@@ -28,16 +28,16 @@ To build the HDF5 and tests, it is assumed that you have done the following:
       This creates a directory called 'hdf5' which 
       contains several files and directories.
 
-	4. You do not have a version of the zlib library and you would like to 
-	use it.  If you do not want to use the zlib library or have your own
-	version read the section about the zlib library.
+      4. You do not have a version of the zlib library and you would like to 
+      use it.  If you do not want to use the zlib library or have your own
+      version read the section about the zlib library.
 
 
 STEP II: Building the Libraries and tests.
         1. Rename the directory under C:\myHDFstuff\ from hdf5xxx to hdf5.  
 
         2. Unpack all.zip in 'hdf5' and move the zlib.dll from 
-	     c:\myHDFstuff\hdf5\src\dll to the Windows system directory.
+	     c:\myHDFstuff\hdf5\src\zlib\dll\ to the Windows system directory.
 
            NOTE TO ALPHA USERS- the version of zlib that is packaged in all.zip 
            is for Intel platforms.  The Alpha versions of the libraries can be
@@ -166,8 +166,7 @@ like to test.
 
 To test the h5dump utility, cd into hdf5\tools.  Then type:
 "dumptest [debug or release] [dll]" depending on which version you would like
-to test. Some differences are expected in the output of these 4 tests (the 
-errors are in the dimensions of the dataspace).
+to test. Some differences are expected in the output of these 4 tests. 
 
 
 NOTE: the appropriate dll should be placed in the Windows\system directory
@@ -176,6 +175,12 @@ before using the dlls.
 NOTE: The debug dll tests on the Alpha platform currently are not completely
       working.  The release dll is fine though.
 
+NOTE: The dll versions of h5dump are currently not working correctly.
+
+NOTE: There is an error in the external test.  The external file feature
+      is working correctly but there is an error in logic for the test which
+      only appears under certain operating systems.  The external test fails
+      for the last case "Testing write external dataset"
         
 STEP IV: BUILDING THE EXAMPLES
 

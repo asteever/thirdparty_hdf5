@@ -158,19 +158,7 @@
 
 	Unfortunately, this does not work on recent Irix platforms
 	(6.5? and later) because that `make' doesn't understand the
-	VPATH variable. However, hdf5 also supports Irix `pmake' which
-	has a .PATH target which serves a similar purpose. Here's what
-	the man pages say about VPATH, which is the facility used by
-	HDF5 makefiles for this feature:
-
-	    The VPATH facility is a derivation of the undocumented
-	    VPATH feature in the System V Release 3 version of make.
-	    System V Release 4 has a new VPATH implementation, much
-	    like the pmake(1) .PATH feature.  This new feature is also
-	    undocumented in the standard System V Release 4 manual
-	    pages.  For this reason it is not available in the IRIX
-	    version of make.  The VPATH facility should not be used
-	    with the new parallel make option.
+	VPATH variable.  This will be fixed in the next release.
 
 5.3. Configuring
 	HDF5 uses the GNU autoconf system for configuration, which
@@ -416,6 +404,12 @@
 	named `lib', `include', and `bin'. The prefix directory must
 	exist prior to `make install', but its subdirectories are
 	created automatically.
+
+        If `make install' fails because the install command at your
+        site somehow fails, you may use the install-sh that comes
+        with the source.  You need to run ./configure again.
+            $ INSTALL="$PWD/bin/install-sh -c" ./configure ...
+            $ make install
 
 	The library can be used without installing it by pointing the
 	compiler at the `src' directory for both include files and

@@ -31,7 +31,7 @@ static char		RcsId[] = "$Revision$";
 #include <H5Pprivate.h>
 
 #define F1_USERBLOCK_SIZE  (hsize_t)0
-#define F1_OFFSET_SIZE	   sizeof(haddr_t)
+#define F1_OFFSET_SIZE	   sizeof(hsize_t)
 #define F1_LENGTH_SIZE	   sizeof(hsize_t)
 #define F1_SYM_LEAF_K	   4
 #define F1_SYM_INTERN_K	   16
@@ -79,41 +79,28 @@ test_file_create(void)
     fid1 = H5Fcreate(FILE1, H5F_ACC_EXCL, H5P_DEFAULT, H5P_DEFAULT);
     CHECK(fid1, FAIL, "H5Fcreate");
 
-    /*
-     * try to create the same file with H5F_ACC_TRUNC. This should fail
-     * because fid1 is the same file and is currently open.
-     */
+    /* try to create the same file with H5F_ACC_TRUNC (should fail) */
     fid2 = H5Fcreate(FILE1, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
     VERIFY(fid2, FAIL, "H5Fcreate");
 
-    /* Close all files */
+    /* Close the file */
     ret = H5Fclose(fid1);
     CHECK(ret, FAIL, "H5Fclose");
-    ret = H5Fclose(fid2);
-    VERIFY(ret, FAIL, "H5Fclose"); /*file should already be closed*/
 
-    /*
-     * Try again with H5F_ACC_EXCL. This should fail because the file already
-     * exists from the previous steps.
-     */
+    /* Try again with H5F_ACC_EXCL (should fail) */
     fid1 = H5Fcreate(FILE1, H5F_ACC_EXCL, H5P_DEFAULT, H5P_DEFAULT);
     VERIFY(fid1, FAIL, "H5Fcreate");
 
-    /* Test create with H5F_ACC_TRUNC. This will truncate the existing file. */
+    /* Test create with H5F_ACC_TRUNC */
+    /* Create first file */
     fid1 = H5Fcreate(FILE1, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
     CHECK(fid1, FAIL, "H5Fcreate");
 
-    /*
-     * Try to truncate first file again. This should fail because fid1 is the
-     * same file and is currently open.
-     */
+    /* Try to create first file again (should fail) */
     fid2 = H5Fcreate(FILE1, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
     VERIFY(fid2, FAIL, "H5Fcreate");
 
-    /*
-     * Try with H5F_ACC_EXCL. This should fail too because the file already
-     * exists.
-     */
+    /* Try with H5F_ACC_EXCL (should fail too) */
     fid2 = H5Fcreate(FILE1, H5F_ACC_EXCL, H5P_DEFAULT, H5P_DEFAULT);
     VERIFY(fid2, FAIL, "H5Fcreate");
 

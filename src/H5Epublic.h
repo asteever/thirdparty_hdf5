@@ -75,8 +75,7 @@ typedef enum H5E_major_t {
     H5E_PLINE,                  /*Data filters                               */
     H5E_EFL,                    /*External file list                         */
     H5E_RAGGED,                 /*Ragged arrays                              */
-    H5E_REFERENCE,              /*References                                 */
-    H5E_VFL			/*Virtual File Layer			     */
+    H5E_REFERENCE               /*References                                 */
 } H5E_major_t;
 
 /* Declare an enumerated type which holds all the valid minor HDF error codes */
@@ -100,7 +99,6 @@ typedef enum H5E_minor_t {
     H5E_FILEOPEN,               /*file already open                          */
     H5E_CANTCREATE,             /*Can't create file                          */
     H5E_CANTOPENFILE,           /*Can't open file                            */
-    H5E_CANTCLOSEFILE,          /*Can't close file			     */
     H5E_NOTHDF5,                /*not an HDF5 format file                    */
     H5E_BADFILE,                /*bad file ID accessed                       */
     H5E_TRUNCATED,              /*file has been truncated                    */

@@ -51,7 +51,6 @@ typedef struct H5D_create_t {
 } H5D_create_t;
 
 typedef struct H5D_t H5D_t;
-
 __DLLVAR__ const H5D_create_t H5D_create_dflt;
 
 /* Functions defined in H5D.c */
@@ -74,7 +73,5 @@ __DLL__ H5S_t *H5D_get_space(H5D_t *dset);
 __DLL__ H5D_t * H5D_open_oid(H5G_entry_t *ent);
 __DLL__ H5F_t * H5D_get_file(const H5D_t *dset);
 __DLL__ hsize_t H5D_get_storage_size(H5D_t *dset);
-__DLL__ void *H5D_vlen_get_buf_size_alloc(size_t size, void *info);
-__DLL__ herr_t H5D_vlen_get_buf_size(void *elem, hid_t type_id, hsize_t ndim, hssize_t *point, void *op_data);
 
 #endif

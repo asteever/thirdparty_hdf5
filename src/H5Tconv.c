@@ -1260,12 +1260,6 @@ H5T_conv_struct_opt(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
 		    if (dst_memb_size > src_memb_size) {
 			offset -= src_memb_size;
 			if (dst_memb_size > src->size-offset) {
-                H5MM_xfree(priv->src2dst);
-                H5MM_xfree(priv->src_memb_id);
-                H5MM_xfree(priv->dst_memb_id);
-                H5MM_xfree(priv->memb_path);
-                H5MM_xfree(priv->memb_nelmts);
-                cdata->priv = priv = H5MM_xfree (priv);
 			    HRETURN_ERROR(H5E_DATATYPE, H5E_UNSUPPORTED, FAIL,
 					  "convertion is unsupported by this "
 					  "function");
@@ -1772,7 +1766,7 @@ H5T_conv_vlen(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
     uint8_t	*s, *sp, *d, *dp;	/*source and dest traversal ptrs     */
     uint8_t 	**dptr;		     /*pointer to correct destination pointer*/
     size_t	src_delta, dst_delta;	/*source & destination stride	     */
-    hssize_t 	seq_len;     /*the number of elements in the current sequence*/
+    hsize_t 	seq_len;     /*the number of elements in the current sequence*/
     size_t	src_base_size, dst_base_size;/*source & destination base size*/
     size_t	src_size, dst_size;/*source & destination total size in bytes*/
     hid_t 	conv_buf_id;		/*ID for comversion buffer	     */
@@ -1824,7 +1818,7 @@ H5T_conv_vlen(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
             /* Get the dataset transfer property list */
             if (H5P_DEFAULT == dset_xfer_plist) {
                 xfer_parms = &H5F_xfer_dflt;
-            } else if (H5P_DATA_XFER != H5P_get_class(dset_xfer_plist) ||
+            } else if (H5P_DATASET_XFER != H5P_get_class(dset_xfer_plist) ||
                    NULL == (xfer_parms = H5I_object(dset_xfer_plist))) {
                 HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not xfer parms");
             }
@@ -1891,7 +1885,6 @@ H5T_conv_vlen(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
 
                 /* Get length of sequences in bytes */
                 seq_len=(*(src->u.vlen.getlen))(src->u.vlen.f,s);
-                assert(seq_len>=0);
                 src_size=seq_len*src_base_size;
                 dst_size=seq_len*dst_base_size;
 
@@ -3484,9 +3477,7 @@ H5T_conv_short_schar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
 		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_short_schar, FAIL);
-    H5T_CONV_Ss(SHORT, SCHAR,
-		short, signed char,
-		SCHAR_MIN, SCHAR_MAX);
+    H5T_CONV_Ss(SHORT, SCHAR, short, signed char, SCHAR_MIN, SCHAR_MAX);
     FUNC_LEAVE(SUCCEED);
 }
 

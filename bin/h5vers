@@ -4,7 +4,6 @@ exit
 
 #! perl
 require 5.003;
-use strict;
 
 ### Copyright © 1998 NCSA.
 # Robb Matzke <matzke@llnl.gov>
@@ -125,9 +124,8 @@ unless ($file) {
     ($file=$_,last) if -f $_;
   }
 }
-die "unable to find source files\n" unless defined $file;
 die "unable to read file: $file\n" unless -r $file;
-my $README = $file;
+$README = $file;
 $README =~ s/[^\/]*$/..\/README/;
 die "unable to read file: $README\n" unless -r $file;
 
@@ -138,7 +136,6 @@ close FILE;
 my (@curver) = getvers $contents;
 
 # Determine the new version number.
-my @newver; #new version
 if ($set) {
   if ($set =~ /(\d+)\.(\d+)\.(\d+)/) {
     @newver = ($1, $2, $3);
@@ -190,7 +187,7 @@ if ($newver[0]!=$curver[0] ||
 # Update the README file
 if ($README) {
   open FILE, $README or die "$README: $!\n";
-  my @contents = <FILE>;
+  @contents = <FILE>;
   close FILE;
   $contents[0] = sprintf("This is hdf5-%d.%d.%d currently under development\n",
 			 @newver);

@@ -180,7 +180,7 @@ test_simple_io(hid_t file)
 
     /* Create a small conversion buffer to test strip mining */
     tconv_buf = malloc (1000);
-    xfer = H5Pcreate (H5P_DATA_XFER);
+    xfer = H5Pcreate (H5P_DATASET_XFER);
     assert (xfer>=0);
     if (H5Pset_buffer (xfer, 1000, tconv_buf, NULL)<0) goto error;
 
@@ -366,7 +366,7 @@ test_compression(hid_t file)
      * Create a small conversion buffer to test strip mining. We
      * might as well test all we can!
      */
-    if ((xfer = H5Pcreate (H5P_DATA_XFER))<0) goto error;
+    if ((xfer = H5Pcreate (H5P_DATASET_XFER))<0) goto error;
     tconv_buf = malloc (1000);
     if (H5Pset_buffer (xfer, 1000, tconv_buf, NULL)<0) goto error;
 
@@ -834,10 +834,9 @@ main(void)
 #endif
     
     h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
-    if ((file=H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl))<0) {
-	goto error;
-    }
-    
+    if ((file=H5Fcreate(filename, H5F_ACC_TRUNC|H5F_ACC_DEBUG,
+			H5P_DEFAULT, fapl))<0) goto error;
+
     /* Cause the library to emit initial messages */
     if ((grp = H5Gcreate (file, "emit diagnostics", 0))<0) goto error;
     if (H5Gset_comment(grp, ".", "Causes diagnostic messages to be emitted")<0)
