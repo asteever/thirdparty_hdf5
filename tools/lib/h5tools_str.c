@@ -540,7 +540,7 @@ h5tools_str_sprint(h5tools_str_t *str, const h5dump_t *info, hid_t container,
         h5tools_str_append(str, OPT(info->fmt_double, "%g"), tempdouble);
     } else if (info->ascii && (H5Tequal(type, H5T_NATIVE_SCHAR) ||
                                H5Tequal(type, H5T_NATIVE_UCHAR))) {
-        h5tools_print_char(str, info, (unsigned char)(*ucp_vp));
+        h5tools_print_char(str, info, *ucp_vp);
     } else if (H5T_STRING == H5Tget_class(type)) {
         unsigned int i;
 
@@ -578,7 +578,7 @@ h5tools_str_sprint(h5tools_str_t *str, const h5dump_t *info, hid_t container,
             }
                 
             /* Print the character */
-            h5tools_print_char(str, info, (unsigned char)(ucp_vp[i]));
+            h5tools_print_char(str, info, ucp_vp[i]);
             
             /* Print the repeat count */
             if (info->str_repeat && j > info->str_repeat) {
@@ -682,6 +682,28 @@ h5tools_str_sprint(h5tools_str_t *str, const h5dump_t *info, hid_t container,
             /* The value */
             offset = H5Tget_member_offset(type, j);
             memb = H5Tget_member_type(type, j);
+#ifdef WANT_H5_V1_2_COMPAT
+            /* v1.2 returns the base type of an array field, work around this */
+            {
+                hid_t new_memb;         /* datatype for array, if necessary */
+                int     arrndims;       /* Array rank for reading */
+                size_t	dims[H5S_MAX_RANK];    /* Array dimensions for reading */
+                hsize_t	arrdims[H5S_MAX_RANK];    /* Array dimensions for reading */
+                int k;              /* Local index variable */
+
+                /* Get the array dimensions */
+                arrndims=H5Tget_member_dims(type,j,dims,NULL);
+
+                /* Patch up array information */
+                if(arrndims>0) {
+                    for(k=0; k<arrndims; k++)
+                        arrdims[k]=dims[k];
+                    new_memb=H5Tarray_create(memb,arrndims,arrdims,NULL);
+                    H5Tclose(memb);
+                    memb=new_memb;
+                } /* end if */
+            }
+#endif /* WANT_H5_V1_2_COMPAT */
 
             ctx->indent_level++;
             h5tools_str_sprint(str, info, container, memb, cp_vp + offset , ctx);
@@ -753,7 +775,7 @@ h5tools_str_sprint(h5tools_str_t *str, const h5dump_t *info, hid_t container,
         if (h5tools_is_zero(vp, H5Tget_size(type))) {
             h5tools_str_append(str, "NULL");
         } else {
-            otype = H5Rget_obj_type(container, H5R_OBJECT, vp);
+            otype = H5Rget_object_type(container, vp);
             obj = H5Rdereference(container, H5R_OBJECT, vp);
             H5Gget_objinfo(obj, ".", FALSE, &sb);
 
@@ -786,7 +808,7 @@ h5tools_str_sprint(h5tools_str_t *str, const h5dump_t *info, hid_t container,
         }
     } else if (H5Tget_class(type) == H5T_ARRAY) {
         int k, ndims;
-        hsize_t	i, dims[H5S_MAX_RANK],temp_nelmts;
+        hsize_t	i, dims[H5S_MAX_RANK];
 
         /* Get the array's base datatype for each element */
         memb = H5Tget_super(type);
@@ -796,12 +818,9 @@ h5tools_str_sprint(h5tools_str_t *str, const h5dump_t *info, hid_t container,
         assert(ndims >= 1 && ndims <= H5S_MAX_RANK);
 
         /* Calculate the number of array elements */
-        for (k = 0, nelmts = 1; k < ndims; k++){
-			temp_nelmts = nelmts;
-			temp_nelmts *= dims[k];
-			assert(temp_nelmts==(hsize_t)((size_t)temp_nelmts));
-            nelmts = (size_t)temp_nelmts;
-		}	
+        for (k = 0, nelmts = 1; k < ndims; k++)
+            nelmts *= dims[k];
+			
         /* Print the opening bracket */
         h5tools_str_append(str, "%s", OPT(info->arr_pre, "["));
 

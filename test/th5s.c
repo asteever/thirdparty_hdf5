@@ -28,7 +28,7 @@
 #include "H5Pprivate.h"
 
 #define TESTFILE   "th5s.h5"
-#define DATAFILE   "th5s1.h5"
+#define FILE   "th5s1.h5"
 
 /* 3-D dataset with fixed dimensions */
 #define SPACE1_NAME  "Space1"
@@ -70,7 +70,7 @@ struct space4_struct {
     unsigned u;
     float f;
     char c2;
- } space4_data={'v',987123,(float)-3.14,'g'}; /* Test data for 4th dataspace */
+ } space4_data={'v',987123,-3.14,'g'}; /* Test data for 4th dataspace */
 
 /****************************************************************
 **
@@ -83,7 +83,7 @@ test_h5s_basic(void)
     hid_t		fid1;		/* HDF5 File IDs		*/
     hid_t		sid1, sid2;	/* Dataspace ID			*/
     hid_t		dset1;		/* Dataset ID			*/
-    int		        rank;		/* Logical rank of dataspace	*/
+    unsigned		rank;		/* Logical rank of dataspace	*/
     hsize_t		dims1[] = {SPACE1_DIM1, SPACE1_DIM2, SPACE1_DIM3};
     hsize_t		dims2[] = {SPACE2_DIM1, SPACE2_DIM2, SPACE2_DIM3,
 				   SPACE2_DIM4};
@@ -92,7 +92,7 @@ test_h5s_basic(void)
 				  SPACE2_MAX4};
     hsize_t		tdims[4];	/* Dimension array to test with */
     hsize_t		tmax[4];
-    hssize_t		n;	 	/* Number of dataspace elements */
+    size_t		n;	 	/* Number of dataspace elements */
     herr_t		ret;		/* Generic return value		*/
 
     /* Output message about test being performed */
@@ -102,16 +102,16 @@ test_h5s_basic(void)
     CHECK(sid1, FAIL, "H5Screate_simple");
 
     n = H5Sget_simple_extent_npoints(sid1);
-    CHECK(n, FAIL, "H5Sget_simple_extent_npoints");
+    CHECK(n, UFAIL, "H5Sget_simple_extent_npoints");
     VERIFY(n, SPACE1_DIM1 * SPACE1_DIM2 * SPACE1_DIM3,
 	   "H5Sget_simple_extent_npoints");
 
     rank = H5Sget_simple_extent_ndims(sid1);
-    CHECK(rank, FAIL, "H5Sget_simple_extent_ndims");
+    CHECK(rank, UFAIL, "H5Sget_simple_extent_ndims");
     VERIFY(rank, SPACE1_RANK, "H5Sget_simple_extent_ndims");
 
-    rank = H5Sget_simple_extent_dims(sid1, tdims, NULL);
-    CHECK(rank, FAIL, "H5Sget_simple_extent_dims");
+    ret = H5Sget_simple_extent_dims(sid1, tdims, NULL);
+    CHECK(ret, FAIL, "H5Sget_simple_extent_dims");
     VERIFY(HDmemcmp(tdims, dims1, SPACE1_RANK * sizeof(unsigned)), 0,
 	   "H5Sget_simple_extent_dims");
 
@@ -119,16 +119,16 @@ test_h5s_basic(void)
     CHECK(sid2, FAIL, "H5Screate_simple");
 
     n = H5Sget_simple_extent_npoints(sid2);
-    CHECK(n, FAIL, "H5Sget_simple_extent_npoints");
+    CHECK(n, UFAIL, "H5Sget_simple_extent_npoints");
     VERIFY(n, SPACE2_DIM1 * SPACE2_DIM2 * SPACE2_DIM3 * SPACE2_DIM4,
 	   "H5Sget_simple_extent_npoints");
 
     rank = H5Sget_simple_extent_ndims(sid2);
-    CHECK(rank, FAIL, "H5Sget_simple_extent_ndims");
+    CHECK(rank, UFAIL, "H5Sget_simple_extent_ndims");
     VERIFY(rank, SPACE2_RANK, "H5Sget_simple_extent_ndims");
 
-    rank = H5Sget_simple_extent_dims(sid2, tdims, tmax);
-    CHECK(rank, FAIL, "H5Sget_simple_extent_dims");
+    ret = H5Sget_simple_extent_dims(sid2, tdims, tmax);
+    CHECK(ret, FAIL, "H5Sget_simple_extent_dims");
     VERIFY(HDmemcmp(tdims, dims2, SPACE2_RANK * sizeof(unsigned)), 0,
 	   "H5Sget_simple_extent_dims");
     VERIFY(HDmemcmp(tmax, max2, SPACE2_RANK * sizeof(unsigned)), 0,
@@ -203,17 +203,17 @@ test_h5s_scalar_write(void)
     hid_t		fid1;		/* HDF5 File IDs		*/
     hid_t		dataset;	/* Dataset ID			*/
     hid_t		sid1;	    /* Dataspace ID			*/
-    int		        rank;		/* Logical rank of dataspace	*/
+    unsigned		rank;		/* Logical rank of dataspace	*/
     hsize_t		tdims[4];	/* Dimension array to test with */
-    hssize_t		n;	 	/* Number of dataspace elements */
+    size_t		n;	 	/* Number of dataspace elements */
     H5S_class_t ext_type;   /* Extent type */
     herr_t		ret;		/* Generic return value		*/
 
     /* Output message about test being performed */
-    MESSAGE(5, ("Testing Scalar Dataspace Manipulation during Writing\n"));
+    MESSAGE(5, ("Testing Scalar Dataspace Manipulation\n"));
 
     /* Create file */
-    fid1 = H5Fcreate(DATAFILE, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    fid1 = H5Fcreate(FILE, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
     CHECK(fid1, FAIL, "H5Fcreate");
 
     /* Create scalar dataspace */
@@ -221,15 +221,15 @@ test_h5s_scalar_write(void)
     CHECK(sid1, FAIL, "H5Screate_simple");
 
     n = H5Sget_simple_extent_npoints(sid1);
-    CHECK(n, FAIL, "H5Sget_simple_extent_npoints");
+    CHECK(n, UFAIL, "H5Sget_simple_extent_npoints");
     VERIFY(n, 1, "H5Sget_simple_extent_npoints");
 
     rank = H5Sget_simple_extent_ndims(sid1);
-    CHECK(rank, FAIL, "H5Sget_simple_extent_ndims");
+    CHECK(rank, UFAIL, "H5Sget_simple_extent_ndims");
     VERIFY(rank, SPACE3_RANK, "H5Sget_simple_extent_ndims");
 
-    rank = H5Sget_simple_extent_dims(sid1, tdims, NULL);
-    VERIFY(rank, 0, "H5Sget_simple_extent_dims");
+    ret = H5Sget_simple_extent_dims(sid1, tdims, NULL);
+    VERIFY(ret, 0, "H5Sget_simple_extent_dims");
 
     /* Verify extent type */
     ext_type = H5Sget_simple_extent_type(sid1);
@@ -266,17 +266,17 @@ test_h5s_scalar_read(void)
     hid_t		fid1;		/* HDF5 File IDs		*/
     hid_t		dataset;	/* Dataset ID			*/
     hid_t		sid1;	    	/* Dataspace ID			*/
-    int		        rank;		/* Logical rank of dataspace	*/
+    unsigned		rank;		/* Logical rank of dataspace	*/
     hsize_t		tdims[4];	/* Dimension array to test with */
-    hssize_t		n;	 	/* Number of dataspace elements */
+    size_t		n;	 	/* Number of dataspace elements */
     unsigned      	rdata;      	/* Scalar data read in 		*/
     herr_t		ret;		/* Generic return value		*/
 
     /* Output message about test being performed */
-    MESSAGE(5, ("Testing Scalar Dataspace Manipulation during Reading\n"));
+    MESSAGE(5, ("Testing Scalar Dataspace Manipulation\n"));
 
     /* Create file */
-    fid1 = H5Fopen(DATAFILE, H5F_ACC_RDWR, H5P_DEFAULT);
+    fid1 = H5Fopen(FILE, H5F_ACC_RDWR, H5P_DEFAULT);
     CHECK(fid1, FAIL, "H5Fopen");
 
     /* Create a dataset */
@@ -287,15 +287,15 @@ test_h5s_scalar_read(void)
     CHECK(sid1, FAIL, "H5Dget_space");
 
     n = H5Sget_simple_extent_npoints(sid1);
-    CHECK(n, FAIL, "H5Sget_simple_extent_npoints");
+    CHECK(n, UFAIL, "H5Sget_simple_extent_npoints");
     VERIFY(n, 1, "H5Sget_simple_extent_npoints");
 
     rank = H5Sget_simple_extent_ndims(sid1);
-    CHECK(rank, FAIL, "H5Sget_simple_extent_ndims");
+    CHECK(rank, UFAIL, "H5Sget_simple_extent_ndims");
     VERIFY(rank, SPACE3_RANK, "H5Sget_simple_extent_ndims");
 
-    rank = H5Sget_simple_extent_dims(sid1, tdims, NULL);
-    VERIFY(rank, 0, "H5Sget_simple_extent_dims");
+    ret = H5Sget_simple_extent_dims(sid1, tdims, NULL);
+    VERIFY(ret, 0, "H5Sget_simple_extent_dims");
 
     ret = H5Dread(dataset, H5T_NATIVE_UINT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &rdata);
     CHECK(ret, FAIL, "H5Dread");
@@ -327,16 +327,16 @@ test_h5s_compound_scalar_write(void)
     hid_t		dataset;	/* Dataset ID			*/
     hid_t       	tid1;       	/* Attribute datatype ID	*/
     hid_t		sid1;	    	/* Dataspace ID			*/
-    int		        rank;		/* Logical rank of dataspace	*/
+    unsigned		rank;		/* Logical rank of dataspace	*/
     hsize_t		tdims[4];	/* Dimension array to test with */
-    hssize_t		n;	 	/* Number of dataspace elements */
+    size_t		n;	 	/* Number of dataspace elements */
     herr_t		ret;		/* Generic return value		*/
 
     /* Output message about test being performed */
-    MESSAGE(5, ("Testing Scalar Dataspace Manipulation for Writing Compound Datatypes\n"));
+    MESSAGE(5, ("Testing Scalar Dataspace Manipulation\n"));
 
     /* Create file */
-    fid1 = H5Fcreate(DATAFILE, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    fid1 = H5Fcreate(FILE, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
     CHECK(fid1, FAIL, "H5Fcreate");
 
     /* Create the compound datatype.  */
@@ -364,15 +364,15 @@ test_h5s_compound_scalar_write(void)
     CHECK(sid1, FAIL, "H5Screate_simple");
 
     n = H5Sget_simple_extent_npoints(sid1);
-    CHECK(n, FAIL, "H5Sget_simple_extent_npoints");
+    CHECK(n, UFAIL, "H5Sget_simple_extent_npoints");
     VERIFY(n, 1, "H5Sget_simple_extent_npoints");
 
     rank = H5Sget_simple_extent_ndims(sid1);
-    CHECK(rank, FAIL, "H5Sget_simple_extent_ndims");
+    CHECK(rank, UFAIL, "H5Sget_simple_extent_ndims");
     VERIFY(rank, SPACE3_RANK, "H5Sget_simple_extent_ndims");
 
-    rank = H5Sget_simple_extent_dims(sid1, tdims, NULL);
-    VERIFY(rank, 0, "H5Sget_simple_extent_dims");
+    ret = H5Sget_simple_extent_dims(sid1, tdims, NULL);
+    VERIFY(ret, 0, "H5Sget_simple_extent_dims");
 
     /* Create a dataset */
     dataset=H5Dcreate(fid1,"Dataset1",tid1,sid1,H5P_DEFAULT);
@@ -407,17 +407,17 @@ test_h5s_compound_scalar_read(void)
     hid_t		dataset;	/* Dataset ID			*/
     hid_t		sid1;	    	/* Dataspace ID			*/
     hid_t       	type;       	/* Datatype             	*/
-    int		        rank;		/* Logical rank of dataspace	*/
+    unsigned		rank;		/* Logical rank of dataspace	*/
     hsize_t		tdims[4];	/* Dimension array to test with */
-    hssize_t		n;	 	/* Number of dataspace elements */
+    size_t		n;	 	/* Number of dataspace elements */
     struct space4_struct rdata; 	/* Scalar data read in 		*/
     herr_t		ret;		/* Generic return value		*/
 
     /* Output message about test being performed */
-    MESSAGE(5, ("Testing Scalar Dataspace Manipulation for Reading Compound Datatypes\n"));
+    MESSAGE(5, ("Testing Scalar Dataspace Manipulation\n"));
 
     /* Create file */
-    fid1 = H5Fopen(DATAFILE, H5F_ACC_RDWR, H5P_DEFAULT);
+    fid1 = H5Fopen(FILE, H5F_ACC_RDWR, H5P_DEFAULT);
     CHECK(fid1, FAIL, "H5Fopen");
 
     /* Create a dataset */
@@ -428,15 +428,15 @@ test_h5s_compound_scalar_read(void)
     CHECK(sid1, FAIL, "H5Dget_space");
 
     n = H5Sget_simple_extent_npoints(sid1);
-    CHECK(n, FAIL, "H5Sget_simple_extent_npoints");
+    CHECK(n, UFAIL, "H5Sget_simple_extent_npoints");
     VERIFY(n, 1, "H5Sget_simple_extent_npoints");
 
     rank = H5Sget_simple_extent_ndims(sid1);
-    CHECK(rank, FAIL, "H5Sget_simple_extent_ndims");
+    CHECK(rank, UFAIL, "H5Sget_simple_extent_ndims");
     VERIFY(rank, SPACE3_RANK, "H5Sget_simple_extent_ndims");
 
-    rank = H5Sget_simple_extent_dims(sid1, tdims, NULL);
-    VERIFY(rank, 0, "H5Sget_simple_extent_dims");
+    ret = H5Sget_simple_extent_dims(sid1, tdims, NULL);
+    VERIFY(ret, 0, "H5Sget_simple_extent_dims");
 
     type=H5Dget_type(dataset);
     CHECK(type, FAIL, "H5Dget_type");
@@ -486,7 +486,7 @@ test_h5s_chunk(void)
     hsize_t csize[2];
     int i,j;
 
-    fileID = H5Fcreate(DATAFILE,H5F_ACC_TRUNC,H5P_DEFAULT,H5P_DEFAULT);
+    fileID = H5Fcreate(FILE,H5F_ACC_TRUNC,H5P_DEFAULT,H5P_DEFAULT);
     CHECK(fileID, FAIL, "H5Fcreate");
 
     plist_id = H5Pcreate(H5P_DATASET_CREATE);
@@ -509,7 +509,7 @@ test_h5s_chunk(void)
     /* Initialize float array */
     for(i=0; i<50000; i++)
         for(j=0; j<3; j++)
-            chunk_data_flt[i][j]=(float)(i*2.5-j*100.3);
+            chunk_data_flt[i][j]=i*2.5-j*100.3;
 
     status= H5Dwrite(dsetID,H5T_NATIVE_FLOAT,H5S_ALL,H5S_ALL,H5P_DEFAULT,chunk_data_flt);
     CHECK(status, FAIL, "H5Dwrite");
@@ -527,7 +527,7 @@ test_h5s_chunk(void)
     HDmemset(chunk_data_dbl,0,sizeof(double)*50000*3);
     HDmemset(chunk_data_flt,0,sizeof(float)*50000*3);
 
-    fileID = H5Fopen(DATAFILE,H5F_ACC_RDONLY,H5P_DEFAULT);
+    fileID = H5Fopen(FILE,H5F_ACC_RDONLY,H5P_DEFAULT);
     CHECK(fileID, FAIL, "H5Fopen");
     dsetID = H5Dopen(fileID,"coords");
     CHECK(dsetID, FAIL, "H5Dopen");
@@ -591,6 +591,6 @@ test_h5s(void)
 void
 cleanup_h5s(void)
 {
-    remove(DATAFILE);
+    remove(FILE);
 }
 

@@ -135,7 +135,7 @@ void                    test_iterate(void);
 void                    test_array(void);
 void                    test_genprop(void);
 void			test_configure(void);
-void			test_misc(void);
+void                    test_misc(void);
 
 /* Prototypes for the cleanup routines */
 void                    cleanup_metadata(void);
@@ -151,6 +151,6 @@ void                    cleanup_iterate(void);
 void                    cleanup_array(void);
 void                    cleanup_genprop(void);
 void			cleanup_configure(void);
-void			cleanup_misc(void);
+void                    cleanup_misc(void);
 
 #endif /* HDF5cleanup_H */

@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
- * Copyright (C) 1997-2001 National Center for Supercomputing Applications
- *			   All rights reserved.
+ * Copyright (C) 1997	National Center for Supercomputing Applications.
+ *			All rights reserved.
  *
  *-------------------------------------------------------------------------
  *
@@ -22,7 +22,7 @@
 /* Private headers needed by this file */
 #include "H5private.h"
 #include "H5Fprivate.h"
-#include "H5ACprivate.h"	/*cache					*/
+#include "H5ACprivate.h"	/*cache                                      */
 
 /*
  * Feature: Define this constant if you want to check B-tree consistency
@@ -40,6 +40,9 @@
     4 +				/*type, level, num entries		  */  \
     2*H5F_SIZEOF_ADDR(F))	/*left and right sibling addresses	  */
      
+#define H5B_K(F,TYPE)		/*K value given file and Btree subclass   */  \
+   ((F)->shared->fcpl->btree_k[(TYPE)->id])
+
 typedef enum H5B_ins_t {
     H5B_INS_ERROR	 = -1,	/*error return value			     */
     H5B_INS_NOOP	 = 0,	/*insert made no changes		     */
@@ -49,6 +52,11 @@ typedef enum H5B_ins_t {
     H5B_INS_FIRST	 = 4,	/*insert first node in (sub)tree	     */
     H5B_INS_REMOVE	 = 5	/*remove current node			     */
 } H5B_ins_t;
+
+typedef enum H5B_subid_t {
+    H5B_SNODE_ID	 = 0,	/*B-tree is for symbol table nodes	     */
+    H5B_ISTORE_ID	 = 1	/*B-tree is for indexed object storage	     */
+} H5B_subid_t;
 
 /*
  * Each class of object that can be pointed to by a B-link tree has a
@@ -131,6 +139,4 @@ __DLL__ herr_t H5B_remove(H5F_t *f, const H5B_class_t *type, haddr_t addr,
 			  void *udata);
 __DLL__ herr_t H5B_iterate (H5F_t *f, const H5B_class_t *type, haddr_t addr,
 			    void *udata);
-__DLL__ int    H5B_Kvalue(H5F_t *f, const H5B_class_t *type);
-
 #endif

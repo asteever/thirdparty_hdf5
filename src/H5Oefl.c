@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 1997-2001 NCSA
- *		           All rights reserved.
+ * Copyright (C) 1997 NCSA
+ *		      All rights reserved.
  *
  * Programmer: Robb Matzke <matzke@llnl.gov>
  *	       Tuesday, November 25, 1997
@@ -404,15 +404,10 @@ H5O_efl_total_size (H5O_efl_t *efl)
  */
 herr_t
 H5O_efl_read (H5F_t UNUSED *f, const H5O_efl_t *efl, haddr_t addr,
-	      size_t size, uint8_t *buf)
+	      hsize_t size, uint8_t *buf)
 {
     int		i, fd=-1;
-    size_t	to_read;
-#ifndef NDEBUG
-    hsize_t     tempto_read;
-#endif /* NDEBUG */
-    hsize_t     skip=0;
-    haddr_t     cur;
+    size_t	to_read, cur, skip=0;
     ssize_t	n;
     herr_t	ret_value = FAIL;
     
@@ -427,11 +422,11 @@ H5O_efl_read (H5F_t UNUSED *f, const H5O_efl_t *efl, haddr_t addr,
     /* Find the first efl member from which to read */
     for (i=0, cur=0; i<efl->nused; i++) {
 	if (H5O_EFL_UNLIMITED==efl->slot[i].size ||
-                addr < cur+efl->slot[i].size) {
+	    addr < cur+efl->slot[i].size) {
 	    skip = addr - cur;
 	    break;
 	}
-  	cur += efl->slot[i].size;
+	cur += efl->slot[i].size;
     }
     
     /* Read the data */
@@ -440,7 +435,7 @@ H5O_efl_read (H5F_t UNUSED *f, const H5O_efl_t *efl, haddr_t addr,
 	    HGOTO_ERROR (H5E_EFL, H5E_OVERFLOW, FAIL,
 			 "read past logical end of file");
 	}
-	if (H5F_OVERFLOW_HSIZET2OFFT (efl->slot[i].offset+skip)) {
+	if (H5F_OVERFLOW_SIZET2OFFT (efl->slot[i].offset+skip)) {
 	    HGOTO_ERROR (H5E_EFL, H5E_OVERFLOW, FAIL,
 			 "external file address overflowed");
 	}
@@ -452,13 +447,7 @@ H5O_efl_read (H5F_t UNUSED *f, const H5O_efl_t *efl, haddr_t addr,
 	    HGOTO_ERROR (H5E_EFL, H5E_SEEKERROR, FAIL,
 			 "unable to seek in external raw data file");
 	}
-#ifndef NDEBUG
-	tempto_read = MIN(efl->slot[i].size-skip,(hsize_t)size);
-        H5_CHECK_OVERFLOW(tempto_read,hsize_t,size_t);
-	to_read = (size_t)tempto_read;
-#else /* NDEBUG */
-	to_read = MIN((size_t)(efl->slot[i].size-skip), size);
-#endif /* NDEBUG */
+	to_read = MIN(efl->slot[i].size-skip, size);
 	if ((n=HDread (fd, buf, to_read))<0) {
 	    HGOTO_ERROR (H5E_EFL, H5E_READERROR, FAIL,
 			 "read error in external raw data file");
@@ -500,15 +489,10 @@ H5O_efl_read (H5F_t UNUSED *f, const H5O_efl_t *efl, haddr_t addr,
  */
 herr_t
 H5O_efl_write (H5F_t UNUSED *f, const H5O_efl_t *efl, haddr_t addr,
-	       size_t size, const uint8_t *buf)
+	       hsize_t size, const uint8_t *buf)
 {
     int		i, fd=-1;
-    size_t	to_write;
-#ifndef NDEBUG
-    hsize_t	tempto_write;
-#endif /* NDEBUG */
-    haddr_t     cur;
-    hsize_t     skip=0;
+    size_t	to_write, cur, skip=0;
     herr_t	ret_value = FAIL;
     
     FUNC_ENTER (H5O_efl_write, FAIL);
@@ -522,7 +506,7 @@ H5O_efl_write (H5F_t UNUSED *f, const H5O_efl_t *efl, haddr_t addr,
     /* Find the first efl member in which to write */
     for (i=0, cur=0; i<efl->nused; i++) {
 	if (H5O_EFL_UNLIMITED==efl->slot[i].size ||
-                addr < cur+efl->slot[i].size) {
+	    addr < cur+efl->slot[i].size) {
 	    skip = addr - cur;
 	    break;
 	}
@@ -535,7 +519,7 @@ H5O_efl_write (H5F_t UNUSED *f, const H5O_efl_t *efl, haddr_t addr,
 	    HGOTO_ERROR (H5E_EFL, H5E_OVERFLOW, FAIL,
 			 "write past logical end of file");
 	}
-	if (H5F_OVERFLOW_HSIZET2OFFT (efl->slot[i].offset+skip)) {
+	if (H5F_OVERFLOW_SIZET2OFFT (efl->slot[i].offset+skip)) {
 	    HGOTO_ERROR (H5E_EFL, H5E_OVERFLOW, FAIL,
 			 "external file address overflowed");
 	}
@@ -552,13 +536,7 @@ H5O_efl_write (H5F_t UNUSED *f, const H5O_efl_t *efl, haddr_t addr,
 	    HGOTO_ERROR (H5E_EFL, H5E_SEEKERROR, FAIL,
 			 "unable to seek in external raw data file");
 	}
-#ifndef NDEBUG
-	tempto_write = MIN(efl->slot[i].size-skip,(hsize_t)size);
-        H5_CHECK_OVERFLOW(tempto_write,hsize_t,size_t);
-        to_write = (size_t)tempto_write;
-#else /* NDEBUG */
-	to_write = MIN((size_t)(efl->slot[i].size-skip), size);
-#endif /* NDEBUG */
+	to_write = MIN(efl->slot[i].size-skip, size);
 	if ((size_t)HDwrite (fd, buf, to_write)!=to_write) {
 	    HGOTO_ERROR (H5E_EFL, H5E_READERROR, FAIL,
 			 "write error in external raw data file");

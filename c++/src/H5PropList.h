@@ -6,14 +6,13 @@
 namespace H5 {
 #endif
 
-class __DLLCPP__ PropList : public IdComponent {
+class  __DLLCPP__ PropList : public IdComponent {
    public:
 	// Default property list
         static const PropList DEFAULT;
 
-	// Creates a property list of a given type or creates a copy of an 
-	// existing property list giving the property list id
-	PropList( const hid_t plist_id );
+	// Creates a property list given the property list type.
+	PropList( H5P_class_t type );
 
 	// Default constructor: creates a PropList object - this object
 	// does not represent any property list yet.
@@ -30,7 +29,11 @@ class __DLLCPP__ PropList : public IdComponent {
 
 	// Gets the class of this property list, i.e. H5P_FILE_CREATE,
 	// H5P_FILE_ACCESS, ...
-	hid_t getClass() const;
+	H5P_class_t getClass() const;
+
+	// Creates a default property list or creates a copy of an 
+	// existing property list giving the property list id
+	PropList( const hid_t plist_id );
 
 	// Used by the API to close the property list
 	void p_close() const;

@@ -21,6 +21,7 @@
 *************************************************************/
 
 #include "hdf5.h"
+#include "H5private.h"
 #include "testhdf5.h"
 
 /* macros definitions */

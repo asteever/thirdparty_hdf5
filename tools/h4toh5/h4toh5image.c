@@ -64,8 +64,8 @@ int Image_h4_to_h5(int32 file_id,int32 ri_id,hid_t h5_group,hid_t h5_palgroup,in
   char*    h5cimage_name;
   void*    image_data;
   HDF_CHUNK_DEF c_def_out;
-  hsize_t    chunk_dims[2];
-  hsize_t    chunk_dims24[3];
+  int32    chunk_dims[2];
+  int32    chunk_dims24[3];
   int32    c_flags;
   int32    interlace_mode;
 
@@ -95,11 +95,7 @@ int Image_h4_to_h5(int32 file_id,int32 ri_id,hid_t h5_group,hid_t h5_palgroup,in
   hsize_t   fielddim[1];
   hsize_t  h5dims[2];
   hsize_t  h5dims24[3];
-#ifdef H5_WANT_H5_V1_4_COMPAT
   hsize_t bufsize;
-#else /* H5_WANT_H5_V1_4_COMPAT */
-  size_t bufsize;
-#endif /* H5_WANT_H5_V1_4_COMPAT */
   herr_t   ret;
   hid_t    create_plist;
   hid_t    write_plist;
@@ -308,10 +304,10 @@ int Image_h4_to_h5(int32 file_id,int32 ri_id,hid_t h5_group,hid_t h5_palgroup,in
 	     provide a chunking size. currently it is set to h5dim[i].*/
 
 	  if(ncomp == 1) {
-	    chunk_dims[0] = (hsize_t)(h5dims[0]);
-            chunk_dims[1] =(hsize_t)(h5dims[1]);
+	    chunk_dims[0] = h5dims[0];
+            chunk_dims[1] = h5dims[1];
 	  
-	    if(H5Pset_chunk(create_plist, 2, chunk_dims)<0) {
+	    if(H5Pset_chunk(create_plist, 2, (hsize_t *)chunk_dims)<0) {
 	      printf("failed to set up chunking information for ");
 	      printf("property list.\n");
 	      free(image_data);
@@ -346,7 +342,7 @@ int Image_h4_to_h5(int32 file_id,int32 ri_id,hid_t h5_group,hid_t h5_palgroup,in
 	      chunk_dims24[1] = edges[0]-start[0];
 	      chunk_dims24[2] = 3;
 	    }
-	    if(H5Pset_chunk(create_plist, 3, chunk_dims24)<0) {
+	    if(H5Pset_chunk(create_plist, 3, (hsize_t *)chunk_dims24)<0) {
 	      printf("failed to set up chunking information for ");
 	      printf("property list.\n");
 	      free(image_data);
@@ -428,7 +424,7 @@ int Image_h4_to_h5(int32 file_id,int32 ri_id,hid_t h5_group,hid_t h5_palgroup,in
  By default, we will compress HDF5 dataset by using gzip compression if HDF5 file is compressed. */
 
   /* we don't use data transfer property list. 
- write_plist = H5Pcreate(H5P_DATASET_XFER);
+ write_plist = H5Pcreate_list(H5P_DATASET_XFER_NEW);
  bufsize = h4memsize *h5dims[1]*ncomp;
 
   if(H5Pset_buffer(write_plist,bufsize,NULL,NULL)<0) {

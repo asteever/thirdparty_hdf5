@@ -21,17 +21,17 @@
  *
  */
 
-#include "H5private.h"                /* library function  */
+#include "H5public.h"                 /* H5_HAVE_STREAM                      */
 
 /* Only build this driver if it was configured with --with-Stream-VFD */
 #ifdef H5_HAVE_STREAM
 
 #include "H5Eprivate.h"               /* error handling                      */
-#include "H5FDpublic.h"               /* Public VFD header                   */
-#include "H5FDstream.h"               /* Stream VFD header                   */
-#include "H5Iprivate.h"               /* IDs                                 */
+#include "H5FDpublic.h"               /* VFD structures                      */
 #include "H5MMprivate.h"              /* memory allocation                   */
-#include "H5Pprivate.h"               /* property prototypes                 */
+#include "H5Ppublic.h"                /* files                               */
+#include "H5Pprivate.h"               /* VFD prototypes                      */
+#include "H5FDstream.h"               /* Stream VFD header                   */
 
 #ifdef H5FD_STREAM_HAVE_UNIX_SOCKETS
 #ifdef H5_HAVE_SYS_TYPES_H
@@ -161,17 +161,16 @@ static herr_t  H5FD_stream_set_eoa (H5FD_t *_stream, haddr_t addr);
 static haddr_t H5FD_stream_get_eof (H5FD_t *_stream);
 static herr_t  H5FD_stream_read (H5FD_t *_stream, H5FD_mem_t type,
                                  hid_t fapl_id, haddr_t addr,
-                                 size_t size, void *buf);
+                                 hsize_t size, void *buf);
 static herr_t  H5FD_stream_write (H5FD_t *_stream, H5FD_mem_t type,
                                   hid_t fapl_id, haddr_t addr,
-                                  size_t size, const void *buf);
+                                  hsize_t size, const void *buf);
 
 /* The Stream VFD's class information structure */
 static const H5FD_class_t H5FD_stream_g =
 {
   "stream",                         /* name                                */
   MAXADDR,                          /* maxaddr                             */
-  H5F_CLOSE_WEAK,		    /* fc_degree			   */
   NULL,                             /* sb_size                             */
   NULL,                             /* sb_encode                           */
   NULL,                             /* sb_decode                           */
@@ -262,15 +261,17 @@ hid_t H5FD_stream_init (void)
  */
 herr_t H5Pset_fapl_stream (hid_t fapl_id, H5FD_stream_fapl_t *fapl)
 {
-  H5FD_stream_fapl_t user_fapl;
-  H5P_genplist_t *plist;      /* Property list pointer */
   herr_t             result;
+  H5FD_stream_fapl_t user_fapl;
+
 
   FUNC_ENTER (H5Pset_fapl_stream, FAIL);
   H5TRACE2 ("e", "ix", fapl_id, fapl);
 
-  if(TRUE!=H5P_isa_class(fapl_id,H5P_FILE_ACCESS) || NULL == (plist = H5I_object(fapl_id)))
+  if (H5P_FILE_ACCESS != H5Pget_class (fapl_id))
+  {
     HRETURN_ERROR (H5E_PLIST, H5E_BADTYPE, FAIL, "not a fapl");
+  }
 
   if (fapl)
   {
@@ -286,11 +287,11 @@ herr_t H5Pset_fapl_stream (hid_t fapl_id, H5FD_stream_fapl_t *fapl)
       user_fapl.increment = H5FD_STREAM_INCREMENT;
     }
     user_fapl.port = 0;
-    result = H5P_set_driver (plist, H5FD_STREAM, &user_fapl);
+    result = H5Pset_driver (fapl_id, H5FD_STREAM, &user_fapl);
   }
   else
   {
-    result = H5P_set_driver (plist, H5FD_STREAM, &default_fapl);
+    result = H5Pset_driver (fapl_id, H5FD_STREAM, &default_fapl);
   }
 
   FUNC_LEAVE (result);
@@ -315,20 +316,20 @@ herr_t H5Pset_fapl_stream (hid_t fapl_id, H5FD_stream_fapl_t *fapl)
 herr_t H5Pget_fapl_stream(hid_t fapl_id, H5FD_stream_fapl_t *fapl /* out */)
 {
   H5FD_stream_fapl_t *this_fapl;
-  H5P_genplist_t *plist;      /* Property list pointer */
+
 
   FUNC_ENTER (H5Pget_fapl_stream, FAIL);
   H5TRACE2("e","ix",fapl_id,fapl);
 
-  if(TRUE!=H5P_isa_class(fapl_id,H5P_FILE_ACCESS) || NULL == (plist = H5I_object(fapl_id)))
+  if (H5P_FILE_ACCESS != H5Pget_class (fapl_id))
   {
     HRETURN_ERROR (H5E_PLIST, H5E_BADTYPE, FAIL, "not a fapl");
   }
-  if (H5FD_STREAM != H5P_get_driver (plist))
+  if (H5FD_STREAM != H5P_get_driver (fapl_id))
   {
     HRETURN_ERROR (H5E_PLIST, H5E_BADVALUE, FAIL, "incorrect VFL driver");
   }
-  if (NULL == (this_fapl = H5P_get_driver_info (plist)))
+  if (NULL == (this_fapl = H5Pget_driver_info (fapl_id)))
   {
     HRETURN_ERROR (H5E_PLIST, H5E_BADVALUE, FAIL, "bad VFL driver info");
   }
@@ -634,7 +635,6 @@ static H5FD_t *H5FD_stream_open (const char *filename,
 #ifdef WIN32
   WSADATA wsadata;
 #endif
-  H5P_genplist_t *plist;      /* Property list pointer */
 
 
   FUNC_ENTER (H5FD_stream_open, NULL);
@@ -676,9 +676,7 @@ static H5FD_t *H5FD_stream_open (const char *filename,
   fapl = NULL;
   if (H5P_DEFAULT != fapl_id)
   {
-    if(TRUE!=H5P_isa_class(fapl_id,H5P_FILE_ACCESS) || NULL == (plist = H5I_object(fapl_id)))
-        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a file access property list");
-    fapl = H5P_get_driver_info (plist);
+    fapl = H5Pget_driver_info (fapl_id);
   }
   if (fapl == NULL)
   {
@@ -710,7 +708,7 @@ static H5FD_t *H5FD_stream_open (const char *filename,
       {
         /* update the port ID in the file access property
            so that it can be queried via H5P_get_fapl_stream() later on */
-        H5P_set_driver (plist, H5FD_STREAM, &_stream.fapl);
+        H5Pset_driver (fapl_id, H5FD_STREAM, &_stream.fapl);
       }
     }
   }
@@ -937,7 +935,7 @@ static herr_t H5FD_stream_close (H5FD_t *_stream)
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FD_stream_query(const H5FD_t * UNUSED _f,
+H5FD_stream_query(const H5FD_t UNUSED *_f,
                   unsigned long *flags/*out*/)
 {
     FUNC_ENTER (H5FD_stream_query, SUCCEED);
@@ -1069,11 +1067,11 @@ static herr_t H5FD_stream_read (H5FD_t *_stream,
                                 H5FD_mem_t UNUSED type,
                                 hid_t UNUSED dxpl_id,
                                 haddr_t addr,
-                                size_t size,
+                                hsize_t size,
                                 void *buf /*out*/)
 {
   H5FD_stream_t *stream = (H5FD_stream_t *) _stream;
-  size_t        nbytes;
+  ssize_t        nbytes;
 
   FUNC_ENTER (H5FD_stream_read, FAIL);
 
@@ -1097,8 +1095,8 @@ static herr_t H5FD_stream_read (H5FD_t *_stream,
   /* Read the part which is before the EOF marker */
   if (addr < stream->eof)
   {
-    nbytes = MIN (size, stream->eof - addr);
-    HDmemcpy (buf, stream->mem + addr, nbytes);
+    nbytes = (ssize_t) MIN (size, stream->eof - addr);
+    HDmemcpy (buf, stream->mem + addr, (size_t) nbytes);
     size -= nbytes;
     addr += nbytes;
     buf = (char *) buf + nbytes;
@@ -1107,7 +1105,7 @@ static herr_t H5FD_stream_read (H5FD_t *_stream,
   /* Read zeros for the part which is after the EOF markers */
   if (size > 0)
   {
-    HDmemset (buf, 0, size);
+    HDmemset (buf, 0, (size_t) size);
   }
 
   FUNC_LEAVE (SUCCEED);
@@ -1135,10 +1133,11 @@ static herr_t H5FD_stream_write (H5FD_t *_stream,
                                  H5FD_mem_t UNUSED type,
                                  hid_t UNUSED dxpl_id,
                                  haddr_t addr,
-                                 size_t size,
+                                 hsize_t size,
                                  const void *buf)
 {
   H5FD_stream_t                *stream = (H5FD_stream_t *) _stream;
+
 
   FUNC_ENTER (H5FD_stream_write, FAIL);
 
@@ -1190,7 +1189,7 @@ static herr_t H5FD_stream_write (H5FD_t *_stream,
   }
 
   /* Write from BUF to memory */
-  HDmemcpy (stream->mem + addr, buf, size);
+  HDmemcpy (stream->mem + addr, buf, (size_t) size);
   stream->dirty = TRUE;
 
   FUNC_LEAVE (SUCCEED);

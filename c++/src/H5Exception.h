@@ -153,13 +153,6 @@ class __DLLCPP__ IdComponentException : public Exception {
 	virtual ~IdComponentException();
 };
 
-// The following are from Java API but not done here:
-// AtomException, BtreeException, DataFiltersException, 
-// ExternalFilelistException, FunctionEntryExitException, 
-// HeapException, InternalErrorException, LowLevelIOException, 
-// MetaDataCacheException, ResourceUnavailableException, 
-// SymbolTableException, ObjectHeaderException, FunctionArgumentException,
-// DataStorageException
 #ifndef H5_NO_NAMESPACE
 }
 #endif

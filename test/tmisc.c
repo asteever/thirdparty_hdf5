@@ -42,7 +42,7 @@ typedef struct {
 } misc2_struct;
 
 /* Definitions for misc. test #3 */
-#define MISC3_FILE              "tmisc3.h5"
+#define MISC3_FILE          "tmisc3.h5"
 #define MISC3_RANK              2
 #define MISC3_DIM1              6
 #define MISC3_DIM2              6
@@ -218,7 +218,7 @@ static void test_misc2_write_attribute(void)
     free(data_check.string);
 
     ret = H5Aclose(att2);
-    CHECK(ret, FAIL, "HAclose");
+    CHECK(ret, FAIL, "H5Aclose");
 
     ret = H5Gclose(root2);
     CHECK(ret, FAIL, "H5Gclose");
@@ -262,7 +262,7 @@ static void test_misc2_read_attribute(const char *filename, const char *att_name
     free(data_check.string);
 
     ret = H5Aclose(att);
-    CHECK(ret, FAIL, "H5Aclose");
+    CHECK(ret, FAIL, "HAclose");
 
     ret = H5Tclose(type);
     CHECK(ret, FAIL, "H5Tclose");
@@ -275,6 +275,7 @@ static void test_misc2_read_attribute(const char *filename, const char *att_name
 
     return;
 }
+
 /****************************************************************
 **
 **  test_misc2(): test using the same VL-derived datatype in two
@@ -358,7 +359,6 @@ test_misc3(void)
     ret = H5Fclose(file);
     CHECK(ret, FAIL, "H5Fclose");
 } /* end test_misc3() */
-
 
 /****************************************************************
 **

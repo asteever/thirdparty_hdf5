@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 1998-2001 NCSA HDF
- * 		           All rights reserved.
+ * Copyright (C) 1998 NCSA HDF
+ * 		      All rights reserved.
  *		      
  * Purpose:	Provides error handling in the form of a stack.  The
  *		FUNC_ENTER() macro clears the error stack whenever an API
@@ -29,7 +29,7 @@
  *
  */
 #include "H5private.h"		/* Generic Functions			  */
-#include "H5Iprivate.h"		/* IDs				  */
+#include "H5Iprivate.h"		/* IDs                                    */
 #include "H5Eprivate.h"		/* Private error routines		  */
 #include "H5MMprivate.h"	/* Memory management			  */
 
@@ -101,9 +101,7 @@ static const H5E_minor_mesg_t H5E_minor_mesg_g[] = {
 
     /* Object atom related errors */
     {H5E_BADATOM, 	"Unable to find atom information (already closed?)"},
-    {H5E_CANTREGISTER, 	"Unable to register new atom"},
-    {H5E_CANTINC,      	"Unable to increment reference count"},
-    {H5E_CANTDEC,      	"Unable to decrement reference count"},
+    {H5E_CANTREGISTER, 	"Unable to  register new atom"},
 
     /* Cache related errors */
     {H5E_CANTFLUSH, 	"Unable to flush data from cache"},
@@ -137,15 +135,7 @@ static const H5E_minor_mesg_t H5E_minor_mesg_g[] = {
     /* Datatype conversion errors */
     {H5E_CANTCONVERT,		"Can't convert datatypes"},
 
-    /* Dataspace errors */
-    {H5E_CANTCLIP,		"Can't clip hyperslab region"},
-    {H5E_CANTCOUNT,		"Can't count elements"},
-
-    /* Property list errors */
-    {H5E_CANTGET,		"Can't get value"},
-    {H5E_CANTSET,		"Can't set value"},
-
-    /* Parallel I/O errors */
+    /* Datatype conversion errors */
     {H5E_MPI,		"Some MPI function failed"}
 };
 
@@ -203,19 +193,19 @@ void *H5E_auto_data_g = NULL;
  *
  *-------------------------------------------------------------------------
  */
-H5E_t *H5E_get_stack(void)
-{
-    H5E_t *estack = pthread_getspecific(H5TS_errstk_key_g);
+H5E_t *H5E_get_stack() {
+  H5E_t *estack;
 
-    if (!estack) {
-        /* no associated value with current thread - create one */
-        estack = (H5E_t *)H5MM_malloc(sizeof(H5E_t));
-        pthread_setspecific(H5TS_errstk_key_g, (void *)estack);
-    }
-
+  if ((estack = pthread_getspecific(H5TS_errstk_key_g))!=NULL) {
     return estack;
+  } else {
+    /* no associated value with current thread - create one */
+    estack = (H5E_t *)malloc(sizeof(H5E_t));
+    pthread_setspecific(H5TS_errstk_key_g, (void *)estack);
+    return estack;
+  }
 }
-#endif  /* H5_HAVE_THREADSAFE */
+#endif
 
 
 /*-------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
- * Copyright (C) 1997-2001 National Center for Supercomputing Applications
- *                         All rights reserved.
+ * Copyright (C) 1997   National Center for Supercomputing Applications.
+ *                      All rights reserved.
  *
  *-------------------------------------------------------------------------
  *
@@ -93,7 +93,6 @@ typedef struct H5G_entry_t {
     H5G_cache_t cache;                  /*cached data from object header     */
     H5F_t       *file;                  /*file to which this obj hdr belongs */
 } H5G_entry_t;
-
 typedef struct H5G_t H5G_t;
 
 /*

@@ -21,6 +21,7 @@
 *************************************************************/
 
 #include "testhdf5.h"
+
 #include "hdf5.h"
 
 #define FILENAME   "tattr.h5"
@@ -75,7 +76,7 @@ struct attr4_struct {
 
 #define ATTR5_NAME  "Attr5"
 #define ATTR5_RANK	0
-float attr_data5=(float)-5.123;        /* Test data for 5th attribute */
+float attr_data5=-5.123;        /* Test data for 5th attribute */
 
 herr_t attr_op1(hid_t loc_id, const char *name, void *op_data);
 
@@ -388,7 +389,7 @@ test_attr_compound_read(void)
     char    attr_name[ATTR_NAME_LEN]; /* Buffer for attribute names */
     int     rank;       /* Attribute rank */
     hsize_t dims[ATTR_MAX_DIMS];    /* Attribute dimensions */
-    H5T_class_t t_class;  /* Attribute datatype class */
+    H5T_class_t class;  /* Attribute datatype class */
     H5T_order_t order;  /* Attribute datatype order */
     size_t      size;   /* Attribute datatype size as stored in file */ 
     int     fields;     /* # of Attribute datatype fields */
@@ -438,8 +439,8 @@ test_attr_compound_read(void)
     /* Verify Datatype */
     type=H5Aget_type(attr);
     CHECK(type, FAIL, "H5Aget_type");
-    t_class=H5Tget_class(type);
-    VERIFY(t_class, H5T_COMPOUND, "H5Tget_class");
+    class=H5Tget_class(type);
+    VERIFY(class, H5T_COMPOUND, "H5Tget_class");
     fields=H5Tget_nmembers(type);
     VERIFY(fields, 3, "H5Tget_nmembers");
     for(i=0; i<fields; i++) {
@@ -462,8 +463,8 @@ test_attr_compound_read(void)
     /* Verify each field's type, class & size */
     field=H5Tget_member_type(type,0);
     CHECK(field, FAIL, "H5Tget_member_type");
-    t_class=H5Tget_class(field);
-    VERIFY(t_class, H5T_INTEGER, "H5Tget_class");
+    class=H5Tget_class(field);
+    VERIFY(class, H5T_INTEGER, "H5Tget_class");
     order=H5Tget_order(field);
     VERIFY(order, H5Tget_order(H5T_NATIVE_INT), "H5Tget_order");
     size=H5Tget_size(field);
@@ -471,8 +472,8 @@ test_attr_compound_read(void)
     H5Tclose(field);
     field=H5Tget_member_type(type,1);
     CHECK(field, FAIL, "H5Tget_member_type");
-    t_class=H5Tget_class(field);
-    VERIFY(t_class, H5T_FLOAT, "H5Tget_class");
+    class=H5Tget_class(field);
+    VERIFY(class, H5T_FLOAT, "H5Tget_class");
     order=H5Tget_order(field);
     VERIFY(order, H5Tget_order(H5T_NATIVE_DOUBLE), "H5Tget_order");
     size=H5Tget_size(field);
@@ -480,8 +481,8 @@ test_attr_compound_read(void)
     H5Tclose(field);
     field=H5Tget_member_type(type,2);
     CHECK(field, FAIL, "H5Tget_member_type");
-    t_class=H5Tget_class(field);
-    VERIFY(t_class, H5T_INTEGER, "H5Tget_class");
+    class=H5Tget_class(field);
+    VERIFY(class, H5T_INTEGER, "H5Tget_class");
     order=H5Tget_order(field);
     VERIFY(order, H5Tget_order(H5T_NATIVE_SCHAR), "H5Tget_order");
     size=H5Tget_size(field);
@@ -775,7 +776,7 @@ test_attr_mult_read(void)
     char    temp_name[ATTR_NAME_LEN]; /* Buffer for mangling attribute names */
     int     rank;       /* Attribute rank */
     hsize_t dims[ATTR_MAX_DIMS];    /* Attribute dimensions */
-    H5T_class_t t_class;              /* Attribute datatype class */
+    H5T_class_t class;              /* Attribute datatype class */
     H5T_order_t order;              /* Attribute datatype order */
     size_t      size;               /* Attribute datatype size as stored in file */ 
     int   read_data1[ATTR1_DIM1]={0}; /* Buffer for reading 1st attribute */
@@ -819,8 +820,8 @@ test_attr_mult_read(void)
     /* Verify Datatype */
     type=H5Aget_type(attr);
     CHECK(type, FAIL, "H5Aget_type");
-    t_class=H5Tget_class(type);
-    VERIFY(t_class, H5T_INTEGER, "H5Tget_class");
+    class=H5Tget_class(type);
+    VERIFY(class, H5T_INTEGER, "H5Tget_class");
     order=H5Tget_order(type);
     VERIFY(order, H5Tget_order(H5T_NATIVE_INT), "H5Tget_order");
     size=H5Tget_size(type);
@@ -884,8 +885,8 @@ test_attr_mult_read(void)
     /* Verify Datatype */
     type=H5Aget_type(attr);
     CHECK(type, FAIL, "H5Aget_type");
-    t_class=H5Tget_class(type);
-    VERIFY(t_class, H5T_INTEGER, "H5Tget_class");
+    class=H5Tget_class(type);
+    VERIFY(class, H5T_INTEGER, "H5Tget_class");
     order=H5Tget_order(type);
     VERIFY(order, H5Tget_order(H5T_NATIVE_INT), "H5Tget_order");
     size=H5Tget_size(type);
@@ -954,8 +955,8 @@ test_attr_mult_read(void)
     /* Verify Datatype */
     type=H5Aget_type(attr);
     CHECK(type, FAIL, "H5Aget_type");
-    t_class=H5Tget_class(type);
-    VERIFY(t_class, H5T_FLOAT, "H5Tget_class");
+    class=H5Tget_class(type);
+    VERIFY(class, H5T_FLOAT, "H5Tget_class");
     order=H5Tget_order(type);
     VERIFY(order, H5Tget_order(H5T_NATIVE_DOUBLE), "H5Tget_order");
     size=H5Tget_size(type);

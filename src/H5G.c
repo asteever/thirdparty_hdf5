@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
- * Copyright (C) 1997-2001 National Center for Supercomputing Applications
- *			   All rights reserved.
+ * Copyright (C) 1997	National Center for Supercomputing Applications.
+ *			All rights reserved.
  *
  *-------------------------------------------------------------------------
  *
@@ -660,7 +660,7 @@ H5Gget_comment(hid_t loc_id, const char *name, size_t bufsize, char *buf)
 
     if ((retval=H5G_get_comment(loc, name, bufsize, buf))<0) {
 	HRETURN_ERROR(H5E_SYM, H5E_CANTINIT, FAIL,
-		      "unable to set comment value");
+		      "unable to get comment value");
     }
 
     FUNC_LEAVE(retval);
@@ -807,7 +807,8 @@ H5G_register_type(int type, htri_t(*isa)(H5G_entry_t*), const char *_desc)
 	    H5G_type_g[i].isa = isa;
 	    H5MM_xfree(H5G_type_g[i].desc);
 	    H5G_type_g[i].desc = desc;
-            HGOTO_DONE(SUCCEED);
+	    ret_value = SUCCEED;
+	    goto done;
 	}
     }
 
@@ -901,7 +902,7 @@ H5G_basename(const char *name, size_t *size_p)
     FUNC_ENTER(H5G_basename, NULL);
 
     /* Find the end of the base name */
-    i = HDstrlen(name);
+    i = strlen(name);
     while (i>0 && '/'==name[i-1]) --i;
 
     /* Skip backward over base name */
@@ -1764,6 +1765,15 @@ H5G_loc (hid_t loc_id)
 	}
 	break;
 
+    case H5I_TEMPLATE_0:
+    case H5I_TEMPLATE_1:
+    case H5I_TEMPLATE_2:
+    case H5I_TEMPLATE_3:
+    case H5I_TEMPLATE_4:
+    case H5I_TEMPLATE_5:
+    case H5I_TEMPLATE_6:
+    case H5I_TEMPLATE_7:
+    case H5I_TEMPLATE_MAX:
     case H5I_GENPROP_CLS:
     case H5I_GENPROP_LST:
 	HRETURN_ERROR(H5E_ARGS, H5E_BADVALUE, NULL,

@@ -11,20 +11,20 @@
 #define H5S_PACKAGE		/*suppress error about including H5Spkg	  */
 
 #include "H5private.h"
-#include "H5Dprivate.h"
 #include "H5Eprivate.h"
 #include "H5Iprivate.h"
 #include "H5MMprivate.h"
 #include "H5Spkg.h"
-#include "H5Tprivate.h"         /* Datatypes */
 #include "H5Vprivate.h"
+#include "H5Dprivate.h"
 
 /* Interface initialization */
 #define PABLO_MASK      H5Spoint_mask
 #define INTERFACE_INIT  NULL
 static int             interface_initialize_g = 0;
 
-static herr_t H5S_point_init (const H5S_t *space, size_t elmt_size, H5S_sel_iter_t *iter);
+static herr_t H5S_point_init (const struct H5O_layout_t *layout,
+			      const H5S_t *space, H5S_sel_iter_t *iter);
 static hsize_t H5S_point_favail (const H5S_t *space, const H5S_sel_iter_t *iter,
 				hsize_t max);
 static hsize_t H5S_point_fgath (H5F_t *f, const struct H5O_layout_t *layout,
@@ -49,6 +49,8 @@ static herr_t H5S_point_mscat (const void *_tconv_buf, size_t elmt_size,
 			       const H5S_t *mem_space,
 			       H5S_sel_iter_t *mem_iter, hsize_t nelmts,
 			       void *_buf/*out*/);
+static herr_t H5S_select_elements(H5S_t *space, H5S_seloper_t op,
+				   size_t num_elem, const hssize_t **coord);
 
 const H5S_fconv_t	H5S_POINT_FCONV[1] = {{
     "point", 				/*name				*/
@@ -84,11 +86,13 @@ const H5S_mconv_t	H5S_POINT_MCONV[1] = {{
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5S_point_init (const H5S_t *space, size_t UNUSED elmt_size, H5S_sel_iter_t *sel_iter)
+H5S_point_init (const struct H5O_layout_t UNUSED *layout,
+		const H5S_t *space, H5S_sel_iter_t *sel_iter)
 {
     FUNC_ENTER (H5S_point_init, FAIL);
 
     /* Check args */
+    assert (layout);
     assert (space && H5S_SEL_POINTS==space->select.type);
     assert (sel_iter);
 
@@ -126,7 +130,7 @@ H5S_point_init (const H5S_t *space, size_t UNUSED elmt_size, H5S_sel_iter_t *sel
 --------------------------------------------------------------------------*/
 herr_t H5S_point_add (H5S_t *space, H5S_seloper_t op, size_t num_elem, const hssize_t **_coord)
 {
-    H5S_pnt_node_t *top, *curr, *new_node; /* Point selection nodes */
+    H5S_pnt_node_t *top, *curr, *new; /* Point selection nodes */
     const hssize_t *coord=(const hssize_t *)_coord;     /* Pointer to the actual coordinates */
     unsigned i;                 /* Counter */
     herr_t ret_value=FAIL;  /* return value */
@@ -144,7 +148,7 @@ herr_t H5S_point_add (H5S_t *space, H5S_seloper_t op, size_t num_elem, const hss
     top=curr=NULL;
     for(i=0; i<num_elem; i++) {
         /* Allocate space for the new node */
-        if((new_node = H5MM_malloc(sizeof(H5S_pnt_node_t)))==NULL)
+        if((new = H5MM_malloc(sizeof(H5S_pnt_node_t)))==NULL)
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL,
                 "can't allocate point node");
 
@@ -152,7 +156,7 @@ herr_t H5S_point_add (H5S_t *space, H5S_seloper_t op, size_t num_elem, const hss
 	printf("%s: check 1.1, rank=%d\n",
 	       FUNC,(int)space->extent.u.simple.rank);
 #endif /* QAK */
-        if((new_node->pnt = H5MM_malloc(space->extent.u.simple.rank*sizeof(hssize_t)))==NULL)
+        if((new->pnt = H5MM_malloc(space->extent.u.simple.rank*sizeof(hssize_t)))==NULL)
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL,
                 "can't allocate coordinate information");
 #ifdef QAK
@@ -160,14 +164,14 @@ herr_t H5S_point_add (H5S_t *space, H5S_seloper_t op, size_t num_elem, const hss
 #endif /* QAK */
 
         /* Copy over the coordinates */
-        HDmemcpy(new_node->pnt,coord+(i*space->extent.u.simple.rank),(space->extent.u.simple.rank*sizeof(hssize_t)));
+        HDmemcpy(new->pnt,coord+(i*space->extent.u.simple.rank),(space->extent.u.simple.rank*sizeof(hssize_t)));
 #ifdef QAK
 	printf("%s: check 1.3\n",FUNC);
 	{
 	    int j;
 
 	    for(j=0; j<space->extent.u.simple.rank; j++) {
-		printf("%s: pnt[%d]=%d\n",FUNC,(int)j,(int)new_node->pnt[j]);
+		printf("%s: pnt[%d]=%d\n",FUNC,(int)j,(int)new->pnt[j]);
 		printf("%s: coord[%d][%d]=%d\n",
 		       FUNC, (int)i, (int)j,
 		       (int)*(coord+(i*space->extent.u.simple.rank)+j));
@@ -176,12 +180,12 @@ herr_t H5S_point_add (H5S_t *space, H5S_seloper_t op, size_t num_elem, const hss
 #endif /* QAK */
 
         /* Link into list */
-        new_node->next=NULL;
+        new->next=NULL;
         if(top==NULL)
-            top=new_node;
+            top=new;
         else
-            curr->next=new_node;
-        curr=new_node;
+            curr->next=new;
+        curr=new;
     } /* end for */
 #ifdef QAK
     printf("%s: check 2.0\n",FUNC);
@@ -195,19 +199,19 @@ herr_t H5S_point_add (H5S_t *space, H5S_seloper_t op, size_t num_elem, const hss
 
         /* Put new list in point selection */
         space->select.sel_info.pnt_lst->head=top;
-    } /* end if */
+    }
     else {  /* op==H5S_SELECT_APPEND */
-        new_node=space->select.sel_info.pnt_lst->head;
-        if(new_node!=NULL) {
-            while(new_node->next!=NULL)
-                new_node=new_node->next;
+        new=space->select.sel_info.pnt_lst->head;
+        if(new!=NULL) {
+            while(new->next!=NULL)
+                new=new->next;
 
             /* Append new list to point selection */
-            new_node->next=top;
+            new->next=top;
         } /* end if */
         else 
             space->select.sel_info.pnt_lst->head=top;
-    } /* end else */
+    }
 
     /* Add the number of elements in the new selection */
     space->select.num_elem+=num_elem;
@@ -236,7 +240,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static hsize_t
-H5S_point_favail (const H5S_t * UNUSED space,
+H5S_point_favail (const H5S_t UNUSED *space,
 		  const H5S_sel_iter_t *sel_iter, hsize_t max)
 {
     FUNC_ENTER (H5S_point_favail, 0);
@@ -730,7 +734,7 @@ H5S_point_npoints (const H5S_t *space)
 herr_t
 H5S_point_copy (H5S_t *dst, const H5S_t *src)
 {
-    H5S_pnt_node_t *curr, *new_node, *new_head;    /* Point information nodes */
+    H5S_pnt_node_t *curr, *new, *new_head;    /* Point information nodes */
     herr_t ret_value=SUCCEED;  /* return value */
 
     FUNC_ENTER (H5S_point_copy, FAIL);
@@ -750,30 +754,30 @@ H5S_point_copy (H5S_t *dst, const H5S_t *src)
     new_head=NULL;
     while(curr!=NULL) {
         /* Create each point */
-        if((new_node=H5MM_malloc(sizeof(H5S_pnt_node_t)))==NULL)
+        if((new=H5MM_malloc(sizeof(H5S_pnt_node_t)))==NULL)
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL,
                 "can't allocate point node");
-        if((new_node->pnt = H5MM_malloc(src->extent.u.simple.rank*sizeof(hssize_t)))==NULL)
+        if((new->pnt = H5MM_malloc(src->extent.u.simple.rank*sizeof(hssize_t)))==NULL)
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL,
                 "can't allocate coordinate information");
-        HDmemcpy(new_node->pnt,curr->pnt,(src->extent.u.simple.rank*sizeof(hssize_t)));
-        new_node->next=NULL;
+        HDmemcpy(new->pnt,curr->pnt,(src->extent.u.simple.rank*sizeof(hssize_t)));
+        new->next=NULL;
 
 #ifdef QAK
  printf("%s: check 5.0\n",FUNC);
     {
         int i;
         for(i=0; i<src->extent.u.simple.rank; i++)
-            printf("%s: check 5.1, new_node->pnt[%d]=%d\n",FUNC,i,(int)new_node->pnt[i]);
+            printf("%s: check 5.1, new->pnt[%d]=%d\n",FUNC,i,(int)new->pnt[i]);
     }
 #endif /* QAK */
 
         /* Keep the order the same when copying */
         if(new_head==NULL)
-            new_head=dst->select.sel_info.pnt_lst->head=new_node;
+            new_head=dst->select.sel_info.pnt_lst->head=new;
         else {
-            new_head->next=new_node;
-            new_head=new_node;
+            new_head->next=new;
+            new_head=new;
         } /* end else */
 
         curr=curr->next;
@@ -1157,7 +1161,7 @@ H5S_point_select_contiguous(const H5S_t *space)
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-herr_t H5S_select_elements (H5S_t *space, H5S_seloper_t op, size_t num_elem,
+static herr_t H5S_select_elements (H5S_t *space, H5S_seloper_t op, size_t num_elem,
     const hssize_t **coord)
 {
     herr_t ret_value=SUCCEED;  /* return value */
@@ -1315,7 +1319,6 @@ H5S_point_select_iterate(void *buf, hid_t type_id, H5S_t *space, H5D_operator_t 
     void *tmp_buf;              /* temporary location of the element in the buffer */
     H5S_pnt_node_t *node;   /* Point node */
     unsigned rank;             /* Dataspace rank */
-    H5T_t *dt;                  /* Datatype structure */
     herr_t ret_value=0;     /* return value */
 
     FUNC_ENTER (H5S_point_select_iterate, 0);
@@ -1330,11 +1333,7 @@ H5S_point_select_iterate(void *buf, hid_t type_id, H5S_t *space, H5D_operator_t 
 
     /* Set up the size of the memory space */
     HDmemcpy(mem_size, space->extent.u.simple.size, rank*sizeof(hsize_t));
-
-    /* Set the size of the datatype */
-    if (NULL==(dt=H5I_object(type_id)))
-        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not an valid base datatype");
-    mem_size[rank]=H5T_get_size(dt);
+    mem_size[rank]=H5Tget_size(type_id);
 
     /* Iterate through the node, checking the bounds on each element */
     node=space->select.sel_info.pnt_lst->head;

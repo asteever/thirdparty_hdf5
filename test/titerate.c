@@ -1,13 +1,13 @@
 /****************************************************************************
- * NCSA HDF								                                    *
- * Software Development Group						                        *
- * National Center for Supercomputing Applications			                *
- * University of Illinois at Urbana-Champaign				                *
- * 605 E. Springfield, Champaign IL 61820				                    *
- *									                                        *
- * For conditions of distribution and use, see the accompanying		        *
- * hdf/COPYING file.							                            *
- *									                                        *
+ * NCSA HDF								    *
+ * Software Development Group						    *
+ * National Center for Supercomputing Applications			    *
+ * University of Illinois at Urbana-Champaign				    *
+ * 605 E. Springfield, Champaign IL 61820				    *
+ *									    *
+ * For conditions of distribution and use, see the accompanying		    *
+ * hdf/COPYING file.							    *
+ *									    *
  ****************************************************************************/
 
 /* $Id$ */
@@ -24,7 +24,7 @@
 
 #include "hdf5.h"
 
-#define DATAFILE   "titerate.h5"
+#define FILE_NAME   "titerate.h5"
 
 /* Number of datasets for group iteration test */
 #define NDATASETS 50
@@ -43,17 +43,11 @@
 #define SPACE1_RANK	1
 #define SPACE1_DIM1	4
 
-typedef enum {
-    RET_ZERO,
-    RET_ONE,
-    RET_CHANGE
-} iter_enum;
-
 /* Custom group iteration callback data */
 typedef struct {
     char name[NAMELEN];     /* The name of the object */
     int type;               /* The type of the object */
-    iter_enum command;      /* The type of return value */
+    enum {RET_ZERO, RET_ONE, RET_CHANGE} command;   /* The type of return value */
 } iter_info;
 
 /* Local functions */
@@ -70,7 +64,7 @@ herr_t aiter_cb(hid_t loc_id, const char *name, void *op_data);
 ****************************************************************/
 int iter_strcmp(const void *s1, const void *s2)
 {
-    return(strcmp(*(const char * const *)s1,*(const char * const *)s2));
+    return(strcmp(*(const char **)s1,*(const char **)s2));
 }
 
 /****************************************************************
@@ -124,7 +118,7 @@ static void test_iter_group(void)
     MESSAGE(5, ("Testing Group Iteration Functionality\n"));
 
     /* Create the test file with the datasets */
-    file = H5Fcreate(DATAFILE, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    file = H5Fcreate(FILE_NAME, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
     CHECK(file, FAIL, "H5Fcreate");
 
     datatype = H5Tcopy(H5T_NATIVE_INT);
@@ -160,7 +154,7 @@ static void test_iter_group(void)
     qsort(dnames,NDATASETS,sizeof(char *),iter_strcmp);
 
     /* Iterate through the datasets in the root group in various ways */
-    file=H5Fopen(DATAFILE, H5F_ACC_RDONLY, H5P_DEFAULT);
+    file=H5Fopen(FILE_NAME, H5F_ACC_RDONLY, H5P_DEFAULT);
     CHECK(file, FAIL, "H5Fopen");
 
     /* Test all objects in group, when callback always returns 0 */
@@ -268,7 +262,7 @@ static void test_iter_attr(void)
     MESSAGE(5, ("Testing Attribute Iteration Functionality\n"));
 
     /* Create the test file with the datasets */
-    file = H5Fcreate(DATAFILE, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    file = H5Fcreate(FILE_NAME, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
     CHECK(file, FAIL, "H5Fcreate");
 
     datatype = H5Tcopy(H5T_NATIVE_INT);
@@ -307,7 +301,7 @@ static void test_iter_attr(void)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Iterate through the attributes on the dataset in various ways */
-    file=H5Fopen(DATAFILE, H5F_ACC_RDONLY, H5P_DEFAULT);
+    file=H5Fopen(FILE_NAME, H5F_ACC_RDONLY, H5P_DEFAULT);
     CHECK(file, FAIL, "H5Fopen");
 
     dataset=H5Dopen(file, "Dataset");
@@ -444,7 +438,7 @@ static void test_iter_group_large(void)
     MESSAGE(5, ("Testing Large Group Iteration Functionality\n"));
 
     /* Create file */
-    file = H5Fcreate(DATAFILE, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    file = H5Fcreate(FILE_NAME, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
     CHECK(file, FAIL, "H5Fcreate");
 
     /* Create dataspace for datasets */
@@ -561,6 +555,6 @@ test_iterate(void)
 void
 cleanup_iterate(void)
 {
-    remove(DATAFILE);
+    remove(FILE_NAME);
 }
 

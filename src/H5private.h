@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 1998-2001 NCSA
- *		           All rights reserved.
+ * Copyright (C) 1998 NCSA
+ *		 All rights reserved.
  *
  * Programmer:	Robb Matzke <matzke@llnl.gov>
  *		Friday, October 30, 1998
@@ -15,7 +15,6 @@
 #define _H5private_H
 
 #include "H5public.h"		/* Include Public Definitions		*/
-
 /*
  * Since H5config.h is a generated header file, it is messy to try
  * to put a #ifndef _H5config_H ... #endif guard in it.
@@ -26,7 +25,7 @@
  */
 #include "H5config.h"		/* Include all configuration info	*/
 
-/* include the pthread header */
+/* include the pthread library */
 #ifdef H5_HAVE_THREADSAFE
 #include <pthread.h>
 #endif
@@ -135,6 +134,7 @@
 #   include <io.h>
 #endif
 
+
 #ifdef WIN32
 
 #define VC_EXTRALEAN		/*Exclude rarely-used stuff from Windows headers */
@@ -143,6 +143,7 @@
 /*
 inline is now in C but in the C99 standard and not the old C89 version so
 MS doesn't recognize it yet (as of April 2001)
+Move H5_inline into windows version of H5pubconf.h; avoid duplicating warnings.
 */
 /*
 #if defined(__MWERKS__) || defined(__cplusplus)
@@ -175,6 +176,7 @@ MS doesn't recognize it yet (as of April 2001)
 #   include "HDFIOTrace.h"
 #   include "ProcIDs.h"
 #endif
+
 
 /*
  * NT doesn't define SIGBUS, but since NT only runs on processors             
@@ -445,22 +447,6 @@ MS doesn't recognize it yet (as of April 2001)
 #endif /* NDEBUG */
 
 /*
- * A macro for detecting over/under-flow when assigning between types
- */
-#ifndef NDEBUG
-#define H5_ASSIGN_OVERFLOW(var,expr,vartype,casttype)   \
-{                                                       \
-    vartype _tmp_overflow=(vartype)(expr);              \
-    casttype _tmp_overflow2=(casttype)(_tmp_overflow);  \
-    assert((casttype)_tmp_overflow==_tmp_overflow2);    \
-    (var)=_tmp_overflow2;                               \
-}
-#else /* NDEBUG */
-#define H5_ASSIGN_OVERFLOW(var,expr,vartype,casttype)   \
-    (var)=(casttype)(expr);
-#endif /* NDEBUG */
-
-/*
  * Data types and functions for timing certain parts of the library.
  */
 typedef struct {
@@ -493,7 +479,6 @@ __DLL__ void H5_bandwidth(char *buf/*out*/, double nbytes, double nseconds);
 #define HDatof(S)		atof(S)
 #define HDatoi(S)		atoi(S)
 #define HDatol(S)		atol(S)
-#define HDBSDgettimeofday(S,P)	BSDgettimeofday(S,P)
 #define HDbsearch(K,B,N,Z,F)	bsearch(K,B,N,Z,F)
 #define HDcalloc(N,Z)		calloc(N,Z)
 #define HDceil(X)		ceil(X)
@@ -532,9 +517,9 @@ __DLL__ void H5_bandwidth(char *buf/*out*/, double nbytes, double nseconds);
 #if defined __MWERKS__
 #include <abort_exit.h>
 #define HD_exit(N)		__exit(N)
-#else /* __MWERKS __ */
+#else
 #define HD_exit(N)		_exit(N)
-#endif /* __MWERKS __ */
+#endif
 #define HDexp(X)		exp(X)
 #define HDfabs(X)		fabs(X)
 #define HDfclose(F)		fclose(F)
@@ -581,9 +566,7 @@ __DLL__ int HDfprintf (FILE *stream, const char *fmt, ...);
 #define HDgetppid()		getppid()
 #define HDgetpwnam(S)		getpwnam(S)
 #define HDgetpwuid(U)		getpwuid(U)
-#define HDgetrusage(X,S)	getrusage(X,S)
 #define HDgets(S)		gets(S)
-#define HDgettimeofday(S,P)	gettimeofday(S,P)
 #define HDgetuid()		getuid()
 #define HDgmtime(T)		gmtime(T)
 #define HDisalnum(C)		isalnum((int)(C)) /*cast for solaris warning*/
@@ -624,9 +607,9 @@ __DLL__ int HDfprintf (FILE *stream, const char *fmt, ...);
 #define HDmemset(X,C,Z)		memset(X,C,Z)
 #ifdef WIN32
 #define HDmkdir(S,M)		_mkdir(S)
-#else /* WIN32 */
-#define HDmkdir(S,M)		mkdir(S,M)
-#endif /* WIN32 */
+#else
+#define HDmkdir(S,M)            mkdir(S,M)
+#endif
 #define HDmkfifo(S,M)		mkfifo(S,M)
 #define HDmktime(T)		mktime(T)
 #define HDmodf(X,Y)		modf(X,Y)
@@ -681,11 +664,7 @@ __DLL__ int HDfprintf (FILE *stream, const char *fmt, ...);
 #define HDsinh(X)		sinh(X)
 #define HDsleep(N)		sleep(N)
 #ifdef H5_HAVE_SNPRINTF
-#ifdef __WATCOMC__
-#   define HDsnprintf		_snprintf /*varargs*/
-#else /* __WATCOMC__ */
 #   define HDsnprintf		snprintf /*varargs*/
-#endif /* __WATCOMC__ */
 #endif
 /* sprintf() variable arguments */
 #define HDsqrt(X)		sqrt(X)
@@ -753,6 +732,7 @@ __DLL__ int64_t HDstrtoll (const char *s, const char **rest, int base);
 #define HDwcstombs(S,P,Z)	wcstombs(S,P,Z)
 #define HDwctomb(S,C)		wctomb(S,C)
 
+
 #if defined (__MWERKS__)
 /* workaround for a bug in the Metrowerks header file for write
  which is not defined as const void*
@@ -767,13 +747,13 @@ __DLL__ int64_t HDstrtoll (const char *s, const char **rest, int base);
  * And now for a couple non-Posix functions...  Watch out for systems that
  * define these in terms of macros.
  */
-#ifdef WIN32
+#if defined (__MWERKS__)
 #define HDstrdup(S)    _strdup(S)
-#else /* WIN32 */
+#else
 
 #if !defined strdup && !defined H5_HAVE_STRDUP 
 extern char *strdup(const char *s);
-#endif
+#endif  /* !strdup && !H5_HAVE_STRDUP */
 
 #define HDstrdup(S)     strdup(S)
 
@@ -941,8 +921,7 @@ __DLL__ void H5_trace(hbool_t returning, const char *func, const char *type,
  *-------------------------------------------------------------------------
  */
 
-/* `S' is the name of a function which is being tested to check if its */
-/*      an API function */
+/* Is `S' the name of an API function? */
 #define H5_IS_API(S) ('_'!=S[2] && '_'!=S[3] && (!S[4] || '_'!=S[4]))
 
 /* global library version information string */
@@ -956,29 +935,23 @@ extern char	H5_lib_vers_info_g[];
 
 /* replacement structure for original global variable */
 typedef struct H5_api_struct {
-    H5TS_mutex_t init_lock;  /* API entrance mutex */
-    hbool_t H5_libinit_g;    /* Has the library been initialized? */
+  H5TS_mutex_t init_lock;           /* API entrance mutex */
+  hbool_t H5_libinit_g;
 } H5_api_t;
-
-/* Macros for accessing the global variables */
-#define H5_INIT_GLOBAL H5_g.H5_libinit_g
 
 /* Macro for first thread initialization */
 #define H5_FIRST_THREAD_INIT                                                  \
-   pthread_once(&H5TS_first_init_g, H5TS_first_thread_init)
+   pthread_once(&H5TS_first_init_g, H5TS_first_thread_init);
 
 /* Macros for threadsafe HDF-5 Phase I locks */
-#define H5_LOCK_API_MUTEX                                                     \
-     H5TS_mutex_lock(&H5_g.init_lock)
+#define H5_INIT_GLOBAL H5_g.H5_libinit_g
 #define H5_API_LOCK_BEGIN                                                     \
    if (H5_IS_API(FUNC)) {                                                     \
-     H5_LOCK_API_MUTEX;
+     H5TS_mutex_lock(&H5_g.init_lock);
 #define H5_API_LOCK_END }
-#define H5_UNLOCK_API_MUTEX                                                   \
-     H5TS_mutex_unlock(&H5_g.init_lock)
 #define H5_API_UNLOCK_BEGIN                                                   \
   if (H5_IS_API(FUNC)) {                                                      \
-    H5_UNLOCK_API_MUTEX;
+    H5TS_mutex_unlock(&H5_g.init_lock);
 #define H5_API_UNLOCK_END }
 
 /* Macros for thread cancellation-safe mechanism */
@@ -994,16 +967,16 @@ typedef struct H5_api_struct {
 
 extern H5_api_t H5_g;
 
-#else /* H5_HAVE_THREADSAFE */
+#else
 
 /* disable any first thread init mechanism */
 #define H5_FIRST_THREAD_INIT
 
+#define H5_INIT_GLOBAL H5_libinit_g
+
 /* disable locks (sequential version) */
-#define H5_LOCK_API_MUTEX
 #define H5_API_LOCK_BEGIN
 #define H5_API_LOCK_END
-#define H5_UNLOCK_API_MUTEX
 #define H5_API_UNLOCK_BEGIN
 #define H5_API_UNLOCK_END
 
@@ -1012,12 +985,9 @@ extern H5_api_t H5_g;
 #define H5_API_SET_CANCEL
 
 /* extern global variables */
-extern hbool_t H5_libinit_g;    /* Has the library been initialized? */
 
-/* Macros for accessing the global variables */
-#define H5_INIT_GLOBAL H5_libinit_g
-
-#endif /* H5_HAVE_THREADSAFE */
+extern hbool_t H5_libinit_g;   /*good thing C's lazy about extern! */
+#endif
 
 #define FUNC_ENTER(func_name,err) FUNC_ENTER_INIT(func_name,INTERFACE_INIT,err)
 
@@ -1029,31 +999,29 @@ extern hbool_t H5_libinit_g;    /* Has the library been initialized? */
    PABLO_TRACE_ON (PABLO_MASK, pablo_func_id);				      \
 									      \
    /* Initialize the library */						      \
-   H5_FIRST_THREAD_INIT;                                                      \
+   H5_FIRST_THREAD_INIT                                                       \
    H5_API_UNSET_CANCEL                                                        \
    H5_API_LOCK_BEGIN                                                          \
-                                                                              \
-   /* Initialize the library */           				      \
-   if (!(H5_INIT_GLOBAL)) {                                                   \
+     if (!(H5_INIT_GLOBAL)) {                                                 \
        H5_INIT_GLOBAL = TRUE;                                                 \
        if (H5_init_library()<0) {					      \
-          HRETURN_ERROR (H5E_FUNC, H5E_CANTINIT, err,			      \
-            "library initialization failed");		                      \
+      HRETURN_ERROR (H5E_FUNC, H5E_CANTINIT, err,			      \
+            "library initialization failed");		      \
        }								      \
-   }									      \
+     }									      \
    H5_API_LOCK_END                                                            \
-                                                                              \
+                                                \
    /* Initialize this interface or bust */				      \
    if (!interface_initialize_g) {					      \
       interface_initialize_g = 1;					      \
       if (interface_init_func &&					      \
-              ((herr_t(*)(void))interface_init_func)()<0) {		      \
+      ((herr_t(*)(void))interface_init_func)()<0) {			      \
          interface_initialize_g = 0;					      \
-         HRETURN_ERROR (H5E_FUNC, H5E_CANTINIT, err,			      \
-            "interface initialization failed");		                      \
+     HRETURN_ERROR (H5E_FUNC, H5E_CANTINIT, err,			      \
+            "interface initialization failed");		      \
       }									      \
    }									      \
-                                                                              \
+                                            \
    /* Clear thread error stack entering public functions */		      \
    if (H5_IS_API(FUNC) && H5E_clearable_g) {				      \
        H5E_clear ();							      \
@@ -1107,6 +1075,5 @@ __DLL__ int H5S_term_interface(void);
 __DLL__ int H5TN_term_interface(void);
 __DLL__ int H5T_term_interface(void);
 __DLL__ int H5Z_term_interface(void);
-
 
 #endif

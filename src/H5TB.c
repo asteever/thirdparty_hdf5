@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2000-2001 NCSA
- *		           All rights reserved.
+ * Copyright (C) 2000 NCSA
+ *		      All rights reserved.
  *
  * Programmer: Quincey Koziol <koziol@ncsa.uiuc.edu>
  *	       Saturday, April 22, 2000
@@ -58,14 +58,14 @@
 
 /* $Id$ */
 
-#include "H5private.h"		/*library		  */
-#include "H5Eprivate.h"		/*error handling	  */
-#include "H5MMprivate.h"	/*Core memory management	  */
-#include "H5FLprivate.h"	/*Free Lists	  */
-#include "H5TBprivate.h"    /*Threaded, balanced, binary trees	  */
+#include "H5private.h"		/*library                                 */
+#include "H5Eprivate.h"		/*error handling                          */
+#include "H5MMprivate.h"	/*core memory management                  */
+#include "H5FLprivate.h"	/*free lists                              */
+#include "H5TBprivate.h"        /*threaded, balanced, binary trees	  */
 
-# define   KEYcmp(k1,k2,a) ((NULL!=compar) ? (*compar)( k1, k2, a) \
-                 : HDmemcmp( k1, k2, 0<(a) ? ((size_t)a) : HDstrlen(k1) )  )
+#define KEYcmp(k1,k2,a) ((NULL!=compar) ? (*compar)( k1, k2, a) \
+                 : HDmemcmp( k1, k2, 0<(a) ? (a) : HDstrlen(k1) )  )
 
 /* Return maximum of two scalar values (use arguments w/o side effects): */
 #define   Max(a,b)  ( (a) > (b) ? (a) : (b) )
@@ -1154,15 +1154,13 @@ H5TB_ffind(H5TB_NODE * root, void * key, unsigned fast_compare, H5TB_NODE ** pp)
     H5TB_NODE  *parent = NULL;
     int        side;
     int        cmp = 1;
-    haddr_t    cmp_addr = 1;
-    H5TB_NODE  *ret_value = NULL;
 
     FUNC_ENTER (H5TB_ffind, NULL);
 
     switch(fast_compare) {
         case H5TB_FAST_HADDR_COMPARE:
             if (ptr) {
-                while (0 != (cmp_addr = (*(haddr_t *)key - *(haddr_t *)ptr->key))) {
+                while (0 != (cmp = (*(haddr_t *)key - *(haddr_t *)ptr->key))) {
                       parent = ptr;
                       side = (cmp < 0) ? LEFT : RIGHT;
                       if (!HasChild(ptr, side))
@@ -1172,9 +1170,6 @@ H5TB_ffind(H5TB_NODE * root, void * key, unsigned fast_compare, H5TB_NODE ** pp)
               } /* end if */
             if (NULL != pp)
                 *pp = parent;
-
-            /* Set return value */
-            ret_value= (0 == cmp_addr) ? ptr : NULL;
             break;
 
         case H5TB_FAST_INTN_COMPARE:
@@ -1189,16 +1184,13 @@ H5TB_ffind(H5TB_NODE * root, void * key, unsigned fast_compare, H5TB_NODE ** pp)
               } /* end if */
             if (NULL != pp)
                 *pp = parent;
-
-            /* Set return value */
-            ret_value= (0 == cmp) ? ptr : NULL;
             break;
 
         default:
             break;
     } /* end switch */
 
-    FUNC_LEAVE(ret_value);
+    FUNC_LEAVE((0 == cmp) ? ptr : NULL);
 } /* H5TB_ffind() */
 
 /* swapkid -- Often refered to as "rotating" nodes.  ptr and ptr's `side'

@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 1999-2001 NCSA
- *                         All rights reserved.
+ * Copyright <A9> 1999 NCSA
+ *                  All rights reserved.
  *
  * Programmer: Raymond Lu <slu@ncsa.uiuc.edu>
  *             Wednesday, April 12, 2000
@@ -10,49 +10,23 @@
 #include "H5private.h"		/*library functions			*/
 #include "H5Eprivate.h"		/*error handling			*/
 #include "H5Fprivate.h"		/*files					*/
-#include "H5FDprivate.h"	/*file driver				  */
-#include "H5FDsrb.h"            /* Core file driver                     */
-#include "H5Iprivate.h"		/*object IDs				  */
-#include "H5MMprivate.h"        /* Memory allocation                    */
+#include "H5FDprivate.h"	/*file driver			        */
+#include "H5FDsrb.h"            /*core file driver                      */
+#include "H5MMprivate.h"        /*memory allocation                     */
 #include "H5Pprivate.h"		/*property lists			*/
-
 
 /* The driver identification number, initialized at runtime */
 static hid_t H5FD_SRB_g = 0;
 
 #ifdef H5_HAVE_SRB
 
-
-/*
- * This driver supports systems that have the lseek64() function by defining
- * some macros here so we don't have to have conditional compilations later
- * throughout the code.
- *
- * file_offset_t:	The datatype for file offsets, the second argument of
- *			the lseek() or lseek64() call.
- *
- * file_seek:		The function which adjusts the current file position,
- *			either lseek() or lseek64().
- */
-/* adding for windows NT file system support. */
-/* pvn: added __MWERKS__ support. */
-
 #ifdef H5_HAVE_LSEEK64
 #   define file_offset_t	off64_t
 #   define file_seek		lseek64
-#elif defined (WIN32)
-#   ifdef __MWERKS__
-#       define file_offset_t off_t
-#       define file_seek lseek
-#   else /*MSVC*/
-#       define file_offset_t __int64
-#       define file_seek _lseeki64
-#   endif
 #else
 #   define file_offset_t	off_t
 #   define file_seek		lseek
 #endif
-
 
 /*
  * These macros check for overflow of various quantities.  These macros
@@ -87,9 +61,9 @@ static haddr_t H5FD_srb_get_eoa(H5FD_t *_file);
 static herr_t  H5FD_srb_set_eoa(H5FD_t *_file, haddr_t addr);
 static haddr_t H5FD_srb_get_eof(H5FD_t *_file);
 static herr_t  H5FD_srb_read(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, haddr_t addr,
-			     size_t size, void *buf);
+			     hsize_t size, void *buf);
 static herr_t  H5FD_srb_write(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, haddr_t addr,
-			      size_t size, const void *buf);
+			      hsize_t size, const void *buf);
 static herr_t  H5FD_srb_flush(H5FD_t *_file);
 
 /* The description of a file belonging to this driver. */ 
@@ -184,39 +158,33 @@ H5FD_srb_init(void)
  *
  * Programmer:  Raymond Lu
  *              April 12, 2000
- *
  * Modifications:
- *
- *		Raymond Lu, 2001-10-25
- *		Use the new generic property list for argument checking.
- *	
  *-------------------------------------------------------------------------
  */
 herr_t
 H5Pset_fapl_srb(hid_t fapl_id, SRB_Info info)
 {
+    herr_t ret_value = FAIL;
     H5FD_srb_fapl_t fa;
     int srb_status;   
-    H5P_genplist_t *plist;      /* Property list pointer */
-    herr_t ret_value = FAIL;
 
     FUNC_ENTER(H5Pset_fapl_srb, FAIL);
 
-    if(TRUE!=H5P_isa_class(fapl_id,H5P_FILE_ACCESS) || NULL == (plist = H5I_object(fapl_id)))
-        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list");
+    if(H5P_FILE_ACCESS != H5Pget_class(fapl_id))
+        HRETURN_ERROR(H5E_PLIST, H5E_BADTYPE, FAIL, "Not a fapl");
 
     /*connect to SRB server */
     fa.srb_conn = clConnect(info.srbHost, info.srbPort, info.srbAuth);
     if((srb_status = clStatus(fa.srb_conn)) != CLI_CONNECTION_OK) {
         fprintf(stderr,"%s",clErrorMessage(fa.srb_conn));
         clFinish(fa.srb_conn);
-
         /*not sure about first 2 parameters. */
-        HRETURN_ERROR(H5E_PLIST, H5E_BADTYPE, FAIL, "Connection to srbMaster failed."); 
+        HRETURN_ERROR(H5E_PLIST, H5E_BADTYPE, FAIL, 
+                      "Connection to srbMaster failed."); 
     }
 
     fa.info = info;
-    ret_value = H5P_set_driver(plist, H5FD_SRB, &fa);
+    ret_value = H5Pset_driver(fapl_id, H5FD_SRB, &fa);
  
     FUNC_LEAVE(ret_value);
 }
@@ -229,32 +197,24 @@ H5Pset_fapl_srb(hid_t fapl_id, SRB_Info info)
  * 
  * Return:      Success:        File INFO is returned.
  *              Failure:        Negative
- *
  * Programmer:  Raymond Lu
  *              April 12, 2000
- *
  * Modifications:
- *
- *		Raymond Lu, 2001-10-25
- *		Use the new generic property list for checking property list
- *		ID.
- *	
  *-------------------------------------------------------------------------
  */
 herr_t
 H5Pget_fapl_srb(hid_t fapl_id, SRB_Info *info/*out*/)
 {
-    H5P_genplist_t *plist;      /* Property list pointer */
     H5FD_srb_fapl_t *fa;
 
     FUNC_ENTER(H5Pget_fapl_srb, FAIL);
     H5TRACE2("e","ix",fapl_id,info);
 
-    if(TRUE!=H5P_isa_class(fapl_id,H5P_FILE_ACCESS) || NULL == (plist = H5I_object(fapl_id)))
-        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list");
-    if(H5FD_SRB != H5P_get_driver(plist))
+    if(H5P_FILE_ACCESS != H5Pget_class(fapl_id))
+        HRETURN_ERROR(H5E_PLIST, H5E_BADTYPE, FAIL, "not a fapl");
+    if(H5FD_SRB != H5P_get_driver(fapl_id))
         HRETURN_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "incorrect VFL driver");
-    if(NULL==(fa=H5P_get_driver_info(plist)))
+    if(NULL==(fa=H5Pget_driver_info(fapl_id)))
         HRETURN_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "bad VFL driver info");
 
     if(info)
@@ -290,7 +250,6 @@ H5FD_srb_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr)
     H5FD_srb_fapl_t       _fa;
     H5FD_srb_t            *file;
     int srb_fid;
-    H5P_genplist_t *plist;      /* Property list pointer */
 
     FUNC_ENTER(H5FD_srb_open, FAIL);
 
@@ -302,14 +261,12 @@ H5FD_srb_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr)
     if (ADDR_OVERFLOW(maxaddr))
         HRETURN_ERROR(H5E_ARGS, H5E_BADRANGE, NULL, "bogus maxaddr");
 
-    if(TRUE!=H5P_isa_class(fapl_id,H5P_FILE_ACCESS) || NULL == (plist = H5I_object(fapl_id)))
-        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list");
-    if(H5P_DEFAULT==fapl_id || H5FD_SRB!=H5P_get_driver(plist)) {
+    if(H5P_DEFAULT==fapl_id || H5FD_SRB!=H5P_get_driver(fapl_id)) {
         memset((void*)&_fa, 0, sizeof(H5FD_srb_fapl_t));        
         fa = &_fa;
     }
     else {
-        fa = H5P_get_driver_info(plist);
+        fa = H5Pget_driver_info(fapl_id);
         assert(fa);
     }
 
@@ -531,7 +488,7 @@ H5FD_srb_get_eof(H5FD_t *_file)
  */
 static herr_t
 H5FD_srb_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, haddr_t addr, 
-              size_t size, void *buf)
+              hsize_t size, void *buf)
 {
     H5FD_srb_t *file = (H5FD_srb_t*)_file;
     ssize_t    nbytes;
@@ -560,7 +517,7 @@ H5FD_srb_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, haddr
      */
     while(size>0) {
         if((nbytes=srbFileRead(file->srb_conn, (int)file->fd, (char*)buf,
-                             size))<0) {
+                             (int)size))<0) {
             file->pos = HADDR_UNDEF;
             srbFileClose(file->srb_conn, file->fd);
             clFinish(file->srb_conn);    
@@ -570,10 +527,10 @@ H5FD_srb_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, haddr
 
         if (0==nbytes) {
             /*end of file but not end of format address space*/
-            HDmemset(buf, 0, size);
+            memset(buf, 0, size);
             size = 0;
         }
-        size -= nbytes;
+        size -= (hsize_t)nbytes;
         addr += (haddr_t)nbytes;
         buf = (char*)buf + nbytes;
     }
@@ -601,7 +558,7 @@ H5FD_srb_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, haddr
  */
 static herr_t
 H5FD_srb_write(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, haddr_t addr, 
-               size_t size, const void *buf)
+               hsize_t size, const void *buf)
 {
     H5FD_srb_t *file = (H5FD_srb_t*)_file;
     ssize_t    nbytes;
@@ -626,7 +583,7 @@ H5FD_srb_write(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, hadd
 
     while(size>0) {
         if( (nbytes=srbFileWrite(file->srb_conn, (int)file->fd, (char*)buf, 
-                                size)) < 0 ) {
+                                (int)size)) < 0 ) {
             file->pos = HADDR_UNDEF;
             srbObjClose(file->srb_conn, file->fd);
             clFinish(file->srb_conn);    
@@ -634,7 +591,7 @@ H5FD_srb_write(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, hadd
                           "srb file write failed");
         }
       
-        size -= nbytes; 
+        size -= (hsize_t)nbytes; 
         addr += (haddr_t)nbytes;
         buf  =  (const char*)buf + nbytes;
     }

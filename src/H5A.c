@@ -26,7 +26,7 @@
 #include "H5MMprivate.h"	/* Memory management			*/
 #include "H5Pprivate.h"		/* Property lists			*/
 #include "H5Oprivate.h"     	/* Object Headers       		*/
-#include "H5Spkg.h"		    /* Data-space functions			  */
+#include "H5Spkg.h"             /* Data-space functions                 */
 #include "H5Apkg.h"		/* Attributes				*/
 
 #define PABLO_MASK	H5A_mask
@@ -150,7 +150,7 @@ H5A_term_interface(void)
 --------------------------------------------------------------------------*/
 hid_t
 H5Acreate(hid_t loc_id, const char *name, hid_t type_id, hid_t space_id,
-	  hid_t UNUSED plist_id)
+	  hid_t plist_id)
 {
     H5G_entry_t    	*ent = NULL;
     H5T_t		*type = NULL;
@@ -179,6 +179,12 @@ H5Acreate(hid_t loc_id, const char *name, hid_t type_id, hid_t space_id,
     if (H5I_DATASPACE != H5I_get_type(space_id) ||
 	NULL == (space = H5I_object(space_id))) {
 	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space");
+    }
+    if (H5P_DEFAULT!=plist_id &&
+	(H5P_DATASET_CREATE != H5P_get_class(plist_id) ||
+	 NULL == H5I_object(plist_id))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a dataset creation property list");
     }
 
     /* Go do the real work for attaching the attribute to the dataset */
@@ -247,11 +253,12 @@ H5A_create(const H5G_entry_t *ent, const char *name, const H5T_t *type,
     /* Compute the internal sizes */
     attr->dt_size=(H5O_DTYPE[0].raw_size)(attr->ent.file,type);
     attr->ds_size=(H5O_SDSPACE[0].raw_size)(attr->ent.file,&(space->extent.u.simple));
-    H5_ASSIGN_OVERFLOW(attr->data_size,H5S_get_simple_extent_npoints(attr->ds)*H5T_get_size(attr->dt),hssize_t,size_t);
+    attr->data_size=H5S_get_simple_extent_npoints(attr->ds)*H5T_get_size(attr->dt);
 
     /* Hold the symbol table entry (and file) open */
-    if (H5O_open(&(attr->ent)) < 0)
+    if (H5O_open(&(attr->ent)) < 0) {
         HGOTO_ERROR(H5E_ATTR, H5E_CANTOPENOBJ, FAIL, "unable to open");
+    }
     attr->ent_opened=1;
 
     /* Read in the existing attributes to check for duplicates */
@@ -502,8 +509,10 @@ H5A_open(H5G_entry_t *ent, unsigned idx)
 
     /* Read in attribute with H5O_read() */
     H5_CHECK_OVERFLOW(idx,unsigned,int);
-    if (NULL==(attr=H5O_read(ent, H5O_ATTR, (int)idx, attr)))
-        HGOTO_ERROR(H5E_ATTR, H5E_CANTINIT, FAIL, "unable to load attribute info from dataset header");
+    if (NULL==(attr=H5O_read(ent, H5O_ATTR, (int)idx, attr))) {
+        HGOTO_ERROR(H5E_ATTR, H5E_CANTINIT, FAIL,
+		    "unable to load attribute info from dataset header");
+    }
     attr->initialized=1;
 
     /* Copy the symbol table entry */
@@ -538,8 +547,8 @@ done:
  USAGE
     herr_t H5Awrite (attr_id, type_id, buf)
         hid_t attr_id;       IN: Attribute to write
-        hid_t type_id;       IN: Memory datatype of buffer
-        const void *buf;     IN: Buffer of data to write
+        hid_t type_id;        IN: Memory datatype of buffer
+        void *buf;           IN: Buffer of data to write
  RETURNS
     Non-negative on success/Negative on failure
  
@@ -590,7 +599,7 @@ H5Awrite(hid_t attr_id, hid_t type_id, const void *buf)
     herr_t H5A_write (attr, mem_type, buf)
         H5A_t *attr;         IN: Attribute to write
         const H5T_t *mem_type;     IN: Memory datatype of buffer
-        const void *buf;           IN: Buffer of data to write
+        void *buf;           IN: Buffer of data to write
  RETURNS
     Non-negative on success/Negative on failure
  
@@ -609,7 +618,7 @@ H5A_write(H5A_t *attr, const H5T_t *mem_type, const void *buf)
     hid_t		src_id = -1, dst_id = -1;/* temporary type atoms */
     size_t		src_type_size;		/* size of source type	*/
     size_t		dst_type_size;		/* size of destination type*/
-    size_t		buf_size;		/* desired buffer size	*/
+    hsize_t		buf_size;		/* desired buffer size	*/
     int         idx;	      /* index of attribute in object header */
     herr_t		ret_value = FAIL;
 
@@ -627,22 +636,31 @@ H5A_write(H5A_t *attr, const H5T_t *mem_type, const void *buf)
     dst_type_size = H5T_get_size(attr->dt);
 
     /* Get the maximum buffer size needed and allocate it */
-    H5_ASSIGN_OVERFLOW(buf_size,nelmts*MAX(src_type_size,dst_type_size),hsize_t,size_t);
-    if (NULL==(tconv_buf = H5MM_malloc (buf_size)) || NULL==(bkg_buf = H5MM_calloc(buf_size)))
-        HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed");
+    buf_size = nelmts*MAX(src_type_size,dst_type_size);
+    assert(buf_size==(hsize_t)((size_t)buf_size)); /*check for overflow*/
+    if (NULL==(tconv_buf = H5MM_malloc ((size_t)buf_size)) ||
+            NULL==(bkg_buf = H5MM_calloc((size_t)buf_size))) {
+        HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL,
+		     "memory allocation failed");
+    }
 
     /* Copy the user's data into the buffer for conversion */
-    H5_CHECK_OVERFLOW((src_type_size*nelmts),hsize_t,size_t);
+    assert((src_type_size*nelmts)==(hsize_t)((size_t)(src_type_size*nelmts))); /*check for overflow*/
     HDmemcpy(tconv_buf,buf,(size_t)(src_type_size*nelmts));
 
     /* Convert memory buffer into disk buffer */
     /* Set up type conversion function */
     if (NULL == (tpath = H5T_path_find(mem_type, attr->dt, NULL, NULL))) {
-        HGOTO_ERROR(H5E_ATTR, H5E_UNSUPPORTED, FAIL, "unable to convert between src and dest data types");
+        HGOTO_ERROR(H5E_ATTR, H5E_UNSUPPORTED, FAIL,
+		    "unable to convert between src and dest data types");
     } else if (!H5T_IS_NOOP(tpath)) {
-        if ((src_id = H5I_register(H5I_DATATYPE, H5T_copy(mem_type, H5T_COPY_ALL)))<0 ||
-                (dst_id = H5I_register(H5I_DATATYPE, H5T_copy(attr->dt, H5T_COPY_ALL)))<0)
-            HGOTO_ERROR(H5E_ATTR, H5E_CANTREGISTER, FAIL, "unable to register types for conversion");
+        if ((src_id = H5I_register(H5I_DATATYPE,
+				   H5T_copy(mem_type, H5T_COPY_ALL)))<0 ||
+	    (dst_id = H5I_register(H5I_DATATYPE,
+				   H5T_copy(attr->dt, H5T_COPY_ALL)))<0) {
+            HGOTO_ERROR(H5E_ATTR, H5E_CANTREGISTER, FAIL,
+			"unable to register types for conversion");
+        }
     }
 
     /* Perform data type conversion */
@@ -763,7 +781,7 @@ H5A_read(H5A_t *attr, const H5T_t *mem_type, void *buf)
     hid_t		src_id = -1, dst_id = -1;/* temporary type atoms*/
     size_t		src_type_size;		/* size of source type 	*/
     size_t		dst_type_size;		/* size of destination type */
-    size_t		buf_size;		/* desired buffer size	*/
+    hsize_t		buf_size;		/* desired buffer size	*/
     herr_t		ret_value = FAIL;
 
     FUNC_ENTER(H5A_read, FAIL);
@@ -780,33 +798,45 @@ H5A_read(H5A_t *attr, const H5T_t *mem_type, void *buf)
     dst_type_size = H5T_get_size(mem_type);
 
     /* Check if the attribute has any data yet, if not, fill with zeroes */
-    H5_CHECK_OVERFLOW((dst_type_size*nelmts),hsize_t,size_t);
+    assert((dst_type_size*nelmts)==(hsize_t)((size_t)(dst_type_size*nelmts))); /*check for overflow*/
     if(attr->ent_opened && !attr->initialized) {
         HDmemset(buf,0,(size_t)(dst_type_size*nelmts));
     }   /* end if */
     else {  /* Attribute exists and has a value */
         /* Get the maximum buffer size needed and allocate it */
-        H5_ASSIGN_OVERFLOW(buf_size,(nelmts*MAX(src_type_size,dst_type_size)),hsize_t,size_t);
-        if (NULL==(tconv_buf = H5MM_malloc (buf_size)) || NULL==(bkg_buf = H5MM_calloc(buf_size)))
-            HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed");
+        buf_size = nelmts*MAX(src_type_size,dst_type_size);
+        assert(buf_size==(hsize_t)((size_t)buf_size)); /*check for overflow*/
+        if (NULL==(tconv_buf = H5MM_malloc ((size_t)buf_size)) ||
+                NULL==(bkg_buf = H5MM_calloc((size_t)buf_size))) {
+            HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL,
+                 "memory allocation failed");
+        }
 
         /* Copy the attribute data into the buffer for conversion */
-        H5_CHECK_OVERFLOW((src_type_size*nelmts),hsize_t,size_t);
+        assert((src_type_size*nelmts)==(hsize_t)((size_t)(src_type_size*nelmts))); /*check for overflow*/
         HDmemcpy(tconv_buf,attr->data,(size_t)(src_type_size*nelmts));
 
         /* Convert memory buffer into disk buffer */
         /* Set up type conversion function */
         if (NULL == (tpath = H5T_path_find(attr->dt, mem_type, NULL, NULL))) {
-            HGOTO_ERROR(H5E_ATTR, H5E_UNSUPPORTED, FAIL, "unable to convert between src and dest data types");
+            HGOTO_ERROR(H5E_ATTR, H5E_UNSUPPORTED, FAIL,
+                "unable to convert between src and dest data types");
         } else if (!H5T_IS_NOOP(tpath)) {
-            if ((src_id = H5I_register(H5I_DATATYPE, H5T_copy(attr->dt, H5T_COPY_ALL)))<0 ||
-                    (dst_id = H5I_register(H5I_DATATYPE, H5T_copy(mem_type, H5T_COPY_ALL)))<0)
-                HGOTO_ERROR(H5E_ATTR, H5E_CANTREGISTER, FAIL, "unable to register types for conversion");
+            if ((src_id = H5I_register(H5I_DATATYPE,
+                       H5T_copy(attr->dt, H5T_COPY_ALL)))<0 ||
+                    (dst_id = H5I_register(H5I_DATATYPE,
+                       H5T_copy(mem_type, H5T_COPY_ALL)))<0) {
+                HGOTO_ERROR(H5E_ATTR, H5E_CANTREGISTER, FAIL,
+                "unable to register types for conversion");
+            }
         }
 
         /* Perform data type conversion.  */
-        if (H5T_convert(tpath, src_id, dst_id, nelmts, 0, 0, tconv_buf, bkg_buf, H5P_DEFAULT)<0)
-            HGOTO_ERROR(H5E_ATTR, H5E_CANTENCODE, FAIL, "data type conversion failed");
+        if (H5T_convert(tpath, src_id, dst_id, nelmts, 0, 0, tconv_buf, bkg_buf,
+                        H5P_DEFAULT)<0) {
+            HGOTO_ERROR(H5E_ATTR, H5E_CANTENCODE, FAIL,
+                "data type conversion failed");
+        }
 
         /* Copy the converted data into the user's buffer */
         HDmemcpy(buf,tconv_buf,(size_t)(dst_type_size*nelmts));

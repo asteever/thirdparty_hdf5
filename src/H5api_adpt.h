@@ -20,7 +20,7 @@
 #define __DLLVAR__ extern
 #endif /* _HDF5DLL_ */
 
-// Added to export or to import C++ APIs - BMR (02-15-2002)
+// Added to export or to import C++ APIs - BMR (01-29-2002)
 #if defined(HDF5_CPPDLL_EXPORTS) // this name is generated at creation
 #define __DLLCPP__ __declspec(dllexport)
 #elif defined(HDF5CPP_USEDLL)

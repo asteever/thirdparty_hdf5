@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 1997-2001 NCSA
- *                         All rights reserved.
+ * Copyright (C) 1997 NCSA
+ *                    All rights reserved.
  *
  * Programmer:  Quincey Koziol
  *              Monday, Apr 20

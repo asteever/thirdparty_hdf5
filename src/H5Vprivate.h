@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 1997-2001 NCSA
- *                         All rights reserved.
+ * Copyright (C) 1997 NCSA
+ *                    All rights reserved.
  *
  * Programmer: Robb Matzke <matzke@llnl.gov>
  *             Friday, October 10, 1997
@@ -95,10 +95,10 @@ __DLL__ hsize_t H5V_array_offset(unsigned n, const hsize_t *total_size,
  *
  *-------------------------------------------------------------------------
  */
-static H5_inline hsize_t 
+static H5_inline hsize_t UNUSED
 H5V_vector_reduce_product(unsigned n, const hsize_t *v)
 {
-    hsize_t                  ans = 1;
+    size_t                  ans = 1;
 
     if (n && !v) return 0;
     while (n--) ans *= *v++;

@@ -138,7 +138,9 @@ main(int argc, char *argv[])
     int                     Summary = 0;
     int                     CleanUp = 1;
     int                     Cache = 1;
-    unsigned                major, minor, release;
+    unsigned                   major, minor, release;
+
+
 
 #if !(defined MAC || defined __MWERKS__ || defined SYMANTEC_C)
     /* Un-buffer the stdout and stderr */

@@ -33,18 +33,18 @@
 ./bin/locate_hdf4
 ./bin/ltconfig
 ./bin/ltmain.sh
-./bin/mkdirs
 ./bin/release
 ./bin/runtest				_DO_NOT_DISTRIBUTE_
 ./bin/snapshot
 ./bin/trace
 
 ./config/BlankForm
+./config/alphaev67-linux-gnu
 ./config/commence.in
 ./config/conclude.in
 ./config/dec-flags
 ./config/dec-osf4.x
-./config/dec-osf5.x
+./config/dec-osf5.1
 ./config/depend1.in
 ./config/depend2.in
 ./config/depend3.in
@@ -270,6 +270,8 @@
 ./doc/html/Tutor/software.html
 ./doc/html/Tutor/title.html
 ./doc/html/Tutor/util.html
+./doc/html/Tutor/property.html
+./doc/html/Tutor/software.html
 
 ./doc/html/Tutor/Graphics/AddInfo.gif
 ./doc/html/Tutor/Graphics/AdvTopics.gif
@@ -334,8 +336,10 @@
 ./doc/html/Tutor/examples/h5_mount.c
 ./doc/html/Tutor/examples/h5_rdwt.c
 ./doc/html/Tutor/examples/h5_read.c
+./doc/html/Tutor/examples/h5_ref2obj.c
 ./doc/html/Tutor/examples/h5_ref2objr.c
 ./doc/html/Tutor/examples/h5_ref2objw.c
+./doc/html/Tutor/examples/h5_ref2reg.c
 ./doc/html/Tutor/examples/h5_ref2regr.c
 ./doc/html/Tutor/examples/h5_ref2regw.c
 ./doc/html/Tutor/examples/h5_reference.c
@@ -346,6 +350,10 @@
 ./doc/html/Tutor/examples/rwdsetexample.f90
 ./doc/html/Tutor/examples/selectele.f90
 
+./doc/html/Tutor/examples/java/Dependencies
+./doc/html/Tutor/examples/java/Makefile.in
+./doc/html/Tutor/examples/java/Makefile.in.txt
+./doc/html/Tutor/examples/java/Makefile.txt
 ./doc/html/Tutor/examples/java/Compound.java
 ./doc/html/Tutor/examples/java/Copy.java
 ./doc/html/Tutor/examples/java/CreateAttribute.java
@@ -356,10 +364,7 @@
 ./doc/html/Tutor/examples/java/CreateGroupAR.java
 ./doc/html/Tutor/examples/java/CreateGroupDataset.java
 ./doc/html/Tutor/examples/java/DatasetRdWt.java
-./doc/html/Tutor/examples/java/Dependencies
 ./doc/html/Tutor/examples/java/HyperSlab.java
-./doc/html/Tutor/examples/java/Makefile.in
-./doc/html/Tutor/examples/java/Makefile
 ./doc/html/Tutor/examples/java/README
 ./doc/html/Tutor/examples/java/readme.html
 ./doc/html/Tutor/examples/java/runCompound.sh
@@ -475,7 +480,6 @@
 ./examples/h5_reference.c
 ./examples/ph5example.c
 
-
 #------------------------------------------------------------------------------
 #
 # Begin Fortran interface
@@ -491,11 +495,12 @@
 ./fortran/configure.in
 
 ./fortran/config/BlankForm
+./fortran/config/alphaev67-linux-gnu
 ./fortran/config/commence.in
 ./fortran/config/conclude.in
 ./fortran/config/dec-flags
 ./fortran/config/dec-osf4.x
-./fortran/config/dec-osf5.x
+./fortran/config/dec-osf5.1
 ./fortran/config/depend
 ./fortran/config/depend1.in
 ./fortran/config/depend2.in
@@ -514,8 +519,6 @@
 ./fortran/config/linux-gnu
 ./fortran/config/linux-gnulibc1
 ./fortran/config/linux-gnulibc2
-./fortran/config/powerpc-ibm-aix4.2.1.0
-./fortran/config/powerpc-ibm-aix4.3.2.0
 ./fortran/config/powerpc-ibm-aix4.x
 ./fortran/config/rs6000-ibm-aix4.x
 ./fortran/config/solaris2.x
@@ -638,7 +641,6 @@
 ./c++/config/linux-gnulibc2
 ./c++/config/rs6000-ibm-aix4.x
 ./c++/config/solaris2.x
-./c++/config/irix6.x
 
 ./c++/examples/Dependencies
 ./c++/examples/Attributes.h5
@@ -718,8 +720,8 @@
 
 ./c++/test/Dependencies
 ./c++/test/Makefile.in
-./c++/test/dsets.cpp
 ./c++/test/testhdf5.cpp
+./c++/test/dsets.cpp
 ./c++/test/tfile.cpp
 ./c++/test/th5s.cpp
 ./c++/test/th5s.h5
@@ -736,7 +738,6 @@
 ./pablo/HDFrecord_RT.h
 ./pablo/Makefile.in
 ./pablo/PabloHDF.c
-./pablo/PabloHDF_MPIO.c
 ./pablo/PabloHDF_RT.c
 ./pablo/PabloHDF_SDDF.c
 ./pablo/PabloHDFff.f
@@ -745,8 +746,8 @@
 ./pablo/ProcTrace.h
 ./pablo/READ_ME
 
-./perform/Dependencies
 ./perform/Makefile.in
+./perform/Dependencies
 ./perform/chunk.c
 ./perform/iopipe.c
 ./perform/mpi-perf.c
@@ -763,6 +764,8 @@
 ./release_docs/INSTALL_VFL
 ./release_docs/INSTALL_parallel
 ./release_docs/INSTALL_Windows.txt
+./release_docs/INSTALL_Windows_withcpp.txt
+./release_docs/INSTALL_Windows_withF90.txt
 ./release_docs/INSTALL_codewarrior.txt
 ./release_docs/HISTORY.txt
 ./release_docs/RELEASE.txt
@@ -858,7 +861,6 @@
 ./src/H5Oshared.c
 ./src/H5Ostab.c
 ./src/H5P.c
-./src/H5Ppkg.h
 ./src/H5Pprivate.h
 ./src/H5Ppublic.h
 ./src/H5R.c
@@ -928,7 +930,6 @@
 ./test/space_overflow.c			_DO_NOT_DISTRIBUTE_
 ./test/gen_old_array.c			_DO_NOT_DISTRIBUTE_
 ./test/gen_new_array.c			_DO_NOT_DISTRIBUTE_
-./test/set_extend.c
 ./test/srb_append.c
 ./test/srb_read.c
 ./test/srb_write.c
@@ -986,7 +987,6 @@
 ./tools/gifconv/readhdf.c
 ./tools/gifconv/writehdf.c
 
-
 ./tools/h4toh5/Dependencies
 ./tools/h4toh5/Makefile.in
 ./tools/h4toh5/h4toh5anno.c
@@ -996,7 +996,6 @@
 ./tools/h4toh5/h4toh5pal.c
 ./tools/h4toh5/h4toh5sds.c
 ./tools/h4toh5/h4toh5test.c
-./tools/h4toh5/h4toh5user.h
 ./tools/h4toh5/h4toh5util.c
 ./tools/h4toh5/h4toh5util.h
 ./tools/h4toh5/h4toh5vdata.c
@@ -1034,17 +1033,15 @@
 
 ./tools/misc/Dependencies
 ./tools/misc/Makefile.in
+./tools/misc/h5cc.in
 ./tools/misc/h5debug.c
 ./tools/misc/h5import.c
 ./tools/misc/h5repart.c
 ./tools/misc/pdb2hdf.c
-./tools/misc/h5cc.in
 
 ./tools/testfiles/tall-1.ddl
 ./tools/testfiles/tall-2.ddl
 ./tools/testfiles/tall-3.ddl
-./tools/testfiles/tall-4s.ddl
-./tools/testfiles/tall-5s.ddl
 ./tools/testfiles/tall.h5
 ./tools/testfiles/tarray1.ddl
 ./tools/testfiles/tarray1.h5
@@ -1076,9 +1073,7 @@
 ./tools/testfiles/tdatareg.ddl 
 ./tools/testfiles/tdset-1.ddl
 ./tools/testfiles/tdset-2.ddl
-./tools/testfiles/tdset-3s.ddl
 ./tools/testfiles/tdset.h5
-./tools/testfiles/tdset2-1s.ddl
 ./tools/testfiles/tdset2.h5
 ./tools/testfiles/tempty.ddl
 ./tools/testfiles/tempty.h5
@@ -1125,7 +1120,7 @@
 ./tools/testfiles/tvldtypes4.ddl
 ./tools/testfiles/tvldtypes4.h5
 
-#new hdf4 files for testing converter
+# new hdf4 files for testing h4toh5 converter
 ./tools/testfiles/anno_test.hdf
 ./tools/testfiles/gr_typ_test.hdf
 ./tools/testfiles/grnameclash_test.hdf
@@ -1252,6 +1247,5 @@
 ./tools/testfiles/tvldtypes3.h5.xml
 
 ./windows/all.zip
-./windows/all_lang.zip
 ./windows/all_withf90.zip
 ./windows/all_withhdf4.zip

@@ -11,7 +11,7 @@
 namespace H5 {
 #endif
 
-class __DLLCPP__ PredType : public AtomType {
+class  __DLLCPP__ PredType : public AtomType {
    public:
 	// Default destructor
 	virtual ~PredType();

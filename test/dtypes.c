@@ -215,7 +215,7 @@ generates_sigfpe(void)
 	for (i=0; i<2000; i++) {
 	    for (j=0; j<sizeof(double); j++) dp[j] = rand();
 	    f = (float)d;
-	    some_dummy_func((float)f);
+	    some_dummy_func(f);
 	}
 	exit(0);
     }
@@ -926,23 +926,17 @@ test_compound_6(void)
     /* Build hdf5 datatypes */
     if ((st=H5Tcreate(H5T_COMPOUND, sizeof(struct st)))<0 ||
             H5Tinsert(st, "b", HOFFSET(struct st, b), H5T_NATIVE_SHORT)<0 ||
-            H5Tinsert(st, "d", HOFFSET(struct st, d), H5T_NATIVE_SHORT)<0) {
-        H5_FAILED();
+            H5Tinsert(st, "d", HOFFSET(struct st, d), H5T_NATIVE_SHORT)<0)
         goto error;
-    }
     
     if ((dt=H5Tcreate(H5T_COMPOUND, sizeof(struct dt)))<0 ||
             H5Tinsert(dt, "b", HOFFSET(struct dt, b), H5T_NATIVE_LONG)<0 ||
-            H5Tinsert(dt, "d", HOFFSET(struct dt, d), H5T_NATIVE_LONG)<0) {
-        H5_FAILED();
+            H5Tinsert(dt, "d", HOFFSET(struct dt, d), H5T_NATIVE_LONG)<0)
         goto error;
-    }
     
     /* Perform the conversion */
-    if (H5Tconvert(st, dt, (hsize_t)nelmts, buf, bkg, H5P_DEFAULT)<0) {
-        H5_FAILED();
+    if (H5Tconvert(st, dt, (hsize_t)nelmts, buf, bkg, H5P_DEFAULT)<0)
         goto error;
-    }
 
     /* Compare results */
     for (i=0; i<nelmts; i++) {
@@ -964,10 +958,7 @@ test_compound_6(void)
     free(buf);
     free(bkg);
     free(orig);
-    if (H5Tclose(st)<0 || H5Tclose(dt)<0) {
-        H5_FAILED();
-        goto error;
-    }
+    if (H5Tclose(st)<0 || H5Tclose(dt)<0) goto error;
 
     PASSED();
     reset_hdf5();
@@ -1288,7 +1279,7 @@ test_named (hid_t fapl)
     /* It should be possible to define an attribute for the named type */
     if ((attr1=H5Acreate (type, "attr1", H5T_NATIVE_UCHAR, space,
 			  H5P_DEFAULT))<0) goto error;
-    for (i=0; i<ds_size[0]*ds_size[1]; i++) attr_data[0][i] = (int)i;/*tricky*/
+    for (i=0; i<ds_size[0]*ds_size[1]; i++) attr_data[0][i] = i;/*tricky*/
     if (H5Awrite(attr1, H5T_NATIVE_UINT, attr_data)<0) goto error;
     if (H5Aclose (attr1)<0) goto error;
 
@@ -3010,12 +3001,12 @@ test_conv_int_1(const char *name, hid_t src, hid_t dst)
 		break;
 	    case INT_LLONG:
 		memcpy(aligned, saved+j*sizeof(long_long), sizeof(long_long));
-		HDfprintf(stdout," %29"PRINTF_LL_WIDTH"d\n", *((long_long*)aligned));
+		printf(" %29"PRINTF_LL_WIDTH"d\n", *((long_long*)aligned));
 		break;
 	    case INT_ULLONG:
 		memcpy(aligned, saved+j*sizeof(long_long),
 		       sizeof(unsigned long_long));
-		HDfprintf(stdout," %29"PRINTF_LL_WIDTH"u\n",
+		printf(" %29"PRINTF_LL_WIDTH"u\n",
 		       *((unsigned long_long*)aligned));
 		break;
 	    case INT_OTHER:
@@ -3063,12 +3054,12 @@ test_conv_int_1(const char *name, hid_t src, hid_t dst)
 		break;
 	    case INT_LLONG:
 		memcpy(aligned, buf+j*sizeof(long_long), sizeof(long_long));
-		HDfprintf(stdout," %29"PRINTF_LL_WIDTH"d\n", *((long_long*)aligned));
+		printf(" %29"PRINTF_LL_WIDTH"d\n", *((long_long*)aligned));
 		break;
 	    case INT_ULLONG:
 		memcpy(aligned, buf+j*sizeof(long_long),
 		       sizeof(unsigned long_long));
-		HDfprintf(stdout," %29"PRINTF_LL_WIDTH"u\n",
+		printf(" %29"PRINTF_LL_WIDTH"u\n",
 		       *((unsigned long_long*)aligned));
 		break;
 	    case INT_OTHER:
@@ -3107,10 +3098,10 @@ test_conv_int_1(const char *name, hid_t src, hid_t dst)
 		printf(" %29lu\n", *((unsigned long*)hw));
 		break;
 	    case INT_LLONG:
-		HDfprintf(stdout," %29"PRINTF_LL_WIDTH"d\n", *((long_long*)hw));
+		printf(" %29"PRINTF_LL_WIDTH"d\n", *((long_long*)hw));
 		break;
 	    case INT_ULLONG:
-		HDfprintf(stdout," %29"PRINTF_LL_WIDTH"u\n", *((unsigned long_long*)hw));
+		printf(" %29"PRINTF_LL_WIDTH"u\n", *((unsigned long_long*)hw));
 		break;
 	    case INT_OTHER:
 		break;
@@ -3345,9 +3336,7 @@ test_conv_flt_1 (const char *name, hid_t src, hid_t dst)
      * The remainder of this function is executed only by the child if
      * HANDLE_SIGFPE is defined.
      */
-#ifndef __WATCOMC__
     signal(SIGFPE,fpe_handler);
-#endif
 
     /* What are the names of the source and destination types */
     if (H5Tequal(src, H5T_NATIVE_FLOAT)) {
@@ -3489,7 +3478,7 @@ test_conv_flt_1 (const char *name, hid_t src, hid_t dst)
 	    } else if (FLT_DOUBLE==src_type) {
 		memcpy(aligned, saved+j*sizeof(double), sizeof(double));
 		if (FLT_FLOAT==dst_type) {
-		    hw_f = (float)(*((double*)aligned));
+		    hw_f = *((double*)aligned);
 		    hw = (unsigned char*)&hw_f;
 		} else if (FLT_DOUBLE==dst_type) {
 		    hw_d = *((double*)aligned);
@@ -3613,7 +3602,7 @@ test_conv_flt_1 (const char *name, hid_t src, hid_t dst)
 	    } else {
 		long double x;
 		memcpy(&x, (long double*)saved+j, sizeof(long double));
-		HDfprintf(stdout," %29.20Le\n", x);
+		printf(" %29.20Le\n", x);
 #endif
 	    }
 
@@ -3635,7 +3624,7 @@ test_conv_flt_1 (const char *name, hid_t src, hid_t dst)
 	    } else {
 		long double x;
 		memcpy(&x, (long double*)buf+j, sizeof(long double));
-		HDfprintf(stdout," %29.20Le\n", x);
+		printf(" %29.20Le\n", x);
 #endif
 	    }
 
@@ -3651,7 +3640,7 @@ test_conv_flt_1 (const char *name, hid_t src, hid_t dst)
 		printf(" %29.20e\n", hw_d);
 #if SIZEOF_LONG_DOUBLE!=SIZEOF_DOUBLE
 	    } else {
-		HDfprintf(stdout," %29.20Le\n", hw_ld);
+		printf(" %29.20Le\n", hw_ld);
 #endif
 	    }
 

@@ -1,12 +1,12 @@
-HDF5 version 1.5.21 currently under development
-================================================================================
+HDF5 version 1.4.3-snap12 currently under development
+==============================================================================
 
 
 INTRODUCTION
 
-This document describes the differences between HDF5-1.4.0 and
-HDF5-1.5-snap0, and contains information on the platforms tested and
-known problems in HDF5-1.5-snap0. For more details check the HISTORY.txt
+This document describes the differences between HDF5-1.4.2 and
+HDF5-1.4.3, and contains information on the platforms tested and
+known problems in HDF5-1.4.2. For more details check the HISTORY.txt
 file in the HDF5 source.
 
 The HDF5 documentation can be found on the NCSA ftp server
@@ -22,57 +22,87 @@ If you have any questions or comments, please send them to:
 
     hdfhelp@ncsa.uiuc.edu
 
+
 CONTENTS
 
 - New Features
-- Bug Fixes since HDF5-1.4.0
+- Bug Fixes since HDF5-1.4.2
+- Documentation
 - Platforms Tested
+- Supported Configuration Features
 - Known Problems
 
-Bug Fixes since HDF5-1.4.2
-==========================
 
-Library
--------
+New Features
+============
+  o Configuration
+  ================
+    * Can use just enable-threadsafe if the C compiler has built-in pthreads
+      support.
 
-    * Fixed bug with contiguous hyperslabs not being detected, causing
-      slower I/O than necessary.
-    * Fixed bug where non-aligned hyperslab I/O on chunked datasets was
-      causing errors during I/O
-    * The RCSID string in H5public.h was causing the C++ compiling problem
-      because when it was included multiple times, C++ did not like multiple
-      definitions of the same static variable.  All occurance of RCSID
-      definition are removed since we have not used it consistently before.
-    * Fixed bug with non-zero userblock sizes causing raw data to not write
-      correctly. 
-    * Fixed build on Linux systems with --enable-static-exec flag. It now
-      works correctly.
-    * IMPORTANT: Fixed file metadata corruption bug which could cause metadata
-      data loss in certain situations.
-    * The allocation by alignment (H5Pset_alignment) feature code somehow
-      got dropped in some 1.3.x version. Re-implemented it with "new and
-      improved" algorithm.  It keeps track of "wasted" file-fragment in
-      the free-list too.
-    * Removed limitation that the data transfer buffer size needed to be
-      set for datasets whose dimensions were too large for the 'all' selection
-      code to handle.  Any size dimensioned datasets should be handled
-      correctly now.
-    * Changed behavior of H5Tget_member_type to correctly emulate HDF5 v1.2.x
-      when --enable-hdf5v1_2 configure flag is enabled.
-    * Tweaked a few API functions to use 'size_t' instead of 'unsigned' or
-      'hsize_t', which may cause errors in some cases.
-    * Fixed a bug of H5pubconf.h causing repeated definitions if it is included
-      more than once.  hdf5.h now includes H5public.h which includes
-      H5pubconf.h.  Applications should #include hdf5.h which handles multiple
-      inclusion correctly.
-    * Fixed H5FDmpio.h to be C++ friendly by making Parallel HDF5 API's to be
-      external to C++.
-    * Fixed a bug in H5FD_mpio_flush() that might result in negative file seek
-      if both MPIO and Split-file drivers are used together.
-    * Added new parallel hdf5 tests in t_mpi.  The new test checks if the
-      filesystem or the MPI-IO can really handle greater than 2GB files.
-      If it fails, it prints information message only without failing the
-      test.
+  o Library
+  =========
+   o General
+   --------- 
+    * Added a new test to verify the information provided by the configure
+      command.
+    * Changed internal error handling macros to reduce code size of library by
+      about 10%.
+
+   o APIs
+   ------
+    * Changed prototype for H5Awrite from:
+        H5Awrite(hid_t attr_id, hid_t type_id, void *buf)
+      to:
+        H5Awrite(hid_t attr_id, hid_t type_id, const void *buf)
+    * The H5Pset_fapl_split() accepts raw and meta file names similar to the
+      syntax of H5Pset_fapl_multi() in addition to what it used to accept.
+
+    C++ API:
+    * Added operator= to class PredType
+    * Add the overloaded member function Attribute::getName to return
+      the attribute name's length as in C API.  Note that the current
+      Attribute::getName, that returns "string", is still available.
+    * Following the change in the C library, the corresponding C++ API
+      is changed from:
+        void Attribute::write( const DataType& mem_type, void *buf )
+      to:
+        void Attribute::write( const DataType& mem_type, const void *buf )
+
+   o Performance
+   -------------
+    * Added perform programs to test the HDF5 library performance.  Programs
+      are installed in directory perform/.
+    * Improved performance of byte-swapping during data conversions.
+    * Improved performance of single, contiguous hyperslabs when reading or
+      writing.
+    * Added support to read/write portions of chunks directly, if they are
+      uncompressed and too large to cache.  This should speed up I/O on chunked
+      datasets for a few more cases.  -QAK, 1/31/02
+
+  o Parallel Library
+  ==================
+    * Parallel C HDF5 now works on HP-UX platforms, Compaq clusters,
+      Linux clusters, Cplants (alpha-linux clusters).
+
+  o Tools
+  =======
+    * A helper script called ``h5cc'', which helps compilation of HDF5
+      programs, is now distributed with HDF5. See the reference manual
+      for information on how to use this feature.
+    * The H5Dumper can now dump comments associated with groups. -WCW 01-05-02
+
+  o Support for new platforms and languages
+  =========================================
+    * HDF5 C++ Library is supported on Windows platforms.
+    * HDF5 F90 shared library is supported on Windows platforms.
+    * HDF5 C Library is supported on IA32 and IA64 platforms.
+
+
+
+Bug Fixes since HDF5-1.4.2 Release
+==================================
+
     * Fixed a bug when reading chunked datasets where the edge of the dataset
       would be incorrectly detected and generate an assertion failure.
     * Fixed a bug where reading an entire dataset wasn't being handled
@@ -110,239 +140,200 @@ Library
       certain chunked datasets when using an "all" or contiguous hyperslab
       selection.  QAK - 2/14/02
 
-Configuration
--------------
-
-    * Changed the default value of $NPROCS from 2 to 3 since 3 processes
-      have a much bigger chance catching parallel errors than just 2.
-    * Basic port to Compaq (nee DEC) Alpha OSF 5.
-    * Added --enable-linux-lfs flag to allow more control over whether to enable
-      or disable large file support on Linux.
-    * Require HDF (a.k.a. hdf4) software that consists of a newer version
-      of zlib library which consists of the compress2() function. Versions
-      HDF version 4.1r3 and newer meets this requirement.  The compress2
-      uses a newer compression algorithm used by the HDF5 library.  Also,
-      4.1r3 has an hdp tool that can handle "loops" in Vgroups.
-    * Can use just enable-threadsafe if the C compiler has builtin pthreads
-      support.
-
-
-Tools
------
-
-    * Fixed segfault when "-v" flag was used with the h5dumper.
-    * Fixed so that the "-i" flag works correctly with the h5dumper.
-
 
 Documentation
--------------
-
-
-New Features
-============
-
-    * A helper script called ``h5cc'', which helps compilation of HDF5
-      programs, is now distributed with HDF5. See the reference manual
-      for information on how to use this feature.
-    * C++ API:
-        - Added two new member functions: Exception::getFuncName() and
-          Exception::getCFuncName() to provide the name of the member
-          function, where an exception is thrown.
-        - IdComponent::operator= becomes a virtual function because
-          DataType, DataSpace, and PropList provide their own
-          implementation.  The new operator= functions invoke H5Tcopy,
-          H5Scopy, and H5Pcopy to make a copy of a datatype, dataspace,
-          and property list, respectively.
-    * F90 API:
-        - Added aditional parameter "dims" to the h5dread/h5dwrite and
-          h5aread/h5awrite subroutines. This parameter is 1D array of size
-          7 and contains the sizes of the data buffer dimensions. 
-    * F90 static library is available on Windows platforms. See
-      INSTALL_Windows.txt for details.
-    * F90 APIs are available on HPUX 11.00 and IBM SP platforms.
-    * File sizes greater than 2GB are now supported on Linux systems with
-      version 2.4.x or higher kernels.
-    * Added a global string variable H5_lib_vers_info_g which holds the
-      HDF5 library version information.  This can be used to identify
-      an hdf5 library or hdf5 application binary.
-      Also added a verification of the consistency between H5_lib_vers_info_g
-      and other version information in the source code.
-    * H5 <-> GIF convertor has been added. This is available under 
-      tools/gifconv. The convertor supports the ability to create animated
-      gifs as well.
-    * Parallel HDF5 now runs on the HP V2500 and HP N4000 machines.
-    * Verified correct operation of library on Solaris 2.8 in both 64-bit and
-      32-bit compilation modes.  See INSTALL document for instructions on
-      compiling the distribution with 64-bit support.
-    * Modified the Pablo build procedure to permit building of the instrumented
-      library to link either with the Trace libraries as before or with the
-      Pablo Performance Caputure Facility.
-    * Improved regular hyperslab I/O by about a factor of 6 or so.
-    * Added two simple parallel performance tests as mpi-perf.c (MPI
-      performance) and perf.c (PHDF5 performance) in testpar.
-    * Added a parallel HDF5 example examples/ph5example.c to illustrate
-      the basic way of using parallel HDF5.
-    * Added a new public macro, H5_VERS_INFO, which is a string holding
-      the HDF5 library version information.  This string is also compiled
-      into all HDF5 binary code which helps to identify the version
-      information of the binary code.  One may use the Unix strings
-      command on the binary file and looks for the pattern "HDF5 library
-      version".
-    * Added new checking in H5check_version() to verify the five HDF5 version
-      information macros (H5_VERS_MAJOR, H5_VERS_MINOR, H5_VERS_RELEASE,
-      H5_VERS_SUBRELEASE and H5_VERS_INFO) are consistent.
-    * Added perform programs to test the HDF5 library performance.  Programs
-      are installed in directory perform/.
-    * The H5Pset_fapl_split() accepts raw and meta file names similar to the
-      syntax of H5Pset_fapl_multi() in addition to what it used to accept.
-    * Added a new test to verify the information provided by the configure
-      command.
-    * As part of the transition to using generic properties everywhere, the
-      parameter of H5Pcreate changed from H5P_class_t to hid_t, as well
-      the return type of H5Pget_class changed from H5P_class_t to hid_t.
-      Further changes are still necessary and will be documented here as they
-      are made.
-    * Improved performance of single, contiguous hyperslabs when reading or
-      writing.
-    * Improved performance of non-contiguous hyperslabs (built up with
-      several hyperslab selection calls).
-    * Removed H5P(get|set)_hyper_cache API function, since the property is no
-      longer used.
-    * Added a new file access property, file close degree, to control file 
-      close behavior.  It has four values, H5F_CLOSE_WEAK, H5F_CLOSE_SEMI,
-      H5F_CLOSE_STRONG, and H5F_CLOSE_DEFAULT.  Two correspont functions 
-      H5Pset_fclose_degree and H5Pget_fclose_degree are also provided.  Two 
-      new functions H5Fget_obj_count and H5Fget_obj_ids are offerted to assist
-      this new feature.  For full details, please refer to the reference 
-      manual under the description of H5Fcreate, H5Fopen, H5Fclose and the 
-      functions mentioned above. 
-    * Changed internal error handling macros to reduce code size of library by
-      about 10-20%.
-    * Added H5Rget_obj_type() API function, which performs the same functionality
-      as H5Rget_object_type(), but requires the reference type as a parameter
-      in order to correctly handle dataset region references.  Moved
-      H5Rget_object_type() to be only compiled into the library when v1.4
-      compatibility is enabled.
-    * Parallel HDF5 is now supported on HP-UX 11.00 platforms.
-    * Added support to read/write portions of chunks directly, if they are
-      uncompressed and too large to cache.  This should speed up I/O on chunked
-      datasets for a few more cases.  -QAK, 1/31/02
-    * Added new "H5Sget_select_type" API function to determine which type of
-      selection is defined for a dataspace ("all", "none", "hyperslab" or
-      "point"). -QAK, 2/7/02
+=============
+    * Documentation was updated for the hdf5-1.4.3 release.
+    * A new "HDF5 User's Guide" is under development.  See 
+      http://hdf.ncsa.uiuc.edu/HDF5/doc_dev_snapshot/H5_NewUG/current/.
+    * Parallel Tutorial is available at http://hdf.ncsa.uiuc.edu/HDF5/doc/Tutor/
 
 
 Platforms Tested
 ================
 
-  AIX 4.3.3.0 (IBM SP powerpc)  mpcc_r 3.6.6
-  Cray T3E sn6711 2.0.5.45      Cray Standard C Version 6.4.0.0
-                                Cray Fortran Version 3.4.0.2
-  Cray SV1 sn9605 10.0.0.7      Cray Standard C Version 6.4.0.0
-                                Cray Fortran Version 3.4.0.2
-  FreeBSD 4.3                   gcc 2.95.2
-                                g++ 2.95.2
-  HP-UX B.10.20                 HP C  HP92453-01 A.10.32.30
-  HP-UX B.11.00                 HP C  HP92453-01 A.11.00.13
-                                HP C  HP92453-01 A.11.01.20
-  IRIX 6.5                      MIPSpro cc 7.30
-  IRIX64 6.5 (64 & n32)         MIPSpro cc 7.3.1m
-                                mpt.1.4.0.2
-                                mpich-1.2.1
-  Linux 2.4.4                   gcc-2.95.3
-                                g++ 2.95.3
-  Linux 2.2.16-3smp             gcc-2.95.2
-                                g++ 2.95.2
-                                pgf90 3.1-3
-  OSF1 V4.0                     DEC-V5.2-040
-                                Digital Fortran 90 V4.1-270
-  SunOS 5.6                     WorkShop Compilers 5.0 98/12/15 C 5.0 
-  (Solaris 2.6)                 WorkShop Compilers 5.0 99/10/25 Fortran 90
-                                       2.0 Patch 107356-04
-                                Workshop Compilers 5.0 98/12/15 C++ 5.0
-  SunOS 5.7                     WorkShop Compilers 5.0 98/12/15 C 5.0
-  (Solaris 2.7)                 WorkShop Compilers 5.0 99/10/25 Fortran 90
-                                       2.0 Patch 107356-04
-                                Workshop Compilers 5.0 98/12/15 C++ 5.0
-  TFLOPS r1.0.4 v4.0            mpich-1.2.1 with local changes
-  Windows NT4.0, 2000 (NT5.0)   MSVC++ 6.0
-  Windows 98                    MSVC++ 6.0
+    AIX 4.3.3.0 (IBM SP powerpc)  xlc 5.0.2.0
+                                  mpcc_r 5.0.2.0
+                                  xlf 07.01.0000.0002
+                                  mpxlf 07.01.0000.0002
+    AIX 4.3 (IBM SP RS6000)       C for AIX Compiler, Version 5.0.2.0
+                                  xlf 7.1.0.2
+                                  poe 3.1.0.12 (includes mpi)
+    Cray T3E sn6711 2.0.5.57      Cray Standard C Version 6.5.0.3
+                                  Cray Fortran Version 3.5.0.4
+    Cray SV1 10.0.0.8             Cray Standard C Version 6.5.0.3 
+                                  Cray Fortran Version 3.5.0.4
+    FreeBSD 4.5                   gcc 2.95.3
+                                  g++ 2.95.3
+    HP-UX B.10.20                 HP C  HP92453-01 A.10.32.30
+                                  HP F90 v2.3
+    HP-UX B.11.00                 HP C  HP92453-01 A.11.01.20 
+                                  HP F90 v2.4
+    HP-UX B.11.00 SysV            HP C  HP92453-01 A.11.01.20 
+                                  HP F90 v2.4
+                                  HP MPI [not a product] (03/24/2000) B6060BA
+    IRIX 6.5                      MIPSpro cc 7.30
+    IRIX64 6.5 (64 & n32)         MIPSpro cc 7.3.1.2m
+    Linux 2.4.4                   gcc 2.95.3
+                                  g++ 2.95.3
+    Linux 2.2.18smp               gcc 2.95.2
+                                  gcc 2.95.2 with mpich 1.2.1
+                                  g++ 2.95.2
+                                  pgf90 3.2-4
+    OSF1 V5.1                     Compaq C V6.3-028         
+                                  Compaq Fortran V5.4-1283
+    SunOS 5.7                     WorkShop Compilers 5.0 98/12/15 C 5.0
+     (Solaris 2.7)                Workshop Compilers 5.0 98/12/15 C++ 5.0 
+                                  Workshop Compilers 5.0 98/10/25 
+                                  FORTRAN 90 2.0 Patch 107356-04 
+    SunOS 5.8/32                  Sun WorkShop 6 update 1 C 5.2 2000/09/11
+     (Solaris 2.8)                Sun WorkShop 6 update 1 Fortran 95 6.1 
+                                          Patch 109503-07 2001/08/11
+                                  Sun WorkShop 6 update 1 C++ 5.2 Patch
+                                        109508-04 2001/07/11
+    SunOS 5.8/64                  Sun WorkShop 6 update 1 C 5.2 2000/09/11
+     (Solaris 2.8)                Sun WorkShop 6 update 1 Fortran 95 6.1 
+                                          Patch 109503-07 2001/08/11
+                                  Sun WorkShop 6 update 1 C++ 5.2 Patch
+                                        109508-04 2001/07/11
+    TFLOPS r1.0.4 v4.0.8 i386     pgcc Rel 3.1-4i with mpich-1.2.1 with
+                                          local modifications
+    IA-32 Linux 2.2.10smpx        cc Intel 5.0.1
+                                  egcs-2.91.66
+    IA-64 Linux 2.4.16 ia64       gcc version 2.96 20000731
+                                  Intel(R) C++ Itanium(TM) Compiler 
+                                  for the Itanium(TM)-based applications,
+                                  Version 6.0 Beta, Build 20010905       
+    Windows 2000 (NT5.0)          MSVC++ 6.0
+                                  DEC Visual Fortran 6.0
+    Windows NT4.0                 MSVC++ 6.0
+                                  DEC Visual Fortran 6.0
+    Windows NT4.0                 Code Warrior 6.0
+    Windows 98                    MSVC++ 6.0
+                                  DEC Visual Fortran 6.0
+
+
+Supported Configuration Features Summary
+========================================
+
+    In the tables below
+          y  = tested and supported
+          n  = not supported or not tested in this release
+          x  = not working in this release
+         ( ) = footnote appears below second table
+
+
+    Platform       C  C         F90  F90       C++   Shared     zlib  Tools
+                      parallel       parallel        libraries
+                                                     (5)
+    Solaris2.7     y  y (1)     y    n         y     y          y     y
+    Solaris2.8 64  y  n         y    n         y     y          y     y
+    Solaris2.8 32  y  n         y    n         y     y          y     y
+    IA-64          y  n         n    n         n     n          y     y 
+    IRIX6.5        y  y (1)     n    n         n     y          y     y
+    IRIX64_6.5 64  y  y (2)     y    y         n     y          y     y
+    IRIX64_6.5 32  y  y (2)     n    n         n     y          y     y
+    HPUX10.20      y  n         y    n         n     y          y     y
+    HPUX11.00      y  y         y    n         n     y          y     y
+    HPUX11 SysV    y  y         y    n         n     y          y     y
+    DECOSF         y  n         y    n         y     y          y     y
+    T3E            y  y         y    y         n     n          y     y
+    SV1            y  n         y    n         n     n          y     y
+    TFLOPS         y  y (1)     n    n         n     n          y     y (4)
+    AIX-4.3 SP2    y  y         y    y         n     n          y     n
+    AIX-4.3 SP3    y  y         y    y         y     n          y     n
+    Win2000        y  n         y    n         y (6) y          y     y
+    Win98          y  n         y    n         y (6) y          y     y
+    WinNT          y  n         y    n         y (6) y          y     y
+    WinNT CW       y  n         n    n         n     n          y     y
+    FreeBSD        y  n         n    n         y     y          y     y
+    Linux 2.2      y  y (1)     y    n         y     y          y     y
+    Linux 2.4      y  y (1)     n    n         y     y          y     y
+
+
+    Platform       1.2            static-   Thread-  SRB  GASS	STREAM-
+                   compatibility  exec      safe                VFD
+    Solaris2.7     n              x         y        n    n     y
+    Solaris2.8 64  n              y         n        n    n     y
+    Solaris2.8 32  n              x         n        n    n     y
+    IA-64          n              n         n        n    n     y   
+    IRIX6.5        n              x         y        n    n     y
+    IRIX64_6.5 64  n              x         y        n    y     y
+    IRIX64_6.5 32  n              x         y        n    y     y
+    HPUX10.20      n              y         n        n    n     y
+    HPUX11.00      n              x         n        n    n     y
+    HPUX11 SysV    n              x         n        n    n     y
+    DECOSF         n              y         n        n    n     y
+    T3E            n              y         n        n    n     y
+    SV1            n              y         n        n    n     y
+    TFLOPS         n              y         n        n    n     n
+    AIX-4.3 SP2    n              y (3)     n        n    n     y
+    AIX-4.3 SP3    n              y         n        n    n     y
+    Win2000        n              y         n        n    n     n
+    Win98          n              y         n        n    n     n
+    WinNT          n              y         n        n    n     n
+    WinNT CW       n              n         n        n    n     n
+    FreeBSD        n              y         y        n    n     y
+    Linux 2.2      n              y         y        n    n     y
+    Linux 2.4      n              y         y        n    n     y
+
+
+    Footnotes:  (1) Using mpich.
+                (2) Using mpt and mpich.
+                (3) When configured with static-exec enabled, tests fail 
+                    in serial mode.
+                (4) No HDF4-related tools.
+                (5) Shared libraries are provided only for the C library.
+		(6) Exception of (5): DLL is available for C++ API on Windows
+
 
 Known Problems
 ==============
-* Datasets or attributes which have a variable-length string datatype are not
-  printing correctly with h5dump and h5ls.
 
-* DLLs do not work on Windows 98 
+    * Datasets or attributes which have a variable-length string datatype are
+      not printing correctly with h5dump and h5ls.
 
-* RELEASE DLLs will fail on some tests on Windows 2000 with Microsoft visual 
-  studio 6.0 due to memory allocation problems caused by compiler.  
-  Users are encouraged to go to microsoft site  to find and install
-  visual studio 6.0 service pack 5. After that, release dlls will work.
+    * When a dataset with the variable-legth datatype is overwritten, 
+      the library can develop memory leaks that cause the file to become 
+      unnecessarily large.  This is planned to be fixed in the next release.
 
-* The stream-vfd test uses ip port 10007 for testing. If another
-  application is already using that port address, the test will hang
-  indefinitely and has to be terminated by the kill command. To try the
-  test again, change the port address in test/stream_test.c to one not
-  being used in the host.
+    * On the SV1, the h5ls test fails due to a difference between the 
+      SV1 printf precision and the printf precision on other platforms.
 
-* The --enable-static-exec configure flag fails to compile for Solaris
-  platforms. This is due to the fact that not all of the system
-  libraries on Solaris are available in a static format.
 
-  The --enable-static-exec configure flag also fails to correctly compile
-  on IBM SP2 platform for the serial mode. The parallel mode works fine
-  with this option.
-  
-  It is suggested that you don't use this option on these platforms
-  during configuration.
+    * The h5dump tests may fail to match the expected output in some
+      platforms (e.g. SP2 parallel, Windows) where the error messages
+      directed to "stderr" do not appear in the "right order" with output
+      from stdout.  This is not an error.
 
-* With the gcc 2.95.2 compiler, HDF 5 uses the `-ansi' flag during
-  compilation. The ANSI version of the compiler complains about not being
-  able to handle the `long long' datatype with the warning:
+    * The --enable-static-exec configure flag fails to compile for HP-UX
+      11.00 platforms.
 
-        warning: ANSI C does not support `long long'
-  
-  This warning is innocuous and can be safely ignored.
+    * The executables are always dynamic on IRIX64 6.5(64 and n32) and 
+      IRIX 6.5 even if they are configured with --enable-static-exec.
 
-* SunOS 5.6 with C WorkShop Compilers 4.2:  Hyperslab selections will 
-  fail if library is compiled using optimization of any level.
+    * IRIX 6.5 fails to compile if configured with --enable-static-exec.
+    
+    * The HDF5_MPI_OPT_TYPES optimization code in the parallel HDF5 will cause
+      a hang in some cases when chunked storage is used.  This is now set to
+      be off by default.  One may turn it on by setting environment variable
+      HDF5_MPI_OPT_TYPES to a non-zero value such as 1.
 
-* h5toh4 converter fails two cases (tstr.h5 and tmany.h5) for release dll
-  version on windows 2000 and NT. The reason is possibly due to windows
-  NT DLL convention on freeing memory. It seems that memory cannot be
-  free across library or DLL. It is still under investigated.
+    * On IA64 systems one has to use -DIA64 compilation flag to compile
+      h4toh5 and h5toh4 utilites. After configuration step manually modify
+      Makefile in the tools/h4toh4 and tools/h5toh4 directories to add 
+      -DIA64 to the compilation flags.
 
-* The Stream VFD was not tested yet under Windows. It is not supported
-  in the TFLOPS machine.
+    * On IA32 ansd IA64 systems, if you use a compiler other than GCC 
+      (such as Intel's ecc compiler), you will need to modify the generated
+      "libtool" program after configuration is finished. On or around line 102 
+      of the libtool file, there are lines which look like:
 
-* Shared library option is broken for IBM SP and some Origin 2000
-  platforms. One needs to run ./configure with '--disable-shared'
+          # How to pass a linker flag through the compiler.
+          wl=""
 
-* The ./dsets tests failed in the TFLOPS machine if the test program,
-  dsets.c, is compiled with the -O option.  The hdf5 library still works
-  correctly with the -O option.  The test program works fine if it is
-  compiled with -O1 or -O0.  Only -O (same as -O2) causes the test
-  program to fail.
+      change the lines to this:
 
-* Certain platforms give false negatives when testing h5ls:
-
-    - Solaris x86 2.5.1, Cray T3E and Cray J90 give errors during testing
-      when displaying object references in certain files.  These are
-      benign differences due to the difference in sizes of the objects
-      created on those platforms. h5ls appears to be dumping object
-      references correctly.
-
-    - Cray J90 (and Cray T3E?) give errors during testing when displaying
-      some floating-point values. These are benign differences due to
-      the different precision in the values displayed and h5ls appears to
-      be dumping floating-point numbers correctly.
-
-* Before building HDF5 F90 Library from source on Crays (T3E and J90) 
-  replace H5Aff.f90, H5Dff.f90 and H5Pff.f90 files in the fortran/src
-  subdirectory in the top level directory with the Cray-specific files
-  from the site:
-
-  ftp://hdf.ncsa.uiuc.edu/pub/ougoing/hdf5/hdf5-1.4.0-beta/F90_source_for_Crays
-
+          # How to pass a linker flag through the compiler.
+          wl="-Wl,"
 

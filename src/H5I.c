@@ -43,7 +43,58 @@ static int interface_initialize_g = 0;
 #define INTERFACE_INIT H5I_init_interface
 static herr_t H5I_init_interface(void);
 
+/*
+ * Define the following macro for fast hash calculations (but limited
+ * hash sizes)
+ */
+#define HASH_SIZE_POWER_2
+
+/* Define the following macro for atom caching over all the atoms */
+#define IDS_ARE_CACHED
+
 /*-------------------- Locally scoped variables -----------------------------*/
+
+#ifdef IDS_ARE_CACHED
+#  define ID_CACHE_SIZE 4	      /*# of previous atoms cached	   */
+#endif
+
+/*
+ * Number of bits to use for Group ID in each atom. Increase if H5I_NGROUPS
+ * becomes too large (an assertion would fail in H5I_init_interface). This is
+ * the only number that must be changed since all other bit field sizes and
+ * masks are calculated from GROUP_BITS.
+ */
+#define GROUP_BITS	5
+#define GROUP_MASK	((1<<GROUP_BITS)-1)
+
+/*
+ * Number of bits to use for the Atom index in each atom (assumes 8-bit
+ * bytes). We don't use the sign bit.
+ */
+#define ID_BITS		((sizeof(hid_t)*8)-(GROUP_BITS+1))
+#define ID_MASK		((1<<ID_BITS)-1)
+
+/* Map an atom to a Group number */
+#define H5I_GROUP(a)	((H5I_type_t)(((hid_t)(a)>>ID_BITS) & GROUP_MASK))
+
+
+#ifdef HASH_SIZE_POWER_2
+/*
+ * Map an ID to a hash location (assumes s is a power of 2 and smaller
+ * than the ID_MASK constant).
+ */
+#  define H5I_LOC(a,s)		((hid_t)((size_t)(a)&((s)-1)))
+#  define POWER_OF_TWO(n)	((((n) - 1) & (n)) == 0 && (n) > 0)
+#else
+/*
+ * Map an ID to a hash location.
+ */
+#  define H5I_LOC(a,s)	(((hid_t)(a)&ID_MASK)%(s))
+#endif
+
+/* Combine a Group number and an atom index into an atom */
+#define H5I_MAKE(g,i)	((((hid_t)(g)&GROUP_MASK)<<ID_BITS)|	  \
+			     ((hid_t)(i)&ID_MASK))
 
 #ifdef IDS_ARE_CACHED
 /* ID Cache */
@@ -121,14 +172,14 @@ H5I_term_interface(void)
 
     if (interface_initialize_g) {
         /* How many groups are still being used? */
-        for (grp=(H5I_type_t)0; grp<H5I_NGROUPS; grp=grp+1) {
+        for (grp=(H5I_type_t)0; grp<H5I_NGROUPS; grp++) {
             if ((grp_ptr=H5I_id_group_list_g[grp]) && grp_ptr->id_list)
                 n++;
         }
 
         /* If no groups are used then clean  up */
         if (0==n) {
-            for (grp=(H5I_type_t)0; grp<H5I_NGROUPS; grp=grp+1) {
+            for (grp=(H5I_type_t)0; grp<H5I_NGROUPS; grp++) {
                 grp_ptr = H5I_id_group_list_g[grp];
                 H5MM_xfree(grp_ptr);
                 H5I_id_group_list_g[grp] = NULL;
@@ -311,14 +362,11 @@ H5I_nmembers(H5I_type_t grp)
 herr_t
 H5I_clear_group(H5I_type_t grp, hbool_t force)
 {
-    H5I_id_group_t  *grp_ptr = NULL;    /* ptr to the atomic group */
-    H5I_id_info_t   *cur=NULL;          /* Current node being worked with */
-    H5I_id_info_t   *next=NULL;         /* Next node in list */
-    H5I_id_info_t   *last=NULL;         /* Last node seen */
-    H5I_id_info_t   *tmp=NULL;          /* Temporary node ptr */
+    H5I_id_group_t	*grp_ptr = NULL;	/* ptr to the atomic group */
+    H5I_id_info_t	*cur=NULL, *next=NULL, *prev=NULL;
     int		ret_value = SUCCEED;
-    unsigned    delete_node;            /* Flag to indicate node should be removed from linked list */
-    unsigned	i,j;
+    unsigned       deleted;                /* Flag to indicate objects have been removed from a linked list */
+    unsigned		i;
 
     FUNC_ENTER(H5I_clear_group, FAIL);
 
@@ -348,6 +396,9 @@ H5I_clear_group(H5I_type_t grp, hbool_t force)
      * object from group regardless if FORCE is non-zero.
      */
     for (i=0; i<grp_ptr->hash_size; i++) {
+        /* Reset the "deleted an object from this list" flag */
+        deleted=0;
+
         for (cur=grp_ptr->id_list[i]; cur; cur=next) {
             /*
              * Do nothing to the object if the reference count is larger than
@@ -356,84 +407,47 @@ H5I_clear_group(H5I_type_t grp, hbool_t force)
             if (!force && cur->count>1)
                 continue;
 
-            /* Check for a 'free' function and call it, if it exists */
+            /* Flag this list as having deleted objects */
+            deleted=1;
+
+            /* Free the object regardless of reference count */
             if (grp_ptr->free_func && (grp_ptr->free_func)(cur->obj_ptr)<0) {
                 if (force) {
 #if H5I_DEBUG
                     if (H5DEBUG(I)) {
-                        fprintf(H5DEBUG(I), "H5I: free grp=%d obj=0x%08lx "
-                            "failure ignored\n", (int)grp,
-                            (unsigned long)(cur->obj_ptr));
-                    } /* end if */
+                    fprintf(H5DEBUG(I), "H5I: free grp=%d obj=0x%08lx "
+                        "failure ignored\n", (int)grp,
+                        (unsigned long)(cur->obj_ptr));
+                    }
 #endif /*H5I_DEBUG*/
+                    /* Decrement the number of IDs in the group */
+                    (grp_ptr->ids)--;
 
-                    /* Indicate node should be removed from list */
-                    delete_node=1;
-                } /* end if */
-                else {
-                    /* Indicate node should _NOT_ be remove from list */
-                    delete_node=0;
-                } /* end else */
-            } /* end if */
-            else {
-                /* Indicate node should be removed from list */
-                delete_node=1;
-            } /* end else */
-
-            /* Check if we should delete this node or not */
-            if(delete_node) {
+                    /* Add ID struct to free list */
+                    next = cur->next;
+                    H5FL_FREE(H5I_id_info_t,cur);
+                } else {
+                    if (prev)
+                        prev->next = cur;
+                    else
+                        grp_ptr->id_list[i] = cur;
+                    prev = cur;
+                }
+            } else {
                 /* Decrement the number of IDs in the group */
                 (grp_ptr->ids)--;
 
-                /* Advance to next node */
+                /* Add ID struct to free list */
                 next = cur->next;
-
-                /* Re-scan the list of nodes and remove the node from the list */
-                /* (can't maintain static pointers to the previous node in the */
-                /*      list, because the node's 'free' callback could have */
-                /*      make an H5I call, which could potentially change the */
-                /*      order of the nodes on the list - QAK) */
-                last=NULL;
-                tmp=grp_ptr->id_list[i];
-                while(tmp!=cur) {
-                    assert(tmp!=NULL);
-                    last=tmp;
-                    tmp=tmp->next;
-                } /* end while */
-
-                /* Delete the node from the list */
-                if(last==NULL) {
-                    /* Node at head of list, just advance the list head to next node */
-                    assert(grp_ptr->id_list[i]==cur);
-                    grp_ptr->id_list[i] = next;
-                } /* end if */
-                else {
-                    /* Node in middle of list, jump over it */
-                    assert(last->next==cur);
-                    last->next=next;
-                } /* end else */
-
-#ifdef IDS_ARE_CACHED
-                /* Scan through cache & remove node, if present */
-                /* (node's 'free' callback function could have made an H5I */
-                /*      call, which would probably put the node back in */
-                /*      the cache - QAK) */
-                for(j=0; j<ID_CACHE_SIZE; j++)
-                    if(H5I_cache_g[j]==cur)
-                        H5I_cache_g[j]=NULL;
-#endif /* IDS_ARE_CACHED */
-
-                /* Free the node */
                 H5FL_FREE(H5I_id_info_t,cur);
-            } /* end if */
-            else {
-                /* Advance to next node */
-                next = cur->next;
-            } /* end else */
-        } /* end for */
-    } /* end for */
+            }
+        }
+        /* 'prev' flag is only valid to check when we've actually deleted objects */
+        if (deleted && !prev)
+            grp_ptr->id_list[i]=NULL;
+    }
     
-done:
+  done:
     FUNC_LEAVE(ret_value);
 }
 
@@ -837,11 +851,6 @@ H5I_remove(hid_t id)
  *	removed from the group and its reference count is not decremented.
  *	The group number is now passed to the free method.
  *
- *	Raymond, 11 Dec 2001
- *	If the freeing function fails, return failure instead of reference
- *	count 1.  This feature is needed by file close with H5F_CLOSE_SEMI
- *	value.
- *
  *-------------------------------------------------------------------------
  */
 int
@@ -878,7 +887,7 @@ H5I_dec_ref(hid_t id)
 		H5I_remove(id);
 		ret_value = 0;
 	    } else {
-		ret_value = FAIL;
+		ret_value = 1;
 	    }
 	} else {
 	    ret_value = --(id_ptr->count);
@@ -974,7 +983,7 @@ H5I_search(H5I_type_t grp, H5I_search_func_t func, const void *key)
     for (i=0; i<grp_ptr->hash_size; i++) {
 	id_ptr = grp_ptr->id_list[i];
 	while (id_ptr) {
-	    if ((*func)(id_ptr->obj_ptr, id_ptr->id, key)) {
+	    if ((*func)(id_ptr->obj_ptr, key)) {
 		HGOTO_DONE(id_ptr->obj_ptr);	/*found the item*/
 	    }
 	    id_ptr = id_ptr->next;

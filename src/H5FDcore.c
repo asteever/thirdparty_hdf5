@@ -1,6 +1,6 @@
 /*
- * Copyright © 1999-2001 NCSA
- *                       All rights reserved.
+ * Copyright © 1999 NCSA
+ *                  All rights reserved.
  *
  * Programmer:  Robb Matzke <matzke@llnl.gov>
  *              Tuesday, August 10, 1999
@@ -12,10 +12,9 @@
 #include "H5private.h"		/*library functions			*/
 #include "H5Eprivate.h"		/*error handling			*/
 #include "H5Fprivate.h"		/*files					*/
-#include "H5FDprivate.h"	/*file driver				  */
-#include "H5FDcore.h"           /* Core file driver */
-#include "H5Iprivate.h"		/*object IDs				  */
-#include "H5MMprivate.h"        /* Memory allocation */
+#include "H5FDprivate.h"	/*file driver			        */
+#include "H5FDcore.h"           /*Core file driver                      */
+#include "H5MMprivate.h"        /*Memory allocation                     */
 #include "H5Pprivate.h"		/*property lists			*/
 
 #undef MAX
@@ -85,14 +84,13 @@ static haddr_t H5FD_core_get_eoa(H5FD_t *_file);
 static herr_t H5FD_core_set_eoa(H5FD_t *_file, haddr_t addr);
 static haddr_t H5FD_core_get_eof(H5FD_t *_file);
 static herr_t H5FD_core_read(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, haddr_t addr,
-			     size_t size, void *buf);
+			     hsize_t size, void *buf);
 static herr_t H5FD_core_write(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, haddr_t addr,
-			      size_t size, const void *buf);
+			      hsize_t size, const void *buf);
 
 static const H5FD_class_t H5FD_core_g = {
     "core",					/*name			*/
     MAXADDR,					/*maxaddr		*/
-    H5F_CLOSE_WEAK,				/*fc_degree		*/
     NULL,					/*sb_size		*/
     NULL,					/*sb_encode		*/
     NULL,					/*sb_decode		*/
@@ -170,30 +168,23 @@ H5FD_core_init(void)
  *		Added the BACKING_STORE argument. If set then the entire file
  *		contents are flushed to a file with the same name as this
  *		core file.
- *
- *		Raymond Lu, 2001-10-25
- *		Changed the file access list to the new generic list.
- *
  *-------------------------------------------------------------------------
  */
 herr_t
 H5Pset_fapl_core(hid_t fapl_id, size_t increment, hbool_t backing_store)
 {
-    H5FD_core_fapl_t	fa;
-    H5P_genplist_t *plist;      /* Property list pointer */
     herr_t ret_value=FAIL;
+    H5FD_core_fapl_t	fa;
 
     FUNC_ENTER(H5FD_set_fapl_core, FAIL);
     H5TRACE3("e","izb",fapl_id,increment,backing_store);
 
-    /* Check argument */
-    if(TRUE!=H5P_isa_class(fapl_id,H5P_FILE_ACCESS) || NULL == (plist = H5I_object(fapl_id)))
-        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list");
-
+    if (H5P_FILE_ACCESS!=H5Pget_class(fapl_id))
+        HRETURN_ERROR(H5E_PLIST, H5E_BADTYPE, FAIL, "not a fapl");
     fa.increment = increment;
     fa.backing_store = backing_store;
 
-    ret_value= H5P_set_driver(plist, H5FD_CORE, &fa);
+    ret_value= H5Pset_driver(fapl_id, H5FD_CORE, &fa);
 
     FUNC_LEAVE(ret_value);
 }
@@ -214,11 +205,6 @@ H5Pset_fapl_core(hid_t fapl_id, size_t increment, hbool_t backing_store)
  * Modifications:
  *		Robb Matzke, 1999-10-19
  *		Added the BACKING_STORE argument.
- *		
- *		Raymond Lu
- *		2001-10-25
- *		Changed file access list to the new generic property list.
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -226,23 +212,19 @@ H5Pget_fapl_core(hid_t fapl_id, size_t *increment/*out*/,
 		 hbool_t *backing_store/*out*/)
 {
     H5FD_core_fapl_t	*fa;
-    H5P_genplist_t *plist;      /* Property list pointer */
 
     FUNC_ENTER(H5Pget_fapl_core, FAIL);
     H5TRACE3("e","ixx",fapl_id,increment,backing_store);
 
-    if(TRUE!=H5P_isa_class(fapl_id,H5P_FILE_ACCESS) || NULL == (plist = H5I_object(fapl_id)))
-        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, 
-                      "not a file access property list");
-    if (H5FD_CORE!=H5P_get_driver(plist))
+    if (H5P_FILE_ACCESS!=H5Pget_class(fapl_id))
+        HRETURN_ERROR(H5E_PLIST, H5E_BADTYPE, FAIL, "not a fapl");
+    if (H5FD_CORE!=H5P_get_driver(fapl_id))
         HRETURN_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "incorrect VFL driver");
-    if (NULL==(fa=H5P_get_driver_info(plist)))
+    if (NULL==(fa=H5Pget_driver_info(fapl_id)))
         HRETURN_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "bad VFL driver info");
     
-    if (increment)
-        *increment = fa->increment;
-    if (backing_store)
-        *backing_store = fa->backing_store;
+    if (increment) *increment = fa->increment;
+    if (backing_store) *backing_store = fa->backing_store;
     
     FUNC_LEAVE(SUCCEED);
 }
@@ -308,7 +290,6 @@ H5FD_core_open(const char *name, unsigned UNUSED flags, hid_t fapl_id,
 {
     H5FD_core_t		*file=NULL;
     H5FD_core_fapl_t	*fa=NULL;
-    H5P_genplist_t *plist;      /* Property list pointer */
     int			fd=-1;
 
     FUNC_ENTER(H5FD_init_interface, NULL);
@@ -318,30 +299,31 @@ H5FD_core_open(const char *name, unsigned UNUSED flags, hid_t fapl_id,
         HRETURN_ERROR(H5E_ARGS, H5E_BADRANGE, NULL, "bogus maxaddr");
     if (ADDR_OVERFLOW(maxaddr))
         HRETURN_ERROR(H5E_ARGS, H5E_OVERFLOW, NULL, "maxaddr overflow");
-    if (H5P_DEFAULT!=fapl_id) {
-        if(NULL == (plist = H5I_object(fapl_id)))
-            HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a file access property list");
-        fa = H5P_get_driver_info(plist);
-    } /* end if */
+    if (H5P_DEFAULT!=fapl_id) fa = H5Pget_driver_info(fapl_id);
 
     /* Open backing store */
     if (fa && fa->backing_store && name &&
-            (fd=HDopen(name, O_CREAT|O_TRUNC|O_RDWR, 0666))<0)
-        HRETURN_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open backing store");
+            (fd=HDopen(name, O_CREAT|O_TRUNC|O_RDWR, 0666))<0) {
+        HRETURN_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL,
+		      "unable to open backing store");
+    }
 
     /* Create the new file struct */
     if (NULL==(file=H5MM_calloc(sizeof(H5FD_core_t))))
-        HRETURN_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "unable to allocate file struct");
+        HRETURN_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL,
+		      "unable to allocate file struct");
     file->fd = fd;
-    if (name && *name)
+    if (name && *name) {
         file->name = HDstrdup(name);
+    }
 
     /*
      * The increment comes from either the file access property list or the
      * default value. But if the file access property list was zero then use
      * the default value instead.
      */
-    file->increment = (fa && fa->increment>0) ?  fa->increment : H5FD_CORE_INCREMENT;
+    file->increment = (fa && fa->increment>0) ?
+		      fa->increment : H5FD_CORE_INCREMENT;
 
     FUNC_LEAVE((H5FD_t*)file);
 }
@@ -383,7 +365,7 @@ H5FD_core_flush(H5FD_t *_file)
         while (size) {
             ssize_t n;
 
-            H5_CHECK_OVERFLOW(size,hsize_t,size_t);
+            assert(size==(hsize_t)((size_t)size)); /*check for overflow*/
             n = HDwrite(file->fd, ptr, (size_t)size);
             if (n<0 && EINTR==errno) continue;
             if (n<0)
@@ -595,7 +577,7 @@ H5FD_core_get_eof(H5FD_t *_file)
  */
 static herr_t
 H5FD_core_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, haddr_t addr,
-	       size_t size, void *buf/*out*/)
+	       hsize_t size, void *buf/*out*/)
 {
     H5FD_core_t	*file = (H5FD_core_t*)_file;
     
@@ -614,18 +596,10 @@ H5FD_core_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, hadd
 
     /* Read the part which is before the EOF marker */
     if (addr < file->eof) {
-        size_t nbytes;
-#ifndef NDEBUG
-        hsize_t temp_nbytes;
+		hsize_t nbytes = MIN(size, file->eof-addr);
 
-        temp_nbytes = file->eof-addr;
-        H5_CHECK_OVERFLOW(temp_nbytes,hsize_t,size_t);
-        nbytes = MIN(size,(size_t)temp_nbytes);
-#else /* NDEBUG */
-        nbytes = MIN(size,(size_t)(file->eof-addr));
-#endif /* NDEBUG */
-
-        HDmemcpy(buf, file->mem + addr, nbytes);
+        assert(nbytes==(hsize_t)((size_t)nbytes)); /*check for overflow*/
+        HDmemcpy(buf, file->mem + addr, (size_t)nbytes);
         size -= nbytes;
         addr += nbytes;
         buf = (char *)buf + nbytes;
@@ -633,7 +607,8 @@ H5FD_core_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, hadd
 
     /* Read zeros for the part which is after the EOF markers */
     if (size > 0) {
-        HDmemset(buf, 0, size);
+        assert(size==(hsize_t)((size_t)size)); /*check for overflow*/
+        HDmemset(buf, 0, (size_t)size);
     }
 
     FUNC_LEAVE(SUCCEED);
@@ -660,7 +635,7 @@ H5FD_core_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, hadd
  */
 static herr_t
 H5FD_core_write(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, haddr_t addr,
-		size_t size, const void *buf)
+		hsize_t size, const void *buf)
 {
     H5FD_core_t		*file = (H5FD_core_t*)_file;
     
@@ -683,16 +658,11 @@ H5FD_core_write(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, had
      */
     if (addr+size>file->eof) {
         unsigned char *x;
-        size_t new_eof;
+        size_t new_eof = file->increment * ((addr+size)/file->increment);
 
-        H5_ASSIGN_OVERFLOW(new_eof,file->increment*((addr+size)/file->increment),hsize_t,size_t);
-
-        if ((addr+size) % file->increment)
-            new_eof += file->increment;
-        if (NULL==file->mem)
-            x = H5MM_malloc(new_eof);
-        else
-            x = H5MM_realloc(file->mem, new_eof);
+        if ((addr+size) % file->increment) new_eof += file->increment;
+        if (NULL==file->mem) x = H5MM_malloc(new_eof);
+        else x = H5MM_realloc(file->mem, new_eof);
         if (!x)
             HRETURN_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL,
 			  "unable to allocate memory block");
@@ -701,7 +671,8 @@ H5FD_core_write(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, had
     }
 
     /* Write from BUF to memory */
-    HDmemcpy(file->mem+addr, buf, size);
+    assert(size==(hsize_t)((size_t)size)); /*check for overflow*/
+    HDmemcpy(file->mem+addr, buf, (size_t)size);
     file->dirty = TRUE;
 
     FUNC_LEAVE(SUCCEED);

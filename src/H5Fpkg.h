@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2000-2001 NCSA
- *		           All rights reserved.
+ * Copyright (C) 2000 NCSA
+ *		      All rights reserved.
  *
  * Programmer:	Quincey Koziol <koziol@ncsa.uiuc.edu>
  *		Thursday, September 28, 2000
@@ -61,12 +61,6 @@
 #else
 #   define H5F_OVERFLOW_SIZET2OFFT(X) 0
 #endif
-#if (H5_SIZEOF_HSIZE_T >= SIZEOF_OFF_T)
-#   define H5F_OVERFLOW_HSIZET2OFFT(X)					      \
-    ((hsize_t)(X)>=(hsize_t)((hsize_t)1<<(8*sizeof(off_t)-1)))
-#else
-#   define H5F_OVERFLOW_SIZET2OFFT(X) 0
-#endif
 
 /* The raw data chunk cache */
 typedef struct H5F_rdcc_t {
@@ -75,7 +69,7 @@ typedef struct H5F_rdcc_t {
     unsigned		nmisses;/* Number of cache misses		*/
     unsigned		nflushes;/* Number of cache flushes		*/
     size_t		nbytes;	/* Current cached raw data in bytes	*/
-    size_t		nslots;	/* Number of chunk slots allocated	*/
+    int		nslots;	/* Number of chunk slots allocated	*/
     struct H5F_rdcc_ent_t *head; /* Head of doubly linked list		*/
     struct H5F_rdcc_ent_t *tail; /* Tail of doubly linked list		*/
     int		nused;	/* Number of chunk slots in use		*/
@@ -99,9 +93,14 @@ typedef struct H5F_file_t {
     haddr_t	freespace_addr;	/* Relative address of free-space info	*/
     haddr_t	driver_addr;	/* File driver information block address*/
     struct H5AC_t *cache;	/* The object cache			*/
-    hid_t       fcpl_id;	/* File creation property list ID 	*/
-    int	mdc_nelmts;		/* Size of meta data cache (elements)	*/
-    size_t	rdcc_nelmts;	/* Size of raw data chunk cache (elmts)	*/
+    H5F_create_t *fcpl;		/* File-creation property list		*/
+                            /* This actually ends up being a pointer to a */
+                            /* H5P_t type, which is returned from H5P_copy */
+                            /* But that's ok because we only access it like */
+                            /* a H5F_create_t until we pass it back to */
+                            /* H5P_close to release it - QAK */
+    int	mdc_nelmts;	/* Size of meta data cache (elements)	*/
+    int	rdcc_nelmts;	/* Size of raw data chunk cache (elmts)	*/
     size_t	rdcc_nbytes;	/* Size of raw data chunk cache	(bytes)	*/
     double	rdcc_w0;	/* Preempt read chunks first? [0.0..1.0]*/
     hsize_t	threshold;	/* Threshold for alignment		*/
@@ -112,14 +111,13 @@ typedef struct H5F_file_t {
     struct H5HG_heap_t **cwfs;	/* Global heap cache			*/
 
     /* Data Sieve Buffering fields */
-    unsigned char *sieve_buf;   /* Buffer to hold data sieve buffer */
-    haddr_t sieve_loc;          /* File location (offset) of the data sieve buffer */
-    size_t sieve_size;          /* Size of the data sieve buffer used (in bytes) */
-    size_t sieve_buf_size;      /* Size of the data sieve buffer allocated (in bytes) */
-    unsigned sieve_dirty;       /* Flag to indicate that the data sieve buffer is dirty */
+    unsigned char *sieve_buf;  /* Buffer to hold data sieve buffer */
+    haddr_t sieve_loc;      /* File location (offset) of the data sieve buffer */
+    hsize_t sieve_size;     /* Size of the data sieve buffer used (in bytes) */
+    hsize_t sieve_buf_size; /* Size of the data sieve buffer allocated (in bytes) */
+    unsigned sieve_dirty;   /* Flag to indicate that the data sieve buffer is dirty */
 
     H5F_rdcc_t	rdcc;		/* Raw data chunk cache			*/
-    H5F_close_degree_t fc_degree;	/* File close behavior degree	*/
 } H5F_file_t;
 
 /* A record of the mount table */
@@ -201,16 +199,10 @@ __DLL__ herr_t H5F_istore_allocate (H5F_t *f, hid_t dxpl_id,
 				    const struct H5O_fill_t *fill);
 
 /* Functions that operate on contiguous storage wrt boot block */
-__DLL__ herr_t H5F_contig_read(H5F_t *f, hsize_t max_data, H5FD_mem_t type, haddr_t addr,
-        size_t size, hid_t dxpl_id, void *_buf/*out*/);
+__DLL__ herr_t H5F_contig_read(H5F_t *f, hsize_t max_data, H5FD_mem_t type, haddr_t addr, hsize_t size,
+                hid_t dxpl_id, void *_buf/*out*/);
 __DLL__ herr_t H5F_contig_write(H5F_t *f, hsize_t max_data, H5FD_mem_t type, haddr_t addr,
-        size_t size, hid_t dxpl_id, const void *buf);
-
-/* Functions that operate on contiguous storage wrt boot block */
-__DLL__ herr_t H5F_contig_readv(H5F_t *f, hsize_t max_data, H5FD_mem_t type, haddr_t addr,
-        size_t nseq, size_t size[], hsize_t offset[], hid_t dxpl_id, void *_buf/*out*/);
-__DLL__ herr_t H5F_contig_writev(H5F_t *f, hsize_t max_data, H5FD_mem_t type, haddr_t addr,
-        size_t nseq, size_t size[], hsize_t offset[], hid_t dxpl_id, const void *buf);
+                  hsize_t size, hid_t dxpl_id, const void *buf);
 
 #endif
 

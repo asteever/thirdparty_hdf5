@@ -1,8 +1,8 @@
 dnl ----------------------------------------------------------------------
 dnl Process this file with autoconf to produce configure.
 dnl
-dnl Copyright (C) 2000 National Center for Supercomputing Applications.
-dnl                    All rights reserved.
+dnl Copyright (C) 2000-2001 National Center for Supercomputing Applications
+dnl                         All rights reserved.
 dnl ----------------------------------------------------------------------
 
 dnl ----------------------------------------------------------------------
@@ -91,9 +91,6 @@ case "$host_os" in
    osf4.*)
       host_os_novers=osf4.x
       ;;
-   osf5.*)
-      host_os_novers=osf5.x
-      ;;
    solaris2.*)
       host_os_novers=solaris2.x
       ;;
@@ -146,6 +143,10 @@ if test "X$GCC" = "Xyes"; then
   AC_CHECK_PROGS(PERL, perl,, $PATH)
 fi
 
+dnl ----------------------------------------------------------------------
+dnl Check which archiving tool to use. This needs to be done before
+dnl the AM_PROG_LIBTOOL macro.
+dnl
 if test -z "$AR"; then
    AC_CHECK_PROGS(AR,ar xar,:,$PATH)
 fi

@@ -11,19 +11,19 @@
 #define H5S_PACKAGE		/*suppress error about including H5Spkg	  */
 
 #include "H5private.h"
-#include "H5Dprivate.h"
 #include "H5Eprivate.h"
 #include "H5Iprivate.h"
 #include "H5Spkg.h"
-#include "H5Tprivate.h"         /* Datatypes */
 #include "H5Vprivate.h"
+#include "H5Dprivate.h"
 
 /* Interface initialization */
 #define PABLO_MASK      H5Sall_mask
 #define INTERFACE_INIT  NULL
 static int             interface_initialize_g = 0;
 
-static herr_t H5S_all_init (const H5S_t *space, size_t elmt_size, H5S_sel_iter_t *iter);
+static herr_t H5S_all_init (const struct H5O_layout_t *layout,
+			    const H5S_t *space, H5S_sel_iter_t *iter);
 static hsize_t H5S_all_favail (const H5S_t *space, const H5S_sel_iter_t *iter,
 			      hsize_t max);
 static hsize_t H5S_all_fgath (H5F_t *f, const struct H5O_layout_t *layout,
@@ -81,11 +81,13 @@ const H5S_mconv_t	H5S_ALL_MCONV[1] = {{
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5S_all_init (const H5S_t *space, size_t UNUSED elmt_size, H5S_sel_iter_t *sel_iter)
+H5S_all_init (const struct H5O_layout_t UNUSED *layout,
+	       const H5S_t *space, H5S_sel_iter_t *sel_iter)
 {
     FUNC_ENTER (H5S_all_init, FAIL);
 
     /* Check args */
+    assert (layout);
     assert (space && H5S_SEL_ALL==space->select.type);
     assert (sel_iter);
 
@@ -116,7 +118,7 @@ H5S_all_init (const H5S_t *space, size_t UNUSED elmt_size, H5S_sel_iter_t *sel_i
  *-------------------------------------------------------------------------
  */
 static hsize_t
-H5S_all_favail (const H5S_t * UNUSED space, const H5S_sel_iter_t *sel_iter, hsize_t max)
+H5S_all_favail (const H5S_t UNUSED *space, const H5S_sel_iter_t *sel_iter, hsize_t max)
 {
     FUNC_ENTER (H5S_all_favail, 0);
 
@@ -165,7 +167,7 @@ H5S_all_fgath (H5F_t *f, const struct H5O_layout_t *layout,
 	       H5S_sel_iter_t *file_iter, hsize_t nelmts, hid_t dxpl_id,
 	       void *buf/*out*/)
 {
-    hsize_t     actual_bytes; /* The actual number of bytes to read */
+    hsize_t     actual_bytes;       /* The actual number of bytes to read */
     hsize_t	buf_off;            /* Dataset offset for copying memory */
 
     FUNC_ENTER (H5S_all_fgath, 0);
@@ -186,9 +188,8 @@ H5S_all_fgath (H5F_t *f, const struct H5O_layout_t *layout,
     /*
      * Read piece from file.
      */
-    H5_CHECK_OVERFLOW(actual_bytes,hsize_t,size_t);
     if (H5F_seq_read(f, dxpl_id, layout, pline, fill, efl, file_space,
-            elmt_size, (size_t)actual_bytes, buf_off, buf/*out*/)<0) {
+            elmt_size, actual_bytes, buf_off, buf/*out*/)<0) {
         HRETURN_ERROR(H5E_DATASPACE, H5E_READERROR, 0, "read error");
     }
 
@@ -248,9 +249,8 @@ H5S_all_fscat (H5F_t *f, const struct H5O_layout_t *layout,
     /*
      * Write piece from file.
      */
-    H5_CHECK_OVERFLOW(actual_bytes,hsize_t,size_t);
     if (H5F_seq_write(f, dxpl_id, layout, pline, fill, efl, file_space,
-            elmt_size, (size_t)actual_bytes, buf_off, buf/*out*/)<0) {
+            elmt_size, actual_bytes, buf_off, buf/*out*/)<0) {
         HRETURN_ERROR(H5E_DATASPACE, H5E_WRITEERROR, 0, "write error");
     }
 
@@ -288,7 +288,7 @@ H5S_all_mgath (const void *_buf, size_t elmt_size,
 	       hsize_t nelmts, void *tconv_buf/*out*/)
 {
     const uint8_t *buf=(const uint8_t*)_buf;   /* Get local copies for address arithmetic */
-    hsize_t      actual_bytes;       /* The actual number of bytes to read */
+    size_t      actual_bytes;       /* The actual number of bytes to read */
 
     FUNC_ENTER (H5S_all_mgath, 0);
 
@@ -305,8 +305,7 @@ H5S_all_mgath (const void *_buf, size_t elmt_size,
     actual_bytes=elmt_size*nelmts;
 
     /* "read" in the bytes from the source (buf) to the destination (tconv_buf) */
-    H5_CHECK_OVERFLOW(actual_bytes,hsize_t,size_t);
-    HDmemcpy(tconv_buf,buf,(size_t)actual_bytes);
+    HDmemcpy(tconv_buf,buf,actual_bytes);
 
     /* Advance iterator */
     mem_iter->all.elmt_left-=nelmts;
@@ -339,7 +338,7 @@ H5S_all_mscat (const void *tconv_buf, size_t elmt_size,
 	       hsize_t nelmts, void *_buf/*out*/)
 {
     uint8_t *buf=(uint8_t *)_buf;
-    hsize_t      actual_bytes;       /* The actual number of bytes to write */
+    size_t      actual_bytes;       /* The actual number of bytes to write */
 
     FUNC_ENTER (H5S_all_mscat, FAIL);
 
@@ -356,8 +355,7 @@ H5S_all_mscat (const void *tconv_buf, size_t elmt_size,
     actual_bytes=elmt_size*nelmts;
 
     /* "write" the bytes from the source (tconv_buf) to the destination (buf) */
-    H5_CHECK_OVERFLOW(actual_bytes,hsize_t,size_t);
-    HDmemcpy(buf,tconv_buf,(size_t)actual_bytes);
+    HDmemcpy(buf,tconv_buf,actual_bytes);
 
     /* Advance iterator */
     mem_iter->all.elmt_left-=nelmts;
@@ -398,8 +396,8 @@ H5S_all_read(H5F_t *f, const H5O_layout_t *layout, const H5O_pline_t *pline,
 	     const H5S_t *mem_space, hid_t dxpl_id, void *_buf/*out*/,
 	     hbool_t *must_convert/*out*/)
 {
-    H5S_hyper_span_t *file_span=NULL,*mem_span=NULL;     /* Hyperslab span node */
     char       *buf=(char*)_buf;        /* Get pointer to buffer */
+    H5S_hyper_node_t *file_node=NULL,*mem_node=NULL;     /* Hyperslab node */
     hsize_t	mem_size,file_size;
     hssize_t	file_off,mem_off;
     hssize_t    count;              /* Regular hyperslab count */
@@ -411,8 +409,7 @@ H5S_all_read(H5F_t *f, const H5O_layout_t *layout, const H5O_pline_t *pline,
                 large_contiguous=0;
     int	        i;
     size_t	down_size[H5O_LAYOUT_NDIMS];
-    hsize_t     acc;
-    herr_t      ret_value=SUCCEED;
+    size_t      acc;
 
     FUNC_ENTER(H5S_all_read, FAIL);
     *must_convert = TRUE;
@@ -422,11 +419,11 @@ printf("%s: check 1.0\n",FUNC);
 #endif /* QAK */
     /* Check whether we can handle this */
     if (H5S_SIMPLE!=mem_space->extent.type)
-        HGOTO_DONE(SUCCEED);
+        goto fall_through;
     if (H5S_SIMPLE!=file_space->extent.type)
-        HGOTO_DONE(SUCCEED);
+        goto fall_through;
     if (mem_space->extent.u.simple.rank!=file_space->extent.u.simple.rank)
-        HGOTO_DONE(SUCCEED);
+        goto fall_through;
 
     /* Check for a single hyperslab block defined in memory dataspace */
     if (mem_space->select.type==H5S_SEL_HYPERSLABS) {
@@ -437,32 +434,17 @@ printf("%s: check 1.0\n",FUNC);
                 count*=mem_space->select.sel_info.hslab.diminfo[u].count;
             /* If the regular hyperslab definition creates more than one hyperslab, fall through */
             if(count>1)
-                HGOTO_DONE(SUCCEED);
+                goto fall_through;
         } /* end if */
         else {
-            /* Get the pointer to the hyperslab spans to check */
-            mem_span=mem_space->select.sel_info.hslab.span_lst->head;
-
-            /* Spin through the spans, checking for more than one span in each dimension */
-            while(mem_span!=NULL) {
-                /* If there are more than one span in the dimension, we can't use this routine */
-                if(mem_span->next!=NULL)
-                    HGOTO_DONE(SUCCEED);
-                
-                /* Advance to the next span, if it's available */
-                if(mem_span->down==NULL)
-                    break;
-                else
-                    mem_span=mem_span->down->head;
-            } /* end while */
-
-            /* Get the pointer to the hyperslab spans to use */
-            mem_span=mem_space->select.sel_info.hslab.span_lst->head;
+            if(mem_space->select.sel_info.hslab.hyper_lst->count>1)
+                goto fall_through;
+            mem_node=mem_space->select.sel_info.hslab.hyper_lst->head;
         } /* end else */
     } /* end if */
     else
     	if(mem_space->select.type!=H5S_SEL_ALL)
-            HGOTO_DONE(SUCCEED);
+            goto fall_through;
 
     /* Check for a single hyperslab block defined in file dataspace */
     if (file_space->select.type==H5S_SEL_HYPERSLABS) {
@@ -473,32 +455,17 @@ printf("%s: check 1.0\n",FUNC);
                 count*=file_space->select.sel_info.hslab.diminfo[u].count;
             /* If the regular hyperslab definition creates more than one hyperslab, fall through */
             if(count>1)
-                HGOTO_DONE(SUCCEED);
+                goto fall_through;
         } /* end if */
         else {
-            /* Get the pointer to the hyperslab spans to check */
-            file_span=file_space->select.sel_info.hslab.span_lst->head;
-
-            /* Spin through the spans, checking for more than one span in each dimension */
-            while(file_span!=NULL) {
-                /* If there are more than one span in the dimension, we can't use this routine */
-                if(file_span->next!=NULL)
-                    HGOTO_DONE(SUCCEED);
-                
-                /* Advance to the next span, if it's available */
-                if(file_span->down==NULL)
-                    break;
-                else
-                    file_span=file_span->down->head;
-            } /* end while */
-
-            /* Get the pointer to the hyperslab spans to use */
-            file_span=file_space->select.sel_info.hslab.span_lst->head;
+            if(file_space->select.sel_info.hslab.hyper_lst->count>1)
+                goto fall_through;
+            file_node=file_space->select.sel_info.hslab.hyper_lst->head;
         } /* end else */
     } /* end if */
     else
         if(file_space->select.type!=H5S_SEL_ALL)
-            HGOTO_DONE(SUCCEED);
+            goto fall_through;
 
     /* Get information about memory and file */
     for (u=0; u<mem_space->extent.u.simple.rank; u++) {
@@ -509,9 +476,8 @@ printf("%s: check 1.0\n",FUNC);
                 mem_off=mem_space->select.sel_info.hslab.diminfo[u].start;
             } /* end if */
             else {
-                mem_size=(mem_span->high-mem_span->low)+1;
-                mem_off=mem_span->low;
-                mem_span=mem_span->down->head;
+                mem_size=(mem_node->end[u]-mem_node->start[u])+1;
+                mem_off=mem_node->start[u];
             } /* end else */
         } /* end if */
         else {
@@ -526,9 +492,8 @@ printf("%s: check 1.0\n",FUNC);
                 file_off=file_space->select.sel_info.hslab.diminfo[u].start;
             } /* end if */
             else {
-                file_size=(file_span->high-file_span->low)+1;
-                file_off=file_span->low;
-                file_span=file_span->down->head;
+                file_size=(file_node->end[u]-file_node->start[u])+1;
+                file_off=file_node->start[u];
             } /* end else */
         } /* end if */
         else {
@@ -537,7 +502,7 @@ printf("%s: check 1.0\n",FUNC);
         } /* end else */
 
         if (mem_size!=file_size)
-            HGOTO_DONE(SUCCEED);
+            goto fall_through;
 
         size[u] = file_size;
         file_offset[u] = file_off;
@@ -598,7 +563,7 @@ printf("%s: check 1.0\n",FUNC);
         if(small_contiguous || large_contiguous) {
             /* Compute the "down sizes" for each dimension */
             for (acc=elmt_size, i=(mem_space->extent.u.simple.rank-1); i>=0; i--) {
-                H5_ASSIGN_OVERFLOW(down_size[i],acc,hsize_t,size_t);
+                down_size[i]=acc;
                 acc*=mem_space->extent.u.simple.size[i];
             } /* end for */
 
@@ -610,29 +575,23 @@ printf("%s: check 1.0\n",FUNC);
         } /* end if */
         else {
             /* Non-contiguous hyperslab block */
-            HGOTO_DONE(SUCCEED);
+            goto fall_through;
         } /* end else */
     } /* end if */
 
 #ifdef QAK
 printf("%s: check 2.0\n",FUNC);
-for (u=0; u<mem_space->extent.u.simple.rank; u++)
-    printf("size[%u]=%lu\n",u,(unsigned long)size[u]);
-for (u=0; u<=mem_space->extent.u.simple.rank; u++)
-    printf("mem_offset[%u]=%lu\n",u,(unsigned long)mem_offset[u]);
-for (u=0; u<=mem_space->extent.u.simple.rank; u++)
-    printf("file_offset[%u]=%lu\n",u,(unsigned long)file_offset[u]);
 #endif /* QAK */
     /* Read data from the file */
     if (H5F_arr_read(f, dxpl_id, layout, pline, fill, efl, size,
 		     size, mem_offset, file_offset, buf/*out*/)<0) {
-        HGOTO_ERROR(H5E_IO, H5E_READERROR, FAIL,
+        HRETURN_ERROR(H5E_IO, H5E_READERROR, FAIL,
 		      "unable to read data from the file");
     }
     *must_convert = FALSE;
 
-done:
-    FUNC_LEAVE(ret_value);
+fall_through:
+    FUNC_LEAVE(SUCCEED);
 }
 
 
@@ -662,15 +621,15 @@ done:
  */
 herr_t
 H5S_all_write(H5F_t *f, const struct H5O_layout_t *layout,
-	     const H5O_pline_t *pline,
-             const struct H5O_fill_t *fill,
-             const H5O_efl_t *efl,
-	     size_t elmt_size, const H5S_t *file_space,
-	     const H5S_t *mem_space, hid_t dxpl_id, const void *_buf,
-	     hbool_t *must_convert/*out*/)
+	      const H5O_pline_t *pline,
+              const struct H5O_fill_t *fill,
+              const H5O_efl_t *efl,
+	      size_t elmt_size, const H5S_t *file_space,
+	      const H5S_t *mem_space, hid_t dxpl_id, const void *_buf,
+	      hbool_t *must_convert/*out*/)
 {
-    H5S_hyper_span_t *file_span=NULL,*mem_span=NULL;     /* Hyperslab span node */
     const char *buf=(const char*)_buf;  /* Get pointer to buffer */
+    H5S_hyper_node_t *file_node=NULL,*mem_node=NULL;     /* Hyperslab node */
     hsize_t	mem_size,file_size;
     hssize_t	file_off,mem_off;
     hssize_t    count;              /* Regular hyperslab count */
@@ -682,19 +641,18 @@ H5S_all_write(H5F_t *f, const struct H5O_layout_t *layout,
                 large_contiguous=0;
     int	        i;
     size_t	down_size[H5O_LAYOUT_NDIMS];
-    hsize_t     acc;
-    herr_t      ret_value=SUCCEED;
+    size_t      acc;
     
     FUNC_ENTER(H5S_all_write, FAIL);
     *must_convert = TRUE;
 
     /* Check whether we can handle this */
     if (H5S_SIMPLE!=mem_space->extent.type)
-        HGOTO_DONE(SUCCEED);
+        goto fall_through;
     if (H5S_SIMPLE!=file_space->extent.type)
-        HGOTO_DONE(SUCCEED);
+        goto fall_through;
     if (mem_space->extent.u.simple.rank!=file_space->extent.u.simple.rank)
-        HGOTO_DONE(SUCCEED);
+        goto fall_through;
 
     /* Check for a single hyperslab block defined in memory dataspace */
     if (mem_space->select.type==H5S_SEL_HYPERSLABS) {
@@ -705,32 +663,17 @@ H5S_all_write(H5F_t *f, const struct H5O_layout_t *layout,
                 count*=mem_space->select.sel_info.hslab.diminfo[u].count;
             /* If the regular hyperslab definition creates more than one hyperslab, fall through */
             if(count>1)
-                HGOTO_DONE(SUCCEED);
+                goto fall_through;
         } /* end if */
         else {
-            /* Get the pointer to the hyperslab spans to check */
-            mem_span=mem_space->select.sel_info.hslab.span_lst->head;
-
-            /* Spin through the spans, checking for more than one span in each dimension */
-            while(mem_span!=NULL) {
-                /* If there are more than one span in the dimension, we can't use this routine */
-                if(mem_span->next!=NULL)
-                    HGOTO_DONE(SUCCEED);
-                
-                /* Advance to the next span, if it's available */
-                if(mem_span->down==NULL)
-                    break;
-                else
-                    mem_span=mem_span->down->head;
-            } /* end while */
-
-            /* Get the pointer to the hyperslab spans to use */
-            mem_span=mem_space->select.sel_info.hslab.span_lst->head;
+            if(mem_space->select.sel_info.hslab.hyper_lst->count>1)
+                goto fall_through;
+            mem_node=mem_space->select.sel_info.hslab.hyper_lst->head;
         } /* end else */
     } /* end if */
     else
     	if(mem_space->select.type!=H5S_SEL_ALL)
-            HGOTO_DONE(SUCCEED);
+            goto fall_through;
 
     /* Check for a single hyperslab block defined in file dataspace */
     if (file_space->select.type==H5S_SEL_HYPERSLABS) {
@@ -741,32 +684,17 @@ H5S_all_write(H5F_t *f, const struct H5O_layout_t *layout,
                 count*=file_space->select.sel_info.hslab.diminfo[u].count;
             /* If the regular hyperslab definition creates more than one hyperslab, fall through */
             if(count>1)
-                HGOTO_DONE(SUCCEED);
+                goto fall_through;
         } /* end if */
         else {
-            /* Get the pointer to the hyperslab spans to check */
-            file_span=file_space->select.sel_info.hslab.span_lst->head;
-
-            /* Spin through the spans, checking for more than one span in each dimension */
-            while(file_span!=NULL) {
-                /* If there are more than one span in the dimension, we can't use this routine */
-                if(file_span->next!=NULL)
-                    HGOTO_DONE(SUCCEED);
-                
-                /* Advance to the next span, if it's available */
-                if(file_span->down==NULL)
-                    break;
-                else
-                    file_span=file_span->down->head;
-            } /* end while */
-
-            /* Get the pointer to the hyperslab spans to use */
-            file_span=file_space->select.sel_info.hslab.span_lst->head;
+            if(file_space->select.sel_info.hslab.hyper_lst->count>1)
+                goto fall_through;
+            file_node=file_space->select.sel_info.hslab.hyper_lst->head;
         } /* end else */
     } /* end if */
     else
     	if(file_space->select.type!=H5S_SEL_ALL)
-            HGOTO_DONE(SUCCEED);
+            goto fall_through;
 
     /* Get information about memory and file */
     for (u=0; u<mem_space->extent.u.simple.rank; u++) {
@@ -777,9 +705,8 @@ H5S_all_write(H5F_t *f, const struct H5O_layout_t *layout,
                 mem_off=mem_space->select.sel_info.hslab.diminfo[u].start;
             } /* end if */
             else {
-                mem_size=(mem_span->high-mem_span->low)+1;
-                mem_off=mem_span->low;
-                mem_span=mem_span->down->head;
+                mem_size=(mem_node->end[u]-mem_node->start[u])+1;
+                mem_off=mem_node->start[u];
             } /* end else */
         } /* end if */
         else {
@@ -794,9 +721,8 @@ H5S_all_write(H5F_t *f, const struct H5O_layout_t *layout,
                 file_off=file_space->select.sel_info.hslab.diminfo[u].start;
             } /* end if */
             else {
-                file_size=(file_span->high-file_span->low)+1;
-                file_off=file_span->low;
-                file_span=file_span->down->head;
+                file_size=(file_node->end[u]-file_node->start[u])+1;
+                file_off=file_node->start[u];
             } /* end else */
         } /* end if */
         else {
@@ -805,7 +731,7 @@ H5S_all_write(H5F_t *f, const struct H5O_layout_t *layout,
         } /* end else */
 
         if (mem_size!=file_size)
-            HGOTO_DONE(SUCCEED);
+            goto fall_through;
 
         size[u] = file_size;
         file_offset[u] = file_off;
@@ -866,7 +792,7 @@ H5S_all_write(H5F_t *f, const struct H5O_layout_t *layout,
         if(small_contiguous || large_contiguous) {
             /* Compute the "down sizes" for each dimension */
             for (acc=elmt_size, i=(mem_space->extent.u.simple.rank-1); i>=0; i--) {
-                H5_ASSIGN_OVERFLOW(down_size[i],acc,hsize_t,size_t);
+                down_size[i]=acc;
                 acc*=mem_space->extent.u.simple.size[i];
             } /* end for */
 
@@ -878,21 +804,21 @@ H5S_all_write(H5F_t *f, const struct H5O_layout_t *layout,
         } /* end if */
         else {
             /* Non-contiguous hyperslab block */
-            HGOTO_DONE(SUCCEED);
+            goto fall_through;
         } /* end else */
     } /* end if */
 
     /* Write data to the file */
     if (H5F_arr_write(f, dxpl_id, layout, pline, fill, efl, size,
 		      size, mem_offset, file_offset, buf)<0) {
-        HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL,
+        HRETURN_ERROR(H5E_IO, H5E_WRITEERROR, FAIL,
 		      "unable to write data to the file");
     }
     *must_convert = FALSE;
 
 
-done:
-    FUNC_LEAVE(ret_value);
+fall_through:
+    FUNC_LEAVE(SUCCEED);
 }
 
 
@@ -914,7 +840,7 @@ done:
  REVISION LOG
 --------------------------------------------------------------------------*/
 herr_t
-H5S_all_release (H5S_t * UNUSED space)
+H5S_all_release (H5S_t UNUSED *space)
 {
     FUNC_ENTER (H5S_all_release, FAIL);
 
@@ -1022,7 +948,7 @@ H5S_all_select_serialize (const H5S_t *space, uint8_t *buf)
  REVISION LOG
 --------------------------------------------------------------------------*/
 herr_t
-H5S_all_select_deserialize (H5S_t *space, const uint8_t * UNUSED buf)
+H5S_all_select_deserialize (H5S_t *space, const uint8_t UNUSED *buf)
 {
     herr_t ret_value=FAIL;  /* return value */
 
@@ -1211,10 +1137,9 @@ H5S_all_select_iterate(void *buf, hid_t type_id, H5S_t *space, H5D_operator_t op
     hsize_t offset;             /* offset of region in buffer */
     hsize_t nelemts;            /* Number of elements to iterate through */
     void *tmp_buf;              /* temporary location of the element in the buffer */
-    unsigned rank;              /* Dataspace rank */
-    int indx;                   /* Index to increment */
-    H5T_t *dt;                  /* Datatype structure */
-    herr_t ret_value=0;         /* return value */
+    unsigned rank;             /* Dataspace rank */
+    int indx;              /* Index to increment */
+    herr_t ret_value=0;     /* return value */
 
     FUNC_ENTER (H5S_all_select_iterate, 0);
 
@@ -1228,11 +1153,7 @@ H5S_all_select_iterate(void *buf, hid_t type_id, H5S_t *space, H5D_operator_t op
 
     /* Set up the size of the memory space */
     HDmemcpy(mem_size, space->extent.u.simple.size, rank*sizeof(hsize_t));
-
-    /* Set the size of the datatype */
-    if (NULL==(dt=H5I_object(type_id)))
-        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not an valid base datatype");
-    mem_size[rank]=H5T_get_size(dt);
+    mem_size[rank]=H5Tget_size(type_id);
 
     /* Set the coordinates to zero */
     HDmemset(mem_offset, 0, (rank+1)*sizeof(hsize_t));

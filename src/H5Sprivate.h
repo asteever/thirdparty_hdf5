@@ -33,8 +33,16 @@
 /* Forward references of common typedefs */
 typedef struct H5S_t H5S_t;
 typedef struct H5S_pnt_node_t H5S_pnt_node_t;
-typedef struct H5S_hyper_span_t H5S_hyper_span_t;
-typedef struct H5S_hyper_span_info_t H5S_hyper_span_info_t;
+
+/* Enumerated type for the type of selection */
+typedef enum {
+    H5S_SEL_ERROR	= -1, 		/* Error			*/
+    H5S_SEL_NONE	= 0,           	/* Nothing selected 		*/
+    H5S_SEL_POINTS	= 1,         	/* Sequence of points selected	*/
+    H5S_SEL_HYPERSLABS	= 2,     	/* Hyperslab selection defined	*/
+    H5S_SEL_ALL		= 3,            /* Entire extent selected	*/
+    H5S_SEL_N		= 4		/*THIS MUST BE LAST		*/
+}H5S_sel_type;
 
 /* Point selection iteration container */
 typedef struct {
@@ -42,12 +50,9 @@ typedef struct {
     H5S_pnt_node_t *curr;   /* Pointer to next node to output */
 } H5S_point_iter_t;
 
-/* New Hyperslab selection iteration container */
+/* Hyperslab selection iteration container */
 typedef struct {
     hsize_t elmt_left;      /* Number of elements left to iterate over */
-    H5S_hyper_span_info_t *spans;  /* Pointer to copy of the span tree */
-    H5S_hyper_span_t **span;  /* Array of pointers to span nodes */
-    hssize_t *off;          /* Offset in span node */
     hssize_t *pos;          /* Position to start iterating at */
 } H5S_hyper_iter_t;
 
@@ -60,7 +65,7 @@ typedef struct {
 /* Selection iteration container */
 typedef union {
     H5S_point_iter_t pnt;   /* Point selection iteration information */
-    H5S_hyper_iter_t hyp;   /* New Hyperslab selection iteration information */
+    H5S_hyper_iter_t hyp;   /* Hyperslab selection iteration information */
     H5S_all_iter_t all;     /* "All" selection iteration information */
 } H5S_sel_iter_t;
 
@@ -76,7 +81,8 @@ typedef struct H5S_fconv_t {
     H5S_sel_type	type;
     
     /* Initialize file element numbering information */
-    herr_t (*init)(const H5S_t *space, size_t elmt_size, H5S_sel_iter_t *iter);
+    herr_t (*init)(const struct H5O_layout_t *layout, const H5S_t *space,
+		   H5S_sel_iter_t *iter);
 
     /* Determine optimal number of elements to transfer */
     hsize_t (*avail)(const H5S_t *file_space, const H5S_sel_iter_t *file_iter,
@@ -105,7 +111,8 @@ typedef struct H5S_mconv_t {
     H5S_sel_type	type;
     
     /* Initialize memory element numbering information */
-    herr_t (*init)(const H5S_t *space, size_t elmt_size, H5S_sel_iter_t *iter);
+    herr_t (*init)(const struct H5O_layout_t *layout, const H5S_t *space,
+		   H5S_sel_iter_t *iter);
 
     /* Gather elements from app buffer to type conversion buffer */
     hsize_t (*gath)(const void *buf, size_t elmt_size,
@@ -142,7 +149,7 @@ typedef struct H5S_conv_t {
     /* Read from file to application w/o intermediate scratch buffer */
     herr_t (*read)(H5F_t *f, const struct H5O_layout_t *layout,
 		   const struct H5O_pline_t *pline,
-                   const struct H5O_fill_t *fill,
+		   const struct H5O_fill_t *fill,
 		   const struct H5O_efl_t *efl, size_t elmt_size,
 		   const H5S_t *file_space, const H5S_t *mem_space,
 		   hid_t dxpl_id, void *buf/*out*/,
@@ -152,7 +159,7 @@ typedef struct H5S_conv_t {
     /* Write directly from app buffer to file */
     herr_t (*write)(H5F_t *f, const struct H5O_layout_t *layout,
 		   const struct H5O_pline_t *pline,
-                   const struct H5O_fill_t *fill,
+		   const struct H5O_fill_t *fill,
 		   const struct H5O_efl_t *efl, size_t elmt_size,
 		   const H5S_t *file_space, const H5S_t *mem_space,
 		   hid_t dxpl_id, const void *buf,
@@ -204,6 +211,11 @@ __DLL__ H5S_t *H5S_read(struct H5G_entry_t *ent);
 __DLL__ int H5S_cmp(const H5S_t *ds1, const H5S_t *ds2);
 __DLL__ htri_t H5S_is_simple(const H5S_t *sdim);
 __DLL__ unsigned H5S_nelem(const H5S_t *space);
+__DLL__ herr_t H5S_select_hyperslab(H5S_t *space, H5S_seloper_t op,
+				    const hssize_t start[],
+				    const hsize_t _stride[],
+				    const hsize_t count[],
+				    const hsize_t _block[]);
 __DLL__ int H5S_get_hyperslab(const H5S_t *ds, hssize_t offset[]/*out*/,
 			       hsize_t size[]/*out*/, hsize_t stride[]/*out*/);
 __DLL__ herr_t H5S_select_copy(H5S_t *dst, const H5S_t *src);
@@ -211,7 +223,8 @@ __DLL__ herr_t H5S_extent_release(H5S_t *space);
 __DLL__ herr_t H5S_select_release(H5S_t *space);
 __DLL__ hssize_t H5S_get_select_npoints(const H5S_t *space);
 __DLL__ int H5S_extend(H5S_t *space, const hsize_t *size);
-__DLL__ int H5S_set_extend(H5S_t *space, const hsize_t *size);
+__DLL__ herr_t H5S_set_extent_simple(H5S_t *space, int rank,
+				     const hsize_t *dims, const hsize_t *max);
 __DLL__ htri_t H5S_select_valid(const H5S_t *space);
 __DLL__ herr_t H5S_debug(H5F_t *f, const void *_mesg, FILE *stream,
 			 int indent, int fwidth);
@@ -229,7 +242,7 @@ __DLL__ herr_t H5S_sel_iter_release(const H5S_t *space,
 __DLL__ herr_t H5S_mpio_spaces_read(H5F_t *f,
 				    const struct H5O_layout_t *layout,
 				    const struct H5O_pline_t *pline,
-                                    const struct H5O_fill_t *fill,
+		                    const struct H5O_fill_t *fill,
 				    const struct H5O_efl_t *efl,
 				    size_t elmt_size, const H5S_t *file_space,
 				    const H5S_t *mem_space, hid_t dxpl_id,
@@ -238,14 +251,14 @@ __DLL__ herr_t H5S_mpio_spaces_read(H5F_t *f,
 
 /* MPI-IO function to write directly from app buffer to file rky980813 */
 __DLL__ herr_t H5S_mpio_spaces_write(H5F_t *f,
-				    const struct H5O_layout_t *layout,
-				    const struct H5O_pline_t *pline,
-                                    const struct H5O_fill_t *fill,
-				    const struct H5O_efl_t *efl,
-				    size_t elmt_size, const H5S_t *file_space,
-				    const H5S_t *mem_space, hid_t dxpl_id,
-				    const void *buf,
-				    hbool_t *must_convert /*out*/ );
+				     const struct H5O_layout_t *layout,
+				     const struct H5O_pline_t *pline,
+		                     const struct H5O_fill_t *fill,
+				     const struct H5O_efl_t *efl,
+				     size_t elmt_size, const H5S_t *file_space,
+				     const H5S_t *mem_space, hid_t dxpl_id,
+				     const void *buf,
+				     hbool_t *must_convert /*out*/ );
 #ifndef _H5S_IN_H5S_C
 /* Global var whose value comes from environment variable */
 __DLLVAR__ hbool_t		H5_mpi_opt_types_g;

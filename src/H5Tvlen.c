@@ -12,15 +12,14 @@
 
 /* $Id$ */
 
-#define H5T_PACKAGE		/*suppress error about including H5Tpkg	     */
+#define H5T_PACKAGE		/*suppress error about including H5Tpkg    */
 
-#include "H5private.h"		/* Generic Functions			*/
-#include "H5Eprivate.h"     /* Errors */
-#include "H5HGprivate.h"    /* Global Heaps */
-#include "H5Iprivate.h"     /* IDs */
-#include "H5Pprivate.h"     /* Property Lists */
-#include "H5MMprivate.h"    /* Memory Allocation */
-#include "H5Tpkg.h"         /* Datatypes */
+#include "H5private.h"          /* Generic Functions                       */
+#include "H5Eprivate.h"         /* Errors                                  */
+#include "H5HGprivate.h"        /* Global Heaps                            */
+#include "H5Iprivate.h"         /* IDs                                     */
+#include "H5MMprivate.h"        /* Memory Allocation                       */
+#include "H5Tpkg.h"             /* Datatypes                               */
 
 #define PABLO_MASK	H5Tvlen_mask
 
@@ -203,13 +202,10 @@ herr_t H5T_vlen_seq_mem_read(H5F_t UNUSED *f, void *vl_addr, void *buf, size_t l
  *
  *-------------------------------------------------------------------------
  */
-herr_t H5T_vlen_seq_mem_write(hid_t plist_id, H5F_t UNUSED *f, void *vl_addr, void *buf, hsize_t seq_len, hsize_t base_size)
+herr_t H5T_vlen_seq_mem_write(const H5D_xfer_t *xfer_parms, H5F_t UNUSED *f, void *vl_addr, void *buf, hsize_t seq_len, hsize_t base_size)
 {
-    H5MM_allocate_t alloc_func;     /* Vlen allocation function */
-    void *alloc_info;               /* Vlen allocation information */
     hvl_t *vl=(hvl_t *)vl_addr;   /* Pointer to the user's hvl_t information */
-    size_t len;
-    H5P_genplist_t *plist;      /* Property list */
+    size_t len=seq_len*base_size;
 
     FUNC_ENTER (H5T_vlen_seq_mem_write, FAIL);
 
@@ -218,28 +214,14 @@ herr_t H5T_vlen_seq_mem_write(hid_t plist_id, H5F_t UNUSED *f, void *vl_addr, vo
     assert(buf);
 
     if(seq_len!=0) {
-        H5_ASSIGN_OVERFLOW(len,(seq_len*base_size),hsize_t,size_t);
-
         /* Use the user's memory allocation routine is one is defined */
-
-        /* Get the default dataset transfer property list if the user didn't provide one */
-        if (H5P_DEFAULT == plist_id)
-            plist_id= H5P_DATASET_XFER_DEFAULT;
-
-        /* Get the allocation function & info */
-        if(TRUE!=H5P_isa_class(plist_id,H5P_DATASET_XFER) || NULL == (plist = H5I_object(plist_id)))
-            HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataset transfer property list");
-        if (H5P_get(plist,H5D_XFER_VLEN_ALLOC_NAME,&alloc_func)<0)
-            HRETURN_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "unable to get value");
-        if (H5P_get(plist,H5D_XFER_VLEN_ALLOC_INFO_NAME,&alloc_info)<0)
-            HRETURN_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "unable to get value");
-
-        if(alloc_func!=NULL) {
-            if(NULL==(vl->p=(alloc_func)(len,alloc_info)))
+        assert((seq_len*base_size)==(hsize_t)((size_t)(seq_len*base_size))); /*check for overflow*/
+        if(xfer_parms->vlen_alloc!=NULL) {
+            if(NULL==(vl->p=(xfer_parms->vlen_alloc)((size_t)(seq_len*base_size),xfer_parms->alloc_info)))
                 HRETURN_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for VL data");
           } /* end if */
         else {  /* Default to system malloc */
-            if(NULL==(vl->p=H5MM_malloc(len)))
+            if(NULL==(vl->p=H5MM_malloc((size_t)(seq_len*base_size))))
                 HRETURN_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for VL data");
           } /* end else */
 
@@ -251,7 +233,7 @@ herr_t H5T_vlen_seq_mem_write(hid_t plist_id, H5F_t UNUSED *f, void *vl_addr, vo
         vl->p=NULL;
 
     /* Set the sequence length */
-    H5_ASSIGN_OVERFLOW(vl->len,seq_len,hsize_t,size_t);
+    vl->len=seq_len;
 
     FUNC_LEAVE (SUCCEED);
 }   /* end H5T_vlen_seq_mem_write() */
@@ -331,36 +313,20 @@ herr_t H5T_vlen_str_mem_read(H5F_t UNUSED *f, void *vl_addr, void *buf, size_t l
  *
  *-------------------------------------------------------------------------
  */
-herr_t H5T_vlen_str_mem_write(hid_t plist_id, H5F_t UNUSED *f, void *vl_addr, void *buf, hsize_t seq_len, hsize_t base_size)
+herr_t H5T_vlen_str_mem_write(const H5D_xfer_t *xfer_parms, H5F_t UNUSED *f, void *vl_addr, void *buf, hsize_t seq_len, hsize_t base_size)
 {
-    H5MM_allocate_t alloc_func;     /* Vlen allocation function */
-    void *alloc_info;               /* Vlen allocation information */
     char **s=(char **)vl_addr;   /* Pointer to the user's hvl_t information */
-    size_t len;
-    H5P_genplist_t *plist;      /* Property list */
+    size_t len=seq_len*base_size;
 
     FUNC_ENTER (H5T_vlen_str_mem_write, FAIL);
 
     /* check parameters */
     assert(buf);
-    H5_CHECK_OVERFLOW(((seq_len+1)*base_size),hsize_t,size_t);
 
-    /* Use the user's memory allocation routine if one is defined */
-
-    /* Get the default dataset transfer property list if the user didn't provide one */
-    if (H5P_DEFAULT == plist_id)
-        plist_id= H5P_DATASET_XFER_DEFAULT;
-
-    /* Get the allocation function & info */
-    if(TRUE!=H5P_isa_class(plist_id,H5P_DATASET_XFER) || NULL == (plist = H5I_object(plist_id)))
-        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataset transfer property list");
-    if (H5P_get(plist,H5D_XFER_VLEN_ALLOC_NAME,&alloc_func)<0)
-        HRETURN_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "unable to get value");
-    if (H5P_get(plist,H5D_XFER_VLEN_ALLOC_INFO_NAME,&alloc_info)<0)
-        HRETURN_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "unable to get value");
-
-    if(alloc_func!=NULL) {
-        if(NULL==(*s=(alloc_func)((size_t)((seq_len+1)*base_size),alloc_info)))
+    /* Use the user's memory allocation routine is one is defined */
+    assert(((seq_len+1)*base_size)==(hsize_t)((size_t)((seq_len+1)*base_size))); /*check for overflow*/
+    if(xfer_parms->vlen_alloc!=NULL) {
+        if(NULL==(*s=(xfer_parms->vlen_alloc)((size_t)((seq_len+1)*base_size),xfer_parms->alloc_info)))
             HRETURN_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for VL data");
       } /* end if */
     else {  /* Default to system malloc */
@@ -368,7 +334,6 @@ herr_t H5T_vlen_str_mem_write(hid_t plist_id, H5F_t UNUSED *f, void *vl_addr, vo
             HRETURN_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for VL data");
       } /* end else */
 
-    len=(size_t)seq_len*base_size;
     HDmemcpy(*s,buf,len);
     (*s)[len]='\0';
 
@@ -465,11 +430,11 @@ herr_t H5T_vlen_disk_read(H5F_t *f, void *vl_addr, void *buf, size_t UNUSED len)
  *
  *-------------------------------------------------------------------------
  */
-herr_t H5T_vlen_disk_write(hid_t UNUSED plist_id, H5F_t *f, void *vl_addr, void *buf, hsize_t seq_len, hsize_t base_size)
+herr_t H5T_vlen_disk_write(const H5D_xfer_t UNUSED *xfer_parms, H5F_t *f, void *vl_addr, void *buf, hsize_t seq_len, hsize_t base_size)
 {
     uint8_t *vl=(uint8_t *)vl_addr;   /* Pointer to the user's hvl_t information */
     H5HG_t hobjid;
-    size_t len;
+    size_t len=seq_len*base_size;
 
     FUNC_ENTER (H5T_vlen_disk_write, FAIL);
 
@@ -479,13 +444,11 @@ herr_t H5T_vlen_disk_write(hid_t UNUSED plist_id, H5F_t *f, void *vl_addr, void 
     assert(f);
 
     /* Set the length of the sequence */
-    H5_CHECK_OVERFLOW(seq_len,hsize_t,size_t);
     UINT32ENCODE(vl, seq_len);
     
     /* Check if this sequence actually has any data */
     if(seq_len!=0) {
         /* Write the VL information to disk (allocates space also) */
-        H5_ASSIGN_OVERFLOW(len,(seq_len*base_size),hsize_t,size_t);
         if(H5HG_insert(f,len,buf,&hobjid)<0)
             HRETURN_ERROR(H5E_DATATYPE, H5E_WRITEERROR, FAIL, "Unable to write VL information");
     } /* end if */
@@ -637,11 +600,8 @@ done:
 herr_t 
 H5T_vlen_reclaim(void *elem, hid_t type_id, hsize_t UNUSED ndim, hssize_t UNUSED *point, void *op_data)
 {
-    hid_t   plist_id = *(hid_t *)op_data; /* Dataset transfer plist from iterator */
-    H5MM_free_t free_func;      /* Vlen free function */
-    void *free_info=NULL;       /* Vlen free information */
+    H5D_xfer_t	   *xfer_parms = (H5D_xfer_t *)op_data; /* Dataset transfer plist from iterator */
     H5T_t	*dt = NULL;
-    H5P_genplist_t *plist;      /* Property list */
     herr_t ret_value = FAIL;
 
     FUNC_ENTER(H5T_vlen_reclaim, FAIL);
@@ -653,20 +613,8 @@ H5T_vlen_reclaim(void *elem, hid_t type_id, hsize_t UNUSED ndim, hssize_t UNUSED
     if (H5I_DATATYPE!=H5I_get_type(type_id) || NULL==(dt=H5I_object(type_id)))
         HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data type");
 
-    /* Get the default dataset transfer property list if the user didn't provide one */
-    if (H5P_DEFAULT == plist_id)
-        plist_id= H5P_DATASET_XFER_DEFAULT;
-
-    /* Get the free func & information */
-    if(TRUE!=H5P_isa_class(plist_id,H5P_DATASET_XFER) || NULL == (plist = H5I_object(plist_id)))
-        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataset transfer property list");
-    if (H5P_get(plist,H5D_XFER_VLEN_FREE_NAME,&free_func)<0)
-        HRETURN_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "unable to get value");
-    if (H5P_get(plist,H5D_XFER_VLEN_FREE_INFO_NAME,&free_info)<0)
-        HRETURN_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "unable to get value");
-
     /* Pull the free function and free info pointer out of the op_data and call the recurse datatype free function */
-    ret_value=H5T_vlen_reclaim_recurse(elem,dt,free_func,free_info);
+    ret_value=H5T_vlen_reclaim_recurse(elem,dt,xfer_parms->vlen_free,xfer_parms->free_info);
 
 #ifdef LATER
 done:

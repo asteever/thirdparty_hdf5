@@ -29,13 +29,7 @@
  * prevent repeated include.
  */
 #include "H5pubconf.h"		/*from configure                             */
-
-#ifdef H5_HAVE_FEATURES_H
-#include <features.h>           /*for setting POSIX, BSD, etc. compatibility */
-#endif
-#ifdef H5_HAVE_SYS_TYPES_H
 #include <sys/types.h>
-#endif
 #ifdef H5_STDC_HEADERS
 #   include <limits.h>		/*for H5T_NATIVE_CHAR defn in H5Tpublic.h    */
 #endif
@@ -65,11 +59,11 @@
 
 /* Version numbers */
 #define H5_VERS_MAJOR	1	/* For major interface/format changes  	     */
-#define H5_VERS_MINOR	5	/* For minor interface/format changes  	     */
-#define H5_VERS_RELEASE	21	/* For tweaks, bug-fixes, or development     */
+#define H5_VERS_MINOR	4	/* For minor interface/format changes  	     */
+#define H5_VERS_RELEASE	3	/* For tweaks, bug-fixes, or development     */
 #define H5_VERS_SUBRELEASE ""	/* For pre-releases like snap0       */
 				/* Empty string for real releases.           */
-#define H5_VERS_INFO    "HDF5 library version: 1.5.21"      /* Full version string */
+#define H5_VERS_INFO    "HDF5 library version: 1.4.3"      /* Full version string */
 
 #define H5check()	H5check_version(H5_VERS_MAJOR,H5_VERS_MINOR,	      \
 				        H5_VERS_RELEASE)
@@ -136,17 +130,14 @@ typedef __int64 ssize_t;
 #   if H5_SIZEOF_LONG_LONG>=8
 typedef unsigned long long 	hsize_t;
 typedef signed long long	hssize_t;
-#       define H5_SIZEOF_HSIZE_T H5_SIZEOF_LONG_LONG
 #   elif H5_SIZEOF___INT64>=8
 typedef unsigned __int64	hsize_t;
 typedef signed __int64		hssize_t;
-#       define H5_SIZEOF_HSIZE_T H5_SIZEOF___INT64
 #   endif
-#else /* H5_HAVE_LARGE_HSIZET */
+#else
 typedef size_t			hsize_t;
 typedef ssize_t			hssize_t;
-#       define H5_SIZEOF_HSIZE_T H5_SIZEOF_SIZE_T
-#endif /* H5_HAVE_LARGE_HSIZET */
+#endif
 
 /*
  * File addresses have there own types.

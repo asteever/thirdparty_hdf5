@@ -83,8 +83,8 @@ static hid_t	fapl_g = -1;
  */
 static size_t
 counter (unsigned UNUSED flags, size_t UNUSED cd_nelmts,
-	 const unsigned * UNUSED cd_values, size_t nbytes,
-	 size_t * UNUSED buf_size, void ** UNUSED buf)
+	 const unsigned UNUSED *cd_values, size_t nbytes,
+	 size_t UNUSED *buf_size, void UNUSED **buf)
 {
     nio_g += nbytes;
     return nbytes;
@@ -162,18 +162,13 @@ create_dataset (void)
  *-------------------------------------------------------------------------
  */
 static double
-test_rowmaj (int op, size_t cache_size, size_t io_size)
+test_rowmaj (int op, hsize_t cache_size, hsize_t io_size)
 {
     hid_t	file, dset, mem_space, file_space;
     signed char	*buf = calloc (1, SQUARE(io_size));
     hsize_t	i, j, hs_size[2];
     hssize_t	hs_offset[2];
-#ifdef H5_WANT_H5_V1_4_COMPAT
     int		mdc_nelmts, rdcc_nelmts;
-#else /* H5_WANT_H5_V1_4_COMPAT */
-    int		mdc_nelmts;
-    size_t	rdcc_nelmts;
-#endif /* H5_WANT_H5_V1_4_COMPAT */
     double	w0;
 
     H5Pget_cache (fapl_g, &mdc_nelmts, &rdcc_nelmts, NULL, &w0);
@@ -242,19 +237,14 @@ test_rowmaj (int op, size_t cache_size, size_t io_size)
  *-------------------------------------------------------------------------
  */
 static double
-test_diag (int op, size_t cache_size, size_t io_size, size_t offset)
+test_diag (int op, hsize_t cache_size, hsize_t io_size, hsize_t offset)
 {
     hid_t	file, dset, mem_space, file_space;
     hsize_t	i, hs_size[2];
     hsize_t	nio = 0;
     hssize_t	hs_offset[2];
     signed char	*buf = calloc (1, SQUARE (io_size));
-#ifdef H5_WANT_H5_V1_4_COMPAT
     int		mdc_nelmts, rdcc_nelmts;
-#else /* H5_WANT_H5_V1_4_COMPAT */
-    int		mdc_nelmts;
-    size_t	rdcc_nelmts;
-#endif /* H5_WANT_H5_V1_4_COMPAT */
     double	w0;
 
     H5Pget_cache (fapl_g, &mdc_nelmts, &rdcc_nelmts, NULL, &w0);
@@ -322,10 +312,10 @@ test_diag (int op, size_t cache_size, size_t io_size, size_t offset)
 int
 main (void)
 {
-    size_t	io_size;
+    hsize_t	io_size;
     double	effic, io_percent;
     FILE	*f, *d;
-    size_t	cache_size;
+    int		cache_size;
     double	w0;
 
     /*
@@ -370,8 +360,8 @@ main (void)
 	 cache_size<=RM_CACHE_END;
 	 cache_size+=RM_CACHE_DELT) {
 	for (io_percent=RM_START; io_percent<=RM_END; io_percent+=RM_DELTA) {
-	    io_size = MAX (1, (size_t)(CH_SIZE*io_percent));
-	    printf ("Rowmaj-rd %8d %8.2f", (int)cache_size, io_percent);
+	    io_size = MAX (1, (int)(CH_SIZE*io_percent));
+	    printf ("Rowmaj-rd %8d %8.2f", cache_size, io_percent);
 	    fflush (stdout);
 	    effic = test_rowmaj (READ, cache_size, io_size);
 	    printf (" %8.2f\n", effic);
@@ -416,8 +406,8 @@ main (void)
 	 cache_size<=RM_CACHE_END;
 	 cache_size+=RM_CACHE_DELT) {
 	for (io_percent=RM_START; io_percent<=RM_END; io_percent+=RM_DELTA) {
-	    io_size = MAX (1, (size_t)(CH_SIZE*io_percent));
-	    printf ("Rowmaj-wr %8d %8.2f", (int)cache_size, io_percent);
+	    io_size = MAX (1, (int)(CH_SIZE*io_percent));
+	    printf ("Rowmaj-wr %8d %8.2f", cache_size, io_percent);
 	    fflush (stdout);
 	    effic = test_rowmaj (WRITE, cache_size, io_size);
 	    printf (" %8.2f\n", effic);
@@ -461,8 +451,8 @@ main (void)
 	for (io_percent=DIAG_START;
 	     io_percent<=DIAG_END;
 	     io_percent+=DIAG_DELTA) {
-	    io_size = MAX (1, (size_t)(CH_SIZE*io_percent));
-	    printf ("Diag-rd   %8d %8.2f", (int)cache_size, io_percent);
+	    io_size = MAX (1, (int)(CH_SIZE*io_percent));
+	    printf ("Diag-rd   %8d %8.2f", cache_size, io_percent);
 	    fflush (stdout);
 	    effic = test_diag (READ, cache_size, io_size, MAX (1, io_size/2));
 	    printf (" %8.2f\n", effic);
@@ -506,8 +496,8 @@ main (void)
 	for (io_percent=DIAG_START;
 	     io_percent<=DIAG_END;
 	     io_percent+=DIAG_DELTA) {
-	    io_size = MAX (1, (size_t)(CH_SIZE*io_percent));
-	    printf ("Diag-wr   %8d %8.2f", (int)cache_size, io_percent);
+	    io_size = MAX (1, (int)(CH_SIZE*io_percent));
+	    printf ("Diag-wr   %8d %8.2f", cache_size, io_percent);
 	    fflush (stdout);
 	    effic = test_diag (WRITE, cache_size, io_size, MAX (1, io_size/2));
 	    printf (" %8.2f\n", effic);

@@ -129,36 +129,38 @@ H5O_mtime_decode(H5F_t UNUSED *f, const uint8_t *p,
 #elif defined(H5_HAVE_BSDGETTIMEOFDAY) && defined(H5_HAVE_STRUCT_TIMEZONE)
     /* Irix5.3 */
     {
-        struct timezone tz;
-        if (HDBSDgettimeofday(NULL, &tz)<0) {
-            HRETURN_ERROR(H5E_OHDR, H5E_CANTINIT, NULL,
-                          "unable to obtain local timezone information");
-        }
-        the_time -= tz.tz_minuteswest * 60 - (tm.tm_isdst ? 3600 : 0);
+	struct timezone tz;
+	if (BSDgettimeofday(NULL, &tz)<0) {
+	    HRETURN_ERROR(H5E_OHDR, H5E_CANTINIT, NULL,
+			  "unable to obtain local timezone information");
+	}
+	the_time -= tz.tz_minuteswest*60 - (tm.tm_isdst?3600:0);
     }
 #elif defined(H5_HAVE_GETTIMEOFDAY) && defined(H5_HAVE_STRUCT_TIMEZONE)
     {
 	struct timezone tz;
-
-	if (HDgettimeofday(NULL, &tz) < 0) {
+	if (gettimeofday(NULL, &tz)<0) {
 	    HRETURN_ERROR(H5E_OHDR, H5E_CANTINIT, NULL,
 			  "unable to obtain local timezone information");
 	}
-
-	the_time -= tz.tz_minuteswest * 60 - (tm.tm_isdst ? 3600 : 0);
+	the_time -= tz.tz_minuteswest*60 - (tm.tm_isdst?3600:0);
     }
-#elif defined (WIN32) && !defined (__MWERKS__)
-    {
-        struct timeb timebuffer;
-        long  tz;
+#elif defined WIN32 && !defined __MWERKS__  
+	{
 
-        ftime(&timebuffer);
-        tz = timebuffer.timezone;
-        /* daylight is not handled properly. Currently we just hard-code
-           the problem. */
-         the_time -= tz*60;
-        /*the_time -= tz * 60 - 3600 * _daylight;*/
-    }
+   struct timeb timebuffer;
+   long  tz;
+   ftime( &timebuffer );
+
+   tz = timebuffer.timezone;
+  
+   /*daylight is not handled properly. Currently we just hard-code                        the problem. */ 
+   the_time -=tz*60;
+
+   /*the_time -=tz*60-3600*_daylight;*/
+
+   
+}
 #else
     /*
      * The catch-all.  If we can't convert a character string universal
@@ -283,7 +285,7 @@ H5O_mtime_copy(const void *_mesg, void *_dest)
  *-------------------------------------------------------------------------
  */
 static size_t
-H5O_mtime_size(H5F_t * UNUSED f, const void * UNUSED mesg)
+H5O_mtime_size(H5F_t UNUSED *f, const void UNUSED *mesg)
 {
     FUNC_ENTER(H5O_mtime_size, 0);
 

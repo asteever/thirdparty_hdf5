@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 1998-2001 Spizella Software
- *		           All rights reserved.
+ * Copyright (C) 1998 Spizella Software
+ *		      All rights reserved.
  *
  * Programmer:	Robb Matzke <robb@arborea.spizella.com>
  *		Tuesday, January 13, 1998
@@ -473,7 +473,7 @@ H5T_conv_order_opt(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
     uint8_t	*buf = (uint8_t*)_buf;
     H5T_t	*src = NULL;
     H5T_t	*dst = NULL;
-    hsize_t     i;
+    hsize_t	i;
 
     FUNC_ENTER(H5T_conv_order_opt, FAIL);
 
@@ -836,7 +836,6 @@ H5T_conv_order_opt(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
     FUNC_LEAVE(SUCCEED);
 }
 
-
 /*-------------------------------------------------------------------------
  * Function:	H5T_conv_order
  *
@@ -858,6 +857,9 @@ H5T_conv_order_opt(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  *
  * 		Robb Matzke, 1999-06-16
  *		Added support for bitfields.
+ *
+ *              Robb Matzke, 2002-01-24
+ *              Unrolled two loops by hand. Ugly code bug *much* faster.
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -935,7 +937,7 @@ H5T_conv_order(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, hsize_t nelmts,
                 H5_SWAP_BYTES(buf, j, src->size-(j+1));
             }
         }
-        break;
+	break;
 
     case H5T_CONV_FREE:
 	/* Free private data */
@@ -1469,8 +1471,8 @@ H5T_conv_struct(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, hsize_t nelmts,
 	    src_delta = src->size;
         bkg_stride = dst->size;
 	} else {
-	    src_delta = -(int)src->size; /*overflow shouldn't be possible*/
-            bkg_stride = -(int)dst->size; /*overflow shouldn't be possible*/
+	    src_delta = -(src->size);
+        bkg_stride = -(dst->size);
 	    xbuf += (nelmts-1) * src->size;
 	    xbkg += (nelmts-1) * dst->size;
 	}
@@ -2202,6 +2204,7 @@ H5T_conv_vlen(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, hsize_t nelmts,
 	      size_t buf_stride, size_t bkg_stride, void *_buf,
               void *_bkg, hid_t dset_xfer_plist)
 {
+    const H5D_xfer_t	   *xfer_parms = NULL;
     H5T_path_t	*tpath;			/* Type conversion path		     */
     hid_t   	tsrc_id = -1, tdst_id = -1;/*temporary type atoms	     */
     H5T_t	*src = NULL;		/*source data type		     */
@@ -2214,7 +2217,7 @@ H5T_conv_vlen(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, hsize_t nelmts,
     size_t	src_base_size, dst_base_size;/*source & destination base size*/
     size_t	src_size, dst_size;/*source & destination total size in bytes*/
     void	*conv_buf=NULL;     	/*temporary conversion buffer 	     */
-    size_t	conv_buf_size;  	/*size of conversion buffer in bytes */
+    hsize_t	conv_buf_size;  	/*size of conversion buffer in bytes */
     uint8_t	dbuf[64],*dbuf_ptr=dbuf;/*temp destination buffer	     */
     int	direction;		/*direction of traversal	     */
     hsize_t	elmtno;			/*element number counter	     */
@@ -2257,6 +2260,14 @@ H5T_conv_vlen(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, hsize_t nelmts,
                     H5I_DATATYPE != H5I_get_type(dst_id) ||
                     NULL == (dst = H5I_object(dst_id))) {
                 HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data type");
+            }
+
+            /* Get the dataset transfer property list */
+            if (H5P_DEFAULT == dset_xfer_plist) {
+                xfer_parms = &H5D_xfer_dflt;
+            } else if (H5P_DATASET_XFER != H5P_get_class(dset_xfer_plist) ||
+                       NULL == (xfer_parms = H5I_object(dset_xfer_plist))) {
+                HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not xfer parms");
             }
 
             /*
@@ -2308,15 +2319,18 @@ H5T_conv_vlen(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, hsize_t nelmts,
             /* Get initial conversion buffer */
             conv_buf_size=MAX(src_base_size,dst_base_size);
             if ((conv_buf=H5FL_BLK_ALLOC(vlen_seq,conv_buf_size,0))==NULL)
-                HRETURN_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for type conversion");
+                HRETURN_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL,
+                     "memory allocation failed for type conversion");
 
             /* Set up conversion path for base elements */
             if (NULL==(tpath=H5T_path_find(src->parent, dst->parent, NULL, NULL))) {
-                HRETURN_ERROR(H5E_DATATYPE, H5E_UNSUPPORTED, FAIL, "unable to convert between src and dest datatypes");
+                HRETURN_ERROR(H5E_DATATYPE, H5E_UNSUPPORTED, FAIL,
+                          "unable to convert between src and dest datatypes");
             } else if (!H5T_IS_NOOP(tpath)) {
                 if ((tsrc_id = H5I_register(H5I_DATATYPE, H5T_copy(src->parent, H5T_COPY_ALL)))<0 ||
-                        (tdst_id = H5I_register(H5I_DATATYPE, H5T_copy(dst->parent, H5T_COPY_ALL)))<0) {
-                    HRETURN_ERROR(H5E_DATASET, H5E_CANTREGISTER, FAIL, "unable to register types for conversion");
+                    (tdst_id = H5I_register(H5I_DATATYPE, H5T_copy(dst->parent, H5T_COPY_ALL)))<0) {
+                        HRETURN_ERROR(H5E_DATASET, H5E_CANTREGISTER, FAIL,
+                                  "unable to register types for conversion");
                 }
             }
 
@@ -2327,9 +2341,8 @@ H5T_conv_vlen(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, hsize_t nelmts,
                 /* Get length of sequences in bytes */
                 seq_len=(*(src->u.vlen.getlen))(src->u.vlen.f,s);
                 assert(seq_len>=0);
-                H5_CHECK_OVERFLOW(seq_len,hssize_t,size_t);
-                src_size=(size_t)seq_len*src_base_size;
-                dst_size=(size_t)seq_len*dst_base_size;
+                src_size=seq_len*src_base_size;
+                dst_size=seq_len*dst_base_size;
 
                 /* Check if conversion buffer is large enough, resize if
                  * necessary */      
@@ -2353,7 +2366,7 @@ H5T_conv_vlen(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, hsize_t nelmts,
                                   "datatype conversion failed");
 
                 /* Write sequence to destination location */
-                if((*(dst->u.vlen.write))(dset_xfer_plist,dst->u.vlen.f,d,conv_buf,
+                if((*(dst->u.vlen.write))(xfer_parms,dst->u.vlen.f,d,conv_buf,
                               (hsize_t)seq_len,(hsize_t)dst_base_size)<0)
                     HRETURN_ERROR(H5E_DATATYPE, H5E_WRITEERROR, FAIL,
                                   "can't write VL data");
@@ -2500,12 +2513,20 @@ H5T_conv_array(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, hsize_t nelmts,
             dst_delta = direction * (buf_stride ? buf_stride : dst->size);
 
             /* Set up conversion path for base elements */
-            if (NULL==(tpath=H5T_path_find(src->parent, dst->parent, NULL, NULL))) {
-                HRETURN_ERROR(H5E_DATATYPE, H5E_UNSUPPORTED, FAIL, "unable to convert between src and dest datatypes");
+            if (NULL==(tpath=H5T_path_find(src->parent, dst->parent,
+                                           NULL, NULL))) {
+                HRETURN_ERROR(H5E_DATATYPE, H5E_UNSUPPORTED, FAIL,
+                              "unable to convert between src and dest "
+                              "datatypes");
             } else if (!H5T_IS_NOOP(tpath)) {
-                if ((tsrc_id = H5I_register(H5I_DATATYPE, H5T_copy(src->parent, H5T_COPY_ALL)))<0 ||
-                        (tdst_id = H5I_register(H5I_DATATYPE, H5T_copy(dst->parent, H5T_COPY_ALL)))<0) {
-                    HRETURN_ERROR(H5E_DATASET, H5E_CANTREGISTER, FAIL, "unable to register types for conversion");
+                if ((tsrc_id = H5I_register(H5I_DATATYPE,
+                                            H5T_copy(src->parent,
+                                                     H5T_COPY_ALL)))<0 ||
+                    (tdst_id = H5I_register(H5I_DATATYPE,
+                                            H5T_copy(dst->parent,
+                                                     H5T_COPY_ALL)))<0) {
+                    HRETURN_ERROR(H5E_DATASET, H5E_CANTREGISTER, FAIL,
+                                  "unable to register types for conversion");
                 }
             }
 
@@ -2515,8 +2536,10 @@ H5T_conv_array(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, hsize_t nelmts,
                 HDmemmove(dp, sp, src->size);
 
                 /* Convert array */
-                if (H5T_convert(tpath, tsrc_id, tdst_id, (hsize_t)src->u.array.nelem, 0, bkg_stride, dp, _bkg, dset_xfer_plist)<0)
-                    HRETURN_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "datatype conversion failed");
+                if (H5T_convert(tpath, tsrc_id, tdst_id, (hsize_t)src->u.array.nelem, 0, bkg_stride,
+                                dp, _bkg, dset_xfer_plist)<0)
+                    HRETURN_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL,
+                                  "datatype conversion failed");
 
                 /* Advance the source & destination pointers */
                 sp += src_delta;
@@ -3149,8 +3172,7 @@ H5T_conv_f_f (hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, hsize_t nelmts,
 		 * accomodate that value.  The mantissa of course is no
 		 * longer normalized.
 		 */
-                H5_ASSIGN_OVERFLOW(mrsh,(mrsh+1-expo),hssize_t,size_t);
-		/*mrsh += 1-expo;*/
+		mrsh += 1-expo;
 		expo = 0;
 		
 	    } else if (expo>=expo_max) {

@@ -18,7 +18,7 @@ SUBDIRS=html
 
 ##===========================================================================
 lib progs check test _test install uninstall:
-	@echo "Nothing to be done"
+	@echo Nothing to be done for $@	
 
 tests TAGS dep depend:
 	@@SETX@; for d in $(SUBDIRS); do				      \
@@ -27,8 +27,8 @@ tests TAGS dep depend:
 
 install-doc:
 	@if test -d $(DOCDIR) ; then                                          \
-	   :;                                                                 \
-	else                                                                  \
+       :;                                                                 \
+    else                                                                  \
 	   mkdir $(DOCDIR) && chmod 755 $(DOCDIR);                            \
 	fi
 	@@SETX@; for d in $(SUBDIRS); do                                      \

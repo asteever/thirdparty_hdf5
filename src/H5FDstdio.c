@@ -1,6 +1,6 @@
 /*
- * Copyright © 1999-2001 NCSA
- *		         All rights reserved.
+ * Copyright © 1999 NCSA
+ *		      All rights reserved.
  *
  * Programmer: Robb Matzke <matzke@llnl.gov>
  *	       Wednesday, October 22, 1997
@@ -14,14 +14,12 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 
-#include "hdf5.h"
-
-#ifdef H5_HAVE_STDIO_H
-#include <stdio.h>
-#endif
 #ifdef H5_HAVE_UNISTD_H
 #include <unistd.h>
 #endif
+
+
+#include "hdf5.h"
 
 #ifdef WIN32
 #include <windows.h>
@@ -33,13 +31,12 @@
 #undef MAX
 #endif /* MAX */
 #define MAX(X,Y)	((X)>(Y)?(X):(Y))
-
 #ifndef F_OK
 #define F_OK 00
 #define W_OK 02
 #define R_OK 04
-#endif
 
+#endif
 /* The driver identification number, initialized at runtime */
 static hid_t H5FD_STDIO_g = 0;
 
@@ -136,15 +133,14 @@ static haddr_t H5FD_stdio_get_eoa(H5FD_t *_file);
 static herr_t H5FD_stdio_set_eoa(H5FD_t *_file, haddr_t addr);
 static haddr_t H5FD_stdio_get_eof(H5FD_t *_file);
 static herr_t H5FD_stdio_read(H5FD_t *lf, H5FD_mem_t type, hid_t fapl_id, haddr_t addr,
-                size_t size, void *buf);
+                hsize_t size, void *buf);
 static herr_t H5FD_stdio_write(H5FD_t *lf, H5FD_mem_t type, hid_t fapl_id, haddr_t addr,
-                size_t size, const void *buf);
+                hsize_t size, const void *buf);
 static herr_t H5FD_stdio_flush(H5FD_t *_file);
 
 static const H5FD_class_t H5FD_stdio_g = {
     "stdio",				        /*name			*/
     MAXADDR,				        /*maxaddr		*/
-    H5F_CLOSE_WEAK,				/* fc_degree		*/
     NULL,					/*sb_size		*/
     NULL,					/*sb_encode		*/
     NULL,					/*sb_decode		*/
@@ -228,8 +224,10 @@ H5Pset_fapl_stdio(hid_t fapl_id)
     /* Clear the error stack */
     H5Eclear();
 
-    if(0 == H5Pisa_class(fapl_id, H5P_FILE_ACCESS))
-        H5Epush_ret(func, H5E_PLIST, H5E_BADTYPE, "not a file access property list", -1);
+    if (H5P_FILE_ACCESS!=H5Pget_class(fapl_id)) {
+        H5Epush_ret(func, H5E_PLIST, H5E_BADTYPE,
+		    "not a file access property list", -1);
+    }
     
     return H5Pset_driver(fapl_id, H5FD_STDIO, NULL);
 }
@@ -421,17 +419,8 @@ H5FD_stdio_cmp(const H5FD_t *_f1, const H5FD_t *_f2)
     if (f1->fileindexlo > f2->fileindexlo) return 1;
 
 #else
-#ifdef H5_DEV_T_IS_SCALAR
     if (f1->device < f2->device) return -1;
     if (f1->device > f2->device) return 1;
-#else /* H5_DEV_T_IS_SCALAR */
-    /* If dev_t isn't a scalar value on this system, just use memcmp to
-     * determine if the values are the same or not.  The actual return value
-     * shouldn't really matter...
-     */
-    if(memcmp(&(f1->device),&(f2->device),sizeof(dev_t))<0) return -1;
-    if(memcmp(&(f1->device),&(f2->device),sizeof(dev_t))>0) return 1;
-#endif /* H5_DEV_T_IS_SCALAR */
 
     if (f1->inode < f2->inode) return -1;
     if (f1->inode > f2->inode) return 1;
@@ -597,7 +586,7 @@ H5FD_stdio_get_eof(H5FD_t *_file)
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FD_stdio_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t size,
+H5FD_stdio_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, hsize_t size,
     void *buf/*out*/)
 {
     size_t		n;
@@ -623,7 +612,8 @@ H5FD_stdio_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, siz
     if (0 == size)
         return(0);
 	if ((haddr_t)addr >= file->eof) {
-        memset(buf, 0, size);
+        assert(size==(hsize_t)((size_t)size)); /*check for overflow*/
+        memset(buf, 0, (size_t)size);
         return(0);
     }
 
@@ -664,13 +654,15 @@ H5FD_stdio_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, siz
      * will advance the file position by N.  If N is negative or an error
      * occurs then the file position is undefined.
      */
-    n = fread(buf, 1, size, file->fp);
+    assert(size==(hsize_t)((size_t)size)); /*check for overflow*/
+    n = fread(buf, 1, (size_t)size, file->fp);
     if (n <= 0 && ferror(file->fp)) {
         file->op = H5FD_STDIO_OP_UNKNOWN;
         file->pos = HADDR_UNDEF;
         H5Epush_ret(func, H5E_IO, H5E_READERROR, "fread failed", -1);
     } else if (n < size) {
-        memset((unsigned char *)buf + n, 0, (size - n));
+        assert((size-n)==(hsize_t)((size_t)(size-n))); /*check for overflow*/
+        memset((unsigned char *)buf + n, 0, (size_t)(size - n));
     }
     
     /*
@@ -707,7 +699,7 @@ H5FD_stdio_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, siz
  */
 static herr_t
 H5FD_stdio_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr,
-		size_t size, const void *buf)
+		hsize_t size, const void *buf)
 {
     H5FD_stdio_t		*file = (H5FD_stdio_t*)_file;
     static const char *func="H5FD_stdio_write";  /* Function Name for error reporting */
@@ -755,7 +747,8 @@ H5FD_stdio_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr,
      * advanced by the number of bytes read.  Otherwise nobody knows where it
      * is.
      */
-    if (size != fwrite(buf, 1, size, file->fp)) {
+    assert(size==(hsize_t)((size_t)size)); /*check for overflow*/
+    if (size != fwrite(buf, 1, (size_t)size, file->fp)) {
         file->op = H5FD_STDIO_OP_UNKNOWN;
         file->pos = HADDR_UNDEF;
         H5Epush_ret(func, H5E_IO, H5E_WRITEERROR, "fwrite failed", -1);

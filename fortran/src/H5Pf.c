@@ -15,12 +15,12 @@
 int_f 
 nh5pcreate_c ( int_f *classtype, hid_t_f *prp_id )
 {
-  hid_t c_classtype;
+  H5P_class_t c_classtype;
   int CASE;
   int ret_value = 0;
   hid_t c_prp_id;
   /*CASE = (int)*classtype; */
-  c_classtype = (hid_t)*classtype;
+  c_classtype = (H5P_class_t)*classtype;
 /*
 
   switch (CASE) {
@@ -71,8 +71,9 @@ int_f
 nh5pclose_c ( hid_t_f *prp_id )
 {
   int ret_value = 0;
-  hid_t c_prp_id=(*prp_id);
+  hid_t c_prp_id;
 
+  c_prp_id = *prp_id;
   if ( H5Pclose(c_prp_id) < 0  ) ret_value = -1;
   return ret_value;
 }
@@ -126,17 +127,24 @@ nh5pget_class_c ( hid_t_f *prp_id , int_f *classtype)
 {
   int ret_value = 0;
   hid_t c_prp_id;
-  hid_t c_classtype; 
+  H5P_class_t c_classtype; 
 
   c_prp_id = *prp_id;
   c_classtype = H5Pget_class(c_prp_id);
   if (c_classtype == H5P_NO_CLASS ) {
+ /*     *classtype = H5P_NO_CLASS_F; */
       *classtype = H5P_NO_CLASS; 
        ret_value = -1;
        return ret_value;
   }
   *classtype = (int_f)c_classtype;
-
+/*
+  if (c_classtype == H5P_FILE_CREATE)    *classtype = H5P_FILE_CREATE_F;
+  if (c_classtype == H5P_FILE_ACCESS)    *classtype = H5P_FILE_ACCESS_F; 
+  if (c_classtype == H5P_DATASET_CREATE) *classtype = H5P_DATASET_CREATE_F; 
+  if (c_classtype == H5P_DATASET_XFER)   *classtype = H5P_DATASET_XFER_F; 
+  if (c_classtype == H5P_MOUNT_F)        *classtype = H5P_MOUNT_F; 
+*/
   return ret_value;
 }
 
@@ -1120,13 +1128,12 @@ nh5pset_cache_c(hid_t_f *prp_id, int_f* mdc_nelmts, int_f* rdcc_nelmts,  size_t_
  * Modifications: Changed type of the rdcc_w0 parameter to be real_f instead of double
  *---------------------------------------------------------------------------*/
 int_f
-nh5pget_cache_c(hid_t_f *prp_id, int_f* mdc_nelmts, size_t_f* rdcc_nelmts, size_t_f* rdcc_nbytes , real_f* rdcc_w0)
+nh5pget_cache_c(hid_t_f *prp_id, int_f* mdc_nelmts, int_f* rdcc_nelmts, size_t_f* rdcc_nbytes , real_f* rdcc_w0)
 {
      int ret_value = -1;
      hid_t c_prp_id;
      herr_t ret;
-     int c_mdc_nelmts;
-     size_t c_rdcc_nelmts; 
+     int c_mdc_nelmts, c_rdcc_nelmts; 
      size_t c_rdcc_nbytes;
      hid_t c_memb_plist;
      double c_rdcc_w0; 
@@ -1656,10 +1663,8 @@ nh5pset_hyper_cache_c(hid_t_f *prp_id, int_f* cache, int_f* limit)
       * Call H5Pset_hyper_cache function.
       */
      c_prp_id = *prp_id;
-#ifdef H5_WANT_H5_V1_4_COMPAT
      ret = H5Pset_hyper_cache(c_prp_id, c_cache, c_limit);
      if (ret < 0) return ret_value;
-#endif /* H5_WANT_H5_V1_4_COMPAT */
      ret_value = 0;
      return ret_value;
 } 
@@ -1688,12 +1693,10 @@ nh5pget_hyper_cache_c(hid_t_f *prp_id, int_f* cache, int_f* limit)
       * Call H5Pget__hyper_cache function.
       */
      c_prp_id = *prp_id;
-#ifdef H5_WANT_H5_V1_4_COMPAT
      ret = H5Pget_hyper_cache(c_prp_id, &c_cache, &c_limit);
      if (ret < 0) return ret_value;
      *cache = (int_f)c_cache;
      *limit = (int_f)c_limit;   
-#endif /* H5_WANT_H5_V1_4_COMPAT */
      ret_value = 0;
      return ret_value;
 } 

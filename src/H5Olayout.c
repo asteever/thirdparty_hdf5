@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 1997-2001 NCSA
- *                         All rights reserved.
+ * Copyright (C) 1997 NCSA
+ *                    All rights reserved.
  *
  * Programmer:  Robb Matzke <matzke@llnl.gov>
  *              Wednesday, October  8, 1997

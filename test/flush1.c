@@ -18,8 +18,6 @@ const char *FILENAME[] = {
     NULL
 };
 
-static double	the_data[100][100];
-
 
 /*-------------------------------------------------------------------------
  * Function:	main
@@ -43,6 +41,7 @@ main(void)
     hid_t	fapl, file, dcpl, space, dset, groups, grp;
     hsize_t	ds_size[2] = {100, 100};
     hsize_t	ch_size[2] = {5, 5};
+    double	the_data[100][100];
     hsize_t	i, j;
     char	name[1024];
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 1998, 1999, 2000, 2001, 2002
+ * Copyright (C) 1998, 1999, 2000, 2001
  *     National Center for Supercomputing Applications
  *     All rights reserved.
  *
@@ -36,7 +36,7 @@ static int          usingdasho = FALSE;
  **/
 
 /* fill_ref_path_table is called to inialize the object reference paths. */
-static herr_t    fill_ref_path_table(hid_t, const char *, void *);
+static herr_t    fill_ref_path_table(hid_t, const char *, void UNUSED *);
 
 /* module-scoped variables for XML option */
 #define DEFAULT_DTD     "http://hdf.ncsa.uiuc.edu/DTDs/HDF5-File.dtd"
@@ -520,18 +520,18 @@ static void             dump_named_datatype(hid_t, const char *);
 static void             dump_dataset(hid_t, const char *, struct subset_t *);
 static void             dump_dataspace(hid_t space);
 static void             dump_datatype(hid_t type);
-static herr_t           dump_attr(hid_t, const char *, void *);
+static herr_t           dump_attr(hid_t, const char *, void UNUSED *);
 static void             dump_data(hid_t, int, struct subset_t *);
 
 /* XML format:   same interface, alternative output */
 
 static void             xml_dump_group(hid_t, const char *);
 static void             xml_dump_named_datatype(hid_t, const char *);
-static void             xml_dump_dataset(hid_t, const char *, struct subset_t *);
+static void             xml_dump_dataset(hid_t, const char *, struct subset_t UNUSED *);
 static void             xml_dump_dataspace(hid_t space);
 static void             xml_dump_datatype(hid_t type);
-static herr_t           xml_dump_attr(hid_t, const char *, void *);
-static void             xml_dump_data(hid_t, int, struct subset_t *);
+static herr_t           xml_dump_attr(hid_t, const char *, void UNUSED *);
+static void             xml_dump_data(hid_t, int, struct subset_t UNUSED *);
 
 /** 
  ** Added for XML **
@@ -594,7 +594,7 @@ static void
 usage(const char *prog)
 {
     fflush(stdout);
-    fprintf(stdout, "usage: %s [OPTIONS] file\n", prog);
+    fprintf(stdout, " usage: %s [OPTIONS] file\n", prog);
     fprintf(stdout, "  OPTIONS\n");
     fprintf(stdout, "     -h, --help           Print a usage message and exit\n");
     fprintf(stdout, "     -B, --bootblock      Print the content of the boot block\n");
@@ -877,6 +877,29 @@ print_datatype(hid_t type)
 	    for (i = 0; i < nmembers; i++) {
 		fname = H5Tget_member_name(type, i);
 		mtype = H5Tget_member_type(type, i);
+#ifdef WANT_H5_V1_2_COMPAT
+            /* v1.2 returns the base type of an array field, work around this */
+            {
+                hid_t new_mtype;         /* datatype for array, if necessary */
+                int     arrndims;       /* Array rank for reading */
+                size_t	dims[H5S_MAX_RANK];    /* Array dimensions for reading */
+                hsize_t	arrdims[H5S_MAX_RANK];    /* Array dimensions for reading */
+                int k;              /* Local index variable */
+
+                /* Get the array dimensions */
+                arrndims=H5Tget_member_dims(type,i,dims,NULL);
+
+                /* Patch up array information */
+                if(arrndims>0) {
+                    for(k=0; k<arrndims; k++)
+                        arrdims[k]=dims[k];
+                    new_mtype=H5Tarray_create(mtype,arrndims,arrdims,NULL);
+                    H5Tclose(mtype);
+                    mtype=new_mtype;
+                } /* end if */
+            }
+#endif /* WANT_H5_V1_2_COMPAT */
+
 		indentation(indent + COL);
 
 		if (H5Tget_class(mtype) == H5T_COMPOUND)
@@ -1093,7 +1116,7 @@ dump_dataspace(hid_t space)
  *-------------------------------------------------------------------------
  */
 static herr_t
-dump_attr(hid_t attr, const char *attr_name, void * UNUSED op_data)
+dump_attr(hid_t attr, const char *attr_name, void UNUSED *op_data)
 {
     hid_t       attr_id, type, space;
     herr_t      ret = SUCCEED;
@@ -1541,7 +1564,7 @@ dump_group(hid_t gid, const char *name)
 {
     H5G_stat_t  statbuf;
     hid_t       dset, type;
-    char        type_name[1024], *tmp, comment[50];
+    char        typename[1024], *tmp, comment[50];
     int         i, xtype = H5G_UNKNOWN; /* dump all */
 
     tmp = malloc(strlen(prefix) + strlen(name) + 2);
@@ -1568,10 +1591,10 @@ dump_group(hid_t gid, const char *name)
 	    if (!type_table->objs[i].recorded) {
 		dset = H5Dopen(gid, type_table->objs[i].objname);
 		type = H5Dget_type(dset);
-		sprintf(type_name, "#%lu:%lu",
+		sprintf(typename, "#%lu:%lu",
 			type_table->objs[i].objno[0],
 			type_table->objs[i].objno[1]);
-		dump_named_datatype(type, type_name);
+		dump_named_datatype(type, typename);
 		H5Tclose(type);
 		H5Dclose(dset);
 	    }
@@ -1964,7 +1987,7 @@ set_output_file(const char *fname)
  *-------------------------------------------------------------------------
  */
 static void
-handle_attributes(hid_t fid, char *attr, void * UNUSED data)
+handle_attributes(hid_t fid, char *attr, void UNUSED *data)
 {
     dump_selected_attr(fid, attr);
 }
@@ -2223,7 +2246,7 @@ handle_datasets(hid_t fid, char *dset, void *data)
  *-------------------------------------------------------------------------
  */
 static void
-handle_groups(hid_t fid, char *group, void * UNUSED data)
+handle_groups(hid_t fid, char *group, void UNUSED *data)
 {
     H5G_stat_t  statbuf;
     hid_t       gid;
@@ -2261,7 +2284,7 @@ handle_groups(hid_t fid, char *group, void * UNUSED data)
  *-------------------------------------------------------------------------
  */
 static void
-handle_links(hid_t fid, char *links, void * UNUSED data)
+handle_links(hid_t fid, char *links, void UNUSED *data)
 {
     H5G_stat_t  statbuf;
 
@@ -2317,11 +2340,11 @@ handle_links(hid_t fid, char *links, void * UNUSED data)
  *-------------------------------------------------------------------------
  */
 static void
-handle_datatypes(hid_t fid, char *type, void * UNUSED data)
+handle_datatypes(hid_t fid, char *type, void UNUSED *data)
 {
-    hid_t       type_id;
+    hid_t       typeid;
 
-    if ((type_id = H5Topen(fid, type)) < 0) {
+    if ((typeid = H5Topen(fid, type)) < 0) {
         /* check if type is unamed data type */
         int idx = 0;
 
@@ -2356,15 +2379,15 @@ handle_datatypes(hid_t fid, char *type, void * UNUSED data)
             d_status = EXIT_FAILURE;
         } else {
             hid_t dsetid = H5Dopen(fid, type_table->objs[idx].objname);
-            type_id = H5Dget_type(dsetid);
-            dump_named_datatype(type_id, type);
-            H5Tclose(type_id);
+            typeid = H5Dget_type(dsetid);
+            dump_named_datatype(typeid, type);
+            H5Tclose(typeid);
             H5Dclose(dsetid);
         }
     } else {
-        dump_named_datatype(type_id, type);
+        dump_named_datatype(typeid, type);
 
-        if (H5Tclose(type_id) < 0)
+        if (H5Tclose(typeid) < 0)
             d_status = EXIT_FAILURE;
     }
 }
@@ -3145,7 +3168,7 @@ lookup_ref_path(hobj_ref_t * ref)
  *-------------------------------------------------------------------------
  */
 static herr_t
-fill_ref_path_table(hid_t group, const char *name, void * UNUSED op_data)
+fill_ref_path_table(hid_t group, const char *name, void UNUSED * op_data)
 {
     hid_t                   obj;
     char                   *tmp;
@@ -3244,9 +3267,9 @@ static const char      *apos = "&apos;";
 static char                   *
 xml_escape_the_name(const char *str)
 {
-    size_t                     extra;
-    size_t                     len;
-    size_t                     i;
+    int                     extra;
+    int                     len;
+    int                     i;
     const char             *cp;
     char                   *ncp;
     char                   *rcp;
@@ -3330,9 +3353,9 @@ xml_escape_the_name(const char *str)
 static char                   *
 xml_escape_the_string(const char *str, int slen)
 {
-    size_t                     extra;
-    size_t                     len;
-    size_t                     i;
+    int                     extra;
+    int                     len;
+    int                     i;
     const char             *cp;
     char                   *ncp;
     char                   *rcp;
@@ -3367,7 +3390,7 @@ xml_escape_the_string(const char *str, int slen)
     }
 
     cp = str;
-    rcp = ncp = calloc((len + extra + 1), sizeof(char));
+    rcp = ncp = calloc((size_t)(len + extra + 1), sizeof(char));
 
     if (ncp == NULL)
 	return NULL;		/* ?? */
@@ -3479,7 +3502,7 @@ xml_print_datatype(hid_t type)
 	}
 	printf("\" Size=\"");
 	sz = H5Tget_size(type);
-	printf("%lu", (unsigned long)sz);
+	printf("%d", sz);
 	printf("\" />\n");
 	indent -= COL;
 	indentation(indent);
@@ -3510,12 +3533,12 @@ xml_print_datatype(hid_t type)
 	}
 	printf("\" Size=\"");
 	sz = H5Tget_size(type);
-	printf("%lu", (unsigned long)sz);
+	printf("%d", sz);
 	H5Tget_fields(type, &spos, &epos, &esize, &mpos, &msize);
-	printf("\" SignBitLocation=\"%lu\" ", (unsigned long)spos);
-	printf("ExponentBits=\"%lu\" ExponentLocation=\"%lu\" ", (unsigned long)esize, (unsigned long)epos);
-	printf("MantissaBits=\"%lu\" MantissaLocation=\"%lu\" />\n",
-	       (unsigned long)msize, (unsigned long)mpos);
+	printf("\" SignBitLocation=\"%d\" ", spos);
+	printf("ExponentBits=\"%d\" ExponentLocation=\"%d\" ", esize, epos);
+	printf("MantissaBits=\"%d\" MantissaLocation=\"%d\" />\n",
+	       msize, mpos);
 	indent -= COL;
 	indentation(indent);
 	printf("</AtomicType>\n");
@@ -3584,7 +3607,7 @@ xml_print_datatype(hid_t type)
 	    printf("ERROR_UNKNOWN");
 	}
 	size = H5Tget_size(type);
-	printf("\" Size=\"%lu\"/>\n", (unsigned long)size);
+	printf("\" Size=\"%d\"/>\n", size);
 	indent -= COL;
 	indentation(indent);
 	printf("</AtomicType>\n");
@@ -3599,7 +3622,7 @@ xml_print_datatype(hid_t type)
 	indentation(indent);
 	printf("<OpaqueType Tag=\"%s\" ", H5Tget_tag(type));
 	size = H5Tget_size(type);
-	printf("Size=\"%lu\"/>\n", (unsigned long)size);
+	printf("Size=\"%d\"/>\n", size);
 	indent -= COL;
 	indentation(indent);
 	printf("</AtomicType>\n");
@@ -3648,6 +3671,28 @@ xml_print_datatype(hid_t type)
 
 		fname = H5Tget_member_name(type, i);
 		mtype = H5Tget_member_type(type, i);
+#ifdef WANT_H5_V1_2_COMPAT
+            /* v1.2 returns the base type of an array field, work around this */
+            {
+                hid_t new_mtype;         /* datatype for array, if necessary */
+                int     arrndims;       /* Array rank for reading */
+                size_t	dims[H5S_MAX_RANK];    /* Array dimensions for reading */
+                hsize_t	arrdims[H5S_MAX_RANK];    /* Array dimensions for reading */
+                int k;              /* Local index variable */
+
+                /* Get the array dimensions */
+                arrndims=H5Tget_member_dims(type,i,dims,NULL);
+
+                /* Patch up array information */
+                if(arrndims>0) {
+                    for(k=0; k<arrndims; k++)
+                        arrdims[k]=dims[k];
+                    new_mtype=H5Tarray_create(mtype,arrndims,arrdims,NULL);
+                    H5Tclose(mtype);
+                    mtype=new_mtype;
+                } /* end if */
+            }
+#endif /* WANT_H5_V1_2_COMPAT */
 		indentation(indent);
                 t_fname = xml_escape_the_name(fname);
 		printf("<Field FieldName=\"%s\">\n", t_fname);
@@ -3920,7 +3965,7 @@ xml_dump_dataspace(hid_t space)
  *-------------------------------------------------------------------------
  */
 static void
-xml_dump_data(hid_t obj_id, int obj_data, struct subset_t * UNUSED sset)
+xml_dump_data(hid_t obj_id, int obj_data, struct subset_t UNUSED *sset)
 {
     h5dump_t               *outputformat = &xml_dataformat;
     int                     status = -1;
@@ -4024,7 +4069,7 @@ xml_dump_data(hid_t obj_id, int obj_data, struct subset_t * UNUSED sset)
  *-------------------------------------------------------------------------
  */
 static herr_t
-xml_dump_attr(hid_t attr, const char *attr_name, void * UNUSED op_data)
+xml_dump_attr(hid_t attr, const char *attr_name, void UNUSED * op_data)
 {
     hid_t   attr_id, type, space;
     char   *t_aname = xml_escape_the_name(attr_name);
@@ -4205,6 +4250,28 @@ xml_dump_named_datatype(hid_t type, const char *name)
 
 	    fname = H5Tget_member_name(type, x);
 	    mtype = H5Tget_member_type(type, x);
+#ifdef WANT_H5_V1_2_COMPAT
+            /* v1.2 returns the base type of an array field, work around this */
+            {
+                hid_t new_mtype;         /* datatype for array, if necessary */
+                int     arrndims;       /* Array rank for reading */
+                size_t	dims[H5S_MAX_RANK];    /* Array dimensions for reading */
+                hsize_t	arrdims[H5S_MAX_RANK];    /* Array dimensions for reading */
+                int k;              /* Local index variable */
+
+                /* Get the array dimensions */
+                arrndims=H5Tget_member_dims(type,x,dims,NULL);
+
+                /* Patch up array information */
+                if(arrndims>0) {
+                    for(k=0; k<arrndims; k++)
+                        arrdims[k]=dims[k];
+                    new_mtype=H5Tarray_create(mtype,arrndims,arrdims,NULL);
+                    H5Tclose(mtype);
+                    mtype=new_mtype;
+                } /* end if */
+            }
+#endif /* WANT_H5_V1_2_COMPAT */
 	    indentation(indent);
             t_fname = xml_escape_the_name(fname);
 	    printf("<Field FieldName=\"%s\">\n", t_fname);
@@ -4283,7 +4350,7 @@ xml_dump_group(hid_t gid, const char *name)
     H5G_stat_t              statbuf;
     char                   *cp;
     hid_t                   dset, type;
-    char                    type_name[1024], *tmp = NULL;
+    char                    typename[1024], *tmp = NULL;
     char                   *par = NULL;
     int                     i;
     int                     isRoot = 0;
@@ -4355,10 +4422,10 @@ xml_dump_group(hid_t gid, const char *name)
 		    if (!type_table->objs[i].recorded) {
 			dset = H5Dopen(gid, type_table->objs[i].objname);
 			type = H5Dget_type(dset);
-			sprintf(type_name, "#%lu:%lu",
+			sprintf(typename, "#%lu:%lu",
 				type_table->objs[i].objno[0],
 				type_table->objs[i].objno[1]);
-			dump_function_table->dump_named_datatype_function(type, type_name);
+			dump_function_table->dump_named_datatype_function(type, typename);
 			H5Tclose(type);
 			H5Dclose(dset);
 		    }
@@ -4385,10 +4452,10 @@ xml_dump_group(hid_t gid, const char *name)
 		if (!type_table->objs[i].recorded) {
 		    dset = H5Dopen(gid, type_table->objs[i].objname);
 		    type = H5Dget_type(dset);
-		    sprintf(type_name, "#%lu:%lu",
+		    sprintf(typename, "#%lu:%lu",
 			    type_table->objs[i].objno[0],
 			    type_table->objs[i].objno[1]);
-		    dump_function_table->dump_named_datatype_function(type, type_name);
+		    dump_function_table->dump_named_datatype_function(type, typename);
 		    H5Tclose(type);
 		    H5Dclose(dset);
 		}
@@ -4670,7 +4737,7 @@ check_compression(hid_t dcpl)
  *-------------------------------------------------------------------------
  */
 static void
-xml_dump_dataset(hid_t did, const char *name, struct subset_t * UNUSED sset)
+xml_dump_dataset(hid_t did, const char *name, struct subset_t UNUSED *sset)
 {
     hid_t                   type, space;
     hid_t                   dcpl;
@@ -4678,7 +4745,6 @@ xml_dump_dataset(hid_t did, const char *name, struct subset_t * UNUSED sset)
     hsize_t                *chsize;
     int                     ndims;
     int                     i;
-	hsize_t                 tempi;
     char                   *tmp;
     char                   *t_name, *t_tmp, *t_prefix;
 
@@ -4744,9 +4810,9 @@ xml_dump_dataset(hid_t did, const char *name, struct subset_t * UNUSED sset)
     indent += COL;
     H5Aiterate(did, NULL, dump_function_table->dump_attribute_function, NULL);
     indent -= COL;
-	tempi = H5Dget_storage_size(did);
-    
-    if (display_data && (tempi > 0)) {
+    i = H5Dget_storage_size(did);
+
+    if (display_data && (i > 0)) {
 	switch (H5Tget_class(type)) {
 	case H5T_INTEGER:
 	case H5T_FLOAT:

@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 1997-2001 NCSA
- *		           All rights reserved.
+ * Copyright (C) 1997 NCSA
+ *		      All rights reserved.
  *
  * Programmer:	Robb Matzke <matzke@llnl.gov>
  *		Monday, November 10, 1997
@@ -41,7 +41,7 @@
     hbool_t _seen[H5FD_MEM_NTYPES];					      \
 									      \
     memset(_seen, 0, sizeof _seen);					      \
-    for (_unmapped=H5FD_MEM_SUPER; _unmapped<H5FD_MEM_NTYPES; _unmapped=_unmapped+1) {  \
+    for (_unmapped=H5FD_MEM_SUPER; _unmapped<H5FD_MEM_NTYPES; _unmapped++) {  \
 	LOOPVAR = MAP[_unmapped];					      \
 	if (H5FD_MEM_DEFAULT==LOOPVAR) LOOPVAR=_unmapped;		      \
 	assert(LOOPVAR>0 && LOOPVAR<H5FD_MEM_NTYPES);			      \
@@ -50,14 +50,14 @@
 #define MAPPED_MEMBERS(MAP,LOOPVAR) {					      \
     H5FD_mem_t _unmapped, LOOPVAR;					      \
 									      \
-    for (_unmapped=H5FD_MEM_SUPER; _unmapped<H5FD_MEM_NTYPES; _unmapped=_unmapped+1) {  \
+    for (_unmapped=H5FD_MEM_SUPER; _unmapped<H5FD_MEM_NTYPES; _unmapped++) {  \
 	LOOPVAR = MAP[_unmapped];					      \
 	if (H5FD_MEM_DEFAULT==LOOPVAR) LOOPVAR=_unmapped;		      \
 	assert(LOOPVAR>0 && LOOPVAR<H5FD_MEM_NTYPES);
 
 #define ALL_MEMBERS(LOOPVAR) {						      \
     H5FD_mem_t LOOPVAR;							      \
-    for (LOOPVAR=H5FD_MEM_DEFAULT; LOOPVAR<H5FD_MEM_NTYPES; LOOPVAR=LOOPVAR+1) {
+    for (LOOPVAR=H5FD_MEM_DEFAULT; LOOPVAR<H5FD_MEM_NTYPES; LOOPVAR++) {
 	
 
 #define END_MEMBERS	}}
@@ -124,16 +124,15 @@ static haddr_t H5FD_multi_alloc(H5FD_t *_file, H5FD_mem_t type, hsize_t size);
 static herr_t H5FD_multi_free(H5FD_t *_file, H5FD_mem_t type, haddr_t addr,
 			      hsize_t size);
 static herr_t H5FD_multi_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr,
-			      size_t size, void *_buf/*out*/);
+			      hsize_t size, void *_buf/*out*/);
 static herr_t H5FD_multi_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr,
-			       size_t size, const void *_buf);
+			       hsize_t size, const void *_buf);
 static herr_t H5FD_multi_flush(H5FD_t *_file);
 
 /* The class struct */
 static const H5FD_class_t H5FD_multi_g = {
     "multi",					/*name			*/
     HADDR_MAX,					/*maxaddr		*/
-    H5F_CLOSE_WEAK,				/* fc_degree		*/
     H5FD_multi_sb_size,				/*sb_size		*/
     H5FD_multi_sb_encode,			/*sb_encode		*/
     H5FD_multi_sb_decode,			/*sb_decode		*/
@@ -257,7 +256,7 @@ H5Pset_fapl_split(hid_t fapl, const char *meta_ext, hid_t meta_plist_id,
     H5Eclear();
 
     /* Initialize */
-    for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt=mt+1) {
+    for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt++) {
 	memb_map[mt] = (H5FD_MEM_DRAW==mt?mt:H5FD_MEM_SUPER);
 	memb_fapl[mt] = -1;
 	memb_name[mt] = NULL;
@@ -376,9 +375,6 @@ H5Pset_fapl_split(hid_t fapl, const char *meta_ext, hid_t meta_plist_id,
  *
  * Modifications:
  *
- *		Raymond Lu, 2001-10-25
- *		Use new generic property list for argument checking.
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -402,37 +398,36 @@ H5Pset_fapl_multi(hid_t fapl_id, const H5FD_mem_t *memb_map,
     H5Eclear();
 
     /* Check arguments and supply default values */
-    if(H5I_GENPROP_LST != H5Iget_type(fapl_id) ||
-        TRUE != H5Pisa_class(fapl_id, H5P_FILE_ACCESS))   
-        H5Epush_ret(func, H5E_PLIST, H5E_BADVALUE, "not an access list", -1);
+    if (H5P_FILE_ACCESS!=H5Pget_class(fapl_id))
+        H5Epush_ret(func, H5E_PLIST, H5E_BADVALUE, "not a file access property list", -1);
     if (!memb_map) {
-	for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt=mt+1) {
+	for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt++) {
 	    _memb_map[mt] = H5FD_MEM_DEFAULT;
 	}
 	memb_map = _memb_map;
     }
     if (!memb_fapl) {
-	for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt=mt+1) {
+	for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt++) {
 	    _memb_fapl[mt] = H5P_DEFAULT;
 	}
 	memb_fapl = _memb_fapl;
     }
     if (!memb_name) {
 	assert(strlen(letters)==H5FD_MEM_NTYPES);
-	for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt=mt+1) {
+	for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt++) {
 	    sprintf(_memb_name[mt], "%%s-%c.h5", letters[mt]);
 	    _memb_name_ptrs[mt] = _memb_name[mt];
 	}
 	memb_name = _memb_name_ptrs;
     }
     if (!memb_addr) {
-	for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt=mt+1) {
+	for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt++) {
 	    _memb_addr[mt] = (mt?mt-1:0) * HADDR_MAX/H5FD_MEM_NTYPES;
 	}
 	memb_addr = _memb_addr;
     }
     
-    for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt=mt+1) {
+    for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt++) {
 	/* Map usage type */
 	mmt = memb_map[mt];
 	if (mmt<0 || mmt>=H5FD_MEM_NTYPES)
@@ -443,7 +438,7 @@ H5Pset_fapl_multi(hid_t fapl_id, const H5FD_mem_t *memb_map,
 	 * All members of MEMB_FAPL must be either defaults or actual file
 	 * access property lists.
 	 */
-	if (H5P_DEFAULT!=memb_fapl[mmt] && TRUE!=H5Pisa_class(memb_fapl[mmt], H5P_FILE_ACCESS))
+	if (H5P_DEFAULT!=memb_fapl[mmt] && H5P_FILE_ACCESS!=H5Pget_class(memb_fapl[mmt]))
         H5Epush_ret(func, H5E_INTERNAL, H5E_BADVALUE, "file resource type incorrect", -1);
 
 	/* All names must be defined */
@@ -480,9 +475,6 @@ H5Pset_fapl_multi(hid_t fapl_id, const H5FD_mem_t *memb_map,
  *
  * Modifications:
  *
- *              Raymond Lu, 2001-10-25
- *              Use new generic property list for argument checking.
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -499,11 +491,12 @@ H5Pget_fapl_multi(hid_t fapl_id, H5FD_mem_t *memb_map/*out*/,
     /* Clear the error stack */
     H5Eclear();
 
-    if(H5I_GENPROP_LST != H5Iget_type(fapl_id) ||
-        TRUE != H5Pisa_class(fapl_id, H5P_FILE_ACCESS))   
-        H5Epush_ret(func, H5E_PLIST, H5E_BADTYPE, "not an access list", -1);
+    if (H5P_FILE_ACCESS!=H5Pget_class(fapl_id))
+        H5Epush_ret(func, H5E_PLIST, H5E_BADTYPE, "not a file access property list", -1);
+#ifndef WANT_H5_V1_2_COMPAT
     if (H5FD_MULTI!=H5Pget_driver(fapl_id))
         H5Epush_ret(func, H5E_PLIST, H5E_BADVALUE, "incorrect VFL driver", -1);
+#endif /* WANT_H5_V1_2_COMPAT */
     if (NULL==(fa=H5Pget_driver_info(fapl_id)))
         H5Epush_ret(func, H5E_PLIST, H5E_BADVALUE, "bad VFL driver info", -1);
 
@@ -511,7 +504,7 @@ H5Pget_fapl_multi(hid_t fapl_id, H5FD_mem_t *memb_map/*out*/,
         memcpy(memb_map, fa->memb_map, H5FD_MEM_NTYPES*sizeof(H5FD_mem_t));
     }
     if (memb_fapl) {
-	for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt=mt+1) {
+	for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt++) {
 	    if (fa->memb_fapl[mt]>=0) {
 		memb_fapl[mt] = H5Pcopy(fa->memb_fapl[mt]);
 	    } else {
@@ -520,7 +513,7 @@ H5Pget_fapl_multi(hid_t fapl_id, H5FD_mem_t *memb_map/*out*/,
 	}
     }
     if (memb_name) {
-	for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt=mt+1) {
+	for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt++) {
 	    if (fa->memb_name[mt]) {
 		memb_name[mt] = malloc(strlen(fa->memb_name[mt])+1);
 		strcpy(memb_name[mt], fa->memb_name[mt]);
@@ -572,13 +565,13 @@ H5Pset_dxpl_multi(hid_t dxpl_id, const hid_t *memb_dxpl)
     H5Eclear();
 
     /* Check arguments */
-    if (TRUE!=H5Pisa_class(dxpl_id,  H5P_DATASET_XFER))
+    if (H5P_DATASET_XFER!=H5Pget_class(dxpl_id))
         H5Epush_ret(func, H5E_PLIST, H5E_BADTYPE, "not a data transfer property list", -1);
     if (!memb_dxpl)
         H5Epush_ret(func, H5E_INTERNAL, H5E_BADVALUE, "invalid pointer", -1);
-    for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt=mt+1) {
+    for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt++) {
 	if (H5P_DEFAULT!=memb_dxpl[mt] &&
-            TRUE!=H5Pisa_class(memb_dxpl[mt], H5P_DATASET_XFER))
+	    H5P_DATASET_XFER!=H5Pget_class(memb_dxpl[mt]))
             H5Epush_ret(func, H5E_PLIST, H5E_BADTYPE, "not a data transfer property list", -1);
     }
 
@@ -617,15 +610,17 @@ H5Pget_dxpl_multi(hid_t dxpl_id, hid_t *memb_dxpl/*out*/)
     /* Clear the error stack */
     H5Eclear();
 
-    if (TRUE!=H5Pisa_class(dxpl_id, H5P_DATASET_XFER))
+    if (H5P_FILE_ACCESS!=H5Pget_class(dxpl_id))
         H5Epush_ret(func, H5E_PLIST, H5E_BADTYPE, "not a file access property list", -1);
+#ifndef WANT_H5_V1_2_COMPAT
     if (H5FD_MULTI!=H5Pget_driver(dxpl_id))
         H5Epush_ret(func, H5E_PLIST, H5E_BADVALUE, "incorrect VFL driver", -1);
+#endif /* WANT_H5_V1_2_COMPAT */
     if (NULL==(dx=H5Pget_driver_info(dxpl_id)))
         H5Epush_ret(func, H5E_PLIST, H5E_BADVALUE, "bad VFL driver info", -1);
 
     if (memb_dxpl) {
-	for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt=mt+1) {
+	for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt++) {
 	    if (dx->memb_dxpl[mt]>=0) {
 		memb_dxpl[mt] = H5Pcopy(dx->memb_dxpl[mt]);
 	    } else {
@@ -727,7 +722,7 @@ H5FD_multi_sb_encode(H5FD_t *_file, char *name/*out*/,
     strcpy(name, "NCSAmulti");
 
     assert(7==H5FD_MEM_NTYPES);
-    for (m=H5FD_MEM_SUPER; m<H5FD_MEM_NTYPES; m=m+1) {
+    for (m=H5FD_MEM_SUPER; m<H5FD_MEM_NTYPES; m++) {
         buf[m-1] = file->fa.memb_map[m];
     }
     buf[7] = 0;
@@ -987,7 +982,7 @@ H5FD_multi_fapl_copy(const void *_old_fa)
     H5Eclear();
 
     memcpy(new_fa, old_fa, sizeof(H5FD_multi_fapl_t));
-    for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt=mt+1) {
+    for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt++) {
 	if (old_fa->memb_fapl[mt]>=0) {
 	    new_fa->memb_fapl[mt] = H5Pcopy(old_fa->memb_fapl[mt]);
 	    if (new_fa->memb_fapl[mt]<0) nerrors++;
@@ -1000,7 +995,7 @@ H5FD_multi_fapl_copy(const void *_old_fa)
     }
 
     if (nerrors) {
-        for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt=mt+1) {
+        for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt++) {
             if (new_fa->memb_fapl[mt]>=0) H5Pclose(new_fa->memb_fapl[mt]);
             if (new_fa->memb_name[mt]) free(new_fa->memb_name[mt]);
         }
@@ -1036,7 +1031,7 @@ H5FD_multi_fapl_free(void *_fa)
     /* Clear the error stack */
     H5Eclear();
 
-    for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt=mt+1) {
+    for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt++) {
 	if (fa->memb_fapl[mt]>=0) H5Pclose(fa->memb_fapl[mt]);
 	if (fa->memb_name[mt]) free(fa->memb_name[mt]);
     }
@@ -1076,7 +1071,7 @@ H5FD_multi_dxpl_copy(const void *_old_dx)
     H5Eclear();
 
     memcpy(new_dx, old_dx, sizeof(H5FD_multi_dxpl_t));
-    for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt=mt+1) {
+    for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt++) {
 	if (old_dx->memb_dxpl[mt]>=0) {
 	    new_dx->memb_dxpl[mt] = H5Pcopy(old_dx->memb_dxpl[mt]);
 	    if (new_dx->memb_dxpl[mt]<0) nerrors++;
@@ -1084,7 +1079,7 @@ H5FD_multi_dxpl_copy(const void *_old_dx)
     }
 
     if (nerrors) {
-        for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt=mt+1)
+        for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt++)
             H5Pclose(new_dx->memb_dxpl[mt]);
         free(new_dx);
         H5Epush_ret(func, H5E_INTERNAL, H5E_BADVALUE, "invalid freespace objects", NULL);
@@ -1118,7 +1113,7 @@ H5FD_multi_dxpl_free(void *_dx)
     /* Clear the error stack */
     H5Eclear();
 
-    for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt=mt+1)
+    for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt++)
         if (dx->memb_dxpl[mt]>=0)
             H5Pclose(dx->memb_dxpl[mt]);
     free(dx);
@@ -1321,7 +1316,7 @@ H5FD_multi_cmp(const H5FD_t *_f1, const H5FD_t *_f2)
     /* Clear the error stack */
     H5Eclear();
 
-    for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt=mt+1) {
+    for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; mt++) {
 	if (f1->memb[mt] && f2->memb[mt]) break;
 	if (!cmp) {
 	    if (f1->memb[mt]) cmp = -1;
@@ -1429,7 +1424,7 @@ H5FD_multi_set_eoa(H5FD_t *_file, haddr_t eoa)
     H5Eclear();
 
     /* Find the subfile in which the new EOA value falls */
-    for (mt=H5FD_MEM_SUPER; mt<H5FD_MEM_NTYPES; mt=mt+1) {
+    for (mt=H5FD_MEM_SUPER; mt<H5FD_MEM_NTYPES; mt++) {
 	mmt = file->fa.memb_map[mt];
 	if (H5FD_MEM_DEFAULT==mmt) mmt = mt;
 	assert(mmt>0 && mmt<H5FD_MEM_NTYPES);
@@ -1602,7 +1597,7 @@ H5FD_multi_free(H5FD_t *_file, H5FD_mem_t type, haddr_t addr, hsize_t size)
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FD_multi_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t size,
+H5FD_multi_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, hsize_t size,
 		 void *_buf/*out*/)
 {
     H5FD_multi_t	*file = (H5FD_multi_t*)_file;
@@ -1619,7 +1614,7 @@ H5FD_multi_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, siz
     }
     
     /* Find the file to which this address belongs */
-    for (mt=H5FD_MEM_SUPER; mt<H5FD_MEM_NTYPES; mt=mt+1) {
+    for (mt=H5FD_MEM_SUPER; mt<H5FD_MEM_NTYPES; mt++) {
 	mmt = file->fa.memb_map[mt];
 	if (H5FD_MEM_DEFAULT==mmt) mmt = mt;
 	assert(mmt>0 && mmt<H5FD_MEM_NTYPES);
@@ -1657,7 +1652,7 @@ H5FD_multi_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, siz
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FD_multi_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t size,
+H5FD_multi_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, hsize_t size,
 		  const void *_buf)
 {
     H5FD_multi_t	*file = (H5FD_multi_t*)_file;
@@ -1674,7 +1669,7 @@ H5FD_multi_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, si
     }
     
     /* Find the file to which this address belongs */
-    for (mt=H5FD_MEM_SUPER; mt<H5FD_MEM_NTYPES; mt=mt+1) {
+    for (mt=H5FD_MEM_SUPER; mt<H5FD_MEM_NTYPES; mt++) {
 	mmt = file->fa.memb_map[mt];
 	if (H5FD_MEM_DEFAULT==mmt) mmt = mt;
 	assert(mmt>0 && mmt<H5FD_MEM_NTYPES);
@@ -1753,7 +1748,7 @@ H5FD_multi_flush(H5FD_t *_file)
     H5Eclear();
 
     /* Flush each file */
-    for (mt=H5FD_MEM_SUPER; mt<H5FD_MEM_NTYPES; mt=mt+1) {
+    for (mt=H5FD_MEM_SUPER; mt<H5FD_MEM_NTYPES; mt++) {
 	if (file->memb[mt]) {
 	    H5E_BEGIN_TRY {
 		if (H5FDflush(file->memb[mt])<0) nerrors++;

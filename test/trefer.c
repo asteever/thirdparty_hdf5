@@ -1,13 +1,13 @@
 /****************************************************************************
- * NCSA HDF								                                    *
- * Software Development Group						                        *
- * National Center for Supercomputing Applications			                *
- * University of Illinois at Urbana-Champaign				                *
- * 605 E. Springfield, Champaign IL 61820				                    *
- *									                                        *
- * For conditions of distribution and use, see the accompanying		        *
- * hdf/COPYING file.							                            *
- *									                                        *
+ * NCSA HDF								    *
+ * Software Development Group						    *
+ * National Center for Supercomputing Applications			    *
+ * University of Illinois at Urbana-Champaign				    *
+ * 605 E. Springfield, Champaign IL 61820				    *
+ *									    *
+ * For conditions of distribution and use, see the accompanying		    *
+ * hdf/COPYING file.							    *
+ *									    *
  ****************************************************************************/
 
 /* $Id$ */
@@ -155,46 +155,26 @@ test_reference_obj(void)
     /* Create reference to dataset */
     ret = H5Rcreate(&wbuf[0],fid1,"/Group1/Dataset1",H5R_OBJECT,-1);
     CHECK(ret, FAIL, "H5Rcreate");
-#ifdef H5_WANT_H5_V1_4_COMPAT
     ret = H5Rget_object_type(dataset,&wbuf[0]);
     VERIFY(ret, H5G_DATASET, "H5Rget_object_type");
-#else /* H5_WANT_H5_V1_4_COMPAT */
-    ret = H5Rget_obj_type(dataset,H5R_OBJECT,&wbuf[0]);
-    VERIFY(ret, H5G_DATASET, "H5Rget_obj_type");
-#endif /* H5_WANT_H5_V1_4_COMPAT */
 
     /* Create reference to dataset */
     ret = H5Rcreate(&wbuf[1],fid1,"/Group1/Dataset2",H5R_OBJECT,-1);
     CHECK(ret, FAIL, "H5Rcreate");
-#ifdef H5_WANT_H5_V1_4_COMPAT
     ret = H5Rget_object_type(dataset,&wbuf[1]);
     VERIFY(ret, H5G_DATASET, "H5Rget_object_type");
-#else /* H5_WANT_H5_V1_4_COMPAT */
-    ret = H5Rget_obj_type(dataset,H5R_OBJECT,&wbuf[1]);
-    VERIFY(ret, H5G_DATASET, "H5Rget_obj_type");
-#endif /* H5_WANT_H5_V1_4_COMPAT */
 
     /* Create reference to group */
     ret = H5Rcreate(&wbuf[2],fid1,"/Group1",H5R_OBJECT,-1);
     CHECK(ret, FAIL, "H5Rcreate");
-#ifdef H5_WANT_H5_V1_4_COMPAT
     ret = H5Rget_object_type(dataset,&wbuf[2]);
     VERIFY(ret, H5G_GROUP, "H5Rget_object_type");
-#else /* H5_WANT_H5_V1_4_COMPAT */
-    ret = H5Rget_obj_type(dataset,H5R_OBJECT,&wbuf[2]);
-    VERIFY(ret, H5G_GROUP, "H5Rget_obj_type");
-#endif /* H5_WANT_H5_V1_4_COMPAT */
 
     /* Create reference to named datatype */
     ret = H5Rcreate(&wbuf[3],fid1,"/Group1/Datatype1",H5R_OBJECT,-1);
     CHECK(ret, FAIL, "H5Rcreate");
-#ifdef H5_WANT_H5_V1_4_COMPAT
     ret = H5Rget_object_type(dataset,&wbuf[3]);
     VERIFY(ret, H5G_TYPE, "H5Rget_object_type");
-#else /* H5_WANT_H5_V1_4_COMPAT */
-    ret = H5Rget_obj_type(dataset,H5R_OBJECT,&wbuf[3]);
-    VERIFY(ret, H5G_TYPE, "H5Rget_obj_type");
-#endif /* H5_WANT_H5_V1_4_COMPAT */
 
     /* Write selection to disk */
     ret=H5Dwrite(dataset,H5T_STD_REF_OBJ,H5S_ALL,H5S_ALL,H5P_DEFAULT,wbuf);
@@ -231,8 +211,8 @@ test_reference_obj(void)
     /* Check information in referenced dataset */
     sid1 = H5Dget_space(dset2);
     CHECK(sid1, FAIL, "H5Dget_space");
-    
-    ret=(int)H5Sget_simple_extent_npoints(sid1);
+
+    ret=H5Sget_simple_extent_npoints(sid1);
     VERIFY(ret, 4, "H5Sget_simple_extent_npoints");
 
     /* Read from disk */
@@ -379,14 +359,12 @@ test_reference_region(void)
     ret = H5Sselect_hyperslab(sid2,H5S_SELECT_SET,start,stride,count,block);
     CHECK(ret, FAIL, "H5Sselect_hyperslab");
 
-    ret = (int)H5Sget_select_npoints(sid2);
+    ret = H5Sget_select_npoints(sid2);
     VERIFY(ret, 36, "H5Sget_select_npoints");
 
     /* Store first dataset region */
     ret = H5Rcreate(&wbuf[0],fid1,"/Dataset2",H5R_DATASET_REGION,sid2);
     CHECK(ret, FAIL, "H5Rcreate");
-    ret = H5Rget_obj_type(dset1,H5R_DATASET_REGION,&wbuf[0]);
-    VERIFY(ret, H5G_DATASET, "H5Rget_obj_type");
 
     /* Select sequence of ten points for second reference */
     coord1[0][0]=6; coord1[0][1]=9;
@@ -402,7 +380,7 @@ test_reference_region(void)
     ret = H5Sselect_elements(sid2,H5S_SELECT_SET,POINT1_NPOINTS,(const hssize_t **)coord1);
     CHECK(ret, FAIL, "H5Sselect_elements");
 
-    ret = (int)H5Sget_select_npoints(sid2);
+    ret = H5Sget_select_npoints(sid2);
     VERIFY(ret, 10, "H5Sget_select_npoints");
 
     /* Store second dataset region */
@@ -445,15 +423,15 @@ test_reference_region(void)
     dset2 = H5Rdereference(dset1,H5R_DATASET_REGION,&rbuf[0]);
     CHECK(dset2, FAIL, "H5Rdereference");
 
-    /* Check what H5Rget_obj_type function returns */
-    ret = H5Rget_obj_type(dset1, H5R_DATASET_REGION,&rbuf[0]);
-    VERIFY(ret, H5G_DATASET, "H5Rget_obj_type");
+    /* Check what H5Rget_object_type function returns */
+    ret = H5Rget_object_type(dset1, &rbuf[0]);
+    VERIFY(ret, H5G_UNKNOWN, "H5Rget_object_type");
 
     /* Check information in referenced dataset */
     sid1 = H5Dget_space(dset2);
     CHECK(sid1, FAIL, "H5Dget_space");
 
-    ret=(int)H5Sget_simple_extent_npoints(sid1);
+    ret=H5Sget_simple_extent_npoints(sid1);
     VERIFY(ret, 100, "H5Sget_simple_extent_npoints");
 
     /* Read from disk */
@@ -468,9 +446,9 @@ test_reference_region(void)
     CHECK(sid2, FAIL, "H5Rget_region");
 
     /* Verify correct hyperslab selected */
-    ret = (int)H5Sget_select_npoints(sid2);
+    ret = H5Sget_select_npoints(sid2);
     VERIFY(ret, 36, "H5Sget_select_npoints");
-    ret = (int)H5Sget_select_hyper_nblocks(sid2);
+    ret = H5Sget_select_hyper_nblocks(sid2);
     VERIFY(ret, 1, "H5Sget_select_hyper_nblocks");
     coords=HDmalloc(ret*SPACE2_RANK*sizeof(hsize_t)*2); /* allocate space for the hyperslab blocks */
     ret = H5Sget_select_hyper_blocklist(sid2,(hsize_t)0,(hsize_t)ret,coords);
@@ -496,9 +474,9 @@ test_reference_region(void)
     CHECK(sid2, FAIL, "H5Rget_region");
 
     /* Verify correct elements selected */
-    ret = (int)H5Sget_select_npoints(sid2);
+    ret = H5Sget_select_npoints(sid2);
     VERIFY(ret, 10, "H5Sget_select_npoints");
-    ret = (int)H5Sget_select_elem_npoints(sid2);
+    ret = H5Sget_select_elem_npoints(sid2);
     VERIFY(ret, 10, "H5Sget_select_elem_npoints");
     coords=HDmalloc(ret*SPACE2_RANK*sizeof(hsize_t)); /* allocate space for the element points */
     ret = H5Sget_select_elem_pointlist(sid2,(hsize_t)0,(hsize_t)ret,coords);
@@ -597,13 +575,8 @@ test_reference_obj_deleted(void)
     /* Create reference to dataset */
     ret = H5Rcreate(&oref,fid1,"/Dataset1",H5R_OBJECT,-1);
     CHECK(ret, FAIL, "H5Rcreate");
-#ifdef H5_WANT_H5_V1_4_COMPAT
     ret = H5Rget_object_type(dataset,&oref);
     VERIFY(ret, H5G_DATASET, "H5Rget_object_type");
-#else /* H5_WANT_H5_V1_4_COMPAT */
-    ret = H5Rget_obj_type(dataset,H5R_OBJECT,&oref);
-    VERIFY(ret, H5G_DATASET, "H5Rget_obj_type");
-#endif /* H5_WANT_H5_V1_4_COMPAT */
 
     /* Write selection to disk */
     ret=H5Dwrite(dataset,H5T_STD_REF_OBJ,H5S_ALL,H5S_ALL,H5P_DEFAULT,&oref);

@@ -1,6 +1,6 @@
 dnl Process this file with autoconf to produce configure.
 dnl
-dnl Copyright (C) 1997, 1998, 1999, 2000, 2001, 2002
+dnl Copyright (C) 1997, 1998, 1999, 2000, 2001
 dnl     National Center for Supercomputing Applications
 dnl     All rights reserved.
 
@@ -78,9 +78,6 @@ case $host_os in
     ;;
   osf4.*)
     host_os_novers=osf4.x
-    ;;
-  osf5.*)
-    host_os_novers=osf5.x
     ;;
   solaris2.*)
     host_os_novers=solaris2.x
@@ -389,14 +386,14 @@ AC_ARG_ENABLE(production,
   [  --enable-production     Determines how to run the compiler.])
 
 case "X-$enable_production" in
-  X-yes)
+  X-|X-yes)
     enable_production="yes"
     AC_MSG_RESULT("production")
     CONFIG_MODE=production
     CFLAGS="$CFLAGS $PROD_CFLAGS"
     CPPFLAGS="$CPPFLAGS $PROD_CPPFLAGS"
     ;;
-  X-|X-no)
+  X-no)
     enable_production="no"
     AC_MSG_RESULT("development")
     CONFIG_MODE=development
@@ -437,7 +434,7 @@ AC_HEADER_TIME
 dnl Unix
 AC_CHECK_HEADERS(sys/resource.h sys/time.h unistd.h sys/ioctl.h sys/stat.h)
 AC_CHECK_HEADERS(sys/socket.h sys/types.h)
-AC_CHECK_HEADERS(stddef.h setjmp.h features.h)
+AC_CHECK_HEADERS(stddef.h setjmp.h)
 AC_CHECK_HEADERS(stdint.h, C9x=yes)
 dnl Windows
 AC_CHECK_HEADERS(io.h winsock.h sys/timeb.h)
@@ -465,20 +462,20 @@ case "$host_cpu-$host_vendor-$host_os" in
       [  --enable-linux-lfs      Enable support for large (64-bit) files on Linux.
                           [default=check]])
 
+    LINUX_LFS="no"
     case "X-$enable_linux_lfs" in
       X-yes)
         LINUX_LFS=yes
         ;;
       X-no)
-        LINUX_LFS=no
         ;;
       X-|*)
-        LINUX_LFS=no
         AC_CHECK_FUNCS(getdents64,
-            dnl Add the large file support flags to the CPPFLAGS macro if
-            dnl we're on a Linux system which austensibly supports LFS. (We
-            dnl think it does if it has the ``getdents64'' syscall).
-            LINUX_LFS=yes)
+                       dnl Add the large file support flags to the
+                       dnl CPPFLAGS macro if we're on a Linux system
+                       dnl which austensibly supports LFS. (We think it
+                       dnl does if it has the ``getdents64'' syscall).
+                       LINUX_LFS=yes)
         ;;
     esac
 
@@ -577,20 +574,6 @@ AC_CHECK_SIZEOF(off_t, 4)
 
 dnl Checkpoint the cache
 AC_CACHE_SAVE
-
-dnl ----------------------------------------------------------------------
-dnl Check if the dev_t type is a scalar type (must come after the check for
-dnl sys/types.h)
-AC_MSG_CHECKING([if dev_t is scalar])
-AC_TRY_COMPILE([
-#ifdef HAVE_SYS_TYPES_H
-#include <sys/types.h>
-#endif
-      ],
-      [dev_t d1, d2; if(d1==d2) return 0;],
-      AC_DEFINE(DEV_T_IS_SCALAR) AC_MSG_RESULT(yes),
-      AC_MSG_RESULT(no)
-)
 
 dnl ----------------------------------------------------------------------
 dnl Fake --with-xxx option to allow us to create a help message for the
@@ -746,8 +729,8 @@ case $withval in
     HAVE_ZLIB="yes"
     case "$withval" in
       *,*)
-        zlib_inc="`echo $withval |cut -f1 -d,`"
-        zlib_lib="`echo $withval |cut -f2 -d, -s`"
+        zlib_inc="`echo $withval | cut -f1 -d,`"
+        zlib_lib="`echo $withval | cut -f2 -d, -s`"
         ;;
       *)
         if test -n "$withval"; then
@@ -775,71 +758,10 @@ case $withval in
 esac
 
 dnl ----------------------------------------------------------------------
-dnl Pablo Configuration
+dnl Is SSL library present? It is needed by GLOBUS-GASS and Grid Storage
+dnl driver. SSL must be tested before them.
 dnl
-AC_SUBST(PABLO) PABLO=""
-AC_SUBST(HAVE_PABLO) HAVE_PABLO="no"
-AC_ARG_WITH(pablo,
-  [  --with-pablo[=DIR]      Use the Pablo library [default=no]],,
-  withval=no)
-
-case "$withval" in
-  yes)
-    failed="no"
-    AC_CHECK_LIB(PabloTraceExt, initIOTrace,, failed="yes")
-
-    if test "$failed" != "yes"; then
-      HAVE_PABLO="yes"
-      PABLO="pablo"
-    fi
-    ;;
-  no)
-    AC_MSG_CHECKING(for Pablo)
-    AC_MSG_RESULT(suppressed)
-    ;;
-  *)
-    case "$withval" in
-      *,*)
-        pablo_inc="`echo $withval | cut -f1 -d,`"
-        pablo_lib="`echo $withval | cut -f2 -d, -s`"
-        ;;
-      *)
-        if test -n "$withval"; then
-          pablo_inc="$withval/include"
-          pablo_lib="$withval/lib"
-        fi
-        ;;
-    esac
-
-    saved_CPPFLAGS="$CPPFLAGS"
-    saved_LDFLAGS="$LDFLAGS"
-    if test -n "$pablo_inc"; then
-      CPPFLAGS="$CPPFLAGS -I$pablo_inc"
-    fi
-
-    if test -n "$pablo_lib"; then
-      LDFLAGS="$LDFLAGS -L$pablo_lib"
-    fi
-
-    failed="no"
-    AC_CHECK_HEADERS(IOTrace.h,
-                     AC_CHECK_LIB(PabloTraceExt, initIOTrace,, failed="yes"),
-                     failed="yes")
-
-    if test "$failed" = "yes"; then
-      dnl Reset flags if failed
-      CPPFLAGS="$saved_CPPFLAGS"
-      LDFLAGS="$saved_LDFLAGS"
-    else
-      HAVE_PABLO="yes"
-      PABLO="pablo"
-    fi
-    ;;
-esac
-
-dnl Is SSL library present?  It is needed by GLOBUS-GASS and Grid Storage
-dnl driver.  SSL must be tested before them.
-AC_SUBST(SSL) SSL=yes
+AC_SUBST(SSL) SSL="yes"
 AC_ARG_WITH(ssl,
   [  --with-ssl[=LIB]        Use the SSL library [default=no]],,
   withval=no)
@@ -951,9 +873,8 @@ dnl Are SRB Client and other system libraries(socket, elf) present?
 dnl
 AC_SUBST(SRB) SRB="yes"
 AC_SUBST(TESTSRB) TESTSRB='$(srcdir)/testsrb'
-AC_ARG_WITH(srb,
-  [  --with-srb[=DIR]        Use the SRB library [default=no]],,
-  withval=no)
+AC_ARG_WITH(srb,[  --with-srb[=DIR]        Use the SRB Library [default=no]],
+	    ,withval=no)
 
 case "$withval" in
   yes)
@@ -1004,7 +925,6 @@ case "$withval" in
     fi
     ;;
 esac
-
 if test -n "$SRB"; then
   AC_DEFINE(HAVE_SRB)
 fi
@@ -1106,18 +1026,18 @@ if test "X$THREADSAFE" = "Xyes"; then
 fi
 
 dnl ----------------------------------------------------------------------
-dnl Check if they would like the HDF5 v1.4 compatibility functions
+dnl Check if they would like the HDF5 v1.2 compatibility functions
 dnl compiled in
 dnl
-AC_MSG_CHECKING(whether HDF5 v1.4 compatibility functions enabled)
-AC_ARG_ENABLE(hdf5v1_4,
-  [  --enable-hdf5v1_4       Compile the HDF5 v1.4 compatibility interface
+AC_MSG_CHECKING(whether HDF5 v1.2 compatibility functions enabled)
+AC_ARG_ENABLE(hdf5v1_2,
+  [  --enable-hdf5v1_2       Compile the HDF5 v1.2 compatibility interface
                           [default=no]],
-  HDF5_V1_4_COMPAT=$enableval)
+  HDF5_V1_2_COMPAT=$enableval)
 
-if test "$HDF5_V1_4_COMPAT" = "yes"; then
+if test "X$HDF5_V1_2_COMPAT" = "Xyes"; then
   AC_MSG_RESULT(yes)
-  AC_DEFINE(WANT_H5_V1_4_COMPAT)
+  AC_DEFINE(WANT_H5_V1_2_COMPAT)
 else
   AC_MSG_RESULT(no)
 fi
@@ -1281,7 +1201,7 @@ LD_LIBRARY_PATH="$LD_LIBRARY_PATH`echo $LDFLAGS | sed -e 's/-L/:/g' -e 's/ //g'`
 export LD_LIBRARY_PATH
 
 for hdf5_cv_printf_ll in l L q ll unknown; do
-   AC_TRY_RUN([
+  AC_TRY_RUN([
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -1300,31 +1220,6 @@ AC_MSG_RESULT(%${hdf5_cv_printf_ll}d and %${hdf5_cv_printf_ll}u)
 AC_DEFINE_UNQUOTED(PRINTF_LL_WIDTH,"$hdf5_cv_printf_ll")
 
 dnl ----------------------------------------------------------------------
-dnl Check if malloc(0) returns valid pointer
-dnl
-AC_MSG_CHECKING(if malloc of zero bytes returns valid pointer)
-AC_CACHE_VAL(hdf5_cv_malloc_works,
-AC_TRY_RUN([
-#if STDC_HEADERS
-#include <stdlib.h>
-#endif
-
-int main(void)
-{
-	exit(malloc (0) ? 0 : 1);
-}
-   ], hdf5_cv_malloc_works=yes,hdf5_cv_malloc_works=no,)
-)
-
-if test ${hdf5_cv_malloc_works} = "yes"; then
-    AC_DEFINE(MALLOC_WORKS, 1,
-        [Define if your system has a working `malloc' function.])
-    AC_MSG_RESULT(yes)
-else
-    AC_MSG_RESULT(no)
-fi
-    
-dnl ----------------------------------------------------------------------
 dnl Turn on debugging by setting compiler flags
 dnl
 AC_MSG_CHECKING(for debug flags)
@@ -1338,17 +1233,17 @@ AC_ARG_ENABLE(debug,
 AC_SUBST(DEBUG_PKG)
 all_packages="ac,b,d,e,f,g,hg,hl,i,mf,mm,o,p,s,t,v,z"
 case "X-$DEBUG_PKG" in
-  X-|X-yes)
+  X-yes)
     DEBUG_PKG="d,e,f,g,hg,i,mm,o,p,s,t,v,z"
     CPPFLAGS="$CPPFLAGS -UNDEBUG"
     AC_MSG_RESULT(default ($DEBUG_PKG))
     ;;
   X-all)
-    DEBUG_PKG=$all_packages
+    DEBUG_PKG="$all_packages"
     CPPFLAGS="$CPPFLAGS -UNDEBUG"
     AC_MSG_RESULT(all ($DEBUG_PKG))
     ;;
-  X-no|X-none)
+  X-|X-no|X-none)
     AC_MSG_RESULT(none)
     DEBUG_PKG=
     CPPFLAGS="$CPPFLAGS -DNDEBUG"
@@ -1458,7 +1353,6 @@ case "$CC_BASENAME" in
     if test -x $path/mpirun; then
       AC_MSG_RESULT($path/mpirun)
       RUNSERIAL="${RUNSERIAL:-none}"
-
       if test -z "$RUNPARALLEL"; then
         RUNPARALLEL="$path/mpirun -np \$\${NPROCS:=3}"
       fi
@@ -1494,6 +1388,7 @@ case "$CC_BASENAME" in
       fi
       AC_MSG_RESULT($path/$cmd);
       RUNSERIAL="${RUNSERIAL:-none}"
+
       if test -z "$RUNPARALLEL"; then
         RUNPARALLEL="$path/$cmd -np \$\${NPROCS:=3}"
       fi
@@ -1619,31 +1514,6 @@ if test -n "$PARALLEL"; then
   if test "X$RUNPARALLEL" = "Xnone"; then
     RUNPARALLEL=""
   fi
-
-  dnl Check whether MPI_Get_count actually works correctly on this
-  dnl platform.
-  AC_MSG_CHECKING(whether a MPI_Get_count works correctly)
-  AC_TRY_RUN([
-#include <mpi.h>
-
-int main(int argc, char **argv)
-{
-    MPI_Status mpi_stat;
-    int bytes_read = 0, ret;
-
-    MPI_Init(&argc, &argv);
-    ret = MPI_Get_count(&mpi_stat, MPI_BYTE, &bytes_read);
-    MPI_Finalize();
-
-    /* this returns TRUE if bytes_read is 0...the shell thinks that the
-     * program fails, but we want it to fail of course so switch the
-     * "true"/"false" parts of the TRY_RUN macro */
-    return bytes_read == 0;
-}
-  ],
-  AC_MSG_RESULT(no),
-  AC_MSG_RESULT(yes)
-  CPPFLAGS="$CPPFLAGS -DMPI_GET_COUNT_WORKS",AC_MSG_RESULT(no))
 fi
 
 dnl ----------------------------------------------------------------------
@@ -1822,18 +1692,6 @@ if test -n "$TESTPARALLEL"; then
   PARALLEL_MAKE="$TESTPARALLEL/Makefile"
 fi
 
-PABLO_MAKE=""
-
-AC_SUBST(PARALLEL_PABLO) PARALLEL_PABLO=""
-
-if test -n "$HAVE_PABLO"; then
-  PABLO_MAKE="pablo/Makefile"
-
-  if test -n "$TESTPARALLEL"; then
-    PARALLEL_PABLO="yes"
-  fi
-fi
-
 EXTRA_H4_MAKEFILES=""
 
 if test -n "$H4TOH5"; then
@@ -1841,7 +1699,7 @@ if test -n "$H4TOH5"; then
 fi
     
 if test -n "$H5TOH4"; then
-   EXTRA_H4_MAKEFILES="$EXTRA_H4_MAKEFILES tools/h5toh4/Makefile"
+  EXTRA_H4_MAKEFILES="$EXTRA_H4_MAKEFILES tools/h5toh4/Makefile"
 fi
 
 AC_OUTPUT(src/libhdf5.settings
@@ -1854,7 +1712,7 @@ AC_OUTPUT(src/libhdf5.settings
           config/conclude
           Makefile
           src/Makefile
-          $PABLO_MAKE
+          pablo/Makefile
           test/Makefile
           $PARALLEL_MAKE
           perform/Makefile
@@ -1877,6 +1735,7 @@ AC_OUTPUT(src/libhdf5.settings
           doc/html/Tutor/Makefile
           doc/html/Tutor/Graphics/Makefile
           doc/html/Tutor/examples/Makefile
+          doc/html/Tutor/examples/java/Makefile
           doc/html/cpplus/Makefile
           doc/html/fortran/Makefile)
 no_create=$saved_no_create
@@ -1994,8 +1853,8 @@ IF_YES_NO "$GASS"
 PRINT_N "                           HDF4"
 IF_YES_NO "$HAVE_HDF4"
 
-PRINT_N "        HDF5 v1.4 Compatibility"
-IF_YES_NO "$HDF5_V1_4_COMPAT"
+PRINT_N "        HDF5 v1.2 Compatibility"
+IF_YES_NO "$HDF5_V1_2_COMPAT"
 
 PRINT_N "                        hsize_t"
 case "$HSIZET" in
@@ -2005,9 +1864,6 @@ esac
 
 PRINT_N " Linux Large File Support (LFS)"
 IF_ENABLED_DISABLED "$LINUX_LFS"
-
-PRINT_N "                          Pablo"
-IF_YES_NO "$HAVE_PABLO"
 
 PRINT_N "                  Parallel HDF5"
 if test "$PARALLEL" != "no"; then

@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
- * Copyright (C) 1997-2001 National Center for Supercomputing Applications
- *                         All rights reserved.
+ * Copyright (C) 1997   National Center for Supercomputing Applications.
+ *                      All rights reserved.
  *
  *-------------------------------------------------------------------------
  *
@@ -22,13 +22,8 @@
 /* Private headers needed by this file */
 #include "H5private.h"
 
-#ifdef H5_MALLOC_WORKS
-#define H5MM_malloc(Z)	HDmalloc(Z)
-#define H5MM_calloc(Z)	HDcalloc(1,Z)
-#else /* H5_MALLOC_WORKS */
 #define H5MM_malloc(Z)	HDmalloc(MAX(1,Z))
 #define H5MM_calloc(Z)	HDcalloc(1,MAX(1,Z))
-#endif /* H5_MALLOC_WORKS */
 
 /*
  * Library prototypes...
