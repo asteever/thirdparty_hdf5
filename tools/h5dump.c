@@ -1117,7 +1117,7 @@ hid_t  type, space;
          dump_data(did, DATASET_DATA);
          break;
     case H5T_BITFIELD:
-         dump_data(did, DATASET_DATA); 
+         dump_data(did, DATASET_DATA);
          break;
     case H5T_OPAQUE:
         /* indent += COL;
@@ -1307,7 +1307,7 @@ int
 main(int argc, char *argv[])
 {
     hid_t fid, gid, dsetid, typeid;
-
+    
     char *fname = NULL;
     int i, index, curr_arg, display_bb=0, display_all=1, newwidth= 0;
     int nopts=0, *opts;
@@ -1316,7 +1316,6 @@ main(int argc, char *argv[])
     void *edata;
     hid_t (*func)(void*);
 	find_objs_t *info = malloc(sizeof(find_objs_t));
-
 
 	dump_header_format = &standardformat;
 
@@ -1431,12 +1430,13 @@ main(int argc, char *argv[])
     if (argv[argc-1][0] == '\\') fname = &argv[argc-1][1];
     else fname = argv[argc-1];
 
-	fid = h5dump_fopen(fname, NULL, 0);
-    if (fid < 0) {
+    fid = H5ToolsFopen(fname, NULL);
+
+    if (fid < 0){
          fprintf (stderr, "h5dump error: unable to open file %s \n", fname);
          free(opts);
          exit(1);
-    }	
+    }
 
     /* allocate and initialize internal data structure */
     init_table(&group_table);

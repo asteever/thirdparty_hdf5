@@ -11,9 +11,9 @@
 <center>
 <table border=0 width=98%>
 <tr><td valign=top align=left>
+   <a href="index.html">HDF5 documents and links</a>&nbsp;<br>
    <a href="H5.intro.html">Introduction to HDF5</a>&nbsp;<br>
    <a href="RM_H5Front.html">HDF5 Reference Manual</a>&nbsp;<br>
-   <a href="index.html">Other HDF5 documents and links</a>&nbsp;<br>
    <!--
    <a href="Glossary.html">Glossary</a><br>
    -->
@@ -34,7 +34,6 @@
       <a href="Errors.html">Error Handling</a>&nbsp;&nbsp;
       <br>
       <a href="Filters.html">Filters</a>&nbsp;&nbsp;
-      <a href="Palettes.html">Palettes</a>&nbsp;&nbsp;
       <a href="Caching.html">Caching</a>&nbsp;&nbsp;
       <a href="Chunking.html">Chunking</a>&nbsp;&nbsp;
       <a href="MountingFiles.html">Mounting Files</a>&nbsp;&nbsp;
@@ -2075,7 +2074,7 @@ to allocate to store VL data while reading the data, the
         <em>hid_t</em> <code>space_id</code>, 
         <em>hsize_t</em> *<code>size</code>) 
 </dl>
-        (This function is not implemented in Release 1.2.)
+        (This function is not implemented in Release 1.2.x)
 
 <p>
 This routine checks the number of bytes required to store the VL data from
@@ -2431,13 +2430,13 @@ in the HDF5 distribution.
 
     <h2>10. Sharing Datatypes among Datasets</h2>
 
-    <p>If a file has lots of datasets which have a common datatype
+    <p>If a file has lots of datasets which have a common datatype, 
       then the file could be made smaller by having all the datasets
       share a single datatype.  Instead of storing a copy of the 
       datatype in each dataset object header, a single datatype is stored
       and the object headers point to it.  The space savings is
-      probably only significant for datasets with a compound datatype
-      since the simple datatypes can be described with just a few
+      probably only significant for datasets with a compound datatype,
+      since the atomic datatypes can be described with just a few
       bytes anyway.
 
     <p>To create a bunch of datasets that share a single datatype
@@ -2524,24 +2523,41 @@ hid_t dset4 = H5Dcreate (file, "dset4", t2, space, H5P_DEFAULT);
 
     <p>
       <code><pre>
-typedef herr_t (*H5T_conv_t)(hid_t <em>src_type</em>,
-                             hid_t <em>dest_type</em>,
-			     H5T_cdata_t *<em>cdata</em>,
-			     size_t <em>nelmts</em>,
-			     void *<em>buffer</em>,
-                             void *<em>background</em>);
+typedef herr_t (*H5T_conv_t) (hid_t <em>src_id</em>, 
+                              hid_t <em>dst_id</em>, 
+                              H5T_cdata_t *<em>cdata</em>,
+                              size_t <em>nelmts</em>, 
+                              size_t <em>buf_stride</em>, 
+                              size_t <em>bkg_stride</em>, 
+                              void *<em>buf</em>, 
+                              void *<em>bkg</em>,
+                              hid_t <em>dset_xfer_plist</em>);
     </pre></code>
 
     <p>The conversion function is called with the source and
-      destination datatypes (<em>src_type</em> and
-      <em>dst_type</em>), path-constant data (<em>cdata</em>), the
-      number of instances of the datatype to convert
-      (<em>nelmts</em>), a buffer which initially contains an array of
-      data having the source type and on return will contain an array
-      of data having the destination type (<em>buffer</em>), and a
-      temporary or background buffer (<em>background</em>).  Functions
-      return a negative value on failure and some other value on
-      success.
+      destination datatypes (<em>src_type</em> and <em>dst_type</em>), 
+      path-constant data (<em>cdata</em>), 
+      the number of instances of the datatype to convert (<em>nelmts</em>), 
+      stride parameters for the buffer and temporary buffer 
+          (<em>buf_stride</em> and <em>bkg_stride</em>),
+      a buffer (<em>buf</em>) which initially contains an array of
+          data having the source type and on return will contain an array
+          of data having the destination type, 
+      a temporary or background buffer (<em>bkg</em>) 
+          which always has the destination type, and 
+      a transfer property list identifier (<em>dset_xfer_plist</em>).
+
+    <p>Normally, the data in <em>buf</em> and <em>bkg</em> are packed
+      and <em>buf_stride</em> and <em>bkg_stride</em> are both 
+      <code>0</code> (zero). 
+      If <em>buf_stride</em> and/or <em>bkg_stride</em> are non-zero, 
+      they indicate the number of bytes from the beginning of one element 
+      to the beginning of the next elelment of the array.
+      If <em>buf_stride</em> is non-zero, the value applies to both the 
+      input and output contents of <em>buf</em>.
+
+    <p>Functions return a negative value on failure and 
+      some other value on success.
 
     <p>The <code>command</code> field of the <em>cdata</em> argument
       determines what happens within the conversion function.  It's
@@ -2838,9 +2854,9 @@ H5Tregister(H5T_PERS_SOFT, "cus2be",
 <center>
 <table border=0 width=98%>
 <tr><td valign=top align=left>
+   <a href="index.html">HDF5 documents and links</a>&nbsp;<br>
    <a href="H5.intro.html">Introduction to HDF5</a>&nbsp;<br>
    <a href="RM_H5Front.html">HDF5 Reference Manual</a>&nbsp;<br>
-   <a href="index.html">Other HDF5 documents and links</a>&nbsp;<br>
    <!--
    <a href="Glossary.html">Glossary</a><br>
    -->
@@ -2861,7 +2877,6 @@ H5Tregister(H5T_PERS_SOFT, "cus2be",
       <a href="Errors.html">Error Handling</a>&nbsp;&nbsp;
       <br>
       <a href="Filters.html">Filters</a>&nbsp;&nbsp;
-      <a href="Palettes.html">Palettes</a>&nbsp;&nbsp;
       <a href="Caching.html">Caching</a>&nbsp;&nbsp;
       <a href="Chunking.html">Chunking</a>&nbsp;&nbsp;
       <a href="MountingFiles.html">Mounting Files</a>&nbsp;&nbsp;
@@ -2884,8 +2899,10 @@ H5Tregister(H5T_PERS_SOFT, "cus2be",
 
 <!-- Created: Thu Dec  4 14:57:32 EST 1997 -->
 <!-- hhmts start -->
-Last modified:  14 October 1999
+Last modified:  9 June 2000
 <!-- hhmts end -->
+<br>
+Describes HDF5 Release 1.2.2, June 2000
 
 
 </body>

@@ -30,8 +30,7 @@
 #include <H5FLprivate.h>	/*Free Lists	  */
 #include <H5HGprivate.h>	/*global heaps				*/
 #include <H5MFprivate.h>	/*file memory management		*/
-#include <H5MMprivate.h>	/*core memory management		*/
-#include <H5Pprivate.h>		/*property lists			*/
+#include <H5MMprivate.h>	/*memory management			*/
 
 #define PABLO_MASK	H5HG_mask
 
@@ -42,8 +41,6 @@ typedef struct H5HG_obj_t {
 } H5HG_obj_t;
 
 struct H5HG_heap_t {
-    H5AC_info_t cache_info; /* Information for H5AC cache functions, _must_ be */
-                            /* first field in structure */
     haddr_t		addr;		/*collection address		*/
     hbool_t		dirty;		/*does heap need to be saved?	*/
     size_t		size;		/*total size of collection	*/
@@ -53,9 +50,9 @@ struct H5HG_heap_t {
 };
 
 /* PRIVATE PROTOTYPES */
-static H5HG_heap_t *H5HG_load(H5F_t *f, haddr_t addr, const void *udata1,
-			      void *udata2);
-static herr_t H5HG_flush(H5F_t *f, hbool_t dest, haddr_t addr,
+static H5HG_heap_t *H5HG_load(H5F_t *f, const haddr_t *addr,
+			      const void *udata1, void *udata2);
+static herr_t H5HG_flush(H5F_t *f, hbool_t dest, const haddr_t *addr,
 			 H5HG_heap_t *heap);
 
 /*
@@ -63,8 +60,8 @@ static herr_t H5HG_flush(H5F_t *f, hbool_t dest, haddr_t addr,
  */
 static const H5AC_class_t H5AC_GHEAP[1] = {{
     H5AC_GHEAP_ID,
-    (void *(*)(H5F_t*, haddr_t, const void*, void*))H5HG_load,
-    (herr_t (*)(H5F_t*, hbool_t, haddr_t, void*))H5HG_flush,
+    (void *(*)(H5F_t*, const haddr_t*, const void*, void*))H5HG_load,
+    (herr_t (*)(H5F_t*, hbool_t, const haddr_t*, void*))H5HG_flush,
 }};
 
 /* Interface initialization */
@@ -119,7 +116,7 @@ H5HG_create (H5F_t *f, size_t size)
     size = H5HG_ALIGN(size);
 
     /* Create it */
-    if (HADDR_UNDEF==(addr=H5MF_alloc(f, H5FD_MEM_GHEAP, (hsize_t)size))) {
+    if (H5MF_alloc (f, H5MF_META, (hsize_t)size, &addr/*out*/)<0) {
 	HGOTO_ERROR (H5E_HEAP, H5E_CANTINIT, NULL,
 		     "unable to allocate file space for global heap");
     }
@@ -169,7 +166,7 @@ H5HG_create (H5F_t *f, size_t size)
     HDmemset (p, 0, (size_t)((heap->chunk+heap->size) - p));
 
     /* Add the heap to the cache */
-    if (H5AC_set (f, H5AC_GHEAP, addr, heap)<0) {
+    if (H5AC_set (f, H5AC_GHEAP, &addr, heap)<0) {
 	HGOTO_ERROR (H5E_HEAP, H5E_CANTINIT, NULL,
 		     "unable to cache global heap collection");
     }
@@ -194,9 +191,9 @@ H5HG_create (H5F_t *f, size_t size)
 
  done:
     if (!ret_value && heap) {
-        H5FL_BLK_FREE(heap_chunk,heap->chunk);
-        H5FL_ARR_FREE (H5HG_obj_t,heap->obj);
-        H5FL_FREE (H5HG_heap_t,heap);
+	H5FL_BLK_FREE(heap_chunk,heap->chunk);
+	H5FL_ARR_FREE (H5HG_obj_t,heap->obj);
+	H5FL_FREE (H5HG_heap_t,heap);
     }
     FUNC_LEAVE (ret_value);
 }
@@ -215,12 +212,11 @@ H5HG_create (H5F_t *f, size_t size)
  *              Friday, March 27, 1998
  *
  * Modifications:
- *		Robb Matzke, 1999-07-28
- *		The ADDR argument is passed by value.
+ *
  *-------------------------------------------------------------------------
  */
 static H5HG_heap_t *
-H5HG_load (H5F_t *f, haddr_t addr, const void UNUSED *udata1,
+H5HG_load (H5F_t *f, const haddr_t *addr, const void UNUSED *udata1,
 	   void UNUSED *udata2)
 {
     H5HG_heap_t	*heap = NULL;
@@ -233,7 +229,7 @@ H5HG_load (H5F_t *f, haddr_t addr, const void UNUSED *udata1,
 
     /* check arguments */
     assert (f);
-    assert (H5F_addr_defined (addr));
+    assert (addr && H5F_addr_defined (addr));
     assert (!udata1);
     assert (!udata2);
 
@@ -242,13 +238,13 @@ H5HG_load (H5F_t *f, haddr_t addr, const void UNUSED *udata1,
 	HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL,
 		     "memory allocation failed");
     }
-    heap->addr = addr;
+    heap->addr = *addr;
     if (NULL==(heap->chunk = H5FL_BLK_ALLOC (heap_chunk,H5HG_MINSIZE,0))) {
 	HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL,
 		     "memory allocation failed");
     }
-    if (H5F_block_read(f, addr, (hsize_t)H5HG_MINSIZE, H5P_DEFAULT,
-		       heap->chunk)<0) {
+    if (H5F_block_read (f, addr, (hsize_t)H5HG_MINSIZE, &H5F_xfer_dflt,
+			heap->chunk)<0) {
 	HGOTO_ERROR (H5E_HEAP, H5E_READERROR, NULL,
 		     "unable to read global heap collection");
     }
@@ -278,13 +274,14 @@ H5HG_load (H5F_t *f, haddr_t addr, const void UNUSED *udata1,
      * collection now.
      */
     if (heap->size > H5HG_MINSIZE) {
-	haddr_t next_addr = addr + (hsize_t)H5HG_MINSIZE;
+	haddr_t next_addr = *addr;
+	H5F_addr_inc (&next_addr, (hsize_t)H5HG_MINSIZE);
 	if (NULL==(heap->chunk = H5FL_BLK_REALLOC (heap_chunk, heap->chunk, heap->size))) {
 	    HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL,
 			 "memory allocation failed");
 	}
-	if (H5F_block_read (f, next_addr, (hsize_t)(heap->size-H5HG_MINSIZE),
-			    H5P_DEFAULT, heap->chunk+H5HG_MINSIZE)<0) {
+	if (H5F_block_read (f, &next_addr, (hsize_t)(heap->size-H5HG_MINSIZE),
+			    &H5F_xfer_dflt, heap->chunk+H5HG_MINSIZE)<0) {
 	    HGOTO_ERROR (H5E_HEAP, H5E_READERROR, NULL,
 			 "unable to read global heap collection");
 	}
@@ -370,9 +367,9 @@ H5HG_load (H5F_t *f, haddr_t addr, const void UNUSED *udata1,
     
  done:
     if (!ret_value && heap) {
-        H5FL_BLK_FREE (heap_chunk,heap->chunk);
-        H5FL_ARR_FREE(H5HG_obj_t,heap->obj);
-        H5FL_FREE (H5HG_heap_t,heap);
+	H5FL_BLK_FREE (heap_chunk,heap->chunk);
+	H5FL_ARR_FREE(H5HG_obj_t,heap->obj);
+	H5FL_FREE (H5HG_heap_t,heap);
     }
     FUNC_LEAVE (ret_value);
 }
@@ -390,12 +387,11 @@ H5HG_load (H5F_t *f, haddr_t addr, const void UNUSED *udata1,
  *              Friday, March 27, 1998
  *
  * Modifications:
- *		Robb Matzke, 1999-07-28
- *		The ADDR argument is passed by value.
+ *
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5HG_flush (H5F_t *f, hbool_t destroy, haddr_t addr, H5HG_heap_t *heap)
+H5HG_flush (H5F_t *f, hbool_t destroy, const haddr_t *addr, H5HG_heap_t *heap)
 {
     int		i;
     
@@ -403,13 +399,13 @@ H5HG_flush (H5F_t *f, hbool_t destroy, haddr_t addr, H5HG_heap_t *heap)
 
     /* Check arguments */
     assert (f);
-    assert (H5F_addr_defined (addr));
-    assert (H5F_addr_eq (addr, heap->addr));
+    assert (addr && H5F_addr_defined (addr));
+    assert (H5F_addr_eq (addr, &(heap->addr)));
     assert (heap);
 
     if (heap->dirty) {
 	if (H5F_block_write (f, addr, (hsize_t)(heap->size),
-			     H5P_DEFAULT, heap->chunk)<0) {
+			     &H5F_xfer_dflt, heap->chunk)<0) {
 	    HRETURN_ERROR (H5E_HEAP, H5E_WRITEERROR, FAIL,
 			   "unable to write global heap collection to file");
 	}
@@ -417,17 +413,17 @@ H5HG_flush (H5F_t *f, hbool_t destroy, haddr_t addr, H5HG_heap_t *heap)
     }
 
     if (destroy) {
-        for (i=0; i<f->shared->ncwfs; i++) {
-            if (f->shared->cwfs[i]==heap) {
-                f->shared->ncwfs -= 1;
-                HDmemmove (f->shared->cwfs+i, f->shared->cwfs+i+1,
-                   (f->shared->ncwfs-i) * sizeof(H5HG_heap_t*));
-                break;
-            }
-        }
-        heap->chunk = H5FL_BLK_FREE(heap_chunk,heap->chunk);
-        heap->obj = H5FL_ARR_FREE(H5HG_obj_t,heap->obj);
-        H5FL_FREE (H5HG_heap_t,heap);
+	for (i=0; i<f->shared->ncwfs; i++) {
+	    if (f->shared->cwfs[i]==heap) {
+		f->shared->ncwfs -= 1;
+		HDmemmove (f->shared->cwfs+i, f->shared->cwfs+i+1,
+			   (f->shared->ncwfs-i) * sizeof(H5HG_heap_t*));
+		break;
+	    }
+	}
+	heap->chunk = H5FL_BLK_FREE(heap_chunk,heap->chunk);
+	heap->obj = H5FL_ARR_FREE(H5HG_obj_t,heap->obj);
+	H5FL_FREE (H5HG_heap_t,heap);
     }
 
     FUNC_LEAVE (SUCCEED);
@@ -657,7 +653,7 @@ H5HG_peek (H5F_t *f, H5HG_t *hobj)
     assert (hobj);
 
     /* Load the heap and return a pointer to the object */
-    if (NULL==(heap=H5AC_find (f, H5AC_GHEAP, hobj->addr, NULL, NULL))) {
+    if (NULL==(heap=H5AC_find (f, H5AC_GHEAP, &(hobj->addr), NULL, NULL))) {
 	HRETURN_ERROR (H5E_HEAP, H5E_CANTLOAD, NULL, "unable to load heap");
     }
     assert (hobj->idx>0 && hobj->idx<heap->nalloc);
@@ -718,7 +714,7 @@ H5HG_read (H5F_t *f, H5HG_t *hobj, void *object/*out*/)
     assert (hobj);
 
     /* Load the heap */
-    if (NULL==(heap=H5AC_find (f, H5AC_GHEAP, hobj->addr, NULL, NULL))) {
+    if (NULL==(heap=H5AC_find (f, H5AC_GHEAP, &(hobj->addr), NULL, NULL))) {
 	HRETURN_ERROR (H5E_HEAP, H5E_CANTLOAD, NULL, "unable to load heap");
     }
     assert (hobj->idx>0 && hobj->idx<heap->nalloc);
@@ -787,7 +783,7 @@ H5HG_link (H5F_t *f, H5HG_t *hobj, intn adjust)
     }
 
     /* Load the heap */
-    if (NULL==(heap=H5AC_find (f, H5AC_GHEAP, hobj->addr, NULL, NULL))) {
+    if (NULL==(heap=H5AC_find (f, H5AC_GHEAP, &(hobj->addr), NULL, NULL))) {
 	HRETURN_ERROR (H5E_HEAP, H5E_CANTLOAD, FAIL, "unable to load heap");
     }
     assert (hobj->idx>0 && hobj->idx<heap->nalloc);
@@ -840,7 +836,7 @@ H5HG_remove (H5F_t *f, H5HG_t *hobj)
     }
 
     /* Load the heap */
-    if (NULL==(heap=H5AC_find (f, H5AC_GHEAP, hobj->addr, NULL, NULL))) {
+    if (NULL==(heap=H5AC_find (f, H5AC_GHEAP, &(hobj->addr), NULL, NULL))) {
 	HRETURN_ERROR (H5E_HEAP, H5E_CANTLOAD, FAIL, "unable to load heap");
     }
     assert (hobj->idx>0 && hobj->idx<heap->nalloc);
@@ -882,8 +878,8 @@ H5HG_remove (H5F_t *f, H5HG_t *hobj)
 	 * to the file free list.
 	 */
 	heap->dirty = FALSE;
-	H5MF_xfree(f, H5FD_MEM_GHEAP, heap->addr, heap->size);
-	H5AC_flush (f, H5AC_GHEAP, heap->addr, TRUE);
+	H5MF_xfree (f, &(heap->addr), (hsize_t)(heap->size));
+	H5AC_flush (f, H5AC_GHEAP, &(heap->addr), TRUE);
 	heap = NULL;
     } else {
 	/*
@@ -922,12 +918,11 @@ H5HG_remove (H5F_t *f, H5HG_t *hobj)
  *		Mar 27, 1998
  *
  * Modifications:
- *		Robb Matzke, 1999-07-28
- *		The ADDR argument is passed by value.
+ *
  *-------------------------------------------------------------------------
  */
 herr_t
-H5HG_debug(H5F_t *f, haddr_t addr, FILE *stream, intn indent,
+H5HG_debug(H5F_t *f, const haddr_t *addr, FILE *stream, intn indent,
 	  intn fwidth)
 {
     int			i, nused, maxobj;
@@ -941,7 +936,7 @@ H5HG_debug(H5F_t *f, haddr_t addr, FILE *stream, intn indent,
 
     /* check arguments */
     assert(f);
-    assert(H5F_addr_defined (addr));
+    assert(addr && H5F_addr_defined (addr));
     assert(stream);
     assert(indent >= 0);
     assert(fwidth >= 0);

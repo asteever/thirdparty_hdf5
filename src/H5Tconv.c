@@ -899,21 +899,22 @@ H5T_conv_struct_init (H5T_t *src, H5T_t *dst, H5T_cdata_t *cdata)
     }
 
     for (i=0; i<src->u.compnd.nmembs; i++) {
-        if (src2dst[i]>=0) {
-            H5T_path_t *tpath = H5T_path_find(src->u.compnd.memb[i].type,
-                      dst->u.compnd.memb[src2dst[i]].type, NULL, NULL);
-
-            if (NULL==(priv->memb_path[i] = tpath)) {
-                H5MM_xfree(priv->src2dst);
-                H5MM_xfree(priv->src_memb_id);
-                H5MM_xfree(priv->dst_memb_id);
-                H5MM_xfree(priv->memb_path);
-                H5MM_xfree(priv->memb_nelmts);
-                cdata->priv = priv = H5MM_xfree (priv);
-                HRETURN_ERROR (H5E_DATATYPE, H5E_UNSUPPORTED, FAIL,
-                       "unable to convert member data type");
-            }
-        }
+	if (src2dst[i]>=0) {
+	    H5T_path_t *tpath;
+	    tpath = H5T_path_find(src->u.compnd.memb[i].type,
+				  dst->u.compnd.memb[src2dst[i]].type,
+				  NULL, NULL);
+	    if (NULL==(priv->memb_path[i] = tpath)) {
+		H5MM_xfree(priv->src2dst);
+		H5MM_xfree(priv->src_memb_id);
+		H5MM_xfree(priv->dst_memb_id);
+		H5MM_xfree(priv->memb_path);
+		H5MM_xfree(priv->memb_nelmts);
+		cdata->priv = priv = H5MM_xfree (priv);
+		HRETURN_ERROR (H5E_DATATYPE, H5E_UNSUPPORTED, FAIL,
+			       "unable to convert member data type");
+	    }
+	}
     }
 
     cdata->need_bkg = H5T_BKG_TEMP;
@@ -1259,7 +1260,7 @@ H5T_conv_struct_opt(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
 	}
 	priv = (H5T_conv_struct_t *)(cdata->priv);
 	src2dst = priv->src2dst;
-            
+	
 	/*
 	 * If the destination type is not larger than the source type then
 	 * this conversion function is guaranteed to work (provided all
@@ -1272,20 +1273,19 @@ H5T_conv_struct_opt(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
 	 */
 	if (dst->size > src->size) {
 	    for (i=0, offset=0; i<src->u.compnd.nmembs; i++) {
-		if (src2dst[i]<0)
-		    continue;
+		if (src2dst[i]<0) continue;
 		src_memb = src->u.compnd.memb + i;
 		dst_memb = dst->u.compnd.memb + src2dst[i];
 		src_memb_size = src_memb->size / priv->memb_nelmts[i];
 		dst_memb_size = dst_memb->size / priv->memb_nelmts[i];
 		for (j=0; j<(intn)(priv->memb_nelmts[i]); j++) {
-		    if (dst_memb_size > src_memb_size)
+		    if (dst_memb_size > src_memb_size) {
 			offset += src_memb_size;
+		    }
 		}
 	    }
 	    for (i=src->u.compnd.nmembs-1; i>=0; --i) {
-		if (src2dst[i]<0)
-		    continue;
+		if (src2dst[i]<0) continue;
 		src_memb = src->u.compnd.memb + i;
 		dst_memb = dst->u.compnd.memb + src2dst[i];
 		src_memb_size = src_memb->size / priv->memb_nelmts[i];
@@ -1415,8 +1415,7 @@ H5T_conv_struct_opt(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
 	 * bkg buffer.
 	 */
 	for (i=src->u.compnd.nmembs-1; i>=0; --i) {
-	    if (src2dst[i]<0)
-		continue;
+	    if (src2dst[i]<0) continue;
 	    src_memb = src->u.compnd.memb + i;
 	    dst_memb = dst->u.compnd.memb + src2dst[i];
 	    src_memb_size = src_memb->size / priv->memb_nelmts[i];
@@ -1878,7 +1877,7 @@ H5T_conv_vlen(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
             /* Get the dataset transfer property list */
             if (H5P_DEFAULT == dset_xfer_plist) {
                 xfer_parms = &H5F_xfer_dflt;
-            } else if (H5P_DATA_XFER != H5P_get_class(dset_xfer_plist) ||
+            } else if (H5P_DATASET_XFER != H5P_get_class(dset_xfer_plist) ||
                        NULL == (xfer_parms = H5I_object(dset_xfer_plist))) {
                 HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not xfer parms");
             }
@@ -1960,7 +1959,6 @@ H5T_conv_vlen(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
 
                 /* Get length of sequences in bytes */
                 seq_len=(*(src->u.vlen.getlen))(src->u.vlen.f,s);
-                assert(seq_len>=0);
                 src_size=seq_len*src_base_size;
                 dst_size=seq_len*dst_base_size;
 

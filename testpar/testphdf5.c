@@ -14,20 +14,23 @@ int chunkdim1;
 int nerrors = 0;			/* errors count */
 int verbose = 0;			/* verbose, default as no. */
 
+#ifdef __PUMAGON__
+/* For the PFS of TFLOPS */
+char *fileprefix = "pfs:/pfs_grande/multi/tmp_1/";
+#else
+char *fileprefix = NULL;		/* file prefix, default as NULL */
+#endif
+size_t fileprefixlen;			/* file prefix length */
+
 herr_t (*old_func)(void*);		/* previous error handler */
 void *old_client_data;			/* previous error handler arg.*/
 
 /* other option flags */
 int doread=1;				/* read test */
 int dowrite=1;				/* write test */
-/* FILENAME and filenames must have the same number of names */
-const char *FILENAME[5]={
-	    "ParaEg1",
-	    "ParaEg2",
-	    "ParaEg3",
-	    "ParaMdset",
-	    NULL};
-char	filenames[5][200];
+char    *filenames[]={ "ParaEg1.h5f",
+		       "ParaEg2.h5f",
+		       "ParaEg3.h5f" };
 
 
 
@@ -37,8 +40,7 @@ char	filenames[5][200];
 /* continue. */
 #include <sys/types.h>
 #include <sys/stat.h>
-
-void pause_proc(void)
+void pause_proc(MPI_Comm comm, int argc, char **argv)
 {
 
     int pid;
@@ -53,6 +55,11 @@ void pause_proc(void)
     int  mpi_namelen;		
     char mpi_name[MPI_MAX_PROCESSOR_NAME];
 
+#ifdef DISABLED
+    /* check if an pause interval option is given */
+    if (--argc > 0 && isdigit(*++argv))
+	time_int = atoi(*argv);
+#endif
     pid = getpid();
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
@@ -68,16 +75,7 @@ void pause_proc(void)
 	    fflush(stdout);
 	    sleep(time_int);
 	}
-    MPI_Barrier(MPI_COMM_WORLD);
-}
-
-/* Use the Profile feature of MPI to call the pause_proc() */
-int MPI_Init(int *argc, char ***argv)
-{
-    int ret_code;
-    ret_code=PMPI_Init(argc, argv);
-    pause_proc();
-    return (ret_code);
+    MPI_Barrier(comm);
 }
 #endif	/* USE_PAUSE */
 
@@ -135,7 +133,7 @@ parse_options(int argc, char **argv)
 				nerrors++;
 				return(1);
 			    }
-			    paraprefix = *argv;
+			    fileprefix = *argv;
 			    break;
 		case 'd':   /* dimensizes */
 			    if (--argc < 2){
@@ -187,29 +185,23 @@ parse_options(int argc, char **argv)
 	return(1);
     }
 
-    /* compose the test filenames */
-    {
-	int i, n;
-	hid_t plist;
+    /* compose the filenames if file prefix is defined */
+    if (fileprefix != NULL) {
+	char *tmpptr;
+	int i;
 
-	plist = H5Pcreate (H5P_FILE_ACCESS);
-	H5Pset_fapl_mpio(plist, MPI_COMM_WORLD, MPI_INFO_NULL);
-	n = sizeof(FILENAME)/sizeof(FILENAME[0]) - 1;	/* exclude the NULL */
-
-	for (i=0; i < n; i++)
-	    if (h5_fixname(FILENAME[i],plist,filenames[i],sizeof(filenames[i]))
-		== NULL){
-		printf("h5_fixname failed\n");
+	fileprefixlen = strlen(fileprefix);
+	i = sizeof(filenames)/sizeof(filenames[0]);
+	while (i-- > 0){
+	    tmpptr = filenames[i];
+            filenames[i] = (char *)malloc (fileprefixlen + strlen(tmpptr) + 1);
+            if (!filenames[i]) {
+		printf("%s\n","memory allocation failed");
 		nerrors++;
-		H5Pclose(plist);
 		return(1);
 	    }
-	H5Pclose(plist);
-	if (verbose){
-	    int i;
-	    printf("Test filenames are:\n");
-	    for (i=0; i < n; i++)
-		printf("    %s\n", filenames[i]);
+	    strcpy(filenames[i],fileprefix);
+	    strcat(filenames[i],tmpptr);
 	}
     }
 
@@ -231,6 +223,10 @@ main(int argc, char **argv)
 	printf("===================================\n");
     }
 
+#ifdef USE_PAUSE
+    pause_proc(MPI_COMM_WORLD, argc, argv);
+#endif
+
     if (parse_options(argc, argv) != 0){
 	if (MAINPROCESS)
 	    usage();
@@ -239,10 +235,10 @@ main(int argc, char **argv)
 
     if (dowrite){
 	MPI_BANNER("testing MPIO independent overlapping writes...");
-	test_mpio_overlap_writes(filenames[0]);
+	test_mpio_overlap_writes(filenames);
 
 	MPI_BANNER("testing dataset using split communicators...");
-	test_split_comm_access(filenames[0]);
+	test_split_comm_access(filenames);
 
 	MPI_BANNER("testing dataset independent write...");
 	dataset_writeInd(filenames[0]);
@@ -252,12 +248,7 @@ main(int argc, char **argv)
 
 	MPI_BANNER("testing extendible dataset independent write...");
 	extend_writeInd(filenames[2]);
-
-	MPI_BANNER("testing multiple datasets write ...");
-	multiple_dset_write(filenames[3]);
-
     }
-
     if (doread){
 	MPI_BANNER("testing dataset independent read...");
 	dataset_readInd(filenames[0]);

@@ -119,8 +119,8 @@ H5O_stab_encode(H5F_t *f, uint8_t *p, const void *_mesg)
     assert(stab);
 
     /* encode */
-    H5F_addr_encode(f, &p, stab->btree_addr);
-    H5F_addr_encode(f, &p, stab->heap_addr);
+    H5F_addr_encode(f, &p, &(stab->btree_addr));
+    H5F_addr_encode(f, &p, &(stab->heap_addr));
 
     FUNC_LEAVE(SUCCEED);
 }
@@ -263,11 +263,15 @@ H5O_stab_debug(H5F_t UNUSED *f, const void *_mesg, FILE * stream,
     assert(indent >= 0);
     assert(fwidth >= 0);
 
-    HDfprintf(stream, "%*s%-*s %a\n", indent, "", fwidth,
-	      "B-tree address:", stab->btree_addr);
+    fprintf(stream, "%*s%-*s ", indent, "", fwidth,
+            "B-tree address:");
+    H5F_addr_print(stream, &(stab->btree_addr));
+    fprintf(stream, "\n");
 
-    HDfprintf(stream, "%*s%-*s %a\n", indent, "", fwidth,
-	      "Name heap address:", stab->heap_addr);
+    fprintf(stream, "%*s%-*s ", indent, "", fwidth,
+            "Name heap address:");
+    H5F_addr_print(stream, &(stab->heap_addr));
+    fprintf(stream, "\n");
 
     FUNC_LEAVE(SUCCEED);
 }

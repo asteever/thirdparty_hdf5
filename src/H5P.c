@@ -18,17 +18,13 @@ static char		RcsId[] = "@(#)$Revision$";
 
 /* Private header files */
 #include <H5private.h>		/* Generic Functions			*/
-#include <H5Iprivate.h>		/* IDs			  		*/
+#include <H5Iprivate.h>		/* IDs			  	*/
 #include <H5Bprivate.h>		/* B-tree subclass names	  	*/
 #include <H5Dprivate.h>		/* Datasets				*/
 #include <H5Eprivate.h>		/* Error handling		  	*/
-#include <H5FDprivate.h>	/* File drivers				*/
-#include <H5FLprivate.h>	/* Free Lists	  */
+#include <H5FLprivate.h>	/*Free Lists	  */
 #include <H5MMprivate.h>	/* Memory management			*/
 #include <H5Pprivate.h>		/* Property lists		  	*/
-
-/* Default file driver - see H5Pget_driver() */
-#include <H5FDsec2.h>		/* Posix unbuffered I/O	file driver	*/
 
 #define PABLO_MASK	H5P_mask
 
@@ -132,71 +128,80 @@ H5P_term_interface(void)
     return n;
 }
 
-
-/*-------------------------------------------------------------------------
- * Function:	H5Pcreate
- *
- * Purpose:	Creates a new property list by copying a default property
- *		list.
- *
- * Return:	Success:	A new copy of a default property list.
- *
- *		Failure:	NULL
- *
- * Programmer:	Unknown
- *
- * Modifications:
- *		Robb Matzke, 1999-08-18
- *		Rewritten in terms of H5P_copy() to fix memory leaks.
- *-------------------------------------------------------------------------
- */
+/*--------------------------------------------------------------------------
+ NAME
+    H5Pcreate
+ PURPOSE
+    Returns a copy of the default property list for some class of property
+ *  lists.
+ USAGE
+    herr_t H5Pcreate (type)
+	H5P_class_t type;	IN: Property list class whose default is
+ *				    desired.
+ RETURNS
+    Property list ID or Negative
+ 
+ ERRORS
+    ARGS      BADVALUE	    Unknown property list class. 
+    ATOM      CANTINIT	    Can't register property list. 
+    INTERNAL  UNSUPPORTED   Not implemented yet. 
+
+ DESCRIPTION
+    Returns a copy of the default property list for some class of property
+ *  lists.
+--------------------------------------------------------------------------*/
 hid_t
 H5Pcreate(H5P_class_t type)
 {
-    hid_t	ret_value = FAIL;
-    const void	*src = NULL;
-    H5P_t	*new_plist = NULL;
+    hid_t		    ret_value = FAIL;
+    H5P_t		    *plist = NULL;
 
     FUNC_ENTER(H5Pcreate, FAIL);
     H5TRACE1("i","p",type);
 
-    /* Allocate a new property list and initialize it with default values */
+    /* Allocate a new property list */
+    if (NULL==(plist = H5FL_ALLOC(H5P_t,0))) {
+        HRETURN_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL,
+               "memory allocation failed");
+    }
+
+    /* Initialize it with default values */
     switch (type) {
         case H5P_FILE_CREATE:
-            src = &H5F_create_dflt;
+            HDmemcpy(plist, &H5F_create_dflt, sizeof(H5F_create_t));
             break;
+
         case H5P_FILE_ACCESS:
-            src = &H5F_access_dflt;
+            HDmemcpy(plist, &H5F_access_dflt, sizeof(H5F_access_t));
             break;
+
         case H5P_DATASET_CREATE:
-            src = &H5D_create_dflt;
+            HDmemcpy(plist, &H5D_create_dflt, sizeof(H5D_create_t));
             break;
-        case H5P_DATA_XFER:
-            src = &H5F_xfer_dflt;
+
+        case H5P_DATASET_XFER:
+            HDmemcpy(plist, &H5F_xfer_dflt, sizeof(H5F_xfer_t));
             break;
+
         case H5P_MOUNT:
-            src = &H5F_mount_dflt;
+            HDmemcpy(plist, &H5F_mount_dflt, sizeof(H5F_mprop_t));
             break;
+
         default:
             HRETURN_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
-		      "unknown property list class");
+                  "unknown property list class");
     }
 
-    /* Copy the property list */
-    if (NULL==(new_plist=H5P_copy(type, src))) {
-	HRETURN_ERROR(H5E_PLIST, H5E_CANTINIT, FAIL,
-		      "unable to copy default property list");
-    }
-    
+    /* Set the type of the property list */
+    plist->class=type;
+
     /* Atomize the new property list */
-    if ((ret_value = H5P_create(type, new_plist)) < 0) {
-	HRETURN_ERROR(H5E_ATOM, H5E_CANTINIT, FAIL,
+    if ((ret_value = H5P_create(type, plist)) < 0) {
+        HRETURN_ERROR(H5E_ATOM, H5E_CANTINIT, FAIL,
 		      "unable to register property list");
     }
-    
     FUNC_LEAVE(ret_value);
 }
-
 
 /*-------------------------------------------------------------------------
  * Function:	H5P_create
@@ -237,24 +242,19 @@ H5P_create(H5P_class_t type, H5P_t *plist)
     FUNC_LEAVE(ret_value);
 }
 
-
-/*-------------------------------------------------------------------------
- * Function:	H5Pclose
- *
- * Purpose:	Release access to a property list object, PLIST_ID.
- *
- * Return:	Success:	non-negative
- *
- *		Failure:	negative
- *
- * Programmer:	Unknown
- *
- * Modifications:
- * 		Robb Matzke, 1999-08-03
- *		Attempting to close H5P_DEFAULT is no longer an error, but
- *		rather a no-op.
- *-------------------------------------------------------------------------
- */
+/*--------------------------------------------------------------------------
+ NAME
+    H5Pclose
+ PURPOSE
+    Release access to a property list object.
+ USAGE
+    herr_t H5Pclose(oid)
+	hid_t oid;	 IN: property list object to release access to
+ RETURNS
+    Non-negative on success/Negative on failure
+ DESCRIPTION
+	This function releases access to a property list object
+--------------------------------------------------------------------------*/
 herr_t
 H5Pclose(hid_t plist_id)
 {
@@ -263,7 +263,8 @@ H5Pclose(hid_t plist_id)
 
     /* Check arguments */
     if (plist_id==H5P_DEFAULT)
-        HRETURN(SUCCEED);
+        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "unable to close predefined object");
     if (H5P_get_class (plist_id)<0) {
         HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list");
     }
@@ -288,8 +289,7 @@ H5Pclose(hid_t plist_id)
  *		Wednesday, February 18, 1998
  *
  * Modifications:
- *		Robb Matzke, 1999-08-03
- *		Modified to work with the virtual file layer.
+ *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -297,23 +297,43 @@ H5P_close(void *_plist)
 {
     H5P_t           *plist=(H5P_t *)_plist;
     H5F_access_t	*fa_list = &(plist->u.faccess);
-    H5F_xfer_t		*dx_list = &(plist->u.dxfer);
     H5D_create_t	*dc_list = &(plist->u.dcreate);
     
     FUNC_ENTER (H5P_close, FAIL);
 
     /* Check args */
-    if (!plist)
-        HRETURN (SUCCEED);
+    if (!plist) HRETURN (SUCCEED);
 
     /* Some property lists may need to do special things */
     switch (plist->class) {
         case H5P_FILE_ACCESS:
-            if (fa_list->driver_id>=0) {
-                H5FD_fapl_free(fa_list->driver_id, fa_list->driver_info);
-                H5I_dec_ref(fa_list->driver_id);
-                fa_list->driver_info = NULL;
-                fa_list->driver_id = -1;
+            switch (fa_list->driver) {
+                case H5F_LOW_ERROR:
+                case H5F_LOW_SEC2:
+                case H5F_LOW_STDIO:
+                case H5F_LOW_CORE:
+                    /* Nothing to do */
+                    break;
+
+                case H5F_LOW_MPIO:
+#ifdef LATER
+                    /* Need to free the COMM and INFO objects too. */
+#endif
+                    break;
+
+                case H5F_LOW_SPLIT:
+                    /* Free member info */
+                    fa_list->driver = H5F_LOW_ERROR; /*prevent cycles*/
+                    H5P_close (fa_list->u.split.meta_access);
+                    H5P_close (fa_list->u.split.raw_access);
+                    H5MM_xfree (fa_list->u.split.meta_ext);
+                    H5MM_xfree (fa_list->u.split.raw_ext);
+                    break;
+
+                case H5F_LOW_FAMILY:
+                    /* Free member info */
+                    H5P_close (fa_list->u.fam.memb_access);
+                    break;
             }
             break;
         
@@ -326,13 +346,7 @@ H5P_close(void *_plist)
             H5O_reset(H5O_PLINE, &(dc_list->pline));
             break;
 
-        case H5P_DATA_XFER:
-            if (dx_list->driver_id>=0) {
-                H5FD_dxpl_free(dx_list->driver_id, dx_list->driver_info);
-                H5I_dec_ref(dx_list->driver_id);
-                dx_list->driver_info = NULL;
-                dx_list->driver_id = -1;
-            }
+        case H5P_DATASET_XFER:
             break;
 
         case H5P_MOUNT:
@@ -340,12 +354,13 @@ H5P_close(void *_plist)
 
         default:
             HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
-                   "unknown property list class");
+                       "unknown property list class");
     }
 
-    /* Return the property list to the free list */
+    /* Free the property list */
     H5FL_FREE(H5P_t,plist);
 
+    /* Free the property list struct and return */
     FUNC_LEAVE(SUCCEED);
 }
 
@@ -423,28 +438,31 @@ H5P_get_class(hid_t plist_id)
     ret_value = (H5P_class_t)(group - H5I_TEMPLATE_0);
     FUNC_LEAVE(ret_value);
 }
-    
+
 
-/*-------------------------------------------------------------------------
- * Function:	H5Pcopy
- *
- * Purpose:	Deep-copies a property list PLIST_ID.
- *
- * Return:	Success:	The ID of the new copy of the property list.
- *				The ID will be different than the input ID
- *				since the new ID refers to a completely
- *				separate copy of the the structure that the
- *				original ID points to.
- *
- *		Failure:	Negative
- *
- * Programmer:	Unknown
- *
- * Modifications:
- *		Robb Matzke, 1999-08-03
- *		If PLIST_ID is H5P_DEFAULT then we return H5P_DEFAULT.
- *-------------------------------------------------------------------------
- */
+/*--------------------------------------------------------------------------
+ NAME
+    H5Pcopy
+ PURPOSE
+    Copy a property list
+ USAGE
+    hid_t H5P_copy(plist_id)
+	hid_t plist_id;	  IN: property list object to copy
+ RETURNS
+    Returns property list ID (atom) on success, Negative on failure
+
+ ERRORS
+    ARGS      BADRANGE	    Unknown property list class. 
+    ATOM      BADATOM	    Can't unatomize property list. 
+    ATOM      CANTREGISTER  Register the atom for the new property list. 
+    INTERNAL  UNSUPPORTED   Dataset transfer properties are not implemented
+			    yet. 
+    INTERNAL  UNSUPPORTED   File access properties are not implemented yet. 
+
+ DESCRIPTION
+ * This function creates a new copy of a property list with all the same
+ * parameter settings.
+--------------------------------------------------------------------------*/
 hid_t
 H5Pcopy(hid_t plist_id)
 {
@@ -456,9 +474,6 @@ H5Pcopy(hid_t plist_id)
 
     FUNC_ENTER(H5Pcopy, FAIL);
     H5TRACE1("i","i",plist_id);
-
-    if (H5P_DEFAULT==plist_id)
-        return H5P_DEFAULT;
 
     /* Check args */
     if (NULL == (plist = H5I_object(plist_id)) ||
@@ -481,7 +496,6 @@ H5Pcopy(hid_t plist_id)
     }
     FUNC_LEAVE(ret_value);
 }
-
 
 /*-------------------------------------------------------------------------
  * Function:	H5P_copy
@@ -497,8 +511,7 @@ H5Pcopy(hid_t plist_id)
  *		Tuesday, February  3, 1998
  *
  * Modifications:
- *		Robb Matzke, 1999-08-03
- *		Modified to use the virtual file layer.
+ *
  *-------------------------------------------------------------------------
  */
 void *
@@ -508,8 +521,8 @@ H5P_copy (H5P_class_t type, const void *src)
     H5P_t		*dst = NULL;
     const H5D_create_t	*dc_src = NULL;
     H5D_create_t	*dc_dst = NULL;
+    const H5F_access_t	*fa_src = NULL;
     H5F_access_t	*fa_dst = NULL;
-    H5F_xfer_t		*dx_dst = NULL;
     
     FUNC_ENTER (H5P_copy, NULL);
     
@@ -527,7 +540,7 @@ H5P_copy (H5P_class_t type, const void *src)
             size = sizeof(H5D_create_t);
             break;
 
-        case H5P_DATA_XFER:
+        case H5P_DATASET_XFER:
             size = sizeof(H5F_xfer_t);
             break;
 
@@ -543,7 +556,7 @@ H5P_copy (H5P_class_t type, const void *src)
     /* Create the new property list */
     if (NULL==(dst = H5FL_ALLOC(H5P_t,0))) {
         HRETURN_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL,
-               "memory allocation failed");
+		       "memory allocation failed");
     }
 
     /* Copy into new object */
@@ -554,65 +567,77 @@ H5P_copy (H5P_class_t type, const void *src)
 
     /* Deep-copy pointers */
     switch (type) {
-        case H5P_FILE_CREATE:
-            break;
-        
-        case H5P_FILE_ACCESS:
-            fa_dst = (H5F_access_t*)dst;
+    case H5P_FILE_CREATE:
+	break;
+	
+    case H5P_FILE_ACCESS:
+	fa_src = (const H5F_access_t*)src;
+	fa_dst = (H5F_access_t*)dst;
+	switch (fa_src->driver) {
+	case H5F_LOW_ERROR:
+	case H5F_LOW_SEC2:
+	case H5F_LOW_STDIO:
+	case H5F_LOW_CORE:
+	case H5F_LOW_MPIO:
+	    /* Nothing to do */
+	    break;
+	    
+	case H5F_LOW_FAMILY:
+	    fa_dst->u.fam.memb_access = H5P_copy (H5P_FILE_ACCESS,
+						  fa_src->u.fam.memb_access);
+	    break;
 
-            if (fa_dst->driver_id>=0) {
-                H5I_inc_ref(fa_dst->driver_id);
-                fa_dst->driver_info = H5FD_fapl_copy(fa_dst->driver_id,
-                                fa_dst->driver_info);
-            }
-            break;
-        
-        case H5P_DATASET_CREATE:
-            dc_src = (const H5D_create_t*)src;
-            dc_dst = (H5D_create_t*)dst;
+	case H5F_LOW_SPLIT:
+	    fa_dst->u.split.meta_access=H5P_copy (H5P_FILE_ACCESS,
+						  fa_src->u.split.meta_access);
+	    fa_dst->u.split.raw_access = H5P_copy (H5P_FILE_ACCESS,
+						   fa_src->u.split.raw_access);
+	    break;
+	}
+	break;
+	
+    case H5P_DATASET_CREATE:
+	dc_src = (const H5D_create_t*)src;
+	dc_dst = (H5D_create_t*)dst;
 
-            /* Copy the fill value */
-            if (NULL==H5O_copy(H5O_FILL, &(dc_src->fill), &(dc_dst->fill))) {
-                HRETURN_ERROR(H5E_PLIST, H5E_CANTINIT, NULL,
-                      "unabe to copy fill value message");
-            }
-            
-            /* Copy the external file list */
-            HDmemset(&(dc_dst->efl), 0, sizeof(dc_dst->efl));
-            if (NULL==H5O_copy(H5O_EFL, &(dc_src->efl), &(dc_dst->efl))) {
-                HRETURN_ERROR(H5E_PLIST, H5E_CANTINIT, NULL,
-                      "unable to copy external file list message");
-            }
+	/* Copy the fill value */
+	if (NULL==H5O_copy(H5O_FILL, &(dc_src->fill), &(dc_dst->fill))) {
+	    HRETURN_ERROR(H5E_PLIST, H5E_CANTINIT, NULL,
+			  "unabe to copy fill value message");
+	}
+	
+	/* Copy the external file list */
+	HDmemset(&(dc_dst->efl), 0, sizeof(dc_dst->efl));
+	if (NULL==H5O_copy(H5O_EFL, &(dc_src->efl), &(dc_dst->efl))) {
+	    HRETURN_ERROR(H5E_PLIST, H5E_CANTINIT, NULL,
+			  "unable to copy external file list message");
+	}
 
-            /* Copy the filter pipeline */
-            if (NULL==H5O_copy(H5O_PLINE, &(dc_src->pline), &(dc_dst->pline))) {
-                HRETURN_ERROR(H5E_PLIST, H5E_CANTINIT, NULL,
-                      "unable to copy filter pipeline message");
-            }
-            break;
-        
-        case H5P_DATA_XFER:
-            dx_dst = (H5F_xfer_t*)dst;
+	/* Copy the filter pipeline */
+	if (NULL==H5O_copy(H5O_PLINE, &(dc_src->pline), &(dc_dst->pline))) {
+	    HRETURN_ERROR(H5E_PLIST, H5E_CANTINIT, NULL,
+			  "unable to copy filter pipeline message");
+	}
+	
 
-            if (dx_dst->driver_id>=0) {
-                H5I_inc_ref(dx_dst->driver_id);
-                dx_dst->driver_info = H5FD_dxpl_copy(dx_dst->driver_id,
-                                dx_dst->driver_info);
-            }
-            break;
+	break;
+	
+    case H5P_DATASET_XFER:
+	/* Nothing to do */
+	break;
 
-        case H5P_MOUNT:
-            /* Nothing to do */
-            break;
+    case H5P_MOUNT:
+	/* Nothing to do */
+	break;
 
-        default:
-            HRETURN_ERROR(H5E_ARGS, H5E_BADRANGE, NULL,
-                  "unknown property list class");
+    default:
+	HRETURN_ERROR(H5E_ARGS, H5E_BADRANGE, NULL,
+		      "unknown property list class");
     }
 
     FUNC_LEAVE (dst);
 }
-
+    
 
 /*-------------------------------------------------------------------------
  * Function:	H5Pget_version
@@ -1469,178 +1494,540 @@ H5Pget_external(hid_t plist_id, int idx, size_t name_size, char *name/*out*/,
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5Pset_driver
+ * Function:	H5Pget_driver
  *
- * Purpose:	Set the file driver (DRIVER_ID) for a file access or data
- *		transfer property list (PLIST_ID) and supply an optional
- *		struct containing the driver-specific properites
- *		(DRIVER_INFO).  The driver properties will be copied into the
- *		property list and the reference count on the driver will be
- *		incremented, allowing the caller to close the driver ID but
- *		still use the property list.
+ * Purpose:	Return the ID of the low-level file driver.  PLIST_ID should
+ *		be a file access property list.
  *
- * Return:	Success:	Non-negative
+ * Return:	Success:	A low-level driver ID
  *
- *		Failure:	Negative
+ *		Failure:	H5F_LOW_ERROR (a negative value)
  *
  * Programmer:	Robb Matzke
- *              Tuesday, August  3, 1999
+ *		Thursday, February 26, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+H5F_driver_t
+H5Pget_driver(hid_t plist_id)
+{
+    H5F_access_t	*plist = NULL;
+
+    FUNC_ENTER (H5Pget_driver, H5F_LOW_ERROR);
+    H5TRACE1("Fd","i",plist_id);
+
+    /* Check arguments */
+    if (H5P_FILE_ACCESS != H5P_get_class (plist_id) ||
+	NULL == (plist = H5I_object (plist_id))) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, H5F_LOW_ERROR,
+		       "not a file access property list");
+    }
+
+    FUNC_LEAVE (plist->driver);
+}
+    
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_stdio
+ *
+ * Purpose:	Set the low level file driver to use the functions declared
+ *		in the stdio.h file: fopen(), fseek() or fseek64(), fread(),
+ *		fwrite(), and fclose().
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Robb Matzke
+ *		Thursday, February 19, 1998
  *
  * Modifications:
  *
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Pset_driver(hid_t plist_id, hid_t driver_id, const void *driver_info)
+H5Pset_stdio(hid_t plist_id)
 {
-    H5F_access_t	*fapl=NULL;
-    H5F_xfer_t		*dxpl=NULL;
+    H5F_access_t	*plist = NULL;
     
-    FUNC_ENTER(H5Pset_driver, FAIL);
-    H5TRACE3("e","iix",plist_id,driver_id,driver_info);
+    FUNC_ENTER (H5Pset_stdio, FAIL);
+    H5TRACE1("e","i",plist_id);
 
-    if (H5I_VFL!=H5I_get_type(driver_id) ||
-	NULL==H5I_object(driver_id)) {
-	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file driver ID");
-    }
-
-    if (H5P_FILE_ACCESS==H5P_get_class(plist_id)) {
-	if (NULL==(fapl=H5I_object(plist_id))) {
-	    HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
-			  "not a file access property list");
-	}
-	
-	/* Remove old driver */
-	assert(fapl->driver_id>=0);
-	H5FD_fapl_free(fapl->driver_id, fapl->driver_info);
-    H5I_dec_ref(fapl->driver_id);
-
-	/* Add new driver */
-	H5I_inc_ref(driver_id);
-	fapl->driver_id = driver_id;
-	fapl->driver_info = H5FD_fapl_copy(driver_id, driver_info);
-	
-    } else if (H5P_DATA_XFER==H5P_get_class(plist_id)) {
-	if (NULL==(dxpl=H5I_object(plist_id))) {
-	    HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
-			  "not a file access property list");
-	}
-
-	/* Remove old driver */
-	if (dxpl->driver_id>=0)
-	    H5FD_dxpl_free(dxpl->driver_id, dxpl->driver_info);
-
-	/* Add new driver */
-	H5I_inc_ref(driver_id);
-	dxpl->driver_id = driver_id;
-	dxpl->driver_info = H5FD_fapl_copy(driver_id, driver_info);
-	
-    } else {
+    /* Check arguments */
+    if (H5P_FILE_ACCESS != H5P_get_class(plist_id) ||
+	NULL == (plist = H5I_object(plist_id))) {
 	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
-		      "not a file access or data transfer property list");
+		      "not a file access property list");
     }
 
-    FUNC_LEAVE(SUCCEED);
+    /* Set driver */
+    plist->driver = H5F_LOW_STDIO;
+
+    FUNC_LEAVE (SUCCEED);
 }
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5Pget_driver
+ * Function:	H5Pget_stdio
  *
- * Purpose:	Return the ID of the low-level file driver.  PLIST_ID should
- *		be a file access property list or data transfer propert list.
+ * Purpose:	If the file access property list is set to the stdio driver
+ *		then this function returns zero; otherwise it returns a
+ *		negative value.	 In the future, additional arguments may be
+ *		added to this function to match those added to H5Pset_stdio().
  *
- * Return:	Success:	A low-level driver ID which is the same ID
- *				used when the driver was set for the property
- *				list. The driver ID is only valid as long as
- *				the file driver remains registered.
- *
- *		Failure:	Negative
+ * Return:	Non-negative on success/Negative on failure
  *
  * Programmer:	Robb Matzke
  *		Thursday, February 26, 1998
  *
  * Modifications:
- *		Robb Matzke, 1999-08-03
- *		Rewritten to use the virtual file layer.
  *
- * 		Robb Matzke, 1999-08-05
- *		If the driver ID is -2 then substitute the current value of
- *		H5FD_SEC2.
  *-------------------------------------------------------------------------
  */
-hid_t
-H5Pget_driver(hid_t plist_id)
+herr_t
+H5Pget_stdio(hid_t plist_id)
 {
-    H5F_access_t	*fapl=NULL;
-    H5F_xfer_t		*dxpl=NULL;
-    hid_t		ret_value=-1;
+    H5F_access_t	*plist = NULL;
 
-    FUNC_ENTER (H5Pget_driver, FAIL);
-    H5TRACE1("i","i",plist_id);
+    FUNC_ENTER (H5Pget_stdio, FAIL);
+    H5TRACE1("e","i",plist_id);
 
-    if (H5P_FILE_ACCESS==H5P_get_class(plist_id) &&
-	(fapl=H5I_object(plist_id))) {
-	ret_value = fapl->driver_id;
-	
-    } else if (H5P_DATA_XFER==H5P_get_class(plist_id) &&
-	       (dxpl=H5I_object(plist_id))) {
-	ret_value = dxpl->driver_id;
-	
-    } else {
-	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
-		      "not a file access or data transfer property list");
+    /* Check arguments */
+    if (H5P_FILE_ACCESS != H5P_get_class (plist_id) ||
+	NULL == (plist = H5I_object (plist_id))) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
+		       "not a file access property list");
+    }
+    if (H5F_LOW_STDIO != plist->driver) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "the stdio driver is not set");
     }
 
-    if (-2==ret_value) ret_value = H5FD_SEC2;
-    FUNC_LEAVE(ret_value);
+    FUNC_LEAVE (SUCCEED);
 }
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5Pget_driver_info
+ * Function:	H5Pset_sec2
  *
- * Purpose:	Returns a pointer directly to the file driver-specific
- *		information of a file access or data transfer property list.
+ * Purpose:	Set the low-level file driver to use the functions declared
+ *		in the unistd.h file: open(), lseek() or lseek64(), read(),
+ *		write(), and close().
  *
- * Return:	Success:	Ptr to *uncopied* driver specific data
- *				structure if any.
- *
- *		Failure:	NULL. Null is also returned if the driver has
- *				not registered any driver-specific properties
- *				although no error is pushed on the stack in
- *				this case.
+ * Return:	Non-negative on success/Negative on failure
  *
  * Programmer:	Robb Matzke
- *              Wednesday, August  4, 1999
+ *		Thursday, February 19, 1998
  *
  * Modifications:
  *
  *-------------------------------------------------------------------------
  */
-void *
-H5Pget_driver_info(hid_t plist_id)
+herr_t
+H5Pset_sec2(hid_t plist_id)
 {
-    H5F_access_t	*fapl=NULL;
-    H5F_xfer_t		*dxpl=NULL;
-    void		*ret_value=NULL;
+    H5F_access_t	*plist = NULL;
+    
+    FUNC_ENTER (H5Pset_sec2, FAIL);
+    H5TRACE1("e","i",plist_id);
 
-    FUNC_ENTER(H5Pget_driver_info, NULL);
+    /* Check arguments */
+    if (H5P_FILE_ACCESS != H5P_get_class(plist_id) ||
+	NULL == (plist = H5I_object(plist_id))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a file access property list");
+    }
 
-    if (H5P_FILE_ACCESS==H5P_get_class(plist_id) &&
-	(fapl=H5I_object(plist_id))) {
-	ret_value = fapl->driver_info;
-	
-    } else if (H5P_DATA_XFER==H5P_get_class(plist_id) &&
-	       (dxpl=H5I_object(plist_id))) {
-	ret_value = dxpl->driver_info;
-	
-    } else {
-	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, NULL,
-		      "not a file access or data transfer property list");
+    /* Set driver */
+    plist->driver = H5F_LOW_SEC2;
+
+    FUNC_LEAVE (SUCCEED);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_sec2
+ *
+ * Purpose:	If the file access property list is set to the sec2 driver
+ *		then this function returns zero; otherwise it returns a
+ *		negative value.	 In the future, additional arguments may be
+ *		added to this function to match those added to H5Pset_sec2().
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Robb Matzke
+ *		Thursday, February 26, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_sec2(hid_t plist_id)
+{
+    H5F_access_t	*plist = NULL;
+
+    FUNC_ENTER (H5Pget_sec2, FAIL);
+    H5TRACE1("e","i",plist_id);
+
+    /* Check arguments */
+    if (H5P_FILE_ACCESS != H5P_get_class (plist_id) ||
+	NULL == (plist = H5I_object (plist_id))) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
+		       "not a file access property list");
+    }
+    if (H5F_LOW_SEC2 != plist->driver) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "the sec2 driver is not set");
+    }
+
+    FUNC_LEAVE (SUCCEED);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_core
+ *
+ * Purpose:	Set the low-level file driver to use malloc() and free().
+ *		This driver is restricted to temporary files which are not
+ *		larger than the amount of virtual memory available. The
+ *		INCREMENT argument determines the file block size and memory
+ *		will be allocated in multiples of INCREMENT bytes. A liberal
+ *		INCREMENT results in fewer calls to realloc() and probably
+ *		less memory fragmentation.
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Robb Matzke
+ *		Thursday, February 19, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_core(hid_t plist_id, size_t increment)
+{
+    H5F_access_t	*plist = NULL;
+    
+    FUNC_ENTER (H5Pset_core, FAIL);
+    H5TRACE2("e","iz",plist_id,increment);
+
+    /* Check arguments */
+    if (H5P_FILE_ACCESS != H5P_get_class(plist_id) ||
+	NULL == (plist = H5I_object(plist_id))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a file access property list");
+    }
+    if (increment<1) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "increment must be positive");
+    }
+
+    /* Set driver */
+    plist->driver = H5F_LOW_CORE;
+    plist->u.core.increment = increment;
+
+    FUNC_LEAVE (SUCCEED);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_core
+ *
+ * Purpose:	If the file access property list is set to the core driver
+ *		then this function returns zero; otherwise it returns a
+ *		negative value.	 On success, the block size is returned
+ *		through the INCREMENT argument if it isn't the null pointer.
+ *		In the future, additional arguments may be added to this
+ *		function to match those added to H5Pset_core().
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Robb Matzke
+ *		Thursday, February 26, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_core(hid_t plist_id, size_t *increment/*out*/)
+{
+    H5F_access_t	*plist = NULL;
+
+    FUNC_ENTER (H5Pget_core, FAIL);
+    H5TRACE2("e","ix",plist_id,increment);
+
+    /* Check arguments */
+    if (H5P_FILE_ACCESS != H5P_get_class (plist_id) ||
+	NULL == (plist = H5I_object (plist_id))) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
+		       "not a file access property list");
+    }
+    if (H5F_LOW_CORE != plist->driver) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "the core driver is not set");
+    }
+
+    /* Return values */
+    if (increment) {
+	*increment = plist->u.core.increment;
     }
     
-    FUNC_LEAVE(ret_value);
+    FUNC_LEAVE (SUCCEED);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_split
+ *
+ * Purpose:	Set the low-level driver to split meta data from raw data,
+ *		storing meta data in one file and raw data in another file.
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Robb Matzke
+ *		Thursday, February 19, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_split(hid_t plist_id, const char *meta_ext, hid_t meta_plist_id,
+	      const char *raw_ext, hid_t raw_plist_id)
+{
+    H5F_access_t	*plist = NULL;
+    H5F_access_t	*meta_plist = &H5F_access_dflt;
+    H5F_access_t	*raw_plist = &H5F_access_dflt;
+    
+    FUNC_ENTER (H5Pset_split, FAIL);
+    H5TRACE5("e","isisi",plist_id,meta_ext,meta_plist_id,raw_ext,raw_plist_id);
+
+    /* Check arguments */
+    if (H5P_FILE_ACCESS != H5P_get_class(plist_id) ||
+	NULL == (plist = H5I_object(plist_id))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a file access property list");
+    }
+    if (H5P_DEFAULT!=meta_plist_id &&
+	(H5P_FILE_ACCESS != H5P_get_class(meta_plist_id) ||
+	 NULL == (meta_plist = H5I_object(meta_plist_id)))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a file access property list");
+    }
+    if (H5P_DEFAULT!=raw_plist_id &&
+	(H5P_FILE_ACCESS != H5P_get_class(raw_plist_id) ||
+	 NULL == (raw_plist = H5I_object(raw_plist_id)))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a file access property list");
+    }
+
+    /* Set driver */
+    plist->driver = H5F_LOW_SPLIT;
+    plist->u.split.meta_access = H5P_copy (H5P_FILE_ACCESS, meta_plist);
+    plist->u.split.raw_access = H5P_copy (H5P_FILE_ACCESS, raw_plist);
+    plist->u.split.meta_ext = H5MM_xstrdup (meta_ext);
+    plist->u.split.raw_ext = H5MM_xstrdup (raw_ext);
+
+    FUNC_LEAVE (SUCCEED);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_split
+ *
+ * Purpose:	If the file access property list is set to the sec2 driver
+ *		then this function returns zero; otherwise it returns a
+ *		negative value.	 On success, at most META_EXT_SIZE characters
+ *		are copied to the META_EXT buffer if non-null and at most
+ *		RAW_EXT_SIZE characters are copied to the RAW_EXT buffer if
+ *		non-null.  If the actual extension is larger than the number
+ *		of characters requested then the buffer will not be null
+ *		terminated (that is, behavior like strncpy()).	In addition,
+ *		if META_PROPERTIES and/or RAW_PROPERTIES are non-null then
+ *		the file access property list of the meta file and/or raw
+ *		file is copied and its OID returned through these arguments.
+ *		In the future, additional arguments may be added to this
+ *		function to match those added to H5Pset_sec2().
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Robb Matzke
+ *		Thursday, February 26, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_split(hid_t plist_id, size_t meta_ext_size, char *meta_ext/*out*/,
+	      hid_t *meta_properties/*out*/, size_t raw_ext_size,
+	      char *raw_ext/*out*/, hid_t *raw_properties/*out*/)
+{
+    H5F_access_t	*plist = NULL;
+
+    FUNC_ENTER (H5Pget_split, FAIL);
+    H5TRACE7("e","izxxzxx",plist_id,meta_ext_size,meta_ext,meta_properties,
+             raw_ext_size,raw_ext,raw_properties);
+
+    /* Check arguments */
+    if (H5P_FILE_ACCESS != H5P_get_class (plist_id) ||
+	NULL == (plist = H5I_object (plist_id))) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
+		       "not a file access property list");
+    }
+    if (H5F_LOW_SPLIT != plist->driver) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "the split driver is not set");
+    }
+
+    /* Reset output args for error handling */
+    if (meta_ext && meta_ext_size>0) *meta_ext = '\0';
+    if (raw_ext && raw_ext_size>0) *raw_ext = '\0';
+    if (meta_properties) *meta_properties = FAIL;
+    if (raw_properties) *raw_properties = FAIL;
+
+    /* Output arguments */
+    if (meta_ext && meta_ext_size>0) {
+	if (plist->u.split.meta_ext) {
+	    HDstrncpy (meta_ext, plist->u.split.meta_ext, meta_ext_size);
+	} else {
+	    HDstrncpy (meta_ext, ".meta", meta_ext_size);
+	}
+    }
+    if (raw_ext && raw_ext_size>0) {
+	if (plist->u.split.raw_ext) {
+	    HDstrncpy (raw_ext, plist->u.split.raw_ext, raw_ext_size);
+	} else {
+	    HDstrncpy (raw_ext, ".raw", raw_ext_size);
+	}
+    }
+    if (meta_properties) {
+	assert (plist->u.split.meta_access);
+	*meta_properties = H5P_create (H5P_FILE_ACCESS,
+				       H5P_copy (H5P_FILE_ACCESS,
+						 plist->u.split.meta_access));
+    }
+    if (raw_properties) {
+	assert (plist->u.split.raw_access);
+	*raw_properties = H5P_create (H5P_FILE_ACCESS,
+				      H5P_copy (H5P_FILE_ACCESS,
+						plist->u.split.raw_access));
+    }
+    
+    FUNC_LEAVE (SUCCEED);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_family
+ *
+ * Purpose:	Sets the low-level driver to stripe the hdf5 address space
+ *		across a family of files.  The MEMB_SIZE argument indicates
+ *		the size in bytes of each family member and is only
+ *		meaningful when creating new files or opening families that
+ *		have only one member.
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Robb Matzke
+ *		Thursday, February 19, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_family(hid_t plist_id, hsize_t memb_size, hid_t memb_plist_id)
+{
+    
+    H5F_access_t	*plist = NULL;
+    H5F_access_t	*memb_plist = &H5F_access_dflt;
+    
+    FUNC_ENTER (H5Pset_family, FAIL);
+    H5TRACE3("e","ihi",plist_id,memb_size,memb_plist_id);
+
+    /* Check arguments */
+    if (H5P_FILE_ACCESS != H5P_get_class(plist_id) ||
+	NULL == (plist = H5I_object(plist_id))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a file access property list");
+    }
+    if (memb_size && memb_size<1024) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADRANGE, FAIL,
+		       "family member size is too small");
+    }
+    if (H5P_DEFAULT!=memb_plist_id &&
+	(H5P_FILE_ACCESS != H5P_get_class(memb_plist_id) ||
+	 NULL == (plist = H5I_object(memb_plist_id)))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a file access property list");
+    }
+
+    /* Set driver */
+    plist->driver = H5F_LOW_FAMILY;
+    H5F_addr_reset (&(plist->u.fam.memb_size));
+    H5F_addr_inc (&(plist->u.fam.memb_size), memb_size);
+    plist->u.fam.memb_access = H5P_copy (H5P_FILE_ACCESS, memb_plist);
+
+    FUNC_LEAVE (SUCCEED);
+}
+    
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_family
+ *
+ * Purpose:	If the file access property list is set to the family driver
+ *		then this function returns zero; otherwise it returns a
+ *		negative value.	 On success, if MEMB_PLIST_ID is a non-null
+ *		pointer it will be initialized with the id of an open
+ *		property list: the file access property list for the family
+ *		members.  In the future, additional arguments may be added to
+ *		this function to match those added to H5Pset_family().
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Robb Matzke
+ *		Thursday, February 26, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_family(hid_t plist_id, hsize_t *memb_size/*out*/,
+	       hid_t *memb_plist_id/*out*/)
+{
+    H5F_access_t	*plist = NULL;
+
+    FUNC_ENTER (H5Pget_family, FAIL);
+    H5TRACE3("e","ixx",plist_id,memb_size,memb_plist_id);
+
+    /* Check arguments */
+    if (H5P_FILE_ACCESS != H5P_get_class (plist_id) ||
+	NULL == (plist = H5I_object (plist_id))) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
+		       "not a file access property list");
+    }
+    if (H5F_LOW_FAMILY != plist->driver) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "the family driver is not set");
+    }
+
+    /* Output args */
+    if (memb_size) {
+	*memb_size = plist->u.fam.memb_size.offset;
+    }
+    if (memb_plist_id) {
+	assert (plist->u.fam.memb_access);
+	*memb_plist_id = H5P_create (H5P_FILE_ACCESS,
+				     H5P_copy (H5P_FILE_ACCESS,
+					       plist->u.fam.memb_access));
+    }
+	
+    FUNC_LEAVE (SUCCEED);
 }
 
 
@@ -1785,7 +2172,7 @@ H5Pset_buffer(hid_t plist_id, size_t size, void *tconv, void *bkg)
     H5TRACE4("e","izxx",plist_id,size,tconv,bkg);
 
     /* Check arguments */
-    if (H5P_DATA_XFER != H5P_get_class (plist_id) ||
+    if (H5P_DATASET_XFER != H5P_get_class (plist_id) ||
 	NULL == (plist = H5I_object (plist_id))) {
 	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
 		       "not a dataset transfer property list");
@@ -1829,7 +2216,7 @@ H5Pget_buffer(hid_t plist_id, void **tconv/*out*/, void **bkg/*out*/)
     H5TRACE3("z","ixx",plist_id,tconv,bkg);
 
     /* Check arguments */
-    if (H5P_DATA_XFER != H5P_get_class (plist_id) ||
+    if (H5P_DATASET_XFER != H5P_get_class (plist_id) ||
 	NULL == (plist = H5I_object (plist_id))) {
 	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, 0,
 		       "not a dataset transfer property list");
@@ -1875,7 +2262,7 @@ H5Pset_hyper_cache(hid_t plist_id, unsigned cache, unsigned limit)
     H5TRACE3("e","iIuIu",plist_id,cache,limit);
 
     /* Check arguments */
-    if (H5P_DATA_XFER != H5P_get_class (plist_id) ||
+    if (H5P_DATASET_XFER != H5P_get_class (plist_id) ||
 	NULL == (plist = H5I_object (plist_id))) {
 	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
 		       "not a dataset transfer property list");
@@ -1886,7 +2273,7 @@ H5Pset_hyper_cache(hid_t plist_id, unsigned cache, unsigned limit)
     plist->block_limit = limit;
 
     FUNC_LEAVE (SUCCEED);
-}
+} /* end H5P_set_hyper_cache() */
 
 
 /*-------------------------------------------------------------------------
@@ -1913,7 +2300,7 @@ H5Pget_hyper_cache(hid_t plist_id, unsigned *cache/*out*/,
     H5TRACE3("e","ixx",plist_id,cache,limit);
 
     /* Check arguments */
-    if (H5P_DATA_XFER != H5P_get_class (plist_id) ||
+    if (H5P_DATASET_XFER != H5P_get_class (plist_id) ||
 	NULL == (plist = H5I_object (plist_id))) {
 	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
 		       "not a dataset transfer property list");
@@ -1924,7 +2311,7 @@ H5Pget_hyper_cache(hid_t plist_id, unsigned *cache/*out*/,
     if (limit) *limit = plist->block_limit;
 
     FUNC_LEAVE (SUCCEED);
-}
+} /* end H5Pget_hyper_cache() */
 
 
 /*-------------------------------------------------------------------------
@@ -1954,7 +2341,7 @@ H5Pset_preserve(hid_t plist_id, hbool_t status)
     H5TRACE2("e","ib",plist_id,status);
 
     /* Check arguments */
-    if (H5P_DATA_XFER != H5P_get_class (plist_id) ||
+    if (H5P_DATASET_XFER != H5P_get_class (plist_id) ||
 	NULL == (plist = H5I_object (plist_id))) {
 	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
 		       "not a dataset transfer property list");
@@ -1992,7 +2379,7 @@ H5Pget_preserve(hid_t plist_id)
     H5TRACE1("Is","i",plist_id);
 
     /* Check arguments */
-    if (H5P_DATA_XFER != H5P_get_class (plist_id) ||
+    if (H5P_DATASET_XFER != H5P_get_class (plist_id) ||
 	NULL == (plist = H5I_object (plist_id))) {
 	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
 		       "not a dataset transfer property list");
@@ -2048,7 +2435,7 @@ H5Pset_filter(hid_t plist_id, H5Z_filter_t filter, unsigned int flags,
     H5TRACE5("e","iZfIuz*[a3]Iu",plist_id,filter,flags,cd_nelmts,cd_values);
 
     /* Check arguments */
-    if (H5P_DATA_XFER==H5P_get_class(plist_id)) {
+    if (H5P_DATASET_XFER==H5P_get_class(plist_id)) {
 	HRETURN_ERROR(H5E_PLINE, H5E_UNSUPPORTED, FAIL,
 		      "transient pipelines are not supported yet");
     }
@@ -2112,7 +2499,7 @@ H5Pget_nfilters(hid_t plist_id)
     FUNC_ENTER(H5Pget_nfilters, FAIL);
     H5TRACE1("Is","i",plist_id);
 
-    if (H5P_DATA_XFER==H5P_get_class(plist_id)) {
+    if (H5P_DATASET_XFER==H5P_get_class(plist_id)) {
 	HRETURN_ERROR(H5E_PLINE, H5E_UNSUPPORTED, FAIL,
 		      "transient pipelines are not supported yet");
     }
@@ -2164,7 +2551,7 @@ H5Pget_filter(hid_t plist_id, int idx, unsigned int *flags/*out*/,
              name);
     
     /* Check arguments */
-    if (H5P_DATA_XFER==H5P_get_class(plist_id)) {
+    if (H5P_DATASET_XFER==H5P_get_class(plist_id)) {
 	HRETURN_ERROR(H5E_PLINE, H5E_UNSUPPORTED, H5Z_FILTER_ERROR,
 		      "transient filters are not supported yet");
     }
@@ -2251,7 +2638,7 @@ H5Pset_deflate(hid_t plist_id, unsigned level)
     H5TRACE2("e","iIu",plist_id,level);
 
     /* Check arguments */
-    if (H5P_DATA_XFER==H5P_get_class(plist_id)) {
+    if (H5P_DATASET_XFER==H5P_get_class(plist_id)) {
 	HRETURN_ERROR(H5E_PLINE, H5E_UNSUPPORTED, FAIL,
 		      "transient filter pipelines are not supported yet");
     }
@@ -2303,7 +2690,7 @@ H5Pget_btree_ratios(hid_t plist_id, double *left/*out*/, double *middle/*out*/,
     H5TRACE4("e","ixxx",plist_id,left,middle,right);
 
     /* Check arguments */
-    if (H5P_DATA_XFER!=H5P_get_class(plist_id) ||
+    if (H5P_DATASET_XFER!=H5P_get_class(plist_id) ||
 	NULL==(plist=H5I_object(plist_id))) {
 	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
 		      "not a dataset transfer property list");
@@ -2350,7 +2737,7 @@ H5Pset_btree_ratios(hid_t plist_id, double left, double middle,
     H5TRACE4("e","iddd",plist_id,left,middle,right);
 
     /* Check arguments */
-    if (H5P_DATA_XFER!=H5P_get_class(plist_id) ||
+    if (H5P_DATASET_XFER!=H5P_get_class(plist_id) ||
 	NULL==(plist=H5I_object(plist_id))) {
 	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
 		      "not a dataset transfer property list");
@@ -2536,27 +2923,261 @@ H5Pget_fill_value(hid_t plist_id, hid_t type_id, void *value/*out*/)
 }
 
 
+#ifdef HAVE_PARALLEL
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_mpi
+ *
+ * Signature:	herr_t H5Pset_mpi(hid_t plist_id, MPI_Comm comm, MPI_Info info)
+ *
+ * Purpose:	Store the access mode for MPIO call and the user supplied
+ *		communicator and info in the access property list which can
+ *		then be used to open file.  This function is available only
+ *		in the parallel HDF5 library and is not a collective
+ *		function.
+ *
+ * Parameters:
+ *		hid_t plist_id 
+ *		    ID of property list to modify 
+ *		MPI_Comm comm 
+ *		    MPI communicator to be used for file open as defined in
+ *		    MPI_FILE_OPEN of MPI-2.  This function  does not make a
+ *		    duplicated communicator. Any modification to comm after
+ *		    this function call returns may have undetermined effect
+ *		    to the access property list.  Users should call this
+ *		    function again to setup the property list.
+ *		MPI_Info info 
+ *		    MPI info object to be used for file open as defined in
+ *		    MPI_FILE_OPEN of MPI-2.  This function  does not make a
+ *		    duplicated info. Any modification to info after
+ *		    this function call returns may have undetermined effect
+ *		    to the access property list.  Users should call this
+ *		    function again to setup the property list.
+ *	     
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Albert Cheng
+ *		Feb 3, 1998
+ *
+ * Modifications:
+ *
+ *	Robb Matzke, 18 Feb 1998
+ *	Check all arguments before the property list is updated so we don't
+ *	leave the property list in a bad state if something goes wrong.  Also,
+ *	the property list data type changed to allow more generality so all
+ *	the mpi-related stuff is in the `u.mpi' member.  The `access_mode'
+ *	will contain only mpi-related flags defined in H5Fpublic.h.
+ *
+ *	Albert Cheng, Apr 16, 1998
+ *	Removed the access_mode argument.  The access_mode is changed
+ *	to be controlled by data transfer property list during data
+ *	read/write calls.
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_mpi(hid_t plist_id, MPI_Comm comm, MPI_Info info)
+{
+    H5F_access_t	   *plist = NULL;
+
+    FUNC_ENTER(H5Pset_mpi, FAIL);
+    H5TRACE3("e","iMcMi",plist_id,comm,info);
+
+    /* Check arguments */
+    if (H5P_FILE_ACCESS != H5P_get_class(plist_id) ||
+	NULL == (plist = H5I_object(plist_id))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a file access property list");
+    }
+    
+#ifdef LATER
+    /*
+     * Need to verify comm and info contain sensible information.
+     */
+#endif
+
+    plist->driver = H5F_LOW_MPIO;
+    plist->u.mpio.comm = comm;
+    plist->u.mpio.info = info;
+
+    FUNC_LEAVE(SUCCEED);
+}
+#endif /*HAVE_PARALLEL*/
+
+
+#ifdef HAVE_PARALLEL
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_mpi
+ *
+ * Purpose:	If the file access property list is set to the mpi driver
+ *		then this function returns zero; otherwise it returns a
+ *		negative value.	 In the future, additional arguments may be
+ *		added to this function to match those added to H5Pset_mpi().
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Robb Matzke
+ *		Thursday, February 26, 1998
+ *
+ * Modifications:
+ *
+ *	Albert Cheng, Apr 16, 1998
+ *	Removed the access_mode argument.  The access_mode is changed
+ *	to be controlled by data transfer property list during data
+ *	read/write calls.
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_mpi(hid_t plist_id, MPI_Comm *comm, MPI_Info *info)
+{
+    H5F_access_t	*plist = NULL;
+
+    FUNC_ENTER (H5Pget_mpi, FAIL);
+    H5TRACE3("e","i*Mc*Mi",plist_id,comm,info);
+
+    /* Check arguments */
+    if (H5P_FILE_ACCESS != H5P_get_class (plist_id) ||
+	NULL == (plist = H5I_object (plist_id))) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
+		       "not a file access property list");
+    }
+    if (H5F_LOW_MPIO != plist->driver) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "the mpi driver is not set");
+    }
+    *comm = plist->u.mpio.comm;
+    *info = plist->u.mpio.info;
+
+    FUNC_LEAVE (SUCCEED);
+}
+#endif /*HAVE_PARALLEL*/
+
+
+#ifdef HAVE_PARALLEL
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_xfer
+ *
+ * Signature:	herr_t H5Pset_xfer(hid_t plist_id,
+ *		                   H5D_transfer_t data_xfer_mode)
+ *
+ * Purpose:	Set the transfer mode of the dataset transfer property list.
+ *		The list can then be used to control the I/O transfer mode
+ *		during dataset accesses.  This function is available only
+ *		in the parallel HDF5 library and is not a collective function.
+ *
+ * Parameters:
+ *		hid_t plist_id 
+ *		    ID of a dataset transfer property list
+ *		H5D_transfer_t data_xfer_mode
+ *		    Data transfer modes: 
+ *			H5D_XFER_INDEPENDENT 
+ *			    Use independent I/O access. 
+ *			H5D_XFER_COLLECTIVE 
+ *			    Use MPI collective I/O access. 
+ *			H5D_XFER_DFLT 
+ *			    Use default I/O access.  Currently,
+ *			    independent is the default mode.
+ *			
+ *	     
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Albert Cheng
+ *		April 2, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_xfer(hid_t plist_id, H5D_transfer_t data_xfer_mode)
+{
+    H5F_xfer_t		*plist = NULL;
+
+    FUNC_ENTER(H5Pset_xfer, FAIL);
+    H5TRACE2("e","iDt",plist_id,data_xfer_mode);
+
+    /* Check arguments */
+    if (H5P_DATASET_XFER != H5P_get_class(plist_id) ||
+	NULL == (plist = H5I_object(plist_id))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a dataset transfer property list");
+    }
+    
+    switch (data_xfer_mode){
+    case H5D_XFER_INDEPENDENT:
+    case H5D_XFER_COLLECTIVE:
+    case H5D_XFER_DFLT:
+	plist->xfer_mode = data_xfer_mode;
+	break;
+    default:
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "invalid dataset transfer mode");
+    }
+
+    FUNC_LEAVE(SUCCEED);
+}
+#endif /*HAVE_PARALLEL*/
+
+
+#ifdef HAVE_PARALLEL
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_xfer
+ *
+ * Purpose:	Reads the transfer mode current set in the property list.
+ *		This function is available only in the parallel HDF5 library
+ *		and is not a collective function.
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Albert Cheng
+ *		April 2, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_xfer(hid_t plist_id, H5D_transfer_t *data_xfer_mode)
+{
+    H5F_xfer_t		*plist = NULL;
+
+    FUNC_ENTER (H5Pget_xfer, FAIL);
+    H5TRACE2("e","i*Dt",plist_id,data_xfer_mode);
+
+    /* Check arguments */
+    if (H5P_DATASET_XFER != H5P_get_class(plist_id) ||
+	NULL == (plist = H5I_object(plist_id))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a dataset transfer property list");
+    }
+
+    *data_xfer_mode = plist->xfer_mode;
+
+    FUNC_LEAVE (SUCCEED);
+}
+#endif /*HAVE_PARALLEL*/
+
+
 /*-------------------------------------------------------------------------
  * Function:	H5Pset_gc_references
  *
  * Purpose:	Sets the flag for garbage collecting references for the file.
- *		Dataset region references (and other reference types
- *		probably) use space in the file heap.  If garbage collection
- *		is on and the user passes in an uninitialized value in a
- *		reference structure, the heap might get corrupted.  When
- *		garbage collection is off however and the user re-uses a
- *		reference, the previous heap block will be orphaned and not
- *		returned to the free heap space.  When garbage collection is
- *		on, the user must initialize the reference structures to 0 or
- *		risk heap corruption.
+ *      Dataset region references (and other reference types probably) use
+ *      space in the file heap.  If garbage collection is on and the user
+ *      passes in an uninitialized value in a reference structure, the heap
+ *      might get corrupted.  When garbage collection is off however and the
+ *      user re-uses a reference, the previous heap block will be orphaned and
+ *      not returned to the free heap space.  When garbage collection is on,
+ *      the user must initialize the reference structures to 0 or risk heap
+ *      corruption.
  *
- *		Default value for garbage collecting references is off, just
- *		to be on the safe side.
+ *		Default value for garbage collecting references is off, just to be
+ *      on the safe side.
  *
  * Return:	Non-negative on success/Negative on failure
  *
  * Programmer:	Quincey Koziol
- *		June, 1999
+ *              Friday, November 13, 1998
  *
  * Modifications:
  *
@@ -2567,14 +3188,12 @@ H5Pset_gc_references(hid_t fapl_id, unsigned gc_ref)
 {
     H5F_access_t	*fapl = NULL;
     
-    FUNC_ENTER(H5Pset_gc_references, FAIL);
+    FUNC_ENTER (H5Pset_gc_references, FAIL);
     H5TRACE2("e","iIu",fapl_id,gc_ref);
 
     /* Check args */
-    if (H5P_FILE_ACCESS!=H5P_get_class(fapl_id) ||
-	NULL==(fapl=H5I_object(fapl_id))) {
-        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
-		      "not a file access property list");
+    if (H5P_FILE_ACCESS != H5P_get_class (fapl_id) || NULL == (fapl = H5I_object (fapl_id))) {
+        HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list");
     }
 
     /* Set values */
@@ -2587,13 +3206,13 @@ H5Pset_gc_references(hid_t fapl_id, unsigned gc_ref)
 /*-------------------------------------------------------------------------
  * Function:	H5Pget_gc_references
  *
- * Purpose:	Returns the current setting for the garbage collection
- *		references property from a file access property list.
+ * Purpose:	Returns the current setting for the garbage collection references
+ *      property from a file access property list.
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *              June, 1999
+ * Programmer:	Robb Matzke
+ *              Tuesday, June  9, 1998
  *
  * Modifications:
  *
@@ -2604,14 +3223,12 @@ H5Pget_gc_references(hid_t fapl_id, unsigned *gc_ref/*out*/)
 {
     H5F_access_t	*fapl = NULL;
 
-    FUNC_ENTER(H5Pget_gc_references, FAIL);
+    FUNC_ENTER (H5Pget_gc_references, FAIL);
     H5TRACE2("e","ix",fapl_id,gc_ref);
 
     /* Check args */
-    if (H5P_FILE_ACCESS!=H5P_get_class(fapl_id) ||
-	NULL==(fapl=H5I_object(fapl_id))) {
-        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
-		      "not a file access property list");
+    if (H5P_FILE_ACCESS != H5P_get_class (fapl_id) || NULL == (fapl = H5I_object (fapl_id))) {
+        HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list");
     }
 
     /* Get values */
@@ -2625,13 +3242,13 @@ H5Pget_gc_references(hid_t fapl_id, unsigned *gc_ref/*out*/)
  * Function:	H5Pset_vlen_mem_manager
  *
  * Purpose:	Sets the memory allocate/free pair for VL datatypes.  The
- *		allocation routine is called when data is read into a new
- *		array and the free routine is called when H5Dvlen_reclaim is
- *		called.  The alloc_info and free_info are user parameters
- *		which are passed to the allocation and freeing functions
- *		respectively.  To reset the allocate/free functions to the
- *		default setting of using the system's malloc/free functions,
- *		call this routine with alloc_func and free_func set to NULL.
+ *      allocation routine is called when data is read into a new array
+ *      and the free routine is called when H5Dvlen_reclaim is called.
+ *      The alloc_info and free_info are user parameters which are passed
+ *      to the allocation and freeing functions respectively.
+ *      To reset the allocate/free functions to the default setting of using
+ *      the system's malloc/free functions, call this routine with alloc_func
+ *      and free_func set to NULL.
  *
  * Return:	Non-negative on success/Negative on failure
  *
@@ -2648,14 +3265,13 @@ H5Pset_vlen_mem_manager(hid_t plist_id, H5MM_allocate_t alloc_func,
 {
     H5F_xfer_t		*plist = NULL;
     
-    FUNC_ENTER(H5Pset_vlen_mem_manager, FAIL);
+    FUNC_ENTER (H5Pset_vlen_mem_manager, FAIL);
     H5TRACE5("e","ixxxx",plist_id,alloc_func,alloc_info,free_func,free_info);
 
     /* Check arguments */
-    if (H5P_DATA_XFER!=H5P_get_class(plist_id) ||
-            NULL==(plist=H5I_object(plist_id))) {
-        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
-		      "not a dataset transfer property list");
+    if (H5P_DATASET_XFER != H5P_get_class (plist_id) ||
+            NULL == (plist = H5I_object (plist_id))) {
+        HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataset transfer property list");
     }
 
     /* Update property list */
@@ -2683,21 +3299,19 @@ H5Pset_vlen_mem_manager(hid_t plist_id, H5MM_allocate_t alloc_func,
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Pget_vlen_mem_manager(hid_t plist_id, H5MM_allocate_t *alloc_func/*out*/,
-			void **alloc_info/*out*/,
-			H5MM_free_t *free_func/*out*/,
-			void **free_info/*out*/)
+H5Pget_vlen_mem_manager(hid_t plist_id, H5MM_allocate_t *alloc_func,
+        void **alloc_info, H5MM_free_t *free_func, void **free_info)
 {
     H5F_xfer_t		*plist = NULL;
     
-    FUNC_ENTER(H5Pget_vlen_mem_manager, FAIL);
-    H5TRACE5("e","ixxxx",plist_id,alloc_func,alloc_info,free_func,free_info);
+    FUNC_ENTER (H5Pget_vlen_mem_manager, FAIL);
+    H5TRACE5("e","i*x*x*x*x",plist_id,alloc_func,alloc_info,free_func,
+             free_info);
 
     /* Check arguments */
-    if (H5P_DATA_XFER!=H5P_get_class(plist_id) ||
-	NULL==(plist=H5I_object(plist_id))) {
-        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
-		      "not a dataset transfer property list");
+    if (H5P_DATASET_XFER != H5P_get_class (plist_id) ||
+            NULL == (plist = H5I_object (plist_id))) {
+        HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataset transfer property list");
     }
 
     if(alloc_func!=NULL)

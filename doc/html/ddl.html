@@ -11,9 +11,9 @@
 <center>
 <table border=0 width=98%>
 <tr><td valign=top align=left>
+   <a href="index.html">HDF5 documents and links</a>&nbsp;<br>
    <a href="H5.intro.html">Introduction to HDF5</a>&nbsp;<br>
    <a href="RM_H5Front.html">HDF5 Reference Manual</a>&nbsp;<br>
-   <a href="index.html">Other HDF5 documents and links</a>&nbsp;<br>
    <!--
    <a href="Glossary.html">Glossary</a><br>
    -->
@@ -34,7 +34,6 @@
       <a href="Errors.html">Error Handling</a>&nbsp;&nbsp;
       <br>
       <a href="Filters.html">Filters</a>&nbsp;&nbsp;
-      <a href="Palettes.html">Palettes</a>&nbsp;&nbsp;
       <a href="Caching.html">Caching</a>&nbsp;&nbsp;
       <a href="Chunking.html">Chunking</a>&nbsp;&nbsp;
       <a href="MountingFiles.html">Mounting Files</a>&nbsp;&nbsp;
@@ -77,15 +76,15 @@ This section contains a brief explanation of the symbols used in the DDL.
 
 <dir>
 <pre>
-&lt;file&gt; ::= HDF5 &lt;file_name&gt; { &lt;file_super_block&gt;<FONT SIZE=1.7>opt</FONT> &lt;root_group&gt; }
+&lt;file&gt; ::= HDF5 &lt;file_name&gt; { &lt;file_boot_block&gt;<FONT SIZE=1.7>opt</FONT> &lt;root_group&gt; }
 
 &lt;file_name&gt; ::= &lt;identifier&gt;
 
-&lt;file_super_block&gt; ::= BOOT_BLOCK { &lt;super_block_content&gt; }
+&lt;file_boot_block&gt; ::= BOOT_BLOCK { &lt;boot_block_content&gt; }
 
-&lt;super_block_content&gt; ::= TBD
+&lt;boot_block_content&gt; ::= TBD
 
-&lt;root_group&gt; ::= GROUP "/" { &lt;unamed_datatype&gt;* &lt;object_id&gt;<FONT SIZE=1.7>opt</FONT> &lt;group_attribute&gt;* &lt;group_member&gt;* }  
+&lt;root_group&gt; ::= GROUP "/" { &lt;unamed_datatype&gt;* &lt;group_attribute&gt;* &lt;group_member&gt;* }  
 
 &lt;unamed_datatype&gt ::= DATATYPE &lt;unamed_type_name&gt; { &lt;compound_type&gt; }
 
@@ -129,7 +128,7 @@ This section contains a brief explanation of the symbols used in the DDL.
 
 &lt;bitfield&gt; ::= TBD
 
-&lt;opaque&gt; ::= { H5T_OPAQUE; OPAQUE_TAG &lt;identifier&gt;; }
+&lt;opaque&gt; ::= TBD
 
 &lt;reference&gt; ::= H5T_REFERENCE
 
@@ -142,9 +141,8 @@ This section contains a brief explanation of the symbols used in the DDL.
 &lt;group_attribute&gt; ::= &lt;attribute&gt; 
 
 &lt;attribute&gt; ::= ATTRIBUTE &lt;attr_name&gt { &lt;datatype&gt;    
-                                        &lt;dataspace&gt;
-                                        &lt;object_id&gt;<FONT SIZE=1.7>opt</FONT>
-                                        &lt;data&gt;<FONT SIZE=1.7>opt</FONT>  } 
+                                          &lt;dataspace&gt;   
+                                          &lt;data&gt;<FONT SIZE=1.7>opt</FONT>  } 
 // &lt;datatype&gt; and &lt;dataspace&gt; must appear before &lt;data&gt;.
 
 &lt;attr_name&gt; ::= &lt;identifier&gt
@@ -204,15 +202,13 @@ This section contains a brief explanation of the symbols used in the DDL.
 
 &lt;reference_data&gt; ::= &lt;object_ref_data&gt; | &lt;data_region_data&gt; | NULL
 
-&lt;object_ref_data&gt; ::= &lt;object_type&gt; &lt;object_num&gt;
+&lt;object_ref_data&gt; ::= &lt;object_type&gt; &lt;object_id&gt;
 
 &lt;object_type&gt; ::= DATASET | GROUP | DATATYPE
 
-&lt;object_id&gt; ::= OBJECTID { &lt;object_num&gt; }
+&lt;object_id&gt; ::= an integer:an integer 
 
-&lt;object_num&gt; ::= an integer:an integer | an integer
-
-&lt;data_region_data&gt; ::= H5T_STD_REF_DSETREG &lt;object_num&gt; {&lt;data_region_data_info&gt;, 
+&lt;data_region_data&gt; ::= H5T_STD_REF_DSETREG &lt;object_id&gt; {&lt;data_region_data_info&gt;, 
                      &lt;data_region_data_info&gt;, ...}
 
 &lt;data_region_data_info&gt; ::= &lt;region_info&gt; | &lt;point_info&gt;
@@ -251,7 +247,7 @@ This section contains a brief explanation of the symbols used in the DDL.
 &lt;named_dataspace&gt; ::= TBD
 
 &lt;group&gt; ::= GROUP &lt;group_name&gt; { &lt;hardlink&gt; } |
-            GROUP &lt;object_id&gt;<FONT SIZE=1.7>opt</FONT> &lt;group_name&gt; { &lt;group_attribute&gt;* &lt;group_member&gt;* } 
+            GROUP &lt;group_name&gt; { &lt;group_attribute&gt;* &lt;group_member&gt;* } 
             
 &lt;group_name&gt; ::= &lt;identifier&gt;
 
@@ -259,12 +255,11 @@ This section contains a brief explanation of the symbols used in the DDL.
 
 &lt;dataset&gt; ::= DATASET &lt;dataset_name&gt; { &lt;hardlink&gt; } |
               DATASET &lt;dataset_name&gt; { &lt;datatype&gt;  
-                                       &lt;dataspace&gt; 
-                                       &lt;storagelayout&gt;<FONT SIZE=1.7>opt</FONT>
-                                       &lt;compression&gt;<FONT SIZE=1.7>opt</FONT>
-                                       &lt;dataset_attribute&gt;*
-                                       &lt;object_id&gt;<FONT SIZE=1.7>opt</FONT>
-                                       &lt;data&gt;<FONT SIZE=1.7>opt</FONT>  } 
+                                         &lt;dataspace&gt; 
+                                         &lt;storagelayout&gt;<FONT SIZE=1.7>opt</FONT>
+                                         &lt;compression&gt;<FONT SIZE=1.7>opt</FONT>
+                                         &lt;dataset_attribute&gt;*
+                                         &lt;data&gt;<FONT SIZE=1.7>opt</FONT>  } 
 // Tokens within {} can be in any order  as long as &lt;data&gt; and &lt;dataset_attribute&gt;
 // are after &lt;datatype&gt; and &lt;dataspace&gt;.
 
@@ -448,9 +443,9 @@ GROUP "/" {
 <center>
 <table border=0 width=98%>
 <tr><td valign=top align=left>
+   <a href="index.html">HDF5 documents and links</a>&nbsp;<br>
    <a href="H5.intro.html">Introduction to HDF5</a>&nbsp;<br>
    <a href="RM_H5Front.html">HDF5 Reference Manual</a>&nbsp;<br>
-   <a href="index.html">Other HDF5 documents and links</a>&nbsp;<br>
    <!--
    <a href="Glossary.html">Glossary</a><br>
    -->
@@ -471,7 +466,6 @@ GROUP "/" {
       <a href="Errors.html">Error Handling</a>&nbsp;&nbsp;
       <br>
       <a href="Filters.html">Filters</a>&nbsp;&nbsp;
-      <a href="Palettes.html">Palettes</a>&nbsp;&nbsp;
       <a href="Caching.html">Caching</a>&nbsp;&nbsp;
       <a href="Chunking.html">Chunking</a>&nbsp;&nbsp;
       <a href="MountingFiles.html">Mounting Files</a>&nbsp;&nbsp;
@@ -493,6 +487,8 @@ GROUP "/" {
 </address>
 
 Last modified:  14 October 1999
+<br>
+Describes HDF5 Release 1.2.2, June 2000
 
 </body>
 </html>

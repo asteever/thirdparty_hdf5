@@ -1,16 +1,13 @@
 
  
-                       HDF5 Release 1.3.x
-    			Under Development
+                       HDF5 Release 1.2.2
 
 
 INTRODUCTION
 
-This document describes the differences between HDF5-1.2.0 and 
-HDF5-1.3.x, and contains information on the platforms where HDF5-1.3.x
-was tested (????? careful, under construction)
-and known problems in HDF5-1.3.x. For more details check the
-HISTORY file in the HDF5 source.
+This document describes the differences between HDF5-1.2.1 and 
+HDF5-1.2.2, and contains information on the platforms where HDF5-1.2.2
+was tested and known problems in HDF5-1.2.2. 
 
 The HDF5 documentation can be found on the NCSA ftp server 
 (ftp.ncsa.uiuc.edu) in the directory:
@@ -28,126 +25,95 @@ If you have any questions or comments, please send them to:
 
 CONTENTS
 
-- New features
-- Bug fixes since HDF5-1.2.0 
-- Platforms Tested
+- Features Added since HDF5-1.2.1 
+- Bug Fixes since HDF5-1.2.1
 - Known Problems
+- Platforms Tested
 
-New features
-============
-   * The Virtual File Layer, VFL, is added to replace the old file
-     drivers.  It also provides an API for user defined file drivers.
+
+Features Added since HDF5-1.2.1
+===============================
+   * Added internal free-lists to reduce memory required by the library and
+     H5garbage_collect API function.
+   * h5dump displays opaque and bitfield types.
    * New features added to snapshots.  Use 'snapshot help' to see a
      complete list of features.
    * Improved configure to detect if MPIO routines are available when
      parallel mode is requested.
-   * Added Thread-Safe support.  Phase I implemented.
 
-Bug fixes since HDF5-1.2.0
+Bug Fixes since HDF5-1.2.1
 ==========================
-
-Library
--------
-   * The function H5Pset_mpi is renamed as H5Pset_fapl_mpio.
+   * h5dump correctly displays compound datatypes, including simple and
+     nested compound types.
+   * h5dump correctly displays the committed copy of predefined types.
+   * Corrected an error in h5toh4 which did not convert the 32-bit
+     int from HDF5 to HDF4 correctly for the T3E platform.
    * Corrected a floating point number conversion error for the
      Cray J90 platform.  The error did not convert the value 0.0
      correctly.
-   * Error was fixed which was not allowing dataset region references to have
-     their regions retrieved correctly.
-   * Corrected a bug that caused non-parallel file drivers to fail in
-     the parallel version.
-   * Added internal free-lists to reduce memory required by the library and
-     H5garbage_collect API function
    * Fixed error in H5Giterate which was not updating the "index" parameter
      correctly.
    * Fixed error in hyperslab iteration which was not walking through the
      correct sequence of array elements if hyperslabs were staggered in a
-     certain pattern
+     certain pattern.
    * Fixed several other problems in hyperslab iteration code.
-   * Fixed another H5Giterate bug which was causes groups with large numbers
+   * Fixed another H5Giterate bug which caused groups with large numbers
      of objects in them to misbehave when the callback function returned
      non-zero values.
    * Changed return type of H5Aiterate and H5A_operator_t typedef to be
      herr_t, to align them with the dataset and group iterator functions.
    * Changed H5Screate_simple and H5Sset_extent_simple to not allow dimensions
-     of size 0 with out the same dimension being unlimited.
-   * QAK - 4/19/00 - Improved metadata hashing & caching algorithms to avoid
-     many hash flushes and also remove some redundant I/O when moving metadata
+     of size 0 without the same dimension being unlimited.
+   * Improved metadata hashing & caching algorithms to avoid
+     many hash flushes and also removed some redundant I/O when moving metadata
      blocks in the file.
+   * The libhdf5.settings file shows the correct machine byte-sex.
    * The "struct(opt)" type conversion function which gets invoked for
      certain compound datatype conversions was fixed for nested compound
      types. This required a small change in the datatype conversion
      function API.
 
-
-Configuration
--------------
-
-   * The hdf5.h include file was fixed to allow the HDF5 Library to be compiled
-     with other libraries/applications that use GNU autoconf. 
-   * Configuration for parallel HDF5 was improved. Configure now attempts to
-     link with libmpi.a and/or libmpio.a as the MPI libraries by default.
-     It also uses "mpirun" to launch MPI tests by default.  It tests to
-     link MPIO routines during the configuration stage, rather than failing
-     later as before.  One can just do "./configure --enable-parallel"
-     if the MPI library is in the system library.
-   * Added support for pthread library and thread-safe option.
-   * The libhdf5.settings file shows the correct machine byte-sex.
-
-Tools
-------
-    * h5dump correctly displays compound datatypes.
-    * Corrected an error in h5toh4 which did not convert the 32bits
-      int from HDF5 to HDF4 corectly for the T3E platform.
-    * h5dump correctly displays the committed copy of predefined types
-      correctly.
-    * Added an option, -V, to show the version information of h5dump.
-    * Fixed a core dumping bug of h5toh4 when executed on platforms like 
-      TFLOPS.
-    * The test script for h5toh4 used to not able to detect the hdp
-      dumper command was not valid.  It now detects and reports the
-      failure of hdp execution.
-    * Merged the tools with the 1.2.2 branch.  Required adding new macros, VERSION12
-      and VERSION13, used in conditional compilation.  Updated the Windows project files
-      for the tools.            
-    * h5dump displays opaque and bitfield data correctly.
-
-Documentation
--------------
-
-    * User's Guide and Reference Manual were updated. 
-      See doc/html/PSandPDF/index.html for more details. 
-
-   
-Platforms Tested:
-================
- Note: Due to the nature of bug fixes, only static versions of the library and tools were tested.
-
-
-  AIX 4.3.2 (IBM SP)            3.6.6
-  Cray T3E 2.0.4.81             cc 6.3.0.1
-                                mpt.1.3
-  FreeBSD 3.3-STABLE            gcc 2.95.2
-  HP-UX B.10.20                 HP C  HP92453-01 A.10.32
-  IRIX 6.5                      MIPSpro cc 7.30
-  IRIX64 6.5 (64 & n32)         MIPSpro cc 7.3.1m
-                                mpt.1.3 (SGI MPI 3.2.0.0)
-
-  Linux 2.2.10 SuSE             egcs-2.91.66               configured with
-  (i686-pc-linux-gnu)                                      --disable-hsizet
-                                mpich-1.2.0 egcs-2.91.66 19990314/Linux 
-
-  OSF1 V4.0                     DEC-V5.2-040
-  SunOS 5.6                     cc WorkShop Compilers 4.2  no optimization
-  SunOS 5.7                     cc WorkShop Compilers 5.0
-  TFLOPS 2.8                    cicc (pgcc Rel 3.0-5i)
-                                mpich-1.1.2 with local changes
-  Windows NT4.0 sp5             MSVC++ 6.0
-
-Known Problems:
+Known Problems
 ==============
 
-o SunOS 5.6 with C WorkShop Compilers 4.2:  Hyperslab selections will 
+o SunOS 5.6 with C WorkShop Compilers 4.2:  hyperslab selections will 
   fail if library is compiled using optimization of any level.
+o TFLOPS: dsets test fails if compiled with optimization turned on.
+o J90: tools fail to dispay data for the datasets with a compound datatype. 
+
+Platforms Tested
+================
+
+  AIX 4.3.3 (IBM SP)            3.6.6                               | binaries
+                                mpicc using mpich 1.1.2             | are not
+                                mpicc_r using IBM MPI-IO prototype  | available
+  AIX 4.3.2.0 (IBM SP)          xlc 5.0.1.0
+  Cray J90 10.0.0.7             cc 6.3.0.2
+  Cray T3E 2.0.5.29             cc 6.3.0.2
+                                mpt.1.3
+  FreeBSD 4.0                   gcc 2.95.2
+  HP-UX B.10.20                 HP C  HP92453-01 A.10.32
+  HP-UX B.11.00                 HP92453-01 A.11.00.13 HP C Compiler 
+                                (static library only, h5toh4 tool is not available) 
+  IRIX 6.5                      MIPSpro cc 7.30
+  IRIX64 6.5 (64 & n32)         MIPSpro cc 7.3.1m
+                                mpt.1.4
+
+  Linux 2.2.10 SMP              gcc 2.95.1 
+                                mpicc(gcc-2.95.1)
+                                gcc (egcs-2.91.66)
+                                mpicc (egcs-2.91.66)
+  Linux 2.2.16 (RedHat 6.2)     gcc 2.95.2
+
+  OSF1 V4.0                     DEC-V5.2-040
+  SunOS 5.6                     cc WorkShop Compilers 5.0 no optimization
+  SunOS 5.7                     cc WorkShop Compilers 5.0
+  SolarisX86 SunOS 5.5.1        gcc version 2.7.2 with --disable-hsizet
+  TFLOPS 3.2.1                  pgcc Rel 3.1-3i
+                                mpich-1.1.2 with local changes
+  Windows NT4.0 sp5             MSVC++ 6.0
+  Windows 98                    MSVC++ 6.0
+  Windows 2000                  MSVC++ 6.0
+
 
 

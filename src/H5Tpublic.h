@@ -150,15 +150,11 @@ typedef enum H5T_pers_t {
     H5T_PERS_SOFT	= 1 	/*soft conversion function		     */
 } H5T_pers_t;
 
-/* Variable Length Datatype struct in memory */
-/* (This is only used for VL sequences, not VL strings, which are stored in char *'s) */
+/* Variable Length Datatype struct */
 typedef struct {
     size_t len; /* Length of VL data (in base type units) */
     void *p;    /* Pointer to VL data */
 } hvl_t;
-
-/* Variable Length String information */
-#define H5T_VARIABLE    ((size_t)(-1))  /* Indicate that a string is variable length (null-terminated in C, instead of fixed length) */
 
 /* All data type conversion functions are... */
 typedef herr_t (*H5T_conv_t) (hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
@@ -362,7 +358,6 @@ __DLLVAR__ hid_t H5T_FORTRAN_S1_g;
 #define H5T_NATIVE_B32		(H5open(), H5T_NATIVE_B32_g)
 #define H5T_NATIVE_B64		(H5open(), H5T_NATIVE_B64_g)
 #define H5T_NATIVE_OPAQUE       (H5open(), H5T_NATIVE_OPAQUE_g)
-#define H5T_NATIVE_HADDR	(H5open(), H5T_NATIVE_HADDR_g)
 #define H5T_NATIVE_HSIZE	(H5open(), H5T_NATIVE_HSIZE_g)
 #define H5T_NATIVE_HSSIZE	(H5open(), H5T_NATIVE_HSSIZE_g)
 #define H5T_NATIVE_HERR		(H5open(), H5T_NATIVE_HERR_g)
@@ -385,7 +380,6 @@ __DLLVAR__ hid_t H5T_NATIVE_B16_g;
 __DLLVAR__ hid_t H5T_NATIVE_B32_g;
 __DLLVAR__ hid_t H5T_NATIVE_B64_g;
 __DLLVAR__ hid_t H5T_NATIVE_OPAQUE_g;
-__DLLVAR__ hid_t H5T_NATIVE_HADDR_g;
 __DLLVAR__ hid_t H5T_NATIVE_HSIZE_g;
 __DLLVAR__ hid_t H5T_NATIVE_HSSIZE_g;
 __DLLVAR__ hid_t H5T_NATIVE_HERR_g;

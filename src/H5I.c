@@ -87,8 +87,7 @@ static herr_t H5I_init_interface(void);
  * Map an ID to a hash location (assumes s is a power of 2 and smaller
  * than the ID_MASK constant).
  */
-#  define H5I_LOC(a,s)		((hid_t)((size_t)(a)&((s)-1)))
-#  define POWER_OF_TWO(n)	((((n) - 1) & (n)) == 0 && (n) > 0)
+#  define H5I_LOC(a,s)	((hid_t)((size_t)(a)&((s)-1)))
 #else
 /*
  * Map an ID to a hash location.
@@ -110,6 +109,7 @@ static H5I_id_group_t *H5I_id_group_list_g[H5I_NGROUPS];
 
 /* Declare a free list to manage the H5I_id_info_t struct */
 H5FL_DEFINE_STATIC(H5I_id_info_t);
+
 
 /*--------------------- Local function prototypes ---------------------------*/
 static H5I_id_info_t *H5I_find_id(hid_t id);
@@ -220,14 +220,6 @@ H5I_term_interface(void)
  *		Friday, February 19, 1999
  *
  * Modifications:
- * 		Bill Wendling, 2000-05-05
- * 		Instead of the ugly test of whether hash_size is a power of
- * 		two, I placed it in a macro POWER_OF_TWO which uses the fact
- * 		that a number that is a power of two has only 1 bit set.
- *
- * 		Bill Wendling, 2000-05-09
- * 		Changed POWER_OF_TWO macro to allow 1 as a valid power of two.
- * 		Changed test below accordingly.
  *
  *-------------------------------------------------------------------------
  */
@@ -245,7 +237,21 @@ H5I_init_group(H5I_type_t grp, size_t hash_size, uintn reserved,
 	HGOTO_DONE(FAIL);
     }
 #ifdef HASH_SIZE_POWER_2
-    if (!POWER_OF_TWO(hash_size) || hash_size == 1)
+    /*
+     * If anyone knows a faster test for a power of two, please change this
+     * silly code -QAK
+     */
+    if (!(hash_size == 2 || hash_size == 4 || hash_size == 8 ||
+	  hash_size == 16 || hash_size == 32 || hash_size == 64 ||
+	  hash_size == 128 || hash_size == 256 || hash_size == 512 ||
+	  hash_size == 1024 || hash_size == 2048 || hash_size == 4096 ||
+	  hash_size == 8192 || hash_size == 16374 || hash_size == 32768 ||
+	  hash_size == 65536 || hash_size == 131072 || hash_size == 262144 ||
+	  hash_size == 524288 || hash_size == 1048576 ||
+	  hash_size == 2097152 || hash_size == 4194304 ||
+	  hash_size == 8388608 || hash_size == 16777216 ||
+	  hash_size == 33554432 || hash_size == 67108864 ||
+	  hash_size == 134217728 || hash_size == 268435456))
 	HGOTO_DONE(FAIL);
 #endif /* HASH_SIZE_POWER_2 */
 
@@ -354,13 +360,6 @@ H5I_nmembers(H5I_type_t grp)
  *		failed is not removed.  This function returns failure if
  *		items could not be removed.
  *
- * 		Robb Matzke, 1999-08-17
- *		If the object reference count is larger than one then it must
- *		be because the library is using the object internally. This
- *		happens for instance for file driver ID's which are stored in
- *		things like property lists, files, etc.  Objects that have a
- *		reference count larger than one are not affected unless FORCE
- *		is non-zero.
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -400,12 +399,6 @@ H5I_clear_group(H5I_type_t grp, hbool_t force)
      */
     for (i=0; i<grp_ptr->hash_size; i++) {
 	for (cur=grp_ptr->id_list[i]; cur; cur=next) {
-	    /*
-	     * Do nothing to the object if the reference count is larger than
-	     * one and forcing is off.
-	     */
-	    if (!force && cur->count>1) continue;
-
 	    /* Free the object regardless of reference count */
 	    if (grp_ptr->free_func && (grp_ptr->free_func)(cur->obj_ptr)<0) {
 		if (force) {
@@ -696,9 +689,7 @@ H5I_get_type(hid_t id)
  * Programmer:	
  *
  * Modifications:
- *		Robb Matzke, 1999-08-23
- *		Also fails if the ID has a valid group but no longer exists
- *		in the ID tables.
+ *
  *-------------------------------------------------------------------------
  */
 H5I_type_t
@@ -711,8 +702,7 @@ H5Iget_type(hid_t id)
 
     ret_value = H5I_get_type(id);
 
-    if (ret_value <= H5I_BADID || ret_value >= H5I_NGROUPS ||
-	NULL==H5I_object(id)) {
+    if (ret_value <= H5I_BADID || ret_value >= H5I_NGROUPS) {
 	HGOTO_DONE(H5I_BADID);
     }
 
@@ -755,47 +745,43 @@ H5I_remove(hid_t id)
 
     /* Check arguments */
     grp = H5I_GROUP(id);
-    if (grp <= H5I_BADID || grp >= H5I_NGROUPS)
-        HGOTO_DONE(NULL);
+    if (grp <= H5I_BADID || grp >= H5I_NGROUPS) HGOTO_DONE(NULL);
     grp_ptr = H5I_id_group_list_g[grp];
-    if (grp_ptr == NULL || grp_ptr->count <= 0)
-        HGOTO_DONE(NULL);
+    if (grp_ptr == NULL || grp_ptr->count <= 0) HGOTO_DONE(NULL);
 
     /* Get the bucket in which the ID is located */
     hash_loc = (uintn) H5I_LOC(id, grp_ptr->hash_size);
     curr_id = grp_ptr->id_list[hash_loc];
-    if (curr_id == NULL)
-        HGOTO_DONE(NULL);
+    if (curr_id == NULL) HGOTO_DONE(NULL);
 
     last_id = NULL;
     while (curr_id != NULL) {
-        if (curr_id->id == id)
-            break;
-        last_id = curr_id;
-        curr_id = curr_id->next;
+	if (curr_id->id == id) break;
+	last_id = curr_id;
+	curr_id = curr_id->next;
     }
 
 #ifdef IDS_ARE_CACHED
     /* Delete object from cache */
     for (i = 0; i < ID_CACHE_SIZE; i++)
-        if (H5I_cache_g[i] && H5I_cache_g[i]->id == id) {
-            H5I_cache_g[i] = NULL;
-            break; /* we assume there is only one instance in the cache */
-        }
+	if (H5I_cache_g[i] && H5I_cache_g[i]->id == id) {
+	    H5I_cache_g[i] = NULL;
+	    break; /* we assume there is only one instance in the cache */
+	}
 #endif /* IDS_ARE_CACHED */
 
     if (curr_id != NULL) {
-        if (last_id == NULL) {
-            /* ID is the first in the chain */
-            grp_ptr->id_list[hash_loc] = curr_id->next;
-        } else {
-            last_id->next = curr_id->next;
-        }
-        ret_value = curr_id->obj_ptr;
-        H5FL_FREE(H5I_id_info_t,curr_id);
+	if (last_id == NULL) {
+	    /* ID is the first in the chain */
+	    grp_ptr->id_list[hash_loc] = curr_id->next;
+	} else {
+	    last_id->next = curr_id->next;
+	}
+	ret_value = curr_id->obj_ptr;
+	H5FL_FREE(H5I_id_info_t,curr_id);
     } else {
-        /* couldn't find the ID in the proper place */
-        HGOTO_DONE(NULL);
+	/* couldn't find the ID in the proper place */
+	HGOTO_DONE(NULL);
     }
 
     /* Decrement the number of IDs in the group */
@@ -880,44 +866,6 @@ H5I_dec_ref(hid_t id)
 	}
     }
     FUNC_LEAVE(ret_value);
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5I_inc_ref
- *
- * Purpose:	Increment the reference count for an object.
- *
- * Return:	Success:	The new reference count.
- *
- *		Failure:	Negative
- *
- * Programmer:	Robb Matzke
- *              Thursday, July 29, 1999
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-intn
-H5I_inc_ref(hid_t id)
-{
-    H5I_type_t		grp = H5I_GROUP(id);	/*group the object is in*/
-    H5I_id_group_t	*grp_ptr = NULL;	/*ptr to the group	*/
-    H5I_id_info_t	*id_ptr = NULL;		/*ptr to the ID		*/
-
-    FUNC_ENTER(H5I_inc_ref, FAIL);
-
-    /* Check arguments */
-    if (id<0) HRETURN(FAIL);
-    grp_ptr = H5I_id_group_list_g[grp];
-    if (!grp_ptr || grp_ptr->count<=0) HRETURN(FAIL);
-
-    /* General lookup of the ID */
-    if (NULL==(id_ptr=H5I_find_id(id))) HRETURN(FAIL);
-    id_ptr->count++;
-
-    FUNC_LEAVE(id_ptr->count);
 }
 
 
@@ -1068,6 +1016,7 @@ H5I_find_id(hid_t id)
     FUNC_LEAVE(ret_value);
 }
 
+#ifdef H5I_DEBUG_OUTPUT
 
 /*-------------------------------------------------------------------------
  * Function:	H5I_debug
@@ -1085,7 +1034,6 @@ H5I_find_id(hid_t id)
  *
  *-------------------------------------------------------------------------
  */
-#ifdef H5I_DEBUG
 static herr_t
 H5I_debug(H5I_type_t grp)
 {
@@ -1132,5 +1080,5 @@ H5I_debug(H5I_type_t grp)
 
     FUNC_LEAVE(SUCCEED);
 }
-#endif /* H5I_DEBUG */
+#endif /* H5I_DEBUG_OUTPUT */
 

@@ -401,7 +401,6 @@ print_results(int nd, detected_t *d)
 \n\
 static intn interface_initialize_g = 0;\n\
 #define INTERFACE_INIT NULL\n\
-\n\
 /* Declare external the free list for H5T_t's */\n\
 H5FL_EXTERN(H5T_t);\n\
 \n\
@@ -439,7 +438,7 @@ H5TN_init_interface(void)\n\
 		     \"memory allocation failed\");\n\
    }\n\
    dt->state = H5T_STATE_IMMUTABLE;\n\
-   dt->ent.header = HADDR_UNDEF;\n\
+   H5F_addr_undef (&(dt->ent.header));\n\
    dt->type = H5T_%s;\n\
    dt->size = %d;\n\
    dt->u.atomic.order = H5T_ORDER_%s;\n\

@@ -232,8 +232,8 @@ H5O_mtime_copy(const void *_mesg, void *_dest)
 
     /* check args */
     assert(mesg);
-    if (!dest && NULL==(dest = H5FL_ALLOC(time_t,0))) {
-        HRETURN_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL,
+    if (!dest && NULL==(dest = H5FL_ALLOC(time_t,1))) {
+	HRETURN_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL,
 		       "memory allocation failed");
     }
     

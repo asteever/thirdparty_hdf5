@@ -12,15 +12,15 @@
 <center>
 <table border=0 width=98%>
 <tr><td valign=top align=left>
-Introduction to HDF5&nbsp;<br>
-<a href="H5.user.html">HDF5 User Guide</a>&nbsp;
+<a href="index.html">HDF5 documents and links</a>&nbsp;<br>
+<a href="RM_H5Front.html">HDF5 Reference Manual</a>&nbsp;<br>
 <!--
 <a href="Glossary.html">Glossary</a><br>
 -->
 </td>
 <td valign=top align=right>
-<a href="RM_H5Front.html">HDF5 Reference Manual</a>&nbsp;<br>
-<a href="index.html">Other HDF5 documents and links</a>&nbsp;
+<a href="H5.user.html">HDF5 User's Guide</a>&nbsp;<br>
+<a href="ADGuide.html">HDF5 Application Developer's Guide</a>&nbsp;<br>
 </td></tr>
 </table>
 </center>
@@ -217,7 +217,7 @@ HDF5 is currently in Release 1.<i>x</i> (HDF5 Release 1.<i>x</i>).
 
 <H3><A NAME="Intro-Changes">Changes in the Current Release</A></H3>
 <P>A detailed list of changes in HDF5 since the last release,
-HDF5 Release 1.0, can be found in the file <CODE>hdf5/RELEASE</CODE> 
+HDF5 Release 1.2, can be found in the file <CODE>hdf5/RELEASE</CODE> 
 in the source code installation.  At a higher level, those changes include:
 
 <UL>
@@ -390,7 +390,13 @@ Atomic datatypes can also be system-specific, or <I><CODE>NATIVE</CODE></I>, and
 <FONT FACE="Times"><P>See <A HREF="Datatypes.html"><I>Datatypes</I></A> in the<I> HDF User&#146s Guide</I> for further information.</font>
 
 
-<FONT FACE="Times"><P>A <I>compound datatype</I> is one in which a collection of simple datatypes are represented as a single unit, similar to a <I>struct</I> in C. The parts of a compound datatype are called <I>members.</I> The members of a compound datatype may be of any datatype, including another compound datatype. It is possible to read members from a compound type without reading the whole type.
+<FONT FACE="Times"><P>A <I>compound datatype</I> is one in which a
+collection of several datatypes are represented as a single unit, 
+a compound datatype, similar to a <I>struct</I> in C. 
+The parts of a compound datatype are called <I>members.</I> 
+The members of a compound datatype may be of any datatype, 
+including another compound datatype. It is possible to read members 
+from a compound type without reading the whole type.
 <p>
 <ta/FONT><I><P>Named datatypes.</I>  Normally each dataset has its own datatype, but sometimes we may want to share a datatype among several datasets.  This can be done using a <I>named </I>datatype. A named datatype is stored in the file independently of any dataset, and referenced by all datasets that have that datatype.  Named datatypes may have an associated attributes list.  
 See <A HREF="Datatypes.html"><I>Datatypes</I></A></font><FONT FACE="Times"> in the<I> HDF User&#146s Guide</I> for further information.
@@ -469,7 +475,7 @@ We particularly encourage you to read <A HREF="Chunking.html"><I>Dataset Chunkin
     <P>At the lowest level, as information is actually written to the disk, 
        an HDF5 file is made up of the following objects:
       <ul>
-         <li>A super block
+         <li>A boot block
          <li>B-tree nodes (containing either symbol nodes or raw data chunks)
          <li>Object headers
 
@@ -4989,15 +4995,15 @@ main(void)
 <center>
 <table border=0 width=98%>
 <tr><td valign=top align=left>
-Introduction to HDF5&nbsp;<br>
-<a href="H5.user.html">HDF5 User Guide</a>&nbsp;
+<a href="index.html">HDF5 documents and links</a>&nbsp;<br>
+<a href="RM_H5Front.html">HDF5 Reference Manual</a>&nbsp;<br>
 <!--
 <a href="Glossary.html">Glossary</a><br>
 -->
 </td>
 <td valign=top align=right>
-<a href="RM_H5Front.html">HDF5 Reference Manual</a>&nbsp;<br>
-<a href="index.html">Other HDF5 documents and links</a>&nbsp;
+<a href="H5.user.html">HDF5 User's Guide</a>&nbsp;<br>
+<a href="ADGuide.html">HDF5 Application Developer's Guide</a>&nbsp;<br>
 </td></tr>
 </table>
 </center>
@@ -5009,10 +5015,12 @@ Introduction to HDF5&nbsp;<br>
 <tr><td align=left valign=top>
 <a href="mailto:hdfhelp@ncsa.uiuc.edu">HDF Help Desk</a>
 <br>
-Last modified:  16 October 1999
+Last modified:  2 June 2000
 
 </td><td align=right valign=top>
-<a href="Copyright.html">Copyright</a>&nbsp;&nbsp;
+<a href="Copyright.html">Copyright</a>
+<br>
+Describes HDF5 Release 1.2.2, June 2000
 </td></tr>
 </table>             
 

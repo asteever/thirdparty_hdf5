@@ -1914,7 +1914,8 @@ main (int argc, char *argv[])
     H5G_stat_t	sb;
     iter_t	iter;
     static char	root_name[] = "/";
-    char        drivername[50];
+    char drivername[50];
+    memset(drivername, '\0',50);
 
 
     /* Build display table */
@@ -1954,7 +1955,7 @@ main (int argc, char *argv[])
 	} else if (!strcmp(argv[argno], "--full")) {
 	    fullname_g = TRUE;
 	} else if (!strcmp(argv[argno], "--group")) {
-	    grp_literal_g = TRUE; 
+	    grp_literal_g = TRUE;
 	} else if (!strcmp(argv[argno], "--label")) {
 	    label_g = TRUE;
 	} else if (!strcmp(argv[argno], "--recursive")) {
@@ -2071,7 +2072,6 @@ main (int argc, char *argv[])
     /* Turn off HDF5's automatic error printing unless you're debugging h5ls */
     if (!show_errors_g) H5Eset_auto(NULL, NULL);
 
-
     /*
      * Each remaining argument is an hdf5 file followed by an optional slash
      * and object name.
@@ -2092,7 +2092,8 @@ main (int argc, char *argv[])
 	file = -1;
 
 	while (fname && *fname) {
-            file = h5dump_fopen(fname, drivername, sizeof drivername);
+
+	    file = H5ToolsFopen(fname,drivername);
 	    if (file>=0) {
 		if (verbose_g) {
 		    printf("Opened \"%s\" with %s driver.\n",

@@ -167,7 +167,6 @@ H5S_select_release (H5S_t *space)
 
     FUNC_LEAVE (ret_value);
 }   /* H5S_select_release() */
-
 
 /*--------------------------------------------------------------------------
  NAME
@@ -595,7 +594,7 @@ H5S_get_select_hyper_nblocks(H5S_t *space)
 
     assert(space);
 
-    ret_value = (hssize_t)space->select.sel_info.hslab.hyper_lst->count;
+    ret_value = space->select.sel_info.hslab.hyper_lst->count;
 
     FUNC_LEAVE (ret_value);
 }   /* H5Sget_select_hyper_nblocks() */
@@ -1124,7 +1123,7 @@ H5S_select_contiguous(const H5S_t *space)
  PURPOSE
     Iterate over the selected elements in a memory buffer.
  USAGE
-    herr_t H5S_select_iterate(buf, type_id, space, operator, operator_data)
+    herr_t H5S_select_iterate(buf, type_id, space, op, operator_data)
         void *buf;      IN/OUT: Buffer containing elements to iterate over
         hid_t type_id;  IN: Datatype ID of BUF array.
         H5S_t *space;   IN: Dataspace object containing selection to iterate over

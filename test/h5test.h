@@ -30,12 +30,6 @@
 extern const char *FILENAME[];
 
 /*
- * This contains the filename prefix specificied as command line option for
- * the parallel test files. 
- */
-extern char *paraprefix;
-
-/*
  * The name of the test is printed by saying TESTING("something") which will
  * result in the string `Testing something' being flushed to standard output.
  * If a test passes, fails, or is skipped then the PASSED(), FAILED(), or
@@ -45,9 +39,9 @@ extern char *paraprefix;
  * the FAILED() macro is invoked automatically when an API function fails.
  */
 #define TESTING(WHAT)	{printf("%-70s", "Testing " WHAT); fflush(stdout);}
-#define PASSED()	{puts(" PASSED");fflush(stdout);}
-#define FAILED()	{puts("*FAILED*");fflush(stdout);}
-#define SKIPPED()	{puts(" -SKIP-");fflush(stdout);}
+#define PASSED()	puts(" PASSED")
+#define FAILED()	puts("*FAILED*")
+#define SKIPPED()	puts(" -SKIP-")
 
 /*
  * Print the current location on the standard output stream.

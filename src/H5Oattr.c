@@ -423,8 +423,7 @@ H5O_attr_debug(H5F_t *f, const void *_mesg, FILE * stream, intn indent,
 	    "Opened:",
 	    (unsigned int)mesg->ent_opened);
     fprintf(stream, "%*sSymbol table entry...\n", indent, "");
-    H5G_ent_debug(f, &(mesg->ent), stream, indent+3, MAX(0, fwidth-3),
-		  HADDR_UNDEF);
+    H5G_ent_debug(f, &(mesg->ent), stream, indent+3, MAX(0, fwidth-3), NULL);
     
     fprintf(stream, "%*s%-*s %lu\n", indent, "", fwidth,
 	    "Data type size:",

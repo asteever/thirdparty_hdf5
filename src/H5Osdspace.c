@@ -22,6 +22,7 @@ static char		RcsId[] = "@(#)$Revision$";
 #include <H5Gprivate.h>
 #include <H5MMprivate.h>
 #include <H5Oprivate.h>
+#include <H5Sprivate.h>
 
 #define PABLO_MASK	H5O_sdspace_mask
 
@@ -360,7 +361,7 @@ H5O_sdspace_reset(void *_mesg)
     FUNC_ENTER (H5O_sdspace_reset, FAIL);
 
     H5S_release_simple(mesg);
-
+    
     FUNC_LEAVE (SUCCEED);
 }
 

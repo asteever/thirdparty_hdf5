@@ -17,10 +17,7 @@
 #ifndef _H5FLprivate_H
 #define _H5FLprivate_H
 
-/* Public headers needed by this file */
-#ifdef LATER
 #include <H5FLpublic.h>		/*API prototypes			     */
-#endif /* LATER */
 
 /* Private headers needed by this file */
 
@@ -67,10 +64,6 @@ typedef struct H5FL_head_t {
 
 /* Free an object of type 't' */
 #define H5FL_FREE(t,obj) H5FL_free(&(t##_free_list),obj)
-
-/* Re-allocating an object of type 't' is not defined, because these free-lists
- * only support fixed sized types, like structs, etc..
- */
 
 /* Data structure to store each block in free list */
 typedef struct H5FL_blk_list_t {
@@ -119,6 +112,10 @@ typedef struct H5FL_blk_head_t {
 
 /* Re-allocate a block of type 't' */
 #define H5FL_BLK_REALLOC(t,blk,new_size) H5FL_blk_realloc(&(t##_pq),blk,new_size)
+
+/* Re-allocating an object of type 't' is not defined, because these free-lists
+ * only support fixed sized types, like structs, etc..
+ */
 
 /* Data structure to store each array in free list */
 typedef struct H5FL_arr_node_t {

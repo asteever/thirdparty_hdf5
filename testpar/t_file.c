@@ -18,7 +18,7 @@
  * sooner or later due to barrier mixed up.
  */
 void
-test_split_comm_access(char *filename)
+test_split_comm_access(char *filename[])
 {
     int mpi_size, mpi_rank;
     MPI_Comm comm;
@@ -30,8 +30,8 @@ test_split_comm_access(char *filename)
     herr_t ret;			/* generic return value */
 
     if (verbose)
-	printf("Split Communicator access test on file %s\n",
-	    filename);
+	printf("Split Communicator access test on file %s %s\n",
+	    filename[0], filename[1]);
 
     /* set up MPI parameters */
     MPI_Comm_size(MPI_COMM_WORLD,&mpi_size);
@@ -56,11 +56,11 @@ test_split_comm_access(char *filename)
 	VRFY((acc_tpl >= 0), "");
 	
 	/* set Parallel access with communicator */
-	ret = H5Pset_fapl_mpio(acc_tpl, comm, info);     
+	ret = H5Pset_mpi(acc_tpl, comm, info);     
 	VRFY((ret >= 0), "");
 
 	/* create the file collectively */
-	fid=H5Fcreate(filename,H5F_ACC_TRUNC,H5P_DEFAULT,acc_tpl);
+	fid=H5Fcreate(filename[color],H5F_ACC_TRUNC,H5P_DEFAULT,acc_tpl);
 	VRFY((fid >= 0), "H5Fcreate succeeded");
 
 	/* Release file-access template */
@@ -73,7 +73,7 @@ test_split_comm_access(char *filename)
 
 	/* detele the test file */
 	if (sub_mpi_rank == 0){
-	    mrc = MPI_File_delete(filename, info);
+	    mrc = MPI_File_delete(filename[color], info);
 	    VRFY((mrc==MPI_SUCCESS), "");
 	}
     }

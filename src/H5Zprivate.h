@@ -9,7 +9,6 @@
 #define _H5Zprivate_H
 
 #include <H5Zpublic.h>
-#include <H5Fprivate.h>
 
 /*
  * The filter table maps filter identification numbers to structs that

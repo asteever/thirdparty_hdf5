@@ -15,11 +15,6 @@
 #include <H5public.h>		/* Include Public Definitions		*/
 #include <H5config.h>		/* Include all configuration info	*/
 
-/* include the pthread library */
-#ifdef H5_HAVE_THREADSAFE
-#include <pthread.h>
-#endif
-
 /*
  * Include ANSI-C header files.
  */
@@ -127,8 +122,8 @@
 #ifdef HAVE_IO_H
 #   include <io.h>
 #endif
-#ifdef HAVE_WINDOWS_H
-#include <windows.h>
+#ifdef HAVE_WINSOCK_H
+#   include <winsock2.h>
 #endif
 #ifndef F_OK
 #   define F_OK	00
@@ -183,7 +178,6 @@
 #define HDF5_FREESPACE_VERSION	0	/* of the Free-Space Info	  */
 #define HDF5_OBJECTDIR_VERSION	0	/* of the Object Directory format */
 #define HDF5_SHAREDHEADER_VERSION 0	/* of the Shared-Header Info	  */
-#define HDF5_DRIVERINFO_VERSION	0	/* of the Driver Information Block*/
 
 /*
  * Status return values for the `herr_t' type.
@@ -385,11 +379,10 @@ typedef double float32;
 #   error "nothing appropriate for float32"
 #endif
 
-/* Bias float64 toward using double - QAK */
-#if SIZEOF_DOUBLE>=8
-typedef double float64;
-#elif SIZEOF_FLOAT>=8
+#if SIZEOF_FLOAT>=8
 typedef float float64;
+#elif SIZEOF_DOUBLE>=8
+typedef double float64;
 #else
 #  error "nothing appropriate for float64"
 #endif
@@ -400,6 +393,15 @@ typedef float float64;
  */
 typedef int intn;
 typedef unsigned uintn;
+
+/*
+ * File addresses.
+ */
+typedef struct {
+    uint64_t		offset;	    /*offset within an HDF5 file    */
+} haddr_t;
+
+#define H5F_ADDR_UNDEF {((uint64_t)(-1L))}
 
 /*
  * Maximum and minimum values.	These should be defined in <limits.h> for the
@@ -584,7 +586,7 @@ __DLL__ int HDfprintf (FILE *stream, const char *fmt, ...);
 #define HDmkfifo(S,M)		mkfifo(S,M)
 #define HDmktime(T)		mktime(T)
 #define HDmodf(X,Y)		modf(X,Y)
-#ifdef O_BINARY
+#ifdef HAVE__O_BINARY
 #define HDopen(S,F,M)		open(S,F|_O_BINARY,M)
 #else
 #define HDopen(S,F,M)		open(S,F,M)
@@ -873,93 +875,28 @@ __DLL__ void H5_trace(hbool_t returning, const char *func, const char *type,
  *	Added auto variable RTYPE which is initialized by the tracing macros.
  *-------------------------------------------------------------------------
  */
+extern hbool_t H5_libinit_g;   /*good thing C's lazy about extern! */
 
 /* Is `S' the name of an API function? */
 #define H5_IS_API(S) ('_'!=S[2] && '_'!=S[3] && (!S[4] || '_'!=S[4]))
-
-/* Lock headers */
-#ifdef H5_HAVE_THREADSAFE
-
-/* Include required thread-safety header */
-#include <H5TSprivate.h>
-
-/* replacement structure for original global variable */
-typedef struct H5_api_struct {
-  H5TS_mutex_t init_lock;           /* API entrance mutex */
-  hbool_t H5_libinit_g;
-} H5_api_t;
-
-/* Macro for first thread initialization */
-#define H5_FIRST_THREAD_INIT                                                  \
-   pthread_once(&H5TS_first_init_g, H5TS_first_thread_init);
-
-/* Macros for threadsafe HDF-5 Phase I locks */
-#define H5_INIT_GLOBAL H5_g.H5_libinit_g
-#define H5_API_LOCK_BEGIN                                                     \
-   if (H5_IS_API(FUNC)) {                                                     \
-     H5TS_mutex_lock(&H5_g.init_lock);
-#define H5_API_LOCK_END }
-#define H5_API_UNLOCK_BEGIN                                                   \
-  if (H5_IS_API(FUNC)) {                                                      \
-    H5TS_mutex_unlock(&H5_g.init_lock);
-#define H5_API_UNLOCK_END }
-
-/* Macros for thread cancellation-safe mechanism */
-#define H5_API_UNSET_CANCEL                                                   \
-  if (H5_IS_API(FUNC)) {                                                      \
-    H5TS_cancel_count_inc();                                                    \
-  }
-
-#define H5_API_SET_CANCEL                                                     \
-  if (H5_IS_API(FUNC)) {                                                      \
-    H5TS_cancel_count_dec();                                                    \
-  }
-
-extern H5_api_t H5_g;
-
-#else
-
-/* disable any first thread init mechanism */
-#define H5_FIRST_THREAD_INIT
-
-#define H5_INIT_GLOBAL H5_libinit_g
-
-/* disable locks (sequential version) */
-#define H5_API_LOCK_BEGIN
-#define H5_API_LOCK_END
-#define H5_API_UNLOCK_BEGIN
-#define H5_API_UNLOCK_END
-
-/* disable cancelability (sequential version) */
-#define H5_API_UNSET_CANCEL
-#define H5_API_SET_CANCEL
-
-/* extern global variables */
-
-extern hbool_t H5_libinit_g;   /*good thing C's lazy about extern! */
-#endif
 
 #define FUNC_ENTER(func_name,err) FUNC_ENTER_INIT(func_name,INTERFACE_INIT,err)
 
 #define FUNC_ENTER_INIT(func_name,interface_init_func,err) {		      \
    CONSTR (FUNC, #func_name);						      \
-   PABLO_SAVE (ID_ ## func_name)  					      \
    H5TRACE_DECL;							      \
+   PABLO_SAVE (ID_ ## func_name);					      \
 									      \
    PABLO_TRACE_ON (PABLO_MASK, pablo_func_id);				      \
 									      \
    /* Initialize the library */						      \
-   H5_FIRST_THREAD_INIT                                                       \
-   H5_API_UNSET_CANCEL                                                        \
-   H5_API_LOCK_BEGIN                                                          \
-     if (!(H5_INIT_GLOBAL)) {                                                 \
-       H5_INIT_GLOBAL = TRUE;                                                 \
-       if (H5_init_library()<0) {					      \
-	  HRETURN_ERROR (H5E_FUNC, H5E_CANTINIT, err,			      \
-		 	"library initialization failed");		      \
-       }								      \
-     }									      \
-   H5_API_LOCK_END                                                            \
+   if (!H5_libinit_g) {							      \
+      H5_libinit_g = TRUE;						      \
+      if (H5_init_library()<0) {					      \
+	 HRETURN_ERROR (H5E_FUNC, H5E_CANTINIT, err,			      \
+			"library initialization failed");		      \
+      }									      \
+   }									      \
 									      \
    /* Initialize this interface or bust */				      \
    if (!interface_initialize_g) {					      \
@@ -995,12 +932,13 @@ extern hbool_t H5_libinit_g;   /*good thing C's lazy about extern! */
  */
 #define FUNC_LEAVE(return_value) HRETURN(return_value)}}
 
+
 /*
  * The FUNC_ENTER() and FUNC_LEAVE() macros make calls to Pablo functions
  * through one of these two sets of macros.
  */
 #ifdef HAVE_PABLO
-#  define PABLO_SAVE(func_id)	intn pablo_func_id = func_id;
+#  define PABLO_SAVE(func_id)	intn pablo_func_id = func_id
 #  define PABLO_TRACE_ON(m, f)	TRACE_ON(m,f)
 #  define PABLO_TRACE_OFF(m, f) TRACE_OFF(m,f)
 #else

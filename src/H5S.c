@@ -20,7 +20,7 @@ static char		RcsId[] = "@(#)$Revision$";
 #include <H5private.h>		/* Generic Functions			  */
 #include <H5Iprivate.h>		/* ID Functions		  */
 #include <H5Eprivate.h>		/* Error handling		  */
-#include <H5FLprivate.h>	/* Free Lists	  */
+#include <H5FLprivate.h>	/*Free Lists	  */
 #include <H5MMprivate.h>	/* Memory Management functions		  */
 #include <H5Oprivate.h>		/* object headers		  */
 #include <H5Sprivate.h>		/* Data-space functions			  */
@@ -40,7 +40,7 @@ static H5S_conv_t		**H5S_conv_g = NULL;
 static size_t			H5S_aconv_g = 0;	/*entries allocated*/
 static size_t			H5S_nconv_g = 0;	/*entries used*/
 
-#ifdef H5_HAVE_PARALLEL
+#ifdef HAVE_PARALLEL
 /* Global var whose value comes from environment variable */
 hbool_t         H5_mpi_opt_types_g = FALSE;
 #endif
@@ -90,7 +90,7 @@ H5S_init_interface(void)
 		      "unable to register one or more conversion functions");
     }
 
-#ifdef H5_HAVE_PARALLEL
+#ifdef HAVE_PARALLEL
     {
         /* Allow MPI buf-and-file-type optimizations? */
         const char *s = HDgetenv ("HDF5_MPI_OPT_TYPES");
@@ -268,6 +268,7 @@ H5S_term_interface(void)
 	    interface_initialize_g = 0;
 	    n = 1; /*H5I*/
 	}
+
     }
     
     return n;
@@ -1364,7 +1365,7 @@ H5Sset_extent_simple(hid_t space_id, int rank, const hsize_t dims[/*rank*/],
             HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
 			   "maximum dimension specified, but no current "
 			   "dimensions specified");
-        }
+	}
         for (u=0; u<rank; u++) {
             if (max[u]!=H5S_UNLIMITED && max[u]<dims[u]) {
                 HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
@@ -1554,7 +1555,7 @@ H5S_find (const H5S_t *mem_space, const H5S_t *file_space)
     c1=H5S_select_contiguous(file_space);
     c2=H5S_select_contiguous(mem_space);
     if(c1==FAIL || c2==FAIL)
-        HRETURN_ERROR(H5E_DATASPACE, H5E_BADRANGE, NULL,
+	HRETURN_ERROR(H5E_DATASPACE, H5E_BADRANGE, NULL,
 		      "invalid check for contiguous dataspace ");
 
     if (c1==TRUE && c2==TRUE) {

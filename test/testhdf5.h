@@ -118,7 +118,6 @@ int                     print_func(const char *,...);
 
 /* Prototypes for the test routines */
 void                    test_metadata(void);
-void                    test_tbbt(void);
 void                    test_file(void);
 void                    test_h5t(void);
 void                    test_h5s(void);
@@ -127,7 +126,6 @@ void                    test_attr(void);
 void                    test_select(void);
 void                    test_reference(void);
 void                    test_vltypes(void);
-void                    test_vlstrings(void);
 void                    test_iterate(void);
 
 /* Prototypes for the cleanup routines */
@@ -138,7 +136,6 @@ void                    cleanup_attr(void);
 void                    cleanup_select(void);
 void                    cleanup_reference(void);
 void                    cleanup_vltypes(void);
-void                    cleanup_vlstrings(void);
 void                    cleanup_iterate(void);
 
 #endif /* HDF5cleanup_H */

@@ -164,7 +164,7 @@ H5O_layout_encode(H5F_t *f, uint8_t *p, const void *_mesg)
     for (i=0; i<5; i++) *p++ = 0;
 
     /* data or B-tree address */
-    H5F_addr_encode(f, &p, mesg->addr);
+    H5F_addr_encode(f, &p, &(mesg->addr));
 
     /* dimension size */
     for (i = 0; i < mesg->ndims; i++) {
@@ -310,21 +310,23 @@ H5O_layout_debug(H5F_t UNUSED *f, const void *_mesg, FILE * stream,
     assert(indent >= 0);
     assert(fwidth >= 0);
 
-    HDfprintf(stream, "%*s%-*s %a\n", indent, "", fwidth,
-	      H5D_CHUNKED == mesg->type ? "B-tree address:" : "Data address:",
-	      mesg->addr);
+    fprintf(stream, "%*s%-*s ", indent, "", fwidth,
+            H5D_CHUNKED == mesg->type ? "B-tree address:" : "Data address:");
+    H5F_addr_print(stream, &(mesg->addr));
+    fprintf(stream, "\n");
 
-    HDfprintf(stream, "%*s%-*s %lu\n", indent, "", fwidth,
-	      "Number of dimensions:",
-	      (unsigned long) (mesg->ndims));
+    fprintf(stream, "%*s%-*s %lu\n", indent, "", fwidth,
+            "Number of dimensions:",
+            (unsigned long) (mesg->ndims));
 
     /* Size */
-    HDfprintf(stream, "%*s%-*s {", indent, "", fwidth, "Size:");
+    fprintf(stream, "%*s%-*s {", indent, "", fwidth,
+            "Size:");
     for (i = 0; i < mesg->ndims; i++) {
-        HDfprintf(stream, "%s%lu", i ? ", " : "",
-		  (unsigned long) (mesg->dim[i]));
+        fprintf(stream, "%s%lu", i ? ", " : "",
+                (unsigned long) (mesg->dim[i]));
     }
-    HDfprintf(stream, "}\n");
+    fprintf(stream, "}\n");
 
     FUNC_LEAVE(SUCCEED);
 }

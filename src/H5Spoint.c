@@ -30,14 +30,16 @@ static size_t H5S_point_fgath (H5F_t *f, const struct H5O_layout_t *layout,
 			       const struct H5O_efl_t *efl, size_t elmt_size,
 			       const H5S_t *file_space,
 			       H5S_sel_iter_t *file_iter, size_t nelmts,
-			       hid_t dxpl_id, void *buf/*out*/);
+			       const H5F_xfer_t *xfer_parms,
+			       void *buf/*out*/);
 static herr_t H5S_point_fscat (H5F_t *f, const struct H5O_layout_t *layout,
 			       const struct H5O_pline_t *pline,
 			       const struct H5O_fill_t *fill,
 			       const struct H5O_efl_t *efl, size_t elmt_size,
 			       const H5S_t *file_space,
 			       H5S_sel_iter_t *file_iter, size_t nelmts,
-			       hid_t dxpl_id, const void *buf);
+			       const H5F_xfer_t *xfer_parms,
+			       const void *buf);
 static size_t H5S_point_mgath (const void *_buf, size_t elmt_size,
 			       const H5S_t *mem_space,
 			       H5S_sel_iter_t *mem_iter, size_t nelmts,
@@ -126,7 +128,7 @@ H5S_point_init (const struct H5O_layout_t UNUSED *layout,
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-herr_t H5S_point_add (H5S_t *space, H5S_seloper_t op, size_t num_elem, const hssize_t **_coord)
+herr_t H5S_point_add (H5S_t *space, size_t num_elem, const hssize_t **_coord)
 {
     H5S_pnt_node_t *top, *curr, *new; /* Point selection nodes */
     const hssize_t *coord=(const hssize_t *)_coord;     /* Pointer to the actual coordinates */
@@ -138,7 +140,6 @@ herr_t H5S_point_add (H5S_t *space, H5S_seloper_t op, size_t num_elem, const hss
     assert(space);
     assert(num_elem>0);
     assert(coord);
-    assert(op==H5S_SELECT_SET || op==H5S_SELECT_APPEND || op==H5S_SELECT_PREPEND);
 
 #ifdef QAK
     printf("%s: check 1.0\n",FUNC);
@@ -189,24 +190,12 @@ herr_t H5S_point_add (H5S_t *space, H5S_seloper_t op, size_t num_elem, const hss
     printf("%s: check 2.0\n",FUNC);
 #endif /* QAK */
 
-    /* Insert the list of points selected in the proper place */
-    if(op==H5S_SELECT_SET || op==H5S_SELECT_PREPEND) {
-        /* Append current list, if there is one */
-        if(space->select.sel_info.pnt_lst->head!=NULL)
-            curr->next=space->select.sel_info.pnt_lst->head;
+    /* Append current list, if there is one */
+    if(space->select.sel_info.pnt_lst->head!=NULL)
+        curr->next=space->select.sel_info.pnt_lst->head;
 
-        /* Put new list in point selection */
-        space->select.sel_info.pnt_lst->head=top;
-    }
-    else {  /* op==H5S_SELECT_APPEND */
-        new=space->select.sel_info.pnt_lst->head;
-        if(new!=NULL)
-            while(new->next!=NULL)
-                new=new->next;
-
-        /* Append new list to point selection */
-        new->next=top;
-    }
+    /* Put new list in point selection */
+    space->select.sel_info.pnt_lst->head=top;
 
     /* Add the number of elements in the new selection */
     space->select.num_elem+=num_elem;
@@ -276,9 +265,7 @@ H5S_point_favail (const H5S_t UNUSED *space,
  *              Tuesday, June 16, 1998
  *
  * Modifications:
- *		Robb Matzke, 1999-08-03
- *		The data transfer properties are passed by ID since that's
- *		what the virtual file layer needs.
+ *
  *-------------------------------------------------------------------------
  */
 static size_t
@@ -286,8 +273,8 @@ H5S_point_fgath (H5F_t *f, const struct H5O_layout_t *layout,
 		 const struct H5O_pline_t *pline,
 		 const struct H5O_fill_t *fill, const struct H5O_efl_t *efl,
 		 size_t elmt_size, const H5S_t *file_space,
-		 H5S_sel_iter_t *file_iter, size_t nelmts, hid_t dxpl_id,
-		 void *_buf/*out*/)
+		 H5S_sel_iter_t *file_iter, size_t nelmts,
+		 const H5F_xfer_t *xfer_parms, void *_buf/*out*/)
 {
     hssize_t	file_offset[H5O_LAYOUT_NDIMS];	/*offset of slab in file*/
     hsize_t	hsize[H5O_LAYOUT_NDIMS];	/*size of hyperslab	*/
@@ -336,9 +323,9 @@ H5S_point_fgath (H5F_t *f, const struct H5O_layout_t *layout,
                 file_offset[i] += file_space->select.offset[i];
 
             /* Go read the point */
-            if (H5F_arr_read(f, dxpl_id, layout, pline, fill, efl, hsize,
-			     hsize, zero, file_offset, buf/*out*/)<0) {
-                HRETURN_ERROR(H5E_DATASPACE, H5E_READERROR, 0, "read error");
+            if (H5F_arr_read (f, xfer_parms, layout, pline, fill, efl, hsize,
+			      hsize, zero, file_offset, buf/*out*/)<0) {
+                HRETURN_ERROR (H5E_DATASPACE, H5E_READERROR, 0, "read error");
             }
 
 #ifdef QAK
@@ -385,9 +372,7 @@ H5S_point_fgath (H5F_t *f, const struct H5O_layout_t *layout,
  *              Tuesday, June 16, 1998
  *
  * Modifications:
- *		Robb Matzke, 1999-08-03
- *		The data transfer properties are passed by ID since that's
- *		what the virtual file layer needs.
+ *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -395,8 +380,8 @@ H5S_point_fscat (H5F_t *f, const struct H5O_layout_t *layout,
 		 const struct H5O_pline_t *pline,
 		 const struct H5O_fill_t *fill, const struct H5O_efl_t *efl,
 		 size_t elmt_size, const H5S_t *file_space,
-		 H5S_sel_iter_t *file_iter, size_t nelmts, hid_t dxpl_id,
-		 const void *_buf)
+		 H5S_sel_iter_t *file_iter, size_t nelmts,
+		 const H5F_xfer_t *xfer_parms, const void *_buf)
 {
     hssize_t	file_offset[H5O_LAYOUT_NDIMS];	/*offset of hyperslab	*/
     hsize_t	hsize[H5O_LAYOUT_NDIMS];	/*size of hyperslab	*/
@@ -464,9 +449,9 @@ H5S_point_fscat (H5F_t *f, const struct H5O_layout_t *layout,
 	}
 #endif /* QAK */
         /* Go write the point */
-        if (H5F_arr_write(f, dxpl_id, layout, pline, fill, efl, hsize,
-			  hsize, zero, file_offset, buf)<0) {
-            HRETURN_ERROR(H5E_DATASPACE, H5E_WRITEERROR, 0, "write error");
+        if (H5F_arr_write (f, xfer_parms, layout, pline, fill, efl, hsize,
+			   hsize, zero, file_offset, buf)<0) {
+            HRETURN_ERROR (H5E_DATASPACE, H5E_WRITEERROR, 0, "write error");
         }
 
         /* Increment the offset of the buffer */
@@ -831,20 +816,11 @@ H5S_point_select_valid (const H5S_t *space)
 
     assert(space);
 
-#ifdef QAK
-printf("%s: check 1.0\n",FUNC);
-#endif /* QAK */
     /* Check each point to determine whether selection+offset is within extent */
     curr=space->select.sel_info.pnt_lst->head;
     while(curr!=NULL) {
         /* Check each dimension */
         for(i=0; i<space->extent.u.simple.rank; i++) {
-#ifdef QAK
-printf("%s: check 2.0\n",FUNC);
-printf("%s: curr->pnt[%d]=%d\n",FUNC,(int)i,(int)curr->pnt[i]);
-printf("%s: space->select.offset[%d]=%d\n",FUNC,(int)i,(int)space->select.offset[i]);
-printf("%s: space->extent.u.simple.size[%d]=%d\n",FUNC,(int)i,(int)space->extent.u.simple.size[i]);
-#endif /* QAK */
             /* Check if an offset has been defined */
             /* Bounds check the selected point + offset against the extent */
             if(((curr->pnt[i]+space->select.offset[i])>(hssize_t)space->extent.u.simple.size[i])
@@ -856,9 +832,6 @@ printf("%s: space->extent.u.simple.size[%d]=%d\n",FUNC,(int)i,(int)space->extent
 
         curr=curr->next;
     } /* end while */
-#ifdef QAK
-printf("%s: check 3.0\n",FUNC);
-#endif /* QAK */
 
     FUNC_LEAVE (ret_value);
 } /* end H5S_point_select_valid() */
@@ -1181,7 +1154,7 @@ static herr_t H5S_select_elements (H5S_t *space, H5S_seloper_t op, size_t num_el
     assert(space);
     assert(num_elem);
     assert(coord);
-    assert(op==H5S_SELECT_SET || op==H5S_SELECT_APPEND || op==H5S_SELECT_PREPEND);
+    assert(op==H5S_SELECT_SET);
 
 #ifdef QAK
     printf("%s: check 1.0\n",FUNC);
@@ -1208,7 +1181,7 @@ static herr_t H5S_select_elements (H5S_t *space, H5S_seloper_t op, size_t num_el
     printf("%s: check 3.0\n",FUNC);
 #endif /* QAK */
     /* Add points to selection */
-    if(H5S_point_add(space,op,num_elem,coord)<0) {
+    if(H5S_point_add(space,num_elem,coord)<0) {
         HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINSERT, FAIL,
             "can't insert elements");
     }
@@ -1221,7 +1194,7 @@ static herr_t H5S_select_elements (H5S_t *space, H5S_seloper_t op, size_t num_el
 
 done:
     FUNC_LEAVE (ret_value);
-}   /* H5S_select_elements() */
+}   /* H5Sselect_elements() */
 
 
 /*--------------------------------------------------------------------------
@@ -1270,7 +1243,7 @@ herr_t H5Sselect_elements (hid_t spaceid, H5S_seloper_t op, size_t num_elem,
     if(coord==NULL || num_elem==0) {
         HRETURN_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "elements not specified");
     } /* end if */
-    if(!(op==H5S_SELECT_SET || op==H5S_SELECT_APPEND || op==H5S_SELECT_PREPEND)) {
+    if(op!=H5S_SELECT_SET) {
         HRETURN_ERROR(H5E_ARGS, H5E_UNSUPPORTED, FAIL,
             "operations other than H5S_SELECT_SET not supported currently");
     } /* end if */
@@ -1323,7 +1296,7 @@ H5S_point_select_iterate(void *buf, hid_t type_id, H5S_t *space, H5D_operator_t 
         void *operator_data)
 {
     hsize_t	mem_size[H5O_LAYOUT_NDIMS]; /* Dataspace size */
-    hssize_t	mem_offset[H5O_LAYOUT_NDIMS];   /* Point offset */
+    hssize_t mem_offset[H5O_LAYOUT_NDIMS];   /* Point offset */
     hsize_t offset;             /* offset of region in buffer */
     void *tmp_buf;              /* temporary location of the element in the buffer */
     H5S_pnt_node_t *node;   /* Point node */
@@ -1352,7 +1325,7 @@ H5S_point_select_iterate(void *buf, hid_t type_id, H5S_t *space, H5D_operator_t 
         mem_offset[rank]=0;
 
         /* Get the offset in the memory buffer */
-        offset=H5V_array_offset(rank+1,mem_size,(const hssize_t *)mem_offset);
+        offset=H5V_array_offset(rank+1,mem_size,mem_offset);
         tmp_buf=((char *)buf+offset);
 
         ret_value=(*op)(tmp_buf,type_id,rank,node->pnt,operator_data);

@@ -163,14 +163,12 @@ main(int argc, char *argv[])
 
     /* Tests are generally arranged from least to most complexity... */
     InitTest("metadata", test_metadata, cleanup_metadata, "Encode/decode metadata code");
-    InitTest("tbbt", test_tbbt, NULL,  "Threaded, Balanced, Binary Trees");
     InitTest("file", test_file, cleanup_file, "Low-Level File I/O");
     InitTest("h5s",  test_h5s,  cleanup_h5s,  "Dataspaces");
     InitTest("attr", test_attr, cleanup_attr,  "Attributes");
     InitTest("select", test_select, cleanup_select,  "Selections");
     InitTest("reference", test_reference, cleanup_reference,  "References");
     InitTest("vltypes", test_vltypes, cleanup_vltypes,  "Variable-Length Datatypes");
-    InitTest("vlstrings", test_vlstrings, cleanup_vlstrings,  "Variable-Length Strings");
     InitTest("iterate", test_iterate, cleanup_iterate,  "Group & Attribute Iteration");
 
     Verbosity = 4;              /* Default Verbosity is Low */

@@ -2,24 +2,18 @@ HDF5 Install Instructions for Windows NT/95/98.
 -------------------------------------------------------------------------
 
 The instructions which follow assume that you will be using the the source
-code release 'zip' file (hdf5-1_2_0.zip).
+code release 'zip' file (hdf5-1_2_2.zip).
 
 The following sections discuss in detail installation procedures. 
 
-  Section 1: Building from Source Code Release
-  Section 2: Building an application using the HDF5 library or DLL
-  Section 3: Some more helpful pointers
-  Section 4: ZLIB library - removing or changing the path
-
-Section 1:
-Building from Source Code Release (hdf5-1_2_0.zip)
+Building from Source Code Release (hdf5-1_2_2.zip)
 ===============================================
 
 STEP I:  Preconditions
 
 To build the HDF5 and tests, it is assumed that you have done the following:
 
-      1. Installed MicroSoft Developer Studio, and Visual C++ 5.0 or 6.0.         
+      1. Installed MicroSoft Developer Studio, and Visual C++ 6.0.         
 
       2. Set up a directory structure to unpack the library. For 
       example: 
@@ -30,20 +24,21 @@ To build the HDF5 and tests, it is assumed that you have done the following:
       and unpacked it using the appropriate archiver options to
       create a directory hierarchy.
         
-      Run WinZip on hdf5-1_2_0.zip (the entire source tree).
+      Run WinZip on hdf5-1_2_2.zip (the entire source tree).
       This creates a directory called 'hdf5' which 
       contains several files and directories.
 
-	4. You do not have a version of the zlib library and you would like to 
-	use it.  If you do not want to use the zlib library or have your own
-	version read the section about the zlib library.
+      4. You do not have a version of the zlib library and you would like to 
+      use it.  If you do not want to use the zlib library or have your own
+      version read the section about the zlib library.
 
 
 STEP II: Building the Libraries and tests.
         1. Rename the directory under C:\myHDFstuff\ from hdf5xxx to hdf5.  
 
-        2. Unpack all.zip in 'hdf5' and move the zlib.dll from 
-	     c:\myHDFstuff\hdf5\src\zlib\dll to the Windows system directory.
+        2. Unpack the c:\myHDFstuff\hdf5\all.zip into the 'myHDFstuff' directory 
+           and move the zlib.dll from c:\myHDFstuff\hdf5\src\zlib\dll to the Windows
+           system directory. 
 
            NOTE TO ALPHA USERS- the version of zlib that is packaged in all.zip 
            is for Intel platforms.  The Alpha versions of the libraries can be
@@ -176,8 +171,7 @@ version you would like to test.
 
 To test the h5dump utility, cd into hdf5\tools.  Then type:
 "dumptest [debug or release] [dll]" depending on which version you would like
-to test. Some differences are expected in the output of these 4 tests (the 
-errors are in the dimensions of the dataspace).
+to test. Some differences are expected in the output of these 4 tests. 
 
 
 NOTE: the appropriate dll should be placed in the Windows\system directory
@@ -186,6 +180,12 @@ before using the dlls.
 NOTE: The debug dll tests on the Alpha platform currently are not completely
       working.  The release dll is fine though.
 
+NOTE: The dll versions of h5dump are currently not working correctly.
+
+NOTE: There is an error in the external test.  The external file feature
+      is working correctly but there is an error in logic for the test which
+      only appears under certain operating systems.  The external test fails
+      for the last case "Testing write external dataset"
         
 STEP IV: BUILDING THE EXAMPLES
 
@@ -244,9 +244,10 @@ STEP IV: BUILDING THE EXAMPLES
 
 			
 
-Section 2:  
-BUILDING AN APPLICATION USING THE HDF5 LIBRARY OR DLL- SOME HELPFUL POINTERS
-============================================================================
+STEP V:  
+
+BUILDING AN APPLICATION USING THE HDF5 LIBRARY - SOME HELPFUL POINTERS
+=====================================================================
 
 If you are building an application that uses the HDF5 library 
 the following locations will need to be specified for locating
@@ -258,50 +259,7 @@ where <top-level HDF5 directory> may be
     C:\MyHDFstuff\hdf5\
 
 
-To specify this location in the settings for your VC++ project:
 
-      1. Open your VC project in Microsoft Visual C++ and make sure it is the 
-         active project.
-      2. Go to the Project menu and chose the 'Settings' option.
-      3. Chose the build configuration you would like to modify in the drop down
-         menu labeled with 'Settings For:'
-      4. Chose the C/C++ tab
-      5. At the bottom of the window, there should be a text-area labeled with
-         'Project Options:'.  In this text-area, scroll until you reach the end
-         and type /I "<top-level HDF5 directory>\src" and then click OK.
-
-To link the HDF5 library with your application:
-
-      1. Open your VC project in Microsoft Visual C++ and make sure it is the 
-         active project.
-      2. Go to the Project menu and chose the 'Add to Project' option and then
-         'Files' option.
-      3. Change the 'Files of type:' to 'Library Files (.lib)'
-      4. Navigate through the directories until you find the location of the
-         hdf5.lib.  
-	5. Select hdf5.lib and click OK.
-
-
-To use the DLL:
-
-      1. Follow the steps for specifing the location of the header files as shown
-         above.
-	2. Follow the steps for linking the HDF5 library as shown above except now
-         link the export library that is created with the DLL.  The export library
-         is called hdf5dll.lib.
-      3. Place the DLL in a location that Windows will be able to locate it.
-         The search path and order for DLL's is
-         a) The directory where the executable module for the current process is
-            located.
-         b) The current directory. 
-         c} The Windows system directory. The GetSystemDirectory function 
-            retrieves the path of this directory. 
-         d) The Windows directory. The GetWindowsDirectory function retrieves the
-            path of this directory.
-         e) The directories listed in the PATH environment variable. 
-
-
-Section 3:
 MORE HELPFUL POINTERS
 =====================
 
@@ -312,7 +270,7 @@ with using the Visual C++ Development Environment.
 Project name and location issues: 
        
     The files in all.zip must end up in the hdf5\ directory
-    installed by hdf5-1_2_0.zip
+    installed by hdf5-1_2_1.zip
 
     If you must install all.dsw and all.dsp in another directory, relative 
     to hdf5\ , you will be asked to locate the sub-project files, 
@@ -343,7 +301,7 @@ Settings... details:
                                       Single-Threaded
 
 
-Section 4:
+
 ZLIB LIBRARY- REMOVING OR CHANGING THE PATH
 ============================================
 
