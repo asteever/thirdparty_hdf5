@@ -26,9 +26,6 @@ HDF4LIB=$HDF4LIB_default
 # What compression methods to use?
 METHODS="gzip bzip2"
 
-# Use User's MAKE if set.  Else use generic make.
-MAKE=${MAKE:-make}
-
 # Make sure cvs would work
 if [ -z "$CVSROOT" ]; then
     echo "Where is the CVS repository?" 1>&2
@@ -137,15 +134,6 @@ fi # Do CVS checkout
 # Run Test the HDF5 library
 #=============================
 if [ "$cmd" = "all" -o -n "$cmdtest" ]; then
-    # Make sure current version exists and is clean
-    if [ -d ${COMPARE}/current ]; then
-	(cd ${COMPARE}/current && ${MAKE} distclean)
-    else
-	errcode=$?
-        snapshot=no
-        exit $errcode
-    fi
-
     # Compare it with the previous version.  Compare only files listed in
     # the MANIFEST plus the MANIFEST itself.
     if [ -d ${COMPARE}/previous ]; then
@@ -165,7 +153,7 @@ if [ "$cmd" = "all" -o -n "$cmdtest" ]; then
     if [ "$snapshot" = "yes" ]; then
 	if (cd ${COMPARE}/current; \
 	    ${CONFIGURE}; \
-	    ${MAKE} check); then
+	    make _test); then
 	    :
 	else
 	    errcode=$?
@@ -181,7 +169,7 @@ fi # Test the HDF5 library
 #=============================
 if [ "$cmd" = "all" -o -n "$cmdrel" ]; then
     if [ "$snapshot" = "yes" ]; then
-	(cd ${COMPARE}/current; ${MAKE} distclean)
+	(cd ${COMPARE}/current; make distclean)
 	(
 	    # Turn on exit on error in the sub-shell so that it does not
 	    # cvs commit if errors encounter here.

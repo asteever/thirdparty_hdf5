@@ -15,14 +15,9 @@
 #include <H5Dprivate.h>
 #include <H5Eprivate.h>
 #include <H5Fprivate.h>
-#include <H5Iprivate.h>
 #include <H5MFprivate.h>
 #include <H5Oprivate.h>
-#include <H5Pprivate.h>
 #include <H5Vprivate.h>
-
-/* MPIO driver functions are needed for some special checks */
-#include <H5FDmpio.h>
 
 /* Interface initialization */
 #define PABLO_MASK	H5Farray_mask
@@ -56,14 +51,14 @@ H5F_arr_create (H5F_t *f, struct H5O_layout_t *layout/*in,out*/)
     /* check args */
     assert (f);
     assert (layout);
-    layout->addr = HADDR_UNDEF; /*just in case we fail*/
+    H5F_addr_undef (&(layout->addr)); /*just in case we fail*/
    
     switch (layout->type) {
     case H5D_CONTIGUOUS:
 	/* Reserve space in the file for the entire array */
 	for (i=0, nbytes=1; i<layout->ndims; i++) nbytes *= layout->dim[i];
 	assert (nbytes>0);
-	if (HADDR_UNDEF==(layout->addr=H5MF_alloc(f, H5FD_MEM_DRAW, nbytes))) {
+	if (H5MF_alloc (f, H5MF_RAW, nbytes, &(layout->addr)/*out*/)<0) {
 	    HRETURN_ERROR (H5E_IO, H5E_NOSPACE, FAIL,
 			   "unable to reserve file space");
 	}
@@ -108,24 +103,22 @@ H5F_arr_create (H5F_t *f, struct H5O_layout_t *layout/*in,out*/)
  *              Friday, January 16, 1998
  *
  * Modifications:
- *		Albert Cheng, 1998-06-02
+ *		June 2, 1998	Albert Cheng
  *		Added xfer_mode argument
  *
- * 		Robb Matzke, 1998-09-28
+ * 		Sep 28, 1998	Robb Matzke
  *		Added the `xfer' argument and removed the `xfer_mode'
  *		argument since it's a field of `xfer'.
  *
- * 		Robb Matzke, 1999-08-02
- *		Data transfer properties are passed by ID since that's how
- *		the virtual file layer wants them.
  *-------------------------------------------------------------------------
  */
 herr_t
-H5F_arr_read(H5F_t *f, hid_t dxpl_id, const struct H5O_layout_t *layout,
-	     const struct H5O_pline_t *pline, const H5O_fill_t *fill,
-	     const struct H5O_efl_t *efl, const hsize_t _hslab_size[],
-	     const hsize_t mem_size[], const hssize_t mem_offset[],
-	     const hssize_t file_offset[], void *_buf/*out*/)
+H5F_arr_read (H5F_t *f, const H5F_xfer_t *xfer,
+	      const struct H5O_layout_t *layout,
+	      const struct H5O_pline_t *pline, const H5O_fill_t *fill,
+	      const struct H5O_efl_t *efl, const hsize_t _hslab_size[],
+	      const hsize_t mem_size[], const hssize_t mem_offset[],
+	      const hssize_t file_offset[], void *_buf/*out*/)
 {
     uint8_t	*buf = (uint8_t*)_buf;		/*cast for arithmetic	*/
     hssize_t	file_stride[H5O_LAYOUT_NDIMS];	/*strides through file	*/
@@ -140,53 +133,37 @@ H5F_arr_read(H5F_t *f, hid_t dxpl_id, const struct H5O_layout_t *layout,
     haddr_t	addr;				/*address in file	*/
     intn	i, j;				/*counters		*/
     hbool_t	carray;				/*carry for subtraction	*/
-#ifdef H5_HAVE_PARALLEL
-    H5FD_mpio_xfer_t xfer_mode=H5FD_MPIO_INDEPENDENT;
-#endif
    
-    FUNC_ENTER(H5F_arr_read, FAIL);
+    FUNC_ENTER (H5F_arr_read, FAIL);
 
     /* Check args */
-    assert(f);
-    assert(layout);
-    assert(_hslab_size);
-    assert(file_offset);
-    assert(mem_offset);
-    assert(mem_size);
-    assert(buf);
+    assert (f);
+    assert (layout);
+    assert (_hslab_size);
+    assert (file_offset);
+    assert (mem_offset);
+    assert (mem_size);
+    assert (buf);
 
     /* Make a local copy of size so we can modify it */
-    H5V_vector_cpy(layout->ndims, hslab_size, _hslab_size);
+    H5V_vector_cpy (layout->ndims, hslab_size, _hslab_size);
 
-#ifdef H5_HAVE_PARALLEL
-    {
-	/* Get the transfer mode */
-	H5F_xfer_t *dxpl;
-	H5FD_mpio_dxpl_t *dx;
-	if (H5P_DEFAULT!=dxpl_id && (dxpl=H5I_object(dxpl_id)) &&
-	    H5FD_MPIO==dxpl->driver_id && (dx=dxpl->driver_info) &&
-	    H5FD_MPIO_INDEPENDENT!=dx->xfer_mode) {
-	    xfer_mode = dx->xfer_mode;
-	}
-    }
-#endif
-    
-#ifdef H5_HAVE_PARALLEL
-    /* Collective MPIO access is unsupported for non-contiguous datasets */
-    if (H5D_CONTIGUOUS!=layout->type && H5FD_MPIO_COLLECTIVE==xfer_mode) {
-	HRETURN_ERROR (H5E_DATASET, H5E_READERROR, FAIL,
-		       "collective access on non-contiguous datasets not "
-		       "supported yet");
+#ifdef HAVE_PARALLEL
+    if (xfer->xfer_mode==H5D_XFER_COLLECTIVE){
+	if (layout->type != H5D_CONTIGUOUS)
+	    HRETURN_ERROR (H5E_DATASET, H5E_READERROR, FAIL,
+			   "collective access on non-contiguous datasets not "
+			   "supported yet");
     }
 #endif
 #ifdef QAK
 {
     extern int qak_debug;
 
+    printf("%s: layout->ndims=%d\n",FUNC,(int)layout->ndims);
+    for(i=0; i<layout->ndims; i++)
+        printf("%s: %d: hslab_size=%d, mem_size=%d, mem_offset=%d, file_offset=%d\n",FUNC,i,(int)_hslab_size[i],(int)mem_size[i],(int)mem_offset[i],(int)file_offset[i]);
     if(qak_debug) {
-        printf("%s: layout->ndims=%d\n",FUNC,(int)layout->ndims);
-        for(i=0; i<layout->ndims; i++)
-            printf("%s: %d: hslab_size=%d, mem_size=%d, mem_offset=%d, file_offset=%d\n",FUNC,i,(int)_hslab_size[i],(int)mem_size[i],(int)mem_offset[i],(int)file_offset[i]);
         printf("%s: *buf=%d, *(buf+1)=%d\n", FUNC,(int)*(const uint16_t *)buf,(int)*((const uint16 *)buf+1));
     }
 }
@@ -200,8 +177,8 @@ H5F_arr_read(H5F_t *f, hid_t dxpl_id, const struct H5O_layout_t *layout,
 	 */
 	for (i=0; i<ndims; i++) {
 	    if (mem_offset[i]<0 || file_offset[i]<0) {
-		HRETURN_ERROR(H5E_IO, H5E_READERROR, FAIL,
-			      "negative offsets are not valid");
+		HRETURN_ERROR (H5E_IO, H5E_READERROR, FAIL,
+			       "negative offsets are not valid");
 	    }
 	}
 
@@ -209,8 +186,8 @@ H5F_arr_read(H5F_t *f, hid_t dxpl_id, const struct H5O_layout_t *layout,
 	 * Filters cannot be used for contiguous data.
 	 */
 	if (pline && pline->nfilters>0) {
-	    HRETURN_ERROR(H5E_IO, H5E_READERROR, FAIL,
-			  "filters are not allowed for contiguous data");
+	    HRETURN_ERROR (H5E_IO, H5E_READERROR, FAIL,
+			   "filters are not allowed for contiguous data");
 	}
 	
 	/*
@@ -218,12 +195,12 @@ H5F_arr_read(H5F_t *f, hid_t dxpl_id, const struct H5O_layout_t *layout,
 	 * and memory. Optimize the strides to result in the fewest number of
 	 * I/O requests.
 	 */
-	mem_start = H5V_hyper_stride(ndims, hslab_size, mem_size,
-				     mem_offset, mem_stride/*out*/);
-	file_start = H5V_hyper_stride(ndims, hslab_size, layout->dim,
-				      file_offset, file_stride/*out*/);
-	H5V_stride_optimize2(&ndims, &elmt_size, hslab_size,
-			     mem_stride, file_stride);
+	mem_start = H5V_hyper_stride (ndims, hslab_size, mem_size,
+				      mem_offset, mem_stride/*out*/);
+	file_start = H5V_hyper_stride (ndims, hslab_size, layout->dim,
+				       file_offset, file_stride/*out*/);
+	H5V_stride_optimize2 (&ndims, &elmt_size, hslab_size,
+			      mem_stride, file_stride);
 
 	/*
 	 * Initialize loop variables.  The loop is a multi-dimensional loop
@@ -231,35 +208,34 @@ H5F_arr_read(H5F_t *f, hid_t dxpl_id, const struct H5O_layout_t *layout,
 	 * element of IDX is treated as a digit with IDX[0] being the least
 	 * significant digit.
 	 */
-	H5V_vector_cpy(ndims, idx, hslab_size);
-	nelmts = H5V_vector_reduce_product(ndims, hslab_size);
+	H5V_vector_cpy (ndims, idx, hslab_size);
+	nelmts = H5V_vector_reduce_product (ndims, hslab_size);
 	if (efl && efl->nused>0) {
-	    addr = 0;
+	    H5F_addr_reset (&addr);
 	} else {
 	    addr = layout->addr;
 	}
-	addr += file_start;
+	H5F_addr_inc (&addr, file_start);
 	buf += mem_start;
 
 	/*
 	 * Now begin to walk through the array, copying data from disk to
 	 * memory.
 	 */
-#ifdef H5_HAVE_PARALLEL
-	if (H5FD_MPIO_COLLECTIVE==xfer_mode){
-	    /*
-	     * Currently supports same number of collective access. Need to
-	     * be changed LATER to combine all reads into one collective MPIO
-	     * call.
+#ifdef HAVE_PARALLEL
+	if (xfer->xfer_mode==H5D_XFER_COLLECTIVE){
+	    /* Currently supports same number of collective access.
+	     * Need to be changed LATER to combine all reads into one
+	     * collective MPIO call.
 	     */
 	    unsigned long max, min, temp;
 
 	    temp = nelmts;
 	    assert(temp==nelmts);	/* verify no overflow */
 	    MPI_Allreduce(&temp, &max, 1, MPI_UNSIGNED_LONG, MPI_MAX,
-			  H5FD_mpio_communicator(f->shared->lf));
+		f->shared->access_parms->u.mpio.comm);
 	    MPI_Allreduce(&temp, &min, 1, MPI_UNSIGNED_LONG, MPI_MIN,
-			  H5FD_mpio_communicator(f->shared->lf));
+		f->shared->access_parms->u.mpio.comm);
 #ifdef AKC
 	    printf("nelmts=%lu, min=%lu, max=%lu\n", temp, min, max);
 #endif
@@ -274,18 +250,19 @@ H5F_arr_read(H5F_t *f, hid_t dxpl_id, const struct H5O_layout_t *layout,
 
 	    /* Read from file */
 	    if (efl && efl->nused>0) {
-		if (H5O_efl_read(f, efl, addr, elmt_size, buf)<0) {
-		    HRETURN_ERROR(H5E_IO, H5E_READERROR, FAIL,
-				  "external data read failed");
+		if (H5O_efl_read (f, efl, &addr, elmt_size, buf)<0) {
+		    HRETURN_ERROR (H5E_IO, H5E_READERROR, FAIL,
+				   "external data read failed");
 		}
-	    } else if (H5F_block_read(f, addr, elmt_size, dxpl_id, buf)<0) {
-		HRETURN_ERROR(H5E_IO, H5E_READERROR, FAIL,
-			      "block read failed");
+	    } else if (H5F_block_read (f, &addr, elmt_size, xfer, buf)<0) {
+		HRETURN_ERROR (H5E_IO, H5E_READERROR, FAIL,
+			       "block read failed");
 	    }
 
 	    /* Decrement indices and advance pointers */
 	    for (j=ndims-1, carray=TRUE; j>=0 && carray; --j) {
-		addr += file_stride[j];
+		
+		H5F_addr_adj (&addr, file_stride[j]);
 		buf += mem_stride[j];
 
 		if (--idx[j]) carray = FALSE;
@@ -300,29 +277,29 @@ H5F_arr_read(H5F_t *f, hid_t dxpl_id, const struct H5O_layout_t *layout,
 	 * into a proper hyperslab.
 	 */
 	if (efl && efl->nused>0) {
-	    HRETURN_ERROR(H5E_IO, H5E_UNSUPPORTED, FAIL,
-			  "chunking and external files are mutually "
-			  "exclusive");
+	    HRETURN_ERROR (H5E_IO, H5E_UNSUPPORTED, FAIL,
+			   "chunking and external files are mutually "
+			   "exclusive");
 	}
 	for (i=0; i<layout->ndims; i++) {
 	    if (0!=mem_offset[i] || hslab_size[i]!=mem_size[i]) {
-		HRETURN_ERROR(H5E_IO, H5E_UNSUPPORTED, FAIL,
-			      "unable to copy into a proper hyperslab");
+		HRETURN_ERROR (H5E_IO, H5E_UNSUPPORTED, FAIL,
+			       "unable to copy into a proper hyperslab");
 	    }
 	}
-	if (H5F_istore_read(f, dxpl_id, layout, pline, fill, file_offset,
+	if (H5F_istore_read (f, xfer, layout, pline, fill, file_offset,
 			     hslab_size, buf)<0) {
-	    HRETURN_ERROR(H5E_IO, H5E_READERROR, FAIL, "chunked read failed");
+	    HRETURN_ERROR (H5E_IO, H5E_READERROR, FAIL, "chunked read failed");
 	}
 	break;
 
     default:
-	assert("not implemented yet" && 0);
-	HRETURN_ERROR(H5E_IO, H5E_UNSUPPORTED, FAIL,
-		      "unsupported storage layout");
+	assert ("not implemented yet" && 0);
+	HRETURN_ERROR (H5E_IO, H5E_UNSUPPORTED, FAIL,
+		       "unsupported storage layout");
     }
 
-    FUNC_LEAVE(SUCCEED);
+    FUNC_LEAVE (SUCCEED);
 }
 
 
@@ -347,25 +324,23 @@ H5F_arr_read(H5F_t *f, hid_t dxpl_id, const struct H5O_layout_t *layout,
  *              Friday, January 16, 1998
  *
  * Modifications:
- *		Albert Cheng, 1998-06-02
+ *		June 2, 1998	Albert Cheng
  *		Added xfer_mode argument
  *
- * 		Robb Matzke, 1998-09-28
+ * 		Sep 28, 1998	Robb Matzke
  *		Added `xfer' argument, removed `xfer_mode' argument since it
  *		is a member of H5F_xfer_t.
  *
- * 		Robb Matzke, 1999-08-02
- *		Data transfer properties are passed by ID since that's how
- *		the virtual file layer wants them.
  *-------------------------------------------------------------------------
  */
 herr_t
-H5F_arr_write(H5F_t *f, hid_t dxpl_id, const struct H5O_layout_t *layout,
-	      const struct H5O_pline_t *pline,
-	      const struct H5O_fill_t *fill, const struct H5O_efl_t *efl,
-	      const hsize_t _hslab_size[], const hsize_t mem_size[],
-	      const hssize_t mem_offset[], const hssize_t file_offset[],
-	      const void *_buf)
+H5F_arr_write (H5F_t *f, const H5F_xfer_t *xfer,
+	       const struct H5O_layout_t *layout,
+	       const struct H5O_pline_t *pline,
+	       const struct H5O_fill_t *fill, const struct H5O_efl_t *efl,
+	       const hsize_t _hslab_size[], const hsize_t mem_size[],
+	       const hssize_t mem_offset[], const hssize_t file_offset[],
+	       const void *_buf)
 {
     const uint8_t *buf = (const uint8_t *)_buf;	/*cast for arithmetic	*/
     hssize_t	file_stride[H5O_LAYOUT_NDIMS];	/*strides through file	*/
@@ -380,11 +355,8 @@ H5F_arr_write(H5F_t *f, hid_t dxpl_id, const struct H5O_layout_t *layout,
     haddr_t	addr;				/*address in file	*/
     intn	i, j;				/*counters		*/
     hbool_t	carray;				/*carry for subtraction	*/
-#ifdef H5_HAVE_PARALLEL
-    H5FD_mpio_xfer_t xfer_mode=H5FD_MPIO_INDEPENDENT;
-#endif
    
-    FUNC_ENTER(H5F_arr_write, FAIL);
+    FUNC_ENTER (H5F_arr_write, FAIL);
 
     /* Check args */
     assert(f);
@@ -396,29 +368,17 @@ H5F_arr_write(H5F_t *f, hid_t dxpl_id, const struct H5O_layout_t *layout,
     assert(buf);
 
     /* Make a local copy of _size so we can modify it */
-    H5V_vector_cpy(layout->ndims, hslab_size, _hslab_size);
+    H5V_vector_cpy (layout->ndims, hslab_size, _hslab_size);
 
-#ifdef H5_HAVE_PARALLEL
-    {
-	/* Get the transfer mode */
-	H5F_xfer_t *dxpl;
-	H5FD_mpio_dxpl_t *dx;
-	if (H5P_DEFAULT!=dxpl_id && (dxpl=H5I_object(dxpl_id)) &&
-	    H5FD_MPIO==dxpl->driver_id && (dx=dxpl->driver_info) &&
-	    H5FD_MPIO_INDEPENDENT!=dx->xfer_mode) {
-	    xfer_mode = dx->xfer_mode;
+#ifdef HAVE_PARALLEL
+    if (xfer->xfer_mode==H5D_XFER_COLLECTIVE) {
+	if (layout->type != H5D_CONTIGUOUS) {
+	    HRETURN_ERROR (H5E_DATASET, H5E_WRITEERROR, FAIL,
+			   "collective access on non-contiguous datasets not "
+			   "supported yet");
 	}
     }
 #endif
-    
-#ifdef H5_HAVE_PARALLEL
-    if (H5D_CONTIGUOUS!=layout->type && H5FD_MPIO_COLLECTIVE==xfer_mode) {
-	HRETURN_ERROR (H5E_DATASET, H5E_WRITEERROR, FAIL,
-		       "collective access on non-contiguous datasets not "
-		       "supported yet");
-    }
-#endif
-    
 #ifdef QAK
     {
 	extern int qak_debug;
@@ -443,8 +403,8 @@ H5F_arr_write(H5F_t *f, hid_t dxpl_id, const struct H5O_layout_t *layout,
 	 */
 	for (i=0; i<ndims; i++) {
 	    if (mem_offset[i]<0 || file_offset[i]<0) {
-		HRETURN_ERROR(H5E_IO, H5E_WRITEERROR, FAIL,
-			      "negative offsets are not valid");
+		HRETURN_ERROR (H5E_IO, H5E_WRITEERROR, FAIL,
+			       "negative offsets are not valid");
 	    }
 	}
 
@@ -452,8 +412,8 @@ H5F_arr_write(H5F_t *f, hid_t dxpl_id, const struct H5O_layout_t *layout,
 	 * Filters cannot be used for contiguous data
 	 */
 	if (pline && pline->nfilters>0) {
-	    HRETURN_ERROR(H5E_IO, H5E_WRITEERROR, FAIL,
-			  "filters are not allowed for contiguous data");
+	    HRETURN_ERROR (H5E_IO, H5E_WRITEERROR, FAIL,
+			   "filters are not allowed for contiguous data");
 	}
 	
 	/*
@@ -461,12 +421,12 @@ H5F_arr_write(H5F_t *f, hid_t dxpl_id, const struct H5O_layout_t *layout,
 	 * Optimize the strides to result in the fewest number of I/O
 	 * requests.
 	 */
-	mem_start = H5V_hyper_stride(ndims, hslab_size, mem_size,
-				     mem_offset, mem_stride/*out*/);
-	file_start = H5V_hyper_stride(ndims, hslab_size, layout->dim,
-				      file_offset, file_stride/*out*/);
-	H5V_stride_optimize2(&ndims, &elmt_size, hslab_size,
-			     mem_stride, file_stride);
+	mem_start = H5V_hyper_stride (ndims, hslab_size, mem_size,
+				      mem_offset, mem_stride/*out*/);
+	file_start = H5V_hyper_stride (ndims, hslab_size, layout->dim,
+				       file_offset, file_stride/*out*/);
+	H5V_stride_optimize2 (&ndims, &elmt_size, hslab_size,
+			      mem_stride, file_stride);
 
 	/*
 	 * Initialize loop variables.  The loop is a multi-dimensional loop
@@ -474,35 +434,34 @@ H5F_arr_write(H5F_t *f, hid_t dxpl_id, const struct H5O_layout_t *layout,
 	 * element of IDX is treated as a digit with IDX[0] being the least
 	 * significant digit.
 	 */
-	H5V_vector_cpy(ndims, idx, hslab_size);
-	nelmts = H5V_vector_reduce_product(ndims, hslab_size);
+	H5V_vector_cpy (ndims, idx, hslab_size);
+	nelmts = H5V_vector_reduce_product (ndims, hslab_size);
 	if (efl && efl->nused>0) {
-	    addr = 0;
+	    H5F_addr_reset (&addr);
 	} else {
 	    addr = layout->addr;
 	}
-	addr += file_start;
+	H5F_addr_inc (&addr, file_start);
 	buf += mem_start;
 
 	/*
 	 * Now begin to walk through the array, copying data from memory to
 	 * disk.
 	 */
-#ifdef H5_HAVE_PARALLEL
-	if (H5FD_MPIO_COLLECTIVE==xfer_mode){
-	    /*
-	     * Currently supports same number of collective access. Need to
-	     * be changed LATER to combine all writes into one collective
-	     * MPIO call.
+#ifdef HAVE_PARALLEL
+	if (xfer->xfer_mode==H5D_XFER_COLLECTIVE){
+	    /* Currently supports same number of collective access.
+	     * Need to be changed LATER to combine all writes into one
+	     * collective MPIO call.
 	     */
 	    unsigned long max, min, temp;
 
 	    temp = nelmts;
 	    assert(temp==nelmts);	/* verify no overflow */
 	    MPI_Allreduce(&temp, &max, 1, MPI_UNSIGNED_LONG, MPI_MAX,
-			  H5FD_mpio_communicator(f->shared->lf));
+		f->shared->access_parms->u.mpio.comm);
 	    MPI_Allreduce(&temp, &min, 1, MPI_UNSIGNED_LONG, MPI_MIN,
-			  H5FD_mpio_communicator(f->shared->lf));
+		f->shared->access_parms->u.mpio.comm);
 #ifdef AKC
 	    printf("nelmts=%lu, min=%lu, max=%lu\n", temp, min, max);
 #endif
@@ -518,18 +477,19 @@ H5F_arr_write(H5F_t *f, hid_t dxpl_id, const struct H5O_layout_t *layout,
 
 	    /* Write to file */
 	    if (efl && efl->nused>0) {
-		if (H5O_efl_write(f, efl, addr, elmt_size, buf)<0) {
-		    HRETURN_ERROR(H5E_IO, H5E_READERROR, FAIL,
-				  "external data write failed");
+		if (H5O_efl_write (f, efl, &addr, elmt_size, buf)<0) {
+		    HRETURN_ERROR (H5E_IO, H5E_READERROR, FAIL,
+				   "external data write failed");
 		}
-	    } else if (H5F_block_write(f, addr, elmt_size, dxpl_id, buf)<0) {
-		HRETURN_ERROR(H5E_IO, H5E_WRITEERROR, FAIL,
-			      "block write failed");
+	    } else if (H5F_block_write(f, &addr, elmt_size, xfer, buf)<0) {
+		HRETURN_ERROR (H5E_IO, H5E_WRITEERROR, FAIL,
+			       "block write failed");
 	    }
 
 	    /* Decrement indices and advance pointers */
 	    for (j=ndims-1, carray=TRUE; j>=0 && carray; --j) {
-		addr += file_stride[j];
+		
+		H5F_addr_adj (&addr, file_stride[j]);
 		buf += mem_stride[j];
 		
 		if (--idx[j]) carray = FALSE;
@@ -545,27 +505,27 @@ H5F_arr_write(H5F_t *f, hid_t dxpl_id, const struct H5O_layout_t *layout,
 	 * from a proper hyperslab.
 	 */
 	if (efl && efl->nused>0) {
-	    HRETURN_ERROR(H5E_IO, H5E_UNSUPPORTED, FAIL,
-			  "chunking and external files are mutually "
-			  "exclusive");
+	    HRETURN_ERROR (H5E_IO, H5E_UNSUPPORTED, FAIL,
+			   "chunking and external files are mutually "
+			   "exclusive");
 	}
 	for (i=0; i<layout->ndims; i++) {
 	    if (0!=mem_offset[i] || hslab_size[i]!=mem_size[i]) {
-		HRETURN_ERROR(H5E_IO, H5E_UNSUPPORTED, FAIL,
-			      "unable to copy from a proper hyperslab");
+		HRETURN_ERROR (H5E_IO, H5E_UNSUPPORTED, FAIL,
+			       "unable to copy from a proper hyperslab");
 	    }
 	}
-	if (H5F_istore_write(f, dxpl_id, layout, pline, fill, file_offset,
-			     hslab_size, buf)<0) {
-	    HRETURN_ERROR(H5E_IO, H5E_WRITEERROR, FAIL,
-			  "chunked write failed");
+	if (H5F_istore_write (f, xfer, layout, pline, fill, file_offset,
+			      hslab_size, buf)<0) {
+	    HRETURN_ERROR (H5E_IO, H5E_WRITEERROR, FAIL,
+			   "chunked write failed");
 	}
 	break;
 
     default:
-	assert("not implemented yet" && 0);
-	HRETURN_ERROR(H5E_IO, H5E_UNSUPPORTED, FAIL,
-		      "unsupported storage layout");
+	assert ("not implemented yet" && 0);
+	HRETURN_ERROR (H5E_IO, H5E_UNSUPPORTED, FAIL,
+		       "unsupported storage layout");
     }
 
     FUNC_LEAVE (SUCCEED);

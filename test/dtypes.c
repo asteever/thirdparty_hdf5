@@ -778,9 +778,8 @@ test_transient (hid_t fapl)
     TESTING("transient data types");
 
     h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
-    if ((file=H5Fcreate (filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl))<0) {
-	goto error;
-    }
+    if ((file=H5Fcreate (filename, H5F_ACC_TRUNC|H5F_ACC_DEBUG,
+			 H5P_DEFAULT, fapl))<0) goto error;
     if ((space = H5Screate_simple (2, ds_size, ds_size))<0) goto error;
 
     /* Predefined types cannot be modified or closed */
@@ -907,9 +906,8 @@ test_named (hid_t fapl)
     TESTING("named data types");
 
     h5_fixname(FILENAME[1], fapl, filename, sizeof filename);
-    if ((file=H5Fcreate (filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl))<0) {
-	goto error;
-    }
+    if ((file=H5Fcreate (filename, H5F_ACC_TRUNC|H5F_ACC_DEBUG,
+			 H5P_DEFAULT, fapl))<0) goto error;
     if ((space = H5Screate_simple (2, ds_size, ds_size))<0) goto error;
 
     /* Predefined types cannot be committed */
@@ -1587,7 +1585,7 @@ test_conv_bitfield(void)
 static herr_t
 convert_opaque(hid_t UNUSED st, hid_t UNUSED dt, H5T_cdata_t *cdata,
 	       size_t UNUSED nelmts, size_t UNUSED stride, void UNUSED *_buf,
-	       void UNUSED *bkg, hid_t UNUSED dset_xfer_plid)
+	       void UNUSED *bkg, hid_t dset_xfer_plid)
 {
     if (H5T_CONV_CONV==cdata->command) num_opaque_conversions_g++;
     return 0;
@@ -2498,7 +2496,7 @@ test_conv_int_1(const char *name, hid_t src, hid_t dst)
         assert(dst_nbits%8==0);
 
 	    /* Are the two results the same */
-        for (k=(dst_size-(dst_nbits/8)); k<dst_size; k++) {
+	    for (k=(dst_size-(dst_nbits/8)); k<dst_size; k++) {
             if (buf[j*dst_size+k]!=hw[k]) break;
 	    }
 	    if (k==dst_size) continue; /*no error*/
@@ -2652,12 +2650,16 @@ test_conv_int_1(const char *name, hid_t src, hid_t dst)
 		break;
 	    case INT_SHORT:
 		memcpy(aligned, saved+j*sizeof(short), sizeof(short));
+#ifdef QAK
+		printf(" %29d\n", *((short*)aligned));
+#else /* QAK */
 		printf(" %29hd\n", *((short*)aligned));
+#endif /* QAK */
 		break;
 	    case INT_USHORT:
 		memcpy(aligned, saved+j*sizeof(short),
 		       sizeof(unsigned short));
-		printf(" %29hu\n", *((unsigned short*)aligned));
+		printf(" %29u\n", *((unsigned short*)aligned));
 		break;
 	    case INT_INT:
 		memcpy(aligned, saved+j*sizeof(int), sizeof(int));
@@ -3048,8 +3050,12 @@ test_conv_flt_1 (const char *name, hid_t src, hid_t dst)
     }
 
     /* Sanity checks */
+#ifdef QAK
+    assert(sizeof(float)!=sizeof(double));
+#else /* QAK */
     if(sizeof(float)==sizeof(double))
         puts("Sizeof(float)==sizeof(double) - some tests may not be sensible.");
+#endif /* QAK */
     if (FLT_OTHER==src_type || FLT_OTHER==dst_type) {
 	sprintf(str, "Testing random %s %s -> %s conversions",
 		name, src_type_name, dst_type_name);

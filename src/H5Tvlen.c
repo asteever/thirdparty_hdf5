@@ -36,15 +36,11 @@ static herr_t H5T_vlen_reclaim_recurse(void *elem, H5T_t *dt, H5MM_free_t free_f
 
 
 /*-------------------------------------------------------------------------
- * Function: H5T_vlen_set_loc
+ * Function:	H5T_vlen_set_loc
  *
  * Purpose:	Sets the location of a VL datatype to be either on disk or in memory
  *
- * Return:	
- *  One of two values on success:
- *      TRUE - If the location of any vlen types changed
- *      FALSE - If the location of any vlen types is the same
- *  <0 is returned on failure
+ * Return:	Non-negative on success/Negative on failure
  *
  * Programmer:	Quincey Koziol
  *		Friday, June 4, 1999
@@ -53,87 +49,66 @@ static herr_t H5T_vlen_reclaim_recurse(void *elem, H5T_t *dt, H5MM_free_t free_f
  *
  *-------------------------------------------------------------------------
  */
-static htri_t
-H5T_vlen_set_loc(H5T_t *dt, H5F_t *f, H5T_vlen_loc_t loc)
+static herr_t
+H5T_vlen_set_loc(H5T_t *dt, H5F_t *f, H5T_vlen_type_t loc)
 {
-    htri_t ret_value = 0;       /* Indicate that success, but no location change */
-
     FUNC_ENTER (H5T_vlen_set_loc, FAIL);
 
     /* check parameters */
     assert(dt);
-    assert(loc>H5T_VLEN_BADLOC && loc<H5T_VLEN_MAXLOC);
+    assert(loc>H5T_VLEN_BADTYPE && loc<H5T_VLEN_MAXTYPE);
 
-    /* Only change the location if it's different */
-    if(loc!=dt->u.vlen.loc) {
-        /* Indicate that the location changed */
-        ret_value=TRUE;
+    switch(loc) {
+        case H5T_VLEN_MEMORY:   /* Memory based VL datatype */
+            assert(f==NULL);
 
-        switch(loc) {
-            case H5T_VLEN_MEMORY:   /* Memory based VL datatype */
-                assert(f==NULL);
+            /* Mark this type as being stored in memory */
+            dt->u.vlen.type=H5T_VLEN_MEMORY;
 
-                /* Mark this type as being stored in memory */
-                dt->u.vlen.loc=H5T_VLEN_MEMORY;
+            /* size in memory, disk size is different */
+            dt->size = sizeof(hvl_t);
 
-                if(dt->u.vlen.type==H5T_VLEN_SEQUENCE) {
-                    /* size in memory, disk size is different */
-                    dt->size = sizeof(hvl_t);
+            /* Set up the function pointers to access the VL information (in memory) */
+            dt->u.vlen.getlen=H5T_vlen_mem_getlen;
+            dt->u.vlen.read=H5T_vlen_mem_read;
+            dt->u.vlen.write=H5T_vlen_mem_write;
 
-                    /* Set up the function pointers to access the VL sequence in memory */
-                    dt->u.vlen.getlen=H5T_vlen_seq_mem_getlen;
-                    dt->u.vlen.read=H5T_vlen_seq_mem_read;
-                    dt->u.vlen.write=H5T_vlen_seq_mem_write;
-                } else if(dt->u.vlen.type==H5T_VLEN_STRING) {
-                    /* size in memory, disk size is different */
-                    dt->size = sizeof(char *);
+            /* Reset file ID (since this VL is in memory) */
+            dt->u.vlen.f=NULL;
+            break;
 
-                    /* Set up the function pointers to access the VL string in memory */
-                    dt->u.vlen.getlen=H5T_vlen_str_mem_getlen;
-                    dt->u.vlen.read=H5T_vlen_str_mem_read;
-                    dt->u.vlen.write=H5T_vlen_str_mem_write;
-                } else {
-                    assert(0 && "Invalid VL type");
-                }
+        case H5T_VLEN_DISK:   /* Disk based VL datatype */
+            assert(f);
 
-                /* Reset file ID (since this VL is in memory) */
-                dt->u.vlen.f=NULL;
-                break;
+            /* Mark this type as being stored on disk */
+            dt->u.vlen.type=H5T_VLEN_DISK;
 
-            case H5T_VLEN_DISK:   /* Disk based VL datatype */
-                assert(f);
+            /* 
+             * Size of element on disk is 4 bytes for the length, plus the size
+             * of an address in this file, plus 4 bytes for the size of a heap
+             * ID.  Memory size is different
+             */
+            dt->size = 4 + H5F_SIZEOF_ADDR(f) + 4;
 
-                /* Mark this type as being stored on disk */
-                dt->u.vlen.loc=H5T_VLEN_DISK;
+            /* Set up the function pointers to access the VL information (in memory) */
+            dt->u.vlen.getlen=H5T_vlen_disk_getlen;
+            dt->u.vlen.read=H5T_vlen_disk_read;
+            dt->u.vlen.write=H5T_vlen_disk_write;
 
-                /* 
-                 * Size of element on disk is 4 bytes for the length, plus the size
-                 * of an address in this file, plus 4 bytes for the size of a heap
-                 * ID.  Memory size is different
-                 */
-                dt->size = 4 + H5F_SIZEOF_ADDR(f) + 4;
+            /* Set file ID (since this VL is on disk) */
+            dt->u.vlen.f=f;
+            break;
 
-                /* Set up the function pointers to access the VL information on disk */
-                /* VL sequences and VL strings are stored identically on disk, so use the same functions */
-                dt->u.vlen.getlen=H5T_vlen_disk_getlen;
-                dt->u.vlen.read=H5T_vlen_disk_read;
-                dt->u.vlen.write=H5T_vlen_disk_write;
+        default:
+            HRETURN_ERROR (H5E_DATATYPE, H5E_BADRANGE, FAIL, "invalid VL datatype location");
+    } /* end switch */
 
-                /* Set file ID (since this VL is on disk) */
-                dt->u.vlen.f=f;
-                break;
-
-            default:
-                HRETURN_ERROR (H5E_DATATYPE, H5E_BADRANGE, FAIL, "invalid VL datatype location");
-        } /* end switch */
-    } /* end if */
-
-    FUNC_LEAVE (ret_value);
+    FUNC_LEAVE (SUCCEED);
 }   /* end H5T_vlen_set_loc() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5T_vlen_seq_mem_getlen
+ * Function:	H5T_vlen_mem_getlen
  *
  * Purpose:	Retrieves the length of a memory based VL element.
  *
@@ -146,24 +121,24 @@ H5T_vlen_set_loc(H5T_t *dt, H5F_t *f, H5T_vlen_loc_t loc)
  *
  *-------------------------------------------------------------------------
  */
-hssize_t H5T_vlen_seq_mem_getlen(H5F_t UNUSED *f, void *vl_addr)
+hsize_t H5T_vlen_mem_getlen(H5F_t UNUSED *f, void *vl_addr)
 {
     hvl_t *vl=(hvl_t *)vl_addr;   /* Pointer to the user's hvl_t information */
-    hssize_t	ret_value = FAIL;	/*return value			*/
+    hsize_t	ret_value = FAIL;	/*return value			*/
 
-    FUNC_ENTER (H5T_vlen_seq_mem_getlen, FAIL);
+    FUNC_ENTER (H5T_vlen_mem_getlen, FAIL);
 
     /* check parameters */
     assert(vl);
 
-    ret_value=(hssize_t)vl->len;
+    ret_value=vl->len;
 
     FUNC_LEAVE (ret_value);
-}   /* end H5T_vlen_seq_mem_getlen() */
+}   /* end H5T_vlen_mem_getlen() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5T_vlen_seq_mem_read
+ * Function:	H5T_vlen_mem_read
  *
  * Purpose:	"Reads" the memory based VL sequence into a buffer
  *
@@ -176,11 +151,11 @@ hssize_t H5T_vlen_seq_mem_getlen(H5F_t UNUSED *f, void *vl_addr)
  *
  *-------------------------------------------------------------------------
  */
-herr_t H5T_vlen_seq_mem_read(H5F_t UNUSED *f, void *vl_addr, void *buf, size_t len)
+herr_t H5T_vlen_mem_read(H5F_t UNUSED *f, void *vl_addr, void *buf, size_t len)
 {
     hvl_t *vl=(hvl_t *)vl_addr;   /* Pointer to the user's hvl_t information */
 
-    FUNC_ENTER (H5T_vlen_seq_mem_read, FAIL);
+    FUNC_ENTER (H5T_vlen_mem_read, FAIL);
 
     /* check parameters */
     assert(vl && vl->p);
@@ -189,11 +164,11 @@ herr_t H5T_vlen_seq_mem_read(H5F_t UNUSED *f, void *vl_addr, void *buf, size_t l
     HDmemcpy(buf,vl->p,len);
 
     FUNC_LEAVE (SUCCEED);
-}   /* end H5T_vlen_seq_mem_read() */
+}   /* end H5T_vlen_mem_read() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5T_vlen_seq_mem_write
+ * Function:	H5T_vlen_mem_write
  *
  * Purpose:	"Writes" the memory based VL sequence from a buffer
  *
@@ -206,12 +181,12 @@ herr_t H5T_vlen_seq_mem_read(H5F_t UNUSED *f, void *vl_addr, void *buf, size_t l
  *
  *-------------------------------------------------------------------------
  */
-herr_t H5T_vlen_seq_mem_write(const H5F_xfer_t *xfer_parms, H5F_t UNUSED *f, void *vl_addr, void *buf, hsize_t seq_len, hsize_t base_size)
+herr_t H5T_vlen_mem_write(const H5F_xfer_t *xfer_parms, H5F_t UNUSED *f, void *vl_addr, void *buf, hsize_t seq_len, hsize_t base_size)
 {
     hvl_t *vl=(hvl_t *)vl_addr;   /* Pointer to the user's hvl_t information */
     size_t len=seq_len*base_size;
 
-    FUNC_ENTER (H5T_vlen_seq_mem_write, FAIL);
+    FUNC_ENTER (H5T_vlen_mem_write, FAIL);
 
     /* check parameters */
     assert(vl);
@@ -231,114 +206,13 @@ herr_t H5T_vlen_seq_mem_write(const H5F_xfer_t *xfer_parms, H5F_t UNUSED *f, voi
     HDmemcpy(vl->p,buf,len);
 
     FUNC_LEAVE (SUCCEED);
-}   /* end H5T_vlen_seq_mem_write() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5T_vlen_str_mem_getlen
- *
- * Purpose:	Retrieves the length of a memory based VL string.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *		Wednesday, June 2, 1999
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-hssize_t H5T_vlen_str_mem_getlen(H5F_t UNUSED *f, void *vl_addr)
-{
-    char *s=*(char **)vl_addr;   /* Pointer to the user's hvl_t information */
-    hssize_t	ret_value = FAIL;	/*return value			*/
-
-    FUNC_ENTER (H5T_vlen_str_mem_getlen, FAIL);
-
-    /* check parameters */
-    assert(s);
-
-    ret_value=(hssize_t)HDstrlen(s);
-
-    FUNC_LEAVE (ret_value);
-}   /* end H5T_vlen_str_mem_getlen() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5T_vlen_str_mem_read
- *
- * Purpose:	"Reads" the memory based VL string into a buffer
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *		Wednesday, June 2, 1999
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-herr_t H5T_vlen_str_mem_read(H5F_t UNUSED *f, void *vl_addr, void *buf, size_t len)
-{
-    char *s=*(char **)vl_addr;   /* Pointer to the user's hvl_t information */
-
-    FUNC_ENTER (H5T_vlen_str_mem_read, FAIL);
-
-    /* check parameters */
-    assert(s);
-    assert(buf);
-
-    HDmemcpy(buf,s,len);
-
-    FUNC_LEAVE (SUCCEED);
-}   /* end H5T_vlen_str_mem_read() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5T_vlen_str_mem_write
- *
- * Purpose:	"Writes" the memory based VL string from a buffer
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *		Wednesday, June 2, 1999
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-herr_t H5T_vlen_str_mem_write(const H5F_xfer_t *xfer_parms, H5F_t UNUSED *f, void *vl_addr, void *buf, hsize_t seq_len, hsize_t base_size)
-{
-    char **s=(char **)vl_addr;   /* Pointer to the user's hvl_t information */
-    size_t len=seq_len*base_size;
-
-    FUNC_ENTER (H5T_vlen_str_mem_write, FAIL);
-
-    /* check parameters */
-    assert(buf);
-
-    /* Use the user's memory allocation routine is one is defined */
-    if(xfer_parms->vlen_alloc!=NULL) {
-        if(NULL==(*s=(xfer_parms->vlen_alloc)((seq_len+1)*base_size,xfer_parms->alloc_info)))
-            HRETURN_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for VL data");
-      } /* end if */
-    else {  /* Default to system malloc */
-        if(NULL==(*s=H5MM_malloc((seq_len+1)*base_size)))
-            HRETURN_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for VL data");
-      } /* end else */
-
-    HDmemcpy(*s,buf,len);
-    (*s)[len]='\0';
-
-    FUNC_LEAVE (SUCCEED);
-}   /* end H5T_vlen_str_mem_write() */
+}   /* end H5T_vlen_mem_write() */
 
 
 /*-------------------------------------------------------------------------
  * Function:	H5T_vlen_disk_getlen
  *
- * Purpose:	Retrieves the length of a disk based VL element.
+ * Purpose:	Retrieves the length of a memory based VL element.
  *
  * Return:	Non-negative on success/Negative on failure
  *
@@ -349,10 +223,10 @@ herr_t H5T_vlen_str_mem_write(const H5F_xfer_t *xfer_parms, H5F_t UNUSED *f, voi
  *
  *-------------------------------------------------------------------------
  */
-hssize_t H5T_vlen_disk_getlen(H5F_t UNUSED *f, void *vl_addr)
+hsize_t H5T_vlen_disk_getlen(H5F_t UNUSED *f, void *vl_addr)
 {
     uint8_t *vl=(uint8_t *)vl_addr;   /* Pointer to the disk VL information */
-    hssize_t	ret_value = FAIL;	/*return value			*/
+    hsize_t	ret_value = FAIL;	/*return value			*/
 
     FUNC_ENTER (H5T_vlen_disk_getlen, FAIL);
 
@@ -368,7 +242,7 @@ hssize_t H5T_vlen_disk_getlen(H5F_t UNUSED *f, void *vl_addr)
 /*-------------------------------------------------------------------------
  * Function:	H5T_vlen_disk_read
  *
- * Purpose:	Reads the disk based VL element into a buffer
+ * Purpose:	Reads the disk based VL sequence into a buffer
  *
  * Return:	Non-negative on success/Negative on failure
  *
@@ -410,7 +284,7 @@ herr_t H5T_vlen_disk_read(H5F_t *f, void *vl_addr, void *buf, size_t UNUSED len)
 /*-------------------------------------------------------------------------
  * Function:	H5T_vlen_disk_write
  *
- * Purpose:	Writes the disk based VL element from a buffer
+ * Purpose:	Writes the disk based VL sequence from a buffer
  *
  * Return:	Non-negative on success/Negative on failure
  *
@@ -442,7 +316,7 @@ herr_t H5T_vlen_disk_write(const H5F_xfer_t UNUSED *xfer_parms, H5F_t *f, void *
         HRETURN_ERROR(H5E_DATATYPE, H5E_WRITEERROR, FAIL, "Unable to write VL information");
 
     /* Get the heap information */
-    H5F_addr_encode(f,&vl,hobjid.addr);
+    H5F_addr_encode(f,&vl,&hobjid.addr);
     INT32ENCODE(vl,hobjid.idx);
 
     FUNC_LEAVE (SUCCEED);
@@ -508,7 +382,7 @@ H5T_vlen_reclaim_recurse(void *elem, H5T_t *dt, H5MM_free_t free_func, void *fre
 
         /* Recurse on the VL information if it's VL or compound, then free VL sequence */
         case H5T_VLEN:
-            if(dt->u.vlen.type==H5T_VLEN_SEQUENCE) {
+            {
                 hvl_t *vl=(hvl_t *)elem;    /* Temp. ptr to the vl info */
 
                 /* Recurse if it's VL or compound */
@@ -529,15 +403,7 @@ H5T_vlen_reclaim_recurse(void *elem, H5T_t *dt, H5MM_free_t free_func, void *fre
                     (*free_func)(vl->p,free_info);
                 else
                     H5MM_xfree(vl->p);
-            } else if(dt->u.vlen.type==H5T_VLEN_STRING) {
-                /* Free the VL string */
-                if(free_func!=NULL)
-                    (*free_func)(*(char **)elem,free_info);
-                else
-                    H5MM_xfree(*(char **)elem);
-            } else {
-                assert(0 && "Invalid VL type");
-            } /* end else */
+            } /* end case */
             break;
 
         default:
@@ -605,16 +471,13 @@ done:
  PURPOSE
     Recursively mark any VL datatypes as on disk/in memory
  USAGE
-    htri_t H5T_vlen_mark(dt,f,loc)
+    herr_t H5T_vlen_mark(dt,f,loc)
         H5T_t *dt;              IN/OUT: Pointer to the datatype to mark
         H5F_t *dt;              IN: Pointer to the file the datatype is in
         H5T_vlen_type_t loc     IN: location of VL type
         
  RETURNS
-    One of two values on success:
-        TRUE - If the location of any vlen types changed
-        FALSE - If the location of any vlen types is the same
-    <0 is returned on failure
+    SUCCEED/FAIL
  DESCRIPTION
     Recursively descends any VL or compound datatypes to mark all VL datatypes
     as either on disk or in memory.
@@ -623,78 +486,69 @@ done:
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-htri_t
-H5T_vlen_mark(H5T_t *dt, H5F_t *f, H5T_vlen_loc_t loc)
+herr_t
+H5T_vlen_mark(H5T_t *dt, H5F_t *f, H5T_vlen_type_t loc)
 {
-    htri_t vlen_changed;    /* Whether H5T_vlen_mark changed the type (even if the size didn't change) */
-    htri_t ret_value = 0;   /* Indicate that success, but no location change */
+    intn i;   /* local counting variable */
+    herr_t ret_value = SUCCEED;
 
     FUNC_ENTER(H5T_vlen_mark, FAIL);
 
     assert(dt);
-    assert(loc>H5T_VLEN_BADLOC && loc<H5T_VLEN_MAXLOC);
+    assert(loc>H5T_VLEN_BADTYPE && loc<H5T_VLEN_MAXTYPE);
 
     /* Check the datatype of this element */
     switch(dt->type) {
         /* Check each field and recurse on VL and compound ones */
         case H5T_COMPOUND:
-            /* Compound datatypes can't change in size if the force_conv flag is not set */
-            if(dt->force_conv) {
-                intn i;   /* local counting variable */
-                intn accum_change=0;    /* Amount of change in the offset of the fields */
-                size_t old_size;        /* Preview size of a field */
+        {
+            intn accum_change=0;    /* Amount of change in the offset of the fields */
+            size_t old_size;        /* Preview size of a field */
 
-                /* Sort the fields based on offsets */
-                H5T_sort_value(dt,NULL);
-        
-                for (i=0; i<dt->u.compnd.nmembs; i++) {
-                    /* Apply the accumulated size change to the offset of the field */
-                    dt->u.compnd.memb[i].offset += accum_change;
+            /* Sort the fields based on offsets */
+            H5T_sort_value(dt,NULL);
+	
+            for (i=0; i<dt->u.compnd.nmembs; i++) {
+                /* Apply the accumulated size change to the offset of the field */
+                dt->u.compnd.memb[i].offset += accum_change;
 
-                    /* Recurse if it's VL or compound */
-                    /* (If the type is compound and the force_conv flag is _not_ set, the type cannot change in size, so don't recurse) */
-                    if((dt->u.compnd.memb[i].type->type==H5T_COMPOUND && dt->u.compnd.memb[i].type->force_conv) || dt->u.compnd.memb[i].type->type==H5T_VLEN) {
-                        /* Keep the old field size for later */
-                        old_size=dt->u.compnd.memb[i].type->size;
+                /* Recurse if it's VL or compound */
+                if(dt->u.compnd.memb[i].type->type==H5T_COMPOUND || dt->u.compnd.memb[i].type->type==H5T_VLEN) {
+                    /* Keep the old field size for later */
+                    old_size=dt->u.compnd.memb[i].type->size;
 
-                        /* Mark the VL or compound type */
-                        if((vlen_changed=H5T_vlen_mark(dt->u.compnd.memb[i].type,f,loc))<0)
-                            HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "Unable to set VL location");
-                        if(vlen_changed>0)
-                            ret_value=vlen_changed;
-                        
-                        /* Check if the field changed size */
-                        if(old_size != dt->u.compnd.memb[i].type->size) {
-                            /* Adjust the size of the member */
-                            dt->u.compnd.memb[i].size = (dt->u.compnd.memb[i].size*dt->u.compnd.memb[i].type->size)/old_size;
+                    /* Mark the VL or compound type */
+                    if(H5T_vlen_mark(dt->u.compnd.memb[i].type,f,loc)<0)
+                        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "Unable to set VL location");
+                    
+                    /* Check if the field changed size */
+                    if(old_size != dt->u.compnd.memb[i].type->size) {
+                        /* Adjust the size of the member */
+                        dt->u.compnd.memb[i].size = (dt->u.compnd.memb[i].size*dt->u.compnd.memb[i].type->size)/old_size;
 
-                            /* Add that change to the accumulated size change */
-                            accum_change += (dt->u.compnd.memb[i].type->size - (int)old_size);
-                        } /* end if */
+                        /* Add that change to the accumulated size change */
+                        accum_change += (dt->u.compnd.memb[i].type->size - (int)old_size);
                     } /* end if */
-                } /* end for */
+                } /* end if */
+            } /* end for */
 
-                /* Apply the accumulated size change to the datatype */
-                dt->size += accum_change;
-            } /* end if */
+            /* Apply the accumulated size change to the datatype */
+            dt->size += accum_change;
+	
+        } /* end case */
             break;
 
         /* Recurse on the VL information if it's VL or compound, then free VL sequence */
         case H5T_VLEN:
             /* Recurse if it's VL or compound */
-            /* (If the type is compound and the force_conv flag is _not_ set, the type cannot change in size, so don't recurse) */
-            if((dt->parent->type==H5T_COMPOUND && dt->parent->force_conv) || dt->parent->type==H5T_VLEN) {
-                if((vlen_changed=H5T_vlen_mark(dt->parent,f,loc))<0)
+            if(dt->parent->type==H5T_COMPOUND || dt->parent->type==H5T_VLEN) {
+                if(H5T_vlen_mark(dt->parent,f,loc)<0)
                     HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "Unable to set VL location");
-                if(vlen_changed>0)
-                    ret_value=vlen_changed;
             } /* end if */
 
             /* Mark this VL sequence */
-            if((vlen_changed=H5T_vlen_set_loc(dt,f,loc))<0)
+            if(H5T_vlen_set_loc(dt,f,loc)<0)
                 HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "Unable to set VL location");
-            if(vlen_changed>0)
-                ret_value=vlen_changed;
             break;
 
         default:
@@ -704,4 +558,3 @@ H5T_vlen_mark(H5T_t *dt, H5F_t *f, H5T_vlen_loc_t loc)
 done:
     FUNC_LEAVE(ret_value);
 }   /* end H5T_vlen_mark() */
-

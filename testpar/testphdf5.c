@@ -14,15 +14,11 @@ int chunkdim1;
 int nerrors = 0;			/* errors count */
 int verbose = 0;			/* verbose, default as no. */
 
-/* FilePrefix defines where the temporary parallel test files should be. */
-/* In a parallel system, filesystem suitable for compiling are unlikly */
-/* the right place for parallel I/O.  There is no common used pathname */
-/* for the parallel file system.  So, /tmp is used as the default. */
 #ifdef __PUMAGON__
 /* For the PFS of TFLOPS */
 char *fileprefix = "pfs:/pfs_grande/multi/tmp_1/";
 #else
-char *fileprefix = "/tmp/";
+char *fileprefix = NULL;		/* file prefix, default as NULL */
 #endif
 size_t fileprefixlen;			/* file prefix length */
 
@@ -34,8 +30,7 @@ int doread=1;				/* read test */
 int dowrite=1;				/* write test */
 char    *filenames[]={ "ParaEg1.h5f",
 		       "ParaEg2.h5f",
-		       "ParaEg3.h5f",
-                       "ParaMdset.h5f" };
+		       "ParaEg3.h5f" };
 
 
 
@@ -45,8 +40,7 @@ char    *filenames[]={ "ParaEg1.h5f",
 /* continue. */
 #include <sys/types.h>
 #include <sys/stat.h>
-
-void pause_proc(void)
+void pause_proc(MPI_Comm comm, int argc, char **argv)
 {
 
     int pid;
@@ -61,6 +55,11 @@ void pause_proc(void)
     int  mpi_namelen;		
     char mpi_name[MPI_MAX_PROCESSOR_NAME];
 
+#ifdef DISABLED
+    /* check if an pause interval option is given */
+    if (--argc > 0 && isdigit(*++argv))
+	time_int = atoi(*argv);
+#endif
     pid = getpid();
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
@@ -76,16 +75,7 @@ void pause_proc(void)
 	    fflush(stdout);
 	    sleep(time_int);
 	}
-    MPI_Barrier(MPI_COMM_WORLD);
-}
-
-/* Use the Profile feature of MPI to call the pause_proc() */
-int MPI_Init(int *argc, char ***argv)
-{
-    int ret_code;
-    ret_code=PMPI_Init(argc, argv);
-    pause_proc();
-    return (ret_code);
+    MPI_Barrier(comm);
 }
 #endif	/* USE_PAUSE */
 
@@ -233,6 +223,10 @@ main(int argc, char **argv)
 	printf("===================================\n");
     }
 
+#ifdef USE_PAUSE
+    pause_proc(MPI_COMM_WORLD, argc, argv);
+#endif
+
     if (parse_options(argc, argv) != 0){
 	if (MAINPROCESS)
 	    usage();
@@ -254,10 +248,6 @@ main(int argc, char **argv)
 
 	MPI_BANNER("testing extendible dataset independent write...");
 	extend_writeInd(filenames[2]);
-
-	MPI_BANNER("testing multiple datasets write ...");
-	multiple_dset_write(filenames[3]);
-
     }
     if (doread){
 	MPI_BANNER("testing dataset independent read...");

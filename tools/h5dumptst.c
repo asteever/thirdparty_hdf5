@@ -248,14 +248,15 @@ int point = 100;
 
 static void test_softlink(void) {
 hid_t fid, root;
+herr_t status;
 
   fid = H5Fcreate(FILE4, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
   root = H5Gopen (fid, "/");
 
-  H5Glink (root, H5G_LINK_SOFT, "somevalue", "slink1");
+  status = H5Glink (root, H5G_LINK_SOFT, "somevalue", "slink1");
 
-  H5Glink (root, H5G_LINK_SOFT, "linkvalue", "slink2");
+  status = H5Glink (root, H5G_LINK_SOFT, "linkvalue", "slink2");
 
   H5Gclose(root);
 
@@ -1017,7 +1018,7 @@ const int perm[4] = {0,1,2,3};  /* the 0'th and the 3'rd indices are permuted */
   H5Fclose(fid);
 
 }
-static hid_t mkstr(int size, H5T_str_t pad) {
+static hid_t mkstr(int size, int pad) {
 hid_t type;
 
   if ((type=H5Tcopy(H5T_C_S1))<0) return -1;
@@ -1159,8 +1160,7 @@ size_t mdims[2];
 static void test_str2(void) {
 hid_t fid, group, attr, dataset, space, space2, mem_space, hyper_space;
 hid_t fxdlenstr, fxdlenstr2, memtype;
-hsize_t dims[1], size[1], stride[1], count[1], block[1];
-hssize_t start[1];
+hsize_t dims[1], size[1], start[1], stride[1], count[1], block[1];
 
 
 int i;
@@ -1362,6 +1362,8 @@ void test_objref(void){
     uint32_t   *tu32;      /* Temporary pointer to uint32 data */
     intn        i;          /* counting variables */
     const char *write_comment="Foo!"; /* Comments for group */
+    herr_t		ret;		/* Generic return value		*/
+
 
     /* Allocate write & read buffers */
     wbuf=malloc(sizeof(hobj_ref_t)*SPACE1_DIM1);
@@ -1378,7 +1380,7 @@ void test_objref(void){
     group=H5Gcreate(fid1,"Group1",-1);
 
     /* Set group's comment */
-    H5Gset_comment(group,".",write_comment);
+    ret=H5Gset_comment(group,".",write_comment);
 
     /* Create a dataset (inside Group1) */
     dataset=H5Dcreate(group,"Dataset1",H5T_STD_U32BE,sid1,H5P_DEFAULT);
@@ -1387,72 +1389,72 @@ void test_objref(void){
         *tu32++=i*3;
 
     /* Write selection to disk */
-    H5Dwrite(dataset,H5T_NATIVE_UINT,H5S_ALL,H5S_ALL,H5P_DEFAULT,wbuf);
+    ret=H5Dwrite(dataset,H5T_NATIVE_UINT,H5S_ALL,H5S_ALL,H5P_DEFAULT,wbuf);
 
     /* Close Dataset */
-    H5Dclose(dataset);
+    ret = H5Dclose(dataset);
 
     /* Create another dataset (inside Group1) */
     dataset=H5Dcreate(group,"Dataset2",H5T_STD_U8BE,sid1,H5P_DEFAULT);
 
     /* Close Dataset */
-    H5Dclose(dataset);
+    ret = H5Dclose(dataset);
 
     /* Create a datatype to refer to */
     tid1 = H5Tcreate (H5T_COMPOUND, sizeof(s1_t));
 
     /* Insert fields */
-    H5Tinsert (tid1, "a", HOFFSET(s1_t,a), H5T_STD_I32BE);
+    ret=H5Tinsert (tid1, "a", HOFFSET(s1_t,a), H5T_STD_I32BE);
 
-    H5Tinsert (tid1, "b", HOFFSET(s1_t,b), H5T_IEEE_F32BE);
+    ret=H5Tinsert (tid1, "b", HOFFSET(s1_t,b), H5T_IEEE_F32BE);
 
-    H5Tinsert (tid1, "c", HOFFSET(s1_t,c), H5T_IEEE_F32BE);
+    ret=H5Tinsert (tid1, "c", HOFFSET(s1_t,c), H5T_IEEE_F32BE);
 
     /* Save datatype for later */
-    H5Tcommit (group, "Datatype1", tid1);
+    ret=H5Tcommit (group, "Datatype1", tid1);
 
     /* Close datatype */
-    H5Tclose(tid1);
+    ret = H5Tclose(tid1);
 
     /* Close group */
-    H5Gclose(group);
+    ret = H5Gclose(group);
 
     /* Create a dataset */
     dataset=H5Dcreate(fid1,"Dataset3",H5T_STD_REF_OBJ,sid1,H5P_DEFAULT);
 
     /* Create reference to dataset */
-    H5Rcreate(&wbuf[0],fid1,"/Group1/Dataset1",H5R_OBJECT,-1);
-    H5Rget_object_type(dataset,&wbuf[0]);
+    ret = H5Rcreate(&wbuf[0],fid1,"/Group1/Dataset1",H5R_OBJECT,-1);
+    ret = H5Rget_object_type(dataset,&wbuf[0]);
 
     /* Create reference to dataset */
-    H5Rcreate(&wbuf[1],fid1,"/Group1/Dataset2",H5R_OBJECT,-1);
+    ret = H5Rcreate(&wbuf[1],fid1,"/Group1/Dataset2",H5R_OBJECT,-1);
 
-    H5Rget_object_type(dataset,&wbuf[1]);
+    ret = H5Rget_object_type(dataset,&wbuf[1]);
  
     /* Create reference to group */
-    H5Rcreate(&wbuf[2],fid1,"/Group1",H5R_OBJECT,-1);
+    ret = H5Rcreate(&wbuf[2],fid1,"/Group1",H5R_OBJECT,-1);
 
-    H5Rget_object_type(dataset,&wbuf[2]);
+    ret = H5Rget_object_type(dataset,&wbuf[2]);
 
 
     /* Create reference to named datatype */
-    H5Rcreate(&wbuf[3],fid1,"/Group1/Datatype1",H5R_OBJECT,-1);
+    ret = H5Rcreate(&wbuf[3],fid1,"/Group1/Datatype1",H5R_OBJECT,-1);
 
-    H5Rget_object_type(dataset,&wbuf[3]);
+    ret = H5Rget_object_type(dataset,&wbuf[3]);
 
 
     /* Write selection to disk */
-    H5Dwrite(dataset,H5T_STD_REF_OBJ,H5S_ALL,H5S_ALL,H5P_DEFAULT,wbuf);
+    ret=H5Dwrite(dataset,H5T_STD_REF_OBJ,H5S_ALL,H5S_ALL,H5P_DEFAULT,wbuf);
 
 
     /* Close disk dataspace */
-    H5Sclose(sid1);
+    ret = H5Sclose(sid1);
    
     /* Close Dataset */
-    H5Dclose(dataset);
+    ret = H5Dclose(dataset);
 
     /* Close file */
-    H5Fclose(fid1);
+    ret = H5Fclose(fid1);
 
     /* Free memory buffers */
     free(wbuf);
@@ -1484,6 +1486,7 @@ void test_datareg(void){
                *drbuf;      /* Buffer for reading numeric data from disk */
     uint8_t    *tu8;        /* Temporary pointer to uint8 data */
     intn        i;          /* counting variables */
+    herr_t		ret;		/* Generic return value		*/
 
     /* Allocate write & read buffers */
     wbuf=calloc(sizeof(hdset_reg_ref_t), SPACE1_DIM1);
@@ -1504,10 +1507,10 @@ void test_datareg(void){
         *tu8++=i*3;
 
     /* Write selection to disk */
-    H5Dwrite(dset2,H5T_NATIVE_UCHAR,H5S_ALL,H5S_ALL,H5P_DEFAULT,dwbuf);
+    ret=H5Dwrite(dset2,H5T_NATIVE_UCHAR,H5S_ALL,H5S_ALL,H5P_DEFAULT,dwbuf);
 
     /* Close Dataset */
-    H5Dclose(dset2);
+    ret = H5Dclose(dset2);
 
     /* Create dataspace for the reference dataset */
     sid1 = H5Screate_simple(SPACE1_RANK, dims1, NULL);
@@ -1522,12 +1525,12 @@ void test_datareg(void){
     stride[0]=1; stride[1]=1;
     count[0]=6; count[1]=6;
     block[0]=1; block[1]=1;
-    H5Sselect_hyperslab(sid2,H5S_SELECT_SET,start,stride,count,block);
+    ret = H5Sselect_hyperslab(sid2,H5S_SELECT_SET,start,stride,count,block);
 
-    H5Sget_select_npoints(sid2);
+    ret = H5Sget_select_npoints(sid2);
 
     /* Store first dataset region */
-    H5Rcreate(&wbuf[0],fid1,"/Dataset2",H5R_DATASET_REGION,sid2);
+    ret = H5Rcreate(&wbuf[0],fid1,"/Dataset2",H5R_DATASET_REGION,sid2);
 
     /* Select sequence of ten points for second reference */
     coord1[0][0]=6; coord1[0][1]=9;
@@ -1540,27 +1543,27 @@ void test_datareg(void){
     coord1[7][0]=9; coord1[7][1]=0;
     coord1[8][0]=7; coord1[8][1]=1;
     coord1[9][0]=3; coord1[9][1]=3;
-    H5Sselect_elements(sid2,H5S_SELECT_SET,POINT1_NPOINTS,(const hssize_t **)coord1);
+    ret = H5Sselect_elements(sid2,H5S_SELECT_SET,POINT1_NPOINTS,(const hssize_t **)coord1);
 
-    H5Sget_select_npoints(sid2);
+    ret = H5Sget_select_npoints(sid2);
 
     /* Store second dataset region */
-    H5Rcreate(&wbuf[1],fid1,"/Dataset2",H5R_DATASET_REGION,sid2);
+    ret = H5Rcreate(&wbuf[1],fid1,"/Dataset2",H5R_DATASET_REGION,sid2);
 
     /* Write selection to disk */
-    H5Dwrite(dset1,H5T_STD_REF_DSETREG,H5S_ALL,H5S_ALL,H5P_DEFAULT,wbuf);
+    ret=H5Dwrite(dset1,H5T_STD_REF_DSETREG,H5S_ALL,H5S_ALL,H5P_DEFAULT,wbuf);
 
     /* Close disk dataspace */
-    H5Sclose(sid1);
+    ret = H5Sclose(sid1);
     
     /* Close Dataset */
-    H5Dclose(dset1);
+    ret = H5Dclose(dset1);
 
     /* Close uint8 dataset dataspace */
-    H5Sclose(sid2);
+    ret = H5Sclose(sid2);
     
     /* Close file */
-    H5Fclose(fid1);
+    ret = H5Fclose(fid1);
 
     /* Free memory buffers */
     free(wbuf);

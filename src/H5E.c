@@ -59,7 +59,6 @@ static const H5E_major_mesg_t H5E_major_mesg_g[] = {
     {H5E_EFL, 		"External file list"},
     {H5E_RAGGED,	"Ragged array layer"},
     {H5E_REFERENCE,	"References layer"},
-    {H5E_VFL,		"Virtual File Layer"},
 };
 
 static const H5E_minor_mesg_t H5E_minor_mesg_g[] = {
@@ -520,41 +519,6 @@ H5E_push(H5E_major_t maj_num, H5E_minor_t min_num, const char *function_name,
     }
     
     return SUCCEED; /*don't use FUNC_LEAVE() here */
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5Epush
- *
- * Purpose:	Pushes a new error record onto error stack for the current
- *		thread.  The error has major and minor numbers MAJ_NUM and
- *		MIN_NUM, the name of a function where the error was detected,
- *		the name of the file where the error was detected, the
- *		line within that file, and an error description string.  The
- *		function name, file name, and error description strings must
- *		be statically allocated.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *		Monday, October 18, 1999
- *
- * Notes: 	Basically a public API wrapper around the H5E_push function.
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5Epush(const char *file, const char *func, unsigned line, H5E_major_t maj,
-	H5E_minor_t min, const char *str)
-{
-    herr_t	ret_value;
-    
-    FUNC_ENTER(H5Epush, FAIL);
-    H5TRACE6("e","ssIuEjEns",file,func,line,maj,min,str);
-    ret_value = H5E_push(maj, min, func, file, line, str);
-    FUNC_LEAVE(ret_value);
 }
 
 

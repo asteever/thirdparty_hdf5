@@ -13,9 +13,6 @@
 #include <hdf5.h>
 #include <stdio.h>
 
-#define ESCAPE_HTML	1
-
-
 /*
  * Information about how to format output.
  */
@@ -80,15 +77,6 @@ typedef struct h5dump_t {
      *		     escape.  If `ascii' is zero then then 1-byte integers are
      *		     printed as numeric values.  The default is zero.
      *
-     *	 str_locale: Determines how strings are printed. If zero then strings
-     *		     are printed like in C except. If set to ESCAPE_HTML then
-     *		     strings are printed using HTML encoding where each
-     *		     character not in the class [a-zA-Z0-9] is substituted
-     *		     with `%XX' where `X' is a hexadecimal digit.
-     *
-     *	 str_repeat: If set to non-zero then any character value repeated N
-     *		     or more times is printed as 'C'*N
-     *
      * Numeric data is also subject to the formats for individual elements.
      */
     hbool_t	raw;
@@ -106,8 +94,6 @@ typedef struct h5dump_t {
     const char	*fmt_double;
     const char	*fmt_float;
     int		ascii;
-    int		str_locale;
-    int		str_repeat;
 
     /*
      * Fields associated with compound array members.
@@ -192,10 +178,7 @@ typedef struct h5dump_t {
     /*
      * Fields associated with entire lines.
      *
-     *	 ncols:	    Number of columns per line defaults to 80.
-     *
-     *	 per_line:  If this field has a positive value then every Nth element
-     *	 	    will be printed at the beginning of a line.
+     *   ncols:	    Number of columns per line defaults to 80.
      *
      *	 pre:       Each line of output contains an optional prefix area
      *		    before the data. This area can contain the index for the
@@ -241,7 +224,6 @@ typedef struct h5dump_t {
      *		    unless it wouldn't fit.
      */
     int		line_ncols;		/*columns of output		*/
-    size_t	line_per_line;		/*max elements per line		*/
     const char	*line_pre;		/*prefix at front of each line	*/
     const char	*line_1st;		/*alternate pre. on first line	*/
     const char	*line_cont;		/*alternate pre. on continuation*/
@@ -257,6 +239,7 @@ int h5dump_mem(FILE *stream, const h5dump_t *info, hid_t type, hid_t space,
 	       void *mem);
 int copy_atomic_char(char* output, char* input, int numchar, int freespace);
 
+
 /*if we get a new program that needs to use the library add its name here*/
 typedef enum {
     UNKNOWN,
@@ -264,43 +247,6 @@ typedef enum {
     H5DUMP
 } ProgType;
 
-
-
-/*struct taken from the dumper. needed in table struct*/
-typedef struct obj_t{
-unsigned long objno[2];
-char objname[1024];
-int displayed;
-int recorded;
-int objflag;
-} obj_t;
-
-
-/*struct for the tables that the find_objs function uses*/
-
-typedef struct table_t{
-int size;
-int nobjs;
-obj_t *objs;
-} table_t;
-
-
-
-/*this struct stores the information that is passed to the find_objs function*/
-typedef struct find_objs_t {
-	int prefix_len; 
-	char *prefix;
-	int threshold; /* should be 0 or 1 */
-	table_t *group_table;
-	table_t *type_table;
-	table_t *dset_table;
-	int status;
-} find_objs_t;
-
-herr_t find_objs(hid_t group, const char *name, void *op_data);
-int search_obj (table_t *temp, unsigned long *);
-void init_table(table_t **temp);
-void init_prefix(char **temp, int);
 
 /*
 	taken from h5dump.h
@@ -349,7 +295,6 @@ extern ProgType programtype;
 #define CTYPE		"CTYPE"
 #define CONCATENATOR "//"
 #define DATASET "DATASET"
-#define OBJID "OBJECTID"
 #define BEGIN		"{"
 #define END		"}"
 #endif

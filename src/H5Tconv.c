@@ -348,8 +348,8 @@ static intn interface_initialize_g = 0;
             if (d_mv) HDmemcpy(dst, &aligned, dt_size);			      \
 									      \
 	    /* Advance pointers */					      \
-	    src = (char *)src + direction * s_stride;			      \
-	    dst = (char *)dst + direction * d_stride;			      \
+	    src = (char *)src + direction * s_stride;				      \
+	    dst = (char *)dst + direction * d_stride;				      \
         }								      \
         break;								      \
 									      \
@@ -446,8 +446,7 @@ H5T_conv_noop(hid_t UNUSED src_id, hid_t UNUSED dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_order(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
-	       size_t stride, void *_buf, void UNUSED *background,
-	       hid_t UNUSED dset_xfer_plist)
+	       size_t stride, void *_buf, void UNUSED *background, hid_t UNUSED dset_xfer_plist)
 {
     uint8_t	*buf = (uint8_t*)_buf;
     uint8_t	tmp;
@@ -553,8 +552,7 @@ H5T_conv_order(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
  */
 herr_t
 H5T_conv_b_b(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
-	     size_t stride, void *_buf, void UNUSED *background,
-	     hid_t UNUSED dset_xfer_plist)
+	     size_t stride, void *_buf, void UNUSED *background, hid_t UNUSED dset_xfer_plist)
 {
     uint8_t	*buf = (uint8_t*)_buf;
     H5T_t	*src=NULL, *dst=NULL;	/*source and dest data types	*/
@@ -668,10 +666,10 @@ H5T_conv_b_b(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
 	    }
 
 	    /*
-	     * Copy the significant part of the value. If the source is larger
-	     * than the destination then invoke the overflow function or copy
-	     * as many bits as possible. Zero extra bits in the destination.
-	     */
+             * Copy the significant part of the value. If the source is larger
+             * than the destination then invoke the overflow function or copy
+             * as many bits as possible. Zero extra bits in the destination.
+             */
 	    if (src->u.atomic.prec>dst->u.atomic.prec) {
 		if (!H5T_overflow_g ||
 		    (H5T_overflow_g)(src_id, dst_id, s, d)<0) {
@@ -687,8 +685,8 @@ H5T_conv_b_b(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
 	    }
 
 	    /*
-	     * Fill the destination padding areas.
-	     */
+             * Fill the destination padding areas.
+             */
 	    switch (dst->u.atomic.lsb_pad) {
 	    case H5T_PAD_ZERO:
 		H5T_bit_set(d, 0, dst->u.atomic.offset, FALSE);
@@ -790,96 +788,96 @@ H5T_conv_struct_init (H5T_t *src, H5T_t *dst, H5T_cdata_t *cdata)
     FUNC_ENTER (H5T_conv_struct_init, FAIL);
     
     if (!priv) {
-        /*
-         * Allocate private data structure and arrays.
-         */
-        if (NULL==(priv=cdata->priv=H5MM_calloc(sizeof(H5T_conv_struct_t))) ||
-            NULL==(priv->src2dst=H5MM_malloc(src->u.compnd.nmembs *
-                             sizeof(intn))) ||
-            NULL==(priv->src_memb_id=H5MM_malloc(src->u.compnd.nmembs *
-                                sizeof(hid_t))) ||
-            NULL==(priv->dst_memb_id=H5MM_malloc(dst->u.compnd.nmembs *
-                                sizeof(hid_t))) ||
-            NULL==(priv->memb_nelmts=H5MM_malloc(src->u.compnd.nmembs *
-                             sizeof(size_t)))) {
-            HRETURN_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL,
-                   "memory allocation failed");
-        }
-        src2dst = priv->src2dst;
+	/*
+	 * Allocate private data structure and arrays.
+	 */
+	if (NULL==(priv=cdata->priv=H5MM_calloc(sizeof(H5T_conv_struct_t))) ||
+	    NULL==(priv->src2dst=H5MM_malloc(src->u.compnd.nmembs *
+					     sizeof(intn))) ||
+	    NULL==(priv->src_memb_id=H5MM_malloc(src->u.compnd.nmembs *
+		         			sizeof(hid_t))) ||
+	    NULL==(priv->dst_memb_id=H5MM_malloc(dst->u.compnd.nmembs *
+		         			sizeof(hid_t))) ||
+	    NULL==(priv->memb_nelmts=H5MM_malloc(src->u.compnd.nmembs *
+						 sizeof(size_t)))) {
+	    HRETURN_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL,
+			   "memory allocation failed");
+	}
+	src2dst = priv->src2dst;
 
-        /*
-         * Insure that members are sorted.
-         */
-        H5T_sort_value(src, NULL);
-        H5T_sort_value(dst, NULL);
+	/*
+	 * Insure that members are sorted.
+	 */
+	H5T_sort_value(src, NULL);
+	H5T_sort_value(dst, NULL);
 
-        /*
-         * Build a mapping from source member number to destination member
-         * number. If some source member is not a destination member then that
-         * mapping element will be negative.  Also create atoms for each
-         * source and destination member data type so we can look up the
-         * member data type conversion functions later.
-         */
-        for (i=0; i<src->u.compnd.nmembs; i++) {
-            src2dst[i] = -1;
-            for (j=0; j<dst->u.compnd.nmembs; j++) {
-                if (!HDstrcmp (src->u.compnd.memb[i].name,
-                       dst->u.compnd.memb[j].name)) {
-                    src2dst[i] = j;
-                    break;
-                }
-            }
-            if (src2dst[i]>=0) {
-                type = H5T_copy (src->u.compnd.memb[i].type, H5T_COPY_ALL);
-                tid = H5I_register (H5I_DATATYPE, type);
-                assert (tid>=0);
-                priv->src_memb_id[i] = tid;
+	/*
+	 * Build a mapping from source member number to destination member
+	 * number. If some source member is not a destination member then that
+	 * mapping element will be negative.  Also create atoms for each
+	 * source and destination member data type so we can look up the
+	 * member data type conversion functions later.
+	 */
+	for (i=0; i<src->u.compnd.nmembs; i++) {
+	    src2dst[i] = -1;
+	    for (j=0; j<dst->u.compnd.nmembs; j++) {
+		if (!HDstrcmp (src->u.compnd.memb[i].name,
+			       dst->u.compnd.memb[j].name)) {
+		    src2dst[i] = j;
+		    break;
+		}
+	    }
+	    if (src2dst[i]>=0) {
+		type = H5T_copy (src->u.compnd.memb[i].type, H5T_COPY_ALL);
+		tid = H5I_register (H5I_DATATYPE, type);
+		assert (tid>=0);
+		priv->src_memb_id[i] = tid;
 
-                type = H5T_copy (dst->u.compnd.memb[src2dst[i]].type,
-                     H5T_COPY_ALL);
-                tid = H5I_register (H5I_DATATYPE, type);
-                assert (tid>=0);
-                priv->dst_memb_id[src2dst[i]] = tid;
-            }
-        }
+		type = H5T_copy (dst->u.compnd.memb[src2dst[i]].type,
+				 H5T_COPY_ALL);
+		tid = H5I_register (H5I_DATATYPE, type);
+		assert (tid>=0);
+		priv->dst_memb_id[src2dst[i]] = tid;
+	    }
+	}
 
-        /*
-         * Those members which are in both the source and destination must be
-         * the same size and shape arrays.
-         */
-        for (i=0; i<src->u.compnd.nmembs; i++) {
-            if (src2dst[i]>=0) {
-                H5T_cmemb_t *src_memb = src->u.compnd.memb + i;
-                H5T_cmemb_t *dst_memb = dst->u.compnd.memb + src2dst[i];
-                if (src_memb->ndims != dst_memb->ndims) {
-                    HRETURN_ERROR(H5E_DATATYPE, H5E_UNSUPPORTED, FAIL,
-                          "source and dest members have incompatible "
-                          "size or shape");
-                }
-                for (j=0; j<src_memb->ndims; j++) {
-                    if (src_memb->dim[j] != dst_memb->dim[j]) {
-                        HRETURN_ERROR(H5E_DATATYPE, H5E_UNSUPPORTED, FAIL,
-                              "source and dest members have "
-                              "incompatible size or shape");
-                    }
+	/*
+	 * Those members which are in both the source and destination must be
+	 * the same size and shape arrays.
+	 */
+	for (i=0; i<src->u.compnd.nmembs; i++) {
+	    if (src2dst[i]>=0) {
+		H5T_cmemb_t *src_memb = src->u.compnd.memb + i;
+		H5T_cmemb_t *dst_memb = dst->u.compnd.memb + src2dst[i];
+		if (src_memb->ndims != dst_memb->ndims) {
+		    HRETURN_ERROR(H5E_DATATYPE, H5E_UNSUPPORTED, FAIL,
+				  "source and dest members have incompatible "
+				  "size or shape");
+		}
+		for (j=0; j<src_memb->ndims; j++) {
+		    if (src_memb->dim[j] != dst_memb->dim[j]) {
+			HRETURN_ERROR(H5E_DATATYPE, H5E_UNSUPPORTED, FAIL,
+				      "source and dest members have "
+				      "incompatible size or shape");
+		    }
 #ifndef LATER
-                    /* Their permutation vectors must be equal */
-                    if (src_memb->perm[j]!=dst_memb->perm[j]) {
-                        HRETURN_ERROR(H5E_DATATYPE, H5E_UNSUPPORTED, FAIL,
-                              "member permutations must be equal");
-                    }
+		    /* Their permutation vectors must be equal */
+		    if (src_memb->perm[j]!=dst_memb->perm[j]) {
+			HRETURN_ERROR(H5E_DATATYPE, H5E_UNSUPPORTED, FAIL,
+				      "member permutations must be equal");
+		    }
 #endif
-                }
-            }
-        }
+		}
+	    }
+	}
 
-        /* Calculate number of elements of each member */
-        for (i=0; i<src->u.compnd.nmembs; i++) {
-            priv->memb_nelmts[i] = 1;
-            for (j=0; j<src->u.compnd.memb[i].ndims; j++) {
-                priv->memb_nelmts[i] *= src->u.compnd.memb[i].dim[j];
-            }
-        }
+	/* Calculate number of elements of each member */
+	for (i=0; i<src->u.compnd.nmembs; i++) {
+	    priv->memb_nelmts[i] = 1;
+	    for (j=0; j<src->u.compnd.memb[i].ndims; j++) {
+		priv->memb_nelmts[i] *= src->u.compnd.memb[i].dim[j];
+	    }
+	}
     }
 
     /*
@@ -890,26 +888,27 @@ H5T_conv_struct_init (H5T_t *src, H5T_t *dst, H5T_cdata_t *cdata)
     H5MM_xfree(priv->memb_path);
     if (NULL==(priv->memb_path=H5MM_malloc(src->u.compnd.nmembs *
 					   sizeof(H5T_path_t*)))) {
-        HRETURN_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL,
+	HRETURN_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL,
 		       "memory allocation failed");
     }
 
     for (i=0; i<src->u.compnd.nmembs; i++) {
-        if (src2dst[i]>=0) {
-            H5T_path_t *tpath = H5T_path_find(src->u.compnd.memb[i].type,
-                      dst->u.compnd.memb[src2dst[i]].type, NULL, NULL);
-
-            if (NULL==(priv->memb_path[i] = tpath)) {
-                H5MM_xfree(priv->src2dst);
-                H5MM_xfree(priv->src_memb_id);
-                H5MM_xfree(priv->dst_memb_id);
-                H5MM_xfree(priv->memb_path);
-                H5MM_xfree(priv->memb_nelmts);
-                cdata->priv = priv = H5MM_xfree (priv);
-                HRETURN_ERROR (H5E_DATATYPE, H5E_UNSUPPORTED, FAIL,
-                       "unable to convert member data type");
-            }
-        }
+	if (src2dst[i]>=0) {
+	    H5T_path_t *tpath;
+	    tpath = H5T_path_find(src->u.compnd.memb[i].type,
+				  dst->u.compnd.memb[src2dst[i]].type,
+				  NULL, NULL);
+	    if (NULL==(priv->memb_path[i] = tpath)) {
+		H5MM_xfree(priv->src2dst);
+		H5MM_xfree(priv->src_memb_id);
+		H5MM_xfree(priv->dst_memb_id);
+		H5MM_xfree(priv->memb_path);
+		H5MM_xfree(priv->memb_nelmts);
+		cdata->priv = priv = H5MM_xfree (priv);
+		HRETURN_ERROR (H5E_DATATYPE, H5E_UNSUPPORTED, FAIL,
+			       "unable to convert member data type");
+	    }
+	}
     }
 
     cdata->need_bkg = H5T_BKG_TEMP;
@@ -1016,7 +1015,8 @@ H5T_conv_struct(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
 	assert (priv);
 	assert (bkg && cdata->need_bkg>=H5T_BKG_TEMP);
 
-	if (cdata->recalc && H5T_conv_struct_init (src, dst, cdata)<0) {
+	if (cdata->recalc &&
+	    H5T_conv_struct_init (src, dst, cdata)<0) {
 	    HRETURN_ERROR (H5E_DATATYPE, H5E_CANTINIT, FAIL,
 			   "unable to initialize conversion data");
 	}
@@ -1053,8 +1053,7 @@ H5T_conv_struct(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
 	     * right side.
 	     */
 	    for (i=0, offset=0; i<src->u.compnd.nmembs; i++) {
-		if (src2dst[i]<0)
-		    continue;
+		if (src2dst[i]<0) continue;
 		src_memb = src->u.compnd.memb + i;
 		dst_memb = dst->u.compnd.memb + src2dst[i];
 
@@ -1064,18 +1063,18 @@ H5T_conv_struct(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
 				    priv->dst_memb_id[src2dst[i]],
 				    priv->memb_nelmts[i],
 				    0, /*no striding*/
-				    buf+src_memb->offset,
-				    bkg+dst_memb->offset,dset_xfer_plist)<0) {
+				    buf + src_memb->offset,
+				    bkg + dst_memb->offset,dset_xfer_plist)<0) {
 			HRETURN_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL,
 				      "unable to convert compound data type "
 				      "member");
 		    }
 		    HDmemmove (buf+offset, buf+src_memb->offset,
-                               dst_memb->size);
+			       dst_memb->size);
 		    offset += dst_memb->size;
 		} else {
 		    HDmemmove (buf+offset, buf+src_memb->offset,
-                               src_memb->size);
+			       src_memb->size);
 		    offset += src_memb->size;
 		}
 	    }
@@ -1088,8 +1087,7 @@ H5T_conv_struct(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
 	     * background buffer.
 	     */
 	    for (i=src->u.compnd.nmembs-1; i>=0; --i) {
-		if (src2dst[i]<0)
-		    continue;
+		if (src2dst[i]<0) continue;
 		src_memb = src->u.compnd.memb + i;
 		dst_memb = dst->u.compnd.memb + src2dst[i];
 
@@ -1100,8 +1098,7 @@ H5T_conv_struct(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
 				    priv->dst_memb_id[src2dst[i]],
 				    priv->memb_nelmts[i],
 				    0, /*no striding*/
-				    buf+offset, bkg+dst_memb->offset,
-				    dset_xfer_plist)<0) {
+				    buf+offset, bkg+dst_memb->offset,dset_xfer_plist)<0) {
 			HRETURN_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL,
 				      "unable to convert compound data type "
 				      "member");
@@ -1184,8 +1181,7 @@ H5T_conv_struct(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
  */
 herr_t
 H5T_conv_struct_opt(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		    size_t nelmts, size_t stride, void *_buf, void *_bkg,
-		    hid_t dset_xfer_plist)
+		    size_t nelmts, size_t stride, void *_buf, void *_bkg, hid_t dset_xfer_plist)
 {
     uint8_t	*buf = (uint8_t *)_buf;	/*cast for pointer arithmetic	*/
     uint8_t	*bkg = (uint8_t *)_bkg;	/*background pointer arithmetic	*/
@@ -1229,7 +1225,7 @@ H5T_conv_struct_opt(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
 	}
 	priv = (H5T_conv_struct_t *)(cdata->priv);
 	src2dst = priv->src2dst;
-            
+	
 	/*
 	 * If the destination type is not larger than the source type then
 	 * this conversion function is guaranteed to work (provided all
@@ -1242,35 +1238,28 @@ H5T_conv_struct_opt(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
 	 */
 	if (dst->size > src->size) {
 	    for (i=0, offset=0; i<src->u.compnd.nmembs; i++) {
-		if (src2dst[i]<0)
-		    continue;
+		if (src2dst[i]<0) continue;
 		src_memb = src->u.compnd.memb + i;
 		dst_memb = dst->u.compnd.memb + src2dst[i];
 		src_memb_size = src_memb->size / priv->memb_nelmts[i];
 		dst_memb_size = dst_memb->size / priv->memb_nelmts[i];
 		for (j=0; j<(intn)(priv->memb_nelmts[i]); j++) {
-		    if (dst_memb_size > src_memb_size)
+		    if (dst_memb_size > src_memb_size) {
 			offset += src_memb_size;
+		    }
 		}
 	    }
 	    for (i=src->u.compnd.nmembs-1; i>=0; --i) {
-		if (src2dst[i]<0)
-		    continue;
+		if (src2dst[i]<0) continue;
 		src_memb = src->u.compnd.memb + i;
 		dst_memb = dst->u.compnd.memb + src2dst[i];
 		src_memb_size = src_memb->size / priv->memb_nelmts[i];
 		dst_memb_size = dst_memb->size / priv->memb_nelmts[i];
 
-		for (j=(intn)(priv->memb_nelmts[i]-1); j>=0; --j) {
+		for (j=priv->memb_nelmts[i]-1; j>=0; --j) {
 		    if (dst_memb_size > src_memb_size) {
 			offset -= src_memb_size;
 			if (dst_memb_size > src->size-offset) {
-			    H5MM_xfree(priv->src2dst);
-			    H5MM_xfree(priv->src_memb_id);
-			    H5MM_xfree(priv->dst_memb_id);
-			    H5MM_xfree(priv->memb_path);
-			    H5MM_xfree(priv->memb_nelmts);
-			    cdata->priv = priv = H5MM_xfree (priv);
 			    HRETURN_ERROR(H5E_DATATYPE, H5E_UNSUPPORTED, FAIL,
 					  "convertion is unsupported by this "
 					  "function");
@@ -1306,7 +1295,8 @@ H5T_conv_struct_opt(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
 	}
 
 	/* Update cached data if necessary */
-	if (cdata->recalc && H5T_conv_struct_init (src, dst, cdata)<0) {
+	if (cdata->recalc &&
+	    H5T_conv_struct_init (src, dst, cdata)<0) {
 	    HRETURN_ERROR (H5E_DATATYPE, H5E_CANTINIT, FAIL,
 			   "unable to initialize conversion data");
 	}
@@ -1329,8 +1319,7 @@ H5T_conv_struct_opt(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
 	 * left as possible in the buffer.
 	 */
 	for (i=0, offset=0; i<src->u.compnd.nmembs; i++) {
-	    if (src2dst[i]<0)
-		continue;
+	    if (src2dst[i]<0) continue;
 	    src_memb = src->u.compnd.memb + i;
 	    dst_memb = dst->u.compnd.memb + src2dst[i];
 	    src_memb_size = src_memb->size / priv->memb_nelmts[i];
@@ -1358,7 +1347,8 @@ H5T_conv_struct_opt(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
 		} else {
 		    for (xbuf=buf, elmtno=0; elmtno<nelmts; elmtno++) {
 			HDmemmove(xbuf+offset,
-				  xbuf+src_memb->offset+j*src_memb_size, src_memb_size);
+				  xbuf+src_memb->offset+j*src_memb_size,
+				  src_memb_size);
 			xbuf += stride ? stride : src->size;
 		    }
 		    offset += src_memb_size;
@@ -1373,14 +1363,13 @@ H5T_conv_struct_opt(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
 	 * bkg buffer.
 	 */
 	for (i=src->u.compnd.nmembs-1; i>=0; --i) {
-	    if (src2dst[i]<0)
-		continue;
+	    if (src2dst[i]<0) continue;
 	    src_memb = src->u.compnd.memb + i;
 	    dst_memb = dst->u.compnd.memb + src2dst[i];
 	    src_memb_size = src_memb->size / priv->memb_nelmts[i];
 	    dst_memb_size = dst_memb->size / priv->memb_nelmts[i];
 
-	    for (j=(intn)(priv->memb_nelmts[i]-1); j>=0; --j) {
+	    for (j=priv->memb_nelmts[i]-1; j>=0; --j) {
 		if (dst_memb_size > src_memb_size) {
 		    offset -= src_memb_size;
 		    xbuf = buf + offset;
@@ -1391,7 +1380,8 @@ H5T_conv_struct_opt(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
 				    nelmts, stride?stride:src->size,
 				    xbuf, xbkg, dset_xfer_plist)<0) {
 			HRETURN_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL,
-				      "unable to convert compound data type member");
+				      "unable to convert compound data "
+				      "type member");
 		    }
 		    for (elmtno=0; elmtno<nelmts; elmtno++) {
 			HDmemmove(xbkg, xbuf, dst_memb_size);
@@ -1586,8 +1576,7 @@ H5T_conv_enum_init(H5T_t *src, H5T_t *dst, H5T_cdata_t *cdata)
  */
 herr_t
 H5T_conv_enum(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
-	      size_t stride, void *_buf, void UNUSED *bkg,
-	      hid_t UNUSED dset_xfer_plist)
+	      size_t stride, void *_buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     uint8_t	*buf = (uint8_t*)_buf;	/*cast for pointer arithmetic	*/
     H5T_t	*src=NULL, *dst=NULL;	/*src and dst data types	*/
@@ -1659,7 +1648,7 @@ H5T_conv_enum(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
 	 * Direction of conversion.
 	 */
 	if (stride) {
-	    src_delta = dst_delta = (intn)stride;
+	    src_delta = dst_delta = stride;
 	    s = d = buf;
 	} else if (dst->size <= src->size) {
 	    src_delta = (int)src->size; /*overflow shouldn't be possible*/
@@ -1766,8 +1755,7 @@ H5T_conv_enum(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
  */
 herr_t
 H5T_conv_vlen(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
-	      size_t stride, void *_buf, void UNUSED *_bkg,
-	      hid_t dset_xfer_plist)
+	      size_t stride, void *_buf, void UNUSED *_bkg, hid_t dset_xfer_plist)
 {
     const H5F_xfer_t	   *xfer_parms = NULL;
     H5T_path_t	*tpath;			/* Type conversion path		     */
@@ -1778,7 +1766,7 @@ H5T_conv_vlen(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
     uint8_t	*s, *sp, *d, *dp;	/*source and dest traversal ptrs     */
     uint8_t 	**dptr;		     /*pointer to correct destination pointer*/
     size_t	src_delta, dst_delta;	/*source & destination stride	     */
-    hssize_t 	seq_len;     /*the number of elements in the current sequence*/
+    hsize_t 	seq_len;     /*the number of elements in the current sequence*/
     size_t	src_base_size, dst_base_size;/*source & destination base size*/
     size_t	src_size, dst_size;/*source & destination total size in bytes*/
     hid_t 	conv_buf_id;		/*ID for comversion buffer	     */
@@ -1830,7 +1818,7 @@ H5T_conv_vlen(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
             /* Get the dataset transfer property list */
             if (H5P_DEFAULT == dset_xfer_plist) {
                 xfer_parms = &H5F_xfer_dflt;
-            } else if (H5P_DATA_XFER != H5P_get_class(dset_xfer_plist) ||
+            } else if (H5P_DATASET_XFER != H5P_get_class(dset_xfer_plist) ||
                    NULL == (xfer_parms = H5I_object(dset_xfer_plist))) {
                 HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not xfer parms");
             }
@@ -1897,7 +1885,6 @@ H5T_conv_vlen(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
 
                 /* Get length of sequences in bytes */
                 seq_len=(*(src->u.vlen.getlen))(src->u.vlen.f,s);
-                assert(seq_len>=0);
                 src_size=seq_len*src_base_size;
                 dst_size=seq_len*dst_base_size;
 
@@ -1980,8 +1967,7 @@ H5T_conv_vlen(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
  */
 herr_t
 H5T_conv_i_i (hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
-	      size_t stride, void *buf, void UNUSED *bkg,
-	      hid_t UNUSED dset_xfer_plist)
+	      size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     H5T_t	*src = NULL;		/*source data type		*/
     H5T_t	*dst = NULL;		/*destination data type		*/
@@ -2349,8 +2335,7 @@ H5T_conv_i_i (hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
  */
 herr_t
 H5T_conv_f_f (hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
-	      size_t stride, void *buf, void UNUSED *bkg,
-	      hid_t UNUSED dset_xfer_plist)
+	      size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     /* Traversal-related variables */
     H5T_t	*src_p;			/*source data type		*/
@@ -2759,8 +2744,7 @@ H5T_conv_f_f (hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
  */
 herr_t
 H5T_conv_s_s (hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
-	      size_t stride, void *buf, void UNUSED *bkg,
-	      hid_t UNUSED dset_xfer_plist)
+	      size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     H5T_t	*src=NULL;		/*source data type		*/
     H5T_t	*dst=NULL;		/*destination data type		*/
@@ -2995,8 +2979,7 @@ H5T_conv_s_s (hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
  */
 herr_t
 H5T_conv_schar_uchar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		     size_t nelmts, size_t stride, void *buf,
-		     void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
+		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_schar_uchar, FAIL);
     H5T_CONV_su(SCHAR, UCHAR,
@@ -3023,8 +3006,7 @@ H5T_conv_schar_uchar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_uchar_schar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		     size_t nelmts, size_t stride, void *buf,
-		     void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
+		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_uchar_schar, FAIL);
     H5T_CONV_us(UCHAR, SCHAR,
@@ -3052,8 +3034,7 @@ H5T_conv_uchar_schar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_schar_short(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		     size_t nelmts, size_t stride, void *buf,
-		     void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
+		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_schar_short, FAIL);
     H5T_CONV_sS(SCHAR, SHORT,
@@ -3108,8 +3089,7 @@ H5T_conv_schar_ushort(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_uchar_short(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		     size_t nelmts, size_t stride, void *buf,
-		     void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
+		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_uchar_short, FAIL);
     H5T_CONV_uS(UCHAR, SHORT,
@@ -3165,8 +3145,7 @@ H5T_conv_uchar_ushort(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_schar_int(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		   size_t nelmts, size_t stride, void *buf,
-		   void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
+		   size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_schar_int, FAIL);
     H5T_CONV_sS(SCHAR, INT,
@@ -3193,8 +3172,7 @@ H5T_conv_schar_int(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_schar_uint(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		    hid_t UNUSED dset_xfer_plist)
+		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_schar_uint, FAIL);
     H5T_CONV_sU(SCHAR, UINT,
@@ -3221,8 +3199,7 @@ H5T_conv_schar_uint(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_uchar_int(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		   size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		   hid_t UNUSED dset_xfer_plist)
+		   size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_uchar_int, FAIL);
     H5T_CONV_uS(UCHAR, INT,
@@ -3250,8 +3227,7 @@ H5T_conv_uchar_int(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_uchar_uint(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		    hid_t UNUSED dset_xfer_plist)
+		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_uchar_uint, FAIL);
     H5T_CONV_uU(UCHAR, UINT,
@@ -3278,8 +3254,7 @@ H5T_conv_uchar_uint(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_schar_long(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		    hid_t UNUSED dset_xfer_plist)
+		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_schar_long, FAIL);
     H5T_CONV_sS(SCHAR, LONG,
@@ -3306,8 +3281,7 @@ H5T_conv_schar_long(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_schar_ulong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		     hid_t UNUSED dset_xfer_plist)
+		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_schar_ulong, FAIL);
     H5T_CONV_sU(SCHAR, ULONG,
@@ -3334,8 +3308,7 @@ H5T_conv_schar_ulong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_uchar_long(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		    hid_t UNUSED dset_xfer_plist)
+		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_uchar_long, FAIL);
     H5T_CONV_uS(UCHAR, LONG,
@@ -3363,8 +3336,7 @@ H5T_conv_uchar_long(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_uchar_ulong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		     hid_t UNUSED dset_xfer_plist)
+		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_uchar_ulong, FAIL);
     H5T_CONV_uU(UCHAR, ULONG,
@@ -3391,8 +3363,7 @@ H5T_conv_uchar_ulong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_schar_llong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		     hid_t UNUSED dset_xfer_plist)
+		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_schar_llong, FAIL);
     H5T_CONV_sS(SCHAR, LLONG,
@@ -3447,8 +3418,7 @@ H5T_conv_schar_ullong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_uchar_llong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		     hid_t UNUSED dset_xfer_plist)
+		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_uchar_llong, FAIL);
     H5T_CONV_uS(UCHAR, LLONG,
@@ -3504,13 +3474,10 @@ H5T_conv_uchar_ullong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_short_schar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		     hid_t UNUSED dset_xfer_plist)
+		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_short_schar, FAIL);
-    H5T_CONV_Ss(SHORT, SCHAR,
-		short, signed char,
-		SCHAR_MIN, SCHAR_MAX);
+    H5T_CONV_Ss(SHORT, SCHAR, short, signed char, SCHAR_MIN, SCHAR_MAX);
     FUNC_LEAVE(SUCCEED);
 }
 
@@ -3533,8 +3500,7 @@ H5T_conv_short_schar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_short_uchar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		     hid_t UNUSED dset_xfer_plist)
+		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_short_uchar, FAIL);
     H5T_CONV_Su(SHORT, UCHAR,
@@ -3677,8 +3643,7 @@ H5T_conv_ushort_short(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_short_int(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		   size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		   hid_t UNUSED dset_xfer_plist)
+		   size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_short_int, FAIL);
     H5T_CONV_sS(SHORT, INT,
@@ -3705,8 +3670,7 @@ H5T_conv_short_int(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_short_uint(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		    hid_t UNUSED dset_xfer_plist)
+		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_short_uint, FAIL);
     H5T_CONV_sU(SHORT, UINT,
@@ -3733,8 +3697,7 @@ H5T_conv_short_uint(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_ushort_int(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		    hid_t UNUSED dset_xfer_plist)
+		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_ushort_int, FAIL);
     H5T_CONV_uS(USHORT, INT,
@@ -3762,8 +3725,7 @@ H5T_conv_ushort_int(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_ushort_uint(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		     hid_t UNUSED dset_xfer_plist)
+		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_ushort_uint, FAIL);
     H5T_CONV_uU(USHORT, UINT,
@@ -3790,8 +3752,7 @@ H5T_conv_ushort_uint(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_short_long(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		    hid_t UNUSED dset_xfer_plist)
+		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_short_long, FAIL);
     H5T_CONV_sS(SHORT, LONG,
@@ -3818,8 +3779,7 @@ H5T_conv_short_long(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_short_ulong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		     hid_t UNUSED dset_xfer_plist)
+		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_short_ulong, FAIL);
     H5T_CONV_sU(SHORT, ULONG,
@@ -3846,8 +3806,7 @@ H5T_conv_short_ulong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_ushort_long(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		     hid_t UNUSED dset_xfer_plist)
+		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_ushort_long, FAIL);
     H5T_CONV_uS(USHORT, LONG,
@@ -3903,8 +3862,7 @@ H5T_conv_ushort_ulong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_short_llong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		     hid_t UNUSED dset_xfer_plist)
+		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_short_llong, FAIL);
     H5T_CONV_sS(SHORT, LLONG,
@@ -4016,8 +3974,7 @@ H5T_conv_ushort_ullong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_int_schar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		   size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		   hid_t UNUSED dset_xfer_plist)
+		   size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_int_schar, FAIL);
     H5T_CONV_Ss(INT, SCHAR,
@@ -4045,8 +4002,7 @@ H5T_conv_int_schar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_int_uchar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		   size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		   hid_t UNUSED dset_xfer_plist)
+		   size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_int_uchar, FAIL);
     H5T_CONV_Su(INT, UCHAR,
@@ -4074,8 +4030,7 @@ H5T_conv_int_uchar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_uint_schar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		    hid_t UNUSED dset_xfer_plist)
+		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_uint_schar, FAIL);
     H5T_CONV_Us(UINT, SCHAR,
@@ -4103,8 +4058,7 @@ H5T_conv_uint_schar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_uint_uchar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		    hid_t UNUSED dset_xfer_plist)
+		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_uint_uchar, FAIL);
     H5T_CONV_Uu(UINT, UCHAR,
@@ -4132,8 +4086,7 @@ H5T_conv_uint_uchar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_int_short(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		   size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		   hid_t UNUSED dset_xfer_plist)
+		   size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_int_short, FAIL);
     H5T_CONV_Ss(INT, SHORT,
@@ -4161,8 +4114,7 @@ H5T_conv_int_short(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_int_ushort(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		    hid_t UNUSED dset_xfer_plist)
+		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_int_ushort, FAIL);
     H5T_CONV_Su(INT, USHORT,
@@ -4190,8 +4142,7 @@ H5T_conv_int_ushort(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_uint_short(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		    hid_t UNUSED dset_xfer_plist)
+		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_uint_short, FAIL);
     H5T_CONV_Us(UINT, SHORT,
@@ -4219,8 +4170,7 @@ H5T_conv_uint_short(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_uint_ushort(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		     hid_t UNUSED dset_xfer_plist)
+		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_uint_ushort, FAIL);
     H5T_CONV_Uu(UINT, USHORT,
@@ -4248,8 +4198,7 @@ H5T_conv_uint_ushort(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_int_uint(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		  size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		  hid_t UNUSED dset_xfer_plist)
+		  size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_int_uint, FAIL);
     H5T_CONV_su(INT, UINT,
@@ -4276,8 +4225,7 @@ H5T_conv_int_uint(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_uint_int(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		  size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		  hid_t UNUSED dset_xfer_plist)
+		  size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_uint_int, FAIL);
     H5T_CONV_us(UINT, INT,
@@ -4305,8 +4253,7 @@ H5T_conv_uint_int(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_int_long(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		  size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		  hid_t UNUSED dset_xfer_plist)
+		  size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_int_long, FAIL);
     H5T_CONV_sS(INT, LONG,
@@ -4333,8 +4280,7 @@ H5T_conv_int_long(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_int_ulong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		   size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		   hid_t UNUSED dset_xfer_plist)
+		   size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_int_ulong, FAIL);
     H5T_CONV_sU(INT, LONG,
@@ -4361,8 +4307,7 @@ H5T_conv_int_ulong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_uint_long(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		   size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		   hid_t UNUSED dset_xfer_plist)
+		   size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_uint_long, FAIL);
     H5T_CONV_uS(UINT, LONG,
@@ -4390,8 +4335,7 @@ H5T_conv_uint_long(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_uint_ulong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		    hid_t UNUSED dset_xfer_plist)
+		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_uint_ulong, FAIL);
     H5T_CONV_uU(UINT, ULONG,
@@ -4418,8 +4362,7 @@ H5T_conv_uint_ulong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_int_llong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		   size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		   hid_t UNUSED dset_xfer_plist)
+		   size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_int_llong, FAIL);
     H5T_CONV_sS(INT, LLONG,
@@ -4446,8 +4389,7 @@ H5T_conv_int_llong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_int_ullong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		    hid_t UNUSED dset_xfer_plist)
+		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_int_ullong, FAIL);
     H5T_CONV_sU(INT, ULLONG,
@@ -4474,8 +4416,7 @@ H5T_conv_int_ullong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_uint_llong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		    hid_t UNUSED dset_xfer_plist)
+		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_uint_llong, FAIL);
     H5T_CONV_uS(UINT, LLONG,
@@ -4503,8 +4444,7 @@ H5T_conv_uint_llong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_uint_ullong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		     hid_t UNUSED dset_xfer_plist)
+		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_uint_ullong, FAIL);
     H5T_CONV_uU(UINT, ULLONG,
@@ -4531,8 +4471,7 @@ H5T_conv_uint_ullong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_long_schar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		    hid_t UNUSED dset_xfer_plist)
+		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_long_schar, FAIL);
     H5T_CONV_Ss(LONG, SCHAR,
@@ -4560,8 +4499,7 @@ H5T_conv_long_schar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_long_uchar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		    hid_t UNUSED dset_xfer_plist)
+		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_long_uchar, FAIL);
     H5T_CONV_Su(LONG, UCHAR,
@@ -4589,8 +4527,7 @@ H5T_conv_long_uchar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_ulong_schar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		     hid_t UNUSED dset_xfer_plist)
+		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_ulong_schar, FAIL);
     H5T_CONV_Us(ULONG, SCHAR,
@@ -4618,8 +4555,7 @@ H5T_conv_ulong_schar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_ulong_uchar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		     hid_t UNUSED dset_xfer_plist)
+		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_ulong_uchar, FAIL);
     H5T_CONV_Uu(ULONG, UCHAR,
@@ -4647,8 +4583,7 @@ H5T_conv_ulong_uchar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_long_short(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		    hid_t UNUSED dset_xfer_plist)
+		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_long_short, FAIL);
     H5T_CONV_Ss(LONG, SHORT,
@@ -4676,8 +4611,7 @@ H5T_conv_long_short(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_long_ushort(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		     hid_t UNUSED dset_xfer_plist)
+		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_long_ushort, FAIL);
     H5T_CONV_Su(LONG, USHORT,
@@ -4705,8 +4639,7 @@ H5T_conv_long_ushort(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_ulong_short(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		     hid_t UNUSED dset_xfer_plist)
+		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_ulong_short, FAIL);
     H5T_CONV_Us(ULONG, SHORT,
@@ -4763,8 +4696,7 @@ H5T_conv_ulong_ushort(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_long_int(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		  size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		  hid_t UNUSED dset_xfer_plist)
+		  size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_long_int, FAIL);
     H5T_CONV_Ss(LONG, INT,
@@ -4792,8 +4724,7 @@ H5T_conv_long_int(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_long_uint(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		   size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		   hid_t UNUSED dset_xfer_plist)
+		   size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_long_uint, FAIL);
     H5T_CONV_Su(LONG, UINT,
@@ -4821,8 +4752,7 @@ H5T_conv_long_uint(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_ulong_int(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		   size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		   hid_t UNUSED dset_xfer_plist)
+		   size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_ulong_int, FAIL);
     H5T_CONV_Us(ULONG, INT,
@@ -4850,8 +4780,7 @@ H5T_conv_ulong_int(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_ulong_uint(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		    hid_t UNUSED dset_xfer_plist)
+		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_ulong_uint, FAIL);
     H5T_CONV_Uu(ULONG, UINT,
@@ -4879,8 +4808,7 @@ H5T_conv_ulong_uint(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_long_ulong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		    hid_t UNUSED dset_xfer_plist)
+		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_long_ulong, FAIL);
     H5T_CONV_su(LONG, ULONG,
@@ -4907,8 +4835,7 @@ H5T_conv_long_ulong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_ulong_long(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		    hid_t UNUSED dset_xfer_plist)
+		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_ulong_long, FAIL);
     H5T_CONV_us(ULONG, LONG,
@@ -4936,8 +4863,7 @@ H5T_conv_ulong_long(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_long_llong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		    hid_t UNUSED dset_xfer_plist)
+		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_long_llong, FAIL);
     H5T_CONV_sS(LONG, LLONG,
@@ -4964,8 +4890,7 @@ H5T_conv_long_llong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_long_ullong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		     hid_t UNUSED dset_xfer_plist)
+		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_long_ullong, FAIL);
     H5T_CONV_sU(LONG, ULLONG,
@@ -4992,8 +4917,7 @@ H5T_conv_long_ullong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_ulong_llong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		     hid_t UNUSED dset_xfer_plist)
+		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_long_llong, FAIL);
     H5T_CONV_uS(ULONG, LLONG,
@@ -5049,8 +4973,7 @@ H5T_conv_ulong_ullong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_llong_schar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		     hid_t UNUSED dset_xfer_plist)
+		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_llong_schar, FAIL);
     H5T_CONV_Ss(LLONG, SCHAR,
@@ -5078,8 +5001,7 @@ H5T_conv_llong_schar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_llong_uchar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		     hid_t UNUSED dset_xfer_plist)
+		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_llong_uchar, FAIL);
     H5T_CONV_Su(LLONG, UCHAR,
@@ -5136,8 +5058,7 @@ H5T_conv_ullong_schar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_ullong_uchar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		      hid_t UNUSED dset_xfer_plist)
+		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_ullong_uchar, FAIL);
     H5T_CONV_Uu(ULLONG, UCHAR,
@@ -5165,8 +5086,7 @@ H5T_conv_ullong_uchar(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_llong_short(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		     hid_t UNUSED dset_xfer_plist)
+		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_llong_short, FAIL);
     H5T_CONV_Ss(LLONG, SHORT,
@@ -5281,8 +5201,7 @@ H5T_conv_ullong_ushort(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_llong_int(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		   size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		   hid_t UNUSED dset_xfer_plist)
+		   size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_llong_int, FAIL);
     H5T_CONV_Ss(LLONG, INT,
@@ -5310,8 +5229,7 @@ H5T_conv_llong_int(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_llong_uint(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		    hid_t UNUSED dset_xfer_plist)
+		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_llong_uint, FAIL);
     H5T_CONV_Su(LLONG, UINT,
@@ -5339,8 +5257,7 @@ H5T_conv_llong_uint(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_ullong_int(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		    hid_t UNUSED dset_xfer_plist)
+		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_ullong_int, FAIL);
     H5T_CONV_Us(ULLONG, INT,
@@ -5368,8 +5285,7 @@ H5T_conv_ullong_int(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_ullong_uint(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		     hid_t UNUSED dset_xfer_plist)
+		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_ullong_uint, FAIL);
     H5T_CONV_Uu(ULLONG, UINT,
@@ -5397,8 +5313,7 @@ H5T_conv_ullong_uint(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_llong_long(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		    hid_t UNUSED dset_xfer_plist)
+		    size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_llong_long, FAIL);
     H5T_CONV_Ss(LLONG, LONG,
@@ -5426,8 +5341,7 @@ H5T_conv_llong_long(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_llong_ulong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		     hid_t UNUSED dset_xfer_plist)
+		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_llong_ulong, FAIL);
     H5T_CONV_Su(LLONG, ULONG,
@@ -5455,8 +5369,7 @@ H5T_conv_llong_ulong(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
  */
 herr_t
 H5T_conv_ullong_long(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
-		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg,
-		     hid_t UNUSED dset_xfer_plist)
+		     size_t nelmts, size_t stride, void *buf, void UNUSED *bkg, hid_t UNUSED dset_xfer_plist)
 {
     FUNC_ENTER(H5T_conv_ullong_long, FAIL);
     H5T_CONV_Us(ULLONG, LONG,

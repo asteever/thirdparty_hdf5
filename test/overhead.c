@@ -12,7 +12,7 @@
 #undef NDEBUG
 #include <hdf5.h>
 
-#ifdef H5_STDC_HEADERS
+#ifdef STDC_HEADERS
 #   include <ctype.h>
 #   include <fcntl.h>
 #   include <stdlib.h>
@@ -20,20 +20,20 @@
 #   include <string.h>
 #endif
 
-#ifdef H5_HAVE_IO_H
+#ifdef HAVE_IO_H
 #	include <io.h>
 #endif
 
-#ifdef H5_HAVE_UNISTD_H
+#ifdef HAVE_UNISTD_H
 #   include <sys/types.h>
 #   include <unistd.h>
 #endif
 
-#ifdef H5_HAVE_IO_H
+#ifdef HAVE_IO_H
 #   include <io.h>
 #endif
 
-#ifndef H5_HAVE_ATTRIBUTE
+#ifndef HAVE_ATTRIBUTE
 #   undef __attribute__
 #   define __attribute__(X) /*void*/
 #   define UNUSED /*void*/
@@ -199,7 +199,7 @@ test(fill_t fill_style, const double splits[],
     }
     if ((dcpl=H5Pcreate(H5P_DATASET_CREATE))<0) goto error;
     if (H5Pset_chunk(dcpl, 1, ch_size)<0) goto error;
-    if ((xfer=H5Pcreate(H5P_DATA_XFER))<0) goto error;
+    if ((xfer=H5Pcreate(H5P_DATASET_XFER))<0) goto error;
     if (H5Pset_btree_ratios(xfer, splits[0], splits[1], splits[2])<0) {
 	goto error;
     }
@@ -335,7 +335,7 @@ main(int argc, char *argv[])
 
     /* Default split ratios */
     H5Eset_auto(display_error_cb, NULL);
-    if ((xfer=H5Pcreate(H5P_DATA_XFER))<0) goto error;
+    if ((xfer=H5Pcreate(H5P_DATASET_XFER))<0) goto error;
     if (H5Pget_btree_ratios(xfer, splits+0, splits+1, splits+2)<0) {
 	goto error;
     }

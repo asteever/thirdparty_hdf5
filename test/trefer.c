@@ -72,7 +72,7 @@ test_reference_obj(void)
     hobj_ref_t      *wbuf,      /* buffer to write to disk */
                *rbuf,       /* buffer read from disk */
                *tbuf;       /* temp. buffer read from disk */
-    uintn      *tu32;      /* Temporary pointer to uint32 data */
+    uintn   *tu32;      /* Temporary pointer to uintn data */
     intn        i;          /* counting variables */
     const char *write_comment="Foo!"; /* Comments for group */
     char read_comment[10];

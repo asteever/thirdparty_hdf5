@@ -11,20 +11,12 @@
 
 *****************************************************************************/
 
-#include "h5toh4.h"
+#include <stdio.h>
 #include <errno.h>
 #include <string.h>
 #include <fcntl.h>
-#include <h5tools.h>
+#include <h5toh4.h>
 
-
-#if WIN32
-typedef unsigned int mode_t;
-#endif
-
-#ifndef S_ISDIR
-#define S_ISDIR(mode)  (((mode)&0xF000) == S_IFDIR)
-#endif
 extern void PrintOptions_h5toh4(void);
 extern char *BuildFilename(char *h5_filename, char *h4_extension);
 extern int test_file(char *filename, int oflag, mode_t mode);
@@ -41,22 +33,16 @@ extern herr_t convert_dataset_string(hid_t, char *, op_data_t *);
 extern int32 h5type_to_h4type(hid_t);
 extern hid_t h4type_to_memtype(int32);
 
-extern void init_table(table_t **temp);
-extern void free_table(table_t **temp);
-extern void init_prefix(char **prefix, int length);
-extern void dump_tables(char* name, table_t* table);
-extern herr_t find_objs(hid_t , const char *, void *);
-extern int get_table_idx(table_t*, unsigned long *);
-extern int get_tableflag(table_t*, int);
-extern int set_tableflag(table_t*, int);
-extern char* get_objectname(table_t*, int);
+extern void init_table(void);
+extern void free_table(void);
+extern void dump_tables(void);
+extern herr_t H5findobj_once(hid_t , char *, void *);
+extern int get_table_idx(int, unsigned long *);
+extern int get_tableflag(int, int);
+extern int set_tableflag(int, int);
+extern char* get_objectname(int, int);
 
 typedef herr_t (*H5G_operator_t)(hid_t, const char*, void*);
-
-static int prefix_len = 1024;
-static char *prefix;
-static table_t *group_table, *dset_table, *type_table;
-
 
 
 /*****************************************************************************
@@ -269,7 +255,6 @@ main(int argc, char *argv[])
 	return status;
 
 }
-
 
 /*****************************************************************************
 
@@ -318,11 +303,6 @@ int h5toh4(char *h5_filename, char *h4_filename)
 	void *edata;
 	hid_t (*func)(void*);
 
-
-	find_objs_t *info = malloc(sizeof(find_objs_t));
-
-
-
 	/* open hdf5 file */
 	if ((fid = H5Fopen (h5_filename, H5F_ACC_RDONLY, plist)) <= 0) {
 		fprintf(stderr,"Error: Unable to open file %s\n",h5_filename);
@@ -358,28 +338,14 @@ int h5toh4(char *h5_filename, char *h4_filename)
 				}
 
 				/* allocate and initialize internal data structure */
-				init_table(&group_table);
-				init_table(&type_table);
-				init_table(&dset_table);
-				init_prefix(&prefix, prefix_len);
-
-				/* init the find_objs_t*/
-				info->threshold = 0;
-				info->prefix_len = prefix_len;
-				info->prefix = prefix;
-				info->group_table = group_table;
-				info->type_table = type_table;
-				info->dset_table = dset_table;
-				info->status = status;
-
-
+				init_table();
 
 				/* Disable error reporting */
 				H5Eget_auto (&func, &edata);
 				H5Eset_auto (NULL, NULL);
 
 				/* find all objects one time */
-				if ((status = H5Giterate(fid, "/", NULL, (H5G_operator_t)find_objs, (void*)info)) != SUCCEED ) {
+				if ((status = H5Giterate(fid, "/", NULL, (H5G_operator_t)H5findobj_once, NULL)) != SUCCEED ) {
 					fprintf(stderr,"Error: Unable to iterate over all of the groups\n");
 					DEBUG_PRINT("Error detected in %s() [%s line %d]\n", "h5toh4", __FILE__, __LINE__);
 				}
@@ -446,9 +412,7 @@ int h5toh4(char *h5_filename, char *h4_filename)
 	}
 
 done:
-	free_table(&group_table);
-	free_table(&dset_table);
-	free_table(&type_table);
+	free_table();
 
 	return status;
 
@@ -534,13 +498,13 @@ H5G_stat_t statbuf;
 
 	} else {
 
-		if ((idx = get_table_idx(group_table, statbuf.objno)) < 0 ) {
+		if ((idx = get_table_idx(H5G_GROUP, statbuf.objno)) < 0 ) {
 
 			fprintf(stderr,"Error: object not found, %s\n",name);
 			DEBUG_PRINT("Error detected in %s() [%s line %d]\n", "convert_group", __FILE__, __LINE__);
 			status = FAIL;
 
-		} else if((flag = get_tableflag(group_table,idx)) < 0 ) {
+		} else if((flag = get_tableflag(H5G_GROUP,idx)) < 0 ) {
 			
 			fprintf(stderr,"Error: get_tableflag() should never return < 0\n");
 			DEBUG_PRINT("Error detected in %s() [%s line %d]\n", "convert_group", __FILE__, __LINE__);
@@ -557,7 +521,7 @@ H5G_stat_t statbuf;
 		} else { /* flag == FALSE */
 
 			/* this is now being converted */
-			if ((status = set_tableflag(group_table,idx)) < 0 ) {
+			if ((status = set_tableflag(H5G_GROUP,idx)) < 0 ) {
 				fprintf(stderr,"Error: set_tableflag should never return < 0\n");
 				DEBUG_PRINT("Error detected in %s() [%s line %d]\n", "convert_group", __FILE__, __LINE__);
 				return(status);
@@ -1364,13 +1328,13 @@ convert_all (hid_t group, char *name, op_data_t *op_data)
 
 	if (statbuf.type==H5G_DATASET ) {
 			
-		if ((idx = get_table_idx(dset_table, statbuf.objno)) < 0 ) {
+		if ((idx = get_table_idx(H5G_DATASET, statbuf.objno)) < 0 ) {
 
 			fprintf(stderr,"Error: object not found\n");
 			DEBUG_PRINT("Error detected in %s() [%s line %d]\n", "convert_all", __FILE__, __LINE__);
 			status = FAIL;
 
-		} else if((flag = get_tableflag(dset_table,idx)) < 0 ) {
+		} else if((flag = get_tableflag(H5G_DATASET,idx)) < 0 ) {
 			
 			fprintf(stderr,"Error: get_tableflag() should never return < 0\n");
 			DEBUG_PRINT("Error detected in %s() [%s line %d]\n", "convert_all", __FILE__, __LINE__);
@@ -1414,7 +1378,7 @@ convert_all (hid_t group, char *name, op_data_t *op_data)
 					DEBUG_PRINT("Error detected in %s() [%s line %d]\n", "convert_all", __FILE__, __LINE__);
 					status = FAIL;
 				}
-				if(( status = set_tableflag(dset_table,idx)) != SUCCEED ) {
+				if(( status = set_tableflag(H5G_DATASET,idx)) != SUCCEED ) {
 					fprintf(stderr,"Error: set_tableflag() did not work for %s\n", name);
 					DEBUG_PRINT("Error detected in %s() [%s line %d]\n", "convert_all", __FILE__, __LINE__);
 					break;
@@ -1431,13 +1395,13 @@ convert_all (hid_t group, char *name, op_data_t *op_data)
 
 	} else if (statbuf.type==H5G_GROUP ) {
 
-		if ((idx = get_table_idx(group_table, statbuf.objno)) < 0 ) {
+		if ((idx = get_table_idx(H5G_GROUP, statbuf.objno)) < 0 ) {
 
 			fprintf(stderr,"Error: object not found\n");
 			DEBUG_PRINT("Error detected in %s() [%s line %d]\n", "convert_all", __FILE__, __LINE__);
 			status = FAIL;
 
-		} else if((flag = get_tableflag(group_table,idx)) < 0 ) {
+		} else if((flag = get_tableflag(H5G_GROUP,idx)) < 0 ) {
 			
 			fprintf(stderr,"Error: get_tableflag() should never return < 0\n");
 			DEBUG_PRINT("Error detected in %s() [%s line %d]\n", "convert_all", __FILE__, __LINE__);
@@ -1481,13 +1445,13 @@ convert_all (hid_t group, char *name, op_data_t *op_data)
 
     case H5G_GROUP:
 
-		if ((idx = get_table_idx(group_table, statbuf.objno)) < 0 ) {
+		if ((idx = get_table_idx(H5G_GROUP, statbuf.objno)) < 0 ) {
 
 			fprintf(stderr,"Error: object not found\n");
 			DEBUG_PRINT("Error detected in %s() [%s line %d]\n", "convert_all", __FILE__, __LINE__);
 			status = FAIL;
 
-		} else if((flag = get_tableflag(group_table,idx)) < 0 ) {
+		} else if((flag = get_tableflag(H5G_GROUP,idx)) < 0 ) {
 			
 			fprintf(stderr,"Error: get_tableflag() should never return < 0\n");
 			DEBUG_PRINT("Error detected in %s() [%s line %d]\n", "convert_all", __FILE__, __LINE__);
@@ -1529,13 +1493,13 @@ convert_all (hid_t group, char *name, op_data_t *op_data)
 
     case H5G_DATASET:
 
-		if ((idx = get_table_idx(dset_table, statbuf.objno)) < 0 ) {
+		if ((idx = get_table_idx(H5G_DATASET, statbuf.objno)) < 0 ) {
 
 			fprintf(stderr,"Error: object not found\n");
 			DEBUG_PRINT("Error detected in %s() [%s line %d]\n", "convert_all", __FILE__, __LINE__);
 			status = FAIL;
 
-		} else if((flag = get_tableflag(dset_table,idx)) < 0 ) {
+		} else if((flag = get_tableflag(H5G_DATASET,idx)) < 0 ) {
 			
 			fprintf(stderr,"Error: get_tableflag() should never return < 0\n");
 			DEBUG_PRINT("Error detected in %s() [%s line %d]\n", "convert_all", __FILE__, __LINE__);
@@ -1579,7 +1543,7 @@ convert_all (hid_t group, char *name, op_data_t *op_data)
 					DEBUG_PRINT("Error detected in %s() [%s line %d]\n", "convert_all", __FILE__, __LINE__);
 					status = FAIL;
 				}
-				if(( status = set_tableflag(dset_table,idx)) != SUCCEED ) {
+				if(( status = set_tableflag(H5G_DATASET,idx)) != SUCCEED ) {
 					fprintf(stderr,"Error: set_tableflag() did not work for %s\n", name);
 					DEBUG_PRINT("Error detected in %s() [%s line %d]\n", "convert_all", __FILE__, __LINE__);
 					break;
@@ -1648,7 +1612,7 @@ convert_shared_dataset(hid_t did, int idx, op_data_t *op_data)
 
     vgroup_id = op_data->vgroup_id;
 
-    if ((dataset_name = get_objectname(dset_table, idx)) == NULL ) {
+    if ((dataset_name = get_objectname(H5G_DATASET, idx)) == NULL ) {
 	fprintf(stderr,"Error: get_objectname() did not work\n");
 	DEBUG_PRINT("Error detected in %s() [%s line %d]\n", "convert_shared_dataset", __FILE__, __LINE__);
 	return (status);
@@ -1811,7 +1775,7 @@ convert_shared_group (hid_t group, int idx, op_data_t *op_data) {
     group2 = group;
     hfile_id = op_data->hfile_id;
 
-    if ((group_name = get_objectname(group_table, idx)) == NULL ) {
+    if ((group_name = get_objectname(H5G_GROUP, idx)) == NULL ) {
 	fprintf(stderr,"Error: get_objectname() did not work\n");
 	DEBUG_PRINT("Error detected in %s() [%s line %d]\n", "convert_shared_group", __FILE__, __LINE__);
         status = FAIL;
@@ -2309,6 +2273,7 @@ int test_dir(char *path)
 	}
 
 	return S_ISDIR(buf_ptr->st_mode);
+
 }
 
 /*****************************************************************************

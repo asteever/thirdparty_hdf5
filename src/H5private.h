@@ -178,7 +178,6 @@
 #define HDF5_FREESPACE_VERSION	0	/* of the Free-Space Info	  */
 #define HDF5_OBJECTDIR_VERSION	0	/* of the Object Directory format */
 #define HDF5_SHAREDHEADER_VERSION 0	/* of the Shared-Header Info	  */
-#define HDF5_DRIVERINFO_VERSION	0	/* of the Driver Information Block*/
 
 /*
  * Status return values for the `herr_t' type.
@@ -380,11 +379,10 @@ typedef double float32;
 #   error "nothing appropriate for float32"
 #endif
 
-/* Bias float64 toward using double - QAK */
-#if SIZEOF_DOUBLE>=8
-typedef double float64;
-#elif SIZEOF_FLOAT>=8
+#if SIZEOF_FLOAT>=8
 typedef float float64;
+#elif SIZEOF_DOUBLE>=8
+typedef double float64;
 #else
 #  error "nothing appropriate for float64"
 #endif
@@ -395,6 +393,15 @@ typedef float float64;
  */
 typedef int intn;
 typedef unsigned uintn;
+
+/*
+ * File addresses.
+ */
+typedef struct {
+    uint64_t		offset;	    /*offset within an HDF5 file    */
+} haddr_t;
+
+#define H5F_ADDR_UNDEF {((uint64_t)(-1L))}
 
 /*
  * Maximum and minimum values.	These should be defined in <limits.h> for the
@@ -877,8 +884,8 @@ extern hbool_t H5_libinit_g;   /*good thing C's lazy about extern! */
 
 #define FUNC_ENTER_INIT(func_name,interface_init_func,err) {		      \
    CONSTR (FUNC, #func_name);						      \
-   PABLO_SAVE (ID_ ## func_name)  					      \
    H5TRACE_DECL;							      \
+   PABLO_SAVE (ID_ ## func_name);					      \
 									      \
    PABLO_TRACE_ON (PABLO_MASK, pablo_func_id);				      \
 									      \
@@ -931,7 +938,7 @@ extern hbool_t H5_libinit_g;   /*good thing C's lazy about extern! */
  * through one of these two sets of macros.
  */
 #ifdef HAVE_PABLO
-#  define PABLO_SAVE(func_id)	intn pablo_func_id = func_id;
+#  define PABLO_SAVE(func_id)	intn pablo_func_id = func_id
 #  define PABLO_TRACE_ON(m, f)	TRACE_ON(m,f)
 #  define PABLO_TRACE_OFF(m, f) TRACE_OFF(m,f)
 #else

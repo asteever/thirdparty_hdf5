@@ -18,7 +18,7 @@ case "X-$CC_BASENAME" in
     X-gcc)
 	CFLAGS="$CFLAGS -Wsign-compare" #Only works for some versions
 	DEBUG_CFLAGS="-g -fverbose-asm"
-	DEBUG_CPPFLAGS=
+	DEBUG_CPPFLAGS="-DH5F_OPT_SEEK=0 -DH5F_LOW_DFLT=H5F_LOW_SEC2"
 	PROD_CFLAGS="-O3"
 	PROD_CPPFLAGS=
 	PROFILE_CFLAGS="-pg"
@@ -41,25 +41,24 @@ case "X-$CC_BASENAME" in
 		;;
 	esac
 
-    # Do *not* use -ansi because it prevents hdf5 from being able
-    # to read modification dates from the file. On some systems it
-    # can also result in compile errors in system header files
-    # since hdf5 includes a couple non-ANSI header files.
-    #CFLAGS="$CFLAGS -ansi"
+        # Do *not* use -ansi because it prevents hdf5 from being able
+        # to read modification dates from the file. On some systems it
+        # can also result in compile errors in system header files
+        # since hdf5 includes a couple non-ANSI header files.
+        #CFLAGS="$CFLAGS -ansi"
 
 	# Always turn off these compiler warnings for the -64 compiler:
 	#    1174:  function declared but not used
-	#    1196:  __vfork() (this is an SGI config problem)
-	#    1209:  constant expressions
 	#    1429:  the `long long' type is not standard
+	#    1209:  constant expressions
+	#    1196:  __vfork() (this is an SGI config problem)
 	#    1685:  turn off warnings about turning off invalid warnings
-    #    3201:  remark - parameter not referenced
-	CFLAGS="$CFLAGS -woff 1174,1429,1209,1196,1685,3201"
+	CFLAGS="$CFLAGS -woff 1174,1429,1209,1196,1685"
 
 	# Always turn off these compiler warnings for the old compiler:
 	#    799:   the `long long' type is not standard
 	#    803:   turn off warnings about turning off invalid warnings
-    #    835:   __vfork() (this is an SGI config problem)
+        #    835:   __vfork() (this is an SGI config problem)
 	CFLAGS="$CFLAGS -woff 799,803,835"
 
 	# Always turn off these loader warnings:
@@ -81,5 +80,8 @@ case "X-$CC_BASENAME" in
 	# Extra profiling flags
 	PROFILE_CFLAGS=-pg
 	PROFILE_CPPFLAGS=
+
+	# Turn off shared lib option.  It does not work for IRIX64 yet.
+	test `uname -s` = IRIX64 && enable_shared="${enable_shared:-no}"
 	;;
 esac

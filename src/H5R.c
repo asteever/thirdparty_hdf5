@@ -159,7 +159,7 @@ H5R_create(void *_ref, H5G_entry_t *loc, const char *name, H5R_type_t ref_type, 
             /* Set information for reference */
             p=(uint8_t *)ref->oid;
             H5F_addr_pack(loc->file,&addr,&sb.objno[0]);
-            H5F_addr_encode(loc->file,&p,addr);
+            H5F_addr_encode(loc->file,&p,&addr);
             break;
         }
 
@@ -177,7 +177,7 @@ H5R_create(void *_ref, H5G_entry_t *loc, const char *name, H5R_type_t ref_type, 
             /* Set up information for dataset region */
 
             /* Return any previous heap block to the free list if we are garbage collecting */
-            if(loc->file->shared->gc_ref) {
+            if(loc->file->shared->access_parms->gc_ref) {
                 /* Check for an existing heap ID in the reference */
                 for(u=0, heapid_found=0; u<H5R_DSET_REG_REF_BUF_SIZE; u++)
                     if(ref->heapid[u]!=0) {
@@ -210,7 +210,7 @@ H5R_create(void *_ref, H5G_entry_t *loc, const char *name, H5R_type_t ref_type, 
             /* Serialize information for dataset OID */
             p=(uint8_t *)buf;
             H5F_addr_pack(loc->file,&addr,&sb.objno[0]);
-            H5F_addr_encode(loc->file,&p,addr);
+            H5F_addr_encode(loc->file,&p,&addr);
 
             /* Serialize the selection */
             if (H5S_select_serialize(space,p) < 0)
@@ -224,7 +224,7 @@ H5R_create(void *_ref, H5G_entry_t *loc, const char *name, H5R_type_t ref_type, 
 
             /* Serialize the heap ID and index for storage in the file */
             p=(uint8_t *)ref->heapid;
-            H5F_addr_encode(loc->file,&p,hobjid.addr);
+            H5F_addr_encode(loc->file,&p,&hobjid.addr);
             INT32ENCODE(p,hobjid.idx);
 
             /* Free the buffer we serialized data in */
