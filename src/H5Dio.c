@@ -14,7 +14,6 @@
 
 #define H5D_PACKAGE		/*suppress error about including H5Dpkg	  */
 
-
 #include "H5private.h"		/* Generic Functions			*/
 #include "H5Dpkg.h"		/* Dataset functions			*/
 #include "H5Eprivate.h"		/* Error handling		  	*/
@@ -235,7 +234,7 @@ H5D_fill(const void *fill, const H5T_t *fill_type, void *buf, const H5T_t *buf_t
     assert(buf_type);
     assert(space);
 
-    /* Make sure the dataspace has an extent set (or is NULL) */
+    /* Make sure the dataspace has an extent set */
     if( !(H5S_has_extent(space)) )
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "dataspace extent has not been set")
 
@@ -357,10 +356,6 @@ H5D_get_dxpl_cache_real(hid_t dxpl_id, H5D_dxpl_cache_t *cache)
     if(H5P_get(dx_plist, H5D_XFER_FILTER_CB_NAME, &cache->filter_cb)<0)
         HGOTO_ERROR (H5E_PLIST, H5E_CANTGET, FAIL, "Can't retrieve filter callback function")
 
-    /* Get the data transform property */
-    if(H5P_get(dx_plist, H5D_XFER_XFORM_NAME, &cache->data_xform_prop)<0)
-        HGOTO_ERROR (H5E_PLIST, H5E_CANTGET, FAIL, "Can't retrieve data transform info")
-            
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 }   /* H5D_get_dxpl_cache_real() */
@@ -1098,8 +1093,6 @@ done:
  * Modifications:
  *      QAK - 2003/04/17
  *      Hacked on it a lot. :-)
- *      Leon Arber: 4/20/04
- *      Added support for data transforms.
  *
  *-------------------------------------------------------------------------
  */
@@ -1151,7 +1144,7 @@ H5D_contig_read(H5D_io_info_t *io_info, hsize_t nelmts,
      * If there is no type conversion then read directly into the
      * application's buffer.  This saves at least one mem-to-mem copy.
      */
-    if ( H5Z_xform_noop(dxpl_cache->data_xform_prop) && H5T_path_noop(tpath)) {
+    if (H5T_path_noop(tpath)) {
 #ifdef H5S_DEBUG
 	H5_timer_begin(&timer);
 #endif
@@ -1300,11 +1293,6 @@ H5D_contig_read(H5D_io_info_t *io_info, hsize_t nelmts,
         if (H5T_convert(tpath, src_id, dst_id, smine_nelmts, 0, 0, tconv_buf, bkg_buf, io_info->dxpl_id)<0)
             HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "data type conversion failed")
 
-	/* Do the data transform after the conversion (since we're using type mem_type) */
-        if(!H5Z_xform_noop(dxpl_cache->data_xform_prop))
-             if( H5Z_xform_eval(dxpl_cache->data_xform_prop, tconv_buf, smine_nelmts, mem_type) < 0)
-		    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Error performing data transform")
-
         /*
          * Scatter the data into memory.
          */
@@ -1360,8 +1348,6 @@ done:
  * Modifications:
  *      QAK - 2003/04/17
  *      Hacked on it a lot. :-)
- *      Leon Arber: 4/20/04
- *      Added support for data transforms.
  *
  *-------------------------------------------------------------------------
  */
@@ -1413,7 +1399,7 @@ H5D_contig_write(H5D_io_info_t *io_info, hsize_t nelmts,
      * If there is no type conversion then write directly from the
      * application's buffer.  This saves at least one mem-to-mem copy.
      */
-    if ( H5Z_xform_noop(dxpl_cache->data_xform_prop) && H5T_path_noop(tpath)) {
+    if (H5T_path_noop(tpath)) {
 #ifdef H5S_DEBUG
 	H5_timer_begin(&timer);
 #endif
@@ -1556,11 +1542,6 @@ H5D_contig_write(H5D_io_info_t *io_info, hsize_t nelmts,
         if (H5T_convert(tpath, src_id, dst_id, smine_nelmts, 0, 0, tconv_buf, bkg_buf, io_info->dxpl_id)<0)
             HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "data type conversion failed")
 
-	/* Do the data transform after the type conversion (since we're using dataset->shared->type). */ 
-	if(!H5Z_xform_noop(dxpl_cache->data_xform_prop))
-	    if( H5Z_xform_eval(dxpl_cache->data_xform_prop, tconv_buf, smine_nelmts, dataset->shared->type) < 0)
-		    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Error performing data transform")
-
         /*
          * Scatter the data out to the file.
          */
@@ -1616,8 +1597,6 @@ done:
  * Modifications:
  *      QAK - 2003/04/17
  *      Hacked on it a lot. :-)
- *      Leon Arber: 4/20/04
- *      Added support for data transforms.
  *
  *-------------------------------------------------------------------------
  */
@@ -1667,7 +1646,7 @@ H5D_chunk_read(H5D_io_info_t *io_info, hsize_t nelmts,
      * If there is no type conversion then read directly into the
      * application's buffer.  This saves at least one mem-to-mem copy.
      */
-    if ( H5Z_xform_noop(dxpl_cache->data_xform_prop) && H5T_path_noop(tpath)) {
+    if (H5T_path_noop(tpath)) {
 #ifdef H5S_DEBUG
 	H5_timer_begin(&timer);
 #endif
@@ -1851,11 +1830,6 @@ H5D_chunk_read(H5D_io_info_t *io_info, hsize_t nelmts,
                     tconv_buf, bkg_buf, io_info->dxpl_id)<0)
                 HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "data type conversion failed")
 
-           /* Do the data transform after the conversion (since we're using type mem_type) */
-            if(!H5Z_xform_noop(dxpl_cache->data_xform_prop))
-	       if( H5Z_xform_eval(dxpl_cache->data_xform_prop, tconv_buf, smine_nelmts, mem_type) < 0)
-		      HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Error performing data transform")
-
             /*
              * Scatter the data into memory.
              */
@@ -1935,8 +1909,6 @@ done:
  * Modifications:
  *      QAK - 2003/04/17
  *      Hacked on it a lot. :-)
- *      Leon Arber: 4/20/04
- *      Added support for data transforms.
  *
  *-------------------------------------------------------------------------
  */
@@ -1986,7 +1958,7 @@ H5D_chunk_write(H5D_io_info_t *io_info, hsize_t nelmts,
      * If there is no type conversion then write directly from the
      * application's buffer.  This saves at least one mem-to-mem copy.
      */
-    if ( H5Z_xform_noop(dxpl_cache->data_xform_prop) && H5T_path_noop(tpath)) {
+    if (H5T_path_noop(tpath)) {
 #ifdef H5S_DEBUG
 	H5_timer_begin(&timer);
 #endif
@@ -2164,11 +2136,6 @@ H5D_chunk_write(H5D_io_info_t *io_info, hsize_t nelmts,
             if (H5T_convert(tpath, src_id, dst_id, smine_nelmts, 0, 0, 
                     tconv_buf, bkg_buf, io_info->dxpl_id)<0)
                 HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "data type conversion failed")
-
- 	    /* Do the data transform after the type conversion (since we're using dataset->shared->type) */
-            if(!H5Z_xform_noop(dxpl_cache->data_xform_prop))
-	      if( H5Z_xform_eval(dxpl_cache->data_xform_prop, tconv_buf, smine_nelmts, dataset->shared->type) < 0)
-		     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Error performing data transform")
 
             /*
              * Scatter the data out to the file.
@@ -2419,7 +2386,7 @@ H5D_create_chunk_map(const H5D_t *dataset, const H5T_t *mem_type, const H5S_t *f
 
     /* Initialize skip list for chunk selections */
     if((fm->fsel=H5SL_create(H5SL_TYPE_HSIZE,0.5,H5D_DEFAULT_SKIPLIST_HEIGHT))==NULL)
-        HGOTO_ERROR(H5E_DATASET,H5E_CANTCREATE,FAIL,"can't create skip list for chunk selections")
+        HGOTO_ERROR(H5E_DATASET,H5E_CANTMAKETREE,FAIL,"can't create skip list for chunk selections")
 
     /* Initialize "last chunk" information */
     fm->last_index=(hsize_t)-1;

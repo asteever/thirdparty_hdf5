@@ -551,7 +551,51 @@ H5FD_mem_t FileAccPropList::getMultiType() const
 ///\param	rdcc_nelmts - IN: Number of elements in the raw data chunk cache
 ///\param	rdcc_nbytes - IN: Total size of the raw data chunk cache, in bytes
 ///\param	rdcc_w0 - IN: Preemption policy
-///\exception	H5::PropListIException
+///\exception   H5::PropListIException
+///\par Description
+///		The argument \a rdcc_w0 should hold a value between 0 and 1 
+///		inclusive.  This value indicates how much chunks that have 
+///		been fully read are favored for preemption. A value of zero 
+///		means fully read chunks are treated no differently than other 
+///		chunks (the preemption is strictly LRU) while a value of one 
+///		means fully read chunks are always preempted before other chunks. 
+//--------------------------------------------------------------------------
+#ifdef H5_WANT_H5_V1_4_COMPAT
+void FileAccPropList::setCache( int mdc_nelmts, int rdcc_nelmts, size_t rdcc_nbytes, double rdcc_w0 ) const
+{
+   herr_t ret_value = H5Pset_cache( id, mdc_nelmts, rdcc_nelmts, rdcc_nbytes, rdcc_w0 );
+   if( ret_value < 0 )
+   {
+      throw PropListIException("FileAccPropList::setCache", "H5Pset_cache failed");
+   }
+}
+
+//--------------------------------------------------------------------------
+// Function:	FileAccPropList::getCache
+///\brief	Queries the meta data cache and raw data chunk cache parameters.
+///\param	mdc_nelmts  - OUT: Number of elements in the meta data cache
+///\param	rdcc_nelmts - OUT: Number of elements in the raw data chunk cache
+///\param	rdcc_nbytes - OUT: Total size of the raw data chunk cache, in bytes
+///\param	rdcc_w0 - OUT: Preemption policy
+///\exception   H5::PropListIException
+//--------------------------------------------------------------------------
+void FileAccPropList::getCache( int& mdc_nelmts, int& rdcc_nelmts, size_t& rdcc_nbytes, double& rdcc_w0 ) const
+{
+   herr_t ret_value = H5Pget_cache( id, &mdc_nelmts, &rdcc_nelmts, &rdcc_nbytes, &rdcc_w0 );
+   if( ret_value < 0 )
+   {
+      throw PropListIException("FileAccPropList::getCache", "H5Pget_cache failed");
+   }
+}
+#else /* H5_WANT_H5_V1_4_COMPAT */
+//--------------------------------------------------------------------------
+// Function:	FileAccPropList::setCache
+///\brief	Sets the meta data cache and raw data chunk cache parameters.
+///\param	mdc_nelmts - IN: Number of elements in the meta data cache
+///\param	rdcc_nelmts - IN: Number of elements in the raw data chunk cache
+///\param	rdcc_nbytes - IN: Total size of the raw data chunk cache, in bytes
+///\param	rdcc_w0 - IN: Preemption policy
+///\exception   H5::PropListIException
 ///\par Description
 ///		The argument \a rdcc_w0 should hold a value between 0 and 1 
 ///		inclusive.  This value indicates how much chunks that have 
@@ -588,6 +632,7 @@ void FileAccPropList::getCache( int& mdc_nelmts, size_t& rdcc_nelmts, size_t& rd
       throw PropListIException("FileAccPropList::getCache", "H5Pget_cache failed");
    }
 }
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
 //--------------------------------------------------------------------------
 // Function:	FileAccPropList::setFcloseDegree

@@ -21,7 +21,7 @@ dset                     Dataset {2/2}
         Data:  {1, 2}, {3, 4}
     Attribute: reference {2}
         Type:      object reference
-        Data:  DATASET-1:976, DATASET-1:976
+        Data:  DATASET-0:1:0:976, DATASET-0:1:0:976
     Attribute: enum      {2}
         Type:      enum 32-bit little-endian integer {
                    RED              = 0
@@ -64,8 +64,8 @@ dset                     Dataset {2/2}
     Attribute: reference2D {3, 2}
         Type:      object reference
         Data:
-            (0,0) DATASET-1:976, DATASET-1:976, DATASET-1:976, DATASET-1:976,
-            (2,0) DATASET-1:976, DATASET-1:976
+            (0,0) DATASET-0:1:0:976, DATASET-0:1:0:976, DATASET-0:1:0:976,
+            (1,1) DATASET-0:1:0:976, DATASET-0:1:0:976, DATASET-0:1:0:976
     Attribute: enum2D    {3, 2}
         Type:      enum 32-bit little-endian integer {
                    RED              = 0
@@ -122,12 +122,14 @@ dset                     Dataset {2/2}
     Attribute: reference3D {4, 3, 2}
         Type:      object reference
         Data:
-            (0,0,0) DATASET-1:976, DATASET-1:976, DATASET-1:976, DATASET-1:976,
-            (0,2,0) DATASET-1:976, DATASET-1:976, DATASET-1:976, DATASET-1:976,
-            (1,1,0) DATASET-1:976, DATASET-1:976, DATASET-1:976, DATASET-1:976,
-            (2,0,0) DATASET-1:976, DATASET-1:976, DATASET-1:976, DATASET-1:976,
-            (2,2,0) DATASET-1:976, DATASET-1:976, DATASET-1:976, DATASET-1:976,
-            (3,1,0) DATASET-1:976, DATASET-1:976, DATASET-1:976, DATASET-1:976
+            (0,0,0) DATASET-0:1:0:976, DATASET-0:1:0:976, DATASET-0:1:0:976,
+            (0,1,1) DATASET-0:1:0:976, DATASET-0:1:0:976, DATASET-0:1:0:976,
+            (1,0,0) DATASET-0:1:0:976, DATASET-0:1:0:976, DATASET-0:1:0:976,
+            (1,1,1) DATASET-0:1:0:976, DATASET-0:1:0:976, DATASET-0:1:0:976,
+            (2,0,0) DATASET-0:1:0:976, DATASET-0:1:0:976, DATASET-0:1:0:976,
+            (2,1,1) DATASET-0:1:0:976, DATASET-0:1:0:976, DATASET-0:1:0:976,
+            (3,0,0) DATASET-0:1:0:976, DATASET-0:1:0:976, DATASET-0:1:0:976,
+            (3,1,1) DATASET-0:1:0:976, DATASET-0:1:0:976, DATASET-0:1:0:976
     Attribute: enum3D    {4, 3, 2}
         Type:      enum 32-bit little-endian integer {
                    RED              = 0
@@ -163,7 +165,7 @@ dset                     Dataset {2/2}
         Data:
             (0,0,0) 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
             (2,2,1) 18, 19, 20, 21, 22, 23, 24
-    Location:  1:976
+    Location:  0:1:0:976
     Links:     1
     Modified:  XXXX-XX-XX XX:XX:XX XXX
     Storage:   8 logical bytes, 0 allocated bytes
@@ -312,8 +314,8 @@ g1                       Group
         Data:
             (0,0,0) 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,
             (2,2,1) 18, 19, 20, 21, 22, 23, 24
-    Location:  1:2176
+    Location:  0:1:0:2176
     Links:     1
 g2                       Group
-    Location:  1:2824
+    Location:  0:1:0:2824
     Links:     1

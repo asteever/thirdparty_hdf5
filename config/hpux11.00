@@ -25,75 +25,12 @@ case "X-$CC" in
     ;;
 
   *)
-    CFLAGS="$CFLAGS -Ae -Wp,-H65536" #increase the size of macro definition table. For test/dtypes.c
+    CFLAGS="$CFLAGS -Ae"
     DEBUG_CFLAGS=-g
     DEBUG_CPPFLAGS="-Ae"
     PROD_CFLAGS=-O
     PROD_CPPFLAGS="-Ae"
     PROFILE_CFLAGS=
     PROFILE_CPPFLAGS="-Ae"
-    ;;
-esac
-
-# The default Fortran 90 compiler
-
-#
-# HDF5 integers
-#
-# 	R_LARGE is the number of digits for the bigest integer supported.
-#	R_INTEGER is the number of digits in INTEGER
-#
-# (for the HPUX architechture)
-#
-R_LARGE=18
-R_INTEGER=9
-HADDR_T='SELECTED_INT_KIND(R_LARGE)'
-HSIZE_T='SELECTED_INT_KIND(R_LARGE)'
-HSSIZE_T='SELECTED_INT_KIND(R_LARGE)'
-HID_T='SELECTED_INT_KIND(R_INTEGER)'
-SIZE_T='SELECTED_INT_KIND(R_INTEGER)'
-OBJECT_NAMELEN_DEFAULT_F=-1
-
-if test "X$FC" = "X"; then
-  FC=f90
-fi
-
-if test "X$f9x_flags_set" = "X"; then
-  F9XSUFFIXFLAG=""
-  FSEARCH_DIRS=""
-  FCFLAGS="$FCFLAGS -O"
-  DEBUG_FCFLAGS="-O"
-  PROD_FCFLAGS="-O"
-  PROFILE_FCFLAGS="-O"
-  f9x_flags_set=yes
-fi
-
-# The default C++ compiler
-
-if test -z "$CXX"; then
-  CXX=aCC
-  CXX_BASENAME=aCC
-fi
-
-case "X-$CXX" in
-  X-aCC)
-    # +Z for PIC, +A for using archived libraries
-    CXXFLAGS="$CXXFLAGS +Z +A -D_INCLUDE_LONGLONG"
-    CFLAGS="$CFLAGS -g +O2"
-    DEBUG_CXXFLAGS=-g
-    DEBUG_CPPFLAGS=
-    PROD_CXXFLAGS="-O -s"
-    PROD_CPPFLAGS=
-    PROFILE_CPPFLAGS=
-    ;;
-
-  *)
-    CXXFLAGS="$CXXFLAGS -D_INCLUDE_LONGLONG"
-    CFLAGS="$CFLAGS"
-    DEBUG_CXXFLAGS=
-    DEBUG_CPPFLAGS=
-    PROD_CXXFLAGS=
-    PROD_CPPFLAGS=
-    PROFILE_CPPFLAGS=
     ;;
 esac

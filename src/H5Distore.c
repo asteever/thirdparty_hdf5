@@ -1252,7 +1252,7 @@ H5D_istore_dest (H5D_t *dset, hid_t dxpl_id)
     HDmemset (rdcc, 0, sizeof(H5D_rdcc_t));
 
     /* Free the raw B-tree node buffer */
-    if(dset->shared->layout.u.chunk.btree_shared==NULL)
+   if(dset->shared->layout.u.chunk.btree_shared==NULL)
         HGOTO_ERROR (H5E_IO, H5E_CANTFREE, FAIL, "ref-counted page nil")
     if(H5RC_DEC(dset->shared->layout.u.chunk.btree_shared)<0)
 	HGOTO_ERROR (H5E_IO, H5E_CANTFREE, FAIL, "unable to decrement ref-counted page")
@@ -1619,7 +1619,7 @@ H5D_istore_lock(const H5D_io_info_t *io_info,
 
 #ifdef OLD_WAY
             /* Clear the error stack from not finding the chunk on disk */
-            H5E_clear_stack(NULL);
+            H5E_clear();
 #endif /* OLD_WAY */
 
             /* Chunk size on disk isn't [likely] the same size as the final chunk
@@ -2352,7 +2352,7 @@ H5D_istore_get_addr(const H5D_io_info_t *io_info, H5D_istore_ud1_t *_udata)
          *      if a chunk exists in the B-tree or not. -QAK
          */
 #ifdef OLD_WAY
-        H5E_clear_stack(NULL);
+        H5E_clear();
 
 	HGOTO_ERROR(H5E_BTREE,H5E_NOTFOUND,HADDR_UNDEF,"Can't locate chunk info")
 #else /* OLD_WAY */

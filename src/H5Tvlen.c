@@ -34,6 +34,7 @@
 #include "H5Tpkg.h"		/* Datatypes				*/
 
 /* Local functions */
+static htri_t H5T_vlen_set_loc(const H5T_t *dt, H5F_t *f, H5T_vlen_loc_t loc);
 static herr_t H5T_vlen_reclaim_recurse(void *elem, const H5T_t *dt, H5MM_free_t free_func, void *free_info);
 static ssize_t H5T_vlen_seq_mem_getlen(const void *_vl);
 static void * H5T_vlen_seq_mem_getptr(void *_vl);
@@ -184,8 +185,8 @@ H5T_vlen_create(const H5T_t *base)
     dt->shared->u.vlen.type = H5T_VLEN_SEQUENCE;
 
     /* Set up VL information */
-    if (H5T_set_loc(dt, NULL, H5T_LOC_MEMORY)<0)
-        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, NULL, "invalid datatype location")
+    if (H5T_vlen_mark(dt, NULL, H5T_VLEN_MEMORY)<0)
+        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, NULL, "invalid VL location")
 
     /* Set return value */
     ret_value=dt;
@@ -213,8 +214,8 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-htri_t
-H5T_vlen_set_loc(const H5T_t *dt, H5F_t *f, H5T_loc_t loc)
+static htri_t
+H5T_vlen_set_loc(const H5T_t *dt, H5F_t *f, H5T_vlen_loc_t loc)
 {
     htri_t ret_value = 0;       /* Indicate that success, but no location change */
 
@@ -222,7 +223,7 @@ H5T_vlen_set_loc(const H5T_t *dt, H5F_t *f, H5T_loc_t loc)
 
     /* check parameters */
     assert(dt);
-    assert(loc>H5T_LOC_BADLOC && loc<H5T_LOC_MAXLOC);
+    assert(loc>H5T_VLEN_BADLOC && loc<H5T_VLEN_MAXLOC);
 
     /* Only change the location if it's different */
     if(loc!=dt->shared->u.vlen.loc) {
@@ -230,11 +231,11 @@ H5T_vlen_set_loc(const H5T_t *dt, H5F_t *f, H5T_loc_t loc)
         ret_value=TRUE;
 
         switch(loc) {
-            case H5T_LOC_MEMORY:   /* Memory based VL datatype */
+            case H5T_VLEN_MEMORY:   /* Memory based VL datatype */
                 assert(f==NULL);
 
                 /* Mark this type as being stored in memory */
-                dt->shared->u.vlen.loc=H5T_LOC_MEMORY;
+                dt->shared->u.vlen.loc=H5T_VLEN_MEMORY;
 
                 if(dt->shared->u.vlen.type==H5T_VLEN_SEQUENCE) {
                     /* size in memory, disk size is different */
@@ -266,11 +267,11 @@ H5T_vlen_set_loc(const H5T_t *dt, H5F_t *f, H5T_loc_t loc)
                 dt->shared->u.vlen.f=NULL;
                 break;
 
-            case H5T_LOC_DISK:   /* Disk based VL datatype */
+            case H5T_VLEN_DISK:   /* Disk based VL datatype */
                 assert(f);
 
                 /* Mark this type as being stored on disk */
-                dt->shared->u.vlen.loc=H5T_LOC_DISK;
+                dt->shared->u.vlen.loc=H5T_VLEN_DISK;
 
                 /* 
                  * Size of element on disk is 4 bytes for the length, plus the size
@@ -1194,3 +1195,129 @@ H5T_vlen_get_alloc_info(hid_t dxpl_id, H5T_vlen_alloc_info_t **vl_alloc_info)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 }   /* end H5T_vlen_get_alloc_info() */
+
+
+/*--------------------------------------------------------------------------
+ NAME
+    H5T_vlen_mark
+ PURPOSE
+    Recursively mark any VL datatypes as on disk/in memory
+ USAGE
+    htri_t H5T_vlen_mark(dt,f,loc)
+        H5T_t *dt;              IN/OUT: Pointer to the datatype to mark
+        H5F_t *dt;              IN: Pointer to the file the datatype is in
+        H5T_vlen_type_t loc     IN: location of VL type
+        
+ RETURNS
+    One of two values on success:
+        TRUE - If the location of any vlen types changed
+        FALSE - If the location of any vlen types is the same
+    <0 is returned on failure
+ DESCRIPTION
+    Recursively descends any VL or compound datatypes to mark all VL datatypes
+    as either on disk or in memory.
+ GLOBAL VARIABLES
+ COMMENTS, BUGS, ASSUMPTIONS
+ EXAMPLES
+ REVISION LOG
+--------------------------------------------------------------------------*/
+htri_t
+H5T_vlen_mark(H5T_t *dt, H5F_t *f, H5T_vlen_loc_t loc)
+{
+    htri_t vlen_changed;    /* Whether H5T_vlen_mark changed the type (even if the size didn't change) */
+    htri_t ret_value = 0;   /* Indicate that success, but no location change */
+    unsigned i;             /* Local index variable */
+    int accum_change=0;     /* Amount of change in the offset of the fields */
+    size_t old_size;        /* Previous size of a field */
+
+    FUNC_ENTER_NOAPI(H5T_vlen_mark, FAIL);
+
+    assert(dt);
+    assert(loc>H5T_VLEN_BADLOC && loc<H5T_VLEN_MAXLOC);
+
+    /* Check the datatype of this element */
+    switch(dt->shared->type) {
+        case H5T_ARRAY:  /* Recurse on VL, compound and array base element type */
+            /* Recurse if it's VL, compound or array */
+            /* (If the type is compound and the force_conv flag is _not_ set, the type cannot change in size, so don't recurse) */
+            if(dt->shared->parent->shared->force_conv && H5T_IS_COMPLEX(dt->shared->parent->shared->type)) {
+                /* Keep the old base element size for later */
+                old_size=dt->shared->parent->shared->size;
+
+                /* Mark the VL, compound or array type */
+                if((vlen_changed=H5T_vlen_mark(dt->shared->parent,f,loc))<0)
+                    HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "Unable to set VL location");
+                if(vlen_changed>0)
+                    ret_value=vlen_changed;
+                
+                /* Check if the field changed size */
+                if(old_size != dt->shared->parent->shared->size) {
+                    /* Adjust the size of the array */
+                    dt->shared->size = dt->shared->u.array.nelem*dt->shared->parent->shared->size;
+                } /* end if */
+            } /* end if */
+            break;
+
+        case H5T_COMPOUND:  /* Check each field and recurse on VL, compound and array type */
+            /* Compound datatypes can't change in size if the force_conv flag is not set */
+            if(dt->shared->force_conv) {
+                /* Sort the fields based on offsets */
+                H5T_sort_value(dt,NULL);
+        
+                for (i=0; i<dt->shared->u.compnd.nmembs; i++) {
+                    /* Apply the accumulated size change to the offset of the field */
+                    dt->shared->u.compnd.memb[i].offset += accum_change;
+
+                    /* Recurse if it's VL, compound, enum or array */
+                    /* (If the force_conv flag is _not_ set, the type cannot change in size, so don't recurse) */
+                    if(dt->shared->u.compnd.memb[i].type->shared->force_conv && H5T_IS_COMPLEX(dt->shared->u.compnd.memb[i].type->shared->type)) {
+                        /* Keep the old field size for later */
+                        old_size=dt->shared->u.compnd.memb[i].type->shared->size;
+
+                        /* Mark the VL, compound, enum or array type */
+                        if((vlen_changed=H5T_vlen_mark(dt->shared->u.compnd.memb[i].type,f,loc))<0)
+                            HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "Unable to set VL location");
+                        if(vlen_changed>0)
+                            ret_value=vlen_changed;
+                        
+                        /* Check if the field changed size */
+                        if(old_size != dt->shared->u.compnd.memb[i].type->shared->size) {
+                            /* Adjust the size of the member */
+                            dt->shared->u.compnd.memb[i].size = (dt->shared->u.compnd.memb[i].size*dt->shared->u.compnd.memb[i].type->shared->size)/old_size;
+
+                            /* Add that change to the accumulated size change */
+                            accum_change += (dt->shared->u.compnd.memb[i].type->shared->size - (int)old_size);
+                        } /* end if */
+                    } /* end if */
+                } /* end for */
+
+                /* Apply the accumulated size change to the datatype */
+                dt->shared->size += accum_change;
+            } /* end if */
+            break;
+
+        case H5T_VLEN: /* Recurse on the VL information if it's VL, compound or array, then free VL sequence */
+            /* Recurse if it's VL, compound or array */
+            /* (If the force_conv flag is _not_ set, the type cannot change in size, so don't recurse) */
+            if(dt->shared->parent->shared->force_conv && H5T_IS_COMPLEX(dt->shared->parent->shared->type)) {
+                if((vlen_changed=H5T_vlen_mark(dt->shared->parent,f,loc))<0)
+                    HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "Unable to set VL location");
+                if(vlen_changed>0)
+                    ret_value=vlen_changed;
+            } /* end if */
+
+            /* Mark this VL sequence */
+            if((vlen_changed=H5T_vlen_set_loc(dt,f,loc))<0)
+                HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "Unable to set VL location");
+            if(vlen_changed>0)
+                ret_value=vlen_changed;
+            break;
+
+        default:
+            break;
+    } /* end switch */
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
+}   /* end H5T_vlen_mark() */
+

@@ -43,11 +43,6 @@ typedef enum H5FD_mem_t {
     H5FD_MEM_NTYPES				/*must be last*/
 } H5FD_mem_t;
 
-/* Map "block tracker" header blocks to 'ohdr' type file memory, since its
- * a fair amount of work to add a new kind of file memory, they are similar
- * enough to object headers and probably too minor to deserve their own type. -QAK */
-#define H5FD_MEM_BLKTRK H5FD_MEM_OHDR
-
 /*
  * A free-list map which maps all types of allocation requests to a single
  * free list.  This is useful for drivers that don't really care about
@@ -188,7 +183,7 @@ typedef struct H5FD_free_t {
 struct H5FD_t {
     hid_t               driver_id;      /*driver ID for this file   */
     const H5FD_class_t *cls;            /*constant class info       */
-    unsigned long       fileno;         /* File serial number       */
+    unsigned long       fileno[2];      /* File serial number       */
     unsigned long       feature_flags;  /* VFL Driver feature Flags */
     hsize_t             threshold;      /* Threshold for alignment  */
     hsize_t             alignment;      /* Allocation alignment     */

@@ -104,10 +104,6 @@ static herr_t H5FL_arr_gc(void);
 static herr_t H5FL_arr_gc_list(H5FL_arr_head_t *head);
 static herr_t H5FL_blk_gc(void);
 static herr_t H5FL_blk_gc_list(H5FL_blk_head_t *head);
-static herr_t H5FL_blk_unlink(H5FL_blk_head_t *pq);
-
-/* Declare a free list to manage the H5FL_fac_head_t struct */
-H5FL_DEFINE(H5FL_fac_head_t);
 
 /* Declare a free list to manage the H5FL_blk_node_t struct */
 H5FL_DEFINE(H5FL_blk_node_t);
@@ -1006,67 +1002,6 @@ done:
 } /* end H5FL_blk_realloc() */
 
 
-/*--------------------------------------------------------------------------
- NAME
-    H5FL_blk_unlink
- PURPOSE
-    Remove a block free list from the global list of initialized block free
-	lists.
- USAGE
-    void H5FL_blk_unlink(H5FL_blk_head_t *pq)
-	H5FL_blk_head_t *pq;		IN: Block free list to remove from global list
- RETURNS
-    Success:	Non-negative
-   	Failure:	Negative
- DESCRIPTION
-    Search through the global list of initialized block free lists and remove
- 	a particular free list.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-static herr_t
-H5FL_blk_unlink(H5FL_blk_head_t *pq)
-{
-    H5FL_blk_gc_node_t *last;   /* Pointer to the last garbage collection node examined */
-    H5FL_blk_gc_node_t *tmp;    /* Temporary pointer to a garbage collection node */
-    herr_t ret_value=SUCCEED;	/* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT(H5FL_blk_unlink)
-    
-    /* Find the node to remove from the global list */
-    last=NULL;
-    tmp=H5FL_blk_gc_head.first;
-    while(tmp!=NULL) {
-        /* Check if the list has allocations outstanding */
-        if(tmp->pq==pq) {
-            /* Unlink node from linked list */
-            if(last==NULL)
-                H5FL_blk_gc_head.first=H5FL_blk_gc_head.first->next;
-            else
-                last->next=tmp->next;
-
-            /* Free the block node */
-            H5MM_xfree(tmp);
-
-            /* Leave now */
-            break;
-        } /* end if */
-
-        /* Advance to next node in list */
-        last=tmp;
-        tmp=tmp->next;
-    } /* end while */
-
-    if(tmp==NULL)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGC, FAIL, "can't release block free list")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
-}   /* end H5FL_blk_unlink() */
-
-
 /*-------------------------------------------------------------------------
  * Function:	H5FL_blk_gc_list
  *
@@ -1837,194 +1772,6 @@ H5FL_seq_realloc(H5FL_seq_head_t *head, void * obj, size_t new_elem)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 }   /* end H5FL_seq_realloc() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5FL_fac_init
- *
- * Purpose:	Initialize a block factory
- *
- * Return:	Success:	Pointer to factory object
- * 		Failure:	NULL
- *
- * Programmer:	Quincey Koziol
- *              Wednesday, February 2, 2005
- *
- * Modifications:
- * 	
- *-------------------------------------------------------------------------
- */
-H5FL_fac_head_t *
-H5FL_fac_init(size_t size)
-{
-    H5FL_fac_head_t *factory;      /* Pointer to new block factory */
-    H5FL_fac_head_t *ret_value;    /* Return value */
-
-    FUNC_ENTER_NOAPI(H5FL_fac_init, NULL)
-
-    /* Sanity check */
-    HDassert(size>0);
-
-    /* Allocate room for the new factory */
-    if(NULL==(factory=H5FL_MALLOC(H5FL_fac_head_t)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed for factory object")
-    
-    /* Initialize block header information */
-    HDmemset(&(factory->queue),0,sizeof(H5FL_blk_head_t));
-
-    /* Set size of blocks for factory */
-    factory->size=size;
-
-    /* Set return value */
-    ret_value=factory;
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-}   /* end H5FL_fac_init() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5FL_fac_free
- *
- * Purpose:	Release a block back to a factory & put on free list
- *
- * Return:	Success:	Non-negative
- * 		Failure:	Negative
- *
- * Programmer:	Quincey Koziol
- *              Wednesday, February 2, 2005
- *
- * Modifications:
- * 	
- *-------------------------------------------------------------------------
- */
-void *
-H5FL_fac_free(H5FL_fac_head_t *head, void *obj)
-{
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5FL_fac_free)
-
-    /* Double check parameters */
-    assert(head);
-    assert(obj);
-
-    /* Make certain that the free list is initialized */
-    assert(head->queue.init);
-
-    /* Use block routine */
-    H5FL_blk_free(&(head->queue),obj);
-
-    FUNC_LEAVE_NOAPI(NULL)
-}   /* end H5FL_fac_free() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5FL_fac_malloc
- *
- * Purpose:	Allocate a block from a factory
- *
- * Return:	Success:	Pointer to a valid sequence object
- * 		Failure:	NULL
- *
- * Programmer:	Quincey Koziol
- *              Wednesday, February 2, 2005
- *
- * Modifications:
- * 	
- *-------------------------------------------------------------------------
- */
-void *
-H5FL_fac_malloc(H5FL_fac_head_t *head)
-{
-    void *ret_value;        /* Pointer to object to return */
-
-    FUNC_ENTER_NOAPI(H5FL_fac_malloc, NULL)
-
-    /* Double check parameters */
-    assert(head);
-
-    /* Use block routine */
-    ret_value=H5FL_blk_malloc(&(head->queue),head->size);
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-}   /* end H5FL_fac_malloc() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5FL_fac_calloc
- *
- * Purpose:	Allocate a block from a factory and clear it to zeros
- *
- * Return:	Success:	Pointer to a valid array object
- * 		Failure:	NULL
- *
- * Programmer:	Quincey Koziol
- *              Wednesday, February 2, 2005
- *
- * Modifications:
- * 	
- *-------------------------------------------------------------------------
- */
-void *
-H5FL_fac_calloc(H5FL_fac_head_t *head)
-{
-    void *ret_value;        /* Pointer to object to return */
-
-    FUNC_ENTER_NOAPI(H5FL_fac_calloc, NULL)
-
-    /* Double check parameters */
-    assert(head);
-
-    /* Use block routine */
-    ret_value=H5FL_blk_calloc(&(head->queue),head->size);
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-}   /* end H5FL_fac_calloc() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5FL_fac_term
- *
- * Purpose:	Terminate a block factory
- *
- * Return:	Success:	non-negative
- * 		Failure:	negative
- *
- * Programmer:	Quincey Koziol
- *              Wednesday, February 2, 2005
- *
- * Modifications:
- * 	
- *-------------------------------------------------------------------------
- */
-herr_t
-H5FL_fac_term(H5FL_fac_head_t *factory)
-{
-    herr_t ret_value=SUCCEED;    /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT(H5FL_fac_term)
-
-    /* Sanity check */
-    HDassert(factory);
-
-    /* Garbage collect all the blocks in the factory's free list */
-    if(H5FL_blk_gc_list(&(factory->queue))<0)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGC, FAIL, "garbage collection of factory failed")
-
-    /* Verify that all the blocks have been freed */
-    if(factory->queue.allocated>0)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTRELEASE, FAIL, "factory still has objects allocated")
-
-    /* Unlink block free list for factory from global free list */
-    H5FL_blk_unlink(&(factory->queue));
-
-    /* Free factory info */
-    H5FL_FREE(H5FL_fac_head_t,factory);
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-}   /* end H5FL_fac_term() */
 
 
 /*-------------------------------------------------------------------------

@@ -28,9 +28,6 @@ class H5_DLLCPP DataType : public H5Object {
 	// Copy constructor: makes a copy of the original object
 	DataType( const DataType& original );
 
-	// Closes this datatype.
-	virtual void close();
-
 	// Copies an existing datatype to this datatype object
 	void copy( const DataType& like_type );
 
@@ -61,6 +58,12 @@ class H5_DLLCPP DataType : public H5Object {
 
 	// Locks a datatype. 
 	void lock() const;
+
+	// Returns a pointer to the current global overflow function. 
+	H5T_overflow_t getOverflow(void) const;
+
+	// Sets the overflow handler to a specified function. 
+	void setOverflow(H5T_overflow_t func) const;
 
 	// Returns the size of a datatype. 
 	size_t getSize() const;
@@ -108,6 +111,11 @@ class H5_DLLCPP DataType : public H5Object {
 
 	// Default constructor
 	DataType();
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+	// Used by the API to appropriately close a datatype
+        void p_close() const;
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 	// Destructor: properly terminates access to this datatype.
 	virtual ~DataType();

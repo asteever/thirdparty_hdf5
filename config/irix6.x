@@ -6,16 +6,6 @@
 #
 # See BlankForm in this directory for details.
 
-# Disable dependency tracking on IRIX unless the user specifically asks for
-# it.
-# IRIX's pmake confuses automake (as of version 1.9) if dependency tracking
-# is enabled and it is not an in-place build.  Simply disabling dependency
-# tracking on IRIX is simpler to implement than detecting pmake, detecting
-# when a build is not in-place, and then disabling dependency tracking.
-if test -z "${enable_dependency_tracking}"; then
-  enable_dependency_tracking="no"
-fi
-
 # Use SGI supplied C compiler by default.  There is no ranlib
 if test "X-" = "X-$CC"; then
     CC='cc'
@@ -90,85 +80,3 @@ case "X-$CC_BASENAME" in
     PROFILE_CPPFLAGS=
     ;;
 esac
-
-# The default Fortran 90 compiler
-
-#
-# HDF5 integers
-#
-# 	R_LARGE is the number of digits for the bigest integer supported.
-#	R_INTEGER is the number of digits in INTEGER
-#
-# (for the IRIX architechture)
-#
-R_LARGE=18
-R_INTEGER=9
-HADDR_T='SELECTED_INT_KIND(R_LARGE)'
-HSIZE_T='SELECTED_INT_KIND(R_LARGE)'
-HSSIZE_T='SELECTED_INT_KIND(R_LARGE)'
-HID_T='SELECTED_INT_KIND(R_INTEGER)'
-SIZE_T='SELECTED_INT_KIND(R_LARGE)'
-OBJECT_NAMELEN_DEFAULT_F=-1
-
-if test "X-" = "X-$FC"; then
-  FC="f90"
-fi
-
-if test "X-" = "X-$f9x_flags_set"; then
-  F9XSUFFIXFLAG=""
-  FSEARCH_DIRS=""
-  FCFLAGS="$FCFLAGS -64 -mips4 -O -s"
-  DEBUG_FCFLAGS="-64 -mips4 -O -s"
-  PROD_FCFLAGS="-64 -mips4 -O -s"
-  PROFILE_FCFLAGS="-64 -mips4 -O -s"
-  f9x_flags_set=yes
-fi
-
-# The default C++ compiler
-
-# The default compiler is `MIPSpro CC'
-if test -z "$CXX"; then
-  CXX=CC
-  CXX_BASENAME=CC
-fi
-
-# Try native compiler flags
-if test -z "$cxx_flags_set"; then
-  # -LANG:std required for std use; -ptused causes templates used to be
-  # instantiated
-  CPPFLAGS="$CPPFLAGS -LANG:std -ptused"
-
-  # libCio is a default library, since libtool before 1.5 doesn't fully 
-  # support C++ yet, default libraries must be explicitly specified.
-  # A new macro is used for this temporary and specific task so it 
-  # won't polute the existing configuration 
-  DEFAULT_LIBS="-lCio"
-
-  DEBUG_CXXFLAGS=-g
-  DEBUG_CPPFLAGS=
-  PROD_CXXFLAGS="-O -s"
-  PROD_CPPFLAGS=
-  PROFILE_CXXFLAGS=-xpg
-  PROFILE_CPPFLAGS=
-  cxx_flags_set=yes
-fi
-
-# Hard set flag to indicate that the 'unsigned long long' to floating-point
-# value conversion are broken by the compilers (as of 4/27/04 - QAK)
-hdf5_cv_sw_ulong_to_fp_bottom_bit_works=${hdf5_cv_sw_ulong_to_fp_bottom_bit_works='no'}
-
-# Set flags to avoid conversion between 'long double' and integers because of 
-# SGI's compiler problems.  For both IRIX64 6.5 and IRIX 6.5, the compilers
-# have the following problems,
-#       long double -> signed char : incorrect rounding
-#       long double -> unsigned char : incorrect rounding
-#       long double -> short : incorrect rounding
-#       long double -> unsigned short : incorrect rounding
-#       long double -> long or long long: incorrect value
-#       long double -> unsigned long or long long : incorrect value
-#
-#       long or long long -> long double : correct value but incorrect bit pattern
-#       unsigned long or long long -> long double : correct value but incorrect bit pattern
-# (1/5/05 - SLU)
-hdf5_cv_sw_ldouble_to_integer_works=${hdf5_cv_sw_ldouble_to_integer_works='no'}
-hdf5_cv_sw_integer_to_ldouble_works=${hdf5_cv_sw_integer_to_ldouble_works='no'}

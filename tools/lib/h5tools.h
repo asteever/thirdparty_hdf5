@@ -418,8 +418,6 @@ typedef struct h5tools_context_t {
     hsize_t pos[H5S_MAX_RANK];    /* matrix position */
 } h5tools_context_t;
 
-   
-
 /* a structure to hold the subsetting particulars for a dataset */
 struct subset_t {
     hsize_t *start;
@@ -468,7 +466,6 @@ extern FILE   *rawdatastream;       /*output stream for raw data            */
 #define OBJNO           "OBJNO"
 #define S_SCALAR        "SCALAR"
 #define S_SIMPLE        "SIMPLE"
-#define S_NULL          "NULL"
 #define SOFTLINK        "SOFTLINK"
 #define STORAGELAYOUT   "STORAGELAYOUT"
 #define START           "START"
@@ -482,9 +479,6 @@ extern FILE   *rawdatastream;       /*output stream for raw data            */
 #define SHUFFLE         "PREPROCESSING SHUFFLE"
 #define FLETCHER32      "CHECKSUM FLETCHER32"
 #define SZIP            "COMPRESSION SZIP"
-#define NBIT            "COMPRESSION NBIT"
-#define SCALEOFFSET            "COMPRESSION SCALEOFFSET"
-#define SCALEOFFSET_MINBIT            "MIN BITS"
 #define STORAGE_LAYOUT  "STORAGE_LAYOUT"
 #define CONTIGUOUS      "CONTIGUOUS"
 #define COMPACT         "COMPACT"

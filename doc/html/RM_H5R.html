@@ -28,7 +28,8 @@ HDF5/H5R API Specification
 <!-- HEADER RIGHT " " -->
 
 
-<!-- #BeginLibraryItem "/ed_libs/NavBar_RM.lbi" --><hr>
+<!-- #BeginLibraryItem "/ed_libs/NavBar_RM.lbi" -->
+<hr>
 <center>
 <table border=0 width=98%>
 <tr><td valign=top align=left>
@@ -41,8 +42,7 @@ HDF5/H5R API Specification
 </td>
 <td valign=top align=right>
 And in this document, the 
-<a href="RM_H5Front.html">HDF5 Reference Manual</a>&nbsp;&nbsp;
-<br>
+<a href="RM_H5Front.html">HDF5 Reference Manual</a>&nbsp;&nbsp;<br>
 <a href="RM_H5.html">H5</a>&nbsp;&nbsp;
 <a href="RM_H5A.html">H5A</a>&nbsp;&nbsp;
 <a href="RM_H5D.html">H5D</a>&nbsp;&nbsp;
@@ -50,8 +50,7 @@ And in this document, the
 <a href="RM_H5F.html">H5F</a>&nbsp;&nbsp;
 <a href="RM_H5G.html">H5G</a>&nbsp;&nbsp;
 <a href="RM_H5I.html">H5I</a>&nbsp;&nbsp;
-<a href="RM_H5P.html">H5P</a>&nbsp;&nbsp;
-<br>
+<a href="RM_H5P.html">H5P</a>&nbsp;&nbsp;<br>
 <a href="RM_H5R.html">H5R</a>&nbsp;&nbsp;
 <a href="RM_H5S.html">H5S</a>&nbsp;&nbsp;
 <a href="RM_H5T.html">H5T</a>&nbsp;&nbsp;
@@ -59,9 +58,14 @@ And in this document, the
 <a href="Tools.html">Tools</a>&nbsp;&nbsp;
 <a href="PredefDTypes.html">Datatypes</a>&nbsp;&nbsp;
 </td></tr>
+<tr><td colspan="2" align="right">
+<i><small>(<a href="http://hdf.ncsa.uiuc.edu/HDF5/doc/PSandPDF/">PDF</a>
+of complete manual formatted as print volume)&nbsp;&nbsp;&nbsp;</small></i>
+</td></tr>
 </table>
 </center>
-<hr><!-- #EndLibraryItem --><center>
+<hr>
+<!-- #EndLibraryItem --><center>
 <h1>H5R: Reference Interface</h1>
 </center>
 
@@ -109,6 +113,7 @@ to specific objects and data regions in an HDF5 file.
     <td valign="top">
 	<ul>
       <li><a href="#Reference-GetObjType">H5Rget_obj_type</a>
+      <li><a href="#Reference-GetObjectType">H5Rget_object_type</a> *
 	</ul>
     </td>
     
@@ -122,7 +127,11 @@ to specific objects and data regions in an HDF5 file.
   </tr>
 </table>
 
-<br>
+* Functions labelled with an asterisk (*) are provided only for 
+backwards compatibility with HDF5 Releases 1.4.<i>x</i>.  
+See further notes in the description of each function.
+<p>
+
 <strong>The FORTRAN90 Interfaces:</strong>
 <br>
 In general, each FORTRAN90 subroutine performs exactly the same task 
@@ -138,7 +147,7 @@ as the corresponding C function.
 </td><td valign=top width=40%>
 <ul>
     <li><a href="#Reference-GetRegion">h5rget_region_f</a>
-    <li><a href="#Reference-GetObjType">h5rget_object_type_f</a>
+    <li><a href="#Reference-GetObjectType">h5rget_object_type_f</a>
 </ul>
 </td><td valign=top width=20%>
 <ul>
@@ -425,6 +434,52 @@ END SUBROUTINE h5rget_object_type_f
         -->
 </dl>
 
+<!-- NEW PAGE -->
+<!-- HEADER RIGHT "H5Rget_object_type" -->
+<hr>
+<dl>
+<dt><strong>Name:</strong> <a name="Reference-GetObjectType">H5Rget_object_type</a>
+<dt><strong>Signature:</strong>
+    <dd><em>int</em> <code>H5Rget_object_type</code>(<em>hid_t</em> <code>id</code>,
+    <em>void *</em><code>ref</code>
+    )
+<dt><strong>Purpose:</strong>
+    <dd>Retrieves the type of object that an object reference points to.
+<dt><strong>Description:</strong>
+    <dd>[<strong>NOTE:</strong>
+        <span class="1_4_compat">
+        This function is provided only to enable backward compatibility
+        with HDF5 Releases 1.4.<i>x</i>. 
+	This function is enabled only if the HDF5 library is configured 
+	with the flag <code>H5_WANT_H5_V1_4_COMPAT</code> and is not
+	enabled in the binaries distributed by NCSA.
+	This function has been replaced in Release 1.6 by the function 
+	<a href="#Reference-GetObjType"><code>H5Rget_obj_type</code></a>
+	and will eventually be deleted from the HDF5 distribution.</span>]
+        <p>
+	</p>Given a reference to an object <code>ref</code>, 
+        <code>H5Rget_object_type</code> returns the 
+        type of the object pointed to.
+<dt><strong>Parameters:</strong>
+    <dl>
+        <dt><em>hid_t</em> <code>id</code>,
+            <dd>IN: The dataset containing the reference object or 
+                the location identifier of the object that the dataset 
+                is located within.
+        <dt><em>void *</em><code>ref</code>
+            <dd>IN: Reference to query.
+    </dl>
+<dt><strong>Returns:</strong>
+    <dd>Returns an object type as defined in <code>H5Gpublic.h</code>;
+        otherwise returns <code>H5G_UNKNOWN</code>.
+		
+		<!--<dt><strong>Non-C API(s):</strong>
+    	<dd>
+        
+        <img src="Graphics/Java.gif"> 
+        <img src="Graphics/C++.gif">
+        -->
+</dl>
 
 <!-- NEW PAGE -->
 <!-- HEADER RIGHT "H5Rget_region" -->
@@ -486,7 +541,8 @@ END SUBROUTINE h5rget_region_f
         -->
 </dl>
 
-<!-- #BeginLibraryItem "/ed_libs/NavBar_RM.lbi" --><hr>
+<!-- #BeginLibraryItem "/ed_libs/NavBar_RM.lbi" -->
+<hr>
 <center>
 <table border=0 width=98%>
 <tr><td valign=top align=left>
@@ -499,8 +555,7 @@ END SUBROUTINE h5rget_region_f
 </td>
 <td valign=top align=right>
 And in this document, the 
-<a href="RM_H5Front.html">HDF5 Reference Manual</a>&nbsp;&nbsp;
-<br>
+<a href="RM_H5Front.html">HDF5 Reference Manual</a>&nbsp;&nbsp;<br>
 <a href="RM_H5.html">H5</a>&nbsp;&nbsp;
 <a href="RM_H5A.html">H5A</a>&nbsp;&nbsp;
 <a href="RM_H5D.html">H5D</a>&nbsp;&nbsp;
@@ -508,8 +563,7 @@ And in this document, the
 <a href="RM_H5F.html">H5F</a>&nbsp;&nbsp;
 <a href="RM_H5G.html">H5G</a>&nbsp;&nbsp;
 <a href="RM_H5I.html">H5I</a>&nbsp;&nbsp;
-<a href="RM_H5P.html">H5P</a>&nbsp;&nbsp;
-<br>
+<a href="RM_H5P.html">H5P</a>&nbsp;&nbsp;<br>
 <a href="RM_H5R.html">H5R</a>&nbsp;&nbsp;
 <a href="RM_H5S.html">H5S</a>&nbsp;&nbsp;
 <a href="RM_H5T.html">H5T</a>&nbsp;&nbsp;
@@ -517,15 +571,22 @@ And in this document, the
 <a href="Tools.html">Tools</a>&nbsp;&nbsp;
 <a href="PredefDTypes.html">Datatypes</a>&nbsp;&nbsp;
 </td></tr>
+<tr><td colspan="2" align="right">
+<i><small>(<a href="http://hdf.ncsa.uiuc.edu/HDF5/doc/PSandPDF/">PDF</a>
+of complete manual formatted as print volume)&nbsp;&nbsp;&nbsp;</small></i>
+</td></tr>
 </table>
 </center>
-<hr><!-- #EndLibraryItem --><!-- #BeginLibraryItem "/ed_libs/Footer.lbi" --><address>
+<hr>
+<!-- #EndLibraryItem --><!-- #BeginLibraryItem "/ed_libs/Footer.lbi" -->
+<address>
 <a href="mailto:hdfhelp@ncsa.uiuc.edu">HDF Help Desk</a> 
 <br>
-Describes HDF5 Release 1.7, the unreleased development branch; working toward HDF5 Release 1.8.0
-</address><!-- #EndLibraryItem --><SCRIPT LANGUAGE="JAVASCRIPT">
+Describes HDF5 Release 1.6.4, March 2005
+</address>
+<!-- #EndLibraryItem --><SCRIPT LANGUAGE="JAVASCRIPT">
 <!--
-document.writeln("Last modified: 24 February 2004");
+document.writeln("Last modified: 16 October 2003");
 -->
 </SCRIPT> 
 

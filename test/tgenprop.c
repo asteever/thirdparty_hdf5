@@ -180,19 +180,11 @@ test_genprop_basic_class_prop(void)
     VERIFY(ret, 0, "H5Pexist");
 
     /* Insert first property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pregister(cid1,PROP1_NAME,PROP1_SIZE,PROP1_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pregister(cid1,PROP1_NAME,PROP1_SIZE,PROP1_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pregister");
 
     /* Try to insert the first property again (should fail) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pregister(cid1,PROP1_NAME,PROP1_SIZE,PROP1_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pregister(cid1,PROP1_NAME,PROP1_SIZE,PROP1_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     VERIFY(ret, FAIL, "H5Pregister");
 
     /* Check the existance of the first property */
@@ -210,19 +202,11 @@ test_genprop_basic_class_prop(void)
     VERIFY(nprops, 1, "H5Pget_nprops");
 
     /* Insert second property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pregister(cid1,PROP2_NAME,PROP2_SIZE,PROP2_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pregister(cid1,PROP2_NAME,PROP2_SIZE,PROP2_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pregister");
 
     /* Try to insert the second property again (should fail) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pregister(cid1,PROP2_NAME,PROP2_SIZE,PROP2_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pregister(cid1,PROP2_NAME,PROP2_SIZE,PROP2_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     VERIFY(ret, FAIL, "H5Pregister");
 
     /* Check the existance of the second property */
@@ -240,11 +224,7 @@ test_genprop_basic_class_prop(void)
     VERIFY(nprops, 2, "H5Pget_nprops");
 
     /* Insert third property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pregister(cid1,PROP3_NAME,PROP3_SIZE,PROP3_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pregister(cid1,PROP3_NAME,PROP3_SIZE,PROP3_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pregister");
 
     /* Check the existance of the third property */
@@ -347,35 +327,19 @@ test_genprop_class_iter(void)
     CHECK_I(cid1, "H5Pcreate_class");
 
     /* Insert first property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pregister(cid1,PROP1_NAME,PROP1_SIZE,PROP1_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pregister(cid1,PROP1_NAME,PROP1_SIZE,PROP1_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pregister");
 
     /* Insert second property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pregister(cid1,PROP2_NAME,PROP2_SIZE,PROP2_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pregister(cid1,PROP2_NAME,PROP2_SIZE,PROP2_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pregister");
 
     /* Insert third property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pregister(cid1,PROP3_NAME,PROP3_SIZE,PROP3_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pregister(cid1,PROP3_NAME,PROP3_SIZE,PROP3_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pregister");
 
     /* Insert third property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pregister(cid1,PROP4_NAME,PROP4_SIZE,PROP4_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pregister(cid1,PROP4_NAME,PROP4_SIZE,PROP4_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pregister");
 
     /* Check the number of properties in class */
@@ -459,35 +423,19 @@ test_genprop_class_callback(void)
     CHECK_I(cid1, "H5Pcreate_class");
 
     /* Insert first property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pregister(cid1,PROP1_NAME,PROP1_SIZE,PROP1_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pregister(cid1,PROP1_NAME,PROP1_SIZE,PROP1_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pregister");
 
     /* Insert second property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pregister(cid1,PROP2_NAME,PROP2_SIZE,PROP2_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pregister(cid1,PROP2_NAME,PROP2_SIZE,PROP2_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pregister");
 
     /* Insert third property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pregister(cid1,PROP3_NAME,PROP3_SIZE,PROP3_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pregister(cid1,PROP3_NAME,PROP3_SIZE,PROP3_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pregister");
 
     /* Insert fourth property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pregister(cid1,PROP4_NAME,PROP4_SIZE,PROP4_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pregister(cid1,PROP4_NAME,PROP4_SIZE,PROP4_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pregister");
 
     /* Check the number of properties in class */
@@ -576,19 +524,11 @@ test_genprop_basic_list(void)
     /* Add several properties (w/default values) */
 
     /* Insert first property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pregister(cid1,PROP1_NAME,PROP1_SIZE,PROP1_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pregister(cid1,PROP1_NAME,PROP1_SIZE,PROP1_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pregister");
 
     /* Insert second property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pregister(cid1,PROP2_NAME,PROP2_SIZE,PROP2_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pregister(cid1,PROP2_NAME,PROP2_SIZE,PROP2_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pregister");
 
     /* Check the number of properties in class */
@@ -686,19 +626,11 @@ test_genprop_basic_list_prop(void)
     /* Add several properties (several w/default values) */
 
     /* Insert first property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pregister(cid1,PROP1_NAME,PROP1_SIZE,PROP1_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pregister(cid1,PROP1_NAME,PROP1_SIZE,PROP1_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pregister");
 
     /* Insert second property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pregister(cid1,PROP2_NAME,PROP2_SIZE,PROP2_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pregister(cid1,PROP2_NAME,PROP2_SIZE,PROP2_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pregister");
 
     /* Create a property list from the class */
@@ -713,19 +645,11 @@ test_genprop_basic_list_prop(void)
     /* Add temporary properties */
 
     /* Insert first temporary property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pinsert(lid1,PROP3_NAME,PROP3_SIZE,PROP3_DEF_VALUE,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pinsert(lid1,PROP3_NAME,PROP3_SIZE,PROP3_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pinsert");
 
     /* Insert second temporary property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pinsert(lid1,PROP4_NAME,PROP4_SIZE,PROP4_DEF_VALUE,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pinsert(lid1,PROP4_NAME,PROP4_SIZE,PROP4_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pinsert");
 
     /* Check the number of properties in list */
@@ -858,19 +782,11 @@ test_genprop_list_iter(void)
     /* Add several properties (several w/default values) */
 
     /* Insert first property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pregister(cid1,PROP1_NAME,PROP1_SIZE,PROP1_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pregister(cid1,PROP1_NAME,PROP1_SIZE,PROP1_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pregister");
 
     /* Insert second property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pregister(cid1,PROP2_NAME,PROP2_SIZE,PROP2_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pregister(cid1,PROP2_NAME,PROP2_SIZE,PROP2_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pregister");
 
     /* Create a property list from the class */
@@ -885,19 +801,11 @@ test_genprop_list_iter(void)
     /* Add temporary properties */
 
     /* Insert first temporary property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pinsert(lid1,PROP3_NAME,PROP3_SIZE,PROP3_DEF_VALUE,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pinsert(lid1,PROP3_NAME,PROP3_SIZE,PROP3_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pinsert");
 
     /* Insert second temporary property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pinsert(lid1,PROP4_NAME,PROP4_SIZE,PROP4_DEF_VALUE,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pinsert(lid1,PROP4_NAME,PROP4_SIZE,PROP4_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pinsert");
 
     /* Check the number of properties in list */
@@ -955,9 +863,6 @@ typedef struct {
     int cop_count;
     char *cop_name;
     void *cop_value;
-
-    /* Compare information */
-    int cmp_count;
 
     /* Close information */
     int cls_count;
@@ -1045,22 +950,6 @@ test_genprop_prop_cop_cb1(const char *name, size_t size, void *value)
     return(SUCCEED);
 }
 
-#ifndef H5_WANT_H5_V1_6_COMPAT
-/****************************************************************
-**
-**  test_genprop_prop_cmp_cb1(): Property comparison callback for test_genprop_list_callback
-** 
-****************************************************************/
-static int 
-test_genprop_prop_cmp_cb1(const void UNUSED *value1, const void UNUSED *value2, size_t UNUSED size)
-{
-    /* Set the information from the comparison call */
-    prop1_cb_info.cmp_count++;
-
-    return(0);
-}
-#endif /* H5_WANT_H5_V1_6_COMPAT */
-
 /****************************************************************
 **
 **  test_genprop_prop_cls_cb1(): Property close callback for test_genprop_list_callback
@@ -1130,35 +1019,19 @@ test_genprop_list_callback(void)
     CHECK_I(cid1, "H5Pcreate_class");
 
     /* Insert first property into class (with callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pregister(cid1,PROP1_NAME,PROP1_SIZE,PROP1_DEF_VALUE,test_genprop_prop_crt_cb1,test_genprop_prop_set_cb1,test_genprop_prop_get_cb1,NULL,test_genprop_prop_cop_cb1,test_genprop_prop_cls_cb1);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pregister(cid1,PROP1_NAME,PROP1_SIZE,PROP1_DEF_VALUE,test_genprop_prop_crt_cb1,test_genprop_prop_set_cb1,test_genprop_prop_get_cb1,NULL,test_genprop_prop_cop_cb1,test_genprop_prop_cmp_cb1,test_genprop_prop_cls_cb1);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pregister");
 
     /* Insert second property into class (with only delete callback) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pregister(cid1,PROP2_NAME,PROP2_SIZE,PROP2_DEF_VALUE,NULL,NULL,NULL,test_genprop_prop_del_cb2,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pregister(cid1,PROP2_NAME,PROP2_SIZE,PROP2_DEF_VALUE,NULL,NULL,NULL,test_genprop_prop_del_cb2,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pregister");
 
     /* Insert third property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pregister(cid1,PROP3_NAME,PROP3_SIZE,PROP3_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pregister(cid1,PROP3_NAME,PROP3_SIZE,PROP3_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pregister");
 
     /* Insert fourth property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pregister(cid1,PROP4_NAME,PROP4_SIZE,PROP4_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pregister(cid1,PROP4_NAME,PROP4_SIZE,PROP4_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pregister");
 
     /* Check the number of properties in class */
@@ -1262,15 +1135,6 @@ test_genprop_list_callback(void)
     VERIFY(cop_cb_struct.count, 1, "H5Pcopy");
     VERIFY(cop_cb_struct.id, lid2, "H5Pcopy");
 
-#ifndef H5_WANT_H5_V1_6_COMPAT
-    /* Compare the two lists */
-    ret = H5Pequal(lid1,lid2);
-    VERIFY(ret, 1, "H5Pequal");
-
-    /* Verify compare callback information for properties tracked */
-    VERIFY(prop1_cb_info.cmp_count, 1, "H5Pequal");
-#endif /* H5_WANT_H5_V1_6_COMPAT */
-
     /* Close first list */
     ret = H5Pclose(lid1);
     CHECK_I(ret, "H5Pclose");
@@ -1338,11 +1202,7 @@ test_genprop_list_addprop(void)
     CHECK(pid, FAIL, "H5Pcreate");
     
     /* Insert temporary property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pinsert(pid,PROP1_NAME,PROP1_SIZE,PROP1_DEF_VALUE,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pinsert(pid,PROP1_NAME,PROP1_SIZE,PROP1_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pinsert");
 
     /* Check existence of added property */
@@ -1421,11 +1281,7 @@ test_genprop_class_addprop(void)
     VERIFY(ret, 0, "H5Pexist");
 
     /* Insert first property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pregister(cid,PROP1_NAME,PROP1_SIZE,PROP1_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pregister(cid,PROP1_NAME,PROP1_SIZE,PROP1_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pregister");
 
     /* Create a derived dataset creation property list */
@@ -1502,19 +1358,11 @@ test_genprop_equal(void)
     CHECK_I(cid1, "H5Pcreate_class");
 
     /* Insert first property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pregister(cid1,PROP1_NAME,PROP1_SIZE,PROP1_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pregister(cid1,PROP1_NAME,PROP1_SIZE,PROP1_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pregister");
 
     /* Insert second property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pregister(cid1,PROP2_NAME,PROP2_SIZE,PROP2_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pregister(cid1,PROP2_NAME,PROP2_SIZE,PROP2_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pregister");
 
     /* Create a property list from the class */
@@ -1558,11 +1406,7 @@ test_genprop_path(void)
     CHECK_I(cid1, "H5Pcreate_class");
 
     /* Insert first property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pregister(cid1,PROP1_NAME,PROP1_SIZE,PROP1_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pregister(cid1,PROP1_NAME,PROP1_SIZE,PROP1_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pregister");
 
     /* Get full path for first class */
@@ -1577,11 +1421,7 @@ test_genprop_path(void)
     CHECK_I(cid2, "H5Pcreate_class");
 
     /* Insert second property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pregister(cid2,PROP2_NAME,PROP2_SIZE,PROP2_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pregister(cid2,PROP2_NAME,PROP2_SIZE,PROP2_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pregister");
 
     /* Get full path for second class */
@@ -1637,11 +1477,7 @@ test_genprop_refcount(void)
     CHECK_I(cid1, "H5Pcreate_class");
 
     /* Insert first property into class (with no callbacks) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     ret = H5Pregister(cid1,PROP1_NAME,PROP1_SIZE,PROP1_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    ret = H5Pregister(cid1,PROP1_NAME,PROP1_SIZE,PROP1_DEF_VALUE,NULL,NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     CHECK_I(ret, "H5Pregister");
 
     /* Create a new generic list, derived from the root of the class hierarchy */

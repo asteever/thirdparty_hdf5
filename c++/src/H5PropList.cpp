@@ -88,7 +88,7 @@ PropList::PropList( const hid_t plist_id ) : IdComponent(0)
 // Programmer	Binh-Minh Ribler - 2000
 // Modification
 //              Replaced resetIdComponent with decRefCount to use new ID
-//              reference counting mechanisms by Quincey Koziol, June 1, 2004
+//              reference counting mechanisms by QAK, Feb 20, 2005
 //--------------------------------------------------------------------------
 void PropList::copy( const PropList& like_plist )
 {
@@ -109,10 +109,11 @@ void PropList::copy( const PropList& like_plist )
 }
 
 //--------------------------------------------------------------------------
-// Function:	PropList::operator=
-///\brief	Assignment operator.
-///\param	rhs - IN: Reference to the existing property list
-///\exception	H5::PropListIException
+// Function:    PropList::operator=
+///\brief       Assignment operator.
+///\param       rhs - IN: Reference to the existing property list
+///\return	Reference to PropList instance
+///\exception   H5::PropListIException
 // Description
 //		Makes a copy of the property list on the right hand side 
 //		and stores the new id in the left hand side object.
@@ -146,13 +147,14 @@ void PropList::copyProp( PropList& dest, PropList& src, const char *name ) const
 }
 
 //--------------------------------------------------------------------------
-// Function:	PropList::copyProp
-///\brief	This is an overloaded member function, provided for convenience.
-/// 		It differs from the above function only in what arguments it 
-///		accepts.
-///\param	dest - IN: Destination property list or class
-///\param	src  - IN: Source property list or class
-///\param	name - IN: Name of the property to copy - \c std::string
+// Function:    PropList::copyProp
+///\brief       This is an overloaded member function, provided for convenience.
+///             It differs from the above function only in what arguments it
+///             accepts.
+///\param       dest - IN: Destination property list or class
+///\param       src  - IN: Source property list or class
+///\param       name - IN: Name of the property to copy - \c std::string
+///\exception   H5::PropListIException
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 void PropList::copyProp( PropList& dest, PropList& src, const string& name ) const
@@ -160,27 +162,28 @@ void PropList::copyProp( PropList& dest, PropList& src, const string& name ) con
    copyProp( dest, src, name.c_str());
 }
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 //--------------------------------------------------------------------------
-// Function:	PropList::close
-///\brief	Closes the property list if it is not a default one.
-///\exception	H5::PropListIException
-// Programmer	Binh-Minh Ribler - Mar 9, 2005
+// Function:	PropList::p_close (private)
+// Purpose:	Closes the property list if it is not a default one.
+// Exception	H5::PropListIException
+// Description
+//		This function will be obsolete because its functionality
+//		is recently handled by the C library layer. - May, 2004
+// Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-void PropList::close()
+void PropList::p_close() const
 {
    if( id != H5P_NO_CLASS ) // not a constant, should call H5Pclose
    {
       herr_t ret_value = H5Pclose( id );
       if( ret_value < 0 )
       {
-         throw PropListIException("PropList::close", "H5Pclose failed");
+         throw PropListIException(0, "property list close failed" );
       }
-      // reset the id because the property list that it represents is now closed
-      id = 0;
    }
-   else
-      throw PropListIException("PropList::close", "Cannot close a constant");
 }
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 //--------------------------------------------------------------------------
 // Function:	PropList::getClass
@@ -579,11 +582,11 @@ PropList PropList::getClassParent() const
 ///\brief	Properly terminates access to this property list.
 // Programmer	Binh-Minh Ribler - 2000
 // Modification
-//		Replaced resetIdComponent with decRefCount to use new ID 
-//		reference counting mechanisms by Quincey Koziol, June 1, 2004
+//              Replaced resetIdComponent with decRefCount to use new ID
+//              reference counting mechanisms by QAK, Feb 20, 2005
 //--------------------------------------------------------------------------
 PropList::~PropList()
-{  
+{
    // The property list id will be closed properly
     try {
         decRefCount();

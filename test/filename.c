@@ -47,7 +47,7 @@ typedef struct s1_t {
     if (strcmp(x, val)) {					              \
 	TestErrPrintf("*** UNEXPECTED VALUE from %s should be %s, but is %s at line %4d " \
 		   "in %s\n", where, val, x, (int)__LINE__, __FILE__);        \
-	H5Eprint_stack(H5E_DEFAULT, stdout);				      \
+	H5Eprint (stdout);					              \
     }									      \
 } while(0)
 

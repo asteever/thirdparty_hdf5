@@ -19,6 +19,7 @@
 
 typedef struct ref_path_table_entry_t {
     hid_t                 obj;
+    hobj_ref_t            obj_ref;
     char                   *apath;
     H5G_stat_t  statbuf;
     struct ref_path_table_entry_t *next;

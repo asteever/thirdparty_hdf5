@@ -52,7 +52,7 @@ static struct {
     int  nalloc;                /* number of slots allocated */
     int  nobjs;                 /* number of objects */
     struct {
-        haddr_t id;             /* object number */
+        unsigned long id[2];    /* object number */
         char *name;             /* full object name */
     } *obj;
 } idtab_g;
@@ -162,7 +162,8 @@ sym_insert(H5G_stat_t *sb, const char *name)
 
     /* Insert the entry */
     n = idtab_g.nobjs++;
-    idtab_g.obj[n].id = sb->objno;
+    idtab_g.obj[n].id[0] = sb->objno[0];
+    idtab_g.obj[n].id[1] = sb->objno[1];
     idtab_g.obj[n].name = malloc(strlen(name)+1);
     strcpy(idtab_g.obj[n].name, name);
 }
@@ -191,8 +192,10 @@ sym_lookup(H5G_stat_t *sb)
     
     if (sb->nlink<2) return NULL; /*only one name possible*/
     for (n=0; n<idtab_g.nobjs; n++) {
-     if (idtab_g.obj[n].id==sb->objno)
-         return idtab_g.obj[n].name;
+ if (idtab_g.obj[n].id[0]==sb->objno[0] &&
+     idtab_g.obj[n].id[1]==sb->objno[1]) {
+     return idtab_g.obj[n].name;
+ }
     }
     return NULL;
 }
@@ -759,7 +762,7 @@ display_enum_type(hid_t type, int ind)
 {
     char        **name=NULL;    /* member names */
     unsigned char *value=NULL;  /* value array */
-    unsigned char *copy = NULL; /* a pointer to value array */
+    unsigned char *copy = NULL; /*a pointer to value array       */
     unsigned    nmembs;         /* number of members */
     int         nchars;         /* number of output characters */
     hid_t       super;          /* enum base integer type */
@@ -817,15 +820,15 @@ display_enum_type(hid_t type, int ind)
             for (j=0; j<dst_size; j++)
                 printf("%02x", value[i*dst_size+j]);
         } else if (H5T_SGN_NONE==H5Tget_sign(native)) {
- 	    /*On SGI Altix(cobalt), wrong values were printed out with "value+i*dst_size"
- 	     *strangely, unless use another pointer "copy".*/
- 	    copy = value+i*dst_size;
+	    /*On SGI Altix(cobalt), wrong values were printed out with "value+i*dst_size"
+	     *strangely, unless use another pointer "copy".*/
+	    copy = value+i*dst_size;
             HDfprintf(stdout,"%"H5_PRINTF_LL_WIDTH"u",
             *((unsigned long_long*)((void*)copy)));
         } else {
- 	    /*On SGI Altix(cobalt), wrong values were printed out with "value+i*dst_size"
- 	     *strangely, unless use another pointer "copy".*/
- 	    copy = value+i*dst_size;
+	    /*On SGI Altix(cobalt), wrong values were printed out with "value+i*dst_size"
+	     *strangely, unless use another pointer "copy".*/
+	    copy = value+i*dst_size;
             HDfprintf(stdout,"%"H5_PRINTF_LL_WIDTH"d",
             *((long_long*)((void*)copy)));
         }
@@ -1174,8 +1177,9 @@ display_type(hid_t type, int ind)
     /* Shared? If so then print the type's OID */
     if (H5Tcommitted(type)) {
  if (H5Gget_objinfo(type, ".", FALSE, &sb)>=0) {
-     printf("shared-%lu:"H5_PRINTF_HADDR_FMT" ",
-     sb.fileno, sb.objno);
+     printf("shared-%lu:%lu:%lu:%lu ",
+     sb.fileno[1], sb.fileno[0],
+     sb.objno[1], sb.objno[0]);
  } else {
      printf("shared ");
  }
@@ -1269,10 +1273,10 @@ dump_dataset_values(hid_t dset)
     sprintf(fmt_double, "%%1.%dg", DBL_DIG);
     info.fmt_double = fmt_double;
 
-    info.dset_format =  "DSET-%lu:"H5_PRINTF_HADDR_FMT"-";
+    info.dset_format =  "DSET-%lu:%lu:%lu:%lu-";
     info.dset_hidefileno = 0;
     
-    info.obj_format = "-%lu:"H5_PRINTF_HADDR_FMT;
+    info.obj_format = "-%lu:%lu:%lu:%lu";
     info.obj_hidefileno = 0;
     
     info.dset_blockformat_pre = "%sBlk%lu: ";
@@ -1359,10 +1363,6 @@ list_attr (hid_t obj, const char *attr_name, void UNUSED *op_data)
                 }
                 puts("}");
                 break;
-            case H5S_NULL:
-                /* null dataspace */
-                puts(" null");
-                break;
             default:
                 /* Unknown dataspace type */
                 puts(" unknown");
@@ -1405,7 +1405,7 @@ list_attr (hid_t obj, const char *attr_name, void UNUSED *op_data)
         }
 
         /* values of type reference */
-        info.obj_format = "-%lu:"H5_PRINTF_HADDR_FMT;
+        info.obj_format = "-%lu:%lu:%lu:%lu";
         info.obj_hidefileno = 0;
         if (hexdump_g)
            p_type = H5Tcopy(type);
@@ -1479,7 +1479,6 @@ dataset_list1(hid_t dset)
  }
     }
     if (space_type==H5S_SCALAR) printf("SCALAR");
-    else if (space_type==H5S_NULL) printf("NULL");
     putchar('}');
     H5Sclose (space);
 
@@ -1553,7 +1552,7 @@ dataset_list2(hid_t dset, const char UNUSED *name)
         (unsigned long)used, 1==used?"":"s");
  if (used>0) {
 #ifdef WIN32
-    utilization = (hssize_t)total * 100.0 / (hssize_t)used;
+    utilization = (hssize_t)total*100.0 /(hssize_t)used;
 #else
     utilization = (total*100.0)/used;
 #endif
@@ -1605,13 +1604,8 @@ dataset_list2(hid_t dset, const char UNUSED *name)
  if ((nf = H5Pget_nfilters(dcpl))>0) {
      for (i=0; i<nf; i++) {
   cd_nelmts = NELMTS(cd_values);
-#ifdef H5_WANT_H5_V1_6_COMPAT
   filt_id = H5Pget_filter(dcpl, (unsigned)i, &filt_flags, &cd_nelmts,
      cd_values, sizeof(f_name), f_name);
-#else
-  filt_id = H5Pget_filter(dcpl, (unsigned)i, &filt_flags, &cd_nelmts,
-     cd_values, sizeof(f_name), f_name, NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
   f_name[sizeof(f_name)-1] = '\0';
   sprintf(s, "Filter-%d:", i);
   printf("    %-10s %s-%u %s {", s,
@@ -1822,8 +1816,8 @@ list (hid_t group, const char *name, void *_iter)
      * which is common to all objects. */
     if (verbose_g>0 && H5G_LINK!=sb.type) {
  if (sb.type>=0) H5Aiterate(obj, NULL, list_attr, NULL);
- printf("    %-10s %lu:"H5_PRINTF_HADDR_FMT"\n", "Location:",
-        sb.fileno, sb.objno);
+ printf("    %-10s %lu:%lu:%lu:%lu\n", "Location:",
+        sb.fileno[1], sb.fileno[0], sb.objno[1], sb.objno[0]);
  printf("    %-10s %u\n", "Links:", sb.nlink);
         if (sb.mtime>0) {
             if (simple_output_g) tm=gmtime(&(sb.mtime));
@@ -2197,7 +2191,7 @@ main (int argc, const char *argv[])
     }
 
     /* Turn off HDF5's automatic error printing unless you're debugging h5ls */
-    if (!show_errors_g) H5Eset_auto_stack(H5E_DEFAULT, NULL, NULL);
+    if (!show_errors_g) H5Eset_auto(NULL, NULL);
 
 
     /* Each remaining argument is an hdf5 file followed by an optional slash

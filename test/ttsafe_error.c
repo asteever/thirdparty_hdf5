@@ -55,18 +55,27 @@
 #define WRITE_NUMBER		37
 
 static herr_t error_callback(void *);
-static herr_t walk_error_callback(unsigned, const H5E_error_t *, void *);
+static herr_t walk_error_callback(int, H5E_error_t *, void *);
 static void *tts_error_thread(void *);
 
 /* Global variables */
 hid_t error_file;
 
 typedef struct err_num_struct {
-    hid_t maj_num;
-    hid_t min_num;
+	int maj_num;
+	int min_num;
 } err_num_t;
 
-err_num_t expected[8]; 
+err_num_t expected[] = {
+	{H5E_DATASET, H5E_CANTINIT},
+	{H5E_DATASET, H5E_CANTINIT},
+	{H5E_SYM, H5E_EXISTS},
+	{H5E_SYM, H5E_CANTINSERT},
+	{H5E_SYM, H5E_CANTINSERT},
+	{H5E_BTREE, H5E_CANTINIT},
+	{H5E_BTREE, H5E_CANTINSERT},
+	{H5E_SYM, H5E_CANTINSERT},
+};
 
 int error_flag = 0;
 int error_count = 0;
@@ -79,31 +88,6 @@ void tts_error(void)
     hid_t dataset;
     int value, i;
 
-    /* Must initialize these at runtime */
-    expected[0].maj_num = H5E_DATASET;
-    expected[0].min_num = H5E_CANTINIT;
-    
-    expected[1].maj_num = H5E_DATASET;
-    expected[1].min_num = H5E_CANTINIT;
-    
-    expected[2].maj_num = H5E_SYM;
-    expected[2].min_num = H5E_EXISTS;
-    
-    expected[3].maj_num = H5E_SYM;
-    expected[3].min_num = H5E_CANTINSERT;
-    
-    expected[4].maj_num = H5E_SYM;
-    expected[4].min_num = H5E_CANTINSERT;
-    
-    expected[5].maj_num = H5E_BTREE;
-    expected[5].min_num = H5E_CANTINIT;
-    
-    expected[6].maj_num = H5E_BTREE;
-    expected[6].min_num = H5E_CANTINSERT;
-
-    expected[7].maj_num = H5E_SYM;
-    expected[7].min_num = H5E_CANTINSERT;
-    
     /* set up mutex for global count of errors */
     pthread_mutex_init(&error_mutex, NULL);
 
@@ -149,12 +133,12 @@ void *tts_error_thread(void UNUSED *arg)
 {
     hid_t dataspace, datatype, dataset;
     hsize_t dimsf[1]; /* dataset dimensions */
-    H5E_auto_stack_t old_error_cb;
+    H5E_auto_t old_error_cb;
     void *old_error_client_data;
     int value;
 
     /* preserve previous error stack handler */
-    H5Eget_auto_stack(H5E_DEFAULT, &old_error_cb, &old_error_client_data);
+    H5Eget_auto(&old_error_cb, &old_error_client_data);
 
     /* set each thread's error stack handler */
     H5Eset_auto(error_callback, NULL);
@@ -179,7 +163,7 @@ void *tts_error_thread(void UNUSED *arg)
     H5Sclose(dataspace);
 
     /* turn our error stack handler off */
-    H5Eset_auto_stack(H5E_DEFAULT, old_error_cb, old_error_client_data);
+    H5Eset_auto(old_error_cb, old_error_client_data);
 
     return NULL;
 }
@@ -190,13 +174,14 @@ herr_t error_callback(void *client_data)
     pthread_mutex_lock(&error_mutex);
     error_count++;
     pthread_mutex_unlock(&error_mutex);
+
     return H5Ewalk(H5E_WALK_DOWNWARD, walk_error_callback, client_data);
 }
 
 static
-herr_t walk_error_callback(unsigned n, const H5E_error_t *err_desc, void UNUSED *client_data)
+herr_t walk_error_callback(int n, H5E_error_t *err_desc, void UNUSED *client_data)
 {
-    hid_t maj_num, min_num;
+    int maj_num, min_num;
 
     if (err_desc) {
         maj_num = err_desc->maj_num;

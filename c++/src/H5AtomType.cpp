@@ -73,36 +73,6 @@ void AtomType::setSize( size_t size ) const
 //--------------------------------------------------------------------------
 // Function:	AtomType::getOrder
 ///\brief	Returns the byte order of an atomic datatype.
-///\return	Byte order, which can be:
-///		\li \c H5T_ORDER_LE
-///		\li \c H5T_ORDER_BE
-///		\li \c H5T_ORDER_VAX
-///\exception	H5::DataTypeIException
-// Programmer	Binh-Minh Ribler - Mar, 2005
-//--------------------------------------------------------------------------
-H5T_order_t AtomType::getOrder() const
-{
-   // Call C routine to get the byte ordering
-   H5T_order_t type_order = H5Tget_order( id );
-
-   // return a byte order constant if successful
-   if( type_order == H5T_ORDER_ERROR )
-   {
-      throw DataTypeIException("AtomType::getOrder", 
-		"H5Tget_order returns H5T_ORDER_ERROR");
-   }
-   return( type_order );
-}
-
-//--------------------------------------------------------------------------
-// Function:	AtomType::getOrder
-///\brief	This is an overloaded member function, provided for convenience.
-///             It takes a reference to a \c std::string for the buffer that
-///		provide the text description of the returned byte order.
-///		The text description can be either of the following:
-///		"Little endian byte ordering (0)";
-///		"Big endian byte ordering (1)";
-///		"VAX mixed byte ordering (2)";
 ///\param	order_string - OUT: Text description of the returned byte order
 ///\return	Byte order, which can be:
 ///		\li \c H5T_ORDER_LE
@@ -113,10 +83,15 @@ H5T_order_t AtomType::getOrder() const
 //--------------------------------------------------------------------------
 H5T_order_t AtomType::getOrder( string& order_string ) const
 {
-   // Call the overloaded to get the type order without text
-   H5T_order_t type_order = getOrder();
+   // Call C routine to get the byte ordering
+   H5T_order_t type_order = H5Tget_order( id );
 
-   // Then provide the text and return the type order
+   // return a byte order constant if successful
+   if( type_order == H5T_ORDER_ERROR )
+   {
+      throw DataTypeIException("AtomType::getOrder", 
+		"H5Tget_order returns H5T_ORDER_ERROR");
+   }
    if( type_order == H5T_ORDER_LE )
       order_string = "Little endian byte ordering (0)";
    else if( type_order == H5T_ORDER_BE )

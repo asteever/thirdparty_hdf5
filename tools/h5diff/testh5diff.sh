@@ -13,10 +13,6 @@
 # access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 #
 # Tests for the h5diff tool
-#
-# Modification:
-#   Albert Cheng, 2005/2/3
-#   Added -p option for parallel h5diff tests.
 
 H5DIFF=h5diff               # The tool name
 H5DIFF_BIN=`pwd`/$H5DIFF    # The path of the tool binary
@@ -26,7 +22,6 @@ DIFF='diff -c'
 
 nerrors=0
 verbose=yes
-pmode=			    # default to run h5diff tests
 
 # The build (current) directory might be different than the source directory.
 if test -z "$srcdir"; then
@@ -34,30 +29,6 @@ if test -z "$srcdir"; then
 fi
 
 test -d ../testfiles || mkdir ../testfiles
-
-# Parse option
-#   -p   run ph5diff tests
-#   -h   print help page
-while [ $# -gt 0 ]; do
-    case "$1" in
-    -p)	# run ph5diff tests
-	H5DIFF_BIN=`pwd`/ph5diff
-	pmode=yes
-	shift
-	;;
-    -h) # print help page
-	echo "$0 [-p] [-h]"
-	echo "    -p   run ph5diff tests"
-	echo "    -h   print help page"
-	shift
-	exit 0
-	;;
-    *)  # unknown option
-        echo "$0: Unknown option ($1)"
-	exit 1
-	;;
-    esac
-done
 
 # Print a line-line message left justified in a field of 70 characters
 # beginning with the word "Testing".
@@ -75,86 +46,47 @@ TESTING() {
 # `.out'.  The actual output is not removed if $HDF5_NOCLEANUP has a
 # non-zero value.
 #
-# Need eval before the RUNCMD command because some machines like
-# AIX, has RUNPARALLEL in the style as
-#   MP_PROCS=3 MP_TASKS_PER_NODE=3 poe ./a.out
-# that throws the shell script off.
-#
 TOOLTEST() {
-    expect="$srcdir/../testfiles/$1"
-    actual="../testfiles/`basename $1 .txt`.out"
-    actual_err="../testfiles/`basename $1 .txt`.err"
-    shift
-    if test -n "$pmode"; then
-	RUNCMD=$RUNPARALLEL
-    else
-	RUNCMD=$RUNSERIAL
-    fi
+   expect="$srcdir/../testfiles/$1"
+   actual="../testfiles/`basename $1 .txt`.out"
+   actual_err="../testfiles/`basename $1 .txt`.err"
+   shift
 
-    # Run test.
-    # Tflops interprets "$@" as "" when no parameter is given (e.g., the
-    # case of missing file name).  Changed it to use $@ till Tflops fixes it.
-    TESTING $H5DIFF $@
-    (
-	echo "#############################"
-	echo "Expected output for '$H5DIFF $@'" 
-	echo "#############################"
-	cd $srcdir/../testfiles
-	if [ "`uname -s`" = "TFLOPS O/S" ]; then
-	    eval $RUNCMD $H5DIFF_BIN $@
-	else
-	    eval $RUNCMD $H5DIFF_BIN "$@"
-	fi
-    ) >$actual 2>$actual_err
-    # In parallel mode and if MPE library is used, it prints the following
-    # two message lines.
-    #    Writing logfile.
-    #    Finished writing logfile.
-    # They interfere with the expected output.  Filter them out.
-    if test -n "$pmode"; then
-	sed -e '/^Writing logfile./d' -e '/^Finished writing logfile./d' \
-	    < $actual_err >> $actual
-    else
-	cat $actual_err >> $actual
-    fi
+   # Run test.
+   # Tflops interprets "$@" as "" when no parameter is given (e.g., the
+   # case of missing file name).  Changed it to use $@ till Tflops fixes it.
+   TESTING $H5DIFF $@
+   (
+      echo "#############################"
+      echo "Expected output for '$H5DIFF $@'" 
+      echo "#############################"
+      cd $srcdir/../testfiles
+      if [ "`uname -s`" = "TFLOPS O/S" ]; then
+        $RUNSERIAL $H5DIFF_BIN $@
+      else
+        $RUNSERIAL $H5DIFF_BIN "$@"
+      fi
+   ) >$actual 2>$actual_err
+   cat $actual_err >> $actual
 
-    if $CMP $expect $actual; then
-	echo " PASSED"
-    elif test -z "$pmode"; then
-	echo "*FAILED*"
-	echo "    Expected result ($expect) differs from actual result ($actual)"
-	nerrors="`expr $nerrors + 1`"
-	test yes = "$verbose" && $DIFF $expect $actual |sed 's/^/    /'
-    else
-	# parallel mode output are often of different ordering from serial
-	# output.  If the sorted expected and actual files compare the same,
-	# it is safe to assume the actual output match the expected file.
-	expect_sorted=expect_sorted
-	actual_sorted=actual_sorted
-	sort $expect -o $expect_sorted
-	sort $actual -o $actual_sorted
-	if $CMP $expect_sorted $actual_sorted; then
-	    echo " PASSED"
-	else
-	    echo "*FAILED*"
-	    nerrors="`expr $nerrors + 1`"
-	    if test yes = "$verbose"; then
-		echo "====Expected result ($expect_sorted) differs from actual result ($actual_sorted)"
-		$DIFF $expect_sorted $actual_sorted |sed 's/^/    /'
-		echo "====The actual result ($actual)"
-		sed 's/^/    /' < $actual 
-		echo "====The part that is actual stderr ($actual_err)"
-		sed 's/^/    /' < $actual_err 
-	    fi
-	fi
-    fi
+   if [ ! -f $expect ]; then
+   # Create the expect file if it doesn't yet exist.
+      echo " CREATED"
+      cp $actual $expect
+   elif $CMP $expect $actual; then
+      echo " PASSED"
+   else
+      echo "*FAILED*"
+      echo "    Expected result (*.txt) differs from actual result (*.out)"
+      nerrors="`expr $nerrors + 1`"
+      test yes = "$verbose" && $DIFF $expect $actual |sed 's/^/    /'
+   fi
 
-    # Clean up output file
-    if test -z "$HDF5_NOCLEANUP"; then
-	rm -f $actual $actual_err $actual_sorted $expect_sorted
-    fi
+   # Clean up output file
+     if test -z "$HDF5_NOCLEANUP"; then
+     rm -f $actual $actual_err
+     fi
 }
-
 
 ##############################################################################
 ##############################################################################

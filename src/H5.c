@@ -14,7 +14,6 @@
 
 #define H5I_PACKAGE		/*suppress error about including H5Ipkg	  */
 
-
 #include "H5private.h"		/* Generic Functions			*/
 #include "H5Bprivate.h"		/* B-link trees				*/
 #include "H5Dprivate.h"		/* Datasets				*/
@@ -136,8 +135,6 @@ H5_init_library(void)
      * & dataset interfaces though, in order to provide them with the proper
      * property classes.
      */
-    if (H5E_init()<0)
-        HGOTO_ERROR(H5E_FUNC, H5E_CANTINIT, FAIL, "unable to initialize error interface")
     if (H5P_init()<0)
         HGOTO_ERROR(H5E_FUNC, H5E_CANTINIT, FAIL, "unable to initialize property list interface")
     if (H5F_init()<0)
@@ -180,7 +177,7 @@ H5_term_library(void)
     int	pending, ntries=0, n;
     unsigned	at=0;
     char	loop[1024];
-    H5E_auto_stack_t func;
+    H5E_auto_t func;
     
 #ifdef H5_HAVE_THREADSAFE
     /* explicit locking of the API */
@@ -193,7 +190,7 @@ H5_term_library(void)
 	goto done;
 
     /* Check if we should display error output */
-    (void)H5Eget_auto_stack(H5E_DEFAULT,&func,NULL);
+    (void)H5Eget_auto(&func,NULL);
 
     /*
      * Terminate each interface. The termination functions return a positive
@@ -235,9 +232,6 @@ H5_term_library(void)
             pending += DOWN(Z);
             pending += DOWN(FD);
             pending += DOWN(P);
-            /* Don't shut down the error code until other APIs which use it are shut down */
-            if(pending==0)
-                pending += DOWN(E);
             /* Don't shut down the ID code until other APIs which use them are shut down */
             if(pending==0)
                 pending += DOWN(I);
@@ -607,7 +601,7 @@ H5check_version(unsigned majnum, unsigned minnum, unsigned relnum)
 	    /* Mention the versions we are referring to */
 	    HDfprintf (stderr, "Headers are %u.%u.%u, library is %u.%u.%u\n",
 		     majnum, minnum, relnum, 
-		     (unsigned)H5_VERS_MAJOR, (unsigned)H5_VERS_MINOR, (unsigned)H5_VERS_RELEASE);
+		     H5_VERS_MAJOR, H5_VERS_MINOR, H5_VERS_RELEASE);
 
 	    /* Bail out now. */
 	    HDfputs ("Bye...\n", stderr);
@@ -627,7 +621,7 @@ H5check_version(unsigned majnum, unsigned minnum, unsigned relnum)
 	    /* Mention the versions we are referring to */
 	    HDfprintf (stderr, "Headers are %u.%u.%u, library is %u.%u.%u\n",
 		     majnum, minnum, relnum, 
-		     (unsigned)H5_VERS_MAJOR, (unsigned)H5_VERS_MINOR, (unsigned)H5_VERS_RELEASE);
+		     H5_VERS_MAJOR, H5_VERS_MINOR, H5_VERS_RELEASE);
 	    break;
         } /* end switch */
 
@@ -1286,16 +1280,16 @@ H5_timer_begin (H5_timer_t *timer)
 #ifdef H5_HAVE_GETRUSAGE
     HDgetrusage (RUSAGE_SELF, &rusage);
     timer->utime = (double)rusage.ru_utime.tv_sec +
-                   ((double)rusage.ru_utime.tv_usec/1e6);
+                   (double)rusage.ru_utime.tv_usec/1e6;
     timer->stime = (double)rusage.ru_stime.tv_sec +
-                   ((double)rusage.ru_stime.tv_usec/1e6);
+                   (double)rusage.ru_stime.tv_usec/1e6;
 #else
     timer->utime = 0.0;
     timer->stime = 0.0;
 #endif
 #ifdef H5_HAVE_GETTIMEOFDAY
     HDgettimeofday (&etime, NULL);
-    timer->etime = (double)etime.tv_sec + ((double)etime.tv_usec/1e6);
+    timer->etime = (double)etime.tv_sec + (double)etime.tv_usec/1e6;
 #else
     timer->etime = 0.0;
 #endif
@@ -1842,26 +1836,29 @@ H5_trace (const double *returning, const char *func, const char *type, ...)
 		}
 		break;
 
-	    case 't':
+	    case 'j':
 		if (ptr) {
 		    if (vp) {
-			fprintf (out, "0x%lx", (unsigned long)vp);
+			fprintf(out, "0x%lx", (unsigned long)vp);
 		    } else {
 			fprintf(out, "NULL");
 		    }
 		} else {
-		    H5E_type_t etype = va_arg (ap, H5E_type_t); /*lint !e64 Type mismatch not really occuring */
-		    switch (etype) {
-		    case H5E_MAJOR:
-			fprintf (out, "H5E_MAJOR");
-			break;
-		    case H5E_MINOR:
-			fprintf (out, "H5E_MINOR");
-			break;
-		    default:
-			fprintf (out, "%ld", (long)etype);
-			break;
+		    H5E_major_t emaj = va_arg(ap, H5E_major_t);
+		    fprintf(out, "%d", (int)emaj);
+		}
+		break;
+
+	    case 'n':
+		if (ptr) {
+		    if (vp) {
+			fprintf(out, "0x%lx", (unsigned long)vp);
+		    } else {
+			fprintf(out, "NULL");
 		    }
+		} else {
+		    H5E_minor_t emin = va_arg(ap, H5E_minor_t);
+		    fprintf(out, "%d", (int)emin);
 		}
 		break;
 		
@@ -1952,44 +1949,6 @@ H5_trace (const double *returning, const char *func, const char *type, ...)
 			break;
 		    default:
 			fprintf (out, "%ld", (long)link_type);
-			break;
-		    }
-		}
-		break;
-
-	    case 'o':
-		if (ptr) {
-		    if (vp) {
-			fprintf (out, "0x%lx", (unsigned long)vp);
-		    } else {
-			fprintf(out, "NULL");
-		    }
-		} else {
-		    H5G_obj_t obj_type = va_arg (ap, H5G_obj_t); /*lint !e64 Type mismatch not really occuring */
-		    switch (obj_type) {
-		    case H5G_UNKNOWN:
-			fprintf (out, "H5G_UNKNOWN");
-			break;
-		    case H5G_LINK:
-			fprintf (out, "H5G_LINK");
-			break;
-		    case H5G_GROUP:
-			fprintf (out, "H5G_GROUP");
-			break;
-		    case H5G_DATASET:
-			fprintf (out, "H5G_DATASET");
-			break;
-		    case H5G_TYPE:
-			fprintf (out, "H5G_TYPE");
-			break;
-		    case H5G_RESERVED_4:
-		    case H5G_RESERVED_5:
-		    case H5G_RESERVED_6:
-		    case H5G_RESERVED_7:
-			fprintf (out, "H5G_RESERVED(%ld)",(long)obj_type);
-			break;
-		    default:
-			fprintf (out, "%ld", (long)obj_type);
 			break;
 		    }
 		}
@@ -2088,10 +2047,7 @@ H5_trace (const double *returning, const char *func, const char *type, ...)
 		} else if (obj<0) {
 		    fprintf (out, "FAIL");
 		} else {
-		    switch (H5I_TYPE(obj)) { /* Use internal H5I macro instead of function call */
-                        case H5I_UNINIT:
-                            fprintf (out, "%ld (uninit - error)", (long)obj);
-                            break;
+		    switch (H5I_GROUP(obj)) { /* Use internal H5I macro instead of function call */
                         case H5I_BADID:
                             fprintf (out, "%ld (error)", (long)obj);
                             break;
@@ -2224,17 +2180,8 @@ H5_trace (const double *returning, const char *func, const char *type, ...)
                         case H5I_GENPROP_LST:
                             fprintf(out, "%ld (genprop list)", (long)obj);
                             break;
-                        case H5I_ERROR_CLASS:
-                            fprintf(out, "%ld (err class)", (long)obj);
-                            break;
-                        case H5I_ERROR_MSG:
-                            fprintf(out, "%ld (err msg)", (long)obj);
-                            break;
-                        case H5I_ERROR_STACK:
-                            fprintf(out, "%ld (err stack)", (long)obj);
-                            break;
-                        case H5I_NTYPES:
-                            fprintf (out, "%ld (ntypes - error)", (long)obj);
+                        case H5I_NGROUPS:
+                            fprintf (out, "%ld (ngroups - error)", (long)obj);
                             break;
                         default:
                             fprintf(out, "%ld (unknown class)", (long)obj);
@@ -2300,9 +2247,6 @@ H5_trace (const double *returning, const char *func, const char *type, ...)
 		} else {
 		    H5I_type_t id_type = va_arg (ap, H5I_type_t); /*lint !e64 Type mismatch not really occuring */
 		    switch (id_type) {
-		    case H5I_UNINIT:
-			fprintf (out, "H5I_UNINIT");
-			break;
 		    case H5I_BADID:
 			fprintf (out, "H5I_BADID");
 			break;
@@ -2339,17 +2283,8 @@ H5_trace (const double *returning, const char *func, const char *type, ...)
 		    case H5I_GENPROP_LST:
 			fprintf (out, "H5I_GENPROP_LST");
 			break;
-		    case H5I_ERROR_CLASS:
-			fprintf (out, "H5I_ERROR_CLASS");
-			break;
-		    case H5I_ERROR_MSG:
-			fprintf (out, "H5I_ERROR_MSG");
-			break;
-		    case H5I_ERROR_STACK:
-			fprintf (out, "H5I_ERROR_STACK");
-			break;
-		    case H5I_NTYPES:
-			fprintf (out, "H5I_NTYPES");
+		    case H5I_NGROUPS:
+			fprintf (out, "H5I_NGROUPS");
 			break;
 		    default:
 			fprintf (out, "%ld", (long)id_type);
@@ -2554,9 +2489,6 @@ H5_trace (const double *returning, const char *func, const char *type, ...)
                             break;
                         case H5S_SIMPLE:
                             fprintf(out, "H5S_SIMPLE");
-                            break;
-                        case H5S_NULL:
-                            fprintf(out, "H5S_NULL");
                             break;
                         case H5S_COMPLEX:
                             fprintf(out, "H5S_COMPLEX");

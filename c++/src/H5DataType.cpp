@@ -96,12 +96,12 @@ DataType::DataType(const DataType& original) : H5Object(original)
 // Programmer	Binh-Minh Ribler - 2000
 // Modification
 //              Replaced resetIdComponent with decRefCount to use new ID
-//              reference counting mechanisms by Quincey Koziol, June 1, 2004
+//              reference counting mechanisms by QAK, Feb 20, 2005
 //--------------------------------------------------------------------------
 void DataType::copy( const DataType& like_type )
 {
-   // reset the identifier of this instance, H5Tclose will be called 
-   // if needed 
+   // reset the identifier of this instance, H5Tclose will be called
+   // if needed
    if( is_predtype == false ) {
         try {
             decRefCount();
@@ -262,6 +262,24 @@ void DataType::convert( const DataType& dest, hsize_t nelmts, void *buf, void *b
    {
       throw DataTypeIException("DataType::convert", "H5Tconvert failed");
    }
+}
+
+// Sets the overflow handler to a specified function. 
+void DataType::setOverflow( H5T_overflow_t func ) const
+{
+   // Call C routine H5Tset_overflow to set the overflow handler
+   herr_t ret_value = H5Tset_overflow( func );
+   if( ret_value < 0 )
+   {
+      throw DataTypeIException("DataType::setOverflow", "H5Tset_overflow failed");
+   }
+}
+
+// Returns a pointer to the current global overflow function. 
+H5T_overflow_t DataType::getOverflow(void) const
+{
+   return( H5Tget_overflow());  // C routine
+   // NULL can be returned as well
 }
 
 //--------------------------------------------------------------------------
@@ -597,28 +615,29 @@ DataSpace DataType::getRegion(void *ref, H5R_type_t ref_type) const
    return(dataspace);
 }
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 //--------------------------------------------------------------------------
-// Function:	DataType::close
-///\brief	Closes the datatype if it is not a predefined type.
-///\exception	H5::DataTypeIException
-// Programmer	Binh-Minh Ribler - Mar 9, 2005
+// Function:    DataType::p_close (private)
+// Purpose:     Closes the datatype if it is not a predefined type.
+// Exception    H5::DataTypeIException
+// Description
+//              This function will be obsolete because its functionality
+//              is recently handled by the C library layer. - May, 2004
+// Programmer   Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-void DataType::close()
+void DataType::p_close() const
 {
    // If this datatype is not a predefined type, call H5Tclose on it.
    if( is_predtype == false )
    {
-      herr_t ret_value = H5Tclose(id);
+      herr_t ret_value = H5Tclose( id );
       if( ret_value < 0 )
       {
-         throw DataTypeIException("DataType::close", "H5Tclose failed");
+         throw DataTypeIException(0, "H5Tclose failed");
       }
-      // reset the id because the datatype that it represents is now closed
-      id = 0;
    }
-   else // cannot close a predefined type
-      throw DataTypeIException("DataType::close", "Cannot close a predefined type");
 }
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 //--------------------------------------------------------------------------
 // Function:	DataType destructor
@@ -626,7 +645,7 @@ void DataType::close()
 // Programmer	Binh-Minh Ribler - 2000
 // Modification
 //              Replaced resetIdComponent with decRefCount to use new ID
-//              reference counting mechanisms by Quincey Koziol, June 1, 2004
+//              reference counting mechanisms by QAK, Feb 20, 2005
 //--------------------------------------------------------------------------
 DataType::~DataType()
 {  

@@ -80,9 +80,6 @@ struct space4_struct {
     char c2;
  } space4_data={'v',987123,(float)-3.14,'g'}; /* Test data for 4th dataspace */
 
-/* Null dataspace */
-int space5_data = 7;
-
 /*-------------------------------------------------------------------------
  *  
  * Function:	test_h5s_basic
@@ -301,9 +298,9 @@ test_h5s_scalar_write(void)
 
 	dataset.write(&space3_data, PredType::NATIVE_UINT);
     } // end of try block
-    catch (Exception E)
+    catch (Exception error)
     {
-	issue_fail_msg(E.getCFuncName(), __LINE__, __FILE__, E.getCDetailMsg());
+	issue_fail_msg(error.getCFuncName(), __LINE__, __FILE__);
     }
 }				/* test_h5s_scalar_write() */
 
@@ -360,69 +357,13 @@ test_h5s_scalar_read(void)
 	dataset.read(&rdata, PredType::NATIVE_UINT);
 	verify_val(rdata, space3_data, "DataSet::read", __LINE__, __FILE__);
     }   // end of try block
-    catch (Exception E)
+    catch (Exception error)
     {
 	// all the exceptions caused by negative returned values by C APIs
-	issue_fail_msg(E.getCFuncName(), __LINE__, __FILE__, E.getCDetailMsg());
+	issue_fail_msg(error.getCFuncName(), __LINE__, __FILE__);
     }
     
 }				/* test_h5s_scalar_read() */
-
-/*-------------------------------------------------------------------------
- *  
- * Function:	test_h5s_null
- *
- * Purpose:	Test null H5S (dataspace) code
- *
- * Return:	none
- *
- * Programmer:	Raymond Lu (using C version)
- *              May 18, 2004
- *
- * Modifications:
- *      January, 2005: C tests' macro VERIFY casts values to 'long' for all
- *		       cases.  Since there are no operator<< for 'long long'
- *		       or int64 in VS C++ ostream, I casted the hssize_t values
- *		       passed to verify_val to 'long' as well.  If problems
- *		       arises later, this will have to be specificly handled
- *		       with a special routine.
- *-------------------------------------------------------------------------
- */
-static void 
-test_h5s_null(void)
-{
-
-    /* Output message about test being performed */
-    MESSAGE(5, ("Testing Null Dataspace Writing\n"));
-
-    try
-    {
-	// Create file
-	H5File fid1(DATAFILE, H5F_ACC_TRUNC);
-
-	/* Create scalar dataspace */
-	DataSpace sid1(H5S_NULL);
-
-	//n = H5Sget_simple_extent_npoints(sid1);
-	hssize_t	n;	 	/* Number of dataspace elements */
-	n = sid1.getSimpleExtentNpoints();
-	verify_val((long)n, 0, "DataSpace::getSimpleExtentNpoints", __LINE__, __FILE__);
-
-	// Create a dataset 
-	DataSet dataset = fid1.createDataSet("Dataset1", PredType::NATIVE_UINT,sid1);
-
-        // Try to write nothing to the dataset
-	dataset.write(&space5_data, PredType::NATIVE_INT);
-
-        // Read the data.  Make sure no change to the buffer
-	dataset.read(&space5_data, PredType::NATIVE_INT);
-	verify_val(space5_data, 7, "DataSet::read", __LINE__, __FILE__);
-    } // end of try block
-    catch (Exception E)
-    {
-	issue_fail_msg(E.getCFuncName(), __LINE__, __FILE__, E.getCDetailMsg());
-    }
-}				/* test_h5s_null() */
 
 /*-------------------------------------------------------------------------
  *  
@@ -492,10 +433,10 @@ test_h5s_compound_scalar_write(void)
 
 	dataset.write(&space4_data, tid1);
     }	// end of try block
-    catch (Exception E)
+    catch (Exception error)
     {
 	// all the exceptions caused by negative returned values by C APIs
-	issue_fail_msg(E.getCFuncName(), __LINE__, __FILE__, E.getCDetailMsg());
+	issue_fail_msg(error.getCFuncName(), __LINE__, __FILE__);
     }
 
 }				/* test_h5s_compound_scalar_write() */
@@ -568,10 +509,10 @@ test_h5s_compound_scalar_read(void)
 		space4_data.c1, rdata.c2);
 	} /* end if */
     }   // end of try block
-    catch (Exception E)
+    catch (Exception error)
     {
 	// all the exceptions caused by negative returned values by C APIs
-	issue_fail_msg(E.getCFuncName(), __LINE__, __FILE__, E.getCDetailMsg());
+	issue_fail_msg(error.getCFuncName(), __LINE__, __FILE__);
     }
 }				/* test_h5s_compound_scalar_read() */
 
@@ -598,7 +539,6 @@ test_h5s(void)
     test_h5s_basic();		/* Test basic H5S code */
     test_h5s_scalar_write();	/* Test scalar H5S writing code */
     test_h5s_scalar_read();	/* Test scalar H5S reading code */
-    test_h5s_null();		/* Test null H5S code  */
     test_h5s_compound_scalar_write();	/* Test compound datatype scalar H5S writing code */
     test_h5s_compound_scalar_read();	/* Test compound datatype scalar H5S reading code */
 } /* test_h5s() */

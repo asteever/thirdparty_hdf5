@@ -13,70 +13,8 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "h5diff.h"
-#include "ph5diff.h"
 #include "H5private.h"
 
-/* global variables */
-int      g_nTasks = 1;
-unsigned char	 g_Parallel = 0;  /*0 for serial, 1 for parallel */
-char    outBuff[OUTBUFF_SIZE];
-unsigned int     outBuffOffset;
-FILE*	overflow_file	      = NULL;
-
-/*-------------------------------------------------------------------------
- * Function: parallel_print
- *
- * Purpose: wrapper for printf for use in parallel mode.
- *
- * Programmer: Leon Arber
- *
- * Date: December 1, 2004
- *
- *-------------------------------------------------------------------------
- */
-void parallel_print(const char* format, ...)
-{
-    int 	bytes_written;
-    va_list	ap;
-
-    va_start(ap, format);
-
-    if(!g_Parallel)
-	vprintf(format, ap); 
-    else
-    {
-
-	if(overflow_file == NULL) /*no overflow has occurred yet */
-	{
-	    bytes_written = HDvsnprintf(outBuff+outBuffOffset, OUTBUFF_SIZE-outBuffOffset, format, ap);
-	    
-            va_end(ap);
-	    va_start(ap, format);
-
-#ifdef H5_VSNPRINTF_WORKS
-	    if(bytes_written >= (OUTBUFF_SIZE-outBuffOffset))
-#else
-	    if((bytes_written+1) == (OUTBUFF_SIZE-outBuffOffset))
-#endif 
-	    {
-		/* Delete the characters that were written to outBuff since they will be written to the overflow_file */
-		memset(outBuff+outBuffOffset, 0, OUTBUFF_SIZE - outBuffOffset); 
-		
-		overflow_file = tmpfile(); 
-		if(overflow_file == NULL)
-		    printf("Warning: Could not create overflow file.  Output may be truncated.\n");
-		else
-		    bytes_written = HDvfprintf(overflow_file, format, ap);
-	    }
-	    else
-		outBuffOffset += bytes_written;
-	}
-	else
-	    bytes_written = HDvfprintf(overflow_file, format, ap); 
-
-    }
-    va_end(ap);
-}
 
 /*-------------------------------------------------------------------------
  * Function: print_pos
@@ -108,22 +46,22 @@ void print_pos( int        *ph,
   *ph=0;
   if (per)
   {
-   parallel_print("%-15s %-15s %-15s %-15s %-15s\n", 
+   printf("%-15s %-15s %-15s %-15s %-15s\n", 
     "position", 
     (obj1!=NULL) ? obj1 : " ", 
     (obj2!=NULL) ? obj2 : " ",
     "difference", 
     "relative");
-   parallel_print("------------------------------------------------------------------------\n");
+   printf("------------------------------------------------------------------------\n");
   }
   else
   {
-   parallel_print("%-15s %-15s %-15s %-20s\n", 
+   printf("%-15s %-15s %-15s %-20s\n", 
     "position", 
     (obj1!=NULL) ? obj1 : " ", 
     (obj2!=NULL) ? obj2 : " ",
     "difference");
-   parallel_print("------------------------------------------------------------\n");
+   printf("------------------------------------------------------------\n");
   }
  }
 
@@ -134,13 +72,12 @@ void print_pos( int        *ph,
  }
  assert( curr_pos == 0 );
 
- parallel_print("[ " );  
+ printf("[ " );  
  for ( i = 0; i < rank; i++)
  {
- /* HDfprintf(stdout,"%Hu ", pos[i]  ); */
-     parallel_print("%"H5_PRINTF_LL_WIDTH"u ", pos[i]);
+  HDfprintf(stdout,"%Hu ", pos[i]  );
  }
- parallel_print("]" );
+ printf("]" );
 }
 
 /*-------------------------------------------------------------------------
@@ -157,11 +94,12 @@ void print_pos( int        *ph,
 void print_dims( int r, hsize_t *d )
 {
  int i;
- parallel_print("[ " );  
+ printf("[ " );  
  for ( i=0; i<r; i++ ) 
-  parallel_print("%d ",(int)d[i]  );
- parallel_print("] " );
+  printf("%d ",(int)d[i]  );
+ printf("] " );
 }
+
 
 /*-------------------------------------------------------------------------
  * Function: print_type
@@ -404,10 +342,7 @@ get_class(H5T_class_t tclass)
  */
 void print_found(hsize_t nfound)
 {
-    if(g_Parallel)
-	parallel_print("%"H5_PRINTF_LL_WIDTH"u differences found\n", nfound);
-    else
-	HDfprintf(stdout,"%Hu differences found\n",nfound);
+ HDfprintf(stdout,"%Hu differences found\n",nfound);
 }
 
 

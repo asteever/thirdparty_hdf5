@@ -6,16 +6,6 @@
 #
 # See BlankForm in this directory for details
 
-# Disable dependency tracking on IRIX unless the user specifically asks for
-# it.
-# IRIX's pmake confuses automake (as of version 1.9) if dependency tracking
-# is enabled and it is not an in-place build.  Simply disabling dependency
-# tracking on IRIX is simpler to implement than detecting pmake, detecting
-# when a build is not in-place, and then disabling dependency tracking.
-if test -z "${enable_dependency_tracking}"; then
-  enable_dependency_tracking="no"
-fi
-
 # The default compiler is `cc' and there is no ranlib.
 if test "X-" = "X-$CC"; then
   CC=cc
@@ -58,23 +48,3 @@ case "X-$CC_BASENAME" in
     PROFILE_CPPFLAGS=
     ;;
 esac
-
-# Hard set flag to indicate that the 'unsigned long long' to floating-point
-# value conversion are broken by the compilers (as of 4/27/04 - QAK)
-hdf5_cv_sw_ulong_to_fp_bottom_bit_works=${hdf5_cv_sw_ulong_to_fp_bottom_bit_works='no'}
-
-# Set flags to avoid conversion between 'long double' and integers because of 
-# SGI's compiler problems.  For both IRIX64 6.5 and IRIX 6.5, the compilers
-# have the following problems,
-#       long double -> signed char : incorrect rounding
-#       long double -> unsigned char : incorrect rounding
-#       long double -> short : incorrect rounding
-#       long double -> unsigned short : incorrect rounding
-#       long double -> long or long long: incorrect value
-#       long double -> unsigned long or long long : incorrect value
-#
-#       long or long long -> long double : correct value but incorrect bit pattern
-#       unsigned long or long long -> long double : correct value but incorrect bit pattern
-# (1/5/05 - SLU)
-hdf5_cv_sw_ldouble_to_int_works=${hdf5_cv_sw_ldouble_to_int_works='no'}
-hdf5_cv_sw_integer_to_ldouble_works=${hdf5_cv_sw_integer_to_ldouble_works='no'}

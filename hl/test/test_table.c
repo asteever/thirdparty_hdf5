@@ -13,10 +13,9 @@
 
 
 
-#include "H5TB.h"
+#include "H5TA.h"
 
 #include <stdlib.h>
-#include <string.h>
 #include <assert.h>
 
 #define TEST_FILE_BE "test_table_be.hdf5"
@@ -51,6 +50,7 @@
 #define TITLE "Title"
 #define NFIELDS  (hsize_t)5
 #define NRECORDS (hsize_t)8
+#define TESTING2(WHAT) {printf("%-70s", "Testing     " WHAT); fflush(stdout);}
 
 /*-------------------------------------------------------------------------
  * structure used for all tests, a particle with properties

@@ -345,15 +345,6 @@ H5O_dtype_decode_helper(H5F_t *f, const uint8_t **pp, H5T_t *dt)
 
             /* Set reference type */
             dt->shared->u.atomic.u.r.rtype = (H5R_type_t)(flags & 0x0f);
-
-            /* Set extra information for object references, so the hobj_ref_t gets swizzled correctly */
-            if(dt->shared->u.atomic.u.r.rtype==H5R_OBJECT) {
-                /* This type is on disk */
-                dt->shared->u.atomic.u.r.loc = H5T_LOC_DISK;
-
-                /* This type needs conversion */
-                dt->shared->force_conv=TRUE;
-            } /* end if */
             break;
 
         case H5T_STRING:
@@ -392,8 +383,8 @@ H5O_dtype_decode_helper(H5F_t *f, const uint8_t **pp, H5T_t *dt)
 
             dt->shared->force_conv=TRUE;
             /* Mark this type as on disk */
-            if (H5T_set_loc(dt, f, H5T_LOC_DISK)<0)
-                HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "invalid datatype location");
+            if (H5T_vlen_mark(dt, f, H5T_VLEN_DISK)<0)
+                HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "invalid VL location");
             break;
 
         case H5T_TIME:  /* Time datatypes */
@@ -1339,14 +1330,14 @@ H5O_dtype_debug(H5F_t *f, hid_t dxpl_id, const void *mesg, FILE *stream,
                 "Vlen type:", s);
 
         switch (dt->shared->u.vlen.loc) {
-            case H5T_LOC_MEMORY:
+            case H5T_VLEN_MEMORY:
                 s = "memory";
                 break;
-            case H5T_LOC_DISK:
+            case H5T_VLEN_DISK:
                 s = "disk";
                 break;
             default:
-                sprintf(buf, "H5T_LOC_%d", dt->shared->u.vlen.loc);
+                sprintf(buf, "H5T_VLEN_%d", dt->shared->u.vlen.loc);
                 s = buf;
                 break;
         }

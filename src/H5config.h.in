@@ -4,20 +4,8 @@
    values. */
 #undef CONVERT_DENORMAL_FLOAT
 
-/* Define if your system can convert long double to unsigned int values
-   correctly. */
-#undef CV_LDOUBLE_TO_UINT_WORKS
-
 /* Define if `dev_t' is a scalar */
 #undef DEV_T_IS_SCALAR
-
-/* Define if your system roundup accurately convert floating-point to unsigned
-   long long values. */
-#undef FP_TO_ULLONG_BOTTOM_BIT_WORKS
-
-/* Define if your system has right maximum convert floating-point to unsigned
-   long long values. */
-#undef FP_TO_ULLONG_RIGHT_MAXIMUM
 
 /* Define if gettimeofday() populates the tz pointer passed in */
 #undef GETTIMEOFDAY_GIVES_TZ
@@ -46,12 +34,6 @@
 /* Define if support for Fletcher32 checksum is enabled */
 #undef HAVE_FILTER_FLETCHER32
 
-/* Define if support for nbit filter is enabled */
-#undef HAVE_FILTER_NBIT
-
-/* Define if support for scaleoffset filter is enabled */
-#undef HAVE_FILTER_SCALEOFFSET
-
 /* Define if support for shuffle filter is enabled */
 #undef HAVE_FILTER_SHUFFLE
 
@@ -60,9 +42,6 @@
 
 /* Define to 1 if you have the `fork' function. */
 #undef HAVE_FORK
-
-/* Define if we want flexible parallel HDF5 support */
-#undef HAVE_FPHDF5
 
 /* Define to 1 if you have the `frexpf' function. */
 #undef HAVE_FREXPF
@@ -78,6 +57,9 @@
 
 /* Define if the compiler understand the __FUNCTION__ keyword */
 #undef HAVE_FUNCTION
+
+/* Define if the Globus GASS is defined */
+#undef HAVE_GASS
 
 /* Define to 1 if you have the `GetConsoleScreenBufferInfo' function. */
 #undef HAVE_GETCONSOLESCREENBUFFERINFO
@@ -99,6 +81,9 @@
 
 /* Define to 1 if you have the `get_fpc_csr' function. */
 #undef HAVE_GET_FPC_CSR
+
+/* Define to 1 if you have the <globus_common.h> header file. */
+#undef HAVE_GLOBUS_COMMON_H
 
 /* Define if we have GPFS support */
 #undef HAVE_GPFS
@@ -122,11 +107,46 @@
 /* Define if it's safe to use `long long' for hsize_t and hssize_t */
 #undef HAVE_LARGE_HSIZET
 
+/* Define to 1 if you have the `crypto' library (-lcrypto). */
+#undef HAVE_LIBCRYPTO
+
 /* Define to 1 if you have the `dmalloc' library (-ldmalloc). */
 #undef HAVE_LIBDMALLOC
 
 /* Define to 1 if you have the `elf' library (-lelf). */
 #undef HAVE_LIBELF
+
+/* Define to 1 if you have the `globus_common' library (-lglobus_common). */
+#undef HAVE_LIBGLOBUS_COMMON
+
+/* Define to 1 if you have the `globus_gaa' library (-lglobus_gaa). */
+#undef HAVE_LIBGLOBUS_GAA
+
+/* Define to 1 if you have the `globus_gass_cache' library
+   (-lglobus_gass_cache). */
+#undef HAVE_LIBGLOBUS_GASS_CACHE
+
+/* Define to 1 if you have the `globus_gass_file' library
+   (-lglobus_gass_file). */
+#undef HAVE_LIBGLOBUS_GASS_FILE
+
+/* Define to 1 if you have the `globus_gass_transfer' library
+   (-lglobus_gass_transfer). */
+#undef HAVE_LIBGLOBUS_GASS_TRANSFER
+
+/* Define to 1 if you have the `globus_gass_transfer_assist' library
+   (-lglobus_gass_transfer_assist). */
+#undef HAVE_LIBGLOBUS_GASS_TRANSFER_ASSIST
+
+/* Define to 1 if you have the `globus_gss' library (-lglobus_gss). */
+#undef HAVE_LIBGLOBUS_GSS
+
+/* Define to 1 if you have the `globus_gss_assist' library
+   (-lglobus_gss_assist). */
+#undef HAVE_LIBGLOBUS_GSS_ASSIST
+
+/* Define to 1 if you have the `globus_io' library (-lglobus_io). */
+#undef HAVE_LIBGLOBUS_IO
 
 /* Define to 1 if you have the `lmpe' library (-llmpe). */
 #undef HAVE_LIBLMPE
@@ -161,6 +181,9 @@
 /* Define to 1 if you have the `SrbClient' library (-lSrbClient). */
 #undef HAVE_LIBSRBCLIENT
 
+/* Define to 1 if you have the `ssl' library (-lssl). */
+#undef HAVE_LIBSSL
+
 /* Define to 1 if you have the `sz' library (-lsz). */
 #undef HAVE_LIBSZ
 
@@ -181,12 +204,6 @@
 
 /* Define to 1 if you have the <mpe.h> header file. */
 #undef HAVE_MPE_H
-
-/* Define if `MPI_Comm_c2f' and `MPI_Comm_f2c' exists */
-#undef HAVE_MPI_MULTI_LANG_Comm
-
-/* Define if `MPI_Info_c2f' and `MPI_Info_f2c' exists */
-#undef HAVE_MPI_MULTI_LANG_Info
 
 /* Define to 1 if you have the <netinet/tcp.h> header file. */
 #undef HAVE_NETINET_TCP_H
@@ -325,9 +342,6 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
-/* Define to 1 if you have the `vasprintf' function. */
-#undef HAVE_VASPRINTF
-
 /* Define to 1 if you have the `vsnprintf' function. */
 #undef HAVE_VSNPRINTF
 
@@ -349,19 +363,12 @@
 /* Define if `__tm_gmtoff' is a member of `struct tm' */
 #undef HAVE___TM_GMTOFF
 
-/* Define if your system can handle complicated MPI derived datatype
-   correctly. */
-#undef MPI_COMPLEX_DERIVED_DATATYPE_WORKS
-
 /* Define if your system's `MPI_File_set_size' function works for files over
    2GB. */
 #undef MPI_FILE_SET_SIZE_BIG
 
 /* Define if shared writing must be disabled (CodeWarrior only) */
 #undef NO_SHARED_WRITING
-
-/* Name of package */
-#undef PACKAGE
 
 /* Define to the address where bug reports for this package should be sent. */
 #undef PACKAGE_BUGREPORT
@@ -492,18 +499,6 @@
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
-/* Define if your system can accurately convert from integers to long double
-   values. */
-#undef SW_INTEGER_TO_LDOUBLE_WORKS
-
-/* Define if your system can accurately convert from long double to integer
-   values. */
-#undef SW_LDOUBLE_TO_INTEGER_WORKS
-
-/* Define if your system can accurately convert unsigned (long) long values to
-   floating-point values. */
-#undef SW_ULONG_TO_FP_BOTTOM_BIT_WORKS
-
 /* Define if your system supports pthread_attr_setscope(&attribute,
    PTHREAD_SCOPE_SYSTEM) call. */
 #undef SYSTEM_SCOPE_THREADS
@@ -514,23 +509,8 @@
 /* Define to 1 if your <sys/time.h> declares `struct tm'. */
 #undef TM_IN_SYS_TIME
 
-/* Define if your system can compile unsigned long long to floating-point
-   casts. */
-#undef ULLONG_TO_FP_CAST_WORKS
-
-/* Define if your system can convert unsigned long long to long double with
-   correct precision. */
-#undef ULLONG_TO_LDOUBLE_PRECISION_WORKS
-
-/* Version number of package */
-#undef VERSION
-
-/* Define if vsnprintf() returns the correct value for formatted strings that
-   don't fit into size allowed */
-#undef VSNPRINTF_WORKS
-
-/* Define if the HDF5 v1.6 compatibility functions are to be compiled in */
-#undef WANT_H5_V1_6_COMPAT
+/* Define if the HDF5 v1.4 compatibility functions are to be compiled in */
+#undef WANT_H5_V1_4_COMPAT
 
 /* Define to 1 if your processor stores words with the most significant byte
    first (like Motorola and SPARC, unlike Intel and VAX). */

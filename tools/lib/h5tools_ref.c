@@ -61,15 +61,18 @@ ref_path_table_entry_t *ref_path_table = NULL;	/* the table */
 ref_path_table_entry_t *
 ref_path_table_lookup(const char *thepath)
 {
-    H5G_stat_t              sb;
+    hobj_ref_t             ref;
     ref_path_table_entry_t *pte = ref_path_table;
 
-    if(H5Gget_objinfo(thefile, thepath, TRUE, &sb)<0)
+    if (ref_path_table == NULL)
+	return NULL;
+
+    if ( H5Rcreate(&ref, thefile, thepath, H5R_OBJECT, -1) < 0)
 	/*  fatal error ? */
 	return NULL;
 
     while(pte!=NULL) {
-	if (sb.objno==pte->statbuf.objno)
+	if(ref==pte->obj_ref)
 	    return pte;
 	pte = pte->next;
     }
@@ -111,6 +114,12 @@ ref_path_table_put(hid_t obj, const char *path)
 	return NULL;
 
     pte->obj = obj;
+
+    if ( H5Rcreate(&pte->obj_ref, thefile, path, H5R_OBJECT, -1) < 0) {
+	/* fatal error? */
+	free(pte);
+	return NULL;
+    }
 
     pte->apath = HDstrdup(path);
 
@@ -155,6 +164,12 @@ get_fake_xid () {
 ref_path_table_entry_t *
 ref_path_table_gen_fake(const char *path)
 {
+    union {
+        hobj_ref_t             rr;
+        char cc[16];
+        unsigned long ll[2];
+    } uu;
+    H5G_stat_t              sb;
     ref_path_table_entry_t *pte;
 
     /* look up 'obj'.  If already in table, return */
@@ -171,8 +186,15 @@ ref_path_table_gen_fake(const char *path)
 
     pte->obj = (hid_t)-1;
 
-    memset(&pte->statbuf,0,sizeof(H5G_stat_t));
-    pte->statbuf.objno = get_fake_xid();
+    sb.objno[0] = (unsigned long)get_fake_xid();
+    sb.objno[1] = (unsigned long)get_fake_xid();
+
+    memcpy(&pte->statbuf,&sb,sizeof(H5G_stat_t));
+
+    uu.ll[0] = sb.objno[0];
+    uu.ll[1] = sb.objno[1];
+
+    memcpy(&pte->obj_ref,(char *)&uu.rr,sizeof(pte->obj_ref));
 
     pte->apath = HDstrdup(path);
 
@@ -201,7 +223,7 @@ lookup_ref_path(hobj_ref_t ref)
     ref_path_table_entry_t *pte = ref_path_table;
 
     while(pte!=NULL) {
-	if (ref==pte->statbuf.objno)
+	if (ref==pte->obj_ref)
 	    return pte->apath;
 	pte = pte->next;
     }

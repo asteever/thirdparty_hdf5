@@ -838,7 +838,6 @@ H5_DLL int64_t HDstrtoll (const char *s, const char **rest, int base);
 #define HDva_arg(A,T)		va_arg(A,T)
 #define HDva_end(A)		va_end(A)
 #define HDva_start(A,P)		va_start(A,P)
-#define HDvasprintf(RET,FMT,A)  vasprintf(RET,FMT,A)
 #define HDvfprintf(F,FMT,A)	vfprintf(F,FMT,A)
 #define HDvprintf(FMT,A)	vprintf(FMT,A)
 #define HDvsprintf(S,FMT,A)	vsprintf(S,FMT,A)
@@ -1168,7 +1167,7 @@ static herr_t		H5_INTERFACE_INIT_FUNC(void);
     FUNC_ENTER_API_THREADSAFE;                                                \
     FUNC_ENTER_API_COMMON(func_name,err);		                      \
     /* Clear thread error stack entering public functions */		      \
-    H5E_clear_stack(NULL);				                      \
+    H5E_clear();						              \
     {
 
 /*
@@ -1185,7 +1184,7 @@ static herr_t		H5_INTERFACE_INIT_FUNC(void);
 /*
  * Use this macro for API functions that shouldn't perform _any_ initialization
  *      of the library or an interface, just perform tracing, etc.  Examples
- *      are: H5close, H5check_version, etc.
+ *      are: H5close, H5check_version, H5Eget_major, H5Eget_minor.
  *
  */
 #define FUNC_ENTER_API_NOINIT(func_name) {{                                   \
@@ -1287,7 +1286,7 @@ static herr_t		H5_INTERFACE_INIT_FUNC(void);
  *	The pablo mask comes from the constant PABLO_MASK defined on a
  *	per-file basis.	 The pablo_func_id comes from an auto variable
  *	defined by FUNC_ENTER.
- *      PABLO was deleted on January 21, 2005 EIP
+ *      PABLO was removed on January 20, 2005 EIP
  *
  *-------------------------------------------------------------------------
  */
@@ -1335,7 +1334,6 @@ H5_DLL void H5_term_library(void);
 H5_DLL int H5A_term_interface(void);
 H5_DLL int H5AC_term_interface(void);
 H5_DLL int H5D_term_interface(void);
-H5_DLL int H5E_term_interface(void);
 H5_DLL int H5F_term_interface(void);
 H5_DLL int H5G_term_interface(void);
 H5_DLL int H5I_term_interface(void);

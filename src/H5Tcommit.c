@@ -143,10 +143,9 @@ H5T_commit (H5G_entry_t *loc, const char *name, H5T_t *type, hid_t dxpl_id)
     if(H5T_is_sensible(type)<=0)
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "datatype is not sensible")
 
-    /* Mark datatype as being on disk now.  This step changes the size of datatype as
-     * stored on disk. */
-    if(H5T_set_loc(type, file, H5T_LOC_DISK)<0)
-        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "cannot mark datatype on disk")
+    /* Mark datatype as being on disk now */
+    if (H5T_vlen_mark(type, file, H5T_VLEN_DISK)<0)
+        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "invalid VL location");
 
     /*
      * Create the object header and open it for write access. Insert the data
@@ -165,9 +164,9 @@ H5T_commit (H5G_entry_t *loc, const char *name, H5T_t *type, hid_t dxpl_id)
     if(H5FO_insert(type->ent.file, type->ent.header, type->shared)<0)
         HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINSERT, FAIL, "can't insert datatype into list of open objects")
 
-    /* Mark datatype as being on memory now.  Since this datatype may still be used in memory
-     * after committed to disk, change its size back as in memory. */
-    if(H5T_set_loc(type, NULL, H5T_LOC_MEMORY)<0)
+    /* Mark datatype as being on memory now because this datatype may be still used in 
+     * memory after committed to disk.  So we need to change its size back. */
+    if (H5T_vlen_mark(type, NULL, H5T_VLEN_MEMORY)<0)
         HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "cannot mark datatype in memory")
 
 done:

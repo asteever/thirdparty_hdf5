@@ -141,22 +141,25 @@ DataSpace Group::getRegion(void *ref, H5R_type_t ref_type) const
    return(dataspace);
 }
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 //--------------------------------------------------------------------------
-// Function:	Group::close
-///\brief	Closes this group.
-///\exception	H5::GroupIException
-// Programmer	Binh-Minh Ribler - Mar 9, 2005
+// Function:    Group::p_close (private)
+// Purpose:     Closes this group.
+// Exception    H5::GroupIException
+// Description
+//              This function will be obsolete because its functionality
+//              is recently handled by the C library layer. - May, 2004
+// Programmer   Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-void Group::close()
+void Group::p_close() const
 {
    herr_t ret_value = H5Gclose( id );
    if( ret_value < 0 )
    {
-      throw GroupIException("Group::close", "H5Gclose failed");
+      throw GroupIException(0, "H5Gclose failed");
    }
-   // reset the id because the group that it represents is now closed
-   id = 0;
 }
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 //--------------------------------------------------------------------------
 // Function:	Group::throwException
@@ -185,7 +188,7 @@ void Group::throwException(const string func_name, const string msg) const
 // Programmer	Binh-Minh Ribler - 2000
 // Modification
 //              Replaced resetIdComponent with decRefCount to use new ID
-//              reference counting mechanisms by Quincey Koziol, June 1, 2004
+//              reference counting mechanisms by QAK, Feb 20, 2005
 //--------------------------------------------------------------------------
 Group::~Group()
 {  
@@ -193,10 +196,9 @@ Group::~Group()
     try {
         decRefCount();
     }
-    catch (Exception close_error) { 
+    catch (Exception close_error) {
         cerr << "Group::~Group - " << close_error.getDetailMsg() << endl;
     }
-
 }  
 
 #ifndef H5_NO_NAMESPACE

@@ -445,7 +445,7 @@ h5tools_simple_prefix(FILE *stream, const h5dump_t *info,
 
     /* Calculate new prefix */
     h5tools_str_prefix(&prefix, info, elmtno, ctx->ndims, ctx->p_min_idx,
-                       ctx->p_max_idx, ctx);
+                       ctx->p_max_idx,ctx);
 
     /* Write new prefix to output */
     if (ctx->indent_level >= 0) {
@@ -1237,8 +1237,6 @@ h5tools_dump_mem(FILE *stream, const h5dump_t *info, hid_t obj_id, hid_t type,
                                    indentlevel);
 }
 
-
-
 /*-------------------------------------------------------------------------
  * Function:    init_acc_pos
  *
@@ -1266,5 +1264,4 @@ void init_acc_pos(h5tools_context_t	*ctx, hsize_t *dims)
  for ( i = 0; i < ctx->ndims; i++)
   ctx->pos[i]=0;
 }
-
 

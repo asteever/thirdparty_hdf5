@@ -100,9 +100,7 @@ done:
  *                         by Fortran routine.
  * Returns:     0 on success, -1 on failure
  * Programmer:  Elena Pourmal
- *              Thursday , August 12, 1999
- * Modifications: dims paramete added.
- *                April 4, 2001
+ *              Tuesday, May 14, 2002
  *---------------------------------------------------------------------------*/
 int_f
 nh5awritec_c (hid_t_f *attr_id, hid_t_f *mem_type_id, _fcd buf, void *dims)
@@ -123,9 +121,7 @@ nh5awritec_c (hid_t_f *attr_id, hid_t_f *mem_type_id, _fcd buf, void *dims)
  *                         by Fortran routine.
  * Returns:     0 on success, -1 on failure
  * Programmer:  Elena Pourmal
- *              Thursday, August 12, 1999
- * Modifications: dims parameter added
- *                April 4, 2001 
+ *              Tuesday, May 14, 2002
  *---------------------------------------------------------------------------*/
 int_f
 nh5awrite_c (hid_t_f *attr_id, hid_t_f *mem_type_id, void *buf, void UNUSED *dims)
@@ -152,9 +148,7 @@ done:
  * Outputs:     buf      - character data buffer
  * Returns:     0 on success, -1 on failure
  * Programmer:  Elena Pourmal
- *              Thursday, August 12, 1999
- * Modifications: dims parameter added.
- *                April 4, 2001
+ *              Tuesday, May 14, 2002
  *---------------------------------------------------------------------------*/
 int_f
 nh5areadc_c (hid_t_f *attr_id, hid_t_f *mem_type_id, _fcd buf, void *dims)
@@ -175,9 +169,7 @@ nh5areadc_c (hid_t_f *attr_id, hid_t_f *mem_type_id, _fcd buf, void *dims)
  * Outputs:     buf      - data buffer
  * Returns:     0 on success, -1 on failure
  * Programmer:  Elena Pourmal
- *              Thursday, August 12, 1999
- * Modifications: dims paramete added.
- *                April 4, 2001
+ *              Tuesday, May 14, 2002
  *---------------------------------------------------------------------------*/
 int_f
 nh5aread_c (hid_t_f *attr_id, hid_t_f *mem_type_id, void *buf, void UNUSED * dims)

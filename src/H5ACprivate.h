@@ -44,11 +44,7 @@
 #define H5AC_LHEAP_ID	2	/*local heap				     */
 #define H5AC_GHEAP_ID	3	/*global heap				     */
 #define H5AC_OHDR_ID	4	/*object header				     */
-#define H5AC_BT2_HDR_ID	5	/*v2 B-tree header			     */
-#define H5AC_BT2_INT_ID 6	/*v2 B-tree internal node		     */
-#define H5AC_BT2_LEAF_ID 7	/*v2 B-tree leaf node			     */
-#define H5AC_BLTR_ID	8	/*block tracker				     */
-#define H5AC_NTYPES	9
+#define H5AC_NTYPES	5	
 
 /* H5AC_DUMP_STATS_ON_CLOSE should always be FALSE when 
  * H5C_COLLECT_CACHE_STATS is FALSE.  
@@ -166,31 +162,15 @@ extern hid_t H5AC_ind_dxpl_id;
 /*
  * Library prototypes.
  */
-
-/* #defines of flags used in the flags parameters in some of the
- * following function calls.  Note that they are just copies of 
- * the equivalent flags from H5Cprivate.h.
- */
-
-#define H5AC__NO_FLAGS_SET		H5C__NO_FLAGS_SET
-#define H5AC__SET_FLUSH_MARKER_FLAG	H5C__SET_FLUSH_MARKER_FLAG
-#define H5AC__DELETED_FLAG		H5C__DELETED_FLAG
-#define H5AC__FLUSH_INVALIDATE_FLAG	H5C__FLUSH_INVALIDATE_FLAG
-#define H5AC__FLUSH_CLEAR_ONLY_FLAG	H5C__FLUSH_CLEAR_ONLY_FLAG
-#define H5AC__FLUSH_MARKED_ENTRIES_FLAG	H5C__FLUSH_MARKED_ENTRIES_FLAG
-
-
-
 H5_DLL herr_t H5AC_init(void);
 H5_DLL herr_t H5AC_create(const H5F_t *f, int size_hint);
-H5_DLL herr_t H5AC_set(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type, 
-                       haddr_t addr, void *thing, unsigned int flags);
+H5_DLL herr_t H5AC_set(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type, haddr_t addr,
+			void *thing);
 H5_DLL void *H5AC_protect(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type,
                           haddr_t addr, const void *udata1, void *udata2,
                           H5AC_protect_t rw);
-H5_DLL herr_t H5AC_unprotect(H5F_t *f, hid_t dxpl_id, 
-                             const H5AC_class_t *type, haddr_t addr,
-			     void *thing, unsigned int flags);
+H5_DLL herr_t H5AC_unprotect(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type, haddr_t addr,
+			     void *thing, hbool_t deleted);
 H5_DLL herr_t H5AC_flush(H5F_t *f, hid_t dxpl_id, unsigned flags);
 H5_DLL herr_t H5AC_rename(H5F_t *f, const H5AC_class_t *type,
 			   haddr_t old_addr, haddr_t new_addr);

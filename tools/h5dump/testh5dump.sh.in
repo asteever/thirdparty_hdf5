@@ -19,8 +19,6 @@ USE_FILTER_SZIP="@USE_FILTER_SZIP@"
 USE_FILTER_DEFLATE="@USE_FILTER_DEFLATE@"
 USE_FILTER_SHUFFLE="@USE_FILTER_SHUFFLE@"
 USE_FILTER_FLETCHER32="@USE_FILTER_FLETCHER32@"
-USE_FILTER_NBIT="@USE_FILTER_NBIT@"
-USE_FILTER_SCALEOFFSET="@USE_FILTER_SCALEOFFSET@"
 
 DUMPER=h5dump               # The tool name
 DUMPER_BIN=`pwd`/$DUMPER    # The path of the tool binary
@@ -284,32 +282,15 @@ if test $USE_FILTER_FLETCHER32 != "yes"; then
 else
  TOOLTEST tfletcher32.ddl $option
 fi
-# nbit
-option="-H -p -d nbit  tfilters.h5"
-if test $USE_FILTER_NBIT != "yes"; then
- SKIP $option
-else
- TOOLTEST tnbit.ddl $option
-fi
-# scaleoffset
-option="-H -p -d scaleoffset  tfilters.h5"
-if test $USE_FILTER_SCALEOFFSET != "yes"; then
- SKIP $option
-else
- TOOLTEST tscaleoffset.ddl $option
-fi
 # all
 option="-H -p -d all  tfilters.h5"
-if test $USE_FILTER_FLETCHER32 != "yes" -o  $USE_FILTER_SZIP != "yes" -o  $USE_FILTER_DEFLATE != "yes" -o  $USE_FILTER_SHUFFLE != "yes" -o $USE_FILTER_NBIT != "yes" -o  $USE_FILTER_SCALEOFFSET != "yes"; then
+if test $USE_FILTER_FLETCHER32 != "yes" -o  $USE_FILTER_SZIP != "yes" -o  $USE_FILTER_DEFLATE != "yes" -o  $USE_FILTER_SHUFFLE != "yes" ; then
  SKIP $option
 else
  TOOLTEST tallfilters.ddl $option
 fi
 # user defined
 TOOLTEST tuserfilter.ddl -H  -p -d myfilter  tfilters.h5
-    
-# test for displaying dataset and attribute of null space
-TOOLTEST tnullspace.ddl tnullspace.h5
 
 
 if test $nerrors -eq 0 ; then

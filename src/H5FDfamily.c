@@ -625,7 +625,6 @@ H5FD_family_open(const char *name, unsigned flags, hid_t fapl_id,
     /* Check that names are unique */
     sprintf(memb_name, name, 0);
     sprintf(temp, name, 1);
-    
     if (!strcmp(memb_name, temp))
         HGOTO_ERROR(H5E_FILE, H5E_FILEEXISTS, NULL, "file names not unique")
 
@@ -656,7 +655,7 @@ H5FD_family_open(const char *name, unsigned flags, hid_t fapl_id,
         if (!file->memb[file->nmembs]) {
             if (0==file->nmembs)
                 HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open member file")
-            H5E_clear_stack(NULL);
+            H5Eclear();
             break;
         }
         file->nmembs++;

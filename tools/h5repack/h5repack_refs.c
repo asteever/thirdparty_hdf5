@@ -22,7 +22,7 @@
 static const char* MapIdToName(hid_t refobj_id, 
                                trav_table_t *travt);
 
-static void close_obj(H5G_obj_t obj_type, hid_t obj_id);
+static void close_obj(H5G_obj_t1 obj_type, hid_t obj_id);
 
 
 static int copy_refs_attr(hid_t loc_in, 
@@ -157,7 +157,7 @@ int do_copy_refobjs(hid_t fidin,
  */
    if (H5Tequal(mtype_id, H5T_STD_REF_OBJ)) 
    {
-    H5G_obj_t        obj_type;
+    H5G_obj_t1       obj_type;
     hid_t            refobj_id;
     hobj_ref_t       *refbuf=NULL; /* buffer for object references */
     hobj_ref_t       *buf=NULL;
@@ -232,7 +232,7 @@ int do_copy_refobjs(hid_t fidin,
  */
    else if (H5Tequal(mtype_id, H5T_STD_REF_DSETREG)) 
    {
-    H5G_obj_t        obj_type;
+    H5G_obj_t1       obj_type;
     hid_t            refobj_id;
     hdset_reg_ref_t  *refbuf=NULL; /* input buffer for region references */
     hdset_reg_ref_t  *buf=NULL;    /* output buffer */
@@ -531,7 +531,7 @@ static int copy_refs_attr(hid_t loc_in,
  */
    if (H5Tequal(mtype_id, H5T_STD_REF_OBJ)) 
    {
-    H5G_obj_t   obj_type;
+    H5G_obj_t1  obj_type;
     hid_t       refobj_id;
     hobj_ref_t  *refbuf=NULL;
     unsigned    k;
@@ -608,7 +608,7 @@ static int copy_refs_attr(hid_t loc_in,
  */
    else if (H5Tequal(mtype_id, H5T_STD_REF_DSETREG)) 
    {
-    H5G_obj_t        obj_type;
+    H5G_obj_t1       obj_type;
     hid_t            refobj_id;
     hdset_reg_ref_t  *refbuf=NULL; /* input buffer for region references */
     hdset_reg_ref_t  *buf=NULL;    /* output buffer */
@@ -718,7 +718,7 @@ error:
  *-------------------------------------------------------------------------
  */
 
-static void close_obj(H5G_obj_t obj_type, hid_t obj_id)
+static void close_obj(H5G_obj_t1 obj_type, hid_t obj_id)
 {
  H5E_BEGIN_TRY 
  {
@@ -787,7 +787,8 @@ static const char* MapIdToName(hid_t refobj_id,
     return NULL;
    if (H5Dclose(id)<0)
     return NULL;
-   if (refstat.fileno==objstat.fileno && refstat.objno==objstat.objno)
+   if (refstat.fileno[0]==objstat.fileno[0] && refstat.fileno[1]==objstat.fileno[1]
+        && refstat.objno[0]==objstat.objno[0] && refstat.objno[1]==objstat.objno[1])
    {
     H5Fclose(fid);
     return travt->objs[i].name;

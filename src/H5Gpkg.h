@@ -118,7 +118,7 @@ typedef struct H5G_bt_ud3_t {
 
     /* upward */
     char         *name;         /*member name to be returned                 */
-    H5G_obj_t    type;          /*member type to be returned                 */
+    int          type;          /*member type to be returned                 */
 } H5G_bt_ud3_t;
 
 /*

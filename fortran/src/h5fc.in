@@ -27,7 +27,6 @@ prefix="@prefix@"
 exec_prefix="@exec_prefix@"
 libdir="@libdir@"
 includedir="@includedir@"
-HL="@HL@"
 
 ############################################################################
 ##                                                                        ##
@@ -51,9 +50,9 @@ dash_c="no"
 get_output_file="no"
 
 SHOW="eval"
-FCBASE="@FC@"
-FLINKERBASE="@FC@"
-FFLAGS="@FCFLAGS@"
+FCBASE="@F9X@"
+FLINKERBASE="@F9X@"
+FFLAGS="@FFLAGS@"
 F9XMODFLAG="@F9XMODFLAG@"
 F9XSUFFIXFLAG="@F9XSUFFIXFLAG@"
 LDFLAGS="@LDFLAGS@"
@@ -204,14 +203,13 @@ done
 # It's possible that there isn't a modules flag...
   fmodules=""
   if test -n "$F9XMODFLAG"; then
-    fmodules="${F9XMODFLAG}${includedir}"
+    fmodules="${F9XMODFLAG}${libdir}"
   fi
 
 if test "x$do_compile" = "xyes"; then
   if test "x$dash_c" != "xyes"; then
     compile_args="-c $compile_args"
   fi
-
 
   $SHOW $FC $FFLAGS ${F9XSUFFIXFLAG} ${fmodules} $compile_args
   status=$?
@@ -221,15 +219,9 @@ if test "x$do_compile" = "xyes"; then
   fi
 fi
 
-
 if test "x$do_link" = "xyes"; then
 
-  # conditionnaly link with the hl library  
-    if test "X$HL" = "Xhl"; then
-      link_args="$link_args ${libdir}/libhdf5_fortran.a ${libdir}/libhdf5.a ${libdir}/libhdf5hl_fortran.a ${libdir}/libhdf5_hl.a"
-     else
-      link_args="$link_args ${libdir}/libhdf5_fortran.a ${libdir}/libhdf5.a"
-    fi      
+  link_args="$link_args ${libdir}/libhdf5_fortran.a ${libdir}/libhdf5.a"
 
   link_args="$link_args $LIBS"
   $SHOW $FLINKER ${FFLAGS} ${F9XSUFFIXFLAG} ${fmodules} ${LDFLAGS} $link_objs $link_args

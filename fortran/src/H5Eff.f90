@@ -147,7 +147,6 @@
 !		error_no	- mojor error number 
 ! Outputs:  
 !		name		- character string describing the error
-!		namelen		- number of characters in the name buffer
 !		hdferr:		- error code		
 !				 	Success:  0
 !				 	Failure: -1   
@@ -163,7 +162,7 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5eget_major_f(error_no, name, namelen, hdferr)
+          SUBROUTINE h5eget_major_f(error_no, name, hdferr)
 !
 !This definition is needed for Windows DLLs
 !DEC$if defined(BUILD_HDF5_DLL)
@@ -173,26 +172,24 @@
             INTEGER, INTENT(IN) :: error_no !Major error number
             CHARACTER(LEN=*), INTENT(OUT) :: name ! Character string describing
                                                   ! the error.
-            INTEGER(SIZE_T), INTENT(IN) :: namelen !Anticipated number of characters in name.
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
 
 !            INTEGER, EXTERNAL :: h5eget_major_c
 !  MS FORTRAN needs explicit interface for C functions called here.
 !
             INTERFACE
-              INTEGER FUNCTION h5eget_major_c(error_no, name, namelen)
+              INTEGER FUNCTION h5eget_major_c(error_no, name)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
               !MS$ATTRIBUTES C,reference,alias:'_H5EGET_MAJOR_C'::h5eget_major_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               INTEGER :: error_no
-              CHARACTER(LEN=*) :: name 
-              INTEGER(SIZE_T), INTENT(IN) :: namelen
+               CHARACTER(LEN=*) :: name 
               END FUNCTION h5eget_major_c
             END INTERFACE
 
-            hdferr = h5eget_major_c(error_no, name, namelen) 
+            hdferr = h5eget_major_c(error_no, name) 
           END SUBROUTINE h5eget_major_f
 
 !----------------------------------------------------------------------

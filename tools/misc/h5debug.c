@@ -26,14 +26,9 @@
  */
 #define H5F_PACKAGE		/*suppress error about including H5Fpkg	  */
 #define H5O_PACKAGE		/*suppress error about including H5Opkg	  */
-#define H5B2_PACKAGE		/*suppress error about including H5B2pkg  */
-#define H5B2_TESTING		/*suppress warning about H5B2 testing funcs*/
-#define H5BT_PACKAGE		/*suppress error about including H5BTpkg  */
 
-#include "H5private.h"		/* Generic Functions			*/
+#include "H5private.h"
 #include "H5Bprivate.h"
-#include "H5B2pkg.h"		/* B-trees				*/
-#include "H5BTpkg.h"		/* Block tracker			*/
 #include "H5Dprivate.h"
 #include "H5Fpkg.h"
 #include "H5Gprivate.h"
@@ -72,14 +67,15 @@ main(int argc, char *argv[])
 {
     hid_t	fid, fapl, dxpl;
     H5F_t       *f;
-    haddr_t     addr=0, extra=0, extra2=0;
+    haddr_t     addr=0, extra=0;
     uint8_t     sig[16];
     int         i;
+    unsigned    ndims;
     herr_t      status = SUCCEED;
 
     if (argc == 1) {
 	fprintf(stderr,
-		"Usage: %s filename [signature-addr [extra]]\n", argv[0]);
+		"Usage: %s filename [signature addr [extra]]\n", argv[0]);
 	HDexit(1);
     }
 
@@ -116,14 +112,11 @@ main(int argc, char *argv[])
      * Parse command arguments.
      */
     if (argc > 2) {
-/*        printf("New address: %s\n", argv[2]); */
+        printf("New address: %s\n", argv[2]);
         addr = HDstrtoll(argv[2], NULL, 0);
     }
     if (argc > 3) {
         extra = HDstrtoll(argv[3], NULL, 0);
-    }
-    if (argc > 4) {
-        extra2 = HDstrtoll(argv[4], NULL, 0);
     }
     /*
      * Read the signature at the specified file position.
@@ -164,7 +157,6 @@ main(int argc, char *argv[])
          * after the B-tree signature.
          */
         H5B_subid_t subtype = (H5B_subid_t)sig[H5B_SIZEOF_MAGIC];
-        unsigned    ndims;
 	
         switch (subtype) {
         case H5B_SNODE_ID:
@@ -180,78 +172,6 @@ main(int argc, char *argv[])
             fprintf(stderr, "Unknown B-tree subtype %u\n", (unsigned)(subtype));
             HDexit(4);
         }
-
-    } else if (!HDmemcmp(sig, H5B2_HDR_MAGIC, H5B2_SIZEOF_MAGIC)) {
-        /*
-         * Debug a v2 B-tree.  B-trees are debugged through the B-tree
-         * subclass.  The subclass identifier is two bytes after the
-         * B-tree signature.
-         */
-        H5B2_subid_t subtype = (H5B_subid_t)sig[H5B2_SIZEOF_MAGIC+1];
-	
-        switch (subtype) {
-            case H5B2_TEST_ID:
-                status = H5B2_hdr_debug(f, H5P_DATASET_XFER_DEFAULT, addr, stdout, 0, VCOL, H5B2_TEST);
-                break;
-
-            case H5B2_BLK_TRK_ID:
-                status = H5B2_hdr_debug(f, H5P_DATASET_XFER_DEFAULT, addr, stdout, 0, VCOL, H5B2_BLKTRK);
-                break;
-
-            default:
-                fprintf(stderr, "Unknown B-tree subtype %u\n", (unsigned)(subtype));
-                HDexit(4);
-        } /* end switch */
-
-    } else if (!HDmemcmp(sig, H5B2_INT_MAGIC, H5B2_SIZEOF_MAGIC)) {
-        /*
-         * Debug a v2 B-tree.  B-trees are debugged through the B-tree
-         * subclass.  The subclass identifier is two bytes after the
-         * B-tree signature.
-         */
-        H5B2_subid_t subtype = (H5B_subid_t)sig[H5B2_SIZEOF_MAGIC+1];
-	
-        switch (subtype) {
-            case H5B2_TEST_ID:
-                status = H5B2_int_debug(f, H5P_DATASET_XFER_DEFAULT, addr, stdout, 0, VCOL, H5B2_TEST, extra, (unsigned)extra2);
-                break;
-
-            case H5B2_BLK_TRK_ID:
-                status = H5B2_int_debug(f, H5P_DATASET_XFER_DEFAULT, addr, stdout, 0, VCOL, H5B2_BLKTRK, extra, (unsigned)extra2);
-                break;
-
-            default:
-                fprintf(stderr, "Unknown B-tree subtype %u\n", (unsigned)(subtype));
-                HDexit(4);
-        } /* end switch */
-
-    } else if (!HDmemcmp(sig, H5B2_LEAF_MAGIC, H5B2_SIZEOF_MAGIC)) {
-        /*
-         * Debug a v2 B-tree.  B-trees are debugged through the B-tree
-         * subclass.  The subclass identifier is two bytes after the
-         * B-tree signature.
-         */
-        H5B2_subid_t subtype = (H5B_subid_t)sig[H5B2_SIZEOF_MAGIC+1];
-	
-        switch (subtype) {
-            case H5B2_TEST_ID:
-                status = H5B2_leaf_debug(f, H5P_DATASET_XFER_DEFAULT, addr, stdout, 0, VCOL, H5B2_TEST, extra, (unsigned)extra2);
-                break;
-
-            case H5B2_BLK_TRK_ID:
-                status = H5B2_leaf_debug(f, H5P_DATASET_XFER_DEFAULT, addr, stdout, 0, VCOL, H5B2_BLKTRK, extra, (unsigned)extra2);
-                break;
-
-            default:
-                fprintf(stderr, "Unknown B-tree subtype %u\n", (unsigned)(subtype));
-                HDexit(4);
-        } /* end switch */
-
-    } else if (!HDmemcmp(sig, H5BT_MAGIC, H5BT_SIZEOF_MAGIC)) {
-        /*
-         * Debug a block tracker info
-         */
-        status = H5BT_hdr_debug(f, H5P_DATASET_XFER_DEFAULT, addr, stdout, 0, VCOL);
 
     } else if (sig[0] == H5O_VERSION) {
         /*

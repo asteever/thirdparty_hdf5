@@ -310,12 +310,11 @@ h5tools_str_fmt(h5tools_str_t *str/*in,out*/, size_t start, const char *fmt)
 char *
 h5tools_str_prefix(h5tools_str_t *str/*in,out*/, const h5dump_t *info,
                    hsize_t elmtno, int ndims, hsize_t min_idx[],
-                   hsize_t max_idx[], h5tools_context_t *ctx)
+                   hsize_t max_idx[],h5tools_context_t *ctx)
 {
     hsize_t p_prod[H5S_MAX_RANK], p_idx[H5S_MAX_RANK];
     hsize_t n, i = 0;
     hsize_t curr_pos=elmtno;
-   
 
     h5tools_str_reset(str);
 
@@ -332,8 +331,7 @@ h5tools_str_prefix(h5tools_str_t *str/*in,out*/, const h5dump_t *info,
             p_idx[i] = n / p_prod[i] + min_idx[i];
             n %= p_prod[i];
         }
-        
-        
+
         for ( i = 0; i < (hsize_t)ndims; i++)
         {
          ctx->pos[i] = curr_pos/ctx->acc[i];
@@ -347,7 +345,7 @@ h5tools_str_prefix(h5tools_str_t *str/*in,out*/, const h5dump_t *info,
                 h5tools_str_append(str, "%s", OPT(info->idx_sep, ","));
 
             h5tools_str_append(str, OPT(info->idx_n_fmt, "%lu"),
-                               (unsigned long)ctx->pos[i]);
+                               (unsigned long) ctx->pos[i]);
         }
     } else {
         /* Scalar */
@@ -847,9 +845,10 @@ h5tools_str_sprint(h5tools_str_t *str, const h5dump_t *info, hid_t container,
             H5Gget_objinfo(obj, ".", FALSE, &sb);
 
             if (info->dset_hidefileno)
-                h5tools_str_append(str, info->dset_format, sb.objno);
+                h5tools_str_append(str, info->dset_format, sb.objno[1], sb.objno[0]);
             else
-                h5tools_str_append(str, info->dset_format, sb.fileno, sb.objno);
+                h5tools_str_append(str, info->dset_format,
+                      sb.fileno[1], sb.fileno[0], sb.objno[1], sb.objno[0]);
 
             h5tools_str_dump_region(str, region, info);
             H5Sclose(region);
@@ -889,9 +888,10 @@ h5tools_str_sprint(h5tools_str_t *str, const h5dump_t *info, hid_t container,
 
             /* Print OID */
             if (info->obj_hidefileno)
-                h5tools_str_append(str, info->obj_format, sb.objno);
+                h5tools_str_append(str, info->obj_format, sb.objno[1], sb.objno[0]);
             else
-                h5tools_str_append(str, info->obj_format, sb.fileno,sb.objno);
+                h5tools_str_append(str, info->obj_format,
+                          sb.fileno[1], sb.fileno[0], sb.objno[1], sb.objno[0]);
 
              /* Print name */
             path = lookup_ref_path(*(hobj_ref_t *)vp);

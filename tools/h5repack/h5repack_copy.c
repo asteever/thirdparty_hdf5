@@ -53,8 +53,6 @@ static void print_obj(hid_t dcpl_id, char *name)
  for ( i=0; i<nfilters; i++)
  {
   cd_nelmts = NELMTS(cd_values);
-
-#ifdef H5_WANT_H5_V1_6_COMPAT
   filtn = H5Pget_filter(dcpl_id, 
    (unsigned)i, 
    &filt_flags, 
@@ -62,18 +60,6 @@ static void print_obj(hid_t dcpl_id, char *name)
    cd_values, 
    sizeof(f_name), 
    f_name);
-#else
-  filtn = H5Pget_filter(dcpl_id, 
-   (unsigned)i, 
-   &filt_flags, 
-   &cd_nelmts,
-   cd_values, 
-   sizeof(f_name), 
-   f_name,
-   NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
-
-
   switch (filtn)
   {
   default:
@@ -114,12 +100,6 @@ static void print_obj(hid_t dcpl_id, char *name)
    break;
   case H5Z_FILTER_FLETCHER32:
    strcat(str,"FLET ");
-   break;
-  case H5Z_FILTER_NBIT:
-   strcat(str,"NBIT ");
-   break;
-  case H5Z_FILTER_SCALEOFFSET:
-   strcat(str,"SCALEOFFSET ");
    break;
   } /* switch */
  }/*i*/

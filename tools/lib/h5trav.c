@@ -31,7 +31,7 @@ herr_t get_name_type( hid_t loc_id,
                       const char *group_name, 
                       int idx, 
                       char **name, 
-                      H5G_obj_t *type );
+                      H5G_obj_t1 *type );
 
 /*-------------------------------------------------------------------------
  * Function: h5trav_getinfo
@@ -278,7 +278,7 @@ herr_t get_name_type( hid_t loc_id,
                       const char *group_name, 
                       int idx, 
                       char **name, 
-                      H5G_obj_t *type ) 
+                      H5G_obj_t1 *type ) 
 {
 
  trav_info_t info;
@@ -315,7 +315,7 @@ int traverse( hid_t loc_id,
 {
  
  char          *name=NULL;
- H5G_obj_t     type;
+ H5G_obj_t1     type;
  int           n_names;
  char          *path=NULL;
  H5G_stat_t    statbuf;

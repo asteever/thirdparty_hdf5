@@ -95,13 +95,13 @@ DataSpace::DataSpace( const DataSpace& original ) : IdComponent( original ) {}
 // Programmer	Binh-Minh Ribler - 2000
 // Modification
 //              Replaced resetIdComponent with decRefCount to use new ID
-//              reference counting mechanisms by Quincey Koziol, June 1, 2004
+//              reference counting mechanisms by QAK, Feb 20, 2005
 //--------------------------------------------------------------------------
 void DataSpace::copy( const DataSpace& like_space )
 {
    // If this object has a valid id, appropriately decrement reference
    // counter and close the id.
-   if( id != H5S_ALL ) { 
+   if( id != H5S_ALL ) {
       try {
          decRefCount();
       }
@@ -110,7 +110,7 @@ void DataSpace::copy( const DataSpace& like_space )
       }
    }  // if
 
-   // call C routine to copy the dataspace 
+   // call C routine to copy the dataspace
    id = H5Scopy( like_space.getId() );
 
    if( id <= 0 )
@@ -537,27 +537,29 @@ void DataSpace::selectHyperslab( H5S_seloper_t op, const hsize_t *count, const h
    }
 }
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 //--------------------------------------------------------------------------
-// Function:	DataSpace::close
-///\brief	Closes this dataspace.
-///\exception	H5::DataSpaceIException
-// Programmer	Binh-Minh Ribler - Mar 9, 2005
+// Function:	DataSpace::p_close (private)
+// Purpose:	Closes the dataspace if it is not a constant.
+// Exception	H5::DataSpaceIException
+// Description
+//		This function will be obsolete because its functionality
+//		is recently handled by the C library layer. - May, 2004
+// Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-void DataSpace::close()
+void DataSpace::p_close() const
 {
-   if( id != H5S_ALL ) // not a constant, should call H5Sclose
+   hid_t space_id = id;
+   if( space_id != H5S_ALL ) // not a constant, should call H5Sclose
    {
-      herr_t ret_value = H5Sclose(id);
+      herr_t ret_value = H5Sclose( space_id );
       if( ret_value < 0 )
       {
-         throw DataSpaceIException("DataSpace::close", "H5Sclose failed");
+         throw DataSpaceIException(0, "H5Sclose failed");
       }
-      // reset the id because the dataspace that it represents is now closed
-      id = 0;
    }
-   else // cannot close a constant
-      throw DataSpaceIException("DataSpace::close", "Cannot close a constant");
 }
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 //--------------------------------------------------------------------------
 // Function:	DataSpace destructor
@@ -565,18 +567,18 @@ void DataSpace::close()
 // Programmer	Binh-Minh Ribler - 2000
 // Modification
 //              Replaced resetIdComponent with decRefCount to use new ID
-//              reference counting mechanisms by Quincey Koziol, June 1, 2004
+//              reference counting mechanisms by QAK, Feb 20, 2005
 //--------------------------------------------------------------------------
 DataSpace::~DataSpace()
 {  
    // If this object has a valid id, appropriately decrement reference
    // counter and close the id.
-   if( id != H5S_ALL ) { 
+   if( id != H5S_ALL ) {
       try {
          decRefCount();
       }
       catch (Exception close_error) {
-	 cerr << "DataSpace::~DataSpace - " << close_error.getDetailMsg() << endl;
+         throw DataSpaceIException("DataSpace::copy", close_error.getDetailMsg());
       }
    }  // if
 }  

@@ -52,7 +52,7 @@
 
 void *tts_cancel_thread(void *);
 void tts_cancel_barrier(void);
-herr_t tts_cancel_callback(void *, hid_t, unsigned , const hsize_t *, void *);
+herr_t tts_cancel_callback(void *, hid_t, unsigned, const hsize_t *, void *);
 void cancellation_cleanup(void *);
 
 hid_t cancel_file;

@@ -22,9 +22,6 @@
 /* Include package's public header */
 #include "H5Zpublic.h"
 
-/* Private headers needed by this file */
-#include "H5Tprivate.h"		/* Datatypes				*/
-
 /* Structure to store information about each filter's parameters */
 typedef struct {
     H5Z_filter_t	id;		/*filter identification number	     */
@@ -63,15 +60,5 @@ H5_DLL H5Z_filter_info_t *H5Z_filter_info(const struct H5O_pline_t *pline,
         H5Z_filter_t filter);
 H5_DLL htri_t H5Z_all_filters_avail(const struct H5O_pline_t *pline);
 H5_DLL herr_t H5Z_delete(struct H5O_pline_t *pline, H5Z_filter_t filter);
-
-/* Data Transform Functions */
-typedef struct H5Z_data_xform_t H5Z_data_xform_t; /* Defined in H5Ztrans.c */
-
-H5_DLL H5Z_data_xform_t *H5Z_xform_create(const char *expr);
-H5_DLL herr_t H5Z_xform_copy(H5Z_data_xform_t **data_xform_prop);
-H5_DLL herr_t H5Z_xform_destroy(H5Z_data_xform_t *data_xform_prop);
-H5_DLL herr_t H5Z_xform_eval(H5Z_data_xform_t *data_xform_prop, void* array, size_t array_size, const H5T_t *buf_type);
-H5_DLL hbool_t H5Z_xform_noop(const H5Z_data_xform_t *data_xform_prop);
-H5_DLL char* H5Z_xform_extract_xform_str(const H5Z_data_xform_t *data_xform_prop);
 
 #endif

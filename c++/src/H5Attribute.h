@@ -22,9 +22,6 @@ namespace H5 {
 
 class H5_DLLCPP Attribute : public AbstractDs {
    public:
-	// Closes this attribute.
-	virtual void close();
-
 	// Gets the name of this attribute.
 	ssize_t getName( size_t buf_size, string& attr_name ) const;
 	string getName( size_t buf_size ) const; // returns name, not its length
@@ -32,9 +29,6 @@ class H5_DLLCPP Attribute : public AbstractDs {
 
 	// Gets a copy of the dataspace for this attribute.
 	virtual DataSpace getSpace() const;
-
-	// Returns the amount of storage size required for this attribute.
-	hsize_t getStorageSize() const;
 
 	// Reads data from this attribute.
 	void read( const DataType& mem_type, void *buf ) const;
@@ -50,6 +44,11 @@ class H5_DLLCPP Attribute : public AbstractDs {
 	// Copy constructor: makes a copy of an existing Attribute object.
 	Attribute( const Attribute& original );
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+	// Used by the API to appropriately close an attribute
+	virtual void p_close() const;
+#endif // DOXYGEN_SHOULD_SKIP_THIS
+
 	// Destructor: properly terminates access to this attribute.
 	virtual ~Attribute();
 
@@ -62,9 +61,6 @@ class H5_DLLCPP Attribute : public AbstractDs {
 
 	// do not inherit iterateAttrs from H5Object
 	int iterateAttrs() { return 0; }
-
-	// do not inherit iterateAttrs from H5Object
-	void rename() {}
 
 	// Default constructor
 	Attribute();

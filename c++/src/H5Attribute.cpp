@@ -256,37 +256,25 @@ string Attribute::getName() const
    return( attr_name ); 
 }
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 //--------------------------------------------------------------------------
-// Function:	Attribute::close
-///\brief:	Closes this attribute.
-///\exception	H5::AttributeIException
-// Programmer	Binh-Minh Ribler - Mar 9, 2005
+// Function:    Attribute::p_close (private)
+// Purpose:     Closes this attribute.
+// Exception    H5::AttributeIException
+// Description
+//              This function will be obsolete because its functionality
+//              is recently handled by the C library layer. - May, 2004
+// Programmer   Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-void Attribute::close()
+void Attribute::p_close() const
 {
-   herr_t ret_value = H5Aclose(id);
+   herr_t ret_value = H5Aclose( id );
    if( ret_value < 0 )
    {
-      throw AttributeIException("Attribute::close", "H5Aclose failed");
+      throw AttributeIException(0, "H5Aclose failed");
    }
-   // reset the id because the attribute that it represents is now closed
-   id = 0;
 }
-
-//--------------------------------------------------------------------------
-// Function:	Attribute::getStorageSize
-///\brief	Returns the amount of storage size required for this attribute.
-///\return	Size of the storage or 0, for no data
-///\exception	H5::AttributeIException
-// Note:        H5Dget_storage_size returns 0 when there is no data.  This
-//              function should have no failure. (from SLU)
-// Programmer	Binh-Minh Ribler - Mar, 2005
-//--------------------------------------------------------------------------
-hsize_t Attribute::getStorageSize() const
-{
-   hsize_t storage_size = H5Aget_storage_size(id);
-   return (storage_size);
-}
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 //--------------------------------------------------------------------------
 // Function:	Attribute destructor
@@ -294,7 +282,7 @@ hsize_t Attribute::getStorageSize() const
 // Programmer	Binh-Minh Ribler - 2000
 // Modification
 //              Replaced resetIdComponent with decRefCount to use new ID
-//              reference counting mechanisms by Quincey Koziol, June 1, 2004
+//              reference counting mechanisms by QAK, Feb 20, 2005
 //--------------------------------------------------------------------------
 Attribute::~Attribute()
 {

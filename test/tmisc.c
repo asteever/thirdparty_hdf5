@@ -605,12 +605,13 @@ test_misc4(void)
     CHECK(ret, FAIL, "H5Gget_objinfo");
 
     /* Verify that the fileno values are the same for groups from file1 */
-    VERIFY(stat1.fileno,stat2.fileno,"H5Gget_objinfo");
+    VERIFY(stat1.fileno[0],stat2.fileno[0],"H5Gget_objinfo");
+    VERIFY(stat1.fileno[1],stat2.fileno[1],"H5Gget_objinfo");
 
     /* Verify that the fileno values are not the same between file1 & file2 */
-    if(stat1.fileno==stat3.fileno)
+    if(stat1.fileno[0]==stat3.fileno[0] && stat1.fileno[1]==stat3.fileno[1])
         TestErrPrintf("Error on line %d: stat1.fileno==stat3.fileno\n",__LINE__);
-    if(stat2.fileno==stat3.fileno)
+    if(stat2.fileno[0]==stat3.fileno[0] && stat2.fileno[1]==stat3.fileno[1])
         TestErrPrintf("Error on line %d: stat1.fileno==stat3.fileno\n",__LINE__);
 
     /* Close the objects */
@@ -1164,7 +1165,11 @@ test_misc8(void)
 #endif /* VERIFY_DATA */
     unsigned u,v;               /* Local index variables */
     int mdc_nelmts;             /* Metadata number of elements */
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    int rdcc_nelmts;            /* Raw data number of elements */
+#else /* H5_WANT_H5_V1_4_COMPAT */
     size_t rdcc_nelmts;         /* Raw data number of elements */
+#endif /* H5_WANT_H5_V1_4_COMPAT */
     size_t rdcc_nbytes;         /* Raw data number of bytes */
     double rdcc_w0;             /* Raw data write percentage */
     hsize_t start[MISC8_RANK];  /* Hyperslab start */
@@ -1746,7 +1751,11 @@ test_misc11(void)
     size_t      len_size;       /* Size of lengths in the file */
     unsigned    sym_ik;         /* Symbol table B-tree initial 'K' value */
     unsigned    istore_ik;      /* Indexed storage B-tree initial 'K' value */
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    int         sym_lk;         /* Symbol table B-tree leaf 'K' value */
+#else /* H5_WANT_H5_V1_4_COMPAT */
     unsigned    sym_lk;         /* Symbol table B-tree leaf 'K' value */
+#endif /* H5_WANT_H5_V1_4_COMPAT */
     unsigned super;             /* Superblock version # */
     unsigned freelist;          /* Free list version # */
     unsigned stab;              /* Symbol table entry version # */
@@ -2898,9 +2907,6 @@ test_misc19(void)
     hid_t plid;         /* Property List ID */
     hid_t pcid;         /* Property Class ID */
     hid_t gid;          /* Group ID */
-    hid_t ecid;         /* Error Class ID */
-    hid_t emid;         /* Error Message ID */
-    hid_t esid;         /* Error Stack ID */
     int rc;             /* Reference count */
     herr_t ret;         /* Generic return value */
 
@@ -3208,110 +3214,6 @@ test_misc19(void)
     ret = H5Fclose(fid);
     CHECK(ret, FAIL, "H5Fclose");
 
-/* Check H5I operations on error classes */
-
-    /* Create an error class */
-    ecid = H5Eregister_class("foo","bar","baz");
-    CHECK(ecid, FAIL, "H5Eregister_class");
-
-    /* Check the reference count */
-    rc = H5Iget_ref(ecid);
-    VERIFY(rc, 1, "H5Iget_ref");
-
-    /* Inc the reference count */
-    rc = H5Iinc_ref(ecid);
-    VERIFY(rc, 2, "H5Iinc_ref");
-
-    /* Close the error class normally */
-    ret = H5Eunregister_class(ecid);
-    CHECK(ret, FAIL, "H5Eunregister_class");
-
-    /* Check the reference count */
-    rc = H5Iget_ref(ecid);
-    VERIFY(rc, 1, "H5Iget_ref");
-
-    /* Close the error class by decrementing the reference count */
-    rc = H5Idec_ref(ecid);
-    VERIFY(rc, 0, "H5Idec_ref");
-
-    /* Try closing the error class again (should fail) */
-    H5E_BEGIN_TRY {
-        ret = H5Eunregister_class(ecid);
-    } H5E_END_TRY;
-    VERIFY(ret, FAIL, "H5Eunregister_class");
-
-/* Check H5I operations on error messages */
-
-    /* Create an error class */
-    ecid = H5Eregister_class("foo","bar","baz");
-    CHECK(ecid, FAIL, "H5Eregister_class");
-
-    /* Create an error message */
-    emid = H5Ecreate_msg(ecid,H5E_MAJOR,"mumble");
-    CHECK(emid, FAIL, "H5Ecreate_msg");
-
-    /* Check the reference count */
-    rc = H5Iget_ref(emid);
-    VERIFY(rc, 1, "H5Iget_ref");
-
-    /* Inc the reference count */
-    rc = H5Iinc_ref(emid);
-    VERIFY(rc, 2, "H5Iinc_ref");
-
-    /* Close the error message normally */
-    ret = H5Eclose_msg(emid);
-    CHECK(ret, FAIL, "H5Eclose_msg");
-
-    /* Check the reference count */
-    rc = H5Iget_ref(emid);
-    VERIFY(rc, 1, "H5Iget_ref");
-
-    /* Close the error message by decrementing the reference count */
-    rc = H5Idec_ref(emid);
-    VERIFY(rc, 0, "H5Idec_ref");
-
-    /* Try closing the error message again (should fail) */
-    H5E_BEGIN_TRY {
-        ret = H5Eclose_msg(emid);
-    } H5E_END_TRY;
-    VERIFY(ret, FAIL, "H5Eclose_msg");
-
-    /* Close the error class */
-    ret = H5Eunregister_class(ecid);
-    CHECK(ret, FAIL, "H5Eunregister_class");
-
-/* Check H5I operations on error stacks */
-
-    /* Create an error stack */
-    esid = H5Eget_current_stack();
-    CHECK(esid, FAIL, "H5Eget_current_stack");
-
-    /* Check the reference count */
-    rc = H5Iget_ref(esid);
-    VERIFY(rc, 1, "H5Iget_ref");
-
-    /* Inc the reference count */
-    rc = H5Iinc_ref(esid);
-    VERIFY(rc, 2, "H5Iinc_ref");
-
-    /* Close the error stack normally */
-    ret = H5Eclose_stack(esid);
-    CHECK(ret, FAIL, "H5Eclose_stack");
-
-    /* Check the reference count */
-    rc = H5Iget_ref(esid);
-    VERIFY(rc, 1, "H5Iget_ref");
-
-    /* Close the error stack by decrementing the reference count */
-    rc = H5Idec_ref(esid);
-    VERIFY(rc, 0, "H5Idec_ref");
-
-    /* Try closing the error stack again (should fail) */
-    H5E_BEGIN_TRY {
-        ret = H5Eclose_stack(esid);
-    } H5E_END_TRY;
-    VERIFY(ret, FAIL, "H5Eclose_stack");
-
 } /* end test_misc19() */
 
 /****************************************************************
@@ -3430,7 +3332,7 @@ test_misc20(void)
     /* Get the layout version */
     ret = H5D_layout_version_test(did,&version);
     CHECK(ret, FAIL, "H5D_layout_version_test");
-    VERIFY(version,3,"H5D_layout_version_test");
+    VERIFY(version,2,"H5D_layout_version_test");
 
     /* Get the layout contiguous storage size */
     ret = H5D_layout_contig_size_test(did,&contig_size);
@@ -3670,7 +3572,7 @@ test_misc22(void)
                 CHECK(dcpl2, FAIL, "H5Dget_create_plist");
             
                 ret= H5Pget_filter_by_id( dcpl2, H5Z_FILTER_SZIP, &flags, 
-                      &cd_nelmts, cd_values, 0, NULL , NULL );
+                      &cd_nelmts, cd_values, 0, NULL );
                 CHECK(ret, FAIL, "H5Pget_filter_by_id");
             
                 VERIFY(cd_values[2], correct, "SZIP filter returned value for precision");

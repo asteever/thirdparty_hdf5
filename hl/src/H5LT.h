@@ -17,17 +17,7 @@
 
 #include <hdf5.h>
 
-
-#ifndef FAIL
-#define FAIL -1
-#endif
-
-#ifndef SUCCESS
-#define SUCCESS 0
-#endif
-
 #define TESTING(WHAT)	{printf("%-70s", "Testing " WHAT); fflush(stdout);}
-#define TESTING2(WHAT) {printf("%-70s", "Testing     " WHAT); fflush(stdout);}
 #define PASSED()	{puts(" PASSED");fflush(stdout);}
 #define H5_FAILED()	{puts("*FAILED*");fflush(stdout);}
 #define SKIPPED()	{puts(" -SKIP-");fflush(stdout);}
@@ -373,10 +363,6 @@ herr_t H5LT_set_attribute_numerical( hid_t loc_id,
                                      size_t size,
                                      hid_t type_id,
                                      const void *data );
-
-herr_t H5LT_set_attribute_string(hid_t dset_id, 
-                                 char *name,
-                                 char *buf );
 
 
 

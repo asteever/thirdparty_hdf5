@@ -16,7 +16,8 @@
 #ifndef _IdComponent_H
 #define _IdComponent_H
 
-// IdComponent represents an HDF5 object that has an identifier.
+// IdComponent provides a mechanism to handle
+// reference counting for an identifier of any HDF5 object.
 
 #ifndef H5_NO_NAMESPACE
 namespace H5 {
@@ -33,7 +34,11 @@ class H5_DLLCPP IdComponent {
 	// Get the reference counter to this identifier.
 	int getCounter();
 
-	// Assignment operator.
+	// Decrements the reference counter then determines if there are no more
+	// reference to this object
+	bool noReference();
+
+	// Assignment operator
 	IdComponent& operator=( const IdComponent& rhs );
 
 	void reset();
@@ -50,6 +55,14 @@ class H5_DLLCPP IdComponent {
 	// Gets the value of IdComponent's data member.
 	virtual hid_t getId () const;
 
+	// Pure virtual function so appropriate close function can
+	// be called by subclasses' for the corresponding object
+	// This function will be obsolete because its functionality
+	// is recently handled by the C library layer.
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+	virtual void p_close() const = 0;
+#endif // DOXYGEN_SHOULD_SKIP_THIS
+
 	// Destructor
 	virtual ~IdComponent();
 
@@ -61,10 +74,10 @@ class H5_DLLCPP IdComponent {
 	IdComponent();
 
 	// Gets the name of the file, in which an HDF5 object belongs.
-#ifdef H5_NO_STD
-	string p_get_file_name() const;
-#else
+#ifndef H5_NO_STD
 	std::string p_get_file_name() const;
+#else
+	string p_get_file_name() const;
 #endif  // H5_NO_STD
 
         // Gets the id of the H5 file in which the given object is located.

@@ -39,7 +39,7 @@
     if ((ret) == (val)) {						      \
 	TestErrPrintf("*** UNEXPECTED RETURN from %s is %ld at line %4d "     \
 		   "in %s\n", where, (long)(ret), (int)__LINE__, __FILE__);   \
-	H5Eprint_stack(H5E_DEFAULT, stdout);				      \
+	H5Eprint (stdout);						      \
     }									      \
 } while(0)
 
@@ -51,7 +51,7 @@
    if ((ret)<0) {							      \
       TestErrPrintf ("*** UNEXPECTED RETURN from %s is %ld line %4d in %s\n", \
                   (where), (long)(ret), (int)__LINE__, __FILE__);	      \
-      H5Eprint_stack(H5E_DEFAULT, stdout);				      \
+      H5Eprint (stdout);						      \
    }									      \
 }
 
@@ -63,7 +63,7 @@
    if (!(ret)) {							      \
       TestErrPrintf ("*** UNEXPECTED RETURN from %s is NULL line %4d in %s\n", \
                   (where), (int)__LINE__, __FILE__);			      \
-      H5Eprint_stack(H5E_DEFAULT, stdout);				      \
+      H5Eprint (stdout);						      \
    }									      \
 }
 
@@ -76,7 +76,7 @@
     if ((x) != (val)) {							      \
 	TestErrPrintf("*** UNEXPECTED VALUE from %s should be %ld, but is %ld at line %4d " \
 		   "in %s\n", (where), (long)(val), (long)(x), (int)__LINE__, __FILE__); \
-	H5Eprint_stack(H5E_DEFAULT, stdout);				      \
+	H5Eprint (stdout);						      \
     }									      \
 } while(0)
 
@@ -87,11 +87,11 @@
 		   "%ld\n", func, (int)__LINE__, __FILE__, (long)(ret));      \
     }									      \
     if (GetTestVerbosity()>=VERBO_HI)					      \
-        H5Eprint_stack(H5E_DEFAULT, stdout);				      \
+        H5Eprint(stdout);					              \
     if ((ret) == FAIL) {						      \
 	TestErrPrintf("*** UNEXPECTED RETURN from %s is %ld at line %4d "     \
 		   "in %s\n", func, (long)(ret), (int)__LINE__, __FILE__);    \
-	H5Eprint_stack(H5E_DEFAULT, stdout);				      \
+	H5Eprint (stdout);						      \
     }									      \
 } while(0)
 
@@ -128,7 +128,6 @@ void                    test_array(void);
 void                    test_genprop(void);
 void			test_configure(void);
 void			test_misc(void);
-void			test_ids(void);
 void			test_skiplist(void);
 
 /* Prototypes for the cleanup routines */

@@ -20,7 +20,6 @@
  */
 
 #define H5T_PACKAGE		/*suppress error about including H5Tpkg	  */
-#define H5F_PACKAGE		/*suppress error about including H5Fpkg	  */
 
 /* Interface initialization */
 #define H5_INTERFACE_INIT_FUNC	H5T_init_interface
@@ -29,7 +28,6 @@
 #include "H5private.h"		/*generic functions			*/
 #include "H5Dprivate.h"		/*datasets (for H5Tcopy)		*/
 #include "H5Eprivate.h"		/*error handling			*/
-#include "H5Fpkg.h"             /* File                 		*/
 #include "H5FLprivate.h"	/* Free Lists				*/
 #include "H5FOprivate.h"	/* File objects				*/
 #include "H5Gprivate.h"		/*groups				  */
@@ -240,6 +238,9 @@ static struct {
     H5T_soft_t	*soft;		/*unsorted array of soft conversions	*/
 } H5T_g;
 
+/* The overflow handler */
+H5T_overflow_t H5T_overflow_g = NULL;
+
 /* The native endianess of the platform */
 H5T_order_t H5T_native_order_g = H5T_ORDER_ERROR;
 
@@ -257,11 +258,6 @@ static herr_t H5T_unregister(H5T_pers_t pers, const char *name, H5T_t *src,
                 H5T_t *dst, H5T_conv_t func, hid_t dxpl_id);
 static herr_t H5T_register(H5T_pers_t pers, const char *name, H5T_t *src,
         H5T_t *dst, H5T_conv_t func, hid_t dxpl_id);
-static herr_t H5T_encode(H5T_t *obj, unsigned char *buf, size_t *nalloc);
-static H5T_t *H5T_decode(const unsigned char *buf);
-
-/* Local macro definitions */
-#define H5T_ENCODE_VERSION      0
 
 /*
  * Type initialization macros
@@ -399,21 +395,18 @@ static H5T_t *H5T_decode(const unsigned char *buf);
 }
 
 /* Define the code templates for references for the "GUTS" in the H5T_INIT_TYPE macro */
-#define H5T_INIT_TYPE_REF_COMMON {					      \
+#define H5T_INIT_TYPE_REF_COMMON(RTYPE) {				      \
     H5T_INIT_TYPE_ALLOC_COMMON(H5T_REFERENCE)				      \
     H5T_INIT_TYPE_NUM_COMMON(H5T_ORDER_NONE)				      \
+    dt->shared->u.atomic.u.r.rtype = RTYPE;					      \
 }
 
 #define H5T_INIT_TYPE_OBJREF_CORE {					      \
-    H5T_INIT_TYPE_REF_COMMON						      \
-    dt->shared->force_conv = TRUE;						      \
-    dt->shared->u.atomic.u.r.rtype = H5R_OBJECT;				      \
-    dt->shared->u.atomic.u.r.loc = H5T_LOC_MEMORY;				      \
+    H5T_INIT_TYPE_REF_COMMON(H5R_OBJECT)				      \
 }
 
 #define H5T_INIT_TYPE_REGREF_CORE {					      \
-    H5T_INIT_TYPE_REF_COMMON						      \
-    dt->shared->u.atomic.u.r.rtype = H5R_DATASET_REGION;			      \
+    H5T_INIT_TYPE_REF_COMMON(H5R_DATASET_REGION)			      \
 }
 
 /* Define the code templates for the "SIZE_TMPL" in the H5T_INIT_TYPE macro */
@@ -675,7 +668,6 @@ H5T_init_interface(void)
     H5T_t       *native_ullong=NULL;    /* Datatype structure for native unsigned llong */
     H5T_t       *native_float=NULL;     /* Datatype structure for native float */
     H5T_t       *native_double=NULL;    /* Datatype structure for native double */
-    H5T_t       *native_ldouble=NULL;    /* Datatype structure for native double */
     H5T_t       *std_u8le=NULL;         /* Datatype structure for unsigned 8-bit little-endian integer */
     H5T_t       *std_u8be=NULL;         /* Datatype structure for unsigned 8-bit big-endian integer */
     H5T_t       *std_u16le=NULL;        /* Datatype structure for unsigned 16-bit little-endian integer */
@@ -695,7 +687,6 @@ H5T_init_interface(void)
     H5T_t	*enum_type=NULL;        /* Datatype structure for enum objects */
     H5T_t	*vlen=NULL;             /* Datatype structure for vlen objects */
     H5T_t	*array=NULL;            /* Datatype structure for array objects */
-    H5T_t	*objref=NULL;           /* Datatype structure for object reference objects */
     hsize_t     dim[1]={1};             /* Dimension info for array datatype */
     herr_t	status;
     unsigned    copied_dtype=1;         /* Flag to indicate whether datatype was copied or allocated (for error cleanup) */
@@ -704,7 +695,7 @@ H5T_init_interface(void)
     FUNC_ENTER_NOAPI_NOINIT(H5T_init_interface);
 
     /* Initialize the atom group for the file IDs */
-    if (H5I_register_type(H5I_DATATYPE, H5I_DATATYPEID_HASHSIZE, H5T_RESERVED_ATOMS, (H5I_free_t)H5T_close)<0)
+    if (H5I_init_group(H5I_DATATYPE, H5I_DATATYPEID_HASHSIZE, H5T_RESERVED_ATOMS, (H5I_free_t)H5T_close)<0)
 	HGOTO_ERROR (H5E_DATATYPE, H5E_CANTINIT, FAIL, "unable to initialize interface");
 
     /* Make certain there aren't too many classes of datatypes defined */
@@ -746,8 +737,6 @@ H5T_init_interface(void)
     if (NULL==(native_float=H5I_object(H5T_NATIVE_FLOAT_g)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a datatype object");
     if (NULL==(native_double=H5I_object(H5T_NATIVE_DOUBLE_g)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a datatype object");
-    if (NULL==(native_ldouble=H5I_object(H5T_NATIVE_LDOUBLE_g)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a datatype object");
 
     /*------------------------------------------------------------
@@ -942,7 +931,6 @@ H5T_init_interface(void)
 
     /* Object pointer (i.e. object header address in file) */
     H5T_INIT_TYPE(OBJREF,H5T_STD_REF_OBJ_g,ALLOC,-,SET,H5R_OBJ_REF_BUF_SIZE)
-    objref=dt;    /* Keep type for later */
     
     /* Dataset Region pointer (i.e. selection inside a dataset) */
     H5T_INIT_TYPE(REGREF,H5T_STD_REF_DSETREG_g,ALLOC,-,SET,H5R_DSET_REG_REF_BUF_SIZE)
@@ -964,9 +952,7 @@ H5T_init_interface(void)
     status = 0;
 
     status |= H5T_register(H5T_PERS_SOFT, "i_i", fixedpt, fixedpt, H5T_conv_i_i, H5AC_dxpl_id);
-    status |= H5T_register(H5T_PERS_SOFT, "i_f", fixedpt, floatpt, H5T_conv_i_f, H5AC_dxpl_id);
     status |= H5T_register(H5T_PERS_SOFT, "f_f", floatpt, floatpt, H5T_conv_f_f, H5AC_dxpl_id);
-    status |= H5T_register(H5T_PERS_SOFT, "f_i", floatpt, fixedpt, H5T_conv_f_i, H5AC_dxpl_id);
     status |= H5T_register(H5T_PERS_SOFT, "s_s", string, string, H5T_conv_s_s, H5AC_dxpl_id);
     status |= H5T_register(H5T_PERS_SOFT, "b_b", bitfield, bitfield, H5T_conv_b_b, H5AC_dxpl_id);
     status |= H5T_register(H5T_PERS_SOFT, "ibo", fixedpt, fixedpt, H5T_conv_order, H5AC_dxpl_id);
@@ -978,7 +964,6 @@ H5T_init_interface(void)
     status |= H5T_register(H5T_PERS_SOFT, "enum", enum_type, enum_type, H5T_conv_enum, H5AC_dxpl_id);
     status |= H5T_register(H5T_PERS_SOFT, "vlen", vlen, vlen, H5T_conv_vlen, H5AC_dxpl_id);
     status |= H5T_register(H5T_PERS_SOFT, "array", array, array, H5T_conv_array, H5AC_dxpl_id);
-    status |= H5T_register(H5T_PERS_SOFT, "objref", objref, objref, H5T_conv_order_opt, H5AC_dxpl_id);
 
     /* Custom conversion for 32-bit ints to 64-bit floats (undocumented) */
     status |= H5T_register(H5T_PERS_HARD, "u32le_f64le", std_u32le, ieee_f64le, H5T_conv_i32le_f64le, H5AC_dxpl_id);
@@ -993,10 +978,8 @@ H5T_init_interface(void)
      */
 
     /* floating point */
-#if H5_CONVERT_DENORMAL_FLOAT
     status |= H5T_register(H5T_PERS_HARD, "flt_dbl", native_float, native_double, H5T_conv_float_double, H5AC_dxpl_id);
     status |= H5T_register(H5T_PERS_HARD, "dbl_flt", native_double, native_float, H5T_conv_double_float, H5AC_dxpl_id);
-#endif /*H5_CONVERT_DENORMAL_FLOAT*/
 
     /* from long_long */
     status |= H5T_register(H5T_PERS_HARD, "llong_ullong", native_llong, native_ullong, H5T_conv_llong_ullong, H5AC_dxpl_id);
@@ -1097,153 +1080,6 @@ H5T_init_interface(void)
     status |= H5T_register(H5T_PERS_HARD, "uchar_uint", native_uchar, native_uint, H5T_conv_uchar_uint, H5AC_dxpl_id);
     status |= H5T_register(H5T_PERS_HARD, "schar_uchar", native_schar, native_uchar, H5T_conv_schar_uchar, H5AC_dxpl_id);
     status |= H5T_register(H5T_PERS_HARD, "uchar_schar", native_uchar, native_schar, H5T_conv_uchar_schar, H5AC_dxpl_id);
-
-    /* From char to floats */
-    status |= H5T_register(H5T_PERS_HARD, "schar_flt", native_schar, native_float, H5T_conv_schar_float, H5AC_dxpl_id);
-    status |= H5T_register(H5T_PERS_HARD, "schar_dbl", native_schar, native_double, H5T_conv_schar_double, H5AC_dxpl_id);
-#if H5_SW_INTEGER_TO_LDOUBLE_WORKS
-    status |= H5T_register(H5T_PERS_HARD, "schar_ldbl", native_schar, native_ldouble, H5T_conv_schar_ldouble, H5AC_dxpl_id);
-#endif /*H5_SW_INTEGER_TO_LDOUBLE_WORKS*/
-
-    /* From unsigned char to floats */
-    status |= H5T_register(H5T_PERS_HARD, "uchar_flt", native_uchar, native_float, H5T_conv_uchar_float, H5AC_dxpl_id);
-    status |= H5T_register(H5T_PERS_HARD, "uchar_dbl", native_uchar, native_double, H5T_conv_uchar_double, H5AC_dxpl_id);
-#if H5_SW_INTEGER_TO_LDOUBLE_WORKS
-    status |= H5T_register(H5T_PERS_HARD, "uchar_ldbl", native_uchar, native_ldouble, H5T_conv_uchar_ldouble, H5AC_dxpl_id);
-#endif /*H5_SW_INTEGER_TO_LDOUBLE_WORKS*/
-
-    /* From short to floats */
-    status |= H5T_register(H5T_PERS_HARD, "short_flt", native_short, native_float, H5T_conv_short_float, H5AC_dxpl_id);
-    status |= H5T_register(H5T_PERS_HARD, "short_dbl", native_short, native_double, H5T_conv_short_double, H5AC_dxpl_id);
-#if H5_SW_INTEGER_TO_LDOUBLE_WORKS
-    status |= H5T_register(H5T_PERS_HARD, "short_ldbl", native_short, native_ldouble, H5T_conv_short_ldouble, H5AC_dxpl_id);
-#endif /*H5_SW_INTEGER_TO_LDOUBLE_WORKS*/
-    
-    /* From unsigned short to floats */
-    status |= H5T_register(H5T_PERS_HARD, "ushort_flt", native_ushort, native_float, H5T_conv_ushort_float, H5AC_dxpl_id);
-    status |= H5T_register(H5T_PERS_HARD, "ushort_dbl", native_ushort, native_double, H5T_conv_ushort_double, H5AC_dxpl_id);
-#if H5_SW_INTEGER_TO_LDOUBLE_WORKS
-    status |= H5T_register(H5T_PERS_HARD, "ushort_ldbl", native_ushort, native_ldouble, H5T_conv_ushort_ldouble, H5AC_dxpl_id);
-#endif /*H5_SW_INTEGER_TO_LDOUBLE_WORKS*/
-
-    /* From int to floats */
-    status |= H5T_register(H5T_PERS_HARD, "int_flt", native_int, native_float, H5T_conv_int_float, H5AC_dxpl_id);
-    status |= H5T_register(H5T_PERS_HARD, "int_dbl", native_int, native_double, H5T_conv_int_double, H5AC_dxpl_id);
-#if H5_SW_INTEGER_TO_LDOUBLE_WORKS
-    status |= H5T_register(H5T_PERS_HARD, "int_ldbl", native_int, native_ldouble, H5T_conv_int_ldouble, H5AC_dxpl_id);
-#endif /*H5_SW_INTEGER_TO_LDOUBLE_WORKS*/
-    
-    /* From unsigned int to floats */
-    status |= H5T_register(H5T_PERS_HARD, "uint_flt", native_uint, native_float, H5T_conv_uint_float, H5AC_dxpl_id);
-    status |= H5T_register(H5T_PERS_HARD, "uint_dbl", native_uint, native_double, H5T_conv_uint_double, H5AC_dxpl_id);
-#if H5_SW_INTEGER_TO_LDOUBLE_WORKS
-    status |= H5T_register(H5T_PERS_HARD, "uint_ldbl", native_uint, native_ldouble, H5T_conv_uint_ldouble, H5AC_dxpl_id);
-#endif /*H5_SW_INTEGER_TO_LDOUBLE_WORKS*/
-
-    /* From long to floats */
-    status |= H5T_register(H5T_PERS_HARD, "long_flt", native_long, native_float, H5T_conv_long_float, H5AC_dxpl_id);
-    status |= H5T_register(H5T_PERS_HARD, "long_dbl", native_long, native_double, H5T_conv_long_double, H5AC_dxpl_id);
-#if H5_SW_INTEGER_TO_LDOUBLE_WORKS
-    status |= H5T_register(H5T_PERS_HARD, "long_ldbl", native_long, native_ldouble, H5T_conv_long_ldouble, H5AC_dxpl_id);
-#endif /*H5_SW_INTEGER_TO_LDOUBLE_WORKS*/
-    
-    /* From unsigned long to floats */
-#if H5_SW_ULONG_TO_FP_BOTTOM_BIT_WORKS
-    status |= H5T_register(H5T_PERS_HARD, "ulong_flt", native_ulong, native_float, H5T_conv_ulong_float, H5AC_dxpl_id);
-    status |= H5T_register(H5T_PERS_HARD, "ulong_dbl", native_ulong, native_double, H5T_conv_ulong_double, H5AC_dxpl_id);
-#endif /*H5_SW_ULONG_TO_FP_BOTTOM_BIT_WORKS*/
-#if H5_SW_ULONG_TO_FP_BOTTOM_BIT_WORKS && H5_SW_INTEGER_TO_LDOUBLE_WORKS
-    status |= H5T_register(H5T_PERS_HARD, "ulong_ldbl", native_ulong, native_ldouble, H5T_conv_ulong_ldouble, H5AC_dxpl_id);
-#endif /* H5_SW_ULONG_TO_FP_BOTTOM_BIT_WORKS && H5_SW_INTEGER_TO_LDOUBLE_WORKS*/
-
-    /* From long long to floats */
-    status |= H5T_register(H5T_PERS_HARD, "llong_flt", native_llong, native_float, H5T_conv_llong_float, H5AC_dxpl_id);
-    status |= H5T_register(H5T_PERS_HARD, "llong_dbl", native_llong, native_double, H5T_conv_llong_double, H5AC_dxpl_id);
-#if H5_SW_INTEGER_TO_LDOUBLE_WORKS
-    status |= H5T_register(H5T_PERS_HARD, "llong_ldbl", native_llong, native_ldouble, H5T_conv_llong_ldouble, H5AC_dxpl_id);
-#endif /*H5_SW_INTEGER_TO_LDOUBLE_WORKS*/
-    
-    /* From unsigned long long to floats */
-#if H5_ULLONG_TO_FP_CAST_WORKS && H5_SW_ULONG_TO_FP_BOTTOM_BIT_WORKS
-    status |= H5T_register(H5T_PERS_HARD, "ullong_flt", native_ullong, native_float, H5T_conv_ullong_float, H5AC_dxpl_id);
-    status |= H5T_register(H5T_PERS_HARD, "ullong_dbl", native_ullong, native_double, H5T_conv_ullong_double, H5AC_dxpl_id);
-#endif /*H5_ULLONG_TO_FP_CAST_WORKS && H5_SW_ULONG_TO_FP_BOTTOM_BIT_WORKS*/
-#if H5_ULLONG_TO_FP_CAST_WORKS && H5_SW_ULONG_TO_FP_BOTTOM_BIT_WORKS && H5_SW_INTEGER_TO_LDOUBLE_WORKS && H5_ULLONG_TO_LDOUBLE_PRECISION_WORKS
-    status |= H5T_register(H5T_PERS_HARD, "ullong_ldbl", native_ullong, native_ldouble, H5T_conv_ullong_ldouble, H5AC_dxpl_id);
-#endif /*H5_ULLONG_TO_FP_CAST_WORKS && H5_SW_ULONG_TO_FP_BOTTOM_BIT_WORKS && H5_SW_INTEGER_TO_LDOUBLE_WORKS && H5_ULLONG_TO_LDOUBLE_PRECISION_WORKS*/
-
-    /* From floats to char */
-    status |= H5T_register(H5T_PERS_HARD, "flt_schar", native_float, native_schar, H5T_conv_float_schar, H5AC_dxpl_id);
-    status |= H5T_register(H5T_PERS_HARD, "dbl_schar", native_double, native_schar, H5T_conv_double_schar, H5AC_dxpl_id);
-#if H5_SW_LDOUBLE_TO_INTEGER_WORKS
-    status |= H5T_register(H5T_PERS_HARD, "ldbl_schar", native_ldouble, native_schar, H5T_conv_ldouble_schar, H5AC_dxpl_id);
-#endif /*H5_SW_LDOUBLE_TO_INTEGER_WORKS*/
-
-    /* From floats to unsigned char */
-    status |= H5T_register(H5T_PERS_HARD, "flt_uchar", native_float, native_uchar, H5T_conv_float_uchar, H5AC_dxpl_id);
-    status |= H5T_register(H5T_PERS_HARD, "dbl_uchar", native_double, native_uchar, H5T_conv_double_uchar, H5AC_dxpl_id);
-#if H5_SW_LDOUBLE_TO_INTEGER_WORKS
-    status |= H5T_register(H5T_PERS_HARD, "ldbl_uchar", native_ldouble, native_uchar, H5T_conv_ldouble_uchar, H5AC_dxpl_id);
-#endif /*H5_SW_LDOUBLE_TO_INTEGER_WORKS*/
-   
-    /* From floats to short */
-    status |= H5T_register(H5T_PERS_HARD, "flt_short", native_float, native_short, H5T_conv_float_short, H5AC_dxpl_id);
-    status |= H5T_register(H5T_PERS_HARD, "dbl_short", native_double, native_short, H5T_conv_double_short, H5AC_dxpl_id);
-#if H5_SW_LDOUBLE_TO_INTEGER_WORKS
-    status |= H5T_register(H5T_PERS_HARD, "ldbl_short", native_ldouble, native_short, H5T_conv_ldouble_short, H5AC_dxpl_id);
-#endif /*H5_SW_LDOUBLE_TO_INTEGER_WORKS*/
-
-    /* From floats to unsigned short */
-    status |= H5T_register(H5T_PERS_HARD, "flt_ushort", native_float, native_ushort, H5T_conv_float_ushort, H5AC_dxpl_id);
-    status |= H5T_register(H5T_PERS_HARD, "dbl_ushort", native_double, native_ushort, H5T_conv_double_ushort, H5AC_dxpl_id);
-#if H5_SW_LDOUBLE_TO_INTEGER_WORKS
-    status |= H5T_register(H5T_PERS_HARD, "ldbl_ushort", native_ldouble, native_ushort, H5T_conv_ldouble_ushort, H5AC_dxpl_id);
-#endif /*H5_SW_LDOUBLE_TO_INTEGER_WORKS*/
-  
-    /* From floats to int */
-    status |= H5T_register(H5T_PERS_HARD, "flt_int", native_float, native_int, H5T_conv_float_int, H5AC_dxpl_id);
-    status |= H5T_register(H5T_PERS_HARD, "dbl_int", native_double, native_int, H5T_conv_double_int, H5AC_dxpl_id);
-#if H5_SW_LDOUBLE_TO_INTEGER_WORKS
-    status |= H5T_register(H5T_PERS_HARD, "ldbl_int", native_ldouble, native_int, H5T_conv_ldouble_int, H5AC_dxpl_id);
-#endif /*H5_SW_LDOUBLE_TO_INTEGER_WORKS*/
-
-    /* From floats to unsigned int */
-    status |= H5T_register(H5T_PERS_HARD, "flt_uint", native_float, native_uint, H5T_conv_float_uint, H5AC_dxpl_id);
-    status |= H5T_register(H5T_PERS_HARD, "dbl_uint", native_double, native_uint, H5T_conv_double_uint, H5AC_dxpl_id);
-#if H5_SW_LDOUBLE_TO_INTEGER_WORKS && H5_CV_LDOUBLE_TO_UINT_WORKS
-    status |= H5T_register(H5T_PERS_HARD, "ldbl_uint", native_ldouble, native_uint, H5T_conv_ldouble_uint, H5AC_dxpl_id);
-#endif /*H5_SW_LDOUBLE_TO_INTEGER_WORKS && H5_CV_LDOUBLE_TO_UINT_WORKS*/
-
-    status |= H5T_register(H5T_PERS_HARD, "flt_long", native_float, native_long, H5T_conv_float_long, H5AC_dxpl_id);
-    status |= H5T_register(H5T_PERS_HARD, "dbl_long", native_double, native_long, H5T_conv_double_long, H5AC_dxpl_id);
-#if H5_SW_LDOUBLE_TO_INTEGER_WORKS
-    status |= H5T_register(H5T_PERS_HARD, "ldbl_long", native_ldouble, native_long, H5T_conv_ldouble_long, H5AC_dxpl_id);
-#endif /*H5_SW_LDOUBLE_TO_INTEGER_WORKS*/
-
-    /* From floats to unsigned long */
-    status |= H5T_register(H5T_PERS_HARD, "flt_ulong", native_float, native_ulong, H5T_conv_float_ulong, H5AC_dxpl_id);
-    status |= H5T_register(H5T_PERS_HARD, "dbl_ulong", native_double, native_ulong, H5T_conv_double_ulong, H5AC_dxpl_id);
-#if H5_SW_LDOUBLE_TO_INTEGER_WORKS
-    status |= H5T_register(H5T_PERS_HARD, "ldbl_ulong", native_ldouble, native_ulong, H5T_conv_ldouble_ulong, H5AC_dxpl_id);
-#endif /*H5_SW_LDOUBLE_TO_INTEGER_WORKS*/
-
-    /* From floats to long long */
-#ifndef H5_HW_FP_TO_LLONG_NOT_WORKS
-    status |= H5T_register(H5T_PERS_HARD, "flt_llong", native_float, native_llong, H5T_conv_float_llong, H5AC_dxpl_id);
-    status |= H5T_register(H5T_PERS_HARD, "dbl_llong", native_double, native_llong, H5T_conv_double_llong, H5AC_dxpl_id);
-#endif /*H5_HW_FP_TO_LLONG_NOT_WORKS*/
-#if H5_SW_LDOUBLE_TO_INTEGER_WORKS && !H5_HW_FP_TO_LLONG_NOT_WORKS
-    status |= H5T_register(H5T_PERS_HARD, "ldbl_llong", native_ldouble, native_llong, H5T_conv_ldouble_llong, H5AC_dxpl_id);
-#endif /*H5_SW_LDOUBLE_TO_INTEGER_WORKS && !H5_HW_FP_TO_LLONG_NOT_WORKS*/
-
-    /* From floats to unsigned long long */
-#if H5_FP_TO_ULLONG_BOTTOM_BIT_WORKS && H5_FP_TO_ULLONG_RIGHT_MAXIMUM
-    status |= H5T_register(H5T_PERS_HARD, "flt_ullong", native_float, native_ullong, H5T_conv_float_ullong, H5AC_dxpl_id);
-    status |= H5T_register(H5T_PERS_HARD, "dbl_ullong", native_double, native_ullong, H5T_conv_double_ullong, H5AC_dxpl_id);
-#endif /*H5_FP_TO_ULLONG_BOTTOM_BIT_WORKS && H5_FP_TO_ULLONG_RIGHT_MAXIMUM*/
-#if H5_FP_TO_ULLONG_BOTTOM_BIT_WORKS && H5_SW_LDOUBLE_TO_INTEGER_WORKS && H5_FP_TO_ULLONG_RIGHT_MAXIMUM
-    status |= H5T_register(H5T_PERS_HARD, "ldbl_ullong", native_ldouble, native_ullong, H5T_conv_ldouble_ullong, H5AC_dxpl_id);
-#endif /*H5_FP_TO_ULLONG_BOTTOM_BIT_WORKS && H5_SW_LDOUBLE_TO_INTEGER_WORKS && H5_FP_TO_ULLONG_RIGHT_MAXIMUM*/
 
     /*
      * The special no-op conversion is the fastest, so we list it last. The
@@ -1364,7 +1200,7 @@ H5T_term_interface(void)
 				 (unsigned long)(path->func), path->name);
 		    }
 #endif
-		    H5E_clear_stack(NULL); /*ignore the error*/
+		    H5E_clear(); /*ignore the error*/
 		}
 	    }
 
@@ -1384,7 +1220,7 @@ H5T_term_interface(void)
 
 	/* Unlock all datatypes, then free them */
 	H5I_search (H5I_DATATYPE, H5T_unlock_cb, NULL);
-	H5I_dec_type_ref(H5I_DATATYPE);
+	H5I_destroy_group(H5I_DATATYPE);
 
         /* Reset all the datatype IDs */
         H5T_IEEE_F32BE_g			= FAIL;
@@ -1856,12 +1692,6 @@ H5T_get_class(const H5T_t *dt, htri_t internal)
 
     assert(dt);
     
-    /* Lie to the user if they have a VL string and tell them it's in the string class */
-    if(dt->shared->type==H5T_VLEN && dt->shared->u.vlen.type==H5T_VLEN_STRING)
-        ret_value=H5T_STRING;
-    else
-        ret_value=dt->shared->type;
-
     /* Externally, a VL string is a string; internally, a VL string is a VL. */ 
     if(internal) { 
         ret_value=dt->shared->type;
@@ -1907,11 +1737,10 @@ H5Tdetect_class(hid_t type, H5T_class_t cls)
     if (!(cls>H5T_NO_CLASS && cls<H5T_NCLASSES))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, H5T_NO_CLASS, "not a data type class");
 
-    /* Set return value.  Consider VL string as a string for API, as a VL for
-     * internal use. */
+    /* Set return value.  Consider VL string as a string for API, as a VL for internal use. */
     if(H5T_IS_VL_STRING(dt->shared))
         ret_value = (H5T_STRING==cls);
-    else
+    else 
         ret_value=H5T_detect_class(dt,cls);
 
 done:
@@ -2299,7 +2128,7 @@ H5T_register(H5T_pers_t pers, const char *name, H5T_t *src, H5T_t *dst,
                 H5I_dec_ref(tmp_sid);
                 H5I_dec_ref(tmp_did);
                 tmp_sid = tmp_did = -1;
-                H5E_clear_stack(NULL);
+                H5E_clear();
                 continue;
             } /* end if */
 
@@ -2341,7 +2170,7 @@ H5T_register(H5T_pers_t pers, const char *name, H5T_t *src, H5T_t *dst,
             tmp_sid = tmp_did = -1;
 
             /* We don't care about any failures during the freeing process */
-	    H5E_clear_stack(NULL);
+            H5E_clear();
         } /* end for */
     } /* end else */
     
@@ -2507,7 +2336,7 @@ H5T_unregister(H5T_pers_t pers, const char *name, H5T_t *src, H5T_t *dst,
             H5T_close(path->src);
             H5T_close(path->dst);
             H5FL_FREE(H5T_path_t,path);
-            H5E_clear_stack(NULL); /*ignore all shutdown errors*/
+            H5E_clear(); /*ignore all shutdown errors*/
         } /* end else */
     } /* end for */
 
@@ -2672,40 +2501,37 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5Tencode
+ * Function:	H5Tget_overflow
  *
- * Purpose:	Given an datatype ID, converts the object description into 
- *              binary in a buffer.
+ * Purpose:	Returns a pointer to the current global overflow function.
+ *		This is an application-defined function that is called
+ *		whenever a data type conversion causes an overflow.
  *
- * Return:	Success:	non-negative
+ * Return:	Success:	Ptr to an application-defined function.
  *
- *		Failure:	negative
+ *		Failure:	NULL (this can happen if no overflow handling
+ *				function is registered).
  *
- * Programmer:	Raymond Lu
- *              slu@ncsa.uiuc.edu
- *              July 14, 2004
+ * Programmer:	Robb Matzke
+ *              Tuesday, July  7, 1998
  *
  * Modifications:
  *
  *-------------------------------------------------------------------------
  */
-herr_t
-H5Tencode(hid_t obj_id, void *buf, size_t *nalloc)
+H5T_overflow_t
+H5Tget_overflow(void)
 {
-    H5T_t       *dtype;
-    herr_t      ret_value=SUCCEED;
-    
-    FUNC_ENTER_API (H5Tencode, FAIL);
-    H5TRACE3("e","ix*z",obj_id,buf,nalloc);
+    H5T_overflow_t      ret_value;       /* Return value */
 
-    /* Check argument and retrieve object */
-    if (NULL==(dtype=H5I_object_verify(obj_id, H5I_DATATYPE)))
-	HGOTO_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL, "not a datatype")
-    if (nalloc==NULL)
-	HGOTO_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL, "NULL pointer for buffer size")
+    FUNC_ENTER_API(H5Tget_overflow, NULL);
+    H5TRACE0("x","");
 
-    if(H5T_encode(dtype, buf, nalloc)<0)
-	HGOTO_ERROR(H5E_DATATYPE, H5E_CANTENCODE, FAIL, "can't encode datatype");
+    if (NULL==H5T_overflow_g)
+	HGOTO_ERROR(H5E_DATATYPE, H5E_UNINITIALIZED, NULL, "no overflow handling function is registered");
+
+    /* Set return value */
+    ret_value=H5T_overflow_g;
 
 done:
     FUNC_LEAVE_API(ret_value);
@@ -2713,41 +2539,32 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5Tdecode
+ * Function:	H5Tset_overflow
  *
- * Purpose:	Decode a binary object description and return a new object
- *              handle.
+ * Purpose:	Sets the overflow handler to be the specified function.  FUNC
+ *		will be called for all data type conversions that result in
+ *		an overflow.  See the definition of `H5T_overflow_t' for
+ *		documentation of arguments and return values.  The NULL
+ *		pointer may be passed to remove the overflow handler.
  *
- * Return:	Success:	datatype ID(non-negative)
+ * Return:	Non-negative on success/Negative on failure
  *
- *		Failure:	negative
- *
- * Programmer:	Raymond Lu
- *              slu@ncsa.uiuc.edu
- *              July 14, 2004
+ * Programmer:	Robb Matzke
+ *              Tuesday, July  7, 1998
  *
  * Modifications:
  *
  *-------------------------------------------------------------------------
  */
-hid_t
-H5Tdecode(const void *buf)
+herr_t
+H5Tset_overflow(H5T_overflow_t func)
 {
-    H5T_t       *dt;
-    hid_t       ret_value;
-    
-    FUNC_ENTER_API (H5Tdecode, FAIL);
-    H5TRACE1("i","x",buf);
+    herr_t ret_value=SUCCEED;   /* Return value */
 
-    if (buf==NULL)
-	HGOTO_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL, "empty buffer")
+    FUNC_ENTER_API(H5Tset_overflow, FAIL);
+    H5TRACE1("e","x",func);
 
-    if((dt = H5T_decode(buf))==NULL)
-	HGOTO_ERROR(H5E_DATATYPE, H5E_CANTDECODE, FAIL, "can't decode object");
-    
-    /* Register the type and return the ID */
-    if ((ret_value=H5I_register (H5I_DATATYPE, dt))<0)
-	HGOTO_ERROR (H5E_DATATYPE, H5E_CANTREGISTER, FAIL, "unable to register data type");
+    H5T_overflow_g = func;
 
 done:
     FUNC_LEAVE_API(ret_value);
@@ -2757,98 +2574,6 @@ done:
  * API functions are above; library-private functions are below...
  *------------------------------------------------------------------------- 
  */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5T_encode
- *
- * Purpose:	Private function for H5Tencode.  Converts an object 
- *              description into binary in a buffer.
- *
- * Return:	Success:	non-negative
- *
- *		Failure:	negative
- *
- * Programmer:	Raymond Lu
- *              slu@ncsa.uiuc.edu
- *              July 14, 2004
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5T_encode(H5T_t *obj, unsigned char *buf, size_t *nalloc)
-{
-    size_t      buf_size;
-    H5F_t       f;
-    herr_t      ret_value = SUCCEED;
-
-    FUNC_ENTER_NOAPI(H5T_encode, FAIL);
-    
-    /* Find out the size of buffer needed */
-    if((buf_size=H5O_raw_size(H5O_DTYPE_ID, &f, obj))==0)
-	HGOTO_ERROR(H5E_DATATYPE, H5E_BADSIZE, FAIL, "can't find datatype size");
-
-    /* Don't encode if buffer size isn't big enough or buffer is empty */
-    if(!buf || *nalloc<(buf_size+1+1)) {
-        *nalloc = buf_size+1+1;
-	HGOTO_DONE(ret_value);
-    }
-
-    /* Encode the type of the information */
-    *buf++ = H5O_DTYPE_ID;
-
-    /* Encode the version of the dataspace information */
-    *buf++ = H5T_ENCODE_VERSION;
-
-    if(H5O_encode(&f, buf, obj, H5O_DTYPE_ID)<0)
-	HGOTO_ERROR(H5E_DATATYPE, H5E_CANTENCODE, FAIL, "can't encode object");
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5T_decode
- *
- * Purpose:	Private function for H5Tdecode.  Reconstructs a binary
- *              description of datatype and returns a new object handle. 
- *
- * Return:	Success:	datatype ID(non-negative)
- *
- *		Failure:	negative
- *
- * Programmer:	Raymond Lu
- *              slu@ncsa.uiuc.edu
- *              July 14, 2004
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static H5T_t *
-H5T_decode(const unsigned char *buf)
-{
-    H5T_t       *ret_value;
-
-    FUNC_ENTER_NOAPI(H5T_decode, NULL);
-
-    /* Decode the type of the information */
-    if(*buf++ != H5O_DTYPE_ID)
-	HGOTO_ERROR(H5E_DATATYPE, H5E_BADMESG, NULL, "not an encoded datatype");
-
-    /* Decode the version of the datatype information */
-    if(*buf++ != H5T_ENCODE_VERSION)
-	HGOTO_ERROR(H5E_DATATYPE, H5E_VERSION, NULL, "unknown version of encoded datatype");
-
-    if((ret_value = H5O_decode(NULL, buf, H5O_DTYPE_ID))==NULL)
-	HGOTO_ERROR(H5E_DATATYPE, H5E_CANTDECODE, NULL, "can't decode object");
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
-}
 
 
 /*-------------------------------------------------------------------------
@@ -3019,7 +2744,7 @@ H5T_open (H5G_entry_t *ent, hid_t dxpl_id)
     /* Check if datatype was already open */
     if((shared_fo=H5FO_opened(ent->file,ent->header))==NULL) {
         /* Clear any errors from H5FO_opened() */
-        H5E_clear_stack(NULL);
+        H5E_clear();
 
         /* Open the datatype object */
         if ((dt=H5T_open_oid(ent, dxpl_id)) ==NULL)
@@ -3030,7 +2755,7 @@ H5T_open (H5G_entry_t *ent, hid_t dxpl_id)
             HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINSERT, NULL, "can't insert datatype into list of open objects")
 
         /* Mark any datatypes as being in memory now */
-        if (H5T_set_loc(dt, NULL, H5T_LOC_MEMORY)<0)
+        if (H5T_vlen_mark(dt, NULL, H5T_VLEN_MEMORY)<0)
             HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, NULL, "invalid datatype location")
 
         dt->shared->fo_count=1;
@@ -3211,7 +2936,7 @@ H5T_copy(const H5T_t *old_dt, H5T_copy_t method)
                 /* Check if the object is already open */
                 if((reopened_fo=H5FO_opened(new_dt->ent.file,new_dt->ent.header))==NULL) {
                     /* Clear any errors from H5FO_opened() */
-                    H5E_clear_stack(NULL);
+                    H5E_clear();
                     if (H5O_open (&(new_dt->ent))<0)
                         HGOTO_ERROR (H5E_DATATYPE, H5E_CANTOPENOBJ, NULL, "unable to reopen named data type");
                     if(H5FO_insert(new_dt->ent.file, new_dt->ent.header,new_dt->shared)<0)
@@ -3314,11 +3039,10 @@ H5T_copy(const H5T_t *old_dt, H5T_copy_t method)
             break;
 
         case H5T_VLEN:
-        case H5T_REFERENCE:
             if(method==H5T_COPY_TRANSIENT || method==H5T_COPY_REOPEN) {
-                /* H5T_copy converts any type into a memory type */
-                if (H5T_set_loc(new_dt, NULL, H5T_LOC_MEMORY)<0)
-                    HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, NULL, "invalid datatype location");
+                /* H5T_copy converts any VL type into a memory VL type */
+                if (H5T_vlen_mark(new_dt, NULL, H5T_VLEN_MEMORY)<0)
+                    HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, NULL, "invalid VL location");
             }
             break;
 
@@ -3681,8 +3405,8 @@ H5T_set_size(H5T_t *dt, size_t size)
                     dt->shared->u.vlen.pad  = tmp_strpad;
 
                     /* Set up VL information */
-                    if (H5T_set_loc(dt, NULL, H5T_LOC_MEMORY)<0)
-                        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "invalid datatype location");
+                    if (H5T_vlen_mark(dt, NULL, H5T_VLEN_MEMORY)<0)
+                        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "invalid VL location");
 
                 } else {
                     prec = 8 * size;
@@ -3951,8 +3675,8 @@ H5T_cmp(const H5T_t *dt1, const H5T_t *dt2)
         case H5T_VLEN:
             assert(dt1->shared->u.vlen.type>H5T_VLEN_BADTYPE && dt1->shared->u.vlen.type<H5T_VLEN_MAXTYPE);
             assert(dt2->shared->u.vlen.type>H5T_VLEN_BADTYPE && dt2->shared->u.vlen.type<H5T_VLEN_MAXTYPE);
-            assert(dt1->shared->u.vlen.loc>H5T_LOC_BADLOC && dt1->shared->u.vlen.loc<H5T_LOC_MAXLOC);
-            assert(dt2->shared->u.vlen.loc>H5T_LOC_BADLOC && dt2->shared->u.vlen.loc<H5T_LOC_MAXLOC);
+            assert(dt1->shared->u.vlen.loc>H5T_VLEN_BADLOC && dt1->shared->u.vlen.loc<H5T_VLEN_MAXLOC);
+            assert(dt2->shared->u.vlen.loc>H5T_VLEN_BADLOC && dt2->shared->u.vlen.loc<H5T_VLEN_MAXLOC);
 
             /* Arbitrarily sort sequence VL datatypes before string VL datatypes */
             if (dt1->shared->u.vlen.type==H5T_VLEN_SEQUENCE &&
@@ -3963,11 +3687,11 @@ H5T_cmp(const H5T_t *dt1, const H5T_t *dt2)
                 HGOTO_DONE(1);
             }
             /* Arbitrarily sort VL datatypes in memory before disk */
-            if (dt1->shared->u.vlen.loc==H5T_LOC_MEMORY &&
-                    dt2->shared->u.vlen.loc==H5T_LOC_DISK) {
+            if (dt1->shared->u.vlen.loc==H5T_VLEN_MEMORY &&
+                    dt2->shared->u.vlen.loc==H5T_VLEN_DISK) {
                 HGOTO_DONE(-1);
-            } else if (dt1->shared->u.vlen.loc==H5T_LOC_DISK &&
-                    dt2->shared->u.vlen.loc==H5T_LOC_MEMORY) {
+            } else if (dt1->shared->u.vlen.loc==H5T_VLEN_DISK &&
+                    dt2->shared->u.vlen.loc==H5T_VLEN_MEMORY) {
                 HGOTO_DONE(1);
             }
             /* Don't allow VL types in different files to compare as equal */
@@ -4101,12 +3825,6 @@ H5T_cmp(const H5T_t *dt1, const H5T_t *dt2)
 
                     switch(dt1->shared->u.atomic.u.r.rtype) {
                         case H5R_OBJECT:
-                            if (dt1->shared->u.atomic.u.r.loc < dt2->shared->u.atomic.u.r.loc)
-                                HGOTO_DONE(-1);
-                            if (dt1->shared->u.atomic.u.r.loc > dt2->shared->u.atomic.u.r.loc)
-                                HGOTO_DONE(1);
-                            break;
-
                         case H5R_DATASET_REGION:
                     /* Does this need more to distinguish it? -QAK 11/30/98 */
                             /*void */
@@ -4201,7 +3919,7 @@ H5T_path_find(const H5T_t *src, const H5T_t *dst, const char *name,
 			"conversion function (ignored)\n");
 	    }
 #endif
-	    H5E_clear_stack(NULL); /*ignore the error*/
+	    H5E_clear(); /*ignore the error*/
 	}
 	H5T_g.path[0]->is_noop = TRUE;
 	H5T_g.npaths = 1;
@@ -4312,7 +4030,7 @@ H5T_path_find(const H5T_t *src, const H5T_t *dst, const char *name,
 	if ((H5T_g.soft[i].func) (src_id, dst_id, &(path->cdata),
                                   0, 0, 0, NULL, NULL, dxpl_id)<0) {
 	    HDmemset (&(path->cdata), 0, sizeof(H5T_cdata_t));
-	    H5E_clear_stack(NULL); /*ignore the error*/
+	    H5E_clear(); /*ignore the error*/
 	} else {
 	    HDstrcpy (path->name, H5T_g.soft[i].name);
 	    path->func = H5T_g.soft[i].func;
@@ -4362,7 +4080,7 @@ H5T_path_find(const H5T_t *src, const H5T_t *dst, const char *name,
 			(unsigned long)(path->func), path->name);
 	    }
 #endif
-	    H5E_clear_stack(NULL); /*ignore the failure*/
+	    H5E_clear(); /*ignore the failure*/
 	}
 	if (table->src) H5T_close(table->src);
 	if (table->dst) H5T_close(table->dst);
@@ -4728,150 +4446,6 @@ done:
 }
 
 
-/*--------------------------------------------------------------------------
- NAME
-    H5T_set_loc
- PURPOSE
-    Recursively mark any datatypes as on disk/in memory
- USAGE
-    htri_t H5T_set_loc(dt,f,loc)
-        H5T_t *dt;              IN/OUT: Pointer to the datatype to mark
-        H5F_t *f;               IN: Pointer to the file the datatype is in
-        H5T_vlen_type_t loc     IN: location of type
-        
- RETURNS
-    One of two values on success:
-        TRUE - If the location of any vlen types changed
-        FALSE - If the location of any vlen types is the same
-    <0 is returned on failure
- DESCRIPTION
-    Recursively descends any VL or compound datatypes to mark all VL datatypes
-    as either on disk or in memory.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-htri_t
-H5T_set_loc(H5T_t *dt, H5F_t *f, H5T_loc_t loc)
-{
-    htri_t changed;    /* Whether H5T_set_loc changed the type (even if the size didn't change) */
-    htri_t ret_value = 0;   /* Indicate that success, but no location change */
-    unsigned i;             /* Local index variable */
-    int accum_change;       /* Amount of change in the offset of the fields */
-    size_t old_size;        /* Previous size of a field */
-
-    FUNC_ENTER_NOAPI(H5T_set_loc, FAIL);
-
-    assert(dt);
-    assert(loc>H5T_LOC_BADLOC && loc<H5T_LOC_MAXLOC);
-
-    /* Datatypes can't change in size if the force_conv flag is not set */
-    if(dt->shared->force_conv) {
-        /* Check the datatype of this element */
-        switch(dt->shared->type) {
-            case H5T_ARRAY:  /* Recurse on VL, compound and array base element type */
-                /* Recurse if it's VL, compound, enum or array */
-                /* (If the force_conv flag is _not_ set, the type cannot change in size, so don't recurse) */
-                if(dt->shared->parent->shared->force_conv && H5T_IS_COMPLEX(dt->shared->parent->shared->type)) {
-                    /* Keep the old base element size for later */
-                    old_size=dt->shared->parent->shared->size;
-
-                    /* Mark the VL, compound or array type */
-                    if((changed=H5T_set_loc(dt->shared->parent,f,loc))<0)
-                        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "Unable to set VL location");
-                    if(changed>0)
-                        ret_value=changed;
-                    
-                    /* Check if the field changed size */
-                    if(old_size != dt->shared->parent->shared->size) {
-                        /* Adjust the size of the array */
-                        dt->shared->size = dt->shared->u.array.nelem*dt->shared->parent->shared->size;
-                    } /* end if */
-                } /* end if */
-                break;
-
-            case H5T_COMPOUND:  /* Check each field and recurse on VL, compound and array type */
-                /* Sort the fields based on offsets */
-                H5T_sort_value(dt,NULL);
-        
-                for (i=0,accum_change=0; i<dt->shared->u.compnd.nmembs; i++) {
-                    H5T_t *memb_type;   /* Member's datatype pointer */
-
-                    /* Apply the accumulated size change to the offset of the field */
-                    dt->shared->u.compnd.memb[i].offset += accum_change;
-
-                    /* Set the member type pointer (for convenience) */
-                    memb_type=dt->shared->u.compnd.memb[i].type;
-
-                    /* Recurse if it's VL, compound, enum or array */
-                    /* (If the force_conv flag is _not_ set, the type cannot change in size, so don't recurse) */
-                    if(memb_type->shared->force_conv && H5T_IS_COMPLEX(memb_type->shared->type)) {
-                        /* Keep the old field size for later */
-                        old_size=memb_type->shared->size;
-
-                        /* Mark the VL, compound, enum or array type */
-                        if((changed=H5T_set_loc(memb_type,f,loc))<0)
-                            HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "Unable to set VL location");
-                        if(changed>0)
-                            ret_value=changed;
-                        
-                        /* Check if the field changed size */
-                        if(old_size != memb_type->shared->size) {
-                            /* Adjust the size of the member */
-                            dt->shared->u.compnd.memb[i].size = (dt->shared->u.compnd.memb[i].size*memb_type->shared->size)/old_size;
-
-                            /* Add that change to the accumulated size change */
-                            accum_change += (memb_type->shared->size - (int)old_size);
-                        } /* end if */
-                    } /* end if */
-                } /* end for */
-
-                /* Apply the accumulated size change to the datatype */
-                dt->shared->size += accum_change;
-                break;
-
-            case H5T_VLEN: /* Recurse on the VL information if it's VL, compound or array, then free VL sequence */
-                /* Recurse if it's VL, compound, enum or array */
-                /* (If the force_conv flag is _not_ set, the type cannot change in size, so don't recurse) */
-                if(dt->shared->parent->shared->force_conv && H5T_IS_COMPLEX(dt->shared->parent->shared->type)) {
-                    if((changed=H5T_set_loc(dt->shared->parent,f,loc))<0)
-                        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "Unable to set VL location");
-                    if(changed>0)
-                        ret_value=changed;
-                } /* end if */
-
-                /* Mark this VL sequence */
-                if((changed=H5T_vlen_set_loc(dt,f,loc))<0)
-                    HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "Unable to set VL location");
-                if(changed>0)
-                    ret_value=changed;
-                break;
-
-            case H5T_REFERENCE:
-                /* Only need to change location of object references */
-                if(dt->shared->u.atomic.u.r.rtype==H5R_OBJECT) {
-                    /* Mark this reference */
-                    if(loc!=dt->shared->u.atomic.u.r.loc) {
-                        /* Set the location */
-                        dt->shared->u.atomic.u.r.loc = loc;
-
-                        /* Indicate that the location changed */
-                        ret_value=TRUE;
-                    } /* end if */
-                } /* end if */
-                break;
-
-            default:
-                break;
-        } /* end switch */
-    } /* end if */
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
-}   /* end H5T_set_loc() */
-
-
 /*-------------------------------------------------------------------------
  * Function:    H5T_is_relocatable
  *
@@ -4904,8 +4478,6 @@ H5T_is_relocatable(const H5T_t *dt)
     assert(dt);
 
     if(H5T_detect_class(dt, H5T_VLEN))
-        ret_value = TRUE;
-    else if(H5T_detect_class(dt, H5T_REFERENCE))
         ret_value = TRUE;
 
 done:

@@ -549,7 +549,7 @@ H5TN_init_interface(void)\n\
                 break;
             }
         }
-
+                
 	/* Print a comment to describe this section of definitions. */
 	printf("\n   /*\n");
 	iprint(d+i);
