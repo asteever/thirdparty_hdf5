@@ -213,13 +213,17 @@ H5P_init_interface(void)
 
     FUNC_ENTER_NOINIT(H5P_init_interface);
 
+    /* Make certain IDs are initialized */
+    if (ret_value < 0)
+        HGOTO_ERROR(H5E_ATOM, H5E_CANTINIT, FAIL, "unable to initialize atom group");
+    
     /*
      * Initialize the Generic Property class & object groups.
      */
     if (H5I_init_group(H5I_GENPROP_CLS, H5I_GENPROPCLS_HASHSIZE, 0, (H5I_free_t)H5P_close_class) < 0)
-        HGOTO_ERROR(H5E_ATOM, H5E_CANTINIT, FAIL, "unable to initialize ID group");
+        HGOTO_ERROR(H5E_ATOM, H5E_CANTINIT, FAIL, "unable to initialize atom group");
     if (H5I_init_group(H5I_GENPROP_LST, H5I_GENPROPOBJ_HASHSIZE, 0, (H5I_free_t)H5P_close) < 0)
-        HGOTO_ERROR(H5E_ATOM, H5E_CANTINIT, FAIL, "unable to initialize ID group");
+        HGOTO_ERROR(H5E_ATOM, H5E_CANTINIT, FAIL, "unable to initialize atom group");
 
     /* Create root property list class */
 
@@ -5164,6 +5168,7 @@ done:
 herr_t
 H5Pclose(hid_t plist_id)
 {
+    H5P_genplist_t	*plist;    /* Property list created */
     herr_t ret_value=SUCCEED;      /* return value */
 
     FUNC_ENTER_API(H5Pclose, FAIL);
@@ -5173,12 +5178,16 @@ H5Pclose(hid_t plist_id)
         HGOTO_DONE(SUCCEED);
 
     /* Check arguments. */
-    if (H5I_GENPROP_LST != H5I_get_type(plist_id))
+    if (NULL == (plist = H5I_object_verify(plist_id, H5I_GENPROP_LST)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list");
 
     /* Close the property list */
-    if (H5I_dec_ref(plist_id) < 0)
+    if (H5P_close(plist) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTFREE, FAIL, "can't close");
+
+    /* Remove the property list from the ID manager now */
+    if (NULL == H5I_remove(plist_id))
+        HGOTO_ERROR(H5E_ARGS, H5E_CANTDELETE, FAIL, "can't delete property list");
 
 done:
     FUNC_LEAVE_API(ret_value);

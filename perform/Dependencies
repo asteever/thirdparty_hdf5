@@ -2,7 +2,7 @@
 ## Only temporary changes may be made here.
 
 iopipe.lo: \
-   $(top_srcdir)/perform/iopipe.c \
+   $(srcdir)/iopipe.c \
    $(top_srcdir)/src/hdf5.h \
    $(top_srcdir)/src/H5public.h \
    $(top_builddir)/src/H5pubconf.h \
@@ -13,10 +13,8 @@ iopipe.lo: \
    $(top_srcdir)/src/H5Bpublic.h \
    $(top_srcdir)/src/H5Dpublic.h \
    $(top_srcdir)/src/H5Epublic.h \
-   $(top_srcdir)/src/H5Epubgen.h \
    $(top_srcdir)/src/H5Fpublic.h \
    $(top_srcdir)/src/H5FDpublic.h \
-   $(top_srcdir)/src/H5FPpublic.h \
    $(top_srcdir)/src/H5Gpublic.h \
    $(top_srcdir)/src/H5Opublic.h \
    $(top_srcdir)/src/H5HGpublic.h \
@@ -40,10 +38,9 @@ iopipe.lo: \
    $(top_srcdir)/src/H5FDstdio.h \
    $(top_srcdir)/src/H5FDstream.h \
    $(top_srcdir)/src/H5private.h \
-   $(top_srcdir)/src/H5MPprivate.h \
-   $(top_srcdir)/src/H5FSprivate.h
+   $(top_srcdir)/src/H5MPprivate.h
 chunk.lo: \
-   $(top_srcdir)/perform/chunk.c \
+   $(srcdir)/chunk.c \
    $(top_srcdir)/src/hdf5.h \
    $(top_srcdir)/src/H5public.h \
    $(top_builddir)/src/H5pubconf.h \
@@ -54,10 +51,8 @@ chunk.lo: \
    $(top_srcdir)/src/H5Bpublic.h \
    $(top_srcdir)/src/H5Dpublic.h \
    $(top_srcdir)/src/H5Epublic.h \
-   $(top_srcdir)/src/H5Epubgen.h \
    $(top_srcdir)/src/H5Fpublic.h \
    $(top_srcdir)/src/H5FDpublic.h \
-   $(top_srcdir)/src/H5FPpublic.h \
    $(top_srcdir)/src/H5Gpublic.h \
    $(top_srcdir)/src/H5Opublic.h \
    $(top_srcdir)/src/H5HGpublic.h \
@@ -81,7 +76,7 @@ chunk.lo: \
    $(top_srcdir)/src/H5FDstdio.h \
    $(top_srcdir)/src/H5FDstream.h
 overhead.lo: \
-   $(top_srcdir)/perform/overhead.c \
+   $(srcdir)/overhead.c \
    $(top_srcdir)/src/hdf5.h \
    $(top_srcdir)/src/H5public.h \
    $(top_builddir)/src/H5pubconf.h \
@@ -92,10 +87,8 @@ overhead.lo: \
    $(top_srcdir)/src/H5Bpublic.h \
    $(top_srcdir)/src/H5Dpublic.h \
    $(top_srcdir)/src/H5Epublic.h \
-   $(top_srcdir)/src/H5Epubgen.h \
    $(top_srcdir)/src/H5Fpublic.h \
    $(top_srcdir)/src/H5FDpublic.h \
-   $(top_srcdir)/src/H5FPpublic.h \
    $(top_srcdir)/src/H5Gpublic.h \
    $(top_srcdir)/src/H5Opublic.h \
    $(top_srcdir)/src/H5HGpublic.h \
@@ -119,10 +112,9 @@ overhead.lo: \
    $(top_srcdir)/src/H5FDstdio.h \
    $(top_srcdir)/src/H5FDstream.h \
    $(top_srcdir)/src/H5private.h \
-   $(top_srcdir)/src/H5MPprivate.h \
-   $(top_srcdir)/src/H5FSprivate.h
+   $(top_srcdir)/src/H5MPprivate.h
 zip_perf.lo: \
-   $(top_srcdir)/perform/zip_perf.c \
+   $(srcdir)/zip_perf.c \
    $(top_srcdir)/src/hdf5.h \
    $(top_srcdir)/src/H5public.h \
    $(top_builddir)/src/H5pubconf.h \
@@ -133,10 +125,8 @@ zip_perf.lo: \
    $(top_srcdir)/src/H5Bpublic.h \
    $(top_srcdir)/src/H5Dpublic.h \
    $(top_srcdir)/src/H5Epublic.h \
-   $(top_srcdir)/src/H5Epubgen.h \
    $(top_srcdir)/src/H5Fpublic.h \
    $(top_srcdir)/src/H5FDpublic.h \
-   $(top_srcdir)/src/H5FPpublic.h \
    $(top_srcdir)/src/H5Gpublic.h \
    $(top_srcdir)/src/H5Opublic.h \
    $(top_srcdir)/src/H5HGpublic.h \
@@ -161,7 +151,7 @@ zip_perf.lo: \
    $(top_srcdir)/src/H5FDstream.h \
    $(top_srcdir)/tools/lib/h5tools_utils.h
 pio_perf.lo: \
-   $(top_srcdir)/perform/pio_perf.c \
+   $(srcdir)/pio_perf.c \
    $(top_srcdir)/src/hdf5.h \
    $(top_srcdir)/src/H5public.h \
    $(top_builddir)/src/H5pubconf.h \
@@ -172,10 +162,8 @@ pio_perf.lo: \
    $(top_srcdir)/src/H5Bpublic.h \
    $(top_srcdir)/src/H5Dpublic.h \
    $(top_srcdir)/src/H5Epublic.h \
-   $(top_srcdir)/src/H5Epubgen.h \
    $(top_srcdir)/src/H5Fpublic.h \
    $(top_srcdir)/src/H5FDpublic.h \
-   $(top_srcdir)/src/H5FPpublic.h \
    $(top_srcdir)/src/H5Gpublic.h \
    $(top_srcdir)/src/H5Opublic.h \
    $(top_srcdir)/src/H5HGpublic.h \
@@ -199,7 +187,7 @@ pio_perf.lo: \
    $(top_srcdir)/src/H5FDstdio.h \
    $(top_srcdir)/src/H5FDstream.h
 pio_engine.lo: \
-   $(top_srcdir)/perform/pio_engine.c \
+   $(srcdir)/pio_engine.c \
    $(top_srcdir)/src/hdf5.h \
    $(top_srcdir)/src/H5public.h \
    $(top_builddir)/src/H5pubconf.h \
@@ -210,10 +198,8 @@ pio_engine.lo: \
    $(top_srcdir)/src/H5Bpublic.h \
    $(top_srcdir)/src/H5Dpublic.h \
    $(top_srcdir)/src/H5Epublic.h \
-   $(top_srcdir)/src/H5Epubgen.h \
    $(top_srcdir)/src/H5Fpublic.h \
    $(top_srcdir)/src/H5FDpublic.h \
-   $(top_srcdir)/src/H5FPpublic.h \
    $(top_srcdir)/src/H5Gpublic.h \
    $(top_srcdir)/src/H5Opublic.h \
    $(top_srcdir)/src/H5HGpublic.h \
@@ -237,8 +223,8 @@ pio_engine.lo: \
    $(top_srcdir)/src/H5FDstdio.h \
    $(top_srcdir)/src/H5FDstream.h
 pio_timer.lo: \
-   $(top_srcdir)/perform/pio_timer.c \
-   $(top_srcdir)/perform/pio_timer.h \
+   $(srcdir)/pio_timer.c \
+   $(srcdir)/pio_timer.h \
    $(top_srcdir)/src/hdf5.h \
    $(top_srcdir)/src/H5public.h \
    $(top_builddir)/src/H5pubconf.h \
@@ -249,10 +235,8 @@ pio_timer.lo: \
    $(top_srcdir)/src/H5Bpublic.h \
    $(top_srcdir)/src/H5Dpublic.h \
    $(top_srcdir)/src/H5Epublic.h \
-   $(top_srcdir)/src/H5Epubgen.h \
    $(top_srcdir)/src/H5Fpublic.h \
    $(top_srcdir)/src/H5FDpublic.h \
-   $(top_srcdir)/src/H5FPpublic.h \
    $(top_srcdir)/src/H5Gpublic.h \
    $(top_srcdir)/src/H5Opublic.h \
    $(top_srcdir)/src/H5HGpublic.h \

@@ -3874,8 +3874,8 @@ static void write_dset_in(hid_t loc_id,
 
 static void gent_attr_all(void)
 {
-    hid_t   file_id; 
-    hid_t   dset_id;
+ hid_t   file_id; 
+ hid_t   dset_id;
 	hid_t   group_id;
 	hid_t   group2_id;
 	hid_t   root_id;

@@ -24,16 +24,27 @@
 #define H5F_PACKAGE		/*suppress error about including H5Fpkg	  */
 #define H5S_PACKAGE		/*suppress error about including H5Spkg	  */
 
-#include "H5private.h"		/* Generic Functions			*/
-#include "H5Eprivate.h"		/* Error handling		  	*/
-#include "H5Fpkg.h"		/* Files				*/
-#include "H5FDprivate.h"	/* File drivers				*/
-#include "H5Iprivate.h"		/* IDs			  		*/
-#include "H5Pprivate.h"         /* Property lists                       */
-#include "H5Spkg.h"		/* Dataspaces 				*/
+#include "H5private.h"          /* Internal types, etc. */
+#include "H5Eprivate.h"         /* Error reporting */
+#include "H5Fpkg.h"             /* Ugly, but necessary for the MPIO I/O accesses */
+#include "H5FDmpio.h"		/* MPIO file driver			*/
+#include "H5FDprivate.h"        /* Necessary for the H5FD_write & H5FD_read prototypes.. */
+#include "H5Iprivate.h"		/* Object IDs */
+#include "H5Pprivate.h"		/* Property Lists */
+#include "H5Spkg.h"             /* Dataspaces */
 
-#ifdef H5_HAVE_PARALLEL
-
+#ifndef H5_HAVE_PARALLEL
+/* 
+ * The H5S_mpio_xxxx functions are for parallel I/O only and are
+ * valid only when H5_HAVE_PARALLEL is #defined.  This empty #ifndef
+ * body is used to allow this source file be included in the serial
+ * distribution.
+ * Some compilers/linkers may complain about "empty" object file.
+ * If that happens, uncomment the following statement to pacify
+ * them.
+ */
+/* const hbool_t H5S_mpio_avail = FALSE; */
+#else /* H5_HAVE_PARALLEL */
 /* Interface initialization */
 #define PABLO_MASK      H5Sall_mask
 #define INTERFACE_INIT  NULL
@@ -999,7 +1010,8 @@ H5S_mpio_spaces_write(H5F_t *f, H5O_layout_t *layout,
 
     /*OKAY: CAST DISCARDS CONST QUALIFIER*/
     ret_value = H5S_mpio_spaces_xfer(f, layout, elmt_size,
-         file_space, mem_space, dxpl_id, (void*)buf, 1/*write*/);
+				     file_space, mem_space, dxpl_id,
+				     (void*)buf, 1/*write*/);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value);

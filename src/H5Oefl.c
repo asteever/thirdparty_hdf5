@@ -92,7 +92,6 @@ H5O_efl_decode(H5F_t *f, hid_t dxpl_id, const uint8_t *p, H5O_shared_t UNUSED *s
     H5O_efl_t		*mesg = NULL;
     int		i, version;
     const char		*s = NULL;
-    const H5HL_t        *heap;
     void *ret_value;            /* Return value */
 
     FUNC_ENTER_NOAPI(H5O_efl_decode, NULL);
@@ -121,19 +120,10 @@ H5O_efl_decode(H5F_t *f, hid_t dxpl_id, const uint8_t *p, H5O_shared_t UNUSED *s
 
     /* Heap address */
     H5F_addr_decode(f, &p, &(mesg->heap_addr));
-
 #ifndef NDEBUG
     assert (H5F_addr_defined(mesg->heap_addr));
-
-    if (NULL == (heap = H5HL_protect(f, dxpl_id, mesg->heap_addr)))
-        HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, NULL, "unable to read protect link value")
-    
-    s = H5HL_offset_into(f, heap, 0);
-
+    s = H5HL_peek (f, dxpl_id, mesg->heap_addr, 0);
     assert (s && !*s);
-
-    if (H5HL_unprotect(f, dxpl_id, heap, mesg->heap_addr) < 0)
-        HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, NULL, "unable to read unprotect link value")
 #endif
 
     /* Decode the file list */
@@ -143,17 +133,9 @@ H5O_efl_decode(H5F_t *f, hid_t dxpl_id, const uint8_t *p, H5O_shared_t UNUSED *s
     for (i=0; i<mesg->nused; i++) {
 	/* Name */
 	H5F_DECODE_LENGTH (f, p, mesg->slot[i].name_offset);
-
-        if (NULL == (heap = H5HL_protect(f, dxpl_id, mesg->heap_addr)))
-            HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, NULL, "unable to read protect link value")
-    
-        s = H5HL_offset_into(f, heap, mesg->slot[i].name_offset);
+	s = H5HL_peek(f, dxpl_id, mesg->heap_addr, mesg->slot[i].name_offset);
 	assert (s && *s);
 	mesg->slot[i].name = H5MM_xstrdup (s);
-        assert(mesg->slot[i].name);
-
-        if (H5HL_unprotect(f, dxpl_id, heap, mesg->heap_addr) < 0)
-            HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, NULL, "unable to read unprotect link value")
 	
 	/* File offset */
 	H5F_DECODE_LENGTH (f, p, mesg->slot[i].offset);

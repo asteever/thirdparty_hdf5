@@ -213,7 +213,6 @@ unsigned m13_rdata[MISC13_DIM1][MISC13_DIM2];          /* Data read from dataset
 #define MISC18_DSET1_NAME       "Dataset1"
 #define MISC18_DSET2_NAME       "Dataset2"
 
-
 /****************************************************************
 **
 **  test_misc1(): test unlinking a dataset from a group and immediately
@@ -565,14 +564,15 @@ test_misc4(void)
     CHECK(ret, FAIL, "H5Gget_objinfo");
 
     /* Verify that the fileno values are the same for groups from file1 */
-    VERIFY(stat1.fileno,stat2.fileno,"H5Gget_objinfo");
+    VERIFY(stat1.fileno[0],stat2.fileno[0],"H5Gget_objinfo");
+    VERIFY(stat1.fileno[1],stat2.fileno[1],"H5Gget_objinfo");
 
     /* Verify that the fileno values are not the same between file1 & file2 */
-    if(stat1.fileno==stat3.fileno) {
+    if(stat1.fileno[0]==stat3.fileno[0] && stat1.fileno[1]==stat3.fileno[1]) {
         num_errs++;
         printf("Error on line %d: stat1.fileno==stat3.fileno\n",__LINE__);
     } /* end if */
-    if(stat2.fileno==stat3.fileno) {
+    if(stat2.fileno[0]==stat3.fileno[0] && stat2.fileno[1]==stat3.fileno[1]) {
         num_errs++;
         printf("Error on line %d: stat1.fileno==stat3.fileno\n",__LINE__);
     } /* end if */
@@ -1128,7 +1128,11 @@ test_misc8(void)
 #endif /* VERIFY_DATA */
     unsigned u,v;               /* Local index variables */
     int mdc_nelmts;             /* Metadata number of elements */
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    int rdcc_nelmts;            /* Raw data number of elements */
+#else /* H5_WANT_H5_V1_4_COMPAT */
     size_t rdcc_nelmts;         /* Raw data number of elements */
+#endif /* H5_WANT_H5_V1_4_COMPAT */
     size_t rdcc_nbytes;         /* Raw data number of bytes */
     double rdcc_w0;             /* Raw data write percentage */
     hssize_t start[MISC8_RANK]; /* Hyperslab start */
@@ -1734,25 +1738,17 @@ test_misc11(void)
     hsize_t     userblock;      /* Userblock size retrieved from FCPL */
     size_t      off_size;       /* Size of offsets in the file */
     size_t      len_size;       /* Size of lengths in the file */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     int         sym_ik;         /* Symbol table B-tree initial 'K' value */
     int         istore_ik;      /* Indexed storage B-tree initial 'K' value */
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    unsigned    sym_ik;         /* Symbol table B-tree internal 'K' value */
-    unsigned    istore_ik;      /* Indexed storage B-tree internal 'K' value */
-#endif /* H5_WANT_H5_V1_6_COMPAT */
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    int         sym_lk;         /* Symbol table B-tree leaf 'K' value */
+#else /* H5_WANT_H5_V1_4_COMPAT */
     unsigned    sym_lk;         /* Symbol table B-tree leaf 'K' value */
-#ifdef H5_WANT_H5_V1_6_COMPAT
+#endif /* H5_WANT_H5_V1_4_COMPAT */
     int super;                  /* Superblock version # */
     int freelist;               /* Free list version # */
     int stab;                   /* Symbol table entry version # */
     int shhdr;                  /* Shared object header version # */
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    unsigned super;             /* Superblock version # */
-    unsigned freelist;          /* Free list version # */
-    unsigned stab;              /* Symbol table entry version # */
-    unsigned shhdr;             /* Shared object header version # */
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     herr_t      ret;            /* Generic return value */
 
     /* Output message about test being performed */
@@ -2653,7 +2649,7 @@ test_misc16(void)
     hid_t file;         /* File ID */
     herr_t ret;         /* Generic return value */
     const char wdata[MISC16_SPACE_DIM][MISC16_STR_SIZE] = 
-                        {"1234567", "1234567\0", "12345678", {NULL}};
+                        {"1234567", "1234567\0", "12345678", NULL};
     char rdata[MISC16_SPACE_DIM][MISC16_STR_SIZE];  /* Information read in */
     hid_t		dataset;	/* Dataset ID			*/
     hid_t		sid;       /* Dataspace ID			*/
@@ -2734,7 +2730,7 @@ test_misc17(void)
     hid_t file;         /* File ID */
     herr_t ret;         /* Generic return value */
     const char wdata[MISC17_SPACE_DIM1][MISC17_SPACE_DIM2] = 
-                        {"1234567", "1234567\0", "12345678", {NULL}};
+                        {"1234567", "1234567\0", "12345678", NULL};
     char rdata[MISC17_SPACE_DIM1][MISC17_SPACE_DIM2];  /* Information read in */
     hid_t		dataset;	/* Dataset ID			*/
     hid_t		sid;       /* Dataspace ID			*/
@@ -2915,7 +2911,7 @@ test_misc(void)
 {
     /* Output message about test being performed */
     MESSAGE(5, ("Testing Miscellaneous Routines\n"));
-    
+
     test_misc1();       /* Test unlinking a dataset & immediately re-using name */
     test_misc2();       /* Test storing a VL-derived datatype in two different files */
     test_misc3();       /* Test reading from chunked dataset with non-zero fill value */
@@ -2934,7 +2930,6 @@ test_misc(void)
     test_misc16();      /* Test array of fixed-length string */
     test_misc17();      /* Test array of ASCII character */
     test_misc18();      /* Test new object header information in H5G_stat_t struct */
-
 } /* test_misc() */
 
 

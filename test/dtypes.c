@@ -1239,7 +1239,7 @@ test_compound_7(void)
     /* Increase compound type size and try inserting field again */
     if(H5Tset_size(tid2, sizeof(struct s2))<0) {
         H5_FAILED();
-        printf("Can't increase size for compound type\n");
+        printf("Incorrect size for struct 2\n");
         goto error;
     } /* end if */
 
@@ -4584,7 +4584,7 @@ main(void)
     nerrors += test_conv_flt_1("sw", H5T_NATIVE_LDOUBLE, H5T_NATIVE_FLOAT);
     nerrors += test_conv_flt_1("sw", H5T_NATIVE_LDOUBLE, H5T_NATIVE_DOUBLE);
 #endif
-
+    
     if (nerrors) {
         printf("***** %lu FAILURE%s! *****\n",
                nerrors, 1==nerrors?"":"S");

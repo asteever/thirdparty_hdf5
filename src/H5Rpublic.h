@@ -50,7 +50,10 @@ typedef struct {
  */
 #define H5R_OBJ_REF_BUF_SIZE    sizeof(haddr_t)
 /* Object reference structure for user's code */
-typedef haddr_t hobj_ref_t; /* Needs to be large enough to store largest haddr_t in a worst case machine (ie. 8 bytes currently) */
+typedef struct {
+    unsigned char oid[H5R_OBJ_REF_BUF_SIZE];    /* Buffer to store OID of object referenced */
+                                /* Needs to be large enough to store largest haddr_t in a worst case machine (ie. 8 bytes currently) */
+} hobj_ref_t;
 
 #define H5R_DSET_REG_REF_BUF_SIZE    (sizeof(haddr_t)+sizeof(int))
 /* Dataset Region reference structure for user's code */
@@ -70,7 +73,12 @@ H5_DLL herr_t H5Rcreate(void *ref, hid_t loc_id, const char *name,
 			 H5R_type_t ref_type, hid_t space_id);
 H5_DLL hid_t H5Rdereference(hid_t dataset, H5R_type_t ref_type, void *ref);
 H5_DLL hid_t H5Rget_region(hid_t dataset, H5R_type_t ref_type, void *ref);
+#ifdef H5_WANT_H5_V1_4_COMPAT
+H5_DLL int H5Rget_object_type(hid_t dataset, void *_ref);
+H5_DLL int H5Rget_obj_type(hid_t id, H5R_type_t ref_type, void *_ref);
+#else /* H5_WANT_H5_V1_4_COMPAT */
 H5_DLL H5G_obj_t H5Rget_obj_type(hid_t id, H5R_type_t ref_type, void *_ref);
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
 #ifdef __cplusplus
 }

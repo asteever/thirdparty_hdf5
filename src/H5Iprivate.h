@@ -37,13 +37,11 @@
 #define H5I_OID_HASHSIZE		64
 #define H5I_GROUPID_HASHSIZE		64
 #define H5I_ATTRID_HASHSIZE		64
+#define H5I_TEMPBUFID_HASHSIZE		64
 #define H5I_REFID_HASHSIZE		64
 #define H5I_VFL_HASHSIZE		64
 #define H5I_GENPROPCLS_HASHSIZE		64
 #define H5I_GENPROPOBJ_HASHSIZE		128
-#define H5I_ERRCLS_HASHSIZE		64
-#define H5I_ERRMSG_HASHSIZE		64
-#define H5I_ERRSTK_HASHSIZE		64
 
 /*
  * Function for freeing objects. This function will be called with an object

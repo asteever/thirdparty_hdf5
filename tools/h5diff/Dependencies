@@ -2,7 +2,7 @@
 ## Only temporary changes may be made here.
 
 h5diff.lo: \
-   $(top_srcdir)/tools/h5diff/h5diff.c \
+   $(srcdir)/h5diff.c \
    $(top_srcdir)/src/hdf5.h \
    $(top_srcdir)/src/H5public.h \
    $(top_builddir)/src/H5pubconf.h \
@@ -13,10 +13,8 @@ h5diff.lo: \
    $(top_srcdir)/src/H5Bpublic.h \
    $(top_srcdir)/src/H5Dpublic.h \
    $(top_srcdir)/src/H5Epublic.h \
-   $(top_srcdir)/src/H5Epubgen.h \
    $(top_srcdir)/src/H5Fpublic.h \
    $(top_srcdir)/src/H5FDpublic.h \
-   $(top_srcdir)/src/H5FPpublic.h \
    $(top_srcdir)/src/H5Gpublic.h \
    $(top_srcdir)/src/H5Opublic.h \
    $(top_srcdir)/src/H5HGpublic.h \
@@ -39,12 +37,11 @@ h5diff.lo: \
    $(top_srcdir)/src/H5FDsrb.h \
    $(top_srcdir)/src/H5FDstdio.h \
    $(top_srcdir)/src/H5FDstream.h \
-   $(top_srcdir)/tools/h5diff/h5trav.h \
+   $(srcdir)/h5trav.h \
    $(top_srcdir)/src/H5private.h \
-   $(top_srcdir)/src/H5MPprivate.h \
-   $(top_srcdir)/src/H5FSprivate.h
+   $(top_srcdir)/src/H5MPprivate.h
 h5trav.lo: \
-   $(top_srcdir)/tools/h5diff/h5trav.c \
+   $(srcdir)/h5trav.c \
    $(top_srcdir)/src/hdf5.h \
    $(top_srcdir)/src/H5public.h \
    $(top_builddir)/src/H5pubconf.h \
@@ -55,10 +52,8 @@ h5trav.lo: \
    $(top_srcdir)/src/H5Bpublic.h \
    $(top_srcdir)/src/H5Dpublic.h \
    $(top_srcdir)/src/H5Epublic.h \
-   $(top_srcdir)/src/H5Epubgen.h \
    $(top_srcdir)/src/H5Fpublic.h \
    $(top_srcdir)/src/H5FDpublic.h \
-   $(top_srcdir)/src/H5FPpublic.h \
    $(top_srcdir)/src/H5Gpublic.h \
    $(top_srcdir)/src/H5Opublic.h \
    $(top_srcdir)/src/H5HGpublic.h \
@@ -81,12 +76,11 @@ h5trav.lo: \
    $(top_srcdir)/src/H5FDsrb.h \
    $(top_srcdir)/src/H5FDstdio.h \
    $(top_srcdir)/src/H5FDstream.h \
-   $(top_srcdir)/tools/h5diff/h5trav.h \
+   $(srcdir)/h5trav.h \
    $(top_srcdir)/src/H5private.h \
-   $(top_srcdir)/src/H5MPprivate.h \
-   $(top_srcdir)/src/H5FSprivate.h
+   $(top_srcdir)/src/H5MPprivate.h
 h5difftst.lo: \
-   $(top_srcdir)/tools/h5diff/h5difftst.c \
+   $(srcdir)/h5difftst.c \
    $(top_srcdir)/src/hdf5.h \
    $(top_srcdir)/src/H5public.h \
    $(top_builddir)/src/H5pubconf.h \
@@ -97,10 +91,8 @@ h5difftst.lo: \
    $(top_srcdir)/src/H5Bpublic.h \
    $(top_srcdir)/src/H5Dpublic.h \
    $(top_srcdir)/src/H5Epublic.h \
-   $(top_srcdir)/src/H5Epubgen.h \
    $(top_srcdir)/src/H5Fpublic.h \
    $(top_srcdir)/src/H5FDpublic.h \
-   $(top_srcdir)/src/H5FPpublic.h \
    $(top_srcdir)/src/H5Gpublic.h \
    $(top_srcdir)/src/H5Opublic.h \
    $(top_srcdir)/src/H5HGpublic.h \
@@ -124,5 +116,4 @@ h5difftst.lo: \
    $(top_srcdir)/src/H5FDstdio.h \
    $(top_srcdir)/src/H5FDstream.h \
    $(top_srcdir)/src/H5private.h \
-   $(top_srcdir)/src/H5MPprivate.h \
-   $(top_srcdir)/src/H5FSprivate.h
+   $(top_srcdir)/src/H5MPprivate.h

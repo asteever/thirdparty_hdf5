@@ -89,12 +89,6 @@ MPI_Info    h5_io_info_g=MPI_INFO_NULL;/* MPI INFO object for IO */
  */
 static const char *multi_letters = "msbrglo";
 
-#ifdef H5_WANT_H5_V1_6_COMPAT
-static herr_t h5_errors(void *client_data);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-static herr_t h5_errors(hid_t err_stack, void *client_data);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
-
 
 /*-------------------------------------------------------------------------
  * Function:	h5_errors
@@ -112,21 +106,11 @@ static herr_t h5_errors(hid_t err_stack, void *client_data);
  *
  *-------------------------------------------------------------------------
  */
-#ifdef H5_WANT_H5_V1_6_COMPAT
-static herr_t
+herr_t
 h5_errors(void UNUSED *client_data)
-#else
-static herr_t
-h5_errors(hid_t err_stack, void UNUSED *client_data)
-#endif /* H5_WANT_H5_V1_6_COMPAT */
 {
     H5_FAILED();
-#ifdef H5_WANT_H5_V1_6_COMPAT
     H5Eprint (stdout);
-#else
-    H5Eprint (err_stack, stdout);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
-
     return 0;
 }
 
@@ -228,11 +212,7 @@ h5_reset(void)
     HDfflush(stdout);
     HDfflush(stderr);
     H5close();
-#ifdef H5_WANT_H5_V1_6_COMPAT
     H5Eset_auto (h5_errors, NULL);
-#else
-    H5Eset_auto (H5E_DEFAULT, h5_errors, NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
 
     /*
      * Cause the library to emit some diagnostics early so they don't
@@ -456,7 +436,11 @@ h5_fileaccess(void)
     char s[1024];
     hid_t fapl = -1;
     hsize_t fam_size = 100*1024*1024; /*100 MB*/
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    long verbosity = 1;
+#else /* H5_WANT_H5_V1_4_COMPAT */
     long log_flags = H5FD_LOG_LOC_IO;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
     H5FD_mem_t	mt;
     
     /* First use the environment variable, then the constant */
@@ -519,12 +503,21 @@ h5_fileaccess(void)
 	}
 	if (H5Pset_fapl_family(fapl, fam_size, H5P_DEFAULT)<0) return -1;
     } else if (!HDstrcmp(name, "log")) {
+#ifdef H5_WANT_H5_V1_4_COMPAT
+        /* Log file access */
+        if ((val = strtok(NULL, " \t\n\r")))
+            verbosity = strtol(val, NULL, 0);
+
+        if (H5Pset_fapl_log(fapl, NULL, (int)verbosity) < 0)
+	    return -1;
+#else /* H5_WANT_H5_V1_4_COMPAT */
         /* Log file access */
         if ((val = HDstrtok(NULL, " \t\n\r")))
             log_flags = HDstrtol(val, NULL, 0);
 
         if (H5Pset_fapl_log(fapl, NULL, (unsigned)log_flags, 0) < 0)
 	    return -1;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
     } else {
 	/* Unknown driver */
 	return -1;

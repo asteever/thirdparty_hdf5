@@ -175,6 +175,7 @@ H5O_fill_new_decode(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const uint8_t *p,
             mesg->size=(-1);
     } /* end else */
     
+    
     /* Set return value */
     ret_value = (void*)mesg;
     
@@ -270,7 +271,7 @@ H5O_fill_new_encode(H5F_t UNUSED *f, uint8_t *p, const void *_mesg)
     assert(mesg && NULL==mesg->type);
 
     /* Version */
-    *p++ = H5O_FILL_VERSION_2;
+    *p++ = H5O_FILL_VERSION;
     /* Space allocation time */
     *p++ = mesg->alloc_time;
     /* Fill value writing time */
@@ -278,15 +279,13 @@ H5O_fill_new_encode(H5F_t UNUSED *f, uint8_t *p, const void *_mesg)
     /* Whether fill value is defined */
     *p++ = mesg->fill_defined;
 
-    /* Only write out the size and fill value if it is defined */
-    if(mesg->fill_defined) {
-        UINT32ENCODE(p, mesg->size);
-        if(mesg->size>0)
-            if(mesg->buf) {
-                H5_CHECK_OVERFLOW(mesg->size,ssize_t,size_t);
-                HDmemcpy(p, mesg->buf, (size_t)mesg->size);
-            } /* end if */
-    } /* end if */
+    /* Does it handle undefined fill value? */
+    UINT32ENCODE(p, mesg->size);
+    if(mesg->size>0)
+        if(mesg->buf) {
+            H5_CHECK_OVERFLOW(mesg->size,ssize_t,size_t);
+            HDmemcpy(p, mesg->buf, (size_t)mesg->size);
+        } /* end if */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value);
@@ -500,9 +499,8 @@ H5O_fill_new_size(H5F_t UNUSED *f, const void *_mesg)
     ret_value = 1 + 		/* Version number        */
 		1 + 		/* Space allocation time */
 		1 + 		/* Fill value write time */
-		1; 		/* Fill value defined    */
-    if(mesg->fill_defined)
-        ret_value += 4 +	/* Fill value size	 */
+		1 + 		/* Fill value defined    */
+		4 +		/* Fill value size	 */
 		(mesg->size>0 ? mesg->size : 0);	/* Size of fill value	 */
 
 done:
@@ -582,7 +580,7 @@ H5O_fill_new_reset(void *_mesg)
     }
     mesg->alloc_time   = (H5D_alloc_time_t)0;
     mesg->fill_time    = (H5D_fill_time_t)0;
-    mesg->fill_defined = FALSE; 
+    mesg->fill_defined = FALSE;
 
 done:
     FUNC_LEAVE_NOAPI(ret_value);

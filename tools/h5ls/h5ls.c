@@ -52,7 +52,7 @@ static struct {
     int  nalloc;                /* number of slots allocated */
     int  nobjs;                 /* number of objects */
     struct {
-        haddr_t id;             /* object number */
+        unsigned long id[2];    /* object number */
         char *name;             /* full object name */
     } *obj;
 } idtab_g;
@@ -156,7 +156,8 @@ sym_insert(H5G_stat_t *sb, const char *name)
 
     /* Insert the entry */
     n = idtab_g.nobjs++;
-    idtab_g.obj[n].id = sb->objno;
+    idtab_g.obj[n].id[0] = sb->objno[0];
+    idtab_g.obj[n].id[1] = sb->objno[1];
     idtab_g.obj[n].name = malloc(strlen(name)+1);
     strcpy(idtab_g.obj[n].name, name);
 }
@@ -185,8 +186,10 @@ sym_lookup(H5G_stat_t *sb)
     
     if (sb->nlink<2) return NULL; /*only one name possible*/
     for (n=0; n<idtab_g.nobjs; n++) {
-     if (idtab_g.obj[n].id==sb->objno)
-         return idtab_g.obj[n].name;
+ if (idtab_g.obj[n].id[0]==sb->objno[0] &&
+     idtab_g.obj[n].id[1]==sb->objno[1]) {
+     return idtab_g.obj[n].name;
+ }
     }
     return NULL;
 }
@@ -703,14 +706,11 @@ display_cmpd_type(hid_t type, int ind)
     char        *name=NULL;     /* member name */
     size_t      size;           /* total size of type in bytes */
     hid_t       subtype;        /* member data type */
-    unsigned    nmembs;         /* number of members */
-    int         n;              /* miscellaneous counters */
-    unsigned    i;              /* miscellaneous counters */
+    int         i, n;           /* miscellaneous counters */
     
     if (H5T_COMPOUND!=H5Tget_class(type)) return FALSE;
     printf("struct {");
-    nmembs=H5Tget_nmembers(type);
-    for (i=0; i<nmembs; i++) {
+    for (i=0; i<H5Tget_nmembers(type); i++) {
 
         /* Name and offset */
         name = H5Tget_member_name(type, i);
@@ -753,17 +753,16 @@ display_enum_type(hid_t type, int ind)
 {
     char        **name=NULL;    /* member names */
     unsigned char *value=NULL;  /* value array */
-    unsigned    nmembs;         /* number of members */
+    int         nmembs;         /* number of members */
     int         nchars;         /* number of output characters */
     hid_t       super;          /* enum base integer type */
     hid_t       native=-1;      /* native integer data type */
     size_t      dst_size;       /* destination value type size */
-    unsigned    i;              /* miscellaneous counters */
+    int         i;              /* miscellaneous counters */
     size_t j;
         
     if (H5T_ENUM!=H5Tget_class(type)) return FALSE;
     nmembs = H5Tget_nmembers(type);
-    assert(nmembs>0);
     super = H5Tget_super(type);
     printf("enum ");
     display_type(super, ind+4);
@@ -775,22 +774,23 @@ display_enum_type(hid_t type, int ind)
      * 2. unsigned long_long -- the largest native unsigned integer
      *     3. raw format */
     if (H5Tget_size(type)<=sizeof(long_long)) {
-        dst_size = sizeof(long_long);
-        if (H5T_SGN_NONE==H5Tget_sign(type)) {
-            native = H5T_NATIVE_ULLONG;
-        } else {
-            native = H5T_NATIVE_LLONG;
-        }
+ dst_size = sizeof(long_long);
+ if (H5T_SGN_NONE==H5Tget_sign(type)) {
+     native = H5T_NATIVE_ULLONG;
+ } else {
+     native = H5T_NATIVE_LLONG;
+ }
     } else {
-        dst_size = H5Tget_size(type);
+ dst_size = H5Tget_size(type);
     }
 
     /* Get the names and raw values of all members */
-    name = calloc(nmembs, sizeof(char*));
-    value = calloc(nmembs, MAX(H5Tget_size(type), dst_size));
+    assert(nmembs>0);
+    name = calloc((size_t)nmembs, sizeof(char*));
+    value = calloc((size_t)nmembs, MAX(H5Tget_size(type), dst_size));
     for (i=0; i<nmembs; i++) {
-        name[i] = H5Tget_member_name(type, i);
-        H5Tget_member_value(type, i, value+i*H5Tget_size(type));
+ name[i] = H5Tget_member_name(type, i);
+ H5Tget_member_value(type, i, value+i*H5Tget_size(type));
     }
 
     /* Convert values to native data type */
@@ -801,21 +801,22 @@ display_enum_type(hid_t type, int ind)
 
     /* Print members */
     for (i=0; i<nmembs; i++) {
-        printf("\n%*s", ind+4, "");
-        nchars = display_string(stdout, name[i], TRUE);
-        printf("%*s = ", MAX(0, 16-nchars), "");
+ printf("\n%*s", ind+4, "");
+ nchars = display_string(stdout, name[i], TRUE);
+ printf("%*s = ", MAX(0, 16-nchars), "");
 
-        if (native<0) {
-            printf("0x");
-            for (j=0; j<dst_size; j++)
-                printf("%02x", value[i*dst_size+j]);
-        } else if (H5T_SGN_NONE==H5Tget_sign(native)) {
-            HDfprintf(stdout,"%"H5_PRINTF_LL_WIDTH"u",
-            *((unsigned long_long*)((void*)(value+i*dst_size))));
-        } else {
-            HDfprintf(stdout,"%"H5_PRINTF_LL_WIDTH"d",
-            *((long_long*)((void*)(value+i*dst_size))));
-        }
+ if (native<0) {
+     printf("0x");
+     for (j=0; j<dst_size; j++) {
+  printf("%02x", value[i*dst_size+j]);
+     }
+ } else if (H5T_SGN_NONE==H5Tget_sign(native)) {
+     HDfprintf(stdout,"%"H5_PRINTF_LL_WIDTH"u",
+     *((unsigned long_long*)((void*)(value+i*dst_size))));
+ } else {
+     HDfprintf(stdout,"%"H5_PRINTF_LL_WIDTH"d",
+     *((long_long*)((void*)(value+i*dst_size))));
+ }
     }
 
     /* Release resources */
@@ -1161,8 +1162,9 @@ display_type(hid_t type, int ind)
     /* Shared? If so then print the type's OID */
     if (H5Tcommitted(type)) {
  if (H5Gget_objinfo(type, ".", FALSE, &sb)>=0) {
-     printf("shared-%lu:"H5_PRINTF_HADDR_FMT" ",
-     sb.fileno, sb.objno);
+     printf("shared-%lu:%lu:%lu:%lu ",
+     sb.fileno[1], sb.fileno[0],
+     sb.objno[1], sb.objno[0]);
  } else {
      printf("shared ");
  }
@@ -1256,10 +1258,10 @@ dump_dataset_values(hid_t dset)
     sprintf(fmt_double, "%%1.%dg", DBL_DIG);
     info.fmt_double = fmt_double;
 
-    info.dset_format =  "DSET-%lu:"H5_PRINTF_HADDR_FMT"-";
+    info.dset_format =  "DSET-%lu:%lu:%lu:%lu-";
     info.dset_hidefileno = 0;
     
-    info.obj_format = "-%lu:"H5_PRINTF_HADDR_FMT;
+    info.obj_format = "-%lu:%lu:%lu:%lu";
     info.obj_hidefileno = 0;
     
     info.dset_blockformat_pre = "%sBlk%lu: ";
@@ -1374,7 +1376,7 @@ list_attr (hid_t obj, const char *attr_name, void UNUSED *op_data)
      info.line_suf = "\"";
  }
  /* values of type reference */
- info.obj_format = "-%lu:"H5_PRINTF_HADDR_FMT;
+ info.obj_format = "-%lu:%lu:%lu:%lu";
  info.obj_hidefileno = 0;
  if (hexdump_g) {
      p_type = H5Tcopy(type);
@@ -1598,7 +1600,7 @@ dataset_list2(hid_t dset, const char UNUSED *name)
  printf("\n");
 
  /* Print address information */
- if (address_g) H5Ddebug(dset);
+ if (address_g) H5Ddebug(dset, 0);
 
  /* Close stuff */
  H5Tclose(type);
@@ -1753,7 +1755,7 @@ list (hid_t group, const char *name, void *_iter)
  return 0;
     } else if (sb.type<0 || sb.type>=H5G_NTYPES) {
  printf("Unknown type(%d)", sb.type);
- sb.type = H5G_UNKNOWN;
+ sb.type = -1;
     }
     if (sb.type>=0 && dispatch_g[sb.type].name) {
  fputs(dispatch_g[sb.type].name, stdout);
@@ -1789,8 +1791,8 @@ list (hid_t group, const char *name, void *_iter)
      * which is common to all objects. */
     if (verbose_g>0 && H5G_LINK!=sb.type) {
  if (sb.type>=0) H5Aiterate(obj, NULL, list_attr, NULL);
- printf("    %-10s %lu:"H5_PRINTF_HADDR_FMT"\n", "Location:",
-        sb.fileno, sb.objno);
+ printf("    %-10s %lu:%lu:%lu:%lu\n", "Location:",
+        sb.fileno[1], sb.fileno[0], sb.objno[1], sb.objno[0]);
  printf("    %-10s %u\n", "Links:", sb.nlink);
         if (sb.mtime>0) {
             if (simple_output_g) tm=gmtime(&(sb.mtime));
@@ -2139,11 +2141,7 @@ main (int argc, char *argv[])
     }
 
     /* Turn off HDF5's automatic error printing unless you're debugging h5ls */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     if (!show_errors_g) H5Eset_auto(NULL, NULL);
-#else
-    if (!show_errors_g) H5Eset_auto(H5E_DEFAULT, NULL, NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
 
 
     /* Each remaining argument is an hdf5 file followed by an optional slash

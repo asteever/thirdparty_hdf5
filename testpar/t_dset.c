@@ -1124,7 +1124,11 @@ extend_writeInd(char *filename)
  */
 {
     int mdc_nelmts;
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    int rdcc_nelmts;
+#else /* H5_WANT_H5_V1_4_COMPAT */
     size_t rdcc_nelmts;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
     size_t rdcc_nbytes;
     double rdcc_w0;
 
@@ -1236,8 +1240,8 @@ extend_writeInd(char *filename)
 
     /* Try write to dataset2 beyond its current dim sizes.  Should fail. */
     /* Temporary turn off auto error reporting */
-    H5Eget_auto(H5E_DEFAULT, &old_func, &old_client_data);
-    H5Eset_auto(H5E_DEFAULT, NULL, NULL);
+    H5Eget_auto(&old_func, &old_client_data);
+    H5Eset_auto(NULL, NULL);
 
     /* create a file dataspace independently */
     file_dataspace = H5Dget_space (dataset2);
@@ -1251,7 +1255,7 @@ extend_writeInd(char *filename)
     VRFY((ret < 0), "H5Dwrite failed as expected");
 
     /* restore auto error reporting */
-    H5Eset_auto(H5E_DEFAULT, old_func, old_client_data);
+    H5Eset_auto(old_func, old_client_data);
     H5Sclose(file_dataspace);
 
     /* Extend dataset2 and try again.  Should succeed. */
@@ -1356,8 +1360,8 @@ extend_readInd(char *filename)
 
     /* Try extend dataset1 which is open RDONLY.  Should fail. */
     /* first turn off auto error reporting */
-    H5Eget_auto(H5E_DEFAULT, &old_func, &old_client_data);
-    H5Eset_auto(H5E_DEFAULT, NULL, NULL);
+    H5Eget_auto(&old_func, &old_client_data);
+    H5Eset_auto(NULL, NULL);
 
     file_dataspace = H5Dget_space (dataset1);
     VRFY((file_dataspace >= 0), "H5Dget_space succeeded");
@@ -1368,7 +1372,7 @@ extend_readInd(char *filename)
     VRFY((ret < 0), "H5Dextend failed as expected");
 
     /* restore auto error reporting */
-    H5Eset_auto(H5E_DEFAULT, old_func, old_client_data);
+    H5Eset_auto(old_func, old_client_data);
     H5Sclose(file_dataspace);
 
 
@@ -1526,7 +1530,11 @@ extend_writeAll(char *filename)
  */
 {
     int mdc_nelmts;
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    int rdcc_nelmts;
+#else /* H5_WANT_H5_V1_4_COMPAT */
     size_t rdcc_nelmts;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
     size_t rdcc_nbytes;
     double rdcc_w0;
 
@@ -1651,8 +1659,8 @@ extend_writeAll(char *filename)
 
     /* Try write to dataset2 beyond its current dim sizes.  Should fail. */
     /* Temporary turn off auto error reporting */
-    H5Eget_auto(H5E_DEFAULT, &old_func, &old_client_data);
-    H5Eset_auto(H5E_DEFAULT, NULL, NULL);
+    H5Eget_auto(&old_func, &old_client_data);
+    H5Eset_auto(NULL, NULL);
 
     /* create a file dataspace independently */
     file_dataspace = H5Dget_space (dataset2);
@@ -1666,7 +1674,7 @@ extend_writeAll(char *filename)
     VRFY((ret < 0), "H5Dwrite failed as expected");
 
     /* restore auto error reporting */
-    H5Eset_auto(H5E_DEFAULT, old_func, old_client_data);
+    H5Eset_auto(old_func, old_client_data);
     H5Sclose(file_dataspace);
 
     /* Extend dataset2 and try again.  Should succeed. */
@@ -1774,8 +1782,8 @@ extend_readAll(char *filename)
 
     /* Try extend dataset1 which is open RDONLY.  Should fail. */
     /* first turn off auto error reporting */
-    H5Eget_auto(H5E_DEFAULT, &old_func, &old_client_data);
-    H5Eset_auto(H5E_DEFAULT, NULL, NULL);
+    H5Eget_auto(&old_func, &old_client_data);
+    H5Eset_auto(NULL, NULL);
 
     file_dataspace = H5Dget_space (dataset1);
     VRFY((file_dataspace >= 0), "H5Dget_space succeeded");
@@ -1786,7 +1794,7 @@ extend_readAll(char *filename)
     VRFY((ret < 0), "H5Dextend failed as expected");
 
     /* restore auto error reporting */
-    H5Eset_auto(H5E_DEFAULT, old_func, old_client_data);
+    H5Eset_auto(old_func, old_client_data);
     H5Sclose(file_dataspace);
 
 

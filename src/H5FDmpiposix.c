@@ -31,20 +31,15 @@
  *              on a non-parallel filesystem.
  *
  */
-
-/* Pablo information */
-/* (Put before include files to avoid problems with inline functions) */
-#define PABLO_MASK	H5FD_mpiposix_mask
-
-#include "H5private.h"		/* Generic Functions			*/
-#include "H5ACprivate.h"	/* Metadata cache			*/
-#include "H5Eprivate.h"		/* Error handling		  	*/
-#include "H5Fprivate.h"		/* File access				*/
-#include "H5FDprivate.h"	/* File drivers				*/
+#include "H5private.h"		/*library functions			*/
+#include "H5ACprivate.h"        /* Metadata cache */
+#include "H5Eprivate.h"		/*error handling			*/
+#include "H5Fprivate.h"		/*files					*/
+#include "H5FDprivate.h"	/*file driver			        */
 #include "H5FDmpiposix.h"       /* MPI/posix I/O file driver            */
 #include "H5Iprivate.h"		/* IDs			  		*/
-#include "H5MMprivate.h"	/* Memory management			*/
-#include "H5Pprivate.h"         /* Property lists                       */
+#include "H5MMprivate.h"        /*memory allocation                     */
+#include "H5Pprivate.h"		/*property lists			*/
 
 /* Features:
  *   H5_HAVE_GPFS   -- issue gpfs_fcntl() calls to hopefully improve
@@ -239,6 +234,7 @@ hbool_t	H5_mpiposix_1_metawrite_g = FALSE;
 #endif
 
 /* Interface initialization */
+#define PABLO_MASK	H5FD_mpiposix_mask
 #define INTERFACE_INIT	H5FD_mpiposix_init
 static int interface_initialize_g = 0;
 
@@ -265,7 +261,7 @@ H5FD_mpiposix_init(void)
 {
     hid_t ret_value=H5FD_MPIPOSIX_g;    /* Return value */
 
-    FUNC_ENTER_NOAPI(H5FD_mpiposix_init, FAIL)
+    FUNC_ENTER_NOAPI(H5FD_mpiposix_init, FAIL);
 
     if (H5I_VFL!=H5Iget_type(H5FD_MPIPOSIX_g))
         H5FD_MPIPOSIX_g = H5FDregister(&H5FD_mpiposix_g);
@@ -274,9 +270,127 @@ H5FD_mpiposix_init(void)
     ret_value=H5FD_MPIPOSIX_g;
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5FD_mpiposix_init() */
 
+#ifdef H5_WANT_H5_V1_4_COMPAT
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_fapl_mpiposix
+ *
+ * Purpose:	Store the user supplied MPI communicator COMM in
+ *		the file access property list FAPL_ID which can then be used
+ *		to create and/or open the file.  This function is available
+ *		only in the parallel HDF5 library and is not collective.
+ *
+ *		comm is the MPI communicator to be used for file open as
+ *		defined in MPI_FILE_OPEN of MPI-2. This function makes a
+ *		duplicate of comm. Any modification to comm after this function
+ *		call returns has no effect on the access property list.
+ *
+ *              If fapl_id has previously set comm value, it will be replaced
+ *              and the old communicator is freed.
+ *
+ * Return:	Success:	Non-negative
+ * 		Failure:	Negative
+ *
+ * Programmer:	Quincey Koziol
+ *		Thursday, July 11, 2002
+ *
+ * Modifications:
+ *		Albert Cheng, 2003-04-24
+ *		Modified the description of the function that it now stores
+ *		a duplicate of the communicator.  Free the old duplicate if
+ *		previously set.  (Work is actually done by H5P_set_driver.)
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_fapl_mpiposix(hid_t fapl_id, MPI_Comm comm)
+{
+    H5FD_mpiposix_fapl_t	fa;
+    H5P_genplist_t *plist;      /* Property list pointer */
+    herr_t ret_value;
+    
+    FUNC_ENTER_API(H5Pset_fapl_mpiposix, FAIL);
+    H5TRACE2("e","iMc",fapl_id,comm);
+
+    /* Check arguments */
+    if(NULL == (plist = H5P_object_verify(fapl_id,H5P_FILE_ACCESS)))
+        HGOTO_ERROR(H5E_PLIST, H5E_BADTYPE, FAIL, "not a file access list");
+    if (MPI_COMM_NULL == comm)
+	HGOTO_ERROR(H5E_PLIST, H5E_BADTYPE, FAIL, "not a valid communicator");
+
+    /* Initialize driver specific properties */
+    fa.comm = comm;
+    fa.use_gpfs = FALSE;
+
+    /* duplication is done during driver setting. */
+    ret_value= H5P_set_driver(plist, H5FD_MPIPOSIX, &fa);
+
+done:
+    FUNC_LEAVE_API(ret_value);
+} /* end H5Pset_fapl_mpiposix() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_fapl_mpiposix
+ *
+ * Purpose:	If the file access property list is set to the H5FD_MPIPOSIX
+ *		driver then this function returns a duplicate of the MPI
+ *		communicator through the comm pointer. It is the responsibility
+ *		of the application to free the returned communicator.
+ *
+ * Return:	Success:	Non-negative with the communicator and
+ *				information returned through the COMM 
+ *				argument if non-null.  Since it is a duplicate
+ *				of the stored object, future modifications to
+ *				the access property list do not affect it and
+ *				it is the responsibility of the application to
+ *				free it.
+ *
+ * 		Failure:	Negative
+ *
+ * Programmer:	Quincey Koziol
+ *		Thursday, July 11, 2002
+ *
+ * Modifications:
+ *		Albert Cheng, 2003-04-24
+ *		Return duplicate of the stored communicator.
+ *
+ *              Bill Wendling, 2003-05-01
+ *              Return the USE_GPFS flag.
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_fapl_mpiposix(hid_t fapl_id, MPI_Comm *comm/*out*/)
+{
+    H5FD_mpiposix_fapl_t	*fa;
+    H5P_genplist_t *plist;      /* Property list pointer */
+    int		mpi_code;		/* mpi return code */
+    herr_t      ret_value=SUCCEED;      /* Return value */
+    
+    FUNC_ENTER_API(H5Pget_fapl_mpiposix, FAIL);
+    H5TRACE2("e","ix",fapl_id,comm);
+
+    if(NULL == (plist = H5P_object_verify(fapl_id,H5P_FILE_ACCESS)))
+        HGOTO_ERROR(H5E_PLIST, H5E_BADTYPE, FAIL, "not a file access list");
+    if (H5FD_MPIPOSIX!=H5P_get_driver(plist))
+        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "incorrect VFL driver");
+    if (NULL==(fa=H5P_get_driver_info(plist)))
+        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "bad VFL driver info");
+
+    /* Get MPI Communicator */
+    if (comm){
+	if (MPI_SUCCESS != (mpi_code=MPI_Comm_dup(fa->comm, comm)))
+	    HMPI_GOTO_ERROR(FAIL, "MPI_Comm_dup failed", mpi_code);
+    }
+
+done:
+    FUNC_LEAVE_API(ret_value);
+} /* end H5Pget_fapl_mpiposix() */
+#else /* H5_WANT_H5_V1_4_COMPAT */
 
 /*-------------------------------------------------------------------------
  * Function:	H5Pset_fapl_mpiposix
@@ -319,14 +433,14 @@ H5Pset_fapl_mpiposix(hid_t fapl_id, MPI_Comm comm, hbool_t use_gpfs)
     H5P_genplist_t *plist;      /* Property list pointer */
     herr_t ret_value;
     
-    FUNC_ENTER_API(H5Pset_fapl_mpiposix, FAIL)
+    FUNC_ENTER_API(H5Pset_fapl_mpiposix, FAIL);
     H5TRACE3("e","iMcb",fapl_id,comm,use_gpfs);
 
     /* Check arguments */
     if(NULL == (plist = H5P_object_verify(fapl_id,H5P_FILE_ACCESS)))
-        HGOTO_ERROR(H5E_PLIST, H5E_BADTYPE, FAIL, "not a file access list")
+        HGOTO_ERROR(H5E_PLIST, H5E_BADTYPE, FAIL, "not a file access list");
     if (MPI_COMM_NULL == comm)
-	HGOTO_ERROR(H5E_PLIST, H5E_BADTYPE, FAIL, "not a valid communicator")
+	HGOTO_ERROR(H5E_PLIST, H5E_BADTYPE, FAIL, "not a valid communicator");
 
     /* Initialize driver specific properties */
     fa.comm = comm;
@@ -336,7 +450,7 @@ H5Pset_fapl_mpiposix(hid_t fapl_id, MPI_Comm comm, hbool_t use_gpfs)
     ret_value= H5P_set_driver(plist, H5FD_MPIPOSIX, &fa);
 
 done:
-    FUNC_LEAVE_API(ret_value)
+    FUNC_LEAVE_API(ret_value);
 } /* end H5Pset_fapl_mpiposix() */
 
 
@@ -378,28 +492,29 @@ H5Pget_fapl_mpiposix(hid_t fapl_id, MPI_Comm *comm/*out*/, hbool_t *use_gpfs/*ou
     int		mpi_code;		/* mpi return code */
     herr_t      ret_value=SUCCEED;      /* Return value */
     
-    FUNC_ENTER_API(H5Pget_fapl_mpiposix, FAIL)
+    FUNC_ENTER_API(H5Pget_fapl_mpiposix, FAIL);
     H5TRACE3("e","ixx",fapl_id,comm,use_gpfs);
 
     if(NULL == (plist = H5P_object_verify(fapl_id,H5P_FILE_ACCESS)))
-        HGOTO_ERROR(H5E_PLIST, H5E_BADTYPE, FAIL, "not a file access list")
+        HGOTO_ERROR(H5E_PLIST, H5E_BADTYPE, FAIL, "not a file access list");
     if (H5FD_MPIPOSIX!=H5P_get_driver(plist))
-        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "incorrect VFL driver")
+        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "incorrect VFL driver");
     if (NULL==(fa=H5P_get_driver_info(plist)))
-        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "bad VFL driver info")
+        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "bad VFL driver info");
 
     /* Get MPI Communicator */
     if (comm){
 	if (MPI_SUCCESS != (mpi_code=MPI_Comm_dup(fa->comm, comm)))
-	    HMPI_GOTO_ERROR(FAIL, "MPI_Comm_dup failed", mpi_code)
+	    HMPI_GOTO_ERROR(FAIL, "MPI_Comm_dup failed", mpi_code);
     }
 
     if (use_gpfs)
         *use_gpfs = fa->use_gpfs;
 
 done:
-    FUNC_LEAVE_API(ret_value)
+    FUNC_LEAVE_API(ret_value);
 } /* end H5Pget_fapl_mpiposix() */
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
 
 /*-------------------------------------------------------------------------
@@ -424,7 +539,7 @@ H5FD_mpiposix_communicator(H5FD_t *_file)
     H5FD_mpiposix_t *file = (H5FD_mpiposix_t*)_file;
     MPI_Comm ret_value;         /* Return value */
 
-    FUNC_ENTER_NOAPI(H5FD_mpiposix_communicator, MPI_COMM_NULL)
+    FUNC_ENTER_NOAPI(H5FD_mpiposix_communicator, MPI_COMM_NULL);
 
     assert(file);
     assert(H5FD_MPIPOSIX==file->pub.driver_id);
@@ -433,7 +548,7 @@ H5FD_mpiposix_communicator(H5FD_t *_file)
     ret_value=file->comm;
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5FD_mpi_posix_communicator() */
 
 
@@ -458,7 +573,7 @@ H5FD_mpiposix_mpi_rank(H5FD_t *_file)
     H5FD_mpiposix_t *file = (H5FD_mpiposix_t*)_file;
     int ret_value;      /* Return value */
 
-    FUNC_ENTER_NOAPI(H5FD_mpiposix_mpi_rank, FAIL)
+    FUNC_ENTER_NOAPI(H5FD_mpiposix_mpi_rank, FAIL);
 
     assert(file);
     assert(H5FD_MPIPOSIX==file->pub.driver_id);
@@ -467,7 +582,7 @@ H5FD_mpiposix_mpi_rank(H5FD_t *_file)
     ret_value=file->mpi_rank;
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5FD_mpiposix_mpi_rank() */
 
 
@@ -492,7 +607,7 @@ H5FD_mpiposix_mpi_size(H5FD_t *_file)
     H5FD_mpiposix_t *file = (H5FD_mpiposix_t*)_file;
     int ret_value;      /* Return value */
 
-    FUNC_ENTER_NOAPI(H5FD_mpiposix_mpi_rank, FAIL)
+    FUNC_ENTER_NOAPI(H5FD_mpiposix_mpi_rank, FAIL);
 
     assert(file);
     assert(H5FD_MPIPOSIX==file->pub.driver_id);
@@ -501,7 +616,7 @@ H5FD_mpiposix_mpi_size(H5FD_t *_file)
     ret_value=file->mpi_size;
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5FD_mpiposix_mpi_size() */
 
 
@@ -534,17 +649,17 @@ H5FD_mpiposix_fapl_get(H5FD_t *_file)
     int		mpi_code;	/* MPI return code */
     void        *ret_value;     /* Return value */
 
-    FUNC_ENTER_NOAPI(H5FD_mpiposix_fapl_get, NULL)
+    FUNC_ENTER_NOAPI(H5FD_mpiposix_fapl_get, NULL);
 
     assert(file);
     assert(H5FD_MPIPOSIX==file->pub.driver_id);
 
     if (NULL==(fa=H5MM_calloc(sizeof(H5FD_mpiposix_fapl_t))))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
 
     /* Duplicate the communicator. */
     if (MPI_SUCCESS != (mpi_code=MPI_Comm_dup(file->comm, &fa->comm)))
-	HMPI_GOTO_ERROR(NULL, "MPI_Comm_dup failed", mpi_code)
+	HMPI_GOTO_ERROR(NULL, "MPI_Comm_dup failed", mpi_code);
     
     fa->use_gpfs = file->use_gpfs;
 
@@ -552,7 +667,7 @@ H5FD_mpiposix_fapl_get(H5FD_t *_file)
     ret_value=fa;
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5FD_mpiposix_fapl_get() */
 
 
@@ -580,17 +695,17 @@ H5FD_mpiposix_fapl_copy(const void *_old_fa)
     H5FD_mpiposix_fapl_t	*new_fa = NULL;
     int		mpi_code;	/* MPI return code */
     
-    FUNC_ENTER_NOAPI(H5FD_mpiposix_fapl_copy, NULL)
+    FUNC_ENTER_NOAPI(H5FD_mpiposix_fapl_copy, NULL);
 
     if (NULL==(new_fa=H5MM_malloc(sizeof(H5FD_mpiposix_fapl_t))))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
 
     /* Copy the general information */
     HDmemcpy(new_fa, old_fa, sizeof(H5FD_mpiposix_fapl_t));
 
     /* Duplicate communicator. */
     if (MPI_SUCCESS != (mpi_code=MPI_Comm_dup(old_fa->comm, &new_fa->comm)))
-	HMPI_GOTO_ERROR(NULL, "MPI_Comm_dup failed", mpi_code)
+	HMPI_GOTO_ERROR(NULL, "MPI_Comm_dup failed", mpi_code);
 
     new_fa->use_gpfs = old_fa->use_gpfs;
     ret_value = new_fa;
@@ -602,7 +717,7 @@ done:
 	    H5MM_xfree(new_fa);
     }
 
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5FD_mpiposix_fapl_copy() */
 
 
@@ -628,7 +743,7 @@ H5FD_mpiposix_fapl_free(void *_fa)
     herr_t		ret_value = SUCCEED;
     H5FD_mpiposix_fapl_t	*fa = (H5FD_mpiposix_fapl_t*)_fa;
 
-    FUNC_ENTER_NOAPI(H5FD_mpiposix_fapl_free, FAIL)
+    FUNC_ENTER_NOAPI(H5FD_mpiposix_fapl_free, FAIL);
     assert(fa);
 
     /* Free the internal communicator */
@@ -637,7 +752,7 @@ H5FD_mpiposix_fapl_free(void *_fa)
     H5MM_xfree(fa);
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5FD_mpiposix_fapl_free() */
 
 
@@ -686,19 +801,19 @@ H5FD_mpiposix_open(const char *name, unsigned flags, hid_t fapl_id,
     H5FD_t                     *ret_value=NULL; /* Return value */
     MPI_Comm                    comm_dup=MPI_COMM_NULL;
 
-    FUNC_ENTER_NOAPI(H5FD_mpiposix_open, NULL)
+    FUNC_ENTER_NOAPI(H5FD_mpiposix_open, NULL);
 
     /* Check arguments */
     if (!name || !*name)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "invalid file name")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "invalid file name");
     if (0==maxaddr || HADDR_UNDEF==maxaddr)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, NULL, "bogus maxaddr")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, NULL, "bogus maxaddr");
     if (ADDR_OVERFLOW(maxaddr))
-        HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, NULL, "bogus maxaddr")
+        HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, NULL, "bogus maxaddr");
 
     /* Obtain a pointer to mpiposix-specific file access properties */
     if(NULL == (plist = H5P_object_verify(fapl_id,H5P_FILE_ACCESS)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a file access property list")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a file access property list");
     if (H5P_FILE_ACCESS_DEFAULT==fapl_id || H5FD_MPIPOSIX!=H5P_get_driver(plist)) {
 	_fa.comm = MPI_COMM_SELF; /*default*/
         _fa.use_gpfs = FALSE;
@@ -711,13 +826,13 @@ H5FD_mpiposix_open(const char *name, unsigned flags, hid_t fapl_id,
 
     /* Duplicate the communicator for use by this file. */
     if (MPI_SUCCESS != (mpi_code=MPI_Comm_dup(fa->comm, &comm_dup)))
-	HMPI_GOTO_ERROR(NULL, "MPI_Comm_dup failed", mpi_code)
+	HMPI_GOTO_ERROR(NULL, "MPI_Comm_dup failed", mpi_code);
 
     /* Get the MPI rank of this process and the total number of processes */
     if (MPI_SUCCESS != (mpi_code=MPI_Comm_rank (comm_dup, &mpi_rank)))
-        HMPI_GOTO_ERROR(NULL, "MPI_Comm_rank failed", mpi_code)
+        HMPI_GOTO_ERROR(NULL, "MPI_Comm_rank failed", mpi_code);
     if (MPI_SUCCESS != (mpi_code=MPI_Comm_size (comm_dup, &mpi_size)))
-        HMPI_GOTO_ERROR(NULL, "MPI_Comm_size failed", mpi_code)
+        HMPI_GOTO_ERROR(NULL, "MPI_Comm_size failed", mpi_code);
 
     /* Build the open flags */
     o_flags = (H5F_ACC_RDWR & flags) ? O_RDWR : O_RDONLY;
@@ -752,29 +867,29 @@ H5FD_mpiposix_open(const char *name, unsigned flags, hid_t fapl_id,
      * to check for that situation and bail out now also. - QAK
      */
     if (MPI_SUCCESS != (mpi_code= MPI_Bcast(&fd, sizeof(int), MPI_BYTE, 0, comm_dup)))
-        HMPI_GOTO_ERROR(NULL, "MPI_Bcast failed", mpi_code)
+        HMPI_GOTO_ERROR(NULL, "MPI_Bcast failed", mpi_code);
 
     /* If the file open on process 0 failed, bail out on all processes now */
     if(fd<0)
-        HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open file")
+        HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open file");
 
     /* Other processes (non 0) wait for broadcast result from process 0 and then open file */
     if(mpi_rank!=0) {
         /* Open the file */
         if ((fd=HDopen(name, o_flags, 0666))<0)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open file")
+            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open file");
     } /* end if */
 
     /* Process 0 fstat()s the file and broadcasts the results to the other processes */
     if(mpi_rank==0) {
         /* Get the stat information */
         if (HDfstat(fd, &sb)<0)
-            HGOTO_ERROR(H5E_FILE, H5E_BADFILE, NULL, "unable to fstat file")
+            HGOTO_ERROR(H5E_FILE, H5E_BADFILE, NULL, "unable to fstat file");
     } /* end if */
 
     /* Broadcast the results of the fstat() from process 0 */
     if (MPI_SUCCESS != (mpi_code= MPI_Bcast(&sb, sizeof(h5_stat_t), MPI_BYTE, 0, comm_dup)))
-        HMPI_GOTO_ERROR(NULL, "MPI_Bcast failed", mpi_code)
+        HMPI_GOTO_ERROR(NULL, "MPI_Bcast failed", mpi_code);
 
 #ifdef H5_HAVE_GPFS
     if (fa->use_gpfs) {
@@ -796,13 +911,13 @@ H5FD_mpiposix_open(const char *name, unsigned flags, hid_t fapl_id,
         hint.fr.length = 0;
         
         if (gpfs_fcntl(fd, &hint)<0)
-            HGOTO_ERROR(H5E_FILE, H5E_FCNTL, NULL, "failed to send hints to GPFS")
+            HGOTO_ERROR(H5E_FILE, H5E_FCNTL, NULL, "failed to send hints to GPFS");
     }
 #endif  /* H5_HAVE_GPFS */
 
     /* Build the file struct and initialize it */
     if (NULL==(file=H5MM_calloc(sizeof(H5FD_mpiposix_t))))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
 
 #ifdef REPORT_IO
     HDfprintf(stderr, "open:  rank=%d name=%s file=0x%08lx\n", mpi_rank, name, (unsigned long)file);
@@ -849,7 +964,7 @@ done:
 	    MPI_Comm_free(&comm_dup);
     } /* end if */
 
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5FD_mpiposix_open() */
 
 
@@ -875,21 +990,21 @@ H5FD_mpiposix_close(H5FD_t *_file)
     H5FD_mpiposix_t	*file = (H5FD_mpiposix_t*)_file;
     herr_t      ret_value=SUCCEED;       /* Return value */
 
-    FUNC_ENTER_NOAPI(H5FD_mpiposix_close, FAIL)
+    FUNC_ENTER_NOAPI(H5FD_mpiposix_close, FAIL);
 
     assert(file);
     assert(H5FD_MPIPOSIX==file->pub.driver_id);
 
     /* Close the unix file */
     if (HDclose(file->fd)<0)
-        HGOTO_ERROR(H5E_IO, H5E_CANTCLOSEFILE, FAIL, "unable to close file")
+        HGOTO_ERROR(H5E_IO, H5E_CANTCLOSEFILE, FAIL, "unable to close file");
 
     /* Clean up other stuff */
     MPI_Comm_free(&file->comm);
     H5MM_xfree(file);
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5FD_mpiposix_close() */
 
 
@@ -917,34 +1032,34 @@ H5FD_mpiposix_cmp(const H5FD_t *_f1, const H5FD_t *_f2)
     const H5FD_mpiposix_t	*f2 = (const H5FD_mpiposix_t*)_f2;
     int ret_value=0;
 
-    FUNC_ENTER_NOAPI(H5FD_mpiposix_cmp, H5FD_VFD_DEFAULT)
+    FUNC_ENTER_NOAPI(H5FD_mpiposix_cmp, H5FD_VFD_DEFAULT);
 
 #ifdef WIN32
-    if (f1->fileindexhi < f2->fileindexhi) HGOTO_DONE(-1)
-    if (f1->fileindexhi > f2->fileindexhi) HGOTO_DONE(1)
+    if (f1->fileindexhi < f2->fileindexhi) HGOTO_DONE(-1);
+    if (f1->fileindexhi > f2->fileindexhi) HGOTO_DONE(1);
 
-    if (f1->fileindexlo < f2->fileindexlo) HGOTO_DONE(-1)
-    if (f1->fileindexlo > f2->fileindexlo) HGOTO_DONE(1)
+    if (f1->fileindexlo < f2->fileindexlo) HGOTO_DONE(-1);
+    if (f1->fileindexlo > f2->fileindexlo) HGOTO_DONE(1);
 
 #else
 #ifdef H5_DEV_T_IS_SCALAR
-    if (f1->device < f2->device) HGOTO_DONE(-1)
-    if (f1->device > f2->device) HGOTO_DONE(1)
+    if (f1->device < f2->device) HGOTO_DONE(-1);
+    if (f1->device > f2->device) HGOTO_DONE(1);
 #else /* H5_DEV_T_IS_SCALAR */
     /* If dev_t isn't a scalar value on this system, just use memcmp to
      * determine if the values are the same or not.  The actual return value
      * shouldn't really matter...
      */
-    if(HDmemcmp(&(f1->device),&(f2->device),sizeof(dev_t))<0) HGOTO_DONE(-1)
-    if(HDmemcmp(&(f1->device),&(f2->device),sizeof(dev_t))>0) HGOTO_DONE(1)
+    if(HDmemcmp(&(f1->device),&(f2->device),sizeof(dev_t))<0) HGOTO_DONE(-1);
+    if(HDmemcmp(&(f1->device),&(f2->device),sizeof(dev_t))>0) HGOTO_DONE(1);
 #endif /* H5_DEV_T_IS_SCALAR */
 
-    if (f1->inode < f2->inode) HGOTO_DONE(-1)
-    if (f1->inode > f2->inode) HGOTO_DONE(1)
+    if (f1->inode < f2->inode) HGOTO_DONE(-1);
+    if (f1->inode > f2->inode) HGOTO_DONE(1);
 #endif
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5FD_mpiposix_cmp() */
 
 
@@ -969,7 +1084,7 @@ H5FD_mpiposix_query(const H5FD_t UNUSED *_file, unsigned long *flags /* out */)
 {
     herr_t ret_value=SUCCEED;
 
-    FUNC_ENTER_NOAPI(H5FD_mpiposix_query, FAIL)
+    FUNC_ENTER_NOAPI(H5FD_mpiposix_query, FAIL);
 
     /* Set the VFL feature flags that this driver supports */
     if(flags) {
@@ -988,7 +1103,7 @@ H5FD_mpiposix_query(const H5FD_t UNUSED *_file, unsigned long *flags /* out */)
     } /* end if */
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5FD_mpiposix_query() */
 
 
@@ -1015,7 +1130,7 @@ H5FD_mpiposix_get_eoa(H5FD_t *_file)
     H5FD_mpiposix_t *file = (H5FD_mpiposix_t*)_file;
     haddr_t ret_value;          /* Return value */
 
-    FUNC_ENTER_NOAPI(H5FD_mpiposix_get_eoa, HADDR_UNDEF)
+    FUNC_ENTER_NOAPI(H5FD_mpiposix_get_eoa, HADDR_UNDEF);
 
     assert(file);
     assert(H5FD_MPIPOSIX==file->pub.driver_id);
@@ -1024,7 +1139,7 @@ H5FD_mpiposix_get_eoa(H5FD_t *_file)
     ret_value=file->eoa;
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5FD_mpiposix_get_eoa() */
 
 
@@ -1051,7 +1166,7 @@ H5FD_mpiposix_set_eoa(H5FD_t *_file, haddr_t addr)
     H5FD_mpiposix_t	*file = (H5FD_mpiposix_t*)_file;
     herr_t ret_value=SUCCEED;   /* Return value */
 
-    FUNC_ENTER_NOAPI(H5FD_mpiposix_set_eoa, FAIL)
+    FUNC_ENTER_NOAPI(H5FD_mpiposix_set_eoa, FAIL);
 
     assert(file);
     assert(H5FD_MPIPOSIX==file->pub.driver_id);
@@ -1059,7 +1174,7 @@ H5FD_mpiposix_set_eoa(H5FD_t *_file, haddr_t addr)
     file->eoa = addr;
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5FD_mpi_posix_set_eoa() */
 
 
@@ -1091,7 +1206,7 @@ H5FD_mpiposix_get_eof(H5FD_t *_file)
     H5FD_mpiposix_t	*file = (H5FD_mpiposix_t*)_file;
     haddr_t ret_value;          /* Return value */
 
-    FUNC_ENTER_NOAPI(H5FD_mpiposix_get_eof, HADDR_UNDEF)
+    FUNC_ENTER_NOAPI(H5FD_mpiposix_get_eof, HADDR_UNDEF);
 
     assert(file);
     assert(H5FD_MPIPOSIX==file->pub.driver_id);
@@ -1100,7 +1215,7 @@ H5FD_mpiposix_get_eof(H5FD_t *_file)
     ret_value=MAX(file->eof,file->eoa);
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5FD_mpiposix_get_eof() */
 
 
@@ -1124,15 +1239,15 @@ H5FD_mpiposix_get_handle(H5FD_t *_file, hid_t UNUSED fapl, void** file_handle)
     H5FD_mpiposix_t       *file = (H5FD_mpiposix_t *)_file;
     herr_t                ret_value = SUCCEED;
                              
-    FUNC_ENTER_NOAPI(H5FD_mpiposix_get_handle, FAIL)
+    FUNC_ENTER_NOAPI(H5FD_mpiposix_get_handle, FAIL);
                                     
     if(!file_handle)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "file handle not valid")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "file handle not valid");
 
     *file_handle = &(file->fd);
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 }
 
 
@@ -1166,7 +1281,7 @@ H5FD_mpiposix_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, 
     ssize_t	        nbytes;         /* Number of bytes read each I/O call */
     herr_t             	ret_value=SUCCEED;
 
-    FUNC_ENTER_NOAPI(H5FD_mpiposix_read, FAIL)
+    FUNC_ENTER_NOAPI(H5FD_mpiposix_read, FAIL);
 
     assert(file);
     assert(H5FD_MPIPOSIX==file->pub.driver_id);
@@ -1174,11 +1289,11 @@ H5FD_mpiposix_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, 
 
     /* Check for overflow conditions */
     if (HADDR_UNDEF==addr)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "addr undefined")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "addr undefined");
     if (REGION_OVERFLOW(addr, size))
-        HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, FAIL, "addr overflow")
+        HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, FAIL, "addr overflow");
     if (addr+size>file->eoa)
-        HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, FAIL, "addr overflow")
+        HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, FAIL, "addr overflow");
 
 #ifdef REPORT_IO
     {
@@ -1192,7 +1307,7 @@ H5FD_mpiposix_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, 
     /* Seek to the correct location */
     if ((addr!=file->pos || OP_READ!=file->op) &&
             file_seek(file->fd, (file_offset_t)addr, SEEK_SET)<0)
-        HGOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to seek to proper position")
+        HGOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to seek to proper position");
 
     /*
      * Read data, being careful of interrupted system calls, partial results,
@@ -1203,7 +1318,7 @@ H5FD_mpiposix_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, 
             nbytes = HDread(file->fd, buf, size);
         } while (-1==nbytes && EINTR==errno);
         if (-1==nbytes)
-            HGOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, "file read failed")
+            HGOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, "file read failed");
         if (0==nbytes) {
             /* end of file but not end of format address space */
             HDmemset(buf, 0, size);
@@ -1228,7 +1343,7 @@ done:
         file->op = OP_UNKNOWN;
     } /* end if */
 
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5FD_mpiposix_read() */
 
 
@@ -1267,7 +1382,7 @@ H5FD_mpiposix_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr,
     unsigned		block_before_meta_write=0;      /* Whether to block before a metadata write */
     herr_t             	ret_value=SUCCEED;      /* Return value */
 
-    FUNC_ENTER_NOAPI(H5FD_mpiposix_write, FAIL)
+    FUNC_ENTER_NOAPI(H5FD_mpiposix_write, FAIL);
 
     assert(file);
     assert(H5FD_MPIPOSIX==file->pub.driver_id);
@@ -1277,15 +1392,15 @@ H5FD_mpiposix_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr,
 
     /* Check for overflow conditions */
     if (HADDR_UNDEF==addr) 
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "addr undefined")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "addr undefined");
     if (REGION_OVERFLOW(addr, size))
-        HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, FAIL, "addr overflow")
+        HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, FAIL, "addr overflow");
     if (addr+size>file->eoa)
-        HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, FAIL, "addr overflow")
+        HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, FAIL, "addr overflow");
     
     /* Obtain the data transfer properties */
     if(NULL == (plist = H5I_object(dxpl_id)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list");
 
     /* Metadata specific actions */
     if(type!=H5FD_MEM_DRAW) {
@@ -1297,11 +1412,11 @@ H5FD_mpiposix_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr,
          */
         if(H5P_exist_plist(plist,H5AC_BLOCK_BEFORE_META_WRITE_NAME)>0)
             if(H5P_get(plist,H5AC_BLOCK_BEFORE_META_WRITE_NAME,&block_before_meta_write)<0)
-                HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get H5AC property")
+                HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get H5AC property");
 
         if(block_before_meta_write)
             if (MPI_SUCCESS!= (mpi_code=MPI_Barrier(file->comm)))
-                HMPI_GOTO_ERROR(FAIL, "MPI_Barrier failed", mpi_code)
+                HMPI_GOTO_ERROR(FAIL, "MPI_Barrier failed", mpi_code);
 
         /* Only p<round> will do the actual write if all procs in comm write same metadata */
         if (H5_mpiposix_1_metawrite_g)
@@ -1338,7 +1453,7 @@ H5FD_mpiposix_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr,
             hint.mar.accRangeArray[0].length = MIN(file->blksize-hint.mar.accRangeArray[0].start, size);
             hint.mar.accRangeArray[0].isWrite = 1;
             if (gpfs_fcntl(file->fd, &hint)<0)
-                HGOTO_ERROR(H5E_FILE, H5E_FCNTL, NULL, "failed to send hints to GPFS")
+                HGOTO_ERROR(H5E_FILE, H5E_FCNTL, NULL, "failed to send hints to GPFS");
         }
 #endif  /* H5_HAVE_GPFS */
     }
@@ -1346,7 +1461,7 @@ H5FD_mpiposix_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr,
     /* Seek to the correct location */
     if ((addr!=file->pos || OP_WRITE!=file->op) &&
             file_seek(file->fd, (file_offset_t)addr, SEEK_SET)<0)
-        HGOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to seek to proper position")
+        HGOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to seek to proper position");
 
     /*
      * Write the data, being careful of interrupted system calls and partial
@@ -1357,7 +1472,7 @@ H5FD_mpiposix_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr,
             nbytes = HDwrite(file->fd, buf, size);
         } while (-1==nbytes && EINTR==errno);
         if (-1==nbytes)
-            HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "file write failed")
+            HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "file write failed");
         assert(nbytes>0);
         assert((size_t)nbytes<=size);
         size -= nbytes;
@@ -1381,11 +1496,11 @@ done:
         /* if only p<round> writes, need to broadcast the ret_value to other processes */
         if ((type!=H5FD_MEM_DRAW) && H5_mpiposix_1_metawrite_g) {
             if (MPI_SUCCESS != (mpi_code= MPI_Bcast(&ret_value, sizeof(ret_value), MPI_BYTE, H5_PAR_META_WRITE, file->comm)))
-                HMPI_GOTO_ERROR(FAIL, "MPI_Bcast failed", mpi_code)
+                HMPI_GOTO_ERROR(FAIL, "MPI_Bcast failed", mpi_code);
         } /* end if */
     } /* end else */
 
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5FD_mpiposix_write() */
 
 
@@ -1415,7 +1530,7 @@ H5FD_mpiposix_flush(H5FD_t *_file, hid_t UNUSED dxpl_id, unsigned UNUSED closing
     int			mpi_code;	/* MPI return code */
     herr_t              ret_value=SUCCEED;
 
-    FUNC_ENTER_NOAPI(H5FD_mpiposix_flush, FAIL)
+    FUNC_ENTER_NOAPI(H5FD_mpiposix_flush, FAIL);
 
     assert(file);
     assert(H5FD_MPIPOSIX==file->pub.driver_id);
@@ -1433,10 +1548,10 @@ H5FD_mpiposix_flush(H5FD_t *_file, hid_t UNUSED dxpl_id, unsigned UNUSED closing
             li.QuadPart = file->eoa;
             SetFilePointer((HANDLE)filehandle,li.LowPart,&li.HighPart,FILE_BEGIN);
             if(SetEndOfFile((HANDLE)filehandle)==0)
-                HGOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to extend file properly")
+                HGOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to extend file properly");
 #else /* WIN32 */
             if(-1==file_truncate(file->fd, (file_offset_t)file->eoa))
-                HGOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to extend file properly")
+                HGOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to extend file properly");
 #endif /* WIN32 */
         } /* end if */
 
@@ -1447,7 +1562,7 @@ H5FD_mpiposix_flush(H5FD_t *_file, hid_t UNUSED dxpl_id, unsigned UNUSED closing
          * the new data written)
          */
         if (MPI_SUCCESS!= (mpi_code=MPI_Barrier(file->comm)))
-            HMPI_GOTO_ERROR(FAIL, "MPI_Barrier failed", mpi_code)
+            HMPI_GOTO_ERROR(FAIL, "MPI_Barrier failed", mpi_code);
 
         /* Update the 'last' eoa and eof values */
         file->last_eoa=file->eoa;
@@ -1459,7 +1574,7 @@ H5FD_mpiposix_flush(H5FD_t *_file, hid_t UNUSED dxpl_id, unsigned UNUSED closing
     } /* end if */
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5FD_mpiposix_flush() */
 
 #endif /*H5_HAVE_PARALLEL*/

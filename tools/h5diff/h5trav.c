@@ -1,3 +1,4 @@
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
@@ -35,6 +36,9 @@
 int traverse( hid_t loc_id, const char *group_name, table_t *table, info_t *info, int *idx );
 herr_t get_nobjects( hid_t loc_id, const char *group_name );
 herr_t get_name_type( hid_t loc_id, const char *group_name, int idx, char **name, int *type );
+
+
+
 
 /*-------------------------------------------------------------------------
  * Function: H5get_object_info
@@ -233,7 +237,9 @@ int traverse( hid_t loc_id, const char *group_name, table_t *table, info_t *info
  H5G_stat_t    statbuf;
  int           inserted_objs=0;
  int           j;
-
+ void          *edata;
+ hid_t         (*func)(void*);
+ 
  if (( nobjs = get_nobjects( loc_id, group_name )) < 0 )
   return -1;
  
@@ -253,11 +259,12 @@ int traverse( hid_t loc_id, const char *group_name, table_t *table, info_t *info
   strcat( path, name ); 
 
   /* disable error reporting */
-  H5E_BEGIN_TRY {
+  H5Eget_auto(&func, &edata);
+  H5Eset_auto(NULL, NULL);
 
   /* get info */
   H5Gget_objinfo( loc_id, path, TRUE, &statbuf);
-  } H5E_END_TRY;
+  H5Eset_auto(func, edata);
 
   /* add to array */
   if ( info )
@@ -282,10 +289,10 @@ int traverse( hid_t loc_id, const char *group_name, table_t *table, info_t *info
    inserted_objs++;
 
    /* nlink is number of hard links to object */
-   if (statbuf.nlink > 0  && table_search_obj(statbuf.objno, table ) == FAIL)
+   if (statbuf.nlink > 0  && table_search(statbuf.objno, table ) == FAIL)
    {
     /* add object to table */
-    table_add_obj(statbuf.objno, path, H5G_GROUP, table );
+    table_add(statbuf.objno, path, H5G_GROUP, table );
     
     /* recurse with the absolute name */
     inserted_objs += traverse( loc_id, path, table, info, idx );
@@ -295,7 +302,7 @@ int traverse( hid_t loc_id, const char *group_name, table_t *table, info_t *info
        group with more than one link to it */
    if (statbuf.nlink > 1) 
    {
-    if ((j = table_search_obj(statbuf.objno, table )) < 0 )
+    if ((j = table_search(statbuf.objno, table )) < 0 )
      return -1;
 
     if ( table->objs[j].displayed == 0 )
@@ -322,17 +329,17 @@ int traverse( hid_t loc_id, const char *group_name, table_t *table, info_t *info
    inserted_objs++;
 
    /* nlink is number of hard links to object */
-   if (statbuf.nlink > 0  && table_search_obj(statbuf.objno, table ) == FAIL)
+   if (statbuf.nlink > 0  && table_search(statbuf.objno, table ) == FAIL)
    {
     /* add object to table */
-    table_add_obj(statbuf.objno, path, H5G_DATASET, table );
+    table_add(statbuf.objno, path, H5G_DATASET, table );
    }
 
     /* search table
        dataset with more than one link to it */
    if (statbuf.nlink > 1) 
    {
-    if ((j = table_search_obj(statbuf.objno, table )) < 0 )
+    if ((j = table_search(statbuf.objno, table )) < 0 )
      return -1;
 
     if ( table->objs[j].displayed == 0 )
@@ -360,10 +367,10 @@ int traverse( hid_t loc_id, const char *group_name, table_t *table, info_t *info
    inserted_objs++;
 
    /* nlink is number of hard links to object */
-   if (statbuf.nlink > 0  && table_search_obj(statbuf.objno, table ) == FAIL)
+   if (statbuf.nlink > 0  && table_search(statbuf.objno, table ) == FAIL)
    {
     /* add object to table */
-    table_add_obj(statbuf.objno, path, H5G_TYPE, table );
+    table_add(statbuf.objno, path, H5G_TYPE, table );
    }
    
    break;
@@ -408,7 +415,7 @@ int traverse( hid_t loc_id, const char *group_name, table_t *table, info_t *info
 
 
 /*-------------------------------------------------------------------------
- * Function: table_search_obj
+ * Function: table_search
  *
  * Purpose: 
  *
@@ -425,12 +432,12 @@ int traverse( hid_t loc_id, const char *group_name, table_t *table, info_t *info
  *-------------------------------------------------------------------------
  */
 
-int table_search_obj(haddr_t objno, table_t *table )
+int table_search(unsigned long *objno, table_t *table )
 {
  int i;
  
  for (i = 0; i < table->nobjs; i++)
-  if (table->objs[i].objno == objno)
+  if (table->objs[i].objno[0] == *objno && table->objs[i].objno[1] == *(objno + 1))
    return i;
   
   return FAIL;
@@ -438,7 +445,7 @@ int table_search_obj(haddr_t objno, table_t *table )
 
 
 /*-------------------------------------------------------------------------
- * Function: table_add_obj
+ * Function: table_add
  *
  * Purpose: 
  *
@@ -455,8 +462,7 @@ int table_search_obj(haddr_t objno, table_t *table )
  *-------------------------------------------------------------------------
  */
 
-void
-table_add_obj(haddr_t objno, char *objname, int type, table_t *table)
+void table_add(unsigned long *objno, char *objname, int type, table_t *table)
 {
  int i;
  
@@ -465,8 +471,7 @@ table_add_obj(haddr_t objno, char *objname, int type, table_t *table)
   table->objs = (obj_t*)realloc(table->objs, table->size * sizeof(obj_t));
   
   for (i = table->nobjs; i < table->size; i++) {
-   table->objs[i].objno = 0;
-   table->objs[i].flags[0] = table->objs[i].flags[1] = 0;
+   table->objs[i].objno[0] = table->objs[i].objno[1] = 0;
    table->objs[i].displayed = 0;
    table->objs[i].type = H5G_UNKNOWN;
    table->objs[i].objname = NULL;
@@ -474,57 +479,11 @@ table_add_obj(haddr_t objno, char *objname, int type, table_t *table)
  }
  
  i = table->nobjs++;
- table->objs[i].objno = objno;
- table->objs[i].flags[0] = table->objs[i].flags[1] = 0;
+ table->objs[i].objno[0] = objno[0];
+ table->objs[i].objno[1] = objno[1];
  free(table->objs[i].objname);
  table->objs[i].objname = (char *)HDstrdup(objname);
- table->objs[i].type = type;
-}
-
-
-/*-------------------------------------------------------------------------
- * Function: table_add_flags
- *
- * Purpose: 
- *
- * Return: 
- *
- * Programmer: Pedro Vicente, pvn@ncsa.uiuc.edu
- *
- * Date: November 4, 2002
- *
- * Comments: 
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-
-void
-table_add_flags(unsigned *flags, char *objname, int type, table_t *table)
-{
- int i;
- 
- if (table->nobjs == table->size) {
-  table->size *= 2;
-  table->objs = (obj_t*)realloc(table->objs, table->size * sizeof(obj_t));
-  
-  for (i = table->nobjs; i < table->size; i++) {
-   table->objs[i].objno = 0;
-   table->objs[i].flags[0] = table->objs[i].flags[1] = 0;
-   table->objs[i].displayed = 0;
-   table->objs[i].type = H5G_UNKNOWN;
-   table->objs[i].objname = NULL;
-  }
- }
- 
- i = table->nobjs++;
- table->objs[i].objno = 0;
- table->objs[i].flags[0] = flags[0];
- table->objs[i].flags[1] = flags[1];
- free(table->objs[i].objname);
- table->objs[i].objname = (char *)HDstrdup(objname);
- table->objs[i].type = type;
+	table->objs[i].type = type;
 }
 
 
@@ -556,8 +515,7 @@ void table_init( table_t **tbl )
  table->objs = (obj_t*) malloc(table->size * sizeof(obj_t));
  
  for (i = 0; i < table->size; i++) {
-  table->objs[i].objno = 0;
-  table->objs[i].flags[0] = table->objs[i].flags[1] = 0;
+  table->objs[i].objno[0] = table->objs[i].objno[1] = 0;
   table->objs[i].displayed = 0;
   table->objs[i].type = H5G_UNKNOWN;
   table->objs[i].objname = NULL;

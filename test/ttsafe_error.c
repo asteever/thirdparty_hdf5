@@ -55,24 +55,28 @@
 #define EXPECTED_ERROR_DEPTH	8
 #define WRITE_NUMBER		37
 
-#ifdef H5_WANT_H5_V1_6_COMPAT
 static herr_t error_callback(void *);
 static herr_t walk_error_callback(int, H5E_error_t *, void *);
-#else /*H5_WANT_H5_V1_6_COMPAT*/
-static herr_t error_callback(hid_t, void *);
-static herr_t walk_error_callback(unsigned, const H5E_error_t *, void *);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
 static void *tts_error_thread(void *);
 
 /* Global variables */
 hid_t error_file;
 
 typedef struct err_num_struct {
-    hid_t maj_num;
-    hid_t min_num;
+	int maj_num;
+	int min_num;
 } err_num_t;
 
-err_num_t expected[8]; 
+err_num_t expected[] = {
+	{H5E_DATASET, H5E_CANTINIT},
+	{H5E_DATASET, H5E_CANTINIT},
+	{H5E_SYM, H5E_EXISTS},
+	{H5E_SYM, H5E_CANTINSERT},
+	{H5E_SYM, H5E_CANTINSERT},
+	{H5E_BTREE, H5E_CANTINIT},
+	{H5E_BTREE, H5E_CANTINSERT},
+	{H5E_SYM, H5E_CANTINSERT},
+};
 
 int error_flag = 0;
 int error_count = 0;
@@ -80,181 +84,134 @@ pthread_mutex_t error_mutex;
 
 void tts_error(void)
 {
-    pthread_t threads[NUM_THREAD];
-    pthread_attr_t attribute;
-    hid_t dataset;
-    int value, i;
+	pthread_t threads[NUM_THREAD];
+	pthread_attr_t attribute;
+	H5E_auto_t old_error_cb;
+	void *old_error_client_data;
+	hid_t dataset;
+	int value, i;
 
-    /* Must initialize these at runtime */
-    expected[0].maj_num = H5E_DATASET;
-    expected[0].min_num = H5E_CANTINIT;
-    
-    expected[1].maj_num = H5E_DATASET;
-    expected[1].min_num = H5E_CANTINIT;
-    
-    expected[2].maj_num = H5E_SYM;
-    expected[2].min_num = H5E_EXISTS;
-    
-    expected[3].maj_num = H5E_SYM;
-    expected[3].min_num = H5E_CANTINSERT;
-    
-    expected[4].maj_num = H5E_SYM;
-    expected[4].min_num = H5E_CANTINSERT;
-    
-    expected[5].maj_num = H5E_BTREE;
-    expected[5].min_num = H5E_CANTINIT;
-    
-    expected[6].maj_num = H5E_BTREE;
-    expected[6].min_num = H5E_CANTINSERT;
+	/* set up mutex for global count of errors */
+	pthread_mutex_init(&error_mutex, NULL);
 
-    expected[7].maj_num = H5E_SYM;
-    expected[7].min_num = H5E_CANTINSERT;
-    
-    /* set up mutex for global count of errors */
-    pthread_mutex_init(&error_mutex, NULL);
+	/* preserve previous error stack handler */
+	H5Eget_auto(&old_error_cb, &old_error_client_data);
 
-    /* make thread scheduling global */
-    pthread_attr_init(&attribute);
+	/* set our own auto error stack handler */
+	H5Eset_auto(error_callback, NULL);
+
+	/* make thread scheduling global */
+	pthread_attr_init(&attribute);
 #ifdef H5_HAVE_SYSTEM_SCOPE_THREADS
-    pthread_attr_setscope(&attribute, PTHREAD_SCOPE_SYSTEM);
+	pthread_attr_setscope(&attribute, PTHREAD_SCOPE_SYSTEM);
 #endif /* H5_HAVE_SYSTEM_SCOPE_THREADS */
 
-    /*
-     * Create a hdf5 file using H5F_ACC_TRUNC access, default file
-     * creation plist and default file access plist
-     */
-    error_file = H5Fcreate(FILENAME, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+	/*
+	 * Create a hdf5 file using H5F_ACC_TRUNC access, default file
+	 * creation plist and default file access plist
+	 */
+	error_file = H5Fcreate(FILENAME, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
-    for (i = 0; i < NUM_THREAD; i++)
-        pthread_create(&threads[i], &attribute, tts_error_thread, NULL);
+	for (i = 0; i < NUM_THREAD; i++)
+		pthread_create(&threads[i], &attribute, tts_error_thread, NULL);
 
-    for (i = 0; i < NUM_THREAD; i++)
-        pthread_join(threads[i],NULL);
+	for (i = 0; i < NUM_THREAD; i++)
+		pthread_join(threads[i],NULL);
 
-    if (error_flag) {
-        fprintf(stderr, "Threads reporting different error values!\n");
-        num_errs++;
-    }
+	if (error_flag) {
+		fprintf(stderr, "Threads reporting different error values!\n");
+		num_errs++;
+	}
 
-    if (error_count != NUM_THREAD - 1) {
-        fprintf(stderr, "Error: %d threads failed instead of %d\n", error_count, NUM_THREAD-1);
-        num_errs++;
-    }
+	if (error_count != NUM_THREAD - 1) {
+		fprintf(stderr, "Error: %d threads failed instead of %d\n",
+			error_count, NUM_THREAD-1);
+		num_errs++;
+	}
 
-    dataset = H5Dopen(error_file, DATASETNAME);
-    H5Dread(dataset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &value);
+	dataset = H5Dopen(error_file, DATASETNAME);
+	H5Dread(dataset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &value);
 
-    if (value != WRITE_NUMBER) {
-        fprintf(stderr, "Error: Successful thread wrote value %d instead of %d\n", value, WRITE_NUMBER);
-        num_errs++;
-    }
+	if (value != WRITE_NUMBER) {
+		fprintf(stderr,
+			"Error: Successful thread wrote value %d instead of %d\n",
+			value, WRITE_NUMBER);
+		num_errs++;
+	}
 
-    H5Dclose(dataset);
-    H5Fclose(error_file);
+	H5Dclose(dataset);
+	H5Fclose(error_file);
 
-    /* Destroy the thread attribute */
-    pthread_attr_destroy(&attribute);
+	/* turn our error stack handler off */
+	H5Eset_auto(old_error_cb, old_error_client_data);
+
+        /* Destroy the thread attribute */
+        pthread_attr_destroy(&attribute);
 }
 
 static
-void *tts_error_thread(void UNUSED *arg)
+void *tts_error_thread(void *arg)
 {
-    hid_t dataspace, datatype, dataset;
-    hsize_t dimsf[1]; /* dataset dimensions */
-    H5E_auto_t old_error_cb;
-    void *old_error_client_data;
-    int value;
+	hid_t dataspace, datatype, dataset;
+	hsize_t dimsf[1]; /* dataset dimensions */
+	int value;
 
-#ifdef H5_WANT_H5_V1_6_COMPAT
-    /* preserve previous error stack handler */
-    H5Eget_auto(&old_error_cb, &old_error_client_data);
+	/* define dataspace for dataset */
+	dimsf[0] = 1;
+	dataspace = H5Screate_simple(1,dimsf,NULL);
 
-    /* set each thread's error stack handler */
-    H5Eset_auto(error_callback, NULL);
-#else /*H5_WANT_H5_V1_6_COMPAT*/
-    /* preserve previous error stack handler */
-    H5Eget_auto(H5E_DEFAULT, &old_error_cb, &old_error_client_data);
+	/* define datatype for the data using native little endian integers */
+	datatype = H5Tcopy(H5T_NATIVE_INT);
+	H5Tset_order(datatype, H5T_ORDER_LE);
 
-    /* set each thread's error stack handler */
-    H5Eset_auto(H5E_DEFAULT, error_callback, NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
+	/* create a new dataset within the file */
+	dataset = H5Dcreate(error_file, DATASETNAME, datatype, dataspace,
+			    H5P_DEFAULT);
+	if (dataset >= 0) {   /* not an error */
+		value = WRITE_NUMBER;
+		H5Dwrite(dataset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL,
+			 H5P_DEFAULT, &value);
+		H5Dclose(dataset);
+	}
 
-    /* define dataspace for dataset */
-    dimsf[0] = 1;
-    dataspace = H5Screate_simple(1,dimsf,NULL);
-
-    /* define datatype for the data using native little endian integers */
-    datatype = H5Tcopy(H5T_NATIVE_INT);
-    H5Tset_order(datatype, H5T_ORDER_LE);
-    
-    /* create a new dataset within the file */
-    dataset = H5Dcreate(error_file, DATASETNAME, datatype, dataspace, H5P_DEFAULT);
-    if (dataset >= 0) {   /* not an error */
-        value = WRITE_NUMBER;
-        H5Dwrite(dataset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &value);
-        H5Dclose(dataset);
-    }
-
-    H5Tclose(datatype);
-    H5Sclose(dataspace);
-
-    /* turn our error stack handler off */
-#ifdef H5_WANT_H5_V1_6_COMPAT
-    H5Eset_auto(old_error_cb, old_error_client_data);
-#else /*H5_WANT_H5_V1_6_COMPAT*/
-    H5Eset_auto(H5E_DEFAULT, old_error_cb, old_error_client_data);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
-
-    return NULL;
+	H5Tclose(datatype);
+	H5Sclose(dataspace);
+        arg = arg; /* gets rid of annoying warning message */
+	return NULL;
 }
 
-#ifdef H5_WANT_H5_V1_6_COMPAT
 static
 herr_t error_callback(void *client_data)
 {
-    pthread_mutex_lock(&error_mutex);
-    error_count++;
-    pthread_mutex_unlock(&error_mutex);
-    return H5Ewalk(H5E_WALK_DOWNWARD, walk_error_callback, client_data);
+	pthread_mutex_lock(&error_mutex);
+	error_count++;
+	pthread_mutex_unlock(&error_mutex);
+        client_data = client_data; /* gets rid of annoying warning message */
+	return H5Ewalk(H5E_WALK_DOWNWARD, walk_error_callback, NULL);
 }
-#else /*H5_WANT_H5_V1_6_COMPAT*/
 
 static
-herr_t error_callback(hid_t estack, void *client_data)
+herr_t walk_error_callback(int n, H5E_error_t *err_desc, void *client_data)
 {
-    pthread_mutex_lock(&error_mutex);
-    error_count++;
-    pthread_mutex_unlock(&error_mutex);
-    return H5Ewalk(estack, H5E_WALK_DOWNWARD, walk_error_callback, client_data);
-}
-#endif /* H5_WANT_H5_V1_6_COMPAT */
+	int maj_num, min_num;
 
-#ifdef H5_WANT_H5_V1_6_COMPAT
-static
-herr_t walk_error_callback(int n, H5E_error_t *err_desc, void UNUSED *client_data)
-#else /* H5_WANT_H5_V1_6_COMPAT */
-static
-herr_t walk_error_callback(unsigned n, const H5E_error_t *err_desc, void UNUSED *client_data)
-#endif /* H5_WANT_H5_V1_6_COMPAT */
-{
-    hid_t maj_num, min_num;
+	if (err_desc) {
+		maj_num = err_desc->maj_num;
+		min_num = err_desc->min_num;
 
-    if (err_desc) {
-        maj_num = err_desc->maj_num;
-        min_num = err_desc->min_num;
-        
-        if (n < EXPECTED_ERROR_DEPTH && maj_num == expected[n].maj_num &&
-                min_num == expected[n].min_num)
-            return SUCCEED;
-    }
+		if (n < EXPECTED_ERROR_DEPTH && maj_num == expected[n].maj_num &&
+			min_num == expected[n].min_num)
+				return SUCCEED;
+	}
 
-    error_flag = -1;
-    return SUCCEED;
+	error_flag = -1;
+        client_data = client_data; /* gets rid of annoying warning message */
+	return SUCCEED;
 }
 
 void cleanup_error(void)
 {
-    HDunlink(FILENAME);
+	HDunlink(FILENAME);
 }
 
 #endif /*H5_HAVE_THREADSAFE*/

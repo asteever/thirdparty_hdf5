@@ -485,7 +485,7 @@ h5tools_dump_simple_data(FILE *stream, const h5dump_t *info, hid_t container,
     for (i = 0; i < nelmts; i++, ctx->cur_elmt++, elmt_counter++) {
         /* Render the element */
         h5tools_str_reset(&buffer);
-        h5tools_str_sprint(&buffer, info, container, type, mem + i * size, ctx);
+            h5tools_str_sprint(&buffer, info, container, type, mem + i * size, ctx);
 
         if (i + 1 < nelmts || (flags & END_OF_DATA) == 0)
             h5tools_str_append(&buffer, "%s", OPT(info->elmt_suf1, ","));

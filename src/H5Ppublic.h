@@ -39,6 +39,19 @@ typedef long off_t;
 #endif
 /*__MWERKS__*/
 
+#ifdef H5_WANT_H5_V1_4_COMPAT
+/* Backward compatibility typedef... */
+typedef hid_t H5P_class_t;      /* Alias H5P_class_t to hid_t */
+
+/* H5P_DATASET_XFER was the name from the beginning through 1.2.  It was
+ * changed to H5P_DATA_XFER on v1.3.0.  Then it was changed back to
+ * H5P_DATASET_XFER right before the release of v1.4.0-beta2.
+ * Define an alias here to help applications that had ported to v1.3.
+ * Should be removed in later version.
+ */
+#define H5P_DATA_XFER H5P_DATASET_XFER
+#endif /* H5_WANT_H5_V1_4_COMPAT */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -144,15 +157,9 @@ H5_DLL herr_t H5Punregister(hid_t pclass_id, const char *name);
 H5_DLL herr_t H5Pclose_class(hid_t plist_id);
 H5_DLL herr_t H5Pclose(hid_t plist_id);
 H5_DLL hid_t H5Pcopy(hid_t plist_id);
-#ifdef H5_WANT_H5_V1_6_COMPAT
 H5_DLL herr_t H5Pget_version(hid_t plist_id, int *boot/*out*/,
          int *freelist/*out*/, int *stab/*out*/,
          int *shhdr/*out*/);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-H5_DLL herr_t H5Pget_version(hid_t plist_id, unsigned *boot/*out*/,
-         unsigned *freelist/*out*/, unsigned *stab/*out*/,
-         unsigned *shhdr/*out*/);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
 H5_DLL herr_t H5Pset_userblock(hid_t plist_id, hsize_t size);
 H5_DLL herr_t H5Pget_userblock(hid_t plist_id, hsize_t *size);
 H5_DLL herr_t H5Pset_alignment(hid_t fapl_id, hsize_t threshold,
@@ -163,17 +170,15 @@ H5_DLL herr_t H5Pset_sizes(hid_t plist_id, size_t sizeof_addr,
        size_t sizeof_size);
 H5_DLL herr_t H5Pget_sizes(hid_t plist_id, size_t *sizeof_addr/*out*/,
        size_t *sizeof_size/*out*/);
-#ifdef H5_WANT_H5_V1_6_COMPAT
+#ifdef H5_WANT_H5_V1_4_COMPAT
+H5_DLL herr_t H5Pset_sym_k(hid_t plist_id, int ik, int lk);
+H5_DLL herr_t H5Pget_sym_k(hid_t plist_id, int *ik/*out*/, int *lk/*out*/);
+#else /* H5_WANT_H5_V1_4_COMPAT */
 H5_DLL herr_t H5Pset_sym_k(hid_t plist_id, int ik, unsigned lk);
 H5_DLL herr_t H5Pget_sym_k(hid_t plist_id, int *ik/*out*/, unsigned *lk/*out*/);
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 H5_DLL herr_t H5Pset_istore_k(hid_t plist_id, int ik);
 H5_DLL herr_t H5Pget_istore_k(hid_t plist_id, int *ik/*out*/);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-H5_DLL herr_t H5Pset_sym_k(hid_t plist_id, unsigned ik, unsigned lk);
-H5_DLL herr_t H5Pget_sym_k(hid_t plist_id, unsigned *ik/*out*/, unsigned *lk/*out*/);
-H5_DLL herr_t H5Pset_istore_k(hid_t plist_id, unsigned ik);
-H5_DLL herr_t H5Pget_istore_k(hid_t plist_id, unsigned *ik/*out*/);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
 H5_DLL herr_t H5Pset_layout(hid_t plist_id, H5D_layout_t layout);
 H5_DLL H5D_layout_t H5Pget_layout(hid_t plist_id);
 H5_DLL herr_t H5Pset_chunk(hid_t plist_id, int ndims, const hsize_t dim[]);
@@ -192,10 +197,17 @@ H5_DLL herr_t H5Pset_family_offset(hid_t fapl_id, hsize_t offset);
 H5_DLL herr_t H5Pget_family_offset(hid_t fapl_id, hsize_t *offset);
 H5_DLL herr_t H5Pset_multi_type(hid_t fapl_id, H5FD_mem_t type);
 H5_DLL herr_t H5Pget_multi_type(hid_t fapl_id, H5FD_mem_t *type);
+#ifdef H5_WANT_H5_V1_4_COMPAT
+H5_DLL herr_t H5Pset_buffer(hid_t plist_id, hsize_t size, void *tconv,
+        void *bkg);
+H5_DLL hsize_t H5Pget_buffer(hid_t plist_id, void **tconv/*out*/,
+        void **bkg/*out*/);
+#else /* H5_WANT_H5_V1_4_COMPAT */
 H5_DLL herr_t H5Pset_buffer(hid_t plist_id, size_t size, void *tconv,
         void *bkg);
 H5_DLL size_t H5Pget_buffer(hid_t plist_id, void **tconv/*out*/,
         void **bkg/*out*/);
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 H5_DLL herr_t H5Pset_preserve(hid_t plist_id, hbool_t status);
 H5_DLL int H5Pget_preserve(hid_t plist_id);
 H5_DLL herr_t H5Pmodify_filter(hid_t plist_id, H5Z_filter_t filter,
@@ -224,11 +236,25 @@ H5_DLL herr_t H5Pset_edc_check(hid_t plist_id, H5Z_EDC_t check);
 H5_DLL H5Z_EDC_t H5Pget_edc_check(hid_t plist_id);
 H5_DLL herr_t H5Pset_filter_callback(hid_t plist_id, H5Z_filter_func_t func, 
                                      void* op_data);
+#ifdef H5_WANT_H5_V1_4_COMPAT
+H5_DLL herr_t H5Pset_cache(hid_t plist_id, int mdc_nelmts, int rdcc_nelmts,
+       size_t rdcc_nbytes, double rdcc_w0);
+H5_DLL herr_t H5Pget_cache(hid_t plist_id, int *mdc_nelmts/*out*/,
+       int *rdcc_nelmts/*out*/,
+       size_t *rdcc_nbytes/*out*/, double *rdcc_w0);
+#else /* H5_WANT_H5_V1_4_COMPAT */
 H5_DLL herr_t H5Pset_cache(hid_t plist_id, int mdc_nelmts, size_t rdcc_nelmts,
        size_t rdcc_nbytes, double rdcc_w0);
 H5_DLL herr_t H5Pget_cache(hid_t plist_id, int *mdc_nelmts/*out*/,
        size_t *rdcc_nelmts/*out*/,
        size_t *rdcc_nbytes/*out*/, double *rdcc_w0);
+#endif /* H5_WANT_H5_V1_4_COMPAT */
+#ifdef H5_WANT_H5_V1_4_COMPAT
+H5_DLL herr_t H5Pset_hyper_cache(hid_t plist_id, unsigned cache,
+      unsigned limit);
+H5_DLL herr_t H5Pget_hyper_cache(hid_t plist_id, unsigned *cache,
+      unsigned *limit);
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 H5_DLL herr_t H5Pset_btree_ratios(hid_t plist_id, double left, double middle,
        double right);
 H5_DLL herr_t H5Pget_btree_ratios(hid_t plist_id, double *left/*out*/,
@@ -261,8 +287,13 @@ H5_DLL herr_t H5Pget_vlen_mem_manager(hid_t plist_id,
                                        void **free_info);
 H5_DLL herr_t H5Pset_meta_block_size(hid_t fapl_id, hsize_t size);
 H5_DLL herr_t H5Pget_meta_block_size(hid_t fapl_id, hsize_t *size/*out*/);
+#ifdef H5_WANT_H5_V1_4_COMPAT
+H5_DLL herr_t H5Pset_sieve_buf_size(hid_t fapl_id, hsize_t size);
+H5_DLL herr_t H5Pget_sieve_buf_size(hid_t fapl_id, hsize_t *size/*out*/);
+#else /* H5_WANT_H5_V1_4_COMPAT */
 H5_DLL herr_t H5Pset_sieve_buf_size(hid_t fapl_id, size_t size);
 H5_DLL herr_t H5Pget_sieve_buf_size(hid_t fapl_id, size_t *size/*out*/);
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 H5_DLL herr_t H5Pset_hyper_vector_size(hid_t fapl_id, size_t size);
 H5_DLL herr_t H5Pget_hyper_vector_size(hid_t fapl_id, size_t *size/*out*/);
 H5_DLL herr_t H5Pset_small_data_block_size(hid_t fapl_id, hsize_t size);

@@ -508,14 +508,11 @@ H5T_conv_order_opt(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
 	    HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data type");
 	if (src->size != dst->size ||
                 0 != src->u.atomic.offset ||
-                0 != dst->u.atomic.offset)
-	    HGOTO_ERROR(H5E_DATATYPE, H5E_UNSUPPORTED, FAIL, "conversion not supported");
-        if((src->type==H5T_REFERENCE && dst->type!=H5T_REFERENCE) ||
-                (dst->type==H5T_REFERENCE && src->type!=H5T_REFERENCE))
-	    HGOTO_ERROR(H5E_DATATYPE, H5E_UNSUPPORTED, FAIL, "conversion not supported");
-        if(src->type!=H5T_REFERENCE &&
-                !((H5T_ORDER_BE == src->u.atomic.order && H5T_ORDER_LE == dst->u.atomic.order) ||
-                  (H5T_ORDER_LE == src->u.atomic.order && H5T_ORDER_BE == dst->u.atomic.order)))
+                0 != dst->u.atomic.offset ||
+                !((H5T_ORDER_BE == src->u.atomic.order &&
+                   H5T_ORDER_LE == dst->u.atomic.order) ||
+                  (H5T_ORDER_LE == src->u.atomic.order &&
+                   H5T_ORDER_BE == dst->u.atomic.order)))
 	    HGOTO_ERROR(H5E_DATATYPE, H5E_UNSUPPORTED, FAIL, "conversion not supported");
         if (src->size!=1 && src->size!=2 && src->size!=4 &&
                 src->size!=8 && src->size!=16)
@@ -523,7 +520,6 @@ H5T_conv_order_opt(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
 	switch (src->type) {
             case H5T_INTEGER:
             case H5T_BITFIELD:
-            case H5T_REFERENCE:
                 /* nothing to check */
                 break;
 
@@ -550,30 +546,6 @@ H5T_conv_order_opt(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
 	if (NULL == (src = H5I_object(src_id)) ||
                 NULL == (dst = H5I_object(dst_id)))
 	    HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data type");
-
-        /* Check for "no op" reference conversion */
-        if(src->type==H5T_REFERENCE) {
-            H5T_t *native_int;          /* Native integer datatype */
-
-            /* Sanity check */
-            assert(dst->type==H5T_REFERENCE);
-
-            /* Get pointer to native integer type */
-            if (NULL==(native_int=H5I_object(H5T_NATIVE_INT_g)))
-                HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a datatype object");
-
-            /* Check if we are on a little-endian machine (the order that
-             * the addresses in the file must be) and just get out now, there
-             * is no need to convert the object reference.  Yes, this is
-             * icky and non-portable, but I can't think of a better way to
-             * support allowing the objno in the H5G_stat_t struct and the
-             * hobj_ref_t type to be compared directly without introducing a
-             * "native" hobj_ref_t datatype and I think that would break a
-             * lot of existing programs.  -QAK
-             */
-            if(native_int->u.atomic.order == H5T_ORDER_LE)
-                break;
-        } /* end if */
 
         buf_stride = buf_stride ? buf_stride : src->size;
         switch (src->size) {
@@ -1217,8 +1189,7 @@ static herr_t
 H5T_conv_struct_init (H5T_t *src, H5T_t *dst, H5T_cdata_t *cdata, hid_t dxpl_id)
 {
     H5T_conv_struct_t	*priv = (H5T_conv_struct_t*)(cdata->priv);
-    int		*src2dst = NULL;
-    unsigned		i, j;
+    int		i, j, *src2dst = NULL;
     H5T_t		*type = NULL;
     hid_t		tid;
     herr_t      ret_value=SUCCEED;       /* Return value */
@@ -1369,7 +1340,6 @@ H5T_conv_struct(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, hsize_t nelmts,
     size_t	offset;			/*byte offset wrt struct	*/
     size_t	src_delta;	    /*source stride	*/
     hsize_t	elmtno;
-    unsigned	u;		/*counters			*/
     int	i;			/*counters			*/
     H5T_conv_struct_t *priv = (H5T_conv_struct_t *)(cdata->priv);
     herr_t      ret_value=SUCCEED;       /* Return value */
@@ -1452,14 +1422,14 @@ H5T_conv_struct(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, hsize_t nelmts,
                  * data point as small as possible with all the free space on the
                  * right side.
                  */
-                for (u=0, offset=0; u<src->u.compnd.nmembs; u++) {
-                    if (src2dst[u]<0) continue; /*subsetting*/
-                    src_memb = src->u.compnd.memb + u;
-                    dst_memb = dst->u.compnd.memb + src2dst[u];
+                for (i=0, offset=0; i<src->u.compnd.nmembs; i++) {
+                    if (src2dst[i]<0) continue; /*subsetting*/
+                    src_memb = src->u.compnd.memb + i;
+                    dst_memb = dst->u.compnd.memb + src2dst[i];
 
                     if (dst_memb->size <= src_memb->size) {
-                        if (H5T_convert(priv->memb_path[u], priv->src_memb_id[u],
-                                priv->dst_memb_id[src2dst[u]],
+                        if (H5T_convert(priv->memb_path[i], priv->src_memb_id[i],
+                                priv->dst_memb_id[src2dst[i]],
                                 (hsize_t)1, 0, 0, /*no striding (packed array)*/
                                 xbuf+src_memb->offset, xbkg+dst_memb->offset,
                                 dxpl_id)<0)
@@ -1602,7 +1572,6 @@ H5T_conv_struct_opt(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
     H5T_cmemb_t	*dst_memb = NULL;	/*destination struct memb desc.	*/
     size_t	offset;			/*byte offset wrt struct	*/
     hsize_t	elmtno;			/*element counter		*/
-    unsigned	u;			/*counters			*/
     int	i;			    /*counters			*/
     H5T_conv_struct_t *priv = NULL;	/*private data			*/
     herr_t      ret_value=SUCCEED;       /* Return value */
@@ -1640,11 +1609,11 @@ H5T_conv_struct_opt(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
              * is room for each conversion instead of actually doing anything.
              */
             if (dst->size > src->size) {
-                for (u=0, offset=0; u<src->u.compnd.nmembs; u++) {
-                    if (src2dst[u]<0)
+                for (i=0, offset=0; i<src->u.compnd.nmembs; i++) {
+                    if (src2dst[i]<0)
                         continue;
-                    src_memb = src->u.compnd.memb + u;
-                    dst_memb = dst->u.compnd.memb + src2dst[u];
+                    src_memb = src->u.compnd.memb + i;
+                    dst_memb = dst->u.compnd.memb + src2dst[i];
                     if (dst_memb->size > src_memb->size)
                         offset += src_memb->size;
                 }
@@ -1721,17 +1690,17 @@ H5T_conv_struct_opt(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
              * destination in the bkg buffer. Otherwise move the element as far
              * left as possible in the buffer.
              */
-            for (u=0, offset=0; u<src->u.compnd.nmembs; u++) {
-                if (src2dst[u]<0) continue; /*subsetting*/
-                src_memb = src->u.compnd.memb + u;
-                dst_memb = dst->u.compnd.memb + src2dst[u];
+            for (i=0, offset=0; i<src->u.compnd.nmembs; i++) {
+                if (src2dst[i]<0) continue; /*subsetting*/
+                src_memb = src->u.compnd.memb + i;
+                dst_memb = dst->u.compnd.memb + src2dst[i];
 
                 if (dst_memb->size <= src_memb->size) {
                     xbuf = buf + src_memb->offset;
                     xbkg = bkg + dst_memb->offset;
-                    if (H5T_convert(priv->memb_path[u],
-                            priv->src_memb_id[u],
-                            priv->dst_memb_id[src2dst[u]], nelmts,
+                    if (H5T_convert(priv->memb_path[i],
+                            priv->src_memb_id[i],
+                            priv->dst_memb_id[src2dst[i]], nelmts,
                             buf_stride ? buf_stride : src->size,
                             bkg_stride, xbuf, xbkg,
                             dxpl_id)<0)
@@ -1823,8 +1792,8 @@ H5T_conv_enum_init(H5T_t *src, H5T_t *dst, H5T_cdata_t *cdata)
     int		n;		/*src value cast as native int	*/
     int		domain[2];	/*min and max source values	*/
     int		*map=NULL;	/*map from src value to dst idx	*/
-    unsigned	length;		/*nelmts in map array		*/
-    unsigned	i, j;		/*counters			*/
+    int		length;		/*nelmts in map array		*/
+    int		i, j;		/*counters			*/
     herr_t      ret_value=SUCCEED;       /* Return value */
     
     FUNC_ENTER_NOINIT(H5T_conv_enum_init);

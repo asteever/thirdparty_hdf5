@@ -36,7 +36,7 @@ int ngroups = 512;                      /* number of groups to create in root
                                          * group. */
 int facc_type = FACC_MPIO;		/*Test file access type */
 
-H5E_auto_t old_func;		        /* previous error handler */
+herr_t (*old_func)(void*);		/* previous error handler */
 void *old_client_data;			/* previous error handler arg.*/
 
 /* other option flags */
@@ -322,7 +322,11 @@ create_faccess_plist(MPI_Comm comm, MPI_Info info, int l_facc_type,
 
     if (l_facc_type == FACC_MPIPOSIX) {
 	/* set Parallel access with communicator */
+#ifdef H5_WANT_H5_V1_4_COMPAT
+	ret = H5Pset_fapl_mpiposix(ret_pl, comm);
+#else /* H5_WANT_H5_V1_4_COMPAT */
 	ret = H5Pset_fapl_mpiposix(ret_pl, comm, use_gpfs);
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 	VRFY((ret >= 0), "H5Pset_fapl_mpiposix succeeded");
 	return(ret_pl);
     }

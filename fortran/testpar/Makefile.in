@@ -1,3 +1,6 @@
+## HDF5 Fortran Parallel Library Test Makefile(.in)
+##
+
 ##
 ## Copyright by the Board of Trustees of the University of Illinois.
 ## All rights reserved.
@@ -11,23 +14,20 @@
 ## http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
 ## access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 ##
-## HDF5 Fortran Parallel Library Test Makefile(.in)
-##
-top_srcdir=@top_srcdir@
+top_srcdir=@top_srcdir@/..
 top_builddir=../..
 srcdir=@srcdir@
 @COMMENCE@
-
-HDF_FORTRAN="yes"
 
 hdf5_builddir=$(top_builddir)/src
 
 ## Add the include directory to the C preprocessor flags the the hdf5 library
 ## to the library list.
+LT_LINK_LIB=$(LT) --mode=link $(F9X) -static -rpath $(libdir)
 LIBFORTRAN=../src/libhdf5_fortran.la
 LIBHDF5=$(hdf5_builddir)/libhdf5.la
-FTLIB=../test/libh5test_fortran.la
-CTLIB=../../test/libh5test.la
+FTLIB = ../test/libh5test_fortran.la
+CTLIB = ../../test/.libs/libh5test.a
 
 ## These tests are parallel
 RUNTEST=$(RUNPARALLEL)
@@ -57,6 +57,6 @@ thyperslab_wr.lo:	    $(srcdir)/thyperslab_wr.f90 thdf5.lo
 ptesthdf5_fortran.lo:	    $(srcdir)/ptesthdf5_fortran.f90 thdf5.lo
 
 ptesthdf5_fortran: thdf5.lo thyperslab_wr.lo ptesthdf5_fortran.lo
-	@$(LT_LINK_FEXE) $(FFLAGS) -o $@ ptesthdf5_fortran.lo thdf5.lo thyperslab_wr.lo $(FTLIB) $(CTLIB) $(LIBFORTRAN) $(LIBHDF5) $(LIBS)
+	@$(LT_LINK_FEXE) $(FFLAGS) -o $@ ptesthdf5_fortran.lo thdf5.lo thyperslab_wr.lo  $(FTLIB) $(CTLIB) $(LIBFORTRAN) $(LIBHDF5) $(LIBS)
 
 @CONCLUDE@

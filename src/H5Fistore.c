@@ -52,7 +52,6 @@
 #include "H5Dprivate.h"		/* Datasets				*/
 #include "H5Eprivate.h"		/* Error handling		  	*/
 #include "H5Fpkg.h"		/* Files				*/
-#include "H5FDprivate.h"	/* File drivers				*/
 #include "H5FLprivate.h"	/* Free Lists                           */
 #include "H5Iprivate.h"		/* IDs			  		*/
 #include "H5MFprivate.h"	/* File space management		*/
@@ -61,6 +60,11 @@
 #include "H5Pprivate.h"         /* Property lists                       */
 #include "H5Sprivate.h"         /* Dataspaces                           */
 #include "H5Vprivate.h"		/* Vector and array functions		*/
+
+/* MPIO, MPIPOSIX, & FPHDF5 drivers needed for special checks */
+#include "H5FDfphdf5.h"
+#include "H5FDmpio.h"
+#include "H5FDmpiposix.h"
 
 /*
  * Feature: If this constant is defined then every cache preemption and load
@@ -1432,7 +1436,7 @@ H5F_istore_lock(H5F_t *f, hid_t dxpl_id, const H5O_layout_t *layout,
         udata.mesg = *layout;
         udata.addr = HADDR_UNDEF;
         status = H5B_find (f, dxpl_id, H5B_ISTORE, layout->addr, &udata);
-        H5E_clear(NULL);
+        H5E_clear ();
 
         if (status>=0 && H5F_addr_defined(udata.addr)) {
             size_t		chunk_alloc=0;		/*allocated chunk size	*/
@@ -1893,13 +1897,15 @@ HDfprintf(stderr,"%s: mem_offset_arr[%Zu]=%Hu\n",FUNC,*mem_curr_seq,mem_offset_a
      * for the chunk has been defined, then don't load the chunk into the
      * cache, just write the data to it directly.
      *
-     * If MPI based VFD is used, must bypass the
+     * If MPIO, MPIPOSIX, or FPHDF5 is used, must bypass the
      * chunk-cache scheme because other MPI processes could be
      * writing to other elements in the same chunk.  Do a direct
      * write-through of only the elements requested.
      */
-    if ((chunk_size>f->shared->rdcc_nbytes && pline.nfilters==0 && chunk_addr!=HADDR_UNDEF)
-        || (IS_H5FD_MPI(f) && (H5F_ACC_RDWR & f->shared->flags))) {
+    if ((chunk_size>f->shared->rdcc_nbytes && pline.nfilters==0 &&
+            chunk_addr!=HADDR_UNDEF)
+        || ((IS_H5FD_MPIO(f) ||IS_H5FD_MPIPOSIX(f) || IS_H5FD_FPHDF5(f)) &&
+            (H5F_ACC_RDWR & f->shared->flags))) {
 #ifdef H5_HAVE_PARALLEL
         /* Additional sanity check when operating in parallel */
         if (chunk_addr==HADDR_UNDEF || pline.nfilters>0)
@@ -2082,8 +2088,7 @@ H5F_istore_get_addr(H5F_t *f, hid_t dxpl_id, const H5O_layout_t *layout,
 
     /* Go get the chunk information */
     if (H5B_find (f, dxpl_id, H5B_ISTORE, layout->addr, &udata)<0) {
-        H5E_clear(NULL);
-        
+        H5E_clear();
 	HGOTO_ERROR(H5E_BTREE,H5E_NOTFOUND,HADDR_UNDEF,"Can't locate chunk info");
     } /* end if */
 
@@ -2153,6 +2158,7 @@ H5F_istore_allocate(H5F_t *f, hid_t dxpl_id, const H5O_layout_t *layout,
 #ifdef H5_HAVE_PARALLEL
     MPI_Comm	mpi_comm=MPI_COMM_NULL;	/* MPI communicator for file */
     int         mpi_rank=(-1);  /* This process's rank  */
+    int         mpi_size=(-1);  /* Total # of processes */
     int         mpi_code;       /* MPI return code */
     unsigned    blocks_written=0; /* Flag to indicate that chunk was actually written */
     unsigned    using_mpi=0;    /* Flag to indicate that the file is being accessed with an MPI-capable file driver */
@@ -2204,6 +2210,8 @@ H5F_istore_allocate(H5F_t *f, hid_t dxpl_id, const H5O_layout_t *layout,
         /* Get the MPI rank & size */
         if ((mpi_rank=H5FD_mpio_mpi_rank(f->shared->lf))<0)
             HGOTO_ERROR(H5E_INTERNAL, H5E_MPI, FAIL, "Can't retrieve MPI rank");
+        if ((mpi_size=H5FD_mpio_mpi_size(f->shared->lf))<0)
+            HGOTO_ERROR(H5E_INTERNAL, H5E_MPI, FAIL, "Can't retrieve MPI size");
 
         /* Set the MPI-capable file driver flag */
         using_mpi=1;
@@ -2216,6 +2224,8 @@ H5F_istore_allocate(H5F_t *f, hid_t dxpl_id, const H5O_layout_t *layout,
         /* Get the MPI rank & size */
         if ((mpi_rank=H5FD_mpiposix_mpi_rank(f->shared->lf))<0)
             HGOTO_ERROR(H5E_INTERNAL, H5E_MPI, FAIL, "Can't retrieve MPI rank");
+        if ((mpi_size=H5FD_mpiposix_mpi_size(f->shared->lf))<0)
+            HGOTO_ERROR(H5E_INTERNAL, H5E_MPI, FAIL, "Can't retrieve MPI size");
 
         /* Set the MPI-capable file driver flag */
         using_mpi=1;
@@ -2229,6 +2239,9 @@ H5F_istore_allocate(H5F_t *f, hid_t dxpl_id, const H5O_layout_t *layout,
         /* Get the MPI rank & size */
         if ((mpi_rank = H5FD_fphdf5_mpi_rank(f->shared->lf)) < 0)
             HGOTO_ERROR(H5E_INTERNAL, H5E_MPI, FAIL, "Can't retrieve MPI rank");
+
+        if ((mpi_size = H5FD_fphdf5_mpi_size(f->shared->lf)) < 0)
+            HGOTO_ERROR(H5E_INTERNAL, H5E_MPI, FAIL, "Can't retrieve MPI size");
 
         /* Set the MPI-capable file driver flag */
         using_mpi = 1;
@@ -2340,7 +2353,7 @@ H5F_istore_allocate(H5F_t *f, hid_t dxpl_id, const H5O_layout_t *layout,
 #ifdef H5_HAVE_PARALLEL
                 /* Check if this file is accessed with an MPI-capable file driver */
                 if(using_mpi) {
-                    /* Write the chunks out from only one process */
+                    /* Round-robin write the chunks out from only one process */
                     if(H5_PAR_META_WRITE==mpi_rank) {
                         if (H5F_block_write(f, H5FD_MEM_DRAW, udata.addr, udata.key.nbytes, dxpl_id, chunk)<0)
                             HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "unable to write raw data to file");
@@ -2946,7 +2959,6 @@ done:
     FUNC_LEAVE_NOAPI(ret_value);
 }
 
-#ifdef H5F_ISTORE_DEBUG
 
 /*-------------------------------------------------------------------------
  * Function:	H5F_istore_stats
@@ -3011,7 +3023,6 @@ H5F_istore_stats (H5F_t *f, hbool_t headers)
 done:
     FUNC_LEAVE_NOAPI(ret_value);
 }
-#endif /* H5F_ISTORE_DEBUG */
 
 
 /*-------------------------------------------------------------------------
