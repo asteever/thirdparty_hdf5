@@ -35,6 +35,18 @@ static char             RcsId[] = "@(#)$Revision$";
    H5_init_interface    -- initialize the H5 interface
    + */
 
+#include <ctype.h>
+#include <errno.h>
+#include <stdarg.h>
+#include <stdio.h>
+#if defined(WIN32)
+#include <time.h>
+#else
+#include <sys/time.h>
+#include <sys/resource.h>
+#endif
+/* We need this on Irix64 even though we've included stdio.h as documented */
+FILE *fdopen(int fd, const char *mode);
 
 /* private headers */
 #include <H5private.h>          /*library                 		*/
@@ -48,9 +60,6 @@ static char             RcsId[] = "@(#)$Revision$";
 #include <H5Sprivate.h>		/*data spaces				*/
 #include <H5Tprivate.h>         /*data types                      	*/
 #include <H5Zprivate.h>		/*filters				*/
-
-/* We need this on Irix64 even though we've included stdio.h as documented */
-FILE *fdopen(int fd, const char *mode);
 
 #define PABLO_MASK      H5_mask
 
@@ -644,21 +653,27 @@ HDfprintf (FILE *stream, const char *fmt, ...)
 	    if (HDstrchr ("ZHhlq", *s)) {
 		switch (*s) {
 		case 'H':
-		    if (sizeof(hsize_t)<sizeof(long)) {
-			modifier[0] = '\0';
-		    } else if (sizeof(hsize_t)==sizeof(long)) {
+		    if (sizeof(hsize_t)==sizeof(long)) {
 			HDstrcpy (modifier, "l");
-		    } else {
+#if defined(WIN32)
+			} else if (sizeof(hsize_t)==sizeof(__int64)) {
+#else
+		    } else if (sizeof(hsize_t)==sizeof(long long)) {
+#endif
 			HDstrcpy (modifier, PRINTF_LL_WIDTH);
 		    }
 		    break;
 		case 'Z':
-		    if (sizeof(size_t)<sizeof(long)) {
-			modifier[0] = '\0';
-		    } else if (sizeof(size_t)==sizeof(long)) {
+		    if (sizeof(size_t)==sizeof(long)) {
 			HDstrcpy (modifier, "l");
-		    } else {
+#if defined(WIN32)
+			} else if (sizeof(size_t)==sizeof(__int64)) {
+#else
+		    } else if (sizeof(size_t)==sizeof(long long)) {
+#endif
 			HDstrcpy (modifier, PRINTF_LL_WIDTH);
+		    } else if (sizeof(size_t)==sizeof(int)) {
+			modifier[0] = '\0';
 		    }
 		    break;
 		    
@@ -703,7 +718,11 @@ HDfprintf (FILE *stream, const char *fmt, ...)
 		    long x = va_arg (ap, long);
 		    n = fprintf (stream, template, x);
 		} else {
-		    int64 x = va_arg(ap, int64);
+#if defined(WIN32)
+			__int64 x = va_arg(ap, __int64);
+#else
+		    long long x = va_arg (ap, long long);
+#endif
 		    n = fprintf (stream, template, x);
 		}
 		break;
@@ -722,8 +741,12 @@ HDfprintf (FILE *stream, const char *fmt, ...)
 		    unsigned long x = va_arg (ap, unsigned long);
 		    n = fprintf (stream, template, x);
 		} else {
-		    uint64 x = va_arg(ap, uint64);
-		    n = fprintf (stream, template, x);
+#if defined(WIN32)
+			unsigned __int64 x = va_arg (ap, unsigned __int64);
+#else
+		    unsigned long long x = va_arg (ap, unsigned long long);
+#endif
+			n = fprintf (stream, template, x);
 		}
 		break;
 
@@ -769,9 +792,6 @@ HDfprintf (FILE *stream, const char *fmt, ...)
 			} else if (sizeof(x->offset)==SIZEOF_LONG) {
 			    HDstrcat(template, "ld");
 			} else if (sizeof(x->offset)==SIZEOF_LONG_LONG) {
-			    HDstrcat(template, PRINTF_LL_WIDTH);
-			    HDstrcat(template, "d");
-			} else if (sizeof(x->offset)==SIZEOF___INT64) {
 			    HDstrcat(template, PRINTF_LL_WIDTH);
 			    HDstrcat(template, "d");
 			}
@@ -983,6 +1003,7 @@ H5_timer_reset (H5_timer_t *timer)
 void
 H5_timer_begin (H5_timer_t *timer)
 {
+#if !defined(WIN32)
 #ifdef HAVE_GETRUSAGE
     struct rusage	rusage;
 #endif
@@ -1003,6 +1024,7 @@ H5_timer_begin (H5_timer_t *timer)
 
     gettimeofday (&etime, NULL);
     timer->etime = (double)etime.tv_sec + (double)etime.tv_usec/1e6;
+#endif
 }
 
 

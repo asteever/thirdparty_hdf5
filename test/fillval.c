@@ -7,23 +7,12 @@
  *
  * Purpose:	Tests dataset fill values.
  */
-
-/* See H5private.h for how to include headers */
-#undef NDEBUG
-#include <H5config.h>
-
-#ifdef STDC_HEADERS
-#   include <fcntl.h>
-#   include <stdlib.h>
-#endif
-
-#ifdef HAVE_UNISTD_H
-#   include <sys/types.h>
-#   include <unistd.h>
-#endif
-
+#include <fcntl.h>
 #include <hdf5.h>
-
+#include <stdlib.h>
+#if !defined(WIN32)
+#include <unistd.h>
+#endif
 /*
  * Define NO_FILLING if you want to compare how this test works when there is
  * no fill value (that is, when the fill value is zero).
@@ -39,6 +28,7 @@
 #define FILE_NAME_6	"fillval_6.h5"
 #define FILE_NAME_RAW	"fillval.raw"
 
+#include <H5config.h>
 #ifndef HAVE_ATTRIBUTE
 #   undef __attribute__
 #   define __attribute__(X) /*void*/
@@ -46,7 +36,10 @@
 #else
 #   define __unused__ __attribute__((unused))
 #endif
-
+#if defined(WIN32)
+#undef __unused__
+#define __unused__
+#endif
 
 /*-------------------------------------------------------------------------
  * Function:	cleanup
@@ -239,7 +232,7 @@ test_getset(void)
 static int
 test_create(const char *filename, H5D_layout_t layout)
 {
-    hid_t	file=-1, space=-1, dcpl=-1, dset1=-1, dset2=-1, dset3=-1;
+    hid_t	file, space, dcpl, dset1, dset2, dset3;
     hsize_t	cur_size[5] = {32, 16, 8, 4, 2};
     hsize_t	ch_size[5] = {1, 1, 1, 4, 2};
     short	rd_s, fill_s = 0x1234;
@@ -383,7 +376,7 @@ test_create(const char *filename, H5D_layout_t layout)
 static int
 test_rdwr(const char *filename, H5D_layout_t layout)
 {
-    hid_t	file=-1, fspace=-1, mspace=-1, dcpl=-1, dset=-1;
+    hid_t	file, fspace, mspace, dcpl, dset;
     hsize_t	cur_size[5] = {32, 16, 8, 4, 2};
     hsize_t	ch_size[5] = {1, 16, 8, 4, 2};
     hsize_t	one[5] = {1, 1, 1, 1, 1};
@@ -527,7 +520,7 @@ test_rdwr(const char *filename, H5D_layout_t layout)
 static int
 test_extend(const char *filename, H5D_layout_t layout)
 {
-    hid_t	file=-1, fspace=-1, mspace=-1, dcpl=-1, dset=-1;
+    hid_t	file, fspace, mspace, dcpl, dset;
     hsize_t	cur_size[5] = {32, 16, 8, 4, 2};
     hsize_t	max_size[5] = {128, 64, 32, 16, 8};
     hsize_t	ch_size[5] = {1, 16, 8, 4, 2};

@@ -75,7 +75,7 @@
 ./doc/html/Dataspaces.html
 ./doc/html/Datatypes.html
 ./doc/html/ddl.html
-./doc/html/DDL.html              	_DO_NOT_DISTRIBUTE_
+./doc/html/DDL.html              	_DO_NOT_DISTRIBUTE_ 
 ./doc/html/Debugging.html
 ./doc/html/Environment.html
 ./doc/html/Errors.html
@@ -97,6 +97,7 @@
 ./doc/html/IH_mapHead.gif
 ./doc/html/IOPipe.html
 ./doc/html/MemoryManagement.html	_DO_NOT_DISTRIBUTE_
+./doc/html/NCSAfooterlogo.gif
 ./doc/html/ObjectHeader.txt		_DO_NOT_DISTRIBUTE_
 ./doc/html/Properties.html
 ./doc/html/Ragged.html
@@ -133,6 +134,7 @@
 ./doc/html/group_p3.gif
 ./doc/html/group_p3.obj			_DO_NOT_DISTRIBUTE_
 ./doc/html/h5s.examples
+./doc/html/hdf2.jpg
 ./doc/html/ph5design.html
 ./doc/html/ph5example.c
 ./doc/html/ph5implement.txt
@@ -171,11 +173,12 @@
 ./doc/src/RM_H5T.html			_DO_NOT_DISTRIBUTE_
 ./doc/src/RM_H5Z.html			_DO_NOT_DISTRIBUTE_
 ./doc/src/Tools.html			_DO_NOT_DISTRIBUTE_
-./doc/tgif/APIGrammar.obj		_DO_NOT_DISTRIBUTE_
-./doc/tgif/FileGrammar.obj		_DO_NOT_DISTRIBUTE_
-./doc/tgif/IOPipe.obj			_DO_NOT_DISTRIBUTE_
-./doc/tgif/RobbPipe.obj			_DO_NOT_DISTRIBUTE_
-./doc/tgif/UserView.obj			_DO_NOT_DISTRIBUTE_
+./doc/tgif/APIGrammar.obj       _DO_NOT_DISTRIBUTE_
+./doc/tgif/FileGrammar.obj      _DO_NOT_DISTRIBUTE_
+./doc/tgif/IOPipe.obj           _DO_NOT_DISTRIBUTE_
+./doc/tgif/RobbPipe.obj         _DO_NOT_DISTRIBUTE_
+./doc/tgif/UserView.obj         _DO_NOT_DISTRIBUTE_
+
 
 ./examples/Attributes.txt
 ./examples/Makefile.in
@@ -188,13 +191,11 @@
 ./examples/h5_select.c
 ./examples/h5_attribute.c
 
-./pablo/HDF5record_RT.h
-./pablo/HDFentries.txt
-./pablo/Makefile.in
-./pablo/PabloHDF.c
-./pablo/PabloHDF_RT.c
-./pablo/PabloHDF_SDDF.c
-./pablo/ProcIDs.h
+./pablo/HDFentries.txt      _DO_NOT_DISTRIBUTE_
+./pablo/Makefile.in         _DO_NOT_DISTRIBUTE_
+./pablo/PabloHDF.c          _DO_NOT_DISTRIBUTE_
+./pablo/PabloHDF_RT.c       _DO_NOT_DISTRIBUTE_
+./pablo/PabloHDF_SDDF.c     _DO_NOT_DISTRIBUTE_
 
 ./src/.distdep
 ./src/.indent.pro			_DO_NOT_DISTRIBUTE_

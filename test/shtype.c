@@ -7,24 +7,22 @@
  *
  * Purpose:	Tests datasets with shared data types.
  */
-
-/* See H5private.h for how to include headers */
-#undef NDEBUG
-#include <H5config.h>
-
-#ifdef STDC_HEADERS
-#   include <assert.h>
-#   include <stdlib.h>
-#endif
-
+#include <assert.h>
 #include <hdf5.h>
+#include <stdlib.h>
 
+#include <H5config.h>
 #ifndef HAVE_ATTRIBUTE
 #   undef __attribute__
 #   define __attribute__(X) /*void*/
 #   define __unused__ /*void*/
 #else
 #   define __unused__ __attribute__((unused))
+#endif
+
+#if defined(WIN32)
+#undef __unused__
+#define __unused__
 #endif
 
 #define TEST_FILE_NAME0		"shtype0.h5"

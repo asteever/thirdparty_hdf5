@@ -5,26 +5,25 @@
  * Programmer:  Robb Matzke <matzke@llnl.gov>
  *              Friday, January 23, 1998
  */
-
-/* See H5private.h for how to include headers */
 #undef NDEBUG
-#include <H5config.h>
-
-#ifdef STDC_HEADERS
-#   include <assert.h>
-#   include <stdio.h>
-#   include <stdlib.h>
-#   include <string.h>
-#endif
-
+#include <assert.h>
 #include <hdf5.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
+#include <H5config.h>
 #ifndef HAVE_ATTRIBUTE
 #   undef __attribute__
 #   define __attribute__(X) /*void*/
 #   define __unused__ /*void*/
 #else
 #   define __unused__ __attribute__((unused))
+#endif
+
+#if defined(WIN32)
+#undef __unused__
+#define __unused__
 #endif
 
 #define TEST_FILE_NAME	"cmpd_dset.h5"

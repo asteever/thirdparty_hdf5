@@ -5,22 +5,15 @@
  * Programmer:  Robb Matzke <matzke@llnl.gov>
  *              Wednesday, April  8, 1998
  */
-
-/* See H5private.h for how to include headers */
-#undef NDEBUG
-#include <H5config.h>
-
-#ifdef STDC_HEADERS
-#   include <assert.h>
-#   include <ctype.h>
-#   include <fcntl.h>
-#   include <math.h>
-#   include <stdio.h>
-#   include <stdlib.h>
-#   include <sys/stat.h>
-#endif
-
+#include <assert.h>
+#include <ctype.h>
+#include <fcntl.h>
 #include <hdf5.h>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+
 #include <H5private.h> /*needed for HDfprintf() */
 
 #define FNAME		"big%05d.h5"
@@ -28,15 +21,11 @@
 #define WRT_N		50
 #define WRT_SIZE	4*1024
 #define FAMILY_SIZE	1024*1024*1024
-
-#if SIZEOF_LONG_LONG > SIZEOF_LONG
-#define GB8LL		((unsigned long long)8*1024*1024*1024)
-#elif SIZEOF___INT64 > SIZEOF_LONG
+#if defined(WIN32)
 #define GB8LL		((unsigned __int64)8*1024*1024*1024)
 #else
-#define GB8LL		((long)1)
+#define GB8LL		((unsigned long long)8*1024*1024*1024)
 #endif
-
 static hsize_t
 randll (hsize_t limit)
 {
@@ -101,10 +90,10 @@ is_sparse(void)
     if (5!=write(fd, "hello", 5)) return 0;
     if (stat("x.h5", &sb)<0) return 0;
     if (unlink("x.h5")<0) return 0;
-#ifdef HAVE_STAT_ST_BLOCKS
+#if !defined(WIN32)
     return (sb.st_blocks*512 < (unsigned)sb.st_size);
 #else
-    return (0);
+	return (0);
 #endif
 }
 

@@ -88,6 +88,7 @@ int fileno ( FILE * );
 #define HDFtrace3OPEN__
 int HDFtrace3OPEN( const char *, int, mode_t );
 
+/*#include "Assert_TrLib.h"*/
 #include "SDDFparam.h"
 #include "TraceParam.h"
 
@@ -114,7 +115,7 @@ int OUTPUT_SWITCH;
 extern void preInitIOTrace( void ); 
 
 #include "ProcIDs.h"
-#include "HDF5Trace.h"
+#include "HDFTrace.h"
 #include "IOTrace.h"
 #define NO_OUTPUT 0
 #define SDDF_OUTPUT 1
@@ -126,7 +127,6 @@ void hdfendtrace_ ( void ) ;
 void HDFendTrace (void);
 void HDFendTrace_RT (void);
 void HDFendTrace_SDDF(void);
-void HDFfinalTimeStamp( void );
 void startHDFtraceEvent (int );
 int computeProcMask (int eventID);
 int computePacketTag(int eventID);
@@ -836,16 +836,16 @@ int HDFtraceFPUTS( const char *s, FILE *stream )
 void *HDFtraceMALLOC(size_t bytes )
 {
 	void *ptr;
-	int byte_req;
-	byte_req = (int)bytes;
+	size_t byte_req;
+	byte_req = bytes;
 	if ( IOtracingEnabled ) {
-	   HDFtraceIOEvent ( ID_malloc, NULL, 0 );
+	   HDFtraceIOEvent ( ID_malloc, &byte_req, sizeof(size_t) );
 	}
 	
 	ptr = malloc( bytes );
 
 	if ( IOtracingEnabled ) {
-	   HDFtraceIOEvent ( -ID_malloc, &byte_req, sizeof(int) );
+	   HDFtraceIOEvent ( -ID_malloc, NULL, 0 );
 	}
 	
 	return ptr ;
@@ -859,37 +859,4 @@ void HDFtraceIOEvent( int eventType, void *dataPtr, unsigned dataLen )
         } else {
            HDFtraceEvent_RT( eventType, (HDFsetInfo *)dataPtr, dataLen );
         }
-}
-/*======================================================================*
-// record the final time stamp                                          *
-//======================================================================*/
-void HDFfinalTimeStamp( void )
-{
-        TR_LOCK criticalSection;
-        CLOCK   currentTime;
-        double  seconds;
-        struct {
-                int packetLength,
-                    packetType,
-                    packetTag,
-                    timeDim;
-                double Seconds;
-                int eventID,
-                    node,
-                    dataLen;
-        } Packet;
-
-        criticalSection = TRlock();
-        currentTime = getClock();
-        seconds = clockToSeconds( currentTime );
-
-        Packet.packetLength = sizeof(Packet);
-        Packet.packetType   = PKT_DATA;
-        Packet.packetTag    = FAMILY_EXTERNAL | RECORD_TRACE;
-        Packet.timeDim      = 0;        /* use fp time stamp only */
-        Packet.Seconds      = seconds;  /* fp time stamp          */
-        Packet.eventID      = ID_timeStamp;
-        Packet.node         = TRgetNode();
-        Packet.dataLen      = 0;
-        putBytes( (void *)&Packet , sizeof(Packet) );
 }
