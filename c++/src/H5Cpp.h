@@ -17,6 +17,7 @@
 #define _H5CPP_H
 
 #include "H5Include.h"
+#include "H5RefCounter.h"
 #include "H5Exception.h"
 #include "H5IdComponent.h"
 #include "H5DataSpace.h"

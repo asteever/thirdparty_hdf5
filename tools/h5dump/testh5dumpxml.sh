@@ -62,8 +62,13 @@ TOOLTEST() {
       $RUNSERIAL $DUMPER_BIN $@
    ) >$actual 2>$actual_err
    cat $actual_err >> $actual
-    
-   if $CMP $expect $actual; then
+
+
+   if [ ! -f $expect ]; then
+    # Create the expect file if it doesn't yet exist.
+    echo " CREATED"
+     cp $actual $expect		  
+   elif  $CMP $expect $actual; then
       echo " PASSED"
    else
       echo "*FAILED*"
@@ -132,9 +137,6 @@ TOOLTEST tvlstr.h5.xml --xml tvlstr.h5
 TOOLTEST tsaf.h5.xml --xml tsaf.h5
 TOOLTEST tempty.h5.xml --xml tempty.h5
 TOOLTEST tnamed_dtype_attr.h5.xml --xml tnamed_dtype_attr.h5
-##Test dataset and attribute of null space.  Commented out:
-## wait until the XML schema is updated for null space. 
-##TOOLTEST tnullspace.h5.xml --xml tnulspace.h5
 
 # other options for xml
 

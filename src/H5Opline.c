@@ -30,6 +30,10 @@
 /* Pablo mask */
 #define PABLO_MASK	H5O_pline_mask
 
+/* Interface initialization */
+static int		interface_initialize_g = 0;
+#define INTERFACE_INIT	NULL
+
 #define H5O_PLINE_VERSION	1
 
 static herr_t H5O_pline_encode (H5F_t *f, uint8_t *p, const void *mesg);
@@ -89,7 +93,7 @@ H5O_pline_decode(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const uint8_t *p,
     unsigned		version;
     size_t		i, j, n, name_length;
 
-    FUNC_ENTER_NOAPI_NOINIT(H5O_pline_decode);
+    FUNC_ENTER_NOAPI(H5O_pline_decode, NULL);
 
     /* check args */
     assert(p);
@@ -180,8 +184,9 @@ H5O_pline_encode (H5F_t UNUSED *f, uint8_t *p/*out*/, const void *mesg)
     size_t		i, j, name_length;
     const char		*name=NULL;
     H5Z_class_t		*cls=NULL;
+    herr_t ret_value=SUCCEED;   /* Return value */
     
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_pline_encode);
+    FUNC_ENTER_NOAPI(H5O_pline_encode, FAIL);
 
     /* Check args */
     assert (p);
@@ -224,7 +229,8 @@ H5O_pline_encode (H5F_t UNUSED *f, uint8_t *p/*out*/, const void *mesg)
 	    UINT32ENCODE(p, 0);
     }
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }
 
 
@@ -252,9 +258,9 @@ H5O_pline_copy (const void *_src, void *_dst/*out*/)
     const H5O_pline_t	*src = (const H5O_pline_t *)_src;
     H5O_pline_t		*dst = (H5O_pline_t *)_dst;
     size_t		i;
-    H5O_pline_t		*ret_value;
+    H5O_pline_t		*ret_value = NULL;
     
-    FUNC_ENTER_NOAPI_NOINIT(H5O_pline_copy);
+    FUNC_ENTER_NOAPI(H5O_pline_copy, NULL);
 
     if (!dst && NULL==(dst = H5FL_MALLOC (H5O_pline_t)))
 	HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
@@ -324,15 +330,15 @@ static size_t
 H5O_pline_size (H5F_t UNUSED *f, const void *mesg)
 {
     const H5O_pline_t	*pline = (const H5O_pline_t*)mesg;
-    size_t		i, name_len;
+    size_t		i, size, name_len;
     const char		*name = NULL;
     H5Z_class_t		*cls = NULL;
     size_t ret_value;           /* Return value */
         
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_pline_size);
+    FUNC_ENTER_NOAPI(H5O_pline_size, 0);
 
     /* Message header */
-    ret_value = 1 +			/*version			*/
+    size = 1 +				/*version			*/
 	   1 +				/*number of filters		*/
 	   6;				/*reserved			*/
 
@@ -344,17 +350,21 @@ H5O_pline_size (H5F_t UNUSED *f, const void *mesg)
 	name_len = name ? HDstrlen(name)+1 : 0;
 	
 
-	ret_value += 2 +		/*filter identification number	*/
+	size += 2 +			/*filter identification number	*/
 		2 +			/*name length			*/
 		2 +			/*flags				*/
 		2 +			/*number of client data values	*/
 		H5O_ALIGN(name_len);	/*length of the filter name	*/
 	
-	ret_value += pline->filter[i].cd_nelmts * 4;
+	size += pline->filter[i].cd_nelmts * 4;
 	if (pline->filter[i].cd_nelmts % 2)
-            ret_value += 4;
+            size += 4;
     }
 
+    /* Set return value */
+    ret_value=size;
+
+done:
     FUNC_LEAVE_NOAPI(ret_value);
 }
 
@@ -379,8 +389,9 @@ H5O_pline_reset (void *mesg)
 {
     H5O_pline_t	*pline = (H5O_pline_t*)mesg;
     size_t	i;
+    herr_t ret_value=SUCCEED;   /* Return value */
     
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_pline_reset);
+    FUNC_ENTER_NOAPI(H5O_pline_reset, FAIL);
 
     assert (pline);
 
@@ -392,7 +403,8 @@ H5O_pline_reset (void *mesg)
         H5MM_xfree(pline->filter);
     HDmemset(pline, 0, sizeof *pline);
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }
 
 
@@ -413,13 +425,16 @@ H5O_pline_reset (void *mesg)
 static herr_t
 H5O_pline_free (void *mesg)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_pline_free);
+    herr_t ret_value=SUCCEED;   /* Return value */
+
+    FUNC_ENTER_NOAPI(H5O_pline_free, FAIL);
 
     assert (mesg);
 
     H5FL_FREE(H5O_pline_t,mesg);
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }
 
 
@@ -445,8 +460,9 @@ H5O_pline_debug (H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const void *mesg, FILE *
 {
     const H5O_pline_t	*pline = (const H5O_pline_t *)mesg;
     size_t		i, j;
+    herr_t ret_value=SUCCEED;   /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_pline_debug);
+    FUNC_ENTER_NOAPI(H5O_pline_debug, FAIL);
 
     /* check args */
     assert(f);
@@ -490,5 +506,6 @@ H5O_pline_debug (H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const void *mesg, FILE *
 	}
     }
     
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }

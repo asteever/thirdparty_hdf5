@@ -7,13 +7,8 @@
 /* Define if `dev_t' is a scalar */
 #undef DEV_T_IS_SCALAR
 
-/* Define if your system roundup accurately convert floating-point to unsigned
-   long long values. */
-#undef FP_TO_ULLONG_BOTTOM_BIT_WORKS
-
-/* Define if your system has right maximum convert floating-point to unsigned
-   long long values. */
-#undef FP_TO_ULLONG_RIGHT_MAXIMUM
+/* Define if gettimeofday() populates the tz pointer passed in */
+#undef GETTIMEOFDAY_GIVES_TZ
 
 /* Define if the __attribute__(()) extension is present */
 #undef HAVE_ATTRIBUTE
@@ -47,9 +42,6 @@
 
 /* Define to 1 if you have the `fork' function. */
 #undef HAVE_FORK
-
-/* Define if we want flexible parallel HDF5 support */
-#undef HAVE_FPHDF5
 
 /* Define to 1 if you have the `frexpf' function. */
 #undef HAVE_FREXPF
@@ -213,12 +205,6 @@
 /* Define to 1 if you have the <mpe.h> header file. */
 #undef HAVE_MPE_H
 
-/* Define if `MPI_Comm_c2f' and `MPI_Comm_f2c' exists */
-#undef HAVE_MPI_MULTI_LANG_Comm
-
-/* Define if `MPI_Info_c2f' and `MPI_Info_f2c' exists */
-#undef HAVE_MPI_MULTI_LANG_Info
-
 /* Define to 1 if you have the <netinet/tcp.h> header file. */
 #undef HAVE_NETINET_TCP_H
 
@@ -377,9 +363,6 @@
 /* Define if `__tm_gmtoff' is a member of `struct tm' */
 #undef HAVE___TM_GMTOFF
 
-/* Define if gettimeofday() populates the tz pointer passed in */
-#undef GETTIMEOFDAY_GIVES_TZ
-
 /* Define if your system's `MPI_File_set_size' function works for files over
    2GB. */
 #undef MPI_FILE_SET_SIZE_BIG
@@ -516,10 +499,6 @@
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
-/* Define if your system can accurately convert unsigned long long values to
-   floating-point values. */
-#undef SW_ULONG_TO_FP_BOTTOM_BIT_WORKS
-
 /* Define if your system supports pthread_attr_setscope(&attribute,
    PTHREAD_SCOPE_SYSTEM) call. */
 #undef SYSTEM_SCOPE_THREADS
@@ -533,12 +512,8 @@
 /* Define to 1 if your <sys/time.h> declares `struct tm'. */
 #undef TM_IN_SYS_TIME
 
-/* Define if your system can compile unsigned long long to floating-point
-   casts. */
-#undef ULLONG_TO_FP_CAST_WORKS
-
-/* Define if the HDF5 v1.6 compatibility functions are to be compiled in */
-#undef WANT_H5_V1_6_COMPAT
+/* Define if the HDF5 v1.4 compatibility functions are to be compiled in */
+#undef WANT_H5_V1_4_COMPAT
 
 /* Define to 1 if your processor stores words with the most significant byte
    first (like Motorola and SPARC, unlike Intel and VAX). */

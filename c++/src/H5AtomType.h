@@ -57,7 +57,7 @@ class H5_DLLCPP AtomType : public DataType {
 	// Copy constructor - makes copy of the original object
 	AtomType( const AtomType& original );
 
-	// Noop destructor
+	// Default destructor
 	virtual ~AtomType();
 
    protected:

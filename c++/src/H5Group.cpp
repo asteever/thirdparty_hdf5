@@ -1,7 +1,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
   * Copyright by the Board of Trustees of the University of Illinois.         *
-  * All rights reserved.                                                      *
-  *                                                                           *
+  * All rights reserved.				                           *
+  *				                                                *
   * This file is part of HDF5.  The full HDF5 copyright notice, including     *
   * terms governing use, modification, and redistribution, is contained in    *
   * the files COPYING and Copyright.html.  COPYING can be found at the root   *
@@ -20,8 +20,10 @@
 #endif
 
 #include "H5Include.h"
+#include "H5RefCounter.h"
 #include "H5Exception.h"
 #include "H5IdComponent.h"
+#include "H5Idtemplates.h"
 #include "H5PropList.h"
 #include "H5Object.h"
 #include "H5AbstractDs.h"
@@ -141,6 +143,26 @@ DataSpace Group::getRegion(void *ref, H5R_type_t ref_type) const
    return(dataspace);
 }
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+//--------------------------------------------------------------------------
+// Function:    Group::p_close (private)
+// Purpose:     Closes this group.
+// Exception    H5::GroupIException
+// Description
+//              This function will be obsolete because its functionality
+//              is recently handled by the C library layer. - May, 2004
+// Programmer   Binh-Minh Ribler - 2000
+//--------------------------------------------------------------------------
+void Group::p_close() const
+{
+   herr_t ret_value = H5Gclose( id );
+   if( ret_value < 0 )
+   {
+      throw GroupIException(0, "H5Gclose failed");
+   }
+}
+#endif // DOXYGEN_SHOULD_SKIP_THIS
+
 //--------------------------------------------------------------------------
 // Function:	Group::throwException
 ///\brief	Throws H5::GroupIException.
@@ -171,9 +193,8 @@ Group::~Group()
 {  
    // The group id will be closed properly
     try {
-        decRefCount();
-    }
-    catch (Exception close_error) { 
+        resetIdComponent( this ); }
+    catch (Exception close_error) { // thrown by p_close
         cerr << "Group::~Group - " << close_error.getDetailMsg() << endl;
     }
 

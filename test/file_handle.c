@@ -174,9 +174,10 @@ test_core(void)
         goto error;
 
     /* There is no garantee the size of metadata in file is constant.  
-     * Just try to check if it's reasonable.  Why is this 4KB? 
+     * Just try to check if it's reasonable.  Currently, this file size
+     * is 976.
      */ 
-    if(file_size<2*KB || file_size>6*KB)
+    if(file_size<KB/2 || file_size>1*KB)
         goto error;
 
     if(H5Fclose(file)<0)

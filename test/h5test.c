@@ -89,8 +89,6 @@ MPI_Info    h5_io_info_g=MPI_INFO_NULL;/* MPI INFO object for IO */
  */
 static const char *multi_letters = "msbrglo";
 
-static herr_t h5_errors(hid_t err_stack, void *client_data);
-
 
 /*-------------------------------------------------------------------------
  * Function:	h5_errors
@@ -108,12 +106,11 @@ static herr_t h5_errors(hid_t err_stack, void *client_data);
  *
  *-------------------------------------------------------------------------
  */
-static herr_t
-h5_errors(hid_t err_stack, void UNUSED *client_data)
+herr_t
+h5_errors(void UNUSED *client_data)
 {
     H5_FAILED();
-    H5Eprint_stack(err_stack, stdout);
-
+    H5Eprint (stdout);
     return 0;
 }
 
@@ -151,7 +148,7 @@ h5_cleanup(const char *base_name[], hid_t fapl)
 	    if (h5_fixname(base_name[i], fapl, filename, sizeof(filename)) == NULL)
 		continue;
 
-            driver = H5Pget_driver(fapl);
+	    driver = H5Pget_driver(fapl);
 
 	    if (driver == H5FD_FAMILY) {
 		for (j = 0; /*void*/; j++) {
@@ -173,7 +170,7 @@ h5_cleanup(const char *base_name[], hid_t fapl)
 
 	    } else if (driver == H5FD_MULTI) {
 		H5FD_mem_t mt;
-		assert(HDstrlen(multi_letters)==H5FD_MEM_NTYPES);
+		assert(strlen(multi_letters)==H5FD_MEM_NTYPES);
 
 		for (mt = H5FD_MEM_DEFAULT; mt < H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t,mt)) {
 		    HDsnprintf(temp, sizeof temp, "%s-%c.h5",
@@ -215,8 +212,7 @@ h5_reset(void)
     HDfflush(stdout);
     HDfflush(stderr);
     H5close();
-
-    H5Eset_auto_stack(H5E_DEFAULT, h5_errors, NULL);
+    H5Eset_auto (h5_errors, NULL);
 
     /*
      * Cause the library to emit some diagnostics early so they don't
@@ -270,10 +266,13 @@ char *
 h5_fixname(const char *base_name, hid_t fapl, char *fullname, size_t size)
 {
     const char     *prefix = NULL;
-    const char     *suffix = ".h5";     /* suffix has default */
+    const char     *suffix = ".h5"; /* suffix has default */
     char           *ptr, last = '\0';
     size_t          i, j;
-    hid_t           driver = -1;
+#ifdef H5_HAVE_PARALLEL
+    static int	    HDF5_PARAPREFIX_explained=0;
+#endif /* H5_HAVE_PARALLEL */
+    hid_t           driver=(-1);
     
     if (!base_name || !fullname || size < 1)
         return NULL;
@@ -281,7 +280,7 @@ h5_fixname(const char *base_name, hid_t fapl, char *fullname, size_t size)
     memset(fullname, 0, size);
 
     /* figure out the suffix */
-    if (H5P_DEFAULT != fapl) {
+    if (H5P_DEFAULT != fapl){
 	if ((driver = H5Pget_driver(fapl)) < 0)
             return NULL;
 
@@ -292,23 +291,17 @@ h5_fixname(const char *base_name, hid_t fapl, char *fullname, size_t size)
     }
     
     /* Use different ones depending on parallel or serial driver used. */
-    if (H5P_DEFAULT != fapl && (H5FD_MPIO == driver || H5FD_FPHDF5 == driver)) {
+    if (H5P_DEFAULT != fapl && H5FD_MPIO == driver){
 #ifdef H5_HAVE_PARALLEL
-	/*
-         * For parallel:
-         *      First use command line option, then the environment
-         *      variable, then try the constant
+	/* For parallel:
+	 * First use command line option, then the environment variable,
+	 * then try the constant
 	 */
-        static int explained = 0;
-
 	prefix = (paraprefix ? paraprefix : getenv("HDF5_PARAPREFIX"));
-
-	if (!prefix && !explained) {
+	if (!prefix && !HDF5_PARAPREFIX_explained){
 	    /* print hint by process 0 once. */
 	    int mpi_rank;
-
 	    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
-
 	    if (mpi_rank == 0)
 		printf("*** Hint ***\n"
 		   "You can use environment variable HDF5_PARAPREFIX to "
@@ -317,17 +310,15 @@ h5_fixname(const char *base_name, hid_t fapl, char *fullname, size_t size)
 		   "   HDF5_PARAPREFIX=pfs:/PFS/user/me\n"
 		   "   export HDF5_PARAPREFIX\n"
 		   "*** End of Hint ***\n");
-
-	    explained = TRUE;
+	    HDF5_PARAPREFIX_explained++;
 #ifdef HDF5_PARAPREFIX
             prefix = HDF5_PARAPREFIX;
 #endif  /* HDF5_PARAPREFIX */
 	}
-#endif  /* H5_HAVE_PARALLEL */
-    } else {
-	/*
-         * For serial:
-         *      First use the environment variable, then try the constant
+#endif
+    }else{
+	/* For serial:
+	 * First use the environment variable, then try the constant
 	 */
 	prefix = HDgetenv("HDF5_PREFIX");
 
@@ -339,16 +330,14 @@ h5_fixname(const char *base_name, hid_t fapl, char *fullname, size_t size)
 
     /* Prepend the prefix value to the base name */
     if (prefix && *prefix) {
-        if (H5P_DEFAULT != fapl && (H5FD_MPIO == driver || H5FD_FPHDF5 == driver)) {
+        if (H5P_DEFAULT != fapl && H5FD_MPIO == driver) {
             /* This is a parallel system */
             char *subdir;
 
             if (!HDstrcmp(prefix, HDF5_PARAPREFIX)) {
-                /*
-                 * If the prefix specifies the HDF5_PARAPREFIX directory, then
+                /* If the prefix specifies the HDF5_PARAPREFIX directory, then
                  * default to using the "/tmp/$USER" or "/tmp/$LOGIN"
-                 * directory instead.
-                 */
+                 * directory instead. */
                 char *user, *login;
 
                 user = HDgetenv("USER");
@@ -361,7 +350,7 @@ h5_fixname(const char *base_name, hid_t fapl, char *fullname, size_t size)
 
                     fullname[i++] = '/';
 
-                    for (j = 0; i < size && subdir[j]; ++i, ++j)
+                    for (j = 0; i < size && subdir[j]; i++, j++)
                         fullname[i] = subdir[j];
                 }
             }
@@ -371,21 +360,17 @@ h5_fixname(const char *base_name, hid_t fapl, char *fullname, size_t size)
                 HDstrncpy(fullname, prefix, MIN(strlen(prefix), size));
 
             if (HDstrlen(fullname) + HDstrlen(base_name) + 1 < size) {
-                /*
-                 * Append the base_name with a slash first. Multiple
-                 * slashes are handled below.
-                 */
+                /* Append the base_name with a slash first. Multiple slashes are
+                 * handled below. */
                 h5_stat_t buf;
 
                 if (HDstat(fullname, &buf) < 0)
                     /* The directory doesn't exist just yet */
-                    if (HDmkdir(fullname, (mode_t)0755) < 0 && errno != EEXIST)
-                        /*
-                         * We couldn't make the "/tmp/${USER,LOGIN}"
-                         * subdirectory.  Default to PREFIX's original
-                         * prefix value.
-                         */
+                    if (HDmkdir(fullname, (mode_t)0755) < 0 && errno != EEXIST) {
+                        /* We couldn't make the "/tmp/${USER,LOGIN}" subdirectory.
+                         * Default to PREFIX's original prefix value. */
                         HDstrcpy(fullname, prefix);
+                    }
 
                 HDstrcat(fullname, "/");
                 HDstrcat(fullname, base_name);
@@ -450,6 +435,13 @@ h5_fileaccess(void)
     const char	*name;
     char s[1024];
     hid_t fapl = -1;
+    hsize_t fam_size = 100*1024*1024; /*100 MB*/
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    long verbosity = 1;
+#else /* H5_WANT_H5_V1_4_COMPAT */
+    long log_flags = H5FD_LOG_LOC_IO;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
+    H5FD_mem_t	mt;
     
     /* First use the environment variable, then the constant */
     val = HDgetenv("HDF5_DRIVER");
@@ -486,7 +478,6 @@ h5_fileaccess(void)
 	const char *memb_name[H5FD_MEM_NTYPES];
 	char sv[H5FD_MEM_NTYPES][1024];
 	haddr_t memb_addr[H5FD_MEM_NTYPES];
-        H5FD_mem_t	mt;
 
 	HDmemset(memb_map, 0, sizeof memb_map);
 	HDmemset(memb_fapl, 0, sizeof memb_fapl);
@@ -506,22 +497,27 @@ h5_fileaccess(void)
 	    return -1;
 	}
     } else if (!HDstrcmp(name, "family")) {
-        hsize_t fam_size = 100*1024*1024; /*100 MB*/
-
 	/* Family of files, each 1MB and using the default driver */
-	if ((val=HDstrtok(NULL, " \t\n\r")))
+	if ((val=HDstrtok(NULL, " \t\n\r"))) {
 	    fam_size = (hsize_t)(HDstrtod(val, NULL) * 1024*1024);
-	if (H5Pset_fapl_family(fapl, fam_size, H5P_DEFAULT)<0)
-            return -1;
+	}
+	if (H5Pset_fapl_family(fapl, fam_size, H5P_DEFAULT)<0) return -1;
     } else if (!HDstrcmp(name, "log")) {
-        long log_flags = H5FD_LOG_LOC_IO;
+#ifdef H5_WANT_H5_V1_4_COMPAT
+        /* Log file access */
+        if ((val = strtok(NULL, " \t\n\r")))
+            verbosity = strtol(val, NULL, 0);
 
+        if (H5Pset_fapl_log(fapl, NULL, (int)verbosity) < 0)
+	    return -1;
+#else /* H5_WANT_H5_V1_4_COMPAT */
         /* Log file access */
         if ((val = HDstrtok(NULL, " \t\n\r")))
             log_flags = HDstrtol(val, NULL, 0);
 
         if (H5Pset_fapl_log(fapl, NULL, (unsigned)log_flags, 0) < 0)
 	    return -1;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
     } else {
 	/* Unknown driver */
 	return -1;
@@ -785,17 +781,17 @@ h5_get_file_size(const char *filename)
 /*
  * This routine is designed to provide equivalent functionality to 'printf'
  * and allow easy replacement for environments which don't have stdin/stdout
- * available. (i.e. Windows & the Mac)
+ * available.  (i.e. Windows & the Mac)
  */
 int 
-print_func(const char *format, ...)
+print_func(const char *format,...)
 {
-	va_list arglist;
-	int ret_value;
+    va_list                 arglist;
+    int                     ret_value;
 
-	va_start(arglist, format);
-	ret_value = vprintf(format, arglist);
-	va_end(arglist);
-	return ret_value;
+    va_start(arglist, format);
+    ret_value = vprintf(format, arglist);
+    va_end(arglist);
+    return (ret_value);
 }
 

@@ -20,8 +20,10 @@
 #endif
 
 #include "H5Include.h"
+#include "H5RefCounter.h"
 #include "H5Exception.h"
 #include "H5IdComponent.h"
+#include "H5Idtemplates.h"
 #include "H5PropList.h"
 #include "H5Object.h"
 #include "H5PropList.h"
@@ -478,6 +480,26 @@ DataSpace DataSet::getRegion(void *ref, H5R_type_t ref_type) const
    return(dataspace);
 }
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+//--------------------------------------------------------------------------
+// Function:    DataSet::p_close (private)
+// Purpose:     Closes this dataset.
+// Exception    H5::DataSetIException
+// Description
+//              This function will be obsolete because its functionality
+//              is recently handled by the C library layer. - May, 2004
+// Programmer   Binh-Minh Ribler - 2000
+//--------------------------------------------------------------------------
+void DataSet::p_close() const
+{
+   herr_t ret_value = H5Dclose( id );
+   if( ret_value < 0 )
+   {
+      throw DataSetIException(0, "H5Dclose failed");
+   }
+}
+#endif // DOXYGEN_SHOULD_SKIP_THIS
+
 //--------------------------------------------------------------------------
 // Function:	DataSet destructor
 ///\brief	Properly terminates access to this dataset.
@@ -487,9 +509,8 @@ DataSet::~DataSet()
 {
    // The dataset id will be closed properly 
     try {
-        decRefCount();
-    }
-    catch (Exception close_error) {
+        resetIdComponent( this ); }
+    catch (Exception close_error) { // thrown by p_close
         cerr << "DataSet::~DataSet - " << close_error.getDetailMsg() << endl;
     }
 }

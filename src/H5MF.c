@@ -42,6 +42,10 @@
 #include "H5FDprivate.h"
 #include "H5MFprivate.h"
 
+/* Is the interface initialized? */
+static int             interface_initialize_g = 0;
+#define INTERFACE_INIT  NULL
+
 
 /*-------------------------------------------------------------------------
  * Function:    H5MF_alloc
@@ -123,7 +127,7 @@ H5MF_xfree(H5F_t *f, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, hsize_t size)
 {
     herr_t      ret_value=SUCCEED;       /* Return value */
 
-    FUNC_ENTER_NOAPI_NOFUNC(H5MF_xfree);
+    FUNC_ENTER_NOAPI(H5MF_xfree, FAIL);
 
     /* check arguments */
     assert(f);
@@ -277,7 +281,9 @@ done:
 herr_t
 H5MF_free_reserved(H5F_t *f, hsize_t size)
 {
-    FUNC_ENTER_NOAPI_NOFUNC(H5MF_free_reserved)
+    herr_t ret_value = SUCCEED;
+
+    FUNC_ENTER_NOAPI(H5MF_free_reserved,FAIL)
 
     /* Check arguments */
     assert(f);
@@ -289,7 +295,8 @@ H5MF_free_reserved(H5F_t *f, hsize_t size)
 
     f->shared->lf->reserved_alloc -= size;
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
 }
 
 /*-------------------------------------------------------------------------
@@ -316,7 +323,7 @@ H5MF_alloc_overflow(H5F_t *f, hsize_t size)
     size_t c;                   /* Local index variable */
     hbool_t ret_value;           /* Return value */
 
-    FUNC_ENTER_NOAPI_NOFUNC(H5MF_alloc_overflow)
+    FUNC_ENTER_NOAPI(H5MF_alloc_overflow,FALSE)
 
     /* Start with the current end of the file's address. */
     space_needed = (hsize_t)H5F_get_eoa(f);
@@ -354,6 +361,7 @@ H5MF_alloc_overflow(H5F_t *f, hsize_t size)
     else
         ret_value=FALSE;
 
+done:
     FUNC_LEAVE_NOAPI(ret_value)
 }
 

@@ -23,7 +23,7 @@
 
 /* Pablo information */
 /* (Put before include files to avoid problems with inline functions) */
-#define PABLO_MASK      H5S_point_mask
+#define PABLO_MASK      H5Spoint_mask
 
 #include "H5private.h"		/* Generic Functions			  */
 #include "H5Eprivate.h"		/* Error handling		  */
@@ -32,6 +32,10 @@
 #include "H5MMprivate.h"	/* Memory Management functions		  */
 #include "H5Spkg.h"		/* Dataspace functions			  */
 #include "H5Vprivate.h"         /* Vector functions */
+
+/* Interface initialization */
+#define INTERFACE_INIT  NULL
+static int             interface_initialize_g = 0;
 
 /* Static function prototypes */
 
@@ -117,7 +121,9 @@ H5FL_DEFINE_STATIC(H5S_pnt_list_t);
 herr_t
 H5S_point_iter_init(H5S_sel_iter_t *iter, const H5S_t *space)
 {
-    FUNC_ENTER_NOAPI_NOFUNC(H5S_point_iter_init);
+    herr_t ret_value=SUCCEED;   /* Return value */
+
+    FUNC_ENTER_NOAPI(H5S_point_iter_init, FAIL);
 
     /* Check args */
     assert (space && H5S_SEL_POINTS==H5S_GET_SELECT_TYPE(space));
@@ -132,7 +138,8 @@ H5S_point_iter_init(H5S_sel_iter_t *iter, const H5S_t *space)
     /* Initialize type of selection iterator */
     iter->type=H5S_sel_iter_point;
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }   /* H5S_point_iter_init() */
 
 
@@ -387,7 +394,7 @@ H5S_point_add (H5S_t *space, H5S_seloper_t op, size_t num_elem, const hssize_t *
     unsigned i;                 /* Counter */
     herr_t      ret_value=SUCCEED;       /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT(H5S_point_add);
+    FUNC_ENTER_NOAPI(H5S_point_add, FAIL);
 
     assert(space);
     assert(num_elem>0);
@@ -465,12 +472,13 @@ done:
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-static herr_t
+herr_t
 H5S_point_release (H5S_t *space)
 {
     H5S_pnt_node_t *curr, *next;        /* Point selection nodes */
+    herr_t ret_value=SUCCEED;   /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_point_release);
+    FUNC_ENTER_NOAPI(H5S_point_release, FAIL);
 
     /* Check args */
     assert (space);
@@ -491,7 +499,8 @@ H5S_point_release (H5S_t *space)
     /* Reset the number of elements in the selection */
     space->select.num_elem=0;
     
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }   /* H5S_point_release() */
 
 
@@ -582,13 +591,13 @@ done:
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-static herr_t
+herr_t
 H5S_point_copy(H5S_t *dst, const H5S_t *src, hbool_t UNUSED share_selection)
 {
     H5S_pnt_node_t *curr, *new_node, *new_head;    /* Point information nodes */
     herr_t ret_value=SUCCEED;  /* return value */
 
-    FUNC_ENTER_NOAPI_NOINIT(H5S_point_copy);
+    FUNC_ENTER_NOAPI(H5S_point_copy, FAIL);
 
     assert(src);
     assert(dst);
@@ -644,14 +653,14 @@ done:
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-static htri_t
+htri_t
 H5S_point_is_valid (const H5S_t *space)
 {
     H5S_pnt_node_t *curr;      /* Point information nodes */
     unsigned u;                   /* Counter */
     htri_t ret_value=TRUE;     /* return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_point_is_valid);
+    FUNC_ENTER_NOAPI(H5S_point_is_valid, FAIL);
 
     assert(space);
 
@@ -663,8 +672,10 @@ H5S_point_is_valid (const H5S_t *space)
             /* Check if an offset has been defined */
             /* Bounds check the selected point + offset against the extent */
             if(((curr->pnt[u]+space->select.offset[u])>(hssize_t)space->extent.size[u])
-                    || ((curr->pnt[u]+space->select.offset[u])<0))
-                HGOTO_DONE(FALSE)
+                    || ((curr->pnt[u]+space->select.offset[u])<0)) {
+                ret_value=FALSE;
+                break;
+            } /* end if */
         } /* end for */
 
         curr=curr->next;
@@ -733,13 +744,13 @@ done:
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-static hssize_t
+hssize_t
 H5S_point_serial_size (const H5S_t *space)
 {
     H5S_pnt_node_t *curr;       /* Point information nodes */
     hssize_t ret_value;         /* return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_point_serial_size);
+    FUNC_ENTER_NOAPI(H5S_point_serial_size, FAIL);
 
     assert(space);
 
@@ -757,6 +768,7 @@ H5S_point_serial_size (const H5S_t *space)
         curr=curr->next;
     } /* end while */
 
+done:
     FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5S_point_serial_size() */
 
@@ -780,15 +792,16 @@ H5S_point_serial_size (const H5S_t *space)
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-static herr_t
+herr_t
 H5S_point_serialize (const H5S_t *space, uint8_t *buf)
 {
     H5S_pnt_node_t *curr;   /* Point information nodes */
     uint8_t *lenp;          /* pointer to length location for later storage */
     uint32_t len=0;         /* number of bytes used */
     unsigned u;                /* local counting variable */
+    herr_t ret_value=SUCCEED;   /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_point_serialize);
+    FUNC_ENTER_NOAPI(H5S_point_serialize, FAIL);
 
     assert(space);
 
@@ -823,7 +836,8 @@ H5S_point_serialize (const H5S_t *space, uint8_t *buf)
     /* Encode length */
     UINT32ENCODE(lenp, (uint32_t)len);  /* Store the length of the extra information */
     
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }   /* H5S_point_serialize() */
 
 
@@ -846,7 +860,7 @@ H5S_point_serialize (const H5S_t *space, uint8_t *buf)
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-static herr_t
+herr_t
 H5S_point_deserialize (H5S_t *space, const uint8_t *buf)
 {
     H5S_seloper_t op=H5S_SELECT_SET;    /* Selection operation */
@@ -856,7 +870,7 @@ H5S_point_deserialize (H5S_t *space, const uint8_t *buf)
     unsigned i,j;              /* local counting variables */
     herr_t ret_value;          /* return value */
 
-    FUNC_ENTER_NOAPI_NOINIT(H5S_point_deserialize);
+    FUNC_ENTER_NOAPI(H5S_point_deserialize, FAIL);
 
     /* Check args */
     assert(space);
@@ -1034,14 +1048,15 @@ done:
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-static herr_t
+herr_t
 H5S_point_bounds(const H5S_t *space, hssize_t *start, hssize_t *end)
 {
     H5S_pnt_node_t *node;       /* Point node */
     int rank;                   /* Dataspace rank */
     int i;                      /* index variable */
+    herr_t ret_value=SUCCEED;   /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_point_bounds);
+    FUNC_ENTER_NOAPI(H5S_point_bounds, FAIL);
 
     assert(space);
     assert(start);
@@ -1068,7 +1083,8 @@ H5S_point_bounds(const H5S_t *space, hssize_t *start, hssize_t *end)
         node=node->next;
       } /* end while */
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }   /* H5S_point_bounds() */
 
 
@@ -1093,12 +1109,12 @@ H5S_point_bounds(const H5S_t *space, hssize_t *start, hssize_t *end)
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-static htri_t
+htri_t
 H5S_point_is_contiguous(const H5S_t *space)
 {
     htri_t ret_value;  /* return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_point_is_contiguous);
+    FUNC_ENTER_NOAPI(H5S_point_is_contiguous, FAIL);
 
     assert(space);
 
@@ -1108,6 +1124,7 @@ H5S_point_is_contiguous(const H5S_t *space)
     else	/* More than one point might be contiguous, but it's complex to check and we don't need it right now */
     	ret_value=FALSE;
 
+done:
     FUNC_LEAVE_NOAPI(ret_value);
 }   /* H5S_point_is_contiguous() */
 
@@ -1130,12 +1147,12 @@ H5S_point_is_contiguous(const H5S_t *space)
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-static htri_t
+htri_t
 H5S_point_is_single(const H5S_t *space)
 {
     htri_t ret_value;  /* return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_point_is_single);
+    FUNC_ENTER_NOAPI(H5S_point_is_single, FAIL);
 
     assert(space);
 
@@ -1145,6 +1162,7 @@ H5S_point_is_single(const H5S_t *space)
     else
     	ret_value=FALSE;
 
+done:
     FUNC_LEAVE_NOAPI(ret_value);
 }   /* H5S_point_is_single() */
 
@@ -1170,12 +1188,12 @@ H5S_point_is_single(const H5S_t *space)
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-static htri_t
+htri_t
 H5S_point_is_regular(const H5S_t *space)
 {
     htri_t ret_value;  /* return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_point_is_regular);
+    FUNC_ENTER_NOAPI(H5S_point_is_regular, FAIL);
 
     /* Check args */
     assert(space);
@@ -1186,6 +1204,7 @@ H5S_point_is_regular(const H5S_t *space)
     else
     	ret_value=FALSE;
 
+done:
     FUNC_LEAVE_NOAPI(ret_value);
 }   /* H5S_point_is_regular() */
 
@@ -1235,8 +1254,6 @@ H5Sselect_elements(hid_t spaceid, H5S_seloper_t op, size_t num_elem,
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataspace");
     if (H5S_SCALAR==H5S_GET_EXTENT_TYPE(space))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "point doesn't support H5S_SCALAR space");
-    if (H5S_NULL==H5S_GET_EXTENT_TYPE(space))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "point doesn't support H5S_NULL space");
     if(coord==NULL || num_elem==0)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "elements not specified");
     if(!(op==H5S_SELECT_SET || op==H5S_SELECT_APPEND || op==H5S_SELECT_PREPEND))
@@ -1282,7 +1299,7 @@ done:
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-static herr_t
+herr_t
 H5S_point_get_seq_list(const H5S_t *space, unsigned flags, H5S_sel_iter_t *iter,
     size_t maxseq, size_t maxelem, size_t *nseq, size_t *nelem,
     hsize_t *off, size_t *len)
@@ -1298,7 +1315,7 @@ H5S_point_get_seq_list(const H5S_t *space, unsigned flags, H5S_sel_iter_t *iter,
     int         i;              /* Local index variable */
     herr_t ret_value=SUCCEED;      /* return value */
 
-    FUNC_ENTER_NOAPI_NOINIT(H5S_point_get_seq_list);
+    FUNC_ENTER_NOAPI (H5S_point_get_seq_list, FAIL);
 
     /* Check args */
     assert(space);

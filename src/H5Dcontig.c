@@ -44,6 +44,10 @@
 static herr_t H5D_contig_write(H5F_t *f, hid_t dxpl_id, H5D_t *dset,
     hsize_t offset, size_t size, const void *buf);
 
+/* Interface initialization */
+static int		interface_initialize_g = 0;
+#define INTERFACE_INIT NULL
+
 /* Declare a PQ free list to manage the sieve buffer information */
 H5FL_BLK_DEFINE(sieve_buf);
 
@@ -314,13 +318,19 @@ done:
 haddr_t
 H5D_contig_get_addr(const H5D_t *dset)
 {
-    FUNC_ENTER_NOAPI_NOFUNC(H5D_contig_get_addr);
+    haddr_t ret_value;   /* Return value */
+
+    FUNC_ENTER_NOAPI(H5D_contig_get_addr, HADDR_UNDEF);
 
     /* check args */
     assert(dset);
     assert(dset->layout.type==H5D_CONTIGUOUS);
 
-    FUNC_LEAVE_NOAPI(dset->layout.u.contig.addr);
+    /* Get the address */
+    ret_value=dset->layout.u.contig.addr;
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5D_contig_get_addr */
 
 
@@ -443,7 +453,7 @@ H5D_contig_readvv(H5F_t *f, hid_t dxpl_id, H5D_t *dset,
             /* Compute offset in memory */
             buf = (unsigned char *)_buf + mem_offset_arr[v];
 
-            /* Check if the sieve buffer is allocated yet */
+            /* No data sieve buffer yet, go allocate one */
             if(dset->cache.contig.sieve_buf==NULL) {
                 /* Check if we can actually hold the I/O request in the sieve buffer */
                 if(size>dset->cache.contig.sieve_buf_size) {
@@ -682,7 +692,7 @@ H5D_contig_writevv(H5F_t *f, hid_t dxpl_id, H5D_t *dset,
         u=*dset_curr_seq;
         v=*mem_curr_seq;
 
-        /* Stash local copies of these values */
+        /* Stash local copies of these value */
         if(dset->cache.contig.sieve_buf!=NULL) {
             sieve_start=dset->cache.contig.sieve_loc;
             sieve_size=dset->cache.contig.sieve_size;
@@ -744,7 +754,7 @@ H5D_contig_writevv(H5F_t *f, hid_t dxpl_id, H5D_t *dset,
                     /* Set sieve buffer dirty flag */
                     dset->cache.contig.sieve_dirty=1;
 
-                    /* Stash local copies of these values */
+                    /* Stash local copies of these value */
                     sieve_start=dset->cache.contig.sieve_loc;
                     sieve_size=dset->cache.contig.sieve_size;
                     sieve_end=sieve_start+sieve_size;

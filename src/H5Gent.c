@@ -30,6 +30,9 @@
 #include "H5HLprivate.h"	/* Local Heaps				*/
 #include "H5MMprivate.h"	/* Memory management			*/
 
+static int          	interface_initialize_g = 0;
+#define INTERFACE_INIT  NULL
+
 /* Private prototypes */
 #ifdef NOT_YET
 static herr_t H5G_ent_modified(H5G_entry_t *ent, H5G_type_t cache_type);
@@ -187,8 +190,9 @@ H5G_ent_decode(H5F_t *f, const uint8_t **pp, H5G_entry_t *ent)
 {
     const uint8_t	*p_ret = *pp;
     uint32_t		tmp;
+    herr_t ret_value=SUCCEED;   /* Return value */
 
-    FUNC_ENTER_NOAPI_NOFUNC(H5G_ent_decode);
+    FUNC_ENTER_NOAPI(H5G_ent_decode, FAIL);
 
     /* check arguments */
     assert(f);
@@ -225,7 +229,8 @@ H5G_ent_decode(H5F_t *f, const uint8_t **pp, H5G_entry_t *ent)
 
     *pp = p_ret + H5G_SIZEOF_ENTRY(f);
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }
 
 
@@ -305,8 +310,9 @@ herr_t
 H5G_ent_encode(H5F_t *f, uint8_t **pp, const H5G_entry_t *ent)
 {
     uint8_t		*p_ret = *pp + H5G_SIZEOF_ENTRY(f);
+    herr_t ret_value=SUCCEED;   /* Return value */
 
-    FUNC_ENTER_NOAPI_NOFUNC(H5G_ent_encode);
+    FUNC_ENTER_NOAPI(H5G_ent_encode, FAIL);
 
     /* check arguments */
     assert(f);
@@ -348,7 +354,8 @@ H5G_ent_encode(H5F_t *f, uint8_t **pp, const H5G_entry_t *ent)
     while (*pp < p_ret) *(*pp)++ = 0;
     *pp = p_ret;
     
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }
 
 
@@ -391,8 +398,9 @@ herr_t
 H5G_ent_copy(H5G_entry_t *dst, const H5G_entry_t *src, H5G_ent_copy_depth_t depth)
 {
     H5RS_str_t *tmp_user_path_r=NULL;   /* Temporary string pointer for entry's user path */
+    herr_t ret_value=SUCCEED;   /* Return value */
 
-    FUNC_ENTER_NOAPI_NOFUNC(H5G_ent_copy);
+    FUNC_ENTER_NOAPI(H5G_ent_copy, FAIL);
 
     /* Check arguments */
     assert(src);
@@ -419,7 +427,8 @@ H5G_ent_copy(H5G_entry_t *dst, const H5G_entry_t *src, H5G_ent_copy_depth_t dept
         dst->canon_path_r=NULL;
     } /* end if */
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }
 
 
@@ -447,8 +456,9 @@ H5G_ent_debug(H5F_t UNUSED *f, hid_t dxpl_id, const H5G_entry_t *ent, FILE * str
 {
     const char		*lval = NULL;
     int nested_indent, nested_fwidth;
+    herr_t ret_value=SUCCEED;   /* Return value */
     
-    FUNC_ENTER_NOAPI_NOFUNC(H5G_ent_debug);
+    FUNC_ENTER_NOAPI(H5G_ent_debug, FAIL);
 
     /* Calculate the indent & field width values for nested information */
     nested_indent=indent+3;
@@ -509,5 +519,6 @@ H5G_ent_debug(H5F_t UNUSED *f, hid_t dxpl_id, const H5G_entry_t *ent, FILE * str
             break;
     }
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }

@@ -18,9 +18,6 @@
 #include "hdf5.h"
 #include "h5trav.h"
 
-typedef H5G_obj_t H5G_obj_t1;
-
-
 
 #if 0
 #define H5DIFF_DEBUG

@@ -33,11 +33,11 @@ class H5_DLLCPP Exception {
 
 	// Returns a character string that describes the error specified by
 	// a major error number.
-	string getMajorString( hid_t err_major_id ) const;
+	string getMajorString( H5E_major_t major_num ) const;
 
 	// Returns a character string that describes the error specified by
 	// a minor error number.
-	string getMinorString( hid_t err_minor_id ) const;
+	string getMinorString( H5E_minor_t minor_num ) const;
 
 	// Returns the detailed message set at the time the exception is thrown
 	string getDetailMsg() const;
@@ -46,14 +46,14 @@ class H5_DLLCPP Exception {
 	const char* getCFuncName() const;	// function name as a char string 
 
 	// Turns on the automatic error printing.
-	static void setAutoPrint( H5E_auto_stack_t& func, void* client_data);
+	static void setAutoPrint( H5E_auto_t& func, void* client_data);
 
 	// Turns off the automatic error printing.
 	static void dontPrint();
 
 	// Retrieves the current settings for the automatic error stack 
 	// traversal function and its data.
-	static void getAutoPrint( H5E_auto_stack_t& func, void** client_data);
+	static void getAutoPrint( H5E_auto_t& func, void** client_data);
 
 	// Clears the error stack for the current thread.
 	static void clearErrorStack();

@@ -24,7 +24,7 @@
 
 #define HOFFSET(S,M)    (offsetof(S,M))
 
-/* These are the various classes of datatypes */
+/* These are the various classes of data types */
 /* If this goes over 16 types (0-15), the file format will need to change) */
 typedef enum H5T_class_t {
     H5T_NO_CLASS         = -1,  /*error                                      */
@@ -134,7 +134,7 @@ typedef enum H5T_pad_t {
 /* Commands sent to conversion functions */
 typedef enum H5T_cmd_t {
     H5T_CONV_INIT	= 0,	/*query and/or initialize private data	     */
-    H5T_CONV_CONV	= 1, 	/*convert data from source to dest datatype */
+    H5T_CONV_CONV	= 1, 	/*convert data from source to dest data type */
     H5T_CONV_FREE	= 2	/*function is being removed from path	     */
 } H5T_cmd_t;
 
@@ -167,21 +167,6 @@ typedef enum H5T_direction_t {
     H5T_DIR_DESCEND     = 2     /*in descendent order                        */
 } H5T_direction_t;
 
-/* The exception type passed into the conversion callback function */
-typedef enum H5T_conv_except_t {
-    H5T_CONV_EXCEPT_RANGE_HI       = 0,   /*source value is greater than destination's range */
-    H5T_CONV_EXCEPT_RANGE_LOW      = 1,   /*source value is less than destination's range    */
-    H5T_CONV_EXCEPT_PRECISION      = 2,   /*source value loses precision in destination      */
-    H5T_CONV_EXCEPT_TRUNCATE       = 3   /*source value is truncated in destination         */
-} H5T_conv_except_t;
-
-/* The return value from conversion callback function H5T_conv_except_func_t */
-typedef enum H5T_conv_ret_t {
-    H5T_CONV_ABORT      = -1,   /*abort conversion                           */
-    H5T_CONV_UNHANDLED  = 0,    /*callback function failed to handle the exception      */
-    H5T_CONV_HANDLED    = 1     /*callback function handled the exception successfully  */
-} H5T_conv_ret_t;
-
 /* Variable Length Datatype struct in memory */
 /* (This is only used for VL sequences, not VL strings, which are stored in char *'s) */
 typedef struct {
@@ -196,16 +181,23 @@ typedef struct {
 extern "C" {
 #endif
 
-/* All datatype conversion functions are... */
+/* All data type conversion functions are... */
 typedef herr_t (*H5T_conv_t) (hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
       size_t nelmts, size_t buf_stride, size_t bkg_stride, void *buf,
       void *bkg, hid_t dset_xfer_plist);
 
-/* Exception handler.  If an exception like overflow happenes during conversion,
- * this function is called if it's registered through H5Tset_type_conv_cb.
+/*
+ * If an error occurs during a data type conversion then the function
+ * registered with H5Tset_overflow() is called.  It's arguments are the
+ * source and destination data types, a buffer which has the source value,
+ * and a buffer to receive an optional result for the overflow conversion.
+ * If the overflow handler chooses a value for the result it should return
+ * non-negative; otherwise the hdf5 library will choose an appropriate
+ * result.
  */
-typedef H5T_conv_ret_t (*H5T_conv_except_func_t)(int except_type, hid_t src_id, 
-            hid_t dst_id, void *src_buf, void *dst_buf, void *user_data);
+typedef herr_t (*H5T_overflow_t)(hid_t src_id, hid_t dst_id,
+				 void *src_buf, void *dst_buf);
+
 
 /* When this header is included from H5Tprivate.h, don't make calls to H5open() */
 #undef H5OPEN
@@ -476,7 +468,7 @@ H5_DLLVAR hid_t H5T_NATIVE_UINT_LEAST64_g;
 H5_DLLVAR hid_t H5T_NATIVE_INT_FAST64_g;
 H5_DLLVAR hid_t H5T_NATIVE_UINT_FAST64_g;
 
-/* Operations defined on all datatypes */
+/* Operations defined on all data types */
 H5_DLL hid_t H5Topen(hid_t loc_id, const char *name);
 H5_DLL hid_t H5Tcreate(H5T_class_t type, size_t size);
 H5_DLL hid_t H5Tcopy(hid_t type_id);
@@ -485,32 +477,30 @@ H5_DLL htri_t H5Tequal(hid_t type1_id, hid_t type2_id);
 H5_DLL herr_t H5Tlock(hid_t type_id);
 H5_DLL herr_t H5Tcommit(hid_t loc_id, const char *name, hid_t type_id);
 H5_DLL htri_t H5Tcommitted(hid_t type_id);
-H5_DLL herr_t H5Tencode(hid_t obj_id, void *buf, size_t *nalloc);
-H5_DLL hid_t H5Tdecode(const void *buf);
 
-/* Operations defined on compound datatypes */
+/* Operations defined on compound data types */
 H5_DLL herr_t H5Tinsert(hid_t parent_id, const char *name, size_t offset,
 			 hid_t member_id);
 H5_DLL herr_t H5Tpack(hid_t type_id);
 
-/* Operations defined on enumeration datatypes */
+/* Operations defined on enumeration data types */
 H5_DLL hid_t H5Tenum_create(hid_t base_id);
-H5_DLL herr_t H5Tenum_insert(hid_t type, const char *name, const void *value);
-H5_DLL herr_t H5Tenum_nameof(hid_t type, const void *value, char *name/*out*/,
+H5_DLL herr_t H5Tenum_insert(hid_t type, const char *name, void *value);
+H5_DLL herr_t H5Tenum_nameof(hid_t type, void *value, char *name/*out*/,
 			     size_t size);
 H5_DLL herr_t H5Tenum_valueof(hid_t type, const char *name,
 			      void *value/*out*/);
 
-/* Operations defined on variable-length datatypes */
+/* Operations defined on variable-length data types */
 H5_DLL hid_t H5Tvlen_create(hid_t base_id);
 
-/* Operations defined on array datatypes */
+/* Operations defined on array data types */
 H5_DLL hid_t H5Tarray_create(hid_t base_id, int ndims,
             const hsize_t dim[/* ndims */], const int perm[/* ndims */]);
 H5_DLL int H5Tget_array_ndims(hid_t type_id);
 H5_DLL int H5Tget_array_dims(hid_t type_id, hsize_t dims[], int perm[]);
 
-/* Operations defined on opaque datatypes */
+/* Operations defined on opaque data types */
 H5_DLL herr_t H5Tset_tag(hid_t type, const char *tag);
 H5_DLL char *H5Tget_tag(hid_t type);
 
@@ -533,23 +523,13 @@ H5_DLL H5T_norm_t H5Tget_norm(hid_t type_id);
 H5_DLL H5T_pad_t H5Tget_inpad(hid_t type_id);
 H5_DLL H5T_str_t H5Tget_strpad(hid_t type_id);
 H5_DLL int H5Tget_nmembers(hid_t type_id);
-#ifdef H5_WANT_H5_V1_6_COMPAT
 H5_DLL char *H5Tget_member_name(hid_t type_id, int membno);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-H5_DLL char *H5Tget_member_name(hid_t type_id, unsigned membno);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
 H5_DLL int H5Tget_member_index(hid_t type_id, const char *name);
-#ifdef H5_WANT_H5_V1_6_COMPAT
 H5_DLL size_t H5Tget_member_offset(hid_t type_id, int membno);
 H5_DLL H5T_class_t H5Tget_member_class(hid_t type_id, int membno);
 H5_DLL hid_t H5Tget_member_type(hid_t type_id, int membno);
-H5_DLL herr_t H5Tget_member_value(hid_t type_id, int membno, void *value/*out*/);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-H5_DLL size_t H5Tget_member_offset(hid_t type_id, unsigned membno);
-H5_DLL H5T_class_t H5Tget_member_class(hid_t type_id, unsigned membno);
-H5_DLL hid_t H5Tget_member_type(hid_t type_id, unsigned membno);
-H5_DLL herr_t H5Tget_member_value(hid_t type_id, unsigned membno, void *value/*out*/);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
+H5_DLL herr_t H5Tget_member_value(hid_t type_id, int membno,
+				   void *value/*out*/);
 H5_DLL H5T_cset_t H5Tget_cset(hid_t type_id);
 H5_DLL htri_t H5Tis_variable_str(hid_t type_id);
 H5_DLL hid_t H5Tget_native_type(hid_t type_id, H5T_direction_t direction); 
@@ -577,6 +557,8 @@ H5_DLL herr_t H5Tunregister(H5T_pers_t pers, const char *name, hid_t src_id,
 H5_DLL H5T_conv_t H5Tfind(hid_t src_id, hid_t dst_id, H5T_cdata_t **pcdata);
 H5_DLL herr_t H5Tconvert(hid_t src_id, hid_t dst_id, size_t nelmts,
 			  void *buf, void *background, hid_t plist_id);
+H5_DLL H5T_overflow_t H5Tget_overflow(void);
+H5_DLL herr_t H5Tset_overflow(H5T_overflow_t func);
 
 #ifdef __cplusplus
 }

@@ -14,13 +14,6 @@
 
 #define H5F_PACKAGE		/*suppress error about including H5Fpkg	  */
 
-/* Interface initialization */
-#define H5_INTERFACE_INIT_FUNC	H5R_init_interface
-
-/* Pablo information */
-/* (Put before include files to avoid problems with inline functions) */
-#define PABLO_MASK	H5R_mask
-
 #include "H5private.h"		/* Generic Functions */
 #include "H5Iprivate.h"		/* ID Functions */
 #include "H5Dprivate.h"		/* Datasets */
@@ -33,12 +26,18 @@
 #include "H5Sprivate.h"		/* Dataspace functions			*/
 #include "H5Tprivate.h"		/* Datatypes */
 
+/* Interface initialization */
+#define PABLO_MASK	H5R_mask
+#define INTERFACE_INIT	H5R_init_interface
+static int		interface_initialize_g = 0;
+static herr_t		H5R_init_interface(void);
+
 /* Static functions */
 static herr_t H5R_create(void *ref, H5G_entry_t *loc, const char *name,
         H5R_type_t ref_type, H5S_t *space, hid_t dxpl_id);
 static hid_t H5R_dereference(H5F_t *file, hid_t dxpl_id, H5R_type_t ref_type, void *_ref);
 static H5S_t * H5R_get_region(H5F_t *file, hid_t dxpl_id, H5R_type_t ref_type, void *_ref);
-static H5G_obj_t H5R_get_obj_type(H5F_t *file, hid_t dxpl_id, H5R_type_t ref_type, void *_ref);
+static int H5R_get_obj_type(H5F_t *file, hid_t dxpl_id, H5R_type_t ref_type, void *_ref);
 
 
 /*--------------------------------------------------------------------------
@@ -61,7 +60,7 @@ H5R_init_interface(void)
     FUNC_ENTER_NOAPI_NOINIT(H5R_init_interface);
 
     /* Initialize the atom group for the file IDs */
-    if (H5I_register_type(H5I_REFERENCE, H5I_REFID_HASHSIZE, H5R_RESERVED_ATOMS,
+    if (H5I_init_group(H5I_REFERENCE, H5I_REFID_HASHSIZE, H5R_RESERVED_ATOMS,
 		       (H5I_free_t)NULL)<0)
 	HGOTO_ERROR (H5E_REFERENCE, H5E_CANTINIT, FAIL, "unable to initialize interface");
 
@@ -94,12 +93,12 @@ H5R_term_interface(void)
 
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5R_term_interface);
     
-    if (H5_interface_initialize_g) {
+    if (interface_initialize_g) {
 	if ((n=H5I_nmembers(H5I_REFERENCE))) {
-	    H5I_clear_type(H5I_REFERENCE, FALSE);
+	    H5I_clear_group(H5I_REFERENCE, FALSE);
 	} else {
-	    H5I_dec_type_ref(H5I_REFERENCE);
-	    H5_interface_initialize_g = 0;
+	    H5I_destroy_group(H5I_REFERENCE);
+	    interface_initialize_g = 0;
 	    n = 1; /*H5I*/
 	}
     }
@@ -154,14 +153,20 @@ H5R_create(void *_ref, H5G_entry_t *loc, const char *name, H5R_type_t ref_type, 
     switch(ref_type) {
         case H5R_OBJECT:
         {
+            haddr_t addr;
             hobj_ref_t *ref=(hobj_ref_t *)_ref; /* Get pointer to correct type of reference struct */
+            uint8_t *p;       /* Pointer to OID to store */
 
-            *ref=sb.objno;
+            /* Set information for reference */
+            p=(uint8_t *)ref;
+            H5F_addr_pack(loc->file,&addr,&sb.objno[0]);
+            H5F_addr_encode(loc->file,&p,addr);
             break;
         }
 
         case H5R_DATASET_REGION:
         {
+            haddr_t addr;
             H5HG_t hobjid;      /* Heap object ID */
             hdset_reg_ref_t *ref=(hdset_reg_ref_t *)_ref; /* Get pointer to correct type of reference struct */
             hssize_t buf_size;  /* Size of buffer needed to serialize selection */
@@ -203,7 +208,8 @@ H5R_create(void *_ref, H5G_entry_t *loc, const char *name, H5R_type_t ref_type, 
 
             /* Serialize information for dataset OID */
             p=(uint8_t *)buf;
-            H5F_addr_encode(loc->file,&p,sb.objno);
+            H5F_addr_pack(loc->file,&addr,&sb.objno[0]);
+            H5F_addr_encode(loc->file,&p,addr);
 
             /* Serialize the selection */
             if (H5S_SELECT_SERIALIZE(space,p) < 0)
@@ -346,8 +352,13 @@ H5R_dereference(H5F_t *file, hid_t dxpl_id, H5R_type_t ref_type, void *_ref)
         case H5R_OBJECT:
         {
             hobj_ref_t *ref=(hobj_ref_t *)_ref; /* Only object references currently supported */
-
-            ent.header=*ref;
+            /*
+             * Switch on object type, when we implement that feature, always try to
+             *  open a dataset for now
+             */
+            /* Get the object oid */
+            p=(uint8_t *)ref;
+            H5F_addr_decode(ent.file,(const uint8_t **)&p,&(ent.header));
         } /* end case */
         break;
 
@@ -610,6 +621,111 @@ done:
     FUNC_LEAVE_API(ret_value);
 }   /* end H5Rget_region() */
 
+#ifdef H5_WANT_H5_V1_4_COMPAT
+
+/*--------------------------------------------------------------------------
+ NAME
+    H5R_get_object_type
+ PURPOSE
+    Retrieves the type of object that an object reference points to
+ USAGE
+    int H5R_get_object_type(file, ref)
+        H5F_t *file;        IN: File the object being dereferenced is within
+        void *ref;          IN: Reference to query.
+        
+ RETURNS
+    Success:	An object type defined in H5Gpublic.h
+    Failure:	H5G_UNKNOWN
+ DESCRIPTION
+    Given a reference to some object, this function returns the type of object
+    pointed to.
+ GLOBAL VARIABLES
+ COMMENTS, BUGS, ASSUMPTIONS
+ EXAMPLES
+ REVISION LOG
+--------------------------------------------------------------------------*/
+static int
+H5R_get_object_type(H5F_t *file, hid_t dxpl_id, void *_ref)
+{
+    H5G_entry_t ent;            /* Symbol table entry */
+    hobj_ref_t *ref=(hobj_ref_t *)_ref; /* Only object references currently supported */
+    uint8_t *p;                 /* Pointer to OID to store */
+    int ret_value;
+
+    FUNC_ENTER_NOAPI_NOINIT(H5R_get_object_type);
+
+    assert(ref);
+    assert(file);
+
+    /* Initialize the symbol table entry */
+    HDmemset(&ent,0,sizeof(H5G_entry_t));
+    ent.type=H5G_NOTHING_CACHED;
+    ent.file=file;
+
+    /* Get the object oid */
+    p=(uint8_t *)ref;
+    H5F_addr_decode(ent.file,(const uint8_t **)&p,&(ent.header));
+
+    /* Get the OID type */
+    ret_value=H5G_get_type(&ent, dxpl_id);
+
+#ifdef LATER
+done:
+#endif /* LATER */
+    FUNC_LEAVE_NOAPI(ret_value);
+}   /* end H5R_get_object_type() */
+
+
+/*--------------------------------------------------------------------------
+ NAME
+    H5Rget_object_type
+ PURPOSE
+    Retrieves the type of object that an object reference points to
+ USAGE
+    int H5Rget_object_type(id, ref)
+        hid_t id;       IN: Dataset reference object is in or location ID of
+                            object that the dataset is located within.
+        void *ref;          IN: Reference to query.
+        
+ RETURNS
+    Success:	An object type defined in H5Gpublic.h
+    Failure:	H5G_UNKNOWN
+ DESCRIPTION
+    Given a reference to some object, this function returns the type of object
+    pointed to.
+ GLOBAL VARIABLES
+ COMMENTS, BUGS, ASSUMPTIONS
+ EXAMPLES
+ REVISION LOG
+--------------------------------------------------------------------------*/
+int
+H5Rget_object_type(hid_t id, void *_ref)
+{
+    H5G_entry_t *loc = NULL;    /* Symbol table entry */
+    H5F_t *file=NULL;       /* File object */
+    hid_t ret_value;
+
+    FUNC_ENTER_API(H5Rget_object_type, H5G_UNKNOWN);
+    H5TRACE2("Is","ix",id,_ref);
+
+    /* Check args */
+    if (NULL == (loc = H5G_loc(id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location");
+    if(_ref==NULL)
+        HGOTO_ERROR (H5E_ARGS, H5E_BADVALUE, H5G_UNKNOWN, "invalid reference pointer");
+
+    /* Get the file pointer from the entry */
+    file=loc->file;
+
+    /* Get the object information */
+    if ((ret_value=H5R_get_object_type(file,H5AC_ind_dxpl_id,_ref))<0)
+	HGOTO_ERROR(H5E_REFERENCE, H5E_CANTINIT, H5G_UNKNOWN, "unable to determine object type");
+    
+done:
+    FUNC_LEAVE_API(ret_value);
+}   /* end H5Rget_object_type() */
+#endif /* H5_WANT_H5_V1_4_COMPAT */
+
 
 /*--------------------------------------------------------------------------
  NAME
@@ -617,7 +733,7 @@ done:
  PURPOSE
     Retrieves the type of object that an object reference points to
  USAGE
-    H5G_obj_t H5R_get_obj_type(file, ref_type, ref)
+    int H5R_get_obj_type(file, ref_type, ref)
         H5F_t *file;        IN: File the object being dereferenced is within
         H5R_type_t ref_type;    IN: Type of reference to query
         void *ref;          IN: Reference to query.
@@ -633,12 +749,12 @@ done:
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-static H5G_obj_t
+static int
 H5R_get_obj_type(H5F_t *file, hid_t dxpl_id, H5R_type_t ref_type, void *_ref)
 {
     H5G_entry_t ent;            /* Symbol table entry */
     uint8_t *p;                 /* Pointer to OID to store */
-    H5G_obj_t ret_value;        /* Return value */
+    int ret_value;
 
     FUNC_ENTER_NOAPI_NOINIT(H5R_get_obj_type);
 
@@ -656,7 +772,8 @@ H5R_get_obj_type(H5F_t *file, hid_t dxpl_id, H5R_type_t ref_type, void *_ref)
             hobj_ref_t *ref=(hobj_ref_t *)_ref; /* Only object references currently supported */
 
             /* Get the object oid */
-            ent.header=*ref;
+            p=(uint8_t *)ref;
+            H5F_addr_decode(ent.file,(const uint8_t **)&p,&(ent.header));
         } /* end case */
         break;
 
@@ -729,15 +846,24 @@ done:
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
+#ifdef H5_WANT_H5_V1_4_COMPAT
+int
+H5Rget_obj_type(hid_t id, H5R_type_t ref_type, void *_ref)
+#else /* H5_WANT_H5_V1_4_COMPAT */
 H5G_obj_t
 H5Rget_obj_type(hid_t id, H5R_type_t ref_type, void *_ref)
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 {
     H5G_entry_t *loc = NULL;    /* Symbol table entry */
     H5F_t *file=NULL;       /* File object */
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    int ret_value;
+#else /* H5_WANT_H5_V1_4_COMPAT */
     H5G_obj_t ret_value;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
     FUNC_ENTER_API(H5Rget_obj_type, H5G_UNKNOWN);
-    H5TRACE3("Go","iRtx",id,ref_type,_ref);
+    H5TRACE3("Is","iRtx",id,ref_type,_ref);
 
     /* Check args */
     if (NULL == (loc = H5G_loc(id)))
@@ -751,7 +877,11 @@ H5Rget_obj_type(hid_t id, H5R_type_t ref_type, void *_ref)
     file=loc->file;
 
     /* Get the object information */
-    if ((ret_value=H5R_get_obj_type(file,H5AC_ind_dxpl_id,ref_type,_ref))<0)
+    if ((ret_value=
+#ifndef H5_WANT_H5_V1_4_COMPAT
+		(H5G_obj_t)
+#endif /* H5_WANT_H5_V1_4_COMPAT */
+		H5R_get_obj_type(file,H5AC_ind_dxpl_id,ref_type,_ref))<0)
 	HGOTO_ERROR(H5E_REFERENCE, H5E_CANTINIT, H5G_UNKNOWN, "unable to determine object type");
     
 done:

@@ -25,9 +25,6 @@
 
 #define H5F_PACKAGE		/*suppress error about including H5Fpkg	  */
 
-/* Interface initialization */
-#define H5_INTERFACE_INIT_FUNC	H5FD_init_interface
-
 /* Pablo information */
 /* (Put before include files to avoid problems with inline functions) */
 #define PABLO_MASK	H5FD_mask
@@ -49,14 +46,16 @@
 #include "H5FDstdio.h"		/* Standard C buffered I/O		*/
 #include "H5FDstream.h"     	/* In-memory files streamed via sockets */
 #include "H5FLprivate.h"	/* Free lists                           */
-#ifdef H5_HAVE_FPHDF5
-#include "H5FPprivate.h"        /*Flexible Parallel HDF5                */
-#endif  /* H5_HAVE_FPHDF5 */
 #include "H5Iprivate.h"		/* IDs			  		*/
 #include "H5MMprivate.h"	/* Memory management			*/
 #include "H5Pprivate.h"		/* Property lists			*/
 
+/* Interface initialization */
+#define INTERFACE_INIT	H5FD_init_interface
+static int interface_initialize_g = 0;
+
 /* static prototypes */
+static herr_t H5FD_init_interface(void);
 static herr_t H5FD_pl_copy(void *(*copy_func)(const void *), size_t pl_size,
     const void *old_pl, void **copied_pl);
 static herr_t H5FD_pl_close(hid_t driver_id, herr_t (*free_func)(void *),
@@ -86,16 +85,16 @@ H5FL_BLK_DEFINE_STATIC(meta_accum);
 /*
  * Global count of the number of H5FD_t's handed out.  This is used as a
  * "serial number" for files that are currently open and is used for the
- * 'fileno' field in H5G_stat_t.  However, if a VFL driver is not able
+ * 'fileno[2]' field in H5G_stat_t.  However, if a VFL driver is not able
  * to detect whether two files are the same, a file that has been opened
  * by H5Fopen more than once with that VFL driver will have two different
  * serial numbers.  :-/
  *
- * Also, if a file is opened, the 'fileno' field is retrieved for an
- * object and the file is closed and re-opened, the 'fileno' value will
+ * Also, if a file is opened, the 'fileno[2]' field is retrieved for an
+ * object and the file is closed and re-opened, the 'fileno[2]' value will
  * be different.
  */
-static unsigned long file_serial_no;
+static unsigned long file_serial_no[2];
 
 
 /*-------------------------------------------------------------------------
@@ -121,11 +120,11 @@ H5FD_init_interface(void)
 
     FUNC_ENTER_NOAPI_NOINIT(H5FD_init_interface)
 
-    if (H5I_register_type(H5I_VFL, H5I_VFL_HASHSIZE, 0, (H5I_free_t)H5FD_free_cls)<0)
+    if (H5I_init_group(H5I_VFL, H5I_VFL_HASHSIZE, 0, (H5I_free_t)H5FD_free_cls)<0)
 	HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, FAIL, "unable to initialize interface")
 
     /* Reset the file serial numbers */
-    file_serial_no=0;
+    HDmemset(file_serial_no,0,sizeof(file_serial_no));
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -159,9 +158,9 @@ H5FD_term_interface(void)
 
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5FD_term_interface)
 
-    if (H5_interface_initialize_g) {
+    if (interface_initialize_g) {
 	if ((n=H5I_nmembers(H5I_VFL))) {
-	    H5I_clear_type(H5I_VFL, FALSE);
+	    H5I_clear_group(H5I_VFL, FALSE);
 
             /* Reset the VFL drivers, if they've been closed */
             if(H5I_nmembers(H5I_VFL)==0) {
@@ -180,17 +179,14 @@ H5FD_term_interface(void)
 #ifdef H5_HAVE_PARALLEL
                 H5FD_mpio_term();
                 H5FD_mpiposix_term();
-#ifdef H5_HAVE_FPHDF5
-                H5FD_fphdf5_term();
-#endif /* H5_HAVE_FPHDF5 */
 #endif /* H5_HAVE_PARALLEL */
 #ifdef H5_HAVE_STREAM
                 H5FD_stream_term();
 #endif
             } /* end if */
 	} else {
-	    H5I_dec_type_ref(H5I_VFL);
-	    H5_interface_initialize_g = 0;
+	    H5I_destroy_group(H5I_VFL);
+	    interface_initialize_g = 0;
 	    n = 1; /*H5I*/
 	}
     }
@@ -1079,11 +1075,12 @@ H5FD_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr)
         HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, NULL, "unable to query file driver")
 
     /* Increment the global serial number & assign it to this H5FD_t object */
-    if(++file_serial_no==0) {
-        /* (Just error out if we wrap around for now...) */
-        HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, NULL, "unable to get file serial number")
+    if(++file_serial_no[0]==0) {
+        /* (Just error out if we wrap both numbers around for now...) */
+        if(++file_serial_no[1]==0)
+            HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, NULL, "unable to get file serial number")
     } /* end if */
-    file->fileno=file_serial_no;
+    HDmemcpy(file->fileno,file_serial_no,sizeof(file_serial_no));
 
     /* Set return value */
     ret_value=file;
@@ -1495,13 +1492,6 @@ done:
  * Function:    H5FD_alloc
  * Purpose:     Private version of H5FDalloc().
  *
- *              For FPHDF5, the dxpl_id is meaningless. The only place it
- *              is likely to be used is in the H5FD_free() function where
- *              it can make a call to H5FD_write() (which needs this
- *              property list). FPHDF5 doesn't have metadata accumulation
- *              turned on, so it won't ever call the H5FD_write()
- *              function.
- *
  * Return:      Success:    The format address of the new file memory.
  *              Failure:    The undefined address HADDR_UNDEF
  * Programmer:  Robb Matzke
@@ -1512,13 +1502,6 @@ done:
  *
  *      Bill Wendling, 2002/12/02
  *      Split apart into subfunctions for each separate task.
- *
- *      Bill Wendling, 2003/02/19
- *      Added support for FPHDF5.
- *
- *	John Mainzer, 2004/04/13
- *	Moved much of the FPHDF5 specific code into H5FP_client_alloc(),
- *      and re-worked it to get rid of a race condition on the eoa.
  *
  *-------------------------------------------------------------------------
  */
@@ -1536,24 +1519,6 @@ H5FD_alloc(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, hsize_t size)
     assert(type >= 0 && type < H5FD_MEM_NTYPES);
     assert(size > 0);
 
-#ifdef H5_HAVE_FPHDF5
-    /*
-     * When we're using the FPHDF5 driver, allocate from the SAP. If this
-     * is the SAP executing this code, then skip the send to the SAP and
-     * try to do the actual allocations.
-     */
-    if ( H5FD_is_fphdf5_driver(file) && !H5FD_fphdf5_is_sap(file) ) {
-        haddr_t addr;
-
-        if ( (addr = H5FP_client_alloc(file, type, dxpl_id, size)) 
-             == HADDR_UNDEF) {
-            HGOTO_ERROR(H5E_FPHDF5, H5E_CANTALLOC, HADDR_UNDEF, 
-                        "allocation failed.")
-        } else {
-            HGOTO_DONE(addr)
-        }
-    }
-#endif  /* H5_HAVE_FPHDF5 */
 
 #ifdef H5F_DEBUG
     if (H5DEBUG(F))
@@ -2255,26 +2220,6 @@ H5FD_free(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, hsize_t si
     assert(file);
     assert(file->cls);
     assert(type >= 0 && type < H5FD_MEM_NTYPES);
-
-#ifdef H5_HAVE_FPHDF5
-    /*
-     * When we're using the FPHDF5 driver, free with the SAP. If this
-     * is the SAP executing this code, then skip the send to the SAP and
-     * try to do the actual free.
-     */
-    if (H5FD_is_fphdf5_driver(file) && !H5FD_fphdf5_is_sap(file)) {
-        unsigned        req_id;
-        H5FP_status_t   status;
-
-        /* Send the request to the SAP */
-        if (H5FP_request_free(file, type, addr, size, &req_id, &status) != SUCCEED)
-            /* FIXME: Should we check the "status" variable here? */
-            HGOTO_ERROR(H5E_FPHDF5, H5E_CANTFREE, FAIL, "server couldn't free from file")
-
-        /* We've succeeded -- return the value */
-        HGOTO_DONE(ret_value)
-    }
-#endif  /* H5_HAVE_FPHDF5 */
 
     if (!H5F_addr_defined(addr) || addr>file->maxaddr ||
             H5F_addr_overflow(addr, size) || addr+size>file->maxaddr)
@@ -3668,7 +3613,7 @@ H5FD_get_fileno(const H5FD_t *file, unsigned long *filenum)
     assert(filenum);
 
     /* Retrieve the file's serial number */
-    HDmemcpy(filenum,&file->fileno,sizeof(file->fileno));
+    HDmemcpy(filenum,file->fileno,sizeof(file->fileno));
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

@@ -33,13 +33,13 @@ int ngroups = 512;                      /* number of groups to create in root
                                          * group. */
 int facc_type = FACC_MPIO;		/*Test file access type */
 
-H5E_auto_stack_t old_func;		        /* previous error handler */
+H5E_auto_t old_func;		        /* previous error handler */
 void *old_client_data;			/* previous error handler arg.*/
 
 /* other option flags */
 
 /* FILENAME and filenames must have the same number of names */
-const char *FILENAME[13]={
+const char *FILENAME[11]={
 	    "ParaEg1",
 	    "ParaEg2",
 	    "ParaEg3",
@@ -50,10 +50,8 @@ const char *FILENAME[13]={
             "ParaBig",
             "ParaFill",
 	    "ParaCC",
-            "ParaNull",
-            "ModeConfusion",
 	    NULL};
-char	filenames[13][PATH_MAX];
+char	filenames[11][PATH_MAX];
 hid_t	fapl;				/* file access property list */
 
 #ifdef USE_PAUSE
@@ -300,7 +298,11 @@ create_faccess_plist(MPI_Comm comm, MPI_Info info, int l_facc_type,
 
     if (l_facc_type == FACC_MPIPOSIX) {
 	/* set Parallel access with communicator */
+#ifdef H5_WANT_H5_V1_4_COMPAT
+	ret = H5Pset_fapl_mpiposix(ret_pl, comm);
+#else /* H5_WANT_H5_V1_4_COMPAT */
 	ret = H5Pset_fapl_mpiposix(ret_pl, comm, use_gpfs);
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 	VRFY((ret >= 0), "H5Pset_fapl_mpiposix succeeded");
 	return(ret_pl);
     }
@@ -336,7 +338,6 @@ int main(int argc, char **argv)
     int mpi_size, mpi_rank;				/* mpi variables */
     H5Ptest_param_t ndsets_params, ngroups_params;
     H5Ptest_param_t collngroups_params;
-    H5Ptest_param_t io_mode_confusion_params;
 
     /* Un-buffer the stdout and stderr */
     setbuf(stderr, NULL);
@@ -432,16 +433,6 @@ int main(int argc, char **argv)
       AddTest("cchunk4", coll_chunk4,NULL,
 	      "collective to independent chunk io",filenames[9]);
     }
-    AddTest("null", null_dataset, NULL, 
-	    "null dataset test", filenames[10]);
-
-    io_mode_confusion_params.name  = filenames[11];
-    io_mode_confusion_params.count = 0; /* value not used */
-
-    AddTest("I/Omodeconf", io_mode_confusion, NULL, 
-	    "I/O mode confusion test -- hangs quickly on failure", 
-            &io_mode_confusion_params);
-
 
     /* Display testing information */
     TestInfo(argv[0]);

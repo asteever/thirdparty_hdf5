@@ -64,6 +64,10 @@ const H5O_class_t H5O_BOGUS[1] = {{
     H5O_bogus_debug,         	/*debug the message             */
 }};
 
+/* Interface initialization */
+static int interface_initialize_g = 0;
+#define INTERFACE_INIT  NULL
+
 
 /*-------------------------------------------------------------------------
  * Function:    H5O_bogus_decode
@@ -90,7 +94,7 @@ H5O_bogus_decode(H5F_t UNUSED *f, hid_t dxpl_id, const uint8_t *p,
     H5O_bogus_t *mesg=NULL;
     void *ret_value;            /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT(H5O_bogus_decode);
+    FUNC_ENTER(H5O_bogus_decode, NULL);
 
     /* check args */
     assert(f);
@@ -115,7 +119,7 @@ done:
     if(ret_value==NULL && mesg!=NULL)
         H5MM_xfree(mesg);
 
-    FUNC_LEAVE_NOAPI(ret_value);
+    FUNC_LEAVE(ret_value);
 } /* end H5O_bogus_decode() */
 
 
@@ -137,7 +141,7 @@ done:
 static herr_t
 H5O_bogus_encode(H5F_t UNUSED *f, uint8_t *p, const void UNUSED *mesg)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_bogus_encode);
+    FUNC_ENTER(H5O_bogus_encode, FAIL);
 
     /* check args */
     assert(f);
@@ -147,7 +151,7 @@ H5O_bogus_encode(H5F_t UNUSED *f, uint8_t *p, const void UNUSED *mesg)
     /* encode */
     UINT32ENCODE(p, H5O_BOGUS_VALUE);
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+    FUNC_LEAVE(SUCCEED);
 } /* end H5O_bogus_encode() */
 
 
@@ -174,7 +178,7 @@ H5O_bogus_encode(H5F_t UNUSED *f, uint8_t *p, const void UNUSED *mesg)
 static size_t
 H5O_bogus_size(H5F_t UNUSED *f, const void UNUSED *mesg)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_bogus_size);
+    FUNC_ENTER(H5O_bogus_size, 0);
 
     /* check args */
     assert(f);
@@ -204,7 +208,7 @@ H5O_bogus_debug(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const void *_mesg, FILE *
 {
     const H5O_bogus_t	*mesg = (const H5O_bogus_t *)_mesg;
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_name_debug);
+    FUNC_ENTER(H5O_name_debug, FAIL);
 
     /* check args */
     assert(f);
@@ -216,7 +220,7 @@ H5O_bogus_debug(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const void *_mesg, FILE *
     fprintf(stream, "%*s%-*s `%u'\n", indent, "", fwidth,
             "Bogus Value:", mesg->u);
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+    FUNC_LEAVE(SUCCEED);
 }
 #endif /* H5O_ENABLE_BOGUS */
 

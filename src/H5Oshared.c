@@ -28,10 +28,6 @@
 #define H5F_PACKAGE	/*suppress error about including H5Fpkg	  */
 #define H5O_PACKAGE	/*suppress error about including H5Opkg	  */
 
-/* Pablo information */
-/* (Put before include files to avoid problems with inline functions) */
-#define PABLO_MASK	H5O_shared_mask
-
 #include "H5private.h"		/* Generic Functions			*/
 #include "H5Eprivate.h"		/* Error handling		  	*/
 #include "H5Fpkg.h"             /* File access				*/
@@ -70,6 +66,11 @@ const H5O_class_t H5O_SHARED[1] = {{
 
 /* New version, with just address of object as link for object header sharing */
 #define H5O_SHARED_VERSION	2
+
+/* Interface initialization */
+#define PABLO_MASK	H5O_shared_mask
+static int interface_initialize_g = 0;
+#define INTERFACE_INIT  NULL
 
 
 /*-------------------------------------------------------------------------
@@ -157,7 +158,7 @@ H5O_shared_link_adj(H5F_t *f, hid_t dxpl_id, const H5O_shared_t *shared, int adj
 {
     int ret_value;     /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT(H5O_shared_link_adj);
+    FUNC_ENTER_NOAPI(H5O_shared_link_adj,FAIL);
 
     /* check args */
     assert(f);
@@ -213,7 +214,7 @@ H5O_shared_decode (H5F_t *f, hid_t UNUSED dxpl_id, const uint8_t *buf, H5O_share
     unsigned		flags, version;
     void                *ret_value;     /* Return value */
     
-    FUNC_ENTER_NOAPI_NOINIT(H5O_shared_decode);
+    FUNC_ENTER_NOAPI(H5O_shared_decode, NULL);
 
     /* Check args */
     assert (f);
@@ -229,7 +230,7 @@ H5O_shared_decode (H5F_t *f, hid_t UNUSED dxpl_id, const uint8_t *buf, H5O_share
     if (version!=H5O_SHARED_VERSION_1 && version!=H5O_SHARED_VERSION)
 	HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "bad version number for shared object message");
 
-    /* Get the shared information flags */
+    /* Flags */
     flags = *buf++;
     mesg->in_gh = (flags & 0x01);
 
@@ -286,8 +287,9 @@ H5O_shared_encode (H5F_t *f, uint8_t *buf/*out*/, const void *_mesg)
 {
     const H5O_shared_t	*mesg = (const H5O_shared_t *)_mesg;
     unsigned		flags;
+    herr_t ret_value=SUCCEED;   /* Return value */
     
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_shared_encode);
+    FUNC_ENTER_NOAPI(H5O_shared_encode, FAIL);
 
     /* Check args */
     assert (f);
@@ -321,7 +323,8 @@ H5O_shared_encode (H5F_t *f, uint8_t *buf/*out*/, const void *_mesg)
         H5F_addr_encode (f, &buf, mesg->u.ent.header);
 #endif /* OLD_WAY */
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }
 
 
@@ -350,7 +353,7 @@ H5O_shared_copy(const void *_mesg, void *_dest)
     H5O_shared_t	*dest = (H5O_shared_t *) _dest;
     void        *ret_value;     /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT(H5O_shared_copy);
+    FUNC_ENTER_NOAPI(H5O_shared_copy, NULL);
 
     /* check args */
     assert(mesg);
@@ -390,7 +393,7 @@ H5O_shared_size (H5F_t *f, const void *_mesg)
     const H5O_shared_t  *shared = (const H5O_shared_t *) _mesg;
     size_t	ret_value;
     
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_shared_size);
+    FUNC_ENTER_NOAPI(H5O_shared_size, 0);
 
     ret_value = 1 +			/*version			*/
             1 +				/*the flags field		*/
@@ -398,6 +401,7 @@ H5O_shared_size (H5F_t *f, const void *_mesg)
                (H5F_SIZEOF_ADDR(f)+4) :	/*sharing via global heap	*/
 		H5F_SIZEOF_ADDR(f));	/*sharing by another obj hdr	*/
 
+done:
     FUNC_LEAVE_NOAPI(ret_value);
 }
 
@@ -422,7 +426,7 @@ H5O_shared_delete(H5F_t *f, hid_t dxpl_id, const void *_mesg)
     const H5O_shared_t       *shared = (const H5O_shared_t *) _mesg;
     herr_t ret_value=SUCCEED;   /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT(H5O_shared_delete);
+    FUNC_ENTER_NOAPI(H5O_shared_delete, FAIL);
 
     /* check args */
     assert(f);
@@ -458,7 +462,7 @@ H5O_shared_link(H5F_t *f, hid_t dxpl_id, const void *_mesg)
     const H5O_shared_t       *shared = (const H5O_shared_t *) _mesg;
     herr_t ret_value=SUCCEED;   /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT(H5O_shared_link);
+    FUNC_ENTER_NOAPI(H5O_shared_link, FAIL);
 
     /* check args */
     assert(f);
@@ -492,8 +496,9 @@ H5O_shared_debug (H5F_t UNUSED *f, hid_t dxpl_id, const void *_mesg,
 		  FILE *stream, int indent, int fwidth)
 {
     const H5O_shared_t	*mesg = (const H5O_shared_t *)_mesg;
+    herr_t ret_value=SUCCEED;   /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_shared_debug);
+    FUNC_ENTER_NOAPI(H5O_shared_debug, FAIL);
 
     /* Check args */
     assert (f);
@@ -520,5 +525,6 @@ H5O_shared_debug (H5F_t UNUSED *f, hid_t dxpl_id, const void *_mesg,
 		       HADDR_UNDEF);
     }
     
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }

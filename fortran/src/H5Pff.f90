@@ -22,54 +22,54 @@
        INTERFACE h5pset_fill_value_f
          MODULE PROCEDURE h5pset_fill_value_integer
          MODULE PROCEDURE h5pset_fill_value_real
-! Comment if on Crays
+! Comment if on T3E
          MODULE PROCEDURE h5pset_fill_value_double
-! End comment if on Crays
+! End comment if on T3E
          MODULE PROCEDURE h5pset_fill_value_char
        END INTERFACE
      
        INTERFACE h5pget_fill_value_f
          MODULE PROCEDURE h5pget_fill_value_integer
          MODULE PROCEDURE h5pget_fill_value_real
-! Comment if on Crays
+! Comment if on T3E
          MODULE PROCEDURE h5pget_fill_value_double
-! End comment if on Crays
+! End comment if on T3E
          MODULE PROCEDURE h5pget_fill_value_char
        END INTERFACE
 
        INTERFACE h5pset_f
          MODULE PROCEDURE h5pset_integer
          MODULE PROCEDURE h5pset_real
-! Comment if on Crays
+! Comment if on T3E
          MODULE PROCEDURE h5pset_double
-! End comment if on Crays
+! End comment if on T3E
          MODULE PROCEDURE h5pset_char
        END INTERFACE
      
        INTERFACE h5pget_f
          MODULE PROCEDURE h5pget_integer
          MODULE PROCEDURE h5pget_real
-! Comment if on Crays
+! Comment if on T3E
          MODULE PROCEDURE h5pget_double
-! End comment if on Crays
+! End comment if on T3E
          MODULE PROCEDURE h5pget_char
        END INTERFACE
 
        INTERFACE h5pregister_f
          MODULE PROCEDURE h5pregister_integer
          MODULE PROCEDURE h5pregister_real
-! Comment if on Crays
+! Comment if on T3E
          MODULE PROCEDURE h5pregister_double
-! End comment if on Crays
+! End comment if on T3E
          MODULE PROCEDURE h5pregister_char
        END INTERFACE
      
        INTERFACE h5pinsert_f
          MODULE PROCEDURE h5pinsert_integer
          MODULE PROCEDURE h5pinsert_real
-! Comment if on Crays
+! Comment if on T3E
          MODULE PROCEDURE h5pinsert_double
-! End comment if on Crays
+! End comment if on T3E
          MODULE PROCEDURE h5pinsert_char
        END INTERFACE
        
@@ -2165,9 +2165,6 @@
 !			called C functions (it is needed for Windows
 !			port).  March 14, 2001 
 !
-!                       Bug fix: type of the rdcc_nelmts parameter should be INTEGER
-!                                instead of INTEGER(SIZE_T) October 10, 2003 
-!
 ! Comment:		
 !----------------------------------------------------------------------
 
@@ -2970,6 +2967,128 @@
 
             hdferr = h5pget_external_c(prp_id, idx, name_size, name, offset, bytes)
           END SUBROUTINE h5pget_external_f
+
+!----------------------------------------------------------------------
+! Name:		h5pset_hyper_cache_f 
+!
+! Purpose: 	Indicates whether to cache hyperslab blocks during I/O
+!
+! Inputs:  
+!		prp_id		- dataset transfer property list identifier
+!		cache		- A flag indicating whether caching is to 
+!				  be set to on (1) or off (0). 
+!		limit		- maximum size of the hyperslab block to
+!			          cache; 0 (zero) indicates no limit
+! Outputs:  
+!		hdferr:		- error code		
+!				 	Success:  0
+!				 	Failure: -1   
+! Optional parameters:
+!				NONE
+!
+! Programmer:	Elena Pourmal
+!		August 12, 1999	
+!
+! Modifications: 	Explicit Fortran interfaces were added for 
+!			called C functions (it is needed for Windows
+!			port).  March 14, 2001 
+!
+! Comment:		
+!----------------------------------------------------------------------
+
+          SUBROUTINE h5pset_hyper_cache_f(prp_id, cache, limit, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_hyper_cache_f
+!DEC$endif
+!
+            IMPLICIT NONE
+            INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier
+            INTEGER, INTENT(IN) :: cache !
+            INTEGER, INTENT(IN) :: limit ! Maximum size of the hyperslab block to 
+                                         !cache. 0 (zero) indicates no limit.
+            INTEGER, INTENT(OUT) :: hdferr  ! Error code
+
+!            INTEGER, EXTERNAL :: h5pset_hyper_cache_c
+!  MS FORTRAN needs explicit interface for C functions called here.
+!
+            INTERFACE
+              INTEGER FUNCTION h5pset_hyper_cache_c(prp_id, cache, limit)
+              USE H5GLOBAL
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !MS$ATTRIBUTES C,reference,alias:'_H5PSET_HYPER_CACHE_C'::h5pset_hyper_cache_c
+              !DEC$ ENDIF
+              INTEGER(HID_T), INTENT(IN) :: prp_id
+              INTEGER, INTENT(IN) :: cache 
+              INTEGER, INTENT(IN) :: limit 
+              END FUNCTION h5pset_hyper_cache_c
+            END INTERFACE
+
+            hdferr = h5pset_hyper_cache_c(prp_id, cache, limit)
+          END SUBROUTINE h5pset_hyper_cache_f
+
+!----------------------------------------------------------------------
+! Name:		h5pget_hyper_cache_f 
+!
+! Purpose: 	Returns information regarding the caching of hyperslab 
+!		blocks during I/O. 
+!
+! Inputs:  
+!		prp_id		- dataset transfer property list identifier
+! Outputs:  
+!		cache		- a flag indicating whether caching is  
+!				  set to on (1) or off (0). 
+!		limit		- maximum size of the hyperslab block to
+!			          cache; 0 (zero) indicates no limit
+!		hdferr:		- error code		
+!				 	Success:  0
+!				 	Failure: -1   
+! Optional parameters:
+!				NONE
+!
+! Programmer:	Elena Pourmal
+!		August 12, 1999	
+!
+! Modifications: 	Explicit Fortran interfaces were added for 
+!			called C functions (it is needed for Windows
+!			port).  March 14, 2001 
+!
+! Comment:		
+!----------------------------------------------------------------------
+
+          SUBROUTINE h5pget_hyper_cache_f(prp_id, cache, limit, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_hyper_cache_f
+!DEC$endif
+!
+            IMPLICIT NONE
+            INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier
+            INTEGER, INTENT(OUT) :: cache !
+            INTEGER, INTENT(OUT) :: limit ! Maximum size of the hyperslab block to 
+                                         !cache. 0 (zero) indicates no limit.
+            INTEGER, INTENT(OUT) :: hdferr  ! Error code
+
+
+!            INTEGER, EXTERNAL :: h5pget_hyper_cache_c
+!  MS FORTRAN needs explicit interface for C functions called here.
+!
+            INTERFACE
+              INTEGER FUNCTION h5pget_hyper_cache_c(prp_id, cache, limit)
+              USE H5GLOBAL
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !MS$ATTRIBUTES C,reference,alias:'_H5PGET_HYPER_CACHE_C'::h5pget_hyper_cache_c
+              !DEC$ ENDIF
+              INTEGER(HID_T), INTENT(IN) :: prp_id
+              INTEGER, INTENT(OUT) :: cache 
+              INTEGER, INTENT(OUT) :: limit 
+              END FUNCTION h5pget_hyper_cache_c
+            END INTERFACE
+
+            hdferr = h5pget_hyper_cache_c(prp_id, cache, limit)
+          END SUBROUTINE h5pget_hyper_cache_f
 
 !----------------------------------------------------------------------
 ! Name:		h5pset_btree_ratios_f 
@@ -6331,16 +6450,15 @@
 
             hdferr = h5pmodify_filter_c(prp_id, filter, flags, cd_nelmts, cd_values )
           END SUBROUTINE h5pmodify_filter_f
-
 !----------------------------------------------------------------------
 ! Name:		h5premove_filter_f 
 !
-! Purpose: 	Delete one or more filters from the filter pipeline. 
+! Purpose: 	Removes filter from the dataset creation property list. 
 !
 ! Inputs:  
-!		prp_id		- data creation or transfer property list 
+!		prp_id		- data creation property list 
 !				  identifier
-!		filter		- filter to be deleted
+!		filter		- filter to be removed
 ! Outputs:  
 !		hdferr:		- error code		
 !				 	Success:  0
@@ -6348,15 +6466,15 @@
 ! Optional parameters:
 !				NONE
 !
-! Programmer:	Quincey Koziol
-!		January 27 2004
+! Programmer:	Elena Pourmal
+!	        August 23, 2004	
 !
 ! Modifications: 	
 !
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5premove_filter_f(prp_id, filter, hdferr)
+          SUBROUTINE h5premove_filter_f(prp_id, filter, hdferr) 
 !
 !This definition is needed for Windows DLLs
 !DEC$if defined(BUILD_HDF5_DLL)
@@ -6364,19 +6482,16 @@
 !DEC$endif
 !
             IMPLICIT NONE
-            INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
-            INTEGER, INTENT(IN) :: filter  !Filter to be modified
+            INTEGER(HID_T), INTENT(IN) :: prp_id ! Dataset creation property list
+                                                 ! identifier
+            INTEGER, INTENT(IN) :: filter        ! Filter to be removed
+            INTEGER, INTENT(OUT) :: hdferr       ! Error code
 
-            INTEGER, INTENT(OUT) :: hdferr  ! Error code
-
-!            INTEGER, EXTERNAL :: h5premove_filter_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
             INTERFACE
               INTEGER FUNCTION h5premove_filter_c(prp_id, filter)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !MS$ATTRIBUTES C,reference,alias:'_H5PMODIFY_FILTER_C'::h5premove_filter_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5PREMOVE_FILTER_C'::h5premove_filter_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id 
               INTEGER, INTENT(IN) :: filter 
@@ -6385,5 +6500,6 @@
 
             hdferr = h5premove_filter_c(prp_id, filter)
           END SUBROUTINE h5premove_filter_f
+
 
      END MODULE H5P

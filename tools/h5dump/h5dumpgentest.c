@@ -1,4 +1,4 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+  /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -25,10 +25,6 @@
 
 #include "hdf5.h"
 #include "H5private.h"
-
-#ifdef H5_HAVE_FILTER_SZIP
-#include "szlib.h"
-#endif
 
 #define FILE1 "tgroup.h5"
 #define FILE2 "tdset.h5"
@@ -74,7 +70,7 @@
 #define FILE42  "tnamed_dtype_attr.h5"
 #define FILE43  "tvldtypes5.h5"
 #define FILE44  "tfilters.h5"
-#define FILE45  "tnullspace.h5"
+/* FILE45  not defined in this version */
 #define FILE46  "tfcontents1.h5"
 #define FILE47  "tfcontents2.h5"
 #define FILE48  "tfvalues.h5"
@@ -96,6 +92,7 @@ static int
 write_dset( hid_t loc_id, int rank, hsize_t *dims, const char *dset_name,
                    hid_t type_id, void *buf );
 
+
 /* a filter operation callback function */
 static size_t
 myfilter(unsigned int UNUSED flags, size_t UNUSED cd_nelmts, 
@@ -110,10 +107,8 @@ set_local_myfilter(hid_t dcpl_id, hid_t type_id, hid_t UNUSED space_id);
 
 /* This message derives from H5Z */
 const H5Z_class_t H5Z_MYFILTER[1] = {{
-    H5Z_CLASS_T_VERS,
-    MYFILTER_ID,		       /* Filter id number		*/
-    1, 1,
-    "myfilter",			       /* Filter name for debugging	*/
+    MYFILTER_ID,         /* Filter id number  */
+    "myfilter",          /* Filter name for debugging */
     NULL,                /* The "can apply" callback     */
     set_local_myfilter,  /* The "set local" callback     */
     myfilter,            /* The actual filter function */
@@ -276,9 +271,9 @@ static void gent_dataset(void)
               dset2[i][j] = 0.0001*j+i;
 
     H5Dwrite(dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, dset2);
+  
     H5Sclose(space);
     H5Dclose(dataset);
-
     H5Fclose(fid);
 }
 
@@ -386,10 +381,10 @@ static void gent_attribute(void)
     H5Tset_size(type, 17);
     attr = H5Acreate (root, "attr5", type, space, H5P_DEFAULT);
     H5Awrite(attr, type, string);
+
+    H5Tclose(type);
     H5Sclose(space);
     H5Aclose(attr);
-   
-    H5Tclose(type);
     H5Gclose(root);
     H5Fclose(fid);
 }
@@ -3081,7 +3076,7 @@ static void gent_char(void)
  *
  * Purpose: write attributes in LOC_ID (dataset, group, named datatype) 
  *
- * Return: 
+ * Return: void
  *
  * Programmer: pvn@ncsa.uiuc.edu
  *
@@ -3521,7 +3516,7 @@ static void write_attr_in(hid_t loc_id,
  *
  * Purpose: write datasets in LOC_ID 
  *
- * Return: 
+ * Return: void
  *
  * Programmer: pvn@ncsa.uiuc.edu
  *
@@ -3988,8 +3983,8 @@ static void write_dset_in(hid_t loc_id,
 
 static void gent_attr_all(void)
 {
-    hid_t   file_id; 
-    hid_t   dset_id;
+ hid_t   file_id; 
+ hid_t   dset_id;
  hid_t   group_id;
  hid_t   group2_id;
  hid_t   root_id;
@@ -4084,8 +4079,6 @@ int write_attr(hid_t loc_id, int rank, hsize_t *dims, const char *attr_name,
  *
  * Purpose: utility function to create and write a dataset in LOC_ID
  *
- * Return: 
- *
  * Programmer: pvn@ncsa.uiuc.edu
  *
  * Date: May 27, 2003
@@ -4106,16 +4099,23 @@ int write_dset( hid_t loc_id, int rank, hsize_t *dims, const char *dset_name,
 
  /* Create a dataset */
  dset_id = H5Dcreate(loc_id,dset_name,type_id,space_id,H5P_DEFAULT);
+ assert (dset_id >= 0);
   
  /* Write the buf */
  if ( buf )
+ {
   status = H5Dwrite(dset_id,type_id,H5S_ALL,H5S_ALL,H5P_DEFAULT,buf);
+  assert (status >= 0);
+ }
 
  /* Close */
  status = H5Dclose(dset_id);
- status = H5Sclose(space_id);
+ assert (status >= 0);
 
- return status;
+ status = H5Sclose(space_id);
+ assert (status >= 0);
+
+ return 1;
 
 }
 
@@ -4362,42 +4362,6 @@ static void gent_named_dtype_attr(void)
 
 
 /*-------------------------------------------------------------------------
- * Function: gent_null_space
- *
- * Purpose: generates dataset and attribute of null dataspace
- *-------------------------------------------------------------------------
- */
-static void gent_null_space(void)
-{
-    hid_t fid, root, dataset, space, attr;
-    int dset_buf = 10;
-    int point = 4;
-    
-    fid = H5Fcreate(FILE45, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-    root = H5Gopen (fid, "/");
-  
-    /* null space */
-    space = H5Screate(H5S_NULL);
-
-    /* dataset */
-    dataset = H5Dcreate(fid, "dset", H5T_STD_I32BE, space, H5P_DEFAULT);
-    /* nothing should be written */
-    H5Dwrite(dataset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &dset_buf);
-
-    /* attribute */
-    attr = H5Acreate (root, "attr", H5T_NATIVE_UINT, space, H5P_DEFAULT);
-    H5Awrite(attr, H5T_NATIVE_INT, &point); /* Nothing can be written */
-
-    H5Dclose(dataset);
-    H5Aclose(attr);
-    H5Gclose(root);
-    H5Sclose(space);
-    H5Fclose(fid);
-}
-
-
-
-/*-------------------------------------------------------------------------
  * Function: make_dset
  *
  * Purpose: utility function to create and write a dataset in LOC_ID
@@ -4433,8 +4397,6 @@ int make_dset(hid_t loc_id,
  } H5E_END_TRY;
  return -1;
 }
-
-
 
 
 
@@ -4481,7 +4443,6 @@ make_external(hid_t fid)
  H5Pclose(dcpl);
  assert(ret>=0);
 }
-
 /*-------------------------------------------------------------------------
  * Function: gent_filters
  *
@@ -4790,11 +4751,7 @@ set_local_myfilter(hid_t dcpl_id, hid_t UNUSED type_id, hid_t UNUSED space_id)
  unsigned cd_values[2]={5,6};   /* Filter parameters */
  
  /* Get the filter's current parameters */
-#ifdef H5_WANT_H5_V1_6_COMPAT
  if(H5Pget_filter_by_id(dcpl_id,MYFILTER_ID,&flags,&cd_nelmts,cd_values,0,NULL)<0)
-#else
- if(H5Pget_filter_by_id(dcpl_id,MYFILTER_ID,&flags,&cd_nelmts,cd_values,0,NULL,NULL)<0)
-#endif /* H5_WANT_H5_V1_6_COMPAT */
   return(FAIL);
 
  cd_nelmts=2; 
@@ -4805,7 +4762,6 @@ set_local_myfilter(hid_t dcpl_id, hid_t UNUSED type_id, hid_t UNUSED space_id)
  
  return(SUCCEED);
 }
-
 
 /*-------------------------------------------------------------------------
  * Function: gent_fcontents
@@ -5248,7 +5204,9 @@ static void gent_aindices(void)
  write_dset(gid[5],3,dims3,"3d",H5T_NATIVE_INT,buf3);
  for (i=0; i<6; i++)
   H5Gclose(gid[i]);
-  
+ 
+
+ 
 /*-------------------------------------------------------------------------
  * close
  *-------------------------------------------------------------------------
@@ -5256,8 +5214,6 @@ static void gent_aindices(void)
  ret=H5Fclose(fid);
  assert(ret>=0);
 }
-
-
 
 
 /*-------------------------------------------------------------------------
@@ -5277,23 +5233,32 @@ int main(void)
     gent_compound_dt();
     gent_all();
     gent_loop();
+
     gent_dataset2();
     gent_compound_dt2();
     gent_loop2();
     gent_many();
+
     gent_str();
     gent_str2();
+
     gent_enum();
+
     gent_objref();
     gent_datareg();
+
     gent_nestcomp();
+
     gent_opaque();
+
     gent_bitfields();
+
     gent_vldatatypes();
     gent_vldatatypes2();
     gent_vldatatypes3();
     gent_vldatatypes4();
     gent_vldatatypes5();
+
     gent_array1();
     gent_array2();
     gent_array3();
@@ -5301,18 +5266,21 @@ int main(void)
     gent_array5();
     gent_array6();
     gent_array7();
+
     gent_empty();
     gent_group_comments();
     gent_split_file();
     gent_family();
     gent_multi();
+
     gent_large_objname();
     gent_vlstr();
     gent_char();
+
     gent_attr_all();
+
     gent_compound_complex();
     gent_named_dtype_attr();
-    gent_null_space();
 
     gent_filters();
     gent_fvalues();
@@ -5322,3 +5290,4 @@ int main(void)
 
     return 0;
 }
+

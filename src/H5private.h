@@ -1118,25 +1118,6 @@ extern hbool_t H5_MPEinit_g;   /* Has the MPE Library been initialized? */
     assert(func_name)
 #endif /* H5_HAVE_FUNCTION */
 
-/* Macros for defining interface initialization routines */
-#ifdef H5_INTERFACE_INIT_FUNC
-static int		H5_interface_initialize_g = 0;
-static herr_t		H5_INTERFACE_INIT_FUNC(void);
-#define H5_INTERFACE_INIT(err)						      \
-   /* Initialize this interface or bust */				      \
-   if (!H5_interface_initialize_g) {					      \
-      H5_interface_initialize_g = 1;					      \
-      if (H5_INTERFACE_INIT_FUNC()<0) {					      \
-         H5_interface_initialize_g = 0;				              \
-         HGOTO_ERROR (H5E_FUNC, H5E_CANTINIT, err,		              \
-            "interface initialization failed")		                      \
-      }								              \
-   }
-#else /* H5_INTERFACE_INIT_FUNC */
-#define H5_INTERFACE_INIT(err)
-#endif /* H5_INTERFACE_INIT_FUNC */
-
-
 #define FUNC_ENTER_COMMON_NOFUNC(func_name,asrt)                              \
    PABLO_SAVE (ID_ ## func_name)  					      \
 									      \
@@ -1177,9 +1158,9 @@ static herr_t		H5_INTERFACE_INIT_FUNC(void);
     FUNC_ENTER_API_VARS(func_name)                                            \
     FUNC_ENTER_COMMON(func_name,H5_IS_API(#func_name));                       \
     FUNC_ENTER_API_THREADSAFE;                                                \
-    FUNC_ENTER_API_COMMON(func_name,err);		                      \
+    FUNC_ENTER_API_COMMON(func_name,INTERFACE_INIT,err);                      \
     /* Clear thread error stack entering public functions */		      \
-    H5E_clear_stack(NULL);				                      \
+    H5E_clear();						              \
     {
 
 /*
@@ -1190,13 +1171,13 @@ static herr_t		H5_INTERFACE_INIT_FUNC(void);
     FUNC_ENTER_API_VARS(func_name)                                            \
     FUNC_ENTER_COMMON(func_name,H5_IS_API(#func_name));                       \
     FUNC_ENTER_API_THREADSAFE;                                                \
-    FUNC_ENTER_API_COMMON(func_name,err);		                      \
+    FUNC_ENTER_API_COMMON(func_name,INTERFACE_INIT,err);                      \
     {
 
 /*
  * Use this macro for API functions that shouldn't perform _any_ initialization
  *      of the library or an interface, just perform tracing, etc.  Examples
- *      are: H5close, H5check_version, etc.
+ *      are: H5close, H5check_version, H5Eget_major, H5Eget_minor.
  *
  */
 #define FUNC_ENTER_API_NOINIT(func_name) {{                                   \
@@ -1210,13 +1191,7 @@ static herr_t		H5_INTERFACE_INIT_FUNC(void);
 /* Use this macro for all "normal" non-API functions */
 #define FUNC_ENTER_NOAPI(func_name,err) {                                     \
     FUNC_ENTER_COMMON(func_name,!H5_IS_API(#func_name));                      \
-    FUNC_ENTER_NOAPI_INIT(func_name,err)		                      \
-    {
-
-/* Use this macro for all non-API functions which don't issue errors */
-#define FUNC_ENTER_NOAPI_NOFUNC(func_name) {                                  \
-    FUNC_ENTER_COMMON_NOFUNC(func_name,!H5_IS_API(#func_name));               \
-    FUNC_ENTER_NOAPI_INIT(func_name,err)		                      \
+    FUNC_ENTER_NOAPI_INIT(func_name,INTERFACE_INIT,err)                       \
     {
 
 /*
@@ -1253,16 +1228,12 @@ static herr_t		H5_INTERFACE_INIT_FUNC(void);
  * Use this macro for non-API functions which fall into these categories:
  *      - functions which shouldn't push their name on the function stack
  *              (so far, just the H5FS routines themselves)
- * 
- * This macro is used for functions which fit the above categories _and_
- * also don't use the 'FUNC' variable (i.e. don't push errors on the error stack)
- * 
  */
-#define FUNC_ENTER_NOAPI_NOFUNC_NOFS(func_name) {                             \
-    FUNC_ENTER_COMMON_NOFUNC(func_name,!H5_IS_API(#func_name));               \
+#define FUNC_ENTER_NOAPI_NOFS(func_name) {                                    \
+    FUNC_ENTER_COMMON(func_name,!H5_IS_API(#func_name));                      \
     {
 
-#define FUNC_ENTER_API_COMMON(func_name,err)			       	      \
+#define FUNC_ENTER_API_COMMON(func_name,interface_init_func,err)       	      \
    /* Initialize the library */           				      \
    if (!(H5_INIT_GLOBAL)) {                                                   \
        H5_INIT_GLOBAL = TRUE;                                                 \
@@ -1271,17 +1242,33 @@ static herr_t		H5_INTERFACE_INIT_FUNC(void);
             "library initialization failed")		                      \
    }								              \
                                                                               \
-   /* Initialize the interface, if appropriate */		              \
-   H5_INTERFACE_INIT(err)						      \
+   /* Initialize this interface or bust */				      \
+   if (!interface_initialize_g) {					      \
+      interface_initialize_g = 1;					      \
+      if (interface_init_func &&					      \
+              ((herr_t(*)(void))interface_init_func)()<0) {		      \
+         interface_initialize_g = 0;				              \
+         HGOTO_ERROR (H5E_FUNC, H5E_CANTINIT, err,		              \
+            "interface initialization failed");		                      \
+      }								              \
+   }                                                                          \
                                                                               \
    /* Push the name of this function on the function stack */                 \
    H5_PUSH_FUNC(func_name);                                                   \
                                                                               \
    BEGIN_MPE_LOG(func_name)
 
-#define FUNC_ENTER_NOAPI_INIT(func_name,err)			       	      \
-   /* Initialize the interface, if appropriate */		              \
-   H5_INTERFACE_INIT(err)						      \
+#define FUNC_ENTER_NOAPI_INIT(func_name,interface_init_func,err)       	      \
+   /* Initialize this interface or bust */				      \
+   if (!interface_initialize_g) {					      \
+      interface_initialize_g = 1;					      \
+      if (interface_init_func &&					      \
+              ((herr_t(*)(void))interface_init_func)()<0) {		      \
+         interface_initialize_g = 0;				              \
+         HGOTO_ERROR (H5E_FUNC, H5E_CANTINIT, err,		              \
+            "interface initialization failed");		                      \
+      }								              \
+   }                                                                          \
                                                                               \
    /* Push the name of this function on the function stack */                 \
    H5_PUSH_FUNC(func_name);
@@ -1362,13 +1349,13 @@ H5_DLL void H5_term_library(void);
 H5_DLL int H5A_term_interface(void);
 H5_DLL int H5AC_term_interface(void);
 H5_DLL int H5D_term_interface(void);
-H5_DLL int H5E_term_interface(void);
 H5_DLL int H5F_term_interface(void);
 H5_DLL int H5G_term_interface(void);
 H5_DLL int H5I_term_interface(void);
 H5_DLL int H5P_term_interface(void);
 H5_DLL int H5R_term_interface(void);
 H5_DLL int H5S_term_interface(void);
+H5_DLL int H5TN_term_interface(void);
 H5_DLL int H5T_term_interface(void);
 H5_DLL int H5Z_term_interface(void);
 

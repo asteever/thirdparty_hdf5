@@ -105,6 +105,11 @@ class H5_DLLCPP DataSpace : public IdComponent {
 	// Copy constructor: makes a copy of the original DataSpace object.
 	DataSpace(const DataSpace& original);
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+	// Used by the API to close the dataspace 
+	void p_close() const;
+#endif // DOXYGEN_SHOULD_SKIP_THIS
+
 	// Destructor: properly terminates access to this dataspace.
 	virtual ~DataSpace();
 };

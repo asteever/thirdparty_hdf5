@@ -49,7 +49,7 @@ esac
 case "$cc_vendor-$cc_version" in
     DEC-V5.*)
 	# Production
-	PROD_CFLAGS="-std -verbose -warnprotos -ieee -misalign -O4  -ansi_args -fp_reorder -readonly_strings -inline speed"
+	PROD_CFLAGS="-std -verbose -warnprotos -ieee -misalign -O4 -ansi_args -fp_reorder -readonly_strings -inline speed"
 	PROD_CPPFLAGS="-D_INTRINSICS -D_INLINE_INTRINSICS"
 
 	# Debug
@@ -66,15 +66,15 @@ case "$cc_vendor-$cc_version" in
 
     DEC-V6.*)
 	# Production
-	PROD_CFLAGS="-std1 -verbose -warnprotos -ieee -misalign -O4 -fp_reorder -readonly_strings -inline speed"
+	PROD_CFLAGS="-c99 -verbose -warnprotos -ieee -misalign -O4 -fp_reorder -readonly_strings -inline speed"
 	PROD_CPPFLAGS="-D_INTRINSICS -D_INLINE_INTRINSICS"
 
 	# Debug
-	DEBUG_CFLAGS="-g -std1 -verbose -warnprotos -ieee -misalign"
+	DEBUG_CFLAGS="-g -c99 -verbose -warnprotos -ieee -misalign"
 	DEBUG_CPPFLAGS=
 
 	# Profile
-	PROFILE_CFLAGS="-pg -std1 -verbose -warnprotos -ieee -misalign"
+	PROFILE_CFLAGS="-pg -c99 -verbose -warnprotos -ieee -misalign"
 	PROFILE_CPPFLAGS=
 
 	# Flags are set
@@ -87,66 +87,3 @@ if test X = "X$cc_flags_set"; then
     cc_vendor=
     cc_version=
 fi
-
-# The default Fortran 90 compiler
-
-#
-# HDF5 integers
-#
-# 	R_LARGE is the number of digits for the bigest integer supported.
-#	R_INTEGER is the number of digits in INTEGER
-#
-# (for the Digital UNIX architechture)
-#
-R_LARGE=18
-R_INTEGER=9
-HSIZE_T='SELECTED_INT_KIND(R_LARGE)'
-HSSIZE_T='SELECTED_INT_KIND(R_LARGE)'
-HID_T='SELECTED_INT_KIND(R_INTEGER)'
-SIZE_T='SELECTED_INT_KIND(R_LARGE)'
-OBJECT_NAMELEN_DEFAULT_F=-1
-
-if test "X-" = "X-$F9X"; then
-  F9X=f90
-fi
-
-if test "X-" = "X-$f9x_flags_set"; then
-  F9XSUFFIXFLAG=""
-  FSEARCH_DIRS=""
-  FFLAGS="$FFLAGS -Olimit 2048 -std1"
-  DEBUG_FFLAGS="-Olimit 2048 -std1"
-  PROD_FFLAGS="-Olimit 2048 -std1"
-  PROFILE_FFLAGS="-Olimit 2048 -std1"
-  f9x_flags_set=yes
-fi
-
-# The default C++ compiler
-
-if test -z "$CXX"; then
-    CXX=cxx
-    CXX_BASENAME=cxx
-fi
-
-
-case $CXX_BASENAME in
-    g++)
-	CXXFLAGS="$CXXFLAGS -Wsign-compare" #Only works for some versions
-	DEBUG_CXXFLAGS="-g -fverbose-asm"
-	DEBUG_CPPFLAGS=
-	PROD_CXXFLAGS="-O3 -fomit-frame-pointer"
-	PROD_CPPFLAGS=
-	PROFILE_CXXFLAGS="-pg"
-	PROFILE_CPPFLAGS=
-	;;
-
-    *)
-	CXXFLAGS="$CXXFLAGS -tlocal -D__USE_STD_IOSTREAM"
-	DEBUG_CXXFLAGS="-g"
-	DEBUG_CPPFLAGS=
-	PROD_CXXFLAGS="-O"
-	PROD_CPPFLAGS=
-	PROFILE_CXXFLAGS="-pg"
-	PROFILE_CPPFLAGS=
-	;;
-esac
-

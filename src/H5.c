@@ -57,6 +57,10 @@ hbool_t                 dont_atexit_g = FALSE;
 H5_debug_t		H5_debug_g;		/*debugging info	*/
 static void		H5_debug_mask(const char*);
 
+/* Interface initialization */
+static int          	interface_initialize_g = 0;
+#define INTERFACE_INIT 	NULL
+
 /*--------------------------------------------------------------------------
  * NAME
  *   H5_init_library -- Initialize library-global information
@@ -137,8 +141,6 @@ H5_init_library(void)
      * & dataset interfaces though, in order to provide them with the proper
      * property classes.
      */
-    if (H5E_init()<0)
-        HGOTO_ERROR(H5E_FUNC, H5E_CANTINIT, FAIL, "unable to initialize error interface")
     if (H5P_init()<0)
         HGOTO_ERROR(H5E_FUNC, H5E_CANTINIT, FAIL, "unable to initialize property list interface")
     if (H5F_init()<0)
@@ -181,7 +183,7 @@ H5_term_library(void)
     int	pending, ntries=0, n;
     unsigned	at=0;
     char	loop[1024];
-    H5E_auto_stack_t func;
+    H5E_auto_t func;
     
 #ifdef H5_HAVE_THREADSAFE
     /* explicit locking of the API */
@@ -194,7 +196,7 @@ H5_term_library(void)
 	goto done;
 
     /* Check if we should display error output */
-    (void)H5Eget_auto_stack(H5E_DEFAULT,&func,NULL);
+    (void)H5Eget_auto(&func,NULL);
 
     /*
      * Terminate each interface. The termination functions return a positive
@@ -221,6 +223,7 @@ H5_term_library(void)
 	pending += DOWN(G);
 	pending += DOWN(A);
 	pending += DOWN(S);
+	pending += DOWN(TN);
 	pending += DOWN(T);
         /* Don't shut down the file code until objects in files are shut down */
         if(pending==0)
@@ -236,9 +239,6 @@ H5_term_library(void)
             pending += DOWN(Z);
             pending += DOWN(FD);
             pending += DOWN(P);
-            /* Don't shut down the error code until other APIs which use it are shut down */
-            if(pending==0)
-                pending += DOWN(E);
             /* Don't shut down the ID code until other APIs which use them are shut down */
             if(pending==0)
                 pending += DOWN(I);
@@ -360,7 +360,7 @@ H5garbage_collect(void)
 
     /* Call the garbage collection routines in the library */
     if(H5FL_garbage_coll()<0)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGC, FAIL, "can't garbage collect objects")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, FAIL, "can't garbage collect objects")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -1061,7 +1061,6 @@ HDfprintf(FILE *stream, const char *fmt, ...)
 				zerofill?"0":"");
 			if (fwidth>0)
 			    sprintf(format_templ+HDstrlen(format_templ), "%d", fwidth);
-
                         /*lint --e{506} Don't issue warnings about constant value booleans */
                         /*lint --e{774} Don't issue warnings boolean within 'if' always evaluates false/true */
 			if (sizeof(x)==H5_SIZEOF_INT) {
@@ -1840,26 +1839,29 @@ H5_trace (const double *returning, const char *func, const char *type, ...)
 		}
 		break;
 
-	    case 't':
+	    case 'j':
 		if (ptr) {
 		    if (vp) {
-			fprintf (out, "0x%lx", (unsigned long)vp);
+			fprintf(out, "0x%lx", (unsigned long)vp);
 		    } else {
 			fprintf(out, "NULL");
 		    }
 		} else {
-		    H5E_type_t etype = va_arg (ap, H5E_type_t);
-		    switch (etype) {
-		    case H5E_MAJOR:
-			fprintf (out, "H5E_MAJOR");
-			break;
-		    case H5E_MINOR:
-			fprintf (out, "H5E_MINOR");
-			break;
-		    default:
-			fprintf (out, "%ld", (long)etype);
-			break;
+		    H5E_major_t emaj = va_arg(ap, H5E_major_t);
+		    fprintf(out, "%d", (int)emaj);
+		}
+		break;
+
+	    case 'n':
+		if (ptr) {
+		    if (vp) {
+			fprintf(out, "0x%lx", (unsigned long)vp);
+		    } else {
+			fprintf(out, "NULL");
 		    }
+		} else {
+		    H5E_minor_t emin = va_arg(ap, H5E_minor_t);
+		    fprintf(out, "%d", (int)emin);
 		}
 		break;
 		
@@ -1950,38 +1952,6 @@ H5_trace (const double *returning, const char *func, const char *type, ...)
 			break;
 		    default:
 			fprintf (out, "%ld", (long)link_type);
-			break;
-		    }
-		}
-		break;
-
-	    case 'o':
-		if (ptr) {
-		    if (vp) {
-			fprintf (out, "0x%lx", (unsigned long)vp);
-		    } else {
-			fprintf(out, "NULL");
-		    }
-		} else {
-		    H5G_obj_t obj_type = va_arg (ap, H5G_obj_t);
-		    switch (obj_type) {
-		    case H5G_UNKNOWN:
-			fprintf (out, "H5G_UNKNOWN");
-			break;
-		    case H5G_LINK:
-			fprintf (out, "H5G_LINK");
-			break;
-		    case H5G_GROUP:
-			fprintf (out, "H5G_GROUP");
-			break;
-		    case H5G_DATASET:
-			fprintf (out, "H5G_DATASET");
-			break;
-		    case H5G_TYPE:
-			fprintf (out, "H5G_TYPE");
-			break;
-		    default:
-			fprintf (out, "%ld", (long)obj_type);
 			break;
 		    }
 		}
@@ -2080,7 +2050,7 @@ H5_trace (const double *returning, const char *func, const char *type, ...)
 		} else if (obj<0) {
 		    fprintf (out, "FAIL");
 		} else {
-		    switch (H5I_TYPE(obj)) { /* Use internal H5I macro instead of function call */
+		    switch (H5I_GROUP(obj)) { /* Use internal H5I macro instead of function call */
                         case H5I_BADID:
                             fprintf (out, "%ld (error)", (long)obj);
                             break;
@@ -2198,26 +2168,17 @@ H5_trace (const double *returning, const char *func, const char *type, ...)
                         case H5I_ATTR:
                             fprintf(out, "%ld (attr)", (long)obj);
                             break;
+                        case H5I_TEMPBUF:
+                            fprintf(out, "%ld", (long)obj);
+                            if (HDstrcmp(argname, "tbuf")) {
+                                fprintf(out, " (tbuf");
+                            }
+                            break;
                         case H5I_REFERENCE:
                             fprintf(out, "%ld (reference)", (long)obj);
                             break;
                         case H5I_VFL:
                             fprintf(out, "%ld (file driver)", (long)obj);
-                            break;
-                        case H5I_GENPROP_CLS:
-                            fprintf(out, "%ld (genprop class)", (long)obj);
-                            break;
-                        case H5I_GENPROP_LST:
-                            fprintf(out, "%ld (genprop list)", (long)obj);
-                            break;
-                        case H5I_ERROR_CLASS:
-                            fprintf(out, "%ld (err class)", (long)obj);
-                            break;
-                        case H5I_ERROR_MSG:
-                            fprintf(out, "%ld (err msg)", (long)obj);
-                            break;
-                        case H5I_ERROR_STACK:
-                            fprintf(out, "%ld (err stack)", (long)obj);
                             break;
                         default:
                             fprintf(out, "%ld (unknown class)", (long)obj);
@@ -2304,6 +2265,9 @@ H5_trace (const double *returning, const char *func, const char *type, ...)
 		    case H5I_ATTR:
 			fprintf (out, "H5I_ATTR");
 			break;
+		    case H5I_TEMPBUF:
+			fprintf (out, "H5I_TEMPBUF");
+			break;
 		    case H5I_REFERENCE:
 			fprintf (out, "H5I_REFERENCE");
 			break;
@@ -2316,17 +2280,8 @@ H5_trace (const double *returning, const char *func, const char *type, ...)
 		    case H5I_GENPROP_LST:
 			fprintf (out, "H5I_GENPROP_LST");
 			break;
-		    case H5I_ERROR_CLASS:
-			fprintf (out, "H5I_ERROR_CLASS");
-			break;
-		    case H5I_ERROR_MSG:
-			fprintf (out, "H5I_ERROR_MSG");
-			break;
-		    case H5I_ERROR_STACK:
-			fprintf (out, "H5I_ERROR_STACK");
-			break;
-		    case H5I_NTYPES:
-			fprintf (out, "H5I_NTYPES");
+		    case H5I_NGROUPS:
+			fprintf (out, "H5I_NGROUPS");
 			break;
 		    default:
 			fprintf (out, "%ld", (long)id_type);
@@ -2958,19 +2913,6 @@ H5_trace (const double *returning, const char *func, const char *type, ...)
 
 	case 'Z':
 	    switch (type[1]) {
-                case 'c':
-                    if (ptr) {
-                        if (vp) {
-                            fprintf (out, "0x%lx", (unsigned long)vp);
-                        } else {
-                            fprintf(out, "NULL");
-                        }
-                    } else {
-                        H5Z_class_t *filter = va_arg (ap, H5Z_class_t*);
-                        fprintf (out, "0x%lx", (unsigned long)filter);
-                    }
-                    break;
-
                 case 'e':
                     if (ptr) {
                         if (vp) {

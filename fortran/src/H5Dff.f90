@@ -17,7 +17,8 @@
 ! 
       MODULE H5D
         USE H5GLOBAL
-
+!        USE H5R
+!
           INTERFACE h5dwrite_f
 
             MODULE PROCEDURE h5dwrite_reference_obj
@@ -46,7 +47,7 @@
             MODULE PROCEDURE h5dwrite_real_5
             MODULE PROCEDURE h5dwrite_real_6
             MODULE PROCEDURE h5dwrite_real_7
-! Comment if on Crays
+! Comment if on T3E
             MODULE PROCEDURE h5dwrite_double_scalar
             MODULE PROCEDURE h5dwrite_double_1
             MODULE PROCEDURE h5dwrite_double_2
@@ -55,7 +56,9 @@
             MODULE PROCEDURE h5dwrite_double_5
             MODULE PROCEDURE h5dwrite_double_6
             MODULE PROCEDURE h5dwrite_double_7
-! End comment if on Crays
+! End comment if on T3E
+!
+!
           END INTERFACE 
           
           INTERFACE h5dread_f
@@ -86,7 +89,7 @@
             MODULE PROCEDURE h5dread_real_5
             MODULE PROCEDURE h5dread_real_6
             MODULE PROCEDURE h5dread_real_7
-! Comment if on Crays
+! Comment if on T3E
             MODULE PROCEDURE h5dread_double_scalar
             MODULE PROCEDURE h5dread_double_1
             MODULE PROCEDURE h5dread_double_2
@@ -95,8 +98,8 @@
             MODULE PROCEDURE h5dread_double_5
             MODULE PROCEDURE h5dread_double_6
             MODULE PROCEDURE h5dread_double_7
-! End comment if on Crays
-
+! End comment if on T3E
+!
           END INTERFACE 
 
           INTERFACE h5dwrite_vl_f
@@ -306,7 +309,6 @@
             hdferr = h5dclose_c(dset_id)
 
           END SUBROUTINE h5dclose_f
-
 
           SUBROUTINE h5dwrite_reference_obj(dset_id, mem_type_id, buf, dims, hdferr, &
                                         mem_space_id, file_space_id, xfer_prp)
@@ -4604,7 +4606,7 @@
                                 file_space_id_default, xfer_prp_default, buf, dims)
            
           END SUBROUTINE h5dread_double_7
-!
+
 !----------------------------------------------------------------------
 ! Name:		h5dget_space_f 
 !

@@ -27,15 +27,22 @@
  * the TYPE can be: 
  *    H5G_UNKNOWN = -1,		
  *    H5G_LINK,		        Object is a symbolic link	
- *    H5G_GROUP,		       Object is a group		
- *    H5G_DATASET,		     Object is a dataset		
- *    H5G_TYPE,			       Object is a named data type	
+ *    H5G_GROUP,		    Object is a group		
+ *    H5G_DATASET,		    Object is a dataset		
+ *    H5G_TYPE,			    Object is a named data type	
  *-------------------------------------------------------------------------
  */
 
+/* hack to alow v1.4 compability */
+#ifdef H5_WANT_H5_V1_4_COMPAT
+ typedef int H5G_obj_t1;
+#else
+ typedef H5G_obj_t H5G_obj_t1;
+#endif
+
 typedef struct trav_info_t {
-	char      *name;
-	H5G_obj_t type;
+	char       *name;
+	H5G_obj_t1 type;
 } trav_info_t;
 
 
@@ -54,11 +61,11 @@ typedef struct trav_link_t {
  */
 
 typedef struct trav_obj_t {
-    haddr_t     objno;     /* object number from H5Gget_objinfo */
+    unsigned long objno[2];/* object number from H5Gget_objinfo */
     unsigned    flags[2];  /* h5diff.object is present or not in both files*/
     char        *name;     /* name */
     int         displayed; /* hard link already traversed once */
-    H5G_obj_t   type;      /* type of object */
+    H5G_obj_t1  type;      /* type of object */
     trav_link_t *links;    /* array of possible link names */
     int         sizelinks; /* size of links array */
     int         nlinks;    /* number of links */
@@ -117,17 +124,17 @@ void trav_table_init(trav_table_t **table);
 
 void trav_table_free(trav_table_t *table);
 
-int  trav_table_search(haddr_t objno, 
+int  trav_table_search(unsigned long *objno, 
                        trav_table_t *table );
 
-void trav_table_add(haddr_t objno, 
+void trav_table_add(unsigned long *objno, 
                     char *objname, 
-                    H5G_obj_t type, 
+                    H5G_obj_t1 type, 
                     trav_table_t *table);
 
 void trav_table_addflags(unsigned *flags, 
                          char *objname, 
-                         H5G_obj_t type, 
+                         H5G_obj_t1 type, 
                          trav_table_t *table);
 
 

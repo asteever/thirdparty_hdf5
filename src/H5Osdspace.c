@@ -53,10 +53,11 @@ const H5O_class_t H5O_SDSPACE[1] = {{
     H5O_sdspace_debug,	        /* debug the message		    	*/
 }};
 
-/* Initial version of the "old" data space information */
 #define H5O_SDSPACE_VERSION	1
-/* Initial version of the "new" data space information */
-#define H5O_SDSPACE_VERSION_2	2
+
+/* Is the interface initialized? */
+static int interface_initialize_g = 0;
+#define INTERFACE_INIT NULL
 
 /* Declare external the free list for H5S_extent_t's */
 H5FL_EXTERN(H5S_extent_t);
@@ -90,12 +91,6 @@ H5FL_ARR_EXTERN(hsize_t);
  
   	Robb Matzke, 1998-07-20
         Added a version number and reformatted the message for aligment.
-
-        Raymond Lu
-        April 8, 2004
-        Added the type of dataspace into this header message using a reserved
-        byte.
-
 --------------------------------------------------------------------------*/
 static void *
 H5O_sdspace_decode(H5F_t *f, hid_t UNUSED dxpl_id, const uint8_t *p, H5O_shared_t UNUSED *sh)
@@ -105,7 +100,7 @@ H5O_sdspace_decode(H5F_t *f, hid_t UNUSED dxpl_id, const uint8_t *p, H5O_shared_
     unsigned		i;		/* local counting variable */
     unsigned		flags, version;
     
-    FUNC_ENTER_NOAPI_NOINIT(H5O_sdspace_decode);
+    FUNC_ENTER_NOAPI(H5O_sdspace_decode, NULL);
 
     /* check args */
     assert(f);
@@ -116,7 +111,7 @@ H5O_sdspace_decode(H5F_t *f, hid_t UNUSED dxpl_id, const uint8_t *p, H5O_shared_
     if ((sdim = H5FL_CALLOC(H5S_extent_t)) != NULL) {
         /* Check version */
         version = *p++;
-        if (version!=H5O_SDSPACE_VERSION && version!=H5O_SDSPACE_VERSION_2)
+        if (version!=H5O_SDSPACE_VERSION)
             HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, NULL, "wrong version number in data space message");
 
         /* Get rank */
@@ -127,22 +122,14 @@ H5O_sdspace_decode(H5F_t *f, hid_t UNUSED dxpl_id, const uint8_t *p, H5O_shared_
         /* Get dataspace flags for later */
         flags = *p++;
 
-        /* Get the type of the extent */
-        if(version>=H5O_SDSPACE_VERSION_2)
-            sdim->type = (H5S_class_t)*p++;
-        else {
-            /* Set the dataspace type to be simple or scalar as appropriate */
-            if(sdim->rank>0)
-                sdim->type = H5S_SIMPLE;
-            else
-                sdim->type = H5S_SCALAR;
+        /* Set the dataspace type to be simple or scalar as appropriate */
+        if(sdim->rank>0)
+            sdim->type = H5S_SIMPLE;
+        else
+            sdim->type = H5S_SCALAR;
 
-            /* Increment past reserved byte */
-            p++;
-        } /* end else */
-        
-        p += 4; /*reserved*/
-        
+        p += 5; /*reserved*/
+
         if (sdim->rank > 0) {
             if (NULL==(sdim->size=H5FL_ARR_MALLOC(hsize_t,sdim->rank)))
                 HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
@@ -157,12 +144,8 @@ H5O_sdspace_decode(H5F_t *f, hid_t UNUSED dxpl_id, const uint8_t *p, H5O_shared_
         }
 
         /* Compute the number of elements in the extent */
-        if(sdim->type == H5S_NULL)
-            sdim->nelem = 0;
-        else {
-            for(i=0, sdim->nelem=1; i<sdim->rank; i++)
-                sdim->nelem*=sdim->size[i];
-        }
+        for(i=0, sdim->nelem=1; i<sdim->rank; i++)
+            sdim->nelem*=sdim->size[i];
     }
 
     /* Set return value */
@@ -202,12 +185,6 @@ done:
  
   	Robb Matzke, 1998-07-20
         Added a version number and reformatted the message for aligment.
-
-        Raymond Lu
-        April 8, 2004
-        Added the type of dataspace into this header message using a reserved
-        byte.
-
 --------------------------------------------------------------------------*/
 static herr_t
 H5O_sdspace_encode(H5F_t *f, uint8_t *p, const void *mesg)
@@ -215,8 +192,9 @@ H5O_sdspace_encode(H5F_t *f, uint8_t *p, const void *mesg)
     const H5S_extent_t	*sdim = (const H5S_extent_t *) mesg;
     unsigned		u;  /* Local counting variable */
     unsigned		flags = 0;
+    herr_t ret_value=SUCCEED;   /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_sdspace_encode);
+    FUNC_ENTER_NOAPI(H5O_sdspace_encode, FAIL);
 
     /* check args */
     assert(f);
@@ -228,16 +206,10 @@ H5O_sdspace_encode(H5F_t *f, uint8_t *p, const void *mesg)
         flags |= H5S_VALID_MAX;
 
     /* encode */
-    if(sdim->type!=H5S_NULL)
-        *p++ = H5O_SDSPACE_VERSION;
-    else
-        *p++ = H5O_SDSPACE_VERSION_2;
+    *p++ = H5O_SDSPACE_VERSION;
     *p++ = sdim->rank;
     *p++ = flags;
-    if(sdim->type!=H5S_NULL)
-        *p++ = 0; /*reserved*/
-    else
-        *p++ = sdim->type;
+    *p++ = 0; /*reserved*/
     *p++ = 0; /*reserved*/
     *p++ = 0; /*reserved*/
     *p++ = 0; /*reserved*/
@@ -252,7 +224,8 @@ H5O_sdspace_encode(H5F_t *f, uint8_t *p, const void *mesg)
         }
     }
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }
 
 
@@ -270,11 +243,6 @@ H5O_sdspace_encode(H5F_t *f, uint8_t *p, const void *mesg)
  DESCRIPTION
 	This function copies a native (memory) simple dimensionality message,
     allocating the destination structure if necessary.
- MODIFICATIONS
-    Raymond Lu
-    April 8, 2004
-    Changed operation on H5S_simple_t to H5S_extent_t.
-
 --------------------------------------------------------------------------*/
 static void *
 H5O_sdspace_copy(const void *mesg, void *dest)
@@ -283,7 +251,7 @@ H5O_sdspace_copy(const void *mesg, void *dest)
     H5S_extent_t	   *dst = (H5S_extent_t *) dest;
     void                   *ret_value;          /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT(H5O_sdspace_copy);
+    FUNC_ENTER_NOAPI(H5O_sdspace_copy, NULL);
 
     /* check args */
     assert(src);
@@ -333,7 +301,7 @@ H5O_sdspace_size(H5F_t *f, const void *mesg)
      */
     size_t		    ret_value = 8;
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_sdspace_size);
+    FUNC_ENTER_NOAPI(H5O_sdspace_size, 0);
 
     /* add in the dimension sizes */
     ret_value += space->rank * H5F_SIZEOF_SIZE (f);
@@ -341,6 +309,7 @@ H5O_sdspace_size(H5F_t *f, const void *mesg)
     /* add in the space for the maximum dimensions, if they are present */
     ret_value += space->max ? space->rank * H5F_SIZEOF_SIZE (f) : 0;
 
+done:
     FUNC_LEAVE_NOAPI(ret_value);
 }
 
@@ -364,12 +333,14 @@ static herr_t
 H5O_sdspace_reset(void *_mesg)
 {
     H5S_extent_t	*mesg = (H5S_extent_t*)_mesg;
+    herr_t ret_value=SUCCEED;   /* Return value */
     
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_sdspace_reset);
+    FUNC_ENTER_NOAPI(H5O_sdspace_reset, FAIL);
 
     H5S_extent_release(mesg);
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }
 
 
@@ -390,13 +361,16 @@ H5O_sdspace_reset(void *_mesg)
 static herr_t
 H5O_sdspace_free (void *mesg)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_sdspace_free);
+    herr_t ret_value=SUCCEED;   /* Return value */
+
+    FUNC_ENTER_NOAPI(H5O_sdspace_free, FAIL);
 
     assert (mesg);
 
     H5FL_FREE(H5S_extent_t,mesg);
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }
 
 
@@ -424,8 +398,9 @@ H5O_sdspace_debug(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const void *mesg,
 {
     const H5S_extent_t	   *sdim = (const H5S_extent_t *) mesg;
     unsigned		    u;	/* local counting variable */
+    herr_t ret_value=SUCCEED;   /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_sdspace_debug);
+    FUNC_ENTER_NOAPI(H5O_sdspace_debug, FAIL);
 
     /* check args */
     assert(f);
@@ -460,5 +435,6 @@ H5O_sdspace_debug(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const void *mesg,
         }
     } /* end if */
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }

@@ -20,8 +20,10 @@
 #endif
 
 #include "H5Include.h"
+#include "H5RefCounter.h"
 #include "H5Exception.h"
 #include "H5IdComponent.h"
+#include "H5Idtemplates.h"
 #include "H5PropList.h"
 #include "H5Object.h"
 #include "H5FaccProp.h"
@@ -187,17 +189,18 @@ void H5File::reOpen()
    // reset the identifier of this H5File - send 'this' in so that
    // H5Fclose can be called appropriately
     try {
-        decRefCount();
-    }
-    catch (Exception close_error) {
-        throw FileIException("H5File::reOpen", close_error.getDetailMsg());
+        resetIdComponent( this ); }
+    catch (Exception close_error) { // thrown by p_close
+        throw FileIException("H5File::reopen", close_error.getDetailMsg());
     }
 
    // call C routine to reopen the file - Note: not sure about this
    // does id need to be closed later?  which id to be the parameter?
    id = H5Freopen( id );
    if( id <= 0 ) // Raise exception when H5Freopen returns a neg value
-      throw FileIException("H5File::reOpen", "H5Freopen failed");
+   {
+      throw FileIException("H5File::reopen", "H5Freopen failed");
+   }
 }
 
 //--------------------------------------------------------------------------
@@ -526,6 +529,26 @@ hid_t H5File::getLocId() const
    return( getId() );
 }
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+//--------------------------------------------------------------------------
+// Function:    H5File::p_close (private)
+// Purpose:     Closes this HDF5 file.
+// Exception    H5::FileIException
+// Description
+//              This function will be obsolete because its functionality
+//              is recently handled by the C library layer. - May, 2004
+// Programmer   Binh-Minh Ribler - 2000
+//--------------------------------------------------------------------------
+void H5File::p_close() const
+{
+   herr_t ret_value = H5Fclose( id );
+   if( ret_value < 0 )
+   {
+      throw FileIException(0, "H5Fclose failed");
+   }
+}
+#endif // DOXYGEN_SHOULD_SKIP_THIS
+
 //--------------------------------------------------------------------------
 // Function:	H5File::throwException
 ///\brief	Throws file exception - initially implemented for CommonFG
@@ -556,9 +579,8 @@ H5File::~H5File()
 {  
    // The HDF5 file id will be closed properly
     try {
-        decRefCount();
-    }
-    catch (Exception close_error) {
+        resetIdComponent( this ); }
+    catch (Exception close_error) { // thrown by p_close
         cerr << "H5File::~H5File - " << close_error.getDetailMsg() << endl;
     }
 }  

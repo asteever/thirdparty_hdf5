@@ -80,7 +80,7 @@ coll_chunk3(void)
   char *filename;
   int mpi_size;
   MPI_Comm comm = MPI_COMM_WORLD;
-  MPI_Comm_size(comm,&mpi_size);           
+  MPI_Comm_size(comm,&mpi_size);
   filename = (char *) GetTestParameters();
   coll_chunktest(filename,mpi_size,BYROW_CONT);
 
@@ -92,9 +92,8 @@ coll_chunk4(void)
 
   char *filename;
   int mpi_size;
-
   MPI_Comm comm = MPI_COMM_WORLD;
-  MPI_Comm_size(comm,&mpi_size);           
+   MPI_Comm_size(comm,&mpi_size); 
   filename = (char *) GetTestParameters();
   coll_chunktest(filename,mpi_size*2,BYROW_DISCONT);
 
@@ -196,13 +195,8 @@ coll_chunktest(char* filename,int chunk_factor,int select_factor) {
     VRFY((status>= 0),"MPIO collective transfer property succeeded");
 #ifdef H5_HAVE_INSTRUMENTED_LIBRARY
     prop_value = H5D_XFER_COLL_CHUNK_DEF;
-#ifdef H5_WANT_H5_V1_6_COMPAT
     status = H5Pinsert(xfer_plist,H5D_XFER_COLL_CHUNK_NAME,H5D_XFER_COLL_CHUNK_SIZE,&prop_value,
                        NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    status = H5Pinsert(xfer_plist,H5D_XFER_COLL_CHUNK_NAME,H5D_XFER_COLL_CHUNK_SIZE,&prop_value,
-                       NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     VRFY((status >= 0),"testing property list inserted succeeded");
 #endif /* H5_HAVE_INSTRUMENTED_LIBRARY */
 
@@ -282,13 +276,8 @@ coll_chunktest(char* filename,int chunk_factor,int select_factor) {
     VRFY((status>= 0),"MPIO collective transfer property succeeded");
 #ifdef H5_HAVE_INSTRUMENTED_LIBRARY
     prop_value = H5D_XFER_COLL_CHUNK_DEF;
-#ifdef H5_WANT_H5_V1_6_COMPAT
     status = H5Pinsert(xfer_plist,H5D_XFER_COLL_CHUNK_NAME,H5D_XFER_COLL_CHUNK_SIZE,&prop_value,
                        NULL,NULL,NULL,NULL,NULL);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    status = H5Pinsert(xfer_plist,H5D_XFER_COLL_CHUNK_NAME,H5D_XFER_COLL_CHUNK_SIZE,&prop_value,
-                       NULL,NULL,NULL,NULL,NULL,NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     VRFY((status >= 0),"testing property list inserted succeeded");
 #endif /* H5_HAVE_INSTRUMENTED_LIBRARY */
     status = H5Dread(dataset, H5T_NATIVE_INT, H5S_ALL, file_dataspace,
@@ -350,18 +339,21 @@ ccslab_set(int mpi_rank, int mpi_size, hssize_t start[], hsize_t count[],
 	break;
     case BYROW_DISCONT:
 	/* Each process takes several disjoint blocks. */
-	block[0] = 1;
-	block[1] = 1;
         /*
+	block[0] = 2;
+	block[1] = 2;
 	stride[0] = 3;
 	stride[1] = 6;
 	count[0] = 2;
 	count[1] = 3;
         */
+        
+        block[0] = 1;
+        block[1] = 1;
         stride[0] = 3;
         stride[1] = 3;
         count[0]  = (SPACE_DIM1/mpi_size)/(stride[0]*block[0]);
-        count[1] =(SPACE_DIM2)/(stride[1]*block[1]);
+        count[1]  = (SPACE_DIM2)/(stride[1]*block[1]);
 	start[0] = SPACE_DIM1/mpi_size*mpi_rank;
 	start[1] = 0;
 if (VERBOSE_MED) printf("slab_set BYROW_DISCONT\n");

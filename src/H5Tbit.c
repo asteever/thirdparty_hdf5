@@ -22,13 +22,16 @@
 
 /* Pablo information */
 /* (Put before include files to avoid problems with inline functions) */
-#define PABLO_MASK	H5T_bit_mask
+#define PABLO_MASK	H5Tbit_mask
 
 #include "H5private.h"		/*generic functions			  */
 #include "H5Eprivate.h"		/*error handling			  */
 #include "H5Iprivate.h"		/*ID functions		   		  */
-#include "H5MMprivate.h"	/* Memory management			*/
 #include "H5Tpkg.h"		/*data-type functions			  */
+
+/* Interface initialization */
+static int interface_initialize_g = 0;
+#define INTERFACE_INIT NULL
 
 
 /*-------------------------------------------------------------------------
@@ -75,7 +78,7 @@ H5T_bit_copy (uint8_t *dst, size_t dst_offset, const uint8_t *src,
      *      ... v v v v v V V V V V
      *      ...+---------------+---------------+
      *      ...|7 6 5 4 3 2 1 0|7 6 5 4 3 2 1 0|
-           ...+---------------+---------------+
+     *      ...+---------------+---------------+
      *           dst[d_idx+1]      dst[d_idx]
      */
     while (src_offset && size>0) {
@@ -158,78 +161,9 @@ H5T_bit_copy (uint8_t *dst, size_t dst_offset, const uint8_t *src,
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5T_bit_shift
- *
- * Purpose:	Simulation of hardware shifting.  Shifts a bit vector
- *              in a way similar to shifting a variable value, like
- *              value <<= 3, or value >>= 16.  SHIFT_DIST is positive for 
- *              left shift, negative for right shift.  The bit vector starts
- *              at OFFSET and is SIZE long.  The caller has to make sure
- *              SIZE+OFFSET doesn't exceed the size of BUF.
- *
- *              For example, if we have a bit sequence 00011100, offset=2,
- *              size=3, shift_dist=2, the result will be 00010000. 
- *
- * Return:	void
- *
- * Programmer:	Raymond Lu
- *              Monday, April 12, 2004
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-void
-H5T_bit_shift (uint8_t *buf, ssize_t shift_dist, size_t offset, size_t size)
-{
-    uint8_t *tmp_buf;
-
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5T_bit_shift);
-
-    /* Sanity check */
-    assert(buf);
-    assert(size);
-
-    if(!shift_dist)
-        goto done;    
-    if((size_t)ABS(shift_dist) >= size) {
-        H5T_bit_set(buf, offset, size, 0);
-        goto done;
-    }
-    
-    tmp_buf = (uint8_t*)H5MM_calloc(size/8+1);
-    assert(tmp_buf);
-
-    /* Shift vector by making copies */    
-    if(shift_dist > 0) { /* left shift */ 
-        /* Copy part to be shifted to a temporary buffer */
-        H5T_bit_copy (tmp_buf, 0, buf, offset, (size_t)(size-shift_dist));
-        
-        /* Copy it back to the original buffer */
-        H5T_bit_copy (buf, offset+shift_dist, tmp_buf, 0, (size_t)(size-shift_dist));
-        
-        /* Zero-set the left part*/
-        H5T_bit_set(buf, offset, (size_t)shift_dist, 0);
-    } else { /* right shift */
-        shift_dist = - shift_dist;
-        H5T_bit_copy(tmp_buf, 0, buf, offset+shift_dist, (size_t)(size-shift_dist));
-        H5T_bit_copy (buf, offset, tmp_buf, 0, (size_t)(size-shift_dist));
-        H5T_bit_set(buf, offset+size-shift_dist, (size_t)shift_dist, 0);
-    }
-
-    /* Free temporary buffer */
-    H5MM_xfree(tmp_buf);
-
-done:
-    FUNC_LEAVE_NOAPI_VOID
-}
-
-
-/*-------------------------------------------------------------------------
  * Function:	H5T_bit_get_d
  *
- * Purpose:	Return a small bit sequence as a number.  Bit vector starts
- *              at OFFSET and is SIZE bits long.
+ * Purpose:	Return a small bit sequence as a number.
  *
  * Return:	Success:	The bit sequence interpretted as an unsigned
  *				integer.
@@ -250,12 +184,12 @@ H5T_bit_get_d (uint8_t *buf, size_t offset, size_t size)
     size_t	i, hs;
     hsize_t	ret_value;      /* Return value */
     
-    FUNC_ENTER_NOAPI_NOFUNC(H5T_bit_get_d);
+    FUNC_ENTER_NOAPI(H5T_bit_get_d, 0);
 
     assert (8*sizeof(val)>=size);
 
     H5T_bit_copy ((uint8_t*)&val, 0, buf, offset, size);
-    switch (H5T_native_order_g) {
+    switch (((H5T_t*)(H5I_object(H5T_NATIVE_INT_g)))->u.atomic.order) {
         case H5T_ORDER_LE:
             break;
 
@@ -274,6 +208,7 @@ H5T_bit_get_d (uint8_t *buf, size_t offset, size_t size)
     /* Set return value */
     ret_value=val;
 
+done:
     FUNC_LEAVE_NOAPI(ret_value);
 }
 
@@ -299,7 +234,7 @@ H5T_bit_set_d (uint8_t *buf, size_t offset, size_t size, hsize_t val)
     
     assert (8*sizeof(val)>=size);
 
-    switch (H5T_native_order_g) {
+    switch (((H5T_t*)(H5I_object(H5T_NATIVE_INT_g)))->u.atomic.order) {
         case H5T_ORDER_LE:
             break;
 
@@ -378,9 +313,7 @@ H5T_bit_set (uint8_t *buf, size_t offset, size_t size, hbool_t value)
  * Purpose:	Finds the first bit with the specified VALUE within a region
  *		of a bit vector.  The region begins at OFFSET and continues
  *		for SIZE bits, but the region can be searched from the least
- *		significat end toward the most significant end(H5T_BIT_LSB
- *		as DIRECTION), or from the most significant end to the least 
- *		significant end(H5T_BIT_MSB as DIRECTION).
+ *		significat end toward the most significant end with 
  *
  * Return:	Success:	The position of the bit found, relative to
  *				the offset.
@@ -484,16 +417,15 @@ done:
 /*-------------------------------------------------------------------------
  * Function:	H5T_bit_inc
  *
- * Purpose:	Increment part of a bit field by adding 1.  The bit field 
- *              starts with bit position START and is SIZE bits long.
+ * Purpose:	Increment part of a bit field by adding 1.
  *
- * Return:	Success:        The carry-out value.  One if overflows, 
- *                              zero otherwise.
+ * Return:	Success:        The carry-out value, one if overflow zero
+ *				otherwise.
  *
  *		Failure:	Negative
  *
- * Programmer:	Raymond Lu
- *              Mar 17, 2004
+ * Programmer:	Robb Matzke
+ *              Friday, June 26, 1998
  *
  * Modifications:
  *
@@ -547,148 +479,4 @@ H5T_bit_inc(uint8_t *buf, size_t start, size_t size)
     }
 
     FUNC_LEAVE_NOAPI(carry ? TRUE : FALSE);
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5T_bit_dec
- *
- * Purpose:	decrement part of a bit field by substracting 1.  The bit 
- *              field starts with bit position START and is SIZE bits long.
- *
- * Return:	Success:        The "borrow-in" value. It's one if underflows,
- *                              zero otherwise.
- *
- *		Failure:	Negative
- *
- * Programmer:	Raymond Lu
- *              March 17, 2004
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-htri_t
-H5T_bit_dec(uint8_t *buf, size_t start, size_t size)
-{
-    size_t	idx = start / 8;
-    size_t      pos = start % 8;
-    uint8_t     tmp;
-    unsigned	borrow = 0;
-    
-    /* Use FUNC_ENTER_NOAPI_NOINIT_NOFUNC here to avoid performance issues */
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5T_bit_dec);
-
-    assert(buf);
-    assert(size);
-
-    /* The first partial byte */
-    if ((size+start-1)/8 > idx) { /*bit sequence doesn't end in the same byte as starts*/
-        /* Example:  a sequence like 11000100 and start = 3.  We substract 00001000 from 
-         * it and get 10111100.  If a sequence is 00000111, we do right shift for START 
-         * bits and get 00000000.  So we need to borrow from higher byte when we substract
-         * 00001000.
-         */ 
-        if(!(buf[idx] >> pos))
-            borrow = 1;
-        buf[idx] -= 1 << pos;
-        idx++;
-        size -= (8 - pos);
-    } else { /* bit sequence ends in the same byte as starts */
-        /* Example: a sequence like 11000100 and pos=3, size=3.  We substract 00001000 
-         * and get 10111100.  A bit is borrowed from 6th bit(buf[idx]>>6=00000010, tmp>>6=00000011,
-         * not equal).  We need to put this bit back by increment 1000000.
-         */ 
-        tmp = buf[idx];
-        buf[idx] -= 1 << pos;
-        if((buf[idx] >> (pos+size)) != tmp >> (pos+size)) {
-            buf[idx] += 1 << (pos+size);
-            borrow = 1;
-        }
-        goto done;
-    }
-    
-    /* The middle bytes */
-    while (borrow && size>=8) {
-        if(buf[idx])
-            borrow = 0;
-        buf[idx] -= 1;
-
-	idx++;
-	size -= 8;
-    }
-
-    /* The last partial byte */
-    if (borrow && size>0) {
-        /* Similar to the first byte case, where sequence ends in the same byte as starts */
-        tmp = buf[idx];
-        buf[idx] -= 1;
-        if((buf[idx] >> size) != tmp >> size)
-            buf[idx] += 1 << size;
-    }
-
-done:
-    FUNC_LEAVE_NOAPI(borrow ? TRUE : FALSE);
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5T_bit_neg
- *
- * Purpose:	negate part of a bit sequence.  The bit 
- *              field starts with bit position START and is SIZE bits long.
- *
- * Return:	void
- *
- * Programmer:	Raymond Lu
- *              March 19, 2004
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-void
-H5T_bit_neg(uint8_t *buf, size_t start, size_t size)
-{
-    size_t	idx = start / 8;
-    size_t      pos = start % 8;
-    uint8_t     tmp;
-    
-    /* Use FUNC_ENTER_NOAPI_NOINIT_NOFUNC here to avoid performance issues */
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5T_bit_neg);
-
-    assert(buf);
-    assert(size);
-
-    /* The first partial byte */
-    tmp = buf[idx];
-    tmp = ~tmp;
-
-    /* Simply copy the negated bit field back to the original byte */
-    if((size+start-1)/8 > idx) {   /*bit sequence doesn't end in the same byte as starts*/
-        H5T_bit_copy (&(buf[idx]), pos, &tmp, pos, (8-pos));
-        idx++;
-        size -= (8 - pos);
-    } else {  /* bit sequence ends in the same byte as starts */
-        H5T_bit_copy (&(buf[idx]), pos, &tmp, pos, size);
-        goto done;
-    }
-
-    /* The middle bytes */
-    while (size>=8) {
-        buf[idx] = ~(buf[idx]);
-	idx++;
-	size -= 8;
-    }
-
-    /* The last partial byte */
-    if (size>0) {
-        /* Similar to the first byte case, where sequence ends in the same byte as starts */
-        tmp = buf[idx];
-        tmp = ~tmp;
-        H5T_bit_copy (&(buf[idx]), 0, &tmp, 0, size);
-    }
-
-done:
-    FUNC_LEAVE_NOAPI_VOID
 }

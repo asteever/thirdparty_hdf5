@@ -34,8 +34,7 @@ typedef enum H5S_class_t {
     H5S_NO_CLASS         = -1,  /*error                                      */
     H5S_SCALAR           = 0,   /*scalar variable                            */
     H5S_SIMPLE           = 1,   /*simple data space                          */
-    H5S_NULL             = 2,   /*null data space                            */
-    H5S_COMPLEX          = 3    /*complex data space                         */
+    H5S_COMPLEX          = 2    /*complex data space                         */
 } H5S_class_t;
 
 /* Different ways of combining selections */
@@ -100,8 +99,6 @@ H5_DLL herr_t H5Sset_extent_simple(hid_t space_id, int rank,
 				    const hsize_t max[]);
 H5_DLL hid_t H5Scopy(hid_t space_id);
 H5_DLL herr_t H5Sclose(hid_t space_id);
-H5_DLL herr_t H5Sencode(hid_t obj_id, void *buf, size_t *nalloc);
-H5_DLL hid_t H5Sdecode(const void *buf);
 H5_DLL hssize_t H5Sget_simple_extent_npoints(hid_t space_id);
 H5_DLL int H5Sget_simple_extent_ndims(hid_t space_id);
 H5_DLL int H5Sget_simple_extent_dims(hid_t space_id, hsize_t dims[],
@@ -114,7 +111,6 @@ H5_DLL herr_t H5Sselect_hyperslab(hid_t space_id, H5S_seloper_t op,
 				   const hsize_t _stride[],
 				   const hsize_t count[],
 				   const hsize_t _block[]);
-/* #define NEW_HYPERSLAB_API */
 #ifdef NEW_HYPERSLAB_API
 H5_DLL hid_t H5Scombine_hyperslab(hid_t space_id, H5S_seloper_t op,
 				   const hssize_t start[],
@@ -140,7 +136,11 @@ H5_DLL hssize_t H5Sget_select_hyper_nblocks(hid_t spaceid);
 H5_DLL hssize_t H5Sget_select_elem_npoints(hid_t spaceid);
 H5_DLL herr_t H5Sget_select_hyper_blocklist(hid_t spaceid, hsize_t startblock, hsize_t numblocks, hsize_t *buf);
 H5_DLL herr_t H5Sget_select_elem_pointlist(hid_t spaceid, hsize_t startpoint, hsize_t numpoints, hsize_t *buf);
+#ifdef H5_WANT_H5_V1_4_COMPAT
+H5_DLL herr_t H5Sget_select_bounds(hid_t spaceid, hsize_t *start, hsize_t *end);
+#else /* H5_WANT_H5_V1_4_COMPAT */
 H5_DLL herr_t H5Sget_select_bounds(hid_t spaceid, hssize_t *start, hssize_t *end);
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 H5_DLL H5S_sel_type H5Sget_select_type(hid_t spaceid);
 
 #ifdef __cplusplus

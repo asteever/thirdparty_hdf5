@@ -146,6 +146,11 @@ typedef struct H5O_layout_compact_t {
 typedef struct H5O_layout_t {
     H5D_layout_t type;			/* Type of layout                    */
     unsigned version;                   /* Version of message                */
+    /* Structure for "unused" dimension information */
+    struct {
+        unsigned ndims;			/*num dimensions in stored data	     */
+        hsize_t	dim[H5O_LAYOUT_NDIMS];	/*size of data or chunk in bytes     */
+    } unused;
     union {
         H5O_layout_contig_t contig;     /* Information for contiguous layout */
         H5O_layout_chunk_t chunk;       /* Information for chunked layout    */
@@ -249,8 +254,6 @@ H5_DLL herr_t H5O_remove(H5G_entry_t *ent, unsigned type_id, int sequence,
     hid_t dxpl_id);
 H5_DLL herr_t H5O_reset(unsigned type_id, void *native);
 H5_DLL void *H5O_free(unsigned type_id, void *mesg);
-H5_DLL herr_t H5O_encode(H5F_t *f, unsigned char *buf, void *obj, unsigned type_id);
-H5_DLL void* H5O_decode(H5F_t *f, unsigned char *buf, unsigned type_id);
 H5_DLL void *H5O_copy(unsigned type_id, const void *mesg, void *dst);
 H5_DLL size_t H5O_raw_size(unsigned type_id, H5F_t *f, const void *mesg);
 H5_DLL herr_t H5O_get_share(unsigned type_id, H5F_t *f, const void *mesg, H5O_shared_t *share);

@@ -27,15 +27,15 @@
 #include <iostream>
 #endif
 
-#include "H5Cpp.h"
 #include "testhdf5.h"
+#include "H5Cpp.h"
 
 #ifndef H5_NO_NAMESPACE
 using namespace H5;
 #endif  /* !H5_NO_NAMESPACE */
 
-#define TESTFILE   "th5s.h5"
-#define DATAFILE   "th5s1.h5"
+const char*    TESTFILE = "th5s.h5";
+const char*    DATAFILE = "th5s1.h5";
 
 /* 3-D dataset with fixed dimensions */
 #define SPACE1_NAME  "Space1"
@@ -78,9 +78,6 @@ struct space4_struct {
     float f;
     char c2;
  } space4_data={'v',987123,(float)-3.14,'g'}; /* Test data for 4th dataspace */
-
-/* Null dataspace */
-int space5_data = 7;
 
 /*-------------------------------------------------------------------------
  *  
@@ -206,7 +203,7 @@ test_h5s_basic(void)
     // catch exception thrown by H5File constructor
     catch( FileIException error ) {
     	CHECK_I(FAIL, error.getCFuncName());
-	cout << "***cannot open the pre-created H5S_MAX_RANK test file" <<
+	cerr << "***cannot open the pre-created H5S_MAX_RANK test file" <<
 	    testfile << endl;
     }
 
@@ -351,56 +348,6 @@ test_h5s_scalar_read(void)
 
 /*-------------------------------------------------------------------------
  *  
- * Function:	test_h5s_null
- *
- * Purpose:	Test null H5S (dataspace) code
- *
- * Return:	none
- *
- * Programmer:	Raymond Lu (using C version)
- *              May 18, 2004
- *
- * Modifications:
- *-------------------------------------------------------------------------
- */
-static void 
-test_h5s_null(void)
-{
-
-    /* Output message about test being performed */
-    MESSAGE(5, ("Testing Null Dataspace Writing\n"));
-
-    try
-    {
-	// Create file
-	H5File fid1(DATAFILE, H5F_ACC_TRUNC);
-
-	/* Create scalar dataspace */
-	DataSpace sid1(H5S_NULL);
-
-	//n = H5Sget_simple_extent_npoints(sid1);
-	hssize_t	n;	 	/* Number of dataspace elements */
-	n = sid1.getSimpleExtentNpoints();
-	VERIFY(n, 0, "DataSpace::getSimpleExtentNpoints");
-
-	// Create a dataset 
-	DataSet dataset = fid1.createDataSet("Dataset1", PredType::NATIVE_UINT,sid1);
-
-        // Try to write nothing to the dataset
-	dataset.write(&space5_data, PredType::NATIVE_INT);
-
-        // Read the data.  Make sure no change to the buffer
-	dataset.read(&space5_data, PredType::NATIVE_INT);
-	VERIFY(space5_data, 7, "H5Dread");
-    } // end of try block
-    catch (Exception error)
-    {
-	CHECK(FAIL, FAIL, error.getCFuncName());
-    }
-}				/* test_h5s_null() */
-
-/*-------------------------------------------------------------------------
- *  
  * Function:	test_h5s_compound_scalar_write
  *
  * Purpose:	Test scalar H5S (dataspace) writing for compound 
@@ -521,11 +468,11 @@ test_h5s_compound_scalar_read(void)
 	// Verify read data
 	if(HDmemcmp(&space4_data,&rdata,sizeof(struct space4_struct)))
 	{
-            cout << "scalar data different: space4_data.c1=" 
+            cerr << "scalar data different: space4_data.c1=" 
 		<< space4_data.c1 << ", read_data4.c1=" << rdata.c1 << endl;
-            cout << "scalar data different: space4_data.u="
+            cerr << "scalar data different: space4_data.u="
 		<< space4_data.u << ", read_data4.u=" << rdata.u << endl;
-            cout << "scalar data different: space4_data.f="
+            cerr << "scalar data different: space4_data.f="
 		<< space4_data.f << ", read_data4.f=" << rdata.f << endl;
             TestErrPrintf("scalar data different: space4_data.c1=%c, read_data4.c1=%c\n",
 		space4_data.c1, rdata.c2);
@@ -560,8 +507,7 @@ test_h5s(void)
 
     test_h5s_basic();		/* Test basic H5S code */
     test_h5s_scalar_write();	/* Test scalar H5S writing code */
-    test_h5s_scalar_read();	/* Test scalar H5S reading code */
-    test_h5s_null();		/* Test null H5S code  */
+    test_h5s_scalar_read();		/* Test scalar H5S reading code */
     test_h5s_compound_scalar_write();	/* Test compound datatype scalar H5S writing code */
     test_h5s_compound_scalar_read();	/* Test compound datatype scalar H5S reading code */
 } /* test_h5s() */

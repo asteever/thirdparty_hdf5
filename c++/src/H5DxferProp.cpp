@@ -15,6 +15,7 @@
 #include <string>
 
 #include "H5Include.h"
+#include "H5RefCounter.h"
 #include "H5Exception.h"
 #include "H5IdComponent.h"
 #include "H5PropList.h"
@@ -30,33 +31,73 @@ namespace H5 {
 const DSetMemXferPropList DSetMemXferPropList::DEFAULT( H5P_DEFAULT );
 
 //--------------------------------------------------------------------------
-// Function	DSetMemXferPropList default constructor
+// Function     Default constructor
 ///\brief	Default constructor: creates a stub dataset memory and
 ///		transfer property list object.
-// Programmer:	Binh-Minh Ribler - 2000
+// Programmer:  Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 DSetMemXferPropList::DSetMemXferPropList() : PropList(H5P_DATASET_XFER) {}
 
 //--------------------------------------------------------------------------
-// Function	DSetMemXferPropList copy constructor
+// Function     DSetMemXferPropList copy constructor
 ///\brief	Copy constructor: makes a copy of the original
 ///		DSetMemXferPropList object
-///\param	orig - IN: The original dataset memory and transfer property 
+///\param       original - IN: Original dataset memory and transfer property
 ///				list object to copy
-// Programmer:	Binh-Minh Ribler - 2000
+// Programmer:  Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-DSetMemXferPropList::DSetMemXferPropList( const DSetMemXferPropList& orig ) : PropList( orig ) {}
+DSetMemXferPropList::DSetMemXferPropList(const DSetMemXferPropList& original) : PropList(original) {}
 
 //--------------------------------------------------------------------------
-// Function	DSetMemXferPropList overloaded constructor
+// Function     DSetMemXferPropList overloaded constructor
 ///\brief	Creates a DSetMemXferPropList object using the id of an
 ///		existing DSetMemXferPropList.
-///\param	plist_id - IN: Id of an existing dataset memory and transfer
+///\param       plist_id - IN: Id of an existing dataset memory and transfer 
 ///				property list
-// Programmer:	Binh-Minh Ribler - 2000
+// Programmer:  Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 DSetMemXferPropList::DSetMemXferPropList(const hid_t plist_id) : PropList(plist_id) {}
 
+#ifdef H5_WANT_H5_V1_4_COMPAT
+//--------------------------------------------------------------------------
+// Function:	DSetMemXferPropList::setBuffer
+///\brief	Sets type conversion and background buffers.
+///\param	size  - IN: Size, in bytes, of the type conversion and background buffers
+///\param	tconv - IN: Pointer to application-allocated type conversion buffer
+///\param	bkg   - IN: Pointer to application-allocated background buffer
+///\exception	H5::PropListIException
+// Programmer:	Binh-Minh Ribler - 2000
+//--------------------------------------------------------------------------
+void DSetMemXferPropList::setBuffer( hsize_t size, void* tconv, void* bkg ) const
+{
+   herr_t ret_value = H5Pset_buffer( id, size, tconv, bkg );
+   if( ret_value < 0 )
+   {
+      throw PropListIException("DSetMemXferPropList::setBuffer",
+		"H5Pset_buffer failed");
+   }
+}
+
+//--------------------------------------------------------------------------
+// Function:	DSetMemXferPropList::getBuffer
+///\brief	Reads buffer settings.
+///\param	tconv - IN: Pointer to application-allocated type conversion buffer
+///\param	bkg   - IN: Pointer to application-allocated background buffer
+///\return	Buffer size, in bytes
+///\exception	H5::PropListIException
+// Programmer:	Binh-Minh Ribler - 2000
+//--------------------------------------------------------------------------
+hsize_t DSetMemXferPropList::getBuffer( void** tconv, void** bkg ) const
+{
+   hsize_t buffer_size = H5Pget_buffer( id, tconv, bkg );
+   if( buffer_size == 0 )
+   {
+      throw PropListIException("DSetMemXferPropList::getBuffer",
+		"H5Pget_buffer returned 0 for buffer size - failure");
+   }
+   return( buffer_size );
+}
+#else /* H5_WANT_H5_V1_4_COMPAT */
 //--------------------------------------------------------------------------
 // Function:	DSetMemXferPropList::setBuffer
 ///\brief	Sets type conversion and background buffers.
@@ -85,7 +126,6 @@ void DSetMemXferPropList::setBuffer( size_t size, void* tconv, void* bkg ) const
 ///\exception	H5::PropListIException
 // Programmer:	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-
 size_t DSetMemXferPropList::getBuffer( void** tconv, void** bkg ) const
 {
    size_t buffer_size = H5Pget_buffer( id, tconv, bkg );
@@ -96,6 +136,7 @@ size_t DSetMemXferPropList::getBuffer( void** tconv, void** bkg ) const
    }
    return( buffer_size );
 }
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
 //--------------------------------------------------------------------------
 // Function:	DSetMemXferPropList::setPreserve
@@ -134,6 +175,64 @@ bool DSetMemXferPropList::getPreserve() const
 		"H5Pget_preserve returned negative value for status");
    }
 }
+
+#ifdef H5_WANT_H5_V1_4_COMPAT
+//--------------------------------------------------------------------------
+// Function:	DSetMemXferPropList::setHyperCache
+///\brief	Indicates whether to cache hyperslab blocks during I/O
+///\param	cache - IN: Flag indicating whether caching is to be set 
+///			    to on (1) or off (0)
+///\param	limit - IN: Maximum size of the hyperslab block to cache or
+///			    0 (zero) for no limit
+///\exception	H5::PropListIException
+///\note	This function is deprecated in HDF5 Release 1.6 and will 
+///		eventually be removed from the HDF5 distribution. It is 
+///		provided in this release only to enable backward compatibility 
+///		with HDF5 Releases 1.4.x and is enabled only if the HDF5 
+///		library is configured with the flag H5_WANT_H5_V1_4_COMPAT.
+// Programmer:	Binh-Minh Ribler - 2000
+//--------------------------------------------------------------------------
+void DSetMemXferPropList::setHyperCache( bool cache, unsigned limit ) const
+{
+   herr_t ret_value = H5Pset_hyper_cache( id, cache, limit );
+   if( ret_value < 0 )
+   {
+      throw PropListIException("DSetMemXferPropList::setHyperCache",
+		"H5Pset_hyper_cache failed");
+   }
+}
+
+//--------------------------------------------------------------------------
+// Function:	DSetMemXferPropList::getHyperCache
+///\brief	Returns information regarding the caching of hyperslab 
+///		blocks during I/O.
+///\param	cache - OUT: Flag indicating whether caching is set 
+///			    to on (1) or off (0)
+///\param	limit - OUT: Maximum size of the hyperslab block to cache or
+///			    0 (zero) for no limit
+///\exception	H5::PropListIException
+///\note	This function is deprecated in HDF5 Release 1.6 and will 
+///		eventually be removed from the HDF5 distribution. It is 
+///		provided in this release only to enable backward compatibility 
+///		with HDF5 Releases 1.4.x and is enabled only if the HDF5 
+///		library is configured with the flag H5_WANT_H5_V1_4_COMPAT.
+// Programmer:	Binh-Minh Ribler - 2000
+//--------------------------------------------------------------------------
+void DSetMemXferPropList::getHyperCache( bool& cache, unsigned& limit ) const
+{
+   unsigned temp_cache;  // C routine takes hid_t, unsigned*, unsigned*
+   herr_t ret_value = H5Pget_hyper_cache( id, &temp_cache, &limit );
+   if( ret_value < 0 )
+   {
+      throw PropListIException("DSetMemXferPropList::getHyperCache",
+		"H5Pget_hyper_cache failed");
+   }
+   if( temp_cache > 0 )
+      cache = true;
+   else
+      cache = false;
+}
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
 //--------------------------------------------------------------------------
 // Function:	DSetMemXferPropList::setBtreeRatios
@@ -174,46 +273,9 @@ void DSetMemXferPropList::getBtreeRatios( double& left, double& middle, double& 
 }
 
 //--------------------------------------------------------------------------
-// Function:	DSetMemXferPropList::setTypeConvCB
-///\brief	Sets an exception handling callback for datatype conversion
-///		for a dataset transfer property list.
-///\param	op        - IN: User's function
-///\param	user_data - IN: User's data
-///\exception	H5::PropListIException
-// Programmer:	Binh-Minh Ribler - April, 2004
-//--------------------------------------------------------------------------
-void DSetMemXferPropList::setTypeConvCB( H5T_conv_except_func_t op, void *user_data) const
-{
-   herr_t ret_value = H5Pset_type_conv_cb( id, op, user_data);
-   if( ret_value < 0 )
-   {
-      throw PropListIException("DSetMemXferPropList::setTypeConvCB",
-                "H5Pset_type_conv_cb failed");
-   }
-}
-
-//--------------------------------------------------------------------------
-// Function:	DSetMemXferPropList::getTypeConvCB
-///\brief	Gets the exception handling callback function and data.
-///\param	op        - IN: Retrieved user function
-///\param	user_data - IN: Retrieved user data
-///\exception	H5::PropListIException
-// Programmer:	Binh-Minh Ribler - April, 2004
-//--------------------------------------------------------------------------
-void DSetMemXferPropList::getTypeConvCB( H5T_conv_except_func_t *op, void **user_data) const
-{
-   herr_t ret_value = H5Pget_type_conv_cb( id, op, user_data);
-   if( ret_value < 0 )
-   {
-      throw PropListIException("DSetMemXferPropList::getTypeConvCB",
-                "H5Pget_type_conv_cb failed");
-   }
-}
-
-//--------------------------------------------------------------------------
 // Function:	DSetMemXferPropList::setVlenMemManager
 ///\brief	Sets the memory manager for variable-length datatype allocation.
-///\param	alloc_func - IN: User's allocate routine
+///\param       alloc_func - IN: User's allocate routine
 ///\param	alloc_info - IN: User's allocation parameters
 ///\param	free_func  - IN: User's free routine
 ///\param	free_info  - IN: User's free parameters
@@ -246,7 +308,7 @@ void DSetMemXferPropList::setVlenMemManager() const
 //--------------------------------------------------------------------------
 // Function:	DSetMemXferPropList::getVlenMemManager
 ///\brief	Gets the memory manager for variable-length datatype allocation 
-///\param	alloc_func - OUT: User's allocate routine
+///\param       alloc_func - OUT: User's allocate routine
 ///\param	alloc_info - OUT: User's allocation parameters
 ///\param	free_func  - OUT: User's free routine
 ///\param	free_info  - OUT: User's free parameters
@@ -266,12 +328,12 @@ void DSetMemXferPropList::getVlenMemManager( H5MM_allocate_t& alloc_func, void**
 //--------------------------------------------------------------------------
 // Function:	DSetMemXferPropList::setMulti
 ///\brief	Sets the data transfer property list for the multi-file driver.
-///\param	memb_dxpl - OUT: Array of data access property lists
+///\param       memb_dxpl - OUT: Array of data access property lists
 ///\exception	H5::PropListIException
 ///\par Description
 ///		This function can only be used after the member map has 
 ///		been set with FileAccPropList::setMulti (not done - BMR.)
-// Programmer:	Binh-Minh Ribler - April, 2004
+// Programmer:	Binh-Minh Ribler - July, 2004
 //--------------------------------------------------------------------------
 void DSetMemXferPropList::setMulti(const hid_t *memb_dxpl)
 {
@@ -286,9 +348,9 @@ void DSetMemXferPropList::setMulti(const hid_t *memb_dxpl)
 //--------------------------------------------------------------------------
 // Function:	DSetMemXferPropList::getMulti
 ///\brief	Returns multi-file data transfer property list information.
-///\param	memb_dxpl - OUT: Array of data access property lists
+///\param       memb_dxpl - OUT: Array of data access property lists
 ///\exception	H5::PropListIException
-// Programmer:	Binh-Minh Ribler - April, 2004
+// Programmer:	Binh-Minh Ribler - July, 2004
 //--------------------------------------------------------------------------
 void DSetMemXferPropList::getMulti(hid_t *memb_dxpl)
 {
@@ -303,12 +365,12 @@ void DSetMemXferPropList::getMulti(hid_t *memb_dxpl)
 //--------------------------------------------------------------------------
 // Function:	DSetMemXferPropList::setSmallDataBlockSize
 ///\brief	Sets the size of a contiguous block reserved for small data.
-///\param	size - IN: Maximum size, in bytes, of the small data block. 
+///\param       size - IN: Maximum size, in bytes, of the small data block. 
 ///\exception	H5::PropListIException
 ///\par Description
 ///		For detail, please refer to the C layer Reference Manual at:
 /// http://hdf.ncsa.uiuc.edu/HDF5/doc/RM_H5P.html#Property-SetSmallData
-// Programmer:	Binh-Minh Ribler - April, 2004
+// Programmer:	Binh-Minh Ribler - July, 2004
 //--------------------------------------------------------------------------
 void DSetMemXferPropList::setSmallDataBlockSize(hsize_t size)
 {
@@ -324,8 +386,8 @@ void DSetMemXferPropList::setSmallDataBlockSize(hsize_t size)
 // Function:	DSetMemXferPropList::getSmallDataBlockSize
 ///\brief	Returns the current small data block size setting.
 ///\return	Size of the small data block, in bytes
-///\exception   H5::PropListIException
-// Programmer:	Binh-Minh Ribler - April, 2004
+///\exception	H5::PropListIException
+// Programmer:	Binh-Minh Ribler - July, 2004
 //--------------------------------------------------------------------------
 hsize_t DSetMemXferPropList::getSmallDataBlockSize()
 {
@@ -347,7 +409,7 @@ hsize_t DSetMemXferPropList::getSmallDataBlockSize()
 ///		For information, please refer to the C layer Reference
 ///		Manual at:
 /// http://hdf.ncsa.uiuc.edu/HDF5/doc/RM_H5P.html#Property-SetHyperVectorSize
-// Programmer:	Binh-Minh Ribler - April, 2004
+// Programmer:	Binh-Minh Ribler - July, 2004
 //--------------------------------------------------------------------------
 void DSetMemXferPropList::setHyperVectorSize(size_t vector_size)
 {
@@ -365,7 +427,7 @@ void DSetMemXferPropList::setHyperVectorSize(size_t vector_size)
 ///		hyperslab I/O.
 ///\return	Number of I/O vectors
 ///\exception	H5::PropListIException
-// Programmer:	Binh-Minh Ribler - April, 2004
+// Programmer:	Binh-Minh Ribler - July, 2004
 //--------------------------------------------------------------------------
 size_t DSetMemXferPropList::getHyperVectorSize()
 {
@@ -395,7 +457,7 @@ size_t DSetMemXferPropList::getHyperVectorSize()
 ///		Valid values are as follows:
 ///		\li \c H5Z_ENABLE_EDC   (default) 
 ///		\li \c H5Z_DISABLE_EDC  
-// Programmer:	Binh-Minh Ribler - April, 2004
+// Programmer:	Binh-Minh Ribler - July, 2004
 //--------------------------------------------------------------------------
 void DSetMemXferPropList::setEDCCheck(H5Z_EDC_t check)
 {
@@ -412,7 +474,7 @@ void DSetMemXferPropList::setEDCCheck(H5Z_EDC_t check)
 ///\brief	Determines whether error-detection is enabled for dataset reads.
 ///\return	\c H5Z_ENABLE_EDC or \c H5Z_DISABLE_EDC
 ///\exception	H5::PropListIException
-// Programmer:	Binh-Minh Ribler - April, 2004
+// Programmer:	Binh-Minh Ribler - July, 2004
 //--------------------------------------------------------------------------
 H5Z_EDC_t DSetMemXferPropList::getEDCCheck()
 {
@@ -435,4 +497,3 @@ DSetMemXferPropList::~DSetMemXferPropList() {}
 #ifndef H5_NO_NAMESPACE
 } // end namespace
 #endif
-

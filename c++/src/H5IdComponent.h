@@ -16,7 +16,8 @@
 #ifndef _IdComponent_H
 #define _IdComponent_H
 
-// IdComponent represents an HDF5 object that has an identifier.
+// IdComponent provides a mechanism to handle
+// reference counting for an identifier of any HDF5 object.
 
 #ifndef H5_NO_NAMESPACE
 namespace H5 {
@@ -24,16 +25,20 @@ namespace H5 {
 
 class H5_DLLCPP IdComponent {
    public:
-	// Increment reference counter.
+	// Increment reference counter
 	void incRefCount();
 
-	// Decrement reference counter.
+	// Decrement reference counter
 	void decRefCount();
 
-	// Get the reference counter to this identifier.
+	// Get the reference counter to this identifier
 	int getCounter();
 
-	// Assignment operator.
+	// Decrements the reference counter then determines if there are no more
+	// reference to this object
+	bool noReference();
+
+	// Assignment operator
 	IdComponent& operator=( const IdComponent& rhs );
 
 	void reset();
@@ -41,14 +46,22 @@ class H5_DLLCPP IdComponent {
 	// Sets the identifier of this object to a new value.
 	void setId( hid_t new_id );
 
-	// Creates an object to hold an HDF5 identifier.
+	// Creates an object to hold an HDF5 identifier
 	IdComponent( const hid_t h5_id );
 
 	// Copy constructor: makes copy of the original IdComponent object.
 	IdComponent( const IdComponent& original );
 
-	// Gets the value of IdComponent's data member.
+	// Gets the value of IdComponent's data member
 	virtual hid_t getId () const;
+
+	// Pure virtual function so appropriate close function can
+	// be called by subclasses' for the corresponding object
+	// This function will be obsolete because its functionality
+	// is recently handled by the C library layer.
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+	virtual void p_close() const = 0;
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 	// Destructor
 	virtual ~IdComponent();
@@ -56,15 +69,17 @@ class H5_DLLCPP IdComponent {
    protected:
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 	hid_t id;	// HDF5 object id
+	RefCounter* ref_count; // used to keep track of the
+	                              // number of copies of an object
 
 	// Default constructor.
 	IdComponent();
 
 	// Gets the name of the file, in which an HDF5 object belongs.
-#ifdef H5_NO_STD
-	string p_get_file_name() const;
-#else
+#ifndef H5_NO_STD
 	std::string p_get_file_name() const;
+#else
+	string p_get_file_name() const;
 #endif  // H5_NO_STD
 
         // Gets the id of the H5 file in which the given object is located.

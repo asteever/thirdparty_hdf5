@@ -58,7 +58,7 @@ main (void)
 
     int         data3[2][2] = { {3, 3},
 				{3, 3} };
-    int fillvalue = 0;
+    int         fill_val = 0;
 
     /*
      * Create the data space with unlimited dimensions. 
@@ -75,7 +75,7 @@ main (void)
      */
     cparms = H5Pcreate(H5P_DATASET_CREATE);
     status = H5Pset_chunk( cparms, RANK, chunk_dims);
-    status = H5Pset_fill_value (cparms, H5T_NATIVE_INT, &fillvalue );
+             H5Pset_fill_value(cparms, H5T_NATIVE_INT, &fill_val);
 
     /*
      * Create a new dataset within the file using cparms

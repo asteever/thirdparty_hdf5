@@ -167,7 +167,7 @@ int apply_filters(const char* name,    /* object name from traverse list */
   for (i=0; i<rank; i++) 
    obj->chunk.chunk_lengths[i] = dims[i];
  }
-
+ 
 /*-------------------------------------------------------------------------
  * the type of filter and additional parameter 
  * type can be one of the filters
@@ -206,19 +206,16 @@ int apply_filters(const char* name,    /* object name from traverse list */
    {
     unsigned  options_mask;
     unsigned  pixels_per_block;
-
     pixels_per_block=obj->filter[i].cd_values[0];
     if (obj->filter[i].szip_coding==0)
      options_mask=H5_SZIP_NN_OPTION_MASK;
     else 
      options_mask=H5_SZIP_EC_OPTION_MASK;
-
     /* set up for szip data */
     if(H5Pset_chunk(dcpl_id,obj->chunk.rank,obj->chunk.chunk_lengths)<0)
      return -1;
     if (H5Pset_szip(dcpl_id,options_mask,pixels_per_block)<0) 
      return -1;
-
    }
    break;
 
@@ -288,7 +285,6 @@ int print_filters(hid_t dcpl_id)
  for (i=0; i<nfilters; i++) 
  {
   cd_nelmts = NELMTS(cd_values);
-#ifdef H5_WANT_H5_V1_6_COMPAT
   filtn = H5Pget_filter(dcpl_id, 
    (unsigned)i, 
    &filt_flags, 
@@ -296,16 +292,6 @@ int print_filters(hid_t dcpl_id)
    cd_values, 
    sizeof(f_name), 
    f_name);
-#else
-  filtn = H5Pget_filter(dcpl_id, 
-   (unsigned)i, 
-   &filt_flags, 
-   &cd_nelmts,
-   cd_values, 
-   sizeof(f_name), 
-   f_name,
-   NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
   
   f_name[sizeof(f_name)-1] = '\0';
   sprintf(s, "Filter-%d:", i);

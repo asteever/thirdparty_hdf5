@@ -2,8 +2,8 @@
 ## Only temporary changes may be made here.
 
 decompress.lo: \
-   $(top_srcdir)/tools/gifconv/decompress.c \
-   $(top_srcdir)/tools/gifconv/gif.h \
+   $(srcdir)/decompress.c \
+   $(srcdir)/gif.h \
    $(top_srcdir)/src/hdf5.h \
    $(top_srcdir)/src/H5public.h \
    $(top_builddir)/src/H5pubconf.h \
@@ -14,26 +14,23 @@ decompress.lo: \
    $(top_srcdir)/src/H5Bpublic.h \
    $(top_srcdir)/src/H5Dpublic.h \
    $(top_srcdir)/src/H5Epublic.h \
-   $(top_srcdir)/src/H5Epubgen.h \
    $(top_srcdir)/src/H5Fpublic.h \
    $(top_srcdir)/src/H5FDpublic.h \
-   $(top_srcdir)/src/H5FPpublic.h \
    $(top_srcdir)/src/H5Gpublic.h \
    $(top_srcdir)/src/H5Opublic.h \
    $(top_srcdir)/src/H5HGpublic.h \
    $(top_srcdir)/src/H5HLpublic.h \
    $(top_srcdir)/src/H5MMpublic.h \
    $(top_srcdir)/src/H5Ppublic.h \
-   $(top_srcdir)/src/H5Tpublic.h \
    $(top_srcdir)/src/H5Zpublic.h \
    $(top_srcdir)/src/H5Rpublic.h \
    $(top_srcdir)/src/H5Spublic.h \
+   $(top_srcdir)/src/H5Tpublic.h \
    $(top_srcdir)/src/H5FDcore.h \
    $(top_srcdir)/src/H5FDfamily.h \
    $(top_srcdir)/src/H5FDgass.h \
    $(top_srcdir)/src/H5FDlog.h \
    $(top_srcdir)/src/H5FDmpi.h \
-   $(top_srcdir)/src/H5FDfphdf5.h \
    $(top_srcdir)/src/H5FDmpio.h \
    $(top_srcdir)/src/H5FDmpiposix.h \
    $(top_srcdir)/src/H5FDmulti.h \
@@ -42,8 +39,8 @@ decompress.lo: \
    $(top_srcdir)/src/H5FDstdio.h \
    $(top_srcdir)/src/H5FDstream.h
 gif2hdf.lo: \
-   $(top_srcdir)/tools/gifconv/gif2hdf.c \
-   $(top_srcdir)/tools/gifconv/gif.h \
+   $(srcdir)/gif2hdf.c \
+   $(srcdir)/gif.h \
    $(top_srcdir)/src/hdf5.h \
    $(top_srcdir)/src/H5public.h \
    $(top_builddir)/src/H5pubconf.h \
@@ -54,26 +51,23 @@ gif2hdf.lo: \
    $(top_srcdir)/src/H5Bpublic.h \
    $(top_srcdir)/src/H5Dpublic.h \
    $(top_srcdir)/src/H5Epublic.h \
-   $(top_srcdir)/src/H5Epubgen.h \
    $(top_srcdir)/src/H5Fpublic.h \
    $(top_srcdir)/src/H5FDpublic.h \
-   $(top_srcdir)/src/H5FPpublic.h \
    $(top_srcdir)/src/H5Gpublic.h \
    $(top_srcdir)/src/H5Opublic.h \
    $(top_srcdir)/src/H5HGpublic.h \
    $(top_srcdir)/src/H5HLpublic.h \
    $(top_srcdir)/src/H5MMpublic.h \
    $(top_srcdir)/src/H5Ppublic.h \
-   $(top_srcdir)/src/H5Tpublic.h \
    $(top_srcdir)/src/H5Zpublic.h \
    $(top_srcdir)/src/H5Rpublic.h \
    $(top_srcdir)/src/H5Spublic.h \
+   $(top_srcdir)/src/H5Tpublic.h \
    $(top_srcdir)/src/H5FDcore.h \
    $(top_srcdir)/src/H5FDfamily.h \
    $(top_srcdir)/src/H5FDgass.h \
    $(top_srcdir)/src/H5FDlog.h \
    $(top_srcdir)/src/H5FDmpi.h \
-   $(top_srcdir)/src/H5FDfphdf5.h \
    $(top_srcdir)/src/H5FDmpio.h \
    $(top_srcdir)/src/H5FDmpiposix.h \
    $(top_srcdir)/src/H5FDmulti.h \
@@ -82,8 +76,8 @@ gif2hdf.lo: \
    $(top_srcdir)/src/H5FDstdio.h \
    $(top_srcdir)/src/H5FDstream.h
 gif2mem.lo: \
-   $(top_srcdir)/tools/gifconv/gif2mem.c \
-   $(top_srcdir)/tools/gifconv/gif.h \
+   $(srcdir)/gif2mem.c \
+   $(srcdir)/gif.h \
    $(top_srcdir)/src/hdf5.h \
    $(top_srcdir)/src/H5public.h \
    $(top_builddir)/src/H5pubconf.h \
@@ -94,26 +88,23 @@ gif2mem.lo: \
    $(top_srcdir)/src/H5Bpublic.h \
    $(top_srcdir)/src/H5Dpublic.h \
    $(top_srcdir)/src/H5Epublic.h \
-   $(top_srcdir)/src/H5Epubgen.h \
    $(top_srcdir)/src/H5Fpublic.h \
    $(top_srcdir)/src/H5FDpublic.h \
-   $(top_srcdir)/src/H5FPpublic.h \
    $(top_srcdir)/src/H5Gpublic.h \
    $(top_srcdir)/src/H5Opublic.h \
    $(top_srcdir)/src/H5HGpublic.h \
    $(top_srcdir)/src/H5HLpublic.h \
    $(top_srcdir)/src/H5MMpublic.h \
    $(top_srcdir)/src/H5Ppublic.h \
-   $(top_srcdir)/src/H5Tpublic.h \
    $(top_srcdir)/src/H5Zpublic.h \
    $(top_srcdir)/src/H5Rpublic.h \
    $(top_srcdir)/src/H5Spublic.h \
+   $(top_srcdir)/src/H5Tpublic.h \
    $(top_srcdir)/src/H5FDcore.h \
    $(top_srcdir)/src/H5FDfamily.h \
    $(top_srcdir)/src/H5FDgass.h \
    $(top_srcdir)/src/H5FDlog.h \
    $(top_srcdir)/src/H5FDmpi.h \
-   $(top_srcdir)/src/H5FDfphdf5.h \
    $(top_srcdir)/src/H5FDmpio.h \
    $(top_srcdir)/src/H5FDmpiposix.h \
    $(top_srcdir)/src/H5FDmulti.h \
@@ -122,8 +113,8 @@ gif2mem.lo: \
    $(top_srcdir)/src/H5FDstdio.h \
    $(top_srcdir)/src/H5FDstream.h
 gifread.lo: \
-   $(top_srcdir)/tools/gifconv/gifread.c \
-   $(top_srcdir)/tools/gifconv/gif.h \
+   $(srcdir)/gifread.c \
+   $(srcdir)/gif.h \
    $(top_srcdir)/src/hdf5.h \
    $(top_srcdir)/src/H5public.h \
    $(top_builddir)/src/H5pubconf.h \
@@ -134,26 +125,23 @@ gifread.lo: \
    $(top_srcdir)/src/H5Bpublic.h \
    $(top_srcdir)/src/H5Dpublic.h \
    $(top_srcdir)/src/H5Epublic.h \
-   $(top_srcdir)/src/H5Epubgen.h \
    $(top_srcdir)/src/H5Fpublic.h \
    $(top_srcdir)/src/H5FDpublic.h \
-   $(top_srcdir)/src/H5FPpublic.h \
    $(top_srcdir)/src/H5Gpublic.h \
    $(top_srcdir)/src/H5Opublic.h \
    $(top_srcdir)/src/H5HGpublic.h \
    $(top_srcdir)/src/H5HLpublic.h \
    $(top_srcdir)/src/H5MMpublic.h \
    $(top_srcdir)/src/H5Ppublic.h \
-   $(top_srcdir)/src/H5Tpublic.h \
    $(top_srcdir)/src/H5Zpublic.h \
    $(top_srcdir)/src/H5Rpublic.h \
    $(top_srcdir)/src/H5Spublic.h \
+   $(top_srcdir)/src/H5Tpublic.h \
    $(top_srcdir)/src/H5FDcore.h \
    $(top_srcdir)/src/H5FDfamily.h \
    $(top_srcdir)/src/H5FDgass.h \
    $(top_srcdir)/src/H5FDlog.h \
    $(top_srcdir)/src/H5FDmpi.h \
-   $(top_srcdir)/src/H5FDfphdf5.h \
    $(top_srcdir)/src/H5FDmpio.h \
    $(top_srcdir)/src/H5FDmpiposix.h \
    $(top_srcdir)/src/H5FDmulti.h \
@@ -162,8 +150,8 @@ gifread.lo: \
    $(top_srcdir)/src/H5FDstdio.h \
    $(top_srcdir)/src/H5FDstream.h
 hdf2gif.lo: \
-   $(top_srcdir)/tools/gifconv/hdf2gif.c \
-   $(top_srcdir)/tools/gifconv/gif.h \
+   $(srcdir)/hdf2gif.c \
+   $(srcdir)/gif.h \
    $(top_srcdir)/src/hdf5.h \
    $(top_srcdir)/src/H5public.h \
    $(top_builddir)/src/H5pubconf.h \
@@ -174,26 +162,23 @@ hdf2gif.lo: \
    $(top_srcdir)/src/H5Bpublic.h \
    $(top_srcdir)/src/H5Dpublic.h \
    $(top_srcdir)/src/H5Epublic.h \
-   $(top_srcdir)/src/H5Epubgen.h \
    $(top_srcdir)/src/H5Fpublic.h \
    $(top_srcdir)/src/H5FDpublic.h \
-   $(top_srcdir)/src/H5FPpublic.h \
    $(top_srcdir)/src/H5Gpublic.h \
    $(top_srcdir)/src/H5Opublic.h \
    $(top_srcdir)/src/H5HGpublic.h \
    $(top_srcdir)/src/H5HLpublic.h \
    $(top_srcdir)/src/H5MMpublic.h \
    $(top_srcdir)/src/H5Ppublic.h \
-   $(top_srcdir)/src/H5Tpublic.h \
    $(top_srcdir)/src/H5Zpublic.h \
    $(top_srcdir)/src/H5Rpublic.h \
    $(top_srcdir)/src/H5Spublic.h \
+   $(top_srcdir)/src/H5Tpublic.h \
    $(top_srcdir)/src/H5FDcore.h \
    $(top_srcdir)/src/H5FDfamily.h \
    $(top_srcdir)/src/H5FDgass.h \
    $(top_srcdir)/src/H5FDlog.h \
    $(top_srcdir)/src/H5FDmpi.h \
-   $(top_srcdir)/src/H5FDfphdf5.h \
    $(top_srcdir)/src/H5FDmpio.h \
    $(top_srcdir)/src/H5FDmpiposix.h \
    $(top_srcdir)/src/H5FDmulti.h \
@@ -202,8 +187,8 @@ hdf2gif.lo: \
    $(top_srcdir)/src/H5FDstdio.h \
    $(top_srcdir)/src/H5FDstream.h
 hdfgifwr.lo: \
-   $(top_srcdir)/tools/gifconv/hdfgifwr.c \
-   $(top_srcdir)/tools/gifconv/gif.h \
+   $(srcdir)/hdfgifwr.c \
+   $(srcdir)/gif.h \
    $(top_srcdir)/src/hdf5.h \
    $(top_srcdir)/src/H5public.h \
    $(top_builddir)/src/H5pubconf.h \
@@ -214,26 +199,23 @@ hdfgifwr.lo: \
    $(top_srcdir)/src/H5Bpublic.h \
    $(top_srcdir)/src/H5Dpublic.h \
    $(top_srcdir)/src/H5Epublic.h \
-   $(top_srcdir)/src/H5Epubgen.h \
    $(top_srcdir)/src/H5Fpublic.h \
    $(top_srcdir)/src/H5FDpublic.h \
-   $(top_srcdir)/src/H5FPpublic.h \
    $(top_srcdir)/src/H5Gpublic.h \
    $(top_srcdir)/src/H5Opublic.h \
    $(top_srcdir)/src/H5HGpublic.h \
    $(top_srcdir)/src/H5HLpublic.h \
    $(top_srcdir)/src/H5MMpublic.h \
    $(top_srcdir)/src/H5Ppublic.h \
-   $(top_srcdir)/src/H5Tpublic.h \
    $(top_srcdir)/src/H5Zpublic.h \
    $(top_srcdir)/src/H5Rpublic.h \
    $(top_srcdir)/src/H5Spublic.h \
+   $(top_srcdir)/src/H5Tpublic.h \
    $(top_srcdir)/src/H5FDcore.h \
    $(top_srcdir)/src/H5FDfamily.h \
    $(top_srcdir)/src/H5FDgass.h \
    $(top_srcdir)/src/H5FDlog.h \
    $(top_srcdir)/src/H5FDmpi.h \
-   $(top_srcdir)/src/H5FDfphdf5.h \
    $(top_srcdir)/src/H5FDmpio.h \
    $(top_srcdir)/src/H5FDmpiposix.h \
    $(top_srcdir)/src/H5FDmulti.h \
@@ -242,8 +224,8 @@ hdfgifwr.lo: \
    $(top_srcdir)/src/H5FDstdio.h \
    $(top_srcdir)/src/H5FDstream.h
 readhdf.lo: \
-   $(top_srcdir)/tools/gifconv/readhdf.c \
-   $(top_srcdir)/tools/gifconv/gif.h \
+   $(srcdir)/readhdf.c \
+   $(srcdir)/gif.h \
    $(top_srcdir)/src/hdf5.h \
    $(top_srcdir)/src/H5public.h \
    $(top_builddir)/src/H5pubconf.h \
@@ -254,26 +236,23 @@ readhdf.lo: \
    $(top_srcdir)/src/H5Bpublic.h \
    $(top_srcdir)/src/H5Dpublic.h \
    $(top_srcdir)/src/H5Epublic.h \
-   $(top_srcdir)/src/H5Epubgen.h \
    $(top_srcdir)/src/H5Fpublic.h \
    $(top_srcdir)/src/H5FDpublic.h \
-   $(top_srcdir)/src/H5FPpublic.h \
    $(top_srcdir)/src/H5Gpublic.h \
    $(top_srcdir)/src/H5Opublic.h \
    $(top_srcdir)/src/H5HGpublic.h \
    $(top_srcdir)/src/H5HLpublic.h \
    $(top_srcdir)/src/H5MMpublic.h \
    $(top_srcdir)/src/H5Ppublic.h \
-   $(top_srcdir)/src/H5Tpublic.h \
    $(top_srcdir)/src/H5Zpublic.h \
    $(top_srcdir)/src/H5Rpublic.h \
    $(top_srcdir)/src/H5Spublic.h \
+   $(top_srcdir)/src/H5Tpublic.h \
    $(top_srcdir)/src/H5FDcore.h \
    $(top_srcdir)/src/H5FDfamily.h \
    $(top_srcdir)/src/H5FDgass.h \
    $(top_srcdir)/src/H5FDlog.h \
    $(top_srcdir)/src/H5FDmpi.h \
-   $(top_srcdir)/src/H5FDfphdf5.h \
    $(top_srcdir)/src/H5FDmpio.h \
    $(top_srcdir)/src/H5FDmpiposix.h \
    $(top_srcdir)/src/H5FDmulti.h \
@@ -282,8 +261,8 @@ readhdf.lo: \
    $(top_srcdir)/src/H5FDstdio.h \
    $(top_srcdir)/src/H5FDstream.h
 writehdf.lo: \
-   $(top_srcdir)/tools/gifconv/writehdf.c \
-   $(top_srcdir)/tools/gifconv/gif.h \
+   $(srcdir)/writehdf.c \
+   $(srcdir)/gif.h \
    $(top_srcdir)/src/hdf5.h \
    $(top_srcdir)/src/H5public.h \
    $(top_builddir)/src/H5pubconf.h \
@@ -294,26 +273,23 @@ writehdf.lo: \
    $(top_srcdir)/src/H5Bpublic.h \
    $(top_srcdir)/src/H5Dpublic.h \
    $(top_srcdir)/src/H5Epublic.h \
-   $(top_srcdir)/src/H5Epubgen.h \
    $(top_srcdir)/src/H5Fpublic.h \
    $(top_srcdir)/src/H5FDpublic.h \
-   $(top_srcdir)/src/H5FPpublic.h \
    $(top_srcdir)/src/H5Gpublic.h \
    $(top_srcdir)/src/H5Opublic.h \
    $(top_srcdir)/src/H5HGpublic.h \
    $(top_srcdir)/src/H5HLpublic.h \
    $(top_srcdir)/src/H5MMpublic.h \
    $(top_srcdir)/src/H5Ppublic.h \
-   $(top_srcdir)/src/H5Tpublic.h \
    $(top_srcdir)/src/H5Zpublic.h \
    $(top_srcdir)/src/H5Rpublic.h \
    $(top_srcdir)/src/H5Spublic.h \
+   $(top_srcdir)/src/H5Tpublic.h \
    $(top_srcdir)/src/H5FDcore.h \
    $(top_srcdir)/src/H5FDfamily.h \
    $(top_srcdir)/src/H5FDgass.h \
    $(top_srcdir)/src/H5FDlog.h \
    $(top_srcdir)/src/H5FDmpi.h \
-   $(top_srcdir)/src/H5FDfphdf5.h \
    $(top_srcdir)/src/H5FDmpio.h \
    $(top_srcdir)/src/H5FDmpiposix.h \
    $(top_srcdir)/src/H5FDmulti.h \

@@ -24,7 +24,6 @@
 /* Private headers needed by this file */
 #include "H5FDprivate.h"	/* File drivers				*/
 #include "H5Oprivate.h"		/* Object headers		  	*/
-#include "H5Zprivate.h"		/* Data filters				*/
 
 /*
  * Feature: Define H5D_DEBUG on the compiler command line if you want to
@@ -75,14 +74,6 @@
 #define H5D_CRT_DATA_PIPELINE_CMP  H5D_crt_data_pipeline_cmp
 
 /* ======== Data transfer properties ======== */
-/* Definitions for data transform property */
-#define H5D_XFER_XFORM_NAME         "data_transform"
-#define H5D_XFER_XFORM_SIZE         sizeof(void *)
-#define H5D_XFER_XFORM_DEF          NULL
-#define H5D_XFER_XFORM_DEL          H5D_xfer_xform_del
-#define H5D_XFER_XFORM_COPY         H5D_xfer_xform_copy
-#define H5D_XFER_XFORM_CLOSE        H5D_xfer_xform_close
-                                   
 /* Definitions for maximum temp buffer size property */
 #define H5D_XFER_MAX_TEMP_BUF_NAME       "max_temp_buf"
 #define H5D_XFER_MAX_TEMP_BUF_SIZE       sizeof(size_t)
@@ -106,6 +97,20 @@
 #define H5D_XFER_BTREE_SPLIT_RATIO_NAME       "btree_split_ratio"
 #define H5D_XFER_BTREE_SPLIT_RATIO_SIZE       sizeof(double[3])
 #define H5D_XFER_BTREE_SPLIT_RATIO_DEF      {0.1, 0.5, 0.9}
+#ifdef H5_WANT_H5_V1_4_COMPAT
+/* Definitions for hyperslab caching property */
+#define H5D_XFER_HYPER_CACHE_NAME       "hyper_cache"
+#define H5D_XFER_HYPER_CACHE_SIZE       sizeof(unsigned)
+#ifndef H5_HAVE_PARALLEL
+#define H5D_XFER_HYPER_CACHE_DEF  1
+#else
+#define H5D_XFER_HYPER_CACHE_DEF  0
+#endif
+/* Definitions for hyperslab cache limit property */
+#define H5D_XFER_HYPER_CACHE_LIM_NAME       "hyper_cache_limit"
+#define H5D_XFER_HYPER_CACHE_LIM_SIZE       sizeof(unsigned)
+#define H5D_XFER_HYPER_CACHE_LIM_DEF  0
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 /* Definitions for vlen allocation function property */
 #define H5D_XFER_VLEN_ALLOC_NAME       "vlen_alloc"
 #define H5D_XFER_VLEN_ALLOC_SIZE       sizeof(H5MM_allocate_t)
@@ -149,10 +154,6 @@
 #define H5D_XFER_FILTER_CB_NAME       "filter_cb"
 #define H5D_XFER_FILTER_CB_SIZE       sizeof(H5Z_cb_t)
 #define H5D_XFER_FILTER_CB_DEF        {NULL,NULL}
-/* Definitions for type conversion callback function property */
-#define H5D_XFER_CONV_CB_NAME       "type_conv_cb"
-#define H5D_XFER_CONV_CB_SIZE       sizeof(H5T_conv_cb_t)
-#define H5D_XFER_CONV_CB_DEF        {NULL,NULL}
 #ifdef H5_HAVE_INSTRUMENTED_LIBRARY
 /* Definitions for collective chunk I/O property */
 #define H5D_XFER_COLL_CHUNK_NAME       "coll_chunk"
@@ -189,7 +190,6 @@ typedef struct H5D_dxpl_cache_t {
 #endif /*H5_HAVE_PARALLEL*/
     H5Z_EDC_t err_detect;       /* Error detection info (H5D_XFER_EDC_NAME) */
     H5Z_cb_t filter_cb;         /* Filter callback function (H5D_XFER_FILTER_CB_NAME) */
-    H5Z_data_xform_t *data_xform_prop; /* Data transform prop (H5D_XFER_XFORM_NAME) */
 } H5D_dxpl_cache_t;
 
 /* Typedef for cached dataset creation property list information */

@@ -33,9 +33,6 @@
  *		
  */
 
-/* Interface initialization */
-#define H5_INTERFACE_INIT_FUNC	H5FD_family_init_interface
-
 /* Pablo information */
 /* (Put before include files to avoid problems with inline functions) */
 #define PABLO_MASK	H5FD_family_mask
@@ -134,6 +131,10 @@ static const H5FD_class_t H5FD_family_g = {
     NULL,                                       /*unlock                */
     H5FD_FLMAP_SINGLE 				/*fl_map		*/
 };
+
+/* Interface initialization */
+#define INTERFACE_INIT	H5FD_family_init_interface
+static int interface_initialize_g = 0;
 
 
 /*--------------------------------------------------------------------------
@@ -651,7 +652,7 @@ H5FD_family_open(const char *name, unsigned flags, hid_t fapl_id,
         if (!file->memb[file->nmembs]) {
             if (0==file->nmembs)
                 HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open member file")
-            H5E_clear_stack(NULL);
+            H5Eclear();
             break;
         }
         file->nmembs++;

@@ -29,13 +29,12 @@ typedef struct ref_path_table_entry_t {
 extern "C" {
 #endif
 
-
-char*       lookup_ref_path(hobj_ref_t ref);
+char*       lookup_ref_path(hobj_ref_t * ref);
 herr_t      fill_ref_path_table(hid_t, const char *, void *);
 int         get_next_xid(void);
 haddr_t     get_fake_xid (void);
 struct      ref_path_table_entry_t *ref_path_table_lookup(const char *);
-ref_path_table_entry_t *ref_path_table_put(hid_t obj, const char *path);
+hobj_ref_t  *ref_path_table_put(hid_t, const char *);
 struct      ref_path_table_entry_t *ref_path_table_gen_fake(const char *);
 
 #ifdef __cplusplus

@@ -14,125 +14,129 @@
 
 #define H5P_PACKAGE		/*suppress error about including H5Ppkg	  */
 
-/* Pablo mask */
-/* (Put before include files to avoid problems with inline functions) */
-#define PABLO_MASK	H5P_dxpl_mask
-
 /* Private header files */
 #include "H5private.h"		/* Generic Functions			*/
 #include "H5Dprivate.h"		/* Datasets				*/
 #include "H5Eprivate.h"		/* Error handling		  	*/
 #include "H5Ppkg.h"		/* Property lists		  	*/
 
+/* Pablo mask */
+#define PABLO_MASK	H5Pdxpl_mask
+
+/* Interface initialization */
+#define INTERFACE_INIT  NULL
+static int             interface_initialize_g = 0;
+
 /* Local datatypes */
 
 /* Static function prototypes */
 
+#ifdef H5_WANT_H5_V1_4_COMPAT
 
 /*-------------------------------------------------------------------------
- * Function:	H5Pset_data_transform
+ * Function:	H5Pset_buffer
  *
- * Purpose:
- *              Sets data transform expression. 
+ * Purpose:	Given a dataset transfer property list, set the maximum size
+ *		for the type conversion buffer and background buffer and
+ *		optionally supply pointers to application-allocated buffers.
+ *		If the buffer size is smaller than the entire amount of data
+ *		being transfered between application and file, and a type
+ *		conversion buffer or background buffer is required then
+ *		strip mining will be used.
  *
- * 
- * Return:      Returns a non-negative value if successful; otherwise returns a negative value. 
- * 
- * 
- * Programmer:	Leon Arber
- *              Monday, March 07, 2004
- * 
+ *		If TCONV and/or BKG are null pointers then buffers will be
+ *		allocated and freed during the data transfer.
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Robb Matzke
+ *              Monday, March 16, 1998
+ *
  * Modifications:
  *
  *-------------------------------------------------------------------------
  */
-herr_t H5Pset_data_transform(hid_t plist_id, const char* expression)
+herr_t
+H5Pset_buffer(hid_t plist_id, hsize_t _size, void *tconv, void *bkg)
 {
     H5P_genplist_t *plist;      /* Property list pointer */
-    H5Z_data_xform_t *data_xform_prop=NULL;    /* New data xform property */
+    size_t size=(size_t)_size;  /* Work around size difference */
     herr_t ret_value=SUCCEED;   /* return value */
 
-    FUNC_ENTER_API(H5Pset_data_transform, FAIL);
-    
+    FUNC_ENTER_API(H5Pset_buffer, FAIL);
+    H5TRACE4("e","ihxx",plist_id,_size,tconv,bkg);
+
     /* Check arguments */
-    if (expression == NULL)
-        HGOTO_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL, "expression cannot be NULL");
+    if (size<=0)
+        HGOTO_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL, "buffer size must not be zero");
 
     /* Get the plist structure */
     if(NULL == (plist = H5P_object_verify(plist_id,H5P_DATASET_XFER)))
         HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID");
-
-    /* Create data transform info from expression */
-    if((data_xform_prop=H5Z_xform_create(expression))==NULL)
-        HGOTO_ERROR (H5E_PLINE, H5E_NOSPACE, FAIL, "unable to create data transform info")
 
     /* Update property list */
-    if(H5P_set(plist, H5D_XFER_XFORM_NAME, &data_xform_prop)<0)
-        HGOTO_ERROR (H5E_PLIST, H5E_CANTSET, FAIL, "Error setting data transform expression");
+    if(H5P_set(plist, H5D_XFER_MAX_TEMP_BUF_NAME, &size)<0)
+        HGOTO_ERROR (H5E_PLIST, H5E_CANTSET, FAIL, "Can't set transfer buffer size");
+    if(H5P_set(plist, H5D_XFER_TCONV_BUF_NAME, &tconv)<0)
+        HGOTO_ERROR (H5E_PLIST, H5E_CANTSET, FAIL, "Can't set transfer type conversion buffer");
+    if(H5P_set(plist, H5D_XFER_BKGR_BUF_NAME, &bkg)<0)
+        HGOTO_ERROR (H5E_PLIST, H5E_CANTSET, FAIL, "Can't set background type conversion buffer");
 
 done:
-    if(ret_value<0) {
-        if(data_xform_prop)
-            if(H5Z_xform_destroy(data_xform_prop)<0)
-                HDONE_ERROR(H5E_PLINE, H5E_CLOSEERROR, FAIL, "unable to release data transform expression")
-    } /* end if */
-
     FUNC_LEAVE_API(ret_value);
 }
 
+
 /*-------------------------------------------------------------------------
- * Function:	H5Pget_data_transform
+ * Function:	H5Pget_buffer
  *
- * Purpose:
- *              Gets data transform expression. 
+ * Purpose:	Reads values previously set with H5Pset_buffer().
  *
- * 
- * Return:      Returns a non-negative value if successful; otherwise returns a negative value. 
- * 
- * 
- * Programmer:	Leon Arber
- *              August 27, 2004
- * 
+ * Return:	Success:	Buffer size.
+ *
+ *		Failure:	0
+ *
+ * Programmer:	Robb Matzke
+ *              Monday, March 16, 1998
+ *
  * Modifications:
  *
  *-------------------------------------------------------------------------
  */
-herr_t H5Pget_data_transform(hid_t plist_id, char** expression)
+hsize_t
+H5Pget_buffer(hid_t plist_id, void **tconv/*out*/, void **bkg/*out*/)
 {
     H5P_genplist_t *plist;      /* Property list pointer */
-    H5Z_data_xform_t *data_xform_prop=NULL;    /* New data xform property */
-    herr_t ret_value=SUCCEED;   /* return value */
+    size_t size;                /* Type conversion buffer size */
+    hsize_t ret_value;          /* Return value */
 
-  
-    FUNC_ENTER_API(H5Pget_data_transform, FAIL);
+    FUNC_ENTER_API(H5Pget_buffer, 0);
+    H5TRACE3("h","ixx",plist_id,tconv,bkg);
 
-    /* Check arguments */
-    if (expression == NULL)
-	HGOTO_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL, "expression cannot be NULL");
- 
     /* Get the plist structure */
     if(NULL == (plist = H5P_object_verify(plist_id,H5P_DATASET_XFER)))
-        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID");
+        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, 0, "can't find object for ID");
 
-    if(H5P_get(plist, H5D_XFER_XFORM_NAME, &data_xform_prop)<0)
-        HGOTO_ERROR (H5E_PLIST, H5E_CANTSET, FAIL, "Error setting data transform expression");
+    /* Return values */
+    if (tconv)
+        if(H5P_get(plist, H5D_XFER_TCONV_BUF_NAME, tconv)<0)
+            HGOTO_ERROR (H5E_PLIST, H5E_CANTGET, 0, "Can't get transfer type conversion buffer");
+    if (bkg)
+        if(H5P_get(plist, H5D_XFER_BKGR_BUF_NAME, bkg)<0)
+            HGOTO_ERROR (H5E_PLIST, H5E_CANTGET, 0, "Can't get background type conversion buffer");
 
-    /* Get the data transform string */
-    *expression = H5Z_xform_extract_xform_str(data_xform_prop);
+    /* Get the size */
+    if(H5P_get(plist, H5D_XFER_MAX_TEMP_BUF_NAME, &size)<0)
+        HGOTO_ERROR (H5E_PLIST, H5E_CANTSET, 0, "Can't set transfer buffer size");
+
+    /* Set the return value */
+    ret_value=(hsize_t)size;
 
 done:
-    if(ret_value<0) {
-	if(data_xform_prop)
-	    if(H5Z_xform_destroy(data_xform_prop)<0)
-		HDONE_ERROR(H5E_PLINE, H5E_CLOSEERROR, FAIL, "unable to release data transform expression")
-    } /* end if */
-
     FUNC_LEAVE_API(ret_value);
 }
 
-
-
-
+#else /* H5_WANT_H5_V1_4_COMPAT */
 
 /*-------------------------------------------------------------------------
  * Function:	H5Pset_buffer
@@ -235,6 +239,99 @@ H5Pget_buffer(hid_t plist_id, void **tconv/*out*/, void **bkg/*out*/)
 done:
     FUNC_LEAVE_API(ret_value);
 }
+
+#endif /* H5_WANT_H5_V1_4_COMPAT */
+
+#ifdef H5_WANT_H5_V1_4_COMPAT
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_hyper_cache
+ *
+ * Purpose:	Given a dataset transfer property list, indicate whether to
+ *		cache the hyperslab blocks during the I/O (which speeds
+ *		things up) and the maximum size of the hyperslab block to
+ *		cache.  If a block is smaller than to limit, it may still not
+ *		be cached if no memory is available. Setting the limit to 0
+ *		indicates no limitation on the size of block to attempt to
+ *		cache.
+ *
+ *		The default is to cache blocks with no limit on block size
+ *		for serial I/O and to not cache blocks for parallel I/O
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Quincey Koziol
+ *              Monday, September 21, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_hyper_cache(hid_t plist_id, unsigned cache, unsigned limit)
+{
+    H5P_genplist_t *plist;      /* Property list pointer */
+    herr_t ret_value=SUCCEED;
+
+    FUNC_ENTER_API(H5Pset_hyper_cache, FAIL);
+    H5TRACE3("e","iIuIu",plist_id,cache,limit);
+
+    /* Get the plist structure */
+    if(NULL == (plist = H5P_object_verify(plist_id,H5P_DATASET_XFER)))
+        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID");
+
+    /* Update property list */
+    cache = (cache>0) ? 1 : 0;
+    if (H5P_set(plist,H5D_XFER_HYPER_CACHE_NAME,&cache)<0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to set value");
+    if (H5P_set(plist,H5D_XFER_HYPER_CACHE_LIM_NAME,&limit)<0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to set value");
+
+done:
+    FUNC_LEAVE_API(ret_value);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_hyper_cache
+ *
+ * Purpose:	Reads values previously set with H5Pset_hyper_cache().
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Quincey Koziol
+ *              Monday, September 21, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_hyper_cache(hid_t plist_id, unsigned *cache/*out*/,
+		   unsigned *limit/*out*/)
+{
+    H5P_genplist_t *plist;      /* Property list pointer */
+    herr_t ret_value=SUCCEED;   /* return value */
+
+    FUNC_ENTER_API(H5Pget_hyper_cache, FAIL);
+    H5TRACE3("e","ixx",plist_id,cache,limit);
+
+    /* Get the plist structure */
+    if(NULL == (plist = H5P_object_verify(plist_id,H5P_DATASET_XFER)))
+        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID");
+
+    /* Return values */
+    if (cache)
+        if (H5P_get(plist,H5D_XFER_HYPER_CACHE_NAME,cache)<0)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "unable to get value");
+    if (limit)
+        if (H5P_get(plist,H5D_XFER_HYPER_CACHE_LIM_NAME,limit)<0)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "unable to get value");
+
+done:
+    FUNC_LEAVE_API(ret_value);
+}
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
 
 /*-------------------------------------------------------------------------
@@ -443,91 +540,6 @@ H5Pset_filter_callback(hid_t plist_id, H5Z_filter_func_t func, void *op_data)
     
     if (H5P_set(plist,H5D_XFER_FILTER_CB_NAME,&cb_struct)<0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "unable to set value");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5Pset_type_conv_cb
- *
- * Purpose:     Sets user's callback function for dataset transfer property
- *              list.  This callback function defines what user wants to do
- *              if there's exception during datatype conversion.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Raymond Lu
- *              April 15, 2004
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5Pset_type_conv_cb(hid_t plist_id, H5T_conv_except_func_t op, void *operate_data)
-{
-    H5P_genplist_t      *plist;      /* Property list pointer */
-    herr_t              ret_value=SUCCEED;   /* return value */
-    H5T_conv_cb_t       cb_struct;
-    
-    FUNC_ENTER_API(H5Pset_type_conv_cb, FAIL);
-    H5TRACE3("e","ixx",plist_id,op,operate_data);
-
-    /* Get the plist structure */
-    if(NULL == (plist = H5P_object_verify(plist_id,H5P_DATASET_XFER)))
-        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID");
-
-    /* Update property list */
-    cb_struct.func = op;
-    cb_struct.user_data = operate_data;
-    
-    if (H5P_set(plist,H5D_XFER_CONV_CB_NAME,&cb_struct)<0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "unable to set value");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5Pget_type_conv_cb
- *
- * Purpose:     Gets callback function for dataset transfer property
- *              list.  This callback function defines what user wants to do
- *              if there's exception during datatype conversion.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Raymond Lu
- *              April 15, 2004
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5Pget_type_conv_cb(hid_t plist_id, H5T_conv_except_func_t *op, void **operate_data)
-{
-    H5P_genplist_t *plist;      /* Property list pointer */
-    H5T_conv_cb_t       cb_struct;
-    herr_t              ret_value=SUCCEED;   /* return value */
-    
-    FUNC_ENTER_API(H5Pget_type_conv_cb, FAIL);
-    H5TRACE3("e","i*xx",plist_id,op,operate_data);
-
-    /* Get the plist structure */
-    if(NULL == (plist = H5P_object_verify(plist_id,H5P_DATASET_XFER)))
-        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID");
-
-    /* Get property */
-    if (H5P_get(plist,H5D_XFER_CONV_CB_NAME,&cb_struct)<0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "unable to set value");
-
-    /* Assign return value */
-    *op = cb_struct.func;
-    *operate_data = cb_struct.user_data;
 
 done:
     FUNC_LEAVE_API(ret_value);

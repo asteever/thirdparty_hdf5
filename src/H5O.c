@@ -28,9 +28,6 @@
 #define H5F_PACKAGE		/*suppress error about including H5Fpkg	  */
 #define H5O_PACKAGE		/*suppress error about including H5Opkg	  */
 
-/* Interface initialization */
-#define H5_INTERFACE_INIT_FUNC	H5O_init_interface
-
 /* Pablo information */
 /* (Put before include files to avoid problems with inline functions) */
 #define PABLO_MASK	H5O_mask
@@ -90,8 +87,7 @@ static H5O_t *H5O_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void *_udata
 		       void *_udata2);
 static herr_t H5O_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5O_t *oh);
 static herr_t H5O_dest(H5F_t *f, H5O_t *oh);
-static herr_t H5O_clear(H5F_t *f, H5O_t *oh, hbool_t destroy);
-static herr_t H5O_compute_size(H5F_t *f, H5O_t *oh, size_t *size_ptr);
+static herr_t H5O_clear(H5O_t *oh);
 
 /* H5O inherits cache-like properties from H5AC */
 static const H5AC_class_t H5AC_OHDR[1] = {{
@@ -100,8 +96,12 @@ static const H5AC_class_t H5AC_OHDR[1] = {{
     (H5AC_flush_func_t)H5O_flush,
     (H5AC_dest_func_t)H5O_dest,
     (H5AC_clear_func_t)H5O_clear,
-    (H5AC_size_func_t)H5O_compute_size,
 }};
+
+/* Interface initialization */
+static int interface_initialize_g = 0;
+#define INTERFACE_INIT	H5O_init_interface
+static herr_t H5O_init_interface(void);
 
 /* ID to type mapping */
 static const H5O_class_t *const message_type_g[] = {
@@ -281,7 +281,7 @@ H5O_init(H5F_t *f, hid_t dxpl_id, size_t size_hint, H5G_entry_t *ent/*out*/, had
     if (NULL == (oh = H5FL_MALLOC(H5O_t)))
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed");
 
-    oh->cache_info.is_dirty = TRUE;
+    oh->cache_info.dirty = TRUE;
     oh->version = H5O_VERSION;
     oh->nlink = 0;
 
@@ -658,7 +658,7 @@ H5O_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5O_t *oh)
     assert(oh);
 
     /* flush */
-    if (oh->cache_info.is_dirty) {
+    if (oh->cache_info.dirty) {
 	p = buf;
 
 	/* encode version */
@@ -782,7 +782,7 @@ H5O_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5O_t *oh)
                 oh->chunk[u].dirty = FALSE;
 	    } /* end if */
 	} /* end for */
-	oh->cache_info.is_dirty = FALSE;
+	oh->cache_info.dirty = FALSE;
     }
 
     if (destroy) {
@@ -821,7 +821,7 @@ H5O_dest(H5F_t UNUSED *f, H5O_t *oh)
     assert(oh);
 
     /* Verify that node is clean */
-    assert (oh->cache_info.is_dirty==FALSE);
+    assert (oh->cache_info.dirty==FALSE);
 
     /* destroy chunks */
     for (i = 0; i < oh->nchunks; i++) {
@@ -867,12 +867,11 @@ H5O_dest(H5F_t UNUSED *f, H5O_t *oh)
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_clear(H5F_t *f, H5O_t *oh, hbool_t destroy)
+H5O_clear(H5O_t *oh)
 {
     unsigned	u;      /* Local index variable */
-    herr_t ret_value = SUCCEED;
 
-    FUNC_ENTER_NOAPI_NOINIT(H5O_clear);
+    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_clear);
 
     /* check args */
     assert(oh);
@@ -886,65 +885,10 @@ H5O_clear(H5F_t *f, H5O_t *oh, hbool_t destroy)
         oh->mesg[u].dirty=FALSE;
 
     /* Mark whole header as clean */
-    oh->cache_info.is_dirty=FALSE;
-
-    if (destroy)
-        if (H5O_dest(f, oh) < 0)
-            HGOTO_ERROR(H5E_OHDR, H5E_CANTFREE, FAIL, "unable to destroy object header data");
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
-} /* end H5O_clear() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5O_compute_size
- *
- * Purpose:	Compute the size in bytes of the specified instance of
- *              H5O_t on disk, and return it in *len_ptr.  On failure,
- *              the value of *len_ptr is undefined.
- *
- *		The value returned will probably be low unless the object
- *		has just been flushed, as we simply total up the size of
- *		the header with the sizes of the chunks.  Thus any message
- *		that has been added since the last flush will not be 
- *		reflected in the total.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	John Mainzer
- *		5/13/04
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5O_compute_size(H5F_t *f, H5O_t *oh, size_t *size_ptr)
-{
-    unsigned	u;
-    size_t	size;
-
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_compute_size);
-
-    /* check args */
-    HDassert(f);
-    HDassert(oh);
-    HDassert(size_ptr);
-
-    size = H5O_SIZEOF_HDR(f);
-
-    for (u = 0; u < oh->nchunks; u++) 
-    {
-        size += oh->chunk[u].size;
-    }
-
-    HDassert(size >= H5O_SIZEOF_HDR(f));
-
-    *size_ptr = size;
+    oh->cache_info.dirty=FALSE;
 
     FUNC_LEAVE_NOAPI(SUCCEED);
-} /* H5O_compute_size() */
+} /* end H5O_clear() */
 
 
 /*-------------------------------------------------------------------------
@@ -1231,7 +1175,7 @@ H5O_link(const H5G_entry_t *ent, int adjust, hid_t dxpl_id)
 
     /* get header */
     if (NULL == (oh = H5AC_protect(ent->file, dxpl_id, H5AC_OHDR, ent->header,
-				   NULL, NULL, H5AC_WRITE)))
+				   NULL, NULL)))
 	HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, FAIL, "unable to load object header");
 
     /* adjust link count */
@@ -1239,7 +1183,7 @@ H5O_link(const H5G_entry_t *ent, int adjust, hid_t dxpl_id)
 	if (oh->nlink + adjust < 0)
 	    HGOTO_ERROR(H5E_OHDR, H5E_LINKCOUNT, FAIL, "link count would be negative");
 	oh->nlink += adjust;
-	oh->cache_info.is_dirty = TRUE;
+	oh->cache_info.dirty = TRUE;
 
         /* Check if the object should be deleted */
         if(oh->nlink==0) {
@@ -1270,7 +1214,7 @@ H5O_link(const H5G_entry_t *ent, int adjust, hid_t dxpl_id)
         } /* end if */
 
 	oh->nlink += adjust;
-	oh->cache_info.is_dirty = TRUE;
+	oh->cache_info.dirty = TRUE;
     }
 
     /* Set return value */
@@ -1364,7 +1308,7 @@ H5O_count_real (H5G_entry_t *ent, const H5O_class_t *type, hid_t dxpl_id)
     assert (type);
 
     /* Load the object header */
-    if (NULL == (oh = H5AC_protect(ent->file, dxpl_id, H5AC_OHDR, ent->header, NULL, NULL, H5AC_READ)))
+    if (NULL == (oh = H5AC_protect(ent->file, dxpl_id, H5AC_OHDR, ent->header, NULL, NULL)))
 	HGOTO_ERROR (H5E_OHDR, H5E_CANTLOAD, FAIL, "unable to load object header");
 
     /* Loop over all messages, counting the ones of the type looked for */
@@ -1466,7 +1410,7 @@ H5O_exists_real(H5G_entry_t *ent, const H5O_class_t *type, int sequence, hid_t d
     assert(sequence>=0);
 
     /* Load the object header */
-    if (NULL == (oh = H5AC_protect(ent->file, dxpl_id, H5AC_OHDR, ent->header, NULL, NULL, H5AC_READ)))
+    if (NULL == (oh = H5AC_protect(ent->file, dxpl_id, H5AC_OHDR, ent->header, NULL, NULL)))
 	HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, FAIL, "unable to load object header");
 
     /* Scan through the messages looking for the right one */
@@ -1598,11 +1542,11 @@ H5O_read_real(H5G_entry_t *ent, const H5O_class_t *type, int sequence, void *mes
 	ret_value = (H5O_fast_g[cache_type]) (cache, type, mesg);
 	if (ret_value)
 	    HGOTO_DONE(ret_value);
-	H5E_clear_stack(NULL); /*don't care, try reading from header */
+	H5E_clear(); /*don't care, try reading from header */
     }
 
     /* copy the message to the user-supplied buffer */
-    if (NULL == (oh = H5AC_protect(ent->file, dxpl_id, H5AC_OHDR, ent->header, NULL, NULL, H5AC_READ)))
+    if (NULL == (oh = H5AC_protect(ent->file, dxpl_id, H5AC_OHDR, ent->header, NULL, NULL)))
 	HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "unable to load object header");
 
     /* can we get it from the object header? */
@@ -1855,7 +1799,7 @@ H5O_modify_real(H5G_entry_t *ent, const H5O_class_t *type, int overwrite,
     if (0==(ent->file->intent & H5F_ACC_RDWR))
 	HGOTO_ERROR (H5E_OHDR, H5E_WRITEERROR, FAIL, "no write intent on file");
 
-    if (NULL == (oh = H5AC_protect(ent->file, dxpl_id, H5AC_OHDR, ent->header, NULL, NULL, H5AC_WRITE)))
+    if (NULL == (oh = H5AC_protect(ent->file, dxpl_id, H5AC_OHDR, ent->header, NULL, NULL)))
 	HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, FAIL, "unable to load object header");
 
     /* Count similar messages */
@@ -1944,7 +1888,7 @@ H5O_protect(H5G_entry_t *ent, hid_t dxpl_id)
     if (0==(ent->file->intent & H5F_ACC_RDWR))
 	HGOTO_ERROR (H5E_OHDR, H5E_WRITEERROR, NULL, "no write intent on file");
 
-    if (NULL == (ret_value = H5AC_protect(ent->file, dxpl_id, H5AC_OHDR, ent->header, NULL, NULL, H5AC_WRITE)))
+    if (NULL == (ret_value = H5AC_protect(ent->file, dxpl_id, H5AC_OHDR, ent->header, NULL, NULL)))
 	HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "unable to load object header");
 
 done:
@@ -2140,7 +2084,7 @@ H5O_new_mesg(H5F_t *f, H5O_t *oh, unsigned *flags, const H5O_class_t *orig_type,
              * If the message isn't shared then turn off the shared bit
              * and treat it as an unshared message.
              */
-            H5E_clear_stack (NULL);
+            H5E_clear ();
             *flags &= ~H5O_FLAG_SHARED;
         } else {
             /* Change type & message to use shared information */
@@ -2210,7 +2154,7 @@ H5O_write_mesg(H5O_t *oh, unsigned idx, const H5O_class_t *type,
 
     idx_msg->flags = flags;
     idx_msg->dirty = TRUE;
-    oh->cache_info.is_dirty = TRUE;
+    oh->cache_info.dirty = TRUE;
 
 done:
     FUNC_LEAVE_NOAPI(ret_value);
@@ -2277,7 +2221,7 @@ H5O_touch_oh(H5F_t *f, H5O_t *oh, hbool_t force)
     }
     *((time_t*)(oh->mesg[idx].native)) = now;
     oh->mesg[idx].dirty = TRUE;
-    oh->cache_info.is_dirty = TRUE;
+    oh->cache_info.dirty = TRUE;
 
 done:
     FUNC_LEAVE_NOAPI(ret_value);
@@ -2317,7 +2261,7 @@ H5O_touch(H5G_entry_t *ent, hbool_t force, hid_t dxpl_id)
 	HGOTO_ERROR(H5E_OHDR, H5E_WRITEERROR, FAIL, "no write intent on file");
 
     /* Get the object header */
-    if (NULL==(oh=H5AC_protect(ent->file, dxpl_id, H5AC_OHDR, ent->header, NULL, NULL, H5AC_WRITE)))
+    if (NULL==(oh=H5AC_protect(ent->file, dxpl_id, H5AC_OHDR, ent->header, NULL, NULL)))
 	HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, FAIL, "unable to load object header");
 
     /* Create/Update the modification time message */
@@ -2421,7 +2365,7 @@ H5O_bogus(H5G_entry_t *ent, hid_t dxpl_id)
 	HGOTO_ERROR(H5E_OHDR, H5E_WRITEERROR, FAIL, "no write intent on file");
 
     /* Get the object header */
-    if (NULL==(oh=H5AC_protect(ent->file, dxpl_id, H5AC_OHDR, ent->header, NULL, NULL, H5AC_WRITE)))
+    if (NULL==(oh=H5AC_protect(ent->file, dxpl_id, H5AC_OHDR, ent->header, NULL, NULL)))
 	HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, FAIL, "unable to load object header");
 
     /* Create the "bogus" message */
@@ -2538,7 +2482,7 @@ H5O_remove_real(H5G_entry_t *ent, const H5O_class_t *type, int sequence, hid_t d
 	HGOTO_ERROR (H5E_HEAP, H5E_WRITEERROR, FAIL, "no write intent on file");
 
     /* load the object header */
-    if (NULL == (oh = H5AC_protect(ent->file, dxpl_id, H5AC_OHDR, ent->header, NULL, NULL, H5AC_WRITE)))
+    if (NULL == (oh = H5AC_protect(ent->file, dxpl_id, H5AC_OHDR, ent->header, NULL, NULL)))
 	HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, FAIL, "unable to load object header");
     
     for (u = seq = 0, curr_msg=&oh->mesg[0]; u < oh->nmesgs; u++,curr_msg++) {
@@ -2567,7 +2511,7 @@ H5O_remove_real(H5G_entry_t *ent, const H5O_class_t *type, int sequence, hid_t d
             else
                 curr_msg->native = H5O_free_real(type, curr_msg->native);
 	    curr_msg->dirty = TRUE;
-	    oh->cache_info.is_dirty = TRUE;
+	    oh->cache_info.dirty = TRUE;
 	    H5O_touch_oh(ent->file, oh, FALSE);
 	}
     }
@@ -2993,7 +2937,7 @@ H5O_alloc(H5F_t *f, H5O_t *oh, const H5O_class_t *type, size_t size)
 	    if ((idx = H5O_alloc_extend_chunk(f, oh, chunkno, size)) != UFAIL) {
 		break;
 	    }
-	    H5E_clear_stack(NULL);
+	    H5E_clear();
 	}
 
 	/*
@@ -3047,7 +2991,7 @@ H5O_alloc(H5F_t *f, H5O_t *oh, const H5O_class_t *type, size_t size)
     msg->dirty = TRUE;
     msg->native = NULL;
 
-    oh->cache_info.is_dirty = TRUE;
+    oh->cache_info.dirty = TRUE;
 
     /* Set return value */
     ret_value=idx;
@@ -3227,7 +3171,7 @@ H5O_delete(H5F_t *f, hid_t dxpl_id, haddr_t addr)
     assert(H5F_addr_defined(addr));
 
     /* Get the object header information */
-    if (NULL == (oh = H5AC_protect(f, dxpl_id, H5AC_OHDR, addr, NULL, NULL, H5AC_WRITE)))
+    if (NULL == (oh = H5AC_protect(f, dxpl_id, H5AC_OHDR, addr, NULL, NULL)))
 	HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, FAIL, "unable to load object header");
 
     /* Delete object */
@@ -3396,7 +3340,7 @@ H5O_get_info(H5G_entry_t *ent, H5O_stat_t *ostat, hid_t dxpl_id)
     assert (ostat);
 
     /* Get the object header information */
-    if (NULL == (oh = H5AC_protect(ent->file, dxpl_id, H5AC_OHDR, ent->header, NULL, NULL, H5AC_READ)))
+    if (NULL == (oh = H5AC_protect(ent->file, dxpl_id, H5AC_OHDR, ent->header, NULL, NULL)))
 	HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, FAIL, "unable to load object header");
 
     /* Iterate over all the messages, accumulating the total size & free space */
@@ -3423,86 +3367,6 @@ done:
 
     FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5O_get_info() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5O_encode
- *
- * Purpose:	Encode an object(data type and simple data space only) 
- *              description into a buffer.
- *
- * Return:	Success:	Non-negative
- *
- *		Failure:	Negative
- *
- * Programmer:	Raymond Lu
- *		slu@ncsa.uiuc.edu
- *		July 13, 2004
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5O_encode(H5F_t *f, unsigned char *buf, void *obj, unsigned type_id)
-{
-    const H5O_class_t   *type;            /* Actual H5O class type for the ID */
-    herr_t 	        ret_value = SUCCEED;        /* Return value */
-
-    FUNC_ENTER_NOAPI(H5O_encode,FAIL);
-
-    /* check args */
-    assert(type_id<NELMTS(message_type_g));
-    type=message_type_g[type_id];    /* map the type ID to the actual type object */
-    assert(type);
-
-    /* Encode */    
-    if ((type->encode)(f, buf, obj)<0)
-        HGOTO_ERROR (H5E_OHDR, H5E_CANTENCODE, FAIL, "unable to encode message");
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5O_decode
- *
- * Purpose:	Decode a binary object(data type and data space only) 
- *              description and return a new object handle.
- *
- * Return:	Success:        Pointer to object(data type or space)	
- *
- *		Failure:	NULL
- *
- * Programmer:	Raymond Lu
- *		slu@ncsa.uiuc.edu
- *		July 14, 2004
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-void*
-H5O_decode(H5F_t *f, unsigned char *buf, unsigned type_id)
-{
-    const H5O_class_t   *type;            /* Actual H5O class type for the ID */
-    void 	        *ret_value=NULL;       /* Return value */
-
-    FUNC_ENTER_NOAPI(H5O_decode,NULL);
-
-    /* check args */
-    assert(type_id<NELMTS(message_type_g));
-    type=message_type_g[type_id];    /* map the type ID to the actual type object */
-    assert(type);
-
-    /* decode */
-    if((ret_value = (type->decode)(f, 0, buf, NULL))==NULL)
-        HGOTO_ERROR (H5E_OHDR, H5E_CANTDECODE, NULL, "unable to decode message");
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
-}
 
 
 /*-------------------------------------------------------------------------
@@ -3586,7 +3450,7 @@ H5O_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream, int indent, int f
     assert(indent >= 0);
     assert(fwidth >= 0);
 
-    if (NULL == (oh = H5AC_protect(f, dxpl_id, H5AC_OHDR, addr, NULL, NULL, H5AC_READ)))
+    if (NULL == (oh = H5AC_protect(f, dxpl_id, H5AC_OHDR, addr, NULL, NULL)))
 	HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, FAIL, "unable to load object header");
 
     /* debug */
@@ -3594,7 +3458,7 @@ H5O_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream, int indent, int f
 
     HDfprintf(stream, "%*s%-*s %d\n", indent, "", fwidth,
 	      "Dirty:",
-	      (int) (oh->cache_info.is_dirty));
+	      (int) (oh->cache_info.dirty));
     HDfprintf(stream, "%*s%-*s %d\n", indent, "", fwidth,
 	      "Version:",
 	      (int) (oh->version));

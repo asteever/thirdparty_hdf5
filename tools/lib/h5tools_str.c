@@ -28,8 +28,6 @@
 #include "h5tools_str.h"        /*function prototypes       */
 #include "h5tools_ref.h"
 
-
-
 /*
  * If REPEAT_VERBOSE is defined then character strings will be printed so
  * that repeated character sequences like "AAAAAAAAAA" are displayed as
@@ -576,8 +574,7 @@ h5tools_str_sprint(h5tools_str_t *str, const h5dump_t *info, hid_t container,
     unsigned char *ucp_vp = (unsigned char *)vp;
     char          *cp_vp = (char *)vp;
     hid_t          memb, obj, region;
-    unsigned       nmembs;
-    int	           otype;
+    int	           nmembs, otype;
     static char    fmt_llong[8], fmt_ullong[8];
     H5T_str_t      pad;
     H5G_stat_t     sb;
@@ -644,7 +641,6 @@ h5tools_str_sprint(h5tools_str_t *str, const h5dump_t *info, hid_t container,
         }
         pad = H5Tget_strpad(type);
 
-        /* Check for NULL pointer for string */
         if(s==NULL) {
             h5tools_str_append(str, "NULL");
         }
@@ -752,7 +748,7 @@ h5tools_str_sprint(h5tools_str_t *str, const h5dump_t *info, hid_t container,
             h5tools_str_append(str, OPT(info->fmt_ullong, fmt_ullong), tempullong);
         }
     } else if (H5Tget_class(type) == H5T_COMPOUND) {
-        unsigned j;
+        int j;
 
         nmembs = H5Tget_nmembers(type);
         h5tools_str_append(str, "%s", OPT(info->cmpd_pre, "{"));
@@ -839,9 +835,10 @@ h5tools_str_sprint(h5tools_str_t *str, const h5dump_t *info, hid_t container,
             H5Gget_objinfo(obj, ".", FALSE, &sb);
 
             if (info->dset_hidefileno)
-                h5tools_str_append(str, info->dset_format, sb.objno);
+                h5tools_str_append(str, info->dset_format, sb.objno[1], sb.objno[0]);
             else
-                h5tools_str_append(str, info->dset_format, sb.fileno, sb.objno);
+                h5tools_str_append(str, info->dset_format,
+                      sb.fileno[1], sb.fileno[0], sb.objno[1], sb.objno[0]);
 
             h5tools_str_dump_region(str, region, info);
             H5Sclose(region);
@@ -880,13 +877,15 @@ h5tools_str_sprint(h5tools_str_t *str, const h5dump_t *info, hid_t container,
             }
 
             /* Print OID */
-            if (info->obj_hidefileno)
-                h5tools_str_append(str, info->obj_format, sb.objno);
-            else
-                h5tools_str_append(str, info->obj_format, sb.fileno,sb.objno);
+            if (info->obj_hidefileno) {
+                h5tools_str_append(str, info->obj_format, sb.objno[1], sb.objno[0]);
+            } else {
+                h5tools_str_append(str, info->obj_format,
+                          sb.fileno[1], sb.fileno[0], sb.objno[1], sb.objno[0]);
+            }
 
-             /* Print name */
-            path = lookup_ref_path(*(hobj_ref_t *)vp);
+            /* Print name */
+            path = lookup_ref_path(vp);
             if (path) {
              h5tools_str_append(str, " ");
              h5tools_str_append(str, path);
@@ -930,7 +929,6 @@ h5tools_str_sprint(h5tools_str_t *str, const h5dump_t *info, hid_t container,
                  if (!info->pindex)
                   h5tools_str_append(str, "%s", OPT(info->line_pre, ""));
                 }
-
 
                 for (x = 0; x < ctx->indent_level + 1; x++)
                     h5tools_str_append(str,"%s",OPT(info->line_indent,""));
@@ -1124,3 +1122,4 @@ h5tools_is_zero(const void *_mem, size_t size)
 
     return TRUE;
 }
+

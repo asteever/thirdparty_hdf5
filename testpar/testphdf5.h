@@ -25,15 +25,6 @@
 #define FALSE   (!TRUE)
 #endif  /* !FALSE */
 
-/* temporary fix for restoring the H5EXXX API. */
-/* An ISO compliant compiler should handle the repeated name correctly. */
-/* If it barks at it, try change the second name to something like */
-/*     H5E/@@/xxx   where '@' is actually '*'.    */
-#ifndef H5_WANT_H5_V1_6_COMPAT
-#define H5Eget_auto(func, data) H5Eget_auto(H5E_DEFAULT, func, data)
-#define H5Eset_auto(func, data) H5Eset_auto(H5E_DEFAULT, func, data)
-#endif
-
 /* Define some handy debugging shorthands, routines, ... */
 /* debugging tools */
 
@@ -142,7 +133,7 @@ typedef int DATATYPE;
 extern int dim0, dim1;				/*Dataset dimensions */
 extern int chunkdim0, chunkdim1;		/*Chunk dimensions */
 extern int nerrors;				/*errors count */
-extern H5E_auto_stack_t old_func;		/* previous error handler */
+extern H5E_auto_t old_func;		        /* previous error handler */
 extern void *old_client_data;			/*previous error handler arg.*/
 extern int facc_type;				/*Test file access type */
 
@@ -165,14 +156,12 @@ void dataset_readAll(void);
 void extend_readInd(void);
 void extend_readAll(void);
 void compact_dataset(void);
-void null_dataset(void);
 void big_dataset(void);
 void dataset_fillvalue(void);
 void coll_chunk1(void);
 void coll_chunk2(void);
 void coll_chunk3(void);
 void coll_chunk4(void);
-void io_mode_confusion(void);
 
 /* commonly used prototypes */
 hid_t create_faccess_plist(MPI_Comm comm, MPI_Info info, int l_facc_type, hbool_t use_gpfs);

@@ -62,6 +62,10 @@ const H5O_class_t H5O_EFL[1] = {{
 
 #define H5O_EFL_VERSION		1
 
+/* Interface initialization */
+static int interface_initialize_g = 0;
+#define INTERFACE_INIT	NULL
+
 
 /*-------------------------------------------------------------------------
  * Function:	H5O_efl_decode

@@ -20,8 +20,10 @@
 #endif
 
 #include "H5Include.h"
+#include "H5RefCounter.h"
 #include "H5Exception.h"
 #include "H5IdComponent.h"
+#include "H5Idtemplates.h"
 #include "H5DataSpace.h"
 
 #ifndef H5_NO_NAMESPACE
@@ -96,19 +98,19 @@ DataSpace::DataSpace( const DataSpace& original ) : IdComponent( original ) {}
 //--------------------------------------------------------------------------
 void DataSpace::copy( const DataSpace& like_space )
 {
-   // If this object has a valid id, appropriately decrement reference
-   // counter and close the id.
-   if( id != H5S_ALL ) { 
-      try {
-         decRefCount();
-      }
-      catch (Exception close_error) {
-         throw DataSpaceIException("DataSpace::copy", close_error.getDetailMsg());
-      }
-   }  // if
+   // reset the identifier of this object - send 'this' in so that
+   // H5Sclose can be called appropriately
+   try {
+      resetIdComponent( this ); }
+   catch (Exception close_error) { // thrown by p_close
+      throw DataSpaceIException("DataSpace::copy", close_error.getDetailMsg());
+   }
 
    // call C routine to copy the dataspace 
    id = H5Scopy( like_space.getId() );
+
+   // new ref counter for this id
+   ref_count = new RefCounter;
 
    if( id <= 0 )
       throw DataSpaceIException("DataSpace::copy", "H5Scopy failed");
@@ -534,6 +536,30 @@ void DataSpace::selectHyperslab( H5S_seloper_t op, const hsize_t *count, const h
    }
 }
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+//--------------------------------------------------------------------------
+// Function:	DataSpace::p_close (private)
+// Purpose:	Closes the dataspace if it is not a constant.
+// Exception	H5::DataSpaceIException
+// Description
+//		This function will be obsolete because its functionality
+//		is recently handled by the C library layer. - May, 2004
+// Programmer	Binh-Minh Ribler - 2000
+//--------------------------------------------------------------------------
+void DataSpace::p_close() const
+{
+   hid_t space_id = id;
+   if( space_id != H5S_ALL ) // not a constant, should call H5Sclose
+   {
+      herr_t ret_value = H5Sclose( space_id );
+      if( ret_value < 0 )
+      {
+         throw DataSpaceIException(0, "H5Sclose failed");
+      }
+   }
+}
+#endif // DOXYGEN_SHOULD_SKIP_THIS
+
 //--------------------------------------------------------------------------
 // Function:	DataSpace destructor
 ///\brief	Properly terminates access to this dataspace.
@@ -541,16 +567,12 @@ void DataSpace::selectHyperslab( H5S_seloper_t op, const hsize_t *count, const h
 //--------------------------------------------------------------------------
 DataSpace::~DataSpace()
 {  
-   // If this object has a valid id, appropriately decrement reference
-   // counter and close the id.
-   if( id != H5S_ALL ) { 
-      try {
-         decRefCount();
-      }
-      catch (Exception close_error) {
-         throw DataSpaceIException("DataSpace::copy", close_error.getDetailMsg());
-      }
-   }  // if
+   // The dataspace id will be closed properly
+    try {
+        resetIdComponent( this ); }
+    catch (Exception close_error) { // thrown by p_close
+        cerr << "DataSpace::~DataSpace - " << close_error.getDetailMsg() << endl;
+    }
 }  
 
 #ifndef H5_NO_NAMESPACE

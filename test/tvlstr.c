@@ -12,6 +12,8 @@
  * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/* $Id$ */
+
 /***********************************************************
 *
 * Test program:	 tvlstr
@@ -193,7 +195,7 @@ test_vlstrings_basic(void)
 
     /* Count the actual number of bytes used by the strings */
     for(i=0,str_used=0; i<SPACE1_DIM1; i++)
-        str_used+=HDstrlen(wdata[i])+1;
+        str_used+=strlen(wdata[i])+1;
 
     /* Compare against the strings actually written */
     VERIFY(size,(hsize_t)str_used,"H5Dvlen_get_buf_size");
@@ -207,11 +209,11 @@ test_vlstrings_basic(void)
 
     /* Compare data read in */
     for(i=0; i<SPACE1_DIM1; i++) {
-        if(HDstrlen(wdata[i])!=strlen(rdata[i])) {
+        if(strlen(wdata[i])!=strlen(rdata[i])) {
             TestErrPrintf("VL data length don't match!, strlen(wdata[%d])=%d, strlen(rdata[%d])=%d\n",(int)i,(int)strlen(wdata[i]),(int)i,(int)strlen(rdata[i]));
             continue;
         } /* end if */
-        if( HDstrcmp(wdata[i],rdata[i]) != 0 ) {
+        if( strcmp(wdata[i],rdata[i]) != 0 ) {
             TestErrPrintf("VL data values don't match!, wdata[%d]=%s, rdata[%d]=%s\n",(int)i,wdata[i],(int)i,rdata[i]);
             continue;
         } /* end if */
@@ -295,9 +297,11 @@ test_vlstrings_special(void)
     CHECK(ret, FAIL, "H5Dread");
 
     /* Check data read in */
-    for(i=0; i<SPACE1_DIM1; i++)
-        if(rdata[i]!=NULL)
+    for(i=0; i<SPACE1_DIM1; i++) {
+        if(rdata[i]!=NULL) {
             TestErrPrintf("VL doesn't match!, rdata[%d]=%p\n",(int)i,rdata[i]);
+        } /* end if */
+    } /* end for */
     
     /* Write dataset to disk */
     ret=H5Dwrite(dataset,tid1,H5S_ALL,H5S_ALL,H5P_DEFAULT,wdata);
@@ -309,11 +313,11 @@ test_vlstrings_special(void)
 
     /* Compare data read in */
     for(i=0; i<SPACE1_DIM1; i++) {
-        if(HDstrlen(wdata[i])!=strlen(rdata[i])) {
+        if(strlen(wdata[i])!=strlen(rdata[i])) {
             TestErrPrintf("VL data length don't match!, strlen(wdata[%d])=%d, strlen(rdata[%d])=%d\n",(int)i,(int)strlen(wdata[i]),(int)i,(int)strlen(rdata[i]));
             continue;
         } /* end if */
-        if( HDstrcmp(wdata[i],rdata[i]) != 0 ) {
+        if( strcmp(wdata[i],rdata[i]) != 0 ) {
             TestErrPrintf("VL data values don't match!, wdata[%d]=%s, rdata[%d]=%s\n",(int)i,wdata[i],(int)i,rdata[i]);
             continue;
         } /* end if */
@@ -348,9 +352,11 @@ test_vlstrings_special(void)
     CHECK(ret, FAIL, "H5Dread");
 
     /* Check data read in */
-    for(i=0; i<SPACE1_DIM1; i++)
-        if(rdata[i]!=NULL)
+    for(i=0; i<SPACE1_DIM1; i++) {
+        if(rdata[i]!=NULL) {
             TestErrPrintf("VL doesn't match!, rdata[%d]=%p\n",(int)i,rdata[i]);
+        } /* end if */
+    } /* end for */
     
     /* Try to write nil strings to disk. */
     ret=H5Dwrite(dataset,tid1,H5S_ALL,H5S_ALL,H5P_DEFAULT,wdata2);
@@ -361,9 +367,11 @@ test_vlstrings_special(void)
     CHECK(ret, FAIL, "H5Dread");
 
     /* Check data read in */
-    for(i=0; i<SPACE1_DIM1; i++)
-        if(rdata[i]!=NULL)
+    for(i=0; i<SPACE1_DIM1; i++) {
+        if(rdata[i]!=NULL) {
             TestErrPrintf("VL doesn't match!, rdata[%d]=%p\n",(int)i,rdata[i]);
+        } /* end if */
+    } /* end for */
     
     /* Close Dataset */
     ret = H5Dclose(dataset);
@@ -526,11 +534,11 @@ test_compact_vlstring(void)
 
     /* Compare data read in */
     for(i=0; i<SPACE1_DIM1; i++) {
-        if(HDstrlen(wdata[i])!=strlen(rdata[i])) {
+        if(strlen(wdata[i])!=strlen(rdata[i])) {
             TestErrPrintf("VL data length don't match!, strlen(wdata[%d])=%d, strlen(rdata[%d])=%d\n",(int)i,(int)strlen(wdata[i]),(int)i,(int)strlen(rdata[i]));
             continue;
         } /* end if */
-        if( HDstrcmp(wdata[i],rdata[i]) != 0 ) {
+        if( strcmp(wdata[i],rdata[i]) != 0 ) {
             TestErrPrintf("VL data values don't match!, wdata[%d]=%s, rdata[%d]=%s\n",(int)i,wdata[i],(int)i,rdata[i]);
             continue;
         } /* end if */
@@ -601,8 +609,9 @@ static void test_write_vl_string_attribute(void)
     ret = H5Aread(att, type, &string_att_check);
     CHECK(ret, FAIL, "H5Aread");
 
-    if(HDstrcmp(string_att_check,string_att)!=0)
+    if(HDstrcmp(string_att_check,string_att)!=0) {
         TestErrPrintf("VL string attributes don't match!, string_att=%s, string_att_check=%s\n",string_att,string_att_check);
+    } /* end if */
 
     HDfree(string_att_check);
 
@@ -622,8 +631,9 @@ static void test_write_vl_string_attribute(void)
     ret = H5Aread(att, type, &string_att_check);
     CHECK(ret, FAIL, "H5Aread");
 
-    if(HDstrcmp(string_att_check,string_att_write)!=0)
+    if(HDstrcmp(string_att_check,string_att_write)!=0) {
         TestErrPrintf("VL string attributes don't match!, string_att_write=%s, string_att_check=%s\n",string_att_write,string_att_check);
+    } /* end if */
 
     HDfree(string_att_check);
     /* The attribute string written is freed below, in the test_read_vl_string_attribute() test */
@@ -681,8 +691,9 @@ static void test_read_vl_string_attribute(void)
     ret = H5Aread(att, type, &string_att_check);
     CHECK(ret, FAIL, "H5Aread");
 
-    if(HDstrcmp(string_att_check,string_att)!=0)
+    if(HDstrcmp(string_att_check,string_att)!=0) {
         TestErrPrintf("VL string attributes don't match!, string_att=%s, string_att_check=%s\n",string_att,string_att_check);
+    } /* end if */
 
     HDfree(string_att_check);
 
@@ -696,8 +707,9 @@ static void test_read_vl_string_attribute(void)
     ret = H5Aread(att, type, &string_att_check);
     CHECK(ret, FAIL, "H5Aread");
 
-    if(HDstrcmp(string_att_check,string_att_write)!=0)
+    if(HDstrcmp(string_att_check,string_att_write)!=0) {
         TestErrPrintf("VL string attributes don't match!, string_att_write=%s, string_att_check=%s\n",string_att_write,string_att_check);
+    } /* end if */
 
     HDfree(string_att_check);
     HDfree(string_att_write);   /* Free string allocated in test_write_vl_string_attribute */
@@ -849,7 +861,7 @@ test_vlstrings(void)
     /* Output message about test being performed */
     MESSAGE(5, ("Testing Variable-Length Strings\n"));
 
-    /* These tests use the same file */
+/* These tests use the same file */
     /* Test basic VL string datatype */
     test_vlstrings_basic();
     test_vlstrings_special();

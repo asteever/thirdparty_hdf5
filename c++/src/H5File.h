@@ -91,6 +91,11 @@ class H5_DLLCPP H5File : public IdComponent, public CommonFG {
 	// Copy constructor: makes a copy of the original H5File object.
 	H5File(const H5File& original);
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+	// Used by the API to appropriately close a file.
+	void p_close() const;
+#endif // DOXYGEN_SHOULD_SKIP_THIS
+
 	// H5File destructor.
 	virtual ~H5File();
 

@@ -66,6 +66,10 @@ const H5O_class_t H5O_DTYPE[1] = {{
  * class objects (array definitely, potentially compound & vlen sequences also) */
 #define H5O_DTYPE_VERSION_UPDATED	2
 
+/* Interface initialization */
+static int		interface_initialize_g = 0;
+#define INTERFACE_INIT	NULL
+
 /* Declare external the free list for H5T_t's */
 H5FL_EXTERN(H5T_t);
 
@@ -89,7 +93,7 @@ static herr_t
 H5O_dtype_decode_helper(H5F_t *f, const uint8_t **pp, H5T_t *dt)
 {
     unsigned		flags, version;
-    unsigned		i, j;
+    int		i, j;
     size_t		z;
     herr_t      ret_value=SUCCEED;       /* Return value */
 
@@ -191,7 +195,7 @@ H5O_dtype_decode_helper(H5F_t *f, const uint8_t **pp, H5T_t *dt)
             if (NULL==dt->u.compnd.memb)
                 HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed");
             for (i = 0; i < dt->u.compnd.nmembs; i++) {
-                unsigned ndims=0;     /* Number of dimensions of the array field */
+                int ndims=0;     /* Number of dimensions of the array field */
                 hsize_t dim[H5O_LAYOUT_NDIMS];  /* Dimensions of the array */
                 int perm[H5O_LAYOUT_NDIMS];     /* Dimension permutations */
                 unsigned perm_word=0;    /* Dimension permutation information */
@@ -249,7 +253,7 @@ H5O_dtype_decode_helper(H5F_t *f, const uint8_t **pp, H5T_t *dt)
                             perm[j]=(perm_word>>(j*8))&0xff;
 
                         /* Create the array datatype for the field */
-                        if ((array_dt=H5T_array_create(temp_type,(int)ndims,dim,perm))==NULL) {
+                        if ((array_dt=H5T_array_create(temp_type,ndims,dim,perm))==NULL) {
                             for (j=0; j<=i; j++)
                                 H5MM_xfree(dt->u.compnd.memb[j].name);
                             H5MM_xfree(dt->u.compnd.memb);
@@ -307,6 +311,7 @@ H5O_dtype_decode_helper(H5F_t *f, const uint8_t **pp, H5T_t *dt)
              * Enumeration data types...
              */
             dt->u.enumer.nmembs = dt->u.enumer.nalloc = flags & 0xffff;
+            assert(dt->u.enumer.nmembs>=0);
             if (NULL==(dt->parent=H5FL_CALLOC(H5T_t)))
                 HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed");
             dt->parent->ent.header = HADDR_UNDEF;
@@ -335,18 +340,7 @@ H5O_dtype_decode_helper(H5F_t *f, const uint8_t **pp, H5T_t *dt)
             dt->u.atomic.offset = 0;
             dt->u.atomic.lsb_pad = H5T_PAD_ZERO;
             dt->u.atomic.msb_pad = H5T_PAD_ZERO;
-
-            /* Set reference type */
             dt->u.atomic.u.r.rtype = (H5R_type_t)(flags & 0x0f);
-
-            /* Set extra information for object references, so the hobj_ref_t gets swizzled correctly */
-            if(dt->u.atomic.u.r.rtype==H5R_OBJECT) {
-                /* This type is on disk */
-                dt->u.atomic.u.r.loc = H5T_LOC_DISK;
-
-                /* This type needs conversion */
-                dt->force_conv=TRUE;
-            } /* end if */
             break;
 
         case H5T_STRING:
@@ -380,8 +374,8 @@ H5O_dtype_decode_helper(H5F_t *f, const uint8_t **pp, H5T_t *dt)
 
             dt->force_conv=TRUE;
             /* Mark this type as on disk */
-            if (H5T_set_loc(dt, f, H5T_LOC_DISK)<0)
-                HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "invalid datatype location");
+            if (H5T_vlen_mark(dt, f, H5T_VLEN_DISK)<0)
+                HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "invalid VL location");
             break;
 
         case H5T_TIME:  /* Time datatypes */
@@ -400,13 +394,13 @@ H5O_dtype_decode_helper(H5F_t *f, const uint8_t **pp, H5T_t *dt)
             *pp += 3;
 
             /* Decode array dimension sizes & compute number of elements */
-            for (j=0, dt->u.array.nelem=1; j<(unsigned)dt->u.array.ndims; j++) {
+            for (j=0, dt->u.array.nelem=1; j<dt->u.array.ndims; j++) {
                 UINT32DECODE(*pp, dt->u.array.dim[j]);
                 dt->u.array.nelem *= dt->u.array.dim[j];
             } /* end for */
 
             /* Decode array dimension permutations (even though they are unused currently) */
-            for (j=0; j<(unsigned)dt->u.array.ndims; j++)
+            for (j=0; j<dt->u.array.ndims; j++)
                 UINT32DECODE(*pp, dt->u.array.perm[j]);
 
             /* Decode base type of array */
@@ -420,7 +414,7 @@ H5O_dtype_decode_helper(H5F_t *f, const uint8_t **pp, H5T_t *dt)
              * Set the "force conversion" flag if a VL base datatype is used or
              * or if any components of the base datatype are VL types.
              */
-            if(dt->parent->force_conv==TRUE)
+            if(dt->parent->type==H5T_VLEN || dt->parent->force_conv==TRUE)
                 dt->force_conv=TRUE;
             break;
 
@@ -454,7 +448,7 @@ H5O_dtype_encode_helper(uint8_t **pp, const H5T_t *dt)
     htri_t has_array=FALSE;       /* Whether a compound datatype has an array inside it */
     unsigned		flags = 0;
     char		*hdr = (char *)*pp;
-    unsigned		i, j;
+    int		i, j;
     size_t		n, z, aligned;
     herr_t      ret_value=SUCCEED;       /* Return value */
 
@@ -670,9 +664,9 @@ H5O_dtype_encode_helper(uint8_t **pp, const H5T_t *dt)
                     *(*pp)++ = 0;
 
                     /* Reserved */
-                    *(*pp)++ = 0;
-                    *(*pp)++ = 0;
-                    *(*pp)++ = 0;
+                    *(*pp)++ = '\0';
+                    *(*pp)++ = '\0';
+                    *(*pp)++ = '\0';
 
                     /* Dimension permutation */
                     UINT32ENCODE(*pp, 0);
@@ -771,11 +765,11 @@ H5O_dtype_encode_helper(uint8_t **pp, const H5T_t *dt)
             *(*pp)++ = '\0';
 
             /* Encode array dimensions */
-            for (j=0; j<(unsigned)dt->u.array.ndims; j++)
+            for (j=0; j<dt->u.array.ndims; j++)
                 UINT32ENCODE(*pp, dt->u.array.dim[j]);
 
             /* Encode array dimension permutations */
-            for (j=0; j<(unsigned)dt->u.array.ndims; j++)
+            for (j=0; j<dt->u.array.ndims; j++)
                 UINT32ENCODE(*pp, dt->u.array.perm[j]);
 
             /* Encode base type of array's information */
@@ -788,7 +782,6 @@ H5O_dtype_encode_helper(uint8_t **pp, const H5T_t *dt)
             break;
     }
 
-    /* Encode the type's class, version and bit field */
     *hdr++ = ((unsigned)(dt->type) & 0x0f) | (((dt->type==H5T_COMPOUND && has_array) ? H5O_DTYPE_VERSION_UPDATED : H5O_DTYPE_VERSION_COMPAT )<<4);
     *hdr++ = (flags >> 0) & 0xff;
     *hdr++ = (flags >> 8) & 0xff;
@@ -824,7 +817,7 @@ H5O_dtype_decode(H5F_t *f, hid_t UNUSED dxpl_id, const uint8_t *p,
     H5T_t		   *dt = NULL;
     void                *ret_value;     /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT(H5O_dtype_decode);
+    FUNC_ENTER_NOAPI(H5O_dtype_decode, NULL);
 
     /* check args */
     assert(p);
@@ -872,10 +865,10 @@ H5O_dtype_encode(H5F_t UNUSED *f, uint8_t *p, const void *mesg)
     const H5T_t		   *dt = (const H5T_t *) mesg;
     herr_t      ret_value=SUCCEED;       /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT(H5O_dtype_encode);
+    FUNC_ENTER_NOAPI(H5O_dtype_encode, FAIL);
 
     /* check args */
-    /*assert(f);*/
+    assert(f);
     assert(p);
     assert(dt);
 
@@ -912,7 +905,7 @@ H5O_dtype_copy(const void *_src, void *_dst)
     H5T_t		   *dst = NULL;
     void 		   *ret_value;  /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT(H5O_dtype_copy);
+    FUNC_ENTER_NOAPI(H5O_dtype_copy, NULL);
 
     /* check args */
     assert(src);
@@ -958,11 +951,11 @@ done:
 static size_t
 H5O_dtype_size(H5F_t *f, const void *mesg)
 {
-    unsigned		    i;
+    int		    i;
     size_t		    ret_value = 8;
     const H5T_t		   *dt = (const H5T_t *) mesg;
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_dtype_size);
+    FUNC_ENTER_NOAPI(H5O_dtype_size, 0);
 
     assert(mesg);
 
@@ -1024,6 +1017,7 @@ H5O_dtype_size(H5F_t *f, const void *mesg)
             break;
     }
 
+done:
     FUNC_LEAVE_NOAPI(ret_value);
 }
 
@@ -1047,13 +1041,15 @@ static herr_t
 H5O_dtype_reset(void *_mesg)
 {
     H5T_t		   *dt = (H5T_t *) _mesg;
+    herr_t      ret_value=SUCCEED;       /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_dtype_reset);
+    FUNC_ENTER_NOAPI(H5O_dtype_reset, FAIL);
 
     if (dt)
         H5T_free(dt);
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }
 
 
@@ -1074,13 +1070,16 @@ H5O_dtype_reset(void *_mesg)
 static herr_t
 H5O_dtype_free (void *mesg)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_dtype_free);
+    herr_t ret_value=SUCCEED;   /* Return value */
+
+    FUNC_ENTER_NOAPI(H5O_dtype_free, FAIL);
 
     assert (mesg);
 
     H5FL_FREE(H5T_t,mesg);
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }
 
 
@@ -1106,7 +1105,7 @@ H5O_dtype_get_share(H5F_t UNUSED *f, const void *_mesg,
     const H5T_t	*dt = (const H5T_t *)_mesg;
     herr_t      ret_value=SUCCEED;       /* Return value */
     
-    FUNC_ENTER_NOAPI_NOINIT(H5O_dtype_get_share);
+    FUNC_ENTER_NOAPI(H5O_dtype_get_share, FAIL);
 
     assert (dt);
     assert (sh);
@@ -1147,8 +1146,9 @@ H5O_dtype_set_share (H5F_t UNUSED *f, void *_mesg/*in,out*/,
 		     const H5O_shared_t *sh)
 {
     H5T_t	*dt = (H5T_t *)_mesg;
+    herr_t ret_value=SUCCEED;   /* Return value */
     
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_dtype_set_share);
+    FUNC_ENTER_NOAPI(H5O_dtype_set_share, FAIL);
 
     assert (dt);
     assert (sh);
@@ -1164,7 +1164,8 @@ H5O_dtype_set_share (H5F_t UNUSED *f, void *_mesg/*in,out*/,
     /* Note that the datatype is a named datatype */
     dt->state = H5T_STATE_NAMED;
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }
 
 
@@ -1194,10 +1195,11 @@ H5O_dtype_debug(H5F_t *f, hid_t dxpl_id, const void *mesg, FILE *stream,
     const H5T_t		*dt = (const H5T_t*)mesg;
     const char		*s;
     char		buf[256];
-    unsigned		i;
+    int		i;
     size_t		k;
+    herr_t ret_value=SUCCEED;   /* Return value */
     
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_dtype_debug);
+    FUNC_ENTER_NOAPI(H5O_dtype_debug, FAIL);
 
     /* check args */
     assert(f);
@@ -1311,14 +1313,14 @@ H5O_dtype_debug(H5F_t *f, hid_t dxpl_id, const void *mesg, FILE *stream,
                 "Vlen type:", s);
 
         switch (dt->u.vlen.loc) {
-            case H5T_LOC_MEMORY:
+            case H5T_VLEN_MEMORY:
                 s = "memory";
                 break;
-            case H5T_LOC_DISK:
+            case H5T_VLEN_DISK:
                 s = "disk";
                 break;
             default:
-                sprintf(buf, "H5T_LOC_%d", dt->u.vlen.loc);
+                sprintf(buf, "H5T_VLEN_%d", dt->u.vlen.loc);
                 s = buf;
                 break;
         }
@@ -1329,12 +1331,12 @@ H5O_dtype_debug(H5F_t *f, hid_t dxpl_id, const void *mesg, FILE *stream,
 		"Rank:",
 		dt->u.array.ndims);
     fprintf(stream, "%*s%-*s {", indent, "", fwidth, "Dim Size:");
-	for (i=0; i<(unsigned)dt->u.array.ndims; i++) {
+	for (i=0; i<dt->u.array.ndims; i++) {
         fprintf (stream, "%s%u", i?", ":"", (unsigned)dt->u.array.dim[i]);
     }
     fprintf (stream, "}\n");
     fprintf(stream, "%*s%-*s {", indent, "", fwidth, "Dim Permutation:");
-	for (i=0; i<(unsigned)dt->u.array.ndims; i++) {
+	for (i=0; i<dt->u.array.ndims; i++) {
         fprintf (stream, "%s%d", i?", ":"", dt->u.array.perm[i]);
     }
     fprintf (stream, "}\n");
@@ -1481,5 +1483,6 @@ H5O_dtype_debug(H5F_t *f, hid_t dxpl_id, const void *mesg, FILE *stream,
 	}
     }
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }

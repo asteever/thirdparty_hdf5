@@ -42,8 +42,7 @@ HDF5/H5Z API Specification
 </td>
 <td valign=top align=right>
 And in this document, the 
-<a href="RM_H5Front.html">HDF5 Reference Manual</a>&nbsp;&nbsp;
-<br>
+<a href="RM_H5Front.html">HDF5 Reference Manual</a>&nbsp;&nbsp;<br>
 <a href="RM_H5.html">H5</a>&nbsp;&nbsp;
 <a href="RM_H5A.html">H5A</a>&nbsp;&nbsp;
 <a href="RM_H5D.html">H5D</a>&nbsp;&nbsp;
@@ -51,8 +50,7 @@ And in this document, the
 <a href="RM_H5F.html">H5F</a>&nbsp;&nbsp;
 <a href="RM_H5G.html">H5G</a>&nbsp;&nbsp;
 <a href="RM_H5I.html">H5I</a>&nbsp;&nbsp;
-<a href="RM_H5P.html">H5P</a>&nbsp;&nbsp;
-<br>
+<a href="RM_H5P.html">H5P</a>&nbsp;&nbsp;<br>
 <a href="RM_H5R.html">H5R</a>&nbsp;&nbsp;
 <a href="RM_H5S.html">H5S</a>&nbsp;&nbsp;
 <a href="RM_H5T.html">H5T</a>&nbsp;&nbsp;
@@ -60,9 +58,14 @@ And in this document, the
 <a href="Tools.html">Tools</a>&nbsp;&nbsp;
 <a href="PredefDTypes.html">Datatypes</a>&nbsp;&nbsp;
 </td></tr>
+<tr><td colspan="2" align="right">
+<i><small>(<a href="http://hdf.ncsa.uiuc.edu/HDF5/doc/PSandPDF/">PDF</a>
+of complete manual formatted as print volume)&nbsp;&nbsp;&nbsp;</small></i>
+</td></tr>
 </table>
 </center>
-<hr><!-- #EndLibraryItem --><center>
+<hr>
+<!-- #EndLibraryItem --><center>
 <h1>H5Z: Filter and Compression Interface</h1>
 </center>
 
@@ -102,7 +105,7 @@ as the corresponding C function.
     </ul>
 </td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td><td valign=top width="30%">
     <ul>
-<!--<li><a href="#Compression-Register">h5zregister_f</a><br>    -->
+<!--<li><a href="#Compression-Register">h5zregister_f</a><br>        -->
     <li><a href="#Compression-GetFilterInfo">h5zget_filter_info_f</a>
     </ul>
 </td><td>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td><td valign=top width="30%">
@@ -126,10 +129,10 @@ The flexibility of the filter pipeline implementation enables the
 definition of additional filters by a user application.
 A filter
   <ul>
-    <li>is associated with a dataset when the dataset is created,
-    <li>can be used only with chunked data
-        <br>(i.e., datasets stored in the <code>H5D_CHUNKED</code> 
-        storage layout), and
+    <li>is associated with a dataset when the dataset is created,<br>
+    <li>can be used only with chunked data<br>
+    (i.e., datasets stored in the <code>H5D_CHUNKED</code> 
+    storage layout), and
     <li>is applied independently to each chunk of the dataset.
   </ul>
 <p>
@@ -143,18 +146,18 @@ are as follows:
 <table align=center border=0>
   <tr valign=top align=left>
   <td>
-    <code>H5Z_FILTER_DEFLATE</code></td><td>The gzip compression, 
+    <code>H5Z_FILTER_DEFLATE</code></td><td>The gzip compression,
           or deflation, filter
   </td></tr><tr><td>
     <code>H5Z_FILTER_SZIP</code></td><td>The SZIP compression filter
   </td></tr><tr><td>
     <code>H5Z_FILTER_SHUFFLE</code></td><td>The shuffle algorithm filter
   </td></tr><tr><td>
-    <code>H5Z_FILTER_FLETCHER32&nbsp;&nbsp;</code></td><td>The Fletcher32 checksum, 
+    <code>H5Z_FILTER_FLETCHER32&nbsp;&nbsp;</code></td><td>The Fletcher32 checksum,
           or error checking, filter
   </td></tr>
 </table>
-Custom filters that have been registered with the library will have 
+Custom filters that have been registered with the library will have
 additional unique identifiers.
 <p>
 See <a href="Datasets.html"><cite>The Dataset Interface (H5D)</cite></a> 
@@ -162,6 +165,7 @@ in the <cite>HDF5 User's Guide</cite> for further information regarding
 data compression.
 
 <!-- NEW PAGE -->
+<!-- HEADER RIGHT " " -->
 <!-- NEW PAGE -->
 <!-- HEADER RIGHT "H5Zfilter_avail" -->
 <hr>
@@ -175,13 +179,12 @@ data compression.
     <dd><code>H5Zfilter_avail</code> determines whether the filter 
         specified in <code>filter</code> is available to the application.
   <dt><strong>Parameters:</strong>
-    <ul><table>
-        <tr>
-		    <td valign="top"><em>H5Z_filter_t</em>&nbsp;<code>filter&nbsp;&nbsp;&nbsp;&nbsp;</code></td>
-            <td valign="top">IN: Filter identifier.
-              See the introduction to this section of the reference manual 
-              for a list of valid filter identifiers.</td></tr>
-    </table></ul>
+    <dl>
+        <dt><em>H5Z_filter_t</em> <code>filter</code>
+            <dd>IN: Filter identifier.
+              See the introduction to this section of the reference manual
+              for a list of valid filter identifiers.
+    </dl>
   <dt><strong>Returns:</strong>
     <dd>Returns a non-negative value if successful;
         otherwise returns a negative value.
@@ -272,20 +275,20 @@ END SUBROUTINE h5zfilter_avail_f
       the filter is not so configured.
       <p>
       If a filter is not encode-enabled, the corresponding
-      <code>H5Pset_*</code> function will return an error if the
-      filter is added to a dataset creation property list (which is
+      <code>H5Pset_*</code> function will return an error if the 
+      filter is added to a dataset creation property list (which is 
       required if the filter is to be used to encode that dataset).
       For example, if the <code>H5Z_FILTER_CONFIG_ENCODE_ENABLED</code>
-      flag is not returned for the SZIP filter,
-      <code>H5Z_FILTER_SZIP</code>, a call to <code>H5Pset_szip</code>
+      flag is not returned for the SZIP filter, 
+      <code>H5Z_FILTER_SZIP</code>, a call to <code>H5Pset_szip</code> 
       will fail.
       <p>
-      If a filter is not decode-enabled, the application will not be
-      able to read an existing file encoded with that filter.
+      If a filter is not decode-enabled, the application will not be 
+      able to read an existing file encoded with that filter.  
       <p>
-      This function should be called, and the returned
-      <code>filter_config_flags</code> analyzed, before calling
-      any other function, such as <code>H5Pset_szip</code>,
+      This function should be called, and the returned 
+      <code>filter_config_flags</code> analyzed, before calling 
+      any other function, such as <code>H5Pset_szip</code>, 
       that might require a particular filter configuration.
 
 <dt><strong>Parameters:</strong>
@@ -298,23 +301,24 @@ END SUBROUTINE h5zfilter_avail_f
         <dd>OUT: A bit field encoding the returned filter information
     </dl>
 <dt><strong>Returns:</strong>
-    <dd>Returns a non-negative value on success,
+    <dd>Returns a non-negative value on success, 
         a negative value on failure.
 
-<dt><strong>Fortran90 Interface:</strong>
+<!-- NEW PAGE -->
+<dt><strong>Fortran90 Interface:</strong> 
     <dd>
     <pre>
-SUBROUTINE h5zget_filter_info_f(filter, config_flags, hdferr)
+SUBROUTINE h5zget_filter_info_f(filter, config_flags, hdferr) 
 
   IMPLICIT NONE
-  INTEGER, INTENT(IN)  :: filter        ! Filter, may be one of the
+  INTEGER, INTENT(IN)  :: filter        ! Filter, may be one of the 
                                         ! following:
                                         !     H5Z_FILTER_DEFLATE_F
                                         !     H5Z_FILTER_SHUFFLE_F
                                         !     H5Z_FILTER_FLETCHER32_F
                                         !     H5Z_FILTER_SZIP_F
-  INTEGER, INTENT(OUT) :: config_flags  ! Bit field indicating whether
-                                        ! a filter's encoder and/or
+  INTEGER, INTENT(OUT) :: config_flags  ! Bit field indicating whether 
+                                        ! a filter's encoder and/or 
                                         ! decoder are available
   INTEGER, INTENT(OUT) :: hdferr        ! Error code
 
@@ -322,8 +326,8 @@ END SUBROUTINE h5zfilter_avail_f
     </pre>
         <!--<dt><strong>Non-C API(s):</strong>
         <dd>
-
-        <img src="Graphics/Java.gif">
+        
+        <img src="Graphics/Java.gif"> 
         <img src="Graphics/C++.gif">
         -->
 </dl>
@@ -519,11 +523,10 @@ END SUBROUTINE h5zfilter_avail_f
       the <i>set local</i> and <i>can apply</i> callback functions
       first appeared in HDF5 Release 1.6.
 <dt><strong>Parameters:</strong>
-    <ul><table>
-        <tr>
-		    <td valign="top"><em>const&nbsp;H5Z_class_t</em>&nbsp;<code>filter_class&nbsp;&nbsp;&nbsp;&nbsp;</code></td>
-            <td valign="top">IN: Struct containing filter-definition information.</td></tr>
-    </table></ul>
+    <dl>
+        <dt><em>const H5Z_class_t</em> <code>filter_class</code>
+            <dd>IN: Struct containing filter-definition information.
+    </dl>
 <dt><strong>Returns:</strong>
     <dd>Returns a non-negative value if successful;
         otherwise returns a negative value.
@@ -560,14 +563,13 @@ END SUBROUTINE h5zfilter_avail_f
 	specified in <code>filter</code> will no longer be 
 	available to the application.
   <dt><strong>Parameters:</strong>
-    <ul><table>
-        <tr>
-		    <td valign="top"><em>H5Z_filter_t</em>&nbsp;<code>filter&nbsp;&nbsp;&nbsp;&nbsp;</code></td>
-            <td valign="top">IN: Identifier of the filter to be unregistered.
-                See the introduction to this section of the reference manual 
-                for a list of identifiers for standard filters
-                distributed with the HDF5 Library.</td></tr>
-    </table></ul>
+    <dl>
+        <dt><em>H5Z_filter_t</em> <code>filter</code>
+            <dd>IN: Identifier of the filter to be unregistered.
+                See the introduction to this section of the reference manual
+                for a list of identifiers for standard filters distributed 
+				with the HDF5 Library.
+    </dl>
   <dt><strong>Returns:</strong>
     <dd>Returns a non-negative value if successful;
         otherwise returns a negative value.
@@ -594,7 +596,6 @@ END SUBROUTINE h5zunregister_f
         -->
 </dl>
 
-<!-- HEADER RIGHT " " -->
 
 <!-- #BeginLibraryItem "/ed_libs/NavBar_RM.lbi" --><hr>
 <center>
@@ -609,8 +610,7 @@ END SUBROUTINE h5zunregister_f
 </td>
 <td valign=top align=right>
 And in this document, the 
-<a href="RM_H5Front.html">HDF5 Reference Manual</a>&nbsp;&nbsp;
-<br>
+<a href="RM_H5Front.html">HDF5 Reference Manual</a>&nbsp;&nbsp;<br>
 <a href="RM_H5.html">H5</a>&nbsp;&nbsp;
 <a href="RM_H5A.html">H5A</a>&nbsp;&nbsp;
 <a href="RM_H5D.html">H5D</a>&nbsp;&nbsp;
@@ -618,8 +618,7 @@ And in this document, the
 <a href="RM_H5F.html">H5F</a>&nbsp;&nbsp;
 <a href="RM_H5G.html">H5G</a>&nbsp;&nbsp;
 <a href="RM_H5I.html">H5I</a>&nbsp;&nbsp;
-<a href="RM_H5P.html">H5P</a>&nbsp;&nbsp;
-<br>
+<a href="RM_H5P.html">H5P</a>&nbsp;&nbsp;<br>
 <a href="RM_H5R.html">H5R</a>&nbsp;&nbsp;
 <a href="RM_H5S.html">H5S</a>&nbsp;&nbsp;
 <a href="RM_H5T.html">H5T</a>&nbsp;&nbsp;
@@ -627,15 +626,20 @@ And in this document, the
 <a href="Tools.html">Tools</a>&nbsp;&nbsp;
 <a href="PredefDTypes.html">Datatypes</a>&nbsp;&nbsp;
 </td></tr>
+<tr><td colspan="2" align="right">
+<i><small>(<a href="http://hdf.ncsa.uiuc.edu/HDF5/doc/PSandPDF/">PDF</a>
+of complete manual formatted as print volume)&nbsp;&nbsp;&nbsp;</small></i>
+</td></tr>
 </table>
 </center>
-<hr><!-- #EndLibraryItem --><!-- #BeginLibraryItem "/ed_libs/Footer.lbi" --><address>
+<hr>
+<!-- #EndLibraryItem --><!-- #BeginLibraryItem "/ed_libs/Footer.lbi" --><address>
 <a href="mailto:hdfhelp@ncsa.uiuc.edu">HDF Help Desk</a> 
 <br>
-Describes HDF5 Release 1.7, the unreleased development branch; working toward HDF5 Release 1.8.0
+Describes HDF5 Release 1.6.3, September 2004
 </address><!-- #EndLibraryItem --><SCRIPT LANGUAGE="JAVASCRIPT">
 <!--
-document.writeln("Last modified: 2 September 2004");
+document.writeln("Last modified:  2 September 2004");
 -->
 </SCRIPT>
  

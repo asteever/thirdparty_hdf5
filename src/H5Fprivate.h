@@ -43,8 +43,9 @@ typedef struct H5F_t H5F_t;
  */
 #define H5F_FLUSH_NONE       (0U)       /* No flags specified                       */
 #define H5F_FLUSH_INVALIDATE (1U << 0)  /* Invalidate cached data                   */
-#define H5F_FLUSH_CLOSING    (1U << 1)  /* Closing the file                         */
-#define H5F_FLUSH_CLEAR_ONLY (1U << 2)  /* Don't write, just clear dirty flags      */
+#define H5F_FLUSH_ALLOC_ONLY (1U << 1)  /* Allocate space for user and super blocks */
+#define H5F_FLUSH_CLOSING    (1U << 2)  /* Closing the file                         */
+#define H5F_FLUSH_CLEAR_ONLY (1U << 3)  /* Don't write, just clear dirty flags      */
 
 /*
  * Encode and decode macros for file meta-data.
@@ -429,17 +430,16 @@ H5_DLL herr_t H5F_block_write(const H5F_t *f, H5FD_mem_t type, haddr_t addr,
                 size_t size, hid_t dxpl_id, const void *buf);
 
 /* Address-related functions */
-H5_DLL void H5F_addr_encode(const H5F_t *, uint8_t** /*in,out*/, haddr_t);
-H5_DLL void H5F_addr_decode(const H5F_t *, const uint8_t** /*in,out*/,
+H5_DLL void H5F_addr_encode(H5F_t *, uint8_t** /*in,out*/, haddr_t);
+H5_DLL void H5F_addr_decode(H5F_t *, const uint8_t** /*in,out*/,
 			     haddr_t* /*out*/);
+H5_DLL herr_t H5F_addr_pack(H5F_t *f, haddr_t *addr_p /*out*/,
+			     const unsigned long objno[2]);
 
 /* Callback functions for file access class */
 H5_DLL herr_t H5F_acs_create(hid_t fapl_id, void *close_data);
 H5_DLL herr_t H5F_acs_close(hid_t fapl_id, void *close_data);
 H5_DLL herr_t H5F_acs_copy(hid_t new_fapl_id, hid_t old_fapl_id, 
                             void *close_data);
-
-/* Debugging functions */
-H5_DLL herr_t H5F_debug(H5F_t *f, hid_t dxpl_id, FILE * stream, int indent, int fwidth);
 
 #endif

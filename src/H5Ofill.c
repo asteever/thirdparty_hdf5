@@ -85,11 +85,15 @@ const H5O_class_t H5O_FILL_NEW[1] = {{
     H5O_fill_new_debug,		/*debug the message			*/
 }};
 
-/* Initial version of the "old" fill value information */
+/* Initial version of the "new" fill value information */
 #define H5O_FILL_VERSION 	1
 /* Revised version of the "new" fill value information */
 #define H5O_FILL_VERSION_2 	2	
  
+/* Interface initialization */
+static int interface_initialize_g = 0;
+#define INTERFACE_INIT NULL
+
 /* Declare a free list to manage the H5O_fill_new_t struct */
 H5FL_DEFINE(H5O_fill_new_t);
 
@@ -123,7 +127,7 @@ H5O_fill_new_decode(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const uint8_t *p,
     int			version;
     void		*ret_value;
     
-    FUNC_ENTER_NOAPI_NOINIT(H5O_fill_new_decode);
+    FUNC_ENTER_NOAPI(H5O_fill_new_decode, NULL);
 
     assert(f);
     assert(p);
@@ -158,7 +162,7 @@ H5O_fill_new_decode(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const uint8_t *p,
     } /* end if */
     else
         mesg->size=(-1);
-    
+
     /* Set return value */
     ret_value = (void*)mesg;
     
@@ -196,7 +200,7 @@ H5O_fill_decode(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const uint8_t *p,
     H5O_fill_t  *mesg=NULL;
     void        *ret_value;
     
-    FUNC_ENTER_NOAPI_NOINIT(H5O_fill_decode);
+    FUNC_ENTER_NOAPI(H5O_fill_decode, NULL);
 
     assert(f);
     assert(p);
@@ -245,15 +249,16 @@ static herr_t
 H5O_fill_new_encode(H5F_t UNUSED *f, uint8_t *p, const void *_mesg)
 {
     const H5O_fill_new_t	*mesg = (const H5O_fill_new_t *)_mesg;
+    herr_t ret_value=SUCCEED;   /* Return value */
     
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_fill_new_encode);
+    FUNC_ENTER_NOAPI(H5O_fill_new_encode, FAIL);
 
     assert(f);
     assert(p);
     assert(mesg && NULL==mesg->type);
 
     /* Version */
-    *p++ = H5O_FILL_VERSION_2;
+    *p++ = H5O_FILL_VERSION;
     /* Space allocation time */
     *p++ = mesg->alloc_time;
     /* Fill value writing time */
@@ -261,17 +266,16 @@ H5O_fill_new_encode(H5F_t UNUSED *f, uint8_t *p, const void *_mesg)
     /* Whether fill value is defined */
     *p++ = mesg->fill_defined;
 
-    /* Only write out the size and fill value if it is defined */
-    if(mesg->fill_defined) {
-        INT32ENCODE(p, mesg->size);
-        if(mesg->size>0)
-            if(mesg->buf) {
-                H5_CHECK_OVERFLOW(mesg->size,ssize_t,size_t);
-                HDmemcpy(p, mesg->buf, (size_t)mesg->size);
-            } /* end if */
-    } /* end if */
+    /* Does it handle undefined fill value? */
+    INT32ENCODE(p, mesg->size);
+    if(mesg->size>0)
+        if(mesg->buf) {
+            H5_CHECK_OVERFLOW(mesg->size,ssize_t,size_t);
+            HDmemcpy(p, mesg->buf, (size_t)mesg->size);
+        } /* end if */
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }
 
 
@@ -293,8 +297,9 @@ static herr_t
 H5O_fill_encode(H5F_t UNUSED *f, uint8_t *p, const void *_mesg)
 {
     const H5O_fill_t    *mesg = (const H5O_fill_t *)_mesg;
+    herr_t ret_value=SUCCEED;   /* Return value */
     
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_fill_encode);
+    FUNC_ENTER_NOAPI(H5O_fill_encode, FAIL);
 
     assert(f);
     assert(p);
@@ -304,7 +309,8 @@ H5O_fill_encode(H5F_t UNUSED *f, uint8_t *p, const void *_mesg)
     if(mesg->buf)
         HDmemcpy(p, mesg->buf, mesg->size);
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }
 
 
@@ -334,7 +340,7 @@ H5O_fill_new_copy(const void *_mesg, void *_dest)
     H5O_fill_new_t		*dest = (H5O_fill_new_t *)_dest;
     void		*ret_value;
 
-    FUNC_ENTER_NOAPI_NOINIT(H5O_fill_new_copy);
+    FUNC_ENTER_NOAPI(H5O_fill_new_copy, NULL);
 
     assert(mesg);
 
@@ -406,7 +412,7 @@ H5O_fill_copy(const void *_mesg, void *_dest)
     H5O_fill_t          *dest = (H5O_fill_t *)_dest;
     void                *ret_value;
 
-    FUNC_ENTER_NOAPI_NOINIT(H5O_fill_copy);
+    FUNC_ENTER_NOAPI(H5O_fill_copy, NULL);
 
     assert(mesg);
 
@@ -472,7 +478,7 @@ H5O_fill_new_size(H5F_t UNUSED *f, const void *_mesg)
     const H5O_fill_new_t	*mesg = (const H5O_fill_new_t *)_mesg;
     size_t			ret_value;
  
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_fill_new_size);
+    FUNC_ENTER_NOAPI(H5O_fill_new_size, 0);
 
     assert(f);
     assert(mesg);
@@ -480,11 +486,11 @@ H5O_fill_new_size(H5F_t UNUSED *f, const void *_mesg)
     ret_value = 1 + 		/* Version number        */
 		1 + 		/* Space allocation time */
 		1 + 		/* Fill value write time */
-		1; 		/* Fill value defined    */
-    if(mesg->fill_defined)
-        ret_value += 4 +	/* Fill value size	 */
+		1 + 		/* Fill value defined    */
+		4 +		/* Fill value size	 */
 		(mesg->size>0 ? mesg->size : 0);	/* Size of fill value	 */
 
+done:
     FUNC_LEAVE_NOAPI(ret_value);
 }
 
@@ -511,13 +517,18 @@ static size_t
 H5O_fill_size(H5F_t UNUSED *f, const void *_mesg)
 {
     const H5O_fill_t    *mesg = (const H5O_fill_t *)_mesg;
+    size_t ret_value;           /* Return value */
     
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_fill_size);
+    FUNC_ENTER_NOAPI(H5O_fill_size, 0);
 
     assert(f);
     assert(mesg);
 
-    FUNC_LEAVE_NOAPI(4+mesg->size);
+    /* Set return value */
+    ret_value=4+mesg->size;
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }
 
 
@@ -541,8 +552,9 @@ static herr_t
 H5O_fill_new_reset(void *_mesg)
 {
     H5O_fill_new_t	*mesg = (H5O_fill_new_t *)_mesg;
+    herr_t ret_value=SUCCEED;   /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_fill_new_reset);
+    FUNC_ENTER_NOAPI(H5O_fill_new_reset, FAIL);
 
     assert(mesg);
     
@@ -555,9 +567,10 @@ H5O_fill_new_reset(void *_mesg)
     }
     mesg->alloc_time   = (H5D_alloc_time_t)0;
     mesg->fill_time    = (H5D_fill_time_t)0;
-    mesg->fill_defined = FALSE; 
+    mesg->fill_defined = FALSE;
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }
 
 
@@ -579,8 +592,9 @@ static herr_t
 H5O_fill_reset(void *_mesg)
 {
     H5O_fill_t  *mesg = (H5O_fill_t *)_mesg;
+    herr_t ret_value=SUCCEED;   /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_fill_reset);
+    FUNC_ENTER_NOAPI(H5O_fill_reset, FAIL);
 
     assert(mesg);
     
@@ -592,7 +606,8 @@ H5O_fill_reset(void *_mesg)
         mesg->type = NULL;
     }
     
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }
 
 
@@ -613,13 +628,16 @@ H5O_fill_reset(void *_mesg)
 static herr_t
 H5O_fill_new_free (void *mesg)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_fill_new_free);
+    herr_t ret_value=SUCCEED;   /* Return value */
+
+    FUNC_ENTER_NOAPI(H5O_fill_new_free, FAIL);
 
     assert (mesg);
 
     H5FL_FREE(H5O_fill_new_t,mesg);
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }
 
 
@@ -640,13 +658,16 @@ H5O_fill_new_free (void *mesg)
 static herr_t
 H5O_fill_free (void *mesg)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_fill_free);
+    herr_t ret_value=SUCCEED;   /* Return value */
+
+    FUNC_ENTER_NOAPI(H5O_fill_free, FAIL);
 
     assert (mesg);
 
     H5FL_FREE(H5O_fill_t,mesg);
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }
 
 
@@ -670,8 +691,9 @@ H5O_fill_new_debug(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const void *_mesg, FIL
 {
     const H5O_fill_new_t	*mesg = (const H5O_fill_new_t *)_mesg;
     H5D_fill_value_t fill_status;       /* Whether the fill value is defined */
+    herr_t ret_value=SUCCEED;   /* Return value */
     
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_fill_new_debug);
+    FUNC_ENTER_NOAPI(H5O_fill_new_debug, FAIL);
 
     assert(f);
     assert(mesg);
@@ -749,7 +771,8 @@ H5O_fill_new_debug(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const void *_mesg, FIL
 	fprintf(stream, "<dataset type>\n");
     }
     
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }
 
 
@@ -772,8 +795,9 @@ H5O_fill_debug(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const void *_mesg, FILE *s
 	       int indent, int fwidth)
 {
     const H5O_fill_t	*mesg = (const H5O_fill_t *)_mesg;
+    herr_t ret_value=SUCCEED;   /* Return value */
     
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_fill_debug);
+    FUNC_ENTER_NOAPI(H5O_fill_debug, FAIL);
 
     assert(f);
     assert(mesg);
@@ -791,7 +815,8 @@ H5O_fill_debug(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const void *_mesg, FILE *s
 	fprintf(stream, "<dataset type>\n");
     }
     
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }
 
 
@@ -837,9 +862,10 @@ H5O_fill_convert(void *_fill, H5T_t *dset_type, hid_t dxpl_id)
     /*
      * Can we convert between source and destination data types?
      */
-    if (NULL==(tpath=H5T_path_find(fill->type, dset_type, NULL, NULL, dxpl_id)))
-	HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "unable to convert between src and dst data types")
-
+    if (NULL==(tpath=H5T_path_find(fill->type, dset_type, NULL, NULL, dxpl_id))) {
+	HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL,
+		    "unable to convert between src and dst data types");
+    }
     /* Don't bother doing anything if there will be no actual conversion */
     if (!H5T_path_noop(tpath)) {
         if ((src_id = H5I_register(H5I_DATATYPE,

@@ -23,8 +23,8 @@
      INTEGER, INTENT(OUT) :: total_error 
      LOGICAL :: status, status1
      INTEGER(HID_T)    :: crtpr_id, xfer_id
-     INTEGER           :: nfilters
      INTEGER           :: error
+     INTEGER           :: nfilters
      INTEGER(HSIZE_T)  :: ch_dims(2)
      INTEGER           :: RANK = 2
      INTEGER           :: dlevel = 6
@@ -145,7 +145,6 @@
          endif
      endif
 
-
      RETURN
      END SUBROUTINE filters_test
 
@@ -181,36 +180,46 @@
           INTEGER     ::   num_errors = 0 ! Number of data errors
 
           INTEGER     :: i, j    !general purpose integers
-          INTEGER     :: config_flags   ! for h5zget_filter_info_f
+          INTEGER(HSIZE_T), DIMENSION(2) :: data_dims_b
           INTEGER(HSIZE_T), DIMENSION(2) :: data_dims
           INTEGER(HID_T) ::  crp_list
           INTEGER :: options_mask, pix_per_block 
           LOGICAL :: flag
           CHARACTER(LEN=4) filter_name 
-
+          
           INTEGER :: filter_flag = -1
           INTEGER(SIZE_T) :: cd_nelemnts = 4
           INTEGER(SIZE_T) :: filter_name_len = 4
-          INTEGER, DIMENSION(4) :: cd_values 
+          INTEGER, DIMENSION(4) :: cd_values
+          INTEGER :: config_flag = 0 
 
           !
-          ! Verify that SZIP exists and has an encoder
+          ! Make sure that Szip has an encoder available
           !
+          CALL h5zget_filter_info_f(H5Z_FILTER_SZIP_F, config_flag, error)
+              CALL check("h5zget_filter_info", error, total_error)
+          if ( IAND(config_flag,  H5Z_FILTER_ENCODE_ENABLED_F) .EQ. 0 ) then
+              szip_flag = .FALSE.
+              total_error = -1
+              return
+          endif
           CALL h5zfilter_avail_f(H5Z_FILTER_SZIP_F, flag, error)
-                   CALL check("h5zfilter_avail_f", error, total_error)
-          if(.NOT. flag) then
-              szip_flag = .FALSE.
-              total_error = -1
-              return
-          endif
+              CALL check("h5zfilter_avail", error, total_error)
 
-          CALL h5zget_filter_info_f(H5Z_FILTER_SZIP_F, config_flags, error) 
-                   CALL check("h5zget_filter_info_f", error, total_error)
-          if(.NOT. (IAND(config_flags, H5Z_FILTER_ENCODE_ENABLED_F) .eq. 1) ) then
-              szip_flag = .FALSE.
-              total_error = -1
-              return
-          endif
+          !
+          ! Make sure h5zget_filter_info_f returns the right flag
+          !
+          if( flag ) then
+              if ( config_flag .NE. IOR( H5Z_FILTER_ENCODE_ENABLED_F, H5Z_FILTER_DECODE_ENABLED_F) ) then
+                  error = -1
+                  CALL check("h5zget_filter_info config_flag", error, total_error)
+              endif
+          else
+              if ( config_flag .NE. 0 ) then
+                  error = -1
+                  CALL check("h5zget_filter_info config_flag", error, total_error)
+              endif
+          endif    
 
           options_mask = H5_SZIP_NN_OM_F
           pix_per_block = 32
@@ -255,6 +264,8 @@
              CALL h5pclose_f(crp_list, error)
              CALL h5sclose_f(dspace_id, error)
              CALL h5fclose_f(file_id, error)
+             szip_flag = .FALSE.
+             total_error = -1
              return
           endif
  
@@ -274,9 +285,9 @@
           !
           ! Write the dataset.
           !
-          data_dims(1) = N
-          data_dims(2) =  M
-          CALL h5dwrite_f(dset_id, H5T_NATIVE_INTEGER, dset_data, data_dims, error)
+          data_dims_b(1) = N
+          data_dims_b(2) =  M
+          CALL h5dwrite_f(dset_id, H5T_NATIVE_INTEGER, dset_data, data_dims_b, error)
               CALL check("h5dwrite_f", error, total_error)
 
 
@@ -327,7 +338,7 @@
           !
           ! Read the dataset.
           !
-          CALL h5dread_f (dset_id, H5T_NATIVE_INTEGER, data_out, data_dims, error)
+          CALL h5dread_f (dset_id, H5T_NATIVE_INTEGER, data_out, data_dims_b, error)
               CALL check("h5dread_f", error, total_error)
 
           !

@@ -58,9 +58,6 @@ typedef int H5Z_filter_t;
 #define H5_SZIP_NN_OPTION_MASK          32
 #define H5_SZIP_MAX_PIXELS_PER_BLOCK    32
 
-/* Current version of the H5Z_class_t struct */
-#define H5Z_CLASS_T_VERS (1)
-
 /* Values to decide if EDC is enabled for reading data */
 typedef enum H5Z_EDC_t {
     H5Z_ERROR_EDC       = -1,   /* error value */
@@ -84,7 +81,7 @@ typedef enum H5Z_cb_return_t {
 /* Filter callback function definition */
 typedef H5Z_cb_return_t (*H5Z_filter_func_t)(H5Z_filter_t filter, void* buf,
                                 size_t buf_size, void* op_data);
-
+                                
 /* Structure for filter callback property */
 typedef struct H5Z_cb_t {
     H5Z_filter_func_t func;
@@ -164,17 +161,19 @@ typedef size_t (*H5Z_func_t)(unsigned int flags, size_t cd_nelmts,
  * contain a pointers to the filter function and timing statistics.
  */
 typedef struct H5Z_class_t {
-    int version;            /* Version number of the H5Z_class_t struct */
     H5Z_filter_t id;		/* Filter ID number			     */
-    unsigned encoder_present;   /* Does this filter have an encoder? */
-    unsigned decoder_present;   /* Does this filter have a decoder? */
     const char	*name;		/* Comment for debugging		     */
     H5Z_can_apply_func_t can_apply; /* The "can apply" callback for a filter */
     H5Z_set_local_func_t set_local; /* The "set local" callback for a filter */
     H5Z_func_t filter;		/* The actual filter function		     */
 } H5Z_class_t;
 
+#ifdef H5_WANT_H5_V1_4_COMPAT
+H5_DLL herr_t H5Zregister(H5Z_filter_t id, const char *comment,
+			   H5Z_func_t filter);
+#else /* H5_WANT_H5_V1_4_COMPAT */
 H5_DLL herr_t H5Zregister(const H5Z_class_t *cls);
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 H5_DLL herr_t H5Zunregister(H5Z_filter_t id);
 H5_DLL htri_t H5Zfilter_avail(H5Z_filter_t id);
 H5_DLL herr_t H5Zget_filter_info(H5Z_filter_t filter, unsigned int *filter_config_flags);

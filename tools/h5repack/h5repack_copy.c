@@ -30,7 +30,7 @@
  *
  *-------------------------------------------------------------------------
  */
-static void print_obj(hid_t dcpl_id, char *name)
+static void print_obj(hid_t dcpl, char *name)
 {
  char         str[255]; 
 #if defined (PRINT_DEBUG )
@@ -47,33 +47,19 @@ static void print_obj(hid_t dcpl_id, char *name)
  strcpy(str,"\0");
 
  /* get information about input filters */
- if ((nfilters = H5Pget_nfilters(dcpl_id))<0) 
+ if ((nfilters = H5Pget_nfilters(dcpl))<0) 
   return;
 
  for ( i=0; i<nfilters; i++)
  {
   cd_nelmts = NELMTS(cd_values);
-
-#ifdef H5_WANT_H5_V1_6_COMPAT
-  filtn = H5Pget_filter(dcpl_id, 
+  filtn = H5Pget_filter(dcpl, 
    (unsigned)i, 
    &filt_flags, 
    &cd_nelmts,
    cd_values, 
    sizeof(f_name), 
    f_name);
-#else
-  filtn = H5Pget_filter(dcpl_id, 
-   (unsigned)i, 
-   &filt_flags, 
-   &cd_nelmts,
-   cd_values, 
-   sizeof(f_name), 
-   f_name,
-   NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
-
-
   switch (filtn)
   {
   default:

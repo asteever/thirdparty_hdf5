@@ -224,11 +224,11 @@ nh5pset_deflate_c ( hid_t_f *prp_id , int_f *level)
 {
   int ret_value = 0;
   hid_t c_prp_id;
-  unsigned c_level;
+  int c_level;
   herr_t status;
 
   c_prp_id = (hid_t)*prp_id;
-  c_level = (unsigned)*level;
+  c_level = (int)*level;
   status = H5Pset_deflate(c_prp_id, c_level);
   if ( status < 0  ) ret_value = -1;
   return ret_value;
@@ -456,10 +456,10 @@ nh5pget_version_c (hid_t_f *prp_id, int_f * boot,int_f * freelist, int_f * stab,
      int ret_value = -1;
      hid_t c_prp_id;
      herr_t ret;
-     unsigned c_boot;
-     unsigned c_freelist;
-     unsigned c_stab;
-     unsigned c_shhdr;
+     int c_boot;
+     int c_freelist;
+     int c_stab;
+     int c_shhdr;
 
      /*
       * Call H5Pget_version function.
@@ -624,16 +624,16 @@ nh5pset_sym_k_c (hid_t_f *prp_id, int_f* ik, int_f* lk)
 {
      int ret_value = -1;
      hid_t c_prp_id;
-     unsigned c_ik;
-     unsigned c_lk;
+     int c_ik;
+     int c_lk;
      herr_t ret;
 
      /*
       * Call H5Pset_sym_k function.
       */
      c_prp_id = (hid_t)*prp_id;
-     c_ik = (unsigned)*ik;
-     c_lk = (unsigned)*lk;
+     c_ik = (int)*ik;
+     c_lk = (int)*lk;
      ret = H5Pset_sym_k(c_prp_id, c_ik, c_lk);
 
      if (ret < 0) return ret_value;
@@ -659,8 +659,12 @@ nh5pget_sym_k_c (hid_t_f *prp_id, int_f* ik, int_f* lk)
      int ret_value = -1;
      hid_t c_prp_id;
      herr_t ret;
-     unsigned c_ik;
+     int c_ik;
+#ifdef H5_WANT_H5_V1_4_COMPAT
+     int c_lk;
+#else /* H5_WANT_H5_V1_4_COMPAT */
      unsigned c_lk;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
      /*
       * Call H5Pget_sym_k function.
@@ -690,14 +694,14 @@ nh5pset_istore_k_c (hid_t_f *prp_id, int_f* ik)
 {
      int ret_value = -1;
      hid_t c_prp_id;
-     unsigned c_ik;
+     int c_ik;
      herr_t ret;
 
      /*
       * Call H5Pset_istore_k function.
       */
      c_prp_id = (hid_t)*prp_id;
-     c_ik = (unsigned)*ik;
+     c_ik = (int)*ik;
      ret = H5Pset_istore_k(c_prp_id, c_ik);
 
      if (ret < 0) return ret_value;
@@ -722,7 +726,7 @@ nh5pget_istore_k_c (hid_t_f *prp_id, int_f* ik)
      int ret_value = -1;
      hid_t c_prp_id;
      herr_t ret;
-     unsigned c_ik;
+     int c_ik;
 
      /*
       * Call H5Pget_istore_k function.
@@ -1133,8 +1137,6 @@ nh5pset_cache_c(hid_t_f *prp_id, int_f* mdc_nelmts, size_t_f* rdcc_nelmts,  size
  * Programmer:  Xiangyang Su
  *              Friday, February 25, 2000
  * Modifications: Changed type of the rdcc_w0 parameter to be real_f instead of double
- *                Changed type of the rdcc_nelmts parameter to be int_f.
- *                                                          EIP  October 10, 2003      
  *---------------------------------------------------------------------------*/
 int_f
 nh5pget_cache_c(hid_t_f *prp_id, int_f* mdc_nelmts, size_t_f* rdcc_nelmts, size_t_f* rdcc_nbytes , real_f* rdcc_w0)
@@ -1412,7 +1414,7 @@ nh5pset_filter_c (hid_t_f *prp_id, int_f* filter, int_f* flags, size_t_f* cd_nel
      unsigned int c_flags;
      H5Z_filter_t c_filter;
      unsigned int * c_cd_values;
-     unsigned i;
+     int i;
      
      c_filter = (H5Z_filter_t)*filter;
      c_flags = (unsigned)*flags;
@@ -1498,7 +1500,7 @@ nh5pget_filter_c(hid_t_f *prp_id, int_f* filter_number, int_f* flags, size_t_f* 
      H5Z_filter_t c_filter;
      unsigned int * c_cd_values;
      char* c_name;
-     unsigned i;
+     int i;
 
      c_cd_nelmts_in = (size_t)*cd_nelmts;
      c_namelen = (size_t)*namelen;
@@ -1516,14 +1518,14 @@ nh5pget_filter_c(hid_t_f *prp_id, int_f* filter_number, int_f* flags, size_t_f* 
       */
      c_prp_id = (hid_t)*prp_id;
      c_filter_number = (int)*filter_number;
-     c_filter = H5Pget_filter(c_prp_id, c_filter_number, &c_flags, &c_cd_nelmts, c_cd_values, c_namelen, c_name, NULL);
+     c_filter = H5Pget_filter(c_prp_id, c_filter_number, &c_flags, &c_cd_nelmts, c_cd_values, c_namelen, c_name);
 
      if (c_filter < 0) goto DONE;
 
      *filter_id = (int_f)c_filter;
      *cd_nelmts = (size_t_f)c_cd_nelmts;
      *flags = (int_f)c_flags;
-     HD5packFstring(c_name, _fcdtocp(name), (int)strlen(c_name)); 
+     HD5packFstring(c_name, _fcdtocp(name), strlen(c_name)); 
  
      for (i = 0; i < c_cd_nelmts_in; i++)
           cd_values[i] = (int_f)c_cd_values[i];
@@ -1579,7 +1581,7 @@ nh5pset_external_c (hid_t_f *prp_id, _fcd name, int_f* namelen, int_f* offset, h
      ret_value = 0;
 
 DONE:
-     HDfree(c_name);
+     free(c_name);
      return ret_value;
 }
 
@@ -1656,11 +1658,81 @@ nh5pget_external_c(hid_t_f *prp_id, int_f *idx, size_t_f* name_size, _fcd name, 
 
      *offset = (int_f)c_offset;
      *bytes = (hsize_t_f)size;
-     HD5packFstring(c_name, _fcdtocp(name), (int)strlen(c_name)); 
+     HD5packFstring(c_name, _fcdtocp(name), strlen(c_name)); 
      ret_value = 0;
 
 DONE:    
      HDfree(c_name);
+     return ret_value;
+} 
+
+/*----------------------------------------------------------------------------
+ * Name:        h5pset_hyper_cache_c
+ * Purpose:     Call H5Pset__hyper_cache to indicate whether to 
+ *              cache hyperslab blocks during I/O. 
+ * Inputs:      prp_id - property list identifier
+ *              cache - 
+ *              limit - Maximum size of the hyperslab block to cache.
+ *                      0 (zero) indicates no limit.
+ * Returns:     0 on success, -1 on failure
+ * Programmer:  Xiangyang Su
+ *              Friday, February 25, 2000
+ * Modifications:
+ *---------------------------------------------------------------------------*/
+int_f
+nh5pset_hyper_cache_c(hid_t_f *prp_id, int_f * cache, int_f * limit)
+{
+     int ret_value = -1;
+#ifdef H5_WANT_H5_V1_4_COMPAT
+     hid_t c_prp_id;
+     herr_t ret;
+     unsigned c_cache, c_limit;
+
+     c_cache = (unsigned) *cache;
+     c_limit = (unsigned) *limit;
+
+     /*
+      * Call H5Pset_hyper_cache function.
+      */
+     c_prp_id = (hid_t)*prp_id;
+     ret = H5Pset_hyper_cache(c_prp_id, c_cache, c_limit);
+     if (ret < 0) return ret_value;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
+     ret_value = 0;
+     return ret_value;
+} 
+
+/*----------------------------------------------------------------------------
+ * Name:        h5pget_hyper_cache_c
+ * Purpose:     Call H5Pget_hyper_cache to get information regarding 
+ *              the caching of hyperslab blocks 
+ * Inputs:      prp_id - property list identifier
+ *              cache - 
+ *              limit - Maximum size of the hyperslab block to cache.
+ *                      0 (zero) indicates no limit.
+ * Returns:     0 on success, -1 on failure
+ * Programmer:  Xiangyang Su
+ *              Friday, February 25, 2000
+ * Modifications:
+ *---------------------------------------------------------------------------*/
+int_f
+nh5pget_hyper_cache_c(hid_t_f *prp_id, int_f * cache, int_f * limit)
+{
+     int ret_value = -1;
+#ifdef H5_WANT_H5_V1_4_COMPAT
+     hid_t c_prp_id;
+     herr_t ret;
+     unsigned c_cache, c_limit;
+     /*
+      * Call H5Pget__hyper_cache function.
+      */
+     c_prp_id = (hid_t)*prp_id;
+     ret = H5Pget_hyper_cache(c_prp_id, &c_cache, &c_limit);
+     if (ret < 0) return ret_value;
+     *cache = (int_f)c_cache;
+     *limit = (int_f)c_limit;   
+     ret_value = 0;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
      return ret_value;
 } 
 
@@ -1813,10 +1885,10 @@ nh5pset_buffer_c ( hid_t_f *prp_id , hsize_t_f *size)
 {
   int ret_value = 0;
   hid_t c_prp_id;
-  size_t c_size;
+  hsize_t c_size;
 
   c_prp_id = (hid_t)*prp_id;
-  c_size = (size_t)*size;
+  c_size = (hsize_t)*size;
   if ( H5Pset_buffer(c_prp_id, c_size, NULL, NULL) < 0  ) ret_value = -1;
   return ret_value;
 }
@@ -1841,8 +1913,8 @@ nh5pget_buffer_c ( hid_t_f *prp_id , hsize_t_f *size)
 
   c_prp_id = (hid_t)*prp_id;
   c_size = H5Pget_buffer(c_prp_id, NULL, NULL);
-  if ( c_size <= 0  ) return ret_value;
-  *size = (hsize_t_f)c_size;
+  if ( c_size == 0  ) return ret_value;
+  *size = (hsize_t)c_size;
   ret_value = 0;
   return ret_value;
 }
@@ -2253,7 +2325,7 @@ nh5pregister_c(hid_t_f *class, _fcd name, int_f *name_len, size_t_f *size, void 
      /*
       * Call H5Pregister function.
       */
-     if( H5Pregister(c_class, c_name, c_size, value, NULL,NULL,NULL,NULL,NULL,NULL,NULL) <0) goto DONE;
+     if( H5Pregister(c_class, c_name, c_size, value, NULL,NULL,NULL,NULL,NULL,NULL) <0) goto DONE;
      ret_value = 0;
 
 DONE:
@@ -2314,7 +2386,7 @@ nh5pinsert_c(hid_t_f *plist, _fcd name, int_f *name_len, size_t_f *size, void *v
      /*
       * Call H5Pinsert function.
       */
-     if( H5Pinsert(c_plist, c_name, c_size, value, NULL,NULL,NULL,NULL,NULL,NULL) <0) goto DONE;
+     if( H5Pinsert(c_plist, c_name, c_size, value, NULL,NULL,NULL,NULL,NULL) <0) goto DONE;
      ret_value = 0;
 
 DONE:
@@ -2627,7 +2699,7 @@ nh5pget_class_name_c(hid_t_f *class, _fcd name, int_f *name_len)
      if( c_name == NULL) goto DONE;
 
      HD5packFstring(c_name, _fcdtocp(name), (int)*name_len);
-     ret_value = (int_f)HDstrlen(c_name);
+     ret_value = strlen(c_name);
 
 DONE:
      HDfree(c_name);
@@ -2916,8 +2988,8 @@ nh5pset_fapl_multi_c ( hid_t_f *prp_id , int_f *memb_map, hid_t_f *memb_fapl, _f
   if (tmp ==NULL) return ret_value; 
   tmp_p = tmp;
   for (i=0; i < H5FD_MEM_NTYPES; i++) {
-       c_memb_name[i] = (char *) malloc((size_t)len[i] + 1);
-       memcpy((char *)c_memb_name[i], tmp_p, (size_t)len[i]);
+       c_memb_name[i] = (char *) malloc(len[i] + 1);
+       memcpy((char *)c_memb_name[i], tmp_p, len[i]);
        tmp_pp = (char *)c_memb_name[i];
        tmp_pp[len[i]] = '\0';
        tmp_p = tmp_p + c_lenmax;
@@ -3011,9 +3083,9 @@ nh5pget_fapl_multi_c ( hid_t_f *prp_id , int_f *memb_map, hid_t_f *memb_fapl, _f
   herr_t status;
   char *tmp, *tmp_p;
   int i;
-  size_t c_lenmax;
-  size_t length = 0;
-  c_lenmax = (size_t)*lenmax;
+  int c_lenmax;
+  int length = 0;
+  c_lenmax = (int)*lenmax;
 
   c_prp_id = (hid_t)*prp_id;
 /*
@@ -3028,7 +3100,7 @@ nh5pget_fapl_multi_c ( hid_t_f *prp_id , int_f *memb_map, hid_t_f *memb_fapl, _f
  */
   tmp = (char *)malloc(c_lenmax*H5FD_MEM_NTYPES + 1);
   tmp_p = tmp;
-  memset(tmp,' ', c_lenmax*H5FD_MEM_NTYPES);
+  for (i=0; i < c_lenmax*H5FD_MEM_NTYPES; i++) tmp[i] = ' ';
   tmp[c_lenmax*H5FD_MEM_NTYPES] = '\0';
   for (i=0; i < H5FD_MEM_NTYPES; i++) {
        memcpy(tmp_p, c_memb_name[i], strlen(c_memb_name[i]));
@@ -3036,7 +3108,7 @@ nh5pget_fapl_multi_c ( hid_t_f *prp_id , int_f *memb_map, hid_t_f *memb_fapl, _f
        length = H5_MAX(length, strlen(c_memb_name[i]));
        tmp_p = tmp_p + c_lenmax;
  } 
-HD5packFstring(tmp, _fcdtocp(memb_name), (int)(c_lenmax*H5FD_MEM_NTYPES));
+HD5packFstring(tmp, _fcdtocp(memb_name), c_lenmax*H5FD_MEM_NTYPES);
 
 /*
  * Take care of other arguments
@@ -3152,7 +3224,7 @@ nh5pget_filter_by_id_c(hid_t_f *prp_id, int_f* filter_id, int_f* flags, size_t_f
      size_t c_cd_nelmts_in;
      unsigned int * c_cd_values;
      char* c_name;
-     unsigned i;
+     int i;
      herr_t status;
      c_cd_nelmts_in = (size_t)*cd_nelmts;
      c_cd_nelmts = (size_t)*cd_nelmts;
@@ -3171,12 +3243,12 @@ nh5pget_filter_by_id_c(hid_t_f *prp_id, int_f* filter_id, int_f* flags, size_t_f
       */
      c_prp_id = (hid_t)*prp_id;
      c_filter_id = (H5Z_filter_t)*filter_id;
-     status = H5Pget_filter_by_id(c_prp_id, c_filter_id, &c_flags, &c_cd_nelmts, c_cd_values, c_namelen, c_name, NULL);
+     status = H5Pget_filter_by_id(c_prp_id, c_filter_id, &c_flags, &c_cd_nelmts, c_cd_values, c_namelen, c_name);
      if (status < 0) goto DONE;
 
      *cd_nelmts = (size_t_f)c_cd_nelmts;
      *flags = (int_f)c_flags;
-     HD5packFstring(c_name, _fcdtocp(name), (int)strlen(c_name)); 
+     HD5packFstring(c_name, _fcdtocp(name), strlen(c_name)); 
  
      for (i = 0; i < c_cd_nelmts_in; i++)
           cd_values[i] = (int_f)c_cd_values[i];
@@ -3213,7 +3285,7 @@ nh5pmodify_filter_c (hid_t_f *prp_id, int_f* filter, int_f* flags, size_t_f* cd_
      unsigned int c_flags;
      H5Z_filter_t c_filter;
      unsigned int * c_cd_values;
-     unsigned i;
+     int i;
      
      c_filter = (H5Z_filter_t)*filter;
      c_flags = (unsigned)*flags;
@@ -3239,34 +3311,30 @@ DONE:
 
 /*----------------------------------------------------------------------------
  * Name:        h5premove_filter_c
- * Purpose:     Call H5Premove_filter to delete one or more filters
- * Inputs:      prp_id - property list identifier 
- *              filter - Filter to be deleted
+ * Purpose:     Call H5Premove_filter to remove a filter
+ * Inputs:      prp_id - dataset creation property list identifier 
+ *              filter - filter to be removed
  * Returns:     0 on success, -1 on failure
- * Programmer:  Quincey Koziol
- *              January 27 2004
+ * Programmer:  Elena Pourmal
+ *              Tuesday, August 24, 2004
  * Modifications:
  *---------------------------------------------------------------------------*/
 int_f
 nh5premove_filter_c (hid_t_f *prp_id, int_f* filter)
 {
-     int ret_value = -1;
+     int_f ret_value = -1;
      hid_t c_prp_id;
      herr_t ret;
      H5Z_filter_t c_filter;
      
      c_filter = (H5Z_filter_t)*filter;
      c_prp_id = (hid_t)*prp_id;
-
      /*
       * Call H5Premove_filter function.
       */
-     ret = H5Premove_filter(c_prp_id, c_filter);
-
-     if (ret < 0) goto DONE;
+     if((ret = H5Premove_filter(c_prp_id, c_filter)) < 0) goto DONE;
      ret_value = 0;
 
 DONE:
      return ret_value;
 }
-

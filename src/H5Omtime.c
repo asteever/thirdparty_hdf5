@@ -83,6 +83,10 @@ const H5O_class_t H5O_MTIME_NEW[1] = {{
     H5O_mtime_debug,		/*debug the message		*/
 }};
 
+/* Interface initialization */
+static int interface_initialize_g = 0;
+#define INTERFACE_INIT	NULL
+
 /* Current version of new mtime information */
 #define H5O_MTIME_VERSION 	1	
  
@@ -120,7 +124,7 @@ H5O_mtime_new_decode(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const uint8_t *p,
     int		version;        /* Version of mtime information */
     void        *ret_value;     /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT(H5O_mtime_new_decode);
+    FUNC_ENTER_NOAPI(H5O_mtime_new_decode, NULL);
 
     /* check args */
     assert(f);
@@ -166,8 +170,6 @@ done:
  *		matzke@llnl.gov
  *		Jul 24 1998
  *
- * Modifications:
- *
  *-------------------------------------------------------------------------
  */
 static void *
@@ -179,7 +181,7 @@ H5O_mtime_decode(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const uint8_t *p,
     struct tm	tm;
     void        *ret_value;     /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT(H5O_mtime_decode);
+    FUNC_ENTER_NOAPI(H5O_mtime_decode, NULL);
 
     /* check args */
     assert(f);
@@ -229,6 +231,7 @@ H5O_mtime_decode(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const uint8_t *p,
     /* Irix5.3 */
     {
         struct timezone tz;
+
         if (HDBSDgettimeofday(NULL, &tz)<0)
             HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, NULL, "unable to obtain local timezone information");
         the_time -= tz.tz_minuteswest * 60 - (tm.tm_isdst ? 3600 : 0);
@@ -236,7 +239,7 @@ H5O_mtime_decode(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const uint8_t *p,
 #elif defined(H5_HAVE_GETTIMEOFDAY) && defined(H5_HAVE_STRUCT_TIMEZONE) && defined(H5_GETTIMEOFDAY_GIVES_TZ)
     {
 	struct timezone tz;
-	struct timeval tv;  /* Used as a placebo; some systems don't like NULL */
+        struct timeval tv;  /* Used as a placebo; some systems don't like NULL */
 
 	if (HDgettimeofday(&tv, &tz) < 0)
 	    HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, NULL, "unable to obtain local timezone information");
@@ -305,8 +308,9 @@ static herr_t
 H5O_mtime_new_encode(H5F_t UNUSED *f, uint8_t *p, const void *_mesg)
 {
     const time_t	*mesg = (const time_t *) _mesg;
+    herr_t ret_value=SUCCEED;   /* Return value */
     
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_mtime_new_encode);
+    FUNC_ENTER_NOAPI(H5O_mtime_new_encode, FAIL);
 
     /* check args */
     assert(f);
@@ -324,7 +328,8 @@ H5O_mtime_new_encode(H5F_t UNUSED *f, uint8_t *p, const void *_mesg)
     /* Encode time */
     UINT32ENCODE(p, *mesg);
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5O_mtime_new_encode() */
 
 
@@ -348,8 +353,9 @@ H5O_mtime_encode(H5F_t UNUSED *f, uint8_t *p, const void *_mesg)
 {
     const time_t	*mesg = (const time_t *) _mesg;
     struct tm		*tm;
+    herr_t ret_value=SUCCEED;   /* Return value */
     
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_mtime_encode);
+    FUNC_ENTER_NOAPI(H5O_mtime_encode, FAIL);
 
     /* check args */
     assert(f);
@@ -362,7 +368,8 @@ H5O_mtime_encode(H5F_t UNUSED *f, uint8_t *p, const void *_mesg)
 	    1900+tm->tm_year, 1+tm->tm_mon, tm->tm_mday,
 	    tm->tm_hour, tm->tm_min, tm->tm_sec);
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }
 
 
@@ -391,7 +398,7 @@ H5O_mtime_copy(const void *_mesg, void *_dest)
     time_t		*dest = (time_t *) _dest;
     void        *ret_value;     /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT(H5O_mtime_copy);
+    FUNC_ENTER_NOAPI(H5O_mtime_copy, NULL);
 
     /* check args */
     assert(mesg);
@@ -432,13 +439,16 @@ done:
 static size_t
 H5O_mtime_new_size(H5F_t UNUSED * f, const void UNUSED * mesg)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_mtime_new_size);
+    size_t ret_value=8;        /* Return value */
+
+    FUNC_ENTER_NOAPI(H5O_mtime_new_size, 0);
 
     /* check args */
     assert(f);
     assert(mesg);
 
-    FUNC_LEAVE_NOAPI(8);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5O_mtime_new_size() */
 
 
@@ -465,13 +475,16 @@ H5O_mtime_new_size(H5F_t UNUSED * f, const void UNUSED * mesg)
 static size_t
 H5O_mtime_size(H5F_t UNUSED * f, const void UNUSED * mesg)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_mtime_size);
+    size_t ret_value=16;        /* Return value */
+
+    FUNC_ENTER_NOAPI(H5O_mtime_size, 0);
 
     /* check args */
     assert(f);
     assert(mesg);
 
-    FUNC_LEAVE_NOAPI(16);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }
 
 
@@ -493,9 +506,12 @@ H5O_mtime_size(H5F_t UNUSED * f, const void UNUSED * mesg)
 static herr_t
 H5O_mtime_reset(void UNUSED *_mesg)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_mtime_reset);
+    herr_t      ret_value=SUCCEED;       /* Return value */
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+    FUNC_ENTER_NOAPI(H5O_mtime_reset, FAIL);
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }
 
 
@@ -516,13 +532,16 @@ H5O_mtime_reset(void UNUSED *_mesg)
 static herr_t
 H5O_mtime_free (void *mesg)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_mtime_free);
+    herr_t ret_value=SUCCEED;   /* Return value */
+
+    FUNC_ENTER_NOAPI(H5O_mtime_free, FAIL);
 
     assert (mesg);
 
     H5FL_FREE(time_t,mesg);
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }
 
 
@@ -548,8 +567,9 @@ H5O_mtime_debug(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const void *_mesg, FILE *
     const time_t	*mesg = (const time_t *)_mesg;
     struct tm		*tm;
     char		buf[128];
+    herr_t ret_value=SUCCEED;   /* Return value */
     
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_mtime_debug);
+    FUNC_ENTER_NOAPI(H5O_mtime_debug, FAIL);
 
     /* check args */
     assert(f);
@@ -565,6 +585,7 @@ H5O_mtime_debug(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const void *_mesg, FILE *
     fprintf(stream, "%*s%-*s %s\n", indent, "", fwidth,
 	    "Time:", buf);
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
 }
 

@@ -87,12 +87,10 @@ static int tst_inc_sort(const void *_i1, const void *_i2)
 static void 
 test_heap_init(void)
 {
-    time_t curr_time;   /* Current time, for seeding random number generator */
     size_t u;           /* Local index variables */
 
     /* Create randomized set of numbers */
-    curr_time=time(NULL);
-    HDsrandom((unsigned long)curr_time);
+    HDsrandom((unsigned long)HDtime(NULL));
     for(u=0; u<NUM_ELEMS; u++)
         /* Generate random numbers from -1000 to 1000 */
         rand_num[u].val=(int)(HDrandom()%2001)-1001;
@@ -593,12 +591,14 @@ static void test_heap_remove_many_core(H5HP_type_t heap_type, test_obj *arr, siz
 
         /* Check that the value is correct, based on the heap type */
         if(heap_type==H5HP_MAX_HEAP) {
-            if(val>last_val)
+            if(val>last_val) {
                 TestErrPrintf("Error on line %d: incorrect value from heap=%d, last_val=%d\n",__LINE__,val,last_val);
+            } /* end if */
         } /* end if */
         else {
-            if(val<last_val)
+            if(val<last_val) {
                 TestErrPrintf("Error on line %d: incorrect value from heap=%d, last_val=%d\n",__LINE__,val,last_val);
+            } /* end if */
         } /* end else */
 
         /* Update last value */
@@ -636,12 +636,14 @@ static void test_heap_remove_many_core(H5HP_type_t heap_type, test_obj *arr, siz
 
         /* Check that the value is correct, based on the heap type */
         if(heap_type==H5HP_MAX_HEAP) {
-            if(val>last_val)
+            if(val>last_val) {
                 TestErrPrintf("Error on line %d: incorrect value from heap=%d, last_val=%d\n",__LINE__,val,last_val);
+            } /* end if */
         } /* end if */
         else {
-            if(val<last_val)
+            if(val<last_val) {
                 TestErrPrintf("Error on line %d: incorrect value from heap=%d, last_val=%d\n",__LINE__,val,last_val);
+            } /* end if */
         } /* end else */
 
         /* Update last value */

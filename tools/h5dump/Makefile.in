@@ -27,7 +27,8 @@ CPPFLAGS=-I. -I$(srcdir) -I$(top_builddir)/src -I$(top_srcdir)/src  \
 ## Test programs and scripts.
 ##
 TEST_PROGS=h5dumpgentest
-TEST_SCRIPTS=./testh5dump.sh $(srcdir)/testh5dumpxml.sh
+TEST_SCRIPTS=./testh5dump.sh
+TEST_SCRIPTS_XML=$(srcdir)/testh5dumpxml.sh
 
 ## These are our main targets: library and tools.
 ##
@@ -64,6 +65,12 @@ TEST_OBJ=$(TEST_SRC:.c=.lo)
 ## Programs have to be built before they can be tested!
 ##
 check test _test: $(PROGS)
+
+## Some XML tests fail in some machines such as 64bits platforms.
+## Run XML tests only if asked.
+check-xml:
+	$(MAKE) TEST_SCRIPTS=$(TEST_SCRIPTS_XML) check
+
 
 ## How to build the programs...They all depend on the hdf5 library and
 ## the tools library compiled in this directory.

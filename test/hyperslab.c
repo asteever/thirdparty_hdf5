@@ -1077,7 +1077,7 @@ test_array_fill(size_t lo, size_t hi)
 
     /* Setup */
     for(u=0; u<ARRAY_FILL_SIZE; u++)
-        src[u]=(char)u;
+        src[u]=(int)u;
 
     /* Fill */
     for(w=lo; w<=hi; w++) {

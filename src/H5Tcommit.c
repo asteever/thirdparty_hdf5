@@ -19,18 +19,20 @@
 
 #define H5T_PACKAGE		/*suppress error about including H5Tpkg	  */
 
-/* Interface initialization */
-#define H5_INTERFACE_INIT_FUNC	H5T_init_commit_interface
-
 /* Pablo information */
 /* (Put before include files to avoid problems with inline functions) */
-#define PABLO_MASK	H5T_commit_mask
+#define PABLO_MASK	H5Tcommit_mask
 
-#include "H5private.h"		/* Generic Functions			*/
-#include "H5Eprivate.h"		/* Error handling		  	*/
-#include "H5Iprivate.h"		/* IDs			  		*/
-#include "H5Oprivate.h"		/* Object headers		  	*/
-#include "H5Tpkg.h"		/* Datatypes				*/
+#include "H5private.h"		/*generic functions			  */
+#include "H5Eprivate.h"		/*error handling			  */
+#include "H5Iprivate.h"		/*ID functions		   		  */
+#include "H5Tpkg.h"		/*data-type functions			  */
+
+/* Interface initialization */
+static int interface_initialize_g = 0;
+#define INTERFACE_INIT H5T_init_commit_interface
+static herr_t H5T_init_commit_interface(void);
+
 
 /* Static local functions */
 static herr_t H5T_commit(H5G_entry_t *loc, const char *name, H5T_t *type, hid_t dxpl_id);
@@ -145,10 +147,9 @@ H5T_commit (H5G_entry_t *loc, const char *name, H5T_t *type, hid_t dxpl_id)
     if(H5T_is_sensible(type)!=TRUE)
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "datatype is not sensible");
 
-    /* Mark datatype as being on disk now.  This step changes the size of datatype as
-     * stored on disk. */
-    if(H5T_set_loc(type, file, H5T_LOC_DISK)<0)
-        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "cannot mark datatype on disk")
+    /* Mark datatype as being on disk now */
+    if (H5T_vlen_mark(type, file, H5T_VLEN_DISK)<0)
+        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "invalid VL location");
 
     /*
      * Create the object header and open it for write access. Insert the data
@@ -162,9 +163,9 @@ H5T_commit (H5G_entry_t *loc, const char *name, H5T_t *type, hid_t dxpl_id)
 	HGOTO_ERROR (H5E_DATATYPE, H5E_CANTINIT, FAIL, "unable to name data type");
     type->state = H5T_STATE_OPEN;
 
-    /* Mark datatype as being on memory now.  Since this datatype may still be used in memory
-     * after committed to disk, change its size back as in memory. */
-    if(H5T_set_loc(type, NULL, H5T_LOC_MEMORY)<0)
+    /* Mark datatype as being on memory now because this datatype may be still used in 
+     * memory after committed to disk.  So we need to change its size back. */
+    if (H5T_vlen_mark(type, NULL, H5T_VLEN_MEMORY)<0)
         HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "cannot mark datatype in memory")
 
 done:
@@ -177,7 +178,6 @@ done:
 	    type->ent.header = HADDR_UNDEF;
 	}
     }
-
     FUNC_LEAVE_NOAPI(ret_value);
 }
 

@@ -18,7 +18,13 @@
       MODULE H5A
 
         USE H5GLOBAL
-
+!
+!On Windows there are no big (integer*8) integers, so overloading 
+!for bug #670 does not work. I have to use DEC compilation directives to make
+!Windows DEC Visual Fortran and OSF compilers happy and do right things.
+!						05/01/02 EP
+          
+!
           INTERFACE h5awrite_f
 
             MODULE PROCEDURE h5awrite_integer_scalar 
@@ -45,7 +51,7 @@
             MODULE PROCEDURE h5awrite_real_5
             MODULE PROCEDURE h5awrite_real_6
             MODULE PROCEDURE h5awrite_real_7
-! Comment if on Crays
+! Comment if on T3E
             MODULE PROCEDURE h5awrite_double_scalar
             MODULE PROCEDURE h5awrite_double_1
             MODULE PROCEDURE h5awrite_double_2
@@ -54,8 +60,7 @@
             MODULE PROCEDURE h5awrite_double_5
             MODULE PROCEDURE h5awrite_double_6
             MODULE PROCEDURE h5awrite_double_7
-! End commnet if on Crays
-
+! End commnet if on T3E
 
           END INTERFACE
 
@@ -85,7 +90,7 @@
             MODULE PROCEDURE h5aread_real_5
             MODULE PROCEDURE h5aread_real_6
             MODULE PROCEDURE h5aread_real_7
-! Comment if on Crays
+! Comment if on T3E
             MODULE PROCEDURE h5aread_double_scalar
             MODULE PROCEDURE h5aread_double_1
             MODULE PROCEDURE h5aread_double_2
@@ -94,7 +99,7 @@
             MODULE PROCEDURE h5aread_double_5
             MODULE PROCEDURE h5aread_double_6
             MODULE PROCEDURE h5aread_double_7
-! End commnet if on Crays
+! End commnet if on T3E
 !
           END INTERFACE
 
@@ -148,7 +153,7 @@
                                                 ! Attribute creation property 
                                                 ! list identifier 
             INTEGER :: creation_prp_default 
-            INTEGER(SIZE_T) :: namelen
+            INTEGER :: namelen
 !            INTEGER, EXTERNAL :: h5acreate_c
 !  MS FORTRAN needs explicit interface for C functions called here.
 !
@@ -162,7 +167,7 @@
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: obj_id
               CHARACTER(LEN=*), INTENT(IN) :: name
-              INTEGER(SIZE_T) :: namelen
+              INTEGER :: namelen
               INTEGER(HID_T), INTENT(IN) :: type_id
               INTEGER(HID_T), INTENT(IN) :: space_id
               INTEGER :: creation_prp_default
@@ -214,7 +219,7 @@
             CHARACTER(LEN=*), INTENT(IN) :: name    ! Attribute name
             INTEGER(HID_T), INTENT(OUT) :: attr_id  ! Attribute identifier 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-            INTEGER(SIZE_T) :: namelen
+            INTEGER :: namelen
 
 !            INTEGER, EXTERNAL :: h5aopen_name_c
 !  MS FORTRAN needs explicit interface for C functions called here.
@@ -228,7 +233,7 @@
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: obj_id
               CHARACTER(LEN=*), INTENT(IN) :: name
-              INTEGER(SIZE_T) :: namelen
+              INTEGER :: namelen
               INTEGER(HID_T), INTENT(OUT) :: attr_id
               END FUNCTION h5aopen_name_c
             END INTERFACE
@@ -294,6 +299,38 @@
           END SUBROUTINE h5aopen_idx_f
 
 
+          SUBROUTINE h5awrite_integer_scalar(attr_id, memtype_id,  buf, dims, hdferr) 
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5awrite_integer_scalar
+!DEC$endif
+            IMPLICIT NONE
+            INTEGER(HID_T), INTENT(IN) :: attr_id   ! Attribute identifier 
+            INTEGER(HID_T), INTENT(IN) :: memtype_id ! Attribute datatype 
+                                                     ! identifier  (in memory)
+            INTEGER(HSIZE_T), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
+            INTEGER, INTENT(IN) :: buf              ! Attribute data 
+            INTEGER, INTENT(OUT) :: hdferr          ! Error code
+
+!            INTEGER, EXTERNAL :: h5awrite_c
+!  MS FORTRAN needs explicit interface for C functions called here.
+!
+            INTERFACE
+              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf, dims)
+              USE H5GLOBAL
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
+              !DEC$ ENDIF
+            INTEGER(HSIZE_T), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
+              INTEGER(HID_T), INTENT(IN) :: attr_id
+              INTEGER(HID_T), INTENT(IN) :: memtype_id
+              INTEGER, INTENT(IN)::buf
+              END FUNCTION h5awrite_c
+            END INTERFACE
+
+            hdferr = h5awrite_c(attr_id, memtype_id,  buf, dims)
+          END SUBROUTINE h5awrite_integer_scalar
+
           SUBROUTINE h5awrite_integer_1(attr_id, memtype_id,  buf, dims, hdferr) 
 !This definition is needed for Windows DLLs
 !DEC$if defined(BUILD_HDF5_DLL)
@@ -303,7 +340,7 @@
             INTEGER(HID_T), INTENT(IN) :: attr_id   ! Attribute identifier 
             INTEGER(HID_T), INTENT(IN) :: memtype_id ! Attribute datatype 
                                                      ! identifier  (in memory)
-            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
+            INTEGER(HSIZE_T), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
             INTEGER, INTENT(IN) , &
             DIMENSION(dims(1)) :: buf
                                                     ! Attribute data 
@@ -318,7 +355,7 @@
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
               !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
               !DEC$ ENDIF
-            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
+            INTEGER(HSIZE_T), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
               INTEGER(HID_T), INTENT(IN) :: attr_id
               INTEGER(HID_T), INTENT(IN) :: memtype_id
               INTEGER, INTENT(IN), &
@@ -339,7 +376,7 @@
             INTEGER(HID_T), INTENT(IN) :: attr_id   ! Attribute identifier 
             INTEGER(HID_T), INTENT(IN) :: memtype_id ! Attribute datatype 
                                                      ! identifier  (in memory)
-            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
+            INTEGER(HSIZE_T), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
             INTEGER, INTENT(IN) , &
             DIMENSION(dims(1),dims(2)) :: buf
                                                     ! Attribute data 
@@ -354,7 +391,7 @@
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
               !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
               !DEC$ ENDIF
-            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
+            INTEGER(HSIZE_T), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
               INTEGER(HID_T), INTENT(IN) :: attr_id
               INTEGER(HID_T), INTENT(IN) :: memtype_id
               INTEGER, INTENT(IN), &
@@ -375,7 +412,7 @@
             INTEGER(HID_T), INTENT(IN) :: attr_id   ! Attribute identifier 
             INTEGER(HID_T), INTENT(IN) :: memtype_id ! Attribute datatype 
                                                      ! identifier  (in memory)
-            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
+            INTEGER(HSIZE_T), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
             INTEGER, INTENT(IN) , &
             DIMENSION(dims(1),dims(2),dims(3)) :: buf
                                                     ! Attribute data 
@@ -390,7 +427,7 @@
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
               !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
               !DEC$ ENDIF
-            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
+            INTEGER(HSIZE_T), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
               INTEGER(HID_T), INTENT(IN) :: attr_id
               INTEGER(HID_T), INTENT(IN) :: memtype_id
               INTEGER, INTENT(IN), &
@@ -411,7 +448,7 @@
             INTEGER(HID_T), INTENT(IN) :: attr_id   ! Attribute identifier 
             INTEGER(HID_T), INTENT(IN) :: memtype_id ! Attribute datatype 
                                                      ! identifier  (in memory)
-            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
+            INTEGER(HSIZE_T), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
             INTEGER, INTENT(IN), &
             DIMENSION(dims(1),dims(2),dims(3),dims(4)) :: buf
                                                     ! Attribute data 
@@ -426,7 +463,7 @@
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
               !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
               !DEC$ ENDIF
-            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
+            INTEGER(HSIZE_T), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
               INTEGER(HID_T), INTENT(IN) :: attr_id
               INTEGER(HID_T), INTENT(IN) :: memtype_id
               INTEGER, INTENT(IN), &
@@ -447,7 +484,7 @@
             INTEGER(HID_T), INTENT(IN) :: attr_id   ! Attribute identifier 
             INTEGER(HID_T), INTENT(IN) :: memtype_id ! Attribute datatype 
                                                      ! identifier  (in memory)
-            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
+            INTEGER(HSIZE_T), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
             INTEGER, INTENT(IN), &
             DIMENSION(dims(1),dims(2),dims(3),dims(4),dims(5)) :: buf
                                                     ! Attribute data 
@@ -462,7 +499,7 @@
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
               !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
               !DEC$ ENDIF
-            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
+            INTEGER(HSIZE_T), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
               INTEGER(HID_T), INTENT(IN) :: attr_id
               INTEGER(HID_T), INTENT(IN) :: memtype_id
               INTEGER, INTENT(IN), &
@@ -545,6 +582,38 @@
             hdferr = h5awrite_c(attr_id, memtype_id,  buf, dims)
           END SUBROUTINE h5awrite_integer_7
 
+
+          SUBROUTINE h5awrite_real_scalar(attr_id, memtype_id,  buf, dims, hdferr) 
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5awrite_real_scalar
+!DEC$endif
+            IMPLICIT NONE
+            INTEGER(HID_T), INTENT(IN) :: attr_id   ! Attribute identifier 
+            INTEGER(HID_T), INTENT(IN) :: memtype_id ! Attribute datatype 
+                                                     ! identifier  (in memory)
+            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
+            REAL, INTENT(IN) :: buf                 ! Attribute data 
+            INTEGER, INTENT(OUT) :: hdferr          ! Error code
+
+!            INTEGER, EXTERNAL :: h5awrite_c
+!  MS FORTRAN needs explicit interface for C functions called here.
+!
+            INTERFACE
+              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf, dims)
+              USE H5GLOBAL
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
+              !DEC$ ENDIF
+            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
+              INTEGER(HID_T), INTENT(IN) :: attr_id
+              INTEGER(HID_T), INTENT(IN) :: memtype_id
+              REAL, INTENT(IN)::buf
+              END FUNCTION h5awrite_c
+            END INTERFACE
+
+            hdferr = h5awrite_c(attr_id, memtype_id,  buf, dims)
+          END SUBROUTINE h5awrite_real_scalar
 
           SUBROUTINE h5awrite_real_1(attr_id, memtype_id,  buf, dims, hdferr) 
 !This definition is needed for Windows DLLs
@@ -798,6 +867,38 @@
           END SUBROUTINE h5awrite_real_7
 
 
+          SUBROUTINE h5awrite_double_scalar(attr_id, memtype_id,  buf, dims, hdferr) 
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5awrite_double_scalar
+!DEC$endif
+            IMPLICIT NONE
+            INTEGER(HID_T), INTENT(IN) :: attr_id   ! Attribute identifier 
+            INTEGER(HID_T), INTENT(IN) :: memtype_id ! Attribute datatype 
+                                                     ! identifier  (in memory)
+            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
+            DOUBLE PRECISION, INTENT(IN) :: buf     ! Attribute data 
+            INTEGER, INTENT(OUT) :: hdferr          ! Error code
+
+!            INTEGER, EXTERNAL :: h5awrite_c
+!  MS FORTRAN needs explicit interface for C functions called here.
+!
+            INTERFACE
+              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf, dims)
+              USE H5GLOBAL
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
+              !DEC$ ENDIF
+            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
+              INTEGER(HID_T), INTENT(IN) :: attr_id
+              INTEGER(HID_T), INTENT(IN) :: memtype_id
+              DOUBLE PRECISION, INTENT(IN)::buf
+              END FUNCTION h5awrite_c
+            END INTERFACE
+
+            hdferr = h5awrite_c(attr_id, memtype_id,  buf, dims)
+          END SUBROUTINE h5awrite_double_scalar
+
           SUBROUTINE h5awrite_double_1(attr_id, memtype_id,  buf, dims, hdferr) 
 !This definition is needed for Windows DLLs
 !DEC$if defined(BUILD_HDF5_DLL)
@@ -1047,6 +1148,39 @@
 
             hdferr = h5awrite_c(attr_id, memtype_id,  buf, dims)
           END SUBROUTINE h5awrite_double_7
+
+          SUBROUTINE h5awrite_char_scalar(attr_id, memtype_id,  buf, dims, hdferr) 
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5awrite_char_scalar
+!DEC$endif
+            IMPLICIT NONE
+            INTEGER(HID_T), INTENT(IN) :: attr_id   ! Attribute identifier 
+            INTEGER(HID_T), INTENT(IN) :: memtype_id ! Attribute datatype 
+                                                     ! identifier  (in memory)
+            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
+            CHARACTER(LEN=*),INTENT(IN) :: buf 
+                                                    ! Attribute data 
+            INTEGER, INTENT(OUT) :: hdferr          ! Error code
+!            INTEGER, EXTERNAL :: h5awritec_c
+!  MS FORTRAN needs explicit interface for C functions called here.
+!
+            INTERFACE
+              INTEGER FUNCTION h5awritec_c(attr_id, memtype_id,  buf, dims)
+              USE H5GLOBAL
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITEC_C'::h5awritec_c
+              !DEC$ ENDIF
+            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
+              !DEC$ATTRIBUTES reference :: buf
+              INTEGER(HID_T), INTENT(IN) :: attr_id
+              INTEGER(HID_T), INTENT(IN) :: memtype_id
+              CHARACTER(LEN=*), INTENT(IN)::buf
+              END FUNCTION h5awritec_c
+            END INTERFACE
+
+            hdferr = h5awritec_c(attr_id, memtype_id,  buf, dims)
+          END SUBROUTINE h5awrite_char_scalar
 
           SUBROUTINE h5awrite_char_1(attr_id, memtype_id,  buf, dims, hdferr) 
 !This definition is needed for Windows DLLs
@@ -1299,135 +1433,6 @@
             hdferr = h5awritec_c(attr_id, memtype_id,  buf, dims)
           END SUBROUTINE h5awrite_char_7
 
-          SUBROUTINE h5awrite_integer_scalar(attr_id, memtype_id,  buf, dims, hdferr) 
-!This definition is needed for Windows DLLs
-!DEC$if defined(BUILD_HDF5_DLL)
-!DEC$attributes dllexport :: h5awrite_integer_scalar
-!DEC$endif
-            IMPLICIT NONE
-            INTEGER(HID_T), INTENT(IN) :: attr_id   ! Attribute identifier 
-            INTEGER(HID_T), INTENT(IN) :: memtype_id ! Attribute datatype 
-                                                     ! identifier  (in memory)
-            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
-            INTEGER, INTENT(IN) :: buf              ! Attribute data 
-            INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5awrite_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf, dims)
-              USE H5GLOBAL
-              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
-              !DEC$ ENDIF
-            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              INTEGER, INTENT(IN)::buf
-              END FUNCTION h5awrite_c
-            END INTERFACE
-
-            hdferr = h5awrite_c(attr_id, memtype_id,  buf, dims)
-          END SUBROUTINE h5awrite_integer_scalar
-
-          SUBROUTINE h5awrite_real_scalar(attr_id, memtype_id,  buf, dims, hdferr) 
-!This definition is needed for Windows DLLs
-!DEC$if defined(BUILD_HDF5_DLL)
-!DEC$attributes dllexport :: h5awrite_real_scalar
-!DEC$endif
-            IMPLICIT NONE
-            INTEGER(HID_T), INTENT(IN) :: attr_id   ! Attribute identifier 
-            INTEGER(HID_T), INTENT(IN) :: memtype_id ! Attribute datatype 
-                                                     ! identifier  (in memory)
-            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
-            REAL, INTENT(IN) :: buf                 ! Attribute data 
-            INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5awrite_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf, dims)
-              USE H5GLOBAL
-              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
-              !DEC$ ENDIF
-            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              REAL, INTENT(IN)::buf
-              END FUNCTION h5awrite_c
-            END INTERFACE
-
-            hdferr = h5awrite_c(attr_id, memtype_id,  buf, dims)
-          END SUBROUTINE h5awrite_real_scalar
-
-          SUBROUTINE h5awrite_double_scalar(attr_id, memtype_id,  buf, dims, hdferr) 
-!This definition is needed for Windows DLLs
-!DEC$if defined(BUILD_HDF5_DLL)
-!DEC$attributes dllexport :: h5awrite_double_scalar
-!DEC$endif
-            IMPLICIT NONE
-            INTEGER(HID_T), INTENT(IN) :: attr_id   ! Attribute identifier 
-            INTEGER(HID_T), INTENT(IN) :: memtype_id ! Attribute datatype 
-                                                     ! identifier  (in memory)
-            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
-            DOUBLE PRECISION, INTENT(IN) :: buf     ! Attribute data 
-            INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5awrite_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf, dims)
-              USE H5GLOBAL
-              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
-              !DEC$ ENDIF
-            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              DOUBLE PRECISION, INTENT(IN)::buf
-              END FUNCTION h5awrite_c
-            END INTERFACE
-
-            hdferr = h5awrite_c(attr_id, memtype_id,  buf, dims)
-          END SUBROUTINE h5awrite_double_scalar
-
-          SUBROUTINE h5awrite_char_scalar(attr_id, memtype_id,  buf, dims, hdferr) 
-!This definition is needed for Windows DLLs
-!DEC$if defined(BUILD_HDF5_DLL)
-!DEC$attributes dllexport :: h5awrite_char_scalar
-!DEC$endif
-            IMPLICIT NONE
-            INTEGER(HID_T), INTENT(IN) :: attr_id   ! Attribute identifier 
-            INTEGER(HID_T), INTENT(IN) :: memtype_id ! Attribute datatype 
-                                                     ! identifier  (in memory)
-            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
-            CHARACTER(LEN=*),INTENT(IN) :: buf 
-                                                    ! Attribute data 
-            INTEGER, INTENT(OUT) :: hdferr          ! Error code
-!            INTEGER, EXTERNAL :: h5awritec_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awritec_c(attr_id, memtype_id,  buf, dims)
-              USE H5GLOBAL
-              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITEC_C'::h5awritec_c
-              !DEC$ ENDIF
-            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
-              !DEC$ATTRIBUTES reference :: buf
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              CHARACTER(LEN=*), INTENT(IN)::buf
-              END FUNCTION h5awritec_c
-            END INTERFACE
-
-            hdferr = h5awritec_c(attr_id, memtype_id,  buf, dims)
-          END SUBROUTINE h5awrite_char_scalar
-
 !----------------------------------------------------------------------
 ! Name:		h5aread_f 
 !
@@ -1460,6 +1465,38 @@
 !			REAL, DOUBLE PRECISION and CHARACTER buffers
 !			up to 7 dimensions.	
 !----------------------------------------------------------------------
+
+          SUBROUTINE h5aread_integer_scalar(attr_id, memtype_id,  buf, dims, hdferr) 
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5aread_integer_scalar
+!DEC$endif
+            IMPLICIT NONE
+            INTEGER(HID_T), INTENT(IN) :: attr_id   ! Attribute identifier 
+            INTEGER(HID_T), INTENT(IN) :: memtype_id ! Attribute datatype 
+                                                     ! identifier  (in memory)
+            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
+            INTEGER, INTENT(OUT) :: buf             ! Attribute data 
+            INTEGER, INTENT(OUT) :: hdferr          ! Error code
+
+!            INTEGER, EXTERNAL :: h5aread_c
+!  MS FORTRAN needs explicit interface for C functions called here.
+!
+            INTERFACE
+              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf, dims)
+              USE H5GLOBAL
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
+              !DEC$ ENDIF
+            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
+              INTEGER(HID_T), INTENT(IN) :: attr_id
+              INTEGER(HID_T), INTENT(IN) :: memtype_id
+              INTEGER, INTENT(OUT)::buf
+              END FUNCTION h5aread_c
+            END INTERFACE
+
+            hdferr = h5aread_c(attr_id, memtype_id,  buf, dims)
+          END SUBROUTINE h5aread_integer_scalar
 
           SUBROUTINE h5aread_integer_1(attr_id, memtype_id,  buf, dims, hdferr) 
 !This definition is needed for Windows DLLs
@@ -1709,6 +1746,38 @@
             hdferr = h5aread_c(attr_id, memtype_id,  buf, dims)
           END SUBROUTINE h5aread_integer_7
 
+
+          SUBROUTINE h5aread_real_scalar(attr_id, memtype_id,  buf, dims, hdferr) 
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5aread_real_scalar
+!DEC$endif
+            IMPLICIT NONE
+            INTEGER(HID_T), INTENT(IN) :: attr_id   ! Attribute identifier 
+            INTEGER(HID_T), INTENT(IN) :: memtype_id ! Attribute datatype 
+                                                     ! identifier  (in memory)
+            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
+            REAL, INTENT(OUT) :: buf                ! Attribute data 
+            INTEGER, INTENT(OUT) :: hdferr          ! Error code
+
+!            INTEGER, EXTERNAL :: h5aread_c
+!  MS FORTRAN needs explicit interface for C functions called here.
+!
+            INTERFACE
+              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf, dims)
+              USE H5GLOBAL
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
+              !DEC$ ENDIF
+            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
+              INTEGER(HID_T), INTENT(IN) :: attr_id
+              INTEGER(HID_T), INTENT(IN) :: memtype_id
+              REAL, INTENT(OUT)::buf
+              END FUNCTION h5aread_c
+            END INTERFACE
+
+            hdferr = h5aread_c(attr_id, memtype_id,  buf, dims)
+          END SUBROUTINE h5aread_real_scalar
 
           SUBROUTINE h5aread_real_1(attr_id, memtype_id,  buf, dims, hdferr) 
 !This definition is needed for Windows DLLs
@@ -1962,6 +2031,38 @@
           END SUBROUTINE h5aread_real_7
 
 
+          SUBROUTINE h5aread_double_scalar(attr_id, memtype_id,  buf, dims, hdferr) 
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5aread_double_scalar
+!DEC$endif
+            IMPLICIT NONE
+            INTEGER(HID_T), INTENT(IN) :: attr_id   ! Attribute identifier 
+            INTEGER(HID_T), INTENT(IN) :: memtype_id ! Attribute datatype 
+                                                     ! identifier  (in memory)
+            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
+            DOUBLE PRECISION, INTENT(OUT) :: buf    ! Attribute data 
+            INTEGER, INTENT(OUT) :: hdferr          ! Error code
+
+!            INTEGER, EXTERNAL :: h5aread_c
+!  MS FORTRAN needs explicit interface for C functions called here.
+!
+            INTERFACE
+              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf, dims)
+              USE H5GLOBAL
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
+              !DEC$ ENDIF
+            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
+              INTEGER(HID_T), INTENT(IN) :: attr_id
+              INTEGER(HID_T), INTENT(IN) :: memtype_id
+              DOUBLE PRECISION, INTENT(OUT)::buf
+              END FUNCTION h5aread_c
+            END INTERFACE
+
+            hdferr = h5aread_c(attr_id, memtype_id,  buf, dims)
+          END SUBROUTINE h5aread_double_scalar
+
           SUBROUTINE h5aread_double_1(attr_id, memtype_id,  buf, dims, hdferr) 
 !This definition is needed for Windows DLLs
 !DEC$if defined(BUILD_HDF5_DLL)
@@ -2212,6 +2313,40 @@
 
             hdferr = h5aread_c(attr_id, memtype_id,  buf, dims)
           END SUBROUTINE h5aread_double_7
+
+          SUBROUTINE h5aread_char_scalar(attr_id, memtype_id,  buf, dims, hdferr) 
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5aread_char_scalar
+!DEC$endif
+            IMPLICIT NONE
+            INTEGER(HID_T), INTENT(IN) :: attr_id   ! Attribute identifier 
+            INTEGER(HID_T), INTENT(IN) :: memtype_id ! Attribute datatype 
+                                                     ! identifier  (in memory)
+            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
+            CHARACTER(LEN=*), INTENT(OUT) :: buf 
+                                                    ! Attribute data 
+            INTEGER, INTENT(OUT) :: hdferr          ! Error code
+
+!            INTEGER, EXTERNAL :: h5areadc_c
+!  MS FORTRAN needs explicit interface for C functions called here.
+!
+            INTERFACE
+              INTEGER FUNCTION h5areadc_c(attr_id, memtype_id,  buf, dims)
+              USE H5GLOBAL
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !MS$ATTRIBUTES C,reference,alias:'_H5AREADC_C'::h5areadc_c
+              !DEC$ ENDIF
+              !DEC$ATTRIBUTES reference :: buf
+            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
+              INTEGER(HID_T), INTENT(IN) :: attr_id
+              INTEGER(HID_T), INTENT(IN) :: memtype_id
+              CHARACTER(LEN=*) :: buf
+              END FUNCTION h5areadc_c
+            END INTERFACE
+
+            hdferr = h5areadc_c(attr_id, memtype_id,  buf, dims)
+          END SUBROUTINE h5aread_char_scalar
 
 
           SUBROUTINE h5aread_char_1(attr_id, memtype_id,  buf, dims, hdferr) 
@@ -2472,137 +2607,6 @@
             hdferr = h5areadc_c(attr_id, memtype_id,  buf, dims)
           END SUBROUTINE h5aread_char_7
 
-          SUBROUTINE h5aread_integer_scalar(attr_id, memtype_id,  buf, dims, hdferr) 
-!This definition is needed for Windows DLLs
-!DEC$if defined(BUILD_HDF5_DLL)
-!DEC$attributes dllexport :: h5aread_integer_scalar
-!DEC$endif
-            IMPLICIT NONE
-            INTEGER(HID_T), INTENT(IN) :: attr_id   ! Attribute identifier 
-            INTEGER(HID_T), INTENT(IN) :: memtype_id ! Attribute datatype 
-                                                     ! identifier  (in memory)
-            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
-            INTEGER, INTENT(OUT) :: buf             ! Attribute data 
-            INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5aread_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf, dims)
-              USE H5GLOBAL
-              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
-              !DEC$ ENDIF
-            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              INTEGER, INTENT(OUT)::buf
-              END FUNCTION h5aread_c
-            END INTERFACE
-
-            hdferr = h5aread_c(attr_id, memtype_id,  buf, dims)
-          END SUBROUTINE h5aread_integer_scalar
-
-          SUBROUTINE h5aread_real_scalar(attr_id, memtype_id,  buf, dims, hdferr) 
-!This definition is needed for Windows DLLs
-!DEC$if defined(BUILD_HDF5_DLL)
-!DEC$attributes dllexport :: h5aread_real_scalar
-!DEC$endif
-            IMPLICIT NONE
-            INTEGER(HID_T), INTENT(IN) :: attr_id   ! Attribute identifier 
-            INTEGER(HID_T), INTENT(IN) :: memtype_id ! Attribute datatype 
-                                                     ! identifier  (in memory)
-            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
-            REAL, INTENT(OUT) :: buf                ! Attribute data 
-            INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5aread_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf, dims)
-              USE H5GLOBAL
-              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
-              !DEC$ ENDIF
-            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              REAL, INTENT(OUT)::buf
-              END FUNCTION h5aread_c
-            END INTERFACE
-
-            hdferr = h5aread_c(attr_id, memtype_id,  buf, dims)
-          END SUBROUTINE h5aread_real_scalar
-
-          SUBROUTINE h5aread_double_scalar(attr_id, memtype_id,  buf, dims, hdferr) 
-!This definition is needed for Windows DLLs
-!DEC$if defined(BUILD_HDF5_DLL)
-!DEC$attributes dllexport :: h5aread_double_scalar
-!DEC$endif
-            IMPLICIT NONE
-            INTEGER(HID_T), INTENT(IN) :: attr_id   ! Attribute identifier 
-            INTEGER(HID_T), INTENT(IN) :: memtype_id ! Attribute datatype 
-                                                     ! identifier  (in memory)
-            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
-            DOUBLE PRECISION, INTENT(OUT) :: buf    ! Attribute data 
-            INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5aread_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf, dims)
-              USE H5GLOBAL
-              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
-              !DEC$ ENDIF
-            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              DOUBLE PRECISION, INTENT(OUT)::buf
-              END FUNCTION h5aread_c
-            END INTERFACE
-
-            hdferr = h5aread_c(attr_id, memtype_id,  buf, dims)
-          END SUBROUTINE h5aread_double_scalar
-
-          SUBROUTINE h5aread_char_scalar(attr_id, memtype_id,  buf, dims, hdferr) 
-!This definition is needed for Windows DLLs
-!DEC$if defined(BUILD_HDF5_DLL)
-!DEC$attributes dllexport :: h5aread_char_scalar
-!DEC$endif
-            IMPLICIT NONE
-            INTEGER(HID_T), INTENT(IN) :: attr_id   ! Attribute identifier 
-            INTEGER(HID_T), INTENT(IN) :: memtype_id ! Attribute datatype 
-                                                     ! identifier  (in memory)
-            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
-            CHARACTER(LEN=*), INTENT(OUT) :: buf 
-                                                    ! Attribute data 
-            INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5areadc_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5areadc_c(attr_id, memtype_id,  buf, dims)
-              USE H5GLOBAL
-              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREADC_C'::h5areadc_c
-              !DEC$ ENDIF
-              !DEC$ATTRIBUTES reference :: buf
-            INTEGER(HSIZE_T), INTENT(IN), DIMENSION(*) :: dims       ! Array to story buf dimension sizes 
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              CHARACTER(LEN=*) :: buf
-              END FUNCTION h5areadc_c
-            END INTERFACE
-
-            hdferr = h5areadc_c(attr_id, memtype_id,  buf, dims)
-          END SUBROUTINE h5aread_char_scalar
-
-
 !----------------------------------------------------------------------
 ! Name:		h5aget_space_f 
 !
@@ -2854,7 +2858,7 @@
             INTEGER(HID_T), INTENT(IN) :: obj_id    ! Object identifier 
             CHARACTER(LEN=*), INTENT(IN) :: name    ! Attribute name
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-            INTEGER(SIZE_T) :: namelen
+            INTEGER :: namelen
 
 !            INTEGER, EXTERNAL ::  h5adelete_c
 !  MS FORTRAN needs explicit interface for C functions called here.
@@ -2868,7 +2872,7 @@
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: obj_id
               CHARACTER(LEN=*), INTENT(IN) :: name
-              INTEGER(SIZE_T) :: namelen
+              INTEGER :: namelen
               END FUNCTION h5adelete_c
             END INTERFACE
 

@@ -41,8 +41,8 @@ extern char  *progname;
 extern int   d_status;
 
 
-
-ref_path_table_entry_t *ref_path_table = NULL;	/* the table */
+struct ref_path_table_entry_t *ref_path_table = NULL;	/* the table */
+int                     npte = 0;	/* number of entries in the table */
 
 /*-------------------------------------------------------------------------
  * Function:    ref_path_table_lookup
@@ -59,20 +59,36 @@ ref_path_table_entry_t *ref_path_table = NULL;	/* the table */
  *
  *-------------------------------------------------------------------------
  */
-ref_path_table_entry_t *
+struct ref_path_table_entry_t *
 ref_path_table_lookup(const char *thepath)
 {
-    H5G_stat_t              sb;
-    ref_path_table_entry_t *pte = ref_path_table;
+    int                     i;
+    hobj_ref_t             *ref;
+    herr_t                  status;
+    struct ref_path_table_entry_t *pte = ref_path_table;
 
-    if(H5Gget_objinfo(thefile, thepath, TRUE, &sb)<0) {
+    if (ref_path_table == NULL)
+	return NULL;
+
+    ref = (hobj_ref_t *) malloc(sizeof(hobj_ref_t));
+
+    if (ref == NULL) {
 	/*  fatal error ? */
 	return NULL;
     }
 
-    while(pte!=NULL) {
-	if (sb.objno==pte->statbuf.objno)
+    status = H5Rcreate(ref, thefile, thepath, H5R_OBJECT, -1);
+
+    if (status < 0) {
+	/*  fatal error ? */
+	return NULL;
+    }
+
+    for (i = 0; i < npte; i++) {
+	if (memcmp(ref, pte->obj_ref, sizeof(hobj_ref_t)) == 0) {
 	    return pte;
+	}
+
 	pte = pte->next;
     }
 
@@ -95,38 +111,64 @@ ref_path_table_lookup(const char *thepath)
  *
  *-------------------------------------------------------------------------
  */
-ref_path_table_entry_t *
+hobj_ref_t *
 ref_path_table_put(hid_t obj, const char *path)
 {
-    ref_path_table_entry_t *pte;
+    hobj_ref_t             *ref;
+    H5G_stat_t             *sb;
+    herr_t                  status;
+    struct ref_path_table_entry_t *pte;
 
     /* look up 'obj'.  If already in table, return */
     pte = ref_path_table_lookup(path);
     if (pte != NULL)
-	return pte;
+	return pte->obj_ref;
 
     /* if not found, then make new entry */
 
-    pte = (ref_path_table_entry_t *) malloc(sizeof(ref_path_table_entry_t));
+    pte = (struct ref_path_table_entry_t *)
+	malloc(sizeof(struct ref_path_table_entry_t));
     if (pte == NULL) {
 	/* fatal error? */
 	return NULL;
     }
 
     pte->obj = obj;
-
-    pte->apath = HDstrdup(path);
-
-    if(H5Gget_objinfo(thefile, path, TRUE, &pte->statbuf)<0) {
+    ref = (hobj_ref_t *) malloc(sizeof(hobj_ref_t));
+    if (ref == NULL) {
 	/* fatal error? */
 	free(pte);
 	return NULL;
     }
 
+    status = H5Rcreate(ref, thefile, path, H5R_OBJECT, -1);
+    if (status < 0) {
+	/* fatal error? */
+	free(ref);
+	free(pte);
+	return NULL;
+    }
+
+    pte->obj_ref = ref;
+
+    pte->apath = HDstrdup(path);
+
+    sb = (H5G_stat_t *) malloc(sizeof(H5G_stat_t));
+    if (sb == NULL) {
+	/* fatal error? */
+	free(pte);
+	return NULL;
+    }
+    H5Gget_objinfo(thefile, path, TRUE, sb);
+
+    memcpy((char *)&(pte->statbuf),(char *)sb,sizeof(H5G_stat_t));
+
     pte->next = ref_path_table;
     ref_path_table = pte;
 
-    return pte;
+    npte++;
+
+    return ref;
 }
 
 /*
@@ -155,10 +197,17 @@ get_fake_xid () {
  * create a table entry with a fake object id as the key.
  */
 
-ref_path_table_entry_t *
+struct ref_path_table_entry_t *
 ref_path_table_gen_fake(const char *path)
 {
-	ref_path_table_entry_t *pte;
+	union {
+		hobj_ref_t             rr;
+		char cc[16];
+		unsigned long ll[2];
+	} uu;
+	hobj_ref_t             *ref;
+	H5G_stat_t             *sb;
+	struct ref_path_table_entry_t *pte;
 
     /* look up 'obj'.  If already in table, return */
     pte = ref_path_table_lookup(path);
@@ -168,7 +217,8 @@ ref_path_table_gen_fake(const char *path)
 
     /* if not found, then make new entry */
 
-    pte = (ref_path_table_entry_t *) malloc(sizeof(ref_path_table_entry_t));
+    pte = (struct ref_path_table_entry_t *)
+	malloc(sizeof(struct ref_path_table_entry_t));
     if (pte == NULL) {
 	/* fatal error? */
 	return NULL;
@@ -176,13 +226,36 @@ ref_path_table_gen_fake(const char *path)
 
     pte->obj = (hid_t)-1;
 
-    memset(&pte->statbuf,0,sizeof(H5G_stat_t));
-    pte->statbuf.objno = get_fake_xid();
+    sb = (H5G_stat_t *) malloc(sizeof(H5G_stat_t));
+    if (sb == NULL) {
+	/* fatal error? */
+	free(pte);
+	return NULL;
+    }
+    sb->objno[0] = (unsigned long)get_fake_xid();
+    sb->objno[1] = (unsigned long)get_fake_xid();
+
+    memcpy((char *)&(pte->statbuf),(char *)sb,sizeof(H5G_stat_t));
+
+    ref = (hobj_ref_t *) malloc(sizeof(hobj_ref_t));
+    if (ref == NULL) {
+	free(pte);
+	return NULL;
+    }
+
+    uu.ll[0] = sb->objno[0];
+    uu.ll[1] = sb->objno[1];
+
+    memcpy((char *)ref,(char *)&uu.rr,sizeof(ref));
+
+    pte->obj_ref = ref;
 
     pte->apath = HDstrdup(path);
 
     pte->next = ref_path_table;
     ref_path_table = pte;
+
+    npte++;
 
     return pte;
 }
@@ -200,14 +273,24 @@ ref_path_table_gen_fake(const char *path)
  *
  *-------------------------------------------------------------------------
  */
-char *
-lookup_ref_path(hobj_ref_t ref)
+char*
+lookup_ref_path(hobj_ref_t * ref)
 {
-    ref_path_table_entry_t *pte = ref_path_table;
+    int                     i;
+    struct ref_path_table_entry_t *pte = NULL;
 
-    while(pte!=NULL) {
-	if (ref==pte->statbuf.objno)
+    if (ref_path_table == NULL)
+	return NULL;
+
+    pte = ref_path_table;
+    if (pte == NULL) {
+	/* fatal -- not initialized? */
+	return NULL;
+    }
+    for (i = 0; i < npte; i++) {
+	if (memcmp(ref, pte->obj_ref, sizeof(hobj_ref_t)) == 0) {
 	    return pte->apath;
+	}
 	pte = pte->next;
     }
     return NULL;
@@ -233,7 +316,7 @@ fill_ref_path_table(hid_t group, const char *name, void UNUSED * op_data)
     hid_t                   obj;
     char                   *tmp;
     H5G_stat_t              statbuf;
-    ref_path_table_entry_t *pte;
+    struct ref_path_table_entry_t *pte;
     char                   *thepath;
 
     H5Gget_objinfo(group, name, FALSE, &statbuf);
@@ -264,7 +347,7 @@ fill_ref_path_table(hid_t group, const char *name, void UNUSED * op_data)
 	    }
 	    H5Dclose(obj);
 	} else {
-            error_msg(progname, "unable to get dataset \"%s\"\n", name);
+     error_msg(progname, "unable to get dataset \"%s\"\n", name);
 	    d_status = EXIT_FAILURE;
 	}
 	break;

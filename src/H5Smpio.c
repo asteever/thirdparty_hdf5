@@ -39,6 +39,10 @@
 
 #ifdef H5_HAVE_PARALLEL
 
+/* Interface initialization */
+#define INTERFACE_INIT  NULL
+static int             interface_initialize_g = 0;
+
 static herr_t
 H5S_mpio_all_type( const H5S_t *space, size_t elmt_size,
 		     /* out: */
@@ -695,9 +699,6 @@ H5S_mpio_hyper_type( const H5S_t *space, size_t elmt_size,
     for (i=rank-1; i>=0; i--)
         displacement[0] += d[i].start * offset[i];
 
-printf("dumping MPI_BYTE\n");
-printdatatype(MPI_INT);
-printdatatype(MPI_BYTE);
     if (displacement[0] > 0) {
         displacement[0] *= elmt_size;
         block_length[0] = 1;
@@ -797,7 +798,6 @@ H5S_mpio_space_type( const H5S_t *space, size_t elmt_size,
 
     /* Creat MPI type based on the kind of selection */
     switch (H5S_GET_EXTENT_TYPE(space)) {
-        case H5S_NULL:
         case H5S_SCALAR:
         case H5S_SIMPLE:
             switch(H5S_GET_SELECT_TYPE(space)) {

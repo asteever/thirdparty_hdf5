@@ -129,7 +129,7 @@ main(int argc, char *argv[])
         /*
          * Debug the boot block.
          */
-        status = H5F_debug(f, H5P_DATASET_XFER_DEFAULT, stdout, 0, VCOL);
+        status = H5F_debug(f, H5P_DATASET_XFER_DEFAULT, addr, stdout, 0, VCOL);
 
     } else if (!HDmemcmp(sig, H5HL_MAGIC, H5HL_SIZEOF_MAGIC)) {
         /*

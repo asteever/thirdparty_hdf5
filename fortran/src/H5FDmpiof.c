@@ -16,7 +16,7 @@
 
 #include "H5f90.h"
 #include <mpi.h> 
-#include "H5pubconf.h"
+#include "H5pubconf_fortran.h"
 
 
 /* Support for C to Fortran translation in MPI */
@@ -112,7 +112,10 @@ nh5pset_dxpl_mpio_c(hid_t_f *prp_id, int_f* data_xfer_mode)
      herr_t ret;
      H5FD_mpio_xfer_t c_data_xfer_mode;
 /*
-     switch (*data_xfer_mode) {
+     int CASE;
+
+     CASE = *data_xfer_mode;
+     switch (CASE) {
 
         case H5FD_MPIO_INDEPENDENT_F:
              c_data_xfer_mode = H5FD_MPIO_INDEPENDENT;
@@ -154,6 +157,7 @@ nh5pget_dxpl_mpio_c(hid_t_f *prp_id, int_f* data_xfer_mode)
      hid_t c_prp_id;
      herr_t ret;
      H5FD_mpio_xfer_t c_data_xfer_mode;
+     int CASE;
 
      /*
       * Call H5Pget_xfer function.
@@ -163,7 +167,8 @@ nh5pget_dxpl_mpio_c(hid_t_f *prp_id, int_f* data_xfer_mode)
      if (ret < 0) return ret_value;
      *data_xfer_mode = (int_f)c_data_xfer_mode; 
 /*
-     switch (c_data_xfer_mode) {
+     CASE = c_data_xfer_mode;
+     switch (CASE) {
 
         case H5FD_MPIO_INDEPENDENT:
              *data_xfer_mode = H5FD_MPIO_INDEPENDENT_F;
