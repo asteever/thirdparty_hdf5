@@ -291,12 +291,6 @@ facilitate moving easily between them.</i>
             <td align=left valign=bottom>Flushes only the specified file.</td></tr>
         </table>
         </center>       
-<dt><strong>Note:</strong>
-        <dd>HDF5 does not possess full control over buffering.
-        <code>H5Fflush</code> flushes the internal HDF5 buffers then 
-        asks the operating system (the OS) to flush the system buffers for the 
-        open files.  After that, the OS is responsible for ensuring that
-        the data is actually flushed to disk.
 <dt><strong>Parameters:</strong>
     <dl>
         <dt><em>hid_t </em><code>object_id</code>
@@ -658,10 +652,9 @@ H5F&nbsp;&nbsp;
 <a href="mailto:hdfhelp@ncsa.uiuc.edu">HDF Help Desk</a> 
 
 <br>
-Last modified:  12 October 2000
+Last modified:  6 July 2001
 <br>
-Describes HDF5 Release 1.5, Unreleased Development Branch
-
+Describes HDF5 Release 1.4.2, July 2001
 
 </body>
 </html>

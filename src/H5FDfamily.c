@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 1997-2001 NCSA
- *		           All rights reserved.
+ * Copyright (C) 1997 NCSA
+ *		      All rights reserved.
  *
  * Programmer:	Robb Matzke <matzke@llnl.gov>
  *		Monday, November 10, 1997
@@ -24,11 +24,10 @@
 #include "H5private.h"		/*library functions			*/
 #include "H5Eprivate.h"		/*error handling			*/
 #include "H5Fprivate.h"		/*files					*/
-#include "H5FDprivate.h"	/*file driver				  */
-#include "H5FDfamily.h"     /* Family file driver */
-#include "H5MMprivate.h"    /* Memory allocation */
+#include "H5FDprivate.h"	/*file driver	                        */
+#include "H5FDfamily.h"         /*family file driver                    */
+#include "H5MMprivate.h"        /*memory allocation                     */
 #include "H5Pprivate.h"		/*property lists			*/
-
 
 #undef MAX
 #define MAX(X,Y)	((X)>(Y)?(X):(Y))
@@ -77,9 +76,9 @@ static haddr_t H5FD_family_get_eoa(H5FD_t *_file);
 static herr_t H5FD_family_set_eoa(H5FD_t *_file, haddr_t eoa);
 static haddr_t H5FD_family_get_eof(H5FD_t *_file);
 static herr_t H5FD_family_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr,
-			       size_t size, void *_buf/*out*/);
+			       hsize_t size, void *_buf/*out*/);
 static herr_t H5FD_family_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr,
-				size_t size, const void *_buf);
+				hsize_t size, const void *_buf);
 static herr_t H5FD_family_flush(H5FD_t *_file);
 
 /* The class struct */
@@ -813,7 +812,7 @@ H5FD_family_get_eof(H5FD_t *_file)
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FD_family_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t size,
+H5FD_family_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, hsize_t size,
 		 void *_buf/*out*/)
 {
     H5FD_family_t	*file = (H5FD_family_t*)_file;
@@ -821,7 +820,7 @@ H5FD_family_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, si
     hid_t		memb_dxpl_id = H5P_DEFAULT;
     int			i;
     haddr_t		sub;
-    size_t		req;
+    hsize_t		req;
 
     FUNC_ENTER(H5FD_family_read, FAIL);
 
@@ -876,7 +875,7 @@ H5FD_family_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, si
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FD_family_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t size,
+H5FD_family_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, hsize_t size,
 		  const void *_buf)
 {
     H5FD_family_t	*file = (H5FD_family_t*)_file;
@@ -884,7 +883,7 @@ H5FD_family_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, s
     hid_t		memb_dxpl_id = H5P_DEFAULT;
     int			i;
     haddr_t		sub;
-    size_t		req;
+    hsize_t		req;
 
     FUNC_ENTER(H5FD_family_write, FAIL);
 

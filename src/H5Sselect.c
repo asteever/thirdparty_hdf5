@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 1998-2001 NCSA
- *                         All rights reserved.
+ * Copyright (C) 1998 NCSA
+ *                    All rights reserved.
  *
  * Programmer:  Quincey Koziol <koziol@ncsa.uiuc.ued>
  *              Friday, May 29, 1998
@@ -69,7 +69,7 @@ H5S_select_copy (H5S_t *dst, const H5S_t *src)
 /* Need to copy order information still */
 
     /* Copy offset information */
-    if (NULL==(dst->select.offset = H5FL_ARR_ALLOC(hssize_t,src->extent.u.simple.rank,1))) {
+    if (NULL==(dst->select.offset = H5FL_ARR_ALLOC(hssize_t,(hsize_t)src->extent.u.simple.rank,1))) {
         HRETURN_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL,
 		       "memory allocation failed");
     }
@@ -214,7 +214,7 @@ H5Sget_select_npoints(hid_t spaceid)
  PURPOSE
     Get the number of elements in current selection
  USAGE
-    herr_t H5S_get_select_npoints(ds)
+    herr_t H5Sselect_hyperslab(ds)
         H5S_t *ds;             IN: Dataspace pointer
  RETURNS
     The number of elements in selection on success, 0 on failure

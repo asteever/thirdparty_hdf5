@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 1998-2001 NCSA
- *                         All rights reserved.
+ * Copyright (C) 1998 NCSA
+ *                    All rights reserved.
  *
  * Programmer:  Robb Matzke <matzke@llnl.gov>
  *              Friday, March 27, 1998
@@ -91,7 +91,7 @@
 
 typedef struct H5HG_t {
     haddr_t		addr;		/*address of collection		*/
-    uintn		idx;		/*object ID within collection	*/
+    intn		idx;		/*object ID within collection	*/
 } H5HG_t;
 
 typedef struct H5HG_heap_t H5HG_heap_t;

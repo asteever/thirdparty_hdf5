@@ -86,12 +86,11 @@ H5D_xfer_t	H5D_xfer_dflt = {
     0,				/*Don't cache the hyperslab blocks	    */
 #endif /* H5_HAVE_PARALLEL */
     0,              		/*No limit on hyperslab block size to cache */
-    1024,              		/*Number of I/O vectors for hyperslabs      */
     NULL,                   	/*Use malloc() for VL data allocations	    */
     NULL,                   	/*No information needed for malloc() calls  */
     NULL,                   	/*Use free() for VL data frees		    */
     NULL,                   	/*No information needed for free() calls    */
-    H5FD_VFD_DEFAULT,		/*See H5Pget_driver()			    */
+    H5FD_VFD_DEFAULT,			/*See H5Pget_driver()			    */
     NULL,			/*No file driver-specific information yet   */
 #ifdef COALESCE_READS
     0,                          /*coalesce single reads into a read         */
@@ -1588,7 +1587,7 @@ H5D_read(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
     herr_t		status;			    /*function return status*/
     size_t		src_type_size;		/*size of source type	*/
     size_t		dst_type_size;	    /*size of destination type*/
-    size_t		target_size;		/*desired buffer size	*/
+    hsize_t		target_size;		/*desired buffer size	*/
     hsize_t		request_nelmts;		/*requested strip mine	*/
     H5T_bkg_t	need_bkg;		    /*type of background buf*/
     H5S_t		*free_this_space=NULL;  /*data space to free	*/
@@ -1775,15 +1774,15 @@ printf("%s: check 1.2, \n",FUNC);
     /*
      * This is the general case.  Figure out the strip mine size.
      */
-    if ((sconv->f->init)(file_space, &file_iter)<0) {
+    if ((sconv->f->init)(&(dataset->layout), file_space, &file_iter)<0) {
         HGOTO_ERROR (H5E_DATASET, H5E_CANTINIT, FAIL,
 		     "unable to initialize file selection information");
     } 
-    if ((sconv->m->init)(mem_space, &mem_iter)<0) {
+    if ((sconv->m->init)(&(dataset->layout), mem_space, &mem_iter)<0) {
         HGOTO_ERROR (H5E_DATASET, H5E_CANTINIT, FAIL,
 		     "unable to initialize memory selection information");
     } 
-    if ((sconv->m->init)(mem_space, &bkg_iter)<0) {
+    if ((sconv->m->init)(&(dataset->layout), mem_space, &bkg_iter)<0) {
         HGOTO_ERROR (H5E_DATASET, H5E_CANTINIT, FAIL,
 		     "unable to initialize background selection information");
     } 
@@ -1830,8 +1829,7 @@ printf("%s: check 2.0, src_type_size=%d, dst_type_size=%d, target_size=%d\n",FUN
     printf("%s: check 3.2, allocating conversion buffer\n",FUNC);
 #endif
         /* Allocate temporary buffer */
-        H5_CHECK_OVERFLOW((request_nelmts*dst_type_size),hsize_t,size_t);
-        if((bkg_buf=H5FL_BLK_ALLOC(bkgr_conv,(size_t)(request_nelmts*dst_type_size),0))==NULL)
+        if((bkg_buf=H5FL_BLK_ALLOC(bkgr_conv,request_nelmts*dst_type_size,0))==NULL)
             HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL,
                  "memory allocation failed for background conversion");
     }
@@ -2037,7 +2035,7 @@ H5D_write(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
     herr_t		status;			    /*function return status*/
     size_t		src_type_size;		/*size of source type	*/
     size_t		dst_type_size;	    /*size of destination type*/
-    size_t		target_size;		/*desired buffer size	*/
+    hsize_t		target_size;		/*desired buffer size	*/
     hsize_t		request_nelmts;		/*requested strip mine	*/
     H5T_bkg_t	need_bkg;		    /*type of background buf*/
     H5S_t		*free_this_space=NULL;	/*data space to free	*/
@@ -2253,15 +2251,15 @@ H5D_write(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
     /*
      * This is the general case.  Figure out the strip mine size.
      */
-    if ((sconv->f->init)(file_space, &file_iter)<0) {
+    if ((sconv->f->init)(&(dataset->layout), file_space, &file_iter)<0) {
         HGOTO_ERROR (H5E_DATASET, H5E_CANTINIT, FAIL,
 		     "unable to initialize file selection information");
     } 
-    if ((sconv->m->init)(mem_space, &mem_iter)<0) {
+    if ((sconv->m->init)(&(dataset->layout), mem_space, &mem_iter)<0) {
         HGOTO_ERROR (H5E_DATASET, H5E_CANTINIT, FAIL,
 		     "unable to initialize memory selection information");
     } 
-    if ((sconv->f->init)(file_space, &bkg_iter)<0) {
+    if ((sconv->f->init)(&(dataset->layout), file_space, &bkg_iter)<0) {
         HGOTO_ERROR (H5E_DATASET, H5E_CANTINIT, FAIL,
 		     "unable to initialize memory selection information");
     }
@@ -2302,8 +2300,7 @@ printf("%s: check 2.0, src_type_size=%d, dst_type_size=%d, target_size=%d\n",FUN
     }
     if (need_bkg && NULL==(bkg_buf=xfer_parms->bkg_buf)) {
         /* Allocate temporary buffer */
-        H5_CHECK_OVERFLOW((request_nelmts*dst_type_size),hsize_t,size_t);
-        if((bkg_buf=H5FL_BLK_ALLOC(bkgr_conv,(size_t)(request_nelmts*dst_type_size),0))==NULL)
+        if((bkg_buf=H5FL_BLK_ALLOC(bkgr_conv,request_nelmts*dst_type_size,0))==NULL)
             HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL,
                  "memory allocation failed for background conversion");
     }
@@ -2653,8 +2650,7 @@ static herr_t
 H5D_init_storage(H5D_t *dset, const H5S_t *space)
 {
     hssize_t    npoints, ptsperbuf;
-    size_t		bufsize=8*1024;
-    size_t		size;
+    hsize_t		size, bufsize=8*1024;
     haddr_t		addr;
     herr_t		ret_value = FAIL;
     void		*buf = NULL;
@@ -2999,7 +2995,7 @@ void *H5D_vlen_get_buf_size_alloc(size_t size, void *info)
     FUNC_ENTER(H5D_vlen_get_buf_size_alloc, NULL);
 
     /* Get a temporary pointer to space for the VL data */
-    if ((vlen_bufsize->vl_tbuf=H5FL_BLK_REALLOC(vlen_vl_buf,vlen_bufsize->vl_tbuf,size))!=NULL)
+    if ((vlen_bufsize->vl_tbuf=H5FL_BLK_REALLOC(vlen_vl_buf,vlen_bufsize->vl_tbuf,(hsize_t)size))!=NULL)
         vlen_bufsize->size+=size;
 
     FUNC_LEAVE(vlen_bufsize->vl_tbuf);
@@ -3050,7 +3046,7 @@ H5D_vlen_get_buf_size(void UNUSED *elem, hid_t type_id, hsize_t UNUSED ndim, hss
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data type");
 
     /* Make certain there is enough fixed-length buffer available */
-    if ((vlen_bufsize->fl_tbuf=H5FL_BLK_REALLOC(vlen_fl_buf,vlen_bufsize->fl_tbuf,H5T_get_size(dt)))==NULL)
+    if ((vlen_bufsize->fl_tbuf=H5FL_BLK_REALLOC(vlen_fl_buf,vlen_bufsize->fl_tbuf,(hsize_t)H5T_get_size(dt)))==NULL)
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "can't resize tbuf");
 
     /* Select point to read in */
@@ -3126,9 +3122,9 @@ H5Dvlen_get_buf_size(hid_t dataset_id, hid_t type_id, hid_t space_id,
         HGOTO_ERROR(H5E_DATASPACE, H5E_CANTCOPY, FAIL, "can't create dataspace");
 
     /* Grab the temporary buffers required */
-    if((vlen_bufsize.fl_tbuf=H5FL_BLK_ALLOC(vlen_fl_buf,1,0))==NULL)
+    if((vlen_bufsize.fl_tbuf=H5FL_BLK_ALLOC(vlen_fl_buf,(hsize_t)1,0))==NULL)
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "no temporary buffers available");
-    if((vlen_bufsize.vl_tbuf=H5FL_BLK_ALLOC(vlen_vl_buf,1,0))==NULL)
+    if((vlen_bufsize.vl_tbuf=H5FL_BLK_ALLOC(vlen_vl_buf,(hsize_t)1,0))==NULL)
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "no temporary buffers available");
 
     /* Change to the custom memory allocation routines for reading VL data */

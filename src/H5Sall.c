@@ -22,7 +22,8 @@
 #define INTERFACE_INIT  NULL
 static intn             interface_initialize_g = 0;
 
-static herr_t H5S_all_init (const H5S_t *space, H5S_sel_iter_t *iter);
+static herr_t H5S_all_init (const struct H5O_layout_t *layout,
+			    const H5S_t *space, H5S_sel_iter_t *iter);
 static hsize_t H5S_all_favail (const H5S_t *space, const H5S_sel_iter_t *iter,
 			      hsize_t max);
 static hsize_t H5S_all_fgath (H5F_t *f, const struct H5O_layout_t *layout,
@@ -80,11 +81,13 @@ const H5S_mconv_t	H5S_ALL_MCONV[1] = {{
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5S_all_init (const H5S_t *space, H5S_sel_iter_t *sel_iter)
+H5S_all_init (const struct H5O_layout_t UNUSED *layout,
+	       const H5S_t *space, H5S_sel_iter_t *sel_iter)
 {
     FUNC_ENTER (H5S_all_init, FAIL);
 
     /* Check args */
+    assert (layout);
     assert (space && H5S_SEL_ALL==space->select.type);
     assert (sel_iter);
 
@@ -164,7 +167,7 @@ H5S_all_fgath (H5F_t *f, const struct H5O_layout_t *layout,
 	       H5S_sel_iter_t *file_iter, hsize_t nelmts, hid_t dxpl_id,
 	       void *buf/*out*/)
 {
-    size_t     actual_bytes;       /* The actual number of bytes to read */
+    hsize_t     actual_bytes;       /* The actual number of bytes to read */
     hsize_t	buf_off;            /* Dataset offset for copying memory */
 
     FUNC_ENTER (H5S_all_fgath, 0);
@@ -225,7 +228,7 @@ H5S_all_fscat (H5F_t *f, const struct H5O_layout_t *layout,
 	       const H5S_t *file_space, H5S_sel_iter_t *file_iter,
 	       hsize_t nelmts, hid_t dxpl_id, const void *buf)
 {
-    size_t     actual_bytes;       /* The actual number of bytes to write */
+    hsize_t     actual_bytes;       /* The actual number of bytes to write */
     hsize_t	buf_off;            /* Dataset offset for copying memory */
 
     FUNC_ENTER (H5S_all_fscat, FAIL);
@@ -281,7 +284,7 @@ H5S_all_fscat (H5F_t *f, const struct H5O_layout_t *layout,
  */
 static hsize_t
 H5S_all_mgath (const void *_buf, size_t elmt_size,
-	       const H5S_t *mem_space, H5S_sel_iter_t *mem_iter,
+	       const H5S_t UNUSED *mem_space, H5S_sel_iter_t *mem_iter,
 	       hsize_t nelmts, void *tconv_buf/*out*/)
 {
     const uint8_t *buf=(const uint8_t*)_buf;   /* Get local copies for address arithmetic */
@@ -331,7 +334,7 @@ H5S_all_mgath (const void *_buf, size_t elmt_size,
  */
 static herr_t
 H5S_all_mscat (const void *tconv_buf, size_t elmt_size,
-	       const H5S_t *mem_space, H5S_sel_iter_t *mem_iter,
+	       const H5S_t UNUSED *mem_space, H5S_sel_iter_t *mem_iter,
 	       hsize_t nelmts, void *_buf/*out*/)
 {
     uint8_t *buf=(uint8_t *)_buf;

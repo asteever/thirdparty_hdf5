@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 1997-2001 NCSA
- *		           All rights reserved.
+ * Copyright (C) 1997 NCSA
+ *		      All rights reserved.
  *
  * Programmer: Robb Matzke <matzke@llnl.gov>
  *	       Tuesday, November 25, 1997
@@ -404,7 +404,7 @@ H5O_efl_total_size (H5O_efl_t *efl)
  */
 herr_t
 H5O_efl_read (H5F_t UNUSED *f, const H5O_efl_t *efl, haddr_t addr,
-	      size_t size, uint8_t *buf)
+	      hsize_t size, uint8_t *buf)
 {
     int		i, fd=-1;
     size_t	to_read, cur, skip=0;
@@ -489,7 +489,7 @@ H5O_efl_read (H5F_t UNUSED *f, const H5O_efl_t *efl, haddr_t addr,
  */
 herr_t
 H5O_efl_write (H5F_t UNUSED *f, const H5O_efl_t *efl, haddr_t addr,
-	       size_t size, const uint8_t *buf)
+	       hsize_t size, const uint8_t *buf)
 {
     int		i, fd=-1;
     size_t	to_write, cur, skip=0;

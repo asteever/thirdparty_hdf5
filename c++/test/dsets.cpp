@@ -12,6 +12,7 @@
 *
 *************************************************************/
 
+#include <stdlib.h>	// for getenv() to temporary fix problem on linux 
 #include <iostream>
 #include "H5Cpp.h"
 #include "h5test.h"
@@ -1019,13 +1020,6 @@ int test_report( int nerrors )
  *
  *-------------------------------------------------------------------------
  */
-static hid_t tempid = H5T_STD_B8LE;
-// the following statement caused seg. fault, need to check into - BMR
-//static PredType temp = PredType::STD_B8LE;
-// because PredType::STD_B8LE was not defined yet, so ref_counter is nil
-// and it'll fail when the ref_counter is being incremented
-// this can be a problem; must check ref_counter before increment or decrement
-
 int
 main(void)
 {

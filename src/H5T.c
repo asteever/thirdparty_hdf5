@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 1998-2001 NCSA
- *		           All rights reserved.
+ * Copyright (C) 1998 NCSA
+ *		      All rights reserved.
  *
  * Programmer:	Robb Matzke <matzke@llnl.gov>
  *		Tuesday, March 31, 1998
@@ -12,11 +12,11 @@
 #include "H5Dprivate.h"		/*datasets (for H5Tcopy)		  */
 #include "H5Iprivate.h"		/*ID functions		   		  */
 #include "H5Eprivate.h"		/*error handling			  */
-#include "H5FLprivate.h"	/*Free Lists	  */
+#include "H5FLprivate.h"	/*free lists                              */
 #include "H5Gprivate.h"		/*groups				  */
 #include "H5HGprivate.h"	/*global heap				  */
 #include "H5MMprivate.h"	/*memory management			  */
-#include "H5Pprivate.h"		/* Property Lists			  */
+#include "H5Pprivate.h"		/*property lists			  */
 #include "H5Sprivate.h"		/*data space				  */
 #include "H5Tpkg.h"		/*data-type functions			  */
 
@@ -3404,6 +3404,67 @@ H5Tget_member_offset(hid_t type_id, int membno)
     FUNC_LEAVE(offset);
 }
 
+#ifdef WANT_H5_V1_2_COMPAT
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Tget_member_dims
+ *
+ * Purpose:	Returns the dimensionality of the member.  The dimensions and
+ *		permuation vector are returned through arguments DIMS and
+ *		PERM, both arrays of at least four elements.  Either (or even
+ *		both) may be null pointers.
+ *
+ * Return:	Success:	A value between zero and four, inclusive.
+ *
+ *		Failure:	Negative
+ *
+ * Programmer:	Robb Matzke
+ *		Wednesday, January  7, 1998
+ *
+ * Modifications:
+ *  Moved into compatibility section for v1.2 functions and patched to
+ *      use new array datatypes - QAK, 11/13/00
+ *
+ *-------------------------------------------------------------------------
+ */
+int
+H5Tget_member_dims(hid_t type_id, int membno,
+		   size_t dims[]/*out*/, int perm[]/*out*/)
+{
+    H5T_t	*dt = NULL;
+    intn	ndims, i;
+
+    FUNC_ENTER(H5Tget_member_dims, FAIL);
+    H5TRACE4("Is","iIsxx",type_id,membno,dims,perm);
+
+    /* Check args */
+    if (H5I_DATATYPE != H5I_get_type(type_id) ||
+            NULL == (dt = H5I_object(type_id)) ||
+            H5T_COMPOUND != dt->type) {
+        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a compound data type");
+    }
+    if (membno < 0 || membno >= dt->u.compnd.nmembs) {
+        HRETURN_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid member number");
+    }
+
+    /* Check if this field is an array datatype */
+    if(dt->u.compnd.memb[membno].type->type==H5T_ARRAY) {
+        /* Value */
+        ndims = dt->u.compnd.memb[membno].type->u.array.ndims;
+        for (i = 0; i < ndims; i++) {
+            if (dims)
+                dims[i] = dt->u.compnd.memb[membno].type->u.array.dim[i];
+            if (perm)
+                perm[i] = dt->u.compnd.memb[membno].type->u.array.perm[i];
+        }
+    } /* end if */
+    else 
+        ndims=0;
+
+    FUNC_LEAVE(ndims);
+}
+#endif /* WANT_H5_V1_2_COMPAT */
+
 
 /*-------------------------------------------------------------------------
  * Function:	H5Tget_member_class
@@ -3487,12 +3548,35 @@ H5Tget_member_type(hid_t type_id, int membno)
 	HRETURN_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid member number");
     }
     
+#ifdef WANT_H5_V1_2_COMPAT
+    /* HDF5-v1.2.x returns the base type of an array field, not the array
+     * field itself.  Emulate this difference. - QAK
+     */
+    if(dt->u.compnd.memb[membno].type->type==H5T_ARRAY) {
+        /* Copy parent's data type into an atom */
+        if (NULL == (memb_dt = H5T_copy(dt->u.compnd.memb[membno].type->parent,
+                                        H5T_COPY_REOPEN))) {
+            HRETURN_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL,
+                          "unable to copy member data type");
+        }
+    } /* end if */
+    else {
+        /* Copy data type into an atom */
+        if (NULL == (memb_dt = H5T_copy(dt->u.compnd.memb[membno].type,
+                                        H5T_COPY_REOPEN))) {
+            HRETURN_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL,
+                          "unable to copy member data type");
+        }
+    } /* end if */
+
+#else /* WANT_H5_V1_2_COMPAT */
     /* Copy data type into an atom */
     if (NULL == (memb_dt = H5T_copy(dt->u.compnd.memb[membno].type,
 				    H5T_COPY_REOPEN))) {
 	HRETURN_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL,
 		      "unable to copy member data type");
     }
+#endif /* WANT_H5_V1_2_COMPAT */
     if ((memb_type_id = H5I_register(H5I_DATATYPE, memb_dt)) < 0) {
 	H5T_close(memb_dt);
 	HRETURN_ERROR(H5E_DATATYPE, H5E_CANTREGISTER, FAIL,
@@ -3561,6 +3645,90 @@ H5Tinsert(hid_t parent_id, const char *name, size_t offset, hid_t member_id)
     
     FUNC_LEAVE(SUCCEED);
 }
+
+#ifdef WANT_H5_V1_2_COMPAT
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Tinsert_array
+ *
+ * Purpose:	Adds another member to the compound data type PARENT_ID. The
+ *		new member has a NAME which must be unique within the
+ *		compound data type.  The OFFSET argument defines the start of
+ *		the member in an instance of the compound data type and
+ *		MEMBER_ID is the type of the new member.  The member is an
+ *		array with NDIMS dimensionality and the size of the array is
+ *		DIMS. The total member size should be relatively small.
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Robb Matzke
+ *              Tuesday, July  7, 1998
+ *
+ * Modifications:
+ *  Moved into compatibility section for v1.2 functions and patched to
+ *      use new array datatypes - QAK, 11/13/00
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Tinsert_array(hid_t parent_id, const char *name, size_t offset,
+		 int ndims, const size_t dim[/*ndims*/], const int *perm,
+		 hid_t member_id)
+{
+    H5T_t	*parent = NULL;		/*the compound parent data type */
+    H5T_t	*member = NULL;		/*the atomic member type	*/
+    H5T_t	*array = NULL;		/*the array type	*/
+    hsize_t newdim[H5S_MAX_RANK];   /* Array to hold the dimensions */
+    intn	i;
+
+    FUNC_ENTER(H5Tinsert_array, FAIL);
+    H5TRACE7("e","iszIs*[a3]z*Isi",parent_id,name,offset,ndims,dim,perm,
+             member_id);
+
+    /* Check args */
+    if (H5I_DATATYPE != H5I_get_type(parent_id) ||
+            NULL == (parent = H5I_object(parent_id)) ||
+            H5T_COMPOUND != parent->type) {
+        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a compound data type");
+    }
+    if (H5T_STATE_TRANSIENT!=parent->state) {
+        HRETURN_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "parent type read-only");
+    }
+    if (!name || !*name) {
+        HRETURN_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no member name");
+    }
+    if (ndims<0 || ndims>4) {
+        HRETURN_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid dimensionality");
+    }
+    if (ndims>0 && !dim) {
+        HRETURN_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no dimensions specified");
+    }
+    for (i=0; i<ndims; i++) {
+        if (dim[i]<1) {
+            HRETURN_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid dimension");
+        }
+        newdim[i]=dim[i];
+    }
+    if (H5I_DATATYPE != H5I_get_type(member_id) ||
+            NULL == (member = H5I_object(member_id))) {
+        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data type");
+    }
+
+    /* Create temporary array datatype for inserting field */
+    if ((array=H5T_array_create(member,ndims,newdim,perm))==NULL)
+        HRETURN_ERROR(H5E_DATATYPE, H5E_CANTREGISTER, FAIL, "unable to create array datatype");
+
+    /* Insert */
+    if (H5T_insert(parent, name, offset, array) < 0)
+        HRETURN_ERROR(H5E_DATATYPE, H5E_CANTINSERT, FAIL, "unable to insert member");
+
+    /* Close array datatype */
+    if (H5T_close(array) < 0)
+        HRETURN_ERROR(H5E_DATATYPE, H5E_CANTINSERT, FAIL, "unable to close array type");
+    
+    FUNC_LEAVE(SUCCEED);
+}
+#endif /* WANT_H5_V1_2_COMPAT */
 
 
 /*-------------------------------------------------------------------------
@@ -6076,7 +6244,7 @@ H5T_enum_nameof(H5T_t *dt, void *value, char *name/*out*/, size_t size)
     }
 
     /* Save result name */
-    if (!name && NULL==(name=H5MM_malloc(HDstrlen(dt->u.enumer.name[md])+1))) {
+    if (!name && NULL==(name=H5MM_malloc(strlen(dt->u.enumer.name[md])+1))) {
 	HRETURN_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL,
 		      "memory allocation failed");
     }
@@ -6660,10 +6828,10 @@ H5T_path_find(const H5T_t *src, const H5T_t *dst, const char *name,
 			"memory allocation failed for type conversion path");
 	}
 	if (name && *name) {
-	    HDstrncpy(path->name, name, H5T_NAMELEN);
+	    strncpy(path->name, name, H5T_NAMELEN);
 	    path->name[H5T_NAMELEN-1] = '\0';
 	} else {
-	    HDstrcpy(path->name, "NONAME");
+	    strcpy(path->name, "NONAME");
 	}
 	if ((src && NULL==(path->src=H5T_copy(src, H5T_COPY_ALL))) ||
 	    (dst && NULL==(path->dst=H5T_copy(dst, H5T_COPY_ALL)))) {
@@ -7245,7 +7413,7 @@ H5T_print_stats(H5T_path_t UNUSED *path, intn UNUSED *nprint/*in,out*/)
  *-------------------------------------------------------------------------
  */
 herr_t
-H5T_debug(const H5T_t *dt, FILE *stream)
+H5T_debug(H5T_t *dt, FILE *stream)
 {
     const char	*s1="", *s2="";
     int		i;

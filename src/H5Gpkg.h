@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 1997-2001 National Center for Supercomputing Applications
- *                         All rights reserved.
+ * Copyright (C) 1997 National Center for Supercomputing Applications.
+ *                    All rights reserved.
  *
  * Programmer: Robb Matzke <matzke@llnl.gov>
  *             Thursday, September 18, 1997

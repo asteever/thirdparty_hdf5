@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
- * Copyright (C) 2000-2001 National Center for Supercomputing Applications
- *			   All rights reserved.
+ * Copyright (C) 2000	National Center for Supercomputing Applications.
+ *			All rights reserved.
  *
  *-------------------------------------------------------------------------
  *

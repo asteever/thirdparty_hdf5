@@ -1,6 +1,6 @@
 /*
- * Copyright © 1999-2001 NCSA
- *                       All rights reserved.
+ * Copyright © 1999 NCSA
+ *                  All rights reserved.
  *
  * Programmer:  Robb Matzke <matzke@llnl.gov>
  *              Thursday, July 29, 1999
@@ -15,10 +15,10 @@
 #include "H5private.h"		/*library functions			*/
 #include "H5Eprivate.h"		/*error handling			*/
 #include "H5Fprivate.h"		/*files					*/
-#include "H5FDprivate.h"	/*file driver				  */
-#include "H5FDsec2.h"       /* Sec2 file driver */
-#include "H5FLprivate.h"	/*Free Lists	  */
-#include "H5MMprivate.h"    /* Memory allocation */
+#include "H5FDprivate.h"	/*file driver			        */
+#include "H5FDsec2.h"           /*sec2 file driver                      */
+#include "H5FLprivate.h"	/*free lists	                        */
+#include "H5MMprivate.h"        /*memory allocation                     */
 #include "H5Pprivate.h"		/*property lists			*/
 
 #ifdef MAX
@@ -75,7 +75,6 @@ typedef struct H5FD_sec2_t {
 #endif
 } H5FD_sec2_t;
 
-
 /*
  * This driver supports systems that have the lseek64() function by defining
  * some macros here so we don't have to have conditional compilations later
@@ -94,13 +93,13 @@ typedef struct H5FD_sec2_t {
 #   define file_offset_t	off64_t
 #   define file_seek		lseek64
 #elif defined (WIN32)
-#   ifdef __MWERKS__
-#       define file_offset_t off_t
-#       define file_seek lseek
-#   else /*MSVC*/
-#       define file_offset_t __int64
-#       define file_seek _lseeki64
-#   endif
+# ifdef __MWERKS__
+#   define file_offset_t off_t
+#   define file_seek lseek
+# else /*MSVC*/
+#   define file_offset_t __int64
+#   define file_seek _lseeki64
+# endif
 #else
 #   define file_offset_t	off_t
 #   define file_seek		lseek
@@ -140,9 +139,9 @@ static haddr_t H5FD_sec2_get_eoa(H5FD_t *_file);
 static herr_t H5FD_sec2_set_eoa(H5FD_t *_file, haddr_t addr);
 static haddr_t H5FD_sec2_get_eof(H5FD_t *_file);
 static herr_t H5FD_sec2_read(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, haddr_t addr,
-			     size_t size, void *buf);
+			     hsize_t size, void *buf);
 static herr_t H5FD_sec2_write(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, haddr_t addr,
-			      size_t size, const void *buf);
+			      hsize_t size, const void *buf);
 static herr_t H5FD_sec2_flush(H5FD_t *_file);
 
 static const H5FD_class_t H5FD_sec2_g = {
@@ -390,17 +389,8 @@ H5FD_sec2_cmp(const H5FD_t *_f1, const H5FD_t *_f2)
     if (f1->fileindexlo > f2->fileindexlo) ret_value= 1;
 
 #else
-#ifdef H5_DEV_T_IS_SCALAR
     if (f1->device < f2->device) ret_value= -1;
     if (f1->device > f2->device) ret_value= 1;
-#else /* H5_DEV_T_IS_SCALAR */
-    /* If dev_t isn't a scalar value on this system, just use memcmp to
-     * determine if the values are the same or not.  The actual return value
-     * shouldn't really matter...
-     */
-    if(HDmemcmp(&(f1->device),&(f2->device),sizeof(dev_t))<0) ret_value= -1;
-    if(HDmemcmp(&(f1->device),&(f2->device),sizeof(dev_t))>0) ret_value= 1;
-#endif /* H5_DEV_T_IS_SCALAR */
 
     if (f1->inode < f2->inode) ret_value= -1;
     if (f1->inode > f2->inode) ret_value= 1;
@@ -558,7 +548,7 @@ H5FD_sec2_get_eof(H5FD_t *_file)
  */
 static herr_t
 H5FD_sec2_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, haddr_t addr,
-	       size_t size, void *buf/*out*/)
+	       hsize_t size, void *buf/*out*/)
 {
     H5FD_sec2_t		*file = (H5FD_sec2_t*)_file;
     ssize_t		nbytes;
@@ -591,7 +581,8 @@ H5FD_sec2_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, hadd
      */
     while (size>0) {
         do {
-            nbytes = HDread(file->fd, buf, size);
+            assert(size==(hsize_t)((size_t)size)); /*check for overflow*/
+            nbytes = HDread(file->fd, buf, (size_t)size);
         } while (-1==nbytes && EINTR==errno);
         if (-1==nbytes) {
             /* error */
@@ -601,12 +592,13 @@ H5FD_sec2_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, hadd
         }
         if (0==nbytes) {
             /* end of file but not end of format address space */
-            HDmemset(buf, 0, size);
+            assert(size==(hsize_t)((size_t)size)); /*check for overflow*/
+            HDmemset(buf, 0, (size_t)size);
             size = 0;
         }
         assert(nbytes>=0);
-        assert((size_t)nbytes<=size);
-        size -= nbytes;
+        assert((hsize_t)nbytes<=size);
+        size -= (hsize_t)nbytes;
         addr += (haddr_t)nbytes;
         buf = (char*)buf + nbytes;
     }
@@ -638,7 +630,7 @@ H5FD_sec2_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, hadd
  */
 static herr_t
 H5FD_sec2_write(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, haddr_t addr,
-		size_t size, const void *buf)
+		hsize_t size, const void *buf)
 {
     H5FD_sec2_t		*file = (H5FD_sec2_t*)_file;
     ssize_t		nbytes;
@@ -671,7 +663,8 @@ H5FD_sec2_write(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, had
      */
     while (size>0) {
         do {
-            nbytes = HDwrite(file->fd, buf, size);
+            assert(size==(hsize_t)((size_t)size)); /*check for overflow*/
+            nbytes = HDwrite(file->fd, buf, (size_t)size);
         } while (-1==nbytes && EINTR==errno);
         if (-1==nbytes) {
             /* error */
@@ -680,8 +673,8 @@ H5FD_sec2_write(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, had
             HRETURN_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "file write failed");
         }
         assert(nbytes>0);
-        assert((size_t)nbytes<=size);
-        size -= nbytes;
+        assert((hsize_t)nbytes<=size);
+        size -= (hsize_t)nbytes;
         addr += (haddr_t)nbytes;
         buf = (const char*)buf + nbytes;
     }

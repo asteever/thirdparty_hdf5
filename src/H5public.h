@@ -29,13 +29,7 @@
  * prevent repeated include.
  */
 #include "H5pubconf.h"		/*from configure                             */
-
-#ifdef H5_HAVE_FEATURES_H
-#include <features.h>           /*for setting POSIX, BSD, etc. compatibility */
-#endif
-#ifdef H5_HAVE_SYS_TYPES_H
 #include <sys/types.h>
-#endif
 #ifdef H5_STDC_HEADERS
 #   include <limits.h>		/*for H5T_NATIVE_CHAR defn in H5Tpublic.h    */
 #endif
@@ -65,11 +59,11 @@
 
 /* Version numbers */
 #define H5_VERS_MAJOR	1	/* For major interface/format changes  	     */
-#define H5_VERS_MINOR	5	/* For minor interface/format changes  	     */
-#define H5_VERS_RELEASE	11	/* For tweaks, bug-fixes, or development     */
+#define H5_VERS_MINOR	4	/* For minor interface/format changes  	     */
+#define H5_VERS_RELEASE	2	/* For tweaks, bug-fixes, or development     */
 #define H5_VERS_SUBRELEASE ""	/* For pre-releases like snap0       */
 				/* Empty string for real releases.           */
-#define H5_VERS_INFO    "HDF5 library version: 1.5.11"      /* Full version string */
+#define H5_VERS_INFO    "HDF5 library version: 1.4.2"      /* Full version string */
 
 #define H5check()	H5check_version(H5_VERS_MAJOR,H5_VERS_MINOR,	      \
 				        H5_VERS_RELEASE)
@@ -105,21 +99,6 @@ typedef int herr_t;
  */
 typedef unsigned int hbool_t;
 typedef int htri_t;
-
-/* Define the ssize_t type if it not is defined */
-#if H5_SIZEOF_SSIZE_T==0
-#if H5_SIZEOF_SIZE_T==H5_SIZEOF_INT
-typedef int ssize_t;
-#elif H5_SIZEOF_SIZE_T==H5_SIZEOF_LONG
-typedef long ssize_t;
-#elif H5_SIZEOF_SIZE_T==H5_SIZEOF_LONG_LONG
-typedef long long ssize_t;
-#elif H5_SIZEOF_SIZE_T==H5_SIZEOF___INT64
-typedef __int64 ssize_t;
-#else /* Can't find matching type for ssize_t */
-#   error "nothing appropriate for ssize_t"
-#endif
-#endif
 
 /*
  * The sizes of file objects have their own types defined here.  If large

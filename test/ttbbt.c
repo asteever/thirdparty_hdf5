@@ -33,7 +33,6 @@
  */
 
 #include <time.h>
-
 #include "testhdf5.h"
 #include "H5TBprivate.h"
 

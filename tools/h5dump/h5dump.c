@@ -1,11 +1,11 @@
 /*
- * Copyright (C) 1998, 1999, 2000, 2001
- *     National Center for Supercomputing Applications
- *     All rights reserved.
+ * Copyright (C) 1998-2001 National Center for Supercomputing Applications
+ *                         All rights reserved.
  *
  */
 #include <stdio.h>
 #include <stdlib.h>
+
 
 #include "h5dump.h"
 #include "H5private.h"
@@ -16,11 +16,10 @@
 static const char  *progname = "h5dump";
 
 static int          d_status = EXIT_SUCCESS;
-static int          unamedtype = 0;     /* shared data type with no name */
+static int          unamedtype = 0;    /* shared data type with no name */
 static int          prefix_len = 1024;
 static table_t     *group_table = NULL, *dset_table = NULL, *type_table = NULL;
 static char        *prefix;
-static const char  *driver = NULL;      /* The driver to open the file with. */
 
 static const dump_header *dump_header_format;
 
@@ -392,9 +391,9 @@ struct handler_t {
  */
 #if 0
     /* binary: not implemented yet */
-static const char *s_opts = "hbBHvVa:d:f:g:l:t:w:xD:o:s:S:c:k:";
+static const char *s_opts = "hbBHvVa:d:g:l:t:w:xD:o:s:S:c:k:";
 #else
-static const char *s_opts = "hBHvVa:d:f:g:l:t:w:xD:o:s:S:c:k:";
+static const char *s_opts = "hBHvVa:d:g:l:t:w:xD:o:s:S:c:k:";
 #endif  /* 0 */
 static struct long_options l_opts[] = {
     { "help", no_arg, 'h' },
@@ -456,15 +455,6 @@ static struct long_options l_opts[] = {
     { "datatyp", require_arg, 't' },
     { "dataty", require_arg, 't' },
     { "datat", require_arg, 't' },
-    { "filedriver", require_arg, 'f' },
-    { "filedrive", require_arg, 'f' },
-    { "filedriv", require_arg, 'f' },
-    { "filedri", require_arg, 'f' },
-    { "filedr", require_arg, 'f' },
-    { "filed", require_arg, 'f' },
-    { "file", require_arg, 'f' },
-    { "fil", require_arg, 'f' },
-    { "fi", require_arg, 'f' },
     { "group", require_arg, 'g' },
     { "grou", require_arg, 'g' },
     { "gro", require_arg, 'g' },
@@ -596,22 +586,21 @@ usage(const char *prog)
     fflush(stdout);
     fprintf(stdout, "\
 usage: %s [OPTIONS] file\n\
-  OPTIONS\n\
-     -h, --help           Print a usage message and exit\n\
-     -B, --bootblock      Print the content of the boot block\n\
-     -H, --header         Print the header only; no data is displayed\n\
-     -i, --object-ids     Print the object ids\n\
-     -V, --version        Print version number and exit\n\
-     -a P, --attribute=P  Print the specified attribute\n\
-     -d P, --dataset=P    Print the specified dataset\n\
-     -f D, --filedriver=D Specify which driver to open the file with\n\
-     -g P, --group=P      Print the specified group and all members\n\
-     -l P, --soft-link=P  Print the value(s) of the specified soft link\n\
-     -o F, --output=F     Output raw data into file F\n\
-     -t P, --datatype=P   Print the specified named data type\n\
-     -w N, --width=N      Set the number of columns of output\n\
-     -x, --xml            Output in XML\n\
-     -D U, --xml-dtd=U    Use the DTD at U\n\
+   OPTIONS\n\
+      -h, --help          Print a usage message and exit\n\
+      -B, --bootblock     Print the content of the boot block\n\
+      -H, --header        Print the header only; no data is displayed\n\
+      -i, --object-ids    Print the object ids\n\
+      -V, --version       Print version number and exit\n\
+      -a P, --attribute=P Print the specified attribute\n\
+      -d P, --dataset=P   Print the specified dataset\n\
+      -g P, --group=P     Print the specified group and all members\n\
+      -l P, --soft-link=P Print the value(s) of the specified soft link\n\
+      -o F, --output=F    Output raw data into file F\n\
+      -t P, --datatype=P  Print the specified named data type\n\
+      -w N, --width=N     Set the number of columns of output\n\
+      -x, --xml           Output in XML\n\
+      -D U, --xml-dtd=U   Use the DTD at U\n\
 \n\
  Subsetting is available by using the following options with a dataset\n\
  attribute. Subsetting is done by selecting a hyperslab from the data.\n\
@@ -625,13 +614,8 @@ usage: %s [OPTIONS] file\n\
       -c L, --count=L     Number of blocks to include in selection\n\
       -k L, --block=L     Size of block in hyperslab\n\
 \n\
-  D - is the file driver to use in opening the file. Acceptable values\n\
-        are \"sec2\", \"family\", \"split\", \"multi\", and \"stream\". Without\n\
-        the file driver flag, the file will be opened with each driver in\n\
-        turn and in the order specified above until one driver succeeds\n\
-        in opening the file.\n\
-  F - is a filename.\n\
   P - is the full path from the root group to the object.\n\
+  F - is a filename.\n\
   N - is an integer greater than 1.\n\
   L - is a list of integers the number of which are equal to the\n\
         number of dimensions in the dataspace being queried\n\
@@ -878,6 +862,29 @@ print_datatype(hid_t type)
 	    for (i = 0; i < nmembers; i++) {
 		fname = H5Tget_member_name(type, i);
 		mtype = H5Tget_member_type(type, i);
+#ifdef WANT_H5_V1_2_COMPAT
+            /* v1.2 returns the base type of an array field, work around this */
+            {
+                hid_t new_mtype;         /* datatype for array, if necessary */
+                int     arrndims;       /* Array rank for reading */
+                size_t	dims[H5S_MAX_RANK];    /* Array dimensions for reading */
+                hsize_t	arrdims[H5S_MAX_RANK];    /* Array dimensions for reading */
+                int k;              /* Local index variable */
+
+                /* Get the array dimensions */
+                arrndims=H5Tget_member_dims(type,i,dims,NULL);
+
+                /* Patch up array information */
+                if(arrndims>0) {
+                    for(k=0; k<arrndims; k++)
+                        arrdims[k]=dims[k];
+                    new_mtype=H5Tarray_create(mtype,arrndims,arrdims,NULL);
+                    H5Tclose(mtype);
+                    mtype=new_mtype;
+                } /* end if */
+            }
+#endif /* WANT_H5_V1_2_COMPAT */
+
 		indentation(indent + COL);
 
 		if (H5Tget_class(mtype) == H5T_COMPOUND)
@@ -1761,7 +1768,7 @@ dump_subsetting_header(struct subset_t *sset, int dims)
     indentation(indent);
     printf("%s %s ", dump_header_format->startbegin,
            dump_header_format->startblockbegin);
-    dump_dims((hsize_t *)sset->start, dims);
+    dump_dims(sset->start, dims);
     printf("%s %s\n", dump_header_format->startend,
            dump_header_format->startblockend);
 
@@ -2056,7 +2063,7 @@ parse_subset_params(char *dset)
             *brace++ = '\0';
 
             s = calloc(1, sizeof(struct subset_t));
-            s->start = (hssize_t *)parse_hsize_list(brace);
+            s->start = parse_hsize_list(brace);
 
             while (*brace && *brace != ';')
                 brace++;
@@ -2173,21 +2180,21 @@ handle_datasets(hid_t fid, char *dset, void *data)
     H5Gget_objinfo(dsetid, ".", TRUE, &statbuf);
 
     if (statbuf.nlink > 1) {
-        int idx = search_obj(dset_table, statbuf.objno);
+        int index = search_obj(dset_table, statbuf.objno);
 
-        if (idx >= 0) {
-            if (dset_table->objs[idx].displayed) {
+        if (index >= 0) {
+            if (dset_table->objs[index].displayed) {
                 begin_obj(dump_header_format->datasetbegin, dset,
                           dump_header_format->datasetblockbegin);
                 indentation(indent + COL);
                 printf("%s \"%s\"\n", HARDLINK,
-                       dset_table->objs[idx].objname);
+                       dset_table->objs[index].objname);
                 indentation(indent);
                 end_obj(dump_header_format->datasetend,
                         dump_header_format->datasetblockend);
             } else {
-                strcpy(dset_table->objs[idx].objname, dset);
-                dset_table->objs[idx].displayed = 1;
+                strcpy(dset_table->objs[index].objname, dset);
+                dset_table->objs[index].displayed = 1;
                 dump_dataset(dsetid, dset, sset);
             }
         } else {
@@ -2316,29 +2323,29 @@ handle_datatypes(hid_t fid, char *type, void UNUSED *data)
 
     if ((typeid = H5Topen(fid, type)) < 0) {
         /* check if type is unamed data type */
-        int idx = 0;
+        int index = 0;
 
-        while (idx < type_table->nobjs ) {
+        while (index < type_table->nobjs ) {
             char name[128], name1[128];
 
-            if (!type_table->objs[idx].recorded) {
+            if (!type_table->objs[index].recorded) {
                 /* unamed data type */
                 sprintf(name, "#%lu:%lu\n",
-                        type_table->objs[idx].objno[0], 
-                        type_table->objs[idx].objno[1]);
+                        type_table->objs[index].objno[0], 
+                        type_table->objs[index].objno[1]);
                 sprintf(name1, "/#%lu:%lu\n",
-                        type_table->objs[idx].objno[0], 
-                        type_table->objs[idx].objno[1]);
+                        type_table->objs[index].objno[0], 
+                        type_table->objs[index].objno[1]);
 
             if (!strncmp(name, type, strlen(type)) || 
                 !strncmp(name1, type, strlen(type)))
                 break;
             } 
 
-            idx++;
+            index++;
         }
 
-        if (idx ==  type_table->nobjs) {
+        if (index ==  type_table->nobjs) {
             /* unknown type */
             begin_obj(dump_header_format->datatypebegin, type,
                       dump_header_format->datatypeblockbegin); 
@@ -2348,7 +2355,7 @@ handle_datatypes(hid_t fid, char *type, void UNUSED *data)
                     dump_header_format->datatypeblockend);
             d_status = EXIT_FAILURE;
         } else {
-            hid_t dsetid = H5Dopen(fid, type_table->objs[idx].objname);
+            hid_t dsetid = H5Dopen(fid, type_table->objs[index].objname);
             typeid = H5Dget_type(dsetid);
             dump_named_datatype(typeid, type);
             H5Tclose(typeid);
@@ -2450,9 +2457,6 @@ parse_start:
 
             last_was_dset = TRUE;
             break;
-        case 'f':
-            driver = opt_arg;
-            break;
         case 'g':
             display_all = 0;
 
@@ -2550,8 +2554,8 @@ parse_start:
              */
             do {
                 switch ((char)opt) {
-                case 's': free(s->start); s->start = (hssize_t *)parse_hsize_list(opt_arg); break;
-                case 'S': free(s->stride); s->stride = parse_hsize_list(opt_arg); break;
+                case 's': free(s->start); s->start = parse_hsize_list(opt_arg); break;
+                case 'T': free(s->stride); s->stride = parse_hsize_list(opt_arg); break;
                 case 'c': free(s->count); s->count = parse_hsize_list(opt_arg); break;
                 case 'k': free(s->block); s->block = parse_hsize_list(opt_arg); break;
                 default: goto end_collect;
@@ -2712,7 +2716,7 @@ main(int argc, const char *argv[])
     else
 	fname = argv[opt_ind];
 
-    fid = h5tools_fopen(fname, driver, NULL, 0);
+    fid = h5tools_fopen(fname, NULL, 0);
 
     if (fid < 0) {
         error_msg(progname, "unable to open file \"%s\"\n", fname);
@@ -2921,10 +2925,10 @@ print_enum(hid_t type)
 	    for (j = 0; j < dst_size; j++)
 		printf("%02x", value[i * dst_size + j]);
 	} else if (H5T_SGN_NONE == H5Tget_sign(native)) {
-	    HDfprintf(stdout,"%" PRINTF_LL_WIDTH "u", *((unsigned long_long *)
+	    printf("%" PRINTF_LL_WIDTH "u", *((unsigned long_long *)
 					      ((void *) (value + i * dst_size))));
 	} else {
-	    HDfprintf(stdout,"%" PRINTF_LL_WIDTH "d",
+	    printf("%" PRINTF_LL_WIDTH "d",
 		   *((long_long *) ((void *) (value + i * dst_size))));
 	}
 
@@ -3641,6 +3645,28 @@ xml_print_datatype(hid_t type)
 
 		fname = H5Tget_member_name(type, i);
 		mtype = H5Tget_member_type(type, i);
+#ifdef WANT_H5_V1_2_COMPAT
+            /* v1.2 returns the base type of an array field, work around this */
+            {
+                hid_t new_mtype;         /* datatype for array, if necessary */
+                int     arrndims;       /* Array rank for reading */
+                size_t	dims[H5S_MAX_RANK];    /* Array dimensions for reading */
+                hsize_t	arrdims[H5S_MAX_RANK];    /* Array dimensions for reading */
+                int k;              /* Local index variable */
+
+                /* Get the array dimensions */
+                arrndims=H5Tget_member_dims(type,i,dims,NULL);
+
+                /* Patch up array information */
+                if(arrndims>0) {
+                    for(k=0; k<arrndims; k++)
+                        arrdims[k]=dims[k];
+                    new_mtype=H5Tarray_create(mtype,arrndims,arrdims,NULL);
+                    H5Tclose(mtype);
+                    mtype=new_mtype;
+                } /* end if */
+            }
+#endif /* WANT_H5_V1_2_COMPAT */
 		indentation(indent);
                 t_fname = xml_escape_the_name(fname);
 		printf("<Field FieldName=\"%s\">\n", t_fname);
@@ -4198,6 +4224,28 @@ xml_dump_named_datatype(hid_t type, const char *name)
 
 	    fname = H5Tget_member_name(type, x);
 	    mtype = H5Tget_member_type(type, x);
+#ifdef WANT_H5_V1_2_COMPAT
+            /* v1.2 returns the base type of an array field, work around this */
+            {
+                hid_t new_mtype;         /* datatype for array, if necessary */
+                int     arrndims;       /* Array rank for reading */
+                size_t	dims[H5S_MAX_RANK];    /* Array dimensions for reading */
+                hsize_t	arrdims[H5S_MAX_RANK];    /* Array dimensions for reading */
+                int k;              /* Local index variable */
+
+                /* Get the array dimensions */
+                arrndims=H5Tget_member_dims(type,x,dims,NULL);
+
+                /* Patch up array information */
+                if(arrndims>0) {
+                    for(k=0; k<arrndims; k++)
+                        arrdims[k]=dims[k];
+                    new_mtype=H5Tarray_create(mtype,arrndims,arrdims,NULL);
+                    H5Tclose(mtype);
+                    mtype=new_mtype;
+                } /* end if */
+            }
+#endif /* WANT_H5_V1_2_COMPAT */
 	    indentation(indent);
             t_fname = xml_escape_the_name(fname);
 	    printf("<Field FieldName=\"%s\">\n", t_fname);
@@ -4906,10 +4954,10 @@ xml_print_enum(hid_t type)
 	    for (j = 0; j < dst_size; j++)
 		printf("%02x", value[i * dst_size + j]);
 	} else if (H5T_SGN_NONE == H5Tget_sign(native)) {
-	    HDfprintf(stdout,"%" PRINTF_LL_WIDTH "u", *((unsigned long_long *)
+	    printf("%" PRINTF_LL_WIDTH "u", *((unsigned long_long *)
 					      ((void *) (value + i * dst_size))));
 	} else {
-	    HDfprintf(stdout,"%" PRINTF_LL_WIDTH "d",
+	    printf("%" PRINTF_LL_WIDTH "d",
 		   *((long_long *) ((void *) (value + i * dst_size))));
 	}
 	printf("\n");

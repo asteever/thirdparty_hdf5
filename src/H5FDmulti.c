@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 1997-2001 NCSA
- *		           All rights reserved.
+ * Copyright (C) 1997 NCSA
+ *		      All rights reserved.
  *
  * Programmer:	Robb Matzke <matzke@llnl.gov>
  *		Monday, November 10, 1997
@@ -124,9 +124,9 @@ static haddr_t H5FD_multi_alloc(H5FD_t *_file, H5FD_mem_t type, hsize_t size);
 static herr_t H5FD_multi_free(H5FD_t *_file, H5FD_mem_t type, haddr_t addr,
 			      hsize_t size);
 static herr_t H5FD_multi_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr,
-			      size_t size, void *_buf/*out*/);
+			      hsize_t size, void *_buf/*out*/);
 static herr_t H5FD_multi_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr,
-			       size_t size, const void *_buf);
+			       hsize_t size, const void *_buf);
 static herr_t H5FD_multi_flush(H5FD_t *_file);
 
 /* The class struct */
@@ -470,8 +470,10 @@ H5Pget_fapl_multi(hid_t fapl_id, H5FD_mem_t *memb_map/*out*/,
 
     if (H5P_FILE_ACCESS!=H5Pget_class(fapl_id))
         H5Epush_ret(func, H5E_PLIST, H5E_BADTYPE, "not a file access property list", -1);
+#ifndef WANT_H5_V1_2_COMPAT
     if (H5FD_MULTI!=H5Pget_driver(fapl_id))
         H5Epush_ret(func, H5E_PLIST, H5E_BADVALUE, "incorrect VFL driver", -1);
+#endif /* WANT_H5_V1_2_COMPAT */
     if (NULL==(fa=H5Pget_driver_info(fapl_id)))
         H5Epush_ret(func, H5E_PLIST, H5E_BADVALUE, "bad VFL driver info", -1);
 
@@ -587,8 +589,10 @@ H5Pget_dxpl_multi(hid_t dxpl_id, hid_t *memb_dxpl/*out*/)
 
     if (H5P_FILE_ACCESS!=H5Pget_class(dxpl_id))
         H5Epush_ret(func, H5E_PLIST, H5E_BADTYPE, "not a file access property list", -1);
+#ifndef WANT_H5_V1_2_COMPAT
     if (H5FD_MULTI!=H5Pget_driver(dxpl_id))
         H5Epush_ret(func, H5E_PLIST, H5E_BADVALUE, "incorrect VFL driver", -1);
+#endif /* WANT_H5_V1_2_COMPAT */
     if (NULL==(dx=H5Pget_driver_info(dxpl_id)))
         H5Epush_ret(func, H5E_PLIST, H5E_BADVALUE, "bad VFL driver info", -1);
 
@@ -1570,7 +1574,7 @@ H5FD_multi_free(H5FD_t *_file, H5FD_mem_t type, haddr_t addr, hsize_t size)
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FD_multi_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t size,
+H5FD_multi_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, hsize_t size,
 		 void *_buf/*out*/)
 {
     H5FD_multi_t	*file = (H5FD_multi_t*)_file;
@@ -1625,7 +1629,7 @@ H5FD_multi_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, siz
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FD_multi_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t size,
+H5FD_multi_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, hsize_t size,
 		  const void *_buf)
 {
     H5FD_multi_t	*file = (H5FD_multi_t*)_file;

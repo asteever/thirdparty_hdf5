@@ -123,20 +123,19 @@ esac
 case "$cc_vendor-$cc_version" in
     gcc*|egcs*|pgcc*)
 	# General
-	CFLAGS="$CFLAGS $ARCH -ansi -pedantic -Wchar-subscripts -Wall -W -Wshadow -Wbad-function-cast -Wcast-qual -Wcast-align -Wwrite-strings -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wnested-externs -Winline -Wpointer-arith -Wconversion -Wredundant-decls"
+        CFLAGS="$CFLAGS $ARCH -ansi -pedantic -Wchar-subscripts -Wall -W -Wshadow -Wbad-function-cast -Wcast-qual -Wcast-align -Wwrite-strings -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wnested-externs -Winline"
 
 	# Production
 	PROD_CFLAGS="-O2 $NOFP -finline-functions"
 	PROD_CPPFLAGS=
 
 	# Debug
-	DEBUG_CFLAGS="-g -fverbose-asm"
+	DEBUG_CFLAGS="-g -fverbose-asm -Wpointer-arith -Wconversion -Wredundant-decls"
 	DEBUG_CPPFLAGS=
 
 	# Profile
 	PROFILE_CFLAGS=-pg
 	PROFILE_CPPFLAGS=
-
         ;;
 esac
 
@@ -160,17 +159,7 @@ case "$cc_vendor-$cc_version" in
 	cc_flags_set=yes
 	;;
 
-    gcc-2.95.[3456789])
-        # Start using the C99 Standard's extensions (long long, etc.)
-        # (Not quite yet... -QAK)
-        # General
-        #CFLAGS="$CFLAGS -std=c9x"
-
-	# Flags are set
-	cc_flags_set=yes
-	;;
-
-    gcc-2.95.[12])
+    gcc-2.95*)
         # No changes from default GCC flags...
 
 	# Flags are set

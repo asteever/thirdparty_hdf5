@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 1998-2001 NCSA HDF
- * 		           All rights reserved.
+ * Copyright (C) 1998 NCSA HDF
+ * 		      All rights reserved.
  *		      
  * Purpose:	Provides error handling in the form of a stack.  The
  *		FUNC_ENTER() macro clears the error stack whenever an API
@@ -29,7 +29,7 @@
  *
  */
 #include "H5private.h"		/* Generic Functions			  */
-#include "H5Iprivate.h"		/* IDs				  */
+#include "H5Iprivate.h"		/* IDs                                    */
 #include "H5Eprivate.h"		/* Private error routines		  */
 #include "H5MMprivate.h"	/* Memory management			  */
 
@@ -193,19 +193,19 @@ void *H5E_auto_data_g = NULL;
  *
  *-------------------------------------------------------------------------
  */
-H5E_t *H5E_get_stack(void)
-{
-    H5E_t *estack = pthread_getspecific(H5TS_errstk_key_g);
+H5E_t *H5E_get_stack() {
+  H5E_t *estack;
 
-    if (!estack) {
-        /* no associated value with current thread - create one */
-        estack = (H5E_t *)H5MM_malloc(sizeof(H5E_t));
-        pthread_setspecific(H5TS_errstk_key_g, (void *)estack);
-    }
-
+  if ((estack = pthread_getspecific(H5TS_errstk_key_g))!=NULL) {
     return estack;
+  } else {
+    /* no associated value with current thread - create one */
+    estack = (H5E_t *)malloc(sizeof(H5E_t));
+    pthread_setspecific(H5TS_errstk_key_g, (void *)estack);
+    return estack;
+  }
 }
-#endif  /* H5_HAVE_THREADSAFE */
+#endif
 
 
 /*-------------------------------------------------------------------------
@@ -358,7 +358,7 @@ H5Eprint(FILE *stream)
     /*NO TRACE*/
     
     if (!stream) stream = stderr;
-    fprintf (stream, "HDF5-DIAG: Error detected in ");
+    fprintf (stream, "HDF5-DIAG: Error detected in %s ", H5_lib_vers_info_g);
     /* try show the process or thread id in multiple processes cases*/
 #ifdef H5_HAVE_PARALLEL
     {   int mpi_rank, mpi_initialized;

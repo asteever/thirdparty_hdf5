@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
- * Copyright (C) 1997-2001 National Center for Supercomputing Applications
- *			   All rights reserved.
+ * Copyright (C) 1997	National Center for Supercomputing Applications.
+ *			All rights reserved.
  *
  *-------------------------------------------------------------------------
  *
@@ -272,7 +272,7 @@ H5G_node_create(H5F_t *f, H5B_ins_t UNUSED op, void *_lt_key,
 		      "unable to allocate file space");
     }
     sym->dirty = TRUE;
-    sym->entry = H5FL_ARR_ALLOC(H5G_entry_t,(2*H5G_NODE_K(f)),1);
+    sym->entry = H5FL_ARR_ALLOC(H5G_entry_t,(hsize_t)(2*H5G_NODE_K(f)),1);
     if (NULL==sym->entry) {
 	H5FL_FREE(H5G_node_t,sym);
 	HRETURN_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL,
@@ -347,7 +347,7 @@ H5G_node_flush(H5F_t *f, hbool_t destroy, haddr_t addr, H5G_node_t *sym)
         size = H5G_node_size(f);
 
         /* Allocate temporary buffer */
-        if ((buf=H5FL_BLK_ALLOC(symbol_node,size, 0))==NULL)
+        if ((buf=H5FL_BLK_ALLOC(symbol_node,(hsize_t)size, 0))==NULL)
             HRETURN_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL,
                    "memory allocation failed");
         p=buf;
@@ -373,7 +373,7 @@ H5G_node_flush(H5F_t *f, hbool_t destroy, haddr_t addr, H5G_node_t *sym)
         if (IS_H5FD_MPIO(f))
             H5FD_mpio_tas_allsame(f->shared->lf, TRUE); /*only p0 will write*/
 #endif /* H5_HAVE_PARALLEL */
-        status = H5F_block_write(f, H5FD_MEM_BTREE, addr, size, H5P_DEFAULT, buf);
+        status = H5F_block_write(f, H5FD_MEM_BTREE, addr, (hsize_t)size, H5P_DEFAULT, buf);
         if (status < 0)
             HRETURN_ERROR(H5E_SYM, H5E_WRITEERROR, FAIL,
                   "unable to write symbol table node to the file");
@@ -415,7 +415,7 @@ H5G_node_load(H5F_t *f, haddr_t addr, const void UNUSED *_udata1,
 	      void UNUSED *_udata2)
 {
     H5G_node_t		   *sym = NULL;
-    size_t		    size = 0;
+    hsize_t		    size = 0;
     uint8_t		   *buf = NULL;
     const uint8_t	   *p = NULL;
     H5G_node_t		   *ret_value = NULL;	/*for error handling */
@@ -439,7 +439,7 @@ H5G_node_load(H5F_t *f, haddr_t addr, const void UNUSED *_udata1,
 		     "memory allocation failed for symbol table node");
     p=buf;
     if (NULL==(sym = H5FL_ALLOC(H5G_node_t,1)) ||
-	NULL==(sym->entry=H5FL_ARR_ALLOC(H5G_entry_t,(2*H5G_NODE_K(f)),1))) {
+	NULL==(sym->entry=H5FL_ARR_ALLOC(H5G_entry_t,(hsize_t)(2*H5G_NODE_K(f)),1))) {
 	HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL,
 		     "memory allocation failed");
     }

@@ -1,6 +1,6 @@
 /*
- * Copyright © 1999-2001 NCSA
- *                       All rights reserved.
+ * Copyright © 1999 NCSA
+ *                  All rights reserved.
  *
  * Programmer:  Thomas Radke <tradke@aei-potsdam.mpg.de>
  *              Monday, October 11, 1999

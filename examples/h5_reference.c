@@ -9,7 +9,6 @@
   */        
 
 #include <stdlib.h>
-
 #include "hdf5.h"
 
 #define H5FILE_NAME "refere.h5"
@@ -37,7 +36,7 @@ main(void) {
    /* 
     *  Create  group "A" in the file.
     */
-   gid_a = H5Gcreate(fid, "A", 0);
+   gid_a = H5Gcreate(fid, "A", -1);
    
   /* 
    *  Create dataset "B" in the file.

@@ -1,6 +1,6 @@
 /*
- * Copyright © 1999-2001 NCSA
- *                       All rights reserved.
+ * Copyright © 1999 NCSA
+ *                  All rights reserved.
  *
  * Programmer:  Saurabh Bagchi (bagchi@uiuc.edu)
  *              Thursday, August 12 -Tuesday, August 17, 1999
@@ -11,11 +11,10 @@
 #include "H5private.h"		/*library functions			*/
 #include "H5Eprivate.h"		/*error handling			*/
 #include "H5Fprivate.h"		/*files					*/
-#include "H5FDprivate.h"	/*file driver				  */
-#include "H5FDgass.h"       /* Core file driver */
-#include "H5MMprivate.h"    /* Memory allocation */
+#include "H5FDprivate.h"	/*file driver                           */
+#include "H5FDgass.h"           /*core file driver                      */
+#include "H5MMprivate.h"        /*memory allocation                     */
 #include "H5Pprivate.h"		/*property lists			*/
-
 
 #undef MAX
 #define MAX(X,Y)	((X)>(Y)?(X):(Y))
@@ -57,6 +56,25 @@ typedef struct H5FD_gass_t {
 
 
 /*
+ * This driver supports systems that have the lseek64() function by defining
+ * some macros here so we don't have to have conditional compilations later
+ * throughout the code.
+ *
+ * file_offset_t:	The datatype for file offsets, the second argument of
+ *			the lseek() or lseek64() call.
+ *
+ * file_seek:		The function which adjusts the current file position,
+ *			either lseek() or lseek64().
+ */
+#ifdef H5_HAVE_LSEEK64
+#   define file_offset_t	off64_t
+#   define file_seek		lseek64
+#else
+#   define file_offset_t	off_t
+#   define file_seek		lseek
+#endif
+
+/*
  * These macros check for overflow of various quantities.  These macros
  * assume that file_offset_t is signed and haddr_t and size_t are unsigned.
  * 
@@ -89,9 +107,9 @@ static haddr_t H5FD_gass_get_eoa(H5FD_t *_file);
 static herr_t H5FD_gass_set_eoa(H5FD_t *_file, haddr_t addr);
 static haddr_t H5FD_gass_get_eof(H5FD_t *_file);
 static herr_t H5FD_gass_read(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, haddr_t addr,
-			     size_t size, void *buf);
+			     hsize_t size, void *buf);
 static herr_t H5FD_gass_write(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, haddr_t addr,
-			      size_t size, const void *buf);
+			      hsize_t size, const void *buf);
 
 /* GASS I/O-specific file access properties */
 typedef struct H5FD_gass_fapl_t {
@@ -559,7 +577,7 @@ H5FD_gass_get_eof(H5FD_t *_file)
  */
 static herr_t
 H5FD_gass_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t dxpl_id/*unused*/, haddr_t addr,
-               size_t size, void *buf/*out*/)
+               hsize_t size, void *buf/*out*/)
 {
     H5FD_gass_t         *file = (H5FD_gass_t*)_file;
     ssize_t             nbytes;
@@ -606,7 +624,7 @@ H5FD_gass_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t dxpl_id/*unused*/, h
             size = 0;
         }
         assert(nbytes>=0);
-        assert(nbytes<=size);
+        assert((hsize_t)nbytes<=size);
         size -= (hsize_t)nbytes;
         addr += (haddr_t)nbytes;
         buf = (char*)buf + nbytes;
@@ -637,7 +655,7 @@ H5FD_gass_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t dxpl_id/*unused*/, h
  */
 static herr_t
 H5FD_gass_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id/*unused*/, haddr_t addr,
-                size_t size, const void *buf)
+                hsize_t size, const void *buf)
 {
     H5FD_gass_t         *file = (H5FD_gass_t*)_file;
     ssize_t             nbytes;
@@ -679,7 +697,7 @@ H5FD_gass_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id/*unused*/, haddr_t
             HRETURN_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "gass file write failed");
         }
         assert(nbytes>0);
-        assert(nbytes<=size);
+        assert((hsize_t)nbytes<=size);
         size -= (hsize_t)nbytes;
         addr += (haddr_t)nbytes;
         buf = (const char*)buf + nbytes;

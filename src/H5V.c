@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 1997-2001 NCSA
- *		           All rights reserved.
+ * Copyright (C) 1997 NCSA
+ *		      All rights reserved.
  *
  * Programmer: Robb Matzke <matzke@llnl.gov>
  *	       Friday, October 10, 1997
@@ -294,7 +294,7 @@ H5V_hyper_stride(uintn n, const hsize_t *size,
         default:
             /* others */
             for (i=(intn)(n-2), acc=1; i>=0; --i) {
-                tmp = acc * (total_size[i+1] - size[i+1]);
+                hsize_t tmp = acc * (total_size[i+1] - size[i+1]);
                 assert (tmp<((hsize_t)1<<(8*sizeof(hssize_t)-1)));
                 stride[i] = (hssize_t)tmp; /*overflow checked*/
                 acc *= total_size[i+1];
@@ -633,8 +633,8 @@ H5V_hyper_copy(uintn n, const hsize_t *_size,
             default:
                 /* others */
                 for (ii=(intn)(n-2), dst_acc=1, src_acc=1; ii>=0; --ii) {
-                    tmp1 = dst_acc * (dst_size[ii+1] - size[ii+1]);
-                    tmp2 = src_acc * (src_size[ii+1] - size[ii+1]);
+                    hsize_t tmp1 = dst_acc * (dst_size[ii+1] - size[ii+1]);
+                    hsize_t tmp2 = src_acc * (src_size[ii+1] - size[ii+1]);
                     assert (tmp1<((hsize_t)1<<(8*sizeof(hssize_t)-1)));
                     assert (tmp2<((hsize_t)1<<(8*sizeof(hssize_t)-1)));
                     dst_stride[ii] = (hssize_t)tmp1; /*overflow checked*/

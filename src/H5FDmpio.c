@@ -1,6 +1,6 @@
 /*
- * Copyright © 1999-2001 NCSA
- *                       All rights reserved.
+ * Copyright © 1999 NCSA
+ *                  All rights reserved.
  *
  * Programmer:  Robb Matzke <matzke@llnl.gov>
  *              Thursday, July 29, 1999
@@ -23,9 +23,9 @@
 #include "H5private.h"		/*library functions			*/
 #include "H5Eprivate.h"		/*error handling			*/
 #include "H5Fprivate.h"		/*files					*/
-#include "H5FDprivate.h"	/*file driver				  */
-#include "H5FDmpio.h"       /* MPI I/O file driver */
-#include "H5MMprivate.h"    /* Memory allocation */
+#include "H5FDprivate.h"	/*file driver			        */
+#include "H5FDmpio.h"           /*MPI I/O file driver                   */
+#include "H5MMprivate.h"        /*memory allocation                     */
 #include "H5Pprivate.h"		/*property lists			*/
 
 /*
@@ -77,9 +77,9 @@ static haddr_t H5FD_mpio_get_eoa(H5FD_t *_file);
 static herr_t H5FD_mpio_set_eoa(H5FD_t *_file, haddr_t addr);
 static haddr_t H5FD_mpio_get_eof(H5FD_t *_file);
 static herr_t H5FD_mpio_read(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, haddr_t addr,
-			     size_t size, void *buf);
+			     hsize_t size, void *buf);
 static herr_t H5FD_mpio_write(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, haddr_t addr,
-			      size_t size, const void *buf);
+			      hsize_t size, const void *buf);
 static herr_t H5FD_mpio_flush(H5FD_t *_file);
 
 /* MPIO-specific file access properties */
@@ -1062,7 +1062,7 @@ H5FD_mpio_get_eof(H5FD_t *_file)
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FD_mpio_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t dxpl_id, haddr_t addr, size_t size,
+H5FD_mpio_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t dxpl_id, haddr_t addr, hsize_t size,
 	       void *buf/*out*/)
 {
     H5FD_mpio_t			*file = (H5FD_mpio_t*)_file;
@@ -1168,12 +1168,7 @@ H5FD_mpio_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t dxpl_id, haddr_t add
      * So I'm commenting this out until it can be investigated. The
      * returned `bytes_written' isn't used anyway because of Kim's
      * kludge to avoid bytes_written<0. Likewise in H5FD_mpio_write(). */
-
-#ifdef H5_HAVE_MPI_GET_COUNT /* Bill and Albert's kludge*/
-    /* Yet Another KLUDGE, Albert Cheng & Bill Wendling, 2001-05-11.
-     * Many systems don't support MPI_Get_count so we need to do a
-     * configure thingy to fix this. */
-
+#ifndef LAM_MPI /*Robb's kludge*/
     /* How many bytes were actually read? */
     if (MPI_SUCCESS != MPI_Get_count(&mpi_stat, MPI_BYTE, &bytes_read))
         HRETURN_ERROR(H5E_INTERNAL, H5E_MPI, FAIL, "MPI_Get_count failed");
@@ -1313,7 +1308,7 @@ H5FD_mpio_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t dxpl_id, haddr_t add
  */
 static herr_t
 H5FD_mpio_write(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t dxpl_id/*unused*/, haddr_t addr,
-		size_t size, const void *buf)
+		hsize_t size, const void *buf)
 {
     H5FD_mpio_t			*file = (H5FD_mpio_t*)_file;
     const H5FD_mpio_dxpl_t	*dx=NULL;
@@ -1442,12 +1437,7 @@ H5FD_mpio_write(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t dxpl_id/*unused*/, 
      * So I'm commenting this out until it can be investigated. The
      * returned `bytes_written' isn't used anyway because of Kim's
      * kludge to avoid bytes_written<0. Likewise in H5FD_mpio_read(). */
-
-#ifdef H5_HAVE_MPI_GET_COUNT /* Bill and Albert's kludge*/
-    /* Yet Another KLUDGE, Albert Cheng & Bill Wendling, 2001-05-11.
-     * Many systems don't support MPI_Get_count so we need to do a
-     * configure thingy to fix this. */
-
+#ifndef LAM_MPI /*Robb's kludge*/
     /* How many bytes were actually written? */
     if (MPI_SUCCESS!= MPI_Get_count(&mpi_stat, MPI_BYTE, &bytes_written))
         HGOTO_ERROR(H5E_INTERNAL, H5E_MPI, FAIL, "MPI_Get_count failed");
@@ -1534,6 +1524,9 @@ H5FD_mpio_flush(H5FD_t *_file)
      * Unfortunately, keeping track of EOF is an expensive operation, so
      * we can't just check whether EOF<EOA like with other drivers.
      * Therefore we'll just read the byte at EOA-1 and then write it back. */
+    /* But if eoa is zero, then nothing to flush.  Just return */
+    if (file->eoa == 0)
+	HRETURN(SUCCEED);
     if (haddr_to_MPIOff(file->eoa-1, &mpi_off)<0) {
         HRETURN_ERROR(H5E_INTERNAL, H5E_BADRANGE, FAIL,
                       "cannot convert from haddr_t to MPI_Offset");

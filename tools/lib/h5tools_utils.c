@@ -52,13 +52,13 @@ error_msg(const char *progname, const char *fmt, ...)
     va_list ap;
 
     va_start(ap, fmt);
-    HDfflush(stdout);
+    fflush(stdout);
 #ifdef WIN32
-    HDfprintf(stdout, "%s error: ", progname);
-    HDvfprintf(stdout, fmt, ap);
+    fprintf(stdout, "%s error: ", progname);
+    vfprintf(stdout, fmt, ap);
 #else
-    HDfprintf(stderr, "%s error: ", progname);
-    HDvfprintf(stderr, fmt, ap);
+    fprintf(stderr, "%s error: ", progname);
+    vfprintf(stderr, fmt, ap);
 #endif
     
     va_end(ap);
@@ -86,14 +86,9 @@ warn_msg(const char *progname, const char *fmt, ...)
     va_list ap;
 
     va_start(ap, fmt);
-    HDfflush(stdout);
-#ifdef WIN32
-    HDfprintf(stdout, "%s warning: ", progname);
-    HDvfprintf(stdout, fmt, ap);
-#else /* WIN32 */
-    HDfprintf(stderr, "%s warning: ", progname);
-    HDvfprintf(stderr, fmt, ap);
-#endif /* WIN32 */
+    fflush(stdout);
+    fprintf(stderr, "%s warning: ", progname);
+    vfprintf(stderr, fmt, ap);
     va_end(ap);
 }
 
@@ -127,7 +122,7 @@ get_option(int argc, const char **argv, const char *opts, const struct long_opti
         /* check for more flag-like tokens */
         if (opt_ind >= argc || argv[opt_ind][0] != '-' || argv[opt_ind][1] == '\0') {
             return EOF;
-        } else if (HDstrcmp(argv[opt_ind], "--") == 0) {
+        } else if (strcmp(argv[opt_ind], "--") == 0) {
             opt_ind++;
             return EOF;
         }
@@ -136,12 +131,12 @@ get_option(int argc, const char **argv, const char *opts, const struct long_opti
     if (sp == 1 && argv[opt_ind][0] == '-' && argv[opt_ind][1] == '-') {
         /* long command line option */
         const char *arg = &argv[opt_ind][2];
-        int i;
+        register int i;
 
         for (i = 0; l_opts && l_opts[i].name; i++) {
-            size_t len = HDstrlen(l_opts[i].name);
+            size_t len = strlen(l_opts[i].name);
 
-            if (HDstrncmp(arg, l_opts[i].name, len) == 0) {
+            if (strncmp(arg, l_opts[i].name, len) == 0) {
                 /* we've found a matching long command line flag */
                 opt_opt = l_opts[i].shortval;
 
@@ -152,7 +147,7 @@ get_option(int argc, const char **argv, const char *opts, const struct long_opti
                         opt_arg = argv[++opt_ind];
                     } else if (l_opts[i].has_arg == require_arg) {
                         if (opt_err)
-                            HDfprintf(stderr,
+                            fprintf(stderr,
                                     "%s: option required for \"--%s\" flag\n",
                                     argv[0], arg);
 
@@ -161,7 +156,7 @@ get_option(int argc, const char **argv, const char *opts, const struct long_opti
                 } else {
                     if (arg[len] == '=') {
                         if (opt_err)
-                            HDfprintf(stderr,
+                            fprintf(stderr,
                                     "%s: no option required for \"%s\" flag\n",
                                     argv[0], arg);
 
@@ -178,7 +173,7 @@ get_option(int argc, const char **argv, const char *opts, const struct long_opti
         if (l_opts[i].name == NULL) {
             /* exhausted all of the l_opts we have and still didn't match */
             if (opt_err)
-                HDfprintf(stderr, "%s: unknown option \"%s\"\n", argv[0], arg);
+                fprintf(stderr, "%s: unknown option \"%s\"\n", argv[0], arg);
 
             opt_opt = '?';
         }
@@ -193,7 +188,7 @@ get_option(int argc, const char **argv, const char *opts, const struct long_opti
 
         if (opt_opt == ':' || (cp = strchr(opts, opt_opt)) == 0) {
             if (opt_err)
-                HDfprintf(stderr, "%s: unknown option \"%c\"\n",
+                fprintf(stderr, "%s: unknown option \"%c\"\n",
                         argv[0], opt_opt);
 
             /* if no chars left in this token, move to next token */
@@ -212,7 +207,7 @@ get_option(int argc, const char **argv, const char *opts, const struct long_opti
                 opt_arg = &argv[opt_ind++][sp + 1];
             } else if (++opt_ind >= argc) {
                 if (opt_err)
-                    HDfprintf(stderr,
+                    fprintf(stderr,
                             "%s: value expected for option \"%c\"\n",
                             argv[0], opt_opt);
 
@@ -260,7 +255,7 @@ indentation(int x)
         while (x-- > 0)
             printf(" ");
     } else {
-        HDfprintf(stderr, "error: the indentation exceeds the number of cols.\n");
+        fprintf(stderr, "error: the indentation exceeds the number of cols.\n");
         exit(1);
     }
 }
@@ -307,11 +302,11 @@ void
 init_table(table_t **tbl)
 {
     int i;
-    table_t *table = HDmalloc(sizeof(table_t));
+    table_t *table = malloc(sizeof(table_t));
 
     table->size = 20;
     table->nobjs = 0;
-    table->objs = HDmalloc(table->size * sizeof(obj_t));
+    table->objs = malloc(table->size * sizeof(obj_t));
 
     for (i = 0; i < table->size; i++) {
         table->objs[i].objno[0] = table->objs[i].objno[1] = 0;
@@ -339,7 +334,7 @@ void
 init_prefix(char **prefix, int prefix_len)
 {
     assert(prefix_len > 0);
-    *prefix = HDcalloc((size_t)prefix_len, 1);
+    *prefix = calloc((size_t)prefix_len, 1);
 }
 
 
@@ -382,7 +377,7 @@ free_table(table_t **table)
 int 
 search_obj(table_t *table, unsigned long *objno)
 {
-    int i;
+    register int i;
 
     for (i = 0; i < table->nobjs; i++)
         if (table->objs[i].objno[0] == *objno && table->objs[i].objno[1] == *(objno + 1))
@@ -414,7 +409,7 @@ find_objs(hid_t group, const char *name, void *op_data)
     H5G_stat_t statbuf;
     char *tmp;
     find_objs_t *info = (find_objs_t*)op_data;
-    int i;
+    register int i;
 
     if (info->threshold > 1)
         /*will get an infinite loop if greater than 1*/
@@ -422,93 +417,93 @@ find_objs(hid_t group, const char *name, void *op_data)
 
     H5Gget_objinfo(group, name, TRUE, &statbuf);
 
-    tmp = HDmalloc(HDstrlen(info->prefix) + HDstrlen(name) + 2);
-    HDstrcpy(tmp, info->prefix); 
+    tmp = malloc(strlen(info->prefix) + strlen(name) + 2);
+    strcpy(tmp, info->prefix); 
 
     switch (statbuf.type) {
-        case H5G_GROUP:
-            if ((obj = H5Gopen(group, name)) >= 0) {
-                if (info->prefix_len < (int)(HDstrlen(info->prefix) + HDstrlen(name) + 2)) {
-                    info->prefix_len *= 2;
-                    info->prefix = HDrealloc(info->prefix,
-                                           info->prefix_len * sizeof(char));
-                }
-
-                HDstrcat(HDstrcat(info->prefix,"/"), name);
-
-                if (statbuf.nlink > info->threshold) {
-                    if (search_obj(info->group_table, statbuf.objno) == FAIL) {
-                        add_obj(info->group_table, statbuf.objno, info->prefix); 
-                        H5Giterate(obj, ".", NULL, find_objs, (void *)info);
-                    }
-                } else {
-                    H5Giterate (obj, ".", NULL, find_objs, (void *)info);
-                }
-
-                HDstrcpy(info->prefix, tmp);
-                H5Gclose (obj);
-            } else {
-                info->status = 1;
+    case H5G_GROUP:
+        if ((obj = H5Gopen(group, name)) >= 0) {
+            if (info->prefix_len < (int)(strlen(info->prefix) + strlen(name) + 2)) {
+                info->prefix_len *= 2;
+                info->prefix = realloc(info->prefix,
+                                       info->prefix_len * sizeof(char));
             }
 
-            break;
+            strcat(strcat(info->prefix,"/"), name);
 
-        case H5G_DATASET:
-            HDstrcat(tmp,"/");
-            HDstrcat(tmp,name); /* absolute name of the data set */
-
-            if (statbuf.nlink > info->threshold  &&
-                            search_obj(info->dset_table, statbuf.objno) == FAIL)
-                add_obj(info->dset_table, statbuf.objno, tmp);
-
-            if ((obj = H5Dopen (group, name)) >= 0) {              
-                type = H5Dget_type(obj);
-
-                if (H5Tcommitted(type) > 0) {
-                    H5Gget_objinfo(type, ".", TRUE, &statbuf);
-
-                    if (search_obj(info->type_table, statbuf.objno) == FAIL) {
-                        add_obj(info->type_table, statbuf.objno, tmp);
-                        info->type_table->objs[info->type_table->nobjs - 1].objflag = 0;
-                    }
+            if (statbuf.nlink > info->threshold) {
+                if (search_obj(info->group_table, statbuf.objno) == FAIL) {
+                    add_obj(info->group_table, statbuf.objno, info->prefix); 
+                    H5Giterate(obj, ".", NULL, find_objs, (void *)info);
                 }
-
-                H5Tclose(type);
-                H5Dclose (obj);
             } else {
-                info->status = 1;
+                H5Giterate (obj, ".", NULL, find_objs, (void *)info);
+	    }
+
+            strcpy(info->prefix, tmp);
+            H5Gclose (obj);
+        } else {
+            info->status = 1;
+	}
+
+        break;
+
+    case H5G_DATASET:
+        strcat(tmp,"/");
+        strcat(tmp,name); /* absolute name of the data set */
+
+        if (statbuf.nlink > info->threshold  &&
+			search_obj(info->dset_table, statbuf.objno) == FAIL)
+            add_obj(info->dset_table, statbuf.objno, tmp);
+
+        if ((obj = H5Dopen (group, name)) >= 0) {              
+            type = H5Dget_type(obj);
+
+            if (H5Tcommitted(type) > 0) {
+                H5Gget_objinfo(type, ".", TRUE, &statbuf);
+
+                if (search_obj(info->type_table, statbuf.objno) == FAIL) {
+                    add_obj(info->type_table, statbuf.objno, tmp);
+                    info->type_table->objs[info->type_table->nobjs - 1].objflag = 0;
+                }
             }
-                
-            break;
 
-        case H5G_TYPE:
-            HDstrcat(tmp,"/");
-            HDstrcat(tmp,name); /* absolute name of the type */
-            i = search_obj(info->type_table, statbuf.objno);
+            H5Tclose(type);
+            H5Dclose (obj);
+        } else {
+            info->status = 1;
+	}
+            
+        break;
 
-            if (i == FAIL) {
-                add_obj(info->type_table, statbuf.objno, tmp) ;
+    case H5G_TYPE:
+        strcat(tmp,"/");
+        strcat(tmp,name); /* absolute name of the type */
+        i = search_obj(info->type_table, statbuf.objno);
 
-                /* named data type */
-                info->type_table->objs[info->type_table->nobjs-1].recorded = 1;
+        if (i == FAIL) {
+            add_obj(info->type_table, statbuf.objno, tmp) ;
 
-                /* named data type */
-                info->type_table->objs[info->type_table->nobjs-1].objflag = 1;
-            } else {
-                strcpy (info->type_table->objs[i].objname, tmp);
-                info->type_table->objs[i].recorded = 1; 
+            /* named data type */
+            info->type_table->objs[info->type_table->nobjs-1].recorded = 1;
 
-                /* named data type */  
-                info->type_table->objs[info->type_table->nobjs-1].objflag = 1;
-            }
+            /* named data type */
+            info->type_table->objs[info->type_table->nobjs-1].objflag = 1;
+        } else {
+            strcpy (info->type_table->objs[i].objname, tmp);
+            info->type_table->objs[i].recorded = 1; 
 
-            break;
+            /* named data type */  
+            info->type_table->objs[info->type_table->nobjs-1].objflag = 1;
+        }
 
-        default:
-            break;
+        break;
+
+    default:
+        break;
     }
 
-    HDfree(tmp);
+    free(tmp);
     return SUCCEED;
 }
 
@@ -529,7 +524,7 @@ find_objs(hid_t group, const char *name, void *op_data)
 void 
 dump_table(char* tablename, table_t *table)
 {
-    int i;
+    register int i;
 
     printf("%s: # of entries = %d\n", tablename,table->nobjs);
 
@@ -638,11 +633,11 @@ get_objectname(table_t *table, int idx)
 static void
 add_obj(table_t *table, unsigned long *objno, char *objname)
 {
-    int i;
+    register int i;
 
     if (table->nobjs == table->size) {
         table->size *= 2;
-        table->objs = HDrealloc(table->objs, table->size * sizeof(obj_t));
+        table->objs = realloc(table->objs, table->size * sizeof(obj_t));
 
         for (i = table->nobjs; i < table->size; i++) {
             table->objs[i].objno[0] = table->objs[i].objno[1] = 0;
@@ -655,5 +650,5 @@ add_obj(table_t *table, unsigned long *objno, char *objname)
     i = table->nobjs++;
     table->objs[i].objno[0] = objno[0];
     table->objs[i].objno[1] = objno[1];
-    HDstrcpy(table->objs[i].objname, objname);
+    strcpy(table->objs[i].objname, objname);
 }

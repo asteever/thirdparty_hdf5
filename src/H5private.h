@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 1998-2001 NCSA
- *		           All rights reserved.
+ * Copyright (C) 1998 NCSA
+ *		 All rights reserved.
  *
  * Programmer:	Robb Matzke <matzke@llnl.gov>
  *		Friday, October 30, 1998
@@ -15,7 +15,6 @@
 #define _H5private_H
 
 #include "H5public.h"		/* Include Public Definitions		*/
-
 /*
  * Since H5config.h is a generated header file, it is messy to try
  * to put a #ifndef _H5config_H ... #endif guard in it.
@@ -26,7 +25,7 @@
  */
 #include "H5config.h"		/* Include all configuration info	*/
 
-/* include the pthread header */
+/* include the pthread library */
 #ifdef H5_HAVE_THREADSAFE
 #include <pthread.h>
 #endif
@@ -135,6 +134,7 @@
 #   include <io.h>
 #endif
 
+
 #ifdef WIN32
 
 #define VC_EXTRALEAN		/*Exclude rarely-used stuff from Windows headers */
@@ -173,6 +173,7 @@ MS doesn't recognize it yet (as of April 2001)
 #   include "HDFIOTrace.h"
 #   include "ProcIDs.h"
 #endif
+
 
 /*
  * NT doesn't define SIGBUS, but since NT only runs on processors             
@@ -482,7 +483,6 @@ __DLL__ void H5_bandwidth(char *buf/*out*/, double nbytes, double nseconds);
 #define HDatof(S)		atof(S)
 #define HDatoi(S)		atoi(S)
 #define HDatol(S)		atol(S)
-#define HDBSDgettimeofday(S,P)	BSDgettimeofday(S,P)
 #define HDbsearch(K,B,N,Z,F)	bsearch(K,B,N,Z,F)
 #define HDcalloc(N,Z)		calloc(N,Z)
 #define HDceil(X)		ceil(X)
@@ -521,9 +521,9 @@ __DLL__ void H5_bandwidth(char *buf/*out*/, double nbytes, double nseconds);
 #if defined __MWERKS__
 #include <abort_exit.h>
 #define HD_exit(N)		__exit(N)
-#else /* __MWERKS __ */
+#else
 #define HD_exit(N)		_exit(N)
-#endif /* __MWERKS __ */
+#endif
 #define HDexp(X)		exp(X)
 #define HDfabs(X)		fabs(X)
 #define HDfclose(F)		fclose(F)
@@ -570,9 +570,7 @@ __DLL__ int HDfprintf (FILE *stream, const char *fmt, ...);
 #define HDgetppid()		getppid()
 #define HDgetpwnam(S)		getpwnam(S)
 #define HDgetpwuid(U)		getpwuid(U)
-#define HDgetrusage(X,S)	getrusage(X,S)
 #define HDgets(S)		gets(S)
-#define HDgettimeofday(S,P)	gettimeofday(S,P)
 #define HDgetuid()		getuid()
 #define HDgmtime(T)		gmtime(T)
 #define HDisalnum(C)		isalnum((int)(C)) /*cast for solaris warning*/
@@ -611,11 +609,7 @@ __DLL__ int HDfprintf (FILE *stream, const char *fmt, ...);
 #define HDmemcpy(X,Y,Z)		memcpy((char*)(X),(const char*)(Y),Z)
 #define HDmemmove(X,Y,Z)	memmove((char*)(X),(const char*)(Y),Z)
 #define HDmemset(X,C,Z)		memset(X,C,Z)
-#ifdef WIN32
-#define HDmkdir(S,M)		_mkdir(S)
-#else /* WIN32 */
 #define HDmkdir(S,M)		mkdir(S,M)
-#endif /* WIN32 */
 #define HDmkfifo(S,M)		mkfifo(S,M)
 #define HDmktime(T)		mktime(T)
 #define HDmodf(X,Y)		modf(X,Y)
@@ -670,11 +664,7 @@ __DLL__ int HDfprintf (FILE *stream, const char *fmt, ...);
 #define HDsinh(X)		sinh(X)
 #define HDsleep(N)		sleep(N)
 #ifdef H5_HAVE_SNPRINTF
-#ifdef __WATCOMC__
-#   define HDsnprintf		_snprintf /*varargs*/
-#else /* __WATCOMC__ */
 #   define HDsnprintf		snprintf /*varargs*/
-#endif /* __WATCOMC__ */
 #endif
 /* sprintf() variable arguments */
 #define HDsqrt(X)		sqrt(X)
@@ -743,8 +733,6 @@ __DLL__ int64_t HDstrtoll (const char *s, const char **rest, int base);
 #define HDwctomb(S,C)		wctomb(S,C)
 
 
-
-
 #if defined (__MWERKS__)
 /* workaround for a bug in the Metrowerks header file for write
  which is not defined as const void*
@@ -759,13 +747,17 @@ __DLL__ int64_t HDstrtoll (const char *s, const char **rest, int base);
  * And now for a couple non-Posix functions...  Watch out for systems that
  * define these in terms of macros.
  */
-#ifdef WIN32
+#if defined (__MWERKS__)
 #define HDstrdup(S)    _strdup(S)
-#else /* WIN32 */
+#else
 
-#if !defined strdup && !defined H5_HAVE_STRDUP 
+#ifdef LATER
+#if !defined strdup && !defined HAVE_STRDUP 
 extern char *strdup(const char *s);
 #endif
+#else /* LATER */
+extern char *strdup(const char *s);
+#endif /* LATER */
 
 #define HDstrdup(S)     strdup(S)
 
@@ -1094,6 +1086,5 @@ __DLL__ intn H5S_term_interface(void);
 __DLL__ intn H5TN_term_interface(void);
 __DLL__ intn H5T_term_interface(void);
 __DLL__ intn H5Z_term_interface(void);
-
 
 #endif

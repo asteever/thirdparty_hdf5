@@ -1,13 +1,13 @@
 /****************************************************************************
- * NCSA HDF								                                    *
- * Software Development Group						                        *
- * National Center for Supercomputing Applications			                *
- * University of Illinois at Urbana-Champaign				                *
- * 605 E. Springfield, Champaign IL 61820				                    *
- *									                                        *
- * For conditions of distribution and use, see the accompanying		        *
- * hdf/COPYING file.							                            *
- *									                                        *
+ * NCSA HDF								    *
+ * Software Development Group						    *
+ * National Center for Supercomputing Applications			    *
+ * University of Illinois at Urbana-Champaign				    *
+ * 605 E. Springfield, Champaign IL 61820				    *
+ *									    *
+ * For conditions of distribution and use, see the accompanying		    *
+ * hdf/COPYING file.							    *
+ *									    *
  ****************************************************************************/
 
 /* $Id$ */
@@ -51,7 +51,7 @@ void test_vltypes_free_custom(void *mem, void *info);
 void *test_vltypes_alloc_custom(size_t size, void *info)
 {
     void *ret_value=NULL;       /* Pointer to return */
-    size_t *mem_used=(size_t *)info;  /* Get the pointer to the memory used */
+    unsigned *mem_used=(unsigned *)info;  /* Get the pointer to the memory used */
     size_t extra;               /* Extra space needed */
 
     /*
@@ -79,7 +79,7 @@ void *test_vltypes_alloc_custom(size_t size, void *info)
 void test_vltypes_free_custom(void *_mem, void *info)
 {
     unsigned char *mem;
-    size_t *mem_used=(size_t *)info;  /* Get the pointer to the memory used */
+    unsigned *mem_used=(unsigned *)info;  /* Get the pointer to the memory used */
     size_t extra;               /* Extra space needed */
 
     /*
@@ -114,7 +114,7 @@ test_vltypes_vlen_atomic(void)
     hsize_t		dims1[] = {SPACE1_DIM1};
     hsize_t     size;       /* Number of bytes which will be used */
     uintn       i,j;        /* counting variables */
-    size_t         mem_used=0; /* Memory used during allocation */
+    unsigned         mem_used=0; /* Memory used during allocation */
     herr_t		ret;		/* Generic return value		*/
 
     /* Output message about test being performed */
@@ -242,7 +242,7 @@ test_vltypes_vlen_compound(void)
     hsize_t		dims1[] = {SPACE1_DIM1};
     hsize_t     size;       /* Number of bytes which will be used */
     uintn       i,j;        /* counting variables */
-    size_t         mem_used=0; /* Memory used during allocation */
+    unsigned         mem_used=0; /* Memory used during allocation */
     herr_t		ret;		/* Generic return value		*/
 
     /* Output message about test being performed */
@@ -392,7 +392,7 @@ test_vltypes_compound_vlen_atomic(void)
     hsize_t		dims1[] = {SPACE1_DIM1};
     hsize_t     size;       /* Number of bytes which will be used */
     uintn       i,j;        /* counting variables */
-    size_t         mem_used=0; /* Memory used during allocation */
+    unsigned         mem_used=0; /* Memory used during allocation */
     herr_t		ret;		/* Generic return value		*/
 
     /* Output message about test being performed */
@@ -531,11 +531,11 @@ test_vltypes_compound_vlen_atomic(void)
 **      Tests VL datatype with VL datatypes of atomic datatypes.
 ** 
 ****************************************************************/
-static size_t vlen_size_func(unsigned long n)
+static unsigned long vlen_size_func(unsigned long n)
 {
-    size_t u=1;
-    size_t tmp=1;
-    size_t result=1;
+    unsigned long u=1;
+    unsigned long tmp=1;
+    unsigned long result=1;
 
     while(u<n) {
         u++;
@@ -565,7 +565,7 @@ test_vltypes_vlen_vlen_atomic(void)
     hsize_t		dims1[] = {SPACE1_DIM1};
     hsize_t     size;       /* Number of bytes which will be used */
     uintn       i,j,k;      /* counting variables */
-    size_t         mem_used=0; /* Memory used during allocation */
+    unsigned         mem_used=0; /* Memory used during allocation */
     herr_t		ret;		/* Generic return value		*/
 
     /* Output message about test being performed */

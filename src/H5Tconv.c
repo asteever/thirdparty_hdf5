@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 1998-2001 Spizella Software
- *		           All rights reserved.
+ * Copyright (C) 1998 Spizella Software
+ *		      All rights reserved.
  *
  * Programmer:	Robb Matzke <robb@arborea.spizella.com>
  *		Tuesday, January 13, 1998
@@ -1822,7 +1822,7 @@ H5T_conv_vlen(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, hsize_t nelmts,
     size_t	src_base_size, dst_base_size;/*source & destination base size*/
     size_t	src_size, dst_size;/*source & destination total size in bytes*/
     void	*conv_buf=NULL;     	/*temporary conversion buffer 	     */
-    size_t	conv_buf_size;  	/*size of conversion buffer in bytes */
+    hsize_t	conv_buf_size;  	/*size of conversion buffer in bytes */
     uint8_t	dbuf[64],*dbuf_ptr=dbuf;/*temp destination buffer	     */
     intn	direction;		/*direction of traversal	     */
     hsize_t	elmtno;			/*element number counter	     */

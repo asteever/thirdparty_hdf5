@@ -1,6 +1,6 @@
 /*
- * Copyright © 1999-2001 NCSA
- *                       All rights reserved.
+ * Copyright © 1999 NCSA
+ *                  All rights reserved.
  *
  * Programmer:  Thomas Radke <tradke@aei-potsdam.mpg.de>
  *              Monday, October 11, 1999
@@ -10,10 +10,10 @@
  */
 
 #include "hdf5.h"
-#include "H5Eprivate.h"         /* error handling    */
+#include "H5Eprivate.h"         /*error handling                          */
 #include "H5FDprivate.h"	/*file driver				  */
 #include "H5FDdpss.h"
-#include "H5MMprivate.h"        /* memory management */
+#include "H5MMprivate.h"        /*memory management                       */
 
 #ifdef COALESCE_READS
 /* Packages needed by this file.*/
@@ -52,6 +52,25 @@ typedef struct H5FD_dpss_t {
 } H5FD_dpss_t;
 
 
+
+/*
+ * This driver supports systems that have the lseek64() function by defining
+ * some macros here so we don't have to have conditional compilations later
+ * throughout the code.
+ *
+ * file_offset_t:       The datatype for file offsets, the second argument of
+ *                      the lseek() or lseek64() call.
+ *
+ * file_seek:           The function which adjusts the current file position,
+ *                      either lseek() or lseek64().
+ */
+#ifdef H5_HAVE_LSEEK64
+#   define file_offset_t        off64_t
+#   define file_seek            lseek64
+#else
+#   define file_offset_t        off_t
+#   define file_seek            lseek
+#endif
 
 /*
  * These macros check for overflow of various quantities.  These macros
@@ -99,9 +118,9 @@ static haddr_t H5FD_dpss_get_eoa (H5FD_t *_file);
 static herr_t H5FD_dpss_set_eoa (H5FD_t *_file, haddr_t addr);
 static haddr_t H5FD_dpss_get_eof (H5FD_t *_file);
 static herr_t H5FD_dpss_read (H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, haddr_t addr,
-                              size_t size, void *buf);
+                              hsize_t size, void *buf);
 static herr_t H5FD_dpss_write (H5FD_t *_file, H5FD_mem_t type, hid_t UNUSED fapl_id,haddr_t addr,
-                               size_t size, const void *buf);
+                               hsize_t size, const void *buf);
 
 /* The Grid Storage I/O driver information */
 static const H5FD_class_t H5FD_dpss_g = {
@@ -513,7 +532,7 @@ H5FD_dpss_get_eof (H5FD_t *_file)
  */
 static herr_t
 H5FD_dpss_read (H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t dxpl_id, haddr_t addr,
-                size_t size, void *buf/*out*/)
+                hsize_t size, void *buf/*out*/)
 {
     H5FD_dpss_t *file = (H5FD_dpss_t *) _file;
     globus_result_t  globus_result;
@@ -525,8 +544,8 @@ H5FD_dpss_read (H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t dxpl_id, haddr_t ad
     FUNC_ENTER (H5FD_dpss_read, FAIL);
 
 #ifdef DEBUG
-    fprintf (stdout, "H5FD_dpss_read: addr 0x%lx, size %u\n",
-             (unsigned long int) addr, (unsigned) size);
+    fprintf (stdout, "H5FD_dpss_read: addr 0x%lx, size %ld\n",
+             (unsigned long int) addr, (unsigned long int) size);
 #endif
 
     /* Check parameters */
@@ -569,7 +588,7 @@ H5FD_dpss_read (H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t dxpl_id, haddr_t ad
 
     /* do the (synchronuous) write operation */
     globus_result = grid_storage_read (&file->handle, (unsigned char *) buf,
-                                       (size_t) addr, size, NULL);
+                                       (size_t) addr, (size_t) size, NULL);
     if (GLOBUS_SUCCESS != globus_result) {
         PRINT_GLOBUS_ERROR_MSG (globus_result);
         HRETURN_ERROR (H5E_IO, H5E_READERROR, FAIL,
@@ -598,7 +617,7 @@ H5FD_dpss_read (H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t dxpl_id, haddr_t ad
  */
 static herr_t
 H5FD_dpss_write (H5FD_t *_file, H5FD_mem_t type, hid_t UNUSED dxpl_id, haddr_t addr,
-                 size_t size, const void *buf)
+                 hsize_t size, const void *buf)
 {
     H5FD_dpss_t  *file = (H5FD_dpss_t *) _file;
     globus_result_t  globus_result;
@@ -606,8 +625,8 @@ H5FD_dpss_write (H5FD_t *_file, H5FD_mem_t type, hid_t UNUSED dxpl_id, haddr_t a
     FUNC_ENTER (H5FD_dpss_write, FAIL);
 
 #ifdef DEBUG
-    fprintf (stdout, "H5FD_dpss_write: addr 0x%lx, size %u\n",
-             (unsigned long int) addr, (unsigned) size);
+    fprintf (stdout, "H5FD_dpss_write: addr 0x%lx, size %ld\n",
+             (unsigned long int) addr, (unsigned long int) size);
 #endif
 
     /* Check parameters */
@@ -626,7 +645,7 @@ H5FD_dpss_write (H5FD_t *_file, H5FD_mem_t type, hid_t UNUSED dxpl_id, haddr_t a
 
     /* do the (synchronuous) write operation */
     globus_result = grid_storage_write (&file->handle, (unsigned char *) buf,
-                                        (size_t) addr, size, NULL);
+                                        (size_t) addr, (size_t) size, NULL);
     if (GLOBUS_SUCCESS != globus_result) {
         PRINT_GLOBUS_ERROR_MSG (globus_result);
         HRETURN_ERROR (H5E_IO, H5E_WRITEERROR, FAIL,

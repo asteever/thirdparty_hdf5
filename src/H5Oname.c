@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
- * Copyright (C) 1997-2001 National Center for Supercomputing Applications
- *                         All rights reserved.
+ * Copyright (C) 1997   National Center for Supercomputing Applications.
+ *                      All rights reserved.
  *
  *-------------------------------------------------------------------------
  *
@@ -40,7 +40,7 @@ const H5O_class_t H5O_NAME[1] = {{
     H5O_name_copy,          	/*copy the native value         */
     H5O_name_size,          	/*raw message size              */
     H5O_name_reset,         	/*free internal memory          */
-    NULL,		            /* free method			*/
+    NULL,		        /*free method			*/
     NULL,		    	/*get share method		*/
     NULL,			/*set share method		*/
     H5O_name_debug,         	/*debug the message             */

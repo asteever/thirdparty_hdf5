@@ -1,6 +1,6 @@
 /*-------------------------------------------------------------------------
- * Copyright (C) 1997-2001 National Center for Supercomputing Applications
- *			   All rights reserved.
+ * Copyright (C) 1997	National Center for Supercomputing Applications.
+ *			All rights reserved.
  *
  *-------------------------------------------------------------------------
  *
@@ -22,7 +22,7 @@
 /* Private headers needed by this file */
 #include "H5private.h"
 #include "H5Fprivate.h"
-#include "H5ACprivate.h"	/*cache					*/
+#include "H5ACprivate.h"	/*cache                                      */
 
 /*
  * Feature: Define this constant if you want to check B-tree consistency

@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 1999-2001 NCSA
- *                         All rights reserved.
+ * Copyright (c) 1999 NCSA
+ *               All rights reserved.
  *
  * Programmer: Raymond Lu <slu@ncsa.uiuc.edu>
  *             Wednesday, April 12, 2000

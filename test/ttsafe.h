@@ -19,13 +19,13 @@
 #ifndef HDF5TEST_H
 #define HDF5TEST_H
 
+#include "hdf5.h"
 #include <string.h>
 
 /*
  * Include required headers.  This file tests internal library functions,
  * so we include the private headers here.
  */
-#include "hdf5.h"
 #include "H5private.h"
 #include "H5Eprivate.h"
 

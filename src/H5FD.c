@@ -1177,7 +1177,7 @@ H5FD_alloc(H5FD_t *file, H5FD_mem_t type, hsize_t size)
     
 #ifdef H5F_DEBUG
     if (H5DEBUG(F)) {
-	HDfprintf(H5DEBUG(F), "%s: alignment=%Hd, threshold=%Hd, size=%Hd\n",
+	fprintf(H5DEBUG(F), "%s: alignment=%ld, threshold=%ld, size=%ld\n",
 	    FUNC, file->alignment, file->threshold, size);
     }
 #endif
@@ -1288,23 +1288,23 @@ H5FD_alloc(H5FD_t *file, H5FD_mem_t type, hsize_t size)
 		ret_value = best->addr + head;
 #ifdef H5F_DEBUG
 		if (H5DEBUG(F)) {
-		    HDfprintf(H5DEBUG(F),
-		    "%s: 3 pieces, begin best->addr=%a, best->size=%Hd, "
-		    "head=%Hd, size=%Hd\n",
+		    fprintf(H5DEBUG(F),
+		    "%s: 3 pieces, begin best->addr=%ld, best->size=%ld, "
+		    "head=%ld, size=%ld\n",
 		    FUNC, best->addr, best->size, head, size);
 		}
 #endif
 		assert(tmp);		/* bark in debug mode */
-		if (tmp) {
-		    if ((tmp->size = (best->size - head - size))) {
+		if (tmp){
+		    if ((tmp->size = best->size - head - size)){
 			tmp->addr = best->addr + head + size;
 			tmp->next = best->next;
 			best->next = tmp;
-		    } else {
+		    }else{
 			/* no tail piece */
 			H5MM_xfree(tmp);
 		    }
-		} else {
+		}else{
 		    /* cannot keep the tail piece.  leak file memory. */
 		}
 		best->size = head;
@@ -1407,13 +1407,13 @@ H5FD_real_alloc(H5FD_t *file, H5FD_mem_t type, hsize_t size)
         }
     } else {
 	hsize_t	wasted;
-        haddr_t oldeoa;
+        haddr_t oldeoa=0;
 	haddr_t eoa = (file->cls->get_eoa)(file);
 
 #ifdef H5F_DEBUG
 	if (file->alignment * file->threshold != 1 && H5DEBUG(F)) {
-	    HDfprintf(H5DEBUG(F),
-		"%s: alignment=%Hd, threshold=%Hd, size=%Hd, Begin eoa=%a\n",
+	    fprintf(H5DEBUG(F),
+		"%s: alignment=%ld, threshold=%ld, size=%ld, Begin eoa=%ld\n",
 		FUNC, file->alignment, file->threshold, size, eoa);
 	}
 #endif
@@ -1452,8 +1452,8 @@ H5FD_real_alloc(H5FD_t *file, H5FD_mem_t type, hsize_t size)
 
 #ifdef H5F_DEBUG
 	if (file->alignment * file->threshold != 1 && H5DEBUG(F)) {
-	    HDfprintf(H5DEBUG(F),
-		"%s: ret_value=%a, wasted=%Hd, Ended eoa=%a\n",
+	    fprintf(H5DEBUG(F),
+		"%s: ret_value=%ld, wasted=%ld, Ended eoa=%ld\n",
 		FUNC, ret_value, wasted, eoa);
 	}
 #endif
@@ -1658,24 +1658,18 @@ H5FD_realloc(H5FD_t *file, H5FD_mem_t type, haddr_t old_addr, hsize_t old_size,
         H5FDfree(file, type, old_addr+old_size, old_size-new_size);
     } else {
         /* move memory to new location */
-        /* Note!  This may fail if sizeof(hsize_t)>sizeof(size_t) and the
-         * object on disk is too large to read into a memory buffer all at one
-         * time.  This chunk of code would have to be re-written using a loop
-         * to move pieces of the realloced data through a fixed size buffer, etc.
-         * -QAK, 6/20/01
-         */
         if (HADDR_UNDEF==(new_addr=H5FDalloc(file, type, new_size))) {
             HRETURN_ERROR(H5E_FILE, H5E_NOSPACE, HADDR_UNDEF,
                   "file allocation failed");
         }
-        H5_CHECK_OVERFLOW(old_size,hsize_t,size_t);
+        assert(old_size==(hsize_t)((size_t)old_size)); /*check for overflow*/
         if (old_size>sizeof(_buf) && NULL==(buf=H5MM_malloc((size_t)old_size))) {
             H5FDfree(file, type, new_addr, new_size);
             HRETURN_ERROR(H5E_RESOURCE, H5E_NOSPACE, HADDR_UNDEF,
                   "memory allocation failed");
         }
-        if (H5FDread(file, type, H5P_DEFAULT, old_addr, (size_t)old_size, buf)<0 ||
-                H5FDwrite(file, type, H5P_DEFAULT, new_addr, (size_t)old_size, buf)<0) {
+        if (H5FDread(file, type, H5P_DEFAULT, old_addr, old_size, buf)<0 ||
+                H5FDwrite(file, type, H5P_DEFAULT, new_addr, old_size, buf)<0) {
             H5FDfree(file, type, new_addr, new_size);
             H5MM_xfree(buf);
             HRETURN_ERROR(H5E_FILE, H5E_READERROR, HADDR_UNDEF,
@@ -1961,11 +1955,11 @@ H5FD_get_eof(H5FD_t *file)
  *-------------------------------------------------------------------------
  */
 herr_t
-H5FDread(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t size,
+H5FDread(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, hsize_t size,
 	 void *buf/*out*/)
 {
     FUNC_ENTER(H5FDread, FAIL);
-    H5TRACE6("e","xMtiazx",file,type,dxpl_id,addr,size,buf);
+    H5TRACE6("e","xMtiahx",file,type,dxpl_id,addr,size,buf);
 
     /* Check args */
     if (!file || !file->cls) {
@@ -2011,7 +2005,7 @@ H5FDread(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t size
  *-------------------------------------------------------------------------
  */
 herr_t
-H5FD_read(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t size,
+H5FD_read(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, hsize_t size,
 	  void *buf/*out*/)
 {
     FUNC_ENTER(H5FD_read, FAIL);
@@ -2034,8 +2028,8 @@ H5FD_read(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t siz
         || (addr<file->accum_loc && (addr+size)>file->accum_loc))) {
 
         unsigned char *read_buf=(unsigned char *)buf; /* Pointer to the buffer being read in */
-        size_t amount_read;         /* Amount to read at a time */
-        haddr_t read_off;           /* Offset to read from */
+        hsize_t amount_read;        /* Amount to read at a time */
+        hsize_t read_off;           /* Offset to read from */
 
         /* Double check that we aren't reading raw data */
         assert(type!=H5FD_MEM_DRAW);
@@ -2064,7 +2058,8 @@ H5FD_read(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t siz
             amount_read=MIN((file->accum_size-read_off),size);
 
             /* Copy the data out of the buffer */
-            HDmemcpy(read_buf,file->meta_accum+read_off,amount_read);
+            assert(amount_read==(hsize_t)((size_t)amount_read)); /*check for overflow*/
+            HDmemcpy(read_buf,file->meta_accum+read_off,(size_t)amount_read);
 
             /* Adjust the buffer, address & size */
             read_buf+=amount_read;
@@ -2117,11 +2112,11 @@ H5FD_read(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t siz
  *-------------------------------------------------------------------------
  */
 herr_t
-H5FDwrite(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t size,
+H5FDwrite(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, hsize_t size,
 	  const void *buf)
 {
     FUNC_ENTER(H5FDwrite, FAIL);
-    H5TRACE6("e","xMtiazx",file,type,dxpl_id,addr,size,buf);
+    H5TRACE6("e","xMtiahx",file,type,dxpl_id,addr,size,buf);
 
     /* Check args */
     if (!file || !file->cls) {
@@ -2168,10 +2163,10 @@ H5FDwrite(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t siz
  *-------------------------------------------------------------------------
  */
 herr_t
-H5FD_write(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t size,
+H5FD_write(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, hsize_t size,
 	   const void *buf)
 {
-    size_t new_size;    /* New size of the accumulator buffer */
+    hsize_t new_size;    /* New size of the accumulator buffer */
     size_t old_offset;  /* Offset of old data within the accumulator buffer */
 
     FUNC_ENTER(H5FD_write, FAIL);
@@ -2209,10 +2204,12 @@ H5FD_write(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t si
                     } /* end if */
 
                     /* Move the existing metadata to the proper location */
-                    HDmemmove(file->meta_accum+size,file->meta_accum,file->accum_size);
+                    assert(file->accum_size==(hsize_t)((size_t)file->accum_size)); /*check for overflow*/
+                    HDmemmove(file->meta_accum+size,file->meta_accum,(size_t)file->accum_size);
 
                     /* Copy the new metadata at the front */
-                    HDmemcpy(file->meta_accum,buf,size);
+                    assert(size==(hsize_t)((size_t)size)); /*check for overflow*/
+                    HDmemcpy(file->meta_accum,buf,(size_t)size);
 
                     /* Set the new size & location of the metadata accumulator */
                     file->accum_loc=addr;
@@ -2234,7 +2231,8 @@ H5FD_write(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t si
                     } /* end if */
 
                     /* Copy the new metadata to the end */
-                    HDmemcpy(file->meta_accum+file->accum_size,buf,size);
+                    assert(size==(hsize_t)((size_t)size)); /*check for overflow*/
+                    HDmemcpy(file->meta_accum+file->accum_size,buf,(size_t)size);
 
                     /* Set the new size of the metadata accumulator */
                     file->accum_size=file->accum_size+size;
@@ -2245,7 +2243,8 @@ H5FD_write(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t si
                 /* Check if the new metadata is entirely within the current accumulator */
                 else if(addr>=file->accum_loc && (addr+size)<=(file->accum_loc+file->accum_size)) {
                     /* Copy the new metadata to the proper location within the accumulator */
-                    HDmemcpy(file->meta_accum+(addr-file->accum_loc),buf,size);
+                    assert(size==(hsize_t)((size_t)size)); /*check for overflow*/
+                    HDmemcpy(file->meta_accum+(addr-file->accum_loc),buf,(size_t)size);
 
                     /* Mark it as written to */
                     file->accum_dirty=TRUE;
@@ -2269,10 +2268,12 @@ H5FD_write(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t si
                     old_offset=(addr+size)-file->accum_loc;
 
                     /* Move the existing metadata to the proper location */
-                    HDmemmove(file->meta_accum+size,file->meta_accum+old_offset,(file->accum_size-old_offset));
+                    assert((file->accum_size-old_offset)==(hsize_t)((size_t)(file->accum_size-old_offset))); /*check for overflow*/
+                    HDmemmove(file->meta_accum+size,file->meta_accum+old_offset,(size_t)(file->accum_size-old_offset));
 
                     /* Copy the new metadata at the front */
-                    HDmemcpy(file->meta_accum,buf,size);
+                    assert(size==(hsize_t)((size_t)size)); /*check for overflow*/
+                    HDmemcpy(file->meta_accum,buf,(size_t)size);
 
                     /* Set the new size & location of the metadata accumulator */
                     file->accum_loc=addr;
@@ -2297,7 +2298,8 @@ H5FD_write(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t si
                     } /* end if */
 
                     /* Copy the new metadata to the end */
-                    HDmemcpy(file->meta_accum+(addr-file->accum_loc),buf,size);
+                    assert(size==(hsize_t)((size_t)size)); /*check for overflow*/
+                    HDmemcpy(file->meta_accum+(addr-file->accum_loc),buf,(size_t)size);
 
                     /* Set the new size & location of the metadata accumulator */
                     file->accum_loc=addr;
@@ -2331,7 +2333,8 @@ H5FD_write(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t si
                 file->accum_loc=addr;
                 file->accum_size=size;
                 file->accum_dirty=TRUE;
-                HDmemcpy(file->meta_accum,buf,size);
+                assert(size==(hsize_t)((size_t)size)); /*check for overflow*/
+                HDmemcpy(file->meta_accum,buf,(size_t)size);
             } /* end else */
         } /* end if */
         /* No metadata in the accumulator, grab this piece and keep it */
@@ -2350,7 +2353,8 @@ H5FD_write(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t si
             file->accum_loc=addr;
             file->accum_size=size;
             file->accum_dirty=TRUE;
-            HDmemcpy(file->meta_accum,buf,size);
+            assert(size==(hsize_t)((size_t)size)); /*check for overflow*/
+            HDmemcpy(file->meta_accum,buf,(size_t)size);
         } /* end else */
     } /* end if */
     else {

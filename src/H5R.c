@@ -20,8 +20,8 @@
 #include "H5Eprivate.h"		/* Error handling */
 #include "H5Fpkg.h"		/* Files */
 #include "H5Gprivate.h"		/* Groups */
-#include "H5HGprivate.h"    /* Global Heaps */
-#include "H5MMprivate.h"    /* Memory Management */
+#include "H5HGprivate.h"        /* Global Heaps */
+#include "H5MMprivate.h"        /* Memory Management */
 #include "H5Rprivate.h"		/* References */
 #include "H5Sprivate.h"		/* Dataspaces */
 #include "H5Tprivate.h"		/* Datatypes */

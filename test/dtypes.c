@@ -215,7 +215,7 @@ generates_sigfpe(void)
 	for (i=0; i<2000; i++) {
 	    for (j=0; j<sizeof(double); j++) dp[j] = rand();
 	    f = (float)d;
-	    some_dummy_func((float)f);
+	    some_dummy_func(f);
 	}
 	exit(0);
     }
@@ -2896,12 +2896,12 @@ test_conv_int_1(const char *name, hid_t src, hid_t dst)
 		break;
 	    case INT_LLONG:
 		memcpy(aligned, saved+j*sizeof(long_long), sizeof(long_long));
-		HDfprintf(stdout," %29"PRINTF_LL_WIDTH"d\n", *((long_long*)aligned));
+		printf(" %29"PRINTF_LL_WIDTH"d\n", *((long_long*)aligned));
 		break;
 	    case INT_ULLONG:
 		memcpy(aligned, saved+j*sizeof(long_long),
 		       sizeof(unsigned long_long));
-		HDfprintf(stdout," %29"PRINTF_LL_WIDTH"u\n",
+		printf(" %29"PRINTF_LL_WIDTH"u\n",
 		       *((unsigned long_long*)aligned));
 		break;
 	    case INT_OTHER:
@@ -2949,12 +2949,12 @@ test_conv_int_1(const char *name, hid_t src, hid_t dst)
 		break;
 	    case INT_LLONG:
 		memcpy(aligned, buf+j*sizeof(long_long), sizeof(long_long));
-		HDfprintf(stdout," %29"PRINTF_LL_WIDTH"d\n", *((long_long*)aligned));
+		printf(" %29"PRINTF_LL_WIDTH"d\n", *((long_long*)aligned));
 		break;
 	    case INT_ULLONG:
 		memcpy(aligned, buf+j*sizeof(long_long),
 		       sizeof(unsigned long_long));
-		HDfprintf(stdout," %29"PRINTF_LL_WIDTH"u\n",
+		printf(" %29"PRINTF_LL_WIDTH"u\n",
 		       *((unsigned long_long*)aligned));
 		break;
 	    case INT_OTHER:
@@ -2993,10 +2993,10 @@ test_conv_int_1(const char *name, hid_t src, hid_t dst)
 		printf(" %29lu\n", *((unsigned long*)hw));
 		break;
 	    case INT_LLONG:
-		HDfprintf(stdout," %29"PRINTF_LL_WIDTH"d\n", *((long_long*)hw));
+		printf(" %29"PRINTF_LL_WIDTH"d\n", *((long_long*)hw));
 		break;
 	    case INT_ULLONG:
-		HDfprintf(stdout," %29"PRINTF_LL_WIDTH"u\n", *((unsigned long_long*)hw));
+		printf(" %29"PRINTF_LL_WIDTH"u\n", *((unsigned long_long*)hw));
 		break;
 	    case INT_OTHER:
 		break;
@@ -3231,9 +3231,7 @@ test_conv_flt_1 (const char *name, hid_t src, hid_t dst)
      * The remainder of this function is executed only by the child if
      * HANDLE_SIGFPE is defined.
      */
-#ifndef __WATCOMC__
     signal(SIGFPE,fpe_handler);
-#endif
 
     /* What are the names of the source and destination types */
     if (H5Tequal(src, H5T_NATIVE_FLOAT)) {
@@ -3499,7 +3497,7 @@ test_conv_flt_1 (const char *name, hid_t src, hid_t dst)
 	    } else {
 		long double x;
 		memcpy(&x, (long double*)saved+j, sizeof(long double));
-		HDfprintf(stdout," %29.20Le\n", x);
+		printf(" %29.20Le\n", x);
 #endif
 	    }
 
@@ -3521,7 +3519,7 @@ test_conv_flt_1 (const char *name, hid_t src, hid_t dst)
 	    } else {
 		long double x;
 		memcpy(&x, (long double*)buf+j, sizeof(long double));
-		HDfprintf(stdout," %29.20Le\n", x);
+		printf(" %29.20Le\n", x);
 #endif
 	    }
 
@@ -3537,7 +3535,7 @@ test_conv_flt_1 (const char *name, hid_t src, hid_t dst)
 		printf(" %29.20e\n", hw_d);
 #if SIZEOF_LONG_DOUBLE!=SIZEOF_DOUBLE
 	    } else {
-		HDfprintf(stdout," %29.20Le\n", hw_ld);
+		printf(" %29.20Le\n", hw_ld);
 #endif
 	    }
 

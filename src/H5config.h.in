@@ -47,11 +47,8 @@
 /* Define if it's safe to use `long long' for hsize_t and hssize_t */
 #undef HAVE_LARGE_HSIZET
 
-/* Define if it's safe to use `long long' for hsize_t and hssize_t */
-#undef DEV_T_IS_SCALAR
-
-/* Define if the HDF5 v1.4 compatibility functions are to be compiled in */
-#undef WANT_H5_V1_4_COMPAT
+/* Define if the HDF5 v1.2 compatibility functions are to be compiled in */
+#undef WANT_H5_V1_2_COMPAT
 
 /* Width for printf() for type `long long' or `__int64', us. `ll' */
 #undef PRINTF_LL_WIDTH
@@ -314,9 +311,6 @@
 /* Define if you have the <stdint.h> header file.  */
 #undef HAVE_STDINT_H
 
-/* Define if you have the <features.h> header file.  */
-#undef HAVE_FEATURES_H
-
 /* Define if you have the <sys/filio.h> header file.  */
 #undef HAVE_SYS_FILIO_H
 
@@ -334,9 +328,6 @@
 
 /* Define if you have the <sys/stat.h> header file.  */
 #undef HAVE_SYS_STAT_H
-
-/* Define if you have the <sys/resource.h> header file.  */
-#undef HAVE_SYS_RESOURCE_H
 
 /* Define if you have the <sys/sysinfo.h> header file.  */
 #undef HAVE_SYS_SYSINFO_H

@@ -1,7 +1,7 @@
 ## Top-level HDF5-C++ Makefile(.in)
 ##
-## Copyright (C) 2000 National Center for Supercomputing Applications.
-##                    All rights reserved.
+## Copyright (C) 2000-2001 National Center for Supercomputing Applications.
+##                         All rights reserved.
 ##
 ## 
 ## This makefile mostly just reinvokes make in the various subdirectories
@@ -73,7 +73,7 @@ lib progs check test _test uninstall:
 	done
 
 tests TAGS dep depend:
-	@@SETX@; for d in $(SUBDIRS) examples; do                             \
+	@@SETX@; for d in $(SUBDIRS) examples; do		      \
 	   (cd $$d && $(MAKE) $@) || exit 1;				      \
 	done
 
@@ -87,14 +87,14 @@ install:
 	mostlyclean distclean maintainer-clean
 
 clean mostlyclean:
-	@@SETX@; for d in $(SUBDIRS) examples; do                             \
-	   (cd $$d && $(MAKE) $@);                                            \
+	@@SETX@; for d in $(SUBDIRS) examples; do		      \
+	   (cd $$d && $(MAKE) $@);					      \
 	done
 	-$(RM) conftest conftest.c
 
 distclean:
-	@@SETX@; for d in $(SUBDIRS) examples; do                             \
-	   (cd $$d && $(MAKE) $@);                                            \
+	@@SETX@; for d in $(SUBDIRS) examples; do				      \
+	   (cd $$d && $(MAKE) $@);					      \
 	done
 	-$(RM) config/commence config/conclude
 	-$(RM) config/stamp1 config/stamp2 config/depend?

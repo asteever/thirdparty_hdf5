@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2000-2001 NCSA
- *		           All rights reserved.
+ * Copyright (C) 2000 NCSA
+ *		      All rights reserved.
  *
  * Programmer:	Quincey Koziol <koziol@ncsa.uiuc.edu>
  *		Thursday, September 28, 2000

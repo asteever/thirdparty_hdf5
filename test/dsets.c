@@ -24,9 +24,6 @@ const char *FILENAME[] = {
 
 #define H5Z_BOGUS		305
 
-/* Shared global arrays */
-int	points[100][200], check[100][200];
-
 
 /*-------------------------------------------------------------------------
  * Function:	test_create
@@ -178,6 +175,7 @@ static herr_t
 test_simple_io(hid_t file)
 {
     hid_t		dataset, space, xfer;
+    int			points[100][200], check[100][200];
     int			i, j, n;
     hsize_t		dims[2];
     void		*tconv_buf = NULL;
@@ -200,7 +198,7 @@ test_simple_io(hid_t file)
     tconv_buf = malloc (1000);
     xfer = H5Pcreate (H5P_DATASET_XFER);
     assert (xfer>=0);
-    if (H5Pset_buffer (xfer, 1000, tconv_buf, NULL)<0) goto error;
+    if (H5Pset_buffer (xfer, (hsize_t)1000, tconv_buf, NULL)<0) goto error;
 
     /* Create the dataset */
     if ((dataset = H5Dcreate(file, DSET_SIMPLE_IO_NAME, H5T_NATIVE_INT, space,
@@ -362,6 +360,7 @@ static herr_t
 test_compression(hid_t file)
 {
     hid_t		dataset, space, xfer, dc;
+    int			points[100][200], check[100][200];
     const hsize_t	size[2] = {100, 200};
     const hsize_t	chunk_size[2] = {2, 25};
     const hssize_t	hs_offset[2] = {7, 30};
@@ -385,7 +384,7 @@ test_compression(hid_t file)
      */
     if ((xfer = H5Pcreate (H5P_DATASET_XFER))<0) goto error;
     tconv_buf = malloc (1000);
-    if (H5Pset_buffer (xfer, 1000, tconv_buf, NULL)<0) goto error;
+    if (H5Pset_buffer (xfer, (hsize_t)1000, tconv_buf, NULL)<0) goto error;
 
     /* Use chunked storage with compression */
     if ((dc = H5Pcreate (H5P_DATASET_CREATE))<0) goto error;

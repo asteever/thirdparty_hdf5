@@ -55,8 +55,11 @@
 //	                Generate a SDDF binary format record descriptor *
 //                      for the	HDF procedure exits			*
 //======================================================================*/
-#ifndef PCF_BUILD
 #include <stdio.h>
+
+#ifdef H5_HAVE_PARALLEL
+#include "mpi.h"
+#endif
 
 #include "H5config.h"
 #undef H5_HAVE_PABLO
@@ -109,7 +112,6 @@ void endIOTrace( void );
 	void endMPIOTrace( void ) {return;} 
 #endif
 extern char *hdfRecordPointer;
-extern char HDFprocNames[][40];
 /*======================================================================*
 // Prototypes of functions in this file.				*
 //======================================================================*/
@@ -204,7 +206,7 @@ int *procEntryCalled;
 /*======================================================================*
 // The HDFProcNames array holds the names of the HDF entries.       	*
 //======================================================================*/
-/*static char HDFprocNames[][40] = {
+static char HDFProcNames[][40] = {
 "noName",
 "noName",
 "noName",
@@ -212,7 +214,7 @@ int *procEntryCalled;
 "noName",
 #include "HDFentryNames.h"
 "HDF_LAST_ENTRY"
-};*/
+};
 /*=======================================================================
 // NAME									*
 //     	HDFinitTrace_SDDF -- initalize HDF tracing with SDDF records	*
@@ -673,7 +675,7 @@ void createHDFTraceDescriptor( int Inx )
         char BUF1[256], BUF2[256] ;
 	int FAMILY;
         strcpy( BUF2, "HDF ");
-        strcat( BUF2, HDFprocNames[Inx] );
+        strcat( BUF2, HDFProcNames[Inx] );
         strcat( BUF2, " Procedure");
         strcpy( BUF1, BUF2 );
         strcat( BUF1, " Trace");
@@ -824,4 +826,4 @@ void _hdfMiscDescriptor( void )
     putBytes( recordBuffer, (unsigned) recordLength );
 }
 
-#endif /* PCF_BUILD */
+/*#endif */ /* H5_HAVE_PABLO */ 

@@ -18,7 +18,7 @@
 #include "H5Dprivate.h"         /*datasets                              */
 #include "H5Eprivate.h"         /*error handling          		*/
 #include "H5FDprivate.h"	/*file driver				*/
-#include "H5FLprivate.h"	/*free lists                            */
+#include "H5FLprivate.h"	/*Free Lists                            */
 #include "H5Iprivate.h"		/*atoms					*/
 #include "H5MMprivate.h"        /*memory management               	*/
 #include "H5Pprivate.h"		/*property lists			*/
@@ -31,8 +31,13 @@
 #include "H5FDmpio.h"
 
 /* we need this for the struct rusage declaration */
-#if defined(H5_HAVE_GETRUSAGE) && defined(H5_HAVE_SYS_RESOURCE_H)
-#   include <sys/resource.h>
+#if defined(H5_HAVE_GETRUSAGE) && defined(linux)
+#include <sys/resource.h>
+#endif
+
+/* We need this on Irix64 even though we've included stdio.h as documented */
+#if !defined __MWERKS__  
+FILE *fdopen(int fd, const char *mode);
 #endif
 
 #define PABLO_MASK      H5_mask
@@ -103,7 +108,7 @@ H5_init_library(void)
      * adding it again later if the library is cosed and reopened.
      */
     if (!dont_atexit_g) {
-	HDatexit(H5_term_library);
+	atexit(H5_term_library);
 	dont_atexit_g = TRUE;
     }
 
@@ -187,7 +192,7 @@ H5_term_library(void)
 #define DOWN(F)								      \
     (((n=H5##F##_term_interface()) && at+5<sizeof loop)?		      \
      (sprintf(loop+at, "%s%s", at?",":"", #F),				      \
-      at += HDstrlen(loop+at),						      \
+      at += strlen(loop+at),						      \
       n):0)
     
     do {
@@ -479,11 +484,23 @@ H5get_libversion(unsigned *majnum, unsigned *minnum, unsigned *relnum)
 /*-------------------------------------------------------------------------
  * Function:	H5check_version
  *
- * Purpose:	Verifies that the arguments match the version numbers
- *		compiled into the library.  This function is intended to be
- *		called from user to verify that the versions of header files
+ * Purpose:	Verifies the library versions are consistent.  It consists of
+ *		two parts:
+ *		1. Verifies that the arguments match the version numbers
+ *		compiled into the library.  This is intended to be called
+ *		from user to verify that the versions of header files
  *		compiled into the application match the version of the hdf5
- *		library.
+ *		library with which it links.
+ *		NOTE that this does not verify the Sub-release value
+ *		which should be an empty string for any official release.
+ *		This requires that any incompatible library version must
+ *              have different {major,minor,release} values. (Notice the
+ *              reverse is not necessarily true.)
+ *		2. Verifies that the five library version information of
+ *		H5_VERS_MAJOR, H5_VERS_MINOR, H5_VERS_RELEASE,
+ *		H5_VERS_SUBRELEASE and H5_VERS_INFO are consistent.
+ *		This catches source code inconsistency but is not a potential
+ *		fatal error as the error in part 1.
  *
  * Return:	Success:	SUCCEED
  *
@@ -507,6 +524,26 @@ H5check_version (unsigned majnum, unsigned minnum, unsigned relnum)
 
     /* Don't initialize the library quite yet */
     
+    /*
+     *This catches link-time version errors--an application that
+     *compiles with one version of HDF5 headers file and links
+     *with a different version of HDF5 library, will trip the alarm here.
+     *This is a fatal error because it has the potential to corrupt an
+     *existing valid HDF5 file.
+     *This must be checked repeatedly because it is possible that an
+     *application may contain different modules that are compiled with
+     *different versions of HDF5 headers.  E.g., an application prog.c
+     *calls hdf5 library directly and also calls lib-Y which calls
+     *the hdf5 library.
+     *   prog.c  is compiled with hdf5 version X
+     *   lib-Y   is compiled with hdf5 version Y
+     *   hdf5 library is version X
+     *
+     *The following code will catch the version inconsistency
+     *even if prog.c calls the hdf5 library first and then calls
+     *lib-Y which calls the hdf5 library.
+     */   
+
     if (H5_VERS_MAJOR!=majnum || H5_VERS_MINOR!=minnum ||
 	H5_VERS_RELEASE!=relnum) {
 	HDfputs ("Warning! The HDF5 header files included by this application "
@@ -529,6 +566,11 @@ H5check_version (unsigned majnum, unsigned minnum, unsigned relnum)
      *verify if H5_VERS_INFO is consistent with the other version information.
      *Check only the first sizeof(lib_str) char.  Assume the information
      *will fit within this size or enough significance.
+     *This catches the error if someone changes only some of the
+     *five H5_VERS_XXX macros in H5public.h.  E.g., if one changes
+     *H5_VERS_SUBRELEASE but did not update H5_VERS_INFO too, this code
+     *will bark.  This does not apply to link-version error as the
+     *above code.
      */
     sprintf(lib_str, "HDF5 library version: %d.%d.%d",
 	H5_VERS_MAJOR, H5_VERS_MINOR, H5_VERS_RELEASE);
@@ -651,7 +693,7 @@ HDsnprintf(char *buf, size_t UNUSED size, const char *fmt, ...)
     va_list	ap;
 
     va_start(ap, fmt);
-    n = HDvsprintf(buf, fmt, ap);
+    n = vsprintf(buf, fmt, ap);
     va_end(ap);
     return n;
 }
@@ -686,7 +728,7 @@ HDsnprintf(char *buf, size_t UNUSED size, const char *fmt, ...)
 int
 HDvsnprintf(char *buf, size_t size, const char *fmt, va_list ap)
 {
-    return HDvsprintf(buf, fmt, ap);
+    return vsprintf(buf, fmt, ap);
 }
 #endif /* H5_HAVE_VSNPRINTF */
 
@@ -752,7 +794,7 @@ HDfprintf (FILE *stream, const char *fmt, ...)
 	    fmt += 2;
 	    nout++;
 	} else if ('%'==fmt[0]) {
-	    s = fmt + 1;
+	    s = fmt+1;
 
 	    /* Flags */
 	    while (HDstrchr ("-+ #", *s)) {
@@ -801,7 +843,7 @@ HDfprintf (FILE *stream, const char *fmt, ...)
 	    }
 
 	    /* Type modifier */
-	    if (HDstrchr ("ZHhlqL", *s)) {
+	    if (HDstrchr ("ZHhlq", *s)) {
 		switch (*s) {
 		case 'H':
 		    if (sizeof(hsize_t)<sizeof(long)) {
@@ -821,18 +863,10 @@ HDfprintf (FILE *stream, const char *fmt, ...)
 			HDstrcpy (modifier, PRINTF_LL_WIDTH);
 		    }
 		    break;
+		    
 		default:
-                    /* Handle 'll' for long long types */
-                    if(*s=='l' && *(s+1)=='l') {
-                        modifier[0] = *s;
-                        modifier[1] = *s;
-                        modifier[2] = '\0';
-                        s++; /* Increment over first 'l', second is taken care of below */
-                    } /* end if */
-                    else {
-                        modifier[0] = *s;
-                        modifier[1] = '\0';
-                    } /* end else */
+		    modifier[0] = *s;
+		    modifier[1] = '\0';
 		    break;
 		}
 		s++;
@@ -1158,7 +1192,7 @@ H5_timer_begin (H5_timer_t *timer)
     assert (timer);
 
 #ifdef H5_HAVE_GETRUSAGE
-    HDgetrusage (RUSAGE_SELF, &rusage);
+    getrusage (RUSAGE_SELF, &rusage);
     timer->utime = (double)rusage.ru_utime.tv_sec +
                    (double)rusage.ru_utime.tv_usec/1e6;
     timer->stime = (double)rusage.ru_stime.tv_sec +
@@ -1168,7 +1202,7 @@ H5_timer_begin (H5_timer_t *timer)
     timer->stime = 0.0;
 #endif
 #ifdef H5_HAVE_GETTIMEOFDAY
-    HDgettimeofday (&etime, NULL);
+    gettimeofday (&etime, NULL);
     timer->etime = (double)etime.tv_sec + (double)etime.tv_usec/1e6;
 #else
     timer->etime = 0.0;
@@ -1968,7 +2002,7 @@ H5_trace (hbool_t returning, const char *func, const char *type, ...)
 		    case H5I_TEMPLATE_5:
 		    case H5I_TEMPLATE_6:
 		    case H5I_TEMPLATE_7:
-			switch (H5P_get_class(id_type)) {
+			switch (H5Pget_class(id_type)) {
 			case H5P_FILE_CREATE:
 			    fprintf(out, "H5P_FILE_CREATE");
 			    break;

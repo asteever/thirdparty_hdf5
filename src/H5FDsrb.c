@@ -1,6 +1,6 @@
 /*
- * Copyright (c) 1999-2001 NCSA
- *                         All rights reserved.
+ * Copyright <A9> 1999 NCSA
+ *                  All rights reserved.
  *
  * Programmer: Raymond Lu <slu@ncsa.uiuc.edu>
  *             Wednesday, April 12, 2000
@@ -10,18 +10,23 @@
 #include "H5private.h"		/*library functions			*/
 #include "H5Eprivate.h"		/*error handling			*/
 #include "H5Fprivate.h"		/*files					*/
-#include "H5FDprivate.h"	/*file driver				  */
-#include "H5FDsrb.h"            /* Core file driver                     */
-#include "H5MMprivate.h"        /* Memory allocation                    */
+#include "H5FDprivate.h"	/*file driver			        */
+#include "H5FDsrb.h"            /*core file driver                      */
+#include "H5MMprivate.h"        /*memory allocation                     */
 #include "H5Pprivate.h"		/*property lists			*/
-
 
 /* The driver identification number, initialized at runtime */
 static hid_t H5FD_SRB_g = 0;
 
 #ifdef H5_HAVE_SRB
 
-
+#ifdef H5_HAVE_LSEEK64
+#   define file_offset_t	off64_t
+#   define file_seek		lseek64
+#else
+#   define file_offset_t	off_t
+#   define file_seek		lseek
+#endif
 
 /*
  * These macros check for overflow of various quantities.  These macros
@@ -56,9 +61,9 @@ static haddr_t H5FD_srb_get_eoa(H5FD_t *_file);
 static herr_t  H5FD_srb_set_eoa(H5FD_t *_file, haddr_t addr);
 static haddr_t H5FD_srb_get_eof(H5FD_t *_file);
 static herr_t  H5FD_srb_read(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, haddr_t addr,
-			     size_t size, void *buf);
+			     hsize_t size, void *buf);
 static herr_t  H5FD_srb_write(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, haddr_t addr,
-			      size_t size, const void *buf);
+			      hsize_t size, const void *buf);
 static herr_t  H5FD_srb_flush(H5FD_t *_file);
 
 /* The description of a file belonging to this driver. */ 
@@ -483,7 +488,7 @@ H5FD_srb_get_eof(H5FD_t *_file)
  */
 static herr_t
 H5FD_srb_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, haddr_t addr, 
-              size_t size, void *buf)
+              hsize_t size, void *buf)
 {
     H5FD_srb_t *file = (H5FD_srb_t*)_file;
     ssize_t    nbytes;
@@ -512,7 +517,7 @@ H5FD_srb_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, haddr
      */
     while(size>0) {
         if((nbytes=srbFileRead(file->srb_conn, (int)file->fd, (char*)buf,
-                             size))<0) {
+                             (int)size))<0) {
             file->pos = HADDR_UNDEF;
             srbFileClose(file->srb_conn, file->fd);
             clFinish(file->srb_conn);    
@@ -522,10 +527,10 @@ H5FD_srb_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, haddr
 
         if (0==nbytes) {
             /*end of file but not end of format address space*/
-            HDmemset(buf, 0, size);
+            memset(buf, 0, size);
             size = 0;
         }
-        size -= nbytes;
+        size -= (hsize_t)nbytes;
         addr += (haddr_t)nbytes;
         buf = (char*)buf + nbytes;
     }
@@ -553,7 +558,7 @@ H5FD_srb_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, haddr
  */
 static herr_t
 H5FD_srb_write(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, haddr_t addr, 
-               size_t size, const void *buf)
+               hsize_t size, const void *buf)
 {
     H5FD_srb_t *file = (H5FD_srb_t*)_file;
     ssize_t    nbytes;
@@ -578,7 +583,7 @@ H5FD_srb_write(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, hadd
 
     while(size>0) {
         if( (nbytes=srbFileWrite(file->srb_conn, (int)file->fd, (char*)buf, 
-                                size)) < 0 ) {
+                                (int)size)) < 0 ) {
             file->pos = HADDR_UNDEF;
             srbObjClose(file->srb_conn, file->fd);
             clFinish(file->srb_conn);    
@@ -586,7 +591,7 @@ H5FD_srb_write(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, hadd
                           "srb file write failed");
         }
       
-        size -= nbytes; 
+        size -= (hsize_t)nbytes; 
         addr += (haddr_t)nbytes;
         buf  =  (const char*)buf + nbytes;
     }
