@@ -235,14 +235,6 @@ AC_PROG_INSTALL
 AC_LIBTOOL_DLOPEN
 AM_PROG_LIBTOOL
 
-dnl Fix up the INSTALL macro if it's a relative path. We want the
-dnl full-path to the binary instead.
-case "$INSTALL" in
-   ..*install-sh)
-      INSTALL='\${top_srcdir}'/bin/install-sh
-      ;;
-esac
-
 AC_MSG_CHECKING(make)
 AC_SUBST_FILE(DEPEND)
 if test "`${MAKE-make} --version -f /dev/null 2>/dev/null |\
@@ -365,6 +357,13 @@ done
 rm maketest
 
 dnl ----------------------------------------------------------------------
+dnl Turn on warning flags for gcc.
+dnl
+if test "X$GCC" = "Xyes"; then
+   CFLAGS="$CFLAGS -ansi -pedantic -Wchar-subscripts -Wall -W -Wshadow -Wbad-function-cast -Wcast-qual -Wcast-align -Wwrite-strings -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wnested-externs -Winline"
+fi
+
+dnl ----------------------------------------------------------------------
 dnl Production flags?  Save the value in $CONFIG_MODE so we have it for
 dnl the record.
 dnl
@@ -373,13 +372,13 @@ AC_ARG_ENABLE(production,
   [  --enable-production     Determines how to run the compiler.])
 
 case "X-$enable_production" in
-   X-yes)
+   X-|X-yes)
       AC_MSG_RESULT("production")
       CONFIG_MODE=production
       CFLAGS="$CFLAGS $PROD_CFLAGS"
       CPPFLAGS="$CPPFLAGS $PROD_CPPFLAGS"
       ;;
-   X-|X-no)
+   X-no)
       AC_MSG_RESULT("development")
       CONFIG_MODE=development
       CFLAGS="$CFLAGS $DEBUG_CFLAGS"
@@ -521,22 +520,21 @@ AC_SUBST(H5TOH4) H5TOH4=h5toh4
 AC_SUBST(TESTH5TOH4) TESTH5TOH4='$(srcdir)/testh5toh4.sh'
 
 AC_SUBST(H4TOH5) H4TOH5=h4toh5
-AC_SUBST(H4TOH5TEST) H4TOH5TEST=h4toh5test
 AC_SUBST(TESTH4TOH5) TESTH4TOH5='$(srcdir)/testh4toh5.sh'
 
 AC_ARG_WITH(hdf4,[  --with-hdf4=INC,LIB     Use the HDF4 library],,withval=no)
 case "$withval" in
    yes)
-      AC_CHECK_HEADERS(mfhdf.h,,unset H5TOH4 TESTH5TOH4 H4TOH5 H4TOH5TEST TESTH4TOH5)
-      AC_CHECK_LIB(z,compress,,unset H5TOH4 TESTH5TOH4 H4TOH5 H4TOH5TEST TESTH4TOH5)
-      AC_CHECK_LIB(jpeg,jpeg_start_compress,,unset H5TOH4 TESTH5TOH4 H4TOH5 H4TOH5TEST TESTH4TOH5)
-      AC_CHECK_LIB(df,Hstartaccess,,unset H5TOH4 TESTH5TOH4 H4TOH5 H4TOH5TEST TESTH4TOH5)
-      AC_CHECK_LIB(mfhdf,SDstart,,unset H5TOH4 TESTH5TOH4 H4TOH5 H4TOH5TEST TESTH4TOH5)
+      AC_CHECK_HEADERS(mfhdf.h,,unset H5TOH4 TESTH5TOH4 H4TOH5 TESTH4TOH5)
+      AC_CHECK_LIB(z,compress,,unset H5TOH4 TESTH5TOH4 H4TOH5 TESTH4TOH5)
+      AC_CHECK_LIB(jpeg,jpeg_start_compress,,unset H5TOH4 TESTH5TOH4 H4TOH5 TESTH4TOH5)
+      AC_CHECK_LIB(df,Hstartaccess,,unset H5TOH4 TESTH5TOH4 H4TOH5 TESTH4TOH5)
+      AC_CHECK_LIB(mfhdf,SDstart,,unset H5TOH4 TESTH5TOH4 H4TOH5 TESTH4TOH5)
       ;;
    no)
       AC_MSG_CHECKING(for HDF4)
       AC_MSG_RESULT(suppressed)
-      unset H5TOH4 TESTH5TOH4 H4TOH5 H4TOH5TEST TESTH4TOH5
+      unset H5TOH4 TESTH5TOH4 H4TOH5 TESTH4TOH5
       ;;
    *)
       hdf4_inc="`echo $withval |cut -f1 -d,`"
@@ -545,7 +543,7 @@ case "$withval" in
          CPPFLAGS="$CPPFLAGS -I$hdf4_inc"
          AC_CHECK_HEADERS(mfhdf.h,,
                           CPPFLAGS="$saved_CPPFLAGS"
-                          unset H5TOH4 TESTH5TOH4 H4TOH5 H4TOH5TEST TESTH4TOH5)
+                          unset H5TOH4 TESTH5TOH4 H4TOH5 TESTH4TOH5)
       else
          AC_CHECK_HEADERS(mfhdf.h)
       fi
@@ -554,13 +552,13 @@ case "$withval" in
       if test -n "$hdf4_lib"; then
          saved_LDFLAGS="$LDFLAGS"
          LDFLAGS="$LDFLAGS -L$hdf4_lib"
-         AC_CHECK_LIB(z,compress,,unset H5TOH4 TESTH5TOH4 H4TOH5 H4TOH5TEST TESTH4TOH5)
-         AC_CHECK_LIB(jpeg,jpeg_start_compress,,unset H5TOH4 TESTH5TOH4 H4TOH5 H4TOH5TEST TESTH4TOH5)
-         AC_CHECK_LIB(df,Hstartaccess,,unset H5TOH4 TESTH5TOH4 H4TOH5 H4TOH5TEST TESTH4TOH5)
-         AC_CHECK_LIB(mfhdf,SDstart,,unset H5TOH4 TESTH5TOH4 H4TOH5 H4TOH5TEST TESTH4TOH5)
+         AC_CHECK_LIB(z,compress,,unset H5TOH4 TESTH5TOH4 H4TOH5 TESTH4TOH5)
+         AC_CHECK_LIB(jpeg,jpeg_start_compress,,unset H5TOH4 TESTH5TOH4 H4TOH5 TESTH4TOH5)
+         AC_CHECK_LIB(df,Hstartaccess,,unset H5TOH4 TESTH5TOH4 H4TOH5 TESTH4TOH5)
+         AC_CHECK_LIB(mfhdf,SDstart,,unset H5TOH4 TESTH5TOH4 H4TOH5 TESTH4TOH5)
       else
-         AC_CHECK_LIB(z,compress,,unset H5TOH4 TESTH5TOH4 H4TOH5 H4TOH5TEST TESTH4TOH5)
-         AC_CHECK_LIB(jpeg,jpeg_start_compress,,unset H5TOH4 TESTH5TOH4 H4TOH5 H4TOH5TEST TESTH4TOH5)
+         AC_CHECK_LIB(z,compress,,unset H5TOH4 TESTH5TOH4 H4TOH5 TESTH4TOH5)
+         AC_CHECK_LIB(jpeg,jpeg_start_compress,,unset H5TOH4 TESTH5TOH4 H4TOH5 TESTH4TOH5)
          AC_CHECK_LIB(df,Hstartaccess)
          AC_CHECK_LIB(mfhdf,SDstart)
       fi
@@ -1099,7 +1097,7 @@ AC_ARG_ENABLE(debug,
 AC_SUBST(DEBUG_PKG)
 all_packages="ac,b,d,e,f,g,hg,hl,i,mf,mm,o,p,s,t,v,z"
 case "X-$DEBUG_PKG" in
-   X-|X-yes)
+   X-yes)
       DEBUG_PKG="d,e,f,g,hg,i,mm,o,p,s,t,v,z"
       CPPFLAGS="$CPPFLAGS -UNDEBUG"
       AC_MSG_RESULT(default ($DEBUG_PKG))
@@ -1109,7 +1107,7 @@ case "X-$DEBUG_PKG" in
       CPPFLAGS="$CPPFLAGS -UNDEBUG"
       AC_MSG_RESULT(all ($DEBUG_PKG))
       ;;
-   X-no|X-none)
+   X-|X-no|X-none)
       AC_MSG_RESULT(none)
       DEBUG_PKG=
       CPPFLAGS="$CPPFLAGS -DNDEBUG"
@@ -1550,50 +1548,17 @@ touch ./config/stamp1
 # Then the config.status file (but not makefiles)
 saved_no_create=$no_create
 no_create=yes
-
-EXTRA_H4_MAKEFILES=
-
-if test -n "$H4TOH5"; then
-   EXTRA_H4_MAKEFILES="$EXTRA_H4_MAKEFILES tools/h4toh5/Makefile"
-fi
-    
-if test -n "$H5TOH4"; then
-   EXTRA_H4_MAKEFILES="$EXTRA_H4_MAKEFILES tools/h5toh4/Makefile"
-fi
-
-AC_OUTPUT(src/libhdf5.settings
-          config/depend1
-          config/depend2
-          config/depend3
-          config/depend4
-          config/dependN
-          config/commence
-          config/conclude
-          Makefile
-          src/Makefile
-          pablo/Makefile
-          test/Makefile
-          testpar/Makefile
-          tools/Makefile
-          tools/h5dump/Makefile
-          tools/h5ls/Makefile
-          tools/lib/Makefile
-          tools/misc/Makefile
-          $EXTRA_H4_MAKEFILES
-          examples/Makefile
-          doc/Makefile
-          doc/html/Makefile
-          doc/html/ADGuide/Makefile
-          doc/html/Graphics/Makefile
-          doc/html/Intro/Makefile
-          doc/html/PSandPDF/Makefile
-          doc/html/TechNotes/Makefile
-          doc/html/Tutor/Makefile
+AC_OUTPUT(src/libhdf5.settings config/depend1 config/depend2 config/depend3
+          config/depend4 config/dependN config/commence config/conclude
+          Makefile src/Makefile pablo/Makefile test/Makefile
+          testpar/Makefile tools/Makefile examples/Makefile
+          doc/Makefile doc/html/Makefile doc/html/ADGuide/Makefile
+          doc/html/Graphics/Makefile doc/html/PSandPDF/Makefile
+          doc/html/TechNotes/Makefile doc/html/Tutor/Makefile
           doc/html/Tutor/Graphics/Makefile
           doc/html/Tutor/examples/Makefile
           doc/html/Tutor/examples/java/Makefile
-          doc/html/cpplus/Makefile
-          doc/html/fortran/Makefile)
+          doc/html/cpplus/Makefile doc/html/fortran/Makefile)
 no_create=$saved_no_create
 
 # Then the stamp2 file for H5config.h
