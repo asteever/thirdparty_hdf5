@@ -22,11 +22,12 @@ static H5F_low_t *H5F_stdio_open(const char *name,
 				 H5F_search_t *key/*out*/);
 static herr_t H5F_stdio_close(H5F_low_t *lf, const H5F_access_t *access_parms);
 static herr_t H5F_stdio_read(H5F_low_t *lf, const H5F_access_t *access_parms,
-			     const H5F_xfer_t *xfer_parms, haddr_t addr,
+			     const H5F_xfer_t *xfer_parms, const haddr_t *addr,
 			     size_t size, uint8_t *buf/*out*/);
 static herr_t H5F_stdio_write(H5F_low_t *lf, const H5F_access_t *access_parms,
-			      const H5F_xfer_t *xfer_parms, haddr_t addr,
-			      size_t size, const uint8_t *buf);
+			      const H5F_xfer_t *xfer_parms,
+			      const haddr_t *addr, size_t size,
+			      const uint8_t *buf);
 static herr_t H5F_stdio_flush(H5F_low_t *lf, const H5F_access_t *access_parms);
 
 const H5F_low_class_t H5F_LOW_STDIO_g[1] = {{
@@ -109,13 +110,13 @@ H5F_stdio_open(const char *name, const H5F_access_t UNUSED *access_parms,
     lf->u.stdio.f = f;
     lf->u.stdio.op = H5F_OP_SEEK;
     lf->u.stdio.cur = 0;
-    lf->eof = 0;
+    H5F_addr_reset(&(lf->eof));
     if (HDfseek(lf->u.stdio.f, 0, SEEK_END) < 0) {
 	lf->u.stdio.op = H5F_OP_UNKNOWN;
     } else {
 	hssize_t x = HDftell (lf->u.stdio.f);
 	assert (x>=0);
-	lf->eof += (hsize_t)x;
+	H5F_addr_inc(&(lf->eof), (hsize_t)x);
     }
 
     /* The unique key */
@@ -174,16 +175,14 @@ H5F_stdio_close(H5F_low_t *lf, const H5F_access_t UNUSED *access_parms)
  *		Wednesday, October 22, 1997
  *
  * Modifications:
- *		Albert Cheng, 1998-06-02
- *		Added XFER_MODE argument.
+ *		June 2, 1998	Albert Cheng
+ *		Added xfer_mode argument
  *
- * 		Robb Matzke, 1999-07-28
- *		The ADDR argument is passed by value.
  *-------------------------------------------------------------------------
  */
 static herr_t
 H5F_stdio_read(H5F_low_t *lf, const H5F_access_t UNUSED *access_parms,
-	       const H5F_xfer_t UNUSED *xfer_parms, haddr_t addr,
+	       const H5F_xfer_t UNUSED *xfer_parms, const haddr_t *addr,
 	       size_t size, uint8_t *buf/*out*/)
 {
     size_t		n;
@@ -198,20 +197,20 @@ H5F_stdio_read(H5F_low_t *lf, const H5F_access_t UNUSED *access_parms,
 
     /* Check for overflow */
     mask = (uint64_t)1 << (8*sizeof(offset)-1);
-    if (addr >= mask ||
-	addr + size < addr ||
-	addr+size >= mask) {
+    if (addr->offset >= mask ||
+	addr->offset + size < addr->offset ||
+	addr->offset+size >= mask) {
 	HRETURN_ERROR (H5E_IO, H5E_OVERFLOW, FAIL, "file address overflowed");
     }
 #ifdef HAVE_FSEEK64
-    offset = (int64_t)(addr); /*checked for overflow*/
+    offset = (int64_t)(addr->offset); /*checked for overflow*/
 #else
-    offset = (long)(addr); /*checked for overflow*/
+    offset = (long)(addr->offset); /*checked for overflow*/
 #endif
 
     /* Check easy cases */
     if (0 == size) HRETURN(SUCCEED);
-    if ((uint64_t)offset >= lf->eof) {
+    if ((uint64_t)offset >= lf->eof.offset) {
 	HDmemset(buf, 0, size);
 	HRETURN(SUCCEED);
     }
@@ -237,8 +236,8 @@ H5F_stdio_read(H5F_low_t *lf, const H5F_access_t UNUSED *access_parms,
     /*
      * Read zeros past the logical end of file (physical is handled below)
      */
-    if ((size_t) offset + size > lf->eof) {
-	size_t nbytes = (size_t) offset + size - lf->eof;
+    if ((size_t) offset + size > lf->eof.offset) {
+	size_t nbytes = (size_t) offset + size - lf->eof.offset;
 	HDmemset(buf + size - nbytes, 0, nbytes);
 	size -= nbytes;
     }
@@ -285,16 +284,14 @@ H5F_stdio_read(H5F_low_t *lf, const H5F_access_t UNUSED *access_parms,
  *		Wednesday, October 22, 1997
  *
  * Modifications:
- *		Albert Cheng, 1998-06-02
- *		Added XFER_MODE argument.
+ *		June 2, 1998	Albert Cheng
+ *		Added xfer_mode argument
  *
- * 		Robb Matzke, 1999-07-28
- *		The ADDR argument is passed by value.
  *-------------------------------------------------------------------------
  */
 static herr_t
 H5F_stdio_write(H5F_low_t *lf, const H5F_access_t UNUSED *access_parms,
-	        const H5F_xfer_t UNUSED *xfer_parms, haddr_t addr,
+	        const H5F_xfer_t UNUSED *xfer_parms, const haddr_t *addr,
 		size_t size, const uint8_t *buf)
 {
     uint64_t		mask;
@@ -310,16 +307,16 @@ H5F_stdio_write(H5F_low_t *lf, const H5F_access_t UNUSED *access_parms,
 
     /* Check for overflow */
     mask = (uint64_t)1 << (8*sizeof(offset)-1);
-    if (addr >= mask ||
-	addr+size < addr ||
-	addr+size >= mask) {
+    if (addr->offset >= mask ||
+	addr->offset+size < addr->offset ||
+	addr->offset+size >= mask) {
 	HRETURN_ERROR (H5E_IO, H5E_OVERFLOW, FAIL, "file address overflowed");
     }
 #ifdef HAVE_FSEEK64
-    offset = (int64_t)(addr); /*checked for overflow*/
+    offset = (int64_t)(addr->offset); /*checked for overflow*/
     n = size; /*checked for overflow*/
 #else
-    offset = (long)(addr); /*checked for overflow*/
+    offset = (long)(addr->offset); /*checked for overflow*/
     n = size; /*checked for overflow*/
 #endif
 

@@ -41,8 +41,9 @@ static char             RcsId[] = "@(#)$Revision$";
 #include <H5api_adpt.h>
 
 /* Version numbers */
+/* **** NOTICE: THIS IS A BETA RELEASE OF HDF5-1.2.0 ****   */
 #define H5_VERS_MAJOR	1       /* For major interface/format changes  	     */
-#define H5_VERS_MINOR	3       /* For minor interface/format changes  	     */
+#define H5_VERS_MINOR	2       /* For minor interface/format changes  	     */
 #define H5_VERS_RELEASE	0      /* For tweaks, bug-fixes, or development     */
 
 #define H5check()	H5check_version(H5_VERS_MAJOR,H5_VERS_MINOR,	      \

@@ -50,10 +50,11 @@ main(int argc, char *argv[])
 {
     hid_t	fid, plist=H5P_DEFAULT;
     H5F_t       *f;
-    haddr_t     addr=0, extra=0;
+    haddr_t     addr;
     uint8_t     sig[16];
     intn        i, ndims;
     herr_t      status = SUCCEED;
+    haddr_t     extra;
 
     /*
      * Open the file and get the file descriptor.
@@ -74,18 +75,22 @@ main(int argc, char *argv[])
     /*
      * Parse command arguments.
      */
+    H5F_addr_reset(&addr);
+    H5F_addr_reset(&extra);
     if (argc > 2) {
         printf("New address: %s\n", argv[2]);
-        addr = HDstrtoll(argv[2], NULL, 0);
+        addr.offset = HDstrtoll(argv[2], NULL, 0);
     }
     if (argc > 3) {
-        extra = HDstrtoll(argv[3], NULL, 0);
+        extra.offset = HDstrtoll(argv[3], NULL, 0);
     }
     /*
      * Read the signature at the specified file position.
      */
-    HDfprintf(stdout, "Reading signature at address %a (rel)\n", addr);
-    if (H5F_block_read(f, addr, (hsize_t)sizeof(sig), &H5F_xfer_dflt,
+    printf("Reading signature at address ");
+    H5F_addr_print(stdout, &addr);
+    printf(" (rel)\n");
+    if (H5F_block_read(f, &addr, (hsize_t)sizeof(sig), &H5F_xfer_dflt,
 		       sig)<0) {
         fprintf(stderr, "cannot read signature\n");
         HDexit(3);
@@ -94,25 +99,25 @@ main(int argc, char *argv[])
         /*
          * Debug the boot block.
          */
-        status = H5F_debug(f, addr, stdout, 0, VCOL);
+        status = H5F_debug(f, &addr, stdout, 0, VCOL);
 
     } else if (!HDmemcmp(sig, H5HL_MAGIC, H5HL_SIZEOF_MAGIC)) {
         /*
          * Debug a local heap.
          */
-        status = H5HL_debug(f, addr, stdout, 0, VCOL);
+        status = H5HL_debug(f, &addr, stdout, 0, VCOL);
 	
     } else if (!HDmemcmp (sig, H5HG_MAGIC, H5HG_SIZEOF_MAGIC)) {
 	/*
 	 * Debug a global heap collection.
 	 */
-	status = H5HG_debug (f, addr, stdout, 0, VCOL);
+	status = H5HG_debug (f, &addr, stdout, 0, VCOL);
 
     } else if (!HDmemcmp(sig, H5G_NODE_MAGIC, H5G_NODE_SIZEOF_MAGIC)) {
         /*
          * Debug a symbol table node.
          */
-        status = H5G_node_debug(f, addr, stdout, 0, VCOL, extra);
+        status = H5G_node_debug(f, &addr, stdout, 0, VCOL, &extra);
 
     } else if (!HDmemcmp(sig, H5B_MAGIC, H5B_SIZEOF_MAGIC)) {
         /*
@@ -124,12 +129,12 @@ main(int argc, char *argv[])
 	
         switch (subtype) {
         case H5B_SNODE_ID:
-            status = H5G_node_debug(f, addr, stdout, 0, VCOL, extra);
+            status = H5G_node_debug(f, &addr, stdout, 0, VCOL, &extra);
             break;
 
 	case H5B_ISTORE_ID:
-	    ndims = (int)extra;
-	    status = H5F_istore_debug (f, addr, stdout, 0, VCOL, ndims);
+	    ndims = (int)extra.offset;
+	    status = H5F_istore_debug (f, &addr, stdout, 0, VCOL, ndims);
 	    break;
 
         default:
@@ -143,7 +148,7 @@ main(int argc, char *argv[])
          * This could be an object header.  Since they don't have a signature
          * it's a somewhat "ify" detection.
          */
-        status = H5O_debug(f, addr, stdout, 0, VCOL);
+        status = H5O_debug(f, &addr, stdout, 0, VCOL);
 
     } else {
         /*

@@ -519,7 +519,10 @@ HDvsnprintf(char *buf, size_t size, const char *fmt, va_list ap)
  *		prints an `hsize_t' value as a hex number right justified and
  *		zero filled in an 18-character field.
  *
- *		The conversion `a' refers to an `haddr_t' type.
+ *		The conversion `a' refers to an `haddr_t*' type.
+ *
+ * Bugs:	Return value will be incorrect if `%a' appears in the format
+ *		string.
  *
  * Return:	Success:	Number of characters printed
  *
@@ -529,9 +532,7 @@ HDvsnprintf(char *buf, size_t size, const char *fmt, va_list ap)
  *              Thursday, April  9, 1998
  *
  * Modifications:
- *		Robb Matzke, 1999-07-27
- *		The `%a' format refers to an argument of `haddr_t' type
- *		instead of `haddr_t*' and the return value is correct.
+ *
  *-------------------------------------------------------------------------
  */
 int
@@ -731,8 +732,8 @@ HDfprintf (FILE *stream, const char *fmt, ...)
 
 	    case 'a':
 		if (1) {
-		    haddr_t x = va_arg (ap, haddr_t);
-		    if (H5F_addr_defined(x)) {
+		    haddr_t *x = va_arg (ap, haddr_t*);
+		    if (x && H5F_addr_defined(x)) {
 			sprintf(template, "%%%s%s%s%s%s",
 				leftjust?"-":"", plussign?"+":"",
 				ldspace?" ":"", prefix?"#":"",
@@ -740,15 +741,15 @@ HDfprintf (FILE *stream, const char *fmt, ...)
 			if (fwidth>0) {
 			    sprintf(template+HDstrlen(template), "%d", fwidth);
 			}
-			if (sizeof(x)==SIZEOF_INT) {
+			if (sizeof(x->offset)==SIZEOF_INT) {
 			    HDstrcat(template, "d");
-			} else if (sizeof(x)==SIZEOF_LONG) {
+			} else if (sizeof(x->offset)==SIZEOF_LONG) {
 			    HDstrcat(template, "ld");
-			} else if (sizeof(x)==SIZEOF_LONG_LONG) {
+			} else if (sizeof(x->offset)==SIZEOF_LONG_LONG) {
 			    HDstrcat(template, PRINTF_LL_WIDTH);
 			    HDstrcat(template, "d");
 			}
-			n = fprintf(stream, template, x);
+			n = fprintf(stream, template, x->offset);
 		    } else {
 			HDstrcpy(template, "%");
 			if (leftjust) HDstrcat(template, "-");
@@ -756,7 +757,7 @@ HDfprintf (FILE *stream, const char *fmt, ...)
 			    sprintf(template+HDstrlen(template), "%d", fwidth);
 			}
 			HDstrcat(template, "s");
-			fprintf(stream, template, "UNDEF");
+			fprintf(stream, template, x?"UNDEF":"NULL");
 		    }
 		}
 		break;

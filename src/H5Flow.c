@@ -15,6 +15,8 @@
 #include <H5Fprivate.h>
 #include <H5MMprivate.h>
 
+#define addr_defined(X) (((uint64_t)(-1)!=(X)->offset) ? TRUE : FALSE)
+
 #define PABLO_MASK	H5Flow_mask
 static intn		interface_initialize_g = 0;
 #define INTERFACE_INIT NULL
@@ -207,24 +209,22 @@ H5F_low_close(H5F_low_t *lf, const H5F_access_t *access_parms)
  *		Wednesday, October 22, 1997
  *
  * Modifications:
- *		Albert Cheng, 1998-06-02
- *		Added XFER_MODE argument.
+ *		June 2, 1998	Albert Cheng
+ *		Added xfer_mode argument
  *
- * 		Robb Matzke, 1999-07-28
- *		The ADDR argument is passed by value.
  *-------------------------------------------------------------------------
  */
 herr_t
 H5F_low_read(H5F_low_t *lf, const H5F_access_t *access_parms,
-	     const H5F_xfer_t *xfer_parms, haddr_t addr, size_t size,
-	     uint8_t *buf/*out*/)
+	     const H5F_xfer_t *xfer_parms, const haddr_t *addr,
+	     size_t size, uint8_t *buf/*out*/)
 {
     herr_t		    ret_value = FAIL;
 
     FUNC_ENTER(H5F_low_read, FAIL);
 
     assert(lf && lf->type);
-    assert(H5F_addr_defined(addr));
+    assert(addr && addr_defined(addr));
     assert(buf);
 
     if (lf->type->read) {
@@ -259,23 +259,20 @@ H5F_low_read(H5F_low_t *lf, const H5F_access_t *access_parms,
  *		Wednesday, October 22, 1997
  *
  * Modifications:
- *		Albert Cheng, 1998-06-02
- *		Added XFER_MODE argument.
+ *		June 2, 1998	Albert Cheng
+ *		Added xfer_mode argument
  *
- *		rky, 1998-08-16
+ *		rky 980816
  *		Accommodate fancy MPI derived datatype writes.
  *
- *		rky, 1998-09-02
+ *		rky 980902
  *		For non-block parallel writes, don't change value of lf->eof.
- *
- * 		Robb Matzke, 1999-07-28
- *		The ADDR argument is passed by value.
  *-------------------------------------------------------------------------
  */
 herr_t
 H5F_low_write(H5F_low_t *lf, const H5F_access_t *access_parms,
-	      const H5F_xfer_t *xfer_parms, haddr_t addr, size_t size,
-	      const uint8_t *buf)
+	      const H5F_xfer_t *xfer_parms, const haddr_t *addr,
+	      size_t size, const uint8_t *buf)
 {
     herr_t		ret_value = FAIL;
     haddr_t		tmp_addr;
@@ -283,16 +280,17 @@ H5F_low_write(H5F_low_t *lf, const H5F_access_t *access_parms,
     FUNC_ENTER(H5F_low_write, FAIL);
 
     assert(lf && lf->type);
-    assert(H5F_addr_defined(addr));
+    assert(addr && addr_defined(addr));
     assert(buf);
 
     /* check for writing past the end of file marker */
-    tmp_addr = addr + (hsize_t)size;
-    if (H5F_addr_gt(tmp_addr, lf->eof))
+    tmp_addr = *addr;
+    H5F_addr_inc(&tmp_addr, (hsize_t)size);
+    if (H5F_addr_gt(&tmp_addr, &(lf->eof)))
         HRETURN_ERROR(H5E_IO, H5E_OVERFLOW, ret_value, "write past end of logical file");
 
     /* Check if the last byte of the logical file has been written */
-    if (!lf->eof_written && H5F_addr_eq(tmp_addr, lf->eof))
+    if (!lf->eof_written && H5F_addr_eq(&tmp_addr, &(lf->eof)))
         lf->eof_written=1;
     
     /* Write the data */
@@ -343,17 +341,16 @@ H5F_low_flush(H5F_low_t *lf, const H5F_access_t *access_parms)
     assert(lf && lf->type);
 
     /* Make sure the last block of the file has been allocated on disk */
-    last_byte = 0;
-    if (!lf->eof_written && H5F_addr_defined(lf->eof) &&
-	H5F_addr_gt(lf->eof, last_byte)) {
+    H5F_addr_reset(&last_byte);
+    if (!lf->eof_written && addr_defined(&(lf->eof)) && H5F_addr_gt(&(lf->eof), &last_byte)) {
 	last_byte = lf->eof;
-	last_byte -= 1;
-	if (H5F_low_read(lf, access_parms, &H5F_xfer_dflt, last_byte,
+	last_byte.offset -= 1;
+	if (H5F_low_read(lf, access_parms, &H5F_xfer_dflt, &last_byte,
 			 1, buf) >= 0) {
 #ifdef HAVE_PARALLEL
 	    H5F_mpio_tas_allsame( lf, TRUE );	/* only p0 will write */
 #endif /* HAVE_PARALLEL */
-	    H5F_low_write(lf, access_parms, &H5F_xfer_dflt, last_byte,
+	    H5F_low_write(lf, access_parms, &H5F_xfer_dflt, &last_byte,
 			  1, buf);
 	}
         else 
@@ -404,17 +401,17 @@ H5F_low_flush(H5F_low_t *lf, const H5F_access_t *access_parms)
  *-------------------------------------------------------------------------
  */
 hsize_t
-H5F_low_size(H5F_low_t *lf, haddr_t *eof_p/*out*/)
+H5F_low_size(H5F_low_t *lf, haddr_t *eof/*out*/)
 {
     hsize_t	size = (hsize_t)(-1);	      /*max possible size */
 
     FUNC_ENTER(H5F_low_size, 0);
 
     assert(lf && lf->type);
-    assert(eof_p);
+    assert(eof);
 
-    *eof_p = lf->eof;
-    if (*eof_p < size) size = *eof_p;
+    *eof = lf->eof;
+    if (eof->offset < size) size = eof->offset;
 
     FUNC_LEAVE(size);
 }
@@ -519,7 +516,7 @@ H5F_low_access(const H5F_low_class_t *type, const char *name,
  *		providing its own allocation method.
  *
  * Return:	Success:	Non-negative.  The address of the old
- *				end-of-file is returned through the ADDR_P
+ *				end-of-file is returned through the ADDR
  *				argument and the logical size of the file has
  *				been extended by SIZE bytes.
  *
@@ -534,25 +531,25 @@ H5F_low_access(const H5F_low_class_t *type, const char *name,
  */
 herr_t
 H5F_low_extend(H5F_low_t *lf, const H5F_access_t *access_parms, intn op,
-	       hsize_t size, haddr_t *addr_p/*out*/)
+	       hsize_t size, haddr_t *addr/*out*/)
 {
     FUNC_ENTER(H5F_low_alloc, FAIL);
 
     assert(lf);
     assert(size > 0);
-    assert(addr_p);
+    assert(addr);
 
     /* Reset the EOF written flag */
     lf->eof_written=0;
 
     if (lf->type->extend) {
-	if ((lf->type->extend) (lf, access_parms, op, size, addr_p/*out*/)<0) {
+	if ((lf->type->extend) (lf, access_parms, op, size, addr/*out*/) < 0) {
 	    HRETURN_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL,
 			  "unable to extend file");
 	}
     } else {
-	*addr_p = lf->eof;
-	lf->eof += size;
+	*addr = lf->eof;
+	H5F_addr_inc(&(lf->eof), size);
     }
 
     FUNC_LEAVE(SUCCEED);
@@ -575,8 +572,7 @@ H5F_low_extend(H5F_low_t *lf, const H5F_access_t *access_parms, intn op,
  *				ADDR will be the address within the free
  *				block where the request can be satisfied.
  *
- *		Failure:	Negative with the output value of ADDR_P
- *				undefined.
+ *		Failure:	Negative with the output value of ADDR undefined.
  *
  * Programmer:	Robb Matzke
  *              Tuesday, June  9, 1998
@@ -587,7 +583,7 @@ H5F_low_extend(H5F_low_t *lf, const H5F_access_t *access_parms, intn op,
  */
 intn
 H5F_low_alloc (H5F_low_t *lf, intn op, hsize_t alignment, hsize_t threshold,
-	       hsize_t size, H5MF_free_t *blk, haddr_t *addr_p/*out*/)
+	       hsize_t size, H5MF_free_t *blk, haddr_t *addr/*out*/)
 {
     intn	ret_value = FAIL;
     hsize_t	wasted;
@@ -597,24 +593,25 @@ H5F_low_alloc (H5F_low_t *lf, intn op, hsize_t alignment, hsize_t threshold,
     assert (alignment>0);
     assert (size>0);
     assert (blk);
-    assert (addr_p);
+    assert (addr);
 
     if (lf->type->alloc) {
 	ret_value = (lf->type->alloc)(lf, op, alignment, threshold, size, blk,
-				      addr_p/*out*/);
+				      addr/*out*/);
     } else {
 	if (size>=threshold) {
-	    wasted = blk->addr % alignment;
+	    wasted = blk->addr.offset % alignment;
 	} else {
 	    wasted = 0;
 	}
 	if (0==wasted && size==blk->size) {
 	    /* exact match */
-	    *addr_p = blk->addr;
+	    *addr = blk->addr;
 	    ret_value = 1;
 	} else if (blk->size>wasted && blk->size-wasted>=size) {
 	    /* over-satisfied */
-	    *addr_p = blk->addr + wasted;
+	    *addr = blk->addr;
+	    H5F_addr_inc (addr, wasted);
 	    ret_value = 0;
 	}
     }
@@ -634,23 +631,144 @@ H5F_low_alloc (H5F_low_t *lf, intn op, hsize_t alignment, hsize_t threshold,
  *		Thursday, November 13, 1997
  *
  * Modifications:
- *		Robb Matzke, 1999-07-28
- *		The ADDR argument is passed by value.
+ *
  *-------------------------------------------------------------------------
  */
 herr_t
-H5F_low_seteof(H5F_low_t *lf, haddr_t addr)
+H5F_low_seteof(H5F_low_t *lf, const haddr_t *addr)
 {
     FUNC_ENTER(H5F_low_seteof, FAIL);
 
     assert(lf);
-    assert(H5F_addr_defined(addr));
+    assert(addr && addr_defined(addr));
 
-    lf->eof = addr;
+    lf->eof = *addr;
 
     FUNC_LEAVE(SUCCEED);
 }
+
+/*-------------------------------------------------------------------------
+ * Function:	H5F_addr_cmp
+ *
+ * Purpose:	Compares two addresses.
+ *
+ * Return:	Success:	<0 if A1<A2
+ *				=0 if A1=A2
+ *				>0 if A1>A2
+ *
+ *		Failure:	never fails
+ *
+ * Programmer:	Robb Matzke
+ *		Friday, November  7, 1997
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+intn
+H5F_addr_cmp(const haddr_t *a1, const haddr_t *a2)
+{
+    FUNC_ENTER(H5F_addr_cmp, FAIL);
 
+    assert(a1 && addr_defined(a1));
+    assert(a2 && addr_defined(a2));
+
+    if (a1->offset < a2->offset)
+	HRETURN(-1);
+    if (a1->offset > a2->offset)
+	HRETURN(1);
+
+    FUNC_LEAVE(0);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:	H5F_addr_undef
+ *
+ * Purpose:	Cause an address to become undefined.
+ *
+ * Return:	void
+ *
+ * Programmer:	Robb Matzke
+ *		Friday, November  7, 1997
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+void
+H5F_addr_undef(haddr_t *addr/*out*/)
+{
+    assert(addr);
+
+    addr->offset = (uint64_t)(-1);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:	H5F_addr_defined
+ *
+ * Purpose:	Determines if an address has a defined value.
+ *
+ * Return:	Success:	TRUE or FALSE
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *		Friday, November  7, 1997
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+htri_t
+H5F_addr_defined(const haddr_t *addr)
+{
+    FUNC_ENTER(H5F_addr_defined, FAIL);
+    FUNC_LEAVE(addr_defined(addr));
+}
+
+/*-------------------------------------------------------------------------
+ * Function:	H5F_addr_reset
+ *
+ * Purpose:	Reset the address to zero.
+ *
+ * Return:	void
+ *
+ * Programmer:	Robb Matzke
+ *		Friday, November  7, 1997
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+void
+H5F_addr_reset(haddr_t *addr/*out*/)
+{
+    assert(addr);
+    addr->offset = 0;
+}
+
+/*-------------------------------------------------------------------------
+ * Function:	H5F_addr_zerop
+ *
+ * Purpose:	Determines if an address is zero.
+ *
+ * Return:	Success:	TRUE or FALSE
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *		Friday, November  7, 1997
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+htri_t
+H5F_addr_zerop(const haddr_t *addr)
+{
+    FUNC_ENTER(H5F_addr_zerop, FAIL);
+    FUNC_LEAVE(0 == addr->offset ? TRUE : FALSE);
+}
 
 /*-------------------------------------------------------------------------
  * Function:	H5F_addr_encode
@@ -665,26 +783,26 @@ H5F_low_seteof(H5F_low_t *lf, haddr_t addr)
  *		Friday, November  7, 1997
  *
  * Modifications:
- *		Robb Matzke, 1999-07-28
- *		The ADDR argument is passed by value.
+ *
  *-------------------------------------------------------------------------
  */
 void
-H5F_addr_encode(H5F_t *f, uint8_t **pp/*in,out*/, haddr_t addr)
+H5F_addr_encode(H5F_t *f, uint8_t **pp, const haddr_t *addr)
 {
     uintn		    i;
     haddr_t		    tmp;
 
     assert(f);
     assert(pp && *pp);
+    assert(addr);
 
-    if (H5F_addr_defined(addr)) {
-	tmp = addr;
+    if (addr_defined(addr)) {
+	tmp = *addr;
 	for (i=0; i<H5F_SIZEOF_ADDR(f); i++) {
-	    *(*pp)++ = (uint8_t)(tmp & 0xff);
-	    tmp >>= 8;
+	    *(*pp)++ = (uint8_t)(tmp.offset & 0xff);
+	    tmp.offset >>= 8;
 	}
-	assert("overflow" && 0 == tmp);
+	assert("overflow" && 0 == tmp.offset);
 
     } else {
 	for (i=0; i<H5F_SIZEOF_ADDR(f); i++) {
@@ -692,7 +810,6 @@ H5F_addr_encode(H5F_t *f, uint8_t **pp/*in,out*/, haddr_t addr)
 	}
     }
 }
-
 
 /*-------------------------------------------------------------------------
  * Function:	H5F_addr_decode
@@ -714,7 +831,7 @@ H5F_addr_encode(H5F_t *f, uint8_t **pp/*in,out*/, haddr_t addr)
  *-------------------------------------------------------------------------
  */
 void
-H5F_addr_decode(H5F_t *f, const uint8_t **pp/*in,out*/, haddr_t *addr_p/*out*/)
+H5F_addr_decode(H5F_t *f, const uint8_t **pp, haddr_t *addr/*out*/)
 {
     uintn		    i;
     haddr_t		    tmp;
@@ -723,25 +840,174 @@ H5F_addr_decode(H5F_t *f, const uint8_t **pp/*in,out*/, haddr_t *addr_p/*out*/)
 
     assert(f);
     assert(pp && *pp);
-    assert(addr_p);
+    assert(addr);
 
-    *addr_p = 0;
+    addr->offset = 0;
 
     for (i=0; i<H5F_SIZEOF_ADDR(f); i++) {
 	c = *(*pp)++;
 	if (c != 0xff) all_zero = FALSE;
 
-	if (i<sizeof(*addr_p)) {
-	    tmp = c;
-	    tmp <<= i * 8;	/*use tmp to get casting right */
-	    *addr_p |= tmp;
+	if (i<sizeof(addr->offset)) {
+	    tmp.offset = c;
+	    tmp.offset <<= i * 8;	/*use tmp to get casting right */
+	    addr->offset |= tmp.offset;
 	} else if (!all_zero) {
 	    assert(0 == **pp);	/*overflow */
 	}
     }
-    if (all_zero) *addr_p = H5F_ADDR_UNDEF;
+    if (all_zero) H5F_addr_undef(addr);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:	H5F_addr_print
+ *
+ * Purpose:	Print an address
+ *
+ * Return:	void
+ *
+ * Programmer:	Robb Matzke
+ *		Friday, November  7, 1997
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+void
+H5F_addr_print(FILE *stream, const haddr_t *addr)
+{
+    assert(stream);
+    assert(addr);
+
+    HDfprintf(stream, "%a", addr);
 }
 
+
+/*-------------------------------------------------------------------------
+ * Function:	H5F_addr_pow2
+ *
+ * Purpose:	Returns an address which is a power of two.
+ *
+ * Return:	void
+ *
+ * Programmer:	Robb Matzke
+ *		Friday, November  7, 1997
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+void
+H5F_addr_pow2(uintn n, haddr_t *addr /*out */ )
+{
+    assert(addr);
+    assert(n < 8 * sizeof(addr->offset));
+
+    addr->offset = 1;
+    addr->offset <<= n;
+}
+
+/*-------------------------------------------------------------------------
+ * Function:	H5F_addr_inc
+ *
+ * Purpose:	Increments an address by some number of bytes.
+ *
+ * Return:	void
+ *
+ * Programmer:	Robb Matzke
+ *		Friday, November  7, 1997
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+void
+H5F_addr_inc(haddr_t *addr/*in,out*/, hsize_t inc)
+{
+    assert(addr && addr_defined(addr));
+    assert(addr->offset <= addr->offset + inc);
+    
+    addr->offset += inc;
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5F_addr_adj
+ *
+ * Purpose:	Adjusts an address by adding or subtracting some amount.
+ *
+ * Return:	void
+ *
+ * Programmer:	Robb Matzke
+ *		Monday, April  6, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+void
+H5F_addr_adj(haddr_t *addr/*in,out */, hssize_t adj)
+{
+#ifndef NDEBUG
+    assert(addr && addr_defined(addr));
+    if (adj>=0) {
+	assert(addr->offset <= addr->offset + adj);
+    } else {
+	assert (addr->offset > addr->offset + adj);
+    }
+#endif
+    
+    addr->offset += adj;
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5F_addr_add
+ *
+ * Purpose:	Adds two addresses and puts the result in the first argument.
+ *
+ * Return:	void
+ *
+ * Programmer:	Robb Matzke
+ *		Friday, November  7, 1997
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+void
+H5F_addr_add(haddr_t *a1 /*in,out */ , const haddr_t *a2)
+{
+    assert(a1 && addr_defined(a1));
+    assert(a2 && addr_defined(a2));
+    a1->offset += a2->offset;
+}
+
+/*-------------------------------------------------------------------------
+ * Function:	H5F_addr_hash
+ *
+ * Purpose:	Computes a hash value of an address between 0 and MOD-1,
+ *		inclusive.
+ *
+ * Return:	Success:	The hash value
+ *
+ *		Failure:	never fails
+ *
+ * Programmer:	Robb Matzke
+ *		Friday, November  7, 1997
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+uintn
+H5F_addr_hash(const haddr_t *addr, uintn mod)
+{
+    assert(addr && addr_defined(addr));
+    assert(mod > 0);
+
+    return (unsigned)(addr->offset % mod);  /*ignore file number */
+}
 
 /*-------------------------------------------------------------------------
  * Function:	H5F_addr_pack
@@ -762,16 +1028,15 @@ H5F_addr_decode(H5F_t *f, const uint8_t **pp/*in,out*/, haddr_t *addr_p/*out*/)
  *-------------------------------------------------------------------------
  */
 herr_t
-H5F_addr_pack(H5F_t UNUSED *f, haddr_t *addr_p/*out*/,
-	      const unsigned long objno[2])
+H5F_addr_pack(H5F_t UNUSED *f, haddr_t *addr, const unsigned long objno[2])
 {
     assert(f);
     assert(objno);
-    assert(addr_p);
+    assert(addr);
 
-    *addr_p = objno[0];
+    addr->offset = objno[0];
 #if SIZEOF_LONG<SIZEOF_UINT64_T
-    *addr_p |= ((uint64_t)objno[1]) << (8*sizeof(long));
+    addr->offset |= ((uint64_t)objno[1]) << (8*sizeof(long));
 #endif
     
     return(SUCCEED);

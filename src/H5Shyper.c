@@ -2844,11 +2844,11 @@ H5S_hyper_select_deserialize (H5S_t *space, const uint8_t *buf)
         } /* end if */
     } /* end for */
 
+done:
     /* Free temporary buffers */
     H5MM_xfree(start);
     H5MM_xfree(count);
 
-done:
     FUNC_LEAVE (ret_value);
 }   /* H5S_hyper_select_deserialize() */
 

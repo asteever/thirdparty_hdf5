@@ -819,7 +819,7 @@ H5D_new(const H5D_create_t *create_parms)
         ret_value->create_parms = H5P_copy (H5P_DATASET_CREATE,
 					    &H5D_create_dflt);
     }
-    ret_value->ent.header = H5F_ADDR_UNDEF;
+    H5F_addr_undef(&(ret_value->ent.header));
 
     /* Success */
 
@@ -1039,7 +1039,7 @@ H5D_create(H5G_entry_t *loc, const char *name, const H5T_t *type,
 			"unable to initialize storage");
 	}
     } else {
-	new_dset->layout.addr = H5F_ADDR_UNDEF;
+	H5F_addr_undef (&(new_dset->layout.addr));
     }
 
     /* Update layout message */
@@ -1055,8 +1055,8 @@ H5D_create(H5G_entry_t *loc, const char *name, const H5T_t *type,
 	for (i=0; i<efl->nused; i++) {
 	    heap_size += H5HL_ALIGN (HDstrlen (efl->slot[i].name)+1);
 	}
-	if (H5HL_create (f, heap_size, &(efl->heap_addr)/*out*/)<0 ||
-	    (size_t)(-1)==H5HL_insert(f, efl->heap_addr, 1, "")) {
+	if (H5HL_create (f, heap_size, &(efl->heap_addr))<0 ||
+	    (size_t)(-1)==H5HL_insert (f, &(efl->heap_addr), 1, "")) {
 	    HGOTO_ERROR (H5E_DATASET, H5E_CANTINIT, NULL,
 			 "unable to create external file list name heap");
 	}
@@ -1088,7 +1088,7 @@ H5D_create(H5G_entry_t *loc, const char *name, const H5T_t *type,
 	    H5P_close (H5P_DATASET_CREATE, new_dset->create_parms);
 	    new_dset->create_parms = NULL;
 	}
-	if (H5F_addr_defined(new_dset->ent.header)) {
+	if (H5F_addr_defined(&(new_dset->ent.header))) {
 	    H5O_close(&(new_dset->ent));
 	}
 	new_dset->ent.file = NULL;
@@ -1314,7 +1314,7 @@ H5D_open_oid(H5G_entry_t *ent)
     /* Get the external file list message, which might not exist */
     if (NULL==H5O_read (&(dataset->ent), H5O_EFL, 0,
 			&(dataset->create_parms->efl)) &&
-	!H5F_addr_defined (dataset->layout.addr)) {
+	!H5F_addr_defined (&(dataset->layout.addr))) {
         HGOTO_ERROR (H5E_DATASET, H5E_CANTINIT, NULL,
 		     "storage address is undefined an no external file list");
     }
@@ -1338,7 +1338,7 @@ H5D_open_oid(H5G_entry_t *ent)
 done:
     if (space) H5S_close(space);
     if (ret_value==NULL && dataset) {
-        if (H5F_addr_defined(dataset->ent.header)) {
+        if (H5F_addr_defined(&(dataset->ent.header))) {
             H5O_close(&(dataset->ent));
         }
         if (dataset->type) {
@@ -1538,7 +1538,7 @@ H5D_read(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
     } else if (!H5T_IS_NOOP(tpath)) {
         if ((src_id=H5I_register(H5I_DATATYPE,
 				 H5T_copy(dataset->type, H5T_COPY_ALL)))<0 ||
-	    (dst_id=H5I_register(H5I_DATATYPE,
+            (dst_id=H5I_register(H5I_DATATYPE,
 				 H5T_copy(mem_type, H5T_COPY_ALL)))<0) {
             HGOTO_ERROR(H5E_DATASET, H5E_CANTREGISTER, FAIL,
                 "unable to register types for conversion");
@@ -1709,20 +1709,25 @@ printf("%s: check 2.0, src_type_size=%d, dst_type_size=%d, target_size=%d, min_e
 	
 #ifdef QAK
 	printf("%s: check 6.0\n",FUNC);
-	printf("%s: check 6.5\n",FUNC);
-	{
-	    int i;
-	    uint16_t *b;
+{
+    char *p=tconv_buf;
+    intn i;
 
-	    if(qak_debug) {
-		b=tconv_buf;
-		printf("\ntconv_buf:");
-		for (i=0; i<smine_nelmts; i++,b++) {
-		    printf("(%d)%u ",i,(unsigned)*b);
-		}
-		printf("\n");
-	    }
-	}
+    for(i=0; i<4; i++) {
+        printf("%s: element[%d]={%d, ",FUNC,i,(int)*(int *)p);
+        p+=sizeof(int);
+        printf("%f, ",(float)*(float *)p);
+        p+=sizeof(float);
+        printf(" {%x, ",(unsigned)*(unsigned *)p);
+        p+=sizeof(int);
+        printf("%x-",(unsigned)*(unsigned *)p);
+        p+=sizeof(int);
+        printf("%x, ",(unsigned)*(unsigned *)p);
+        p+=sizeof(int);
+        printf("%d}}\n",(int)*(int *)p);
+        p+=sizeof(int);
+    }
+}
 #endif
 	
         if (H5T_BKG_YES==need_bkg) {
@@ -1757,6 +1762,21 @@ printf("%s: check 2.0, src_type_size=%d, dst_type_size=%d, target_size=%d, min_e
         }
 
 #ifdef QAK
+{
+    char *p=tconv_buf;
+    intn i;
+
+    for(i=0; i<4; i++) {
+        printf("%s: element[%d]={%d, ",FUNC,i,(int)*(int *)p);
+        p+=sizeof(int);
+        printf("%f, ",(float)*(float *)p);
+        p+=sizeof(float);
+        printf(" {%d, ",(int)*(int *)p);
+        p+=sizeof(int);
+        printf("%p}}\n",(char *)*(char **)p);
+        p+=sizeof(char *);
+    }
+}
 	printf("%s: check 8.0\n",FUNC);
 #endif
 	
@@ -1870,7 +1890,7 @@ H5D_write(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
     /* support parallel access of that yet */
     if (H5F_LOW_MPIO==dataset->ent.file->shared->access_parms->driver &&
             H5T_get_class(mem_type)==H5T_VLEN) {
-        HGOTO_ERROR (H5E_DATASET, H5E_UNSUPPORTED, FAIL,
+        HGOTO_ERROR (H5E_DATASET, H5E_UNSUPPORTED, NULL,
 		     "Parallel IO does not support writing VL datatypes yet");
     }
 #endif
@@ -1881,7 +1901,7 @@ H5D_write(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
     if (H5F_LOW_MPIO==dataset->ent.file->shared->access_parms->driver &&
             H5T_get_class(mem_type)==H5T_REFERENCE &&
             H5T_get_ref_type(mem_type)==H5R_DATASET_REGION) {
-        HGOTO_ERROR (H5E_DATASET, H5E_UNSUPPORTED, FAIL,
+        HGOTO_ERROR (H5E_DATASET, H5E_UNSUPPORTED, NULL,
 		     "Parallel IO does not support writing VL datatypes yet");
     }
 #endif
@@ -1951,13 +1971,13 @@ H5D_write(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
 	HGOTO_ERROR(H5E_DATASET, H5E_UNSUPPORTED, FAIL,
 		    "unable to convert between src and dest data types");
     } else if (!H5T_IS_NOOP(tpath)) {
-	if ((src_id = H5I_register(H5I_DATATYPE,
-				   H5T_copy(mem_type, H5T_COPY_ALL)))<0 ||
-	    (dst_id = H5I_register(H5I_DATATYPE,
-				   H5T_copy(dataset->type, H5T_COPY_ALL)))<0) {
-	    HGOTO_ERROR(H5E_DATASET, H5E_CANTREGISTER, FAIL,
-			"unable to register types for conversion");
-	}
+        if ((src_id = H5I_register(H5I_DATATYPE,
+                       H5T_copy(mem_type, H5T_COPY_ALL)))<0 ||
+            (dst_id = H5I_register(H5I_DATATYPE,
+                       H5T_copy(dataset->type, H5T_COPY_ALL)))<0) {
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTREGISTER, FAIL,
+                "unable to register types for conversion");
+        }
     }
 #ifdef QAK
     printf("%s: after H5T_find, tpath=%p, tpath->name=%s\n",FUNC,tpath,tpath->name);
@@ -2038,6 +2058,9 @@ H5D_write(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
      
     src_type_size = H5T_get_size(mem_type);
     dst_type_size = H5T_get_size(dataset->type);
+#ifdef QAK
+    printf("%s: check 2.0, src_type_size=%d, dst_type_size=%d\n",FUNC,(int)src_type_size,(int)dst_type_size);
+#endif
     target_size = xfer_parms->buf_size;
     request_nelmts = target_size / MAX (src_type_size, dst_type_size);
 
@@ -2120,19 +2143,21 @@ H5D_write(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
         }
 
 #ifdef QAK
-	{
-	    int i;
-	    uint16_t *b;
+{
+    char *p=tconv_buf;
+    intn i;
 
-	    if(qak_debug) {
-		b=tconv_buf;
-		printf("\ntconv_buf:");
-		for (i=0; i<smine_nelmts; i++,b++) {
-		    printf("(%d)%d ",i,(int)*b);
-		}
-		printf("\n");
-	    }
-	}
+    for(i=0; i<4; i++) {
+        printf("%s: element[%d]={%d, ",FUNC,i,(int)*(int *)p);
+        p+=sizeof(int);
+        printf("%f, ",(float)*(float *)p);
+        p+=sizeof(float);
+        printf(" {%d, ",(int)*(int *)p);
+        p+=sizeof(int);
+        printf("%p}}\n",(char *)*(char **)p);
+        p+=sizeof(char *);
+    }
+}
 	printf("%s: check 6.0\n",FUNC);
 #endif
 
@@ -2169,6 +2194,25 @@ H5D_write(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
         }
 #ifdef QAK
 	printf("%s: check 6.3\n",FUNC);
+{
+    char *p=tconv_buf;
+    intn i;
+
+    for(i=0; i<4; i++) {
+        printf("%s: element[%d]={%d, ",FUNC,i,(int)*(int *)p);
+        p+=sizeof(int);
+        printf("%f, ",(float)*(float *)p);
+        p+=sizeof(float);
+        printf(" {%x, ",(unsigned)*(unsigned *)p);
+        p+=sizeof(int);
+        printf("%x-",(unsigned)*(unsigned *)p);
+        p+=sizeof(int);
+        printf("%x, ",(unsigned)*(unsigned *)p);
+        p+=sizeof(int);
+        printf("%d}}\n",(int)*(int *)p);
+        p+=sizeof(int);
+    }
+}
 #endif
 
         /*
@@ -2443,7 +2487,7 @@ H5D_init_storage(H5D_t *dset, const H5S_t *space)
 	    H5V_array_fill(buf, dset->create_parms->fill.buf,
 			   dset->create_parms->fill.size, ptsperbuf);
 	    if (dset->create_parms->efl.nused) {
-		addr = 0;
+		H5F_addr_reset(&addr);
 	    } else {
 		addr = dset->layout.addr;
 	    }
@@ -2453,19 +2497,19 @@ H5D_init_storage(H5D_t *dset, const H5S_t *space)
 		if (dset->create_parms->efl.nused) {
 		    if (H5O_efl_write(dset->ent.file,
 				      &(dset->create_parms->efl),
-				      addr, size, buf)<0) {
+				      &addr, size, buf)<0) {
 			HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL,
 				    "unable to write fill value to dataset");
 		    }
 		} else {
-		    if (H5F_block_write(dset->ent.file, addr, size,
+		    if (H5F_block_write(dset->ent.file, &addr, size,
 					&H5F_xfer_dflt, buf)<0) {
 			HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL,
 				    "unable to write fill value to dataset");
 		    }
 		}
 		npoints -= MIN(ptsperbuf, npoints);
-		addr += size;
+		H5F_addr_inc(&addr, size);
 	    }
 	} else if (dset->create_parms->fill.buf) {
 	    /*
@@ -2578,7 +2622,7 @@ H5D_get_storage_size(H5D_t *dset)
 
     if (H5D_CHUNKED==dset->layout.type) {
 	size = H5F_istore_allocated(dset->ent.file, dset->layout.ndims,
-				    dset->layout.addr);
+				    &(dset->layout.addr));
     } else {
 	for (i=0, size=1; i<dset->layout.ndims; i++) {
 	    size *= dset->layout.dim[i];
@@ -2719,8 +2763,7 @@ H5Dvlen_reclaim(hid_t type_id, hid_t space_id, hid_t plist_id, void *buf)
     }
 
     /* Call H5Diterate with args, etc. */
-    ret_value=H5Diterate(buf,type_id,space_id,H5T_vlen_reclaim,
-			 (void*)xfer_parms);
+    ret_value=H5Diterate(buf,type_id,space_id,H5T_vlen_reclaim,(void *)xfer_parms);
 
     FUNC_LEAVE(ret_value);
 }   /* end H5Dvlen_reclaim() */
@@ -2760,10 +2803,10 @@ H5Ddebug(hid_t dset_id, unsigned UNUSED flags)
     /* Print B-tree information */
     if (H5D_CHUNKED==dset->layout.type) {
 	H5F_istore_dump_btree(dset->ent.file, stdout, dset->layout.ndims,
-			      dset->layout.addr);
+			      &(dset->layout.addr));
     } else if (H5D_CONTIGUOUS==dset->layout.type) {
 	HDfprintf(stdout, "    %-10s %a\n", "Address:",
-		  dset->layout.addr);
+		  &(dset->layout.addr));
     }
     
     FUNC_LEAVE(SUCCEED);

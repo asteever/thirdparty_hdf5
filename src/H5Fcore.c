@@ -33,10 +33,10 @@ static H5F_low_t *H5F_core_open(const char *name,
 				H5F_search_t *key/*out*/);
 static herr_t H5F_core_close(H5F_low_t *lf, const H5F_access_t *access_parms);
 static herr_t H5F_core_read(H5F_low_t *lf, const H5F_access_t *access_parms,
-			    const H5F_xfer_t *xfer_parms, haddr_t addr,
+			    const H5F_xfer_t *xfer_parms, const haddr_t *addr,
 			    size_t size, uint8_t *buf);
 static herr_t H5F_core_write(H5F_low_t *lf, const H5F_access_t *access_parms,
-			     const H5F_xfer_t *xfer_parms, haddr_t addr,
+			     const H5F_xfer_t *xfer_parms, const haddr_t *addr,
 			     size_t size, const uint8_t *buf);
 
 const H5F_low_class_t	H5F_LOW_CORE_g[1] = {{
@@ -121,7 +121,7 @@ H5F_core_open(const char UNUSED *name,
     lf->u.core.mem = NULL;
     lf->u.core.alloc = 0;
     lf->u.core.size = 0;
-    lf->eof = 0;
+    H5F_addr_reset(&(lf->eof));
 
     if (key) {
 	key->dev = H5F_CORE_DEV;
@@ -176,16 +176,14 @@ H5F_core_close(H5F_low_t *lf, const H5F_access_t UNUSED *access_parms)
  *		Wednesday, October 22, 1997
  *
  * Modifications:
- *		Albert Cheng, 1998-06-02
- *		Added XFER_MODE argument.
+ *		June 2, 1998	Albert Cheng
+ *		Added xfer_mode argument
  *
- * 		Robb Matzke, 1999-07-28
- *		The ADDR argument is passed by value.
  *-------------------------------------------------------------------------
  */
 static herr_t
 H5F_core_read(H5F_low_t *lf, const H5F_access_t UNUSED *access_parms,
-	      const H5F_xfer_t UNUSED *xfer_parms, haddr_t addr,
+	      const H5F_xfer_t UNUSED *xfer_parms, const haddr_t *addr,
 	      size_t size, uint8_t *buf)
 {
     size_t		n;
@@ -194,16 +192,16 @@ H5F_core_read(H5F_low_t *lf, const H5F_access_t UNUSED *access_parms,
     FUNC_ENTER(H5F_core_read, FAIL);
 
     assert(lf);
-    assert(H5F_addr_defined(addr));
+    assert(addr && H5F_addr_defined(addr));
     assert(buf);
 
-    eof = MIN(lf->eof, lf->u.core.size);
+    eof = MIN(lf->eof.offset, lf->u.core.size);
 
-    if (addr >= eof) {
+    if (addr->offset >= eof) {
 	HDmemset(buf, 0, size);
     } else {
-	n = MIN(size, eof-addr);
-	HDmemcpy(buf, lf->u.core.mem + addr, n);
+	n = MIN(size, eof-addr->offset);
+	HDmemcpy(buf, lf->u.core.mem + addr->offset, n);
 	HDmemset(buf+n, 0, size-n);
     }
 
@@ -226,16 +224,14 @@ H5F_core_read(H5F_low_t *lf, const H5F_access_t UNUSED *access_parms,
  *		Wednesday, October 22, 1997
  *
  * Modifications:
- *		Albert Cheng, 1998-06-02
- *		Added XFER_MODE argument.
+ *		June 2, 1998	Albert Cheng
+ *		Added xfer_mode argument
  *
- * 		Robb Matzke, 1999-07-28
- *		The ADDR argument is passed by value.
  *-------------------------------------------------------------------------
  */
 static herr_t
 H5F_core_write(H5F_low_t *lf, const H5F_access_t *access_parms,
-	       const H5F_xfer_t UNUSED *xfer_parms, haddr_t addr,
+	       const H5F_xfer_t UNUSED *xfer_parms, const haddr_t *addr,
 	       size_t size, const uint8_t *buf)
 {
     size_t		need_more, na;
@@ -245,7 +241,7 @@ H5F_core_write(H5F_low_t *lf, const H5F_access_t *access_parms,
     FUNC_ENTER(H5F_core_write, FAIL);
 
     assert(lf);
-    assert(H5F_addr_defined(addr));
+    assert(addr && H5F_addr_defined(addr));
     assert(buf);
     assert (!access_parms || H5F_LOW_CORE==access_parms->driver);
 
@@ -254,9 +250,9 @@ H5F_core_write(H5F_low_t *lf, const H5F_access_t *access_parms,
      * size, which is either defined in the file access property list or
      * which defaults to one.
      */
-    if (addr + size > lf->u.core.alloc) {
+    if (addr->offset + size > lf->u.core.alloc) {
 	if (access_parms) increment = access_parms->u.core.increment;
-	need_more = addr+size - lf->u.core.alloc;
+	need_more = addr->offset+size - lf->u.core.alloc;
 	need_more = increment*((need_more+increment-1)/increment);
 
 	na = lf->u.core.alloc + need_more;
@@ -269,12 +265,12 @@ H5F_core_write(H5F_low_t *lf, const H5F_access_t *access_parms,
     }
     
     /* Move the physical EOF marker */
-    if (addr + size > lf->u.core.size) {
-	lf->u.core.size = addr + size;
+    if (addr->offset + size > lf->u.core.size) {
+	lf->u.core.size = addr->offset + size;
     }
     
     /* Copy data */
-    HDmemcpy(lf->u.core.mem+addr, buf, size);
+    HDmemcpy(lf->u.core.mem+addr->offset, buf, size);
 
     FUNC_LEAVE(SUCCEED);
 }

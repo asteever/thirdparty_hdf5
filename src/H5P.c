@@ -1783,7 +1783,8 @@ H5Pset_family(hid_t plist_id, hsize_t memb_size, hid_t memb_plist_id)
 
     /* Set driver */
     plist->driver = H5F_LOW_FAMILY;
-    plist->u.fam.memb_size = memb_size;
+    H5F_addr_reset (&(plist->u.fam.memb_size));
+    H5F_addr_inc (&(plist->u.fam.memb_size), memb_size);
     plist->u.fam.memb_access = H5P_copy (H5P_FILE_ACCESS, memb_plist);
 
     FUNC_LEAVE (SUCCEED);
@@ -1832,7 +1833,7 @@ H5Pget_family(hid_t plist_id, hsize_t *memb_size/*out*/,
 
     /* Output args */
     if (memb_size) {
-	*memb_size = plist->u.fam.memb_size;
+	*memb_size = plist->u.fam.memb_size.offset;
     }
     if (memb_plist_id) {
 	assert (plist->u.fam.memb_access);
