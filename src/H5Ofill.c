@@ -16,8 +16,8 @@
 
 #define PABLO_MASK	H5O_fill_mask
 
-static void *H5O_fill_decode(H5F_t *f, const uint8_t *p, H5O_shared_t *sh);
-static herr_t H5O_fill_encode(H5F_t *f, uint8_t *p, const void *_mesg);
+static void *H5O_fill_decode(H5F_t *f, const uint8 *p, H5O_shared_t *sh);
+static herr_t H5O_fill_encode(H5F_t *f, uint8 *p, const void *_mesg);
 static void *H5O_fill_copy(const void *_mesg, void *_dest);
 static size_t H5O_fill_size(H5F_t *f, const void *_mesg);
 static herr_t H5O_fill_reset(void *_mesg);
@@ -40,7 +40,7 @@ const H5O_class_t H5O_FILL[1] = {{
 }};
 
 /* Interface initialization */
-static intn interface_initialize_g = 0;
+static hbool_t interface_initialize_g = FALSE;
 #define INTERFACE_INIT NULL
 
 
@@ -61,8 +61,7 @@ static intn interface_initialize_g = 0;
  *-------------------------------------------------------------------------
  */
 static void *
-H5O_fill_decode(H5F_t __unused__ *f, const uint8_t *p,
-		H5O_shared_t __unused__ *sh)
+H5O_fill_decode(H5F_t *f, const uint8 *p, H5O_shared_t *sh)
 {
     H5O_fill_t	*mesg=NULL;
     void	*ret_value = NULL;
@@ -111,7 +110,7 @@ H5O_fill_decode(H5F_t __unused__ *f, const uint8_t *p,
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_fill_encode(H5F_t __unused__ *f, uint8_t *p, const void *_mesg)
+H5O_fill_encode(H5F_t *f, uint8 *p, const void *_mesg)
 {
     const H5O_fill_t	*mesg = (const H5O_fill_t *)_mesg;
     
@@ -202,7 +201,7 @@ H5O_fill_copy(const void *_mesg, void *_dest)
  *-------------------------------------------------------------------------
  */
 static size_t
-H5O_fill_size(H5F_t __unused__ *f, const void *_mesg)
+H5O_fill_size(H5F_t *f, const void *_mesg)
 {
     const H5O_fill_t	*mesg = (const H5O_fill_t *)_mesg;
     
@@ -262,8 +261,8 @@ H5O_fill_reset(void *_mesg)
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_fill_debug(H5F_t __unused__ *f, const void *_mesg, FILE *stream,
-	       intn indent, intn fwidth)
+H5O_fill_debug(H5F_t *f, const void *_mesg, FILE *stream, intn indent,
+	       intn fwidth)
 {
     const H5O_fill_t	*mesg = (const H5O_fill_t *)_mesg;
     
@@ -308,10 +307,15 @@ H5O_fill_debug(H5F_t __unused__ *f, const void *_mesg, FILE *stream,
 herr_t
 H5O_fill_convert(H5O_fill_t *fill, H5T_t *dset_type)
 {
-    H5T_path_t		*tpath=NULL;		/*type conversion info	*/
+    H5T_cdata_t		*cdata=NULL;		/*conversion data	*/
+    H5T_conv_t		cfunc=NULL;		/*conversion function	*/
     void		*buf=NULL, *bkg=NULL;	/*conversion buffers	*/
+    herr_t		status;			/*conversion status	*/
     hid_t		src_id=-1, dst_id=-1;	/*data type identifiers	*/
     herr_t		ret_value=FAIL;		/*return value		*/
+#ifdef H5T_DEBUG
+    H5_timer_t		timer;			/*debugging timer	*/
+#endif
 
     FUNC_ENTER(H5O_fill_convert, FAIL);
     assert(fill);
@@ -327,7 +331,7 @@ H5O_fill_convert(H5O_fill_t *fill, H5T_t *dset_type)
     /*
      * Can we convert between source and destination data types?
      */
-    if (NULL==(tpath=H5T_path_find(fill->type, dset_type, NULL, NULL))) {
+    if (NULL==(cfunc=H5T_find(fill->type, dset_type, H5T_BKG_NO, &cdata))) {
 	HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL,
 		    "unable to convert between src and dst data types");
     }
@@ -352,14 +356,22 @@ H5O_fill_convert(H5O_fill_t *fill, H5T_t *dset_type)
 	}
 	HDmemcpy(buf, fill->buf, H5T_get_size(fill->type));
     }
-    if (tpath->cdata.need_bkg>=H5T_BKG_TEMP &&
+    if (cdata->need_bkg>=H5T_BKG_TEMP &&
 	NULL==(bkg=H5MM_malloc(H5T_get_size(dset_type)))) {
 	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL,
 		    "memory allocation failed for type conversion");
     }
 
     /* Do the conversion */
-    if (H5T_convert(tpath, src_id, dst_id, 1, buf, bkg)<0) {
+#ifdef H5T_DEBUG
+    H5T_timer_begin(&timer, cdata);
+#endif
+    cdata->command = H5T_CONV_CONV;
+    status = (cfunc)(src_id, dst_id, cdata, 1, buf, bkg);
+#ifdef H5T_DEBUG
+    H5T_timer_end(&timer, cdata, 1);
+#endif
+    if (status<0) {
 	HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL,
 		    "data type conversion failed");
     }

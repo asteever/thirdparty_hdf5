@@ -145,14 +145,8 @@ typedef struct H5T_cdata_t {
     H5T_bkg_t		need_bkg;/*is the background buffer needed?	     */
     hbool_t		recalc;	/*recalculate private data		     */
     void		*priv;	/*private data				     */
+    struct H5T_stats_t	*stats;	/*statistics for the conversion		     */
 } H5T_cdata_t;
-
-/* Conversion function persistence */
-typedef enum H5T_pers_t {
-    H5T_PERS_DONTCARE	= -1, 	/*wild card				     */
-    H5T_PERS_HARD	= 0,	/*hard conversion function		     */
-    H5T_PERS_SOFT	= 1 	/*soft conversion function		     */
-} H5T_pers_t;
 
 /* All data type conversion functions are... */
 typedef herr_t (*H5T_conv_t) (hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
@@ -215,8 +209,7 @@ extern hid_t H5T_IEEE_F64LE_g;
 #define H5T_STD_B32LE		(H5open(), H5T_STD_B32LE_g)
 #define H5T_STD_B64BE		(H5open(), H5T_STD_B64BE_g)
 #define H5T_STD_B64LE		(H5open(), H5T_STD_B64LE_g)
-#define H5T_STD_REF_OBJ	    	(H5open(), H5T_STD_REF_OBJ_g)
-#define H5T_STD_REF_DSETREG 	(H5open(), H5T_STD_REF_DSETREG_g)
+#define H5T_STD_REF_OBJ	    (H5open(), H5T_STD_REF_OBJ_g)
 extern hid_t H5T_STD_I8BE_g;
 extern hid_t H5T_STD_I8LE_g;
 extern hid_t H5T_STD_I16BE_g;
@@ -242,7 +235,6 @@ extern hid_t H5T_STD_B32LE_g;
 extern hid_t H5T_STD_B64BE_g;
 extern hid_t H5T_STD_B64LE_g;
 extern hid_t H5T_STD_REF_OBJ_g;
-extern hid_t H5T_STD_REF_DSETREG_g;
 
 /*
  * Types which are particular to Unix.
@@ -332,11 +324,10 @@ extern hid_t H5T_FORTRAN_S1_g;
  * precision and byte order as the last component, they have a C-like type
  * name.  If the type begins with `U' then it is the unsigned version of the
  * integer type; other integer types are signed.  The type LLONG corresponds
- * to C's `long_long' and LDOUBLE is `long double' (these types might be the
+ * to C's `long long' and LDOUBLE is `long double' (these types might be the
  * same as `LONG' and `DOUBLE' respectively.
  */
-#define H5T_NATIVE_CHAR		(CHAR_MIN?H5T_NATIVE_SCHAR:H5T_NATIVE_UCHAR)
-#define H5T_NATIVE_SCHAR        (H5open(), H5T_NATIVE_SCHAR_g)
+#define H5T_NATIVE_CHAR         (H5open(), H5T_NATIVE_CHAR_g)
 #define H5T_NATIVE_UCHAR        (H5open(), H5T_NATIVE_UCHAR_g)
 #define H5T_NATIVE_SHORT        (H5open(), H5T_NATIVE_SHORT_g)
 #define H5T_NATIVE_USHORT       (H5open(), H5T_NATIVE_USHORT_g)
@@ -358,7 +349,7 @@ extern hid_t H5T_FORTRAN_S1_g;
 #define H5T_NATIVE_HSSIZE	(H5open(), H5T_NATIVE_HSSIZE_g)
 #define H5T_NATIVE_HERR		(H5open(), H5T_NATIVE_HERR_g)
 #define H5T_NATIVE_HBOOL	(H5open(), H5T_NATIVE_HBOOL_g)
-extern hid_t H5T_NATIVE_SCHAR_g;
+extern hid_t H5T_NATIVE_CHAR_g;
 extern hid_t H5T_NATIVE_UCHAR_g;
 extern hid_t H5T_NATIVE_SHORT_g;
 extern hid_t H5T_NATIVE_USHORT_g;
@@ -439,10 +430,11 @@ herr_t H5Tset_cset (hid_t type_id, H5T_cset_t cset);
 herr_t H5Tset_strpad (hid_t type_id, H5T_str_t strpad);
 
 /* Type conversion database */
-herr_t H5Tregister(H5T_pers_t pers, const char *name, hid_t src_id,
-		   hid_t dst_id, H5T_conv_t func);
-herr_t H5Tunregister (H5T_pers_t pers, const char *name, hid_t src_id,
-		      hid_t dst_id, H5T_conv_t func);
+herr_t H5Tregister_hard (const char *name, hid_t src_id, hid_t dst_id,
+			 H5T_conv_t func);
+herr_t H5Tregister_soft (const char *name, H5T_class_t src, H5T_class_t dst,
+			 H5T_conv_t func);
+herr_t H5Tunregister (H5T_conv_t func);
 H5T_conv_t H5Tfind (hid_t src_id, hid_t dst_id, H5T_cdata_t **pcdata);
 herr_t H5Tconvert (hid_t src_id, hid_t dst_id, size_t nelmts, void *buf,
 		   void *background);

@@ -36,7 +36,7 @@
  */
 #define PABLO_MASK      H5AC_mask
 #define INTERFACE_INIT  NULL
-static intn             interface_initialize_g = 0;
+static int              interface_initialize_g = FALSE;
 
 #ifdef H5AC_SORT_BY_ADDR
 static H5AC_t          *current_cache_g = NULL;         /*for sorting */

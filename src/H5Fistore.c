@@ -65,7 +65,7 @@
 
 /* Interface initialization */
 #define PABLO_MASK	H5F_istore_mask
-static intn		interface_initialize_g = 0;
+static hbool_t		interface_initialize_g = FALSE;
 #define INTERFACE_INIT NULL
 
 /*
@@ -86,7 +86,7 @@ typedef struct H5F_rdcc_ent_t {
     size_t	wr_count;	/*bytes remaining to be written		*/
     size_t	chunk_size;	/*size of a chunk			*/
     size_t	alloc_size;	/*amount allocated for the chunk	*/
-    uint8_t	*chunk;		/*the unfiltered chunk data		*/
+    uint8	*chunk;		/*the unfiltered chunk data		*/
     intn	idx;		/*index in hash table			*/
     struct H5F_rdcc_ent_t *next;/*next item in doubly-linked list	*/
     struct H5F_rdcc_ent_t *prev;/*previous item in doubly-linked list	*/
@@ -108,9 +108,9 @@ static H5B_ins_t H5F_istore_insert(H5F_t *f, const haddr_t *addr,
 				   void *_md_key, void *_udata,
 				   void *_rt_key, hbool_t *rt_key_changed,
 				   haddr_t *new_node/*out*/);
-static herr_t H5F_istore_decode_key(H5F_t *f, H5B_t *bt, uint8_t *raw,
+static herr_t H5F_istore_decode_key(H5F_t *f, H5B_t *bt, uint8 *raw,
 				    void *_key);
-static herr_t H5F_istore_encode_key(H5F_t *f, H5B_t *bt, uint8_t *raw,
+static herr_t H5F_istore_encode_key(H5F_t *f, H5B_t *bt, uint8 *raw,
 				    void *_key);
 static herr_t H5F_istore_debug_key (FILE *stream, intn indent, intn fwidth,
 				    const void *key, const void *udata);
@@ -228,7 +228,7 @@ H5F_istore_sizeof_rkey(H5F_t __unused__ *f, const void *_udata)
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5F_istore_decode_key(H5F_t __unused__ *f, H5B_t *bt, uint8_t *raw, void *_key)
+H5F_istore_decode_key(H5F_t __unused__ *f, H5B_t *bt, uint8 *raw, void *_key)
 {
     H5F_istore_key_t	*key = (H5F_istore_key_t *) _key;
     intn		i;
@@ -269,7 +269,7 @@ H5F_istore_decode_key(H5F_t __unused__ *f, H5B_t *bt, uint8_t *raw, void *_key)
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5F_istore_encode_key(H5F_t __unused__ *f, H5B_t *bt, uint8_t *raw, void *_key)
+H5F_istore_encode_key(H5F_t __unused__ *f, H5B_t *bt, uint8 *raw, void *_key)
 {
     H5F_istore_key_t	*key = (H5F_istore_key_t *) _key;
     intn		ndims = H5F_ISTORE_NDIMS(bt);
@@ -506,7 +506,7 @@ H5F_istore_new_node(H5F_t *f, H5B_ins_t op,
 	rt_key->nbytes = 0;
 	rt_key->filter_mask = 0;
 	for (i=0; i<udata->mesg.ndims; i++) {
-	    assert (udata->mesg.dim[i] < HSSIZET_MAX);
+	    assert (udata->mesg.dim[i] < MAX_HSSIZET);
 	    assert (udata->key.offset[i]+(hssize_t)(udata->mesg.dim[i]) >
 		    udata->key.offset[i]);
 	    rt_key->offset[i] = udata->key.offset[i] +
@@ -1434,7 +1434,7 @@ H5F_istore_unlock (H5F_t *f, const H5O_layout_t *layout,
 		   const double split_ratios[],
 		   const H5O_pline_t *pline, hbool_t dirty,
 		   const hssize_t offset[], intn *idx_hint,
-		   uint8_t *chunk, size_t naccessed)
+		   uint8 *chunk, size_t naccessed)
 {
     H5F_rdcc_t		*rdcc = &(f->shared->rdcc);
     H5F_rdcc_ent_t	*ent = NULL;
@@ -1527,7 +1527,7 @@ H5F_istore_read(H5F_t *f, const H5D_xfer_t *xfer, const H5O_layout_t *layout,
     hssize_t		chunk_offset[H5O_LAYOUT_NDIMS];
     intn		i, carry;
     size_t		naccessed;		/*bytes accessed in chnk*/
-    uint8_t		*chunk=NULL;		/*ptr to a chunk buffer	*/
+    uint8		*chunk=NULL;		/*ptr to a chunk buffer	*/
     intn		idx_hint=0;		/*cache index hint	*/
 
     FUNC_ENTER(H5F_istore_read, FAIL);
@@ -1554,7 +1554,7 @@ H5F_istore_read(H5F_t *f, const H5D_xfer_t *xfer, const H5O_layout_t *layout,
     for (i=0; i<layout->ndims; i++) {
 	assert (offset_f[i]>=0); /*negative offsets not supported*/
 	assert (offset_m[i]>=0); /*negative offsets not supported*/
-	assert (size[i]<SIZET_MAX);
+	assert (size[i]<MAX_SIZET);
 	assert(offset_m[i]+(hssize_t)size[i]<=(hssize_t)size_m[i]);
 	assert(layout->dim[i]>0);
     }
@@ -1575,7 +1575,7 @@ H5F_istore_read(H5F_t *f, const H5D_xfer_t *xfer, const H5O_layout_t *layout,
     while (1) {
 	for (i=0, naccessed=1; i<layout->ndims; i++) {
 	    /* The location and size of the chunk being accessed */
-	    assert (layout->dim[i] < HSSIZET_MAX);
+	    assert (layout->dim[i] < MAX_HSSIZET);
 	    chunk_offset[i] = idx_cur[i] * (hssize_t)(layout->dim[i]);
 
 	    /* The offset and size wrt the chunk */
@@ -1697,7 +1697,7 @@ H5F_istore_write(H5F_t *f, const H5D_xfer_t *xfer, const H5O_layout_t *layout,
     hssize_t		chunk_offset[H5O_LAYOUT_NDIMS];
     hssize_t		offset_wrt_chunk[H5O_LAYOUT_NDIMS];
     hssize_t		sub_offset_m[H5O_LAYOUT_NDIMS];
-    uint8_t		*chunk=NULL;
+    uint8		*chunk=NULL;
     intn		idx_hint=0;
     size_t		chunk_size, naccessed;
     
@@ -1726,7 +1726,7 @@ H5F_istore_write(H5F_t *f, const H5D_xfer_t *xfer, const H5O_layout_t *layout,
     for (i=0; i<layout->ndims; i++) {
 	assert (offset_f[i]>=0); /*negative offsets not supported*/
 	assert (offset_m[i]>=0); /*negative offsets not supported*/
-	assert(size[i]<SIZET_MAX);
+	assert(size[i]<MAX_SIZET);
 	assert(offset_m[i]+(hssize_t)size[i]<=(hssize_t)size_m[i]);
 	assert(layout->dim[i]>0);
     }
@@ -1749,7 +1749,7 @@ H5F_istore_write(H5F_t *f, const H5D_xfer_t *xfer, const H5O_layout_t *layout,
 	
 	for (i=0, naccessed=1; i<layout->ndims; i++) {
 	    /* The location and size of the chunk being accessed */
-	    assert (layout->dim[i] < HSSIZET_MAX);
+	    assert (layout->dim[i] < MAX_HSSIZET);
 	    chunk_offset[i] = idx_cur[i] * (hssize_t)(layout->dim[i]);
 
 	    /* The offset and size wrt the chunk */
@@ -2068,7 +2068,7 @@ H5F_istore_allocate (H5F_t *f, const H5O_layout_t *layout,
 
     intn		i, carry;
     hssize_t		chunk_offset[H5O_LAYOUT_NDIMS];
-    uint8_t		*chunk=NULL;
+    uint8		*chunk=NULL;
     intn		idx_hint=0;
     size_t		chunk_size;
 #ifdef AKC
@@ -2124,13 +2124,14 @@ H5F_istore_allocate (H5F_t *f, const H5O_layout_t *layout,
 	     */
 
 #ifdef HAVE_PARALLEL
-	    /* rky 981207 Serialize access to this critical region. */
-	    if (SUCCEED!=
-		H5PC_Wait_for_left_neighbor(f->shared->access_parms->u.mpio.comm))
-	    {
-		HRETURN_ERROR (H5E_IO, H5E_WRITEERROR, FAIL,
-			       "unable to lock the data chunk");
-	    }
+            /* rky 981207 Serialize access to this critical region. */
+            if (SUCCEED!=
+		H5PC_Wait_for_left_neighbor(f->shared->access_parms->u.mpio.comm
+))
+            {
+                HRETURN_ERROR (H5E_IO, H5E_WRITEERROR, FAIL,
+                               "unable to lock the data chunk");
+            }
 #endif
 	    if (NULL==(chunk=H5F_istore_lock (f, layout, split_ratios, pline,
 					      fill, chunk_offset, FALSE,
@@ -2142,14 +2143,15 @@ H5F_istore_allocate (H5F_t *f, const H5O_layout_t *layout,
 				   chunk_offset, &idx_hint, chunk,
 				   chunk_size)<0) {
 		HRETURN_ERROR (H5E_IO, H5E_WRITEERROR, FAIL,
-			       "uanble to unlock raw data chunk");
-	    }
+			       "unable to unlock raw data chunk");
+            }
 #ifdef HAVE_PARALLEL
-	    if (SUCCEED!=
-		H5PC_Signal_right_neighbor(f->shared->access_parms->u.mpio.comm))
-	    {
-		HRETURN_ERROR (H5E_IO, H5E_WRITEERROR, FAIL,
-			       "unable to unlock the data chunk");
+            if (SUCCEED!=
+		H5PC_Signal_right_neighbor(f->shared->access_parms->u.mpio.comm)
+)
+            {
+                HRETURN_ERROR (H5E_IO, H5E_WRITEERROR, FAIL,
+                               "unable to unlock the data chunk");
 	    }
 #endif
 #ifdef NO

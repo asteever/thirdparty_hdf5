@@ -30,28 +30,46 @@ static const char *FileHeader = "\n\
  *-------------------------------------------------------------------------
  */
 #undef NDEBUG
-#include <H5private.h>
+#include <assert.h>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#if !defined(WIN32)
+#include <unistd.h>
+#include <sys/time.h>
+#include <pwd.h>
+#endif
+
+#include <H5config.h>
 
 #define MAXDETECT 16
+
+#ifndef MIN
+#  define MIN(X,Y) ((X)<(Y)?(X):(Y))
+#  define MIN3(X,Y,Z) MIN(X,MIN(Y,Z))
+#endif
+
 /*
  * This structure holds information about a type that
  * was detected.
  */
 typedef struct detected_t {
     const char          *varname;
-    int                 size;		/*total byte size		*/
-    int			precision;	/*meaningful bits		*/
-    int			offset;		/*bit offset to meaningful bits	*/
-    int                 perm[32];	/*byte order			*/
-    int                 sign;		/*location of sign bit		*/
-    int                 mpos, msize, imp;/*information about mantissa	*/
-    int                 epos, esize;	/*information about exponent	*/
-    unsigned long       bias;		/*exponent bias for floating pt.*/
-    size_t		align;		/*required byte alignment	*/
+    int                 size;		/*total byte size*/
+    int			precision;	/*meaningful bits*/
+    int			offset;		/*bit offset to meaningful bits*/
+    int                 perm[32];
+    int                 sign;
+    int                 mpos, msize, imp;
+    int                 epos, esize;
+    unsigned long       bias;
 } detected_t;
 
 static void print_results(int nd, detected_t *d);
 static void iprint(detected_t *);
+static void print_known_formats(detected_t *);
 static int byte_cmp(int, void *, void *);
 static int bit_cmp(int, int *, void *, void *);
 static void fix_order(int, int, int, int *, const char **);
@@ -59,7 +77,6 @@ static int imp_bit(int, int *, void *, void *);
 static unsigned long find_bias(int, int, int *, void *);
 static void precision (detected_t*);
 static void print_header(void);
-static size_t align_g[] = {1, 2, 4, 8, 16};
 
 
 /*-------------------------------------------------------------------------
@@ -115,7 +132,58 @@ precision (detected_t *d)
     }
 }
 
+
+/*-------------------------------------------------------------------------
+ * For convenience, we place here in a table descriptions of all
+ * architectures we've seen so far.  That way we can print a description
+ * of the system on which the program is run.  We place the system name
+ * in the VARNAME field.
+ *-------------------------------------------------------------------------
+ */
+#define LE {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,                            \
+     16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31}
+#define LE_1 LE
+#define LE_2 LE
+#define LE_4 LE
+#define LE_8 LE
 
+#define BE_1 {0}
+#define BE_2 {1,0}
+#define BE_4 {3,2,1,0}
+#define BE_8 {7,6,5,4,3,2,1,0}
+
+#define INTEGER 0,0,0,0,0,0,0
+
+static detected_t       Known[] =
+{
+   /* Single-byte quantities */
+    {"Byte addressable",
+     1, 8, 0, LE_1, INTEGER},
+
+   /* Little-endian integer */
+    {"Little-endian",
+     2, 16, 0, LE_2, INTEGER},
+    {"Little-endian",
+     4, 32, 0, LE_4, INTEGER},
+
+   /* Big-endian integer */
+    {"Big-endian",
+     2, 16, 0, BE_2, INTEGER},
+    {"Big-endian",
+     4, 32, 0, BE_4, INTEGER},
+
+   /* Little-endian IEEE floating-point */
+    {"Little-endian IEEE",
+     4, 32, 0, LE_4, 31, 0, 23, 1, 23, 8, 127},
+    {"Little-endian IEEE",
+     8, 64, 0, LE_8, 63, 0, 52, 1, 52, 11, 1023},
+
+   /* Big-endian IEEE floating-point */
+    {"Big-endian IEEE",
+     4, 32, 0, BE_4, 31, 0, 23, 1, 23, 8, 127},
+    {"Big-endian IEEE",
+     8, 64, 0, BE_8, 63, 0, 52, 1, 52, 11, 1023},
+};
 
 /*-------------------------------------------------------------------------
  * Function:    DETECT_I
@@ -160,7 +228,6 @@ precision (detected_t *d)
       INFO.perm[_i] = _j;                                                     \
    }                                                                          \
    INFO.sign = ('U'!=*(#VAR));                                                \
-   ALIGNMENT(TYPE, INFO.align);						      \
    precision (&(INFO));							      \
 }
 
@@ -237,47 +304,8 @@ precision (detected_t *d)
                                                                               \
    _v1 = 1.0;                                                                 \
    INFO.bias = find_bias (INFO.epos, INFO.esize, INFO.perm, &_v1);            \
-   ALIGNMENT(TYPE, INFO.align);						      \
    precision (&(INFO));							      \
 }
-
-#define ALIGNMENT(TYPE,ALIGN) {						      \
-    char	*_buf=malloc(sizeof(TYPE)+align_g[NELMTS(align_g)-1]);	      \
-    TYPE	_val=0;							      \
-    size_t	_ano;							      \
-    pid_t	_child;							      \
-    int		_status;						      \
-									      \
-    for (_ano=0; _ano<NELMTS(align_g); _ano++) {			      \
-        fflush(stdout);							      \
-        fflush(stderr);							      \
-	if (0==(_child=fork())) {					      \
-	    _val = *((TYPE*)(_buf+align_g[_ano]));			      \
-	    exit(0);							      \
-	} else if (_child<0) {						      \
-	    perror("fork");						      \
-	    exit(1);							      \
-	}								      \
-	if (waitpid(_child, &_status, 0)<0) {				      \
-	    perror("waitpid");						      \
-	    exit(1);							      \
-	}								      \
-	if (WIFEXITED(_status) && 0==WEXITSTATUS(_status)) {		      \
-	    ALIGN=align_g[_ano];					      \
-	    break;							      \
-	}								      \
-	if (WIFSIGNALED(_status) && SIGBUS==WTERMSIG(_status)) {	      \
-	    continue;							      \
-	}								      \
-	_ano=NELMTS(align_g);						      \
-	break;								      \
-    }									      \
-    if (_ano>=NELMTS(align_g)) {					      \
-	ALIGN=0;							      \
-	fprintf(stderr, "unable to calculate alignment for %s\n", #TYPE);     \
-    }									      \
-}
-	
 
 /*-------------------------------------------------------------------------
  * Function:    print_results
@@ -311,32 +339,29 @@ print_results(int nd, detected_t *d)
 #include <H5MMprivate.h>\n\
 #include <H5Tpkg.h>\n\
 \n\
-static intn interface_initialize_g = 0;\n\
+static hbool_t interface_initialize_g = FALSE;\n\
 #define INTERFACE_INIT NULL\n\
 \n");
 
-    /* The interface termination function */
-    printf("\n\
-void\n\
-H5T_native_close(intn status)\n\
-{\n\
-    interface_initialize_g = status;\n\
-}\n");
-
-    /* The interface initialization function */
+    /* Function declaration */
     printf("\n\
 herr_t\n\
-H5T_native_open (void)\n\
+H5T_init (void)\n\
 {\n\
    H5T_t        *dt = NULL;\n\
+   static intn  ncalls = 0;\n\
 \n\
-   FUNC_ENTER (H5T_init, FAIL);\n");
+   FUNC_ENTER (H5T_init, FAIL);\n\
+\n\
+   if (ncalls++) return SUCCEED; /*already initialized*/\n\
+\n");
 
     for (i = 0; i < nd; i++) {
 
         /* Print a comment to describe this section of definitions. */
         printf("\n   /*\n");
-        iprint(d+i);
+        iprint(d + i);
+        print_known_formats(d + i);
         printf("    */\n");
 
         /* The part common to fixed and floating types */
@@ -393,8 +418,6 @@ H5T_native_open (void)\n\
                      \"failure\");\n\
    }\n",
                d[i].varname);
-        printf("   H5T_NATIVE_%s_ALIGN_g = %lu;\n",
-	       d[i].varname, (unsigned long)(d[i].align));
     }
 
     printf("   FUNC_LEAVE (SUCCEED);\n}\n");
@@ -466,16 +489,50 @@ iprint(detected_t *d)
     if (d->msize) {
         printf("    * Implicit bit? %s\n", d->imp ? "yes" : "no");
     }
+}
 
-    /*
-     * Alignment
-     */
-    if (0==d->align) {
-        printf("    * Alignment: NOT CALCULATED\n");
-    } else if (1==d->align) {
-        printf("    * Alignment: none\n");
-    } else {
-        printf("    * Alignment: %lu\n", (unsigned long)(d->align));
+
+/*-------------------------------------------------------------------------
+ * Function:    print_known_formats
+ *
+ * Purpose:     Prints archetecture names for the specified format
+ *              description, if any.
+ *
+ * Return:      void
+ *
+ * Programmer:  Robb Matzke
+ *              matzke@llnl.gov
+ *              Jun 13, 1996
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+static void
+print_known_formats(detected_t *d)
+{
+
+    int         i, j, diff;
+    int         n = sizeof(Known) / sizeof(Known[0]);
+
+    for (i=0; i<n; i++) {
+        if (d->size != Known[i].size) continue;
+	if (d->precision != Known[i].precision) continue;
+	if (d->offset != Known[i].offset) continue;
+        for (j = diff = 0; !diff && j < d->size; j++) {
+            if (d->perm[j] != Known[i].perm[j]) diff = 1;
+        }
+        if (diff) continue;
+
+        /* if (d->sign  != Known[i].sign)  continue; */
+        if (d->mpos != Known[i].mpos) continue;
+        if (d->msize != Known[i].msize) continue;
+        if (d->imp != Known[i].imp) continue;
+        if (d->epos != Known[i].epos) continue;
+        if (d->esize != Known[i].esize) continue;
+        if (d->bias != Known[i].bias) continue;
+
+        printf("    * %s\n", Known[i].varname);
     }
 }
 
@@ -744,15 +801,11 @@ print_header(void)
 
     time_t              now = time(NULL);
     struct tm           *tm = localtime(&now);
+    struct passwd       *pwd = NULL;
     char                real_name[30];
     char                host_name[256];
     int                 i;
     const char          *s;
-#ifdef HAVE_GETPWUID
-    struct passwd       *pwd = NULL;
-#else
-    int			pwd = 1;
-#endif
     static const char   *month_name[] =
     {
         "Jan", "Feb", "Mar", "Apr", "May", "Jun",
@@ -842,7 +895,7 @@ bit.\n";
     if (pwd || real_name[0] || host_name[0]) {
         printf(" *\t\t\t");
         if (real_name[0]) printf("%s <", real_name);
-#ifdef HAVE_GETPWUID
+#if !defined(WIN32)
         if (pwd) fputs(pwd->pw_name, stdout);
 #endif
         if (host_name[0]) printf("@%s", host_name);
@@ -891,7 +944,7 @@ main(void)
 
     print_header();
 
-    DETECT_I(signed char,	  SCHAR,   d[nd]); nd++;
+    DETECT_I(signed char,	  CHAR,	   d[nd]); nd++;
     DETECT_I(unsigned char,	  UCHAR,   d[nd]); nd++;
     DETECT_I(short,		  SHORT,   d[nd]); nd++;
     DETECT_I(unsigned short,	  USHORT,  d[nd]); nd++;
@@ -900,18 +953,23 @@ main(void)
     DETECT_I(long,		  LONG,	   d[nd]); nd++;
     DETECT_I(unsigned long,	  ULONG,   d[nd]); nd++;
 
-#if SIZEOF_LONG_LONG>0
-    DETECT_I(long_long,           LLONG,   d[nd]); nd++;
-    DETECT_I(unsigned long_long,  ULLONG,  d[nd]); nd++;
-#else
+#if SIZEOF_LONG == SIZEOF_LONG_LONG
     /*
-     * This architecture doesn't support an integer type larger than `long'
-     * so we'll just make H5T_NATIVE_LLONG the same as H5T_NATIVE_LONG.
+     * If sizeof(long)==sizeof(long long) then assume that `long long' isn't
+     * supported and use `long' instead.  This suppresses warnings on some
+     * systems.
      */
     DETECT_I(long,                LLONG,   d[nd]); nd++;
     DETECT_I(unsigned long,       ULLONG,  d[nd]); nd++;
+#else
+#if defined(WIN32)
+	DETECT_I(__int64,	  	  LLONG,   d[nd]); nd++;
+    DETECT_I(unsigned __int64,  ULLONG,  d[nd]); nd++;
+#else
+    DETECT_I(long long,	  	  LLONG,   d[nd]); nd++;
+    DETECT_I(unsigned long long,  ULLONG,  d[nd]); nd++;
 #endif
-
+#endif
     DETECT_F(float,		  FLOAT,   d[nd]); nd++;
     DETECT_F(double,		  DOUBLE,  d[nd]); nd++;
 

@@ -14,8 +14,8 @@
 
 #define PABLO_MASK	H5O_mtime_mask
 
-static void *H5O_mtime_decode(H5F_t *f, const uint8_t *p, H5O_shared_t *sh);
-static herr_t H5O_mtime_encode(H5F_t *f, uint8_t *p, const void *_mesg);
+static void *H5O_mtime_decode(H5F_t *f, const uint8 *p, H5O_shared_t *sh);
+static herr_t H5O_mtime_encode(H5F_t *f, uint8 *p, const void *_mesg);
 static void *H5O_mtime_copy(const void *_mesg, void *_dest);
 static size_t H5O_mtime_size(H5F_t *f, const void *_mesg);
 static herr_t H5O_mtime_debug(H5F_t *f, const void *_mesg, FILE *stream,
@@ -37,7 +37,7 @@ const H5O_class_t H5O_MTIME[1] = {{
 }};
 
 /* Interface initialization */
-static intn interface_initialize_g = 0;
+static hbool_t interface_initialize_g = FALSE;
 #define INTERFACE_INIT	NULL
 
 
@@ -60,7 +60,7 @@ static intn interface_initialize_g = 0;
  *-------------------------------------------------------------------------
  */
 static void *
-H5O_mtime_decode(H5F_t __unused__ *f, const uint8_t *p,
+H5O_mtime_decode(H5F_t __unused__ *f, const uint8 *p,
 		 H5O_shared_t __unused__ *sh)
 {
     time_t	*mesg, the_time;
@@ -135,8 +135,8 @@ H5O_mtime_decode(H5F_t __unused__ *f, const uint8_t *p,
     /*
      * The catch-all.  If we can't convert a character string universal
      * coordinated time to a time_t value reliably then we can't decode the
-     * modification time message. This really isn't as bad as it sounds -- the
-     * only way a user can get the modification time is from H5Gget_objinfo()
+     * modification time message. This really isn't as bad as it sounds --
+     * the only way a user can get the modification time is from H5Gget_objinfo()
      * and H5G_get_objinfo() can gracefully recover.
      */
 
@@ -172,7 +172,7 @@ H5O_mtime_decode(H5F_t __unused__ *f, const uint8_t *p,
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_mtime_encode(H5F_t __unused__ *f, uint8_t *p, const void *_mesg)
+H5O_mtime_encode(H5F_t __unused__ *f, uint8 *p, const void *_mesg)
 {
     const time_t	*mesg = (const time_t *) _mesg;
     struct tm		*tm;

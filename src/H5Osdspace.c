@@ -25,8 +25,8 @@ static char		RcsId[] = "@(#)$Revision$";
 #define PABLO_MASK	H5O_sdspace_mask
 
 /* PRIVATE PROTOTYPES */
-static void *H5O_sdspace_decode(H5F_t *f, const uint8_t *p, H5O_shared_t *sh);
-static herr_t H5O_sdspace_encode(H5F_t *f, uint8_t *p, const void *_mesg);
+static void *H5O_sdspace_decode(H5F_t *f, const uint8 *p, H5O_shared_t *sh);
+static herr_t H5O_sdspace_encode(H5F_t *f, uint8 *p, const void *_mesg);
 static void *H5O_sdspace_copy(const void *_mesg, void *_dest);
 static size_t H5O_sdspace_size(H5F_t *f, const void *_mesg);
 static herr_t H5O_sdspace_debug(H5F_t *f, const void *_mesg,
@@ -51,7 +51,7 @@ const H5O_class_t H5O_SDSPACE[1] = {{
 #define H5O_SDSPACE_VERSION	1
 
 /* Is the interface initialized? */
-static intn interface_initialize_g = 0;
+static hbool_t interface_initialize_g = FALSE;
 #define INTERFACE_INIT NULL
 
 /*--------------------------------------------------------------------------
@@ -81,7 +81,7 @@ static intn interface_initialize_g = 0;
         Added a version number and reformatted the message for aligment.
 --------------------------------------------------------------------------*/
 static void *
-H5O_sdspace_decode(H5F_t *f, const uint8_t *p, H5O_shared_t __unused__ *sh)
+H5O_sdspace_decode(H5F_t *f, const uint8 *p, H5O_shared_t __unused__ *sh)
 {
     H5S_simple_t	*sdim = NULL;/* New simple dimensionality structure */
     void		*ret_value = NULL;
@@ -175,7 +175,7 @@ H5O_sdspace_decode(H5F_t *f, const uint8_t *p, H5O_shared_t __unused__ *sh)
         Added a version number and reformatted the message for aligment.
 --------------------------------------------------------------------------*/
 static herr_t
-H5O_sdspace_encode(H5F_t *f, uint8_t *p, const void *mesg)
+H5O_sdspace_encode(H5F_t *f, uint8 *p, const void *mesg)
 {
     const H5S_simple_t	*sdim = (const H5S_simple_t *) mesg;
     intn		u;  /* Local counting variable */

@@ -10,7 +10,7 @@
 /* Define if it's safe to use `long long' for hsize_t and hssize_t */
 #undef HAVE_LARGE_HSIZET
 
-/* Width for printf() for type `long long' or `__int64', us. `ll' */
+/* The width parameter for printf formats for type `long long', us. `ll' */
 #undef PRINTF_LL_WIDTH
 
 /* Define if `tm_gmtoff' is a member of `struct tm' */
@@ -21,18 +21,3 @@
 
 /* Define if `struct timezone' is defined */
 #undef HAVE_STRUCT_TIMEZONE
-
-/* Define if `struct stat' has the `st_blocks' field */
-#undef HAVE_STAT_ST_BLOCKS
-
-/* Define if `struct text_info' is defined */
-#undef HAVE_STRUCT_TEXT_INFO
-
-/* Define if `struct videoconfig' is defined */
-#undef HAVE_STRUCT_VIDEOCONFIG
-
-/* Define if the ioctl TIOCGETD is defined */
-#undef HAVE_TIOCGETD
-
-/* Define if the ioctl TIOCGWINSZ is defined */
-#undef HAVE_TIOCGWINSZ

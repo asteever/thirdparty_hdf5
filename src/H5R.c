@@ -22,22 +22,21 @@ static char		RcsId[] = "@(#)$Revision$";
 #include <H5Eprivate.h>		/* Error handling */
 #include <H5Fprivate.h>		/* Files */
 #include <H5Gprivate.h>		/* Groups */
-#include <H5HGprivate.h>    /* Global Heaps */
-#include <H5MMprivate.h>    /* Memory Management */
 #include <H5Rprivate.h>		/* References */
 #include <H5Sprivate.h>		/* Dataspaces */
 
 /* Interface initialization */
 #define PABLO_MASK	H5R_mask
 #define INTERFACE_INIT	H5R_init_interface
-static intn		interface_initialize_g = 0;
+static intn		interface_initialize_g = FALSE;
 static herr_t		H5R_init_interface(void);
+static void		H5R_term_interface(void);
 
 /* Static functions */
 static herr_t H5R_create(void *ref, H5G_entry_t *loc, const char *name,
         H5R_type_t ref_type, H5S_t *space);
 static hid_t H5R_dereference(H5D_t *dset, H5R_type_t ref_type, void *_ref);
-static H5S_t * H5R_get_region(H5D_t *dset, H5R_type_t ref_type, void *_ref);
+static H5S_t * H5R_get_region(void *ref);
 
 
 /*--------------------------------------------------------------------------
@@ -55,17 +54,17 @@ DESCRIPTION
 static herr_t
 H5R_init_interface(void)
 {
+    herr_t		    ret_value = SUCCEED;
     FUNC_ENTER(H5R_init_interface, FAIL);
 
     /* Initialize the atom group for the file IDs */
-    if (H5I_init_group(H5I_REFERENCE, H5I_REFID_HASHSIZE, H5R_RESERVED_ATOMS,
-		       (herr_t (*)(void *)) NULL)<0) {
-	HRETURN_ERROR (H5E_REFERENCE, H5E_CANTINIT, FAIL,
-		       "unable to initialize interface");
+    if ((ret_value = H5I_init_group(H5I_REFERENCE, H5I_REFID_HASHSIZE,
+            H5R_RESERVED_ATOMS, (herr_t (*)(void *)) NULL)) >= 0) {
+        ret_value = H5_add_exit(&H5R_term_interface);
     }
 
-    FUNC_LEAVE(SUCCEED);
-}
+    FUNC_LEAVE(ret_value);
+}   /* end H5R_init_interface() */
 
 
 /*--------------------------------------------------------------------------
@@ -85,16 +84,12 @@ H5R_init_interface(void)
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-void
-H5R_term_interface(intn status)
+static void
+H5R_term_interface(void)
 {
-    if (interface_initialize_g>0) {
-	/* Free ID group */
-	H5I_destroy_group(H5I_REFERENCE);
-    }
-    
-    interface_initialize_g = status;
-}
+    /* Free ID group */
+    H5I_destroy_group(H5I_REFERENCE);
+}   /* end H5R_term_interface() */
 
 
 /*--------------------------------------------------------------------------
@@ -125,7 +120,7 @@ H5R_term_interface(intn status)
  REVISION LOG
 --------------------------------------------------------------------------*/
 static herr_t
-H5R_create(void *_ref, H5G_entry_t *loc, const char *name, H5R_type_t ref_type, H5S_t *space)
+H5R_create(void *_ref, H5G_entry_t *loc, const char *name, H5R_type_t ref_type, H5S_t __unused__ *space)
 {
     H5G_stat_t sb;              /* Stat buffer for retrieving OID */
     herr_t ret_value = FAIL;
@@ -145,91 +140,22 @@ H5R_create(void *_ref, H5G_entry_t *loc, const char *name, H5R_type_t ref_type, 
         {
             haddr_t addr;
             hobj_ref_t *ref=(hobj_ref_t *)_ref; /* Get pointer to correct type of reference struct */
-            uint8_t *p;       /* Pointer to OID to store */
+            uint8 *p;       /* Pointer to OID to store */
 
             /* Set information for reference */
-            p=(uint8_t *)ref->oid;
+            p=(uint8 *)ref->oid;
             H5F_addr_pack(loc->file,&addr,&sb.objno[0]);
             H5F_addr_encode(loc->file,&p,&addr);
             break;
         }
 
         case H5R_DATASET_REGION:
-        {
-            haddr_t addr;
-            H5HG_t hobjid;      /* Heap object ID */
-            hdset_reg_ref_t *ref=(hdset_reg_ref_t *)_ref; /* Get pointer to correct type of reference struct */
-            hssize_t buf_size;  /* Size of buffer needed to serialize selection */
-            uint8_t *p;       /* Pointer to OID to store */
-            uint8_t *buf;     /* Buffer to store serialized selection in */
-            uintn heapid_found;  /* Flag for non-zero heap ID found */
-            uintn u;        /* local index */
-
-            /* Set up information for dataset region */
-
-            /* Return any previous heap block to the free list if we are garbage collecting */
-            if(loc->file->shared->access_parms->gc_ref) {
-                /* Check for an existing heap ID in the reference */
-                for(u=0, heapid_found=0; u<H5R_DSET_REG_REF_BUF_SIZE; u++)
-                    if(ref->heapid[u]!=0) {
-                        heapid_found=1;
-                        break;
-                    } /* end if */
-                
-                if(heapid_found!=0) {
-/* Return heap block to free list */
-                } /* end if */
-            } /* end if */
-
-            /* Zero the heap ID out, may leak heap space if user is re-using reference and doesn't have garbage collection on */
-            HDmemset(ref->heapid,H5R_DSET_REG_REF_BUF_SIZE,0);
-
-            /* Get the amount of space required to serialize the selection */
-            if ((buf_size = H5S_select_serial_size(space)) < 0)
-                HGOTO_ERROR(H5E_REFERENCE, H5E_CANTINIT, FAIL,
-                  "Invalid amount of space for serializing selection");
-
-            /* Increase buffer size to allow for the dataset OID */
-            buf_size+=sizeof(haddr_t);
-
-            /* Allocate the space to store the serialized information */
-            if (NULL==(buf = H5MM_malloc(buf_size))) {
-                HRETURN_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL,
-                       "memory allocation failed");
-            }
-
-            /* Serialize information for dataset OID */
-            p=(uint8_t *)buf;
-            H5F_addr_pack(loc->file,&addr,&sb.objno[0]);
-            H5F_addr_encode(loc->file,&p,&addr);
-
-            /* Serialize the selection */
-            if (H5S_select_serialize(space,p) < 0)
-                HGOTO_ERROR(H5E_REFERENCE, H5E_CANTCOPY, FAIL,
-                  "Unable to serialize selection");
-
-            /* Save the serialized buffer for later */
-            if(H5HG_insert(loc->file,buf_size,buf,&hobjid)<0)
-                HGOTO_ERROR(H5E_REFERENCE, H5E_WRITEERROR, FAIL,
-                  "Unable to serialize selection");
-
-            /* Serialize the heap ID and index for storage in the file */
-            p=(uint8_t *)ref->heapid;
-            H5F_addr_encode(loc->file,&p,&hobjid.addr);
-            INT32ENCODE(p,hobjid.idx);
-
-            /* Free the buffer we serialized data in */
-            H5MM_xfree(buf);
-            break;
-        }
-
         case H5R_INTERNAL:
             HRETURN_ERROR(H5E_REFERENCE, H5E_UNSUPPORTED, FAIL,
-                  "Internal references are not yet supported");
+                  "Dataset region and internal references are not supported yet");
 
         case H5R_BADTYPE:
         case H5R_MAXTYPE:
-        default:
             assert("unknown reference type" && 0);
             HRETURN_ERROR(H5E_REFERENCE, H5E_UNSUPPORTED, FAIL,
                   "internal error (unknown reference type)");
@@ -289,7 +215,7 @@ H5Rcreate(void *ref, hid_t loc_id, const char *name, H5R_type_t ref_type, hid_t 
         HRETURN_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no name given");
     if(ref_type<=H5R_BADTYPE || ref_type>=H5R_MAXTYPE)
         HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL, "invalid reference type");
-    if(ref_type!=H5R_OBJECT && ref_type!=H5R_DATASET_REGION)
+    if(ref_type!=H5R_OBJECT)
         HRETURN_ERROR (H5E_ARGS, H5E_UNSUPPORTED, FAIL, "reference type not supported");
     if (space_id!=(-1) && (H5I_DATASPACE!=H5I_get_type (space_id) || NULL==(space=H5I_object (space_id))))
         HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataspace");
@@ -329,74 +255,26 @@ static hid_t
 H5R_dereference(H5D_t *dset, H5R_type_t ref_type, void *_ref)
 {
     H5D_t *dataset;             /* Pointer to dataset to open */
+    hobj_ref_t *ref=(hobj_ref_t *)_ref; /* Only object references currently supported */
     H5G_entry_t ent;            /* Symbol table entry */
-    uint8_t *p;                 /* Pointer to OID to store */
+    uint8 *p;                   /* Pointer to OID to store */
     hid_t ret_value = FAIL;
 
     FUNC_ENTER(H5R_dereference, FAIL);
 
-    assert(_ref);
-    assert(ref_type>H5R_BADTYPE || ref_type<H5R_MAXTYPE);
-    assert(dset);
+    assert(ref);
+    assert(ref_type==H5R_OBJECT);
 
+    /*
+     * Switch on object type, when we implement that feature, always try to
+     *  open a dataset for now
+     */
     /* Initialize the symbol table entry */
     HDmemset(&ent,0,sizeof(H5G_entry_t));
     ent.type=H5G_NOTHING_CACHED;
     ent.file=H5D_get_file(dset);
-
-    switch(ref_type) {
-        case H5R_OBJECT:
-        {
-            hobj_ref_t *ref=(hobj_ref_t *)_ref; /* Only object references currently supported */
-            /*
-             * Switch on object type, when we implement that feature, always try to
-             *  open a dataset for now
-             */
-            /* Get the object oid */
-            p=(uint8_t *)ref->oid;
-            H5F_addr_decode(ent.file,(const uint8_t **)&p,&(ent.header));
-            break;
-        } /* end case */
-
-        case H5R_DATASET_REGION:
-        {
-            hdset_reg_ref_t *ref=(hdset_reg_ref_t *)_ref; /* Get pointer to correct type of reference struct */
-            H5HG_t hobjid;  /* Heap object ID */
-            uint8_t *buf;   /* Buffer to store serialized selection in */
-
-            /* Get the heap ID for the dataset region */
-            p=(uint8_t *)ref->heapid;
-            H5F_addr_decode(ent.file,(const uint8_t **)&p,&(hobjid.addr));
-            INT32DECODE(p,hobjid.idx);
-
-            /* Get the dataset region from the heap (allocate inside routine) */
-printf("%s: hobjid.addr=",FUNC);
-H5F_addr_print(stdout,&hobjid.addr);
-printf(", hobjid.idx=%d\n", hobjid.idx);
-            if((buf=H5HG_read(ent.file,&hobjid,NULL))==NULL)
-                HGOTO_ERROR(H5E_REFERENCE, H5E_READERROR, FAIL,
-                  "Unable to read dataset region information");
-
-            /* Get the object oid for the dataset */
-            p=(uint8_t *)buf;
-            H5F_addr_decode(ent.file,(const uint8_t **)&p,&(ent.header));
-
-            /* Free the buffer allocated in H5HG_read() */
-            H5MM_xfree(buf);
-            break;
-        } /* end case */
-
-        case H5R_INTERNAL:
-            HRETURN_ERROR(H5E_REFERENCE, H5E_UNSUPPORTED, FAIL,
-                  "Internal references are not yet supported");
-
-        case H5R_BADTYPE:
-        case H5R_MAXTYPE:
-        default:
-            assert("unknown reference type" && 0);
-            HRETURN_ERROR(H5E_REFERENCE, H5E_UNSUPPORTED, FAIL,
-                  "internal error (unknown reference type)");
-    } /* end switch */
+    p=(uint8 *)ref->oid;
+    H5F_addr_decode(ent.file,(const uint8 **)&p,&(ent.header));
 
     /* Open the dataset object */
     if ((dataset=H5D_open_oid(&ent)) == NULL) {
@@ -483,60 +361,17 @@ done:
  REVISION LOG
 --------------------------------------------------------------------------*/
 static H5S_t *
-H5R_get_region(H5D_t *dset, H5R_type_t ref_type, void *_ref)
+H5R_get_region(void __unused__ *ref)
 {
-    H5D_t *dataset;             /* Pointer to dataset to open */
-    H5G_entry_t ent;            /* Symbol table entry */
-    uint8_t *p;                 /* Pointer to OID to store */
-    hdset_reg_ref_t *ref=(hdset_reg_ref_t *)_ref; /* Get pointer to correct type of reference struct */
-    H5HG_t hobjid;  /* Heap object ID */
-    uint8_t *buf;   /* Buffer to store serialized selection in */
     H5S_t *ret_value = NULL;
 
     FUNC_ENTER(H5R_get_region, NULL);
 
-    assert(_ref);
-    assert(ref_type==H5R_DATASET_REGION);
-    assert(dset);
+    assert(ref);
 
-    /* Initialize the symbol table entry */
-    HDmemset(&ent,0,sizeof(H5G_entry_t));
-    ent.type=H5G_NOTHING_CACHED;
-    ent.file=H5D_get_file(dset);
-
-    /* Get the heap ID for the dataset region */
-    p=(uint8_t *)ref->heapid;
-    H5F_addr_decode(ent.file,(const uint8_t **)&p,&(hobjid.addr));
-    INT32DECODE(p,hobjid.idx);
-
-    /* Get the dataset region from the heap (allocate inside routine) */
-    if((buf=H5HG_read(ent.file,&hobjid,NULL))==NULL)
-        HGOTO_ERROR(H5E_REFERENCE, H5E_READERROR, NULL,
-          "Unable to read dataset region information");
-
-    /* Get the object oid for the dataset */
-    p=(uint8_t *)buf;
-    H5F_addr_decode(ent.file,(const uint8_t **)&p,&(ent.header));
-
-    /* Open the dataset object */
-    if ((dataset=H5D_open_oid(&ent)) == NULL) {
-        HGOTO_ERROR(H5E_DATASET, H5E_NOTFOUND, NULL, "not found");
-    }
-
-    /* Copy the dataspace object */
-    if ((ret_value=H5D_get_space(dataset)) == NULL) {
-        HGOTO_ERROR(H5E_DATASPACE, H5E_NOTFOUND, NULL, "not found");
-    }
-
-/* Unserialize the selection */
-
-    /* Free the buffer allocated in H5HG_read() */
-    H5MM_xfree(buf);
-
-/* Close the dataset we opened */
-
-
+#ifdef LATER
 done:
+#endif /* LATER */
     FUNC_LEAVE(ret_value);
 }   /* end H5R_get_region() */
 
@@ -562,25 +397,20 @@ done:
  REVISION LOG
 --------------------------------------------------------------------------*/
 hid_t
-H5Rget_region(hid_t dataset, H5R_type_t ref_type, void *_ref)
+H5Rget_region(hid_t dset, H5R_type_t rtype, void *ref)
 {
-    H5D_t *dset = NULL;     /* dataset object */
-    H5S_t *space = NULL;    /* dataspace object */
+    H5S_t *space = NULL;
     hid_t ret_value = FAIL;
 
     FUNC_ENTER(H5Rget_region, FAIL);
-    H5TRACE3("i","iRtx",dataset,ref_type,_ref);
+    H5TRACE3("i","iRtx",dset,rtype,ref);
 
     /* Check args */
-    if (H5I_DATASET != H5I_get_type(dataset) || NULL == (dset = H5I_object(dataset)))
-        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataset");
-    if(ref_type!=H5R_DATASET_REGION)
-        HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL, "invalid reference type");
-    if(_ref==NULL)
-        HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL, "invalid reference pointer");
+    if(ref==NULL)
+        HGOTO_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL, "invalid reference pointer");
 
-    /* Get the dataspace with the correct region selected */
-    if ((space=H5R_get_region(dset,ref_type,_ref))==NULL)
+    /* Create reference */
+    if ((space=H5R_get_region(ref))==NULL)
         HGOTO_ERROR (H5E_REFERENCE, H5E_CANTCREATE, FAIL, "unable to create dataspace");
 
     /* Atomize */

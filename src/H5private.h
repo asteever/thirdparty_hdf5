@@ -1,139 +1,25 @@
+/****************************************************************************
+ * NCSA HDF                                                                 *
+ * Software Development Group                                               *
+ * National Center for Supercomputing Applications                          *
+ * University of Illinois at Urbana-Champaign                               *
+ * 605 E. Springfield, Champaign IL 61820                                   *
+ *                                                                          *
+ * For conditions of distribution and use, see the accompanying             *
+ * hdf/COPYING file.                                                        *
+ *                                                                          *
+ ****************************************************************************/
+
+/* $Id$ */
+
 /*
- * Copyright (C) 1998 NCSA
- *               All rights reserved.
- *
- * Programmer:  Robb Matzke <matzke@llnl.gov>
- *              Friday, October 30, 1998
- *
- * Purpose:	This file is included by all HDF5 library source files to
- *		define common things which are not defined in the HDF5 API.
- *		The configuration constants like HAVE_UNISTD_H etc. are
- *		defined in H5config.h which is included by H5public.h.
+ * This file contains macros & private information for general HDF5 functions.
+ * Every HDF5 source file will include this file immediately after any
+ * system include files but before any other private include files.
  */
 #ifndef _H5private_H
 #define _H5private_H
 #include <H5public.h>           /* Include Public Definitions     */
-
-/*
- * Include ANSI-C header files.
- */
-#ifdef STDC_HEADERS
-#   include <assert.h>
-#   include <ctype.h>
-#   include <errno.h>
-#   include <fcntl.h>
-#   include <float.h>
-#   include <limits.h>
-#   include <math.h>
-#   include <signal.h>
-#   include <stdarg.h>
-#   include <stdio.h>
-#   include <stdlib.h>
-#   include <string.h>
-#endif
-
-/*
- * If _POSIX_VERSION is defined in unistd.h then this system is Posix.1
- * compliant. Otherwise all bets are off.
- */
-#ifdef HAVE_UNISTD_H
-#   include <sys/types.h>
-#   include <unistd.h>
-#endif
-#ifdef _POSIX_VERSION
-#   include <sys/wait.h>
-#   include <pwd.h>
-#endif
-
-/*
- * The `struct stat' data type for stat() and fstat(). This is a Posix file
- * but often apears on non-Posix systems also.  The `struct stat' is required
- * for hdf5 to compile, although only a few fields are actually used.
- */
-#ifdef HAVE_SYS_STAT_H
-#   include <sys/stat.h>
-#endif
-
-/*
- * If a program may include both `time.h' and `sys/time.h' then
- * TIME_WITH_SYS_TIME is defined (see AC_HEADER_TIME in configure.in).
- * On some older systems, `sys/time.h' includes `time.h' but `time.h' is not
- * protected against multiple inclusion, so programs should not explicitly
- * include both files. This macro is useful in programs that use, for example,
- * `struct timeval' or `struct timezone' as well as `struct tm'.  It is best
- * used in conjunction with `HAVE_SYS_TIME_H', whose existence is checked
- * by `AC_CHECK_HEADERS(sys/time.h)' in configure.in.
- */
-#if defined(TIME_WITH_SYS_TIME)
-#   include <sys/time.h>
-#   include <time.h>
-#elif defined(HAVE_SYS_TIME_H)
-#   include <sys/time.h>
-#else
-#   include <time.h>
-#endif
-
-/*
- * Resource usage is not Posix.1 but HDF5 uses it anyway for some performance
- * and debugging code if available.
- */
-#ifdef HAVE_SYS_RESOURCE_H
-#   include <sys/resource.h>
-#endif
-
-/*
- * Unix ioctls.  These are used by h5ls (and perhaps others) to determine a
- * resonable output width.
- */
-#ifdef HAVE_SYS_IOCTL_H
-#   include <sys/ioctl.h>
-#endif
-
-/*
- * Win32 is severely broken when it comes to ANSI-C and Posix.1 compliance.
- */
-#ifdef HAVE_IO_H
-#   include <io.h>
-#endif
-#ifdef HAVE_WINSOCK_H
-#   include <winsock2.h>
-#endif
-#ifndef F_OK
-#   define F_OK	00
-#   define W_OK 02
-#   define R_OK 04
-#endif
-
-/*
- * Pablo support files.
- */
-#ifdef HAVE_PABLO
-#   define IOTRACE
-#   define HDFIOTRACE
-#   include "HDFIOTrace.h"
-#   include "ProcIDs.h"
-#endif
-
-/*
- * Does the compiler support the __attribute__(()) syntax?  This is how gcc
- * suppresses warnings about unused function arguments.  It's no big deal if
- * we don't.
- */
-#ifdef HAVE_ATTRIBUTE
-#   define __unused__		__attribute__((unused))
-#else
-#   define __attribute__(X)	/*void*/
-#   define __unused__		/*void*/
-#endif
-
-/*
- * Does the compiler expand __FUNCTION__ to be the name of the function
- * currently being defined?  If not then define it to be some constant
- * string.
- */
-#ifndef HAVE_FUNCTION
-#   define __FUNCTION__  "NoFunctionName"
-#endif
 
 /* Version #'s of the major components of the file format */
 #define HDF5_BOOTBLOCK_VERSION  0       /* of the boot block format       */
@@ -154,24 +40,81 @@
 #define FAIL            (-1)
 #define UFAIL           (unsigned)(-1)
 
+
+/*
+ * Include those things that almost all source files need.
+ */
+#ifdef STDC_HEADERS
+#   include <assert.h>
+#   include <ctype.h>
+#   include <fcntl.h>
+#   include <stdio.h>
+#   include <stdlib.h>
+#   include <string.h>
+#   include <time.h>
+
+#if defined(WIN32)
+#	include<sys\types.h>
+#	include<io.h>
+#define F_OK 00
+#define R_OK 04
+#define W_OK 02
+#else
+#   include <sys/time.h>
+#   include <sys/types.h>
+#   include <unistd.h>
+#endif /*if defined(WIN32)*/
+
+#endif
+
+/*
+ * Pablo support files.
+ */
+#ifdef HAVE_PABLO
+#   define IOTRACE
+#   define HDFIOTRACE
+#   include "HDFIOTrace.h"
+#   include "ProcIDs.h"
+#endif
+
+/* Does the compiler support the __attribute__(()) syntax? */
+#ifndef HAVE_ATTRIBUTE
+#   define __attribute__(X)	/*void*/
+#   define __unused__		/*void*/
+#else
+#   define __unused__		__attribute__((unused))
+#endif
+
+#if defined(WIN32)
+#undef __unused__
+#define __unused__
+#endif
+
+/* Does the compiler expand __FUNCTION__? */
+#ifndef HAVE_FUNCTION
+#   define __FUNCTION__  "NoFuntionName"
+#endif
+
 /* number of members in an array */
 #ifndef NELMTS
 #    define NELMTS(X)		(sizeof(X)/sizeof(X[0]))
 #endif
 
 /* minimum of two, three, or four values */
-#undef MIN
-#define MIN(a,b)		(((a)<(b)) ? (a) : (b))
-#define MIN2(a,b)		MIN(a,b)
-#define MIN3(a,b,c)		MIN(a,MIN(b,c))
-#define MIN4(a,b,c,d)		MIN(MIN(a,b),MIN(c,d))
+#ifndef MIN
+#   define MIN(a,b)		(((a)<(b)) ? (a) : (b))
+#   define MIN2(a,b)		MIN(a,b)
+#   define MIN3(a,b,c)		MIN(a,MIN(b,c))
+#   define MIN4(a,b,c,d)	MIN(MIN(a,b),MIN(c,d))
+#endif
 
 /* maximum of two, three, or four values */
-#undef MAX
-#define MAX(a,b)    		(((a)>(b)) ? (a) : (b))
-#define MAX2(a,b)		MAX(a,b)
-#define MAX3(a,b,c)		MAX(a,MAX(b,c))
-#define MAX4(a,b,c,d)		MAX(MAX(a,b),MAX(c,d))
+#ifndef MAX
+#   define MAX(a,b)    		(((a)>(b)) ? (a) : (b))
+#   define MAX2(a,b)		MAX(a,b)
+#   define MAX3(a,b,c)		MAX(a,MAX(b,c))
+#   define MAX4(a,b,c,d)	MAX(MAX(a,b),MAX(c,d))
+#endif
 
 /* limit the middle value to be within a range (inclusive) */
 #define RANGE(LO,X,HI)		MAX(LO,MIN(X,HI))
@@ -186,6 +129,12 @@
 #   define SIGN(a)		((a)>0 ? 1 : (a)<0 ? -1 : 0)
 #endif
 
+/* maximum value of various types */
+#define MAX_SIZET	((hsize_t)(size_t)(ssize_t)(-1))
+#define MAX_SSIZET	((hsize_t)(ssize_t)((size_t)1<<(8*sizeof(ssize_t)-1)))
+#define MAX_HSIZET	((hsize_t)(hssize_t)(-1))
+#define MAX_HSSIZET	((hsize_t)1<<(8*sizeof(hssize_t)-1))
+
 /*
  * HDF Boolean type.
  */
@@ -197,159 +146,61 @@
 #endif
 
 /*
- * Although `long long' is part of the revised ANSI-C some compilers don't
- * support it yet.  We define `long_long' as the longest integral integer type
- * supported by the compiler, usually 64 bits.  It must be legal to qualify
- * `long_long' with `unsigned'.
+ * Numeric data types
  */
-#if SIZEOF_LONG_LONG>0
-#   define long_long	long long
-#elif SIZEOF___INT64>0
-#   define long_long	__int64	/*Win32*/
-#   undef SIZEOF_LONG_LONG
-#   define SIZEOF_LONG_LONG SIZEOF___INT64
+typedef char            char8;
+typedef signed char int8;
+typedef unsigned char   uchar8, uint8;
+
+#if SIZEOF_SHORT==2
+typedef short int16;
+typedef unsigned short uint16;
 #else
-#   define long_long	long int
-#   undef SIZEOF_LONG_LONG
-#   define SIZEOF_LONG_LONG SIZEOF_LONG
+typedef int int16;              /*not really */
+typedef unsigned uint16;        /*not really */
 #endif
 
-/*
- * Numeric data types.  Some of these might be defined in Posix.1g, otherwise
- * we define them with the closest available type which is at least as large
- * as the number of bits indicated in the type name.  The `int8' types *must*
- * be exactly one byte wide because we use it for pointer calculations to
- * void* memory.
- *
- * For int16_t and uint16_t we use `short' only if it's exactly 2 bytes.
- * Otherwise we use `int' because it's probably faster.
- */
-#if SIZEOF_INT8_T==0
-    typedef signed char int8_t;
-#   undef SIZEOF_INT8_T
-#   define SIZEOF_INT8_T SIZEOF_CHAR
-#elif SIZEOF_INT8_T==1
+#if SIZEOF_INT==4
+typedef int int32;
+typedef unsigned int uint32;
+#elif SIZEOF_LONG==4
+typedef long int32;
+typedef unsigned long uint32;
 #else
-#   error "the int8_t type must be 1 byte wide"
+typedef int int32;              /*not really */
+typedef unsigned uint32;        /*not really */
 #endif
 
-#if SIZEOF_UINT8_T==0
-    typedef unsigned char uint8_t;
-#   undef SIZEOF_UINT8_T
-#   define SIZEOF_UINT8_T SIZEOF_CHAR
-#elif SIZEOF_UINT8_T==1
+#if SIZEOF_INT==8
+typedef int             int64;
+typedef unsigned        uint64;
+#elif SIZEOF_LONG==8
+typedef long            int64;
+typedef unsigned long   uint64;
+#elif SIZEOF_LONG_LONG==8
+#if defined(WIN32)
+typedef __int64       int64;
+typedef unsigned __int64 uint64;
 #else
-#   error "the uint8_t type must be 1 byte wide"
+typedef long long       int64;
+typedef unsigned long long uint64;
+#endif
+#else
+#  error "no 64-bit integer type"
 #endif
 
-#if SIZEOF_INT16_T>=2
-#elif SIZEOF_SHORT==2
-    typedef short int16_t;
-#   undef SIZEOF_INT16_T
-#   define SIZEOF_INT16_T SIZEOF_SHORT
-#elif SIZEOF_INT>=2
-    typedef int int16_t;
-#   undef SIZEOF_INT16_T
-#   define SIZEOF_INT16_T SIZEOF_INT
-#else
-#   error "nothing appropriate for int16_t"
-#endif
-
-#if SIZEOF_UINT16_T>=2
-#elif SIZEOF_SHORT>=2
-    typedef unsigned short uint16_t;
-#   undef SIZEOF_UINT16_T
-#   define SIZEOF_UINT16_T SIZEOF_SHORT
-#elif SIZEOF_INT>=2
-    typedef unsigned uint16_t;
-#   undef SIZEOF_UINT16_T
-#   define SIZEOF_UINT16_T SIZEOF_INT
-#else
-#   error "nothing appropriate for uint16_t"
-#endif
-
-#if SIZEOF_INT32_T>=4
-#elif SIZEOF_SHORT>=4
-    typedef short int32_t
-#   undef SIZEOF_INT32_T
-#   define SIZEOF_INT32_T SIZEOF_SHORT
-#elif SIZEOF_INT>=4
-    typedef int int32_t;
-#   undef SIZEOF_INT32_T
-#   define SIZEOF_INT32_T SIZEOF_INT
-#elif SIZEOF_LONG>=4
-    typedef long int32_t;
-#   undef SIZEOF_INT32_T
-#   define SIZEOF_INT32_T SIZEOF_LONG
-#else
-#   error "nothing appropriate for int32_t"
-#endif
-
-#if SIZEOF_UINT32_T>=4
-#elif SIZEOF_SHORT>=4
-    typedef short uint32_t;
-#   undef SIZEOF_UINT32_T
-#   define SIZEOF_UINT32_T SIZEOF_SHORT
-#elif SIZEOF_INT>=4
-    typedef unsigned int uint32_t;
-#   undef SIZEOF_UINT32_T
-#   define SIZEOF_UINT32_T SIZEOF_INT
-#elif SIZEOF_LONG>=4
-    typedef unsigned long uint32_t;
-#   undef SIZEOF_UINT32_T
-#   define SIZEOF_UINT32_T SIZEOF_LONG
-#else
-#   error "nothing appropriate for uint32_t"
-#endif
-
-#if SIZEOF_INT64_T>=8
-#elif SIZEOF_INT>=8
-    typedef int int64_t;
-#   undef SIZEOF_INT64_T
-#   define SIZEOF_INT64_T SIZEOF_INT
-#elif SIZEOF_LONG>=8
-    typedef long int64_t;
-#   undef SIZEOF_INT64_T
-#   define SIZEOF_INT64_T SIZEOF_LONG
-#elif SIZEOF_LONG_LONG>=8
-    typedef long_long int64_t;
-#   undef SIZEOF_INT64_T
-#   define SIZEOF_INT64_T SIZEOF_LONG_LONG
-#else
-#   error "nothing appropriate for int64_t"
-#endif
-
-#if SIZEOF_UINT64_T>=8
-#elif SIZEOF_INT>=8
-    typedef unsigned uint64_t;
-#   undef SIZEOF_UINT64_T
-#   define SIZEOF_UINT64_T SIZEOF_INT
-#elif SIZEOF_LONG>=8
-    typedef unsigned long uint64_t;
-#   undef SIZEOF_UINT64_T
-#   define SIZEOF_UINT64_T SIZEOF_LONG
-#elif SIZEOF_LONG_LONG>=8
-    typedef unsigned long_long uint64_t;
-#   undef SIZEOF_UINT64_T
-#   define SIZEOF_UINT64_T SIZEOF_LONG_LONG
-#else
-#   error "nothing appropriate for uint64_t"
-#endif
-
-#if SIZEOF_FLOAT>=4
+#if SIZEOF_FLOAT==4
 typedef float float32;
-#elif SIZEOF_DOUBLE>=4
-typedef double float32;
 #else
-#   error "nothing appropriate for float32"
+typedef float float32;          /*not really */
 #endif
 
-#if SIZEOF_FLOAT>=8
+#if SIZEOF_FLOAT==8
 typedef float float64;
-#elif SIZEOF_DOUBLE>=8
+#elif SIZEOF_DOUBLE==8
 typedef double float64;
 #else
-#  error "nothing appropriate for float64"
+#  error "no 64-bit floating point type"
 #endif
 
 /*
@@ -363,26 +214,10 @@ typedef unsigned uintn;
  * File addresses.
  */
 typedef struct {
-    uint64_t		offset;     /*offset within an HDF5 file    */
+    uint64                  offset;     /*offset within an HDF5 file    */
 } haddr_t;
 
-#define H5F_ADDR_UNDEF {((uint64_t)(-1L))}
-
-/*
- * Maximum and minimum values.  These should be defined in <limits.h> for the
- * most part.
- */
-#ifndef LLONG_MAX
-#   define LLONG_MAX	((long_long)(((unsigned long_long)1		      \
-				      <<(8*sizeof(long_long)-1))-1))
-#   define ULLONG_MAX	((unsigned long_long)((long_long)(-1)))
-#endif
-#ifndef SIZET_MAX
-#   define SIZET_MAX	((hsize_t)(size_t)(ssize_t)(-1))
-#   define SSIZET_MAX	((hsize_t)(ssize_t)((size_t)1<<(8*sizeof(ssize_t)-1)))
-#endif
-#define HSIZET_MAX	((hsize_t)(hssize_t)(-1))
-#define HSSIZET_MAX	((hsize_t)1<<(8*sizeof(hssize_t)-1))
+#define H5F_ADDR_UNDEF {((uint64)(-1L))}
 
 /*
  * Some compilers have problems declaring auto variables that point
@@ -546,11 +381,7 @@ int HDfprintf (FILE *stream, const char *fmt, ...);
 #define HDmkfifo(S,M)           mkfifo(S,M)
 #define HDmktime(T)             mktime(T)
 #define HDmodf(X,Y)             modf(X,Y)
-#ifdef HAVE__O_BINARY
-#define HDopen(S,F,M)		open(S,F|_O_BINARY,M)
-#else
 #define HDopen(S,F,M)		open(S,F,M)
-#endif
 #define HDopendir(S)            opendir(S)
 #define HDpathconf(S,N)         pathconf(S,N)
 #define HDpause()               pause()
@@ -596,9 +427,6 @@ int HDfprintf (FILE *stream, const char *fmt, ...);
 #define HDsin(X)                sin(X)
 #define HDsinh(X)               sinh(X)
 #define HDsleep(N)              sleep(N)
-#ifdef HAVE_SNPRINTF
-#   define HDsnprintf		snprintf /*varargs*/
-#endif
 /* sprintf() variable arguments */
 #define HDsqrt(X)               sqrt(X)
 #define HDsrand(N)              srand(N)
@@ -623,7 +451,7 @@ int HDfprintf (FILE *stream, const char *fmt, ...);
 #define HDstrtod(S,R)           strtod(S,R)
 #define HDstrtok(X,Y)           strtok(X,Y)
 #define HDstrtol(S,R,N)         strtol(S,R,N)
-int64_t HDstrtoll (const char *s, const char **rest, int base);
+int64 HDstrtoll (const char *s, const char **rest, int base);
 #define HDstrtoul(S,R,N)        strtoul(S,R,N)
 #define HDstrxfrm(X,Y,Z)        strxfrm(X,Y,Z)
 #define HDsysconf(N)            sysconf(N)
@@ -666,12 +494,8 @@ int64_t HDstrtoll (const char *s, const char **rest, int base);
 /*
  * And now for a couple non-Posix functions...
  */
-char *strdup(const char *s);
+extern char *strdup(const char *s);
 #define HDstrdup(S)             strdup(S)
-
-#ifndef HAVE_SNPRINTF
-int HDsnprintf(char *buf, size_t size, const char *fmt, ...);
-#endif
 
 /*
  * These macros check whether debugging has been requested for a certain
@@ -826,6 +650,7 @@ void H5_trace (hbool_t returning, const char *func, const char *type, ...);
  *-------------------------------------------------------------------------
  */
 extern hbool_t library_initialize_g;   /*good thing C's lazy about extern! */
+extern hbool_t thread_initialize_g;    /*don't decl interface_initialize_g */
 
 /* Is `S' the name of an API function? */
 #define H5_IS_API(S) ('_'!=S[2] && '_'!=S[3] && (!S[4] || '_'!=S[4]))
@@ -846,24 +671,29 @@ extern hbool_t library_initialize_g;   /*good thing C's lazy about extern! */
          HRETURN_ERROR (H5E_FUNC, H5E_CANTINIT, err,			      \
                         "library initialization failed");		      \
       }									      \
-   }       								      \
+   }									      \
 									      \
-   /* Initialize this interface or bust */				      \
+   /* Initialize this thread */						      \
+   if (!thread_initialize_g) {						      \
+      thread_initialize_g = TRUE;					      \
+      if (H5_init_thread()<0) {						      \
+         HRETURN_ERROR (H5E_FUNC, H5E_CANTINIT, err,			      \
+                        "thread initialization failed");		      \
+      }									      \
+   }									      \
+									      \
+   /* Initialize this interface */					      \
    if (!interface_initialize_g) {					      \
-      interface_initialize_g = 1;					      \
+      interface_initialize_g = TRUE;					      \
       if (interface_init_func &&					      \
           ((herr_t(*)(void))interface_init_func)()<0) {			      \
          HRETURN_ERROR (H5E_FUNC, H5E_CANTINIT, err,			      \
                         "interface initialization failed");		      \
       }									      \
-   } else if (interface_initialize_g<0) {				      \
-       HRETURN_ERROR(H5E_FUNC, H5E_CANTINIT, err,			      \
-		     "interface is closing");				      \
-       assert("interface is closing" && 0);				      \
    }									      \
 									      \
    /* Clear thread error stack entering public functions */		      \
-   if (H5E_clearable_g && H5_IS_API (FUNC)) {				      \
+   if (H5E_clearable_g && H5_IS_API (FUNC)) {		                      \
        H5E_clear ();							      \
    }									      \
    {
@@ -903,21 +733,8 @@ extern hbool_t library_initialize_g;   /*good thing C's lazy about extern! */
 /* Private functions, not part of the publicly documented API */
 herr_t H5_init_library(void);
 void H5_term_library(void);
-
-/* Functions to terminate interfaces */
-void H5A_term_interface(intn status);
-void H5D_term_interface(intn status);
-void H5F_term_interface(intn status);
-void H5G_term_interface(intn status);
-void H5I_term_interface(intn status);
-void H5P_term_interface(intn status);
-void H5RA_term_interface(intn status);
-void H5R_term_interface(intn status);
-void H5S_term_interface(intn status);
-void H5TB_term_interface(intn status);
-void H5T_native_close(intn status);
-void H5T_term_interface(intn status);
-void H5Z_term_interface(intn status);
-
+herr_t H5_add_exit(void (*func) (void));
+herr_t H5_init_thread(void);
+void H5_term_thread(void);
 
 #endif

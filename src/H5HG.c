@@ -36,14 +36,14 @@
 typedef struct H5HG_obj_t {
     intn		nrefs;		/*reference count		*/
     size_t		size;		/*total size of object		*/
-    uint8_t		*begin;		/*ptr to object into heap->chunk*/
+    uint8		*begin;		/*ptr to object into heap->chunk*/
 } H5HG_obj_t;
 
 struct H5HG_heap_t {
     haddr_t		addr;		/*collection address		*/
     hbool_t		dirty;		/*does heap need to be saved?	*/
     size_t		size;		/*total size of collection	*/
-    uint8_t		*chunk;		/*the collection, incl. header	*/
+    uint8		*chunk;		/*the collection, incl. header	*/
     intn		nalloc;		/*numb object slots allocated	*/
     H5HG_obj_t		*obj;		/*array of object descriptions	*/
 };
@@ -64,7 +64,7 @@ static const H5AC_class_t H5AC_GHEAP[1] = {{
 }};
 
 /* Interface initialization */
-static intn interface_initialize_g = 0;
+static intn interface_initialize_g = FALSE;
 #define INTERFACE_INIT NULL
 
 
@@ -94,7 +94,7 @@ H5HG_create (H5F_t *f, size_t size)
 {
     H5HG_heap_t	*heap = NULL;
     H5HG_heap_t	*ret_value = NULL;
-    uint8_t	*p = NULL;
+    uint8	*p = NULL;
     haddr_t	addr;
     
     FUNC_ENTER (H5HG_create, NULL);
@@ -200,9 +200,9 @@ H5HG_load (H5F_t *f, const haddr_t *addr, const void __unused__ *udata1,
 {
     H5HG_heap_t	*heap = NULL;
     H5HG_heap_t	*ret_value = NULL;
-    uint8_t	*p = NULL;
+    uint8	*p = NULL;
     intn	i;
-    size_t	nalloc, need;
+    size_t	nalloc;
     
     FUNC_ENTER (H5HG_load, NULL);
 
@@ -286,7 +286,7 @@ H5HG_load (H5F_t *f, const haddr_t *addr, const void __unused__ *udata1,
 	    p += heap->obj[0].size;
 	} else {
 	    intn idx;
-	    uint8_t *begin = p;
+	    uint8 *begin = p;
 	    UINT16DECODE (p, idx);
 	    assert (idx<heap->nalloc);
 	    assert (NULL==heap->obj[idx].begin);
@@ -294,18 +294,7 @@ H5HG_load (H5F_t *f, const haddr_t *addr, const void __unused__ *udata1,
 	    p += 4; /*reserved*/
 	    H5F_decode_length (f, p, heap->obj[idx].size);
 	    heap->obj[idx].begin = begin;
-	    /*
-	     * The total storage size includes the size of the object header
-	     * and is zero padded so the next object header is properly
-	     * aligned. The last bit of space is the free space object whose
-	     * size is never padded and already includes the object header.
-	     */
-	    if (idx>0) {
-		need = H5HG_ALIGN(H5HG_SIZEOF_OBJHDR(f) + heap->obj[idx].size);
-	    } else {
-		need = heap->obj[idx].size;
-	    }
-	    p = begin + need;
+	    p = begin + H5HG_ALIGN(heap->obj[idx].size);
 	}
     }
     assert(p==heap->chunk+heap->size);
@@ -433,7 +422,7 @@ static intn
 H5HG_alloc (H5F_t *f, H5HG_heap_t *heap, int cwfsno, size_t size)
 {
     int		idx;
-    uint8_t	*p = NULL;
+    uint8	*p = NULL;
     size_t	need = H5HG_ALIGN(H5HG_SIZEOF_OBJHDR(f) + size);
 
     FUNC_ENTER (H5HG_alloc, FAIL);
@@ -682,7 +671,7 @@ H5HG_read (H5F_t *f, H5HG_t *hobj, void *object/*out*/)
     H5HG_heap_t	*heap = NULL;
     intn	i;
     size_t	size;
-    uint8_t	*p = NULL;
+    uint8	*p = NULL;
     
     FUNC_ENTER (H5HG_read, NULL);
 
@@ -797,7 +786,7 @@ H5HG_link (H5F_t *f, H5HG_t *hobj, intn adjust)
 herr_t
 H5HG_remove (H5F_t *f, H5HG_t *hobj)
 {
-    uint8_t	*p=NULL, *obj_start=NULL;
+    uint8	*p=NULL, *obj_start=NULL;
     H5HG_heap_t	*heap = NULL;
     size_t	need;
     intn	i;
@@ -904,7 +893,7 @@ H5HG_debug(H5F_t *f, const haddr_t *addr, FILE *stream, intn indent,
     H5HG_heap_t		*h = NULL;
     char		buf[64];
     size_t		size;
-    uint8_t		*p = NULL;
+    uint8		*p = NULL;
 
     FUNC_ENTER(H5HG_debug, FAIL);
 

@@ -7,14 +7,73 @@
  *
  * Purpose:	Test H5Gunlink().
  */
-#include <h5test.h>
+#include <hdf5.h>
+#include <stdlib.h>
 
-const char *FILENAME[] = {
-    "unlink",
-    NULL
-};
+#include <H5config.h>
+#ifndef HAVE_ATTRIBUTE
+#   undef __attribute__
+#   define __attribute__(X) /*void*/
+#   define __unused__ /*void*/
+#else
+#   define __unused__ __attribute__((unused))
+#endif
+#if defined(WIN32)
+#undef __unused__
+#define __unused__
+#endif
 
+#define FILE_NAME_1	"unlink.h5"
 #define THE_OBJECT	"/foo"
+
+
+
+/*-------------------------------------------------------------------------
+ * Function:	cleanup
+ *
+ * Purpose:	Removes test files
+ *
+ * Return:	void
+ *
+ * Programmer:	Robb Matzke
+ *              Thursday, June  4, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+static void
+cleanup (void)
+{
+    if (!getenv ("HDF5_NOCLEANUP")) {
+	remove (FILE_NAME_1);
+    }
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	display_error_cb
+ *
+ * Purpose:	Displays the error stack after printing "*FAILED*".
+ *
+ * Return:	Success:	0
+ *
+ *		Failure:	-1
+ *
+ * Programmer:	Robb Matzke
+ *		Wednesday, March  4, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+display_error_cb (void __unused__ *client_data)
+{
+    puts ("*FAILED*");
+    H5Eprint (stdout);
+    return 0;
+}
 
 
 /*-------------------------------------------------------------------------
@@ -37,49 +96,48 @@ const char *FILENAME[] = {
 static int
 test_one(hid_t file)
 {
-    hid_t	work=-1, grp=-1;
+    hid_t	work, grp;
     herr_t	status;
     
     /* Create a test group */
     if ((work=H5Gcreate(file, "/test_one", 0))<0) goto error;
 
     /* Delete by absolute name */
-    TESTING("unlink by absolute name");
+    printf("%-70s", "Testing unlink by absolute name");
+    fflush(stdout);
     if ((grp=H5Gcreate(work, "foo", 0))<0) goto error;
     if (H5Gclose(grp)<0) goto error;
     if (H5Gunlink(file, "/test_one/foo")<0) goto error;
-    PASSED();
+    puts(" PASSED");
 
     /* Delete by local name */
-    TESTING("unlink by local name");
+    printf("%-70s", "Testing unlink by local name");
+    fflush(stdout);
     if ((grp=H5Gcreate(work, "foo", 0))<0) goto error;
     if (H5Gclose(grp)<0) goto error;
     if (H5Gunlink(work, "foo")<0) goto error;
-    PASSED();
+    puts(" PASSED");
 
     /* Delete directly - should fail */
-    TESTING("unlink without a name");
+    printf("%-70s", "Testing unlink without a name");
+    fflush(stdout);
     if ((grp=H5Gcreate(work, "foo", 0))<0) goto error;
     H5E_BEGIN_TRY {
 	status = H5Gunlink(grp, ".");
     } H5E_END_TRY;
     if (status>=0) {
-	FAILED();
-	puts("    Unlinking object w/o a name should have failed.");
+	puts("*FAILED*");
+	puts("   Unlinking object w/o a name should have failed.");
 	goto error;
     }
     if (H5Gclose(grp)<0) goto error;
-    PASSED();
+    puts(" PASSED");
 
     /* Cleanup */
     if (H5Gclose(work)<0) goto error;
     return 0;
-
  error:
-    H5E_BEGIN_TRY {
-	H5Gclose(work);
-	H5Gclose(grp);
-    } H5E_END_TRY;
+    H5Gclose(work);
     return 1;
 }
 
@@ -103,7 +161,7 @@ test_one(hid_t file)
 static int
 test_many(hid_t file)
 {
-    hid_t	work=-1, grp=-1;
+    hid_t	work, grp;
     int		i;
     const int	how_many=500;
     char	name[32];
@@ -114,7 +172,8 @@ test_many(hid_t file)
     if (H5Gclose(grp)<0) goto error;
 
     /* Create a bunch of names and unlink them in order */
-    TESTING("forward unlink");
+    printf("%-70s", "Testing forward unlink");
+    fflush(stdout);
     for (i=0; i<how_many; i++) {
 	sprintf(name, "obj_%05d", i);
 	if (H5Glink(work, H5G_LINK_HARD, "/test_many_foo", name)<0) goto error;
@@ -123,10 +182,11 @@ test_many(hid_t file)
 	sprintf(name, "obj_%05d", i);
 	if (H5Gunlink(work, name)<0) goto error;
     }
-    PASSED();
+    puts(" PASSED");
 
     /* Create a bunch of names and unlink them in reverse order */
-    TESTING("backward unlink");
+    printf("%-70s", "Testing backward unlink");
+    fflush(stdout);
     for (i=0; i<how_many; i++) {
 	sprintf(name, "obj_%05d", i);
 	if (H5Glink(work, H5G_LINK_HARD, "/test_many_foo", name)<0) goto error;
@@ -135,10 +195,11 @@ test_many(hid_t file)
 	sprintf(name, "obj_%05d", i);
 	if (H5Gunlink(work, name)<0) goto error;
     }
-    PASSED();
+    puts(" PASSED");
 
     /* Create a bunch of names and unlink them from both directions */
-    TESTING("inward unlink");
+    printf("%-70s", "Testing inward unlink");
+    fflush(stdout);
     for (i=0; i<how_many; i++) {
 	sprintf(name, "obj_%05d", i);
 	if (H5Glink(work, H5G_LINK_HARD, "/test_many_foo", name)<0) goto error;
@@ -151,10 +212,11 @@ test_many(hid_t file)
 	}
 	if (H5Gunlink(work, name)<0) goto error;
     }
-    PASSED();
+    puts(" PASSED");
     
     /* Create a bunch of names and unlink them from the midle */
-    TESTING("outward unlink");
+    printf("%-70s", "Testing outward unlink");
+    fflush(stdout);
     for (i=0; i<how_many; i++) {
 	sprintf(name, "obj_%05d", i);
 	if (H5Glink(work, H5G_LINK_HARD, "/test_many_foo", name)<0) goto error;
@@ -167,18 +229,14 @@ test_many(hid_t file)
 	}
 	if (H5Gunlink(work, name)<0) goto error;
     }
-    PASSED();
+    puts(" PASSED");
     
 
     /* Cleanup */
     if (H5Gclose(work)<0) goto error;
     return 0;
-    
  error:
-    H5E_BEGIN_TRY {
-	H5Gclose(work);
-	H5Gclose(grp);
-    } H5E_END_TRY;
+    H5Gclose(work);
     return 1;
 }
 
@@ -202,9 +260,10 @@ test_many(hid_t file)
 static int
 test_symlink(hid_t file)
 {
-    hid_t	work=-1;
+    hid_t	work;
 
-    TESTING("symlink removal");
+    printf("%-70s", "Testing symlink removal");
+    fflush(stdout);
     
     /* Create a test group and symlink */
     if ((work=H5Gcreate(file, "/test_symlink", 0))<0) goto error;
@@ -213,13 +272,10 @@ test_symlink(hid_t file)
 
     /* Cleanup */
     if (H5Gclose(work)<0) goto error;
-    PASSED();
+    puts(" PASSED");
     return 0;
-    
  error:
-    H5E_BEGIN_TRY {
-	H5Gclose(work);
-    } H5E_END_TRY;
+    H5Gclose(work);
     return 1;
 }
 
@@ -243,10 +299,12 @@ test_symlink(hid_t file)
 static int
 test_rename(hid_t file)
 {
-    hid_t	work=-1, foo=-1, inner=-1;
+    hid_t	work, foo, inner;
 
+    
     /* Create a test group and rename something */
-    TESTING("object renaming");
+    printf("%-70s", "Testing object renaming");
+    fflush(stdout);
     if ((work=H5Gcreate(file, "/test_rename", 0))<0) goto error;
     if ((foo=H5Gcreate(work, "foo", 0))<0) goto error;
     if (H5Gmove(work, "foo", "bar")<0) goto error;
@@ -255,24 +313,20 @@ test_rename(hid_t file)
     if (H5Gclose(foo)<0) goto error;
     if ((inner=H5Gopen(work, "bar/inner"))<0) goto error;
     if (H5Gclose(inner)<0) goto error;
-    PASSED();
+    puts(" PASSED");
 
     /* Try renaming a symlink */
-    TESTING("symlink renaming");
+    printf("%-70s", "Testing symlink renaming");
+    fflush(stdout);
     if (H5Glink(work, H5G_LINK_SOFT, "link_value", "link_one")<0) goto error;
     if (H5Gmove(work, "link_one", "link_two")<0) goto error;
-    PASSED();
+    puts(" PASSED");
 
     /* Cleanup */
     if (H5Gclose(work)<0) goto error;
     return 0;
-    
  error:
-    H5E_BEGIN_TRY {
-	H5Gclose(work);
-	H5Gclose(foo);
-	H5Gclose(inner);
-    } H5E_END_TRY;
+    H5Gclose(work);
     return 1;
 }
     
@@ -297,16 +351,13 @@ test_rename(hid_t file)
 int
 main(void)
 {
-    hid_t	fapl, file;
+    hid_t	file;
     int		nerrors = 0;
-    char	filename[1024];
 
     /* Open */
-    h5_reset();
-    fapl = h5_fileaccess();
-    h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
-    if ((file=H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl))<0)
-	goto error;
+    H5Eset_auto(display_error_cb, NULL);
+    if ((file=H5Fcreate(FILE_NAME_1, H5F_ACC_TRUNC,
+			H5P_DEFAULT, H5P_DEFAULT))<0) goto error;
 
     /* Tests */
     nerrors += test_one(file);
@@ -321,7 +372,7 @@ main(void)
 	exit(1);
     }
     puts("All unlink tests passed.");
-    h5_cleanup(fapl);
+    cleanup();
     return 0;
  error:
     return 1;

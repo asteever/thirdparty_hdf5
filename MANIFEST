@@ -75,7 +75,7 @@
 ./doc/html/Dataspaces.html
 ./doc/html/Datatypes.html
 ./doc/html/ddl.html
-./doc/html/DDL.html              	_DO_NOT_DISTRIBUTE_
+./doc/html/DDL.html              	_DO_NOT_DISTRIBUTE_ 
 ./doc/html/Debugging.html
 ./doc/html/Environment.html
 ./doc/html/Errors.html
@@ -97,6 +97,7 @@
 ./doc/html/IH_mapHead.gif
 ./doc/html/IOPipe.html
 ./doc/html/MemoryManagement.html	_DO_NOT_DISTRIBUTE_
+./doc/html/NCSAfooterlogo.gif
 ./doc/html/ObjectHeader.txt		_DO_NOT_DISTRIBUTE_
 ./doc/html/Properties.html
 ./doc/html/Ragged.html
@@ -133,8 +134,15 @@
 ./doc/html/group_p3.gif
 ./doc/html/group_p3.obj			_DO_NOT_DISTRIBUTE_
 ./doc/html/h5s.examples
+./doc/html/hdf2.jpg
 ./doc/html/ph5design.html
-./doc/html/ph5example.c
+./doc/html/ph5eg.h
+./doc/html/ph5eg_coll.c
+./doc/html/ph5eg_comm.c
+./doc/html/ph5eg_extindep.c
+./doc/html/ph5eg_indep.c
+./doc/html/ph5eg_main.c
+./doc/html/ph5implement.html
 ./doc/html/ph5implement.txt
 ./doc/html/pipe1.gif
 ./doc/html/pipe1.obj			_DO_NOT_DISTRIBUTE_
@@ -171,11 +179,13 @@
 ./doc/src/RM_H5T.html			_DO_NOT_DISTRIBUTE_
 ./doc/src/RM_H5Z.html			_DO_NOT_DISTRIBUTE_
 ./doc/src/Tools.html			_DO_NOT_DISTRIBUTE_
-./doc/tgif/APIGrammar.obj		_DO_NOT_DISTRIBUTE_
-./doc/tgif/FileGrammar.obj		_DO_NOT_DISTRIBUTE_
-./doc/tgif/IOPipe.obj			_DO_NOT_DISTRIBUTE_
-./doc/tgif/RobbPipe.obj			_DO_NOT_DISTRIBUTE_
-./doc/tgif/UserView.obj			_DO_NOT_DISTRIBUTE_
+./doc/src/ph5design.doc			_DO_NOT_DISTRIBUTE_
+./doc/tgif/APIGrammar.obj       _DO_NOT_DISTRIBUTE_
+./doc/tgif/FileGrammar.obj      _DO_NOT_DISTRIBUTE_
+./doc/tgif/IOPipe.obj           _DO_NOT_DISTRIBUTE_
+./doc/tgif/RobbPipe.obj         _DO_NOT_DISTRIBUTE_
+./doc/tgif/UserView.obj         _DO_NOT_DISTRIBUTE_
+
 
 ./examples/Attributes.txt
 ./examples/Makefile.in
@@ -188,13 +198,11 @@
 ./examples/h5_select.c
 ./examples/h5_attribute.c
 
-./pablo/HDF5record_RT.h
-./pablo/HDFentries.txt
-./pablo/Makefile.in
-./pablo/PabloHDF.c
-./pablo/PabloHDF_RT.c
-./pablo/PabloHDF_SDDF.c
-./pablo/ProcIDs.h
+./pablo/HDFentries.txt      _DO_NOT_DISTRIBUTE_
+./pablo/Makefile.in         _DO_NOT_DISTRIBUTE_
+./pablo/PabloHDF.c          _DO_NOT_DISTRIBUTE_
+./pablo/PabloHDF_RT.c       _DO_NOT_DISTRIBUTE_
+./pablo/PabloHDF_SDDF.c     _DO_NOT_DISTRIBUTE_
 
 ./src/.distdep
 ./src/.indent.pro			_DO_NOT_DISTRIBUTE_
@@ -278,7 +286,6 @@
 ./src/H5Sall.c
 ./src/H5Shyper.c
 ./src/H5Smpio.c
-./src/H5Snone.c
 ./src/H5Spoint.c
 ./src/H5Sprivate.h
 ./src/H5Spublic.h
@@ -317,32 +324,30 @@
 ./test/flush1.c
 ./test/flush2.c
 ./test/gheap.c
-./test/h5test.c
-./test/h5test.h
 ./test/hyperslab.c
 ./test/iopipe.c
 ./test/istore.c
-./test/lheap.c
 ./test/links.c
 ./test/mount.c
 ./test/mtime.c
-./test/ohdr.c
 ./test/overhead.c
 ./test/ragged.c
+./test/shtype.c
 ./test/space_overflow.c			_DO_NOT_DISTRIBUTE_
-./test/stab.c
 ./test/testhdf5.c
 ./test/testhdf5.h
 ./test/tattr.c
 ./test/tfile.c
 ./test/th5s.c
 ./test/th5s.h5
+./test/theap.c
 ./test/tmeta.c
+./test/tohdr.c
 ./test/trefer.c
 ./test/tselect.c
+./test/tstab.c
 ./test/unlink.c
 
-./testpar/Makefile.in
 ./testpar/Makefile.ascired
 ./testpar/Makefile.ibmsp
 ./testpar/Makefile.irix64
@@ -357,54 +362,43 @@
 ./tools/h5dump.c
 ./tools/h5dump.h
 ./tools/h5dumputil.c
-./tools/h5findshd.c
 ./tools/h5import.c
 ./tools/h5ls.c
 ./tools/h5repart.c
-./tools/h5toh4.c
-./tools/h5toh4.h
 ./tools/h5tools.c
 ./tools/h5tools.h
 ./tools/testh5dump.sh
-./tools/testh5toh4
 
 ./tools/testfiles/h5dumptst.c
 ./tools/testfiles/tall-1.ddl
 ./tools/testfiles/tall-2.ddl
 ./tools/testfiles/tall-3.ddl
-./tools/testfiles/tall.dmp
 ./tools/testfiles/tall.h5
 ./tools/testfiles/tattr-1.ddl
 ./tools/testfiles/tattr-2.ddl
 ./tools/testfiles/tattr-3.ddl
-./tools/testfiles/tattr.dmp
+./tools/testfiles/tattr-4.ddl
 ./tools/testfiles/tattr.h5
 ./tools/testfiles/tcomp-1.ddl
 ./tools/testfiles/tcomp-2.ddl
 ./tools/testfiles/tcomp-3.ddl
-./tools/testfiles/tcompound.dmp
+./tools/testfiles/tcomp-4.ddl
 ./tools/testfiles/tcompound.h5
-./tools/testfiles/tcompound2.dmp
-./tools/testfiles/tcompound2.h5
 ./tools/testfiles/tdset-1.ddl
 ./tools/testfiles/tdset-2.ddl
-./tools/testfiles/tdset.dmp
+./tools/testfiles/tdset-3.ddl
+./tools/testfiles/tdset-4.ddl
 ./tools/testfiles/tdset.h5
-./tools/testfiles/tdset2.dmp
-./tools/testfiles/tdset2.h5
 ./tools/testfiles/tgroup-1.ddl
 ./tools/testfiles/tgroup-2.ddl
-./tools/testfiles/tgroup.dmp
+./tools/testfiles/tgroup-3.ddl
 ./tools/testfiles/tgroup.h5
 ./tools/testfiles/thlink-1.ddl
 ./tools/testfiles/thlink-2.ddl
 ./tools/testfiles/thlink-3.ddl
 ./tools/testfiles/thlink-4.ddl
 ./tools/testfiles/thlink-5.ddl
-./tools/testfiles/thlink.dmp
 ./tools/testfiles/thlink.h5
-./tools/testfiles/tloop-1.ddl
 ./tools/testfiles/tslink-1.ddl
 ./tools/testfiles/tslink-2.ddl
-./tools/testfiles/tslink.dmp
 ./tools/testfiles/tslink.h5

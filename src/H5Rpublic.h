@@ -24,11 +24,11 @@
  * Reference types allowed.
  */
 typedef enum {
-    H5R_BADTYPE     =   (-1),   /*invalid Reference Type                     */
-    H5R_OBJECT,                 /*Object reference                           */
-    H5R_DATASET_REGION,         /*Dataset Region Reference                   */
-    H5R_INTERNAL,               /*Internal Reference                         */
-    H5R_MAXTYPE                 /*highest type (Invalid as true type)	     */
+    H5R_BADTYPE     =   (-1),   /* invalid Reference Type                     */
+    H5R_OBJECT,                 /* Object reference                           */
+    H5R_DATASET_REGION,         /* Dataset Region Reference                   */
+    H5R_INTERNAL,               /* Internal Reference                         */
+    H5R_MAXTYPE                 /* highest type in group (Invalid as true type)*/
 } H5R_type_t;
 
 #ifdef LATER
@@ -40,24 +40,10 @@ typedef struct {
 } href_t;
 #endif /* LATER */
 
-/* Note! Be careful with the sizes of the references because they should really
- * depend on the run-time values in the file.  Unfortunately, the arrays need
- * to be defined at run-time, so we have to go with the worst case sizes for
- * them.  -QAK
- */
-#define H5R_OBJ_REF_BUF_SIZE    sizeof(hsize_t)
 /* Object reference structure for user's code */
 typedef struct {
-    unsigned char oid[H5R_OBJ_REF_BUF_SIZE];    /* Buffer to store OID of object referenced */
-                                /* Needs to be large enough to store largest haddr_t in a worst case machine (ie. 8 bytes currently) */
+    unsigned long oid[2];       /* OID of object referenced */
 } hobj_ref_t;
-
-#define H5R_DSET_REG_REF_BUF_SIZE    (sizeof(hsize_t)+sizeof(int))
-/* Dataset Region reference structure for user's code */
-typedef struct {
-    unsigned char heapid[H5R_DSET_REG_REF_BUF_SIZE];    /* Buffer to store heap ID and index */
-                                /* Needs to be large enough to store largest haddr_t in a worst case machine (ie. 8 bytes currently) plus an int (4 bytes typically, but could be 8 bytes) */
-} hdset_reg_ref_t;
 
 /* Publicly visible datastructures */
 
@@ -67,7 +53,7 @@ extern "C" {
 
 /* Functions in H5R.c */
 herr_t H5Rcreate(void *ref, hid_t loc_id, const char *name,
-		 H5R_type_t ref_type, hid_t space_id);
+        H5R_type_t ref_type, hid_t space_id);
 hid_t H5Rdereference(hid_t dataset, H5R_type_t ref_type, void *ref);
 hid_t H5Rget_region(hid_t dataset, H5R_type_t ref_type, void *ref);
 

@@ -10,12 +10,73 @@
  *		as the file was flushed first.  This half tries to read the
  *		file created by the first half.
  */
-#include <h5test.h>
+#undef NDEBUG
+#include <assert.h>
+#include <hdf5.h>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 
-const char *FILENAME[] = {
-    "flush",
-    NULL
-};
+#include <H5config.h>
+#ifndef HAVE_ATTRIBUTE
+#   undef __attribute__
+#   define __attribute__(X) /*void*/
+#   define __unused__ /*void*/
+#else
+#   define __unused__ __attribute__((unused))
+#endif
+
+
+#define FILE_NAME_1	"flush.h5"
+
+
+
+/*-------------------------------------------------------------------------
+ * Function:	cleanup
+ *
+ * Purpose:	Removes test files
+ *
+ * Return:	void
+ *
+ * Programmer:	Robb Matzke
+ *              Thursday, June  4, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+static void
+cleanup (void)
+{
+    if (!getenv ("HDF5_NOCLEANUP")) {
+	remove (FILE_NAME_1);
+    }
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	display_error_cb
+ *
+ * Purpose:	Displays the error stack after printing "*FAILED*".
+ *
+ * Return:	Success:	0
+ *
+ *		Failure:	-1
+ *
+ * Programmer:	Robb Matzke
+ *		Wednesday, March  4, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+display_error_cb (void __unused__ *client_data)
+{
+    puts ("*FAILED*");
+    H5Eprint (stdout);
+    return 0;
+}
 
 
 /*-------------------------------------------------------------------------
@@ -37,19 +98,18 @@ const char *FILENAME[] = {
 int
 main(void)
 {
-    hid_t	fapl, file, space, dset, groups, grp;
+    hid_t	file, space, dset, groups, grp;
     hsize_t	ds_size[2];
     double	the_data[100][100], error;
     hsize_t	i, j;
-    char	name[1024];
+    char	name[256];
 
-    h5_reset();
-    fapl = h5_fileaccess();
-    TESTING("H5Fflush (part2)");
+    printf("%-70s", "Testing H5Fflush (part2)");
+    fflush(stdout);
+    H5Eset_auto(display_error_cb, NULL);
 
     /* Open the file */
-    h5_fixname(FILENAME[0], fapl, name, sizeof name);
-    if ((file=H5Fopen(name, H5F_ACC_RDONLY, fapl))<0) goto error;
+    if ((file=H5Fopen(FILE_NAME_1, H5F_ACC_RDONLY, H5P_DEFAULT))<0) goto error;
     
     /* Open the dataset */
     if ((dset=H5Dopen(file, "dset"))<0) goto error;
@@ -62,12 +122,7 @@ main(void)
 		the_data)<0) goto error;
     for (i=0; i<ds_size[0]; i++) {
 	for (j=0; j<ds_size[1]; j++) {
-	    /*
-	     * The extra cast in the following statement is a bug workaround
-	     * for the Win32 version 5.0 compiler.
-	     * 1998-11-06 ptl
-	     */
-	    error = fabs(the_data[i][j]-(double)(hssize_t)i/((hssize_t)j+1));
+	    error = fabs(the_data[i][j]-(double)i/((double)j+1));
 	    assert(error<0.0001);
 	}
     }
@@ -83,11 +138,12 @@ main(void)
     if (H5Gclose(groups)<0) goto error;
     if (H5Dclose(dset)<0) goto error;
     if (H5Fclose(file)<0) goto error;
-    PASSED();
-    h5_cleanup(fapl);
+    puts(" PASSED");
+    cleanup();
     return 0;
 
  error:
+    printf("*FAILED*");
     return 1;
 }
 

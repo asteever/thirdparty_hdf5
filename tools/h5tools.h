@@ -58,13 +58,13 @@ typedef struct h5dump_t {
     /*
      * Fields associated with the individual elements.
      *
-     *	 ascii:     If set then print 1-byte integer values as an ASCII
-     *		    character (no quotes).  If the character is one of the
-     *		    standard C escapes then print the escaped version.  If
-     *		    the character is unprintable then print a 3-digit octal
-     *		    escape.  If `ascii' is zero then then 1-byte integers are
+     *	 ascii:	    If set then pint 1-byte integer values as an ASCII
+     *		    character (no quotes). If the character is one of the
+     *		    standard C escapes then print the escaped version. If the
+     *		    character is unprintable then print a 3-digit octal
+     *		    escape.  If `ascii' is zero then 1-byte integers are
      *		    printed as numeric values.  The default is zero.
-     * 
+     *
      *	 fmt:       A printf(3c) format to use to print the value string
      *		    after it has been rendered.  The default is "%s".
      *

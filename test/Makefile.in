@@ -1,4 +1,4 @@
-# HDF5 Library Test Makefile(.in)
+# HDF5 Library Test Makefile(.in)			       -*- makefile -*-
 #
 # Copyright (C) 1997 National Center for Supercomputing Applications.
 #                    All rights reserved.
@@ -6,48 +6,37 @@
 # 
 @COMMENCE@
 
-# Add include directory to the C preprocessor flags and the hdf5
-# library to the library list.
+# Add include directory to the C preprocessor flags.
 CPPFLAGS=-I. -I../src @CPPFLAGS@
-LIBS=libh5test.a ../src/libhdf5.a @LIBS@
 
 # These are our main targets. They should be listed in the order to be
 # executed, generally most specific tests to least specific tests.
-TEST_PROGS=testhdf5 lheap ohdr stab gheap hyperslab istore bittests dtypes   \
-      dsets cmpd_dset extend external links unlink big mtime fillval mount   \
-      flush1 flush2
+TESTS=testhdf5 gheap hyperslab istore bittests dtypes dsets cmpd_dset extend \
+      external shtype links unlink big mtime fillval mount flush1 flush2
 TIMINGS=iopipe chunk ragged overhead
 
-# The libh5test.a library provides common support code for the tests.
-LIB=libh5test.a
-LIB_SRC=h5test.c
-LIB_OBJ=$(LIB_SRC:.c=.o)
-
-# Temporary files.  These files are the ones created by setting the
-# HDF5_NOCLEANUP environment variable and running `make test' without
-# specifying a file prefix or low-level driver.  Changing the file
-# prefix or low-level driver with environment variables will influence 
-# the temporary file name in ways that the makefile is not aware of.
+# Temporary files
 MOSTLYCLEAN=cmpd_dset.h5 dataset.h5 extend.h5 istore.h5 tfile1.h5 tfile2.h5  \
-	    tfile3.h5 th5s1.h5 lheap.h5 ohdr.h5 stab1.h5 stab2.h5            \
-	    extern_1.h5 extern_2.h5 extern_3.h5 extern_1a.raw extern_1b.raw  \
-	    extern_2a.raw extern_2b.raw extern_3a.raw extern_3b.raw          \
-	    extern_4a.raw extern_4b.raw iopipe.raw iopipe.h5 gheap0.h5       \
-	    gheap1.h5 gheap2.h5 gheap3.h5 gheap4.h5 links.h5 chunk.h5        \
-	    big.data big[0-9][0-9][0-9][0-9][0-9].h5 dtypes1.h5 dtypes2.h5   \
-            tattr.h5 tselect.h5 mtime.h5 ragged.h5 unlink.h5 overhead.h5     \
-            fillval_[0-9].h5 fillval.raw mount_[0-9].h5 trefer.h5 flush.h5
+	    tfile3.h5 th5s1.h5 theap.h5 tohdr.h5 tstab1.h5 tstab2.h5         \
+	    extern_1.h5 extern_2.h5 extern_3.h5 extern_1.raw extern_1b.raw   \
+	    extern_2.raw extern_2b.raw extern_3.raw extern_3b.raw            \
+	    extern_4.raw extern_4b.raw iopipe.raw iopipe.h5 gheap0.h5        \
+	    gheap1.h5 gheap2.h5 gheap3.h5 gheap4.h5 shtype0.h5 shtype1.h5    \
+	    shtype2a.h5 shtype2b.h5 shtype3.h5 links.h5 chunk.h5 big.data    \
+	    big[0-9][0-9][0-9][0-9][0-9].h5 dtypes1.h5 dtypes2.h5 tattr.h5   \
+	    tselect.h5 mtime.h5 ragged.h5 grptime.h5 unlink.h5 overhead.h5   \
+	    fillval_[0-9].h5 mount_[0-9].h5 trefer.h5 flush.h5
 CLEAN=$(TIMINGS)
 
 # Source and object files for programs...  The TEST_SRC list contains all the
 # source files and is used for things like dependencies, archiving, etc.  The
 # other source lists are for the individual tests, the files of which may
 # overlap with other tests.
-TEST_SRC=big.c bittests.c chunk.c cmpd_dset.c dsets.c dtypes.c extend.c      \
-         external.c fillval.c flush1.c flush2.c gheap.c h5test.c hyperslab.c \
-         iopipe.c istore.c lheap.c links.c mount.c mtime.c ohdr.c overhead.c \
-	 ragged.c space_overflow.c stab.c tattr.c testhdf5.c tfile.c th5s.c  \
-	 tmeta.c trefer.c tselect.c unlink.c
+TEST_SRC=testhdf5.c tattr.c tfile.c theap.c tmeta.c tohdr.c trefer.c         \
+    tselect.c tstab.c th5s.c dtypes.c hyperslab.c istore.c dsets.c           \
+    cmpd_dset.c extend.c external.c iopipe.c gheap.c shtype.c big.c links.c  \
+    chunk.c bittests.c mtime.c ragged.c unlink.c overhead.c fillval.c        \
+    mount.c flush1.c flush2.c
 TEST_OBJ=$(TEST_SRC:.c=.o)
 
 # Private header files (not to be installed)...
@@ -63,82 +52,78 @@ timings _timings: $(TIMINGS)
 	   fi;								      \
 	done;
 
-# How to build the tests...  They all depend on the test and hdf5 libraries.
-$(TEST_PROGS): libh5test.a ../src/libhdf5.a
-TESTHDF5_OBJ=testhdf5.o tattr.o tfile.o tmeta.o trefer.o tselect.o th5s.o
-testhdf5: $(TESTHDF5_OBJ)
-	$(CC) $(CFLAGS) -o $@ $(TESTHDF5_OBJ) $(LDFLAGS) $(LIBS)
+# How to build the programs...
+TESTHDF5_OBJ=testhdf5.o tattr.o tfile.o theap.o tmeta.o tohdr.o trefer.o tselect.o tstab.o th5s.o
+testhdf5: $(TESTHDF5_OBJ) ../src/libhdf5.a
+	$(CC) $(CFLAGS) -o $@ $(TESTHDF5_OBJ) ../src/libhdf5.a $(LIBS)
 
-lheap: lheap.o
-	$(CC) $(CFLAGS) -o $@ lheap.o $(LDFLAGS) $(LIBS)
+gheap: gheap.o ../src/libhdf5.a
+	$(CC) $(CFLAGS) -o $@ gheap.o ../src/libhdf5.a $(LIBS)
 
-ohdr: ohdr.o
-	$(CC) $(CFLAGS) -o $@ ohdr.o $(LDFLAGS) $(LIBS)
+dsets: dsets.o ../src/libhdf5.a
+	$(CC) $(CFLAGS) -o $@ dsets.o ../src/libhdf5.a $(LIBS)
 
-stab: stab.o
-	$(CC) $(CFLAGS) -o $@ stab.o $(LDFLAGS) $(LIBS)
+bittests: bittests.o ../src/libhdf5.a
+	$(CC) $(CFLAGS) -o $@ bittests.o ../src/libhdf5.a $(LIBS)
 
-gheap: gheap.o
-	$(CC) $(CFLAGS) -o $@ gheap.o $(LDFLAGS) $(LIBS)
+dtypes: dtypes.o ../src/libhdf5.a
+	$(CC) $(CFLAGS) -o $@ dtypes.o ../src/libhdf5.a $(LIBS)
 
-dsets: dsets.o
-	$(CC) $(CFLAGS) -o $@ dsets.o $(LDFLAGS) $(LIBS)
+hyperslab: hyperslab.o ../src/libhdf5.a
+	$(CC) $(CFLAGS) -o $@ hyperslab.o ../src/libhdf5.a $(LIBS)
 
-bittests: bittests.o
-	$(CC) $(CFLAGS) -o $@ bittests.o $(LDFLAGS) $(LIBS)
+istore: istore.o ../src/libhdf5.a
+	$(CC) $(CFLAGS) -o $@ istore.o ../src/libhdf5.a $(LIBS)
 
-dtypes: dtypes.o
-	$(CC) $(CFLAGS) -o $@ dtypes.o $(LDFLAGS) $(LIBS)
+cmpd_dset: cmpd_dset.o ../src/libhdf5.a
+	$(CC) $(CFLAGS) -o $@ cmpd_dset.o ../src/libhdf5.a $(LIBS)
 
-hyperslab: hyperslab.o
-	$(CC) $(CFLAGS) -o $@ hyperslab.o $(LDFLAGS) $(LIBS)
+extend: extend.o ../src/libhdf5.a
+	$(CC) $(CFLAGS) -o $@ extend.o ../src/libhdf5.a $(LIBS)
 
-istore: istore.o
-	$(CC) $(CFLAGS) -o $@ istore.o $(LDFLAGS) $(LIBS)
+external: external.o ../src/libhdf5.a
+	$(CC) $(CFLAGS) -o $@ external.o ../src/libhdf5.a $(LIBS)
 
-cmpd_dset: cmpd_dset.o
-	$(CC) $(CFLAGS) -o $@ cmpd_dset.o $(LDFLAGS) $(LIBS)
+shtype: shtype.o ../src/libhdf5.a
+	$(CC) $(CFLAGS) -o $@ shtype.o ../src/libhdf5.a $(LIBS)
 
-extend: extend.o
-	$(CC) $(CFLAGS) -o $@ extend.o $(LDFLAGS) $(LIBS)
+iopipe: iopipe.o ../src/libhdf5.a
+	$(CC) $(CFLAGS) -o $@ iopipe.o ../src/libhdf5.a $(LIBS)
 
-external: external.o
-	$(CC) $(CFLAGS) -o $@ external.o $(LDFLAGS) $(LIBS)
+grptime: grptime.o ../src/libhdf5.a
+	$(CC) $(CFLAGS) -o $@ grptime.o ../src/libhdf5.a $(LIBS)
 
-iopipe: iopipe.o
-	$(CC) $(CFLAGS) -o $@ iopipe.o $(LDFLAGS) $(LIBS)
+big: big.o ../src/libhdf5.a
+	$(CC) $(CFLAGS) -o $@ big.o ../src/libhdf5.a $(LIBS)
 
-big: big.o
-	$(CC) $(CFLAGS) -o $@ big.o $(LDFLAGS) $(LIBS)
+links: links.o ../src/libhdf5.a
+	$(CC) $(CFLAGS) -o $@ links.o ../src/libhdf5.a $(LIBS)
 
-links: links.o
-	$(CC) $(CFLAGS) -o $@ links.o $(LDFLAGS) $(LIBS)
+chunk: chunk.o ../src/libhdf5.a
+	$(CC) $(CFLAGS) -o $@ chunk.o ../src/libhdf5.a $(LIBS)
 
-chunk: chunk.o
-	$(CC) $(CFLAGS) -o $@ chunk.o $(LDFLAGS) $(LIBS)
+mtime: mtime.o ../src/libhdf5.a
+	$(CC) $(CFLAGS) -o $@ mtime.o ../src/libhdf5.a $(LIBS)
 
-mtime: mtime.o
-	$(CC) $(CFLAGS) -o $@ mtime.o $(LDFLAGS) $(LIBS)
+ragged: ragged.o ../src/libhdf5.a
+	$(CC) $(CFLAGS) -o $@ ragged.o ../src/libhdf5.a $(LIBS)
 
-ragged: ragged.o
-	$(CC) $(CFLAGS) -o $@ ragged.o $(LDFLAGS) $(LIBS)
+unlink: unlink.o ../src/libhdf5.a
+	$(CC) $(CFLAGS) -o $@ unlink.o ../src/libhdf5.a $(LIBS)
 
-unlink: unlink.o
-	$(CC) $(CFLAGS) -o $@ unlink.o $(LDFLAGS) $(LIBS)
+overhead: overhead.o ../src/libhdf5.a
+	$(CC) $(CFLAGS) -o $@ overhead.o ../src/libhdf5.a $(LIBS)
 
-overhead: overhead.o
-	$(CC) $(CFLAGS) -o $@ overhead.o $(LDFLAGS) $(LIBS)
+fillval: fillval.o ../src/libhdf5.a
+	$(CC) $(CFLAGS) -o $@ fillval.o ../src/libhdf5.a $(LIBS)
 
-fillval: fillval.o
-	$(CC) $(CFLAGS) -o $@ fillval.o $(LDFLAGS) $(LIBS)
+mount: mount.o ../src/libhdf5.a
+	$(CC) $(CFLAGS) -o $@ mount.o ../src/libhdf5.a $(LIBS)
 
-mount: mount.o
-	$(CC) $(CFLAGS) -o $@ mount.o $(LDFLAGS) $(LIBS)
+flush1: flush1.o ../src/libhdf5.a
+	$(CC) $(CFLAGS) -o $@ flush1.o ../src/libhdf5.a $(LIBS)
 
-flush1: flush1.o
-	$(CC) $(CFLAGS) -o $@ flush1.o $(LDFLAGS) $(LIBS)
-
-flush2: flush2.o
-	$(CC) $(CFLAGS) -o $@ flush2.o $(LDFLAGS) $(LIBS)
+flush2: flush2.o ../src/libhdf5.a
+	$(CC) $(CFLAGS) -o $@ flush2.o ../src/libhdf5.a $(LIBS)
 
 @CONCLUDE@

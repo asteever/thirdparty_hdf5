@@ -3,9 +3,8 @@
 # Usage: pipe the output of Linux's `strace' program into the stdin of
 # this command, and the output of this command into gnuplot.
 
-my $filename = shift || "tstab2.h5";
-my $total = 0;
-my %What;			# What{pos}{nbytes}{r|w} = naccesses
+$filename = shift || "tstab2.h5";
+$total = 0;
 
 while (<>) {
    if (!defined $fd) {
@@ -23,7 +22,6 @@ while (<>) {
    } elsif (/^write\((\d+), ".*?"(\.\.\.)?, \d+\)\s*= (\d+)/ &&
 	    $1==$fd && $3>=0) {
       my $nbytes = $3;
-      $What{$pos}{$nbytes}{w}++;
       printf "%d %d\n", $total, $pos;
       $pos += $nbytes;
       $total += $nbytes;
@@ -32,7 +30,6 @@ while (<>) {
    } elsif (/^read\((\d+), ".*?"(\.\.\.)?, \d+\)\s*= (\d+)/ &&
 	    $1==$fd && $3>=0) {
       my $nbytes = $3;
-      $What{$pos}{$nbytes}{r}++;
       printf "%d %d\n", $total, $pos;
       $pos += $nbytes;
       $total += $nbytes;
@@ -40,14 +37,4 @@ while (<>) {
       die $_;
    }
 }
-     
-
-print "="x36, "\n"; 
-  printf "%8s %8s %8s %8s\n","Position","NBytes","NReads","NWrites";
-for $pos (sort {$a<=>$b} keys %What) {
-  for $nbytes (sort {$a<=>$b} keys %{$What{$pos}}) {
-    printf "%8d %8d %8d %8d\n", $pos, $nbytes,
-           $What{$pos}{$nbytes}{r},
-           $What{$pos}{$nbytes}{w};
-  }
-}
+      

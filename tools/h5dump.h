@@ -4,15 +4,14 @@
 #include <hdf5.h>
 
 #define BOOT_BLOCK	"BOOT_BLOCK"
-#define GROUPNAME	"GROUP"
+#define GROUP		"GROUP"
 #define DATASET		"DATASET"
 #define ATTRIBUTE	"ATTRIBUTE"
 #define	DATATYPE	"DATATYPE"
 #define DATASPACE	"DATASPACE"
 #define DATA		"DATA"
-#define SCALAR		"SCALAR"
-#define SIMPLE		"SIMPLE"
-#define COMPLEX		"COMPLEX"
+#define ARRAY		"ARRAY"
+#define OTHER		"OTHER"
 #define STORAGELAYOUT	"STORAGELAYOUT"
 #define COMPRESSION	"COMPRESSION"
 #define EXTERNAL	"EXTERNAL"
@@ -21,10 +20,6 @@
 #define NLINK		"NLINK"
 #define FILENO		"FILENO"
 #define OBJNO		"OBJNO"
-#define STRSIZE		"STRSIZE"
-#define STRPAD		"STRPAD"
-#define CSET		"CSET"
-#define CTYPE		"CTYPE"
 
 #define BEGIN		"{"
 #define END		"}"
@@ -32,7 +27,7 @@
 #define ATTRIBUTE_DATA	0
 #define DATASET_DATA	1
 
-#define H5DUMP_MAX_RANK	H5S_MAX_RANK
+#define H5DUMP_MAX_NDIMS	64
 
 #define begin_obj(obj,name)	printf("%s \"%s\" %s\n", obj, name, BEGIN)
 #define end_obj()		printf("%s\n", END);

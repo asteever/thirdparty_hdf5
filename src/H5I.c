@@ -65,7 +65,7 @@ static char		RcsId[] = "@(#)$Revision$";
 
 /* Interface initialialization? */
 #define PABLO_MASK	H5I_mask
-static intn interface_initialize_g = 0;
+static hbool_t interface_initialize_g = FALSE;
 #define INTERFACE_INIT H5I_init_interface
 static herr_t H5I_init_interface(void);
 
@@ -160,6 +160,9 @@ H5I_init_interface(void)
      * for them in an ID.
      */
     assert(H5I_MAXID<=(1<<GROUP_BITS));
+
+    /* Registers the cleanup routine with the exit chain */
+    ret_value = H5_add_exit(&H5I_term_interface);
 
     FUNC_LEAVE(ret_value);
 }
@@ -917,28 +920,25 @@ H5I_release_id_node(H5I_id_info_t *id)
  REVISION LOG
 --------------------------------------------------------------------------*/
 void 
-H5I_term_interface(intn status)
+H5I_term_interface(void)
 {
-    H5I_id_info_t	*curr;
-    intn		i;
+    H5I_id_info_t		   *curr;
+    intn		    i;
 
-    if (interface_initialize_g>0) {
-	/* Release the free-list */
-	while (id_free_list) {
+    /* Release the free-list if it exists */
+    if (id_free_list != NULL) {
+	while (id_free_list != NULL) {
 	    curr = id_free_list;
 	    id_free_list = id_free_list->next;
 	    HDfree(curr);
 	}
+    }
 
-	/* Release all groups */
-	for (i = 0; i < (intn) H5I_MAXID; i++) {
-	    if (id_group_list[i] != NULL) {
-		HDfree(id_group_list[i]);
-		id_group_list[i] = NULL;
-	    }
+    /* Release all groups */
+    for (i = 0; i < (intn) H5I_MAXID; i++) {
+	if (id_group_list[i] != NULL) {
+	    HDfree(id_group_list[i]);
+	    id_group_list[i] = NULL;
 	}
     }
-    
-    /* Indicate interface status */
-    interface_initialize_g = status;
 }

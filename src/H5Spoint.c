@@ -17,7 +17,7 @@
 /* Interface initialization */
 #define PABLO_MASK      H5S_point_mask
 #define INTERFACE_INIT  NULL
-static intn             interface_initialize_g = 0;
+static intn             interface_initialize_g = FALSE;
 
 static herr_t H5S_point_init (const struct H5O_layout_t *layout,
 			      const H5S_t *space, H5S_sel_iter_t *iter);
@@ -275,10 +275,10 @@ H5S_point_fgath (H5F_t *f, const struct H5O_layout_t *layout,
     hssize_t	file_offset[H5O_LAYOUT_NDIMS];	/*offset of slab in file*/
     hsize_t	hsize[H5O_LAYOUT_NDIMS];	/*size of hyperslab	*/
     hssize_t	zero[H5O_LAYOUT_NDIMS];		/*zero			*/
-    uint8_t	*buf=(uint8_t *)_buf;   /* Alias for pointer arithmetic */
-    uintn   	ndims;          /* Number of dimensions of dataset */
+    uint8 *buf=(uint8 *)_buf;   /* Alias for pointer arithmetic */
+    uintn   ndims;          /* Number of dimensions of dataset */
     intn	i;				/*counters		*/
-    size_t  	num_read;       /* number of elements read into buffer */
+    size_t  num_read;       /* number of elements read into buffer */
 
     FUNC_ENTER (H5S_point_fgath, 0);
 
@@ -382,7 +382,7 @@ H5S_point_fscat (H5F_t *f, const struct H5O_layout_t *layout,
     hssize_t	file_offset[H5O_LAYOUT_NDIMS];	/*offset of hyperslab	*/
     hsize_t	hsize[H5O_LAYOUT_NDIMS];	/*size of hyperslab	*/
     hssize_t	zero[H5O_LAYOUT_NDIMS];		/*zero vector		*/
-    const uint8_t *buf=(const uint8_t *)_buf;   /* Alias for pointer arithmetic */
+    const uint8 *buf=(const uint8 *)_buf;   /* Alias for pointer arithmetic */
     uintn   ndims;          /* Number of dimensions of dataset */
     intn	i;				/*counters		*/
     size_t  num_written;    /* number of elements written from buffer */
@@ -494,8 +494,8 @@ H5S_point_mgath (const void *_buf, size_t elmt_size,
 		 size_t nelmts, void *_tconv_buf/*out*/)
 {
     hsize_t	mem_size[H5O_LAYOUT_NDIMS];	/*total size of app buf	*/
-    const uint8_t *buf=(const uint8_t *)_buf;   /* Get local copies for address arithmetic */
-    uint8_t *tconv_buf=(uint8_t *)_tconv_buf;
+    const uint8 *buf=(const uint8 *)_buf;   /* Get local copies for address arithmetic */
+    uint8 *tconv_buf=(uint8 *)_tconv_buf;
     hsize_t	acc;				/* coordinate accumulator */
     hsize_t	off;				/* coordinate offset */
     intn	space_ndims;			/*dimensionality of space*/
@@ -570,8 +570,8 @@ H5S_point_mscat (const void *_tconv_buf, size_t elmt_size,
 		 size_t nelmts, void *_buf/*out*/)
 {
     hsize_t	mem_size[H5O_LAYOUT_NDIMS];	/*total size of app buf	*/
-    uint8_t *buf=(uint8_t *)_buf;   /* Get local copies for address arithmetic */
-    const uint8_t *tconv_buf=(const uint8_t *)_tconv_buf;
+    uint8 *buf=(uint8 *)_buf;   /* Get local copies for address arithmetic */
+    const uint8 *tconv_buf=(const uint8 *)_tconv_buf;
     hsize_t	acc;				/* coordinate accumulator */
     hsize_t	off;				/* coordinate offset */
     intn	space_ndims;		/*dimensionality of space*/
@@ -831,182 +831,4 @@ H5S_point_select_valid (const H5S_t *space)
 
     FUNC_LEAVE (ret_value);
 } /* end H5S_point_select_valid() */
-
-/*--------------------------------------------------------------------------
- NAME
-    H5S_point_select_serial_size
- PURPOSE
-    Determine the number of bytes needed to store the serialized point selection
-    information.
- USAGE
-    hssize_t H5S_point_select_serial_size(space)
-        H5S_t *space;             IN: Dataspace pointer to query
- RETURNS
-    The number of bytes required on success, negative on an error.
- DESCRIPTION
-    Determines the number of bytes required to serialize the current point
-    selection information for storage on disk.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-hssize_t
-H5S_point_select_serial_size (const H5S_t *space)
-{
-    H5S_pnt_node_t *curr;       /* Point information nodes */
-    hssize_t ret_value=FAIL;    /* return value */
 
-    FUNC_ENTER (H5S_point_select_serial_size, FAIL);
-
-    assert(space);
-
-    /* Basic number of bytes required to serialize point selection:
-     *  <type (4 bytes)> + <version (4 bytes)> + <padding (4 bytes)> + 
-     *      <length (4 bytes)> + <rank (4 bytes)> + <# of points (4 bytes)> = 24 bytes
-     */
-    ret_value=24;
-
-    /* Count points in selection */
-    curr=space->select.sel_info.pnt_lst->head;
-    while(curr!=NULL) {
-        /* Add 4 bytes times the rank for each element selected */
-        ret_value+=4*space->extent.u.simple.rank;
-        curr=curr->next;
-    } /* end while */
-
-    FUNC_LEAVE (ret_value);
-} /* end H5S_point_select_serial_size() */
-
-/*--------------------------------------------------------------------------
- NAME
-    H5S_point_select_serialize
- PURPOSE
-    Serialize the current selection into a user-provided buffer.
- USAGE
-    herr_t H5S_point_select_serialize(space, buf)
-        H5S_t *space;           IN: Dataspace pointer of selection to serialize
-        uint8 *buf;             OUT: Buffer to put serialized selection into
- RETURNS
-    Non-negative on success/Negative on failure
- DESCRIPTION
-    Serializes the current element selection into a buffer.  (Primarily for
-    storing on disk).
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5S_point_select_serialize (const H5S_t *space, uint8_t *buf)
-{
-    H5S_pnt_node_t *curr;       /* Point information nodes */
-    uint8_t *lenp;            /* pointer to length location for later storage */
-    uint32_t len=0;           /* number of bytes used */
-    intn i;                 /* local counting variable */
-    herr_t ret_value=FAIL;  /* return value */
-
-    FUNC_ENTER (H5S_point_select_serialize, FAIL);
-
-    assert(space);
-
-    /* Store the preamble information */
-    UINT32ENCODE(buf, (uint32_t)space->select.type);  /* Store the type of selection */
-    UINT32ENCODE(buf, (uint32_t)1);  /* Store the version number */
-    UINT32ENCODE(buf, (uint32_t)0);  /* Store the un-used padding */
-    lenp=buf;           /* keep the pointer to the length location for later */
-    buf+=4;             /* skip over space for length */
-
-    /* Encode number of dimensions */
-    INT32ENCODE(buf, (uint32_t)space->extent.u.simple.rank);
-    len+=4;
-
-    /* Encode number of elements */
-    UINT32ENCODE(buf, (uint32_t)space->select.num_elem);
-    len+=4;
-
-    /* Encode each point in selection */
-    curr=space->select.sel_info.pnt_lst->head;
-    while(curr!=NULL) {
-        /* Add 4 bytes times the rank for each element selected */
-        len+=4*space->extent.u.simple.rank;
-
-        /* Encode each point */
-        for(i=0; i<space->extent.u.simple.rank; i++)
-            UINT32ENCODE(buf, (uint32_t)curr->pnt[i]);
-
-        curr=curr->next;
-    } /* end while */
-
-    /* Encode length */
-    UINT32ENCODE(lenp, (uint32_t)len);  /* Store the length of the extra information */
-    
-    /* Set success */
-    ret_value=SUCCEED;
-
-    FUNC_LEAVE (ret_value);
-}   /* H5S_point_select_serialize() */
-
-/*--------------------------------------------------------------------------
- NAME
-    H5S_point_select_deserialize
- PURPOSE
-    Deserialize the current selection from a user-provided buffer.
- USAGE
-    herr_t H5S_point_select_deserialize(space, buf)
-        H5S_t *space;           IN/OUT: Dataspace pointer to place selection into
-        uint8 *buf;             IN: Buffer to retrieve serialized selection from
- RETURNS
-    Non-negative on success/Negative on failure
- DESCRIPTION
-    Deserializes the current selection into a buffer.  (Primarily for retrieving
-    from disk).
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5S_point_select_deserialize (H5S_t *space, const uint8_t *buf)
-{
-    H5S_seloper_t op=H5S_SELECT_SET;    /* Selection operation */
-    int32_t rank;           /* Rank of points */
-    size_t num_elem=0;      /* Number of elements in selection */
-    hssize_t *coord=NULL, *tcoord;   /* Pointer to array of elements */
-    uintn i,j;              /* local counting variables */
-    herr_t ret_value=FAIL;  /* return value */
-
-    FUNC_ENTER (H5S_point_select_deserialize, FAIL);
-
-    /* Check args */
-    assert(space);
-    assert(buf);
-
-    /* Deserialize points to select */
-    buf+=16;    /* Skip over selection header */
-    INT32DECODE(buf,rank);  /* decode the rank of the point selection */
-    if(rank!=space->extent.u.simple.rank)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_BADRANGE, FAIL, "rank of pointer does not match dataspace");
-    UINT32DECODE(buf,num_elem);  /* decode the number of points */
-
-    /* Allocate space for the coordinates */
-    if((coord = H5MM_malloc(num_elem*rank*sizeof(hssize_t)))==NULL)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "can't allocate coordinate information");
-    
-    /* Retrieve the coordinates from the buffer */
-    for(tcoord=coord,i=0; i<num_elem; i++)
-        for(j=0; j<(unsigned)rank; j++,tcoord++)
-            UINT32DECODE(buf, *tcoord);
-
-    /* Select points */
-    if((ret_value=H5S_select_elements(space,op,num_elem,(const hssize_t **)coord))<0) {
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDELETE, FAIL, "can't change selection");
-    } /* end if */
-
-done:
-    /* Free the coordinate array if necessary */
-    if(coord!=NULL)
-        H5MM_xfree(coord);
-
-    FUNC_LEAVE (ret_value);
-}   /* H5S_point_select_deserialize() */

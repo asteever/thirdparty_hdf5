@@ -45,7 +45,7 @@ static const H5AC_class_t H5AC_OHDR[1] = {{
 }};
 
 /* Interface initialization */
-static intn interface_initialize_g = 0;
+static intn interface_initialize_g = FALSE;
 #define INTERFACE_INIT	H5O_init_interface
 static herr_t H5O_init_interface(void);
 
@@ -318,14 +318,14 @@ H5O_load(H5F_t *f, const haddr_t *addr, const void __unused__ *_udata1,
 {
     H5O_t	*oh = NULL;
     H5O_t	*ret_value = NULL;
-    uint8_t	buf[16], *p;
+    uint8	buf[16], *p;
     size_t	hdr_size, mesg_size;
     uintn	id;
     intn	mesgno, chunkno, curmesg = 0, nmesgs;
     haddr_t	chunk_addr;
     size_t	chunk_size;
     H5O_cont_t	*cont = NULL;
-    uint8_t	flags;
+    uint8	flags;
 
     FUNC_ENTER(H5O_load, NULL);
 
@@ -454,7 +454,7 @@ H5O_load(H5F_t *f, const haddr_t *addr, const void __unused__ *_udata1,
 	     !H5F_addr_defined(&chunk_addr) && curmesg < oh->nmesgs;
 	     curmesg++) {
 	    if (H5O_CONT_ID == oh->mesg[curmesg].type->id) {
-		uint8_t *p2 = oh->mesg[curmesg].raw;
+		uint8 *p2 = oh->mesg[curmesg].raw;
 		cont = (H5O_CONT->decode) (f, p2, NULL);
 		oh->mesg[curmesg].native = cont;
 		chunk_addr = cont->addr;
@@ -505,10 +505,10 @@ H5O_load(H5F_t *f, const haddr_t *addr, const void __unused__ *_udata1,
 static herr_t
 H5O_flush(H5F_t *f, hbool_t destroy, const haddr_t *addr, H5O_t *oh)
 {
-    uint8_t	buf[16], *p;
+    uint8	buf[16], *p;
     intn	i, id;
     H5O_cont_t	*cont = NULL;
-    herr_t	(*encode)(H5F_t*, uint8_t*, const void*) = NULL;
+    herr_t	(*encode)(H5F_t*, uint8*, const void*) = NULL;
 
     FUNC_ENTER(H5O_flush, FAIL);
 
@@ -874,55 +874,6 @@ H5O_count (H5G_entry_t *ent, const H5O_class_t *type)
     }
 
     FUNC_LEAVE (acc);
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5O_exists
- *
- * Purpose:	Determines if a particular message exists in an object
- *		header without trying to decode the message.
- *
- * Return:	Success:	FALSE if the message does not exist; TRUE if
- *				th message exists.
- *
- *		Failure:	FAIL if the existence of the message could
- *				not be determined due to some error such as
- *				not being able to read the object header.
- *
- * Programmer:	Robb Matzke
- *              Monday, November  2, 1998
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-htri_t
-H5O_exists(H5G_entry_t *ent, const H5O_class_t *type, intn sequence)
-{
-    H5O_t	*oh=NULL;
-    intn	i;
-    
-    FUNC_ENTER(H5O_exists, FAIL);
-    assert(ent);
-    assert(ent->file);
-    assert(type);
-    assert(sequence>=0);
-
-    /* Load the object header */
-    if (NULL==(oh=H5AC_find(ent->file, H5AC_OHDR, &(ent->header),
-			    NULL, NULL))) {
-	HRETURN_ERROR(H5E_OHDR, H5E_CANTLOAD, FAIL,
-		      "unable to load object header");
-    }
-
-    /* Scan through the messages looking for the right one */
-    for (i=0; i<oh->nmesgs; i++) {
-	if (type->id!=oh->mesg[i].type->id) continue;
-	if (--sequence<0) break;
-    }
-
-    FUNC_LEAVE(sequence<0);
 }
 
 
@@ -1573,7 +1524,7 @@ H5O_alloc_extend_chunk(H5O_t *oh, intn chunkno, size_t size)
 {
     intn	idx, i;
     size_t	delta;
-    uint8_t	*old_addr;
+    uint8	*old_addr;
 
     FUNC_ENTER(H5O_alloc_extend_chunk, FAIL);
 
@@ -1702,7 +1653,7 @@ H5O_alloc_new_chunk(H5F_t *f, H5O_t *oh, size_t size)
     intn	found_null = (-1);	/*best fit null message		*/
     intn	found_other = (-1);	/*best fit other message	*/
     intn	idx = FAIL;		/*message number return value	*/
-    uint8_t	*p = NULL;		/*ptr into new chunk		*/
+    uint8	*p = NULL;		/*ptr into new chunk		*/
     H5O_cont_t	*cont = NULL;		/*native continuation message	*/
     intn	i, chunkno;
 
@@ -2059,7 +2010,7 @@ H5O_debug(H5F_t *f, const haddr_t *addr, FILE * stream, intn indent,
     int		*sequence;
     haddr_t	tmp_addr;
     herr_t	ret_value = FAIL;
-    void	*(*decode)(H5F_t*, const uint8_t*, H5O_shared_t*);
+    void	*(*decode)(H5F_t*, const uint8*, H5O_shared_t*);
     herr_t      (*debug)(H5F_t*, const void*, FILE*, intn, intn)=NULL;
 
     FUNC_ENTER(H5O_debug, FAIL);

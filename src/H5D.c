@@ -91,9 +91,10 @@ const H5D_xfer_t	H5D_xfer_dflt = {
 };
 
 /* Interface initialization? */
-static intn interface_initialize_g = 0;
+static hbool_t interface_initialize_g = FALSE;
 #define INTERFACE_INIT H5D_init_interface
 static herr_t H5D_init_interface(void);
+static void H5D_term_interface(void);
 static herr_t H5D_init_storage(H5D_t *dataset, const H5S_t *space);
 H5D_t * H5D_new(const H5D_create_t *create_parms);
 
@@ -113,42 +114,41 @@ DESCRIPTION
 static herr_t
 H5D_init_interface(void)
 {
+    herr_t		    ret_value = SUCCEED;
     FUNC_ENTER(H5D_init_interface, FAIL);
 
     /* Initialize the atom group for the dataset IDs */
-    if (H5I_init_group(H5I_DATASET, H5I_DATASETID_HASHSIZE, H5D_RESERVED_ATOMS,
-		       (herr_t (*)(void *)) H5D_close)<0) {
-        HRETURN_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL,
-		      "unable to initialize interface");
+    if ((ret_value = H5I_init_group(H5I_DATASET, H5I_DATASETID_HASHSIZE,
+				    H5D_RESERVED_ATOMS,
+				    (herr_t (*)(void *)) H5D_close)) >=0) {
+	ret_value = H5_add_exit(H5D_term_interface);
     }
-    
-    FUNC_LEAVE(SUCCEED);
+    FUNC_LEAVE(ret_value);
 }
 
 
-/*-------------------------------------------------------------------------
- * Function:	H5D_term_interface
- *
- * Purpose:	Terminate this interface.
- *
- * Return:	void
- *
- * Programmer:	Robb Matzke
- *              Friday, November 20, 1998
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-void
-H5D_term_interface(intn status)
+/*--------------------------------------------------------------------------
+ NAME
+    H5D_term_interface
+ PURPOSE
+    Terminate various H5D objects
+ USAGE
+    void H5D_term_interface()
+ RETURNS
+    Non-negative on success/Negative on failure
+ DESCRIPTION
+    Release the atom group and any other resources allocated.
+ GLOBAL VARIABLES
+ COMMENTS, BUGS, ASSUMPTIONS
+     Can't report errors...
+ EXAMPLES
+ REVISION LOG
+--------------------------------------------------------------------------*/
+static void
+H5D_term_interface(void)
 {
-    if (interface_initialize_g>0) {
-	H5I_destroy_group(H5I_DATASET);
-    }
-    interface_initialize_g = status;
+    H5I_destroy_group(H5I_DATASET);
 }
-
 
 /*-------------------------------------------------------------------------
  * Function:	H5Dcreate
@@ -880,7 +880,7 @@ H5D_create(H5G_entry_t *loc, const char *name, const H5T_t *type,
     H5D_t		*new_dset = NULL;
     H5D_t		*ret_value = NULL;
     intn		i, ndims;
-    hsize_t		max_dim[H5O_LAYOUT_NDIMS]={0};
+    hsize_t		max_dim[H5O_LAYOUT_NDIMS];
     H5O_efl_t		*efl = NULL;
     H5F_t		*f = NULL;
 
@@ -1101,57 +1101,7 @@ H5D_create(H5G_entry_t *loc, const char *name, const H5T_t *type,
     FUNC_LEAVE(ret_value);
 }
 
-
 /*-------------------------------------------------------------------------
- * Function:	H5D_isa
- *
- * Purpose:	Determines if an object has the requisite messages for being
- *		a dataset.
- *
- * Return:	Success:	TRUE if the required dataset messages are
- *				present; FALSE otherwise.
- *
- *		Failure:	FAIL if the existence of certain messages
- *				cannot be determined.
- *
- * Programmer:	Robb Matzke
- *              Monday, November  2, 1998
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-htri_t
-H5D_isa(H5G_entry_t *ent)
-{
-    htri_t	exists;
-    
-    FUNC_ENTER(H5D_isa, FAIL);
-    assert(ent);
-
-    /* Data type */
-    if ((exists=H5O_exists(ent, H5O_DTYPE, 0))<0) {
-	HRETURN_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL,
-		      "unable to read object header");
-    } else if (!exists) {
-	HRETURN(FALSE);
-    }
-
-    /* Layout */
-    if ((exists=H5O_exists(ent, H5O_LAYOUT, 0))<0) {
-	HRETURN_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL,
-		      "unable to read object header");
-    } else if (!exists) {
-	HRETURN(FALSE);
-    }
-    
-
-    
-    FUNC_LEAVE(TRUE);
-}
-
-/*
- *------------------------------------------------------------------------- 
  * Function:	H5D_open
  *
  * Purpose:	Finds a dataset named NAME in file F and builds a descriptor
@@ -1180,7 +1130,7 @@ H5D_open(H5G_entry_t *loc, const char *name)
 {
     H5D_t	*dataset = NULL;	/*the dataset which was found	*/
     H5D_t	*ret_value = NULL;	/*return value			*/
-    H5G_entry_t ent;            	/*dataset symbol table entry	*/
+    H5G_entry_t ent;            /* Dataset symbol table entry */
     
     FUNC_ENTER(H5D_open, NULL);
 
@@ -1223,10 +1173,10 @@ done:
 H5D_t *
 H5D_open_oid(H5G_entry_t *ent)
 {
-    H5D_t 	*dataset = NULL;	/*new dataset struct 		*/
-    H5D_t 	*ret_value = NULL;	/*return value			*/
-    H5S_t	*space = NULL;		/*data space			*/
+    H5D_t *dataset = NULL;      /* New dataset struct */
+    H5D_t *ret_value = NULL;	/*return value			*/
     intn	i;
+    H5S_t	*space = NULL;
     
     FUNC_ENTER(H5D_open_oid, NULL);
 
@@ -1340,7 +1290,8 @@ H5D_open_oid(H5G_entry_t *ent)
     ret_value = dataset;
 
 done:
-    if (space) H5S_close (space);
+    if (space)
+        H5S_close (space);
     if (ret_value==NULL && dataset) {
         if (H5F_addr_defined(&(dataset->ent.header))) {
             H5O_close(&(dataset->ent));
@@ -1444,21 +1395,21 @@ H5D_read(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
 	 const H5S_t *file_space, const H5D_xfer_t *xfer_parms,
 	 void *buf/*out*/)
 {
-    hssize_t    	nelmts;			/*number of elements	*/
+    hssize_t    nelmts;			/*number of elements	*/
     size_t		smine_start;		/*strip mine start loc	*/
     size_t		n, smine_nelmts;	/*elements per strip	*/
-    hid_t       	tconv_id=FAIL;		/*type conv buffer ID	*/
-    hid_t		bkg_id=FAIL;		/*background buffer ID	*/
-    uint8_t		*tconv_buf = NULL;	/*data type conv buffer	*/
-    uint8_t		*bkg_buf = NULL;	/*background buffer	*/
-    H5T_path_t		*tpath = NULL;		/*type conversion info	*/
+    hid_t       tconv_id=FAIL, bkg_id=FAIL;   /* Conversion buffer IDs */
+    uint8		*tconv_buf = NULL;	/*data type conv buffer	*/
+    uint8		*bkg_buf = NULL;	/*background buffer	*/
+    H5T_conv_t		tconv_func = NULL;	/*conversion function	*/
     hid_t		src_id = -1, dst_id = -1;/*temporary type atoms */
     H5S_conv_t		*sconv=NULL;		/*space conversion funcs*/
     H5S_sel_iter_t 	mem_iter;        /* mem selection iteration info*/
     H5S_sel_iter_t	bkg_iter;	     /*background iteration info*/
     H5S_sel_iter_t	file_iter;            /*file selection iter info*/
-    herr_t		ret_value = FAIL;	/*return value		*/
-    herr_t		status;			/*function return status*/
+    H5T_cdata_t		*cdata = NULL;		/*type conversion data	*/
+    herr_t		ret_value = FAIL;
+    herr_t		status;
     size_t		src_type_size;		/*size of source type	*/
     size_t		dst_type_size;	      /*size of destination type*/
     size_t		target_size;		/*desired buffer size	*/
@@ -1522,10 +1473,11 @@ H5D_read(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
         HGOTO_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
 		     "src and dest data spaces have different sizes");
     }
-    if (NULL==(tpath=H5T_path_find(dataset->type, mem_type, NULL, NULL))) {
+    if (NULL == (tconv_func = H5T_find(dataset->type, mem_type,
+				       xfer_parms->need_bkg, &cdata))) {
         HGOTO_ERROR(H5E_DATASET, H5E_UNSUPPORTED, FAIL,
 		    "unable to convert between src and dest data types");
-    } else if (!H5T_IS_NOOP(tpath)) {
+    } else if (H5T_conv_noop!=tconv_func) {
         if ((src_id=H5I_register(H5I_DATATYPE,
 				 H5T_copy(dataset->type, H5T_COPY_ALL)))<0 ||
 	    (dst_id=H5I_register(H5I_DATATYPE,
@@ -1555,7 +1507,7 @@ H5D_read(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
      * If there is no type conversion then try reading directly into the
      * application's buffer.  This saves at least one mem-to-mem copy.
      */
-    if (H5T_IS_NOOP(tpath) && sconv->read) {
+    if (H5T_conv_noop==tconv_func && sconv->read) {
         status = (sconv->read)(dataset->ent.file, &(dataset->layout),
 			       &(dataset->create_parms->pline),
 			       &(dataset->create_parms->efl),
@@ -1618,8 +1570,8 @@ H5D_read(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
      * malloc() is usually less resource-intensive if we allocate/free the
      * same size over and over.
      */
-    if (tpath->cdata.need_bkg) {
-        need_bkg = MAX(tpath->cdata.need_bkg, xfer_parms->need_bkg);
+    if (cdata->need_bkg) {
+        need_bkg = MAX (cdata->need_bkg, xfer_parms->need_bkg);
     } else {
         need_bkg = H5T_BKG_NO; /*never needed even if app says yes*/
     }
@@ -1683,7 +1635,7 @@ H5D_read(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
 	printf("%s: check 6.5\n",FUNC);
 	{
 	    int i;
-	    uint16_t *b;
+	    uint16 *b;
 
 	    if(qak_debug) {
 		b=tconv_buf;
@@ -1719,8 +1671,16 @@ H5D_read(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
         /*
          * Perform data type conversion.
          */
-	if (H5T_convert(tpath, src_id, dst_id, smine_nelmts, tconv_buf,
-			bkg_buf)<0) {
+#ifdef H5T_DEBUG
+        H5T_timer_begin (&timer, cdata);
+#endif
+        cdata->command = H5T_CONV_CONV;
+        status = (tconv_func)(src_id, dst_id, cdata, smine_nelmts, tconv_buf,
+			      bkg_buf);
+#ifdef H5T_DEBUG
+        H5T_timer_end (&timer, cdata, smine_nelmts);
+#endif
+        if (status<0) {
             HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL,
                 "data type conversion failed");
         }
@@ -1794,28 +1754,27 @@ H5D_write(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
 	  const H5S_t *file_space, const H5D_xfer_t *xfer_parms,
 	  const void *buf)
 {
-    hssize_t		nelmts;			/*total number of elmts	*/
+    hssize_t	nelmts;			/*total number of elmts	*/
     size_t		smine_start;		/*strip mine start loc	*/
     size_t		n, smine_nelmts;	/*elements per strip	*/
-    hid_t       	tconv_id=FAIL;		/*type conv buffer ID	*/
-    hid_t		bkg_id=FAIL;   		/*background buffer ID	*/
-    uint8_t		*tconv_buf = NULL;	/*data type conv buffer	*/
-    uint8_t		*bkg_buf = NULL;	/*background buffer	*/
-    H5T_path_t		*tpath = NULL;		/*type conversion info	*/
+    hid_t       tconv_id=FAIL, bkg_id=FAIL;   /* Conversion buffer IDs */
+    uint8		*tconv_buf = NULL;	/*data type conv buffer	*/
+    uint8		*bkg_buf = NULL;	/*background buffer	*/
+    H5T_conv_t		tconv_func = NULL;	/*conversion function	*/
     hid_t		src_id = -1, dst_id = -1;/*temporary type atoms */
     H5S_conv_t		*sconv=NULL;		/*space conversion funcs*/
     H5S_sel_iter_t	mem_iter;      /*memory selection iteration info*/
     H5S_sel_iter_t	bkg_iter;            /*background iteration info*/
     H5S_sel_iter_t	file_iter;       /*file selection iteration info*/
-    herr_t		ret_value = FAIL;	/*return value		*/
-    herr_t		status;			/*function return status*/
+    H5T_cdata_t		*cdata = NULL;		/*type conversion data	*/
+    herr_t		ret_value = FAIL, status;
     size_t		src_type_size;		/*size of source type	*/
     size_t		dst_type_size;	      /*size of destination type*/
     size_t		target_size;		/*desired buffer size	*/
     size_t		request_nelmts;		/*requested strip mine	*/
     H5T_bkg_t		need_bkg;		/*type of background buf*/
     H5S_t		*free_this_space=NULL;	/*data space to free	*/
-    hbool_t             must_convert;        /*have to xfer the slow way*/
+    hbool_t             must_convert;           /*have to xfer the slow way */
 #ifdef H5T_DEBUG
     H5_timer_t		timer;
 #endif
@@ -1881,10 +1840,11 @@ H5D_write(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
 	HGOTO_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
 		     "src and dest data spaces have different sizes");
     }
-    if (NULL==(tpath=H5T_path_find(mem_type, dataset->type, NULL, NULL))) {
+    if (NULL == (tconv_func = H5T_find(mem_type, dataset->type,
+				       xfer_parms->need_bkg, &cdata))) {
 	HGOTO_ERROR(H5E_DATASET, H5E_UNSUPPORTED, FAIL,
 		    "unable to convert between src and dest data types");
-    } else if (!H5T_IS_NOOP(tpath)) {
+    } else if (H5T_conv_noop!=tconv_func) {
 	if ((src_id = H5I_register(H5I_DATATYPE,
 				   H5T_copy(mem_type, H5T_COPY_ALL)))<0 ||
 	    (dst_id = H5I_register(H5I_DATATYPE,
@@ -1917,7 +1877,7 @@ H5D_write(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
      * If there is no type conversion then try writing directly from
      * application buffer to file.
      */
-    if (H5T_IS_NOOP(tpath) && sconv->write) {
+    if (H5T_conv_noop==tconv_func && sconv->write) {
 	status = (sconv->write)(dataset->ent.file, &(dataset->layout),
 				&(dataset->create_parms->pline),
 				&(dataset->create_parms->efl),
@@ -1981,8 +1941,8 @@ H5D_write(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
      * malloc() is usually less resource-intensive if we allocate/free the
      * same size over and over.
      */
-    if (tpath->cdata.need_bkg) {
-        need_bkg = MAX (tpath->cdata.need_bkg, xfer_parms->need_bkg);
+    if (cdata->need_bkg) {
+        need_bkg = MAX (cdata->need_bkg, xfer_parms->need_bkg);
     } else {
         need_bkg = H5T_BKG_NO; /*never needed even if app says yes*/
     }
@@ -2041,7 +2001,7 @@ H5D_write(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
 #ifdef QAK
 	{
 	    int i;
-	    uint16_t *b;
+	    uint16 *b;
 
 	    if(qak_debug) {
 		b=tconv_buf;
@@ -2079,8 +2039,16 @@ H5D_write(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
         /*
          * Perform data type conversion.
          */
-	if (H5T_convert(tpath, src_id, dst_id, smine_nelmts, tconv_buf,
-			bkg_buf)<0) {
+#ifdef H5T_DEBUG
+        H5T_timer_begin (&timer, cdata);
+#endif
+        cdata->command = H5T_CONV_CONV;
+        status = (tconv_func) (src_id, dst_id, cdata, smine_nelmts, tconv_buf,
+			       bkg_buf);
+#ifdef H5T_DEBUG
+        H5T_timer_end (&timer, cdata, smine_nelmts);
+#endif
+        if (status<0) {
             HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL,
                 "data type conversion failed");
         }

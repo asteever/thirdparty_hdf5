@@ -34,11 +34,12 @@ static char		RcsId[] = "$Revision$";
 #define PABLO_MASK	H5A_mask
 
 /* Is the interface initialized? */
-static intn		interface_initialize_g = 0;
+static hbool_t		interface_initialize_g = FALSE;
 #define INTERFACE_INIT	H5A_init_interface
 static herr_t		H5A_init_interface(void);
 
 /* PRIVATE PROTOTYPES */
+static void H5A_term_interface(void);
 static hid_t H5A_create(const H5G_entry_t *ent, const char *name,
 			const H5T_t *type, const H5S_t *space);
 static hid_t H5A_open(H5G_entry_t *ent, unsigned idx);
@@ -62,18 +63,26 @@ DESCRIPTION
 static herr_t
 H5A_init_interface(void)
 {
+    herr_t		    ret_value = SUCCEED;
+
     FUNC_ENTER(H5A_init_interface, FAIL);
 
     /*
-     * Create attribute group.
+     * Register cleanup function.
      */
-    if (H5I_init_group(H5I_ATTR, H5I_ATTRID_HASHSIZE, H5A_RESERVED_ATOMS,
-		       (herr_t (*)(void *)) H5A_close)<0) {
+    if ((ret_value = H5I_init_group(H5I_ATTR, H5I_ATTRID_HASHSIZE,
+				    H5A_RESERVED_ATOMS,
+				    (herr_t (*)(void *)) H5A_close))<0) {
         HRETURN_ERROR(H5E_INTERNAL, H5E_CANTINIT, FAIL,
-		      "unable to initialize interface");
+		      "unable to initialize attribute group");
+    }
+
+    if (H5_add_exit(H5A_term_interface) < 0) {
+	HRETURN_ERROR(H5E_INTERNAL, H5E_CANTINIT, FAIL,
+		      "unable to install atexit function");
     }
     
-    FUNC_LEAVE(SUCCEED);
+    FUNC_LEAVE(ret_value);
 }
 
 
@@ -85,6 +94,7 @@ H5A_init_interface(void)
  USAGE
     void H5A_term_interface()
  RETURNS
+    Non-negative on success/Negative on failure
  DESCRIPTION
     Release any other resources allocated.
  GLOBAL VARIABLES
@@ -93,13 +103,10 @@ H5A_init_interface(void)
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-void
-H5A_term_interface(intn status)
+static void
+H5A_term_interface(void)
 {
-    if (interface_initialize_g>0) {
-	H5I_destroy_group(H5I_ATTR);
-    }
-    interface_initialize_g = status;
+    H5I_destroy_group(H5I_ATTR);
 }
 
 
@@ -602,15 +609,19 @@ H5Awrite(hid_t attr_id, hid_t type_id, void *buf)
 static herr_t
 H5A_write(H5A_t *attr, const H5T_t *mem_type, void *buf)
 {
-    uint8_t		*tconv_buf = NULL;	/* data type conv buffer */
+    uint8		*tconv_buf = NULL;	/* data type conv buffer */
     size_t		nelmts;		    	/* elements in attribute */
-    H5T_path_t		*tpath = NULL;		/* conversion information*/
+    H5T_conv_t		tconv_func = NULL;	/* conversion function	*/
+    H5T_cdata_t		*cdata = NULL;		/* type conversion data	*/
     hid_t		src_id = -1, dst_id = -1;/* temporary type atoms */
     size_t		src_type_size;		/* size of source type	*/
     size_t		dst_type_size;		/* size of destination type*/
     size_t		buf_size;		/* desired buffer size	*/
     int         	idx;	      /* index of attribute in object header */
     herr_t		ret_value = FAIL;
+#ifdef H5T_DEBUG
+    H5_timer_t		timer;
+#endif
 
     FUNC_ENTER(H5A_write, FAIL);
 
@@ -637,10 +648,11 @@ H5A_write(H5A_t *attr, const H5T_t *mem_type, void *buf)
 
     /* Convert memory buffer into disk buffer */
     /* Set up type conversion function */
-    if (NULL == (tpath = H5T_path_find(mem_type, attr->dt, NULL, NULL))) {
+    if (NULL == (tconv_func = H5T_find(mem_type, attr->dt,
+				       H5T_BKG_NO, &cdata))) {
         HGOTO_ERROR(H5E_ATTR, H5E_UNSUPPORTED, FAIL,
 		    "unable to convert between src and dest data types");
-    } else if (!H5T_IS_NOOP(tpath)) {
+    } else if (H5T_conv_noop!=tconv_func) {
         if ((src_id = H5I_register(H5I_DATATYPE,
 				   H5T_copy(mem_type, H5T_COPY_ALL)))<0 ||
 	    (dst_id = H5I_register(H5I_DATATYPE,
@@ -650,11 +662,18 @@ H5A_write(H5A_t *attr, const H5T_t *mem_type, void *buf)
         }
     }
 
-    /* Perform data type conversion */
-    if (H5T_convert(tpath, src_id, dst_id, nelmts, tconv_buf, NULL)<0) {
+    /* Perform data type conversion.  */
+#ifdef H5T_DEBUG
+    H5T_timer_begin (&timer, cdata);
+#endif
+    cdata->command = H5T_CONV_CONV;
+    if ((tconv_func) (src_id, dst_id, cdata, nelmts, tconv_buf, NULL)<0) {
 	HGOTO_ERROR(H5E_ATTR, H5E_CANTENCODE, FAIL,
 		    "data type conversion failed");
     }
+#ifdef H5T_DEBUG
+    H5T_timer_end (&timer, cdata, nelmts);
+#endif
 
     /* Free the previous attribute data buffer, if there is one */
     if(attr->data)
@@ -761,14 +780,18 @@ H5Aread(hid_t attr_id, hid_t type_id, void *buf)
 static herr_t
 H5A_read(H5A_t *attr, const H5T_t *mem_type, void *buf)
 {
-    uint8_t		*tconv_buf = NULL;	/* data type conv buffer*/
+    uint8		*tconv_buf = NULL;	/* data type conv buffer*/
     size_t		nelmts;			/* elements in attribute*/
-    H5T_path_t		*tpath = NULL;		/* type conversion info	*/
+    H5T_conv_t		tconv_func = NULL;	/* conversion function 	*/
+    H5T_cdata_t		*cdata = NULL;		/* type conversion data	*/
     hid_t		src_id = -1, dst_id = -1;/* temporary type atoms*/
     size_t		src_type_size;		/* size of source type 	*/
     size_t		dst_type_size;		/* size of destination type */
     size_t		buf_size;		/* desired buffer size	*/
     herr_t		ret_value = FAIL;
+#ifdef H5T_DEBUG
+    H5_timer_t		timer;
+#endif
 
     FUNC_ENTER(H5A_read, FAIL);
 
@@ -795,10 +818,11 @@ H5A_read(H5A_t *attr, const H5T_t *mem_type, void *buf)
 
     /* Convert memory buffer into disk buffer */
     /* Set up type conversion function */
-    if (NULL == (tpath = H5T_path_find(attr->dt, mem_type, NULL, NULL))) {
+    if (NULL == (tconv_func = H5T_find(attr->dt, mem_type,
+				       H5T_BKG_NO, &cdata))) {
         HGOTO_ERROR(H5E_ATTR, H5E_UNSUPPORTED, FAIL,
 		    "unable to convert between src and dest data types");
-    } else if (!H5T_IS_NOOP(tpath)) {
+    } else if (H5T_conv_noop!=tconv_func) {
         if ((src_id = H5I_register(H5I_DATATYPE,
 				   H5T_copy(attr->dt, H5T_COPY_ALL)))<0 ||
 	    (dst_id = H5I_register(H5I_DATATYPE,
@@ -809,10 +833,17 @@ H5A_read(H5A_t *attr, const H5T_t *mem_type, void *buf)
     }
 
     /* Perform data type conversion.  */
-    if (H5T_convert(tpath, src_id, dst_id, nelmts, tconv_buf, NULL)<0) {
+#ifdef H5T_DEBUG
+    H5T_timer_begin (&timer, cdata);
+#endif
+    cdata->command = H5T_CONV_CONV;
+    if ((tconv_func) (src_id, dst_id, cdata, nelmts, tconv_buf, NULL)<0) {
 	HGOTO_ERROR(H5E_ATTR, H5E_CANTENCODE, FAIL,
 		    "data type conversion failed");
     }
+#ifdef H5T_DEBUG
+    H5T_timer_end (&timer, cdata, nelmts);
+#endif
 
     /* Copy the converted data into the user's buffer */
     HDmemcpy(buf,tconv_buf,dst_type_size*nelmts);
@@ -1358,7 +1389,7 @@ H5A_close(H5A_t *attr)
 
     /* Check if the attribute has any data yet, if not, fill with zeroes */
     if(attr->ent_opened && !attr->initialized) {
-        uint8_t *tmp_buf=H5MM_calloc(attr->data_size);
+        uint8 *tmp_buf=H5MM_calloc(attr->data_size);
         if (NULL == tmp_buf) {
             HRETURN_ERROR(H5E_ATTR, H5E_NOSPACE, FAIL,
 			  "memory allocation failed for attribute fill-value");

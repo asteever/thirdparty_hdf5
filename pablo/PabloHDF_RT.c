@@ -114,7 +114,7 @@
 #include "Trace.h"
 #include "TraceParam.h"
 #include "ProcIDs.h"
-#include "HDF5Trace.h"
+#include "HDFTrace.h"
 #include "SDDFparam.h"
 #include <string.h>
 #include <stdio.h>
@@ -137,10 +137,9 @@
 #endif
 #define NEG_THREAD_ID -999
 
-#include "HDF5record_RT.h"
+#include "HDFrecord_RT.h"
 
 #ifdef HAVE_PARALLEL
-#include "mpio.h"
 #include "MPIO_Init.h"
 #include "MPIO_EventArgs.h"
 #include "MPIO_TraceParams.h"
@@ -188,12 +187,12 @@ void HDFendTrace_RT( void );
 int initproctracert_( void );
 int initHDFProcTrace_RT( void );
 void HDFtraceEvent_RT( int , char *, unsigned ) ;
-void BeginIOEventRecord ( int, CLOCK , void * );
-void EndIOEventRecord ( int , CLOCK , void * );
-void BeginMPIOEventRecord ( int, CLOCK , void *, int ); 
-void EndMPIOEventRecord ( int , CLOCK  , void *, int);
-void BeginHDFEventRecord( int , CLOCK  );
-void EndHDFEventRecord ( int , CLOCK  ,void *);
+void BeginIOEventRecord ( int, double , void * );
+void EndIOEventRecord ( int , double , void *);
+void BeginMPIOEventRecord ( int, double, void * ); 
+void EndMPIOEventRecord ( int , double , void *);
+void BeginHDFEventRecord( int , double );
+void EndHDFEventRecord ( int , double ,void * );
 void HDFrecordFileName( HDFsetInfo * );
 void HDFassignPabloIDs( int *, char *** );
 void writeHDFNamePacketsRT( char **, int );
@@ -208,7 +207,6 @@ void writeHDFRecDescrptrsRT( void );
 void printFileMappingsRT( char *, char **, int );
 void _hdfNameDescriptor( void );
 void _hdfDescriptorRT( char *, char *, int );
-void HDFfinalTimeStamp( void );
 /*======================================================================*
 // Global variables           						*
 //======================================================================*/
@@ -231,9 +229,6 @@ extern char *hdfRecordPointer;
 //======================================================================*/
 void HDFinitTrace_RT( char *fileName, unsigned procTraceMask )
 {
-#ifdef  HAVE_PARALLEL
-	int myNode;
-#endif
 	int error;
 	TR_LOCK	criticalSection;
 	TRgetClock( &epoch );
@@ -245,24 +240,22 @@ void HDFinitTrace_RT( char *fileName, unsigned procTraceMask )
 	   fprintf (stderr,"Unable to Initialize properly.  Exiting program\n");
 	   exit(-1);
 	}
-	FileName = ( char * ) malloc ( strlen( fileName ) + 10 );
+	FileName = ( char * ) malloc ( strlen( fileName ) + 1 );
+	strcpy( FileName, fileName ) ;
 #ifdef  HAVE_PARALLEL
-        MPI_Comm_rank( MPI_COMM_WORLD, &myNode );
-        setTraceProcessorNumber( myNode );
-	sprintf(FileName,"%s.nd%d",fileName,myNode);
 	/*==============================================================*
 	// In the parallel case, initialize MPI-IO tracing.  This will	*
 	// set the trace file name.					*
 	//==============================================================*/
+/*        initMPIOTrace( FileName, RUNTIME_TRACE ); */
 #else
 	/*==============================================================*
 	// In the non-parallel case, set the trace file name and 	*
 	// initialize the trace library.				*
 	//==============================================================*/
-	strcpy( FileName, fileName ) ;
-#endif	/* HAVE_PARALLEL */
         setTraceFileName(FileName);
         basicLibraryInit( );         
+#endif	/* HAVE_PARALLEL */
 }
 /*======================================================================*
 // NAME									*
@@ -272,36 +265,29 @@ void HDFinitTrace_RT( char *fileName, unsigned procTraceMask )
 // RETURNS								*
 //     None.								*
 //======================================================================*/
-void HDFendTrace_RT( void )
+void HDFendTrace_RT( )
 {
 	int j, numSetIDs;
 	HDFnode_t *P;
 	char **Names;
 	char* mapFile;
 
-	HDFfinalTimeStamp();
 	/*==============================================================*
 	//  Assing pablo ids to named identifiers and tag records	*
 	//==============================================================*/
 	HDFassignPabloIDs( &numSetIDs, &Names );
-	/*==============================================================*
-	//  Create a file name for the File map file.			*
-	//==============================================================*/
-	mapFile = (char *)malloc( strlen(FileName) + 4 );
+	mapFile = (char *)malloc( strlen(FileName) + 5 );
 	strcpy(mapFile,FileName);
 	strcat(mapFile,".map");
-	/*==============================================================*
-	//  print the file mappings.					*
-	//==============================================================*/
-        printFileMappingsRT( mapFile, Names, numSetIDs ); 
+        printFileMappingsRT( mapFile, Names, numSetIDs );
 	/*==============================================================*
 	// Print SDDF summary records					*
 	//==============================================================*/
 	writeHDFRecDescrptrsRT();
 	writeHDFNamePacketsRT( Names, numSetIDs );
-     	for ( j = 0; j < NumHDFProcs; ++j ) {
+   	for ( j = 0; j < NumHDFProcs; ++j ) {
 	   HDFSummarySDDF( HDFQueues[j], j );
-	}  
+	} 
 	endTracing();
 	/*==============================================================*
 	// Clean up storage						*
@@ -319,7 +305,7 @@ void HDFendTrace_RT( void )
         } else {
            free((void *)P);
 	}
-	free((void *)HDFQueues) ; 
+	free((void *)HDFQueues) ;
 }
 /*======================================================================*
 // initHFDProcTrace_RT							*
@@ -347,15 +333,15 @@ int initHDFProcTrace_RT( void )
 	//==============================================================*/
 	InitNode.ptr = NULL;
         InitNode.eventID = 0;             
-        InitNode.lastIOtime = zeroClock;
+        InitNode.lastIOtime = 0;           
         InitNode.record.nCalls = 0;             
-        InitNode.record.lastCall = zeroClock;
-        InitNode.record.incDur = zeroClock;              
-        InitNode.record.excDur = zeroClock;              
+        InitNode.record.lastCall = 0;
+        InitNode.record.incDur = 0;              
+        InitNode.record.excDur = 0;              
         InitNode.record.hdfID = 0;             
         InitNode.record.xRef = 0;             
 	for ( j = 0; j < nTallyFields; ++j ) {
-           InitNode.record.times[j] = zeroClock; 
+           InitNode.record.times[j] = 0; 
 	}
 	for ( j = 0; j < nTallyFields; ++j ) {
            InitNode.record.counts[j] = 0; 
@@ -379,7 +365,7 @@ int initHDFProcTrace_RT( void )
 	// each HDF procedure.  Each queue will be a list of summary 	*
 	// records distinquished by file type and 			*
 	//==============================================================*/
-	size = (int)(numProcs*sizeof( HDFnode_t * ));
+	size = numProcs*sizeof( HDFnode_t * );
 	HDFQueues = (HDFnode_t **)malloc( size );
 	if ( HDFQueues == NULL ) {
 	   fprintf(stderr,"Failed to allocate HDFQueues in initHDFProcTrace\n");
@@ -405,14 +391,16 @@ int initHDFProcTrace_RT( void )
 void HDFtraceEvent_RT( int eventType, char *dataPtr, unsigned dataLen ) 
 {
 	TR_LOCK	criticalSection;
-	CLOCK	seconds;
+	CLOCK	currentTime;
+	double  seconds;
 
 	criticalSection = TRlock();
-	seconds = getClock();
+	currentTime = getClock();
+	seconds = clockToSeconds( currentTime );
 
-	if ( isBeginIOEvent ( eventType ) || eventType == ID_malloc ) {
+	if ( isBeginIOEvent ( eventType ) ) {
 	   BeginIOEventRecord ( eventType, seconds, dataPtr ) ;
-	} else if ( isEndIOEvent( eventType )  || eventType == -ID_malloc) {
+	} else if ( isEndIOEvent( eventType ) ) {
 	   EndIOEventRecord ( eventType, seconds, dataPtr );
 	} else if ( isBeginHDFEvent( eventType ) ) { 
 	   BeginHDFEventRecord ( eventType , seconds ) ;
@@ -420,12 +408,12 @@ void HDFtraceEvent_RT( int eventType, char *dataPtr, unsigned dataLen )
 	   EndHDFEventRecord ( eventType, seconds, dataPtr );
 #ifdef  HAVE_PARALLEL
 	} else if ( isBeginMPIOEvent( eventType ) ) { 
-	   BeginMPIOEventRecord ( eventType, seconds, dataPtr, dataLen ) ;
+	   BeginMPIOEventRecord ( eventType, seconds, dataPtr ) ;
 	} else if ( isEndMPIOEvent( eventType ) ) {
-	   EndMPIOEventRecord ( eventType, seconds, dataPtr, dataLen );
+	   EndMPIOEventRecord ( eventType, seconds, dataPtr );
 #endif  /* HAVE_PARALLEL */
 	} else {
-	   fprintf(stderr,"eventType %d, dataLen = %u\n",eventType,dataLen);
+	   fprintf(stderr,"eventType %d, dataLen = %d\n",eventType,dataLen);
 	} 
 	TRunlock( criticalSection );
 }
@@ -434,7 +422,7 @@ void HDFtraceEvent_RT( int eventType, char *dataPtr, unsigned dataLen )
 //  This routine simply records the time in the record on the top of 	*
 //  the stack.								*
 //======================================================================*/ 
-void BeginIOEventRecord ( int eventType, CLOCK seconds, void *dataPtr  )
+void BeginIOEventRecord ( int eventType, double seconds, void *dataPtr  )
 {
 	char *name;
 	/*==============================================================*
@@ -479,15 +467,14 @@ void BeginIOEventRecord ( int eventType, CLOCK seconds, void *dataPtr  )
 //  record field corresponding to this type of I/O.  The Bytes field in *
 //  the record is updated if this is a read or write operation.		*
 //======================================================================*/ 
-void EndIOEventRecord ( int eventType, CLOCK secs, void *dataPtr )
+void EndIOEventRecord ( int eventType, double secs, void *dataPtr )
 {
-	CLOCK incDur;
+	double incDur;
 	int i, Field, ByteField, bytes;
 
-	incDur = clockSubtract(secs,CallStack->lastIOtime) ;
+	incDur = secs - CallStack->lastIOtime;
 	Field = getHDFFieldIndex( eventType ) ;
-        CallStack->record.times[Field] 
-            = clockAdd ( CallStack->record.times[Field] , incDur ) ;
+        CallStack->record.times[Field] += incDur;
         ++CallStack->record.counts[Field];
 	ByteField = getHDFByteFieldIndex( Field ) ;
 	switch ( eventType ) 
@@ -509,7 +496,7 @@ void EndIOEventRecord ( int eventType, CLOCK secs, void *dataPtr )
 		case fopenEndID:
 		case openEndID:
 		   openInfo.setName = openName;
-		   openInfo.setID = (int)(*((long *)dataPtr));
+		   openInfo.setID = *((long *)dataPtr);
 		   CallStack->record.hdfID = openInfo.setID;
 	           HDFrecordFileName ( &openInfo );
 		   break;
@@ -524,10 +511,7 @@ void EndIOEventRecord ( int eventType, CLOCK secs, void *dataPtr )
 //  This routine simply records the time in the record on the top of 	*
 //  the stack.								*
 //======================================================================*/ 
-void BeginMPIOEventRecord( int eventType, 
-	                   CLOCK seconds, 
-	                   void *dataPtr,
-	                   int dataLen )
+void BeginMPIOEventRecord( int eventType, double seconds, void *dataPtr )
 {
 	/*==============================================================*
 	// save the time value temporarily in top of stack		*
@@ -541,7 +525,6 @@ void BeginMPIOEventRecord( int eventType,
 	// name of the file.  For mpiDelete, no information is of any	*
 	// use.								*
 	//==============================================================*/
-        if ( dataLen == 0 ) return;
 	switch ( eventType ) 
 	{
 	   case mpiGetSizeBeginID:
@@ -668,18 +651,14 @@ void BeginMPIOEventRecord( int eventType,
 //  and computes the duration of the MPI-I/O event.  This is added to   *
 //  the record field corresponding MPI-I/O.  				*
 //======================================================================*/ 
-void EndMPIOEventRecord ( int eventType, 
-	                  CLOCK secs, 
-	                  void *dataPtr,
-	                  int dataLen )
+void EndMPIOEventRecord ( int eventType, double seconds, void *dataPtr )
 {
-	CLOCK incDur;
+	double incDur;
 
-	incDur = clockSubtract(secs,CallStack->lastIOtime) ;
-        CallStack->record.times[MPI] 
-           = clockAdd ( CallStack->record.times[MPI], incDur );
+	incDur = seconds - CallStack->lastIOtime;
+        CallStack->record.times[MPI] += incDur;
         ++CallStack->record.counts[MPI];
-	if ( eventType == mpiOpenEndID && dataLen != 0 ) {
+	if ( eventType == mpiOpenEndID ) {
 	   /*===========================================================*
 	   // complete the file information for the case of a file 	*
 	   // open and record the information.				*
@@ -697,7 +676,7 @@ void EndMPIOEventRecord ( int eventType,
 //   	this thread.  If no stack exists, one is created.  If no record	* 
 //   	exist, a record is created.                                   	* 
 //======================================================================*/ 
-void BeginHDFEventRecord( int eventID, CLOCK secs )
+void BeginHDFEventRecord( int eventID, double secs )
 {
 	HDFnode_t *HDFrec;
 	/*==============================================================*
@@ -720,12 +699,17 @@ void BeginHDFEventRecord( int eventID, CLOCK secs )
 //  and adds it to the inclusive duration field of this record and to   *
 //  the HDF time field of the calling routines record.			*
 //======================================================================*/ 
-void EndHDFEventRecord ( int eventID, CLOCK secs, void *dataPtr )
+void EndHDFEventRecord ( int eventID, double seconds, void *dataPtr )
 {
         HDFsetInfo 	*info;
 	HDFnode_t	*HDFrec;
-	CLOCK  		incSecs;
+	double 		incSecs;
 	static int	dummyIDs = -4;
+	int		procIndex;
+	/*==============================================================*
+	// Find the procIndex in the table.                          	* 
+	//==============================================================*/
+	procIndex = ProcIndexForHDFExit( eventID );
 	/*==============================================================*
 	// pop record from top of the stack, compute inclusive duration	*
 	// and set the corresponding record field and increment nCalls.	*
@@ -736,9 +720,8 @@ void EndHDFEventRecord ( int eventID, CLOCK secs, void *dataPtr )
 	   fprintf(stderr,">>> EndHDFEventRecord: Call Stack is empty. <<<\n");
 	   return;
 	}
-	incSecs = clockSubtract(secs,HDFrec->record.lastCall) ;
-                  
-	HDFrec->record.incDur = incSecs;
+	incSecs = seconds - HDFrec->record.lastCall;
+	HDFrec->record.incDur = +incSecs;
 	++HDFrec->record.nCalls;
    	/*==============================================================*
 	// add old record to chain to have its xRef field tagged.	*
@@ -761,8 +744,7 @@ void EndHDFEventRecord ( int eventID, CLOCK secs, void *dataPtr )
 	/*==============================================================*
 	// Update the HDF totals for the calling program.		*
 	//==============================================================*/
-        CallStack->record.times[ HDF_ ] 
-           = clockAdd( CallStack->record.times[ HDF_ ] , incSecs ) ;
+        CallStack->record.times[ HDF_ ] += incSecs ;
         ++CallStack->record.counts[ HDF_ ] ;
 	/*==============================================================*
 	// If the stack has only one record it represents the main 	* 
@@ -782,8 +764,7 @@ void HDFrecordFileName( HDFsetInfo *info )
 {
 	fileRec_t *P;
 	char *t;
-	int match; 
-	long id;
+	int match, id;
 	P = HDFfileList;
 	match = FALSE;
 	id = info->setID;
@@ -815,9 +796,7 @@ void HDFassignPabloIDs( int *nSetIDs, char ***Names )
 {
 	fileRec_t *F, *G;
 	HDFnode_t *P;
-	int j; 
-	long PabloID = 1;
-	long hdfID, xRef;
+	int j, hdfID, xRef, PabloID = 1;
 	char *fName, **T;
 
 	F = HDFfileList;
@@ -838,7 +817,7 @@ void HDFassignPabloIDs( int *nSetIDs, char ***Names )
 	   }
 	   F = F->ptr;
 	}
-	*nSetIDs = (int)(PabloID - 1);
+	*nSetIDs = PabloID - 1;
         if ( *nSetIDs <= 0 ) return;
         /*==============================================================*
 	// Repace hdfID and xRef fields with corresponding Pablo ID	*
@@ -921,10 +900,10 @@ void writeHDFNamePacketsRT( char **Names, int numSetIDs )
 	//==============================================================*/
 	for ( j = 1; j <= numSetIDs; ++j ) {
 	   fName = Names[j];
-	   NamePkt.packetLength = (int)(sizeof(NamePkt) + strlen(fName));
+	   NamePkt.packetLength = sizeof(NamePkt) + strlen(fName) ;
 	   NamePkt.fileType = 0;		/* not currently used	*/
 	   NamePkt.fileID = j;
-	   NamePkt.nameLen = (int)strlen(fName) ;
+	   NamePkt.nameLen = strlen(fName) ;
 	   if ( buffSize < NamePkt.packetLength ) {
 	      free((void *)BUFF) ;
 	      buffSize = NamePkt.packetLength + 80;
@@ -945,10 +924,10 @@ void writeHDFNamePacketsRT( char **Names, int numSetIDs )
 // This routine takes the records after they have been tagged and adds  *
 // their fields to the apporopriate position in the HDFQueues structure *
 //======================================================================*/
-void HDFupdateProcLists( void )
+void HDFupdateProcLists( )
 {
 	HDFnode_t *P, *Q;
-	long hdfID;
+	int hdfID;
 
 	hdfID = TagQueue->record.hdfID;
 	P = TagQueue;
@@ -968,8 +947,7 @@ void HDFupdateProcLists( void )
 //======================================================================*/
 void HDFupdateProcs( HDFnode_t *P )
 {
-	int procIndex, eventID;
-	long hdfID, xRef;
+	int procIndex, hdfID, xRef, eventID;
 	HDFnode_t *Q;
 	eventID = P->eventID;
 	procIndex = ProcIndexForHDFEntry( eventID );
@@ -1004,17 +982,14 @@ void HDFupdateProcs( HDFnode_t *P )
 //======================================================================*/
 void HDFSummarySDDF( HDFnode_t *P, int procIndex )
 {
-	int i, j, arrayLen;
-	int allIOCount;
-	CLOCK allIOTime, excDur;
-	double t;
+	int i, arrayLen;
 	char buff[1024];
 	char *Packet;
 	HDFnode_t *Q;
 	struct {
 		int packetLen,
-		    packetType,
 		    packetTag,
+		    packetType,
 	            eventID,
 		    threadID,
 	            nCalls;
@@ -1025,6 +1000,7 @@ void HDFSummarySDDF( HDFnode_t *P, int procIndex )
 	              XREFid;
 	} Header;
 
+	Packet = buff;
 	Header.packetLen = sizeof(Header) 
 	                 + sizeof(int)			 /* array len   */
 			 + nTallyFields*sizeof(double)	 /* times array */
@@ -1035,43 +1011,17 @@ void HDFSummarySDDF( HDFnode_t *P, int procIndex )
 	                 + nByteFields*sizeof(int)	 /* array lens  */
 	                 + nByteFields*nBkts*sizeof(int) /* byte hist   */
 	                 + sizeof(int) ;                 /* Name len    */
-	Header.packetTag = HDF_SUMMARY_FAMILY +
-			   ( procIndex + 1 )*8 + RECORD_TRACE ;
+	Header.packetTag = ( procIndex + 1 )*HDF_FAMILY | RECORD_TRACE ;
 	Header.packetType = PKT_DATA;
 	Header.threadID = TRgetNode();
         while ( P != NULL ) {
 	   Q = P->ptr;
-	   /*===========================================================*
-	   // Total the I/O time and counts                        	*
-	   //===========================================================*/
-           allIOTime = zeroClock;
-           for ( j = FirstIO; j <= LastIO; ++j ) {
-              allIOTime = clockAdd( allIOTime, P->record.times[j] );
-           }
-           P->record.times[AllIO] = allIOTime;
- 
-           allIOCount = 0;
-           for ( j = FirstIO; j <= LastIO; ++j ) {
-              allIOCount += P->record.counts[j];
-           }
-           P->record.counts[AllIO] = allIOCount;
-	   /*===========================================================*
-	   // compute exclusive duration.				*
-	   //===========================================================*/
-	   excDur = clockSubtract(P->record.incDur,allIOTime);
-	   excDur = clockSubtract(excDur,P->record.times[HDF_]);
-	   excDur = clockSubtract(excDur,P->record.times[MPI]);
-	   /*===========================================================*
-	   // print header information.					*
-	   //===========================================================*/
-	   Header.eventID = P->eventID;
-	   Header.nCalls  = P->record.nCalls;
-           Header.Seconds = clockToSeconds(P->record.lastCall);
-	   Header.IncDur  = clockToSeconds( P->record.incDur );
-	   Header.ExcDur  = clockToSeconds(excDur);
-	   Header.HDFid   = P->record.hdfID;
-	   Header.XREFid  = P->record.xRef;
-	   Packet = buff;
+	   Header.eventID = Q->eventID;
+           Header.Seconds = Q->record.lastCall;
+	   Header.IncDur  = Q->record.incDur;
+	   Header.ExcDur  = Q->record.excDur;
+	   Header.HDFid   = Q->record.hdfID;
+	   Header.XREFid  = Q->record.xRef;
 	   memcpy( Packet, &Header, sizeof(Header) );
 	   Packet += sizeof(Header);
 	   /*===========================================================*
@@ -1080,18 +1030,15 @@ void HDFSummarySDDF( HDFnode_t *P, int procIndex )
 	   arrayLen = nTallyFields;
 	   memcpy( Packet, &arrayLen, sizeof(int) );
 	   Packet += sizeof(int);
-           for ( j = 0; j < nTallyFields; ++j ) {
-	      t = clockToSeconds(P->record.times[j]); 
-	      memcpy( Packet, &t, sizeof(double) );
-	      Packet += sizeof(double);
-	   }
+	   memcpy( Packet, Q->record.times, nTallyFields*sizeof(int) );
+	   Packet += nTallyFields*sizeof(int);
 	   /*===========================================================*
 	   // copy length of counts array and counts array to Packet.	*
 	   //===========================================================*/
 	   arrayLen = nTallyFields;
 	   memcpy( Packet, &arrayLen, sizeof(int) );
 	   Packet += sizeof(int);
-	   memcpy( Packet, P->record.counts, nTallyFields*sizeof(int) );
+	   memcpy( Packet, Q->record.counts, nTallyFields*sizeof(int) );
 	   Packet += nTallyFields*sizeof(int);
 	   /*===========================================================*
 	   // copy length of bytes array and bytes array to Packet.	*
@@ -1099,7 +1046,7 @@ void HDFSummarySDDF( HDFnode_t *P, int procIndex )
 	   arrayLen = nByteFields;
 	   memcpy( Packet, &arrayLen, sizeof(int) );
 	   Packet += sizeof(int);
-	   memcpy( Packet, P->record.bytes, nByteFields*sizeof(int) );
+	   memcpy( Packet, Q->record.counts, nByteFields*sizeof(int) );
 	   Packet += nByteFields*sizeof(int);
 	   /*===========================================================*
 	   // copy length of historgram arrays and arrays to Packet.	*
@@ -1108,12 +1055,12 @@ void HDFSummarySDDF( HDFnode_t *P, int procIndex )
 	   for ( i = 0; i < nByteFields; ++i ) {
 	      memcpy( Packet, &arrayLen, sizeof(int) );
 	      Packet += sizeof(int);
-	      memcpy( Packet, P->record.Hists[i], nBkts*sizeof(int) );
+	      memcpy( Packet, Q->record.Hists[i], nBkts*sizeof(int) );
 	      Packet += nBkts*sizeof(int);
 	   }
 	   arrayLen = 0;	/* name length */
 	   memcpy( Packet, &arrayLen, sizeof(int) );
-	   putBytes( buff, Header.packetLen ); 
+	   putBytes( buff, Header.packetLen );
            free((void *)P);
            P = Q;
 	} 
@@ -1131,15 +1078,29 @@ void HDFnodeInit ( HDFnode_t *S )
 //======================================================================*/
 void HDFrecordSum ( HDFrec_t *S, HDFrec_t *T )
 {
-        int i, j;
-	
+        int i, j, allIOCount;
+        double allIOTime;
+        allIOTime = 0;
+        for ( j = FirstIO; j <= LastIO; ++j ) {
+           allIOTime += T->times[j];
+        }
+        T->times[AllIO] = allIOTime;
+ 
+        allIOCount = 0;
+        for ( j = FirstIO; j <= LastIO; ++j ) {
+           allIOCount += T->counts[j];
+        }
+        T->counts[AllIO] = allIOCount;
+ 
+        T->excDur = T->incDur - ( T->times[HDF_] + T->times[MPI]
+                                                 + T->times[AllIO] );
+ 
         S->nCalls    += T->nCalls;
-	if ( clockCompare ( S->lastCall, T->lastCall ) < 0 ) {
-           S->lastCall  =  T->lastCall ;
-	}
-        S->incDur    = clockAdd ( S->incDur, T->incDur );
+        S->lastCall  =  max( S->lastCall, T->lastCall );
+        S->incDur    += T->incDur;
+        S->excDur    += T->excDur;
         for ( j = 0; j < nTallyFields; ++j ) {
-           S->times[j] =  clockAdd( S->times[j] , T->times[j] ) ;
+           S->times[j] += T->times[j] ;
         }
         for ( j = 0; j < nTallyFields; ++j ) {
            S->counts[j] += T->counts[j] ;
@@ -1396,7 +1357,7 @@ void _hdfDescriptorRT( char *recordName, char *recordDescription,
     // Compute and update the record length.				* 
     // Write the completed record.					* 
     //==================================================================*/
-    recordLength = (int)(hdfRecordPointer - recordBuffer);
+    recordLength = hdfRecordPointer - recordBuffer;
 
     hdfRecordPointer = recordBuffer;
     sddfWriteInteger( &hdfRecordPointer, recordLength );
@@ -1408,13 +1369,13 @@ void _hdfDescriptorRT( char *recordName, char *recordDescription,
 //   Internal Routine:  writeHDFRecDescrptrsRT	                        * 
 //                      Writes record descriptors for the HDF events.   * 
 //======================================================================*/
-void writeHDFRecDescrptrsRT( void ) 
+void writeHDFRecDescrptrsRT() 
 {
 	char HDFProcNames[][40] = {
 #	include "HDFentryNames.h"
 	"HDF_Last_Entry"
 	};
-	int j, FAMILY;
+	int j;
         char BUF1[256], BUF2[256] ;
 	_hdfNameDescriptor();	/* Descriptor for named identifiers	*/
         for ( j = 0; j < NumHDFProcs; ++j ) {
@@ -1424,8 +1385,7 @@ void writeHDFRecDescrptrsRT( void )
               strcat( BUF2, " Procedure Summary");
               strcpy( BUF1, BUF2 );
               strcat( BUF1, " Trace");
-	      FAMILY = HDF_SUMMARY_FAMILY + (j + 1)*8;
-              _hdfDescriptorRT( BUF1, BUF2, FAMILY );
+              _hdfDescriptorRT( BUF1, BUF2, (j+1)*HDF_FAMILY );
            }
         }
         return;
@@ -1458,7 +1418,7 @@ void printFileMappingsRT( char *mapFile, char **Names, int nPabloIDs )
 /*	   Generate a SDDF binary format record descriptor for the	*/
 /*	   named identifiers used during execution.              	*/
 /************************************************************************/
-void _hdfNameDescriptor( void )
+void _hdfNameDescriptor()
 {
     static char recordBuffer[ 4096 ];
     int         recordLength;
@@ -1504,7 +1464,7 @@ void _hdfNameDescriptor( void )
                      "HDF Name", "Name of File, Data Set or Dim",
                       CHARACTER, 1 );
 
-    recordLength = (int)(hdfRecordPointer - recordBuffer);
+    recordLength = hdfRecordPointer - recordBuffer;
 
     hdfRecordPointer = recordBuffer;
     sddfWriteInteger( &hdfRecordPointer, recordLength );

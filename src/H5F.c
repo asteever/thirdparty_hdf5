@@ -49,6 +49,10 @@ static char		RcsId[] = "@(#)$Revision$";
 #include <H5Pprivate.h>		/*property lists			  */
 #include <H5Tprivate.h>		/*data types				  */
 
+#include <ctype.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
 /*
  * Define the following if you want H5F_block_read() and H5F_block_write() to
  * keep track of the file position and attempt to minimize calls to the file
@@ -98,9 +102,9 @@ const H5F_mprop_t	H5F_mount_dflt = {
 };
 
 /* Interface initialization */
-static intn interface_initialize_g = 0;
+static intn interface_initialize_g = FALSE;
 #define INTERFACE_INIT H5F_init_interface
-static herr_t H5F_init_interface(void);
+static void H5F_term_interface(void);
 
 /* PRIVATE PROTOTYPES */
 static H5F_t *H5F_new(H5F_file_t *shared, const H5F_create_t *fcpl,
@@ -112,57 +116,34 @@ static herr_t H5F_locate_signature(H5F_low_t *f_handle,
 				   haddr_t *addr/*out*/);
 
 
-/*-------------------------------------------------------------------------
- * Function:	H5F_init
- *
- * Purpose:	Initialize the interface from some other layer.
- *
- * Return:	Success:	non-negative
- *
- *		Failure:	negative
- *
- * Programmer:	Robb Matzke
- *              Wednesday, December 16, 1998
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5F_init(void)
-{
-    FUNC_ENTER(H5F_init, FAIL);
-    /* FUNC_ENTER() does all the work */
-    FUNC_LEAVE(SUCCEED);
-}
+/*--------------------------------------------------------------------------
+NAME
+   H5F_init_interface -- Initialize interface-specific information
+USAGE
+    herr_t H5F_init_interface()
+   
+RETURNS
+    Non-negative on success/Negative on failure
+DESCRIPTION
+    Initializes any interface-specific data or routines.
 
-
-/*-------------------------------------------------------------------------
- * Function:	H5F_init_interface
- *
- * Purpose:	Initialize interface-specific information.
- *
- * Return:	Success:	non-negative
- *
- *		Failure:	negative
- *
- * Programmer:	Robb Matzke
- *              Friday, November 20, 1998
- *
- * Modifications:
- * 	Robb Matzke, 4 Aug 1997
- *	Changed pablo mask from H5_mask to H5F_mask for the FUNC_LEAVE call.
- *	It was already H5F_mask for the PABLO_TRACE_ON call.
- *
- *  	rky 980816
- *	Added .disp, .btype, .ftype to H5F_access_t.
- *-------------------------------------------------------------------------
- */
-static herr_t 
+ERRORS
+
+Modifications:
+    Robb Matzke, 4 Aug 1997
+    Changed pablo mask from H5_mask to H5F_mask for the FUNC_LEAVE call.
+    It was already H5F_mask for the PABLO_TRACE_ON call.
+
+    rky 980816
+    Added .disp, .btype, .ftype to H5F_access_t.
+
+--------------------------------------------------------------------------*/
+herr_t 
 H5F_init_interface(void)
 {
     herr_t	ret_value = SUCCEED;
     
+    interface_initialize_g = TRUE;
     FUNC_ENTER(H5F_init_interface, FAIL);
 
 #ifdef HAVE_PARALLEL
@@ -177,8 +158,9 @@ H5F_init_interface(void)
 
     /* Initialize the atom group for the file IDs */
     if (H5I_init_group(H5I_FILE, H5I_FILEID_HASHSIZE, 0,
-		       (herr_t (*)(void*))H5F_close)<0) {
-	HRETURN_ERROR (H5E_FILE, H5E_CANTINIT, FAIL,
+		       (herr_t (*)(void*))H5F_close)<0 ||
+	H5_add_exit(H5F_term_interface)<0) {	
+	HRETURN_ERROR (H5E_ATOM, H5E_CANTINIT, FAIL,
 		       "unable to initialize interface");
     }
 
@@ -189,7 +171,6 @@ H5F_init_interface(void)
     H5F_access_dflt.rdcc_w0 = 0.75; /*preempt fully read chunks*/
     H5F_access_dflt.threshold = 1; /*alignment applies to everything*/
     H5F_access_dflt.alignment = 1; /*no alignment*/
-    H5F_access_dflt.gc_ref = 0;     /* Don't garbage-collect references unless user chooses to */
     H5F_access_dflt.driver = H5F_LOW_DFLT;
 #if (H5F_LOW_DFLT == H5F_LOW_SEC2)
     /* Nothing to initialize */
@@ -234,13 +215,10 @@ H5F_init_interface(void)
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-void
-H5F_term_interface(intn status)
+static void
+H5F_term_interface(void)
 {
-    if (interface_initialize_g>0) {
-	H5I_destroy_group(H5I_FILE);
-    }
-    interface_initialize_g = status;
+    H5I_destroy_group(H5I_FILE);
 }
 
 
@@ -250,8 +228,8 @@ H5F_term_interface(intn status)
  USAGE
        void H5F_encode_length_unusual(f, p, l)
        const H5F_t *f;		   IN: pointer to the file record
-       uint8_t **p;		IN: pointer to buffer pointer to encode length in
-       uint8_t *l;		IN: pointer to length to encode
+       uint8 **p;		IN: pointer to buffer pointer to encode length in
+       uint8 *l;		IN: pointer to length to encode
 
  ERRORS
 
@@ -261,7 +239,7 @@ H5F_term_interface(intn status)
     Encode non-standard (i.e. not 2, 4 or 8-byte) lengths in file meta-data.
 --------------------------------------------------------------------------*/
 void 
-H5F_encode_length_unusual(const H5F_t *f, uint8_t **p, uint8_t *l)
+H5F_encode_length_unusual(const H5F_t *f, uint8 **p, uint8 *l)
 {
     intn		    i = (intn)H5F_SIZEOF_SIZE(f)-1;
 
@@ -437,9 +415,9 @@ H5F_locate_signature(H5F_low_t *f_handle, const H5F_access_t *access_parms,
 		     haddr_t *addr/*out*/)
 {
     herr_t          ret_value=FAIL;
-    haddr_t	    max_addr;
-    uint8_t	    buf[H5F_SIGNATURE_LEN];
-    uintn	    n = 9;
+    haddr_t		    max_addr;
+    uint8		    buf[H5F_SIGNATURE_LEN];
+    uintn		    n = 9;
 
     FUNC_ENTER(H5F_locate_signature, FAIL);
 
@@ -791,8 +769,8 @@ H5F_open(const char *name, uintn flags,
     H5F_low_t		*fd = NULL;	/*low level file desc		*/
     hbool_t		empty_file = FALSE; /*is file empty?		*/
     hbool_t		file_exists = FALSE; /*file already exists	*/
-    uint8_t		buf[256];	/*I/O buffer..			*/
-    const uint8_t	*p = NULL;	/*        ..and pointer into it */
+    uint8		buf[256];	/*I/O buffer..			*/
+    const uint8		*p = NULL;	/*        ..and pointer into it */
     size_t		fixed_size = 24; /*size of fixed part of boot blk*/
     size_t		variable_size;	/*variable part of boot block	*/
     H5F_create_t	*cp = NULL;	/*file creation parameters	*/
@@ -1479,7 +1457,7 @@ H5Fflush(hid_t object_id, H5F_scope_t scope)
 static herr_t
 H5F_flush(H5F_t *f, H5F_scope_t scope, hbool_t invalidate)
 {
-    uint8_t		buf[2048], *p = buf;
+    uint8		buf[2048], *p = buf;
     haddr_t		reserved_addr;
     uintn		nerrors=0, i;
     
@@ -1530,9 +1508,9 @@ H5F_flush(H5F_t *f, H5F_scope_t scope, hbool_t invalidate)
     *p++ = 0;			/*reserved*/
     *p++ = f->shared->create_parms->sharedheader_ver;
     assert (H5F_SIZEOF_ADDR(f)<=255);
-    *p++ = (uint8_t)H5F_SIZEOF_ADDR(f);
+    *p++ = (uint8)H5F_SIZEOF_ADDR(f);
     assert (H5F_SIZEOF_SIZE(f)<=255);
-    *p++ = (uint8_t)H5F_SIZEOF_SIZE(f);
+    *p++ = (uint8)H5F_SIZEOF_SIZE(f);
     *p++ = 0;			/*reserved */
     UINT16ENCODE(p, f->shared->create_parms->sym_leaf_k);
     UINT16ENCODE(p, f->shared->create_parms->btree_k[H5B_SNODE_ID]);
@@ -1701,7 +1679,7 @@ H5F_close(H5F_t *f)
 
  USAGE
     herr_t H5Fclose(file_id)
-	int32_t file_id;	IN: File ID of file to close
+	int32 file_id;	IN: File ID of file to close
 
  ERRORS
     ARGS      BADTYPE	    Not a file atom. 
@@ -2222,7 +2200,7 @@ H5F_block_read(H5F_t *f, const haddr_t *addr, hsize_t size,
 
     FUNC_ENTER(H5F_block_read, FAIL);
 
-    assert (size < SIZET_MAX);
+    assert (size < MAX_SIZET);
 
     /* convert the relative address to an absolute address */
     abs_addr = f->shared->base_addr;
@@ -2267,7 +2245,7 @@ H5F_block_write(H5F_t *f, const haddr_t *addr, hsize_t size,
 
     FUNC_ENTER(H5F_block_write, FAIL);
 
-    assert (size < SIZET_MAX);
+    assert (size < MAX_SIZET);
 
     if (0 == (f->intent & H5F_ACC_RDWR)) {
 	HRETURN_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "no write intent");

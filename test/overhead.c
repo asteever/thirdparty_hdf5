@@ -7,32 +7,14 @@
  *
  * Purpose:	Creates a chunked dataset and measures the storage overhead.
  */
-
-/* See H5private.h for how to include headers */
-#undef NDEBUG
+#include <ctype.h>
+#include <fcntl.h>
 #include <hdf5.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
-#ifdef STDC_HEADERS
-#   include <ctype.h>
-#   include <fcntl.h>
-#   include <stdlib.h>
-#   include <sys/stat.h>
-#   include <string.h>
-#endif
-
-#ifdef HAVE_IO_H
-#	include <io.h>
-#endif
-
-#ifdef HAVE_UNISTD_H
-#   include <sys/types.h>
-#   include <unistd.h>
-#endif
-
-#ifdef HAVE_IO_H
-#   include <io.h>
-#endif
-
+#include <H5config.h>
 #ifndef HAVE_ATTRIBUTE
 #   undef __attribute__
 #   define __attribute__(X) /*void*/
@@ -44,7 +26,7 @@
 #define FILE_NAME_1	"overhead.h5"
 #define FALSE		0
 #define TRUE		1
- 
+
 typedef enum fill_t {
     FILL_ALL,
     FILL_FORWARD,
@@ -246,14 +228,9 @@ test(fill_t fill_style, const double splits[],
 	if (verbose) {
 	    if (H5Fflush(file, H5F_SCOPE_LOCAL)<0) goto error;
 	    if (fstat(fd, &sb)<0) goto error;
-	    /*
-	     * The extra cast in the following statement is a bug workaround
-	     * for the Win32 version 5.0 compiler.
-	     * 1998-11-06 ptl
-	     */
-	    printf("%4lu %8.3f ***\n",
+	    printf("%4lu %8.3f\n",
 		   (unsigned long)i,
-		   (double)(hssize_t)(sb.st_size-i*sizeof(int))/(hssize_t)i);
+		   (double)(sb.st_size-i*sizeof(int))/(double)i);
 	}
     }
 
@@ -284,14 +261,9 @@ test(fill_t fill_style, const double splits[],
 	    abort();
 	}
 	if (fstat(fd, &sb)<0) goto error;
-	/*
-	 * The extra cast in the following statement is a bug workaround
-	 * for the Win32 version 5.0 compiler.
-	 * 1998-11-06 ptl
-	 */
-	printf("%-7s %8.3f\n", sname,
-	       (double)(hssize_t)(sb.st_size-cur_size[0]*sizeof(int))/
-	           (hssize_t)cur_size[0]);
+	printf("%-7s %8.3f\n", sname, 
+	       (sb.st_size-cur_size[0]*sizeof(int))/(double)cur_size[0]);
+	
     }
     close(fd);
     return 0;

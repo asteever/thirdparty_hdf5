@@ -16,7 +16,7 @@
 /* Interface initialization */
 #define PABLO_MASK      H5S_all_mask
 #define INTERFACE_INIT  NULL
-static intn             interface_initialize_g = 0;
+static intn             interface_initialize_g = FALSE;
 
 static herr_t H5S_all_init (const struct H5O_layout_t *layout,
 			    const H5S_t *space, H5S_sel_iter_t *iter);
@@ -177,7 +177,7 @@ H5S_all_fgath (H5F_t *f, const struct H5O_layout_t *layout,
     hssize_t	file_offset[H5O_LAYOUT_NDIMS];	/*offset of slab in file*/
     hsize_t	hsize[H5O_LAYOUT_NDIMS];	/*size of hyperslab	*/
     hssize_t	zero[H5O_LAYOUT_NDIMS];		/*zero			*/
-    uint8_t	*buf=(uint8_t*)_buf;		/*for pointer arithmetic*/
+    uint8 *buf=(uint8 *)_buf;   /* Alias for pointer arithmetic */
     hsize_t	acc;				/*accumulator		*/
     intn	space_ndims;			/*dimensionality of space*/
     intn	i;				/*counters		*/
@@ -265,7 +265,7 @@ H5S_all_fscat (H5F_t *f, const struct H5O_layout_t *layout,
     hssize_t	file_offset[H5O_LAYOUT_NDIMS];	/*offset of hyperslab	*/
     hsize_t	hsize[H5O_LAYOUT_NDIMS];	/*size of hyperslab	*/
     hssize_t	zero[H5O_LAYOUT_NDIMS];		/*zero vector		*/
-    const uint8_t *buf=(const uint8_t*)_buf;    /*for pointer arithmetic*/
+    const uint8 *buf=(const uint8 *)_buf;   /* Alias for pointer arithmetic */
     hsize_t	acc;				/*accumulator		*/
     intn	space_ndims;			/*space dimensionality	*/
     intn	i;				/*counters		*/
@@ -350,8 +350,8 @@ H5S_all_mgath (const void *_buf, size_t elmt_size,
     hsize_t	mem_size[H5O_LAYOUT_NDIMS];	/*total size of app buf	*/
     hsize_t	hsize[H5O_LAYOUT_NDIMS];	/*size of hyperslab	*/
     hssize_t	zero[H5O_LAYOUT_NDIMS];		/*zero			*/
-    const uint8_t *buf=(const uint8_t*)_buf;   /* Get local copies for address arithmetic */
-    uint8_t	*tconv_buf=(uint8_t*)_tconv_buf;
+    const uint8 *buf=(const uint8 *)_buf;   /* Get local copies for address arithmetic */
+    uint8 *tconv_buf=(uint8 *)_tconv_buf;
     hsize_t	acc;				/*accumulator		*/
     intn	space_ndims;			/*dimensionality of space*/
     intn	i;				/*counters		*/
@@ -438,8 +438,8 @@ H5S_all_mscat (const void *_tconv_buf, size_t elmt_size,
     hsize_t	mem_size[H5O_LAYOUT_NDIMS];	/*total size of app buf	*/
     hsize_t	hsize[H5O_LAYOUT_NDIMS];	/*size of hyperslab	*/
     hssize_t	zero[H5O_LAYOUT_NDIMS];		/*zero			*/
-    uint8_t	*buf=(uint8_t*)_buf;   /* Get local copies for address arithmetic */
-    const uint8_t *tconv_buf=(const uint8_t *)_tconv_buf;
+    uint8 *buf=(uint8 *)_buf;   /* Get local copies for address arithmetic */
+    const uint8 *tconv_buf=(const uint8 *)_tconv_buf;
     hsize_t	acc;				/*accumulator		*/
     intn	space_ndims;			/*dimensionality of space*/
     intn	i;				/*counters		*/
@@ -563,80 +563,3 @@ H5S_all_npoints (const H5S_t *space)
     
     FUNC_LEAVE (ret_value);
 }   /* H5S_all_npoints() */
-
-/*--------------------------------------------------------------------------
- NAME
-    H5S_all_select_serialize
- PURPOSE
-    Serialize the current selection into a user-provided buffer.
- USAGE
-    herr_t H5S_all_select_serialize(space, buf)
-        H5S_t *space;           IN: Dataspace pointer of selection to serialize
-        uint8 *buf;             OUT: Buffer to put serialized selection into
- RETURNS
-    Non-negative on success/Negative on failure
- DESCRIPTION
-    Serializes the current element selection into a buffer.  (Primarily for
-    storing on disk).
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5S_all_select_serialize (const H5S_t *space, uint8_t *buf)
-{
-    herr_t ret_value=FAIL;  /* return value */
-
-    FUNC_ENTER (H5S_all_select_serialize, FAIL);
-
-    assert(space);
-
-    /* Store the preamble information */
-    UINT32ENCODE(buf, (uint32_t)space->select.type);  /* Store the type of selection */
-    UINT32ENCODE(buf, (uint32_t)1);  /* Store the version number */
-    UINT32ENCODE(buf, (uint32_t)0);  /* Store the un-used padding */
-    UINT32ENCODE(buf, (uint32_t)0);  /* Store the additional information length */
-
-    /* Set success */
-    ret_value=SUCCEED;
-
-    FUNC_LEAVE (ret_value);
-}   /* H5S_all_select_serialize() */
-
-/*--------------------------------------------------------------------------
- NAME
-    H5S_all_select_deserialize
- PURPOSE
-    Deserialize the current selection from a user-provided buffer.
- USAGE
-    herr_t H5S_all_select_deserialize(space, buf)
-        H5S_t *space;           IN/OUT: Dataspace pointer to place selection into
-        uint8 *buf;             IN: Buffer to retrieve serialized selection from
- RETURNS
-    Non-negative on success/Negative on failure
- DESCRIPTION
-    Deserializes the current selection into a buffer.  (Primarily for retrieving
-    from disk).
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5S_all_select_deserialize (H5S_t *space, const uint8_t __unused__ *buf)
-{
-    herr_t ret_value=FAIL;  /* return value */
-
-    FUNC_ENTER (H5S_all_select_deserialize, FAIL);
-
-    assert(space);
-
-    /* Change to "all" selection */
-    if((ret_value=H5S_select_all(space))<0) {
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDELETE, FAIL, "can't change selection");
-    } /* end if */
-
-done:
-    FUNC_LEAVE (ret_value);
-}   /* H5S_all_select_deserialize() */

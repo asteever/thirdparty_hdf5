@@ -7,14 +7,79 @@
  *
  * Purpose:	Tests file mounting.
  */
-#include <h5test.h>
+#include <hdf5.h>
+#include <stdlib.h>
 
-const char *FILENAME[] = {
-    "mount_1",
-    "mount_2",
-    "mount_3",
-    NULL
-};
+#define FALSE		0
+#define TRUE		1
+
+#define FILE_NAME_1	"mount_1.h5"
+#define FILE_NAME_2	"mount_2.h5"
+#define FILE_NAME_3	"mount_3.h5"
+
+#include <H5config.h>
+#ifndef HAVE_ATTRIBUTE
+#   undef __attribute__
+#   define __attribute__(X) /*void*/
+#   define __unused__ /*void*/
+#else
+#   define __unused__ __attribute__((unused))
+#endif
+
+#if defined(WIN32)
+#undef __unused__
+#define __unused__
+#endif
+
+
+/*-------------------------------------------------------------------------
+ * Function:	cleanup
+ *
+ * Purpose:	Removes test files
+ *
+ * Return:	void
+ *
+ * Programmer:	Robb Matzke
+ *              Thursday, June  4, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+static void
+cleanup(void)
+{
+    if (!getenv("HDF5_NOCLEANUP")) {
+	remove(FILE_NAME_1);
+	remove(FILE_NAME_2);
+	remove(FILE_NAME_3);
+    }
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	display_error_cb
+ *
+ * Purpose:	Displays the error stack after printing "*FAILED*".
+ *
+ * Return:	Success:	0
+ *
+ *		Failure:	-1
+ *
+ * Programmer:	Robb Matzke
+ *		Wednesday, March  4, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+display_error_cb(void __unused__ *client_data)
+{
+    puts("*FAILED*");
+    H5Eprint(stdout);
+    return 0;
+}
 
 
 /*-------------------------------------------------------------------------
@@ -34,15 +99,13 @@ const char *FILENAME[] = {
  *-------------------------------------------------------------------------
  */
 static int
-setup(hid_t fapl)
+setup(void)
 {
     hid_t	file=-1;
-    char	filename[1024];
 
     /* file 1 */
-    h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
-    if ((file=H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl))<0)
-	goto error;
+    if ((file=H5Fcreate(FILE_NAME_1, H5F_ACC_TRUNC, H5P_DEFAULT,
+			H5P_DEFAULT))<0) goto error;
     if (H5Gclose(H5Gcreate(file, "/mnt1", 0))<0) goto error;
     if (H5Gclose(H5Gcreate(file, "/mnt1/file1", 0))<0) goto error;
     if (H5Gclose(H5Gcreate(file, "/mnt_unlink", 0))<0) goto error;
@@ -52,9 +115,8 @@ setup(hid_t fapl)
     if (H5Fclose(file)<0) goto error;
 
     /* file 2 */
-    h5_fixname(FILENAME[1], fapl, filename, sizeof filename);
-    if ((file=H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl))<0)
-	goto error;
+    if ((file=H5Fcreate(FILE_NAME_2, H5F_ACC_TRUNC, H5P_DEFAULT,
+			H5P_DEFAULT))<0) goto error;
     if (H5Gclose(H5Gcreate(file, "/file2", 0))<0) goto error;
     if (H5Gclose(H5Gcreate(file, "/rename_a", 0))<0) goto error;
     if (H5Gclose(H5Gcreate(file, "/rename_b", 0))<0) goto error;
@@ -62,9 +124,8 @@ setup(hid_t fapl)
     if (H5Fclose(file)<0) goto error;
 
     /* file 3 */
-    h5_fixname(FILENAME[2], fapl, filename, sizeof filename);
-    if ((file=H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl))<0)
-	goto error;
+    if ((file=H5Fcreate(FILE_NAME_3, H5F_ACC_TRUNC, H5P_DEFAULT,
+			H5P_DEFAULT))<0) goto error;
     if (H5Fclose(file)<0) goto error;
 
     return 0;
@@ -95,17 +156,15 @@ setup(hid_t fapl)
  *-------------------------------------------------------------------------
  */
 static int
-test_basic(hid_t fapl)
+test_basic(void)
 {
     hid_t	file1=-1, file2=-1, grp=-1;
-    char	filename1[1024], filename2[1024];
 
-    TESTING("basic functionality");
-    h5_fixname(FILENAME[0], fapl, filename1, sizeof filename1);
-    h5_fixname(FILENAME[1], fapl, filename2, sizeof filename2);
+    printf("%-70s", "Testing basic functionality");
+    fflush(stdout);
 
-    if ((file1=H5Fopen(filename1, H5F_ACC_RDONLY, fapl))<0 ||
-	(file2=H5Fopen(filename2, H5F_ACC_RDONLY, fapl))<0)
+    if ((file1=H5Fopen(FILE_NAME_1, H5F_ACC_RDONLY, H5P_DEFAULT))<0 ||
+	(file2=H5Fopen(FILE_NAME_2, H5F_ACC_RDONLY, H5P_DEFAULT))<0)
 	goto error;
     if (H5Fmount(file1, "/mnt1", file2, H5P_DEFAULT)<0) goto error;
     if ((grp=H5Gopen(file1, "/mnt1/file2"))<0) goto error;
@@ -114,7 +173,7 @@ test_basic(hid_t fapl)
     if (H5Fclose(file1)<0) goto error;
     if (H5Fclose(file2)<0) goto error;
 
-    PASSED();
+    puts(" PASSED");
     return 0;
     
  error:
@@ -144,22 +203,18 @@ test_basic(hid_t fapl)
  *-------------------------------------------------------------------------
  */
 static int
-test_illegal(hid_t fapl)
+test_illegal(void)
 {
     hid_t	file1=-1, file2=-1, file3=-1, mnt=-1;
     herr_t	status;
-    char	filename1[1024], filename2[1024], filename3[1024];
 
-    TESTING("illegal mount operations");
-    h5_fixname(FILENAME[0], fapl, filename1, sizeof filename1);
-    h5_fixname(FILENAME[1], fapl, filename2, sizeof filename2);
-    h5_fixname(FILENAME[2], fapl, filename3, sizeof filename3);
-    
+    printf("%-70s", "Testing illegal mount operations");
+    fflush(stdout);
 
     /* Open the files */
-    if ((file1=H5Fopen(filename1, H5F_ACC_RDONLY, fapl))<0 ||
-	(file2=H5Fopen(filename2, H5F_ACC_RDONLY, fapl))<0 ||
-	(file3=H5Fopen(filename3, H5F_ACC_RDONLY, fapl))<0)
+    if ((file1=H5Fopen(FILE_NAME_1, H5F_ACC_RDONLY, H5P_DEFAULT))<0 ||
+	(file2=H5Fopen(FILE_NAME_2, H5F_ACC_RDONLY, H5P_DEFAULT))<0 ||
+	(file3=H5Fopen(FILE_NAME_3, H5F_ACC_RDONLY, H5P_DEFAULT))<0)
 	goto error;
 
     /* Try mounting a file on itself */
@@ -167,8 +222,8 @@ test_illegal(hid_t fapl)
 	status = H5Fmount(file1, "/mnt1", file1, H5P_DEFAULT);
     } H5E_END_TRY;
     if (status>=0) {
-	FAILED();
-	puts("    Mounting a file on itself should have failed.");
+	puts("*FAILED*");
+	puts("   Mounting a file on itself should have failed.");
 	goto error;
     }
 
@@ -183,8 +238,8 @@ test_illegal(hid_t fapl)
 	status = H5Fmount(mnt, ".", file3, H5P_DEFAULT);
     } H5E_END_TRY;
     if (status>=0) {
-	FAILED();
-	puts("    Mounting two files at one mount point should have failed.");
+	puts("*FAILED*");
+	puts("   Mounting two files at one mount point should have failed.");
 	goto error;
     }
     if (H5Funmount(mnt, ".")<0) goto error;
@@ -195,7 +250,7 @@ test_illegal(hid_t fapl)
     if (H5Fclose(file1)<0) goto error;
     if (H5Fclose(file2)<0) goto error;
     if (H5Fclose(file3)<0) goto error;
-    PASSED();
+    puts(" PASSED");
     return 0;
 
  error:
@@ -228,18 +283,16 @@ test_illegal(hid_t fapl)
  *-------------------------------------------------------------------------
  */
 static int
-test_hide(hid_t fapl)
+test_hide(void)
 {
     hid_t	file1=-1, file2=-1, grp=-1;
     H5G_stat_t	sb1, sb2;
-    char	filename1[1024], filename2[1024];
 
-    TESTING("name hiding under mount point");
-    h5_fixname(FILENAME[0], fapl, filename1, sizeof filename1);
-    h5_fixname(FILENAME[1], fapl, filename2, sizeof filename2);
+    printf("%-70s", "Testing name hiding under mount point");
+    fflush(stdout);
     
-    if ((file1=H5Fopen(filename1, H5F_ACC_RDONLY, fapl))<0 ||
-	(file2=H5Fopen(filename2, H5F_ACC_RDONLY, fapl))<0)
+    if ((file1=H5Fopen(FILE_NAME_1, H5F_ACC_RDONLY, H5P_DEFAULT))<0 ||
+	(file2=H5Fopen(FILE_NAME_2, H5F_ACC_RDONLY, H5P_DEFAULT))<0)
 	goto error;
 
     /* Get information about file1:/mnt1/file1 for later */
@@ -253,8 +306,8 @@ test_hide(hid_t fapl)
 	grp = H5Gopen(file1, "/mnt1/file1");
     } H5E_END_TRY;
     if (grp>=0) {
-	FAILED();
-	puts("    Name is still accessible under mount point.");
+	puts("*FAILED*");
+	puts("   Name is still accessible under mount point.");
 	goto error;
     }
 
@@ -265,8 +318,8 @@ test_hide(hid_t fapl)
     if (H5Gget_objinfo(file1, "/file1", TRUE, &sb2)<0) goto error;
     if (sb1.fileno[0]!=sb2.fileno[0] || sb1.fileno[1]!=sb2.fileno[1] ||
 	sb1.objno[0]!=sb2.objno[0] || sb1.objno[1]!=sb2.objno[1]) {
-	FAILED();
-	puts("    Hard link failed for hidden object.");
+	puts("*FAILED*");
+	puts("   Hard link failed for hidden object.");
 	goto error;
     }
 
@@ -274,7 +327,7 @@ test_hide(hid_t fapl)
     if (H5Funmount(file1, "/mnt1")<0) goto error;
     H5Fclose(file1);
     H5Fclose(file2);
-    PASSED();
+    puts(" PASSED");
     return 0;
 
  error:
@@ -305,19 +358,17 @@ test_hide(hid_t fapl)
  *-------------------------------------------------------------------------
  */
 static int
-test_assoc(hid_t fapl)
+test_assoc(void)
 {
     hid_t	file1=-1, file2=-1;
     H5G_stat_t	sb1, sb2;
-    char	filename1[1024], filename2[1024];
     
-    TESTING("mount point open");
-    h5_fixname(FILENAME[0], fapl, filename1, sizeof filename1);
-    h5_fixname(FILENAME[1], fapl, filename2, sizeof filename2);
+    printf("%-70s", "Testing mount point open");
+    fflush(stdout);
     
     /* Open the files */
-    if ((file1=H5Fopen(filename1, H5F_ACC_RDONLY, fapl))<0 ||
-	(file2=H5Fopen(filename2, H5F_ACC_RDONLY, fapl))<0)
+    if ((file1=H5Fopen(FILE_NAME_1, H5F_ACC_RDONLY, H5P_DEFAULT))<0 ||
+	(file2=H5Fopen(FILE_NAME_2, H5F_ACC_RDONLY, H5P_DEFAULT))<0)
 	goto error;
 
     /* Get information about the root of file2 */
@@ -333,8 +384,8 @@ test_assoc(hid_t fapl)
     if (H5Gget_objinfo(file1, "/mnt1", TRUE, &sb2)<0) goto error;
     if (sb1.fileno[0]!=sb2.fileno[0] || sb1.fileno[1]!=sb2.fileno[1] ||
 	sb1.objno[0]!=sb2.objno[0] || sb1.objno[1]!=sb2.objno[1]) {
-	FAILED();
-	puts("    Association failed.");
+	puts("*FAILED*");
+	puts("   Association failed.");
 	goto error;
     }
     
@@ -342,7 +393,7 @@ test_assoc(hid_t fapl)
     if (H5Funmount(file1, "/mnt1_link")<0) goto error;
     if (H5Fclose(file1)<0) goto error;
     if (H5Fclose(file2)<0) goto error;
-    PASSED();
+    puts(" PASSED");
     return 0;
 
  error:
@@ -373,19 +424,16 @@ test_assoc(hid_t fapl)
  *-------------------------------------------------------------------------
  */
 static int
-test_mntlnk(hid_t fapl)
+test_mntlnk(void)
 {
     hid_t	file1=-1, file2=-1, grp=-1;
-    char	filename1[1024], filename2[1024];
 
-    TESTING("multi-linked mount point");
-    h5_fixname(FILENAME[0], fapl, filename1, sizeof filename1);
-    h5_fixname(FILENAME[1], fapl, filename2, sizeof filename2);
-
+    printf("%-70s", "Testing multi-linked mount point");
+    fflush(stdout);
     
     /* Build the virtual file */
-    if ((file1=H5Fopen(filename1, H5F_ACC_RDONLY, fapl))<0 ||
-	(file2=H5Fopen(filename2, H5F_ACC_RDONLY, fapl))<0)
+    if ((file1=H5Fopen(FILE_NAME_1, H5F_ACC_RDONLY, H5P_DEFAULT))<0 ||
+	(file2=H5Fopen(FILE_NAME_2, H5F_ACC_RDONLY, H5P_DEFAULT))<0)
 	goto error;
     if (H5Fmount(file1, "/mnt1", file2, H5P_DEFAULT)<0) goto error;
 
@@ -402,7 +450,7 @@ test_mntlnk(hid_t fapl)
     if (H5Funmount(file1, "/mnt1_link")<0) goto error;
     if (H5Fclose(file1)<0) goto error;
     if (H5Fclose(file2)<0) goto error;
-    PASSED();
+    puts(" PASSED");
     return 0;
 
  error:
@@ -434,19 +482,17 @@ test_mntlnk(hid_t fapl)
  *-------------------------------------------------------------------------
  */
 static int
-test_move(hid_t fapl)
+test_move(void)
 {
     hid_t	file1=-1, file2=-1;
     herr_t	status;
-    char	filename1[1024], filename2[1024];
     
-    TESTING("object renaming");
-    h5_fixname(FILENAME[0], fapl, filename1, sizeof filename1);
-    h5_fixname(FILENAME[1], fapl, filename2, sizeof filename2);
+    printf("%-70s", "Testing object renaming");
+    fflush(stdout);
     
     /* Build the virtual file */
-    if ((file1=H5Fopen(filename1, H5F_ACC_RDWR, fapl))<0 ||
-	(file2=H5Fopen(filename2, H5F_ACC_RDWR, fapl))<0)
+    if ((file1=H5Fopen(FILE_NAME_1, H5F_ACC_RDWR, H5P_DEFAULT))<0 ||
+	(file2=H5Fopen(FILE_NAME_2, H5F_ACC_RDWR, H5P_DEFAULT))<0)
 	goto error;
     if (H5Fmount(file1, "/mnt1", file2, H5P_DEFAULT)<0) goto error;
 
@@ -456,8 +502,8 @@ test_move(hid_t fapl)
 	status = H5Gmove(file1, "/mnt1/rename_b/y",  "/y");
     } H5E_END_TRY;
     if (status>=0) {
-	FAILED();
-	puts("    Moving an object across files should't have been possible");
+	puts("*FAILED*");
+	puts("   Moving an object across files should not have been possible");
 	goto error;
     }
 
@@ -465,7 +511,7 @@ test_move(hid_t fapl)
     if (H5Funmount(file1, "/mnt1")<0) goto error;
     if (H5Fclose(file1)<0) goto error;
     if (H5Fclose(file2)<0) goto error;
-    PASSED();
+    puts(" PASSED");
     return 0;
 
  error:
@@ -495,17 +541,15 @@ test_move(hid_t fapl)
  *-------------------------------------------------------------------------
  */
 static int
-test_preopen(hid_t fapl)
+test_preopen(void)
 {
     hid_t	file1=-1, file2=-1, grp=-1;
-    char	filename1[1024], filename2[1024];
 
-    TESTING("preopening objects under the mount point");
-    h5_fixname(FILENAME[0], fapl, filename1, sizeof filename1);
-    h5_fixname(FILENAME[1], fapl, filename2, sizeof filename2);
+    printf("%-70s", "Testing preopening objects under the mount point");
+    fflush(stdout);
     
-    if ((file1=H5Fopen(filename1, H5F_ACC_RDONLY, fapl))<0 ||
-	(file2=H5Fopen(filename2, H5F_ACC_RDONLY, fapl))<0)
+    if ((file1=H5Fopen(FILE_NAME_1, H5F_ACC_RDONLY, H5P_DEFAULT))<0 ||
+	(file2=H5Fopen(FILE_NAME_2, H5F_ACC_RDONLY, H5P_DEFAULT))<0)
 	goto error;
 
     /* Open something under the mount point */
@@ -522,7 +566,7 @@ test_preopen(hid_t fapl)
     if (H5Gclose(grp)<0) goto error;
     if (H5Fclose(file1)<0) goto error;
     if (H5Fclose(file2)<0) goto error;
-    PASSED();
+    puts(" PASSED");
     return 0;
 
  error:
@@ -554,19 +598,17 @@ test_preopen(hid_t fapl)
  *-------------------------------------------------------------------------
  */
 static int
-test_postopen(hid_t fapl)
+test_postopen(void)
 {
     
     hid_t	file1=-1, file2=-1, grp=-1;
-    char	filename1[1024], filename2[1024];
 
-    TESTING("open object access after unmount");
-    h5_fixname(FILENAME[0], fapl, filename1, sizeof filename1);
-    h5_fixname(FILENAME[1], fapl, filename2, sizeof filename2);
+    printf("%-70s", "Testing open object access after unmount");
+    fflush(stdout);
 
     /* Create the virtual file */
-    if ((file1=H5Fopen(filename1, H5F_ACC_RDONLY, fapl))<0 ||
-	(file2=H5Fopen(filename2, H5F_ACC_RDONLY, fapl))<0)
+    if ((file1=H5Fopen(FILE_NAME_1, H5F_ACC_RDONLY, H5P_DEFAULT))<0 ||
+	(file2=H5Fopen(FILE_NAME_2, H5F_ACC_RDONLY, H5P_DEFAULT))<0)
 	goto error;
     if (H5Fmount(file1, "/mnt1", file2, H5P_DEFAULT)<0) goto error;
 
@@ -586,7 +628,7 @@ test_postopen(hid_t fapl)
     if (H5Gclose(grp)<0) goto error;
     if (H5Fclose(file1)<0) goto error;
     if (H5Fclose(file2)<0) goto error;
-    PASSED();
+    puts(" PASSED");
     return 0;
 
  error:
@@ -618,19 +660,17 @@ test_postopen(hid_t fapl)
  *-------------------------------------------------------------------------
  */
 static int
-test_unlink(hid_t fapl)
+test_unlink(void)
 {
     hid_t	file1=-1, file2=-1, mnt=-1, root=-1;
     herr_t	status;
-    char	filename1[1024], filename2[1024];
 
-    TESTING("mount point unlinking");
-    h5_fixname(FILENAME[0], fapl, filename1, sizeof filename1);
-    h5_fixname(FILENAME[1], fapl, filename2, sizeof filename2);
+    printf("%-70s", "Testing mount point unlinking");
+    fflush(stdout);
 
     /* Open files */
-    if ((file1=H5Fopen(filename1, H5F_ACC_RDWR, fapl))<0 ||
-	(file2=H5Fopen(filename2, H5F_ACC_RDWR, fapl))<0)
+    if ((file1=H5Fopen(FILE_NAME_1, H5F_ACC_RDWR, H5P_DEFAULT))<0 ||
+	(file2=H5Fopen(FILE_NAME_2, H5F_ACC_RDWR, H5P_DEFAULT))<0)
 	goto error;
 
     /*
@@ -656,8 +696,8 @@ test_unlink(hid_t fapl)
 	status = H5Gget_objinfo(mnt, "file2", TRUE, NULL);
     } H5E_END_TRY;
     if (status>=0) {
-	FAILED();
-	puts("    Incorrect traversal from mount point!");
+	puts("*FAILED*");
+	puts("   Incorrect traversal from mount point!");
 	goto error;
     }
     
@@ -673,16 +713,16 @@ test_unlink(hid_t fapl)
 	status = H5Gget_objinfo(mnt, "file2", TRUE, NULL);
     } H5E_END_TRY;
     if (status>=0) {
-	FAILED();
-	puts("    Traversal through mount point should not have worked!");
+	puts("*FAILED*");
+	puts("   Traversal through mount point should not have worked!");
 	goto error;
     }
     H5E_BEGIN_TRY {
 	status = H5Gget_objinfo(file2, "/mnt_unlink/file2", TRUE, NULL);
     } H5E_END_TRY;
     if (status>=0) {
-	FAILED();
-	puts("    Traversal through mount point should not have worked!");
+	puts("*FAILED*");
+	puts("   Traversal through mount point should not have worked!");
 	goto error;
     }
 
@@ -695,16 +735,16 @@ test_unlink(hid_t fapl)
 	status = H5Funmount(file1, "/mnt_unlink");
     } H5E_END_TRY;
     if (status>=0) {
-	FAILED();
-	puts("    Unmount by name should not have been allowed!");
+	puts("*FAILED*");
+	puts("   Unmount by name should not have been allowed!");
 	goto error;
     }
     H5E_BEGIN_TRY {
 	status = H5Funmount(file2, "/");
     } H5E_END_TRY;
     if (status>=0) {
-	FAILED();
-	puts("    Unmount by name should not have been allowed!");
+	puts("*FAILED*");
+	puts("   Unmount by name should not have been allowed!");
 	goto error;
     }
     if (H5Funmount(mnt, ".")<0) goto error;
@@ -714,7 +754,7 @@ test_unlink(hid_t fapl)
     if (H5Gclose(root)<0) goto error;
     if (H5Fclose(file1)<0) goto error;
     if (H5Fclose(file2)<0) goto error;
-    PASSED();
+    puts(" PASSED");
     return 0;
 
  error:
@@ -745,18 +785,16 @@ test_unlink(hid_t fapl)
  *-------------------------------------------------------------------------
  */
 static int
-test_mvmpt(hid_t fapl)
+test_mvmpt(void)
 {
     hid_t	file1=-1, file2=-1;
-    char	filename1[1024], filename2[1024];
     
-    TESTING("mount point renaming");
-    h5_fixname(FILENAME[0], fapl, filename1, sizeof filename1);
-    h5_fixname(FILENAME[1], fapl, filename2, sizeof filename2);
+    printf("%-70s", "Testing mount point renaming");
+    fflush(stdout);
     
     /* Build the virtual file */
-    if ((file1=H5Fopen(filename1, H5F_ACC_RDWR, fapl))<0 ||
-	(file2=H5Fopen(filename2, H5F_ACC_RDWR, fapl))<0)
+    if ((file1=H5Fopen(FILE_NAME_1, H5F_ACC_RDWR, H5P_DEFAULT))<0 ||
+	(file2=H5Fopen(FILE_NAME_2, H5F_ACC_RDWR, H5P_DEFAULT))<0)
 	goto error;
     if (H5Fmount(file1, "/mnt_move_a", file2, H5P_DEFAULT)<0) goto error;
 
@@ -770,7 +808,7 @@ test_mvmpt(hid_t fapl)
     if (H5Funmount(file1, "/mnt_move_b")<0) goto error;
     if (H5Fclose(file1)<0) goto error;
     if (H5Fclose(file2)<0) goto error;
-    PASSED();
+    puts(" PASSED");
     return 0;
 
  error:
@@ -799,20 +837,18 @@ test_mvmpt(hid_t fapl)
  *-------------------------------------------------------------------------
  */
 static int
-test_interlink(hid_t fapl)
+test_interlink(void)
 {
     hid_t	file1=-1, file2=-1, type=-1, space=-1, dset=-1;
-    char	filename1[1024], filename2[1024];
     herr_t	status;
     hsize_t	cur_dims[1] = {2};
     
-    TESTING("interfile hard links");
-    h5_fixname(FILENAME[0], fapl, filename1, sizeof filename1);
-    h5_fixname(FILENAME[1], fapl, filename2, sizeof filename2);
+    printf("%-70s", "Testing interfile hard links");
+    fflush(stdout);
     
     /* Build the virtual file */
-    if ((file1=H5Fopen(filename1, H5F_ACC_RDWR, fapl))<0 ||
-	(file2=H5Fopen(filename2, H5F_ACC_RDWR, fapl))<0)
+    if ((file1=H5Fopen(FILE_NAME_1, H5F_ACC_RDWR, H5P_DEFAULT))<0 ||
+	(file2=H5Fopen(FILE_NAME_2, H5F_ACC_RDWR, H5P_DEFAULT))<0)
 	goto error;
     if (H5Fmount(file1, "/mnt1", file2, H5P_DEFAULT)<0) goto error;
 
@@ -821,8 +857,8 @@ test_interlink(hid_t fapl)
 	status = H5Glink(file1, H5G_LINK_HARD, "/mnt1/file2",  "/file2");
     } H5E_END_TRY;
     if (status>=0) {
-	FAILED();
-	puts("    Interfile hard link should not have been allowed!");
+	puts("*FAILED*");
+	puts("   Interfile hard link should not have been allowed!");
 	goto error;
     }
 
@@ -831,8 +867,8 @@ test_interlink(hid_t fapl)
 	status = H5Gmove(file1, "/mnt1/file2", "/file2");
     } H5E_END_TRY;
     if (status>=0) {
-	FAILED();
-	puts("    Interfile renaming should not have been allowed!");
+	puts("*FAILED*");
+	puts("   Interfile renaming should not have been allowed!");
 	goto error;
     }
 
@@ -844,8 +880,8 @@ test_interlink(hid_t fapl)
 	dset = H5Dcreate(file1, "/mnt1/file2/dset", type, space, H5P_DEFAULT);
     } H5E_END_TRY;
     if (dset>=0) {
-	FAILED();
-	puts("    Dataset and shared type must be in the same file!");
+	puts("*FAILED*");
+	puts("   Dataset and shared type must be in the same file!");
 	goto error;
     }
     
@@ -855,7 +891,7 @@ test_interlink(hid_t fapl)
     if (H5Funmount(file1, "/mnt1")<0) goto error;
     if (H5Fclose(file1)<0) goto error;
     if (H5Fclose(file2)<0) goto error;
-    PASSED();
+    puts(" PASSED");
     return 0;
 
  error:
@@ -888,18 +924,16 @@ test_interlink(hid_t fapl)
  *-------------------------------------------------------------------------
  */
 static int
-test_uniformity(hid_t fapl)
+test_uniformity(void)
 {
     hid_t	file1=-1, file2=-1;
-    char	filename1[1024], filename2[1024];
     
-    TESTING("file handle uniformity");
-    h5_fixname(FILENAME[0], fapl, filename1, sizeof filename1);
-    h5_fixname(FILENAME[1], fapl, filename2, sizeof filename2);
+    printf("%-70s", "Testing file handle uniformity");
+    fflush(stdout);
     
     /* Build the virtual file */
-    if ((file1=H5Fopen(filename1, H5F_ACC_RDWR, fapl))<0 ||
-	(file2=H5Fopen(filename2, H5F_ACC_RDWR, fapl))<0)
+    if ((file1=H5Fopen(FILE_NAME_1, H5F_ACC_RDWR, H5P_DEFAULT))<0 ||
+	(file2=H5Fopen(FILE_NAME_2, H5F_ACC_RDWR, H5P_DEFAULT))<0)
 	goto error;
     if (H5Fmount(file1, "/mnt1", file2, H5P_DEFAULT)<0) goto error;
 
@@ -921,7 +955,7 @@ test_uniformity(hid_t fapl)
     if (H5Funmount(file1, "/mnt1")<0) goto error;
     if (H5Fclose(file1)<0) goto error;
     if (H5Fclose(file2)<0) goto error;
-    PASSED();
+    puts(" PASSED");
     return 0;
 
  error:
@@ -950,19 +984,17 @@ test_uniformity(hid_t fapl)
  *-------------------------------------------------------------------------
  */
 static int
-test_close(hid_t fapl)
+test_close(void)
 {
     hid_t	file1=-1, file2=-1;
-    char	filename1[1024], filename2[1024];
     herr_t	status;
     
-    TESTING("file handle close");
-    h5_fixname(FILENAME[0], fapl, filename1, sizeof filename1);
-    h5_fixname(FILENAME[1], fapl, filename2, sizeof filename2);
+    printf("%-70s", "Testing file handle close");
+    fflush(stdout);
     
     /* Build the virtual file */
-    if ((file1=H5Fopen(filename1, H5F_ACC_RDWR, fapl))<0 ||
-	(file2=H5Fopen(filename2, H5F_ACC_RDWR, fapl))<0)
+    if ((file1=H5Fopen(FILE_NAME_1, H5F_ACC_RDWR, H5P_DEFAULT))<0 ||
+	(file2=H5Fopen(FILE_NAME_2, H5F_ACC_RDWR, H5P_DEFAULT))<0)
 	goto error;
     if (H5Fmount(file1, "/mnt1", file2, H5P_DEFAULT)<0) goto error;
 
@@ -976,15 +1008,15 @@ test_close(hid_t fapl)
 	status = H5Gget_objinfo(file2, "/mnt1", TRUE, NULL);
     } H5E_END_TRY;
     if (status>=0) {
-	FAILED();
-	puts("    File1 contents are still accessible!");
+	puts("*FAILED*");
+	puts("   File1 contents are still accessible!");
 	goto error;
     }
     if (H5Fclose(file2)<0) goto error;
 
     /* Build the virtual file again */
-    if ((file1=H5Fopen(filename1, H5F_ACC_RDWR, fapl))<0 ||
-	(file2=H5Fopen(filename2, H5F_ACC_RDWR, fapl))<0)
+    if ((file1=H5Fopen(FILE_NAME_1, H5F_ACC_RDWR, H5P_DEFAULT))<0 ||
+	(file2=H5Fopen(FILE_NAME_2, H5F_ACC_RDWR, H5P_DEFAULT))<0)
 	goto error;
     if (H5Fmount(file1, "/mnt1", file2, H5P_DEFAULT)<0) goto error;
 
@@ -996,7 +1028,7 @@ test_close(hid_t fapl)
     if (H5Fclose(file1)<0) goto error;
     
     /* Shut down */
-    PASSED();
+    puts(" PASSED");
     return 0;
 
  error:
@@ -1029,32 +1061,30 @@ int
 main(void)
 {
     int		nerrors = 0;
-    hid_t	fapl = -1;
+    
+    H5Eset_auto(display_error_cb, NULL);
+    if (setup()<0) goto error;
 
-    h5_reset();
-    fapl = h5_fileaccess();
-    if (setup(fapl)<0) goto error;
-
-    nerrors += test_basic(fapl);
-    nerrors += test_illegal(fapl);
-    nerrors += test_hide(fapl);
-    nerrors += test_assoc(fapl);
-    nerrors += test_mntlnk(fapl);
-    nerrors += test_unlink(fapl);
-    nerrors += test_move(fapl);
-    nerrors += test_mvmpt(fapl);
-    nerrors += test_preopen(fapl);
-    nerrors += test_postopen(fapl);
-    nerrors += test_interlink(fapl);
-    nerrors += test_uniformity(fapl);
-    nerrors += test_close(fapl);
+    nerrors += test_basic();
+    nerrors += test_illegal();
+    nerrors += test_hide();
+    nerrors += test_assoc();
+    nerrors += test_mntlnk();
+    nerrors += test_unlink();
+    nerrors += test_move();
+    nerrors += test_mvmpt();
+    nerrors += test_preopen();
+    nerrors += test_postopen();
+    nerrors += test_interlink();
+    nerrors += test_uniformity();
+    nerrors += test_close();
     
     if (nerrors) goto error;
     puts("All mount tests passed.");
-    h5_cleanup(fapl);
-    return 0;
+    cleanup();
+    return(0);
     
  error:
     puts("***** MOUNT ERRORS *****");
-    return 1;
+    return(1);
 }

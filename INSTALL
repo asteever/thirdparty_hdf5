@@ -7,14 +7,12 @@ formats.
 For those that like to live dangerously and don't like to read ;-) you
 can do the following:
 
-	$ tar xf hdf5-1.0.0a.tar
-	$ cd hdf5-1.0.0a
+	$ tar xf hdf5-1.0.0.tar
+	$ cd hdf5-1.0.0
         
-        $ sh configure
+        $ sh configure		# Configures the library
         $ make                  # Builds library and tools
-	$ make test             # Builds and runs confidence tests.
-                                # NOTE: if fails, run the
-                                # command in the test directory
+	$ make _test            # Builds and runs confidence tests.
 
 	$ make install		# Optional
 
@@ -31,19 +29,19 @@ Step 0: Install optional third-party packages.
 
 Step 1. Unpack the source tree.
 
-    * The tarball will unpack into an hdf5-1.1.0 directory with one of
+    * The tarball will unpack into an hdf5-1.0.0 directory with one of
       the following commands:
 
-	$ tar xf hdf5-1.1.0.tar				OR
-	$ gunzip <hdf5-1.1.0.tar.gz |tar xf -		OR
-	$ bunzip2 <hdf5-1.1.0.tar.bz2 |tar xf -		OR
-	$ uncompress -c <hdf5-1.1.0.tar.Z |tar xf -
+	$ tar xf hdf5-1.0.0.tar				OR
+	$ gunzip <hdf5-1.0.0.tar.gz |tar xf -		OR
+	$ bunzip2 <hdf5-1.0.0.tar.bz2 |tar xf -		OR
+	$ uncompress -c <hdf5-1.0.0.tar.Z |tar xf -
 
 Step 2. Configure.
 
     * HDF5 uses the GNU autoconf program for configuration.  Most
       installations can be configured by typing just (from the
-      hdf5-1.1.0 directory)
+      hdf5-1.0.0 directory)
 
 	$ sh configure
 
@@ -68,44 +66,29 @@ Step 2. Configure.
 	RANLIB	  Name of the `ranlib' program or `:' if none.
 	MAKE	  Name of the `make' program (GNU make is preferred)
 
-    * This version of HDF5 is normally built with various debugging code
-      enabled.  To turn it off add the `--disable-debug' switch to the
-      configure command. Even if debugging support is compiled into the
-      library one must still enable the code at runtime with the HDF5_DEBUG
-      environment variable (see Debugging.html). Including debugging support
-      in the library (whether it's enabled or not) may incur a significant
-      run-time penalty.
+    * This version of HDF5 is normally built with various debugging
+      code disabled.  To turn it on add the `--enable-debug' switch
+      to the configure command. Even if debugging support is compiled
+      into the library one must still enable the code at runtime with
+      the HDF5_DEBUG environment variable (see Debugging.html).
 
-    * This version of HDF5 is normally built with support for symbolic 
-      debugging with dbx or gdb and without compiler optimization
-      switches.  To disable symbolic debugging and enable
-      optimizations add `--enable-production' to the configure
-      command.
+    * This version of HDF5 is normally built with compiler optimization
+      but without support for symbolic debugging with dbx or gdb.  To
+      disable optimizations and enable symbolic debugging add
+      `--disable-production' to the configure command.
 
-    * This version of HDF5 is normally built with the ability to print
+    * This version of HDF5 is normally built without the ability to print
       the names, arguments, and return values of all API functions
       when they're called.  For more information refer to the
-      Debugging.html file.  To disable tracing support add
-      `--disable-trace' to the configure command.
-
-    * Configure will look for the GNU zlib (a compression library) in
-      the standard places for your environment.  If it's installed in
-      a non-standard place then absolute path names can be specified
-      with `--with-zlib=INCDIR,LIBDIR' for the include file and/or
-      library. To prevent detection of zlib use `--without-zlib'.
-
-    * The HDF5-to-HDF4 conversion tool requires the HDF4 library and header
-      files which are auto-detected by configure.  If they are in a
-      non-standard place then absolute path names can be specified with
-      `--with-hdf4=INCDIR,LIBDIR' for the include file and/or library. To
-      prevent detection of hdf4 use `--without-hdf4'. Beware of the GNU zlib
-      that comes with hdf4 -- it's too old to use with hdf5 (hdf4 tools can be 
-      linked with the newer versions of zlib).
+      Debugging.html file.  To enable tracing support add
+      `--enable-trace' to the configure command.
 
     * Old versions of gcc (<2.8.0) may experience register allocation
       problems on some architectures.  If this happens then the
       `--disable-hsizet' can be given but the resulting library will
-      be unable to handle datasets larger than 4GB.
+      be unable to handle datasets larger than 4GB.  This will cause
+      the library to only be able to access 2GB files and objects but
+      often results in a substantial speed improvement.
 
     * Libraries, include files, programs, and documentation are
       installed (when one says `make install') under /usr/local/lib,
@@ -150,7 +133,7 @@ Step 4. Run confidence tests.
     * Temporary files will be deleted by each test when it completes,
       but may continue to exist in an incomplete state if the test
       fails. To prevent deletion of the files define the
-      HDF5_NOCLEANUP environment variable.
+      HDF5_NOCLEANUP environment variable to some non-empty value.
 
 Step 5. Install public files.
 
@@ -185,11 +168,10 @@ Step 5. Install public files.
 	    ./tools/libh5tools.a
 
 	Some tools:
-	    ./tools/h5ls	(list file contents)
-	    ./tools/h5dump	(dump file contents)
-	    ./tools/h5repart	(repartition file families)
-	    ./tools/h5toh4	(hdf5 to hdf4 file converter)
-	    ./tools/h5debug	(low-level file debugging)
+	    ./tools/h5ls
+	    ./tools/h5repart
+	    ./tools/h5dump
+	    ./tools/h5debug
 	    ./tools/h5import	(a demo)
 
 Step 6. Subscribe to mailing lists.

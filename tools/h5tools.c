@@ -15,7 +15,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <H5private.h>
+
 /*
  * The output functions need a temporary buffer to hold a piece of the
  * dataset while it's being printed.  This constant sets the limit on the
@@ -29,6 +29,8 @@
 #endif
 
 #define OPT(X,S)	((X)?(X):(S))
+#define MIN(X,Y)	((X)<(Y)?(X):(Y))
+#define NELMTS(X)	(sizeof(X)/sizeof(*X))
 #define ALIGN(A,Z)	((((A)+(Z)-1)/(Z))*(Z))
 
 
@@ -125,8 +127,8 @@ h5dump_sprint(char *s/*out*/, const h5dump_t *info, hid_t type, void *vp)
 	sprintf(temp, "%g", *((float*)vp));
 	
     } else if (info->ascii &&
-	       (H5Tequal(type, H5T_NATIVE_SCHAR) ||
-		H5Tequal(type, H5T_NATIVE_UCHAR))) {
+	       (H5Tequal(type, H5T_NATIVE_CHAR) ||
+	        H5Tequal(type, H5T_NATIVE_UCHAR))) {
 	switch (*((char*)vp)) {
 	case '"':
 	    strcpy(temp, "\\\"");
@@ -223,7 +225,7 @@ h5dump_sprint(char *s/*out*/, const h5dump_t *info, hid_t type, void *vp)
 	}
 	if (quote) sprintf(temp+strlen(temp), "%c", quote);
 	
-    } else if (H5Tequal(type, H5T_NATIVE_SCHAR)) {
+    } else if (H5Tequal(type, H5T_NATIVE_CHAR)) {
 	sprintf(temp, "%d", *((signed char*)vp));
 	
     } else if (H5Tequal(type, H5T_NATIVE_UCHAR)) {
@@ -248,29 +250,25 @@ h5dump_sprint(char *s/*out*/, const h5dump_t *info, hid_t type, void *vp)
 	sprintf(temp, "%lu", *((unsigned long*)vp));
 	
     } else if (H5Tequal(type, H5T_NATIVE_HSSIZE)) {
-	if (sizeof(hssize_t)==sizeof(int)) {
-	    sprintf(temp, "%d", *((int*)vp));
-	} else if (sizeof(hssize_t)==sizeof(long)) {
+	if (sizeof(hssize_t)==sizeof(long)) {
 	    sprintf(temp, "%ld", *((long*)vp));
 	} else {
 	    char fmt[8];
 	    strcpy(fmt, "%");
 	    strcat(fmt, PRINTF_LL_WIDTH);
 	    strcat(fmt, "d");
-	    sprintf(temp, fmt, *((int64_t*)vp));
+	    sprintf(temp, fmt, *((long long*)vp));
 	}
 	
     } else if (H5Tequal(type, H5T_NATIVE_HSIZE)) {
-	if (sizeof(hsize_t)==sizeof(int)) {
-	    sprintf(temp, "%u", *((unsigned*)vp));
-	} else if (sizeof(hsize_t)==sizeof(long)) {
+	if (sizeof(hsize_t)==sizeof(long)) {
 	    sprintf(temp, "%lu", *((unsigned long*)vp));
 	} else {
 	    char fmt[8];
 	    strcpy(fmt, "%");
 	    strcat(fmt, PRINTF_LL_WIDTH);
 	    strcat(fmt, "u");
-	    sprintf(temp, fmt, *((uint64_t*)vp));
+	    sprintf(temp, fmt, *((unsigned long long*)vp));
 	}
 	
     } else if (H5T_COMPOUND==H5Tget_class(type)) {
@@ -525,7 +523,7 @@ h5dump_fixtype(hid_t f_type)
 	 * memory type available.
 	 */
 	if (size<=sizeof(char)) {
-	    m_type = H5Tcopy(H5T_NATIVE_SCHAR);
+	    m_type = H5Tcopy(H5T_NATIVE_CHAR);
 	} else if (size<=sizeof(short)) {
 	    m_type = H5Tcopy(H5T_NATIVE_SHORT);
 	} else if (size<=sizeof(int)) {

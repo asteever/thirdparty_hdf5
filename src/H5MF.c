@@ -28,7 +28,7 @@
 #define PABLO_MASK      H5MF_mask
 
 /* Is the interface initialized? */
-static intn             interface_initialize_g = 0;
+static intn             interface_initialize_g = FALSE;
 #define INTERFACE_INIT  NULL
 
 

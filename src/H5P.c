@@ -16,6 +16,8 @@ static char		RcsId[] = "@(#)$Revision$";
 
 /* $Id$ */
 
+#include <stdarg.h>
+
 /* Private header files */
 #include <H5private.h>		/* Generic Functions			*/
 #include <H5Iprivate.h>		/* IDs			  	*/
@@ -28,9 +30,12 @@ static char		RcsId[] = "@(#)$Revision$";
 #define PABLO_MASK	H5P_mask
 
 /* Is the interface initialized? */
-static intn		interface_initialize_g = 0;
+static hbool_t		interface_initialize_g = FALSE;
 #define INTERFACE_INIT H5P_init_interface
 static herr_t		H5P_init_interface(void);
+
+/* PRIVATE PROTOTYPES */
+static void		H5P_term_interface(void);
 
 /*--------------------------------------------------------------------------
 NAME
@@ -58,7 +63,7 @@ H5P_init_interface(void)
      * initialized since this might be done at run-time instead of compile
      * time.
      */
-    if (H5F_init()<0) {
+    if (H5F_init_interface ()<0) {
 	HRETURN_ERROR (H5E_INTERNAL, H5E_CANTINIT, FAIL,
 		       "unable to initialize H5F and H5P interfaces");
     }
@@ -78,6 +83,14 @@ H5P_init_interface(void)
     if (ret_value < 0) {
 	HRETURN_ERROR(H5E_ATOM, H5E_CANTINIT, FAIL,
 		      "unable to initialize atom group");
+    }
+    
+    /*
+     * Register cleanup function.
+     */
+    if (H5_add_exit(H5P_term_interface) < 0) {
+	HRETURN_ERROR(H5E_INTERNAL, H5E_CANTINIT, FAIL,
+		      "unable to install atexit function");
     }
     
     FUNC_LEAVE(ret_value);
@@ -100,18 +113,14 @@ H5P_init_interface(void)
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-void
-H5P_term_interface(intn status)
+static void
+H5P_term_interface(void)
 {
     intn		    i;
 
-    if (interface_initialize_g>0) {
-	for (i = 0; i < H5P_NCLASSES; i++) {
-	    H5I_destroy_group((H5I_type_t)(H5I_TEMPLATE_0 + i));
-	}
+    for (i = 0; i < H5P_NCLASSES; i++) {
+	H5I_destroy_group((H5I_type_t)(H5I_TEMPLATE_0 + i));
     }
-    
-    interface_initialize_g = status;
 }
 
 /*--------------------------------------------------------------------------
@@ -1826,8 +1835,8 @@ H5Pget_family(hid_t plist_id, hsize_t *memb_size/*out*/,
     if (memb_plist_id) {
 	assert (plist->u.fam.memb_access);
 	*memb_plist_id = H5P_create (H5P_FILE_ACCESS,
-				     H5P_copy (H5P_FILE_ACCESS,
-					       plist->u.fam.memb_access));
+				H5P_copy (H5P_FILE_ACCESS,
+					  plist->u.fam.memb_access));
     }
 	
     FUNC_LEAVE (SUCCEED);
@@ -2643,13 +2652,18 @@ H5Pset_fill_value(hid_t plist_id, hid_t type_id, const void *value)
 herr_t
 H5Pget_fill_value(hid_t plist_id, hid_t type_id, void *value/*out*/)
 {
-    H5D_create_t	*plist = NULL;		/*property list		*/
-    H5T_t		*type = NULL;		/*data type		*/
-    H5T_path_t		*tpath = NULL;		/*type conversion info	*/
+    H5D_create_t	*plist = NULL;
+    H5T_t		*type = NULL;
+    H5T_cdata_t		*cdata = NULL;		/*conversion data	*/
+    H5T_conv_t		cfunc = NULL;		/*conversion function	*/
     void		*buf = NULL;		/*conversion buffer	*/
     void		*bkg = NULL;		/*conversion buffer	*/
     hid_t		src_id = -1;		/*source data type id	*/
-    herr_t		ret_value = FAIL;	/*return value		*/
+    herr_t		status;
+    herr_t		ret_value = FAIL;
+#ifdef H5T_DEBUG
+    H5_timer_t		timer;			/*conversion timer	*/
+#endif
     
     FUNC_ENTER(H5Pget_fill_value, FAIL);
     H5TRACE3("e","iix",plist_id,type_id,value);
@@ -2681,7 +2695,7 @@ H5Pget_fill_value(hid_t plist_id, hid_t type_id, void *value/*out*/)
     /*
      * Can we convert between the source and destination data types?
      */
-    if (NULL==(tpath=H5T_path_find(plist->fill.type, type, NULL, NULL))) {
+    if (NULL==(cfunc=H5T_find(plist->fill.type, type, H5T_BKG_NO, &cdata))) {
 	HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL,
 		    "unable to convert between src and dst data types");
     }
@@ -2699,7 +2713,7 @@ H5Pget_fill_value(hid_t plist_id, hid_t type_id, void *value/*out*/)
      */
     if (H5T_get_size(type)>=H5T_get_size(plist->fill.type)) {
 	buf = value;
-	if (tpath->cdata.need_bkg>=H5T_BKG_TEMP &&
+	if (cdata->need_bkg>=H5T_BKG_TEMP &&
 	    NULL==(bkg=H5MM_malloc(H5T_get_size(type)))) {
 	    HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL,
 			"memory allocation failed for type conversion");
@@ -2709,12 +2723,20 @@ H5Pget_fill_value(hid_t plist_id, hid_t type_id, void *value/*out*/)
 	    HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL,
 			"memory allocation failed for type conversion");
 	}
-	if (tpath->cdata.need_bkg>=H5T_BKG_TEMP) bkg = value;
+	if (cdata->need_bkg>=H5T_BKG_TEMP) bkg = value;
     }
     HDmemcpy(buf, plist->fill.buf, H5T_get_size(plist->fill.type));
     
     /* Do the conversion */
-    if (H5T_convert(tpath, src_id, type_id, 1, buf, bkg)<0) {
+#ifdef H5T_DEBUG
+    H5T_timer_begin(&timer, cdata);
+#endif
+    cdata->command = H5T_CONV_CONV;
+    status = (cfunc)(src_id, type_id, cdata, 1, buf, bkg);
+#ifdef H5T_DEBUG
+    H5T_timer_end(&timer, cdata, 1);
+#endif
+    if (status<0) {
 	HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL,
 		    "data type conversion failed");
     }
@@ -2962,86 +2984,6 @@ H5Pget_xfer(hid_t plist_id, H5D_transfer_t *data_xfer_mode)
     FUNC_LEAVE (SUCCEED);
 }
 #endif /*HAVE_PARALLEL*/
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5Pset_gc_references
- *
- * Purpose:	Sets the flag for garbage collecting references for the file.
- *      Dataset region references (and other reference types probably) use
- *      space in the file heap.  If garbage collection is on and the user
- *      passes in an uninitialized value in a reference structure, the heap
- *      might get corrupted.  When garbage collection is off however and the
- *      user re-uses a reference, the previous heap block will be orphaned and
- *      not returned to the free heap space.  When garbage collection is on,
- *      the user must initialize the reference structures to 0 or risk heap
- *      corruption.
- *
- *		Default value for garbage collecting references is off, just to be
- *      on the safe side.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Friday, November 13, 1998
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5Pset_gc_references(hid_t fapl_id, unsigned gc_ref)
-{
-    H5F_access_t	*fapl = NULL;
-    
-    FUNC_ENTER (H5Pset_gc_references, FAIL);
-    H5TRACE2("e","iIu",fapl_id,gc_ref);
-
-    /* Check args */
-    if (H5P_FILE_ACCESS != H5P_get_class (fapl_id) || NULL == (fapl = H5I_object (fapl_id))) {
-        HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list");
-    }
-
-    /* Set values */
-    fapl->gc_ref = (gc_ref!=0);
-
-    FUNC_LEAVE (SUCCEED);
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5Pget_gc_refernces
- *
- * Purpose:	Returns the current setting for the garbage collection refernces
- *      property from a file access property list.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Robb Matzke
- *              Tuesday, June  9, 1998
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5Pget_gc_reference(hid_t fapl_id, unsigned *gc_ref/*out*/)
-{
-    H5F_access_t	*fapl = NULL;
-
-    FUNC_ENTER (H5Pget_alignment, FAIL);
-    H5TRACE2("e","ix",fapl_id,gc_ref);
-
-    /* Check args */
-    if (H5P_FILE_ACCESS != H5P_get_class (fapl_id) || NULL == (fapl = H5I_object (fapl_id))) {
-        HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list");
-    }
-
-    /* Get values */
-    if (gc_ref) *gc_ref = fapl->gc_ref;
-
-    FUNC_LEAVE (SUCCEED);
-}
 
 
 /*--------------------------------------------------------------------------

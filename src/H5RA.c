@@ -47,9 +47,10 @@ struct H5RA_t {
 };
 
 #define PABLO_MASK	H5RA_mask
-static intn		interface_initialize_g = 0;
+static hbool_t interface_initialize_g = FALSE;
 #define INTERFACE_INIT H5RA_init_interface
 static herr_t H5RA_init_interface(void);
+static void H5RA_term_interface(void);
 static H5T_t *H5RA_meta_type_g = NULL;
 
 static herr_t H5RA_fix_overflow(H5RA_t *ra, H5T_t *type, H5RA_meta_t *meta,
@@ -73,15 +74,15 @@ static herr_t H5RA_fix_overflow(H5RA_t *ra, H5T_t *type, H5RA_meta_t *meta,
 static herr_t
 H5RA_init_interface(void)
 {
+    herr_t	ret_value = SUCCEED;
     H5T_t	*type = NULL;
     
     FUNC_ENTER(H5RA_init_interface, FAIL);
 
     /* The atom group */
-    if (H5I_init_group(H5I_RAGGED, H5I_RAGGED_HASHSIZE, 0,
-		       (herr_t(*)(void*))H5RA_close)<0) {
-	HRETURN_ERROR (H5E_RAGGED, H5E_CANTINIT, FAIL,
-		       "unable to initialize interface");
+    if ((ret_value=H5I_init_group(H5I_RAGGED, H5I_RAGGED_HASHSIZE, 0,
+				  (herr_t(*)(void*))H5RA_close))>=0) {
+	ret_value = H5_add_exit(H5RA_term_interface);
     }
 
     /* The meta dataset type */
@@ -97,7 +98,7 @@ H5RA_init_interface(void)
     }
     H5RA_meta_type_g = type;
     
-    FUNC_LEAVE(SUCCEED);
+    FUNC_LEAVE(ret_value);
 }
 
 
@@ -115,16 +116,12 @@ H5RA_init_interface(void)
  *
  *-------------------------------------------------------------------------
  */
-void
-H5RA_term_interface(intn status)
+static void
+H5RA_term_interface(void)
 {
-    if (interface_initialize_g>0) {
-	H5I_destroy_group(H5I_RAGGED);
-	H5T_close(H5RA_meta_type_g);
-	H5RA_meta_type_g = NULL;
-    }
-    
-    interface_initialize_g = status;
+    H5I_destroy_group(H5I_RAGGED);
+    H5T_close(H5RA_meta_type_g);
+    H5RA_meta_type_g = NULL;
 }
 
 
@@ -401,67 +398,6 @@ H5RAopen(hid_t loc_id, const char *name)
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5RA_isa
- *
- * Purpose:	Determines if an object is a ragged array.
- *
- * Return:	Success:	TRUE if the object is a ragged array; FALSE
- *				otherwise.
- *
- *		Failure:	Negative
- *
- * Programmer:	Robb Matzke
- *              Wednesday, November  4, 1998
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-htri_t
-H5RA_isa(H5G_entry_t *ent)
-{
-    htri_t	exists;
-    H5G_entry_t	d_ent;
-    
-    FUNC_ENTER(H5RA_isa, FAIL);
-
-    /* Open the container group */
-    if ((exists=H5G_isa(ent))<0) {
-	HRETURN_ERROR(H5E_RAGGED, H5E_CANTINIT, FAIL,
-		      "unable to read object header");
-    } else if (!exists) {
-	HRETURN(FALSE);
-    }
-
-    /* Is `raw' a dataset? */
-    if (H5G_find(ent, "raw", NULL, &d_ent)<0) HRETURN(FALSE);
-    if ((exists=H5D_isa(&d_ent))<0) {
-	HRETURN_ERROR(H5E_DATASET, H5E_NOTFOUND, FAIL, "not found");
-    } else if (!exists) {
-	HRETURN(FALSE);
-    }
-
-    /* Is `over' a dataset? */
-    if (H5G_find(ent, "over", NULL, &d_ent)<0 ||
-	(exists=H5D_isa(&d_ent))<0) {
-	HRETURN_ERROR(H5E_DATASET, H5E_NOTFOUND, FAIL, "not found");
-    } else if (!exists) {
-	HRETURN(FALSE);
-    }
-
-    /* Is `meta' a dataset? */
-    if (H5G_find(ent, "meta", NULL, &d_ent)<0 ||
-	(exists=H5D_isa(&d_ent))<0) {
-	HRETURN_ERROR(H5E_DATASET, H5E_NOTFOUND, FAIL, "not found");
-    } else if (!exists) {
-	HRETURN(FALSE);
-    }
-
-    FUNC_LEAVE(TRUE);
-}
-
-
-/*-------------------------------------------------------------------------
  * Function:	H5RA_open
  *
  * Purpose:	Open a ragged array.  The name of the array is the same as
@@ -693,7 +629,7 @@ H5RA_write(H5RA_t *ra, hssize_t start_row, hsize_t nrows, H5T_t *type,
     hsize_t	raw_cur_size[2];	/*raw data current size		*/
     hssize_t	hs_offset[2];		/*hyperslab offset		*/
     hsize_t	hs_size[2];		/*hyperslab size		*/
-    uint8_t	*raw_buf=NULL;		/*raw buffer			*/
+    uint8	*raw_buf=NULL;		/*raw buffer			*/
     size_t	type_size;		/*size of the TYPE argument	*/
     hsize_t	i;
     
@@ -781,7 +717,7 @@ H5RA_write(H5RA_t *ra, hssize_t start_row, hsize_t nrows, H5T_t *type,
     for (i=0; i<nrows; i++) {
 	if (size[i]>raw_cur_size[1]) {
 	    H5RA_fix_overflow(ra, type, meta+i, size[i]-raw_cur_size[1],
-			     (uint8_t*)(buf[i])+raw_cur_size[1]*type_size);
+			     (uint8*)(buf[i])+raw_cur_size[1]*type_size);
 	}
 	meta[i].nelmts = size[i];
     }
@@ -1044,7 +980,7 @@ H5RA_read(H5RA_t *ra, hssize_t start_row, hsize_t nrows, H5T_t *type,
     hsize_t	raw_read_size[2];	/*amount of raw data to read	*/
     hssize_t	hs_offset[2];		/*hyperslab offset		*/
     hsize_t	hs_size[2];		/*hyperslab size		*/
-    uint8_t	*raw_buf=NULL;		/*raw buffer			*/
+    uint8	*raw_buf=NULL;		/*raw buffer			*/
     size_t	type_size;		/*size of the TYPE argument	*/
     void	**buf_out=NULL;		/*output BUF values		*/
     hsize_t	i;			/*counter			*/

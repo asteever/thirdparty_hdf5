@@ -27,7 +27,7 @@
 #include <H5MMprivate.h>
 
 #define PABLO_MASK H5F_family
-static intn		interface_initialize_g = 0;
+static hbool_t		interface_initialize_g = FALSE;
 #define INTERFACE_INIT NULL
 
 #define H5F_FAM_OFFSET(LF,ADDR)	((off_t)((ADDR)->offset %		     \
@@ -44,11 +44,11 @@ static H5F_low_t *H5F_fam_open(const char *name,
 static herr_t H5F_fam_close(H5F_low_t *lf, const H5F_access_t *access_parms);
 static herr_t H5F_fam_read(H5F_low_t *lf, const H5F_access_t *access_parms,
 			   const H5D_transfer_t xfer_mode,
-			   const haddr_t *addr, size_t size, uint8_t *buf);
+			   const haddr_t *addr, size_t size, uint8 *buf);
 static herr_t H5F_fam_write(H5F_low_t *lf, const H5F_access_t *access_parms,
 			    const H5D_transfer_t xfer_mode,
 			    const haddr_t *addr, size_t size,
-			    const uint8_t *buf);
+			    const uint8 *buf);
 static herr_t H5F_fam_flush(H5F_low_t *lf, const H5F_access_t *access_parms);
 
 const H5F_low_class_t H5F_LOW_FAMILY_g[1] = {{
@@ -314,7 +314,7 @@ H5F_fam_close(H5F_low_t *lf, const H5F_access_t *access_parms)
 static herr_t
 H5F_fam_read(H5F_low_t *lf, const H5F_access_t *access_parms,
 	     const H5D_transfer_t xfer_mode,
-	     const haddr_t *addr, size_t size, uint8_t *buf)
+	     const haddr_t *addr, size_t size, uint8 *buf)
 {
     size_t		nbytes;
     haddr_t		cur_addr;
@@ -379,7 +379,7 @@ H5F_fam_read(H5F_low_t *lf, const H5F_access_t *access_parms,
 static herr_t
 H5F_fam_write(H5F_low_t *lf, const H5F_access_t *access_parms,
 	      const H5D_transfer_t xfer_mode,
-	      const haddr_t *addr, size_t size, const uint8_t *buf)
+	      const haddr_t *addr, size_t size, const uint8 *buf)
 {
     size_t		   	nbytes;
     haddr_t		    	cur_addr, max_addr;
@@ -454,14 +454,14 @@ H5F_fam_write(H5F_low_t *lf, const H5F_access_t *access_parms,
 	
 	/*
 	 * Make sure the logical eof is large enough to handle the request.
-	 * Do not decrease the EOF
+	 * Do not decrease the EOF.
 	 */
 	max_addr = cur_addr;
 	H5F_addr_inc(&max_addr, (hsize_t)nbytes);
 	if (H5F_addr_gt(&max_addr, &(lf->u.fam.memb[membno]->eof))) {
 	    H5F_low_seteof(lf->u.fam.memb[membno], &max_addr);
 	}
-	
+
 	/* Write the data to the member */
 	if (H5F_low_write(lf->u.fam.memb[membno],
 			  access_parms->u.fam.memb_access, xfer_mode,
@@ -500,7 +500,7 @@ static herr_t
 H5F_fam_flush(H5F_low_t *lf, const H5F_access_t *access_parms)
 {
     int			    membno, nerrors = 0;
-    uint8_t		    buf[1];
+    uint8		    buf[1];
     haddr_t		    addr1, addr2, addr3;
     hsize_t		    max_offset;
 

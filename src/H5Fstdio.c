@@ -13,8 +13,11 @@
 #include <H5Fprivate.h>
 #include <H5MMprivate.h>
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #define PABLO_MASK	H5F_stdio
-static intn		interface_initialize_g = 0;
+static hbool_t		interface_initialize_g = FALSE;
 #define INTERFACE_INIT	NULL
 
 static H5F_low_t *H5F_stdio_open(const char *name,
@@ -24,11 +27,11 @@ static herr_t H5F_stdio_close(H5F_low_t *lf, const H5F_access_t *access_parms);
 static herr_t H5F_stdio_read(H5F_low_t *lf, const H5F_access_t *access_parms,
 			     const H5D_transfer_t xfer_mode,
 			     const haddr_t *addr, size_t size,
-			     uint8_t *buf/*out*/);
+			     uint8 *buf/*out*/);
 static herr_t H5F_stdio_write(H5F_low_t *lf, const H5F_access_t *access_parms,
 			      const H5D_transfer_t xfer_mode,
 			      const haddr_t *addr, size_t size,
-			      const uint8_t *buf);
+			      const uint8 *buf);
 static herr_t H5F_stdio_flush(H5F_low_t *lf, const H5F_access_t *access_parms);
 
 const H5F_low_class_t H5F_LOW_STDIO_g[1] = {{
@@ -184,12 +187,12 @@ H5F_stdio_close(H5F_low_t *lf, const H5F_access_t __unused__ *access_parms)
 static herr_t
 H5F_stdio_read(H5F_low_t *lf, const H5F_access_t __unused__ *access_parms,
 	       const H5D_transfer_t __unused__ xfer_mode,
-	       const haddr_t *addr, size_t size, uint8_t *buf/*out*/)
+	       const haddr_t *addr, size_t size, uint8 *buf/*out*/)
 {
     size_t		n;
-    uint64_t		mask;
+    uint64		mask;
 #ifdef HAVE_FSEEK64
-    int64_t		offset;
+    int64		offset;
 #else
     long		offset;
 #endif
@@ -197,21 +200,21 @@ H5F_stdio_read(H5F_low_t *lf, const H5F_access_t __unused__ *access_parms,
     FUNC_ENTER(H5F_stdio_read, FAIL);
 
     /* Check for overflow */
-    mask = (uint64_t)1 << (8*sizeof(offset)-1);
+    mask = (uint64)1 << (8*sizeof(offset)-1);
     if (addr->offset >= mask ||
 	addr->offset + size < addr->offset ||
 	addr->offset+size >= mask) {
 	HRETURN_ERROR (H5E_IO, H5E_OVERFLOW, FAIL, "file address overflowed");
     }
 #ifdef HAVE_FSEEK64
-    offset = (int64_t)(addr->offset); /*checked for overflow*/
+    offset = (int64)(addr->offset); /*checked for overflow*/
 #else
     offset = (long)(addr->offset); /*checked for overflow*/
 #endif
 
     /* Check easy cases */
     if (0 == size) HRETURN(SUCCEED);
-    if ((uint64_t)offset >= lf->eof.offset) {
+    if ((uint64)offset >= lf->eof.offset) {
 	HDmemset(buf, 0, size);
 	HRETURN(SUCCEED);
     }
@@ -261,7 +264,7 @@ H5F_stdio_read(H5F_low_t *lf, const H5F_access_t __unused__ *access_parms,
      */
     lf->u.stdio.op = H5F_OP_READ;
 #ifdef HAVE_FSEEK64
-    lf->u.stdio.cur = (int64_t)(offset+n); /*checked for overflow above*/
+    lf->u.stdio.cur = (int64)(offset+n); /*checked for overflow above*/
 #else
     lf->u.stdio.cur = (off_t)(offset+n); /*checked for overflow above*/
 #endif
@@ -293,12 +296,12 @@ H5F_stdio_read(H5F_low_t *lf, const H5F_access_t __unused__ *access_parms,
 static herr_t
 H5F_stdio_write(H5F_low_t *lf, const H5F_access_t __unused__ *access_parms,
 	        const H5D_transfer_t __unused__ xfer_mode,
-		const haddr_t *addr, size_t size, const uint8_t *buf)
+		const haddr_t *addr, size_t size, const uint8 *buf)
 {
-    uint64_t		mask;
+    uint64		mask;
 #ifdef HAVE_FSEEK64
-    int64_t		offset;
-    uint64_t		n;
+    int64		offset;
+    uint64		n;
 #else
     long		offset;
     size_t		n;
@@ -307,14 +310,14 @@ H5F_stdio_write(H5F_low_t *lf, const H5F_access_t __unused__ *access_parms,
     FUNC_ENTER(H5F_stdio_write, FAIL);
 
     /* Check for overflow */
-    mask = (uint64_t)1 << (8*sizeof(offset)-1);
+    mask = (uint64)1 << (8*sizeof(offset)-1);
     if (addr->offset >= mask ||
 	addr->offset+size < addr->offset ||
 	addr->offset+size >= mask) {
 	HRETURN_ERROR (H5E_IO, H5E_OVERFLOW, FAIL, "file address overflowed");
     }
 #ifdef HAVE_FSEEK64
-    offset = (int64_t)(addr->offset); /*checked for overflow*/
+    offset = (int64)(addr->offset); /*checked for overflow*/
     n = size; /*checked for overflow*/
 #else
     offset = (long)(addr->offset); /*checked for overflow*/
@@ -353,7 +356,7 @@ H5F_stdio_write(H5F_low_t *lf, const H5F_access_t __unused__ *access_parms,
      * Update seek optimizing data.
      */
     lf->u.stdio.op = H5F_OP_WRITE;
-    lf->u.stdio.cur = offset + (int64_t)n;
+    lf->u.stdio.cur = offset + (int64)n;
     FUNC_LEAVE(SUCCEED);
 }
 

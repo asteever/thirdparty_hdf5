@@ -8,26 +8,26 @@
  * Purpose:	Checks the effect of various I/O request sizes and raw data
  *		cache sizes.  Performance depends on the amount of data read
  *		from disk and we use a filter to get that number.
+
  */
-
-/* See H5private.h for how to include headers */
-#undef NDEBUG
+#include <assert.h>
 #include <hdf5.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#ifdef STDC_HEADERS
-#   include <assert.h>
-#   include <stdio.h>
-#   include <stdlib.h>
-#   include <string.h>
-#endif
-
-
+#include <H5config.h>
 #ifndef HAVE_ATTRIBUTE
 #   undef __attribute__
 #   define __attribute__(X) /*void*/
 #   define __unused__ /*void*/
 #else
 #   define __unused__ __attribute__((unused))
+#endif
+
+#if defined(WIN32)
+#undef __unused__
+#define __unused__
 #endif
 
 #define FILE_NAME	"chunk.h5"
@@ -113,7 +113,7 @@ create_dataset (void)
 {
     hid_t	file, space, dcpl, dset;
     hsize_t	size[2];
-    signed char	*buf;
+    char	*buf;
 
     /* The file */
     file = H5Fcreate (FILE_NAME, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_g);
@@ -130,12 +130,12 @@ create_dataset (void)
     H5Pset_filter (dcpl, FILTER_COUNTER, 0, 0, NULL);
         
     /* The dataset */
-    dset = H5Dcreate (file, "dset", H5T_NATIVE_SCHAR, space, dcpl);
+    dset = H5Dcreate (file, "dset", H5T_NATIVE_CHAR, space, dcpl);
     assert (dset>=0);
 
     /* The data */
     buf = calloc (1, SQUARE (DS_SIZE*CH_SIZE));
-    H5Dwrite (dset, H5T_NATIVE_SCHAR, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf);
+    H5Dwrite (dset, H5T_NATIVE_CHAR, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf);
     free (buf);
 
     /* Close */
@@ -165,7 +165,7 @@ static double
 test_rowmaj (int op, hsize_t cache_size, hsize_t io_size)
 {
     hid_t	file, dset, mem_space, file_space;
-    signed char	*buf = calloc (1, SQUARE(io_size));
+    char	*buf = calloc (1, SQUARE(io_size));
     hsize_t	i, j, hs_size[2];
     hssize_t	hs_offset[2];
     int		mdc_nelmts, rdcc_nelmts;
@@ -200,10 +200,10 @@ test_rowmaj (int op, hsize_t cache_size, hsize_t io_size)
 				 NULL, hs_size, NULL);
 
 	    if (READ==op) {
-		H5Dread (dset, H5T_NATIVE_SCHAR, mem_space, file_space,
+		H5Dread (dset, H5T_NATIVE_CHAR, mem_space, file_space,
 			 H5P_DEFAULT, buf);
 	    } else {
-		H5Dwrite (dset, H5T_NATIVE_SCHAR, mem_space, file_space,
+		H5Dwrite (dset, H5T_NATIVE_CHAR, mem_space, file_space,
 			  H5P_DEFAULT, buf);
 	    }
 	    H5Sclose (mem_space);
@@ -241,9 +241,13 @@ test_diag (int op, hsize_t cache_size, hsize_t io_size, hsize_t offset)
 {
     hid_t	file, dset, mem_space, file_space;
     hsize_t	i, hs_size[2];
-    hsize_t	nio = 0;
+#if defined(WIN32)
+	hssize_t nio = 0;
+#else
+	hsize_t nio = 0;
+#endif
     hssize_t	hs_offset[2];
-    signed char	*buf = calloc (1, SQUARE (io_size));
+    char	*buf = calloc (1, SQUARE (io_size));
     int		mdc_nelmts, rdcc_nelmts;
     double	w0;
 
@@ -268,10 +272,10 @@ test_diag (int op, hsize_t cache_size, hsize_t io_size, hsize_t offset)
 	H5Sselect_hyperslab (file_space, H5S_SELECT_SET, hs_offset, NULL,
 			     hs_size, NULL);
 	if (READ==op) {
-	    H5Dread (dset, H5T_NATIVE_SCHAR, mem_space, file_space,
+	    H5Dread (dset, H5T_NATIVE_CHAR, mem_space, file_space,
 		     H5P_DEFAULT, buf);
 	} else {
-	    H5Dwrite (dset, H5T_NATIVE_SCHAR, mem_space, file_space,
+	    H5Dwrite (dset, H5T_NATIVE_CHAR, mem_space, file_space,
 		      H5P_DEFAULT, buf);
 	}
 	H5Sclose (mem_space);
@@ -284,12 +288,7 @@ test_diag (int op, hsize_t cache_size, hsize_t io_size, hsize_t offset)
     H5Dclose (dset);
     H5Fclose (file);
 
-    /*
-     * The extra cast in the following statement is a bug workaround for the
-     * Win32 version 5.0 compiler.
-     * 1998-11-06 ptl
-     */
-    return (double)(hssize_t)nio/(hssize_t)nio_g;
+    return (double)nio/(double)nio_g;
 }
 
 

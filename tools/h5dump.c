@@ -12,7 +12,6 @@ typedef struct shared_obj_t{
 unsigned long objno[2];
 char objname[1024];
 int displayed;
-int recorded;
 } shared_obj_t;
 
 typedef struct table_t{
@@ -97,11 +96,10 @@ static void indentation(int x) {
 static void
 print_datatype(hid_t type) {
 char *fname ;
-hid_t nmembers, mtype, str_type;
-int i, j, ndims, perm[H5DUMP_MAX_RANK];
-size_t dims[H5DUMP_MAX_RANK], size;
-H5T_str_t str_pad; 
-H5T_cset_t cset;
+hid_t nmembers, mtype;
+int i, j, ndims, perm[H5DUMP_MAX_NDIMS];
+size_t dims[H5DUMP_MAX_NDIMS];
+
 H5G_stat_t statbuf;
 
     switch (H5Tget_class(type)) {
@@ -140,8 +138,8 @@ H5G_stat_t statbuf;
             printf( "H5T_STD_U64BE");
         else if (H5Tequal(type, H5T_STD_U64LE))
             printf( "H5T_STD_U64LE");
-        else if (H5Tequal(type, H5T_NATIVE_SCHAR)) 
-            printf( "H5T_NATIVE_SCHAR");
+        else if (H5Tequal(type, H5T_NATIVE_CHAR)) 
+            printf( "H5T_NATIVE_CHAR");
         else if (H5Tequal(type, H5T_NATIVE_UCHAR))
             printf( "H5T_NATIVE_UCHAR");
         else if (H5Tequal(type, H5T_NATIVE_SHORT))
@@ -189,69 +187,17 @@ H5G_stat_t statbuf;
 
     case H5T_TIME: 
         printf( "H5T_TIME: not yet implemented");
-        break;
 
     case H5T_STRING: 
 
-        size = H5Tget_size(type); 
-        str_pad = H5Tget_strpad(type) ;
-        cset = H5Tget_cset(type);
-
-        indentation (indent+col);
-        printf("%s %s %d;\n", BEGIN, STRSIZE, size);
-  
-        indentation (indent+col);
-        printf("  %s ", STRPAD);
-        if (str_pad == H5T_STR_NULLTERM )
-
-            printf("H5T_STR_NULLTERM;\n");
-
-        else if (str_pad == H5T_STR_NULLPAD )
-
-            printf("H5T_STR_NULLPAD;\n");
-
-        else if (str_pad == H5T_STR_SPACEPAD )
-
-            printf("H5T_STR_SPACEPAD;\n");
-
-        else
-            printf("H5T_STR_ERROR;\n");
-
-        indentation (indent+col);
-        printf("  %s ", CSET);
-        if (cset == H5T_CSET_ASCII)
-            printf("H5T_CSET_ASCII;\n");
-        else 
-            printf("unknown_cset;\n");
-
-        str_type = H5Tcopy(H5T_C_S1);
-        H5Tset_cset(str_type, cset ) ;
-        H5Tset_size(str_type, size);
-        H5Tset_strpad(str_type, str_pad);
-
-        indentation (indent+col);
-        printf("  %s ", CTYPE);
-        if (H5Tequal(type,str_type)) {
-            printf("H5T_C_S1;\n");
-            H5Tclose(str_type);
-        } else {
-
-          H5Tclose(str_type);
-          str_type = H5Tcopy(H5T_FORTRAN_S1);
-          H5Tset_cset(str_type, cset ) ;
-          H5Tset_size(str_type, size);
-          H5Tset_strpad(str_type, str_pad );
-          if (H5Tequal(type,str_type)) 
-              printf( "H5T_FORTRAN_S1;\n");
-          else {
-            printf("unknown_one_character_type;\n ");
+        if (H5Tequal(type,H5T_C_S1))
+            printf( "H5T_C_S1");
+        else if (H5Tequal(type,H5T_FORTRAN_S1))
+            printf( "H5T_FORTRAN_S1");
+        else {
+            printf( "undefined string");
             status = 1;
-          }
-          H5Tclose(str_type);
         }
-        indentation (indent+col);
-        printf("%s\n", END);
-
         break;
 
     case H5T_BITFIELD: 
@@ -291,11 +237,12 @@ H5G_stat_t statbuf;
 
             indentation (indent+col);
             if (i >= 0) {
-                if (!type_table.objs[i].recorded) /* unamed data type */
-                    printf("\"#%lu:%lu\"\n", type_table.objs[i].objno[0],
-                                             type_table.objs[i].objno[1]);
+                if (!type_table.objs[i].displayed) /* unamed data type */
+                    printf("%s %s \"#%lu:%lu\" %s\n", HARDLINK, BEGIN,
+                                                      type_table.objs[i].objno[0],
+                                                      type_table.objs[i].objno[1], END);
                 else
-                    printf("\"%s\"\n", type_table.objs[i].objname);
+                    printf("%s %s \"%s\" %s\n", HARDLINK, BEGIN,type_table.objs[i].objname, END);
             } else {
                 printf("h5dump error: unknown committed type.\n");
                 status = 1;
@@ -317,7 +264,7 @@ H5G_stat_t statbuf;
 
                  print_datatype(mtype);
 
-                 printf (" \"%s\"", fname);
+                 printf (" %s", fname);
 
                  if (ndims != 1 || dims[0] != 1) {
                      for (j = 0; j < ndims; j++) 
@@ -379,16 +326,15 @@ dump_datatype (hid_t type) {
 
     indent += col;
     indentation (indent);
-    if (H5Tget_class(type) == H5T_COMPOUND || 
-        H5Tget_class(type) == H5T_STRING ) {
+    if (H5Tget_class(type) == H5T_COMPOUND) {
         printf ("%s %s\n", DATATYPE, BEGIN);
         print_datatype(type);
         indentation (indent);
         printf ("%s\n", END);
     } else {
-        printf ("%s %s ", DATATYPE, BEGIN);
+        printf ("%s %s \"", DATATYPE, BEGIN);
         print_datatype(type);
-        printf (" %s\n", END);
+        printf ("\" %s\n", END);
     }
     indent -= col;
 }
@@ -410,8 +356,8 @@ dump_datatype (hid_t type) {
 static void
 dump_dataspace (hid_t space)
 {
-    hsize_t size[H5DUMP_MAX_RANK];
-    hsize_t maxsize[H5DUMP_MAX_RANK]; 
+    hsize_t size[H5DUMP_MAX_NDIMS];
+    hsize_t maxsize[H5DUMP_MAX_NDIMS]; 
     int ndims = H5Sget_simple_extent_dims(space, size, maxsize);
     int i;
 
@@ -421,13 +367,13 @@ dump_dataspace (hid_t space)
 
     if (H5Sis_simple(space)) {
 
-        if (ndims == 0) /* scalar dataspace */ 
-            HDfprintf (stdout, "%s %s %s\n", BEGIN, SCALAR, END);
-        else { /* simple dataspace */
-            HDfprintf (stdout, "%s %s ( %Hu",BEGIN, SIMPLE, size[0]);
+        if (ndims == 0) /* scalar space */
+            HDfprintf (stdout, "%s %s ( 0 ) ( 0 ) %s\n",BEGIN, ARRAY, END);
+        else {
+            HDfprintf (stdout, "%s %s ( %Hu",BEGIN, ARRAY, size[0]);
             for (i = 1; i < ndims; i++) 
                 HDfprintf (stdout, ", %Hu", size[i]);
-            printf(" ) / ");
+            printf(" ) ");
            
            if (maxsize[0]==H5S_UNLIMITED)
                HDfprintf (stdout, "( %s", "H5S_UNLIMITED");
@@ -520,23 +466,21 @@ char *obj_name, *attr_name;
 hid_t  oid, attr_id, type, space;
 H5G_stat_t statbuf;
 
+
     j = strlen(name)-1;
-    obj_name = malloc ((j+2)* sizeof(char));
+    obj_name = malloc ((j+2) * sizeof(char));
 
     /* find the last / */
     while (name[j] != '/' && j >=0) j--;
-
     /* object name */
     if (j == -1) strcpy(obj_name, "/");
-    else {
-      strncpy(obj_name, name, j+1);
-      obj_name[j+1] = '\0';
-    }
-
+    else strncpy(obj_name, name, j+1);
+ 
     attr_name = name+j+1;
+
     begin_obj (ATTRIBUTE, name);
 
-    H5Gget_objinfo(loc_id, obj_name, FALSE , &statbuf);
+    H5Gget_objinfo(loc_id, obj_name, FALSE, &statbuf);
     switch (statbuf.type) {
     case H5G_GROUP:
          if ((oid = H5Gopen (loc_id, obj_name))<0) {
@@ -706,7 +650,8 @@ int i;
                      indentation (indent);
                      begin_obj(DATASET, name);
                      indentation (indent+col);
-                     printf("%s \"%s\"\n", HARDLINK, dset_table.objs[i].objname);
+                     printf("%s %s \"%s\" %s\n",HARDLINK, BEGIN, 
+                                                dset_table.objs[i].objname,END);
                      indentation (indent);
                      end_obj();
                      goto done;
@@ -766,8 +711,8 @@ static void
 dump_named_datatype (hid_t type, const char *name) {
 char *fname ;
 hid_t nmembers, mtype;
-int i, j, ndims, perm[H5DUMP_MAX_RANK];
-size_t dims[H5DUMP_MAX_RANK];
+int i, j, ndims, perm[H5DUMP_MAX_NDIMS];
+size_t dims[H5DUMP_MAX_NDIMS];
 
     indentation (indent);
     begin_obj(DATATYPE, name);
@@ -786,7 +731,7 @@ size_t dims[H5DUMP_MAX_RANK];
 
          print_datatype(mtype);
 
-         printf (" \"%s\"", fname);
+         printf (" %s", fname);
   
          if (ndims != 1 || dims[0] != 1) {
              for (j = 0; j < ndims; j++) 
@@ -827,12 +772,12 @@ int i;
 
 
     indentation (indent);
-    begin_obj(GROUPNAME, name);
+    begin_obj(GROUP, name);
     indent += col;
 
     if (!strcmp(name,"/") && unamedtype) { /* dump unamed type in root group */
         for (i = 0; i < type_table.nobjs; i++)
-             if (!type_table.objs[i].recorded) {
+             if (!type_table.objs[i].displayed) {
                  dset = H5Dopen (gid, type_table.objs[i].objname);
                  type = H5Dget_type (dset);
                  sprintf(typename,"#%lu:%lu", type_table.objs[i].objno[0],
@@ -856,12 +801,12 @@ int i;
         } else if (group_table.objs[i].displayed) {
 
             indentation (indent);
-            printf("%s \"%s\"\n",HARDLINK, group_table.objs[i].objname);
+            printf("%s %s \"%s\" %s\n",HARDLINK, BEGIN, group_table.objs[i].objname,END); 
 
         } else {
 
             strcpy(group_table.objs[i].objname, prefix);
-            group_table.objs[i].displayed = 1;
+            group_table.objs[i].displayed=1;
             H5Aiterate (gid, NULL, dump_attr, NULL);
             H5Giterate (gid, ".", NULL, dump_all, NULL);
 
@@ -940,7 +885,13 @@ hid_t  type, space;
          printf("DATA{ not yet implemented.}\n");
          break;
     case H5T_COMPOUND:
+/*
          dump_data(did, DATASET_DATA);
+*/
+         indent += col;
+         indentation (indent);
+         indent -= col;
+         printf("DATA{ not yet implemented.}\n");
          break;
     default: break;
     }
@@ -985,26 +936,20 @@ int i;
     for (i = 0; i < group_table.size; i++) {
          group_table.objs[i].objno[0] = group_table.objs[i].objno[1] = 0;
          group_table.objs[i].displayed = 0;
-         group_table.objs[i].recorded = 0;
     }
 
     for (i = 0; i < dset_table.size; i++) {
          dset_table.objs[i].objno[0] = dset_table.objs[i].objno[1] = 0;
          dset_table.objs[i].displayed = 0;
-         dset_table.objs[i].recorded = 0;
     }
 
     for (i = 0; i < type_table.size; i++) {
-         type_table.objs[i].objno[0] = type_table.objs[i].objno[1] = 0;
-         type_table.objs[i].displayed = 0;
-         type_table.objs[i].recorded = 0;
+         dset_table.objs[i].objno[0] = dset_table.objs[i].objno[1] = 0;
+         dset_table.objs[i].displayed = 0;
     }
 
     prefix = (char *) malloc(prefix_len * sizeof (char));
-    *prefix = '\0';
-/*
     strcpy(prefix, "");
-*/
 }
 
 
@@ -1060,7 +1005,6 @@ int i;
         for (i = table->nobjs; i < table->size; i++) {
              table->objs[i].objno[0] = table->objs[i].objno[1] = 0;
              table->objs[i].displayed = 0;
-             table->objs[i].recorded = 0;
         }
     }
 
@@ -1091,27 +1035,24 @@ int i;
 
     printf("group_table: # of entries = %d\n", group_table.nobjs);
     for ( i = 0; i < group_table.nobjs; i++)
-        printf ("%ul %ul %s\n %d %d", group_table.objs[i].objno[0],
+        printf ("%ul %ul %s\n %d", group_table.objs[i].objno[0],
                                    group_table.objs[i].objno[1],
                                    group_table.objs[i].objname,
-                                   group_table.objs[i].displayed,
-                                   group_table.objs[i].recorded);
+                                   group_table.objs[i].displayed);
 
     printf("\ndset_table: # of entries = %d\n", dset_table.nobjs);
     for ( i = 0; i < dset_table.nobjs; i++)
-        printf ("%ul %ul %s %d %d\n", dset_table.objs[i].objno[0],
+        printf ("%ul %ul %s %d\n", dset_table.objs[i].objno[0],
                                    dset_table.objs[i].objno[1],
                                    dset_table.objs[i].objname,
-                                   dset_table.objs[i].displayed,
-                                   dset_table.objs[i].recorded);
+                                   dset_table.objs[i].displayed);
    
     printf("\ntype_table: # of entries = %d\n", type_table.nobjs);
     for ( i = 0; i < type_table.nobjs; i++)
-        printf ("%ul %ul %s %d %d\n", type_table.objs[i].objno[0],
+        printf ("%ul %ul %s %d\n", type_table.objs[i].objno[0],
                                    type_table.objs[i].objno[1],
                                    type_table.objs[i].objname,
-                                   type_table.objs[i].displayed,
-                                   type_table.objs[i].recorded);
+                                   type_table.objs[i].displayed);
 }
 */
 
@@ -1183,8 +1124,10 @@ int i;
              type = H5Dget_type (obj);
              if (H5Tcommitted(type) > 0 ) {
                  H5Gget_objinfo(type, ".", TRUE, &statbuf);
-                 if (search_obj (type_table, statbuf.objno) < 0) 
+                 if (search_obj (type_table, statbuf.objno) < 0) {
                      add_obj (&type_table, statbuf.objno, tmp) ;
+                     type_table.objs[type_table.nobjs-1].displayed = 0;
+                 }
              }
              H5Tclose(type);
              H5Dclose (obj);
@@ -1199,10 +1142,10 @@ int i;
          i = search_obj (type_table, statbuf.objno);
          if (i < 0) {
              add_obj (&type_table, statbuf.objno, tmp) ;
-             type_table.objs[type_table.nobjs-1].recorded = 1; /* named data type */
+             type_table.objs[type_table.nobjs-1].displayed = 1; /* named data type */
          } else {
              strcpy (type_table.objs[i].objname, tmp);
-             type_table.objs[i].recorded = 1; 
+             type_table.objs[i].displayed = 1; /* named data type */
          }
          break;
 
@@ -1255,8 +1198,7 @@ dump_data (hid_t obj_id, int obj_data) {
      * If the dataset is a 1-byte integer type then format it as an ASCI
      * character string instead of integers.
      */
-    if ((1==size && H5T_INTEGER==H5Tget_class(f_type)) || 
-        (H5T_STRING == H5Tget_class(f_type))) {
+    if (1==size && H5T_INTEGER==H5Tget_class(f_type)) {
         info.elmt_suf1 = "";
         info.elmt_suf2 = "";
         info.idx_fmt = "        (%s) \"";
@@ -1275,7 +1217,6 @@ dump_data (hid_t obj_id, int obj_data) {
     if (h5dump1(stdout, &info, obj_id, -1, obj_data)<0) {
         indentation(indent+col);
         printf("Unable to print data.\n");
-        status = 1;
     }
 
     if (1==size && H5T_INTEGER==H5Tget_class(f_type)) 
@@ -1416,9 +1357,9 @@ H5Eset_auto (NULL, NULL);
     H5Giterate (fid, "/", NULL, find_shared_objs, NULL);
     strcpy(prefix, "");
 
-    /* does there exist unamed committed data type */
+    /* assign names to unamed shared data type */
     for ( i = 0; i < type_table.nobjs; i++)
-          if (type_table.objs[i].recorded == 0) unamedtype = 1;
+          if (type_table.objs[i].displayed == 0) unamedtype = 1;
 
 /*
     #ifdef H5DUMP_DEBUG
@@ -1431,7 +1372,6 @@ H5Eset_auto (NULL, NULL);
         goto done;
     }
 
-    /* start to dump */
     begin_obj("HDF5", fname);
 
     if (display_bb) dump_bb();
@@ -1457,6 +1397,7 @@ H5Eset_auto (NULL, NULL);
                for (curr_arg = opts[i]+1; 
                     curr_arg < ((i+1)==nopts?(argc-1):opts[i+1]); 
                     curr_arg++) 
+
                     dump_selected_attr (fid, argv[curr_arg]);
 
            } else if (!strcmp(argv[opts[i]],"-d")) {
@@ -1479,8 +1420,8 @@ H5Eset_auto (NULL, NULL);
                                  if (dset_table.objs[index].displayed) {
                                      begin_obj(DATASET, argv[curr_arg]);
                                      indentation (indent+col);
-                                     printf("%s \"%s\"\n", HARDLINK,
-                                                           dset_table.objs[index].objname);
+                                     printf("%s %s \"%s\" %s\n",HARDLINK, BEGIN, 
+                                                       dset_table.objs[index].objname,END);
                                      indentation (indent);
                                      end_obj();
                                  } else {
@@ -1504,7 +1445,7 @@ H5Eset_auto (NULL, NULL);
                      curr_arg < ((i+1)==nopts?(argc-1):opts[i+1]); 
                      curr_arg++) {
                      if ((gid = H5Gopen (fid, argv[curr_arg])) < 0) {
-                         begin_obj (GROUPNAME, argv[curr_arg]); 
+                         begin_obj (GROUP, argv[curr_arg]); 
                          indentation (col);
                          fprintf (stdout, "h5dump error: unable to open %s\n", 
                                   argv[curr_arg]);
@@ -1568,7 +1509,7 @@ H5Eset_auto (NULL, NULL);
                          /* check if argv[curr_arg] is unamed data type */
                          index = 0;
                          while (index < type_table.nobjs ) {
-                             if (!type_table.objs[index].recorded) { /* unamed data type */
+                             if (!type_table.objs[index].displayed) { /* unamed data type */
                                  sprintf(name,"#%lu:%lu\n", type_table.objs[index].objno[0], 
                                                             type_table.objs[index].objno[1]);
                                  sprintf(name1,"/#%lu:%lu\n", type_table.objs[index].objno[0], 

@@ -57,7 +57,7 @@ int main (void)
    hssize_t coord[NPOINTS][FSPACE_RANK]; /* Array to store selected points 
                                             from the file dataspace */ 
    herr_t ret;
-   unsigned i,j;
+   uint   i,j;
    int    matrix[FSPACE_DIM1][FSPACE_DIM2]; /* Buffer to write to the dataset */
    int    matrix_out[MSPACE_DIM1][MSPACE_DIM2]; /* Buffer to read from the 
                                                    dataset */

@@ -113,12 +113,27 @@ extern int              Verbosity;
 #define TEST_STR        "Test"
 #define CLEAN_STR       "Cleanup"
 
+/* System command to use for Cleanup */
+#ifdef VMS
+#define CLEAN_CMD       "delete *.hdf;*"
+#else
+#   ifdef WIN32
+#   define CLEAN_CMD  "del *.hdf"
+#   else
+/* default is Unix */
+#   define CLEAN_CMD    "rm -f *.hdf"
+#   endif                       /* WIN32  */
+#endif /*VMS */
+
 /* Prototypes for the support routines */
 int                     print_func(const char *,...);
 
 /* Prototypes for the test routines */
 void                    test_metadata(void);
 void                    test_file(void);
+void                    test_heap(void);
+void                    test_ohdr(void);
+void                    test_stab(void);
 void                    test_h5t(void);
 void                    test_h5s(void);
 void                    test_h5d(void);
@@ -129,6 +144,9 @@ void                    test_reference(void);
 /* Prototypes for the cleanup routines */
 void                    cleanup_metadata(void);
 void                    cleanup_file(void);
+void                    cleanup_heap(void);
+void                    cleanup_ohdr(void);
+void                    cleanup_stab(void);
 void                    cleanup_h5s(void);
 void                    cleanup_attr(void);
 void                    cleanup_select(void);

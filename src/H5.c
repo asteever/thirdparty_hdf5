@@ -16,6 +16,38 @@ static char             RcsId[] = "@(#)$Revision$";
 
 /* $Id$ */
 
+/*LINTLIBRARY */
+/*+
+   FILE
+   hdf5.c
+   HDF library support routines
+
+   EXPORTED ROUTINES
+   H5dont_atexit    -- Indicate that an 'atexit' routine is _not_ to be installed
+   H5get_libversion        -- Check the version of the library
+
+   LIBRARY-SCOPED ROUTINES
+   H5_init_library      -- initialize the HDF5 library
+   H5_term_library      -- shut-down the HDF5 library
+   H5_init_thread       -- initialize thread-specific information
+
+   LOCAL ROUTINES
+   H5_init_interface    -- initialize the H5 interface
+   + */
+
+#include <ctype.h>
+#include <errno.h>
+#include <stdarg.h>
+#include <stdio.h>
+#if defined(WIN32)
+#include <time.h>
+#else
+#include <sys/time.h>
+#include <sys/resource.h>
+#endif
+/* We need this on Irix64 even though we've included stdio.h as documented */
+FILE *fdopen(int fd, const char *mode);
+
 /* private headers */
 #include <H5private.h>          /*library                 		*/
 #include <H5ACprivate.h>        /*cache                           	*/
@@ -24,24 +56,30 @@ static char             RcsId[] = "@(#)$Revision$";
 #include <H5Iprivate.h>		/*atoms					*/
 #include <H5MMprivate.h>        /*memory management               	*/
 #include <H5Pprivate.h>		/*property lists			*/
-#include <H5Rpublic.h>		/*references				*/
+#include <H5Rpublic.h>		/* References */
 #include <H5Sprivate.h>		/*data spaces				*/
 #include <H5Tprivate.h>         /*data types                      	*/
 #include <H5Zprivate.h>		/*filters				*/
 
-/* We need this on Irix64 even though we've included stdio.h as documented */
-FILE *fdopen(int fd, const char *mode);
-
 #define PABLO_MASK      H5_mask
 
 hbool_t                 library_initialize_g = FALSE;
-hbool_t                 dont_atexit_g = FALSE;
+hbool_t                 thread_initialize_g = FALSE;
+hbool_t                 install_atexit_g = TRUE;
 H5_debug_t		H5_debug_g;		/*debugging info	*/
 static void		H5_debug_mask(const char*);
 
+typedef struct H5_exit {
+    void                    (*func) (void);     /* Interface function to call during exit */
+    struct H5_exit         *next;       /* Pointer to next node with exit function */
+} H5_exit_t;
+
+H5_exit_t              *lib_exit_head;  /* Pointer to the head of the list of 'atexit' functions */
+
 /* Interface initialization */
-static intn          interface_initialize_g = 0;
-#define INTERFACE_INIT 	NULL
+static hbool_t          interface_initialize_g = FALSE;
+#define INTERFACE_INIT H5_init_interface
+static herr_t           H5_init_interface(void);
 
 /*--------------------------------------------------------------------------
 NAME
@@ -83,22 +121,18 @@ H5_init_library(void)
     H5_debug_g.pkg[H5_PKG_V].name = "v";
     H5_debug_g.pkg[H5_PKG_Z].name = "z";
 
-    /*
-     * Install atexit() library cleanup routine unless the H5dont_atexit()
-     * has been called.  Once we add something to the atexit() list it stays
-     * there permanently, so we set dont_atexit_g after we add it to prevent
-     * adding it again later if the library is cosed and reopened.
-     */
-    if (!dont_atexit_g) {
-	atexit(H5_term_library);
-	dont_atexit_g = TRUE;
+    /* Install atexit() library cleanup routine */
+    if (install_atexit_g == TRUE &&
+        HDatexit(&H5_term_library) != 0) {
+        HRETURN_ERROR(H5E_FUNC, H5E_CANTINIT, FAIL,
+		      "unable to register atexit function");
     }
-
+    
     /*
      * Initialize interfaces that might not be able to initialize themselves
      * soon enough.
      */
-    if (H5T_init()<0) {
+    if (H5T_init_interface() < 0) {
         HRETURN_ERROR(H5E_FUNC, H5E_CANTINIT, FAIL,
                       "unable to initialize type interface");
     }
@@ -110,113 +144,187 @@ H5_init_library(void)
     FUNC_LEAVE(SUCCEED);
 }
 
-
-/*-------------------------------------------------------------------------
- * Function:	H5_term_library
- *
- * Purpose:	Terminate interfaces in a well-defined order due to
- *		dependencies among the interfaces, then terminate
- *		library-specific data.
- *
- * Return:	void
- *
- * Programmer:	Robb Matzke
- *              Friday, November 20, 1998
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
+/*--------------------------------------------------------------------------
+ NAME
+    H5_add_exit
+ PURPOSE
+    Add an exit routine to the list of routines to call during 'atexit'
+ USAGE
+    herr_t H5_add_exit(func)
+        void (*func)(void);     IN: Function pointer of routine to add to chain
+
+ RETURNS
+    Non-negative on success/Negative on failure
+ DESCRIPTION
+    Pre-pend the new function to the list of function to call during the exit
+    process.  These routines are responsible for free'ing static buffers, etc.
+ GLOBAL VARIABLES
+ COMMENTS, BUGS, ASSUMPTIONS
+    Don't make assumptions about the environment during the exit procedure...
+ EXAMPLES
+ REVISION LOG
+--------------------------------------------------------------------------*/
+herr_t
+H5_add_exit(void (*func)(void))
+{
+    H5_exit_t              *new_exit;
+
+    FUNC_ENTER_INIT(H5_add_exit, NULL, FAIL);
+
+    assert(func);
+
+    if (NULL==(new_exit = H5MM_calloc(sizeof(H5_exit_t)))) {
+	HRETURN_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL,
+		       "memory allocation failed");
+    }
+
+    new_exit->func = func;
+    new_exit->next = lib_exit_head;
+    lib_exit_head = new_exit;
+
+    FUNC_LEAVE(SUCCEED);
+}                               /* end H5_add_exit() */
+
+/*--------------------------------------------------------------------------
+ NAME
+    H5_term_library
+ PURPOSE
+    Terminate various static buffers and shutdown the library.
+ USAGE
+    void H5_term_library()
+ RETURNS
+    Non-negative on success/Negative on failure
+ DESCRIPTION
+    Walk through the shutdown routines for the various interfaces and 
+    terminate them all.
+ GLOBAL VARIABLES
+ COMMENTS, BUGS, ASSUMPTIONS
+    Should only ever be called by the "atexit" function, or real power-users.
+ EXAMPLES
+ REVISION LOG
+--------------------------------------------------------------------------*/
 void
 H5_term_library(void)
 {
-    /* Don't do anything if the library is already closed */
-    if (!library_initialize_g) return;
+    H5_exit_t              *temp;
 
-    /*
-     * Close interfaces in a well-defined order based on dependencies. The
-     * goal is that closing one interface doesn't reopen another that was
-     * just closed. In order to help us track down dependencies that we
-     * didn't know about, we close the interfaces in a two step process.  The
-     * first step does the real work and makes the interface unusable. The
-     * second step doesn't do any work but makes it possible to reopen the
-     * interface later.
-     */
+    temp = lib_exit_head;
+    while (lib_exit_head != NULL) {
+        (*lib_exit_head->func) ();
+        lib_exit_head = lib_exit_head->next;
+        HDfree(temp);
+        temp = lib_exit_head;
+    }                           /* end while */
+}                               /* end H5_term_library() */
 
-    /* Function			   What depends on it?			*/
-    /*-------------------------   -------------------------------	*/
-    H5D_term_interface(-1);	/*					*/
-    H5TB_term_interface(-1);	/*					*/
-    H5Z_term_interface(-1);	/*					*/
-    H5A_term_interface(-1);	/*					*/
-    H5RA_term_interface(-1);	/*					*/
-    H5F_term_interface(-1); 	/* T					*/
-    H5G_term_interface(-1);	/*					*/
-    H5R_term_interface(-1);	/*					*/
-    H5S_term_interface(-1);	/*					*/
-    H5T_native_close(-1);	/* D RA					*/
-    H5T_term_interface(-1);	/* D RA					*/
-    H5P_term_interface(-1);	/* D					*/
-    H5I_term_interface(-1);	/* A D F G P RA S T TB Z		*/
-    /*------------------------- ---------------------------------	*/
+/*--------------------------------------------------------------------------
+NAME
+   H5_init_thread -- Initialize thread-specific information
+USAGE
+    void H5_init_thread()
+   
+RETURNS
+    Non-negative on success/Negative on failure
+DESCRIPTION
+    Initializes any thread-specific data or routines.
 
-    /*
-     * Finalize the closing by calling all the functions again but with an
-     * argument of zero.  This allows the interface to be reopened later.
-     */
-    H5A_term_interface(0);
-    H5D_term_interface(0);
-    H5F_term_interface(0);
-    H5G_term_interface(0);
-    H5I_term_interface(0);
-    H5P_term_interface(0);
-    H5RA_term_interface(0);
-    H5R_term_interface(0);
-    H5S_term_interface(0);
-    H5TB_term_interface(0);
-    H5T_native_close(0);
-    H5T_term_interface(0);
-    H5Z_term_interface(0);
+--------------------------------------------------------------------------*/
+herr_t 
+H5_init_thread(void)
+{
+    FUNC_ENTER_INIT(H5_init_thread, NULL, FAIL);
 
-    /* Mark library as closed */
-    library_initialize_g = FALSE;
-}
+    /* Add the "thread termination" routine to the exit chain */
+    if (H5_add_exit(&H5_term_thread)<0)
+        HRETURN_ERROR(H5E_FUNC, H5E_CANTINIT, FAIL,
+                      "unable to set thread atexit function");
 
-
-/*-------------------------------------------------------------------------
- * Function:	H5dont_atexit
- *
- * Purpose:	Indicates that the library is not to clean up after itself
- *		when the application exits by calling exit() or returning
- *		from main().  This function must be called before any other
- *		HDF5 function or constant is used or it will have no effect.
- *
- *		If this function is used then certain memory buffers will not
- *		be de-allocated nor will open files be flushed automatically.
- *		The application may still call H5close() explicitly to
- *		accomplish these things.
- *
- * Return:	Success:	non-negative
- *
- *		Failure:	negative if this function is called more than
- *				once or if it is called too late.
- *
- * Programmer:	Robb Matzke
- *              Friday, November 20, 1998
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
+    FUNC_LEAVE(SUCCEED);
+}                               /* H5_init_thread */
+
+/*--------------------------------------------------------------------------
+ NAME
+    H5_term_thread
+ PURPOSE
+    Terminate various thread-specific objects
+ USAGE
+    void H5_term_thread()
+ RETURNS
+    Non-negative on success/Negative on failure
+ DESCRIPTION
+    Release the error stack and any other thread-specific resources allocated
+    on a "per thread" basis.
+ GLOBAL VARIABLES
+ COMMENTS, BUGS, ASSUMPTIONS
+     Can't report errors...
+ EXAMPLES
+ REVISION LOG
+--------------------------------------------------------------------------*/
+void
+H5_term_thread(void)
+{/*void*/}
+
+/*--------------------------------------------------------------------------
+NAME
+   H5_init_interface -- Initialize interface-specific information
+USAGE
+    herr_t H5_init_interface()
+   
+RETURNS
+    Non-negative on success/Negative on failure
+DESCRIPTION
+    Initializes any interface-specific data or routines.
+
+--------------------------------------------------------------------------*/
+static herr_t 
+H5_init_interface(void)
+{
+    FUNC_ENTER(H5_init_interface, FAIL);
+
+    FUNC_LEAVE(SUCCEED);
+}                               /* H5_init_interface */
+
+/*--------------------------------------------------------------------------
+ NAME
+    H5dont_atexit
+ PURPOSE
+    Indicates to the library that an 'atexit()' routine is _not_ to be installed
+ USAGE
+    herr_t H5dont_atexit(void)
+ RETURNS
+    Non-negative on success/Negative on failure
+ DESCRIPTION
+        This routine indicates to the library that an 'atexit()' cleanip routine
+    should not be installed.  The major (only?) purpose for this is in
+    situations where the library is dynamically linked into an application and
+    is un-linked from the application before 'exit()' gets callled.  In those
+    situations, a routine installed with 'atexit()' would jump to a routine
+    which was no longer in memory, causing errors.
+        In order to be effective, this routine _must_ be called before any other
+    HDF function calls, and must be called each time the library is loaded/
+    linked into the application. (the first time and after it's been un-loaded) 
+ GLOBAL VARIABLES
+ COMMENTS, BUGS, ASSUMPTIONS
+    If this routine is used, certain memory buffers will not be de-allocated,
+    although in theory a user could call HPend on their own...
+ EXAMPLES
+ REVISION LOG
+--------------------------------------------------------------------------*/
 herr_t 
 H5dont_atexit(void)
 {
-    /* FUNC_ENTER_INIT() should not be called */
-    H5_trace(FALSE, "H5dont_atexit", "");
-    if (dont_atexit_g) return FAIL;
-    dont_atexit_g = TRUE;
-    H5_trace(TRUE, NULL, "e", SUCCEED);
+#ifdef DONT_DO_THIS
+    FUNC_ENTER_INIT(H5dont_atexit, NULL, FAIL);
+#endif /* DONT_DO_THIS */
+
+    if (install_atexit_g == TRUE)
+        install_atexit_g = FALSE;
+
+#ifdef DONT_DO_THIS
+    FUNC_LEAVE(SUCCEED);
+#else /* DONT_DO_THIS */
     return(SUCCEED);
+#endif /* DONT_DO_THIS */
 }
 
 
@@ -432,49 +540,8 @@ H5close (void)
      * thing just to release it all right away.  It is safe to call this
      * function for an uninitialized library.
      */
-    H5_term_library();
+    H5_term_library ();
     return SUCCEED;
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:	HDsnprintf
- *
- * Purpose:	Writes output to the string BUF under control of the format
- *		FMT that specifies how subsequent arguments are converted for
- *		output.  It is similar to sprintf except that SIZE specifies
- *		the maximum number of characters to produce.  The trailing
- *		null character is counted towards this limit, so you should
- *		allocated at least SIZE characters for the string BUF.
- *
- * Note:	This function is for compatibility on systems that don't have
- *		snprintf(3). It doesn't actually check for overflow like the
- *		real snprintf() would.
- *
- * Return:	Success:	Number of characters stored, not including
- *				the terminating null.  If this value equals
- *				SIZE then there was not enough space in BUF
- *				for all the output.
- *
- *		Failure:	-1
- *
- * Programmer:	Robb Matzke
- *              Tuesday, November 24, 1998
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-int
-HDsnprintf(char *buf, size_t __unused__ size, const char *fmt, ...)
-{
-    int		n;
-    va_list	ap;
-
-    va_start(ap, fmt);
-    n = vsprintf(buf, fmt, ap);
-    va_end(ap);
-    return n;
 }
 
 
@@ -592,21 +659,27 @@ HDfprintf (FILE *stream, const char *fmt, ...)
 	    if (HDstrchr ("ZHhlq", *s)) {
 		switch (*s) {
 		case 'H':
-		    if (sizeof(hsize_t)<sizeof(long)) {
-			modifier[0] = '\0';
-		    } else if (sizeof(hsize_t)==sizeof(long)) {
+		    if (sizeof(hsize_t)==sizeof(long)) {
 			HDstrcpy (modifier, "l");
-		    } else {
+#if defined(WIN32)
+			} else if (sizeof(hsize_t)==sizeof(__int64)) {
+#else
+		    } else if (sizeof(hsize_t)==sizeof(long long)) {
+#endif
 			HDstrcpy (modifier, PRINTF_LL_WIDTH);
 		    }
 		    break;
 		case 'Z':
-		    if (sizeof(size_t)<sizeof(long)) {
-			modifier[0] = '\0';
-		    } else if (sizeof(size_t)==sizeof(long)) {
+		    if (sizeof(size_t)==sizeof(long)) {
 			HDstrcpy (modifier, "l");
-		    } else {
+#if defined(WIN32)
+			} else if (sizeof(size_t)==sizeof(__int64)) {
+#else
+		    } else if (sizeof(size_t)==sizeof(long long)) {
+#endif
 			HDstrcpy (modifier, PRINTF_LL_WIDTH);
+		    } else if (sizeof(size_t)==sizeof(int)) {
+			modifier[0] = '\0';
 		    }
 		    break;
 		    
@@ -651,7 +724,11 @@ HDfprintf (FILE *stream, const char *fmt, ...)
 		    long x = va_arg (ap, long);
 		    n = fprintf (stream, template, x);
 		} else {
-		    int64_t x = va_arg(ap, int64_t);
+#if defined(WIN32)
+			__int64 x = va_arg(ap, __int64);
+#else
+		    long long x = va_arg (ap, long long);
+#endif
 		    n = fprintf (stream, template, x);
 		}
 		break;
@@ -670,8 +747,12 @@ HDfprintf (FILE *stream, const char *fmt, ...)
 		    unsigned long x = va_arg (ap, unsigned long);
 		    n = fprintf (stream, template, x);
 		} else {
-		    uint64_t x = va_arg(ap, uint64_t);
-		    n = fprintf (stream, template, x);
+#if defined(WIN32)
+			unsigned __int64 x = va_arg (ap, unsigned __int64);
+#else
+		    unsigned long long x = va_arg (ap, unsigned long long);
+#endif
+			n = fprintf (stream, template, x);
 		}
 		break;
 
@@ -776,7 +857,7 @@ HDfprintf (FILE *stream, const char *fmt, ...)
 /*-------------------------------------------------------------------------
  * Function:	HDstrtoll
  *
- * Purpose:	Converts the string S to an int64_t value according to the
+ * Purpose:	Converts the string S to an int64 value according to the
  *		given BASE, which must be between 2 and 36 inclusive, or be
  *		the special value zero.
  *
@@ -788,7 +869,7 @@ HDfprintf (FILE *stream, const char *fmt, ...)
  *		unless the next character is a `0', in which case it is taken
  *		as 8 (octal).
  *
- *		The remainder of the string is converted to an int64_t in the
+ *		The remainder of the string is converted to an int64 in the
  *		obvious manner, stopping at the first character which is not
  *		a valid digit in the given base.  (In bases above 10, the
  *		letter `A' in either upper or lower case represetns 10, `B'
@@ -817,10 +898,10 @@ HDfprintf (FILE *stream, const char *fmt, ...)
  *
  *-------------------------------------------------------------------------
  */
-int64_t
+int64
 HDstrtoll (const char *s, const char **rest, int base)
 {
-    int64_t	sign=1, acc=0;
+    int64	sign=1, acc=0;
     hbool_t	overflow = FALSE;
     
     errno = 0;
@@ -857,7 +938,7 @@ HDstrtoll (const char *s, const char **rest, int base)
 			(*s>='a' && *s<'a'+base-10) ||
 			(*s>='A' && *s<'A'+base-10)))) {
 	if (!overflow) {
-	    int64_t digit = 0;
+	    int64 digit = 0;
 	    if (*s>='0' && *s<='9') digit = *s - '0';
 	    else if (*s>='a' && *s<='z') digit = *s-'a'+10;
 	    else digit = *s-'A'+10;
@@ -874,9 +955,9 @@ HDstrtoll (const char *s, const char **rest, int base)
     /* Overflow */
     if (overflow) {
 	if (sign>0) {
-	    acc = ((uint64_t)1<<(8*sizeof(int64_t)-1))-1;
+	    acc = ((uint64)1<<(8*sizeof(int64)-1))-1;
 	} else {
-	    acc = (uint64_t)1<<(8*sizeof(int64_t)-1);
+	    acc = (uint64)1<<(8*sizeof(int64)-1);
 	}
 	errno = ERANGE;
     }
@@ -928,12 +1009,11 @@ H5_timer_reset (H5_timer_t *timer)
 void
 H5_timer_begin (H5_timer_t *timer)
 {
+#if !defined(WIN32)
 #ifdef HAVE_GETRUSAGE
     struct rusage	rusage;
 #endif
-#ifdef HAVE_GETTIMEOFDAY
     struct timeval	etime;
-#endif
 
     assert (timer);
 
@@ -947,11 +1027,9 @@ H5_timer_begin (H5_timer_t *timer)
     timer->utime = 0.0;
     timer->stime = 0.0;
 #endif
-#ifdef HAVE_GETTIMEOFDAY
+
     gettimeofday (&etime, NULL);
     timer->etime = (double)etime.tv_sec + (double)etime.tv_usec/1e6;
-#else
-    timer->etime = 0.0;
 #endif
 }
 
@@ -1084,12 +1162,6 @@ H5_bandwidth(char *buf/*out*/, double nbytes, double nseconds)
  * Note:	The TYPE string is meant to be terse and is generated by a
  *		separate perl script.
  *
- * WARNING:	DO NOT CALL ANY HDF5 FUNCTION THAT CALLS FUNC_ENTER(). DOING
- *		SO MAY CAUSE H5_trace() TO BE INVOKED RECURSIVELY OR MAY
- *		CAUSE LIBRARY INITIALIZATIONS THAT ARE NOT DESIRED.  DO NOT
- *		USE THE H5T_*_* CONSTANTS SINCE THEY CALL H5_open() WHICH
- *		INVOKES FUNC_ENTER().
- *
  * Return:	void
  *
  * Programmer:	Robb Matzke
@@ -1110,8 +1182,6 @@ H5_trace (hbool_t returning, const char *func, const char *type, ...)
     hssize_t		i;
     void		*vp = NULL;
     FILE		*out = H5_debug_g.trace;
-
-    /* FUNC_ENTER() should not be called */
 
     if (!out) return;	/*tracing is off*/
     va_start (ap, type);
@@ -1536,8 +1606,8 @@ H5_trace (hbool_t returning, const char *func, const char *type, ...)
 			}
 			break;
 		    case H5I_DATATYPE:
-			if (obj==H5T_NATIVE_SCHAR_g) {
-			    fprintf(out, "H5T_NATIVE_SCHAR");
+			if (obj==H5T_NATIVE_CHAR_g) {
+			    fprintf(out, "H5T_NATIVE_CHAR");
 			} else if (obj==H5T_NATIVE_UCHAR_g) {
 			    fprintf(out, "H5T_NATIVE_UCHAR");
 			} else if (obj==H5T_NATIVE_SHORT_g) {
@@ -2036,32 +2106,6 @@ H5_trace (hbool_t returning, const char *func, const char *type, ...)
 			break;
 		    default:
 			fprintf (out, "%ld", (long)cset);
-			break;
-		    }
-		}
-		break;
-
-	    case 'e':
-		if (ptr) {
-		    if (vp) {
-			fprintf(out, "0x%lx", (unsigned long)vp);
-		    } else {
-			fprintf(out, "NULL");
-		    }
-		} else {
-		    H5T_pers_t pers = va_arg(ap, H5T_pers_t);
-		    switch (pers) {
-		    case H5T_PERS_DONTCARE:
-			fprintf(out, "H5T_PERS_DONTCARE");
-			break;
-		    case H5T_PERS_SOFT:
-			fprintf(out, "H5T_PERS_SOFT");
-			break;
-		    case H5T_PERS_HARD:
-			fprintf(out, "H5T_PERS_HARD");
-			break;
-		    default:
-			fprintf(out, "%ld", (long)pers);
 			break;
 		    }
 		}

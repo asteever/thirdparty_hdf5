@@ -41,11 +41,21 @@
  *		  that the number of bytes read is always equal to the number
  *		  requested.  This kluge is activated by #ifdef MPI_KLUGE0202.
  *
+ *	H5PC_Wait_for_left_neighbor
+ *	H5PC_Signal_right_neighbor
+ *		- These interprocess coordination routines don't do file I/O,
+ *		  and really belong in a separate package.
+ *		  I have given them the prefix "PC" for "process control",
+ *		  but as yet no separate PC package exists.
+ *
  */
 #include <H5private.h>
 #include <H5Eprivate.h>
 #include <H5Dprivate.h>
 #include <H5MMprivate.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #ifndef HAVE_PARALLEL
 /* 
@@ -62,8 +72,11 @@
 #include <mpi.h>
 #include <mpio.h>
 
+#ifdef HAVE_PABLO
+#include "MPIO_Trace.h"
+#endif
 #define PABLO_MASK      H5F_mpio
-static intn          interface_initialize_g = 0;
+static hbool_t          interface_initialize_g = FALSE;	/* rky??? */
 #define INTERFACE_INIT  NULL
 
 /* Global var to allow elimination of redundant metadata writes
@@ -108,12 +121,12 @@ static herr_t H5F_mpio_close(H5F_low_t *lf, const H5F_access_t *access_parms);
 static herr_t H5F_mpio_read(H5F_low_t *lf, H5F_access_t *access_parms,
 			    const H5D_transfer_t xfer_mode,
 			    const haddr_t *addr, size_t size,
-			    uint8_t *buf/*out*/);
+			    uint8 *buf/*out*/);
 htri_t H5F_mpio_tas_allsame(H5F_low_t *lf, hbool_t newval );
 static herr_t H5F_mpio_write(H5F_low_t *lf, H5F_access_t *access_parms,
 			     const H5D_transfer_t xfer_mode,
 			     const haddr_t *addr, size_t size,
-			     const uint8_t *buf);
+			     const uint8 *buf);
 static herr_t H5F_mpio_flush(H5F_low_t *lf, const H5F_access_t *access_parms);
 static herr_t H5F_MPIOff_to_haddr(MPI_Offset mpi_off, haddr_t *addr);
 static herr_t H5F_haddr_to_MPIOff(haddr_t addr, MPI_Offset *mpi_off);
@@ -127,14 +140,14 @@ const H5F_low_class_t	H5F_LOW_MPIO_g[1] = {{
      * this is ugly, but removing the const modifier from access_parms
      * in the parameter list of the write function in H5F_low_class_t
      * would propagate to a lot of functions that don't change that param */
-    (int(*)(struct H5F_low_t *lf, const H5F_access_t *access_parms, const H5D_transfer_t xfer_mode, const haddr_t *addr, size_t size, uint8_t *buf))
+    (int(*)(struct H5F_low_t *lf, const H5F_access_t *access_parms, const H5D_transfer_t xfer_mode, const haddr_t *addr, size_t size, uint8 *buf))
     H5F_mpio_read,		/*read method				*/
 
     /* rky 980816
      * this is ugly, but removing the const modifier from access_parms
      * in the parameter list of the write function in H5F_low_class_t
      * would propagate to a lot of functions that don't change that param */
-    (int(*)(struct H5F_low_t *lf, const H5F_access_t *access_parms, const H5D_transfer_t xfer_mode, const haddr_t *addr, size_t size, const uint8_t *buf))
+    (int(*)(struct H5F_low_t *lf, const H5F_access_t *access_parms, const H5D_transfer_t xfer_mode, const haddr_t *addr, size_t size, const uint8 *buf))
     H5F_mpio_write,		/*write method				*/
 
     H5F_mpio_flush,		/*flush method				*/
@@ -296,9 +309,8 @@ H5F_mpio_access(const char *name, const H5F_access_t *access_parms, int mode,
  *
  *      rky 980828 Init flag controlling redundant metadata writes to disk.
  *
- *      rky 19981207 Added barrier after MPI_File_set_size to prevent
- *	race condition: subsequent writes were being truncated,
- *	causing holes in file.
+ *      rky 19981208 Added barrier after MPI_File_set_size to prevent race:
+ *	interspersed writes were being truncated, causing holes in file.
  *-------------------------------------------------------------------------
  */
 static H5F_low_t *
@@ -502,7 +514,7 @@ H5F_mpio_close(H5F_low_t *lf, const H5F_access_t __unused__ *access_parms)
 static herr_t
 H5F_mpio_read(H5F_low_t *lf, H5F_access_t *access_parms,
 	      const H5D_transfer_t xfer_mode,
-	      const haddr_t *addr, size_t size, uint8_t *buf/*out*/)
+	      const haddr_t *addr, size_t size, uint8 *buf/*out*/)
 {
     MPI_Offset  mpi_off, mpi_disp;
     MPI_Status  mpi_stat;
@@ -531,7 +543,7 @@ H5F_mpio_read(H5F_low_t *lf, H5F_access_t *access_parms,
 #ifdef H5Fmpio_DEBUG
     if (H5F_mpio_Debug[(int)'r'])
         HDfprintf(stdout, "in H5F_mpio_read  mpi_off=%Hd  size_i=%d\n",
-                (hssize_t)mpi_off, size_i );
+                  (hssize_t)mpi_off, size_i );
 #endif
 
     /* Set up for a fancy xfer using complex types, or single byte block.
@@ -749,7 +761,7 @@ H5F_mpio_tas_allsame(H5F_low_t *lf, hbool_t newval )
 static herr_t
 H5F_mpio_write(H5F_low_t *lf, H5F_access_t *access_parms,
 	       const H5D_transfer_t xfer_mode,
-	       const haddr_t *addr, size_t size, const uint8_t *buf)
+	       const haddr_t *addr, size_t size, const uint8 *buf)
 {
     MPI_Offset  mpi_off, mpi_disp;
     MPI_Status  mpi_stat;
@@ -967,7 +979,7 @@ H5F_MPIOff_to_haddr( MPI_Offset mpi_off, haddr_t *addr )
 {
     herr_t ret_val = FAIL;
 
-    addr->offset = (uint64_t) mpi_off;
+    addr->offset = (uint64) mpi_off;
     if (addr->offset == mpi_off)
 	ret_val = SUCCEED;
 

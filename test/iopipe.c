@@ -5,39 +5,23 @@
  * Programmer:  Robb Matzke <matzke@llnl.gov>
  *              Thursday, March 12, 1998
  */
-
-/* See H5private.h for how to include headers */
 #undef NDEBUG
+#include <assert.h>
+#include <fcntl.h>
 #include <hdf5.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <sys/types.h>
 
-#ifdef STDC_HEADERS
-#   include <assert.h>
-#   include <fcntl.h>
-#   include <stdio.h>
-#   include <string.h>
-#   include <stdlib.h>
-#endif
 
-#ifdef HAVE_UNISTD_H
-#   include <sys/types.h>
-#   include <unistd.h>
-#endif
-
-#if defined(TIME_WITH_SYS_TIME)
-#   include <sys/time.h>
-#   include <time.h>
-#elif defined(HAVE_SYS_TIME_H)
-#   include <sys/time.h>
-#else
-#   include <time.h>
-#endif
-
-#ifdef HAVE_SYS_RESOURCE_H
-#   include <sys/resource.h>
-#endif
-
-#ifdef HAVE_WINSOCK_H
+#if defined(WIN32)
+#include <time.h>
 #include <Winsock.h>
+#else
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <unistd.h>
 #endif
 
 #define RAW_FILE_NAME	"iopipe.raw"
@@ -164,16 +148,20 @@ synchronize (void)
 int
 main (void)
 {
+#if defined(WIN32)
+	static hssize_t	size[2] = {REQUEST_SIZE_X, REQUEST_SIZE_Y};
+#else
     static hsize_t	size[2] = {REQUEST_SIZE_X, REQUEST_SIZE_Y};
+#endif
     static int		nread=NREAD_REQUESTS, nwrite=NWRITE_REQUESTS;
 
     unsigned char	*the_data = NULL;
     hid_t		file, dset, file_space=-1;
     herr_t		status;
-#ifdef HAVE_GETRUSAGE
+#if !defined(WIN32)
     struct rusage	r_start, r_stop;
 #else 
-    struct timeval r_start, r_stop;
+	struct timeval r_start, r_stop;
 #endif    
     struct timeval	t_start, t_stop;
     int			i, fd;
@@ -181,14 +169,10 @@ main (void)
     off_t		offset;
     hssize_t		start[2];
     hsize_t		count[2];
-
-    /*
-     * The extra cast in the following statement is a bug workaround for the
-     * Win32 version 5.0 compiler.
-     * 1998-11-06 ptl
-     */
+    
     printf ("I/O request size is %1.1fMB\n",
-	    (double)(hssize_t)(size[0]*size[1])/1024.0*1024);
+	    ((double)(size[0])*(double)(size[1]))/(1024.0*1024));
+
     
     /* Open the files */
     file = H5Fcreate (HDF5_FILE_NAME, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
@@ -210,7 +194,7 @@ main (void)
 #ifdef HAVE_GETRUSAGE
     getrusage (RUSAGE_SELF, &r_start);
 #endif
-#ifdef HAVE_GETTIMEOFDAY
+#if !defined(WIN32)
     gettimeofday (&t_start, NULL);
 #endif   
     fprintf (stderr, HEADING, "fill raw");
@@ -222,7 +206,7 @@ main (void)
 #ifdef HAVE_GETRUSAGE
     getrusage (RUSAGE_SELF, &r_stop);
 #endif
-#ifdef HAVE_GETTIMEOFDAY
+#if !defined(WIN32)
     gettimeofday (&t_stop, NULL);
 #endif 
     putc ('\n', stderr);
@@ -236,7 +220,7 @@ main (void)
 #ifdef HAVE_GETRUSAGE
     getrusage (RUSAGE_SELF, &r_start);
 #endif
-#ifdef HAVE_GETTIMEOFDAY
+#if !defined(WIN32)
     gettimeofday (&t_start, NULL);
 #endif 
     fprintf (stderr, HEADING, "fill hdf5");
@@ -250,7 +234,7 @@ main (void)
 #ifdef HAVE_GETRUSAGE
     getrusage (RUSAGE_SELF, &r_stop);
 #endif
-#ifdef HAVE_GETTIMEOFDAY
+#if !defined(WIN32)
     gettimeofday (&t_stop, NULL);
 #endif 
     putc ('\n', stderr);
@@ -263,7 +247,7 @@ main (void)
 #ifdef HAVE_GETRUSAGE
     getrusage (RUSAGE_SELF, &r_start);
 #endif
-#ifdef HAVE_GETTIMEOFDAY
+#if !defined(WIN32)
     gettimeofday (&t_start, NULL);
 #endif 
     fprintf (stderr, HEADING, "out raw");
@@ -278,7 +262,7 @@ main (void)
 #ifdef HAVE_GETRUSAGE
     getrusage (RUSAGE_SELF, &r_stop);
 #endif
-#ifdef HAVE_GETTIMEOFDAY
+#if !defined(WIN32)
     gettimeofday (&t_stop, NULL);
 #endif 
     putc ('\n', stderr);
@@ -291,7 +275,7 @@ main (void)
 #ifdef HAVE_GETRUSAGE
     getrusage (RUSAGE_SELF, &r_start);
 #endif
-#ifdef HAVE_GETTIMEOFDAY
+#if !defined(WIN32)
     gettimeofday (&t_start, NULL);
 #endif 
     fprintf (stderr, HEADING, "out hdf5");
@@ -305,7 +289,7 @@ main (void)
 #ifdef HAVE_GETRUSAGE
     getrusage (RUSAGE_SELF, &r_stop);
 #endif
-#ifdef HAVE_GETTIMEOFDAY
+#if !defined(WIN32)
     gettimeofday (&t_stop, NULL);
 #endif 
     putc ('\n', stderr);
@@ -318,7 +302,7 @@ main (void)
 #ifdef HAVE_GETRUSAGE
     getrusage (RUSAGE_SELF, &r_start);
 #endif
-#ifdef HAVE_GETTIMEOFDAY
+#if !defined(WIN32)
     gettimeofday (&t_start, NULL);
 #endif 
     fprintf (stderr, HEADING, "in raw");
@@ -333,7 +317,7 @@ main (void)
 #ifdef HAVE_GETRUSAGE
     getrusage (RUSAGE_SELF, &r_stop);
 #endif
-#ifdef HAVE_GETTIMEOFDAY
+#if !defined(WIN32)
     gettimeofday (&t_stop, NULL);
 #endif 
     putc ('\n', stderr);
@@ -347,7 +331,7 @@ main (void)
 #ifdef HAVE_GETRUSAGE
     getrusage (RUSAGE_SELF, &r_start);
 #endif
-#ifdef HAVE_GETTIMEOFDAY
+#if !defined(WIN32)
     gettimeofday (&t_start, NULL);
 #endif 
     fprintf (stderr, HEADING, "in hdf5");
@@ -361,7 +345,7 @@ main (void)
 #ifdef HAVE_GETRUSAGE
     getrusage (RUSAGE_SELF, &r_stop);
 #endif
-#ifdef HAVE_GETTIMEOFDAY
+#if !defined(WIN32)
     gettimeofday (&t_stop, NULL);
 #endif 
     putc ('\n', stderr);
@@ -379,7 +363,7 @@ main (void)
 #ifdef HAVE_GETRUSAGE
     getrusage (RUSAGE_SELF, &r_start);
 #endif
-#ifdef HAVE_GETTIMEOFDAY
+#if !defined(WIN32)
     gettimeofday (&t_start, NULL);
 #endif 
     fprintf (stderr, HEADING, "in hdf5 partial");
@@ -393,7 +377,7 @@ main (void)
 #ifdef HAVE_GETRUSAGE
     getrusage (RUSAGE_SELF, &r_stop);
 #endif
-#ifdef HAVE_GETTIMEOFDAY
+#if !defined(WIN32)
     gettimeofday (&t_stop, NULL);
 #endif 
     putc ('\n', stderr);

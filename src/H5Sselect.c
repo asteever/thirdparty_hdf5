@@ -18,9 +18,59 @@
 
 /* Interface initialization */
 #define PABLO_MASK      H5S_select_mask
-#define INTERFACE_INIT  NULL
-static intn             interface_initialize_g = 0;
+#define INTERFACE_INIT  H5S_select_init
+static intn             interface_initialize_g = FALSE;
+static herr_t		H5S_select_init(void);
+static void		H5S_select_term(void);
 
+
+/*--------------------------------------------------------------------------
+ NAME
+    H5S_select_init
+ PURPOSE
+    Initialize selection interface
+ USAGE
+   herr_t  H5S_select_init(void)
+ RETURNS
+    Non-negative on success/Negative on failure
+ DESCRIPTION
+ GLOBAL VARIABLES
+ COMMENTS, BUGS, ASSUMPTIONS
+ EXAMPLES
+ REVISION LOG
+--------------------------------------------------------------------------*/
+herr_t
+H5S_select_init (void)
+{
+    herr_t		    ret_value = SUCCEED;
+    FUNC_ENTER (H5S_select_init, FAIL);
+
+    /* Register the atexit function for this (sub)interface */
+    ret_value = H5_add_exit(&H5S_select_term);
+    FUNC_LEAVE(ret_value);
+}
+
+/*--------------------------------------------------------------------------
+ NAME
+    H5S_select_term
+ PURPOSE
+    Terminate various H5S selection objects and free lists
+ USAGE
+    void H5S_select_term()
+ RETURNS
+    Non-negative on success/Negative on failure
+ DESCRIPTION
+    Release the selection resources allocated.
+ GLOBAL VARIABLES
+ COMMENTS, BUGS, ASSUMPTIONS
+     Can't report errors...
+ EXAMPLES
+ REVISION LOG
+--------------------------------------------------------------------------*/
+static void
+H5S_select_term(void)
+{
+}
 
 /*--------------------------------------------------------------------------
  NAME
@@ -326,15 +376,16 @@ H5S_select_hyperslab (H5S_t *space, H5S_seloper_t op,
     printf("%s: check 2.0\n",FUNC);
 #endif /* QAK */
     /* Allocate space for the hyperslab selection information if necessary */
-    if(space->select.type!=H5S_SEL_HYPERSLABS || space->select.sel_info.hslab.hyper_lst==NULL) {
-        if((space->select.sel_info.hslab.hyper_lst = H5MM_calloc(sizeof(H5S_hyper_list_t)))==NULL)
+    if(space->select.type!=H5S_SEL_HYPERSLABS || space->select.sel_info.hyper.hyper_lst==NULL) {
+        if((space->select.sel_info.hyper.hyper_lst = H5MM_calloc(sizeof(H5S_hyper_list_t)))==NULL)
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "can't allocate hyperslab information");
-        if((space->select.sel_info.hslab.hyper_lst->lo_bounds = H5MM_calloc(space->extent.u.simple.rank* sizeof(H5S_hyper_bound_t *)))==NULL)
+        if((space->select.sel_info.hyper.hyper_lst->lo_bounds = H5MM_calloc(space->extent.u.simple.rank* sizeof(H5S_hyper_bound_t *)))==NULL)
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "can't allocate hyperslab lo bound information");
-        if((space->select.sel_info.hslab.hyper_lst->hi_bounds = H5MM_calloc(space->extent.u.simple.rank* sizeof(H5S_hyper_bound_t *)))==NULL)
+        if((space->select.sel_info.hyper.hyper_lst->hi_bounds = H5MM_calloc(space->extent.u.simple.rank* sizeof(H5S_hyper_bound_t *)))==NULL)
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "can't allocate hyperslab lo bound information");
     } /* end if */
 
+#ifndef OLD_WAY
     /* Generate list of blocks to add/remove based on selection operation */
     switch(op) {
         case H5S_SELECT_SET:
@@ -370,7 +421,7 @@ H5S_select_hyperslab (H5S_t *space, H5S_seloper_t op,
                         HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINSERT, FAIL, "can't insert hyperslab");
                     } /* end if */
                 } /* end for */
-            } /* end else */
+            } /* end if */
 
             /* Clip list of new blocks to add against current selection */
             if(op==H5S_SELECT_OR) {
@@ -388,7 +439,7 @@ H5S_select_hyperslab (H5S_t *space, H5S_seloper_t op,
                     diminfo[i].count = count[i];
                     diminfo[i].block = block[i];
                 } /* end for */
-                space->select.sel_info.hslab.diminfo = diminfo;
+                space->select.sel_info.hyper.diminfo = diminfo;
             } /* end else */
             break;
 
@@ -420,6 +471,40 @@ H5S_select_hyperslab (H5S_t *space, H5S_seloper_t op,
 #ifdef QAK
     printf("%s: check 3.0\n",FUNC);
 #endif /* QAK */
+#else /* OLD_WAY */
+    /* Add hyperslab to selection */
+    if(contig) { /* Check for trivial case */
+
+        /* Account for strides & blocks being equal, but larger than one */
+        /* (Why someone would torture us this way, I don't know... -QAK :-) */
+        for(i=0; i<space->extent.u.simple.rank; i++)
+            slab[i]=count[i]*stride[i];
+
+        /* Add the contiguous hyperslab to the selection */
+        if(H5S_hyper_add(space,start,(const hsize_t *)slab)<0) {
+            HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINSERT, FAIL, "can't insert hyperslab");
+        }
+    } else {
+        /* Build the slice sizes for each dimension */
+        for(i=0, acc=1; i<space->extent.u.simple.rank; i++) {
+            slice[i]=acc;
+            acc*=count[i];
+        } /* end for */
+
+        /* Step through all the blocks to add */
+        /* (reuse the count in ACC above) */
+        for(i=0; i<(int)acc; i++) {
+            /* Build the location of the block */
+            for(j=0; j<space->extent.u.simple.rank; j++)
+                slab[j]=start[j]+((i/slice[j])%count[j])*stride[j];
+            
+            /* Add the block to the list of hyperslab selections */
+            if(H5S_hyper_add(space,(const hssize_t *)slab, (const hsize_t *)block)<0) {
+                HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINSERT, FAIL, "can't insert hyperslab");
+            } /* end if */
+        } /* end for */
+    } /* end if */
+#endif /* OLD_WAY */
 
     /* Set selection type */
     space->select.type=H5S_SEL_HYPERSLABS;
@@ -433,89 +518,7 @@ done:
     if(_block!=NULL) H5TB_release_buf(block_id);
     FUNC_LEAVE (ret_value);
 }
-
-/*--------------------------------------------------------------------------
- NAME
-    H5S_select_elements
- PURPOSE
-    Specify a series of elements in the dataspace to select
- USAGE
-    herr_t H5S_select_elements(dsid, op, num_elem, coord)
-        hid_t dsid;             IN: Dataspace ID of selection to modify
-        H5S_seloper_t op;       IN: Operation to perform on current selection
-        size_t num_elem;        IN: Number of elements in COORD array.
-        const hssize_t **coord; IN: The location of each element selected
- RETURNS
-    Non-negative on success/Negative on failure
- DESCRIPTION
-    This function selects array elements to be included in the selection for
-    the dataspace.  The COORD array is a 2-D array of size <dataspace rank>
-    by NUM_ELEM (ie. a list of coordinates in the dataspace).  The order of
-    the element coordinates in the COORD array specifies the order that the
-    array elements are iterated through when I/O is performed.  Duplicate
-    coordinates are not checked for.  The selection operator, OP, determines
-    how the new selection is to be combined with the existing selection for
-    the dataspace.  Currently, only H5S_SELECT_SET is supported, which replaces
-    the existing selection with the one defined in this call.  When operators
-    other than H5S_SELECT_SET are used to combine a new selection with an
-    existing selection, the selection ordering is reset to 'C' array ordering.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t H5S_select_elements (H5S_t *space, H5S_seloper_t op, size_t num_elem,
-    const hssize_t **coord)
-{
-    herr_t ret_value=SUCCEED;  /* return value */
 
-    FUNC_ENTER (H5S_select_elements, FAIL);
-
-    /* Check args */
-    assert(space);
-    assert(num_elem);
-    assert(coord);
-    assert(op==H5S_SELECT_SET);
-
-#ifdef QAK
-    printf("%s: check 1.0\n",FUNC);
-#endif /* QAK */
-    /* If we are setting a new selection, remove current selection first */
-    if(op==H5S_SELECT_SET) {
-        if(H5S_select_release(space)<0) {
-            HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDELETE, FAIL,
-                "can't release hyperslab");
-        } /* end if */
-    } /* end if */
-
-#ifdef QAK
-    printf("%s: check 2.0\n",FUNC);
-#endif /* QAK */
-    /* Allocate space for the point selection information if necessary */
-    if(space->select.type!=H5S_SEL_POINTS || space->select.sel_info.pnt_lst==NULL) {
-        if((space->select.sel_info.pnt_lst = H5MM_calloc(sizeof(H5S_pnt_list_t)))==NULL)
-            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL,
-                "can't allocate element information");
-    } /* end if */
-
-#ifdef QAK
-    printf("%s: check 3.0\n",FUNC);
-#endif /* QAK */
-    /* Add points to selection */
-    if(H5S_point_add(space,num_elem,coord)<0) {
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINSERT, FAIL,
-            "can't insert elements");
-    }
-
-    /* Set selection type */
-    space->select.type=H5S_SEL_POINTS;
-#ifdef QAK
-    printf("%s: check 4.0\n",FUNC);
-#endif /* QAK */
-
-done:
-    FUNC_LEAVE (ret_value);
-}   /* H5Sselect_elements() */
 
 /*--------------------------------------------------------------------------
  NAME
@@ -551,7 +554,7 @@ herr_t H5Sselect_elements (hid_t spaceid, H5S_seloper_t op, size_t num_elem,
     const hssize_t **coord)
 {
     H5S_t	*space = NULL;  /* Dataspace to modify selection of */
-    herr_t ret_value=SUCCEED;  /* return value */
+    herr_t ret_value=FAIL;  /* return value */
 
     FUNC_ENTER (H5Sselect_elements, FAIL);
 
@@ -568,10 +571,42 @@ herr_t H5Sselect_elements (hid_t spaceid, H5S_seloper_t op, size_t num_elem,
             "operations other than H5S_SELECT_SET not supported currently");
     } /* end if */
 
-    /* Call the real element selection routine */
-    if((ret_value=H5S_select_elements(space,op,num_elem,coord))<0) {
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDELETE, FAIL, "can't select elements");
+#ifdef QAK
+    printf("%s: check 1.0\n",FUNC);
+#endif /* QAK */
+    /* If we are setting a new selection, remove current selection first */
+    if(op==H5S_SELECT_SET) {
+        if(H5S_select_release(space)<0) {
+            HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDELETE, FAIL,
+                "can't release hyperslab");
+        } /* end if */
     } /* end if */
+
+#ifdef QAK
+    printf("%s: check 2.0\n",FUNC);
+#endif /* QAK */
+    /* Allocate space for the point selection information if necessary */
+    if(space->select.type!=H5S_SEL_POINTS || space->select.sel_info.pnt_lst==NULL) {
+        if((space->select.sel_info.pnt_lst = H5MM_calloc(sizeof(H5S_pnt_list_t)))==NULL)
+            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL,
+                "can't allocate element information");
+    } /* end if */
+
+#ifdef QAK
+    printf("%s: check 3.0\n",FUNC);
+#endif /* QAK */
+    /* Add points to selection */
+    if(H5S_point_add(space,num_elem,coord)<0) {
+        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINSERT, FAIL,
+            "can't insert elements");
+    }
+
+    /* Set selection type */
+    space->select.type=H5S_SEL_POINTS;
+    ret_value=SUCCEED;
+#ifdef QAK
+    printf("%s: check 4.0\n",FUNC);
+#endif /* QAK */
 
 done:
     FUNC_LEAVE (ret_value);
@@ -579,49 +614,11 @@ done:
 
 /*--------------------------------------------------------------------------
  NAME
-    H5S_select_all
- PURPOSE
-    Specify the the entire extent is selected
- USAGE
-    herr_t H5S_select_all(dsid)
-        hid_t dsid;             IN: Dataspace ID of selection to modify
- RETURNS
-    Non-negative on success/Negative on failure
- DESCRIPTION
-    This function selects the entire extent for a dataspace.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t H5S_select_all (H5S_t *space)
-{
-    herr_t ret_value=SUCCEED;  /* return value */
-
-    FUNC_ENTER (H5S_select_all, FAIL);
-
-    /* Check args */
-    assert(space);
-
-    /* Remove current selection first */
-    if(H5S_select_release(space)<0) {
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDELETE, FAIL, "can't release selection");
-    } /* end if */
-
-    /* Set selection type */
-    space->select.type=H5S_SEL_ALL;
-
-done:
-    FUNC_LEAVE (ret_value);
-}   /* H5S_select_all() */
-
-/*--------------------------------------------------------------------------
- NAME
     H5Sselect_all
  PURPOSE
     Specify the the entire extent is selected
  USAGE
-    herr_t H5Sselect_all(dsid)
+    herr_t H5Sselect_elements(dsid)
         hid_t dsid;             IN: Dataspace ID of selection to modify
  RETURNS
     Non-negative on success/Negative on failure
@@ -635,49 +632,15 @@ done:
 herr_t H5Sselect_all (hid_t spaceid)
 {
     H5S_t	*space = NULL;  /* Dataspace to modify selection of */
-    herr_t ret_value=SUCCEED;  /* return value */
+    herr_t ret_value=FAIL;  /* return value */
 
     FUNC_ENTER (H5Sselect_all, FAIL);
 
     /* Check args */
-    if (H5I_DATASPACE != H5I_get_type(spaceid) || NULL == (space=H5I_object(spaceid))) {
+    if (H5I_DATASPACE != H5I_get_type(spaceid) ||
+            NULL == (space=H5I_object(spaceid))) {
         HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space");
     }
-
-    /* Remove current selection first */
-    if((ret_value=H5S_select_all(space))<0) {
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDELETE, FAIL, "can't change selection");
-    } /* end if */
-
-done:
-    FUNC_LEAVE (ret_value);
-}   /* H5Sselect_all() */
-
-/*--------------------------------------------------------------------------
- NAME
-    H5S_select_none
- PURPOSE
-    Specify that nothing is selected in the extent
- USAGE
-    herr_t H5S_select_none(dsid)
-        hid_t dsid;             IN: Dataspace ID of selection to modify
- RETURNS
-    Non-negative on success/Negative on failure
- DESCRIPTION
-    This function de-selects the entire extent for a dataspace.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t H5S_select_none (H5S_t *space)
-{
-    herr_t ret_value=SUCCEED;  /* return value */
-
-    FUNC_ENTER (H5S_select_none, FAIL);
-
-    /* Check args */
-    assert(space);
 
     /* Remove current selection first */
     if(H5S_select_release(space)<0) {
@@ -686,11 +649,12 @@ herr_t H5S_select_none (H5S_t *space)
     } /* end if */
 
     /* Set selection type */
-    space->select.type=H5S_SEL_NONE;
+    space->select.type=H5S_SEL_ALL;
+    ret_value=SUCCEED;
 
 done:
     FUNC_LEAVE (ret_value);
-}   /* H5S_select_none() */
+}   /* H5Sselect_all() */
 
 /*--------------------------------------------------------------------------
  NAME
@@ -698,7 +662,7 @@ done:
  PURPOSE
     Specify that nothing is selected in the extent
  USAGE
-    herr_t H5Sselect_none(dsid)
+    herr_t H5Sselect_elements(dsid)
         hid_t dsid;             IN: Dataspace ID of selection to modify
  RETURNS
     Non-negative on success/Negative on failure
@@ -722,10 +686,15 @@ herr_t H5Sselect_none (hid_t spaceid)
         HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space");
     }
 
-    /* Change to "none" selection */
-    if((ret_value=H5S_select_none(space))<0) {
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDELETE, FAIL, "can't change selection");
+    /* Remove current selection first */
+    if(H5S_select_release(space)<0) {
+        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDELETE, FAIL,
+            "can't release hyperslab");
     } /* end if */
+
+    /* Set selection type */
+    space->select.type=H5S_SEL_NONE;
+    ret_value=SUCCEED;
 
 done:
     FUNC_LEAVE (ret_value);
@@ -959,172 +928,3 @@ H5S_select_valid (const H5S_t *space)
 
     FUNC_LEAVE (ret_value);
 }   /* H5S_select_valid() */
-
-/*--------------------------------------------------------------------------
- NAME
-    H5S_select_serial_size
- PURPOSE
-    Determine the number of bytes needed to serialize the current selection
-    offset defined.
- USAGE
-    hssize_t H5S_select_serial_size(space)
-        H5S_t *space;             IN: Dataspace pointer to query
- RETURNS
-    The number of bytes required on success, negative on an error.
- DESCRIPTION
-    Determines the number of bytes required to serialize the current selection
-    information for storage on disk.  This routine just hands off to the
-    appropriate routine for each type of selection.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-hssize_t
-H5S_select_serial_size (const H5S_t *space)
-{
-    hssize_t ret_value=FAIL;  /* return value */
-
-    FUNC_ENTER (H5S_select_serial_size, FAIL);
-
-    assert(space);
-
-    switch(space->select.type) {
-    case H5S_SEL_POINTS:         /* Sequence of points selected */
-        ret_value=H5S_point_select_serial_size(space);
-        break;
-
-    case H5S_SEL_HYPERSLABS:     /* Hyperslab selection defined */
-        ret_value=H5S_hyper_select_serial_size(space);
-        break;
-
-    case H5S_SEL_ALL:            /* Entire extent selected */
-    case H5S_SEL_NONE:           /* Nothing selected */
-        ret_value=16;            /* replace with real function call at some point */
-        break;
-
-    case H5S_SEL_ERROR:
-    case H5S_SEL_N:
-        break;
-    }
-
-    FUNC_LEAVE (ret_value);
-}   /* H5S_select_serial_size() */
-
-/*--------------------------------------------------------------------------
- NAME
-    H5S_select_serialize
- PURPOSE
-    Serialize the current selection into a user-provided buffer.
- USAGE
-    herr_t H5S_select_serialize(space, buf)
-        H5S_t *space;           IN: Dataspace pointer of selection to serialize
-        uint8 *buf;             OUT: Buffer to put serialized selection into
- RETURNS
-    Non-negative on success/Negative on failure
- DESCRIPTION
-    Serializes the current selection into a buffer.  (Primarily for storing
-    on disk).  This routine just hands off to the appropriate routine for each
-    type of selection.
-    The serialized information for all types of selections follows this format:
-        <type of selection> = uint32
-        <version #>         = uint32
-        <padding, not-used> = 4 bytes
-        <length of selection specific information> = uint32
-        <selection specific information> = ? bytes (depends on selection type)
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5S_select_serialize (const H5S_t *space, uint8_t *buf)
-{
-    herr_t ret_value=FAIL;  /* return value */
-
-    FUNC_ENTER (H5S_select_serialize, FAIL);
-
-    assert(space);
-
-    switch(space->select.type) {
-        case H5S_SEL_POINTS:         /* Sequence of points selected */
-            ret_value=H5S_point_select_serialize(space,buf);
-            break;
-
-        case H5S_SEL_HYPERSLABS:     /* Hyperslab selection defined */
-            ret_value=H5S_hyper_select_serialize(space,buf);
-            break;
-
-        case H5S_SEL_ALL:            /* Entire extent selected */
-            ret_value=H5S_all_select_serialize(space,buf);
-            break;
-
-        case H5S_SEL_NONE:           /* Nothing selected */
-            ret_value=H5S_none_select_serialize(space,buf);
-            break;
-
-        case H5S_SEL_ERROR:
-        case H5S_SEL_N:
-            break;
-    }
-
-    FUNC_LEAVE (ret_value);
-}   /* H5S_select_serialize() */
-
-/*--------------------------------------------------------------------------
- NAME
-    H5S_select_deserialize
- PURPOSE
-    Deserialize the current selection from a user-provided buffer into a real
-        selection in the dataspace.
- USAGE
-    herr_t H5S_select_deserialize(space, buf)
-        H5S_t *space;           IN/OUT: Dataspace pointer to place selection into
-        uint8 *buf;             IN: Buffer to retrieve serialized selection from
- RETURNS
-    Non-negative on success/Negative on failure
- DESCRIPTION
-    Deserializes the current selection into a buffer.  (Primarily for retrieving
-    from disk).  This routine just hands off to the appropriate routine for each
-    type of selection.  The format of the serialized information is shown in
-    the H5S_select_serialize() header.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5S_select_deserialize (H5S_t *space, const uint8_t *buf)
-{
-    const uint32_t *sel_type;       /* Pointer to the selection type */
-    herr_t ret_value=FAIL;  /* return value */
-
-    FUNC_ENTER (H5S_select_deserialize, FAIL);
-
-    assert(space);
-
-    sel_type=(const uint32_t *)buf;
-    switch(*sel_type) {
-        case H5S_SEL_POINTS:         /* Sequence of points selected */
-            ret_value=H5S_point_select_deserialize(space,buf);
-            break;
-
-        case H5S_SEL_HYPERSLABS:     /* Hyperslab selection defined */
-            ret_value=H5S_hyper_select_deserialize(space,buf);
-            break;
-
-        case H5S_SEL_ALL:            /* Entire extent selected */
-            ret_value=H5S_all_select_deserialize(space,buf);
-            break;
-
-        case H5S_SEL_NONE:           /* Nothing selected */
-            ret_value=H5S_none_select_deserialize(space,buf);
-            break;
-
-        case H5S_SEL_ERROR:
-        case H5S_SEL_N:
-            break;
-    }
-
-    FUNC_LEAVE (ret_value);
-}   /* H5S_select_deserialize() */

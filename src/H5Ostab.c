@@ -23,8 +23,8 @@
 #define PABLO_MASK      H5O_stab_mask
 
 /* PRIVATE PROTOTYPES */
-static void *H5O_stab_decode(H5F_t *f, const uint8_t *p, H5O_shared_t *sh);
-static herr_t H5O_stab_encode(H5F_t *f, uint8_t *p, const void *_mesg);
+static void *H5O_stab_decode(H5F_t *f, const uint8 *p, H5O_shared_t *sh);
+static herr_t H5O_stab_encode(H5F_t *f, uint8 *p, const void *_mesg);
 static void *H5O_stab_copy(const void *_mesg, void *_dest);
 static size_t H5O_stab_size(H5F_t *f, const void *_mesg);
 static herr_t H5O_stab_debug(H5F_t *f, const void *_mesg,
@@ -46,7 +46,7 @@ const H5O_class_t H5O_STAB[1] = {{
 }};
 
 /* Interface initialization */
-static intn interface_initialize_g = 0;
+static hbool_t interface_initialize_g = FALSE;
 #define INTERFACE_INIT  NULL
 
 /*-------------------------------------------------------------------------
@@ -68,7 +68,7 @@ static intn interface_initialize_g = 0;
  *-------------------------------------------------------------------------
  */
 static void *
-H5O_stab_decode(H5F_t *f, const uint8_t *p, H5O_shared_t __unused__ *sh)
+H5O_stab_decode(H5F_t *f, const uint8 *p, H5O_shared_t __unused__ *sh)
 {
     H5O_stab_t             *stab;
 
@@ -106,7 +106,7 @@ H5O_stab_decode(H5F_t *f, const uint8_t *p, H5O_shared_t __unused__ *sh)
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_stab_encode(H5F_t *f, uint8_t *p, const void *_mesg)
+H5O_stab_encode(H5F_t *f, uint8 *p, const void *_mesg)
 {
     const H5O_stab_t       *stab = (const H5O_stab_t *) _mesg;
 
