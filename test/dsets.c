@@ -8,7 +8,7 @@
  * Purpose:	Tests the dataset interface (H5D)
  */
 
-#include "h5test.h"
+#include <h5test.h>
 
 const char *FILENAME[] = {
     "dataset",
@@ -23,9 +23,6 @@ const char *FILENAME[] = {
 #define DSET_BOGUS_NAME		"bogus"
 
 #define H5Z_BOGUS		305
-
-/* Shared global arrays */
-int	points[100][200], check[100][200];
 
 
 /*-------------------------------------------------------------------------
@@ -178,6 +175,7 @@ static herr_t
 test_simple_io(hid_t file)
 {
     hid_t		dataset, space, xfer;
+    int			points[100][200], check[100][200];
     int			i, j, n;
     hsize_t		dims[2];
     void		*tconv_buf = NULL;
@@ -362,6 +360,7 @@ static herr_t
 test_compression(hid_t file)
 {
     hid_t		dataset, space, xfer, dc;
+    int			points[100][200], check[100][200];
     const hsize_t	size[2] = {100, 200};
     const hsize_t	chunk_size[2] = {2, 25};
     const hssize_t	hs_offset[2] = {7, 30};

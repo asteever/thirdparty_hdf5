@@ -132,7 +132,6 @@ extern char *hdfRecordPointer;
 #define FAMILY_HDFPROCNAME     	0300
 
 typedef struct {
-        long numBytes;
         long setID;
         char *setName;
 } HDFsetInfo ;

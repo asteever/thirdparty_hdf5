@@ -390,9 +390,9 @@ struct handler_t {
  */
 #if 0
     /* binary: not implemented yet */
-static const char *s_opts = "hbBHvVa:d:g:l:t:w:xD:o:s:T:c:k:";
+static const char *s_opts = "hbBHvVa:d:g:l:t:w:xD:o:s:S:c:k:";
 #else
-static const char *s_opts = "hBHvVa:d:g:l:t:w:xD:o:s:T:c:k:";
+static const char *s_opts = "hBHvVa:d:g:l:t:w:xD:o:s:S:c:k:";
 #endif  /* 0 */
 static struct long_options l_opts[] = {
     { "help", no_arg, 'h' },
@@ -601,6 +601,7 @@ usage: %s [OPTIONS] file\n\
       -x, --xml           Output in XML\n\
       -D U, --xml-dtd=U   Use the DTD at U\n\
 \n\
+ EXPERIMENTAL:\n\
  Subsetting is available by using the following options with a dataset\n\
  attribute. Subsetting is done by selecting a hyperslab from the data.\n\
  Thus, the options mirror those for performing a hyperslab selection.\n\
@@ -2445,7 +2446,7 @@ parse_start:
 
         /** begin subsetting parameters **/
         case 's':
-        case 'T':
+        case 'S':
         case 'c':
         case 'k': {
             struct subset_t *s;
@@ -2471,7 +2472,7 @@ parse_start:
              * slightly convoluted, but...we are only interested in options
              * for subsetting: "--start", "--stride", "--count", and "--block"
              * which can come in any order. If we run out of parameters (EOF)
-             * or run into one which isn't a subsetting parameter (NOT s, T,
+             * or run into one which isn't a subsetting parameter (NOT s, S,
              * c, or K), then we exit the do-while look, set the subset_info
              * to the structure we've been filling. If we've reached the end
              * of the options, we exit the parsing (goto parse_end) otherwise,

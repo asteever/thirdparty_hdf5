@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 1998-2001 NCSA
- *		           All rights reserved.
+ * Copyright (C) 1998 NCSA
+ *		 All rights reserved.
  *
  * Programmer:	Robb Matzke <matzke@llnl.gov>
  *		Friday, October 30, 1998
@@ -12,18 +12,8 @@
  */
 #ifndef _H5private_H
 #define _H5private_H
-
-#include "H5public.h"		/* Include Public Definitions		*/
-
-/*
- * Since H5config.h is a generated header file, it is messy to try
- * to put a #ifndef _H5config_H ... #endif guard in it.
- * HDF5 has set an internal rule that it is being included here.
- * Source files should NOT include H5config.h directly but include
- * it via H5private.h.  The #ifndef _H5private_H guard above would
- * prevent repeated include.
- */
-#include "H5config.h"		/* Include all configuration info	*/
+#include <H5public.h>		/* Include Public Definitions		*/
+#include <H5config.h>		/* Include all configuration info	*/
 
 /* include the pthread library */
 #ifdef H5_HAVE_THREADSAFE
@@ -161,6 +151,7 @@
 #   include "HDFIOTrace.h"
 #   include "ProcIDs.h"
 #endif
+
 
 /*
  * NT doesn't define SIGBUS, but since NT only runs on processors             
@@ -663,11 +654,7 @@ __DLL__ int HDfprintf (FILE *stream, const char *fmt, ...);
 #define HDsinh(X)		sinh(X)
 #define HDsleep(N)		sleep(N)
 #ifdef H5_HAVE_SNPRINTF
-#ifdef __WATCOMC__
-#   define HDsnprintf		_snprintf /*varargs*/
-#else /* __WATCOMC__ */
 #   define HDsnprintf		snprintf /*varargs*/
-#endif /* __WATCOMC__ */
 #endif
 /* sprintf() variable arguments */
 #define HDsqrt(X)		sqrt(X)
@@ -925,7 +912,7 @@ __DLL__ void H5_trace(hbool_t returning, const char *func, const char *type,
 #ifdef H5_HAVE_THREADSAFE
 
 /* Include required thread-safety header */
-#include "H5TSprivate.h"
+#include <H5TSprivate.h>
 
 /* replacement structure for original global variable */
 typedef struct H5_api_struct {

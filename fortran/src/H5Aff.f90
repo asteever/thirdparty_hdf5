@@ -83,36 +83,6 @@
           END INTERFACE
 
       CONTAINS
-
-!----------------------------------------------------------------------
-! Name:		h5acreate_f 
-!
-! Purpose: 	Creates a dataset as an attribute of a group, dataset, 
-!		or named datatype 
-!
-! Inputs:  
-!		obj_id		- identifier of an object (group, dataset,
-!				  or named datatype) attribute is attached to
-!		name		- attribute name
-!		type_id		- attribute datatype identifier
-!		space_id	- attribute dataspace identifier
-!
-! Outputs:  
-!		attr_id		- attribute identifier
-!		hdferr:		- error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:
-!		creation_prp	- creation property list identifier 			
-!
-! Programmer:	Elena Pourmal
-!		August 12, 1999	
-!
-! Modifications: 	Explicit Fortran interfaces are added for 
-!			called C functions (it is needed for Windows
-!			port).  February 27, 2001 
-!
-!----------------------------------------------------------------------
           SUBROUTINE h5acreate_f(obj_id, name, type_id, space_id, attr_id, &
                                  hdferr, creation_prp) 
             IMPLICIT NONE
@@ -129,25 +99,7 @@
                                                 ! list identifier 
             INTEGER :: creation_prp_default 
             INTEGER :: namelen
-!            INTEGER, EXTERNAL :: h5acreate_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5acreate_c(obj_id, name, namelen, type_id, &
-                               space_id, creation_prp_default, attr_id)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5ACREATE_C'::h5acreate_c
-              !DEC$ATTRIBUTES reference :: name
-              INTEGER(HID_T), INTENT(IN) :: obj_id
-              CHARACTER(LEN=*), INTENT(IN) :: name
-              INTEGER :: namelen
-              INTEGER(HID_T), INTENT(IN) :: type_id
-              INTEGER(HID_T), INTENT(IN) :: space_id
-              INTEGER :: creation_prp_default
-              INTEGER(HID_T), INTENT(OUT) :: attr_id
-              END FUNCTION h5acreate_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5acreate_c
             creation_prp_default = H5P_DEFAULT_F
             namelen = LEN(NAME)
             if (present(creation_prp)) creation_prp_default = creation_prp
@@ -156,31 +108,6 @@
           END SUBROUTINE h5acreate_f
 
 
-!----------------------------------------------------------------------
-! Name:		h5aopen_name_f 
-!
-! Purpose:  	Opens an attribute specified by name. 
-!
-! Inputs:  	
-!		obj_id 		- identifier of a group, dataset, or named 
-!				  datatype atttribute to be attached to
-!		name		- attribute name
-! Outputs:  
-!		attr_id		- attribute identifier
-!		hdferr:		- error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:
-!				NONE			
-!
-! Programmer:	Elena Pourmal
-!		August 12, 1999	
-!
-! Modifications: 	Explicit Fortran interfaces are added for 
-!			called C functions (it is needed for Windows
-!			port).  February 27, 2001 
-!
-!----------------------------------------------------------------------
 
           SUBROUTINE h5aopen_name_f(obj_id, name, attr_id, hdferr) 
             IMPLICIT NONE
@@ -189,52 +116,12 @@
             INTEGER(HID_T), INTENT(OUT) :: attr_id  ! Attribute identifier 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
             INTEGER :: namelen
-
-!            INTEGER, EXTERNAL :: h5aopen_name_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aopen_name_c(obj_id, name, namelen, attr_id)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AOPEN_NAME_C'::h5aopen_name_c
-              !DEC$ATTRIBUTES reference :: name
-              INTEGER(HID_T), INTENT(IN) :: obj_id
-              CHARACTER(LEN=*), INTENT(IN) :: name
-              INTEGER :: namelen
-              INTEGER(HID_T), INTENT(OUT) :: attr_id
-              END FUNCTION h5aopen_name_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aopen_name_c
             namelen = LEN(name)
             hdferr = h5aopen_name_c(obj_id, name, namelen, attr_id)
           END SUBROUTINE h5aopen_name_f
 
 
-!----------------------------------------------------------------------
-! Name:		h5aopen_idx_f 
-!
-! Purpose:  	Opens the attribute specified by its index.
-!
-! Inputs:  
-!		obj_id		- identifier of a group, dataset, or named
-!				  datatype an attribute to be attached to
-!		index		- index of the attribute to open (zero-based)
-! Outputs:  
-!		attr_id		- attribute identifier
-!		hdferr:		- error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:
-!				NONE			
-!
-! Programmer:	Elena Pourmal
-!		August 12, 1999	
-!
-! Modifications: 	Explicit Fortran interfaces are added for 
-!			called C functions (it is needed for Windows
-!			port).  February 27, 2001 
-!
-!----------------------------------------------------------------------
 
           SUBROUTINE h5aopen_idx_f(obj_id, index, attr_id, hdferr) 
             IMPLICIT NONE
@@ -242,53 +129,11 @@
             INTEGER, INTENT(IN) :: index            ! Attribute index 
             INTEGER(HID_T), INTENT(OUT) :: attr_id  ! Attribute identifier 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5aopen_idx_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aopen_idx_c(obj_id, index, attr_id)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AOPEN_IDX_C'::h5aopen_idx_c
-              INTEGER(HID_T), INTENT(IN) :: obj_id
-              INTEGER, INTENT(IN) :: index
-              INTEGER(HID_T), INTENT(OUT) :: attr_id
-              END FUNCTION h5aopen_idx_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aopen_idx_c
             hdferr = h5aopen_idx_c(obj_id, index, attr_id)
           END SUBROUTINE h5aopen_idx_f
 
 
-!----------------------------------------------------------------------
-! Name:		h5awrite_f 
-!
-! Purpose:  	Writes data to an attribute. 
-!
-! Inputs:  
-!		attr_id		- attribute identifier
-!		memtype_id	- attribute memory type identifier
-!		buf		- data to write
-! Outputs:  
-!
-!		hdferr:		- error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:
-!				NONE			
-!
-! Programmer:	Elena Pourmal
-!		August 12, 1999	
-!
-! Modifications: 	Explicit Fortran interfaces are added for 
-!			called C functions (it is needed for Windows
-!			port).  February 27, 2001 
-!
-! Comment:		This function is overloaded to write INTEGER,
-!			REAL, DOUBLE PRECISION and CHARACTER buffers
-!			up to 7 dimensions.	
-!
-!----------------------------------------------------------------------
 
           SUBROUTINE h5awrite_integer_scalar(attr_id, memtype_id,  buf, hdferr) 
             IMPLICIT NONE
@@ -297,20 +142,7 @@
                                                      ! identifier  (in memory)
             INTEGER, INTENT(IN) :: buf              ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5awrite_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              INTEGER, INTENT(IN)::buf
-              END FUNCTION h5awrite_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awrite_c
             hdferr = h5awrite_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_integer_scalar
 
@@ -322,20 +154,7 @@
             INTEGER, DIMENSION(:), INTENT(IN) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5awrite_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              INTEGER, DIMENSION(:), INTENT(IN)::buf
-              END FUNCTION h5awrite_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awrite_c
             hdferr = h5awrite_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_integer_1
 
@@ -348,20 +167,7 @@
             INTEGER, DIMENSION(:,:), INTENT(IN) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5awrite_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              INTEGER, DIMENSION(:,:), INTENT(IN)::buf
-              END FUNCTION h5awrite_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awrite_c
             hdferr = h5awrite_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_integer_2
 
@@ -374,20 +180,7 @@
             INTEGER, DIMENSION(:,:,:), INTENT(IN) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5awrite_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              INTEGER, DIMENSION(:,:,:), INTENT(IN)::buf
-              END FUNCTION h5awrite_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awrite_c
             hdferr = h5awrite_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_integer_3
 
@@ -400,20 +193,7 @@
             INTEGER, DIMENSION(:,:,:,:), INTENT(IN) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5awrite_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              INTEGER, DIMENSION(:,:,:,:), INTENT(IN)::buf
-              END FUNCTION h5awrite_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awrite_c
             hdferr = h5awrite_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_integer_4
 
@@ -426,20 +206,7 @@
             INTEGER, DIMENSION(:,:,:,:,:), INTENT(IN) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5awrite_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              INTEGER, DIMENSION(:,:,:,:,:), INTENT(IN)::buf
-              END FUNCTION h5awrite_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awrite_c
             hdferr = h5awrite_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_integer_5
 
@@ -452,20 +219,7 @@
             INTEGER, DIMENSION(:,:,:,:,:,:), INTENT(IN) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5awrite_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              INTEGER, DIMENSION(:,:,:,:,:,:), INTENT(IN)::buf
-              END FUNCTION h5awrite_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awrite_c
             hdferr = h5awrite_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_integer_6
 
@@ -478,20 +232,7 @@
             INTEGER, DIMENSION(:,:,:,:,:,:,:), INTENT(IN) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5awrite_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              INTEGER, DIMENSION(:,:,:,:,:,:,:), INTENT(IN)::buf
-              END FUNCTION h5awrite_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awrite_c
             hdferr = h5awrite_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_integer_7
 
@@ -503,20 +244,7 @@
                                                      ! identifier  (in memory)
             REAL, INTENT(IN) :: buf                 ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5awrite_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              REAL, INTENT(IN)::buf
-              END FUNCTION h5awrite_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awrite_c
             hdferr = h5awrite_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_real_scalar
 
@@ -528,20 +256,7 @@
             REAL, DIMENSION(:), INTENT(IN) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5awrite_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              REAL, DIMENSION(:), INTENT(IN)::buf
-              END FUNCTION h5awrite_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awrite_c
             hdferr = h5awrite_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_real_1
 
@@ -554,21 +269,7 @@
             REAL, DIMENSION(:,:), INTENT(IN) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5awrite_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              REAL, INTENT(IN)::buf
-              REAL, DIMENSION(:,:), INTENT(IN)::buf
-              END FUNCTION h5awrite_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awrite_c
             hdferr = h5awrite_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_real_2
 
@@ -581,20 +282,7 @@
             REAL, DIMENSION(:,:,:), INTENT(IN) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5awrite_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              REAL, DIMENSION(:,:,:), INTENT(IN)::buf
-              END FUNCTION h5awrite_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awrite_c
             hdferr = h5awrite_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_real_3
 
@@ -607,21 +295,7 @@
             REAL, DIMENSION(:,:,:,:), INTENT(IN) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5awrite_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              REAL, INTENT(IN)::buf
-              REAL, DIMENSION(:,:,:,:), INTENT(IN)::buf
-              END FUNCTION h5awrite_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awrite_c
             hdferr = h5awrite_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_real_4
 
@@ -634,21 +308,7 @@
             REAL, DIMENSION(:,:,:,:,:), INTENT(IN) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5awrite_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              REAL, INTENT(IN)::buf
-              REAL, DIMENSION(:,:,:,:,:), INTENT(IN)::buf
-              END FUNCTION h5awrite_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awrite_c
             hdferr = h5awrite_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_real_5
 
@@ -661,20 +321,7 @@
             REAL, DIMENSION(:,:,:,:,:,:), INTENT(IN) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5awrite_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              REAL, DIMENSION(:,:,:,:,:,:), INTENT(IN)::buf
-              END FUNCTION h5awrite_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awrite_c
             hdferr = h5awrite_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_real_6
 
@@ -687,20 +334,7 @@
             REAL, DIMENSION(:,:,:,:,:,:,:), INTENT(IN) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5awrite_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              REAL, DIMENSION(:,:,:,:,:,:,:), INTENT(IN)::buf
-              END FUNCTION h5awrite_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awrite_c
             hdferr = h5awrite_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_real_7
 
@@ -712,20 +346,7 @@
                                                      ! identifier  (in memory)
             DOUBLE PRECISION, INTENT(IN) :: buf     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5awrite_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              DOUBLE PRECISION, INTENT(IN)::buf
-              END FUNCTION h5awrite_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awrite_c
             hdferr = h5awrite_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_double_scalar
 
@@ -737,20 +358,7 @@
             DOUBLE PRECISION, DIMENSION(:), INTENT(IN) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5awrite_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              DOUBLE PRECISION, DIMENSION(:), INTENT(IN)::buf
-              END FUNCTION h5awrite_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awrite_c
             hdferr = h5awrite_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_double_1
 
@@ -763,20 +371,7 @@
             DOUBLE PRECISION, DIMENSION(:,:), INTENT(IN) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5awrite_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              DOUBLE PRECISION, DIMENSION(:,:), INTENT(IN)::buf
-              END FUNCTION h5awrite_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awrite_c
             hdferr = h5awrite_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_double_2
 
@@ -789,20 +384,7 @@
             DOUBLE PRECISION, DIMENSION(:,:,:), INTENT(IN) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5awrite_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              DOUBLE PRECISION, DIMENSION(:,:,:), INTENT(IN)::buf
-              END FUNCTION h5awrite_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awrite_c
             hdferr = h5awrite_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_double_3
 
@@ -815,20 +397,7 @@
             DOUBLE PRECISION, DIMENSION(:,:,:,:), INTENT(IN) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5awrite_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              DOUBLE PRECISION, DIMENSION(:,:,:,:), INTENT(IN)::buf
-              END FUNCTION h5awrite_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awrite_c
             hdferr = h5awrite_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_double_4
 
@@ -841,20 +410,7 @@
             DOUBLE PRECISION, DIMENSION(:,:,:,:,:), INTENT(IN) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5awrite_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              DOUBLE PRECISION, DIMENSION(:,:,:,:,:), INTENT(IN)::buf
-              END FUNCTION h5awrite_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awrite_c
             hdferr = h5awrite_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_double_5
 
@@ -867,20 +423,7 @@
             DOUBLE PRECISION, DIMENSION(:,:,:,:,:,:), INTENT(IN) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5awrite_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              DOUBLE PRECISION, DIMENSION(:,:,:,:,:,:), INTENT(IN)::buf
-              END FUNCTION h5awrite_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awrite_c
             hdferr = h5awrite_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_double_6
 
@@ -893,20 +436,7 @@
             DOUBLE PRECISION, DIMENSION(:,:,:,:,:,:,:), INTENT(IN) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5awrite_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awrite_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITE_C'::h5awrite_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              DOUBLE PRECISION, DIMENSION(:,:,:,:,:,:,:), INTENT(IN)::buf
-              END FUNCTION h5awrite_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awrite_c
             hdferr = h5awrite_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_double_7
 
@@ -918,20 +448,7 @@
             CHARACTER(LEN=*),INTENT(IN) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-!            INTEGER, EXTERNAL :: h5awritec_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awritec_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITEC_C'::h5awritec_c
-              !DEC$ATTRIBUTES reference :: buf
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              CHARACTER(LEN=*), INTENT(IN)::buf
-              END FUNCTION h5awritec_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awritec_c
             hdferr = h5awritec_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_char_scalar
 
@@ -943,20 +460,7 @@
             CHARACTER(LEN=*), DIMENSION(*), INTENT(IN) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-!            INTEGER, EXTERNAL :: h5awritec_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awritec_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITEC_C'::h5awritec_c
-              !DEC$ATTRIBUTES reference :: buf
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              CHARACTER(LEN=*), INTENT(IN), DIMENSION(*)::buf
-              END FUNCTION h5awritec_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awritec_c
             hdferr = h5awritec_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_char_1
 
@@ -969,21 +473,7 @@
             CHARACTER(LEN=*), DIMENSION(:,:), INTENT(IN) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5awritec_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awritec_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITEC_C'::h5awritec_c
-              !DEC$ATTRIBUTES reference :: buf
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              CHARACTER(LEN=*), INTENT(IN), DIMENSION(:,:)::buf
-              END FUNCTION h5awritec_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awritec_c
             hdferr = h5awritec_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_char_2
 
@@ -996,20 +486,7 @@
             CHARACTER(LEN=*), DIMENSION(:,:,:), INTENT(IN) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-!            INTEGER, EXTERNAL :: h5awritec_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awritec_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITEC_C'::h5awritec_c
-              !DEC$ATTRIBUTES reference :: buf
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              CHARACTER(LEN=*), INTENT(IN), DIMENSION(:,:,:)::buf
-              END FUNCTION h5awritec_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awritec_c
             hdferr = h5awritec_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_char_3
 
@@ -1022,20 +499,7 @@
             CHARACTER(LEN=*), DIMENSION(:,:,:,:), INTENT(IN) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-!            INTEGER, EXTERNAL :: h5awritec_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awritec_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITEC_C'::h5awritec_c
-              !DEC$ATTRIBUTES reference :: buf
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              CHARACTER(LEN=*), INTENT(IN), DIMENSION(:,:,:,:)::buf
-              END FUNCTION h5awritec_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awritec_c
             hdferr = h5awritec_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_char_4
 
@@ -1048,20 +512,7 @@
             CHARACTER(LEN=*), DIMENSION(:,:,:,:,:), INTENT(IN) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-!            INTEGER, EXTERNAL :: h5awritec_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awritec_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITEC_C'::h5awritec_c
-              !DEC$ATTRIBUTES reference :: buf
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              CHARACTER(LEN=*), INTENT(IN), DIMENSION(:,:,:,:,:)::buf
-              END FUNCTION h5awritec_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awritec_c
             hdferr = h5awritec_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_char_5
 
@@ -1074,20 +525,7 @@
             CHARACTER(LEN=*), DIMENSION(:,:,:,:,:,:), INTENT(IN) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-!            INTEGER, EXTERNAL :: h5awritec_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awritec_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITEC_C'::h5awritec_c
-              !DEC$ATTRIBUTES reference :: buf
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              CHARACTER(LEN=*), INTENT(IN), DIMENSION(:,:,:,:,:,:)::buf
-              END FUNCTION h5awritec_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awritec_c
             hdferr = h5awritec_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_char_6
 
@@ -1100,50 +538,10 @@
             CHARACTER(LEN=*), DIMENSION(:,:,:,:,:,:,:), INTENT(IN) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-!            INTEGER, EXTERNAL :: h5awritec_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5awritec_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AWRITEC_C'::h5awritec_c
-              !DEC$ATTRIBUTES reference :: buf
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              CHARACTER(LEN=*), INTENT(IN), DIMENSION(:,:,:,:,:,:,:)::buf
-              END FUNCTION h5awritec_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5awritec_c
             hdferr = h5awritec_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5awrite_char_7
 
-!----------------------------------------------------------------------
-! Name:		h5aread_f 
-!
-! Purpose:  	Reads an attribute.
-!
-! Inputs:  
-!		attr_id		- attribute identifier
-!		memtype_id	- attribute memory type identifier
-! Outputs:  
-!		buf		- buffer to read attribute data in
-!		hdferr:		- error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:
-!				NONE			
-!
-! Programmer:	Elena Pourmal
-!		August 12, 1999	
-!
-! Modifications: 	Explicit Fortran interfaces are added for 
-!			called C functions (it is needed for Windows
-!			port).  February 27, 2001 
-!
-! Comment:		This function is overloaded to write INTEGER,
-!			REAL, DOUBLE PRECISION and CHARACTER buffers
-!			up to 7 dimensions.	
-!----------------------------------------------------------------------
 
           SUBROUTINE h5aread_integer_scalar(attr_id, memtype_id,  buf, hdferr) 
             IMPLICIT NONE
@@ -1152,20 +550,7 @@
                                                      ! identifier  (in memory)
             INTEGER, INTENT(OUT) :: buf             ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5aread_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              INTEGER, INTENT(OUT)::buf
-              END FUNCTION h5aread_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aread_c
             hdferr = h5aread_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_integer_scalar
 
@@ -1174,22 +559,10 @@
             INTEGER(HID_T), INTENT(IN) :: attr_id   ! Attribute identifier 
             INTEGER(HID_T), INTENT(IN) :: memtype_id ! Attribute datatype 
                                                      ! identifier  (in memory)
-            INTEGER, DIMENSION(:), INTENT(OUT) :: buf ! Attribute data 
+            INTEGER, DIMENSION(:), INTENT(OUT) :: buf 
+                                                    ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5aread_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              INTEGER, DIMENSION(:), INTENT(OUT)::buf
-              END FUNCTION h5aread_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aread_c
             hdferr = h5aread_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_integer_1
 
@@ -1199,22 +572,10 @@
             INTEGER(HID_T), INTENT(IN) :: attr_id   ! Attribute identifier 
             INTEGER(HID_T), INTENT(IN) :: memtype_id ! Attribute datatype 
                                                      ! identifier  (in memory)
-            INTEGER, DIMENSION(:,:), INTENT(OUT) :: buf ! Attribute data 
+            INTEGER, DIMENSION(:,:), INTENT(OUT) :: buf 
+                                                    ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5aread_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              INTEGER, DIMENSION(:,:), INTENT(OUT)::buf
-              END FUNCTION h5aread_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aread_c
             hdferr = h5aread_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_integer_2
 
@@ -1224,22 +585,10 @@
             INTEGER(HID_T), INTENT(IN) :: attr_id   ! Attribute identifier 
             INTEGER(HID_T), INTENT(IN) :: memtype_id ! Attribute datatype 
                                                      ! identifier  (in memory)
-            INTEGER, DIMENSION(:,:,:), INTENT(OUT) :: buf ! Attribute data 
+            INTEGER, DIMENSION(:,:,:), INTENT(OUT) :: buf 
+                                                    ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5aread_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              INTEGER, DIMENSION(:,:,:), INTENT(OUT)::buf
-              END FUNCTION h5aread_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aread_c
             hdferr = h5aread_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_integer_3
 
@@ -1252,20 +601,7 @@
             INTEGER, DIMENSION(:,:,:,:), INTENT(OUT) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5aread_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              INTEGER, DIMENSION(:,:,:,:), INTENT(OUT)::buf
-              END FUNCTION h5aread_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aread_c
             hdferr = h5aread_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_integer_4
 
@@ -1278,20 +614,7 @@
             INTEGER, DIMENSION(:,:,:,:,:), INTENT(OUT) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5aread_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              INTEGER, DIMENSION(:,:,:,:,:), INTENT(OUT)::buf
-              END FUNCTION h5aread_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aread_c
             hdferr = h5aread_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_integer_5
 
@@ -1304,20 +627,7 @@
             INTEGER, DIMENSION(:,:,:,:,:,:), INTENT(OUT) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5aread_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              INTEGER, DIMENSION(:,:,:,:,:,:), INTENT(OUT)::buf
-              END FUNCTION h5aread_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aread_c
             hdferr = h5aread_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_integer_6
 
@@ -1330,20 +640,7 @@
             INTEGER, DIMENSION(:,:,:,:,:,:,:), INTENT(OUT) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5aread_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              INTEGER, DIMENSION(:,:,:,:,:,:,:), INTENT(OUT)::buf
-              END FUNCTION h5aread_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aread_c
             hdferr = h5aread_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_integer_7
 
@@ -1355,20 +652,7 @@
                                                      ! identifier  (in memory)
             REAL, INTENT(OUT) :: buf                ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5aread_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              REAL, INTENT(OUT)::buf
-              END FUNCTION h5aread_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aread_c
             hdferr = h5aread_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_real_scalar
 
@@ -1380,20 +664,7 @@
             REAL, DIMENSION(:), INTENT(OUT) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5aread_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              REAL, DIMENSION(:), INTENT(OUT)::buf
-              END FUNCTION h5aread_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aread_c
             hdferr = h5aread_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_real_1
 
@@ -1406,20 +677,7 @@
             REAL, DIMENSION(:,:), INTENT(OUT) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5aread_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              REAL, DIMENSION(:,:), INTENT(OUT)::buf
-              END FUNCTION h5aread_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aread_c
             hdferr = h5aread_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_real_2
 
@@ -1432,20 +690,7 @@
             REAL, DIMENSION(:,:,:), INTENT(OUT) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5aread_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              REAL, DIMENSION(:,:,:), INTENT(OUT)::buf
-              END FUNCTION h5aread_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aread_c
             hdferr = h5aread_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_real_3
 
@@ -1458,20 +703,7 @@
             REAL, DIMENSION(:,:,:,:), INTENT(OUT) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5aread_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              REAL, DIMENSION(:,:,:,:), INTENT(OUT)::buf
-              END FUNCTION h5aread_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aread_c
             hdferr = h5aread_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_real_4
 
@@ -1484,20 +716,7 @@
             REAL, DIMENSION(:,:,:,:,:), INTENT(OUT) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5aread_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              REAL, DIMENSION(:,:,:,:,:), INTENT(OUT)::buf
-              END FUNCTION h5aread_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aread_c
             hdferr = h5aread_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_real_5
 
@@ -1510,20 +729,7 @@
             REAL, DIMENSION(:,:,:,:,:,:), INTENT(OUT) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5aread_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              REAL, DIMENSION(:,:,:,:,:,:), INTENT(OUT)::buf
-              END FUNCTION h5aread_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aread_c
             hdferr = h5aread_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_real_6
 
@@ -1536,20 +742,7 @@
             REAL, DIMENSION(:,:,:,:,:,:,:), INTENT(OUT) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5aread_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              REAL, DIMENSION(:,:,:,:,:,:,:), INTENT(OUT)::buf
-              END FUNCTION h5aread_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aread_c
             hdferr = h5aread_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_real_7
 
@@ -1561,20 +754,7 @@
                                                      ! identifier  (in memory)
             DOUBLE PRECISION, INTENT(OUT) :: buf    ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5aread_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              DOUBLE PRECISION, INTENT(OUT)::buf
-              END FUNCTION h5aread_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aread_c
             hdferr = h5aread_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_double_scalar
 
@@ -1586,20 +766,7 @@
             DOUBLE PRECISION, DIMENSION(:), INTENT(OUT) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5aread_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              DOUBLE PRECISION, DIMENSION(:), INTENT(OUT)::buf
-              END FUNCTION h5aread_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aread_c
             hdferr = h5aread_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_double_1
 
@@ -1612,20 +779,7 @@
             DOUBLE PRECISION, DIMENSION(:,:), INTENT(OUT) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5aread_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              DOUBLE PRECISION, DIMENSION(:,:), INTENT(OUT)::buf
-              END FUNCTION h5aread_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aread_c
             hdferr = h5aread_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_double_2
 
@@ -1638,20 +792,7 @@
             DOUBLE PRECISION, DIMENSION(:,:,:), INTENT(OUT) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5aread_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              DOUBLE PRECISION, DIMENSION(:,:,:), INTENT(OUT)::buf
-              END FUNCTION h5aread_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aread_c
             hdferr = h5aread_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_double_3
 
@@ -1664,20 +805,7 @@
             DOUBLE PRECISION, DIMENSION(:,:,:,:), INTENT(OUT) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5aread_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              DOUBLE PRECISION, DIMENSION(:,:,:,:), INTENT(OUT)::buf
-              END FUNCTION h5aread_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aread_c
             hdferr = h5aread_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_double_4
 
@@ -1690,20 +818,7 @@
             DOUBLE PRECISION, DIMENSION(:,:,:,:,:), INTENT(OUT) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5aread_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              DOUBLE PRECISION, DIMENSION(:,:,:,:,:), INTENT(OUT)::buf
-              END FUNCTION h5aread_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aread_c
             hdferr = h5aread_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_double_5
 
@@ -1716,20 +831,7 @@
             DOUBLE PRECISION, DIMENSION(:,:,:,:,:,:), INTENT(OUT) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5aread_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              DOUBLE PRECISION, DIMENSION(:,:,:,:,:,:), INTENT(OUT)::buf
-              END FUNCTION h5aread_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aread_c
             hdferr = h5aread_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_double_6
 
@@ -1742,20 +844,7 @@
             DOUBLE PRECISION, DIMENSION(:,:,:,:,:,:,:), INTENT(OUT) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5aread_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aread_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREAD_C'::h5aread_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              DOUBLE PRECISION, DIMENSION(:,:,:,:,:,:,:), INTENT(OUT)::buf
-              END FUNCTION h5aread_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aread_c
             hdferr = h5aread_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_double_7
 
@@ -1767,21 +856,7 @@
             CHARACTER(LEN=*), INTENT(OUT) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5areadc_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5areadc_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREADC_C'::h5areadc_c
-              !DEC$ATTRIBUTES reference :: buf
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              CHARACTER(LEN=*) :: buf
-              END FUNCTION h5areadc_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5areadc_c
             hdferr = h5areadc_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_char_scalar
 
@@ -1794,21 +869,7 @@
             CHARACTER(LEN=*), DIMENSION(*), INTENT(OUT) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5areadc_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5areadc_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREADC_C'::h5areadc_c
-              !DEC$ATTRIBUTES reference :: buf
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              CHARACTER(LEN=*), INTENT(OUT), DIMENSION(*)::buf
-              END FUNCTION h5areadc_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5areadc_c
             hdferr = h5areadc_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_char_1
 
@@ -1821,21 +882,7 @@
             CHARACTER(LEN=*), DIMENSION(:,:), INTENT(OUT) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5areadc_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5areadc_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREADC_C'::h5areadc_c
-              !DEC$ATTRIBUTES reference :: buf
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              CHARACTER(LEN=*), INTENT(OUT), DIMENSION(:,:)::buf
-              END FUNCTION h5areadc_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5areadc_c
             hdferr = h5areadc_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_char_2
 
@@ -1848,21 +895,7 @@
             CHARACTER(LEN=*), DIMENSION(:,:,:), INTENT(OUT) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5areadc_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5areadc_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREADC_C'::h5areadc_c
-              !DEC$ATTRIBUTES reference :: buf
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              CHARACTER(LEN=*), INTENT(OUT), DIMENSION(:,:,:)::buf
-              END FUNCTION h5areadc_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5areadc_c
             hdferr = h5areadc_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_char_3
 
@@ -1875,21 +908,7 @@
             CHARACTER(LEN=*), DIMENSION(:,:,:,:), INTENT(OUT) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5areadc_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5areadc_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREADC_C'::h5areadc_c
-              !DEC$ATTRIBUTES reference :: buf
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              CHARACTER(LEN=*), INTENT(OUT), DIMENSION(:,:,:,:)::buf
-              END FUNCTION h5areadc_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5areadc_c
             hdferr = h5areadc_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_char_4
 
@@ -1902,21 +921,7 @@
             CHARACTER(LEN=*), DIMENSION(:,:,:,:,:), INTENT(OUT) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5areadc_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5areadc_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREADC_C'::h5areadc_c
-              !DEC$ATTRIBUTES reference :: buf
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              CHARACTER(LEN=*), INTENT(OUT), DIMENSION(:,:,:,:,:)::buf
-              END FUNCTION h5areadc_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5areadc_c
             hdferr = h5areadc_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_char_5
 
@@ -1929,21 +934,7 @@
             CHARACTER(LEN=*), DIMENSION(:,:,:,:,:,:), INTENT(OUT) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5areadc_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5areadc_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREADC_C'::h5areadc_c
-              !DEC$ATTRIBUTES reference :: buf
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              CHARACTER(LEN=*), INTENT(OUT), DIMENSION(:,:,:,:,:,:)::buf
-              END FUNCTION h5areadc_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5areadc_c
             hdferr = h5areadc_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_char_6
 
@@ -1956,47 +947,10 @@
             CHARACTER(LEN=*), DIMENSION(:,:,:,:,:,:,:), INTENT(OUT) :: buf 
                                                     ! Attribute data 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL :: h5areadc_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5areadc_c(attr_id, memtype_id,  buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AREADC_C'::h5areadc_c
-              !DEC$ATTRIBUTES reference :: buf
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(IN) :: memtype_id
-              CHARACTER(LEN=*), INTENT(OUT), DIMENSION(:,:,:,:,:,:,:)::buf
-              END FUNCTION h5areadc_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5areadc_c
             hdferr = h5areadc_c(attr_id, memtype_id,  buf)
           END SUBROUTINE h5aread_char_7
 
-!----------------------------------------------------------------------
-! Name:		h5aget_space_f 
-!
-! Purpose:  	Gets a copy of the dataspace for an attribute.
-!
-! Inputs:  
-!		attr_id		- attribute identifier
-! Outputs:  
-!		space_id	- attribite dataspace identifier
-!		hdferr:		- error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:
-!				NONE			
-!
-! Programmer:	Elena Pourmal
-!		August 12, 1999	
-!
-! Modifications: 	Explicit Fortran interfaces are added for 
-!			called C functions (it is needed for Windows
-!			port).  February 27, 2001 
-!
-!----------------------------------------------------------------------
 
           SUBROUTINE h5aget_space_f(attr_id, space_id, hdferr) 
             IMPLICIT NONE
@@ -2004,45 +958,10 @@
             INTEGER(HID_T), INTENT(OUT) :: space_id 
                                             ! Attribute dataspace identifier
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
-
-!            INTEGER, EXTERNAL:: h5aget_space_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aget_space_c(attr_id, space_id)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AGET_SPACE_C'::h5aget_space_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(OUT) :: space_id
-              END FUNCTION h5aget_space_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL:: h5aget_space_c
             hdferr = h5aget_space_c(attr_id, space_id)
           END SUBROUTINE h5aget_space_f
 
-!----------------------------------------------------------------------
-! Name:		h5aget_type_f 
-!
-! Purpose:  	Gets an attribute datatype.
-!
-! Inputs:  
-!		attr_id 	- attribute identifier
-! Outputs:  
-!		type_id		- attribute datatype identifier
-!		hdferr:		- error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:
-!				NONE			
-!
-! Programmer:	Elena Pourmal
-!		August 12, 1999	
-!
-! Modifications: 	Explicit Fortran interfaces are added for 
-!			called C functions (it is needed for Windows
-!			port).  February 27, 2001 
-!
-!----------------------------------------------------------------------
 
           SUBROUTINE h5aget_type_f(attr_id, type_id, hdferr) 
             IMPLICIT NONE
@@ -2050,46 +969,10 @@
             INTEGER(HID_T), INTENT(OUT) :: type_id 
                                               ! Attribute datatype identifier
             INTEGER, INTENT(OUT) :: hdferr    ! Error code
-
-!            INTEGER, EXTERNAL :: h5aget_type_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aget_type_c(attr_id, type_id)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AGET_TYPE_C'::h5aget_type_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER(HID_T), INTENT(OUT) :: type_id
-              END FUNCTION h5aget_type_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aget_type_c
             hdferr = h5aget_type_c(attr_id, type_id)
           END SUBROUTINE h5aget_type_f
 
-!----------------------------------------------------------------------
-! Name:		h5aget_name_f 
-!
-! Purpose: 	Gets an attribute name.  
-!
-! Inputs:  
-!		attr_id		- attribute identifier
-!		size		- size of a buffer to read name in
-! Outputs:  
-!		buf		- buffer to read name in
-!		hdferr:		- error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:
-!				NONE			
-!
-! Programmer:	Elena Pourmal
-!		August 12, 1999	
-!
-! Modifications: 	Explicit Fortran interfaces are added for 
-!			called C functions (it is needed for Windows
-!			port).  February 27, 2001 
-!
-!----------------------------------------------------------------------
 
 
           SUBROUTINE h5aget_name_f(attr_id, size, buf, hdferr) 
@@ -2101,48 +984,11 @@
             INTEGER, INTENT(OUT) :: hdferr         ! Error code:
                                                    ! name length is successful,
                                                    ! -1 if fail
-!            INTEGER, EXTERNAL :: h5aget_name_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aget_name_c(attr_id, size, buf)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AGET_NAME_C'::h5aget_name_c
-              !DEC$ATTRIBUTES reference :: buf
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              INTEGER, INTENT(IN) :: size
-              CHARACTER(LEN=*), INTENT(OUT) :: buf
-              END FUNCTION h5aget_name_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aget_name_c
             hdferr = h5aget_name_c(attr_id, size, buf)
           END SUBROUTINE h5aget_name_f
 
 
-!----------------------------------------------------------------------
-! Name:		h5aget_num_attrs_f 
-!
-! Purpose:  	Determines the number of attributes attached to an object.
-!
-! Inputs:  
-!		obj_id		- object (group, dataset, or named datatype)
-!				  identifier
-! Outputs:  
-!		attr_num	- number of attributes attached to the object
-!		hdferr:		- error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:
-!				NONE			
-!
-! Programmer:	Elena Pourmal
-!		August 12, 1999	
-!
-! Modifications: 	Explicit Fortran interfaces are added for 
-!			called C functions (it is needed for Windows
-!			port).  February 27, 2001 
-!
-!----------------------------------------------------------------------
 
           SUBROUTINE h5aget_num_attrs_f(obj_id, attr_num, hdferr) 
             IMPLICIT NONE
@@ -2150,47 +996,10 @@
             INTEGER, INTENT(OUT) :: attr_num      ! Number of attributes of the
                                                   ! object
             INTEGER, INTENT(OUT) :: hdferr         ! Error code
-
-!            INTEGER, EXTERNAL :: h5aget_num_attrs_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aget_num_attrs_c(obj_id, attr_num)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5AGET_NUM_ATTRS_C'::h5aget_num_attrs_c
-              INTEGER(HID_T), INTENT(IN) :: obj_id
-              INTEGER, INTENT(OUT) :: attr_num
-              END FUNCTION h5aget_num_attrs_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aget_num_attrs_c
             hdferr = h5aget_num_attrs_c(obj_id, attr_num)
           END SUBROUTINE h5aget_num_attrs_f
 
-!----------------------------------------------------------------------
-! Name:		h5adelete_f 
-!
-! Purpose:  	Deletes an attribute of an object (group, dataset or
-!		named datatype)
-!
-! Inputs:  
-!		obj_id		- object identifier
-!		name		- attribute name
-! Outputs:  
-!
-!		hdferr:		- error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:
-!				NONE			
-!
-! Programmer:	Elena Pourmal
-!		August 12, 1999	
-!
-! Modifications: 	Explicit Fortran interfaces are added for 
-!			called C functions (it is needed for Windows
-!			port).  February 27, 2001 
-!
-!----------------------------------------------------------------------
 
           SUBROUTINE h5adelete_f(obj_id, name, hdferr) 
             IMPLICIT NONE
@@ -2198,65 +1007,17 @@
             CHARACTER(LEN=*), INTENT(IN) :: name    ! Attribute name
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
             INTEGER :: namelen
-
-!            INTEGER, EXTERNAL ::  h5adelete_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5adelete_c(obj_id, name, namelen) 
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5ADELETE_C'::h5adelete_c
-              !DEC$ATTRIBUTES reference :: name
-              INTEGER(HID_T), INTENT(IN) :: obj_id
-              CHARACTER(LEN=*), INTENT(IN) :: name
-              INTEGER :: namelen
-              END FUNCTION h5adelete_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL ::  h5adelete_c
             namelen = LEN(name)
             hdferr = h5adelete_c(obj_id, name, namelen)
           END SUBROUTINE h5adelete_f
 
-!----------------------------------------------------------------------
-! Name:		h5aclose_f 
-!
-! Purpose:  	Closes the specified attribute.
-!		
-! Inputs:  
-!		attr_id		- attribute identifier
-! Outputs:  
-!
-!		hdferr:		- error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:
-!				NONE			
-!
-! Programmer:	Elena Pourmal
-!		August 12, 1999	
-!
-! Modifications: 	Explicit Fortran interfaces are added for 
-!			called C functions (it is needed for Windows
-!			port).  February 27, 2001 
-!
-!----------------------------------------------------------------------
 
           SUBROUTINE h5aclose_f(attr_id, hdferr) 
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: attr_id  ! Attribute identifier 
             INTEGER, INTENT(OUT) :: hdferr         ! Error code:
-
-!            INTEGER, EXTERNAL :: h5aclose_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5aclose_c(attr_id)
-              USE H5GLOBAL
-              !MS$ATTRIBUTES C,reference,alias:'_H5ACLOSE_C'::h5aclose_c
-              INTEGER(HID_T), INTENT(IN) :: attr_id
-              END FUNCTION h5aclose_c
-            END INTERFACE
-
+            INTEGER, EXTERNAL :: h5aclose_c
             hdferr = h5aclose_c(attr_id)
           END SUBROUTINE h5aclose_f
 

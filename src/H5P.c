@@ -1,44 +1,44 @@
 /****************************************************************************
-* NCSA HDF				                                    *
-* Software Development Group			                            *
-* National Center for Supercomputing Applications	                    *
-* University of Illinois at Urbana-Champaign		                    *
-* 605 E. Springfield, Champaign IL 61820		                    *
-*							                    *
-* For conditions of distribution and use, see the accompanying		    *
-* hdf/COPYING file.							    *
-*									    *
+* NCSA HDF								                                    *
+* Software Development Group						                        *
+* National Center for Supercomputing Applications			                *
+* University of Illinois at Urbana-Champaign				                *
+* 605 E. Springfield, Champaign IL 61820				                    *
+*									                                        *
+* For conditions of distribution and use, see the accompanying		        *
+* hdf/COPYING file.							                                *
+*									                                        *
 ****************************************************************************/
 
 /* $Id$ */
 
 /* Private header files */
-#include "H5private.h"		/* Generic Functions			*/
-#include "H5Iprivate.h"		/* IDs			  		*/
-#include "H5Bprivate.h"		/* B-tree subclass names	  	*/
-#include "H5Dprivate.h"		/* Datasets				*/
-#include "H5Eprivate.h"		/* Error handling		  	*/
-#include "H5Fprivate.h"		/* Files		  	*/
-#include "H5FDprivate.h"	/* File drivers				*/
-#include "H5FLprivate.h"	/* Free Lists	  */
-#include "H5MMprivate.h"	/* Memory management			*/
-#include "H5Pprivate.h"		/* Property lists		  	*/
+#include <H5private.h>		/* Generic Functions			*/
+#include <H5Iprivate.h>		/* IDs			  		*/
+#include <H5Bprivate.h>		/* B-tree subclass names	  	*/
+#include <H5Dprivate.h>		/* Datasets				*/
+#include <H5Eprivate.h>		/* Error handling		  	*/
+#include <H5Fprivate.h>		/* Files		  	*/
+#include <H5FDprivate.h>	/* File drivers				*/
+#include <H5FLprivate.h>	/* Free Lists	  */
+#include <H5MMprivate.h>	/* Memory management			*/
+#include <H5Pprivate.h>		/* Property lists		  	*/
 
 /* Default file driver - see H5Pget_driver() */
-#include "H5FDsec2.h"		/* Posix unbuffered I/O	file driver	*/
+#include <H5FDsec2.h>		/* Posix unbuffered I/O	file driver	*/
 
 #ifdef WANT_H5_V1_2_COMPAT
 /* Other predefined file drivers */
-#include "H5FDcore.h"		/* Files stored entirely in memory	*/
-#include "H5FDfamily.h"		/* File families 			*/
-#include "H5FDmpio.h"		/* Parallel files using MPI-2 I/O	*/
-#include "H5FDstdio.h"		/* Standard C buffered I/O		*/
-#include "H5FDsrb.h"        /* Remote access using SRB              */
-#include "H5FDgass.h"		/* Remote files using GASS I/O		*/
-#include "H5FDdpss.h"       /* Remote access using Storage Client API */
-#include "H5FDstream.h"     /* in-memory files streamed via sockets */
-#include "H5FDmulti.h"		/* Usage-partitioned file family	*/
-#include "H5FDlog.h"        /* sec2 driver with I/O logging (for debugging) */
+#include <H5FDcore.h>		/* Files stored entirely in memory	*/
+#include <H5FDfamily.h>		/* File families 			*/
+#include <H5FDmpio.h>		/* Parallel files using MPI-2 I/O	*/
+#include <H5FDstdio.h>		/* Standard C buffered I/O		*/
+#include <H5FDsrb.h>        /* Remote access using SRB              */
+#include <H5FDgass.h>		/* Remote files using GASS I/O		*/
+#include <H5FDdpss.h>       /* Remote access using Storage Client API */
+#include <H5FDstream.h>     /* in-memory files streamed via sockets */
+#include <H5FDmulti.h>		/* Usage-partitioned file family	*/
+#include <H5FDlog.h>        /* sec2 driver with I/O logging (for debugging) */
 #endif /* WANT_H5_V1_2_COMPAT */
 
 
@@ -4008,7 +4008,7 @@ done:
     Internal routine to create a new property
  USAGE
     H5P_genprop_t *H5P_create_prop(name,size,def_value,prp_create,prp_set,
-            prp_get,prp_delete,prp_close)
+            prp_get,prp_close)
         const char *name;       IN: Name of property to register
         size_t size;            IN: Size of property in bytes
         void *def_value;        IN: Pointer to buffer containing default value
@@ -4017,7 +4017,6 @@ done:
                                     creation callback
         H5P_prp_set_func_t prp_set; IN: Function pointer to property set callback
         H5P_prp_get_func_t prp_get; IN: Function pointer to property get callback
-        H5P_prp_delete_func_t prp_delete; IN: Function pointer to property delete callback
         H5P_prp_close_func_t prp_close; IN: Function pointer to property close
                                     callback
  RETURNS
@@ -4033,8 +4032,7 @@ done:
 static H5P_genprop_t *
 H5P_create_prop(const char *name, size_t size, void *def_value, void *value,
     H5P_prp_create_func_t prp_create, H5P_prp_set_func_t prp_set,
-    H5P_prp_get_func_t prp_get, H5P_prp_delete_func_t prp_delete,
-    H5P_prp_close_func_t prp_close)
+    H5P_prp_get_func_t prp_get, H5P_prp_close_func_t prp_close)
 {
     H5P_genprop_t *prop=NULL;        /* Pointer to new property copied */
     H5P_genprop_t *ret_value=NULL;   /* Return value */
@@ -4042,7 +4040,7 @@ H5P_create_prop(const char *name, size_t size, void *def_value, void *value,
     FUNC_ENTER (H5P_create_prop, NULL);
 
     assert(name);
-    assert((size>0 && (def_value!=NULL || value!=NULL)) || (size==0));
+    assert((size>0 && def_value!=NULL) || (size==0));
 
     /* Allocate the new property */
     if (NULL==(prop = H5MM_malloc (sizeof(H5P_genprop_t))))
@@ -4052,7 +4050,6 @@ H5P_create_prop(const char *name, size_t size, void *def_value, void *value,
     prop->xor_val = H5P_xor_name(name); /* Generate the XOR'd value for the name */
     prop->name = HDstrdup(name); /* Duplicate name */
     prop->size=size;
-
     /* Duplicate value, if it exists */
     if(value!=NULL) {
         if (NULL==(prop->value = H5MM_malloc (prop->size)))
@@ -4061,6 +4058,7 @@ H5P_create_prop(const char *name, size_t size, void *def_value, void *value,
     } /* end if */
     else
         prop->value=NULL;
+
 
     /* Duplicate default value, if it exists */
     if(def_value!=NULL) {
@@ -4075,7 +4073,6 @@ H5P_create_prop(const char *name, size_t size, void *def_value, void *value,
     prop->create=prp_create;
     prop->set=prp_set;
     prop->get=prp_get;
-    prop->del=prp_delete;
     prop->close=prp_close;
 
     /* Reset the link to the next property */
@@ -4283,7 +4280,7 @@ H5P_free_all_prop(H5P_genprop_t *hash[], uintn hashsize, uintn make_cb)
 
             /* Call the close callback and ignore the return value, there's nothing we can do about it */
             if(make_cb && tprop->close!=NULL)
-                (tprop->close)(tprop->name,tprop->value);
+                (tprop->close)(tprop->name,&(tprop->value));
 
             /* Free the property, ignoring return value, nothing we can do */
             H5P_free_prop(tprop);
@@ -4629,7 +4626,7 @@ static H5P_genplist_t *H5P_create_list(H5P_genclass_t *pclass)
 
                         /* Call property creation callback, if it exists */
                         if(pcopy->create) {
-                            if((pcopy->create)(pcopy->name,pcopy->value)<0) {
+                            if((pcopy->create)(pcopy->name,&(pcopy->value))<0) {
                                 H5P_free_prop(pcopy);
                                 HGOTO_ERROR (H5E_PLIST, H5E_CANTINIT, NULL,"Can't initialize property");
                             } /* end if */
@@ -4638,9 +4635,6 @@ static H5P_genplist_t *H5P_create_list(H5P_genclass_t *pclass)
                         /* Insert the initialized property into the property list */
                         if(H5P_add_prop(plist->props,tclass->hashsize,pcopy)<0)
                             HGOTO_ERROR (H5E_PLIST, H5E_CANTINSERT, NULL,"Can't insert property into class");
-
-                        /* Increment the number of properties in list */
-                        plist->nprops++;
                     } /* end if */
 
                     /* Go to next registered property in class */
@@ -4758,7 +4752,6 @@ done:
                                     creation callback
         H5P_prp_set_func_t prp_set; IN: Function pointer to property set callback
         H5P_prp_get_func_t prp_get; IN: Function pointer to property get callback
-        H5P_prp_delete_func_t prp_delete; IN: Function pointer to property delete callback
         H5P_prp_close_func_t prp_close; IN: Function pointer to property close
                                     callback
  RETURNS
@@ -4818,19 +4811,6 @@ done:
     negative value, the property value is returned and the property list get
     routine returns an error value.
 
-        The 'delete' callback is called when a property is deleted from a
-    property list.  H5P_prp_del_func_t is defined as:
-        typedef herr_t (*H5P_prp_del_func_t)(hid_t prop_id, const char *name,
-            void *value);
-    where the parameters to the callback function are:
-        hid_t prop_id;      IN: The ID of the property list the property is deleted from.
-        const char *name;   IN: The name of the property being deleted.
-        void *value;        IN/OUT: The value of the property being deleted.
-    The 'delete' routine may modify the value passed in, but the value is not
-    used by the library when the 'delete' routine returns.  If the
-    'delete' routine returns a negative value, the property list deletion
-    routine returns an error value but the property is still deleted.
-
         The 'close' callback is called when a property list with this
     property is being destroyed.  H5P_prp_close_func_t is defined as:
         typedef herr_t (*H5P_prp_close_func_t)(const char *name, void *value);
@@ -4863,7 +4843,7 @@ done:
 --------------------------------------------------------------------------*/
 static herr_t H5P_register(H5P_genclass_t *pclass, const char *name, size_t size,
     void *def_value, H5P_prp_create_func_t prp_create, H5P_prp_set_func_t prp_set,
-    H5P_prp_get_func_t prp_get, H5P_prp_delete_func_t prp_delete, H5P_prp_close_func_t prp_close)
+    H5P_prp_get_func_t prp_get, H5P_prp_close_func_t prp_close)
 {
     H5P_genclass_t *new_class; /* New class pointer */
     H5P_genprop_t *tmp_prop;   /* Temporary property pointer */
@@ -4913,7 +4893,7 @@ static herr_t H5P_register(H5P_genclass_t *pclass, const char *name, size_t size
     } /* end if */
 
     /* Create property object from parameters */
-    if((new_prop=H5P_create_prop(name,size,def_value,NULL,prp_create,prp_set,prp_get,prp_delete,prp_close))==NULL)
+    if((new_prop=H5P_create_prop(name,size,def_value,NULL,prp_create,prp_set,prp_get,prp_close))==NULL)
         HGOTO_ERROR (H5E_PLIST, H5E_CANTCREATE, FAIL,"Can't create property");
 
     /* Insert property into property list class */
@@ -4958,7 +4938,6 @@ done:
                                     creation callback
         H5P_prp_set_func_t prp_set; IN: Function pointer to property set callback
         H5P_prp_get_func_t prp_get; IN: Function pointer to property get callback
-        H5P_prp_delete_func_t prp_delete; IN: Function pointer to property delete callback
         H5P_prp_close_func_t prp_close; IN: Function pointer to property close
                                     callback
  RETURNS
@@ -5018,19 +4997,6 @@ done:
     negative value, the property value is returned and the property list get
     routine returns an error value.
 
-        The 'delete' callback is called when a property is deleted from a
-    property list.  H5P_prp_del_func_t is defined as:
-        typedef herr_t (*H5P_prp_del_func_t)(hid_t prop_id, const char *name,
-            void *value);
-    where the parameters to the callback function are:
-        hid_t prop_id;      IN: The ID of the property list the property is deleted from.
-        const char *name;   IN: The name of the property being deleted.
-        void *value;        IN/OUT: The value of the property being deleted.
-    The 'delete' routine may modify the value passed in, but the value is not
-    used by the library when the 'delete' routine returns.  If the
-    'delete' routine returns a negative value, the property list deletion
-    routine returns an error value but the property is still deleted.
-
         The 'close' callback is called when a property list with this
     property is being destroyed.  H5P_prp_close_func_t is defined as:
         typedef herr_t (*H5P_prp_close_func_t)(const char *name, void *value);
@@ -5063,7 +5029,7 @@ done:
 --------------------------------------------------------------------------*/
 herr_t H5Pregister(hid_t cls_id, const char *name, size_t size, void *def_value,
     H5P_prp_create_func_t prp_create, H5P_prp_set_func_t prp_set,
-    H5P_prp_get_func_t prp_get, H5P_prp_delete_func_t prp_delete, H5P_prp_close_func_t prp_close)
+    H5P_prp_get_func_t prp_get, H5P_prp_close_func_t prp_close)
 {
     H5P_genclass_t	*pclass;   /* Property list class to modify */
     herr_t ret_value=FAIL;     /* return value */
@@ -5079,7 +5045,7 @@ herr_t H5Pregister(hid_t cls_id, const char *name, size_t size, void *def_value,
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "properties >0 size must have default");
 
     /* Create the new property list class */
-    if ((ret_value=H5P_register(pclass,name,size,def_value,prp_create,prp_set,prp_get,prp_delete,prp_close))<0)
+    if ((ret_value=H5P_register(pclass,name,size,def_value,prp_create,prp_set,prp_get,prp_close))<0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to register property in class");
 
 done:
@@ -5100,7 +5066,6 @@ done:
         void *value;            IN: Pointer to the value for the property
         H5P_prp_set_func_t prp_set; IN: Function pointer to property set callback
         H5P_prp_get_func_t prp_get; IN: Function pointer to property get callback
-        H5P_prp_delete_func_t prp_delete; IN: Function pointer to property delete callback
         H5P_prp_close_func_t prp_close; IN: Function pointer to property close
                                     callback
  RETURNS
@@ -5145,19 +5110,6 @@ done:
     negative value, the property value is returned and the property list get
     routine returns an error value.
 
-        The 'delete' callback is called when a property is deleted from a
-    property list.  H5P_prp_del_func_t is defined as:
-        typedef herr_t (*H5P_prp_del_func_t)(hid_t prop_id, const char *name,
-            void *value);
-    where the parameters to the callback function are:
-        hid_t prop_id;      IN: The ID of the property list the property is deleted from.
-        const char *name;   IN: The name of the property being deleted.
-        void *value;        IN/OUT: The value of the property being deleted.
-    The 'delete' routine may modify the value passed in, but the value is not
-    used by the library when the 'delete' routine returns.  If the
-    'delete' routine returns a negative value, the property list deletion
-    routine returns an error value but the property is still deleted.
-
         The 'close' callback is called when a property list with this
     property is being destroyed.  H5P_prp_close_func_t is defined as:
         typedef herr_t (*H5P_prp_close_func_t)(const char *name,
@@ -5195,7 +5147,7 @@ done:
 --------------------------------------------------------------------------*/
 static herr_t H5P_insert(H5P_genplist_t *plist, const char *name, size_t size,
     void *value, H5P_prp_set_func_t prp_set, H5P_prp_get_func_t prp_get,
-    H5P_prp_delete_func_t prp_delete, H5P_prp_close_func_t prp_close)
+    H5P_prp_close_func_t prp_close)
 {
     H5P_genprop_t *new_prop=NULL;   /* Temporary property pointer */
     herr_t ret_value=FAIL;     /* return value */
@@ -5211,7 +5163,7 @@ static herr_t H5P_insert(H5P_genplist_t *plist, const char *name, size_t size,
         HGOTO_ERROR(H5E_PLIST, H5E_EXISTS, FAIL, "property already exists");
 
     /* Create property object from parameters */
-    if((new_prop=H5P_create_prop(name,size,NULL,value,NULL,prp_set,prp_get,prp_delete,prp_close))==NULL)
+    if((new_prop=H5P_create_prop(name,size,NULL,value,NULL,prp_set,prp_get,prp_close))==NULL)
         HGOTO_ERROR (H5E_PLIST, H5E_CANTCREATE, FAIL,"Can't create property");
 
     /* Insert property into property list class */
@@ -5253,7 +5205,6 @@ done:
         void *value;            IN: Pointer to the value for the property
         H5P_prp_set_func_t prp_set; IN: Function pointer to property set callback
         H5P_prp_get_func_t prp_get; IN: Function pointer to property get callback
-        H5P_prp_delete_func_t prp_delete; IN: Function pointer to property delete callback
         H5P_prp_close_func_t prp_close; IN: Function pointer to property close
                                     callback
  RETURNS
@@ -5298,19 +5249,6 @@ done:
     negative value, the property value is returned and the property list get
     routine returns an error value.
 
-        The 'delete' callback is called when a property is deleted from a
-    property list.  H5P_prp_del_func_t is defined as:
-        typedef herr_t (*H5P_prp_del_func_t)(hid_t prop_id, const char *name,
-            void *value);
-    where the parameters to the callback function are:
-        hid_t prop_id;      IN: The ID of the property list the property is deleted from.
-        const char *name;   IN: The name of the property being deleted.
-        void *value;        IN/OUT: The value of the property being deleted.
-    The 'delete' routine may modify the value passed in, but the value is not
-    used by the library when the 'delete' routine returns.  If the
-    'delete' routine returns a negative value, the property list deletion
-    routine returns an error value but the property is still deleted.
-
         The 'close' callback is called when a property list with this
     property is being destroyed.  H5P_prp_close_func_t is defined as:
         typedef herr_t (*H5P_prp_close_func_t)(const char *name, void *value);
@@ -5347,7 +5285,7 @@ done:
 --------------------------------------------------------------------------*/
 herr_t H5Pinsert(hid_t plist_id, const char *name, size_t size, void *value,
     H5P_prp_set_func_t prp_set, H5P_prp_get_func_t prp_get,
-    H5P_prp_delete_func_t prp_delete, H5P_prp_close_func_t prp_close)
+    H5P_prp_close_func_t prp_close)
 {
     H5P_genplist_t	*plist;    /* Property list to modify */
     herr_t ret_value=FAIL;     /* return value */
@@ -5363,7 +5301,7 @@ herr_t H5Pinsert(hid_t plist_id, const char *name, size_t size, void *value,
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "properties >0 size must have default");
 
     /* Create the new property list class */
-    if ((ret_value=H5P_insert(plist,name,size,value,prp_set,prp_get,prp_delete,prp_close))<0)
+    if ((ret_value=H5P_insert(plist,name,size,value,prp_set,prp_get,prp_close))<0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to register property in plist");
 
 done:
@@ -5432,7 +5370,7 @@ static herr_t H5P_set(hid_t plist_id, const char *name, void *value)
         /* Make a copy of the current value, in case the callback fails */
         if (NULL==(tmp_value=H5MM_malloc(prop->size)))
             HRETURN_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed temporary property value");
-        HDmemcpy(tmp_value,value,prop->size);
+        HDmemcpy(tmp_value,prop->value,prop->size);
 
         /* Call user's callback */
         if((*(prop->set))(plist_id,name,tmp_value)<0)
@@ -6339,96 +6277,6 @@ done:
 
 /*--------------------------------------------------------------------------
  NAME
-    H5P_isa_class
- PURPOSE
-    Internal routine to query whether a property list is a certain class
- USAGE
-    htri_t H5P_isa_class(plist, pclass)
-        H5P_genplist_t *plist;    IN: Property list to check
-        H5P_genclass_t *pclass;   IN: Property class to compare with
- RETURNS
-    Success: TRUE (1) or FALSE (0)
-    Failure: negative value
- DESCRIPTION
-    This routine queries whether a property list is a member of the property
-    list class.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
-    What about returning a value indicating that the property class is further
-    up the class hierarchy?
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-static htri_t H5P_isa_class(H5P_genplist_t *plist, H5P_genclass_t *pclass)
-{
-    htri_t ret_value=FAIL;
-
-    FUNC_ENTER (H5P_isa_class, FAIL);
-
-    assert(plist);
-    assert(pclass);
-
-    /* Compare property classes */
-    if(H5P_cmp_class(plist->pclass,pclass)==0) {
-        HGOTO_DONE(TRUE);
-    } else {
-        HGOTO_DONE(FALSE);
-    } /* end else */
-
-done:
-    FUNC_LEAVE (ret_value);
-}   /* H5P_isa_class() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pisa_class
- PURPOSE
-    Routine to query whether a property list is a certain class
- USAGE
-    hid_t H5Pisa_class(plist_id, pclass_id)
-        hid_t plist_id;         IN: Property list to query
-        hid_t pclass_id;        IN: Property class to query
- RETURNS
-    Success: TRUE (1) or FALSE (0)
-    Failure: negative
- DESCRIPTION
-    This routine queries whether a property list is a member of the property
-    list class.
-
- GLOBAL VARIABLES
-    What about returning a value indicating that the property class is further
-    up the class hierarchy?
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-hid_t H5Pisa_class(hid_t plist_id, hid_t pclass_id)
-{
-    H5P_genplist_t	*plist;         /* Property list to query */
-    H5P_genclass_t	*pclass=NULL;   /* Property list class */
-    htri_t ret_value=FAIL;              /* return value */
-
-    FUNC_ENTER (H5Pget_class, FAIL);
-
-    /* Check arguments. */
-    if (H5I_GENPROP_LST != H5I_get_type(plist_id) || NULL == (plist = H5I_object(plist_id)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list");
-    if (H5I_GENPROP_CLS != H5I_get_type(pclass_id) || NULL == (pclass = H5I_object(pclass_id)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property class");
-
-    /* Compare the property list's class against the other class */
-    if ((ret_value = H5P_isa_class(plist, pclass))<0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to compare property list classes");
-
-done:
-    FUNC_LEAVE (ret_value);
-}   /* H5Pisa_class() */
-
-
-/*--------------------------------------------------------------------------
- NAME
     H5P_iterate_props
  PURPOSE
     Internal routine to iterate over a hashtable of properties 
@@ -6909,7 +6757,7 @@ done:
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-static herr_t H5P_remove(hid_t plist_id, H5P_genplist_t *plist, const char *name)
+static herr_t H5P_remove(H5P_genplist_t *plist, const char *name)
 {
     H5P_genprop_t *prop;        /* Temporary property pointer */
     H5P_genprop_t *tprop, *prev;/* Temporary pointer to properties */
@@ -6926,9 +6774,9 @@ static herr_t H5P_remove(hid_t plist_id, H5P_genplist_t *plist, const char *name
         HGOTO_ERROR(H5E_PLIST, H5E_NOTFOUND, FAIL, "property doesn't exist");
 
     /* Pass value to 'close' callback, if it exists */
-    if(prop->del!=NULL) {
+    if(prop->close!=NULL) {
         /* Call user's callback */
-        if((*(prop->del))(plist_id,name,prop->value)<0)
+        if((*(prop->close))(name,prop->value)<0)
             HRETURN_ERROR(H5E_PLIST, H5E_CANTINIT, FAIL, "can't close property value");
     } /* end if */
 
@@ -7012,7 +6860,7 @@ herr_t H5Premove(hid_t plist_id, const char *name)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid property name");
 
     /* Create the new property list class */
-    if ((ret_value=H5P_remove(plist_id,plist,name))<0)
+    if ((ret_value=H5P_remove(plist,name))<0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to remove property");
 
 done:

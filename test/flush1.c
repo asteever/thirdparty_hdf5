@@ -11,14 +11,12 @@
  *		calling _exit(0) since this doesn't flush HDF5 caches but
  *		still exits with success.
  */
-#include "h5test.h"
+#include <h5test.h>
 
 const char *FILENAME[] = {
     "flush",
     NULL
 };
-
-static double	the_data[100][100];
 
 
 /*-------------------------------------------------------------------------
@@ -43,6 +41,7 @@ main(void)
     hid_t	fapl, file, dcpl, space, dset, groups, grp;
     hsize_t	ds_size[2] = {100, 100};
     hsize_t	ch_size[2] = {5, 5};
+    double	the_data[100][100];
     hsize_t	i, j;
     char	name[1024];
 

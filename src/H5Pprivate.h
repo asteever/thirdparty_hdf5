@@ -16,12 +16,12 @@
 #ifndef _H5Pprivate_H
 #define _H5Pprivate_H
 
-#include "H5Ppublic.h"
+#include <H5Ppublic.h>
 
 /* Private headers needed by this file */
-#include "H5private.h"
-#include "H5Fprivate.h"
-#include "H5Dprivate.h"
+#include <H5private.h>
+#include <H5Fprivate.h>
+#include <H5Dprivate.h>
 
 /* Define enum for modifications to class */
 typedef enum {
@@ -49,7 +49,6 @@ typedef struct H5P_genprop_tag {
     void *def_value;      /* Pointer to default value to pass along to create callback */
     H5P_prp_set_func_t set; /* Function to call when a property value is set */
     H5P_prp_get_func_t get; /* Function to call when a property value is retrieved */
-    H5P_prp_delete_func_t del; /* Function to call when a property is deleted */
     H5P_prp_close_func_t close; /* Function to call when a property is closed */
 
     struct H5P_genprop_tag *next;  /* Pointer to the next property in this list */

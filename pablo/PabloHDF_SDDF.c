@@ -57,14 +57,14 @@
 //======================================================================*/
 #include <stdio.h>
 
-#ifdef H5_HAVE_PARALLEL
+#ifdef HAVE_PARALLEL
 #include "mpi.h"
 #endif
 
 #include "H5config.h"
-#undef H5_HAVE_PABLO
+#undef HAVE_PABLO
 #include "H5private.h" 
-#define H5_HAVE_PABLO
+#define HAVE_PABLO
 #include "ProcIDs.h"
 
 #include "SystemDepend.h"
@@ -105,7 +105,7 @@ void endIOTrace( void );
 
 #define returnRecord(x)    return x;
 
-#ifdef H5_HAVE_MPIOTRACE
+#ifdef HAVE_MPIOTRACE
 	int initMPIOTrace( char *, int );
 	void endMPIOTrace( void ) ;
 #else
@@ -233,7 +233,7 @@ void HDFinitTrace_SDDF( char *traceFileName, int OUTSW )
         // set traceFileName and set IO tracing switches.  If MPIO 	*
 	// tracing is available, MPIO tracing will also be initialized. *
 	//==============================================================*/
-#ifdef H5_HAVE_PARALLEL
+#ifdef HAVE_PARALLEL
 	/*===============================================================
 	// The code is built to handle parallel processing using MPI.	*	
 	// However, the code may or may not be run using MPI and there  *
@@ -254,7 +254,7 @@ void HDFinitTrace_SDDF( char *traceFileName, int OUTSW )
 	   //===========================================================*/
            MPI_Comm_rank( MPI_COMM_WORLD, &myNode );
 	   setTraceProcessorNumber( myNode );
-#ifdef H5_HAVE_MPIOTRACE
+#ifdef HAVE_MPIOTRACE
 	   /*============================================================
 	   // MPIO Tracing is supported in the Pablo Library.  Let the  *
 	   // MPIO initialization be performed and handle the naming of *
@@ -296,7 +296,7 @@ void HDFinitTrace_SDDF( char *traceFileName, int OUTSW )
     	disableLifetimeSummaries();
         disableTimeWindowSummaries();
 	disableFileRegionSummaries();
-#endif /* H5_HAVE_PARALLEL */
+#endif /* HAVE_PARALLEL */
 	/*===============================================================
 	// complete HDF initiailization.				*
 	//==============================================================*/
@@ -826,4 +826,4 @@ void _hdfMiscDescriptor( void )
     putBytes( recordBuffer, (unsigned) recordLength );
 }
 
-/*#endif */ /* H5_HAVE_PABLO */ 
+/*#endif */ /* HAVE_PABLO */ 

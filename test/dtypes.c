@@ -8,7 +8,7 @@
  * Purpose:     Tests the data type interface (H5T)
  */
 
-#include "h5test.h"
+#include <h5test.h>
 
 /* Number of times to run each test */
 #define NTESTS	1
@@ -35,7 +35,7 @@
 /* Alignment test stuff */
 #ifdef TEST_ALIGNMENT
 #define H5T_PACKAGE
-#include "H5Tpkg.h"
+#include <H5Tpkg.h>
 #endif
 #define SET_ALIGNMENT(TYPE,VAL) \
     H5T_NATIVE_##TYPE##_ALIGN_g=MAX(H5T_NATIVE_##TYPE##_ALIGN_g, VAL)
@@ -3231,9 +3231,7 @@ test_conv_flt_1 (const char *name, hid_t src, hid_t dst)
      * The remainder of this function is executed only by the child if
      * HANDLE_SIGFPE is defined.
      */
-#ifndef __WATCOMC__
     signal(SIGFPE,fpe_handler);
-#endif
 
     /* What are the names of the source and destination types */
     if (H5Tequal(src, H5T_NATIVE_FLOAT)) {

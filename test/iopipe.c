@@ -8,8 +8,8 @@
 
 /* See H5private.h for how to include headers */
 #undef NDEBUG
-#include "hdf5.h"
-#include "H5private.h"
+#include <hdf5.h>
+#include <H5private.h>
 
 #ifdef H5_STDC_HEADERS
 #   include <assert.h>
@@ -151,11 +151,7 @@ synchronize (void)
 {
 #ifdef H5_HAVE_SYSTEM
 #ifdef WIN32
-#ifdef __WATCOMC__
-	flushall();
-#else /* __WATCOMC__ */
 	_flushall();
-#endif /* __WATCOMC__ */
 #else
     system ("sync");
     system ("df >/dev/null");

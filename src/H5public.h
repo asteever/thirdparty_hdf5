@@ -20,15 +20,7 @@
 #define _H5public_H
 
 /* Include files for public use... */
-/*
- * Since H5pubconf.h is a generated header file, it is messy to try
- * to put a #ifndef _H5pubconf_H ... #endif guard in it.
- * HDF5 has set an internal rule that it is being included here.
- * Source files should NOT include H5pubconf.h directly but include
- * it via H5public.h.  The #ifndef _H5public_H guard above would
- * prevent repeated include.
- */
-#include "H5pubconf.h"		/*from configure                             */
+#include <H5pubconf.h>		/*from configure                             */
 #include <sys/types.h>
 #ifdef H5_STDC_HEADERS
 #   include <limits.h>		/*for H5T_NATIVE_CHAR defn in H5Tpublic.h    */
@@ -55,12 +47,12 @@
 #include <srbClient.h>
 #endif
 
-#include "H5api_adpt.h"
+#include <H5api_adpt.h>
 
 /* Version numbers */
 #define H5_VERS_MAJOR	1	/* For major interface/format changes  	     */
-#define H5_VERS_MINOR	5	/* For minor interface/format changes  	     */
-#define H5_VERS_RELEASE	3	/* For tweaks, bug-fixes, or development     */
+#define H5_VERS_MINOR	4	/* For minor interface/format changes  	     */
+#define H5_VERS_RELEASE	1	/* For tweaks, bug-fixes, or development     */
 #define H5_VERS_SUBRELEASE ""	/* For pre-releases like snap0       */
 				/* Empty string for real releases.           */
 
@@ -98,21 +90,6 @@ typedef int herr_t;
  */
 typedef unsigned int hbool_t;
 typedef int htri_t;
-
-/* Define the ssize_t type if it not is defined */
-#if H5_SIZEOF_SSIZE_T==0
-#if H5_SIZEOF_SIZE_T==H5_SIZEOF_INT
-typedef int ssize_t;
-#elif H5_SIZEOF_SIZE_T==H5_SIZEOF_LONG
-typedef long ssize_t;
-#elif H5_SIZEOF_SIZE_T==H5_SIZEOF_LONG_LONG
-typedef long long ssize_t;
-#elif H5_SIZEOF_SIZE_T==H5_SIZEOF___INT64
-typedef __int64 ssize_t;
-#else /* Can't find matching type for ssize_t */
-#   error "nothing appropriate for ssize_t"
-#endif
-#endif
 
 /*
  * The sizes of file objects have their own types defined here.  If large

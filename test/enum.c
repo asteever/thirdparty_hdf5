@@ -5,7 +5,7 @@
  * Programmer:  Robb Matzke <matzke@llnl.gov>
  *              Tuesday, December 22, 1998
  */
-#include "h5test.h"
+#include <h5test.h>
 #define CPTR(VAR,CONST)	((VAR)=(CONST),&(VAR))
 
 const char *FILENAME[] = {
@@ -207,9 +207,7 @@ test_tr1(hid_t file)
     if (H5Tenum_insert(m_type, "WHITE", CPTR(eval, E1_WHITE))<0) goto error;
     if (H5Tenum_insert(m_type, "BLACK", CPTR(eval, E1_BLACK))<0) goto error;
 
-#ifndef __WATCOMC__
     assert(sizeof(c_e1)==sizeof(int));
-#endif /* __WATCOMCC__ */
     if ((f_type = H5Tcreate(H5T_ENUM, sizeof(c_e1)))<0) goto error;
     if (H5Tenum_insert(f_type, "RED",   CPTR(ival, 105))<0) goto error;
     if (H5Tenum_insert(f_type, "GREEN", CPTR(ival, 104))<0) goto error;
