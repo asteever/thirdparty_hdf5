@@ -31,17 +31,23 @@
 #include "H5private.h"		/* Generic Functions			*/
 #include "H5Dprivate.h"		/* Dataset functions			*/
 #include "H5Eprivate.h"		/* Error handling		  	*/
-#include "H5Fpkg.h"		/* Files				*/
-#include "H5FDprivate.h"	/* File drivers				*/
-#include "H5FLprivate.h"	/* Free Lists                           */
-#include "H5MFprivate.h"	/* File memory management		*/
+#include "H5Fpkg.h"
+#include "H5FDprivate.h"	/*file driver				  */
+#include "H5FLprivate.h"	/*Free Lists	  */
+#include "H5MFprivate.h"	/*file memory management		*/
 #include "H5Oprivate.h"		/* Object headers		  	*/
 #include "H5Pprivate.h"		/* Property lists			*/
 #include "H5Sprivate.h"		/* Dataspace functions			*/
 #include "H5Vprivate.h"		/* Vector and array functions		*/
 
+/* MPIO, MPIPOSIX, & FPHDF5 drivers needed for special checks */
+#include "H5FDfphdf5.h"
+#include "H5FDmpio.h"
+#include "H5FDmpiposix.h"
+
 /* Private prototypes */
-static herr_t H5F_contig_write(H5F_t *f, hsize_t max_data, haddr_t addr,
+static herr_t
+H5F_contig_write(H5F_t *f, hsize_t max_data, haddr_t addr,
     const size_t size, hid_t dxpl_id, const void *buf);
 
 /* Interface initialization */
@@ -132,6 +138,7 @@ H5F_contig_fill(H5F_t *f, hid_t dxpl_id, struct H5O_layout_t *layout,
 #ifdef H5_HAVE_PARALLEL
     MPI_Comm	mpi_comm=MPI_COMM_NULL;	/* MPI communicator for file */
     int         mpi_rank=(-1);  /* This process's rank  */
+    int         mpi_size=(-1);  /* Total # of processes */
     int         mpi_code;       /* MPI return code */
     unsigned    blocks_written=0; /* Flag to indicate that chunk was actually written */
     unsigned    using_mpi=0;    /* Flag to indicate that the file is being accessed with an MPI-capable file driver */
@@ -151,19 +158,52 @@ H5F_contig_fill(H5F_t *f, hid_t dxpl_id, struct H5O_layout_t *layout,
     assert(elmt_size>0);
 
 #ifdef H5_HAVE_PARALLEL
-    /* Retrieve MPI parameters */
-    if(IS_H5FD_MPI(f)) {
+    /* Retrieve up MPI parameters */
+    if(IS_H5FD_MPIO(f)) {
         /* Get the MPI communicator */
-        if (MPI_COMM_NULL == (mpi_comm=H5FD_mpi_get_comm(f->shared->lf)))
+        if (MPI_COMM_NULL == (mpi_comm=H5FD_mpio_communicator(f->shared->lf)))
             HGOTO_ERROR(H5E_INTERNAL, H5E_MPI, FAIL, "Can't retrieve MPI communicator");
 
         /* Get the MPI rank & size */
-        if ((mpi_rank=H5FD_mpi_get_rank(f->shared->lf))<0)
+        if ((mpi_rank=H5FD_mpio_mpi_rank(f->shared->lf))<0)
             HGOTO_ERROR(H5E_INTERNAL, H5E_MPI, FAIL, "Can't retrieve MPI rank");
+        if ((mpi_size=H5FD_mpio_mpi_size(f->shared->lf))<0)
+            HGOTO_ERROR(H5E_INTERNAL, H5E_MPI, FAIL, "Can't retrieve MPI size");
 
         /* Set the MPI-capable file driver flag */
         using_mpi=1;
     } /* end if */
+    else if(IS_H5FD_MPIPOSIX(f)) {
+        /* Get the MPI communicator */
+        if (MPI_COMM_NULL == (mpi_comm=H5FD_mpiposix_communicator(f->shared->lf)))
+            HGOTO_ERROR(H5E_INTERNAL, H5E_MPI, FAIL, "Can't retrieve MPI communicator");
+
+        /* Get the MPI rank & size */
+        if ((mpi_rank=H5FD_mpiposix_mpi_rank(f->shared->lf))<0)
+            HGOTO_ERROR(H5E_INTERNAL, H5E_MPI, FAIL, "Can't retrieve MPI rank");
+        if ((mpi_size=H5FD_mpiposix_mpi_size(f->shared->lf))<0)
+            HGOTO_ERROR(H5E_INTERNAL, H5E_MPI, FAIL, "Can't retrieve MPI size");
+
+        /* Set the MPI-capable file driver flag */
+        using_mpi=1;
+    } /* end if */
+#ifdef H5_HAVE_FPHDF5
+    else if (IS_H5FD_FPHDF5(f)) {
+        /* Get the FPHDF5 barrier communicator */
+        if (MPI_COMM_NULL == (mpi_comm = H5FD_fphdf5_barrier_communicator(f->shared->lf)))
+            HGOTO_ERROR(H5E_INTERNAL, H5E_MPI, FAIL, "Can't retrieve MPI communicator");
+
+        /* Get the MPI rank & size */
+        if ((mpi_rank = H5FD_fphdf5_mpi_rank(f->shared->lf)) < 0)
+            HGOTO_ERROR(H5E_INTERNAL, H5E_MPI, FAIL, "Can't retrieve MPI rank");
+
+        if ((mpi_size = H5FD_fphdf5_mpi_size(f->shared->lf)) < 0)
+            HGOTO_ERROR(H5E_INTERNAL, H5E_MPI, FAIL, "Can't retrieve MPI size");
+
+        /* Set the MPI-capable file driver flag */
+        using_mpi = 1;
+    } /* end if */
+#endif  /* H5_HAVE_FPHDF5 */
 #endif  /* H5_HAVE_PARALLEL */
 
     /* Get the number of elements in the dataset's dataspace */

@@ -77,28 +77,15 @@ typedef enum H5AC_subid_t {
 typedef void *(*H5AC_load_func_t)(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void *udata1, void *udata2);
 typedef herr_t (*H5AC_flush_func_t)(H5F_t *f, hid_t dxpl_id, hbool_t dest, haddr_t addr, void *thing);
 typedef herr_t (*H5AC_dest_func_t)(H5F_t *f, void *thing);
-typedef herr_t (*H5AC_clear_func_t)(H5F_t *f, void *thing, hbool_t dest);
+typedef herr_t (*H5AC_clear_func_t)(void *thing);
 
 typedef struct H5AC_class_t {
-    H5AC_subid_t            id;
-    H5AC_load_func_t        load;
-    H5AC_flush_func_t       flush;
-    H5AC_dest_func_t        dest;
-    H5AC_clear_func_t       clear;
+    H5AC_subid_t	id;
+    H5AC_load_func_t    load;
+    H5AC_flush_func_t   flush;
+    H5AC_dest_func_t    dest;
+    H5AC_clear_func_t   clear;
 } H5AC_class_t;
-
-/*===----------------------------------------------------------------------===
- *                             Protect Types
- *===----------------------------------------------------------------------===
- *
- * These are for the wrapper functions to H5AC_protect. They specify what
- * type of operation you're planning on doing to the metadata. The
- * Flexible Parallel HDF5 locking can then act accordingly.
- */
-typedef enum H5AC_protect_t {
-    H5AC_WRITE,                 /* Protect object for writing                */
-    H5AC_READ                   /* Protect object for reading                */
-} H5AC_protect_t;
 
 /*
  * A cache has a certain number of entries.  Objects are mapped into a
@@ -145,22 +132,21 @@ extern hid_t H5AC_ind_dxpl_id;
  * Library prototypes.
  */
 H5_DLL herr_t H5AC_init(void);
-H5_DLL herr_t H5AC_create(const H5F_t *f, int size_hint);
+H5_DLL herr_t H5AC_create(H5F_t *f, int size_hint);
 H5_DLL herr_t H5AC_set(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type, haddr_t addr,
 			void *thing);
-H5_DLL void *H5AC_protect(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type,
-                          haddr_t addr, const void *udata1, void *udata2,
-                          H5AC_protect_t rw);
+H5_DLL void *H5AC_protect(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type, haddr_t addr,
+			   const void *udata1, void *udata2);
 H5_DLL herr_t H5AC_unprotect(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type, haddr_t addr,
-			     void *thing, hbool_t deleted);
+			      void *thing, hbool_t deleted);
+H5_DLL void *H5AC_find(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type,
+        haddr_t addr, const void *udata1, void *udata2);
 H5_DLL herr_t H5AC_flush(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type, haddr_t addr,
 			  unsigned flags);
 H5_DLL herr_t H5AC_rename(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type,
 			   haddr_t old_addr, haddr_t new_addr);
 H5_DLL herr_t H5AC_dest(H5F_t *f, hid_t dxpl_id);
-#ifdef H5AC_DEBUG
-H5_DLL herr_t H5AC_stats(H5F_t *f);
-#endif /* H5AC_DEBUG */
+H5_DLL herr_t H5AC_debug(H5F_t *f);
 
 #endif /* !_H5ACprivate_H */
 

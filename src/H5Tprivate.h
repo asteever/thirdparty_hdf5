@@ -18,11 +18,7 @@
 #ifndef _H5Tprivate_H
 #define _H5Tprivate_H
 
-/* Get package's public header */
 #include "H5Tpublic.h"
-
-/* Other public headers needed by this file */
-#include "H5MMpublic.h"         /* Memory management                    */
 
 /* Private headers needed by this file */
 #include "H5private.h"		/* Generic Functions			*/
@@ -34,28 +30,20 @@ typedef struct H5T_t H5T_t;
 typedef struct H5T_stats_t H5T_stats_t;
 typedef struct H5T_path_t H5T_path_t;
 
-/* How to copy a datatype */
+/* How to copy a data type */
 typedef enum H5T_copy_t {
     H5T_COPY_TRANSIENT,
     H5T_COPY_ALL,
     H5T_COPY_REOPEN
 } H5T_copy_t;
 
-/* Location of datatype information */
+/* Location of VL information */
 typedef enum {
-    H5T_LOC_BADLOC =   0,  /* invalid datatype location */
-    H5T_LOC_MEMORY,        /* data stored in memory */
-    H5T_LOC_DISK,          /* data stored on disk */
-    H5T_LOC_MAXLOC         /* highest value (Invalid as true value) */
-} H5T_loc_t;
-
-/* VL allocation information */
-typedef struct {
-    H5MM_allocate_t alloc_func; /* Allocation function */
-    void *alloc_info;           /* Allocation information */
-    H5MM_free_t free_func;      /* Free function */
-    void *free_info;            /* Free information */
-} H5T_vlen_alloc_info_t;
+    H5T_VLEN_BADLOC =   0,  /* invalid VL Type */
+    H5T_VLEN_MEMORY,        /* VL data stored in memory */
+    H5T_VLEN_DISK,          /* VL data stored on disk */
+    H5T_VLEN_MAXLOC         /* highest type (Invalid as true type) */
+} H5T_vlen_loc_t;
 
 /* Private functions */
 H5_DLL herr_t H5TN_init_interface(void);
@@ -81,9 +69,8 @@ H5_DLL herr_t H5T_convert(H5T_path_t *tpath, hid_t src_id, hid_t dst_id,
 			   hsize_t nelmts, size_t buf_stride, size_t bkg_stride,
                            void *buf, void *bkg, hid_t dset_xfer_plist);
 H5_DLL herr_t H5T_vlen_reclaim(void *elem, hid_t type_id, hsize_t ndim, hssize_t *point, void *_op_data);
-H5_DLL herr_t H5T_vlen_get_alloc_info(hid_t dxpl_id, H5T_vlen_alloc_info_t *vl_alloc_info);
+H5_DLL htri_t H5T_vlen_mark(H5T_t *dt, H5F_t *f, H5T_vlen_loc_t loc);
 H5_DLL htri_t H5T_is_sensible(const H5T_t *dt);
-H5_DLL htri_t H5T_set_loc(H5T_t *dt, H5F_t *f, H5T_loc_t loc);
 H5_DLL htri_t H5T_committed(H5T_t *type);
 H5_DLL int H5T_link(const H5T_t *type, int adjust, hid_t dxpl_id);
 

@@ -19,14 +19,12 @@
 
 #define H5T_PACKAGE		/*suppress error about including H5Tpkg	  */
 
-/* Pablo information */
-/* (Put before include files to avoid problems with inline functions) */
-#define PABLO_MASK	H5Tstrpad_mask
+#include "H5private.h"		/*generic functions			  */
+#include "H5Eprivate.h"		/*error handling			  */
+#include "H5Iprivate.h"		/*ID functions		   		  */
+#include "H5Tpkg.h"		/*data-type functions			  */
 
-#include "H5private.h"		/* Generic Functions			*/
-#include "H5Eprivate.h"		/* Error handling		  	*/
-#include "H5Iprivate.h"		/* IDs			  		*/
-#include "H5Tpkg.h"		/* Datatypes				*/
+#define PABLO_MASK	H5Tstrpad_mask
 
 /* Interface initialization */
 static int interface_initialize_g = 0;
@@ -50,9 +48,9 @@ DESCRIPTION
 static herr_t
 H5T_init_strpad_interface(void)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5T_init_strpad_interface)
+    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5T_init_strpad_interface);
 
-    FUNC_LEAVE_NOAPI(H5T_init())
+    FUNC_LEAVE_NOAPI(H5T_init());
 } /* H5T_init_strpad_interface() */
 
 
@@ -73,7 +71,7 @@ H5T_init_strpad_interface(void)
  *
  * Modifications:
  * 	Robb Matzke, 22 Dec 1998
- *	Also works for derived datatypes.
+ *	Also works for derived data types.
  *
  *-------------------------------------------------------------------------
  */
@@ -83,25 +81,27 @@ H5Tget_strpad(hid_t type_id)
     H5T_t	*dt = NULL;
     H5T_str_t	ret_value;
 
-    FUNC_ENTER_API(H5Tget_strpad, H5T_STR_ERROR)
+    FUNC_ENTER_API(H5Tget_strpad, H5T_STR_ERROR);
     H5TRACE1("Tz","i",type_id);
 
     /* Check args */
     if (NULL == (dt = H5I_object_verify(type_id,H5I_DATATYPE)))
-	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, H5T_STR_ERROR, "not a datatype")
+	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, H5T_STR_ERROR, "not a data type");
     while (dt->parent && !H5T_IS_STRING(dt))
         dt = dt->parent;  /*defer to parent*/
     if (!H5T_IS_STRING(dt))
-	HGOTO_ERROR(H5E_DATATYPE, H5E_UNSUPPORTED, H5T_STR_ERROR, "operation not defined for datatype class")
+	HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, H5T_STR_ERROR, "operation not defined for data type class");
     
     /* result */
-    if(H5T_IS_FIXED_STRING(dt))
+    if(H5T_STRING == dt->type)
         ret_value = dt->u.atomic.u.s.pad;
-    else
+    else if(H5T_VLEN == dt->type && H5T_VLEN_STRING == dt->u.vlen.type)
         ret_value = dt->u.vlen.pad;
+    else
+        HGOTO_ERROR(H5E_DATATYPE, H5E_BADVALUE, H5T_STR_ERROR, "can't get strpad info");
 
 done:
-    FUNC_LEAVE_API(ret_value)
+    FUNC_LEAVE_API(ret_value);
 }
 
 
@@ -130,7 +130,7 @@ done:
  *
  * Modifications:
  * 	Robb Matzke, 22 Dec 1998
- *	Also works for derived datatypes.
+ *	Also works for derived data types.
  *
  *-------------------------------------------------------------------------
  */
@@ -140,28 +140,30 @@ H5Tset_strpad(hid_t type_id, H5T_str_t strpad)
     H5T_t	*dt = NULL;
     herr_t      ret_value=SUCCEED;       /* Return value */
 
-    FUNC_ENTER_API(H5Tset_strpad, FAIL)
+    FUNC_ENTER_API(H5Tset_strpad, FAIL);
     H5TRACE2("e","iTz",type_id,strpad);
 
     /* Check args */
     if (NULL == (dt = H5I_object_verify(type_id,H5I_DATATYPE)))
-	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a datatype")
+	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data type");
     if (H5T_STATE_TRANSIENT!=dt->state)
-	HGOTO_ERROR(H5E_ARGS, H5E_CANTINIT, FAIL, "datatype is read-only")
+	HGOTO_ERROR(H5E_ARGS, H5E_CANTINIT, FAIL, "data type is read-only");
     if (strpad < 0 || strpad >= H5T_NSTR)
-	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "illegal string pad type")
+	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "illegal string pad type");
     while (dt->parent && !H5T_IS_STRING(dt))
         dt = dt->parent;  /*defer to parent*/
     if (!H5T_IS_STRING(dt))
-	HGOTO_ERROR(H5E_DATATYPE, H5E_UNSUPPORTED, FAIL, "operation not defined for datatype class")
+	HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "operation not defined for data type class");
     
     /* Commit */
-    if(H5T_IS_FIXED_STRING(dt))
+    if(H5T_STRING == dt->type)
         dt->u.atomic.u.s.pad = strpad;
-    else
+    else if(H5T_VLEN == dt->type && H5T_VLEN_STRING == dt->u.vlen.type)
         dt->u.vlen.pad = strpad;
+    else
+        HGOTO_ERROR(H5E_DATATYPE, H5E_BADVALUE, H5T_STR_ERROR, "can't set strpad info");
 
 done:
-    FUNC_LEAVE_API(ret_value)
+    FUNC_LEAVE_API(ret_value);
 }
 

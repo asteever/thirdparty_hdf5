@@ -459,7 +459,8 @@ check_new_move(void)
         puts("    Unexpected object type, should have been a group");
         goto error;
     }
-    if( sb_hard1.objno!=sb_hard2.objno) {
+    if( sb_hard1.objno[0]!=sb_hard2.objno[0] || 
+        sb_hard1.objno[1]!=sb_hard2.objno[1] ) { 
         H5_FAILED();
         puts("    Hard link test failed.  Link seems not to point to the ");
         puts("    expected file location.");
@@ -532,7 +533,11 @@ test_filespace(void)
 
     /* Metadata cache parameters */
     int mdc_nelmts;
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    int rdcc_nelmts;
+#else /* H5_WANT_H5_V1_4_COMPAT */
     size_t rdcc_nelmts;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
     size_t rdcc_nbytes;
     double rdcc_w0;
 
@@ -1821,7 +1826,11 @@ main(void)
 
     /* Metadata cache parameters */
     int mdc_nelmts;
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    int rdcc_nelmts;
+#else /* H5_WANT_H5_V1_4_COMPAT */
     size_t rdcc_nelmts;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
     size_t rdcc_nbytes;
     double rdcc_w0;
 
@@ -1863,7 +1872,7 @@ main(void)
 
     nerrors += test_link_slashes();
     nerrors += test_unlink_slashes();
-
+ 
     /* Test specific B-tree removal issues */
     nerrors += test_unlink_rightleaf(file);
     nerrors += test_unlink_rightnode(file);

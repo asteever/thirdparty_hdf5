@@ -116,10 +116,12 @@ double	points_dbl[DSET_DIM1][DSET_DIM2], check_dbl[DSET_DIM1][DSET_DIM2];
 /* Local prototypes for filter functions */
 static size_t filter_bogus(unsigned int flags, size_t cd_nelmts, 
     const unsigned int *cd_values, size_t nbytes, size_t *buf_size, void **buf);
+#ifndef H5_WANT_H5_V1_4_COMPAT
 static herr_t can_apply_bogus(hid_t dcpl_id, hid_t type_id, hid_t space_id);
 static herr_t set_local_bogus2(hid_t dcpl_id, hid_t type_id, hid_t space_id);
 static size_t filter_bogus2(unsigned int flags, size_t cd_nelmts, 
     const unsigned int *cd_values, size_t nbytes, size_t *buf_size, void **buf);
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 static size_t filter_corrupt(unsigned int flags, size_t cd_nelmts, 
     const unsigned int *cd_values, size_t nbytes, size_t *buf_size, void **buf);
 
@@ -332,7 +334,11 @@ test_simple_io(hid_t fapl)
     tconv_buf = malloc (1000);
     xfer = H5Pcreate (H5P_DATASET_XFER);
     assert (xfer>=0);
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    if (H5Pset_buffer (xfer, (hsize_t)1000, tconv_buf, NULL)<0) goto error;
+#else /* H5_WANT_H5_V1_4_COMPAT */
     if (H5Pset_buffer (xfer, (size_t)1000, tconv_buf, NULL)<0) goto error;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
     /* Create the dataset */
     if ((dataset = H5Dcreate(file, DSET_SIMPLE_IO_NAME, H5T_NATIVE_INT, space,
@@ -770,7 +776,11 @@ test_conv_buffer(hid_t fid)
     hsize_t     dimsb[1];
     hsize_t     dimsc[1];
     hid_t       xfer_list;
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    hsize_t      size;
+#else /* H5_WANT_H5_V1_4_COMPAT */
     size_t      size;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
     TESTING("data type conversion buffer size");
     
@@ -958,6 +968,7 @@ const H5Z_class_t H5Z_BOGUS[1] = {{
     filter_bogus,		/* The actual filter function	*/
 }};
 
+#ifndef H5_WANT_H5_V1_4_COMPAT
 
 /*-------------------------------------------------------------------------
  * Function:	can_apply_bogus
@@ -983,6 +994,7 @@ can_apply_bogus(hid_t UNUSED dcpl_id, hid_t type_id, hid_t UNUSED space_id)
     else
         return 1;
 }
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
 
 /*-------------------------------------------------------------------------
@@ -1009,6 +1021,7 @@ filter_bogus(unsigned int UNUSED flags, size_t UNUSED cd_nelmts,
     return nbytes;
 }
 
+#ifndef H5_WANT_H5_V1_4_COMPAT
 
 /*-------------------------------------------------------------------------
  * Function:	set_local_bogus2
@@ -1121,6 +1134,7 @@ filter_bogus2(unsigned int flags, size_t cd_nelmts,
     else
         return(nbytes);
 }
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
 /* This message derives from H5Z */
 const H5Z_class_t H5Z_CORRUPT[1] = {{
@@ -1285,7 +1299,11 @@ test_filter_internal(hid_t fid, const char *name, hid_t dcpl, int if_fletcher32,
      */
     if ((dxpl = H5Pcreate (H5P_DATASET_XFER))<0) goto error;
     tconv_buf = malloc (1000);
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    if (H5Pset_buffer (dxpl, (hsize_t)1000, tconv_buf, NULL)<0) goto error;
+#else /* H5_WANT_H5_V1_4_COMPAT */
     if (H5Pset_buffer (dxpl, (size_t)1000, tconv_buf, NULL)<0) goto error;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
     if (if_fletcher32==DISABLE_FLETCHER32) {
         if(H5Pset_edc_check(dxpl, H5Z_DISABLE_EDC)<0)
@@ -1640,7 +1658,11 @@ test_filters(hid_t file)
     puts("Testing 'null' filter");
     if((dc = H5Pcreate(H5P_DATASET_CREATE))<0) goto error;
     if (H5Pset_chunk (dc, 2, chunk_size)<0) goto error;
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    if (H5Zregister (H5Z_FILTER_BOGUS, "bogus", filter_bogus)<0) goto error;
+#else /* H5_WANT_H5_V1_4_COMPAT */
     if (H5Zregister (H5Z_BOGUS)<0) goto error;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
     if (H5Pset_filter (dc, H5Z_FILTER_BOGUS, 0, 0, NULL)<0) goto error;
 
     if(test_filter_internal(file,DSET_BOGUS_NAME,dc,DISABLE_FLETCHER32,DATA_NOT_CORRUPTED,&null_size)<0) goto error;
@@ -1681,7 +1703,11 @@ test_filters(hid_t file)
     data_corrupt[1] = 33;
     data_corrupt[2] = 27;
 
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    if (H5Zregister (H5Z_FILTER_CORRUPT, "corrupt", filter_corrupt)<0) goto error;
+#else /* H5_WANT_H5_V1_4_COMPAT */
     if (H5Zregister (H5Z_CORRUPT)<0) goto error;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
     if (H5Pset_filter (dc, H5Z_FILTER_CORRUPT, 0, 3, data_corrupt)<0) goto error;
     if(test_filter_internal(file,DSET_FLETCHER32_NAME_3,dc,ENABLE_FLETCHER32,DATA_CORRUPTED,&fletcher32_size)<0) goto error;
     if(fletcher32_size<=null_size) {
@@ -2371,6 +2397,7 @@ test_types(hid_t file)
     return -1;
 }
 
+#ifndef H5_WANT_H5_V1_4_COMPAT
 /* This message derives from H5Z */
 const H5Z_class_t H5Z_CAN_APPLY[1] = {{
     H5Z_FILTER_BOGUS,		/* Filter id number		*/
@@ -2534,6 +2561,7 @@ test_can_apply(hid_t file)
 error:
     return -1;
 } /* end test_can_apply() */
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
 
 /*-------------------------------------------------------------------------
@@ -2718,6 +2746,7 @@ error:
 #endif /* H5_HAVE_FILTER_SZIP */
 } /* end test_can_apply_szip() */
 
+#ifndef H5_WANT_H5_V1_4_COMPAT
 /* This message derives from H5Z */
 const H5Z_class_t H5Z_SET_LOCAL[1] = {{
     H5Z_FILTER_BOGUS2,		/* Filter id number		*/
@@ -2988,6 +3017,7 @@ test_set_local(hid_t fapl)
 error:
     return -1;
 } /* end test_set_local() */
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
 
 /*-------------------------------------------------------------------------
@@ -3076,130 +3106,6 @@ error:
 
 
 /*-------------------------------------------------------------------------
- * Function: test_filter_delete
- *
- * Purpose: Tests deletion of filters from a dataset creation property list
- *
- * Return: Success: 0
- *  Failure: -1
- *
- * Programmer: Pedro Vicente
- *              Monday, January 26, 2004
- *
- * Modifications:
- *             
- *-------------------------------------------------------------------------
- */
-static herr_t
-test_filter_delete(hid_t file)
-{
-    H5Z_filter_t filtn;     /* filter identification number */
-    hid_t        dsid;      /* dataset ID */
-    hid_t        sid;       /* dataspace ID */ 
-    hid_t        dcpl;      /* dataset creation property list ID */
-    hid_t        dcpl1;     /* dataset creation property list ID */
-    hsize_t      dims[2] = {20,20}; /* dataspace dimensions */
-    hsize_t      chunk_dims[2] = {10,10};  /* chunk dimensions */
-    size_t       nfilters;   /* number of filters in DCPL */
-    size_t       i;
-    herr_t      ret;            /* Generic return value */
-
-    TESTING("filter deletion");
-
-    /* Create the data space */
-    if ((sid = H5Screate_simple(2, dims, NULL))<0) goto error;
-
-    /* Create dcpl  */
-    if((dcpl = H5Pcreate(H5P_DATASET_CREATE))<0) goto error;
-    if(H5Pset_chunk(dcpl, 2, chunk_dims)<0) goto error;
-
-#if defined H5_HAVE_FILTER_FLETCHER32 
-    if (H5Pset_fletcher32 (dcpl)<0) goto error;
-#endif
-
-#if defined H5_HAVE_FILTER_DEFLATE
-    if (H5Pset_deflate (dcpl, 6)<0) goto error;
-#endif
-
-#if defined H5_HAVE_FILTER_SHUFFLE 
-    if (H5Pset_shuffle (dcpl)<0) goto error;
-#endif
-
-    /* Create a dataset */
-    if ((dsid = H5Dcreate(file,"dsetdel", H5T_NATIVE_INT, sid, dcpl)) <0) goto error;
-
-    /* Get copy of dataset's dataset creation property list */
-    if ((dcpl1=H5Dget_create_plist(dsid))<0) goto error;
-
-    /*----------------------------------------------------------------------
-    * delete the deflate filter
-    *---------------------------------------------------------------------- 
-    */
-#if defined H5_HAVE_FILTER_DEFLATE
-    /* delete the deflate filter */
-    if (H5Premove_filter(dcpl1,H5Z_FILTER_DEFLATE)<0) goto error;
-
-    /* get information about filters */
-    if ((nfilters = H5Pget_nfilters(dcpl1))<0) goto error; 
-
-    /* check if filter was deleted */
-    for (i=0; i<nfilters; i++) {
-        filtn = H5Pget_filter(dcpl1,i,0,0,0,0,0);
-        if (H5Z_FILTER_DEFLATE==filtn)
-            goto error; 
-    } 
-
-    /* Try to delete the deflate filter again */
-    H5E_BEGIN_TRY {
-        ret=H5Premove_filter(dcpl1,H5Z_FILTER_DEFLATE);
-    } H5E_END_TRY;
-    if (ret >=0) {
-        H5_FAILED();
-        printf("    Line %d: Shouldn't have deleted filter!\n",__LINE__);
-        goto error;
-    } /* end if */
-
-#endif /*H5_HAVE_FILTER_DEFLATE*/
-
-    /*----------------------------------------------------------------------
-    * delete all filters
-    *---------------------------------------------------------------------- 
-    */
-    /* delete all filters */
-    if (H5Premove_filter(dcpl1,H5Z_FILTER_ALL)<0) goto error; 
-
-    /* get information about filters */
-    if ((nfilters = H5Pget_nfilters(dcpl1))<0) goto error; 
-
-    /* check if filters were deleted */
-    if (nfilters)goto error; 
-
-    /*----------------------------------------------------------------------
-    * close
-    *---------------------------------------------------------------------- 
-    */
-
-    /* clean up objects used for this test */
-    if (H5Pclose (dcpl)<0) goto error;
-    if (H5Pclose (dcpl1)<0) goto error;
-    if (H5Dclose (dsid)<0) goto error;
-    if (H5Sclose (sid)<0) goto error;
-
-    PASSED();
-    return 0;
-
-error:
-    H5E_BEGIN_TRY {
-        H5Pclose(dcpl);
-        H5Pclose(dcpl1);
-        H5Dclose(dsid);
-        H5Sclose(sid);
-    } H5E_END_TRY;
-    return -1;
-} /* end test_filter_delete() */
-
-
-/*-------------------------------------------------------------------------
  * Function:	main
  *
  * Purpose:	Tests the dataset interface (H5D)
@@ -3260,11 +3166,12 @@ main(void)
     nerrors += test_types(file)<0       ?1:0;
     nerrors += test_userblock_offset(fapl)<0     ?1:0;
     nerrors += test_missing_filter(file)<0	?1:0;
+#ifndef H5_WANT_H5_V1_4_COMPAT
     nerrors += test_can_apply(file)<0	?1:0; 
     nerrors += test_set_local(fapl)<0	?1:0;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
     nerrors += test_can_apply_szip(file)<0	?1:0; 
     nerrors += test_compare_dcpl(file)<0	?1:0; 
-    nerrors += test_filter_delete(file)<0	?1:0;
 
     if (H5Fclose(file)<0) goto error;
     if (nerrors) goto error;

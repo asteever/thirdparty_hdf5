@@ -288,7 +288,7 @@ done:
 herr_t
 H5Pset_external(hid_t plist_id, const char *name, off_t offset, hsize_t size)
 {
-    size_t		idx;
+    int			idx;
     hsize_t		total, tmp;
     H5O_efl_t           efl;
     H5P_genplist_t *plist;      /* Property list pointer */
@@ -426,26 +426,16 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-#ifdef H5_WANT_H5_V1_6_COMPAT
 herr_t
 H5Pget_external(hid_t plist_id, int idx, size_t name_size, char *name/*out*/,
 		 off_t *offset/*out*/, hsize_t *size/*out*/)
-#else /* H5_WANT_H5_V1_6_COMPAT */
-herr_t
-H5Pget_external(hid_t plist_id, unsigned idx, size_t name_size, char *name/*out*/,
-		 off_t *offset/*out*/, hsize_t *size/*out*/)
-#endif /* H5_WANT_H5_V1_6_COMPAT */
 {
     H5O_efl_t           efl;
     H5P_genplist_t *plist;      /* Property list pointer */
     herr_t ret_value=SUCCEED;   /* return value */
 
     FUNC_ENTER_API(H5Pget_external, FAIL);
-#ifdef H5_WANT_H5_V1_6_COMPAT
     H5TRACE6("e","iIszxxx",plist_id,idx,name_size,name,offset,size);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    H5TRACE6("e","iIuzxxx",plist_id,idx,name_size,name,offset,size);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     
     /* Get the plist structure */
     if(NULL == (plist = H5P_object_verify(plist_id,H5P_DATASET_CREATE)))
@@ -455,13 +445,8 @@ H5Pget_external(hid_t plist_id, unsigned idx, size_t name_size, char *name/*out*
     if(H5P_get(plist, H5D_CRT_EXT_FILE_LIST_NAME, &efl) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get external file list");
     
-#ifdef H5_WANT_H5_V1_6_COMPAT
-    if (idx<0 || (size_t)idx>=efl.nused)
+    if (idx<0 || idx>=efl.nused)
         HGOTO_ERROR (H5E_ARGS, H5E_BADRANGE, FAIL, "external file index is out of range");
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    if (idx>=efl.nused)
-        HGOTO_ERROR (H5E_ARGS, H5E_BADRANGE, FAIL, "external file index is out of range");
-#endif /* H5_WANT_H5_V1_6_COMPAT */
 
     /* Return values */
     if (name_size>0 && name)
@@ -676,7 +661,7 @@ H5Pget_nfilters(hid_t plist_id)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get pipeline");
 
     /* Set return value */
-    ret_value=(int)(pline.nused);
+    ret_value=(int)(pline.nfilters);
 
 done:
     FUNC_LEAVE_API(ret_value);
@@ -713,17 +698,10 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-#ifdef H5_WANT_H5_V1_6_COMPAT
 H5Z_filter_t
 H5Pget_filter(hid_t plist_id, int idx, unsigned int *flags/*out*/,
 	       size_t *cd_nelmts/*in_out*/, unsigned cd_values[]/*out*/,
 	       size_t namelen, char name[]/*out*/)
-#else /* H5_WANT_H5_V1_6_COMPAT */
-H5Z_filter_t
-H5Pget_filter(hid_t plist_id, unsigned idx, unsigned int *flags/*out*/,
-	       size_t *cd_nelmts/*in_out*/, unsigned cd_values[]/*out*/,
-	       size_t namelen, char name[]/*out*/)
-#endif /* H5_WANT_H5_V1_6_COMPAT */
 {
     H5O_pline_t         pline;  /* Filter pipeline */
     H5Z_filter_info_t *filter;  /* Pointer to filter information */
@@ -732,17 +710,11 @@ H5Pget_filter(hid_t plist_id, unsigned idx, unsigned int *flags/*out*/,
     H5Z_filter_t ret_value;     /* return value */
     
     FUNC_ENTER_API(H5Pget_filter, H5Z_FILTER_ERROR);
-#ifdef H5_WANT_H5_V1_6_COMPAT
     H5TRACE7("Zf","iIsx*zxzx",plist_id,idx,flags,cd_nelmts,cd_values,namelen,
              name);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    H5TRACE7("Zf","iIux*zxzx",plist_id,idx,flags,cd_nelmts,cd_values,namelen,
-             name);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     
     /* Check args */
-    if (cd_nelmts || cd_values)
-{
+    if (cd_nelmts || cd_values) {
         if (cd_nelmts && *cd_nelmts>256)
             /*
              * It's likely that users forget to initialize this on input, so
@@ -771,13 +743,8 @@ H5Pget_filter(hid_t plist_id, unsigned idx, unsigned int *flags/*out*/,
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, H5Z_FILTER_ERROR, "can't get pipeline");
 
     /* Check more args */
-#ifdef H5_WANT_H5_V1_6_COMPAT
-    if (idx<0 || (size_t)idx>=pline.nused)
+    if (idx<0 || (size_t)idx>=pline.nfilters)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, H5Z_FILTER_ERROR, "filter number is invalid");
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    if (idx>=pline.nused)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, H5Z_FILTER_ERROR, "filter number is invalid");
-#endif /* H5_WANT_H5_V1_6_COMPAT */
 
     /* Set pointer to particular filter to query */
     filter=&pline.filter[idx];
@@ -1369,14 +1336,17 @@ H5P_is_fill_value_defined(const struct H5O_fill_t *fill, H5D_fill_value_t *statu
     assert(status);
 
     /* Check if the fill value was never set */
-    if(fill->size == (size_t)-1 && !fill->buf)
+    if(fill->size == (size_t)-1 && !fill->buf) {
 	*status = H5D_FILL_VALUE_UNDEFINED;
+    }
     /* Check if the fill value was set to the default fill value by the library */
-    else if(fill->size == 0 && !fill->buf)
+    else if(fill->size == 0 && !fill->buf) {
 	*status = H5D_FILL_VALUE_DEFAULT;
+    }
     /* Check if the fill value was set by the application */
-    else if(fill->size > 0 && fill->buf)
+    else if(fill->size > 0 && fill->buf) {
 	*status = H5D_FILL_VALUE_USER_DEFINED;
+    }
     else {
 	*status = H5D_FILL_VALUE_ERROR;
         HGOTO_ERROR(H5E_PLIST, H5E_BADRANGE, FAIL, "invalid combination of fill-value info"); 
@@ -1385,6 +1355,45 @@ H5P_is_fill_value_defined(const struct H5O_fill_t *fill, H5D_fill_value_t *statu
 done:
     FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5P_is_fill_value_defined() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5P_fill_value_defined
+ *
+ * Purpose:	Check if fill value is defined.  Internal version of function
+ * 
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:  Raymond Lu
+ *              Wednesday, January 16, 2002
+ *
+ * Modifications:
+ *              
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5P_fill_value_defined(H5P_genplist_t *plist, H5D_fill_value_t *status)
+{
+    herr_t		ret_value = SUCCEED;
+    H5O_fill_t		fill;
+
+    FUNC_ENTER_NOAPI(H5P_fill_value_defined, FAIL);
+
+    assert(plist);
+    assert(status);
+
+    /* Get the fill value struct */
+    if(H5P_get(plist, H5D_CRT_FILL_VALUE_NAME, &fill) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get fill value"); 
+
+    /* Get the fill-value status */
+    if(H5P_is_fill_value_defined(&fill, status) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "can't check fill value status"); 
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
+} /* end H5P_fill_value_defined() */
 
 
 /*-------------------------------------------------------------------------
@@ -1406,7 +1415,6 @@ herr_t
 H5Pfill_value_defined(hid_t plist_id, H5D_fill_value_t *status)
 {
     H5P_genplist_t 	*plist;
-    H5O_fill_t		fill;
     herr_t		ret_value = SUCCEED;
 
     FUNC_ENTER_API(H5Pfill_value_defined, FAIL);
@@ -1418,13 +1426,9 @@ H5Pfill_value_defined(hid_t plist_id, H5D_fill_value_t *status)
     if(NULL == (plist = H5P_object_verify(plist_id,H5P_DATASET_CREATE)))
         HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID");
 
-    /* Get the fill value struct */
-    if(H5P_get(plist, H5D_CRT_FILL_VALUE_NAME, &fill) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get fill value"); 
-
-    /* Get the fill-value status */
-    if(H5P_is_fill_value_defined(&fill, status) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "can't check fill value status"); 
+    /* Call the internal function */
+    if(H5P_fill_value_defined(plist, status) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get fill value info"); 
 
 done:
     FUNC_LEAVE_API(ret_value);
@@ -1582,55 +1586,6 @@ H5Pget_fill_time(hid_t plist_id, H5D_fill_time_t *fill_time/*out*/)
     /* Set values */
     if(!fill_time || H5P_get(plist, H5D_CRT_FILL_TIME_NAME, fill_time) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set space allocation time");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}
-
-/*-------------------------------------------------------------------------
- * Function: H5Premove_filter
- *
- * Purpose: Deletes a filter from the dataset creation property list;
- *  deletes all filters if FILTER is H5Z_FILTER_NONE  
- *  
- * Return: Non-negative on success/Negative on failure
- *
- * Programmer: Pedro Vicente
- *             January 26, 2004
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-
-herr_t
-H5Premove_filter(hid_t plist_id, H5Z_filter_t filter)
-{
-    H5P_genplist_t *plist;      /* Property list pointer */
-    H5O_pline_t pline;          /* Filter pipeline */
-    herr_t ret_value = SUCCEED; /* return value          */
-
-    FUNC_ENTER_API(H5Premove_filter, FAIL)
-    H5TRACE2("e","iZf",plist_id,filter);
-
-    /* Get the property list structure */
-    if(NULL == (plist = H5P_object_verify(plist_id,H5P_DATASET_CREATE)))
-        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
-
-    /* Get pipeline info */
-    if(H5P_get(plist, H5D_CRT_DATA_PIPELINE_NAME, &pline) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, H5Z_FILTER_ERROR, "can't get pipeline")
-
-    /* Check if there are any filters */
-    if (pline.filter) {
-        /* Delete filter */
-        if(H5Z_delete(&pline, filter) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, H5Z_FILTER_ERROR, "can't delete filter")
-
-        /* Put the I/O pipeline information back into the property list */
-        if(H5P_set(plist, H5D_CRT_DATA_PIPELINE_NAME, &pline) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set pipeline")
-    } /* end if */
 
 done:
     FUNC_LEAVE_API(ret_value);

@@ -16,10 +16,6 @@
 #define H5O_PACKAGE		/*suppress error about including H5Opkg	  */
 #define H5S_PACKAGE	        /*suppress error about including H5Spkg	  */
 
-/* Pablo information */
-/* (Put before include files to avoid problems with inline functions) */
-#define PABLO_MASK      H5O_attr_mask
-
 #include "H5private.h"		/* Generic Functions			*/
 #include "H5Apkg.h"		/* Attributes				*/
 #include "H5Eprivate.h"		/* Error handling		  	*/
@@ -28,6 +24,8 @@
 #include "H5MMprivate.h"	/* Memory management			*/
 #include "H5Opkg.h"             /* Object headers			*/
 #include "H5Spkg.h"		/* Dataspaces				*/
+
+#define PABLO_MASK      H5O_attr_mask
 
 /* PRIVATE PROTOTYPES */
 static herr_t H5O_attr_encode (H5F_t *f, uint8_t *p, const void *mesg);
@@ -219,6 +217,13 @@ H5O_attr_decode(H5F_t *f, hid_t dxpl_id, const uint8_t *p, H5O_shared_t UNUSED *
     /* Indicate that the fill values aren't to be written out */
     attr->initialized=1;
     
+#ifdef LOTSLATER
+    if (hobj) {
+        attr->sh_heap = *hobj;
+        attr->sh_file = f;
+    }
+#endif 
+
     /* Set return value */
     ret_value=attr;
 
@@ -257,7 +262,7 @@ H5O_attr_encode(H5F_t *f, uint8_t *p, const void *mesg)
     size_t      name_len;   /* Attribute name length */
     unsigned    version;        /* Attribute version */
     hbool_t     type_shared;    /* Flag to indicate that a shared datatype is used for this attribute */
-    herr_t      ret_value=SUCCEED;      /* Return value */
+    herr_t      ret_value=SUCCEED;       /* Return value */
 
     FUNC_ENTER_NOAPI(H5O_attr_encode, FAIL);
 

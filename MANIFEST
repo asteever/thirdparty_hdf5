@@ -6,14 +6,13 @@
 # in column one with a '#'.
 #------------------------------------------------------------------------------
 
-./.autom4te.cfg             _DO_NOT_DISTRIBUTE_
+./.autom4te.cfg				_DO_NOT_DISTRIBUTE_
 ./COPYING
 ./MANIFEST
 ./Makefile.dist
 ./Makefile.in
 ./README.txt
 ./aclocal.m4
-./acsite.m4
 ./configure
 ./configure.in
 
@@ -28,13 +27,12 @@
 ./bin/debug-ohdr			_DO_NOT_DISTRIBUTE_
 ./bin/dependencies
 ./bin/distdep
-./bin/errors			        _DO_NOT_DISTRIBUTE_
+./bin/errors				_DO_NOT_DISTRIBUTE_
 ./bin/h5vers
 ./bin/install-sh
 ./bin/iostats
 ./bin/locate_sw
 ./bin/ltmain.sh
-./bin/make_err
 ./bin/mkdirs
 ./bin/release
 ./bin/runtest				_DO_NOT_DISTRIBUTE_
@@ -137,6 +135,8 @@
 ./doc/html/MountingFiles.html
 ./doc/html/NCSAfooterlogo.gif
 ./doc/html/ObjectHeader.txt		_DO_NOT_DISTRIBUTE_
+./doc/html/PDF_RM_body.book             _DO_NOT_DISTRIBUTE_
+./doc/html/PDF_RM_front.book            _DO_NOT_DISTRIBUTE_
 ./doc/html/Performance.html
 ./doc/html/PredefDTypes.html
 ./doc/html/Properties.html
@@ -154,6 +154,8 @@
 ./doc/html/RM_H5S.html
 ./doc/html/RM_H5T.html
 ./doc/html/RM_H5Z.html
+./doc/html/RM_Title.html                _DO_NOT_DISTRIBUTE_
+./doc/html/RM_TOC.html                  _DO_NOT_DISTRIBUTE_
 ./doc/html/Tools.html
 ./doc/html/Version.html
 ./doc/html/chunk1.gif
@@ -227,7 +229,6 @@
 ./doc/html/TechNotes/ThreadSafeLibrary.html
 ./doc/html/TechNotes/VFL.html
 ./doc/html/TechNotes/VFLfunc.html
-./doc/html/TechNotes/VLTypes.html
 ./doc/html/TechNotes/Version.html
 ./doc/html/TechNotes/openmp-hdf5.c
 ./doc/html/TechNotes/openmp-hdf5.html
@@ -518,7 +519,51 @@
 #
 #------------------------------------------------------------------------------
 
+./fortran/Makefile.dist
 ./fortran/Makefile.in
+./fortran/aclocal.m4
+./fortran/acsite.m4
+./fortran/configure
+./fortran/configure.in
+
+./fortran/config/BlankForm
+./fortran/config/commence.in
+./fortran/config/conclude.in
+./fortran/config/dec-flags
+./fortran/config/dec-osf4.x
+./fortran/config/dec-osf5.x
+./fortran/config/depend
+./fortran/config/depend1.in
+./fortran/config/depend2.in
+./fortran/config/depend3.in
+./fortran/config/depend4.in
+./fortran/config/dependN.in
+./fortran/config/freebsd
+./fortran/config/gnu-flags
+./fortran/config/hpux10.20
+./fortran/config/hpux11.00
+./fortran/config/hpux9.03
+./fortran/config/i386-pc-cygwin32
+./fortran/config/ia64-linux-gnu
+./fortran/config/intel-osf1
+./fortran/config/irix5.x
+./fortran/config/irix6.x
+./fortran/config/linux-gnu
+./fortran/config/linux-gnuaout
+./fortran/config/linux-gnulibc1
+./fortran/config/linux-gnulibc2
+./fortran/config/powerpc-apple
+./fortran/config/powerpc-ibm-aix4.x
+./fortran/config/powerpc-ibm-aix5.x
+./fortran/config/rs6000-ibm-aix4.x
+./fortran/config/solaris2.x
+./fortran/config/sv1-cray
+./fortran/config/unicos
+./fortran/config/unicos10.0.X
+./fortran/config/unicosmk
+./fortran/config/unicosmk2.0.X
+./fortran/config/unicosmk2.0.5.X
+./fortran/config/unicosmk2.0.6.X
 
 ./fortran/examples/Dependencies
 ./fortran/examples/Makefile.in
@@ -542,6 +587,7 @@
 ./fortran/src/H5_ff.f90
 ./fortran/src/H5Af.c
 ./fortran/src/H5Aff.f90
+./fortran/src/H5config_fortran.h.in
 ./fortran/src/H5Df.c
 ./fortran/src/H5Dff.f90
 ./fortran/src/H5Ef.c
@@ -552,6 +598,8 @@
 ./fortran/src/H5Fff.f90
 ./fortran/src/H5Gf.c
 ./fortran/src/H5Gff.f90
+./fortran/src/H5Git.c
+./fortran/src/H5Git.h
 ./fortran/src/H5If.c
 ./fortran/src/H5Iff.f90
 ./fortran/src/H5Pf.c
@@ -619,6 +667,31 @@
 #------------------------------------------------------------------------------
 
 ./c++/Makefile.in
+./c++/aclocal.m4
+./c++/configure
+./c++/configure.in
+
+./c++/config/BlankForm
+./c++/config/commence.in
+./c++/config/conclude.in
+./c++/config/dec-osf5.x
+./c++/config/depend1.in
+./c++/config/depend2.in
+./c++/config/depend3.in
+./c++/config/depend4.in
+./c++/config/dependN.in
+./c++/config/hpux11.00
+./c++/config/ia64-linux-gnu
+./c++/config/irix6.x
+./c++/config/linux-gnu
+./c++/config/linux-gnulibc1
+./c++/config/linux-gnulibc2
+./c++/config/powerpc-ibm-aix
+./c++/config/rs6000-ibm-aix4.x
+./c++/config/solaris2.x
+./c++/config/sv1-cray
+./c++/config/unicos10.0.X
+./c++/config/unicosmk2.0.6.X
 
 ./c++/examples/Dependencies
 ./c++/examples/Attributes.h5
@@ -723,8 +796,8 @@
 ./pablo/PabloHDF_RT.c
 ./pablo/PabloHDF_SDDF.c
 ./pablo/PabloHDFff.f
-./pablo/PabloSedscr
 ./pablo/ProcIDs.h
+./pablo/PabloSedscr
 ./pablo/ProcTrace.h
 ./pablo/READ_ME
 
@@ -757,11 +830,9 @@
 ./release_docs/RELEASE.txt
 
 ./src/.indent.pro			_DO_NOT_DISTRIBUTE_
-./src/hdf5.lnt				_DO_NOT_DISTRIBUTE_
 ./src/Dependencies
 ./src/H5.c
 ./src/H5api_adpt.h
-./src/H5err.txt
 ./src/H5A.c
 ./src/H5Aprivate.h
 ./src/H5Apublic.h
@@ -778,19 +849,12 @@
 ./src/H5Dprivate.h
 ./src/H5Dpublic.h
 ./src/H5Dpkg.h
-./src/H5DZ.c
-./src/H5DZtrans.c
 ./src/H5E.c
-./src/H5Edefin.h
-./src/H5Einit.h
 ./src/H5Eprivate.h
-./src/H5Epubgen.h
 ./src/H5Epublic.h
-./src/H5Eterm.h
 ./src/H5F.c
 ./src/H5Fcontig.c
 ./src/H5Fcompact.c
-./src/H5Fdbg.c
 ./src/H5Fistore.c
 ./src/H5Fpkg.h
 ./src/H5Fprivate.h
@@ -807,8 +871,6 @@
 ./src/H5FDgass.h
 ./src/H5FDlog.c
 ./src/H5FDlog.h
-./src/H5FDmpi.c
-./src/H5FDmpi.h
 ./src/H5FDmpio.c
 ./src/H5FDmpio.h
 ./src/H5FDmpiposix.c
@@ -844,13 +906,9 @@
 ./src/H5Gpublic.h
 ./src/H5Gstab.c
 ./src/H5HG.c
-./src/H5HGdbg.c
-./src/H5HGpkg.h
 ./src/H5HGprivate.h
 ./src/H5HGpublic.h
 ./src/H5HL.c
-./src/H5HLdbg.c
-./src/H5HLpkg.h
 ./src/H5HLprivate.h
 ./src/H5HLpublic.h
 ./src/H5HP.c
@@ -966,8 +1024,6 @@
 ./test/enum.c
 ./test/extend.c
 ./test/external.c
-./test/error_test.c
-./test/err_compat.c
 ./test/file_handle.c
 ./test/fill_old.h5
 ./test/fillval.c
@@ -1010,7 +1066,6 @@
 ./test/testframe.c
 ./test/testhdf5.c
 ./test/testhdf5.h
-./test/testerror.sh
 ./test/testmeta.c
 ./test/tfile.c
 ./test/tgenprop.c
@@ -1037,11 +1092,6 @@
 ./test/tvlstr.c
 ./test/tvltypes.c
 ./test/unlink.c
-
-./test/testfiles/err_compat_1
-./test/testfiles/err_compat_2
-./test/testfiles/error_test_1
-./test/testfiles/error_test_2
 
 ./testpar/Dependencies
 ./testpar/Makefile.in
@@ -1117,35 +1167,11 @@
 
 ./tools/h5diff/Dependencies
 ./tools/h5diff/Makefile.in
-./tools/h5diff/h5diff_main.c
-./tools/h5diff/testh5diff_util.c
-./tools/h5diff/testh5diff_main.c
-./tools/h5diff/testh5diff_dset.c
-./tools/h5diff/testh5diff_basic.c
-./tools/h5diff/testh5diff_attr.c
-./tools/h5diff/testh5diff.h
+./tools/h5diff/h5diff.c
+./tools/h5diff/h5trav.c
+./tools/h5diff/h5trav.h
+./tools/h5diff/h5difftst.c
 ./tools/h5diff/testh5diff.sh
-
-./tools/h5repack/Dependencies
-./tools/h5repack/Makefile.in
-./tools/h5repack/h5repack.sh
-./tools/h5repack/h5repack.h
-./tools/h5repack/h5repack.c
-./tools/h5repack/h5repack_layout.c
-./tools/h5repack/h5repack_list.c
-./tools/h5repack/h5repack_filters.c
-./tools/h5repack/h5repack_verify.c
-./tools/h5repack/h5repack_copy.c
-./tools/h5repack/h5repack_refs.c
-./tools/h5repack/h5repack_main.c
-./tools/h5repack/h5repack_opttable.c
-./tools/h5repack/h5repack_parse.c
-./tools/h5repack/testh5repack_attr.c
-./tools/h5repack/testh5repack_dset.c
-./tools/h5repack/testh5repack_filters.c
-./tools/h5repack/testh5repack_make.c
-./tools/h5repack/testh5repack_main.c
-
 
 ./tools/h5ls/Dependencies
 ./tools/h5ls/Makefile.in
@@ -1161,15 +1187,6 @@
 ./tools/lib/h5tools_utils.c
 ./tools/lib/h5tools_utils.h
 ./tools/lib/talign.c
-./tools/lib/h5diff.c
-./tools/lib/h5diff_array.c
-./tools/lib/h5diff_attr.c
-./tools/lib/h5diff_dset.c
-./tools/lib/h5diff_util.c
-./tools/lib/h5trav.c
-./tools/lib/h5trav_table.c
-./tools/lib/h5trav.h
-./tools/lib/h5diff.h
 
 ./tools/misc/Dependencies
 ./tools/misc/Makefile.in
@@ -1298,6 +1315,7 @@
 ./tools/testfiles/tvlstr.h5
 ./tools/testfiles/tvlstr.ddl
 ./tools/testfiles/tattr2.h5
+./tools/testfiles/tattr2.h5
 ./tools/testfiles/tall-2A.ddl
 
 # Expected output from h5ls tests
@@ -1340,39 +1358,27 @@
 ./tools/testfiles/tloop.h5.xml
 ./tools/testfiles/tloop2.h5.xml
 ./tools/testfiles/tmany.h5.xml
-./tools/testfiles/tname-amp.h5
 ./tools/testfiles/tname-amp.h5.xml
-./tools/testfiles/tname-apos.h5
 ./tools/testfiles/tname-apos.h5.xml
-./tools/testfiles/tname-gt.h5
 ./tools/testfiles/tname-gt.h5.xml
-./tools/testfiles/tname-lt.h5
 ./tools/testfiles/tname-lt.h5.xml
-./tools/testfiles/tname-quot.h5
 ./tools/testfiles/tname-quot.h5.xml
-./tools/testfiles/tname-sp.h5
 ./tools/testfiles/tname-sp.h5.xml
 ./tools/testfiles/tnamed_dtype_attr.ddl
 ./tools/testfiles/tnamed_dtype_attr.h5
 ./tools/testfiles/tnamed_dtype_attr.h5.xml
 ./tools/testfiles/tnestedcomp.h5.xml
-./tools/testfiles/tnodata.h5
 ./tools/testfiles/tnodata.h5.xml
 ./tools/testfiles/tobjref.h5.xml
 ./tools/testfiles/topaque.h5.xml
-./tools/testfiles/tref-escapes-at.h5
 ./tools/testfiles/tref-escapes-at.h5.xml
-./tools/testfiles/tref-escapes.h5
 ./tools/testfiles/tref-escapes.h5.xml
-./tools/testfiles/tref.h5
 ./tools/testfiles/tref.h5.xml
 ./tools/testfiles/tsaf.h5.xml
 ./tools/testfiles/tslink.h5.xml
 ./tools/testfiles/tstr.h5.xml
 ./tools/testfiles/tstr2.h5.xml
-./tools/testfiles/tstring-at.h5
 ./tools/testfiles/tstring-at.h5.xml
-./tools/testfiles/tstring.h5
 ./tools/testfiles/tstring.h5.xml
 ./tools/testfiles/tvldtypes1.h5.xml
 ./tools/testfiles/tvldtypes2.h5.xml
@@ -1380,18 +1386,6 @@
 ./tools/testfiles/tvldtypes4.h5.xml
 ./tools/testfiles/tvldtypes5.h5.xml
 ./tools/testfiles/tvlstr.h5.xml
-./tools/testfiles/tname-amp.h5
-./tools/testfiles/tname-apos.h5
-./tools/testfiles/tname-gt.h5
-./tools/testfiles/tname-lt.h5
-./tools/testfiles/tname-quot.h5
-./tools/testfiles/tname-sp.h5
-./tools/testfiles/tnodata.h5
-./tools/testfiles/tref-escapes-at.h5
-./tools/testfiles/tref-escapes.h5
-./tools/testfiles/tref.h5
-./tools/testfiles/tstring-at.h5
-./tools/testfiles/tstring.h5
 ./tools/testfiles/tempty-dtd.h5.xml
 ./tools/testfiles/tempty-dtd-uri.h5.xml
 ./tools/testfiles/tempty-nons.h5.xml
@@ -1401,6 +1395,18 @@
 ./tools/testfiles/tempty-nons-2.h5.xml
 ./tools/testfiles/tempty-ns-2.h5.xml
 ./tools/testfiles/tall-2A.h5.xml
+./tools/testfiles/tname-amp.h5
+./tools/testfiles/tname-apos.h5
+./tools/testfiles/tname-gt.h5
+./tools/testfiles/tname-lt.h5
+./tools/testfiles/tname-quot.h5
+./tools/testfiles/tname-sp.h5
+./tools/testfiles/tnodata.h5
+./tools/testfiles/tref-escapes-at.h5
+./tools/testfiles/tref-escapes.h5
+./tools/testfiles/tref.h5
+./tools/testfiles/tstring-at.h5
+./tools/testfiles/tstring.h5
 
 #test files for h5diff
 ./tools/testfiles/file1.h5
@@ -1409,8 +1415,6 @@
 ./tools/testfiles/file4.h5
 ./tools/testfiles/file5.h5
 ./tools/testfiles/file6.h5
-./tools/testfiles/file7.h5
-./tools/testfiles/file8.h5
 ./tools/testfiles/h5diff_10.txt
 ./tools/testfiles/h5diff_11.txt
 ./tools/testfiles/h5diff_12.txt
@@ -1424,6 +1428,18 @@
 ./tools/testfiles/h5diff_23.txt
 ./tools/testfiles/h5diff_24.txt
 ./tools/testfiles/h5diff_25.txt
+./tools/testfiles/h5diff_30.txt
+./tools/testfiles/h5diff_31.txt
+./tools/testfiles/h5diff_32.txt
+./tools/testfiles/h5diff_33.txt
+./tools/testfiles/h5diff_34.txt
+./tools/testfiles/h5diff_35.txt
+./tools/testfiles/h5diff_36.txt
+./tools/testfiles/h5diff_37.txt
+./tools/testfiles/h5diff_38.txt
+./tools/testfiles/h5diff_40.txt
+./tools/testfiles/h5diff_41.txt
+./tools/testfiles/h5diff_42.txt
 ./tools/testfiles/h5diff_50.txt
 ./tools/testfiles/h5diff_51.txt
 ./tools/testfiles/h5diff_52.txt
@@ -1462,8 +1478,6 @@
 ./tools/testfiles/h5diff_627.txt
 ./tools/testfiles/h5diff_628.txt
 ./tools/testfiles/h5diff_629.txt
-./tools/testfiles/h5diff_70.txt
-./tools/testfiles/h5diff_80.txt
 
 
 ./windows/all.zip

@@ -534,10 +534,10 @@ END SUBROUTINE h5aget_space_f
 	<pre>
 SUBROUTINE h5aget_type_f(attr_id, type_id, hdferr) 
   IMPLICIT NONE
-  INTEGER(HID_T), INTENT(IN) :: attr_id    ! Attribute identifier 
-  INTEGER(HID_T), INTENT(OUT) :: type_id   ! Attribute datatype identifier
-  INTEGER, INTENT(OUT) :: hdferr           ! Error code:
-                                           ! 0 on success and -1 on failure
+  INTEGER(HID_T), INTENT(IN) :: attr_id  ! Attribute identifier 
+  INTEGER(HID_T), INTENT(OUT) :: type_id ! Attribute datatype identifier
+  INTEGER, INTENT(OUT) :: hdferr         ! Error code:
+                                         ! 0 on success and -1 on failure
 END SUBROUTINE h5aget_type_f
 	</pre>		
 		
@@ -665,11 +665,11 @@ SUBROUTINE
 	<pre>
 SUBROUTINE h5aopen_idx_f(obj_id, index, attr_id, hdferr) 
   IMPLICIT NONE
-  INTEGER(HID_T), INTENT(IN) :: obj_id      ! Object identifier 
-  INTEGER, INTENT(IN) :: index              ! Attribute index 
-  INTEGER(HID_T), INTENT(OUT) :: attr_id    ! Attribute identifier 
-  INTEGER, INTENT(OUT) :: hdferr            ! Error code:
-                                            ! 0 on success and -1 on failure
+  INTEGER(HID_T), INTENT(IN) :: obj_id    ! Object identifier 
+  INTEGER, INTENT(IN) :: index            ! Attribute index 
+  INTEGER(HID_T), INTENT(OUT) :: attr_id  ! Attribute identifier 
+  INTEGER, INTENT(OUT) :: hdferr          ! Error code:
+                                          ! 0 on success and -1 on failure
 END SUBROUTINE h5aopen_idx_f
 	</pre>		
 		
@@ -717,11 +717,11 @@ END SUBROUTINE h5aopen_idx_f
 	<pre>
 SUBROUTINE h5aopen_name_f(obj_id, name, attr_id, hdferr) 
   IMPLICIT NONE
-  INTEGER(HID_T), INTENT(IN) :: obj_id      ! Object identifier 
-  CHARACTER(LEN=*), INTENT(IN) :: name      ! Attribute name
-  INTEGER(HID_T), INTENT(OUT) :: attr_id    ! Attribute identifier 
-  INTEGER, INTENT(OUT) :: hdferr            ! Error code:
-                                            ! 0 on success and -1 on failure
+  INTEGER(HID_T), INTENT(IN) :: obj_id    ! Object identifier 
+  CHARACTER(LEN=*), INTENT(IN) :: name    ! Attribute name
+  INTEGER(HID_T), INTENT(OUT) :: attr_id  ! Attribute identifier 
+  INTEGER, INTENT(OUT) :: hdferr          ! Error code:
+                                          ! 0 on success and -1 on failure
 END SUBROUTINE h5aopen_name_f
 	</pre>		
 		
@@ -850,8 +850,8 @@ SUBROUTINE h5awrite_f(attr_id, memtype_id,  buf, dims, hdferr)
   DIMENSION(*), INTEGER(HSIZE_T), INTENT(IN)  :: dims 
                                            ! Array to hold corresponding 
                                            ! dimension sizes of data buffer buf;
-                                           ! dim(k) has value of the 
-                                           ! k-th dimension of buffer buf; 
+                                           ! dim(k) has value of the k-th 
+                                           ! dimension of buffer buf;
                                            ! values are ignored if buf is 
                                            ! a scalar
   INTEGER, INTENT(OUT) :: hdferr           ! Error code:
@@ -904,10 +904,10 @@ And in this document, the
 <!-- #EndLibraryItem --><!-- #BeginLibraryItem "/ed_libs/Footer.lbi" --><address>
 <a href="mailto:hdfhelp@ncsa.uiuc.edu">HDF Help Desk</a> 
 <br>
-Describes HDF5 Release 1.7, the unreleased development branch; working toward HDF5 Release 1.8.0
+Describes HDF5 Release 1.6.2, February 2004
 </address><!-- #EndLibraryItem --><SCRIPT LANGUAGE="JAVASCRIPT">
 <!--
-document.writeln("Last modified: 21 October 2003");
+document.writeln("Last modified: 16 October 2003");
 -->
 </SCRIPT>
  

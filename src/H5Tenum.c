@@ -220,7 +220,7 @@ done:
 herr_t
 H5T_enum_insert(H5T_t *dt, const char *name, void *value)
 {
-    unsigned	i;
+    int		i;
     char	**names=NULL;
     uint8_t	*values=NULL;
     herr_t      ret_value=SUCCEED;       /* Return value */
@@ -280,28 +280,20 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-#ifdef H5_WANT_H5_V1_6_COMPAT
 herr_t
-H5Tget_member_value(hid_t type, int _membno, void *value/*out*/)
-#else /* H5_WANT_H5_V1_6_COMPAT */
-herr_t
-H5Tget_member_value(hid_t type, unsigned membno, void *value/*out*/)
-#endif /* H5_WANT_H5_V1_6_COMPAT */
+H5Tget_member_value(hid_t type, int membno, void *value/*out*/)
 {
-#ifdef H5_WANT_H5_V1_6_COMPAT
-    unsigned membno = (unsigned)_membno;
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     H5T_t	*dt=NULL;
     herr_t      ret_value=SUCCEED;       /* Return value */
     
     FUNC_ENTER_API(H5Tget_member_value, FAIL);
-    H5TRACE3("e","iIux",type,membno,value);
+    H5TRACE3("e","iIsx",type,membno,value);
 
     if (NULL==(dt=H5I_object_verify(type,H5I_DATATYPE)))
 	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data type");
     if (H5T_ENUM!=dt->type)
 	HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "operation not defined for data type class");
-    if (membno>=dt->u.enumer.nmembs)
+    if (membno<0 || membno>=dt->u.enumer.nmembs)
 	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid member number");
     if (!value)
 	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "null value buffer");
@@ -332,7 +324,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5T_get_member_value(H5T_t *dt, unsigned membno, void *value/*out*/)
+H5T_get_member_value(H5T_t *dt, int membno, void *value/*out*/)
 {
     herr_t      ret_value=SUCCEED;       /* Return value */
     

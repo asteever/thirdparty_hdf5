@@ -41,13 +41,12 @@ typedef enum {
     H5I_DATASPACE,	        /*group ID for Dataspace objects	    */
     H5I_DATASET,	        /*group ID for Dataset objects		    */
     H5I_ATTR,		        /*group ID for Attribute objects	    */
+    H5I_TEMPBUF,	        /*group ID for Temporary buffer objects	    */
     H5I_REFERENCE,	        /*group ID for Reference objects	    */
     H5I_VFL,			/*group ID for virtual file layer	    */
     H5I_GENPROP_CLS,            /*group ID for generic property list classes */
     H5I_GENPROP_LST,            /*group ID for generic property lists       */
-    H5I_ERROR_CLASS,            /*group ID for error classes                */
-    H5I_ERROR_MSG,              /*group ID for error messages               */
-    H5I_ERROR_STACK,            /*group ID for error stacks                 */
+    
     H5I_NGROUPS		        /*number of valid groups, MUST BE LAST!	    */
 } H5I_type_t;
 
@@ -63,7 +62,6 @@ extern "C" {
 
 /* Public API functions */
 H5_DLL H5I_type_t H5Iget_type(hid_t id);
-H5_DLL hid_t H5Iget_file_id(hid_t id);
 H5_DLL ssize_t H5Iget_name(hid_t id, char *name/*out*/, size_t size);
 H5_DLL int H5Iinc_ref(hid_t id);
 H5_DLL int H5Idec_ref(hid_t id);

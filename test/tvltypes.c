@@ -12,6 +12,8 @@
  * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/* $Id$ */
+
 /***********************************************************
 *
 * Test program:	 tvltypes
@@ -192,7 +194,7 @@ test_vltypes_vlen_atomic(void)
 
     /* Allocate and initialize VL data to write */
     for(i=0; i<SPACE1_DIM1; i++) {
-        wdata[i].p=HDmalloc((i+1)*sizeof(unsigned int));
+        wdata[i].p=malloc((i+1)*sizeof(unsigned int));
         wdata[i].len=i+1;
         for(j=0; j<(i+1); j++)
             ((unsigned int *)wdata[i].p)[j]=i*10+j;
@@ -222,9 +224,11 @@ test_vltypes_vlen_atomic(void)
     CHECK(ret, FAIL, "H5Dread");
 
     /* Check data read in */
-    for(i=0; i<SPACE1_DIM1; i++)
-        if(rdata[i].len!=0 || rdata[i].p!=NULL)
+    for(i=0; i<SPACE1_DIM1; i++) {
+        if(rdata[i].len!=0 || rdata[i].p!=NULL) {
             TestErrPrintf("VL doesn't match!, rdata[%d].len=%u, rdata[%d].p=%p\n",(int)i,(unsigned)rdata[i].len,(int)i,rdata[i].p);
+        } /* end if */
+    } /* end for */
     
     /* Write "nil" data to disk */
     ret=H5Dwrite(dataset,tid1,H5S_ALL,H5S_ALL,H5P_DEFAULT,wdata2);
@@ -235,9 +239,11 @@ test_vltypes_vlen_atomic(void)
     CHECK(ret, FAIL, "H5Dread");
 
     /* Check data read in */
-    for(i=0; i<SPACE1_DIM1; i++)
-        if(rdata[i].len!=0 || rdata[i].p!=NULL)
+    for(i=0; i<SPACE1_DIM1; i++) {
+        if(rdata[i].len!=0 || rdata[i].p!=NULL) {
             TestErrPrintf("VL doesn't match!, rdata[%d].len=%u, rdata[%d].p=%p\n",(int)i,(unsigned)rdata[i].len,(int)i,rdata[i].p);
+        } /* end if */
+    } /* end for */
     
     /* Write dataset to disk */
     ret=H5Dwrite(dataset,tid1,H5S_ALL,H5S_ALL,H5P_DEFAULT,wdata);
@@ -269,9 +275,11 @@ test_vltypes_vlen_atomic(void)
     CHECK(ret, FAIL, "H5Dread");
 
     /* Check data read in */
-    for(i=0; i<SPACE1_DIM1; i++)
-        if(rdata[i].len!=0 || rdata[i].p!=NULL)
+    for(i=0; i<SPACE1_DIM1; i++) {
+        if(rdata[i].len!=0 || rdata[i].p!=NULL) {
             TestErrPrintf("VL doesn't match!, rdata[%d].len=%u, rdata[%d].p=%p\n",(int)i,(unsigned)rdata[i].len,(int)i,rdata[i].p);
+        } /* end if */
+    } /* end for */
     
     /* Write "nil" data to disk */
     ret=H5Dwrite(dataset,tid1,H5S_ALL,H5S_ALL,H5P_DEFAULT,wdata2);
@@ -282,9 +290,11 @@ test_vltypes_vlen_atomic(void)
     CHECK(ret, FAIL, "H5Dread");
 
     /* Check data read in */
-    for(i=0; i<SPACE1_DIM1; i++)
-        if(rdata[i].len!=0 || rdata[i].p!=NULL)
+    for(i=0; i<SPACE1_DIM1; i++) {
+        if(rdata[i].len!=0 || rdata[i].p!=NULL) {
             TestErrPrintf("VL doesn't match!, rdata[%d].len=%u, rdata[%d].p=%p\n",(int)i,(unsigned)rdata[i].len,(int)i,rdata[i].p);
+        } /* end if */
+    } /* end for */
     
     /* Write data to disk */
     ret=H5Dwrite(dataset,tid1,H5S_ALL,H5S_ALL,H5P_DEFAULT,wdata);
@@ -491,7 +501,7 @@ rewrite_vltypes_vlen_atomic(void)
 
     /* Allocate and initialize VL data to write */
     for(i=0; i<SPACE1_DIM1; i++) {
-        wdata[i].p=HDmalloc((i+increment)*sizeof(unsigned int));
+        wdata[i].p=malloc((i+increment)*sizeof(unsigned int));
         wdata[i].len=i+increment;
         for(j=0; j<(i+increment); j++)
             ((unsigned int *)wdata[i].p)[j]=i*20+j;
@@ -652,7 +662,7 @@ test_vltypes_vlen_compound(void)
 
     /* Allocate and initialize VL data to write */
     for(i=0; i<SPACE1_DIM1; i++) {
-        wdata[i].p=HDmalloc((i+1)*sizeof(s1));
+        wdata[i].p=malloc((i+1)*sizeof(s1));
         wdata[i].len=i+1;
         for(j=0; j<(i+1); j++) {
             ((s1 *)wdata[i].p)[j].i=i*10+j;
@@ -798,7 +808,7 @@ rewrite_vltypes_vlen_compound(void)
 
     /* Allocate and initialize VL data to write */
     for(i=0; i<SPACE1_DIM1; i++) {
-        wdata[i].p=HDmalloc((i+increment)*sizeof(s1));
+        wdata[i].p=malloc((i+increment)*sizeof(s1));
         wdata[i].len=i+increment;
         for(j=0; j<(i+increment); j++) {
             ((s1 *)wdata[i].p)[j].i=i*40+j;
@@ -932,8 +942,12 @@ test_vltypes_compound_vlen_vlen(void)
     hid_t	dataset;	        /* Dataset ID			*/
     hid_t	sid1;                   /* Dataspace ID			*/
     hid_t	tid1, tid2, tid3;       /* Datatype IDs         */
+    hid_t       xfer_pid;               /* Dataset transfer property list ID */
+    hid_t       dcpl_pid;               /* Dataset creation property list ID */
     hsize_t	dims1[] = {SPACE3_DIM1};
+    hsize_t     size;                   /* Number of bytes which will be used */
     unsigned    i,j,k;                  /* counting variables */
+    size_t      mem_used=0;             /* Memory used during allocation */
     hvl_t       *t1, *t2;               /* Temporary pointer to VL information */
     herr_t	ret;		        /* Generic return value		*/
 
@@ -944,10 +958,10 @@ test_vltypes_compound_vlen_vlen(void)
     for(i=0; i<SPACE3_DIM1; i++) {
         wdata[i].i=i*10;
         wdata[i].f=(float)((i*20)/3.0);
-        wdata[i].v.p=HDmalloc((i+L1_INCM)*sizeof(hvl_t));
+        wdata[i].v.p=malloc((i+L1_INCM)*sizeof(hvl_t));
         wdata[i].v.len=i+L1_INCM;
         for(t1=(wdata[i].v).p,j=0; j<(i+L1_INCM); j++, t1++) {
-            t1->p=HDmalloc((j+L2_INCM)*sizeof(unsigned int));
+            t1->p=malloc((j+L2_INCM)*sizeof(unsigned int));
             t1->len=j+L2_INCM;
             for(k=0; k<j+L2_INCM; k++)
                 ((unsigned int*)t1->p)[k] = i*100 + j*10 + k;
@@ -1110,7 +1124,7 @@ test_vltypes_compound_vlen_atomic(void)
     for(i=0; i<SPACE1_DIM1; i++) {
         wdata[i].i=i*10;
         wdata[i].f=(float)((i*20)/3.0);
-        wdata[i].v.p=HDmalloc((i+1)*sizeof(unsigned int));
+        wdata[i].v.p=malloc((i+1)*sizeof(unsigned int));
         wdata[i].v.len=i+1;
         for(j=0; j<(i+1); j++)
             ((unsigned int *)wdata[i].v.p)[j]=i*10+j;
@@ -1224,9 +1238,11 @@ test_vltypes_compound_vlen_atomic(void)
     CHECK(ret, FAIL, "H5Dread");
 
     /* Check data read in */
-    for(i=0; i<SPACE1_DIM1; i++)
-        if(rdata[i].i!=0 || rdata[i].f!=0.0 || rdata[i].v.len!=0 || rdata[i].v.p!=NULL)
+    for(i=0; i<SPACE1_DIM1; i++) {
+        if(rdata[i].i!=0 || rdata[i].f!=0.0 || rdata[i].v.len!=0 || rdata[i].v.p!=NULL) {
             TestErrPrintf("VL doesn't match!, rdata[%d].i=%d, rdata[%d].f=%f, rdata[%d].v.len=%u, rdata[%d].v.p=%p\n",(int)i,rdata[i].i,(int)i,rdata[i].f,(int)i,(unsigned)rdata[i].v.len,(int)i,rdata[i].v.p);
+        } /* end if */
+    } /* end for */
     
     /* Write dataset to disk */
     ret=H5Dwrite(dataset,tid2,H5S_ALL,H5S_ALL,H5P_DEFAULT,wdata);
@@ -1328,7 +1344,7 @@ rewrite_vltypes_compound_vlen_atomic(void)
     for(i=0; i<SPACE1_DIM1; i++) {
         wdata[i].i=i*40;
         wdata[i].f=(float)((i*50)/3.0);
-        wdata[i].v.p=HDmalloc((i+increment)*sizeof(unsigned int));
+        wdata[i].v.p=malloc((i+increment)*sizeof(unsigned int));
         wdata[i].v.len=i+increment;
         for(j=0; j<(i+increment); j++)
             ((unsigned int *)wdata[i].v.p)[j]=i*60+j;
@@ -1495,14 +1511,14 @@ test_vltypes_vlen_vlen_atomic(void)
 
     /* Allocate and initialize VL data to write */
     for(i=0; i<SPACE1_DIM1; i++) {
-        wdata[i].p=HDmalloc((i+1)*sizeof(hvl_t));
+        wdata[i].p=malloc((i+1)*sizeof(hvl_t));
         if(wdata[i].p==NULL) {
             TestErrPrintf("Cannot allocate memory for VL data! i=%u\n",i);
             return;
         } /* end if */
         wdata[i].len=i+1;
         for(t1=wdata[i].p,j=0; j<(i+1); j++, t1++) {
-            t1->p=HDmalloc((j+1)*sizeof(unsigned int));
+            t1->p=malloc((j+1)*sizeof(unsigned int));
             if(t1->p==NULL) {
                 TestErrPrintf("Cannot allocate memory for VL data! i=%u, j=%u\n",i,j);
                 return;
@@ -1686,14 +1702,14 @@ rewrite_longer_vltypes_vlen_vlen_atomic(void)
 
     /* Allocate and initialize VL data to write */
     for(i=0; i<SPACE1_DIM1; i++) {
-        wdata[i].p=HDmalloc((i+increment)*sizeof(hvl_t));
+        wdata[i].p=malloc((i+increment)*sizeof(hvl_t));
         if(wdata[i].p==NULL) {
             TestErrPrintf("Cannot allocate memory for VL data! i=%u\n",i);
             return;
         } /* end if */
         wdata[i].len=i+increment;
         for(t1=wdata[i].p,j=0; j<(i+increment); j++, t1++) {
-            t1->p=HDmalloc((j+1)*sizeof(unsigned int));
+            t1->p=malloc((j+1)*sizeof(unsigned int));
             if(t1->p==NULL) {
                 TestErrPrintf("Cannot allocate memory for VL data! i=%u, j=%u\n",i,j);
                 return;
@@ -1787,8 +1803,7 @@ rewrite_longer_vltypes_vlen_vlen_atomic(void)
             TestErrPrintf("%d: VL data length don't match!, wdata[%d].len=%d, rdata[%d].len=%d\n",__LINE__,(int)i,(int)wdata[i].len,(int)i,(int)rdata[i].len);
             continue;
         } /* end if */
-        for(t1=wdata[i].p, t2=rdata[i].p, j=0; j<rdata[i].len; j++, t1++, t2++)
-{
+        for(t1=wdata[i].p, t2=rdata[i].p, j=0; j<rdata[i].len; j++, t1++, t2++) {
             if(t1->len!=t2->len) {
                 TestErrPrintf("%d: VL data length don't match!, i=%d, j=%d, t1->len=%d, t2->len=%d\n",__LINE__,(int)i,(int)j,(int)t1->len,(int)t2->len);
                 continue;
@@ -1863,14 +1878,14 @@ rewrite_shorter_vltypes_vlen_vlen_atomic(void)
 
     /* Allocate and initialize VL data to write */
     for(i=0; i<SPACE1_DIM1; i++) {
-        wdata[i].p=HDmalloc((i+increment)*sizeof(hvl_t));
+        wdata[i].p=malloc((i+increment)*sizeof(hvl_t));
         if(wdata[i].p==NULL) {
             TestErrPrintf("Cannot allocate memory for VL data! i=%u\n",i);
             return;
         } /* end if */
         wdata[i].len=i+increment;
         for(t1=wdata[i].p,j=0; j<(i+increment); j++, t1++) {
-            t1->p=HDmalloc((j+1)*sizeof(unsigned int));
+            t1->p=malloc((j+1)*sizeof(unsigned int));
             if(t1->p==NULL) {
                 TestErrPrintf("Cannot allocate memory for VL data! i=%u, j=%u\n",i,j);
                 return;

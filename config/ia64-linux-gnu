@@ -6,96 +6,39 @@
 
 # Use Intel C compiler by default (if it's available).
 if test "X$CC" = "X" && which ecc > /dev/null; then
-  CC=ecc
-  CC_BASENAME=ecc
+    CC=ecc
+    CC_BASENAME=ecc
 fi
 
 #----------------------------------------------------------------------------
 # Compiler flags. The CPPFLAGS values should not include package debug
 # flags like `-DH5G_DEBUG' since these are added with the
-# `--enable-debug' switch of configure.  For ecc 7.1, because of the 
-# overlapping definitions of int64_t(starting from int8_t) in sys/types.h 
-# and stdint.h, we added -D__GNUC__ to CFLAGS.
+# `--enable-debug' switch of configure.  After titan's ecc was updated to 7.1,
+# int64_t couldn't be found because of overlapping definitions in stdint.h
+# and sys/types.h.  So added -D__GNUC__ to CFLAGS.
 
 case $CC_BASENAME in
-  ecc)
-    CFLAGS="$CFLAGS -std=c99 -w2 -Wall -D__GNUC__"
+    ecc)
+	CFLAGS="$CFLAGS -std=c99 -w2 -Wall -D__GNUC__"
+	DEBUG_CFLAGS="-g -O0"
+	DEBUG_CPPFLAGS=
+	PROD_CFLAGS=""		# ecc has -O2 as default
+	PROD_CPPFLAGS=
+	PROFILE_CFLAGS="-p"
+	PROFILE_CPPFLAGS=
+	;;
 
-    DEBUG_CFLAGS="-g -O0"
-    DEBUG_CPPFLAGS=
+    gcc)
+	. $srcdir/config/gnu-flags
+	;;
 
-    PROD_CFLAGS=""
-    PROD_CFLAGS=""		# ecc has -O2 as default
-    PROD_CPPFLAGS=
-    PROFILE_CFLAGS="-p"
-    PROFILE_CPPFLAGS=
-    ;;
-
-  gcc)
-    . $srcdir/config/gnu-flags
-    ;;
-
-  *)
-    CFLAGS="$CFLAGS -ansi"
-    DEBUG_CFLAGS="-g"
-    DEBUG_CPPFLAGS=
-    PROD_CFLAGS="-O"
-    PROD_CPPFLAGS=
-    PROFILE_CFLAGS="-pg"
-    PROFILE_CPPFLAGS=
-    ;;
+    *)
+	CFLAGS="$CFLAGS -ansi"
+	DEBUG_CFLAGS="-g"
+	DEBUG_CPPFLAGS=
+	PROD_CFLAGS="-O"
+	PROD_CPPFLAGS=
+	PROFILE_CFLAGS="-pg"
+	PROFILE_CPPFLAGS=
+	;;
 esac
-
-# The default Fortran 90 compiler
-
-#
-# HDF5 integers
-#
-#       R_LARGE is the number of digits for the bigest integer supported.
-#       R_INTEGER is the number of digits in INTEGER
-#
-# (for the Linux architechture)
-#
-
-R_LARGE=18
-R_INTEGER=9
-
-# Use Intel Fortran compiler by default.
-if test "X-$F9X" = "X-"; then
-  F9X="efc"
-fi
-
-case $F9X in
-  *efc)
-    # this is for efc v7.  Older efc do not work with these.
-    # -Vaxlib is for non-standard fortran calls like exit().
-    MORE_FFLAGS='-fpp -DDEC$=DEC_ -DMS$=MS_ -Vaxlib'
-    FFLAGS="$FFLAGS $MORE_FFLAGS"
-    HSIZE_T='SELECTED_INT_KIND(R_LARGE)'
-    HSSIZE_T='SELECTED_INT_KIND(R_LARGE)'
-    HID_T='SELECTED_INT_KIND(R_INTEGER)'
-    SIZE_T='SELECTED_INT_KIND(R_LARGE)'
-    OBJECT_NAMELEN_DEFAULT_F=-1
-    f9x_flags_set=yes
-    ;;
-
-  *)
-    HSIZE_T='SELECTED_INT_KIND(R_LARGE)'
-    HSSIZE_T='SELECTED_INT_KIND(R_LARGE)'
-    HID_T='SELECTED_INT_KIND(R_INTEGER)'
-    SIZE_T='SELECTED_INT_KIND(R_LARGE)'
-    OBJECT_NAMELEN_DEFAULT_F=-1
-    f9x_flags_set=yes
-    ;;
-esac
-
-# The following is not right and need work.
-if test "X$f9x_flags_set" = "X"; then
-  F9XSUFFIXFLAG=""
-  FSEARCH_DIRS=""
-  FFLAGS="$FFLAGS"
-  DEBUG_FFLAGS=""
-  PROD_FFLAGS=""
-  PROFILE_FFLAGS=""
-  f9x_flags_set=yes
-fi

@@ -36,7 +36,7 @@
  *
  *	19 May 2000, Bill Wendling
  *	Changed so that it creates its own HDF5 file and removes it at cleanup
- *	time.
+ *	time. Added num_errs flag.
  *
  ********************************************************************/
 #include "ttsafe.h"
@@ -137,7 +137,7 @@ void tts_dcreate(void)
             assert(ret>=0);
 
             if (datavalue != i) {
-                TestErrPrintf(stderr, "Wrong value read %d for dataset name %s - test failed\n",
+                TestErrPrintf("Wrong value read %d for dataset name %s - test failed\n",
                             datavalue, dsetname[i]);
                 H5Dclose(dataset);
                 H5Fclose(file);

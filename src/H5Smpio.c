@@ -24,16 +24,27 @@
 #define H5F_PACKAGE		/*suppress error about including H5Fpkg	  */
 #define H5S_PACKAGE		/*suppress error about including H5Spkg	  */
 
-#include "H5private.h"		/* Generic Functions			*/
-#include "H5Eprivate.h"		/* Error handling		  	*/
-#include "H5Fpkg.h"		/* Files				*/
-#include "H5FDprivate.h"	/* File drivers				*/
-#include "H5Iprivate.h"		/* IDs			  		*/
-#include "H5Pprivate.h"         /* Property lists                       */
-#include "H5Spkg.h"		/* Dataspaces 				*/
+#include "H5private.h"          /* Internal types, etc. */
+#include "H5Eprivate.h"         /* Error reporting */
+#include "H5Fpkg.h"             /* Ugly, but necessary for the MPIO I/O accesses */
+#include "H5FDmpio.h"		/* MPIO file driver			*/
+#include "H5FDprivate.h"        /* Necessary for the H5FD_write & H5FD_read prototypes.. */
+#include "H5Iprivate.h"		/* Object IDs */
+#include "H5Pprivate.h"		/* Property Lists */
+#include "H5Spkg.h"             /* Dataspaces */
 
-#ifdef H5_HAVE_PARALLEL
-
+#ifndef H5_HAVE_PARALLEL
+/* 
+ * The H5S_mpio_xxxx functions are for parallel I/O only and are
+ * valid only when H5_HAVE_PARALLEL is #defined.  This empty #ifndef
+ * body is used to allow this source file be included in the serial
+ * distribution.
+ * Some compilers/linkers may complain about "empty" object file.
+ * If that happens, uncomment the following statement to pacify
+ * them.
+ */
+/* const hbool_t H5S_mpio_avail = FALSE; */
+#else /* H5_HAVE_PARALLEL */
 /* Interface initialization */
 #define PABLO_MASK      H5Sall_mask
 #define INTERFACE_INIT  NULL
@@ -337,7 +348,7 @@ H5S_mpio_hyper_type( const H5S_t *space, size_t elmt_size,
 *  Construct contig type for inner contig dims:
 *******************************************************/
 #ifdef H5Smpi_DEBUG
-    HDfprintf(stderr, "%s: Making contig type %d MPI_BYTEs\n", FUNC,elmt_size );
+    HDfprintf(stderr, "%s: Making contig type %d MPI_BYTEs\n", FUNC, elmt_size );
     for (i=rank-1; i>=0; --i)
         HDfprintf(stderr, "d[%d].xtent=%Hu \n", i, d[i].xtent);
 #endif
@@ -356,12 +367,12 @@ H5S_mpio_hyper_type( const H5S_t *space, size_t elmt_size,
 #endif
 
 #ifdef H5Smpi_DEBUG
-        HDfprintf(stderr, "%s: i=%d  Making vector-type \n", FUNC,i);
+        HDfprintf(stderr, "%s: i=%d  Making vector-type \n", FUNC, i);
 #endif
        /****************************************
        *  Build vector in current dimension:
        ****************************************/
-	mpi_code =MPI_Type_vector((int)(d[i].count),        /* count */
+        mpi_code =MPI_Type_vector((int)(d[i].count),        /* count */
 				  (int)(d[i].block),        /* blocklength */
 				  (int)(d[i].strid),   	    /* stride */
 				  inner_type,	            /* old type */
@@ -623,9 +634,9 @@ done:
  */
 static herr_t
 H5S_mpio_spaces_xfer(H5F_t *f, const H5O_layout_t *layout, size_t elmt_size,
-     const H5S_t *file_space, const H5S_t *mem_space,
-     hid_t dxpl_id, void *_buf /*out*/,
-     hbool_t do_write )
+                     const H5S_t *file_space, const H5S_t *mem_space,
+		     hid_t dxpl_id, void *_buf /*out*/,
+		     hbool_t do_write )
 {
     haddr_t	 addr;                  /* Address of dataset (or selection) within file */
     size_t	 mpi_buf_count, mpi_file_count;       /* Number of "objects" to transfer */
@@ -681,7 +692,7 @@ H5S_mpio_spaces_xfer(H5F_t *f, const H5O_layout_t *layout, size_t elmt_size,
      * Pass buf type, file type to the file driver. Request an MPI type
      * transfer (instead of an elementary byteblock transfer).
      */
-    if(H5FD_mpi_setup_collective(dxpl_id, mpi_buf_type, mpi_file_type)<0)
+    if(H5FD_mpio_setup(dxpl_id, mpi_buf_type, mpi_file_type)<0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set MPI-I/O properties");
     plist_is_setup=1;
 
@@ -700,7 +711,7 @@ H5S_mpio_spaces_xfer(H5F_t *f, const H5O_layout_t *layout, size_t elmt_size,
 done:
     /* Reset the dxpl settings */
     if(plist_is_setup) {
-        if(H5FD_mpi_teardown_collective(dxpl_id)<0)
+        if(H5FD_mpio_teardown(dxpl_id)<0)
     	    HDONE_ERROR(H5E_DATASPACE, H5E_CANTFREE, FAIL, "unable to reset dxpl values");
     } /* end if */
 
@@ -740,16 +751,17 @@ done:
  */
 herr_t
 H5S_mpio_spaces_read(H5F_t *f, const H5O_layout_t *layout,
-    const H5D_dcpl_cache_t UNUSED *dcpl_cache, const H5D_storage_t UNUSED *store, size_t elmt_size,
-    const H5S_t *file_space, const H5S_t *mem_space, const H5D_dxpl_cache_t UNUSED *dxpl_cache,
-    hid_t dxpl_id, void *buf/*out*/)
+    H5P_genplist_t UNUSED *dc_plist, const H5D_storage_t UNUSED *store, size_t elmt_size,
+    const H5S_t *file_space, const H5S_t *mem_space, hid_t dxpl_id,
+    void *buf/*out*/)
 {
     herr_t ret_value;
 
     FUNC_ENTER_NOAPI(H5S_mpio_spaces_read, FAIL);
 
-    ret_value = H5S_mpio_spaces_xfer(f, layout, elmt_size, file_space,
-        mem_space, dxpl_id, buf, 0/*read*/);
+    ret_value = H5S_mpio_spaces_xfer(f, layout, elmt_size,
+				     file_space, mem_space, dxpl_id,
+				     buf, 0/*read*/);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value);
@@ -778,17 +790,18 @@ done:
  */
 herr_t
 H5S_mpio_spaces_write(H5F_t *f, H5O_layout_t *layout,
-    const H5D_dcpl_cache_t UNUSED *dcpl_cache, const H5D_storage_t UNUSED *store, size_t elmt_size,
-    const H5S_t *file_space, const H5S_t *mem_space, const H5D_dxpl_cache_t UNUSED *dxpl_cache,
-    hid_t dxpl_id, const void *buf)
+    H5P_genplist_t UNUSED *dc_plist, const H5D_storage_t UNUSED *store, size_t elmt_size,
+    const H5S_t *file_space, const H5S_t *mem_space, hid_t dxpl_id,
+    const void *buf)
 {
     herr_t ret_value;
 
     FUNC_ENTER_NOAPI(H5S_mpio_spaces_write, FAIL);
 
     /*OKAY: CAST DISCARDS CONST QUALIFIER*/
-    ret_value = H5S_mpio_spaces_xfer(f, layout, elmt_size, file_space,
-        mem_space, dxpl_id, (void*)buf, 1/*write*/);
+    ret_value = H5S_mpio_spaces_xfer(f, layout, elmt_size,
+				     file_space, mem_space, dxpl_id,
+				     (void*)buf, 1/*write*/);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value);

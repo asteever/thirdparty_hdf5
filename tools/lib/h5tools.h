@@ -23,6 +23,10 @@
 
 #include "hdf5.h"
 
+#if H5_VERS_MAJOR == 1 && H5_VERS_MINOR == 2
+#define VERSION12
+#endif	/* H5_VERS_MAJOR == 1 && H5_VERS_MINOR == 2 */
+
 #define ESCAPE_HTML             1
 #define OPT(X,S)                ((X) ? (X) : (S))
 #define OPTIONAL_LINE_BREAK     "\001"  /* Special strings embedded in the output */
@@ -472,8 +476,7 @@ extern FILE   *rawdatastream;       /*output stream for raw data            */
 extern void     h5tools_init(void);
 extern void     h5tools_close(void);
 extern hid_t    h5tools_fopen(const char *fname, const char *driver,
-                              char *drivername, size_t drivername_len,
-                              int argc, const char *argv[]);
+                              char *drivername, size_t drivername_len);
 extern int      h5tools_dump_dset(FILE *stream, const h5dump_t *info, hid_t dset,
                                   hid_t p_typ, struct subset_t *sset, int indentlevel);
 extern int      h5tools_dump_mem(FILE *stream, const h5dump_t *info, hid_t obj_id,

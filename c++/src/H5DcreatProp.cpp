@@ -125,17 +125,6 @@ void DSetCreatPropList::setFilter( H5Z_filter_t filter, unsigned int flags, size
    }
 }
 
-// Removes one or more filters to the filter pipeline
-void DSetCreatPropList::removeFilter( H5Z_filter_t filter) const
-{
-   herr_t ret_value = H5Premove_filter( id, filter);
-   if( ret_value < 0 )
-   {
-      throw PropListIException("DSetCreatPropList::removeFilter",
-                "H5Premove_filter failed");
-   }
-}
-
 // Returns the number of filters in the pipeline 
 int DSetCreatPropList::getNfilters() const
 {

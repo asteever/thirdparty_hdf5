@@ -568,13 +568,16 @@ test_misc4(void)
     CHECK(ret, FAIL, "H5Gget_objinfo");
 
     /* Verify that the fileno values are the same for groups from file1 */
-    VERIFY(stat1.fileno,stat2.fileno,"H5Gget_objinfo");
+    VERIFY(stat1.fileno[0],stat2.fileno[0],"H5Gget_objinfo");
+    VERIFY(stat1.fileno[1],stat2.fileno[1],"H5Gget_objinfo");
 
     /* Verify that the fileno values are not the same between file1 & file2 */
-    if(stat1.fileno==stat3.fileno)
+    if(stat1.fileno[0]==stat3.fileno[0] && stat1.fileno[1]==stat3.fileno[1]) {
         TestErrPrintf("Error on line %d: stat1.fileno==stat3.fileno\n",__LINE__);
-    if(stat2.fileno==stat3.fileno)
+    } /* end if */
+    if(stat2.fileno[0]==stat3.fileno[0] && stat2.fileno[1]==stat3.fileno[1]) {
         TestErrPrintf("Error on line %d: stat1.fileno==stat3.fileno\n",__LINE__);
+    } /* end if */
 
     /* Close the objects */
     ret = H5Gclose(group1);
@@ -1127,7 +1130,11 @@ test_misc8(void)
 #endif /* VERIFY_DATA */
     unsigned u,v;               /* Local index variables */
     int mdc_nelmts;             /* Metadata number of elements */
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    int rdcc_nelmts;            /* Raw data number of elements */
+#else /* H5_WANT_H5_V1_4_COMPAT */
     size_t rdcc_nelmts;         /* Raw data number of elements */
+#endif /* H5_WANT_H5_V1_4_COMPAT */
     size_t rdcc_nbytes;         /* Raw data number of bytes */
     double rdcc_w0;             /* Raw data write percentage */
     hssize_t start[MISC8_RANK]; /* Hyperslab start */
@@ -1397,8 +1404,9 @@ test_misc8(void)
     tdata2=rdata;
     for(u=0; u<MISC8_DIM0; u++)
         for(v=0; v<MISC8_DIM1; v++,tdata++,tdata2++)
-            if(*tdata!=*tdata2)
+            if(*tdata!=*tdata2) {
                 TestErrPrintf("Error on line %d: u=%u, v=%d, *tdata=%d, *tdata2=%d\n",__LINE__,(unsigned)u,(unsigned)v,(int)*tdata,(int)*tdata2);
+            } 
 #endif /* VERIFY_DATA */
 
     /* Check the storage size after data is written */
@@ -1433,11 +1441,13 @@ test_misc8(void)
     storage_size=H5Dget_storage_size(did);
     CHECK(storage_size, 0, "H5Dget_storage_size");
 #ifdef H5_HAVE_FILTER_DEFLATE
-    if(storage_size>=(MISC8_DIM0*MISC8_DIM1*H5Tget_size(H5T_NATIVE_INT)))
+    if(storage_size>=(MISC8_DIM0*MISC8_DIM1*H5Tget_size(H5T_NATIVE_INT))) {
         TestErrPrintf("Error on line %d: data wasn't compressed! storage_size=%u\n",__LINE__,(unsigned)storage_size);
+    } 
 #else /* Compression is not configured */
-    if(storage_size!=(MISC8_DIM0*MISC8_DIM1*H5Tget_size(H5T_NATIVE_INT)))
+    if(storage_size!=(MISC8_DIM0*MISC8_DIM1*H5Tget_size(H5T_NATIVE_INT))) {
         TestErrPrintf("Error on line %d: wrong storage size! storage_size=%u\n",__LINE__,(unsigned)storage_size);
+    }
 #endif /* H5_HAVE_FILTER_DEFLATE */
 
     /* Close dataset ID */
@@ -1465,11 +1475,13 @@ test_misc8(void)
     storage_size=H5Dget_storage_size(did);
     CHECK(storage_size, 0, "H5Dget_storage_size");
 #ifdef H5_HAVE_FILTER_DEFLATE
-    if(storage_size>=(MISC8_DIM0*MISC8_DIM1*H5Tget_size(H5T_NATIVE_INT)))
+    if(storage_size>=(MISC8_DIM0*MISC8_DIM1*H5Tget_size(H5T_NATIVE_INT))) {
         TestErrPrintf("Error on line %d: data wasn't compressed! storage_size=%u\n",__LINE__,(unsigned)storage_size);
+    } 
 #else /* Compression is not configured */
-    if(storage_size!=(MISC8_DIM0*MISC8_DIM1*H5Tget_size(H5T_NATIVE_INT)))
+    if(storage_size!=(MISC8_DIM0*MISC8_DIM1*H5Tget_size(H5T_NATIVE_INT))) {
         TestErrPrintf("Error on line %d: wrong storage size! storage_size=%u\n",__LINE__,(unsigned)storage_size);
+    }
 #endif /* H5_HAVE_FILTER_DEFLATE */
 
     /* Write entire dataset */
@@ -1486,19 +1498,22 @@ test_misc8(void)
     tdata2=rdata;
     for(u=0; u<MISC8_DIM0; u++)
         for(v=0; v<MISC8_DIM1; v++,tdata++,tdata2++)
-            if(*tdata!=*tdata2)
+            if(*tdata!=*tdata2) {
                 TestErrPrintf("Error on line %d: u=%u, v=%d, *tdata=%d, *tdata2=%d\n",__LINE__,(unsigned)u,(unsigned)v,(int)*tdata,(int)*tdata2);
+            } 
 #endif /* VERIFY_DATA */
 
     /* Check the storage size after data is written */
     storage_size=H5Dget_storage_size(did);
     CHECK(storage_size, 0, "H5Dget_storage_size");
 #ifdef H5_HAVE_FILTER_DEFLATE
-    if(storage_size>=(MISC8_DIM0*MISC8_DIM1*H5Tget_size(H5T_NATIVE_INT)))
+    if(storage_size>=(MISC8_DIM0*MISC8_DIM1*H5Tget_size(H5T_NATIVE_INT))) {
         TestErrPrintf("Error on line %d: data wasn't compressed! storage_size=%u\n",__LINE__,(unsigned)storage_size);
+    } 
 #else
-    if(storage_size!=(MISC8_DIM0*MISC8_DIM1*H5Tget_size(H5T_NATIVE_INT)))
+    if(storage_size!=(MISC8_DIM0*MISC8_DIM1*H5Tget_size(H5T_NATIVE_INT))) {
         TestErrPrintf("Error on line %d: wrong storage size! storage_size=%u\n",__LINE__,(unsigned)storage_size);
+    }
 #endif /*H5_HAVE_FILTER_DEFLATE*/
 
     /* Close dataset ID */
@@ -1525,11 +1540,13 @@ test_misc8(void)
     storage_size=H5Dget_storage_size(did);
     CHECK(storage_size, 0, "H5Dget_storage_size");
 #ifdef H5_HAVE_FILTER_DEFLATE
-    if(storage_size>=(4*MISC8_CHUNK_DIM0*MISC8_CHUNK_DIM1*H5Tget_size(H5T_NATIVE_INT)))
+    if(storage_size>=(4*MISC8_CHUNK_DIM0*MISC8_CHUNK_DIM1*H5Tget_size(H5T_NATIVE_INT))) {
         TestErrPrintf("Error on line %d: data wasn't compressed! storage_size=%u\n",__LINE__,(unsigned)storage_size);
+    } 
 #else /* Compression is not configured */
-    if(storage_size!=(4*MISC8_CHUNK_DIM0*MISC8_CHUNK_DIM1*H5Tget_size(H5T_NATIVE_INT)))
+    if(storage_size!=(4*MISC8_CHUNK_DIM0*MISC8_CHUNK_DIM1*H5Tget_size(H5T_NATIVE_INT))) {
         TestErrPrintf("Error on line %d: wrong storage size! storage_size=%u\n",__LINE__,(unsigned)storage_size);
+    }
 #endif /* H5_HAVE_FILTER_DEFLATE */
 
     /* Write entire dataset */
@@ -1546,19 +1563,22 @@ test_misc8(void)
     tdata2=rdata;
     for(u=0; u<MISC8_DIM0; u++)
         for(v=0; v<MISC8_DIM1; v++,tdata++,tdata2++)
-            if(*tdata!=*tdata2)
+            if(*tdata!=*tdata2) {
                 TestErrPrintf("Error on line %d: u=%u, v=%d, *tdata=%d, *tdata2=%d\n",__LINE__,(unsigned)u,(unsigned)v,(int)*tdata,(int)*tdata2);
+            } 
 #endif /* VERIFY_DATA */
 
     /* Check the storage size after data is written */
     storage_size=H5Dget_storage_size(did);
     CHECK(storage_size, 0, "H5Dget_storage_size");
 #ifdef H5_HAVE_FILTER_DEFLATE
-    if(storage_size>=(MISC8_DIM0*MISC8_DIM1*H5Tget_size(H5T_NATIVE_INT)))
+    if(storage_size>=(MISC8_DIM0*MISC8_DIM1*H5Tget_size(H5T_NATIVE_INT))) {
         TestErrPrintf("Error on line %d: data wasn't compressed! storage_size=%u\n",__LINE__,(unsigned)storage_size);
+    } 
 #else
-    if(storage_size!=(MISC8_DIM0*MISC8_DIM1*H5Tget_size(H5T_NATIVE_INT)))
+    if(storage_size!=(MISC8_DIM0*MISC8_DIM1*H5Tget_size(H5T_NATIVE_INT))) {
         TestErrPrintf("Error on line %d: wrong storage size! storage_size=%u\n",__LINE__,(unsigned)storage_size);
+    }
 #endif /*H5_HAVE_FILTER_DEFLATE*/
 
     /* Close dataset ID */
@@ -1707,25 +1727,17 @@ test_misc11(void)
     hsize_t     userblock;      /* Userblock size retrieved from FCPL */
     size_t      off_size;       /* Size of offsets in the file */
     size_t      len_size;       /* Size of lengths in the file */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     int         sym_ik;         /* Symbol table B-tree initial 'K' value */
     int         istore_ik;      /* Indexed storage B-tree initial 'K' value */
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    unsigned    sym_ik;         /* Symbol table B-tree internal 'K' value */
-    unsigned    istore_ik;      /* Indexed storage B-tree internal 'K' value */
-#endif /* H5_WANT_H5_V1_6_COMPAT */
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    int         sym_lk;         /* Symbol table B-tree leaf 'K' value */
+#else /* H5_WANT_H5_V1_4_COMPAT */
     unsigned    sym_lk;         /* Symbol table B-tree leaf 'K' value */
-#ifdef H5_WANT_H5_V1_6_COMPAT
+#endif /* H5_WANT_H5_V1_4_COMPAT */
     int super;                  /* Superblock version # */
     int freelist;               /* Free list version # */
     int stab;                   /* Symbol table entry version # */
     int shhdr;                  /* Shared object header version # */
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    unsigned super;             /* Superblock version # */
-    unsigned freelist;          /* Free list version # */
-    unsigned stab;              /* Symbol table entry version # */
-    unsigned shhdr;             /* Shared object header version # */
-#endif /* H5_WANT_H5_V1_6_COMPAT */
     herr_t      ret;            /* Generic return value */
 
     /* Output message about test being performed */
@@ -1948,11 +1960,13 @@ test_misc12(void)
     CHECK(ret, FAIL, "H5Dread");
 
     for(i=0; i<MISC12_SPACE1_DIM1; i++)
-        if(HDstrcmp(wdata[i],rdata[i]))
+        if(HDstrcmp(wdata[i],rdata[i])) {
             TestErrPrintf("Error on line %d: wdata[%d]=%s, rdata[%d]=%s\n",__LINE__,i,wdata[i],i,rdata[i]);
+        } /* end if */
     for(; i<(MISC12_SPACE1_DIM1+MISC12_APPEND_SIZE); i++)
-        if(HDstrcmp(wdata1[i-MISC12_SPACE1_DIM1],rdata[i]))
+        if(HDstrcmp(wdata1[i-MISC12_SPACE1_DIM1],rdata[i])) {
             TestErrPrintf("Error on line %d: wdata1[%d]=%s, rdata[%d]=%s\n",__LINE__,i-MISC12_SPACE1_DIM1,wdata1[i-MISC12_SPACE1_DIM1],i,rdata[i]);
+        } /* end if */
 
     /* Reclaim VL data memory */
     ret = H5Dvlen_reclaim (tid1, sid1, H5P_DEFAULT, rdata);
@@ -2390,8 +2404,9 @@ test_misc14(void)
     /* Check data from first dataset */
     ret = H5Dread(Dataset1, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &rdata);
     CHECK(ret, FAIL, "H5Dread");
-    if(rdata!=data1)
+    if(rdata!=data1) {
         TestErrPrintf("Error on line %d: data1!=rdata\n",__LINE__);
+    } /* end if */
 
     /* Unlink second dataset */
     ret = H5Gunlink(file_id, MISC14_DSET2_NAME);
@@ -2404,8 +2419,9 @@ test_misc14(void)
     /* Verify the data from dataset #1 */
     ret = H5Dread(Dataset1, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &rdata);
     CHECK(ret, FAIL, "H5Dread");
-    if(rdata!=data1)
+    if(rdata!=data1) {
         TestErrPrintf("Error on line %d: data1!=rdata\n",__LINE__);
+    } /* end if */
 
     /* Close first dataset */
     ret = H5Dclose(Dataset1);
@@ -2438,8 +2454,9 @@ test_misc14(void)
     /* Check data from second dataset */
     ret = H5Dread(Dataset2, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &rdata);
     CHECK(ret, FAIL, "H5Dread");
-    if(rdata!=data2)
+    if(rdata!=data2) {
         TestErrPrintf("Error on line %d: data2!=rdata\n",__LINE__);
+    } /* end if */
 
     /* Unlink first dataset */
     ret = H5Gunlink(file_id, MISC14_DSET1_NAME);
@@ -2452,8 +2469,9 @@ test_misc14(void)
     /* Verify the data from dataset #2 */
     ret = H5Dread(Dataset2, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &rdata);
     CHECK(ret, FAIL, "H5Dread");
-    if(rdata!=data2)
+    if(rdata!=data2) {
         TestErrPrintf("Error on line %d: data2!=rdata\n",__LINE__);
+    } /* end if */
 
     /* Close second dataset */
     ret = H5Dclose(Dataset2);
@@ -2493,14 +2511,16 @@ test_misc14(void)
     /* Check data from first dataset */
     ret = H5Dread(Dataset1, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &rdata);
     CHECK(ret, FAIL, "H5Dread");
-    if(rdata!=data1)
+    if(rdata!=data1) {
         TestErrPrintf("Error on line %d: data1!=rdata\n",__LINE__);
+    } /* end if */
 
     /* Check data from third dataset */
     ret = H5Dread(Dataset3, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &rdata);
     CHECK(ret, FAIL, "H5Dread");
-    if(rdata!=data3)
+    if(rdata!=data3) {
         TestErrPrintf("Error on line %d: data3!=rdata\n",__LINE__);
+    } /* end if */
 
     /* Unlink second dataset */
     ret = H5Gunlink(file_id, MISC14_DSET2_NAME);
@@ -2513,14 +2533,16 @@ test_misc14(void)
     /* Verify the data from dataset #1 */
     ret = H5Dread(Dataset1, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &rdata);
     CHECK(ret, FAIL, "H5Dread");
-    if(rdata!=data1)
+    if(rdata!=data1) {
         TestErrPrintf("Error on line %d: data1!=rdata\n",__LINE__);
+    } /* end if */
 
     /* Verify the data from dataset #3 */
     ret = H5Dread(Dataset3, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, &rdata);
     CHECK(ret, FAIL, "H5Dread");
-    if(rdata!=data3)
+    if(rdata!=data3) {
         TestErrPrintf("Error on line %d: data3!=rdata\n",__LINE__);
+    } /* end if */
 
     /* Close first dataset */
     ret = H5Dclose(Dataset1);
@@ -2646,11 +2668,11 @@ test_misc16(void)
 
     /* Compare data read in */
     for(i=0; i<MISC16_SPACE_DIM; i++) {
-        if(HDstrlen(wdata[i])!=strlen(rdata[i])) {
+        if(strlen(wdata[i])!=strlen(rdata[i])) {
             TestErrPrintf("VL data length don't match!, strlen(wdata[%d])=%d, strlen(rdata[%d])=%d\n",(int)i,(int)strlen(wdata[i]),(int)i,(int)strlen(rdata[i]));
             continue;
         } /* end if */
-        if( HDstrcmp(wdata[i],rdata[i]) != 0 ) {
+        if( strcmp(wdata[i],rdata[i]) != 0 ) {
             TestErrPrintf("VL data values don't match!, wdata[%d]=%s, rdata[%d]=%s\n",(int)i,wdata[i],(int)i,rdata[i]);
             continue;
         } /* end if */
@@ -2722,11 +2744,11 @@ test_misc17(void)
 
     /* Compare data in the way of strings. */
     for(i=0; i<MISC17_SPACE_DIM1; i++) {
-        if(HDstrlen(wdata[i])!=strlen(rdata[i])) {
+        if(strlen(wdata[i])!=strlen(rdata[i])) {
             TestErrPrintf("VL data length don't match!, strlen(wdata[%d])=%d, strlen(rdata[%d])=%d\n",(int)i,(int)strlen(wdata[i]),(int)i,(int)strlen(rdata[i]));
             continue;
         } /* end if */
-        if( HDstrcmp(wdata[i],rdata[i]) != 0 ) {
+        if( strcmp(wdata[i],rdata[i]) != 0 ) {
             TestErrPrintf("VL data values don't match!, wdata[%d]=%s, rdata[%d]=%s\n",(int)i,wdata[i],(int)i,rdata[i]);
             continue;
         } /* end if */
@@ -2870,9 +2892,6 @@ test_misc19(void)
     hid_t plid;         /* Property List ID */
     hid_t pcid;         /* Property Class ID */
     hid_t gid;          /* Group ID */
-    hid_t ecid;         /* Error Class ID */
-    hid_t emid;         /* Error Message ID */
-    hid_t esid;         /* Error Stack ID */
     int rc;             /* Reference count */
     herr_t ret;         /* Generic return value */
 
@@ -3180,110 +3199,6 @@ test_misc19(void)
     ret = H5Fclose(fid);
     CHECK(ret, FAIL, "H5Fclose");
 
-/* Check H5I operations on error classes */
-
-    /* Create an error class */
-    ecid = H5Eregister_class("foo","bar","baz");
-    CHECK(ecid, FAIL, "H5Eregister_class");
-
-    /* Check the reference count */
-    rc = H5Iget_ref(ecid);
-    VERIFY(rc, 1, "H5Iget_ref");
-
-    /* Inc the reference count */
-    rc = H5Iinc_ref(ecid);
-    VERIFY(rc, 2, "H5Iinc_ref");
-
-    /* Close the error class normally */
-    ret = H5Eunregister_class(ecid);
-    CHECK(ret, FAIL, "H5Eunregister_class");
-
-    /* Check the reference count */
-    rc = H5Iget_ref(ecid);
-    VERIFY(rc, 1, "H5Iget_ref");
-
-    /* Close the error class by decrementing the reference count */
-    rc = H5Idec_ref(ecid);
-    VERIFY(rc, 0, "H5Idec_ref");
-
-    /* Try closing the error class again (should fail) */
-    H5E_BEGIN_TRY {
-        ret = H5Eunregister_class(ecid);
-    } H5E_END_TRY;
-    VERIFY(ret, FAIL, "H5Eunregister_class");
-
-/* Check H5I operations on error messages */
-
-    /* Create an error class */
-    ecid = H5Eregister_class("foo","bar","baz");
-    CHECK(ecid, FAIL, "H5Eregister_class");
-
-    /* Create an error message */
-    emid = H5Ecreate_msg(ecid,H5E_MAJOR,"mumble");
-    CHECK(emid, FAIL, "H5Ecreate_msg");
-
-    /* Check the reference count */
-    rc = H5Iget_ref(emid);
-    VERIFY(rc, 1, "H5Iget_ref");
-
-    /* Inc the reference count */
-    rc = H5Iinc_ref(emid);
-    VERIFY(rc, 2, "H5Iinc_ref");
-
-    /* Close the error message normally */
-    ret = H5Eclose_msg(emid);
-    CHECK(ret, FAIL, "H5Eclose_msg");
-
-    /* Check the reference count */
-    rc = H5Iget_ref(emid);
-    VERIFY(rc, 1, "H5Iget_ref");
-
-    /* Close the error message by decrementing the reference count */
-    rc = H5Idec_ref(emid);
-    VERIFY(rc, 0, "H5Idec_ref");
-
-    /* Try closing the error message again (should fail) */
-    H5E_BEGIN_TRY {
-        ret = H5Eclose_msg(emid);
-    } H5E_END_TRY;
-    VERIFY(ret, FAIL, "H5Eclose_msg");
-
-    /* Close the error class */
-    ret = H5Eunregister_class(ecid);
-    CHECK(ret, FAIL, "H5Eunregister_class");
-
-/* Check H5I operations on error stacks */
-
-    /* Create an error stack */
-    esid = H5Eget_current_stack();
-    CHECK(esid, FAIL, "H5Eget_current_stack");
-
-    /* Check the reference count */
-    rc = H5Iget_ref(esid);
-    VERIFY(rc, 1, "H5Iget_ref");
-
-    /* Inc the reference count */
-    rc = H5Iinc_ref(esid);
-    VERIFY(rc, 2, "H5Iinc_ref");
-
-    /* Close the error stack normally */
-    ret = H5Eclose_stack(esid);
-    CHECK(ret, FAIL, "H5Eclose_stack");
-
-    /* Check the reference count */
-    rc = H5Iget_ref(esid);
-    VERIFY(rc, 1, "H5Iget_ref");
-
-    /* Close the error stack by decrementing the reference count */
-    rc = H5Idec_ref(esid);
-    VERIFY(rc, 0, "H5Idec_ref");
-
-    /* Try closing the error stack again (should fail) */
-    H5E_BEGIN_TRY {
-        ret = H5Eclose_stack(esid);
-    } H5E_END_TRY;
-    VERIFY(ret, FAIL, "H5Eclose_stack");
-
 } /* end test_misc19() */
 
 /****************************************************************
@@ -3296,7 +3211,7 @@ test_misc(void)
 {
     /* Output message about test being performed */
     MESSAGE(5, ("Testing Miscellaneous Routines\n"));
-    
+
     test_misc1();       /* Test unlinking a dataset & immediately re-using name */
     test_misc2();       /* Test storing a VL-derived datatype in two different files */
     test_misc3();       /* Test reading from chunked dataset with non-zero fill value */

@@ -1,3 +1,4 @@
+## HDF5-Fortran test/Makefile(.in)
 ##
 ## Copyright by the Board of Trustees of the University of Illinois.
 ## All rights reserved.
@@ -11,14 +12,10 @@
 ## http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
 ## access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 ##
-## HDF5-Fortran test/Makefile(.in)
-##
-top_srcdir=@top_srcdir@
+top_srcdir=@top_srcdir@/..
 top_builddir=../..
 srcdir=@srcdir@
 @COMMENCE@
-
-HDF_FORTRAN="yes"
 
 hdf5_builddir=$(top_builddir)/src
 
@@ -28,9 +25,9 @@ FC_PP=$(bindir)/h5pfc
 
 ## These are the programs that `make all' or `make tests' will build and which
 ## `make check' will run. List them in the order they should be run.
-TEST_PROGS=dsetexample fileexample rwdsetexample attrexample groupexample       \
-           grpsexample grpdsetexample hyperslab selectele grpit refobjexample   \
-           refregexample mountexample compound
+TEST_PROGS=dsetexample fileexample rwdsetexample attrexample groupexample	\
+	   grpsexample grpdsetexample hyperslab selectele grpit refobjexample	\
+	   refregexample mountexample compound
 
 ## These are the files that `make clean' (and derivatives) will remove from
 ## this directory.
@@ -39,10 +36,10 @@ CLEAN=*.h5
 ## List all source files here. The list of object files will be
 ## created by replacing the `.f90' with a `.o'. This list is necessary
 ## for building automatic dependencies.
-TEST_SRC=dsetexample.f90 fileexample.f90 rwdsetexample.f90 attrexample.f90      \
-         groupexample.f90 grpsexample.f90 grpdsetexample.f90 hyperslab.f90      \
-         selectele.f90 grpit.f90 refobjexample.f90 refregexample.f90            \
-         mountexample.f90 compound.f90
+TEST_SRC=dsetexample.f90 fileexample.f90 rwdsetexample.f90 attrexample.f90	\
+	 groupexample.f90 grpsexample.f90 grpdsetexample.f90 hyperslab.f90	\
+	 selectele.f90 grpit.f90 refobjexample.f90 refregexample.f90		\
+	 mountexample.f90 compound.f90
 TEST_OBJ=$(TEST_SRC:.f90=.lo)
 
 EXAMPLE_PROGS=$(TEST_SRC)

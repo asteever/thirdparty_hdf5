@@ -15,6 +15,9 @@
 #ifndef H5FDFPHDF5_H__
 #define H5FDFPHDF5_H__
 
+#include "H5FDmpio.h"
+#include "H5FDpublic.h"         /* for the H5FD_t structure         */
+
 #ifdef H5_HAVE_FPHDF5
 #   define H5FD_FPHDF5      (H5FD_fphdf5_init())
 #else
@@ -72,7 +75,7 @@ typedef struct H5FD_fphdf5_t {
     haddr_t     last_eoa;       /*Last known end-of-address marker      */
 } H5FD_fphdf5_t;
 
-extern const H5FD_class_mpi_t H5FD_fphdf5_g;
+extern const H5FD_class_t H5FD_fphdf5_g;
 
 /* Function prototypes */
 #ifdef __cplusplus
@@ -98,19 +101,21 @@ H5_DLL herr_t   H5Pget_fapl_fphdf5(hid_t fapl_id, MPI_Comm *comm,
  *                         Private Library Functions
  *==--------------------------------------------------------------------------==
  */
-/* Forward declarations for prototype arguments */
-struct H5P_genplist_t;
-
 H5_DLL hid_t    H5FD_fphdf5_init(void);
-H5_DLL void H5FD_gass_term(void);
+H5_DLL MPI_Comm H5FD_fphdf5_communicator(H5FD_t *_file);
+H5_DLL MPI_Comm H5FD_fphdf5_barrier_communicator(H5FD_t *_file);
+H5_DLL herr_t   H5FD_fphdf5_setup(hid_t dxpl_id, MPI_Datatype btype,
+                                  MPI_Datatype ftype, unsigned use_view);
+H5_DLL herr_t   H5FD_fphdf5_teardown(hid_t dxpl_id);
+H5_DLL int      H5FD_fphdf5_mpi_rank(H5FD_t *_file);
+H5_DLL int      H5FD_fphdf5_mpi_size(H5FD_t *_file);
 H5_DLL unsigned H5FD_fphdf5_file_id(H5FD_t *_file);
 H5_DLL hbool_t  H5FD_fphdf5_is_sap(H5FD_t *_file);
 H5_DLL hbool_t  H5FD_fphdf5_is_captain(H5FD_t *_file);
 H5_DLL hbool_t  H5FD_is_fphdf5_driver(H5FD_t *_file);
 
-H5_DLL herr_t   H5FD_fphdf5_write_real(H5FD_t *_file, H5FD_mem_t mem_type,
-                                       struct H5P_genplist_t *plist,
-                                       haddr_t addr, int size,
+H5_DLL herr_t   H5FD_fphdf5_write_real(H5FD_t *_file, hid_t dxpl_id,
+                                       MPI_Offset mpi_off, int size,
                                        const void *buf);
 
 #ifdef __cplusplus

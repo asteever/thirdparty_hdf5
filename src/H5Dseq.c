@@ -29,17 +29,21 @@
 /* (Put before include files to avoid problems with inline functions) */
 #define PABLO_MASK	H5Fseq_mask
 
-#include "H5private.h"		/* Generic Functions			*/
-#include "H5Dprivate.h"		/* Datasets				*/
-#include "H5Eprivate.h"		/* Error handling		  	*/
-#include "H5Fpkg.h"		/* Files				*/
-#include "H5FDprivate.h"	/* File drivers				*/
-#include "H5Iprivate.h"		/* IDs			  		*/
-#include "H5MFprivate.h"	/* File space management		*/
-#include "H5MMprivate.h"	/* Memory management			*/
-#include "H5Oprivate.h"		/* Object headers		  	*/
-#include "H5Pprivate.h"         /* Property lists                       */
-#include "H5Vprivate.h"		/* Vector and array functions		*/
+#include "H5private.h"
+#include "H5Dprivate.h"
+#include "H5Eprivate.h"
+#include "H5Fpkg.h"
+#include "H5FDprivate.h"	/*file driver				  */
+#include "H5Iprivate.h"
+#include "H5MFprivate.h"
+#include "H5MMprivate.h"	/*memory management			  */
+#include "H5Oprivate.h"
+#include "H5Pprivate.h"
+#include "H5Vprivate.h"
+
+/* MPIO & MPIPOSIX driver functions are needed for some special checks */
+#include "H5FDmpio.h"
+#include "H5FDmpiposix.h"
 
 /* Interface initialization */
 #define INTERFACE_INIT	NULL
@@ -68,9 +72,8 @@ static int interface_initialize_g = 0;
  *-------------------------------------------------------------------------
  */
 herr_t
-H5F_seq_read(H5F_t *f, const struct H5D_dxpl_cache_t *dxpl_cache,
-    hid_t dxpl_id, const H5O_layout_t *layout,
-    const struct H5D_dcpl_cache_t *dcpl_cache, const H5D_storage_t *store, 
+H5F_seq_read(H5F_t *f, hid_t dxpl_id, const H5O_layout_t *layout,
+    H5P_genplist_t *dc_plist, const H5D_storage_t *store, 
     size_t seq_len, hsize_t dset_offset, void *buf/*out*/)
 {
     hsize_t mem_off=0;                  /* Offset in memory */
@@ -87,7 +90,7 @@ H5F_seq_read(H5F_t *f, const struct H5D_dxpl_cache_t *dxpl_cache,
     assert(buf);
     assert(TRUE==H5P_isa_class(dxpl_id,H5P_DATASET_XFER));
 
-    if (H5F_seq_readvv(f, dxpl_cache, dxpl_id, layout, dcpl_cache, store, 1, &dset_curr_seq, &seq_len, &dset_offset, 1, &mem_curr_seq, &mem_len, &mem_off, buf)<0)
+    if (H5F_seq_readvv(f, dxpl_id, layout, dc_plist, store, 1, &dset_curr_seq, &seq_len, &dset_offset, 1, &mem_curr_seq, &mem_len, &mem_off, buf)<0)
         HGOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, "vector read failed");
 
 done:
@@ -117,9 +120,8 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5F_seq_write(H5F_t *f, const struct H5D_dxpl_cache_t *dxpl_cache,
-    hid_t dxpl_id, H5O_layout_t *layout,
-    const struct H5D_dcpl_cache_t *dcpl_cache, const H5D_storage_t *store, 
+H5F_seq_write(H5F_t *f, hid_t dxpl_id, H5O_layout_t *layout,
+    H5P_genplist_t *dc_plist, const H5D_storage_t *store, 
     size_t seq_len, hsize_t dset_offset, const void *buf)
 {
     hsize_t mem_off=0;                  /* Offset in memory */
@@ -136,7 +138,7 @@ H5F_seq_write(H5F_t *f, const struct H5D_dxpl_cache_t *dxpl_cache,
     assert(buf);
     assert(TRUE==H5P_isa_class(dxpl_id,H5P_DATASET_XFER));
 
-    if (H5F_seq_writevv(f, dxpl_cache, dxpl_id, layout, dcpl_cache, store, 1, &dset_curr_seq, &seq_len, &dset_offset, 1, &mem_curr_seq, &mem_len, &mem_off, buf)<0)
+    if (H5F_seq_writevv(f, dxpl_id, layout, dc_plist, store, 1, &dset_curr_seq, &seq_len, &dset_offset, 1, &mem_curr_seq, &mem_len, &mem_off, buf)<0)
         HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "vector write failed");
 
 done:
@@ -185,9 +187,8 @@ done:
  *-------------------------------------------------------------------------
  */
 ssize_t
-H5F_seq_readvv(H5F_t *f, const struct H5D_dxpl_cache_t *dxpl_cache, hid_t dxpl_id,
-    const struct H5O_layout_t *layout,
-    const struct H5D_dcpl_cache_t *dcpl_cache, const H5D_storage_t *store, 
+H5F_seq_readvv(H5F_t *f, hid_t dxpl_id, const struct H5O_layout_t *layout,
+    struct H5P_genplist_t *dc_plist, const H5D_storage_t *store, 
     size_t dset_max_nseq, size_t *dset_curr_seq,  size_t dset_len_arr[], hsize_t dset_offset_arr[],
     size_t mem_max_nseq, size_t *mem_curr_seq, size_t mem_len_arr[], hsize_t mem_offset_arr[],
     void *buf/*out*/)
@@ -200,7 +201,7 @@ H5F_seq_readvv(H5F_t *f, const struct H5D_dxpl_cache_t *dxpl_cache, hid_t dxpl_i
     assert(f);
     assert(TRUE==H5P_isa_class(dxpl_id,H5P_DATASET_XFER)); /* Make certain we have the correct type of property list */
     assert(layout);
-    assert(dcpl_cache);
+    assert(dc_plist);
     assert(dset_curr_seq);
     assert(*dset_curr_seq<dset_max_nseq);
     assert(dset_len_arr);
@@ -244,7 +245,7 @@ H5F_seq_readvv(H5F_t *f, const struct H5D_dxpl_cache_t *dxpl_cache, hid_t dxpl_i
 
         case H5D_CHUNKED:
             assert(store);
-            if((ret_value=H5F_istore_readvv(f, dxpl_cache, dxpl_id, layout, dcpl_cache, store->chunk_coords,
+            if((ret_value=H5F_istore_readvv(f, dxpl_id, layout, dc_plist, store->chunk_coords,
                     dset_max_nseq, dset_curr_seq, dset_len_arr, dset_offset_arr,
                     mem_max_nseq, mem_curr_seq, mem_len_arr, mem_offset_arr,
                     buf))<0)
@@ -301,9 +302,8 @@ done:
  *-------------------------------------------------------------------------
  */
 ssize_t
-H5F_seq_writevv(H5F_t *f, const struct H5D_dxpl_cache_t *dxpl_cache,
-    hid_t dxpl_id, struct H5O_layout_t *layout,
-    const struct H5D_dcpl_cache_t *dcpl_cache, const H5D_storage_t *store, 
+H5F_seq_writevv(H5F_t *f, hid_t dxpl_id, struct H5O_layout_t *layout,
+    struct H5P_genplist_t *dc_plist, const H5D_storage_t *store, 
     size_t dset_max_nseq, size_t *dset_curr_seq,  size_t dset_len_arr[], hsize_t dset_offset_arr[],
     size_t mem_max_nseq, size_t *mem_curr_seq, size_t mem_len_arr[], hsize_t mem_offset_arr[],
     const void *buf)
@@ -316,7 +316,7 @@ H5F_seq_writevv(H5F_t *f, const struct H5D_dxpl_cache_t *dxpl_cache,
     assert(f);
     assert(TRUE==H5P_isa_class(dxpl_id,H5P_DATASET_XFER)); /* Make certain we have the correct type of property list */
     assert(layout);
-    assert(dcpl_cache);
+    assert(dc_plist);
     assert(dset_curr_seq);
     assert(*dset_curr_seq<dset_max_nseq);
     assert(dset_len_arr);
@@ -360,7 +360,7 @@ H5F_seq_writevv(H5F_t *f, const struct H5D_dxpl_cache_t *dxpl_cache,
 
         case H5D_CHUNKED:
             assert(store);
-            if((ret_value=H5F_istore_writevv(f, dxpl_cache, dxpl_id, layout, dcpl_cache, store->chunk_coords,
+            if((ret_value=H5F_istore_writevv(f, dxpl_id, layout, dc_plist, store->chunk_coords,
                     dset_max_nseq, dset_curr_seq, dset_len_arr, dset_offset_arr,
                     mem_max_nseq, mem_curr_seq, mem_len_arr, mem_offset_arr,
                     buf))<0)

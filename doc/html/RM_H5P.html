@@ -223,7 +223,6 @@ which require many different parameters to be easily manipulated.
     <li><a href="#Property-SetExternal">H5Pset_external</a>
     <li><a href="#Property-GetExternalCount">H5Pget_external_count</a>
     <li><a href="#Property-GetExternal">H5Pget_external</a>
-    <li><a href="#Property-DeleteFilter">H5Premove_filter</a>
     </ul>
 
     <p><i>Dataset Access, Memory, and <br> Transfer Properties</i>
@@ -235,6 +234,8 @@ which require many different parameters to be easily manipulated.
     <li><a href="#Property-SetEdcCheck">H5Pset_edc_check</a>
     <li><a href="#Property-GetEdcCheck">H5Pget_edc_check</a>
     <li><a href="#Property-SetFilterCallback">H5Pset_filter_callback</a>
+    <li><a href="#Property-SetHyperCache">H5Pset_hyper_cache</a> *
+    <li><a href="#Property-GetHyperCache">H5Pget_hyper_cache</a> *
     <li><a href="#Property-SetHyperVectorSize">H5Pset_hyper_vector_size</a>
     <li><a href="#Property-GetHyperVectorSize">H5Pget_hyper_vector_size</a>
     <li><a href="#Property-SetBTreeRatios">H5Pset_btree_ratios</a>
@@ -283,7 +284,6 @@ See further notes in the description of each function.
       <li><a href="#Property-Create">H5Pcreate</a>
       <li><a href="#Property-CreateClass">H5Pcreate_class</a>
       <li><a href="#Property-CreateList">H5Pcreate_list</a>
-      <li><a href="#Property-Equal">H5Premove_filter</a>
       <li><a href="#Property-Equal">H5Pequal</a>
       <li><a href="#Property-Exist">H5Pexist</a>
       <li><a href="#Property-FillValueDefined">H5Pfill_value_defined</a>
@@ -326,6 +326,7 @@ See further notes in the description of each function.
       <li><a href="#Property-GetFilter">H5Pget_filter</a>
       <li><a href="#Property-GetFilterById">H5Pget_filter_by_id</a>
       <li><a href="#Property-GetGCReferences">H5Pget_gc_references</a>
+      <li><a href="#Property-GetHyperCache">H5Pget_hyper_cache</a> *
       <li><a href="#Property-GetHyperVectorSize">H5Pget_hyper_vector_size</a>
       <li><a href="#Property-GetIstoreK">H5Pget_istore_k</a>
       <li><a href="#Property-GetLayout">H5Pget_layout</a>
@@ -388,6 +389,7 @@ See further notes in the description of each function.
       <li><a href="#Property-SetFilterCallback">H5Pset_filter_callback</a>
       <li><a href="#Property-SetFletcher32">H5Pset_fletcher32</a>
       <li><a href="#Property-SetGCReferences">H5Pset_gc_references</a>
+      <li><a href="#Property-SetHyperCache">H5Pset_hyper_cache</a> *
       <li><a href="#Property-SetHyperVectorSize">H5Pset_hyper_vector_size</a>
       <li><a href="#Property-SetIstoreK">H5Pset_istore_k</a>
       <li><a href="#Property-SetLayout">H5Pset_layout</a>
@@ -510,7 +512,6 @@ as the corresponding C function.
     <li><a href="#Property-SetExternal">h5pset_external_f</a>
     <li><a href="#Property-GetExternalCount">h5pget_external_count_f</a>
     <li><a href="#Property-GetExternal">h5pget_external_f</a>
-    <li><a href="#Property-DeleteFilter">h5premove_filter_f</a>
     </ul>
 
 <!--
@@ -574,6 +575,8 @@ as the corresponding C function.
     <li><a href="#Property-GetPreserve">h5pget_preserve_f</a> 
     <li><a href="#Property-SetEdcCheck">h5pset_edc_check_f</a>
     <li><a href="#Property-GetEdcCheck">h5pget_edc_check_f</a>
+    <li><a href="#Property-SetHyperCache">h5pset_hyper_cache_f</a>
+    <li><a href="#Property-GetHyperCache">h5pget_hyper_cache_f</a>
     <li><a href="#Property-SetHyperVectorSize">h5pset_hyper_vector_size_f</a>
     <li><a href="#Property-GetHyperVectorSize">h5pget_hyper_vector_size_f</a>
     <li><a href="#Property-SetBTreeRatios">h5pset_btree_ratios_f</a>
@@ -1180,103 +1183,6 @@ SUBROUTINE
 	</pre>		
 -->
 
-		<!--<dt><strong>Non-C API(s):</strong>
-    	<dd>
-        
-        <img src="Graphics/Java.gif"> 
-        <img src="Graphics/C++.gif">
-        -->
-</dl>
-
-<!-- NEW PAGE -->
-<!-- HEADER RIGHT "H5Premove_filter" -->
-<hr>
-<dl>
-  <dt><strong>Name:</strong> <a name="Property-RemoveFilter">H5Pdelete_filter</a>
-  <dt><strong>Signature:</strong>
-    <dd><em>herr_t</em> <code>H5Premove_filter</code>(<em>hid_t</em> <code>plist</code>,
-        <em>H5Z_filter_t</em> <code>filter</code>
-    )
-  <dt><strong>Purpose:</strong>
-    <dd>Delete one or more filters in the filter pipeline.
-  <dt><strong>Description:</strong>
-    <dd><code>H5Premove_filter</code> removes the specified 
-        <code>filter</code> from the filter pipeline in <code>plist</code>.
-	<p>
-	The <code>filter</code> parameter specifies the filter to be removed.  
-	Valid values of filters to remove are as follows:
-
-        <center>
-        <table width=75%>
-        <tr valign=top align=left><td>
-            <code>H5Z_FILTER_ALL</code> 
-            </td><td>
-            Removes all filters from the permanent filter pipeline.
-        </td></tr>
-        <tr valign=top align=left><td>
-            <code>H5Z_FILTER_DEFLATE</code> 
-            </td><td>
-            Data compression filter, employing the gzip algorithm 
-        </td></tr>
-        <tr valign=top align=left><td>
-            <code>H5Z_FILTER_SHUFFLE</code> 
-            </td><td>
-            Data shuffling filter 
-        </td></tr>
-        <tr valign=top align=left><td>
-            <code>H5Z_FILTER_FLETCHER32&nbsp;&nbsp;</code> 
-            </td><td>
-            Error detection filter, employing the Fletcher32 checksum algorithm 
-        </td></tr>	
-        <tr valign=top align=left><td>
-            <code>H5Z_FILTER_SZIP</code> 
-            </td><td>
-            Data compression filter, employing the SZIP algorithm 
-        </td></tr>
-	</table>
-	</center>
-        <p>
-        Additionally, user defined filters can be removed with this routine
-        as well by passing the filter ID they were registered with the library
-        with.
-        <p>
-        Attempting to remove a filter that is not in the permanent filter
-        pipeline is an error.
-  <dt><strong>Note:</strong>
-    <dd>This function currently supports only the permanent filter
-        pipeline; <code>plist</code> must be a dataset creation 
-        property list.
-  <dt><strong>Parameters:</strong>
-    <dl>
-        <dt><em>hid_t</em> <code>plist_id</code>
-            <dd>IN: Property list identifier.
-        <dt><em>H5Z_filter_t</em> <code>filter</code>
-            <dd>IN: Type of filter to be deleted.
-    </dl>
-  <dt><strong>Returns:</strong>
-    <dd>Returns a non-negative value if successful;
-        otherwise returns a negative value.
-
-    <dt><strong>Fortran90 Interface:</strong> h5premove_filter_f
-    <dd>
-	<pre>
-SUBROUTINE h5premove_filter_f(prp_id, filter, hdferr) 
-  IMPLICIT NONE
-  INTEGER(HID_T), INTENT(IN) :: prp_id      ! Property list identifier
-  INTEGER, INTENT(IN)        :: filter      ! Filter to be modified
-                                            ! Valid values are:
-                                            !
-                                            ! H5Z_FILTER_ALL_F
-                                            ! H5Z_FILTER_DEFLATE_F
-                                            ! H5Z_FILTER_SHUFFLE_F
-                                            ! H5Z_FILTER_FLETCHER32_F
-                                            ! H5Z_FILTER_SZIP_F
-                                            !
-  INTEGER, INTENT(OUT)       :: hdferr      ! Error code
-                                            ! 0 on success and -1 on failure
-END SUBROUTINE h5premove_filter_f
-	</pre>		
-		
 		<!--<dt><strong>Non-C API(s):</strong>
     	<dd>
         
@@ -3398,6 +3304,69 @@ END SUBROUTINE h5pget_gc_references_f
         -->
 </dl>
 
+<!-- NEW PAGE -->
+<!-- HEADER RIGHT "H5Pget_hyper_cache" -->
+<hr>
+<dl>
+  <dt><strong>Name:</strong> <a name="Property-GetHyperCache">H5Pget_hyper_cache</a>
+  <dt><strong>Signature:</strong>
+    <dd><em>herr_t</em> <code>H5Pget_hyper_cache</code>(<em>hid_t</em> <code>plist</code>,
+        <em>unsigned</em> *<code>cache</code>,
+        <em>unsigned</em> *<code>limit</code>
+    )
+  <dt><strong>Purpose:</strong>
+    <dd>[<strong>NOTE:</strong>
+        <span class="1_4_compat">
+	This function is deprecated in HDF5 Release 1.6 
+	and will eventually be removed from the HDF5 distribution.
+        It is provided in this release only to enable backward compatibility
+        with HDF5 Releases 1.4.<i>x</i> 
+	and is enabled only if the HDF5 library is configured 
+	with the flag <code>H5_WANT_H5_V1_4_COMPAT</code>;
+        the function is not enabled in the binaries distributed by NCSA.
+	</span>]
+        <p>
+        Returns information regarding the caching of hyperslab blocks during I/O.
+  <dt><strong>Description:</strong>
+    <dd>Given a dataset transfer property list, <code>H5Pget_hyper_cache</code> 
+        returns instructions regarding the caching of hyperslab blocks during I/O.
+        These parameters are set with the <code>H5Pset_hyper_cache</code> function.
+  <dt><strong>Parameters:</strong>
+    <dl>
+        <dt><em>hid_t</em> <code>plist</code>
+            <dd>IN: Dataset transfer property list identifier.
+        <dt><em>unsigned</em> *<code>cache</code>
+            <dd>OUT: A flag indicating whether caching is 
+                set to on (<code>1</code>) or off (<code>0</code>).
+        <dt><em>unsigned</em> *<code>limit</code>
+            <dd>OUT: Maximum size of the hyperslab block to cache. 
+                <code>0</code> (zero) indicates no limit.
+    </dl>
+  <dt><strong>Returns:</strong>
+    <dd>Returns a non-negative value if successful;
+        otherwise returns a negative value.
+  <dt><strong>Fortran90 Interface:</strong> h5pget_hyper_cache_f
+    <dd>
+	<pre>
+SUBROUTINE h5pget_hyper_cache_f(prp_id, cache, limit, hdferr)
+  IMPLICIT NONE
+  INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier
+  INTEGER, INTENT(OUT) :: cache        !
+  INTEGER, INTENT(OUT) :: limit        ! Maximum size of the hyperslab 
+                                       ! block to cache 
+                                       ! 0 (zero) indicates no limit
+  INTEGER, INTENT(OUT) :: hdferr       ! Error code
+                                       ! 0 on success and -1 on failure
+END SUBROUTINE h5pget_hyper_cache_f
+	</pre>		
+		
+		<!--<dt><strong>Non-C API(s):</strong>
+    	<dd>
+        
+        <img src="Graphics/Java.gif"> 
+        <img src="Graphics/C++.gif">
+        -->
+</dl>
 
 <!-- NEW PAGE -->
 <!-- HEADER RIGHT "H5Pget_hyper_vector_size" -->
@@ -4284,7 +4253,6 @@ SUBROUTINE
                   <em>H5P_prp_get_func_t</em> <code>get</code>,
                   <em>H5P_prp_delete_func_t</em> <code>delete</code>,
                   <em>H5P_prp_copy_func_t</em> <code>copy</code>,
-                  <em>H5P_prp_compare_func_t</em> <code>compare</code>,
                   <em>H5P_prp_close_func_t</em> <code>close</code>
 		)
 
@@ -4391,7 +4359,6 @@ SUBROUTINE
     routine returns an error value.
     </p>
 
-    <P>
     The <code>delete</code> routine is called when a property is being 
     deleted from a property list.  
     The <code>H5P_prp_delete_func_t</code> callback function is defined 
@@ -4425,7 +4392,6 @@ SUBROUTINE
     error value but the property is still deleted. 
     </P>
     
-    <P>
     The <code>copy</code> routine is called when a new property list 
     with this property is being created through a copy operation.  
     The <code>H5P_prp_copy_func_t</code> collback function is defined 
@@ -4452,36 +4418,6 @@ SUBROUTINE
     If the <code>copy</code> routine returns a negative value, the 
     new property value is not copied into the property and the 
     copy routine returns an error value.
-    </P>
-
-    <P>
-    The <code>compare</code> routine is called when a property list with 
-    this property is compared to another property list with the same property.
-    The <code>H5P_prp_compare_func_t</code> callback function is defined
-    as follows:
-        <ul><em>typedef int</em> (*<code>H5P_prp_compare_func_t</code>)(
-            <em>const void *</em><code>value1</code>,
-            <em>const void *</em><code>value2</code>,
-            <em>size_t </em><code>size</code>);
-        </ul>
-    The parameters to the callback function are defined as follows:
-    <ul><table>
-    <tr>
-        <td><em>const void *</em><code>value1</code></td>
-        <td>IN: The value of the first property to compare</td></tr>
-    <tr>
-        <td><em>const void *</em><code>value2</code></td>
-        <td>IN: The value of the second property to compare</td></tr>
-    <tr>
-        <td><em>size_t </em><code>size</code></td>
-        <td>IN: The size of the property in bytes</td></tr>
-    </table></ul>
-    The <code>compare</code> routine may <EM>not</EM> modify the values.
-    The <code>compare</code> routine should return a positive value if
-    <code>value1</code> is greater than <code>value2</code>, a negative value
-    if <code>value2</code> is greater than <code>value1</code> and zero if
-    <code>value1</code> and <code>value2</code> are equal.
-    </P>
 
     <P>The <code>close</code> routine is called when a property list 
     with this property is being closed.  
@@ -4855,7 +4791,6 @@ END SUBROUTINE h5pmodify_filter_f
                   <em>H5P_prp_get_func_t</em> <code>get</code>,
                   <em>H5P_prp_delete_func_t</em> <code>delete</code>,
                   <em>H5P_prp_copy_func_t</em> <code>copy</code>,
-                  <em>H5P_prp_compare_func_t</em> <code>compare</code>,
                   <em>H5P_prp_close_func_t</em> <code>close</code>
 				 )
 				 
@@ -4883,7 +4818,6 @@ END SUBROUTINE h5pmodify_filter_f
     <code>get</code> callbacks are never called.
     </P>
 	
-    <P>
     The <code>create</code> routine is called when a new property list 
     with this property is being created.  
     The <code>H5P_prp_create_func_t</code> callback function is defined 
@@ -4913,7 +4847,6 @@ END SUBROUTINE h5pmodify_filter_f
     create routine returns an error value.
     </P>
 	
-    <P>
     The <code>set</code> routine is called before a new value is copied 
     into the property.  
     The <code>H5P_prp_set_func_t</code> callback function is defined 
@@ -4991,7 +4924,6 @@ END SUBROUTINE h5pmodify_filter_f
     routine returns an error value.
     </P>
 
-    <P>
     The <code>delete</code> routine is called when a property is being 
     deleted from a property list.  
     The <code>H5P_prp_delete_func_t</code> callback function is defined 
@@ -5025,7 +4957,6 @@ END SUBROUTINE h5pmodify_filter_f
     an error value but the property is still deleted.
     </P>
 
-    <P>
     The <code>copy</code> routine is called when a new property list with 
     this property is being created through a copy operation.  
     The <code>H5P_prp_copy_func_t</code> callback function is defined
@@ -5054,36 +4985,6 @@ END SUBROUTINE h5pmodify_filter_f
     the copy routine returns an error value.
     </P>
 
-    <P>
-    The <code>compare</code> routine is called when a property list with 
-    this property is compared to another property list with the same property.
-    The <code>H5P_prp_compare_func_t</code> callback function is defined
-    as follows:
-        <ul><em>typedef int</em> (*<code>H5P_prp_compare_func_t</code>)(
-            <em>const void *</em><code>value1</code>,
-            <em>const void *</em><code>value2</code>,
-            <em>size_t </em><code>size</code>);
-        </ul>
-    The parameters to the callback function are defined as follows:
-    <ul><table>
-    <tr>
-        <td><em>const void *</em><code>value1</code></td>
-        <td>IN: The value of the first property to compare</td></tr>
-    <tr>
-        <td><em>const void *</em><code>value2</code></td>
-        <td>IN: The value of the second property to compare</td></tr>
-    <tr>
-        <td><em>size_t </em><code>size</code></td>
-        <td>IN: The size of the property in bytes</td></tr>
-    </table></ul>
-    The <code>compare</code> routine may <EM>not</EM> modify the values.
-    The <code>compare</code> routine should return a positive value if
-    <code>value1</code> is greater than <code>value2</code>, a negative value
-    if <code>value2</code> is greater than <code>value1</code> and zero if
-    <code>value1</code> and <code>value2</code> are equal.
-    </P>
-
-    <P>
     The <code>close</code> routine is called when a property list with 
     this property is being closed.  
     The <code>H5P_prp_close_func_t</code> callback function is defined 
@@ -5116,7 +5017,6 @@ END SUBROUTINE h5pmodify_filter_f
     If the <code>close</code> routine returns a negative value, 
     the property list close routine returns an error value but
     the property list is still closed.
-    </P>
 	
 <dt><strong>Parameters:</strong>
     <ul><dl>
@@ -7821,6 +7721,88 @@ END SUBROUTINE h5pset_gc_references_f
         -->
 </dl>
 
+<!-- NEW PAGE -->
+<!-- HEADER RIGHT "H5Pset_hyper_cache" -->
+<hr>
+<dl>
+  <dt><strong>Name:</strong> <a name="Property-SetHyperCache">H5Pset_hyper_cache</a>
+  <dt><strong>Signature:</strong>
+    <dd><em>herr_t</em> <code>H5Pset_hyper_cache</code>(<em>hid_t</em> <code>plist</code>,
+        <em>unsigned</em> <code>cache</code>,
+        <em>unsigned</em> <code>limit</code>
+    )
+  <dt><strong>Purpose:</strong>
+    <dd>Indicates whether to cache hyperslab blocks during I/O.
+  <dt><strong>Description:</strong>
+    <dd>[<strong>NOTE:</strong>
+        <span class="1_4_compat">
+	This function is deprecated in HDF5 Release 1.6 
+	and will eventually be removed from the HDF5 distribution.
+        It is provided in this release only to enable backward compatibility
+        with HDF5 Releases 1.4.<i>x</i> 
+	and is enabled only if the HDF5 library is configured 
+	with the flag <code>H5_WANT_H5_V1_4_COMPAT</code>;
+        the function is not enabled in the binaries distributed by NCSA.
+        </span>]
+        <p>
+        Given a dataset transfer property list, <code>H5Pset_hyper_cache</code> 
+        indicates whether to cache hyperslab blocks during I/O, 
+        a process which can significantly increase I/O speeds.  
+        <p>
+        When working with hyperslab selections, it is possible to 
+        significantly speed up I/O operations by retrieving an 
+        entire hyperslab from the file in one operation and 
+        caching it in memory.  
+        The <code>cache</code> parameter specifies whether to turn 
+        caching on for hyperslab I/O operations.
+        If <code>cache</code> is set to <code>1</code>, 
+        caching is turned on; 
+        if set to <code>0</code>, caching is turned off.
+        <p>
+        The parameter <code>limit</code> sets the maximum size of the 
+        hyperslab block to cache.  If a block is smaller than that limit, 
+        it may still not be cached if no memory is available. 
+        Setting <code>limit</code> to <code>0</code> (zero) indicates 
+        no limitation on the size of block to attempt to cache.
+        <p>
+        The default is to cache blocks with no limit on block size 
+        for serial I/O and to not cache blocks for parallel I/O.
+  <dt><strong>Parameters:</strong>
+    <dl>
+        <dt><em>hid_t</em> <code>plist</code>
+            <dd>IN: Dataset transfer property list identifier.
+        <dt><em>unsigned</em> <code>cache</code>
+            <dd>IN: A flag indicating whether caching is to be 
+                set to on (<code>1</code>) or off (<code>0</code>).
+        <dt><em>unsigned</em> <code>limit</code>
+            <dd>IN: Maximum size of the hyperslab block to cache. 
+                <code>0</code> (zero) indicates no limit.
+    </dl>
+  <dt><strong>Returns:</strong>
+    <dd>Returns a non-negative value if successful;
+        otherwise returns a negative value.
+  <dt><strong>Fortran90 Interface:</strong> h5pset_hyper_cache_f
+    <dd>
+	<pre>
+SUBROUTINE h5pset_hyper_cache_f(prp_id, cache, limit, hdferr)
+  IMPLICIT NONE
+  INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier
+  INTEGER, INTENT(IN) :: cache         !
+  INTEGER, INTENT(IN) :: limit         ! Maximum size of the hyperslab 
+                                       ! block to cache 
+                                       ! 0 (zero) indicates no limit
+  INTEGER, INTENT(OUT) :: hdferr       ! Error code
+                                       ! 0 on success and -1 on failure
+END SUBROUTINE h5pset_hyper_cache_f
+	</pre>		
+		
+		<!--<dt><strong>Non-C API(s):</strong>
+    	<dd>
+        
+        <img src="Graphics/Java.gif"> 
+        <img src="Graphics/C++.gif">
+        -->
+</dl>
 
 <!-- NEW PAGE -->
 <!-- HEADER RIGHT "H5Pset_hyper_vector_size" -->
@@ -8340,13 +8322,12 @@ END SUBROUTINE h5pset_sieve_buf_size_f
     <dd>Sets the byte size of the offsets and lengths used to address objects 
         in an HDF5 file.  
   <dt><strong>Description:</strong>
-        <dd><code>H5Pset_sizes</code> sets the byte size of the offsets 
-            and lengths used to address objects in an HDF5 file.  
-            This function is only valid for file creation property lists.  
-            Passing in a value of 0 for one of the <code>sizeof_...</code> 
-            parameters retains the current value.  
-            The default value for both values is the same as 
-            <code>sizeof(hsize_t)</code> in the library (normally 8 bytes).  
+        <dd><code>H5Pset_sizes</code> sets the byte size of the offsets and lengths used to
+            address objects in an HDF5 file.  This function is only valid for
+            file creation property lists.  Passing in a value of 0 for one of the
+            sizeof parameters retains the current value.  The default value
+            for both values is the same as <code>sizeof(hsize_t)</code> 
+            in the library (normally 8 bytes).  
             Valid values currently are 2, 4, 8 and 16.
   <dt><strong>Parameters:</strong>
     <dl>
@@ -9206,7 +9187,7 @@ And in this document, the
 <!-- #EndLibraryItem --><!-- #BeginLibraryItem "/ed_libs/Footer.lbi" --><address>
 <a href="mailto:hdfhelp@ncsa.uiuc.edu">HDF Help Desk</a> 
 <br>
-Describes HDF5 Release 1.7, the unreleased development branch; working toward HDF5 Release 1.8.0
+Describes HDF5 Release 1.6.2, February 2004
 </address><!-- #EndLibraryItem --><SCRIPT LANGUAGE="JAVASCRIPT">
 <!--
 document.writeln("Last modified: 14 January 2004");

@@ -593,12 +593,14 @@ static void test_heap_remove_many_core(H5HP_type_t heap_type, test_obj *arr, siz
 
         /* Check that the value is correct, based on the heap type */
         if(heap_type==H5HP_MAX_HEAP) {
-            if(val>last_val)
+            if(val>last_val) {
                 TestErrPrintf("Error on line %d: incorrect value from heap=%d, last_val=%d\n",__LINE__,val,last_val);
+            } /* end if */
         } /* end if */
         else {
-            if(val<last_val)
+            if(val<last_val) {
                 TestErrPrintf("Error on line %d: incorrect value from heap=%d, last_val=%d\n",__LINE__,val,last_val);
+            } /* end if */
         } /* end else */
 
         /* Update last value */
@@ -636,12 +638,14 @@ static void test_heap_remove_many_core(H5HP_type_t heap_type, test_obj *arr, siz
 
         /* Check that the value is correct, based on the heap type */
         if(heap_type==H5HP_MAX_HEAP) {
-            if(val>last_val)
+            if(val>last_val) {
                 TestErrPrintf("Error on line %d: incorrect value from heap=%d, last_val=%d\n",__LINE__,val,last_val);
+            } /* end if */
         } /* end if */
         else {
-            if(val<last_val)
+            if(val<last_val) {
                 TestErrPrintf("Error on line %d: incorrect value from heap=%d, last_val=%d\n",__LINE__,val,last_val);
+            } /* end if */
         } /* end else */
 
         /* Update last value */

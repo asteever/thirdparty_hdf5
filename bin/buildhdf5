@@ -216,7 +216,11 @@ LOCATE_GASS()
 # Configure.  Default to do --srcdir.
 CONFIG()
 {
-    CMD="$SRCDIR/configure $*"
+    INSTALLDIR=`pwd`/installdir
+
+    test -d $INSTALLDIR ||  ( echo mkdir $INSTALLDIR; \
+	test "$NOEXEC" != 'noexec' && mkdir $INSTALLDIR )
+    CMD="$SRCDIR/configure --prefix=$INSTALLDIR $*"
     echo $CMD
     if [ "$NOEXEC" != 'noexec' ]; then
 	$CMD

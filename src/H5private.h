@@ -434,7 +434,6 @@
 #ifndef LLONG_MAX
 #   define LLONG_MAX	((long_long)(((unsigned long_long)1		      \
 				      <<(8*sizeof(long_long)-1))-1))
-#   define LLONG_MIN    ((long_long)(-LLONG_MAX)-1)
 #   define ULLONG_MAX	((unsigned long_long)((long_long)(-1)))
 #endif
 #ifndef SIZET_MAX
@@ -490,16 +489,16 @@
  * A macro for detecting over/under-flow when assigning between types
  */
 #ifndef NDEBUG
-#define H5_ASSIGN_OVERFLOW(var,expr,exprtype,vartype)   \
+#define H5_ASSIGN_OVERFLOW(var,expr,vartype,casttype)   \
 {                                                       \
-    exprtype _tmp_overflow=(exprtype)(expr);              \
-    vartype _tmp_overflow2=(vartype)(_tmp_overflow);  \
-    assert((vartype)_tmp_overflow==_tmp_overflow2);    \
+    vartype _tmp_overflow=(vartype)(expr);              \
+    casttype _tmp_overflow2=(casttype)(_tmp_overflow);  \
+    assert((casttype)_tmp_overflow==_tmp_overflow2);    \
     (var)=_tmp_overflow2;                               \
 }
 #else /* NDEBUG */
-#define H5_ASSIGN_OVERFLOW(var,expr,exprtype,vartype)   \
-    (var)=(vartype)(expr);
+#define H5_ASSIGN_OVERFLOW(var,expr,vartype,casttype)   \
+    (var)=(casttype)(expr);
 #endif /* NDEBUG */
 
 /*
@@ -588,11 +587,7 @@ H5_DLL void H5_bandwidth(char *buf/*out*/, double nbytes, double nseconds);
 #define HDfgetc(F)		fgetc(F)
 #define HDfgetpos(F,P)		fgetpos(F,P)
 #define HDfgets(S,N,F)		fgets(S,N,F)
-#ifdef WIN32
-#define HDfileno(F)		_fileno(F)
-#else /* WIN32 */
 #define HDfileno(F)		fileno(F)
-#endif /* WIN32 */
 #define HDfloor(X)		floor(X)
 #define HDfmod(X,Y)		fmod(X,Y)
 #define HDfopen(S,M)		fopen(S,M)
@@ -982,13 +977,9 @@ extern H5_debug_t		H5_debug_g;
 #define H5TRACE9(R,T,A0,A1,A2,A3,A4,A5,A6,A7,A8) RTYPE=R;                                               \
                                            CALLTIME=H5_trace(NULL,FUNC,T,#A0,A0,#A1,A1,#A2,A2,#A3,A3,   \
                                                              #A4,A4,#A5,A5,#A6,A6,#A7,A7,#A8,A8)
-#define H5TRACE10(R,T,A0,A1,A2,A3,A4,A5,A6,A7,A8,A9) RTYPE=R;                                           \
+#define H5TRACE10(R,T,A0,A1,A2,A3,A4,A5,A6,A7,A8,A9) RTYPE=R;                                               \
                                            CALLTIME=H5_trace(NULL,FUNC,T,#A0,A0,#A1,A1,#A2,A2,#A3,A3,   \
                                                              #A4,A4,#A5,A5,#A6,A6,#A7,A7,#A8,A8,#A9,A9)
-#define H5TRACE11(R,T,A0,A1,A2,A3,A4,A5,A6,A7,A8,A9,A10) RTYPE=R;                                       \
-                                           CALLTIME=H5_trace(NULL,FUNC,T,#A0,A0,#A1,A1,#A2,A2,#A3,A3,   \
-                                                             #A4,A4,#A5,A5,#A6,A6,#A7,A7,#A8,A8,#A9,A9, \
-                                                             #A10,A10)
 #define H5TRACE_RETURN(V)		   if (RTYPE) {                                                 \
 					      H5_trace(&CALLTIME,FUNC,RTYPE,NULL,V);                    \
 					      RTYPE=NULL;                                               \
@@ -1006,11 +997,10 @@ extern H5_debug_t		H5_debug_g;
 #define H5TRACE8(R,T,A0,A1,A2,A3,A4,A5,A6,A7)           /*void*/
 #define H5TRACE9(R,T,A0,A1,A2,A3,A4,A5,A6,A7,A8)        /*void*/
 #define H5TRACE10(R,T,A0,A1,A2,A3,A4,A5,A6,A7,A8,A9)    /*void*/
-#define H5TRACE11(R,T,A0,A1,A2,A3,A4,A5,A6,A7,A8,A9,A10) /*void*/
 #define H5TRACE_RETURN(V)		                /*void*/
 #endif
 
-H5_DLL double H5_trace(const double *calltime, const char *func, const char *type, ...);
+H5_DLL double H5_trace(double *calltime, const char *func, const char *type, ...);
 
 
 /*-------------------------------------------------------------------------
@@ -1123,6 +1113,7 @@ extern H5_api_t H5_g;
 /* extern global variables */
 extern hbool_t H5_libinit_g;    /* Has the library been initialized? */
 
+
 /* Macros for accessing the global variables */
 #define H5_INIT_GLOBAL H5_libinit_g
 
@@ -1154,8 +1145,8 @@ extern hbool_t H5_MPEinit_g;   /* Has the MPE Library been initialized? */
    PABLO_TRACE_ON (PABLO_MASK, pablo_func_id)
 
 #define FUNC_ENTER_COMMON(func_name,asrt)                                     \
-    CONSTR (FUNC, #func_name);						      \
-    FUNC_ENTER_COMMON_NOFUNC(func_name,asrt);                                 \
+   CONSTR (FUNC, #func_name);						      \
+   FUNC_ENTER_COMMON_NOFUNC(func_name,asrt);                                  \
 
 /* Threadsafety initialization code for API routines */
 #define FUNC_ENTER_API_THREADSAFE                                             \
@@ -1183,7 +1174,7 @@ extern hbool_t H5_MPEinit_g;   /* Has the MPE Library been initialized? */
     FUNC_ENTER_API_THREADSAFE;                                                \
     FUNC_ENTER_API_COMMON(func_name,INTERFACE_INIT,err);                      \
     /* Clear thread error stack entering public functions */		      \
-    H5E_clear(NULL);				      \
+    H5E_clear();						              \
     {
 
 /*
@@ -1200,7 +1191,7 @@ extern hbool_t H5_MPEinit_g;   /* Has the MPE Library been initialized? */
 /*
  * Use this macro for API functions that shouldn't perform _any_ initialization
  *      of the library or an interface, just perform tracing, etc.  Examples
- *      are: H5close, H5check_version, etc.
+ *      are: H5close, H5check_version, H5Eget_major, H5Eget_minor.
  *
  */
 #define FUNC_ENTER_API_NOINIT(func_name) {{                                   \
@@ -1262,7 +1253,7 @@ extern hbool_t H5_MPEinit_g;   /* Has the MPE Library been initialized? */
        H5_INIT_GLOBAL = TRUE;                                                 \
        if (H5_init_library()<0)  					      \
           HGOTO_ERROR (H5E_FUNC, H5E_CANTINIT, err,		              \
-            "library initialization failed")		                      \
+            "library initialization failed");		                      \
    }								              \
                                                                               \
    /* Initialize this interface or bust */				      \
@@ -1272,7 +1263,7 @@ extern hbool_t H5_MPEinit_g;   /* Has the MPE Library been initialized? */
               ((herr_t(*)(void))interface_init_func)()<0) {		      \
          interface_initialize_g = 0;				              \
          HGOTO_ERROR (H5E_FUNC, H5E_CANTINIT, err,		              \
-            "interface initialization failed")		                      \
+            "interface initialization failed");		                      \
       }								              \
    }                                                                          \
                                                                               \
@@ -1289,7 +1280,7 @@ extern hbool_t H5_MPEinit_g;   /* Has the MPE Library been initialized? */
               ((herr_t(*)(void))interface_init_func)()<0) {		      \
          interface_initialize_g = 0;				              \
          HGOTO_ERROR (H5E_FUNC, H5E_CANTINIT, err,		              \
-            "interface initialization failed")		                      \
+            "interface initialization failed");		                      \
       }								              \
    }                                                                          \
                                                                               \
@@ -1372,7 +1363,6 @@ H5_DLL void H5_term_library(void);
 H5_DLL int H5A_term_interface(void);
 H5_DLL int H5AC_term_interface(void);
 H5_DLL int H5D_term_interface(void);
-H5_DLL int H5E_term_interface(void);
 H5_DLL int H5F_term_interface(void);
 H5_DLL int H5G_term_interface(void);
 H5_DLL int H5I_term_interface(void);

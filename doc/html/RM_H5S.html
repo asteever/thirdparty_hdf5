@@ -306,7 +306,7 @@ END SUBROUTINE h5sclose_f
 SUBROUTINE h5scopy_f(space_id, new_space_id, hdferr) 
   IMPLICIT NONE
   INTEGER(HID_T), INTENT(IN) :: space_id      ! Dataspace identifier 
-  INTEGER(HID_T), INTENT(OUT) :: new_space_id ! Identifier of dataspace copy 
+  INTEGER(HID_T), INTENT(OUT) :: new_space_id ! Identifier of dataspace's copy 
   INTEGER, INTENT(OUT) :: hdferr              ! Error code
                                               ! 0 on success and -1 on failure
 END SUBROUTINE h5scopy_f
@@ -1061,10 +1061,10 @@ SUBROUTINE h5sget_simple_extent_type_f(space_id, classtype, hdferr)
   IMPLICIT NONE
   INTEGER(HID_T), INTENT(IN) :: space_id ! Dataspace identifier 
   INTEGER, INTENT(OUT) :: classtype      ! Class type 
-                                         ! Possible values are: 
+                                         ! Valid values are: 
                                          !    H5S_NO_CLASS_F 
                                          !    H5S_SCALAR_F 
-                                         !    H5S_SIMPLE_F 
+                                         !    H5S_SIMPLE_F   
   INTEGER, INTENT(OUT) :: hdferr         ! Error code
                                          ! 0 on success and -1 on failure
 END SUBROUTINE h5sget_simple_extent_type_f
@@ -1106,8 +1106,8 @@ END SUBROUTINE h5sget_simple_extent_type_f
 SUBROUTINE h5sis_simple_f(space_id, flag, hdferr) 
   IMPLICIT NONE
   INTEGER(HID_T), INTENT(IN) :: space_id    ! Dataspace identifier 
-  LOGICAL, INTENT(OUT) :: flag              ! Flag, indicates if dataspace
-                                            ! is simple or not: 
+  LOGICAL, INTENT(OUT) :: flag              ! Flag, idicates if dataspace
+                                            ! is simple or not:
                                             ! TRUE or FALSE  
   INTEGER, INTENT(OUT) :: hdferr            ! Error code
                                             ! 0 on success and -1 on failure 
@@ -1804,7 +1804,7 @@ And in this document, the
 <!-- #EndLibraryItem --><!-- #BeginLibraryItem "/ed_libs/Footer.lbi" --><address>
 <a href="mailto:hdfhelp@ncsa.uiuc.edu">HDF Help Desk</a> 
 <br>
-Describes HDF5 Release 1.7, the unreleased development branch; working toward HDF5 Release 1.8.0
+Describes HDF5 Release 1.6.2, February 2004
 </address><!-- #EndLibraryItem --><SCRIPT LANGUAGE="JAVASCRIPT">
 <!--
 document.writeln("Last modified: 29 October 2003");

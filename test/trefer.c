@@ -12,6 +12,8 @@
  * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+/* $Id$ */
+
 /***********************************************************
 *
 * Test program:	 trefer
@@ -160,26 +162,46 @@ test_reference_obj(void)
     /* Create reference to dataset */
     ret = H5Rcreate(&wbuf[0],fid1,"/Group1/Dataset1",H5R_OBJECT,-1);
     CHECK(ret, FAIL, "H5Rcreate");
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    ret = H5Rget_object_type(dataset,&wbuf[0]);
+    VERIFY(ret, H5G_DATASET, "H5Rget_object_type");
+#else /* H5_WANT_H5_V1_4_COMPAT */
     ret = H5Rget_obj_type(dataset,H5R_OBJECT,&wbuf[0]);
     VERIFY(ret, H5G_DATASET, "H5Rget_obj_type");
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
     /* Create reference to dataset */
     ret = H5Rcreate(&wbuf[1],fid1,"/Group1/Dataset2",H5R_OBJECT,-1);
     CHECK(ret, FAIL, "H5Rcreate");
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    ret = H5Rget_object_type(dataset,&wbuf[1]);
+    VERIFY(ret, H5G_DATASET, "H5Rget_object_type");
+#else /* H5_WANT_H5_V1_4_COMPAT */
     ret = H5Rget_obj_type(dataset,H5R_OBJECT,&wbuf[1]);
     VERIFY(ret, H5G_DATASET, "H5Rget_obj_type");
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
     /* Create reference to group */
     ret = H5Rcreate(&wbuf[2],fid1,"/Group1",H5R_OBJECT,-1);
     CHECK(ret, FAIL, "H5Rcreate");
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    ret = H5Rget_object_type(dataset,&wbuf[2]);
+    VERIFY(ret, H5G_GROUP, "H5Rget_object_type");
+#else /* H5_WANT_H5_V1_4_COMPAT */
     ret = H5Rget_obj_type(dataset,H5R_OBJECT,&wbuf[2]);
     VERIFY(ret, H5G_GROUP, "H5Rget_obj_type");
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
     /* Create reference to named datatype */
     ret = H5Rcreate(&wbuf[3],fid1,"/Group1/Datatype1",H5R_OBJECT,-1);
     CHECK(ret, FAIL, "H5Rcreate");
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    ret = H5Rget_object_type(dataset,&wbuf[3]);
+    VERIFY(ret, H5G_TYPE, "H5Rget_object_type");
+#else /* H5_WANT_H5_V1_4_COMPAT */
     ret = H5Rget_obj_type(dataset,H5R_OBJECT,&wbuf[3]);
     VERIFY(ret, H5G_TYPE, "H5Rget_obj_type");
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
     /* Write selection to disk */
     ret=H5Dwrite(dataset,H5T_STD_REF_OBJ,H5S_ALL,H5S_ALL,H5P_DEFAULT,wbuf);
@@ -240,8 +262,9 @@ test_reference_obj(void)
     CHECK(ret, FAIL, "H5Gget_comment");
 
     /* Check for correct comment value */
-    if(HDstrcmp(write_comment,read_comment)!=0)
+    if(HDstrcmp(write_comment,read_comment)!=0) {
         TestErrPrintf("Error! Incorrect group comment, wanted: %s, got: %s\n",write_comment,read_comment);
+    }
 
     /* Close group */
     ret = H5Gclose(group);
@@ -302,8 +325,13 @@ test_reference_region(void)
     hsize_t		block[SPACE2_RANK];     /* Block size of hyperslab */
     hssize_t	coord1[POINT1_NPOINTS][SPACE2_RANK]; /* Coordinates for point selection */
     hsize_t *   coords;             /* Coordinate buffer */
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    hsize_t		low[SPACE2_RANK];   /* Selection bounds */
+    hsize_t		high[SPACE2_RANK];     /* Selection bounds */
+#else /* H5_WANT_H5_V1_4_COMPAT */
     hssize_t		low[SPACE2_RANK];   /* Selection bounds */
     hssize_t		high[SPACE2_RANK];     /* Selection bounds */
+#endif /* H5_WANT_H5_V1_4_COMPAT */
     hdset_reg_ref_t      *wbuf,      /* buffer to write to disk */
                *rbuf;       /* buffer read from disk */
     uint8_t    *dwbuf,      /* Buffer for writing numeric data to disk */
@@ -853,8 +881,13 @@ test_reference_obj_deleted(void)
     /* Create reference to dataset */
     ret = H5Rcreate(&oref,fid1,"/Dataset1",H5R_OBJECT,-1);
     CHECK(ret, FAIL, "H5Rcreate");
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    ret = H5Rget_object_type(dataset,&oref);
+    VERIFY(ret, H5G_DATASET, "H5Rget_object_type");
+#else /* H5_WANT_H5_V1_4_COMPAT */
     ret = H5Rget_obj_type(dataset,H5R_OBJECT,&oref);
     VERIFY(ret, H5G_DATASET, "H5Rget_obj_type");
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
     /* Write selection to disk */
     ret=H5Dwrite(dataset,H5T_STD_REF_OBJ,H5S_ALL,H5S_ALL,H5P_DEFAULT,&oref);

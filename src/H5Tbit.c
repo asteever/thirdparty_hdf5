@@ -27,7 +27,6 @@
 #include "H5private.h"		/*generic functions			  */
 #include "H5Eprivate.h"		/*error handling			  */
 #include "H5Iprivate.h"		/*ID functions		   		  */
-#include "H5MMprivate.h"	/* Memory management			*/
 #include "H5Tpkg.h"		/*data-type functions			  */
 
 /* Interface initialization */
@@ -79,7 +78,7 @@ H5T_bit_copy (uint8_t *dst, size_t dst_offset, const uint8_t *src,
      *      ... v v v v v V V V V V
      *      ...+---------------+---------------+
      *      ...|7 6 5 4 3 2 1 0|7 6 5 4 3 2 1 0|
-           ...+---------------+---------------+
+     *      ...+---------------+---------------+
      *           dst[d_idx+1]      dst[d_idx]
      */
     while (src_offset && size>0) {
@@ -162,61 +161,6 @@ H5T_bit_copy (uint8_t *dst, size_t dst_offset, const uint8_t *src,
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5T_bit_shift
- *
- * Purpose:	Simulation of hardware shifting.  Shifts a bit vector
- *              in a way similar to shifting a variable value, like
- *              value <<= 3, or value >>= 16.
- *
- * Return:	void
- *
- * Programmer:	Raymond Lu
- *              Wednesday, Febuary 4, 2004
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-void
-H5T_bit_shift (uint8_t *buf, ssize_t shift_dist, size_t buf_size)
-{
-    uint8_t *tmp_buf;
-    size_t  buf_size_bit = 8*buf_size;
-
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5T_bit_shift);
-
-    /* Sanity check */
-    assert(buf);
-    assert(buf_size);
-
-    if(!shift_dist)
-        goto done;    
-    if(ABS(shift_dist) >= buf_size_bit) {
-        HDmemset(buf,0,buf_size);
-        goto done;
-    }
-    
-    tmp_buf = (uint8_t*)H5MM_calloc(buf_size);
-    assert(tmp_buf);
-
-    /* Shift vector by making copies */    
-    if(shift_dist > 0)  /* left shift */ 
-        H5T_bit_copy (tmp_buf, (size_t)shift_dist, buf, 0, (size_t)(buf_size_bit-shift_dist));
-    else  /* right shift */
-        H5T_bit_copy(tmp_buf, 0, buf, (size_t)-shift_dist, (size_t)(buf_size_bit+shift_dist));
-
-    /* Copy back the vector */
-    HDmemcpy(buf,tmp_buf,buf_size);
-
-    /* Free temporary buffer */
-    H5MM_xfree(tmp_buf);
-
-done:
-    FUNC_LEAVE_NOAPI_VOID
-}
-
-
-/*-------------------------------------------------------------------------
  * Function:	H5T_bit_get_d
  *
  * Purpose:	Return a small bit sequence as a number.
@@ -245,7 +189,7 @@ H5T_bit_get_d (uint8_t *buf, size_t offset, size_t size)
     assert (8*sizeof(val)>=size);
 
     H5T_bit_copy ((uint8_t*)&val, 0, buf, offset, size);
-    switch (H5T_native_order_g) {
+    switch (((H5T_t*)(H5I_object(H5T_NATIVE_INT_g)))->u.atomic.order) {
         case H5T_ORDER_LE:
             break;
 
@@ -290,7 +234,7 @@ H5T_bit_set_d (uint8_t *buf, size_t offset, size_t size, hsize_t val)
     
     assert (8*sizeof(val)>=size);
 
-    switch (H5T_native_order_g) {
+    switch (((H5T_t*)(H5I_object(H5T_NATIVE_INT_g)))->u.atomic.order) {
         case H5T_ORDER_LE:
             break;
 
@@ -495,7 +439,7 @@ H5T_bit_inc(uint8_t *buf, size_t start, size_t size)
     unsigned	acc, mask;
 
     /* Use FUNC_ENTER_NOAPI_NOINIT_NOFUNC here to avoid performance issues */
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5T_bit_inc);
+    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5T_bit_find);
 
     assert(buf);
     start %= 8;
@@ -535,70 +479,4 @@ H5T_bit_inc(uint8_t *buf, size_t start, size_t size)
     }
 
     FUNC_LEAVE_NOAPI(carry ? TRUE : FALSE);
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5T_bit_dec
- *
- * Purpose:	decrement part of a bit field by 1.
- *              At this moment, START is always 0 and the algorithm only 
- *              works from the end to the front for the buffer.
- *
- * Return:	void
- *
- *
- * Programmer:	Raymond Lu
- *              Wednesday, Jan 28, 2004
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-void
-H5T_bit_dec(uint8_t *buf, size_t start, size_t size)
-{
-    size_t	idx;
-
-    assert(buf);
-    assert(size);
-    assert(start==0);
-
-    for(idx=0; idx < size/8; idx++) {
-        if(buf[idx] != 0x00) {
-            buf[idx] -= 1; 
-            break;
-        } else if(buf[idx]==0x00) {
-            buf[idx] -= 1; 
-        }
-    }
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5T_bit_neg
- *
- * Purpose:	Bit-negate buffer.
- *              At this moment, START is always 0. 
- *
- * Return:	void
- *
- * Programmer:	Raymond Lu
- *              Wednesday, Jan 28, 2004
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-void
-H5T_bit_neg(uint8_t *buf, size_t start, size_t size)
-{
-    size_t i;
-
-    assert(buf);
-    assert(size);
-    assert(start==0);
-
-    for(i=0; i<size/8; i++)
-        buf[i] = ~(buf[i]);
 }

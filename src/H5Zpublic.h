@@ -29,7 +29,6 @@
 typedef int H5Z_filter_t;
 #define H5Z_FILTER_ERROR	(-1)	/*no filter			*/
 #define H5Z_FILTER_NONE		0	/*reserved indefinitely		*/
-#define H5Z_FILTER_ALL	 	0	/*symbol to remove all filters in H5Premove_filter		*/
 #define H5Z_FILTER_DEFLATE	1 	/*deflation like gzip	     	*/
 #define H5Z_FILTER_SHUFFLE      2       /*shuffle the data              */
 #define H5Z_FILTER_FLETCHER32   3       /*fletcher32 checksum of EDC       */
@@ -164,7 +163,12 @@ typedef struct H5Z_class_t {
     H5Z_func_t filter;		/* The actual filter function		     */
 } H5Z_class_t;
 
+#ifdef H5_WANT_H5_V1_4_COMPAT
+H5_DLL herr_t H5Zregister(H5Z_filter_t id, const char *comment,
+			   H5Z_func_t filter);
+#else /* H5_WANT_H5_V1_4_COMPAT */
 H5_DLL herr_t H5Zregister(const H5Z_class_t *cls);
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 H5_DLL herr_t H5Zunregister(H5Z_filter_t id);
 H5_DLL htri_t H5Zfilter_avail(H5Z_filter_t id);
 

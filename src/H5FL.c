@@ -26,17 +26,14 @@
  *      move frequently accessed free lists to the head of the queue.
  */
 
-/* Pablo information */
-/* (Put before include files to avoid problems with inline functions) */
-#define PABLO_MASK	H5FL_mask
-
 /* #define H5FL_DEBUG */
 
-#include "H5private.h"		/* Generic Functions			*/
-#include "H5Eprivate.h"		/* Error handling		  	*/
-#include "H5FLprivate.h"	/* Free Lists                           */
-#include "H5MMprivate.h"	/* Memory management			*/
+#include "H5private.h"		/*library		  */
+#include "H5Eprivate.h"		/*error handling	  */
+#include "H5MMprivate.h"	/*Core memory management	  */
+#include "H5FLprivate.h"	/*Priority queues	  */
 
+#define PABLO_MASK	H5FL_mask
 static int		interface_initialize_g = 0;
 #define INTERFACE_INIT	NULL
 
@@ -133,21 +130,20 @@ H5FL_malloc(size_t mem_size)
 {
     void *ret_value=NULL;   /* return value*/
 
-    FUNC_ENTER_NOAPI(H5FL_malloc, NULL)
+    FUNC_ENTER_NOAPI(H5FL_malloc, NULL);
 
     /* Attempt to allocate the memory requested */
     if(NULL==(ret_value=H5MM_malloc(mem_size))) {
         /* If we can't allocate the memory now, try garbage collecting first */
-        if(H5FL_garbage_coll()<0)
-            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGC, NULL, "garbage collection failed during allocation")
+        H5FL_garbage_coll();
 
         /* Now try allocating the memory again */
         if(NULL==(ret_value=H5MM_malloc(mem_size)))
-            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed for chunk")
+            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed for chunk");
     } /* end if */
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 }   /* end H5FL_malloc() */
 
 
@@ -173,11 +169,11 @@ H5FL_reg_init(H5FL_reg_head_t *head)
     H5FL_reg_gc_node_t *new_node;   /* Pointer to the node for the new list to garbage collect */
     herr_t ret_value=SUCCEED;   /* return value*/
 
-    FUNC_ENTER_NOAPI_NOINIT(H5FL_reg_init)
+    FUNC_ENTER_NOAPI_NOINIT(H5FL_reg_init);
 
     /* Allocate a new garbage collection node */
     if (NULL==(new_node = H5MM_malloc(sizeof(H5FL_reg_gc_node_t))))
-        HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
+        HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed");
 
     /* Initialize the new garbage collection node */
     new_node->list=head;
@@ -194,7 +190,7 @@ H5FL_reg_init(H5FL_reg_head_t *head)
         head->size=sizeof(void *);
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 }   /* end H5FL_reg_init() */
 
 
@@ -219,7 +215,7 @@ H5FL_reg_free(H5FL_reg_head_t *head, void *obj)
     H5FL_reg_node_t *temp;      /* Temp. ptr to the new free list node allocated */
     void *ret_value=NULL;       /* Return value */
 
-    FUNC_ENTER_NOAPI(H5FL_reg_free, NULL)
+    FUNC_ENTER_NOAPI(H5FL_reg_free, NULL);
 
     /* Double check parameters */
     assert(head);
@@ -251,16 +247,14 @@ H5FL_reg_free(H5FL_reg_head_t *head, void *obj)
     /* Check for exceeding free list memory use limits */
     /* First check this particular list */
     if(head->list_mem>H5FL_reg_lst_mem_lim)
-        if(H5FL_reg_gc_list(head)<0)
-            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGC, NULL, "garbage collection failed during free")
+        H5FL_reg_gc_list(head);
 
     /* Then check the global amount memory on regular free lists */
     if(H5FL_reg_gc_head.mem_freed>H5FL_reg_glb_mem_lim)
-        if(H5FL_reg_gc()<0)
-            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGC, NULL, "garbage collection failed during free")
+        H5FL_reg_gc();
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 }   /* end H5FL_reg_free() */
 
 
@@ -284,15 +278,14 @@ H5FL_reg_malloc(H5FL_reg_head_t *head)
 {
     void *ret_value;        /* Pointer to object to return */
 
-    FUNC_ENTER_NOAPI(H5FL_reg_malloc, NULL)
+    FUNC_ENTER_NOAPI(H5FL_reg_malloc, NULL);
 
     /* Double check parameters */
     assert(head);
 
     /* Make certain the list is initialized first */
     if(!head->init)
-        if(H5FL_reg_init(head)<0)
-            HGOTO_ERROR (H5E_RESOURCE, H5E_CANTINIT, NULL, "can't initialize 'regular' blocks")
+        H5FL_reg_init(head);
 
     /* Check for nodes available on the free list first */
     if(head->list!=NULL) {
@@ -313,14 +306,14 @@ H5FL_reg_malloc(H5FL_reg_head_t *head)
     /* Otherwise allocate a node */
     else {
         if (NULL==(ret_value = H5FL_malloc(head->size)))
-            HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+            HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
 
         /* Increment the number of blocks allocated in list */
         head->allocated++;
     } /* end else */
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 }   /* end H5FL_reg_malloc() */
 
 
@@ -344,20 +337,20 @@ H5FL_reg_calloc(H5FL_reg_head_t *head)
 {
     void *ret_value;        /* Pointer to object to return */
 
-    FUNC_ENTER_NOAPI(H5FL_reg_calloc, NULL)
+    FUNC_ENTER_NOAPI(H5FL_reg_calloc, NULL);
 
     /* Double check parameters */
     assert(head);
 
     /* Allocate the block */
     if (NULL==(ret_value = H5FL_reg_malloc(head)))
-        HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+        HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
 
     /* Clear to zeros */
     HDmemset(ret_value,0,head->size);
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 }   /* end H5FL_reg_calloc() */
 
 
@@ -383,7 +376,7 @@ H5FL_reg_gc_list(H5FL_reg_head_t *head)
     void *tmp;          /* Temporary node pointer */
     size_t total_mem;   /* Total memory used on list */
     
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5FL_reg_gc_list)
+    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5FL_reg_gc_list);
 
     /* Calculate the total memory used on this list */
     total_mem=head->onlist*head->size;
@@ -414,7 +407,7 @@ H5FL_reg_gc_list(H5FL_reg_head_t *head)
     /* Decrement global count of free memory on "regular" lists */
     H5FL_reg_gc_head.mem_freed-=total_mem;
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
+    FUNC_LEAVE_NOAPI(SUCCEED);
 }   /* end H5FL_reg_gc_list() */
 
 
@@ -439,16 +432,14 @@ static herr_t
 H5FL_reg_gc(void)
 {
     H5FL_reg_gc_node_t *gc_node;    /* Pointer into the list of things to garbage collect */
-    herr_t ret_value=SUCCEED;   /* return value*/
     
-    FUNC_ENTER_NOAPI_NOINIT(H5FL_reg_gc)
+    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5FL_reg_gc);
 
     /* Walk through all the free lists, free()'ing the nodes */
     gc_node=H5FL_reg_gc_head.first;
     while(gc_node!=NULL) {
         /* Release the free nodes on the list */
-        if(H5FL_reg_gc_list(gc_node->list)<0)
-            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGC, FAIL, "garbage collection of list failed")
+        H5FL_reg_gc_list(gc_node->list);
 
         /* Go on to the next free list to garbage collect */
         gc_node=gc_node->next;
@@ -457,8 +448,7 @@ H5FL_reg_gc(void)
     /* Double check that all the memory on the free lists is recycled */
     assert(H5FL_reg_gc_head.mem_freed==0);
 
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(SUCCEED);
 }   /* end H5FL_reg_gc() */
 
 
@@ -493,7 +483,7 @@ H5FL_reg_term(void)
     H5FL_reg_gc_node_t *left;   /* pointer to garbage collection lists with work left */
     H5FL_reg_gc_node_t *tmp;    /* Temporary pointer to a garbage collection node */
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5FL_reg_term)
+    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5FL_reg_term);
 
     if (interface_initialize_g) {
         /* Free the nodes on the garbage collection list, keeping nodes with allocations outstanding */
@@ -530,7 +520,7 @@ H5FL_reg_term(void)
 
     /* Terminating this layer never affects other layers; rather, other layers affect
      * the termination of this layer. */
-    FUNC_LEAVE_NOAPI(0)
+    FUNC_LEAVE_NOAPI(0);
 }   /* end H5FL_reg_term() */
 
 
@@ -559,7 +549,7 @@ H5FL_blk_find_list(H5FL_blk_node_t **head, size_t size)
     H5FL_blk_node_t *temp;  /* Temp. pointer to node in the native list */
     H5FL_blk_node_t *ret_value;
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5FL_blk_find_list)
+    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5FL_blk_find_list);
 
     /* Find the correct free list */
     temp=*head;
@@ -586,7 +576,7 @@ H5FL_blk_find_list(H5FL_blk_node_t **head, size_t size)
     
     ret_value=temp;
 
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5FL_blk_find_list() */
 
 
@@ -613,11 +603,11 @@ H5FL_blk_create_list(H5FL_blk_node_t **head, size_t size)
     H5FL_blk_node_t *temp;  /* Temp. pointer to node in the list */
     H5FL_blk_node_t *ret_value;
 
-    FUNC_ENTER_NOAPI_NOINIT(H5FL_blk_create_list)
+    FUNC_ENTER_NOAPI_NOINIT(H5FL_blk_create_list);
 
     /* Allocate room for the new free list node */
     if(NULL==(temp=H5FL_MALLOC(H5FL_blk_node_t)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed for chunk info")
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed for chunk info");
     
     /* Set the correct values for the new free list */
     temp->size=size;
@@ -638,7 +628,7 @@ H5FL_blk_create_list(H5FL_blk_node_t **head, size_t size)
     ret_value=temp;
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5FL_blk_create_list() */
 
 
@@ -664,11 +654,11 @@ H5FL_blk_init(H5FL_blk_head_t *head)
     H5FL_blk_gc_node_t *new_node;   /* Pointer to the node for the new list to garbage collect */
     herr_t ret_value=SUCCEED;       /* return value*/
 
-    FUNC_ENTER_NOAPI_NOINIT(H5FL_blk_init)
+    FUNC_ENTER_NOAPI_NOINIT(H5FL_blk_init);
 
     /* Allocate a new garbage collection node */
     if (NULL==(new_node = H5MM_malloc(sizeof(H5FL_blk_gc_node_t))))
-        HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
+        HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed");
 
     /* Initialize the new garbage collection node */
     new_node->pq=head;
@@ -681,7 +671,7 @@ H5FL_blk_init(H5FL_blk_head_t *head)
     head->init=1;
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 }   /* end H5FL_blk_init() */
 
 
@@ -707,7 +697,7 @@ H5FL_blk_free_block_avail(H5FL_blk_head_t *head, size_t size)
     H5FL_blk_node_t *free_list;  /* The free list of nodes of correct size */
     htri_t ret_value;   /* Return value */
 
-    FUNC_ENTER_NOAPI(H5FL_blk_free_block_avail, FAIL)
+    FUNC_ENTER_NOAPI(H5FL_blk_free_block_avail, FAIL);
 
     /* Double check parameters */
     assert(head);
@@ -719,7 +709,7 @@ H5FL_blk_free_block_avail(H5FL_blk_head_t *head, size_t size)
     else
         ret_value=FALSE;
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5FL_blk_free_block_avail() */
 
 
@@ -748,7 +738,7 @@ H5FL_blk_malloc(H5FL_blk_head_t *head, size_t size)
     H5FL_blk_list_t *temp;  /* Temp. ptr to the new native list allocated */
     void *ret_value;    /* Pointer to the block to return to the user */
 
-    FUNC_ENTER_NOAPI(H5FL_blk_malloc, NULL)
+    FUNC_ENTER_NOAPI(H5FL_blk_malloc, NULL);
 
     /* Double check parameters */
     assert(head);
@@ -756,8 +746,7 @@ H5FL_blk_malloc(H5FL_blk_head_t *head, size_t size)
 
     /* Make certain the list is initialized first */
     if(!head->init)
-        if(H5FL_blk_init(head)<0)
-            HGOTO_ERROR (H5E_RESOURCE, H5E_CANTINIT, NULL, "can't initialize 'block' list")
+        H5FL_blk_init(head);
 
     /* check if there is a free list for blocks of this size */
     /* and if there are any blocks available on the list */
@@ -784,7 +773,7 @@ H5FL_blk_malloc(H5FL_blk_head_t *head, size_t size)
     else { 
         /* Allocate new node, with room for the page info header and the actual page data */
         if(NULL==(temp=H5FL_malloc(sizeof(H5FL_blk_list_t)+size)))
-            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed for chunk")
+            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed for chunk");
 
         /* Increment the number of blocks allocated */
         head->allocated++;
@@ -797,7 +786,7 @@ H5FL_blk_malloc(H5FL_blk_head_t *head, size_t size)
     } /* end else */
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5FL_blk_malloc() */
 
 
@@ -825,7 +814,7 @@ H5FL_blk_calloc(H5FL_blk_head_t *head, size_t size)
 {
     void *ret_value;    /* Pointer to the block to return to the user */
 
-    FUNC_ENTER_NOAPI(H5FL_blk_calloc, NULL)
+    FUNC_ENTER_NOAPI(H5FL_blk_calloc, NULL);
 
     /* Double check parameters */
     assert(head);
@@ -833,13 +822,13 @@ H5FL_blk_calloc(H5FL_blk_head_t *head, size_t size)
 
     /* Allocate the block */
     if (NULL==(ret_value = H5FL_blk_malloc(head,size)))
-        HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+        HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
 
     /* Clear the block to zeros */
     HDmemset(ret_value,0,size);
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5FL_blk_calloc() */
 
 
@@ -869,14 +858,14 @@ H5FL_blk_free(H5FL_blk_head_t *head, void *block)
     size_t free_size;           /* Size of the block freed */
     void *ret_value=NULL;       /* Return value */
 
-    FUNC_ENTER_NOAPI(H5FL_blk_free, NULL)
+    FUNC_ENTER_NOAPI(H5FL_blk_free, NULL);
 
     /* Double check parameters */
     assert(head);
     assert(block);
 
     /* Get the pointer to the native block info header in front of the native block to free */
-    temp=(H5FL_blk_list_t *)((unsigned char *)block-sizeof(H5FL_blk_list_t)); /*lint !e826 Pointer-to-pointer cast is appropriate here */
+    temp=(H5FL_blk_list_t *)((unsigned char *)block-sizeof(H5FL_blk_list_t));
 
     /* Save the block's size for later */
     free_size=temp->size;
@@ -903,16 +892,14 @@ H5FL_blk_free(H5FL_blk_head_t *head, void *block)
     /* Check for exceeding free list memory use limits */
     /* First check this particular list */
     if(head->list_mem>H5FL_blk_lst_mem_lim)
-        if(H5FL_blk_gc_list(head)<0)
-            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGC, NULL, "garbage collection failed during free")
+        H5FL_blk_gc_list(head);
 
     /* Then check the global amount memory on block free lists */
     if(H5FL_blk_gc_head.mem_freed>H5FL_blk_glb_mem_lim)
-        if(H5FL_blk_gc()<0)
-            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGC, NULL, "garbage collection failed during free")
+        H5FL_blk_gc();
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5FL_blk_free() */
 
 
@@ -940,7 +927,7 @@ H5FL_blk_realloc(H5FL_blk_head_t *head, void *block, size_t new_size)
     H5FL_blk_list_t *temp;      /* Temp. ptr to the new block node allocated */
     void *ret_value=NULL;       /* Return value */
 
-    FUNC_ENTER_NOAPI(H5FL_blk_realloc, NULL)
+    FUNC_ENTER_NOAPI(H5FL_blk_realloc, NULL);
 
     /* Double check parameters */
     assert(head);
@@ -949,12 +936,12 @@ H5FL_blk_realloc(H5FL_blk_head_t *head, void *block, size_t new_size)
     /* Check if we are actually re-allocating a block */
     if(block!=NULL) {
         /* Get the pointer to the chunk info header in front of the chunk to free */
-        temp=(H5FL_blk_list_t *)((unsigned char *)block-sizeof(H5FL_blk_list_t)); /*lint !e826 Pointer-to-pointer cast is appropriate here */
+        temp=(H5FL_blk_list_t *)((unsigned char *)block-sizeof(H5FL_blk_list_t));
 
         /* check if we are actually changing the size of the buffer */
         if(new_size!=temp->size) {
             if((ret_value=H5FL_blk_malloc(head,new_size))==NULL)
-                HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed for block")
+                HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed for block");
             blk_size=MIN(new_size,temp->size);
             HDmemcpy(ret_value,block,blk_size);
             H5FL_blk_free(head,block);
@@ -967,7 +954,7 @@ H5FL_blk_realloc(H5FL_blk_head_t *head, void *block, size_t new_size)
         ret_value=H5FL_blk_malloc(head,new_size);
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5FL_blk_realloc() */
 
 
@@ -993,7 +980,7 @@ H5FL_blk_gc_list(H5FL_blk_head_t *head)
     void *next;     /* Temp. ptr to the free list list node */
     void *temp;     /* Temp. ptr to the free list page node */
     
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5FL_blk_gc_list)
+    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5FL_blk_gc_list);
 
     /* Loop through all the nodes in the block free list queue */
     while(head->head!=NULL) {
@@ -1031,7 +1018,7 @@ H5FL_blk_gc_list(H5FL_blk_head_t *head)
     /* Double check that all the memory on this list is recycled */
     assert(head->list_mem==0);
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
+    FUNC_LEAVE_NOAPI(SUCCEED);
 }   /* end H5FL_blk_gc_list() */
 
 
@@ -1054,16 +1041,14 @@ static herr_t
 H5FL_blk_gc(void)
 {
     H5FL_blk_gc_node_t *gc_node;    /* Pointer into the list of things to garbage collect */
-    herr_t ret_value=SUCCEED;   /* return value*/
     
-    FUNC_ENTER_NOAPI_NOINIT(H5FL_blk_gc)
+    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5FL_blk_gc);
 
     /* Walk through all the free lists, free()'ing the nodes */
     gc_node=H5FL_blk_gc_head.first;
     while(gc_node!=NULL) {
         /* For each free list being garbage collected, walk through the nodes and free them */
-        if(H5FL_blk_gc_list(gc_node->pq)<0)
-            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGC, FAIL, "garbage collection of list failed")
+        H5FL_blk_gc_list(gc_node->pq);
 
         /* Go on to the next free list to garbage collect */
         gc_node=gc_node->next;
@@ -1072,8 +1057,7 @@ H5FL_blk_gc(void)
     /* Double check that all the memory on the free lists are recycled */
     assert(H5FL_blk_gc_head.mem_freed==0);
 
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(SUCCEED);
 }   /* end H5FL_blk_gc() */
 
 
@@ -1102,7 +1086,7 @@ H5FL_blk_term(void)
     H5FL_blk_gc_node_t *left;   /* pointer to garbage collection lists with work left */
     H5FL_blk_gc_node_t *tmp;    /* Temporary pointer to a garbage collection node */
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5FL_blk_term)
+    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5FL_blk_term);
     
     /* Free the nodes on the garbage collection list, keeping nodes with allocations outstanding */
     left=NULL;
@@ -1134,7 +1118,7 @@ printf("H5FL_blk_term: head->name=%s, head->allocated=%d\n", H5FL_blk_gc_head.fi
     /* Point to the list of nodes left with allocations open, if any */
     H5FL_blk_gc_head.first=left;
     
-    FUNC_LEAVE_NOAPI(H5FL_blk_gc_head.first!=NULL ? 1 : 0)
+    FUNC_LEAVE_NOAPI(H5FL_blk_gc_head.first!=NULL ? 1 : 0);
 }   /* end H5FL_blk_term() */
 
 
@@ -1160,11 +1144,11 @@ H5FL_arr_init(H5FL_arr_head_t *head)
     H5FL_gc_arr_node_t *new_node;   /* Pointer to the node for the new list to garbage collect */
     herr_t ret_value=SUCCEED;       /* return value*/
 
-    FUNC_ENTER_NOAPI_NOINIT(H5FL_arr_init)
+    FUNC_ENTER_NOAPI_NOINIT(H5FL_arr_init);
 
     /* Allocate a new garbage collection node */
     if (NULL==(new_node = H5MM_malloc(sizeof(H5FL_gc_arr_node_t))))
-        HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
+        HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed");
 
     /* Initialize the new garbage collection node */
     new_node->list=head;
@@ -1175,10 +1159,10 @@ H5FL_arr_init(H5FL_arr_head_t *head)
 
     /* Allocate room for the free lists, if the arrays have a maximum size */
     if(head->maxelem>0) {
-        if (NULL==(head->u.list_arr = H5MM_calloc((size_t)head->maxelem*sizeof(H5FL_arr_node_t *))))
-            HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
-        if (NULL==(head->onlist = H5MM_calloc((size_t)head->maxelem*sizeof(unsigned))))
-            HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
+        if (NULL==(head->u.list_arr = H5MM_calloc(head->maxelem*sizeof(H5FL_arr_node_t *))))
+            HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed");
+        if (NULL==(head->onlist = H5MM_calloc(head->maxelem*sizeof(unsigned))))
+            HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed");
     } /* end if */
     else {
         head->u.queue.init=0;
@@ -1193,7 +1177,7 @@ H5FL_arr_init(H5FL_arr_head_t *head)
     head->init=1;
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 }   /* end H5FL_arr_init() */
 
 
@@ -1220,11 +1204,11 @@ H5FL_arr_free(H5FL_arr_head_t *head, void *obj)
     size_t free_nelem;      /* Number of elements in node being free'd */
     void *ret_value=NULL;   /* Return value */
 
-    FUNC_ENTER_NOAPI(H5FL_arr_free, NULL)
+    FUNC_ENTER_NOAPI(H5FL_arr_free, NULL);
 
     /* The H5MM_xfree code allows obj to null */
     if (!obj)
-        HGOTO_DONE (NULL)
+        HGOTO_DONE (NULL);
 
     /* Double check parameters */
     assert(head);
@@ -1235,7 +1219,7 @@ H5FL_arr_free(H5FL_arr_head_t *head, void *obj)
     /* Check if there are a maximum number of elements in list */
     if(head->maxelem>0) {
         /* Get the pointer to the info header in front of the block to free */
-        temp=(H5FL_arr_node_t *)((unsigned char *)obj-sizeof(H5FL_arr_node_t)); /*lint !e826 Pointer-to-pointer cast is appropriate here */
+        temp=(H5FL_arr_node_t *)((unsigned char *)obj-sizeof(H5FL_arr_node_t));
 
         /* Save the number of elements for later */
         free_nelem=temp->nelem;
@@ -1262,13 +1246,11 @@ H5FL_arr_free(H5FL_arr_head_t *head, void *obj)
         /* Check for exceeding free list memory use limits */
         /* First check this particular list */
         if(head->list_mem>H5FL_arr_lst_mem_lim)
-            if(H5FL_arr_gc_list(head)<0)
-                HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGC, NULL, "garbage collection failed during free")
+            H5FL_arr_gc_list(head);
 
         /* Then check the global amount memory on array free lists */
         if(H5FL_arr_gc_head.mem_freed>H5FL_arr_glb_mem_lim)
-            if(H5FL_arr_gc()<0)
-                HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGC, NULL, "garbage collection failed during free")
+            H5FL_arr_gc();
 
     } /* end if */
     /* No maximum number of elements, use block routine */
@@ -1276,7 +1258,7 @@ H5FL_arr_free(H5FL_arr_head_t *head, void *obj)
         H5FL_blk_free(&(head->u.queue),obj);
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 }   /* end H5FL_arr_free() */
 
 
@@ -1302,7 +1284,7 @@ H5FL_arr_malloc(H5FL_arr_head_t *head, size_t elem)
     void *ret_value;        /* Pointer to object to return */
     size_t mem_size;        /* Size of memory block being recycled */
 
-    FUNC_ENTER_NOAPI(H5FL_arr_malloc, NULL)
+    FUNC_ENTER_NOAPI(H5FL_arr_malloc, NULL);
 
     /* Double check parameters */
     assert(head);
@@ -1310,8 +1292,7 @@ H5FL_arr_malloc(H5FL_arr_head_t *head, size_t elem)
 
     /* Make certain the list is initialized first */
     if(!head->init)
-        if(H5FL_arr_init(head)<0)
-            HGOTO_ERROR (H5E_RESOURCE, H5E_CANTINIT, NULL, "can't initialize 'array' blocks")
+        H5FL_arr_init(head);
 
     /* Set the set of the memory block */
     mem_size=head->size*elem;
@@ -1346,7 +1327,7 @@ H5FL_arr_malloc(H5FL_arr_head_t *head, size_t elem)
         /* Otherwise allocate a node */
         else {
             if (NULL==(new_obj = H5FL_malloc(sizeof(H5FL_arr_node_t)+mem_size)))
-                HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+                HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
 
             /* Increment the number of blocks allocated in list */
             head->allocated++;
@@ -1363,7 +1344,7 @@ H5FL_arr_malloc(H5FL_arr_head_t *head, size_t elem)
         ret_value=H5FL_blk_malloc(&(head->u.queue),mem_size);
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 }   /* end H5FL_arr_malloc() */
 
 
@@ -1387,7 +1368,7 @@ H5FL_arr_calloc(H5FL_arr_head_t *head, size_t elem)
 {
     void *ret_value;        /* Pointer to object to return */
 
-    FUNC_ENTER_NOAPI(H5FL_arr_calloc, NULL)
+    FUNC_ENTER_NOAPI(H5FL_arr_calloc, NULL);
 
     /* Double check parameters */
     assert(head);
@@ -1395,13 +1376,13 @@ H5FL_arr_calloc(H5FL_arr_head_t *head, size_t elem)
 
     /* Allocate the array */
     if (NULL==(ret_value = H5FL_arr_malloc(head,elem)))
-        HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+        HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
 
     /* Clear to zeros */
     HDmemset(ret_value,0,head->size*elem);
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 }   /* end H5FL_arr_calloc() */
 
 
@@ -1427,7 +1408,7 @@ H5FL_arr_realloc(H5FL_arr_head_t *head, void * obj, size_t new_elem)
     H5FL_arr_node_t *temp;  /* Temp. ptr to the new free list node allocated */
     void *ret_value;        /* Pointer to object to return */
 
-    FUNC_ENTER_NOAPI(H5FL_arr_realloc, NULL)
+    FUNC_ENTER_NOAPI(H5FL_arr_realloc, NULL);
 
     /* Double check parameters */
     assert(head);
@@ -1444,7 +1425,7 @@ H5FL_arr_realloc(H5FL_arr_head_t *head, void * obj, size_t new_elem)
             assert((int)new_elem<=head->maxelem);
 
             /* Get the pointer to the info header in front of the block to free */
-            temp=(H5FL_arr_node_t *)((unsigned char *)obj-sizeof(H5FL_arr_node_t)); /*lint !e826 Pointer-to-pointer cast is appropriate here */
+            temp=(H5FL_arr_node_t *)((unsigned char *)obj-sizeof(H5FL_arr_node_t));
 
             /* Check if the size is really changing */
             if(temp->nelem!=new_elem) {
@@ -1467,7 +1448,7 @@ H5FL_arr_realloc(H5FL_arr_head_t *head, void * obj, size_t new_elem)
     } /* end else */
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 }   /* end H5FL_arr_realloc() */
 
 
@@ -1491,22 +1472,21 @@ H5FL_arr_gc_list(H5FL_arr_head_t *head)
 {
     H5FL_arr_node_t *arr_free_list; /* Pointer to nodes in free list being garbage collected */
     void *tmp;      /* Temporary node pointer */
-    unsigned u;     /* Counter for array of free lists */
+    int i;         /* Counter for array of free lists */
     size_t total_mem;   /* Total memory used on list */
-    herr_t ret_value=SUCCEED;   /* return value*/
     
-    FUNC_ENTER_NOAPI_NOINIT(H5FL_arr_gc_list)
+    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5FL_arr_gc_list);
 
     /* Check if the array has a fixed maximum number of elements */
     if(head->maxelem>0) {
         /* Walk through the array of free lists */
-        for(u=0; u<(unsigned)head->maxelem; u++) {
-            if(head->onlist[u]>0) {
+        for(i=0; i<head->maxelem; i++) {
+            if(head->onlist[i]>0) {
                 /* Calculate the total memory used on this list */
-                total_mem=head->onlist[u]*u*head->size;
+                total_mem=head->onlist[i]*i*head->size;
 
                 /* For each free list being garbage collected, walk through the nodes and free them */
-                arr_free_list=head->u.list_arr[u];
+                arr_free_list=head->u.list_arr[i];
                 while(arr_free_list!=NULL) {
                     tmp=arr_free_list->next;
 
@@ -1518,8 +1498,8 @@ H5FL_arr_gc_list(H5FL_arr_head_t *head)
                 } /* end while */
 
                 /* Indicate no free nodes on the free list */
-                head->u.list_arr[u]=NULL;
-                head->onlist[u]=0;
+                head->u.list_arr[i]=NULL;
+                head->onlist[i]=0;
 
                 /* Decrement count of free memory on this "array" list */
                 head->list_mem-=total_mem;
@@ -1536,11 +1516,9 @@ H5FL_arr_gc_list(H5FL_arr_head_t *head)
     } /* end if */
     /* No maximum number of elements, use the block call to garbage collect */
     else
-        if(H5FL_blk_gc_list(&(head->u.queue))<0)
-            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGC, FAIL, "garbage collection of list failed")
+        H5FL_blk_gc_list(&(head->u.queue));
 
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(SUCCEED);
 }   /* end H5FL_arr_gc_list() */
 
 
@@ -1563,16 +1541,14 @@ static herr_t
 H5FL_arr_gc(void)
 {
     H5FL_gc_arr_node_t *gc_arr_node;    /* Pointer into the list of things to garbage collect */
-    herr_t ret_value=SUCCEED;   /* return value*/
     
-    FUNC_ENTER_NOAPI_NOINIT(H5FL_arr_gc)
+    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5FL_arr_gc);
 
     /* Walk through all the free lists, free()'ing the nodes */
     gc_arr_node=H5FL_arr_gc_head.first;
     while(gc_arr_node!=NULL) {
         /* Release the free nodes on the list */
-        if(H5FL_arr_gc_list(gc_arr_node->list)<0)
-            HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGC, FAIL, "garbage collection of list failed")
+        H5FL_arr_gc_list(gc_arr_node->list);
 
         /* Go on to the next free list to garbage collect */
         gc_arr_node=gc_arr_node->next;
@@ -1581,8 +1557,7 @@ H5FL_arr_gc(void)
     /* Double check that all the memory on the free lists are recycled */
     assert(H5FL_arr_gc_head.mem_freed==0);
 
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(SUCCEED);
 }   /* end H5FL_arr_gc() */
 
 
@@ -1611,7 +1586,7 @@ H5FL_arr_term(void)
     H5FL_gc_arr_node_t *left;   /* pointer to garbage collection lists with work left */
     H5FL_gc_arr_node_t *tmp;    /* Temporary pointer to a garbage collection node */
     
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5FL_arr_term)
+    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5FL_arr_term);
 
     /* Free the nodes on the garbage collection list, keeping nodes with allocations outstanding */
     left=NULL;
@@ -1671,7 +1646,7 @@ printf("H5FL_arr_term: head->name=%s, head->allocated=%d\n", H5FL_arr_gc_head.fi
     /* Point to the list of nodes left with allocations open, if any */
     H5FL_arr_gc_head.first=left;
     
-    FUNC_LEAVE_NOAPI(H5FL_arr_gc_head.first!=NULL ? 1 : 0)
+    FUNC_LEAVE_NOAPI(H5FL_arr_gc_head.first!=NULL ? 1 : 0);
 }   /* end H5FL_arr_term() */
 
 
@@ -1693,24 +1668,18 @@ printf("H5FL_arr_term: head->name=%s, head->allocated=%d\n", H5FL_arr_gc_head.fi
 herr_t
 H5FL_garbage_coll(void)
 {
-    herr_t                  ret_value = SUCCEED;
-
-    FUNC_ENTER_NOAPI_NOINIT(H5FL_garbage_coll)
+    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5FL_garbage_coll);
 
     /* Garbage collect the free lists for array objects */
-    if(H5FL_arr_gc()<0)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGC, FAIL, "can't garbage collect array objects")
+    H5FL_arr_gc();
 
     /* Garbage collect free lists for blocks */
-    if(H5FL_blk_gc()<0)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGC, FAIL, "can't garbage collect block objects")
+    H5FL_blk_gc();
 
     /* Garbage collect the free lists for regular objects */
-    if(H5FL_reg_gc()<0)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGC, FAIL, "can't garbage collect regular objects")
+    H5FL_reg_gc();
 
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(SUCCEED);
 }   /* end H5FL_garbage_coll() */
 
 
@@ -1749,7 +1718,7 @@ H5FL_set_free_list_limits(int reg_global_lim, int reg_list_lim, int arr_global_l
 {
     herr_t                  ret_value = SUCCEED;
 
-    FUNC_ENTER_NOAPI(H5FL_set_free_list_limits, FAIL)
+    FUNC_ENTER_NOAPI(H5FL_set_free_list_limits, FAIL);
 
     /* Set the limit variables */
     /* limit on all regular free lists */
@@ -1766,7 +1735,7 @@ H5FL_set_free_list_limits(int reg_global_lim, int reg_list_lim, int arr_global_l
     H5FL_blk_lst_mem_lim=(blk_list_lim==-1 ? UINT_MAX : (size_t)blk_list_lim);
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 }   /* end H5FL_set_free_list_limits() */
 
 
@@ -1794,13 +1763,13 @@ H5FL_term_interface(void)
 {
     int ret_value=0;
     
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5FL_term_interface)
+    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5FL_term_interface);
 
     /* Garbage collect any nodes on the free lists */
-    (void)H5FL_garbage_coll();
+    H5FL_garbage_coll();
 
     ret_value=H5FL_reg_term()+H5FL_arr_term()+H5FL_blk_term();
 
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 }
 

@@ -230,7 +230,7 @@ H5O_shared_decode (H5F_t *f, hid_t UNUSED dxpl_id, const uint8_t *buf, H5O_share
     if (version!=H5O_SHARED_VERSION_1 && version!=H5O_SHARED_VERSION)
 	HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "bad version number for shared object message");
 
-    /* Get the shared information flags */
+    /* Flags */
     flags = *buf++;
     mesg->in_gh = (flags & 0x01);
 

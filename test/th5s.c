@@ -548,8 +548,9 @@ test_h5s_chunk(void)
 
     for(i=0; i<50000; i++) {
         for(j=0; j<3; j++) {
-            if(chunk_data_dbl[i][j]!=chunk_data_flt[i][j])
+            if(chunk_data_dbl[i][j]!=chunk_data_flt[i][j]) {
                 TestErrPrintf("chunk_data_dbl[%d][%d]=%f, chunk_data_flt[%d][%d]=%f\n",i,j,chunk_data_dbl[i][j],i,j,chunk_data_flt[i][j]);
+            } /* end if */
         } /* end for */
     } /* end for */
 } /* test_h5s_chunk() */

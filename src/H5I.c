@@ -117,7 +117,6 @@ H5FL_DEFINE_STATIC(H5I_id_info_t);
 /*--------------------- Local function prototypes ---------------------------*/
 static herr_t H5I_init_interface(void);
 static H5I_id_info_t *H5I_find_id(hid_t id);
-static hid_t H5I_get_file_id(hid_t obj_id);
 static int H5I_get_ref(hid_t id);
 #ifdef H5I_DEBUG_OUTPUT
 static herr_t H5I_debug(H5I_type_t grp);
@@ -519,7 +518,7 @@ H5I_destroy_group(H5I_type_t grp)
      */
     if (1==grp_ptr->count) {
         H5I_clear_group(grp, TRUE);
-        H5E_clear(NULL); /*don't care about errors*/
+        H5E_clear(); /*don't care about errors*/
         H5MM_xfree(grp_ptr->id_list);
         HDmemset (grp_ptr, 0, sizeof(*grp_ptr));
     } else {
@@ -710,7 +709,7 @@ H5I_object_verify(hid_t id, H5I_type_t id_type)
     assert(id_type>=H5I_FILE && id_type<H5I_NGROUPS);
 
     /* Verify that the group of the ID is correct & lookup the ID */
-    if(id_type == H5I_GRP(id) && NULL!=(id_ptr = H5I_find_id(id))) {
+    if(id_type == H5I_GROUP(id) && NULL!=(id_ptr = H5I_find_id(id))) {
         /* Get the object pointer to return */
         ret_value = id_ptr->obj_ptr;
     } /* end if */
@@ -747,7 +746,7 @@ H5I_get_type(hid_t id)
     FUNC_ENTER_NOAPI(H5I_get_type, H5I_BADID);
 
     if (id>0)
-        ret_value = H5I_GRP(id);
+        ret_value = H5I_GROUP(id);
 
     assert(ret_value>=H5I_BADID && ret_value<H5I_NGROUPS);
 
@@ -795,98 +794,6 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5Iget_file_id
- *
- * Purpose:	The public version of H5I_get_file_id(), obtains the file
- *              ID given an object ID.  User has to close this ID. 
- *
- * Return:	Success:	file ID
- *
- *		Failure:	a negative value
- *
- * Programmer:  Raymond Lu
- *              Oct 27, 2003	
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-hid_t
-H5Iget_file_id(hid_t obj_id)
-{
-    hid_t		ret_value;
-
-    FUNC_ENTER_API(H5Iget_file_id, FAIL);
-    H5TRACE1("i","i",obj_id);
-
-    if((ret_value = H5I_get_file_id(obj_id))<0)
-        HGOTO_ERROR (H5E_ATOM, H5E_CANTGET, FAIL, "can't retrieve file ID");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5I_get_file_id
- *
- * Purpose:	The private version of H5Iget_file_id(), obtains the file
- *              ID given an object ID. 
- *
- * Return:	Success:	file ID
- *
- *		Failure:	a negative value
- *
- * Programmer:  Raymond Lu
- *              Oct 27, 2003	
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static hid_t
-H5I_get_file_id(hid_t obj_id)
-{
-    H5G_entry_t         *ent;
-    hid_t		ret_value;
-
-    FUNC_ENTER_NOAPI_NOINIT(H5I_get_file_id);
-
-    /* Get object type */
-    switch(H5I_GRP(obj_id)) {
-        case H5I_FILE:
-            ret_value = obj_id;
-            
-            /* Increment reference count on atom. */
-            if (H5I_inc_ref(ret_value)<0)
-                HGOTO_ERROR (H5E_ATOM, H5E_CANTSET, FAIL, "incrementing file ID failed");
-
-            break;
-
-        case H5I_DATATYPE:
-            if((ent = H5G_loc(obj_id))==NULL)
-                HGOTO_ERROR (H5E_ATOM, H5E_CANTGET, FAIL, "not a named datatype");
-            ret_value = H5F_get_id(ent->file);
-            break;
-
-        case H5I_GROUP:
-        case H5I_DATASET:
-        case H5I_ATTR:
-            if((ent = H5G_loc(obj_id))==NULL)
-                HGOTO_ERROR (H5E_ATOM, H5E_CANTGET, FAIL, "can't get symbol table info");
-            ret_value = H5F_get_id(ent->file);
-            break;
-
-        default:
-	    HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, FAIL, "invalid object ID");
-    } 
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
-}
-
-
-/*-------------------------------------------------------------------------
  * Function:	H5I_remove
  *
  * Purpose:	Removes the specified ID from its group.
@@ -916,7 +823,7 @@ H5I_remove(hid_t id)
     FUNC_ENTER_NOAPI(H5I_remove, NULL);
 
     /* Check arguments */
-    grp = H5I_GRP(id);
+    grp = H5I_GROUP(id);
     if (grp <= H5I_BADID || grp >= H5I_NGROUPS)
 	HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, NULL, "invalid group number");
     grp_ptr = H5I_id_group_list_g[grp];
@@ -1049,9 +956,9 @@ H5I_dec_ref(hid_t id)
     assert(id>=0);
 
     /* Check arguments */
-    grp = H5I_GRP(id);
+    grp = H5I_GROUP(id);
     if (grp <= H5I_BADID || grp >= H5I_NGROUPS)
-	HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, FAIL, "invalid group number");
+	HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, NULL, "invalid group number");
     grp_ptr = H5I_id_group_list_g[grp];
     if (grp_ptr == NULL || grp_ptr->count <= 0)
 	HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, FAIL, "invalid group number");
@@ -1152,9 +1059,9 @@ H5I_inc_ref(hid_t id)
     assert(id>=0);
 
     /* Check arguments */
-    grp = H5I_GRP(id);
+    grp = H5I_GROUP(id);
     if (grp <= H5I_BADID || grp >= H5I_NGROUPS)
-	HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, FAIL, "invalid group number");
+	HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, NULL, "invalid group number");
     grp_ptr = H5I_id_group_list_g[grp];
     if (!grp_ptr || grp_ptr->count<=0)
 	HGOTO_ERROR(H5E_ATOM, H5E_BADGROUP, FAIL, "invalid group");
@@ -1237,9 +1144,9 @@ H5I_get_ref(hid_t id)
     assert(id>=0);
 
     /* Check arguments */
-    grp = H5I_GRP(id);
+    grp = H5I_GROUP(id);
     if (grp <= H5I_BADID || grp >= H5I_NGROUPS)
-	HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, FAIL, "invalid group number");
+	HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, NULL, "invalid group number");
     grp_ptr = H5I_id_group_list_g[grp];
     if (!grp_ptr || grp_ptr->count<=0)
 	HGOTO_ERROR(H5E_ATOM, H5E_BADGROUP, FAIL, "invalid group");
@@ -1341,37 +1248,42 @@ H5I_find_id(hid_t id)
     unsigned		hash_loc;		/*bucket pointer	*/
     H5I_id_info_t	*ret_value = NULL;	/*return value		*/
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5I_find_id);
+    FUNC_ENTER_NOAPI_NOINIT(H5I_find_id);
 
     /* Check arguments */
-    grp = H5I_GRP(id);
-    assert(grp > H5I_BADID && grp < H5I_NGROUPS);
+    grp = H5I_GROUP(id);
+    if (grp <= H5I_BADID || grp >= H5I_NGROUPS)
+	HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, NULL, "invalid group number");
     grp_ptr = H5I_id_group_list_g[grp];
-    assert(grp_ptr && grp_ptr->count > 0);
+    if (grp_ptr == NULL || grp_ptr->count <= 0)
+	HGOTO_ERROR(H5E_ATOM, H5E_BADGROUP, NULL, "invalid group");
 
     /* Get the bucket in which the ID is located */
     hash_loc = (unsigned)H5I_LOC(id, grp_ptr->hash_size);
     id_ptr = grp_ptr->id_list[hash_loc];
+    if (id_ptr == NULL)
+	HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, NULL, "invalid ID");
 
     /* Scan the bucket's linked list for a match */
     last_id=NULL;
     while (id_ptr) {
-	if (id_ptr->id == id) {
-            /* If we found an object, move it to the front of the list, if it isn't there already */
-            if(last_id!=NULL) {
-                last_id->next=id_ptr->next;
-                id_ptr->next=grp_ptr->id_list[hash_loc];
-                grp_ptr->id_list[hash_loc]=id_ptr;
-            } /* end if */
+	if (id_ptr->id == id)
             break;
-        } /* end if */
         last_id=id_ptr;
 	id_ptr = id_ptr->next;
-    } /* end while */
+    }
+
+    /* If we found an object, move it to the front of the list, if it isn't there already */
+    if(id_ptr!=NULL && last_id!=NULL) {
+        last_id->next=id_ptr->next;
+        id_ptr->next=grp_ptr->id_list[hash_loc];
+        grp_ptr->id_list[hash_loc]=id_ptr;
+    } /* end if */
 
     /* Set the return value */
     ret_value = id_ptr;
 
+done:
     FUNC_LEAVE_NOAPI(ret_value);
 }
 
@@ -1478,7 +1390,7 @@ H5I_debug(H5I_type_t grp)
     /* Cache */
     fprintf(stderr, "	 Cache:\n");
     for (is=0; is<ID_CACHE_SIZE; is++) {
-        if (H5I_cache_g[is] && H5I_GRP(H5I_cache_g[is]->id)==grp) {
+        if (H5I_cache_g[is] && H5I_GROUP(H5I_cache_g[is]->id)==grp) {
             fprintf(stderr, "	     Entry-%d, ID=%lu\n",
                     is, (unsigned long)(H5I_cache_g[is]->id));
         }

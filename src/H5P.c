@@ -213,13 +213,17 @@ H5P_init_interface(void)
 
     FUNC_ENTER_NOAPI_NOINIT(H5P_init_interface);
 
+    /* Make certain IDs are initialized */
+    if (ret_value < 0)
+        HGOTO_ERROR(H5E_ATOM, H5E_CANTINIT, FAIL, "unable to initialize atom group");
+    
     /*
      * Initialize the Generic Property class & object groups.
      */
     if (H5I_init_group(H5I_GENPROP_CLS, H5I_GENPROPCLS_HASHSIZE, 0, (H5I_free_t)H5P_close_class) < 0)
-        HGOTO_ERROR(H5E_ATOM, H5E_CANTINIT, FAIL, "unable to initialize ID group");
+        HGOTO_ERROR(H5E_ATOM, H5E_CANTINIT, FAIL, "unable to initialize atom group");
     if (H5I_init_group(H5I_GENPROP_LST, H5I_GENPROPOBJ_HASHSIZE, 0, (H5I_free_t)H5P_close) < 0)
-        HGOTO_ERROR(H5E_ATOM, H5E_CANTINIT, FAIL, "unable to initialize ID group");
+        HGOTO_ERROR(H5E_ATOM, H5E_CANTINIT, FAIL, "unable to initialize atom group");
 
     /* Create root property list class */
 
@@ -2000,7 +2004,6 @@ done:
         H5P_prp_get_func_t prp_get; IN: Function pointer to property get callback
         H5P_prp_delete_func_t prp_delete; IN: Function pointer to property delete callback
         H5P_prp_copy_func_t prp_copy; IN: Function pointer to property copy callback
-        H5P_prp_compare_func_t prp_cmp; IN: Function pointer to property compare callback
         H5P_prp_close_func_t prp_close; IN: Function pointer to property close
                                     callback
  RETURNS
@@ -2090,20 +2093,6 @@ done:
     negative value, the new property value is not copied into the property and
     the property list copy routine returns an error value.
 
-        The 'compare' callback is called when a property list with this
-    property is compared to another property list.  H5P_prp_compare_func_t is
-    defined as:
-        typedef int (*H5P_prp_compare_func_t)( void *value1, void *value2,
-            size_t size);
-    where the parameters to the callback function are:
-        const void *value1; IN: The value of the first property being compared.
-        const void *value2; IN: The value of the second property being compared.
-        size_t size;        IN: The size of the property value
-    The 'compare' routine may not modify the values to be compared.  The
-    'compare' routine should return a positive value if VALUE1 is greater than
-    VALUE2, a negative value if VALUE2 is greater than VALUE1 and zero if VALUE1
-    and VALUE2 are equal.
-
         The 'close' callback is called when a property list with this
     property is being destroyed.  H5P_prp_close_func_t is defined as:
         typedef herr_t (*H5P_prp_close_func_t)(const char *name, size_t size,
@@ -2136,32 +2125,18 @@ done:
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-#ifdef H5_WANT_H5_V1_6_COMPAT
 herr_t
 H5Pregister(hid_t cls_id, const char *name, size_t size, void *def_value,
     H5P_prp_create_func_t prp_create, H5P_prp_set_func_t prp_set,
     H5P_prp_get_func_t prp_get, H5P_prp_delete_func_t prp_delete,
     H5P_prp_copy_func_t prp_copy, H5P_prp_close_func_t prp_close)
-#else /* H5_WANT_H5_V1_6_COMPAT */
-herr_t
-H5Pregister(hid_t cls_id, const char *name, size_t size, void *def_value,
-    H5P_prp_create_func_t prp_create, H5P_prp_set_func_t prp_set,
-    H5P_prp_get_func_t prp_get, H5P_prp_delete_func_t prp_delete,
-    H5P_prp_copy_func_t prp_copy, H5P_prp_compare_func_t prp_cmp, 
-    H5P_prp_close_func_t prp_close)
-#endif /* H5_WANT_H5_V1_6_COMPAT */
 {
     H5P_genclass_t	*pclass;   /* Property list class to modify */
     herr_t ret_value;     /* return value */
 
     FUNC_ENTER_API(H5Pregister, FAIL);
-#ifdef H5_WANT_H5_V1_6_COMPAT
     H5TRACE10("e","iszxxxxxxx",cls_id,name,size,def_value,prp_create,prp_set,
              prp_get,prp_delete,prp_copy,prp_close);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    H5TRACE11("e","iszxxxxxxxx",cls_id,name,size,def_value,prp_create,prp_set,
-             prp_get,prp_delete,prp_copy,prp_cmp,prp_close);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
 
     /* Check arguments. */
     if (NULL == (pclass = H5I_object_verify(cls_id, H5I_GENPROP_CLS)))
@@ -2171,15 +2146,9 @@ H5Pregister(hid_t cls_id, const char *name, size_t size, void *def_value,
     if (size>0 && def_value==NULL)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "properties >0 size must have default");
 
-#ifdef H5_WANT_H5_V1_6_COMPAT
     /* Create the new property list class */
     if ((ret_value=H5P_register(pclass,name,size,def_value,prp_create,prp_set,prp_get,prp_delete,prp_copy,NULL,prp_close))<0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to register property in class");
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    /* Create the new property list class */
-    if ((ret_value=H5P_register(pclass,name,size,def_value,prp_create,prp_set,prp_get,prp_delete,prp_copy,prp_cmp,prp_close))<0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to register property in class");
-#endif /* H5_WANT_H5_V1_6_COMPAT */
 
 done:
     FUNC_LEAVE_API(ret_value);
@@ -2226,7 +2195,6 @@ done:
             size_t size, void *value);
     where the parameters to the callback function are:
         hid_t prop_id;      IN: The ID of the property list being modified.
-        const char *name;   IN: The name of the property being modified.
         size_t size;        IN: The size of the property value
         void *new_value;    IN/OUT: The value being set for the property.
     The 'set' routine may modify the value to be set and those changes will be
@@ -2415,7 +2383,6 @@ done:
         H5P_prp_get_func_t prp_get; IN: Function pointer to property get callback
         H5P_prp_delete_func_t prp_delete; IN: Function pointer to property delete callback
         H5P_prp_copy_func_t prp_copy; IN: Function pointer to property copy callback
-        H5P_prp_compare_func_t prp_cmp; IN: Function pointer to property compare callback
         H5P_prp_close_func_t prp_close; IN: Function pointer to property close
                                     callback
  RETURNS
@@ -2440,7 +2407,6 @@ done:
             size_t size, void *value);
     where the parameters to the callback function are:
         hid_t prop_id;      IN: The ID of the property list being modified.
-        const char *name;   IN: The name of the property being modified.
         size_t size;        IN: The size of the property value
         void *new_value;    IN/OUT: The value being set for the property.
     The 'set' routine may modify the value to be set and those changes will be
@@ -2489,20 +2455,6 @@ done:
     negative value, the new property value is not copied into the property and
     the property list copy routine returns an error value.
 
-        The 'compare' callback is called when a property list with this
-    property is compared to another property list.  H5P_prp_compare_func_t is
-    defined as:
-        typedef int (*H5P_prp_compare_func_t)( void *value1, void *value2,
-            size_t size);
-    where the parameters to the callback function are:
-        const void *value1; IN: The value of the first property being compared.
-        const void *value2; IN: The value of the second property being compared.
-        size_t size;        IN: The size of the property value
-    The 'compare' routine may not modify the values to be compared.  The
-    'compare' routine should return a positive value if VALUE1 is greater than
-    VALUE2, a negative value if VALUE2 is greater than VALUE1 and zero if VALUE1
-    and VALUE2 are equal.
-
         The 'close' callback is called when a property list with this
     property is being destroyed.  H5P_prp_close_func_t is defined as:
         typedef herr_t (*H5P_prp_close_func_t)(const char *name, size_t size,
@@ -2539,31 +2491,18 @@ done:
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-#ifdef H5_WANT_H5_V1_6_COMPAT
 herr_t
 H5Pinsert(hid_t plist_id, const char *name, size_t size, void *value,
     H5P_prp_set_func_t prp_set, H5P_prp_get_func_t prp_get,
     H5P_prp_delete_func_t prp_delete, H5P_prp_copy_func_t prp_copy, 
     H5P_prp_close_func_t prp_close)
-#else /* H5_WANT_H5_V1_6_COMPAT */
-herr_t
-H5Pinsert(hid_t plist_id, const char *name, size_t size, void *value,
-    H5P_prp_set_func_t prp_set, H5P_prp_get_func_t prp_get,
-    H5P_prp_delete_func_t prp_delete, H5P_prp_copy_func_t prp_copy, 
-    H5P_prp_compare_func_t prp_cmp, H5P_prp_close_func_t prp_close)
-#endif /* H5_WANT_H5_V1_6_COMPAT */
 {
     H5P_genplist_t	*plist;    /* Property list to modify */
     herr_t ret_value;           /* return value */
 
     FUNC_ENTER_API(H5Pinsert, FAIL);
-#ifdef H5_WANT_H5_V1_6_COMPAT
     H5TRACE9("e","iszxxxxxx",plist_id,name,size,value,prp_set,prp_get,
              prp_delete,prp_copy,prp_close);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    H5TRACE10("e","iszxxxxxxx",plist_id,name,size,value,prp_set,prp_get,
-             prp_delete,prp_copy,prp_cmp,prp_close);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
 
     /* Check arguments. */
     if (NULL == (plist = H5I_object_verify(plist_id, H5I_GENPROP_LST)))
@@ -2574,13 +2513,8 @@ H5Pinsert(hid_t plist_id, const char *name, size_t size, void *value,
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "properties >0 size must have default");
 
     /* Create the new property list class */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     if ((ret_value=H5P_insert(plist,name,size,value,prp_set,prp_get,prp_delete,prp_copy,NULL,prp_close))<0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to register property in plist");
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    if ((ret_value=H5P_insert(plist,name,size,value,prp_set,prp_get,prp_delete,prp_copy,prp_cmp,prp_close))<0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to register property in plist");
-#endif /* H5_WANT_H5_V1_6_COMPAT */
 
 done:
     FUNC_LEAVE_API(ret_value);

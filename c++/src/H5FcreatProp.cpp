@@ -34,7 +34,7 @@ FileCreatPropList::FileCreatPropList() : PropList( H5P_FILE_CREATE ) {}
 FileCreatPropList::FileCreatPropList( const FileCreatPropList& orig ) : PropList( orig ) {}
 
 void FileCreatPropList::getVersion( 
-			unsigned& boot, unsigned& freelist, unsigned& stab, unsigned& shhdr ) const
+			int& boot, int& freelist, int& stab, int& shhdr ) const
 {
    herr_t ret_value = H5Pget_version( id, &boot, &freelist, &stab, &shhdr );
    if( ret_value < 0 )
@@ -86,7 +86,8 @@ void FileCreatPropList::getSizes( size_t& sizeof_addr, size_t& sizeof_size ) con
    }
 }
 
-void FileCreatPropList::setSymk( unsigned ik, unsigned lk ) const
+#ifdef H5_WANT_H5_V1_4_COMPAT
+void FileCreatPropList::setSymk( int ik, int lk ) const
 {
    herr_t ret_value = H5Pset_sym_k( id, ik, lk );
    if( ret_value < 0 )
@@ -96,7 +97,7 @@ void FileCreatPropList::setSymk( unsigned ik, unsigned lk ) const
    }
 }
 
-void FileCreatPropList::getSymk( unsigned& ik, unsigned& lk ) const
+void FileCreatPropList::getSymk( int& ik, int& lk ) const
 {
    herr_t ret_value = H5Pget_sym_k( id, &ik, &lk );
    if( ret_value < 0 )
@@ -105,8 +106,29 @@ void FileCreatPropList::getSymk( unsigned& ik, unsigned& lk ) const
 		"H5Pget_sym_k failed");
    }
 }
+#else /* H5_WANT_H5_V1_4_COMPAT */
+void FileCreatPropList::setSymk( int ik, unsigned lk ) const
+{
+   herr_t ret_value = H5Pset_sym_k( id, ik, lk );
+   if( ret_value < 0 )
+   {
+      throw PropListIException("FileCreatPropList::setSymk", 
+		"H5Pset_sym_k failed");
+   }
+}
 
-void FileCreatPropList::setIstorek( unsigned ik ) const
+void FileCreatPropList::getSymk( int& ik, unsigned& lk ) const
+{
+   herr_t ret_value = H5Pget_sym_k( id, &ik, &lk );
+   if( ret_value < 0 )
+   {
+      throw PropListIException("FileCreatPropList::getSymk", 
+		"H5Pget_sym_k failed");
+   }
+}
+#endif /* H5_WANT_H5_V1_4_COMPAT */
+
+void FileCreatPropList::setIstorek( int ik ) const
 {
    herr_t ret_value = H5Pset_istore_k( id, ik );
    if( ret_value < 0 )
@@ -115,9 +137,9 @@ void FileCreatPropList::setIstorek( unsigned ik ) const
 		"H5Pset_istore_k failed");
    }
 }
-unsigned FileCreatPropList::getIstorek() const
+int FileCreatPropList::getIstorek() const
 {
-   unsigned ik;
+   int ik;
    herr_t ret_value = H5Pget_istore_k( id, &ik );
    if( ret_value < 0 )
    {
