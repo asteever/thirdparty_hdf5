@@ -228,7 +228,7 @@ H5O_dtype_decode_helper(H5F_t *f, const uint8_t **pp, H5T_t *dt)
 		HRETURN_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL,
 			       "memory allocation failed");
 	    }
-	    dt->u.compnd.memb[i].type->ent.header = HADDR_UNDEF;
+	    H5F_addr_undef (&(dt->u.compnd.memb[i].type->ent.header));
 	    if (H5O_dtype_decode_helper(f, pp, dt->u.compnd.memb[i].type)<0) {
 		for (j=0; j<=i; j++) H5MM_xfree(dt->u.compnd.memb[j].name);
 		H5MM_xfree(dt->u.compnd.memb);
@@ -261,7 +261,7 @@ H5O_dtype_decode_helper(H5F_t *f, const uint8_t **pp, H5T_t *dt)
 	    HRETURN_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL,
 			  "memory allocation failed");
 	}
-	dt->parent->ent.header = HADDR_UNDEF;
+	H5F_addr_undef(&(dt->parent->ent.header));
 	if (H5O_dtype_decode_helper(f, pp, dt->parent)<0) {
 	    HRETURN_ERROR(H5E_DATATYPE, H5E_CANTDECODE, FAIL,
 			  "unable to decode parent data type");
@@ -297,7 +297,7 @@ H5O_dtype_decode_helper(H5F_t *f, const uint8_t **pp, H5T_t *dt)
 
     case H5T_VLEN:  /* Variable length datatypes...  */
         /* Decode base type of VL information */
-        dt->parent->ent.header = HADDR_UNDEF;
+        H5F_addr_undef(&(dt->parent->ent.header));
 	    if (H5O_dtype_decode_helper(f, pp, dt->parent)<0) {
             HRETURN_ERROR(H5E_DATATYPE, H5E_CANTDECODE, FAIL, "unable to decode VL parent type");
         }
@@ -685,7 +685,7 @@ H5O_dtype_decode(H5F_t *f, const uint8_t *p,
 	HRETURN_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL,
 		       "memory allocation failed");
     }
-    dt->ent.header = HADDR_UNDEF;
+    H5F_addr_undef (&(dt->ent.header));
 
     if (H5O_dtype_decode_helper(f, &p, dt) < 0) {
 	H5MM_xfree(dt);
@@ -898,8 +898,8 @@ H5O_dtype_reset(void *_mesg)
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_dtype_get_share(H5F_t UNUSED *f, const void *_mesg,
-		    H5O_shared_t *sh/*out*/)
+H5O_dtype_get_share (H5F_t UNUSED *f, const void *_mesg,
+		     H5O_shared_t *sh/*out*/)
 {
     const H5T_t	*dt = (const H5T_t *)_mesg;
     
@@ -907,7 +907,7 @@ H5O_dtype_get_share(H5F_t UNUSED *f, const void *_mesg,
     assert (dt);
     assert (sh);
 
-    if (H5F_addr_defined (dt->ent.header)) {
+    if (H5F_addr_defined (&(dt->ent.header))) {
 	assert (H5T_STATE_NAMED==dt->state || H5T_STATE_OPEN==dt->state);
 	sh->in_gh = FALSE;
 	sh->u.ent = dt->ent;

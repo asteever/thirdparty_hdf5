@@ -706,9 +706,12 @@ __DLL__ int64_t HDstrtoll (const char *s, const char **rest, int base);
 #define HDwrite(F,M,Z)		write(F,M,Z)
 
 /*
- * And now for a couple non-Posix functions...
+ * And now for a couple non-Posix functions...  Watch out for systems that
+ * define these in terms of macros.
  */
+#ifndef strdup
 char *strdup(const char *s);
+#endif
 #define HDstrdup(S)		strdup(S)
 
 #ifndef HAVE_SNPRINTF
@@ -880,8 +883,8 @@ extern hbool_t H5_libinit_g;   /*good thing C's lazy about extern! */
 
 #define FUNC_ENTER_INIT(func_name,interface_init_func,err) {		      \
    CONSTR (FUNC, #func_name);						      \
-   PABLO_SAVE (ID_ ## func_name)  					      \
    H5TRACE_DECL;							      \
+   PABLO_SAVE (ID_ ## func_name);					      \
 									      \
    PABLO_TRACE_ON (PABLO_MASK, pablo_func_id);				      \
 									      \
@@ -934,7 +937,7 @@ extern hbool_t H5_libinit_g;   /*good thing C's lazy about extern! */
  * through one of these two sets of macros.
  */
 #ifdef HAVE_PABLO
-#  define PABLO_SAVE(func_id)	intn pablo_func_id = func_id;
+#  define PABLO_SAVE(func_id)	intn pablo_func_id = func_id
 #  define PABLO_TRACE_ON(m, f)	TRACE_ON(m,f)
 #  define PABLO_TRACE_OFF(m, f) TRACE_OFF(m,f)
 #else

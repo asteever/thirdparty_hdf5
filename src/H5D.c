@@ -23,6 +23,7 @@ static char		RcsId[] = "@(#)$Revision$";
 #include <H5Eprivate.h>		/* Error handling		  	*/
 #include <H5Gprivate.h>		/* Group headers		  	*/
 #include <H5HLprivate.h>	/* Name heap				*/
+#include <H5MFprivate.h>	/* File space allocation header		*/
 #include <H5MMprivate.h>	/* Memory management			*/
 #include <H5Oprivate.h>		/* Object headers		  	*/
 #include <H5Pprivate.h>		/* Property lists			*/
@@ -30,13 +31,6 @@ static char		RcsId[] = "@(#)$Revision$";
 #include <H5TBprivate.h>	/* Temporary buffers        		*/
 #include <H5Vprivate.h>		/* Vector and array functions		*/
 #include <H5Zprivate.h>		/* Data filters				*/
-
-/*
- * The MPIO driver is needed because there are kludges in this file and
- * places where we check for things that aren't handled by this driver.
- */
-#include <H5FDmpio.h>
-
 
 #ifdef HAVE_PARALLEL
 /* Remove this if H5R_DATASET_REGION is no longer used in this file */
@@ -68,7 +62,7 @@ const H5D_create_t	H5D_create_dflt = {
     {NULL, 0, NULL},		/* No fill value			*/
 
     /* External file list */
-    {HADDR_UNDEF,		/* External file list heap address	*/
+    {H5F_ADDR_UNDEF,		/* External file list heap address	*/
      0,				/*...slots allocated			*/
      0,				/*...slots used				*/
      NULL}, 			/*...slot array				*/
@@ -634,7 +628,7 @@ H5Dread(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
 			  "selection+offset not within extent");
 	}
     }
-    if (H5P_DEFAULT != plist_id && H5P_DATA_XFER != H5P_get_class(plist_id)) {
+    if (H5P_DEFAULT != plist_id && H5P_DATASET_XFER != H5P_get_class(plist_id)) {
 	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not xfer parms");
     }
     if (!buf) {
@@ -729,7 +723,7 @@ H5Dwrite(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
 			  "selection+offset not within extent");
 	}
     }
-    if (H5P_DEFAULT != plist_id && H5P_DATA_XFER != H5P_get_class(plist_id)) {
+    if (H5P_DEFAULT != plist_id && H5P_DATASET_XFER != H5P_get_class(plist_id)) {
 	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not xfer parms");
     }
     if (!buf) {
@@ -825,7 +819,7 @@ H5D_new(const H5D_create_t *create_parms)
         ret_value->create_parms = H5P_copy (H5P_DATASET_CREATE,
 					    &H5D_create_dflt);
     }
-    ret_value->ent.header = HADDR_UNDEF;
+    H5F_addr_undef(&(ret_value->ent.header));
 
     /* Success */
 
@@ -900,7 +894,7 @@ H5D_create(H5G_entry_t *loc, const char *name, const H5T_t *type,
 
 #ifdef HAVE_PARALLEL
     /* If MPIO is used, no filter support yet. */
-    if (H5FD_MPIO==f->shared->lf->driver_id &&
+    if (f->shared->access_parms->driver == H5F_LOW_MPIO &&
 	create_parms->pline.nfilters>0) {
 	HGOTO_ERROR (H5E_DATASET, H5E_UNSUPPORTED, NULL,
 		     "Parallel IO does not support filters yet");
@@ -1045,7 +1039,7 @@ H5D_create(H5G_entry_t *loc, const char *name, const H5T_t *type,
 			"unable to initialize storage");
 	}
     } else {
-	new_dset->layout.addr = HADDR_UNDEF;
+	H5F_addr_undef (&(new_dset->layout.addr));
     }
 
     /* Update layout message */
@@ -1061,8 +1055,8 @@ H5D_create(H5G_entry_t *loc, const char *name, const H5T_t *type,
 	for (i=0; i<efl->nused; i++) {
 	    heap_size += H5HL_ALIGN (HDstrlen (efl->slot[i].name)+1);
 	}
-	if (H5HL_create (f, heap_size, &(efl->heap_addr)/*out*/)<0 ||
-	    (size_t)(-1)==H5HL_insert(f, efl->heap_addr, 1, "")) {
+	if (H5HL_create (f, heap_size, &(efl->heap_addr))<0 ||
+	    (size_t)(-1)==H5HL_insert (f, &(efl->heap_addr), 1, "")) {
 	    HGOTO_ERROR (H5E_DATASET, H5E_CANTINIT, NULL,
 			 "unable to create external file list name heap");
 	}
@@ -1094,7 +1088,7 @@ H5D_create(H5G_entry_t *loc, const char *name, const H5T_t *type,
 	    H5P_close (H5P_DATASET_CREATE, new_dset->create_parms);
 	    new_dset->create_parms = NULL;
 	}
-	if (H5F_addr_defined(new_dset->ent.header)) {
+	if (H5F_addr_defined(&(new_dset->ent.header))) {
 	    H5O_close(&(new_dset->ent));
 	}
 	new_dset->ent.file = NULL;
@@ -1277,8 +1271,8 @@ H5D_open_oid(H5G_entry_t *ent)
 
 #ifdef HAVE_PARALLEL
     /* If MPIO is used, no filter support yet. */
-    if (H5FD_MPIO==dataset->ent.file->shared->lf->driver_id &&
-	dataset->create_parms->pline.nfilters>0){
+    if (dataset->ent.file->shared->access_parms->driver == H5F_LOW_MPIO &&
+            dataset->create_parms->pline.nfilters>0){
         HGOTO_ERROR (H5E_DATASET, H5E_UNSUPPORTED, NULL,
 		     "Parallel IO does not support filters yet");
     }
@@ -1320,7 +1314,7 @@ H5D_open_oid(H5G_entry_t *ent)
     /* Get the external file list message, which might not exist */
     if (NULL==H5O_read (&(dataset->ent), H5O_EFL, 0,
 			&(dataset->create_parms->efl)) &&
-	!H5F_addr_defined (dataset->layout.addr)) {
+	!H5F_addr_defined (&(dataset->layout.addr))) {
         HGOTO_ERROR (H5E_DATASET, H5E_CANTINIT, NULL,
 		     "storage address is undefined an no external file list");
     }
@@ -1344,7 +1338,7 @@ H5D_open_oid(H5G_entry_t *ent)
 done:
     if (space) H5S_close(space);
     if (ret_value==NULL && dataset) {
-        if (H5F_addr_defined(dataset->ent.header)) {
+        if (H5F_addr_defined(&(dataset->ent.header))) {
             H5O_close(&(dataset->ent));
         }
         if (dataset->type) {
@@ -1431,23 +1425,25 @@ H5D_close(H5D_t *dataset)
  *		Thursday, December  4, 1997
  *
  * Modifications:
- *		Robb Matzke, 1998-06-09
- *		The data space is no longer cached in the dataset struct.
+ *	Robb Matzke, 9 Jun 1998
+ *	The data space is no longer cached in the dataset struct.
  *
- * 		Robb Matzke, 1998-08-11
- *		Added timing calls around all the data space I/O functions.
+ * 	Robb Matzke, 11 Aug 1998
+ *	Added timing calls around all the data space I/O functions.
  *
- * 		rky, 1998-09-18
- *		Added must_convert to do non-optimized read when necessary.
+ * 	rky 980918
+ *	Added must_convert to do non-optimized read when necessary.
  *
- *  		Quincey Koziol, 1999-07-02
- *		Changed xfer_parms parameter to xfer plist parameter, so it
- *		could be passed to H5T_convert.
+ *  Quincey Koziol, 2 July 1999
+ *  Changed xfer_parms parameter to xfer plist parameter, so it could be passed
+ *  to H5T_convert
+ *
  *-------------------------------------------------------------------------
  */
 herr_t
 H5D_read(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
-	 const H5S_t *file_space, hid_t dxpl_id, void *buf/*out*/)
+	 const H5S_t *file_space, hid_t dset_xfer_plid,
+	 void *buf/*out*/)
 {
     const H5F_xfer_t	   *xfer_parms = NULL;
     hssize_t    	nelmts;			/*number of elements	*/
@@ -1490,10 +1486,10 @@ H5D_read(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
     HDmemset(&file_iter,0,sizeof(H5S_sel_iter_t));
 
     /* Get the dataset transfer property list */
-    if (H5P_DEFAULT == dxpl_id) {
+    if (H5P_DEFAULT == dset_xfer_plid) {
         xfer_parms = &H5F_xfer_dflt;
-    } else if (H5P_DATA_XFER != H5P_get_class(dxpl_id) ||
-	       NULL == (xfer_parms = H5I_object(dxpl_id))) {
+    } else if (H5P_DATASET_XFER != H5P_get_class(dset_xfer_plid) ||
+	       NULL == (xfer_parms = H5I_object(dset_xfer_plid))) {
         HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not xfer parms");
     }
 
@@ -1508,16 +1504,19 @@ H5D_read(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
     nelmts = H5S_get_select_npoints(mem_space);
 
 #ifdef HAVE_PARALLEL
-    {
-	/* Collective access is not permissible with the MPIO driver */
-	H5FD_mpio_dxpl_t *dx;
-	if (H5FD_MPIO==dataset->ent.file->shared->lf->driver_id &&
-	    H5FD_MPIO==xfer_parms->driver_id &&
-	    (dx=xfer_parms->driver_info) &&
-	    H5FD_MPIO_COLLECTIVE==dx->xfer_mode) {
+    /*
+     * Check if collective data transfer requested.
+     */
+    if (xfer_parms->xfer_mode == H5D_XFER_COLLECTIVE){
+	/*
+	 * Verify that the file can support collective access. The check may
+	 * not be necessarily since collective access can always be simulated
+	 * by independent access.  Nevertheless, must check driver is MPIO
+	 * before using those access_mode which exists only for MPIO case.
+	 */
+	if (dataset->ent.file->shared->access_parms->driver != H5F_LOW_MPIO)
 	    HGOTO_ERROR (H5E_DATASET, H5E_UNSUPPORTED, FAIL,
 			 "collective access not permissible");
-	}
     }
 #endif
 
@@ -1539,7 +1538,7 @@ H5D_read(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
     } else if (!H5T_IS_NOOP(tpath)) {
         if ((src_id=H5I_register(H5I_DATATYPE,
 				 H5T_copy(dataset->type, H5T_COPY_ALL)))<0 ||
-	    (dst_id=H5I_register(H5I_DATATYPE,
+            (dst_id=H5I_register(H5I_DATATYPE,
 				 H5T_copy(mem_type, H5T_COPY_ALL)))<0) {
             HGOTO_ERROR(H5E_DATASET, H5E_CANTREGISTER, FAIL,
                 "unable to register types for conversion");
@@ -1557,7 +1556,7 @@ H5D_read(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
      * (the latter in case the arguments to sconv_funcs
      * turn out to be inappropriate for MPI-IO).  */
     if (H5_mpi_opt_types_g &&
-        H5FD_MPIO==dataset->ent.file->shared->lf->driver_id) {
+        H5F_LOW_MPIO==dataset->ent.file->shared->access_parms->driver) {
 	sconv->read = H5S_mpio_spaces_read;
     }
 #endif /*HAVE_PARALLEL*/
@@ -1574,7 +1573,7 @@ H5D_read(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
 			       &(dataset->create_parms->pline),
 			       &(dataset->create_parms->efl),
 			       H5T_get_size (dataset->type), file_space,
-			       mem_space, dxpl_id, buf/*out*/,
+			       mem_space, xfer_parms, buf/*out*/,
 			       &must_convert);
         if (status<0) {
 	    /* Supports only no conversion, type or space, for now. */
@@ -1698,7 +1697,7 @@ printf("%s: check 2.0, src_type_size=%d, dst_type_size=%d, target_size=%d, min_e
 			     &(dataset->create_parms->fill),
 			     &(dataset->create_parms->efl), src_type_size,
 			     file_space, &file_iter, smine_nelmts,
-			     dxpl_id, tconv_buf/*out*/);
+			     xfer_parms, tconv_buf/*out*/);
 #ifdef H5S_DEBUG
 	H5_timer_end(&(sconv->stats[1].gath_timer), &timer);
 	sconv->stats[1].gath_nbytes += n * src_type_size;
@@ -1710,20 +1709,25 @@ printf("%s: check 2.0, src_type_size=%d, dst_type_size=%d, target_size=%d, min_e
 	
 #ifdef QAK
 	printf("%s: check 6.0\n",FUNC);
-	printf("%s: check 6.5\n",FUNC);
-	{
-	    int i;
-	    uint16_t *b;
+{
+    char *p=tconv_buf;
+    intn i;
 
-	    if(qak_debug) {
-		b=tconv_buf;
-		printf("\ntconv_buf:");
-		for (i=0; i<smine_nelmts; i++,b++) {
-		    printf("(%d)%u ",i,(unsigned)*b);
-		}
-		printf("\n");
-	    }
-	}
+    for(i=0; i<4; i++) {
+        printf("%s: element[%d]={%d, ",FUNC,i,(int)*(int *)p);
+        p+=sizeof(int);
+        printf("%f, ",(float)*(float *)p);
+        p+=sizeof(float);
+        printf(" {%x, ",(unsigned)*(unsigned *)p);
+        p+=sizeof(int);
+        printf("%x-",(unsigned)*(unsigned *)p);
+        p+=sizeof(int);
+        printf("%x, ",(unsigned)*(unsigned *)p);
+        p+=sizeof(int);
+        printf("%d}}\n",(int)*(int *)p);
+        p+=sizeof(int);
+    }
+}
 #endif
 	
         if (H5T_BKG_YES==need_bkg) {
@@ -1752,12 +1756,27 @@ printf("%s: check 2.0, src_type_size=%d, dst_type_size=%d, target_size=%d, min_e
          * Perform data type conversion.
          */
 	if (H5T_convert(tpath, src_id, dst_id, smine_nelmts, 0, tconv_buf,
-			bkg_buf, dxpl_id)<0) {
+			bkg_buf, dset_xfer_plid)<0) {
             HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL,
                 "data type conversion failed");
         }
 
 #ifdef QAK
+{
+    char *p=tconv_buf;
+    intn i;
+
+    for(i=0; i<4; i++) {
+        printf("%s: element[%d]={%d, ",FUNC,i,(int)*(int *)p);
+        p+=sizeof(int);
+        printf("%f, ",(float)*(float *)p);
+        p+=sizeof(float);
+        printf(" {%d, ",(int)*(int *)p);
+        p+=sizeof(int);
+        printf("%p}}\n",(char *)*(char **)p);
+        p+=sizeof(char *);
+    }
+}
 	printf("%s: check 8.0\n",FUNC);
 #endif
 	
@@ -1827,7 +1846,8 @@ printf("%s: check 2.0, src_type_size=%d, dst_type_size=%d, target_size=%d, min_e
  */
 herr_t
 H5D_write(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
-	  const H5S_t *file_space, hid_t dxpl_id, const void *buf)
+	  const H5S_t *file_space, hid_t dset_xfer_plid,
+	  const void *buf)
 {
     const H5F_xfer_t	   *xfer_parms = NULL;
     hssize_t		nelmts;			/*total number of elmts	*/
@@ -1868,9 +1888,9 @@ H5D_write(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
     /* If MPIO is used, no VL datatype support yet. */
     /* This is because they use the global heap in the file and we don't */
     /* support parallel access of that yet */
-    if (H5FD_MPIO==dataset->ent.file->shared->lf->driver_id &&
-	H5T_get_class(mem_type)==H5T_VLEN) {
-        HGOTO_ERROR (H5E_DATASET, H5E_UNSUPPORTED, FAIL,
+    if (H5F_LOW_MPIO==dataset->ent.file->shared->access_parms->driver &&
+            H5T_get_class(mem_type)==H5T_VLEN) {
+        HGOTO_ERROR (H5E_DATASET, H5E_UNSUPPORTED, NULL,
 		     "Parallel IO does not support writing VL datatypes yet");
     }
 #endif
@@ -1878,10 +1898,10 @@ H5D_write(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
     /* If MPIO is used, no dataset region reference support yet. */
     /* This is because they use the global heap in the file and we don't */
     /* support parallel access of that yet */
-    if (H5FD_MPIO==dataset->ent.file->shared->lf->driver_id &&
-	H5T_get_class(mem_type)==H5T_REFERENCE &&
-	H5T_get_ref_type(mem_type)==H5R_DATASET_REGION) {
-        HGOTO_ERROR (H5E_DATASET, H5E_UNSUPPORTED, FAIL,
+    if (H5F_LOW_MPIO==dataset->ent.file->shared->access_parms->driver &&
+            H5T_get_class(mem_type)==H5T_REFERENCE &&
+            H5T_get_ref_type(mem_type)==H5R_DATASET_REGION) {
+        HGOTO_ERROR (H5E_DATASET, H5E_UNSUPPORTED, NULL,
 		     "Parallel IO does not support writing VL datatypes yet");
     }
 #endif
@@ -1892,10 +1912,10 @@ H5D_write(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
     HDmemset(&file_iter,0,sizeof(H5S_sel_iter_t));
 
     /* Get the dataset transfer property list */
-    if (H5P_DEFAULT == dxpl_id) {
+    if (H5P_DEFAULT == dset_xfer_plid) {
         xfer_parms = &H5F_xfer_dflt;
-    } else if (H5P_DATA_XFER != H5P_get_class(dxpl_id) ||
-	       NULL == (xfer_parms = H5I_object(dxpl_id))) {
+    } else if (H5P_DATASET_XFER != H5P_get_class(dset_xfer_plid) ||
+	       NULL == (xfer_parms = H5I_object(dset_xfer_plid))) {
         HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not xfer parms");
     }
 
@@ -1915,16 +1935,19 @@ H5D_write(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
     nelmts = H5S_get_select_npoints(mem_space);
 
 #ifdef HAVE_PARALLEL
-    {
-	/* Collective access is not permissible with the MPIO driver */
-	H5FD_mpio_dxpl_t *dx;
-	if (H5FD_MPIO==dataset->ent.file->shared->lf->driver_id &&
-	    H5FD_MPIO==xfer_parms->driver_id &&
-	    (dx=xfer_parms->driver_info) &&
-	    H5FD_MPIO_COLLECTIVE==dx->xfer_mode) {
+    /*
+     * Check if collective data transfer requested.
+     */
+    if (xfer_parms->xfer_mode == H5D_XFER_COLLECTIVE){
+	/*
+	 * Verify that the file can support collective access.  The check may
+	 * not be necessarily since collective access can always be simulated
+	 * by independent access.  Nevertheless, must check driver is MPIO
+	 * before using those access_mode which exists only for MPIO case.
+	 */
+	if (dataset->ent.file->shared->access_parms->driver != H5F_LOW_MPIO)
 	    HGOTO_ERROR (H5E_DATASET, H5E_UNSUPPORTED, FAIL,
 			 "collective access not permissible");
-	}
     }
 #endif
 
@@ -1948,13 +1971,13 @@ H5D_write(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
 	HGOTO_ERROR(H5E_DATASET, H5E_UNSUPPORTED, FAIL,
 		    "unable to convert between src and dest data types");
     } else if (!H5T_IS_NOOP(tpath)) {
-	if ((src_id = H5I_register(H5I_DATATYPE,
-				   H5T_copy(mem_type, H5T_COPY_ALL)))<0 ||
-	    (dst_id = H5I_register(H5I_DATATYPE,
-				   H5T_copy(dataset->type, H5T_COPY_ALL)))<0) {
-	    HGOTO_ERROR(H5E_DATASET, H5E_CANTREGISTER, FAIL,
-			"unable to register types for conversion");
-	}
+        if ((src_id = H5I_register(H5I_DATATYPE,
+                       H5T_copy(mem_type, H5T_COPY_ALL)))<0 ||
+            (dst_id = H5I_register(H5I_DATATYPE,
+                       H5T_copy(dataset->type, H5T_COPY_ALL)))<0) {
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTREGISTER, FAIL,
+                "unable to register types for conversion");
+        }
     }
 #ifdef QAK
     printf("%s: after H5T_find, tpath=%p, tpath->name=%s\n",FUNC,tpath,tpath->name);
@@ -1971,7 +1994,7 @@ H5D_write(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
      * (the latter in case the arguments to sconv_funcs
      * turn out to be inappropriate for MPI-IO).  */
     if (H5_mpi_opt_types_g &&
-        H5FD_MPIO==dataset->ent.file->shared->lf->driver_id) {
+        H5F_LOW_MPIO==dataset->ent.file->shared->access_parms->driver) {
 	sconv->write = H5S_mpio_spaces_write;
     }
 #endif /*HAVE_PARALLEL*/
@@ -1988,7 +2011,8 @@ H5D_write(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
 				&(dataset->create_parms->pline),
 				&(dataset->create_parms->efl),
 				H5T_get_size (dataset->type), file_space,
-				mem_space, dxpl_id, buf, &must_convert/*out*/);
+				mem_space, xfer_parms, buf,
+				&must_convert/*out*/);
         if (status<0) {
 	    /* Supports only no conversion, type or space, for now. */
 	    HGOTO_ERROR(H5E_DATASET, H5E_READERROR, FAIL,
@@ -2034,6 +2058,9 @@ H5D_write(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
      
     src_type_size = H5T_get_size(mem_type);
     dst_type_size = H5T_get_size(dataset->type);
+#ifdef QAK
+    printf("%s: check 2.0, src_type_size=%d, dst_type_size=%d\n",FUNC,(int)src_type_size,(int)dst_type_size);
+#endif
     target_size = xfer_parms->buf_size;
     request_nelmts = target_size / MAX (src_type_size, dst_type_size);
 
@@ -2116,19 +2143,21 @@ H5D_write(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
         }
 
 #ifdef QAK
-	{
-	    int i;
-	    uint16_t *b;
+{
+    char *p=tconv_buf;
+    intn i;
 
-	    if(qak_debug) {
-		b=tconv_buf;
-		printf("\ntconv_buf:");
-		for (i=0; i<smine_nelmts; i++,b++) {
-		    printf("(%d)%d ",i,(int)*b);
-		}
-		printf("\n");
-	    }
-	}
+    for(i=0; i<4; i++) {
+        printf("%s: element[%d]={%d, ",FUNC,i,(int)*(int *)p);
+        p+=sizeof(int);
+        printf("%f, ",(float)*(float *)p);
+        p+=sizeof(float);
+        printf(" {%d, ",(int)*(int *)p);
+        p+=sizeof(int);
+        printf("%p}}\n",(char *)*(char **)p);
+        p+=sizeof(char *);
+    }
+}
 	printf("%s: check 6.0\n",FUNC);
 #endif
 
@@ -2141,7 +2170,7 @@ H5D_write(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
 				 &(dataset->create_parms->fill),
 				 &(dataset->create_parms->efl), dst_type_size,
 				 file_space, &bkg_iter, smine_nelmts,
-				 dxpl_id, bkg_buf/*out*/);
+				 xfer_parms, bkg_buf/*out*/);
 #ifdef H5S_DEBUG
 	    H5_timer_end(&(sconv->stats[0].bkg_timer), &timer);
 	    sconv->stats[0].bkg_nbytes += n * dst_type_size;
@@ -2159,12 +2188,31 @@ H5D_write(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
          * Perform data type conversion.
          */
 	if (H5T_convert(tpath, src_id, dst_id, smine_nelmts, 0, tconv_buf,
-			bkg_buf, dxpl_id)<0) {
+			bkg_buf, dset_xfer_plid)<0) {
             HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL,
                 "data type conversion failed");
         }
 #ifdef QAK
 	printf("%s: check 6.3\n",FUNC);
+{
+    char *p=tconv_buf;
+    intn i;
+
+    for(i=0; i<4; i++) {
+        printf("%s: element[%d]={%d, ",FUNC,i,(int)*(int *)p);
+        p+=sizeof(int);
+        printf("%f, ",(float)*(float *)p);
+        p+=sizeof(float);
+        printf(" {%x, ",(unsigned)*(unsigned *)p);
+        p+=sizeof(int);
+        printf("%x-",(unsigned)*(unsigned *)p);
+        p+=sizeof(int);
+        printf("%x, ",(unsigned)*(unsigned *)p);
+        p+=sizeof(int);
+        printf("%d}}\n",(int)*(int *)p);
+        p+=sizeof(int);
+    }
+}
 #endif
 
         /*
@@ -2178,7 +2226,7 @@ H5D_write(H5D_t *dataset, const H5T_t *mem_type, const H5S_t *mem_space,
 				  &(dataset->create_parms->fill),
 				  &(dataset->create_parms->efl), dst_type_size,
 				  file_space, &file_iter, smine_nelmts,
-				  dxpl_id, tconv_buf);
+				  xfer_parms, tconv_buf);
 #ifdef QAK
 	printf("%s: check 6.35\n",FUNC);
 #endif
@@ -2401,6 +2449,8 @@ H5D_get_file (const H5D_t *dset)
 static herr_t
 H5D_init_storage(H5D_t *dset, const H5S_t *space)
 {
+    intn		ndims;
+    hsize_t		dim[H5O_LAYOUT_NDIMS];
     hssize_t    	npoints, ptsperbuf;
     size_t		size, bufsize=8*1024;
     hid_t		buf_id = -1;
@@ -2437,7 +2487,7 @@ H5D_init_storage(H5D_t *dset, const H5S_t *space)
 	    H5V_array_fill(buf, dset->create_parms->fill.buf,
 			   dset->create_parms->fill.size, ptsperbuf);
 	    if (dset->create_parms->efl.nused) {
-		addr = 0;
+		H5F_addr_reset(&addr);
 	    } else {
 		addr = dset->layout.addr;
 	    }
@@ -2447,19 +2497,19 @@ H5D_init_storage(H5D_t *dset, const H5S_t *space)
 		if (dset->create_parms->efl.nused) {
 		    if (H5O_efl_write(dset->ent.file,
 				      &(dset->create_parms->efl),
-				      addr, size, buf)<0) {
+				      &addr, size, buf)<0) {
 			HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL,
 				    "unable to write fill value to dataset");
 		    }
 		} else {
-		    if (H5F_block_write(dset->ent.file, addr, size,
-					H5P_DEFAULT, buf)<0) {
+		    if (H5F_block_write(dset->ent.file, &addr, size,
+					&H5F_xfer_dflt, buf)<0) {
 			HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL,
 				    "unable to write fill value to dataset");
 		    }
 		}
 		npoints -= MIN(ptsperbuf, npoints);
-		addr += size;
+		H5F_addr_inc(&addr, size);
 	    }
 	} else if (dset->create_parms->fill.buf) {
 	    /*
@@ -2471,16 +2521,12 @@ H5D_init_storage(H5D_t *dset, const H5S_t *space)
 	break;
 
     case H5D_CHUNKED:
-#ifdef HAVE_PARALLEL
 	/*
 	 * If the dataset is accessed via parallel I/O, allocate file space
 	 * for all chunks now and initialize each chunk with the fill value.
 	 */
-	if (H5FD_MPIO==dset->ent.file->shared->lf->driver_id) {
+	if (H5F_LOW_MPIO==dset->ent.file->shared->access_parms->driver) {
 	    /* We only handle simple data spaces so far */
-	    intn		ndims;
-	    hsize_t		dim[H5O_LAYOUT_NDIMS];
-	    
 	    if ((ndims=H5S_get_simple_extent_dims(space, dim, NULL))<0) {
 		HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL,
 			    "unable to get simple data space info");
@@ -2488,15 +2534,14 @@ H5D_init_storage(H5D_t *dset, const H5S_t *space)
 	    dim[ndims] = dset->layout.dim[ndims];
 	    ndims++;
 
-	    if (H5F_istore_allocate(dset->ent.file, H5P_DEFAULT,
-				    &(dset->layout), dim,
+	    if (H5F_istore_allocate(dset->ent.file, &(dset->layout),
+				    dim, H5F_xfer_dflt.split_ratios,
 				    &(dset->create_parms->pline),
 				    &(dset->create_parms->fill))<0) {
 		HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL,
 			    "unable to allocate all chunks of dataset");
 	    }
 	}
-#endif /*HAVE_PARALLEL*/
 	break;
     }
     ret_value = SUCCEED;
@@ -2577,7 +2622,7 @@ H5D_get_storage_size(H5D_t *dset)
 
     if (H5D_CHUNKED==dset->layout.type) {
 	size = H5F_istore_allocated(dset->ent.file, dset->layout.ndims,
-				    dset->layout.addr);
+				    &(dset->layout.addr));
     } else {
 	for (i=0, size=1; i<dset->layout.ndims; i++) {
 	    size *= dset->layout.dim[i];
@@ -2608,7 +2653,7 @@ H5D_get_storage_size(H5D_t *dset)
  *      hid_t type_id;      IN: Datatype ID for the elements stored in BUF.
  *      hid_t space_id;     IN: Dataspace ID for BUF, also contains the
  *                              selection to iterate over.
- *      H5D_operator_t op; IN: Function pointer to the routine to be
+ *      H5D_operator_t op;  IN: Function pointer to the routine to be
  *                              called for each element in BUF iterated over.
  *      void *operator_data;    IN/OUT: Pointer to any user-defined data
  *                              associated with the operation.
@@ -2662,10 +2707,8 @@ H5Diterate(void *buf, hid_t type_id, hid_t space_id, H5D_operator_t op,
     /* Check args */
     if (NULL==op)
         HRETURN_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid operator");
-#ifdef OLD_WAY
     if (buf==NULL)
         HRETURN_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid buffer");
-#endif /* OLD_WAY */
     if (H5I_DATATYPE != H5I_get_type(type_id))
         HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid datatype");
     if (H5I_DATASPACE != H5I_get_type(space_id) ||
@@ -2714,202 +2757,16 @@ H5Dvlen_reclaim(hid_t type_id, hid_t space_id, hid_t plist_id, void *buf)
     /* Retrieve dataset transfer property list */
     if (H5P_DEFAULT == plist_id) {
         xfer_parms = &H5F_xfer_dflt;
-    } else if (H5P_DATA_XFER != H5P_get_class(plist_id) ||
+    } else if (H5P_DATASET_XFER != H5P_get_class(plist_id) ||
 	       NULL == (xfer_parms = H5I_object(plist_id))) {
         HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not xfer parms");
     }
 
     /* Call H5Diterate with args, etc. */
-    ret_value=H5Diterate(buf,type_id,space_id,H5T_vlen_reclaim,
-			 (void*/*FIXME*/)xfer_parms);
+    ret_value=H5Diterate(buf,type_id,space_id,H5T_vlen_reclaim,(void *)xfer_parms);
 
     FUNC_LEAVE(ret_value);
 }   /* end H5Dvlen_reclaim() */
-
-/*-------------------------------------------------------------------------
- * Function:	H5D_vlen_get_buf_size_alloc
- *
- * Purpose:	This routine makes certain there is enough space in the temporary
- *      buffer for the new data to read in.  All the VL data read in is actually
- *      placed in this buffer, overwriting the previous data.  Needless to say,
- *      this data is not actually usable.
- *
- * Return:	Non-negative on success, negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Tuesday, August 17, 1999
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-void *H5D_vlen_get_buf_size_alloc(size_t size, void *info)
-{
-    H5T_vlen_bufsize_t *vlen_bufsize=(H5T_vlen_bufsize_t *)info;
-    void *ret_value=NULL;       /* Pointer to return */
-
-    FUNC_ENTER(H5D_vlen_get_buf_size_alloc, NULL);
-
-    /* Get a temporary pointer to space for the VL data */
-    if (H5TB_resize_buf(vlen_bufsize->vl_tbuf_id,size,&ret_value)>=0)
-        vlen_bufsize->size+=size;
-
-    FUNC_LEAVE(ret_value);
-} /* end H5D_vlen_get_buf_size_alloc() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5D_vlen_get_buf_size
- *
- * Purpose:	This routine checks the number of bytes required to store a single
- *      element from a dataset in memory, creating a selection with just the
- *      single element selected to read in the element and using a custom memory
- *      allocator for any VL data encountered.
- *          The *size value is modified according to how many bytes are
- *      required to store the element in memory.
- *
- * Implementation: This routine actually performs the read with a custom
- *      memory manager which basically just counts the bytes requested and
- *      uses a temporary memory buffer (through the H5TB API) to make certain
- *      enough space is available to perform the read.  Then the temporary
- *      buffer is released and the number of bytes allocated is returned.
- *      Kinda kludgy, but easier than the other method of trying to figure out
- *      the sizes without actually reading the data in... - QAK
- *
- * Return:	Non-negative on success, negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Tuesday, August 17, 1999
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5D_vlen_get_buf_size(void UNUSED *elem, hid_t type_id, hsize_t UNUSED ndim, hssize_t *point, void *op_data)
-{
-    H5T_vlen_bufsize_t *vlen_bufsize=(H5T_vlen_bufsize_t *)op_data;
-    void *tbuf;         /* pointer to temporary buffer */
-    H5T_t	*dt = NULL;
-    herr_t ret_value=FAIL;
-
-    FUNC_ENTER(H5D_vlen_get_buf_size, FAIL);
-
-    assert(op_data);
-    assert(H5I_DATATYPE == H5I_get_type(type_id));
-
-    /* Check args */
-    if (NULL==(dt=H5I_object(type_id)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data type");
-
-    /* Make certain there is enough fixed-length buffer available */
-    if (H5TB_resize_buf(vlen_bufsize->fl_tbuf_id,H5T_get_size(dt),&tbuf)<0)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "can't resize tbuf");
-
-    /* Select point to read in */
-    if (H5Sselect_elements(vlen_bufsize->space_id,H5S_SELECT_SET,1,(const hssize_t **)point)<0)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTCREATE, FAIL, "can't select point");
-
-    /* Read in the point (with the custom VL memory allocator) */
-    if(H5Dread(vlen_bufsize->dataset_id,type_id,H5S_ALL,vlen_bufsize->space_id,vlen_bufsize->xfer_pid,tbuf)<0)
-        HGOTO_ERROR(H5E_DATASET, H5E_READERROR, FAIL, "can't read point");
-
-    /* Set the correct return value, if we get this far */
-    ret_value=0;
-
-done:
-
-    FUNC_LEAVE(ret_value);
-}   /* end H5D_vlen_get_buf_size() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5Dvlen_get_buf_size
- *
- * Purpose:	This routine checks the number of bytes required to store the VL
- *      data from the dataset, using the space_id for the selection in the
- *      dataset on disk and the type_id for the memory representation of the
- *      VL data, in memory.  The *size value is modified according to how many
- *      bytes are required to store the VL data in memory.
- *
- * Implementation: This routine actually performs the read with a custom
- *      memory manager which basically just counts the bytes requested and
- *      uses a temporary memory buffer (through the H5TB API) to make certain
- *      enough space is available to perform the read.  Then the temporary
- *      buffer is released and the number of bytes allocated is returned.
- *      Kinda kludgy, but easier than the other method of trying to figure out
- *      the sizes without actually reading the data in... - QAK
- *
- * Return:	Non-negative on success, negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Wednesday, August 11, 1999
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5Dvlen_get_buf_size(hid_t dataset_id, hid_t type_id, hid_t space_id,
-        hsize_t *size)
-{
-    H5T_vlen_bufsize_t vlen_bufsize = {0, 0, 0, 0, 0, 0};
-    char bogus;         /* bogus value to pass to H5Diterate() */
-    herr_t ret_value=FAIL;
-
-    FUNC_ENTER(H5Dvlen_get_buf_size, FAIL);
-    H5TRACE4("e","iii*h",dataset_id,type_id,space_id,size);
-
-    /* Check args */
-    if (H5I_DATASET!=H5I_get_type(dataset_id) ||
-            H5I_DATATYPE!=H5I_get_type(type_id) ||
-            H5I_DATASPACE!=H5I_get_type(space_id) || size==NULL) {
-        HRETURN_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid argument");
-    }
-
-    /* Save the dataset ID */
-    vlen_bufsize.dataset_id=dataset_id;
-
-    /* Get a copy of the dataspace ID */
-    if((vlen_bufsize.space_id=H5Dget_space(dataset_id))<0)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTCOPY, FAIL, "can't copy dataspace");
-
-    /* Grab the temporary buffers required */
-    if((vlen_bufsize.fl_tbuf_id=H5TB_get_buf(1,0,NULL))<0)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "no temporary buffers available");
-    if((vlen_bufsize.vl_tbuf_id=H5TB_get_buf(1,0,NULL))<0)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "no temporary buffers available");
-
-    /* Change to the custom memory allocation routines for reading VL data */
-    if((vlen_bufsize.xfer_pid=H5Pcreate(H5P_DATA_XFER))<0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTCREATE, FAIL, "no dataset xfer plists available");
-
-    if(H5Pset_vlen_mem_manager(vlen_bufsize.xfer_pid,H5D_vlen_get_buf_size_alloc,&vlen_bufsize,NULL,NULL)<0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTINIT, FAIL, "can't set VL data allocation routine");
-
-    /* Set the initial number of bytes required */
-    vlen_bufsize.size=0;
-
-    /* Call H5Diterate with args, etc. */
-    ret_value=H5Diterate(&bogus,type_id,space_id,H5D_vlen_get_buf_size,
-			 &vlen_bufsize);
-
-    /* Get the size if we succeeded */
-    if(ret_value>=0)
-        *size=vlen_bufsize.size;
-
-done:
-    if(vlen_bufsize.space_id>0)
-        H5Sclose(vlen_bufsize.space_id);
-    if(vlen_bufsize.fl_tbuf_id>0)
-        H5TB_release_buf(vlen_bufsize.fl_tbuf_id);
-    if(vlen_bufsize.vl_tbuf_id>0)
-        H5TB_release_buf(vlen_bufsize.vl_tbuf_id);
-    if(vlen_bufsize.xfer_pid>0)
-        H5Pclose(vlen_bufsize.xfer_pid);
-
-    FUNC_LEAVE(ret_value);
-}   /* end H5Dvlen_get_buf_size() */
 
 
 /*-------------------------------------------------------------------------
@@ -2946,10 +2803,10 @@ H5Ddebug(hid_t dset_id, unsigned UNUSED flags)
     /* Print B-tree information */
     if (H5D_CHUNKED==dset->layout.type) {
 	H5F_istore_dump_btree(dset->ent.file, stdout, dset->layout.ndims,
-			      dset->layout.addr);
+			      &(dset->layout.addr));
     } else if (H5D_CONTIGUOUS==dset->layout.type) {
 	HDfprintf(stdout, "    %-10s %a\n", "Address:",
-		  dset->layout.addr);
+		  &(dset->layout.addr));
     }
     
     FUNC_LEAVE(SUCCEED);

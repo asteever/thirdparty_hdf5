@@ -41,8 +41,9 @@ static char             RcsId[] = "@(#)$Revision$";
 #include <H5api_adpt.h>
 
 /* Version numbers */
+/* **** NOTICE: THIS IS A BETA RELEASE OF HDF5-1.2.0 ****   */
 #define H5_VERS_MAJOR	1       /* For major interface/format changes  	     */
-#define H5_VERS_MINOR	3       /* For minor interface/format changes  	     */
+#define H5_VERS_MINOR	2       /* For minor interface/format changes  	     */
 #define H5_VERS_RELEASE	0      /* For tweaks, bug-fixes, or development     */
 
 #define H5check()	H5check_version(H5_VERS_MAJOR,H5_VERS_MINOR,	      \
@@ -97,26 +98,6 @@ typedef signed __int64		hssize_t;
 typedef size_t			hsize_t;
 typedef ssize_t			hssize_t;
 #endif
-
-/*
- * File addresses have there own types.
- */
-#if SIZEOF_UINT64_T>=8
-    typedef uint64_t		haddr_t;
-#   define HADDR_UNDEF		((haddr_t)(int64_t)(-1))
-#elif SIZEOF_INT>=8
-    typedef unsigned		haddr_t;
-#   define HADDR_UNDEF		((haddr_t)(-1))
-#elif SIZEOF_LONG>=8
-    typedef unsigned long	haddr_t;
-#   define HADDR_UNDEF		((haddr_t)(long)(-1))
-#elif SIZEOF_LONG_LONG>=8
-    typedef unsigned long long	haddr_t;
-#   define HADDR_UNDEF		((haddr_t)(long long)(-1))
-#else
-#   error "nothing appropriate for haddr_t"
-#endif
-#define HADDR_MAX		(HADDR_UNDEF-1)
 
 #ifdef __cplusplus
 extern "C" {

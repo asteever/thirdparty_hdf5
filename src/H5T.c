@@ -94,7 +94,6 @@ hid_t H5T_NATIVE_B16_g			= FAIL;
 hid_t H5T_NATIVE_B32_g			= FAIL;
 hid_t H5T_NATIVE_B64_g			= FAIL;
 hid_t H5T_NATIVE_OPAQUE_g		= FAIL;
-hid_t H5T_NATIVE_HADDR_g		= FAIL;
 hid_t H5T_NATIVE_HSIZE_g		= FAIL;
 hid_t H5T_NATIVE_HSSIZE_g		= FAIL;
 hid_t H5T_NATIVE_HERR_g			= FAIL;
@@ -463,7 +462,7 @@ H5T_init_interface(void)
 		     "memory allocation failed");
     }
     dt->state = H5T_STATE_IMMUTABLE;
-    dt->ent.header = HADDR_UNDEF;
+    H5F_addr_undef (&(dt->ent.header));
     dt->type = H5T_OPAQUE;
     dt->size = 1;
     dt->u.opaque.tag = H5MM_strdup("");
@@ -471,13 +470,6 @@ H5T_init_interface(void)
 	HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL,
 		    "unable to initialize H5T layer");
     }
-
-    /* haddr_t */
-    dt = H5I_object(H5T_NATIVE_HADDR_g=H5Tcopy(H5T_NATIVE_UINT_g));
-    dt->state = H5T_STATE_IMMUTABLE;
-    dt->size = sizeof(haddr_t);
-    dt->u.atomic.prec = 8*dt->size;
-    dt->u.atomic.offset = 0;
 
     /* hsize_t */
     dt = H5I_object (H5T_NATIVE_HSIZE_g = H5Tcopy (H5T_NATIVE_UINT_g));
@@ -845,7 +837,7 @@ H5T_init_interface(void)
 		     "memory allocation failed");
     }
     dt->state = H5T_STATE_IMMUTABLE;
-    dt->ent.header = HADDR_UNDEF;
+    H5F_addr_undef (&(dt->ent.header));
     dt->type = H5T_STRING;
     dt->size = 1;
     dt->u.atomic.order = H5T_ORDER_NONE;
@@ -871,7 +863,7 @@ H5T_init_interface(void)
 		     "memory allocation failed");
     }
     dt->state = H5T_STATE_IMMUTABLE;
-    dt->ent.header = HADDR_UNDEF;
+    H5F_addr_undef (&(dt->ent.header));
     dt->type = H5T_STRING;
     dt->size = 1;
     dt->u.atomic.order = H5T_ORDER_NONE;
@@ -897,7 +889,7 @@ H5T_init_interface(void)
 		     "memory allocation failed");
     }
     dt->state = H5T_STATE_IMMUTABLE;
-    dt->ent.header = HADDR_UNDEF;
+    H5F_addr_undef (&(dt->ent.header));
     dt->type = H5T_REFERENCE;
     dt->size = H5R_OBJ_REF_BUF_SIZE;
     dt->u.atomic.order = H5T_ORDER_NONE;
@@ -917,7 +909,7 @@ H5T_init_interface(void)
 		     "memory allocation failed");
     }
     dt->state = H5T_STATE_IMMUTABLE;
-    dt->ent.header = HADDR_UNDEF;
+    H5F_addr_undef (&(dt->ent.header));
     dt->type = H5T_REFERENCE;
     dt->size = H5R_DSET_REG_REF_BUF_SIZE;
     dt->u.atomic.order = H5T_ORDER_NONE;
@@ -3911,25 +3903,17 @@ H5Tvlen_create(hid_t base_id)
     H5TRACE1("i","i",base_id);
 
     /* Check args */
-    if (H5I_DATATYPE!=H5I_get_type(base_id) ||
-	NULL==(base=H5I_object(base_id))) {
-        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
-		      "not an valid base datatype");
+    if (H5I_DATATYPE!=H5I_get_type(base_id) || NULL==(base=H5I_object(base_id))) {
+        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not an valid base datatype");
     }
 
     /* Build new type */
     if (NULL==(dt=H5MM_calloc(sizeof(H5T_t)))) {
-        HRETURN_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL,
-		      "memory allocation failed");
+        HRETURN_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed");
     }
-    dt->ent.header = HADDR_UNDEF;
+    H5F_addr_undef (&(dt->ent.header));
     dt->type = H5T_VLEN;
-
-    /*
-     * Force conversions (i.e. memory to memory conversions should duplicate
-     * data, not point to the same VL sequences
-     */
-    dt->force_conv = TRUE;
+    dt->force_conv = TRUE;      /* Force conversions (i.e. memory to memory conversions should duplicate data, not point to the same VL sequences */
     dt->parent = H5T_copy(base, H5T_COPY_ALL);
 
     /* Set up VL information */
@@ -3939,8 +3923,7 @@ H5Tvlen_create(hid_t base_id)
 
     /* Atomize the type */
     if ((ret_value=H5I_register(H5I_DATATYPE, dt))<0) {
-        HRETURN_ERROR(H5E_DATATYPE, H5E_CANTREGISTER, FAIL,
-		      "unable to register datatype");
+        HRETURN_ERROR(H5E_DATATYPE, H5E_CANTREGISTER, FAIL, "unable to register datatype");
     }
 
     FUNC_LEAVE(ret_value);
@@ -4418,7 +4401,7 @@ H5Tconvert(hid_t src_id, hid_t dst_id, size_t nelmts, void *buf,
     /* Check args */
     if (H5I_DATATYPE!=H5I_get_type(src_id) || NULL==(src=H5I_object(src_id)) ||
         H5I_DATATYPE!=H5I_get_type(dst_id) || NULL==(dst=H5I_object(dst_id)) ||
-        (H5P_DEFAULT!=plist_id && H5P_DATA_XFER!=H5P_get_class(plist_id))) {
+        (H5P_DEFAULT != plist_id && H5P_DATASET_XFER != H5P_get_class(plist_id))) {
 	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data type");
     }
 
@@ -4588,7 +4571,7 @@ H5T_create(H5T_class_t type, size_t size)
 		      "unknown data type class");
     }
 
-    dt->ent.header = HADDR_UNDEF;
+    H5F_addr_undef (&(dt->ent.header));
     dt->size = size;
     FUNC_LEAVE(dt);
 }
@@ -4778,7 +4761,7 @@ H5T_copy(const H5T_t *old_dt, H5T_copy_t method)
 	 */
 	new_dt->state = H5T_STATE_TRANSIENT;
 	HDmemset (&(new_dt->ent), 0, sizeof(new_dt->ent));
-	new_dt->ent.header = HADDR_UNDEF;
+	H5F_addr_undef (&(new_dt->ent.header));
 	break;
 	
     case H5T_COPY_ALL:
@@ -4798,7 +4781,7 @@ H5T_copy(const H5T_t *old_dt, H5T_copy_t method)
 	 * Return a transient type (locked or unlocked) or an opened named
 	 * type.
 	 */
-	if (H5F_addr_defined(new_dt->ent.header)) {
+	if (H5F_addr_defined (&(new_dt->ent.header))) {
 	    if (H5O_open (&(new_dt->ent))<0) {
 		H5MM_xfree (new_dt);
 		HRETURN_ERROR (H5E_DATATYPE, H5E_CANTOPENOBJ, NULL,
@@ -4839,11 +4822,12 @@ H5T_copy(const H5T_t *old_dt, H5T_copy_t method)
             /* Apply the accumulated size change to the offset of the field */
             new_dt->u.compnd.memb[i].offset += accum_change;
 
-            /* If the field changed size, add that change to the accumulated size change */
+            /* Check if the field changed size */
             if(new_dt->u.compnd.memb[i].type->size != old_dt->u.compnd.memb[i].type->size) {
                 /* Adjust the size of the member */
                 new_dt->u.compnd.memb[i].size = (old_dt->u.compnd.memb[i].size*tmp->size)/old_dt->u.compnd.memb[i].type->size;
 
+                /* Add that change to the accumulated size change */
                 accum_change += (new_dt->u.compnd.memb[i].type->size - old_dt->u.compnd.memb[i].type->size);
             } /* end if */
         }
@@ -4956,9 +4940,9 @@ H5T_commit (H5G_entry_t *loc, const char *name, H5T_t *type)
 
  done:
     if (ret_value<0) {
-	if (H5F_addr_defined(type->ent.header)) {
+	if (H5F_addr_defined (&(type->ent.header))) {
 	    H5O_close(&(type->ent));
-	    type->ent.header = HADDR_UNDEF;
+	    H5F_addr_undef (&(type->ent.header));
 	}
     }
     FUNC_LEAVE (ret_value);
@@ -5040,7 +5024,7 @@ H5T_close(H5T_t *dt)
      * If a named type is being closed then close the object header also.
      */
     if (H5T_STATE_OPEN==dt->state) {
-	assert (H5F_addr_defined(dt->ent.header));
+	assert (H5F_addr_defined (&(dt->ent.header)));
 	if (H5O_close(&(dt->ent))<0) {
 	    HRETURN_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL,
 			  "unable to close data type object header");
@@ -7041,7 +7025,7 @@ H5T_debug(H5T_t *dt, FILE *stream)
  REVISION LOG
 --------------------------------------------------------------------------*/
 H5R_type_t
-H5T_get_ref_type(const H5T_t *dt)
+H5T_get_ref_type(H5T_t *dt)
 {
     H5R_type_t ret_value = H5R_BADTYPE;
 
