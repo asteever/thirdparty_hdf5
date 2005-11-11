@@ -38,9 +38,6 @@
 
 #ifndef H5_NO_NAMESPACE
 namespace H5 {
-#ifndef H5_NO_STD
-    using namespace std;
-#endif  // H5_NO_STD
 #endif
 
 //--------------------------------------------------------------------------
@@ -188,7 +185,7 @@ bool H5File::isHdf5(const string& name )
 //              be investigated.  BMR - 2/20/2005
 // Modification
 //		Replaced resetIdComponent with decRefCount to use C library
-//		ID reference counting mechanism - June 1, 2004
+//		ID reference counting mechanism - BMR, Feb 20, 2005
 //--------------------------------------------------------------------------
 void H5File::reOpen()
 {
@@ -515,12 +512,7 @@ void* H5File::Reference(const string& name) const
 //--------------------------------------------------------------------------
 H5G_obj_t H5File::getObjType(void *ref, H5R_type_t ref_type) const
 {
-   try {
-      return(p_get_obj_type(ref, ref_type));
-   }
-   catch (IdComponentException E) {
-      throw FileIException("H5File::getObjType", E.getDetailMsg());
-   }
+   return(p_get_obj_type(ref, ref_type));
 }
 
 //--------------------------------------------------------------------------
@@ -534,13 +526,8 @@ H5G_obj_t H5File::getObjType(void *ref, H5R_type_t ref_type) const
 //--------------------------------------------------------------------------
 DataSpace H5File::getRegion(void *ref, H5R_type_t ref_type) const
 {
-   try {
-      DataSpace dataspace(p_get_region(ref, ref_type));
-      return(dataspace);
-   }
-   catch (IdComponentException E) {
-      throw FileIException("H5File::getRegion", E.getDetailMsg());
-   }
+   DataSpace dataspace(p_get_region(ref, ref_type));
+   return(dataspace);
 }
 
 //--------------------------------------------------------------------------
@@ -622,7 +609,7 @@ void H5File::throwException(const string func_name, const string msg) const
 // Programmer	Binh-Minh Ribler - 2000
 // Modification
 //		Replaced resetIdComponent with decRefCount to use C library
-//		ID reference counting mechanism - June 1, 2004
+//		ID reference counting mechanism - BMR, Feb 20, 2005
 //--------------------------------------------------------------------------
 H5File::~H5File()
 {

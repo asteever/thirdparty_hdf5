@@ -77,7 +77,7 @@
  * This contains the filename prefix specificied as command line option for
  * the parallel test files.
  */
-H5_DLLVAR char *paraprefix;
+extern char *paraprefix;
 #ifdef H5_HAVE_PARALLEL
 extern MPI_Info h5_io_info_g;         /* MPI INFO object for IO */
 #endif
@@ -100,12 +100,8 @@ extern MPI_Info h5_io_info_g;         /* MPI INFO object for IO */
 #define TESTING(WHAT)	{printf("Testing %-62s",WHAT); fflush(stdout);}
 #define PASSED()	{puts(" PASSED");fflush(stdout);}
 #define H5_FAILED()	{puts("*FAILED*");fflush(stdout);}
-#define H5_WARNING()	{puts("*WARNING*");fflush(stdout);}
 #define SKIPPED()	{puts(" -SKIP-");fflush(stdout);}
 #define TEST_ERROR      {H5_FAILED(); AT(); goto error;}
-#define STACK_ERROR     {H5Eprint_stack(H5E_DEFAULT, stdout); goto error;}
-#define FAIL_STACK_ERROR {H5_FAILED(); AT(); \
-    H5Eprint_stack(H5E_DEFAULT, stdout); goto error;}
 
 /*
  * Alarm definitions to wait up (terminate) a test that runs too long.

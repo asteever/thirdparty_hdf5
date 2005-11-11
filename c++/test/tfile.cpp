@@ -42,22 +42,37 @@ using namespace H5;
 const hsize_t F1_USERBLOCK_SIZE = (hsize_t)0;
 const size_t F1_OFFSET_SIZE = sizeof(haddr_t);
 const size_t F1_LENGTH_SIZE = sizeof(hsize_t);
+#ifdef H5_WANT_H5_V1_4_COMPAT
+const int F1_SYM_LEAF_K  = 4;
+const int F1_SYM_INTERN_K = 16;
+#else /* H5_WANT_H5_V1_4_COMPAT */
 const unsigned F1_SYM_LEAF_K  = 4;
 const unsigned F1_SYM_INTERN_K = 16;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 const string    FILE1("tfile1.h5");
 
 const hsize_t F2_USERBLOCK_SIZE = (hsize_t)512;
 const size_t F2_OFFSET_SIZE = 8;
 const size_t F2_LENGTH_SIZE = 8;
-const unsigned F2_SYM_LEAF_K  = 8;
+#ifdef H5_WANT_H5_V1_4_COMPAT
+const int F2_SYM_LEAF_K  = 4;
+const int F2_SYM_INTERN_K = 32;
+#else /* H5_WANT_H5_V1_4_COMPAT */
+const unsigned F2_SYM_LEAF_K  = 4;
 const unsigned F2_SYM_INTERN_K = 32;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 const string    FILE2("tfile2.h5");
 
 const hsize_t F3_USERBLOCK_SIZE = (hsize_t)0;
 const size_t F3_OFFSET_SIZE = F2_OFFSET_SIZE;
 const size_t F3_LENGTH_SIZE = F2_LENGTH_SIZE;
+#ifdef H5_WANT_H5_V1_4_COMPAT
+const int F3_SYM_LEAF_K  = F2_SYM_LEAF_K;
+const int F3_SYM_INTERN_K = F2_SYM_INTERN_K;
+#else /* H5_WANT_H5_V1_4_COMPAT */
 const unsigned F3_SYM_LEAF_K  = F2_SYM_LEAF_K;
 const unsigned F3_SYM_INTERN_K = F2_SYM_INTERN_K;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 const string    FILE3("tfile3.h5");
 
 const int KB =  1024;
@@ -160,15 +175,19 @@ test_file_create(void)
 	hsize_t ublock = tmpl1.getUserblock();
 	verify_val((long)ublock, (long)F1_USERBLOCK_SIZE, "FileCreatPropList::getUserblock", __LINE__, __FILE__);
 
-    	size_t  parm1, parm2;		// file-creation parameters
+    	size_t  parm1, parm2;	// file-creation parameters
 	tmpl1.getSizes( parm1, parm2);
 	verify_val(parm1, F1_OFFSET_SIZE, "FileCreatPropList::getSizes", __LINE__, __FILE__);
 	verify_val(parm2, F1_LENGTH_SIZE, "FileCreatPropList::getSizes", __LINE__, __FILE__);
 
-        unsigned  iparm1,iparm2;        // file-creation parameters
-        tmpl1.getSymk( iparm1, iparm2);
-        verify_val(iparm1, F1_SYM_INTERN_K, "FileCreatPropList::getSymk", __LINE__, __FILE__);
-        verify_val(iparm2, F1_SYM_LEAF_K, "FileCreatPropList::getSymk", __LINE__, __FILE__);
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    	int iparm1, iparm2;	// file-creation parameters
+#else /* H5_WANT_H5_V1_4_COMPAT */
+    	unsigned  iparm1, iparm2;	// file-creation parameters
+#endif /* H5_WANT_H5_V1_4_COMPAT */
+    	tmpl1.getSymk( iparm1, iparm2);
+	verify_val(iparm1, F1_SYM_INTERN_K, "FileCreatPropList::getSymk", __LINE__, __FILE__);
+	verify_val(iparm2, F1_SYM_LEAF_K, "FileCreatPropList::getSymk", __LINE__, __FILE__);
 
 	// tmpl1 is automatically closed; if error occurs, it'll be
 	// caught in the catch block
@@ -176,6 +195,7 @@ test_file_create(void)
 	// Close first file
 	delete file1;
     }
+
     catch (InvalidActionException E)
     {
         cerr << " FAILED" << endl;
@@ -223,10 +243,14 @@ test_file_create(void)
 	verify_val(parm1, F2_OFFSET_SIZE, "FileCreatPropList::getSizes", __LINE__, __FILE__);
 	verify_val(parm2, F2_LENGTH_SIZE, "FileCreatPropList::getSizes", __LINE__, __FILE__);
 
-        unsigned  iparm1,iparm2;	// file-creation parameters
-        tmpl1->getSymk( iparm1, iparm2);
-        verify_val(iparm1, F2_SYM_INTERN_K, "FileCreatPropList::getSymk", __LINE__, __FILE__);
-        verify_val(iparm2, F2_SYM_LEAF_K, "FileCreatPropList::getSymk", __LINE__, __FILE__);
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    	int  iparm1, iparm2;	// file-creation parameters
+#else /* H5_WANT_H5_V1_4_COMPAT */
+    	unsigned  iparm1, iparm2;	// file-creation parameters
+#endif /* H5_WANT_H5_V1_4_COMPAT */
+    	tmpl1->getSymk( iparm1, iparm2);
+	verify_val(iparm1, F2_SYM_INTERN_K, "FileCreatPropList::getSymk", __LINE__, __FILE__);
+	verify_val(iparm2, F2_SYM_LEAF_K, "FileCreatPropList::getSymk", __LINE__, __FILE__);
 
 	// Clone the file-creation template
 	FileCreatPropList tmpl2;
@@ -308,16 +332,21 @@ test_file_open(void)
 	// Get the file-creation parameters
 	hsize_t ublock = tmpl1.getUserblock();
 	verify_val((long)ublock, (long)F2_USERBLOCK_SIZE, "FileCreatPropList::getUserblock", __LINE__, __FILE__);
+	verify_val((long)ublock, (long)F2_USERBLOCK_SIZE, "FileCreatPropList::getUserblock", __LINE__, __FILE__);
 
     	size_t  parm1, parm2;		// file-creation parameters
 	tmpl1.getSizes( parm1, parm2);
 	verify_val(parm1, F2_OFFSET_SIZE, "FileCreatPropList::getSizes", __LINE__, __FILE__);
 	verify_val(parm2, F2_LENGTH_SIZE, "FileCreatPropList::getSizes", __LINE__, __FILE__);
 
-        unsigned  iparm1,iparm2;       // file-creation parameters
-        tmpl1.getSymk( iparm1, iparm2);
-        verify_val(iparm1, F2_SYM_INTERN_K, "FileCreatPropList::getSymk", __LINE__, __FILE__);
-        verify_val(iparm2, F2_SYM_LEAF_K, "FileCreatPropList::getSymk", __LINE__, __FILE__);
+#ifdef H5_WANT_H5_V1_4_COMPAT
+	int  iparm1, iparm2;       // file-creation parameters
+#else /* H5_WANT_H5_V1_4_COMPAT */
+	unsigned  iparm1, iparm2;       // file-creation parameters
+#endif /* H5_WANT_H5_V1_4_COMPAT */
+	tmpl1.getSymk( iparm1, iparm2);
+	verify_val(iparm1, F2_SYM_INTERN_K, "FileCreatPropList::getSymk", __LINE__, __FILE__);
+	verify_val(iparm2, F2_SYM_LEAF_K, "FileCreatPropList::getSymk", __LINE__, __FILE__);
     }   // end of try block
 
     catch( Exception E ) {

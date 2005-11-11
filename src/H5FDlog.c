@@ -181,9 +181,9 @@ static herr_t H5FD_log_close(H5FD_t *_file);
 static int H5FD_log_cmp(const H5FD_t *_f1, const H5FD_t *_f2);
 static herr_t H5FD_log_query(const H5FD_t *_f1, unsigned long *flags);
 static haddr_t H5FD_log_alloc(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, hsize_t size);
-static haddr_t H5FD_log_get_eoa(const H5FD_t *_file);
+static haddr_t H5FD_log_get_eoa(H5FD_t *_file);
 static herr_t H5FD_log_set_eoa(H5FD_t *_file, haddr_t addr);
-static haddr_t H5FD_log_get_eof(const H5FD_t *_file);
+static haddr_t H5FD_log_get_eof(H5FD_t *_file);
 static herr_t  H5FD_log_get_handle(H5FD_t *_file, hid_t fapl, void** file_handle);
 static herr_t H5FD_log_read(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, haddr_t addr,
 			     size_t size, void *buf);
@@ -319,6 +319,54 @@ H5FD_log_term(void)
     FUNC_LEAVE_NOAPI_VOID
 } /* end H5FD_log_term() */
 
+#ifdef H5_WANT_H5_V1_4_COMPAT
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_fapl_log
+ *
+ * Purpose:	Modify the file access property list to use the H5FD_LOG
+ *		driver defined in this source file.  There are no driver
+ *		specific properties.
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Robb Matzke
+ *		Thursday, February 19, 1998
+ *
+ * Modifications:
+ *              We copy the LOGFILE value into our own access properties.
+ *
+ * 		Raymond Lu, 2001-10-25
+ *		Changed the file access list to the new generic property list.
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_fapl_log(hid_t fapl_id, const char *logfile, int verbosity)
+{
+    H5FD_log_fapl_t	fa;     /* File access property list information */
+    H5P_genplist_t *plist;      /* Property list pointer */
+    herr_t ret_value;
+
+    FUNC_ENTER_API(H5Pset_fapl_log, FAIL)
+    H5TRACE3("e","isIs",fapl_id,logfile,verbosity);
+
+    if(NULL == (plist = H5P_object_verify(fapl_id,H5P_FILE_ACCESS)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list")
+
+    fa.logfile=logfile;
+    if(verbosity>0) {
+        fa.flags=H5FD_LOG_LOC_IO|H5FD_LOG_FLAVOR;
+        if(verbosity>1)
+            fa.flags|=H5FD_LOG_FILE_IO;
+    } /* end if */
+    fa.buf_size=32*(1024*1024);
+    ret_value= H5P_set_driver(plist, H5FD_LOG, &fa);
+
+done:
+    FUNC_LEAVE_API(ret_value)
+}
+#else /* H5_WANT_H5_V1_4_COMPAT */
 
 /*-------------------------------------------------------------------------
  * Function:	H5Pset_fapl_log
@@ -361,6 +409,7 @@ H5Pset_fapl_log(hid_t fapl_id, const char *logfile, unsigned flags, size_t buf_s
 done:
     FUNC_LEAVE_API(ret_value)
 }
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
 
 /*-------------------------------------------------------------------------
@@ -890,9 +939,9 @@ done:
  *-------------------------------------------------------------------------
  */
 static haddr_t
-H5FD_log_get_eoa(const H5FD_t *_file)
+H5FD_log_get_eoa(H5FD_t *_file)
 {
-    const H5FD_log_t	*file = (const H5FD_log_t*)_file;
+    H5FD_log_t	*file = (H5FD_log_t*)_file;
     haddr_t ret_value;          /* Return value */
 
     FUNC_ENTER_NOAPI(H5FD_log_get_eoa, HADDR_UNDEF)
@@ -959,9 +1008,9 @@ done:
  *-------------------------------------------------------------------------
  */
 static haddr_t
-H5FD_log_get_eof(const H5FD_t *_file)
+H5FD_log_get_eof(H5FD_t *_file)
 {
-    const H5FD_log_t	*file = (const H5FD_log_t*)_file;
+    H5FD_log_t	*file = (H5FD_log_t*)_file;
     haddr_t ret_value;          /* Return value */
 
     FUNC_ENTER_NOAPI(H5FD_log_get_eof, HADDR_UNDEF)

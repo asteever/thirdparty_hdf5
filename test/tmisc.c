@@ -245,7 +245,7 @@ unsigned m13_rdata[MISC13_DIM1][MISC13_DIM2];          /* Data read from dataset
 #define MISC21_CHUNK_DIM0       2048
 #define MISC21_CHUNK_DIM1       2048
 
-/* Definitions for misc. test #22 */
+/* Definitions for misc. test #21 */
 #define MISC22_FILE             "tmisc22.h5"
 #define MISC22_DSET_NAME        "Dataset"
 #define MISC22_SPACE_RANK       2
@@ -253,10 +253,6 @@ unsigned m13_rdata[MISC13_DIM1][MISC13_DIM2];          /* Data read from dataset
 #define MISC22_CHUNK_DIM1       512
 #define MISC22_SPACE_DIM0       639
 #define MISC22_SPACE_DIM1       1308
-
-/* Definitions for misc. test #23 */
-#define MISC23_FILE             "tmisc23.h5"
-#define MISC23_NAME_BUF_SIZE    40
 
 /****************************************************************
 **
@@ -609,12 +605,13 @@ test_misc4(void)
     CHECK(ret, FAIL, "H5Gget_objinfo");
 
     /* Verify that the fileno values are the same for groups from file1 */
-    VERIFY(stat1.fileno,stat2.fileno,"H5Gget_objinfo");
+    VERIFY(stat1.fileno[0],stat2.fileno[0],"H5Gget_objinfo");
+    VERIFY(stat1.fileno[1],stat2.fileno[1],"H5Gget_objinfo");
 
     /* Verify that the fileno values are not the same between file1 & file2 */
-    if(stat1.fileno==stat3.fileno)
+    if(stat1.fileno[0]==stat3.fileno[0] && stat1.fileno[1]==stat3.fileno[1])
         TestErrPrintf("Error on line %d: stat1.fileno==stat3.fileno\n",__LINE__);
-    if(stat2.fileno==stat3.fileno)
+    if(stat2.fileno[0]==stat3.fileno[0] && stat2.fileno[1]==stat3.fileno[1])
         TestErrPrintf("Error on line %d: stat1.fileno==stat3.fileno\n",__LINE__);
 
     /* Close the objects */
@@ -1168,7 +1165,11 @@ test_misc8(void)
 #endif /* VERIFY_DATA */
     unsigned u,v;               /* Local index variables */
     int mdc_nelmts;             /* Metadata number of elements */
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    int rdcc_nelmts;            /* Raw data number of elements */
+#else /* H5_WANT_H5_V1_4_COMPAT */
     size_t rdcc_nelmts;         /* Raw data number of elements */
+#endif /* H5_WANT_H5_V1_4_COMPAT */
     size_t rdcc_nbytes;         /* Raw data number of bytes */
     double rdcc_w0;             /* Raw data write percentage */
     hsize_t start[MISC8_RANK];  /* Hyperslab start */
@@ -1750,7 +1751,11 @@ test_misc11(void)
     size_t      len_size;       /* Size of lengths in the file */
     unsigned    sym_ik;         /* Symbol table B-tree initial 'K' value */
     unsigned    istore_ik;      /* Indexed storage B-tree initial 'K' value */
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    int         sym_lk;         /* Symbol table B-tree leaf 'K' value */
+#else /* H5_WANT_H5_V1_4_COMPAT */
     unsigned    sym_lk;         /* Symbol table B-tree leaf 'K' value */
+#endif /* H5_WANT_H5_V1_4_COMPAT */
     unsigned super;             /* Superblock version # */
     unsigned freelist;          /* Free list version # */
     unsigned stab;              /* Symbol table entry version # */
@@ -2813,10 +2818,10 @@ test_misc18(void)
     /* Get object information */
     ret = H5Gget_objinfo(fid,MISC18_DSET1_NAME,0,&statbuf);
     CHECK(ret, FAIL, "H5Gget_objinfo");
-    VERIFY(statbuf.u.obj.ohdr.nmesgs, 6, "H5Gget_objinfo");
-    VERIFY(statbuf.u.obj.ohdr.nchunks, 1, "H5Gget_objinfo");
-    VERIFY(statbuf.u.obj.ohdr.size, 272, "H5Gget_objinfo");
-    VERIFY(statbuf.u.obj.ohdr.free, 152, "H5Gget_objinfo");
+    VERIFY(statbuf.ohdr.nmesgs, 6, "H5Gget_objinfo");
+    VERIFY(statbuf.ohdr.nchunks, 1, "H5Gget_objinfo");
+    VERIFY(statbuf.ohdr.size, 272, "H5Gget_objinfo");
+    VERIFY(statbuf.ohdr.free, 152, "H5Gget_objinfo");
 
     /* Create second dataset */
     did2 = H5Dcreate(fid, MISC18_DSET2_NAME, H5T_STD_U32LE, sid, H5P_DEFAULT);
@@ -2825,10 +2830,10 @@ test_misc18(void)
     /* Get object information */
     ret = H5Gget_objinfo(fid,MISC18_DSET2_NAME,0,&statbuf);
     CHECK(ret, FAIL, "H5Gget_objinfo");
-    VERIFY(statbuf.u.obj.ohdr.nmesgs, 6, "H5Gget_objinfo");
-    VERIFY(statbuf.u.obj.ohdr.nchunks, 1, "H5Gget_objinfo");
-    VERIFY(statbuf.u.obj.ohdr.size, 272, "H5Gget_objinfo");
-    VERIFY(statbuf.u.obj.ohdr.free, 152, "H5Gget_objinfo");
+    VERIFY(statbuf.ohdr.nmesgs, 6, "H5Gget_objinfo");
+    VERIFY(statbuf.ohdr.nchunks, 1, "H5Gget_objinfo");
+    VERIFY(statbuf.ohdr.size, 272, "H5Gget_objinfo");
+    VERIFY(statbuf.ohdr.free, 152, "H5Gget_objinfo");
 
     /* Loop creating attributes on each dataset, flushing them to the file each time */
     for(u=0; u<10; u++) {
@@ -2857,18 +2862,18 @@ test_misc18(void)
     /* Get object information for dataset #1 now */
     ret = H5Gget_objinfo(fid,MISC18_DSET1_NAME,0,&statbuf);
     CHECK(ret, FAIL, "H5Gget_objinfo");
-    VERIFY(statbuf.u.obj.ohdr.nmesgs, 24, "H5Gget_objinfo");
-    VERIFY(statbuf.u.obj.ohdr.nchunks, 9, "H5Gget_objinfo");
-    VERIFY(statbuf.u.obj.ohdr.size, 888, "H5Gget_objinfo");
-    VERIFY(statbuf.u.obj.ohdr.free, 16, "H5Gget_objinfo");
+    VERIFY(statbuf.ohdr.nmesgs, 24, "H5Gget_objinfo");
+    VERIFY(statbuf.ohdr.nchunks, 9, "H5Gget_objinfo");
+    VERIFY(statbuf.ohdr.size, 888, "H5Gget_objinfo");
+    VERIFY(statbuf.ohdr.free, 16, "H5Gget_objinfo");
 
     /* Get object information for dataset #2 now */
     ret = H5Gget_objinfo(fid,MISC18_DSET2_NAME,0,&statbuf);
     CHECK(ret, FAIL, "H5Gget_objinfo");
-    VERIFY(statbuf.u.obj.ohdr.nmesgs, 24, "H5Gget_objinfo");
-    VERIFY(statbuf.u.obj.ohdr.nchunks, 9, "H5Gget_objinfo");
-    VERIFY(statbuf.u.obj.ohdr.size, 888, "H5Gget_objinfo");
-    VERIFY(statbuf.u.obj.ohdr.free, 16, "H5Gget_objinfo");
+    VERIFY(statbuf.ohdr.nmesgs, 24, "H5Gget_objinfo");
+    VERIFY(statbuf.ohdr.nchunks, 9, "H5Gget_objinfo");
+    VERIFY(statbuf.ohdr.size, 888, "H5Gget_objinfo");
+    VERIFY(statbuf.ohdr.free, 16, "H5Gget_objinfo");
 
     /* Close second dataset */
     ret = H5Dclose(did2);
@@ -2902,9 +2907,6 @@ test_misc19(void)
     hid_t plid;         /* Property List ID */
     hid_t pcid;         /* Property Class ID */
     hid_t gid;          /* Group ID */
-    hid_t ecid;         /* Error Class ID */
-    hid_t emid;         /* Error Message ID */
-    hid_t esid;         /* Error Stack ID */
     int rc;             /* Reference count */
     herr_t ret;         /* Generic return value */
 
@@ -3212,110 +3214,6 @@ test_misc19(void)
     ret = H5Fclose(fid);
     CHECK(ret, FAIL, "H5Fclose");
 
-/* Check H5I operations on error classes */
-
-    /* Create an error class */
-    ecid = H5Eregister_class("foo","bar","baz");
-    CHECK(ecid, FAIL, "H5Eregister_class");
-
-    /* Check the reference count */
-    rc = H5Iget_ref(ecid);
-    VERIFY(rc, 1, "H5Iget_ref");
-
-    /* Inc the reference count */
-    rc = H5Iinc_ref(ecid);
-    VERIFY(rc, 2, "H5Iinc_ref");
-
-    /* Close the error class normally */
-    ret = H5Eunregister_class(ecid);
-    CHECK(ret, FAIL, "H5Eunregister_class");
-
-    /* Check the reference count */
-    rc = H5Iget_ref(ecid);
-    VERIFY(rc, 1, "H5Iget_ref");
-
-    /* Close the error class by decrementing the reference count */
-    rc = H5Idec_ref(ecid);
-    VERIFY(rc, 0, "H5Idec_ref");
-
-    /* Try closing the error class again (should fail) */
-    H5E_BEGIN_TRY {
-        ret = H5Eunregister_class(ecid);
-    } H5E_END_TRY;
-    VERIFY(ret, FAIL, "H5Eunregister_class");
-
-/* Check H5I operations on error messages */
-
-    /* Create an error class */
-    ecid = H5Eregister_class("foo","bar","baz");
-    CHECK(ecid, FAIL, "H5Eregister_class");
-
-    /* Create an error message */
-    emid = H5Ecreate_msg(ecid,H5E_MAJOR,"mumble");
-    CHECK(emid, FAIL, "H5Ecreate_msg");
-
-    /* Check the reference count */
-    rc = H5Iget_ref(emid);
-    VERIFY(rc, 1, "H5Iget_ref");
-
-    /* Inc the reference count */
-    rc = H5Iinc_ref(emid);
-    VERIFY(rc, 2, "H5Iinc_ref");
-
-    /* Close the error message normally */
-    ret = H5Eclose_msg(emid);
-    CHECK(ret, FAIL, "H5Eclose_msg");
-
-    /* Check the reference count */
-    rc = H5Iget_ref(emid);
-    VERIFY(rc, 1, "H5Iget_ref");
-
-    /* Close the error message by decrementing the reference count */
-    rc = H5Idec_ref(emid);
-    VERIFY(rc, 0, "H5Idec_ref");
-
-    /* Try closing the error message again (should fail) */
-    H5E_BEGIN_TRY {
-        ret = H5Eclose_msg(emid);
-    } H5E_END_TRY;
-    VERIFY(ret, FAIL, "H5Eclose_msg");
-
-    /* Close the error class */
-    ret = H5Eunregister_class(ecid);
-    CHECK(ret, FAIL, "H5Eunregister_class");
-
-/* Check H5I operations on error stacks */
-
-    /* Create an error stack */
-    esid = H5Eget_current_stack();
-    CHECK(esid, FAIL, "H5Eget_current_stack");
-
-    /* Check the reference count */
-    rc = H5Iget_ref(esid);
-    VERIFY(rc, 1, "H5Iget_ref");
-
-    /* Inc the reference count */
-    rc = H5Iinc_ref(esid);
-    VERIFY(rc, 2, "H5Iinc_ref");
-
-    /* Close the error stack normally */
-    ret = H5Eclose_stack(esid);
-    CHECK(ret, FAIL, "H5Eclose_stack");
-
-    /* Check the reference count */
-    rc = H5Iget_ref(esid);
-    VERIFY(rc, 1, "H5Iget_ref");
-
-    /* Close the error stack by decrementing the reference count */
-    rc = H5Idec_ref(esid);
-    VERIFY(rc, 0, "H5Idec_ref");
-
-    /* Try closing the error stack again (should fail) */
-    H5E_BEGIN_TRY {
-        ret = H5Eclose_stack(esid);
-    } H5E_END_TRY;
-    VERIFY(ret, FAIL, "H5Eclose_stack");
-
 } /* end test_misc19() */
 
 /****************************************************************
@@ -3434,7 +3332,7 @@ test_misc20(void)
     /* Get the layout version */
     ret = H5D_layout_version_test(did,&version);
     CHECK(ret, FAIL, "H5D_layout_version_test");
-    VERIFY(version,3,"H5D_layout_version_test");
+    VERIFY(version,2,"H5D_layout_version_test");
 
     /* Get the layout contiguous storage size */
     ret = H5D_layout_contig_size_test(did,&contig_size);
@@ -3674,7 +3572,7 @@ test_misc22(void)
                 CHECK(dcpl2, FAIL, "H5Dget_create_plist");
 
                 ret= H5Pget_filter_by_id( dcpl2, H5Z_FILTER_SZIP, &flags,
-                      &cd_nelmts, cd_values, 0, NULL , NULL );
+                      &cd_nelmts, cd_values, 0, NULL );
                 CHECK(ret, FAIL, "H5Pget_filter_by_id");
 
                 VERIFY(cd_values[2], correct, "SZIP filter returned value for precision");
@@ -3706,257 +3604,6 @@ test_misc22(void)
     HDfree(buf);
 } /* end test_misc22() */
 #endif /* H5_HAVE_FILTER_SZIP */
-
-/****************************************************************
-**
-**  test_misc23(): Test intermediate group creation.
-**
-****************************************************************/
-static void
-test_misc23(void)
-{
-    herr_t      status;
-    hsize_t     dims[] = {10};
-    hid_t       file_id=0, group_id=0, type_id=0, space_id=0,
-                tmp_id=0, create_id=H5P_DEFAULT, access_id=H5P_DEFAULT;
-    char        objname[MISC23_NAME_BUF_SIZE];  /* Name of object */
-    H5G_stat_t  sb;
-
-    /* Output message about test being performed */
-    MESSAGE(5, ("Testing intermediate group creation\n"));
-
-    /* Create a new file using default properties. */
-    file_id = H5Fcreate(MISC23_FILE, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(file_id, FAIL, "H5Fcreate");
-
-
-    /* Build some infrastructure */
-    group_id = H5Gcreate(file_id, "/A", 0);
-    CHECK(group_id, FAIL, "H5Gcreate");
-
-    space_id = H5Screate_simple(1, dims, NULL);
-    CHECK(space_id, FAIL, "H5Screate_simple");
-
-    type_id = H5Tcopy( H5T_STD_I32BE);
-    CHECK(type_id, FAIL, "H5Tcopy");
-
-
-    /**********************************************************************
-    * test the old APIs
-    **********************************************************************/
-
-    H5E_BEGIN_TRY {
-        tmp_id = H5Gcreate(file_id, "/A/B00a/grp", 0);
-    } H5E_END_TRY;
-    VERIFY(tmp_id, FAIL, "H5Gcreate");
-
-
-    tmp_id = H5Gcreate(file_id, "/A/grp", 0);
-    CHECK(tmp_id, FAIL, "H5Gcreate");
-
-    status = H5Gclose(tmp_id);
-    CHECK(status, FAIL, "H5Gclose");
-
-
-    H5E_BEGIN_TRY {
-        tmp_id = H5Dcreate(file_id, "/A/B00c/dset", type_id, space_id, create_id);
-    } H5E_END_TRY;
-    VERIFY(tmp_id, FAIL, "H5Dcreate");
-
-
-    tmp_id = H5Dcreate(file_id, "/A/dset", type_id, space_id, create_id);
-    CHECK(tmp_id, FAIL, "H5Dcreate");
-
-    status = H5Dclose(tmp_id);
-    CHECK(status, FAIL, "H5Dclose");
-
-    /**********************************************************************
-    * test H5Gcreate_expand()
-    **********************************************************************/
-
-    /* Create group creation property list */
-    create_id = H5Pcreate(H5P_GROUP_CREATE);
-    CHECK(create_id, FAIL, "H5Pcreate");
-
-    /* Set flag for intermediate group creation */
-    status = H5Pset_create_intermediate_group(create_id, TRUE);
-    CHECK(status, FAIL, "H5Pset_create_intermediate_group");
-
-
-    tmp_id = H5Gcreate_expand(file_id, "/A/B01/grp", create_id, access_id);
-    CHECK(tmp_id, FAIL, "H5Gcreate_expand");
-
-    /* Query that the name of the new group is correct */
-    status = H5Iget_name( tmp_id, objname, (size_t)MISC23_NAME_BUF_SIZE );
-    CHECK(status, FAIL, "H5Iget_name");
-    VERIFY_STR(objname, "/A/B01/grp", "H5Iget_name");
-
-    status = H5Gclose(tmp_id);
-    CHECK(status, FAIL, "H5Gclose");
-
-    /* Check that intermediate group is set up correctly */
-    tmp_id = H5Gopen(file_id, "/A/B01");
-    CHECK(tmp_id, FAIL, "H5Gopen");
-
-    status = H5Gget_objinfo(tmp_id, ".", FALSE, &sb);
-    CHECK(status, FAIL, "H5Gget_objinfo");
-    VERIFY(sb.u.obj.nlink,1,"H5Gget_objinfo");
-
-    status = H5Gclose(tmp_id);
-    CHECK(status, FAIL, "H5Gclose");
-
-
-    tmp_id = H5Gcreate_expand(file_id, "/A/B02/C02/grp", create_id, access_id);
-    CHECK(tmp_id, FAIL, "H5Gcreate_expand");
-
-    status = H5Gclose(tmp_id);
-    CHECK(status, FAIL, "H5Gclose");
-
-
-    tmp_id = H5Gcreate_expand(group_id, "B03/grp/", create_id, access_id);
-    CHECK(tmp_id, FAIL, "H5Gcreate_expand");
-
-    status = H5Gclose(tmp_id);
-    CHECK(status, FAIL, "H5Gclose");
-
-
-    if ( (tmp_id = H5Gcreate_expand(group_id, "/A/B04/grp/", create_id, access_id)) < 0)
-    CHECK(tmp_id, FAIL, "H5Gcreate_expand");
-
-    status = H5Gclose(tmp_id);
-    CHECK(status, FAIL, "H5Gclose");
-
-
-    if ( (tmp_id = H5Gcreate_expand(file_id, "/A/B05/C05/A", create_id, access_id)) < 0)
-    CHECK(tmp_id, FAIL, "H5Gcreate_expand");
-
-    status = H5Gclose(tmp_id);
-    CHECK(status, FAIL, "H5Gclose");
-
-
-    status = H5Pclose(create_id);
-    CHECK(status, FAIL, "H5Pclose");
-
-
-    /**********************************************************************
-    * test new H5Dcreate
-    **********************************************************************/
-
-    /* Create dataset creation property list */
-    create_id = H5Pcreate(H5P_DATASET_CREATE);
-    CHECK(create_id, FAIL, "H5Pcreate");
-
-    /* Set flag for intermediate group creation */
-    status = H5Pset_create_intermediate_group(create_id, TRUE);
-    CHECK(status, FAIL, "H5Pset_create_intermediate_group");
-
-
-    tmp_id = H5Dcreate(file_id, "/A/B06/dset", type_id, space_id, create_id);
-    CHECK(tmp_id, FAIL, "H5Dcreate");
-
-    status = H5Dclose(tmp_id);
-    CHECK(status, FAIL, "H5Dclose");
-
-
-    tmp_id = H5Dcreate(file_id, "/A/B07/B07/dset", type_id, space_id, create_id);
-    CHECK(tmp_id, FAIL, "H5Dcreate");
-
-    status = H5Dclose(tmp_id);
-    CHECK(status, FAIL, "H5Dclose");
-
-
-    tmp_id = H5Dcreate(group_id, "B08/dset", type_id, space_id, create_id);
-    CHECK(tmp_id, FAIL, "H5Dcreate");
-
-    status = H5Dclose(tmp_id);
-    CHECK(status, FAIL, "H5Dclose");
-
-
-    tmp_id = H5Dcreate(group_id, "/A/B09/dset", type_id, space_id, create_id);
-    CHECK(tmp_id, FAIL, "H5Dcreate");
-
-    status = H5Dclose(tmp_id);
-    CHECK(status, FAIL, "H5Dclose");
-
-
-    tmp_id = H5Dcreate(file_id, "/A/B10/C10/A/dset", type_id, space_id, create_id);
-    CHECK(tmp_id, FAIL, "H5Dcreate");
-
-    status = H5Dclose(tmp_id);
-    CHECK(status, FAIL, "H5Dclose");
-
-
-    status = H5Pclose(create_id);
-    CHECK(status, FAIL, "H5Pclose");
-
-
-    /**********************************************************************
-    * test new H5Tcommit
-    **********************************************************************/
-
-    /* Create datatype creation property list */
-    create_id = H5Pcreate(H5P_DATATYPE_CREATE);
-    CHECK(create_id, FAIL, "H5Pcreate");
-
-    /* Set flag for intermediate group creation */
-    status = H5Pset_create_intermediate_group(create_id, TRUE);
-    CHECK(status, FAIL, "H5Pset_create_intermediate_group");
-
-
-    tmp_id = H5Tcopy(H5T_NATIVE_INT16);
-    CHECK(tmp_id, FAIL, "H5Tcopy");
-
-    status = H5Tcommit_expand(file_id, "/A/B11/dtype", tmp_id, create_id, access_id);
-    CHECK(status, FAIL, "H5Tcommit_expand");
-
-    status = H5Tclose(tmp_id);
-    CHECK(status, FAIL, "H5Tclose");
-
-
-    tmp_id = H5Tcopy(H5T_NATIVE_INT32);
-    CHECK(tmp_id, FAIL, "H5Tcopy");
-
-    status = H5Tcommit_expand(file_id, "/A/B12/C12/dtype", tmp_id, create_id, access_id);
-    CHECK(status, FAIL, "H5Tcommit_expand");
-
-    status = H5Tclose(tmp_id);
-    CHECK(status, FAIL, "H5Tclose");
-
-
-    tmp_id = H5Tcopy(H5T_NATIVE_INT64);
-    CHECK(tmp_id, FAIL, "H5Tcopy");
-
-    status = H5Tcommit_expand(group_id, "B13/dtype", tmp_id, create_id, access_id);
-    CHECK(status, FAIL, "H5Tcommit_expand");
-
-    status = H5Tclose(tmp_id);
-    CHECK(status, FAIL, "H5Tclose");
-
-
-    tmp_id = H5Tcopy(H5T_NATIVE_FLOAT);
-    CHECK(tmp_id, FAIL, "H5Tcopy");
-
-    status = H5Tcommit_expand(group_id, "/A/B14/dtype", tmp_id, create_id, access_id);
-    CHECK(status, FAIL, "H5Tcommit_expand");
-
-    status = H5Tclose(tmp_id);
-    CHECK(status, FAIL, "H5Tclose");
-
-
-    tmp_id = H5Tcopy(H5T_NATIVE_DOUBLE);
-    CHECK(tmp_id, FAIL, "H5Tcopy");
-
-    status = H5Tcommit_expand(file_id, "/A/B15/C15/A/dtype", tmp_id, create_id, access_id);
-    CHECK(status, FAIL, "H5Tcommit_expand");
-
-    status = H5Tclose(tmp_id);
-    CHECK(status, FAIL, "H5Tclose");
-
-
-    status = H5Pclose(create_id);
-    CHECK(status, FAIL, "H5Pclose");
-
-} /* end test_misc23() */
 
 /****************************************************************
 **
@@ -3993,7 +3640,6 @@ test_misc(void)
     test_misc21();      /* Test that "late" allocation time is treated the same as "incremental", for chunked datasets w/a filters */
     test_misc22();     /* check szip bits per pixel */
 #endif /* H5_HAVE_FILTER_SZIP */
-    test_misc23();      /* Test intermediate group creation */
 
 } /* test_misc() */
 
@@ -4042,6 +3688,5 @@ cleanup_misc(void)
     HDremove(MISC21_FILE);
     HDremove(MISC22_FILE);
 #endif /* H5_HAVE_FILTER_SZIP */
-    HDremove(MISC23_FILE);
 }
 

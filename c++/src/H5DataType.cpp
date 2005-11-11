@@ -34,9 +34,6 @@
 
 #ifndef H5_NO_NAMESPACE
 namespace H5 {
-#ifndef H5_NO_STD
-    using namespace std;
-#endif  // H5_NO_STD
 #endif
 
 //--------------------------------------------------------------------------
@@ -99,7 +96,7 @@ DataType::DataType(const DataType& original) : H5Object(original)
 // Programmer	Binh-Minh Ribler - 2000
 // Modification
 //		Replaced resetIdComponent with decRefCount to use C library
-//		ID reference counting mechanism - June 1, 2004
+//		ID reference counting mechanism - BMR, Feb 20, 2005
 //--------------------------------------------------------------------------
 void DataType::copy( const DataType& like_type )
 {
@@ -158,7 +155,8 @@ bool DataType::operator==(const DataType& compared_type ) const
       return false;
    else
    {
-      throw DataTypeIException(inMemFunc("operator=="), "H5Tequal returns negative value");
+      throw DataTypeIException(inMemFunc("operator=="),
+		"H5Tequal returns negative value");
    }
 }
 
@@ -199,7 +197,8 @@ void DataType::commit(CommonFG& loc, const string& name) const
 // Function:	DataType::committed
 ///\brief	Determines whether a datatype is a named type or a
 ///		transient type.
-///\return	true if the datatype is a named type, and false, otherwise.
+///\return	\c true if the datatype is a named type, and \c false, 
+///		otherwise.
 ///\exception	H5::DataTypeIException
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
@@ -266,6 +265,49 @@ void DataType::convert( const DataType& dest, size_t nelmts, void *buf, void *ba
    }
 }
 
+/*
+These two functions may not work properly.  They will be re-evaluated 
+and tested throughly.  BMR - Oct 29, 2005
+*/
+
+//--------------------------------------------------------------------------
+// Function:	DataType::setOverflow
+///\brief	Sets the overflow handler to a specified function.
+///\param	func       - IN: Function to be called when overflow occurs
+///\return	Pointer to a suitable conversion function
+///\exception	H5::DataTypeIException
+///\par Description
+///		The function specified by \a func will be called for all 
+///		data type conversions that result in an overflow.
+///		For more information, please see:
+/// http://hdf.ncsa.uiuc.edu/HDF5/doc/RM_H5T.html#Datatype-SetOverflow
+// Programmer	Binh-Minh Ribler - 2004
+//--------------------------------------------------------------------------
+void DataType::setOverflow( H5T_overflow_t func ) const
+{
+   // Call C routine H5Tset_overflow to set the overflow handler
+   herr_t ret_value = H5Tset_overflow( func );
+   if( ret_value < 0 )
+   {
+      throw DataTypeIException(inMemFunc("setOverflow"), "H5Tset_overflow failed");
+   }
+}
+
+//--------------------------------------------------------------------------
+// Function:	DataType::getOverflow
+///\brief	Returns a pointer to the current global overflow function.
+///\return	Pointer to an application-defined function if successful; 
+///		otherwise returns NULL; this can happen if no overflow 
+///		handling function is registered.
+///\exception	H5::DataTypeIException
+// Programmer	Binh-Minh Ribler - 2004
+//--------------------------------------------------------------------------
+H5T_overflow_t DataType::getOverflow(void) const
+{
+   return( H5Tget_overflow());  // C routine
+   // NULL can be returned as well
+}
+
 //--------------------------------------------------------------------------
 // Function:	DataType::lock
 ///\brief	Locks a datatype, making it read-only and non-destructible.
@@ -304,7 +346,8 @@ H5T_class_t DataType::getClass() const
    // Return datatype class identifier if successful
    if( type_class == H5T_NO_CLASS )
    {
-      throw DataTypeIException(inMemFunc("getClass"), "H5Tget_class returns H5T_NO_CLASS");
+      throw DataTypeIException(inMemFunc("getClass"),
+		"H5Tget_class returns H5T_NO_CLASS");
    }
    return( type_class );
 }
@@ -322,7 +365,8 @@ size_t DataType::getSize() const
    size_t type_size = H5Tget_size( id );
    if( type_size <= 0 ) // valid data types are never zero size
    {
-      throw DataTypeIException(inMemFunc("getSize"), "H5Tget_size returns invalid datatype size");
+      throw DataTypeIException(inMemFunc("getSize"),
+		"H5Tget_size returns invalid datatype size");
    }
    return( type_size );
 }
@@ -481,7 +525,8 @@ string DataType::getTag() const
    }
    else
    {
-      throw DataTypeIException(inMemFunc("getTag"), "H5Tget_tag returns NULL for tag");
+      throw DataTypeIException(inMemFunc("getTag"),
+		"H5Tget_tag returns NULL for tag");
    }
 }
 
@@ -503,7 +548,8 @@ bool DataType::detectClass(H5T_class_t cls) const
       return false;
    else
    {
-      throw DataTypeIException(inMemFunc("detectClass"), "H5Tdetect_class returns negative value");
+      throw DataTypeIException(inMemFunc("detectClass"),
+		"H5Tdetect_class returns negative value");
    }
 }
 
@@ -524,7 +570,8 @@ bool DataType::isVariableStr() const
       return false;
    else
    {
-      throw DataTypeIException(inMemFunc("isVariableStr"), "H5Tis_variable_str returns negative value");
+      throw DataTypeIException(inMemFunc("isVariableStr"),
+                "H5Tis_variable_str returns negative value");
    }
 }
 
@@ -535,7 +582,7 @@ bool DataType::isVariableStr() const
 ///\param	dataspace - IN: Dataspace with selection
 ///\param	ref_type - IN: Type of reference; default to \c H5R_DATASET_REGION
 ///\return	A reference
-///\exception	H5::DataTypeIException
+///\exception	H5::IdComponentException
 // Programmer	Binh-Minh Ribler - May, 2004
 //--------------------------------------------------------------------------
 void* DataType::Reference(const char* name, DataSpace& dataspace, H5R_type_t ref_type) const
@@ -555,7 +602,7 @@ void* DataType::Reference(const char* name, DataSpace& dataspace, H5R_type_t ref
 ///		a reference to an HDF5 object, not to a dataset region.
 ///\param	name - IN: Name of the object to be referenced
 ///\return	A reference
-///\exception	H5::DataTypeIException
+///\exception	H5::IdComponentException
 ///\par Description
 //		This function passes H5R_OBJECT and -1 to the protected
 //		function for it to pass to the C API H5Rcreate
@@ -595,7 +642,7 @@ void* DataType::Reference(const string& name) const
 ///			\li \c H5G_GROUP Object is a group.
 ///			\li \c H5G_DATASET   Object is a dataset.
 ///			\li \c H5G_TYPE Object is a named datatype
-///\exception	H5::DataTypeIException
+///\exception	H5::IdComponentException
 // Programmer	Binh-Minh Ribler - May, 2004
 //--------------------------------------------------------------------------
 H5G_obj_t DataType::getObjType(void *ref, H5R_type_t ref_type) const
@@ -614,7 +661,7 @@ H5G_obj_t DataType::getObjType(void *ref, H5R_type_t ref_type) const
 ///\param	ref      - IN: Reference to get region of
 ///\param	ref_type - IN: Type of reference to get region of - default
 ///\return	DataSpace instance
-///\exception	H5::DataTypeIException
+///\exception	H5::IdComponentException
 // Programmer	Binh-Minh Ribler - May, 2004
 //--------------------------------------------------------------------------
 DataSpace DataType::getRegion(void *ref, H5R_type_t ref_type) const
@@ -649,7 +696,7 @@ void DataType::close()
       id = 0;
    }
    else // cannot close a predefined type
-      throw DataTypeIException("DataType::close", "Cannot close a predefined type");
+      throw DataTypeIException(inMemFunc("close"), "Cannot close a predefined type");
 }
 
 //--------------------------------------------------------------------------
@@ -658,7 +705,7 @@ void DataType::close()
 // Programmer	Binh-Minh Ribler - 2000
 // Modification
 //		Replaced resetIdComponent with decRefCount to use C library
-//		ID reference counting mechanism - June 1, 2004
+//		ID reference counting mechanism - BMR, Feb 20, 2005
 //--------------------------------------------------------------------------
 DataType::~DataType()
 {

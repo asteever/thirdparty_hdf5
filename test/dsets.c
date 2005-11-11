@@ -74,19 +74,6 @@ const char *FILENAME[] = {
 #define DSET_SET_LOCAL_NAME	"set_local"
 #define DSET_SET_LOCAL_NAME_2	"set_local_2"
 #define DSET_ONEBYTE_SHUF_NAME   "onebyte_shuffle"
-#define DSET_NBIT_INT_NAME             "nbit_int"
-#define DSET_NBIT_FLOAT_NAME           "nbit_float"
-#define DSET_NBIT_DOUBLE_NAME          "nbit_double"
-#define DSET_NBIT_ARRAY_NAME           "nbit_array"
-#define DSET_NBIT_COMPOUND_NAME        "nbit_compound"
-#define DSET_NBIT_COMPOUND_NAME_2      "nbit_compound_2"
-#define DSET_NBIT_COMPOUND_NAME_3      "nbit_compound_3"
-#define DSET_SCALEOFFSET_INT_NAME      "scaleoffset_int"
-#define DSET_SCALEOFFSET_INT_NAME_2    "scaleoffset_int_2"
-#define DSET_SCALEOFFSET_FLOAT_NAME    "scaleoffset_float"
-#define DSET_SCALEOFFSET_FLOAT_NAME_2  "scaleoffset_float_2"
-#define DSET_SCALEOFFSET_DOUBLE_NAME   "scaleoffset_double"
-#define DSET_SCALEOFFSET_DOUBLE_NAME_2 "scaleoffset_double_2"
 #define DSET_COMPARE_DCPL_NAME	"compare_dcpl"
 #define DSET_COMPARE_DCPL_NAME_2	"compare_dcpl_2"
 
@@ -145,10 +132,12 @@ double	points_dbl[DSET_DIM1][DSET_DIM2], check_dbl[DSET_DIM1][DSET_DIM2];
 /* Local prototypes for filter functions */
 static size_t filter_bogus(unsigned int flags, size_t cd_nelmts,
     const unsigned int *cd_values, size_t nbytes, size_t *buf_size, void **buf);
+#ifndef H5_WANT_H5_V1_4_COMPAT
 static herr_t can_apply_bogus(hid_t dcpl_id, hid_t type_id, hid_t space_id);
 static herr_t set_local_bogus2(hid_t dcpl_id, hid_t type_id, hid_t space_id);
 static size_t filter_bogus2(unsigned int flags, size_t cd_nelmts,
     const unsigned int *cd_values, size_t nbytes, size_t *buf_size, void **buf);
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 static size_t filter_corrupt(unsigned int flags, size_t cd_nelmts,
     const unsigned int *cd_values, size_t nbytes, size_t *buf_size, void **buf);
 
@@ -361,7 +350,11 @@ test_simple_io(hid_t fapl)
     tconv_buf = malloc (1000);
     xfer = H5Pcreate (H5P_DATASET_XFER);
     assert (xfer>=0);
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    if (H5Pset_buffer (xfer, (hsize_t)1000, tconv_buf, NULL)<0) goto error;
+#else /* H5_WANT_H5_V1_4_COMPAT */
     if (H5Pset_buffer (xfer, (size_t)1000, tconv_buf, NULL)<0) goto error;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
     /* Create the dataset */
     if ((dataset = H5Dcreate(file, DSET_SIMPLE_IO_NAME, H5T_NATIVE_INT, space,
@@ -801,7 +794,11 @@ test_conv_buffer(hid_t fid)
     hsize_t     dimsb[1];
     hsize_t     dimsc[1];
     hid_t       xfer_list;
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    hsize_t      size;
+#else /* H5_WANT_H5_V1_4_COMPAT */
     size_t      size;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
     TESTING("data type conversion buffer size");
 
@@ -982,15 +979,14 @@ test_tconv(hid_t file)
 
 /* This message derives from H5Z */
 const H5Z_class_t H5Z_BOGUS[1] = {{
-    H5Z_CLASS_T_VERS,       /* H5Z_class_t version */
     H5Z_FILTER_BOGUS,		/* Filter id number		*/
-    1, 1,               /* Encoding and decoding enabled */
     "bogus",			/* Filter name for debugging	*/
     NULL,                       /* The "can apply" callback     */
     NULL,                       /* The "set local" callback     */
     filter_bogus,		/* The actual filter function	*/
 }};
 
+#ifndef H5_WANT_H5_V1_4_COMPAT
 
 /*-------------------------------------------------------------------------
  * Function:	can_apply_bogus
@@ -1016,6 +1012,7 @@ can_apply_bogus(hid_t UNUSED dcpl_id, hid_t type_id, hid_t UNUSED space_id)
     else
         return 1;
 }
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
 
 /*-------------------------------------------------------------------------
@@ -1042,6 +1039,7 @@ filter_bogus(unsigned int UNUSED flags, size_t UNUSED cd_nelmts,
     return nbytes;
 }
 
+#ifndef H5_WANT_H5_V1_4_COMPAT
 
 /*-------------------------------------------------------------------------
  * Function:	set_local_bogus2
@@ -1073,13 +1071,8 @@ set_local_bogus2(hid_t dcpl_id, hid_t type_id, hid_t UNUSED space_id)
         add_on=(unsigned)H5Tget_size(type_id);
 
     /* Get the filter's current parameters */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     if(H5Pget_filter_by_id(dcpl_id,H5Z_FILTER_BOGUS2,&flags,&cd_nelmts,
             cd_values,0,NULL)<0)
-#else
-    if(H5Pget_filter_by_id(dcpl_id,H5Z_FILTER_BOGUS2,&flags,&cd_nelmts,
-            cd_values,0,NULL,NULL)<0)
-#endif
         return(FAIL);
 
     /* Check that the parameter values were passed along correctly */
@@ -1159,12 +1152,11 @@ filter_bogus2(unsigned int flags, size_t cd_nelmts,
     else
         return(nbytes);
 }
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
 /* This message derives from H5Z */
 const H5Z_class_t H5Z_CORRUPT[1] = {{
-    H5Z_CLASS_T_VERS,            /* H5Z_class_t version */
     H5Z_FILTER_CORRUPT,		/* Filter id number		*/
-    1, 1,               /* Encoding and decoding enabled */
     "corrupt",			/* Filter name for debugging	*/
     NULL,                       /* The "can apply" callback     */
     NULL,                       /* The "set local" callback     */
@@ -1314,7 +1306,7 @@ test_filter_internal(hid_t fid, const char *name, hid_t dcpl, int if_fletcher32,
     const hsize_t	hs_offset[2] = {FILTER_HS_OFFSET1, FILTER_HS_OFFSET2}; /* Hyperslab offset */
     const hsize_t	hs_size[2] = {FILTER_HS_SIZE1, FILTER_HS_SIZE2};   /* Hyperslab size */
     void		*tconv_buf = NULL;      /* Temporary conversion buffer */
-    hsize_t		i, j, n;        /* Local index variables */
+    int			i, j, n;        /* Local index variables */
     herr_t              status;         /* Error status */
 
     /* Create the data space */
@@ -1326,7 +1318,11 @@ test_filter_internal(hid_t fid, const char *name, hid_t dcpl, int if_fletcher32,
      */
     if ((dxpl = H5Pcreate (H5P_DATASET_XFER))<0) goto error;
     tconv_buf = malloc (1000);
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    if (H5Pset_buffer (dxpl, (hsize_t)1000, tconv_buf, NULL)<0) goto error;
+#else /* H5_WANT_H5_V1_4_COMPAT */
     if (H5Pset_buffer (dxpl, (size_t)1000, tconv_buf, NULL)<0) goto error;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
     if ((write_dxpl = H5Pcopy (dxpl))<0) TEST_ERROR;
 
     if (if_fletcher32==DISABLE_FLETCHER32) {
@@ -1827,17 +1823,10 @@ test_get_filter_info(void)
     } /* end else */
 #endif /* H5_HAVE_FILTER_SZIP */
 
-  /* Verify that get_filter_info throws an error when given a bad filter */
-  /* (Depends on 1.6 compatibility flag) */
-#ifdef H5_WANT_H5_V1_6_COMPAT
+  /* Verify that get_filter_info doesn't throw an error when given a bad filter */
+  /* (Different default behavior in post-1.6 code) */
   if (H5Zget_filter_info(-1, &flags) < 0) TEST_ERROR
   if (flags != 0) TEST_ERROR
-#else /* H5_WANT_H5_V1_6_COMPAT */
-  H5E_BEGIN_TRY {
-    err = H5Zget_filter_info(-1, &flags);
-  } H5E_END_TRY;
-  if (err >= 0) TEST_ERROR
-#endif /* H5_WANT_H5_V1_6_COMPAT */
 
   PASSED();
   return 0;
@@ -1907,7 +1896,11 @@ test_filters(hid_t file)
     puts("Testing 'null' filter");
     if((dc = H5Pcreate(H5P_DATASET_CREATE))<0) goto error;
     if (H5Pset_chunk (dc, 2, chunk_size)<0) goto error;
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    if (H5Zregister (H5Z_FILTER_BOGUS, "bogus", filter_bogus)<0) goto error;
+#else /* H5_WANT_H5_V1_4_COMPAT */
     if (H5Zregister (H5Z_BOGUS)<0) goto error;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
     if (H5Pset_filter (dc, H5Z_FILTER_BOGUS, 0, 0, NULL)<0) goto error;
 
     if(test_filter_internal(file,DSET_BOGUS_NAME,dc,DISABLE_FLETCHER32,DATA_NOT_CORRUPTED,&null_size)<0) goto error;
@@ -1948,7 +1941,11 @@ test_filters(hid_t file)
     data_corrupt[1] = 33;
     data_corrupt[2] = 27;
 
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    if (H5Zregister (H5Z_FILTER_CORRUPT, "corrupt", filter_corrupt)<0) goto error;
+#else /* H5_WANT_H5_V1_4_COMPAT */
     if (H5Zregister (H5Z_CORRUPT)<0) goto error;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
     if (H5Pset_filter (dc, H5Z_FILTER_CORRUPT, 0, 3, data_corrupt)<0) goto error;
     if(test_filter_internal(file,DSET_FLETCHER32_NAME_3,dc,DISABLE_FLETCHER32,DATA_CORRUPTED,&fletcher32_size)<0) goto error;
     if(fletcher32_size<=null_size) {
@@ -2164,7 +2161,7 @@ test_missing_filter(hid_t file)
     const hsize_t dims[2] = {DSET_DIM1, DSET_DIM2};         /* Dataspace dimensions */
     const hsize_t chunk_dims[2] = {2, 25};      /* Chunk dimensions */
     hsize_t     dset_size;      /* Dataset size */
-    hsize_t     i,j;            /* Local index variables */
+    int	        i,j;            /* Local index variables */
     herr_t      ret;            /* Generic return value */
     char testfile[512]="";      /* Buffer to hold name of existing test file */
     char *srcdir = HDgetenv("srcdir");    /* The source directory, if we are using the --srcdir configure option */
@@ -2416,7 +2413,7 @@ test_onebyte_shuffle(hid_t file)
     const hsize_t       chunk_size[2] = {10, 20};
     unsigned char       orig_data[10][20];
     unsigned char       new_data[10][20];
-    hsize_t		i, j;
+    int	   		i, j;
 #else /* H5_HAVE_FILTER_SHUFFLE */
     const char		*not_supported= "    Data shuffling is not enabled.";
 #endif /* H5_HAVE_FILTER_SHUFFLE */
@@ -2504,2086 +2501,6 @@ test_onebyte_shuffle(hid_t file)
 
     return 0;
 
-error:
-    return -1;
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:    test_nbit_int
- *
- * Purpose:     Tests the integer datatype for nbit filter
- *
- * Return:      Success:        0
- *
- *              Failure:        -1
- *
- * Programmer:  Xiaowen Wu
- *              Wednesday, Dec. 23th, 2004
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-test_nbit_int(hid_t file)
-{
-#ifdef H5_HAVE_FILTER_NBIT
-    hid_t               dataset, datatype, mem_datatype, space, dc;
-    const hsize_t       size[2] = {2, 5};
-    const hsize_t       chunk_size[2] = {2,5};
-    int                 orig_data[2][5];
-    int                 new_data[2][5];
-    unsigned int        mask;
-    size_t              precision, offset;
-    hsize_t             i, j;
-#else /* H5_HAVE_FILTER_NBIT */
-    const char          *not_supported= "    Nbit is not enabled.";
-#endif /* H5_HAVE_FILTER_NBIT */
-
-    puts("Testing nbit filter");
-    TESTING("    nbit int (setup)");
-#ifdef H5_HAVE_FILTER_NBIT
-    /* Define dataset datatype (integer), and set precision, offset */
-    datatype = H5Tcopy(H5T_NATIVE_INT);
-    precision = 17; /* precision includes sign bit */
-    if(H5Tset_precision(datatype,precision)<0) goto error;
-    offset = 4;
-    if(H5Tset_offset(datatype,offset)<0) goto error;
-
-    /* Copy to memory datatype before setting order */
-    mem_datatype = H5Tcopy(datatype);
-
-    /* Set order of dataset datatype */
-    if(H5Tset_order(datatype, H5T_ORDER_BE)<0) goto error;
-
-    /* Create the data space */
-    if ((space = H5Screate_simple(2, size, NULL))<0) goto error;
-
-    /* Use nbit filter  */
-    if((dc = H5Pcreate(H5P_DATASET_CREATE))<0) goto error;
-    if (H5Pset_chunk(dc, 2, chunk_size)<0) goto error;
-    if (H5Pset_nbit(dc)<0) goto error;
-
-    /* Create the dataset */
-    if ((dataset = H5Dcreate(file, DSET_NBIT_INT_NAME, datatype,
-                             space,dc))<0) goto error;
-
-    /* Initialize data, assuming size of long_long >= size of int */
-    for (i= 0;i< size[0]; i++)
-      for (j = 0; j < size[1]; j++) {
-        orig_data[i][j] = ((long_long)HDrandom() %
-                           (long_long)HDpow(2.0, precision - 1)) << offset;
-
-        /* even-numbered values are negtive */
-        if((i*size[1]+j+1)%2 == 0)
-            orig_data[i][j] = -orig_data[i][j];
-      }
-
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-
-    /*----------------------------------------------------------------------
-     * STEP 1: Test nbit by setting up a chunked dataset and writing
-     * to it.
-     *----------------------------------------------------------------------
-     */
-    TESTING("    nbit int (write)");
-
-#ifdef H5_HAVE_FILTER_NBIT
-    if (H5Dwrite(dataset, mem_datatype, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-                 orig_data)<0)
-        goto error;
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-
-    /*----------------------------------------------------------------------
-     * STEP 2: Try to read the data we just wrote.
-     *----------------------------------------------------------------------
-     */
-    TESTING("    nbit int (read)");
-
-#ifdef H5_HAVE_FILTER_NBIT
-    /* Read the dataset back */
-    if (H5Dread(dataset, mem_datatype, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-                new_data)<0)
-        goto error;
-
-    /* Check that the values read are the same as the values written
-     * Use mask for checking the significant bits, ignoring the padding bits
-     */
-    mask = ~(~0 << (precision + offset)) & (~0 << offset);
-    for (i=0; i<size[0]; i++) {
-        for (j=0; j<size[1]; j++) {
-            if ((new_data[i][j] & mask) != (orig_data[i][j] & mask)) {
-                H5_FAILED();
-                printf("    Read different values than written.\n");
-                printf("    At index %lu,%lu\n", (unsigned long)i, (unsigned long)j);
-                goto error;
-            }
-        }
-    }
-
-    /*----------------------------------------------------------------------
-     * Cleanup
-     *----------------------------------------------------------------------
-     */
-    if (H5Tclose(datatype)<0) goto error;
-    if (H5Tclose(mem_datatype)<0) goto error;
-    if (H5Pclose(dc)<0) goto error;
-    if (H5Sclose(space)<0) goto error;
-    if (H5Dclose(dataset)<0) goto error;
-
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-    return 0;
-error:
-    return -1;
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:    test_nbit_float
- *
- * Purpose:     Tests the float datatype of nbit filter
- *
- * Return:      Success:        0
- *
- *              Failure:        -1
- *
- * Programmer:  Xiaowen Wu
- *              Friday, Jan. 21th, 2005
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-test_nbit_float(hid_t file)
-{
-#ifdef H5_HAVE_FILTER_NBIT
-    hid_t               dataset, datatype, space, dc;
-    const hsize_t       size[2] = {2, 5};
-    const hsize_t       chunk_size[2] = {2, 5};
-    /* orig_data[] are initialized to be within the range that can be represented by
-     * dataset datatype (no precision loss during datatype conversion)
-     */
-    float               orig_data[2][5] = {{188384.00, 19.103516, -1.0831790e9, -84.242188,
-    5.2045898}, {-49140.000, 2350.2500, -3.2110596e-1, 6.4998865e-5, -0.0000000}};
-    float               new_data[2][5];
-    size_t              precision, offset;
-    hsize_t             i, j;
-#else /* H5_HAVE_FILTER_NBIT */
-    const char          *not_supported= "    Nbit is not enabled.";
-#endif /* H5_HAVE_FILTER_NBIT */
-
-    TESTING("    nbit float (setup)");
-#ifdef H5_HAVE_FILTER_NBIT
-    /* Define user-defined single-precision floating-point type for dataset */
-    datatype = H5Tcopy(H5T_IEEE_F32BE);
-    if(H5Tset_fields(datatype, 26, 20, 6, 7, 13)<0) goto error;
-    offset = 7;
-    if(H5Tset_offset(datatype,offset)<0) goto error;
-    precision = 20;
-    if(H5Tset_precision(datatype,precision)<0) goto error;
-    if(H5Tset_size(datatype, 4)<0) goto error;
-    if(H5Tset_ebias(datatype, 31)<0) goto error;
-
-    /* Create the data space */
-    if ((space = H5Screate_simple(2, size, NULL))<0) goto error;
-
-    /* Use nbit filter  */
-    if((dc = H5Pcreate(H5P_DATASET_CREATE))<0) goto error;
-    if (H5Pset_chunk(dc, 2, chunk_size)<0) goto error;
-    if (H5Pset_nbit(dc)<0) goto error;
-
-    /* Create the dataset */
-    if ((dataset = H5Dcreate(file, DSET_NBIT_FLOAT_NAME, datatype,
-                             space,dc))<0) goto error;
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-
-    /*----------------------------------------------------------------------
-     * STEP 1: Test nbit by setting up a chunked dataset and writing
-     * to it.
-     *----------------------------------------------------------------------
-     */
-    TESTING("    nbit float (write)");
-
-#ifdef H5_HAVE_FILTER_NBIT
-    if (H5Dwrite(dataset, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-                 orig_data)<0)
-        goto error;
-
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-
-    /*----------------------------------------------------------------------
-     * STEP 2: Try to read the data we just wrote.
-     *----------------------------------------------------------------------
-     */
-    TESTING("    nbit float (read)");
-
-#ifdef H5_HAVE_FILTER_NBIT
-    /* Read the dataset back */
-    if (H5Dread(dataset, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-                new_data)<0)
-        goto error;
-
-    /* Check that the values read are the same as the values written
-     * Assume size of int = size of float
-     */
-    for (i=0; i<size[0]; i++) {
-        for (j=0; j<size[1]; j++) {
-            if (!(orig_data[i][j]==orig_data[i][j])) continue;  /* skip if value is NaN */
-            if (new_data[i][j] != orig_data[i][j]) {
-                H5_FAILED();
-                printf("    Read different values than written.\n");
-                printf("    At index %lu,%lu\n", (unsigned long)i, (unsigned long)j);
-                goto error;
-            }
-        }
-    }
-
-    /*----------------------------------------------------------------------
-     * Cleanup
-     *----------------------------------------------------------------------
-     */
-    if (H5Tclose(datatype)<0) goto error;
-    if (H5Pclose(dc)<0) goto error;
-    if (H5Sclose(space)<0) goto error;
-    if (H5Dclose(dataset)<0) goto error;
-
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-
-    return 0;
-
-error:
-    return -1;
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:    test_nbit_double
- *
- * Purpose:     Tests the double datatype of nbit filter
- *
- * Return:      Success:        0
- *
- *              Failure:        -1
- *
- * Programmer:  Xiaowen Wu
- *              Wednesday, Jan. 26th, 2005
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-test_nbit_double(hid_t file)
-{
-/* assume unsigned int and float has the same number of bytes */
-#ifdef H5_HAVE_FILTER_NBIT
-    hid_t               dataset, datatype, space, dc;
-    const hsize_t       size[2] = {2, 5};
-    const hsize_t       chunk_size[2] = {2, 5};
-    /* orig_data[] are initialized to be within the range that can be represented by
-     * dataset datatype (no precision loss during datatype conversion)
-     */
-    double              orig_data[2][5] = {{1.6081706885101836e+60, -255.32099170994480,
-    1.2677579992621376e-61, 64568.289448797700, -1.0619721778839084e-75}, {2.1499497833454840e+56,
-    6.6562295504670740e-3, -1.5747263393432150, 1.0711093225222612, -9.8971679387636870e-1}};
-    double              new_data[2][5];
-    size_t              precision, offset;
-    hsize_t             i, j;
-#else /* H5_HAVE_FILTER_NBIT */
-    const char          *not_supported= "    Nbit is not enabled.";
-#endif /* H5_HAVE_FILTER_NBIT */
-
-    TESTING("    nbit double (setup)");
-#ifdef H5_HAVE_FILTER_NBIT
-    /* Define user-defined doule-precision floating-point type for dataset */
-    datatype = H5Tcopy(H5T_IEEE_F64BE);
-    if(H5Tset_fields(datatype, 55, 46, 9, 5, 41)<0) goto error;
-    offset = 5;
-    if(H5Tset_offset(datatype,offset)<0) goto error;
-    precision = 51;
-    if(H5Tset_precision(datatype,precision)<0) goto error;
-    if(H5Tset_size(datatype, 8)<0) goto error;
-    if(H5Tset_ebias(datatype, 255)<0) goto error;
-
-    /* Create the data space */
-    if ((space = H5Screate_simple(2, size, NULL))<0) goto error;
-
-    /* Use nbit filter  */
-    if((dc = H5Pcreate(H5P_DATASET_CREATE))<0) goto error;
-    if (H5Pset_chunk(dc, 2, chunk_size)<0) goto error;
-    if (H5Pset_nbit(dc)<0) goto error;
-
-    /* Create the dataset */
-    if ((dataset = H5Dcreate(file, DSET_NBIT_DOUBLE_NAME, datatype,
-                             space, dc))<0) goto error;
-
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-
-    /*----------------------------------------------------------------------
-     * STEP 1: Test nbit by setting up a chunked dataset and writing
-     * to it.
-     *----------------------------------------------------------------------
-     */
-    TESTING("    nbit double (write)");
-
-#ifdef H5_HAVE_FILTER_NBIT
-    if (H5Dwrite(dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-                 orig_data)<0)
-        goto error;
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-
-    /*----------------------------------------------------------------------
-     * STEP 2: Try to read the data we just wrote.
-     *----------------------------------------------------------------------
-     */
-    TESTING("    nbit double (read)");
-
-#ifdef H5_HAVE_FILTER_NBIT
-    /* Read the dataset back */
-    if (H5Dread(dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-                new_data)<0)
-        goto error;
-
-    /* Check that the values read are the same as the values written
-     * Assume size of long_long = size of double
-     */
-    for (i=0; i<size[0]; i++) {
-        for (j=0; j<size[1]; j++) {
-            if (!(orig_data[i][j]==orig_data[i][j])) continue;  /* skip if value is NaN */
-            if (new_data[i][j] != orig_data[i][j]) {
-                H5_FAILED();
-                printf("    Read different values than written.\n");
-                printf("    At index %lu,%lu\n", (unsigned long)i, (unsigned long)j);
-                goto error;
-            }
-        }
-    }
-
-    /*----------------------------------------------------------------------
-     * Cleanup
-     *----------------------------------------------------------------------
-     */
-    if (H5Tclose(datatype)<0) goto error;
-    if (H5Pclose(dc)<0) goto error;
-    if (H5Sclose(space)<0) goto error;
-    if (H5Dclose(dataset)<0) goto error;
-
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-
-    return 0;
-
-error:
-    return -1;
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:    test_nbit_array
- *
- * Purpose:     Tests the simple version array datatype for nbit filter
- *
- * Return:      Success:        0
- *
- *              Failure:        -1
- *
- * Programmer:  Xiaowen Wu
- *              Tuesday, Jan. 18th, 2005
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-test_nbit_array(hid_t file)
-{
-#ifdef H5_HAVE_FILTER_NBIT
-    hid_t               dataset, base_datatype, array_datatype, space, dc;
-    hid_t               mem_base_datatype, mem_array_datatype;
-    const hsize_t       size[2] = {2, 5};
-    const hsize_t       adims[2] = {3, 2};
-    const hsize_t       chunk_size[2] = {2,5};
-    unsigned int        orig_data[2][5][3][2];
-    unsigned int        new_data[2][5][3][2];
-    size_t              precision, offset;
-    hsize_t             i, j, m, n;
-#else /* H5_HAVE_FILTER_NBIT */
-    const char          *not_supported= "    Nbit is not enabled.";
-#endif /* H5_HAVE_FILTER_NBIT */
-
-    TESTING("    nbit array (setup)");
-#ifdef H5_HAVE_FILTER_NBIT
-    /* Define dataset array datatype's base datatype and set precision, offset */
-    base_datatype = H5Tcopy(H5T_NATIVE_UINT);
-    precision = 22;
-    if(H5Tset_precision(base_datatype,precision)<0) goto error;
-    offset = 7;
-    if(H5Tset_offset(base_datatype,offset)<0) goto error;
-
-    /* Copy to memory array datatype's base datatype before setting order */
-    mem_base_datatype = H5Tcopy(base_datatype);
-
-    /* Set order of dataset array datatype's base datatype */
-    if(H5Tset_order(base_datatype, H5T_ORDER_BE)<0) goto error;
-
-    /* Create dataset array datatype */
-    array_datatype = H5Tarray_create(base_datatype, 2, adims, NULL);
-
-    /* Create memory array datatype */
-    mem_array_datatype = H5Tarray_create(mem_base_datatype, 2, adims, NULL);
-
-    /* Create the data space */
-    if ((space = H5Screate_simple(2, size, NULL))<0) goto error;
-
-    /* Use nbit filter  */
-    if((dc = H5Pcreate(H5P_DATASET_CREATE))<0) goto error;
-    if (H5Pset_chunk(dc, 2, chunk_size)<0) goto error;
-    if (H5Pset_nbit(dc)<0) goto error;
-
-    /* Create the dataset */
-    if ((dataset = H5Dcreate(file, DSET_NBIT_ARRAY_NAME, array_datatype,
-                             space,dc))<0) goto error;
-
-    /* Initialize data, assuming size of long_long >= size of unsigned int */
-    for (i= 0;i< size[0]; i++)
-      for (j = 0; j < size[1]; j++)
-        for (m = 0; m < adims[0]; m++)
-          for (n = 0; n < adims[1]; n++)
-            orig_data[i][j][m][n] = ((long_long)HDrandom() %
-                                     (long_long)HDpow(2.0, precision)) << offset;
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-
-    /*----------------------------------------------------------------------
-     * STEP 1: Test nbit by setting up a chunked dataset and writing
-     * to it.
-     *----------------------------------------------------------------------
-     */
-    TESTING("    nbit array (write)");
-
-#ifdef H5_HAVE_FILTER_NBIT
-    if (H5Dwrite(dataset, mem_array_datatype, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-                 orig_data)<0)
-        goto error;
-
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-
-    /*----------------------------------------------------------------------
-     * STEP 2: Try to read the data we just wrote.
-     *----------------------------------------------------------------------
-     */
-    TESTING("    nbit array (read)");
-
-#ifdef H5_HAVE_FILTER_NBIT
-    /* Read the dataset back */
-    if (H5Dread(dataset, mem_array_datatype, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-                new_data)<0)
-        goto error;
-
-    /* Check that the values read are the same as the values written
-     */
-    for (i=0; i<size[0]; i++)
-      for (j=0; j<size[1]; j++)
-        for (m = 0; m < adims[0]; m++)
-          for (n = 0; n < adims[1]; n++) {
-            if (new_data[i][j][m][n]!= orig_data[i][j][m][n]) {
-                H5_FAILED();
-                printf("    Read different values than written.\n");
-                printf("    At index %lu,%lu,%lu,%lu\n",
-                (unsigned long)i, (unsigned long)j, (unsigned long)m, (unsigned long)n);
-                goto error;
-            }
-          }
-
-    /*----------------------------------------------------------------------
-     * Cleanup
-     *----------------------------------------------------------------------
-     */
-    if (H5Tclose(array_datatype)<0) goto error;
-    if (H5Tclose(base_datatype)<0) goto error;
-    if (H5Tclose(mem_array_datatype)<0) goto error;
-    if (H5Tclose(mem_base_datatype)<0) goto error;
-    if (H5Pclose(dc)<0) goto error;
-    if (H5Sclose(space)<0) goto error;
-    if (H5Dclose(dataset)<0) goto error;
-
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-    return 0;
-
-error:
-    return -1;
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:    test_nbit_compound
- *
- * Purpose:     Tests a simple version of compound datatype of nbit filter
- *
- * Return:      Success:        0
- *
- *              Failure:        -1
- *
- * Programmer:  Xiaowen Wu
- *              Tuesday, Jan. 18th, 2005
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-test_nbit_compound(hid_t file)
-{
-#ifdef H5_HAVE_FILTER_NBIT
-    typedef struct {     /* Struct with atomic fields */
-        int i;
-        char c;
-        short s;
-        float f;
-    } atomic;
-    hid_t               i_tid, c_tid, s_tid, f_tid;
-    hid_t               cmpd_tid; /* atomic compound datatype */
-    hid_t               mem_cmpd_tid; /* memory atomic compound datatype */
-    size_t              precision[3] = {15, 7, 10};
-    size_t              offset[3] = {9, 0, 3};
-    hid_t               dataset, space, dc;
-    const hsize_t       size[2] = {2, 5};
-    const hsize_t       chunk_size[2] = {2, 5};
-    const float         float_val[2][5] = {{188384.00, 19.103516, -1.0831790e9, -84.242188,
-    5.2045898}, {-49140.000, 2350.2500, -3.2110596e-1, 6.4998865e-5, -0.0000000}};
-    atomic              orig_data[2][5];
-    atomic              new_data[2][5];
-    unsigned int        i_mask, s_mask, c_mask;
-    hsize_t             i, j;
-
-#else /* H5_HAVE_FILTER_NBIT */
-    const char          *not_supported= "    Nbit is not enabled.";
-#endif /* H5_HAVE_FILTER_NBIT */
-
-    TESTING("    nbit compound (setup)");
-#ifdef H5_HAVE_FILTER_NBIT
-    /* Define datatypes of members of compound datatype */
-    i_tid=H5Tcopy(H5T_NATIVE_INT);
-    c_tid=H5Tcopy(H5T_NATIVE_CHAR);
-    s_tid=H5Tcopy(H5T_NATIVE_SHORT);
-    f_tid=H5Tcopy(H5T_IEEE_F32BE);
-
-    /* Set precision and offset etc. */
-    if(H5Tset_precision(i_tid,precision[0])<0) goto error;
-    if(H5Tset_offset(i_tid,offset[0])<0) goto error;
-
-    if(H5Tset_precision(c_tid,precision[1])<0) goto error;
-    if(H5Tset_offset(c_tid,offset[1])<0) goto error;
-
-    if(H5Tset_precision(s_tid,precision[2])<0) goto error;
-    if(H5Tset_offset(s_tid,offset[2])<0) goto error;
-
-    if(H5Tset_fields(f_tid, 26, 20, 6, 7, 13)<0) goto error;
-    if(H5Tset_offset(f_tid, 7)<0) goto error;
-    if(H5Tset_precision(f_tid, 20)<0) goto error;
-    if(H5Tset_size(f_tid, 4)<0) goto error;
-    if(H5Tset_ebias(f_tid, 31)<0) goto error;
-
-    /* Create a memory compound datatype before setting the order */
-    mem_cmpd_tid = H5Tcreate(H5T_COMPOUND, sizeof(atomic));
-    if(H5Tinsert(mem_cmpd_tid, "i", HOFFSET(atomic, i), i_tid)<0) goto error;
-    if(H5Tinsert(mem_cmpd_tid, "c", HOFFSET(atomic, c), c_tid)<0) goto error;
-    if(H5Tinsert(mem_cmpd_tid, "s", HOFFSET(atomic, s), s_tid)<0) goto error;
-    if(H5Tinsert(mem_cmpd_tid, "f", HOFFSET(atomic, f), H5T_NATIVE_FLOAT)<0) goto error;
-
-    /* Set order of dataset compound member datatype */
-    if(H5Tset_order(i_tid, H5T_ORDER_BE)<0) goto error;
-    if(H5Tset_order(c_tid, H5T_ORDER_BE)<0) goto error;
-    if(H5Tset_order(s_tid, H5T_ORDER_BE)<0) goto error;
-
-    /* Create a dataset compound datatype and insert some atomic types */
-    cmpd_tid = H5Tcreate(H5T_COMPOUND, sizeof(atomic));
-    if(H5Tinsert(cmpd_tid, "i", HOFFSET(atomic, i), i_tid)<0) goto error;
-    if(H5Tinsert(cmpd_tid, "c", HOFFSET(atomic, c), c_tid)<0) goto error;
-    if(H5Tinsert(cmpd_tid, "s", HOFFSET(atomic, s), s_tid)<0) goto error;
-    if(H5Tinsert(cmpd_tid, "f", HOFFSET(atomic, f), f_tid)<0) goto error;
-
-    /* Create the data space */
-    if ((space = H5Screate_simple(2, size, NULL))<0) goto error;
-
-    /* Use nbit filter  */
-    if((dc = H5Pcreate(H5P_DATASET_CREATE))<0) goto error;
-    if (H5Pset_chunk(dc, 2, chunk_size)<0) goto error;
-    if (H5Pset_nbit(dc)<0) goto error;
-
-    /* Create the dataset */
-    if ((dataset = H5Dcreate(file, DSET_NBIT_COMPOUND_NAME, cmpd_tid,
-                             space,dc))<0) goto error;
-
-    /* Initialize data, assuming size of long_long >= size of member datatypes */
-    for (i= 0;i< size[0]; i++)
-      for (j = 0; j < size[1]; j++) {
-        orig_data[i][j].i = ((long_long)HDrandom() %
-                             (long_long)HDpow(2.0, precision[0]-1)) << offset[0];
-        orig_data[i][j].c = ((long_long)HDrandom() %
-                             (long_long)HDpow(2.0, precision[1]-1)) << offset[1];
-        orig_data[i][j].s = ((long_long)HDrandom() %
-                             (long_long)HDpow(2.0, precision[2]-1)) << offset[2];
-        orig_data[i][j].f = float_val[i][j];
-
-        /* some even-numbered integer values are negtive */
-        if((i*size[1]+j+1)%2 == 0) {
-            orig_data[i][j].i = -orig_data[i][j].i;
-            orig_data[i][j].s = -orig_data[i][j].s;
-        }
-      }
-
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-
-    /*----------------------------------------------------------------------
-     * STEP 1: Test nbit by setting up a chunked dataset and writing
-     * to it.
-     *----------------------------------------------------------------------
-     */
-    TESTING("    nbit compound (write)");
-
-#ifdef H5_HAVE_FILTER_NBIT
-    if (H5Dwrite(dataset, mem_cmpd_tid, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-                 orig_data)<0)
-        goto error;
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-
-    /*----------------------------------------------------------------------
-     * STEP 2: Try to read the data we just wrote.
-     *----------------------------------------------------------------------
-     */
-    TESTING("    nbit compound (read)");
-
-#ifdef H5_HAVE_FILTER_NBIT
-    /* Read the dataset back */
-    if (H5Dread(dataset, mem_cmpd_tid, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-                new_data)<0)
-        goto error;
-
-    /* Check that the values read are the same as the values written
-     * Use mask for checking the significant bits, ignoring the padding bits
-     */
-    i_mask = ~(~0 << (precision[0] + offset[0])) & (~0 << offset[0]);
-    c_mask = ~(~0 << (precision[1] + offset[1])) & (~0 << offset[1]);
-    s_mask = ~(~0 << (precision[2] + offset[2])) & (~0 << offset[2]);
-    for (i=0; i<size[0]; i++) {
-        for (j=0; j<size[1]; j++) {
-            if ((new_data[i][j].i & i_mask) != (orig_data[i][j].i & i_mask) ||
-                (new_data[i][j].c & c_mask) != (orig_data[i][j].c & c_mask) ||
-                (new_data[i][j].s & s_mask) != (orig_data[i][j].s & s_mask) ||
-                (orig_data[i][j].f==orig_data[i][j].f && new_data[i][j].f != orig_data[i][j].f))
-            {
-                H5_FAILED();
-                printf("    Read different values than written.\n");
-                printf("    At index %lu,%lu\n", (unsigned long)i, (unsigned long)j);
-                goto error;
-            }
-        }
-    }
-
-    /*----------------------------------------------------------------------
-     * Cleanup
-     *----------------------------------------------------------------------
-     */
-    if (H5Tclose(i_tid)<0) goto error;
-    if (H5Tclose(c_tid)<0) goto error;
-    if (H5Tclose(s_tid)<0) goto error;
-    if (H5Tclose(f_tid)<0) goto error;
-    if (H5Tclose(cmpd_tid)<0) goto error;
-    if (H5Tclose(mem_cmpd_tid)<0) goto error;
-    if (H5Pclose(dc)<0) goto error;
-    if (H5Sclose(space)<0) goto error;
-    if (H5Dclose(dataset)<0) goto error;
-
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-    return 0;
-
-error:
-    return -1;
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:    test_nbit_compound_2
- *
- * Purpose:     Tests a complex version of compound datatype of nbit filter
- *
- * Return:      Success:        0
- *
- *              Failure:        -1
- *
- * Programmer:  Xiaowen Wu
- *              Tuesday, Jan. 18th, 2005
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-test_nbit_compound_2(hid_t file)
-{
-#ifdef H5_HAVE_FILTER_NBIT
-    typedef struct {     /* Struct with atomic fields */
-        int i;
-        char c;
-        short s;
-        float f;
-    } atomic;
-
-    typedef struct {     /* Struct with complex fields */
-        atomic a;
-        unsigned int v;
-        char   b[2][2];
-        atomic d[2][2];
-    } complex;
-
-    hid_t               i_tid, c_tid, s_tid, f_tid, v_tid;
-    hid_t               cmpd_tid1; /* atomic compound datatype */
-    hid_t               cmpd_tid2; /* complex compound datatype */
-    hid_t               mem_cmpd_tid1; /* memory atomic compound datatype */
-    hid_t               mem_cmpd_tid2; /* memory complex compound datatype */
-    hid_t               base_tid;      /* simple array datatype's base datatype */
-    hid_t               array_tid;     /* simple array datatype */
-    hid_t               array_cmplx_tid;     /* complex array datatype */
-    hid_t               mem_array_cmplx_tid; /* memory complex array datatype */
-    const hsize_t       array_dims[2] = {2, 2};
-    size_t              precision[5] = {31, 8, 10, 23, 8};
-    size_t              offset[5] = {1, 0, 3, 5, 0};
-    hid_t               dataset, space, dc;
-    const hsize_t       size[2] = {2, 5};
-    const hsize_t       chunk_size[2] = {2, 5};
-    const float         float_val[2][5] = {{188384.00, 19.103516, -1.0831790e9, -84.242188,
-    5.2045898}, {-49140.000, 2350.2500, -3.2110596e-1, 6.4998865e-5, -0.0000000}};
-    complex             orig_data[2][5];
-    complex             new_data[2][5];
-    unsigned int        i_mask, s_mask, c_mask, b_mask;
-    hsize_t             i, j, m, n, b_failed, d_failed;
-
-#else /* H5_HAVE_FILTER_NBIT */
-    const char          *not_supported= "    Nbit is not enabled.";
-#endif /* H5_HAVE_FILTER_NBIT */
-
-    TESTING("    nbit compound complex (setup)");
-#ifdef H5_HAVE_FILTER_NBIT
-    /* Define datatypes of members of compound datatype */
-    i_tid=H5Tcopy(H5T_NATIVE_INT);
-    c_tid=H5Tcopy(H5T_NATIVE_CHAR);
-    s_tid=H5Tcopy(H5T_NATIVE_SHORT);
-    v_tid=H5Tcopy(H5T_NATIVE_UINT);
-    f_tid=H5Tcopy(H5T_IEEE_F32BE);
-
-    /* Set precision and offset etc. of atomic compound datatype members */
-    if(H5Tset_precision(i_tid,precision[0])<0) goto error;
-    if(H5Tset_offset(i_tid,offset[0])<0) goto error;
-
-    if(H5Tset_precision(c_tid,precision[1])<0) goto error;
-    if(H5Tset_offset(c_tid,offset[1])<0) goto error;
-
-    if(H5Tset_precision(s_tid,precision[2])<0) goto error;
-    if(H5Tset_offset(s_tid,offset[2])<0) goto error;
-
-    if(H5Tset_fields(f_tid, 26, 20, 6, 7, 13)<0) goto error;
-    if(H5Tset_offset(f_tid, 7)<0) goto error;
-    if(H5Tset_precision(f_tid, 20)<0) goto error;
-    if(H5Tset_size(f_tid, 4)<0) goto error;
-    if(H5Tset_ebias(f_tid, 31)<0) goto error;
-
-    /* Create a memory atomic compound datatype before setting the order */
-    mem_cmpd_tid1 = H5Tcreate(H5T_COMPOUND, sizeof(atomic));
-    if(H5Tinsert(mem_cmpd_tid1, "i", HOFFSET(atomic, i), i_tid)<0) goto error;
-    if(H5Tinsert(mem_cmpd_tid1, "c", HOFFSET(atomic, c), c_tid)<0) goto error;
-    if(H5Tinsert(mem_cmpd_tid1, "s", HOFFSET(atomic, s), s_tid)<0) goto error;
-    if(H5Tinsert(mem_cmpd_tid1, "f", HOFFSET(atomic, f), H5T_NATIVE_FLOAT)<0) goto error;
-
-    /* Set order of dataset atomic compound member datatype */
-    if(H5Tset_order(i_tid, H5T_ORDER_BE)<0) goto error;
-    if(H5Tset_order(c_tid, H5T_ORDER_BE)<0) goto error;
-    if(H5Tset_order(s_tid, H5T_ORDER_BE)<0) goto error;
-
-    /* Create a dataset atomic compound datatype and insert some atomic types */
-    cmpd_tid1 = H5Tcreate(H5T_COMPOUND, sizeof(atomic));
-    if(H5Tinsert(cmpd_tid1, "i", HOFFSET(atomic, i), i_tid)<0) goto error;
-    if(H5Tinsert(cmpd_tid1, "c", HOFFSET(atomic, c), c_tid)<0) goto error;
-    if(H5Tinsert(cmpd_tid1, "s", HOFFSET(atomic, s), s_tid)<0) goto error;
-    if(H5Tinsert(cmpd_tid1, "f", HOFFSET(atomic, f), f_tid)<0) goto error;
-
-    /* Set precision and offset of the other data member */
-    if(H5Tset_precision(v_tid,precision[3])<0) goto error;
-    if(H5Tset_offset(v_tid,offset[3])<0) goto error;
-
-    /* Create the simple array datatype */
-    base_tid = H5Tcopy(H5T_NATIVE_CHAR);
-    if(H5Tset_precision(base_tid,precision[4])<0) goto error;
-    if(H5Tset_offset(base_tid,offset[4])<0) goto error;
-    array_tid = H5Tarray_create(base_tid, 2, array_dims, NULL);
-
-    /* Create the complex memory and dataset array datatype */
-    array_cmplx_tid = H5Tarray_create(cmpd_tid1, 2, array_dims, NULL);
-    mem_array_cmplx_tid = H5Tarray_create(mem_cmpd_tid1, 2, array_dims, NULL);
-
-    /* Create a memory complex compound datatype before setting the order */
-    mem_cmpd_tid2 = H5Tcreate(H5T_COMPOUND, sizeof(complex));
-    if(H5Tinsert(mem_cmpd_tid2, "a", HOFFSET(complex, a), mem_cmpd_tid1)<0) goto error;
-    if(H5Tinsert(mem_cmpd_tid2, "v", HOFFSET(complex, v), v_tid)<0) goto error;
-    if(H5Tinsert(mem_cmpd_tid2, "b", HOFFSET(complex, b), array_tid)<0) goto error;
-    if(H5Tinsert(mem_cmpd_tid2, "d", HOFFSET(complex, d), mem_array_cmplx_tid)<0) goto error;
-
-    /* Set order of dataset other complex compound member datatype */
-    if(H5Tset_order(v_tid, H5T_ORDER_BE)<0) goto error;
-
-    /* Create a dataset complex compound datatype and insert members */
-    cmpd_tid2 = H5Tcreate(H5T_COMPOUND, sizeof(complex));
-    if(H5Tinsert(cmpd_tid2, "a", HOFFSET(complex, a), cmpd_tid1)<0) goto error;
-    if(H5Tinsert(cmpd_tid2, "v", HOFFSET(complex, v), v_tid)<0) goto error;
-    if(H5Tinsert(cmpd_tid2, "b", HOFFSET(complex, b), array_tid)<0) goto error;
-    if(H5Tinsert(cmpd_tid2, "d", HOFFSET(complex, d), array_cmplx_tid)<0) goto error;
-
-    /* Create the data space */
-    if ((space = H5Screate_simple(2, size, NULL))<0) goto error;
-
-    /* Use nbit filter  */
-    if((dc = H5Pcreate(H5P_DATASET_CREATE))<0) goto error;
-    if (H5Pset_chunk(dc, 2, chunk_size)<0) goto error;
-    if (H5Pset_nbit(dc)<0) goto error;
-
-    /* Create the dataset */
-    if ((dataset = H5Dcreate(file, DSET_NBIT_COMPOUND_NAME_2, cmpd_tid2,
-                             space,dc))<0) goto error;
-
-    /* Initialize data, assuming size of long_long >= size of member datatypes */
-    for (i= 0;i< size[0]; i++)
-      for (j = 0; j < size[1]; j++) {
-        orig_data[i][j].a.i = ((long_long)HDrandom() %
-                               (long_long)HDpow(2.0, precision[0]-1)) << offset[0];
-        orig_data[i][j].a.c = ((long_long)HDrandom() %
-                               (long_long)HDpow(2.0, precision[1]-1)) << offset[1];
-        orig_data[i][j].a.s = -((long_long)HDrandom() %
-                               (long_long)HDpow(2.0, precision[2]-1)) << offset[2];
-        orig_data[i][j].a.f = float_val[i][j];
-
-        orig_data[i][j].v = ((long_long)HDrandom() %
-                             (long_long)HDpow(2.0, precision[3])) << offset[3];
-
-        for(m = 0; m < array_dims[0]; m++)
-          for(n = 0; n < array_dims[1]; n++)
-            orig_data[i][j].b[m][n] = ((long_long)HDrandom() %
-                                       (long_long)HDpow(2.0, precision[4]-1)) << offset[4];
-
-        for(m = 0; m < array_dims[0]; m++)
-          for(n = 0; n < array_dims[1]; n++) {
-            orig_data[i][j].d[m][n].i = -((long_long)HDrandom() %
-                                         (long_long)HDpow(2.0, precision[0]-1)) << offset[0];
-            orig_data[i][j].d[m][n].c = ((long_long)HDrandom() %
-                                         (long_long)HDpow(2.0, precision[1]-1)) << offset[1];
-            orig_data[i][j].d[m][n].s = ((long_long)HDrandom() %
-                                         (long_long)HDpow(2.0, precision[2]-1)) << offset[2];
-            orig_data[i][j].d[m][n].f = float_val[i][j];
-          }
-      }
-
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-
-    /*----------------------------------------------------------------------
-     * STEP 1: Test nbit by setting up a chunked dataset and writing
-     * to it.
-     *----------------------------------------------------------------------
-     */
-    TESTING("    nbit compound complex (write)");
-
-#ifdef H5_HAVE_FILTER_NBIT
-    if (H5Dwrite(dataset, mem_cmpd_tid2, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-                 orig_data)<0)
-        goto error;
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-
-    /*----------------------------------------------------------------------
-     * STEP 2: Try to read the data we just wrote.
-     *----------------------------------------------------------------------
-     */
-    TESTING("    nbit compound complex (read)");
-
-#ifdef H5_HAVE_FILTER_NBIT
-    /* Read the dataset back */
-    if (H5Dread(dataset, mem_cmpd_tid2, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-                new_data)<0)
-        goto error;
-
-    /* Check that the values read are the same as the values written
-     * Use mask for checking the significant bits, ignoring the padding bits
-     */
-    i_mask = ~(~0 << (precision[0] + offset[0])) & (~0 << offset[0]);
-    c_mask = ~(~0 << (precision[1] + offset[1])) & (~0 << offset[1]);
-    s_mask = ~(~0 << (precision[2] + offset[2])) & (~0 << offset[2]);
-    b_mask = ~(~0 << (precision[4] + offset[4])) & (~0 << offset[4]);
-    for (i=0; i<size[0]; i++) {
-      for (j=0; j<size[1]; j++) {
-        b_failed = 0;
-        for(m = 0; m < array_dims[0]; m++)
-          for(n = 0; n < array_dims[1]; n++)
-             if((new_data[i][j].b[m][n]&b_mask)!=(orig_data[i][j].b[m][n]&b_mask)) {
-                b_failed = 1;
-                goto out;
-             }
-
-        d_failed = 0;
-        for(m = 0; m < array_dims[0]; m++)
-          for(n = 0; n < array_dims[1]; n++)
-             if((new_data[i][j].d[m][n].i & i_mask)!=(orig_data[i][j].d[m][n].i & i_mask)||
-                (new_data[i][j].d[m][n].c & c_mask)!=(orig_data[i][j].d[m][n].c & c_mask)||
-                (new_data[i][j].d[m][n].s & s_mask)!=(orig_data[i][j].d[m][n].s & s_mask)||
-                (new_data[i][j].d[m][n].f==new_data[i][j].d[m][n].f &&
-                 new_data[i][j].d[m][n].f != new_data[i][j].d[m][n].f)) {
-                d_failed = 1;
-                goto out;
-             }
-
-        out:
-        if((new_data[i][j].a.i & i_mask)!=(orig_data[i][j].a.i & i_mask)||
-           (new_data[i][j].a.c & c_mask)!=(orig_data[i][j].a.c & c_mask)||
-           (new_data[i][j].a.s & s_mask)!=(orig_data[i][j].a.s & s_mask)||
-           (new_data[i][j].a.f==new_data[i][j].a.f &&
-            new_data[i][j].a.f != new_data[i][j].a.f)||
-            new_data[i][j].v != orig_data[i][j].v || b_failed || d_failed) {
-           H5_FAILED();
-           printf("    Read different values than written.\n");
-           printf("    At index %lu,%lu\n", (unsigned long)i, (unsigned long)j);
-           goto error;
-        }
-      }
-    }
-
-    /*----------------------------------------------------------------------
-     * Cleanup
-     *----------------------------------------------------------------------
-     */
-    if (H5Tclose(i_tid)<0) goto error;
-    if (H5Tclose(c_tid)<0) goto error;
-    if (H5Tclose(s_tid)<0) goto error;
-    if (H5Tclose(f_tid)<0) goto error;
-    if (H5Tclose(v_tid)<0) goto error;
-    if (H5Tclose(cmpd_tid2)<0) goto error;
-    if (H5Tclose(cmpd_tid1)<0) goto error;
-    if (H5Tclose(mem_cmpd_tid2)<0) goto error;
-    if (H5Tclose(mem_cmpd_tid1)<0) goto error;
-    if (H5Tclose(array_tid)<0) goto error;
-    if (H5Tclose(base_tid)<0) goto error;
-    if (H5Tclose(array_cmplx_tid)<0) goto error;
-    if (H5Tclose(mem_array_cmplx_tid)<0) goto error;
-    if (H5Pclose(dc)<0) goto error;
-    if (H5Sclose(space)<0) goto error;
-    if (H5Dclose(dataset)<0) goto error;
-
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-    return 0;
-
-error:
-    return -1;
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:    test_nbit_compound_3
- *
- * Purpose:     Tests no-op datatypes in compound datatype for nbit filter
- *
- * Return:      Success:        0
- *
- *              Failure:        -1
- *
- * Programmer:  Xiaowen Wu
- *              Thursday, Mar. 31th, 2005
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-test_nbit_compound_3(hid_t file)
-{
-#ifdef H5_HAVE_FILTER_NBIT
-    typedef struct {     /* Struct with some no-op type fields */
-        int i;              /* integer field, NOT a no-op type */
-        char str[30];       /* fixed-length string, no-op type */
-        char *vl_str;       /* varible-length string, no-op type */
-        hvl_t v;            /* VL datatype field, no-op type */
-        hobj_ref_t r;       /* Object reference field, no-op type */
-        unsigned char o[5]; /* Opaque field, no-op type */
-    } atomic;
-    hid_t               i_tid, str_tid, vl_str_tid, v_tid, o_tid;
-    hid_t               cmpd_tid; /* atomic compound datatype */
-    hid_t               dataset, space, dc, obj_ref_dataset = -1;
-    const hsize_t       size[1] = {5};
-    const hsize_t       chunk_size[1] = {5};
-    atomic              orig_data[5];
-    atomic              new_data[5];
-    hsize_t             i, k, j;
-
-#else /* H5_HAVE_FILTER_NBIT */
-    const char          *not_supported= "    Nbit is not enabled.";
-#endif /* H5_HAVE_FILTER_NBIT */
-
-    TESTING("    nbit compound with no-op type (setup)");
-#ifdef H5_HAVE_FILTER_NBIT
-
-    /* Define datatypes of members of compound datatype */
-    i_tid=H5Tcopy(H5T_NATIVE_INT);
-    if(H5Tset_precision(i_tid, 17)<0) goto error;
-
-    str_tid=H5Tcopy(H5T_C_S1);
-    if(H5Tset_size(str_tid,30)<0) goto error;
-
-    vl_str_tid = H5Tcopy(H5T_C_S1);
-    if(H5Tset_size(vl_str_tid,H5T_VARIABLE)<0) goto error;
-
-    if((v_tid = H5Tvlen_create(H5T_NATIVE_UINT))<0) goto error;
-
-    if((o_tid = H5Tcreate(H5T_OPAQUE, 5))<0) goto error;
-    if(H5Tset_tag(o_tid, "testing opaque field")<0) goto error;
-
-    /* Create a dataset compound datatype and insert some atomic types */
-    cmpd_tid = H5Tcreate(H5T_COMPOUND, sizeof(atomic));
-    if(H5Tinsert(cmpd_tid, "i", HOFFSET(atomic, i), i_tid)<0) goto error;
-    if(H5Tinsert(cmpd_tid, "str", HOFFSET(atomic, str), str_tid)<0) goto error;
-    if(H5Tinsert(cmpd_tid, "vl_str", HOFFSET(atomic, vl_str), vl_str_tid)<0) goto error;
-    if(H5Tinsert(cmpd_tid, "v", HOFFSET(atomic, v), v_tid)<0) goto error;
-    if(H5Tinsert(cmpd_tid, "r", HOFFSET(atomic, r), H5T_STD_REF_OBJ)<0) goto error;
-    if(H5Tinsert(cmpd_tid, "o", HOFFSET(atomic, o), o_tid)<0) goto error;
-
-    /* Create the data space */
-    if ((space = H5Screate_simple(1, size, NULL))<0) goto error;
-
-    /* Use nbit filter  */
-    if((dc = H5Pcreate(H5P_DATASET_CREATE))<0) goto error;
-    if (H5Pset_chunk(dc, 1, chunk_size)<0) goto error;
-    if (H5Pset_nbit(dc)<0) goto error;
-
-    /* Create the dataset */
-    if ((dataset = H5Dcreate(file, DSET_NBIT_COMPOUND_NAME_3, cmpd_tid,
-                             space, dc))<0) goto error;
-
-    /* Create the dataset object reference points to */
-    if ((obj_ref_dataset = H5Dcreate(file, "nbit_obj_ref", H5T_NATIVE_INT,
-                                     space, H5P_DEFAULT))<0) goto error;
-
-    /* Initialize data */
-    for(i = 0; i < size[0]; i++) {
-        orig_data[i].i = HDrandom() % (long)HDpow(2.0, 17-1);
-        strcpy(orig_data[i].str, "fixed-length C string");
-        orig_data[i].vl_str = strdup("variable-length C string");
-
-        orig_data[i].v.p = HDmalloc((i+1)*sizeof(unsigned int));
-        orig_data[i].v.len = i+1;
-        for(k = 0; k < (i+1); k++) ((unsigned int *)orig_data[i].v.p)[k] = i*100 + k;
-
-        /* Create reference to the dataset "nbit_obj_ref" */
-        if(H5Rcreate(&orig_data[i].r, file, "nbit_obj_ref", H5R_OBJECT, -1)<0) goto error;
-
-        for(j = 0; j < 5; j++) orig_data[i].o[j] = i + j;
-    }
-
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-
-    /*----------------------------------------------------------------------
-     * STEP 1: Test nbit by setting up a chunked dataset and writing
-     * to it.
-     *----------------------------------------------------------------------
-     */
-    TESTING("    nbit compound with no-op type (write)");
-
-#ifdef H5_HAVE_FILTER_NBIT
-    if (H5Dwrite(dataset, cmpd_tid, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-                 orig_data)<0)
-        goto error;
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-
-    /*----------------------------------------------------------------------
-     * STEP 2: Try to read the data we just wrote.
-     *----------------------------------------------------------------------
-     */
-    TESTING("    nbit compound with no-op type (read)");
-
-#ifdef H5_HAVE_FILTER_NBIT
-    /* Read the dataset back */
-    if (H5Dread(dataset, cmpd_tid, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-                new_data)<0)
-        goto error;
-
-    /* Check that the values read are the same as the values written */
-    for (i = 0; i < size[0]; i++) {
-        if(new_data[i].i != orig_data[i].i ||
-           strcmp(new_data[i].str, orig_data[i].str) !=0 ||
-           strcmp(new_data[i].vl_str, orig_data[i].vl_str) !=0 ||
-           new_data[i].v.len != orig_data[i].v.len ||
-           new_data[i].r != orig_data[i].r)
-        {
-            H5_FAILED();
-            printf("    Read different values than written.\n");
-            printf("    At index %lu\n", (unsigned long)i);
-            goto error;
-        }
-
-        for(k=0; k<i+1; k++)
-            if(((unsigned int *)orig_data[i].v.p)[k] !=((unsigned int *)new_data[i].v.p)[k])
-            {
-                H5_FAILED();
-                printf("    Read different values than written.\n");
-                printf("    At index %lu\n", (unsigned long)i);
-                goto error;
-            }
-
-        for(j=0; j<5; j++)
-            if(orig_data[i].o[j] != new_data[i].o[j])
-            {
-                H5_FAILED();
-                printf("    Read different values than written.\n");
-                printf("    At index %lu\n", (unsigned long)i);
-                goto error;
-            }
-    }
-
-    /*----------------------------------------------------------------------
-     * Cleanup
-     *----------------------------------------------------------------------
-     */
-    if (H5Dvlen_reclaim(cmpd_tid, space, H5P_DEFAULT, new_data)<0) goto error;
-    if (H5Dvlen_reclaim(cmpd_tid, space, H5P_DEFAULT, orig_data)<0) goto error;
-    if (H5Tclose(i_tid)<0) goto error;
-    if (H5Tclose(str_tid)<0) goto error;
-    if (H5Tclose(vl_str_tid)<0) goto error;
-    if (H5Tclose(v_tid)<0) goto error;
-    if (H5Tclose(o_tid)<0) goto error;
-    if (H5Tclose(cmpd_tid)<0) goto error;
-    if (H5Pclose(dc)<0) goto error;
-    if (H5Sclose(space)<0) goto error;
-    if (H5Dclose(obj_ref_dataset)<0) goto error;
-    if (H5Dclose(dataset)<0) goto error;
-
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-    return 0;
-
-error:
-    return -1;
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:    test_scaleoffset_int
- *
- * Purpose:     Tests the integer datatype for scaleoffset filter
- *              with fill value not defined
- *
- * Return:      Success:        0
- *
- *              Failure:        -1
- *
- * Programmer:  Xiaowen Wu
- *              Monday, Feb. 14th, 2005
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-test_scaleoffset_int(hid_t file)
-{
-#ifdef H5_HAVE_FILTER_SCALEOFFSET
-    hid_t               dataset, datatype, space, dc;
-    const hsize_t       size[2] = {2, 5};
-    const hsize_t       chunk_size[2] = {2,5};
-    int                 orig_data[2][5];
-    int                 new_data[2][5];
-    hsize_t             i, j;
-#else /* H5_HAVE_FILTER_SCALEOFFSET */
-    const char          *not_supported= "    Scaleoffset is not enabled.";
-#endif /* H5_HAVE_FILTER_SCALEOFFSET */
-
-    puts("Testing scaleoffset filter");
-    TESTING("    scaleoffset int without fill value (setup)");
-#ifdef H5_HAVE_FILTER_SCALEOFFSET
-    datatype = H5Tcopy(H5T_NATIVE_INT);
-
-    /* Set order of dataset datatype */
-    if(H5Tset_order(datatype, H5T_ORDER_BE)<0) goto error;
-
-    /* Create the data space */
-    if ((space = H5Screate_simple(2, size, NULL))<0) goto error;
-
-    /* Create the dataset property list  */
-    if((dc = H5Pcreate(H5P_DATASET_CREATE))<0) goto error;
-
-    /* Fill value undefined */
-    if (H5Pset_fill_value(dc, datatype, NULL)<0) goto error;
-
-    /* Set up to use scaleoffset filter, let library calculate minbits */
-    if (H5Pset_chunk(dc, 2, chunk_size)<0) goto error;
-    if (H5Pset_scaleoffset(dc, H5Z_SO_INT,H5Z_SO_INT_MINBITS_DEFAULT)<0) goto error;
-
-    /* Create the dataset */
-    if ((dataset = H5Dcreate(file, DSET_SCALEOFFSET_INT_NAME, datatype,
-                             space,dc))<0) goto error;
-
-    /* Initialize data */
-    for (i= 0;i< size[0]; i++)
-      for (j = 0; j < size[1]; j++) {
-        orig_data[i][j] = HDrandom() % 10000;
-
-        /* even-numbered values are negtive */
-        if((i*size[1]+j+1)%2 == 0)
-            orig_data[i][j] = -orig_data[i][j];
-      }
-
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-
-    /*----------------------------------------------------------------------
-     * STEP 1: Test scaleoffset by setting up a chunked dataset and writing
-     * to it.
-     *----------------------------------------------------------------------
-     */
-    TESTING("    scaleoffset int without fill value (write)");
-
-#ifdef H5_HAVE_FILTER_SCALEOFFSET
-    if (H5Dwrite(dataset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-                 orig_data)<0) goto error;
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-
-    /*----------------------------------------------------------------------
-     * STEP 2: Try to read the data we just wrote.
-     *----------------------------------------------------------------------
-     */
-    TESTING("    scaleoffset int without fill value (read)");
-
-#ifdef H5_HAVE_FILTER_SCALEOFFSET
-    /* Read the dataset back */
-    if (H5Dread(dataset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-                new_data)<0) goto error;
-
-    /* Check that the values read are the same as the values written */
-    for (i=0; i<size[0]; i++) {
-        for (j=0; j<size[1]; j++) {
-            if (new_data[i][j] != orig_data[i][j]) {
-                H5_FAILED();
-                printf("    Read different values than written.\n");
-                printf("    At index %lu,%lu\n", (unsigned long)i, (unsigned long)j);
-                goto error;
-            }
-        }
-    }
-
-    /*----------------------------------------------------------------------
-     * Cleanup
-     *----------------------------------------------------------------------
-     */
-    if (H5Tclose(datatype)<0) goto error;
-    if (H5Pclose(dc)<0) goto error;
-    if (H5Sclose(space)<0) goto error;
-    if (H5Dclose(dataset)<0) goto error;
-
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-    return 0;
-error:
-    return -1;
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:    test_scaleoffset_int_2
- *
- * Purpose:     Tests the integer datatype for scaleoffset filter
- *              with fill value set
- *
- * Return:      Success:        0
- *
- *              Failure:        -1
- *
- * Programmer:  Xiaowen Wu
- *              Tuesday, March 15th, 2005
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-test_scaleoffset_int_2(hid_t file)
-{
-#ifdef H5_HAVE_FILTER_SCALEOFFSET
-    hid_t               dataset, datatype, space, mspace, dc;
-    const hsize_t       size[2] = {2, 5};
-    const hsize_t       chunk_size[2] = {2,5};
-    int                 orig_data[2][5];
-    int                 new_data[2][5];
-    hsize_t             start[2]; /* Start of hyperslab */
-    hsize_t             stride[2]; /* Stride of hyperslab */
-    hsize_t             count[2];  /* Block count */
-    hsize_t             block[2];  /* Block sizes */
-    int                 fillval;
-    hsize_t             j;
-#else /* H5_HAVE_FILTER_SCALEOFFSET */
-    const char          *not_supported= "    Scaleoffset is not enabled.";
-#endif /* H5_HAVE_FILTER_SCALEOFFSET */
-
-    TESTING("    scaleoffset int with fill value (setup)");
-#ifdef H5_HAVE_FILTER_SCALEOFFSET
-    datatype = H5Tcopy(H5T_NATIVE_INT);
-
-    /* Set order of dataset datatype */
-    if(H5Tset_order(datatype, H5T_ORDER_BE)<0) goto error;
-
-    /* Create the data space for the dataset */
-    if ((space = H5Screate_simple(2, size, NULL))<0) goto error;
-
-    /* Create the dataset property list  */
-    if((dc = H5Pcreate(H5P_DATASET_CREATE))<0) goto error;
-
-    /* Set fill value */
-    fillval = 10000;
-    if (H5Pset_fill_value(dc, H5T_NATIVE_INT, &fillval)<0) goto error;
-
-    /* Set up to use scaleoffset filter, let library calculate minbits */
-    if (H5Pset_chunk(dc, 2, chunk_size)<0) goto error;
-    if (H5Pset_scaleoffset(dc, H5Z_SO_INT,H5Z_SO_INT_MINBITS_DEFAULT)<0) goto error;
-
-    /* Create the dataset */
-    if ((dataset = H5Dcreate(file, DSET_SCALEOFFSET_INT_NAME_2, datatype,
-                             space,dc))<0) goto error;
-
-    /* Create the memory data space */
-    if ((mspace = H5Screate_simple(2, size, NULL))<0) goto error;
-
-    /* Select hyperslab for data to write, using 1x5 blocks,
-     * (1,1) stride and (1,1) count starting at the position (0,0).
-     */
-    start[0]  = 0; start[1]  = 0;
-    stride[0] = 1; stride[1] = 1;
-    count[0]  = 1; count[1]  = 1;
-    block[0]  = 1; block[1]  = 5;
-    if(H5Sselect_hyperslab(mspace, H5S_SELECT_SET, start,
-                           stride, count, block)<0) goto error;
-
-    /* Initialize data of hyperslab */
-    for (j = 0; j < size[1]; j++) {
-        orig_data[0][j] = (long_long)HDrandom() % 10000;
-
-        /* even-numbered values are negtive */
-        if((j+1)%2 == 0)
-            orig_data[0][j] = -orig_data[0][j];
-    }
-
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-
-    /*----------------------------------------------------------------------
-     * STEP 1: Test scaleoffset by setting up a chunked dataset and writing
-     * to it.
-     *----------------------------------------------------------------------
-     */
-    TESTING("    scaleoffset int with fill value (write)");
-
-#ifdef H5_HAVE_FILTER_SCALEOFFSET
-    /* only data in the hyperslab will be written, other value should be fill value */
-    if (H5Dwrite(dataset, H5T_NATIVE_INT, mspace, mspace, H5P_DEFAULT,
-                 orig_data)<0) goto error;
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-
-    /*----------------------------------------------------------------------
-     * STEP 2: Try to read the data we just wrote.
-     *----------------------------------------------------------------------
-     */
-    TESTING("    scaleoffset int with fill value (read)");
-
-#ifdef H5_HAVE_FILTER_SCALEOFFSET
-    /* Read the dataset back */
-    if (H5Dread(dataset, H5T_NATIVE_INT, mspace, mspace, H5P_DEFAULT,
-                new_data)<0) goto error;
-
-    /* Check that the values read are the same as the values written */
-    for (j=0; j<size[1]; j++) {
-        if (new_data[0][j] != orig_data[0][j]) {
-            H5_FAILED();
-            printf("    Read different values than written.\n");
-            printf("    At index %lu,%lu\n", (unsigned long)0, (unsigned long)j);
-            goto error;
-        }
-    }
-
-    /*----------------------------------------------------------------------
-     * Cleanup
-     *----------------------------------------------------------------------
-     */
-    if (H5Tclose(datatype)<0) goto error;
-    if (H5Pclose(dc)<0) goto error;
-    if (H5Sclose(space)<0) goto error;
-    if (H5Dclose(dataset)<0) goto error;
-
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-    return 0;
-error:
-    return -1;
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:    test_scaleoffset_float
- *
- * Purpose:     Tests the float datatype for scaleoffset filter, with fill
- *              value undefined, using variable-minimum-bits method
- *
- * Return:      Success:        0
- *
- *              Failure:        -1
- *
- * Programmer:  Xiaowen Wu
- *              Wednesday, Apr. 20th, 2005
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-test_scaleoffset_float(hid_t file)
-{
-#ifdef H5_HAVE_FILTER_SCALEOFFSET
-    hid_t               dataset, datatype, space, dc;
-    const hsize_t       size[2] = {2, 5};
-    const hsize_t       chunk_size[2] = {2,5};
-    float               orig_data[2][5];
-    float               new_data[2][5];
-    hsize_t             i, j;
-#else /* H5_HAVE_FILTER_SCALEOFFSET */
-    const char          *not_supported= "    Scaleoffset is not enabled.";
-#endif /* H5_HAVE_FILTER_SCALEOFFSET */
-
-    TESTING("    scaleoffset float without fill value, D-scaling (setup)");
-#ifdef H5_HAVE_FILTER_SCALEOFFSET
-    datatype = H5Tcopy(H5T_NATIVE_FLOAT);
-
-    /* Set order of dataset datatype */
-    if(H5Tset_order(datatype, H5T_ORDER_BE)<0) goto error;
-
-    /* Create the data space */
-    if ((space = H5Screate_simple(2, size, NULL))<0) goto error;
-
-    /* Create the dataset property list  */
-    if((dc = H5Pcreate(H5P_DATASET_CREATE))<0) goto error;
-
-    /* Fill value undefined */
-    if (H5Pset_fill_value(dc, datatype, NULL)<0) goto error;
-
-    /* Set up to use scaleoffset filter, decimal scale factor is 3,
-     * use variable-minimum-bits method
-     */
-    if (H5Pset_chunk(dc, 2, chunk_size)<0) goto error;
-    if (H5Pset_scaleoffset(dc, H5Z_SO_FLOAT_DSCALE,3)<0) goto error;
-
-    /* Create the dataset */
-    if ((dataset = H5Dcreate(file, DSET_SCALEOFFSET_FLOAT_NAME, datatype,
-                             space,dc))<0) goto error;
-
-    /* Initialize data */
-    for (i= 0;i< size[0]; i++)
-      for (j = 0; j < size[1]; j++) {
-        orig_data[i][j] = (HDrandom() % 100000) / 1000.0;
-
-        /* even-numbered values are negtive */
-        if((i*size[1]+j+1)%2 == 0)
-            orig_data[i][j] = -orig_data[i][j];
-      }
-
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-
-    /*----------------------------------------------------------------------
-     * STEP 1: Test scaleoffset by setting up a chunked dataset and writing
-     * to it.
-     *----------------------------------------------------------------------
-     */
-    TESTING("    scaleoffset float without fill value, D-scaling (write)");
-
-#ifdef H5_HAVE_FILTER_SCALEOFFSET
-    if (H5Dwrite(dataset, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-                 orig_data)<0) goto error;
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-
-    /*----------------------------------------------------------------------
-     * STEP 2: Try to read the data we just wrote.
-     *----------------------------------------------------------------------
-     */
-    TESTING("    scaleoffset float without fill value, D-scaling (read)");
-
-#ifdef H5_HAVE_FILTER_SCALEOFFSET
-    /* Read the dataset back */
-    if (H5Dread(dataset, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-                new_data)<0) goto error;
-
-    /* Check that the values read are the same as the values written */
-    for (i=0; i<size[0]; i++) {
-        for (j=0; j<size[1]; j++) {
-            if (HDfabs(new_data[i][j]-orig_data[i][j]) > HDpow(10.0, -3)) {
-                H5_FAILED();
-                printf("    Read different values than written.\n");
-                printf("    At index %lu,%lu\n", (unsigned long)i, (unsigned long)j);
-                goto error;
-            }
-        }
-    }
-
-    /*----------------------------------------------------------------------
-     * Cleanup
-     *----------------------------------------------------------------------
-     */
-    if (H5Tclose(datatype)<0) goto error;
-    if (H5Pclose(dc)<0) goto error;
-    if (H5Sclose(space)<0) goto error;
-    if (H5Dclose(dataset)<0) goto error;
-
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-    return 0;
-error:
-    return -1;
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:    test_scaleoffset_float_2
- *
- * Purpose:     Tests the float datatype for scaleoffset filter, with fill
- *              value set, using variable-minimum-bits method
- *
- * Return:      Success:        0
- *
- *              Failure:        -1
- *
- * Programmer:  Xiaowen Wu
- *              Wednesday, Apr. 20th, 2005
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-test_scaleoffset_float_2(hid_t file)
-{
-#ifdef H5_HAVE_FILTER_SCALEOFFSET
-    hid_t               dataset, datatype, space, mspace, dc;
-    const hsize_t       size[2] = {2, 5};
-    const hsize_t       chunk_size[2] = {2,5};
-    float               orig_data[2][5];
-    float               new_data[2][5];
-    float               fillval;
-    hsize_t             start[2];  /* Start of hyperslab */
-    hsize_t             stride[2]; /* Stride of hyperslab */
-    hsize_t             count[2];  /* Block count */
-    hsize_t             block[2];  /* Block sizes */
-    hsize_t             j;
-#else /* H5_HAVE_FILTER_SCALEOFFSET */
-    const char          *not_supported= "    Scaleoffset is not enabled.";
-#endif /* H5_HAVE_FILTER_SCALEOFFSET */
-
-    TESTING("    scaleoffset float with fill value, D-scaling (setup)");
-#ifdef H5_HAVE_FILTER_SCALEOFFSET
-    datatype = H5Tcopy(H5T_NATIVE_FLOAT);
-
-    /* Set order of dataset datatype */
-    if(H5Tset_order(datatype, H5T_ORDER_BE)<0) goto error;
-
-    /* Create the data space for the dataset */
-    if ((space = H5Screate_simple(2, size, NULL))<0) goto error;
-
-    /* Create the dataset property list  */
-    if((dc = H5Pcreate(H5P_DATASET_CREATE))<0) goto error;
-
-    /* Set fill value */
-    fillval = 10000.0;
-    if (H5Pset_fill_value(dc, H5T_NATIVE_FLOAT, &fillval)<0) goto error;
-
-    /* Set up to use scaleoffset filter, decimal scale factor is 3,
-     * use variable-minimum-bits method
-     */
-    if (H5Pset_chunk(dc, 2, chunk_size)<0) goto error;
-    if (H5Pset_scaleoffset(dc, H5Z_SO_FLOAT_DSCALE,3)<0) goto error;
-
-    /* Create the dataset */
-    if ((dataset = H5Dcreate(file, DSET_SCALEOFFSET_FLOAT_NAME_2, datatype,
-                             space,dc))<0) goto error;
-
-    /* Create the memory data space */
-    if ((mspace = H5Screate_simple(2, size, NULL))<0) goto error;
-
-    /* Select hyperslab for data to write, using 1x5 blocks,
-     * (1,1) stride and (1,1) count starting at the position (0,0).
-     */
-    start[0]  = 0; start[1]  = 0;
-    stride[0] = 1; stride[1] = 1;
-    count[0]  = 1; count[1]  = 1;
-    block[0]  = 1; block[1]  = 5;
-    if(H5Sselect_hyperslab(mspace, H5S_SELECT_SET, start,
-                           stride, count, block)<0) goto error;
-
-    /* Initialize data of hyperslab */
-    for (j = 0; j < size[1]; j++) {
-        orig_data[0][j] = (HDrandom() % 100000) / 1000.0;
-
-        /* even-numbered values are negtive */
-        if((j+1)%2 == 0)
-            orig_data[0][j] = -orig_data[0][j];
-    }
-
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-
-    /*----------------------------------------------------------------------
-     * STEP 1: Test scaleoffset by setting up a chunked dataset and writing
-     * to it.
-     *----------------------------------------------------------------------
-     */
-    TESTING("    scaleoffset float with fill value, D-scaling (write)");
-
-#ifdef H5_HAVE_FILTER_SCALEOFFSET
-    /* only data in the hyperslab will be written, other value should be fill value */
-    if (H5Dwrite(dataset, H5T_NATIVE_FLOAT, mspace, mspace, H5P_DEFAULT,
-                 orig_data)<0) goto error;
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-
-    /*----------------------------------------------------------------------
-     * STEP 2: Try to read the data we just wrote.
-     *----------------------------------------------------------------------
-     */
-    TESTING("    scaleoffset float with fill value, D-scaling (read)");
-
-#ifdef H5_HAVE_FILTER_SCALEOFFSET
-    /* Read the dataset back */
-    if (H5Dread(dataset, H5T_NATIVE_FLOAT, mspace, mspace, H5P_DEFAULT,
-                new_data)<0) goto error;
-
-    /* Check that the values read are the same as the values written */
-    for (j=0; j<size[1]; j++) {
-        if (HDfabs(new_data[0][j]-orig_data[0][j]) > HDpow(10.0, -3)) {
-            H5_FAILED();
-            printf("    Read different values than written.\n");
-            printf("    At index %lu,%lu\n", (unsigned long)0, (unsigned long)j);
-            goto error;
-        }
-    }
-    /*----------------------------------------------------------------------
-     * Cleanup
-     *----------------------------------------------------------------------
-     */
-    if (H5Tclose(datatype)<0) goto error;
-    if (H5Pclose(dc)<0) goto error;
-    if (H5Sclose(space)<0) goto error;
-    if (H5Dclose(dataset)<0) goto error;
-
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-    return 0;
-error:
-    return -1;
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:    test_scaleoffset_double
- *
- * Purpose:     Tests the double datatype for scaleoffset filter, with fill
- *              value undefined, using variable-minimum-bits method
- *
- * Return:      Success:        0
- *
- *              Failure:        -1
- *
- * Programmer:  Xiaowen Wu
- *              Monday, Apr. 25th, 2005
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-test_scaleoffset_double(hid_t file)
-{
-#ifdef H5_HAVE_FILTER_SCALEOFFSET
-    hid_t               dataset, datatype, space, dc;
-    const hsize_t       size[2] = {2, 5};
-    const hsize_t       chunk_size[2] = {2,5};
-    double              orig_data[2][5];
-    double              new_data[2][5];
-    hsize_t             i, j;
-#else /* H5_HAVE_FILTER_SCALEOFFSET */
-    const char          *not_supported= "    Scaleoffset is not enabled.";
-#endif /* H5_HAVE_FILTER_SCALEOFFSET */
-
-    TESTING("    scaleoffset double without fill value, D-scaling (setup)");
-#ifdef H5_HAVE_FILTER_SCALEOFFSET
-    datatype = H5Tcopy(H5T_NATIVE_DOUBLE);
-
-    /* Set order of dataset datatype */
-    if(H5Tset_order(datatype, H5T_ORDER_BE)<0) goto error;
-
-    /* Create the data space */
-    if ((space = H5Screate_simple(2, size, NULL))<0) goto error;
-
-    /* Create the dataset property list  */
-    if((dc = H5Pcreate(H5P_DATASET_CREATE))<0) goto error;
-
-    /* Fill value undefined */
-    if (H5Pset_fill_value(dc, datatype, NULL)<0) goto error;
-
-    /* Set up to use scaleoffset filter, decimal scale factor is 7,
-     * use variable-minimum-bits method
-     */
-    if (H5Pset_chunk(dc, 2, chunk_size)<0) goto error;
-    if (H5Pset_scaleoffset(dc, H5Z_SO_FLOAT_DSCALE,7)<0) goto error;
-
-    /* Create the dataset */
-    if ((dataset = H5Dcreate(file, DSET_SCALEOFFSET_DOUBLE_NAME, datatype,
-                             space,dc))<0) goto error;
-
-    /* Initialize data */
-    for (i= 0;i< size[0]; i++)
-      for (j = 0; j < size[1]; j++) {
-        orig_data[i][j] = (HDrandom() % 10000000) / 10000000.0;
-
-        /* even-numbered values are negtive */
-        if((i*size[1]+j+1)%2 == 0)
-            orig_data[i][j] = -orig_data[i][j];
-      }
-
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-
-    /*----------------------------------------------------------------------
-     * STEP 1: Test scaleoffset by setting up a chunked dataset and writing
-     * to it.
-     *----------------------------------------------------------------------
-     */
-    TESTING("    scaleoffset double without fill value, D-scaling (write)");
-
-#ifdef H5_HAVE_FILTER_SCALEOFFSET
-    if (H5Dwrite(dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-                 orig_data)<0) goto error;
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-
-    /*----------------------------------------------------------------------
-     * STEP 2: Try to read the data we just wrote.
-     *----------------------------------------------------------------------
-     */
-    TESTING("    scaleoffset double without fill value, D-scaling (read)");
-
-#ifdef H5_HAVE_FILTER_SCALEOFFSET
-    /* Read the dataset back */
-    if (H5Dread(dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT,
-                new_data)<0) goto error;
-
-    /* Check that the values read are the same as the values written */
-    for (i=0; i<size[0]; i++) {
-        for (j=0; j<size[1]; j++) {
-            if (HDfabs(new_data[i][j]-orig_data[i][j]) > HDpow(10.0, -7)) {
-                H5_FAILED();
-                printf("    Read different values than written.\n");
-                printf("    At index %lu,%lu\n", (unsigned long)i, (unsigned long)j);
-                goto error;
-            }
-        }
-    }
-
-    /*----------------------------------------------------------------------
-     * Cleanup
-     *----------------------------------------------------------------------
-     */
-    if (H5Tclose(datatype)<0) goto error;
-    if (H5Pclose(dc)<0) goto error;
-    if (H5Sclose(space)<0) goto error;
-    if (H5Dclose(dataset)<0) goto error;
-
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-    return 0;
-error:
-    return -1;
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:    test_scaleoffset_double_2
- *
- * Purpose:     Tests the double datatype for scaleoffset filter, with fill
- *              value set, using variable-minimum-bits method
- *
- * Return:      Success:        0
- *
- *              Failure:        -1
- *
- * Programmer:  Xiaowen Wu
- *              Monday, Apr. 25th, 2005
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-test_scaleoffset_double_2(hid_t file)
-{
-#ifdef H5_HAVE_FILTER_SCALEOFFSET
-    hid_t               dataset, datatype, space, mspace, dc;
-    const hsize_t       size[2] = {2, 5};
-    const hsize_t       chunk_size[2] = {2,5};
-    double              orig_data[2][5];
-    double              new_data[2][5];
-    double              fillval;
-    hsize_t             start[2];  /* Start of hyperslab */
-    hsize_t             stride[2]; /* Stride of hyperslab */
-    hsize_t             count[2];  /* Block count */
-    hsize_t             block[2];  /* Block sizes */
-    hsize_t             j;
-#else /* H5_HAVE_FILTER_SCALEOFFSET */
-    const char          *not_supported= "    Scaleoffset is not enabled.";
-#endif /* H5_HAVE_FILTER_SCALEOFFSET */
-
-    TESTING("    scaleoffset double with fill value, D-scaling (setup)");
-#ifdef H5_HAVE_FILTER_SCALEOFFSET
-    datatype = H5Tcopy(H5T_NATIVE_DOUBLE);
-
-    /* Set order of dataset datatype */
-    if(H5Tset_order(datatype, H5T_ORDER_BE)<0) goto error;
-
-    /* Create the data space for the dataset */
-    if ((space = H5Screate_simple(2, size, NULL))<0) goto error;
-
-    /* Create the dataset property list  */
-    if((dc = H5Pcreate(H5P_DATASET_CREATE))<0) goto error;
-
-    /* Set fill value */
-    fillval = 10000.0;
-    if (H5Pset_fill_value(dc, H5T_NATIVE_DOUBLE, &fillval)<0) goto error;
-
-    /* Set up to use scaleoffset filter, decimal scale factor is 7,
-     * use variable-minimum-bits method
-     */
-    if (H5Pset_chunk(dc, 2, chunk_size)<0) goto error;
-    if (H5Pset_scaleoffset(dc, H5Z_SO_FLOAT_DSCALE,7)<0) goto error;
-
-    /* Create the dataset */
-    if ((dataset = H5Dcreate(file, DSET_SCALEOFFSET_DOUBLE_NAME_2, datatype,
-                             space,dc))<0) goto error;
-
-    /* Create the memory data space */
-    if ((mspace = H5Screate_simple(2, size, NULL))<0) goto error;
-
-    /* Select hyperslab for data to write, using 1x5 blocks,
-     * (1,1) stride and (1,1) count starting at the position (0,0).
-     */
-    start[0]  = 0; start[1]  = 0;
-    stride[0] = 1; stride[1] = 1;
-    count[0]  = 1; count[1]  = 1;
-    block[0]  = 1; block[1]  = 5;
-    if(H5Sselect_hyperslab(mspace, H5S_SELECT_SET, start,
-                           stride, count, block)<0) goto error;
-
-    /* Initialize data of hyperslab */
-    for (j = 0; j < size[1]; j++) {
-        orig_data[0][j] = (HDrandom() % 10000000) / 10000000.0;
-
-        /* even-numbered values are negtive */
-        if((j+1)%2 == 0)
-            orig_data[0][j] = -orig_data[0][j];
-    }
-
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-
-    /*----------------------------------------------------------------------
-     * STEP 1: Test scaleoffset by setting up a chunked dataset and writing
-     * to it.
-     *----------------------------------------------------------------------
-     */
-    TESTING("    scaleoffset double with fill value, D-scaling (write)");
-
-#ifdef H5_HAVE_FILTER_SCALEOFFSET
-    /* only data in the hyperslab will be written, other value should be fill value */
-    if (H5Dwrite(dataset, H5T_NATIVE_DOUBLE, mspace, mspace, H5P_DEFAULT,
-                 orig_data)<0) goto error;
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-
-    /*----------------------------------------------------------------------
-     * STEP 2: Try to read the data we just wrote.
-     *----------------------------------------------------------------------
-     */
-    TESTING("    scaleoffset double with fill value, D-scaling (read)");
-
-#ifdef H5_HAVE_FILTER_SCALEOFFSET
-    /* Read the dataset back */
-    if (H5Dread(dataset, H5T_NATIVE_DOUBLE, mspace, mspace, H5P_DEFAULT,
-                new_data)<0) goto error;
-
-    /* Check that the values read are the same as the values written */
-    for (j=0; j<size[1]; j++) {
-        if (HDfabs(new_data[0][j]-orig_data[0][j]) > HDpow(10.0, -7)) {
-            H5_FAILED();
-            printf("    Read different values than written.\n");
-            printf("    At index %lu,%lu\n", (unsigned long)0, (unsigned long)j);
-            goto error;
-        }
-    }
-
-    /*----------------------------------------------------------------------
-     * Cleanup
-     *----------------------------------------------------------------------
-     */
-    if (H5Tclose(datatype)<0) goto error;
-    if (H5Pclose(dc)<0) goto error;
-    if (H5Sclose(space)<0) goto error;
-    if (H5Dclose(dataset)<0) goto error;
-
-    PASSED();
-#else
-    SKIPPED();
-    puts(not_supported);
-#endif
-    return 0;
 error:
     return -1;
 }
@@ -4756,11 +2673,10 @@ test_types(hid_t file)
     return -1;
 }
 
+#ifndef H5_WANT_H5_V1_4_COMPAT
 /* This message derives from H5Z */
-const H5Z_class_t H5Z_CAN_APPLY_TEST[1] = {{
-	H5Z_CLASS_T_VERS,
+const H5Z_class_t H5Z_CAN_APPLY[1] = {{
     H5Z_FILTER_BOGUS,		/* Filter id number		*/
-	1, 1,
     "bogus",			/* Filter name for debugging	*/
     can_apply_bogus,            /* The "can apply" callback     */
     NULL,                       /* The "set local" callback     */
@@ -4791,7 +2707,7 @@ test_can_apply(hid_t file)
     const hsize_t dims[2] = {DSET_DIM1, DSET_DIM2};         /* Dataspace dimensions */
     const hsize_t chunk_dims[2] = {2, 25};      /* Chunk dimensions */
     hsize_t     dset_size;      /* Dataset size */
-    hsize_t     i,j;            /* Local index variables */
+    int	        i,j;            /* Local index variables */
 
     TESTING("dataset filter 'can apply' callback");
 
@@ -4806,7 +2722,7 @@ test_can_apply(hid_t file)
         printf("    Line %d: Can't set chunk sizes\n",__LINE__);
         goto error;
     } /* end if */
-    if(H5Zregister (H5Z_CAN_APPLY_TEST)<0) {
+    if(H5Zregister (H5Z_CAN_APPLY)<0) {
         H5_FAILED();
         printf("    Line %d: Can't register 'can apply' filter\n",__LINE__);
         goto error;
@@ -4921,6 +2837,7 @@ test_can_apply(hid_t file)
 error:
     return -1;
 } /* end test_can_apply() */
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
 
 /*-------------------------------------------------------------------------
@@ -5115,12 +3032,10 @@ error:
 #endif /* H5_HAVE_FILTER_SZIP */
 } /* end test_can_apply_szip() */
 
-
+#ifndef H5_WANT_H5_V1_4_COMPAT
 /* This message derives from H5Z */
-const H5Z_class_t H5Z_SET_LOCAL_TEST[1] = {{
-	H5Z_CLASS_T_VERS,
+const H5Z_class_t H5Z_SET_LOCAL[1] = {{
     H5Z_FILTER_BOGUS2,		/* Filter id number		*/
-	1, 1,
     "bogus2",			/* Filter name for debugging	*/
     NULL,                       /* The "can apply" callback     */
     set_local_bogus2,           /* The "set local" callback     */
@@ -5153,7 +3068,7 @@ test_set_local(hid_t fapl)
     const hsize_t chunk_dims[2] = {2, 25};      /* Chunk dimensions */
     hsize_t     dset_size;      /* Dataset size */
     unsigned    cd_values[2]={BOGUS2_PARAM_1, BOGUS2_PARAM_2};   /* Parameters for Bogus2 filter */
-    hsize_t     i,j;          /* Local index variables */
+    int	        i,j;          /* Local index variables */
     double      n;          /* Local index variables */
 
     TESTING("dataset filter 'set local' callback");
@@ -5186,7 +3101,7 @@ test_set_local(hid_t fapl)
         printf("    Line %d: Can't set chunk sizes\n",__LINE__);
         goto error;
     } /* end if */
-    if(H5Zregister (H5Z_SET_LOCAL_TEST)<0) {
+    if(H5Zregister (H5Z_SET_LOCAL)<0) {
         H5_FAILED();
         printf("    Line %d: Can't register 'set local' filter\n",__LINE__);
         goto error;
@@ -5389,6 +3304,7 @@ test_set_local(hid_t fapl)
 error:
     return -1;
 } /* end test_set_local() */
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
 
 /*-------------------------------------------------------------------------
@@ -5537,11 +3453,7 @@ test_filter_delete(hid_t file)
 
     /* check if filter was deleted */
     for (i=0; i<nfilters; i++) {
-#ifdef H5_WANT_H5_V1_6_COMPAT
         filtn = H5Pget_filter(dcpl1,(unsigned)i,0,0,0,0,0);
-#else
-        filtn = H5Pget_filter(dcpl1,(unsigned)i,0,0,0,0,0,NULL);
-#endif
         if (H5Z_FILTER_DEFLATE==filtn)
             goto error;
     }
@@ -6021,25 +3933,14 @@ main(void)
     nerrors += test_tconv(file)<0	?1:0;
     nerrors += test_filters(file)<0	?1:0;
     nerrors += test_onebyte_shuffle(file)<0 ?1:0;
-    nerrors += test_nbit_int(file)<0 ?1:0;
-    nerrors += test_nbit_float(file)<0         ?1:0;
-    nerrors += test_nbit_double(file)<0         ?1:0;
-    nerrors += test_nbit_array(file)<0 ?1:0;
-    nerrors += test_nbit_compound(file)<0 ?1:0;
-    nerrors += test_nbit_compound_2(file)<0 ?1:0;
-    nerrors += test_nbit_compound_3(file)<0 ?1:0;
-    nerrors += test_scaleoffset_int(file)<0 ?1:0;
-    nerrors += test_scaleoffset_int_2(file)<0 ?1:0;
-    nerrors += test_scaleoffset_float(file)<0 ?1:0;
-    nerrors += test_scaleoffset_float_2(file)<0 ?1:0;
-    nerrors += test_scaleoffset_double(file)<0 ?1:0;
-    nerrors += test_scaleoffset_double_2(file)<0 ?1:0;
     nerrors += test_multiopen (file)<0	?1:0;
     nerrors += test_types(file)<0       ?1:0;
     nerrors += test_userblock_offset(fapl)<0     ?1:0;
     nerrors += test_missing_filter(file)<0	?1:0;
+#ifndef H5_WANT_H5_V1_4_COMPAT
     nerrors += test_can_apply(file)<0	?1:0;
     nerrors += test_set_local(fapl)<0	?1:0;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
     nerrors += test_can_apply_szip(file)<0	?1:0;
     nerrors += test_compare_dcpl(file)<0	?1:0;
     nerrors += test_filter_delete(file)<0	?1:0;
@@ -6048,7 +3949,6 @@ main(void)
     nerrors += test_missing_chunk(file)<0	?1:0;
 
     if (H5Fclose(file)<0) goto error;
-
     if (nerrors) goto error;
     printf("All dataset tests passed.\n");
     h5_cleanup(FILENAME, fapl);

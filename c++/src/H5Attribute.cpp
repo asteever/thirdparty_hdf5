@@ -33,9 +33,6 @@
 
 #ifndef H5_NO_NAMESPACE
 namespace H5 {
-#ifndef H5_NO_STD
-    using namespace std;
-#endif  // H5_NO_STD
 #endif
 
 //--------------------------------------------------------------------------
@@ -260,6 +257,21 @@ string Attribute::getName() const
 }
 
 //--------------------------------------------------------------------------
+// Function:	Attribute::getStorageSize
+///\brief	Returns the amount of storage size required for this attribute.
+///\return	Size of the storage or 0, for no data
+///\exception	H5::AttributeIException
+// Note:	H5Dget_storage_size returns 0 when there is no data.  This
+//		function should have no failure. (from SLU)
+// Programmer	Binh-Minh Ribler - Mar, 2005
+//--------------------------------------------------------------------------
+hsize_t Attribute::getStorageSize() const
+{
+   hsize_t storage_size = H5Aget_storage_size(id);
+   return (storage_size);
+}
+
+//--------------------------------------------------------------------------
 // Function:	Attribute::close
 ///\brief	Closes this attribute.
 ///
@@ -278,27 +290,12 @@ void Attribute::close()
 }
 
 //--------------------------------------------------------------------------
-// Function:	Attribute::getStorageSize
-///\brief	Returns the amount of storage size required for this attribute.
-///\return	Size of the storage or 0, for no data
-///\exception	H5::AttributeIException
-// Note:        H5Dget_storage_size returns 0 when there is no data.  This
-//              function should have no failure. (from SLU)
-// Programmer	Binh-Minh Ribler - Mar, 2005
-//--------------------------------------------------------------------------
-hsize_t Attribute::getStorageSize() const
-{
-   hsize_t storage_size = H5Aget_storage_size(id);
-   return (storage_size);
-}
-
-//--------------------------------------------------------------------------
 // Function:	Attribute destructor
 ///\brief	Properly terminates access to this attribute.
 // Programmer	Binh-Minh Ribler - 2000
 // Modification
 //		Replaced resetIdComponent with decRefCount to use C library
-//		ID reference counting mechanism - June 1, 2004
+//		ID reference counting mechanism - BMR, Feb 20, 2005
 //--------------------------------------------------------------------------
 Attribute::~Attribute()
 {

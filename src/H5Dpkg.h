@@ -271,8 +271,6 @@ H5_DLL ssize_t H5D_istore_writevv(const H5D_io_info_t *io_info,
     const void *buf);
 H5_DLL haddr_t H5D_istore_get_addr(const H5D_io_info_t *io_info,
     struct H5D_istore_ud1_t *_udata);
-H5_DLL herr_t H5D_istore_copy(H5F_t *f_src, H5O_layout_t *layout_src,
-    H5F_t *f_dst, H5O_layout_t *layout_dst, hid_t dxpl_id);
 
 /* Functions that operate on external file list (efl) storage */
 H5_DLL ssize_t H5D_efl_readvv(const H5D_io_info_t *io_info,
@@ -285,8 +283,7 @@ H5_DLL ssize_t H5D_efl_writevv(const H5D_io_info_t *io_info,
     const void *buf);
 
 #ifdef H5_HAVE_PARALLEL
-
-/* MPI-IO function to read , it will select either regular or irregular read */
+/* MPI-IO function to read directly from app buffer to file rky980813 */
 H5_DLL herr_t H5D_mpio_select_read(H5D_io_info_t *io_info,
     size_t nelmts, size_t elmt_size,
     const struct H5S_t *file_space, const struct H5S_t *mem_space,
@@ -297,7 +294,6 @@ H5_DLL herr_t H5D_mpio_select_write(H5D_io_info_t *io_info,
     size_t nelmts, size_t elmt_size,
     const struct H5S_t *file_space, const struct H5S_t *mem_space,
     const void *buf);
-
 
 /* MPI-IO function to read directly from app buffer to file rky980813 */
 H5_DLL herr_t H5D_mpio_spaces_read(H5D_io_info_t *io_info,
@@ -336,4 +332,3 @@ H5_DLL herr_t H5D_layout_contig_size_test(hid_t did, hsize_t *size);
 #endif /* H5D_TESTING */
 
 #endif /*_H5Dpkg_H*/
-

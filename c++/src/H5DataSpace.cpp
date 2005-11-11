@@ -26,9 +26,6 @@
 
 #ifndef H5_NO_NAMESPACE
 namespace H5 {
-#ifndef H5_NO_STD
-    using namespace std;
-#endif  // H5_NO_STD
 #endif
 
 //--------------------------------------------------------------------------
@@ -98,7 +95,7 @@ DataSpace::DataSpace( const DataSpace& original ) : IdComponent( original ) {}
 // Programmer	Binh-Minh Ribler - 2000
 // Modification
 //		Replaced resetIdComponent with decRefCount to use C library
-//		ID reference counting mechanism - June 1, 2004
+//		ID reference counting mechanism - BMR, Feb 20, 2005
 //--------------------------------------------------------------------------
 void DataSpace::copy( const DataSpace& like_space )
 {
@@ -557,7 +554,7 @@ void DataSpace::close()
       herr_t ret_value = H5Sclose(id);
       if( ret_value < 0 )
       {
-         throw DataSpaceIException("DataSpace::close", "H5Sclose failed");
+	 throw DataSpaceIException("DataSpace::close", "H5Sclose failed");
       }
       // reset the id because the dataspace that it represents is now closed
       id = 0;
@@ -572,7 +569,7 @@ void DataSpace::close()
 // Programmer	Binh-Minh Ribler - 2000
 // Modification
 //		Replaced resetIdComponent with decRefCount to use C library
-//		ID reference counting mechanism - June 1, 2004
+//		ID reference counting mechanism - BMR, Feb 20, 2005
 //--------------------------------------------------------------------------
 DataSpace::~DataSpace()
 {

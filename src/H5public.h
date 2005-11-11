@@ -56,6 +56,14 @@
 #endif
 #endif
 
+#ifdef H5_HAVE_GASS             /*for Globus GASS I/O                        */
+#include "globus_common.h"
+#include "globus_gass_file.h"
+#endif
+
+#ifdef H5_HAVE_SRB              /*for SRB I/O                                */
+#include <srbClient.h>
+#endif
 
 #include "H5api_adpt.h"
 
@@ -65,11 +73,11 @@ extern "C" {
 
 /* Version numbers */
 #define H5_VERS_MAJOR	1	/* For major interface/format changes  	     */
-#define H5_VERS_MINOR	7	/* For minor interface/format changes  	     */
-#define H5_VERS_RELEASE	52	/* For tweaks, bug-fixes, or development     */
+#define H5_VERS_MINOR	6	/* For minor interface/format changes  	     */
+#define H5_VERS_RELEASE	5	/* For tweaks, bug-fixes, or development     */
 #define H5_VERS_SUBRELEASE ""	/* For pre-releases like snap0       */
 				/* Empty string for real releases.           */
-#define H5_VERS_INFO    "HDF5 library version: 1.7.52"      /* Full version string */
+#define H5_VERS_INFO    "HDF5 library version: 1.6.5"      /* Full version string */
 
 #define H5check()	H5check_version(H5_VERS_MAJOR,H5_VERS_MINOR,	      \
 				        H5_VERS_RELEASE)
@@ -106,24 +114,6 @@ typedef int herr_t;
 typedef unsigned int hbool_t;
 typedef int htri_t;
 
-/*
- * Although `long long' is part of the revised ANSI-C some compilers don't
- * support it yet.  We define `long_long' as the longest integral integer type
- * supported by the compiler, usually 64 bits.  It must be legal to qualify
- * `long_long' with `unsigned'.
- */
-#if H5_SIZEOF_LONG_LONG>0
-#   define long_long    long long
-#elif H5_SIZEOF___INT64>0
-#   define long_long    __int64 /*Win32*/
-#   undef H5_SIZEOF_LONG_LONG
-#   define H5_SIZEOF_LONG_LONG H5_SIZEOF___INT64
-#else
-#   define long_long    long int
-#   undef H5_SIZEOF_LONG_LONG
-#   define H5_SIZEOF_LONG_LONG H5_SIZEOF_LONG
-#endif
-
 /* Define the ssize_t type if it not is defined */
 #if H5_SIZEOF_SSIZE_T==0
 /* Undefine this size, we will re-define it in one of the sections below */
@@ -135,8 +125,11 @@ typedef int ssize_t;
 typedef long ssize_t;
 #       define H5_SIZEOF_SSIZE_T H5_SIZEOF_LONG
 #elif H5_SIZEOF_SIZE_T==H5_SIZEOF_LONG_LONG
-typedef long_long ssize_t;
+typedef long long ssize_t;
 #       define H5_SIZEOF_SSIZE_T H5_SIZEOF_LONG_LONG
+#elif H5_SIZEOF_SIZE_T==H5_SIZEOF___INT64
+typedef __int64 ssize_t;
+#       define H5_SIZEOF_SSIZE_T H5_SIZEOF___INT64
 #else /* Can't find matching type for ssize_t */
 #   error "nothing appropriate for ssize_t"
 #endif
@@ -149,20 +142,22 @@ typedef long_long ssize_t;
  */
 #ifdef H5_HAVE_LARGE_HSIZET
 #   if H5_SIZEOF_LONG_LONG>=8
-typedef unsigned long_long 	hsize_t;
-typedef signed long_long	hssize_t;
+typedef unsigned long long 	hsize_t;
+typedef signed long long	hssize_t;
 #       define H5_SIZEOF_HSIZE_T H5_SIZEOF_LONG_LONG
-#       define H5_SIZEOF_HSSIZE_T H5_SIZEOF_LONG_LONG
+#   elif H5_SIZEOF___INT64>=8
+typedef unsigned __int64	hsize_t;
+typedef signed __int64		hssize_t;
+#       define H5_SIZEOF_HSIZE_T H5_SIZEOF___INT64
 #   endif
 #else /* H5_HAVE_LARGE_HSIZET */
 typedef size_t			hsize_t;
 typedef ssize_t			hssize_t;
 #       define H5_SIZEOF_HSIZE_T H5_SIZEOF_SIZE_T
-#       define H5_SIZEOF_HSSIZE_T H5_SIZEOF_SIZE_T
 #endif /* H5_HAVE_LARGE_HSIZET */
 
 /*
- * File addresses have their own types.
+ * File addresses have there own types.
  */
 #if H5_SIZEOF_INT64_T>=8
     typedef uint64_t                haddr_t;
@@ -186,9 +181,16 @@ typedef ssize_t			hssize_t;
 #       define HADDR_AS_MPI_TYPE    MPI_UNSIGNED_LONG
 #   endif  /* H5_HAVE_PARALLEL */
 #elif H5_SIZEOF_LONG_LONG>=8
-    typedef unsigned long_long      haddr_t;
-#   define HADDR_UNDEF              ((haddr_t)(long_long)(-1))
+    typedef unsigned long long      haddr_t;
+#   define HADDR_UNDEF              ((haddr_t)(long long)(-1))
 #   define H5_SIZEOF_HADDR_T        H5_SIZEOF_LONG_LONG
+#   ifdef H5_HAVE_PARALLEL
+#       define HADDR_AS_MPI_TYPE    MPI_LONG_LONG_INT
+#   endif  /* H5_HAVE_PARALLEL */
+#elif H5_SIZEOF___INT64>=8
+    typedef unsigned __int64        haddr_t;
+#   define HADDR_UNDEF              ((haddr_t)(__int64)(-1))
+#   define H5_SIZEOF_HADDR_T        H5_SIZEOF___INT64
 #   ifdef H5_HAVE_PARALLEL
 #       define HADDR_AS_MPI_TYPE    MPI_LONG_LONG_INT
 #   endif  /* H5_HAVE_PARALLEL */
@@ -200,6 +202,8 @@ typedef ssize_t			hssize_t;
 #elif H5_SIZEOF_HADDR_T ==H5_SIZEOF_LONG
 #   define H5_PRINTF_HADDR_FMT  "%lu"
 #elif H5_SIZEOF_HADDR_T ==H5_SIZEOF_LONG_LONG
+#   define H5_PRINTF_HADDR_FMT  "%"H5_PRINTF_LL_WIDTH"u"
+#elif H5_SIZEOF_HADDR_T ==H5_SIZEOF___INT64
 #   define H5_PRINTF_HADDR_FMT  "%"H5_PRINTF_LL_WIDTH"u"
 #else
 #   error "nothing appropriate for H5_PRINTF_HADDR_FMT"

@@ -295,7 +295,11 @@ create_faccess_plist(MPI_Comm comm, MPI_Info info, int l_facc_type,
 
     if (l_facc_type == FACC_MPIPOSIX) {
 	/* set Parallel access with communicator */
+#ifdef H5_WANT_H5_V1_4_COMPAT
+	ret = H5Pset_fapl_mpiposix(ret_pl, comm);
+#else /* H5_WANT_H5_V1_4_COMPAT */
 	ret = H5Pset_fapl_mpiposix(ret_pl, comm, use_gpfs);
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 	VRFY((ret >= 0), "H5Pset_fapl_mpiposix succeeded");
 	return(ret_pl);
     }
@@ -381,8 +385,6 @@ int main(int argc, char **argv)
 	    "extendible dataset collective read", PARATESTFILE);
     AddTest("eidsetw2", extend_writeInd2, NULL,
 	    "extendible dataset independent write #2", PARATESTFILE);
-    AddTest("calloc", test_chunk_alloc, NULL,
-	    "parallel extend Chunked allocation on serial file", PARATESTFILE);
 
 #ifdef H5_HAVE_FILTER_DEFLATE
     AddTest("cmpdsetr", compress_readAll, NULL,
@@ -410,23 +412,44 @@ int main(int argc, char **argv)
 	    "collective group and dataset write", &collngroups_params);
     AddTest("ingrpr", independent_group_read, NULL,
 	    "independent group and dataset read", &collngroups_params);
- /* By default, do not run big dataset on WIN32. */
-#ifdef WIN32
-    AddTest("-bigdset", big_dataset, NULL, 
-            "big dataset test", PARATESTFILE);
-#else
-				 AddTest("bigdset", big_dataset, NULL, 
-            "big dataset test", PARATESTFILE);
-#endif
+
+    /* By default, do not run big dataset. */
+    AddTest("-bigdset", big_dataset, NULL,
+	    "big dataset test", PARATESTFILE);
     AddTest("fill", dataset_fillvalue, NULL,
 	    "dataset fill value", PARATESTFILE);
 
-    AddTest("cchunk1",
+#if 0
+    /* Collective Chunk IO are verified to work for 64 processes.
+     * Add or skip depending on whether mpi_size is larger than 64.
+     */
+
+    if((mpi_size > 64) && MAINPROCESS) {
+	printf("Collective chunk IO tests haven't been tested \n");
+	printf("  for the number of process greater than 64.\n");
+	printf("Please try with the number of process \n");
+	printf("  no greater than 64 for collective chunk IO test.\n");
+	printf("Collective chunk tests will be skipped \n");
+    }
+    AddTest((mpi_size > 64) ? "-cchunk1" : "cchunk1",
+	coll_chunk1,NULL, "simple collective chunk io",PARATESTFILE);
+    AddTest((mpi_size > 64) ? "-cchunk2" : "cchunk2",
+	coll_chunk2,NULL, "noncontiguous collective chunk io",PARATESTFILE);
+    AddTest((mpi_size > 64) ? "-cchunk3" : "cchunk3",
+	coll_chunk3,NULL, "multi-chunk collective chunk io",PARATESTFILE);
+    AddTest((mpi_size > 64) ? "-cchunk4" : "cchunk4",
+	coll_chunk4,NULL, "collective to independent chunk io",PARATESTFILE);
+#endif
+  AddTest("cchunk1",
 	coll_chunk1,NULL, "simple collective chunk io",PARATESTFILE);
     AddTest("cchunk2",
 	coll_chunk2,NULL, "noncontiguous collective chunk io",PARATESTFILE);
     AddTest("cchunk3",
 	coll_chunk3,NULL, "multi-chunk collective chunk io",PARATESTFILE);
+#if 0
+    AddTest("cchunk4",
+	coll_chunk4,NULL, "collective to independent chunk io",PARATESTFILE);
+#endif
 
 /* irregular collective IO tests*/
     AddTest("ccontw",
@@ -448,38 +471,6 @@ int main(int argc, char **argv)
 	coll_irregular_complex_chunk_read,NULL,
 	"collective irregular complex chunk read",PARATESTFILE);
 
-
-#if 0
-    if((mpi_size > 3) && MAINPROCESS) {
-	printf("Collective irregular chunk IO tests haven't been tested \n");
-	printf("  for the number of process greater than 3.\n");
-	printf("Please try with the number of process \n");
-	printf("  no greater than 3 for collective irregular chunk IO test.\n");
-	printf("Collective irregular chunk tests will be skipped \n");
-    }
-    AddTest((mpi_size > 3) ? "-ccontw" : "ccontw",
-	coll_irregular_cont_write,NULL,
-	"collective irregular contiguous write",PARATESTFILE);
-    AddTest((mpi_size > 3) ? "-ccontr" : "ccontr",
-	coll_irregular_cont_read,NULL,
-	"collective irregular contiguous read",PARATESTFILE);
-    AddTest((mpi_size > 3) ? "-cschunkw" : "cschunkw",
-	coll_irregular_simple_chunk_write,NULL,
-	"collective irregular simple chunk write",PARATESTFILE);
-    AddTest((mpi_size > 3) ? "-cschunkr" : "cschunkr",
-	coll_irregular_simple_chunk_read,NULL,
-	"collective irregular simple chunk read",PARATESTFILE);
-    AddTest((mpi_size > 3) ? "-ccchunkw" : "ccchunkw",
-	coll_irregular_complex_chunk_write,NULL,
-	"collective irregular complex chunk write",PARATESTFILE);
-    AddTest((mpi_size > 3) ? "-ccchunkr" : "ccchunkr",
-	coll_irregular_complex_chunk_read,NULL,
-	"collective irregular complex chunk read",PARATESTFILE);
-#endif
-
-
-    AddTest("null", null_dataset, NULL,
-	    "null dataset test", PARATESTFILE);
 
     io_mode_confusion_params.name  = PARATESTFILE;
     io_mode_confusion_params.count = 0; /* value not used */

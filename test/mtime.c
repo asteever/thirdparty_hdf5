@@ -97,7 +97,8 @@ main(void)
     if (H5Fclose(file)<0) TEST_ERROR;
 
     /* Compare times from the two ways of calling H5Gget_objinfo() */
-    if (sb1.u.obj.objno!=sb2.u.obj.objno || sb1.u.obj.mtime!=sb2.u.obj.mtime) {
+    if (sb1.objno[0]!=sb2.objno[0] || sb1.objno[1]!=sb2.objno[1] ||
+	sb1.mtime!=sb2.mtime) {
         H5_FAILED();
 	puts("    Calling H5Gget_objinfo() with the dataset ID returned");
 	puts("    different values than calling it with a file and dataset");
@@ -106,15 +107,15 @@ main(void)
     }
 
     /* Compare times -- they must be within 60 seconds of one another */
-    if (0==sb1.u.obj.mtime) {
+    if (0==sb1.mtime) {
 	SKIPPED();
 	puts("    The modification time could not be decoded on this OS.");
 	puts("    Modification times will be mantained in the file but");
 	puts("    cannot be queried on this system.  See H5O_mtime_decode().");
 	return 0;
-    } else if (fabs(HDdifftime(now, sb1.u.obj.mtime))>60.0) {
+    } else if (fabs(HDdifftime(now, sb1.mtime))>60.0) {
         H5_FAILED();
-	tm = localtime(&(sb1.u.obj.mtime));
+	tm = localtime(&(sb1.mtime));
 	strftime((char*)buf1, sizeof buf1, "%Y-%m-%d %H:%M:%S", tm);
 	tm = localtime(&now);
 	strftime((char*)buf2, sizeof buf2, "%Y-%m-%d %H:%M:%S", tm);
@@ -140,7 +141,7 @@ main(void)
     if (file >= 0){
         if(H5Gget_objinfo(file, "/Dataset1", TRUE, &sb1)<0)
             TEST_ERROR;
-        if(sb1.u.obj.mtime!=MTIME1) {
+        if(sb1.mtime!=MTIME1) {
             H5_FAILED();
                /* If this fails, examine H5Omtime.c.  Modification time is very
                 * system dependant (e.g., on Windows DST must be hardcoded). */
@@ -175,7 +176,7 @@ main(void)
     if (file >= 0){
         if(H5Gget_objinfo(file, "/Dataset1", TRUE, &sb2)<0)
             TEST_ERROR;
-        if(sb2.u.obj.mtime!=MTIME2) {
+        if(sb2.mtime!=MTIME2) {
            H5_FAILED();
            puts("    Modification time incorrect.");
            goto error;

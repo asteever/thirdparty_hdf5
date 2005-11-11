@@ -113,9 +113,6 @@ extern void     dump_tables(find_objs_t *info)
 #endif  /* H5DUMP_DEBUG */
 extern herr_t init_objs(hid_t fid, find_objs_t *info, table_t **group_table,
     table_t **dset_table, table_t **type_table);
-extern obj_t   *search_obj(table_t *temp, haddr_t objno);
-#ifndef H5_HAVE_TMPFILE
-extern FILE *	tmpfile(void);
-#endif
+extern obj_t   *search_obj(table_t *temp, unsigned long *objno);
 
 #endif	/* H5TOOLS_UTILS_H__ */

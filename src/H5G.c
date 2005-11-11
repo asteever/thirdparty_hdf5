@@ -91,6 +91,7 @@
 /* Interface initialization */
 #define H5_INTERFACE_INIT_FUNC	H5G_init_interface
 
+
 /* Packages needed by this file... */
 #include "H5private.h"		/* Generic Functions			*/
 #include "H5Aprivate.h"		/* Attributes				*/
@@ -102,11 +103,11 @@
 #include "H5HLprivate.h"	/* Local Heaps				*/
 #include "H5Iprivate.h"		/* IDs			  		*/
 #include "H5MMprivate.h"	/* Memory management			*/
-#include "H5Pprivate.h"         /* Property lists                       */
 
 /* Local macros */
 #define H5G_INIT_HEAP		8192
 #define H5G_RESERVED_ATOMS	0
+#define H5G_SIZE_HINT   256             /*default root grp size hint         */
 
 /*
  * During name lookups (see H5G_namei()) we sometimes want information about
@@ -116,7 +117,6 @@
 #define H5G_TARGET_NORMAL	0x0000
 #define H5G_TARGET_SLINK	0x0001
 #define H5G_TARGET_MOUNT	0x0002
-#define H5G_CRT_INTMD_GROUP	0x0004
 
 /* Local typedefs */
 
@@ -142,12 +142,10 @@ typedef enum {
  * is allocated dynamically.
  */
 typedef struct H5G_typeinfo_t {
-    H5G_obj_t 	type;			        /*one of the public H5G_* types	     */
+    int 	type;			        /*one of the public H5G_* types	     */
     htri_t	(*isa)(H5G_entry_t*, hid_t);	/*function to determine type	     */
     char	*desc;			        /*description of object type	     */
 } H5G_typeinfo_t;
-
-/* Package variables */
 
 /* Local variables */
 static H5G_typeinfo_t *H5G_type_g = NULL;	/*object typing info	*/
@@ -163,11 +161,8 @@ H5FL_DEFINE(H5G_shared_t);
 /* Declare extern the PQ free list for the wrapped strings */
 H5FL_BLK_EXTERN(str_buf);
 
-/* Declare a free list to manage haddr_t's */
-H5FL_DEFINE(haddr_t);
-
 /* Private prototypes */
-static herr_t H5G_register_type(H5G_obj_t type, htri_t(*isa)(H5G_entry_t*, hid_t),
+static herr_t H5G_register_type(int type, htri_t(*isa)(H5G_entry_t*, hid_t),
 				 const char *desc);
 static const char * H5G_component(const char *name, size_t *size_p);
 static const char * H5G_basename(const char *name, size_t *size_p);
@@ -178,8 +173,7 @@ static herr_t H5G_namei(const H5G_entry_t *loc_ent, const char *name,
     H5G_entry_t *ent, hid_t dxpl_id);
 static herr_t H5G_traverse_slink(H5G_entry_t *grp_ent/*in,out*/,
     H5G_entry_t *obj_ent/*in,out*/, int *nlinks/*in,out*/, hid_t dxpl_id);
-static H5G_t *H5G_create(H5G_entry_t *loc, const char *name, hid_t dxpl_id,
-    hid_t gcpl_id, hid_t gapl_id);
+static H5G_t *H5G_create(H5G_entry_t *loc, const char *name, size_t size_hint, hid_t dxpl_id);
 static htri_t H5G_isa(H5G_entry_t *ent, hid_t dxpl_id);
 static htri_t H5G_link_isa(H5G_entry_t *ent, hid_t dxpl_id);
 static H5G_t * H5G_open_oid(H5G_entry_t *ent, hid_t dxpl_id);
@@ -189,7 +183,7 @@ static herr_t H5G_link(H5G_entry_t *cur_loc, const char *cur_name,
     unsigned namei_flags, hid_t dxpl_id);
 static herr_t H5G_get_num_objs(H5G_entry_t *grp, hsize_t *num_objs, hid_t dxpl_id);
 static ssize_t H5G_get_objname_by_idx(H5G_entry_t *loc, hsize_t idx, char* name, size_t size, hid_t dxpl_id);
-static H5G_obj_t H5G_get_objtype_by_idx(H5G_entry_t *loc, hsize_t idx, hid_t dxpl_id);
+static int H5G_get_objtype_by_idx(H5G_entry_t *loc, hsize_t idx, hid_t dxpl_id);
 static herr_t H5G_linkval(H5G_entry_t *loc, const char *name, size_t size,
     char *buf/*out*/, hid_t dxpl_id);
 static herr_t H5G_set_comment(H5G_entry_t *loc, const char *name,
@@ -203,8 +197,6 @@ static htri_t H5G_common_path(const H5RS_str_t *fullpath_r,
     const H5RS_str_t *prefix_r);
 static H5RS_str_t *H5G_build_fullpath(const H5RS_str_t *prefix_r, const H5RS_str_t *name_r);
 static int H5G_replace_ent(void *obj_ptr, hid_t obj_id, void *key);
-static herr_t H5G_copy(H5G_entry_t *ent_src, H5G_entry_t *loc_dst,
-         const char *name_dst, hid_t plist_id);
 
 
 /*-------------------------------------------------------------------------
@@ -241,7 +233,6 @@ H5Gcreate(hid_t loc_id, const char *name, size_t size_hint)
 {
     H5G_entry_t		   *loc = NULL;
     H5G_t		   *grp = NULL;
-    hid_t                   tmp_gcpl = (-1);    /* Temporary group creation property list */
     hid_t		    ret_value;
 
     FUNC_ENTER_API(H5Gcreate, FAIL);
@@ -253,119 +244,11 @@ H5Gcreate(hid_t loc_id, const char *name, size_t size_hint)
     if (!name || !*name)
 	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no name given");
 
-    /* Check if we need to create a non-standard GCPL */
-    if(size_hint > 0) {
-        H5P_genplist_t  *gc_plist;  /* Property list created */
-        H5O_ginfo_t     ginfo;          /* Group info property */
-
-        /* Get the default property list */
-        if(NULL == (gc_plist = H5I_object(H5P_GROUP_CREATE_DEFAULT)))
-            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list")
-
-        /* Make a copy of the default property list */
-        if((tmp_gcpl = H5P_copy_plist(gc_plist)) < 0)
-            HGOTO_ERROR(H5E_SYM, H5E_CANTGET, FAIL, "unable to copy the creation property list")
-
-        /* Get the copy of the property list */
-        if(NULL == (gc_plist = H5I_object(H5P_GROUP_CREATE_DEFAULT)))
-            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list")
-
-        /* Get the group info property */
-        if(H5P_get(gc_plist, H5G_CRT_GROUP_INFO_NAME, &ginfo) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get group info")
-
-        /* Set the non-default local heap size hint */
-        ginfo.lheap_size_hint = size_hint;
-        if(H5P_set(gc_plist, H5G_CRT_GROUP_INFO_NAME, &ginfo) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't set group info")
-    } /* end if */
-    else
-        tmp_gcpl = H5P_GROUP_CREATE_DEFAULT;
-
     /* Create the group */
-    if (NULL == (grp = H5G_create(loc, name, H5AC_dxpl_id, tmp_gcpl, H5P_DEFAULT)))
+    if (NULL == (grp = H5G_create(loc, name, size_hint, H5AC_dxpl_id)))
 	HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, FAIL, "unable to create group");
     if ((ret_value = H5I_register(H5I_GROUP, grp)) < 0)
 	HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to register group");
-
-done:
-    if(tmp_gcpl > 0 && tmp_gcpl != H5P_GROUP_CREATE_DEFAULT)
-        if(H5I_dec_ref(tmp_gcpl) < 0)
-            HDONE_ERROR(H5E_SYM, H5E_CLOSEERROR, FAIL, "unable to release property list")
-
-    if(ret_value < 0) {
-        if(grp!=NULL)
-            H5G_close(grp);
-    } /* end if */
-
-    FUNC_LEAVE_API(ret_value);
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5Gcreate_expand
- *
- * Purpose:	Creates a new group relative to LOC_ID and gives it the
- *		specified NAME, and creation property list GCPL_ID and access
- *              property list GAPL_ID.
- *
- *		The optional SIZE_HINT specifies how much file space to
- *		reserve to store the names that will appear in this
- *		group. If a non-positive value is supplied for the SIZE_HINT
- *		then a default size is chosen.
- *
- *              Given the default setting, H5Gcreate_expand() will have the
- *              same function of H5Gcreate()
- *
- * See also:	H5Gcreate(), H5Dcreate_expand()
- *
- * Errors:
- *
- * Return:	Success:	The object ID of a new, empty group open for
- *				writing.  Call H5Gclose() when finished with
- *				the group.
- *
- *		Failure:	FAIL
- *
- * Programmer:  Peter Cao
- *	        May 08, 2005
- *-------------------------------------------------------------------------
- */
-hid_t
-H5Gcreate_expand(hid_t loc_id, const char *name, hid_t gcpl_id, hid_t gapl_id)
-{
-    H5G_entry_t		   *loc = NULL;
-    H5G_t		   *grp = NULL;
-    hid_t		    ret_value;
-
-    FUNC_ENTER_API(H5Gcreate_expand, FAIL)
-
-    /* Check arguments */
-    if (NULL==(loc=H5G_loc (loc_id)))
-	HGOTO_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
-    if (!name || !*name)
-	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no name given")
-
-    /* Check group creation property list */
-    if(H5P_DEFAULT == gcpl_id)
-        gcpl_id = H5P_GROUP_CREATE_DEFAULT;
-    else
-        if(TRUE != H5P_isa_class(gcpl_id, H5P_GROUP_CREATE))
-            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not group create property list")
-
-#ifdef LATER
-    /* Check the group access property list */
-    if(H5P_DEFAULT == gapl_id)
-        gapl_id = H5P_GROUP_ACCESS_DEFAULT;
-    else
-        if(TRUE != H5P_isa_class(gapl_id, H5P_GROUP_ACCESS))
-            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not group access property list")
-#endif /* LATER */
-
-    if (NULL == (grp = H5G_create(loc, name, H5AC_dxpl_id, gcpl_id, gapl_id)))
-        HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, FAIL, "unable to create group")
-    if ((ret_value = H5I_register(H5I_GROUP, grp)) < 0)
-	HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to register group")
 
 done:
     if(ret_value<0) {
@@ -374,7 +257,7 @@ done:
     } /* end if */
 
     FUNC_LEAVE_API(ret_value)
-} /* end H5Gcreate_expand() */
+}
 
 
 /*-------------------------------------------------------------------------
@@ -675,6 +558,31 @@ done:
  *
  *-------------------------------------------------------------------------
  */
+#ifdef H5_WANT_H5_V1_4_COMPAT
+int
+H5Gget_objtype_by_idx(hid_t loc_id, hsize_t idx)
+{
+    H5G_entry_t		*loc = NULL;    /* Pointer to symbol table entry */
+    int 		ret_value;
+
+    FUNC_ENTER_API(H5Gget_objtype_by_idx, FAIL);
+    H5TRACE2("Is","ih",loc_id,idx);
+
+    /* Check args */
+    if (NULL==(loc=H5G_loc (loc_id)))
+	HGOTO_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL, "not a location ID");
+    if(H5G_get_type(loc,H5AC_ind_dxpl_id)!=H5G_GROUP)
+	HGOTO_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL, "not a group");
+
+    /*call private function*/
+    ret_value = H5G_get_objtype_by_idx(loc, idx, H5AC_ind_dxpl_id);
+
+done:
+    FUNC_LEAVE_API(ret_value);
+
+}
+
+#else /*H5_WANT_H5_V1_4_COMPAT*/
 H5G_obj_t
 H5Gget_objtype_by_idx(hid_t loc_id, hsize_t idx)
 {
@@ -691,12 +599,13 @@ H5Gget_objtype_by_idx(hid_t loc_id, hsize_t idx)
 	HGOTO_ERROR (H5E_ARGS, H5E_BADTYPE, H5G_UNKNOWN, "not a group");
 
     /*call private function*/
-    ret_value = H5G_get_objtype_by_idx(loc, idx, H5AC_ind_dxpl_id);
+    ret_value = (H5G_obj_t)H5G_get_objtype_by_idx(loc, idx, H5AC_ind_dxpl_id);
 
 done:
     FUNC_LEAVE_API(ret_value);
 
 }
+#endif /*H5_WANT_H5_V1_4_COMPAT*/
 
 
 /*-------------------------------------------------------------------------
@@ -1041,50 +950,6 @@ done:
     FUNC_LEAVE_API(ret_value);
 }
 
-
-/*-------------------------------------------------------------------------
- * Function:    H5Gcopy
- *
- * Purpose:     Copy an object to destination location 
- *
- * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Peter Cao 
- *              June 4, 2005 
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5Gcopy(hid_t id_src, hid_t loc_dst, const char *name_dst, hid_t plist_id)
-{
-    H5G_entry_t            *ent_src = NULL, *ent_dst=NULL;
-    herr_t                  ret_value = SUCCEED;       /* Return value */
-
-    FUNC_ENTER_API(H5Gcopy, FAIL)
-
-    /* Check arguments */
-    if(NULL == (ent_src = H5G_loc(id_src)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
-    if(NULL == (ent_dst = H5G_loc(loc_dst)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
-    if(!name_dst || !*name_dst)
-	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no name specified")
-
-/* Get correct property list */
-/* XXX: This is a kludge, to use the datatype creation property list - QAK */
-if(H5P_DEFAULT == plist_id)
-    plist_id = H5P_DATATYPE_CREATE_DEFAULT;
-else
-    if(TRUE != H5P_isa_class(plist_id, H5P_DATATYPE_CREATE))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not object create property list")
-
-    if(H5G_copy(ent_src, ent_dst, name_dst, plist_id) < 0)
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTCOPY, FAIL, "unable to copy object")
-
-done:
-    FUNC_LEAVE_API(ret_value)
-} /* end H5Gcopy() */
-
 /*
  *-------------------------------------------------------------------------
  *-------------------------------------------------------------------------
@@ -1110,19 +975,12 @@ done:
 static herr_t
 H5G_init_interface(void)
 {
-    /* Group creation property class variables.  In sequence, they are,
-     * - Creation property list class to modify
-     * - Default value for "group info"
-     */
-    H5P_genclass_t  *crt_pclass;
-    H5O_ginfo_t     ginfo                       = H5G_CRT_GROUP_INFO_DEF;
-    size_t          nprops;             /* Number of properties */
-    herr_t          ret_value=SUCCEED;  /* Return value */
+    herr_t          ret_value=SUCCEED;       /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5G_init_interface);
 
     /* Initialize the atom group for the group IDs */
-    if (H5I_register_type(H5I_GROUP, (size_t)H5I_GROUPID_HASHSIZE, H5G_RESERVED_ATOMS,
+    if (H5I_init_group(H5I_GROUP, H5I_GROUPID_HASHSIZE, H5G_RESERVED_ATOMS,
 		       (H5I_free_t)H5G_close) < 0)
 	HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, FAIL, "unable to initialize interface");
 
@@ -1135,32 +993,6 @@ H5G_init_interface(void)
     H5G_register_type(H5G_GROUP,   H5G_isa,  "group");
     H5G_register_type(H5G_DATASET, H5D_isa,  "dataset");
     H5G_register_type(H5G_LINK,    H5G_link_isa,  "link");
-
-    /* ========== group Creation Property Class Initialization ============*/
-    assert(H5P_CLS_GROUP_CREATE_g!=-1);
-
-    /* Get the pointer to group creation class */
-    if(NULL == (crt_pclass = H5I_object(H5P_CLS_GROUP_CREATE_g)))
-         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list class")
-
-    /* Get the number of properties in the class */
-    if(H5P_get_nprops_pclass(crt_pclass, &nprops, FALSE)<0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't query number of properties")
-
-    /* Assume that if there are properties in the class, they are the default ones */
-    if(nprops==0) {
-        /* Register group info */
-        if(H5P_register(crt_pclass,H5G_CRT_GROUP_INFO_NAME,H5G_CRT_GROUP_INFO_SIZE,
-                 &ginfo,NULL,NULL,NULL,NULL,NULL,NULL,NULL)<0)
-             HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
-    } /* end if */
-
-    /* Only register the default property list if it hasn't been created yet */
-    if(H5P_LST_GROUP_CREATE_g==(-1)) {
-        /* Register the default group creation property list */
-        if((H5P_LST_GROUP_CREATE_g = H5P_create_id(crt_pclass))<0)
-             HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "can't insert property into class")
-    } /* end if */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value);
@@ -1195,7 +1027,7 @@ H5G_term_interface(void)
 
     if (H5_interface_initialize_g) {
 	if ((n=H5I_nmembers(H5I_GROUP))) {
-	    H5I_clear_type(H5I_GROUP, FALSE);
+	    H5I_clear_group(H5I_GROUP, FALSE);
 	} else {
 	    /* Empty the object type table */
 	    for (i=0; i<H5G_ntypes_g; i++)
@@ -1204,7 +1036,7 @@ H5G_term_interface(void)
 	    H5G_type_g = H5MM_xfree(H5G_type_g);
 
 	    /* Destroy the group object id group */
-	    H5I_dec_type_ref(H5I_GROUP);
+	    H5I_destroy_group(H5I_GROUP);
 
             /* Free the global component buffer */
             H5G_comp_g = H5MM_xfree(H5G_comp_g);
@@ -1241,7 +1073,7 @@ H5G_term_interface(void)
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5G_register_type(H5G_obj_t type, htri_t(*isa)(H5G_entry_t*, hid_t), const char *_desc)
+H5G_register_type(int type, htri_t(*isa)(H5G_entry_t*, hid_t), const char *_desc)
 {
     char	*desc = NULL;
     size_t	i;
@@ -1667,31 +1499,11 @@ H5G_namei(const H5G_entry_t *loc_ent, const char *name, const char **rest/*out*/
             case H5G_NAMEI_INSERT:
                 if(!last_comp) {
                     if (H5G_stab_find(grp_ent, H5G_comp_g, obj_ent/*out*/, dxpl_id )<0) {
-                        /* If an intermediate group doesn't exist & flag is set, create the group */
-                        if (target & H5G_CRT_INTMD_GROUP) {
-                            H5G_entry_t new_ent;
-
-                            /* Reset group entry */
-                            H5G_ent_reset(&new_ent);
-
-                            /* Create the intermediate group */
-                            if (H5G_stab_create(grp_ent->file, dxpl_id, 0, &new_ent/*out*/) < 0)
-                                HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, FAIL, "can't create grp");
-
-                            /* Insert new group into current group's symbol table */
-                            if (H5G_stab_insert(grp_ent, H5G_comp_g, &new_ent, TRUE, dxpl_id))
-                                HGOTO_ERROR(H5E_SYM, H5E_CANTINSERT, FAIL, "unable to insert intermediate group");
-
-                            /* Keep newly created group's entry, so we can traverse into it */
-                            if (H5G_ent_copy(obj_ent, &new_ent, H5G_COPY_DEEP)<0)
-                                HGOTO_ERROR(H5E_DATATYPE, H5E_CANTOPENOBJ, FAIL, "unable to copy entry");
-
-                            /* Close new group */
-                            if (H5O_close(&new_ent) < 0)
-                                HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, FAIL, "unable to close");
-                        }
-                        else
-                            HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "component not found");
+                        /*
+                         * Component was not found in the current symbol table, possibly
+                         * because GRP_ENT isn't a symbol table.
+                         */
+                        HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "component not found");
                     }
                 } /* end if */
                 else {
@@ -1770,11 +1582,6 @@ done:
  *      Pedro Vicente, <pvn@ncsa.uiuc.edu> 22 Aug 2002
  *      Added `id to name' support.
  *
- *	John Mainzer - 6/8/05
- *      Modified function to use the new dirtied parmeter of
- *      H5AC_unprotect(), which allows management of the is_dirty
- *      field of the cache info to be moved into the cache code.
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1807,7 +1614,7 @@ H5G_traverse_slink (H5G_entry_t *grp_ent/*in,out*/,
     linkval = H5MM_xstrdup (clv);
     assert(linkval);
 
-    if (H5HL_unprotect(grp_ent->file, dxpl_id, heap, stab_mesg.heap_addr, H5AC__NO_FLAGS_SET) < 0)
+    if (H5HL_unprotect(grp_ent->file, dxpl_id, heap, stab_mesg.heap_addr) < 0)
 	HGOTO_ERROR (H5E_SYM, H5E_NOTFOUND, FAIL, "unable to read unprotect link value")
 
     /* Hold the entry's name (& old_name) to restore later */
@@ -1966,12 +1773,10 @@ done:
  *-------------------------------------------------------------------------
  */
 static H5G_t *
-H5G_create(H5G_entry_t *loc, const char *name,
-                  hid_t dxpl_id, hid_t gcpl_id, hid_t UNUSED gapl_id)
+H5G_create(H5G_entry_t *loc, const char *name, size_t size_hint, hid_t dxpl_id)
 {
     H5G_t	*grp = NULL;	/*new group			*/
     H5F_t       *file = NULL;   /* File new group will be in    */
-    H5P_genplist_t  *gc_plist;  /* Property list created */
     unsigned    stab_init=0;    /* Flag to indicate that the symbol table was created successfully */
     H5G_t	*ret_value;	/* Return value */
 
@@ -1980,10 +1785,6 @@ H5G_create(H5G_entry_t *loc, const char *name,
     /* check args */
     assert(loc);
     assert(name && *name);
-    assert(gcpl_id != H5P_DEFAULT);
-#ifdef LATER
-    assert(gapl_id != H5P_DEFAULT);
-#endif /* LATER */
 
     /* create an open group */
     if (NULL==(grp = H5FL_CALLOC(H5G_t)))
@@ -1996,16 +1797,12 @@ H5G_create(H5G_entry_t *loc, const char *name,
         HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, NULL, "unable to locate insertion point");
 
     /* Create the group entry */
-    if (H5G_stab_create(file, dxpl_id, (size_t)H5G_SIZE_HINT, &(grp->ent)/*out*/) < 0)
+    if (H5G_stab_create(file, dxpl_id, size_hint, &(grp->ent)/*out*/) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, NULL, "can't create grp");
     stab_init=1;    /* Indicate that the symbol table information is valid */
 
-    /* Get the property list */
-    if (NULL == (gc_plist = H5I_object(gcpl_id)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a property list")
-
     /* insert child name into parent */
-    if(H5G_insert(loc,name,&(grp->ent), dxpl_id, gc_plist)<0)
+    if(H5G_insert(loc,name,&(grp->ent), dxpl_id)<0)
         HGOTO_ERROR(H5E_SYM, H5E_CANTINSERT, NULL, "can't insert group");
 
     /* Add group to list of open objects in file */
@@ -2148,7 +1945,7 @@ H5G_open(H5G_entry_t *ent, hid_t dxpl_id)
     if((shared_fo=H5FO_opened(ent->file, ent->header))==NULL) {
 
         /* Clear any errors from H5FO_opened() */
-        H5E_clear_stack(NULL);
+        H5E_clear();
 
         /* Open the group object */
         if ((grp=H5G_open_oid(ent, dxpl_id)) ==NULL)
@@ -2427,17 +2224,12 @@ H5G_rootof(H5F_t *f)
  *      Pedro Vicente, <pvn@ncsa.uiuc.edu> 18 Sep 2002
  *      Added `id to name' support.
  *
- *      Peter Cao
- *      May 09, 2005
- *      Add flag 'crt_intmd_group' to support creating missing groups
- *
  *-------------------------------------------------------------------------
  */
 herr_t
-H5G_insert(H5G_entry_t *loc, const char *name, H5G_entry_t *ent, hid_t dxpl_id, H5P_genplist_t *oc_plist)
+H5G_insert(H5G_entry_t *loc, const char *name, H5G_entry_t *ent, hid_t dxpl_id)
 {
     herr_t      ret_value=SUCCEED;       /* Return value */
-    unsigned    target=H5G_TARGET_NORMAL;
 
     FUNC_ENTER_NOAPI(H5G_insert, FAIL);
 
@@ -2446,22 +2238,12 @@ H5G_insert(H5G_entry_t *loc, const char *name, H5G_entry_t *ent, hid_t dxpl_id, 
     assert (name && *name);
     assert (ent);
 
-    /* Check for intermediate group creation flag present */
-    if(oc_plist != NULL) {
-        unsigned crt_intmd_group;
-
-        if(H5P_get(oc_plist, H5G_CRT_INTERMEDIATE_GROUP_NAME, &crt_intmd_group) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get property value for creating missing groups");
-
-        if (crt_intmd_group > 0)
-            target |= H5G_CRT_INTMD_GROUP;
-    } /* end if */
-
     /*
      * Lookup and insert the name -- it shouldn't exist yet.
      */
-    if (H5G_namei(loc, name, NULL, NULL, NULL, target, NULL, H5G_NAMEI_INSERT, ent, dxpl_id)<0)
+    if (H5G_namei(loc, name, NULL, NULL, NULL, H5G_TARGET_NORMAL, NULL, H5G_NAMEI_INSERT, ent, dxpl_id)<0)
 	HGOTO_ERROR(H5E_SYM, H5E_EXISTS, FAIL, "already exists");
+
 
 done:
     FUNC_LEAVE_NOAPI(ret_value);
@@ -2621,11 +2403,6 @@ H5G_loc (hid_t loc_id)
         case H5I_GENPROP_LST:
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "unable to get symbol table entry of property list");
 
-        case H5I_ERROR_CLASS:
-        case H5I_ERROR_MSG:
-        case H5I_ERROR_STACK:
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "unable to get symbol table entry of error class, message or stack");
-
         case H5I_GROUP:
             if (NULL==(group=H5I_object (loc_id)))
                 HGOTO_ERROR (H5E_ARGS, H5E_BADVALUE, NULL, "invalid group ID");
@@ -2725,7 +2502,7 @@ H5G_link (H5G_entry_t *cur_loc, const char *cur_name, H5G_entry_t *new_loc,
             if (H5G_namei(new_loc, norm_new_name, &rest, &grp_ent, NULL,
                             H5G_TARGET_NORMAL, NULL, H5G_NAMEI_TRAVERSE, NULL, dxpl_id)>=0)
                 HGOTO_ERROR (H5E_SYM, H5E_EXISTS, FAIL, "already exists");
-            H5E_clear_stack (NULL); /*it's okay that we didn't find it*/
+            H5E_clear (); /*it's okay that we didn't find it*/
             rest = H5G_component (rest, &nchars);
 
             /*
@@ -2772,7 +2549,7 @@ H5G_link (H5G_entry_t *cur_loc, const char *cur_name, H5G_entry_t *new_loc,
             if (H5G_namei(cur_loc, norm_cur_name, NULL, NULL, &cur_obj, namei_flags, NULL, H5G_NAMEI_TRAVERSE, NULL, dxpl_id)<0)
                 HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "source object not found");
             cur_obj_init=1;     /* Indicate that the cur_obj struct is initialized */
-            if (H5G_insert (new_loc, norm_new_name, &cur_obj, dxpl_id, NULL)<0)
+            if (H5G_insert (new_loc, norm_new_name, &cur_obj, dxpl_id)<0)
                 HGOTO_ERROR (H5E_SYM, H5E_CANTINIT, FAIL, "unable to create new name/link for object");
             break;
 
@@ -2815,12 +2592,12 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-H5G_obj_t
+int
 H5G_get_type(H5G_entry_t *ent, hid_t dxpl_id)
 {
     htri_t	isa;
     size_t	i;
-    H5G_obj_t   ret_value=H5G_UNKNOWN;       /* Return value */
+    int         ret_value=H5G_UNKNOWN;       /* Return value */
 
     FUNC_ENTER_NOAPI(H5G_get_type, H5G_UNKNOWN);
 
@@ -2859,11 +2636,6 @@ done:
  *      Pedro Vicente, <pvn@ncsa.uiuc.edu> 18 Sep 2002
  *      Added `id to name' support.
  *
- *	John Mainzer - 6/8/05
- *      Modified function to use the new dirtied parmeter of
- *      H5AC_unprotect(), which allows management of the is_dirty
- *      field of the cache info to be moved into the cache code.
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -2891,7 +2663,7 @@ H5G_get_objinfo (H5G_entry_t *loc, const char *name, hbool_t follow_link,
      */
     if (statbuf) {
         /* Common code to retrieve the file's fileno */
-        if(H5F_get_fileno(obj_ent.file,&statbuf->fileno)<0)
+        if(H5F_get_fileno(obj_ent.file,statbuf->fileno)<0)
             HGOTO_ERROR (H5E_FILE, H5E_BADVALUE, FAIL, "unable to read fileno");
 
         /* Retrieve information specific to each type of entry */
@@ -2910,31 +2682,41 @@ H5G_get_objinfo (H5G_entry_t *loc, const char *name, hbool_t follow_link,
 
             s = H5HL_offset_into(grp_ent.file, heap, obj_ent.cache.slink.lval_offset);
 
-	    statbuf->u.slink.linklen = HDstrlen(s) + 1; /*count the null terminator*/
+	    statbuf->linklen = HDstrlen(s) + 1; /*count the null terminator*/
 
             /* Release the local heap */
-            if (H5HL_unprotect(grp_ent.file, dxpl_id, heap, stab_mesg.heap_addr, H5AC__NO_FLAGS_SET) < 0)
+            if (H5HL_unprotect(grp_ent.file, dxpl_id, heap, stab_mesg.heap_addr) < 0)
                 HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "unable to read unprotect link value")
 
             /* Set object type */
 	    statbuf->type = H5G_LINK;
 	} else {
 	    /* Some other type of object */
-	    statbuf->u.obj.objno = obj_ent.header;
-	    statbuf->u.obj.nlink = H5O_link (&obj_ent, 0, dxpl_id);
-	    if (NULL==H5O_read(&obj_ent, H5O_MTIME_ID, 0, &(statbuf->u.obj.mtime), dxpl_id)) {
-                H5E_clear_stack(NULL);
-                if (NULL==H5O_read(&obj_ent, H5O_MTIME_NEW_ID, 0, &(statbuf->u.obj.mtime), dxpl_id)) {
-                    H5E_clear_stack(NULL);
-                    statbuf->u.obj.mtime = 0;
+	    statbuf->objno[0] = (unsigned long)(obj_ent.header);
+#if H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG
+	    statbuf->objno[1] = (unsigned long)(obj_ent.header >>
+						8*sizeof(long));
+#else
+	    statbuf->objno[1] = 0;
+#endif
+	    statbuf->nlink = H5O_link (&obj_ent, 0, dxpl_id);
+	    if (NULL==H5O_read(&obj_ent, H5O_MTIME_ID, 0, &(statbuf->mtime), dxpl_id)) {
+		H5E_clear();
+                if (NULL==H5O_read(&obj_ent, H5O_MTIME_NEW_ID, 0, &(statbuf->mtime), dxpl_id)) {
+                    H5E_clear();
+                    statbuf->mtime = 0;
                 }
 	    }
             /* Get object type */
-	    statbuf->type = H5G_get_type(&obj_ent, dxpl_id);
-	    H5E_clear_stack(NULL); /*clear errors resulting from checking type*/
+	    statbuf->type =
+#ifndef H5_WANT_H5_V1_4_COMPAT
+                (H5G_obj_t)
+#endif /*H5_WANT_H5_V1_4_COMPAT*/
+                H5G_get_type(&obj_ent, dxpl_id);
+	    H5E_clear(); /*clear errors resulting from checking type*/
 
             /* Get object header information */
-            if(H5O_get_info(&obj_ent, &(statbuf->u.obj.ohdr), dxpl_id)<0)
+            if(H5O_get_info(&obj_ent, &(statbuf->ohdr), dxpl_id)<0)
                 HGOTO_ERROR(H5E_SYM, H5E_CANTGET, FAIL, "unable to get object header information")
 	}
     } /* end if */
@@ -3078,12 +2860,12 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-static H5G_obj_t
+static int
 H5G_get_objtype_by_idx(H5G_entry_t *loc, hsize_t idx, hid_t dxpl_id)
 {
     H5O_stab_t		stab_mesg;	/*info about local heap	& B-tree */
     H5G_bt_it_ud3_t	udata;          /* User data for B-tree callback */
-    H5G_obj_t		ret_value;      /* Return value */
+    int	    ret_value;          /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5G_get_objtype_by_idx);
 
@@ -3136,11 +2918,6 @@ done:
  *      Pedro Vicente, <pvn@ncsa.uiuc.edu> 18 Sep 2002
  *      Added `id to name' support.
  *
- *	John Mainzer - 6/8/05
- *      Modified function to use the new dirtied parmeter of
- *      H5AC_unprotect(), which allows management of the is_dirty
- *      field of the cache info to be moved into the cache code.
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -3180,7 +2957,7 @@ H5G_linkval (H5G_entry_t *loc, const char *name, size_t size, char *buf/*out*/, 
     if (size>0 && buf)
 	HDstrncpy (buf, s, size);
 
-    if (H5HL_unprotect(grp_ent.file, dxpl_id, heap, stab_mesg.heap_addr, H5AC__NO_FLAGS_SET) < 0)
+    if (H5HL_unprotect(grp_ent.file, dxpl_id, heap, stab_mesg.heap_addr) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "unable to read unprotect link value")
 
 done:
@@ -3224,7 +3001,7 @@ H5G_set_comment(H5G_entry_t *loc, const char *name, const char *buf, hid_t dxpl_
 
     /* Remove the previous comment message if any */
     if (H5O_remove(&obj_ent, H5O_NAME_ID, 0, TRUE, dxpl_id)<0)
-        H5E_clear_stack(NULL);
+        H5E_clear();
 
     /* Add the new message */
     if (buf && *buf) {
@@ -3320,7 +3097,7 @@ H5G_unlink(H5G_entry_t *loc, const char *name, hid_t dxpl_id)
     H5G_entry_t		grp_ent, obj_ent;
     const char		*base=NULL;
     char		*norm_name = NULL;	/* Pointer to normalized name */
-    H5G_obj_t           obj_type;       /* Object type */
+    int                 obj_type;       /* Object type */
     herr_t      ret_value=SUCCEED;       /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5G_unlink);
@@ -3513,7 +3290,7 @@ H5G_insertion_file(H5G_entry_t *loc, const char *name, hid_t dxpl_id)
             H5G_free_ent_name(&grp_ent);
             HGOTO_ERROR(H5E_SYM, H5E_EXISTS, NULL, "name already exists");
         } /* end if */
-        H5E_clear_stack(NULL);
+        H5E_clear();
 
         /* Make sure only the last component wasn't resolved */
         rest = H5G_component(rest, &size);
@@ -3644,7 +3421,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5G_replace_name(H5G_obj_t type, H5G_entry_t *loc,
+H5G_replace_name(int type, H5G_entry_t *loc,
     H5RS_str_t *src_name, H5G_entry_t *src_loc,
     H5RS_str_t *dst_name, H5G_entry_t *dst_loc, H5G_names_op_t op )
 {
@@ -4263,60 +4040,3 @@ H5G_unmount(H5G_t *grp)
     FUNC_LEAVE_NOAPI(SUCCEED);
 } /* end H5G_unmount() */
 
-
-/*-------------------------------------------------------------------------
- * Function:    H5G_copy
- *
- * Purpose:     Copy an object to destination location 
- *
- * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Peter Cao 
- *              June 4, 2005 
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5G_copy(H5G_entry_t *ent_src, H5G_entry_t *loc_dst,
-         const char *name_dst, hid_t plist_id)
-{
-    H5P_genplist_t  *oc_plist;          /* Property list created */
-    hid_t           dxpl_id = H5AC_dxpl_id;
-    H5G_entry_t     ent_new;
-    hbool_t         entry_inserted = FALSE;     /* Flag to indicate that the new entry was inserted into a group */
-    herr_t          ret_value = SUCCEED;       /* Return value */
-
-    FUNC_ENTER_NOAPI(H5G_copy, FAIL);
-
-    HDassert(ent_src);
-    HDassert(ent_src->file);
-    HDassert(loc_dst);
-    HDassert(loc_dst->file);
-    HDassert(name_dst);
-
-    /* Get the property list */
-    if(NULL == (oc_plist = H5I_object(plist_id)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list")
-
-    /* Reset group entry for new object */
-    H5G_ent_reset(&ent_new);
-    ent_new.file = loc_dst->file;
-
-    /* copy the object from the source file to the destination file */
-    if(H5O_copy_header(ent_src, &ent_new, dxpl_id) < 0)
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTCOPY, FAIL, "unable to copy object")
-
-    /* Insert the new object in the destination file's group */
-    if(H5G_insert(loc_dst, name_dst, &ent_new, dxpl_id, oc_plist) < 0)
-	HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "unable to insert the name")
-    entry_inserted = TRUE;
-
-done:
-    /* Free the ID to name buffers */
-    if(entry_inserted)
-        H5G_free_ent_name(&ent_new);
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5G_copy() */

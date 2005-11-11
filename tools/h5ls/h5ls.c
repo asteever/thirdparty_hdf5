@@ -52,7 +52,7 @@ static struct {
     int  nalloc;                /* number of slots allocated */
     int  nobjs;                 /* number of objects */
     struct {
-        haddr_t id;             /* object number */
+        unsigned long id[2];    /* object number */
         char *name;             /* full object name */
     } *obj;
 } idtab_g;
@@ -149,7 +149,7 @@ sym_insert(H5G_stat_t *sb, const char *name)
 
     /* Don't add it if the link count is 1 because such an object can only
      * have one name. */
-    if (sb->u.obj.nlink<2) return;
+    if (sb->nlink<2) return;
 
     /* Extend the table */
     if (idtab_g.nobjs>=idtab_g.nalloc) {
@@ -160,7 +160,8 @@ sym_insert(H5G_stat_t *sb, const char *name)
 
     /* Insert the entry */
     n = idtab_g.nobjs++;
-    idtab_g.obj[n].id = sb->u.obj.objno;
+    idtab_g.obj[n].id[0] = sb->objno[0];
+    idtab_g.obj[n].id[1] = sb->objno[1];
     idtab_g.obj[n].name = HDstrdup(name);
 }
 
@@ -186,10 +187,12 @@ sym_lookup(H5G_stat_t *sb)
 {
     int  n;
 
-    if (sb->u.obj.nlink<2) return NULL; /*only one name possible*/
+    if (sb->nlink<2) return NULL; /*only one name possible*/
     for (n=0; n<idtab_g.nobjs; n++) {
-        if (idtab_g.obj[n].id==sb->u.obj.objno)
-            return idtab_g.obj[n].name;
+ if (idtab_g.obj[n].id[0]==sb->objno[0] &&
+     idtab_g.obj[n].id[1]==sb->objno[1]) {
+     return idtab_g.obj[n].name;
+ }
     }
     return NULL;
 }
@@ -318,10 +321,8 @@ display_native_type(hid_t type, int UNUSED ind)
  printf("native float");
     } else if (H5Tequal(type, H5T_NATIVE_DOUBLE)) {
  printf("native double");
-#if H5_SIZEOF_LONG_DOUBLE !=0
     } else if (H5Tequal(type, H5T_NATIVE_LDOUBLE)) {
  printf("native long double");
-#endif
     } else if (H5Tequal(type, H5T_NATIVE_INT8)) {
  printf("native int8_t");
     } else if (H5Tequal(type, H5T_NATIVE_UINT8)) {
@@ -904,9 +905,7 @@ display_string_type(hid_t type, int UNUSED ind)
     case H5T_CSET_ASCII:
  cset_s = "ASCII";
  break;
-    case H5T_CSET_UTF8:
- cset_s = "UTF-8";
- break;
+    case H5T_CSET_RESERVED_1:
     case H5T_CSET_RESERVED_2:
     case H5T_CSET_RESERVED_3:
     case H5T_CSET_RESERVED_4:
@@ -1175,8 +1174,9 @@ display_type(hid_t type, int ind)
     /* Shared? If so then print the type's OID */
     if (H5Tcommitted(type)) {
  if (H5Gget_objinfo(type, ".", FALSE, &sb)>=0) {
-     printf("shared-%lu:"H5_PRINTF_HADDR_FMT" ",
-     sb.fileno, sb.u.obj.objno);
+     printf("shared-%lu:%lu:%lu:%lu ",
+     sb.fileno[1], sb.fileno[0],
+     sb.objno[1], sb.objno[0]);
  } else {
      printf("shared ");
  }
@@ -1270,10 +1270,10 @@ dump_dataset_values(hid_t dset)
     sprintf(fmt_double, "%%1.%dg", DBL_DIG);
     info.fmt_double = fmt_double;
 
-    info.dset_format =  "DSET-%lu:"H5_PRINTF_HADDR_FMT"-";
+    info.dset_format =  "DSET-%lu:%lu:%lu:%lu-";
     info.dset_hidefileno = 0;
 
-    info.obj_format = "-%lu:"H5_PRINTF_HADDR_FMT;
+    info.obj_format = "-%lu:%lu:%lu:%lu";
     info.obj_hidefileno = 0;
 
     info.dset_blockformat_pre = "%sBlk%lu: ";
@@ -1360,10 +1360,6 @@ list_attr (hid_t obj, const char *attr_name, void UNUSED *op_data)
                 }
                 puts("}");
                 break;
-            case H5S_NULL:
-                /* null dataspace */
-                puts(" null");
-                break;
             default:
                 /* Unknown dataspace type */
                 puts(" unknown");
@@ -1406,7 +1402,7 @@ list_attr (hid_t obj, const char *attr_name, void UNUSED *op_data)
         }
 
         /* values of type reference */
-        info.obj_format = "-%lu:"H5_PRINTF_HADDR_FMT;
+        info.obj_format = "-%lu:%lu:%lu:%lu";
         info.obj_hidefileno = 0;
         if (hexdump_g)
            p_type = H5Tcopy(type);
@@ -1480,7 +1476,6 @@ dataset_list1(hid_t dset)
  }
     }
     if (space_type==H5S_SCALAR) printf("SCALAR");
-    else if (space_type==H5S_NULL) printf("NULL");
     putchar('}');
     H5Sclose (space);
 
@@ -1606,13 +1601,8 @@ dataset_list2(hid_t dset, const char UNUSED *name)
  if ((nf = H5Pget_nfilters(dcpl))>0) {
      for (i=0; i<nf; i++) {
   cd_nelmts = NELMTS(cd_values);
-#ifdef H5_WANT_H5_V1_6_COMPAT
   filt_id = H5Pget_filter(dcpl, (unsigned)i, &filt_flags, &cd_nelmts,
      cd_values, sizeof(f_name), f_name);
-#else
-  filt_id = H5Pget_filter(dcpl, (unsigned)i, &filt_flags, &cd_nelmts,
-     cd_values, sizeof(f_name), f_name, NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
   f_name[sizeof(f_name)-1] = '\0';
   sprintf(s, "Filter-%d:", i);
   printf("    %-10s %s-%u %s {", s,
@@ -1824,11 +1814,12 @@ list (hid_t group, const char *name, void *_iter)
     if (verbose_g>0 && H5G_LINK!=sb.type) {
         if (sb.type>=0)
             H5Aiterate(obj, NULL, list_attr, NULL);
-        printf("    %-10s %lu:"H5_PRINTF_HADDR_FMT"\n", "Location:", sb.fileno, sb.u.obj.objno);
-        printf("    %-10s %u\n", "Links:", sb.u.obj.nlink);
-        if (sb.u.obj.mtime>0) {
-            if (simple_output_g) tm=gmtime(&(sb.u.obj.mtime));
-            else tm=localtime(&(sb.u.obj.mtime));
+ printf("    %-10s %lu:%lu:%lu:%lu\n", "Location:",
+        sb.fileno[1], sb.fileno[0], sb.objno[1], sb.objno[0]);
+        printf("    %-10s %u\n", "Links:", sb.nlink);
+        if (sb.mtime>0) {
+            if (simple_output_g) tm=gmtime(&(sb.mtime));
+            else tm=localtime(&(sb.mtime));
             if (tm) {
                 strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S %Z", tm);
                 printf("    %-10s %s\n", "Modified:", buf);
@@ -2201,7 +2192,7 @@ main (int argc, const char *argv[])
     }
 
     /* Turn off HDF5's automatic error printing unless you're debugging h5ls */
-    if (!show_errors_g) H5Eset_auto_stack(H5E_DEFAULT, NULL, NULL);
+    if (!show_errors_g) H5Eset_auto(NULL, NULL);
 
 
     /* Each remaining argument is an hdf5 file followed by an optional slash

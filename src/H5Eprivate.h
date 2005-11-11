@@ -24,57 +24,43 @@
 #include "H5private.h"
 
 #define H5E_NSLOTS	32	/*number of slots in an error stack	     */
-#define H5E_RESERVED_ATOMS  0
 
-/* Error class */
-typedef struct H5E_cls_t {
-    char *cls_name;             /* Name of error class */
-    char *lib_name;             /* Name of library within class */
-    char *lib_vers;             /* Version of library */
-} H5E_cls_t;
+/*
+ * The list of error messages in the system is kept as an array of
+ * error_code/message pairs, one for major error numbers and another for
+ * minor error numbers.
+ */
+typedef struct H5E_major_mesg_t {
+    H5E_major_t error_code;
+    const char	*str;
+} H5E_major_mesg_t;
 
-/* Major or minor message */
-typedef struct H5E_msg_t {
-    char        *msg;           /* Message for error */
-    H5E_type_t   type;          /* Type of error (major or minor) */
-    H5E_cls_t   *cls;           /* Which error class this message belongs to */
-} H5E_msg_t;
+typedef struct H5E_minor_mesg_t {
+    H5E_minor_t error_code;
+    const char	*str;
+} H5E_minor_mesg_t;
 
-/* Error stack */
+/* An error stack */
 typedef struct H5E_t {
-    size_t nused;		        /* Num slots currently used in stack  */
-    H5E_error_t slot[H5E_NSLOTS];	/* Array of error records	     */
-    hbool_t  new_api;                   /* Indicate that the function pointer is for the new (stack) API or the old */
-    union {
-        H5E_auto_t  func;                   /* Function for 'automatic' error reporting */
-        H5E_auto_stack_t  func_stack;       /* Function for 'automatic' error reporting */
-    } u;
-    void *auto_data;                    /* Callback data for 'automatic error reporting */
+    int	nused;			/*num slots currently used in stack  */
+    H5E_error_t slot[H5E_NSLOTS];	/*array of error records	     */
+    H5E_auto_t auto_func;       /* Function for 'automatic' error reporting */
+    void *auto_data;            /* Callback data for 'automatic' error reporting */
 } H5E_t;
-
-/* Printing information */
-typedef struct H5E_print_t {
-    FILE        *stream;
-    H5E_cls_t   cls;
-} H5E_print_t;
-
-/* HDF5 error class */
-#define    H5E_CLS_NAME         "HDF5"
-#define    H5E_CLS_LIB_NAME     "HDF5"
 
 /*
  * HERROR macro, used to facilitate error reporting between a FUNC_ENTER()
  * and a FUNC_LEAVE() within a function body.  The arguments are the major
  * error number, the minor error number, and a description of the error.
  */
-#define HERROR(maj_id, min_id, str) H5E_push_stack(NULL, __FILE__, FUNC, __LINE__, H5E_ERR_CLS_g, maj_id, min_id, str)
+#define HERROR(maj, min, str) H5E_push(maj, min, FUNC, __FILE__, __LINE__, str)
 
 /*
  * HCOMMON_ERROR macro, used by HDONE_ERROR and HGOTO_ERROR
  * (Shouldn't need to be used outside this header file)
  */
 #define HCOMMON_ERROR(maj, min, str)  				              \
-   HERROR(maj, min, str);						      \
+   HERROR (maj, min, str);						      \
    (void)H5E_dump_api_stack((int)H5_IS_API(FUNC));
 
 /*
@@ -112,11 +98,11 @@ typedef struct H5E_print_t {
 #define HGOTO_DONE(ret_val) {ret_value = ret_val; goto done;}
 
 /* Library-private functions defined in H5E package */
-H5_DLL herr_t  H5E_init(void);
-H5_DLL herr_t  H5E_push_stack(H5E_t *estack, const char *file, const char *func, unsigned line,
-                            hid_t cls_id, hid_t maj_id, hid_t min_id, const char *desc);
-H5_DLL herr_t  H5E_clear_stack(H5E_t *estack);
-H5_DLL herr_t  H5E_dump_api_stack(int is_api);
+H5_DLL herr_t H5E_push (H5E_major_t maj_num, H5E_minor_t min_num,
+			 const char *func_name, const char *file_name,
+			 unsigned line, const char *desc);
+H5_DLL herr_t H5E_clear (void);
+H5_DLL herr_t H5E_dump_api_stack (int is_api);
 
 /*
  * Macros handling system error messages as described in C standard.

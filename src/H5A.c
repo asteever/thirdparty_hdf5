@@ -77,7 +77,7 @@ H5A_init_interface(void)
     /*
      * Create attribute group.
      */
-    if (H5I_register_type(H5I_ATTR, (size_t)H5I_ATTRID_HASHSIZE, H5A_RESERVED_ATOMS, (H5I_free_t)H5A_close)<H5I_FILE)
+    if (H5I_init_group(H5I_ATTR, H5I_ATTRID_HASHSIZE, H5A_RESERVED_ATOMS, (H5I_free_t)H5A_close)<0)
         HGOTO_ERROR(H5E_INTERNAL, H5E_CANTINIT, FAIL, "unable to initialize interface")
 
 done:
@@ -110,9 +110,9 @@ H5A_term_interface(void)
 
     if (H5_interface_initialize_g) {
 	if ((n=H5I_nmembers(H5I_ATTR))>0) {
-	    (void)H5I_clear_type(H5I_ATTR, FALSE);
+	    (void)H5I_clear_group(H5I_ATTR, FALSE);
 	} else {
-	    (void)H5I_dec_type_ref(H5I_ATTR);
+	    (void)H5I_destroy_group(H5I_ATTR);
 	    H5_interface_initialize_g = 0;
 	    n = 1;
 	}
@@ -256,9 +256,9 @@ H5A_create(const H5G_entry_t *ent, const char *name, const H5T_t *type,
     /* Copy the attribute's datatype */
     attr->dt=H5T_copy(type, H5T_COPY_ALL);
 
-    /* Mark any datatypes as being on disk now */
-    if (H5T_set_loc(attr->dt, ent->file, H5T_LOC_DISK)<0)
-        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "invalid datatype location")
+    /* Mark any VL datatypes as being on disk now */
+    if (H5T_vlen_mark(attr->dt, ent->file, H5T_VLEN_DISK)<0)
+        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "invalid VL location");
 
     /* Copy the dataspace for the attribute */
     attr->ds=H5S_copy(space, FALSE);
@@ -674,7 +674,7 @@ H5A_write(H5A_t *attr, const H5T_t *mem_type, const void *buf, hid_t dxpl_id)
 
         /* Convert memory buffer into disk buffer */
         /* Set up type conversion function */
-        if (NULL == (tpath = H5T_path_find(mem_type, attr->dt, NULL, NULL, dxpl_id, FALSE)))
+        if (NULL == (tpath = H5T_path_find(mem_type, attr->dt, NULL, NULL, dxpl_id)))
             HGOTO_ERROR(H5E_ATTR, H5E_UNSUPPORTED, FAIL, "unable to convert between src and dst datatypes")
 
         /* Check for type conversion required */
@@ -840,7 +840,7 @@ H5A_read(const H5A_t *attr, const H5T_t *mem_type, void *buf, hid_t dxpl_id)
         else {  /* Attribute exists and has a value */
             /* Convert memory buffer into disk buffer */
             /* Set up type conversion function */
-            if (NULL == (tpath = H5T_path_find(attr->dt, mem_type, NULL, NULL, dxpl_id, FALSE)))
+            if (NULL == (tpath = H5T_path_find(attr->dt, mem_type, NULL, NULL, dxpl_id)))
                 HGOTO_ERROR(H5E_ATTR, H5E_UNSUPPORTED, FAIL, "unable to convert between src and dst datatypes")
 
             /* Check for type conversion required */
@@ -981,9 +981,9 @@ H5Aget_type(hid_t attr_id)
     if (NULL==(dst=H5T_copy(attr->dt, H5T_COPY_REOPEN)))
 	HGOTO_ERROR(H5E_ATTR, H5E_CANTINIT, FAIL, "unable to copy datatype")
 
-    /* Mark any datatypes as being in memory now */
-    if (H5T_set_loc(dst, NULL, H5T_LOC_MEMORY)<0)
-        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "invalid datatype location")
+    /* Mark any VL datatypes as being in memory now */
+    if (H5T_vlen_mark(dst, NULL, H5T_VLEN_MEMORY)<0)
+        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "invalid VL location")
     if (H5T_lock(dst, FALSE)<0)
 	HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "unable to lock transient datatype")
 
@@ -1281,7 +1281,7 @@ H5A_rename(H5G_entry_t *ent, const char *old_name, const char *new_name, hid_t d
 	    HGOTO_ERROR(H5E_ATTR, H5E_CANTFREE, FAIL, "can't release attribute info")
 	seq++;
     }
-    H5E_clear_stack(NULL);
+    H5E_clear ();
     if(idx<0)
 	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "attribute cannot be found")
 
@@ -1393,7 +1393,7 @@ H5Aiterate(hid_t loc_id, unsigned *attr_num, H5A_operator_t op, void *op_data)
 	    if(H5O_reset (H5O_ATTR_ID, &found_attr)<0)
                 HGOTO_ERROR(H5E_ATTR, H5E_CANTFREE, FAIL, "can't release attribute info")
 	}
-        H5E_clear_stack(NULL);
+	H5E_clear ();
     }
     else
         if(start_idx>0)

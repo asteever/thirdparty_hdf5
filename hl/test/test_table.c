@@ -12,16 +12,21 @@
  * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include "H5TB.h"
+#include "H5TA.h"
 
 #include <stdlib.h>
-#include <string.h>
 #include <assert.h>
 
 #define TEST_FILE_BE "test_table_be.hdf5"
 #define TEST_FILE_LE "test_table_le.hdf5"
 #define TEST_FILE_CRAY "test_table_cray.hdf5"
 
+/* Compiler optimization on Cray X1s can cause this file not to compile.
+ * Turn it off.
+ */
+#ifdef __crayx1
+#pragma OPTIMIZE OFF
+#endif
 
 /*-------------------------------------------------------------------------
  * Table API test
@@ -50,6 +55,7 @@
 #define TITLE "Title"
 #define NFIELDS  (hsize_t)5
 #define NRECORDS (hsize_t)8
+#define TESTING2(WHAT) {printf("%-70s", "Testing     " WHAT); fflush(stdout);}
 
 /*-------------------------------------------------------------------------
  * structure used for all tests, a particle with properties
@@ -1592,5 +1598,4 @@ static int compare_deleted(hsize_t rrecords, hsize_t dstart, hsize_t drecords,
  }
  return 0;
 }
-
 

@@ -12,16 +12,8 @@
  * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/****************/
-/* Module Setup */
-/****************/
-
 #define H5D_PACKAGE		/*suppress error about including H5Dpkg	  */
 
-
-/***********/
-/* Headers */
-/***********/
 #include "H5private.h"		/* Generic Functions			*/
 #include "H5Dpkg.h"		/* Dataset functions			*/
 #include "H5Eprivate.h"		/* Error handling		  	*/
@@ -32,20 +24,17 @@
 #include "H5SLprivate.h"	/* Skip lists				*/
 #include "H5Vprivate.h"		/* Vector and array functions		*/
 
+/*#define H5D_DEBUG*/
+
 #ifdef H5_HAVE_PARALLEL
 /* Remove this if H5R_DATASET_REGION is no longer used in this file */
 #   include "H5Rpublic.h"
 #endif /*H5_HAVE_PARALLEL*/
 
-/****************/
-/* Local Macros */
-/****************/
-
+/* Local macros */
 #define H5D_DEFAULT_SKIPLIST_HEIGHT     8
 
-/******************/
-/* Local Typedefs */
-/******************/
+/* Local typedefs */
 
 /* Information for mapping between file space and memory space */
 
@@ -79,10 +68,7 @@ typedef struct fm_map {
     H5S_sel_type msel_type;     /* Selection type in memory */
 } fm_map;
 
-/********************/
-/* Local Prototypes */
-/********************/
-
+/* Local functions */
 static herr_t H5D_fill(const void *fill, const H5T_t *fill_type, void *buf,
     const H5T_t *buf_type, const H5S_t *space, hid_t dxpl_id);
 static herr_t H5D_read(H5D_t *dataset, hid_t mem_type_id,
@@ -91,25 +77,39 @@ static herr_t H5D_read(H5D_t *dataset, hid_t mem_type_id,
 static herr_t H5D_write(H5D_t *dataset, hid_t mem_type_id,
 			 const H5S_t *mem_space, const H5S_t *file_space,
 			 hid_t dset_xfer_plist, const void *buf);
-static herr_t H5D_contig_read(H5D_io_info_t *io_info, hsize_t nelmts,
+static herr_t
+H5D_contig_read(H5D_io_info_t *io_info, hsize_t nelmts,
             const H5T_t *mem_type, const H5S_t *mem_space,
             const H5S_t *file_space, H5T_path_t *tpath,
             hid_t src_id, hid_t dst_id, void *buf/*out*/);
-static herr_t H5D_contig_write(H5D_io_info_t *io_info, hsize_t nelmts,
+static herr_t
+H5D_contig_write(H5D_io_info_t *io_info, hsize_t nelmts,
             const H5T_t *mem_type, const H5S_t *mem_space,
 	    const H5S_t *file_space, H5T_path_t *tpath,
             hid_t src_id, hid_t dst_id, const void *buf);
-static herr_t H5D_chunk_read(H5D_io_info_t *io_info, hsize_t nelmts,
+static herr_t
+H5D_chunk_read(H5D_io_info_t *io_info, hsize_t nelmts,
             const H5T_t *mem_type, const H5S_t *mem_space,
             const H5S_t *file_space, H5T_path_t *tpath,
             hid_t src_id, hid_t dst_id, void *buf/*out*/);
-static herr_t H5D_chunk_write(H5D_io_info_t *io_info, hsize_t nelmts,
+static herr_t
+H5D_chunk_write(H5D_io_info_t *io_info, hsize_t nelmts,
             const H5T_t *mem_type, const H5S_t *mem_space,
 	    const H5S_t *file_space, H5T_path_t *tpath,
             hid_t src_id, hid_t dst_id, const void *buf);
 #ifdef H5_HAVE_PARALLEL
-static herr_t H5D_ioinfo_make_ind(H5D_io_info_t *io_info);
-static herr_t H5D_ioinfo_make_coll(H5D_io_info_t *io_info);
+/*static herr_t
+H5D_io_assist_mpio(hid_t dxpl_id, H5D_dxpl_cache_t *dxpl_cache,
+            hbool_t *xfer_mode_changed);
+static herr_t
+H5D_io_restore_mpio(hid_t dxpl_id);
+static htri_t
+H5D_get_collective_io_consensus(const H5F_t *file,
+            const htri_t local_opinion,
+            const unsigned flags);
+*/
+static herr_t H5D_ioinfo_make_ind(H5D_io_info_t *io_info);  
+static herr_t H5D_ioinfo_make_coll(H5D_io_info_t *io_info); 
 static herr_t H5D_ioinfo_term(H5D_io_info_t *io_info);
 static herr_t H5D_mpio_get_min_chunk(const H5D_io_info_t *io_info,
     const fm_map *fm, int *min_chunkf);
@@ -131,14 +131,6 @@ static herr_t H5D_chunk_file_cb(void *elem, hid_t type_id, unsigned ndims,
     const hsize_t *coords, void *fm);
 static herr_t H5D_chunk_mem_cb(void *elem, hid_t type_id, unsigned ndims,
     const hsize_t *coords, void *fm);
-
-/*********************/
-/* Package Variables */
-/*********************/
-
-/*******************/
-/* Local Variables */
-/*******************/
 
 /* Declare a free list to manage blocks of single datatype element data */
 H5FL_BLK_DEFINE(type_elem);
@@ -247,7 +239,7 @@ H5D_fill(const void *fill, const H5T_t *fill_type, void *buf, const H5T_t *buf_t
     assert(buf_type);
     assert(space);
 
-    /* Make sure the dataspace has an extent set (or is NULL) */
+    /* Make sure the dataspace has an extent set */
     if( !(H5S_has_extent(space)) )
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "dataspace extent has not been set")
 
@@ -269,7 +261,7 @@ H5D_fill(const void *fill, const H5T_t *fill_type, void *buf, const H5T_t *buf_t
         HDmemcpy(tconv_buf,fill,src_type_size);
 
         /* Set up type conversion function */
-        if (NULL == (tpath = H5T_path_find(fill_type, buf_type, NULL, NULL, dxpl_id, FALSE)))
+        if (NULL == (tpath = H5T_path_find(fill_type, buf_type, NULL, NULL, dxpl_id)))
             HGOTO_ERROR(H5E_DATASET, H5E_UNSUPPORTED, FAIL, "unable to convert between src and dest data types")
 
         /* Convert memory buffer into disk buffer */
@@ -369,10 +361,6 @@ H5D_get_dxpl_cache_real(hid_t dxpl_id, H5D_dxpl_cache_t *cache)
     if(H5P_get(dx_plist, H5D_XFER_FILTER_CB_NAME, &cache->filter_cb)<0)
         HGOTO_ERROR (H5E_PLIST, H5E_CANTGET, FAIL, "Can't retrieve filter callback function")
 
-    /* Get the data transform property */
-    if(H5P_get(dx_plist, H5D_XFER_XFORM_NAME, &cache->data_xform_prop)<0)
-        HGOTO_ERROR (H5E_PLIST, H5E_CANTGET, FAIL, "Can't retrieve data transform info")
-
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 }   /* H5D_get_dxpl_cache_real() */
@@ -447,8 +435,18 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
+ * Errors:
+ *		ARGS	  BADTYPE	Not a data space.
+ *		ARGS	  BADTYPE	Not a data type.
+ *		ARGS	  BADTYPE	Not a dataset.
+ *		ARGS	  BADTYPE	Not xfer parms.
+ *		ARGS	  BADVALUE	No output buffer.
+ *		DATASET	  READERROR	Can't read data.
+ *
  * Programmer:	Robb Matzke
  *		Thursday, December  4, 1997
+ *
+ * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -531,8 +529,12 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
+ * Errors:
+ *
  * Programmer:	Robb Matzke
  *		Thursday, December  4, 1997
+ *
+ * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -600,6 +602,40 @@ done:
  * Programmer:	Robb Matzke
  *		Thursday, December  4, 1997
  *
+ * Modifications:
+ *	Robb Matzke, 1998-06-09
+ *	The data space is no longer cached in the dataset struct.
+ *
+ * 	Robb Matzke, 1998-08-11
+ *	Added timing calls around all the data space I/O functions.
+ *
+ * 	rky, 1998-09-18
+ *	Added must_convert to do non-optimized read when necessary.
+ *
+ *  	Quincey Koziol, 1999-07-02
+ *	Changed xfer_parms parameter to xfer plist parameter, so it
+ *	could be passed to H5T_convert.
+ *
+ *	Albert Cheng, 2000-11-21
+ *	Added the code that when it detects it is not safe to process a
+ *	COLLECTIVE read request without hanging, it changes it to
+ *	INDEPENDENT calls.
+ *
+ *	Albert Cheng, 2000-11-27
+ *	Changed to use the optimized MPIO transfer for Collective calls only.
+ *
+ *      Raymond Lu, 2001-10-2
+ *      Changed the way to retrieve property for generic property list.
+ *
+ *	Raymond Lu, 2002-2-26
+ *	For the new fill value design, data space can either be allocated
+ *	or not allocated at this stage.  Fill value or data from space is
+ *	returned to outgoing buffer.
+ *
+ *      QAK - 2002/04/02
+ *      Removed the must_convert parameter and move preconditions to
+ *      H5S_<foo>_opt_possible() routine
+ *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -614,6 +650,7 @@ H5D_read(H5D_t *dataset, hid_t mem_type_id, const H5S_t *mem_space,
     hbool_t     io_info_init = FALSE;   /* Whether the I/O info has been initialized */
     H5D_dxpl_cache_t _dxpl_cache;       /* Data transfer property cache buffer */
     H5D_dxpl_cache_t *dxpl_cache=&_dxpl_cache;   /* Data transfer property cache */
+
     herr_t	ret_value = SUCCEED;	/* Return value	*/
 
     FUNC_ENTER_NOAPI_NOINIT(H5D_read)
@@ -641,6 +678,8 @@ H5D_read(H5D_t *dataset, hid_t mem_type_id, const H5S_t *mem_space,
     /* Collective access is not permissible without a MPI based VFD */
     if (dxpl_cache->xfer_mode==H5FD_MPIO_COLLECTIVE && !IS_H5FD_MPI(dataset->ent.file))
         HGOTO_ERROR (H5E_DATASET, H5E_UNSUPPORTED, FAIL, "collective access for MPI-based drivers only")
+
+
 #endif /*H5_HAVE_PARALLEL*/
 
     /* Make certain that the number of elements in each selection is the same */
@@ -695,8 +734,10 @@ H5D_read(H5D_t *dataset, hid_t mem_type_id, const H5S_t *mem_space,
      * enough value in xfer_parms since turning off data type conversion also
      * turns off background preservation.
      */
-    if (NULL==(tpath=H5T_path_find(dataset->shared->type, mem_type, NULL, NULL, dxpl_id, FALSE)))
+    if (NULL==(tpath=H5T_path_find(dataset->shared->type, mem_type, NULL, NULL, dxpl_id)))
         HGOTO_ERROR(H5E_DATASET, H5E_UNSUPPORTED, FAIL, "unable to convert between src and dest data types")
+
+    
 
     /* Set up I/O operation */
     if(H5D_ioinfo_init(dataset,dxpl_cache,dxpl_id,mem_space,file_space,tpath,&io_info)<0)
@@ -738,6 +779,39 @@ done:
  * Programmer:	Robb Matzke
  *		Thursday, December  4, 1997
  *
+ * Modifications:
+ * 	Robb Matzke, 9 Jun 1998
+ *	The data space is no longer cached in the dataset struct.
+ *
+ * 	rky 980918
+ *	Added must_convert to do non-optimized read when necessary.
+ *
+ *      Quincey Koziol, 2 July 1999
+ *      Changed xfer_parms parameter to xfer plist parameter, so it could
+ *      be passed to H5T_convert
+ *
+ *	Albert Cheng, 2000-11-21
+ *	Added the code that when it detects it is not safe to process a
+ *	COLLECTIVE write request without hanging, it changes it to
+ *	INDEPENDENT calls.
+ *
+ *	Albert Cheng, 2000-11-27
+ *	Changed to use the optimized MPIO transfer for Collective calls only.
+ *
+ *      Raymond Lu, 2001-10-2
+ *      Changed the way to retrieve property for generic property list.
+ *
+ *	Raymond Lu, 2002-2-26
+ *	For the new fill value design, space may not be allocated until
+ *	this function is called.  Allocate and initialize space if it
+ *	hasn't been.
+ *
+ *      QAK - 2002/04/02
+ *      Removed the must_convert parameter and move preconditions to
+ *      H5S_<foo>_opt_possible() routine
+ *
+ *      Nat Furrer and James Laird, 2004/6/7
+ *      Added check for filter encode capability
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -771,7 +845,6 @@ H5D_write(H5D_t *dataset, hid_t mem_type_id, const H5S_t *mem_space,
 
         dataset->shared->checked_filters = TRUE;
     }
-
     /* Check if we are allowed to write to this file */
     if (0==(H5F_get_intent(dataset->ent.file) & H5F_ACC_RDWR))
 	HGOTO_ERROR(H5E_DATASET, H5E_WRITEERROR, FAIL, "no write intent on file")
@@ -813,6 +886,13 @@ H5D_write(H5D_t *dataset, hid_t mem_type_id, const H5S_t *mem_space,
     if((snelmts = H5S_GET_SELECT_NPOINTS(mem_space))<0)
 	HGOTO_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL, "src dataspace has invalid selection")
     H5_ASSIGN_OVERFLOW(nelmts,snelmts,hssize_t,hsize_t);
+
+#ifdef H5_HAVE_PARALLEL
+    /* Collective access is not permissible without a MPI based VFD */
+    if (dxpl_cache->xfer_mode==H5FD_MPIO_COLLECTIVE && !IS_H5FD_MPI(dataset->ent.file))
+        HGOTO_ERROR (H5E_DATASET, H5E_UNSUPPORTED, FAIL, "collective access for MPI-based driver only")
+
+#endif /*H5_HAVE_PARALLEL*/
 
     /* Make certain that the number of elements in each selection is the same */
     if (nelmts!=(hsize_t)H5S_GET_SELECT_NPOINTS(file_space))
@@ -857,8 +937,9 @@ H5D_write(H5D_t *dataset, hid_t mem_type_id, const H5S_t *mem_space,
      * enough value in xfer_parms since turning off data type conversion also
      * turns off background preservation.
      */
-    if (NULL==(tpath=H5T_path_find(mem_type, dataset->shared->type, NULL, NULL, dxpl_id, FALSE)))
+    if (NULL==(tpath=H5T_path_find(mem_type, dataset->shared->type, NULL, NULL, dxpl_id)))
 	HGOTO_ERROR(H5E_DATASET, H5E_UNSUPPORTED, FAIL, "unable to convert between src and dest data types")
+
 
     /* Set up I/O operation */
     if(H5D_ioinfo_init(dataset,dxpl_cache,dxpl_id,mem_space,file_space,tpath,&io_info)<0)
@@ -914,6 +995,10 @@ done:
  * Programmer:	Raymond Lu
  *		Thursday, April 10, 2003
  *
+ * Modifications:
+ *      QAK - 2003/04/17
+ *      Hacked on it a lot. :-)
+ *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -964,7 +1049,7 @@ H5D_contig_read(H5D_io_info_t *io_info, hsize_t nelmts,
      * If there is no type conversion then read directly into the
      * application's buffer.  This saves at least one mem-to-mem copy.
      */
-    if ( H5Z_xform_noop(dxpl_cache->data_xform_prop) && H5T_path_noop(tpath)) {
+    if (H5T_path_noop(tpath)) {
 #ifdef H5S_DEBUG
 	H5_timer_begin(&timer);
 #endif
@@ -1113,11 +1198,6 @@ H5D_contig_read(H5D_io_info_t *io_info, hsize_t nelmts,
         if (H5T_convert(tpath, src_id, dst_id, smine_nelmts, 0, 0, tconv_buf, bkg_buf, io_info->dxpl_id)<0)
             HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "data type conversion failed")
 
-	/* Do the data transform after the conversion (since we're using type mem_type) */
-        if(!H5Z_xform_noop(dxpl_cache->data_xform_prop))
-             if( H5Z_xform_eval(dxpl_cache->data_xform_prop, tconv_buf, smine_nelmts, mem_type) < 0)
-		    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Error performing data transform")
-
         /*
          * Scatter the data into memory.
          */
@@ -1170,6 +1250,10 @@ done:
  * Programmer:	Raymond Lu
  *		Thursday, April 10, 2003
  *
+ * Modifications:
+ *      QAK - 2003/04/17
+ *      Hacked on it a lot. :-)
+ *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1220,7 +1304,7 @@ H5D_contig_write(H5D_io_info_t *io_info, hsize_t nelmts,
      * If there is no type conversion then write directly from the
      * application's buffer.  This saves at least one mem-to-mem copy.
      */
-    if ( H5Z_xform_noop(dxpl_cache->data_xform_prop) && H5T_path_noop(tpath)) {
+    if (H5T_path_noop(tpath)) {
 #ifdef H5S_DEBUG
 	H5_timer_begin(&timer);
 #endif
@@ -1363,11 +1447,6 @@ H5D_contig_write(H5D_io_info_t *io_info, hsize_t nelmts,
         if (H5T_convert(tpath, src_id, dst_id, smine_nelmts, 0, 0, tconv_buf, bkg_buf, io_info->dxpl_id)<0)
             HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "data type conversion failed")
 
-	/* Do the data transform after the type conversion (since we're using dataset->shared->type). */
-	if(!H5Z_xform_noop(dxpl_cache->data_xform_prop))
-	    if( H5Z_xform_eval(dxpl_cache->data_xform_prop, tconv_buf, smine_nelmts, dataset->shared->type) < 0)
-		    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Error performing data transform")
-
         /*
          * Scatter the data out to the file.
          */
@@ -1419,6 +1498,10 @@ done:
  *
  * Programmer:	Raymond Lu
  *		Thursday, April 10, 2003
+ *
+ * Modifications:
+ *      QAK - 2003/04/17
+ *      Hacked on it a lot. :-)
  *
  *-------------------------------------------------------------------------
  */
@@ -1472,7 +1555,7 @@ H5D_chunk_read(H5D_io_info_t *io_info, hsize_t nelmts,
      * If there is no type conversion then read directly into the
      * application's buffer.  This saves at least one mem-to-mem copy.
      */
-    if ( H5Z_xform_noop(dxpl_cache->data_xform_prop) && H5T_path_noop(tpath)) {
+    if (H5T_path_noop(tpath)) {
 #ifdef H5S_DEBUG
 	H5_timer_begin(&timer);
 #endif
@@ -1523,29 +1606,9 @@ H5D_chunk_read(H5D_io_info_t *io_info, hsize_t nelmts,
                 }
 #ifndef H5_MPI_COMPLEX_DERIVED_DATATYPE_WORKS
                 else {
-                    int is_regular;     /* If this chunk's selections are regular */
-                    int mpi_code;       /* MPI error code */
-                    int all_regular = 0;    /* If this chunk's selections are regular on all processes */
-
-                    /* Determine if this process has regular selections */
-                    if(H5S_SELECT_IS_REGULAR(chunk_info->fspace) == TRUE &&
-                            H5S_SELECT_IS_REGULAR(chunk_info->mspace) == TRUE)
-                        is_regular = 1;
-                    else
-                        is_regular = 0;
-
-                    /* Determine if all processes have regular selections */
-                    if (MPI_SUCCESS != (mpi_code = MPI_Allreduce(&is_regular, &all_regular, 1, MPI_INT, MPI_LAND, io_info->comm)))
-                        HMPI_GOTO_ERROR(FAIL, "MPI_Allreduce failed", mpi_code)
-
-                    /* For regular selection,
-                        if MPI_COMPLEX_DERIVED_DATATYPE is not defined,
-                        unless spaces for all processors are regular, independent read operation should be performed.*/
-                    if(!all_regular) {
                         /* Switch to independent I/O (temporarily) */
                         make_ind = TRUE;
                         make_coll = TRUE;
-                    } /* end if */
                 } /* end else */
 #endif /* H5_MPI_COMPLEX_DERIVED_DATATYPE_WORKS */
             } /* end if */
@@ -1722,11 +1785,6 @@ H5D_chunk_read(H5D_io_info_t *io_info, hsize_t nelmts,
                     tconv_buf, bkg_buf, io_info->dxpl_id)<0)
                 HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "data type conversion failed")
 
-           /* Do the data transform after the conversion (since we're using type mem_type) */
-            if(!H5Z_xform_noop(dxpl_cache->data_xform_prop))
-	       if( H5Z_xform_eval(dxpl_cache->data_xform_prop, tconv_buf, smine_nelmts, mem_type) < 0)
-		      HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Error performing data transform")
-
             /*
              * Scatter the data into memory.
              */
@@ -1803,6 +1861,13 @@ done:
  * Programmer:	Raymond Lu
  *		Thursday, April 10, 2003
  *
+ * Modifications:
+ *      QAK - 2003/04/17
+ *      Hacked on it a lot. :-)
+
+ *      Kent Yang: 8/10/04
+ *      Added support for collective chunk IO.
+ *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1855,7 +1920,7 @@ H5D_chunk_write(H5D_io_info_t *io_info, hsize_t nelmts,
      * If there is no type conversion then write directly from the
      * application's buffer.  This saves at least one mem-to-mem copy.
      */
-    if ( H5Z_xform_noop(dxpl_cache->data_xform_prop) && H5T_path_noop(tpath)) {
+    if (H5T_path_noop(tpath)) {
 #ifdef H5S_DEBUG
 	H5_timer_begin(&timer);
 #endif
@@ -1901,29 +1966,9 @@ H5D_chunk_write(H5D_io_info_t *io_info, hsize_t nelmts,
 	        }
 #ifndef H5_MPI_COMPLEX_DERIVED_DATATYPE_WORKS
 	        else {
-                    int is_regular;     /* If this chunk's selections are regular */
-                    int mpi_code;       /* MPI error code */
-                    int all_regular = 0;    /* If this chunk's selections are regular on all processes */
-
-                    /* Determine if this process has regular selections */
-                    if(H5S_SELECT_IS_REGULAR(chunk_info->fspace) == TRUE &&
-                            H5S_SELECT_IS_REGULAR(chunk_info->mspace) == TRUE)
-                        is_regular = 1;
-                    else
-                        is_regular = 0;
-
-                    /* Determine if all processes have regular selections */
-                    if (MPI_SUCCESS != (mpi_code = MPI_Allreduce(&is_regular, &all_regular, 1, MPI_INT, MPI_LAND, io_info->comm)))
-                        HMPI_GOTO_ERROR(FAIL, "MPI_Allreduce failed", mpi_code)
-
-                    /* For regular selection,
-                        if MPI_COMPLEX_DERIVED_DATATYPE is not defined,
-                        unless spaces for all processors are regular, independent read operation should be performed.*/
-                    if(!all_regular) {
                         /* Switch to independent I/O (temporarily) */
                         make_ind = TRUE;
                         make_coll = TRUE;
-                    } /* end if */
                 } /* end else */
 #endif /* H5_MPI_COMPLEX_DERIVED_DATATYPE_WORKS */
             } /* end if */
@@ -2101,11 +2146,6 @@ H5D_chunk_write(H5D_io_info_t *io_info, hsize_t nelmts,
                     tconv_buf, bkg_buf, io_info->dxpl_id)<0)
                 HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "data type conversion failed")
 
- 	    /* Do the data transform after the type conversion (since we're using dataset->shared->type) */
-            if(!H5Z_xform_noop(dxpl_cache->data_xform_prop))
-	      if( H5Z_xform_eval(dxpl_cache->data_xform_prop, tconv_buf, smine_nelmts, dataset->shared->type) < 0)
-		     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Error performing data transform")
-
             /*
              * Scatter the data out to the file.
              */
@@ -2185,6 +2225,10 @@ done:
  * Programmer:	Raymond Lu
  *		Thursday, April 10, 2003
  *
+ * Modifications:
+ *      QAK - 2003/04/17
+ *      Hacked on it a lot. :-)
+ *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -2248,7 +2292,7 @@ H5D_create_chunk_map(const H5D_t *dataset, const H5T_t *mem_type, const H5S_t *f
      * speed up hyperslab calculations by removing the extra checks and/or
      * additions involving the offset and the hyperslab selection -QAK)
      */
-    if(H5S_hyper_normalize_offset((H5S_t *)file_space, old_offset)<0)
+    if(H5S_hyper_normalize_offset(file_space, old_offset)<0)
         HGOTO_ERROR (H5E_DATASET, H5E_BADSELECT, FAIL, "unable to normalize dataspace by offset")
     file_space_normalized = TRUE;
 
@@ -2413,7 +2457,7 @@ done:
             HDONE_ERROR (H5E_DATASET, H5E_CANTFREE, FAIL, "Can't decrement temporary datatype ID")
     } /* end if */
     if(file_space_normalized) {
-        if(H5S_hyper_denormalize_offset((H5S_t *)file_space, old_offset)<0)
+        if(H5S_hyper_denormalize_offset(file_space, old_offset)<0)
             HGOTO_ERROR (H5E_DATASET, H5E_BADSELECT, FAIL, "unable to normalize dataspace by offset")
     } /* end if */
 
@@ -2471,6 +2515,8 @@ H5D_free_chunk_info(void *item, void UNUSED *key, void UNUSED *opdata)
  * Programmer:	Quincey Koziol
  *		Saturday, May 17, 2003
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -2508,6 +2554,8 @@ done:
  *
  * Programmer:	Quincey Koziol
  *		Thursday, May 29, 2003
+ *
+ * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -2684,6 +2732,8 @@ done:
  *
  * Assumptions: That the file and memory selections are the same shape.
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -2801,6 +2851,8 @@ done:
  * Programmer:	Quincey Koziol
  *		Wednesday, July 23, 2003
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -2912,6 +2964,10 @@ done:
  * Programmer:	Raymond Lu
  *		Thursday, April 10, 2003
  *
+ * Modifications:
+ *      QAK - 2003/04/17
+ *      Hacked on it a lot. :-)
+ *
  *-------------------------------------------------------------------------
  */
 /* ARGSUSED */
@@ -2991,6 +3047,8 @@ done:
  * Programmer:	Quincey Koziol
  *		Thursday, September 30, 2004
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -3010,6 +3068,7 @@ H5D_ioinfo_init(H5D_t *dset, const H5D_dxpl_cache_t *dxpl_cache, hid_t dxpl_id,
     *tpath,
     H5D_io_info_t *io_info)
 {
+
     herr_t	ret_value = SUCCEED;	/* Return value	*/
 
 #if defined H5_HAVE_PARALLEL || defined H5S_DEBUG
@@ -3112,6 +3171,8 @@ H5D_ioinfo_init(H5D_t *dset, const H5D_dxpl_cache_t *dxpl_cache, hid_t dxpl_id,
         /* Set the pointers to the non-MPI-specific routines */
         io_info->ops.read = H5D_select_read;
         io_info->ops.write = H5D_select_write;
+
+
     } /* end else */
 #else /* H5_HAVE_PARALLEL */
     io_info->ops.read = H5D_select_read;
@@ -3129,7 +3190,6 @@ done:
 #endif /* H5_HAVE_PARALLEL || H5S_DEBUG */
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D_ioinfo_init() */
-
 #ifdef H5_HAVE_PARALLEL
 
 /*-------------------------------------------------------------------------
@@ -3141,6 +3201,8 @@ done:
  *
  * Programmer:	Quincey Koziol
  *		Friday, August 12, 2005
+ *
+ * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -3186,6 +3248,8 @@ done:
  *
  * Programmer:	Quincey Koziol
  *		Friday, August 12, 2005
+ *
+ * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -3233,6 +3297,8 @@ done:
  * Programmer:	Quincey Koziol
  *		Friday, February  6, 2004
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -3270,6 +3336,8 @@ done:
  * Return:	Non-negative on success/Negative on failure
  *
  * Programmer:
+ *
+ * Modifications:
  *
  *-------------------------------------------------------------------------
  */

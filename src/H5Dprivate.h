@@ -24,11 +24,6 @@
 /* Private headers needed by this file */
 #include "H5FDprivate.h"	/* File drivers				*/
 #include "H5Oprivate.h"		/* Object headers		  	*/
-#include "H5Zprivate.h"		/* Data filters				*/
-
-/**************************/
-/* Library Private Macros */
-/**************************/
 
 /*
  * Feature: Define H5D_DEBUG on the compiler command line if you want to
@@ -105,6 +100,20 @@
 #define H5D_XFER_BTREE_SPLIT_RATIO_NAME       "btree_split_ratio"
 #define H5D_XFER_BTREE_SPLIT_RATIO_SIZE       sizeof(double[3])
 #define H5D_XFER_BTREE_SPLIT_RATIO_DEF      {0.1, 0.5, 0.9}
+#ifdef H5_WANT_H5_V1_4_COMPAT
+/* Definitions for hyperslab caching property */
+#define H5D_XFER_HYPER_CACHE_NAME       "hyper_cache"
+#define H5D_XFER_HYPER_CACHE_SIZE       sizeof(unsigned)
+#ifndef H5_HAVE_PARALLEL
+#define H5D_XFER_HYPER_CACHE_DEF  1
+#else
+#define H5D_XFER_HYPER_CACHE_DEF  0
+#endif
+/* Definitions for hyperslab cache limit property */
+#define H5D_XFER_HYPER_CACHE_LIM_NAME       "hyper_cache_limit"
+#define H5D_XFER_HYPER_CACHE_LIM_SIZE       sizeof(unsigned)
+#define H5D_XFER_HYPER_CACHE_LIM_DEF  0
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 /* Definitions for vlen allocation function property */
 #define H5D_XFER_VLEN_ALLOC_NAME       "vlen_alloc"
 #define H5D_XFER_VLEN_ALLOC_SIZE       sizeof(H5MM_allocate_t)
@@ -148,17 +157,6 @@
 #define H5D_XFER_FILTER_CB_NAME       "filter_cb"
 #define H5D_XFER_FILTER_CB_SIZE       sizeof(H5Z_cb_t)
 #define H5D_XFER_FILTER_CB_DEF        {NULL,NULL}
-/* Definitions for type conversion callback function property */
-#define H5D_XFER_CONV_CB_NAME       "type_conv_cb"
-#define H5D_XFER_CONV_CB_SIZE       sizeof(H5T_conv_cb_t)
-#define H5D_XFER_CONV_CB_DEF        {NULL,NULL}
-/* Definitions for data transform property */
-#define H5D_XFER_XFORM_NAME         "data_transform"
-#define H5D_XFER_XFORM_SIZE         sizeof(void *)
-#define H5D_XFER_XFORM_DEF          NULL
-#define H5D_XFER_XFORM_DEL          H5D_xfer_xform_del
-#define H5D_XFER_XFORM_COPY         H5D_xfer_xform_copy
-#define H5D_XFER_XFORM_CLOSE        H5D_xfer_xform_close
 #ifdef H5_HAVE_INSTRUMENTED_LIBRARY
 /* Definitions for collective chunk I/O property */
 #define H5D_XFER_COLL_CHUNK_NAME       "coll_chunk"
@@ -203,7 +201,6 @@ typedef struct H5D_dxpl_cache_t {
     H5FD_mpio_xfer_t xfer_mode; /* Parallel transfer for this request (H5D_XFER_IO_XFER_MODE_NAME) */
 #endif /*H5_HAVE_PARALLEL*/
     H5Z_cb_t filter_cb;         /* Filter callback function (H5D_XFER_FILTER_CB_NAME) */
-    H5Z_data_xform_t *data_xform_prop; /* Data transform prop (H5D_XFER_XFORM_NAME) */
 } H5D_dxpl_cache_t;
 
 /* Typedef for cached dataset creation property list information */
@@ -213,13 +210,7 @@ typedef struct H5D_dcpl_cache_t {
     H5D_fill_time_t fill_time;  /* Fill time (H5D_CRT_FILL_TIME_NAME) */
 } H5D_dcpl_cache_t;
 
-/*****************************/
-/* Library Private Variables */
-/*****************************/
-
-/******************************/
-/* Library Private Prototypes */
-/******************************/
+/* Library-private functions defined in H5D package */
 H5_DLL herr_t H5D_init(void);
 H5_DLL H5D_t *H5D_open(const H5G_entry_t *ent, hid_t dxpl_id);
 H5_DLL herr_t H5D_close(H5D_t *dataset);
@@ -247,5 +238,4 @@ H5_DLL herr_t H5D_istore_delete(H5F_t *f, hid_t dxpl_id,
 H5_DLL herr_t H5D_istore_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE * stream,
 				int indent, int fwidth, unsigned ndims);
 
-#endif /* _H5Dprivate_H */
-
+#endif

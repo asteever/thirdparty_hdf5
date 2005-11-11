@@ -290,7 +290,7 @@ h5_fixname(const char *base_name, hid_t fapl, char *fullname, size_t size)
     }
 
     /* Use different ones depending on parallel or serial driver used. */
-    if (H5P_DEFAULT != fapl && (H5FD_MPIO == driver || H5FD_FPHDF5 == driver)) {
+    if (H5P_DEFAULT != fapl && H5FD_MPIO == driver){
 #ifdef H5_HAVE_PARALLEL
 	/*
          * For parallel:
@@ -337,7 +337,7 @@ h5_fixname(const char *base_name, hid_t fapl, char *fullname, size_t size)
 
     /* Prepend the prefix value to the base name */
     if (prefix && *prefix) {
-        if (H5P_DEFAULT != fapl && (H5FD_MPIO == driver || H5FD_FPHDF5 == driver)) {
+        if (H5P_DEFAULT != fapl && H5FD_MPIO == driver) {
             /* This is a parallel system */
             char *subdir;
 
@@ -512,6 +512,16 @@ h5_fileaccess(void)
 	if (H5Pset_fapl_family(fapl, fam_size, H5P_DEFAULT)<0)
             return -1;
     } else if (!HDstrcmp(name, "log")) {
+#ifdef H5_WANT_H5_V1_4_COMPAT
+        long verbosity = 1;
+
+        /* Log file access */
+        if ((val = strtok(NULL, " \t\n\r")))
+            verbosity = strtol(val, NULL, 0);
+
+        if (H5Pset_fapl_log(fapl, NULL, (int)verbosity) < 0)
+	    return -1;
+#else /* H5_WANT_H5_V1_4_COMPAT */
         unsigned log_flags = H5FD_LOG_LOC_IO;
 
         /* Log file access */
@@ -520,6 +530,7 @@ h5_fileaccess(void)
 
         if (H5Pset_fapl_log(fapl, NULL, log_flags, 0) < 0)
 	    return -1;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
     } else {
 	/* Unknown driver */
 	return -1;

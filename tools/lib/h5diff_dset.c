@@ -13,7 +13,6 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "h5diff.h"
-#include "ph5diff.h"
 #include "H5private.h"
 #include "h5tools.h"
 
@@ -207,9 +206,9 @@ hsize_t diff_datasetid( hid_t dset1_id,
  if (storage_size1<=0 && storage_size2<=0)
  {
   if (options->m_verbose && obj1_name && obj2_name)
-   parallel_print("<%s> and <%s> are empty datasets\n", obj1_name, obj2_name);
+   printf("<%s> and <%s> are empty datasets\n", obj1_name, obj2_name);
   cmp=0;
-  options->not_cmp=1;
+		options->not_cmp=1;
  }
 
 
@@ -229,10 +228,11 @@ hsize_t diff_datasetid( hid_t dset1_id,
   obj1_name,
   obj2_name,
   options)!=1)
- {
+	{
   cmp=0;
   options->not_cmp=1;
  }
+
 /*-------------------------------------------------------------------------
  * get number of elements
  *-------------------------------------------------------------------------
@@ -249,9 +249,7 @@ hsize_t diff_datasetid( hid_t dset1_id,
   nelmts2 *= dims2[i];
  }
 
- if (cmp)
-  /* onnly assert if the space is the same */
-  assert(nelmts1==nelmts2);
+ assert(nelmts1==nelmts2);
 
 /*-------------------------------------------------------------------------
  * check for equal file datatype; warning only
@@ -296,13 +294,12 @@ hsize_t diff_datasetid( hid_t dset1_id,
  sign2=H5Tget_sign(m_type2);
  if ( sign1 != sign2 )
  {
-     if (options->m_verbose && obj1_name) {
-	 parallel_print("Comparison not supported: <%s> has sign %s ", obj1_name, get_sign(sign1));
-	 parallel_print("and <%s> has sign %s\n", obj2_name, get_sign(sign2));
-     }
-
-     cmp=0;
-     options->not_cmp=1;
+  if (options->m_verbose && obj1_name) {
+   printf("Comparison not supported: <%s> has sign %s ", obj1_name, get_sign(sign1));
+   printf("and <%s> has sign %s\n", obj2_name, get_sign(sign2));
+  }
+  cmp=0;
+		options->not_cmp=1;
  }
 
 /*-------------------------------------------------------------------------
@@ -369,12 +366,12 @@ hsize_t diff_datasetid( hid_t dset1_id,
  * array compare
  *-------------------------------------------------------------------------
  */
- if (obj1_name) {
+
+ if (obj1_name!=NULL)
   name1=diff_basename(obj1_name);
- }
- if (obj2_name) {
+ if (obj2_name!=NULL)
   name2=diff_basename(obj2_name);
- }
+
  nfound = diff_array(buf1,
                      buf2,
                      nelmts1,
@@ -392,7 +389,7 @@ hsize_t diff_datasetid( hid_t dset1_id,
  *-------------------------------------------------------------------------
  */
 
- if (obj1_name)
+ if (obj1_name!=NULL)
   diff_attr(dset1_id,dset2_id,obj1_name,obj2_name,options);
 
  }/*cmp*/

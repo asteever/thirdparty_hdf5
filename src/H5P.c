@@ -43,17 +43,11 @@
  * H5P_init_interface() in this source file.
  */
 hid_t H5P_CLS_NO_CLASS_g            = FAIL;
-hid_t H5P_CLS_OBJECT_CREATE_g       = FAIL;
 hid_t H5P_CLS_FILE_CREATE_g         = FAIL;
 hid_t H5P_CLS_FILE_ACCESS_g         = FAIL;
 hid_t H5P_CLS_DATASET_CREATE_g      = FAIL;
-hid_t H5P_CLS_DATASET_ACCESS_g      = FAIL;
 hid_t H5P_CLS_DATASET_XFER_g        = FAIL;
 hid_t H5P_CLS_MOUNT_g               = FAIL;
-hid_t H5P_CLS_GROUP_CREATE_g        = FAIL;
-hid_t H5P_CLS_GROUP_ACCESS_g        = FAIL;
-hid_t H5P_CLS_DATATYPE_CREATE_g     = FAIL;
-hid_t H5P_CLS_DATATYPE_ACCESS_g     = FAIL;
 
 /*
  * Predefined property lists for each predefined class. These are initialized
@@ -63,13 +57,8 @@ hid_t H5P_LST_NO_CLASS_g            = FAIL;
 hid_t H5P_LST_FILE_CREATE_g         = FAIL;
 hid_t H5P_LST_FILE_ACCESS_g         = FAIL;
 hid_t H5P_LST_DATASET_CREATE_g      = FAIL;
-hid_t H5P_LST_DATASET_ACCESS_g      = FAIL;
 hid_t H5P_LST_DATASET_XFER_g        = FAIL;
 hid_t H5P_LST_MOUNT_g               = FAIL;
-hid_t H5P_LST_GROUP_CREATE_g        = FAIL;
-hid_t H5P_LST_GROUP_ACCESS_g        = FAIL;
-hid_t H5P_LST_DATATYPE_CREATE_g       = FAIL;
-hid_t H5P_LST_DATATYPE_ACCESS_g       = FAIL;
 
 /* Track the revision count of a class, to make comparisons faster */
 static unsigned H5P_next_rev=0;
@@ -212,35 +201,23 @@ RETURNS
 DESCRIPTION
     Initializes any interface-specific data or routines.
 
-Modification:
-
-    Peter Cao
-    May 08, 2005
-    Add Group creation property, Add object creation property class.
-    group, dataset and datatype creation property classes are inherited from
-    the object creation property class
-
 --------------------------------------------------------------------------*/
 static herr_t
 H5P_init_interface(void)
 {
     H5P_genclass_t  *root_class;    /* Pointer to root property list class created */
-    H5P_genclass_t  *ocrt_class;    /* Pointer to object (dataset, group, or datatype) creation property list class created */
     H5P_genclass_t  *pclass;        /* Pointer to property list class to create */
-    unsigned    intmd_group = H5G_CRT_INTERMEDIATE_GROUP_DEF;
-    size_t      nprops;             /* Number of properties */
     herr_t      ret_value = SUCCEED;
-
 
     FUNC_ENTER_NOAPI_NOINIT(H5P_init_interface);
 
     /*
      * Initialize the Generic Property class & object groups.
      */
-    if (H5I_register_type(H5I_GENPROP_CLS, H5I_GENPROPCLS_HASHSIZE, 0, (H5I_free_t)H5P_close_class) < 0)
-        HGOTO_ERROR(H5E_ATOM, H5E_CANTINIT, FAIL, "unable to initialize ID group");
-    if (H5I_register_type(H5I_GENPROP_LST, H5I_GENPROPOBJ_HASHSIZE, 0, (H5I_free_t)H5P_close) < 0)
-        HGOTO_ERROR(H5E_ATOM, H5E_CANTINIT, FAIL, "unable to initialize ID group");
+    if (H5I_init_group(H5I_GENPROP_CLS, H5I_GENPROPCLS_HASHSIZE, 0, (H5I_free_t)H5P_close_class) < 0)
+        HGOTO_ERROR(H5E_ATOM, H5E_CANTINIT, FAIL, "unable to initialize atom group");
+    if (H5I_init_group(H5I_GENPROP_LST, H5I_GENPROPOBJ_HASHSIZE, 0, (H5I_free_t)H5P_close) < 0)
+        HGOTO_ERROR(H5E_ATOM, H5E_CANTINIT, FAIL, "unable to initialize atom group");
 
     /* Create root property list class */
 
@@ -252,29 +229,6 @@ H5P_init_interface(void)
     /* Register the root class */
     if ((H5P_CLS_NO_CLASS_g = H5I_register (H5I_GENPROP_CLS, root_class))<0)
         HGOTO_ERROR (H5E_PLIST, H5E_CANTREGISTER, FAIL, "can't register property list class");
-
-    /* Create object property  class */
-
-    /* Allocate the object class */
-    assert(H5P_CLS_OBJECT_CREATE_g==(-1));
-    if (NULL==(ocrt_class = H5P_create_class (root_class,"object create",1,NULL,NULL,NULL,NULL,NULL,NULL)))
-        HGOTO_ERROR (H5E_PLIST, H5E_CANTINIT, FAIL, "class initialization failed");
-
-    /* Register the object class */
-    if ((H5P_CLS_OBJECT_CREATE_g = H5I_register (H5I_GENPROP_CLS, ocrt_class))<0)
-        HGOTO_ERROR (H5E_PLIST, H5E_CANTREGISTER, FAIL, "can't register property list class");
-
-    /* Get the number of properties in the object class */
-    if(H5P_get_nprops_pclass(ocrt_class,&nprops,FALSE)<0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "can't query number of properties")
-
-    /* Assume that if there are properties in the class, they are the default ones */
-    if(nprops==0) {
-        /* Register create intermediate groups */
-        if(H5P_register(ocrt_class,H5G_CRT_INTERMEDIATE_GROUP_NAME,H5G_CRT_INTERMEDIATE_GROUP_SIZE,
-                 &intmd_group,NULL,NULL,NULL,NULL,NULL,NULL,NULL)<0)
-             HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
-    } /* end if */
 
     /* Register the file creation and file access property classes */
 
@@ -296,24 +250,15 @@ H5P_init_interface(void)
     if ((H5P_CLS_FILE_ACCESS_g = H5I_register (H5I_GENPROP_CLS, pclass))<0)
         HGOTO_ERROR (H5E_PLIST, H5E_CANTREGISTER, FAIL, "can't register property list class");
 
-    /* Register the dataset creation, dataset access and data xfer property classes */
+    /* Register the dataset creation and data xfer property classes */
 
     /* Allocate the dataset creation class */
     assert(H5P_CLS_DATASET_CREATE_g==(-1));
-    if (NULL==(pclass = H5P_create_class (ocrt_class,"dataset create",1,NULL,NULL,H5D_crt_copy,NULL,H5D_crt_close,NULL)))
+    if (NULL==(pclass = H5P_create_class (root_class,"dataset create",1,NULL,NULL,H5D_crt_copy,NULL,H5D_crt_close,NULL)))
         HGOTO_ERROR (H5E_PLIST, H5E_CANTINIT, FAIL, "class initialization failed");
 
     /* Register the dataset creation class */
     if ((H5P_CLS_DATASET_CREATE_g = H5I_register (H5I_GENPROP_CLS, pclass))<0)
-        HGOTO_ERROR (H5E_PLIST, H5E_CANTREGISTER, FAIL, "can't register property list class");
-
-    /* Allocate the dataset access class */
-    assert(H5P_CLS_DATASET_ACCESS_g==(-1));
-    if (NULL==(pclass = H5P_create_class (root_class,"dataset access",1,NULL,NULL,NULL,NULL,NULL,NULL)))
-        HGOTO_ERROR (H5E_PLIST, H5E_CANTINIT, FAIL, "class initialization failed");
-
-    /* Register the dataset access class */
-    if ((H5P_CLS_DATASET_ACCESS_g = H5I_register (H5I_GENPROP_CLS, pclass))<0)
         HGOTO_ERROR (H5E_PLIST, H5E_CANTREGISTER, FAIL, "can't register property list class");
 
     /* Allocate the data xfer class */
@@ -332,43 +277,6 @@ H5P_init_interface(void)
 
     /* Register the mount class */
     if ((H5P_CLS_MOUNT_g = H5I_register (H5I_GENPROP_CLS, pclass))<0)
-        HGOTO_ERROR (H5E_PLIST, H5E_CANTREGISTER, FAIL, "can't register property list class");
-
-
-    /* Allocate the group creation class */
-    assert(H5P_CLS_GROUP_CREATE_g==(-1));
-    if (NULL==(pclass = H5P_create_class (ocrt_class,"group create",1,NULL,NULL,NULL,NULL,NULL,NULL)))
-        HGOTO_ERROR (H5E_PLIST, H5E_CANTINIT, FAIL, "class initialization failed");
-
-    /* Register the group creation class */
-    if ((H5P_CLS_GROUP_CREATE_g = H5I_register (H5I_GENPROP_CLS, pclass))<0)
-        HGOTO_ERROR (H5E_PLIST, H5E_CANTREGISTER, FAIL, "can't register property list class");
-
-    /* Allocate the group access class */
-    assert(H5P_CLS_GROUP_ACCESS_g==(-1));
-    if (NULL==(pclass = H5P_create_class (root_class,"group access",1,NULL,NULL,NULL,NULL,NULL,NULL)))
-        HGOTO_ERROR (H5E_PLIST, H5E_CANTINIT, FAIL, "class initialization failed");
-
-    /* Register the group access class */
-    if ((H5P_CLS_GROUP_ACCESS_g = H5I_register (H5I_GENPROP_CLS, pclass))<0)
-        HGOTO_ERROR (H5E_PLIST, H5E_CANTREGISTER, FAIL, "can't register property list class");
-
-    /* Allocate the datatype creation class */
-    assert(H5P_CLS_DATATYPE_CREATE_g==(-1));
-    if (NULL==(pclass = H5P_create_class (ocrt_class,"datatype create",1,NULL,NULL,NULL,NULL,NULL,NULL)))
-        HGOTO_ERROR (H5E_PLIST, H5E_CANTINIT, FAIL, "class initialization failed");
-
-    /* Register the datatype creation class */
-    if ((H5P_CLS_DATATYPE_CREATE_g = H5I_register (H5I_GENPROP_CLS, pclass))<0)
-        HGOTO_ERROR (H5E_PLIST, H5E_CANTREGISTER, FAIL, "can't register property list class");
-
-    /* Allocate the datatype access class */
-    assert(H5P_CLS_DATATYPE_ACCESS_g==(-1));
-    if (NULL==(pclass = H5P_create_class (root_class,"datatype access",1,NULL /*H5T_acs_create*/,NULL,NULL /*H5T_acs_copy*/,NULL,NULL /*H5T_acs_close*/,NULL)))
-        HGOTO_ERROR (H5E_PLIST, H5E_CANTINIT, FAIL, "class initialization failed");
-
-    /* Register the datatype access class */
-    if ((H5P_CLS_DATATYPE_ACCESS_g = H5I_register (H5I_GENPROP_CLS, pclass))<0)
         HGOTO_ERROR (H5E_PLIST, H5E_CANTREGISTER, FAIL, "can't register property list class");
 
 done:
@@ -414,49 +322,37 @@ H5P_term_interface(void)
         if (n) {
             /* Clear the lists */
             if(nlist>0) {
-                H5I_clear_type(H5I_GENPROP_LST, FALSE);
+                H5I_clear_group(H5I_GENPROP_LST, FALSE);
 
                 /* Reset the default property lists, if they've been closed */
                 if(H5I_nmembers(H5I_GENPROP_LST)==0) {
                     H5P_LST_NO_CLASS_g =
-                        H5P_CLS_OBJECT_CREATE_g =
                         H5P_LST_FILE_CREATE_g =
                         H5P_LST_FILE_ACCESS_g =
                         H5P_LST_DATASET_CREATE_g =
-                        H5P_LST_DATASET_ACCESS_g =
                         H5P_LST_DATASET_XFER_g =
-                        H5P_LST_GROUP_CREATE_g =
-                        H5P_LST_GROUP_ACCESS_g =
-                        H5P_LST_DATATYPE_CREATE_g =
-                        H5P_LST_DATATYPE_ACCESS_g =
                         H5P_LST_MOUNT_g = (-1);
                 } /* end if */
             } /* end if */
 
             /* Only attempt to close the classes after all the lists are closed */
             if(nlist==0 && nclass>0) {
-                H5I_clear_type(H5I_GENPROP_CLS, FALSE);
+                H5I_clear_group(H5I_GENPROP_CLS, FALSE);
 
                 /* Reset the default property lists, if they've been closed */
                 if(H5I_nmembers(H5I_GENPROP_CLS)==0) {
-                        H5P_CLS_NO_CLASS_g =
-                        H5P_CLS_OBJECT_CREATE_g =
+                    H5P_CLS_NO_CLASS_g =
                         H5P_CLS_FILE_CREATE_g =
                         H5P_CLS_FILE_ACCESS_g =
                         H5P_CLS_DATASET_CREATE_g =
-                        H5P_CLS_DATASET_ACCESS_g =
                         H5P_CLS_DATASET_XFER_g =
-                        H5P_CLS_GROUP_CREATE_g =
-                        H5P_CLS_GROUP_ACCESS_g =
-                        H5P_CLS_DATATYPE_CREATE_g =
-                        H5P_CLS_DATATYPE_ACCESS_g =
                         H5P_CLS_MOUNT_g = (-1);
                 } /* end if */
             } /* end if */
         } else {
-            H5I_dec_type_ref(H5I_GENPROP_LST);
+            H5I_destroy_group(H5I_GENPROP_LST);
             n++; /*H5I*/
-            H5I_dec_type_ref(H5I_GENPROP_CLS);
+            H5I_destroy_group(H5I_GENPROP_CLS);
             n++; /*H5I*/
 
             H5_interface_initialize_g = 0;
@@ -2091,7 +1987,6 @@ done:
         H5P_prp_get_func_t prp_get; IN: Function pointer to property get callback
         H5P_prp_delete_func_t prp_delete; IN: Function pointer to property delete callback
         H5P_prp_copy_func_t prp_copy; IN: Function pointer to property copy callback
-        H5P_prp_compare_func_t prp_cmp; IN: Function pointer to property compare callback
         H5P_prp_close_func_t prp_close; IN: Function pointer to property close
                                     callback
  RETURNS
@@ -2181,20 +2076,6 @@ done:
     negative value, the new property value is not copied into the property and
     the property list copy routine returns an error value.
 
-        The 'compare' callback is called when a property list with this
-    property is compared to another property list.  H5P_prp_compare_func_t is
-    defined as:
-        typedef int (*H5P_prp_compare_func_t)( void *value1, void *value2,
-            size_t size);
-    where the parameters to the callback function are:
-        const void *value1; IN: The value of the first property being compared.
-        const void *value2; IN: The value of the second property being compared.
-        size_t size;        IN: The size of the property value
-    The 'compare' routine may not modify the values to be compared.  The
-    'compare' routine should return a positive value if VALUE1 is greater than
-    VALUE2, a negative value if VALUE2 is greater than VALUE1 and zero if VALUE1
-    and VALUE2 are equal.
-
         The 'close' callback is called when a property list with this
     property is being destroyed.  H5P_prp_close_func_t is defined as:
         typedef herr_t (*H5P_prp_close_func_t)(const char *name, size_t size,
@@ -2227,32 +2108,18 @@ done:
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-#ifdef H5_WANT_H5_V1_6_COMPAT
 herr_t
 H5Pregister(hid_t cls_id, const char *name, size_t size, void *def_value,
     H5P_prp_create_func_t prp_create, H5P_prp_set_func_t prp_set,
     H5P_prp_get_func_t prp_get, H5P_prp_delete_func_t prp_delete,
     H5P_prp_copy_func_t prp_copy, H5P_prp_close_func_t prp_close)
-#else /* H5_WANT_H5_V1_6_COMPAT */
-herr_t
-H5Pregister(hid_t cls_id, const char *name, size_t size, void *def_value,
-    H5P_prp_create_func_t prp_create, H5P_prp_set_func_t prp_set,
-    H5P_prp_get_func_t prp_get, H5P_prp_delete_func_t prp_delete,
-    H5P_prp_copy_func_t prp_copy, H5P_prp_compare_func_t prp_cmp,
-    H5P_prp_close_func_t prp_close)
-#endif /* H5_WANT_H5_V1_6_COMPAT */
 {
     H5P_genclass_t	*pclass;   /* Property list class to modify */
     herr_t ret_value;     /* return value */
 
     FUNC_ENTER_API(H5Pregister, FAIL);
-#ifdef H5_WANT_H5_V1_6_COMPAT
     H5TRACE10("e","iszxxxxxxx",cls_id,name,size,def_value,prp_create,prp_set,
              prp_get,prp_delete,prp_copy,prp_close);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    H5TRACE11("e","iszxxxxxxxx",cls_id,name,size,def_value,prp_create,prp_set,
-             prp_get,prp_delete,prp_copy,prp_cmp,prp_close);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
 
     /* Check arguments. */
     if (NULL == (pclass = H5I_object_verify(cls_id, H5I_GENPROP_CLS)))
@@ -2262,15 +2129,9 @@ H5Pregister(hid_t cls_id, const char *name, size_t size, void *def_value,
     if (size>0 && def_value==NULL)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "properties >0 size must have default");
 
-#ifdef H5_WANT_H5_V1_6_COMPAT
     /* Create the new property list class */
     if ((ret_value=H5P_register(pclass,name,size,def_value,prp_create,prp_set,prp_get,prp_delete,prp_copy,NULL,prp_close))<0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to register property in class");
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    /* Create the new property list class */
-    if ((ret_value=H5P_register(pclass,name,size,def_value,prp_create,prp_set,prp_get,prp_delete,prp_copy,prp_cmp,prp_close))<0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to register property in class");
-#endif /* H5_WANT_H5_V1_6_COMPAT */
 
 done:
     FUNC_LEAVE_API(ret_value);
@@ -2505,7 +2366,6 @@ done:
         H5P_prp_get_func_t prp_get; IN: Function pointer to property get callback
         H5P_prp_delete_func_t prp_delete; IN: Function pointer to property delete callback
         H5P_prp_copy_func_t prp_copy; IN: Function pointer to property copy callback
-        H5P_prp_compare_func_t prp_cmp; IN: Function pointer to property compare callback
         H5P_prp_close_func_t prp_close; IN: Function pointer to property close
                                     callback
  RETURNS
@@ -2579,20 +2439,6 @@ done:
     negative value, the new property value is not copied into the property and
     the property list copy routine returns an error value.
 
-        The 'compare' callback is called when a property list with this
-    property is compared to another property list.  H5P_prp_compare_func_t is
-    defined as:
-        typedef int (*H5P_prp_compare_func_t)( void *value1, void *value2,
-            size_t size);
-    where the parameters to the callback function are:
-        const void *value1; IN: The value of the first property being compared.
-        const void *value2; IN: The value of the second property being compared.
-        size_t size;        IN: The size of the property value
-    The 'compare' routine may not modify the values to be compared.  The
-    'compare' routine should return a positive value if VALUE1 is greater than
-    VALUE2, a negative value if VALUE2 is greater than VALUE1 and zero if VALUE1
-    and VALUE2 are equal.
-
         The 'close' callback is called when a property list with this
     property is being destroyed.  H5P_prp_close_func_t is defined as:
         typedef herr_t (*H5P_prp_close_func_t)(const char *name, size_t size,
@@ -2629,31 +2475,18 @@ done:
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-#ifdef H5_WANT_H5_V1_6_COMPAT
 herr_t
 H5Pinsert(hid_t plist_id, const char *name, size_t size, void *value,
     H5P_prp_set_func_t prp_set, H5P_prp_get_func_t prp_get,
     H5P_prp_delete_func_t prp_delete, H5P_prp_copy_func_t prp_copy,
     H5P_prp_close_func_t prp_close)
-#else /* H5_WANT_H5_V1_6_COMPAT */
-herr_t
-H5Pinsert(hid_t plist_id, const char *name, size_t size, void *value,
-    H5P_prp_set_func_t prp_set, H5P_prp_get_func_t prp_get,
-    H5P_prp_delete_func_t prp_delete, H5P_prp_copy_func_t prp_copy,
-    H5P_prp_compare_func_t prp_cmp, H5P_prp_close_func_t prp_close)
-#endif /* H5_WANT_H5_V1_6_COMPAT */
 {
     H5P_genplist_t	*plist;    /* Property list to modify */
     herr_t ret_value;           /* return value */
 
     FUNC_ENTER_API(H5Pinsert, FAIL);
-#ifdef H5_WANT_H5_V1_6_COMPAT
     H5TRACE9("e","iszxxxxxx",plist_id,name,size,value,prp_set,prp_get,
              prp_delete,prp_copy,prp_close);
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    H5TRACE10("e","iszxxxxxxx",plist_id,name,size,value,prp_set,prp_get,
-             prp_delete,prp_copy,prp_cmp,prp_close);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
 
     /* Check arguments. */
     if (NULL == (plist = H5I_object_verify(plist_id, H5I_GENPROP_LST)))
@@ -2664,13 +2497,8 @@ H5Pinsert(hid_t plist_id, const char *name, size_t size, void *value,
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "properties >0 size must have default");
 
     /* Create the new property list class */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     if ((ret_value=H5P_insert(plist,name,size,value,prp_set,prp_get,prp_delete,prp_copy,NULL,prp_close))<0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to register property in plist");
-#else /* H5_WANT_H5_V1_6_COMPAT */
-    if ((ret_value=H5P_insert(plist,name,size,value,prp_set,prp_get,prp_delete,prp_copy,prp_cmp,prp_close))<0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to register property in plist");
-#endif /* H5_WANT_H5_V1_6_COMPAT */
 
 done:
     FUNC_LEAVE_API(ret_value);
@@ -3347,7 +3175,6 @@ H5P_get_nprops_plist(H5P_genplist_t *plist, size_t *nprops)
     herr_t H5P_get_nprops_pclass(pclass, nprops)
         H5P_genclass_t *pclass;  IN: Property class to check
         size_t *nprops;         OUT: Number of properties in the property list
-        hbool_t recurse;        IN: Include properties in parent class(es) also
  RETURNS
     Success: non-negative value (can't fail)
     Failure: negative value
@@ -3360,7 +3187,7 @@ H5P_get_nprops_plist(H5P_genplist_t *plist, size_t *nprops)
  REVISION LOG
 --------------------------------------------------------------------------*/
 herr_t
-H5P_get_nprops_pclass(H5P_genclass_t *pclass, size_t *nprops, hbool_t recurse)
+H5P_get_nprops_pclass(H5P_genclass_t *pclass, size_t *nprops)
 {
     herr_t ret_value = SUCCEED;         /* Return value */
 
@@ -3371,13 +3198,6 @@ H5P_get_nprops_pclass(H5P_genclass_t *pclass, size_t *nprops, hbool_t recurse)
 
     /* Get number of properties */
     *nprops=pclass->nprops;
-
-    /* Check if the class is derived, and walk up the chain, if so */
-    if(recurse)
-	while(pclass->parent!=NULL) {
-	    pclass = pclass->parent;
-	    *nprops += pclass->nprops;
-	} /* end while */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -3433,7 +3253,7 @@ H5Pget_nprops(hid_t id, size_t *nprops)
         if(H5I_GENPROP_CLS == H5I_get_type(id)) {
             if (NULL == (pclass = H5I_object(id)))
                 HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property class");
-            if (H5P_get_nprops_pclass(pclass,nprops,FALSE)<0)
+            if (H5P_get_nprops_pclass(pclass,nprops)<0)
                 HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to query # of properties in pclass");
         } /* end if */
         else

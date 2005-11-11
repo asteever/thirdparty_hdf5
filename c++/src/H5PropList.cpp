@@ -26,9 +26,6 @@
 
 #ifndef H5_NO_NAMESPACE
 namespace H5 {
-#ifndef H5_NO_STD
-    using namespace std;
-#endif  // H5_NO_STD
 #endif
 
 //--------------------------------------------------------------------------
@@ -91,7 +88,7 @@ PropList::PropList( const hid_t plist_id ) : IdComponent(0)
 // Programmer	Binh-Minh Ribler - 2000
 // Modification
 //		Replaced resetIdComponent with decRefCount to use C library
-//		ID reference counting mechanism - June 1, 2004
+//		ID reference counting mechanism - BMR, Feb 20, 2005
 //--------------------------------------------------------------------------
 void PropList::copy( const PropList& like_plist )
 {
@@ -166,7 +163,7 @@ void PropList::copyProp( PropList& dest, const string& name ) const
 ///\param	dest - IN: Destination property list or class
 ///\param	src  - IN: Source property list or class
 ///\param	name - IN: Name of the property to copy - \c char pointer
-///\notes	This member function will be removed in the next release
+///\note	This member function will be removed in the next release
 ///\exception	H5::PropListIException
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
@@ -349,7 +346,7 @@ string PropList::getProperty(const char* name) const
 ///\brief	This is an overloaded member function, provided for convenience.
 ///   		It differs from the above function only in what arguments it
 ///		accepts.
-///\param	name -   IN: Name of property to query - \c std::string
+///\param	name -   IN: Name of property to query - \c str::string
 ///\param	value - OUT: Pointer to the buffer for the property value
 // Programmer:  Binh-Minh Ribler - April, 2004
 //--------------------------------------------------------------------------
@@ -620,13 +617,13 @@ PropList PropList::getClassParent() const
 // Programmer	Binh-Minh Ribler - 2000
 // Modification
 //		Replaced resetIdComponent with decRefCount to use C library
-//		ID reference counting mechanism - June 1, 2004
+//		ID reference counting mechanism - BMR, Feb 20, 2005
 //--------------------------------------------------------------------------
 PropList::~PropList()
 {
    // The property list id will be closed properly
     try {
-        decRefCount();
+	decRefCount();
     }
     catch (Exception close_error) {
         cerr << "PropList::~PropList - " << close_error.getDetailMsg() << endl;

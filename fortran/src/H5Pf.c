@@ -1130,8 +1130,6 @@ nh5pset_cache_c(hid_t_f *prp_id, int_f* mdc_nelmts, size_t_f* rdcc_nelmts,  size
  * Programmer:  Xiangyang Su
  *              Friday, February 25, 2000
  * Modifications: Changed type of the rdcc_w0 parameter to be real_f instead of double
- *                Changed type of the rdcc_nelmts parameter to be int_f.
- *                                                          EIP  October 10, 2003
  *---------------------------------------------------------------------------*/
 int_f
 nh5pget_cache_c(hid_t_f *prp_id, int_f* mdc_nelmts, size_t_f* rdcc_nelmts, size_t_f* rdcc_nbytes , real_f* rdcc_w0)
@@ -1513,7 +1511,7 @@ nh5pget_filter_c(hid_t_f *prp_id, int_f* filter_number, int_f* flags, size_t_f* 
       */
      c_prp_id = (hid_t)*prp_id;
      c_filter_number = (int)*filter_number;
-     c_filter = H5Pget_filter(c_prp_id, c_filter_number, &c_flags, &c_cd_nelmts, c_cd_values, c_namelen, c_name, NULL);
+     c_filter = H5Pget_filter(c_prp_id, c_filter_number, &c_flags, &c_cd_nelmts, c_cd_values, c_namelen, c_name);
 
      if (c_filter < 0) goto DONE;
 
@@ -1658,6 +1656,76 @@ nh5pget_external_c(hid_t_f *prp_id, int_f *idx, size_t_f* name_size, _fcd name, 
 
 DONE:
      HDfree(c_name);
+     return ret_value;
+}
+
+/*----------------------------------------------------------------------------
+ * Name:        h5pset_hyper_cache_c
+ * Purpose:     Call H5Pset__hyper_cache to indicate whether to
+ *              cache hyperslab blocks during I/O.
+ * Inputs:      prp_id - property list identifier
+ *              cache -
+ *              limit - Maximum size of the hyperslab block to cache.
+ *                      0 (zero) indicates no limit.
+ * Returns:     0 on success, -1 on failure
+ * Programmer:  Xiangyang Su
+ *              Friday, February 25, 2000
+ * Modifications:
+ *---------------------------------------------------------------------------*/
+int_f
+nh5pset_hyper_cache_c(hid_t_f *prp_id, int_f * cache, int_f * limit)
+{
+     int ret_value = -1;
+#ifdef H5_WANT_H5_V1_4_COMPAT
+     hid_t c_prp_id;
+     herr_t ret;
+     unsigned c_cache, c_limit;
+
+     c_cache = (unsigned) *cache;
+     c_limit = (unsigned) *limit;
+
+     /*
+      * Call H5Pset_hyper_cache function.
+      */
+     c_prp_id = (hid_t)*prp_id;
+     ret = H5Pset_hyper_cache(c_prp_id, c_cache, c_limit);
+     if (ret < 0) return ret_value;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
+     ret_value = 0;
+     return ret_value;
+}
+
+/*----------------------------------------------------------------------------
+ * Name:        h5pget_hyper_cache_c
+ * Purpose:     Call H5Pget_hyper_cache to get information regarding
+ *              the caching of hyperslab blocks
+ * Inputs:      prp_id - property list identifier
+ *              cache -
+ *              limit - Maximum size of the hyperslab block to cache.
+ *                      0 (zero) indicates no limit.
+ * Returns:     0 on success, -1 on failure
+ * Programmer:  Xiangyang Su
+ *              Friday, February 25, 2000
+ * Modifications:
+ *---------------------------------------------------------------------------*/
+int_f
+nh5pget_hyper_cache_c(hid_t_f *prp_id, int_f * cache, int_f * limit)
+{
+     int ret_value = -1;
+#ifdef H5_WANT_H5_V1_4_COMPAT
+     hid_t c_prp_id;
+     herr_t ret;
+     unsigned c_cache, c_limit;
+     /*
+      * Call H5Pget__hyper_cache function.
+      */
+     c_prp_id = (hid_t)*prp_id;
+     ret = H5Pget_hyper_cache(c_prp_id, &c_cache, &c_limit);
+     if (ret < 0) return ret_value;
+     *cache = (int_f)c_cache;
+     *limit = (int_f)c_limit;
+     ret_value = 0;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
      return ret_value;
 }
 
@@ -2250,7 +2318,7 @@ nh5pregister_c(hid_t_f *class, _fcd name, int_f *name_len, size_t_f *size, void 
      /*
       * Call H5Pregister function.
       */
-     if( H5Pregister(c_class, c_name, c_size, value, NULL,NULL,NULL,NULL,NULL,NULL,NULL) <0) goto DONE;
+     if( H5Pregister(c_class, c_name, c_size, value, NULL,NULL,NULL,NULL,NULL,NULL) <0) goto DONE;
      ret_value = 0;
 
 DONE:
@@ -2311,7 +2379,7 @@ nh5pinsert_c(hid_t_f *plist, _fcd name, int_f *name_len, size_t_f *size, void *v
      /*
       * Call H5Pinsert function.
       */
-     if( H5Pinsert(c_plist, c_name, c_size, value, NULL,NULL,NULL,NULL,NULL,NULL) <0) goto DONE;
+     if( H5Pinsert(c_plist, c_name, c_size, value, NULL,NULL,NULL,NULL,NULL) <0) goto DONE;
      ret_value = 0;
 
 DONE:
@@ -2897,7 +2965,6 @@ nh5pset_fapl_multi_c ( hid_t_f *prp_id , int_f *memb_map, hid_t_f *memb_fapl, _f
   char *tmp, *tmp_p, *tmp_pp;
   int i;
   int c_lenmax;
-  long double  tmp_max_addr;
   c_lenmax = (int)*lenmax;
   relax = (hbool_t)*flag;
 /*
@@ -2926,16 +2993,23 @@ nh5pset_fapl_multi_c ( hid_t_f *prp_id , int_f *memb_map, hid_t_f *memb_fapl, _f
 /*
  * Take care of othe arguments
  */
-  tmp_max_addr =  (long double)(HADDR_MAX);
+
   c_prp_id = (hid_t)*prp_id;
+
+/*
+ * The Cray X1 compiler can become confused when trying to optimize
+ * this loop.  This ugly #pragma tells it not to try to optimize it.
+ */
+#ifdef __crayx1
+#pragma _CRI novector
+#endif
   for (i=0; i < H5FD_MEM_NTYPES; i++) {
        c_memb_map[i] = (H5FD_mem_t)memb_map[i];
        /*printf("map %d \n", c_memb_map[i]); */
        c_memb_fapl[i] = (hid_t)memb_fapl[i];
        /*printf("fapl %d \n", c_memb_fapl[i]); */
        if(memb_addr[i] < 0) c_memb_addr[i] = HADDR_UNDEF;
-      /* else c_memb_addr[i] = (haddr_t)(((float)memb_addr[i])*(HADDR_MAX));*/
-       else c_memb_addr[i] = (haddr_t)(((float)memb_addr[i])*(tmp_max_addr));
+       else c_memb_addr[i] = (haddr_t)(((float)memb_addr[i])*(HADDR_MAX));
        /*printf("address %Ld \n", c_memb_addr[i]); */
   }
 /*
@@ -3170,7 +3244,7 @@ nh5pget_filter_by_id_c(hid_t_f *prp_id, int_f* filter_id, int_f* flags, size_t_f
       */
      c_prp_id = (hid_t)*prp_id;
      c_filter_id = (H5Z_filter_t)*filter_id;
-     status = H5Pget_filter_by_id(c_prp_id, c_filter_id, &c_flags, &c_cd_nelmts, c_cd_values, c_namelen, c_name, NULL);
+     status = H5Pget_filter_by_id(c_prp_id, c_filter_id, &c_flags, &c_cd_nelmts, c_cd_values, c_namelen, c_name);
      if (status < 0) goto DONE;
 
      *cd_nelmts = (size_t_f)c_cd_nelmts;
@@ -3238,12 +3312,12 @@ DONE:
 
 /*----------------------------------------------------------------------------
  * Name:        h5premove_filter_c
- * Purpose:     Call H5Premove_filter to delete one or more filters
- * Inputs:      prp_id - property list identifier
- *              filter - Filter to be deleted
+ * Purpose:     Call H5Premove_filter to remove a filter
+ * Inputs:      prp_id - dataset creation property list identifier
+ *              filter - filter to be removed
  * Returns:     0 on success, -1 on failure
- * Programmer:  Quincey Koziol
- *              January 27 2004
+ * Programmer:  Elena Pourmal
+ *              Tuesday, August 24, 2004
  * Modifications:
  *---------------------------------------------------------------------------*/
 int_f

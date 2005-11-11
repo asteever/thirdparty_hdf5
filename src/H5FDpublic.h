@@ -43,19 +43,6 @@ typedef enum H5FD_mem_t {
     H5FD_MEM_NTYPES				/*must be last*/
 } H5FD_mem_t;
 
-/* Map "block tracker" header blocks to 'ohdr' type file memory, since its
- * a fair amount of work to add a new kind of file memory, they are similar
- * enough to object headers and probably too minor to deserve their own type. -QAK */
-#define H5FD_MEM_BLKTRK H5FD_MEM_OHDR
-
-/* Map "segmented heap" header blocks to 'ohdr' type file memory, since its
- * a fair amount of work to add a new kind of file memory, they are similar
- * enough to object headers and probably too minor to deserve their own type.
- * Map "segmented heap" blocks to 'lheap' type file memory, since they will be
- * replacing local heaps. -QAK */
-#define H5FD_MEM_SHEAP_HDR      H5FD_MEM_OHDR
-#define H5FD_MEM_SHEAP_BLOCK    H5FD_MEM_LHEAP
-
 /*
  * A free-list map which maps all types of allocation requests to a single
  * free list.  This is useful for drivers that don't really care about
@@ -168,9 +155,9 @@ typedef struct H5FD_class_t {
     haddr_t (*alloc)(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, hsize_t size);
     herr_t  (*free)(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id,
                     haddr_t addr, hsize_t size);
-    haddr_t (*get_eoa)(const H5FD_t *file);
+    haddr_t (*get_eoa)(H5FD_t *file);
     herr_t  (*set_eoa)(H5FD_t *file, haddr_t addr);
-    haddr_t (*get_eof)(const H5FD_t *file);
+    haddr_t (*get_eof)(H5FD_t *file);
     herr_t  (*get_handle)(H5FD_t *file, hid_t fapl, void**file_handle);
     herr_t  (*read)(H5FD_t *file, H5FD_mem_t type, hid_t dxpl,
                     haddr_t addr, size_t size, void *buffer);
@@ -196,7 +183,7 @@ typedef struct H5FD_free_t {
 struct H5FD_t {
     hid_t               driver_id;      /*driver ID for this file   */
     const H5FD_class_t *cls;            /*constant class info       */
-    unsigned long       fileno;         /* File serial number       */
+    unsigned long       fileno[2];      /* File serial number       */
     unsigned long       feature_flags;  /* VFL Driver feature Flags */
     hsize_t             threshold;      /* Threshold for alignment  */
     hsize_t             alignment;      /* Allocation alignment     */

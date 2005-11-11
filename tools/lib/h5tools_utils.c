@@ -43,7 +43,7 @@ static void init_table(table_t **tbl);
 #ifdef H5DUMP_DEBUG
 static void dump_table(char* tablename, table_t *table);
 #endif  /* H5DUMP_DEBUG */
-static void add_obj(table_t *table, haddr_t objno, char *objname, hbool_t recorded);
+static void add_obj(table_t *table, unsigned long *objno, char *objname, hbool_t recorded);
 static char * build_obj_path_name(const char *prefix, const char *name);
 static herr_t find_objs_cb(hid_t group, const char *name, void *op_data);
 
@@ -422,8 +422,9 @@ dump_tables(find_objs_t *info)
  *-------------------------------------------------------------------------
  */
 obj_t *
-search_obj(table_t *table, haddr_t objno)
+search_obj(table_t *table, unsigned long *_objno)
 {
+    haddr_t objno = ((haddr_t)_objno[1] << (8*sizeof(long))) | (haddr_t)_objno[0];
     unsigned u;
 
     for (u = 0; u < table->nobjs; u++)
@@ -491,11 +492,11 @@ find_objs_cb(hid_t group, const char *name, void *op_data)
         char *tmp;
 
         case H5G_GROUP:
-            if (search_obj(info->group_table, statbuf.u.obj.objno) == NULL) {
+            if (search_obj(info->group_table, statbuf.objno) == NULL) {
                 char *old_prefix;
 
                 tmp = build_obj_path_name(info->prefix, name);
-                add_obj(info->group_table, statbuf.u.obj.objno, tmp, TRUE);
+                add_obj(info->group_table, statbuf.objno, tmp, TRUE);
 
                 old_prefix = info->prefix;
                 info->prefix = tmp;
@@ -508,11 +509,11 @@ find_objs_cb(hid_t group, const char *name, void *op_data)
             break;
 
         case H5G_DATASET:
-            if (search_obj(info->dset_table, statbuf.u.obj.objno) == NULL) {
+            if (search_obj(info->dset_table, statbuf.objno) == NULL) {
                 hid_t dset;
 
                 tmp = build_obj_path_name(info->prefix, name);
-                add_obj(info->dset_table, statbuf.u.obj.objno, tmp, TRUE);
+                add_obj(info->dset_table, statbuf.objno, tmp, TRUE);
 
                 if ((dset = H5Dopen (group, name)) >= 0) {
                     hid_t type;
@@ -522,10 +523,10 @@ find_objs_cb(hid_t group, const char *name, void *op_data)
                     if (H5Tcommitted(type) > 0) {
                         H5Gget_objinfo(type, ".", TRUE, &statbuf);
 
-                        if (search_obj(info->type_table, statbuf.u.obj.objno) == NULL) {
+                        if (search_obj(info->type_table, statbuf.objno) == NULL) {
                             char *type_name = HDstrdup(tmp);
 
-                            add_obj(info->type_table, statbuf.u.obj.objno, type_name, FALSE);
+                            add_obj(info->type_table, statbuf.objno, type_name, FALSE);
                         } /* end if */
                     }
 
@@ -542,8 +543,8 @@ find_objs_cb(hid_t group, const char *name, void *op_data)
             obj_t *found_obj;
 
             tmp = build_obj_path_name(info->prefix, name);
-            if ((found_obj = search_obj(info->type_table, statbuf.u.obj.objno)) == NULL)
-                add_obj(info->type_table, statbuf.u.obj.objno, tmp, TRUE);
+            if ((found_obj = search_obj(info->type_table, statbuf.objno)) == NULL)
+                add_obj(info->type_table, statbuf.objno, tmp, TRUE);
             else {
                 /* Use latest version of name */
                 HDfree(found_obj->objname);
@@ -614,8 +615,9 @@ init_objs(hid_t fid, find_objs_t *info, table_t **group_table,
  *-------------------------------------------------------------------------
  */
 static void
-add_obj(table_t *table, haddr_t objno, char *objname, hbool_t record)
+add_obj(table_t *table, unsigned long *_objno, char *objname, hbool_t record)
 {
+    haddr_t objno = ((haddr_t)_objno[1] << (8*sizeof(long))) | (haddr_t)_objno[0];
     unsigned u;
 
     /* See if we need to make table larger */
@@ -633,28 +635,3 @@ add_obj(table_t *table, haddr_t objno, char *objname, hbool_t record)
     table->objs[u].recorded = record;
     table->objs[u].displayed = 0;
 }
-
-
-#ifndef H5_HAVE_TMPFILE
-/*-------------------------------------------------------------------------
- * Function:    tmpfile
- *
- * Purpose:     provide tmpfile() function when it is not supported by the
- *              system.  Always return NULL for now.
- *
- * Return:      a stream description when succeeds.
- *              NULL if fails.
- *
- * Programmer:  Albert Cheng, 2005/8/9
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-FILE *
-tmpfile(void)
-{
-    return NULL;
-}
-
-#endif

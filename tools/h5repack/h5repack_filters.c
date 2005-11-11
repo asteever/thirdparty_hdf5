@@ -147,6 +147,8 @@ int aux_assign_obj(const char* name,            /* object name from traverse lis
 			tmp.nfilters=1;
 			tmp.filter[0]=options->filter_g;
 		}
+
+
 		if (options->all_layout)
 		{
 			/* assign the global layout info to the OBJ info */
@@ -161,7 +163,10 @@ int aux_assign_obj(const char* name,            /* object name from traverse lis
 			default:
 				break;
 			}/*switch*/
+
 		}
+
+
 	}
 
  *obj = tmp;
@@ -194,13 +199,13 @@ int apply_filters(const char* name,    /* object name from traverse list */
                   pack_opt_t *options) /* repack options */
 {
 	int          nfilters;       /* number of filters in DCPL */
+ unsigned     aggression;     /* the deflate level */
  hsize_t      nelmts;         /* number of elements in dataset */
  size_t       size;           /* size of datatype in bytes */
  hsize_t      chsize[64];     /* chunk size in elements */
  H5D_layout_t layout;
  int          i;
 	pack_info_t  obj;
-
 
  if (rank==0)
   goto out;
@@ -270,7 +275,8 @@ int apply_filters(const char* name,    /* object name from traverse list */
   }
  }
 
-/*-------------------------------------------------------------------------
+
+	/*-------------------------------------------------------------------------
  * the type of filter and additional parameter
  * type can be one of the filters
  * H5Z_FILTER_NONE       0,  uncompress if compressed
@@ -278,8 +284,6 @@ int apply_filters(const char* name,    /* object name from traverse list */
  * H5Z_FILTER_SHUFFLE    2 , shuffle the data
  * H5Z_FILTER_FLETCHER32 3 , fletcher32 checksum of EDC
  * H5Z_FILTER_SZIP       4 , szip compression
- * H5Z_FILTER_NBIT       5 , nbit compression
- * H5Z_FILTER_SCALEOFFSET 6 , scaleoffset compression
  *-------------------------------------------------------------------------
  */
 
@@ -309,16 +313,12 @@ int apply_filters(const char* name,    /* object name from traverse list */
 				*-------------------------------------------------------------------------
 				*/
 			case H5Z_FILTER_DEFLATE:
-				{
-					unsigned     aggression;     /* the deflate level */
-					
-					aggression = obj.filter[i].cd_values[0];
-					/* set up for deflated data */
-					if(H5Pset_chunk(dcpl_id, obj.chunk.rank, obj.chunk.chunk_lengths)<0)
-						return -1;
-					if(H5Pset_deflate(dcpl_id,aggression)<0)
-						return -1;
-				}
+				aggression=obj.filter[i].cd_values[0];
+				/* set up for deflated data */
+				if(H5Pset_chunk(dcpl_id, obj.chunk.rank, obj.chunk.chunk_lengths)<0)
+					return -1;
+				if(H5Pset_deflate(dcpl_id,aggression)<0)
+					return -1;
 				break;
 
 				/*-------------------------------------------------------------------------
@@ -330,9 +330,12 @@ int apply_filters(const char* name,    /* object name from traverse list */
 					unsigned  options_mask;
 					unsigned  pixels_per_block;
 
-					options_mask     = obj.filter[i].cd_values[0]; 
-					pixels_per_block = obj.filter[i].cd_values[1];
-		
+					pixels_per_block=obj.filter[i].cd_values[0];
+					if (obj.filter[i].szip_coding==0)
+						options_mask=H5_SZIP_NN_OPTION_MASK;
+					else
+						options_mask=H5_SZIP_EC_OPTION_MASK;
+
 					/* set up for szip data */
 					if(H5Pset_chunk(dcpl_id,obj.chunk.rank,obj.chunk.chunk_lengths)<0)
 						return -1;
@@ -362,35 +365,6 @@ int apply_filters(const char* name,    /* object name from traverse list */
 					return -1;
 				if (H5Pset_fletcher32(dcpl_id)<0)
 					return -1;
-				break;
-				/*----------- -------------------------------------------------------------
-				* H5Z_FILTER_NBIT , NBIT compression
-				*-------------------------------------------------------------------------
-				*/
-			case H5Z_FILTER_NBIT:
-				if(H5Pset_chunk(dcpl_id, obj.chunk.rank, obj.chunk.chunk_lengths)<0)
-					return -1;
-				if (H5Pset_nbit(dcpl_id)<0)
-					return -1;
-				break;
-				/*----------- -------------------------------------------------------------
-				* H5Z_FILTER_SCALEOFFSET , scale+offset compression
-				*-------------------------------------------------------------------------
-				*/
-
-			case H5Z_FILTER_SCALEOFFSET:
-				{
-					H5Z_SO_scale_type_t scale_type; 
-     int                 scale_factor;      
-					
-					scale_type   = obj.filter[i].cd_values[0];
-					scale_factor = obj.filter[i].cd_values[1];
-					
-					if(H5Pset_chunk(dcpl_id, obj.chunk.rank, obj.chunk.chunk_lengths)<0)
-						return -1;
-					if (H5Pset_scaleoffset(dcpl_id,scale_type,scale_factor)<0)
-						return -1;
-				}
 				break;
 			} /* switch */
 		}/*i*/
@@ -459,7 +433,6 @@ int print_filters(hid_t dcpl_id)
  for (i=0; i<nfilters; i++)
  {
   cd_nelmts = NELMTS(cd_values);
-#ifdef H5_WANT_H5_V1_6_COMPAT
   filtn = H5Pget_filter(dcpl_id,
    (unsigned)i,
    &filt_flags,
@@ -467,16 +440,6 @@ int print_filters(hid_t dcpl_id)
    cd_values,
    sizeof(f_name),
    f_name);
-#else
-  filtn = H5Pget_filter(dcpl_id,
-   (unsigned)i,
-   &filt_flags,
-   &cd_nelmts,
-   cd_values,
-   sizeof(f_name),
-   f_name,
-   NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
 
   f_name[sizeof(f_name)-1] = '\0';
   sprintf(s, "Filter-%d:", i);

@@ -46,9 +46,7 @@ RUNPARALLEL=${RUNPARALLEL:-"yod -sz 8"}
 CFLAGS="$CFLAGS"
 
 # What must *always* be present for things to compile correctly?
-# -DH5_TFLOPS: for the Sandia Tflops machine.  Had used the builtin
-# __PUMAGON__ but H5_TFLOPS is more meaningful.
-CPPFLAGS="$CPPFLAGS -DH5_TFLOPS"
+#CPPFLAGS="$CPPFLAGS -I."
 
 # What compiler flags should be used for code development?
 DEBUG_CFLAGS=-g
@@ -165,15 +163,5 @@ hdf5_cv_system_scope_threads=${hdf5_cv_system_scope_threads="no"}
 # Hard set MPI_File_set_size() working for files over 2GB to no
 hdf5_cv_mpi_file_set_size_big=${hdf5_cv_mpi_file_set_size_big='no'}
 
-# Hard set variables for v1.7 and higher.
 # Set gettimeofday_tz to yes.
 hdf5_cv_gettimeofday_tz=${hdf5_cv_gettimeofday_tz='yes'}
-hdf5_cv_convert_denormal_float=${hdf5_cv_convert_denormal_float='no'}
-hdf5_cv_fp_to_ullong_bottom_bit_works=${hdf5_cv_fp_to_ullong_bottom_bit_works='no'}
-hdf5_cv_fp_to_ullong_right_maximum=${hdf5_cv_fp_to_ullong_right_maximum='yes'}
-hdf5_cv_ldouble_to_uint_works=${hdf5_cv_ldouble_to_uint_works='yes'}
-hdf5_cv_sw_ldouble_to_integer_works=${hdf5_cv_sw_ldouble_to_integer_works='yes'}
-hdf5_cv_sw_ulong_to_fp_bottom_bit_works=${hdf5_cv_sw_ulong_to_fp_bottom_bit_works='no'}
-hdf5_cv_ullong_to_fp_cast_works=${hdf5_cv_ullong_to_fp_cast_works='yes'}
-hdf5_cv_ullong_to_ldouble_precision_works=${hdf5_cv_ullong_to_ldouble_precision_works='yes'}
-hdf5_cv_fp_to_integer_overflow_works=${hdf5_cv_fp_to_integer_overflow_works='yes'}

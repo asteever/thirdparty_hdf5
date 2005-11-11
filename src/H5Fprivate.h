@@ -197,8 +197,6 @@ typedef struct H5F_t H5F_t;
 
 /* If the module using this macro is allowed access to the private variables, access them directly */
 #ifdef H5F_PACKAGE
-/* The FCPL itself */
-#define H5F_FCPL(F)             ((F)->shared->fcpl_id)
 /* size of size_t and off_t as they exist on disk */
 #define H5F_SIZEOF_ADDR(F)      ((F)->shared->sizeof_addr)
 #define H5F_SIZEOF_SIZE(F)      ((F)->shared->sizeof_size)
@@ -219,7 +217,6 @@ typedef struct H5F_t H5F_t;
 /* Sieve buffer size for datasets */
 #define H5F_SIEVE_BUF_SIZE(F)   ((F)->shared->sieve_buf_size)
 #else /* H5F_PACKAGE */
-#define H5F_FCPL(F)             (H5F_get_fcpl(F))
 #define H5F_SIZEOF_ADDR(F)      (H5F_sizeof_addr(F))
 #define H5F_SIZEOF_SIZE(F)      (H5F_sizeof_size(F))
 #define H5F_SYM_LEAF_K(F)       (H5F_sym_leaf_k(F))
@@ -322,10 +319,10 @@ typedef struct H5F_t H5F_t;
 #define H5F_CRT_SHARE_HEAD_VERS_DEF   HDF5_SHAREDHEADER_VERSION
 
 /* ========= File Access properties ============ */
-/* Definitions for the initial metadata cache resize configuration */
-#define H5F_ACS_META_CACHE_INIT_CONFIG_NAME	"mdc_initCacheCfg"
-#define H5F_ACS_META_CACHE_INIT_CONFIG_SIZE	sizeof(H5AC_cache_config_t)
-#define H5F_ACS_META_CACHE_INIT_CONFIG_DEF	H5AC__DEFAULT_CACHE_CONFIG
+/* Definitions for size of meta data cache(elements) */
+#define H5F_ACS_META_CACHE_SIZE_NAME            "mdc_nelmts"
+#define H5F_ACS_META_CACHE_SIZE_SIZE            sizeof(int)
+#define H5F_ACS_META_CACHE_SIZE_DEF             H5AC_NSLOTS
 
 /* Definitions for size of raw data chunk cache(elements) */
 #define H5F_ACS_DATA_CACHE_ELMT_SIZE_NAME       "rdcc_nelmts"
@@ -395,18 +392,6 @@ typedef struct H5F_t H5F_t;
 #define H5F_ACS_FAMILY_OFFSET_SIZE              sizeof(hsize_t)
 #define H5F_ACS_FAMILY_OFFSET_DEF               0
 
-/* Definition for new member size of family driver. It's private
- * property only used by h5repart */
-#define H5F_ACS_FAMILY_NEWSIZE_NAME            "family_newsize"
-#define H5F_ACS_FAMILY_NEWSIZE_SIZE            sizeof(hsize_t)
-#define H5F_ACS_FAMILY_NEWSIZE_DEF             0
-
-/* Definition for whether to conver family to sec2 driver. It's private
- * property only used by h5repart */
-#define H5F_ACS_FAMILY_TO_SEC2_NAME            "family_to_sec2"
-#define H5F_ACS_FAMILY_TO_SEC2_SIZE            sizeof(hbool_t)
-#define H5F_ACS_FAMILY_TO_SEC2_DEF             FALSE
-
 /* Definition for data type in multi file driver */
 #define H5F_ACS_MULTI_TYPE_NAME                 "multi_type"
 #define H5F_ACS_MULTI_TYPE_SIZE                 sizeof(H5FD_mem_t)
@@ -432,12 +417,9 @@ H5_DLL herr_t H5F_init(void);
 #ifdef NOT_YET
 H5_DLL herr_t H5F_flush_all(hbool_t invalidate);
 #endif /* NOT_YET */
-H5_DLL H5F_t * H5F_open(const char *name, unsigned flags, hid_t fcpl_id,
-    hid_t fapl_id, hid_t dxpl_id);
 
 /* Functions than retrieve values from the file struct */
 H5_DLL hid_t H5F_get_driver_id(const H5F_t *f);
-H5_DLL hid_t H5F_get_access_plist(H5F_t *f);
 H5_DLL unsigned H5F_get_intent(const H5F_t *f);
 H5_DLL herr_t H5F_get_fileno(const H5F_t *f, unsigned long *filenum);
 H5_DLL hid_t H5F_get_id(H5F_t *file);
@@ -448,7 +430,6 @@ H5_DLL haddr_t H5F_get_eoa(const H5F_t *f);
 #ifdef H5_HAVE_PARALLEL
 H5_DLL int H5F_mpi_get_rank(const H5F_t *f);
 H5_DLL MPI_Comm H5F_mpi_get_comm(const H5F_t *f);
-H5_DLL int H5F_mpi_get_size(const H5F_t *f);
 #endif /* H5_HAVE_PARALLEL */
 
 /* Functions than check file mounting information */
@@ -456,7 +437,6 @@ H5_DLL htri_t H5F_is_mount(const H5F_t *file);
 H5_DLL htri_t H5F_has_mount(const H5F_t *file);
 
 /* Functions than retrieve values set from the FCPL */
-H5_DLL hid_t H5F_get_fcpl(const H5F_t *f);
 H5_DLL size_t H5F_sizeof_addr(const H5F_t *f);
 H5_DLL size_t H5F_sizeof_size(const H5F_t *f);
 H5_DLL unsigned H5F_sym_leaf_k(const H5F_t *f);
@@ -478,6 +458,8 @@ H5_DLL herr_t H5F_block_write(const H5F_t *f, H5FD_mem_t type, haddr_t addr,
 H5_DLL void H5F_addr_encode(const H5F_t *, uint8_t** /*in,out*/, haddr_t);
 H5_DLL void H5F_addr_decode(const H5F_t *, const uint8_t** /*in,out*/,
 			     haddr_t* /*out*/);
+H5_DLL herr_t H5F_addr_pack(H5F_t *f, haddr_t *addr_p /*out*/,
+			     const unsigned long objno[2]);
 
 /* Callback functions for file access class */
 H5_DLL herr_t H5F_acs_create(hid_t fapl_id, void *close_data);

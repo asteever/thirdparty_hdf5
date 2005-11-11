@@ -31,11 +31,8 @@
 #include "H5Gprivate.h"
 
 /* Other private headers needed by this file */
-#include "H5ACprivate.h"	/* Metadata cache			*/
+#include "H5ACprivate.h"	/* Metadata cache			  */
 #include "H5Oprivate.h"		/* Object headers		  	*/
-#include "H5SLprivate.h"	/* Skip lists				*/
-
-#define H5G_SIZE_HINT   256    /* default root grp size hint         */
 
 /*
  * A symbol table node is a collection of symbol table entries.  It can
@@ -154,7 +151,11 @@ typedef struct H5G_bt_it_ud3_t {
     hsize_t     num_objs;       /*the number of objects having been traversed*/
 
     /* upward */
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    int    type;                /*member type to be returned                 */
+#else /* H5_WANT_H5_V1_4_COMPAT */
     H5G_obj_t    type;          /*member type to be returned                 */
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 } H5G_bt_it_ud3_t;
 
 /*
@@ -168,13 +169,6 @@ typedef struct H5G_bt_it_ud4_t {
 
     /* upward */
 } H5G_bt_it_ud4_t;
-
-/* Data passed to B-tree iteration for copying copy symblol table content */
-typedef struct H5G_bt_it_ud5_t {
-    H5SL_t      *map_list;       /* skip list to map copied object addresses */
-    haddr_t     heap_addr;       /* heap address of the source symbol table   */
-    H5G_entry_t *loc_dst;        /* group where new object is inserted to */ 
-} H5G_bt_it_ud5_t;
 
 /*
  * This is the class identifier to give to the B-tree functions.
@@ -197,9 +191,6 @@ H5_DLL herr_t H5G_stab_insert(H5G_entry_t *grp_ent, const char *name,
 			       H5G_entry_t *obj_ent, hbool_t inc_link, hid_t dxpl_id);
 H5_DLL herr_t H5G_stab_delete(H5F_t *f, hid_t dxpl_id, const H5O_stab_t *stab, hbool_t adj_link);
 H5_DLL herr_t H5G_stab_remove(H5G_entry_t *grp_ent, const char *name, hid_t dxpl_id);
-H5_DLL herr_t H5G_stab_copy_tmp(H5F_t *f_dst, H5O_stab_t *stab_dst,
-    hid_t dxpl_id);
-
 
 /*
  * Functions that understand symbol table entries.
@@ -219,7 +210,4 @@ H5_DLL int H5G_node_name(H5F_t *f, hid_t dxpl_id, const void *_lt_key, haddr_t a
 		     const void *_rt_key, void *_udata);
 H5_DLL int H5G_node_type(H5F_t *f, hid_t dxpl_id, const void *_lt_key, haddr_t addr,
 		     const void *_rt_key, void *_udata);
-H5_DLL int H5G_node_copy(H5F_t *f, hid_t dxpl_id, const void *_lt_key, haddr_t addr,
-		     const void *_rt_key, void *_udata);
-
 #endif

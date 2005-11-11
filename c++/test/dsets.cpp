@@ -380,12 +380,10 @@ test_tconv( H5File& file)
 
 /* This message derives from H5Z */
 const H5Z_class_t H5Z_BOGUS[1] = {{
-    H5Z_CLASS_T_VERS,		/* H5Z_class_t version number   */
     H5Z_FILTER_BOGUS,		/* Filter id number		*/
-    1, 1,			/* Encode and decode enabled    */
     "bogus",			/* Filter name for debugging	*/
-    NULL,                       /* The "can apply" callback     */
-    NULL,                       /* The "set local" callback     */
+    NULL,		       /* The "can apply" callback     */
+    NULL,		       /* The "set local" callback     */
     bogus,			/* The actual filter function	*/
 }};
 
@@ -654,8 +652,13 @@ test_compression(H5File& file)
 	*/
 	TESTING("compression (app-defined method)");
 
-        if (H5Zregister (H5Z_BOGUS)<0)
-		throw Exception("test_compression", "Failed in app-defined method");
+#ifdef H5_WANT_H5_V1_4_COMPAT
+	if (H5Zregister (H5Z_FILTER_BOGUS, "bogus", bogus)<0)
+	    throw Exception("test_compression", "Failed in app-defined method");
+#else /* H5_WANT_H5_V1_4_COMPAT */
+	if (H5Zregister (H5Z_BOGUS)<0)
+	    throw Exception("test_compression", "Failed in app-defined method");
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 	if (H5Pset_filter (dscreatplist.getId(), H5Z_FILTER_BOGUS, 0, 0, NULL)<0)
 	    throw Exception("test_compression", "Failed in app-defined method");
 	dscreatplist.setFilter (H5Z_FILTER_BOGUS, 0, 0, NULL);

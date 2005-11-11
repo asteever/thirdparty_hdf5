@@ -92,16 +92,11 @@ typedef struct H5F_file_t {
     haddr_t	base_addr;	/* Absolute base address for rel.addrs. */
     haddr_t	freespace_addr;	/* Relative address of free-space info	*/
     haddr_t	driver_addr;	/* File driver information block address*/
-    hbool_t     fam_to_sec2;    /* Is h5repart changing driver from family to sec2 */
 
     unsigned	super_chksum;	/* Superblock checksum                  */
     unsigned	drvr_chksum;	/* Driver info block checksum           */
     H5AC_t      *cache;		/* The object cache			*/
-    H5AC_cache_config_t
-		mdc_initCacheCfg; /* initial configuration for the      */
-                                /* metadata cache.  This structure is   */
-                                /* fixed at creation time and should    */
-                                /* not change thereafter.               */
+    int         mdc_nelmts;	/* Size of meta data cache (elements)	*/
     hid_t       fcpl_id;	/* File creation property list ID 	*/
     H5F_close_degree_t fc_degree;   /* File close behavior degree	*/
     size_t	rdcc_nelmts;	/* Size of raw data chunk cache (elmts)	*/
@@ -175,9 +170,9 @@ H5_DLL int H5F_term_unmount_cb(void *obj_ptr, hid_t obj_id, void *key);
 H5_DLL herr_t H5F_mount_count_ids(H5F_t *f, unsigned *nopen_files, unsigned *nopen_objs);
 
 /* Superblock related routines */
-H5_DLL hsize_t H5F_init_superblock(const H5F_t *f, hid_t dxpl_id);
-H5_DLL herr_t H5F_write_superblock(H5F_t *f, hid_t dxpl_id, uint8_t *buf);
-H5_DLL herr_t H5F_read_superblock(H5F_t *f, hid_t dxpl_id, H5G_entry_t *root_ent, haddr_t addr, uint8_t *buf, size_t buf_size);
+H5_DLL herr_t H5F_init_superblock(const H5F_t *f, hid_t dxpl_id);
+H5_DLL herr_t H5F_write_superblock(H5F_t *f, hid_t dxpl_id);
+H5_DLL herr_t H5F_read_superblock(H5F_t *f, hid_t dxpl_id, H5G_entry_t *root_ent);
 
 /* Shared file list related routines */
 H5_DLL herr_t H5F_sfile_add(H5F_file_t *shared);

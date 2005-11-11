@@ -12,21 +12,82 @@
  * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/* common definitions used by all parallel hdf5 test programs. */
-
 #ifndef PHDF5TEST_H
 #define PHDF5TEST_H
 
-#include "testpar.h"
-
-#ifndef FALSE
-#define FALSE   0
-#endif
+#include "h5test.h"
 
 #ifndef TRUE
 #define TRUE    1
-#endif
+#endif  /* !TRUE */
 
+#ifndef FALSE
+#define FALSE   (!TRUE)
+#endif  /* !FALSE */
+
+/* Define some handy debugging shorthands, routines, ... */
+/* debugging tools */
+
+#define MESG(x)                                                         \
+	if (VERBOSE_MED) printf("%s\n", x);                                 \
+
+#define VRFY(val, mesg) do {                                            \
+    if (val) {                                                          \
+        if (*mesg != '\0') {                                            \
+            MESG(mesg);                                                 \
+        }                                                               \
+    } else {                                                            \
+        printf("Proc %d: ", mpi_rank);                                  \
+        printf("*** PHDF5 ERROR ***\n");                                \
+        printf("        Assertion (%s) failed at line %4d in %s\n",     \
+               mesg, (int)__LINE__, __FILE__);                          \
+        ++nerrors;                                                      \
+        fflush(stdout);                                                 \
+        if (!VERBOSE_MED) {                                                 \
+            printf("aborting MPI process\n");                           \
+            MPI_Finalize();                                             \
+            exit(nerrors);                                              \
+        }                                                               \
+    }                                                                   \
+} while(0)
+
+/*
+ * Checking for information purpose.
+ * If val is false, print mesg; else nothing.
+ * Either case, no error setting.
+ */
+#define INFO(val, mesg) do {                                            \
+    if (val) {                                                          \
+        if (*mesg != '\0') {                                            \
+            MESG(mesg);                                                 \
+        }                                                               \
+    } else {                                                            \
+        printf("Proc %d: ", mpi_rank);                                  \
+        printf("*** PHDF5 REMARK (not an error) ***\n");                \
+        printf("        Condition (%s) failed at line %4d in %s\n",     \
+               mesg, (int)__LINE__, __FILE__);                          \
+        fflush(stdout);                                                 \
+    }                                                                   \
+} while(0)
+
+#define MPI_BANNER(mesg) do {                                           \
+    if (VERBOSE_MED || MAINPROCESS){                                    \
+	printf("--------------------------------\n");                   \
+	printf("Proc %d: ", mpi_rank);                                  \
+	printf("*** %s\n", mesg);                                       \
+	printf("--------------------------------\n");                   \
+    }                                                                   \
+} while(0)
+
+#define MAINPROCESS     (!mpi_rank) /* define process 0 as main process */
+
+#define SYNC(comm) do {                                                 \
+    MPI_BANNER("doing a SYNC");                                         \
+    MPI_Barrier(comm);                                                  \
+    MPI_BANNER("SYNC DONE");                                            \
+} while(0)
+
+/* End of Define some handy debugging shorthands, routines, ... */
 
 /* Constants definitions */
 #define DIM0		600 	/* Default dataset sizes. */
@@ -42,6 +103,7 @@
 #define BYCOL           2       /* divide into blocks of columns */
 #define ZROW            3       /* same as BYCOL except process 0 gets 0 rows */
 #define ZCOL            4       /* same as BYCOL except process 0 gets 0 columns */
+#define MAX_ERR_REPORT  10      /* Maximum number of errors reported */
 
 /* File_Access_type bits */
 #define FACC_DEFAULT    0x0     /* default */
@@ -187,9 +249,7 @@ void dataset_readInd(void);
 void dataset_readAll(void);
 void extend_readInd(void);
 void extend_readAll(void);
-void test_chunk_alloc(void);
 void compact_dataset(void);
-void null_dataset(void);
 void big_dataset(void);
 void dataset_fillvalue(void);
 void coll_chunk1(void);

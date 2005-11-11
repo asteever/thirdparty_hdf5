@@ -49,9 +49,9 @@ typedef struct H5S_hyper_span_info_t H5S_hyper_span_info_t;
 /* Information about one dimension in a hyperslab selection */
 typedef struct H5S_hyper_dim_t {
     hsize_t start;
-    hsize_t stride;
-    hsize_t count;
-    hsize_t block;
+    hsize_t  stride;
+    hsize_t  count;
+    hsize_t  block;
 } H5S_hyper_dim_t;
 
 /* Point selection iteration container */
@@ -200,8 +200,7 @@ H5_DLL int H5S_get_simple_extent_dims(const H5S_t *ds, hsize_t dims[]/*out*/,
 					hsize_t max_dims[]/*out*/);
 H5_DLL herr_t H5S_modify(struct H5G_entry_t *ent, const H5S_t *space,
         hbool_t update_time, hid_t dxpl_id);
-H5_DLL herr_t H5S_append(H5F_t *f, hid_t dxpl_id, struct H5O_t *oh,
-                         const H5S_t *ds, unsigned * oh_flags_ptr);
+H5_DLL herr_t H5S_append(H5F_t *f, hid_t dxpl_id, struct H5O_t *oh, const H5S_t *ds);
 H5_DLL size_t H5S_raw_size(const H5F_t *f, const H5S_t *space);
 H5_DLL H5S_t *H5S_read(const struct H5G_entry_t *ent, hid_t dxpl_id);
 H5_DLL int H5S_extend(H5S_t *space, const hsize_t *size);

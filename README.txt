@@ -1,4 +1,4 @@
-HDF5 version 1.7.52 currently under development
+HDF5 version 1.6.5 released on Thu Nov 10 18:17:53 CST 2005
 Please refer to the release_docs/INSTALL file for installation instructions.
 ------------------------------------------------------------------------------
 
@@ -41,3 +41,4 @@ snapshot.
 The HDF5 website is located at http://hdf.ncsa.uiuc.edu/HDF5/
 
 Bugs should be reported to hdfhelp@ncsa.uiuc.edu.
+

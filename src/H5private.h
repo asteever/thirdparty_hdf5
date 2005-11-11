@@ -160,65 +160,12 @@
 
 /*
  * MPE Instrumentation support
- */
-#ifdef H5_HAVE_MPE
-/*------------------------------------------------------------------------
- * Purpose:    Begin to collect MPE log information for a function. It should
- *             be ahead of the actual function's process.
+ * Do not #if the following header file because it contains
+ * the needed null definitions for the H5-MPE macros when MPE
+ * support is not configured.
  *
- * Programmer: Long Wang
- *
- *------------------------------------------------------------------------
  */
-#include "mpe.h"
-/*
- * #define eventa(func_name)   h5_mpe_ ## func_name ## _a
- * #define eventb(func_name)   h5_mpe_ ## func_name ## _b
- */
-#define eventa(func_name)   h5_mpe_eventa
-#define eventb(func_name)   h5_mpe_eventb
-#define MPE_LOG_VARS(func_name)                                               \
-    static int eventa(func_name) = -1;                                        \
-    static int eventb(func_name) = -1;                                        \
-    const char* p_end_funcname = #func_name;                                  \
-    const char* p_event_start = "start" #func_name;
-
-/* Hardwire the color to "red", since that's what all the routines are using
- * now.  In the future, if we want to change that color for a given routine,
- * we should define a "FUNC_ENTER_API_COLOR" macro which takes an extra 'color'
- * parameter and then make additional FUNC_ENTER_<foo>_COLOR macros to get that
- * color information down to the BEGIN_MPE_LOG macro (which should have a new
- * BEGIN_MPE_LOG_COLOR variant). -QAK
- */
-#define BEGIN_MPE_LOG(func_name)                                              \
-  if (H5_MPEinit_g){							      \
-    if (eventa(func_name) == -1 && eventb(func_name) == -1) {		      \
-	const char* p_color = "red";					      \
-         eventa(func_name)=MPE_Log_get_event_number();                        \
-         eventb(func_name)=MPE_Log_get_event_number();                        \
-         MPE_Describe_state(eventa(func_name), eventb(func_name), (char *)p_end_funcname, (char *)p_color); \
-    }                                                                         \
-    MPE_Log_event(eventa(func_name), 0, (char *)p_event_start); 	              \
-  }
-
-
-/*------------------------------------------------------------------------
- * Purpose:   Finish the collection of MPE log information for a function.
- *            It should be after the actual function's process.
- *
- * Programmer: Long Wang
- */
-#define FINISH_MPE_LOG                                                       \
-    if (H5_MPEinit_g) {                                                      \
-        MPE_Log_event(eventb(func_name), 0, (char *)p_end_funcname);                 \
-    }
-
-#else /* H5_HAVE_MPE */
-#define MPE_LOG_VARS(func_name) /* void */
-#define BEGIN_MPE_LOG(func_name) /* void */
-#define FINISH_MPE_LOG   /* void */
-
-#endif /* H5_HAVE_MPE */
+#include "H5MPprivate.h"
 
 /*
  * dmalloc (debugging malloc) support
@@ -333,6 +280,24 @@
 #endif
 #ifndef TRUE
 #   define TRUE 1
+#endif
+
+/*
+ * Although `long long' is part of the revised ANSI-C some compilers don't
+ * support it yet.  We define `long_long' as the longest integral integer type
+ * supported by the compiler, usually 64 bits.	It must be legal to qualify
+ * `long_long' with `unsigned'.
+ */
+#if H5_SIZEOF_LONG_LONG>0
+#   define long_long	long long
+#elif H5_SIZEOF___INT64>0
+#   define long_long	__int64	/*Win32*/
+#   undef H5_SIZEOF_LONG_LONG
+#   define H5_SIZEOF_LONG_LONG H5_SIZEOF___INT64
+#else
+#   define long_long	long int
+#   undef H5_SIZEOF_LONG_LONG
+#   define H5_SIZEOF_LONG_LONG H5_SIZEOF_LONG
 #endif
 
 /*
@@ -462,8 +427,6 @@
 #   define LLONG_MAX	((long_long)(((unsigned long_long)1		      \
 				      <<(8*sizeof(long_long)-1))-1))
 #   define LLONG_MIN    ((long_long)(-LLONG_MAX)-1)
-#endif
-#ifndef ULLONG_MAX
 #   define ULLONG_MAX	((unsigned long_long)((long_long)(-1)))
 #endif
 #ifndef SIZET_MAX
@@ -764,10 +727,10 @@ typedef off_t                   h5_stat_size_t;
 #define HDqsort(M,N,Z,F)	qsort(M,N,Z,F)
 #define HDraise(N)		raise(N)
 #define HDrand()		rand()
-#ifdef  H5_HAVE_RANDOM
-#define HDrandom()              random()
-#else
+#ifdef  WIN32
 #define HDrandom()		rand()
+#else
+#define HDrandom()              random()
 #endif
 #define HDread(F,M,Z)		read(F,M,Z)
 #define HDreaddir(D)		readdir(D)
@@ -802,19 +765,15 @@ typedef off_t                   h5_stat_size_t;
 #define HDsinh(X)		sinh(X)
 #define HDsleep(N)		sleep(N)
 #ifdef H5_HAVE_SNPRINTF
-#ifdef WIN32
-#define HDsnprintf       _snprintf /*varargs*/
-#else
 #   define HDsnprintf		snprintf /*varargs*/
-#endif
 #endif
 /* sprintf() variable arguments */
 #define HDsqrt(X)		sqrt(X)
 #define HDsrand(N)		srand(N)
-#ifdef H5_HAVE_SRANDOM
-#define HDsrandom(N)		srandom(N)
-#else
+#ifdef WIN32
 #define HDsrandom(N)            srand(N)
+#else
+#define HDsrandom(N)		srandom(N)
 #endif
 /* sscanf() variable arguments */
 
@@ -883,16 +842,11 @@ H5_DLL int64_t HDstrtoll (const char *s, const char **rest, int base);
 #define HDva_arg(A,T)		va_arg(A,T)
 #define HDva_end(A)		va_end(A)
 #define HDva_start(A,P)		va_start(A,P)
-#define HDvasprintf(RET,FMT,A)  vasprintf(RET,FMT,A)
 #define HDvfprintf(F,FMT,A)	vfprintf(F,FMT,A)
 #define HDvprintf(FMT,A)	vprintf(FMT,A)
 #define HDvsprintf(S,FMT,A)	vsprintf(S,FMT,A)
 #ifdef H5_HAVE_VSNPRINTF
-#ifdef WIN32
-#   define HDvsnprintf(S,N,FMT,A) _vsnprintf(S,N,FMT,A)
-#else
 #   define HDvsnprintf(S,N,FMT,A) vsnprintf(S,N,FMT,A)
-#endif
 #endif
 #define HDwait(W)		wait(W)
 #define HDwaitpid(P,W,O)	waitpid(P,W,O)
@@ -925,15 +879,11 @@ extern char *strdup(const char *s);
 #endif /* WIN32 */
 
 
-/* Define our own HDsnprintf only for TFLOPS. */
-#ifdef __PUMAGON__
 #ifndef H5_HAVE_SNPRINTF
 H5_DLL int HDsnprintf(char *buf, size_t size, const char *fmt, ...);
 #endif
-
 #ifndef H5_HAVE_VSNPRINTF
 H5_DLL int HDvsnprintf(char *buf, size_t size, const char *fmt, va_list ap);
-#endif
 #endif
 
 /*
@@ -1221,7 +1171,7 @@ static herr_t		H5_INTERFACE_INIT_FUNC(void);
     FUNC_ENTER_API_THREADSAFE;                                                \
     FUNC_ENTER_API_COMMON(func_name,err);		                      \
     /* Clear thread error stack entering public functions */		      \
-    H5E_clear_stack(NULL);				                      \
+    H5E_clear();						              \
     {
 
 /*
@@ -1238,7 +1188,7 @@ static herr_t		H5_INTERFACE_INIT_FUNC(void);
 /*
  * Use this macro for API functions that shouldn't perform _any_ initialization
  *      of the library or an interface, just perform tracing, etc.  Examples
- *      are: H5close, H5check_version, etc.
+ *      are: H5close, H5check_version, H5Eget_major, H5Eget_minor.
  *
  */
 #define FUNC_ENTER_API_NOINIT(func_name) {{                                   \
@@ -1340,7 +1290,7 @@ static herr_t		H5_INTERFACE_INIT_FUNC(void);
  *	The pablo mask comes from the constant PABLO_MASK defined on a
  *	per-file basis.	 The pablo_func_id comes from an auto variable
  *	defined by FUNC_ENTER.
- *      PABLO was deleted on January 21, 2005 EIP
+ *      PABLO was removed on January 20, 2005 EIP
  *
  *-------------------------------------------------------------------------
  */
@@ -1388,7 +1338,6 @@ H5_DLL void H5_term_library(void);
 H5_DLL int H5A_term_interface(void);
 H5_DLL int H5AC_term_interface(void);
 H5_DLL int H5D_term_interface(void);
-H5_DLL int H5E_term_interface(void);
 H5_DLL int H5F_term_interface(void);
 H5_DLL int H5G_term_interface(void);
 H5_DLL int H5I_term_interface(void);
@@ -1399,3 +1348,4 @@ H5_DLL int H5T_term_interface(void);
 H5_DLL int H5Z_term_interface(void);
 
 #endif
+

@@ -64,12 +64,6 @@ typedef struct {
 typedef herr_t (*H5O_operator_int_t)(H5O_mesg_t *mesg/*in,out*/, unsigned idx,
     unsigned * oh_flags_ptr, void *operator_data/*in,out*/);
 
-/* Node in skip list to map addresses from one file to another during object header copy */
-typedef struct H5O_addr_map_t {
-    haddr_t     src_addr;               /* Address of object in source file */
-    haddr_t     dst_addr;               /* Address of object in destination file */
-} H5O_addr_map_t;
-
 /* PRIVATE PROTOTYPES */
 static herr_t H5O_init(H5F_t *f, hid_t dxpl_id, size_t size_hint,
                        H5G_entry_t *ent/*out*/, haddr_t header);
@@ -91,36 +85,23 @@ static int H5O_modify_real(H5G_entry_t *ent, const H5O_class_t *type,
     int overwrite, unsigned flags, unsigned update_flags, const void *mesg,
     hid_t dxpl_id);
 static int H5O_append_real(H5F_t *f, hid_t dxpl_id, H5O_t *oh,
-    const H5O_class_t *type, unsigned flags, const void *mesg,
-    unsigned * oh_flags_ptr);
+    const H5O_class_t *type, unsigned flags, const void *mesg);
 static herr_t H5O_remove_real(H5G_entry_t *ent, const H5O_class_t *type,
     int sequence, H5O_operator_t op, void *op_data, hbool_t adj_link, hid_t dxpl_id);
-static unsigned H5O_alloc(H5F_t *f, hid_t dxpl_id, H5O_t *oh,
-    const H5O_class_t *type, size_t size, hbool_t * oh_dirtied_ptr);
-static htri_t H5O_alloc_extend_chunk(H5F_t *f, H5O_t *oh,
-    unsigned chunkno, size_t size, unsigned * msg_idx);
-static unsigned H5O_alloc_new_chunk(H5F_t *f, hid_t dxpl_id, H5O_t *oh,
-    size_t size);
+static unsigned H5O_alloc(H5F_t *f, H5O_t *oh, const H5O_class_t *type,
+		      size_t size);
+static unsigned H5O_alloc_extend_chunk(H5F_t *f, H5O_t *oh, unsigned chunkno, size_t size);
+static unsigned H5O_alloc_new_chunk(H5F_t *f, H5O_t *oh, size_t size);
 static herr_t H5O_delete_oh(H5F_t *f, hid_t dxpl_id, H5O_t *oh);
 static herr_t H5O_delete_mesg(H5F_t *f, hid_t dxpl_id, H5O_mesg_t *mesg,
     hbool_t adj_link);
 static unsigned H5O_new_mesg(H5F_t *f, H5O_t *oh, unsigned *flags,
     const H5O_class_t *orig_type, const void *orig_mesg, H5O_shared_t *sh_mesg,
-    const H5O_class_t **new_type, const void **new_mesg, hid_t dxpl_id,
-    unsigned * oh_flags_ptr);
+    const H5O_class_t **new_type, const void **new_mesg, hid_t dxpl_id);
 static herr_t H5O_write_mesg(H5O_t *oh, unsigned idx, const H5O_class_t *type,
-    const void *mesg, unsigned flags, unsigned update_flags,
-    unsigned * oh_flags_ptr);
+    const void *mesg, unsigned flags, unsigned update_flags);
 static herr_t H5O_iterate_real(const H5G_entry_t *ent, const H5O_class_t *type,
     H5AC_protect_t prot, hbool_t internal, void *op, void *op_data, hid_t dxpl_id);
-static void * H5O_copy_mesg_file(const H5O_class_t *type, H5F_t *file_src,
-        void *mesg_src, H5F_t *file_dst, hid_t dxpl_id, H5SL_t *map_list, void *udata);
-static herr_t H5O_post_copy_mesg_file(const H5O_class_t *type, H5F_t *file_src,
-        const void *mesg_src, H5G_entry_t *loc_dst, 
-        hid_t dxpl_id, H5SL_t *map_list);
-static herr_t H5O_copy_header_real(const H5G_entry_t *ent_src,
-    H5G_entry_t *ent_dst /*out */, hid_t dxpl_id, H5SL_t *map_list);
-static herr_t H5O_copy_free_addrmap_cb(void *item, void *key, void *op_data);
 
 /* Metadata cache callbacks */
 static H5O_t *H5O_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void *_udata1,
@@ -167,8 +148,6 @@ static const H5O_class_t *const message_type_g[] = {
     H5O_MTIME_NEW,	/*0x0012 New Object modification date and time  */
 };
 
-/* Library private variables */
-
 /*
  * An array of functions indexed by symbol table entry cache type
  * (H5G_type_t) that are called to retrieve constant messages cached in the
@@ -195,9 +174,6 @@ H5FL_EXTERN(time_t);
 
 /* Declare extern the free list for H5O_cont_t's */
 H5FL_EXTERN(H5O_cont_t);
-
-/* Declare a free list to manage the H5O_addr_map_t struct */
-H5FL_DEFINE_STATIC(H5O_addr_map_t);
 
 
 /*-------------------------------------------------------------------------
@@ -303,11 +279,6 @@ done:
  *
  * Modifications:
  *
- *		JRM -- 6/6/05
- *		Removed code modifying the is_dirty field of the
- *		cache_info.  This field is now managed by the cache
- *		proper.
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -331,6 +302,7 @@ H5O_init(H5F_t *f, hid_t dxpl_id, size_t size_hint, H5G_entry_t *ent/*out*/, had
     if (NULL == (oh = H5FL_MALLOC(H5O_t)))
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed");
 
+    oh->cache_info.is_dirty = TRUE;
     oh->version = H5O_VERSION;
     oh->nlink = 0;
 
@@ -364,7 +336,7 @@ H5O_init(H5F_t *f, hid_t dxpl_id, size_t size_hint, H5G_entry_t *ent/*out*/, had
     oh->mesg[0].chunkno = 0;
 
     /* cache it */
-    if (H5AC_set(f, dxpl_id, H5AC_OHDR, ent->header, oh, H5AC__NO_FLAGS_SET) < 0)
+    if (H5AC_set(f, dxpl_id, H5AC_OHDR, ent->header, oh) < 0)
         HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, FAIL, "unable to cache object header");
 
     /* open it */
@@ -695,6 +667,7 @@ H5O_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5O_t *oh)
     int	id;
     unsigned	u;
     H5O_mesg_t *curr_msg;       /* Pointer to current message being operated on */
+    H5O_cont_t	*cont = NULL;
     herr_t	(*encode)(H5F_t*, uint8_t*, const void*) = NULL;
     unsigned combine=0;        /* Whether to combine the object header prefix & the first chunk */
     herr_t      ret_value=SUCCEED;       /* Return value */
@@ -760,12 +733,17 @@ H5O_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5O_t *oh)
                     /* allocate file space for chunks that have none yet */
                     if (H5O_CONT_ID == curr_msg->type->id &&
                             !H5F_addr_defined(((H5O_cont_t *)(curr_msg->native))->addr)) {
-			/* We now allocate disk space on insertion, instead
-                         * of on flush from the cache, so this case is now an
-                         * error.                         -- JRM
-			 */
-                        HGOTO_ERROR(H5E_OHDR, H5E_SYSTEM, FAIL,
-                                    "File space for message not allocated!?!");
+                        cont = (H5O_cont_t *) (curr_msg->native);
+                        assert(cont->chunkno < oh->nchunks);
+                        assert(!H5F_addr_defined(oh->chunk[cont->chunkno].addr));
+                        cont->size = oh->chunk[cont->chunkno].size;
+
+                        /* Free the space we'd reserved in the file to hold this chunk */
+                        H5MF_free_reserved(f, (hsize_t)cont->size);
+
+                        if (HADDR_UNDEF==(cont->addr=H5MF_alloc(f, H5FD_MEM_OHDR, dxpl_id, (hsize_t)cont->size)))
+                            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "unable to allocate space for object header data");
+                        oh->chunk[cont->chunkno].addr = cont->addr;
                     }
 
                     /*
@@ -1280,20 +1258,13 @@ done:
  *	if zero is passed for ADJUST.  If that's the case then we don't check
  *	for write access on the file.
  *
- *	John Mainzer, 6/6/05
- *	Modified function to use the new dirtied parameter to
- *	H5AC_unprotect() instead of modfying the is_dirty field.
- *
  *-------------------------------------------------------------------------
  */
 int
 H5O_link(const H5G_entry_t *ent, int adjust, hid_t dxpl_id)
 {
     H5O_t	*oh = NULL;
-    unsigned    oh_flags=H5AC__NO_FLAGS_SET; /* used to indicate whether the
-                                            * object was deleted as a result
-                                            * of this action.
-                                            */
+    hbool_t deleted=FALSE;      /* Whether the object was deleted as a result of this action */
     int	ret_value = FAIL;
 
     FUNC_ENTER_NOAPI(H5O_link, FAIL);
@@ -1315,7 +1286,7 @@ H5O_link(const H5G_entry_t *ent, int adjust, hid_t dxpl_id)
 	if (oh->nlink + adjust < 0)
 	    HGOTO_ERROR(H5E_OHDR, H5E_LINKCOUNT, FAIL, "link count would be negative");
 	oh->nlink += adjust;
-        oh_flags |= H5AC__DIRTIED_FLAG;
+	oh->cache_info.is_dirty = TRUE;
 
         /* Check if the object should be deleted */
         if(oh->nlink==0) {
@@ -1331,7 +1302,7 @@ H5O_link(const H5G_entry_t *ent, int adjust, hid_t dxpl_id)
                     HGOTO_ERROR(H5E_OHDR, H5E_CANTDELETE, FAIL, "can't delete object from file");
 
                 /* Mark the object header as deleted */
-                oh_flags = H5C__DELETED_FLAG;
+                deleted=TRUE;
             } /* end else */
         } /* end if */
     } else if (adjust>0) {
@@ -1346,14 +1317,14 @@ H5O_link(const H5G_entry_t *ent, int adjust, hid_t dxpl_id)
         } /* end if */
 
 	oh->nlink += adjust;
-        oh_flags |= H5AC__DIRTIED_FLAG;
+	oh->cache_info.is_dirty = TRUE;
     }
 
     /* Set return value */
     ret_value = oh->nlink;
 
 done:
-    if (oh && H5AC_unprotect(ent->file, dxpl_id, H5AC_OHDR, ent->header, oh, oh_flags) < 0)
+    if (oh && H5AC_unprotect(ent->file, dxpl_id, H5AC_OHDR, ent->header, oh, deleted) < 0)
 	HDONE_ERROR(H5E_OHDR, H5E_PROTECT, FAIL, "unable to release object header");
 
     FUNC_LEAVE_NOAPI(ret_value);
@@ -1452,7 +1423,7 @@ H5O_count_real (H5G_entry_t *ent, const H5O_class_t *type, hid_t dxpl_id)
     ret_value=acc;
 
 done:
-    if (oh && H5AC_unprotect(ent->file, dxpl_id, H5AC_OHDR, ent->header, oh, H5AC__NO_FLAGS_SET) != SUCCEED)
+    if (oh && H5AC_unprotect(ent->file, dxpl_id, H5AC_OHDR, ent->header, oh, FALSE) != SUCCEED)
 	HDONE_ERROR(H5E_OHDR, H5E_PROTECT, FAIL, "unable to release object header");
 
     FUNC_LEAVE_NOAPI(ret_value);
@@ -1525,10 +1496,6 @@ done:
  *
  * Modifications:
  *
- *	John Mainzer, 6/6/05
- *	Modified function to use the new dirtied parameter to
- *	H5AC_unprotect() instead of modfying the is_dirty field.
- *
  *-------------------------------------------------------------------------
  */
 static htri_t
@@ -1561,7 +1528,7 @@ H5O_exists_real(H5G_entry_t *ent, const H5O_class_t *type, int sequence, hid_t d
     ret_value=(sequence<0);
 
 done:
-    if (oh && H5AC_unprotect(ent->file, dxpl_id, H5AC_OHDR, ent->header, oh, H5AC__NO_FLAGS_SET) != SUCCEED)
+    if (oh && H5AC_unprotect(ent->file, dxpl_id, H5AC_OHDR, ent->header, oh, FALSE) != SUCCEED)
 	HDONE_ERROR(H5E_OHDR, H5E_PROTECT, FAIL, "unable to release object header");
 
     FUNC_LEAVE_NOAPI(ret_value);
@@ -1645,18 +1612,12 @@ done:
  *		Aug  6 1997
  *
  * Modifications:
- *
  *      Bill Wendling, 2003-09-30
  *      Protect the object header and pass it into the H5O_find_in_ohdr
  *      function. This is done because the H5O_find_in_ohdr used to
  *      protect the ohdr, find the message, and then unprotect it. This
  *      saves time and also helps the FPHDF5 stuff, where unprotecting
  *      actually destroys the object in the cache.
- *
- *	John Mainzer, 6/6/05
- *	Modified function to use the new dirtied parameter to
- *	H5AC_unprotect() instead of modfying the is_dirty field.
- *
  *-------------------------------------------------------------------------
  */
 void *
@@ -1684,7 +1645,7 @@ H5O_read_real(const H5G_entry_t *ent, const H5O_class_t *type, int sequence, voi
 	ret_value = (H5O_fast_g[cache_type]) (cache, type, mesg);
 	if (ret_value)
 	    HGOTO_DONE(ret_value);
-	H5E_clear_stack(NULL); /*don't care, try reading from header */
+	H5E_clear(); /*don't care, try reading from header */
     }
 
     /* copy the message to the user-supplied buffer */
@@ -1717,7 +1678,7 @@ H5O_read_real(const H5G_entry_t *ent, const H5O_class_t *type, int sequence, voi
     }
 
 done:
-    if (oh && H5AC_unprotect(ent->file, dxpl_id, H5AC_OHDR, ent->header, oh, H5AC__NO_FLAGS_SET) < 0)
+    if (oh && H5AC_unprotect(ent->file, dxpl_id, H5AC_OHDR, ent->header, oh, FALSE) < 0)
 	HDONE_ERROR(H5E_OHDR, H5E_PROTECT, NULL, "unable to release object header");
 
     FUNC_LEAVE_NOAPI(ret_value);
@@ -1914,11 +1875,6 @@ done:
  *	constant it can never become non-constant.  Constant messages cannot
  *	be modified.
  *
- *	John Mainzer, 6/6/05
- *	Updated function to use the new dirtied parameter of
- *	H5AC_unprotect() instead of manipulating the is_dirty
- *	field of the cache info directly.
- *
  *-------------------------------------------------------------------------
  */
 static int
@@ -1926,7 +1882,6 @@ H5O_modify_real(H5G_entry_t *ent, const H5O_class_t *type, int overwrite,
    unsigned flags, unsigned update_flags, const void *mesg, hid_t dxpl_id)
 {
     H5O_t		*oh=NULL;
-    unsigned		oh_flags = H5AC__NO_FLAGS_SET;
     int		        sequence;
     unsigned		idx;            /* Index of message to modify */
     H5O_mesg_t         *idx_msg;        /* Pointer to message to modify */
@@ -1969,7 +1924,7 @@ H5O_modify_real(H5G_entry_t *ent, const H5O_class_t *type, int overwrite,
     /* Check for creating new message */
     if (overwrite < 0) {
         /* Create a new message */
-        if((idx=H5O_new_mesg(ent->file,oh,&flags,type,mesg,&sh_mesg,&type,&mesg,dxpl_id,&oh_flags))==UFAIL)
+        if((idx=H5O_new_mesg(ent->file,oh,&flags,type,mesg,&sh_mesg,&type,&mesg,dxpl_id))==UFAIL)
 	    HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, FAIL, "unable to create new message");
 
         /* Set the correct sequence number for the message created */
@@ -1982,18 +1937,18 @@ H5O_modify_real(H5G_entry_t *ent, const H5O_class_t *type, int overwrite,
     }
 
     /* Write the information to the message */
-    if(H5O_write_mesg(oh,idx,type,mesg,flags,update_flags,&oh_flags)<0)
+    if(H5O_write_mesg(oh,idx,type,mesg,flags,update_flags)<0)
         HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, FAIL, "unable to write message");
 
     /* Update the modification time message if any */
     if(update_flags&H5O_UPDATE_TIME)
-        H5O_touch_oh(ent->file, dxpl_id, oh, FALSE, &oh_flags);
+        H5O_touch_oh(ent->file, oh, FALSE);
 
     /* Set return value */
     ret_value = sequence;
 
 done:
-    if (oh && H5AC_unprotect(ent->file, dxpl_id, H5AC_OHDR, ent->header, oh, oh_flags) < 0)
+    if (oh && H5AC_unprotect(ent->file, dxpl_id, H5AC_OHDR, ent->header, oh, FALSE) < 0)
 	HDONE_ERROR(H5E_OHDR, H5E_PROTECT, FAIL, "unable to release object header");
 
     FUNC_LEAVE_NOAPI(ret_value);
@@ -2060,15 +2015,10 @@ done:
  *
  * Modifications:
  *
- *		John Mainzer, 6/6/05
- *		Updated function to use the new dirtied parameter of
- *		H5AC_unprotect() instead of manipulating the is_dirty
- *		field of the cache info directly.
- *
  *-------------------------------------------------------------------------
  */
 herr_t
-H5O_unprotect(H5G_entry_t *ent, H5O_t *oh, hid_t dxpl_id, unsigned oh_flags)
+H5O_unprotect(H5G_entry_t *ent, H5O_t *oh, hid_t dxpl_id)
 {
     herr_t ret_value=SUCCEED;      /* Return value */
 
@@ -2080,7 +2030,7 @@ H5O_unprotect(H5G_entry_t *ent, H5O_t *oh, hid_t dxpl_id, unsigned oh_flags)
     assert(H5F_addr_defined(ent->header));
     assert(oh);
 
-    if (H5AC_unprotect(ent->file, dxpl_id, H5AC_OHDR, ent->header, oh, oh_flags) < 0)
+    if (H5AC_unprotect(ent->file, dxpl_id, H5AC_OHDR, ent->header, oh, FALSE) < 0)
 	HGOTO_ERROR(H5E_OHDR, H5E_PROTECT, FAIL, "unable to release object header");
 
 done:
@@ -2109,16 +2059,11 @@ done:
  *              Quincey Koziol
  *		Feb 14 2003
  *
- *		John Mainzer, 6/6/05
- *		Updated function to use the new dirtied parameter of
- *		H5AC_unprotect() instead of manipulating the is_dirty
- *		field of the cache info directly.
- *
  *-------------------------------------------------------------------------
  */
 int
 H5O_append(H5F_t *f, hid_t dxpl_id, H5O_t *oh, unsigned type_id, unsigned flags,
-    const void *mesg, unsigned * oh_flags_ptr)
+    const void *mesg)
 {
     const H5O_class_t *type;            /* Actual H5O class type for the ID */
     int	ret_value;                      /* Return value */
@@ -2133,10 +2078,9 @@ H5O_append(H5F_t *f, hid_t dxpl_id, H5O_t *oh, unsigned type_id, unsigned flags,
     assert(type);
     assert(0==(flags & ~H5O_FLAG_BITS));
     assert(mesg);
-    assert(oh_flags_ptr);
 
     /* Call the "real" append routine */
-    if((ret_value=H5O_append_real( f, dxpl_id, oh, type, flags, mesg, oh_flags_ptr))<0)
+    if((ret_value=H5O_append_real( f, dxpl_id, oh, type, flags, mesg))<0)
 	HGOTO_ERROR(H5E_OHDR, H5E_WRITEERROR, FAIL, "unable to append to object header");
 
 done:
@@ -2161,16 +2105,11 @@ done:
  *
  * Modifications:
  *
- *		John Mainzer, 6/6/05
- *		Updated function to use the new dirtied parameter of
- *		H5AC_unprotect() instead of manipulating the is_dirty
- *		of the cache info.
- *
  *-------------------------------------------------------------------------
  */
 static int
 H5O_append_real(H5F_t *f, hid_t dxpl_id, H5O_t *oh, const H5O_class_t *type,
-    unsigned flags, const void *mesg, unsigned * oh_flags_ptr)
+    unsigned flags, const void *mesg)
 {
     unsigned		idx;            /* Index of message to modify */
     H5O_shared_t	sh_mesg;
@@ -2184,14 +2123,13 @@ H5O_append_real(H5F_t *f, hid_t dxpl_id, H5O_t *oh, const H5O_class_t *type,
     assert(type);
     assert(0==(flags & ~H5O_FLAG_BITS));
     assert(mesg);
-    assert(oh_flags_ptr);
 
     /* Create a new message */
-    if((idx=H5O_new_mesg(f,oh,&flags,type,mesg,&sh_mesg,&type,&mesg,dxpl_id,oh_flags_ptr))==UFAIL)
+    if((idx=H5O_new_mesg(f,oh,&flags,type,mesg,&sh_mesg,&type,&mesg,dxpl_id))==UFAIL)
         HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, FAIL, "unable to create new message");
 
     /* Write the information to the message */
-    if(H5O_write_mesg(oh,idx,type,mesg,flags,0,oh_flags_ptr)<0)
+    if(H5O_write_mesg(oh,idx,type,mesg,flags,0)<0)
         HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, FAIL, "unable to write message");
 
     /* Set return value */
@@ -2215,18 +2153,12 @@ done:
  *
  * Modifications:
  *
- *	John Mainzer, 6/7/05
- *	Modified function to use the new dirtied parameter to
- *	H5AC_unprotect() instead of modfying the is_dirty field.
- *      In this case, that requires the addition of the oh_dirtied_ptr
- *	parameter to track whether *oh is dirty.
- *
  *-------------------------------------------------------------------------
  */
 static unsigned
 H5O_new_mesg(H5F_t *f, H5O_t *oh, unsigned *flags, const H5O_class_t *orig_type,
     const void *orig_mesg, H5O_shared_t *sh_mesg, const H5O_class_t **new_type,
-    const void **new_mesg, hid_t dxpl_id, unsigned * oh_flags_ptr)
+    const void **new_mesg, hid_t dxpl_id)
 {
     size_t	size;                   /* Size of space allocated for object header */
     unsigned    ret_value=UFAIL;        /* Return value */
@@ -2242,7 +2174,6 @@ H5O_new_mesg(H5F_t *f, H5O_t *oh, unsigned *flags, const H5O_class_t *orig_type,
     assert(sh_mesg);
     assert(new_mesg);
     assert(new_type);
-    assert(oh_flags_ptr);
 
     /* Check for shared message */
     if (*flags & H5O_FLAG_SHARED) {
@@ -2255,7 +2186,7 @@ H5O_new_mesg(H5F_t *f, H5O_t *oh, unsigned *flags, const H5O_class_t *orig_type,
              * If the message isn't shared then turn off the shared bit
              * and treat it as an unshared message.
              */
-            H5E_clear_stack (NULL);
+            H5E_clear ();
             *flags &= ~H5O_FLAG_SHARED;
         } else {
             /* Change type & message to use shared information */
@@ -2273,7 +2204,7 @@ H5O_new_mesg(H5F_t *f, H5O_t *oh, unsigned *flags, const H5O_class_t *orig_type,
         HGOTO_ERROR (H5E_OHDR, H5E_CANTINIT, UFAIL, "object header message is too large (16k max)");
 
     /* Allocate space in the object headed for the message */
-    if ((ret_value = H5O_alloc(f, dxpl_id, oh, orig_type, size, oh_flags_ptr)) == UFAIL)
+    if ((ret_value = H5O_alloc(f, oh, orig_type, size)) == UFAIL)
         HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, UFAIL, "unable to allocate space for message");
 
     /* Increment any links in message */
@@ -2297,18 +2228,11 @@ done:
  *
  * Modifications:
  *
- *	John Mainzer, 6/6/05
- *	Modified function to use the new dirtied parameter to
- *	H5AC_unprotect() instead of modfying the is_dirty field.
- *      In this case, that requires the addition of the oh_dirtied_ptr
- *	parameter to track whether *oh is dirty.
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
 H5O_write_mesg(H5O_t *oh, unsigned idx, const H5O_class_t *type,
-    const void *mesg, unsigned flags, unsigned update_flags,
-    unsigned * oh_flags_ptr)
+    const void *mesg, unsigned flags, unsigned update_flags)
 {
     H5O_mesg_t         *idx_msg;        /* Pointer to message to modify */
     herr_t      ret_value=SUCCEED;      /* Return value */
@@ -2319,7 +2243,6 @@ H5O_write_mesg(H5O_t *oh, unsigned idx, const H5O_class_t *type,
     assert(oh);
     assert(type);
     assert(mesg);
-    assert(oh_flags_ptr);
 
     /* Set pointer to the correct message */
     idx_msg=&oh->mesg[idx];
@@ -2334,7 +2257,7 @@ H5O_write_mesg(H5O_t *oh, unsigned idx, const H5O_class_t *type,
 
     idx_msg->flags = flags;
     idx_msg->dirty = TRUE;
-    *oh_flags_ptr |= H5AC__DIRTIED_FLAG;
+    oh->cache_info.is_dirty = TRUE;
 
 done:
     FUNC_LEAVE_NOAPI(ret_value);
@@ -2355,24 +2278,10 @@ done:
  *
  * Modifications:
  *
- *	John Mainzer, 6/6/05
- *	Modified function to use the new dirtied parameter to
- *	H5AC_unprotect() instead of modfying the is_dirty field.
- *      In this case, that requires the addition of the oh_dirtied_ptr
- *	parameter to track whether *oh is dirty.
- *
- *	John Mainzer, 8/20/05
- *	Added dxpl_id parameter needed by the revised version of 
- *	H5O_alloc().
- *
  *-------------------------------------------------------------------------
  */
 herr_t
-H5O_touch_oh(H5F_t *f, 
-             hid_t dxpl_id, 
-	     H5O_t *oh, 
-	     hbool_t force, 
-             unsigned * oh_flags_ptr)
+H5O_touch_oh(H5F_t *f, H5O_t *oh, hbool_t force)
 {
     unsigned	idx;
 #ifdef H5_HAVE_GETTIMEOFDAY
@@ -2385,7 +2294,6 @@ H5O_touch_oh(H5F_t *f,
     FUNC_ENTER_NOAPI_NOINIT(H5O_touch_oh);
 
     assert(oh);
-    assert(oh_flags_ptr);
 
     /* Look for existing message */
     for (idx=0; idx<oh->nmesgs; idx++) {
@@ -2405,9 +2313,7 @@ H5O_touch_oh(H5F_t *f,
 	if (!force)
             HGOTO_DONE(SUCCEED); /*nothing to do*/
 	size = (H5O_MTIME_NEW->raw_size)(f, &now);
-
-	if ((idx=H5O_alloc(f, dxpl_id, oh, H5O_MTIME_NEW,
-                           size, oh_flags_ptr))==UFAIL)
+	if ((idx=H5O_alloc(f, oh, H5O_MTIME_NEW, size))==UFAIL)
 	    HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, FAIL, "unable to allocate space for modification time message");
     }
 
@@ -2418,7 +2324,7 @@ H5O_touch_oh(H5F_t *f,
     }
     *((time_t*)(oh->mesg[idx].native)) = now;
     oh->mesg[idx].dirty = TRUE;
-    *oh_flags_ptr |= H5AC__DIRTIED_FLAG;
+    oh->cache_info.is_dirty = TRUE;
 
 done:
     FUNC_LEAVE_NOAPI(ret_value);
@@ -2440,17 +2346,12 @@ done:
  *
  * Modifications:
  *
- *	John Mainzer, 6/16/05
- *	Modified function to use the new dirtied parameter to
- *	H5AC_unprotect() instead of modfying the is_dirty field.
- *
  *-------------------------------------------------------------------------
  */
 herr_t
 H5O_touch(H5G_entry_t *ent, hbool_t force, hid_t dxpl_id)
 {
     H5O_t	*oh = NULL;
-    unsigned 	oh_flags = H5AC__NO_FLAGS_SET;
     herr_t      ret_value=SUCCEED;       /* Return value */
 
     FUNC_ENTER_NOAPI(H5O_touch, FAIL);
@@ -2467,11 +2368,11 @@ H5O_touch(H5G_entry_t *ent, hbool_t force, hid_t dxpl_id)
 	HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, FAIL, "unable to load object header");
 
     /* Create/Update the modification time message */
-    if (H5O_touch_oh(ent->file, dxpl_id, oh, force, &oh_flags)<0)
+    if (H5O_touch_oh(ent->file, oh, force)<0)
 	HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, FAIL, "unable to update object modificaton time");
 
 done:
-    if (oh && H5AC_unprotect(ent->file, dxpl_id, H5AC_OHDR, ent->header, oh, oh_flags)<0)
+    if (oh && H5AC_unprotect(ent->file, dxpl_id, H5AC_OHDR, ent->header, oh, FALSE)<0)
 	HDONE_ERROR(H5E_OHDR, H5E_PROTECT, FAIL, "unable to release object header");
 
     FUNC_LEAVE_NOAPI(ret_value);
@@ -2492,19 +2393,10 @@ done:
  *
  * Modifications:
  *
- *	John Mainzer, 6/16/05
- *	Modified function to use the new dirtied parameter to
- *	H5AC_unprotect() instead of modfying the is_dirty field.
- *      In this case, that requires the addition of the oh_dirtied_ptr
- *	parameter to track whether *oh is dirty.
- *
- *	John Mainzer, 8/20/05
- *	Added dxpl_id parameter needed by call to H5O_alloc().
- *
  *-------------------------------------------------------------------------
  */
 herr_t
-H5O_bogus_oh(H5F_t *f, hid_t dxpl_id, H5O_t *oh, hbool_t * oh_flags_ptr)
+H5O_bogus_oh(H5F_t *f, H5O_t *oh)
 {
     int	idx;
     size_t	size;
@@ -2514,7 +2406,6 @@ H5O_bogus_oh(H5F_t *f, hid_t dxpl_id, H5O_t *oh, hbool_t * oh_flags_ptr)
 
     assert(f);
     assert(oh);
-    assert(oh_flags_ptr);
 
     /* Look for existing message */
     for (idx=0; idx<oh->nmesgs; idx++)
@@ -2524,7 +2415,7 @@ H5O_bogus_oh(H5F_t *f, hid_t dxpl_id, H5O_t *oh, hbool_t * oh_flags_ptr)
     /* Create a new message */
     if (idx==oh->nmesgs) {
 	size = (H5O_BOGUS->raw_size)(f, NULL);
-	if ((idx=H5O_alloc(f, dxpl_id, oh, H5O_BOGUS, size, oh_flags_ptr))<0)
+	if ((idx=H5O_alloc(f, oh, H5O_BOGUS, size))<0)
 	    HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, FAIL, "unable to allocate space for 'bogus' message");
 
         /* Allocate the native message in memory */
@@ -2535,7 +2426,6 @@ H5O_bogus_oh(H5F_t *f, hid_t dxpl_id, H5O_t *oh, hbool_t * oh_flags_ptr)
         ((H5O_bogus_t *)(oh->mesg[idx].native))->u = H5O_BOGUS_VALUE;
 
         /* Mark the message and object header as dirty */
-	*oh_flags_ptr = TRUE;
         oh->mesg[idx].dirty = TRUE;
         oh->dirty = TRUE;
     } /* end if */
@@ -2558,17 +2448,12 @@ done:
  *
  * Modifications:
  *
- *	John Mainzer, 6/16/05
- *	Modified function to use the new dirtied parameter to
- *	H5AC_unprotect() instead of modfying the is_dirty field.
- *
  *-------------------------------------------------------------------------
  */
 herr_t
 H5O_bogus(H5G_entry_t *ent, hid_t dxpl_id)
 {
     H5O_t	*oh = NULL;
-    unsigned	oh_flags = H5AC__NO_FLAGS_SET;
     herr_t	ret_value = SUCCEED;
 
     FUNC_ENTER(H5O_bogus, FAIL);
@@ -2587,11 +2472,11 @@ H5O_bogus(H5G_entry_t *ent, hid_t dxpl_id)
 	HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, FAIL, "unable to load object header");
 
     /* Create the "bogus" message */
-    if (H5O_bogus_oh(ent->file, dxpl_id, oh, &oh_flags)<0)
+    if (H5O_bogus_oh(ent->file, oh)<0)
 	HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, FAIL, "unable to update object 'bogus' message");
 
 done:
-    if (oh && H5AC_unprotect(ent->file, dxpl_id, H5AC_OHDR, ent->header, oh, oh_flags)<0)
+    if (oh && H5AC_unprotect(ent->file, dxpl_id, H5AC_OHDR, ent->header, oh, FALSE)<0)
 	HDONE_ERROR(H5E_OHDR, H5E_PROTECT, FAIL, "unable to release object header");
 
     FUNC_LEAVE(ret_value);
@@ -2764,7 +2649,7 @@ H5O_remove_cb(H5O_mesg_t *mesg/*in,out*/, unsigned idx, unsigned * oh_flags_ptr,
             mesg->dirty = TRUE;
 
             /* Indicate that the object header was modified */
-            *oh_flags_ptr |= H5AC__DIRTIED_FLAG;
+            *oh_flags_ptr = TRUE;
         } /* end else */
 
         /* Break out now, if we've found the correct message */
@@ -2799,10 +2684,6 @@ done:
  *
  *	Robb Matzke, 7 Jan 1998
  *	Does not remove constant messages.
- *
- *      John Mainzer, 6/6/05
- *      Modified function to use the new dirtied parameter to
- *      H5AC_unprotect() instead of modfying the is_dirty field.
  *
  *-------------------------------------------------------------------------
  */
@@ -2845,227 +2726,198 @@ done:
 } /* end H5O_remove_real() */
 
 
-/*------------------------------------------------------------------------- 
+/*-------------------------------------------------------------------------
+ * Function:	H5O_alloc_extend_chunk
  *
- * Function:    H5O_alloc_extend_chunk
+ * Purpose:	Extends a chunk which hasn't been allocated on disk yet
+ *		to make the chunk large enough to contain a message whose
+ *		data size is exactly SIZE bytes (SIZE need not be aligned).
  *
- * Purpose:     Attempt to extend a chunk that is allocated on disk.
+ *		If the last message of the chunk is the null message, then
+ *		that message will be extended with the chunk.  Otherwise a
+ *		new null message is created.
  *
- *              If the extension is successful, and if the last message 
- *		of the chunk is the null message, then that message will 
- *		be extended with the chunk.  Otherwise a new null message 
- *		is created.
+ *		F is the file in which the chunk will be written.  It is
+ *		included to ensure that there is enough space to extend
+ *		this chunk.
  *
- *              f is the file in which the chunk will be written.  It is
- *              included to ensure that there is enough space to extend
- *              this chunk.
+ * Return:	Success:	Message index for null message which
+ *				is large enough to hold SIZE bytes.
  *
- * Return:      TRUE:		The chunk has been extended, and *msg_idx
- *				contains the message index for null message 
- *				which is large enough to hold size bytes.
+ *		Failure:	Negative
  *
- *		FALSE:		The chunk cannot be extended, and *msg_idx
- *				is undefined.
+ * Programmer:	Robb Matzke
+ *		matzke@llnl.gov
+ *		Aug  7 1997
  *
- *		FAIL:		Some internal error has been detected.
- *
- * Programmer:  John Mainzer -- 8/16/05
- *
+ * Modifications:
+ *		Robb Matzke, 1999-08-26
+ *		If new memory is allocated as a multiple of some alignment
+ *		then we're careful to initialize the part of the new memory
+ *		from the end of the expected message to the end of the new
+ *		memory.
  *-------------------------------------------------------------------------
  */
-static htri_t
-H5O_alloc_extend_chunk(H5F_t *f, 
-                       H5O_t *oh, 
-                       unsigned chunkno, 
-                       size_t size, 
-                       unsigned * msg_idx)
+static unsigned
+H5O_alloc_extend_chunk(H5F_t *f, H5O_t *oh, unsigned chunkno, size_t size)
 {
-    size_t      delta;          /* Change in chunk's size */
-    size_t      aligned_size = H5O_ALIGN(size);
-    uint8_t     *old_image;     /* Old address of chunk's image in memory */
-    size_t      old_size;       /* Old size of chunk */
-    htri_t      tri_result;     /* Result from checking if chunk can be extended */
-    int         extend_msg = -1;/* Index of null message to extend */
-    unsigned    u;              /* Local index variable */
-    htri_t      ret_value = TRUE; 	/* return value */
+    unsigned	u;
+    unsigned	idx;
+    size_t	delta, old_size;
+    size_t	aligned_size = H5O_ALIGN(size);
+    uint8_t	*old_addr;
+    unsigned	ret_value;
 
-    FUNC_ENTER_NOAPI_NOINIT(H5O_alloc_extend_chunk)
+    FUNC_ENTER_NOAPI_NOINIT(H5O_alloc_extend_chunk);
 
     /* check args */
-    HDassert(f != NULL);
-    HDassert(oh != NULL);
-    HDassert(chunkno < oh->nchunks);
-    HDassert(size > 0);
-    HDassert(msg_idx != NULL);
+    assert(oh);
+    assert(chunkno < oh->nchunks);
+    assert(size > 0);
 
-    if(!H5F_addr_defined(oh->chunk[chunkno].addr))
-        HGOTO_ERROR(H5E_OHDR, H5E_NOSPACE, FAIL, "chunk isn't on disk")
+    if (H5F_addr_defined(oh->chunk[chunkno].addr))
+	HGOTO_ERROR(H5E_OHDR, H5E_NOSPACE, UFAIL, "chunk is on disk");
 
-    /* Test to see if the specified chunk ends with a null messages.
-     * If successful, set the index of the the null message in extend_msg.
-     */
-    for(u = 0; u < oh->nmesgs; u++) {
-        /* Check for null message at end of proper chunk */
-        if(oh->mesg[u].chunkno == chunkno && H5O_NULL_ID == oh->mesg[u].type->id &&
-                (oh->mesg[u].raw + oh->mesg[u].raw_size == oh->chunk[chunkno].image + oh->chunk[chunkno].size)) {
+    /* try to extend a null message */
+    for (idx=0; idx<oh->nmesgs; idx++) {
+	if (oh->mesg[idx].chunkno==chunkno) {
+            if (H5O_NULL_ID == oh->mesg[idx].type->id &&
+                    (oh->mesg[idx].raw + oh->mesg[idx].raw_size ==
+                     oh->chunk[chunkno].image + oh->chunk[chunkno].size)) {
 
-            extend_msg = u;
-            break;
+                delta = MAX (H5O_MIN_SIZE, aligned_size - oh->mesg[idx].raw_size);
+                assert (delta=H5O_ALIGN (delta));
+
+                /* Reserve space in the file to hold the increased chunk size */
+                if( H5MF_reserve(f, (hsize_t)delta) < 0 )
+                    HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, UFAIL, "unable to reserve space in file");
+
+                oh->mesg[idx].dirty = TRUE;
+                oh->mesg[idx].raw_size += delta;
+
+                old_addr = oh->chunk[chunkno].image;
+
+                /* Be careful not to indroduce garbage */
+                oh->chunk[chunkno].image = H5FL_BLK_REALLOC(chunk_image,old_addr,
+                                                        (oh->chunk[chunkno].size + delta));
+                if (NULL==oh->chunk[chunkno].image)
+                    HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, UFAIL, "memory allocation failed");
+                HDmemset(oh->chunk[chunkno].image + oh->chunk[chunkno].size,
+                         0, delta);
+                oh->chunk[chunkno].size += delta;
+
+                /* adjust raw addresses for messages of this chunk */
+                if (old_addr != oh->chunk[chunkno].image) {
+                    for (u = 0; u < oh->nmesgs; u++) {
+                        if (oh->mesg[u].chunkno == chunkno)
+                            oh->mesg[u].raw = oh->chunk[chunkno].image +
+                                              (oh->mesg[u].raw - old_addr);
+                    }
+                }
+                HGOTO_DONE(idx);
+            }
         } /* end if */
-    } /* end for */
-
-    /* If we can extend an existing null message, adjust the delta appropriately */
-    if(extend_msg >= 0)
-        delta = MAX(H5O_MIN_SIZE, aligned_size - oh->mesg[extend_msg].raw_size);
-    else
-        delta = MAX(H5O_MIN_SIZE, aligned_size + H5O_SIZEOF_MSGHDR(f));
-    delta = H5O_ALIGN(delta);
-
-    /* determine whether the chunk can be extended */
-    tri_result = H5MF_can_extend(f, H5FD_MEM_OHDR, oh->chunk[chunkno].addr, 
-                                 (hsize_t)(oh->chunk[chunkno].size), (hsize_t)delta);
-    if(tri_result == FALSE) { /* can't extend -- we are done */
-        HGOTO_DONE(FALSE);
-    } else if(tri_result != TRUE) { /* system error */
-        HGOTO_ERROR(H5E_RESOURCE, H5E_SYSTEM, FAIL, "can't tell if we can extend chunk")
     }
 
-    /* If we get this far, we should be able to extend the chunk */
-    if(H5MF_extend(f, H5FD_MEM_OHDR, oh->chunk[chunkno].addr, (hsize_t)(oh->chunk[chunkno].size), (hsize_t)delta) < 0 )
-        HGOTO_ERROR(H5E_RESOURCE, H5E_SYSTEM, FAIL, "can't extend chunk")
+    /* Reserve space in the file */
+    delta = MAX(H5O_MIN_SIZE, aligned_size+H5O_SIZEOF_MSGHDR(f));
+    delta = H5O_ALIGN(delta);
 
-    /* If we can extend an existing null message, take take of that */
-    if(extend_msg >= 0) {
-        /* Adjust message size of existing null message */
-        oh->mesg[extend_msg].dirty = TRUE;
-        oh->mesg[extend_msg].raw_size += delta;
-    } /* end if */
-    /* Create new null message for end of chunk */
-    else {
-        /* Create a new null message */
-        if(oh->nmesgs >= oh->alloc_nmesgs) {
-            unsigned na = oh->alloc_nmesgs + H5O_NMESGS;
-            H5O_mesg_t *x = H5FL_SEQ_REALLOC(H5O_mesg_t, oh->mesg, (size_t)na);
+    if( H5MF_reserve(f, (hsize_t)delta) < 0 )
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, UFAIL, "unable to reserve space in file");
 
-            if(NULL == x)
-                HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
-            oh->alloc_nmesgs = na;
-            oh->mesg = x;
-        } /* end if */
+    /* create a new null message */
+    if (oh->nmesgs >= oh->alloc_nmesgs) {
+        unsigned na = oh->alloc_nmesgs + H5O_NMESGS;
+        H5O_mesg_t *x = H5FL_SEQ_REALLOC (H5O_mesg_t, oh->mesg, (size_t)na);
 
-        /* Set extension message */
-        extend_msg = oh->nmesgs++;
+        if (NULL==x)
+            HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, UFAIL, "memory allocation failed");
+        oh->alloc_nmesgs = na;
+        oh->mesg = x;
+    }
+    idx = oh->nmesgs++;
+    oh->mesg[idx].type = H5O_NULL;
+    oh->mesg[idx].dirty = TRUE;
+    oh->mesg[idx].native = NULL;
+    oh->mesg[idx].raw = oh->chunk[chunkno].image +
+			oh->chunk[chunkno].size +
+			H5O_SIZEOF_MSGHDR(f);
+    oh->mesg[idx].raw_size = delta - H5O_SIZEOF_MSGHDR(f);
+    oh->mesg[idx].chunkno = chunkno;
 
-        /* Initialize new null message */
-        oh->mesg[extend_msg].type = H5O_NULL;
-        oh->mesg[extend_msg].dirty = TRUE;
-        oh->mesg[extend_msg].native = NULL;
-        oh->mesg[extend_msg].raw = oh->chunk[chunkno].image +
-                            oh->chunk[chunkno].size + H5O_SIZEOF_MSGHDR(f);
-        oh->mesg[extend_msg].raw_size = delta - H5O_SIZEOF_MSGHDR(f);
-        oh->mesg[extend_msg].chunkno = chunkno;
-    } /* end else */
-
-    /* Allocate more memory space for chunk's image */
-    old_image = oh->chunk[chunkno].image;
+    old_addr = oh->chunk[chunkno].image;
     old_size = oh->chunk[chunkno].size;
     oh->chunk[chunkno].size += delta;
-    oh->chunk[chunkno].image = H5FL_BLK_REALLOC(chunk_image, old_image, oh->chunk[chunkno].size);
-    oh->chunk[chunkno].dirty = TRUE;
-    if(NULL == oh->chunk[chunkno].image)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
+    oh->chunk[chunkno].image = H5FL_BLK_REALLOC(chunk_image,old_addr,
+					    oh->chunk[chunkno].size);
+    if (NULL==oh->chunk[chunkno].image)
+	HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, UFAIL, "memory allocation failed");
+    HDmemset(oh->chunk[chunkno].image+old_size, 0,
+	     oh->chunk[chunkno].size - old_size);
 
-    /* Wipe new space for chunk */
-    HDmemset(oh->chunk[chunkno].image + old_size, 0, oh->chunk[chunkno].size - old_size);
-
-    /* Spin through existing messages, adjusting them */
-    for(u = 0; u < oh->nmesgs; u++) {
-        /* Adjust raw addresses for messages in this chunk to reflect to 'image' address */
-        if(oh->mesg[u].chunkno == chunkno)
-            oh->mesg[u].raw = oh->chunk[chunkno].image + (oh->mesg[u].raw - old_image);
-
-        /* Find continuation message which points to this chunk and adjust chunk's size */
-        /* (Chunk 0 doesn't have a continuation message that points to it and
-         * it's size is directly encoded in the object header) */
-        if(chunkno > 0 && (H5O_CONT_ID == oh->mesg[u].type->id) &&
-                (((H5O_cont_t *)(oh->mesg[u].native))->chunkno == chunkno)) {
-            /* Adjust size of continuation message */
-            HDassert(((H5O_cont_t *)(oh->mesg[u].native))->size == old_size);
-            ((H5O_cont_t *)(oh->mesg[u].native))->size = oh->chunk[chunkno].size;
-
-            /* Flag continuation message & it's chunk as dirty */
-            oh->mesg[u].dirty = TRUE;
-            oh->chunk[oh->mesg[u].chunkno].dirty = TRUE;
-        } /* end if */
-    } /* end for */
+    /* adjust raw addresses for messages of this chunk */
+    if (old_addr != oh->chunk[chunkno].image) {
+	for (u = 0; u < oh->nmesgs; u++) {
+	    if (oh->mesg[u].chunkno == chunkno)
+		oh->mesg[u].raw = oh->chunk[chunkno].image +
+		    (oh->mesg[u].raw - old_addr);
+	}
+    }
 
     /* Set return value */
-    *msg_idx = extend_msg;
+    ret_value=idx;
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5O_alloc_extend_chunk() */
+    FUNC_LEAVE_NOAPI(ret_value);
+}
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5O_alloc_new_chunk
+ * Function:	H5O_alloc_new_chunk
  *
- * Purpose:     Allocates a new chunk for the object header, including 
- *		file space.
+ * Purpose:	Allocates a new chunk for the object header but doen't
+ *		give the new chunk a file address yet.	One of the other
+ *		chunks will get an object continuation message.	 If there
+ *		isn't room in any other chunk for the object continuation
+ *		message, then some message from another chunk is moved into
+ *		this chunk to make room.
  *
- *              One of the other chunks will get an object continuation 
- *		message.  If there isn't room in any other chunk for the 
- *		object continuation message, then some message from 
- *		another chunk is moved into this chunk to make room.
+ * 		SIZE need not be aligned.
  *
- *              SIZE need not be aligned.
+ * Return:	Success:	Index number of the null message for the
+ *				new chunk.  The null message will be at
+ *				least SIZE bytes not counting the message
+ *				ID or size fields.
  *
- * Return:      Success:        Index number of the null message for the
- *                              new chunk.  The null message will be at
- *                              least SIZE bytes not counting the message
- *                              ID or size fields.
+ *		Failure:	Negative
  *
- *              Failure:        Negative
- *
- * Programmer:  Robb Matzke
- *              matzke@llnl.gov
- *              Aug  7 1997
+ * Programmer:	Robb Matzke
+ *		matzke@llnl.gov
+ *		Aug  7 1997
  *
  * Modifications:
- *
- * 		John Mainzer, 8/17/05
- * 		Reworked function to allocate file space immediately, 
- * 		instead of just allocating core space (as it used to).  
- * 		This change was necessary, as we were allocating file 
- * 		space on metadata cache eviction, which need not be 
- * 		synchronized across all	processes.  As a result, 
- * 		different processes were allocating different file
- * 		locations to the same chunk.
  *
  *-------------------------------------------------------------------------
  */
 static unsigned
-H5O_alloc_new_chunk(H5F_t *f, 
-                    hid_t dxpl_id, 
-                    H5O_t *oh, 
-                    size_t size)
+H5O_alloc_new_chunk(H5F_t *f, H5O_t *oh, size_t size)
 {
-    size_t      cont_size;              /*continuation message size     */
-    int found_null = (-1);      /*best fit null message         */
-    int found_other = (-1);     /*best fit other message        */
-    unsigned    idx;                    /*message number */
-    uint8_t     *p = NULL;              /*ptr into new chunk            */
-    H5O_cont_t  *cont = NULL;           /*native continuation message   */
-    int chunkno;
-    unsigned    u;
-    haddr_t	new_chunk_addr;
-    unsigned    ret_value;              /*return value  */
+    size_t	cont_size;		/*continuation message size	*/
+    int	found_null = (-1);	/*best fit null message		*/
+    int	found_other = (-1);	/*best fit other message	*/
+    unsigned	idx;		        /*message number */
+    uint8_t	*p = NULL;		/*ptr into new chunk		*/
+    H5O_cont_t	*cont = NULL;		/*native continuation message	*/
+    int	chunkno;
+    unsigned	u;
+    unsigned	ret_value;		/*return value	*/
 
     FUNC_ENTER_NOAPI_NOINIT(H5O_alloc_new_chunk);
 
     /* check args */
-    HDassert (oh);
-    HDassert (size > 0);
+    assert (oh);
+    assert (size > 0);
     size = H5O_ALIGN(size);
 
     /*
@@ -3076,23 +2928,23 @@ H5O_alloc_new_chunk(H5F_t *f,
      */
     cont_size = H5O_ALIGN (H5F_SIZEOF_ADDR(f) + H5F_SIZEOF_SIZE(f));
     for (u=0; u<oh->nmesgs; u++) {
-        if (H5O_NULL_ID == oh->mesg[u].type->id) {
-            if (cont_size == oh->mesg[u].raw_size) {
-                found_null = u;
-                break;
-            } else if (oh->mesg[u].raw_size >= cont_size &&
-                       (found_null < 0 ||
-                        (oh->mesg[u].raw_size <
-                         oh->mesg[found_null].raw_size))) {
-                found_null = u;
-            }
-        } else if (H5O_CONT_ID == oh->mesg[u].type->id) {
-            /*don't consider continuation messages */
-        } else if (oh->mesg[u].raw_size >= cont_size &&
-                   (found_other < 0 ||
-                    oh->mesg[u].raw_size < oh->mesg[found_other].raw_size)) {
-            found_other = u;
-        }
+	if (H5O_NULL_ID == oh->mesg[u].type->id) {
+	    if (cont_size == oh->mesg[u].raw_size) {
+		found_null = u;
+		break;
+	    } else if (oh->mesg[u].raw_size >= cont_size &&
+		       (found_null < 0 ||
+			(oh->mesg[u].raw_size <
+			 oh->mesg[found_null].raw_size))) {
+		found_null = u;
+	    }
+	} else if (H5O_CONT_ID == oh->mesg[u].type->id) {
+	    /*don't consider continuation messages */
+	} else if (oh->mesg[u].raw_size >= cont_size &&
+		   (found_other < 0 ||
+		    oh->mesg[u].raw_size < oh->mesg[found_other].raw_size)) {
+	    found_other = u;
+	}
     }
     assert(found_null >= 0 || found_other >= 0);
 
@@ -3102,38 +2954,35 @@ H5O_alloc_new_chunk(H5F_t *f,
      * other message.
      */
     if (found_null < 0)
-        size += H5O_SIZEOF_MSGHDR(f) + oh->mesg[found_other].raw_size;
+	size += H5O_SIZEOF_MSGHDR(f) + oh->mesg[found_other].raw_size;
 
     /*
      * The total chunk size must include the requested space plus enough
-     * for the message header.  This must be at least some minimum and a
+     * for the message header.	This must be at least some minimum and a
      * multiple of the alignment size.
      */
     size = MAX(H5O_MIN_SIZE, size + H5O_SIZEOF_MSGHDR(f));
     assert (size == H5O_ALIGN (size));
 
-    /* allocate space in file to hold the new chunk */
-    new_chunk_addr = H5MF_alloc(f, H5FD_MEM_OHDR, dxpl_id, (hsize_t)size);
-    if(HADDR_UNDEF == new_chunk_addr)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, UFAIL, "unable to allocate space for new chunk")
+    /* Reserve space in the file to hold the new chunk */
+    if( H5MF_reserve(f, (hsize_t)size) < 0 )
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, UFAIL, "unable to reserve space in file for new chunk");
 
     /*
-     * Create the new chunk giving it a file address.
+     * Create the new chunk without giving it a file address.
      */
-    if ( oh->nchunks >= oh->alloc_nchunks ) {
-
+    if (oh->nchunks >= oh->alloc_nchunks) {
         unsigned na = oh->alloc_nchunks + H5O_NCHUNKS;
         H5O_chunk_t *x = H5FL_SEQ_REALLOC (H5O_chunk_t, oh->chunk, (size_t)na);
 
         if (!x)
-            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, UFAIL, "memory allocation failed");
+            HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, UFAIL, "memory allocation failed");
         oh->alloc_nchunks = na;
         oh->chunk = x;
     }
-
     chunkno = oh->nchunks++;
     oh->chunk[chunkno].dirty = TRUE;
-    oh->chunk[chunkno].addr = new_chunk_addr;
+    oh->chunk[chunkno].addr = HADDR_UNDEF;
     oh->chunk[chunkno].size = size;
     if (NULL==(oh->chunk[chunkno].image = p = H5FL_BLK_CALLOC(chunk_image,size)))
 	HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, UFAIL, "memory allocation failed");
@@ -3154,30 +3003,28 @@ H5O_alloc_new_chunk(H5F_t *f,
 
         /* Set new object header info to zeros */
         HDmemset(&oh->mesg[old_alloc], 0,
-                 (oh->alloc_nmesgs-old_alloc)*sizeof(H5O_mesg_t));
+		 (oh->alloc_nmesgs-old_alloc)*sizeof(H5O_mesg_t));
     }
 
     /*
      * Describe the messages of the new chunk.
      */
     if (found_null < 0) {
-        found_null = u = oh->nmesgs++;
-        oh->mesg[u].type = H5O_NULL;
-        oh->mesg[u].dirty = TRUE;
-        oh->mesg[u].native = NULL;
-        oh->mesg[u].raw = oh->mesg[found_other].raw;
-        oh->mesg[u].raw_size = oh->mesg[found_other].raw_size;
-        oh->mesg[u].chunkno = oh->mesg[found_other].chunkno;
+	found_null = u = oh->nmesgs++;
+	oh->mesg[u].type = H5O_NULL;
+	oh->mesg[u].dirty = TRUE;
+	oh->mesg[u].native = NULL;
+	oh->mesg[u].raw = oh->mesg[found_other].raw;
+	oh->mesg[u].raw_size = oh->mesg[found_other].raw_size;
+	oh->mesg[u].chunkno = oh->mesg[found_other].chunkno;
 
-        oh->mesg[found_other].dirty = TRUE;
+	oh->mesg[found_other].dirty = TRUE;
         /* Copy the message to the new location */
-        HDmemcpy(p + H5O_SIZEOF_MSGHDR(f),
-                 oh->mesg[found_other].raw,
-                 oh->mesg[found_other].raw_size);
-        oh->mesg[found_other].raw = p + H5O_SIZEOF_MSGHDR(f);
-        oh->mesg[found_other].chunkno = chunkno;
-        p += H5O_SIZEOF_MSGHDR(f) + oh->mesg[found_other].raw_size;
-        size -= H5O_SIZEOF_MSGHDR(f) + oh->mesg[found_other].raw_size;
+        HDmemcpy(p+H5O_SIZEOF_MSGHDR(f),oh->mesg[found_other].raw,oh->mesg[found_other].raw_size);
+	oh->mesg[found_other].raw = p + H5O_SIZEOF_MSGHDR(f);
+	oh->mesg[found_other].chunkno = chunkno;
+	p += H5O_SIZEOF_MSGHDR(f) + oh->mesg[found_other].raw_size;
+	size -= H5O_SIZEOF_MSGHDR(f) + oh->mesg[found_other].raw_size;
     }
     idx = oh->nmesgs++;
     oh->mesg[idx].type = H5O_NULL;
@@ -3193,19 +3040,19 @@ H5O_alloc_new_chunk(H5F_t *f,
      * two null messages.
      */
     if (oh->mesg[found_null].raw_size > cont_size) {
-        u = oh->nmesgs++;
-        oh->mesg[u].type = H5O_NULL;
-        oh->mesg[u].dirty = TRUE;
-        oh->mesg[u].native = NULL;
-        oh->mesg[u].raw = oh->mesg[found_null].raw +
-                          cont_size +
-                          H5O_SIZEOF_MSGHDR(f);
-        oh->mesg[u].raw_size = oh->mesg[found_null].raw_size -
-                               (cont_size + H5O_SIZEOF_MSGHDR(f));
-        oh->mesg[u].chunkno = oh->mesg[found_null].chunkno;
+	u = oh->nmesgs++;
+	oh->mesg[u].type = H5O_NULL;
+	oh->mesg[u].dirty = TRUE;
+	oh->mesg[u].native = NULL;
+	oh->mesg[u].raw = oh->mesg[found_null].raw +
+			  cont_size +
+			  H5O_SIZEOF_MSGHDR(f);
+	oh->mesg[u].raw_size = oh->mesg[found_null].raw_size -
+			       (cont_size + H5O_SIZEOF_MSGHDR(f));
+	oh->mesg[u].chunkno = oh->mesg[found_null].chunkno;
 
-        oh->mesg[found_null].dirty = TRUE;
-        oh->mesg[found_null].raw_size = cont_size;
+	oh->mesg[found_null].dirty = TRUE;
+	oh->mesg[found_null].raw_size = cont_size;
     }
 
     /*
@@ -3214,9 +3061,9 @@ H5O_alloc_new_chunk(H5F_t *f,
     oh->mesg[found_null].type = H5O_CONT;
     oh->mesg[found_null].dirty = TRUE;
     if (NULL==(cont = H5FL_MALLOC(H5O_cont_t)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, UFAIL, "memory allocation failed")
-    cont->addr = oh->chunk[chunkno].addr;
-    cont->size = oh->chunk[chunkno].size;
+	HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, UFAIL, "memory allocation failed");
+    cont->addr = HADDR_UNDEF;
+    cont->size = 0;
     cont->chunkno = chunkno;
     oh->mesg[found_null].native = cont;
 
@@ -3225,74 +3072,52 @@ H5O_alloc_new_chunk(H5F_t *f,
 
 done:
     FUNC_LEAVE_NOAPI(ret_value);
-} /* H5O_alloc_new_chunk() */
+}
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5O_alloc
+ * Function:	H5O_alloc
  *
- * Purpose:     Allocate enough space in the object header for this message.
+ * Purpose:	Allocate enough space in the object header for this message.
  *
- * Return:      Success:        Index of message
+ * Return:	Success:	Index of message
  *
- *              Failure:        Negative
+ *		Failure:	Negative
  *
- * Programmer:  Robb Matzke
- *              matzke@llnl.gov
- *              Aug  6 1997
+ * Programmer:	Robb Matzke
+ *		matzke@llnl.gov
+ *		Aug  6 1997
  *
  * Modifications:
- *
- *      John Mainzer, 6/7/05
- *      Modified function to use the new dirtied parameter to
- *      H5AC_unprotect() instead of modfying the is_dirty field directly.
- *      In this case, that requires the addition of the oh_dirtied_ptr
- *      parameter to track whether *oh is dirty.
- *
- *	John Mainzer, 8/19/05
- *	Reworked the function to allocate disk space immediately instead
- *	of waiting to cache eviction time.  This is necessary since cache
- *	evictions need not be synchronized across the processes in the 
- *	PHDF5 case.
- *
- *	Note the use of a revised versions of H5O_alloc_new_chunk() and
- *	H5O_alloc_extend_chunk().
  *
  *-------------------------------------------------------------------------
  */
 static unsigned
-H5O_alloc(H5F_t *f, 
-          hid_t dxpl_id, 
-          H5O_t *oh, 
-          const H5O_class_t *type, 
-          size_t size, 
-          unsigned * oh_flags_ptr)
+H5O_alloc(H5F_t *f, H5O_t *oh, const H5O_class_t *type, size_t size)
 {
     unsigned	idx;
     H5O_mesg_t *msg;            /* Pointer to newly allocated message */
-    size_t      aligned_size = H5O_ALIGN(size);
-    htri_t	tri_result;
-    unsigned    ret_value;      /* Return value */
+    size_t	aligned_size = H5O_ALIGN(size);
+    unsigned	ret_value;      /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5O_alloc);
 
     /* check args */
-    HDassert (oh);
-    HDassert (type);
-    HDassert (oh_flags_ptr);
+    assert (oh);
+    assert (type);
 
     /* look for a null message which is large enough */
     for (idx = 0; idx < oh->nmesgs; idx++) {
-        if (H5O_NULL_ID == oh->mesg[idx].type->id &&
+	if (H5O_NULL_ID == oh->mesg[idx].type->id &&
                 oh->mesg[idx].raw_size >= aligned_size)
-            break;
+	    break;
     }
 
 #ifdef LATER
     /*
      * Perhaps if we join adjacent null messages we could make one
      * large enough... we leave this as an exercise for future
-     * programmers :-)  This isn't a high priority because when an
+     * programmers :-)	This isn't a high priority because when an
      * object header is read from disk the null messages are combined
      * anyway.
      */
@@ -3300,78 +3125,63 @@ H5O_alloc(H5F_t *f,
 
     /* if we didn't find one, then allocate more header space */
     if (idx >= oh->nmesgs) {
-        unsigned        chunkno;
+        unsigned	chunkno;
 
-        /* check to see if we can extend one of the chunks.  If we can,
-         * do so.  Otherwise, we will have to allocate a new chunk.
-         *
-         * Note that in this new version of this function, all chunks 
-         * must have file space allocated to them.
-         */
+	/*
+	 * Look for a chunk which hasn't had disk space allocated yet
+	 * since we can just increase the size of that chunk.
+	 */
 	for (chunkno = 0; chunkno < oh->nchunks; chunkno++) {
-            HDassert( H5F_addr_defined(oh->chunk[chunkno].addr) );
+	    if ((idx = H5O_alloc_extend_chunk(f, oh, chunkno, size)) != UFAIL) {
+		break;
+	    }
+	    H5E_clear();
+	}
 
-            tri_result = H5O_alloc_extend_chunk(f, oh, chunkno, size, &idx);
-
-            if ( tri_result == TRUE ) {
-
-		break; 
-
-            } else if ( tri_result == FALSE ) {
-
-                idx = UFAIL;
-
-            } else {
-
-                HGOTO_ERROR(H5E_OHDR, H5E_SYSTEM, UFAIL, \
-                            "H5O_alloc_extend_chunk failed unexpectedly");
-            }
-        }
-
-        /* if idx is still UFAIL, we were not able to extend a chunk.  
-         * Create a new one.
-         */
-        if(idx == UFAIL) {
-            if((idx = H5O_alloc_new_chunk(f, dxpl_id, oh, size)) == UFAIL)
-                HGOTO_ERROR(H5E_OHDR, H5E_NOSPACE, UFAIL, "unable to create a new object header data chunk")
-        }
+	/*
+	 * Create a new chunk
+	 */
+	if (idx == UFAIL) {
+	    if ((idx = H5O_alloc_new_chunk(f, oh, size)) == UFAIL)
+		HGOTO_ERROR(H5E_OHDR, H5E_NOSPACE, UFAIL, "unable to create a new object header data chunk");
+	}
     }
 
     /* Set pointer to newly allocated message */
-    msg = &(oh->mesg[idx]);
+    msg=&oh->mesg[idx];
 
     /* do we need to split the null message? */
     if (msg->raw_size > aligned_size) {
         H5O_mesg_t *null_msg;       /* Pointer to null message */
         size_t	mesg_size = aligned_size+ H5O_SIZEOF_MSGHDR(f); /* Total size of newly allocated message */
 
-        HDassert(msg->raw_size - aligned_size >= H5O_SIZEOF_MSGHDR(f));
+	assert(msg->raw_size - aligned_size >= H5O_SIZEOF_MSGHDR(f));
 
-        if (oh->nmesgs >= oh->alloc_nmesgs) {
-            int old_alloc=oh->alloc_nmesgs;
-            unsigned na = oh->alloc_nmesgs + H5O_NMESGS;
-            H5O_mesg_t *x = H5FL_SEQ_REALLOC(H5O_mesg_t, oh->mesg, (size_t)na);
+	if (oh->nmesgs >= oh->alloc_nmesgs) {
+	    int old_alloc=oh->alloc_nmesgs;
+	    unsigned na = oh->alloc_nmesgs + H5O_NMESGS;
+	    H5O_mesg_t *x = H5FL_SEQ_REALLOC (H5O_mesg_t, oh->mesg, (size_t)na);
 
 	    if (!x)
                 HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, UFAIL, "memory allocation failed");
 	    oh->alloc_nmesgs = na;
 	    oh->mesg = x;
 
-            /* Set new object header info to zeros */
-            HDmemset(&oh->mesg[old_alloc],0,
-                     (oh->alloc_nmesgs-old_alloc)*sizeof(H5O_mesg_t));
+	    /* Set new object header info to zeros */
+	    HDmemset(&oh->mesg[old_alloc],0,
+		     (oh->alloc_nmesgs-old_alloc)*sizeof(H5O_mesg_t));
 
             /* "Retarget" local 'msg' pointer into newly allocated array of messages */
             msg=&oh->mesg[idx];
-        }
-        null_msg = &(oh->mesg[oh->nmesgs++]);
-        null_msg->type = H5O_NULL;
-        null_msg->dirty = TRUE;
-        null_msg->native = NULL;
-        null_msg->raw = msg->raw + mesg_size;
-        null_msg->raw_size = msg->raw_size - mesg_size;
-        null_msg->chunkno = msg->chunkno;
-        msg->raw_size = aligned_size;
+	}
+        null_msg=&oh->mesg[oh->nmesgs++];
+	null_msg->type = H5O_NULL;
+	null_msg->dirty = TRUE;
+	null_msg->native = NULL;
+	null_msg->raw = msg->raw + mesg_size;
+	null_msg->raw_size = msg->raw_size - mesg_size;
+	null_msg->chunkno = msg->chunkno;
+	msg->raw_size = aligned_size;
     }
 
     /* initialize the new message */
@@ -3379,14 +3189,14 @@ H5O_alloc(H5F_t *f,
     msg->dirty = TRUE;
     msg->native = NULL;
 
-    *oh_flags_ptr |= H5AC__DIRTIED_FLAG;
+    oh->cache_info.is_dirty = TRUE;
 
     /* Set return value */
-    ret_value = idx;
+    ret_value=idx;
 
 done:
     FUNC_LEAVE_NOAPI(ret_value);
-} /* H5O_alloc() */
+}
 
 #ifdef NOT_YET
 
@@ -3612,8 +3422,7 @@ H5O_delete(H5F_t *f, hid_t dxpl_id, haddr_t addr)
         HGOTO_ERROR(H5E_OHDR, H5E_CANTDELETE, FAIL, "can't delete object from file");
 
 done:
-    if (oh &&
-        H5AC_unprotect(f, dxpl_id, H5AC_OHDR, addr, oh, H5AC__DIRTIED_FLAG | H5C__DELETED_FLAG)<0)
+    if (oh && H5AC_unprotect(f, dxpl_id, H5AC_OHDR, addr, oh, TRUE)<0)
 	HDONE_ERROR(H5E_OHDR, H5E_PROTECT, FAIL, "unable to release object header");
 
     FUNC_LEAVE_NOAPI(ret_value);
@@ -3755,10 +3564,6 @@ done:
  *
  * Modifications:
  *
- *      John Mainzer, 6/16/05
- *      Modified function to use the new dirtied parameter to
- *      H5AC_unprotect() instead of modfying the is_dirty field.
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -3800,91 +3605,11 @@ H5O_get_info(H5G_entry_t *ent, H5O_stat_t *ostat, hid_t dxpl_id)
     ostat->nchunks=oh->nchunks;
 
 done:
-    if (oh && H5AC_unprotect(ent->file, dxpl_id, H5AC_OHDR, ent->header, oh, H5AC__NO_FLAGS_SET)<0)
+    if (oh && H5AC_unprotect(ent->file, dxpl_id, H5AC_OHDR, ent->header, oh, FALSE)<0)
 	HDONE_ERROR(H5E_OHDR, H5E_PROTECT, FAIL, "unable to release object header");
 
     FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5O_get_info() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5O_encode
- *
- * Purpose:	Encode an object(data type and simple data space only)
- *              description into a buffer.
- *
- * Return:	Success:	Non-negative
- *
- *		Failure:	Negative
- *
- * Programmer:	Raymond Lu
- *		slu@ncsa.uiuc.edu
- *		July 13, 2004
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5O_encode(H5F_t *f, unsigned char *buf, void *obj, unsigned type_id)
-{
-    const H5O_class_t   *type;            /* Actual H5O class type for the ID */
-    herr_t 	        ret_value = SUCCEED;        /* Return value */
-
-    FUNC_ENTER_NOAPI(H5O_encode,FAIL);
-
-    /* check args */
-    assert(type_id<NELMTS(message_type_g));
-    type=message_type_g[type_id];    /* map the type ID to the actual type object */
-    assert(type);
-
-    /* Encode */
-    if ((type->encode)(f, buf, obj)<0)
-        HGOTO_ERROR (H5E_OHDR, H5E_CANTENCODE, FAIL, "unable to encode message");
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5O_decode
- *
- * Purpose:	Decode a binary object(data type and data space only)
- *              description and return a new object handle.
- *
- * Return:	Success:        Pointer to object(data type or space)
- *
- *		Failure:	NULL
- *
- * Programmer:	Raymond Lu
- *		slu@ncsa.uiuc.edu
- *		July 14, 2004
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-void*
-H5O_decode(H5F_t *f, const unsigned char *buf, unsigned type_id)
-{
-    const H5O_class_t   *type;            /* Actual H5O class type for the ID */
-    void 	        *ret_value=NULL;       /* Return value */
-
-    FUNC_ENTER_NOAPI(H5O_decode,NULL);
-
-    /* check args */
-    assert(type_id<NELMTS(message_type_g));
-    type=message_type_g[type_id];    /* map the type ID to the actual type object */
-    assert(type);
-
-    /* decode */
-    if((ret_value = (type->decode)(f, 0, buf, NULL))==NULL)
-        HGOTO_ERROR (H5E_OHDR, H5E_CANTDECODE, NULL, "unable to decode message");
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
-}
 
 
 /*-------------------------------------------------------------------------
@@ -3917,10 +3642,6 @@ done:
  *          indicating failure.
  *
  * Modifications:
- *
- *      John Mainzer, 6/16/05
- *      Modified function to use the new dirtied parameter to
- *      H5AC_unprotect() instead of modfying the is_dirty field.
  *
  *-------------------------------------------------------------------------
  */
@@ -3988,7 +3709,7 @@ H5O_iterate_real(const H5G_entry_t *ent, const H5O_class_t *type, H5AC_protect_t
     hbool_t internal, void *op, void *op_data, hid_t dxpl_id)
 {
     H5O_t		*oh=NULL;       /* Pointer to actual object header */
-    unsigned            oh_flags = H5AC__NO_FLAGS_SET;  /* Start iteration with no flags set on object header */
+    unsigned            oh_flags = FALSE;  /* Start iteration with no flags set on object header */
     unsigned		idx;            /* Absolute index of current message in all messages */
     unsigned		sequence;       /* Relative index of current message for messages of type */
     H5O_mesg_t         *idx_msg;        /* Pointer to current message */
@@ -4046,444 +3767,19 @@ H5O_iterate_real(const H5G_entry_t *ent, const H5O_class_t *type, H5AC_protect_t
     } /* end for */
 
     /* Check if object header was modified */
-    if(oh_flags & H5AC__DIRTIED_FLAG) {
+    if(oh_flags) {
         /* Shouldn't be able to modify object header if we don't have write access */
         HDassert(prot == H5AC_WRITE);
-        H5O_touch_oh(ent->file, dxpl_id, oh, FALSE, &oh_flags);
+        oh->cache_info.is_dirty = TRUE;
+        H5O_touch_oh(ent->file, oh, FALSE);
     } /* end if */
 
 done:
-    if (oh && H5AC_unprotect(ent->file, dxpl_id, H5AC_OHDR, ent->header, oh, oh_flags) < 0)
+    if (oh && H5AC_unprotect(ent->file, dxpl_id, H5AC_OHDR, ent->header, oh, FALSE) < 0)
 	HDONE_ERROR(H5E_OHDR, H5E_PROTECT, FAIL, "unable to release object header")
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_iterate_real() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5O_copy_mesg_file
- *      
- * Purpose:     Copies a message to file.  If MESG is is the null pointer then a null
- *              pointer is returned with no error.
- *
- * Return:      Success:        Ptr to the new message
- *
- *              Failure:        NULL
- *                       
- * Programmer:  Peter Cao 
- *              June 4, 2005 
- *                               
- *-------------------------------------------------------------------------
- */
-static void *
-H5O_copy_mesg_file(const H5O_class_t *type, H5F_t *file_src,
-    void *native_src, H5F_t *file_dst, hid_t dxpl_id, H5SL_t *map_list, void *udata)
-{
-    void        *ret_value;
-
-    FUNC_ENTER_NOAPI_NOINIT(H5O_copy_mesg_file)
-
-    /* check args */
-    HDassert(type);
-    HDassert(type->copy_file);
-    HDassert(file_src);
-    HDassert(native_src);
-    HDassert(file_dst);
-    HDassert(map_list);
-
-    if(NULL == (ret_value = (type->copy_file)(file_src, native_src, file_dst, dxpl_id, map_list, udata)))
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, NULL, "unable to copy object header message to file")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5O_copy_mesg_file() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5O_post_copy_mesg_file
- *      
- * Purpose:     Copies what's left to file after the object a meesage is copied.
- *              This function is need for situations like copying symbol tables.
- *              Copying a member of symbol table requires the parent object header 
- *              exists in file. For this case, the first round of the message will
- *              create symbol table enttries but will not go deep copying member
- *              objects in the symbol table. The post copy will do that.
- *
- * Return:	Non-negative on success/Negative on failure
- *                       
- * Programmer:  Peter Cao 
- *              September 28, 2005 
- *                               
- *-------------------------------------------------------------------------
- */
-static herr_t 
-H5O_post_copy_mesg_file (const H5O_class_t *type, H5F_t *file_src,
-        const void *mesg_src, H5G_entry_t *loc_dst, 
-        hid_t dxpl_id, H5SL_t *map_list)
-{
-    herr_t	ret_value = SUCCEED;
-
-    FUNC_ENTER_NOAPI_NOINIT(H5O_post_copy_mesg_file)
-
-    /* check args */
-    HDassert(type);
-    HDassert(file_src);
-    HDassert(mesg_src);
-    HDassert(loc_dst->file);
-    HDassert(map_list);
-
-    if(type->post_copy_file && (type->post_copy_file)(file_src, mesg_src, loc_dst, dxpl_id, map_list) < 0)
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, FAIL, "unable to copy object header message to file")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5O_post_copy_mesg_file */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5O_copy_header_real
- *
- * Purpose:     copy header object from one location to another.
- *
- * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Peter Cao
- *              May 30, 2005
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5O_copy_header_real(const H5G_entry_t *ent_src,
-    H5G_entry_t *ent_dst /*out */, hid_t dxpl_id, H5SL_t *map_list)
-{
-    H5O_addr_map_t      *addr_map;              /* Address mapping of object copied */
-    uint8_t	       buf[16], *p;
-    H5O_t             *oh = NULL;
-    unsigned           chunkno = 0, mesgno = 0;
-    size_t             chunk_size, hdr_size;
-    haddr_t            addr_new;
-    H5O_mesg_t         *mesg_src;
-    H5O_chunk_t       *chunk;
-    herr_t             ret_value = SUCCEED;
-
-    FUNC_ENTER_NOAPI_NOINIT(H5O_copy_header_real)
-
-    HDassert(ent_src);
-    HDassert(ent_src->file);
-    HDassert(H5F_addr_defined(ent_src->header));
-    HDassert(ent_dst->file);
-    HDassert(map_list);
-
-    if(NULL == (oh = H5AC_protect(ent_src->file, dxpl_id, H5AC_OHDR, ent_src->header, NULL, NULL, H5AC_READ)))
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, FAIL, "unable to load object header")
-
-    /* get the size of the file header of the destination file */
-    hdr_size = H5O_SIZEOF_HDR(ent_dst->file);
-
-    /* allocate memory space for the destitnation chunks */
-    if(NULL == (chunk = H5FL_SEQ_MALLOC(H5O_chunk_t, (size_t)oh->nchunks)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
-
-    /* Allocate space for the first chunk */
-    if(HADDR_UNDEF == (addr_new = H5MF_alloc(ent_dst->file, H5FD_MEM_OHDR, dxpl_id, (hsize_t)hdr_size + oh->chunk[0].size))) 
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "file allocation failed for object header")
-
-    /* Return the first chunk address */
-    ent_dst->header = addr_new;
-
-    /* Set chunk's address */
-    chunk[0].addr = addr_new + (hsize_t)hdr_size;
-
-    /* Encode header information */
-    p = buf;
-
-    /* encode version */
-    *p++ = H5O_VERSION;
-
-    /* reserved */
-    *p++ = 0;
-
-    /* encode number of messages */
-    UINT16ENCODE(p, oh->nmesgs);
-
-    /* encode link count (at zero initially) */
-    UINT32ENCODE(p, 0);
-
-    /* encode body size */
-    UINT32ENCODE(p, oh->chunk[0].size);
-
-    /* zero to alignment */
-    HDmemset(p, 0, (size_t)(hdr_size-12));
-
-    /* need to allocate all the chunks for the destination before copy the chunk message
-       because continuation chunk message will need to know the chunk address of address of 
-       continuation block. 
-     */
-    for(chunkno = 1; chunkno < oh->nchunks; chunkno++) {
-        if(HADDR_UNDEF == (chunk[chunkno].addr = H5MF_alloc(ent_dst->file, H5FD_MEM_OHDR, dxpl_id, (hsize_t)oh->chunk[chunkno].size)))
-            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "file allocation failed for object header")
-    } /* end for */
-
-    /* Loop through chunks to copy chunk information */
-    for(chunkno = 0; chunkno < oh->nchunks; chunkno++) {
-        chunk_size = oh->chunk[chunkno].size;
-
-        /* copy chunk information */
-        chunk[chunkno].dirty = oh->chunk[chunkno].dirty;
-        chunk[chunkno].size = chunk_size;
-
-        /* create memory image for the new chunk */
-        if(NULL == (chunk[chunkno].image = H5FL_BLK_MALLOC(chunk_image,chunk_size)))
-            HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
-
-        /* copy the chunk image from source to destination in memory */
-        /* (This copies over all the messages which don't require special
-         * callbacks to fix them up.)
-         */
-        HDmemcpy(chunk[chunkno].image, oh->chunk[chunkno].image, chunk_size);
-
-        /* Loop through messages, to fix up any which refer to addresses in the source file, etc. */
-        for(mesgno = 0; mesgno < oh->nmesgs; mesgno++) {
-            const H5O_class_t *copy_type;
-
-            mesg_src = &(oh->mesg[mesgno]);
-
-            /* check if the message belongs to this chunk */
-            if(mesg_src->chunkno != chunkno)
-                continue;
-
-            if (mesg_src->flags & H5O_FLAG_SHARED)
-                copy_type = H5O_SHARED;
-            else
-                copy_type = mesg_src->type;
-
-            /* copy this message into destination file */
-            HDassert(copy_type);
-            if(copy_type->copy_file) {
-		void    *dst_native;       /* Pointer to copy of native information for current message */
- 
-                /*
-                 * Decode the message if necessary.  If the message is shared then d
-                 * a shared message, ignoring the message type.
-                 */
-                if(NULL == mesg_src->native) {
-                    /* Decode the message if necessary */
-                    HDassert(copy_type->decode);
-                    if(NULL == (mesg_src->native = (copy_type->decode)(ent_src->file, dxpl_id, mesg_src->raw, NULL)))
-                        HGOTO_ERROR(H5E_OHDR, H5E_CANTDECODE, FAIL, "unable to decode a message")
-                } /* end if (NULL == mesg_src->native) */
-
-		/* Copy the source message */
-                if(H5O_CONT_ID == copy_type->id) {
-                    if((dst_native = H5O_copy_mesg_file(copy_type, ent_src->file, mesg_src->native, 
-                            ent_dst->file, dxpl_id, map_list, chunk)) == NULL)
-                        HGOTO_ERROR(H5E_OHDR, H5E_CANTCOPY, FAIL, "unable to copy object header message")
-                 } /* end if */
-                 else {
-                    if((dst_native = H5O_copy_mesg_file(copy_type, ent_src->file, mesg_src->native, 
-                            ent_dst->file, dxpl_id, map_list, NULL)) == NULL)
-                        HGOTO_ERROR(H5E_OHDR, H5E_CANTCOPY, FAIL, "unable to copy object header message")
-                 } /* end else */
-
-		/* Calculate address in destination raw chunk */
-		p = chunk[chunkno].image + (mesg_src->raw - oh->chunk[chunkno].image);
-
-                /*
-                 * Encode the message.  If the message is shared then we
-                 * encode a Shared Object message instead of the object
-                 * which is being shared.
-                 */
-                if((copy_type->encode)(ent_dst->file, p, dst_native) < 0)
-                    HGOTO_ERROR(H5E_OHDR, H5E_CANTENCODE, FAIL, "unable to encode object header message")
-
-		/* Release native destination info */
-                H5O_free_real(copy_type, dst_native);
-	    } /* end if (mesg_src->type && mesg_src->type->copy_file) */
-        } /* end of mesgno loop */
-
-        /* Write the object header to the file if this is the first chunk */
-        if(chunkno == 0)
-            if(H5F_block_write(ent_dst->file, H5FD_MEM_OHDR, addr_new, hdr_size, dxpl_id, buf) < 0)
-                HGOTO_ERROR(H5E_OHDR, H5E_WRITEERROR, FAIL, "unable to write object header hdr to disk")
-
-        /* Write this chunk into disk */
-        if(H5F_block_write(ent_dst->file, H5FD_MEM_OHDR, chunk[chunkno].addr, chunk[chunkno].size, dxpl_id, chunk[chunkno].image) < 0)
-           HGOTO_ERROR(H5E_OHDR, H5E_WRITEERROR, FAIL, "unable to write object header data to disk")
-    } /* end of chunkno loop */
-
-    /* Allocate space for the address mapping of the object copied */
-    if(NULL == (addr_map = H5FL_MALLOC(H5O_addr_map_t)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
-
-    /* Insert the address mapping for the new object into the copied list */
-    /* (Do this here, because "post copy" possibly checks it) */
-    addr_map->src_addr = ent_src->header;
-    addr_map->dst_addr = ent_dst->header;
-    if(H5SL_insert(map_list, addr_map, &(addr_map->src_addr)) < 0)
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTINSERT, FAIL, "can't insert object into skip list")
-
-    /* "post copy" loop over messages */
-    for(mesgno = 0; mesgno < oh->nmesgs; mesgno++) {
-        const H5O_class_t *copy_type;
-
-        mesg_src = &(oh->mesg[mesgno]);
-
-        if (mesg_src->flags & H5O_FLAG_SHARED)
-            copy_type = H5O_SHARED;
-        else
-            copy_type = mesg_src->type;
-
-        HDassert(copy_type);
-        if(mesg_src->native) {
-            if((H5O_post_copy_mesg_file(copy_type, ent_src->file, mesg_src->native,
-                    ent_dst, dxpl_id, map_list)) < 0)
-                HGOTO_ERROR(H5E_OHDR, H5E_CANTCOPY, FAIL, "unable to copy object header message")
-        } /* end if */
-    } /* end for */
-
-done:
-    /* Release pointer to object header itself */
-    if(oh != NULL) {
-        for(chunkno = 0; chunkno < oh->nchunks; chunkno++)
-            H5FL_BLK_FREE(chunk_image, chunk[chunkno].image);
-        H5FL_SEQ_FREE(H5O_chunk_t, chunk);
-
-        if(H5AC_unprotect(ent_src->file, dxpl_id, H5AC_OHDR, ent_src->header, oh, H5AC__NO_FLAGS_SET) < 0)
-            HDONE_ERROR(H5E_OHDR, H5E_PROTECT, FAIL, "unable to release object header")
-    } /* end if */
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5O_copy_header_real() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5O_copy_header_map
- *
- * Purpose:     Copy header object from one location to another, detecting
- *              already mapped objects, etc.
- *
- * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Quincey Koziol
- *              November 1, 2005
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5O_copy_header_map(const H5G_entry_t *ent_src,
-    H5G_entry_t *ent_dst /*out */, hid_t dxpl_id, H5SL_t *map_list)
-{
-    H5O_addr_map_t      *addr_map;              /* Address mapping of object copied */
-    herr_t             ret_value = SUCCEED;
-
-    FUNC_ENTER_NOAPI(H5O_copy_header_map, FAIL)
-
-    /* Sanity check */
-    HDassert(ent_src);
-    HDassert(ent_dst);
-    HDassert(ent_dst->file);
-    HDassert(map_list);
-
-    /* Look up the address of the object to copy in the skip list */
-    addr_map = (H5O_addr_map_t *)H5SL_search(map_list, &(ent_src->header));
-
-    /* Check if address is already in list of objects copied */
-    if(addr_map == NULL) {
-        /* Copy object for the first time */
-
-        /* Copy object referred to */
-        if(H5O_copy_header_real(ent_src, ent_dst, dxpl_id, map_list) < 0)
-            HGOTO_ERROR(H5E_OHDR, H5E_CANTCOPY, FAIL, "unable to copy object")
-    } /* end if */
-    else {
-        /* Object has already been copied, set it's address in destination file */
-        ent_dst->header = addr_map->dst_addr;
-    } /* end else */
-
-    /* Increment destination object's link count */
-    if(H5O_link(ent_dst, 1, dxpl_id) < 0)
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, FAIL, "unable to increment object link count")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5O_copy_header_map() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5O_copy_free_addrmap_cb
- PURPOSE
-    Internal routine to free address maps from the skip list for copying objects
- USAGE
-    herr_t H5O_copy_free_addrmap_cb(item, key, op_data)
-        void *item;             IN/OUT: Pointer to addr
-        void *key;              IN/OUT: (unused)
-        void *op_data;          IN: (unused)
- RETURNS
-    Returns zero on success, negative on failure.
- DESCRIPTION
-        Releases the memory for the address.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-static herr_t
-H5O_copy_free_addrmap_cb(void *item, void UNUSED *key, void UNUSED *op_data)
-{
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_copy_free_addrmap_cb)
-
-    HDassert(item);
-
-    /* Release the item */
-    H5FL_FREE(H5O_addr_map_t, item);
-
-    FUNC_LEAVE_NOAPI(0)
-}   /* H5O_copy_free_addrmap_cb() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5O_copy_header
- *
- * Purpose:     copy header object from one location to another.
- *
- * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Peter Cao
- *              May 30, 2005
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5O_copy_header(const H5G_entry_t *ent_src,
-    H5G_entry_t *ent_dst /*out */, hid_t dxpl_id)
-{
-    H5SL_t          *map_list = NULL;           /* Skip list to hold address mappings */
-    herr_t             ret_value = SUCCEED;
-
-    FUNC_ENTER_NOAPI(H5O_copy_header, FAIL)
-
-    HDassert(ent_src);
-    HDassert(ent_src->file);
-    HDassert(H5F_addr_defined(ent_src->header));
-    HDassert(ent_dst->file);
-
-    /* Create a skip list to keep track of which objects are copied */
-    if((map_list = H5SL_create(H5SL_TYPE_HADDR, 0.5, 16)) == NULL)
-        HGOTO_ERROR(H5E_SLIST, H5E_CANTCREATE, FAIL, "cannot make skip list")
-
-    /* copy the object from the source file to the destination file */
-    if(H5O_copy_header_real(ent_src, ent_dst, dxpl_id, map_list) < 0)
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTCOPY, FAIL, "unable to copy object")
-
-done:
-    if(map_list)
-        H5SL_destroy(map_list, H5O_copy_free_addrmap_cb, NULL);
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5O_copy_header() */
 
 
 /*-------------------------------------------------------------------------
@@ -4544,10 +3840,6 @@ done:
  * Modifications:
  *		Robb Matzke, 1999-07-28
  *		The ADDR argument is passed by value.
- *
- *		John Mainzer, 6/16/05
- *     	 	Modified function to use the new dirtied parameter to
- *     		H5AC_unprotect() instead of modfying the is_dirty field.
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -4712,7 +4004,7 @@ H5O_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream, int indent, int f
 	HDfprintf(stream, "*** TOTAL SIZE DOES NOT MATCH ALLOCATED SIZE!\n");
 
 done:
-    if (oh && H5AC_unprotect(f, dxpl_id, H5AC_OHDR, addr, oh, H5AC__NO_FLAGS_SET) < 0)
+    if (oh && H5AC_unprotect(f, dxpl_id, H5AC_OHDR, addr, oh, FALSE) < 0)
 	HDONE_ERROR(H5E_OHDR, H5E_PROTECT, FAIL, "unable to release object header");
 
     FUNC_LEAVE_NOAPI(ret_value);

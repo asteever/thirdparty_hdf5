@@ -121,38 +121,7 @@ ac_cv_sizeof_uint_fast64_t=${ac_cv_sizeof_uint_fast64_t=8}
 #ac_cv_sizeof_size_t=${ac_cv_sizeof_size_t=4}
 #ac_cv_sizeof_off_t=${ac_cv_sizeof_off_t=8}
 
-# The default Fortran 90 compiler
-
-if test "X-" = "X-$FC"; then
-  if test "X-$enable_parallel" = "X-yes"; then
-    FC=mpxlf_r
-  else
-    FC=xlf
-  fi
-fi
-
-if test "X-" = "X-$f9x_flags_set"; then
-  F9XSUFFIXFLAG="-qsuffix=f=f90"
-  FCFLAGS="$FCFLAGS -static -O ${F9XSUFFIXFLAG} -qmoddir=./ -k"
-  FSEARCH_DIRS="-I./ -I../src"
-  DEBUG_FCFLAGS="-O"
-  PROD_FCFLAGS="-O"
-  PROFILE_FCFLAGS="-O"
-  f9x_flags_set=yes
-fi
-
 # With poe version 3.2.0.19 or lower(using lpp -l all | grep ppe.poe to check the version number, 
 # IBM MPI-IO implementation has a bug, 
 #it cannot generate correct MPI derived datatype. Please uncomment the following line:
 #hdf5_mpi_complex_derived_datatype_works=${hdf5_mpi_complex_derived_datatype_works='no'}
-
-# The default C++ compiler
-
-# Use AIX supplied C++ compiler by default.
-CXX=${CXX=xlC}
-
-# Added -qweaksymbol to suppress linker messages warning of duplicate
-# symbols; these warnings are harmless. - BMR
-CXXFLAGS="$CXXFLAGS -qweaksymbol"
-
-

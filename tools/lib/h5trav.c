@@ -31,7 +31,7 @@ herr_t get_name_type( hid_t loc_id,
                       const char *group_name,
                       int idx,
                       char **name,
-                      H5G_obj_t *type );
+                      H5G_obj_t1 *type );
 
 /*-------------------------------------------------------------------------
  * Function: h5trav_getinfo
@@ -278,7 +278,7 @@ herr_t get_name_type( hid_t loc_id,
                       const char *group_name,
                       int idx,
                       char **name,
-                      H5G_obj_t *type )
+                      H5G_obj_t1 *type )
 {
 
  trav_info_t info;
@@ -315,7 +315,7 @@ int traverse( hid_t loc_id,
 {
 
  char          *name=NULL;
- H5G_obj_t     type;
+ H5G_obj_t1     type;
  int           n_names;
  char          *path=NULL;
  H5G_stat_t    statbuf;
@@ -370,10 +370,10 @@ int traverse( hid_t loc_id,
    inserted_objs++;
 
    /* nlink is number of hard links to object */
-   if (statbuf.u.obj.nlink > 0  && trav_table_search(statbuf.u.obj.objno, table ) == -1)
+   if (statbuf.nlink > 0  && trav_table_search(statbuf.objno, table ) == -1)
    {
     /* add object to table */
-    trav_table_add(statbuf.u.obj.objno, path, H5G_GROUP, table );
+    trav_table_add(statbuf.objno, path, H5G_GROUP, table );
 
     /* print it */
     if (print)
@@ -385,9 +385,9 @@ int traverse( hid_t loc_id,
 
      /* search table
        group with more than one link to it */
-   if (statbuf.u.obj.nlink > 1)
+   if (statbuf.nlink > 1)
    {
-    if ((j = trav_table_search(statbuf.u.obj.objno, table )) < 0 )
+    if ((j = trav_table_search(statbuf.objno, table )) < 0 )
      return -1;
 
     trav_table_addlink(table,j,path);
@@ -418,10 +418,10 @@ int traverse( hid_t loc_id,
    inserted_objs++;
 
    /* nlink is number of hard links to object */
-   if (statbuf.u.obj.nlink > 0  && trav_table_search(statbuf.u.obj.objno, table ) == -1)
+   if (statbuf.nlink > 0  && trav_table_search(statbuf.objno, table ) == -1)
    {
     /* add object to table */
-    trav_table_add(statbuf.u.obj.objno, path, H5G_DATASET, table );
+    trav_table_add(statbuf.objno, path, H5G_DATASET, table );
 
     /* print it */
     if (print)
@@ -430,9 +430,9 @@ int traverse( hid_t loc_id,
 
    /* search table
        dataset with more than one link to it */
-   if (statbuf.u.obj.nlink > 1)
+   if (statbuf.nlink > 1)
    {
-    if ((j = trav_table_search(statbuf.u.obj.objno, table )) < 0 )
+    if ((j = trav_table_search(statbuf.objno, table )) < 0 )
      return -1;
 
     trav_table_addlink(table,j,path);
@@ -463,10 +463,10 @@ int traverse( hid_t loc_id,
    inserted_objs++;
 
    /* nlink is number of hard links to object */
-   if (statbuf.u.obj.nlink > 0  && trav_table_search(statbuf.u.obj.objno, table ) == -1)
+   if (statbuf.nlink > 0  && trav_table_search(statbuf.objno, table ) == -1)
    {
     /* add object to table */
-    trav_table_add(statbuf.u.obj.objno, path, H5G_TYPE, table );
+    trav_table_add(statbuf.objno, path, H5G_TYPE, table );
 
      /* print it */
     if (print)
@@ -489,12 +489,12 @@ int traverse( hid_t loc_id,
     inserted_objs++;
 
     /* add object to table */
-    trav_table_add(statbuf.u.obj.objno, path, H5G_LINK, table );
+    trav_table_add(statbuf.objno, path, H5G_LINK, table );
 
-    if (statbuf.u.slink.linklen>0)
+    if (statbuf.linklen>0)
     {
-     targbuf=malloc(statbuf.u.slink.linklen);
-     H5Gget_linkval(loc_id,path,statbuf.u.slink.linklen,targbuf);
+     targbuf=malloc(statbuf.linklen);
+     H5Gget_linkval(loc_id,path,statbuf.linklen,targbuf);
      if (print)
       printf(" %-10s %s -> %s\n", "link", path, targbuf);
      if (targbuf)

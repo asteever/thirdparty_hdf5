@@ -22,16 +22,8 @@
  *      with the data sieve buffer from H5F_seq_read/write.
  */
 
-/****************/
-/* Module Setup */
-/****************/
-
 #define H5D_PACKAGE		/*suppress error about including H5Dpkg	  */
 
-
-/***********/
-/* Headers */
-/***********/
 #include "H5private.h"		/* Generic Functions			*/
 #include "H5Dpkg.h"		/* Dataset functions			*/
 #include "H5Eprivate.h"		/* Error handling		  	*/
@@ -44,27 +36,9 @@
 #include "H5Sprivate.h"		/* Dataspace functions			*/
 #include "H5Vprivate.h"		/* Vector and array functions		*/
 
-/****************/
-/* Local Macros */
-/****************/
-
-/******************/
-/* Local Typedefs */
-/******************/
-
-/********************/
-/* Local Prototypes */
-/********************/
+/* Private prototypes */
 static herr_t H5D_contig_write(H5D_t *dset, const H5D_dxpl_cache_t *dxpl_cache,
     hid_t dxpl_id, const H5D_storage_t *store, hsize_t offset, size_t size, const void *buf);
-
-/*********************/
-/* Package Variables */
-/*********************/
-
-/*******************/
-/* Local Variables */
-/*******************/
 
 /* Declare a PQ free list to manage the sieve buffer information */
 H5FL_BLK_DEFINE(sieve_buf);
@@ -85,6 +59,8 @@ H5FL_BLK_DEFINE_STATIC(zero_fill);
  *
  * Programmer:	Quincey Koziol
  *		April 19, 2003
+ *
+ * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -117,6 +93,11 @@ done:
  *
  * Programmer:	Quincey Koziol
  *		August 22, 2002
+ *
+ * Modifications:
+ *          Bill Wendling, February 20, 2003
+ *          Added support for getting the barrier COMM if you're using
+ *          Flexible PHDF5.
  *
  *-------------------------------------------------------------------------
  */
@@ -305,6 +286,8 @@ done:
  * Programmer:	Quincey Koziol
  *		March 20, 2003
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -337,6 +320,8 @@ done:
  * Programmer:	Quincey Koziol
  *		June  2, 2004
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 haddr_t
@@ -363,6 +348,9 @@ H5D_contig_get_addr(const H5D_t *dset)
  *
  * Programmer:	Quincey Koziol
  *              Thursday, September 28, 2000
+ *
+ * Modifications:
+ *              Re-written in terms of the new writevv call, QAK, 5/7/03
  *
  *-------------------------------------------------------------------------
  */
@@ -412,6 +400,8 @@ done:
  *
  * Notes:
  *      Offsets in the sequences must be monotonically increasing
+ *
+ * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -677,6 +667,8 @@ done:
  *
  * Notes:
  *      Offsets in the sequences must be monotonically increasing
+ *
+ * Modifications:
  *
  *-------------------------------------------------------------------------
  */

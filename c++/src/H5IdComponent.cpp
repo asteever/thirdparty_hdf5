@@ -49,7 +49,7 @@ IdComponent::IdComponent( const IdComponent& original )
 ///\brief	Increment reference counter for a given id.
 // Programmer	Binh-Minh Ribler - May 2005
 //--------------------------------------------------------------------------
-void IdComponent::incRefCount(const hid_t obj_id) const
+void IdComponent::incRefCount(hid_t obj_id) const
 {
     if (p_valid_id(obj_id))
 	if (H5Iinc_ref(obj_id) < 0)
@@ -74,7 +74,7 @@ void IdComponent::incRefCount() const
 //		Added the check for ref counter to give a little more info
 //		on why H5Idec_ref fails in some cases - BMR 5/19/2005
 //--------------------------------------------------------------------------
-void IdComponent::decRefCount(const hid_t obj_id) const
+void IdComponent::decRefCount(hid_t obj_id) const
 {
     if (p_valid_id(obj_id))
         if (H5Idec_ref(obj_id) < 0)
@@ -102,7 +102,7 @@ void IdComponent::decRefCount() const
 ///\return	Reference count
 // Programmer	Binh-Minh Ribler - May 2005
 //--------------------------------------------------------------------------
-int IdComponent::getCounter(const hid_t obj_id) const
+int IdComponent::getCounter(hid_t obj_id) const
 {
     int counter = 0;
     if (p_valid_id(obj_id))
@@ -123,29 +123,6 @@ int IdComponent::getCounter(const hid_t obj_id) const
 int IdComponent::getCounter() const
 {
     return (getCounter(id));
-}
-
-//--------------------------------------------------------------------------
-// Function:    hdfObjectType
-///\brief       Given an id, returns the type of the object.
-///return       a valid HDF object type, which may be one of the following:
-///		\li \c H5I_FILE
-///		\li \c H5I_GROUP
-///		\li \c H5I_DATATYPE
-///		\li \c H5I_DATASPACE
-///		\li \c H5I_DATASET
-///		\li \c H5I_ATTR
-///		\li or \c H5I_BADID, if no valid type can be determined or the
-///				input object id is invalid.
-// Programmer   Binh-Minh Ribler - Jul, 2005
-//--------------------------------------------------------------------------
-H5I_type_t IdComponent::getHDFObjType(const hid_t obj_id)
-{
-    H5I_type_t id_type = H5Iget_type(obj_id);
-    if (id_type <= H5I_BADID || id_type >= H5I_NTYPES)
-        return H5I_BADID; // invalid
-    else
-        return id_type; // valid type
 }
 
 //--------------------------------------------------------------------------
@@ -189,7 +166,7 @@ IdComponent& IdComponent::operator=( const IdComponent& rhs )
 // 		Then the object's id is reset to the new id.
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-void IdComponent::setId(const hid_t new_id)
+void IdComponent::setId( hid_t new_id )
 {
    // handling references to this id
    decRefCount();
@@ -241,30 +218,11 @@ IdComponent::~IdComponent() {
 }
 
 //
-// Implementation of protected functions for HDF5 Reference Interface.
+// Implementation of protected functions for HDF5 Reference Interface
+// and miscelaneous helpers.
 //
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-//--------------------------------------------------------------------------
-// Function:	IdComponent::inMemFunc
-///\brief	Makes and returns string "<class-name>::<func_name>"
-///\param	func_name - Name of the function where failure occurs
-// Description
-///		Concatenates the class name of this object with the
-///		passed-in function name to create a string that indicates
-///		where the failure occurs.  The class-name is provided by
-///		fromClass().  This string will be used by a base class when
-///		an exception is thrown.
-// Programmer	Binh-Minh Ribler - Aug 6, 2005
-//--------------------------------------------------------------------------
-string IdComponent::inMemFunc(const char* func_name) const
-{
-   string full_name = func_name;
-   full_name.insert(0, "::");
-   full_name.insert(0, fromClass());
-   return (full_name);
-}
-
 //--------------------------------------------------------------------------
 // Function:	IdComponent default constructor - private
 ///\brief	Default constructor.
@@ -273,7 +231,7 @@ string IdComponent::inMemFunc(const char* func_name) const
 IdComponent::IdComponent() : id(-1) {}
 
 //--------------------------------------------------------------------------
-// Function:	IdComponent::p_get_file_name (protected)
+// Function:	IdComponent::p_get_file_name
 // Purpose:	Gets the name of the file, in which this object belongs.
 // Exception:	H5::IdComponentException
 // Description:
@@ -387,13 +345,33 @@ hid_t IdComponent::p_get_region(void *ref, H5R_type_t ref_type) const
 // Return	true if id is valid, false, otherwise
 // Programmer	Binh-Minh Ribler - May, 2005
 //--------------------------------------------------------------------------
-bool IdComponent::p_valid_id(const hid_t obj_id) const
+bool IdComponent::p_valid_id(hid_t obj_id) const
 {
     H5I_type_t id_type = H5Iget_type(obj_id);
-    if (id_type <= H5I_BADID || id_type >= H5I_NTYPES)
+    if (id_type <= H5I_BADID || id_type >= H5I_NGROUPS)
 	return false;
     else
 	return true;
+}
+
+//--------------------------------------------------------------------------
+// Function:	IdComponent::inMemFunc
+///\brief	Makes and returns string "<class-name>::<func_name>"
+///\param	func_name - Name of the function where failure occurs
+// Description
+///		Concatenates the class name of this object with the
+///		passed-in function name to create a string that indicates
+///		where the failure occurs.  The class-name is provided by
+///		fromClass().  This string will be used by a base class when
+///		an exception is thrown.
+// Programmer	Binh-Minh Ribler - Oct 10, 2005
+//--------------------------------------------------------------------------
+string IdComponent::inMemFunc(const char* func_name) const
+{
+   string full_name = func_name;
+   full_name.insert(0, "::");
+   full_name.insert(0, fromClass());
+   return (full_name);
 }
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS

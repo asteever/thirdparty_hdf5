@@ -71,7 +71,7 @@
 #define FILE42  "tnamed_dtype_attr.h5"
 #define FILE43  "tvldtypes5.h5"
 #define FILE44  "tfilters.h5"
-#define FILE45  "tnullspace.h5"
+/* FILE45  not defined in this version */
 #define FILE46  "tfcontents1.h5"
 #define FILE47  "tfcontents2.h5"
 #define FILE48  "tfvalues.h5"
@@ -108,10 +108,8 @@ set_local_myfilter(hid_t dcpl_id, hid_t type_id, hid_t UNUSED space_id);
 
 /* This message derives from H5Z */
 const H5Z_class_t H5Z_MYFILTER[1] = {{
-    H5Z_CLASS_T_VERS,
-    MYFILTER_ID,		       /* Filter id number		*/
-    1, 1,
-    "myfilter",			       /* Filter name for debugging	*/
+    MYFILTER_ID,         /* Filter id number  */
+    "myfilter",          /* Filter name for debugging */
     NULL,                /* The "can apply" callback     */
     set_local_myfilter,  /* The "set local" callback     */
     myfilter,            /* The actual filter function */
@@ -4363,42 +4361,6 @@ static void gent_named_dtype_attr(void)
 
 
 /*-------------------------------------------------------------------------
- * Function: gent_null_space
- *
- * Purpose: generates dataset and attribute of null dataspace
- *-------------------------------------------------------------------------
- */
-static void gent_null_space(void)
-{
-    hid_t fid, root, dataset, space, attr;
-    int dset_buf = 10;
-    int point = 4;
-
-    fid = H5Fcreate(FILE45, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-    root = H5Gopen (fid, "/");
-
-    /* null space */
-    space = H5Screate(H5S_NULL);
-
-    /* dataset */
-    dataset = H5Dcreate(fid, "dset", H5T_STD_I32BE, space, H5P_DEFAULT);
-    /* nothing should be written */
-    H5Dwrite(dataset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &dset_buf);
-
-    /* attribute */
-    attr = H5Acreate (root, "attr", H5T_NATIVE_UINT, space, H5P_DEFAULT);
-    H5Awrite(attr, H5T_NATIVE_INT, &point); /* Nothing can be written */
-
-    H5Dclose(dataset);
-    H5Aclose(attr);
-    H5Gclose(root);
-    H5Sclose(space);
-    H5Fclose(fid);
-}
-
-
-
-/*-------------------------------------------------------------------------
  * Function: make_dset
  *
  * Purpose: utility function to create and write a dataset in LOC_ID
@@ -4636,42 +4598,6 @@ static void gent_filters(void)
 #endif
 
 /*-------------------------------------------------------------------------
- * nbit
- *-------------------------------------------------------------------------
- */
-#if defined (H5_HAVE_FILTER_NBIT)
- /* remove the filters from the dcpl */
- ret=H5Premove_filter(dcpl,H5Z_FILTER_ALL);
- assert(ret>=0);
-
- /* set the checksum filter */
- ret=H5Pset_nbit(dcpl);
- assert(ret>=0);
-
- tid=H5Tcopy(H5T_NATIVE_INT);
- H5Tset_precision(tid,H5Tget_size(tid)-1);
- ret=make_dset(fid,"nbit",sid,tid,dcpl,buf1);
- assert(ret>=0);
-#endif
-
-/*-------------------------------------------------------------------------
- * scaleoffset
- *-------------------------------------------------------------------------
- */
-#if defined (H5_HAVE_FILTER_SCALEOFFSET)
- /* remove the filters from the dcpl */
- ret=H5Premove_filter(dcpl,H5Z_FILTER_ALL);
- assert(ret>=0);
-
- /* set the scaleoffset filter */
- ret=H5Pset_scaleoffset(dcpl,H5Z_SO_INT,H5Tget_size(H5T_NATIVE_INT));
- assert(ret>=0);
-
- ret=make_dset(fid,"scaleoffset",sid,H5T_NATIVE_INT,dcpl,buf1);
- assert(ret>=0);
-#endif
-
-/*-------------------------------------------------------------------------
  * all filters
  *-------------------------------------------------------------------------
  */
@@ -4703,12 +4629,6 @@ static void gent_filters(void)
 #if defined (H5_HAVE_FILTER_FLETCHER32)
  /* set the checksum filter */
  ret=H5Pset_fletcher32(dcpl);
- assert(ret>=0);
-#endif
-
-#if defined (H5_HAVE_FILTER_NBIT)
- /* set the nbit filter */
- ret=H5Pset_nbit(dcpl);
  assert(ret>=0);
 #endif
 
@@ -4835,11 +4755,7 @@ set_local_myfilter(hid_t dcpl_id, hid_t UNUSED type_id, hid_t UNUSED space_id)
  unsigned cd_values[2]={5,6};   /* Filter parameters */
 
  /* Get the filter's current parameters */
-#ifdef H5_WANT_H5_V1_6_COMPAT
  if(H5Pget_filter_by_id(dcpl_id,MYFILTER_ID,&flags,&cd_nelmts,cd_values,0,NULL)<0)
-#else
- if(H5Pget_filter_by_id(dcpl_id,MYFILTER_ID,&flags,&cd_nelmts,cd_values,0,NULL,NULL)<0)
-#endif /* H5_WANT_H5_V1_6_COMPAT */
   return(FAIL);
 
  cd_nelmts=2;
@@ -5244,12 +5160,10 @@ static void gent_aindices(void)
  hsize_t  dims2[2]  = {2,100};
  hsize_t  dims3[3]  = {2,2,100};
  hsize_t  dims4[4]  = {2,3,4,5};
- hsize_t  dims5[2]  = {32,4097}; /* big enough data size to force a second stripmine read */
  int      buf1[100];
  int      buf2[2][100];
  int      buf3[2][2][100];
  int      buf4[2][3][4][5];
- double   *buf5;
  int      i, j, k, l, n, ret;
 
  for (i=n=0; i<100; i++){
@@ -5278,10 +5192,6 @@ static void gent_aindices(void)
   }
  }
 
- buf5 = malloc(32 * 4097 * sizeof(double) );
- for (i = 0; i < 32 * 4097; i++)
-  buf5[i] = 1;
-
  /* create a file */
  fid  = H5Fcreate(FILE50, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
  assert(fid>=0);
@@ -5294,7 +5204,6 @@ static void gent_aindices(void)
  write_dset(fid,2,dims2,"2d",H5T_NATIVE_INT,buf2);
  write_dset(fid,3,dims3,"3d",H5T_NATIVE_INT,buf3);
  write_dset(fid,4,dims4,"4d",H5T_NATIVE_INT,buf4);
- write_dset(fid,2,dims5,"stripmine",H5T_NATIVE_DOUBLE,buf5);
 
 /*-------------------------------------------------------------------------
  * test with group indentation
@@ -5319,8 +5228,6 @@ static void gent_aindices(void)
  */
  ret=H5Fclose(fid);
  assert(ret>=0);
-
- free(buf5);
 }
 
 /*-------------------------------------------------------------------------
@@ -5380,6 +5287,7 @@ static void gent_longlinks(void)
  *-------------------------------------------------------------------------
  */
 
+
 int main(void)
 {
     gent_group();
@@ -5425,7 +5333,6 @@ int main(void)
     gent_attr_all();
     gent_compound_complex();
     gent_named_dtype_attr();
-    gent_null_space();
 
     gent_filters();
     gent_fvalues();

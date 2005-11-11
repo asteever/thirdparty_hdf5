@@ -158,10 +158,10 @@ static h5dump_t         dataformat = {
     1,				/*skip_first */
 
     1,				/*obj_hidefileno */
-    " "H5_PRINTF_HADDR_FMT,	/*obj_format */
+    " %lu:%lu",			/*obj_format */
 
     1,				/*dset_hidefileno */
-    "DATASET "H5_PRINTF_HADDR_FMT" ",		/*dset_format */
+    "DATASET %lu:%lu ",		/*dset_format */
     "%s",			/*dset_blockformat_pre */
     "%s",			/*dset_ptformat_pre */
     "%s",			/*dset_ptformat */
@@ -242,10 +242,10 @@ static h5dump_t         xml_dataformat = {
     1,				/*skip_first */
 
     1,				/*obj_hidefileno */
-    " "H5_PRINTF_HADDR_FMT,	/*obj_format */
+    " %lu:%lu",			/*obj_format */
 
     1,				/*dset_hidefileno */
-    "DATASET "H5_PRINTF_HADDR_FMT" ",		/*dset_format */
+    "DATASET %lu:%lu ",		/*dset_format */
     "%s",			/*dset_blockformat_pre */
     "%s",			/*dset_ptformat_pre */
     "%s",			/*dset_ptformat */
@@ -683,11 +683,20 @@ print_datatype(hid_t type,unsigned in_group)
         obj_t  *obj;    /* Found object */
 
         H5Gget_objinfo(type, ".", TRUE, &statbuf);
-        obj = search_obj(type_table, statbuf.u.obj.objno);
+        obj = search_obj(type_table, statbuf.objno);
 
         if (obj) {
-            if (!obj->recorded)
-                HDfprintf(stdout,"\"/#%a\"", obj->objno);
+            if (!obj->recorded) {
+                unsigned long 	objno[2];	/*object number			*/
+
+                objno[0] = (unsigned long)(obj->objno);
+#if H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG
+                objno[1] = (unsigned long)(obj->objno >> 8*sizeof(long));
+#else /* H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG */
+                objno[1] = 0;
+#endif /* H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG */
+                HDfprintf(stdout,"\"/#%lu:%lu\"", objno[0], objno[1]);
+            }
             else
                 printf("\"%s\"", obj->objname);
         } else {
@@ -768,10 +777,8 @@ print_datatype(hid_t type,unsigned in_group)
                 printf("H5T_NATIVE_FLOAT");
             } else if (H5Tequal(type, H5T_NATIVE_DOUBLE)) {
                 printf("H5T_NATIVE_DOUBLE");
-#if H5_SIZEOF_LONG_DOUBLE !=0
             } else if (H5Tequal(type, H5T_NATIVE_LDOUBLE)) {
                 printf("H5T_NATIVE_LDOUBLE");
-#endif
             } else {
                 printf("undefined float");
                 d_status = EXIT_FAILURE;
@@ -1098,11 +1105,6 @@ dump_dataspace(hid_t space)
 	    printf(" %s }", dump_header_format->dataspacedimend);
 
 	    break;
-        case H5S_NULL:
-	    /* null dataspace */
-	    HDfprintf(stdout, "%s %s",
-		      dump_header_format->dataspacedescriptionbegin, S_NULL);
-            break;
         case H5S_COMPLEX:
 	    printf("%s not yet implemented %s\n", BEGIN, END);
             break;
@@ -1350,7 +1352,7 @@ dump_all(hid_t group, const char *name, void * op_data)
     switch (statbuf.type) {
     case H5G_LINK:
 	indentation(indent);
-	targbuf = malloc(statbuf.u.slink.linklen);
+	targbuf = malloc(statbuf.linklen);
 
 	if (!doxml) {
 	    begin_obj(dump_header_format->softlinkbegin, name,
@@ -1358,7 +1360,7 @@ dump_all(hid_t group, const char *name, void * op_data)
 	    indentation(indent + COL);
 	}
 
-	if (H5Gget_linkval(group, name, statbuf.u.slink.linklen, targbuf) < 0) {
+	if (H5Gget_linkval(group, name, statbuf.linklen, targbuf) < 0) {
             error_msg(progname, "unable to get link value\n");
 	    d_status = EXIT_FAILURE;
             ret = FAIL;
@@ -1378,7 +1380,7 @@ dump_all(hid_t group, const char *name, void * op_data)
                 char *tmp2, *t_tmp;
 		int res;
 
-                tmp2 = malloc(strlen(prefix) + statbuf.u.slink.linklen + 1);
+                tmp2 = malloc(strlen(prefix) + statbuf.linklen + 1);
                 strcpy(tmp2, prefix);
 
                 if (targbuf && targbuf[0] == '/')
@@ -1465,10 +1467,10 @@ dump_all(hid_t group, const char *name, void * op_data)
 	    /* hard link */
 	    H5Gget_objinfo(obj, ".", TRUE, &statbuf);
 
-	    if (statbuf.u.obj.nlink > 1) {
+	    if (statbuf.nlink > 1) {
                 obj_t  *found_obj;    /* Found object */
 
-		found_obj = search_obj(dset_table, statbuf.u.obj.objno);
+		found_obj = search_obj(dset_table, statbuf.objno);
 
 		if (found_obj == NULL) {
 		    indentation(indent);
@@ -1648,10 +1650,20 @@ dump_group(hid_t gid, const char *name)
 	/* dump unamed type in root group */
 	for (u = 0; u < type_table->nobjs; u++)
 	    if (!type_table->objs[u].recorded) {
+                unsigned long 	objno[2];	/*object number			*/
+
 		dset = H5Dopen(gid, type_table->objs[u].objname);
 		type = H5Dget_type(dset);
-		sprintf(type_name, "#"H5_PRINTF_HADDR_FMT, type_table->objs[u].objno);
+
+                objno[0] = (unsigned long)(type_table->objs[u].objno);
+#if H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG
+                objno[1] = (unsigned long)(type_table->objs[u].objno >> 8*sizeof(long));
+#else /* H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG */
+                objno[1] = 0;
+#endif /* H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG */
+		sprintf(type_name, "#%lu:%lu", objno[0], objno[1]);
                 dump_function_table->dump_named_datatype_function(type, type_name);
+
 		H5Tclose(type);
 		H5Dclose(dset);
 	    }
@@ -1659,10 +1671,10 @@ dump_group(hid_t gid, const char *name)
 
     H5Gget_objinfo(gid, ".", TRUE, &statbuf);
 
-    if (statbuf.u.obj.nlink > 1) {
+    if (statbuf.nlink > 1) {
         obj_t  *found_obj;    /* Found object */
 
-        found_obj = search_obj(group_table, statbuf.u.obj.objno);
+        found_obj = search_obj(group_table, statbuf.objno);
 
 	if (found_obj == NULL) {
 	    indentation(indent);
@@ -1950,7 +1962,7 @@ dump_data(hid_t obj_id, int obj_data, struct subset_t *sset, int pindex)
         /* need to call h5tools_dump_mem for the attribute data */
         space = H5Aget_space(obj_id);
         space_type = H5Sget_simple_extent_type(space);
-        if(space_type == H5S_NULL || space_type == H5S_NO_CLASS || space_type == H5S_COMPLEX) {
+        if(space_type == H5S_NO_CLASS || space_type == H5S_COMPLEX) {
             status = SUCCEED;
         } else {
 	    char        string_prefix[64];
@@ -2256,7 +2268,6 @@ dump_dcpl(hid_t dcpl_id,hid_t type_id, hid_t obj_id)
   for (i=0; i<nfilters; i++)
   {
    cd_nelmts = NELMTS(cd_values);
-#ifdef H5_WANT_H5_V1_6_COMPAT
    filtn = H5Pget_filter(dcpl_id,
     (unsigned)i,
     &filt_flags,
@@ -2264,16 +2275,6 @@ dump_dcpl(hid_t dcpl_id,hid_t type_id, hid_t obj_id)
     cd_values,
     sizeof(f_name),
     f_name);
-#else
-   filtn = H5Pget_filter(dcpl_id,
-    (unsigned)i,
-    &filt_flags,
-    &cd_nelmts,
-    cd_values,
-    sizeof(f_name),
-    f_name,
-    NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
 
    switch (filtn)
    {
@@ -2329,14 +2330,6 @@ dump_dcpl(hid_t dcpl_id,hid_t type_id, hid_t obj_id)
      indentation(indent + COL);
      printf("%s\n",END);
     }
-    break;
-   case H5Z_FILTER_NBIT:
-    indentation(indent + COL);
-    printf("%s\n", NBIT);
-    break;
-   case H5Z_FILTER_SCALEOFFSET:
-    indentation(indent + COL);
-    printf("%s %s %s %d %s\n", SCALEOFFSET, BEGIN, SCALEOFFSET_MINBIT, cd_values[0], END);
     break;
    default:
     indentation(indent + COL);
@@ -2475,8 +2468,13 @@ dump_fcpl(hid_t fid)
  unsigned shhdr;     /* shared object header version # */
  hid_t    fdriver;    /* file driver */
  char     dname[15]; /* buffer to store driver name */
+#ifdef H5_WANT_H5_V1_4_COMPAT
+ int      sym_lk;
+ int      sym_ik;    /* symbol table B-tree internal 'K' value */
+#else
  unsigned sym_lk;    /* symbol table B-tree leaf 'K' value */
  unsigned sym_ik;    /* symbol table B-tree internal 'K' value */
+#endif
  unsigned istore_ik; /* indexed storage B-tree internal 'K' value */
 
  fcpl=H5Fget_create_plist(fid);
@@ -2519,6 +2517,10 @@ dump_fcpl(hid_t fid)
  else if (H5FD_FAMILY==fdriver)
  {
   strcpy(dname,"H5FD_FAMILY");
+ }
+ else if (H5FD_GASS==fdriver)
+ {
+  strcpy(dname,"H5FD_GASS");
  }
  else if (H5FD_LOG==fdriver)
  {
@@ -2579,7 +2581,6 @@ dump_fcpl(hid_t fid)
 
 static void dump_fcontents(hid_t fid)
 {
-
     printf("%s %s\n",FILE_CONTENTS, BEGIN);
 
     /* special case of unamed types in root group */
@@ -2587,8 +2588,17 @@ static void dump_fcontents(hid_t fid)
         unsigned u;
 
         for (u = 0; u < type_table->nobjs; u++) {
-            if (!type_table->objs[u].recorded)
-                printf(" %-10s /#"H5_PRINTF_HADDR_FMT"\n", "datatype", type_table->objs[u].objno);
+            if (!type_table->objs[u].recorded) {
+                unsigned long 	objno[2];	/*object number			*/
+
+                objno[0] = (unsigned long)(type_table->objs[u].objno);
+#if H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG
+                objno[1] = (unsigned long)(type_table->objs[u].objno >> 8*sizeof(long));
+#else /* H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG */
+                objno[1] = 0;
+#endif /* H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG */
+                printf(" %-10s /#%lu:%lu\n", "datatype", objno[0], objno[1]);
+            }
         }
     }
 
@@ -2858,10 +2868,10 @@ handle_datasets(hid_t fid, char *dset, void *data)
 
     H5Gget_objinfo(dsetid, ".", TRUE, &statbuf);
 
-    if (statbuf.u.obj.nlink > 1) {
+    if (statbuf.nlink > 1) {
         obj_t  *found_obj;    /* Found object */
 
-        found_obj = search_obj(dset_table, statbuf.u.obj.objno);
+        found_obj = search_obj(dset_table, statbuf.objno);
 
         if (found_obj) {
             if (found_obj->displayed) {
@@ -2960,13 +2970,13 @@ handle_links(hid_t fid, char *links, void UNUSED * data)
                 dump_header_format->softlinkblockend);
         d_status = EXIT_FAILURE;
     } else if (statbuf.type == H5G_LINK) {
-        char *buf = malloc(statbuf.u.slink.linklen);
+        char *buf = malloc(statbuf.linklen);
 
         begin_obj(dump_header_format->softlinkbegin, links,
                   dump_header_format->softlinkblockbegin);
         indentation(COL);
 
-        if (H5Gget_linkval(fid, links, statbuf.u.slink.linklen, buf) >= 0) {
+        if (H5Gget_linkval(fid, links, statbuf.linklen, buf) >= 0) {
             printf("LINKTARGET \"%s\"\n", buf);
         } else {
             error_msg(progname, "h5dump error: unable to get link value for \"%s\"\n",
@@ -3015,8 +3025,16 @@ handle_datatypes(hid_t fid, char *type, void UNUSED * data)
             char name[128];
 
             if (!type_table->objs[idx].recorded) {
+                unsigned long 	objno[2];	/*object number			*/
+
                 /* unamed data type */
-                sprintf(name, "/#"H5_PRINTF_HADDR_FMT, type_table->objs[idx].objno);
+                objno[0] = (unsigned long)(type_table->objs[idx].objno);
+#if H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG
+                objno[1] = (unsigned long)(type_table->objs[idx].objno >> 8*sizeof(long));
+#else /* H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG */
+                objno[1] = 0;
+#endif /* H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG */
+                sprintf(name, "/#%lu:%lu", objno[0], objno[1]);
 
                 if (!HDstrcmp(name, type))
                     break;
@@ -3387,7 +3405,7 @@ main(int argc, const char *argv[])
     hid_t               fid, gid;
     const char         *fname = NULL;
     void               *edata;
-    H5E_auto_stack_t    func;
+    H5E_auto_t          func;
     find_objs_t         info;
     struct handler_t   *hand;
     int                 i;
@@ -3397,8 +3415,8 @@ main(int argc, const char *argv[])
     dump_function_table = &ddl_function_table;
 
     /* Disable error reporting */
-    H5Eget_auto_stack(H5E_DEFAULT, &func, &edata);
-    H5Eset_auto_stack(H5E_DEFAULT, NULL, NULL);
+    H5Eget_auto(&func, &edata);
+    H5Eset_auto(NULL, NULL);
 
     /* Initialize h5tools lib */
     h5tools_init();
@@ -3502,7 +3520,6 @@ main(int argc, const char *argv[])
 		  dump_header_format->fileblockbegin);
     } else {
 	printf("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-
 	/* alternative first element, depending on schema or DTD. */
         if (useschema) {
             if (strcmp(xmlnsprefix,"") == 0) {
@@ -3539,6 +3556,7 @@ main(int argc, const char *argv[])
         if (display_bb)
             dump_fcpl(fid);
     }
+
 
     if (display_all) {
         if ((gid = H5Gopen(fid, "/")) < 0) {
@@ -3588,7 +3606,7 @@ done:
 
     /* To Do:  clean up XML table */
 
-    H5Eset_auto_stack(H5E_DEFAULT, func, edata);
+    H5Eset_auto(func, edata);
 
     leave(d_status);
 }
@@ -3716,6 +3734,7 @@ int
 xml_name_to_XID(const char *str , char *outstr, int outlen, int gen)
 {
     haddr_t objno;      /* Object ID for object at path */
+    unsigned long 	_objno[2];	/*object number			*/
 
     if (outlen < 22) return 1;
 
@@ -3726,7 +3745,13 @@ xml_name_to_XID(const char *str , char *outstr, int outlen, int gen)
             if (objno == HADDR_UNDEF) {
                 if (gen) {
                     objno = ref_path_table_gen_fake(str);
-                    sprintf(outstr, "xid_"H5_PRINTF_HADDR_FMT, objno);
+                    _objno[0] = (unsigned long)(objno);
+#if H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG
+                    _objno[1] = (unsigned long)(objno >> 8*sizeof(long));
+#else /* H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG */
+                    _objno[1] = 0;
+#endif /* H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG */
+		    sprintf(outstr,"xid_%lu-%lu", _objno[0], _objno[1]);
                     return 0;
                 } else {
                     return 1;
@@ -3735,7 +3760,13 @@ xml_name_to_XID(const char *str , char *outstr, int outlen, int gen)
         } else {
             if (gen) {
                 objno = ref_path_table_gen_fake(str);
-                sprintf(outstr, "xid_"H5_PRINTF_HADDR_FMT, objno);
+                _objno[0] = (unsigned long)(objno);
+#if H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG
+                _objno[1] = (unsigned long)(objno >> 8*sizeof(long));
+#else /* H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG */
+                _objno[1] = 0;
+#endif /* H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG */
+                sprintf(outstr,"xid_%lu-%lu", _objno[0], _objno[1]);
                 return 0;
             } else {
                 return 1;
@@ -3743,7 +3774,13 @@ xml_name_to_XID(const char *str , char *outstr, int outlen, int gen)
         }
     }
 
-    sprintf(outstr, "xid_"H5_PRINTF_HADDR_FMT, objno);
+    _objno[0] = (unsigned long)(objno);
+#if H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG
+    _objno[1] = (unsigned long)(objno >> 8*sizeof(long));
+#else /* H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG */
+    _objno[1] = 0;
+#endif /* H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG */
+    sprintf(outstr,"xid_%lu-%lu", _objno[0], _objno[1]);
 
     return(0);
 }
@@ -3981,7 +4018,7 @@ xml_print_datatype(hid_t type, unsigned in_group)
 
         /* detect a shared datatype, output only once */
         H5Gget_objinfo(type, ".", TRUE, &statbuf);
-        found_obj = search_obj(type_table, statbuf.u.obj.objno);
+        found_obj = search_obj(type_table, statbuf.objno);
 
         if (found_obj) {
             /* This should be defined somewhere else */
@@ -4348,7 +4385,7 @@ xml_dump_datatype(hid_t type)
 
 	/* Data type is a shared or named data type */
 	H5Gget_objinfo(type, ".", TRUE, &statbuf);
-	found_obj = search_obj(type_table, statbuf.u.obj.objno);
+	found_obj = search_obj(type_table, statbuf.objno);
 
 	if (found_obj) {
 	    /* Shared data type, must be entered as an object  */
@@ -4446,14 +4483,6 @@ xml_dump_dataspace(hid_t space)
 	    printf("</%sSimpleDataspace>\n", xmlnsprefix );
 
             break;
-#ifdef TMP
-        /* Commented out: wait until the schema is updated first */
-        case H5S_NULL:
-	    /* null dataspace (just a tag, no XML attrs. defined */
-	    printf("<%sNullDataspace />\n",xmlnsprefix);
-
-            break;
-#endif /* TMP */
         case H5S_COMPLEX:
 	    printf("<!-- not yet implemented -->\n");
 
@@ -4591,7 +4620,6 @@ static herr_t
 xml_dump_attr(hid_t attr, const char *attr_name, void UNUSED * op_data)
 {
     hid_t   attr_id, type, space;
-    H5S_class_t space_type;
     char   *t_aname = xml_escape_the_name(attr_name);
 
     indentation(indent);
@@ -4601,12 +4629,11 @@ xml_dump_attr(hid_t attr, const char *attr_name, void UNUSED * op_data)
     if ((attr_id = H5Aopen_name(attr, attr_name)) >= 0) {
 	type = H5Aget_type(attr_id);
 	space = H5Aget_space(attr_id);
-        space_type = H5Sget_simple_extent_type(space);
 
 	dump_function_table->dump_dataspace_function(space);
 	dump_function_table->dump_datatype_function(type);
 
-	if (display_attr_data && space_type!=H5S_NULL) {
+	if (display_attr_data) {
 	    switch (H5Tget_class(type)) {
 	    case H5T_INTEGER:
 	    case H5T_FLOAT:
@@ -4672,8 +4699,7 @@ xml_dump_attr(hid_t attr, const char *attr_name, void UNUSED * op_data)
 		break;
 	    }
 	} else {
-	    /* The case of an attribute never yet written ??
-             * Or dataspace is H5S_NULL. */
+	    /* The case of an attribute never yet written ?? */
 	    indentation(indent + COL);
 	    printf("<%sData>\n",xmlnsprefix);
 	    indentation(indent + COL + COL);
@@ -4830,11 +4856,11 @@ xml_dump_group(hid_t gid, const char *name)
     indent += COL;
     H5Gget_objinfo(gid, ".", TRUE, &statbuf);
 
-    if (statbuf.u.obj.nlink > 1) {
+    if (statbuf.nlink > 1) {
         obj_t  *found_obj;    /* Found object */
 
 	/* Group with more than one link to it... */
-	found_obj = search_obj(group_table, statbuf.u.obj.objno);
+	found_obj = search_obj(group_table, statbuf.objno);
 
 	if (found_obj == NULL) {
 	    indentation(indent);
@@ -4909,10 +4935,20 @@ xml_dump_group(hid_t gid, const char *name)
                     /* Very special case: dump unamed type in root group */
                     for (u = 0; u < type_table->nobjs; u++) {
                         if (!type_table->objs[u].recorded) {
+                            unsigned long 	objno[2];	/*object number			*/
+
                             dset = H5Dopen(gid, type_table->objs[u].objname);
                             type = H5Dget_type(dset);
-                            sprintf(type_name, "#"H5_PRINTF_HADDR_FMT, type_table->objs[u].objno);
+
+                            objno[0] = (unsigned long)(type_table->objs[u].objno);
+#if H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG
+                            objno[1] = (unsigned long)(type_table->objs[u].objno >> 8*sizeof(long));
+#else /* H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG */
+                            objno[1] = 0;
+#endif /* H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG */
+                            sprintf(type_name, "#%lu:%lu", objno[0], objno[1]);
                             dump_function_table->dump_named_datatype_function(type, type_name);
+
                             H5Tclose(type);
                             H5Dclose(dset);
                         }
@@ -4959,7 +4995,6 @@ xml_dump_group(hid_t gid, const char *name)
         free(t_name);
 	free(grpxid);
 	free(parentxid);
-
 	/* 1.  do all the attributes of the group */
 	H5Aiterate(gid, NULL, dump_function_table->dump_attribute_function, NULL);
 
@@ -4969,10 +5004,20 @@ xml_dump_group(hid_t gid, const char *name)
 	    /* Very special case: dump unamed type in root group */
 	    for (u = 0; u < type_table->nobjs; u++) {
 		if (!type_table->objs[u].recorded) {
+                    unsigned long 	objno[2];	/*object number			*/
+
 		    dset = H5Dopen(gid, type_table->objs[u].objname);
 		    type = H5Dget_type(dset);
-                    sprintf(type_name, "#"H5_PRINTF_HADDR_FMT, type_table->objs[u].objno);
+
+                    objno[0] = (unsigned long)(type_table->objs[u].objno);
+#if H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG
+                    objno[1] = (unsigned long)(type_table->objs[u].objno >> 8*sizeof(long));
+#else /* H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG */
+                    objno[1] = 0;
+#endif /* H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG */
+		    sprintf(type_name, "#%lu:%lu", objno[0], objno[1]);
 		    dump_function_table->dump_named_datatype_function(type, type_name);
+
 		    H5Tclose(type);
 		    H5Dclose(dset);
 		}
@@ -5245,15 +5290,9 @@ check_compression(hid_t dcpl)
     if (nfilt <= 0)
 	return;
     for (i = 0; i < nfilt; i++) {
-#ifdef H5_WANT_H5_V1_6_COMPAT
 	filter = H5Pget_filter(dcpl, i, &flags,
 			       (size_t *) &cd_nelmts,
 			       &cd_values, 20, namebuf);
-#else
-	filter = H5Pget_filter(dcpl, i, &flags,
-			       (size_t *) &cd_nelmts,
-			       &cd_values, 20, namebuf, NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
 	if (filter == H5Z_FILTER_DEFLATE) {
 	    indentation(indent + COL);
 	    printf("<%sCompression />\n",xmlnsprefix);
@@ -5293,15 +5332,9 @@ check_filters(hid_t dcpl)
     if (nfilt <= 0)
 	return;
     for (i = 0; i < nfilt; i++) {
-#ifdef H5_WANT_H5_V1_6_COMPAT
 	filter = H5Pget_filter(dcpl, (unsigned)i, &flags,
 			       (size_t *) &cd_nelmts,
 			       cd_values, 120, namebuf);
-#else
-	filter = H5Pget_filter(dcpl, (unsigned)i, &flags,
-			       (size_t *) &cd_nelmts,
-			       cd_values, 120, namebuf, NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
 	if (filter == H5Z_FILTER_DEFLATE) {
 	    indentation(indent + COL);
 	    printf("<%sDeflate Level=\"",xmlnsprefix);
@@ -5483,7 +5516,6 @@ xml_dump_fill_value(hid_t dcpl, hid_t type)
     printf("</%sData>\n",xmlnsprefix);
     indent -= COL;
 }
-
 /*-------------------------------------------------------------------------
  * Function:    xml_dump_group
  *
@@ -5963,14 +5995,27 @@ h5_fileaccess(void)
 	if (H5Pset_fapl_family(fapl, fam_size, H5P_DEFAULT)<0)
             return -1;
     } else if (!HDstrcmp(name, "log")) {
+#ifdef H5_WANT_H5_V1_4_COMPAT
+        long verbosity = 1;
+#else /* H5_WANT_H5_V1_4_COMPAT */
         long log_flags = H5FD_LOG_LOC_IO;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
+#ifdef H5_WANT_H5_V1_4_COMPAT
+        /* Log file access */
+        if ((val = strtok(NULL, " \t\n\r")))
+            verbosity = strtol(val, NULL, 0);
+
+        if (H5Pset_fapl_log(fapl, NULL, (int)verbosity) < 0)
+	    return -1;
+#else /* H5_WANT_H5_V1_4_COMPAT */
         /* Log file access */
         if ((val = HDstrtok(NULL, " \t\n\r")))
             log_flags = HDstrtol(val, NULL, 0);
 
         if (H5Pset_fapl_log(fapl, NULL, (unsigned)log_flags, 0) < 0)
 	    return -1;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
     } else {
 	/* Unknown driver */
 	return -1;
@@ -5978,7 +6023,6 @@ h5_fileaccess(void)
 
     return fapl;
 }
-
 
 /*-------------------------------------------------------------------------
  * Function:    init_prefix

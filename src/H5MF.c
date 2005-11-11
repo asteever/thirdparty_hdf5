@@ -360,6 +360,11 @@ H5MF_alloc_overflow(H5F_t *f, hsize_t size)
  *
  * Purpose:	Check if a block in the file can be extended.
  *
+ *		This is a simple check currently, which only checks for the
+ *              block being at the end of the file.  A more sophisticated check
+ *              would also use the free space list to see if there is a block
+ *              appropriately placed to accomodate the space requested.
+ *
  * Return:	Success:	TRUE(1)/FALSE(0)
  *
  * 		Failure:	FAIL
@@ -399,9 +404,9 @@ done:
  *
  * Purpose:	Extend a block in the file.
  *
- * Return:	Success:	Non-negative
+ * Return:	Success:	TRUE(1)/FALSE(0)
  *
- * 		Failure:	Negative
+ * 		Failure:	FAIL
  *
  * Programmer:	Quincey Koziol
  *              Saturday, June 12, 2004
@@ -410,10 +415,10 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-herr_t
+htri_t
 H5MF_extend(H5F_t *f, H5FD_mem_t type, haddr_t addr, hsize_t size, hsize_t extra_requested)
 {
-    herr_t	ret_value;      /* Return value */
+    htri_t	ret_value;      /* Return value */
 
     FUNC_ENTER_NOAPI(H5MF_extend, FAIL);
 

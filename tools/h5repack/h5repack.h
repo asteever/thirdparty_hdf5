@@ -16,7 +16,6 @@
 #ifndef H5REPACK_H__
 #define H5REPACK_H__
 
-#include <string.h>
 #include "hdf5.h"
 #include "h5trav.h"
 #include "h5diff.h"
@@ -29,6 +28,7 @@
 
 #define MAX_NC_NAME 256 /* max length of a name */
 #define MAX_VAR_DIMS 32 /* max per variable dimensions */
+
 
 /*-------------------------------------------------------------------------
  * data structures for command line options
@@ -43,13 +43,11 @@ typedef struct {
 /*
  the type of filter and additional parameter
  type can be one of the filters
- H5Z_FILTER_NONE        0,  uncompress if compressed
- H5Z_FILTER_DEFLATE	    1 , deflation like gzip
- H5Z_FILTER_SHUFFLE     2 , shuffle the data
- H5Z_FILTER_FLETCHER32  3 , letcher32 checksum of EDC
- H5Z_FILTER_SZIP        4 , szip compression
-	H5Z_FILTER_NBIT        5 , nbit compression              
- H5Z_FILTER_SCALEOFFSET 6 , scaleoffset compression      
+ H5Z_FILTER_NONE       0,  uncompress if compressed
+ H5Z_FILTER_DEFLATE	   1 , deflation like gzip
+ H5Z_FILTER_SHUFFLE    2 , shuffle the data
+ H5Z_FILTER_FLETCHER32 3 , letcher32 checksum of EDC
+ H5Z_FILTER_SZIP       4 , szip compression
 */
 
 #define CDVALUES 2
@@ -57,6 +55,11 @@ typedef struct {
 typedef struct {
  H5Z_filter_t filtn;               /* filter identification number */
  int          cd_values[CDVALUES]; /* filter client data values */
+ /* extra input for szip, selects the coding method
+    entropy coding method: EC=0
+    nearest neighbor coding method: NN=1
+ */
+ int          szip_coding;
 } filter_info_t;
 
 /* chunk lengths along each dimension and rank */
@@ -67,7 +70,7 @@ typedef struct {
 
 /* we currently define a maximum value for the filters array,
    that corresponds to the current library filters */
-#define H5_REPACK_MAX_NFILTERS 6
+#define H5_REPACK_MAX_NFILTERS 4
 
 /* information for one object, contains PATH, CHUNK info and FILTER info */
 typedef struct {
@@ -250,32 +253,28 @@ int         parse_number(char *str);
  */
 
 #define FNAME0     "test0.h5"
-#define FNAME0OUT  "test0out.h5"
+#define FNAME0OUT  "test0.out.h5"
 #define FNAME1     "test1.h5"
-#define FNAME1OUT  "test1out.h5"
+#define FNAME1OUT  "test1.out.h5"
 #define FNAME2     "test2.h5"
-#define FNAME2OUT  "test2out.h5"
+#define FNAME2OUT  "test2.out.h5"
 #define FNAME3     "test3.h5"
-#define FNAME3OUT  "test3out.h5"
+#define FNAME3OUT  "test3.out.h5"
 #define FNAME4     "test4.h5"
-#define FNAME4OUT  "test4out.h5"
+#define FNAME4OUT  "test4.out.h5"
 #define FNAME5     "test5.h5"
-#define FNAME5OUT  "test5out.h5"
+#define FNAME5OUT  "test5.out.h5"
 #define FNAME6     "test6.h5"
 #define FNAME7     "test_szip.h5"
 #define FNAME8     "test_deflate.h5"
 #define FNAME9     "test_shuffle.h5"
 #define FNAME10    "test_fletcher32.h5"
 #define FNAME11    "test_all.h5"
-#define FNAME7OUT  "test_szipout.h5"
-#define FNAME8OUT  "test_deflateout.h5"
-#define FNAME9OUT  "test_shuffleout.h5"
-#define FNAME10OUT "test_fletcher32out.h5"
-#define FNAME11OUT "test_allout.h5"
-#define FNAME12    "test_nbit.h5"
-#define FNAME12OUT "test_nbitout.h5"
-#define FNAME13    "test_scaleoffset.h5"
-#define FNAME13OUT "test_scaleoffsetout.h5"
+#define FNAME7OUT     "test_szip.out.h5"
+#define FNAME8OUT     "test_deflate.out.h5"
+#define FNAME9OUT     "test_shuffle.out.h5"
+#define FNAME10OUT    "test_fletcher32.out.h5"
+#define FNAME11OUT    "test_all.out.h5"
 
 int make_testfiles(void);
 

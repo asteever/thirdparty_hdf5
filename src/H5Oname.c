@@ -32,7 +32,6 @@
 #include "H5MMprivate.h"
 #include "H5Opkg.h"             /* Object header functions                  */
 
-
 /* PRIVATE PROTOTYPES */
 static void *H5O_name_decode(H5F_t *f, hid_t dxpl_id, const uint8_t *p, H5O_shared_t *sh);
 static herr_t H5O_name_encode(H5F_t *f, uint8_t *p, const void *_mesg);
@@ -57,9 +56,7 @@ const H5O_class_t H5O_NAME[1] = {{
     NULL,			/* link method			*/
     NULL,		    	/*get share method		*/
     NULL,			/*set share method		*/
-    NULL,			/* copy native value to file    */
-    NULL,			/* post copy native value to file    */
-    H5O_name_debug         	/*debug the message             */
+    H5O_name_debug,         	/*debug the message             */
 }};
 
 

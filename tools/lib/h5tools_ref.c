@@ -66,6 +66,7 @@ int
 init_ref_path_table(hid_t fid)
 {
     H5G_stat_t              sb;
+    haddr_t objno;
     char *root_path;
 
     /* Set file ID for later queries (XXX: this should be fixed) */
@@ -85,7 +86,8 @@ init_ref_path_table(hid_t fid)
     }
 
     /* Insert into table (takes ownership of path) */
-    ref_path_table_put(root_path, sb.u.obj.objno);
+    objno = ((haddr_t)sb.objno[1] << (8*sizeof(long))) | (haddr_t)sb.objno[0];
+    ref_path_table_put(root_path, objno);
 
     return(0);
 }
@@ -108,7 +110,7 @@ free_ref_path_info(void *item, void UNUSED *key, void UNUSED *operator_data/*in,
 {
     ref_path_node_t *node = (ref_path_node_t *)item;
 
-    HDfree((void *)node->path);
+    HDfree(node->path);
     HDfree(node);
 
     return(0);
@@ -156,6 +158,7 @@ haddr_t
 ref_path_table_lookup(const char *thepath)
 {
     H5G_stat_t  sb;
+    haddr_t objno;
     haddr_t     ret_value;
 
     /* Get object ID for object at path */
@@ -164,7 +167,8 @@ ref_path_table_lookup(const char *thepath)
 	return HADDR_UNDEF;
 
     /* Return OID or HADDR_UNDEF */
-    ret_value = ref_path_table_find(sb.u.obj.objno) ? sb.u.obj.objno : HADDR_UNDEF;
+    objno = ((haddr_t)sb.objno[1] << (8*sizeof(long))) | (haddr_t)sb.objno[0];
+    ret_value = ref_path_table_find(objno) ? objno : HADDR_UNDEF;
 
     return(ret_value);
 }
@@ -293,13 +297,40 @@ ref_path_table_gen_fake(const char *path)
 const char *
 lookup_ref_path(haddr_t ref)
 {
-    ref_path_node_t *node;
+    uint8_t                *p;          /* Pointer to reference to translate */
+    haddr_t                 addr;       /* Resulting address */
+    unsigned		    i;          /* Local index variable */
+    haddr_t		    tmp;        /* Temporary portion of address */
+    uint8_t		    c;          /* Byte from address */
+    hbool_t		    all_zero = TRUE;    /* If the address is all zeros, make into HADDR_UNDEF */
+    ref_path_node_t        *node;       /* Ref path node found for address */
 
     /* Be safer for h5ls */
     if(!ref_path_table)
         return(NULL);
 
-    node = H5SL_search(ref_path_table, &ref);
+    /* Compensate for endianness differences */
+    p = (uint8_t *)&ref;
+    addr = 0;
+
+    for (i=0; i<sizeof(haddr_t); i++) {
+	c = *p++;
+	if (c != 0xff)
+            all_zero = FALSE;
+
+	if (i<sizeof(haddr_t)) {
+	    tmp = c;
+	    tmp <<= (i * 8);	/*use tmp to get casting right */
+	    addr |= tmp;
+	} else if (!all_zero) {
+	    assert(0 == *p);	/*overflow */
+	}
+    }
+    if (all_zero)
+        addr = HADDR_UNDEF;
+
+    /* Check if address is in reference path table */
+    node = H5SL_search(ref_path_table, &addr);
 
     return(node ? node->path : NULL);
 }
@@ -323,11 +354,13 @@ fill_ref_path_table(hid_t group, const char *obj_name, void *op_data)
 {
     const char *obj_prefix = (const char *)op_data;
     H5G_stat_t              statbuf;
+    haddr_t objno;
 
     H5Gget_objinfo(group, obj_name, FALSE, &statbuf);
+    objno = ((haddr_t)statbuf.objno[1] << (8*sizeof(long))) | (haddr_t)statbuf.objno[0];
 
     /* Check if the object is in the path table */
-    if (!ref_path_table_find(statbuf.u.obj.objno)) {
+    if (!ref_path_table_find(objno)) {
         size_t                  tmp_len;
         char                   *thepath;
 
@@ -344,7 +377,7 @@ fill_ref_path_table(hid_t group, const char *obj_name, void *op_data)
         HDstrcat(thepath, obj_name);
 
         /* Insert the object into the path table */
-        ref_path_table_put(thepath, statbuf.u.obj.objno);
+        ref_path_table_put(thepath, objno);
 
         if(statbuf.type == H5G_GROUP) {
             /* Iterate over objects in this group, using this group's

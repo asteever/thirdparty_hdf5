@@ -550,7 +550,7 @@ h5tools_dump_simple_data(FILE *stream, const h5dump_t *info, hid_t container,
     size_t		ncols = 80;	/*available output width	*/
     h5tools_str_t	buffer;		/*string into which to render	*/
     int			multiline;	/*datum was multiline		*/
-    hsize_t		curr_pos;		/* total data element position 		*/
+				hsize_t		curr_pos;		/* total data element position 		*/
     int                 elmt_counter = 0;/*counts the # elements printed.
                                           *I (ptl?) needed something that
                                           *isn't going to get reset when a new
@@ -669,12 +669,9 @@ h5tools_dump_simple_data(FILE *stream, const h5dump_t *info, hid_t container,
                 if (secnum)
                     multiline++;
 
-                  /* pass to the prefix in h5tools_simple_prefix the total position
-																		   instead of the current stripmine position i; this is necessary 
-																					to print the array indices */
-
-																 /* pass to the prefix in h5tools_simple_prefix the total position
-																		   this is necessary to print the array indices */
+																  /* pass to the prefix the total position instead of the current
+                   stripmine position i; this is necessary to print the array
+                   indices */
                 curr_pos = ctx->sm_pos + i;
 
                 h5tools_simple_prefix(stream, info, ctx, curr_pos, secnum);
@@ -1013,7 +1010,7 @@ h5tools_dump_simple_dset(FILE *stream, const h5dump_t *info, hid_t dset,
         flags = (elmtno == 0) ? START_OF_DATA : 0;
         flags |= ((elmtno + hs_nelmts) >= p_nelmts) ? END_OF_DATA : 0;
 
-        /* initialize the current stripmine position; this is necessary to print the array
+         /* initialize the current stripmine position; this is necessary to print the array
            indices */
         ctx.sm_pos = elmtno;
 
@@ -1260,8 +1257,6 @@ h5tools_dump_mem(FILE *stream, const h5dump_t *info, hid_t obj_id, hid_t type,
                                    indentlevel);
 }
 
-
-
 /*-------------------------------------------------------------------------
  * Function:    init_acc_pos
  *
@@ -1289,5 +1284,4 @@ void init_acc_pos(h5tools_context_t	*ctx, hsize_t *dims)
  for ( i = 0; i < ctx->ndims; i++)
   ctx->pos[i]=0;
 }
-
 

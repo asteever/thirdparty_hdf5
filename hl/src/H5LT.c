@@ -16,13 +16,9 @@
 #include <string.h>
 #include <stdlib.h>
 
-/* For Lex and Yacc */
-int  input_len;
-char *myinput;
-
 /*-------------------------------------------------------------------------
  *
- * internal functions
+ * Private functions
  *
  *-------------------------------------------------------------------------
  */
@@ -1566,37 +1562,6 @@ herr_t H5LTset_attribute_long( hid_t loc_id,
  return 0;
 
 }
-/*-------------------------------------------------------------------------
- * Function: H5LTset_attribute_long_long
- *
- * Purpose: Create and write an attribute.
- *
- * Return: Success: 0, Failure: -1
- *
- * Programmer: Elena Pourmal, epourmal@ncsa.uiuc.edu
- *
- * Date: June 17, 2005
- *
- * Comments: This function was added to support attributes of type long long
- *
- *-------------------------------------------------------------------------
- */
-
-herr_t H5LTset_attribute_long_long( hid_t loc_id,
-                               const char *obj_name,
-                               const char *attr_name,
-                               const long_long *data,
-                               size_t size )
-{
-
- if ( H5LT_set_attribute_numerical( loc_id, obj_name, attr_name, size,
-      H5T_NATIVE_LLONG, data ) < 0 )
-  return -1;
-
- return 0;
-
-}
-
 
 /*-------------------------------------------------------------------------
  * Function: H5LTset_attribute_ulong
@@ -1982,43 +1947,9 @@ out:
  return -1;
 }
 
-/*-------------------------------------------------------------------------
- * Function: H5LTtext_to_dtype
- *
- * Purpose:  Convert DDL description to HDF5 data type.
- *
- * Return: Success: 0, Failure: -1
- *
- * Programmer: Raymond Lu, slu@ncsa.uiuc.edu
- *
- * Date: October 6, 2004
- *
- * Comments:
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-hid_t H5LTtext_to_dtype(const char *text)
-{
- extern int yyparse(void);
- hid_t   type_id; 
- hsize_t i;
- 
- input_len = strlen(text);
- myinput = strdup(text);
 
- if((type_id = yyparse())<0)
-     goto out;
 
- free(myinput);
- input_len = 0;
 
- return type_id;
-
-out:
- return -1;
-}
 
 /*-------------------------------------------------------------------------
  * Function: H5LTrepack
@@ -2487,53 +2418,6 @@ herr_t H5LTget_attribute_long( hid_t loc_id,
  return 0;
 
 }
-/*-------------------------------------------------------------------------
- * Function: H5LTget_attribute_long_long
- *
- * Purpose: Reads an attribute named attr_name
- *
- * Return: Success: 0, Failure: -1
- *
- * Programmer: Elena Pourmal, epourmal@ncsa.uiuc.edu
- *
- * Date: June 17, 2005
- *
- * Comments: This funstion was added to suuport INTEGER*8 Fortran types
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-herr_t H5LTget_attribute_long_long( hid_t loc_id,
-                              const char *obj_name,
-                              const char *attr_name,
-                              long_long *data )
-{
-
- /* identifiers */
- hid_t      obj_id;
- H5G_stat_t statbuf;
-
- /* Get the type of object */
- if (H5Gget_objinfo(loc_id, obj_name, 1, &statbuf)<0)
-  return -1;
-
- /* Open the object */
- if ((obj_id = H5LT_open_id( loc_id, obj_name, statbuf.type )) < 0)
-  return -1;
-
- /* Get the attribute */
- if ( H5LT_get_attribute_mem( obj_id, attr_name, H5T_NATIVE_LLONG, data ) < 0 )
-  return -1;
-
- /* Close the object */
- if ( H5LT_close_id( obj_id, statbuf.type ) < 0 )
-  return -1;
-
- return 0;
-
-}
-
 
 /*-------------------------------------------------------------------------
  * Function: H5LTget_attribute_ulong
@@ -2737,12 +2621,6 @@ herr_t H5LTget_attribute( hid_t loc_id,
 
 
 /*-------------------------------------------------------------------------
- * private functions
- *-------------------------------------------------------------------------
- */
-
-
-/*-------------------------------------------------------------------------
  * Function: H5LT_get_attribute_mem
  *
  * Purpose: Reads an attribute named attr_name with the memory type mem_type_id
@@ -2809,8 +2687,8 @@ herr_t H5LT_get_attribute_disk( hid_t loc_id,
                           void *attr_out )
 {
  /* identifiers */
- hid_t attr_id;
- hid_t attr_type;
+ hid_t      attr_id;
+ hid_t      attr_type;
 
  if ( ( attr_id = H5Aopen_name( loc_id, attr_name ) ) < 0 )
   return -1;
@@ -2837,95 +2715,4 @@ out:
 
 
 
-
-
-/*-------------------------------------------------------------------------
- * Function: H5LT_set_attribute_string
- *
- * Purpose: creates and writes an attribute named NAME to the dataset DSET_ID
- *
- * Return: FAIL on error, SUCCESS on success
- *
- * Programmer: pvn@ncsa.uiuc.edu
- *
- * Date: January 04, 2005
- *
- * Comments:
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-
-
-herr_t H5LT_set_attribute_string(hid_t dset_id,
-                                 char *name,
-                                 char *buf )
-{
- hid_t   tid;
- hid_t   sid;
- hid_t   aid;
- int     has_attr;
-	size_t  size;
-
- /* verify if the attribute already exists */
- has_attr = H5LT_find_attribute(dset_id,name);
-
- /* the attribute already exists, delete it */
- if ( has_attr == 1 )
- {
-  if ( H5Adelete(dset_id,name)<0)
-    return FAIL;
- }
-
-/*-------------------------------------------------------------------------
- * create the attribute type
- *-------------------------------------------------------------------------
- */
- if ((tid = H5Tcopy(H5T_C_S1))<0)
-  return FAIL;
-
- size = strlen(buf) + 1; /* extra null term */
-
- if (H5Tset_size(tid,(size_t)size)<0)
-  goto out;
-
- if (H5Tset_strpad(tid,H5T_STR_NULLTERM)<0)
-  goto out;
-
- if ((sid = H5Screate(H5S_SCALAR))<0)
-  goto out;
-
-
-/*-------------------------------------------------------------------------
- * create and write the attribute
- *-------------------------------------------------------------------------
- */
- if ((aid = H5Acreate(dset_id,name,tid,sid,H5P_DEFAULT))<0)
-  goto out;
-
- if (H5Awrite(aid,tid,buf)<0)
-  goto out;
-
- if (H5Aclose(aid)<0)
-  goto out;
-
- if (H5Sclose(sid)<0)
-  goto out;
-
- if (H5Tclose(tid)<0)
-  goto out;
-
- return SUCCESS;
-
- /* error zone, gracefully close */
-out:
- H5E_BEGIN_TRY {
-  H5Aclose(aid);
-  H5Tclose(tid);
-  H5Sclose(sid);
- } H5E_END_TRY;
- return FAIL;
-
-}
 

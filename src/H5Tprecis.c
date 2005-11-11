@@ -247,6 +247,7 @@ H5T_set_precision(const H5T_t *dt, size_t prec)
                             dt->shared->u.atomic.u.f.mpos + dt->shared->u.atomic.u.f.msize > prec+offset)
                         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "adjust sign, mantissa, and exponent fields first")
                     break;
+
                 default:
                     HGOTO_ERROR(H5E_ARGS, H5E_UNSUPPORTED, FAIL, "operation not defined for datatype class")
 	    } /* end switch */ /*lint !e788 All appropriate cases are covered */

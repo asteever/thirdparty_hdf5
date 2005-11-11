@@ -781,7 +781,7 @@ if [ -z "$NOCVS" ]; then
 		echo ...
 		tail -$ntaillines $COPYRIGHT_ERR
 	    fi 
-	)  | Mail -s "${H5VERSION} Copyrights check Failed" acheng
+	)  | Mail -s "${H5VERSION} Copyrights check Failed" hdf5lib
     fi
     rm $TMPFILE
     PRINT_BLANK

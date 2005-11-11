@@ -22,9 +22,6 @@ namespace H5 {
 
 class H5_DLLCPP Attribute : public AbstractDs {
    public:
-	// Closes this attribute.
-	virtual void close();
-
 	// Gets the name of this attribute.
 	ssize_t getName( size_t buf_size, string& attr_name ) const;
 	string getName( size_t buf_size ) const; // returns name, not its length
@@ -34,7 +31,7 @@ class H5_DLLCPP Attribute : public AbstractDs {
 	virtual DataSpace getSpace() const;
 
 	// Returns the amount of storage size required for this attribute.
-	hsize_t getStorageSize() const;
+	virtual hsize_t getStorageSize() const;
 
 	// Reads data from this attribute.
 	void read( const DataType& mem_type, void *buf ) const;
@@ -45,13 +42,19 @@ class H5_DLLCPP Attribute : public AbstractDs {
 	void write(const DataType& mem_type, const string& strg ) const;
 
 	// Returns this class name
-	virtual string fromClass () const { return ("Attribute"); }
+	virtual string fromClass () const { return("Attribute"); }
 
         // Creates a copy of an existing attribute using the attribute id
         Attribute( const hid_t attr_id );
 
 	// Copy constructor: makes a copy of an existing Attribute object.
 	Attribute( const Attribute& original );
+
+	// Default constructor
+	Attribute();
+
+	// Close this attribute.
+	virtual void close();
 
 	// Destructor: properly terminates access to this attribute.
 	virtual ~Attribute();
@@ -63,14 +66,11 @@ class H5_DLLCPP Attribute : public AbstractDs {
 	// sub-types
 	virtual hid_t p_get_type() const;
 
-	// do not inherit iterateAttrs from H5Object
+	// do not inherit 'iterateAttrs' from H5Object
 	int iterateAttrs() { return 0; }
 
-	// do not inherit iterateAttrs from H5Object
-	void rename() {}
-
-	// Default constructor
-	Attribute();
+        // do not inherit 'rename' from H5Object
+        void rename() {}
 };
 #ifndef H5_NO_NAMESPACE
 }

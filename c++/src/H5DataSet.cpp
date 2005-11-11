@@ -35,9 +35,6 @@
 
 #ifndef H5_NO_NAMESPACE
 namespace H5 {
-#ifndef H5_NO_STD
-    using namespace std;
-#endif  // H5_NO_STD
 #endif
 
 //--------------------------------------------------------------------------
@@ -352,8 +349,7 @@ int DataSet::iterateElems( void* buf, const DataType& type, const DataSpace& spa
 ///\par Description
 ///		For more information, please see the Description section in
 ///		C layer Reference Manual at:
-///\par
-/// http://hdf.ncsa.uiuc.edu/HDF5/doc/RM_H5D.html#Dataset-Extend
+/// http:
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 void DataSet::extend( const hsize_t* size ) const
@@ -417,17 +413,12 @@ void DataSet::fillMemBuf(void *buf, DataType& buf_type, DataSpace& space)
 ///\param	dataspace - IN: Dataspace with selection
 ///\param	ref_type - IN: Type of reference; default to \c H5R_DATASET_REGION
 ///\return	A reference
-///\exception	H5::DataSetIException
+///\exception	H5::IdComponentException
 // Programmer	Binh-Minh Ribler - May, 2004
 //--------------------------------------------------------------------------
 void* DataSet::Reference(const char* name, DataSpace& dataspace, H5R_type_t ref_type) const
 {
-   try {
-      return(p_reference(name, dataspace.getId(), ref_type));
-   }
-   catch (IdComponentException E) {
-      throw DataSetIException("DataSet::Reference", E.getDetailMsg());
-   }
+   return(p_reference(name, dataspace.getId(), ref_type));
 }
 
 //--------------------------------------------------------------------------
@@ -435,9 +426,9 @@ void* DataSet::Reference(const char* name, DataSpace& dataspace, H5R_type_t ref_
 ///\brief	This is an overloaded function, provided for your convenience.
 ///		It differs from the above function in that it only creates
 ///		a reference to an HDF5 object, not to a dataset region.
-///\param	name - IN: Name of the object to be referenced
+///\param	name - IN: Name of the object to be referenced - \c char pointer
 ///\return	A reference
-///\exception	H5::DataSetIException
+///\exception	H5::IdComponentException
 ///\par Description
 //		This function passes H5R_OBJECT and -1 to the protected
 //		function for it to pass to the C API H5Rcreate
@@ -446,21 +437,16 @@ void* DataSet::Reference(const char* name, DataSpace& dataspace, H5R_type_t ref_
 //--------------------------------------------------------------------------
 void* DataSet::Reference(const char* name) const
 {
-   try {
-      return(p_reference(name, -1, H5R_OBJECT));
-   }
-   catch (IdComponentException E) {
-      throw DataSetIException("DataSet::Reference", E.getDetailMsg());
-   }
+   return(p_reference(name, -1, H5R_OBJECT));
 }
 
 //--------------------------------------------------------------------------
-// Function:	DataSet::Reference
-///\brief	This is an overloaded function, provided for your convenience.
-///		It differs from the above function in that it takes an
-///		\c std::string for the object's name.
-///\param	name - IN: Name of the object to be referenced - \c std::string
-// Programmer	Binh-Minh Ribler - May, 2004
+// Function:    DataSet::Reference
+///\brief       This is an overloaded function, provided for your convenience.
+///             It differs from the above function in that it takes an
+///             \c std::string for the object's name.
+///\param       name - IN: Name of the object to be referenced - \c std::string
+// Programmer   Binh-Minh Ribler - May, 2004
 //--------------------------------------------------------------------------
 void* DataSet::Reference(const string& name) const
 {
@@ -472,22 +458,17 @@ void* DataSet::Reference(const string& name) const
 ///\brief	Retrieves the type of object that an object reference points to.
 ///\param		ref_type - IN: Type of reference to query
 ///\param		ref      - IN: Reference to query
-///\return	An object type, which can be one of the following:
+// Return	An object type, which can be one of the following:
 //			H5G_LINK Object is a symbolic link.
 //			H5G_GROUP Object is a group.
 //			H5G_DATASET   Object is a dataset.
 //			H5G_TYPE Object is a named datatype
-///\exception	H5::DataSetIException
+// Exception	H5::IdComponentException
 // Programmer	Binh-Minh Ribler - May, 2004
 //--------------------------------------------------------------------------
 H5G_obj_t DataSet::getObjType(void *ref, H5R_type_t ref_type) const
 {
-   try {
-      return(p_get_obj_type(ref, ref_type));
-   }
-   catch (IdComponentException E) {
-      throw DataSetIException("DataSet::getObjType", E.getDetailMsg());
-   }
+   return(p_get_obj_type(ref, ref_type));
 }
 
 //--------------------------------------------------------------------------
@@ -497,18 +478,13 @@ H5G_obj_t DataSet::getObjType(void *ref, H5R_type_t ref_type) const
 ///		to H5R_DATASET_REGION
 ///\param	ref      - IN: Reference to get region of
 ///\return	DataSpace instance
-///\exception	H5::DataSetIException
+///\exception	H5::IdComponentException
 // Programmer	Binh-Minh Ribler - May, 2004
 //--------------------------------------------------------------------------
 DataSpace DataSet::getRegion(void *ref, H5R_type_t ref_type) const
 {
-   try {
-      DataSpace dataspace(p_get_region(ref, ref_type));
-      return(dataspace);
-   }
-   catch (IdComponentException E) {
-      throw DataSetIException("DataSet::getRegion", E.getDetailMsg());
-   }
+   DataSpace dataspace(p_get_region(ref, ref_type));
+   return(dataspace);
 }
 
 //--------------------------------------------------------------------------
@@ -525,7 +501,7 @@ void DataSet::close()
    {
       throw DataSetIException("DataSet::close", "H5Dclose failed");
    }
-   // reset the id because the dataset that it represents is now closed
+   // reset the id because the group that it represents is now closed
    id = 0;
 }
 
@@ -535,7 +511,7 @@ void DataSet::close()
 // Programmer	Binh-Minh Ribler - 2000
 // Modification
 //		Replaced resetIdComponent with decRefCount to use C library
-//		ID reference counting mechanism - June 1, 2004
+//		ID reference counting mechanism - BMR, Feb 20, 2005
 //--------------------------------------------------------------------------
 DataSet::~DataSet()
 {

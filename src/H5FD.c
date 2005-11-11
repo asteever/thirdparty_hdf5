@@ -37,16 +37,15 @@
 #include "H5FDprivate.h"	/* File drivers				*/
 #include "H5FDcore.h"		/* Files stored entirely in memory	*/
 #include "H5FDfamily.h"		/* File families 			*/
+#include "H5FDgass.h"		/* Remote files using GASS I/O		*/
 #include "H5FDlog.h"        	/* sec2 driver with I/O logging (for debugging) */
 #include "H5FDmpi.h"            /* MPI-based file drivers		*/
 #include "H5FDmulti.h"		/* Usage-partitioned file family	*/
 #include "H5FDsec2.h"		/* POSIX unbuffered file I/O		*/
+#include "H5FDsrb.h"        	/* Remote access using SRB              */
 #include "H5FDstdio.h"		/* Standard C buffered I/O		*/
 #include "H5FDstream.h"     	/* In-memory files streamed via sockets */
 #include "H5FLprivate.h"	/* Free lists                           */
-#ifdef H5_HAVE_FPHDF5
-#include "H5FPprivate.h"        /* Flexible Parallel HDF5               */
-#endif  /* H5_HAVE_FPHDF5 */
 #include "H5Iprivate.h"		/* IDs			  		*/
 #include "H5MMprivate.h"	/* Memory management			*/
 #include "H5Pprivate.h"		/* Property lists			*/
@@ -81,16 +80,16 @@ H5FL_BLK_DEFINE_STATIC(meta_accum);
 /*
  * Global count of the number of H5FD_t's handed out.  This is used as a
  * "serial number" for files that are currently open and is used for the
- * 'fileno' field in H5G_stat_t.  However, if a VFL driver is not able
+ * 'fileno[2]' field in H5G_stat_t.  However, if a VFL driver is not able
  * to detect whether two files are the same, a file that has been opened
  * by H5Fopen more than once with that VFL driver will have two different
  * serial numbers.  :-/
  *
- * Also, if a file is opened, the 'fileno' field is retrieved for an
- * object and the file is closed and re-opened, the 'fileno' value will
+ * Also, if a file is opened, the 'fileno[2]' field is retrieved for an
+ * object and the file is closed and re-opened, the 'fileno[2]' value will
  * be different.
  */
-static unsigned long file_serial_no;
+static unsigned long file_serial_no[2];
 
 
 /*-------------------------------------------------------------------------
@@ -116,11 +115,11 @@ H5FD_init_interface(void)
 
     FUNC_ENTER_NOAPI_NOINIT(H5FD_init_interface)
 
-    if (H5I_register_type(H5I_VFL, H5I_VFL_HASHSIZE, 0, (H5I_free_t)H5FD_free_cls)<H5I_FILE)
+    if (H5I_init_group(H5I_VFL, H5I_VFL_HASHSIZE, 0, (H5I_free_t)H5FD_free_cls)<0)
 	HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, FAIL, "unable to initialize interface")
 
     /* Reset the file serial numbers */
-    file_serial_no=0;
+    HDmemset(file_serial_no,0,sizeof(file_serial_no));
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -156,7 +155,7 @@ H5FD_term_interface(void)
 
     if (H5_interface_initialize_g) {
 	if ((n=H5I_nmembers(H5I_VFL))!=0) {
-	    H5I_clear_type(H5I_VFL, FALSE);
+	    H5I_clear_group(H5I_VFL, FALSE);
 
             /* Reset the VFL drivers, if they've been closed */
             if(H5I_nmembers(H5I_VFL)==0) {
@@ -164,21 +163,24 @@ H5FD_term_interface(void)
                 H5FD_log_term();
                 H5FD_stdio_term();
                 H5FD_family_term();
+#ifdef H5_HAVE_GASS
+                H5FD_gass_term();
+#endif
+#ifdef H5_HAVE_SRB
+                H5FD_srb_term();
+#endif
                 H5FD_core_term();
                 H5FD_multi_term();
 #ifdef H5_HAVE_PARALLEL
                 H5FD_mpio_term();
                 H5FD_mpiposix_term();
-#ifdef H5_HAVE_FPHDF5
-                H5FD_fphdf5_term();
-#endif /* H5_HAVE_FPHDF5 */
 #endif /* H5_HAVE_PARALLEL */
 #ifdef H5_HAVE_STREAM
                 H5FD_stream_term();
 #endif
             } /* end if */
 	} else {
-	    H5I_dec_type_ref(H5I_VFL);
+	    H5I_destroy_group(H5I_VFL);
 	    H5_interface_initialize_g = 0;
 	    n = 1; /*H5I*/
 	}
@@ -1069,11 +1071,12 @@ H5FD_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr)
         HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, NULL, "unable to query file driver")
 
     /* Increment the global serial number & assign it to this H5FD_t object */
-    if(++file_serial_no==0) {
-        /* (Just error out if we wrap around for now...) */
-        HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, NULL, "unable to get file serial number")
+    if(++file_serial_no[0]==0) {
+        /* (Just error out if we wrap both numbers around for now...) */
+        if(++file_serial_no[1]==0)
+            HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, NULL, "unable to get file serial number")
     } /* end if */
-    file->fileno=file_serial_no;
+    HDmemcpy(file->fileno,file_serial_no,sizeof(file_serial_no));
 
     /* Set return value */
     ret_value=file;
@@ -1485,13 +1488,6 @@ done:
  * Function:    H5FD_alloc
  * Purpose:     Private version of H5FDalloc().
  *
- *              For FPHDF5, the dxpl_id is meaningless. The only place it
- *              is likely to be used is in the H5FD_free() function where
- *              it can make a call to H5FD_write() (which needs this
- *              property list). FPHDF5 doesn't have metadata accumulation
- *              turned on, so it won't ever call the H5FD_write()
- *              function.
- *
  * Return:      Success:    The format address of the new file memory.
  *              Failure:    The undefined address HADDR_UNDEF
  * Programmer:  Robb Matzke
@@ -1502,13 +1498,6 @@ done:
  *
  *      Bill Wendling, 2002/12/02
  *      Split apart into subfunctions for each separate task.
- *
- *      Bill Wendling, 2003/02/19
- *      Added support for FPHDF5.
- *
- *	John Mainzer, 2004/04/13
- *	Moved much of the FPHDF5 specific code into H5FP_client_alloc(),
- *      and re-worked it to get rid of a race condition on the eoa.
  *
  *-------------------------------------------------------------------------
  */
@@ -1526,24 +1515,6 @@ H5FD_alloc(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, hsize_t size)
     assert(type >= H5FD_MEM_DEFAULT && type < H5FD_MEM_NTYPES);
     assert(size > 0);
 
-#ifdef H5_HAVE_FPHDF5
-    /*
-     * When we're using the FPHDF5 driver, allocate from the SAP. If this
-     * is the SAP executing this code, then skip the send to the SAP and
-     * try to do the actual allocations.
-     */
-    if ( H5FD_is_fphdf5_driver(file) && !H5FD_fphdf5_is_sap(file) ) {
-        haddr_t addr;
-
-        if ( (addr = H5FP_client_alloc(file, type, dxpl_id, size))
-             == HADDR_UNDEF) {
-            HGOTO_ERROR(H5E_FPHDF5, H5E_CANTALLOC, HADDR_UNDEF,
-                        "allocation failed.")
-        } else {
-            HGOTO_DONE(addr)
-        }
-    }
-#endif  /* H5_HAVE_FPHDF5 */
 
 #ifdef H5F_DEBUG
     if (H5DEBUG(F))
@@ -2246,26 +2217,6 @@ H5FD_free(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, hsize_t si
     assert(file->cls);
     assert(type >= H5FD_MEM_DEFAULT && type < H5FD_MEM_NTYPES);
 
-#ifdef H5_HAVE_FPHDF5
-    /*
-     * When we're using the FPHDF5 driver, free with the SAP. If this
-     * is the SAP executing this code, then skip the send to the SAP and
-     * try to do the actual free.
-     */
-    if (H5FD_is_fphdf5_driver(file) && !H5FD_fphdf5_is_sap(file)) {
-        unsigned        req_id;
-        H5FP_status_t   status;
-
-        /* Send the request to the SAP */
-        if (H5FP_request_free(file, type, addr, size, &req_id, &status) != SUCCEED)
-            /* FIXME: Should we check the "status" variable here? */
-            HGOTO_ERROR(H5E_FPHDF5, H5E_CANTFREE, FAIL, "server couldn't free from file")
-
-        /* We've succeeded -- return the value */
-        HGOTO_DONE(ret_value)
-    }
-#endif  /* H5_HAVE_FPHDF5 */
-
     if (!H5F_addr_defined(addr) || addr>file->maxaddr ||
             H5F_addr_overflow(addr, size) || addr+size>file->maxaddr)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid region")
@@ -2328,7 +2279,7 @@ H5FD_free(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, hsize_t si
                 H5_ASSIGN_OVERFLOW(overlap_size,(file->accum_loc+file->accum_size)-addr,haddr_t,size_t);
 
                 /* Block to free is in the middle of the accumulator */
-                if(H5F_addr_lt((addr + size), file->accum_loc + file->accum_size)) {
+                if(H5F_addr_lt(addr,file->accum_loc+file->accum_size)) {
                     haddr_t tail_addr;
                     size_t tail_size;
 
@@ -2610,6 +2561,11 @@ done:
  *
  * Purpose:	Check if a block in the file can be extended.
  *
+ *		This is a simple check currently, which only checks for the
+ *              block being at the end of the file.  A more sophisticated check
+ *              would also use the free space list to see if there is a block
+ *              appropriately placed to accomodate the space requested.
+ *
  * Return:	Success:	TRUE(1)/FALSE(0)
  *
  * 		Failure:	FAIL
@@ -2622,7 +2578,7 @@ done:
  *-------------------------------------------------------------------------
  */
 htri_t
-H5FD_can_extend(const H5FD_t *file, H5FD_mem_t type, haddr_t addr, hsize_t size, hsize_t extra_requested)
+H5FD_can_extend(H5FD_t *file, H5FD_mem_t type, haddr_t addr, hsize_t size, hsize_t UNUSED extra_requested)
 {
     haddr_t     eoa;                    /* End of address space in the file */
     htri_t      ret_value=FALSE;        /* Return value */
@@ -2636,19 +2592,9 @@ H5FD_can_extend(const H5FD_t *file, H5FD_mem_t type, haddr_t addr, hsize_t size,
     /* Check if the block is exactly at the end of the file */
     if((addr+size)==eoa)
         HGOTO_DONE(TRUE)
+    /* Check if block is inside the metadata or small data accumulator */
     else {
-        H5FD_free_t *curr;          /* Current free block being inspected */
-        H5FD_mem_t mapped_type;     /* Memory type, after mapping */
-        haddr_t end;                /* End of block in file */
-
-        /* Map request type to free list */
-        if (H5FD_MEM_DEFAULT==file->cls->fl_map[type])
-            mapped_type = type;
-        else
-            mapped_type = file->cls->fl_map[type];
-
-        /* Check if block is inside the metadata or small data accumulator */
-        if(mapped_type!=H5FD_MEM_DRAW) {
+        if(type!=H5FD_MEM_DRAW) {
             if (file->feature_flags & H5FD_FEAT_AGGREGATE_METADATA) {
                 /* If the metadata block is at the end of the file, and
                  * the block to test adjoins the beginning of the metadata
@@ -2670,21 +2616,6 @@ H5FD_can_extend(const H5FD_t *file, H5FD_mem_t type, haddr_t addr, hsize_t size,
                     HGOTO_DONE(TRUE)
             } /* end if */
         } /* end else */
-
-        /* Scan through the existing blocks for the mapped type to see if we can extend one */
-        curr = file->fl[mapped_type];
-        end = addr + size;
-        while(curr != NULL) {
-            if(end == curr->addr) {
-                if(extra_requested <= curr->size)
-                    HGOTO_DONE(TRUE)
-                else
-                    HGOTO_DONE(FALSE)
-            } /* end if */
-
-            /* Advance to next node in list */
-            curr=curr->next;
-        } /* end while */
     } /* end else */
 
 done:
@@ -2697,9 +2628,14 @@ done:
  *
  * Purpose:	Extend a block in the file.
  *
- * Return:	Success:	Non-negative
+ *		This is simple code currently, which only checks for the
+ *              block being at the end of the file.  A more sophisticated check
+ *              would also use the free space list to see if there is a block
+ *              appropriately placed to accomodate the space requested.
  *
- * 		Failure:	Negative
+ * Return:	Success:	TRUE(1)/FALSE(0)
+ *
+ * 		Failure:	FAIL
  *
  * Programmer:	Quincey Koziol
  *              Saturday, June 12, 2004
@@ -2712,11 +2648,8 @@ herr_t
 H5FD_extend(H5FD_t *file, H5FD_mem_t type, haddr_t addr, hsize_t size, hsize_t extra_requested)
 {
     haddr_t     eoa;                    /* End of address space in the file */
-    haddr_t     end;                    /* End of block in file */
     hbool_t     update_eoma=FALSE;      /* Whether we need to update the eoma */
     hbool_t     update_eosda=FALSE;     /* Whether we need to update the eosda */
-    hbool_t     at_end=FALSE;           /* Block is at end of file */
-    H5FD_mem_t  mapped_type;            /* Memory type, after mapping */
     herr_t      ret_value=SUCCEED;      /* Return value */
 
     FUNC_ENTER_NOAPI(H5FD_extend, FAIL)
@@ -2725,105 +2658,56 @@ H5FD_extend(H5FD_t *file, H5FD_mem_t type, haddr_t addr, hsize_t size, hsize_t e
     if (HADDR_UNDEF==(eoa=H5FD_get_eoa(file)))
 	HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, FAIL, "driver get_eoa request failed")
 
-    /* Map request type to free list */
-    if (H5FD_MEM_DEFAULT==file->cls->fl_map[type])
-        mapped_type = type;
-    else
-        mapped_type = file->cls->fl_map[type];
-
-    /* Compute end of block */
-    end = addr + size;
-
     /* Check if the block is exactly at the end of the file */
-    if(end == eoa)
-        at_end = TRUE;
-    else {
-        /* (Check if block is inside the metadata or small data accumulator) */
-        if(mapped_type!=H5FD_MEM_DRAW) {
-            if (file->feature_flags & H5FD_FEAT_AGGREGATE_METADATA)
+    /* (Check if block is inside the metadata or small data accumulator) */
+    if((addr+size)!=eoa) {
+        if(type!=H5FD_MEM_DRAW) {
+            if (file->feature_flags & H5FD_FEAT_AGGREGATE_METADATA) {
                 /* If the metadata block is at the end of the file, and
                  * the block to test adjoins the beginning of the metadata
                  * block, then it's extendable
                  */
-                if ((file->eoma + file->cur_meta_block_size) == eoa &&
-                        end == file->eoma)
+                if (file->eoma + file->cur_meta_block_size == eoa &&
+                        (addr+size)==file->eoma)
                     update_eoma=TRUE;
+                else
+                    HGOTO_ERROR(H5E_VFL, H5E_NOSPACE, FAIL, "can't extend block")
+            } /* end if */
+            else
+                HGOTO_ERROR(H5E_VFL, H5E_NOSPACE, FAIL, "can't extend block")
         } /* end if */
         else {
-            if (file->feature_flags & H5FD_FEAT_AGGREGATE_SMALLDATA)
+            if (file->feature_flags & H5FD_FEAT_AGGREGATE_SMALLDATA) {
                 /* If the small data block is at the end of the file, and
                  * the block to test adjoins the beginning of the small data
                  * block, then it's extendable
                  */
-                if ((file->eosda + file->cur_sdata_block_size) == eoa &&
-                        end == file->eosda)
+                if (file->eosda + file->cur_sdata_block_size == eoa &&
+                        (addr+size)==file->eosda)
                     update_eosda=TRUE;
-        } /* end else */
-    } /* end else */
-
-    /* Block is at end of file, we are extending the eoma or eosda */
-    if(update_eoma || update_eosda || at_end) {
-        /* Check for overflowing the file */
-        if (H5F_addr_overflow(eoa, extra_requested) || eoa + extra_requested > file->maxaddr)
-            HGOTO_ERROR(H5E_VFL, H5E_NOSPACE, FAIL, "file allocation request failed")
-
-        /* Extend the file */
-        eoa += extra_requested;
-        if (file->cls->set_eoa(file, eoa) < 0)
-            HGOTO_ERROR(H5E_VFL, H5E_NOSPACE, FAIL, "file allocation request failed")
-
-        /* Update the metadata and/or small data block */
-        assert(!(update_eoma && update_eosda));
-        if(update_eoma)
-            file->eoma+=extra_requested;
-        if(update_eosda)
-            file->eosda+=extra_requested;
-    } /* end if */
-    /* If the block we are extending isn't at the end of the file, find a free block to extend into */
-    else {
-        H5FD_free_t *curr;          /* Current free block being inspected */
-        H5FD_free_t *prev;          /* Current free block being inspected */
-
-        /* Walk through free list, looking for block to merge with */
-        curr = file->fl[mapped_type];
-        prev = NULL;
-        while(curr!=NULL) {
-            /* Found block that ajoins end of block to extend */
-            if(end == curr->addr) {
-                /* Check if free space is large enough */
-                if(extra_requested <= curr->size) {
-                    /* Check for exact match */
-                    if(extra_requested == curr->size) {
-                        /* Unlink node from free list */
-                        if(prev == NULL)
-                            file->fl[mapped_type] = curr->next;
-                        else
-                            prev->next = curr->next;
-
-                        /* Free the memory for the used block */
-                        H5FL_FREE(H5FD_free_t, curr);
-                    } /* end if */
-                    else {
-                        curr->addr += extra_requested;
-                        curr->size -= extra_requested;
-                    } /* end else */
-
-                    /* Leave now */
-                    break;
-                } /* end if */
                 else
                     HGOTO_ERROR(H5E_VFL, H5E_NOSPACE, FAIL, "can't extend block")
             } /* end if */
-
-            /* Advance to next node in list */
-            prev = curr;
-            curr = curr->next;
-        } /* end while */
-
-        /* Couldn't find block to extend */
-        if(curr == NULL)
-            HGOTO_ERROR(H5E_VFL, H5E_NOSPACE, FAIL, "can't extend block")
+            else
+                HGOTO_ERROR(H5E_VFL, H5E_NOSPACE, FAIL, "can't extend block")
+        } /* end else */
     } /* end else */
+
+    /* Check for overflowing the file */
+    if (H5F_addr_overflow(eoa, extra_requested) || eoa + extra_requested > file->maxaddr)
+        HGOTO_ERROR(H5E_VFL, H5E_NOSPACE, FAIL, "file allocation request failed")
+
+    /* Extend the file */
+    eoa += extra_requested;
+    if (file->cls->set_eoa(file, eoa) < 0)
+        HGOTO_ERROR(H5E_VFL, H5E_NOSPACE, FAIL, "file allocation request failed")
+
+    /* Update the metadata and/or small data block */
+    assert(!(update_eoma && update_eosda));
+    if(update_eoma)
+        file->eoma+=extra_requested;
+    if(update_eosda)
+        file->eosda+=extra_requested;
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -2885,7 +2769,7 @@ done:
  *-------------------------------------------------------------------------
  */
 haddr_t
-H5FD_get_eoa(const H5FD_t *file)
+H5FD_get_eoa(H5FD_t *file)
 {
     haddr_t	ret_value;
 
@@ -2939,7 +2823,6 @@ H5FDset_eoa(H5FD_t *file, haddr_t addr)
     /* Check args */
     if (!file || !file->cls)
 	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid file pointer")
-
     if (!H5F_addr_defined(addr) || addr>file->maxaddr)
 	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid end-of-address value")
 
@@ -3051,7 +2934,7 @@ done:
  *-------------------------------------------------------------------------
  */
 haddr_t
-H5FD_get_eof(const H5FD_t *file)
+H5FD_get_eof(H5FD_t *file)
 {
     haddr_t	ret_value;
 
@@ -3726,7 +3609,7 @@ H5FD_get_fileno(const H5FD_t *file, unsigned long *filenum)
     assert(filenum);
 
     /* Retrieve the file's serial number */
-    HDmemcpy(filenum,&file->fileno,sizeof(file->fileno));
+    HDmemcpy(filenum,file->fileno,sizeof(file->fileno));
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

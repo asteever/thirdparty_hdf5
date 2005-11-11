@@ -56,7 +56,7 @@ namespace H5 {
 ///\param	size_hint - IN: Indicates the number of bytes to reserve for
 ///		the names that will appear in the group
 ///\return	Group instance
-///\exception	H5::GroupIException
+///\exception	H5::FileIException or H5::GroupIException
 ///\par Description
 ///		The optional \a size_hint specifies how much file space to
 ///		reserve for storing the names that will appear in this new
@@ -99,7 +99,7 @@ Group CommonFG::createGroup( const string& name, size_t size_hint ) const
 ///		or another group.
 ///\param	name  - IN: Name of the group to open
 ///\return	Group instance
-///\exception	H5::GroupIException
+///\exception	H5::FileIException or H5::GroupIException
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 Group CommonFG::openGroup( const char* name ) const
@@ -139,7 +139,7 @@ Group CommonFG::openGroup( const string& name ) const
 ///\param	data_space - IN: Dataspace for the dataset
 ///\param	create_plist - IN: Creation properly list for the dataset
 ///\return	DataSet instance
-///\exception	H5::DataSetIException
+///\exception	H5::FileIException or H5::GroupIException
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 DataSet CommonFG::createDataSet( const char* name, const DataType& data_type, const DataSpace& data_space, const DSetCreatPropList& create_plist ) const
@@ -180,7 +180,7 @@ DataSet CommonFG::createDataSet( const string& name, const DataType& data_type, 
 ///\brief	Opens an existing dataset at this location.
 ///\param	name  - IN: Name of the dataset to open
 ///\return	DataSet instance
-///\exception	H5::DataSetIException
+///\exception	H5::FileIException or H5::GroupIException
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 DataSet CommonFG::openDataSet( const char* name ) const
@@ -283,11 +283,6 @@ void CommonFG::unlink( const string& name ) const
 ///\param	src - IN: Object's original name
 ///\param	dst - IN: Object's new name
 ///\exception	H5::FileIException or H5::GroupIException
-///\note
-///		Exercise care in moving groups as it is possible to render
-///		data in a file inaccessible with Group::move. Please refer
-///		to the Group Interface in the HDF5 User's Guide at:
-/// http://hdf.ncsa.uiuc.edu/HDF5/doc/Groups.html
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 void CommonFG::move( const char* src, const char* dst ) const
@@ -319,10 +314,6 @@ void CommonFG::move( const string& src, const string& dst ) const
 ///\param	statbuf - OUT: Buffer to return information about the object
 ///\exception	H5::FileIException or H5::GroupIException
 // Programmer	Binh-Minh Ribler - 2000
-///\par Description
-///		For more information, please refer to the C layer Reference
-///		Manual at:
-/// http://hdf.ncsa.uiuc.edu/HDF5/doc/RM_H5G.html#Group-GetObjinfo
 //--------------------------------------------------------------------------
 void CommonFG::getObjinfo( const char* name, hbool_t follow_link, H5G_stat_t& statbuf ) const
 {
@@ -590,6 +581,38 @@ void CommonFG::unmount( const string& name ) const
 }
 
 //--------------------------------------------------------------------------
+// Function:	CommonFG::p_open_data_type (private)
+// Purpose	Opens the named datatype and returns the datatype's identifier.
+// Return	Id of the datatype
+// Exception	H5::FileIException or H5::GroupIException
+// Description
+//              This private function is used by the member functions
+//		CommonFG::openXxxType, where Xxx indicates the specific
+//		datatypes.
+// Programmer	Binh-Minh Ribler - 2000
+//--------------------------------------------------------------------------
+hid_t CommonFG::p_open_data_type( const char* name ) const
+{
+   // Call C function H5Topen to open the named datatype in this group,
+   // giving either the file or group id
+   hid_t datatype_id = H5Topen( getLocId(), name );
+
+   // If the datatype's opening failed, throw an exception
+   if( datatype_id < 0 )
+   {
+      throwException("openDataType", "H5Topen failed");
+   }
+
+   // No failure, return the datatype id
+   return( datatype_id );
+}
+
+//
+// The following member functions use the private function
+// p_open_data_type to open a named datatype in this location
+//
+
+//--------------------------------------------------------------------------
 // Function:	CommonFG::openDataType
 ///\brief	Opens the named generic datatype at this location.
 ///\param	name  - IN: Name of the datatype to open
@@ -599,18 +622,8 @@ void CommonFG::unmount( const string& name ) const
 //--------------------------------------------------------------------------
 DataType CommonFG::openDataType( const char* name ) const
 {
-   // Call C function H5Topen to open the named datatype in this group,
-   // given either the file or group id
-   hid_t type_id = H5Topen(getLocId(), name);
-
-   // If the datatype's opening failed, throw an exception
-   if( type_id < 0 )
-   {
-      throwException("openDataType", "H5Topen failed");
-   }
-   // No failure, create and return the DataType object
-   DataType data_type(type_id);
-   return(data_type);
+   DataType data_type(p_open_data_type(name));
+   return( data_type );
 }
 
 //--------------------------------------------------------------------------
@@ -631,21 +644,11 @@ DataType CommonFG::openDataType( const string& name ) const
 ///\param	name  - IN: Name of the array datatype to open
 ///\return	ArrayType instance
 ///\exception	H5::FileIException or H5::GroupIException
-// Programmer	Binh-Minh Ribler - Jul, 2005
+// Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 ArrayType CommonFG::openArrayType( const char* name ) const
 {
-   // Call C function H5Topen to open the named datatype in this group,
-   // given either the file or group id
-   hid_t type_id = H5Topen(getLocId(), name);
-
-   // If the datatype's opening failed, throw an exception
-   if( type_id < 0 )
-   {
-      throwException("openArrayType", "H5Topen failed");
-   }
-   // No failure, create and return the ArrayType object
-   ArrayType array_type (type_id);
+   ArrayType array_type(p_open_data_type(name));
    return(array_type);
 }
 
@@ -654,7 +657,7 @@ ArrayType CommonFG::openArrayType( const char* name ) const
 ///\brief	This is an overloaded member function, provided for convenience.
 ///		It differs from the above function in that it takes an
 ///		\c std::string for \a name.
-// Programmer	Binh-Minh Ribler - Jul, 2005
+// Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 ArrayType CommonFG::openArrayType( const string& name ) const
 {
@@ -671,17 +674,7 @@ ArrayType CommonFG::openArrayType( const string& name ) const
 //--------------------------------------------------------------------------
 CompType CommonFG::openCompType( const char* name ) const
 {
-   // Call C function H5Topen to open the named datatype in this group,
-   // given either the file or group id
-   hid_t type_id = H5Topen(getLocId(), name);
-
-   // If the datatype's opening failed, throw an exception
-   if( type_id < 0 )
-   {
-      throwException("openCompType", "H5Topen failed");
-   }
-   // No failure, create and return the CompType object
-   CompType comp_type(type_id);
+   CompType comp_type(p_open_data_type(name));
    return(comp_type);
 }
 
@@ -707,17 +700,7 @@ CompType CommonFG::openCompType( const string& name ) const
 //--------------------------------------------------------------------------
 EnumType CommonFG::openEnumType( const char* name ) const
 {
-   // Call C function H5Topen to open the named datatype in this group,
-   // given either the file or group id
-   hid_t type_id = H5Topen(getLocId(), name);
-
-   // If the datatype's opening failed, throw an exception
-   if( type_id < 0 )
-   {
-      throwException("openEnumType", "H5Topen failed");
-   }
-   // No failure, create and return the EnumType object
-   EnumType enum_type(type_id);
+   EnumType enum_type(p_open_data_type(name));
    return(enum_type);
 }
 
@@ -743,17 +726,7 @@ EnumType CommonFG::openEnumType( const string& name ) const
 //--------------------------------------------------------------------------
 IntType CommonFG::openIntType( const char* name ) const
 {
-   // Call C function H5Topen to open the named datatype in this group,
-   // given either the file or group id
-   hid_t type_id = H5Topen(getLocId(), name);
-
-   // If the datatype's opening failed, throw an exception
-   if( type_id < 0 )
-   {
-      throwException("openIntType", "H5Topen failed");
-   }
-   // No failure, create and return the IntType object
-   IntType int_type(type_id);
+   IntType int_type(p_open_data_type(name));
    return(int_type);
 }
 
@@ -779,17 +752,7 @@ IntType CommonFG::openIntType( const string& name ) const
 //--------------------------------------------------------------------------
 FloatType CommonFG::openFloatType( const char* name ) const
 {
-   // Call C function H5Topen to open the named datatype in this group,
-   // given either the file or group id
-   hid_t type_id = H5Topen(getLocId(), name);
-
-   // If the datatype's opening failed, throw an exception
-   if( type_id < 0 )
-   {
-      throwException("openFloatType", "H5Topen failed");
-   }
-   // No failure, create and return the FloatType object
-   FloatType float_type(type_id);
+   FloatType float_type(p_open_data_type(name));
    return(float_type);
 }
 
@@ -815,17 +778,7 @@ FloatType CommonFG::openFloatType( const string& name ) const
 //--------------------------------------------------------------------------
 StrType CommonFG::openStrType( const char* name ) const
 {
-   // Call C function H5Topen to open the named datatype in this group,
-   // given either the file or group id
-   hid_t type_id = H5Topen(getLocId(), name);
-
-   // If the datatype's opening failed, throw an exception
-   if( type_id < 0 )
-   {
-      throwException("openStrType", "H5Topen failed");
-   }
-   // No failure, create and return the StrType object
-   StrType str_type(type_id);
+   StrType str_type(p_open_data_type(name));
    return(str_type);
 }
 
@@ -847,21 +800,11 @@ StrType CommonFG::openStrType( const string& name ) const
 ///\param	name  - IN: Name of the variable length datatype to open
 ///\return	VarLenType instance
 ///\exception	H5::FileIException or H5::GroupIException
-// Programmer	Binh-Minh Ribler - Jul, 2005
+// Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 VarLenType CommonFG::openVarLenType( const char* name ) const
 {
-   // Call C function H5Topen to open the named datatype in this group,
-   // given either the file or group id
-   hid_t type_id = H5Topen(getLocId(), name);
-
-   // If the datatype's opening failed, throw an exception
-   if( type_id < 0 )
-   {
-      throwException("openVarLenType", "H5Topen failed");
-   }
-   // No failure, create and return the VarLenType object
-   VarLenType varlen_type(type_id);
+   VarLenType varlen_type(p_open_data_type(name));
    return(varlen_type);
 }
 
@@ -870,7 +813,7 @@ VarLenType CommonFG::openVarLenType( const char* name ) const
 ///\brief	This is an overloaded member function, provided for convenience.
 ///		It differs from the above function in that it takes an
 ///		\c std::string for \a name.
-// Programmer	Binh-Minh Ribler - Jul, 2005
+// Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 VarLenType CommonFG::openVarLenType( const string& name ) const
 {

@@ -26,7 +26,7 @@
  * Last process opens the same file and verifies the data.
  */
 
-#include "testpar.h"
+#include "testphdf5.h"
 
 /* FILENAME and filenames must have the same number of names */
 const char *FILENAME[2]={
@@ -591,244 +591,7 @@ if (special_request & USEFSYNC){
     return nerrs;
 }
 
-/*
 
-Function: test_mpio_derived_dtype
-
-Test Whether the Displacement of MPI derived datatype
-(+ File_set_view + MPI_write)works or not on this MPI-IO package
-and this platform.
-
-1. Details for the test:
-1) Create two derived datatypes with MPI_Type_hindexed:
-        datatype1:
-	count = 1, blocklens = 1, offsets = 0,
-	base type = MPI_BYTE(essentially a char)
-        datatype2:
-	count = 1, blocklens = 1, offsets = 1(byte),
-	base type = MPI_BYTE
-
-2) Using these two derived datatypes,
-   Build another derived datatype with MPI_Type_struct:
-        advtype: derived from datatype1 and datatype2
-        advtype:
-	count = 2, blocklens[0] = 1, blocklens[1]=1,
-	offsets[0] = 0, offsets[1] = 1(byte),
-        bas_type[0]=datatype1,
-        bas_type[1] = datatype2;
-
-3) Setting MPI file view with advtype
-4) Writing 2 bytes 1 to 2 using MPI_File_write to a file
-5) File content:
-Suppose the fill value of the file is 0(most machines indeed do so)
-and Fill value is embraced with "() in the following output:
-Expected output should be:
-1,0,2
-
-
-
-However, at some platforms, for example, IBM AIX(at March 23rd, 2005):
-the following values were obtained:
-1,2,0
-
-The problem is that the displacement of the second derived datatype(datatype2) which formed the final derived datatype(advtype)
- has been put after the basic datatype(MPI_BYTE) of datatype2. This is a bug.
-
-
-2. This test will verify whether the complicated derived datatype is working on
-the current platform.
-
-If this bug has been fixed in the previous not-working package, this test will issue a printf message to tell the developer to change
-the configuration specific file of HDF5 so that we can change our configurationsetting to support collective IO for irregular selections.
-
-If it turns out that the previous working MPI-IO package no longer works, this test will also issue a message to inform the corresponding failure so that
-we can turn off collective IO support for irregular selections.
-*/
-
-static int test_mpio_derived_dtype(char *filename) {
-
-    MPI_File fh;
-    char mpi_err_str[MPI_MAX_ERROR_STRING];
-    int  mpi_err_strlen;
-    int  mpi_err;
-    int  i;
-    int  nerrors = 0;		/* number of errors */
-    MPI_Datatype  etype,filetype;
-    MPI_Datatype  adv_filetype,bas_filetype[2];
-    MPI_Datatype  etypenew, filetypenew;
-    MPI_Offset    disp,dispnew;
-    MPI_Status    Status;
-    MPI_Aint      adv_disp[2];
-    MPI_Aint      offsets[1],adv_offsets[2];
-    int           blocklens[1],adv_blocklens[2];
-    int           count,outcount;
-    int           retcode;
-
-    int mpi_rank,mpi_size;
-
-    char          buf[3],outbuf[3] = {0};
-
-    MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
-    MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
-    retcode = 0;
-    for(i=0;i<3;i++)
-      buf[i] = i+1;
-
-
-    if ((mpi_err = MPI_File_open(MPI_COMM_WORLD, filename,
-				 MPI_MODE_RDWR | MPI_MODE_CREATE,
-				 MPI_INFO_NULL, &fh))
-	    != MPI_SUCCESS){
-	MPI_Error_string(mpi_err, mpi_err_str, &mpi_err_strlen);
-	printf("MPI_File_open failed (%s)\n", mpi_err_str);
-	return 1;
-    }
-
-    disp  = 0;
-    etype = MPI_BYTE;
-
-    count = 1;
-    blocklens[0] = 1;
-    offsets[0]   = 0;
-
-    if((mpi_err= MPI_Type_hindexed(count,blocklens,offsets,MPI_BYTE,&filetype))
-       != MPI_SUCCESS){
-      	MPI_Error_string(mpi_err, mpi_err_str, &mpi_err_strlen);
-	printf("MPI_Type_contiguous failed (%s)\n", mpi_err_str);
-	return 1;
-    }
-
-    if((mpi_err=MPI_Type_commit(&filetype))!=MPI_SUCCESS){
-        MPI_Error_string(mpi_err, mpi_err_str, &mpi_err_strlen);
-	printf("MPI_Type_commit failed (%s)\n", mpi_err_str);
-	return 1;
-    }
-
-    count = 1;
-    blocklens[0]=1;
-    offsets[0] = 1;
-    if((mpi_err= MPI_Type_hindexed(count,blocklens,offsets,MPI_BYTE,&filetypenew))
-       != MPI_SUCCESS){
-      	MPI_Error_string(mpi_err, mpi_err_str, &mpi_err_strlen);
-	printf("MPI_Type_contiguous failed (%s)\n", mpi_err_str);
-	return 1;
-    }
-
-    if((mpi_err=MPI_Type_commit(&filetypenew))!=MPI_SUCCESS){
-        MPI_Error_string(mpi_err, mpi_err_str, &mpi_err_strlen);
-	printf("MPI_Type_commit failed (%s)\n", mpi_err_str);
-	return 1;
-    }
-
-    outcount         = 2;
-    adv_blocklens[0] = 1;
-    adv_blocklens[1] = 1;
-    adv_disp[0]      = 0;
-    adv_disp[1]      = 1;
-    bas_filetype[0]  = filetype;
-    bas_filetype[1]  = filetypenew;
-
-    if((mpi_err= MPI_Type_struct(outcount,adv_blocklens,adv_disp,bas_filetype,&adv_filetype))
-       != MPI_SUCCESS){
-      	MPI_Error_string(mpi_err, mpi_err_str, &mpi_err_strlen);
-	printf("MPI_Type_struct failed (%s)\n", mpi_err_str);
-	return 1;
-    }
-    if((mpi_err=MPI_Type_commit(&adv_filetype))!=MPI_SUCCESS){
-        MPI_Error_string(mpi_err, mpi_err_str, &mpi_err_strlen);
-	printf("MPI_Type_commit failed (%s)\n", mpi_err_str);
-	return 1;
-    }
-
-
-    if((mpi_err = MPI_File_set_view(fh,disp,etype,adv_filetype,"native",MPI_INFO_NULL))!= MPI_SUCCESS){
-      MPI_Error_string(mpi_err, mpi_err_str, &mpi_err_strlen);
-	printf("MPI_File_set_view failed (%s)\n", mpi_err_str);
-	return 1;
-    }
-
-    if((mpi_err = MPI_File_write(fh,buf,3,MPI_BYTE,&Status))!= MPI_SUCCESS){
-        MPI_Error_string(mpi_err, mpi_err_str, &mpi_err_strlen);
-	printf("MPI_File_write failed (%s)\n", mpi_err_str);
-	return 1;
-      ;
-    }
-
-
-    if((mpi_err = MPI_File_close(&fh)) != MPI_SUCCESS){
-       MPI_Error_string(mpi_err, mpi_err_str, &mpi_err_strlen);
-	printf("MPI_File_close failed (%s)\n", mpi_err_str);
-	return 1;
-    }
-
-
-    if((mpi_err = MPI_File_open(MPI_COMM_WORLD,filename,MPI_MODE_RDONLY,MPI_INFO_NULL,&fh)) != MPI_SUCCESS){
-       MPI_Error_string(mpi_err, mpi_err_str, &mpi_err_strlen);
-	printf("MPI_File_open failed (%s)\n", mpi_err_str);
-	return 1;
-    }
-
-    if((mpi_err = MPI_File_set_view(fh,0,MPI_BYTE,MPI_BYTE,"native",MPI_INFO_NULL))!= MPI_SUCCESS){
-        MPI_Error_string(mpi_err, mpi_err_str, &mpi_err_strlen);
-	printf("MPI_File_set_view failed (%s)\n", mpi_err_str);
-	return 1;
-    }
-    if((mpi_err = MPI_File_read(fh,outbuf,3,MPI_BYTE,&Status))!=MPI_SUCCESS){
-      MPI_Error_string(mpi_err, mpi_err_str, &mpi_err_strlen);
-      printf("MPI_File_read failed (%s)\n", mpi_err_str);
-      return 1;
-    }
-
-    if(outbuf[2]==2) {
-       retcode = 0;
-    }
-    else {
-/*      if(mpi_rank == 0) {
-       printf("complicated derived datatype is NOT working at this platform\n");
-       printf("go back to hdf5/config and find the corresponding\n");
-       printf("configure-specific file and change ?????\n");
-      }
-*/
-       retcode = -1;
-   }
-
-    if((mpi_err = MPI_File_close(&fh)) != MPI_SUCCESS){
-       MPI_Error_string(mpi_err, mpi_err_str, &mpi_err_strlen);
-	printf("MPI_File_close failed (%s)\n", mpi_err_str);
-	return 1;
-    }
-
-
-    mpi_err = MPI_Barrier(MPI_COMM_WORLD);
-#ifdef H5_MPI_COMPLEX_DERIVED_DATATYPE_WORKS
-    if(retcode == -1) {
-	if(mpi_rank == 0) {
-	    printf("Complicated derived datatype is NOT working at this platform\n");
-	    printf("Go back to hdf5/config and find the corresponding\n");
-	    printf("configure-specific file (for example, powerpc-ibm-aix5.x) and add\n");
-	    printf("hdf5_mpi_complex_derived_datatype_works=${hdf5_mpi_complex_derived_datatype-works='no'}\n");
-	    printf(" at the end of the file.\n");
-	    printf(" Please report to hdfhelp@ncsa.uiuc.edu about this problem.\n");
-	}
-	retcode = 1;
-    }
-#else
-    if(retcode == 0) {
-	if(mpi_rank == 0) {
-	    printf(" This is NOT an error, What it really says is\n");
-	    printf("Complicated derived datatype is WORKING at this platform\n");
-	    printf(" Go back to hdf5/config and find the corresponding \n");
-	    printf(" configure-specific file (for example, powerpc-ibm-aix5.x) and delete the line\n");
-	    printf("hdf5_mpi_complex_derived_datatype_works=${hdf5_mpi_complex_derived_datatype-works='no'}\n");
-	    printf(" at the end of the file.\n");
-	    printf("Please report to hdfhelp@ncsa.uiuc.edu about this problem.\n");
-	}
-	retcode = 1;
-    }
-    if(retcode == -1) retcode = 0;
-#endif
-    return retcode;
-}
 /*
  * parse the command line options
  */
@@ -944,38 +707,6 @@ main(int argc, char **argv)
     fapl = H5Pcreate (H5P_FILE_ACCESS);
     H5Pset_fapl_mpio(fapl, MPI_COMM_WORLD, MPI_INFO_NULL);
 
-    /* set alarm. */
-    ALARM_ON;
-
-    /*=======================================
-     * MPIO complicated derived datatype test
-     *=======================================*/
-    /* test_mpio_derived_dtype often hangs when fails.
-     * Do not run it if it is known NOT working unless ask to
-     * run explicitly by high verbose mode.
-     */
-#ifdef H5_MPI_COMPLEX_DERIVED_DATATYPE_WORKS
-    MPI_BANNER("MPIO complicated derived datatype test...");
-    ret_code = test_mpio_derived_dtype(filenames[0]);
-#else
-    if (VERBOSE_HI){
-	MPI_BANNER("MPIO complicated derived datatype test...");
-	ret_code = test_mpio_derived_dtype(filenames[0]);
-    }else{
-	MPI_BANNER("MPIO complicated derived datatype test SKIPPED.");
-	ret_code = 0;	/* fake ret_code */
-    }
-#endif
-    ret_code = errors_sum(ret_code);
-    if (mpi_rank==0 && ret_code > 0){
-	printf("***FAILED with %d total errors\n", ret_code);
-	nerrors += ret_code;
-    }
-
-
-    /*=======================================
-     * MPIO 1 write Many read test
-     *=======================================*/
     MPI_BANNER("MPIO 1 write Many read test...");
     ret_code = test_mpio_1wMr(filenames[0], USENONE);
     ret_code = errors_sum(ret_code);
@@ -1004,10 +735,6 @@ main(int argc, char **argv)
 	}
     }
 
-
-    /*=======================================
-     * MPIO MPIO File size range test
-     *=======================================*/
     MPI_BANNER("MPIO File size range test...");
     ret_code = test_mpio_gb_file(filenames[0]);
     ret_code = errors_sum(ret_code);
@@ -1016,10 +743,6 @@ main(int argc, char **argv)
 	nerrors += ret_code;
     }
 
-
-    /*=======================================
-     * MPIO independent overlapping writes
-     *=======================================*/
     MPI_BANNER("MPIO independent overlapping writes...");
     ret_code = test_mpio_overlap_writes(filenames[0]);
     ret_code = errors_sum(ret_code);
@@ -1043,9 +766,6 @@ finish:
 	}
 	printf("===================================\n");
     }
-
-    /* turn off alarm */
-    ALARM_OFF;
 
     h5_cleanup(FILENAME, fapl);
     H5close();

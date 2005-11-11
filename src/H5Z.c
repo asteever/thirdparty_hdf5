@@ -95,24 +95,13 @@ H5Z_init_interface (void)
 	HGOTO_ERROR (H5E_PLINE, H5E_CANTINIT, FAIL, "unable to register fletcher32 filter")
 #endif /* H5_HAVE_FILTER_FLETCHER32 */
 #ifdef H5_HAVE_FILTER_SZIP
-    H5Z_SZIP->encoder_present = SZ_encoder_enabled();
-    if (H5Z_SZIP->encoder_present < 0)
-	HGOTO_ERROR (H5E_PLINE, H5E_CANTINIT, FAIL, "szip filter reports bad status")
     if (H5Z_register (H5Z_SZIP)<0)
 	HGOTO_ERROR (H5E_PLINE, H5E_CANTINIT, FAIL, "unable to register szip filter")
 #endif /* H5_HAVE_FILTER_SZIP */
-#ifdef H5_HAVE_FILTER_NBIT
-    if (H5Z_register (H5Z_NBIT)<0)
-        HGOTO_ERROR (H5E_PLINE, H5E_CANTINIT, FAIL, "unable to register nbit filter")
-#endif /* H5_HAVE_FILTER_NBIT */
-#ifdef H5_HAVE_FILTER_SCALEOFFSET
-    if (H5Z_register (H5Z_SCALEOFFSET)<0)
-        HGOTO_ERROR (H5E_PLINE, H5E_CANTINIT, FAIL, "unable to register scaleoffset filter")
-#endif /* H5_HAVE_FILTER_SCALEOFFSET */
 
-#if (defined H5_HAVE_FILTER_DEFLATE | defined H5_HAVE_FILTER_FLETCHER32 | defined H5_HAVE_FILTER_SHUFFLE | defined H5_HAVE_FILTER_SZIP | defined H5_HAVE_FILTER_NBIT | defined H5_HAVE_FILTER_SCALEOFFSET)
+#if (defined H5_HAVE_FILTER_DEFLATE | defined H5_HAVE_FILTER_FLETCHER32 | defined H5_HAVE_FILTER_SHUFFLE | defined H5_HAVE_FILTER_SZIP)
 done:
-#endif /* (defined H5_HAVE_FILTER_DEFLATE | defined H5_HAVE_FILTER_FLETCHER32 | defined H5_HAVE_FILTER_SHUFFLE | defined H5_HAVE_FILTER_SZIP | defined H5_HAVE_FILTER_NBIT | defined H5_HAVE_FILTER_SCALEOFFSET) */
+#endif /* (defined H5_HAVE_FILTER_DEFLATE | defined H5_HAVE_FILTER_FLETCHER32 | defined H5_HAVE_FILTER_SHUFFLE | defined H5_HAVE_FILTER_SZIP) */
     FUNC_LEAVE_NOAPI(ret_value)
 }
 
@@ -200,6 +189,56 @@ H5Z_term_interface (void)
     return 0;
 }
 
+#ifdef H5_WANT_H5_V1_4_COMPAT
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Zregister
+ *
+ * Purpose:	This function registers new filter. The COMMENT argument is
+ *		used for debugging and may be the null pointer.
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Robb Matzke
+ *              Thursday, April 16, 1998
+ *
+ * Modifications:
+ *              Changed to pass H5Z_class_t struct to H5Z_register
+ *              Quincey Koziol, April  5, 2003
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Zregister(H5Z_filter_t id, const char *comment, H5Z_func_t func)
+{
+    H5Z_class_t cls;                    /* Filter class used to bundle parameters */
+    herr_t     ret_value=SUCCEED;       /* Return value */
+
+    FUNC_ENTER_API(H5Zregister, FAIL);
+    H5TRACE3("e","Zfsx",id,comment,func);
+
+    /* Check args */
+    if (id<0 || id>H5Z_FILTER_MAX)
+	HGOTO_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL, "invalid filter identification number");
+    if (id<H5Z_FILTER_RESERVED)
+	HGOTO_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL, "unable to modify predefined filters");
+    if (!func)
+	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no function specified");
+
+    /* Build class structure */
+    cls.id=id;
+    cls.name=comment;
+    cls.can_apply=cls.set_local=NULL;
+    cls.filter=func;
+
+    /* Do it */
+    if (H5Z_register (&cls)<0)
+	HGOTO_ERROR (H5E_PLINE, H5E_CANTINIT, FAIL, "unable to register filter");
+
+done:
+    FUNC_LEAVE_API(ret_value);
+}
+#else /* H5_WANT_H5_V1_4_COMPAT */
 
 /*-------------------------------------------------------------------------
  * Function:	H5Zregister
@@ -228,13 +267,6 @@ H5Zregister(const H5Z_class_t *cls)
     /* Check args */
     if (cls==NULL)
 	HGOTO_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL, "invalid filter class")
-
-    /* Check H5Z_class_t version number; this is where a function to convert
-     * from an outdated version should be called.
-     */
-    if(cls->version != H5Z_CLASS_T_VERS)
-    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid H5Z_class_t version number");
-
     if (cls->id<0 || cls->id>H5Z_FILTER_MAX)
 	HGOTO_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL, "invalid filter identification number")
     if (cls->id<H5Z_FILTER_RESERVED)
@@ -249,6 +281,7 @@ H5Zregister(const H5Z_class_t *cls)
 done:
     FUNC_LEAVE_API(ret_value)
 }
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
 
 /*-------------------------------------------------------------------------
@@ -530,7 +563,7 @@ H5Z_prelude_callback(hid_t dcpl_id, hid_t type_id, H5Z_prelude_type_t prelude_ty
                     if (NULL==(fclass=H5Z_find(dcpl_pline.filter[u].id))) {
                         /* Ignore errors from optional filters */
                         if (dcpl_pline.filter[u].flags & H5Z_FLAG_OPTIONAL)
-                            H5E_clear_stack(NULL);
+                            H5E_clear();
                         else
                             HGOTO_ERROR(H5E_PLINE, H5E_NOTFOUND, FAIL, "required filter was not located")
                     } /* end if */
@@ -538,15 +571,12 @@ H5Z_prelude_callback(hid_t dcpl_id, hid_t type_id, H5Z_prelude_type_t prelude_ty
                         /* Make correct callback */
                         switch(prelude_type) {
                             case H5Z_PRELUDE_CAN_APPLY:
-                                /* Check if filter is configured to be able to encode */
-                                if(! fclass->encoder_present)
-                                    HGOTO_ERROR(H5E_PLINE, H5E_NOENCODER, FAIL, "Filter present but encoding is disabled.");
-
-
                                 /* Check if there is a "can apply" callback */
                                 if(fclass->can_apply) {
+                                    herr_t status;
+
                                     /* Make callback to filter's "can apply" function */
-                                    herr_t status=(fclass->can_apply)(dcpl_id, type_id, space_id);
+                                    status=(fclass->can_apply)(dcpl_id, type_id, space_id);
 
                                     /* Check return value */
                                     if(status<=0) {
@@ -968,7 +998,7 @@ H5Z_pipeline(const H5O_pline_t *pline, unsigned flags,
 
                 *nbytes = *buf_size;
                 failed |= (unsigned)1 << idx;
-                H5E_clear_stack(NULL);
+                H5E_clear();
             } else {
                 *nbytes = new_nbytes;
             }
@@ -985,7 +1015,7 @@ H5Z_pipeline(const H5O_pline_t *pline, unsigned flags,
 		    HGOTO_ERROR(H5E_PLINE, H5E_WRITEERROR, FAIL, "required filter is not registered")
 
 		failed |= (unsigned)1 << idx;
-                H5E_clear_stack(NULL);
+                H5E_clear();
 		continue; /*filter excluded*/
 	    }
             fclass=&H5Z_table_g[fclass_idx];
@@ -1010,7 +1040,7 @@ H5Z_pipeline(const H5O_pline_t *pline, unsigned flags,
                 }
 
                 failed |= (unsigned)1 << idx;
-                H5E_clear_stack(NULL);
+                H5E_clear();
             } else {
                 *nbytes = new_nbytes;
             }
@@ -1199,31 +1229,27 @@ done:
  */
 herr_t H5Zget_filter_info(H5Z_filter_t filter, unsigned int *filter_config_flags)
 {
-    herr_t ret_value=SUCCEED;
-    H5Z_class_t * fclass;
+    herr_t ret_value = SUCCEED;
 
     FUNC_ENTER_API(H5Zget_filter_info, FAIL)
 
-    fclass = H5Z_find(filter);
-
-#ifdef H5_WANT_H5_V1_6_COMPAT
-    if(fclass == NULL && filter_config_flags != NULL) {
-        *filter_config_flags = 0;
-        HGOTO_DONE(SUCCEED)
-    } /* end if */
-#else
-    if(fclass == NULL)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Filter not defined")
-#endif /* H5_WANT_H5_V1_6_COMPAT */
-
-    if(filter_config_flags != NULL)
+    if (filter_config_flags != NULL)
     {
-        *filter_config_flags = 0;
-
-        if(fclass->encoder_present)
-            *filter_config_flags |= H5Z_FILTER_CONFIG_ENCODE_ENABLED;
-        if(fclass->decoder_present)
+        if (filter == H5Z_FILTER_SZIP)
+        {
+            *filter_config_flags = 0;
+#ifdef H5_HAVE_FILTER_SZIP
+            if(SZ_encoder_enabled()>0)
+                *filter_config_flags |= H5Z_FILTER_CONFIG_ENCODE_ENABLED;
+#endif /* H5_HAVE_FILTER_SZIP */
             *filter_config_flags |= H5Z_FILTER_CONFIG_DECODE_ENABLED;
+        }
+        else
+            *filter_config_flags = H5Z_FILTER_CONFIG_DECODE_ENABLED | H5Z_FILTER_CONFIG_ENCODE_ENABLED;
+
+        /* Make sure the filter exists */
+        if (H5Z_find(filter) == NULL)
+            *filter_config_flags = 0;
     }
 
 done:

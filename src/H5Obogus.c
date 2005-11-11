@@ -60,9 +60,7 @@ const H5O_class_t H5O_BOGUS[1] = {{
     NULL,			/* link method			*/
     NULL,		    	/*get share method		*/
     NULL,			/*set share method		*/
-    NULL,			/* copy native value to file    */
-    NULL,			/* post copy native value to file    */
-    H5O_bogus_debug         	/*debug the message             */
+    H5O_bogus_debug,         	/*debug the message             */
 }};
 
 

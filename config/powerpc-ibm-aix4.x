@@ -96,24 +96,4 @@ ac_cv_sizeof_uint_fast64_t=${ac_cv_sizeof_uint_fast64_t=8}
 #ac_cv_sizeof_size_t=${ac_cv_sizeof_size_t=4}
 #ac_cv_sizeof_off_t=${ac_cv_sizeof_off_t=8}
 
-# The default Fortran 90 compiler
-
-if test "X-" = "X-$FC"; then
-  FC=xlf
-fi
-
-if test "X-" = "X-$f9x_flags_set"; then
-  F9XSUFFIXFLAG="-qsuffix=f=f90"
-  FCFLAGS="$FCFLAGS -static -O ${F9XSUFFIXFLAG} -qmoddir=./ -k"
-  FSEARCH_DIRS="-I./ -I../src"
-  DEBUG_FCFLAGS="-O"
-  PROD_FCFLAGS="-O"
-  PROFILE_FCFLAGS="-O"
-  f9x_flags_set=yes
-fi
-
-# The default C++ compiler
-
-# Use AIX supplied C++ compiler by default.
-CXX=${CXX=xlC}
 hdf5_mpi_complex_derived_datatype_works=${hdf5_mpi_complex_derived_datatype_works='no'}

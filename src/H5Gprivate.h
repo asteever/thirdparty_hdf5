@@ -63,18 +63,6 @@
     4 +				/*reserved				*/    \
     H5G_SIZEOF_SCRATCH)         /*scratch pad space                     */
 
-/* ========= Group Creation properties ============ */
-
-/* Definitions for local heap size hint */
-#define H5G_CRT_GROUP_INFO_NAME                 "group info"
-#define H5G_CRT_GROUP_INFO_SIZE                 sizeof(H5O_ginfo_t)
-#define H5G_CRT_GROUP_INFO_DEF                  {0, 8, 6, 4, 8}
-
-/* Definitions for creating intermediate groups */
-#define H5G_CRT_INTERMEDIATE_GROUP_NAME         "intermediate_group"
-#define H5G_CRT_INTERMEDIATE_GROUP_SIZE         sizeof(unsigned)
-#define H5G_CRT_INTERMEDIATE_GROUP_DEF          0
-
 /*
  * Various types of object header information can be cached in a symbol
  * table entry (it's normal home is the object header to which the entry
@@ -145,9 +133,6 @@ typedef enum {
     H5G_COPY_DEEP       /* Deep copy from source to destination, including duplicating name & old name fields */
 } H5G_ent_copy_depth_t;
 
-/* Forward declarations for prototype arguments */
-struct H5P_genplist_t;
-
 /*
  * Library prototypes...  These are the ones that other packages routinely
  * call.
@@ -159,16 +144,16 @@ H5_DLL H5F_t *H5G_fileof(H5G_t *grp);
 H5_DLL herr_t H5G_free(H5G_t *grp);
 H5_DLL H5G_t *H5G_open(H5G_entry_t *ent, hid_t dxpl_id);
 H5_DLL herr_t H5G_close(H5G_t *grp);
-H5_DLL H5G_obj_t H5G_get_type(H5G_entry_t *ent, hid_t dxpl_id);
+H5_DLL int H5G_get_type(H5G_entry_t *ent, hid_t dxpl_id);
 H5_DLL herr_t H5G_get_objinfo(H5G_entry_t *loc, const char *name,
 			       hbool_t follow_link,
 			       H5G_stat_t *statbuf/*out*/, hid_t dxpl_id);
 H5_DLL herr_t H5G_insert(H5G_entry_t *loc, const char *name,
-			  H5G_entry_t *ent, hid_t dxpl_id, struct H5P_genplist_t *oc_plist);
+			  H5G_entry_t *ent, hid_t dxpl_id);
 H5_DLL herr_t H5G_find(H5G_entry_t *loc, const char *name,
                         H5G_entry_t *ent/*out*/, hid_t dxpl_id);
 H5_DLL H5F_t *H5G_insertion_file(H5G_entry_t *loc, const char *name, hid_t dxpl_id);
-H5_DLL  herr_t H5G_replace_name(H5G_obj_t type, H5G_entry_t *loc,
+H5_DLL  herr_t H5G_replace_name(int type, H5G_entry_t *loc,
         H5RS_str_t *src_name, H5G_entry_t *src_loc,
         H5RS_str_t *dst_name, H5G_entry_t *dst_loc, H5G_names_op_t op);
 H5_DLL  herr_t H5G_free_grp_name(H5G_t *grp);
