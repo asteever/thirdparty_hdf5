@@ -44,7 +44,7 @@ static void init_table(table_t **tbl);
 #ifdef H5DUMP_DEBUG
 static void dump_table(char* tablename, table_t *table);
 #endif  /* H5DUMP_DEBUG */
-static void add_obj(table_t *table, haddr_t objno, char *objname, hbool_t recorded);
+static void add_obj(table_t *table, unsigned long *objno, char *objname, hbool_t recorded);
 static char * build_obj_path_name(const char *prefix, const char *name);
 static herr_t find_objs_cb(hid_t group, const char *name, void *op_data);
 
@@ -100,13 +100,13 @@ warn_msg(const char *progname, const char *fmt, ...)
 
     va_start(ap, fmt);
     HDfflush(stdout);
-#ifdef _WIN32
+#ifdef WIN32
     HDfprintf(stdout, "%s warning: ", progname);
     HDvfprintf(stdout, fmt, ap);
-#else /* _WIN32 */
+#else /* WIN32 */
     HDfprintf(stderr, "%s warning: ", progname);
     HDvfprintf(stderr, fmt, ap);
-#endif /* _WIN32 */
+#endif /* WIN32 */
     va_end(ap);
 }
 
@@ -423,8 +423,9 @@ dump_tables(find_objs_t *info)
  *-------------------------------------------------------------------------
  */
 obj_t *
-search_obj(table_t *table, haddr_t objno)
+search_obj(table_t *table, unsigned long *_objno)
 {
+    haddr_t objno = ((haddr_t)_objno[1] << (8*sizeof(long))) | (haddr_t)_objno[0];
     unsigned u;
 
     for (u = 0; u < table->nobjs; u++)
@@ -489,24 +490,18 @@ find_objs_cb(hid_t group, const char *name, void *op_data)
     if(H5Gget_objinfo(group, name, FALSE, &statbuf) < 0)
         ;     /* keep going */
     else {
-        haddr_t objno;              /* Compact form of object's location */
-
-        objno = (haddr_t)statbuf.objno[0] | ((haddr_t)statbuf.objno[1] << (8 * sizeof(long)));
         switch (statbuf.type) {
-            char   *tmp;
-            size_t tmp_len;
+            char *tmp;
 
             case H5G_GROUP:
-                if (search_obj(info->group_table, objno) == NULL) {
+                if (search_obj(info->group_table, statbuf.objno) == NULL) {
                     char *old_prefix;
 
                     tmp = build_obj_path_name(info->prefix, name);
-                    add_obj(info->group_table, objno, tmp, TRUE);
+                    add_obj(info->group_table, statbuf.objno, tmp, TRUE);
 
                     old_prefix = info->prefix;
-                    tmp_len = HDstrlen(tmp);
-                    info->prefix = HDmalloc(tmp_len+1);
-                    HDstrcpy(info->prefix, tmp);
+                    info->prefix = tmp;
 
                     if(H5Giterate(group, name, NULL, find_objs_cb, (void *)info) < 0)
                         ret_value = FAIL;
@@ -516,11 +511,11 @@ find_objs_cb(hid_t group, const char *name, void *op_data)
                 break;
 
             case H5G_DATASET:
-                if (search_obj(info->dset_table, objno) == NULL) {
+                if (search_obj(info->dset_table, statbuf.objno) == NULL) {
                     hid_t dset;
 
                     tmp = build_obj_path_name(info->prefix, name);
-                    add_obj(info->dset_table, objno, tmp, TRUE);
+                    add_obj(info->dset_table, statbuf.objno, tmp, TRUE);
 
                     if ((dset = H5Dopen (group, name)) >= 0) {
                         hid_t type;
@@ -529,12 +524,11 @@ find_objs_cb(hid_t group, const char *name, void *op_data)
 
                         if (H5Tcommitted(type) > 0) {
                             H5Gget_objinfo(type, ".", TRUE, &statbuf);
-                            objno = (haddr_t)statbuf.objno[0] | ((haddr_t)statbuf.objno[1] << (8 * sizeof(long)));
 
-                            if (search_obj(info->type_table, objno) == NULL) {
+                            if (search_obj(info->type_table, statbuf.objno) == NULL) {
                                 char *type_name = HDstrdup(tmp);
 
-                                add_obj(info->type_table, objno, type_name, FALSE);
+                                add_obj(info->type_table, statbuf.objno, type_name, FALSE);
                             } /* end if */
                         }
 
@@ -551,8 +545,8 @@ find_objs_cb(hid_t group, const char *name, void *op_data)
                 obj_t *found_obj;
 
                 tmp = build_obj_path_name(info->prefix, name);
-                if ((found_obj = search_obj(info->type_table, objno)) == NULL)
-                    add_obj(info->type_table, objno, tmp, TRUE);
+                if ((found_obj = search_obj(info->type_table, statbuf.objno)) == NULL)
+                    add_obj(info->type_table, statbuf.objno, tmp, TRUE);
                 else {
                     /* Use latest version of name */
                     HDfree(found_obj->objname);
@@ -599,7 +593,7 @@ init_objs(hid_t fid, find_objs_t *info, table_t **group_table,
     init_table(type_table);
 
     /* Init the find_objs_t */
-    info->prefix = HDcalloc(1, 1);
+    info->prefix = (char *)"";
     info->group_table = *group_table;
     info->type_table = *type_table;
     info->dset_table = *dset_table;
@@ -608,21 +602,25 @@ init_objs(hid_t fid, find_objs_t *info, table_t **group_table,
      /* add the root group as an object, it may have hard links to it */
      
      H5G_stat_t statbuf;
-     haddr_t    objno;    /* compact form of object's location */
+     unsigned long   objno[2];   /*object number         */
      char*      tmp;
      
      if(H5Gget_objinfo(fid, "/", FALSE, &statbuf) < 0)
          return FAIL;
      else 
      {
-         objno = (haddr_t)statbuf.objno[0] | ((haddr_t)statbuf.objno[1] << (8 * sizeof(long)));
+         objno[0] = (unsigned long)(statbuf.objno[0]);
+#if H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG
+         objno[1] = (unsigned long)(statbuf.objno[1] >> 8*sizeof(long));
+#else /* H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG */
+         objno[1] = 0;
+#endif /* H5_SIZEOF_UINT64_T>H5_SIZEOF_LONG */
+
          /* call with an empty string, it appends group separator */
          tmp = build_obj_path_name(info->prefix, "");
          add_obj(info->group_table, objno, tmp, TRUE);
      }
     }
-
-
 
     /* Find all shared objects */
     return(H5Giterate(fid, "/", NULL, find_objs_cb, (void *)info));
@@ -644,8 +642,9 @@ init_objs(hid_t fid, find_objs_t *info, table_t **group_table,
  *-------------------------------------------------------------------------
  */
 static void
-add_obj(table_t *table, haddr_t objno, char *objname, hbool_t record)
+add_obj(table_t *table, unsigned long *_objno, char *objname, hbool_t record)
 {
+    haddr_t objno = ((haddr_t)_objno[1] << (8*sizeof(long))) | (haddr_t)_objno[0];
     unsigned u;
 
     /* See if we need to make table larger */
@@ -663,28 +662,3 @@ add_obj(table_t *table, haddr_t objno, char *objname, hbool_t record)
     table->objs[u].recorded = record;
     table->objs[u].displayed = 0;
 }
-
-
-#ifndef H5_HAVE_TMPFILE
-/*-------------------------------------------------------------------------
- * Function:    tmpfile
- *
- * Purpose:     provide tmpfile() function when it is not supported by the
- *              system.  Always return NULL for now.
- *
- * Return:      a stream description when succeeds.
- *              NULL if fails.
- *
- * Programmer:  Albert Cheng, 2005/8/9
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-FILE *
-tmpfile(void)
-{
-    return NULL;
-}
-
-#endif

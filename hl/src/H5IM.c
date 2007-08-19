@@ -13,10 +13,11 @@
  * access to either file, you may request a copy from help@hdfgroup.org.     *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include "H5IMprivate.h"
-#include "H5LTprivate.h"
+#include "H5IM.h"
+
 #include <string.h>
 #include <stdlib.h>
+
 
 /*-------------------------------------------------------------------------
  * Function: H5IMmake_image_8bit
@@ -25,7 +26,7 @@
  *
  * Return: Success: 0, Failure: -1
  *
- * Programmer: Pedro Vicente Nunes, pvn@ncsa.uiuc.edu
+ * Programmer: Pedro Vicente, pvn@ncsa.uiuc.edu
  *
  * Date: June 13, 2001
  *
@@ -44,7 +45,8 @@ herr_t H5IMmake_image_8bit( hid_t loc_id,
                             hsize_t height,
                             const unsigned char *buffer )
 {
- hsize_t  dims[IMAGE8_RANK];
+ int      rank = 3;
+ hsize_t  dims[3];
 
   /* Initialize the image dimensions */
  dims[0] = height;
@@ -52,15 +54,15 @@ herr_t H5IMmake_image_8bit( hid_t loc_id,
  dims[2] = 1;
 
  /* Make the dataset */
- if ( H5LTmake_dataset( loc_id, dset_name, IMAGE8_RANK, dims, H5T_NATIVE_UCHAR, buffer ) < 0 )
+ if ( H5LTmake_dataset( loc_id, dset_name, rank, dims, H5T_NATIVE_UCHAR, buffer ) < 0 )
   return -1;
 
  /* Attach the CLASS attribute */
- if ( H5LTset_attribute_string( loc_id, dset_name, "CLASS", IMAGE_CLASS ) < 0 )
+ if ( H5LTset_attribute_string( loc_id, dset_name, "CLASS", "IMAGE" ) < 0 )
   return -1;
 
  /* Attach the VERSION attribute */
- if ( H5LTset_attribute_string( loc_id, dset_name, "IMAGE_VERSION", IMAGE_VERSION ) < 0 )
+ if ( H5LTset_attribute_string( loc_id, dset_name, "IMAGE_VERSION", "1.2" ) < 0 )
   return -1;
 
  /* Attach the IMAGE_SUBCLASS attribute */
@@ -70,6 +72,8 @@ herr_t H5IMmake_image_8bit( hid_t loc_id,
  return 0;
 }
 
+
+
 /*-------------------------------------------------------------------------
  * Function: H5IMmake_image_24bit
  *
@@ -77,7 +81,7 @@ herr_t H5IMmake_image_8bit( hid_t loc_id,
  *
  * Return: Success: 0, Failure: -1
  *
- * Programmer: Pedro Vicente Nunes, pvn@ncsa.uiuc.edu
+ * Programmer: Pedro Vicente, pvn@ncsa.uiuc.edu
  *
  * Date: June 13, 2001
  *
@@ -102,7 +106,8 @@ herr_t H5IMmake_image_24bit( hid_t loc_id,
                              const char *interlace,
                              const unsigned char *buffer )
 {
- hsize_t  dims[IMAGE24_RANK];
+ int      rank = 3;
+ hsize_t  dims[3];
 
  /* Initialize the image dimensions */
 
@@ -111,28 +116,28 @@ herr_t H5IMmake_image_24bit( hid_t loc_id,
   /* Number of color planes is defined as the third dimension */
   dims[0] = height;
   dims[1] = width;
-  dims[2] = IMAGE24_RANK;
+  dims[2] = 3;
  }
  else
  if ( strcmp( interlace, "INTERLACE_PLANE" ) == 0 )
  {
   /* Number of color planes is defined as the first dimension */
-  dims[0] = IMAGE24_RANK;
+  dims[0] = 3;
   dims[1] = height;
   dims[2] = width;
  }
  else return -1;
 
  /* Make the dataset */
- if ( H5LTmake_dataset( loc_id, dset_name, IMAGE24_RANK, dims, H5T_NATIVE_UCHAR, buffer ) < 0 )
+ if ( H5LTmake_dataset( loc_id, dset_name, rank, dims, H5T_NATIVE_UCHAR, buffer ) < 0 )
   return -1;
 
  /* Attach the CLASS attribute */
- if ( H5LTset_attribute_string( loc_id, dset_name, "CLASS", IMAGE_CLASS ) < 0 )
+ if ( H5LTset_attribute_string( loc_id, dset_name, "CLASS", "IMAGE" ) < 0 )
   return -1;
 
  /* Attach the VERSION attribute */
- if ( H5LTset_attribute_string( loc_id, dset_name, "IMAGE_VERSION", IMAGE_VERSION ) < 0 )
+ if ( H5LTset_attribute_string( loc_id, dset_name, "IMAGE_VERSION", "1.2" ) < 0 )
   return -1;
 
  /* Attach the IMAGE_SUBCLASS attribute */
@@ -156,7 +161,7 @@ herr_t H5IMmake_image_24bit( hid_t loc_id,
  *
  * Return:
  *
- * Programmer: Pedro Vicente Nunes, pvn@ncsa.uiuc.edu
+ * Programmer: Pedro Vicente, pvn@ncsa.uiuc.edu
  *
  * Date: May 28, 2001
  *
@@ -200,7 +205,7 @@ static herr_t find_palette( hid_t loc_id, const char *name, void  *op_data )
  *
  * Return: Success: 1, Failure: 0
  *
- * Programmer: Pedro Vicente Nunes, pvn@ncsa.uiuc.edu
+ * Programmer: Pedro Vicente, pvn@ncsa.uiuc.edu
  *
  * Date: May 11, 2001
  *
@@ -212,7 +217,7 @@ static herr_t find_palette( hid_t loc_id, const char *name, void  *op_data )
  *-------------------------------------------------------------------------
  */
 
-herr_t H5IM_find_palette( hid_t loc_id )
+static herr_t H5IM_find_palette( hid_t loc_id )
 {
 
  unsigned int attr_num;     /* Starting attribute to look up */
@@ -233,7 +238,7 @@ herr_t H5IM_find_palette( hid_t loc_id )
  *
  * Return: Success: 0, Failure: -1
  *
- * Programmer: Pedro Vicente Nunes, pvn@ncsa.uiuc.edu
+ * Programmer: Pedro Vicente, pvn@ncsa.uiuc.edu
  *
  * Date: July 25, 2001
  *
@@ -247,15 +252,15 @@ herr_t H5IM_find_palette( hid_t loc_id )
  */
 
 herr_t H5IMget_image_info( hid_t loc_id,
-                           const char *dset_name,
-                           hsize_t *width,
-                           hsize_t *height,
-                           hsize_t *planes,
-                           char *interlace,
-                           hssize_t *npals )
+                     const char *dset_name,
+                     hsize_t *width,
+                     hsize_t *height,
+                     hsize_t *planes,
+                     char *interlace,
+                     hssize_t *npals )
 {
  hid_t   did, sid;
- hsize_t dims[IMAGE24_RANK];
+ hsize_t dims[3];
  hid_t   attr_id;
  hid_t   attr_type;
  int     has_attr;
@@ -329,7 +334,7 @@ herr_t H5IMget_image_info( hid_t loc_id,
  {
   *height = dims[0];
   *width  = dims[1];
-  *planes = 1;
+  *planes = dims[2];
  }
 
  /* Close */
@@ -401,7 +406,7 @@ out:
  *
  * Return: Success: 0, Failure: -1
  *
- * Programmer: Pedro Vicente Nunes, pvn@ncsa.uiuc.edu
+ * Programmer: Pedro Vicente, pvn@ncsa.uiuc.edu
  *
  * Date: June 13, 2001
  *
@@ -448,7 +453,7 @@ out:
  *
  * Return: Success: 0, Failure: -1
  *
- * Programmer: Pedro Vicente Nunes, pvn@ncsa.uiuc.edu
+ * Programmer: Pedro Vicente, pvn@ncsa.uiuc.edu
  *
  * Date: May 01, 2001
  *
@@ -482,7 +487,7 @@ herr_t H5IMmake_palette( hid_t loc_id,
   return -1;
 
  /* Attach the attribute "CLASS" to the >>palette<< dataset*/
- if ( H5LTset_attribute_string( loc_id, pal_name, "CLASS", PALETTE_CLASS ) < 0 )
+ if ( H5LTset_attribute_string( loc_id, pal_name, "CLASS", "PALETTE" ) < 0 )
   return -1;
 
  /* Attach the attribute "PAL_VERSION" to the >>palette<< dataset*/
@@ -501,7 +506,7 @@ herr_t H5IMmake_palette( hid_t loc_id,
  *
  * Return: Success: 0, Failure: -1
  *
- * Programmer: Pedro Vicente Nunes, pvn@ncsa.uiuc.edu
+ * Programmer: Pedro Vicente, pvn@ncsa.uiuc.edu
  *
  * Date: May 01, 2001
  *
@@ -524,10 +529,10 @@ herr_t H5IMlink_palette( hid_t loc_id,
 
 {
  hid_t       image_id;
- hid_t       attr_type=-1;
- hid_t       attr_id=-1;
- hid_t       attr_space_id=-1;
- hid_t       attr_class=-1;
+ hid_t       attr_type;
+ hid_t       attr_id;
+ hid_t       attr_space_id;
+ hid_t       attr_class;
  hobj_ref_t  ref;         /* write a new reference */
  hobj_ref_t  *refbuf;     /* buffer to read references */
  hssize_t    n_refs;
@@ -664,7 +669,6 @@ out:
 }
 
 
-
 /*-------------------------------------------------------------------------
  * Function: H5IMunlink_palette
  *
@@ -672,7 +676,7 @@ out:
  *
  * Return: Success: 0, Failure: -1
  *
- * Programmer: Pedro Vicente Nunes, pvn@ncsa.uiuc.edu
+ * Programmer: Pedro Vicente, pvn@ncsa.uiuc.edu
  *
  * Date: September 10, 2001
  *
@@ -769,7 +773,7 @@ out:
  *
  * Return: Success: 0, Failure: -1
  *
- * Programmer: Pedro Vicente Nunes, pvn@ncsa.uiuc.edu
+ * Programmer: Pedro Vicente, pvn@ncsa.uiuc.edu
  *
  * Date: July 22, 2001
  *
@@ -856,7 +860,7 @@ out:
  *
  * Return: Success: 0, Failure: -1
  *
- * Programmer: Pedro Vicente Nunes, pvn@ncsa.uiuc.edu
+ * Programmer: Pedro Vicente, pvn@ncsa.uiuc.edu
  *
  * Date: July 22, 2001
  *
@@ -876,9 +880,9 @@ herr_t H5IMget_palette_info( hid_t loc_id,
 {
  hid_t      image_id;
  int        has_pal;
- hid_t      attr_type=-1;
+ hid_t      attr_type;
  hid_t      attr_id;
- hid_t      attr_space_id=-1;
+ hid_t      attr_space_id;
  hid_t      attr_class;
  hssize_t   n_refs;
  hsize_t    dim_ref;
@@ -962,7 +966,6 @@ out:
  
 }
 
-
 /*-------------------------------------------------------------------------
  * Function: H5IMget_palette
  *
@@ -970,7 +973,7 @@ out:
  *
  * Return: Success: 0, Failure: -1
  *
- * Programmer: Pedro Vicente Nunes, pvn@ncsa.uiuc.edu
+ * Programmer: Pedro Vicente, pvn@ncsa.uiuc.edu
  *
  * Date: August 30, 2001
  *
@@ -990,9 +993,9 @@ herr_t H5IMget_palette( hid_t loc_id,
 {
  hid_t      image_id;
  int        has_pal;
- hid_t      attr_type=-1;
+ hid_t      attr_type;
  hid_t      attr_id;
- hid_t      attr_space_id=-1;
+ hid_t      attr_space_id;
  hid_t      attr_class;
  hssize_t   n_refs;
  hsize_t    dim_ref;
@@ -1072,7 +1075,7 @@ out:
  *
  * Return: true, false, fail
  *
- * Programmer: Pedro Vicente Nunes, pvn@ncsa.uiuc.edu
+ * Programmer: Pedro Vicente, pvn@ncsa.uiuc.edu
  *
  * Date: August 30, 2001
  *
@@ -1126,7 +1129,7 @@ herr_t H5IMis_image( hid_t loc_id,
   if ( H5Aread( attr_id, attr_type, attr_data ) < 0 )
     goto out;
 
-  if( strcmp( attr_data, IMAGE_CLASS ) == 0 )
+  if( strcmp( attr_data, "IMAGE" ) == 0 )
    ret = 1;
   else
    ret = 0;
@@ -1151,6 +1154,8 @@ out:
 
 }
 
+
+
 /*-------------------------------------------------------------------------
  * Function: H5IMis_palette
  *
@@ -1158,7 +1163,7 @@ out:
  *
  * Return: true, false, fail
  *
- * Programmer: Pedro Vicente Nunes, pvn@ncsa.uiuc.edu
+ * Programmer: Pedro Vicente, pvn@ncsa.uiuc.edu
  *
  * Date: August 30, 2001
  *
@@ -1188,7 +1193,7 @@ herr_t H5IMis_palette( hid_t loc_id,
  if ( (did = H5Dopen( loc_id, dset_name )) < 0 )
   return -1;
 
- /* Try to find the attribute "CLASS" on the dataset */
+    /* Try to find the attribute "CLASS" on the dataset */
  has_class = H5LT_find_attribute( did, "CLASS" );
 
  if ( has_class ==  0 )
@@ -1212,7 +1217,7 @@ herr_t H5IMis_palette( hid_t loc_id,
   if ( H5Aread( attr_id, attr_type, attr_data ) < 0 )
     goto out;
 
-  if( strcmp( attr_data, PALETTE_CLASS ) == 0 )
+  if( strcmp( attr_data, "PALETTE" ) == 0 )
    ret = 1;
   else
    ret = 0;
@@ -1225,7 +1230,7 @@ herr_t H5IMis_palette( hid_t loc_id,
 
  }
 
- /* Close the dataset. */
+     /* Close the dataset. */
  if ( H5Dclose( did ) < 0 )
   return -1;
 
@@ -1236,4 +1241,3 @@ out:
  return -1;
 
 }
-

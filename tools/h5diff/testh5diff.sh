@@ -259,7 +259,7 @@ SKIP() {
 
 ##############################################################################
 ##############################################################################
-###			  T H E   T E S T S                                ###
+###			  T H E   T E S T S                                            ###
 ##############################################################################
 ##############################################################################
 
@@ -290,7 +290,7 @@ TOOLTEST h5diff_15.txt $FILE1 $FILE2 -r -d 5 g1/dset3 g1/dset4
 TOOLTEST h5diff_16_1.txt $FILE1 $FILE1 -v -p 0.02 g1/dset5 g1/dset6
 
 # 1.6.2 with -p (unsigned long_long)
-TOOLTEST h5diff_16_2.txt $FILE1 $FILE1 -v -p 0.02 g1/dset7 g1/dset8
+#TOOLTEST h5diff_16_2.txt $FILE1 $FILE1 -v -p 0.02 g1/dset7 g1/dset8
 
 # 1.6.3 with -p (double)
 TOOLTEST h5diff_16_3.txt $FILE1 $FILE1 -v -p 0.02 g1/dset9 g1/dset10
@@ -492,14 +492,14 @@ TOOLTEST h5diff_70.txt $FILE5 $FILE6 -v
 TOOLTEST h5diff_80.txt $FILE7 $FILE8 -v
 
 # 9. compare a file with itself
-TOOLTEST h5diff_90.txt $FILE2 $FILE2
+TOOLTEST h5diff_90.txt $FILE1 $FILE1
 
 # 10. read by hyperslab, print indexes
 TOOLTEST h5diff_100.txt $FILE9 $FILE10 -v
 
 # 11. floating point comparison
-TOOLTEST h5diff_101.txt $FILE1 $FILE1 g1/d1  g1/d2  -v
-TOOLTEST h5diff_102.txt $FILE1 $FILE1 g1/fp1 g1/fp2 -v
+TOOLTEST h5diff_101.txt $FILE1 $FILE1 /g1/d1  g1/d2  -v
+TOOLTEST h5diff_102.txt $FILE1 $FILE1 /g1/fp1 g1/fp2 -v
 
 # ##############################################################################
 # # END

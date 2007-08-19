@@ -35,7 +35,7 @@ static herr_t get_name_type( hid_t loc_id,
                              const char *group_name,
                              int idx,
                              char **name,
-                             H5G_obj_t *type );
+                             H5G_obj_t1 *type );
 
 
 /*-------------------------------------------------------------------------
@@ -168,9 +168,7 @@ void h5trav_printinfo(int nobjs, trav_info_t *travi)
   case H5G_LINK:
    printf(" %-10s %s\n", "link", travi[i].name );
    break;
-  case H5G_UDLINK:
-   printf(" %-10s %s\n", "User defined link", travi[i].name );
-   break;
+ 
   default:
    printf(" %-10s %s\n", "User defined object", travi[i].name );
    break;
@@ -412,7 +410,7 @@ static herr_t get_name_type( hid_t loc_id,
                              const char *group_name,
                              int idx,
                              char **name,
-                             H5G_obj_t *type )
+                             H5G_obj_t1 *type )
 {
 
  trav_info_t info;
@@ -449,7 +447,7 @@ static int traverse( hid_t loc_id,
 {
  haddr_t       objno;              /* Compact form of object's location */
  char          *name=NULL;
- H5G_obj_t     type;
+ H5G_obj_t1    type;
  int           n_names;
  char          *path=NULL;
  H5G_stat_t    statbuf;
@@ -644,52 +642,7 @@ static int traverse( hid_t loc_id,
 
    break;
 
-  /*-------------------------------------------------------------------------
-   * H5G_UDLINK
-   *-------------------------------------------------------------------------
-   */
-
-  case H5G_UDLINK:
-  {
-    H5L_info_t linkbuf;
-
-    /* increment */
-    inserted_objs++;
-
-    /* add object to table */
-    trav_table_add(HADDR_UNDEF, path, H5G_UDLINK, table );
-
-    /* Get type of link */
-    H5E_BEGIN_TRY {
-        /* get link class info */
-        H5Lget_info( loc_id, path, &linkbuf, H5P_DEFAULT);
-    } H5E_END_TRY;
-
-    if(linkbuf.type == H5L_TYPE_EXTERNAL) {
-        if(statbuf.linklen > 0) {
-            char *targbuf;
-            const char *filename;
-            const char *objname;
-
-            targbuf = HDmalloc(statbuf.linklen);
-            assert(targbuf);
-            H5Gget_linkval(loc_id, path, statbuf.linklen, targbuf);
-            H5Lunpack_elink_val(targbuf, statbuf.linklen, NULL, &filename, &objname);
-            if(print)
-                printf(" %-10s %s -> %s %s\n", "ext link", path, filename, objname);
-            free(targbuf);
-        } /* end if */
-        else {
-            if(print)
-                printf(" %-10s %s ->\n", "udlink", path);
-        } /* end else */
-    } /* end if */
-    else {  /* Unknown user-defined type */
-        if(print)
-            printf(" %-10s %s ->\n", "UD link type", path);
-    } /* end else */
-  }
-  break;
+  
 
 
   default:
@@ -714,6 +667,7 @@ static int traverse( hid_t loc_id,
 
  return inserted_objs;
 }
+
 
 /*-------------------------------------------------------------------------
  * Function: trav_table_search
@@ -757,7 +711,7 @@ int trav_table_search(haddr_t objno, trav_table_t *table )
 
 void trav_table_add(haddr_t objno,
                     char *name,
-                    H5G_obj_t type,
+                    H5G_obj_t1 type,
                     trav_table_t *table)
 {
  unsigned int i;
@@ -806,7 +760,7 @@ void trav_table_add(haddr_t objno,
 
 void trav_table_addflags(unsigned *flags,
                          char *name,
-                         H5G_obj_t type,
+                         H5G_obj_t1 type,
                          trav_table_t *table)
 {
  unsigned int i;
@@ -951,5 +905,13 @@ void trav_table_addlink(trav_table_t *table,
  k=table->objs[j].nlinks++;
  table->objs[j].links[k].new_name = (char*)HDstrdup(path);
 }
+
+
+
+
+
+
+
+
 
 

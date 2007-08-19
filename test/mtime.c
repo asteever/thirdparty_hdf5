@@ -75,20 +75,20 @@ main(void)
     /* Create the file, create a dataset, then close the file */
     h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
     if ((file=H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl))<0)
-        TEST_ERROR;
+	TEST_ERROR;
     if ((space=H5Screate_simple(1, size, NULL))<0) TEST_ERROR;
     if ((dset=H5Dcreate(file, "dset", H5T_NATIVE_SCHAR, space, H5P_DEFAULT))<0)
-        TEST_ERROR;
+	TEST_ERROR;
     now = time(NULL);
     if (H5Dclose(dset)<0) TEST_ERROR;
     if (H5Sclose(space)<0) TEST_ERROR;
     if (H5Fclose(file)<0) TEST_ERROR;
 
     /*
-        * Open the file and get the modification time. We'll test the new
-        * H5Gget_objinfo() arguments too: being able to stat something without
-        * knowing its name.
-        */
+     * Open the file and get the modification time. We'll test the new
+     * H5Gget_objinfo() arguments too: being able to stat something without
+     * knowing its name.
+     */
     h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
     if ((file = H5Fopen(filename, H5F_ACC_RDONLY, fapl))<0) TEST_ERROR;
     if (H5Gget_objinfo(file, "dset", TRUE, &sb1)<0) TEST_ERROR;
@@ -98,32 +98,32 @@ main(void)
     if (H5Fclose(file)<0) TEST_ERROR;
 
     /* Compare times from the two ways of calling H5Gget_objinfo() */
-    if (HDmemcmp(&sb1.objno, &sb2.objno, sizeof(sb1.objno)) || sb1.mtime!=sb2.mtime) {
+    if (sb1.objno[0]!=sb2.objno[0] || sb1.objno[1]!=sb2.objno[1] ||
+	sb1.mtime!=sb2.mtime) {
         H5_FAILED();
-        puts("    Calling H5Gget_objinfo() with the dataset ID returned");
-        puts("    different values than calling it with a file and dataset");
-        puts("    name.");
-        goto error;
+	puts("    Calling H5Gget_objinfo() with the dataset ID returned");
+	puts("    different values than calling it with a file and dataset");
+	puts("    name.");
+	goto error;
     }
 
     /* Compare times -- they must be within 60 seconds of one another */
     if (0==sb1.mtime) {
-        SKIPPED();
-        puts("    The modification time could not be decoded on this OS.");
-        puts("    Modification times will be mantained in the file but");
-        puts("    cannot be queried on this system.  See H5O_mtime_decode().");
-        return 0;
+	SKIPPED();
+	puts("    The modification time could not be decoded on this OS.");
+	puts("    Modification times will be mantained in the file but");
+	puts("    cannot be queried on this system.  See H5O_mtime_decode().");
+	return 0;
     } else if (fabs(HDdifftime(now, sb1.mtime))>60.0) {
         H5_FAILED();
-        tm = localtime(&(sb1.mtime));
-        strftime((char*)buf1, sizeof buf1, "%Y-%m-%d %H:%M:%S", tm);
-        tm = localtime(&now);
-        strftime((char*)buf2, sizeof buf2, "%Y-%m-%d %H:%M:%S", tm);
-        printf("    got: %s\n    ans: %s\n", buf1, buf2);
-        goto error;
+	tm = localtime(&(sb1.mtime));
+	strftime((char*)buf1, sizeof buf1, "%Y-%m-%d %H:%M:%S", tm);
+	tm = localtime(&now);
+	strftime((char*)buf2, sizeof buf2, "%Y-%m-%d %H:%M:%S", tm);
+	printf("    got: %s\n    ans: %s\n", buf1, buf2);
+	goto error;
     }
     PASSED();
-
 
     /* Check opening existing file with old-style modification time information
      * and make certain that the time is correct

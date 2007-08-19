@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "hdf5.h"
-#include "H5IMpublic.h"
+#include "H5IM.h"
 
 /*-------------------------------------------------------------------------
  * Program: h52gifgentst

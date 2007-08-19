@@ -36,7 +36,7 @@ nh5rcreate_object_c (haddr_t_f *ref, hid_t_f *loc_id, _fcd name, int_f *namelen)
      hid_t c_loc_id;
      int ret_value_c;
      char *c_name;
-     size_t c_namelen;
+     int c_namelen;
      hobj_ref_t ref_c;
 
      /*
@@ -83,7 +83,7 @@ nh5rcreate_region_c (int_f *ref, hid_t_f *loc_id, _fcd name, int_f *namelen, hid
      hid_t c_space_id;
      int ret_value_c;
      char *c_name;
-     size_t c_namelen;
+     int c_namelen;
      hdset_reg_ref_t ref_c;
 
      /*
@@ -160,7 +160,7 @@ nh5rdereference_object_c (hid_t_f *dset_id, haddr_t_f *ref, hid_t_f *obj_id)
      hid_t c_obj_id;
      hobj_ref_t ref_c;
 
-     ref_c=*ref;
+     ref_c=(hobj_ref_t)*ref;
 
      /*
       * Call H5Rdereference function.

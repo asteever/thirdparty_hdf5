@@ -17,7 +17,7 @@
 #include <string.h>
 
 #include "gif.h"
-#include "H5IMpublic.h"
+#include "H5IM.h"
 
 #define PAL_NAME "global"
 

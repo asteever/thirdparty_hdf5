@@ -23,16 +23,16 @@ Preconditions:
 
 2. Compilers Installed
 
-   2.1 C/C++ Compilers HDF5-1.8.0 Supported
+   2.1 C/C++ Compilers HDF5-1.6 Supported
 
        gcc-3.4.4 is included in Cygwin, which includes: 
        gcc    : GNU C compiler
        gcc-g++: GNU C++ compiler
        gcc-g77: GNU Fortran 77 compiler
 
-   2.2 Fortran Compiler HDF5-1.8.0 Supported
+   2.2 Fortran Compiler HDF5-1.6 Supported
        
-       HDF5-1.8.0 supports g95(GCC 4.0.1 (g95!) Jul 22 2005) and higher.
+       HDF5-1.6 supports g95(GCC 4.0.1 (g95!) Jul 22 2005) and higher.
        
        g95 is a free, open source Fortran 95 compiler. Users can 
        download the g95 binaries for Cygwin in the following website: 
@@ -69,7 +69,7 @@ Preconditions:
        http://hdfgroup.org/HDF5/doc_resource/SZIP/index.html.
       
        The latest supported public release of SZIP is available from
-       ftp://ftp.hdfgroup.org/lib-external/szip/2.0. Binary distribution can be 
+       ftp://ftp.hdfgroup.org/lib-external/szip/2.0/bin/. Binary distribution can be 
        found under ftp://ftp.hdfgroup.org/lib-external/szip/2.0/bin/cygwin
 
 
@@ -84,19 +84,19 @@ Install HDF5 on Cygwin
 
    The HDF5 source code is distributed in a variety of formats which
    can be unpacked with the following commands, each of which creates 
-   an `hdf5-1.8.0' directory.
+   an `hdf5-1.6' directory.
 
    2.1 Non-compressed tar archive (*.tar)
 
-            $ tar xf hdf5-1.8.0.tar
+            $ tar xf hdf5-1.6.tar
 
    2.2 Gzip'd tar archive (*.tar.gz)
 
-            $ gunzip < hdf5-1.8.0.tar.gz | tar xf -
+            $ gunzip < hdf5-1.6.tar.gz | tar xf -
 
    2.3 Bzip'd tar archive (*.tar.bz2)
 
-            $ bunzip2 < hdf5-1.8.0.tar.bz2 | tar xf - 
+            $ bunzip2 < hdf5-1.6.tar.bz2 | tar xf - 
             
 3. Configuring 
      
@@ -141,27 +141,11 @@ Install HDF5 on Cygwin
 
            $ ./configure --without-zlib
            
-   3.6 Two ways to configure HDF5 C with specified Zlib
+   3.6 To configure HDF5 C with Zlib,
      
-     3.6.1 Using
+     To enable zlib, using
 
-           $ ./configure --with-zlib=INCDIR,LIBDIR
-
-       For example, if the zlib library is installed in
-       /cygdrive/c/usr, which is the parent directory of directories
-       "include" and "lib", 
-
- $ ./configure --with-zlib=/cygdrive/c/usr/include,/cygdrive/c/usr/lib
-
-     3.6.2 Through the CPPFLAGS and LDFLAGS Variables
-           
-       For example, if zlib was installed in the directory 
-       /cygdrive/c/usr then using the following command to configure 
-       HDF5 with zib
-
-           $ CPPFLAGS=-I/cygdrive/c/usr/include \
-           $ LDFLAGS=-L/cygdrive/c/usr/lib \
-           $ ./configure
+           $ ./configure --with-zlib
 
    3.7 To specify the installation directories, using 
 
@@ -185,7 +169,7 @@ Install HDF5 on Cygwin
      
            $ ./configure
              --with-szlib=/cygdrive/c/szip
-             --with-zlib=/cygdrive/c/usr/include,/cygdrive/c/usr/lib
+             --with-zlib
              --prefix=/cygdrive/c/hdf5
              --enable-cxx
              --enable-fortran 
@@ -196,19 +180,7 @@ Install HDF5 on Cygwin
               space between each line, No "Enter" until users finish 
               the switches and want to run the configure. 
 
- 
-     or do it through CPPFLAGS and LDFLAGS variables:
-     
-           $ CPPFLAGS=-I/cygdrive/c/usr/include \
-           $ LDFLAGS=-L/cygdrive/c/usr/lib \
-
-           $ ./configure
-             --with-szlib=/cygdrive/c/szip
-             --prefix=/cygdrive/c/hdf5
-             --enable-cxx
-             --enable-fortran 
-             <"If no more switches, then hit Enter">
-                          
+                           
 4. Make and Make Check
 
    After configuration is done successfully, run the following series of
@@ -222,7 +194,8 @@ Install HDF5 on Cygwin
 
 5. Make Install
 
-            $ make install  > "output file name"
+            $ make install           > "output file name"
+            $ make check-install    > "output file name"
    
      
 6. Check installed HDF5 library
@@ -232,7 +205,7 @@ Install HDF5 on Cygwin
 
 7. Known Problems 
    
-   Shared libraries can not be built on Cygwin In release 1.8.0.
+   Shared libraries can not be built on Cygwin In release 1.6.
 
 -----------------------------------------------------------------------
 

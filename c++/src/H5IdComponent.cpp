@@ -13,10 +13,6 @@
  * access to either file, you may request a copy from help@hdfgroup.org.     *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#ifdef H5_VMS
-#include <iostream>
-#endif /*H5_VMS*/
-
 #include <string>
 
 #include "H5Include.h"
@@ -148,7 +144,7 @@ int IdComponent::getCounter() const
 H5I_type_t IdComponent::getHDFObjType(const hid_t obj_id)
 {
     H5I_type_t id_type = H5Iget_type(obj_id);
-    if (id_type <= H5I_BADID || id_type >= H5I_NTYPES)
+    if (id_type <= H5I_BADID || id_type >= H5I_NGROUPS)
 	return H5I_BADID; // invalid
     else
 	return id_type; // valid type
@@ -252,19 +248,13 @@ IdComponent::~IdComponent() {}
 ///		where the failure occurs.  The class-name is provided by
 ///		fromClass().  This string will be used by a base class when
 ///		an exception is thrown.
-// Programmer	Binh-Minh Ribler - Aug 6, 2005
+// Programmer	Binh-Minh Ribler - Oct 10, 2005
 //--------------------------------------------------------------------------
 H5std_string IdComponent::inMemFunc(const char* func_name) const
 {
-#ifdef H5_VMS
-   H5std_string full_name = fromClass();
-   full_name.append("::");
-   full_name.append(func_name);
-#else
    H5std_string full_name = func_name;
    full_name.insert(0, "::");
    full_name.insert(0, fromClass());
-#endif /*H5_VMS*/
    return (full_name);
 }
 
@@ -382,9 +372,9 @@ void IdComponent::reference(void* ref, const char* name) const
 // Function:    IdComponent::reference
 ///\brief       This is an overloaded function, provided for your convenience.
 ///             It differs from the above function in that it takes an
-///             \c std::string for the object's name.
+///             \c H5std_string for the object's name.
 ///\param       ref - IN: Reference pointer
-///\param       name - IN: Name of the object to be referenced - \c std::string
+///\param       name - IN: Name of the object to be referenced - \c H5std_string
 // Programmer   Binh-Minh Ribler - May, 2004
 //--------------------------------------------------------------------------
 void IdComponent::reference(void* ref, const H5std_string& name) const
@@ -504,7 +494,7 @@ hid_t IdComponent::p_get_region(void *ref, H5R_type_t ref_type) const
 bool IdComponent::p_valid_id(const hid_t obj_id) const
 {
     H5I_type_t id_type = H5Iget_type(obj_id);
-    if (id_type <= H5I_BADID || id_type >= H5I_NTYPES)
+    if (id_type <= H5I_BADID || id_type >= H5I_NGROUPS)
 	return false;
     else
 	return true;

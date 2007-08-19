@@ -13,24 +13,23 @@
  * access to either file, you may request a copy from help@hdfgroup.org.     *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include "hdf5.h"
-#include "hdf5_hl.h"
+#include "H5LT.h"
 #include <stdlib.h>
 
 #define ATTR_SIZE 5
 
 int main( void )
 {
- hid_t   file_id;
+ hid_t   file_id; 
  hid_t   dset_id;
- hid_t   space_id;
+ hid_t   space_id;  
  hsize_t dims[1] = { ATTR_SIZE };
  int     data[ATTR_SIZE] = {1,2,3,4,5};
- herr_t  status;
+ herr_t  status; 
  int     i;
-
+  
  /* create a file */
- file_id = H5Fcreate ("ex_lite3.h5", H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+ file_id = H5Fcreate ("ex_lite3.h5", H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT); 
 
  /* create a data space  */
  space_id = H5Screate_simple(1,dims,NULL);
@@ -46,7 +45,7 @@ int main( void )
  * example of H5LTset_attribute_int
  *-------------------------------------------------------------------------
  */
-
+  
  /* create and write the attribute "attr1" on the dataset "dset" */
  status = H5LTset_attribute_int(file_id,"dset","attr1",data,ATTR_SIZE);
 

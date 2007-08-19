@@ -34,8 +34,8 @@ const char *FILENAME[] = {
 
 /* Define big file as 2GB */
 #define BIG_FILE 0x80000000UL
-
-#define MAX_TRIES	100
+ 
+#define MAX_TRIES       100
 
 #if H5_SIZEOF_LONG_LONG >= 8
 #   define GB8LL	((unsigned long_long)8*1024*1024*1024)
@@ -46,20 +46,16 @@ const char *FILENAME[] = {
 /* Protocols */
 static void usage(void);
 
-/* Array used to record all addresses at which data has been written */
-/* so far.  Used to prevent overlapping writes. */
 static hsize_t values_used[WRT_N];
 
 /*-------------------------------------------------------------------------
  * Function:	randll
  *
  * Purpose:	Create a random long_long value.
- * 		Ensures that a write at this value doesn't overlap any
- *		previous write.
  *
  * Return:	Success:	Random value
  *
- *		Failure:	Random value which overlaps another write
+ *		Failure:	never fails
  *
  * Programmer:	Robb Matzke
  *              Tuesday, November 24, 1998
@@ -71,10 +67,10 @@ static hsize_t values_used[WRT_N];
 static hsize_t
 randll(hsize_t limit, int current_index)
 {
-    hsize_t	acc;
-    int 	overlap = 1;
-    int 	i;
-    int 	tries = 0;
+    hsize_t     acc;
+    int         overlap = 1;
+    int         i;
+    int         tries = 0;
 
     /* Generate up to MAX_TRIES random numbers until one of them */
     /* does not overlap with any previous writes */
@@ -89,7 +85,8 @@ randll(hsize_t limit, int current_index)
         {
             if((acc >= values_used[i]) && (acc < values_used[i]+WRT_SIZE))
                 overlap = 1;
-            if((acc+WRT_SIZE >= values_used[i]) && (acc+WRT_SIZE < values_used[i]+WRT_SIZE))
+            if((acc+WRT_SIZE >= values_used[i]) && (acc+WRT_SIZE < values_used[i
+]+WRT_SIZE))
                 overlap = 1;
         }
         tries++;
@@ -178,6 +175,7 @@ supports_big(void)
     return (1);
 }
 
+
 
 /*-------------------------------------------------------------------------
  * Function:	enough_room
@@ -258,7 +256,7 @@ enough_room(hid_t fapl)
  *-------------------------------------------------------------------------
  */
 static int
-writer (char* filename, hid_t fapl, int wrt_n)
+writer(char* filename, hid_t fapl, int wrt_n)
 {
     hsize_t	size1[4] = {8, 1024, 1024, 1024};
     hsize_t	size2[1] = {GB8LL};
@@ -494,9 +492,6 @@ usage(void)
  *		Albert Cheng, 2002/04/19
  *		Added command option -c.
  *
- *              Raymond Lu, 2007/05/25
- *              Added similar tests for SEC2 and STDIO drivers.
- *
  *-------------------------------------------------------------------------
  */
 int
@@ -621,7 +616,7 @@ main (int ac, char **av)
     if(H5Pset_fapl_sec2(fapl)<0)
 
     HDmemset(filename, 0, sizeof(filename));
-    h5_fixname(FILENAME[1], fapl, filename, sizeof filename);
+    h5_fixname(FILENAME[2], fapl, filename, sizeof filename);
 
     if (writer(filename, fapl, WRT_N)) goto error;
     if (reader(filename, fapl)) goto error;
@@ -641,7 +636,7 @@ main (int ac, char **av)
     if(H5Pset_fapl_stdio(fapl)<0)
 
     HDmemset(filename, 0, sizeof(filename));
-    h5_fixname(FILENAME[2], fapl, filename, sizeof filename);
+    h5_fixname(FILENAME[1], fapl, filename, sizeof filename);
 
     if (writer(filename, fapl, WRT_N)) goto error;
     if (reader(filename, fapl)) goto error;

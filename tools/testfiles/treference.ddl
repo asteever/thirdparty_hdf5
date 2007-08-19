@@ -522,7 +522,7 @@ GROUP "/" {
          DATATYPE  H5T_REFERENCE
          DATASPACE  SIMPLE { ( 2 ) / ( 2 ) }
          DATA {
-         (0): DATASET 976 /dset , DATASET 976 /dset 
+         (0): DATASET 0:976 /dset , DATASET 0:976 /dset 
          }
       }
       ATTRIBUTE "enum" {
@@ -636,9 +636,9 @@ GROUP "/" {
          DATATYPE  H5T_REFERENCE
          DATASPACE  SIMPLE { ( 3, 2 ) / ( 3, 2 ) }
          DATA {
-         (0,0): DATASET 976 /dset , DATASET 976 /dset ,
-         (1,0): DATASET 976 /dset , DATASET 976 /dset ,
-         (2,0): DATASET 976 /dset , DATASET 976 /dset 
+         (0,0): DATASET 0:976 /dset , DATASET 0:976 /dset ,
+         (1,0): DATASET 0:976 /dset , DATASET 0:976 /dset ,
+         (2,0): DATASET 0:976 /dset , DATASET 0:976 /dset 
          }
       }
       ATTRIBUTE "enum2D" {
@@ -861,18 +861,18 @@ GROUP "/" {
          DATATYPE  H5T_REFERENCE
          DATASPACE  SIMPLE { ( 4, 3, 2 ) / ( 4, 3, 2 ) }
          DATA {
-         (0,0,0): DATASET 976 /dset , DATASET 976 /dset ,
-         (0,1,0): DATASET 976 /dset , DATASET 976 /dset ,
-         (0,2,0): DATASET 976 /dset , DATASET 976 /dset ,
-         (1,0,0): DATASET 976 /dset , DATASET 976 /dset ,
-         (1,1,0): DATASET 976 /dset , DATASET 976 /dset ,
-         (1,2,0): DATASET 976 /dset , DATASET 976 /dset ,
-         (2,0,0): DATASET 976 /dset , DATASET 976 /dset ,
-         (2,1,0): DATASET 976 /dset , DATASET 976 /dset ,
-         (2,2,0): DATASET 976 /dset , DATASET 976 /dset ,
-         (3,0,0): DATASET 976 /dset , DATASET 976 /dset ,
-         (3,1,0): DATASET 976 /dset , DATASET 976 /dset ,
-         (3,2,0): DATASET 976 /dset , DATASET 976 /dset 
+         (0,0,0): DATASET 0:976 /dset , DATASET 0:976 /dset ,
+         (0,1,0): DATASET 0:976 /dset , DATASET 0:976 /dset ,
+         (0,2,0): DATASET 0:976 /dset , DATASET 0:976 /dset ,
+         (1,0,0): DATASET 0:976 /dset , DATASET 0:976 /dset ,
+         (1,1,0): DATASET 0:976 /dset , DATASET 0:976 /dset ,
+         (1,2,0): DATASET 0:976 /dset , DATASET 0:976 /dset ,
+         (2,0,0): DATASET 0:976 /dset , DATASET 0:976 /dset ,
+         (2,1,0): DATASET 0:976 /dset , DATASET 0:976 /dset ,
+         (2,2,0): DATASET 0:976 /dset , DATASET 0:976 /dset ,
+         (3,0,0): DATASET 0:976 /dset , DATASET 0:976 /dset ,
+         (3,1,0): DATASET 0:976 /dset , DATASET 0:976 /dset ,
+         (3,2,0): DATASET 0:976 /dset , DATASET 0:976 /dset 
          }
       }
       ATTRIBUTE "enum3D" {
@@ -1820,34 +1820,34 @@ GROUP "/" {
          DATATYPE  H5T_REFERENCE
          DATASPACE  SIMPLE { ( 2 ) / ( 2 ) }
          DATA {
-         (0): DATASET 976 /dset , DATASET 976 /dset 
+         (0): DATASET 0:976 /dset , DATASET 0:976 /dset 
          }
       }
       DATASET "reference2D" {
          DATATYPE  H5T_REFERENCE
          DATASPACE  SIMPLE { ( 3, 2 ) / ( 3, 2 ) }
          DATA {
-         (0,0): DATASET 976 /dset , DATASET 976 /dset ,
-         (1,0): DATASET 976 /dset , DATASET 976 /dset ,
-         (2,0): DATASET 976 /dset , DATASET 976 /dset 
+         (0,0): DATASET 0:976 /dset , DATASET 0:976 /dset ,
+         (1,0): DATASET 0:976 /dset , DATASET 0:976 /dset ,
+         (2,0): DATASET 0:976 /dset , DATASET 0:976 /dset 
          }
       }
       DATASET "reference3D" {
          DATATYPE  H5T_REFERENCE
          DATASPACE  SIMPLE { ( 4, 3, 2 ) / ( 4, 3, 2 ) }
          DATA {
-         (0,0,0): DATASET 976 /dset , DATASET 976 /dset ,
-         (0,1,0): DATASET 976 /dset , DATASET 976 /dset ,
-         (0,2,0): DATASET 976 /dset , DATASET 976 /dset ,
-         (1,0,0): DATASET 976 /dset , DATASET 976 /dset ,
-         (1,1,0): DATASET 976 /dset , DATASET 976 /dset ,
-         (1,2,0): DATASET 976 /dset , DATASET 976 /dset ,
-         (2,0,0): DATASET 976 /dset , DATASET 976 /dset ,
-         (2,1,0): DATASET 976 /dset , DATASET 976 /dset ,
-         (2,2,0): DATASET 976 /dset , DATASET 976 /dset ,
-         (3,0,0): DATASET 976 /dset , DATASET 976 /dset ,
-         (3,1,0): DATASET 976 /dset , DATASET 976 /dset ,
-         (3,2,0): DATASET 976 /dset , DATASET 976 /dset 
+         (0,0,0): DATASET 0:976 /dset , DATASET 0:976 /dset ,
+         (0,1,0): DATASET 0:976 /dset , DATASET 0:976 /dset ,
+         (0,2,0): DATASET 0:976 /dset , DATASET 0:976 /dset ,
+         (1,0,0): DATASET 0:976 /dset , DATASET 0:976 /dset ,
+         (1,1,0): DATASET 0:976 /dset , DATASET 0:976 /dset ,
+         (1,2,0): DATASET 0:976 /dset , DATASET 0:976 /dset ,
+         (2,0,0): DATASET 0:976 /dset , DATASET 0:976 /dset ,
+         (2,1,0): DATASET 0:976 /dset , DATASET 0:976 /dset ,
+         (2,2,0): DATASET 0:976 /dset , DATASET 0:976 /dset ,
+         (3,0,0): DATASET 0:976 /dset , DATASET 0:976 /dset ,
+         (3,1,0): DATASET 0:976 /dset , DATASET 0:976 /dset ,
+         (3,2,0): DATASET 0:976 /dset , DATASET 0:976 /dset 
          }
       }
       DATASET "string" {

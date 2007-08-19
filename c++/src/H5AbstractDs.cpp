@@ -117,7 +117,7 @@ DataType AbstractDs::getDataType() const
 ///		can be a dataset or an attribute.
 ///\return	ArrayType instance
 ///\exception	H5::DataTypeIException
-// Programmer	Binh-Minh Ribler - Jul, 2005
+// Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 ArrayType AbstractDs::getArrayType() const
 {
@@ -273,7 +273,7 @@ StrType AbstractDs::getStrType() const
 ///		which can be a dataset or an attribute.
 ///\return	VarLenType instance
 ///\exception	H5::DataTypeIException
-// Programmer	Binh-Minh Ribler - Jul, 2005
+// Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 VarLenType AbstractDs::getVarLenType() const
 {

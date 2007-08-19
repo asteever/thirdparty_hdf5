@@ -43,7 +43,7 @@
 #include "H5Cpp.h"	// C++ API header file
 
 #ifndef H5_NO_NAMESPACE
-    using namespace H5;
+using namespace H5;
 #endif
 
 #include "h5cpputil.h"	// C++ utilility header file
@@ -59,8 +59,9 @@ const H5std_string	DSET_BOGUS_NAME	("bogus");
 const int H5Z_FILTER_BOGUS = 305;
 
 // Local prototypes
-static size_t filter_bogus(unsigned int flags, size_t cd_nelmts,
+static size_t bogus(unsigned int flags, size_t cd_nelmts,
     const unsigned int *cd_values, size_t nbytes, size_t *buf_size, void **buf);
+void cleanup_dsets(void);
 
 
 /*-------------------------------------------------------------------------
@@ -172,7 +173,7 @@ test_create( H5File& file)
     // catch all other exceptions
     catch (Exception E)
     {
-	issue_fail_msg("test_create", __LINE__, __FILE__);
+	issue_fail_msg(E.getCFuncName(), __LINE__, __FILE__);
 
 	// clean up and return with failure
 	if (dataset != NULL)
@@ -180,6 +181,7 @@ test_create( H5File& file)
 	return -1;
     }
 }   // test_create
+
 
 /*-------------------------------------------------------------------------
  * Function:	test_simple_io
@@ -334,7 +336,7 @@ test_tconv( H5File& file)
 	// clean up and return with success
 	delete [] out;
 	delete [] in;
-	PASSED();
+	cerr << " PASSED" << endl;
 	return 0;
     }  // end try
 
@@ -353,13 +355,11 @@ test_tconv( H5File& file)
 
 /* This message derives from H5Z */
 const H5Z_class_t H5Z_BOGUS[1] = {{
-    H5Z_CLASS_T_VERS,		/* H5Z_class_t version number   */
     H5Z_FILTER_BOGUS,		/* Filter id number		*/
-    1, 1,			/* Encode and decode enabled    */
     "bogus",			/* Filter name for debugging	*/
-    NULL,                       /* The "can apply" callback     */
-    NULL,                       /* The "set local" callback     */
-    (H5Z_func_t)filter_bogus,   /* The actual filter function	*/
+    NULL,		       /* The "can apply" callback     */
+    NULL,		       /* The "set local" callback     */
+    bogus,			/* The actual filter function	*/
 }};
 
 /*-------------------------------------------------------------------------
@@ -383,7 +383,7 @@ static size_t
       const unsigned int UNUSED cd_values[], size_t nbytes,
       size_t UNUSED *buf_size, void UNUSED **buf)
 BMR: removed UNUSED for now until asking Q. or R. to pass compilation*/
-filter_bogus(unsigned int flags, size_t cd_nelmts,
+bogus(unsigned int flags, size_t cd_nelmts,
       const unsigned int cd_values[], size_t nbytes,
       size_t *buf_size, void **buf)
 {
@@ -627,8 +627,13 @@ test_compression(H5File& file)
 	*/
 	TESTING("compression (app-defined method)");
 
-        if (H5Zregister (H5Z_BOGUS)<0)
-		throw Exception("test_compression", "Failed in app-defined method");
+#ifdef H5_WANT_H5_V1_4_COMPAT
+	if (H5Zregister (H5Z_FILTER_BOGUS, "bogus", bogus)<0)
+	    throw Exception("test_compression", "Failed in app-defined method");
+#else /* H5_WANT_H5_V1_4_COMPAT */
+	if (H5Zregister (H5Z_BOGUS)<0)
+	    throw Exception("test_compression", "Failed in app-defined method");
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 	if (H5Pset_filter (dscreatplist.getId(), H5Z_FILTER_BOGUS, 0, 0, NULL)<0)
 	    throw Exception("test_compression", "Failed in app-defined method");
 	dscreatplist.setFilter (H5Z_FILTER_BOGUS, 0, 0, NULL);
@@ -971,8 +976,10 @@ test_types(H5File& file)
  *-------------------------------------------------------------------------
  */
 int
-main()
+main(void)
 {
+    h5_reset(); // in h5test.c, resets the library by closing it
+
     hid_t	fapl_id;
     fapl_id = h5_fileaccess(); // in h5test.c, returns a file access template
 
@@ -1027,11 +1034,9 @@ main()
  *
  *-------------------------------------------------------------------------
  */
-#ifdef __cplusplus
-extern "C"
-#endif
-void cleanup_dsets()
+void
+cleanup_dsets(void)
 {
-    HDremove(FILE1.c_str());
+    remove(FILE1.c_str());
 } // cleanup_dsets
 

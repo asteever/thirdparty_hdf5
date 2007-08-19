@@ -50,8 +50,6 @@ FILE8=h5repack_deflate.h5
 FILE9=h5repack_shuffle.h5
 FILE10=h5repack_fletcher.h5
 FILE11=h5repack_filters.h5
-FILE12=h5repack_nbit.h5
-FILE13=h5repack_soffset.h5
 
 
 nerrors=0
@@ -309,53 +307,7 @@ else
  TOOLTEST $arg
 fi        
 
-# nbit copy
-arg="$FILE12"
-if test $USE_FILTER_NBIT != "yes" ; then
- SKIP $arg
-else
- TOOLTEST $arg
-fi
 
-# nbit remove
-arg="$FILE12 -f dset_nbit:NONE"
-if test $USE_FILTER_NBIT != "yes" ; then
- SKIP $arg
-else
- TOOLTEST $arg
-fi        
-
-# nbit add
-arg="$FILE12 -f dset_int31:NBIT"
-if test $USE_FILTER_NBIT != "yes" ; then
- SKIP $arg
-else
- TOOLTEST $arg
-fi
-
-# scaleoffset copy
-arg="$FILE13"
-if test $USE_FILTER_SCALEOFFSET != "yes" ; then
- SKIP $arg
-else
- TOOLTEST $arg
-fi
-
-# scaleoffset add
-arg="$FILE13 -f dset_none:SOFF=31,IN"
-if test $USE_FILTER_SCALEOFFSET != "yes" ; then
- SKIP $arg
-else
- TOOLTEST $arg
-fi
-
-# scaleoffset remove
-arg="$FILE13 -f dset_scaleoffset:NONE"
-if test $USE_FILTER_SCALEOFFSET != "yes" ; then
- SKIP $arg
-else
- TOOLTEST $arg
-fi        
 
 # remove all  filters
 arg="$FILE11 -f NONE"

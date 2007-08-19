@@ -18,7 +18,7 @@
  *              Thursday, July 23, 1998
  *
  * Purpose: A library for displaying the values of a dataset in a human
- *  readable format.
+ *      readable format.
  */
 
 #include <stdio.h>
@@ -31,11 +31,12 @@
 #include "H5private.h"
 
 
-#define ALIGN(A,Z)  ((((A) + (Z) - 1) / (Z)) * (Z))
+
+#define ALIGN(A,Z)      ((((A) + (Z) - 1) / (Z)) * (Z))
 
 /* global variables */
 int         compound_data;
-FILE       *rawdatastream; /* should initialize to stdout but gcc moans about it */
+FILE       *rawdatastream;  /* should initialize to stdout but gcc moans about it */
 int         bin_output;    /* binary output */
 int         bin_form;      /* binary form */
 
@@ -58,7 +59,7 @@ static const char *drivernames[]={
     "multi",
 #ifdef H5_HAVE_STREAM
     "stream",
-#endif /* H5_HAVE_STREAM */
+#endif  /* H5_HAVE_STREAM */
 #ifdef H5_HAVE_PARALLEL
     "mpio",
     "mpiposix"
@@ -74,7 +75,7 @@ enum {
    ,MULTI_IDX
 #ifdef H5_HAVE_STREAM
    ,STREAM_IDX
-#endif /* H5_HAVE_STREAM */
+#endif  /* H5_HAVE_STREAM */
 #ifdef H5_HAVE_PARALLEL
    ,MPIO_IDX
    ,MPIPOSIX_IDX
@@ -156,76 +157,63 @@ h5tools_close(void)
  * Programmer:
  *      Quincey Koziol, 2004-02-04
  * Modifications:
- *      Pedro Vicente Nunes, Thursday, July 27, 2006
- *   Added error return conditions for the H5Pset_fapl calls
  *-------------------------------------------------------------------------
  */
 static hid_t
-h5tools_get_fapl(hid_t fapl, const char *driver, unsigned *drivernum)
+h5tools_get_fapl(const char *driver, unsigned *drivernum)
 {
-    hid_t new_fapl;     /* Copy of file access property list passed in, or new property list */
-
-    /* Make a copy of the FAPL, for the file open call to use, eventually */
-    if(fapl == H5P_DEFAULT) {
-        if((new_fapl = H5Pcreate(H5P_FILE_ACCESS)) < 0)
-            goto error;
-    } /* end if */
-    else {
-        if((new_fapl = H5Pcopy(fapl)) < 0)
-            goto error;
-    } /* end else */
+    hid_t               fapl = H5P_DEFAULT;
 
     /* Determine which driver the user wants to open the file with. Try
      * that driver. If it can't open it, then fail. */
-    if(!strcmp(driver, drivernames[SEC2_IDX])) {
-        /* SEC2 driver */
-        if(H5Pset_fapl_sec2(new_fapl) < 0)
-            goto error;
-
+    if (!strcmp(driver, drivernames[SEC2_IDX])) {
         if(drivernum)
             *drivernum = SEC2_IDX;
-    } else if(!strcmp(driver, drivernames[FAMILY_IDX])) {
+    } else if (!strcmp(driver, drivernames[FAMILY_IDX])) {
         /* FAMILY Driver */
+        if((fapl = H5Pcreate(H5P_FILE_ACCESS))>=0) {
+            /* Set member size to be 0 to indicate the current first member size
+             * is the member size.
+             */
+            H5Pset_fapl_family(fapl, (hsize_t)0, H5P_DEFAULT);
 
-        /* Set member size to be 0 to indicate the current first member size
-         * is the member size.
-         */
-        if(H5Pset_fapl_family(new_fapl, (hsize_t)0, H5P_DEFAULT) < 0)
-            goto error;
-
-        if(drivernum)
-            *drivernum = FAMILY_IDX;
-    } else if(!strcmp(driver, drivernames[SPLIT_IDX])) {
+            if(drivernum)
+                *drivernum = FAMILY_IDX;
+        } /* end if */
+    } else if (!strcmp(driver, drivernames[SPLIT_IDX])) {
         /* SPLIT Driver */
-        if(H5Pset_fapl_split(new_fapl, "-m.h5", H5P_DEFAULT, "-r.h5", H5P_DEFAULT) < 0)
-            goto error;
+        if((fapl = H5Pcreate(H5P_FILE_ACCESS))>=0) {
+            H5Pset_fapl_split(fapl, "-m.h5", H5P_DEFAULT, "-r.h5", H5P_DEFAULT);
 
-        if(drivernum)
-            *drivernum = SPLIT_IDX;
-    } else if(!strcmp(driver, drivernames[MULTI_IDX])) {
+            if(drivernum)
+                *drivernum = SPLIT_IDX;
+        } /* end if */
+    } else if (!strcmp(driver, drivernames[MULTI_IDX])) {
         /* MULTI Driver */
-        if(H5Pset_fapl_multi(new_fapl, NULL, NULL, NULL, NULL, TRUE) < 0)
-            goto error;
+        if((fapl = H5Pcreate(H5P_FILE_ACCESS))>=0) {
+            H5Pset_fapl_multi(fapl, NULL, NULL, NULL, NULL, TRUE);
 
-        if(drivernum)
-            *drivernum = MULTI_IDX;
+            if(drivernum)
+                *drivernum = MULTI_IDX;
+        } /* end if */
 #ifdef H5_HAVE_STREAM
-    } else if(!strcmp(driver, drivernames[STREAM_IDX])) {
+    } else if (!strcmp(driver, drivernames[STREAM_IDX])) {
         /* STREAM Driver */
-        if(H5Pset_fapl_stream(new_fapl, NULL) < 0)
-            goto error;
+        if((fapl = H5Pcreate(H5P_FILE_ACCESS))>=0) {
+            H5Pset_fapl_stream(fapl, NULL);
 
-        if(drivernum)
-            *drivernum = STREAM_IDX;
-#endif /* H5_HAVE_STREAM */
+            if(drivernum)
+                *drivernum = STREAM_IDX;
+        } /* end if */
+#endif  /* H5_HAVE_STREAM */
 #ifdef H5_HAVE_PARALLEL
-    } else if(!strcmp(driver, drivernames[MPIO_IDX])) {
+    } else if (!strcmp(driver, drivernames[MPIO_IDX])) {
         /* MPI-I/O Driver */
     /* check if MPI has been initialized. */
-    if(!h5tools_mpi_init_g)
+    if (!h5tools_mpi_init_g)
         MPI_Initialized(&h5tools_mpi_init_g);
-        if(h5tools_mpi_init_g) {
-            if(H5Pset_fapl_mpio(new_fapl, MPI_COMM_WORLD, MPI_INFO_NULL) < 0)
+        if (h5tools_mpi_init_g && ((fapl = H5Pcreate(H5P_FILE_ACCESS))>=0)) {
+            if (H5Pset_fapl_mpio(fapl, MPI_COMM_WORLD, MPI_INFO_NULL)<0)
         goto error;
 
             if(drivernum)
@@ -234,10 +222,14 @@ h5tools_get_fapl(hid_t fapl, const char *driver, unsigned *drivernum)
     } else if (!strcmp(driver, drivernames[MPIPOSIX_IDX])) {
         /* MPI-I/O Driver */
     /* check if MPI has been initialized. */
-    if(!h5tools_mpi_init_g)
+    if (!h5tools_mpi_init_g)
         MPI_Initialized(&h5tools_mpi_init_g);
-        if(h5tools_mpi_init_g) {
-            if(H5Pset_fapl_mpiposix(new_fapl, MPI_COMM_WORLD, TRUE) < 0)
+        if (h5tools_mpi_init_g && ((fapl = H5Pcreate(H5P_FILE_ACCESS))>=0)) {
+#ifdef H5_WANT_H5_V1_4_COMPAT
+            if (H5Pset_fapl_mpiposix(fapl, MPI_COMM_WORLD)<0)
+#else
+        if (H5Pset_fapl_mpiposix(fapl, MPI_COMM_WORLD, TRUE)<0)
+#endif
         goto error;
 
             if(drivernum)
@@ -245,14 +237,14 @@ h5tools_get_fapl(hid_t fapl, const char *driver, unsigned *drivernum)
         } /* end if */
 #endif /* H5_HAVE_PARALLEL */
     } else {
-        goto error;
+        fapl=(-1);
     }
 
-    return(new_fapl);
+    return(fapl);
 
 error:
-    if(new_fapl != H5P_DEFAULT)
-        H5Pclose(new_fapl);
+    if(fapl!=H5P_DEFAULT)
+     H5Pclose(fapl);
     return -1;
 }
 
@@ -312,49 +304,49 @@ error:
  *-------------------------------------------------------------------------
  */
 hid_t
-h5tools_fopen(const char *fname, unsigned flags, hid_t fapl, const char *driver,
-    char *drivername, size_t drivername_size)
+h5tools_fopen(const char *fname, const char *driver, char *drivername,
+              size_t drivername_size)
 {
     unsigned    drivernum;
     hid_t       fid = FAIL;
-    hid_t       my_fapl = H5P_DEFAULT;
+    hid_t       fapl = H5P_DEFAULT;
 
-    if(driver && *driver) {
+    if (driver && *driver) {
         /* Get the correct FAPL for the given driver */
-        if((my_fapl = h5tools_get_fapl(fapl, driver, &drivernum)) < 0)
+        if((fapl=h5tools_get_fapl(driver,&drivernum))<0)
             goto done;
 
         H5E_BEGIN_TRY {
-            fid = H5Fopen(fname, flags, my_fapl);
+            fid = H5Fopen(fname, H5F_ACC_RDONLY, fapl);
         } H5E_END_TRY;
 
-        if(fid == FAIL)
+        if (fid == FAIL)
             goto done;
 
     } else {
         /* Try to open the file using each of the drivers */
-        for(drivernum = 0; drivernum < NUM_DRIVERS; drivernum++) {
+        for (drivernum = 0; drivernum < NUM_DRIVERS; drivernum++) {
             /* Get the correct FAPL for the given driver */
-            if((my_fapl = h5tools_get_fapl(fapl, drivernames[drivernum], NULL)) < 0)
+            if((fapl=h5tools_get_fapl(drivernames[drivernum],NULL))<0)
                 goto done;
 
             H5E_BEGIN_TRY {
-                fid = H5Fopen(fname, flags, my_fapl);
+                fid = H5Fopen(fname, H5F_ACC_RDONLY, fapl);
             } H5E_END_TRY;
 
-            if(fid != FAIL)
+            if (fid != FAIL)
                 break;
             else {
                 /* Close the FAPL */
-                H5Pclose(my_fapl);
-                my_fapl = H5P_DEFAULT;
+                H5Pclose(fapl);
+                fapl=H5P_DEFAULT;
             } /* end else */
         }
     }
 
     /* Save the driver name */
-    if(drivername && drivername_size) {
-        if(fid != FAIL) {
+    if (drivername && drivername_size) {
+        if (fid != FAIL) {
             strncpy(drivername, drivernames[drivernum], drivername_size);
             drivername[drivername_size - 1] = '\0';
         } else {
@@ -364,8 +356,8 @@ h5tools_fopen(const char *fname, unsigned flags, hid_t fapl, const char *driver,
     }
 
 done:
-    if(my_fapl != H5P_DEFAULT)
-        H5Pclose(my_fapl);
+    if(fapl!=H5P_DEFAULT)
+        H5Pclose(fapl);
     return fid;
 }
 
@@ -410,8 +402,8 @@ h5tools_ncols(const char *s)
  *      Robb Matzke, Monday, April 26, 1999
  * Modifications:
  *      Robb Matzke, 1999-09-29
- * If a new prefix is printed then the current element number is set back
- * to zero.
+ *  If a new prefix is printed then the current element number is set back
+ *  to zero.
  *      pvn, 2004-07-08
  * Added support for printing array indices:
  *  the indentation is printed before the prefix (printed one indentation
@@ -428,16 +420,16 @@ h5tools_simple_prefix(FILE *stream, const h5tool_format_t *info,
     int i, indentlevel = 0;
 
     if (!ctx->need_prefix)
- return;
+    return;
 
     memset(&prefix, 0, sizeof(h5tools_str_t));
     memset(&str, 0, sizeof(h5tools_str_t));
 
     /* Terminate previous line, if any */
     if (ctx->cur_column) {
-     fputs(OPT(info->line_suf, ""), stream);
+        fputs(OPT(info->line_suf, ""), stream);
      putc('\n', stream);
-     fputs(OPT(info->line_sep, ""), stream);
+        fputs(OPT(info->line_sep, ""), stream);
     }
 
     /* Calculate new prefix */
@@ -454,7 +446,7 @@ h5tools_simple_prefix(FILE *stream, const h5tool_format_t *info,
          * the ctx->indent_level is negative so we need to skip the above and
          * just print out the default indent levels.
          */
- indentlevel = ctx->default_indent_level;
+    indentlevel = ctx->default_indent_level;
     }
 
     /* when printing array indices, print the indentation before the prefix
@@ -702,7 +694,6 @@ h5tools_dump_simple_data(FILE *stream, const h5tool_format_t *info, hid_t contai
 
 }
 
-
 /*-------------------------------------------------------------------------
  * Audience:    Public
  * Chapter:     H5Tools Library
@@ -715,21 +706,6 @@ h5tools_dump_simple_data(FILE *stream, const h5tool_format_t *info, hid_t contai
  * Programmer:
  *      Bill Wendling, Wednesday, 07. March 2001
  * Modifications:
- *      Pedro Vicente, 12 December 2006
- *       Add information to print array indices from the element position
- *       The algorythm used is 
- *       Given an index I(z,y,x) its position from the beginning of an array 
- *       of sizes A(size_z, size_y,size_x) is given by
- *       Position of I(z,y,x) = index_z * size_y * size_x 
- *                             + index_y * size_x
- *                             + index_x
- *
- *      Pedro Vicente, Quincey Koziol, 4 January 2007
- *       Introduced an outer loop for cases where dimensionality is greater 
- *       than 2D. In each iteration a 2D block is displayed by rows in a inner
- *       loop. The remainning slower dimensions above the first 2 are incremented 
- *       one at a time in the outer loop
- *      
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -737,40 +713,36 @@ h5tools_dump_simple_subset(FILE *stream, const h5tool_format_t *info, hid_t dset
                            hid_t p_type, struct subset_t *sset,
                            int indentlevel)
 {
-    herr_t            ret;                     /* the value to return */
-    hid_t             f_space;                 /* file data space */
-    size_t            i;                       /* counters  */
-    size_t            j;                       /* counters  */
-    hsize_t           n;                       /* counters  */
-    hsize_t           zero = 0;                /* vector of zeros */
-    unsigned int      flags;                   /* buffer extent flags */
-    hsize_t           total_size[H5S_MAX_RANK];/* total size of dataset*/
+    herr_t              ret;                    /*the value to return   */
+    hid_t       f_space;        /*file data space   */
+    int         i, j;                      /*counters       */
+    hsize_t     zero = 0;               /*vector of zeros   */
+    unsigned int    flags;          /*buffer extent flags   */
+    hsize_t     total_size[H5S_MAX_RANK];/*total size of dataset*/
+
+    /* Print info */
+    h5tools_context_t   ctx;            /*print context     */
+    size_t      p_type_nbytes;      /*size of memory type   */
+
+    /* Stripmine info */
+    hsize_t     sm_size[H5S_MAX_RANK];  /*stripmine size    */
+    hsize_t     sm_nbytes;      /*bytes per stripmine   */
+    hsize_t     sm_nelmts;      /*elements per stripmine*/
+    unsigned char      *sm_buf = NULL;      /*buffer for raw data   */
+    hid_t       sm_space;       /*stripmine data space  */
+
+    hsize_t             count;
+
     hsize_t           elmtno;                  /* elemnt index  */
     hsize_t           low[H5S_MAX_RANK];       /* low bound of hyperslab */
     hsize_t           high[H5S_MAX_RANK];      /* higher bound of hyperslab */
-    h5tools_context_t ctx;                     /* print context  */
-    size_t            p_type_nbytes;           /* size of memory type */
-    hsize_t           sm_size[H5S_MAX_RANK];   /* stripmine size */
-    hsize_t           sm_nbytes;               /* bytes per stripmine */
-    hsize_t           sm_nelmts;               /* elements per stripmine*/
-    unsigned char     *sm_buf = NULL;          /* buffer for raw data */
-    hid_t             sm_space;                /* stripmine data space */
-    hsize_t           count;                   /* hyperslab count */
-    hsize_t           outer_count;             /* offset count */
-    unsigned int      row_dim;                 /* index of row dimension */
-    int               current_outer_dim;       /* dimension for start */
-    hsize_t           temp_start[H5S_MAX_RANK];/* temporary start inside offset count loop */
-    hsize_t           max_start[H5S_MAX_RANK]; /* maximum start inside offset count loop */
-    hsize_t           temp_count[H5S_MAX_RANK];/* temporary count inside offset count loop  */
-
-    int reset_dim;
 
     ret = FAIL;     /* be pessimistic */
     f_space = H5Dget_space(dset);
-    
+
     if (f_space == FAIL)
         goto done;
-    
+
     /*
      * check that everything looks okay. the dimensionality must not be too
      * great and the dimensionality of the items selected for printing must
@@ -786,173 +758,109 @@ h5tools_dump_simple_subset(FILE *stream, const h5tool_format_t *info, hid_t dset
 
     /* assume entire data space to be printed */
     if (ctx.ndims > 0)
-        for (i = 0; i < (size_t)ctx.ndims; i++)
+        for (i = 0; i < ctx.ndims; i++)
             ctx.p_min_idx[i] = 0;
 
     H5Sget_simple_extent_dims(f_space, total_size, NULL);
     ctx.size_last_dim = total_size[ctx.ndims - 1];
 
-    if (ctx.ndims == 1)
-        row_dim = 0;
-    else
-        row_dim = ctx.ndims - 2;
-
-    /* get the offset count */
-    outer_count = 1;
-    if (ctx.ndims > 2)
-        for (i = 0; i < (size_t)ctx.ndims - 2; i++)
-            outer_count *= sset->count[ i ];
+    count = sset->count[ctx.ndims - 1];
+    sset->count[ctx.ndims - 1] = 1;
 
     if(ctx.ndims>0)
-        init_acc_pos(&ctx,total_size);
+     init_acc_pos(&ctx,total_size);
 
+    for (; count > 0; sset->start[ctx.ndims - 1] += sset->stride[ctx.ndims - 1],
+                      count--) {
+        /* calculate the potential number of elements we're going to print */
+        H5Sselect_hyperslab(f_space, H5S_SELECT_SET,
+            sset->start,
+            sset->stride,
+            sset->count,
+            sset->block);
+        sm_nelmts = H5Sget_select_npoints(f_space);
 
-    /* initialize temporary start, count and maximum start */
-    for (i = 0; i < (size_t)ctx.ndims; i++)
-    {
-        temp_start[ i ] = sset->start[ i ];
-        temp_count[ i ] = sset->count[ i ];
-        max_start[ i ] = 0;
+        /*
+         * start (0, 0)
+         * block (2, 2)
+         * stride (15, 5)
+         * count (4, 3)
+         *
+         * make:
+         *
+         * for up to "count" times.
+         *
+         * start (0, += stride[last_dim])
+         * block (2, 2)
+         * stride (15, 5)
+         * count (4, 1)
+         */
 
+        if (sm_nelmts == 0) {
+            /* nothing to print */
+            ret = SUCCEED;
+            goto done_close;
+        }
+
+        /*
+         * determine the strip mine size and allocate a buffer. the strip mine is
+         * a hyperslab whose size is manageable.
+         */
+        sm_nbytes = p_type_nbytes = H5Tget_size(p_type);
+
+        if (ctx.ndims > 0)
+            for (i = ctx.ndims; i > 0; --i) {
+                sm_size[i - 1] = MIN(total_size[i - 1], H5TOOLS_BUFSIZE / sm_nbytes);
+                sm_nbytes *= sm_size[i - 1];
+                assert(sm_nbytes > 0);
+            }
+
+        assert(sm_nbytes == (hsize_t)((size_t)sm_nbytes)); /*check for overflow*/
+        sm_buf = malloc((size_t)sm_nelmts * p_type_nbytes);
+        sm_space = H5Screate_simple(1, &sm_nelmts, NULL);
+
+        H5Sselect_hyperslab(sm_space, H5S_SELECT_SET, &zero, NULL, &sm_nelmts, NULL);
+
+        /* Read the data */
+        if (H5Dread(dset, p_type, sm_space, f_space, H5P_DEFAULT, sm_buf) < 0) {
+            H5Sclose(f_space);
+            H5Sclose(sm_space);
+            free(sm_buf);
+            return FAIL;
+        }
+
+        /* Print the data */
+        flags = START_OF_DATA;
+
+        if (count == 1)
+            flags |= END_OF_DATA;
+
+        for (i = 0; i < ctx.ndims; i++) {
+            ctx.p_max_idx[i] = ctx.p_min_idx[i] + MIN(total_size[i], sm_size[i]);
+        }
+
+        /* print array indices. get the lower bound of the hyperslab and calulate
+        the element position at the start of hyperslab */
+        H5Sget_select_bounds(f_space,low,high);
+        elmtno=0;
+        for (i = 0; i < ctx.ndims-1; i++) 
+        {
+            hsize_t offset = 1; /* accumulation of the previous dimensions */
+            for (j = i+1; j < ctx.ndims; j++) 
+                offset *= total_size[j];
+            elmtno+= low[i] * offset;
+        }
+        elmtno+= low[ctx.ndims - 1];
+
+        /* initialize the current stripmine position; this is necessary to print the array
+        indices */
+        ctx.sm_pos = elmtno;
+
+        h5tools_dump_simple_data(stream, info, dset, &ctx, flags, sm_nelmts,
+                                 p_type, sm_buf);
+        free(sm_buf);
+        ctx.continuation++;
     }
-    if (ctx.ndims > 2)
-    {
-        for (i = 0; i < (size_t)ctx.ndims - 2; i++)
-        {
-            max_start[ i ] = temp_start[ i ] + sset->count[ i ];
-            temp_count[ i ] = 1;
-            
-        }
-    }
-
-      
-    /* offset loop */
-    for (n = 0; n < outer_count; n++)
-    {
-
-        /* number of read iterations in inner loop, read by rows, to match 2D display */
-        if (ctx.ndims > 1)
-        {
-            count = sset->count[ row_dim ];
-            temp_count[ row_dim ] = 1;
-        }
-        /* for the 1D case */
-        else
-        {
-            count = 1;
-        }
-
-        
-        /* display loop */
-        for (; count > 0; temp_start[ row_dim ] += sset->stride[ row_dim ],
-            count--) 
-        {
-            /* calculate the potential number of elements we're going to print */
-            H5Sselect_hyperslab(f_space, H5S_SELECT_SET,
-                temp_start,
-                sset->stride,
-                temp_count,
-                sset->block);
-            sm_nelmts = H5Sget_select_npoints(f_space);
-             
-            if (sm_nelmts == 0) {
-                /* nothing to print */
-                ret = SUCCEED;
-                goto done_close;
-            }
-            
-            /*
-            * determine the strip mine size and allocate a buffer. the strip mine is
-            * a hyperslab whose size is manageable.
-            */
-            sm_nbytes = p_type_nbytes = H5Tget_size(p_type);
-            
-            if (ctx.ndims > 0)
-                for (i = ctx.ndims; i > 0; --i) {
-                    sm_size[i - 1] = MIN(total_size[i - 1], H5TOOLS_BUFSIZE / sm_nbytes);
-                    sm_nbytes *= sm_size[i - 1];
-                    assert(sm_nbytes > 0);
-                }
-                
-                assert(sm_nbytes == (hsize_t)((size_t)sm_nbytes)); /*check for overflow*/
-                sm_buf = malloc((size_t)sm_nelmts * p_type_nbytes);
-                sm_space = H5Screate_simple(1, &sm_nelmts, NULL);
-                
-                H5Sselect_hyperslab(sm_space, H5S_SELECT_SET, &zero, NULL, &sm_nelmts, NULL);
-                
-                /* read the data */
-                if (H5Dread(dset, p_type, sm_space, f_space, H5P_DEFAULT, sm_buf) < 0) {
-                    H5Sclose(f_space);
-                    H5Sclose(sm_space);
-                    free(sm_buf);
-                    return FAIL;
-                }
-                
-                /* print the data */
-                flags = START_OF_DATA;
-                
-                if (count == 1)
-                    flags |= END_OF_DATA;
-                
-                for (i = 0; i < ctx.ndims; i++) {
-                    ctx.p_max_idx[i] = ctx.p_min_idx[i] + MIN(total_size[i], sm_size[i]);
-                }
-                
-                /* print array indices. get the lower bound of the hyperslab and calulate
-                the element position at the start of hyperslab */
-                H5Sget_select_bounds(f_space,low,high);
-                elmtno=0;
-                for (i = 0; i < (size_t)ctx.ndims-1; i++) 
-                {
-                    hsize_t offset = 1; /* accumulation of the previous dimensions */
-                    for (j = i+1; j < (size_t)ctx.ndims; j++) 
-                        offset *= total_size[j];
-                    elmtno+= low[i] * offset;
-                }
-                elmtno+= low[ctx.ndims - 1];
-                
-                /* initialize the current stripmine position; this is necessary to print the array
-                indices */
-                ctx.sm_pos = elmtno;
-                
-                h5tools_dump_simple_data(stream, info, dset, &ctx, flags, sm_nelmts,
-                    p_type, sm_buf);
-                free(sm_buf);
-                
-                /* we need to jump to next line and update the index */
-                ctx.need_prefix = 1;
-                
-                ctx.continuation++;
-        } /* count */
-
-        if (ctx.ndims > 2)
-        {
-            /* dimension for start */
-            current_outer_dim = (ctx.ndims - 2) -1;
-            
-            /* set start to original from current_outer_dim up */
-            for (i = current_outer_dim + 1; i < ctx.ndims; i++)
-            {
-                temp_start[ i ] = sset->start[ i ]; 
-            }
-            
-            /* increment start dimension */
-            do
-            {
-                reset_dim = 0;
-                temp_start[ current_outer_dim ]++;
-                if (temp_start[ current_outer_dim ] >= max_start[ current_outer_dim ])
-                {
-                    temp_start[ current_outer_dim ] = sset->start[ current_outer_dim ];
-                    current_outer_dim--;
-                    reset_dim = 1;
-                }
-            }
-            while (current_outer_dim >= 0 && reset_dim);
-            
-        } /* ctx.ndims > 1 */
-        
-    } /* outer_count */
 
     /* Terminate the output */
     if (ctx.cur_column) {
@@ -960,16 +868,14 @@ h5tools_dump_simple_subset(FILE *stream, const h5tool_format_t *info, hid_t dset
         putc('\n', stream);
         fputs(OPT(info->line_sep, ""), stream);
     }
-    
+
     ret = SUCCEED;
-    
+
 done_close:
     H5Sclose(f_space);
 done:
     return ret;
 }
-
-
 
 /*-------------------------------------------------------------------------
  * Audience:    Public
@@ -1043,7 +949,7 @@ h5tools_dump_simple_dset(FILE *stream, const h5tool_format_t *info, hid_t dset,
 
     /* Assume entire data space to be printed */
     if (ctx.ndims > 0)
-        for (i = 0; i < (size_t)ctx.ndims; i++)
+        for (i = 0; i < ctx.ndims; i++)
             ctx.p_min_idx[i] = 0;
 
     H5Sget_simple_extent_dims(f_space, total_size, NULL);
@@ -1168,16 +1074,16 @@ h5tools_dump_simple_dset(FILE *stream, const h5tool_format_t *info, hid_t dset,
 }
 
 /*-------------------------------------------------------------------------
- * Function: h5tools_dump_simple_mem
+ * Function:    h5tools_dump_simple_mem
  *
  * Purpose: Print some values from memory with a simple data space.
- *  This is a special case of h5tools_dump_mem().
+ *      This is a special case of h5tools_dump_mem().
  *
- * Return: Success:    SUCCEED
+ * Return:  Success:    SUCCEED
  *
- *  Failure:    FAIL
+ *      Failure:    FAIL
  *
- * Programmer: Robb Matzke
+ * Programmer:  Robb Matzke
  *              Thursday, July 23, 1998
  *
  * Modifications:
@@ -1188,9 +1094,9 @@ static int
 h5tools_dump_simple_mem(FILE *stream, const h5tool_format_t *info, hid_t obj_id,
                         hid_t type, hid_t space, void *mem, int indentlevel)
 {
-    int   i;   /*counters  */
-    hsize_t  nelmts;   /*total selected elmts */
-    h5tools_context_t ctx;   /*printing context */
+    int         i;          /*counters      */
+    hsize_t     nelmts;         /*total selected elmts  */
+    h5tools_context_t   ctx;            /*printing context  */
 
     /*
      * Check that everything looks okay.  The dimensionality must not be too
@@ -1242,34 +1148,34 @@ h5tools_dump_simple_mem(FILE *stream, const h5tool_format_t *info, hid_t obj_id,
 }
 
 /*-------------------------------------------------------------------------
- * Function: h5tools_dump_dset
+ * Function:    h5tools_dump_dset
  *
  * Purpose: Print some values from a dataset DSET to the file STREAM
- *  after converting all types to P_TYPE (which should be a
- *  native type).  If P_TYPE is a negative value then it will be
- *  computed from the dataset type using only native types.
+ *      after converting all types to P_TYPE (which should be a
+ *      native type).  If P_TYPE is a negative value then it will be
+ *      computed from the dataset type using only native types.
  *
- * Note: This function is intended only for datasets since it does
- *  some things like strip mining which are unnecessary for
- *  smaller objects such as attributes. The easiest way to print
- *  small objects is to read the object into memory and call
- *  h5tools_dump_mem().
+ * Note:    This function is intended only for datasets since it does
+ *      some things like strip mining which are unnecessary for
+ *      smaller objects such as attributes. The easiest way to print
+ *      small objects is to read the object into memory and call
+ *      h5tools_dump_mem().
  *
- * Return: Success:    SUCCEED
+ * Return:  Success:    SUCCEED
  *
- *  Failure:    FAIL
+ *      Failure:    FAIL
  *
- * Programmer: Robb Matzke
+ * Programmer:  Robb Matzke
  *              Thursday, July 23, 1998
  *
  * Modifications:
- *   Robb Matzke, 1999-06-07
- *  If info->raw is set then the memory datatype will be the same
- *  as the file datatype.
+ *      Robb Matzke, 1999-06-07
+ *      If info->raw is set then the memory datatype will be the same
+ *      as the file datatype.
  *
- *  Bill Wendling, 2001-02-27
- *  Renamed to ``h5tools_dump_dset'' and added the subsetting
- *  parameter.
+ *      Bill Wendling, 2001-02-27
+ *      Renamed to ``h5tools_dump_dset'' and added the subsetting
+ *      parameter.
  *
  *-------------------------------------------------------------------------
  */
@@ -1324,7 +1230,7 @@ h5tools_dump_dset(FILE *stream, const h5tool_format_t *info, hid_t dset, hid_t _
         else
             status = h5tools_dump_simple_subset(rawdatastream, info, dset, p_type,
                                                 sset, indentlevel);
-    } else /* space is H5S_NULL */
+    } else 
         status = SUCCEED;
 
     /* Close the dataspace */
@@ -1338,17 +1244,17 @@ done:
 }
 
 /*-------------------------------------------------------------------------
- * Function: h5tools_dump_mem
+ * Function:    h5tools_dump_mem
  *
  * Purpose: Displays the data contained in MEM. MEM must have the
- *  specified data TYPE and SPACE.  Currently only simple data
- *  spaces are allowed and only the `all' selection.
+ *      specified data TYPE and SPACE.  Currently only simple data
+ *      spaces are allowed and only the `all' selection.
  *
- * Return: Success:    SUCCEED
+ * Return:  Success:    SUCCEED
  *
- *  Failure:    FAIL
+ *      Failure:    FAIL
  *
- * Programmer: Robb Matzke
+ * Programmer:  Robb Matzke
  *              Wednesday, January 20, 1999
  *
  * Modifications:
@@ -1363,16 +1269,16 @@ h5tools_dump_mem(FILE *stream, const h5tool_format_t *info, hid_t obj_id, hid_t 
 
     /* Use default values */
     if (!stream)
- stream = stdout;
+    stream = stdout;
 
     if (!info) {
- memset(&info_dflt, 0, sizeof(info_dflt));
- info = &info_dflt;
+    memset(&info_dflt, 0, sizeof(info_dflt));
+    info = &info_dflt;
     }
 
     /* Check the data space */
     if (H5Sis_simple(space) <= 0)
- return -1;
+    return -1;
 
     return h5tools_dump_simple_mem(stream, info, obj_id, type, space, mem,
                                    indentlevel);
@@ -1405,7 +1311,6 @@ void init_acc_pos(h5tools_context_t *ctx, hsize_t *dims)
  for ( i = 0; i < ctx->ndims; i++)
   ctx->pos[i]=0;
 }
-
 
 /*-------------------------------------------------------------------------
  * Function: do_bin_output

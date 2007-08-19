@@ -38,12 +38,9 @@ static size_t H5Z_filter_szip (unsigned flags, size_t cd_nelmts,
     const unsigned cd_values[], size_t nbytes, size_t *buf_size, void **buf);
 
 /* This message derives from H5Z */
-H5Z_class_t H5Z_SZIP[1] = {{
-    H5Z_CLASS_T_VERS,       /* H5Z_class_t version */
+const H5Z_class_t H5Z_SZIP[1] = {{
     H5Z_FILTER_SZIP,		/* Filter id number		*/
-    1,              /* Assume encoder present: check before registering */
-    1,                  /* decoder_present flag (set to true) */
-    "szip",			    /* Filter name for debugging	*/
+    "szip",			/* Filter name for debugging	*/
     H5Z_can_apply_szip,		/* The "can apply" callback     */
     H5Z_set_local_szip,         /* The "set local" callback     */
     H5Z_filter_szip,		/* The actual filter function	*/
@@ -89,6 +86,10 @@ H5Z_can_apply_szip(hid_t UNUSED dcpl_id, hid_t type_id, hid_t UNUSED space_id)
     herr_t ret_value=TRUE;              /* Return value */
 
     FUNC_ENTER_NOAPI(H5Z_can_apply_szip, FAIL)
+
+    /* If this is the Szip filter, make sure it can encode */
+    if (SZ_encoder_enabled()<=0)
+        HGOTO_ERROR(H5E_PLINE, H5E_NOENCODER, FAIL, "Filter present but encoding is disabled.");
 
     /* Get datatype's size, for checking the "bits-per-pixel" */
     if((dtype_size=(8*H5Tget_size(type_id)))==0)
@@ -142,7 +143,7 @@ H5Z_set_local_szip(hid_t dcpl_id, hid_t type_id, hid_t space_id)
     hsize_t dims[H5O_LAYOUT_NDIMS];             /* Dataspace (i.e. chunk) dimensions */
     int ndims;                  /* Number of (chunk) dimensions */
     H5T_order_t dtype_order;    /* Datatype's endianness order */
-    size_t dtype_size;          /* Datatype's size (in bits) */
+    int dtype_size;             /* Datatype's size (in bits) */
     size_t dtype_precision;     /* Datatype's precision (in bits) */
     size_t dtype_offset;        /* Datatype's offset (in bits) */
     hsize_t scanline;           /* Size of dataspace's fastest changing dimension */
@@ -151,12 +152,8 @@ H5Z_set_local_szip(hid_t dcpl_id, hid_t type_id, hid_t space_id)
     FUNC_ENTER_NOAPI(H5Z_set_local_szip, FAIL)
 
     /* Get the filter's current parameters */
-#ifdef H5_WANT_H5_V1_6_COMPAT
     if(H5Pget_filter_by_id(dcpl_id,H5Z_FILTER_SZIP,&flags,&cd_nelmts, cd_values,0,NULL)<0)
-#else
-    if(H5Pget_filter_by_id(dcpl_id,H5Z_FILTER_SZIP,&flags,&cd_nelmts, cd_values,0,NULL,NULL)<0)
-#endif
-	HGOTO_ERROR(H5E_PLINE, H5E_CANTGET, FAIL, "can't get szip parameters")
+	HGOTO_ERROR(H5E_PLINE, H5E_CANTGET, FAIL, "can't get szip parameters");
 
     /* Get datatype's size, for checking the "bits-per-pixel" */
     if((dtype_size=(8*H5Tget_size(type_id)))==0)

@@ -16,8 +16,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include "gif.h"
-#include "H5IMpublic.h"
-
+#include "H5IM.h"
 
 int EndianOrder;
 

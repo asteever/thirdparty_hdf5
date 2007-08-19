@@ -23,13 +23,12 @@
 
 
 #include "H5private.h"		/* Generic Functions			*/
-#include "H5Dprivate.h"		/* Datasets				*/
+#include "H5Dprivate.h"		/* Datasets		  		*/
 #include "H5Eprivate.h"		/* Error handling		  	*/
 #include "H5FLprivate.h"	/* Free Lists                           */
 #include "H5Iprivate.h"		/* IDs			  		*/
 #include "H5Spkg.h"		/* Dataspaces 				*/
 #include "H5Vprivate.h"		/* Vector and array functions		*/
-#include "H5WBprivate.h"        /* Wrapped Buffers                      */
 
 /* Local functions */
 #ifdef LATER
@@ -38,6 +37,8 @@ static htri_t H5S_select_iter_has_next_block (const H5S_sel_iter_t *iter);
 static herr_t H5S_select_iter_next_block(H5S_sel_iter_t *iter);
 #endif /* LATER */
 
+/* Declare a free list to manage blocks of single datatype element data */
+H5FL_BLK_EXTERN(type_elem);
 
 
 /*--------------------------------------------------------------------------
@@ -292,7 +293,7 @@ H5Sget_select_npoints(hid_t spaceid)
     hssize_t ret_value;         /* return value */
 
     FUNC_ENTER_API(H5Sget_select_npoints, FAIL);
-    H5TRACE1("Hs", "i", spaceid);
+    H5TRACE1("Hs","i",spaceid);
 
     /* Check args */
     if (NULL == (space=H5I_object_verify(spaceid, H5I_DATASPACE)))
@@ -356,7 +357,7 @@ H5S_get_select_npoints(const H5S_t *space)
  COMMENTS, BUGS, ASSUMPTIONS
  EXAMPLES
  REVISION LOG
-    Christian Chilan 01/17/2007
+    Christian Chilan 01/05/2007
     Changed the error return value from 0 to FAIL.
 --------------------------------------------------------------------------*/
 htri_t
@@ -366,7 +367,7 @@ H5Sselect_valid(hid_t spaceid)
     htri_t ret_value;     /* return value */
 
     FUNC_ENTER_API(H5Sselect_valid, FAIL);
-    H5TRACE1("t", "i", spaceid);
+    H5TRACE1("t","i",spaceid);
 
     /* Check args */
     if (NULL == (space=H5I_object_verify(spaceid, H5I_DATASPACE)))
@@ -517,7 +518,7 @@ H5Sget_select_bounds(hid_t spaceid, hsize_t *start, hsize_t *end)
     herr_t ret_value;        /* return value */
 
     FUNC_ENTER_API(H5Sget_select_bounds, FAIL);
-    H5TRACE3("e", "i*h*h", spaceid, start, end);
+    H5TRACE3("e","i*h*h",spaceid,start,end);
 
     /* Check args */
     if(start==NULL || end==NULL)
@@ -1060,10 +1061,10 @@ H5S_select_iterate(void *buf, hid_t type_id, const H5S_t *space, H5D_operator_t 
     hsize_t coords[H5O_LAYOUT_NDIMS];  /* Coordinates of element in dataspace */
     hssize_t nelmts;            /* Number of elements in selection */
     hsize_t space_size[H5O_LAYOUT_NDIMS]; /* Dataspace size */
-    hsize_t off[H5D_IO_VECTOR_SIZE];          /* Array to store sequence offsets */
+    hsize_t off[H5D_XFER_HYPER_VECTOR_SIZE_DEF];          /* Array to store sequence offsets */
     hsize_t curr_off;           /* Current offset within sequence */
     hsize_t tmp_off;            /* Temporary offset within sequence */
-    size_t len[H5D_IO_VECTOR_SIZE];           /* Array to store sequence lengths */
+    size_t len[H5D_XFER_HYPER_VECTOR_SIZE_DEF];           /* Array to store sequence lengths */
     size_t curr_len;            /* Length of bytes left to process in sequence */
     size_t nseq;                /* Number of sequences generated */
     size_t curr_seq;            /* Current sequnce being worked on */
@@ -1114,7 +1115,7 @@ H5S_select_iterate(void *buf, hid_t type_id, const H5S_t *space, H5D_operator_t 
     /* Loop, while elements left in selection */
     while(max_elem>0 && user_ret==0) {
         /* Get the sequences of bytes */
-        if(H5S_SELECT_GET_SEQ_LIST(space, 0, &iter, (size_t)H5D_IO_VECTOR_SIZE, max_elem, &nseq, &nelem, off, len) < 0)
+        if(H5S_SELECT_GET_SEQ_LIST(space,0,&iter,H5D_XFER_HYPER_VECTOR_SIZE_DEF,max_elem,&nseq,&nelem,off,len)<0)
             HGOTO_ERROR (H5E_INTERNAL, H5E_UNSUPPORTED, FAIL, "sequence length generation failed");
 
         /* Loop, while sequences left to process */
@@ -1187,7 +1188,7 @@ H5Sget_select_type(hid_t space_id)
     H5S_sel_type        ret_value;       /* Return value */
 
     FUNC_ENTER_API(H5Sget_select_type, H5S_SEL_ERROR);
-    H5TRACE1("St", "i", space_id);
+    H5TRACE1("St","i",space_id);
 
     /* Check args */
     if (NULL == (space = H5I_object_verify(space_id, H5I_DATASPACE)))
@@ -1329,12 +1330,12 @@ H5S_select_shape_same(const H5S_t *space1, const H5S_t *space2)
          * that the selection iterator shouldn't be "flattened", since we
          * aren't actually going to be doing I/O with the iterators.
          */
-        if(H5S_select_iter_init(&iter1, space1, (size_t)0) < 0)
+        if (H5S_select_iter_init(&iter1, space1, 0)<0)
             HGOTO_ERROR (H5E_DATASPACE, H5E_CANTINIT, FAIL, "unable to initialize selection iterator");
-        iter1_init = 1;
-        if(H5S_select_iter_init(&iter2, space2, (size_t)0) < 0)
+        iter1_init=1;
+        if (H5S_select_iter_init(&iter2, space2, 0)<0)
             HGOTO_ERROR (H5E_DATASPACE, H5E_CANTINIT, FAIL, "unable to initialize selection iterator");
-        iter2_init = 1;
+        iter2_init=1;
 
         /* Iterate over all the blocks in each selection */
         while(1) {
@@ -1433,67 +1434,77 @@ done:
  REVISION LOG
 --------------------------------------------------------------------------*/
 herr_t
-H5S_select_fill(const void *fill, size_t fill_size, const H5S_t *space, void *_buf)
+H5S_select_fill(const void *_fill, size_t fill_size, const H5S_t *space, void *_buf)
 {
     H5S_sel_iter_t iter;        /* Selection iteration info */
-    hbool_t iter_init = 0;      /* Selection iteration info has been initialized */
+    hbool_t iter_init=0;        /* Selection iteration info has been initialized */
+    uint8_t *buf;               /* Current location in buffer */
+    const void *fill = _fill;   /* Alias for fill-value buffer */
     hssize_t nelmts;            /* Number of elements in selection */
+    hsize_t off[H5D_XFER_HYPER_VECTOR_SIZE_DEF];          /* Array to store sequence offsets */
+    size_t len[H5D_XFER_HYPER_VECTOR_SIZE_DEF];           /* Array to store sequence lengths */
+    size_t nseq;                /* Number of sequences generated */
+    size_t curr_seq;            /* Current sequnce being worked on */
+    size_t nelem;               /* Number of elements used in sequences */
     size_t max_elem;            /* Total number of elements in selection */
-    herr_t ret_value = SUCCEED; /* Return value */
+    herr_t ret_value=SUCCEED;   /* return value */
 
-    FUNC_ENTER_NOAPI(H5S_select_fill, FAIL)
+    FUNC_ENTER_NOAPI(H5S_select_fill, FAIL);
 
     /* Check args */
-    HDassert(fill);
-    HDassert(fill_size > 0);
-    HDassert(space);
-    HDassert(_buf);
+    assert(fill_size>0);
+    assert(space);
+    assert(_buf);
+
+    /* Check if we need a temporary fill value buffer */
+    if(fill==NULL) {
+        if (NULL==(fill = H5FL_BLK_CALLOC(type_elem,fill_size)))
+            HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL, "fill value buffer allocation failed");
+    } /* end if */
 
     /* Initialize iterator */
-    if(H5S_select_iter_init(&iter, space, fill_size) < 0)
-        HGOTO_ERROR (H5E_DATASPACE, H5E_CANTINIT, FAIL, "unable to initialize selection iterator")
-    iter_init = 1;	/* Selection iteration info has been initialized */
+    if (H5S_select_iter_init(&iter, space, fill_size)<0)
+        HGOTO_ERROR (H5E_DATASPACE, H5E_CANTINIT, FAIL, "unable to initialize selection iterator");
+    iter_init=1;	/* Selection iteration info has been initialized */
 
     /* Get the number of elements in selection */
-    if((nelmts = H5S_GET_SELECT_NPOINTS(space)) < 0)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTCOUNT, FAIL, "can't get number of elements selected")
+    if((nelmts = H5S_GET_SELECT_NPOINTS(space))<0)
+        HGOTO_ERROR (H5E_DATASPACE, H5E_CANTCOUNT, FAIL, "can't get number of elements selected");
 
     /* Compute the number of bytes to process */
-    H5_ASSIGN_OVERFLOW(max_elem, nelmts, hssize_t, size_t);
+    H5_ASSIGN_OVERFLOW(max_elem,nelmts,hssize_t,size_t);
 
     /* Loop, while elements left in selection */
-    while(max_elem > 0) {
-        hsize_t off[H5D_IO_VECTOR_SIZE];          /* Array to store sequence offsets */
-        size_t len[H5D_IO_VECTOR_SIZE];           /* Array to store sequence lengths */
-        size_t nseq;                /* Number of sequences generated */
-        size_t curr_seq;            /* Current sequnce being worked on */
-        size_t nelem;               /* Number of elements used in sequences */
-
+    while(max_elem>0) {
         /* Get the sequences of bytes */
-        if(H5S_SELECT_GET_SEQ_LIST(space, 0, &iter, (size_t)H5D_IO_VECTOR_SIZE, max_elem, &nseq, &nelem, off, len) < 0)
-            HGOTO_ERROR (H5E_INTERNAL, H5E_UNSUPPORTED, FAIL, "sequence length generation failed")
+        if(H5S_SELECT_GET_SEQ_LIST(space,0,&iter,H5D_XFER_HYPER_VECTOR_SIZE_DEF,max_elem,&nseq,&nelem,off,len)<0)
+            HGOTO_ERROR (H5E_INTERNAL, H5E_UNSUPPORTED, FAIL, "sequence length generation failed");
 
         /* Loop over sequences */
-        for(curr_seq = 0; curr_seq < nseq; curr_seq++) {
-            uint8_t *buf;               /* Current location in buffer */
-
+        for(curr_seq=0; curr_seq<nseq; curr_seq++) {
             /* Get offset in memory buffer */
-            buf = (uint8_t *)_buf + off[curr_seq];
+            buf=(uint8_t *)_buf+off[curr_seq];
 
             /* Fill each sequence in memory with fill value */
-            HDassert((len[curr_seq] % fill_size) == 0);
-            H5V_array_fill(buf, fill, fill_size, (len[curr_seq] / fill_size));
+            assert((len[curr_seq]%fill_size)==0);
+            H5V_array_fill(buf, fill, fill_size, (len[curr_seq]/fill_size));
         } /* end for */
 
         /* Decrement number of elements left to process */
-        max_elem -= nelem;
+        max_elem-=nelem;
     } /* end while */
 
 done:
-    /* Release resouces */
-    if(iter_init && H5S_SELECT_ITER_RELEASE(&iter) < 0)
-        HDONE_ERROR(H5E_DATASPACE, H5E_CANTRELEASE, FAIL, "unable to release selection iterator")
+    /* Release selection iterator */
+    if(iter_init) {
+        if (H5S_SELECT_ITER_RELEASE(&iter)<0)
+            HDONE_ERROR (H5E_DATASPACE, H5E_CANTRELEASE, FAIL, "unable to release selection iterator");
+    } /* end if */
 
-    FUNC_LEAVE_NOAPI(ret_value)
+    /* Release fill value, if allocated */
+    if(_fill==NULL && fill)
+        H5FL_BLK_FREE(type_elem, (void *)fill); /* casting away const OK - QAK */
+
+    FUNC_LEAVE_NOAPI(ret_value);
 }   /* H5S_select_fill() */
 

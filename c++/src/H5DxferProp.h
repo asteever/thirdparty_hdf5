@@ -28,11 +28,26 @@ class H5_DLLCPP DSetMemXferPropList : public PropList {
 	// Creates a dataset memory and transfer property list.
 	DSetMemXferPropList();
 
-	// Sets type conversion and background buffers.
-	void setBuffer( size_t size, void* tconv, void* bkg ) const;
+#ifdef H5_WANT_H5_V1_4_COMPAT
+        // Sets type conversion and background buffers.
+        void setBuffer( hsize_t size, void* tconv, void* bkg ) const;
 
-	// Reads buffer settings.
-	size_t getBuffer( void** tconv, void** bkg ) const;
+        // Reads buffer settings.
+        hsize_t getBuffer( void** tconv, void** bkg ) const;
+
+        // Indicates whether to cache hyperslab blocks during I/O.
+        void setHyperCache( bool cache, unsigned limit = 0 ) const;
+
+        // Returns information regarding the caching of hyperslab blocks during I/O.
+        void getHyperCache( bool& cache, unsigned& limit ) const;
+
+#else /* H5_WANT_H5_V1_4_COMPAT */
+        // Sets type conversion and background buffers.
+        void setBuffer( size_t size, void* tconv, void* bkg ) const;
+
+        // Reads buffer settings.
+        size_t getBuffer( void** tconv, void** bkg ) const;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
 	// Sets B-tree split ratios for a dataset transfer property list.
 	void setBtreeRatios( double left, double middle, double right ) const;
@@ -45,12 +60,6 @@ class H5_DLLCPP DSetMemXferPropList : public PropList {
 
 	// Checks status of the dataset transfer property list.
 	bool getPreserve() const;
-
-	// Sets an exception handling callback for datatype conversion.
-	void setTypeConvCB( H5T_conv_except_func_t op, void *user_data) const;
-
-	// Gets the exception handling callback for datatype conversion.
-	void getTypeConvCB( H5T_conv_except_func_t *op, void **user_data) const;
 
 	// Sets the memory manager for variable-length datatype
 	// allocation in H5Dread and H5Dvlen_reclaim.

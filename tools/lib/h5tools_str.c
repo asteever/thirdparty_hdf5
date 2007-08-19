@@ -29,7 +29,6 @@
 #include "h5tools_ref.h"
 #include "h5tools_str.h"        /*function prototypes       */
 
-
 /*
  * If REPEAT_VERBOSE is defined then character strings will be printed so
  * that repeated character sequences like "AAAAAAAAAA" are displayed as
@@ -49,6 +48,7 @@
 static char    *h5tools_escape(char *s, size_t size);
 static hbool_t  h5tools_is_zero(const void *_mem, size_t size);
 static void     h5tools_print_char(h5tools_str_t *str, const h5tool_format_t *info, char ch);
+
 
 /*-------------------------------------------------------------------------
  * Function:    h5tools_str_close
@@ -165,6 +165,10 @@ h5tools_str_append(h5tools_str_t *str/*in,out*/, const char *fmt, ...)
             */
        size_t newsize = MAX(str->len+nchars+1, 2*str->nalloc);
        assert(newsize > str->nalloc); /*overflow*/
+#ifndef H5_HAVE_VSNPRINTF
+       /* If we even made it this far... the HDvsnprintf() clobbered memory: SIGSEGV probable*/
+       abort();
+#endif
        str->s = realloc(str->s, newsize);
        assert(str->s);
        str->nalloc = newsize;
@@ -325,7 +329,7 @@ h5tools_str_prefix(h5tools_str_t *str/*in,out*/, const h5tool_format_t *info,
         for (i = ndims - 1, p_prod[ndims - 1] = 1; i > 0; --i)
             p_prod[i - 1] = (max_idx[i] - min_idx[i]) * p_prod[i];
 
-        for ( i = 0; i < (size_t)ndims; i++)
+        for ( i = 0; i < (hsize_t)ndims; i++)
         {
          ctx->pos[i] = curr_pos/ctx->acc[i];
          curr_pos -= ctx->acc[i]*ctx->pos[i];
@@ -333,13 +337,12 @@ h5tools_str_prefix(h5tools_str_t *str/*in,out*/, const h5tool_format_t *info,
         assert( curr_pos == 0 );
 
         /* Print the index values */
-        for (i = 0; i < (size_t)ndims; i++) {
+        for (i = 0; i < (hsize_t)ndims; i++) {
             if (i)
                 h5tools_str_append(str, "%s", OPT(info->idx_sep, ","));
 
             h5tools_str_append(str, OPT(info->idx_n_fmt, HSIZE_T_FORMAT),
                                (hsize_t)ctx->pos[i]);
-            
         }
     } else {
         /* Scalar */
@@ -464,6 +467,7 @@ h5tools_str_dump_region(h5tools_str_t *str, hid_t region, const h5tool_format_t 
  *
  *-------------------------------------------------------------------------
  */
+
 static void
 h5tools_print_char(h5tools_str_t *str, const h5tool_format_t *info, char ch)
 {
@@ -627,14 +631,14 @@ h5tools_str_sprint(h5tools_str_t *str, const h5tool_format_t *info, hid_t contai
         memcpy(&tempfloat, vp, sizeof(float));
         h5tools_str_append(str, OPT(info->fmt_float, "%g"), tempfloat);
     } else if (H5Tequal(type, H5T_NATIVE_DOUBLE)) {
-     memcpy(&tempdouble, vp, sizeof(double));
-     h5tools_str_append(str, OPT(info->fmt_double, "%g"), tempdouble);
+        memcpy(&tempdouble, vp, sizeof(double));
+        h5tools_str_append(str, OPT(info->fmt_double, "%g"), tempdouble);
 #if H5_SIZEOF_LONG_DOUBLE !=0
     } else if (H5Tequal(type, H5T_NATIVE_LDOUBLE)) {
       memcpy(&templdouble, vp, sizeof(long double));
       h5tools_str_append(str, "%Lf", templdouble);
 #endif
-     } else if (info->ascii && (H5Tequal(type, H5T_NATIVE_SCHAR) ||
+    } else if (info->ascii && (H5Tequal(type, H5T_NATIVE_SCHAR) ||
                                H5Tequal(type, H5T_NATIVE_UCHAR))) {
         h5tools_print_char(str, info, (char)(*ucp_vp));
     } else if (H5T_STRING == H5Tget_class(type)) {
@@ -845,15 +849,15 @@ h5tools_str_sprint(h5tools_str_t *str, const h5tool_format_t *info, hid_t contai
         if (h5tools_is_zero(vp, H5Tget_size(type))) {
             h5tools_str_append(str, "NULL");
         } else {
-            char name[1024];
-
             obj = H5Rdereference(container, H5R_DATASET_REGION, vp);
             region = H5Rget_region(container, H5R_DATASET_REGION, vp);
             H5Gget_objinfo(obj, ".", FALSE, &sb);
-            
-            /* get name of the dataset the region reference points to using H5Rget_name */
-            H5Rget_name(obj, H5R_DATASET_REGION, vp, (char*)name, 1024);
-            h5tools_str_append(str, info->dset_format, name);
+
+            if (info->dset_hidefileno)
+                h5tools_str_append(str, info->dset_format, sb.objno[1], sb.objno[0]);
+            else
+                h5tools_str_append(str, info->dset_format,
+                      sb.fileno[1], sb.fileno[0], sb.objno[1], sb.objno[0]);
 
             h5tools_str_dump_region(str, region, info);
             H5Sclose(region);
@@ -867,9 +871,7 @@ h5tools_str_sprint(h5tools_str_t *str, const h5tool_format_t *info, hid_t contai
         if (h5tools_is_zero(vp, H5Tget_size(type))) {
             h5tools_str_append(str, "NULL");
         } else {
-            haddr_t objno;              /* Compact form of object's location */
             const char *path;
-
             otype = H5Rget_obj_type(container, H5R_OBJECT, vp);
             obj = H5Rdereference(container, H5R_OBJECT, vp);
             H5Gget_objinfo(obj, ".", FALSE, &sb);
@@ -894,11 +896,11 @@ h5tools_str_sprint(h5tools_str_t *str, const h5tool_format_t *info, hid_t contai
             }
 
             /* Print OID */
-            objno = (haddr_t)sb.objno[0] | ((haddr_t)sb.objno[1] << (8 * sizeof(long)));
             if (info->obj_hidefileno)
-                h5tools_str_append(str, info->obj_format, objno);
+                h5tools_str_append(str, info->obj_format, sb.objno[1], sb.objno[0]);
             else
-                h5tools_str_append(str, info->obj_format, sb.fileno[0], objno);
+                h5tools_str_append(str, info->obj_format,
+                          sb.fileno[1], sb.fileno[0], sb.objno[1], sb.objno[0]);
 
              /* Print name */
             path = lookup_ref_path(*(haddr_t *)vp);

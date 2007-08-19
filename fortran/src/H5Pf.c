@@ -145,8 +145,8 @@ nh5pget_class_c ( hid_t_f *prp_id , int_f *classtype)
 
   c_prp_id = *prp_id;
   c_classtype = H5Pget_class(c_prp_id);
-  if (c_classtype == H5P_ROOT ) {
-      *classtype = H5P_ROOT;
+  if (c_classtype == H5P_NO_CLASS ) {
+      *classtype = H5P_NO_CLASS;
        ret_value = -1;
        return ret_value;
   }
@@ -1567,8 +1567,8 @@ nh5pget_filter_c(hid_t_f *prp_id, int_f* filter_number, int_f* flags, size_t_f* 
       * Call H5Pget_filter function.
       */
      c_prp_id = (hid_t)*prp_id;
-     c_filter_number = (unsigned)*filter_number;
-     c_filter = H5Pget_filter(c_prp_id, c_filter_number, &c_flags, &c_cd_nelmts, c_cd_values, c_namelen, c_name, NULL);
+     c_filter_number = (int)*filter_number;
+     c_filter = H5Pget_filter(c_prp_id, c_filter_number, &c_flags, &c_cd_nelmts, c_cd_values, c_namelen, c_name);
 
      if (c_filter < 0) goto DONE;
 
@@ -2305,7 +2305,7 @@ nh5pregister_c(hid_t_f *class, _fcd name, int_f *name_len, size_t_f *size, void 
      /*
       * Call H5Pregister function.
       */
-     if( H5Pregister(c_class, c_name, c_size, value, NULL,NULL,NULL,NULL,NULL,NULL,NULL) <0) goto DONE;
+     if( H5Pregister(c_class, c_name, c_size, value, NULL,NULL,NULL,NULL,NULL,NULL) <0) goto DONE;
      ret_value = 0;
 
 DONE:
@@ -2394,7 +2394,7 @@ nh5pinsert_c(hid_t_f *plist, _fcd name, int_f *name_len, size_t_f *size, void UN
      /*
       * Call H5Pinsert function.
       */
-     if( H5Pinsert(c_plist, c_name, c_size, value, NULL,NULL,NULL,NULL,NULL,NULL) <0) goto DONE;
+     if( H5Pinsert(c_plist, c_name, c_size, value, NULL,NULL,NULL,NULL,NULL) <0) goto DONE;
      ret_value = 0;
 
 DONE:
@@ -3210,12 +3210,12 @@ HD5packFstring(tmp, _fcdtocp(memb_name), (size_t)(c_lenmax*H5FD_MEM_NTYPES));
   for (i=0; i < H5FD_MEM_NTYPES; i++) {
        memb_map[i] = (int_f)c_memb_map[i];
        memb_fapl[i] = (hid_t_f)c_memb_fapl[i];
-#if defined(_WIN32)
+#if defined(WIN32)
        memb_addr[i] = -1;
 #else
        if(c_memb_addr[i] == HADDR_UNDEF) memb_addr[i] = -1;
        else memb_addr[i] = (real_f) ((long)c_memb_addr[i]/HADDR_MAX);
-#endif /*_WIN32*/
+#endif /*WIN32*/
   }
   *flag = (int_f)relax;
   *maxlen_out = (int_f)length;
@@ -3336,7 +3336,7 @@ nh5pget_filter_by_id_c(hid_t_f *prp_id, int_f* filter_id, int_f* flags, size_t_f
       */
      c_prp_id = (hid_t)*prp_id;
      c_filter_id = (H5Z_filter_t)*filter_id;
-     status = H5Pget_filter_by_id(c_prp_id, c_filter_id, &c_flags, &c_cd_nelmts, c_cd_values, c_namelen, c_name, NULL);
+     status = H5Pget_filter_by_id(c_prp_id, c_filter_id, &c_flags, &c_cd_nelmts, c_cd_values, c_namelen, c_name);
      if (status < 0) goto DONE;
 
      *cd_nelmts = (size_t_f)c_cd_nelmts;

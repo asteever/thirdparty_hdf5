@@ -62,6 +62,7 @@
      write(*,*) '                       ==========================                            '
      write(*,*) '                              FORTRAN tests '
      write(*,*) '                       ==========================                            '
+
      CALL h5get_libversion_f(majnum, minnum, relnum, total_error)
      if(total_error .eq. 0) then
 
@@ -76,6 +77,7 @@
      endif
      write(*,*)
 !     CALL h5check_version_f(1,4,4,total_error)
+
 !     write(*,*) '========================================='
 !     write(*,*) 'Testing FILE Interface                   '
 !     write(*,*) '========================================='
@@ -87,6 +89,7 @@
 
      write(*, fmt = e_format) error_string 
      total_error = total_error + mounting_total_error 
+
      error_string = failure
      CALL reopentest(cleanup, reopen_total_error)
      IF (reopen_total_error == 0) error_string = success
@@ -95,9 +98,6 @@
      write(*, fmt = e_format) error_string
      total_error = total_error + reopen_total_error 
 
-!DEC$ if defined(H5_VMS)
-     goto 100
-!DEC$ else
      error_string = failure
      CALL file_close(cleanup, fclose_total_error)
      IF (fclose_total_error == 0) error_string = success
@@ -105,8 +105,7 @@
      write(*, fmt = '(49x,a)', advance = 'no') ' ' 
      write(*, fmt = e_format) error_string
      total_error = total_error + fclose_total_error 
-!DEC$ endif
-100  continue
+
      error_string = failure
      CALL file_space(cleanup, fspace_total_error)
      IF (fspace_total_error == 0) error_string = success
@@ -114,6 +113,7 @@
      write(*, fmt = '(49x,a)', advance = 'no') ' ' 
      write(*, fmt = e_format) error_string
      total_error = total_error + fspace_total_error 
+
 
 !     write(*,*)
 !     write(*,*) '========================================='
@@ -127,6 +127,7 @@
      write(*, fmt = '(57x,a)', advance = 'no')  ' '
      write(*, fmt = e_format) error_string
      total_error = total_error + dataset_total_error 
+
      error_string = failure
      CALL extenddsettest(cleanup, extend_dataset_total_error)
      IF (extend_dataset_total_error == 0)  error_string = success
@@ -134,6 +135,7 @@
      write(*, fmt = '(46x,a)', advance = 'no') ' '
      write(*, fmt = e_format) error_string
      total_error = total_error + extend_dataset_total_error 
+
 !     write(*,*)
 !     write(*,*) '========================================='
 !     write(*,*) 'Testing DATASPACE Interface             '
@@ -203,6 +205,7 @@
 !     write(*,*) '========================================='
 !     write(*,*) 'Testing DATATYPE interface               '
 !     write(*,*) '========================================='
+
      error_string = failure
      CALL basic_data_type_test(cleanup, basic_datatype_total_error)
      IF (basic_datatype_total_error == 0) error_string = success
@@ -218,6 +221,7 @@
      write(*, fmt = '(47x,a)', advance = 'no')  ' '
      write(*, fmt = e_format) error_string
      total_error = total_error + total_error_compoundtest
+
      error_string = failure
      CALL enumtest(cleanup, enum_total_error)
      IF (enum_total_error == 0) error_string = success
@@ -225,6 +229,8 @@
      write(*, fmt = '(51x,a)', advance = 'no')  ' '
      write(*, fmt = e_format) error_string
      total_error = total_error + enum_total_error 
+
+
 !     write(*,*)
 !     write(*,*) '========================================='
 !     write(*,*) 'Testing PROPERTY interface               ' 
@@ -237,9 +243,8 @@
      write(*, fmt = '(48x,a)', advance = 'no')  ' '
      write(*, fmt = e_format) error_string
      total_error = total_error + external_total_error 
-
+    
      error_string = failure
-!     error_string = skip
      cleanup = .FALSE.
      CALL multi_file_test(cleanup, multi_file_total_error)
      IF (multi_file_total_error == 0) error_string = success
@@ -247,6 +252,7 @@
      write(*, fmt = '(47x,a)', advance = 'no')  ' '
      write(*, fmt = e_format) error_string
      total_error = total_error + multi_file_total_error 
+    
 !     write(*,*)
 !     write(*,*) '========================================='
 !     write(*,*) 'Testing ATTRIBUTE interface              ' 
@@ -272,6 +278,7 @@
      write(*, fmt = '(54x,a)', advance = 'no')  ' '
      write(*, fmt = e_format) error_string
      total_error = total_error + identifier_total_error 
+
      error_string = failure
      CALL filters_test(cleanup, z_total_error)
      IF (z_total_error == 0) error_string = success

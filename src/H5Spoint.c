@@ -697,7 +697,7 @@ H5Sget_select_elem_npoints(hid_t spaceid)
     hssize_t ret_value;        /* return value */
 
     FUNC_ENTER_API(H5Sget_select_elem_npoints, FAIL);
-    H5TRACE1("Hs", "i", spaceid);
+    H5TRACE1("Hs","i",spaceid);
 
     /* Check args */
     if (NULL == (space=H5I_object_verify(spaceid, H5I_DATASPACE)))
@@ -989,7 +989,7 @@ H5Sget_select_elem_pointlist(hid_t spaceid, hsize_t startpoint, hsize_t numpoint
     herr_t ret_value;        /* return value */
 
     FUNC_ENTER_API(H5Sget_select_elem_pointlist, FAIL);
-    H5TRACE4("e", "ihh*h", spaceid, startpoint, numpoints, buf);
+    H5TRACE4("e","ihh*h",spaceid,startpoint,numpoints,buf);
 
     /* Check args */
     if(buf==NULL)
@@ -1232,15 +1232,13 @@ H5Sselect_elements(hid_t spaceid, H5S_seloper_t op, size_t num_elem,
     herr_t ret_value;  /* return value */
 
     FUNC_ENTER_API(H5Sselect_elements, FAIL);
-    H5TRACE4("e", "iSsz**h", spaceid, op, num_elem, coord);
+    H5TRACE4("e","iSsz**h",spaceid,op,num_elem,coord);
 
     /* Check args */
     if (NULL == (space=H5I_object_verify(spaceid, H5I_DATASPACE)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataspace");
     if (H5S_SCALAR==H5S_GET_EXTENT_TYPE(space))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "point doesn't support H5S_SCALAR space");
-    if (H5S_NULL==H5S_GET_EXTENT_TYPE(space))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "point doesn't support H5S_NULL space");
     if(coord==NULL || num_elem==0)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "elements not specified");
     if(!(op==H5S_SELECT_SET || op==H5S_SELECT_APPEND || op==H5S_SELECT_PREPEND))

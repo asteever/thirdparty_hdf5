@@ -224,11 +224,6 @@ void compact_dataset(void)
     VRFY((dxpl >= 0), "");
     ret=H5Pset_dxpl_mpio(dxpl, H5FD_MPIO_COLLECTIVE);
     VRFY((ret >= 0), "H5Pcreate xfer succeeded");
-    if(dxfer_coll_type == DXFER_INDEPENDENT_IO) {
-     ret = H5Pset_dxpl_mpio_collective_opt(dxpl,H5FD_MPIO_INDIVIDUAL_IO);
-     VRFY((ret>= 0),"set independent IO collectively succeeded");
-    }
-
 
     /* Recalculate data to write.  Each process writes the same data. */
     for (i = 0; i < size; i++)
@@ -254,11 +249,6 @@ void compact_dataset(void)
     VRFY((dxpl >= 0), "");
     ret=H5Pset_dxpl_mpio(dxpl, H5FD_MPIO_COLLECTIVE);
     VRFY((ret >= 0), "H5Pcreate xfer succeeded");
-    if(dxfer_coll_type == DXFER_INDEPENDENT_IO) {
-     ret = H5Pset_dxpl_mpio_collective_opt(dxpl,H5FD_MPIO_INDIVIDUAL_IO);
-     VRFY((ret>= 0),"set independent IO collectively succeeded");
-    }
-
 
     dataset = H5Dopen(iof, dname);
     VRFY((dataset >= 0), "H5Dcreate succeeded");
@@ -279,119 +269,6 @@ void compact_dataset(void)
     H5Fclose(iof);
     HDfree(inme);
     HDfree(outme);
-}
-
-/*
- * Example of using PHDF5 to create, write, and read dataset and attribute
- * of Null dataspace.
- *
- * Changes:	Removed the assert that mpi_size <= the SIZE #define.
- *		As best I can tell, this assert isn't needed here,
- *		and in any case, the SIZE #define is being removed
- *		in an update of the functions in this file to run
- *		with an arbitrary number of processes.
- *
- *                                         JRM - 8/24/04
- */
-void null_dataset(void)
-{
-    int mpi_size, mpi_rank;
-    hbool_t use_gpfs = FALSE;
-    hid_t iof, plist, dxpl, dataset, attr, sid;
-    unsigned uval=2;    /* Buffer for writing to dataset */
-    int val=1;          /* Buffer for writing to attribute */
-    int nelem;
-    char dname[]="dataset";
-    char attr_name[]="attribute";
-    herr_t ret;
-    const char *filename;
-
-    MPI_Comm_rank (MPI_COMM_WORLD, &mpi_rank);
-    MPI_Comm_size (MPI_COMM_WORLD, &mpi_size);
-
-    filename = GetTestParameters();
-
-    plist = create_faccess_plist(MPI_COMM_WORLD, MPI_INFO_NULL,
-                                 facc_type, use_gpfs);
-    iof = H5Fcreate (filename, H5F_ACC_TRUNC, H5P_DEFAULT, plist);
-
-    /* Define data space */
-    sid = H5Screate(H5S_NULL);
-
-    /* Check that the null dataspace actually has 0 elements */
-    nelem = H5Sget_simple_extent_npoints(sid);
-    VRFY((nelem== 0), "H5Sget_simple_extent_npoints");
-
-    /* Create a compact dataset */
-    dataset = H5Dcreate (iof, dname, H5T_NATIVE_UINT, sid, H5P_DEFAULT);
-    VRFY((dataset >= 0), "H5Dcreate succeeded");
-
-    /* set up the collective transfer properties list */
-    dxpl = H5Pcreate (H5P_DATASET_XFER);
-    VRFY((dxpl >= 0), "");
-    ret=H5Pset_dxpl_mpio(dxpl, H5FD_MPIO_COLLECTIVE);
-    VRFY((ret >= 0), "H5Pcreate xfer succeeded");
-    if(dxfer_coll_type == DXFER_INDEPENDENT_IO) {
-     ret = H5Pset_dxpl_mpio_collective_opt(dxpl,H5FD_MPIO_INDIVIDUAL_IO);
-     VRFY((ret>= 0),"set independent IO collectively succeeded");
-    }
-
-
-    /* Write "nothing" to the dataset (with type conversion) */
-    ret=H5Dwrite (dataset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, dxpl, &uval);
-    VRFY((ret >= 0), "H5Dwrite succeeded");
-
-    /* Create an attribute for the group */
-    attr=H5Acreate(dataset,attr_name,H5T_NATIVE_UINT,sid,H5P_DEFAULT);
-    VRFY((attr>=0), "H5Acreate");
-
-    /* Write "nothing" to the attribute (with type conversion) */
-    ret = H5Awrite(attr, H5T_NATIVE_INT, &val);
-    VRFY((ret>=0), "H5Awrite");
-
-    H5Aclose (attr);
-    H5Dclose (dataset);
-    H5Pclose (plist);
-    H5Sclose (sid);
-    H5Fclose (iof);
-
-    /* Open the file and dataset, read and compare the data. */
-    plist = create_faccess_plist(MPI_COMM_WORLD, MPI_INFO_NULL, facc_type, use_gpfs);
-    iof = H5Fopen(filename, H5F_ACC_RDONLY, plist);
-    VRFY((iof >= 0), "H5Fopen succeeded");
-
-    /* set up the collective transfer properties list */
-    dxpl = H5Pcreate (H5P_DATASET_XFER);
-    VRFY((dxpl >= 0), "");
-    ret=H5Pset_dxpl_mpio(dxpl, H5FD_MPIO_COLLECTIVE);
-    VRFY((ret >= 0), "H5Pcreate xfer succeeded");
-    if(dxfer_coll_type == DXFER_INDEPENDENT_IO) {
-     ret = H5Pset_dxpl_mpio_collective_opt(dxpl,H5FD_MPIO_INDIVIDUAL_IO);
-     VRFY((ret>= 0),"set independent IO collectively succeeded");
-    }
-
- 
-    dataset = H5Dopen(iof, dname);
-    VRFY((dataset >= 0), "H5Dcreate succeeded");
-
-    /* Try reading from the dataset (make certain our buffer is unmodified) */
-    ret = H5Dread(dataset, H5T_NATIVE_UINT, H5S_ALL, H5S_ALL, dxpl, &uval);
-    VRFY((ret>=0), "H5Dread");
-    VRFY((uval==2), "H5Dread");
-
-    /* Open the attribute for the dataset */
-    attr=H5Aopen_name(dataset,attr_name);
-    VRFY((attr>=0), "H5Aopen_name");
-
-    /* Try reading from the attribute (make certain our buffer is unmodified) */    ret = H5Aread(attr, H5T_NATIVE_INT, &val);
-    VRFY((ret>=0), "H5Aread");
-    VRFY((val==1), "H5Aread");
-
-    H5Pclose(plist);
-    H5Pclose(dxpl);
-    H5Aclose (attr);
-    H5Dclose(dataset);
-    H5Fclose(iof);
 }
 
 /* Example of using PHDF5 to create "large" datasets.  (>2GB, >4GB, >8GB)
@@ -459,9 +336,7 @@ void big_dataset(void)
 
     /* Check that file of the correct size was created */
     file_size=h5_get_file_size(filename);
-#ifndef _WIN32
-    VRFY((file_size == 2147485696ULL), "File is correct size (~2GB)");
-#endif
+    VRFY((file_size == 2147485696ULL), "File is correct size");
 
     /*
      * Create >4GB HDF5 file
@@ -490,9 +365,7 @@ void big_dataset(void)
 
     /* Check that file of the correct size was created */
     file_size=h5_get_file_size(filename);
-#ifndef _WIN32
-    VRFY((file_size == 4294969344ULL), "File is correct size (~4GB)");
-#endif
+    VRFY((file_size == 4294969344ULL), "File is correct size");
 
     /*
      * Create >8GB HDF5 file
@@ -521,9 +394,7 @@ void big_dataset(void)
 
     /* Check that file of the correct size was created */
     file_size=h5_get_file_size(filename);
-#ifndef _WIN32
-    VRFY((file_size == 8589936640ULL), "File is correct size (~8GB)");
-#endif
+    VRFY((file_size == 8589936640ULL), "File is correct size");
 
     /* Close fapl */
     ret=H5Pclose (fapl);
@@ -645,11 +516,6 @@ void dataset_fillvalue(void)
 
     ret=H5Pset_dxpl_mpio(dxpl, H5FD_MPIO_COLLECTIVE);
     VRFY((ret >= 0), "H5Pset_dxpl_mpio succeeded");
-    if(dxfer_coll_type == DXFER_INDEPENDENT_IO) {
-     ret = H5Pset_dxpl_mpio_collective_opt(dxpl,H5FD_MPIO_INDIVIDUAL_IO);
-     VRFY((ret>= 0),"set independent IO collectively succeeded");
-    }
-
 
     /* Fill write buffer with some values */
     twdata=wdata;
@@ -1662,13 +1528,8 @@ void io_mode_confusion(void)
                   mpi_rank, fcn_name);
 
     status = H5Pset_dxpl_mpio(plist_id, H5FD_MPIO_COLLECTIVE);
+
     VRFY(( status >= 0 ), "H5Pset_dxpl_mpio() failed");
-    if(dxfer_coll_type == DXFER_INDEPENDENT_IO) {
-     status = H5Pset_dxpl_mpio_collective_opt(plist_id,H5FD_MPIO_INDIVIDUAL_IO);
-     VRFY((status>= 0),"set independent IO collectively succeeded");
-    }
-
-
 
 
     if ( verbose )

@@ -16,7 +16,7 @@
 /*-------------------------------------------------------------------------
  *
  * Created:		H5Gname.c
- *			Sep 12 2005
+ *			Dec 19 2005
  *			Quincey Koziol <koziol@ncsa.uiuc.edu>
  *
  * Purpose:		Functions for handling group hierarchy paths.
@@ -35,36 +35,18 @@
 #include "H5FLprivate.h"	/* Free Lists                           */
 #include "H5Gpkg.h"		/* Groups		  		*/
 #include "H5Iprivate.h"		/* IDs			  		*/
-#include "H5Lprivate.h"		/* Links                                */
-#include "H5MMprivate.h"	/* Memory wrappers			*/
 
 /* Private typedefs */
 
 /* Struct used by change name callback function */
 typedef struct H5G_names_t {
     H5G_names_op_t op;                  /* Operation performed on file */
-    H5F_t       *src_file;              /* Top file in src location's mounted file hier. */
-    H5RS_str_t  *src_full_path_r;       /* Source location's full path */
-    H5F_t       *dst_file;              /* Destination location's file */
-    H5RS_str_t  *dst_full_path_r;       /* Destination location's full path */
-    H5RS_str_t  *new_name_r;            /* Name of object relative to destination location */
+    H5G_entry_t	*loc;                   /* [src] Location affected */
+    H5F_t       *top_loc_file;          /* Top file in src location's mounted file hier. */
+    H5G_entry_t	*dst_loc;               /* Destination location */
+    H5RS_str_t  *dst_name;              /* Name of object relative to destination location */
 } H5G_names_t;
 
-/* Info to pass to the iteration function when building name */
-typedef struct H5G_ref_path_iter_t {
-    /* In */
-    hid_t file; 		/* File id where it came from */
-    hid_t dxpl_id; 		/* DXPL for operations */
-    hbool_t is_root_group; 	/* Flag to indicate that the root group is being looked at */
-    const H5O_loc_t *loc; 	/* The location of the object we're looking for */
-
-    /* In/Out */
-    H5SL_t *ref_path_table;     /* Skip list for tracking visited nodes */
-    size_t max_container_len;   /* Maximum size of container */
-
-    /* Out */
-    char *container;            /* full name of the container object */
-} H5G_ref_path_iter_t;
 
 /* Private macros */
 
@@ -73,19 +55,14 @@ typedef struct H5G_ref_path_iter_t {
 /* Declare extern the PQ free list for the wrapped strings */
 H5FL_BLK_EXTERN(str_buf);
 
-/* Declare the free list to manage haddr_t's */
-H5FL_DEFINE_STATIC(haddr_t);
-
 /* PRIVATE PROTOTYPES */
 static htri_t H5G_common_path(const H5RS_str_t *fullpath_r, const H5RS_str_t *prefix_r);
 static H5RS_str_t *H5G_build_fullpath(const char *prefix, const char *name);
 static H5RS_str_t *H5G_build_fullpath_refstr_refstr(const H5RS_str_t *prefix_r, const H5RS_str_t *name_r);
+static H5RS_str_t *H5G_build_fullpath_refstr_str(H5RS_str_t *path_r, const char *name);
 static herr_t H5G_name_move_path(H5RS_str_t **path_r_ptr,
     const char *full_suffix, const char *src_path, const char *dst_path);
 static int H5G_name_replace_cb(void *obj_ptr, hid_t obj_id, void *key);
-static herr_t H5G_refname_iterator(hid_t group, const char *name,
-    const H5L_info_t *link_info, void *_udata);
-static herr_t H5G_free_ref_path_node(void *item, void *key, void *operator_data/*in,out*/);
 
 
 /*-------------------------------------------------------------------------
@@ -225,7 +202,7 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-H5RS_str_t *
+static H5RS_str_t *
 H5G_build_fullpath_refstr_str(H5RS_str_t *prefix_r, const char *name)
 {
     const char *prefix;         /* Pointer to raw string for path */
@@ -297,19 +274,19 @@ H5G_build_fullpath_refstr_refstr(const H5RS_str_t *prefix_r, const H5RS_str_t *n
  *-------------------------------------------------------------------------
  */
 herr_t
-H5G_name_init(H5G_name_t *name, const char *path)
+H5G_name_init(H5G_entry_t *ent, const char *path)
 {
     FUNC_ENTER_NOAPI_NOFUNC(H5G_name_init)
 
     /* Check arguments */
-    HDassert(name);
+    HDassert(ent);
 
     /* Set the initial paths for a name object */
-    name->full_path_r = H5RS_create(path);
-    HDassert(name->full_path_r);
-    name->user_path_r = H5RS_create(path);
-    HDassert(name->user_path_r);
-    name->obj_hidden = 0;
+    ent->full_path_r = H5RS_create(path);
+    HDassert(ent->full_path_r);
+    ent->user_path_r = H5RS_create(path);
+    HDassert(ent->user_path_r);
+    ent->obj_hidden = 0;
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5G_name_init() */
@@ -329,7 +306,7 @@ H5G_name_init(H5G_name_t *name, const char *path)
  *-------------------------------------------------------------------------
  */
 herr_t
-H5G_name_set(H5G_name_t *loc, H5G_name_t *obj, const char *name)
+H5G_name_set(H5G_entry_t *loc, H5G_entry_t *obj, const char *name)
 {
     herr_t  ret_value = SUCCEED;
 
@@ -362,59 +339,6 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5G_name_copy
- *
- * Purpose:     Do a copy of group hier. names
- *
- * Return:	Success:	Non-negative
- *		Failure:	Negative
- *
- * Programmer:	Quincey Koziol
- *              Monday, September 12, 2005
- *
- * Notes:       'depth' parameter determines how much of the group entry
- *              structure we want to copy.  The depths are:
- *                  H5_COPY_SHALLOW - Copy all the fields from the source
- *                      to the destination, including the user path and
- *                      canonical path. (Destination "takes ownership" of
- *                      user and canonical paths)
- *                  H5_COPY_DEEP - Copy all the fields from the source to
- *                      the destination, deep copying the user and canonical
- *                      paths.
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5G_name_copy(H5G_name_t *dst, const H5G_name_t *src, H5_copy_depth_t depth)
-{
-    FUNC_ENTER_NOAPI_NOFUNC(H5G_name_copy)
-
-    /* Check arguments */
-    HDassert(src);
-    HDassert(dst);
-#if defined(H5_USING_MEMCHECKER) || !defined(NDEBUG)
-    HDassert(dst->full_path_r == NULL);
-    HDassert(dst->user_path_r == NULL);
-#endif /* H5_USING_MEMCHECKER */
-    HDassert(depth == H5_COPY_SHALLOW || depth == H5_COPY_DEEP);
-
-    /* Copy the top level information */
-    HDmemcpy(dst, src, sizeof(H5G_name_t));
-
-    /* Deep copy the names */
-    if(depth == H5_COPY_DEEP) {
-        dst->full_path_r = H5RS_dup(src->full_path_r);
-        dst->user_path_r = H5RS_dup(src->user_path_r);
-    } else {
-        /* Discarding 'const' qualifier OK - QAK */
-        H5G_name_reset((H5G_name_t *)src);
-    } /* end if */
-
-    FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5G_name_copy() */
-
-
-/*-------------------------------------------------------------------------
  * Function:    H5G_get_name
  *
  * Purpose:     Gets a name of an object from its ID.
@@ -427,87 +351,35 @@ H5G_name_copy(H5G_name_t *dst, const H5G_name_t *src, H5_copy_depth_t depth)
  * Programmer:	Quincey Koziol
  *              Tuesday, December 13, 2005
  *
- * Modifications: Leon Arber
- * 		  Oct. 18, 2006
- * 		  Added functionality to get the name for a reference.
- *
  *-------------------------------------------------------------------------
  */
 ssize_t
-H5G_get_name(hid_t id, char *name/*out*/, size_t size, hid_t dxpl_id)
+H5G_get_name(hid_t id, char *name/*out*/, size_t size)
 {
-    H5G_loc_t     loc;          /* Object location */
-    ssize_t       ret_value = FAIL;
+    H5G_entry_t   *ent;       /*symbol table entry */
+    size_t        len = 0;
+    ssize_t       ret_value;
 
-    FUNC_ENTER_NOAPI(H5G_get_name, FAIL)
+    FUNC_ENTER_NOAPI_NOFUNC(H5G_get_name)
 
-    /* get object location */
-    if(H5G_loc(id, &loc) >= 0) {
-        ssize_t len = 0;
-
-        /* If the user path is available and it's not "hidden", use it */
-        if(loc.path->user_path_r != NULL && loc.path->obj_hidden == 0) {
-            len = H5RS_len(loc.path->user_path_r);
+    /* get symbol table entry */
+    if(NULL != (ent = H5G_loc(id))) {
+        if (ent->user_path_r != NULL && ent->obj_hidden == 0) {
+            len = H5RS_len(ent->user_path_r);
 
             if(name) {
-                HDstrncpy(name, H5RS_get_str(loc.path->user_path_r), MIN((size_t)(len + 1), size));
-                if((size_t)len >= size)
-                    name[size - 1] = '\0';
+                HDstrncpy(name, H5RS_get_str(ent->user_path_r), MIN(len + 1, size));
+                if(len >= size)
+                    name[size-1] = '\0';
             } /* end if */
         } /* end if */
-	else if(!loc.path->obj_hidden) {
-	    hid_t	  file;
-
-            /* Retrieve file ID for name search */
-	    if((file = H5I_get_file_id(id)) < 0)
-		HGOTO_ERROR(H5E_SYM, H5E_CANTGET, FAIL, "can't retrieve file ID")
-
-            /* Search for name of object */
-	    if((len = H5G_get_refobj_name(file, dxpl_id, loc.oloc, name, size)) < 0) {
-                H5I_dec_ref(file);
-		HGOTO_ERROR(H5E_SYM, H5E_CANTGET, FAIL, "can't determine name")
-            } /* end if */
-	
-            /* Close file ID used for search */
-	    if(H5I_dec_ref(file) < 0)
-		HGOTO_ERROR(H5E_SYM, H5E_CANTCLOSEFILE, FAIL, "can't determine name")
-	} /* end else */
-
-        /* Set return value */
-        ret_value = len;
     } /* end if */
 
-done: 
+    /* Set return value */
+    ret_value=(ssize_t)len;
+
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5G_get_name() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5G_name_reset
- *
- * Purpose:	Reset a group hierarchy name to an empty state
- *
- * Return:	Success:	Non-negative
- *		Failure:	Negative
- *
- * Programmer:	Quincey Koziol
- *              Monday, September 12, 2005
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5G_name_reset(H5G_name_t *name)
-{
-    FUNC_ENTER_NOAPI_NOFUNC(H5G_name_reset)
-
-    /* Check arguments */
-    HDassert(name);
-
-    /* Clear the group hier. name to an empty state */
-    HDmemset(name, 0, sizeof(H5G_name_t));
-
-    FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5G_name_reset() */
 
 
 /*-------------------------------------------------------------------------
@@ -524,22 +396,22 @@ H5G_name_reset(H5G_name_t *name)
  *-------------------------------------------------------------------------
  */
 herr_t
-H5G_name_free(H5G_name_t *name)
+H5G_name_free(H5G_entry_t *ent)
 {
     FUNC_ENTER_NOAPI_NOFUNC(H5G_name_free)
 
     /* Check args */
-    HDassert(name);
+    HDassert(ent);
 
-    if(name->full_path_r) {
-        H5RS_decr(name->full_path_r);
-        name->full_path_r = NULL;
+    if(ent->full_path_r) {
+        H5RS_decr(ent->full_path_r);
+        ent->full_path_r = NULL;
     } /* end if */
-    if(name->user_path_r) {
-        H5RS_decr(name->user_path_r);
-        name->user_path_r = NULL;
+    if(ent->user_path_r) {
+        H5RS_decr(ent->user_path_r);
+        ent->user_path_r = NULL;
     } /* end if */
-    name->obj_hidden = 0;
+    ent->obj_hidden = 0;
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5G_name_free() */
@@ -578,7 +450,7 @@ H5G_name_move_path(H5RS_str_t **path_r_ptr, const char *full_suffix, const char 
     /* Get pointer to path to update */
     path = H5RS_get_str(*path_r_ptr);
     HDassert(path);
-
+    
     /* Check if path needs to be updated */
     full_suffix_len = HDstrlen(full_suffix);
     path_len = HDstrlen(path);
@@ -665,8 +537,7 @@ static int
 H5G_name_replace_cb(void *obj_ptr, hid_t obj_id, void *key)
 {
     const H5G_names_t *names = (const H5G_names_t *)key;        /* Get operation's information */
-    H5O_loc_t *oloc;            /* Object location for object that the ID refers to */
-    H5G_name_t *obj_path;       /* Pointer to group hier. path for obj */
+    H5G_entry_t *ent = NULL;    /* Group entry for object that the ID refers to */
     H5F_t *top_obj_file;        /* Top file in object's mounted file hier. */
     hbool_t obj_in_child = FALSE;   /* Flag to indicate that the object is in the child mount hier. */
     herr_t      ret_value = SUCCEED;       /* Return value */
@@ -678,13 +549,11 @@ H5G_name_replace_cb(void *obj_ptr, hid_t obj_id, void *key)
     /* Get the symbol table entry */
     switch(H5I_get_type(obj_id)) {
         case H5I_GROUP:
-            oloc = H5G_oloc((H5G_t *)obj_ptr);
-            obj_path = H5G_nameof((H5G_t *)obj_ptr);
+            ent = H5G_entof((H5G_t*)obj_ptr);
             break;
 
         case H5I_DATASET:
-            oloc = H5D_oloc((H5D_t *)obj_ptr);
-            obj_path = H5D_nameof((H5D_t *)obj_ptr);
+            ent = H5D_entof((H5D_t*)obj_ptr);
             break;
 
         case H5I_DATATYPE:
@@ -692,45 +561,43 @@ H5G_name_replace_cb(void *obj_ptr, hid_t obj_id, void *key)
             if(!H5T_is_named((H5T_t *)obj_ptr))
                 HGOTO_DONE(SUCCEED)     /* Do not exit search over IDs */
 
-            oloc = H5T_oloc((H5T_t *)obj_ptr);
-            obj_path = H5T_nameof((H5T_t *)obj_ptr);
+            ent = H5T_entof((H5T_t*)obj_ptr);
             break;
 
         default:
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "unknown data object")
     } /* end switch */
-    HDassert(oloc);
-    HDassert(obj_path);
+    HDassert(ent);
 
     /* Check if the object has a full path still */
-    if(!obj_path->full_path_r)
+    if(!ent->full_path_r)
         HGOTO_DONE(SUCCEED)     /* No need to look at object, it's path is already invalid */
 
     /* Find the top file in object's mount hier. */
-    if(oloc->file->mtab.parent) {
+    if(ent->file->mtab.parent) {
         /* Check if object is in child file (for mount & unmount operations) */
-        if(names->dst_file && oloc->file->shared == names->dst_file->shared)
+        if(names->dst_loc && ent->file->shared == names->dst_loc->file->shared)
             obj_in_child = TRUE;
 
         /* Find the "top" file in the chain of mounted files */
-        top_obj_file = oloc->file->mtab.parent;
+        top_obj_file = ent->file->mtab.parent;
         while(top_obj_file->mtab.parent != NULL) {
             /* Check if object is in child mount hier. (for mount & unmount operations) */
-            if(names->dst_file && top_obj_file->shared == names->dst_file->shared)
+            if(names->dst_loc && top_obj_file->shared == names->dst_loc->file->shared)
                 obj_in_child = TRUE;
 
             top_obj_file = top_obj_file->mtab.parent;
         } /* end while */
     } /* end if */
     else
-        top_obj_file = oloc->file;
+        top_obj_file = ent->file;
 
     /* Check if object is in top of child mount hier. (for mount & unmount operations) */
-    if(names->dst_file && top_obj_file->shared == names->dst_file->shared)
+    if(names->dst_loc && top_obj_file->shared == names->dst_loc->file->shared)
         obj_in_child = TRUE;
 
     /* Check if the object is in same file mount hier. */
-    if(top_obj_file->shared != names->src_file->shared)
+    if(top_obj_file->shared != names->top_loc_file->shared)
         HGOTO_DONE(SUCCEED)     /* No need to look at object, it's path is already invalid */
 
     switch(names->op) {
@@ -747,8 +614,8 @@ H5G_name_replace_cb(void *obj_ptr, hid_t obj_id, void *key)
                 size_t new_full_len;        /* Length of new full path */
 
                 /* Get pointers to paths of interest */
-                full_path = H5RS_get_str(obj_path->full_path_r);
-                src_path = H5RS_get_str(names->src_full_path_r);
+                full_path = H5RS_get_str(ent->full_path_r);
+                src_path = H5RS_get_str(names->loc->full_path_r);
 
                 /* Build new full path */
 
@@ -762,19 +629,19 @@ H5G_name_replace_cb(void *obj_ptr, hid_t obj_id, void *key)
                 HDstrcat(new_full_path, full_path);
 
                 /* Release previous full path */
-                H5RS_decr(obj_path->full_path_r);
+                H5RS_decr(ent->full_path_r);
 
                 /* Take ownership of the new full path */
-                obj_path->full_path_r = H5RS_own(new_full_path);
+                ent->full_path_r = H5RS_own(new_full_path);
             } /* end if */
             /* Object must be in parent mount file hier. */
             else {
                 /* Check if the source is along the entry's path */
                 /* (But not actually the entry itself) */
-                if(H5G_common_path(obj_path->full_path_r, names->src_full_path_r) &&
-                        H5RS_cmp(obj_path->full_path_r, names->src_full_path_r)) {
+                if(H5G_common_path(ent->full_path_r, names->loc->full_path_r) &&
+                        H5RS_cmp(ent->full_path_r, names->loc->full_path_r)) {
                     /* Hide the user path */
-                    (obj_path->obj_hidden)++;
+                    (ent->obj_hidden)++;
                 } /* end if */
             } /* end else */
             break;
@@ -791,8 +658,8 @@ H5G_name_replace_cb(void *obj_ptr, hid_t obj_id, void *key)
                 char *new_full_path;        /* New full path of object */
 
                 /* Get pointers to paths of interest */
-                full_path = H5RS_get_str(obj_path->full_path_r);
-                src_path = H5RS_get_str(names->src_full_path_r);
+                full_path = H5RS_get_str(ent->full_path_r);
+                src_path = H5RS_get_str(names->loc->full_path_r);
 
                 /* Construct full path suffix */
                 full_suffix = full_path + HDstrlen(src_path);
@@ -805,37 +672,37 @@ H5G_name_replace_cb(void *obj_ptr, hid_t obj_id, void *key)
                 HDstrcpy(new_full_path, full_suffix);
 
                 /* Release previous full path */
-                H5RS_decr(obj_path->full_path_r);
+                H5RS_decr(ent->full_path_r);
 
                 /* Take ownership of the new full path */
-                obj_path->full_path_r = H5RS_own(new_full_path);
+                ent->full_path_r = H5RS_own(new_full_path);
 
                 /* Check if the object's user path should be invalidated */
-                if(obj_path->user_path_r && HDstrlen(new_full_path) < (size_t)H5RS_len(obj_path->user_path_r)) {
+                if(ent->user_path_r && HDstrlen(new_full_path) < (size_t)H5RS_len(ent->user_path_r)) {
                     /* Free user path */
-                    H5RS_decr(obj_path->user_path_r);
-                    obj_path->user_path_r = NULL;
+                    H5RS_decr(ent->user_path_r);
+                    ent->user_path_r = NULL;
                 } /* end if */
             } /* end if */
             else {
                 /* Check if file being unmounted was hiding the object */
-                if(H5G_common_path(obj_path->full_path_r, names->src_full_path_r) &&
-                        H5RS_cmp(obj_path->full_path_r, names->src_full_path_r)) {
+                if(H5G_common_path(ent->full_path_r, names->loc->full_path_r) &&
+                        H5RS_cmp(ent->full_path_r, names->loc->full_path_r)) {
                     /* Un-hide the user path */
-                    (obj_path->obj_hidden)--;
+                    (ent->obj_hidden)--;
                 } /* end if */
             } /* end else */
             break;
 
         /*-------------------------------------------------------------------------
-        * H5G_NAME_DELETE
+        * H5G_NAME_UNLINK
         *-------------------------------------------------------------------------
         */
-        case H5G_NAME_DELETE:
+        case H5G_NAME_UNLINK:
             /* Check if the location being unlinked is in the path for the current object */
-            if(H5G_common_path(obj_path->full_path_r, names->src_full_path_r)) {
+            if(H5G_common_path(ent->full_path_r, names->loc->full_path_r)) {
                 /* Free paths for object */
-                H5G_name_free(obj_path);
+                H5G_name_free(ent);
             } /* end if */
             break;
 
@@ -845,7 +712,7 @@ H5G_name_replace_cb(void *obj_ptr, hid_t obj_id, void *key)
         */
         case H5G_NAME_MOVE: /* H5Gmove case, check for relative names case */
             /* Check if the src object moved is in the current object's path */
-            if(H5G_common_path(obj_path->full_path_r, names->src_full_path_r)) {
+            if(H5G_common_path(ent->full_path_r, names->loc->full_path_r)) {
                 const char *full_path;      /* Full path of current object */
                 const char *full_suffix;    /* Suffix of full path, after src_path */
                 char *new_full_path;        /* New full path of object */
@@ -856,22 +723,21 @@ H5G_name_replace_cb(void *obj_ptr, hid_t obj_id, void *key)
                 const char *dst_path;       /* Full path of destination object */
 
                 /* Sanity check */
-                HDassert(*(H5RS_get_str(names->src_full_path_r)) == '/');
-                HDassert(names->new_name_r);
+                HDassert(*(H5RS_get_str(names->loc->full_path_r)) == '/');
+                HDassert(names->dst_name);
 
                 /* Make certain that the source and destination names are full (not relative) paths */
-                src_path_r = H5RS_dup(names->src_full_path_r);
-                if(*(H5RS_get_str(names->new_name_r)) != '/') {
-                    HDassert(names->dst_full_path_r);
+                src_path_r = H5RS_dup(names->loc->full_path_r);
+                if(*(H5RS_get_str(names->dst_name)) != '/') {
                     /* Create reference counted string for full dst path */
-                    if((dst_path_r = H5G_build_fullpath_refstr_refstr(names->dst_full_path_r, names->new_name_r)) == NULL)
+                    if((dst_path_r = H5G_build_fullpath_refstr_refstr(names->dst_loc->full_path_r, names->dst_name)) == NULL)
                         HGOTO_ERROR(H5E_SYM, H5E_PATH, FAIL, "can't build destination path name")
                 } /* end if */
                 else
-                    dst_path_r = H5RS_dup(names->new_name_r);
+                    dst_path_r = H5RS_dup(names->dst_name);
 
                 /* Get pointers to paths of interest */
-                full_path = H5RS_get_str(obj_path->full_path_r);
+                full_path = H5RS_get_str(ent->full_path_r);
                 src_path = H5RS_get_str(src_path_r);
                 dst_path = H5RS_get_str(dst_path_r);
 
@@ -879,8 +745,8 @@ H5G_name_replace_cb(void *obj_ptr, hid_t obj_id, void *key)
                 full_suffix = full_path + HDstrlen(src_path);
 
                 /* Update the user path, if one exists */
-                if(obj_path->user_path_r)
-                    if(H5G_name_move_path(&(obj_path->user_path_r), full_suffix, src_path, dst_path) < 0)
+                if(ent->user_path_r)
+                    if(H5G_name_move_path(&(ent->user_path_r), full_suffix, src_path, dst_path) < 0)
                         HGOTO_ERROR(H5E_SYM, H5E_PATH, FAIL, "can't build user path name")
 
                 /* Build new full path */
@@ -895,10 +761,10 @@ H5G_name_replace_cb(void *obj_ptr, hid_t obj_id, void *key)
                 HDstrcat(new_full_path, full_suffix);
 
                 /* Release previous full path */
-                H5RS_decr(obj_path->full_path_r);
+                H5RS_decr(ent->full_path_r);
 
                 /* Take ownership of the new full path */
-                obj_path->full_path_r = H5RS_own(new_full_path);
+                ent->full_path_r = H5RS_own(new_full_path);
 
                 /* Release source & destination full paths */
                 H5RS_decr(src_path_r);
@@ -919,11 +785,10 @@ done:
  * Function: H5G_name_replace
  *
  * Purpose: Search the list of open IDs and replace names according to a
- *              particular operation.  The operation occured on the
- *              SRC_FILE/SRC_FULL_PATH_R object.  The new name (if there is
- *              one) is NEW_NAME_R.  Additional entry location information
- *              (currently only needed for the 'move' operation) is passed in
- *              DST_FILE/DST_FULL_PATH_R.
+ *              particular operation.  The operation occured on the LOC
+ *              entry.  The new name (if there is one) is DST_NAME.
+ *              Additional entry location information (currently only needed
+ *              for the 'move' operation) is passed in DST_LOC.
  *
  * Return: Success: 0, Failure: -1
  *
@@ -934,18 +799,15 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5G_name_replace(H5G_obj_t type, H5F_t *src_file, H5RS_str_t *src_full_path_r,
-    H5RS_str_t *new_name_r, H5F_t *dst_file, H5RS_str_t *dst_full_path_r, H5G_names_op_t op)
+H5G_name_replace(int type, H5G_entry_t *loc,
+    H5RS_str_t *dst_name, H5G_entry_t *dst_loc, H5G_names_op_t op )
 {
     herr_t ret_value = SUCCEED;
 
     FUNC_ENTER_NOAPI(H5G_name_replace, FAIL)
 
-    /* Check arguments */
-    HDassert(src_file);
-
     /* Check if the object we are manipulating has a path */
-    if(src_full_path_r) {
+    if(loc->full_path_r) {
         unsigned search_group = 0;  /* Flag to indicate that groups are to be searched */
         unsigned search_dataset = 0;  /* Flag to indicate that datasets are to be searched */
         unsigned search_datatype = 0; /* Flag to indicate that datatypes are to be searched */
@@ -985,13 +847,6 @@ H5G_name_replace(H5G_obj_t type, H5F_t *src_file, H5RS_str_t *src_full_path_r,
                     search_datatype = 1;
                 break;
 
-            case H5G_UDLINK:
-              /* User-defined links automatically wipe out names (because it
-               * would be too much work to track them), so there's no point
-               * in searching them.
-               */
-              break;
-
             default:
                 HGOTO_ERROR(H5E_SYM, H5E_BADTYPE, FAIL, "not valid object type")
         } /* end switch */
@@ -999,17 +854,23 @@ H5G_name_replace(H5G_obj_t type, H5F_t *src_file, H5RS_str_t *src_full_path_r,
         /* Check if we need to operate on the objects affected */
         if(search_group || search_dataset || search_datatype) {
             H5G_names_t names;          /* Structure to hold operation information for callback */
+            H5F_t *top_loc_file;        /* Top file in src location's mounted file hier. */
 
             /* Find top file in src location's mount hierarchy */
-            while(src_file->mtab.parent)
-                src_file = src_file->mtab.parent;
+            if(loc->file->mtab.parent) {
+                /* Find the "top" file in the chain of mounted files for the location */
+                top_loc_file = loc->file->mtab.parent;
+                while(top_loc_file->mtab.parent != NULL)
+                    top_loc_file = top_loc_file->mtab.parent;
+            } /* end if */
+            else
+                top_loc_file = loc->file;
 
             /* Set up common information for callback */
-            names.src_file = src_file;
-            names.src_full_path_r = src_full_path_r;
-            names.dst_file = dst_file;
-            names.dst_full_path_r = dst_full_path_r;
-            names.new_name_r = new_name_r;
+            names.loc = loc;
+            names.top_loc_file = top_loc_file;
+            names.dst_loc = dst_loc;
+            names.dst_name = dst_name;
             names.op = op;
 
             /* Search through group IDs */
@@ -1029,231 +890,4 @@ H5G_name_replace(H5G_obj_t type, H5F_t *src_file, H5RS_str_t *src_full_path_r,
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5G_name_replace() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5G_refname_iterator
- *
- * Purpose:     The iterator which traverses all objects in a file looking for
- * 		one that matches the object that is being looked for.
- *
- * Return:      1 on success, 0 to continue searching, negative on failure.
- *
- * Programmer:  Leon Arber, Nov 1, 2006.
- *
- * Modifications:
- * 		Quincey Koziol, Nov. 3, 2006
- * 		Cleaned up code.
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5G_refname_iterator(hid_t group, const char *name, const H5L_info_t *link_info,
-    void *_udata)
-{
-    H5G_ref_path_iter_t *udata = (H5G_ref_path_iter_t*)_udata;
-    herr_t ret_value = H5_ITER_CONT;       /* Return value */
-    
-    FUNC_ENTER_NOAPI_NOINIT(H5G_refname_iterator)
-    
-    /* We only care about hard links */
-    if(link_info->type == H5L_TYPE_HARD) {
-        H5G_loc_t loc;              /* Group location of parent */
-
-        /* Look up group's location */
-        if(H5G_loc(group, &loc) < 0)
-            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, H5_ITER_ERROR, "not a location")
-
-        /* Check for finding the object */
-        /* (checks against the file in the location as well, to make certain that
-         *  the correct object is found in a mounted file hierarchy)
-         */
-        if(udata->loc->addr == link_info->u.address && udata->loc->file == loc.oloc->file) {
-            size_t len_needed;              /* Length of container string needed */
-
-            /* Build the object's full name */
-            len_needed = HDstrlen(udata->container) + HDstrlen(name) + 2;
-            if(len_needed > udata->max_container_len) {
-                if(NULL == (udata->container = H5MM_realloc(udata->container, len_needed)))
-                    HGOTO_ERROR(H5E_SYM, H5E_NOSPACE, H5_ITER_ERROR, "can't allocate path string")
-                udata->max_container_len = len_needed;
-            } /* end if */
-            HDstrcat(udata->container, name); 
-
-            /* We found a match so we return immediately */
-            HGOTO_DONE(H5_ITER_STOP)
-        } /* end if */
-        else {
-            H5O_info_t oinfo;   /* Object information */
-            H5O_loc_t tmp_oloc; /* Temporary object location */
-
-            /* Check if we've seen this object before */
-            if(H5SL_search(udata->ref_path_table, &link_info->u.address))
-                HGOTO_DONE(H5_ITER_CONT)
-
-            /* Go retrieve the object information */
-            tmp_oloc.file = loc.oloc->file;
-            tmp_oloc.addr = link_info->u.address;
-            if(H5O_get_info(&tmp_oloc, udata->dxpl_id, FALSE, &oinfo) < 0)
-                HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, H5_ITER_ERROR, "unable to get object info")
-
-            /* If its ref count is > 1, we add it to the list of visited objects */
-            if(oinfo.rc > 1) {
-                haddr_t *new_node;                  /* New path node for table */
-
-                /* Allocate new path node */
-                if((new_node = H5FL_MALLOC(haddr_t)) == NULL)
-                    HGOTO_ERROR(H5E_SYM, H5E_NOSPACE, H5_ITER_ERROR, "can't allocate path node")
-
-                /* Set node information */
-                *new_node = link_info->u.address;
-
-                /* Insert into skip list */
-                if(H5SL_insert(udata->ref_path_table, new_node, new_node) < 0)
-                    HGOTO_ERROR(H5E_SYM, H5E_CANTINSERT, H5_ITER_ERROR, "can't insert path node into table")
-            } /* end if */
-
-            /* If it's a group, we recurse into it */
-            if(oinfo.type == H5G_GROUP) {
-                H5G_link_iterate_t lnk_op;          /* Link operator */
-                hsize_t last_obj;
-                size_t len_needed;                  /* Length of container string needed */
-                size_t len;
-
-                /* Build full path name of group to recurse into */
-                len = HDstrlen(udata->container);
-                len_needed = len + HDstrlen(name) + 2;
-                if(len_needed > udata->max_container_len) {
-                    if(NULL == (udata->container = H5MM_realloc(udata->container, len_needed)))
-                        HGOTO_ERROR(H5E_SYM, H5E_NOSPACE, H5_ITER_ERROR, "can't allocate path string")
-                    udata->max_container_len = len_needed;
-                } /* end if */
-                if(!udata->is_root_group)
-                    HDstrcat(udata->container, name); 
-                else
-                    udata->is_root_group = FALSE;
-                HDstrcat(udata->container, "/"); 
-                    
-                /* Build iterator operator */
-                lnk_op.op_type = H5G_LINK_OP_APP;
-                lnk_op.u.app_op = H5G_refname_iterator;
-
-                ret_value = H5G_obj_iterate(udata->file, udata->container, H5_INDEX_NAME, H5_ITER_NATIVE, (hsize_t)0, &last_obj, &lnk_op, udata, udata->dxpl_id);
-                
-                /* If we didn't find the object, truncate the name to not include group name anymore */
-                if(!ret_value)
-                    udata->container[len] = '\0'; 
-            } /* end if */
-        } /* end else */
-    } /* end if */
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5G_refname_iterator() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5G_free_ref_path_node
- *
- * Purpose:     Free the key for a reference path table node
- *
- * Return:      Non-negative on success, negative on failure
- *
- * Programmer:  Quincey Koziol
- *
- * Modifications:
- * 		Leon Arber, Oct. 25, 2006.  Moved into H5G from h5ls
- * 		tools lib for looking up path to reference.
- *
- * 		Quincey Koziol, Nov. 3, 2006
- * 		Cleaned up code.
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5G_free_ref_path_node(void *item, void UNUSED *key, void UNUSED *operator_data/*in,out*/)
-{
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5G_free_ref_path_node)
-
-    H5FL_FREE(haddr_t, item);
-
-    FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5G_free_ref_path_node() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5G_get_refobj_name
- *
- * Purpose:     Tries to figure out the path to a reference.
- *
- * Return:      returns size of path name, and copies it into buffer
- * 		pointed to by name if that buffer is big enough.
- * 		0 if it cannot find the path
- * 		negative on failure.
- *
- * Programmer:  Leon Arber, Nov 1, 2006.
- *
- * Modifications:
- * 		Quincey Koziol, Nov. 3, 2006
- * 		Cleaned up code.
- *
- *-------------------------------------------------------------------------
- */
-ssize_t
-H5G_get_refobj_name(hid_t file, hid_t dxpl_id, const H5O_loc_t *loc,
-    char *name, size_t size)
-{
-    H5G_ref_path_iter_t udata;  /* User data for iteration */
-    H5G_loc_t root_loc;         /* Root location */
-    H5L_info_t root_info;       /* Link info for root group */
-    herr_t status;              /* Status from iteration */
-    ssize_t ret_value;          /* Return value */
-
-    FUNC_ENTER_NOAPI(H5G_get_refobj_name, FAIL)
-
-    /* Construct the link info for the root group */
-    if(H5G_loc(file, &root_loc) < 0)
-	HGOTO_ERROR(H5E_SYM, H5E_CANTGET, FAIL, "can't get root group's location")
-    HDmemset(&root_info, 0, sizeof(root_info));
-    root_info.type = H5L_TYPE_HARD;
-    root_info.u.address = root_loc.oloc->addr;
-
-    /* Set up user data for iterator */
-    udata.file = file;
-    udata.dxpl_id = dxpl_id;
-    udata.is_root_group = TRUE;
-    if(NULL == (udata.container = H5MM_strdup("")))
-        HGOTO_ERROR(H5E_SYM, H5E_NOSPACE, FAIL, "can't allocate root group name")
-    udata.max_container_len = 1;
-    udata.loc = loc;
-    
-    /* Create skip list to store reference path information */
-    if((udata.ref_path_table = H5SL_create(H5SL_TYPE_HADDR, 0.5, (size_t)16)) == NULL)
-        HGOTO_ERROR(H5E_SYM, H5E_CANTCREATE, FAIL, "can't create skip list for path nodes")
-
-    /* Iterate over all the objects in the file */
-    if((status = H5G_refname_iterator(file, "/", &root_info, &udata)) < 0)
-        HGOTO_ERROR(H5E_SYM, H5E_BADITER, FAIL, "group iteration failed while looking for object name")
-    else if(status > 0) {
-        /* Set the length of the full path */
-        ret_value = HDstrlen(udata.container);
-
-        /* If there's a buffer provided, copy into it, up to the limit of its size */
-        if(name) {
-            HDstrncpy(name, udata.container, size);
-            if((size_t)ret_value >= size)
-                name[size - 1] = '\0';
-        } /* end if */
-    } /* end if */
-    else
-        ret_value = 0;
-   
-done:    
-    /* Release resources */
-    H5MM_xfree(udata.container);
-    if(udata.ref_path_table)
-        H5SL_destroy(udata.ref_path_table, H5G_free_ref_path_node, NULL);
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5G_get_refobj_name() */
 

@@ -3,8 +3,8 @@ Expected output for 'h5dump --xml tsaf.h5'
 #############################
 <?xml version="1.0" encoding="UTF-8"?>
 <hdf5:HDF5-File xmlns:hdf5="http://hdfgroup.org/DTDs/HDF5-File" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://hdfgroup.org/DTDs/HDF5File http://hdfgroup.org/DTDs/HDF5-File.xsd">
-<hdf5:RootGroup OBJ-XID="xid_696" H5Path="/">
-   <hdf5:Dataset Name=".DSL_METADATA" OBJ-XID="xid_744" H5Path= "/.DSL_METADATA" Parents="xid_696" H5ParentPaths="/">
+<hdf5:RootGroup OBJ-XID="xid_696-0" H5Path="/">
+   <hdf5:Dataset Name=".DSL_METADATA" OBJ-XID="xid_744-0" H5Path= "/.DSL_METADATA" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ChunkedLayout Ndims="1">
             <hdf5:ChunkDimension DimSize="1024" />
@@ -307,7 +307,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="Blob" OBJ-XID="xid_17612" H5Path= "/Blob" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="Blob" OBJ-XID="xid_17612-0" H5Path= "/Blob" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ChunkedLayout Ndims="1">
             <hdf5:ChunkDimension DimSize="1024" />
@@ -390,7 +390,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="Cat" OBJ-XID="xid_169596" H5Path= "/Cat" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="Cat" OBJ-XID="xid_169596-0" H5Path= "/Cat" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ChunkedLayout Ndims="1">
             <hdf5:ChunkDimension DimSize="1024" />
@@ -539,7 +539,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="Collection" OBJ-XID="xid_425460" H5Path= "/Collection" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="Collection" OBJ-XID="xid_425460-0" H5Path= "/Collection" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ChunkedLayout Ndims="1">
             <hdf5:ChunkDimension DimSize="1024" />
@@ -765,7 +765,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="Field" OBJ-XID="xid_619980" H5Path= "/Field" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="Field" OBJ-XID="xid_619980-0" H5Path= "/Field" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ChunkedLayout Ndims="1">
             <hdf5:ChunkDimension DimSize="1024" />
@@ -1041,7 +1041,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="FieldTmpl" OBJ-XID="xid_518404" H5Path= "/FieldTmpl" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="FieldTmpl" OBJ-XID="xid_518404-0" H5Path= "/FieldTmpl" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ChunkedLayout Ndims="1">
             <hdf5:ChunkDimension DimSize="1024" />
@@ -1296,7 +1296,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="IndexSpec" OBJ-XID="xid_51916" H5Path= "/IndexSpec" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="IndexSpec" OBJ-XID="xid_51916-0" H5Path= "/IndexSpec" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ChunkedLayout Ndims="1">
             <hdf5:ChunkDimension DimSize="1024" />
@@ -1329,7 +1329,7 @@ Expected output for 'h5dump --xml tsaf.h5'
                      <hdf5:Field FieldName="_">
                         <hdf5:DataType>
                            <hdf5:ArrayType Ndims="1">
-                              <hdf5:ArrayDimension DimSize="8"/>
+                              <hdf5:ArrayDimension DimSize="8" DimPerm="0"/>
                               <hdf5:DataType>
                                  <hdf5:AtomicType>
                                     <hdf5:IntegerType ByteOrder="BE" Sign="true" Size="4" />
@@ -1347,7 +1347,7 @@ Expected output for 'h5dump --xml tsaf.h5'
                      <hdf5:Field FieldName="_">
                         <hdf5:DataType>
                            <hdf5:ArrayType Ndims="1">
-                              <hdf5:ArrayDimension DimSize="8"/>
+                              <hdf5:ArrayDimension DimSize="8" DimPerm="0"/>
                               <hdf5:DataType>
                                  <hdf5:AtomicType>
                                     <hdf5:IntegerType ByteOrder="BE" Sign="true" Size="4" />
@@ -1365,7 +1365,7 @@ Expected output for 'h5dump --xml tsaf.h5'
                      <hdf5:Field FieldName="_">
                         <hdf5:DataType>
                            <hdf5:ArrayType Ndims="1">
-                              <hdf5:ArrayDimension DimSize="8"/>
+                              <hdf5:ArrayDimension DimSize="8" DimPerm="0"/>
                               <hdf5:DataType>
                                  <hdf5:AtomicType>
                                     <hdf5:IntegerType ByteOrder="BE" Sign="true" Size="4" />
@@ -1472,7 +1472,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="Relation" OBJ-XID="xid_465812" H5Path= "/Relation" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="Relation" OBJ-XID="xid_465812-0" H5Path= "/Relation" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ChunkedLayout Ndims="1">
             <hdf5:ChunkDimension DimSize="1024" />
@@ -1756,7 +1756,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="Set" OBJ-XID="xid_254332" H5Path= "/Set" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="Set" OBJ-XID="xid_254332-0" H5Path= "/Set" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ChunkedLayout Ndims="1">
             <hdf5:ChunkDimension DimSize="1024" />
@@ -1882,7 +1882,7 @@ Expected output for 'h5dump --xml tsaf.h5'
                      <hdf5:Field FieldName="_">
                         <hdf5:DataType>
                            <hdf5:ArrayType Ndims="1">
-                              <hdf5:ArrayDimension DimSize="16"/>
+                              <hdf5:ArrayDimension DimSize="16" DimPerm="0"/>
                               <hdf5:DataType>
                                  <hdf5:AtomicType>
                                     <hdf5:IntegerType ByteOrder="BE" Sign="true" Size="4" />
@@ -1953,7 +1953,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="field-coords_0002" OBJ-XID="xid_14968" H5Path= "/field-coords_0002" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="field-coords_0002" OBJ-XID="xid_14968-0" H5Path= "/field-coords_0002" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ContiguousLayout/>
       </hdf5:StorageLayout>
@@ -1979,7 +1979,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="field-displacements_0007" OBJ-XID="xid_15968" H5Path= "/field-displacements_0007" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="field-displacements_0007" OBJ-XID="xid_15968-0" H5Path= "/field-displacements_0007" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ContiguousLayout/>
       </hdf5:StorageLayout>
@@ -2006,7 +2006,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="field-distribution_factors_0003" OBJ-XID="xid_15384" H5Path= "/field-distribution_factors_0003" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="field-distribution_factors_0003" OBJ-XID="xid_15384-0" H5Path= "/field-distribution_factors_0003" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ContiguousLayout/>
       </hdf5:StorageLayout>
@@ -2031,7 +2031,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="field-pressure_0013" OBJ-XID="xid_17332" H5Path= "/field-pressure_0013" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="field-pressure_0013" OBJ-XID="xid_17332-0" H5Path= "/field-pressure_0013" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ContiguousLayout/>
       </hdf5:StorageLayout>
@@ -2056,7 +2056,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="field-stress_0011" OBJ-XID="xid_16384" H5Path= "/field-stress_0011" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="field-stress_0011" OBJ-XID="xid_16384-0" H5Path= "/field-stress_0011" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ContiguousLayout/>
       </hdf5:StorageLayout>
@@ -2081,7 +2081,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="field-temperature_0004" OBJ-XID="xid_15676" H5Path= "/field-temperature_0004" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="field-temperature_0004" OBJ-XID="xid_15676-0" H5Path= "/field-temperature_0004" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ContiguousLayout/>
       </hdf5:StorageLayout>
@@ -2106,7 +2106,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="field-temperature_0012" OBJ-XID="xid_17032" H5Path= "/field-temperature_0012" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="field-temperature_0012" OBJ-XID="xid_17032-0" H5Path= "/field-temperature_0012" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ContiguousLayout/>
       </hdf5:StorageLayout>
@@ -2131,7 +2131,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="metablob00000.blob" OBJ-XID="xid_761500" H5Path= "/metablob00000.blob" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="metablob00000.blob" OBJ-XID="xid_761500-0" H5Path= "/metablob00000.blob" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ChunkedLayout Ndims="1">
             <hdf5:ChunkDimension DimSize="32" />
@@ -2160,7 +2160,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="metablob00000.index" OBJ-XID="xid_758876" H5Path= "/metablob00000.index" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="metablob00000.index" OBJ-XID="xid_758876-0" H5Path= "/metablob00000.index" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ChunkedLayout Ndims="1">
             <hdf5:ChunkDimension DimSize="32" />
@@ -2203,7 +2203,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="ssrel-_0000" OBJ-XID="xid_8924" H5Path= "/ssrel-_0000" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="ssrel-_0000" OBJ-XID="xid_8924-0" H5Path= "/ssrel-_0000" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ContiguousLayout/>
       </hdf5:StorageLayout>
@@ -2228,7 +2228,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="ssrel-_0001" OBJ-XID="xid_9232" H5Path= "/ssrel-_0001" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="ssrel-_0001" OBJ-XID="xid_9232-0" H5Path= "/ssrel-_0001" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ContiguousLayout/>
       </hdf5:StorageLayout>
@@ -2253,7 +2253,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="ssrel-_0002" OBJ-XID="xid_9520" H5Path= "/ssrel-_0002" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="ssrel-_0002" OBJ-XID="xid_9520-0" H5Path= "/ssrel-_0002" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ContiguousLayout/>
       </hdf5:StorageLayout>
@@ -2278,7 +2278,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="ssrel-_0003" OBJ-XID="xid_9820" H5Path= "/ssrel-_0003" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="ssrel-_0003" OBJ-XID="xid_9820-0" H5Path= "/ssrel-_0003" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ContiguousLayout/>
       </hdf5:StorageLayout>
@@ -2303,7 +2303,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="ssrel-_0004" OBJ-XID="xid_10108" H5Path= "/ssrel-_0004" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="ssrel-_0004" OBJ-XID="xid_10108-0" H5Path= "/ssrel-_0004" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ContiguousLayout/>
       </hdf5:StorageLayout>
@@ -2328,7 +2328,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="ssrel-_0005" OBJ-XID="xid_10400" H5Path= "/ssrel-_0005" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="ssrel-_0005" OBJ-XID="xid_10400-0" H5Path= "/ssrel-_0005" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ContiguousLayout/>
       </hdf5:StorageLayout>
@@ -2353,7 +2353,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="ssrel-_0006" OBJ-XID="xid_10684" H5Path= "/ssrel-_0006" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="ssrel-_0006" OBJ-XID="xid_10684-0" H5Path= "/ssrel-_0006" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ContiguousLayout/>
       </hdf5:StorageLayout>
@@ -2378,7 +2378,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="ssrel-_0007" OBJ-XID="xid_11300" H5Path= "/ssrel-_0007" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="ssrel-_0007" OBJ-XID="xid_11300-0" H5Path= "/ssrel-_0007" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ContiguousLayout/>
       </hdf5:StorageLayout>
@@ -2403,7 +2403,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="ssrel-_0008" OBJ-XID="xid_11576" H5Path= "/ssrel-_0008" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="ssrel-_0008" OBJ-XID="xid_11576-0" H5Path= "/ssrel-_0008" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ContiguousLayout/>
       </hdf5:StorageLayout>
@@ -2428,7 +2428,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="ssrel-_0009" OBJ-XID="xid_11888" H5Path= "/ssrel-_0009" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="ssrel-_0009" OBJ-XID="xid_11888-0" H5Path= "/ssrel-_0009" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ContiguousLayout/>
       </hdf5:StorageLayout>
@@ -2453,7 +2453,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="ssrel-_0010" OBJ-XID="xid_12176" H5Path= "/ssrel-_0010" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="ssrel-_0010" OBJ-XID="xid_12176-0" H5Path= "/ssrel-_0010" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ContiguousLayout/>
       </hdf5:StorageLayout>
@@ -2478,7 +2478,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="ssrel-_0011" OBJ-XID="xid_12788" H5Path= "/ssrel-_0011" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="ssrel-_0011" OBJ-XID="xid_12788-0" H5Path= "/ssrel-_0011" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ContiguousLayout/>
       </hdf5:StorageLayout>
@@ -2503,7 +2503,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="ssrel-_0012" OBJ-XID="xid_13080" H5Path= "/ssrel-_0012" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="ssrel-_0012" OBJ-XID="xid_13080-0" H5Path= "/ssrel-_0012" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ContiguousLayout/>
       </hdf5:StorageLayout>
@@ -2528,7 +2528,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="toporel-_0017" OBJ-XID="xid_13372" H5Path= "/toporel-_0017" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="toporel-_0017" OBJ-XID="xid_13372-0" H5Path= "/toporel-_0017" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ContiguousLayout/>
       </hdf5:StorageLayout>
@@ -2553,7 +2553,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="toporel-_0018" OBJ-XID="xid_13708" H5Path= "/toporel-_0018" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="toporel-_0018" OBJ-XID="xid_13708-0" H5Path= "/toporel-_0018" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ContiguousLayout/>
       </hdf5:StorageLayout>
@@ -2578,7 +2578,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="toporel-_0019" OBJ-XID="xid_14344" H5Path= "/toporel-_0019" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="toporel-_0019" OBJ-XID="xid_14344-0" H5Path= "/toporel-_0019" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ContiguousLayout/>
       </hdf5:StorageLayout>
@@ -2603,7 +2603,7 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Dataset Name="toporel-_0020" OBJ-XID="xid_14632" H5Path= "/toporel-_0020" Parents="xid_696" H5ParentPaths="/">
+   <hdf5:Dataset Name="toporel-_0020" OBJ-XID="xid_14632-0" H5Path= "/toporel-_0020" Parents="xid_696-0" H5ParentPaths="/">
       <hdf5:StorageLayout>
          <hdf5:ContiguousLayout/>
       </hdf5:StorageLayout>
@@ -2628,9 +2628,9 @@ Expected output for 'h5dump --xml tsaf.h5'
          </hdf5:DataFromFile>
       </hdf5:Data>
    </hdf5:Dataset>
-   <hdf5:Group Name=".attributes" OBJ-XID="xid_5072" H5Path="/.attributes" Parents="xid_696" H5ParentPaths="/" >
-      <hdf5:Group Name="database" OBJ-XID="xid_5728" H5Path="/.attributes/database" Parents="xid_5072" H5ParentPaths="/.attributes" >
-         <hdf5:Dataset Name=".SAF_DbProps" OBJ-XID="xid_6104" H5Path= "/.attributes/database/.SAF_DbProps" Parents="xid_5728" H5ParentPaths="/.attributes/database">
+   <hdf5:Group Name=".attributes" OBJ-XID="xid_5072-0" H5Path="/.attributes" Parents="xid_696-0" H5ParentPaths="/" >
+      <hdf5:Group Name="database" OBJ-XID="xid_5728-0" H5Path="/.attributes/database" Parents="xid_5072-0" H5ParentPaths="/.attributes" >
+         <hdf5:Dataset Name=".SAF_DbProps" OBJ-XID="xid_6104-0" H5Path= "/.attributes/database/.SAF_DbProps" Parents="xid_5728-0" H5ParentPaths="/.attributes/database">
             <hdf5:StorageLayout>
                <hdf5:ContiguousLayout/>
             </hdf5:StorageLayout>

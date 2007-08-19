@@ -187,15 +187,12 @@ int aux_assign_obj(const char* name,            /* object name from traverse lis
  *
  *-------------------------------------------------------------------------
  */
-
 int apply_filters(const char* name,    /* object name from traverse list */
                   int rank,            /* rank of dataset */
                   hsize_t *dims,       /* dimensions of dataset */
                   hid_t dcpl_id,       /* (IN,OUT) dataset creation property list */
                   pack_opt_t *options, /* repack options */
                   int *has_filter)     /* (OUT) object NAME has a filter */
-
-
 {
     int          nfilters;       /* number of filters in DCPL */
     hsize_t      chsize[64];     /* chunk size in elements */
@@ -267,8 +264,6 @@ int apply_filters(const char* name,    /* object name from traverse list */
     * H5Z_FILTER_SHUFFLE    2 , shuffle the data
     * H5Z_FILTER_FLETCHER32 3 , fletcher32 checksum of EDC
     * H5Z_FILTER_SZIP       4 , szip compression
-    * H5Z_FILTER_NBIT       5 , nbit compression
-    * H5Z_FILTER_SCALEOFFSET 6 , scaleoffset compression
     *-------------------------------------------------------------------------
     */
     
@@ -276,9 +271,9 @@ int apply_filters(const char* name,    /* object name from traverse list */
     {
         
     /*-------------------------------------------------------------------------
-    * filters require CHUNK layout; if we do not have one define a default
-    *-------------------------------------------------------------------------
-        */
+     * filters require CHUNK layout; if we do not have one define a default
+     *-------------------------------------------------------------------------
+     */
         if (obj.layout==-1)
         {
             obj.chunk.rank=rank;
@@ -352,42 +347,14 @@ int apply_filters(const char* name,    /* object name from traverse list */
                 if (H5Pset_fletcher32(dcpl_id)<0)
                     return -1;
                 break;
-           /*----------- -------------------------------------------------------------
-            * H5Z_FILTER_NBIT , NBIT compression
-            *-------------------------------------------------------------------------
-            */
-            case H5Z_FILTER_NBIT:
-                if(H5Pset_chunk(dcpl_id, obj.chunk.rank, obj.chunk.chunk_lengths)<0)
-                    return -1;
-                if (H5Pset_nbit(dcpl_id)<0)
-                    return -1;
-                break;
-            /*----------- -------------------------------------------------------------
-             * H5Z_FILTER_SCALEOFFSET , scale+offset compression
-             *-------------------------------------------------------------------------
-             */
-                
-            case H5Z_FILTER_SCALEOFFSET:
-                {
-                    H5Z_SO_scale_type_t scale_type;
-                    int                 scale_factor;
-                    
-                    scale_type   = obj.filter[i].cd_values[0];
-                    scale_factor = obj.filter[i].cd_values[1];
-                    
-                    if(H5Pset_chunk(dcpl_id, obj.chunk.rank, obj.chunk.chunk_lengths)<0)
-                        return -1;
-                    if (H5Pset_scaleoffset(dcpl_id,scale_type,scale_factor)<0)
-                        return -1;
-                }
-                break;
+           
             } /* switch */
         }/*i*/
         
     }
     /*obj.nfilters*/
     
-    /*-------------------------------------------------------------------------
+   /*-------------------------------------------------------------------------
     * layout
     *-------------------------------------------------------------------------
     */
@@ -443,7 +410,7 @@ int print_filters(hid_t dcpl_id)
  for (i=0; i<nfilters; i++)
  {
   cd_nelmts = NELMTS(cd_values);
-#ifdef H5_WANT_H5_V1_6_COMPAT
+
   filtn = H5Pget_filter(dcpl_id,
    (unsigned)i,
    &filt_flags,
@@ -451,16 +418,7 @@ int print_filters(hid_t dcpl_id)
    cd_values,
    sizeof(f_name),
    f_name);
-#else
-  filtn = H5Pget_filter(dcpl_id,
-   (unsigned)i,
-   &filt_flags,
-   &cd_nelmts,
-   cd_values,
-   sizeof(f_name),
-   f_name,
-   NULL);
-#endif /* H5_WANT_H5_V1_6_COMPAT */
+
 
   f_name[sizeof(f_name)-1] = '\0';
   sprintf(s, "Filter-%d:", i);

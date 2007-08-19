@@ -18,7 +18,6 @@
 #else
 #include <iostream>
 #endif
-
 #include <string>
 
 #include "H5Include.h"
@@ -62,7 +61,7 @@ PropList::PropList( const PropList& original ) : IdComponent( original ) {}
 // Description
 //		This function calls H5Pcreate to create a new property list
 //		if the given id, plist_id, is that of a property class.  If
-//		the given id is equal to H5P_ROOT, then set this
+//		the given id is equal to H5P_NO_CLASS, then set this
 //		property's id to H5P_DEFAULT, otherwise, to the given id.
 //		Note: someone else added this code without comments and this
 //		description was what I came up with from reading the code.
@@ -79,7 +78,7 @@ PropList::PropList( const hid_t plist_id ) : IdComponent(0)
 	}
     }
     else {
-	if(plist_id==H5P_ROOT)
+	if(plist_id==H5P_NO_CLASS)
 	    id=H5P_DEFAULT;
 	else
 	    id=plist_id;
@@ -94,7 +93,7 @@ PropList::PropList( const hid_t plist_id ) : IdComponent(0)
 // Programmer	Binh-Minh Ribler - 2000
 // Modification
 //		- Replaced resetIdComponent() with decRefCount() to use C
-//		library ID reference counting mechanism - BMR, Jun 1, 2004
+//		library ID reference counting mechanism - BMR, Feb 20, 2005
 //		- Replaced decRefCount with close() to let the C library
 //		handle the reference counting - BMR, Jun 1, 2006
 //--------------------------------------------------------------------------
@@ -157,7 +156,7 @@ void PropList::copyProp(PropList& dest, const char *name) const
 /// 		It differs from the above function only in what arguments it
 ///		accepts.
 ///\param	dest - IN: Destination property list or class
-///\param	name - IN: Name of the property to copy - \c std::string
+///\param	name - IN: Name of the property to copy - \c H5std_string
 // Programmer	Binh-Minh Ribler - Jul, 2005
 //--------------------------------------------------------------------------
 void PropList::copyProp( PropList& dest, const H5std_string& name ) const
@@ -194,7 +193,7 @@ void PropList::copyProp( PropList& dest, PropList& src, const char *name ) const
 ///		accepts. - Obsolete
 ///\param	dest - IN: Destination property list or class
 ///\param	src  - IN: Source property list or class
-///\param	name - IN: Name of the property to copy - \c std::string
+///\param	name - IN: Name of the property to copy - \c H5std_string
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 void PropList::copyProp( PropList& dest, PropList& src, const H5std_string& name ) const
@@ -226,17 +225,17 @@ void PropList::close()
 //--------------------------------------------------------------------------
 // Function:	PropList::getClass
 ///\brief	Returns the class of this property list, i.e. \c H5P_FILE_CREATE...
-///\return	The property list class if it is not equal to \c H5P_ROOT
+///\return	The property list class if it is not equal to \c H5P_NO_CLASS
 ///\exception	H5::PropListIException
 // Programmer	Binh-Minh Ribler - April, 2004
 //--------------------------------------------------------------------------
 hid_t PropList::getClass() const
 {
    hid_t plist_class = H5Pget_class( id );
-   if( plist_class == H5P_ROOT )
+   if( plist_class == H5P_NO_CLASS )
    {
       throw PropListIException(inMemFunc("getClass"),
-		"H5Pget_class failed - returned H5P_ROOT");
+		"H5Pget_class failed - returned H5P_NO_CLASS");
    }
    return( plist_class );
 }
@@ -273,7 +272,7 @@ bool PropList::propExist(const char* name ) const
 ///\brief	This is an overloaded member function, provided for convenience.
 /// 		It differs from the above function only in what arguments it
 ///		accepts.
-///\param	name - IN: Name of property to check for - \c std::string
+///\param	name - IN: Name of property to check for - \c H5std_string
 // Programmer:  Binh-Minh Ribler - April, 2004
 //--------------------------------------------------------------------------
 bool PropList::propExist(const H5std_string& name ) const
@@ -326,7 +325,7 @@ void PropList::getProperty(const char* name, void* value) const
 ///   		It differs from the above function only in what arguments it
 ///		accepts.
 ///\param	name -  IN: Name of property to query - \c char pointer
-///\return	The property that is a \c std::string.
+///\return	The property that is a \c H5std_string.
 ///\exception	H5::PropListIException
 // Programmer:  Binh-Minh Ribler - April, 2004
 //--------------------------------------------------------------------------
@@ -352,7 +351,7 @@ H5std_string PropList::getProperty(const char* name) const
 ///\brief	This is an overloaded member function, provided for convenience.
 ///   		It differs from the above function only in what arguments it
 ///		accepts.
-///\param	name -   IN: Name of property to query - \c std::string
+///\param	name -   IN: Name of property to query - \c H5std_string
 ///\param	value - OUT: Pointer to the buffer for the property value
 // Programmer:  Binh-Minh Ribler - April, 2004
 //--------------------------------------------------------------------------
@@ -365,8 +364,8 @@ void PropList::getProperty(const H5std_string& name, void* value) const
 ///\brief	This is an overloaded member function, provided for convenience.
 ///   		It differs from the above function only in what arguments it
 ///		accepts.
-///\param	name -  IN: Name of property to query - \c std::string
-///\return	The property that is a \c std::string.
+///\param	name -  IN: Name of property to query - \c H5std_string
+///\return	The property that is a \c H5std_string.
 // Programmer:  Binh-Minh Ribler - April, 2004
 //--------------------------------------------------------------------------
 H5std_string PropList::getProperty(const H5std_string& name) const
@@ -402,7 +401,7 @@ size_t PropList::getPropSize(const char *name) const
 ///\brief	This is an overloaded member function, provided for convenience.
 /// 		It differs from the above function only in what arguments it
 ///		accepts.
-///\param	name - IN: Name of property to query - \c std::string
+///\param	name - IN: Name of property to query - \c H5std_string
 ///
 // Programmer:  Binh-Minh Ribler - April, 2004
 //--------------------------------------------------------------------------
@@ -489,7 +488,7 @@ void PropList::setProperty(const char* name, const char* charptr) const
 /// 		It differs from the above function only in what arguments it
 ///		accepts.
 ///\param	name - IN: Name of property to set - \c char pointer
-///\param	strg - IN: Value for the property is a \c std::string
+///\param	strg - IN: Value for the property is a \c H5std_string
 // Programmer:  Binh-Minh Ribler - April, 2004
 //--------------------------------------------------------------------------
 void PropList::setProperty(const char* name, H5std_string& strg) const
@@ -502,7 +501,7 @@ void PropList::setProperty(const char* name, H5std_string& strg) const
 ///\brief	This is an overloaded member function, provided for convenience.
 /// 		It differs from the above function only in what arguments it
 ///		accepts.
-///\param	name  - IN: Name of property to set - \c std::string
+///\param	name  - IN: Name of property to set - \c H5std_string
 ///\param	value - IN: Void pointer to the value for the property
 // Programmer:  Binh-Minh Ribler - April, 2004
 //--------------------------------------------------------------------------
@@ -516,8 +515,8 @@ void PropList::setProperty(const H5std_string& name, void* value) const
 ///\brief	This is an overloaded member function, provided for convenience.
 /// 		It differs from the above function only in what arguments it
 ///		accepts.
-///\param	name - IN: Name of property to set - \c std::string
-///\param	strg - IN: Value for the property is a \c std::string
+///\param	name - IN: Name of property to set - \c H5std_string
+///\param	strg - IN: Value for the property is a \c H5std_string
 // Programmer:  Binh-Minh Ribler - April, 2004
 //--------------------------------------------------------------------------
 void PropList::setProperty(const H5std_string& name, H5std_string& strg) const
@@ -569,7 +568,7 @@ void PropList::removeProp(const char *name) const
 ///\brief	This is an overloaded member function, provided for convenience.
 /// 		It differs from the above function only in what arguments it
 ///		accepts.
-///\param	name - IN: Name of property to remove - \c std::string
+///\param	name - IN: Name of property to remove - \c H5std_string
 // Programmer:  Binh-Minh Ribler - April, 2004
 //--------------------------------------------------------------------------
 void PropList::removeProp(const H5std_string& name) const
@@ -623,7 +622,7 @@ PropList PropList::getClassParent() const
 // Programmer	Binh-Minh Ribler - 2000
 // Modification
 //		- Replaced resetIdComponent() with decRefCount() to use C
-//		library ID reference counting mechanism - BMR, Jun 1, 2004
+//		library ID reference counting mechanism - BMR, Feb 20, 2005
 //		- Replaced decRefCount with close() to let the C library
 //		handle the reference counting - BMR, Jun 1, 2006
 //--------------------------------------------------------------------------

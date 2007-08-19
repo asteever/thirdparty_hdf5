@@ -51,8 +51,6 @@ namespace H5 {
 // Function:	DataType overloaded constructor
 ///\brief	Creates a datatype using an existing datatype's id
 ///\param	existing_id - IN: Id of the existing datatype
-///\param	predefined  - IN: Indicates whether or not this datatype is
-///		a predefined datatype; default to \c false
 // Description
 //		Constructor creates a copy of an existing DataType using
 //		its id.  The argument "predefined" is default to false;
@@ -87,7 +85,7 @@ DataType::DataType( const H5T_class_t type_class, size_t size ) : H5Object()
 ///\brief	Given a reference to some object, returns that datatype
 ///\param       obj - IN: Location reference object is in
 ///\param	ref - IN: Reference pointer
-///\parDescription
+///\par Description
 ///		\c obj can be DataSet, Group, H5File, or named DataType, that 
 ///		is a datatype that has been named by DataType::commit.
 // Programmer	Binh-Minh Ribler - Oct, 2006
@@ -145,7 +143,7 @@ void DataType::copy( const DataType& like_type )
 ///\param	dset - IN: Dataset 
 ///\exception	H5::DataTypeIException
 // Programmer	Binh-Minh Ribler - Jan, 2007
-///\parDescription
+///\par Description
 ///		The resulted dataset will be transient and modifiable.
 //--------------------------------------------------------------------------
 void DataType::copy(const DataSet& dset)
@@ -354,6 +352,49 @@ void DataType::convert( const DataType& dest, size_t nelmts, void *buf, void *ba
    }
 }
 
+/*
+These two functions may not work properly.  They will be re-evaluated 
+and tested throughly.  BMR - Oct 29, 2005
+*/
+
+//--------------------------------------------------------------------------
+// Function:	DataType::setOverflow
+///\brief	Sets the overflow handler to a specified function.
+///\param	func       - IN: Function to be called when overflow occurs
+///\return	Pointer to a suitable conversion function
+///\exception	H5::DataTypeIException
+///\par Description
+///		The function specified by \a func will be called for all 
+///		data type conversions that result in an overflow.
+///		For more information, please see:
+/// <A HREF="../RM_H5T.html#Datatype-SetOverflow">../RM_H5T.html#Datatype-SetOverflow</A>
+// Programmer	Binh-Minh Ribler - 2004
+//--------------------------------------------------------------------------
+void DataType::setOverflow( H5T_overflow_t func ) const
+{
+   // Call C routine H5Tset_overflow to set the overflow handler
+   herr_t ret_value = H5Tset_overflow( func );
+   if( ret_value < 0 )
+   {
+      throw DataTypeIException(inMemFunc("setOverflow"), "H5Tset_overflow failed");
+   }
+}
+
+//--------------------------------------------------------------------------
+// Function:	DataType::getOverflow
+///\brief	Returns a pointer to the current global overflow function.
+///\return	Pointer to an application-defined function if successful; 
+///		otherwise returns NULL; this can happen if no overflow 
+///		handling function is registered.
+///\exception	H5::DataTypeIException
+// Programmer	Binh-Minh Ribler - 2004
+//--------------------------------------------------------------------------
+H5T_overflow_t DataType::getOverflow(void) const
+{
+   return( H5Tget_overflow());  // C routine
+   // NULL can be returned as well
+}
+
 //--------------------------------------------------------------------------
 // Function:	DataType::lock
 ///\brief	Locks a datatype, making it read-only and non-destructible.
@@ -454,7 +495,7 @@ DataType DataType::getSuper() const
 ///\exception	H5::DataTypeIException
 ///\par Description
 ///		For more information, please see:
-/// http://hdf.ncsa.uiuc.edu/HDF5/doc/RM_H5T.html#Datatype-Register
+/// <A HREF="../RM_H5T.html#Datatype-Register">../RM_H5T.html#Datatype-Register</A>
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 void DataType::registerFunc( H5T_pers_t pers, const char* name, const DataType& dest, H5T_conv_t func ) const

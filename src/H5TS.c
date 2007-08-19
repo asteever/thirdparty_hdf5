@@ -65,7 +65,7 @@ static void H5TS_mutex_init(H5TS_mutex_t *mutex);
 static void
 H5TS_key_destructor(void *key_val)
 {
-    /* Use HDfree here instead of H5MM_xfree(), to avoid calling the H5CS routines */
+    /* Use HDfree here instead of H5MM_xfree(), to avoid calling the H5FS routines */
     if(key_val!=NULL)
         HDfree(key_val);
 }
@@ -272,8 +272,8 @@ H5TS_cancel_count_inc(void)
 	cancel_counter = H5MM_calloc(sizeof(H5TS_cancel_t));
 
 	if (!cancel_counter) {
-	    H5E_push_stack(NULL, "H5TS_cancel_count_inc",
-		     __FILE__, __LINE__, H5E_ERR_CLS_g, H5E_RESOURCE, H5E_NOSPACE, "memory allocation failed");
+	    H5E_push(H5E_RESOURCE, H5E_NOSPACE, "H5TS_cancel_count_inc",
+		     __FILE__, __LINE__, "memory allocation failed");
 	    return FAIL;
 	}
 

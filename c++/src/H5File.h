@@ -87,7 +87,7 @@ class H5_DLLCPP H5File : public IdComponent, public CommonFG {
 
 	// Creates a reference to a named HDF5 object or to a dataset region
 	// in this object.
-	void* Reference(const char* name, DataSpace& dataspace, H5R_type_t ref_type = H5R_DATASET_REGION) const; // will be obsolete
+	void* Reference(const char* name, DataSpace& dataspace, H5R_type_t ref_type = H5R_DATASET_REGION) const;
 
 	// Creates a reference to a named Hdf5 object in this object.
 	void* Reference(const char* name) const; // will be obsolete

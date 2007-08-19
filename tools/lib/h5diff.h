@@ -55,10 +55,6 @@ hsize_t  h5diff(const char *fname1,
                 const char *objname2,
                 diff_opt_t *options);
 
-#ifdef H5_HAVE_PARALLEL
-void phdiff_dismiss_workers(void);
-void print_manager_output(void);
-#endif
 
 #ifdef __cplusplus
 }
@@ -89,7 +85,7 @@ hsize_t diff( hid_t      file1_id,
               hid_t      file2_id,
               const char *path2,
               diff_opt_t *options,
-              H5G_obj_t  type );
+              H5G_obj_t1  type );
 
 hsize_t diff_compare( hid_t file1_id,
                       const char *file1_name,
@@ -151,7 +147,6 @@ hsize_t diff_attr(hid_t loc1_id,
  */
 
 void        print_found(hsize_t nfound);
-void        parallel_print(const char* format, ... );
 void        print_type(hid_t type);
 const char* diff_basename(const char *name);
 const char* get_type(int type);

@@ -39,7 +39,6 @@
 #include "H5Fpkg.h"
 #include "H5FDprivate.h"
 #include "H5MFprivate.h"
-#include "H5FDmulti.h"		/*multiple files partitioned by mem usage */
 
 
 /*-------------------------------------------------------------------------
@@ -216,7 +215,81 @@ done:
     FUNC_LEAVE_NOAPI(ret_value);
 }
 
-
+/*-------------------------------------------------------------------------
+ * Function:	H5MF_reserve
+ *
+ * Purpose:	Sets aside file space that has not yet been allocated, but will
+ *		be (or might be in the worst case).  This number is used to
+ *		ensure that there is room in the file when it is flushed to disk.
+ *
+ *		Nothing changes (and no error is generated) if the file is opened
+ *		as read-only.
+ *
+ * Return:	Success:	0
+ *
+ * 		Failure:	negative
+ *
+ * Programmer:	James Laird
+ *		Nat Furrer
+ *              Thursday, May 27, 2004
+ *
+ * Modifications:
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5MF_reserve(H5F_t *f, hsize_t size)
+{
+    herr_t ret_value = SUCCEED;
+
+    FUNC_ENTER_NOAPI(H5MF_reserve, FAIL);
+
+    /* Check arguments */
+    assert(f);
+
+    /* Check that there is room in the file to reserve this space */
+    if( H5MF_alloc_overflow( f, size ) )
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "not enough address space in file");
+
+    f->shared->lf->reserved_alloc += size;
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:	H5MF_free_reserved
+ *
+ * Purpose:	Releases the file space set aside by H5MF_reserve.  This should
+ *			be called immediately before allocating the file space for which
+ *			the space was reserved.
+ *
+ * Return:	None
+ *
+ * Programmer:	James Laird
+ *				Nat Furrer
+ *              Thursday, May 27, 2004
+ *
+ * Modifications:
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5MF_free_reserved(H5F_t *f, hsize_t size)
+{
+    FUNC_ENTER_NOAPI_NOFUNC(H5MF_free_reserved)
+
+    /* Check arguments */
+    assert(f);
+
+    /* If this assert breaks, it means that HDF5 is trying to free file space
+     * that was never reserved.
+     */
+    assert(size <= f->shared->lf->reserved_alloc);
+
+    f->shared->lf->reserved_alloc -= size;
+
+    FUNC_LEAVE_NOAPI(SUCCEED)
+}
+
 /*-------------------------------------------------------------------------
  * Function:	H5MF_alloc_overflow
  *
@@ -228,23 +301,23 @@ done:
  *          1 if overflow would result (the allocation should not be allowed)
  *
  * Programmer:	James Laird
- *		Nat Furrer
+ *				Nat Furrer
  *              Tuesday, June 1, 2004
  *
+ * Modifications:
  *-------------------------------------------------------------------------
  */
 hbool_t
 H5MF_alloc_overflow(H5F_t *f, hsize_t size)
 {
-    hsize_t space_needed = 0;    /* Accumulator variable */
-    size_t c;                    /* Local index variable */
+    hsize_t space_needed;       /* Accumulator variable */
+    size_t c;                   /* Local index variable */
     hbool_t ret_value;           /* Return value */
 
     FUNC_ENTER_NOAPI_NOFUNC(H5MF_alloc_overflow)
 
     /* Start with the current end of the file's address. */
     space_needed = (hsize_t)H5F_get_eoa(f);
-
     HDassert(H5F_addr_defined(space_needed));
 
     /* Subtract the file's base address to get the actual amount of
@@ -257,19 +330,27 @@ H5MF_alloc_overflow(H5F_t *f, hsize_t size)
     /* Add the amount of space requested for this allocation */
     space_needed += size;
 
+    /* Also add space that is "reserved" for data to be flushed
+     * to disk (e.g., for object headers and the heap).
+     * This is the total amount of file space that will be
+     * allocated.
+     */
+    space_needed += f->shared->lf->reserved_alloc;
+
     /* Ensure that this final number is less than the file's
      * address space.  We do this by shifting in multiples
      * of 16 bits because some systems will do nothing if
-     * we shift by 64 bits all at once (<cough> Linux <cough>).
-     *  Thus, we break one shift into several smaller shifts.
+     * we shift by the size of a long long (64 bits) all at
+     * once (<cough> Linux <cough>).  Thus, we break one shift
+     * into several smaller shifts.
      */
     for(c=0; c < H5F_SIZEOF_ADDR(f); c += 2)
         space_needed = space_needed >> 16;
 
     if(space_needed != 0)
-        ret_value = TRUE;
+        ret_value=TRUE;
     else
-        ret_value = FALSE;
+        ret_value=FALSE;
 
     FUNC_LEAVE_NOAPI(ret_value)
 }
@@ -279,6 +360,11 @@ H5MF_alloc_overflow(H5F_t *f, hsize_t size)
  * Function:	H5MF_can_extend
  *
  * Purpose:	Check if a block in the file can be extended.
+ *
+ *		This is a simple check currently, which only checks for the
+ *              block being at the end of the file.  A more sophisticated check
+ *              would also use the free space list to see if there is a block
+ *              appropriately placed to accomodate the space requested.
  *
  * Return:	Success:	TRUE(1)/FALSE(0)
  *
@@ -319,9 +405,9 @@ done:
  *
  * Purpose:	Extend a block in the file.
  *
- * Return:	Success:	Non-negative
+ * Return:	Success:	TRUE(1)/FALSE(0)
  *
- * 		Failure:	Negative
+ * 		Failure:	FAIL
  *
  * Programmer:	Quincey Koziol
  *              Saturday, June 12, 2004
@@ -330,10 +416,10 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-herr_t
+htri_t
 H5MF_extend(H5F_t *f, H5FD_mem_t type, haddr_t addr, hsize_t size, hsize_t extra_requested)
 {
-    herr_t	ret_value;      /* Return value */
+    htri_t	ret_value;      /* Return value */
 
     FUNC_ENTER_NOAPI(H5MF_extend, FAIL);
 

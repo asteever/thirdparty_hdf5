@@ -1,4 +1,3 @@
-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
@@ -20,9 +19,7 @@
 #include <stdio.h>
 #include "h5repack.h"
 #include "H5private.h"
-#include "h5diff.h"
 #include "h5tools.h"
-
 
 /*-------------------------------------------------------------------------
  * local functions
@@ -88,23 +85,17 @@ int do_copy_refobjs(hid_t fidin,
    * copy referenced objects in attributes
    *-------------------------------------------------------------------------
    */
-
-      if ((grp_out=H5Gopen(fidout,travt->objs[i].name))<0)
-          goto error;
-      
-      if((grp_in = H5Gopen (fidin,travt->objs[i].name))<0)
-          goto error;
-      
-      if (copy_refs_attr(grp_in,grp_out,options,travt,fidout)<0)
-          goto error;
-      
-      if (H5Gclose(grp_out)<0)
-          goto error;
-      if (H5Gclose(grp_in)<0)
-          goto error;
-
-
-
+   
+   if ((grp_out=H5Gopen(fidout,travt->objs[i].name))<0)
+    goto error;
+   if((grp_in = H5Gopen (fidin,travt->objs[i].name))<0)
+    goto error;
+   if (copy_refs_attr(grp_in,grp_out,options,travt,fidout)<0)
+    goto error;
+   if (H5Gclose(grp_out)<0)
+    goto error;
+   if (H5Gclose(grp_in)<0)
+    goto error;
 
    /*-------------------------------------------------------------------------
     * check for hard links
@@ -151,6 +142,8 @@ int do_copy_refobjs(hid_t fidin,
 
    if ((msize=H5Tget_size(mtype_id))==0)
     goto error;
+
+
 /*-------------------------------------------------------------------------
  * check if the dataset creation property list has filters that
  * are not registered in the current configuration
@@ -346,6 +339,7 @@ int do_copy_refobjs(hid_t fidin,
    if (copy_refs_attr(dset_in,dset_out,options,travt,fidout)<0)
     goto error;
 
+
 /*-------------------------------------------------------------------------
  * check for hard links
  *-------------------------------------------------------------------------
@@ -539,7 +533,6 @@ static int copy_refs_attr(hid_t loc_in,
   if ((msize=H5Tget_size(mtype_id))==0)
    goto error;
 
-  
 /*-------------------------------------------------------------------------
  * object references are a special case
  * we cannot just copy the buffers, but instead we recreate the reference
@@ -572,6 +565,7 @@ static int copy_refs_attr(hid_t loc_in,
      if ((obj_type = H5Rget_obj_type(attr_id,H5R_OBJECT,buf))<0)
       goto error;
      refbuf=HDcalloc((unsigned)nelmts,msize);
+
      if ( refbuf==NULL){
       printf( "cannot allocate memory\n" );
       goto error;
@@ -603,14 +597,13 @@ static int copy_refs_attr(hid_t loc_in,
 
     if ((attr_out=H5Acreate(loc_out,name,ftype_id,space_id,H5P_DEFAULT))<0)
      goto error;
-    if (nelmts) 
-    {
+    if (nelmts) {
      if(H5Awrite(attr_out,mtype_id,refbuf)<0)
       goto error;
     }
+
     if (H5Aclose(attr_out)<0)
      goto error;
-
 
     if (refbuf)
      free(refbuf);
@@ -819,5 +812,4 @@ static const char* MapIdToName(hid_t refobj_id,
 
  return NULL;
 }
-
 

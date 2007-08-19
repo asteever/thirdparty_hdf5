@@ -66,8 +66,8 @@ static hbool_t ref_path_table_find(haddr_t objno);
 int
 init_ref_path_table(hid_t fid)
 {
-    H5G_stat_t sb;
-    haddr_t objno;              /* Compact form of object's location */
+    H5G_stat_t              sb;
+    haddr_t objno;
     char *root_path;
 
     /* Set file ID for later queries (XXX: this should be fixed) */
@@ -85,9 +85,9 @@ init_ref_path_table(hid_t fid)
     HDfree(root_path);
     return (-1);
     }
-    objno = (haddr_t)sb.objno[0] | ((haddr_t)sb.objno[1] << (8 * sizeof(long)));
 
     /* Insert into table (takes ownership of path) */
+    objno = ((haddr_t)sb.objno[1] << (8*sizeof(long))) | (haddr_t)sb.objno[0];
     ref_path_table_put(root_path, objno);
 
     return(0);
@@ -159,34 +159,19 @@ haddr_t
 ref_path_table_lookup(const char *thepath)
 {
     H5G_stat_t  sb;
-    haddr_t objno;              /* Compact form of object's location */
+    haddr_t objno;
+    haddr_t     ret_value;
 
-    /* Check for external link first, so we don't return the OID of an object in another file */
-    if(H5Gget_objinfo(thefile, thepath, FALSE, &sb)<0)
+    /* Get object ID for object at path */
+    if(H5Gget_objinfo(thefile, thepath, TRUE, &sb)<0)
+    /*  fatal error ? */
     return HADDR_UNDEF;
-    if(sb.type == H5G_LINK) {
-        /* Get object ID for object at path */
-        /* (If the object is not a soft link, we've already retrieved the
-         *      correct information and don't have to perform this call. -QAK
-         */
-        if(H5Gget_objinfo(thefile, thepath, TRUE, &sb)<0)
-            /*  fatal error ? */
-            return HADDR_UNDEF;
-    } else if(sb.type == H5G_UDLINK)
-    {
-        /* UD links can't be followed, so they always "dangle" like
-         * soft links.
-         */
-        return HADDR_UNDEF;
-    } /* end if */
-    objno = (haddr_t)sb.objno[0] | ((haddr_t)sb.objno[1] << (8 * sizeof(long)));
 
+    /* Return OID or HADDR_UNDEF */
+    objno = ((haddr_t)sb.objno[1] << (8*sizeof(long))) | (haddr_t)sb.objno[0];
+    ret_value = ref_path_table_find(objno) ? objno : HADDR_UNDEF;
 
-    /* All existing objects in the file had better be in the table */
-    HDassert(ref_path_table_find(objno));
-
-    /* Return OID */
-    return(objno);
+    return(ret_value);
 }
 
 /*-------------------------------------------------------------------------
@@ -255,7 +240,7 @@ ref_path_table_put(const char *path, haddr_t objno)
  */
 int xid = 1;
 
-int get_next_xid(void) {
+int get_next_xid() {
     return xid++;
 }
 
@@ -267,7 +252,7 @@ int get_next_xid(void) {
  */
 haddr_t fake_xid = HADDR_MAX;
 haddr_t
-get_fake_xid (void) {
+get_fake_xid () {
     return (fake_xid--);
 }
 
@@ -313,13 +298,40 @@ ref_path_table_gen_fake(const char *path)
 const char *
 lookup_ref_path(haddr_t ref)
 {
-    ref_path_node_t *node;
+    uint8_t                *p;          /* Pointer to reference to translate */
+    haddr_t                 addr;       /* Resulting address */
+    unsigned            i;          /* Local index variable */
+    haddr_t         tmp;        /* Temporary portion of address */
+    uint8_t         c;          /* Byte from address */
+    hbool_t         all_zero = TRUE;    /* If the address is all zeros, make into HADDR_UNDEF */
+    ref_path_node_t        *node;       /* Ref path node found for address */
 
     /* Be safer for h5ls */
     if(!ref_path_table)
         return(NULL);
 
-    node = H5SL_search(ref_path_table, &ref);
+    /* Compensate for endianness differences */
+    p = (uint8_t *)&ref;
+    addr = 0;
+
+    for (i=0; i<sizeof(haddr_t); i++) {
+    c = *p++;
+    if (c != 0xff)
+            all_zero = FALSE;
+
+    if (i<sizeof(haddr_t)) {
+        tmp = c;
+        tmp <<= (i * 8);    /*use tmp to get casting right */
+        addr |= tmp;
+    } else if (!all_zero) {
+        assert(0 == *p);    /*overflow */
+    }
+    }
+    if (all_zero)
+        addr = HADDR_UNDEF;
+
+    /* Check if address is in reference path table */
+    node = H5SL_search(ref_path_table, &addr);
 
     return(node ? node->path : NULL);
 }
@@ -343,10 +355,10 @@ fill_ref_path_table(hid_t group, const char *obj_name, void *op_data)
 {
     const char *obj_prefix = (const char *)op_data;
     H5G_stat_t              statbuf;
-    haddr_t objno;              /* Compact form of object's location */
+    haddr_t objno;
 
     H5Gget_objinfo(group, obj_name, FALSE, &statbuf);
-    objno = (haddr_t)statbuf.objno[0] | ((haddr_t)statbuf.objno[1] << (8 * sizeof(long)));
+    objno = ((haddr_t)statbuf.objno[1] << (8*sizeof(long))) | (haddr_t)statbuf.objno[0];
 
     /* Check if the object is in the path table */
     if (!ref_path_table_find(objno)) {

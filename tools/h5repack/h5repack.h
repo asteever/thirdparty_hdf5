@@ -21,6 +21,7 @@
 #include "h5trav.h"
 
 
+
 #define H5FOPENERROR "unable to open file"
 
 #define PFORMAT  "%-7s %-7s %-7s\n" /*chunk info, compression info, name*/
@@ -47,8 +48,7 @@ typedef struct {
  H5Z_FILTER_SHUFFLE     2 , shuffle the data
  H5Z_FILTER_FLETCHER32  3 , letcher32 checksum of EDC
  H5Z_FILTER_SZIP        4 , szip compression
- H5Z_FILTER_NBIT        5 , nbit compression
- H5Z_FILTER_SCALEOFFSET 6 , scaleoffset compression
+
 */
 
 #define CDVALUES 2
@@ -102,11 +102,6 @@ typedef struct {
  int             verbose;     /*verbose mode */
  hsize_t         threshold;   /*minimum size to compress, in bytes */
  int             use_native;  /*use a native type in write */  
- int             latest;      /*pack file with the latest file format */
- int             grp_compact; /* Set the maximum number of links to store as header messages in the group */
- int             grp_indexed; /* Set the minimum number of links to store in the indexed format */
- int             msg_size[8]; /* Minumum size of shared messages: dataspace, 
-                                 datatype, fill value, filter pipleline, attribute */
 } pack_opt_t;
 
 
@@ -155,10 +150,10 @@ int do_copy_refobjs(hid_t fidin,
                     pack_opt_t *options); /* repack options */
 
 
-void read_info(const char *filename,pack_opt_t *options);
 void init_packobject(pack_info_t *obj);
 int print_filters(hid_t dcpl_id);
 int have_request(pack_opt_t *options);
+
 
 
 

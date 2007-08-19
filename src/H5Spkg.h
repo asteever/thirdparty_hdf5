@@ -30,40 +30,25 @@
 
 #include "H5Sprivate.h"
 
+/* Number of reserved IDs in ID group */
+#define H5S_RESERVED_ATOMS  2
+
 /* Flags to indicate special dataspace features are active */
 #define H5S_VALID_MAX	0x01
 #define H5S_VALID_PERM	0x02
-
-
-/* Initial version of the dataspace information */
-#define H5O_SDSPACE_VERSION_1	1
-
-/* This version adds support for "null" dataspaces, encodes the type of the
- *      dataspace in the message and eliminated the rest of the "reserved"
- *      bytes.
- */
-#define H5O_SDSPACE_VERSION_2	2
-
-/* The latest version of the format.  Look through the 'encode' 
- *      and 'size' callbacks for places to change when updating this. */
-#define H5O_SDSPACE_VERSION_LATEST H5O_SDSPACE_VERSION_2
-
 
 /*
  * Dataspace extent information
  */
 /* Extent container */
-struct H5S_extent_t {
-    H5O_shared_t sh_loc;        /* Shared message info (must be first) */
+typedef struct {
+    H5S_class_t	type;   /* Type of extent */
+    hsize_t nelem;      /* Number of elements in extent */
 
-    H5S_class_t	type;           /* Type of extent */
-    unsigned version;           /* Version of object header message to encode this object with */
-    hsize_t nelem;              /* Number of elements in extent */
-
-    unsigned rank;              /* Number of dimensions */
-    hsize_t *size;              /* Current size of the dimensions */
-    hsize_t *max;               /* Maximum size of the dimensions */
-};
+    unsigned rank;      /* Number of dimensions */
+    hsize_t *size;      /* Current size of the dimensions */
+    hsize_t *max;       /* Maximum size of the dimensions */
+} H5S_extent_t;
 
 /*
  * Dataspace selection information
@@ -176,7 +161,7 @@ typedef struct {
 
 /* Main dataspace structure (typedef'd in H5Sprivate.h) */
 struct H5S_t {
-    H5S_extent_t extent;                /* Dataspace extent (must stay first) */
+    H5S_extent_t extent;                /* Dataspace extent */
     H5S_select_t select;		/* Dataspace selection */
 };
 
@@ -239,8 +224,6 @@ H5_DLL herr_t H5S_extent_copy(H5S_extent_t *dst, const H5S_extent_t *src);
 /* Testing functions */
 #ifdef H5S_TESTING
 H5_DLL htri_t H5S_select_shape_same_test(hid_t sid1, hid_t sid2);
-H5_DLL htri_t H5S_get_rebuild_status_test(hid_t space_id);
 #endif /* H5S_TESTING */
 
 #endif /*_H5Spkg_H*/
-

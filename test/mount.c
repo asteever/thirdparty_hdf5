@@ -72,8 +72,8 @@ setup(hid_t fapl)
     if (H5Gclose(H5Gcreate(file, "/mnt1/file1", (size_t)0))<0) goto error;
     if (H5Gclose(H5Gcreate(file, "/mnt_unlink", (size_t)0))<0) goto error;
     if (H5Gclose(H5Gcreate(file, "/mnt_move_a", (size_t)0))<0) goto error;
-    if (H5Glink(file, H5L_TYPE_HARD, "/mnt1/file1", "/file1")<0) goto error;
-    if (H5Glink(file, H5L_TYPE_HARD, "/mnt1", "/mnt1_link")<0) goto error;
+    if (H5Glink(file, H5G_LINK_HARD, "/mnt1/file1", "/file1")<0) goto error;
+    if (H5Glink(file, H5G_LINK_HARD, "/mnt1", "/mnt1_link")<0) goto error;
     if (H5Fclose(file)<0) goto error;
 
     /* file 2 */
@@ -294,7 +294,8 @@ test_hide(hid_t fapl)
      * other names.  This is a rather stupid test but demonstrates a point.
      */
     if (H5Gget_objinfo(file1, "/file1", TRUE, &sb2)<0) goto error;
-    if (HDmemcmp(&sb1.fileno, &sb2.fileno, sizeof(sb1.fileno)) || HDmemcmp(&sb1.objno, &sb2.objno, sizeof(sb1.objno))) {
+    if (sb1.fileno[0]!=sb2.fileno[0] || sb1.fileno[1]!=sb2.fileno[1] ||
+	sb1.objno[0]!=sb2.objno[0] || sb1.objno[1]!=sb2.objno[1]) {
 	H5_FAILED();
 	puts("    Hard link failed for hidden object.");
 	goto error;
@@ -337,7 +338,7 @@ test_hide(hid_t fapl)
 static int
 test_assoc(hid_t fapl)
 {
-    hid_t	file1 = -1, file2 = -1;
+    hid_t	file1=-1, file2=-1;
     H5G_stat_t	sb1, sb2;
     char	filename1[1024], filename2[1024];
 
@@ -346,42 +347,36 @@ test_assoc(hid_t fapl)
     h5_fixname(FILENAME[1], fapl, filename2, sizeof filename2);
 
     /* Open the files */
-    if((file1 = H5Fopen(filename1, H5F_ACC_RDONLY, fapl)) < 0 ||
-            (file2 = H5Fopen(filename2, H5F_ACC_RDONLY, fapl)) < 0)
-        TEST_ERROR
+    if ((file1=H5Fopen(filename1, H5F_ACC_RDONLY, fapl))<0 ||
+	(file2=H5Fopen(filename2, H5F_ACC_RDONLY, fapl))<0)
+	goto error;
 
     /* Get information about the root of file2 */
-    if(H5Gget_objinfo(file2, "/", TRUE, &sb1) < 0)
-        TEST_ERROR
+    if (H5Gget_objinfo(file2, "/", TRUE, &sb1)<0) goto error;
 
     /* Create the virtual file */
-    if(H5Fmount(file1, "/mnt1", file2, H5P_DEFAULT) < 0)
-        TEST_ERROR
+    if (H5Fmount(file1, "/mnt1", file2, H5P_DEFAULT)<0) goto error;
 
     /*
      * Get info about the mount point -- should be the same as the root group
      * of file2.
      */
-    if(H5Gget_objinfo(file1, "/mnt1", TRUE, &sb2) < 0)
-        TEST_ERROR
-    if(HDmemcmp(&sb1.fileno, &sb2.fileno, sizeof(sb1.fileno)) || HDmemcmp(&sb1.objno, &sb2.objno, sizeof(sb1.objno))) {
+    if (H5Gget_objinfo(file1, "/mnt1", TRUE, &sb2)<0) goto error;
+    if (sb1.fileno[0]!=sb2.fileno[0] || sb1.fileno[1]!=sb2.fileno[1] ||
+	sb1.objno[0]!=sb2.objno[0] || sb1.objno[1]!=sb2.objno[1]) {
 	H5_FAILED();
 	puts("    Association failed.");
-        AT();
-        goto error;
+	goto error;
     }
 
     /* Shut down */
-    if(H5Funmount(file1, "/mnt1_link") < 0)
-        TEST_ERROR
-    if(H5Fclose(file1) < 0)
-        TEST_ERROR
-    if(H5Fclose(file2) < 0)
-        TEST_ERROR
+    if (H5Funmount(file1, "/mnt1_link")<0) goto error;
+    if (H5Fclose(file1)<0) goto error;
+    if (H5Fclose(file2)<0) goto error;
     PASSED();
     return 0;
 
-error:
+ error:
     H5E_BEGIN_TRY {
 	H5Fclose(file2);
 	H5Fclose(file1);
@@ -487,9 +482,9 @@ test_move(hid_t fapl)
     if (H5Fmount(file1, "/mnt1", file2, H5P_DEFAULT)<0) goto error;
 
     /* First rename an object in the mounted file, then try it across files */
-    if (H5Lmove(file1, "/mnt1/rename_a/x", H5L_SAME_LOC, "/mnt1/rename_b/y", H5P_DEFAULT, H5P_DEFAULT)<0) goto error;
+    if (H5Gmove(file1, "/mnt1/rename_a/x", "/mnt1/rename_b/y")<0) goto error;
     H5E_BEGIN_TRY {
-	status = H5Lmove(file1, "/mnt1/rename_b/y", H5L_SAME_LOC, "/y", H5P_DEFAULT, H5P_DEFAULT);
+	status = H5Gmove(file1, "/mnt1/rename_b/y",  "/y");
     } H5E_END_TRY;
     if (status>=0) {
 	H5_FAILED();
@@ -793,20 +788,19 @@ test_mvmpt(hid_t fapl)
     /* Build the virtual file */
     if ((file1=H5Fopen(filename1, H5F_ACC_RDWR, fapl))<0 ||
 	(file2=H5Fopen(filename2, H5F_ACC_RDWR, fapl))<0)
-	TEST_ERROR
-    if (H5Fmount(file1, "/mnt_move_a", file2, H5P_DEFAULT)<0) TEST_ERROR
+	goto error;
+    if (H5Fmount(file1, "/mnt_move_a", file2, H5P_DEFAULT)<0) goto error;
 
     /* Rename the mount point */
-    if (H5Lmove(file1, "/mnt_move_a", H5L_SAME_LOC, "/mnt_move_b", H5P_DEFAULT, H5P_DEFAULT)<0) TEST_ERROR
+    if (H5Gmove(file1, "/mnt_move_a", "/mnt_move_b")<0) goto error;
 
     /* Access something under the new name */
-    if (H5Gget_objinfo(file1, "/mnt_move_b/file2", TRUE, NULL)<0) TEST_ERROR
+    if (H5Gget_objinfo(file1, "/mnt_move_b/file2", TRUE, NULL)<0) goto error;
 
     /* Shut down */
-    if (H5Funmount(file1, "/mnt_move_b")<0) TEST_ERROR
-    if (H5Fclose(file1)<0) TEST_ERROR
-    if (H5Fclose(file2)<0) TEST_ERROR
-
+    if (H5Funmount(file1, "/mnt_move_b")<0) goto error;
+    if (H5Fclose(file1)<0) goto error;
+    if (H5Fclose(file2)<0) goto error;
     PASSED();
     return 0;
 
@@ -855,7 +849,7 @@ test_interlink(hid_t fapl)
 
     /* Try an interfile hard link directly */
     H5E_BEGIN_TRY {
-	status = H5Glink(file1, H5L_TYPE_HARD, "/mnt1/file2",  "/file2");
+	status = H5Glink(file1, H5G_LINK_HARD, "/mnt1/file2",  "/file2");
     } H5E_END_TRY;
     if (status>=0) {
 	H5_FAILED();
@@ -865,7 +859,7 @@ test_interlink(hid_t fapl)
 
     /* Try an interfile hard link by renaming something */
     H5E_BEGIN_TRY {
-	status = H5Lmove(file1, "/mnt1/file2", H5L_SAME_LOC, "/file2", H5P_DEFAULT, H5P_DEFAULT);
+	status = H5Gmove(file1, "/mnt1/file2", "/file2");
     } H5E_END_TRY;
     if (status>=0) {
 	H5_FAILED();
@@ -1109,9 +1103,9 @@ test_mount_after_close(hid_t fapl)
         TEST_ERROR
     if((gidABM = H5Gcreate(gidAB , "M", (size_t)0)) < 0) /* Mount point */
         TEST_ERROR
-    if(H5Glink(gidAB, H5L_TYPE_SOFT, "./M/X/Y", "C") < 0) /* Soft link */
+    if(H5Glink(gidAB, H5G_LINK_SOFT, "./M/X/Y", "C") < 0) /* Soft link */
         TEST_ERROR
-    if(H5Glink(gidAB, H5L_TYPE_SOFT, "/A", "T") < 0) /* Soft link */
+    if(H5Glink(gidAB, H5G_LINK_SOFT, "/A", "T") < 0) /* Soft link */
         TEST_ERROR
 
     /* Close groups and file */
@@ -1145,7 +1139,7 @@ test_mount_after_close(hid_t fapl)
         TEST_ERROR
     if((did = H5Dcreate(gidXY, "D", H5T_NATIVE_INT, sid, H5P_DEFAULT)) < 0)
         TEST_ERROR
-    if(H5Glink(gidX, H5L_TYPE_SOFT, "./Y", "T") < 0) /* Soft link */
+    if(H5Glink(gidX, H5G_LINK_SOFT, "./Y", "T") < 0) /* Soft link */
         TEST_ERROR
 
     /* Write data to the dataset. */
@@ -1439,19 +1433,19 @@ test_mount_after_unmount(hid_t fapl)
         TEST_ERROR
 
     /* Unmount second file */
-    if(H5Funmount(fid1, "/A/M")<0)
+    if (H5Funmount(fid1, "/A/M")<0)
 	TEST_ERROR
 
     /* Check name */
     *objname = '\0';
     if(H5Iget_name( gidAMXMY, objname, (size_t)NAME_BUF_SIZE ) < 0)
         TEST_ERROR
-    if(HDstrcmp(objname, "/X/M/Y"))
+    if(HDstrcmp(objname, ""))
         TEST_ERROR
 
     /* Rename object in file #3 that is "disconnected" from name hiearchy */
     /* (It is "disconnected" because it's parent file has been unmounted) */
-    if(H5Lmove(gidAMX,"M/Y",gidAMX,"M/Z", H5P_DEFAULT, H5P_DEFAULT) < 0)
+    if(H5Gmove2(gidAMX,"M/Y",gidAMX,"M/Z") < 0)
 	TEST_ERROR
 
     /* Close group in file #3 */
@@ -1466,7 +1460,7 @@ test_mount_after_unmount(hid_t fapl)
     *objname = '\0';
     if(H5Iget_name( gidAMXMY, objname, (size_t)NAME_BUF_SIZE ) < 0)
 	TEST_ERROR
-    if(HDstrcmp(objname, "/X/M/Z"))
+    if(HDstrcmp(objname, ""))
 	TEST_ERROR
 
     /* Mount fourth file */
@@ -2976,10 +2970,10 @@ test_nested_survive(hid_t fapl)
     if(H5Funmount(gidA, ".") < 0)
         TEST_ERROR
 
-    /* Check name */
+    /* Check name (should be unavailable) */
     if((name_len = H5Iget_name(gidAM, name, (size_t)NAME_BUF_SIZE )) < 0)
         TEST_ERROR
-    if(name_len == 0 || HDstrcmp(name, "/M"))
+    if(name_len != 0)
         TEST_ERROR
 
     /* Open object in file #3 through file #1 mount path (should fail) */
@@ -3174,10 +3168,10 @@ test_close_parent(hid_t fapl)
     if(H5Funmount(gidM, "/A") < 0)
         TEST_ERROR
 
-    /* Check the name of "M" is defined in its file */
+    /* Check the name of "M" is not defined any longer */
     if((name_len = H5Iget_name(gidM, name, (size_t)NAME_BUF_SIZE )) < 0)
         TEST_ERROR
-    if(name_len == 0 || HDstrcmp(name, "/M"))
+    if(name_len != 0)
         TEST_ERROR
 
     /* Just file #2's underlying shared file should be open still */
@@ -3548,10 +3542,10 @@ test_cut_graph(hid_t fapl)
     if(H5Gclose(gidO) < 0)
         TEST_ERROR
 
-    /* Check the name of "M" is defined in its file */
+    /* Check the name of "M" is not defined any longer */
     if((name_len = H5Iget_name(gidM, name, (size_t)NAME_BUF_SIZE )) < 0)
         TEST_ERROR
-    if(name_len == 0 || HDstrcmp(name, "/E/M"))
+    if(name_len != 0)
         TEST_ERROR
 
     /* Check the name of "Q" is still defined */
@@ -3581,10 +3575,10 @@ test_cut_graph(hid_t fapl)
     if(H5F_sfile_assert_num(3) != 0)
         TEST_ERROR
 
-    /* Check the name of "Q" is defined in its file */
+    /* Check the name of "Q" is not defined any longer */
     if((name_len = H5Iget_name(gidQ, name, (size_t)NAME_BUF_SIZE )) < 0)
         TEST_ERROR
-    if(name_len == 0 || HDstrcmp(name, "/I/Q"))
+    if(name_len != 0)
         TEST_ERROR
 
     /* Open object in file #6 from file #7 */
@@ -3687,7 +3681,7 @@ test_symlink(hid_t fapl)
         TEST_ERROR
 
     /* Create soft link to mounted object */
-    if(H5Glink(fid1, H5L_TYPE_SOFT, "./A/D/H", "L") < 0) /* Soft link */
+    if(H5Glink(fid1, H5G_LINK_SOFT, "./A/D/H", "L") < 0) /* Soft link */
         TEST_ERROR
 
     if(H5Fclose(fid1) < 0)
@@ -3824,56 +3818,45 @@ main(void)
 {
     int		nerrors = 0;
     hid_t	fapl = -1;
-    const char *envval = NULL;
 
-    envval = HDgetenv("HDF5_DRIVER");
-    if (envval == NULL) 
-        envval = "nomatch";
-    if (HDstrcmp(envval, "split") && HDstrcmp(envval, "multi")) {
-	h5_reset();
-	fapl = h5_fileaccess();
-	if (setup(fapl)<0) goto error;
+    h5_reset();
+    fapl = h5_fileaccess();
+    if (setup(fapl)<0) goto error;
 
-	nerrors += test_basic(fapl);
-	nerrors += test_illegal(fapl);
-	nerrors += test_hide(fapl);
-	nerrors += test_assoc(fapl);
-	nerrors += test_mntlnk(fapl);
-	nerrors += test_unlink(fapl);
-	nerrors += test_move(fapl);
-	nerrors += test_mvmpt(fapl);
-	nerrors += test_preopen(fapl);
-	nerrors += test_postopen(fapl);
-	nerrors += test_interlink(fapl);
-	nerrors += test_uniformity(fapl);
-	nerrors += test_close(fapl);
-	nerrors += test_mount_after_close(fapl);
-	nerrors += test_mount_after_unmount(fapl);
-	nerrors += test_missing_unmount(fapl);
-	nerrors += test_hold_open_file(fapl);
-	nerrors += test_hold_open_group(fapl);
-	nerrors += test_fcdegree_same(fapl);
-	nerrors += test_fcdegree_semi(fapl);
-	nerrors += test_fcdegree_strong(fapl);
-	nerrors += test_acc_perm(fapl);
-	nerrors += test_mult_mount(fapl);
-	nerrors += test_nested_survive(fapl);
-	nerrors += test_close_parent(fapl);
-	nerrors += test_cut_graph(fapl);
-	nerrors += test_symlink(fapl);
+    nerrors += test_basic(fapl);
+    nerrors += test_illegal(fapl);
+    nerrors += test_hide(fapl);
+    nerrors += test_assoc(fapl);
+    nerrors += test_mntlnk(fapl);
+    nerrors += test_unlink(fapl);
+    nerrors += test_move(fapl);
+    nerrors += test_mvmpt(fapl);
+    nerrors += test_preopen(fapl);
+    nerrors += test_postopen(fapl);
+    nerrors += test_interlink(fapl);
+    nerrors += test_uniformity(fapl);
+    nerrors += test_close(fapl);
+    nerrors += test_mount_after_close(fapl);
+    nerrors += test_mount_after_unmount(fapl);
+    nerrors += test_missing_unmount(fapl);
+    nerrors += test_hold_open_file(fapl);
+    nerrors += test_hold_open_group(fapl);
+    nerrors += test_fcdegree_same(fapl);
+    nerrors += test_fcdegree_semi(fapl);
+    nerrors += test_fcdegree_strong(fapl);
+    nerrors += test_acc_perm(fapl);
+    nerrors += test_mult_mount(fapl);
+    nerrors += test_nested_survive(fapl);
+    nerrors += test_close_parent(fapl);
+    nerrors += test_cut_graph(fapl);
+    nerrors += test_symlink(fapl);
 
-	if (nerrors) goto error;
-	puts("All mount tests passed.");
-	h5_cleanup(FILENAME, fapl);
-    }
-    else
-    {
-        puts("All mount tests skipped - Incompatible with current Virtual File Driver");
-    }
+    if (nerrors) goto error;
+    puts("All mount tests passed.");
+    h5_cleanup(FILENAME, fapl);
     return 0;
 
-    error:
-        puts("***** MOUNT ERRORS *****");
-        return 1;
+ error:
+    puts("***** MOUNT ERRORS *****");
+    return 1;
 }
-

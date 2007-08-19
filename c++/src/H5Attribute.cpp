@@ -86,7 +86,7 @@ void Attribute::write( const DataType& mem_type, const void *buf ) const
 //--------------------------------------------------------------------------
 // Function:	Attribute::write
 ///\brief	This is an overloaded member function, provided for convenience.
-///		It writes a \a std::string to this attribute.
+///		It writes a \a H5std_string to this attribute.
 ///\param	mem_type  - IN: Attribute datatype (in memory)
 ///\param	strg      - IN: Data to be written
 ///\exception	H5::AttributeIException
@@ -125,15 +125,11 @@ void Attribute::read( const DataType& mem_type, void *buf ) const
 //--------------------------------------------------------------------------
 // Function:	Attribute::read
 ///\brief	This is an overloaded member function, provided for convenience.
-///		It reads a \a std::string from this attribute.
+///		It reads a \a H5std_string from this attribute.
 ///\param	mem_type  - IN: Attribute datatype (in memory)
 ///\param	strg      - IN: Buffer for read string
 ///\exception	H5::AttributeIException
 // Programmer	Binh-Minh Ribler - Apr, 2003
-// Modification
-//		2006/12/9 - H5Aread allocates memory for character string
-//			    buffer with malloc, therefore, no allocation here,
-//			    but HDfree is needed. - BMR
 //--------------------------------------------------------------------------
 void Attribute::read( const DataType& mem_type, H5std_string& strg ) const
 {
@@ -141,11 +137,12 @@ void Attribute::read( const DataType& mem_type, H5std_string& strg ) const
 
    // call C API to get the attribute string of chars
    herr_t ret_value = H5Aread( id, mem_type.getId(), &strg_C);
+
    if( ret_value < 0 )
    {
       throw AttributeIException("Attribute::read", "H5Aread failed");
    }
-   strg = strg_C;	// get 'string' from the C char*
+   strg = strg_C;       // get 'string' from the C char*
    HDfree(strg_C);
 }
 
@@ -309,7 +306,7 @@ void Attribute::close()
 // Programmer	Binh-Minh Ribler - 2000
 // Modification
 //		- Replaced resetIdComponent() with decRefCount() to use C
-//		library ID reference counting mechanism - BMR, Jun 1, 2004
+//		library ID reference counting mechanism - BMR, Feb 20, 2005
 //		- Replaced decRefCount with close() to let the C library
 //		handle the reference counting - BMR, Jun 1, 2006
 //--------------------------------------------------------------------------

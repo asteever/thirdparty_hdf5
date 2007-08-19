@@ -71,6 +71,12 @@ class H5_DLLCPP DataType : public H5Object {
 	// Locks a datatype.
 	void lock() const;
 
+	// Returns a pointer to the current global overflow function.
+	H5T_overflow_t getOverflow(void) const;
+
+	// Sets the overflow handler to a specified function.
+	void setOverflow(H5T_overflow_t func) const;
+
 	// Returns the size of a datatype.
 	size_t getSize() const;
 

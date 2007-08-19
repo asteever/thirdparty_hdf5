@@ -107,7 +107,7 @@ int DSetCreatPropList::getChunk( int max_ndims, hsize_t* dim ) const
 ///\exception	H5::PropListIException
 ///\par Description
 ///		For information on setting layout type, please refer to
-/// http://hdf.ncsa.uiuc.edu/HDF5/doc/RM_H5P.html#Property-SetLayout
+/// <A HREF="../RM_H5P.html#Property-SetLayout">../RM_H5P.html#Property-SetLayout</A>
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 void DSetCreatPropList::setLayout(H5D_layout_t layout) const
@@ -172,18 +172,18 @@ void DSetCreatPropList::setDeflate( int level ) const
 //--------------------------------------------------------------------------
 // Function:	DSetCreatPropList::setSzip
 ///\brief	Sets up for the use of the SZIP compression filter.
-///\param	options_mask     - IN: A bit-mask conveying the desired SZIP 
-///			options.  Valid values are H5_SZIP_EC_OPTION_MASK 
+///\param	options_mask     - IN: A bit-mask conveying the desired SZIP
+///			options.  Valid values are H5_SZIP_EC_OPTION_MASK
 ///			and H5_SZIP_NN_OPTION_MASK.
-///\param	pixels_per_block - IN: Number of pixels or data elements in 
+///\param	pixels_per_block - IN: Number of pixels or data elements in
 ///			each data block.
 ///\exception	H5::PropListIException
 ///\par Description
-///		The associate C function sets an SZIP compression filter, 
+///		The associate C function sets an SZIP compression filter,
 ///		H5Z_FILTER_SZIP, for a dataset.  For more information about
-///		SZIP and usage, please refer to the C layer Reference 
+///		SZIP and usage, please refer to the C layer Reference
 ///		Manual at:
-/// http://hdfgroup.org/HDF5/doc/RM_H5P.html#Property-SetSzip
+/// <A HREF="../RM_H5P.html#Property-SetSzip">../RM_H5P.html#Property-SetSzip</A>
 // Programmer	Binh-Minh Ribler - Jan, 2007
 //--------------------------------------------------------------------------
 void DSetCreatPropList::setSzip(unsigned int options_mask, unsigned int pixels_per_block) const
@@ -211,7 +211,7 @@ void DSetCreatPropList::setSzip(unsigned int options_mask, unsigned int pixels_p
 ///\par
 ///		For information on setting fill value, please refer to the
 ///		C layer Reference Manual at:
-/// http://hdf.ncsa.uiuc.edu/HDF5/doc/RM_H5P.html#Property-SetFillValue
+/// <A HREF="../RM_H5P.html#Property-SetFillValue">../RM_H5P.html#Property-SetFillValue</A>
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 void DSetCreatPropList::setFillValue( const DataType& fvalue_type, const void* value ) const
@@ -257,7 +257,7 @@ void DSetCreatPropList::getFillValue( const DataType& fvalue_type, void* value )
 ///\exception	H5::PropListIException
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-H5D_fill_value_t DSetCreatPropList::isFillValueDefined()
+H5D_fill_value_t DSetCreatPropList::isFillValueDefined() const
 {
    H5D_fill_value_t status;
    herr_t ret_value = H5Pfill_value_defined(id, &status);
@@ -290,7 +290,7 @@ H5D_fill_value_t DSetCreatPropList::isFillValueDefined()
 ///		and the filter fails then the entire I/O operation fails.
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-void DSetCreatPropList::setFilter( H5Z_filter_t filter_id, unsigned int flags,
+void DSetCreatPropList::setFilter( H5Z_filter_t filter_id, unsigned int flags, 
 	size_t cd_nelmts, const unsigned int cd_values[] ) const
 {
    herr_t ret_value = H5Pset_filter( id, filter_id, flags, cd_nelmts, cd_values );
@@ -351,19 +351,18 @@ int DSetCreatPropList::getNfilters() const
 ///\param	cd_values     - OUT: Array to hold the data; allocated by the user
 ///\param	namelen       - OUT: Length of \a name
 ///\param	name          - OUT: Name of the filter
-///\param	filter_config - OUT: Flags indicating whether filter can encode/decode
 ///\return	Filter id
 ///\exception	H5::PropListIException
 ///\par Description
 ///		Failure occurs when \a filter_number is out of range.
 //--------------------------------------------------------------------------
-H5Z_filter_t DSetCreatPropList::getFilter(int filter_number,
-	unsigned int &flags, size_t &cd_nelmts, unsigned int* cd_values,
-	size_t namelen, char name[], unsigned int& filter_config) const
+H5Z_filter_t DSetCreatPropList::getFilter(int filter_number, 
+	unsigned int &flags, size_t &cd_nelmts, unsigned int* cd_values, 
+	size_t namelen, char name[] ) const
 {
    H5Z_filter_t filter_id;
    filter_id = H5Pget_filter( id, filter_number, &flags, &cd_nelmts,
-				cd_values, namelen, name, &filter_config);
+				cd_values, namelen, name);
    if( filter_id == H5Z_FILTER_ERROR )
    {
       throw PropListIException("DSetCreatPropList::getFilter",
@@ -384,16 +383,15 @@ H5Z_filter_t DSetCreatPropList::getFilter(int filter_number,
 ///\param	cd_values -     OUT: Array to hold the data; allocated by the user
 ///\param	namelen   -      IN: Length of \a name
 ///\param	name      -     OUT: Name of the filter
-///\param	filter_config - OUT: Flags indicating whether filter can encode/decode
 ///\exception	H5::PropListIException
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-void DSetCreatPropList::getFilterById(H5Z_filter_t filter_id,
-	unsigned int &flags, size_t &cd_nelmts, unsigned int* cd_values,
-	size_t namelen, char name[], unsigned int &filter_config) const
+void DSetCreatPropList::getFilterById(H5Z_filter_t filter_id, 
+	unsigned int &flags, size_t &cd_nelmts, unsigned int* cd_values, 
+	size_t namelen, char name[]) const
 {
    herr_t ret_value = H5Pget_filter_by_id(id, filter_id, &flags, &cd_nelmts,
-				cd_values, namelen, name, &filter_config );
+                                cd_values, namelen, name );
    if (ret_value < 0)
    {
       throw PropListIException("DSetCreatPropList::getFilterById",
@@ -422,7 +420,7 @@ void DSetCreatPropList::getFilterById(H5Z_filter_t filter_id,
 ///		and the filter fails then the entire I/O operation fails.
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-void DSetCreatPropList::modifyFilter( H5Z_filter_t filter_id, unsigned int
+void DSetCreatPropList::modifyFilter( H5Z_filter_t filter_id, unsigned int 
 	flags, size_t cd_nelmts, const unsigned int cd_values[] ) const
 {
    herr_t ret_value = H5Pmodify_filter(id, filter_id, flags, cd_nelmts, cd_values);
@@ -442,7 +440,7 @@ void DSetCreatPropList::modifyFilter( H5Z_filter_t filter_id, unsigned int
 ///\exception	H5::PropListIException
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-bool DSetCreatPropList::allFiltersAvail()
+bool DSetCreatPropList::allFiltersAvail() const
 {
    htri_t ret_value = H5Pall_filters_avail(id);
    if( ret_value > 0 )
@@ -463,7 +461,7 @@ bool DSetCreatPropList::allFiltersAvail()
 ///\par Description
 ///		Please refer to the Reference Manual of \c H5Pset_shuffle for
 ///		details.
-/// http://hdf.ncsa.uiuc.edu/HDF5/doc/RM_H5P.html#Property-SetShuffle
+/// <A HREF="../RM_H5P.html#Property-SetShuffle">../RM_H5P.html#Property-SetShuffle</A>
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 void DSetCreatPropList::setShuffle() const
@@ -490,7 +488,7 @@ void DSetCreatPropList::setShuffle() const
 ///		\li \c H5D_ALLOC_TIME_INCR
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-H5D_alloc_time_t DSetCreatPropList::getAllocTime()
+H5D_alloc_time_t DSetCreatPropList::getAllocTime() const
 {
    H5D_alloc_time_t alloc_time;
    herr_t ret_value = H5Pget_alloc_time(id, &alloc_time);
@@ -514,7 +512,7 @@ H5D_alloc_time_t DSetCreatPropList::getAllocTime()
 ///		\li \c H5D_FILL_TIME_ALLOC.
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-H5D_fill_time_t DSetCreatPropList::getFillTime()
+H5D_fill_time_t DSetCreatPropList::getFillTime() const
 {
    H5D_fill_time_t fill_time;
    herr_t ret_value = H5Pget_fill_time(id, &fill_time);
@@ -540,7 +538,7 @@ H5D_fill_time_t DSetCreatPropList::getFillTime()
 ///		\li \c H5D_ALLOC_TIME_INCR
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-void DSetCreatPropList::setAllocTime(H5D_alloc_time_t alloc_time)
+void DSetCreatPropList::setAllocTime(H5D_alloc_time_t alloc_time) const
 {
    herr_t ret_value = H5Pset_alloc_time(id, alloc_time);
    if( ret_value < 0 )
@@ -561,7 +559,7 @@ void DSetCreatPropList::setAllocTime(H5D_alloc_time_t alloc_time)
 ///		\li \c H5D_FILL_TIME_ALLOC.
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-void DSetCreatPropList::setFillTime(H5D_fill_time_t fill_time)
+void DSetCreatPropList::setFillTime(H5D_fill_time_t fill_time) const
 {
    herr_t ret_value = H5Pset_fill_time(id, fill_time);
    if( ret_value < 0 )

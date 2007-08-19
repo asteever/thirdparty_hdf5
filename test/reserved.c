@@ -15,7 +15,6 @@
 
 #include "h5test.h"
 
-#ifdef BROKEN
 const char *FILENAME[] = {
     "rsrv_heap",
     "rsrv_ohdr",
@@ -55,7 +54,6 @@ rsrv_heap(void)
 
     /* Create a new file. */
     fapl = h5_fileaccess();
-
     h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
     /* Set file address sizes to be very small. */
     fcpl = H5Pcreate(H5P_FILE_CREATE);
@@ -405,7 +403,6 @@ rsrv_vlen(void)
    } H5E_END_TRY
    return 1;
 }
-#endif /* BROKEN */
 
 /*-------------------------------------------------------------------------
  * Function:	main
@@ -426,40 +423,20 @@ rsrv_vlen(void)
 int
 main(void)
 {
-    /* This test is currently not working properly; it should be revisted
-     * when we have time.
-     */
-#ifdef BROKEN
     int num_errs=0;
     hid_t fapl;
-    const char *envval = NULL;
 
-    envval = HDgetenv("HDF5_DRIVER");
-    if (envval == NULL) 
-        envval = "nomatch";
-/* QAK: should be able to use the core driver? */
-    if (HDstrcmp(envval, "core") && HDstrcmp(envval, "split") && HDstrcmp(envval, "multi") && HDstrcmp(envval, "family")) {
-	num_errs+=rsrv_ohdr();
-	num_errs+=rsrv_heap();
-	num_errs+=rsrv_vlen();
+    num_errs+=rsrv_ohdr();
+    num_errs+=rsrv_heap();
+    num_errs+=rsrv_vlen();
 
-	if(num_errs > 0)
-	    printf("**** %d FAILURE%s! ****\n", num_errs, num_errs==1?"":"S");
-	else
-	    puts("All address space reservation tests passed.");
-
-	fapl = h5_fileaccess();
-	h5_cleanup(FILENAME, fapl);
-	return num_errs;
-    }
+    if(num_errs > 0)
+        printf("**** %d FAILURE%s! ****\n", num_errs, num_errs==1?"":"S");
     else
-    {
-        puts("All address space reservation tests skippped - Incompatible with current Virtual File Driver");
-    }
-#endif /* BROKEN */
+        puts("All address space reservation tests passed.");
 
-    SKIPPED();
-    return 0;
-
+    fapl = h5_fileaccess();
+    h5_cleanup(FILENAME, fapl);
+    return num_errs;
 }
 

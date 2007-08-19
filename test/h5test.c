@@ -26,11 +26,11 @@
 #include <sys/stat.h>
 #include "h5test.h"
 
-#ifdef _WIN32
+#ifdef WIN32
 #include <process.h>
 #include <direct.h>
 #include <winsock.h>
-#endif  /* _WIN32 */
+#endif  /* WIN32 */
 
 /*
  * Define these environment variables or constants to influence functions in
@@ -225,7 +225,7 @@ h5_reset(void)
     H5E_BEGIN_TRY {
 	hid_t file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT,
 			       H5P_DEFAULT);
-	hid_t grp = H5Gcreate(file, "emit", (size_t)0);
+	hid_t grp = H5Gcreate(file, "emit", 0);
 	H5Gclose(grp);
 	H5Fclose(file);
 	HDunlink(filename);
@@ -287,14 +287,14 @@ h5_fixname(const char *base_name, hid_t fapl, char *fullname, size_t size)
 
 	if (H5FD_FAMILY == driver)
 	    suffix = "%05d.h5";
-	else if (H5FD_MULTI == driver)
+	else if (H5FD_CORE == driver || H5FD_MULTI == driver)
 	    suffix = NULL;
     }
 
     /* Must first check fapl is not H5P_DEFAULT (-1) because H5FD_XXX
      * could be of value -1 if it is not defined.
      */
-    isppdriver = H5P_DEFAULT != fapl &&
+    isppdriver = H5P_DEFAULT != fapl && 
 	(H5FD_MPIO==driver || H5FD_MPIPOSIX==driver);
 
     /* Check HDF5_NOCLEANUP environment setting.
@@ -467,16 +467,16 @@ h5_fixname(const char *base_name, hid_t fapl, char *fullname, size_t size)
  *
  *-------------------------------------------------------------------------
  */
-const char *
+char *
 h5_rmprefix(const char *filename)
 {
-    const char *ret_ptr;
+    char *ret_ptr;
 
     if ((ret_ptr = HDstrstr(filename, ":")) == NULL)
 	ret_ptr = filename;
     else
 	ret_ptr++;
-
+    
     return(ret_ptr);
 }
 
@@ -528,7 +528,7 @@ h5_fileaccess(void)
 	if (H5Pset_fapl_stdio(fapl)<0) return -1;
     } else if (!HDstrcmp(name, "core")) {
 	/* In-core temporary file with 1MB increment */
-	if (H5Pset_fapl_core(fapl, (size_t)1024*1024, TRUE)<0) return -1;
+	if (H5Pset_fapl_core(fapl, 1024*1024, FALSE)<0) return -1;
     } else if (!HDstrcmp(name, "split")) {
 	/* Split meta data and raw data each using default driver */
 	if (H5Pset_fapl_split(fapl,
@@ -570,23 +570,25 @@ h5_fileaccess(void)
 	if (H5Pset_fapl_family(fapl, fam_size, H5P_DEFAULT)<0)
             return -1;
     } else if (!HDstrcmp(name, "log")) {
-        unsigned log_flags = H5FD_LOG_LOC_IO | H5FD_LOG_ALLOC;
+#ifdef H5_WANT_H5_V1_4_COMPAT
+        long verbosity = 1;
+
+        /* Log file access */
+        if ((val = strtok(NULL, " \t\n\r")))
+            verbosity = strtol(val, NULL, 0);
+
+        if (H5Pset_fapl_log(fapl, NULL, (int)verbosity) < 0)
+	    return -1;
+#else /* H5_WANT_H5_V1_4_COMPAT */
+        unsigned log_flags = H5FD_LOG_LOC_IO;
 
         /* Log file access */
         if ((val = HDstrtok(NULL, " \t\n\r")))
             log_flags = (unsigned)HDstrtol(val, NULL, 0);
 
-        if (H5Pset_fapl_log(fapl, NULL, log_flags, (size_t)0) < 0)
+        if (H5Pset_fapl_log(fapl, NULL, log_flags, 0) < 0)
 	    return -1;
-    } else if (!HDstrcmp(name, "direct")) {
-#ifdef H5_HAVE_DIRECT
-	/* Linux direct read() and write() system calls.  Set memory boundary, file block size,
-	 * and copy buffer size to the default values. */
-	if (H5Pset_fapl_direct(fapl, 1024, 4096, 8*4096)<0) return -1;
-#endif
-    } else if (!HDstrcmp(name, "latest")) {
-	/* use the latest format */
-	if (H5Pset_latest_format(fapl, TRUE)<0) return -1;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
     } else {
 	/* Unknown driver */
 	return -1;
@@ -635,7 +637,7 @@ void
 h5_show_hostname(void)
 {
     char	hostname[80];
-#ifdef _WIN32
+#ifdef WIN32
      WSADATA wsaData;
      int err;
 #endif
@@ -653,7 +655,7 @@ h5_show_hostname(void)
 	    printf("thread 0.");
     }
 #elif defined(H5_HAVE_THREADSAFE)
-#ifdef _WIN32
+#ifdef WIN32
     printf("some thread: no way to know the thread number from pthread on windows.");
 #else
     printf("thread %d.", (int)pthread_self());
@@ -662,7 +664,7 @@ h5_show_hostname(void)
 #else
     printf("thread 0.");
 #endif
-#ifdef _WIN32
+#ifdef WIN32
 
    err = WSAStartup( MAKEWORD(2,2), &wsaData );
    if ( err != 0 ) {
@@ -685,14 +687,15 @@ h5_show_hostname(void)
 
 #endif
 #ifdef H5_HAVE_GETHOSTNAME
-    if (gethostname(hostname, (size_t)80) < 0)
+    if (gethostname(hostname, 80) < 0){
 	printf(" gethostname failed\n");
+    }
     else
 	printf(" hostname=%s\n", hostname);
 #else
     printf(" gethostname not supported\n");
 #endif
-#ifdef _WIN32
+#ifdef WIN32
     WSACleanup();
 #endif
 }
@@ -828,19 +831,19 @@ h5_dump_info_object(MPI_Info info)
 
 
 /*-------------------------------------------------------------------------
- * Function:	h5_get_file_size
+ * Function:    h5_get_file_size
  *
- * Purpose:	Get the current size of a file (in bytes)
+ * Purpose:     Get the current size of a file (in bytes)
  *
- * Return:	Success:	Size of file in bytes
- *		Failure:	-1
+ * Return:      Success:        Size of file in bytes
+ *              Failure:        -1
  *
- * Programmer:	Quincey Koziol
+ * Programmer:  Quincey Koziol
  *              Saturday, March 22, 2003
  *
  * Modifications:
- * 	Albert Cheng, Oct 11, 2006
- *	Changed Failure return value to -1.
+ *      Albert Cheng, Nov 22, 2006
+ *      Changed Failure return value to -1.
  *
  *-------------------------------------------------------------------------
  */
@@ -943,75 +946,58 @@ int h5_szip_can_encode(void )
  *              4/4/05
  *
  * Modifications:
- *		Use original getenv if MPI is not initialized. This happens
- *		one uses the PHDF5 library to build a serial nature code.
- *		Albert 2006/04/07
  *
  *-------------------------------------------------------------------------
  */
 
 char* getenv_all(MPI_Comm comm, int root, const char* name)
 {
-    int mpi_size, mpi_rank, mpi_initialized;
-    int len;
+    int nID;
+    int len = -1;
     static char* env = NULL;
     MPI_Status Status;
 
     assert(name);
 
-    MPI_Initialized(&mpi_initialized);
-    if (!mpi_initialized){
-	/* use original getenv */
-	if(env)
-	    HDfree(env);
-	env = HDgetenv(name);
-    }else{
-	MPI_Comm_rank(comm, &mpi_rank);
-	MPI_Comm_size(comm, &mpi_size);
-	assert(root < mpi_size);
+    MPI_Comm_rank(comm, &nID);
 
-	/* The root task does the getenv call
-	 * and sends the result to the other tasks */
-	if(mpi_rank == root)
+    /* The root task does the getenv call
+     * and sends the result to the other tasks */
+    if(nID == root)
+    {
+	env = HDgetenv(name);
+	if(env)
 	{
-	    env = HDgetenv(name);
-	    if(env)
-	    {
-		len = HDstrlen(env);
-		MPI_Bcast(&len, 1, MPI_INT, root, comm);
-		MPI_Bcast(env, len, MPI_CHAR, root, comm);
-	    }
-	    else{
-		/* len -1 indicates that the variable was not in the environment */
-		len = -1;
-		MPI_Bcast(&len, 1, MPI_INT, root, comm);
-	    }
+	    len = HDstrlen(env);
+	    MPI_Bcast(&len, 1, MPI_INT, root, comm);
+	    MPI_Bcast(env, len, MPI_CHAR, root, comm);
+	}
+	/* len -1 indicates that the variable was not in the environment */
+	else
+	    MPI_Bcast(&len, 1, MPI_INT, root, comm);
+    }
+    else
+    {
+	MPI_Bcast(&len, 1, MPI_INT, root, comm);
+	if(len >= 0)
+	{
+	    if(env == NULL)
+		env = (char*) HDmalloc(len+1);
+	    else if(strlen(env) < len)
+		env = (char*) HDrealloc(env, len+1);
+
+	    MPI_Bcast(env, len, MPI_CHAR, root, comm);
+	    env[len] = '\0';
 	}
 	else
 	{
-	    MPI_Bcast(&len, 1, MPI_INT, root, comm);
-	    if(len >= 0)
-	    {
-		if(env == NULL)
-		    env = (char*) HDmalloc(len+1);
-		else if(strlen(env) < len)
-		    env = (char*) HDrealloc(env, len+1);
-
-		MPI_Bcast(env, len, MPI_CHAR, root, comm);
-		env[len] = '\0';
-	    }
-	    else
-	    {
-		if(env)
-		    HDfree(env);
-		env = NULL;
-	    }
+	    if(env)
+		HDfree(env);
+	    env = NULL;
 	}
     }
 
-#ifndef NDEBUG
     MPI_Barrier(comm);
-#endif
 
     return env;
 }

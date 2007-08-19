@@ -66,16 +66,6 @@
 #endif
 #endif
 
-/* 
- * WinXP x64 does not define EWOULDBLOCK, but instead uses
- * their own Windows-specific macro, so define it here.
- */
- #ifdef _WIN32
- #ifndef EWOULDBLOCK
- #define EWOULDBLOCK WSAEWOULDBLOCK
- #endif /* EWOULDBLOCK */
- #endif /* _WIN32 */
- 
 #ifndef H5_HAVE_SOCKLEN_T
 typedef int socklen_t;
 #endif
@@ -182,9 +172,9 @@ static H5FD_t *H5FD_stream_open (const char *name, unsigned flags,
 static herr_t  H5FD_stream_flush (H5FD_t *_stream, hid_t dxpl_id, unsigned closing);
 static herr_t  H5FD_stream_close (H5FD_t *_stream);
 static herr_t H5FD_stream_query(const H5FD_t *_f1, unsigned long *flags);
-static haddr_t H5FD_stream_get_eoa (const H5FD_t *_stream, H5FD_mem_t type);
-static herr_t  H5FD_stream_set_eoa (H5FD_t *_stream, H5FD_mem_t type, haddr_t addr);
-static haddr_t H5FD_stream_get_eof (const H5FD_t *_stream);
+static haddr_t H5FD_stream_get_eoa (H5FD_t *_stream);
+static herr_t  H5FD_stream_set_eoa (H5FD_t *_stream, haddr_t addr);
+static haddr_t H5FD_stream_get_eof (H5FD_t *_stream);
 static herr_t  H5FD_stream_get_handle(H5FD_t *_file, hid_t fapl, void** file_handle);
 static herr_t  H5FD_stream_read (H5FD_t *_stream, H5FD_mem_t type,
                                  hid_t fapl_id, haddr_t addr,
@@ -497,18 +487,18 @@ H5FD_stream_open_socket (const char *filename, int o_flags,
       fprintf (stderr, "Stream VFD: connecting to host '%s' port %d\n",
                hostname, fapl->port);
 #endif
-      if (connect (sock, (struct sockaddr *) &server, (socklen_t)sizeof (server)) < 0)
+      if (connect (sock, (struct sockaddr *) &server, sizeof (server)) < 0)
         HGOTO_ERROR(H5E_RESOURCE,H5E_NOSPACE,H5FD_STREAM_INVALID_SOCKET,"unable to connect")
     }
     else {
       server.sin_addr.s_addr = INADDR_ANY;
-      if (H5FD_STREAM_IOCTL_SOCKET (sock, (int)FIONBIO, &on) < 0) {
+      if (H5FD_STREAM_IOCTL_SOCKET (sock, FIONBIO, &on) < 0) {
         HGOTO_ERROR(H5E_RESOURCE,H5E_NOSPACE,H5FD_STREAM_INVALID_SOCKET,"unable to set non-blocking mode for socket")
       } else if (setsockopt (sock, IPPROTO_TCP, TCP_NODELAY, (const char *) &on,
-                           (socklen_t)sizeof(on)) < 0) {
+                           sizeof(on)) < 0) {
         HGOTO_ERROR(H5E_RESOURCE,H5E_NOSPACE,H5FD_STREAM_INVALID_SOCKET,"unable to set socket option TCP_NODELAY")
       } else if (setsockopt (sock, SOL_SOCKET, SO_REUSEADDR, (const char *) &on,
-                           (socklen_t)sizeof(on)) < 0) {
+                           sizeof(on)) < 0) {
         HGOTO_ERROR(H5E_RESOURCE,H5E_NOSPACE,H5FD_STREAM_INVALID_SOCKET,"unable to set socket option SO_REUSEADDR")
       } else {
         /* Try to bind the socket to the given port.
@@ -634,7 +624,7 @@ H5FD_stream_open (const char *filename,
   H5FD_stream_t             *stream=NULL;
   const H5FD_stream_fapl_t *fapl;
   int                       o_flags;
-#ifdef _WIN32
+#ifdef WIN32
   WSADATA wsadata;
 #endif
   H5P_genplist_t *plist=NULL;        /* Property list pointer */
@@ -659,7 +649,7 @@ H5FD_stream_open (const char *filename,
   if ((O_RDWR & o_flags) && ! (O_CREAT & o_flags))
     HGOTO_ERROR (H5E_ARGS, H5E_UNSUPPORTED, NULL, "open stream for read/write not supported")
 
-#ifdef _WIN32
+#ifdef WIN32
   if (WSAStartup (MAKEWORD (2, 0), &wsadata))
     HGOTO_ERROR (H5E_IO, H5E_CANTINIT, NULL, "Couldn't start Win32 socket layer")
 #endif
@@ -786,7 +776,7 @@ H5FD_stream_flush (H5FD_t *_stream, hid_t UNUSED dxpl_id, unsigned UNUSED closin
     fromlen = sizeof (from);
     while (! H5FD_STREAM_ERROR_CHECK (sock = accept (stream->socket,
                                                      &from, &fromlen))) {
-      if (H5FD_STREAM_IOCTL_SOCKET (sock, (int)FIONBIO, &on) < 0) {
+      if (H5FD_STREAM_IOCTL_SOCKET (sock, FIONBIO, &on) < 0) {
         H5FD_STREAM_CLOSE_SOCKET (sock);
         continue;           /* continue the loop for other clients to connect */
       }
@@ -908,16 +898,13 @@ done:
  *                Tuesday, September 12, 2000
  *
  * Modifications:
- *              Raymond Lu
- *              21 Dec. 2006
- *              Added the parameter TYPE.  It's only used for MULTI driver.
  *
  *-------------------------------------------------------------------------
  */
 static haddr_t
-H5FD_stream_get_eoa (const H5FD_t *_stream, H5FD_mem_t UNUSED type)
+H5FD_stream_get_eoa (H5FD_t *_stream)
 {
-  const H5FD_stream_t *stream = (const H5FD_stream_t *) _stream;
+  H5FD_stream_t *stream = (H5FD_stream_t *) _stream;
   haddr_t ret_value;            /* Return value */
 
   FUNC_ENTER_NOAPI(H5FD_stream_get_eoa, HADDR_UNDEF)
@@ -944,14 +931,11 @@ done:
  *                Tuesday, September 12, 2000
  *
  * Modifications:
- *              Raymond Lu
- *              21 Dec. 2006
- *              Added the parameter TYPE.  It's only used for MULTI driver.
  *
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FD_stream_set_eoa (H5FD_t *_stream, H5FD_mem_t UNUSED type, haddr_t addr)
+H5FD_stream_set_eoa (H5FD_t *_stream, haddr_t addr)
 {
   H5FD_stream_t        *stream = (H5FD_stream_t *) _stream;
     herr_t      ret_value=SUCCEED;       /* Return value */
@@ -988,9 +972,9 @@ done:
  *-------------------------------------------------------------------------
  */
 static haddr_t
-H5FD_stream_get_eof (const H5FD_t *_stream)
+H5FD_stream_get_eof (H5FD_t *_stream)
 {
-  const H5FD_stream_t        *stream = (const H5FD_stream_t *) _stream;
+  H5FD_stream_t        *stream = (H5FD_stream_t *) _stream;
   haddr_t ret_value;    /* Return value */
 
   FUNC_ENTER_NOAPI(H5FD_stream_get_eof, HADDR_UNDEF)

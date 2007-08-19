@@ -14,33 +14,8 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "h5diff.h"
-#include "ph5diff.h"
 #include "H5private.h"
 #include "h5tools.h"
-
-/*-------------------------------------------------------------------------
- * Function: print_size
- *
- * Purpose: print dimensions 
- *
- *-------------------------------------------------------------------------
- */
-void
-print_size (int rank, hsize_t *dims)
-{
-    int i;
-
-    parallel_print("[" );
-    for ( i = 0; i < rank-1; i++)
-    {
-        parallel_print("%"H5_PRINTF_LL_WIDTH"u", (unsigned long_long)dims[i]);
-        parallel_print("x");
-    }
-    parallel_print("%"H5_PRINTF_LL_WIDTH"u", (unsigned long_long)dims[rank-1]);
-    parallel_print("]\n" );
-    
-}
-
 
 
 /*-------------------------------------------------------------------------
@@ -153,7 +128,6 @@ error:
  * Date: May 9, 2003
  *
  * Modifications: 
- *
  *
  * October 2006:  Read by hyperslabs for big datasets.
  *
@@ -285,7 +259,7 @@ hsize_t diff_datasetid( hid_t did1,
  if (storage_size1==0 || storage_size2==0)
  {
   if (options->m_verbose && obj1_name && obj2_name)
-   parallel_print("<%s> or <%s> are empty datasets\n", obj1_name, obj2_name);
+   printf("<%s> or <%s> are empty datasets\n", obj1_name, obj2_name);
   cmp=0;
   options->not_cmp=1;
  }
@@ -334,8 +308,8 @@ hsize_t diff_datasetid( hid_t did1,
  if ( sign1 != sign2 )
  {
   if (options->m_verbose && obj1_name) {
-   parallel_print("Comparison not supported: <%s> has sign %s ", obj1_name, get_sign(sign1));
-   parallel_print("and <%s> has sign %s\n", obj2_name, get_sign(sign2));
+   printf("Comparison not supported: <%s> has sign %s ", obj1_name, get_sign(sign1));
+   printf("and <%s> has sign %s\n", obj2_name, get_sign(sign2));
   }
 
   cmp=0;
@@ -509,7 +483,7 @@ hsize_t diff_datasetid( hid_t did1,
     H5Sselect_all(sm_space);
     hs_nelmts = 1;
    } /* rank */
- 
+
    if ( H5Dread(did1,m_tid1,sm_space,sid1,H5P_DEFAULT,sm_buf1) < 0 )
     goto error;
    if ( H5Dread(did2,m_tid2,sm_space,sid2,H5P_DEFAULT,sm_buf2) < 0 )
@@ -562,8 +536,9 @@ hsize_t diff_datasetid( hid_t did1,
   }
   
  } /* hyperslab read */
+
  }/*cmp*/
- 
+
 /*-------------------------------------------------------------------------
  * compare attributes
  * the if condition refers to cases when the dataset is a referenced object
@@ -832,9 +807,6 @@ int diff_can_type( hid_t       f_tid1, /* file data type */
 
  return 1;
 }
-
-
-
 
 /*-------------------------------------------------------------------------
  * Function: print_sizes

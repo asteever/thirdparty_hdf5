@@ -65,22 +65,23 @@ typedef struct complex_t {
  *
  *-------------------------------------------------------------------------
  */
-static void test_compound_1()
+static void test_compound_1(void)
 {
     // Output message about test being performed
     SUBTEST("Compound Data Types");
-    try {
+    try
+    {
 	// Create an empty compound datatype
 	CompType complex_type(sizeof(complex_t));
 
 	// Add a couple of fields
 	complex_type.insertMember("real", HOFFSET(complex_t, re), PredType::NATIVE_DOUBLE);
 	complex_type.insertMember("imaginary", HOFFSET(complex_t, im), PredType::NATIVE_DOUBLE);
+
 	PASSED();
     }   // end of try block
 
     catch (Exception E) {
-cerr << "test_compound_1 in catch" << endl;
         issue_fail_msg(E.getCFuncName(), __LINE__, __FILE__, E.getCDetailMsg());
     }
 }   // test_compound_1()
@@ -102,7 +103,7 @@ cerr << "test_compound_1 in catch" << endl;
  *
  *-------------------------------------------------------------------------
  */
-static void test_compound_2()
+static void test_compound_2(void)
 {
     typedef struct {
 	int a, b, c[4], d, e;
@@ -120,8 +121,9 @@ static void test_compound_2()
 
     // Output message about test being performed
     SUBTEST("Compound Element Reordering");
-    try {
-	// Sizes should be the same, but be careful just in case
+    try
+    {
+	/* Sizes should be the same, but be careful just in case */
 	buf = (unsigned char*)malloc(nelmts * MAX(sizeof(src_typ_t), sizeof(dst_typ_t)));
 	bkg = (unsigned char*)malloc(nelmts * sizeof(dst_typ_t));
 	orig = (unsigned char*)malloc(nelmts * sizeof(src_typ_t));
@@ -138,7 +140,7 @@ static void test_compound_2()
 	}
 	memcpy(buf, orig, nelmts*sizeof(src_typ_t));
 
-	// Build hdf5 datatypes
+	/* Build hdf5 datatypes */
 	ArrayType* array_dt = new ArrayType(PredType::NATIVE_INT, 1, &four);
 
 	// Create an empty compound datatype
@@ -161,10 +163,10 @@ static void test_compound_2()
 	dt.insertMember("e", HOFFSET(dst_typ_t, e), PredType::NATIVE_INT);
 	array_dt->close();
 
-	// Perform the conversion
+	/* Perform the conversion */
 	st.convert(dt, (size_t)nelmts, buf, bkg);
 
-	// Compare results
+	/* Compare results */
 	for (i=0; i<nelmts; i++) {
 	    s_ptr = ((src_typ_t*)orig) + i;
 	    d_ptr = ((dst_typ_t*)buf)  + i;
@@ -186,21 +188,22 @@ static void test_compound_2()
 		     << "c=[" << s_ptr->c[0] << "," << s_ptr->c[1] << "," 
 		     << s_ptr->c[2] << "," << s_ptr->c[3] << ", d=" 
 		     << s_ptr->d << ", e=" << s_ptr->e << "}" << endl;
-	    }
-    	}
-	// Release resources
-	free(buf);
-	free(bkg);
-	free(orig);
-	s_ptr = NULL;
-	d_ptr = NULL;
-	st.close();
-	dt.close();
-	PASSED();
+	}
+    }
+    
+    /* Release resources */
+    free(buf);
+    free(bkg);
+    free(orig);
+    s_ptr = NULL;
+    d_ptr = NULL;
+    st.close();
+    dt.close();
+
+    PASSED();
     }   // end of try block
 
     catch (Exception E) {
-cerr << "test_compound_2 in catch" << endl;
         issue_fail_msg(E.getCFuncName(), __LINE__, __FILE__, E.getCDetailMsg());
     }
 }   // test_compound_2()
@@ -222,7 +225,7 @@ cerr << "test_compound_2 in catch" << endl;
  *
  *-------------------------------------------------------------------------
  */
-static void test_compound_3()
+static void test_compound_3(void)
 {
     typedef struct {
 	int a, b, c[4], d, e;
@@ -240,7 +243,8 @@ static void test_compound_3()
 
     // Output message about test being performed
     SUBTEST("Compound Datatype Subset Conversions");
-    try {
+    try
+    {
 	/* Initialize */
 	buf = (unsigned char*)malloc(nelmts * MAX(sizeof(src_typ_t), sizeof(dst_typ_t)));
 	bkg = (unsigned char*)malloc(nelmts * sizeof(dst_typ_t));
@@ -313,11 +317,11 @@ static void test_compound_3()
 	d_ptr = NULL;
 	st.close();
 	dt.close();
+
 	PASSED();
     }   // end of try block
 
     catch (Exception E) {
-cerr << "test_compound_3 in catch" << endl;
 	issue_fail_msg(E.getCFuncName(), __LINE__, __FILE__, E.getCDetailMsg());
     }
 }   // test_compound_3()
@@ -339,7 +343,7 @@ cerr << "test_compound_3 in catch" << endl;
  *
  *-------------------------------------------------------------------------
  */
-static void test_compound_4()
+static void test_compound_4(void)
 {
 
     typedef struct {
@@ -362,7 +366,8 @@ static void test_compound_4()
 
     // Output message about test being performed
     SUBTEST("Compound Element Shrinking & Reordering");
-    try {
+    try
+    {
 	/* Sizes should be the same, but be careful just in case */
 	buf = (unsigned char*)malloc(nelmts * MAX(sizeof(src_typ_t), sizeof(dst_typ_t)));
 	bkg = (unsigned char*)malloc(nelmts * sizeof(dst_typ_t));
@@ -440,11 +445,11 @@ static void test_compound_4()
 	d_ptr = NULL;
 	st.close();
 	dt.close();
+
 	PASSED();
     }   // end of try block
 
     catch (Exception E) {
-cerr << "test_compound_4 in catch" << endl;
         issue_fail_msg(E.getCFuncName(), __LINE__, __FILE__, E.getCDetailMsg());
     }
 }   // test_compound_4()
@@ -467,7 +472,7 @@ cerr << "test_compound_4 in catch" << endl;
  *
  *-------------------------------------------------------------------------
  */
-static void test_compound_5()
+static void test_compound_5(void)
 {
     typedef struct {
         char    name[16];
@@ -490,7 +495,8 @@ static void test_compound_5()
 
     // Output message about test being performed
     SUBTEST("Optimized Struct Converter");
-    try {
+    try
+    {
 
 	/* Build datatypes */
 	ArrayType* array_dt = new ArrayType(PredType::NATIVE_SHORT, 1, dims);	
@@ -543,7 +549,6 @@ static void test_compound_5()
     }   // end of try block
 
     catch (Exception E) {
-cerr << "test_compound_5 in catch" << endl;
         issue_fail_msg(E.getCFuncName(), __LINE__, __FILE__, E.getCDetailMsg());
     }
 }   // test_compound_5()
@@ -565,7 +570,7 @@ cerr << "test_compound_5 in catch" << endl;
  *
  *-------------------------------------------------------------------------
  */
-static void test_compound_6()
+static void test_compound_6(void)
 {
     typedef struct {
 	short b;
@@ -585,7 +590,8 @@ static void test_compound_6()
 
     // Output message about test being performed
     SUBTEST("Compound Element Growing");
-    try {
+    try
+    {
 	/* Sizes should be the same, but be careful just in case */
 	buf = (unsigned char*)malloc(nelmts * MAX(sizeof(src_typ_t), sizeof(dst_typ_t)));
 	bkg = (unsigned char*)malloc(nelmts * sizeof(dst_typ_t));
@@ -633,11 +639,11 @@ static void test_compound_6()
 	d_ptr = NULL;
 	st.close();
 	dt.close();
+
 	PASSED();
     }   // end of try block
 
     catch (Exception E) {
-cerr << "test_compound_6 in catch" << endl;
         issue_fail_msg(E.getCFuncName(), __LINE__, __FILE__, E.getCDetailMsg());
     }
 }   // test_compound_6()
@@ -657,7 +663,7 @@ cerr << "test_compound_6 in catch" << endl;
  *
  *-------------------------------------------------------------------------
  */
-static void test_compound_7()
+static void test_compound_7(void)
 {
     typedef struct {
 	int a;
@@ -674,7 +680,8 @@ static void test_compound_7()
 
     // Output message about test being performed
     SUBTEST("Compound Element Insertion");
-    try {
+    try
+    {
 	CompType tid1(sizeof(s1_typ_t));
 
 	tid1.insertMember("a", HOFFSET(s1_typ_t,a),PredType::NATIVE_INT);
@@ -700,11 +707,11 @@ static void test_compound_7()
 	/* Release resources */
 	tid1.close();
 	tid2.close();
+
 	PASSED();
     }   // end of try block
 
     catch (Exception E) {
-cerr << "test_compound_7 in catch" << endl;
         issue_fail_msg(E.getCFuncName(), __LINE__, __FILE__, E.getCDetailMsg());
     }
 }   // test_compound_7()
@@ -724,10 +731,7 @@ cerr << "test_compound_7 in catch" << endl;
  *
  *-------------------------------------------------------------------------
  */
-#ifdef __cplusplus
-extern "C"
-#endif
-void test_compound()
+void test_compound(void)
 {
     // Output message about test being performed
     MESSAGE(5, ("Testing Compound Data Type operations\n"));
@@ -753,9 +757,7 @@ void test_compound()
  *
  *-------------------------------------------------------------------------
  */
-#ifdef __cplusplus
-extern "C"
-#endif
-void cleanup_compound()
+void
+cleanup_compound(void)
 {
 }   // cleanup_file
