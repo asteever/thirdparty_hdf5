@@ -14,35 +14,8 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "h5diff.h"
-#include "ph5diff.h"
 #include "H5private.h"
 #include "h5tools.h"
-
-/*-------------------------------------------------------------------------
- * Function: print_size
- *
- * Purpose: print dimensions 
- *
- *-------------------------------------------------------------------------
- */
-#if defined (H5DIFF_DEBUG)
-static void
-print_size (int rank, hsize_t *dims)
-{
-    int i;
-
-    parallel_print("[" );
-    for ( i = 0; i < rank-1; i++)
-    {
-        parallel_print("%"H5_PRINTF_LL_WIDTH"u", (unsigned long_long)dims[i]);
-        parallel_print("x");
-    }
-    parallel_print("%"H5_PRINTF_LL_WIDTH"u", (unsigned long_long)dims[rank-1]);
-    parallel_print("]\n" );
-    
-}
-#endif /* H5DIFF_DEBUG */
-
 
 
 /*-------------------------------------------------------------------------
@@ -65,11 +38,11 @@ hsize_t diff_dataset( hid_t file1_id,
                       const char *obj2_name,
                       diff_opt_t *options)
 {
- hid_t   did1 = -1;
- hid_t   did2 = -1;
- hid_t   dcpl1 = -1;
- hid_t   dcpl2 = -1;
- hsize_t nfound = 0;
+ hid_t   did1=-1;
+ hid_t   did2=-1;
+ hid_t   dcpl1=-1;
+ hid_t   dcpl2=-1;
+ hsize_t nfound=0;
 
 /*-------------------------------------------------------------------------
  * open the handles
@@ -78,21 +51,23 @@ hsize_t diff_dataset( hid_t file1_id,
  /* disable error reporting */
  H5E_BEGIN_TRY {
  /* Open the datasets */
- if((did1 = H5Dopen2(file1_id, obj1_name, H5P_DEFAULT)) < 0) {
-  printf("Cannot open dataset <%s>\n", obj1_name);
+ if ( (did1 = H5Dopen(file1_id,obj1_name)) < 0 )
+ {
+  printf("Cannot open dataset <%s>\n", obj1_name );
   goto error;
  }
- if((did2 = H5Dopen2(file2_id, obj2_name, H5P_DEFAULT)) < 0) {
-  printf("Cannot open dataset <%s>\n", obj2_name);
+ if ( (did2 = H5Dopen(file2_id,obj2_name)) < 0 )
+ {
+  printf("Cannot open dataset <%s>\n", obj2_name );
   goto error;
  }
  /* enable error reporting */
  } H5E_END_TRY;
 
 
- if((dcpl1 = H5Dget_create_plist(did1)) < 0)
+ if ((dcpl1=H5Dget_create_plist(did1))<0)
   goto error;
- if((dcpl2 = H5Dget_create_plist(did2)) < 0)
+ if ((dcpl2=H5Dget_create_plist(did2))<0)
   goto error;
 
 /*-------------------------------------------------------------------------
@@ -153,7 +128,6 @@ error:
  * Date: May 9, 2003
  *
  * Modifications: 
- *
  *
  * October 2006:  Read by hyperslabs for big datasets.
  *
@@ -279,11 +253,13 @@ hsize_t diff_datasetid( hid_t did1,
 
  storage_size1=H5Dget_storage_size(did1);
  storage_size2=H5Dget_storage_size(did2);
+ if (storage_size1<0 || storage_size2<0)
+  goto error;
 
  if (storage_size1==0 || storage_size2==0)
  {
   if (options->m_verbose && obj1_name && obj2_name)
-   parallel_print("<%s> or <%s> are empty datasets\n", obj1_name, obj2_name);
+   printf("<%s> or <%s> are empty datasets\n", obj1_name, obj2_name);
   cmp=0;
   options->not_cmp=1;
  }
@@ -313,10 +289,10 @@ hsize_t diff_datasetid( hid_t did1,
  * memory type and sizes
  *-------------------------------------------------------------------------
  */
- if ((m_tid1=h5tools_get_native_type(f_tid1)) < 0)
+ if ((m_tid1=h5tools_get_native_type(f_tid1))<0)
   goto error;
 
- if ((m_tid2=h5tools_get_native_type(f_tid2)) < 0)
+ if ((m_tid2=h5tools_get_native_type(f_tid2))<0)
   goto error;
 
  m_size1 = H5Tget_size( m_tid1 );
@@ -332,8 +308,8 @@ hsize_t diff_datasetid( hid_t did1,
  if ( sign1 != sign2 )
  {
   if (options->m_verbose && obj1_name) {
-   parallel_print("Comparison not supported: <%s> has sign %s ", obj1_name, get_sign(sign1));
-   parallel_print("and <%s> has sign %s\n", obj2_name, get_sign(sign2));
+   printf("Comparison not supported: <%s> has sign %s ", obj1_name, get_sign(sign1));
+   printf("and <%s> has sign %s\n", obj2_name, get_sign(sign2));
   }
 
   cmp=0;
@@ -376,7 +352,7 @@ hsize_t diff_datasetid( hid_t did1,
   {
    H5Tclose(m_tid1);
 
-   if ((m_tid1=h5tools_get_native_type(f_tid2)) < 0)
+   if ((m_tid1=h5tools_get_native_type(f_tid2))<0)
     goto error;
 
    m_size1 = H5Tget_size( m_tid1 );
@@ -385,7 +361,7 @@ hsize_t diff_datasetid( hid_t did1,
   {
    H5Tclose(m_tid2);
 
-   if ((m_tid2=h5tools_get_native_type(f_tid1)) < 0)
+   if ((m_tid2=h5tools_get_native_type(f_tid1))<0)
     goto error;
 
    m_size2 = H5Tget_size( m_tid2 );
@@ -493,11 +469,11 @@ hsize_t diff_datasetid( hid_t did1,
      hs_size[i] = MIN(dims1[i] - hs_offset[i], sm_size[i]);
      hs_nelmts *= hs_size[i];
     }
-    if (H5Sselect_hyperslab(sid1, H5S_SELECT_SET, hs_offset, NULL, hs_size, NULL) < 0)
+    if (H5Sselect_hyperslab(sid1, H5S_SELECT_SET, hs_offset, NULL, hs_size, NULL)<0)
      goto error;
-    if (H5Sselect_hyperslab(sid2, H5S_SELECT_SET, hs_offset, NULL, hs_size, NULL) < 0)
+    if (H5Sselect_hyperslab(sid2, H5S_SELECT_SET, hs_offset, NULL, hs_size, NULL)<0)
      goto error;
-    if (H5Sselect_hyperslab(sm_space, H5S_SELECT_SET, zero, NULL, &hs_nelmts, NULL) < 0)
+    if (H5Sselect_hyperslab(sm_space, H5S_SELECT_SET, zero, NULL, &hs_nelmts, NULL)<0)
      goto error;
    } 
    else 
@@ -507,7 +483,7 @@ hsize_t diff_datasetid( hid_t did1,
     H5Sselect_all(sm_space);
     hs_nelmts = 1;
    } /* rank */
- 
+
    if ( H5Dread(did1,m_tid1,sm_space,sid1,H5P_DEFAULT,sm_buf1) < 0 )
     goto error;
    if ( H5Dread(did2,m_tid2,sm_space,sid2,H5P_DEFAULT,sm_buf2) < 0 )
@@ -560,8 +536,9 @@ hsize_t diff_datasetid( hid_t did1,
   }
   
  } /* hyperslab read */
+
  }/*cmp*/
- 
+
 /*-------------------------------------------------------------------------
  * compare attributes
  * the if condition refers to cases when the dataset is a referenced object
@@ -690,10 +667,10 @@ int diff_can_type( hid_t       f_tid1, /* file data type */
  *-------------------------------------------------------------------------
  */
 
- if ((tclass1=H5Tget_class(f_tid1)) < 0)
+ if ((tclass1=H5Tget_class(f_tid1))<0)
   return -1;
 
- if ((tclass2=H5Tget_class(f_tid2)) < 0)
+ if ((tclass2=H5Tget_class(f_tid2))<0)
   return -1;
 
  if ( tclass1 != tclass2 )
@@ -830,9 +807,6 @@ int diff_can_type( hid_t       f_tid1, /* file data type */
 
  return 1;
 }
-
-
-
 
 /*-------------------------------------------------------------------------
  * Function: print_sizes

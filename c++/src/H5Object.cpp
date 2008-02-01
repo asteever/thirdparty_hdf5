@@ -33,10 +33,9 @@ namespace H5 {
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 // userAttrOpWrpr simply interfaces between the user's function and the
-// C library function H5Aiterate2; used to resolve the different prototype
+// C library function H5Aiterate; used to resolve the different prototype
 // problem.  May be moved to Iterator later.
-extern "C" herr_t userAttrOpWrpr(hid_t loc_id, const char *attr_name,
-    const H5A_info_t *ainfo, void *op_data)
+extern "C" herr_t userAttrOpWrpr( hid_t loc_id, const char* attr_name, void* op_data )
 {
    H5std_string s_attr_name = H5std_string( attr_name );
 #ifdef NO_STATIC_CAST
@@ -103,7 +102,7 @@ Attribute H5Object::createAttribute( const char* name, const DataType& data_type
    hid_t type_id = data_type.getId();
    hid_t space_id = data_space.getId();
    hid_t plist_id = create_plist.getId();
-   hid_t attr_id = H5Acreate2(id, name, type_id, space_id, plist_id, H5P_DEFAULT );
+   hid_t attr_id = H5Acreate( id, name, type_id, space_id, plist_id );
 
    // If the attribute id is valid, create and return the Attribute object
    if( attr_id > 0 )
@@ -112,14 +111,16 @@ Attribute H5Object::createAttribute( const char* name, const DataType& data_type
       return( attr );
    }
    else
-      throw AttributeIException(inMemFunc("createAttribute"), "H5Acreate2 failed");
+   {
+      throw AttributeIException(inMemFunc("createAttribute"), "H5Acreate failed");
+   }
 }
 
 //--------------------------------------------------------------------------
 // Function:	H5Object::createAttribute
 ///\brief	This is an overloaded member function, provided for convenience.
 ///		It differs from the above function in that it takes
-///		a reference to an \c std::string for \a name.
+///		a reference to an \c H5std_string for \a name.
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 Attribute H5Object::createAttribute( const H5std_string& name, const DataType& data_type, const DataSpace& data_space, const PropList& create_plist ) const
@@ -137,7 +138,7 @@ Attribute H5Object::createAttribute( const H5std_string& name, const DataType& d
 //--------------------------------------------------------------------------
 Attribute H5Object::openAttribute( const char* name ) const
 {
-   hid_t attr_id = H5Aopen( id, name, H5P_DEFAULT );
+   hid_t attr_id = H5Aopen_name( id, name );
    if( attr_id > 0 )
    {
       Attribute attr( attr_id );
@@ -145,7 +146,7 @@ Attribute H5Object::openAttribute( const char* name ) const
    }
    else
    {
-      throw AttributeIException(inMemFunc("openAttribute"), "H5Aopen failed");
+      throw AttributeIException(inMemFunc("openAttribute"), "H5Aopen_name failed");
    }
 }
 
@@ -153,7 +154,7 @@ Attribute H5Object::openAttribute( const char* name ) const
 // Function:	H5Object::openAttribute
 ///\brief	This is an overloaded member function, provided for convenience.
 ///		It differs from the above function in that it takes
-///		a reference to an \c std::string for \a name.
+///		a reference to an \c H5std_string for \a name.
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 Attribute H5Object::openAttribute( const H5std_string& name ) const
@@ -171,7 +172,7 @@ Attribute H5Object::openAttribute( const H5std_string& name ) const
 //--------------------------------------------------------------------------
 Attribute H5Object::openAttribute( const unsigned int idx ) const
 {
-   hid_t attr_id = H5Aopen_by_idx(id, ".", H5_INDEX_CRT_ORDER, H5_ITER_INC, (hsize_t)idx, H5P_DEFAULT, H5P_DEFAULT);
+   hid_t attr_id = H5Aopen_idx( id, idx );
    if( attr_id > 0 )
    {
       Attribute attr( attr_id );
@@ -179,7 +180,7 @@ Attribute H5Object::openAttribute( const unsigned int idx ) const
    }
    else
    {
-      throw AttributeIException(inMemFunc("openAttribute"), "H5Aopen_by_idx failed");
+      throw AttributeIException(inMemFunc("openAttribute"), "H5Aopen_idx failed");
    }
 }
 
@@ -196,32 +197,29 @@ Attribute H5Object::openAttribute( const unsigned int idx ) const
 ///\par Description
 ///		For information, please refer to the C layer Reference Manual
 ///		at:
-/// http://hdf.ncsa.uiuc.edu/HDF5/doc/RM_H5A.html#Annot-Iterate
+/// <A HREF="../RM_H5A.html#Annot-Iterate">../RM_H5A.html#Annot-Iterate</A>
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-int H5Object::iterateAttrs( attr_operator_t user_op, unsigned *_idx, void *op_data )
+int H5Object::iterateAttrs( attr_operator_t user_op, unsigned * idx, void *op_data )
 {
    // store the user's function and data
    UserData4Aiterate* userData = new UserData4Aiterate;
    userData->opData = op_data;
+   userData->idx = idx;
    userData->op = user_op;
    userData->object = this;
 
-   // call the C library routine H5Aiterate2 to iterate the attributes
-   hsize_t idx = (hsize_t)*_idx;
-   int ret_value = H5Aiterate2(id, H5_INDEX_NAME, H5_ITER_INC, &idx, userAttrOpWrpr, (void *) userData);
-
+   // call the C library routine H5Aiterate to iterate the attributes
+   int ret_value = H5Aiterate( id, idx, userAttrOpWrpr, (void *) userData );
    // release memory
    delete userData;
 
-   if( ret_value >= 0 ) {
-      /* Pass back update index value to calling code */
-      *_idx = (unsigned)idx;
-
+   if( ret_value >= 0 )
       return( ret_value );
-   }
    else  // raise exception when H5Aiterate returns a negative value
-      throw AttributeIException(inMemFunc("iterateAttrs"), "H5Aiterate2 failed");
+   {
+      throw AttributeIException(inMemFunc("iterateAttrs"), "H5Aiterate failed");
+   }
 }
 
 //--------------------------------------------------------------------------
@@ -233,12 +231,14 @@ int H5Object::iterateAttrs( attr_operator_t user_op, unsigned *_idx, void *op_da
 //--------------------------------------------------------------------------
 int H5Object::getNumAttrs() const
 {
-   H5O_info_t oinfo;    /* Object info */
-
-   if(H5Oget_info(id, &oinfo) < 0)
-      throw AttributeIException(inMemFunc("getNumAttrs"), "H5Oget_info failed");
+   int num_attrs = H5Aget_num_attrs( id );
+   if( num_attrs < 0 )
+   {
+      throw AttributeIException(inMemFunc("getNumAttrs"),
+		"H5Aget_num_attrs failed - returned negative number of attributes");
+   }
    else
-      return( (int)oinfo.num_attrs );
+      return( num_attrs );
 }
 
 //--------------------------------------------------------------------------
@@ -250,16 +250,18 @@ int H5Object::getNumAttrs() const
 //--------------------------------------------------------------------------
 void H5Object::removeAttr( const char* name ) const
 {
-   herr_t ret_value = H5Adelete(id, name);
+   herr_t ret_value = H5Adelete( id, name );
    if( ret_value < 0 )
+   {
       throw AttributeIException(inMemFunc("removeAttr"), "H5Adelete failed");
+   }
 }
 
 //--------------------------------------------------------------------------
 // Function:	H5Object::removeAttr
 ///\brief	This is an overloaded member function, provided for convenience.
 ///		It differs from the above function in that it takes
-///		a reference to an \c std::string for \a name.
+///		a reference to an \c H5std_string for \a name.
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 void H5Object::removeAttr( const H5std_string& name ) const
@@ -279,14 +281,16 @@ void H5Object::renameAttr(const char* oldname, const char* newname) const
 {
    herr_t ret_value = H5Arename(id, oldname, newname);
    if (ret_value < 0)
+   {
       throw AttributeIException(inMemFunc("renameAttr"), "H5Arename failed");
+   }
 }
 
 //--------------------------------------------------------------------------
 // Function:	H5Object::renameAttr
 ///\brief	This is an overloaded member function, provided for convenience.
 ///		It differs from the above function in that it takes
-///		a reference to an \c std::string for the names.
+///		a reference to an \c H5std_string for the names.
 // Programmer	Binh-Minh Ribler - Mar, 2005
 //--------------------------------------------------------------------------
 void H5Object::renameAttr(const H5std_string& oldname, const H5std_string& newname) const

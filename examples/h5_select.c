@@ -87,8 +87,7 @@ main (void)
     * Buffers' initialization.
     */
    vector[0] = vector[MSPACE1_DIM - 1] = -1;
-   for(i = 1; i < MSPACE1_DIM - 1; i++)
-       vector[i] = i;
+   for (i = 1; i < MSPACE1_DIM - 1; i++) vector[i] = i;
 
    /*
     * Create a file.
@@ -110,7 +109,7 @@ main (void)
      * Create dataset in the file. Notice that creation
      * property list plist is used.
      */
-    dataset = H5Dcreate2(file, "Matrix in file", H5T_NATIVE_INT, fid, H5P_DEFAULT, plist, H5P_DEFAULT);
+    dataset = H5Dcreate(file, "Matrix in file", H5T_NATIVE_INT, fid, plist);
 
     /*
      * Select hyperslab for the dataset in the file, using 3x2 blocks,
@@ -216,7 +215,7 @@ main (void)
     /*
      * Open the dataset.
      */
-    dataset = H5Dopen2(file, "Matrix in file", H5P_DEFAULT);
+    dataset = H5Dopen(file,"Matrix in file");
 
     /*
      * Get dataspace of the open dataset.
@@ -302,9 +301,8 @@ main (void)
      *                     0  0  0  0  0  0  0  0  0
      *                     0  0  0  0  0  0  0  0  0
      */
-    for(i = 0; i < MSPACE_DIM1; i++) {
-        for(j = 0; j < MSPACE_DIM2; j++)
-            printf("%3d  ", matrix_out[i][j]);
+    for (i=0; i < MSPACE_DIM1; i++) {
+        for(j=0; j < MSPACE_DIM2; j++) printf("%3d  ", matrix_out[i][j]);
         printf("\n");
     }
 
@@ -331,4 +329,3 @@ main (void)
 
     return 0;
 }
-

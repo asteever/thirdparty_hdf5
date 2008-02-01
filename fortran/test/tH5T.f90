@@ -357,7 +357,7 @@
              CALL h5tget_member_class_f(dtype_id, i-1, class, error)
               CALL check("h5tget_member_class_f",error, total_error)
               if (class .ne. H5T_INTEGER_F) then
-                 write(*,*) "Wrong class returned for INTEGER member"
+                 write(*,*) "Wrong class returned for integer member"
                  total_error = total_error + 1
               endif
         CASE("double_field")
@@ -480,7 +480,7 @@
          CALL check("h5dread_f", error, total_error)
          do i = 1, dimsize
             if (real_member_out(i) .ne. real_member(i)) then
-                write(*,*) " Wrong real precision data is read back "
+                write(*,*) " Wrong double precision data is read back "
                 total_error = total_error + 1
             endif
          enddo

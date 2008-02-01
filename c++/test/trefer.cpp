@@ -59,17 +59,9 @@ const int SPACE1_DIM1 = 4;
 
 // 2-D dataset with fixed dimensions
 const H5std_string      SPACE2_NAME("Space2");
-const int SPACE2_RANK = 2;
-const int SPACE2_DIM1 = 10;
-const int SPACE2_DIM2 = 10;
 
 // Larger 1-D dataset with fixed dimensions
 const H5std_string      SPACE3_NAME("Space3");
-const int SPACE3_RANK = 1;
-const int SPACE3_DIM1 = 100;
-
-// Element selection information
-const int POINT1_NPOINTS = 10;
 
 // Compound datatype
 typedef struct s1_t {
@@ -84,13 +76,14 @@ typedef struct s1_t {
 **      Tests references to various kinds of objects
 **
 ****************************************************************/
-static void test_reference_obj()
+static void
+test_reference_obj(void)
 {
     int    i;          // counting variables
     const  H5std_string write_comment="Foo!"; // Comments for group
 
     // Output message about test being performed
-    SUBTEST("Testing Object Reference Functions");
+    MESSAGE(5, ("Testing Object Reference Functions\n"));
 
     H5File* file1 = NULL;
     try {
@@ -157,31 +150,23 @@ static void test_reference_obj()
 	// Create reference to dataset
 	file1->reference(&wbuf[0], "/Group1/Dataset1");
 
-#ifndef H5_NO_DEPRECATED_SYMBOLS
 	H5G_obj_t obj_type = dataset.getObjType(&wbuf[0], H5R_OBJECT);
 	verify_val(obj_type, H5G_DATASET, "DataSet::getObjType", __LINE__, __FILE__);
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
 
 	// Create reference to dataset
 	file1->reference(&wbuf[1], "/Group1/Dataset2");
-#ifndef H5_NO_DEPRECATED_SYMBOLS
 	obj_type = dataset.getObjType(&wbuf[1], H5R_OBJECT);
 	verify_val(obj_type, H5G_DATASET, "DataSet::getObjType", __LINE__, __FILE__);
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
 
 	// Create reference to group
 	file1->reference(&wbuf[2], "/Group1");
-#ifndef H5_NO_DEPRECATED_SYMBOLS
 	obj_type = dataset.getObjType(&wbuf[2], H5R_OBJECT);
 	verify_val(obj_type, H5G_GROUP, "DataSet::getObjType", __LINE__, __FILE__);
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
 
 	// Create reference to named datatype
 	file1->reference(&wbuf[3], "/Group1/Datatype1");
-#ifndef H5_NO_DEPRECATED_SYMBOLS
 	obj_type = dataset.getObjType(&wbuf[3], H5R_OBJECT);
 	verify_val(obj_type, H5G_TYPE, "DataSet::getObjType", __LINE__, __FILE__);
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
 
 	// Write selection to disk
 	dataset.write(wbuf, PredType::STD_REF_OBJ);
@@ -207,7 +192,7 @@ static void test_reference_obj()
 	// Check information in the referenced dataset
 	sid1 = dset2.getSpace();
 	hssize_t n_elements = sid1.getSimpleExtentNpoints();
-	verify_val((long)n_elements, (long)4, "DataSpace::getSimpleExtentNpoints", __LINE__, __FILE__);
+	verify_val((long)n_elements, 4, "DataSpace::getSimpleExtentNpoints", __LINE__, __FILE__);
 
 	// Read from disk
 	dset2.read(tbuf, PredType::NATIVE_UINT);
@@ -239,7 +224,7 @@ static void test_reference_obj()
 	Group new_group(dataset, &rbuf[2]);
 	H5std_string read_comment3 = new_group.getComment(".", 10);
 	verify_val(read_comment3, write_comment, "Group::getComment", __LINE__, __FILE__);
-	group.close();
+	new_group.close();
 
 	// Dereference datatype object from the location where 'dataset' 
 	// is located
@@ -273,11 +258,9 @@ static void test_reference_obj()
 	free(wbuf);
 	free(rbuf);
 	free(tbuf);
-
-	PASSED();
     } // end try
     catch (Exception E) {
-	issue_fail_msg("test_reference_obj()", __LINE__, __FILE__, E.getCDetailMsg());
+	issue_fail_msg(E.getCFuncName(), __LINE__, __FILE__, E.getCDetailMsg());
     }
 }   // test_reference_obj()
 
@@ -286,10 +269,8 @@ static void test_reference_obj()
 **  test_reference(): Main reference testing routine.
 **
 ****************************************************************/
-#ifdef __cplusplus
-extern "C"
-#endif
-void test_reference()
+void
+test_reference(void)
 {
     // Output message about test being performed
     MESSAGE(5, ("Testing References\n"));
@@ -304,11 +285,9 @@ void test_reference()
 ** Purpose:	Cleanup temporary test files
 ** Return:	none
 ****************************************************************/
-#ifdef __cplusplus
-extern "C"
-#endif
-void cleanup_reference()
+void
+cleanup_reference(void)
 {
-    HDremove(FILE1.c_str());
+    remove(FILE1.c_str());
 }
 

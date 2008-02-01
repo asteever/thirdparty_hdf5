@@ -68,8 +68,7 @@ typedef struct detected_t {
     int			size;		/*total byte size		*/
     int			precision;	/*meaningful bits		*/
     int			offset;		/*bit offset to meaningful bits	*/
-    int			perm[32];	/*for detection of byte order	*/
-    int                 is_vax;         /*for vax (float & double) only */
+    int			perm[32];	/*byte order			*/
     int			sign;		/*location of sign bit		*/
     int			mpos, msize, imp;/*information about mantissa	*/
     int			epos, esize;	/*information about exponent	*/
@@ -286,9 +285,6 @@ precision (detected_t *d)
       }									      \
    }									      \
    fix_order (sizeof(TYPE), _first, _last, INFO.perm, (const char**)&_mesg);  \
-                                                                              \
-   if(!strcmp(_mesg, "VAX"))                                                  \
-      INFO.is_vax = TRUE;                                                     \
 									      \
    /* Implicit mantissa bit */						      \
    _v1 = 0.5;								      \
@@ -376,14 +372,13 @@ precision (detected_t *d)
 	/*              locations with pointers that are supposed to be */    \
 	/*              word aligned. -QAK */                                 \
 	memset(_buf, 0xff, sizeof(TYPE)+align_g[NELMTS(align_g)-1]);	      \
-        /*How to handle VAX types?*/                                          \
 	if(INFO.perm[0]) /* Big-Endian */				      \
 	    memcpy(_buf+align_g[_ano]+(INFO.size-((INFO.offset+INFO.precision)/8)),((char *)&_val)+(INFO.size-((INFO.offset+INFO.precision)/8)),(size_t)(INFO.precision/8)); \
 	else /* Little-Endian */					      \
 	    memcpy(_buf+align_g[_ano]+(INFO.offset/8),((char *)&_val)+(INFO.offset/8),(size_t)(INFO.precision/8)); \
 	_val2 = *((TYPE*)(_buf+align_g[_ano]));				      \
 	if(_val!=_val2)							      \
-	    longjmp(jbuf_g, 1);			        		      \
+	    longjmp(jbuf_g, 1);						      \
 	/* End Cray Check */						      \
 	(INFO.align)=align_g[_ano];					      \
     } else {								      \
@@ -493,9 +488,6 @@ sigbus_handler(int UNUSED signo)
 {
     signal(SIGBUS, sigbus_handler);
     longjmp(jbuf_g, 1);
-#ifdef H5_HAVE_SIGLONGJMP
-    siglongjmp(jbuf_g, 1);
-#endif /* H5_HAVE_SIGLONGJMP */
 }
 
 
@@ -517,7 +509,7 @@ sigbus_handler(int UNUSED signo)
 static void
 print_results(int nd, detected_t *d, int na, malign_t *misc_align)
 {
-    int         byte_order=0;   /*byte order of data types*/
+    int         byte_order=0;
     int		i, j;
 
     /* Include files */
@@ -548,15 +540,11 @@ H5TN_init_interface(void)\n\
          * are always zero.  This happens on the Cray for `short' where
          * sizeof(short) is 8, but only the low-order 4 bytes are ever used.
          */
-        if(d[i].is_vax)    /* the type is a VAX floating number */
-            byte_order=-1;
-        else {
-            for(j=0; j<32; j++) {
-                /*Find the 1st containing valid data*/
-                if(d[i].perm[j]>-1) {
-                    byte_order=d[i].perm[j];
-                    break;
-                }
+        for(j=0; j<32; j++) {
+            /*Find the 1st containing valid data*/
+            if(d[i].perm[j]>-1) {
+                byte_order=d[i].perm[j];
+                break;
             }
         }
 
@@ -571,28 +559,18 @@ H5TN_init_interface(void)\n\
         HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL,\"memory allocation failed\")\n\
     dt->shared->state = H5T_STATE_IMMUTABLE;\n\
     dt->shared->type = H5T_%s;\n\
-    dt->shared->size = %d;\n",
-	       d[i].msize ? "FLOAT" : "INTEGER",/*class			*/
-	       d[i].size);			/*size			*/
-
-        if(byte_order==-1)
-            printf("\
-    dt->shared->u.atomic.order = H5T_ORDER_VAX;\n");
-        else if(byte_order==0)
-            printf("\
-    dt->shared->u.atomic.order = H5T_ORDER_LE;\n");
-        else
-            printf("\
-    dt->shared->u.atomic.order = H5T_ORDER_BE;\n");
-
-        printf("\
+    dt->shared->size = %d;\n\
+    dt->shared->u.atomic.order = H5T_ORDER_%s;\n\
     dt->shared->u.atomic.offset = %d;\n\
     dt->shared->u.atomic.prec = %d;\n\
     dt->shared->u.atomic.lsb_pad = H5T_PAD_ZERO;\n\
     dt->shared->u.atomic.msb_pad = H5T_PAD_ZERO;\n",
+	       d[i].msize ? "FLOAT" : "INTEGER",/*class			*/
+	       d[i].size,			/*size			*/
+	       byte_order ? "BE" : "LE",	/*byte order		*/
 	       d[i].offset,			/*offset		*/
 	       d[i].precision);			/*precision		*/
-    /*assert((d[i].perm[0]>0)==(byte_order>0));*/   /* Double-check that byte-order doesn't change */
+    assert((d[i].perm[0]>0)==(byte_order>0));   /* Double-check that byte-order doesn't change */
 
 	if (0 == d[i].msize) {
 	    /* The part unique to fixed point types */
@@ -637,16 +615,10 @@ H5TN_init_interface(void)\n\
         }
     }
 
-    /* Consider VAX a little-endian machine */
-    if(byte_order==0 || byte_order==-1) {
-        printf("\n\
+    printf("\n\
     /* Set the native order for this machine */\n\
-    H5T_native_order_g = H5T_ORDER_%s;\n", "LE");
-    } else {
-        printf("\n\
-    /* Set the native order for this machine */\n\
-    H5T_native_order_g = H5T_ORDER_%s;\n", "BE");
-    }
+    H5T_native_order_g = H5T_ORDER_%s;\n",
+	       byte_order ? "BE" : "LE");	/*byte order		*/
 
     /* Structure alignment for pointers, hvl_t, hobj_ref_t, hdset_reg_ref_t */
     printf("\n    /* Structure alignment for pointers, hvl_t, hobj_ref_t, hdset_reg_ref_t */\n");
@@ -1090,7 +1062,7 @@ bit.\n";
      * The FQDM of this host or the empty string.
      */
 #ifdef H5_HAVE_GETHOSTNAME
-#ifdef _WIN32
+#ifdef WIN32
 /* windows DLL cannot recognize gethostname, so turn off on windows for the time being!
     KY, 2003-1-14 */
     host_name[0] = '\0';

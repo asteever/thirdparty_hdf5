@@ -122,7 +122,7 @@ int aux_assign_obj(const char* name,            /* object name from traverse lis
         {
             /* assign the global filter */
             tmp.nfilters=1;
-            tmp.filter[0]=options->filter_g[0];
+            tmp.filter[0]=options->filter_g;
         } /* if all */
         else
         {
@@ -144,12 +144,9 @@ int aux_assign_obj(const char* name,            /* object name from traverse lis
         
         if (options->all_filter)
         {
-            int k;
-
-            /* assign the global filters */
-            tmp.nfilters=options->n_filter_g;
-            for ( k = 0; k < options->n_filter_g; k++)
-                tmp.filter[k]=options->filter_g[k];
+            /* assign the global filter */
+            tmp.nfilters=1;
+            tmp.filter[0]=options->filter_g;
         }
         if (options->all_layout)
         {
@@ -171,7 +168,8 @@ int aux_assign_obj(const char* name,            /* object name from traverse lis
     *obj = tmp;
     return 1;
     
-}       
+}
+                   
 
 
 /*-------------------------------------------------------------------------
@@ -189,15 +187,12 @@ int aux_assign_obj(const char* name,            /* object name from traverse lis
  *
  *-------------------------------------------------------------------------
  */
-
 int apply_filters(const char* name,    /* object name from traverse list */
                   int rank,            /* rank of dataset */
                   hsize_t *dims,       /* dimensions of dataset */
-                  hid_t dcpl_id,       /* dataset creation property list */
+                  hid_t dcpl_id,       /* (IN,OUT) dataset creation property list */
                   pack_opt_t *options, /* repack options */
                   int *has_filter)     /* (OUT) object NAME has a filter */
-
-
 {
     int          nfilters;       /* number of filters in DCPL */
     hsize_t      chsize[64];     /* chunk size in elements */
@@ -264,23 +259,21 @@ int apply_filters(const char* name,    /* object name from traverse list */
     /*-------------------------------------------------------------------------
     * the type of filter and additional parameter
     * type can be one of the filters
-    * H5Z_FILTER_NONE        0 , uncompress if compressed
-    * H5Z_FILTER_DEFLATE     1 , deflation like gzip
-    * H5Z_FILTER_SHUFFLE     2 , shuffle the data
-    * H5Z_FILTER_FLETCHER32  3 , fletcher32 checksum of EDC
-    * H5Z_FILTER_SZIP        4 , szip compression
-    * H5Z_FILTER_NBIT        5 , nbit compression
-    * H5Z_FILTER_SCALEOFFSET 6 , scaleoffset compression
+    * H5Z_FILTER_NONE       0,  uncompress if compressed
+    * H5Z_FILTER_DEFLATE      1 , deflation like gzip
+    * H5Z_FILTER_SHUFFLE    2 , shuffle the data
+    * H5Z_FILTER_FLETCHER32 3 , fletcher32 checksum of EDC
+    * H5Z_FILTER_SZIP       4 , szip compression
     *-------------------------------------------------------------------------
     */
     
     if (obj.nfilters)
     {
         
-   /*-------------------------------------------------------------------------
-    * filters require CHUNK layout; if we do not have one define a default
-    *-------------------------------------------------------------------------
-    */
+    /*-------------------------------------------------------------------------
+     * filters require CHUNK layout; if we do not have one define a default
+     *-------------------------------------------------------------------------
+     */
         if (obj.layout==-1)
         {
             obj.chunk.rank=rank;
@@ -354,42 +347,14 @@ int apply_filters(const char* name,    /* object name from traverse list */
                 if (H5Pset_fletcher32(dcpl_id)<0)
                     return -1;
                 break;
-           /*----------- -------------------------------------------------------------
-            * H5Z_FILTER_NBIT , NBIT compression
-            *-------------------------------------------------------------------------
-            */
-            case H5Z_FILTER_NBIT:
-                if(H5Pset_chunk(dcpl_id, obj.chunk.rank, obj.chunk.chunk_lengths)<0)
-                    return -1;
-                if (H5Pset_nbit(dcpl_id)<0)
-                    return -1;
-                break;
-            /*----------- -------------------------------------------------------------
-             * H5Z_FILTER_SCALEOFFSET , scale+offset compression
-             *-------------------------------------------------------------------------
-             */
-                
-            case H5Z_FILTER_SCALEOFFSET:
-                {
-                    H5Z_SO_scale_type_t scale_type;
-                    int                 scale_factor;
-                    
-                    scale_type   = obj.filter[i].cd_values[0];
-                    scale_factor = obj.filter[i].cd_values[1];
-                    
-                    if(H5Pset_chunk(dcpl_id, obj.chunk.rank, obj.chunk.chunk_lengths)<0)
-                        return -1;
-                    if (H5Pset_scaleoffset(dcpl_id,scale_type,scale_factor)<0)
-                        return -1;
-                }
-                break;
+           
             } /* switch */
         }/*i*/
         
     }
     /*obj.nfilters*/
     
-    /*-------------------------------------------------------------------------
+   /*-------------------------------------------------------------------------
     * layout
     *-------------------------------------------------------------------------
     */
@@ -413,4 +378,64 @@ int apply_filters(const char* name,    /* object name from traverse list */
 
  return 0;
 }
+
+
+
+/*-------------------------------------------------------------------------
+ * Function: print_filters
+ *
+ * Purpose: print the filters in DCPL
+ *
+ * Return: 0, ok, -1 no
+ *
+ *-------------------------------------------------------------------------
+ */
+
+int print_filters(hid_t dcpl_id)
+{
+ int          nfilters;       /* number of filters */
+ unsigned     filt_flags;     /* filter flags */
+ H5Z_filter_t filtn;          /* filter identification number */
+ unsigned     cd_values[20];  /* filter client data values */
+ size_t       cd_nelmts;      /* filter client number of values */
+ size_t       cd_num;         /* filter client data counter */
+ char         f_name[256];    /* filter name */
+ char         s[64];          /* temporary string buffer */
+ int          i;
+
+ /* get information about filters */
+ if ((nfilters = H5Pget_nfilters(dcpl_id))<0)
+  return -1;
+
+ for (i=0; i<nfilters; i++)
+ {
+  cd_nelmts = NELMTS(cd_values);
+
+  filtn = H5Pget_filter(dcpl_id,
+   (unsigned)i,
+   &filt_flags,
+   &cd_nelmts,
+   cd_values,
+   sizeof(f_name),
+   f_name);
+
+
+  f_name[sizeof(f_name)-1] = '\0';
+  sprintf(s, "Filter-%d:", i);
+  printf("    %-10s %s-%u %s {", s,
+   f_name[0]?f_name:"method",
+   (unsigned)filtn,
+   filt_flags & H5Z_FLAG_OPTIONAL?"OPT":"");
+  for (cd_num=0; cd_num<cd_nelmts; cd_num++) {
+   printf("%s%u", cd_num?", ":"", cd_values[cd_num]);
+  }
+  printf("}\n");
+ }
+
+ return 0;
+
+
+}
+
+
 

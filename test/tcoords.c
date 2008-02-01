@@ -88,8 +88,8 @@ static void test_single_end(hid_t file)
     ret = H5Pset_chunk(plid, 4, da_chunksize);
     CHECK(ret, FAIL, "H5Pset_chunk");
 
-    did = H5Dcreate2(file, "single_end", H5T_NATIVE_INT, sid, H5P_DEFAULT, plid, H5P_DEFAULT);
-    CHECK(did, FAIL, "H5Dcreate2");
+    did = H5Dcreate(file, "single_end", H5T_NATIVE_INT, sid, plid);
+    CHECK(did, FAIL, "H5Dcreate");
 
     for(i=0; i<2; i++) {
         for(j=0; j<3; j++) {
@@ -100,7 +100,7 @@ static void test_single_end(hid_t file)
         }
     }
 
-    ret = H5Dwrite(did, H5T_NATIVE_INT, sid, sid, H5P_DEFAULT, da_buffer);
+    ret = H5Dwrite(did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, da_buffer);
     CHECK(ret, FAIL, "H5Dwrite");
 
     ret = H5Dclose(did);
@@ -109,11 +109,11 @@ static void test_single_end(hid_t file)
   
     /* ****** Case 1: ******
      * Testing the full selection in the fastest-growing end */
-    did = H5Dopen2(file, "single_end", H5P_DEFAULT);
+    did = H5Dopen(file, "single_end");
     CHECK(did, FAIL, "H5Dopen");
 
     /* Select the elements in the dataset */
-    ret = H5Sselect_elements(sid, H5S_SELECT_SET, 12, da_elmts1);
+    ret = H5Sselect_elements(sid, H5S_SELECT_SET, (const size_t)12, da_elmts1);
     CHECK(ret, FAIL, "H5Sselect_elements");
 
     msid = H5Screate_simple(4, mem1_dims, mem1_dims);
@@ -139,11 +139,11 @@ static void test_single_end(hid_t file)
 
     /* ****** Case 2: ******
      * Testing the full selection in the slowest-growing end */
-    did = H5Dopen2(file, "single_end", H5P_DEFAULT);
+    did = H5Dopen(file, "single_end");
     CHECK(did, FAIL, "H5Dopen");
 
     /* Select the elements in the dataset */
-    ret = H5Sselect_elements(sid, H5S_SELECT_SET, 6, da_elmts2);
+    ret = H5Sselect_elements(sid, H5S_SELECT_SET, (const size_t)6, da_elmts2);
     CHECK(ret, FAIL, "H5Sselect_elements");
 
     msid = H5Screate_simple(4, mem2_dims, mem2_dims);
@@ -169,7 +169,7 @@ static void test_single_end(hid_t file)
 
     /* ****** Case 3: ******
      * Testing the full selection in the middle dimensions */
-    did = H5Dopen2(file, "single_end", H5P_DEFAULT);
+    did = H5Dopen(file, "single_end");
     CHECK(did, FAIL, "H5Dopen");
 
     /* Select the elements in the dataset */
@@ -272,8 +272,8 @@ static void test_multiple_ends(hid_t file)
     ret = H5Pset_chunk(plid, 8, da_chunksize);
     CHECK(ret, FAIL, "H5Pset_chunk");
 
-    did = H5Dcreate2(file, "multiple_ends", H5T_NATIVE_INT, sid, H5P_DEFAULT, plid, H5P_DEFAULT);
-    CHECK(did, FAIL, "H5Dcreate2");
+    did = H5Dcreate(file, "multiple_ends", H5T_NATIVE_INT, sid, plid);
+    CHECK(did, FAIL, "H5Dcreate");
 
     for(i=0; i<4; i++)
         for(j=0; j<5; j++)
@@ -286,7 +286,7 @@ static void test_multiple_ends(hid_t file)
                                 da_buffer[i][j][k][l][m][n][p][1] = i*1000000 + j*100000 + k*10000 + l*1000 + m*100 + n*10 + p + 1;
                             }
 
-    ret = H5Dwrite(did, H5T_NATIVE_INT, sid, sid, H5P_DEFAULT, da_buffer);
+    ret = H5Dwrite(did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, da_buffer);
     CHECK(ret, FAIL, "H5Dwrite");
 
     ret = H5Dclose(did);
@@ -294,7 +294,7 @@ static void test_multiple_ends(hid_t file)
 
     /* ****** Case 1: ******
      * Testing the full selections in the fastest-growing end and in the middle dimensions*/
-    did = H5Dopen2(file, "multiple_ends", H5P_DEFAULT);
+    did = H5Dopen(file, "multiple_ends");
     CHECK(did, FAIL, "H5Dopen");
 
     /* Select the elements in the dataset */
@@ -326,7 +326,7 @@ static void test_multiple_ends(hid_t file)
 
     /* ****** Case 2: ******
      * Testing the full selections in the slowest-growing end and in the middle dimensions*/
-    did = H5Dopen2(file, "multiple_ends", H5P_DEFAULT);
+    did = H5Dopen(file, "multiple_ends");
     CHECK(did, FAIL, "H5Dopen");
 
     /* Select the elements in the dataset */
@@ -358,7 +358,7 @@ static void test_multiple_ends(hid_t file)
 
     /* ****** Case 3: ******
      * Testing two unadjacent full selections in the middle dimensions */
-    did = H5Dopen2(file, "multiple_ends", H5P_DEFAULT);
+    did = H5Dopen(file, "multiple_ends");
     CHECK(did, FAIL, "H5Dopen");
 
     /* Select the elements in the dataset */
@@ -390,7 +390,7 @@ static void test_multiple_ends(hid_t file)
 
     /* ****** Case 4: ******
      * Testing the full selections in the fastest-growing end and the slowest-growing end */
-    did = H5Dopen2(file, "multiple_ends", H5P_DEFAULT);
+    did = H5Dopen(file, "multiple_ends");
     CHECK(did, FAIL, "H5Dopen");
 
     /* Select the elements in the dataset */
@@ -424,7 +424,7 @@ static void test_multiple_ends(hid_t file)
     /* ****** Case 5: ******
      * Testing the full selections in the fastest-growing end and the slowest-growing end, 
      * and also in the middle dimensions */
-    did = H5Dopen2(file, "multiple_ends", H5P_DEFAULT);
+    did = H5Dopen(file, "multiple_ends");
     CHECK(did, FAIL, "H5Dopen");
 
     /* Select the elements in the dataset */

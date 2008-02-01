@@ -36,6 +36,7 @@ H5DIFF_BIN=`pwd`/$H5DIFF        # The path of the h5diff  tool binary
 H5DETECTSZIP=testh5repack_detect_szip               # The tool name
 H5DETECTSZIP_BIN=`pwd`/$H5DETECTSZIP    # The path of the tool binary
 
+
 INFO_FILE=../testfiles/info.h5repack
 
 FILE0=h5repack_fill.h5
@@ -49,8 +50,6 @@ FILE8=h5repack_deflate.h5
 FILE9=h5repack_shuffle.h5
 FILE10=h5repack_fletcher.h5
 FILE11=h5repack_filters.h5
-FILE12=h5repack_nbit.h5
-FILE13=h5repack_soffset.h5
 
 
 nerrors=0
@@ -93,9 +92,9 @@ DIFFTEST()
 {
     VERIFY  $@
     if [ "`uname -s`" = "TFLOPS O/S" ]; then
-     $RUNSERIAL $H5DIFF_BIN -q $@ 
+     $RUNSERIAL $H5DIFF_BIN $@ -q
     else
-     $RUNSERIAL $H5DIFF_BIN -q "$@" 
+     $RUNSERIAL $H5DIFF_BIN "$@" -q
     fi
     RET=$?
     if [ $RET != 0 ] ; then
@@ -121,9 +120,9 @@ TOOLTEST()
     outfile=$path/out.$1
     shift
     if [ "`uname -s`" = "TFLOPS O/S" ]; then
-     $RUNSERIAL $H5REPACK_BIN $@ $infile $outfile
+     $RUNSERIAL $H5REPACK_BIN -i $infile -o $outfile $@
     else
-     $RUNSERIAL $H5REPACK_BIN "$@" $infile $outfile
+     $RUNSERIAL $H5REPACK_BIN -i $infile -o $outfile "$@"
     fi
 
     RET=$?
@@ -253,7 +252,7 @@ else
 fi
   
 # szip remove
-arg="$FILE7 --filter=dset_szip:NONE"
+arg="$FILE7 -f dset_szip:NONE"
 if test $USE_FILTER_SZIP_ENCODER != "yes" -o $USE_FILTER_SZIP != "yes" ; then
  SKIP $arg
 else
@@ -308,53 +307,7 @@ else
  TOOLTEST $arg
 fi        
 
-# nbit copy
-arg="$FILE12"
-if test $USE_FILTER_NBIT != "yes" ; then
- SKIP $arg
-else
- TOOLTEST $arg
-fi
 
-# nbit remove
-arg="$FILE12 -f dset_nbit:NONE"
-if test $USE_FILTER_NBIT != "yes" ; then
- SKIP $arg
-else
- TOOLTEST $arg
-fi        
-
-# nbit add
-arg="$FILE12 -f dset_int31:NBIT"
-if test $USE_FILTER_NBIT != "yes" ; then
- SKIP $arg
-else
- TOOLTEST $arg
-fi
-
-# scaleoffset copy
-arg="$FILE13"
-if test $USE_FILTER_SCALEOFFSET != "yes" ; then
- SKIP $arg
-else
- TOOLTEST $arg
-fi
-
-# scaleoffset add
-arg="$FILE13 -f dset_none:SOFF=31,IN"
-if test $USE_FILTER_SCALEOFFSET != "yes" ; then
- SKIP $arg
-else
- TOOLTEST $arg
-fi
-
-# scaleoffset remove
-arg="$FILE13 -f dset_scaleoffset:NONE"
-if test $USE_FILTER_SCALEOFFSET != "yes" ; then
- SKIP $arg
-else
- TOOLTEST $arg
-fi        
 
 # remove all  filters
 arg="$FILE11 -f NONE"
@@ -402,7 +355,7 @@ fi
 # layout options (these files have no filters)
 #########################################################
 
-TOOLTEST $FILE4 --layout=dset2:CHUNK=20x10
+TOOLTEST $FILE4 -l dset2:CHUNK=20x10
 TOOLTEST $FILE4 -l CHUNK=20x10
 TOOLTEST $FILE4 -l dset2:CONTI
 TOOLTEST $FILE4 -l CONTI
@@ -414,37 +367,28 @@ TOOLTEST $FILE4 -l COMPA
 # layout conversions (file has no filters)
 ###############################################################
 
-TOOLTEST $FILE4 -l dset_compact:CONTI
-TOOLTEST $FILE4 -l dset_compact:CHUNK=2x5
-TOOLTEST $FILE4 -l dset_compact:COMPA
-TOOLTEST $FILE4 -l dset_contiguous:COMPA
-TOOLTEST $FILE4 -l dset_contiguous:CHUNK=3x6
-TOOLTEST $FILE4 -l dset_contiguous:CONTI
-TOOLTEST $FILE4 -l dset_chunk:COMPA
-TOOLTEST $FILE4 -l dset_chunk:CONTI
-TOOLTEST $FILE4 -l dset_chunk:CHUNK=18x13
+arg1="$FILE4 -l dset_compact:CONTI"
+arg2="$FILE4 -l dset_compact:CHUNK=2x5"
+arg3="$FILE4 -l dset_compact:COMPA"
+arg4="$FILE4 -l dset_contiguous:COMPA"
+arg5="$FILE4 -l dset_contiguous:CHUNK=3x6"
+arg6="$FILE4 -l dset_contiguous:CONTI"
+arg7="$FILE4 -l dset_chunk:COMPA"
+arg8="$FILE4 -l dset_chunk:CONTI"
+arg9="$FILE4 -l dset_chunk:CHUNK=18x13"
+TOOLTEST $arg1
+TOOLTEST $arg2
+TOOLTEST $arg3
+TOOLTEST $arg4
+TOOLTEST $arg5
+TOOLTEST $arg6
+TOOLTEST $arg7
+TOOLTEST $arg8
+TOOLTEST $arg9
 
-# Native option
-TOOLTEST $FILE1 -n
-
-
-# long swtiches. use FILE4=h5repack_layout.h5 (no filters)
-
-arg="$FILE4 --layout CHUNK=20x10 --filter GZIP=1 --threshold=10 --native --latest --compact=8 --indexed=6 --ssize=8[:dtype]"
-if test $USE_FILTER_DEFLATE != "yes" ; then
- SKIP $arg
-else
- TOOLTEST $arg
-fi
-
-# several global filters
-
-arg="$FILE4 --filter GZIP=1 --filter SHUF"
-if test $USE_FILTER_DEFLATE != "yes" -o $USE_FILTER_SHUFFLE != "yes" ; then
- SKIP $arg
-else
- TOOLTEST $arg
-fi
+#native option
+arg="$FILE1 -n"
+TOOLTEST $arg
 
 
 if test $nerrors -eq 0 ; then
@@ -452,4 +396,3 @@ if test $nerrors -eq 0 ; then
 fi
 
 exit $nerrors
-

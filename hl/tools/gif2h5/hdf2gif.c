@@ -16,10 +16,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include "gif.h"
-#include "H5IMpublic.h"
-#include "h5tools_utils.h"
-
-
+#include "H5IM.h"
 
 int EndianOrder;
 
@@ -35,8 +32,6 @@ static void
 usage(void)
 {
     printf("Usage: h52gif <h5_file> <gif_file> -i <h5_image>\n");
-    fprintf(stdout, "       h52gif -V \n");
-    fprintf(stdout, "        Print HDF5 library version and exit\n");
     printf("h52gif expects *at least* one h5_image.\n");
    
 }
@@ -69,14 +64,6 @@ int main(int argc , char **argv)
     int bool_is_image = 0; /* 0 = false , 1 = true */
     char *image_name = NULL;
     int idx;
-    
-    if ( argv[1] && (strcmp("-V",argv[1])==0) )
-    {
-        print_version("gif2h5");
-        exit(EXIT_SUCCESS);
-        
-    }
-
 
     if (argc < 4) 
     {

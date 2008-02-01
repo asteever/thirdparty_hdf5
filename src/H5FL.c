@@ -98,15 +98,6 @@ typedef struct H5FL_blk_gc_list_t {
 /* The head of the list of PQs to garbage collect */
 static H5FL_blk_gc_list_t H5FL_blk_gc_head={0,NULL};
 
-#ifdef H5FL_TRACK
-
-/* Extra headers needed */
-#include "H5CSprivate.h"	/* Function stack			*/
-
-/* Head of "outstanding allocations" list */
-static H5FL_track_t *H5FL_out_head_g = NULL;
-#endif /* H5FL_TRACK */
-
 /* Forward declarations of local static functions */
 static herr_t H5FL_reg_gc(void);
 static herr_t H5FL_reg_gc_list(H5FL_reg_head_t *head);
@@ -114,10 +105,6 @@ static herr_t H5FL_arr_gc(void);
 static herr_t H5FL_arr_gc_list(H5FL_arr_head_t *head);
 static herr_t H5FL_blk_gc(void);
 static herr_t H5FL_blk_gc_list(H5FL_blk_head_t *head);
-static herr_t H5FL_blk_unlink(H5FL_blk_head_t *pq);
-
-/* Declare a free list to manage the H5FL_fac_head_t struct */
-H5FL_DEFINE(H5FL_fac_head_t);
 
 /* Declare a free list to manage the H5FL_blk_node_t struct */
 H5FL_DEFINE(H5FL_blk_node_t);
@@ -167,7 +154,7 @@ H5FL_init_interface(void)
 static void *
 H5FL_malloc(size_t mem_size)
 {
-    void *ret_value;   /* return value*/
+    void *ret_value=NULL;   /* return value*/
 
     FUNC_ENTER_NOAPI(H5FL_malloc, NULL)
 
@@ -225,11 +212,6 @@ H5FL_reg_init(H5FL_reg_head_t *head)
     /* Indicate that the free list is initialized */
     head->init=1;
 
-    /* Make certain there's room for tracking information, if any */
-#ifdef H5FL_TRACK
-    head->size += sizeof(H5FL_track_t);
-#endif /* H5FL_TRACK */
-
     /* Make certain that the space allocated is large enough to store a free list pointer (eventually) */
     if(head->size<sizeof(void *))
         head->size=sizeof(void *);
@@ -257,6 +239,7 @@ done:
 void *
 H5FL_reg_free(H5FL_reg_head_t *head, void *obj)
 {
+    H5FL_reg_node_t *temp;      /* Temp. ptr to the new free list node allocated */
     void *ret_value=NULL;       /* Return value */
 
     FUNC_ENTER_NOAPI(H5FL_reg_free, NULL)
@@ -265,30 +248,6 @@ H5FL_reg_free(H5FL_reg_head_t *head, void *obj)
     assert(head);
     assert(obj);
 
-#ifdef H5FL_TRACK
-    {
-        H5FL_track_t *trk = obj = ((unsigned char *)obj) - sizeof(H5FL_track_t);
-
-        /* Free tracking information about the allocation location */
-        H5CS_close_stack(trk->stack);
-        trk->stack = H5MM_xfree(trk->stack);
-        trk->file = H5MM_xfree(trk->file);
-        trk->func = H5MM_xfree(trk->func);
-
-        /* Remove from "outstanding allocations" list */
-        if(trk == H5FL_out_head_g) {
-            H5FL_out_head_g = H5FL_out_head_g->next;
-            if(H5FL_out_head_g)
-                H5FL_out_head_g->prev = NULL;
-        } /* end if */
-        else {
-            trk->prev->next = trk->next;
-            if(trk->next)
-                trk->next->prev = trk->prev;
-        } /* end else */
-    }
-#endif /* H5FL_TRACK */
-
 #ifdef H5FL_DEBUG
     HDmemset(obj,255,head->size);
 #endif /* H5FL_DEBUG */
@@ -296,11 +255,14 @@ H5FL_reg_free(H5FL_reg_head_t *head, void *obj)
     /* Make certain that the free list is initialized */
     assert(head->init);
 
+    /* Alias the pointer to the block to free into a H5FL_reg_node_t node */
+    temp=(H5FL_reg_node_t *)obj;
+
     /* Link into the free list */
-    ((H5FL_reg_node_t *)obj)->next=head->list;
+    temp->next=head->list;
 
     /* Point free list at the node freed */
-    head->list=(H5FL_reg_node_t *)obj;
+    head->list=temp;
 
     /* Increment the number of blocks & memory on free list */
     head->onlist++;
@@ -341,7 +303,7 @@ done:
  *-------------------------------------------------------------------------
  */
 void *
-H5FL_reg_malloc(H5FL_reg_head_t *head H5FL_TRACK_PARAMS)
+H5FL_reg_malloc(H5FL_reg_head_t *head)
 {
     void *ret_value;        /* Pointer to object to return */
 
@@ -369,6 +331,7 @@ H5FL_reg_malloc(H5FL_reg_head_t *head H5FL_TRACK_PARAMS)
 
         /* Decrement the amount of global "regular" free list memory in use */
         H5FL_reg_gc_head.mem_freed-=(head->size);
+
     } /* end if */
     /* Otherwise allocate a node */
     else {
@@ -378,25 +341,6 @@ H5FL_reg_malloc(H5FL_reg_head_t *head H5FL_TRACK_PARAMS)
         /* Increment the number of blocks allocated in list */
         head->allocated++;
     } /* end else */
-
-#ifdef H5FL_TRACK
-    /* Copy allocation location information */
-    ((H5FL_track_t *)ret_value)->stack = H5MM_calloc(sizeof(H5CS_t));
-    H5CS_copy_stack(((H5FL_track_t *)ret_value)->stack);
-    ((H5FL_track_t *)ret_value)->file = H5MM_strdup(call_file);
-    ((H5FL_track_t *)ret_value)->func = H5MM_strdup(call_func);
-    ((H5FL_track_t *)ret_value)->line = call_line;
-
-    /* Add to "outstanding allocations" list */
-    ((H5FL_track_t *)ret_value)->prev = NULL;
-    ((H5FL_track_t *)ret_value)->next = H5FL_out_head_g;
-    if(H5FL_out_head_g)
-        H5FL_out_head_g->prev = (H5FL_track_t *)ret_value;
-    H5FL_out_head_g = (H5FL_track_t *)ret_value;
-
-    /* Adjust for allocation tracking information */
-    ret_value = ((unsigned char *)ret_value) + sizeof(H5FL_track_t);
-#endif /* H5FL_TRACK */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -419,7 +363,7 @@ done:
  *-------------------------------------------------------------------------
  */
 void *
-H5FL_reg_calloc(H5FL_reg_head_t *head H5FL_TRACK_PARAMS)
+H5FL_reg_calloc(H5FL_reg_head_t *head)
 {
     void *ret_value;        /* Pointer to object to return */
 
@@ -429,12 +373,11 @@ H5FL_reg_calloc(H5FL_reg_head_t *head H5FL_TRACK_PARAMS)
     assert(head);
 
     /* Allocate the block */
-    if (NULL==(ret_value = H5FL_reg_malloc(head H5FL_TRACK_INFO_INT)))
+    if (NULL==(ret_value = H5FL_reg_malloc(head)))
         HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
 
     /* Clear to zeros */
-    /* (Accomodate tracking information, if present) */
-    HDmemset(ret_value,0,head->size - H5FL_TRACK_SIZE);
+    HDmemset(ret_value,0,head->size);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -829,7 +772,7 @@ done:
  *-------------------------------------------------------------------------
  */
 void *
-H5FL_blk_malloc(H5FL_blk_head_t *head, size_t size H5FL_TRACK_PARAMS)
+H5FL_blk_malloc(H5FL_blk_head_t *head, size_t size)
 {
     H5FL_blk_node_t *free_list;  /* The free list of nodes of correct size */
     H5FL_blk_list_t *temp;  /* Temp. ptr to the new native list allocated */
@@ -853,6 +796,12 @@ H5FL_blk_malloc(H5FL_blk_head_t *head, size_t size H5FL_TRACK_PARAMS)
         temp=free_list->list;
         free_list->list=free_list->list->next;
 
+        /* Restore the size of the block */
+        temp->size=size;        /* Overwrites the 'next' field */
+
+        /* Return the pointer to the data portion */
+        ret_value=((char *)temp)+sizeof(H5FL_blk_list_t);
+
         /* Decrement the number of blocks & memory used on free list */
         head->onlist--;
         head->list_mem-=size;
@@ -864,37 +813,18 @@ H5FL_blk_malloc(H5FL_blk_head_t *head, size_t size H5FL_TRACK_PARAMS)
     /* No free list available, or there are no nodes on the list, allocate a new node to give to the user */
     else {
         /* Allocate new node, with room for the page info header and the actual page data */
-        if(NULL==(temp=H5FL_malloc(sizeof(H5FL_blk_list_t) + H5FL_TRACK_SIZE + size)))
+        if(NULL==(temp=H5FL_malloc(sizeof(H5FL_blk_list_t)+size)))
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed for chunk")
 
         /* Increment the number of blocks allocated */
         head->allocated++;
+
+        /* Initialize the block allocated */
+        temp->size=size;
+
+        /* Set the return value to the block itself */
+        ret_value=((char *)temp)+sizeof(H5FL_blk_list_t);
     } /* end else */
-
-    /* Initialize the block allocated */
-    temp->size=size;
-
-    /* Set the return value to the block itself */
-    ret_value=((char *)temp)+sizeof(H5FL_blk_list_t);
-
-#ifdef H5FL_TRACK
-    /* Copy allocation location information */
-    ((H5FL_track_t *)ret_value)->stack = H5MM_calloc(sizeof(H5CS_t));
-    H5CS_copy_stack(((H5FL_track_t *)ret_value)->stack);
-    ((H5FL_track_t *)ret_value)->file = H5MM_strdup(call_file);
-    ((H5FL_track_t *)ret_value)->func = H5MM_strdup(call_func);
-    ((H5FL_track_t *)ret_value)->line = call_line;
-
-    /* Add to "outstanding allocations" list */
-    ((H5FL_track_t *)ret_value)->prev = NULL;
-    ((H5FL_track_t *)ret_value)->next = H5FL_out_head_g;
-    if(H5FL_out_head_g)
-        H5FL_out_head_g->prev = (H5FL_track_t *)ret_value;
-    H5FL_out_head_g = (H5FL_track_t *)ret_value;
-
-    /* Adjust for allocation tracking information */
-    ret_value = ((unsigned char *)ret_value) + sizeof(H5FL_track_t);
-#endif /* H5FL_TRACK */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -921,7 +851,7 @@ done:
  *-------------------------------------------------------------------------
  */
 void *
-H5FL_blk_calloc(H5FL_blk_head_t *head, size_t size H5FL_TRACK_PARAMS)
+H5FL_blk_calloc(H5FL_blk_head_t *head, size_t size)
 {
     void *ret_value;    /* Pointer to the block to return to the user */
 
@@ -932,7 +862,7 @@ H5FL_blk_calloc(H5FL_blk_head_t *head, size_t size H5FL_TRACK_PARAMS)
     assert(size);
 
     /* Allocate the block */
-    if (NULL==(ret_value = H5FL_blk_malloc(head,size H5FL_TRACK_INFO_INT)))
+    if (NULL==(ret_value = H5FL_blk_malloc(head,size)))
         HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
 
     /* Clear the block to zeros */
@@ -975,45 +905,16 @@ H5FL_blk_free(H5FL_blk_head_t *head, void *block)
     assert(head);
     assert(block);
 
-#ifdef H5FL_TRACK
-    {
-        H5FL_track_t *trk = block = ((unsigned char *)block) - sizeof(H5FL_track_t);
-
-        /* Free tracking information about the allocation location */
-        H5CS_close_stack(trk->stack);
-        trk->stack = H5MM_xfree(trk->stack);
-        trk->file = H5MM_xfree(trk->file);
-        trk->func = H5MM_xfree(trk->func);
-
-        /* Remove from "outstanding allocations" list */
-        if(trk == H5FL_out_head_g) {
-            H5FL_out_head_g = H5FL_out_head_g->next;
-            if(H5FL_out_head_g)
-                H5FL_out_head_g->prev = NULL;
-        } /* end if */
-        else {
-            trk->prev->next = trk->next;
-            if(trk->next)
-                trk->next->prev = trk->prev;
-        } /* end else */
-    }
-#endif /* H5FL_TRACK */
-
     /* Get the pointer to the native block info header in front of the native block to free */
     temp=(H5FL_blk_list_t *)((unsigned char *)block-sizeof(H5FL_blk_list_t)); /*lint !e826 Pointer-to-pointer cast is appropriate here */
 
     /* Save the block's size for later */
     free_size=temp->size;
 
-#ifdef H5FL_DEBUG
-    HDmemset(temp,255,free_size + sizeof(H5FL_blk_list_t) + H5FL_TRACK_SIZE);
-#endif /* H5FL_DEBUG */
-
     /* check if there is a free list for native blocks of this size */
-    if((free_list=H5FL_blk_find_list(&(head->head),free_size))==NULL) {
+    if((free_list=H5FL_blk_find_list(&(head->head),temp->size))==NULL) {
         /* No free list available, create a new list node and insert it to the queue */
-        free_list=H5FL_blk_create_list(&(head->head),free_size);
-        HDassert(free_list);
+        free_list=H5FL_blk_create_list(&(head->head),temp->size);
     } /* end if */
 
     /* Prepend the free'd native block to the front of the free list */
@@ -1063,7 +964,7 @@ done:
  *-------------------------------------------------------------------------
  */
 void *
-H5FL_blk_realloc(H5FL_blk_head_t *head, void *block, size_t new_size H5FL_TRACK_PARAMS)
+H5FL_blk_realloc(H5FL_blk_head_t *head, void *block, size_t new_size)
 {
     void *ret_value=NULL;       /* Return value */
 
@@ -1078,106 +979,28 @@ H5FL_blk_realloc(H5FL_blk_head_t *head, void *block, size_t new_size H5FL_TRACK_
         H5FL_blk_list_t *temp;      /* Temp. ptr to the new block node allocated */
 
         /* Get the pointer to the chunk info header in front of the chunk to free */
-        temp=(H5FL_blk_list_t *)((unsigned char *)block - (sizeof(H5FL_blk_list_t) + H5FL_TRACK_SIZE)); /*lint !e826 Pointer-to-pointer cast is appropriate here */
+        temp=(H5FL_blk_list_t *)((unsigned char *)block-sizeof(H5FL_blk_list_t)); /*lint !e826 Pointer-to-pointer cast is appropriate here */
 
         /* check if we are actually changing the size of the buffer */
         if(new_size!=temp->size) {
             size_t blk_size;           /* Temporary block size */
 
-            if((ret_value=H5FL_blk_malloc(head,new_size H5FL_TRACK_INFO_INT))==NULL)
+            if((ret_value=H5FL_blk_malloc(head,new_size))==NULL)
                 HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed for block")
             blk_size=MIN(new_size,temp->size);
             HDmemcpy(ret_value,block,blk_size);
             H5FL_blk_free(head,block);
         } /* end if */
-        else {
-#ifdef H5FL_TRACK
-            {
-                H5FL_track_t *trk = (H5FL_track_t *)(((unsigned char *)block) - sizeof(H5FL_track_t));
-
-                /* Release previous tracking information */
-                H5CS_close_stack(trk->stack);
-                trk->file = H5MM_xfree(trk->file);
-                trk->func = H5MM_xfree(trk->func);
-
-                /* Store new tracking information */
-                H5CS_copy_stack(trk->stack);
-                trk->file = H5MM_strdup(call_file);
-                trk->func = H5MM_strdup(call_func);
-                trk->line = call_line;
-            }
-#endif /* H5FL_TRACK */
+        else
             ret_value=block;
-        } /* end if */
     } /* end if */
     /* Not re-allocating, just allocate a fresh block */
     else
-        ret_value=H5FL_blk_malloc(head,new_size H5FL_TRACK_INFO_INT);
+        ret_value=H5FL_blk_malloc(head,new_size);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FL_blk_realloc() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5FL_blk_unlink
- PURPOSE
-    Remove a block free list from the global list of initialized block free
-	lists.
- USAGE
-    void H5FL_blk_unlink(H5FL_blk_head_t *pq)
-	H5FL_blk_head_t *pq;		IN: Block free list to remove from global list
- RETURNS
-    Success:	Non-negative
-   	Failure:	Negative
- DESCRIPTION
-    Search through the global list of initialized block free lists and remove
- 	a particular free list.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-static herr_t
-H5FL_blk_unlink(H5FL_blk_head_t *pq)
-{
-    H5FL_blk_gc_node_t *last;   /* Pointer to the last garbage collection node examined */
-    H5FL_blk_gc_node_t *tmp;    /* Temporary pointer to a garbage collection node */
-    herr_t ret_value=SUCCEED;	/* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT(H5FL_blk_unlink)
-
-    /* Find the node to remove from the global list */
-    last=NULL;
-    tmp=H5FL_blk_gc_head.first;
-    while(tmp!=NULL) {
-        /* Check if the list has allocations outstanding */
-        if(tmp->pq==pq) {
-            /* Unlink node from linked list */
-            if(last==NULL)
-                H5FL_blk_gc_head.first=H5FL_blk_gc_head.first->next;
-            else
-                last->next=tmp->next;
-
-            /* Free the block node */
-            H5MM_xfree(tmp);
-
-            /* Leave now */
-            break;
-        } /* end if */
-
-        /* Advance to next node in list */
-        last=tmp;
-        tmp=tmp->next;
-    } /* end while */
-
-    if(tmp==NULL)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGC, FAIL, "can't release block free list")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
-}   /* end H5FL_blk_unlink() */
 
 
 /*-------------------------------------------------------------------------
@@ -1508,11 +1331,11 @@ H5FL_arr_malloc(H5FL_arr_head_t *head, size_t elem)
         if(H5FL_arr_init(head)<0)
             HGOTO_ERROR (H5E_RESOURCE, H5E_CANTINIT, NULL, "can't initialize 'array' blocks")
 
-    /* Sanity check that the number of elements is supported */
-    assert(elem<=(unsigned) head->maxelem);
-
     /* Get the set of the memory block */
     mem_size=head->list_arr[elem].size;
+
+    /* Sanity check that the number of elements is supported */
+    assert((int)elem<=head->maxelem);
 
     /* Check for nodes available on the free list first */
     if(head->list_arr[elem].list!=NULL) {
@@ -1866,7 +1689,7 @@ H5FL_seq_free(H5FL_seq_head_t *head, void *obj)
  *-------------------------------------------------------------------------
  */
 void *
-H5FL_seq_malloc(H5FL_seq_head_t *head, size_t elem H5FL_TRACK_PARAMS)
+H5FL_seq_malloc(H5FL_seq_head_t *head, size_t elem)
 {
     void *ret_value;        /* Pointer to object to return */
 
@@ -1877,7 +1700,7 @@ H5FL_seq_malloc(H5FL_seq_head_t *head, size_t elem H5FL_TRACK_PARAMS)
     assert(elem);
 
     /* Use block routine */
-    ret_value=H5FL_blk_malloc(&(head->queue),head->size*elem H5FL_TRACK_INFO_INT);
+    ret_value=H5FL_blk_malloc(&(head->queue),head->size*elem);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1900,7 +1723,7 @@ done:
  *-------------------------------------------------------------------------
  */
 void *
-H5FL_seq_calloc(H5FL_seq_head_t *head, size_t elem H5FL_TRACK_PARAMS)
+H5FL_seq_calloc(H5FL_seq_head_t *head, size_t elem)
 {
     void *ret_value;        /* Pointer to object to return */
 
@@ -1911,7 +1734,7 @@ H5FL_seq_calloc(H5FL_seq_head_t *head, size_t elem H5FL_TRACK_PARAMS)
     assert(elem);
 
     /* Use block routine */
-    ret_value=H5FL_blk_calloc(&(head->queue),head->size*elem H5FL_TRACK_INFO_INT);
+    ret_value=H5FL_blk_calloc(&(head->queue),head->size*elem);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1934,7 +1757,7 @@ done:
  *-------------------------------------------------------------------------
  */
 void *
-H5FL_seq_realloc(H5FL_seq_head_t *head, void * obj, size_t new_elem H5FL_TRACK_PARAMS)
+H5FL_seq_realloc(H5FL_seq_head_t *head, void * obj, size_t new_elem)
 {
     void *ret_value;        /* Pointer to object to return */
 
@@ -1945,199 +1768,11 @@ H5FL_seq_realloc(H5FL_seq_head_t *head, void * obj, size_t new_elem H5FL_TRACK_P
     assert(new_elem);
 
     /* Use block routine */
-    ret_value=H5FL_blk_realloc(&(head->queue),obj,head->size*new_elem H5FL_TRACK_INFO_INT);
+    ret_value=H5FL_blk_realloc(&(head->queue),obj,head->size*new_elem);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 }   /* end H5FL_seq_realloc() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5FL_fac_init
- *
- * Purpose:	Initialize a block factory
- *
- * Return:	Success:	Pointer to factory object
- * 		Failure:	NULL
- *
- * Programmer:	Quincey Koziol
- *              Wednesday, February 2, 2005
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-H5FL_fac_head_t *
-H5FL_fac_init(size_t size)
-{
-    H5FL_fac_head_t *factory;      /* Pointer to new block factory */
-    H5FL_fac_head_t *ret_value;    /* Return value */
-
-    FUNC_ENTER_NOAPI(H5FL_fac_init, NULL)
-
-    /* Sanity check */
-    HDassert(size>0);
-
-    /* Allocate room for the new factory */
-    if(NULL==(factory=H5FL_MALLOC(H5FL_fac_head_t)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed for factory object")
-
-    /* Initialize block header information */
-    HDmemset(&(factory->queue),0,sizeof(H5FL_blk_head_t));
-
-    /* Set size of blocks for factory */
-    factory->size=size;
-
-    /* Set return value */
-    ret_value=factory;
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-}   /* end H5FL_fac_init() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5FL_fac_free
- *
- * Purpose:	Release a block back to a factory & put on free list
- *
- * Return:	Success:	Non-negative
- * 		Failure:	Negative
- *
- * Programmer:	Quincey Koziol
- *              Wednesday, February 2, 2005
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-void *
-H5FL_fac_free(H5FL_fac_head_t *head, void *obj)
-{
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5FL_fac_free)
-
-    /* Double check parameters */
-    assert(head);
-    assert(obj);
-
-    /* Make certain that the free list is initialized */
-    assert(head->queue.init);
-
-    /* Use block routine */
-    H5FL_blk_free(&(head->queue),obj);
-
-    FUNC_LEAVE_NOAPI(NULL)
-}   /* end H5FL_fac_free() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5FL_fac_malloc
- *
- * Purpose:	Allocate a block from a factory
- *
- * Return:	Success:	Pointer to a valid sequence object
- * 		Failure:	NULL
- *
- * Programmer:	Quincey Koziol
- *              Wednesday, February 2, 2005
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-void *
-H5FL_fac_malloc(H5FL_fac_head_t *head H5FL_TRACK_PARAMS)
-{
-    void *ret_value;        /* Pointer to object to return */
-
-    FUNC_ENTER_NOAPI(H5FL_fac_malloc, NULL)
-
-    /* Double check parameters */
-    assert(head);
-
-    /* Use block routine */
-    ret_value=H5FL_blk_malloc(&(head->queue),head->size H5FL_TRACK_INFO_INT);
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-}   /* end H5FL_fac_malloc() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5FL_fac_calloc
- *
- * Purpose:	Allocate a block from a factory and clear it to zeros
- *
- * Return:	Success:	Pointer to a valid array object
- * 		Failure:	NULL
- *
- * Programmer:	Quincey Koziol
- *              Wednesday, February 2, 2005
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-void *
-H5FL_fac_calloc(H5FL_fac_head_t *head H5FL_TRACK_PARAMS)
-{
-    void *ret_value;        /* Pointer to object to return */
-
-    FUNC_ENTER_NOAPI(H5FL_fac_calloc, NULL)
-
-    /* Double check parameters */
-    assert(head);
-
-    /* Use block routine */
-    ret_value=H5FL_blk_calloc(&(head->queue),head->size H5FL_TRACK_INFO_INT);
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-}   /* end H5FL_fac_calloc() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5FL_fac_term
- *
- * Purpose:	Terminate a block factory
- *
- * Return:	Success:	non-negative
- * 		Failure:	negative
- *
- * Programmer:	Quincey Koziol
- *              Wednesday, February 2, 2005
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5FL_fac_term(H5FL_fac_head_t *factory)
-{
-    herr_t ret_value=SUCCEED;    /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT(H5FL_fac_term)
-
-    /* Sanity check */
-    HDassert(factory);
-
-    /* Garbage collect all the blocks in the factory's free list */
-    if(H5FL_blk_gc_list(&(factory->queue))<0)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGC, FAIL, "garbage collection of factory failed")
-
-    /* Verify that all the blocks have been freed */
-    if(factory->queue.allocated>0)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTRELEASE, FAIL, "factory still has objects allocated")
-
-    /* Unlink block free list for factory from global free list */
-    H5FL_blk_unlink(&(factory->queue));
-
-    /* Free factory info */
-    H5FL_FREE(H5FL_fac_head_t,factory);
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-}   /* end H5FL_fac_term() */
 
 
 /*-------------------------------------------------------------------------
@@ -2265,24 +1900,6 @@ H5FL_term_interface(void)
     (void)H5FL_garbage_coll();
 
     ret_value=H5FL_reg_term()+H5FL_arr_term()+H5FL_blk_term();
-
-#ifdef H5FL_TRACK
-    /* If we haven't freed all the allocated memory, dump out the list now */
-    if(ret_value > 0 && H5FL_out_head_g) {
-        H5FL_track_t *trk = H5FL_out_head_g;
-
-        /* Dump information about all the outstanding allocations */
-        while(trk != NULL) {
-            /* Print information about the outstanding block */
-            HDfprintf(stderr,"%s: Outstanding allocation:\n", "H5FL_term_interface");
-            HDfprintf(stderr,"\tFile: %s, Function: %s, Line: %d\n", trk->file, trk->func, trk->line);
-            H5CS_print_stack(trk->stack, stderr);
-
-            /* Advance to next node */
-            trk = trk->next;
-        } /* end while */
-    } /* end if */
-#endif /* H5FL_TRACK */
 
     FUNC_LEAVE_NOAPI(ret_value)
 }
