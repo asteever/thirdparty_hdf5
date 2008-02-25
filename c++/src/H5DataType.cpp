@@ -223,9 +223,11 @@ bool DataType::operator==(const DataType& compared_type ) const
 void DataType::p_commit(hid_t loc_id, const char* name)
 {
    // Call C routine to commit the transient datatype
-   herr_t ret_value = H5Tcommit2(loc_id, name, id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+   herr_t ret_value = H5Tcommit(loc_id, name, id);
    if( ret_value < 0 )
-      throw DataTypeIException(inMemFunc("p_commit"), "H5Tcommit2 failed");
+   {
+      throw DataTypeIException(inMemFunc("p_commit"), "H5Tcommit failed");
+   }
 }
 
 //--------------------------------------------------------------------------
@@ -662,7 +664,6 @@ void* DataType::Reference(const H5std_string& name) const
    return(Reference(name.c_str()));
 }
 
-#ifndef H5_NO_DEPRECATED_SYMBOLS
 //--------------------------------------------------------------------------
 // Function:	DataType::getObjType
 ///\brief	Retrieves the type of object that an object reference points to.
@@ -685,7 +686,6 @@ H5G_obj_t DataType::getObjType(void *ref, H5R_type_t ref_type) const
       throw DataTypeIException(inMemFunc("getObjType"), E.getDetailMsg());
    }
 }
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
 
 //--------------------------------------------------------------------------
 // Function:	DataType::getRegion

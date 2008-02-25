@@ -51,7 +51,6 @@ typedef struct H5G_bt_it_gnbi_t {
     char         *name;         /*member name to be returned                 */
 } H5G_bt_it_gnbi_t;
 
-#ifndef H5_NO_DEPRECATED_SYMBOLS
 /* Data passed through B-tree iteration for looking up a type by index */
 typedef struct H5G_bt_it_gtbi_t {
     /* downward */
@@ -61,7 +60,6 @@ typedef struct H5G_bt_it_gtbi_t {
     /* upward */
     H5G_obj_t    type;          /*member type to be returned                 */
 } H5G_bt_it_gtbi_t;
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
 
 /* Data passed through B-tree iteration for looking up a link by index */
 typedef struct H5G_bt_it_lbi_t {
@@ -484,7 +482,8 @@ done:
  */
 herr_t
 H5G_stab_iterate(const H5O_loc_t *oloc, hid_t dxpl_id, H5_iter_order_t order,
-    hsize_t skip, hsize_t *last_lnk, H5G_lib_iterate_t op, void *op_data)
+    hsize_t skip, hsize_t *last_lnk, hid_t gid,
+    H5G_link_iterate_t *lnk_op, void *op_data)
 {
     H5HL_t              *heap = NULL;           /* Local heap for group */
     H5O_stab_t		stab;		        /* Info about symbol table */
@@ -495,7 +494,7 @@ H5G_stab_iterate(const H5O_loc_t *oloc, hid_t dxpl_id, H5_iter_order_t order,
 
     /* Sanity check */
     HDassert(oloc);
-    HDassert(op);
+    HDassert(lnk_op && lnk_op->u.old_op);
 
     /* Get the B-tree info */
     if(NULL == H5O_msg_read(oloc, H5O_STAB_ID, &stab, dxpl_id))
@@ -511,10 +510,11 @@ H5G_stab_iterate(const H5O_loc_t *oloc, hid_t dxpl_id, H5_iter_order_t order,
         H5G_bt_it_it_t	udata;                  /* User data to pass to B-tree callback */
 
         /* Build udata to pass through H5B_iterate() to H5G_node_iterate() */
+        udata.group_id = gid;
         udata.heap = heap;
         udata.skip = skip;
         udata.final_ent = last_lnk;
-        udata.op = op;
+        udata.lnk_op = lnk_op;
         udata.op_data = op_data;
 
         /* Iterate over the group members */
@@ -548,7 +548,7 @@ H5G_stab_iterate(const H5O_loc_t *oloc, hid_t dxpl_id, H5_iter_order_t order,
             HGOTO_ERROR(H5E_SYM, H5E_CANTSORT, FAIL, "error sorting link messages")
 
         /* Iterate over links in table */
-        if((ret_value = H5G_link_iterate_table(&ltable, skip, last_lnk, op, op_data)) < 0)
+        if((ret_value = H5G_link_iterate_table(&ltable, skip, last_lnk, gid, lnk_op, op_data)) < 0)
             HERROR(H5E_SYM, H5E_CANTNEXT, "iteration operator failed");
     } /* end else */
 
@@ -601,48 +601,6 @@ H5G_stab_count(H5O_loc_t *oloc, hsize_t *num_objs, hid_t dxpl_id)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5G_stab_count() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5G_stab_bh_size
- *
- * Purpose:	Retrieve storage for btree and heap (1.6)
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Vailin Choi
- *		June 25 2007
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5G_stab_bh_size(H5F_t *f, hid_t dxpl_id, const H5O_stab_t *stab, H5_ih_info_t *bh_info)
-{
-    H5B_info_ud_t       bh_udata;               /* User-data for B-tree callbacks */
-    herr_t              ret_value = SUCCEED;
-
-    FUNC_ENTER_NOAPI(H5G_stab_bh_size, FAIL)
-
-    /* Sanity check */
-    HDassert(f);
-    HDassert(stab);
-    HDassert(bh_info);
-
-    /* Set up user data for B-tree callback */
-    bh_udata.udata = NULL;
-    bh_udata.btree_size = &(bh_info->index_size);
-
-    /* Get the B-tree & symbol table node size info */
-    if(H5B_iterate_size(f, dxpl_id, H5B_SNODE, H5G_node_iterate_size, stab->btree_addr, &bh_udata) < 0)
-        HGOTO_ERROR(H5E_BTREE, H5E_CANTINIT, FAIL, "iteration operator failed")
-
-    /* Get the size of the local heap for the group */
-    if(H5HL_heapsize(f, dxpl_id, stab->heap_addr, &(bh_info->heap_size)) < 0)
-        HGOTO_ERROR(H5E_HEAP, H5E_CANTINIT, FAIL, "iteration operator failed")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5G_stab_bh_size() */
 
 
 /*-------------------------------------------------------------------------
@@ -767,6 +725,116 @@ done:
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5G_stab_get_name_by_idx() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5G_stab_get_type_by_idx_cb
+ *
+ * Purpose:     Callback for B-tree iteration 'by index' info query to 
+ *              retrieve the type of an object
+ *
+ * Return:	Success:        Non-negative
+ *		Failure:	Negative
+ *
+ * Programmer:	Quincey Koziol
+ *	        Nov  7, 2006
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5G_stab_get_type_by_idx_cb(const H5G_entry_t *ent, void *_udata)
+{
+    H5G_bt_it_gtbi_t	*udata = (H5G_bt_it_gtbi_t *)_udata;
+    herr_t ret_value = SUCCEED;         /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT(H5G_stab_get_type_by_idx_cb)
+
+    /* Sanity check */
+    HDassert(ent);
+    HDassert(udata);
+
+    /* Check for a soft link */
+    switch(ent->type) {
+        case H5G_CACHED_SLINK:
+            udata->type = H5G_LINK;
+            break;
+
+        default:
+            {
+                H5O_loc_t tmp_oloc;             /* Temporary object location */
+                H5O_type_t obj_type;            /* Type of object at location */
+
+                /* Build temporary object location */
+                tmp_oloc.file = udata->common.f;
+                HDassert(H5F_addr_defined(ent->header));
+                tmp_oloc.addr = ent->header;
+
+                /* Get the type of the object */
+                if(H5O_obj_type(&tmp_oloc, &obj_type, udata->dxpl_id) < 0)
+                    HGOTO_ERROR(H5E_SYM, H5E_CANTGET, FAIL, "can't get object type")
+                udata->type = H5G_map_obj_type(obj_type);
+            }
+            break;
+    } /* end switch */
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5G_stab_get_type_by_idx_cb */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5G_get_objtype_by_idx
+ *
+ * Purpose:     Private function for H5Gget_objtype_by_idx.
+ *              Returns the type of objects in the group by giving index.
+ *
+ * Return:	Success:        H5G_GROUP(1), H5G_DATASET(2), H5G_TYPE(3)
+ *
+ *		Failure:	UNKNOWN
+ *
+ * Programmer:	Raymond Lu
+ *	        Nov 20, 2002
+ *
+ *-------------------------------------------------------------------------
+ */
+H5G_obj_t
+H5G_stab_get_type_by_idx(H5O_loc_t *oloc, hsize_t idx, hid_t dxpl_id)
+{
+    H5O_stab_t		stab;	        /* Info about local heap & B-tree */
+    H5G_bt_it_gtbi_t	udata;          /* User data for B-tree callback */
+    H5G_obj_t		ret_value;      /* Return value */
+
+    FUNC_ENTER_NOAPI(H5G_stab_get_type_by_idx, H5G_UNKNOWN)
+
+    /* Sanity check */
+    HDassert(oloc);
+
+    /* Get the B-tree & local heap info */
+    if(NULL == H5O_msg_read(oloc, H5O_STAB_ID, &stab, dxpl_id))
+	HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, H5G_UNKNOWN, "unable to determine local heap address")
+
+    /* Set iteration information */
+    udata.common.f = oloc->file;
+    udata.common.idx = idx;
+    udata.common.num_objs = 0;
+    udata.common.op = H5G_stab_get_type_by_idx_cb;
+    udata.dxpl_id = dxpl_id;
+    udata.type = H5G_UNKNOWN;
+
+    /* Iterate over the group members */
+    if(H5B_iterate(oloc->file, dxpl_id, H5B_SNODE, H5G_node_by_idx, stab.btree_addr, &udata) < 0)
+	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, H5G_UNKNOWN, "iteration operator failed")
+
+    /* If we don't know the type now, we almost certainly went out of bounds */
+    if(udata.type == H5G_UNKNOWN)
+	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, H5G_UNKNOWN, "index out of bound")
+
+    /* Set the return value */
+    ret_value = udata.type;
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5G_stab_get_type_by_idx() */
 
 
 /*-------------------------------------------------------------------------
@@ -978,116 +1046,4 @@ done:
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5G_stab_lookup_by_idx() */
-
-#ifndef H5_NO_DEPRECATED_SYMBOLS
-
-/*-------------------------------------------------------------------------
- * Function:	H5G_stab_get_type_by_idx_cb
- *
- * Purpose:     Callback for B-tree iteration 'by index' info query to 
- *              retrieve the type of an object
- *
- * Return:	Success:        Non-negative
- *		Failure:	Negative
- *
- * Programmer:	Quincey Koziol
- *	        Nov  7, 2006
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5G_stab_get_type_by_idx_cb(const H5G_entry_t *ent, void *_udata)
-{
-    H5G_bt_it_gtbi_t	*udata = (H5G_bt_it_gtbi_t *)_udata;
-    herr_t ret_value = SUCCEED;         /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT(H5G_stab_get_type_by_idx_cb)
-
-    /* Sanity check */
-    HDassert(ent);
-    HDassert(udata);
-
-    /* Check for a soft link */
-    switch(ent->type) {
-        case H5G_CACHED_SLINK:
-            udata->type = H5G_LINK;
-            break;
-
-        default:
-            {
-                H5O_loc_t tmp_oloc;             /* Temporary object location */
-                H5O_type_t obj_type;            /* Type of object at location */
-
-                /* Build temporary object location */
-                tmp_oloc.file = udata->common.f;
-                HDassert(H5F_addr_defined(ent->header));
-                tmp_oloc.addr = ent->header;
-
-                /* Get the type of the object */
-                if(H5O_obj_type(&tmp_oloc, &obj_type, udata->dxpl_id) < 0)
-                    HGOTO_ERROR(H5E_SYM, H5E_CANTGET, FAIL, "can't get object type")
-                udata->type = H5G_map_obj_type(obj_type);
-            }
-            break;
-    } /* end switch */
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5G_stab_get_type_by_idx_cb */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5G_get_objtype_by_idx
- *
- * Purpose:     Private function for H5Gget_objtype_by_idx.
- *              Returns the type of objects in the group by giving index.
- *
- * Return:	Success:        H5G_GROUP(1), H5G_DATASET(2), H5G_TYPE(3)
- *
- *		Failure:	UNKNOWN
- *
- * Programmer:	Raymond Lu
- *	        Nov 20, 2002
- *
- *-------------------------------------------------------------------------
- */
-H5G_obj_t
-H5G_stab_get_type_by_idx(H5O_loc_t *oloc, hsize_t idx, hid_t dxpl_id)
-{
-    H5O_stab_t		stab;	        /* Info about local heap & B-tree */
-    H5G_bt_it_gtbi_t	udata;          /* User data for B-tree callback */
-    H5G_obj_t		ret_value;      /* Return value */
-
-    FUNC_ENTER_NOAPI(H5G_stab_get_type_by_idx, H5G_UNKNOWN)
-
-    /* Sanity check */
-    HDassert(oloc);
-
-    /* Get the B-tree & local heap info */
-    if(NULL == H5O_msg_read(oloc, H5O_STAB_ID, &stab, dxpl_id))
-	HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, H5G_UNKNOWN, "unable to determine local heap address")
-
-    /* Set iteration information */
-    udata.common.f = oloc->file;
-    udata.common.idx = idx;
-    udata.common.num_objs = 0;
-    udata.common.op = H5G_stab_get_type_by_idx_cb;
-    udata.dxpl_id = dxpl_id;
-    udata.type = H5G_UNKNOWN;
-
-    /* Iterate over the group members */
-    if(H5B_iterate(oloc->file, dxpl_id, H5B_SNODE, H5G_node_by_idx, stab.btree_addr, &udata) < 0)
-	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, H5G_UNKNOWN, "iteration operator failed")
-
-    /* If we don't know the type now, we almost certainly went out of bounds */
-    if(udata.type == H5G_UNKNOWN)
-	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, H5G_UNKNOWN, "index out of bound")
-
-    /* Set the return value */
-    ret_value = udata.type;
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5G_stab_get_type_by_idx() */
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
 

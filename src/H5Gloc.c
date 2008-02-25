@@ -73,31 +73,10 @@ typedef struct {
 typedef struct {
     /* downward */
     hid_t dxpl_id;              /* DXPL to use for operation */
-    hbool_t want_ih_info;       /* Whether to retrieve the index & heap info */
 
     /* upward */
     H5O_info_t  *oinfo;         /* Object information to retrieve */
 } H5G_loc_info_t;
-
-/* User data for setting an object's comment in a group */
-typedef struct {
-    /* downward */
-    hid_t dxpl_id;              /* DXPL to use for operation */
-    const char *comment;        /* Object comment buffer */
-
-    /* upward */
-} H5G_loc_sc_t;
-
-/* User data for getting an object's comment in a group */
-typedef struct {
-    /* downward */
-    hid_t dxpl_id;              /* DXPL to use for operation */
-    char  *comment;             /* Object comment buffer */
-    size_t bufsize;             /* Size of object comment buffer */
-
-    /* upward */
-    ssize_t comment_size;       /* Actual size of object comment */
-} H5G_loc_gc_t;
 
 
 /********************/
@@ -107,16 +86,10 @@ typedef struct {
 /* Group traversal callbacks */
 static herr_t H5G_loc_find_cb(H5G_loc_t *grp_loc, const char *name,
     const H5O_link_t *lnk, H5G_loc_t *obj_loc, void *_udata,
-    H5G_own_loc_t *own_loc);
+    H5G_own_loc_t *own_loc/*out*/);
 static herr_t H5G_loc_find_by_idx_cb(H5G_loc_t *grp_loc, const char *name,
     const H5O_link_t *lnk, H5G_loc_t *obj_loc, void *_udata,
-    H5G_own_loc_t *own_loc);
-static herr_t H5G_loc_set_comment_cb(H5G_loc_t *grp_loc, const char *name,
-    const H5O_link_t *lnk, H5G_loc_t *obj_loc, void *_udata,
-    H5G_own_loc_t *own_loc);
-static herr_t H5G_loc_get_comment_cb(H5G_loc_t *grp_loc, const char *name,
-    const H5O_link_t *lnk, H5G_loc_t *obj_loc, void *_udata,
-    H5G_own_loc_t *own_loc);
+    H5G_own_loc_t *own_loc/*out*/);
 
 
 /*********************/
@@ -656,7 +629,7 @@ H5G_loc_info_cb(H5G_loc_t UNUSED *grp_loc/*in*/, const char UNUSED *name, const 
         HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "name doesn't exist")
 
     /* Query object information */
-    if(H5O_get_info(obj_loc->oloc, udata->dxpl_id, udata->want_ih_info, udata->oinfo) < 0)
+    if(H5O_get_info(obj_loc->oloc, udata->oinfo, udata->dxpl_id) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_CANTGET, FAIL, "can't get object info")
 
 done:
@@ -682,7 +655,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5G_loc_info(H5G_loc_t *loc, const char *name, hbool_t want_ih_info, H5O_info_t *oinfo/*out*/,
+H5G_loc_info(H5G_loc_t *loc, const char *name, H5O_info_t *oinfo/*out*/,
     hid_t lapl_id, hid_t dxpl_id)
 {
     H5G_loc_info_t udata;               /* User data for traversal callback */
@@ -697,7 +670,6 @@ H5G_loc_info(H5G_loc_t *loc, const char *name, hbool_t want_ih_info, H5O_info_t 
 
     /* Set up user data for locating object */
     udata.dxpl_id = dxpl_id;
-    udata.want_ih_info = want_ih_info;
     udata.oinfo = oinfo;
 
     /* Traverse group hierarchy to locate object */
@@ -707,186 +679,4 @@ H5G_loc_info(H5G_loc_t *loc, const char *name, hbool_t want_ih_info, H5O_info_t 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5G_loc_info() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5G_loc_set_comment_cb
- *
- * Purpose:	Callback for (re)setting object comment for an object in a group
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Thursday, August 30, 2007
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5G_loc_set_comment_cb(H5G_loc_t UNUSED *grp_loc/*in*/, const char UNUSED *name, const H5O_link_t UNUSED *lnk,
-    H5G_loc_t *obj_loc, void *_udata/*in,out*/, H5G_own_loc_t *own_loc/*out*/)
-{
-    H5G_loc_sc_t *udata = (H5G_loc_sc_t *)_udata;   /* User data passed in */
-    H5O_name_t comment;                 /* Object header "comment" message */
-    herr_t ret_value = SUCCEED;         /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT(H5G_loc_set_comment_cb)
-
-    /* Check if the name in this group resolved to a valid link */
-    if(obj_loc == NULL)
-        HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "name doesn't exist")
-
-    /* Remove the previous comment message if any */
-    if(H5O_msg_remove(obj_loc->oloc, H5O_NAME_ID, 0, TRUE, udata->dxpl_id) < 0)
-        H5E_clear_stack(NULL);
-
-    /* Add the new message */
-    if(udata->comment && *udata->comment) {
-        /* Casting away const OK -QAK */
-	comment.s = (char *)udata->comment;
-	if(H5O_msg_create(obj_loc->oloc, H5O_NAME_ID, 0, H5O_UPDATE_TIME, &comment, udata->dxpl_id) < 0)
-	    HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, FAIL, "unable to set comment object header message")
-    } /* end if */
-
-done:
-    /* Indicate that this callback didn't take ownership of the group *
-     * location for the object */
-    *own_loc = H5G_OWN_NONE;
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5G_loc_set_comment_cb() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5G_loc_set_comment
- *
- * Purpose:	(Re)set the information for an object from a group location
- *              and path to that object
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *		Thursday, August 30, 2007
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5G_loc_set_comment(H5G_loc_t *loc, const char *name, const char *comment,
-    hid_t lapl_id, hid_t dxpl_id)
-{
-    H5G_loc_sc_t udata;         /* User data for traversal callback */
-    herr_t ret_value = SUCCEED; /* Return value */
-
-    FUNC_ENTER_NOAPI(H5G_loc_set_comment, FAIL)
-
-    /* Check args. */
-    HDassert(loc);
-    HDassert(name && *name);
-
-    /* Set up user data for locating object */
-    udata.dxpl_id = dxpl_id;
-    udata.comment = comment;
-
-    /* Traverse group hierarchy to locate object */
-    if(H5G_traverse(loc, name, H5G_TARGET_NORMAL, H5G_loc_set_comment_cb, &udata, lapl_id, dxpl_id) < 0)
-        HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "can't find object")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5G_loc_set_comment() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5G_loc_get_comment_cb
- *
- * Purpose:	Callback for retrieving object comment for an object in a group
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Thursday, August 30, 2007
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5G_loc_get_comment_cb(H5G_loc_t UNUSED *grp_loc/*in*/, const char UNUSED *name, const H5O_link_t UNUSED *lnk,
-    H5G_loc_t *obj_loc, void *_udata/*in,out*/, H5G_own_loc_t *own_loc/*out*/)
-{
-    H5G_loc_gc_t *udata = (H5G_loc_gc_t *)_udata;   /* User data passed in */
-    H5O_name_t comment;                 /* Object header "comment" message */
-    herr_t ret_value = SUCCEED;         /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT(H5G_loc_get_comment_cb)
-
-    /* Check if the name in this group resolved to a valid link */
-    if(obj_loc == NULL)
-        HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "name doesn't exist")
-
-    /* Query object comment */
-    comment.s = NULL;
-    if(NULL == H5O_msg_read(obj_loc->oloc, H5O_NAME_ID, &comment, udata->dxpl_id)) {
-	if(udata->comment && udata->bufsize > 0)
-            udata->comment[0] = '\0';
-	udata->comment_size = 0;
-    } else {
-        if(udata->comment && udata->bufsize)
-	   HDstrncpy(udata->comment, comment.s, udata->bufsize);
-	udata->comment_size = HDstrlen(comment.s);
-	H5O_msg_reset(H5O_NAME_ID, &comment);
-    } /* end else */
-
-done:
-    /* Indicate that this callback didn't take ownership of the group *
-     * location for the object */
-    *own_loc = H5G_OWN_NONE;
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5G_loc_get_comment_cb() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5G_loc_get_comment
- *
- * Purpose:	Retrieve the information for an object from a group location
- *              and path to that object
- *
- * Return:	Success:	Number of bytes in the comment including the
- *				null terminator.  Zero if the object has no
- *				comment.
- *
- *		Failure:	Negative
- *
- * Programmer:	Quincey Koziol
- *		Thursday, August 30, 2007
- *
- *-------------------------------------------------------------------------
- */
-ssize_t
-H5G_loc_get_comment(H5G_loc_t *loc, const char *name, char *comment/*out*/,
-    size_t bufsize, hid_t lapl_id, hid_t dxpl_id)
-{
-    H5G_loc_gc_t udata;         /* User data for traversal callback */
-    ssize_t ret_value;          /* Return value */
-
-    FUNC_ENTER_NOAPI(H5G_loc_get_comment, FAIL)
-
-    /* Check args. */
-    HDassert(loc);
-    HDassert(name && *name);
-
-    /* Set up user data for locating object */
-    udata.dxpl_id = dxpl_id;
-    udata.comment = comment;
-    udata.bufsize = bufsize;
-    udata.comment_size = (-1);
-
-    /* Traverse group hierarchy to locate object */
-    if(H5G_traverse(loc, name, H5G_TARGET_NORMAL, H5G_loc_get_comment_cb, &udata, lapl_id, dxpl_id) < 0)
-        HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "can't find object")
-
-    /* Set the return value */
-    ret_value = udata.comment_size;
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5G_loc_get_comment() */
 

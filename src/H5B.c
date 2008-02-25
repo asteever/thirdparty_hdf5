@@ -1827,94 +1827,6 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5B_iterate_size
- *
- * Purpose:     Return the amount of storage used for the btree.
- *		Keep following the left-most child until reaching the leaf node.
- *		For each level, gather storage for all the nodes on that level.
- *		For 0 level, also gather storage for the SNODs.
- *
- * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Vailin Choi
- *              June 19, 2007
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5B_iterate_size(H5F_t *f, hid_t dxpl_id, const H5B_class_t *type,
-    H5B_operator_t op, haddr_t addr, H5B_info_ud_t *bh_udata)
-{
-    H5B_t		*bt = NULL;     /* Pointer to current B-tree node */
-    H5B_shared_t        *shared;        /* Pointer to shared B-tree info */
-    herr_t		ret_value = SUCCEED;      /* Return value */
-
-    FUNC_ENTER_NOAPI(H5B_iterate_size, FAIL)
-
-    /*
-     * Check arguments.
-     */
-    HDassert(f);
-    HDassert(type);
-    HDassert(H5F_addr_defined(addr));
-    HDassert(bh_udata);
-
-    /* Protect the initial/current node */
-    if(NULL == (bt = (H5B_t *)H5AC_protect(f, dxpl_id, H5AC_BT, addr, type, bh_udata->udata, H5AC_READ)))
-	HGOTO_ERROR(H5E_BTREE, H5E_CANTLOAD, FAIL, "unable to load B-tree node")
-    shared = H5RC_GET_OBJ(bt->rc_shared);
-    HDassert(shared);
-
-    /* Keep following the left-most child until we reach a leaf node. */
-    if(bt->level > 0)
-	if(H5B_iterate_size(f, dxpl_id, type, op, bt->child[0], bh_udata) < 0)
-	    HGOTO_ERROR(H5E_BTREE, H5E_CANTLIST, FAIL, "unable to list B-tree node")
-
-    /* Iterate through all nodes at this level of the tree */
-    while(bt) {
-        haddr_t	next_addr;      /* Address of next node to iterate over */
-
-        /* for leaf node with callback, add in the space pointed to by each key */
-        /* (currently only used for symbol table nodes) */
-	if(bt->level == 0 && op) {
-            haddr_t		*child;         /* Pointer to node's child addresses */
-            uint8_t		*key;           /* Pointer to node's native keys */
-            unsigned		u;              /* Local index variable */
-
-            for(u = 0, child = bt->child, key = bt->native; u < bt->nchildren; u++, child++, key += type->sizeof_nkey)
-                if((*op)(f, dxpl_id, key, *child, key + type->sizeof_nkey, bh_udata->btree_size) < 0)
-                    HGOTO_ERROR(H5E_BTREE, H5E_CANTLIST, FAIL, "iterator function failed")
-        } /* end if */
-
-        /* count the size of this node */
-        *(bh_udata->btree_size) += H5B_nodesize(f, shared, NULL);
-
-        /* Get the address of the next node to the right */
-        next_addr = bt->right;
-
-        /* Unprotect current node */
-       if(H5AC_unprotect(f, dxpl_id, H5AC_BT, addr, bt, H5AC__NO_FLAGS_SET) < 0)
-            HGOTO_ERROR(H5E_BTREE, H5E_PROTECT, FAIL, "unable to release B-tree node")
-
-        /* Protect bt's next node to the right, if there is one */
-        if(H5F_addr_defined(next_addr)) {
-            addr = next_addr;
-            if(NULL == (bt = (H5B_t *)H5AC_protect(f, dxpl_id, H5AC_BT, addr, type, bh_udata->udata, H5AC_READ)))
-                HGOTO_ERROR(H5E_BTREE, H5E_CANTLOAD, FAIL, "B-tree node")
-        } /* end if */
-        else
-            bt = NULL;
-    } /* end while */
-
-done:
-    if(bt && H5AC_unprotect(f, dxpl_id, H5AC_BT, addr, bt, H5AC__NO_FLAGS_SET) < 0)
-        HDONE_ERROR(H5E_BTREE, H5E_PROTECT, FAIL, "unable to release B-tree node")
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5B_iterate_size() */
-
-
-/*-------------------------------------------------------------------------
  * Function:	H5B_debug
  *
  * Purpose:	Prints debugging info about a B-tree.
@@ -2157,4 +2069,3 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 }
 #endif /* H5B_DEBUG */
-

@@ -57,8 +57,8 @@ int main(void)
     /* Copy the file access property list */
     if((fapl = H5Pcreate(H5P_FILE_ACCESS)) < 0) goto error;
 
-    /* Set the "use the latest version of the format" bounds for creating objects in the file */
-    if(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0) goto error;
+    /* Set the "use the latest version of the format" flag for creating objects in the file */
+    if(H5Pset_latest_format(fapl, TRUE) < 0) goto error;
 
     /* Create file for test groups */
     if((fid = H5Fcreate(FILENAME, H5F_ACC_TRUNC, fcpl, fapl)) <0) goto error;
@@ -73,18 +73,18 @@ int main(void)
     if((sid = H5Screate(H5S_SCALAR)) < 0) goto error;
 
     /* Create empty group (w/default group creation properties) */
-    if((gid = H5Gcreate2(fid, "empty", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) goto error;
+    if((gid = H5Gcreate(fid, "empty", (size_t)0)) < 0) goto error;
     if(H5Gclose(gid) < 0) goto error;
 
     /* Create group which will contain link messages (w/default group creation properties) */
-    if((gid = H5Gcreate2(fid, "links", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) goto error;
+    if((gid = H5Gcreate(fid, "links", (size_t)0)) < 0) goto error;
 
     /* Create dataset in group */
-    if((did = H5Dcreate2(gid, "dset1", H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) goto error;
+    if((did = H5Dcreate(gid, "dset1", H5T_NATIVE_INT, sid, H5P_DEFAULT)) < 0) goto error;
     if(H5Dclose(did)<0) goto error;
 
     /* Create second dataset in group */
-    if((did = H5Dcreate2(gid, "dset2", H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) goto error;
+    if((did = H5Dcreate(gid, "dset2", H5T_NATIVE_INT, sid, H5P_DEFAULT)) < 0) goto error;
     if(H5Dclose(did)<0) goto error;
 
     /* Close dataspace */

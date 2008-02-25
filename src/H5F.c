@@ -31,7 +31,6 @@
 #include "H5Iprivate.h"		/* IDs			  		*/
 #include "H5MMprivate.h"	/* Memory management			*/
 #include "H5Pprivate.h"		/* Property lists			*/
-#include "H5SMprivate.h"	/* Shared Object Header Messages	*/
 #include "H5Tprivate.h"		/* Datatypes				*/
 
 /* Predefined file drivers */
@@ -45,6 +44,7 @@
 #ifdef H5_HAVE_WINDOWS 
 #include "H5FDwindows.h"        /* Windows buffered I/O     */
 #endif
+#include "H5FDstream.h"         /*in-memory files streamed via sockets  */
 #include "H5FDdirect.h"         /*Linux direct I/O			*/
 
 /* Struct only used by functions H5F_get_objects and H5F_get_objects_cb */
@@ -308,7 +308,7 @@ H5F_get_access_plist(H5F_t *f)
 
     /* Copy properties of the file access property list */
     if(H5P_set(new_plist, H5F_ACS_META_CACHE_INIT_CONFIG_NAME, &(f->shared->mdc_initCacheCfg)) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set initial metadata cache resize config.")
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set initial meta data cache resize config.")
     if(H5P_set(new_plist, H5F_ACS_DATA_CACHE_ELMT_SIZE_NAME, &(f->shared->rdcc_nelmts)) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set data cache element size")
     if(H5P_set(new_plist, H5F_ACS_DATA_CACHE_BYTE_SIZE_NAME, &(f->shared->rdcc_nbytes)) < 0)
@@ -321,11 +321,11 @@ H5F_get_access_plist(H5F_t *f)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set alignment")
     if(H5P_set(new_plist, H5F_ACS_GARBG_COLCT_REF_NAME, &(f->shared->gc_ref)) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set garbage collect reference")
-    if(H5P_set(new_plist, H5F_ACS_META_BLOCK_SIZE_NAME, &(f->shared->lf->meta_aggr.alloc_size)) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set metadata cache size")
+    if(H5P_set(new_plist, H5F_ACS_META_BLOCK_SIZE_NAME, &(f->shared->lf->def_meta_block_size)) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set meta data cache size")
     if(H5P_set(new_plist, H5F_ACS_SIEVE_BUF_SIZE_NAME, &(f->shared->sieve_buf_size)) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't sieve buffer size")
-    if(H5P_set(new_plist, H5F_ACS_SDATA_BLOCK_SIZE_NAME, &(f->shared->lf->sdata_aggr.alloc_size)) < 0)
+    if(H5P_set(new_plist, H5F_ACS_SDATA_BLOCK_SIZE_NAME, &(f->shared->lf->def_sdata_block_size)) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set 'small data' cache size")
     if(H5P_set(new_plist, H5F_ACS_LATEST_FORMAT_NAME, &(f->shared->latest_format)) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set 'latest format' flag")
@@ -882,7 +882,7 @@ H5F_new(H5F_file_t *shared, hid_t fcpl_id, hid_t fapl_id, H5FD_t *lf)
         if(NULL == (plist = H5I_object(fapl_id)))
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not file access property list")
         if(H5P_get(plist, H5F_ACS_META_CACHE_INIT_CONFIG_NAME, &(f->shared->mdc_initCacheCfg)) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get initial metadata cache resize config")
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get initial meta data cache resize config")
         if(H5P_get(plist, H5F_ACS_DATA_CACHE_ELMT_SIZE_NAME, &(f->shared->rdcc_nelmts)) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get data cache element size")
         if(H5P_get(plist, H5F_ACS_DATA_CACHE_BYTE_SIZE_NAME, &(f->shared->rdcc_nbytes)) < 0)
@@ -899,11 +899,6 @@ H5F_new(H5F_file_t *shared, hid_t fcpl_id, hid_t fapl_id, H5FD_t *lf)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get sieve buffer size")
         if(H5P_get(plist, H5F_ACS_LATEST_FORMAT_NAME, &(f->shared->latest_format)) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get 'latest format' flag")
-
-        /* Get the VFD values to cache */
-        f->shared->maxaddr = H5FD_get_maxaddr(lf);
-        if(!H5F_addr_defined(f->shared->maxaddr))
-            HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, NULL, "bad maximum address from VFD")
 
         /* Bump superblock version if we are to use the latest version of the format */
         if(f->shared->latest_format)
@@ -929,12 +924,12 @@ H5F_new(H5F_file_t *shared, hid_t fcpl_id, hid_t fapl_id, H5FD_t *lf)
         } /* end if */
 
 	/*
-	 * Create a metadata cache with the specified number of elements.
+	 * Create a meta data cache with the specified number of elements.
 	 * The cache might be created with a different number of elements and
 	 * the access property list should be updated to reflect that.
 	 */
 	if(SUCCEED != H5AC_create(f, &(f->shared->mdc_initCacheCfg)))
-	    HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, NULL, "unable to create metadata cache")
+	    HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, NULL, "unable to create meta data cache")
 
         /* Create the file's "open object" information */
         if(H5FO_create(f) < 0)
@@ -1702,12 +1697,12 @@ H5F_flush(H5F_t *f, hid_t dxpl_id, H5F_scope_t scope, unsigned flags)
     if(H5D_flush(f, dxpl_id, flags) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush dataset cache")
 
-    /* flush (and invalidate, if requested) the entire metadata cache */
+    /* flush (and invalidate, if requested) the entire meta data cache */
     H5AC_flags = 0;
     if((flags & H5F_FLUSH_INVALIDATE) != 0 )
         H5AC_flags |= H5AC__FLUSH_INVALIDATE_FLAG;
     if(H5AC_flush(f, dxpl_id, H5AC_flags) < 0)
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush metadata cache")
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush meta data cache")
 
     /*
      * If we are invalidating everything (which only happens just before
@@ -1715,11 +1710,29 @@ H5F_flush(H5F_t *f, hid_t dxpl_id, H5F_scope_t scope, unsigned flags)
      * "small data" blocks back to the free lists in the file.
      */
     if(flags & H5F_FLUSH_INVALIDATE) {
-        if(H5FD_aggr_reset(f->shared->lf, &(f->shared->lf->meta_aggr), dxpl_id) < 0)
-            HGOTO_ERROR(H5E_VFL, H5E_CANTFREE, FAIL, "can't reset metadata block")
+        if(f->shared->lf->feature_flags & H5FD_FEAT_AGGREGATE_METADATA) {
+            /* Return the unused portion of the metadata block to a free list */
+            if(f->shared->lf->eoma != 0)
+                if(H5FD_free(f->shared->lf, H5FD_MEM_DEFAULT, dxpl_id,
+                        f->shared->lf->eoma, f->shared->lf->cur_meta_block_size) < 0)
+                    HGOTO_ERROR(H5E_VFL, H5E_CANTFREE, FAIL, "can't free metadata block")
 
-        if(H5FD_aggr_reset(f->shared->lf, &(f->shared->lf->sdata_aggr), dxpl_id) < 0)
-            HGOTO_ERROR(H5E_VFL, H5E_CANTFREE, FAIL, "can't reset 'small data' block")
+            /* Reset metadata block information, just in case */
+            f->shared->lf->eoma = 0;
+            f->shared->lf->cur_meta_block_size = 0;
+        } /* end if */
+
+        if(f->shared->lf->feature_flags & H5FD_FEAT_AGGREGATE_SMALLDATA) {
+            /* Return the unused portion of the "small data" block to a free list */
+            if(f->shared->lf->eosda != 0)
+                if(H5FD_free(f->shared->lf, H5FD_MEM_DRAW, dxpl_id,
+                        f->shared->lf->eosda, f->shared->lf->cur_sdata_block_size) < 0)
+                    HGOTO_ERROR(H5E_VFL, H5E_CANTFREE, FAIL, "can't free 'small data' block")
+
+            /* Reset "small data" block information, just in case */
+            f->shared->lf->eosda = 0;
+            f->shared->lf->cur_sdata_block_size = 0;
+        } /* end if */
     } /* end if */
 
     /* Write the superblock to disk */
@@ -2431,6 +2444,8 @@ H5F_get_driver_id(const H5F_t *f)
  * Programmer:	Quincey Koziol <koziol@ncsa.uiuc.edu>
  *		March 27, 2002
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -2440,13 +2455,13 @@ H5F_get_fileno(const H5F_t *f, unsigned long *filenum)
 
     FUNC_ENTER_NOAPI(H5F_get_fileno, FAIL)
 
-    HDassert(f);
-    HDassert(f->shared);
-    HDassert(f->shared->lf);
-    HDassert(filenum);
+    assert(f);
+    assert(f->shared);
+    assert(f->shared->lf);
+    assert(filenum);
 
     /* Retrieve the file's serial number */
-    if(H5FD_get_fileno(f->shared->lf, filenum) < 0)
+    if(H5FD_get_fileno(f->shared->lf,filenum) < 0)
 	HGOTO_ERROR(H5E_FILE, H5E_BADRANGE, FAIL, "can't retrieve fileno")
 
 done:
@@ -3473,25 +3488,37 @@ done:
  *
  *-------------------------------------------------------------------------
  */
+
 herr_t
 H5Freset_mdc_hit_rate_stats(hid_t file_id)
 {
-    H5F_t      *file;                   /* File object for file ID */
-    herr_t     ret_value = SUCCEED;     /* Return value */
+    H5F_t      *file=NULL;      /* File object for file ID */
+    herr_t     ret_value = SUCCEED;      /* Return value */
+    herr_t     result;
 
     FUNC_ENTER_API(H5Freset_mdc_hit_rate_stats, FAIL)
     H5TRACE1("e", "i", file_id);
 
     /* Check args */
-    if(NULL == (file = H5I_object_verify(file_id, H5I_FILE)))
+    if ( NULL == (file = H5I_object_verify(file_id, H5I_FILE)) ) {
+
          HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "not a file ID")
+    }
 
     /* Reset the hit rate statistic */
-    if(H5AC_reset_cache_hit_rate_stats(file->shared->cache) < 0)
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "can't reset cache hit rate")
+    result = H5AC_reset_cache_hit_rate_stats(file->shared->cache);
+
+    if ( result != SUCCEED ) {
+
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
+                    "H5AC_reset_cache_hit_rate_stats() failed.");
+    }
+
 
 done:
+
     FUNC_LEAVE_API(ret_value)
+
 } /* H5Freset_mdc_hit_rate_stats() */
 
 
@@ -3511,6 +3538,8 @@ done:
  *
  * Programmer:  Raymond Lu
  *              June 29, 2004
+ *
+ * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -3550,72 +3579,9 @@ H5Fget_name(hid_t obj_id, char *name/*out*/, size_t size)
     } /* end if */
 
     /* Set return value */
-    ret_value = (ssize_t)len;
+    ret_value=(ssize_t)len;
 
 done:
     FUNC_LEAVE_API(ret_value)
 } /* end H5Fget_name() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5Fget_info
- *		1. Get storage size for superblock extension if there is one
- *              2. Get the amount of btree and heap storage for entries
- *                 in the SOHM table if there is one.
- *		Consider success when there is no superblock extension and/or SOHM table
- *
- * Return:      Success:        non-negative on success
- *              Failure:        Negative
- *
- * Programmer:  Vailin Choi
- *              July 11, 2007
- *-------------------------------------------------------------------------
- */
-herr_t
-H5Fget_info(hid_t obj_id, H5F_info_t *finfo)
-{
-    H5F_t *f;                           /* Top file in mount hierarchy */
-    herr_t ret_value = SUCCEED;         /* Return value */
-
-    FUNC_ENTER_API(H5Fget_info, FAIL)
-    H5TRACE2("e", "i*x", obj_id, finfo);
-
-    /* Check args */
-    if(!finfo)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no info struct")
-
-    /* For file IDs, get the file object directly */
-    /* (This prevents the H5G_loc() call from returning the file pointer for
-     * the top file in a mount hierarchy)
-     */
-    if(H5I_get_type(obj_id) == H5I_FILE ) {
-        if(NULL == (f = H5I_object(obj_id)))
-            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file")
-    } /* end if */
-    else {
-        H5G_loc_t     loc;        /* Object location */
-
-        /* Get symbol table entry */
-        if(H5G_loc(obj_id, &loc) < 0)
-             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "not a valid object ID")
-        f = loc.oloc->file;
-    } /* end else */
-    HDassert(f->shared);
-
-    /* Reset file info struct */
-    HDmemset(finfo, 0, sizeof(H5F_info_t));
-
-    /* Check for superblock extension info */
-    if(H5F_addr_defined(f->shared->extension_addr))
-        if(H5F_super_ext_size(f, H5AC_ind_dxpl_id, &finfo->super_ext_size) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "Unable to retrieve superblock extension size")
-
-    /* Check for SOHM info */
-    if(H5F_addr_defined(f->shared->sohm_addr))
-        if(H5SM_ih_size(f, H5AC_ind_dxpl_id, finfo) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "Unable to retrieve SOHM btree & heap storage info")
-
-done:
-    FUNC_LEAVE_API(ret_value)
-} /* end H5Fget_info() */
 

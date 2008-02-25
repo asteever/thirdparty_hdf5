@@ -136,10 +136,8 @@ CXXDEPMODE = @CXXDEPMODE@
 CXXFLAGS = @CXXFLAGS@ @H5_CXXFLAGS@
 CYGPATH_W = @CYGPATH_W@
 DEBUG_PKG = @DEBUG_PKG@
-DEFAULT_API_VERSION = @DEFAULT_API_VERSION@
 DEFS = @DEFS@
 DEPDIR = @DEPDIR@
-DEPRECATED_SYMBOLS = @DEPRECATED_SYMBOLS@
 DYNAMIC_DIRS = @DYNAMIC_DIRS@
 ECHO = @ECHO@
 ECHO_C = @ECHO_C@
@@ -222,7 +220,6 @@ SET_MAKE = @SET_MAKE@
 SHELL = /bin/sh
 SIZE_T = @SIZE_T@
 STATIC_SHARED = @STATIC_SHARED@
-STRICT_FORMAT_CHECKS = @STRICT_FORMAT_CHECKS@
 STRIP = @STRIP@
 TESTPARALLEL = @TESTPARALLEL@
 TIME = @TIME@
@@ -359,7 +356,7 @@ include_HEADERS = H5Cpp.h H5AbstractDs.h H5AtomType.h H5Attribute.h H5Classes.h 
         H5DcreatProp.h H5DxferProp.h H5EnumType.h H5Exception.h H5FaccProp.h  \
         H5FcreatProp.h H5File.h H5FloatType.h H5Group.h H5IdComponent.h       \
         H5Include.h H5IntType.h H5Library.h H5Object.h H5PredType.h           \
-        H5PropList.h H5StrType.h H5CppDoc.h H5ArrayType.h H5VarLenType.h      
+        H5PropList.h H5StrType.h H5CppDoc.h H5ArrayType.h H5VarLenType.h
 
 
 # h5c++ and libhdf5.settings are generated during configure.  Remove only when

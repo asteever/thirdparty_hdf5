@@ -1026,7 +1026,7 @@ H5T_conv_order_opt(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
              * the addresses in the file must be) and just get out now, there
              * is no need to convert the object reference.  Yes, this is
              * icky and non-portable, but I can't think of a better way to
-             * support allowing the objno in the H5O_info_t struct and the
+             * support allowing the objno in the H5G_stat_t struct and the
              * hobj_ref_t type to be compared directly without introducing a
              * "native" hobj_ref_t datatype and I think that would break a
              * lot of existing programs.  -QAK
@@ -1884,24 +1884,26 @@ done:
  * Programmer:	Raymond Lu
  *		8 June 2007
  *
+ * Modifications:
  *-------------------------------------------------------------------------
  */
 H5T_subset_t
 H5T_conv_struct_subset(const H5T_cdata_t *cdata)
 {
     H5T_conv_struct_t	*priv;
-    H5T_subset_t        ret_value;       /* Return value */
+    H5T_subset_t        ret_value=FALSE;       /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5T_conv_struct_subset)
+    FUNC_ENTER_NOAPI_NOINIT(H5T_conv_struct_subset);
 
-    HDassert(cdata);
-    HDassert(cdata->priv);
+    assert(cdata);
+    assert(cdata->priv);
 
     priv = (H5T_conv_struct_t*)(cdata->priv);
     ret_value = priv->smembs_subset;
 
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5T_conv_struct_subset() */
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
+}
 
 
 /*-------------------------------------------------------------------------
@@ -2206,7 +2208,6 @@ H5T_conv_struct_opt(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
     H5T_cmemb_t	*dst_memb = NULL;	/*destination struct memb desc.	*/
     size_t	offset;			/*byte offset wrt struct	*/
     size_t	elmtno;			/*element counter		*/
-    size_t      copy_size;              /*size of element for copying   */
     unsigned	u;			/*counters			*/
     int	i;			        /*counters			*/
     H5T_conv_struct_t *priv = NULL;	/*private data			*/
@@ -2324,12 +2325,12 @@ H5T_conv_struct_opt(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
                 buf_stride = src->shared->size;
             }
 
-            if(priv->smembs_subset == H5T_SUBSET_SRC || priv->smembs_subset == H5T_SUBSET_DST) {
+            if(priv->smembs_subset == H5T_SUBSET_SRC) {
                 /* If the optimization flag is set to indicate source members are a subset and 
                  * in the top of the destination, simply copy the source members to background buffer. */
                 xbuf = buf;
                 xbkg = bkg;
-                if(dst->shared->size <= src->shared->size)
+                if(dst->shared->size <= src->shared->size) {
                     /* This is to deal with a very special situation when the fields and their
                      * offset for both source and destination are identical but the datatype 
                      * sizes of source and destination are different.  The library still 
@@ -2337,16 +2338,49 @@ H5T_conv_struct_opt(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata,
                      * in table API test (hdf5/hl/test/test_table.c) when a table field is 
                      * deleted.
                      */
-                    copy_size = dst->shared->size;
-                else
-                    copy_size = src->shared->size;
+                    for (elmtno=0; elmtno<nelmts; elmtno++) {
+                        HDmemmove(xbkg, xbuf, dst->shared->size); 
 
-                for (elmtno=0; elmtno<nelmts; elmtno++) {
-                    HDmemmove(xbkg, xbuf, copy_size); 
+                        /* Update pointers */
+                        xbuf += buf_stride;
+                        xbkg += bkg_stride;
+                    }
+                } else {
+                    for (elmtno=0; elmtno<nelmts; elmtno++) {
+                        HDmemmove(xbkg, xbuf, src->shared->size); 
 
-                    /* Update pointers */
-                    xbuf += buf_stride;
-                    xbkg += bkg_stride;
+                        /* Update pointers */
+                        xbuf += buf_stride;
+                        xbkg += bkg_stride;
+                    }
+                }
+            } else if(priv->smembs_subset == H5T_SUBSET_DST) {
+                /* If the optimization flag is set to indicate destination members are a subset 
+                 * and in the top of the source, simply copy the source members to background 
+                 * buffer. */
+                xbuf = buf;
+                xbkg = bkg;
+
+                if(src->shared->size <= dst->shared->size) {
+                    /* This is to deal with a very special situation when the fields and their
+                     * offset for both source and destination are identical but the datatype 
+                     * sizes of source and destination are different.
+                     */
+                    for (elmtno=0; elmtno<nelmts; elmtno++) {
+                        HDmemmove(xbkg, xbuf, src->shared->size); 
+
+                        /* Update pointers */
+                        xbuf += buf_stride;
+                        xbkg += bkg_stride;
+                    }
+                } else {
+                     for (elmtno=0; elmtno<nelmts; elmtno++) {
+                        HDmemmove(xbkg, xbuf, dst->shared->size); 
+
+                        /* Update pointers */
+                        xbuf += buf_stride;
+                        xbkg += bkg_stride;
+                     }
                 }
             } else {
                 /*
@@ -3129,7 +3163,8 @@ H5T_conv_array(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
     int	        direction;		/*direction of traversal	     */
     size_t	elmtno;			/*element number counter	     */
     unsigned    u;                      /* local index variable */
-    void	*bkg_buf = NULL;     	/*temporary background buffer 	     */
+    void	*bkg_buf=NULL;     	/*temporary background buffer 	     */
+    size_t	bkg_buf_size=0;	        /*size of background buffer in bytes */
     herr_t      ret_value=SUCCEED;       /* Return value */
 
     FUNC_ENTER_NOAPI(H5T_conv_array, FAIL)
@@ -3204,12 +3239,10 @@ H5T_conv_array(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
 
             /* Check if we need a background buffer for this conversion */
             if(tpath->cdata.need_bkg) {
-                size_t	bkg_buf_size;	        /*size of background buffer in bytes */
-
                 /* Allocate background buffer */
                 bkg_buf_size = src->shared->u.array.nelem * MAX(src->shared->size, dst->shared->size);
-                if(NULL == (bkg_buf = H5FL_BLK_CALLOC(array_seq, bkg_buf_size)))
-                    HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for type conversion")
+                if((bkg_buf = H5FL_BLK_CALLOC(array_seq, bkg_buf_size)) == NULL)
+                    HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for type conversion")
             } /* end if */
 
             /* Perform the actual conversion */
@@ -3226,6 +3259,10 @@ H5T_conv_array(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
                 dp += dst_delta;
             } /* end for */
 
+            /* Release the background buffer, if we have one */
+            if(bkg_buf != NULL)
+                H5FL_BLK_FREE(array_seq, bkg_buf);
+
             /* Release the temporary datatype IDs used */
             if(tsrc_id >= 0)
                 H5I_dec_ref(tsrc_id);
@@ -3238,10 +3275,6 @@ H5T_conv_array(hid_t src_id, hid_t dst_id, H5T_cdata_t *cdata, size_t nelmts,
     }   /* end switch */
 
 done:
-    /* Release the background buffer, if we have one */
-    if(bkg_buf)
-        H5FL_BLK_FREE(array_seq, bkg_buf);
-
     FUNC_LEAVE_NOAPI(ret_value)
 }   /* end H5T_conv_array() */
 

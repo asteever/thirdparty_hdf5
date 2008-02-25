@@ -87,7 +87,7 @@ typedef struct H5F_file_t {
     unsigned	sohm_vers;	/* Version of shared message table on disk */
     unsigned	sohm_nindexes;	/* Number of shared messages indexes in the table */
     haddr_t	driver_addr;	/* File driver information block address*/
-    haddr_t	maxaddr;	/* Maximum address for file             */
+    hbool_t     fam_to_sec2;    /* Is h5repart changing driver from family to sec2 */
 
     H5AC_t      *cache;		/* The object cache			*/
     H5AC_cache_config_t
@@ -105,8 +105,7 @@ typedef struct H5F_file_t {
     hsize_t	alignment;	/* Alignment				*/
     unsigned	gc_ref;		/* Garbage-collect references?		*/
     hbool_t	latest_format;	/* Always use the latest format?	*/
-    hbool_t	store_msg_crt_idx;  /* Store creation index for object header messages?	*/
-    hbool_t     fam_to_sec2;    /* Is h5repart changing driver from family to sec2? */
+    hbool_t	store_msg_crt_idx;	/* Store creation index for object header messages?	*/
     int	ncwfs;			/* Num entries on cwfs list		*/
     struct H5HG_heap_t **cwfs;	/* Global heap cache			*/
     struct H5G_t *root_grp;	/* Open root group			*/
@@ -178,8 +177,6 @@ H5_DLL herr_t H5F_mount_count_ids(H5F_t *f, unsigned *nopen_files, unsigned *nop
 H5_DLL herr_t H5F_super_init(H5F_t *f, hid_t dxpl_id);
 H5_DLL herr_t H5F_super_write(H5F_t *f, hid_t dxpl_id);
 H5_DLL herr_t H5F_super_read(H5F_t *f, hid_t dxpl_id, H5G_loc_t *root_loc);
-H5_DLL herr_t H5F_super_ext_size(H5F_t *f, hid_t dxpl_id, hsize_t *super_ext_info);
-
 
 /* Shared file list related routines */
 H5_DLL herr_t H5F_sfile_add(H5F_file_t *shared);

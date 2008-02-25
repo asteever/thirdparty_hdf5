@@ -48,7 +48,7 @@ main(void)
     /*
      * Create a group in the file.
      */
-    g1_id = H5Gcreate2(file, "/G1", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    g1_id = H5Gcreate(file, "/G1", 0);
 
     H5Gclose(g1_id);
     H5Fclose(file);
@@ -68,7 +68,7 @@ main(void)
      * Check that group G2/G3 exists in /G1 and if not create it using 
      * intermediate group creation property.
      */
-    g1_id = H5Gopen2(file, "/G1", H5P_DEFAULT);
+    g1_id = H5Gopen(file, "/G1");
 /* Next commented call causes error stack to be printed out; the next one
  * works fine; is it a bug or a feature? EIP 04-25-07 
 */
@@ -90,8 +90,8 @@ main(void)
      */
     if (H5Lexists(file, "/G1/G2", H5P_DEFAULT)) { 
 
-    	g2_id = H5Gopen2(file, "/G1/G2", H5P_DEFAULT);
-    	status = H5Gget_info(g2_id, &g2_info);
+    	g2_id = H5Gopen(file, "/G1/G2");
+    	status = H5Gget_info(g2_id, ".", &g2_info, H5P_DEFAULT);
     	printf("Group /G1/G2 has %d member(s)\n", (int)g2_info.nlinks);
 
     	for (i=0; i < (int)g2_info.nlinks; i++) {

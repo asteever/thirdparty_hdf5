@@ -412,12 +412,13 @@
 #   define SIZET_MAX	((size_t)(ssize_t)(-1))
 #   define SSIZET_MAX	((ssize_t)(((size_t)1<<(8*sizeof(ssize_t)-1))-1))
 #endif
-
-/*
- * Maximum & minimum values for our typedefs.
- */
+#ifdef H5_HAVE_LARGE_HSIZET
 #define	HSIZET_MAX	((hsize_t)ULLONG_MAX)
 #define	HSSIZET_MAX	((hssize_t)LLONG_MAX)
+#else /* H5_HAVE_LARGE_HSIZET */
+#define HSIZET_MAX	((hsize_t)SIZET_MAX)
+#define HSSIZET_MAX	((hssize_t)SSIZET_MAX)
+#endif /* H5_HAVE_LARGE_HSIZET */
 #define HSSIZET_MIN	(~(HSSIZET_MAX))
 
 /*
@@ -484,12 +485,6 @@ typedef enum {
     H5_COPY_SHALLOW,    /* Shallow copy from source to destination, just copy field pointers */
     H5_COPY_DEEP        /* Deep copy from source to destination, including duplicating fields pointed to */
 } H5_copy_depth_t;
-
-/* Unique object "position" */
-typedef struct {
-    unsigned long fileno;       /* The unique identifier for the file of the object */
-    haddr_t addr;               /* The unique address of the object's header in that file */
-} H5_obj_t;
 
 /*
  * Redefine all the POSIX functions.  We should never see a POSIX
@@ -777,12 +772,8 @@ int HDremove_all(const char * fname);
 #define HDsetpgid(P,PG)		setpgid(P,PG)
 #define HDsetsid()		setsid()
 #define HDsetuid(U)		setuid(U)
-/* Windows does not permit setting the buffer size to values
-   less than 2.  */
 #ifndef _WIN32
 #define HDsetvbuf(F,S,M,Z)	setvbuf(F,S,M,Z)
-#else
-#define HDsetvbuf(F,S,M,Z)  setvbuf(F,S,M,(Z>1?Z:2))
 #endif
 #define HDsigaction(N,A)	sigaction(N,A)
 #define HDsigaddset(S,N)	sigaddset(S,N)
@@ -1415,7 +1406,6 @@ H5_DLL uint32_t H5_checksum_fletcher32(const void *data, size_t len);
 H5_DLL uint32_t H5_checksum_crc(const void *data, size_t len);
 H5_DLL uint32_t H5_checksum_lookup3(const void *data, size_t len, uint32_t initval);
 H5_DLL uint32_t H5_checksum_metadata(const void *data, size_t len, uint32_t initval);
-H5_DLL uint32_t H5_hash_string(const char *str);
 
 /* Functions for debugging */
 H5_DLL herr_t H5_buffer_dump(FILE *stream, int indent, uint8_t *buf,

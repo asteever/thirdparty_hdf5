@@ -176,18 +176,6 @@
  *		entry is flushed to disk.
  *
  *
- * In cases where memory is plentiful, and performance is an issue, it
- * is useful to disable all cache evictions, and thereby postpone metadata
- * writes.  The following field is used to implement this.
- *
- * evictions_enabled:  Boolean flag that is initialized to TRUE.  When
- * 		this flag is set to FALSE, the metadata cache will not 
- * 		attempt to evict entries to make space for newly protected
- * 		entries, and instead the will grow without limit.
- * 		
- * 		Needless to say, this feature must be used with care.
- *
- *
  * The cache requires an index to facilitate searching for entries.  The
  * following fields support that index.
  *
@@ -465,18 +453,6 @@
  *		all the ways this can happen, we simply set this flag when
  *		we receive a new configuration.
  *
- * flash_size_increase_possible: Depending on the configuration data given
- * 		in the resize_ctl field, it may or may not be possible
- * 		for a flash size increase to occur.  We set this flag
- * 		whenever we receive a new configuration so as to avoid 
- * 		repeated calculations.
- *
- * flash_size_increase_threshold: If a flash cache size increase is possible,
- * 		this field is used to store the minimum size of a new entry
- * 		or size increase needed to trigger a flash cache size 
- * 		increase.  Note that this field must be updated whenever 
- * 		the size of the cache is changed.
- *
  * size_decrease_possible:  Depending on the configuration data given
  *              in the resize_ctl field, it may or may not be possible
  *              to decrease the size of the cache.  Rather than test for
@@ -592,10 +568,10 @@
  *		equal to the array index has not been in cache when
  *		requested in the current epoch.
  *
- * write_protects:  Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.  The 
- *		cells are used to record the number of times an entry with 
- *		type id equal to the array index has been write protected 
- *		in the current epoch.
+ * write_protects:  Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.  The cells
+ * 		are used to record the number of times an entry with type id
+ * 		equal to the array index has been write protected in the 
+ * 		current epoch.
  *
  * 		Observe that (hits + misses) = (write_protects + read_protects).
  *
@@ -826,8 +802,6 @@ struct H5C_t
 
     H5C_log_flush_func_t	log_flush;
 
-    hbool_t			evictions_enabled;
-
     int32_t                     index_len;
     size_t                      index_size;
     H5C_cache_entry_t *		(index[H5C__HASH_TABLE_LEN]);
@@ -867,8 +841,6 @@ struct H5C_t
     H5C_cache_entry_t *	        dLRU_tail_ptr;
 
     hbool_t			size_increase_possible;
-    hbool_t			flash_size_increase_possible;
-    size_t			flash_size_increase_threshold; 
     hbool_t			size_decrease_possible;
     hbool_t			resize_enabled;
     hbool_t			cache_full;

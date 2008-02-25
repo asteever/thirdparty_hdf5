@@ -42,7 +42,6 @@
 #include "H5MMprivate.h"	/* Memory management			*/
 #include "H5Opkg.h"		/* Object headers			*/
 #include "H5SMprivate.h"	/* Shared object header messages        */
-#include "H5WBprivate.h"        /* Wrapped Buffers                      */
 
 
 /****************/
@@ -166,6 +165,9 @@ typedef struct H5A_bt2_ud_rmbi_t {
 /*******************/
 /* Local Variables */
 /*******************/
+
+/* Declare a free list to manage the serialized attribute information */
+H5FL_BLK_DEFINE(ser_attr);
 
 
 
@@ -408,8 +410,8 @@ H5A_dense_insert(H5F_t *f, hid_t dxpl_id, const H5O_ainfo_t *ainfo, H5A_t *attr)
     H5A_bt2_ud_ins_t udata;             /* User data for v2 B-tree insertion */
     H5HF_t *fheap = NULL;               /* Fractal heap handle for attributes */
     H5HF_t *shared_fheap = NULL;        /* Fractal heap handle for shared header messages */
-    H5WB_t *wb = NULL;                  /* Wrapped buffer for attribute data */
     uint8_t attr_buf[H5A_ATTR_BUF_SIZE]; /* Buffer for serializing message */
+    void *attr_ptr = NULL;              /* Pointer to serialized message */
     unsigned mesg_flags = 0;            /* Flags for storing message */
     htri_t attr_sharable;               /* Flag indicating attributes are sharable */
     herr_t ret_value = SUCCEED;         /* Return value */
@@ -472,20 +474,19 @@ H5A_dense_insert(H5F_t *f, hid_t dxpl_id, const H5O_ainfo_t *ainfo, H5A_t *attr)
         udata.id = attr->sh_loc.u.heap_id;
     } /* end if */
     else {
-        void *attr_ptr;         /* Pointer to serialized message */
-        size_t attr_size;       /* Size of serialized attribute in the heap */
+        size_t attr_size;                   /* Size of serialized attribute in the heap */
 
         /* Find out the size of buffer needed for serialized message */
         if((attr_size = H5O_msg_raw_size(f, H5O_ATTR_ID, FALSE, attr)) == 0)
             HGOTO_ERROR(H5E_ATTR, H5E_CANTGETSIZE, FAIL, "can't get message size")
 
-        /* Wrap the local buffer for serialized attributes */
-        if(NULL == (wb = H5WB_wrap(attr_buf, sizeof(attr_buf))))
-            HGOTO_ERROR(H5E_ATTR, H5E_CANTINIT, FAIL, "can't wrap buffer")
-
-        /* Get a pointer to a buffer that's large enough for attribute */
-        if(NULL == (attr_ptr = H5WB_actual(wb, attr_size)))
-            HGOTO_ERROR(H5E_ATTR, H5E_NOSPACE, FAIL, "can't get actual buffer")
+        /* Allocate space for serialized message, if necessary */
+        if(attr_size > sizeof(attr_buf)) {
+            if(NULL == (attr_ptr = H5FL_BLK_MALLOC(ser_attr, attr_size)))
+                HGOTO_ERROR(H5E_ATTR, H5E_NOSPACE, FAIL, "memory allocation failed")
+        } /* end if */
+        else
+            attr_ptr = attr_buf;
 
         /* Create serialized form of attribute or shared message */
         if(H5O_msg_encode(f, H5O_ATTR_ID, FALSE, (unsigned char *)attr_ptr, attr) < 0)
@@ -528,8 +529,8 @@ done:
         HDONE_ERROR(H5E_ATTR, H5E_CLOSEERROR, FAIL, "can't close fractal heap")
     if(fheap && H5HF_close(fheap, dxpl_id) < 0)
         HDONE_ERROR(H5E_ATTR, H5E_CLOSEERROR, FAIL, "can't close fractal heap")
-    if(wb && H5WB_unwrap(wb) < 0)
-        HDONE_ERROR(H5E_ATTR, H5E_CLOSEERROR, FAIL, "can't close wrapped buffer")
+    if(attr_ptr && attr_ptr != attr_buf)
+        (void)H5FL_BLK_FREE(ser_attr, attr_ptr);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5A_dense_insert() */
@@ -591,8 +592,8 @@ H5A_dense_write_bt2_cb(void *_record, void *_op_data, hbool_t *changed)
 {
     H5A_dense_bt2_name_rec_t *record = (H5A_dense_bt2_name_rec_t *)_record; /* Record from B-tree */
     H5A_bt2_od_wrt_t *op_data = (H5A_bt2_od_wrt_t *)_op_data;       /* "op data" from v2 B-tree modify */
-    H5WB_t *wb = NULL;                  /* Wrapped buffer for attribute data */
     uint8_t attr_buf[H5A_ATTR_BUF_SIZE]; /* Buffer for serializing attribute */
+    void *attr_ptr = NULL;              /* Pointer to serialized attribute */
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5A_dense_write_bt2_cb)
@@ -637,20 +638,19 @@ H5A_dense_write_bt2_cb(void *_record, void *_op_data, hbool_t *changed)
         *changed = TRUE;
     } /* end if */
     else {
-        void *attr_ptr;         /* Pointer to serialized message */
-        size_t attr_size;       /* Size of serialized attribute in the heap */
+        size_t attr_size;               /* Size of serialized attribute in the heap */
 
         /* Find out the size of buffer needed for serialized attribute */
         if((attr_size = H5O_msg_raw_size(op_data->f, H5O_ATTR_ID, FALSE, op_data->attr)) == 0)
             HGOTO_ERROR(H5E_ATTR, H5E_CANTGETSIZE, FAIL, "can't get attribute size")
 
-        /* Wrap the local buffer for serialized attributes */
-        if(NULL == (wb = H5WB_wrap(attr_buf, sizeof(attr_buf))))
-            HGOTO_ERROR(H5E_ATTR, H5E_CANTINIT, FAIL, "can't wrap buffer")
-
-        /* Get a pointer to a buffer that's large enough for attribute */
-        if(NULL == (attr_ptr = H5WB_actual(wb, attr_size)))
-            HGOTO_ERROR(H5E_ATTR, H5E_NOSPACE, FAIL, "can't get actual buffer")
+        /* Allocate space for serialized attribute, if necessary */
+        if(attr_size > sizeof(attr_buf)) {
+            if(NULL == (attr_ptr = H5FL_BLK_MALLOC(ser_attr, attr_size)))
+                HGOTO_ERROR(H5E_ATTR, H5E_NOSPACE, FAIL, "memory allocation failed")
+        } /* end if */
+        else
+            attr_ptr = attr_buf;
 
         /* Create serialized form of attribute */
         if(H5O_msg_encode(op_data->f, H5O_ATTR_ID, FALSE, (unsigned char *)attr_ptr, op_data->attr) < 0)
@@ -674,8 +674,8 @@ H5A_dense_write_bt2_cb(void *_record, void *_op_data, hbool_t *changed)
 
 done:
     /* Release resources */
-    if(wb && H5WB_unwrap(wb) < 0)
-        HDONE_ERROR(H5E_ATTR, H5E_CLOSEERROR, FAIL, "can't close wrapped buffer")
+    if(attr_ptr && attr_ptr != attr_buf)
+        (void)H5FL_BLK_FREE(ser_attr, attr_ptr);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5A_dense_write_bt2_cb() */
@@ -907,10 +907,6 @@ H5A_dense_rename(H5F_t *f, hid_t dxpl_id, const H5O_ainfo_t *ainfo, const char *
     H5MM_xfree(attr_copy->name);
     attr_copy->name = H5MM_xstrdup(new_name);
 
-    /* Recompute the version to encode the attribute with */
-    if(H5A_set_version(f, attr_copy) < 0)
-        HGOTO_ERROR(H5E_ATTR, H5E_CANTSET, FAIL, "unable to update attribute version")
-
     /* Insert renamed attribute back into dense storage */
     /* (Possibly making it shared) */
     if(H5A_dense_insert(f, dxpl_id, ainfo, attr_copy) < 0)
@@ -1024,12 +1020,10 @@ H5A_dense_iterate_bt2_cb(const void *_record, void *_bt2_udata)
                 break;
             }
 
-#ifndef H5_NO_DEPRECATED_SYMBOLS
             case H5A_ATTR_OP_APP:
                 /* Make the application callback */
                 ret_value = (bt2_udata->attr_op->u.app_op)(bt2_udata->loc_id, fh_udata.attr->name, bt2_udata->op_data);
                 break;
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
 
             case H5A_ATTR_OP_LIB:
                 /* Call the library's callback */

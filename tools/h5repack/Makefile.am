@@ -40,9 +40,9 @@ bin_PROGRAMS=h5repack
 LDADD=$(LIBH5TOOLS) $(LIBH5TEST) $(LIBHDF5)
 
 # Source files
-COMMON_SOURCES=h5repack.c h5repack_copy.c h5repack_filters.c \
-               h5repack_opttable.c h5repack_parse.c h5repack_refs.c \
-               h5repack_verify.c
+COMMON_SOURCES=h5repack.c h5repack_copy.c h5repack_refs.c h5repack_filters.c \
+        h5repack_list.c h5repack_opttable.c h5repack_parse.c \
+        h5repack_verify.c
 
 h5repack_SOURCES=$(COMMON_SOURCES) h5repack_main.c
 

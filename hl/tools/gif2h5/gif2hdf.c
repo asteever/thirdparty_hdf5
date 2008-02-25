@@ -17,8 +17,6 @@
 #include <stdlib.h>
 
 #include "gif.h"
-#include "h5tools_utils.h"
-
 
 int
 main(int argv , char *argc[])
@@ -49,17 +47,8 @@ main(int argv , char *argc[])
     GifMemoryStruct.GifApplicationExtension    = NULL;
     GifMemoryStruct.GifCommentExtension        = NULL;
 
-    if ( argc[1] && (strcmp("-V",argc[1])==0) )
-    {
-        print_version("gif2h5");
-        exit(EXIT_SUCCESS);
-        
-    }
-
     if (argv < 3) {
-        printf("Usage: gif2h5 <GIFFILE> <HDFFILE>\n");
-        fprintf(stdout, "       gif2h5 -V \n");
-        fprintf(stdout, "        Print HDF5 library version and exit\n");
+        printf("\n\nWrong Usage. Use:\ngif2h5 <GIFFILE> <HDFFILE>\n\n");
         return(-1);
     }
 

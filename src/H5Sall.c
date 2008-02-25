@@ -42,11 +42,9 @@ static hssize_t H5S_all_serial_size(const H5S_t *space);
 static herr_t H5S_all_serialize(const H5S_t *space, uint8_t *buf);
 static herr_t H5S_all_deserialize(H5S_t *space, const uint8_t *buf);
 static herr_t H5S_all_bounds(const H5S_t *space, hsize_t *start, hsize_t *end);
-static herr_t H5S_all_offset(const H5S_t *space, hsize_t *off);
 static htri_t H5S_all_is_contiguous(const H5S_t *space);
 static htri_t H5S_all_is_single(const H5S_t *space);
 static htri_t H5S_all_is_regular(const H5S_t *space);
-static herr_t H5S_all_adjust_u(H5S_t *space, const hsize_t *offset);
 static herr_t H5S_all_iter_init(H5S_sel_iter_t *iter, const H5S_t *space);
 
 /* Selection iteration callbacks */
@@ -71,11 +69,9 @@ const H5S_select_class_t H5S_sel_all[1] = {{
     H5S_all_serialize,
     H5S_all_deserialize,
     H5S_all_bounds,
-    H5S_all_offset,
     H5S_all_is_contiguous,
     H5S_all_is_single,
     H5S_all_is_regular,
-    H5S_all_adjust_u,
     H5S_all_iter_init,
 }};
 
@@ -587,61 +583,26 @@ done:
 herr_t
 H5S_all_bounds(const H5S_t *space, hsize_t *start, hsize_t *end)
 {
-    unsigned rank;                  /* Dataspace rank */
-    unsigned i;                     /* index variable */
+    int rank;                  /* Dataspace rank */
+    int i;                     /* index variable */
 
-    FUNC_ENTER_NOAPI_NOFUNC(H5S_all_bounds)
+    FUNC_ENTER_NOAPI_NOFUNC(H5S_all_bounds);
 
-    HDassert(space);
-    HDassert(start);
-    HDassert(end);
+    assert(space);
+    assert(start);
+    assert(end);
 
     /* Get the dataspace extent rank */
-    rank = space->extent.rank;
+    rank=space->extent.rank;
 
     /* Just copy over the complete extent */
-    for(i = 0; i < rank; i++) {
-        start[i] = 0;
-        end[i] = space->extent.size[i] - 1;
+    for(i=0; i<rank; i++) {
+        start[i]=0;
+        end[i]=space->extent.size[i]-1;
     } /* end for */
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
-}   /* H5S_all_bounds() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5S_all_offset
- PURPOSE
-    Gets the linear offset of the first element for the selection.
- USAGE
-    herr_t H5S_all_offset(space, offset)
-        const H5S_t *space;     IN: Dataspace pointer of selection to query
-        hsize_t *offset;        OUT: Linear offset of first element in selection
- RETURNS
-    Non-negative on success, negative on failure
- DESCRIPTION
-    Retrieves the linear offset (in "units" of elements) of the first element
-    selected within the dataspace.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
-    Calling this function on a "none" selection returns fail.
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5S_all_offset(const H5S_t *space, hsize_t *offset)
-{
-    FUNC_ENTER_NOAPI_NOFUNC(H5S_all_offset)
-
-    HDassert(space);
-    HDassert(offset);
-
-    /* 'All' selections always start at offset 0 */
-    *offset = 0;
-
-    FUNC_LEAVE_NOAPI(SUCCEED)
-}   /* H5S_all_offset() */
+    FUNC_LEAVE_NOAPI(SUCCEED);
+}   /* H5Sget_all_bounds() */
 
 
 /*--------------------------------------------------------------------------
@@ -731,37 +692,6 @@ H5S_all_is_regular(const H5S_t UNUSED *space)
 
     FUNC_LEAVE_NOAPI(TRUE);
 }   /* H5S_all_is_regular() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5S_all_adjust_u
- PURPOSE
-    Adjust an "all" selection by subtracting an offset
- USAGE
-    herr_t H5S_all_adjust_u(space, offset)
-        H5S_t *space;           IN/OUT: Pointer to dataspace to adjust
-        const hsize_t *offset; IN: Offset to subtract
- RETURNS
-    Non-negative on success, negative on failure
- DESCRIPTION
-    Moves selection by subtracting an offset from it.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5S_all_adjust_u(H5S_t UNUSED *space, const hsize_t UNUSED *offset)
-{
-    FUNC_ENTER_NOAPI_NOFUNC(H5S_all_adjust_u)
-
-    /* Check args */
-    HDassert(space);
-    HDassert(offset);
-
-    FUNC_LEAVE_NOAPI(SUCCEED)
-}   /* H5S_all_adjust_u() */
 
 
 /*--------------------------------------------------------------------------

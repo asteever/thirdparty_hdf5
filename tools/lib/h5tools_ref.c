@@ -20,7 +20,6 @@
 #include "H5SLprivate.h"
 #include "h5tools.h"
 #include "h5tools_utils.h"
-#include "h5trav.h"
 
 
 /*
@@ -43,12 +42,56 @@ typedef struct {
 } ref_path_node_t;
 
 static H5SL_t *ref_path_table = NULL;   /* the "table" (implemented with a skip list) */
-static hid_t thefile = (-1);
+static hid_t thefile;
 
 extern char  *progname;
 extern int   d_status;
 
 static int ref_path_table_put(const char *, haddr_t objno);
+static hbool_t ref_path_table_find(haddr_t objno);
+
+/*-------------------------------------------------------------------------
+ * Function:    init_ref_path_table
+ *
+ * Purpose:     Enter the root group ("/") into the path table
+ *
+ * Return:      Non-negative on success, negative on failure
+ *
+ * Programmer:  Quincey Koziol
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+int
+init_ref_path_table(hid_t fid)
+{
+    H5G_stat_t sb;
+    haddr_t objno;              /* Compact form of object's location */
+    char *root_path;
+
+    /* Set file ID for later queries (XXX: this should be fixed) */
+    thefile = fid;
+
+    /* Create skip list to store reference path information */
+    if((ref_path_table = H5SL_create(H5SL_TYPE_HADDR, 0.5, (size_t)16))==NULL)
+    return (-1);
+
+    if((root_path = HDstrdup("/")) == NULL)
+    return (-1);
+
+    if(H5Gget_objinfo(fid, "/", TRUE, &sb)<0) {
+    /* fatal error? */
+    HDfree(root_path);
+    return (-1);
+    }
+    objno = (haddr_t)sb.objno[0] | ((haddr_t)sb.objno[1] << (8 * sizeof(long)));
+
+    /* Insert into table (takes ownership of path) */
+    ref_path_table_put(root_path, objno);
+
+    return(0);
+}
 
 /*-------------------------------------------------------------------------
  * Function:    free_ref_path_info
@@ -70,61 +113,6 @@ free_ref_path_info(void *item, void UNUSED *key, void UNUSED *operator_data/*in,
 
     HDfree((void *)node->path);
     HDfree(node);
-
-    return(0);
-}
-
-/*-------------------------------------------------------------------------
- * Function:    init_ref_path_cb
- *
- * Purpose:     Called by interator to create references for
- *              all objects and enter them in the table.
- *
- * Return:      Error status.
- *
- * Programmer:  REMcG
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-init_ref_path_cb(const char *obj_name, const H5O_info_t *oinfo,
-    const char *already_seen, void UNUSED *_udata)
-{
-    /* Check if the object is already in the path table */
-    if(NULL == already_seen) {
-        /* Insert the object into the path table */
-        ref_path_table_put(obj_name, oinfo->addr);
-    } /* end if */
-
-    return 0;
-}
-
-/*-------------------------------------------------------------------------
- * Function:    init_ref_path_table
- *
- * Purpose:     Initalize the reference path table
- *
- * Return:      Non-negative on success, negative on failure
- *
- * Programmer:  Quincey Koziol
- *
- *-------------------------------------------------------------------------
- */
-static int
-init_ref_path_table(void)
-{
-    /* Sanity check */
-    HDassert(thefile > 0);
-
-    /* Create skip list to store reference path information */
-    if((ref_path_table = H5SL_create(H5SL_TYPE_HADDR, 0.5, (size_t)16))==NULL)
-        return (-1);
-
-    /* Iterate over objects in this file */
-    if(h5trav_visit(thefile, "/", TRUE, TRUE, init_ref_path_cb, NULL, NULL) < 0) {
-        error_msg(progname, "unable to construct reference path table\n");
-        d_status = EXIT_FAILURE;
-    } /* end if */
 
     return(0);
 }
@@ -170,28 +158,60 @@ term_ref_path_table(void)
 haddr_t
 ref_path_table_lookup(const char *thepath)
 {
-    H5O_info_t  oi;
+    H5G_stat_t  sb;
+    haddr_t objno;              /* Compact form of object's location */
 
-    /* Allow lookups on the root group, even though it doesn't have any link info */
-    if(HDstrcmp(thepath, "/")) {
-        H5L_info_t  li;
-
-        /* Check for external link first, so we don't return the OID of an object in another file */
-        if(H5Lget_info(thefile, thepath, &li, H5P_DEFAULT) < 0)
+    /* Check for external link first, so we don't return the OID of an object in another file */
+    if(H5Gget_objinfo(thefile, thepath, FALSE, &sb)<0)
+    return HADDR_UNDEF;
+    if(sb.type == H5G_LINK) {
+        /* Get object ID for object at path */
+        /* (If the object is not a soft link, we've already retrieved the
+         *      correct information and don't have to perform this call. -QAK
+         */
+        if(H5Gget_objinfo(thefile, thepath, TRUE, &sb)<0)
+            /*  fatal error ? */
             return HADDR_UNDEF;
-
-        /* UD links can't be followed, so they always "dangle" like soft links.  */
-        if(li.type >= H5L_TYPE_UD_MIN)
-            return HADDR_UNDEF;
-    } /* end if */
-
-    /* Get the object info now */
-    /* (returns failure for dangling soft links) */
-    if(H5Oget_info_by_name(thefile, thepath, &oi, H5P_DEFAULT) < 0)
+    } else if(sb.type == H5G_UDLINK)
+    {
+        /* UD links can't be followed, so they always "dangle" like
+         * soft links.
+         */
         return HADDR_UNDEF;
+    } /* end if */
+    objno = (haddr_t)sb.objno[0] | ((haddr_t)sb.objno[1] << (8 * sizeof(long)));
+
+
+    /* All existing objects in the file had better be in the table */
+    HDassert(ref_path_table_find(objno));
 
     /* Return OID */
-    return(oi.addr);
+    return(objno);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:    ref_path_table_find
+ *
+ * Purpose:     Looks up a table entry given a object number.
+ *              Used during construction of the table.
+ *
+ * Return:      TRUE/FALSE on success, can't fail
+ *
+ * Programmer:  Quincey Koziol
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+static hbool_t
+ref_path_table_find(haddr_t objno)
+{
+    HDassert(ref_path_table);
+
+    if(H5SL_search(ref_path_table, &objno) == NULL)
+        return FALSE;
+    else
+        return TRUE;
 }
 
 /*-------------------------------------------------------------------------
@@ -225,7 +245,7 @@ ref_path_table_put(const char *path, haddr_t objno)
         return(-1);
 
     new_node->objno = objno;
-    new_node->path = HDstrdup(path);
+    new_node->path = path;
 
     return(H5SL_insert(ref_path_table, new_node, &(new_node->objno)));
 }
@@ -262,17 +282,17 @@ get_fake_xid (void) {
 haddr_t
 ref_path_table_gen_fake(const char *path)
 {
+    const char *dup_path;
     haddr_t fake_objno;
+
+    if((dup_path = HDstrdup(path)) == NULL)
+        return HADDR_UNDEF;
 
     /* Generate fake ID for string */
     fake_objno = get_fake_xid();
 
-    /* Create ref path table, if it hasn't already been created */
-    if(ref_path_table == NULL)
-        init_ref_path_table();
-
-    /* Insert "fake" object into table */
-    ref_path_table_put(path, fake_objno);
+    /* Insert "fake" object into table (takes ownership of path) */
+    ref_path_table_put(dup_path, fake_objno);
 
     return(fake_objno);
 }
@@ -296,12 +316,8 @@ lookup_ref_path(haddr_t ref)
     ref_path_node_t *node;
 
     /* Be safer for h5ls */
-    if(thefile < 0)
+    if(!ref_path_table)
         return(NULL);
-
-    /* Create ref path table, if it hasn't already been created */
-    if(ref_path_table == NULL)
-        init_ref_path_table();
 
     node = H5SL_search(ref_path_table, &ref);
 
@@ -318,15 +334,50 @@ lookup_ref_path(haddr_t ref)
  *
  * Programmer:  REMcG
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 herr_t
-fill_ref_path_table(hid_t fid)
+fill_ref_path_table(hid_t group, const char *obj_name, void *op_data)
 {
-    /* Set file ID for later queries (XXX: this should be fixed) */
-    thefile = fid;
+    const char *obj_prefix = (const char *)op_data;
+    H5G_stat_t              statbuf;
+    haddr_t objno;              /* Compact form of object's location */
 
-    /* Defer creating the ref path table until it's needed */
+    H5Gget_objinfo(group, obj_name, FALSE, &statbuf);
+    objno = (haddr_t)statbuf.objno[0] | ((haddr_t)statbuf.objno[1] << (8 * sizeof(long)));
+
+    /* Check if the object is in the path table */
+    if (!ref_path_table_find(objno)) {
+        size_t                  tmp_len;
+        char                   *thepath;
+
+        /* Compute length for this object's path */
+        tmp_len = HDstrlen(obj_prefix) + HDstrlen(obj_name) + 2;
+
+        /* Allocate room for the path for this object */
+        if ((thepath = (char *) HDmalloc(tmp_len)) == NULL)
+            return FAIL;
+
+        /* Build the name for this object */
+        HDstrcpy(thepath, obj_prefix);
+        HDstrcat(thepath, "/");
+        HDstrcat(thepath, obj_name);
+
+        /* Insert the object into the path table */
+        ref_path_table_put(thepath, objno);
+
+        if(statbuf.type == H5G_GROUP) {
+            /* Iterate over objects in this group, using this group's
+             * name as their prefix
+             */
+            if(H5Giterate(group, obj_name, NULL, fill_ref_path_table, thepath) < 0) {
+                error_msg(progname, "unable to dump group \"%s\"\n", obj_name);
+                d_status = EXIT_FAILURE;
+            }
+        }
+    }
 
     return 0;
 }

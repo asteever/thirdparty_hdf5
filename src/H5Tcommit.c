@@ -139,7 +139,7 @@ H5T_commit_named(const H5G_loc_t *loc, const char *name, H5T_t *dt,
 {
     H5O_obj_create_t ocrt_info;             /* Information for object creation */
     H5T_obj_create_t tcrt_info;             /* Information for named datatype creation */
-    H5T_state_t old_state = H5T_STATE_TRANSIENT;        /* The state of the datatype before H5T_commit. */
+    H5T_state_t old_state;                  /* The state of the datatype before H5T_commit. */
     herr_t      ret_value = SUCCEED;        /* Return value */
 
     FUNC_ENTER_NOAPI(H5T_commit_named, FAIL)
@@ -209,7 +209,7 @@ done:
  *		into a "named", immutable type.
  *
  *              The resulting ID should be linked into the file with
- *              H5Olink or it will be deleted when closed.
+ *              H5Llink or it will be deleted when closed.
  *
  * Note:	Datatype access property list is unused currently, but is
  *		checked for sanity anyway.
@@ -313,11 +313,6 @@ H5T_commit(H5F_t *file, H5T_t *type, hid_t tcpl_id, hid_t dxpl_id)
     if(H5G_name_reset(&temp_path) < 0)
 	HGOTO_ERROR(H5E_SYM, H5E_CANTRESET, FAIL, "unable to initialize path")
     loc_init = TRUE;
-
-    /* Set the latest format, if requested */
-    if(H5F_USE_LATEST_FORMAT(file))
-        if(H5T_set_latest_version(type) < 0)
-            HGOTO_ERROR(H5E_DATASET, H5E_CANTSET, FAIL, "can't set latest version of datatype")
 
     /* Calculate message size infomation, for creating object header */
     dtype_size = H5O_msg_size_f(file, tcpl_id, H5O_DTYPE_ID, type, (size_t)0);

@@ -21,10 +21,6 @@
  *  should be created on a little-endian and a big-endian machine.
  *  They will be named according to the platform and should
  *  be placed in the hdf5/test directory so that the links test can use them.
- *
- * Note: The be_extlink2.h5 is also used by external.c to test opening 
- *  external link twice. -SLU 2007/11/7
- *  
  */
 
 #include "hdf5.h"
@@ -66,9 +62,9 @@ main (void)
   if((fid2 = H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT)) < 0) goto error;
 
   /* Create two groups in the second file */
-  if((gid = H5Gcreate2(fid2, "group", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) goto error;
+  if((gid = H5Gcreate(fid2, "group", (size_t)0)) < 0) goto error;
   if((H5Gclose(gid)) < 0) goto error;
-  if((gid = H5Gcreate2(fid2, "group/subgroup", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) goto error;
+  if((gid = H5Gcreate(fid2, "group/subgroup", (size_t)0)) < 0) goto error;
   if((H5Gclose(gid)) < 0) goto error;
 
   /* Create an external link in the first file pointing to the group in the second file */

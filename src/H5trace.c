@@ -647,26 +647,6 @@ H5_trace (const double *returning, const char *func, const char *type, ...)
                     }
                     break;
 
-                case 'v':
-                    if(ptr) {
-                        if(vp)
-                            fprintf(out, "0x%lx", (unsigned long)vp);
-                        else
-                            fprintf(out, "NULL");
-                    } else {
-                        H5F_libver_t libver_vers = va_arg(ap, H5F_libver_t); /*lint !e64 Type mismatch not really occuring */
-
-                        switch(libver_vers) {
-                            case H5F_LIBVER_EARLIEST:
-                                fprintf(out, "H5F_LIBVER_EARLIEST");
-                                break;
-                            case H5F_LIBVER_LATEST:
-                                fprintf(out, "H5F_LIBVER_LATEST");
-                                break;
-                        }
-                    }
-                    break;
-
                 default:
                     fprintf(out, "BADTYPE(F%c)", type[1]);
                     goto error;
@@ -675,7 +655,6 @@ H5_trace (const double *returning, const char *func, const char *type, ...)
 
 	case 'G':
 	    switch(type[1]) {
-#ifndef H5_NO_DEPRECATED_SYMBOLS
                 case 'o':
                     if(ptr) {
                         if(vp)
@@ -689,38 +668,31 @@ H5_trace (const double *returning, const char *func, const char *type, ...)
                             case H5G_UNKNOWN:
                                 fprintf(out, "H5G_UNKNOWN");
                                 break;
-
-                            case H5G_GROUP:
-                                fprintf(out, "H5G_GROUP");
-                                break;
-
-                            case H5G_DATASET:
-                                fprintf(out, "H5G_DATASET");
-                                break;
-
-                            case H5G_TYPE:
-                                fprintf(out, "H5G_TYPE");
-                                break;
-
                             case H5G_LINK:
                                 fprintf(out, "H5G_LINK");
                                 break;
-
                             case H5G_UDLINK:
                                 fprintf(out, "H5G_UDLINK");
                                 break;
-
+                            case H5G_GROUP:
+                                fprintf(out, "H5G_GROUP");
+                                break;
+                            case H5G_DATASET:
+                                fprintf(out, "H5G_DATASET");
+                                break;
+                            case H5G_TYPE:
+                                fprintf(out, "H5G_TYPE");
+                                break;
                             case H5G_RESERVED_5:
                             case H5G_RESERVED_6:
                             case H5G_RESERVED_7:
                                 fprintf(out, "H5G_RESERVED(%ld)",(long)obj_type);
                                 break;
-
                             default:
                                 fprintf(out, "%ld", (long)obj_type);
                                 break;
-                        } /* end switch */
-                    } /* end else */
+                        }
+                    }
                     break;
 
                 case 's':
@@ -735,7 +707,6 @@ H5_trace (const double *returning, const char *func, const char *type, ...)
                         fprintf(out, "0x%lx", (unsigned long)statbuf);
                     }
                     break;
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
 
                 default:
                     fprintf(out, "BADTYPE(G%c)", type[1]);
@@ -1274,40 +1245,6 @@ H5_trace (const double *returning, const char *func, const char *type, ...)
 	    }
 	    break;
 
-	case 'O':
-	    switch(type[1]) {
-                case 't':
-                    if(ptr) {
-                        if(vp)
-                            fprintf(out, "0x%lx", (unsigned long)vp);
-                        else
-                            fprintf(out, "NULL");
-                    } /* end if */
-                    else {
-                        H5O_type_t objtype = va_arg(ap, H5O_type_t); /*lint !e64 Type mismatch not really occuring */
-                        switch(objtype) {
-                            case H5O_TYPE_GROUP:
-                                fprintf(out, "H5O_TYPE_GROUP");
-                                break;
-                            case H5O_TYPE_DATASET:
-                                fprintf(out, "H5O_TYPE_DATASET");
-                                break;
-                            case H5O_TYPE_NAMED_DATATYPE:
-                                fprintf(out, "H5O_TYPE_NAMED_DATATYPE");
-                                break;
-                            default:
-                                fprintf(out, "BADTYPE(%ld)", (long)objtype);
-                                break;
-                        } /* end switch */
-                    } /* end else */
-                    break;
-
-                default:
-                    fprintf(out, "BADTYPE(S%c)", type[1]);
-                    goto error;
-	    } /* end switch */
-	    break;
-
 	case 'p':
 	    if (ptr) {
 		if (vp) {
@@ -1366,6 +1303,9 @@ H5_trace (const double *returning, const char *func, const char *type, ...)
                                 break;
                             case H5R_DATASET_REGION:
                                 fprintf(out, "H5R_DATASET_REGION");
+                                break;
+                            case H5R_INTERNAL:
+                                fprintf(out, "H5R_INTERNAL");
                                 break;
                             case H5R_MAXTYPE:
                                 fprintf(out, "H5R_MAXTYPE");

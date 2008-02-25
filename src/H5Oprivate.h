@@ -91,10 +91,6 @@ typedef struct H5O_t H5O_t;
 #define H5O_BOGUS_MSG_FLAGS_NAME        "bogus msg flags"       /* Flags for 'bogus' message */
 #define H5O_BOGUS_MSG_FLAGS_SIZE        sizeof(uint8_t)
 #endif /* H5O_ENABLE_BOGUS */
-#ifdef H5O_ENABLE_BAD_MESG_COUNT
-#define H5O_BAD_MESG_COUNT_NAME         "bad message count"       /* Flag setting bad message count */
-#define H5O_BAD_MESG_COUNT_SIZE         sizeof(hbool_t)
-#endif /* H5O_ENABLE_BAD_MESG_COUNT */
 
 /* ========= Object Copy properties ============ */
 #define H5O_CPY_OPTION_NAME 		"copy object"           /* Copy options */
@@ -236,31 +232,18 @@ typedef struct H5O_linfo_t {
     haddr_t     name_bt2_addr;          /* Address of v2 B-tree for indexing names of links */
 } H5O_linfo_t;
 
-/* Initial version of the "old" fill value information */
-/* (It doesn't look like this value was ever used in the file -QAK) */
-#define H5O_FILL_VERSION_1 	1
-/* Revised version of the "new" fill value information */
-#define H5O_FILL_VERSION_2 	2
-/* Version of the "new" fill value information with smaller default format */
-#define H5O_FILL_VERSION_3 	3
-
-/* The latest version of the format.  Look through the 'encode', 'decode'
- *      and 'size' callback for places to change when updating this. */
-#define H5O_FILL_VERSION_LATEST H5O_FILL_VERSION_3
-
 /*
- * Fill Value Message.
+ * New Fill Value Message.
  * (Data structure in memory for both "old" and "new" fill value messages)
  *
- * The fill value message is fill value plus space allocation time, fill value
- * writing time, whether fill value is defined, and the location of the
- * message if it's shared.
+ * The new fill value message is fill value plus
+ * space allocation time, fill value writing time, whether fill
+ * value is defined, and the location of the message if it's shared
  */
 
 typedef struct H5O_fill_t {
     H5O_shared_t        sh_loc;         /* Shared message info (must be first) */
 
-    unsigned	        version;	/* Encoding version number           */
     H5T_t		*type;		/*type. Null implies same as dataset */
     ssize_t		size;		/*number of bytes in the fill value  */
     void		*buf;		/*the fill value		     */
@@ -400,7 +383,6 @@ typedef struct H5O_ginfo_t {
 typedef struct H5O_pline_t {
     H5O_shared_t        sh_loc;         /* Shared message info (must be first) */
 
-    unsigned	version;	        /* Encoding version number */
     size_t	nalloc;			/*num elements in `filter' array     */
     size_t	nused;			/*num filters defined		     */
     H5Z_filter_info_t *filter;		/*array of filters		     */
@@ -537,37 +519,33 @@ struct H5P_genplist_t;
 H5_DLL herr_t H5O_init(void);
 H5_DLL herr_t H5O_create(H5F_t *f, hid_t dxpl_id, size_t size_hint,
     hid_t ocpl_id, H5O_loc_t *loc/*out*/);
-H5_DLL herr_t H5O_open(H5O_loc_t *loc);
+H5_DLL herr_t H5O_open(const H5O_loc_t *loc);
 H5_DLL herr_t H5O_close(H5O_loc_t *loc);
 H5_DLL int H5O_link(const H5O_loc_t *loc, int adjust, hid_t dxpl_id);
-H5_DLL H5O_t *H5O_protect(H5O_loc_t *loc, hid_t dxpl_id);
-H5_DLL herr_t H5O_unprotect(H5O_loc_t *loc, H5O_t *oh);
+H5_DLL struct H5O_t *H5O_protect(H5O_loc_t *loc, hid_t dxpl_id);
+H5_DLL herr_t H5O_unprotect(H5O_loc_t *loc, struct H5O_t *oh);
 H5_DLL herr_t H5O_touch(H5O_loc_t *loc, hbool_t force, hid_t dxpl_id);
-H5_DLL herr_t H5O_touch_oh(H5F_t *f, hid_t dxpl_id, H5O_t *oh,
+H5_DLL herr_t H5O_touch_oh(H5F_t *f, hid_t dxpl_id, struct H5O_t *oh,
     hbool_t force);
 #ifdef H5O_ENABLE_BOGUS
-H5_DLL herr_t H5O_bogus_oh(H5F_t *f, hid_t dxpl_id, H5O_t *oh, unsigned mesg_flags);
+H5_DLL herr_t H5O_bogus_oh(H5F_t *f, hid_t dxpl_id, struct H5O_t *oh, unsigned mesg_flags);
 #endif /* H5O_ENABLE_BOGUS */
 H5_DLL herr_t H5O_delete(H5F_t *f, hid_t dxpl_id, haddr_t addr);
-H5_DLL herr_t H5O_get_info(H5O_loc_t *oloc, hid_t dxpl_id, hbool_t want_ih_info,
-    H5O_info_t *oinfo);
+H5_DLL herr_t H5O_get_info(H5O_loc_t *oloc, H5O_info_t *oinfo, hid_t dxpl_id);
 H5_DLL herr_t H5O_obj_type(const H5O_loc_t *loc, H5O_type_t *obj_type, hid_t dxpl_id);
 H5_DLL herr_t H5O_get_create_plist(const H5O_loc_t *loc, hid_t dxpl_id, struct H5P_genplist_t *oc_plist);
 H5_DLL hid_t H5O_open_name(H5G_loc_t *loc, const char *name, hid_t lapl_id);
 H5_DLL herr_t H5O_get_nlinks(const H5O_loc_t *loc, hid_t dxpl_id, hsize_t *nlinks);
 H5_DLL void *H5O_obj_create(H5F_t *f, H5O_type_t obj_type, void *crt_info, H5G_loc_t *obj_loc, hid_t dxpl_id);
 H5_DLL haddr_t H5O_get_oh_addr(const H5O_t *oh);
-H5_DLL herr_t H5O_get_rc_and_type(const H5O_loc_t *oloc, hid_t dxpl_id, unsigned *rc, H5O_type_t *otype);
 
 /* Object header message routines */
 H5_DLL herr_t H5O_msg_create(const H5O_loc_t *loc, unsigned type_id, unsigned mesg_flags,
     unsigned update_flags, void *mesg, hid_t dxpl_id);
-H5_DLL herr_t H5O_msg_append_oh(H5F_t *f, hid_t dxpl_id, H5O_t *oh, unsigned type_id,
+H5_DLL herr_t H5O_msg_append(H5F_t *f, hid_t dxpl_id, struct H5O_t *oh, unsigned type_id,
     unsigned mesg_flags, unsigned update_flags, void *mesg);
-H5_DLL herr_t H5O_msg_write(const H5O_loc_t *loc, unsigned type_id,
-    unsigned mesg_flags, unsigned update_flags, void *mesg, hid_t dxpl_id);
-H5_DLL herr_t H5O_msg_write_oh(H5F_t *f, hid_t dxpl_id, H5O_t *oh,
-    unsigned type_id, unsigned mesg_flags, unsigned update_flags, void *mesg);
+H5_DLL herr_t H5O_msg_write(const H5O_loc_t *loc, unsigned type_id, unsigned flags,
+    unsigned update_flags, void *mesg, hid_t dxpl_id);
 H5_DLL void *H5O_msg_read(const H5O_loc_t *loc, unsigned type_id, void *mesg,
     hid_t dxpl_id);
 H5_DLL herr_t H5O_msg_reset(unsigned type_id, void *native);
@@ -629,7 +607,6 @@ H5_DLL hsize_t H5O_efl_total_size(H5O_efl_t *efl);
 /* Fill value operators */
 H5_DLL herr_t H5O_fill_reset_dyn(H5O_fill_t *fill);
 H5_DLL herr_t H5O_fill_convert(H5O_fill_t *fill, H5T_t *type, hbool_t *fill_changed, hid_t dxpl_id);
-H5_DLL herr_t H5O_fill_set_latest_version(H5O_fill_t *fill);
 
 /* Link operators */
 H5_DLL herr_t H5O_link_delete(H5F_t *f, hid_t dxpl_id, H5O_t *open_oh,

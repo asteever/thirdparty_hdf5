@@ -45,7 +45,7 @@ char *ub_file = NULL;
  * parameters. The long-named ones can be partially spelled. When
  * adding more, make sure that they don't clash with each other.
  */
-static const char *s_opts = "hu:i:o:d:V";
+static const char *s_opts = "hu:i:o:d";
 static struct long_options l_opts[] = {
     { "help", no_arg, 'h' },
     { "hel", no_arg, 'h' },
@@ -83,8 +83,6 @@ usage(const char *prog)
 
     fprintf(stdout, "       %s -h\n",prog);
     fprintf(stdout, "           Print a usage message and exit\n");
-    fprintf(stdout, "       %s -V \n", prog);
-    fprintf(stdout, "           Print HDF5 library version and exit\n");
 }
 
 /*-------------------------------------------------------------------------
@@ -123,16 +121,13 @@ parse_command_line(int argc, const char *argv[])
 	case 'd':
 	  do_delete = TRUE;
 	  break;
-    case 'h':
-        usage(progname);
-        exit(EXIT_SUCCESS);
-    case 'V':
-        print_version (progname);
-        exit (EXIT_SUCCESS);
-    case '?':
-    default:
-        usage(progname);
-        exit(EXIT_FAILURE);
+        case 'h':
+            usage(progname);
+            exit(EXIT_SUCCESS);
+        case '?':
+        default:
+            usage(progname);
+            exit(EXIT_FAILURE);
         }
     }
 
@@ -257,7 +252,7 @@ main(int argc, const char *argv[])
             exit(EXIT_FAILURE);
         }
     } else {
-        h5fid = HDopen(output_file,O_WRONLY|O_CREAT|O_TRUNC, 0644 );
+        h5fid = open(output_file,O_WRONLY|O_CREAT|O_TRUNC, 0644 );
 
         if (h5fid < 0) {
             error_msg(progname, "unable to open output HDF5 file \"%s\"\n", output_file);

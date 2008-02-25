@@ -23,15 +23,17 @@
 
 #include "testhdf5.h"
 
+/*#include "H5private.h"
+#include "H5Bprivate.h"
+#include "H5Sprivate.h"
+#include "H5Pprivate.h"
+*/
+
 #define TEST_FILENAME "th5o_file"
 
 #define RANK 2
 #define DIM0 5
 #define DIM1 10
-
-#define TEST6_DIM1 100
-#define TEST6_DIM2 100
-
 
 /****************************************************************
 **
@@ -45,7 +47,7 @@ test_h5o_open(void)
     hid_t       grp, dset, dtype, dspace;   /* Object identifiers */
     hsize_t     dims[RANK];
     H5I_type_t  id_type;                    /* Type of IDs returned from H5Oopen */
-    H5G_info_t  ginfo;                      /* Group info struct */
+    hsize_t     num_objs = 0;               /* Number of objects in the group */
     H5T_class_t type_class;                 /* Class of the datatype */
     herr_t      ret;                        /* Value returned from API calls */
 
@@ -55,16 +57,16 @@ test_h5o_open(void)
 
     /* Create a group, dataset, and committed datatype within the file */
     /* Create the group */
-    grp = H5Gcreate2(fid, "group", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(grp, FAIL, "H5Gcreate2");
+    grp = H5Gcreate(fid, "group", (size_t)0);
+    CHECK(grp, FAIL, "H5Gcreate");
     ret = H5Gclose(grp);
     CHECK(ret, FAIL, "H5Gclose");
 
     /* Commit the type inside the group */
     dtype = H5Tcopy(H5T_NATIVE_INT);
     CHECK(dtype, FAIL, "H5Tcopy");
-    ret = H5Tcommit2(fid, "group/datatype", dtype, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Tcommit2");
+    ret = H5Tcommit(fid, "group/datatype", dtype);
+    CHECK(ret, FAIL, "H5Tcommit");
     ret = H5Tclose(dtype);
     CHECK(ret, FAIL, "H5Tclose");
 
@@ -75,8 +77,8 @@ test_h5o_open(void)
     CHECK(dspace, FAIL, "H5Screate_simple");
 
     /* Create the dataset. */
-    dset = H5Dcreate2(fid, "dataset", H5T_NATIVE_INT, dspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(dset, FAIL, "H5Dcreate2");
+    dset = H5Dcreate(fid, "dataset", H5T_NATIVE_INT, dspace, H5P_DEFAULT);
+    CHECK(dset, FAIL, "H5Dcreate");
     ret = H5Dclose(dset);
     CHECK(ret, FAIL, "H5Dclose");
     ret = H5Sclose(dspace);
@@ -100,9 +102,9 @@ test_h5o_open(void)
     VERIFY(id_type, H5I_DATASET, "H5Iget_type for dataset ID");
 
     /* Do something more complex with each of the IDs to make sure they "work" */
-    ret = H5Gget_info(grp, &ginfo);
-    CHECK(ret, FAIL, "H5Gget_info");
-    VERIFY(ginfo.nlinks, 1, "H5Gget_info"); /* There should be one object, the datatype */
+    ret = H5Gget_num_objs(grp, &num_objs);
+    CHECK(ret, FAIL, "H5Gget_num_objs");
+    VERIFY(num_objs, 1, "H5Gget_num_objs"); /* There should be one object, the datatype */
 
     type_class = H5Tget_class(dtype);
     VERIFY(type_class, H5T_INTEGER, "H5Tget_class");
@@ -160,8 +162,8 @@ test_h5o_close(void)
 
     /* Create a group, dataset, and committed datatype within the file */
     /* Create the group and close it with H5Oclose */
-    grp = H5Gcreate2(fid, "group", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(grp, FAIL, "H5Gcreate2");
+    grp = H5Gcreate(fid, "group", (size_t)0);
+    CHECK(grp, FAIL, "H5Gcreate");
     VERIFY(H5Iget_type(grp), H5I_GROUP, "H5Iget_type");
     ret = H5Oclose(grp);
     CHECK(ret, FAIL, "H5Oclose");
@@ -169,8 +171,8 @@ test_h5o_close(void)
     /* Commit the type inside the group */
     dtype = H5Tcopy(H5T_NATIVE_INT);
     CHECK(dtype, FAIL, "H5Tcopy");
-    ret = H5Tcommit2(fid, "group/datatype", dtype, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Tcommit2");
+    ret = H5Tcommit(fid, "group/datatype", dtype);
+    CHECK(ret, FAIL, "H5Tcommit");
     ret = H5Oclose(dtype);
     CHECK(ret, FAIL, "H5Oclose");
 
@@ -181,8 +183,8 @@ test_h5o_close(void)
     CHECK(dspace, FAIL, "H5Screate_simple");
 
     /* Create the dataset. */
-    dset = H5Dcreate2(fid, "dataset", H5T_NATIVE_INT, dspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(dset, FAIL, "H5Dcreate2");
+    dset = H5Dcreate(fid, "dataset", H5T_NATIVE_INT, dspace, H5P_DEFAULT);
+    CHECK(dset, FAIL, "H5Dcreate");
     ret = H5Oclose(dset);
     CHECK(ret, FAIL, "H5Oclose");
 
@@ -211,12 +213,12 @@ test_h5o_close(void)
     CHECK(ret, FAIL, "H5Oclose");
 
     /* Make sure H5Oclose can close objects opened with H5*open */
-    grp = H5Gopen2(fid, "group", H5P_DEFAULT);
-    CHECK(grp, FAIL, "H5Gopen2");
-    dtype = H5Topen2(fid, "group/datatype", H5P_DEFAULT);
-    CHECK(dtype, FAIL, "H5Topen2");
-    dset = H5Dopen2(fid, "dataset", H5P_DEFAULT);
-    CHECK(dset, FAIL, "H5Dopen2");
+    grp = H5Gopen(fid, "group");
+    CHECK(grp, FAIL, "H5Gopen");
+    dtype = H5Topen(fid, "group/datatype");
+    CHECK(dtype, FAIL, "H5Topen");
+    dset = H5Dopen(fid, "dataset");
+    CHECK(dset, FAIL, "H5Dopen");
 
     ret = H5Oclose(grp);
     CHECK(ret, FAIL, "H5Oclose");
@@ -247,7 +249,7 @@ test_h5o_open_by_addr(void)
     haddr_t dtype_addr;
     hsize_t     dims[RANK];
     H5I_type_t  id_type;                    /* Type of IDs returned from H5Oopen */
-    H5G_info_t  ginfo;                      /* Group info struct */
+    hsize_t     num_objs = 0;               /* Number of objects in the group */
     H5T_class_t type_class;                 /* Class of the datatype */
     herr_t      ret;                        /* Value returned from API calls */
 
@@ -257,16 +259,16 @@ test_h5o_open_by_addr(void)
 
     /* Create a group, dataset, and committed datatype within the file */
     /* Create the group */
-    grp = H5Gcreate2(fid, "group", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(grp, FAIL, "H5Gcreate2");
+    grp = H5Gcreate(fid, "group", (size_t)0);
+    CHECK(grp, FAIL, "H5Gcreate");
     ret = H5Gclose(grp);
     CHECK(ret, FAIL, "H5Gclose");
 
     /* Commit the type inside the group */
     dtype = H5Tcopy(H5T_NATIVE_INT);
     CHECK(dtype, FAIL, "H5Tcopy");
-    ret = H5Tcommit2(fid, "group/datatype", dtype, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Tcommit2");
+    ret = H5Tcommit(fid, "group/datatype", dtype);
+    CHECK(ret, FAIL, "H5Tcommit");
     ret = H5Tclose(dtype);
     CHECK(ret, FAIL, "H5Tclose");
 
@@ -277,8 +279,8 @@ test_h5o_open_by_addr(void)
     CHECK(dspace, FAIL, "H5Screate_simple");
 
     /* Create the dataset. */
-    dset = H5Dcreate2(fid, "dataset", H5T_NATIVE_INT, dspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(dset, FAIL, "H5Dcreate2");
+    dset = H5Dcreate(fid, "dataset", H5T_NATIVE_INT, dspace, H5P_DEFAULT);
+    CHECK(dset, FAIL, "H5Dcreate");
     ret = H5Dclose(dset);
     CHECK(ret, FAIL, "H5Dclose");
     ret = H5Sclose(dspace);
@@ -313,9 +315,9 @@ test_h5o_open_by_addr(void)
     VERIFY(id_type, H5I_DATASET, "H5Iget_type for dataset ID");
 
     /* Do something more complex with each of the IDs to make sure they "work" */
-    ret = H5Gget_info(grp, &ginfo);
-    CHECK(ret, FAIL, "H5Gget_info");
-    VERIFY(ginfo.nlinks, 1, "H5Gget_info"); /* There should be one object, the datatype */
+    ret = H5Gget_num_objs(grp, &num_objs);
+    CHECK(ret, FAIL, "H5Gget_num_objs");
+    VERIFY(num_objs, 1, "H5Gget_num_objs"); /* There should be one object, the datatype */
 
     type_class = H5Tget_class(dtype);
     VERIFY(type_class, H5T_INTEGER, "H5Tget_class");
@@ -376,7 +378,7 @@ test_h5o_refcount(void)
 {
     hid_t       fid;                        /* HDF5 File ID      */
     hid_t       grp, dset, dtype, dspace;   /* Object identifiers */
-    H5O_info_t	oinfo;                      /* Object info struct */
+    H5G_stat_t	sb;                         /* Statbuffer for H5Gget_objinfo */
     hsize_t     dims[RANK];
     herr_t      ret;                        /* Value returned from API calls */
 
@@ -386,14 +388,14 @@ test_h5o_refcount(void)
 
     /* Create a group, dataset, and committed datatype within the file */
     /* Create the group */
-    grp = H5Gcreate2(fid, "group", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(grp, FAIL, "H5Gcreate2");
+    grp = H5Gcreate(fid, "group", (size_t)0);
+    CHECK(grp, FAIL, "H5Gcreate");
 
     /* Commit the type inside the group */
     dtype = H5Tcopy(H5T_NATIVE_INT);
     CHECK(dtype, FAIL, "H5Tcopy");
-    ret = H5Tcommit2(fid, "datatype", dtype, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Tcommit2");
+    ret = H5Tcommit(fid, "datatype", dtype);
+    CHECK(ret, FAIL, "H5Tcommit");
 
     /* Create the data space for the dataset. */
     dims[0] = DIM0;
@@ -402,21 +404,21 @@ test_h5o_refcount(void)
     CHECK(dspace, FAIL, "H5Screate_simple");
 
     /* Create the dataset. */
-    dset = H5Dcreate2(fid, "dataset", H5T_NATIVE_INT, dspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(dset, FAIL, "H5Dcreate2");
+    dset = H5Dcreate(fid, "dataset", H5T_NATIVE_INT, dspace, H5P_DEFAULT);
+    CHECK(dset, FAIL, "H5Dcreate");
     ret = H5Sclose(dspace);
     CHECK(ret, FAIL, "H5Sclose");
 
     /* Get ref counts for each object.  They should all be 1, since each object has a hard link. */
-    ret = H5Oget_info_by_name(fid, "group", &oinfo, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Oget_info_by_name");
-    VERIFY(oinfo.rc, 1, "reference count in H5Oget_info_by_name");
-    ret = H5Oget_info_by_name(fid, "datatype", &oinfo, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Oget_info_by_name");
-    VERIFY(oinfo.rc, 1, "reference count in H5Oget_info_by_name");
-    ret = H5Oget_info_by_name(fid, "dataset", &oinfo, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Oget_info_by_name");
-    VERIFY(oinfo.rc, 1, "reference count in H5Oget_info_by_name");
+    ret = H5Gget_objinfo(fid, "group", FALSE, &sb);
+    CHECK(ret, FAIL, "H5Gget_objinfo");
+    VERIFY(sb.nlink, 1, "reference count in H5Gget_objinfo");
+    ret = H5Gget_objinfo(fid, "datatype", FALSE, &sb);
+    CHECK(ret, FAIL, "H5Gget_objinfo");
+    VERIFY(sb.nlink, 1, "reference count in H5Gget_objinfo");
+    ret = H5Gget_objinfo(fid, "dataset", FALSE, &sb);
+    CHECK(ret, FAIL, "H5Gget_objinfo");
+    VERIFY(sb.nlink, 1, "reference count in H5Gget_objinfo");
 
     /* Increment each object's reference count. */
     ret = H5Oincr_refcount(grp);
@@ -427,15 +429,15 @@ test_h5o_refcount(void)
     CHECK(ret, FAIL, "H5Oincr_refcount");
 
     /* Get ref counts for each object.  They should all be 2 now. */
-    ret = H5Oget_info_by_name(fid, "group", &oinfo, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Oget_info_by_name");
-    VERIFY(oinfo.rc, 2, "reference count in H5Oget_info_by_name");
-    ret = H5Oget_info_by_name(fid, "datatype", &oinfo, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Oget_info_by_name");
-    VERIFY(oinfo.rc, 2, "reference count in H5Oget_info_by_name");
-    ret = H5Oget_info_by_name(fid, "dataset", &oinfo, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Oget_info_by_name");
-    VERIFY(oinfo.rc, 2, "reference count in H5Oget_info_by_name");
+    ret = H5Gget_objinfo(fid, "group", FALSE, &sb);
+    CHECK(ret, FAIL, "H5Gget_objinfo");
+    VERIFY(sb.nlink, 2, "reference count in H5Gget_objinfo");
+    ret = H5Gget_objinfo(fid, "datatype", FALSE, &sb);
+    CHECK(ret, FAIL, "H5Gget_objinfo");
+    VERIFY(sb.nlink, 2, "reference count in H5Gget_objinfo");
+    ret = H5Gget_objinfo(fid, "dataset", FALSE, &sb);
+    CHECK(ret, FAIL, "H5Gget_objinfo");
+    VERIFY(sb.nlink, 2, "reference count in H5Gget_objinfo");
 
     /* Decrement the reference counts and check that they decrease back to 1. */
     ret = H5Odecr_refcount(grp);
@@ -445,15 +447,15 @@ test_h5o_refcount(void)
     ret = H5Odecr_refcount(dset);
     CHECK(ret, FAIL, "H5Odecr_refcount");
 
-    ret = H5Oget_info_by_name(fid, "group", &oinfo, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Oget_info_by_name");
-    VERIFY(oinfo.rc, 1, "reference count in H5Oget_info_by_name");
-    ret = H5Oget_info_by_name(fid, "datatype", &oinfo, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Oget_info_by_name");
-    VERIFY(oinfo.rc, 1, "reference count in H5Oget_info_by_name");
-    ret = H5Oget_info_by_name(fid, "dataset", &oinfo, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Oget_info_by_name");
-    VERIFY(oinfo.rc, 1, "reference count in H5Oget_info_by_name");
+    ret = H5Gget_objinfo(fid, "group", FALSE, &sb);
+    CHECK(ret, FAIL, "H5Gget_objinfo");
+    VERIFY(sb.nlink, 1, "reference count in H5Gget_objinfo");
+    ret = H5Gget_objinfo(fid, "datatype", FALSE, &sb);
+    CHECK(ret, FAIL, "H5Gget_objinfo");
+    VERIFY(sb.nlink, 1, "reference count in H5Gget_objinfo");
+    ret = H5Gget_objinfo(fid, "dataset", FALSE, &sb);
+    CHECK(ret, FAIL, "H5Gget_objinfo");
+    VERIFY(sb.nlink, 1, "reference count in H5Gget_objinfo");
 
     /* Increment the reference counts and then close the file to make sure the increment is permanant */
     ret = H5Oincr_refcount(grp);
@@ -476,22 +478,22 @@ test_h5o_refcount(void)
     fid = H5Fopen(TEST_FILENAME, H5F_ACC_RDWR, H5P_DEFAULT);
     CHECK(fid, FAIL, "H5Fopen");
 
-    grp = H5Gopen2(fid, "group", H5P_DEFAULT);
-    CHECK(grp, FAIL, "H5Gopen2");
-    dtype = H5Topen2(fid, "datatype", H5P_DEFAULT);
-    CHECK(dtype, FAIL, "H5Topen2");
-    dset = H5Dopen2(fid, "dataset", H5P_DEFAULT);
-    CHECK(dset, FAIL, "H5Dopen2");
+    grp = H5Gopen(fid, "group");
+    CHECK(grp, FAIL, "H5Gopen");
+    dtype = H5Topen(fid, "datatype");
+    CHECK(dtype, FAIL, "H5Gopen");
+    dset = H5Dopen(fid, "dataset");
+    CHECK(dset, FAIL, "H5Gopen");
 
-    ret = H5Oget_info_by_name(fid, "group", &oinfo, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Oget_info_by_name");
-    VERIFY(oinfo.rc, 2, "reference count in H5Oget_info_by_name");
-    ret = H5Oget_info_by_name(fid, "datatype", &oinfo, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Oget_info_by_name");
-    VERIFY(oinfo.rc, 2, "reference count in H5Oget_info_by_name");
-    ret = H5Oget_info_by_name(fid, "dataset", &oinfo, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Oget_info_by_name");
-    VERIFY(oinfo.rc, 2, "reference count in H5Oget_info_by_name");
+    ret = H5Gget_objinfo(fid, "group", FALSE, &sb);
+    CHECK(ret, FAIL, "H5Gget_objinfo");
+    VERIFY(sb.nlink, 2, "reference count in H5Gget_objinfo");
+    ret = H5Gget_objinfo(fid, "datatype", FALSE, &sb);
+    CHECK(ret, FAIL, "H5Gget_objinfo");
+    VERIFY(sb.nlink, 2, "reference count in H5Gget_objinfo");
+    ret = H5Gget_objinfo(fid, "dataset", FALSE, &sb);
+    CHECK(ret, FAIL, "H5Gget_objinfo");
+    VERIFY(sb.nlink, 2, "reference count in H5Gget_objinfo");
 
     /* Decrement the reference counts and close the file */
     ret = H5Odecr_refcount(grp);
@@ -514,22 +516,22 @@ test_h5o_refcount(void)
     fid = H5Fopen(TEST_FILENAME, H5F_ACC_RDWR, H5P_DEFAULT);
     CHECK(fid, FAIL, "H5Fopen");
 
-    grp = H5Gopen2(fid, "group", H5P_DEFAULT);
-    CHECK(grp, FAIL, "H5Gopen2");
-    dtype = H5Topen2(fid, "datatype", H5P_DEFAULT);
-    CHECK(dtype, FAIL, "H5Topen2");
-    dset = H5Dopen2(fid, "dataset", H5P_DEFAULT);
-    CHECK(dset, FAIL, "H5Dopen2");
+    grp = H5Gopen(fid, "group");
+    CHECK(grp, FAIL, "H5Gopen");
+    dtype = H5Topen(fid, "datatype");
+    CHECK(dtype, FAIL, "H5Gopen");
+    dset = H5Dopen(fid, "dataset");
+    CHECK(dset, FAIL, "H5Gopen");
 
-    ret = H5Oget_info_by_name(fid, "group", &oinfo, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Oget_info_by_name");
-    VERIFY(oinfo.rc, 1, "reference count in H5Oget_info_by_name");
-    ret = H5Oget_info_by_name(fid, "datatype", &oinfo, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Oget_info_by_name");
-    VERIFY(oinfo.rc, 1, "reference count in H5Oget_info_by_name");
-    ret = H5Oget_info_by_name(fid, "dataset", &oinfo, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Oget_info_by_name");
-    VERIFY(oinfo.rc, 1, "reference count in H5Oget_info_by_name");
+    ret = H5Gget_objinfo(fid, "group", FALSE, &sb);
+    CHECK(ret, FAIL, "H5Gget_objinfo");
+    VERIFY(sb.nlink, 1, "reference count in H5Gget_objinfo");
+    ret = H5Gget_objinfo(fid, "datatype", FALSE, &sb);
+    CHECK(ret, FAIL, "H5Gget_objinfo");
+    VERIFY(sb.nlink, 1, "reference count in H5Gget_objinfo");
+    ret = H5Gget_objinfo(fid, "dataset", FALSE, &sb);
+    CHECK(ret, FAIL, "H5Gget_objinfo");
+    VERIFY(sb.nlink, 1, "reference count in H5Gget_objinfo");
 
     /* Close the IDs */
     ret = H5Gclose(grp);
@@ -581,9 +583,9 @@ test_h5o_plist(void)
     fapl = H5Pcreate(H5P_FILE_ACCESS);
     CHECK(fapl, FAIL, "H5Pcreate");
 
-    /* Set the "use the latest version of the format" bounds for creating objects in the file */
-    ret = H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST);
-    CHECK(ret, FAIL, "H5Pset_libver_bounds");
+    /* Set the "use the latest version of the format" flag for creating objects in the file */
+    ret = H5Pset_latest_format(fapl, TRUE);
+    CHECK(ret, FAIL, "H5Pset_latest_format");
 
     /* Create a new HDF5 file */
     fid = H5Fcreate(TEST_FILENAME, H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
@@ -630,16 +632,16 @@ test_h5o_plist(void)
     /* Create the group anonymously and link it in */
     grp = H5Gcreate_anon(fid, gcpl, H5P_DEFAULT);
     CHECK(grp, FAIL, "H5Gcreate_anon");
-    ret = H5Olink(grp, fid, "group", H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Olink");
+    ret = H5Llink(fid, "group", grp, H5P_DEFAULT, H5P_DEFAULT);
+    CHECK(ret, FAIL, "H5Llink");
 
     /* Commit the type inside the group anonymously and link it in */
     dtype = H5Tcopy(H5T_NATIVE_INT);
     CHECK(dtype, FAIL, "H5Tcopy");
     ret = H5Tcommit_anon(fid, dtype, tcpl, H5P_DEFAULT);
     CHECK(ret, FAIL, "H5Tcommit_anon");
-    ret = H5Olink(dtype, fid, "datatype", H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Olink");
+    ret = H5Llink(fid, "datatype", dtype, H5P_DEFAULT, H5P_DEFAULT);
+    CHECK(ret, FAIL, "H5Llink");
 
     /* Create the dataspace for the dataset. */
     dspace = H5Screate(H5S_SCALAR);
@@ -648,8 +650,8 @@ test_h5o_plist(void)
     /* Create the dataset anonymously and link it in */
     dset = H5Dcreate_anon(fid, H5T_NATIVE_INT, dspace, dcpl, H5P_DEFAULT);
     CHECK(dset, FAIL, "H5Dcreate_anon");
-    ret = H5Olink(dset, fid, "dataset", H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Olink");
+    ret = H5Llink(fid, "dataset", dset, H5P_DEFAULT, H5P_DEFAULT);
+    CHECK(ret, FAIL, "H5Llink");
     ret = H5Sclose(dspace);
     CHECK(ret, FAIL, "H5Sclose");
 
@@ -704,12 +706,12 @@ test_h5o_plist(void)
     CHECK(fid, FAIL, "H5Fopen");
 
     /* Re-open objects */
-    grp = H5Gopen2(fid, "group", H5P_DEFAULT);
-    CHECK(grp, FAIL, "H5Gopen2");
-    dtype = H5Topen2(fid, "datatype", H5P_DEFAULT);
-    CHECK(dtype, FAIL, "H5Topen2");
-    dset = H5Dopen2(fid, "dataset", H5P_DEFAULT);
-    CHECK(dset, FAIL, "H5Dopen2");
+    grp = H5Gopen(fid, "group");
+    CHECK(grp, FAIL, "H5Gopen");
+    dtype = H5Topen(fid, "datatype");
+    CHECK(dtype, FAIL, "H5Topen");
+    dset = H5Dopen(fid, "dataset");
+    CHECK(dset, FAIL, "H5Dopen");
 
     /* Retrieve each object's creation property list */
     gcpl = H5Gget_create_plist(grp);
@@ -757,147 +759,6 @@ test_h5o_plist(void)
 
 /****************************************************************
 **
-**  test_h5o_link(): Test creating link to object
-**
-****************************************************************/
-static void
-test_h5o_link(void)
-{
-    hid_t file_id=-1;
-    hid_t group_id=-1;
-    hid_t space_id=-1;
-    hid_t dset_id=-1;
-    hid_t type_id=-1;
-    hid_t fapl_id=-1;
-    hid_t lcpl_id=-1;
-    hsize_t dims[2] = {TEST6_DIM1, TEST6_DIM2};
-    htri_t committed;           /* Whether the named datatype is committed */
-    hbool_t new_format;         /* Whether to use the new format or not */
-    int wdata[TEST6_DIM1][TEST6_DIM2];
-    int rdata[TEST6_DIM1][TEST6_DIM2];
-    int i, n, j;
-    herr_t ret;                 /* Value returned from API calls */
-
-    /* Initialize the raw data */
-    for(i = n = 0; i < TEST6_DIM1; i++)
-        for(j = 0; j < TEST6_DIM2; j++)
-          wdata[i][j] = n++;
-
-    /* Create the dataspace */
-    space_id = H5Screate_simple(2 ,dims, NULL);
-    CHECK(space_id, FAIL, "H5Screate_simple");
-
-    /* Create LCPL with intermediate group creation flag set */
-    lcpl_id = H5Pcreate(H5P_LINK_CREATE);
-    CHECK(lcpl_id, FAIL, "H5Pcreate");
-    ret = H5Pset_create_intermediate_group(lcpl_id, TRUE);
-    CHECK(ret, FAIL, "H5Pset_create_intermediate_group");
-
-    /* Loop over using new group format */
-    for(new_format = FALSE; new_format <= TRUE; new_format++) {
-
-        /* Make a FAPL that uses the "use the latest version of the format" bounds */
-        fapl_id = H5Pcreate(H5P_FILE_ACCESS);
-        CHECK(fapl_id, FAIL, "H5Pcreate");
-
-        /* Set the "use the latest version of the format" bounds for creating objects in the file */
-        ret = H5Pset_libver_bounds(fapl_id, (new_format ? H5F_LIBVER_LATEST : H5F_LIBVER_EARLIEST), H5F_LIBVER_LATEST);
-        CHECK(ret, FAIL, "H5Pset_libver_bounds");
-
-        /* Create a new HDF5 file */
-        file_id = H5Fcreate(TEST_FILENAME, H5F_ACC_TRUNC, H5P_DEFAULT, fapl_id);
-        CHECK(file_id, FAIL, "H5Fcreate");
-
-        /* Close the FAPL */
-        ret = H5Pclose(fapl_id);
-        CHECK(ret, FAIL, "H5Pclose");
-
-
-        /* Create and commit a datatype with no name */
-        type_id = H5Tcopy(H5T_NATIVE_INT);
-        CHECK(type_id, FAIL, "H5Fcreate");
-        ret = H5Tcommit_anon(file_id, type_id, H5P_DEFAULT, H5P_DEFAULT);
-        CHECK(ret, FAIL, "H5Tcommit_anon");
-        committed = H5Tcommitted(type_id);
-        VERIFY(committed, TRUE, "H5Tcommitted");
-
-        /* Create a dataset with no name using the committed datatype*/
-        dset_id = H5Dcreate_anon(file_id, type_id, space_id, H5P_DEFAULT, H5P_DEFAULT);
-        CHECK(dset_id, FAIL, "H5Dcreate_anon");
-
-        /* Verify that we can write to and read from the dataset */
-
-        /* Write the data to the dataset */
-        ret = H5Dwrite(dset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, wdata);
-        CHECK(ret, FAIL, "H5Dwrite");
-
-        /* Read the data back */
-        ret = H5Dread(dset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, rdata);
-        CHECK(ret, FAIL, "H5Dread");
-        
-        /* Verify the data */
-        for(i = 0; i < TEST6_DIM1; i++)
-            for(j = 0; j < TEST6_DIM2; j++)
-                VERIFY(wdata[i][j], rdata[i][j], "H5Dread");
-
-        /* Create a group with no name*/
-        group_id = H5Gcreate_anon(file_id, H5P_DEFAULT, H5P_DEFAULT);
-        CHECK(group_id, FAIL, "H5Gcreate_anon");
-
-        /* Link nameless datatype into nameless group */
-        ret = H5Olink(type_id, group_id, "datatype", H5P_DEFAULT, H5P_DEFAULT);
-        CHECK(ret, FAIL, "H5Olink");
-
-        /* Link nameless dataset into nameless group with intermediate group */
-        ret = H5Olink(dset_id, group_id, "inter_group/dataset", lcpl_id, H5P_DEFAULT);
-        CHECK(ret, FAIL, "H5Olink");
-
-        /* Close IDs for dataset and datatype */
-        ret = H5Dclose(dset_id);
-        CHECK(ret, FAIL, "H5Dclose");
-        ret = H5Tclose(type_id);
-        CHECK(ret, FAIL, "H5Tclose");
-
-        /* Re-open datatype using new link */
-        type_id = H5Topen2(group_id, "datatype", H5P_DEFAULT);
-        CHECK(type_id, FAIL, "H5Topen2");
-
-        /* Link nameless group to root group and close the group ID*/
-        ret = H5Olink(group_id, file_id, "/group", H5P_DEFAULT, H5P_DEFAULT);
-        CHECK(ret, FAIL, "H5Olink");
-        ret = H5Gclose(group_id);
-        CHECK(ret, FAIL, "H5Gclose");
-
-        /* Open dataset through root group and verify its data */
-        dset_id = H5Dopen2(file_id, "/group/inter_group/dataset", H5P_DEFAULT);
-        CHECK(dset_id, FAIL, "H5Dopen2");
-
-        /* Read data from dataset */
-        ret = H5Dread(dset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, rdata);
-        CHECK(ret, FAIL, "H5Dread");
-        for(i = 0; i < TEST6_DIM1; i++)
-            for(j = 0; j < TEST6_DIM2; j++)
-                VERIFY(wdata[i][j], rdata[i][j], "H5Dread");
-            
-        /* Close open IDs */
-        ret = H5Dclose(dset_id);
-        CHECK(ret, FAIL, "H5Dclose");
-        ret = H5Tclose(type_id);
-        CHECK(ret, FAIL, "H5Tclose");
-        ret = H5Fclose(file_id);
-        CHECK(ret, FAIL, "H5Fclose");
-    } /* end for */
-
-    /* Close remaining IDs */
-    ret = H5Sclose(space_id);
-    CHECK(ret, FAIL, "H5Sclose");
-    ret = H5Pclose(lcpl_id);
-    CHECK(ret, FAIL, "H5Pclose");
-} /* end test_h5o_link() */
-
-
-/****************************************************************
-**
 **  test_h5o(): Main H5O (generic object) testing routine.
 **
 ****************************************************************/
@@ -912,7 +773,6 @@ test_h5o(void)
     test_h5o_close();		/* Test generic close function */
     test_h5o_refcount();        /* Test incrementing and decrementing reference count */
     test_h5o_plist();           /* Test object creation properties */
-    test_h5o_link();            /* Test object link routine */
 } /* test_h5o() */
 
 
@@ -933,4 +793,3 @@ cleanup_h5o(void)
 {
     remove(TEST_FILENAME);
 }
-

@@ -61,6 +61,8 @@ typedef struct {
 /* User data for iteration when opening an attribute */
 typedef struct {
     /* down */
+    H5F_t *f;                   /* Pointer to file attribute is in */
+    hid_t dxpl_id;              /* DXPL for operation */
     const char *name;           /* Name of attribute to open */
 
     /* up */
@@ -114,15 +116,6 @@ typedef struct {
     /* up */
     hbool_t found;              /* Found attribute to delete */
 } H5O_iter_rm_t;
-
-/* User data for iteration when checking if an attribute exists */
-typedef struct {
-    /* down */
-    const char *name;           /* Name of attribute to open */
-
-    /* up */
-    hbool_t found;              /* Found attribute */
-} H5O_iter_xst_t;
 
 
 /********************/
@@ -490,6 +483,8 @@ H5O_attr_open_by_name(const H5O_loc_t *loc, const char *name, hid_t dxpl_id)
         H5O_mesg_operator_t op;         /* Wrapper for operator */
 
         /* Set up user data for callback */
+        udata.f = loc->file;
+        udata.dxpl_id = dxpl_id;
         udata.name = name;
         udata.attr = NULL;
 
@@ -883,15 +878,9 @@ H5O_attr_rename_mod_cb(H5O_t *oh, H5O_mesg_t *mesg/*in,out*/,
 
     /* Find correct attribute message to rename */
     if(HDstrcmp(((H5A_t *)mesg->native)->name, udata->old_name) == 0) {
-        unsigned old_version = ((H5A_t *)mesg->native)->version;        /* Old version of the attribute */
-
         /* Change the name for the attribute */
         H5MM_xfree(((H5A_t *)mesg->native)->name);
         ((H5A_t *)mesg->native)->name = H5MM_xstrdup(udata->new_name);
-
-        /* Recompute the version to encode the attribute with */
-        if(H5A_set_version(udata->f, ((H5A_t *)mesg->native)) < 0)
-            HGOTO_ERROR(H5E_ATTR, H5E_CANTSET, H5_ITER_ERROR, "unable to update attribute version")
 
         /* Mark message as dirty */
         mesg->dirty = TRUE;
@@ -907,8 +896,7 @@ H5O_attr_rename_mod_cb(H5O_t *oh, H5O_mesg_t *mesg/*in,out*/,
             HDassert(H5O_msg_is_shared(H5O_ATTR_ID, (H5A_t *)mesg->native) == FALSE);
 
             /* Check for attribute message changing size */
-            if(HDstrlen(udata->new_name) != HDstrlen(udata->old_name) ||
-                    old_version != ((H5A_t *)mesg->native)->version) {
+            if(HDstrlen(udata->new_name) != HDstrlen(udata->old_name)) {
                 H5A_t *attr;            /* Attribute to re-add */
 
                 /* Take ownership of the message's native info (the attribute) 
@@ -1555,6 +1543,44 @@ H5O_attr_count_real(H5F_t *f, hid_t dxpl_id, H5O_t *oh)
 
 
 /*-------------------------------------------------------------------------
+ * Function:	H5O_attr_count
+ *
+ * Purpose:	Determine the # of attributes on an object
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Quincey Koziol
+ *		Monday, December 11, 2006
+ *
+ *-------------------------------------------------------------------------
+ */
+int
+H5O_attr_count(const H5O_loc_t *loc, hid_t dxpl_id)
+{
+    H5O_t *oh = NULL;                   /* Pointer to actual object header */
+    int ret_value;                      /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT(H5O_attr_count)
+
+    /* Check arguments */
+    HDassert(loc);
+
+    /* Protect the object header to iterate over */
+    if(NULL == (oh = (H5O_t *)H5AC_protect(loc->file, dxpl_id, H5AC_OHDR, loc->addr, NULL, NULL, H5AC_READ)))
+	HGOTO_ERROR(H5E_ATTR, H5E_CANTLOAD, FAIL, "unable to load object header")
+
+    /* Retrieve # of attributes on object */
+    ret_value = (int)H5O_attr_count_real(loc->file, dxpl_id, oh);
+
+done:
+    if(oh && H5AC_unprotect(loc->file, dxpl_id, H5AC_OHDR, loc->addr, oh, H5AC__NO_FLAGS_SET) < 0)
+        HDONE_ERROR(H5E_ATTR, H5E_PROTECT, FAIL, "unable to release object header")
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5O_attr_count */
+
+
+/*-------------------------------------------------------------------------
  * Function:	H5O_attr_exists_cb
  *
  * Purpose:	Object header iterator callback routine to check for an
@@ -1661,114 +1687,4 @@ done:
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_attr_exists */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5O_attr_bh_info
- *
- * Purpose:     For 1.8 attribute, returns storage amount for btree and fractal heap
- *
- * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Vailin Choi
- *              June 19, 2007
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5O_attr_bh_info(H5F_t *f, hid_t dxpl_id, H5O_t *oh, H5_ih_info_t *bh_info)
-{
-    H5HF_t      *fheap = NULL;              /* Fractal heap handle */
-    herr_t      ret_value = SUCCEED;        /* Return value */
-
-    FUNC_ENTER_NOAPI(H5O_attr_bh_info, FAIL)
-
-    HDassert(f);
-    HDassert(oh);
-    HDassert(bh_info);
-
-    /* Attributes are only stored in fractal heap & indexed w/v2 B-tree in later versions */
-    if(oh->version > H5O_VERSION_1) {
-        H5O_ainfo_t ainfo;          /* Attribute information for object */
-
-        /* Check for attribute info stored */
-        if(NULL == H5A_get_ainfo(f, dxpl_id, oh, &ainfo))
-            /* Clear error stack from not finding attribute info */
-            H5E_clear_stack(NULL);
-        else {
-            /* Get storage size of creation order index, if it's used */
-            if(H5F_addr_defined(ainfo.corder_bt2_addr))
-                if(H5B2_iterate_size(f, dxpl_id, H5A_BT2_CORDER, ainfo.corder_bt2_addr, &(bh_info->index_size)) < 0)
-                    HGOTO_ERROR(H5E_BTREE, H5E_CANTGET, FAIL, "can't retrieve B-tree storage info")
-
-            /* Get storage size of name index, if it's used */
-            if(H5F_addr_defined(ainfo.name_bt2_addr))
-                if(H5B2_iterate_size(f, dxpl_id, H5A_BT2_NAME, ainfo.name_bt2_addr, &(bh_info->index_size)) < 0)
-                    HGOTO_ERROR(H5E_BTREE, H5E_CANTGET, FAIL, "can't retrieve B-tree storage info")
-
-            /* Get storage size of fractal heap, if it's used */
-            if(H5F_addr_defined(ainfo.fheap_addr)) {
-                /* Open the fractal heap for attributes */
-                if(NULL == (fheap = H5HF_open(f, dxpl_id, ainfo.fheap_addr)))
-                    HGOTO_ERROR(H5E_HEAP, H5E_CANTOPENOBJ, FAIL, "unable to open fractal heap")
-
-                /* Get heap storage size */
-                if(H5HF_size(fheap, dxpl_id, &(bh_info->heap_size)) < 0)
-                    HGOTO_ERROR(H5E_BTREE, H5E_CANTGET, FAIL, "can't retrieve B-tree storage info")
-
-                /* Release the fractal heap */
-                if(H5HF_close(fheap, dxpl_id) < 0)
-                    HGOTO_ERROR(H5E_HEAP, H5E_CLOSEERROR, FAIL, "can't close fractal heap")
-                fheap = NULL;
-            } /* end if */
-        } /* end else */
-    } /* end if */
-
-done:
-    /* Release resources */
-    if(fheap && H5HF_close(fheap, dxpl_id) < 0)
-        HDONE_ERROR(H5E_HEAP, H5E_CLOSEERROR, FAIL, "can't close fractal heap")
-
-    FUNC_LEAVE_NOAPI(ret_value)
-}   /* H5O_attr_bh_info() */
-
-#ifndef H5_NO_DEPRECATED_SYMBOLS
-
-/*-------------------------------------------------------------------------
- * Function:	H5O_attr_count
- *
- * Purpose:	Determine the # of attributes on an object
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *		Monday, December 11, 2006
- *
- *-------------------------------------------------------------------------
- */
-int
-H5O_attr_count(const H5O_loc_t *loc, hid_t dxpl_id)
-{
-    H5O_t *oh = NULL;                   /* Pointer to actual object header */
-    int ret_value;                      /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT(H5O_attr_count)
-
-    /* Check arguments */
-    HDassert(loc);
-
-    /* Protect the object header to iterate over */
-    if(NULL == (oh = (H5O_t *)H5AC_protect(loc->file, dxpl_id, H5AC_OHDR, loc->addr, NULL, NULL, H5AC_READ)))
-	HGOTO_ERROR(H5E_ATTR, H5E_CANTLOAD, FAIL, "unable to load object header")
-
-    /* Retrieve # of attributes on object */
-    ret_value = (int)H5O_attr_count_real(loc->file, dxpl_id, oh);
-
-done:
-    if(oh && H5AC_unprotect(loc->file, dxpl_id, H5AC_OHDR, loc->addr, oh, H5AC__NO_FLAGS_SET) < 0)
-        HDONE_ERROR(H5E_ATTR, H5E_PROTECT, FAIL, "unable to release object header")
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5O_attr_count */
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
 

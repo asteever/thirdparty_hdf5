@@ -75,7 +75,6 @@ static herr_t H5SM_delete_from_index(H5F_t *f, hid_t dxpl_id, H5O_t *open_oh,
 static herr_t H5SM_type_to_flag(unsigned type_id, unsigned *type_flag);
 static herr_t H5SM_read_iter_op(H5O_t *oh, H5O_mesg_t *mesg, unsigned sequence,
     hbool_t *oh_modified, void *_udata);
-static herr_t H5SM_read_mesg_fh_cb(const void *obj, size_t obj_len, void *_udata);
 static herr_t H5SM_read_mesg(H5F_t *f, const H5SM_sohm_t *mesg, H5HF_t *fheap,
                H5O_t * open_oh, hid_t dxpl_id, size_t *encoding_size /*out*/,
                void ** encoded_mesg /*out*/);
@@ -101,7 +100,6 @@ H5FL_ARR_DEFINE(H5SM_sohm_t, H5O_SHMESG_MAX_LIST_SIZE);
 /*******************/
 
 
-
 /*-------------------------------------------------------------------------
  * Function:    H5SM_init
  *
@@ -220,7 +218,7 @@ H5SM_init(H5F_t *f, H5P_genplist_t * fc_plist, const H5O_loc_t *ext_loc, hid_t d
     /* Check for sharing attributes in this file, which means that creation
      *  indices must be tracked on object header message in the file.
      */
-    if(type_flags_used & H5O_SHMESG_ATTR_FLAG)
+    if(type_flags_used & H5O_MESG_ATTR_FLAG)
         f->shared->store_msg_crt_idx = TRUE;
 
     /* Write shared message information to the superblock extension */
@@ -263,18 +261,22 @@ H5SM_type_to_flag(unsigned type_id, unsigned *type_flag)
 
     /* Translate the H5O type_id into an H5SM type flag */
     switch(type_id) {
-        case H5O_FILL_ID:
-            type_id = H5O_FILL_NEW_ID;
-            /* Fall through... */
-
         case H5O_SDSPACE_ID:
-        case H5O_DTYPE_ID:
-        case H5O_FILL_NEW_ID:
-        case H5O_PLINE_ID:
-        case H5O_ATTR_ID:
-            *type_flag = (unsigned)1 << type_id;
+            *type_flag = H5O_MESG_SDSPACE_FLAG;
             break;
-
+        case H5O_DTYPE_ID:
+            *type_flag = H5O_MESG_DTYPE_FLAG;
+            break;
+        case H5O_FILL_ID:
+        case H5O_FILL_NEW_ID:
+            *type_flag = H5O_MESG_FILL_FLAG;
+            break;
+        case H5O_PLINE_ID:
+            *type_flag = H5O_MESG_PLINE_FLAG;
+            break;
+        case H5O_ATTR_ID:
+            *type_flag = H5O_MESG_ATTR_FLAG;
+            break;
         default:
             HGOTO_ERROR(H5E_OHDR, H5E_BADTYPE, FAIL, "unknown message type ID")
     } /* end switch */
@@ -303,7 +305,7 @@ done:
 ssize_t
 H5SM_get_index(const H5SM_master_table_t *table, unsigned type_id)
 {
-    size_t x;
+    ssize_t x;
     unsigned type_flag;
     ssize_t ret_value = FAIL;
 
@@ -318,7 +320,7 @@ H5SM_get_index(const H5SM_master_table_t *table, unsigned type_id)
      */
     for(x = 0; x < table->num_indexes; ++x)
         if(table->indexes[x].mesg_types & type_flag)
-            HGOTO_DONE((ssize_t)x)
+            HGOTO_DONE(x)
 
     /* At this point, ret_value is either the location of the correct
      * index or it's still FAIL because we didn't find an index.
@@ -1251,7 +1253,6 @@ H5SM_write_mesg(H5F_t *f, hid_t dxpl_id, H5O_t *open_oh,
         if(share_in_ohdr && open_oh) {
             /* Set up shared component info */
             shared.type = H5O_SHARE_TYPE_HERE;
-
             /* Retrieve any creation index from the native message */
             if(H5O_msg_get_crt_index(type_id, mesg, &shared.u.loc.index) < 0)
                 HGOTO_ERROR(H5E_SOHM, H5E_CANTGET, FAIL, "unable to retrieve creation index")
@@ -1577,13 +1578,13 @@ H5SM_delete_from_index(H5F_t *f, hid_t dxpl_id, H5O_t *open_oh,
 {
     H5SM_list_t     *list = NULL;
     H5SM_mesg_key_t key;
-    H5SM_sohm_t     message;            /* Deleted message returned from index */
-    H5SM_sohm_t    *message_ptr;        /* Pointer to deleted message returned from index */
-    H5HF_t         *fheap = NULL;       /* Fractal heap that contains the message */
-    size_t          buf_size;           /* Size of the encoded message (out) */
-    void            *encoding_buf = NULL; /* The encoded message (out) */
-    H5O_loc_t       oloc;               /* Object location for message in object header */
-    H5O_t           *oh = NULL;         /* Object header for message in object header */
+    H5SM_sohm_t     message;             /* Deleted message returned from index */
+    H5SM_sohm_t    *message_ptr;         /* Pointer to deleted message returned from index */
+    H5HF_t         *fheap = NULL;        /* Fractal heap that contains the message */
+    size_t          buf_size;            /* Size of the encoded message */
+    void *          encoding_buf = NULL; /* Buffer for encoded message */
+    H5O_loc_t       oloc;
+    H5O_t           *oh = NULL;
     unsigned        type_id;            /* Message type to operate on */
     herr_t          ret_value = SUCCEED;
 
@@ -1606,21 +1607,78 @@ H5SM_delete_from_index(H5F_t *f, hid_t dxpl_id, H5O_t *open_oh,
     /* Get the message size and encoded message for the message to be deleted,
      * either from its OH or from the heap.
      */
+     /* JAMES: could H5SM_read_mesg do this?  We need to set up key->message
+      * anyway.
+      */
     if(mesg->type == H5O_SHARE_TYPE_HERE) {
+        /* Read message from object header */
+        H5SM_read_udata_t udata;
+        const H5O_msg_class_t *type = NULL;    /* Actual H5O class type for the ID */
+        H5O_mesg_operator_t op;         /* Wrapper for operator */
+
+        HDassert(open_oh);
+        type = H5O_msg_class_g[type_id];    /* map the type ID to the actual type object */
+        HDassert(type);
+
+        /* If the message we are deleting is not in the object header passed in,
+         *      we need to open & protect its object header
+         */
+        if(mesg->u.loc.oh_addr != H5O_OH_GET_ADDR(open_oh)) {
+            /* Reset object location for operation */
+            if(H5O_loc_reset(&oloc) < 0)
+                HGOTO_ERROR(H5E_SYM, H5E_CANTRESET, FAIL, "unable to initialize location")
+
+            /* Open the object in the file */
+            oloc.file = f;
+            oloc.addr = mesg->u.loc.oh_addr;
+            if(H5O_open(&oloc) < 0)
+	        HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, FAIL, "unable to open object header")
+
+            /* Load the object header from the cache */
+            if(NULL == (oh = H5AC_protect(oloc.file, dxpl_id, H5AC_OHDR, oloc.addr, NULL, NULL, H5AC_WRITE)))
+	        HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, FAIL, "unable to load object header")
+        } /* end if */
+        else
+            oh = open_oh;
+
+        /* Set up user data for message iteration */
+        udata.file = f;
+        udata.idx = mesg->u.loc.index;
+        udata.encoding_buf = NULL;
+
+        /* Use the "real" iterate routine so it doesn't try to protect the OH */
+        op.op_type = H5O_MESG_OP_LIB;
+        op.u.lib_op = H5SM_read_iter_op;
+        if((ret_value = H5O_msg_iterate_real(f, oh, type, &op, &udata, dxpl_id)) < 0)
+            HGOTO_ERROR(H5E_OHDR, H5E_BADITER, FAIL, "unable to iterate over object header messages")
+
+        /* Record the returned values */
+        buf_size = udata.buf_size;
+        encoding_buf = udata.encoding_buf;
+        HDassert(buf_size > 0 && encoding_buf);
+
         key.message.location = H5SM_IN_OH;
         key.message.msg_type_id = type_id;
         key.message.u.mesg_loc = mesg->u.loc;
     } /* end if */
     else {
+        /* Get the size of the message in the heap */
+        if(H5HF_get_obj_len(fheap, dxpl_id, &(mesg->u.heap_id), &buf_size) < 0)
+            HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, FAIL, "can't get message size from fractal heap.")
+
+        /* Allocate a buffer to hold the message */
+        if(NULL == (encoding_buf = H5MM_malloc(buf_size)))
+            HGOTO_ERROR(H5E_OHDR, H5E_NOSPACE, FAIL, "memory allocation failed")
+
+        /* Read the message from the heap */
+        if(H5HF_read(fheap, dxpl_id, &(mesg->u.heap_id), encoding_buf) < 0)
+            HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, FAIL, "can't read message from fractal heap.")
+
         key.message.location = H5SM_IN_HEAP;
         key.message.msg_type_id = type_id;
         key.message.u.heap_loc.ref_count = 0; /* Refcount isn't relevant here */
         key.message.u.heap_loc.fheap_id = mesg->u.heap_id;
     } /* end else */
-
-    /* Get the encoded message */
-    if(H5SM_read_mesg(f, &key.message, fheap, open_oh, dxpl_id, &buf_size, &encoding_buf) < 0)
-	HGOTO_ERROR(H5E_HEAP, H5E_CANTOPENOBJ, FAIL, "unable to open fractal heap")
 
     /* Set up key for message to be deleted. */
     key.file = f;
@@ -1824,7 +1882,7 @@ H5SM_get_info(const H5O_loc_t *ext_loc, H5P_genplist_t *fc_plist, hid_t dxpl_id)
             /* Check for sharing attributes in this file, which means that creation
              *  indices must be tracked on object header message in the file.
              */
-            if(index_flags[u] & H5O_SHMESG_ATTR_FLAG)
+            if(index_flags[u] & H5O_MESG_ATTR_FLAG)
                 shared->store_msg_crt_idx = TRUE;
         } /* end for */
 
@@ -2165,41 +2223,6 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5SM_read_mesg_fh_cb
- *
- * Purpose:	Callback for H5HF_op, used in H5SM_read_mesg below.
- *              Makes a copy of the message in the heap data, returned in the
- *              UDATA struct.
- *
- * Return:	Negative on error, non-negative on success
- *
- * Programmer:	Quincey Koziol
- *              Tuesday, June 26, 2007
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5SM_read_mesg_fh_cb(const void *obj, size_t obj_len, void *_udata)
-{
-    H5SM_read_udata_t *udata = (H5SM_read_udata_t *)_udata;
-    herr_t ret_value = SUCCEED;
-
-    FUNC_ENTER_NOAPI_NOINIT(H5SM_read_mesg_fh_cb)
-
-    /* Allocate a buffer to hold the message */
-    if(NULL == (udata->encoding_buf = H5MM_malloc(obj_len)))
-        HGOTO_ERROR(H5E_OHDR, H5E_NOSPACE, FAIL, "memory allocation failed")
-
-    /* Copy the message from the heap */
-    HDmemcpy(udata->encoding_buf, obj, obj_len);
-    udata->buf_size = obj_len;
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5SM_read_mesg_fh_cb() */
-
-
-/*-------------------------------------------------------------------------
  * Function:	H5SM_read_mesg
  *
  * Purpose:	Given an H5SM_sohm_t sohm, encodes the message into a buffer.
@@ -2217,9 +2240,10 @@ H5SM_read_mesg(H5F_t *f, const H5SM_sohm_t *mesg, H5HF_t *fheap,
     H5O_t *open_oh, hid_t dxpl_id, size_t *encoding_size /*out*/,
     void ** encoded_mesg /*out*/)
 {
-    H5SM_read_udata_t udata;    /* User data for callbacks */
-    H5O_loc_t oloc;             /* Object location for message in object header */
-    H5O_t *oh = NULL;           /* Object header for message in object header */
+    size_t buf_size;
+    void * encoding_buf=NULL;
+    H5O_loc_t oloc;
+    H5O_t *oh = NULL;
     herr_t ret_value = SUCCEED;
 
     FUNC_ENTER_NOAPI_NOINIT(H5SM_read_mesg)
@@ -2228,17 +2252,12 @@ H5SM_read_mesg(H5F_t *f, const H5SM_sohm_t *mesg, H5HF_t *fheap,
     HDassert(mesg);
     HDassert(fheap);
 
-    /* Set up user data for message iteration */
-    udata.file = f;
-    udata.idx = mesg->u.mesg_loc.index;
-    udata.encoding_buf = NULL;
-    udata.idx = 0;
-
     /* Get the message size and encoded message for the message to be deleted,
      * either from its OH or from the heap.
      */
     if(mesg->location == H5SM_IN_OH) {
         /* Read message from object header */
+        H5SM_read_udata_t udata;
         const H5O_msg_class_t *type = NULL;    /* Actual H5O class type for the ID */
         H5O_mesg_operator_t op;         /* Wrapper for operator */
 
@@ -2263,25 +2282,41 @@ H5SM_read_mesg(H5F_t *f, const H5SM_sohm_t *mesg, H5HF_t *fheap,
         else
             oh = open_oh;
 
+        /* Set up user data for message iteration */
+        udata.file = f;
+        udata.idx = mesg->u.mesg_loc.index;
+        udata.encoding_buf = NULL;
+        udata.idx = 0;
+
         /* Use the "real" iterate routine so it doesn't try to protect the OH */
         op.op_type = H5O_MESG_OP_LIB;
         op.u.lib_op = H5SM_read_iter_op;
         if((ret_value = H5O_msg_iterate_real(f, oh, type, &op, &udata, dxpl_id)) < 0)
             HGOTO_ERROR(H5E_OHDR, H5E_BADITER, FAIL, "unable to iterate over object header messages")
+
+        /* Record the returned values */
+        buf_size = udata.buf_size;
+        encoding_buf = udata.encoding_buf;
     } /* end if */
     else {
         HDassert(mesg->location == H5SM_IN_HEAP);
 
-        /* Copy the message from the heap */
-        if(H5HF_op(fheap, dxpl_id, &(mesg->u.heap_loc.fheap_id), H5SM_read_mesg_fh_cb, &udata) < 0)
+        /* Get the size of the message in the heap */
+        if(H5HF_get_obj_len(fheap, dxpl_id, &(mesg->u.heap_loc.fheap_id), &buf_size) < 0)
+            HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, FAIL, "can't get message size from fractal heap.")
+
+        /* Allocate a buffer to hold the message */
+        if(NULL == (encoding_buf = H5MM_malloc(buf_size)))
+            HGOTO_ERROR(H5E_OHDR, H5E_NOSPACE, FAIL, "memory allocation failed")
+
+        /* Read the message from the heap */
+        /* JAMES: do one op here, as above? */
+        if(H5HF_read(fheap, dxpl_id, &(mesg->u.heap_loc.fheap_id), encoding_buf) < 0)
             HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, FAIL, "can't read message from fractal heap.")
     } /* end else */
-    HDassert(udata.encoding_buf);
-    HDassert(udata.buf_size);
 
-    /* Record the returned values */
-    *encoded_mesg = udata.encoding_buf;
-    *encoding_size = udata.buf_size;
+    *encoded_mesg = encoding_buf;
+    *encoding_size = buf_size;
 
 done:
     /* Close the object header if we opened one and had an error */
@@ -2293,9 +2328,8 @@ done:
             HDONE_ERROR(H5E_OHDR, H5E_CANTRELEASE, FAIL, "unable to close object header")
     } /* end if */
 
-    /* Release the encoding buffer on error */
-    if(ret_value < 0 && udata.encoding_buf)
-        udata.encoding_buf = H5MM_xfree(udata.encoding_buf);
+    if(ret_value < 0 && encoding_buf)
+        encoding_buf = H5MM_xfree(encoding_buf);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5SM_read_mesg */
@@ -2470,82 +2504,4 @@ done:
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5SM_list_debug() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5SM_ih_size
- *
- * Purpose:     Loop through the master SOHM table (if there is one) to:
- *			1. collect storage used for header
- *                      1. collect storage used for B-tree and List 
- *			   (include btree storage used by huge objects in fractal heap)
- *                      2. collect fractal heap storage
- *
- * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Vailin Choi
- *              June 19, 2007
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5SM_ih_size(H5F_t *f, hid_t dxpl_id, H5F_info_t *finfo)
-{
-    H5SM_master_table_t *table = NULL;          /* SOHM master table */
-    H5HF_t              *fheap = NULL;          /* Fractal heap handle */
-    unsigned    	u;                      /* Local index variable */
-    herr_t              ret_value = SUCCEED;    /* Return value */
-
-    FUNC_ENTER_NOAPI(H5SM_ih_size, FAIL)
-
-    /* Sanity check */
-    HDassert(f);
-    HDassert(H5F_addr_defined(f->shared->sohm_addr));
-    HDassert(finfo);
-
-    /* Look up the master SOHM table */
-    if(NULL == (table = (H5SM_master_table_t *)H5AC_protect(f, dxpl_id, H5AC_SOHM_TABLE, f->shared->sohm_addr, NULL, NULL, H5AC_READ)))
-	HGOTO_ERROR(H5E_CACHE, H5E_CANTPROTECT, FAIL, "unable to load SOHM master table")
-
-    /* Get SOHM header size */
-    finfo->sohm.hdr_size = (hsize_t) H5SM_TABLE_SIZE(f) +
-                           (hsize_t)(table->num_indexes * H5SM_INDEX_HEADER_SIZE(f));
-
-    /* Loop over all the indices for shared messages */
-    for(u = 0; u < table->num_indexes; u++) {
-        /* Get index storage size (for either B-tree or list) */
-	if(table->indexes[u].index_type == H5SM_BTREE) {
-	    if(H5F_addr_defined(table->indexes[u].index_addr))
-		if(H5B2_iterate_size(f, dxpl_id, H5SM_INDEX, table->indexes[u].index_addr, &(finfo->sohm.msgs_info.index_size)) < 0)
-                    HGOTO_ERROR(H5E_BTREE, H5E_CANTGET, FAIL, "can't retrieve B-tree storage info")
-        } /* end if */
-        else if(table->indexes[u].index_type == H5SM_LIST)
-	    finfo->sohm.msgs_info.index_size += H5SM_LIST_SIZE(f, table->indexes[u].list_max);
-
-        /* Check for heap for this index */
-	if(H5F_addr_defined(table->indexes[u].heap_addr)) {
-            /* Open the fractal heap for this index */
-            if(NULL == (fheap = H5HF_open(f, dxpl_id, table->indexes[u].heap_addr)))
-                HGOTO_ERROR(H5E_HEAP, H5E_CANTOPENOBJ, FAIL, "unable to open fractal heap")
-
-            /* Get heap storage size */
-	    if(H5HF_size(fheap, dxpl_id, &(finfo->sohm.msgs_info.heap_size)) < 0)
-		HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, FAIL, "can't retrieve fractal heap storage info")
-
-            /* Release the fractal heap */
-            if(H5HF_close(fheap, dxpl_id) < 0)
-                HGOTO_ERROR(H5E_HEAP, H5E_CLOSEERROR, FAIL, "can't close fractal heap")
-            fheap = NULL;
-        } /* end if */
-    } /* end for */
-
-done:
-    /* Release resources */
-    if(fheap && H5HF_close(fheap, dxpl_id) < 0)
-        HDONE_ERROR(H5E_HEAP, H5E_CLOSEERROR, FAIL, "can't close fractal heap")
-    if(table && H5AC_unprotect(f, dxpl_id, H5AC_SOHM_TABLE, f->shared->sohm_addr, table, H5AC__NO_FLAGS_SET) < 0)
-        HDONE_ERROR(H5E_CACHE, H5E_CANTRELEASE, FAIL, "unable to close SOHM master table")
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5SM_ih_size() */
 

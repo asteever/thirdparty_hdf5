@@ -785,10 +785,6 @@ H5Z_append(H5O_pline_t *pline, H5Z_filter_t filter, unsigned flags,
     if(pline->nused >= H5Z_MAX_NFILTERS)
 	HGOTO_ERROR(H5E_PLINE, H5E_CANTINIT, FAIL, "too many filters in pipeline")
 
-    /* Check for freshly allocated filter pipeline */
-    if(pline->version == 0)
-        pline->version = H5O_PLINE_VERSION_1;
-
     /* Allocate additional space in the pipeline if it's full */
     if(pline->nused >= pline->nalloc) {
 	H5O_pline_t x;
@@ -1240,7 +1236,6 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5Z_delete() */
 
-
 /*-------------------------------------------------------------------------
  * Function: H5Zget_filter_info
  *
@@ -1252,62 +1247,40 @@ done:
  * Programmer: James Laird and Nat Furrer
  *              Monday, June 7, 2004
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
-herr_t
-H5Zget_filter_info(H5Z_filter_t filter, unsigned int *filter_config_flags)
+herr_t H5Zget_filter_info(H5Z_filter_t filter, unsigned int *filter_config_flags)
 {
-    H5Z_class_t *fclass;
-    herr_t ret_value = SUCCEED;
+    herr_t ret_value=SUCCEED;
+    H5Z_class_t * fclass;
 
     FUNC_ENTER_API(H5Zget_filter_info, FAIL)
-    H5TRACE2("e", "Zf*Iu", filter, filter_config_flags);
 
-    /* Look up the filter class info */
-    if(NULL == (fclass = H5Z_find(filter)))
+    fclass = H5Z_find(filter);
+
+#ifdef H5_WANT_H5_V1_6_COMPAT
+    if(fclass == NULL && filter_config_flags != NULL) {
+        *filter_config_flags = 0;
+        HGOTO_DONE(SUCCEED)
+    } /* end if */
+#else
+    if(fclass == NULL)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Filter not defined")
+#endif /* H5_WANT_H5_V1_6_COMPAT */
 
-    /* Set the filter config flags for the application */
-    if(filter_config_flags != NULL) {
+    if(filter_config_flags != NULL)
+    {
         *filter_config_flags = 0;
 
         if(fclass->encoder_present)
             *filter_config_flags |= H5Z_FILTER_CONFIG_ENCODE_ENABLED;
         if(fclass->decoder_present)
             *filter_config_flags |= H5Z_FILTER_CONFIG_DECODE_ENABLED;
-    } /* end if */
+    }
 
 done:
     FUNC_LEAVE_API(ret_value)
-} /* end H5Zget_filter_info() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5Z_set_latest_version
- *
- * Purpose:     Set the encoding for a I/O filter pipeline to the latest version.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:  Quincey Koziol
- *              Tuesday, July 24, 2007
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5Z_set_latest_version(H5O_pline_t *pline)
-{
-    herr_t ret_value = SUCCEED;         /* Return value */
-
-    FUNC_ENTER_NOAPI(H5Z_set_latest_version, FAIL)
-
-    /* Sanity check */
-    HDassert(pline);
-
-    /* Set encoding of I/O pipeline to latest version */
-    pline->version = H5O_PLINE_VERSION_LATEST;
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5Z_set_latest_version() */
+}
 

@@ -107,11 +107,6 @@ TOOLTEST()
         nerrors="`expr $nerrors + 1`"
     else
         echo " PASSED"
-
-        # Clean up output file
-        if test -z "$HDF5_NOCLEANUP"; then
-           rm -f output.out
-        fi
     fi
     
     if [ $runh5diff != no ]; then
@@ -125,9 +120,9 @@ H5DIFFTEST()
 {
     VERIFY  $@
     if [ "`uname -s`" = "TFLOPS O/S" ]; then
-        $RUNSERIAL $H5DIFF_BIN -q $@ 
+        $RUNSERIAL $H5DIFF_BIN $@ -q
     else
-        $RUNSERIAL $H5DIFF_BIN -q "$@" 
+        $RUNSERIAL $H5DIFF_BIN "$@" -q
     fi
     RET=$?
     if [ $RET != 0 ] ; then
@@ -170,11 +165,6 @@ H5LSTEST()
       echo "    Expected result (*.ls) differs from actual result (*.out)"
       nerrors="`expr $nerrors + 1`"
       test yes = "$verbose" && $DIFF $expect $actual |sed 's/^/    /'
-   fi
-
-   # Clean up output file
-   if test -z "$HDF5_NOCLEANUP"; then
-      rm -f $actual $actual_err
    fi
 }
 

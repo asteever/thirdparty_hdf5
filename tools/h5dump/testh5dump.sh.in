@@ -73,69 +73,30 @@ TOOLTEST() {
     # Run test.
     TESTING $DUMPER $@
     (
-      echo "#############################"
-      echo "Expected output for '$DUMPER $@'" 
-      echo "#############################"
-	  cd $srcdir/../testfiles
-  	  $RUNSERIAL $DUMPER_BIN $@
+	cd $srcdir/../testfiles
+	$RUNSERIAL $DUMPER_BIN $@
     ) >$actual 2>$actual_err
     cat $actual_err >> $actual
 
-	if [ ! -f $expect ]; then
-    # Create the expect file if it doesn't yet exist.
-     echo " CREATED"
-     cp $actual $expect
-    elif $CMP $expect $actual; then
-     echo " PASSED"
+    if [ ! -f $expect ]; then
+        echo "*FAILED*"
+	echo "    $expect missing"
+        nerrors="`expr $nerrors + 1`"
     else
-     echo "*FAILED*"
-     echo "    Expected result (*.ddl) differs from actual result (*.out)"
-	 nerrors="`expr $nerrors + 1`"
-	 test yes = "$verbose" && $DIFF $expect $actual |sed 's/^/    /'
+	# Skip the first three lines, which are label lines, before cmp.
+        if tail +4l $expect | $CMP - $actual; then
+	    echo " PASSED"
+        else
+	    echo "*FAILED*"
+	    echo "    Expected result (*.ddl) differs from actual result (*.out)"
+	    nerrors="`expr $nerrors + 1`"
+	    test yes = "$verbose" && $DIFF $expect $actual |sed 's/^/    /'
+        fi
     fi
 
     # Clean up output file
     if test -z "$HDF5_NOCLEANUP"; then
-	 rm -f $actual $actual_err
-    fi
-
-}
-
-
-# same as TOOLTEST but does not print the header Expected output
-# used for the binary tests that expect a full path in -o
-TOOLTEST1() {
-
-    expect="$srcdir/../testfiles/$1"
-    actual="../testfiles/`basename $1 .ddl`.out"
-    actual_err="../testfiles/`basename $1 .ddl`.err"
-    shift
-
-    # Run test.
-    TESTING $DUMPER $@
-    (
-      
-	  cd $srcdir/../testfiles
-  	  $RUNSERIAL $DUMPER_BIN $@
-    ) >$actual 2>$actual_err
-    cat $actual_err >> $actual
-
-	if [ ! -f $expect ]; then
-    # Create the expect file if it doesn't yet exist.
-     echo " CREATED"
-     cp $actual $expect
-    elif $CMP $expect $actual; then
-     echo " PASSED"
-    else
-     echo "*FAILED*"
-     echo "    Expected result (*.ddl) differs from actual result (*.out)"
-	 nerrors="`expr $nerrors + 1`"
-	 test yes = "$verbose" && $DIFF $expect $actual |sed 's/^/    /'
-    fi
-
-    # Clean up output file
-    if test -z "$HDF5_NOCLEANUP"; then
-	 rm -f $actual $actual_err
+	rm -f $actual $actual_err
     fi
 
 }
@@ -218,7 +179,7 @@ IMPORTTEST()
 
 ##############################################################################
 ##############################################################################
-###			  T H E   T E S T S                                            ###
+###			  T H E   T E S T S                                ###
 ##############################################################################
 ##############################################################################
 
@@ -260,7 +221,7 @@ TOOLTEST tcomp-1.ddl tcompound.h5
 # test for named data types
 TOOLTEST tcomp-2.ddl -t /type1 --datatype /type2 --datatype=/group1/type3 tcompound.h5
 # test for unamed type 
-TOOLTEST tcomp-3.ddl -t /#6632 -g /group2 tcompound.h5
+TOOLTEST tcomp-3.ddl -t /#6632:0 -g /group2 tcompound.h5
 # test complicated compound datatype
 TOOLTEST tcomp-4.ddl tcompound_complex.h5
 
@@ -373,18 +334,11 @@ TOOLTEST tstring2.ddl -r -d str4 tstr3.h5
 TOOLTEST tindicesyes.ddl taindices.h5
 TOOLTEST tindicesno.ddl -y taindices.h5
 
-########## array indices with subsetting
-# 1D case
-TOOLTEST tindicessub1.ddl -d 1d -s 1 -S 10 -c 2  -k 3 taindices.h5
-
-# 2D case
-TOOLTEST tindicessub2.ddl -d 2d -s 1,2  -S 3,3 -c 3,2 -k 2,2 taindices.h5
-
-# 3D case
-TOOLTEST tindicessub3.ddl -d 3d -s 0,1,2 -S 1,3,3 -c 2,2,2  -k 1,2,2  taindices.h5
-
-# 4D case
-TOOLTEST tindicessub4.ddl -d 4d -s 0,0,1,2  -c 2,2,3,2 -S 1,1,3,3 -k 1,1,2,2  taindices.h5
+# array indices with subsetting
+TOOLTEST tindicessub1.ddl -d 1d -s 3 -c 40 taindices.h5
+TOOLTEST tindicessub2.ddl -d 2d -s 1,3 -c 6,4 taindices.h5
+TOOLTEST tindicessub3.ddl -d 3d -s 0,1,3 -c 2,6,4 taindices.h5
+TOOLTEST tindicessub4.ddl -d 4d -s 0,0,1,3 -c 2,2,6,4 taindices.h5
 
 
 # tests for filters
@@ -462,15 +416,15 @@ TOOLTEST tnullspace.ddl tnullspace.h5
 TOOLTEST tvms.ddl tvms.h5
 
 # test for binary output
-TOOLTEST1   tbin1.ddl -d integer -o $TESTDIR/out1.bin -b LE    tbinary.h5
-TOOLTEST1   tbin2.ddl -d float  -o $TESTDIR/out2.bin -b BE     tbinary.h5
+TOOLTEST   tbin1.ddl -d array  -o $TESTDIR/out1.bin -b LE     tbinary.h5
+TOOLTEST   tbin2.ddl -d float  -o $TESTDIR/out2.bin -b BE     tbinary.h5
 
 # the MEMORY test can be validated with h5import/h5diff
-TOOLTEST1   tbin3.ddl -d integer -o $TESTDIR/out3.bin -b MEMORY tbinary.h5
+TOOLTEST   tbin3.ddl -d integer -o $TESTDIR/out3.bin -b MEMORY tbinary.h5
 IMPORTTEST $TESTDIR/out3.bin -c out3.h5import -o $TESTDIR/out3.h5
 DIFFTEST   tbinary.h5 $TESTDIR/out3.h5 /integer /integer
 
-TOOLTEST1   tbin4.ddl -d double  -o $TESTDIR/out4.bin -b FILE   tbinary.h5
+TOOLTEST   tbin4.ddl -d double  -o $TESTDIR/out4.bin -b FILE   tbinary.h5
    
 # Clean up binary output files
 if test -z "$HDF5_NOCLEANUP"; then
@@ -480,22 +434,7 @@ fi
 
 
 # test for dataset region references 
-TOOLTEST tdatareg.ddl tdatareg.h5
-
-# tests for group creation order
-# "1" tracked, "2" name, root tracked
-TOOLTEST tordergr1.ddl --group=1 --sort_by=creation_order --sort_order=ascending tordergr.h5
-TOOLTEST tordergr2.ddl --group=1 --sort_by=creation_order --sort_order=descending tordergr.h5
-TOOLTEST tordergr3.ddl -g 2 -q name -z ascending tordergr.h5
-TOOLTEST tordergr4.ddl -g 2 -q name -z descending tordergr.h5
-TOOLTEST tordergr5.ddl -q creation_order tordergr.h5
-
-# tests for attribute order
-TOOLTEST torderattr1.ddl -H --sort_by=name --sort_order=ascending torderattr.h5
-TOOLTEST torderattr2.ddl -H --sort_by=name --sort_order=descending torderattr.h5
-TOOLTEST torderattr3.ddl -H --sort_by=creation_order --sort_order=ascending torderattr.h5
-TOOLTEST torderattr4.ddl -H --sort_by=creation_order --sort_order=descending torderattr.h5
-
+TOOLTEST tregref.ddl tdatareg.h5
 
 
 if test $nerrors -eq 0 ; then

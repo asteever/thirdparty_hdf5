@@ -445,14 +445,14 @@ main(int argc, char *argv[])
 
         status = H5FS_sects_debug(f, H5P_DATASET_XFER_DEFAULT, addr, stdout, 0, VCOL, extra, extra2);
 
-    } else if(!HDmemcmp(sig, H5SM_TABLE_MAGIC, (size_t)H5SM_SIZEOF_MAGIC)) {
+    } else if(!HDmemcmp(sig, H5SM_TABLE_MAGIC, (size_t)H5SM_TABLE_SIZEOF_MAGIC)) {
         /*
          * Debug shared message master table.
          */
 
         status = H5SM_table_debug(f, H5P_DATASET_XFER_DEFAULT, addr, stdout, 0, VCOL, (unsigned) UFAIL, (unsigned) UFAIL);
 
-    } else if(!HDmemcmp(sig, H5SM_LIST_MAGIC, (size_t)H5SM_SIZEOF_MAGIC)) {
+    } else if(!HDmemcmp(sig, H5SM_LIST_MAGIC, (size_t)H5SM_LIST_SIZEOF_MAGIC)) {
         /*
          * Debug shared message list index.
          */
@@ -504,7 +504,7 @@ main(int argc, char *argv[])
     /* Check for an error when dumping information */
     if(status < 0) {
         fprintf(stderr, "An error occurred!\n");
-        H5Eprint2(H5E_DEFAULT, stderr);
+        H5Eprint(stderr);
         HDexit(5);
     } /* end if */
 

@@ -73,7 +73,6 @@ main(void)
     int		i;
     hbool_t     b;                      /* Index for "new format" loop */
     const char  *envval = NULL;
-    herr_t      ret;                    /* Generic return value */
  
     /* Reset library */
     h5_reset();
@@ -84,12 +83,12 @@ main(void)
     for(b = FALSE; b <= TRUE; b++) {
         /* Display info about testing */
         if(b)
-            HDputs("Using new file format:");
+            HDputs("Using new file format");
         else
-            HDputs("Using default file format:");
+            HDputs("Using default file format");
 
         /* Set the format to use for the file */
-        if (H5Pset_libver_bounds(fapl, (b ? H5F_LIBVER_LATEST : H5F_LIBVER_EARLIEST), H5F_LIBVER_LATEST) < 0) FAIL_STACK_ERROR
+        if (H5Pset_latest_format(fapl, b) < 0) FAIL_STACK_ERROR
 
         /* Create the file to operate on */
         if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
@@ -136,7 +135,7 @@ main(void)
             TEST_ERROR
 
         /* Make certain that chunk #0 in the object header can be encoded with a 1-byte size */
-        if(H5O_get_info(&oh_loc, H5P_DATASET_XFER_DEFAULT, FALSE, &oinfo) < 0)
+        if(H5O_get_info(&oh_loc, &oinfo, H5P_DATASET_XFER_DEFAULT) < 0)
             FAIL_STACK_ERROR
         if(oinfo.hdr.space.total >=256)
             TEST_ERROR
@@ -161,7 +160,7 @@ main(void)
             FAIL_STACK_ERROR
 
         /* Make certain that chunk #0 in the object header will be encoded with a 2-byte size */
-        if(H5O_get_info(&oh_loc, H5P_DATASET_XFER_DEFAULT, FALSE, &oinfo) < 0)
+        if(H5O_get_info(&oh_loc, &oinfo, H5P_DATASET_XFER_DEFAULT) < 0)
             FAIL_STACK_ERROR
         if(oinfo.hdr.space.total < 256)
             TEST_ERROR
@@ -189,7 +188,6 @@ main(void)
             oh_loc.file = f;
             if(H5O_open(&oh_loc) < 0)
                 FAIL_STACK_ERROR
-            PASSED();
         } /* end if */
         else {
             SKIPPED();
@@ -225,31 +223,6 @@ main(void)
         PASSED();
 
 
-        /*
-         * Constant message handling.
-         * (can't write to them, but should be able to remove them)
-         */
-        TESTING("constant message handling");
-        time_new = 22222222;
-        if(H5O_msg_create(&oh_loc, H5O_MTIME_NEW_ID, H5O_MSG_FLAG_CONSTANT, 0, &time_new, H5P_DATASET_XFER_DEFAULT) < 0)
-            FAIL_STACK_ERROR
-        if(H5AC_flush(f, H5P_DATASET_XFER_DEFAULT, TRUE) < 0)
-            FAIL_STACK_ERROR
-        if(NULL == H5O_msg_read(&oh_loc, H5O_MTIME_NEW_ID, &ro, H5P_DATASET_XFER_DEFAULT))
-            FAIL_STACK_ERROR
-        if(ro != time_new)
-            TEST_ERROR
-        time_new = 33333333;
-        H5E_BEGIN_TRY {
-            ret = H5O_msg_write(&oh_loc, H5O_MTIME_NEW_ID, 0, 0, &time_new, H5P_DATASET_XFER_DEFAULT);
-        } H5E_END_TRY;
-        if(ret >= 0)
-            TEST_ERROR
-        if(H5O_msg_remove(&oh_loc, H5O_MTIME_NEW_ID, H5O_ALL, TRUE, H5P_DATASET_XFER_DEFAULT) < 0)
-            FAIL_STACK_ERROR
-        PASSED();
-
-
         /* release resources */
         TESTING("object header closing");
         if(H5O_close(&oh_loc) < 0)
@@ -258,7 +231,7 @@ main(void)
 
 
         /* Test reading datasets with undefined object header messages */
-        HDputs("Accessing objects with unknown header messages:");
+        TESTING("reading objects with unknown header messages");
         envval = HDgetenv("HDF5_DRIVER");
         if(envval == NULL) 
             envval = "nomatch";
@@ -286,7 +259,7 @@ main(void)
                 TEST_ERROR
 
             /* Open the dataset with the unknown header message, but no extra flags */
-            if((dset = H5Dopen2(file2, "/Dataset1", H5P_DEFAULT)) < 0)
+            if((dset = H5Dopen(file2, "/Dataset1")) < 0)
                 TEST_ERROR
             if(H5Dclose(dset) < 0)
                 TEST_ERROR
@@ -297,7 +270,7 @@ main(void)
 
             /* Attempt to open the dataset with the unknown header message, and "fail if unknown" flag */
             H5E_BEGIN_TRY {
-                dset = H5Dopen2(file2, "/Dataset2", H5P_DEFAULT);
+                dset = H5Dopen(file2, "/Dataset2");
             } H5E_END_TRY;
             if(dset >= 0) {
                 H5Dclose(dset);
@@ -321,7 +294,7 @@ main(void)
                 TEST_ERROR
 
             /* Open the dataset with the "mark if unknown" message */
-            if((dset = H5Dopen2(file, "/Dataset3", H5P_DEFAULT)) < 0)
+            if((dset = H5Dopen(file, "/Dataset3")) < 0)
                 TEST_ERROR
 
             /* Check that the "unknown" message was _NOT_ marked */
@@ -341,7 +314,7 @@ main(void)
                 TEST_ERROR
 
             /* Open the dataset with the "mark if unknown" message */
-            if((dset = H5Dopen2(file, "/Dataset3", H5P_DEFAULT)) < 0)
+            if((dset = H5Dopen(file, "/Dataset3")) < 0)
                 TEST_ERROR
             if(H5Dclose(dset) < 0)
                 TEST_ERROR
@@ -355,7 +328,7 @@ main(void)
                 TEST_ERROR
 
             /* Re-open the dataset with the "mark if unknown" message */
-            if((dset = H5Dopen2(file, "/Dataset3", H5P_DEFAULT)) < 0)
+            if((dset = H5Dopen(file, "/Dataset3")) < 0)
                 TEST_ERROR
 
             /* Check that the "unknown" message was marked */

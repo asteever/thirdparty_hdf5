@@ -126,34 +126,46 @@ create_chunked_dataset(const char *filename, int nchunks, write_type write_patte
 	VRFY((file_id >= 0), "H5Fcreate");
 
 	/* Modify dataset creation properties, i.e. enable chunking  */
-	cparms = H5Pcreate(H5P_DATASET_CREATE);
+	cparms = H5Pcreate (H5P_DATASET_CREATE);
 	VRFY((cparms >= 0), "");
 
 	hrc = H5Pset_alloc_time(cparms, H5D_ALLOC_TIME_EARLY);
 	VRFY((hrc >= 0), "");
 
-	hrc = H5Pset_chunk(cparms, 1, chunk_dims);
+	hrc = H5Pset_chunk ( cparms, 1, chunk_dims);
 	VRFY((hrc >= 0), "");
 
 	/* Create a new dataset within the file using cparms creation properties. */
-	dataset = H5Dcreate2(file_id, DATASETNAME, H5T_NATIVE_UCHAR, dataspace, H5P_DEFAULT, cparms, H5P_DEFAULT);
+	dataset = H5Dcreate (file_id, DATASETNAME, H5T_NATIVE_UCHAR, dataspace, cparms);
 	VRFY((dataset >= 0), "");
 
-	if(write_pattern == sec_last) {
-            HDmemset(buffer, 100, CHUNKSIZE);
+	switch (write_pattern) {
 
-            count[0] = 1;
-            stride[0] = 1;
-            block[0] = chunk_dims[0];
-            offset[0] = (nchunks-2)*chunk_dims[0];
+	    /* writes only the second to last chunk */
+	    case sec_last:
 
-            hrc = H5Sselect_hyperslab(dataspace, H5S_SELECT_SET, offset, stride, count, block);
-                VRFY((hrc >= 0), "");
+		memset(buffer, 100, CHUNKSIZE);
 
-            /* Write sec_last chunk */
-            hrc = H5Dwrite(dataset, H5T_NATIVE_UCHAR, memspace, dataspace, H5P_DEFAULT, buffer);
-            VRFY((hrc >= 0), "H5Dwrite");
-        } /* end if */
+		count[0] = 1;
+		stride[0] = 1;
+		block[0] = chunk_dims[0];
+		offset[0] = (nchunks-2)*chunk_dims[0];
+
+		hrc = H5Sselect_hyperslab(dataspace, H5S_SELECT_SET, offset, stride, count, block);
+		    VRFY((hrc >= 0), "");
+
+		/* Write sec_last chunk */
+		hrc = H5Dwrite(dataset, H5T_NATIVE_UCHAR, memspace, dataspace, H5P_DEFAULT, buffer);
+		VRFY((hrc >= 0), "H5Dwrite");
+
+		break;
+
+
+	    /* doesn't write anything */
+	    case none:
+
+		break;
+	}
 
 	/* Close resources */
 	hrc = H5Dclose (dataset);
@@ -175,7 +187,7 @@ create_chunked_dataset(const char *filename, int nchunks, write_type write_patte
 
 	/* verify file size */
 	filesize = get_filesize(filename);
-	est_filesize = nchunks * CHUNKSIZE * sizeof(unsigned char);
+	est_filesize = nchunks*CHUNKSIZE*sizeof(unsigned char);
 	VRFY((filesize >= est_filesize), "file size check");
 
     }
@@ -238,7 +250,7 @@ parallel_access_dataset(const char *filename, int nchunks, access_type action, h
 
     /* Open dataset*/
     if (*dataset<0){
-        *dataset = H5Dopen2(*file_id, DATASETNAME, H5P_DEFAULT);
+        *dataset = H5Dopen(*file_id, DATASETNAME);
         VRFY((*dataset >= 0), "");
     }
 
@@ -278,7 +290,7 @@ parallel_access_dataset(const char *filename, int nchunks, access_type action, h
         /* only extends the dataset */
         case extend_only:
             /* Extend dataset*/
-            hrc = H5Dset_extent(*dataset, size);
+            hrc = H5Dextend(*dataset, size);
             VRFY((hrc >= 0), "");
 
             break;
@@ -369,7 +381,7 @@ void verify_data(const char *filename, int nchunks, write_type write_pattern, in
 
     /* Open dataset*/
     if (*dataset<0){
-        *dataset = H5Dopen2(*file_id, DATASETNAME, H5P_DEFAULT);
+        *dataset = H5Dopen(*file_id, DATASETNAME);
         VRFY((*dataset >= 0), "");
     }
 

@@ -554,12 +554,10 @@ H5A_attr_iterate_table(const H5A_attr_table_t *atable, hsize_t skip,
                 break;
             }
 
-#ifndef H5_NO_DEPRECATED_SYMBOLS
             case H5A_ATTR_OP_APP:
                 /* Make the application callback */
                 ret_value = (attr_op->u.app_op)(loc_id, atable->attrs[u].name, op_data);
                 break;
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
 
             case H5A_ATTR_OP_LIB:
                 /* Call the library's callback */
@@ -670,60 +668,4 @@ H5A_get_ainfo(H5F_t *f, hid_t dxpl_id, H5O_t *oh, H5O_ainfo_t *ainfo)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5A_get_ainfo() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5A_set_version
- *
- * Purpose:     Sets the correct version to encode attribute with.
- *              Chooses the oldest version possible, unless the "use the
- *              latest format" flag is set.
- *
- * Return:	Success:        Non-negative
- *		Failure:	Negative
- *
- * Programmer:  Quincey Koziol
- *              koziol@hdfgroup.org
- *              Jul 17 2007
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5A_set_version(const H5F_t *f, H5A_t *attr)
-{
-    hbool_t type_shared, space_shared;  /* Flags to indicate that shared messages are used for this attribute */
-    hbool_t use_latest_format;          /* Flag indicating the newest file format should be used */
-    
-    FUNC_ENTER_NOAPI_NOFUNC(H5A_set_version)
-
-    /* check arguments */
-    HDassert(f);
-    HDassert(attr);
-
-    /* Get the file's 'use the latest version of the format' flag */
-    use_latest_format = H5F_USE_LATEST_FORMAT(f);
-
-    /* Check whether datatype and dataspace are shared */
-    if(H5O_msg_is_shared(H5O_DTYPE_ID, attr->dt) > 0)
-        type_shared = TRUE;
-    else
-        type_shared = FALSE;
-
-    if(H5O_msg_is_shared(H5O_SDSPACE_ID, attr->ds) > 0)
-        space_shared = TRUE;
-    else
-        space_shared = FALSE;
-
-    /* Check which version to encode attribute with */
-    if(use_latest_format)
-        attr->version = H5O_ATTR_VERSION_LATEST;      /* Write out latest version of format */
-    else if(attr->encoding != H5T_CSET_ASCII)
-        attr->version = H5O_ATTR_VERSION_3;   /* Write version which includes the character encoding */
-    else if(type_shared || space_shared)
-        attr->version = H5O_ATTR_VERSION_2;   /* Write out version with flag for indicating shared datatype or dataspace */
-    else
-        attr->version = H5O_ATTR_VERSION_1;   /* Write out basic version */
-
-    FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5A_set_version() */
 

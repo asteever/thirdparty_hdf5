@@ -79,11 +79,6 @@ TOOLTEST()
         nerrors="`expr $nerrors + 1`"
     else
         echo " PASSED"
-
-        # Clean up output file
-        if test -z "$HDF5_NOCLEANUP"; then
-           rm -f output.out
-        fi
     fi
 }
 
@@ -117,11 +112,6 @@ H5LSTEST()
       nerrors="`expr $nerrors + 1`"
       test yes = "$verbose" && $DIFF $expect $actual |sed 's/^/    /'
    fi
-
-   # Clean up output file
-   if test -z "$HDF5_NOCLEANUP"; then
-      rm -f $actual $actual_err
-   fi
 }
 
 # Single run of tool
@@ -148,7 +138,6 @@ RUNTEST()
 
     # Remove output file created, if the "no cleanup" environment variable is
     #   not defined
-echo "FILEOUT=" $FILEOUT
     if test -z "$HDF5_NOCLEANUP"; then
         rm -f $FILEOUT
     fi
