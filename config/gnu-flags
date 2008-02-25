@@ -1,19 +1,5 @@
 #							-*- shell-script -*-
 #
-# Copyright by The HDF Group.
-# Copyright by the Board of Trustees of the University of Illinois.
-# All rights reserved.
-#
-# This file is part of HDF5.  The full HDF5 copyright notice, including
-# terms governing use, modification, and redistribution, is contained in
-# the files COPYING and Copyright.html.  COPYING can be found at the root
-# of the source code distribution tree; Copyright.html can be found at the
-# root level of an installed copy of the electronic HDF5 document set and
-# is linked from the top-level documents page.  It can also be found at
-# http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-# access to either file, you may request a copy from help@hdfgroup.org.
-
-
 # This file should be sourced into configure if the compiler is the
 # GNU gcc compiler or a derivative.  It is careful not to do anything
 # if the compiler is not GNU; otherwise `cc_flags_set' is set to `yes'
@@ -26,7 +12,7 @@
 #   cc_version:   Version number: 2.91.60, 2.7.2.1
 #
 if test X = "X$cc_flags_set"; then
-    cc_version="`$CC $CFLAGS $H5_CFLAGS -v 2>&1 |grep 'gcc version' |\
+    cc_version="`$CC $CFLAGS -v 2>&1 |grep 'gcc version' |\
 	        sed 's/.*gcc version \([-a-z0-9\.]*\).*/\1/'`"
     cc_vendor=`echo $cc_version |sed 's/\([a-z]*\).*/\1/'`
     cc_version=`echo $cc_version |sed 's/[-a-z]//g'`
@@ -61,19 +47,6 @@ if test gcc = "$cc_vendor" -a "$cc_vers_all" -lt 2008001; then
 EOF
     sleep 5
 
-# GCC v2.96 (shipped with RH7.x) has problems with `float'-> `double' conversions.
-elif test gcc = "$cc_vendor" -a "$cc_vers_all" -eq 2096000; then
-   cat <<EOF
-    **
-    ** This compiler may have problems converting 'float' values to
-    ** 'double' values.  There may be other code generation problems
-    ** as well.
-    **
-    ** Please use a different version of gcc before reporting bugs.
-    **
-EOF
-       sleep 5
-
 # Current EGCS compilers have problems with `long long' and register
 # allocation when optimizations are turned on for x86 systems.
 elif test egcs = "$cc_vendor" -a "$cc_vers_all" -le 2091066; then
@@ -100,289 +73,164 @@ elif test pgcc = "$cc_vendor" -a "$cc_vers_all" -le 2091066; then
     **
 EOF
     sleep 5
-
 fi
+
+# Architecture-specific flags
+case "$host_os-$host_cpu" in
+    # FreeBSD sets the information from "hostname -m" to the general machine
+    # architecture, not the specific CPU for the machine, so even our
+    # Pentium II Xeon server is set to "i386".  Once we know we are on a FreeBSD
+    # machine, use the "sysctl" command to get the CPU hardware model.
+    freebsd*)
+        host_cpu_model=`sysctl -n hw.model`
+        case "$host_cpu_model" in
+            # Hmm.. this might not catch Celerons, but it won't hurt them either...
+            *Pro*|*II*)
+                # This check should be kept in sync with the *-i686 check below
+                case "$cc_vendor-$cc_version" in
+                    gcc-2.95*|gcc-3*)
+                        ARCH=${ARCH:="-march=i686"}
+                        ;;
+                    gcc-*|egcs-*|pgcc-*)
+                        ARCH=${ARCH:="-mcpu=pentiumpro -march=pentiumpro"}
+                        ;;
+                esac
+            ;;
+        esac
+        ;;
+
+    *-i686)
+        case "$cc_vendor-$cc_version" in
+            gcc-2.9[56]*|gcc-3*)
+                ARCH=${ARCH:="-march=i686"}
+                ;;
+            gcc-*|egcs-*|pgcc-*)
+                ARCH=${ARCH:="-mcpu=pentiumpro -march=pentiumpro"}
+                ;;
+        esac
+        ;;
+esac
+
+# Host-specific flags
+case "`hostname`" in
+    sleipnir.ncsa.uiuc.edu)
+        ARCH="$ARCH -pipe"
+        ;;
+esac
 
 # Common GCC flags for various situations
 case "$cc_vendor-$cc_version" in
-  gcc*|egcs*|pgcc*)
-    # Architecture-specific flags
-    arch=
-    case "$host_os-$host_cpu" in
-        # FreeBSD sets the information from "uname -m" to the general machine
-        # architecture, not the specific CPU for the machine, so even our
-        # Pentium II Xeon server is set to "i386".  Once we know we are on a FreeBSD
-        # machine, use the "sysctl" command to get the CPU hardware model.
-        freebsd*-i386)
-            host_cpu_model=`sysctl -n hw.model`
-            case "$host_cpu_model" in
-                # Hmm.. this might not catch Celerons, but it won't hurt them either...
-                *Pro*|*II*|*III*|*IV*|*Athlon*)
-                    # architecture-specific optimizations cause problems
-                    # for some users who build binaries to be used on
-                    # multiple architectures.
-                    # arch="-march=i686"
-                ;;
-            esac
-            ;;
+    gcc*|egcs*|pgcc*)
+	# General
+	CFLAGS="$CFLAGS $ARCH -ansi -pedantic -Wall -W -Wundef -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-qual -Wcast-align -Wwrite-strings -Wconversion -Wsign-compare -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wredundant-decls -Wnested-externs -Winline"
 
-        *-i686)
-                    # architecture-specific optimizations cause problems
-                    # for some users who build binaries to be used on
-                    # multiple architectures.
-                    # arch="-march=i686"
-            ;;
-    esac
+	# Production
+	PROD_CFLAGS="-O2 $NOFP -finline-functions"
+	PROD_CPPFLAGS=
 
-    # Host-specific flags
-    case "`hostname`" in
-        sleipnir.ncsa.uiuc.edu)
-            arch="$arch -pipe"
-            ;;
-    esac
+	# Debug
+	DEBUG_CFLAGS="-g -fverbose-asm"
+	DEBUG_CPPFLAGS=
 
-    # General
-    H5_CFLAGS="$H5_CFLAGS $arch -ansi -pedantic -Wall -W -Wundef -Wshadow -Wpointer-arith -Wbad-function-cast -Wcast-qual -Wcast-align -Wwrite-strings -Wconversion -Wsign-compare -Waggregate-return -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wredundant-decls -Wnested-externs -Winline"
-
-    # Production
-    case "$cc_vendor-$cc_version" in
-      gcc-2.95.[34])
-        PROD_CFLAGS="-O3"
+	# Profile
+	PROFILE_CFLAGS=-pg
+	PROFILE_CPPFLAGS=
         ;;
-      gcc-3.[0-4]*|gcc-4.[012]*)
-        # The optimization level is reduced for gcc 3.* and 4.* due to problems
-        # with code generation for src/H5Tconv.c with the -O2 & -O3 
-        # optimization levels (which shows up as failures for various integer
-        # types -> long long conversions in the test/dtypes test).  Perhaps
-        # later versions of gcc will fix this bug... - QAK - 2003/10/20
-        PROD_CFLAGS="-O"
-        ;;
-      gcc-4*)
-        # Be optimistic about future versions of gcc.. :-) - QAK - 2003/10/20
-        PROD_CFLAGS="-O3"
-        ;;
-      *)
-        PROD_CFLAGS="-O"
-        ;;
-    esac
-
-    PROD_CFLAGS="$PROD_CFLAGS -fomit-frame-pointer -finline-functions"
-    PROD_CPPFLAGS=
-
-    # Debug
-    DEBUG_CFLAGS="-g -fverbose-asm"
-    DEBUG_CPPFLAGS=
-
-    # Profile
-    PROFILE_CFLAGS="-g -pg"
-    PROFILE_CPPFLAGS=
-
-    # Flags are set
-    cc_flags_set=yes
-    ;;
 esac
 
 # Version specific GCC flags
-#
-# Please follow the pattern below by adding new versions at the top, copying
-# the information from the previous version and adding modifications to that.
 case "$cc_vendor-$cc_version" in
+    gcc-2.7*)
+        # No changes from default GCC flags...
 
-# Closer to the gcc 4.2 release, we should check for additional flags to
-# include and break it out into it's own section, like the other versions
-# below. -QAK
-  gcc-4.[12]*)
-    # Replace -ansi flag with -std=c99 flag
-    H5_CFLAGS="`echo $H5_CFLAGS | sed -e 's/-ansi/-std=c99/g'`"
+	# Flags are set
+	cc_flags_set=yes
+	;;
 
-    # Disable warnings about using 'long long' type
-    H5_CFLAGS="$H5_CFLAGS -Wno-long-long"
+    gcc-2.8*)
+        # General
+        # No changes from default GCC flags...
 
-    # Append warning flags from gcc-3* case
-    # (don't use -Wpadded flag for normal builds, many of the warnings its
-    #   issuing can't be fixed and they are making it hard to detect other,
-    #   more important warnings)
-    #H5_CFLAGS="$H5_CFLAGS -Wfloat-equal -Wmissing-format-attribute -Wpadded"
-    H5_CFLAGS="$H5_CFLAGS -Wfloat-equal -Wmissing-format-attribute"
+	# Production
+	PROD_CFLAGS="$PROD_CFLAGS -fschedule-insns2"
 
-    # Append warning flags from gcc-3.2* case
-    H5_CFLAGS="$H5_CFLAGS -Wmissing-noreturn -Wpacked -Wdisabled-optimization -Wmultichar"
+	# Flags are set
+	cc_flags_set=yes
+	;;
 
-    # Enable mort format checking flags, beyond the basic -Wformat included
-    # in -Wall
-    H5_CFLAGS="$H5_CFLAGS -Wformat-nonliteral -Wformat-security -Wformat-y2k"
+    gcc-2.95*)
+        # Append some extra warning flags that only gcc2.95+ know about
+	CFLAGS="$CFLAGS -Wno-long-long"
 
-    # The "unreachable code" warning does not appear to be reliable yet...
-    H5_CFLAGS="$H5_CFLAGS -Wunreachable-code"
+	# Flags are set
+	cc_flags_set=yes
+	;;
 
-    # Append warning flags from gcc-3.3* case
-    H5_CFLAGS="$H5_CFLAGS -Wendif-labels"
+    gcc-3.0*)
+        # Replace -ansi flag with -std=c99 flag
+	CFLAGS="`echo $CFLAGS | sed -e 's/-ansi/-std=c99/g'`"
 
-    # Append warning flags from gcc-3.4* case
-    H5_CFLAGS="$H5_CFLAGS -Wdeclaration-after-statement -Wold-style-definition -Winvalid-pch"
+        # Append warning flags from gcc-2.95.* case
+	CFLAGS="$CFLAGS -Wno-long-long"
 
-    # Replace old -W flag with new -Wextra flag
-    H5_CFLAGS="`echo $H5_CFLAGS | sed -e 's/-W\ /-Wextra\ /g'`"
+        # Append some extra warning flags that only gcc3+ know about
+	CFLAGS="$CFLAGS -Wfloat-equal -Wmissing-format-attribute -Wpadded"
 
-    # Append more extra warning flags that only gcc4.0+ know about
-    H5_CFLAGS="$H5_CFLAGS -Wmissing-field-initializers -Wvariadic-macros"
+	# Flags are set
+	cc_flags_set=yes
+	;;
 
-    # Append more extra warning flags that only gcc4.1+ know about
-    H5_CFLAGS="$H5_CFLAGS -Wunsafe-loop-optimizations -Wc++-compat -Wvolatile-register-var"
+    gcc-3.1*)
+        # Replace -ansi flag with -std=c99 flag
+	CFLAGS="`echo $CFLAGS | sed -e 's/-ansi/-std=c99/g'`"
 
-    # Try out the new "stack protector" feature in gcc 4.1
-    # (Strictly speaking this isn't really a "warning" flag, so it's added to
-    #   the debugging flags)
-    #DEBUG_CFLAGS="$DEBUG_CFLAGS -Wstack-protector -fstack-protector-all"
-    ;;
+        # Append warning flags from gcc-2.95* case
+	CFLAGS="$CFLAGS -Wno-long-long"
 
-  gcc-4.0*)
-    # Replace -ansi flag with -std=c99 flag
-    H5_CFLAGS="`echo $H5_CFLAGS | sed -e 's/-ansi/-std=c99/g'`"
+        # Append warning flags from gcc-3.0* case
+	CFLAGS="$CFLAGS -Wfloat-equal -Wmissing-format-attribute -Wpadded"
 
-    # Disable warnings about using 'long long' type
-    H5_CFLAGS="$H5_CFLAGS -Wno-long-long"
+        # Append some extra warning flags that only gcc3.1+ know about
+        # None currently...
 
-    # Append warning flags from gcc-3* case
-    # (don't use -Wpadded flag for normal builds, many of the warnings its
-    #   issuing can't be fixed and they are making it hard to detect other,
-    #   more important warnings)
-    #H5_CFLAGS="$H5_CFLAGS -Wfloat-equal -Wmissing-format-attribute -Wpadded"
-    H5_CFLAGS="$H5_CFLAGS -Wfloat-equal -Wmissing-format-attribute"
+	# Flags are set
+	cc_flags_set=yes
+	;;
 
-    # Append warning flags from gcc-3.2* case
-    H5_CFLAGS="$H5_CFLAGS -Wmissing-noreturn -Wpacked -Wdisabled-optimization -Wmultichar"
+    egcs-2.*|pgcc-2.*)
+	# General
+	CFLAGS="$CFLAGS $ARCH -Wsign-compare"
 
-    # The "format=2" warning generates too many warnings about valid
-    # usage in the library.
-    #CFLAGS="$CFLAGS -Wformat=2"
+	# Production
+	PROD_CFLAGS="-O6 $NOFP"
 
-    # The "unreachable code" warning does not appear to be reliable yet...
-    #CFLAGS="$CFLAGS -Wunreachable-code"
+	# Flags are set
+	cc_flags_set=yes
+	;;
 
-    # Append warning flags from gcc-3.3* case
-    H5_CFLAGS="$H5_CFLAGS -Wendif-labels"
+    gcc-*|egcs-*|pgcc-*)
+        # This must be some other GNU compiler that we don't know about.
+        # Just use fairly generic flags.
 
-    # Append warning flags from gcc-3.4* case
-    H5_CFLAGS="$H5_CFLAGS -Wdeclaration-after-statement -Wold-style-definition -Winvalid-pch"
+	# Production
+	PROD_CFLAGS=-O
+	PROD_CPPFLAGS=
 
-    # Replace old -W flag with new -Wextra flag
-    H5_CFLAGS="`echo $H5_CFLAGS | sed -e 's/-W\ /-Wextra\ /g'`"
+	# Debug
+	DEBUG_CFLAGS=-g
+	DEBUG_CPPFLAGS=
 
-    # Append more extra warning flags that only gcc4.0+ know about
-    H5_CFLAGS="$H5_CFLAGS -Wmissing-field-initializers -Wvariadic-macros"
-    ;;
+	# Profile
+	PROFILE_CFLAGS=-pg
+	PROFILE_CPPFLAGS=
 
-  gcc-3.4*)
-    # Replace -ansi flag with -std=c99 flag
-    H5_CFLAGS="`echo $H5_CFLAGS | sed -e 's/-ansi/-std=c99/g'`"
-
-    # Disable warnings about using 'long long' type
-    H5_CFLAGS="$H5_CFLAGS -Wno-long-long"
-
-    # Append warning flags from gcc-3* case
-    # (don't use -Wpadded flag for normal builds, many of the warnings its
-    #   issuing can't be fixed and they are making it hard to detect other,
-    #   more important warnings)
-    #H5_CFLAGS="$H5_CFLAGS -Wfloat-equal -Wmissing-format-attribute -Wpadded"
-    H5_CFLAGS="$H5_CFLAGS -Wfloat-equal -Wmissing-format-attribute"
-
-    # Append warning flags from gcc-3.2* case
-    H5_CFLAGS="$H5_CFLAGS -Wmissing-noreturn -Wpacked -Wdisabled-optimization -Wmultichar"
-
-    # The "format=2" warning generates too many warnings about valid
-    # usage in the library.
-    #CFLAGS="$CFLAGS -Wformat=2"
-
-    # The "unreachable code" warning does not appear to be reliable yet...
-    #CFLAGS="$CFLAGS -Wunreachable-code"
-
-    # Append warning flags from gcc-3.3* case
-    H5_CFLAGS="$H5_CFLAGS -Wendif-labels"
-
-    # Append more extra warning flags that only gcc3.4+ know about
-    H5_CFLAGS="$H5_CFLAGS -Wdeclaration-after-statement -Wold-style-definition -Winvalid-pch"
-
-    # Replace old -W flag with new -Wextra flag
-    H5_CFLAGS="`echo $H5_CFLAGS | sed -e 's/-W\ /-Wextra\ /g'`"
-    ;;
-
-  gcc-3.3*)
-    # Replace -ansi flag with -std=c99 flag
-    H5_CFLAGS="`echo $H5_CFLAGS | sed -e 's/-ansi/-std=c99/g'`"
-
-    # Disable warnings about using 'long long' type
-    H5_CFLAGS="$H5_CFLAGS -Wno-long-long"
-
-    # Append warning flags from gcc-3* case
-    # (don't use -Wpadded flag for normal builds, many of the warnings its
-    #   issuing can't be fixed and they are making it hard to detect other,
-    #   more important warnings)
-    #H5_CFLAGS="$H5_CFLAGS -Wfloat-equal -Wmissing-format-attribute -Wpadded"
-    H5_CFLAGS="$H5_CFLAGS -Wfloat-equal -Wmissing-format-attribute"
-
-    # Append warning flags from gcc-3.2* case
-    H5_CFLAGS="$H5_CFLAGS -Wmissing-noreturn -Wpacked -Wdisabled-optimization -Wmultichar"
-
-    # The "format=2" warning generates too many warnings about valid
-    # usage in the library.
-    #CFLAGS="$CFLAGS -Wformat=2"
-
-    # The "unreachable code" warning does not appear to be reliable yet...
-    #CFLAGS="$CFLAGS -Wunreachable-code"
-
-    # Append more extra warning flags that only gcc3.3+ know about
-    H5_CFLAGS="$H5_CFLAGS -Wendif-labels"
-    ;;
-
-  gcc-3.2*)
-    # Replace -ansi flag with -std=c99 flag
-    H5_CFLAGS="`echo $H5_CFLAGS | sed -e 's/-ansi/-std=c99/g'`"
-
-    # Disable warnings about using 'long long' type
-    H5_CFLAGS="$H5_CFLAGS -Wno-long-long"
-
-    # Append warning flags from gcc-3* case
-    # (don't use -Wpadded flag for normal builds, many of the warnings its
-    #   issuing can't be fixed and they are making it hard to detect other,
-    #   more important warnings)
-    #H5_CFLAGS="$H5_CFLAGS -Wfloat-equal -Wmissing-format-attribute -Wpadded"
-    H5_CFLAGS="$H5_CFLAGS -Wfloat-equal -Wmissing-format-attribute"
-
-    # Append more extra warning flags that only gcc3.2+ know about
-    H5_CFLAGS="$H5_CFLAGS -Wmissing-noreturn -Wpacked -Wdisabled-optimization -Wmultichar"
-
-    # The "format=2" warning generates too many warnings about valid
-    # usage in the library.
-    #CFLAGS="$CFLAGS -Wformat=2"
-
-    # The "unreachable code" warning does not appear to be reliable yet...
-    #CFLAGS="$CFLAGS -Wunreachable-code"
-    ;;
-
-  gcc-3*)
-    # Replace -ansi flag with -std=c99 flag
-    H5_CFLAGS="`echo $H5_CFLAGS | sed -e 's/-ansi/-std=c99/g'`"
-
-    # Disable warnings about using 'long long' type
-    H5_CFLAGS="$H5_CFLAGS -Wno-long-long"
-
-    # Append some extra warning flags that only gcc3+ know about
-    # (don't use -Wpadded flag for normal builds, many of the warnings its
-    #   issuing can't be fixed and they are making it hard to detect other,
-    #   more important warnings)
-    #H5_CFLAGS="$H5_CFLAGS -Wfloat-equal -Wmissing-format-attribute -Wpadded"
-    H5_CFLAGS="$H5_CFLAGS -Wfloat-equal -Wmissing-format-attribute"
-    ;;
-
-  gcc-2.9[56]*)
-    # Disable warnings about using 'long long' type
-    H5_CFLAGS="$H5_CFLAGS -Wno-long-long"
-    ;;
+	# Flags are set
+	cc_flags_set=yes
+	;;
 esac
 
 # Clear cc info if no flags set
-if test "X$cc_flags_set" = "X"; then
-  cc_vendor=
-  cc_version=
+if test X = "X$cc_flags_set"; then
+    cc_vendor=
+    cc_version=
 fi

@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -34,7 +33,7 @@
 #endif
 
 
-#if !defined(H5_HAVE_ATTRIBUTE) || defined __cplusplus
+#ifndef H5_HAVE_ATTRIBUTE
 #   undef __attribute__
 #   define __attribute__(X) /*void*/
 #   define UNUSED /*void*/
@@ -75,23 +74,6 @@
 
 static size_t	nio_g;
 static hid_t	fapl_g = -1;
-
-/* Local function prototypes */
-static size_t
-counter (unsigned UNUSED flags, size_t cd_nelmts,
-	 const unsigned *cd_values, size_t nbytes,
-	 size_t *buf_size, void **buf);
-
-/* This message derives from H5Z */
-const H5Z_class_t H5Z_COUNTER[1] = {{
-    H5Z_CLASS_T_VERS,		/* H5Z_class_t version		*/
-    FILTER_COUNTER,		/* Filter id number		*/
-    1, 1,			/* Encoding and decoding enabled */
-    "counter",			/* Filter name for debugging	*/
-    NULL,                       /* The "can apply" callback     */
-    NULL,                       /* The "set local" callback     */
-    counter,			/* The actual filter function	*/
-}};
 
 
 /*-------------------------------------------------------------------------
@@ -149,29 +131,29 @@ create_dataset (void)
 
     /* The data space */
     size[0] = size[1] = DS_SIZE * CH_SIZE;
-    space = H5Screate_simple(2, size, size);
+    space = H5Screate_simple (2, size, size);
 
     /* The storage layout and compression */
-    dcpl = H5Pcreate(H5P_DATASET_CREATE);
+    dcpl = H5Pcreate (H5P_DATASET_CREATE);
     size[0] = size[1] = CH_SIZE;
-    H5Pset_chunk(dcpl, 2, size);
-    H5Zregister(H5Z_COUNTER);
-    H5Pset_filter(dcpl, FILTER_COUNTER, 0, 0, NULL);
-
+    H5Pset_chunk (dcpl, 2, size);
+    H5Zregister (FILTER_COUNTER, "counter", counter);
+    H5Pset_filter (dcpl, FILTER_COUNTER, 0, 0, NULL);
+        
     /* The dataset */
-    dset = H5Dcreate2(file, "dset", H5T_NATIVE_SCHAR, space, H5P_DEFAULT, dcpl, H5P_DEFAULT);
-    assert(dset>=0);
+    dset = H5Dcreate (file, "dset", H5T_NATIVE_SCHAR, space, dcpl);
+    assert (dset>=0);
 
     /* The data */
-    buf = calloc(1, SQUARE (DS_SIZE*CH_SIZE));
-    H5Dwrite(dset, H5T_NATIVE_SCHAR, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf);
-    free(buf);
+    buf = calloc (1, SQUARE (DS_SIZE*CH_SIZE));
+    H5Dwrite (dset, H5T_NATIVE_SCHAR, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf);
+    free (buf);
 
     /* Close */
-    H5Dclose(dset);
-    H5Sclose(space);
-    H5Pclose(dcpl);
-    H5Fclose(file);
+    H5Dclose (dset);
+    H5Sclose (space);
+    H5Pclose (dcpl);
+    H5Fclose (file);
 }
 
 
@@ -196,9 +178,8 @@ test_rowmaj (int op, size_t cache_size, size_t io_size)
     hid_t	file, dset, mem_space, file_space;
     signed char	*buf = calloc (1, (size_t)(SQUARE(io_size)));
     hsize_t	i, j, hs_size[2];
-    hsize_t	hs_offset[2];
-    int		mdc_nelmts;
-    size_t	rdcc_nelmts;
+    hssize_t	hs_offset[2];
+    int		mdc_nelmts, rdcc_nelmts;
     double	w0;
 
     H5Pget_cache (fapl_g, &mdc_nelmts, &rdcc_nelmts, NULL, &w0);
@@ -210,9 +191,9 @@ test_rowmaj (int op, size_t cache_size, size_t io_size)
 #endif
     H5Pset_cache (fapl_g, mdc_nelmts, rdcc_nelmts,
 		  cache_size*SQUARE (CH_SIZE), w0);
-    file = H5Fopen(FILE_NAME, H5F_ACC_RDWR, fapl_g);
-    dset = H5Dopen2(file, "dset", H5P_DEFAULT);
-    file_space = H5Dget_space(dset);
+    file = H5Fopen (FILE_NAME, H5F_ACC_RDWR, fapl_g);
+    dset = H5Dopen (file, "dset");
+    file_space = H5Dget_space (dset);
     nio_g = 0;
 
     for (i=0; i<CH_SIZE*DS_SIZE; i+=io_size) {
@@ -239,8 +220,8 @@ test_rowmaj (int op, size_t cache_size, size_t io_size)
 	    H5Sclose (mem_space);
 	}
     }
-
-    free (buf);
+    
+    free (buf); 
     H5Sclose (file_space);
     H5Dclose (dset);
     H5Fclose (file);
@@ -272,10 +253,9 @@ test_diag (int op, size_t cache_size, size_t io_size, size_t offset)
     hid_t	file, dset, mem_space, file_space;
     hsize_t	i, hs_size[2];
     hsize_t	nio = 0;
-    hsize_t	hs_offset[2];
+    hssize_t	hs_offset[2];
     signed char	*buf = calloc (1, (size_t)(SQUARE (io_size)));
-    int		mdc_nelmts;
-    size_t	rdcc_nelmts;
+    int		mdc_nelmts, rdcc_nelmts;
     double	w0;
 
     H5Pget_cache (fapl_g, &mdc_nelmts, &rdcc_nelmts, NULL, &w0);
@@ -287,11 +267,11 @@ test_diag (int op, size_t cache_size, size_t io_size, size_t offset)
 #endif
     H5Pset_cache (fapl_g, mdc_nelmts, rdcc_nelmts,
 		  cache_size*SQUARE (CH_SIZE), w0);
-    file = H5Fopen(FILE_NAME, H5F_ACC_RDWR, fapl_g);
-    dset = H5Dopen2(file, "dset", H5P_DEFAULT);
-    file_space = H5Dget_space(dset);
+    file = H5Fopen (FILE_NAME, H5F_ACC_RDWR, fapl_g);
+    dset = H5Dopen (file, "dset");
+    file_space = H5Dget_space (dset);
     nio_g = 0;
-
+    
     for (i=0, hs_size[0]=io_size; hs_size[0]==io_size; i+=offset) {
 	hs_offset[0] = hs_offset[1] = i;
 	hs_size[0] = hs_size[1] = MIN (io_size, CH_SIZE*DS_SIZE-i);
@@ -329,9 +309,9 @@ test_diag (int op, size_t cache_size, size_t io_size, size_t offset)
  *
  * Purpose:	See file prologue.
  *
- * Return:	Success:
+ * Return:	Success:	
  *
- *		Failure:
+ *		Failure:	
  *
  * Programmer:	Robb Matzke
  *              Thursday, May 14, 1998
@@ -407,7 +387,7 @@ main (void)
     fclose (d);
     fprintf (f, "pause -1\n");
 #endif
-
+    
 #if 1
     /*
      * Test row-major writing of the dataset with various sizes of request

@@ -1,5 +1,4 @@
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!   Copyright by The HDF Group.                                               *
 !   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
@@ -9,33 +8,29 @@
 !   of the source code distribution tree; Copyright.html can be found at the  *
 !   root level of an installed copy of the electronic HDF5 document set and   *
 !   is linked from the top-level documents page.  It can also be found at     *
-!   http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
-!   access to either file, you may request a copy from help@hdfgroup.org.     *
+!   http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+!   access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!
 !
 ! 
 !    Testing Dataspace Interface functionality.
 !
 !
-!   The following subroutine tests the following functionalities:
-!   h5screate_f, h5scopy_f, h5screate_simple_f, h5sis_simple_f,   
-!   h5sget_simple_extent_dims_f,h5sget_simple_extent_ndims_f 
-!   h5sget_simple_extent_npoints_f, h5sget_simple_extent_type_f,
-!   h5sextent_copy_f, h5sset_extent_simple_f, h5sset_extent_none_f     
+!    The following subroutine tests the following functionalities:
+!    h5screate_f, h5scopy_f, h5screate_simple_f, h5sis_simple_f,   
+!    h5sget_simple_extent_dims_f,h5sget_simple_extent_ndims_f 
+!    h5sget_simple_extent_npoints_f, h5sget_simple_extent_type_f,
+!    h5sextent_copy_f, h5sset_extent_simple_f, h5sset_extent_none_f     
 !
-        SUBROUTINE dataspace_basic_test(cleanup, total_error)
+        SUBROUTINE dataspace_basic_test(total_error)
 
         USE HDF5 ! This module contains all necessary modules 
 
           IMPLICIT NONE
-          LOGICAL, INTENT(IN)  :: cleanup
           INTEGER, INTENT(OUT) :: total_error 
 
-          CHARACTER(LEN=10), PARAMETER :: filename1 = "basicspace" ! File1 name
-          CHARACTER(LEN=9), PARAMETER :: filename2 = "copyspace"  ! File2 name
-          CHARACTER(LEN=80) :: fix_filename1 
-          CHARACTER(LEN=80) :: fix_filename2 
+          CHARACTER(LEN=13), PARAMETER :: filename1 = "basicspace.h5" ! File1 name
+          CHARACTER(LEN=12), PARAMETER :: filename2 = "copyspace.h5"  ! File2 name
           CHARACTER(LEN=9), PARAMETER :: dsetname = "basicdset"       ! Dataset name
 
           INTEGER(HID_T) :: file1_id, file2_id     ! File identifiers 
@@ -59,7 +54,7 @@
 
           LOGICAL     ::   flag  !flag to test datyspace is simple or not
           INTEGER     :: i, j    !general purpose integers
-          INTEGER(HSIZE_T), DIMENSION(2) :: data_dims
+          INTEGER, DIMENSION(7) :: data_dims
 
           !
           ! Initialize the dset_data array.
@@ -85,20 +80,10 @@
           !
           ! Create new files using default properties.
           ! 
-          CALL h5_fixname_f(filename1, fix_filename1, H5P_DEFAULT_F, error)
-          if (error .ne. 0) then
-              write(*,*) "Cannot modify filename"
-              stop
-          endif
-          CALL h5fcreate_f(fix_filename1, H5F_ACC_TRUNC_F, file1_id, error)
+          CALL h5fcreate_f(filename1, H5F_ACC_TRUNC_F, file1_id, error)
               CALL check("h5fcreate_f", error, total_error)
 
-          CALL h5_fixname_f(filename2, fix_filename2, H5P_DEFAULT_F, error)
-          if (error .ne. 0) then
-              write(*,*) "Cannot modify filename"
-              stop
-          endif
-          CALL h5fcreate_f(fix_filename2, H5F_ACC_TRUNC_F, file2_id, error)
+          CALL h5fcreate_f(filename2, H5F_ACC_TRUNC_F, file2_id, error)
               CALL check("h5fcreate_f", error, total_error)
 
           ! 
@@ -265,11 +250,12 @@
           CALL h5fclose_f(file2_id, error)
               CALL check("h5fclose_f", error, total_error)
      
+         !
+         !Close FORTRAN predifined datatypes
+         !
+!         CALL h5close_types_f(error)
+!              CALL check("h5close_types_f",error,total_error)
 
-          if(cleanup) CALL h5_cleanup_f(filename1, H5P_DEFAULT_F, error)
-              CALL check("h5_cleanup_f", error, total_error)
-          if(cleanup) CALL h5_cleanup_f(filename2, H5P_DEFAULT_F, error)
-              CALL check("h5_cleanup_f", error, total_error)
           RETURN
         END SUBROUTINE dataspace_basic_test
 

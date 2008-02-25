@@ -1,5 +1,4 @@
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!   Copyright by The HDF Group.                                               *
 !   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
@@ -9,25 +8,23 @@
 !   of the source code distribution tree; Copyright.html can be found at the  *
 !   root level of an installed copy of the electronic HDF5 document set and   *
 !   is linked from the top-level documents page.  It can also be found at     *
-!   http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
-!   access to either file, you may request a copy from help@hdfgroup.org.     *
+!   http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+!   access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!
 !
 ! 
 !    Testing Reference Interface functionality.
 !
-!    The following subroutine tests h5rcreate_f, h5rdereference_f
-!    and H5Rget_object_type functions
+!      
+!The following subroutine tests h5rcreate_f, h5rdereference_f
+!and H5Rget_object_type functions
 !
-        SUBROUTINE refobjtest(cleanup, total_error)
+        SUBROUTINE refobjtest(total_error)
         USE HDF5 ! This module contains all necessary modules 
           IMPLICIT NONE
-          LOGICAL, INTENT(IN)  :: cleanup
           INTEGER, INTENT(OUT) :: total_error 
 
-          CHARACTER(LEN=9), PARAMETER :: filename = "reference"
-          CHARACTER(LEN=80) :: fix_filename
+          CHARACTER(LEN=12), PARAMETER :: filename = "reference.h5"
           CHARACTER(LEN=8), PARAMETER :: dsetnamei = "INTEGERS"
           CHARACTER(LEN=17), PARAMETER :: dsetnamer = "OBJECT_REFERENCES"
           CHARACTER(LEN=6), PARAMETER :: groupname1 = "GROUP1"
@@ -49,21 +46,21 @@
           INTEGER :: rankr = 1 
           TYPE(hobj_ref_t_f), DIMENSION(4) ::  ref
           TYPE(hobj_ref_t_f), DIMENSION(4) ::  ref_out
-          INTEGER(HSIZE_T), DIMENSION(1) :: ref_dim
+          INTEGER, DIMENSION(7) :: ref_dim
           INTEGER, DIMENSION(5) :: data = (/1, 2, 3, 4, 5/)
-          INTEGER(HSIZE_T), DIMENSION(2) :: data_dims
+          INTEGER, DIMENSION(7) :: data_dims
 
+          !
+          !  Initialize FORTRAN predefined datatypes
+          !
+!          CALL h5init_types_f(error)
+!              CALL check("h5init_types_f",error,total_error)
 
           !
           !Create a new file with Default file access and
           !file creation properties . 
           !
-          CALL h5_fixname_f(filename, fix_filename, H5P_DEFAULT_F, error)
-          if (error .ne. 0) then
-              write(*,*) "Cannot modify filename"
-              stop
-          endif
-          CALL h5fcreate_f(fix_filename, H5F_ACC_TRUNC_F, file_id, error)
+          CALL h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error)
               CALL check("h5fcreate_f",error,total_error)
 
 
@@ -159,7 +156,7 @@
           !
           CALL h5rget_object_type_f(dsetr_id, ref(3), obj_type, error) 
               CALL check("h5rget_object_type_f",error,total_error)
-          if (obj_type == H5G_DATASET_F) then 
+          if (obj_type == 2) then 
               CALL h5rdereference_f(dsetr_id, ref(3), dset1_id, error)
                   CALL check("h5rdereference_f",error,total_error)
           
@@ -173,7 +170,7 @@
           !
           CALL h5rget_object_type_f(dsetr_id, ref(4), obj_type, error) 
               CALL check("h5rget_object_type_f",error,total_error)
-          if (obj_type == H5G_TYPE_F) then 
+          if (obj_type == 3) then 
               CALL h5rdereference_f(dsetr_id, ref(4), type_id, error)
                   CALL check("h5rdereference_f",error,total_error)
           end if
@@ -190,25 +187,24 @@
               CALL check("h5dclose_f",error,total_error)
           CALL h5fclose_f(file_id, error)
               CALL check("h5fclose_f",error,total_error)
-
-
-          if(cleanup) CALL h5_cleanup_f(filename, H5P_DEFAULT_F, error)
-              CALL check("h5_cleanup_f", error, total_error)
+          !
+          ! Close FORTRAN predefined datatypes.
+          !
+!          CALL h5close_types_f(error) 
+!              CALL check("h5close_types_f",error,total_error)
           RETURN
 
         END SUBROUTINE refobjtest
 !
-!   The following subroutine tests h5rget_region_f, h5rcreate_f
-!   and h5rdereference_f functionalities
+!The following subroutine tests h5rget_region_f, h5rcreate_f
+!and h5rdereference_f functionalities
 ! 
-        SUBROUTINE refregtest(cleanup, total_error)
+        SUBROUTINE refregtest(total_error)
         USE HDF5 ! This module contains all necessary modules 
           IMPLICIT NONE
-          LOGICAL, INTENT(IN)  :: cleanup
           INTEGER, INTENT(OUT) :: total_error 
 
-          CHARACTER(LEN=6), PARAMETER :: filename = "Refreg"
-          CHARACTER(LEN=80) :: fix_filename
+          CHARACTER(LEN=9), PARAMETER :: filename = "Refreg.h5"
           CHARACTER(LEN=6), PARAMETER :: dsetnamev = "MATRIX"
           CHARACTER(LEN=17), PARAMETER :: dsetnamer = "REGION_REFERENCES"
 
@@ -220,17 +216,17 @@
           INTEGER     ::   error
           TYPE(hdset_reg_ref_t_f) , DIMENSION(2) :: ref     ! Buffers to store references
           TYPE(hdset_reg_ref_t_f) , DIMENSION(2) :: ref_out !
-          INTEGER(HSIZE_T), DIMENSION(2) :: ref_dim
-          INTEGER(HSIZE_T), DIMENSION(2) :: data_dims
+          INTEGER, DIMENSION(7) :: ref_dim
+          INTEGER, DIMENSION(7) :: data_dims
           INTEGER(HSIZE_T), DIMENSION(2) :: dims = (/2,9/)  ! Datasets dimensions
           INTEGER(HSIZE_T), DIMENSION(1) :: dimsr = (/2/)   ! 
-          INTEGER(HSIZE_T), DIMENSION(2) :: start
+          INTEGER(HSSIZE_T), DIMENSION(2) :: start
           INTEGER(HSIZE_T), DIMENSION(2) :: count
           INTEGER :: rankr = 1 
           INTEGER :: rank = 2
           INTEGER , DIMENSION(2,9) ::  data 
           INTEGER , DIMENSION(2,9) ::  data_out = 0 
-          INTEGER(HSIZE_T) , DIMENSION(2,3) :: coord
+          INTEGER(HSSIZE_T) , DIMENSION(2,3) :: coord
           INTEGER(SIZE_T) ::num_points = 3  ! Number of selected points
           INTEGER :: i, j
           coord = reshape((/1,1,2,7,1,9/), (/2,3/))   ! Coordinates of selected points
@@ -244,12 +240,7 @@
           !
           !  Create a new file.
           !
-          CALL h5_fixname_f(filename, fix_filename, H5P_DEFAULT_F, error)
-          if (error .ne. 0) then
-              write(*,*) "Cannot modify filename"
-              stop
-          endif
-          CALL h5fcreate_f(fix_filename, H5F_ACC_TRUNC_F, file_id, error)
+          CALL h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error)
           ! Default file access and file creation
           ! properties are used. 
               CALL check("h5fcreate_f", error, total_error)
@@ -328,7 +319,7 @@
           !
           ! Reopen the file to test selections.
           !
-          CALL h5fopen_f (fix_filename, H5F_ACC_RDWR_F, file_id, error)
+          CALL h5fopen_f (filename, H5F_ACC_RDWR_F, file_id, error)
               CALL check("h5fopen_f", error, total_error)
           CALL h5dopen_f(file_id, dsetnamer, dsetr_id, error)
               CALL check("h5dopen_f", error, total_error)
@@ -383,10 +374,11 @@
               CALL check("h5dclose_f", error, total_error)
           CALL h5fclose_f(file_id, error)
               CALL check("h5fclose_f", error, total_error)
-
-
-          if(cleanup) CALL h5_cleanup_f(filename, H5P_DEFAULT_F, error)
-              CALL check("h5_cleanup_f", error, total_error)
+          !
+          ! Close FORTRAN predefined datatypes.
+          !
+!          CALL h5close_types_f(error) 
+!              CALL check("h5close_types_f",error,total_error)
           RETURN
 
         END SUBROUTINE refregtest

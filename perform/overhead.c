@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -61,7 +60,7 @@
 #ifndef TRUE
 #define TRUE		1
 #endif /* TRUE */
-
+ 
 typedef enum fill_t {
     FILL_ALL,
     FILL_FORWARD,
@@ -163,11 +162,10 @@ cleanup (void)
  *-------------------------------------------------------------------------
  */
 static herr_t
-display_error_cb (hid_t estack, void UNUSED *client_data)
+display_error_cb (void UNUSED *client_data)
 {
     puts ("*FAILED*");
-    H5Eprint2(estack, stdout);
-
+    H5Eprint (stdout);
     return 0;
 }
 
@@ -196,7 +194,7 @@ test(fill_t fill_style, const double splits[],
     hsize_t	ch_size[1] = {1};		/*chunk size		*/
     hsize_t	cur_size[1] = {1000};		/*current dataset size	*/
     hsize_t	max_size[1] = {H5S_UNLIMITED};	/*maximum dataset size	*/
-    hsize_t	hs_start[1];			/*hyperslab start offset*/
+    hssize_t	hs_start[1];			/*hyperslab start offset*/
     hsize_t	hs_count[1] = {1};		/*hyperslab nelmts	*/
     int		fd = (-1);			/*h5 file direct	*/
     static int	*had = NULL;			/*for random filling	*/
@@ -206,29 +204,33 @@ test(fill_t fill_style, const double splits[],
     int		j;
     h5_stat_t	sb;
 
-    if(!had) had = calloc((size_t)cur_size[0], sizeof(int));
-    if((fapl = H5Pcreate(H5P_FILE_ACCESS)) < 0) goto error;
-    if(!use_rdcc) {
-	if(H5Pget_cache(fapl, &mdc_nelmts, NULL, NULL, NULL) < 0) goto error;
-	if(H5Pset_cache(fapl, mdc_nelmts, 0, 0, 0.0) < 0) goto error;
+    if (!had) had = calloc((size_t)cur_size[0], sizeof(int));
+    if ((fapl=H5Pcreate(H5P_FILE_ACCESS))<0) goto error;
+    if (!use_rdcc) {
+	if (H5Pget_cache(fapl, &mdc_nelmts, NULL, NULL, NULL)<0) goto error;
+	if (H5Pset_cache(fapl, mdc_nelmts, 0, 0, 0.0)<0) goto error;
     }
-    if((file = H5Fcreate(FILE_NAME_1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) goto error;
-    if((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0) goto error;
-    if(H5Pset_chunk(dcpl, 1, ch_size) < 0) goto error;
-    if((xfer = H5Pcreate(H5P_DATASET_XFER)) < 0) goto error;
-    if(H5Pset_btree_ratios(xfer, splits[0], splits[1], splits[2]) < 0) goto error;
-    if((fspace = H5Screate_simple(1, cur_size, max_size)) < 0) goto error;
-    if((mspace = H5Screate_simple(1, ch_size, ch_size)) < 0) goto error;
-    if((dset = H5Dcreate2(file, "chunked", H5T_NATIVE_INT,
-			fspace, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0) goto error;
+    if ((file=H5Fcreate(FILE_NAME_1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl))<0) {
+	goto error;
+    }
+    if ((dcpl=H5Pcreate(H5P_DATASET_CREATE))<0) goto error;
+    if (H5Pset_chunk(dcpl, 1, ch_size)<0) goto error;
+    if ((xfer=H5Pcreate(H5P_DATASET_XFER))<0) goto error;
+    if (H5Pset_btree_ratios(xfer, splits[0], splits[1], splits[2])<0) {
+	goto error;
+    }
+    if ((fspace=H5Screate_simple(1, cur_size, max_size))<0) goto error;
+    if ((mspace=H5Screate_simple(1, ch_size, ch_size))<0) goto error;
+    if ((dset=H5Dcreate(file, "chunked", H5T_NATIVE_INT,
+			fspace, dcpl))<0) goto error;
 
-#if !defined( __MWERKS__)
+#if !defined( __MWERKS__)	
 
- /*
+ /* 
   workaround for a bug in the Metrowerks version 6.0 open function
-  */
-    if ((fd=HDopen(FILE_NAME_1, O_RDONLY, 0666)) < 0) goto error;
-#endif
+  */		
+    if ((fd=open(FILE_NAME_1, O_RDONLY))<0) goto error;
+#endif  
 
     for (i=1; i<=cur_size[0]; i++) {
 
@@ -244,11 +246,11 @@ test(fill_t fill_style, const double splits[],
 	    hs_start[0] = i%2 ? i/2 : cur_size[0]-i/2;
 	    break;
 	case FILL_OUTWARD:
-	    j = (int)(cur_size[0]-i)+1;
+	    j = (cur_size[0]-i)+1;
 	    hs_start[0] = j%2 ? j/2 : (hssize_t)cur_size[0]-j/2;
 	    break;
 	case FILL_RANDOM:
-	    for (j=HDrand()%(int)cur_size[0]; had[j]; j=(j+1)%(int)cur_size[0]) /*void*/;
+	    for (j=rand()%cur_size[0]; had[j]; j=(j+1)%cur_size[0]) /*void*/;
 	    hs_start[0] = j;
 	    had[j] = 1;
 	    break;
@@ -258,18 +260,18 @@ test(fill_t fill_style, const double splits[],
 
 	/* Write the chunk */
 	if (H5Sselect_hyperslab(fspace, H5S_SELECT_SET, hs_start, NULL,
-				hs_count, NULL) < 0) goto error;
-	if (H5Dwrite(dset, H5T_NATIVE_INT, mspace, fspace, xfer, &i) < 0) {
+				hs_count, NULL)<0) goto error;
+	if (H5Dwrite(dset, H5T_NATIVE_INT, mspace, fspace, xfer, &i)<0) {
 	    goto error;
 	}
 
 
-#if !defined( __MWERKS__)
+#if !defined( __MWERKS__)			
 
 	/* Determine overhead */
 	if (verbose) {
-	    if (H5Fflush(file, H5F_SCOPE_LOCAL) < 0) goto error;
-	    if (HDfstat(fd, &sb) < 0) goto error;
+	    if (H5Fflush(file, H5F_SCOPE_LOCAL)<0) goto error;
+	    if (HDfstat(fd, &sb)<0) goto error;
 	    /*
 	     * The extra cast in the following statement is a bug workaround
 	     * for the Win32 version 5.0 compiler.
@@ -279,9 +281,9 @@ test(fill_t fill_style, const double splits[],
 		   (unsigned long)i,
 		   (double)(hssize_t)(sb.st_size-i*sizeof(int))/(hssize_t)i);
 	}
-#endif
-
-
+#endif    
+	
+	
     }
 
     H5Dclose(dset);
@@ -311,20 +313,20 @@ test(fill_t fill_style, const double splits[],
 	case FILL_ALL:
 	    abort();
 	}
-
+	
 #if !defined( __MWERKS__)
-
-	if (HDfstat(fd, &sb) < 0) goto error;
+	
+	if (HDfstat(fd, &sb)<0) goto error;
 		printf("%-7s %8.3f\n", sname,
 	       (double)(hssize_t)(sb.st_size-cur_size[0]*sizeof(int))/
 	           (hssize_t)cur_size[0]);
 #endif
-
+	          
     }
 
 
 #if !defined( __MWERKS__)
-    HDclose(fd);
+    close(fd);
 #endif
 
     return 0;
@@ -337,7 +339,7 @@ test(fill_t fill_style, const double splits[],
     H5Pclose(xfer);
     H5Fclose(file);
     free(had);
-    HDclose(fd);
+    close(fd);
     return 1;
 }
 
@@ -345,7 +347,7 @@ test(fill_t fill_style, const double splits[],
 /*-------------------------------------------------------------------------
  * Function:	main
  *
- * Purpose:
+ * Purpose:	
  *
  * Return:	Success:        zero
  *
@@ -368,14 +370,15 @@ main(int argc, char *argv[])
     int		i, j, nerrors=0;
 
     /* Default split ratios */
-    H5Eset_auto2(H5E_DEFAULT, display_error_cb, NULL);
-
-    if((xfer = H5Pcreate(H5P_DATASET_XFER)) < 0) goto error;
-    if(H5Pget_btree_ratios(xfer, splits+0, splits+1, splits+2) < 0) goto error;
-    if(H5Pclose(xfer) < 0) goto error;
-
+    H5Eset_auto(display_error_cb, NULL);
+    if ((xfer=H5Pcreate(H5P_DATASET_XFER))<0) goto error;
+    if (H5Pget_btree_ratios(xfer, splits+0, splits+1, splits+2)<0) {
+	goto error;
+    }
+    if (H5Pclose(xfer)<0) goto error;
+    
     /* Parse command-line options */
-    for(i = 1, j = 0; i < argc; i++) {
+    for (i=1, j=0; i<argc; i++) {
 	if (!strcmp(argv[i], "forward")) {
 	    fill_style = FILL_FORWARD;
 	} else if (!strcmp(argv[i], "reverse")) {

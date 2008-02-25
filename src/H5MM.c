@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*-------------------------------------------------------------------------
@@ -21,82 +20,18 @@
  *
  * Purpose:		Memory management functions.
  *
- * Modifications:
+ * Modifications:	
  *
  *-------------------------------------------------------------------------
  */
-
-
 #include "H5private.h"
 #include "H5Eprivate.h"
 #include "H5MMprivate.h"
 
-#ifndef NDEBUG
-
-/*-------------------------------------------------------------------------
- * Function:	H5MM_malloc
- *
- * Purpose:	Just like the POSIX version of malloc(3). This routine
- *		specifically checks for allocations of 0 bytes and fails
- *              in that case.  This routine is not called when NDEBUG is
- *		defined.
- *
- * Return:	Success:	Ptr to new memory
- *
- *		Failure:	NULL
- *
- * Programmer:	Quincey Koziol
- *		koziol@ncsa.uiuc.edu
- *		Nov  8 2003
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-void *
-H5MM_malloc(size_t size)
-{
-    /* Use FUNC_ENTER_NOAPI_NOINIT_NOFUNC here to avoid performance issues */
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5MM_malloc);
-
-    assert(size);
-
-    FUNC_LEAVE_NOAPI(HDmalloc(size));
-} /* end H5MM_malloc() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5MM_calloc
- *
- * Purpose:	Similar to the POSIX version of calloc(3), except this routine
- *              just takes a 'size' parameter. This routine
- *		specifically checks for allocations of 0 bytes and fails
- *              in that case.  This routine is not called when NDEBUG is
- *		defined.
- *
- * Return:	Success:	Ptr to new memory
- *
- *		Failure:	NULL
- *
- * Programmer:	Quincey Koziol
- *		koziol@ncsa.uiuc.edu
- *		Nov  8 2003
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-void *
-H5MM_calloc(size_t size)
-{
-    /* Use FUNC_ENTER_NOAPI_NOINIT_NOFUNC here to avoid performance issues */
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5MM_calloc);
-
-    assert(size);
-
-    FUNC_LEAVE_NOAPI(HDcalloc(1,size));
-} /* end H5MM_calloc() */
-#endif /* NDEBUG */
+/* Interface initialization? */
+#define PABLO_MASK H5MM_mask
+static int interface_initialize_g = 0;
+#define INTERFACE_INIT NULL
 
 
 /*-------------------------------------------------------------------------
@@ -125,14 +60,8 @@ H5MM_calloc(size_t size)
 void *
 H5MM_realloc(void *mem, size_t size)
 {
-    void *ret_value;
-
-    /* Use FUNC_ENTER_NOAPI_NOINIT_NOFUNC here to avoid performance issues */
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5MM_realloc);
-
     if (!mem) {
-	if (0 == size)
-            HGOTO_DONE(NULL);
+	if (0 == size) return NULL;
 	mem = H5MM_malloc(size);
 
     } else if (0 == size) {
@@ -143,11 +72,7 @@ H5MM_realloc(void *mem, size_t size)
 	assert(mem);
     }
 
-    /* Set return value */
-    ret_value=mem;
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
+    return mem;
 }
 
 
@@ -166,24 +91,21 @@ done:
  *		matzke@llnl.gov
  *		Jul 10 1997
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 char *
 H5MM_xstrdup(const char *s)
 {
-    char	*ret_value = NULL;
+    char	*mem;
 
-    /* Use FUNC_ENTER_NOAPI_NOINIT_NOFUNC here to avoid performance issues */
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5MM_xstrdup)
-
-    if(s) {
-        ret_value = H5MM_malloc(HDstrlen(s) + 1);
-        HDassert(ret_value);
-        HDstrcpy(ret_value, s);
-    } /* end if */
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5MM_xstrdup() */
+    if (!s) return NULL;
+    mem = H5MM_malloc(HDstrlen(s) + 1);
+    assert (mem);
+    HDstrcpy(mem, s);
+    return mem;
+}
 
 
 /*-------------------------------------------------------------------------
@@ -208,18 +130,21 @@ H5MM_xstrdup(const char *s)
 char *
 H5MM_strdup(const char *s)
 {
-    char	*ret_value;
+    char	*mem;
 
-    FUNC_ENTER_NOAPI(H5MM_strdup, NULL);
+    FUNC_ENTER (H5MM_strdup, NULL);
 
-    if (!s)
-	HGOTO_ERROR (H5E_ARGS, H5E_BADVALUE, NULL, "null string");
-    if (NULL==(ret_value = H5MM_malloc(HDstrlen(s) + 1)))
-	HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
-    HDstrcpy(ret_value, s);
+    if (!s) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, NULL,
+		       "null string");
+    }
+    if (NULL==(mem = H5MM_malloc(HDstrlen(s) + 1))) {
+	HRETURN_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL,
+		       "memory allocation failed");
+    }
+    HDstrcpy(mem, s);
 
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
+    FUNC_LEAVE (mem);
 }
 
 
@@ -240,16 +165,13 @@ done:
  *		matzke@llnl.gov
  *		Jul 10 1997
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 void *
 H5MM_xfree(void *mem)
 {
-    /* Use FUNC_ENTER_NOAPI_NOINIT_NOFUNC here to avoid performance issues */
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5MM_xfree);
-
-    if(mem)
-        HDfree(mem);
-
-    FUNC_LEAVE_NOAPI(NULL);
-} /* end H5MM_xfree() */
+    if (mem) HDfree(mem);
+    return NULL;
+}

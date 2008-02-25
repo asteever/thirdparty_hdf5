@@ -1,6 +1,5 @@
 #! /bin/sh
 #
-# Copyright by The HDF Group.
 # Copyright by the Board of Trustees of the University of Illinois.
 # All rights reserved.
 #
@@ -10,8 +9,8 @@
 # of the source code distribution tree; Copyright.html can be found at the
 # root level of an installed copy of the electronic HDF5 document set and
 # is linked from the top-level documents page.  It can also be found at
-# http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-# access to either file, you may request a copy from help@hdfgroup.org.
+# http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
+# access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 #
 
 # run the hdf5/bin/snapshot
@@ -34,21 +33,16 @@
 DEBUGMODE=""
 test -n "$DEBUGMODE" && echo "******** DEBUGMODE is $DEBUGMODE ************"
 WHEREAMI='pwd'
-CMD=
 
 # the name of this program
 PROGNAME="bin/runtest $DEBUGMODE"
 
 # Setup
 HOSTNAME=`hostname | cut -f1 -d.`	# no domain part
-TODAY=`date +%m%d%a`
+TODAY=`date +%y%m%d`
 WEEKDAY=`date +%a`
 H5VER=			# default to current CVS version
 H5VERSION=		# default to current CVS version
-n_test=0		# Number of tests ran
-n_pass=0		# Number of tests passed
-n_fail=0		# Number of tests failed
-n_skip=0		# Number of tests skipped
 
 # Default to do checkout (only once) and test, no release.
 # Will run test only if there is significant differences from previous version.
@@ -60,7 +54,6 @@ SNAPCMD="$SRCDIR test clean"
 # Default Standard snaptest command options
 STANDARD_OPT=""
 ENABLE_PARALLEL="--enable-parallel"
-CONFIGNAME=$HOSTNAME	# Name used in the SNAPTESTCFG file
 
 # test host default as local host.
 TESTHOST=""
@@ -117,16 +110,9 @@ REPORT_ERR()
 REPORT_RESULT()
 {
     if [ $retcode -eq 0 ]; then
-	if [ $skiptest = yes ]; then
-	    n_skip=`expr $n_skip + 1`
-	    PRINT "SKIPPED ${HOSTNAME}: $TEST_TYPE" | tee -a $SKIPPEDLOG
-	else
-	    n_pass=`expr $n_pass + 1`
-	    PRINT "PASSED ${HOSTNAME}: $TEST_TYPE" | tee -a $PASSEDLOG
-	fi
+	PRINT "PASSED ${HOSTNAME}: $TEST_TYPE" | tee -a $PASSEDLOG
     else
 	# test failed.
-	n_fail=`expr $n_fail + 1`
 	REPORT_ERR "****FAILED ${HOSTNAME}: $TEST_TYPE****"
     fi
 }
@@ -151,26 +137,21 @@ PRINT_TRAILER()
 {
     PRINT "*** finished tests in $HOSTNAME ***"
     date; TotalEndTime=`SecOfDay`
-    PRINT "${HOSTNAME}: Ran $n_test($n_pass/$n_fail/$n_skip) $runtest_type, Grand total test time = " \
-          "`ElapsedTime $TotalStartTime $TotalEndTime`" | tee -a $TIMELOG
+    PRINT Grand total tests time = `ElapsedTime $TotalStartTime $TotalEndTime`
     PRINT_BLANK
 }
 
 # Figure out which remote command to use to reach a host.
-# Try ssh first, then rsh since fewer machines support rsh exec.
+# Try rsh first, then ssh.
 # $1--hostname to reach.
 CHECK_RSH()
 {
     # Figure out how to use ping command in this host.
-    # Some hosts use "ping host count", some use "ping -c count host".
-    # Test "ping -c 3 -w 5" since it has timeout feature.
-    # Test "ping -c ..." style before "ping host 3" because some machines
-    # that recognize -c treat 'ping localhost 3' as to ping host '3'.
+    # Some hosts use "ping host count", some use "ping -c count host"
+    # Test "ping -c ..." style first because some '-c' machines treat
+    # the command 'ping localhost 3' means to ping host '3'.
     if [ -z "$PING" ]; then
-	if ping -c 3 -w 5 localhost >/dev/null 2>&1; then
-	    PING='ping -c 3 -w 5'
-	    PINGCOUNT=
-	elif ping -c 3 localhost >/dev/null 2>&1; then
+	if ping -c 3 localhost >/dev/null 2>&1; then
 	    PING='ping -c 3'
 	    PINGCOUNT=
 	elif ping localhost 3 >/dev/null 2>&1; then
@@ -186,10 +167,10 @@ CHECK_RSH()
     # Try remote command with host if it responds to ping.
     # Still try it if we don't know how to do ping.
     if [ no_ping = "$PING" ] || $PING $host $PINGCOUNT >/dev/null 2>&1; then
-	if ssh $host -n hostname >/dev/null 2>&1; then
-	    RSH=ssh
-	elif rsh $host -n hostname >/dev/null 2>&1; then
+	if rsh $host -n hostname >/dev/null 2>&1; then
 	    RSH=rsh
+	elif ssh $host -n hostname >/dev/null 2>&1; then
+	    RSH=ssh
 	else
 	    PRINT cannot remote command with $host
 	    RSH="NoRemoteCommand"
@@ -270,14 +251,12 @@ WAITTILL()
 RUNSNAPTEST()
 {
     SNAPCMD_OPT="$STANDARD_OPT"		# snapshot test option
-    SRCDIRNAME=${HOSTNAME}
-    # restore CC, PATH in case they were changed in the last test.
-    CC="$CC_SAVED"
-    PATH=$PATH_SAVED
+    SRCDIRNAME=""
+    CC_SAVED="$CC"
+    PATH_SAVED=$PATH
     export PATH			# DEC OSF1 needs to export PATH explicitly
     TEST_TYPE=$*
     retcode=0
-    skiptest=no
     date
     PRINT "*** starting $TEST_TYPE tests in $HOSTNAME ***"
     PRINT "Uname -a: `uname -a`"
@@ -289,11 +268,6 @@ RUNSNAPTEST()
 	    -n32) # want -n32 option
 		SRCDIRNAME=${SRCDIRNAME}-n32
 		CC="cc -n32"
-		export CC
-		;;
-	    -64) # want -64 option
-		SRCDIRNAME=${SRCDIRNAME}-64
-		CC="cc -64"
 		export CC
 		;;
 	    parallel) # want parallel test
@@ -311,53 +285,21 @@ RUNSNAPTEST()
 		SNAPCMD_OPT="$SNAPCMD_OPT $1 $2"
 		shift
 		;;
-	    op-snapshot)
-		# option for snapshot
-		shift
-		SNAPCMD_OPT="$SNAPCMD_OPT $1"
-		;;
 	    setenv)
-		# pass them along to snapshot set environment variable
+		# set environment variable
 		shift
-		SNAPCMD_OPT="$SNAPCMD_OPT setenv $1 $2"
+		eval $1="$2"
+		export $1
 		shift
 		;;
-	    setenvN)
-		# set environment variable with $1 values
-		# e.g., setenvN 3 x a b c is same as setenv x="a b c".
-		# pass them along to snapshot set environment variable
+	    setenv2)
+		# set environment variable with 2 values
+		# a kludge now--the extra single quotes are needed
+		# else eval complains.
 		shift
-		envN=$1
-		shift
-		envname=$1
-		SNAPCMD_OPT="$SNAPCMD_OPT setenvN $envN $envname"
-		envalue=
-		while test $envN -gt 0; do
-		    shift
-		    envalue="$envalue $1"
-		    envN=`expr $envN - 1`
-		done
-		SNAPCMD_OPT="$SNAPCMD_OPT $envalue"
-		;;
-	    skip)
-		# skip this test
-		skiptest=yes
-		;;
-	    srcdirname)
-		# Use this before using parallel and -n32 since this overrides
-		# the others.
-		shift
-		SRCDIRNAME=$1
-		;;
-	    deploy)
-		# deploy the built binary.
-		shift
-		SNAPCMD_OPT="$SNAPCMD_OPT deploy $1"
-		;;
-	    deploydir)
-		# default directory for deployment.
-		shift
-		SNAPCMD_OPT="$SNAPCMD_OPT deploydir $1"
+		eval $1="'$2 $3'"
+		export $1
+		shift; shift
 		;;
 	    *) # unknown test
 		PRINT "$0: unknown type of test ($1)"
@@ -366,11 +308,7 @@ RUNSNAPTEST()
 	esac
 	shift
     done
-
-    if [ $retcode -ne 0 -o $skiptest = yes ]; then
-	errcode=$retcode 
-	return $retcode
-    fi
+    [ $retcode -ne 0 ] && errcode=$retcode && return $retcode
 
     # Track down the zlib software
     ans=`$SNAPYARD/current/bin/locate_sw zlib`
@@ -390,7 +328,7 @@ RUNSNAPTEST()
 
     # Setup log file name to save test output
     THIS_MINUTE=`date +%H%M`
-    LOGFILE=${LOGBASENAME}/${SRCDIRNAME}_${TODAY}_${THIS_MINUTE}
+    LOGFILE=${LOGBASENAME}${SRCDIRNAME}_${TODAY}_${THIS_MINUTE}
     PRINT "Running snapshot with output saved in"
     PRINT "   $LOGFILE"
     (date; PRINT Hostname=$HOSTNAME) >> $LOGFILE
@@ -403,20 +341,10 @@ RUNSNAPTEST()
     [ $retcode -ne 0 ] && errcode=$retcode
 
     date >> $LOGFILE
-    if [ $retcode -ne 0 ]; then
-        # Dump the first 10 lines and the last 30 lines of the LOGFILE.
-        ( ntail=30
-	    echo =========================
-	    echo "Dumping logfile of ${HOSTNAME}: $TEST_TYPE"
-	    echo "Last $ntail lines of $LOGFILE"
-	    echo =========================
-	    tail -$ntail $LOGFILE
-            echo =========================
-            echo Dumping done
-            echo =========================
-	    echo ""
-	) >> $FAILEDDETAIL
-    fi
+
+    # restore CC, PATH
+    CC="$CC_SAVED"
+    PATH=$PATH_SAVED
 }
 
 
@@ -441,18 +369,8 @@ RUNSNAPTEST()
 #    -n32		-n32 mode.  Apply to 64/32 bit OS such as IRIX64.
 #    parallel		parallel mode.
 #    op-configure <option>	configure option
-#    op-snapshot <option>	snapshot option
 #    --*		configure option
 #    setenv <name> <value>	set environment variable <name> to <value>
-#                       Pass along to snapshot
-#    setenvN <N> <name> <value> ...
-#		        set environment variable with <N> values
-#		        e.g., setenvN 3 x a b c is same as setenv x="a b c".
-#                       Pass along to snapshot.
-#    skip		skip this test
-#    srcdirname <name>	use <name> as the build-directory.
-#    deploy <name>	deploy the built binary at directory <name>.
-#    deploydir <name>   use <name> as the default directory for deployment.
 SNAPTEST_CONFIG_PARSE()
 {
     while read x y ; do
@@ -473,7 +391,7 @@ SNAPTEST_CONFIG_PARSE()
 		#standard configuration
 		STANDARD_OPT="$y"
 		;;
-	    all: | ${CONFIGNAME}:)
+	    all: | ${HOSTNAME}:)
 		# types of test for all hosts or this host
 		if [ -n "$TEST_TYPES" ]; then
 		    TEST_TYPES="$TEST_TYPES ; $y"
@@ -504,6 +422,17 @@ SNAPTEST_CONFIG()
 }
 
 
+# Flush the AFS files if applicable.
+# Hopefully the flushing is done when the tests of this
+# host are done rather than when the launching site try
+# to pull them in at the same time.  This way, the afs
+# server updates are spread out.
+FLUSH_FILES()
+{
+    /usr/afsws/bin/fs flush $SNAPYARD
+}
+
+
 # Show usage page
 USAGE()
 {
@@ -521,10 +450,6 @@ Usage: runtest [-h] [-debug] [-r<version>] [-all] [-nocvs] [-nodiff] [<host> ...
 	do not do cvs commands
     -nodiff
 	do not do diff commands
-    -setup
-        setup the directory structure for snapshot test
-    -configname <name>
-	use <name> as hostname in the parsing of the snaptest configure file
     <host>
 	launch tests for <host>
     
@@ -532,21 +457,6 @@ Usage: runtest [-h] [-debug] [-r<version>] [-all] [-nocvs] [-nodiff] [<host> ...
 the one to take effect.  If neither are given, do the test for the
 local host.
 EOF
-}
-
-
-# Verify if directory ($1) exists.  If not, create it.
-CHECK_DIR()
-{
-   dir=$1
-   if test ! -e $1; then
-      echo mkdir $1
-      mkdir $1
-      errcode=$?
-   elif test ! -d $1; then
-      echo $1 is not a directory
-      errcode=1
-   fi
 }
 
 
@@ -558,10 +468,7 @@ CHECK_DIR()
 #################################
 retcode=0			# error code of individula task
 errcode=0			# error code of the whole test
-skiptest=no			# if test is skipped
-CC_SAVED="$CC"			# CC & PATH maybe changed within a test.
-PATH_SAVED=$PATH		# These save the original values.
-timelimit=300			# time limit (minutes) for the timekeeper
+
 
 #################################
 # Parse options
@@ -588,21 +495,12 @@ while [ $# -gt 0 ]; do
 	    TESTHOST=-all
 	    ;;
 	-nocvs)
-	    # do not do cvs commands.
+	    # do not do cvs commands
 	    NOCVS=nocvs
 	    ;;
 	-nodiff)
-	    # do not do diff commands.
+	    # do not do diff commands
 	    NODIFF=nodiff
-	    ;;
-	-configname)
-	    # use <name> as hostname in the parsing of the snaptest configure file.
-	    shift
-	    CONFIGNAME=$1
-	    ;;
-	-setup)
-	    # setup the directory structure for snapshot test.
-	    CMD=setup
 	    ;;
 	-*) # Unknow option
 	    PRINT "Unknown option ($1)"
@@ -634,73 +532,26 @@ fi
 #################################
 # Setup snapshot test directories
 #################################
-BASEDIR=${HOME}/snapshots-${H5VERSION}
-# initial processing of setup option if requested
-if test x-$CMD = x-setup; then
-    CHECK_DIR $BASEDIR
-    test $errcode -ne 0 && exit 1
-elif [ ! -d ${BASEDIR} ]; then
-    echo "BASEDIR ($BASEDIR) does not exist"
-    exit 1
-fi
 # Show the real physical path rather than the symbolic path
-SNAPYARD=`cd $BASEDIR && /bin/pwd`
+SNAPYARD=`cd $HOME/snapshots-${H5VERSION} && /bin/pwd`
 # Log file basename
-LOGDIR=${SNAPYARD}/log
-LOGBASENAME=${LOGDIR}
-PASSEDLOG=${LOGDIR}/PASSED_LOG_${TODAY}
-FAILEDLOG=${LOGDIR}/FAILED_LOG_${TODAY}
-FAILEDDETAIL=${LOGDIR}/FAILED_DETAIL_${TODAY}
-SKIPPEDLOG=${LOGDIR}/SKIPPED_LOG_${TODAY}
-TIMELOG=${LOGDIR}/TIME_LOG_${TODAY}
-TIMEKEEPERLOG=${LOGDIR}/TIMEKEEPER_LOG_${TODAY}
-CVSLOG=${LOGDIR}/CVS_LOG_${TODAY}
-CVSLOG_LOCK=${LOGDIR}/CVS_LOG_LOCK_${TODAY}
-DIFFLOG=${LOGDIR}/DIFF_LOG_${TODAY}
-COPYRIGHT_ERR=${LOGDIR}/COPYRIGHT_ERR_${TODAY}
-# Snap Test hosts and Configuration files
-ALLHOSTSFILE=${SNAPYARD}/allhostfile
+LOGBASENAME=${SNAPYARD}/log/${HOSTNAME}
+PASSEDLOG=${SNAPYARD}/log/PASSED_LOG_${TODAY}
+FAILEDLOG=${SNAPYARD}/log/FAILED_LOG_${TODAY}
+CVSLOG=${SNAPYARD}/log/CVS_LOG_${TODAY}
+CVSLOG_LOCK=${SNAPYARD}/log/CVS_LOG_LOCK_${TODAY}
+DIFFLOG=${SNAPYARD}/log/DIFF_LOG_${TODAY}
+# Snap Test Configuration file
 SNAPTESTCFG=${SNAPYARD}/snaptest.cfg
-TIMELIMIT=${SNAPYARD}/timelimit
-TMPFILE="${LOGDIR}/#runtest.${TODAY}.$$"
 
-# more processing of setup option if requested
-if test x-$CMD = x-setup; then
-    CHECK_DIR $LOGDIR
-    test $errcode -ne 0 && exit 1
-    CHECK_DIR $LOGDIR/OLD
-    test $errcode -ne 0 && exit 1
-    CHECK_DIR $SNAPYARD/TestDir
-    test $errcode -ne 0 && exit 1
-    # create empty test hosts or configure files if non-existing
-    for f in $ALLHOSTSFILE $SNAPTESTCFG; do
-	if test ! -f $f; then
-	    echo Creating $f
-	    touch $f
-	fi
-    done
-    # create or update the current source.
-    echo update current source
-    $SNAPSHOT checkout 
-    # setup completed.  Exit.
-    exit 0
-fi
-
-#################################
-# Show some host status numbers
-#################################
-# df sometimes hangs due to file system problems.  Invoke it as background
-# process and give it 10 seconds to finish.  If it hangs, just continue.
-uptime
-df &
-sleep 10
 
 #################################
 # Setup test host(s)
 #################################
+ALLHOSTSFILE=${SNAPYARD}/allhostfile
 if [ "$TESTHOST" = -all ]; then
     if [ -f $ALLHOSTSFILE ]; then
-	TESTHOST=`sed -e '/^#/d;/^ *$/d' $ALLHOSTSFILE`
+	TESTHOST=`sed -e s/#.*// $ALLHOSTSFILE`
     else
 	PRINT "could not access the all-hosts-file ($ALLHOSTSFILE)"
 	USAGE
@@ -724,9 +575,9 @@ PRINT STANDARD_OPT=$STANDARD_OPT
 PRINT TEST_TYPES=$TEST_TYPES
 PRINT_BLANK
 
-# Do a checkout if one has not been done today.
-# Then check MANIFEST file and copyrights noitces.
-if [ -z "$NOCVS" ]; then
+# Do a checkout if one has not been done today
+# Also check MANIFEST file
+if [ -z "$NOCVS" -a ! -f $CVSLOG ]; then
     PRINT "Running CVS checkout with output saved in"
     PRINT "   $CVSLOG"
     # Set CVS lock first
@@ -740,67 +591,14 @@ if [ -z "$NOCVS" ]; then
 	REPORT_ERR "****FAILED ${HOSTNAME}: CVS checkout****"
 	exit $errcode
     fi
-    # ===================
-    # Check MANIFEST file
-    # ===================
     PRINT Checking MAINFEST file ...
-    (cd $SNAPYARD/current; bin/chkmanifest) > $TMPFILE 2>&1
+    (cd $SNAPYARD/current; bin/chkmanifest)
     errcode=$?
-    if [ $errcode -eq 0 ]; then
-	# test passed.
-	cat $TMPFILE
-    else
+    if [ $errcode -ne 0 ]; then
 	# test failed.
 	REPORT_ERR "****FAILED ${HOSTNAME}: MANIFEST check****"
-        (   echo =========================
-	    echo "MANIFEST checking failed output"
-	    echo =========================
-	    cat $TMPFILE
-            echo =========================
-	    echo "MANIFEST checking failed output done"
-            echo =========================
-	    echo ""
-	) >> $FAILEDDETAIL
     fi
-    rm $TMPFILE
     PRINT_BLANK
-    # No copyright checking until what need copyright is decided. 2006/4/7.
-    if false; then
-    # ======================
-    # Check Copyright notice
-    # ======================
-    PRINT Checking Copyrights notices ...
-    if (cd $SNAPYARD/current; bin/chkcopyright) > $TMPFILE 2>&1 ; then
-	echo Passed.
-    else
-	# Save the output and report some of it.
-	# Do not report it as failed for runtest yet.
-	# Send a separate report mail via hardcoding.
-	# Need fixes/cleanup later.
-	echo "Failed. See detail in another report mail"
-	cp $TMPFILE $COPYRIGHT_ERR
-	nheadlines=300
-	ntaillines=5		# Number of lines in report summary.
-	(
-	    echo =========================
-	    echo "Copyright checking failed. Showing first $nheadlines lines of output."
-	    echo "Complete output is in file $COPYRIGHT_ERR"
-	    echo =========================
-	    nreportlines=`wc -l < $COPYRIGHT_ERR`
-	    if [ $nreportlines -le `expr $nheadlines + $ntaillines` ]; then
-		# Just print the whole file.
-		cat $COPYRIGHT_ERR
-	    else
-		# Show the first $nheadlines plus report summary
-		head -$nheadlines $COPYRIGHT_ERR
-		echo ...
-		tail -$ntaillines $COPYRIGHT_ERR
-	    fi 
-	)  | Mail -s "${H5VERSION} Copyrights check Failed" hdf5lib
-    fi
-    rm $TMPFILE
-    PRINT_BLANK
-    fi
 else
     # make sure the cvs update, if done by another host, has completed.
     # First wait for the presence of $CVSLOG which signals some host
@@ -825,8 +623,7 @@ fi
 if [ -z "$NODIFF" ]; then
     $SNAPSHOT diff >> $DIFFLOG 2>&1
     errcode=$?
-    # check the errcode only if NOT in DEBUG MODE
-    if [ -z "$DEBUGMODE" -a $errcode -eq 0 ]; then
+    if [ $errcode -eq 0 ]; then
 	# no need to run test
 	PRINT "NO TEST: no significant differences between current and previous versions" |
 	    tee -a $PASSEDLOG
@@ -834,9 +631,9 @@ if [ -z "$NODIFF" ]; then
     fi
 fi
 
-# we can use the version of script in SNAPYARD/current now.
-# Don't do the diff or cvs update any more.
-PROGNAME="$SNAPYARD/current/$PROGNAME -nodiff -nocvs"
+# we can use the version of script in SNAPYARD/current now
+# Don't do the diff any more.
+PROGNAME="$SNAPYARD/current/$PROGNAME -nodiff"
 
 # Decide to do test for the local host or for remote hosts
 if [ -n "$TESTHOST" -a $HOSTNAME != "$TESTHOST" ]; then
@@ -845,21 +642,8 @@ if [ -n "$TESTHOST" -a $HOSTNAME != "$TESTHOST" ]; then
     PRINT_BLANK
     TEST_TYPE="launching"
     cd ${SNAPYARD}/log
-    # Fork off timekeeper if concurrent tests will be used.
-    if [ -n "$SRCDIR" ]; then
-	timelimit=`grep -v '^#' $TIMELIMIT`
-	($SNAPYARD/current/bin/timekeeper $timelimit > $TIMEKEEPERLOG 2>&1 &)
-	PRINT "    Fork off timekeeper $timelimit"
-    fi
-    runtest_type="hosts"
     for h in $TESTHOST; do
-	# Must do CONFIGNAME before $h got changed by the second cut.
-	# cut returns the whole string if there is no / in the string
-	# at all.  But that works okay for the CONFIGNAME too.
-	CONFIGNAME=`echo $h | cut -f2 -d/`
-	h=`echo $h | cut -f1 -d/`
-	n_test=`expr $n_test + 1`
-	TMP_OUTPUT="#${h}_${CONFIGNAME}.out"
+	TMP_OUTPUT="#$h.out"
 	(PRINT "=============="
 	 PRINT "Testing $h"
 	 PRINT "==============") > $TMP_OUTPUT
@@ -867,22 +651,23 @@ if [ -n "$TESTHOST" -a $HOSTNAME != "$TESTHOST" ]; then
 	# run the remote shell command with output to $TMP_OUTPUT
 	case "$RSH" in
 	    rsh|ssh)
-		CMD="$RSH $h -n $PROGNAME -configname $CONFIGNAME"
-		PRINT $CMD
+		PRINT $RSH $h -n $PROGNAME
+		# kludge: some how eirene and houdin can not have
+                # rsh connections too close.  wait a few seconds
+		test $h = houdin && echo "wait 10 sec for houdin" && sleep 10
 
 		# launch concurrent tests only if srcdir is used
 		if [ -n "$SRCDIR" ]; then
-		    $CMD &
-		    echo $! > PID.${h}_${CONFIGNAME}
+		    $RSH $h -n $PROGNAME &
 		else
-		    $CMD
+		    $RSH $h -n $PROGNAME
 		fi
 		;;
 	    NoRemoteCommand)
-		PRINT $h does not accept Remote Command "(`date`)"
+		PRINT $h does not accept Remote Command
 		;;
 	    NotReachable)
-		PRINT $h is not reachable  "(`date`)"
+		PRINT $h is not reachable 
 		;;
 	    *)
 		PRINT "CHECK_RSH for $h returned unknow result ($RSH)"
@@ -891,18 +676,14 @@ if [ -n "$TESTHOST" -a $HOSTNAME != "$TESTHOST" ]; then
     done
     # wait for all launched tests to finish, then cat them back out.
     wait
-    # Pause a moment in case the timekeeper is terminating processes.
-    wait 30
     for h in $TESTHOST; do
-	CONFIGNAME=`echo $h | cut -f2 -d/`
-	h=`echo $h | cut -f1 -d/`
-	TMP_OUTPUT="#${h}_${CONFIGNAME}.out"
+	TMP_OUTPUT="#$h.out"
 	cat $TMP_OUTPUT
 	# Verify test script did complete by checking the last lines
-	(tail -2 $TMP_OUTPUT | grep -s 'Grand total' > /dev/null 2>&1) ||
+	(tail -2 $TMP_OUTPUT | grep -s '^Grand total' > /dev/null 2>&1) ||
 	    (REPORT_ERR "****FAILED ${h}: snaptest did not complete****" &&
 		PRINT_BLANK)
-	rm -f $TMP_OUTPUT PID.${h}_${CONFIGNAME}
+	rm $TMP_OUTPUT
     done
     exit 0
 fi
@@ -915,11 +696,9 @@ fi
 # If -s is used with the first field, it will suppress completely
 # a $TYPE_TYPES that has no ';' (only 1 tst ).  That results in no
 # test at all.
-# Note that n_test must start as 1.
 # 
 n_test=1
-runtest_type="tests"
-TEST="`echo $TEST_TYPES | cut -f$n_test -d';'`"
+TEST="`echo $TEST_TYPES | cut -f1 -d';'`"
 while [ -n "$TEST" ]; do
     StartTime=`SecOfDay`
     RUNSNAPTEST $TEST
@@ -929,8 +708,8 @@ while [ -n "$TEST" ]; do
     n_test=`expr $n_test + 1`
     TEST="`echo $TEST_TYPES | cut -f$n_test -s -d';'`"
 done
-# dec n_test to show the actual number of tests ran.
-n_test=`expr $n_test - 1`
+
+FLUSH_FILES
 
 PRINT_TRAILER
 

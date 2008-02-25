@@ -1,6 +1,5 @@
 #!/bin/sh
 #
-# Copyright by The HDF Group.
 # Copyright by the Board of Trustees of the University of Illinois.
 # All rights reserved.
 #
@@ -10,8 +9,8 @@
 # of the source code distribution tree; Copyright.html can be found at the
 # root level of an installed copy of the electronic HDF5 document set and
 # is linked from the top-level documents page.  It can also be found at
-# http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-# access to either file, you may request a copy from help@hdfgroup.org.
+# http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
+# access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 #
 
 # Make a release of hdf5.  The command-line switches are:
@@ -21,35 +20,28 @@
 #
 #  --nocheck	Ignore errors in MANIFEST file.
 #          
-#  --private	Make a private release with today's date in version information.
-#          
 # The other command-line options are the names of the programs to use
 # for compressing the resulting tar archive (if none are given then
-# `tar md5' is assumed):
+# `tar' is assumed):
 #
 #   tar		-- use tar and don't do any compressing.
 #   compress	-- use compress and append `.Z' to the output name.
 #   gzip	-- use gzip with `-9' and append `.gz' to the output name.
 #   bzip2       -- use bzip2 with `-9' and append `.bz2' to the output name.
-#   md5         -- produce a md5 checksum in addition to the archive.
-#   doc         -- produce the latest doc tree in addition to the archive.
 #
 # Examples:
 #
 #   $ release
 #   releases/hdf5-1.0.38.tar
-#   releases/hdf5-1.0.38.tar.md5
 #
 #   $ release gzip
 #   releases/hdf5-1.0.38.tar.gz
 #
-#   $ release -d /tmp tar compress gzip bzip2 md5 doc
+#   $ release -d /tmp tar compress gzip bzip2
 #   /tmp/hdf5-1.0.38.tar
 #   /tmp/hdf5-1.0.38.tar.Z
 #   /tmp/hdf5-1.0.38.tar.gz
 #   /tmp/hdf5-1.0.38.tar.bz2
-#   /tmp/hdf5-1.0.38.tar.md5
-#   /tmp/hdf5-1.0.38_doc.tar
 #
 # Modifications
 #   Robb Matzke, 1999-07-16
@@ -60,83 +52,12 @@
 #   Moved the MANIFEST checking to a separate command file so that
 #   it can be invoked individually.
 
-# Function definitions
-#
-# Print Usage page
-USAGE()
-{
-cat << EOF
-Usage: $0 [--nocheck] [-d <dir>] [-h] <methods> ...
-   -d DIR	The name of the directory where the releas(es) should be
-                placed.  By default, the directory is ./releases
-
-   --nocheck	Ignore errors in MANIFEST file.
-         
-   --private	Make a private release with today's date in version information.
-         
-The other command-line options are the names of the programs to use
-for compressing the resulting tar archive (if none are given then
-"tar md5" is assumed):
-
-    tar		-- use tar and don't do any compressing.
-    compress	-- use compress and append ".Z" to the output name.
-    gzip	-- use gzip with "-9" and append ".gz" to the output name.
-    bzip2       -- use bzip2 with "-9" and append ".bz2" to the output name.
-    md5         -- produce a md5 checksum in addition to the archive.
-    doc         -- produce the latest doc tree in addition to the archive.
-
-Examples:
-
-    $ release
-    releases/hdf5-1.0.38.tar
-    releases/hdf5-1.0.38.tar.md5
-
-    $ release gzip
-    releases/hdf5-1.0.38.tar.gz
-
-    $ release -d /tmp tar compress gzip bzip2 md5
-    /tmp/hdf5-1.0.38.tar
-    /tmp/hdf5-1.0.38.tar.Z
-    /tmp/hdf5-1.0.38.tar.gz
-    /tmp/hdf5-1.0.38.tar.bz2
-    /tmp/hdf5-1.0.38.tar.md5
-
-EOF
-
-}
-
-# This command must be run at the top level of the hdf5 source directory.
-# Verify this requirement.
-if [ ! \( -f configure -a -f bin/release \) ]; then
-    echo "$0 must be run at the top level of the hdf5 source directory"
-    exit 1
-fi
-
 # Defaults
 DEST=releases
 VERS=`perl bin/h5vers`
-VERS_OLD=
 test "$VERS" || exit 1
 verbose=yes
 check=yes
-today=`date +%Y%m%d`
-pmode='no'
-tmpdir="../#release_tmp.$$"	# tmp work directory
-DOC_URL=http://svn.hdfgroup.uiuc.edu/hdf5doc/trunk
-CPPLUS_RM_NAME=cpplus_RM
-
-# Restore previous Version information
-RESTORE_VERSION()
-{
-    if [ X-${VERS_OLD} != X- ]; then
-	echo restoring version information back to $VERS_OLD
-	rm -f config/lt_vers.am
-	cp $tmpdir/lt_vers.am config/lt_vers.am
-	bin/h5vers -s $VERS_OLD
-	VERS_OLD=
-    fi
-}
-
 
 # Command-line arguments
 while [ -n "$1" ]; do
@@ -150,16 +71,8 @@ while [ -n "$1" ]; do
 	--nocheck)
 	    check=no
 	    ;;
-	-h)
-	    USAGE
-	    exit 0
-	    ;;
-	--private)
-	    pmode=yes
-	    ;;
 	-*)
 	    echo "Unknown switch: $arg" 1>&2
-	    USAGE
 	    exit 1
 	    ;;
 	*)
@@ -168,39 +81,13 @@ while [ -n "$1" ]; do
     esac
 done
 
-# Default methods are tar and md5
+# Default method is tar
 if [ "X$methods" = "X" ]; then
-    methods="tar md5"
+    methods=tar
 fi
 
-# Create the temporay work directory.
-if mkdir $tmpdir; then
-    echo "temporary work directory for release.  "\
-         "Can be deleted after release completes." > $tmpdir/README
-else
-    echo "Failed to mkdir tmpdir($tmpdir)"
-    exit 1
-fi
 
-# setup restoration in case of abort.
-trap RESTORE_VERSION 0
-
-if [ X$pmode = Xyes ]; then
-    VERS_OLD=$VERS
-    # Copy old version of config/lt_vers.am, since it's hard to
-    # "undo" changes to it.
-    cp config/lt_vers.am $tmpdir
-    # Set version information to m.n.r-of$today.
-    # (h5vers does not correctly handle just m.n.r-$today.)
-    VERS=`echo $VERS | sed -e s/-.*//`-of$today
-    echo Private release of $VERS
-    bin/h5vers -s $VERS
-fi
-
-# Store hdf5-$VERS ("hdf5-1.7.51", e.g.) to a variable to avoid typos
-HDF5_VERS=hdf5-$VERS
-
-test "$verbose" && echo "Releasing $HDF5_VERS to $DEST" 1>&2
+test "$verbose" && echo "Releasing hdf5-$VERS to $DEST" 1>&2
 if [ ! -d $DEST ]; then
     echo "   Destination directory $DEST does not exist" 1>&2
     exit 1
@@ -217,12 +104,13 @@ if [ "X$fail" = "Xyes" ]; then
 fi
 
 # Create a manifest that contains only files for distribution.
-MANIFEST=$tmpdir/H5_MANIFEST
+MANIFEST=/tmp/H5_MANIFEST.$$
 grep '^\.' MANIFEST | grep -v _DO_NOT_DISTRIBUTE_ >$MANIFEST
 
 # Prepare the source tree for a release.
-ln -s `pwd` $tmpdir/$HDF5_VERS || exit 1
-mv Makefile $tmpdir/Makefile.x 2>/dev/null #might fail
+test -h ../hdf5-$VERS && rm ../hdf5-$VERS
+ln -s `pwd` ../hdf5-$VERS || exit 1
+mv Makefile ../Makefile.x 2>/dev/null #might fail
 cp -p Makefile.dist Makefile
 
 # Update README.txt and release_docs/RELEASE.txt with release information.
@@ -234,11 +122,14 @@ for f in README.txt release_docs/RELEASE.txt; do
     chmod 644 $f
 done
 
+# synchronize the HISTORY.tx and RELEASE.tx files in the doc area
+cp release_docs/HISTORY.txt release_docs/RELEASE.txt doc/html/ADGuide/.
+
 # Create the tar file
 test "$verbose" && echo "   Running tar..." 1>&2
 ( \
-    cd $tmpdir; \
-    tar cf $HDF5_VERS.tar $HDF5_VERS/Makefile \
+    cd ..; \
+    tar cf x.tar hdf5-$VERS/Makefile \
 	`sed 's/^\.\//hdf5-'$VERS'\//' $MANIFEST` || exit 1 \
 )
 
@@ -246,54 +137,25 @@ test "$verbose" && echo "   Running tar..." 1>&2
 for comp in $methods; do
     case $comp in
 	tar)
-	    cp -p $tmpdir/$HDF5_VERS.tar $DEST/$HDF5_VERS.tar
-	    ;;
+	    cp -p ../x.tar $DEST/hdf5-$VERS.tar;;
 	compress)
 	    test "$verbose" && echo "   Running compress..." 1>&2
-	    compress -c <$tmpdir/$HDF5_VERS.tar >$DEST/$HDF5_VERS.tar.Z
-	    ;;
+	    compress -c <../x.tar >$DEST/hdf5-$VERS.tar.Z;;
 	gzip)
 	    test "$verbose" && echo "   Running gzip..." 1>&2
-	    gzip -9 <$tmpdir/$HDF5_VERS.tar >$DEST/$HDF5_VERS.tar.gz
-	    ;;
+	    gzip -9 <../x.tar >$DEST/hdf5-$VERS.tar.gz;;
 	bzip2)
 	    test "$verbose" && echo "   Running bzip2..." 1>&2
-	    bzip2 -9 <$tmpdir/$HDF5_VERS.tar >$DEST/$HDF5_VERS.tar.bz2
-	    ;;
-	md5)
-	    test "$verbose" && echo "   Creating checksum..." 1>&2
-	    (cd $tmpdir; md5sum $HDF5_VERS.tar ) > $DEST/$HDF5_VERS.tar.md5
-	    ;;
-	doc)
-	    test "$verbose" && echo "   Creating docs..." 1>&2
-	    # Check out docs from svn repo
-	    (cd $tmpdir; svn co $DOC_URL > /dev/null) || exit 1
-	    # Create doxygen C++ RM
-	    (cd c++/src && doxygen cpp_doc_config > /dev/null ) || exit 1
-	    # Replace version of C++ RM with just-created version
-	    rm -rf $tmpdir/trunk/html/$CPPLUS_RM_NAME
-	    mv c++/src/$CPPLUS_RM_NAME $tmpdir/trunk/html/$CPPLUS_RM_NAME
-	    # Compress the docs and move them to the release area
-	    mv $tmpdir/trunk $tmpdir/${HDF5_VERS}_docs
-	    (cd $tmpdir && tar cf ${HDF5_VERS}_docs.tar ${HDF5_VERS}_docs)
-	    mv $tmpdir/${HDF5_VERS}_docs.tar $DEST
-	    ;;
+	    bzip2 -9 <../x.tar >$DEST/hdf5-$VERS.tar.bz2;;
     esac
 done
 
 # Copy the RELEASE.txt to the release area.
-cp release_docs/RELEASE.txt $DEST/$HDF5_VERS-RELEASE.txt
-
-# Restore previous Makefile if existed.
-test -f $tmpdir/Makefile.x && mv $tmpdir/Makefile.x Makefile
-
-# Restore OLD version information, then no need for trap.
-if [ X$pmode = Xyes ]; then
-    RESTORE_VERSION
-    trap 0
-fi
+cp release_docs/RELEASE.txt $DEST/hdf5-$VERS-RELEASE.txt
 
 # Remove temporary things
-rm -rf $tmpdir
-
+test -f ../Makefile.x && mv ../Makefile.x Makefile
+rm -f $MANIFEST
+rm -f ../hdf5-$VERS
+rm -f ../x.tar
 exit 0

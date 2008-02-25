@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -32,11 +31,11 @@
 /*-------------------------------------------------------------------------
  * Function:	main
  *
- * Purpose:
+ * Purpose:	
  *
- * Return:	Success:
+ * Return:	Success:	
  *
- *		Failure:
+ *		Failure:	
  *
  * Programmer:	Robb Matzke
  *              Monday, October 26, 1998
@@ -53,15 +52,15 @@ main(void)
     int		i;
 
     file = H5Fcreate("th5s.h5", H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-    if(file < 0)
+    if(file<0)
         printf("file<0!\n");
-    for(i = 0; i < H5S_MAX_RANK; i++)
+    for (i=0; i<H5S_MAX_RANK; i++)
         cur_dim[i] = 1;
     space = H5Screate_simple(H5S_MAX_RANK, cur_dim, NULL);
-    if(space < 0)
+    if(space<0)
         printf("space<0!\n");
-    dset = H5Dcreate2(file, "dset", H5T_NATIVE_UCHAR, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    if(dset < 0)
+    dset = H5Dcreate(file, "dset", H5T_NATIVE_UCHAR, space, H5P_DEFAULT);
+    if(dset<0)
         printf("dset<0!\n");
     H5Sclose(space);
     H5Dclose(dset);

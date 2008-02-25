@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -81,7 +80,7 @@ test_1 (hid_t fapl)
 	puts("    Unable to create file");
 	goto error;
     }
-
+    
     /*
      * Write the objects, monotonically increasing in length.  Since this is
      * a clean file, the addresses allocated for the collections should also
@@ -90,8 +89,8 @@ test_1 (hid_t fapl)
     for (i=0; i<1024; i++) {
 	size = i+1;
 	memset (out, 'A'+i%26, size);
-	H5Eclear2(H5E_DEFAULT);
-	status = H5HG_insert (f, H5P_DATASET_XFER_DEFAULT, size, out, obj+i);
+	H5Eclear ();
+	status = H5HG_insert (f, size, out, obj+i);
 	if (status<0) {
 	    H5_FAILED();
 	    puts("    Unable to insert object into global heap");
@@ -109,8 +108,8 @@ test_1 (hid_t fapl)
     for (i=0; i<1024; i++) {
 	size = i+1;
 	memset (out, 'A'+i%26, size);
-	H5Eclear2(H5E_DEFAULT);
-	if (NULL==H5HG_read (f, H5P_DATASET_XFER_DEFAULT, obj+i, in, NULL)) {
+	H5Eclear ();
+	if (NULL==H5HG_read (f, obj+i, in)) {
 	    H5_FAILED();
 	    puts("    Unable to read object");
 	    nerrors++;
@@ -120,7 +119,7 @@ test_1 (hid_t fapl)
 	    nerrors++;
 	}
     }
-
+    
     if (H5Fclose(file)<0) goto error;
     if (nerrors) goto error;
     PASSED();
@@ -175,15 +174,15 @@ test_2 (hid_t fapl)
 	puts("    Unable to create file");
 	goto error;
     }
-
+    
     /*
      * Write the objects, monotonically decreasing in length.
      */
     for (i=0; i<1024; i++) {
 	size = 1024-i;
 	memset (out, 'A'+i%26, size);
-	H5Eclear2(H5E_DEFAULT);
-	if (H5HG_insert (f, H5P_DATASET_XFER_DEFAULT, size, out, obj+i)<0) {
+	H5Eclear ();
+	if (H5HG_insert (f, size, out, obj+i)<0) {
 	    H5_FAILED();
 	    puts("    Unable to insert object into global heap");
 	    nerrors++;
@@ -196,8 +195,8 @@ test_2 (hid_t fapl)
     for (i=0; i<1024; i++) {
 	size = 1024-i;
 	memset (out, 'A'+i%26, size);
-	H5Eclear2(H5E_DEFAULT);
-	if (NULL==H5HG_read (f, H5P_DATASET_XFER_DEFAULT, obj+i, in, NULL)) {
+	H5Eclear ();
+	if (NULL==H5HG_read (f, obj+i, in)) {
 	    H5_FAILED();
 	    puts("    Unable to read object");
 	    nerrors++;
@@ -207,7 +206,7 @@ test_2 (hid_t fapl)
 	    nerrors++;
 	}
     }
-
+    
     if (H5Fclose(file)<0) goto error;
     if (nerrors) goto error;
     PASSED();
@@ -267,8 +266,8 @@ test_3 (hid_t fapl)
     for (i=0; i<1024; i++) {
 	size = i%30+100;
 	memset (out, 'A'+i%26, size);
-	H5Eclear2(H5E_DEFAULT);
-	status = H5HG_insert (f, H5P_DATASET_XFER_DEFAULT, size, out, obj+i);
+	H5Eclear ();
+	status = H5HG_insert (f, size, out, obj+i);
 	if (status<0) {
 	    H5_FAILED();
 	    puts("    Unable to insert object into global heap");
@@ -278,14 +277,14 @@ test_3 (hid_t fapl)
 
     /* Remove everything */
     for (i=0; i<1024; i++) {
-	status = H5HG_remove (f, H5P_DATASET_XFER_DEFAULT, obj+i);
+	status = H5HG_remove (f, obj+i);
 	if (status<0) {
 	    H5_FAILED();
 	    puts("    Unable to remove object");
 	    nerrors++;
 	}
     }
-
+    
     if (H5Fclose(file)<0) goto error;
     if (nerrors) goto error;
     PASSED();
@@ -346,8 +345,8 @@ test_4 (hid_t fapl)
 	/* Insert */
 	size = i%30+100;
 	memset (out, 'A'+i%26, size);
-	H5Eclear2(H5E_DEFAULT);
-	status = H5HG_insert (f, H5P_DATASET_XFER_DEFAULT, size, out, obj+i);
+	H5Eclear ();
+	status = H5HG_insert (f, size, out, obj+i);
 	if (status<0) {
 	    H5_FAILED();
 	    puts("    Unable to insert object into global heap");
@@ -358,10 +357,10 @@ test_4 (hid_t fapl)
 	 * Remove every third one beginning with the second, but after the
 	 * next one has already been inserted.  That is, insert A, B, C;
 	 * remove B, insert D, E, F; remove E; etc.
-	 */
+	 */ 
 	if (1==i%3) {
-	    H5Eclear2(H5E_DEFAULT);
-	    status = H5HG_remove (f, H5P_DATASET_XFER_DEFAULT, obj+i-1);
+	    H5Eclear ();
+	    status = H5HG_remove (f, obj+i-1);
 	    if (status<0) {
 		H5_FAILED();
 		puts("    Unable to remove object");
@@ -382,7 +381,7 @@ test_4 (hid_t fapl)
     } H5E_END_TRY;
     return MAX(1, nerrors);
 }
-
+    
 
 /*-------------------------------------------------------------------------
  * Function:	main
@@ -408,7 +407,7 @@ main (void)
 
     h5_reset();
     fapl = h5_fileaccess();
-
+    
     nerrors += test_1(fapl);
     nerrors += test_2(fapl);
     nerrors += test_3(fapl);

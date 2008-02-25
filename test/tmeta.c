@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,9 +8,11 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* $Id$ */
 
 /***********************************************************
 *
@@ -22,6 +23,8 @@
 *************************************************************/
 
 #include "testhdf5.h"
+
+#include "H5private.h"
 #include "H5Fprivate.h"
 
 #define TEST_INT16_VALUE    -7641
@@ -48,9 +51,9 @@ uint8_t                   encode_buffer[sizeof(compar_buffer)];
 /****************************************************************
 **
 **  test_metadata(): Main meta-data encode/decode testing routine.
-**
+** 
 ****************************************************************/
-void
+void 
 test_metadata(void)
 {
     int16_t     ei16 = TEST_INT16_VALUE;    /* variables to hold the values to encode */
@@ -64,7 +67,7 @@ test_metadata(void)
     uint8_t	*p;  /* pointer into the buffer being en/de-coded */
 
     /* Output message about test being performed */
-    MESSAGE(5, ("Testing Metadata Encoding/decoding\n"));
+    MESSAGE(5, ("Testing Metadata encode/decode code\n"));
 
     /* Start by encoding the values above */
     p = encode_buffer;
@@ -78,8 +81,10 @@ test_metadata(void)
         unsigned                   u;      /* local counting variable */
 
         for (u = 0; u < sizeof(compar_buffer); u++) {
-            if (compar_buffer[u] != encode_buffer[u])
-                TestErrPrintf("Error encoding meta-data at offset %u, wanted: %u, got: %u\n", (unsigned) u, (unsigned) compar_buffer[u], (unsigned) encode_buffer[u]);
+            if (compar_buffer[u] != encode_buffer[u]) {
+                print_func("Error encoding meta-data at offset %u, wanted: %u, got: %u\n", (unsigned) u, (unsigned) compar_buffer[u], (unsigned) encode_buffer[u]);
+                num_errs++;
+            }                   /* end if */
         }                       /* end for */
     }                           /* end if */
     /* Test decoding macros */
@@ -90,22 +95,30 @@ test_metadata(void)
     UINT32DECODE(p, du32);      /* Decode the uint32 value */
 
     /* Check the values decoded */
-    if (di16 != TEST_INT16_VALUE)
-        TestErrPrintf("Error decoding int16 meta-data wanted: %d, got: %d "
+    if (di16 != TEST_INT16_VALUE) {
+        print_func("Error decoding int16 meta-data wanted: %d, got: %d "
                    "at %s:%d\n", (int) TEST_INT16_VALUE, (int) di16,
                    __FILE__, __LINE__);
-    if (du16 != TEST_UINT16_VALUE)
-        TestErrPrintf("Error decoding uint16 meta-data wanted: %u, got: %u "
+        num_errs++;
+    }                           /* end if */
+    if (du16 != TEST_UINT16_VALUE) {
+        print_func("Error decoding uint16 meta-data wanted: %u, got: %u "
                    "at %s:%d\n", (unsigned) TEST_UINT16_VALUE, (unsigned) du16,
                    __FILE__, __LINE__);
-    if (di32 != TEST_INT32_VALUE)
-        TestErrPrintf("Error decoding int32 meta-data wanted: %ld, got: %ld "
+        num_errs++;
+    }                           /* end if */
+    if (di32 != TEST_INT32_VALUE) {
+        print_func("Error decoding int32 meta-data wanted: %ld, got: %ld "
                    "at %s:%d\n", (long) TEST_INT32_VALUE, (long) di32,
                    __FILE__, __LINE__);
-    if (du32 != TEST_UINT32_VALUE)
-        TestErrPrintf("Error decoding uint32 meta-data wanted: %lu, got: %lu "
+        num_errs++;
+    }                           /* end if */
+    if (du32 != TEST_UINT32_VALUE) {
+        print_func("Error decoding uint32 meta-data wanted: %lu, got: %lu "
                    "at %s:%d\n", (unsigned long) TEST_UINT32_VALUE, (unsigned long) du32,
                    __FILE__, __LINE__);
+        num_errs++;
+    }                           /* end if */
 }                               /* test_metadata() */
 
 

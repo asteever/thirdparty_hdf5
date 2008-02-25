@@ -1,5 +1,4 @@
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!   Copyright by The HDF Group.                                               *
 !   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
@@ -9,36 +8,30 @@
 !   of the source code distribution tree; Copyright.html can be found at the  *
 !   root level of an installed copy of the electronic HDF5 document set and   *
 !   is linked from the top-level documents page.  It can also be found at     *
-!   http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
-!   access to either file, you may request a copy from help@hdfgroup.org.     *
+!   http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+!   access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!
 !
 ! 
 !    Testing Dataset Interface functionality.
 !
 !
-!    The following subroutine tests the following functionalities:
-!    h5dcreate_f, h5dopen_f, h5dclose_f, h5dget_space_f, h5dget_type_f,
-!    h5dread_f, and h5dwrite_f
+!The following subroutine tests the following functionalities:
+!h5dcreate_f, h5dopen_f, h5dclose_f, h5dget_space_f, h5dget_type_f,
+!h5dread_f, and h5dwrite_f
 !
-        SUBROUTINE datasettest(cleanup, total_error)
+        SUBROUTINE datasettest(total_error)
         USE HDF5 ! This module contains all necessary modules 
 
           IMPLICIT NONE
-          LOGICAL, INTENT(IN) :: cleanup
           INTEGER, INTENT(OUT) :: total_error 
 
-          CHARACTER(LEN=5), PARAMETER :: filename = "dsetf" ! File name
-          CHARACTER(LEN=80) :: fix_filename 
+          CHARACTER(LEN=8), PARAMETER :: filename = "dsetf.h5" ! File name
           CHARACTER(LEN=4), PARAMETER :: dsetname = "dset"     ! Dataset name
-          CHARACTER(LEN=9), PARAMETER :: null_dsetname = "null_dset"     ! Dataset name
 
           INTEGER(HID_T) :: file_id       ! File identifier 
           INTEGER(HID_T) :: dset_id       ! Dataset identifier 
-          INTEGER(HID_T) :: null_dset     ! Null dataset identifier 
           INTEGER(HID_T) :: dspace_id     ! Dataspace identifier
-          INTEGER(HID_T) :: null_dspace   ! Null dataspace identifier
           INTEGER(HID_T) :: dtype_id      ! Datatype identifier
 
 
@@ -49,9 +42,8 @@
           INTEGER     ::   error ! Error flag
 
           INTEGER     :: i, j    !general purpose integers
-          INTEGER(HSIZE_T), DIMENSION(2) :: data_dims
-          INTEGER(HSIZE_T), DIMENSION(1) :: null_data_dim
-          INTEGER     ::   null_dset_data = 1              ! null data
+          INTEGER(HSIZE_T), DIMENSION(7) :: data_dims_b
+          INTEGER, DIMENSION(7) :: data_dims
 
           !
           ! Initialize the dset_data array.
@@ -62,16 +54,16 @@
              end do
           end do
 
+          !
+          ! Initialize FORTRAN predefined datatypes.
+          !
+!          CALL h5init_types_f(error)
+!              CALL check("h5init_types_f", error, total_error)
 
           !
           ! Create a new file using default properties.
           ! 
-          CALL h5_fixname_f(filename, fix_filename, H5P_DEFAULT_F, error)
-          if (error .ne. 0) then
-              write(*,*) "Cannot modify filename"
-              stop
-          endif
-          CALL h5fcreate_f(fix_filename, H5F_ACC_TRUNC_F, file_id, error)
+          CALL h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error)
               CALL check("h5fcreate_f", error, total_error)
 
 
@@ -79,11 +71,6 @@
           ! Create the dataspace.
           !
           CALL h5screate_simple_f(rank, dims, dspace_id, error)
-              CALL check("h5screate_simple_f", error, total_error)
-          ! 
-          ! Create null dataspace.
-          !
-          CALL h5screate_f(H5S_NULL_F, null_dspace, error)
               CALL check("h5screate_simple_f", error, total_error)
 
 
@@ -93,25 +80,13 @@
           CALL h5dcreate_f(file_id, dsetname, H5T_NATIVE_INTEGER, dspace_id, &
                            dset_id, error)
               CALL check("h5dcreate_f", error, total_error)
-          !
-          ! Create the null dataset. 
-          !
-          CALL h5dcreate_f(file_id, null_dsetname, H5T_NATIVE_INTEGER, null_dspace, &
-                           null_dset, error)
-              CALL check("h5dcreate_f", error, total_error)
 
           !
           ! Write the dataset.
           !
-          data_dims(1) = 4
-          data_dims(2) = 6 
-          CALL h5dwrite_f(dset_id, H5T_NATIVE_INTEGER, dset_data, data_dims, error)
-              CALL check("h5dwrite_f", error, total_error)
-          !
-          ! Write null dataset.  Nothing can be written.
-          !    
-          null_data_dim(1) = 1 
-          CALL h5dwrite_f(null_dset, H5T_NATIVE_INTEGER, null_dset_data, null_data_dim, error)
+          data_dims_b(1) = 4
+          data_dims_b(2) = 6 
+          CALL h5dwrite_f(dset_id, H5T_NATIVE_INTEGER, dset_data, data_dims_b, error)
               CALL check("h5dwrite_f", error, total_error)
 
 
@@ -120,15 +95,11 @@
           ! 
           CALL h5dclose_f(dset_id, error)
               CALL check("h5dclose_f", error, total_error)
-          CALL h5dclose_f(null_dset, error)
-              CALL check("h5dclose_f", error, total_error)
 
           !
           ! Terminate access to the data space.
           !
           CALL h5sclose_f(dspace_id, error)
-              CALL check("h5sclose_f", error, total_error)
-          CALL h5sclose_f(null_dspace, error)
               CALL check("h5sclose_f", error, total_error)
 
           ! 
@@ -140,15 +111,13 @@
           !
           ! Open the existing file.
           !
-          CALL h5fopen_f (fix_filename, H5F_ACC_RDWR_F, file_id, error)
+          CALL h5fopen_f (filename, H5F_ACC_RDWR_F, file_id, error)
               CALL check("h5fopen_f", error, total_error)
 
           !
           ! Open the existing dataset. 
           !
           CALL h5dopen_f(file_id, dsetname, dset_id, error)
-              CALL check("h5dopen_f", error, total_error)
-          CALL h5dopen_f(file_id, null_dsetname, null_dset, error)
               CALL check("h5dopen_f", error, total_error)
 
           !
@@ -168,11 +137,6 @@
           !
           CALL h5dread_f(dset_id, H5T_NATIVE_INTEGER, data_out, data_dims, error)
               CALL check("h5dread_f", error, total_error)
-          !
-          ! Read the null dataset.  Nothing should be read.
-          !
-          CALL h5dread_f(null_dset, H5T_NATIVE_INTEGER, null_dset_data, null_data_dim, error)
-              CALL check("h5dread_f", error, total_error)
 
           !
           !Compare the data.
@@ -186,19 +150,10 @@
               end do    
           end do
 
-          !
-          ! Check if no change to null_dset_data
-          !
-          IF (null_dset_data .NE. 1) THEN 
-              write(*, *) "null dataset test error occured"
-          END IF
-
           !   
           ! End access to the dataset and release resources used by it.
           ! 
           CALL h5dclose_f(dset_id, error)
-              CALL check("h5dclose_f", error, total_error)
-          CALL h5dclose_f(null_dset, error)
               CALL check("h5dclose_f", error, total_error)
 
           !
@@ -217,9 +172,13 @@
           !
           CALL h5fclose_f(file_id, error)
               CALL check("h5fclose_f", error, total_error)
-          if(cleanup) CALL h5_cleanup_f(filename, H5P_DEFAULT_F, error)
-              CALL check("h5_cleanup_f", error, total_error)
      
+         !
+         !Close FORTRAN predifined datatypes
+         !
+!         CALL h5close_types_f(error)
+!              CALL check("h5close_types_f",error,total_error)
+
           RETURN
         END SUBROUTINE datasettest
 
@@ -227,18 +186,16 @@
 !the following subroutine tests h5dextend_f functionality
 !
 
-        SUBROUTINE extenddsettest(cleanup, total_error)
+        SUBROUTINE extenddsettest(total_error)
         USE HDF5 ! This module contains all necessary modules 
 
           IMPLICIT NONE
-          LOGICAL, INTENT(IN)  :: cleanup
           INTEGER, INTENT(OUT) :: total_error 
 
           !
           !the dataset is stored in file "extf.h5"
           !
-          CHARACTER(LEN=4), PARAMETER :: filename = "extf"
-          CHARACTER(LEN=80) :: fix_filename
+          CHARACTER(LEN=7), PARAMETER :: filename = "extf.h5"
 
           !
           !dataset name is "ExtendibleArray"
@@ -296,7 +253,7 @@
           !  
           INTEGER(HSIZE_T), DIMENSION(2) :: dimsr, maxdimsr
           INTEGER :: rankr
-          INTEGER(HSIZE_T), DIMENSION(2) :: data_dims
+          INTEGER, DIMENSION(7) :: data_dims
 
           !
           !data initialization 
@@ -316,12 +273,7 @@
           !
           !Create a new file using default properties.
           ! 
-          CALL h5_fixname_f(filename, fix_filename, H5P_DEFAULT_F, error)
-          if (error .ne. 0) then
-              write(*,*) "Cannot modify filename"
-              stop
-          endif
-          CALL h5fcreate_f(fix_filename, H5F_ACC_TRUNC_F, file_id, error)
+          CALL h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error)
                CALL check("h5fcreate_f",error,total_error)
 
 
@@ -402,7 +354,7 @@
           !
           !Open the file.
           !
-          CALL h5fopen_f (fix_filename, H5F_ACC_RDONLY_F, file_id, error)
+          CALL h5fopen_f (filename, H5F_ACC_RDONLY_F, file_id, error)
               CALL check("hfopen_f",error,total_error)
 
           !
@@ -499,8 +451,12 @@
           !
           CALL h5fclose_f(file_id, error)
               CALL check("h5fclose_f",error,total_error)
-          if(cleanup) CALL h5_cleanup_f(filename, H5P_DEFAULT_F, error)
-              CALL check("h5_cleanup_f", error, total_error)
+
+          !
+          ! Close FORTRAN predefined datatypes.
+          !
+!          CALL h5close_types_f(error)
+!              CALL check("h5close_types_f",error,total_error)
 
           RETURN
         END SUBROUTINE extenddsettest 

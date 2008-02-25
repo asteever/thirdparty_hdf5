@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -61,7 +60,7 @@ enum {
  * and can have more than one short named option specified at one time:
  *
  * 	-aw80
- *
+ * 
  * in which case those options which expect an argument need to come at the
  * end.
  */
@@ -80,25 +79,29 @@ extern int    get_option(int argc, const char **argv, const char *opt,
 
 /*struct taken from the dumper. needed in table struct*/
 typedef struct obj_t {
-    haddr_t objno;
+    unsigned long objno[2];
     char *objname;
-    hbool_t displayed;          /* Flag to indicate that the object has been displayed */
-    hbool_t recorded;           /* Flag for named datatypes to indicate they were found in the group hierarchy */
+    int displayed;
+    int recorded;
+    int objflag;
 } obj_t;
 
 /*struct for the tables that the find_objs function uses*/
 typedef struct table_t {
-    size_t size;
-    size_t nobjs;
+    int size;
+    int nobjs;
     obj_t *objs;
 } table_t;
 
 /*this struct stores the information that is passed to the find_objs function*/
 typedef struct find_objs_t {
-    hid_t fid;
+    size_t prefix_len; 
+    char *prefix;
+    unsigned int threshold; /* should be 0 or 1 */
     table_t *group_table;
     table_t *type_table;
     table_t *dset_table;
+    int status;
 } find_objs_t;
 
 extern int     nCols;               /*max number of columns for outputting  */
@@ -108,15 +111,15 @@ extern void     indentation(int);
 extern void     print_version(const char *progname);
 extern void     error_msg(const char *progname, const char *fmt, ...);
 extern void     warn_msg(const char *progname, const char *fmt, ...);
-extern void     free_table(table_t *table);
-#ifdef H5DUMP_DEBUG
-extern void     dump_tables(find_objs_t *info)
-#endif  /* H5DUMP_DEBUG */
-extern herr_t init_objs(hid_t fid, find_objs_t *info, table_t **group_table,
-    table_t **dset_table, table_t **type_table);
-extern obj_t   *search_obj(table_t *temp, haddr_t objno);
-#ifndef H5_HAVE_TMPFILE
-extern FILE *	tmpfile(void);
-#endif
+extern void     free_table(table_t **table);
+extern void     dump_table(char *name, table_t *table);
+extern int      get_table_idx(table_t *table, unsigned long *);
+extern int      get_tableflag(table_t*, int);
+extern int      set_tableflag(table_t*, int);
+extern char    *get_objectname(table_t*, int);
+extern herr_t   find_objs(hid_t group, const char *name, void *op_data);
+extern int      search_obj(table_t *temp, unsigned long *);
+extern void     init_table(table_t **tbl);
+extern void     init_prefix(char **temp, size_t );
 
 #endif	/* H5TOOLS_UTILS_H__ */

@@ -1,20 +1,17 @@
 #! /bin/sh
 ##
-# Copyright by The HDF Group.
-# Copyright by the Board of Trustees of the University of Illinois.
-# All rights reserved.
-#
-# This file is part of HDF5.  The full HDF5 copyright notice, including
-# terms governing use, modification, and redistribution, is contained in
-# the files COPYING and Copyright.html.  COPYING can be found at the root
-# of the source code distribution tree; Copyright.html can be found at the
-# root level of an installed copy of the electronic HDF5 document set and
-# is linked from the top-level documents page.  It can also be found at
-# http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-# access to either file, you may request a copy from help@hdfgroup.org.
+## Copyright by the Board of Trustees of the University of Illinois.
+## All rights reserved.
 ##
-
-# This tool is adapted from the mpicc command of the MPICH Software.
+## This file is part of HDF5.  The full HDF5 copyright notice, including
+## terms governing use, modification, and redistribution, is contained in
+## the files COPYING and Copyright.html.  COPYING can be found at the root
+## of the source code distribution tree; Copyright.html can be found at the
+## root level of an installed copy of the electronic HDF5 document set and
+## is linked from the top-level documents page.  It can also be found at
+## http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
+## access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
+##
 
 ############################################################################
 ##                                                                        ##
@@ -30,7 +27,6 @@ prefix="@prefix@"
 exec_prefix="@exec_prefix@"
 libdir="@libdir@"
 includedir="@includedir@"
-HL="@HL@"
 
 ############################################################################
 ##                                                                        ##
@@ -44,7 +40,6 @@ prog_name="`basename $0`"
 
 allargs=""
 compile_args=""
-libraries=""
 link_args=""
 link_objs=""
 clibpath=""
@@ -77,7 +72,6 @@ usage() {
   echo "    -prefix=DIR  Prefix directory to find HDF5 lib/ and include/"
   echo "                   subdirectories [default: $prefix]"
   echo "    -show        Show the commands without executing them"
-  echo "    -showconfig  Show the HDF5 library configuration summary"
   echo "    -shlib       Compile with shared HDF5 libraries"
   echo "    -noshlib     Compile with static HDF5 libraries [default]"
   echo " "
@@ -97,17 +91,6 @@ usage() {
   echo " "
   exit 1
 }
-
-# Show the configuration summary of the library recorded in the
-# libhdf5.settings file reside in the lib directory.
-showconfigure()
-{
-  cat ${libdir}/libhdf5.settings
-  status=$?
-}
-
-# Main
-status=0
 
 if test "$#" = "0"; then
   # No parameters specified, issue usage statement and exit.
@@ -168,10 +151,10 @@ for arg in $@ ; do
       allargs="$allargs $arg"
       compile_args="$compile_args $arg"
       dash_c="yes"
-      do_link="no"
+      dash_o="no"
       ;;
     -l*)
-      libraries=" $libraries $arg "
+      link_args="$link_args $arg"
       allargs="$allargs $arg"
       ;;
     -prefix=*)
@@ -182,10 +165,6 @@ for arg in $@ ; do
       ;;
     -show)
       SHOW="echo"
-      ;;
-    -showconfig)
-      showconfigure
-      exit $status
       ;;
     -shlib)
       USE_SHARED_LIB="yes"
@@ -222,9 +201,6 @@ for arg in $@ ; do
             do_link="yes"
             link_objs="$link_objs $arg"
           fi
-        elif test "x$ext" = "x.a"; then
-          # This is an archive that we're linking in
-          libraries=" $libraries $arg "
         else
           compile_args="$compile_args $arg"
           link_args="$link_args $arg"
@@ -236,11 +212,6 @@ for arg in $@ ; do
       ;;
   esac
 done
-
-if test "$dash_c" = "yes" -a "$do_compile" = no -a "$do_link" = no ; then
-    # -c was specified.  Force do_compile on.
-    do_compile=yes
-fi
 
 if test "x$do_compile" = "xyes"; then
   if test "x$dash_c" != "xyes"; then
@@ -257,68 +228,28 @@ fi
 
 if test "x$do_link" = "xyes"; then
   shared_link=""
-# conditionnaly link with the hl library  
-  if test "X$HL" = "Xhl"; then
-   libraries=" $libraries -lhdf5_hl -lhdf5 "
-  else
-   libraries=" $libraries  -lhdf5 "
-  fi
-  link_args="$link_args -L${libdir}"
 
-  case "$kind" in
-    gcc|linux*)
-      # MacOS X doesn't support the "-Wl,-rpath -Wl," style of linker flags.
-      # It appears to want none of them specified.
-      case "$host_os" in
-        darwin*)          flag="" ;;
-        *)                flag="-Wl,-rpath -Wl," ;;
-      esac
-      ;;
-    hpux*)                flag="-Wl,+b -Wl," ;;
-    freebsd*|solaris*)    flag="-R" ;;
-    rs6000*|aix*)         flag="-L" ;;
-    irix*|sgi)            flag="-rpath " ;;
-    *)                    flag="" ;;
-  esac
+  if test "x$USE_SHARED_LIB" = "xyes"; then
+    case "$kind" in
+      gcc|linux*)           flag="-Wl,-rpath -Wl," ;;
+      hpux*)                flag="-Wl,+b -Wl," ;;
+      freebsd*|solaris*)    flag="-R" ;;
+      rs6000*|aix*)         flag="-L" ;;
+      irix*|sgi)            flag="-rpath " ;;
+      *)                    flag="" ;;
+    esac
 
-  if test -n "$flag"; then
-    shared_link="${flag}${libdir}"
-  fi
-
-  if test "x$USE_SHARED_LIB" != "xyes"; then
-    # The "-lhdf5" & "-lhdf5_hl" flags are in here already...This is a static
-    # compile though, so change it to the static version (.a) of the library.
-    new_libraries=""
-    for lib in $libraries; do
-      case "$lib" in
-        -lhdf5)
-          new_libraries="$new_libraries ${libdir}/libhdf5.a"
-          ;;
-        -lhdf5_hl)
-          new_libraries="$new_libraries ${libdir}/libhdf5_hl.a"
-          ;;
-        *)
-          new_libraries="$new_libraries $lib"
-          ;;
-      esac
-    done
-    libraries="$new_libraries"
-  fi
-
-  for lib in $libraries; do
-    if echo $link_args | grep " $lib " > /dev/null ||
-       echo $link_args | grep " $lib$" > /dev/null; then
-      :
-    else
-      link_args="$link_args $lib "
+    if test -n "$flag"; then
+      shared_link="${flag}${libdir}"
     fi
-  done
 
-  # The LIBS are just a bunch of -l* libraries necessary for the HDF5
-  # module. It's okay if they're included twice in the compile line.
+    link_args="$link_args -L${libdir} -lhdf5"
+  else
+    link_args="$link_args ${libdir}/libhdf5.a"
+  fi
+
   link_args="$link_args $LIBS"
-
-  $SHOW $CLINKER $CFLAGS $LDFLAGS $clibpath $link_objs $link_args $shared_link
+  $SHOW $CLINKER $LDFLAGS $clibpath $link_objs $link_args $shared_link
   status=$?
 fi
 

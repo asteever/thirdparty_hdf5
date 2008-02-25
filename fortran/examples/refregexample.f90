@@ -1,5 +1,5 @@
+
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!   Copyright by The HDF Group.                                               *
 !   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
@@ -9,10 +9,10 @@
 !   of the source code distribution tree; Copyright.html can be found at the  *
 !   root level of an installed copy of the electronic HDF5 document set and   *
 !   is linked from the top-level documents page.  It can also be found at     *
-!   http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
-!   access to either file, you may request a copy from help@hdfgroup.org.     *
+!   http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+!   access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!
+
 !
 !    This program shows how to create, store and dereference references 
 !    to the dataset regions.
@@ -42,17 +42,17 @@
      TYPE(hdset_reg_ref_t_f) , DIMENSION(2) :: ref_out !
      INTEGER(HSIZE_T), DIMENSION(2) :: dims = (/2,9/)  ! Datasets dimensions
      INTEGER(HSIZE_T), DIMENSION(1) :: dimsr = (/2/)   ! 
-     INTEGER(HSIZE_T), DIMENSION(2) :: start
+     INTEGER(HSSIZE_T), DIMENSION(2) :: start
      INTEGER(HSIZE_T), DIMENSION(2) :: count
      INTEGER :: rankr = 1 
      INTEGER :: rank = 2
      INTEGER , DIMENSION(2,9) ::  data 
      INTEGER , DIMENSION(2,9) ::  data_out = 0 
-     INTEGER(HSIZE_T) , DIMENSION(2,3) :: coord
+     INTEGER(HSSIZE_T) , DIMENSION(2,3) :: coord
      INTEGER(SIZE_T) ::num_points = 3  ! Number of selected points
      INTEGER :: i, j
-     INTEGER(HSIZE_T), DIMENSION(1) :: ref_size
-     INTEGER(HSIZE_T), DIMENSION(2) :: data_dims
+     INTEGER, DIMENSION(7) :: ref_size
+     INTEGER, DIMENSION(7) :: data_dims
      coord = reshape((/1,1,2,7,1,9/), (/2,3/))   ! Coordinates of selected points
      data = reshape ((/1,1,1,2,2,2,3,3,3,4,4,4,5,5,5,6,6,6/), (/2,9/))
      !

@@ -1,5 +1,4 @@
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!   Copyright by The HDF Group.                                               *
 !   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
@@ -9,10 +8,9 @@
 !   of the source code distribution tree; Copyright.html can be found at the  *
 !   root level of an installed copy of the electronic HDF5 document set and   *
 !   is linked from the top-level documents page.  It can also be found at     *
-!   http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
-!   access to either file, you may request a copy from help@hdfgroup.org.     *
+!   http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+!   access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!
 ! 
 !    Testing Selection-related Dataspace Interface functionality.
 !
@@ -26,16 +24,17 @@
 !    h5sget_select_hyper_nblocks_f, h5sget_select_npoints_f
 !
 
-  SUBROUTINE test_select_hyperslab(cleanup, total_error)
+  SUBROUTINE test_select_hyperslab(total_error)
 
     USE HDF5 ! This module contains all necessary modules 
 
     IMPLICIT NONE
-    LOGICAL, INTENT(IN) :: cleanup
     INTEGER, INTENT(OUT) :: total_error 
 
-    CHARACTER(LEN=7), PARAMETER :: filename = "tselect"
-    CHARACTER(LEN=80) :: fix_filename
+    !
+    !the dataset is stored in file "sdsf.h5"
+    !
+    CHARACTER(LEN=7), PARAMETER :: filename = "sdsf.h5"
 
     !
     !dataset name is "IntArray"
@@ -118,7 +117,7 @@
     !flag to check operation success 
     !
     INTEGER :: error, error_n 
-    INTEGER(HSIZE_T), DIMENSION(3) :: data_dims
+    INTEGER, DIMENSION(7) :: data_dims
 
 
     !
@@ -150,12 +149,7 @@
     !
     !Create a new file using default properties.
     ! 
-          CALL h5_fixname_f(filename, fix_filename, H5P_DEFAULT_F, error)
-          if (error .ne. 0) then
-              write(*,*) "Cannot modify filename"
-              stop
-          endif
-    CALL h5fcreate_f(fix_filename, H5F_ACC_TRUNC_F, file_id, error)
+    CALL h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error)
     CALL check("h5fcreate_f", error, total_error)
 
     !
@@ -216,7 +210,7 @@
     !
     !Open the file.
     !
-    CALL h5fopen_f (fix_filename, H5F_ACC_RDONLY_F, file_id, error)
+    CALL h5fopen_f (filename, H5F_ACC_RDONLY_F, file_id, error)
     CALL check("h5fopen_f", error, total_error)
 
     !
@@ -301,9 +295,11 @@
     CALL h5fclose_f(file_id, error)
     CALL check("h5fclose_f", error, total_error)
 
-
-          if(cleanup) CALL h5_cleanup_f(filename, H5P_DEFAULT_F, error)
-              CALL check("h5_cleanup_f", error, total_error)
+    !
+    ! Close FORTRAN predefined datatypes.
+    !
+!    CALL h5close_types_f(error)
+!    CALL check("h5close_types_f", error, total_error)
     RETURN
 
   END SUBROUTINE test_select_hyperslab
@@ -312,25 +308,22 @@
   !Subroutine to test element selection
   !
 
-  SUBROUTINE test_select_element(cleanup, total_error)
+  SUBROUTINE test_select_element(total_error)
 
     USE HDF5 ! This module contains all necessary modules 
 
     IMPLICIT NONE
-    LOGICAL, INTENT(IN)  :: cleanup
     INTEGER, INTENT(OUT) :: total_error 
 
     !
     !the dataset1 is stored in file "copy1.h5"
     !
-    CHARACTER(LEN=13), PARAMETER :: filename1 = "tselect_copy1"
-    CHARACTER(LEN=80) :: fix_filename1
+    CHARACTER(LEN=8), PARAMETER :: filename1 = "copy1.h5"
 
     !
     !the dataset2 is stored in file "copy2.h5"
     !
-    CHARACTER(LEN=13), PARAMETER :: filename2 = "tselect_copy2"
-    CHARACTER(LEN=80) :: fix_filename2
+    CHARACTER(LEN=8), PARAMETER :: filename2 = "copy2.h5"
     !
     !dataset1 name is "Copy1"
     !
@@ -372,7 +365,7 @@
     !
     !Points positions in the file 
     !
-    INTEGER(HSIZE_T), DIMENSION(RANK,NUMP) :: coord
+    INTEGER(HSSIZE_T), DIMENSION(RANK,NUMP) :: coord
 
     !
     !data buffers 
@@ -399,7 +392,7 @@
     !
     INTEGER :: error 
     LOGICAL :: status
-    INTEGER(HSIZE_T), DIMENSION(3) :: data_dims
+    INTEGER, DIMENSION(7) :: data_dims
 
 
     !
@@ -431,20 +424,10 @@
     !
     !Create file1, file2  using default properties.
     ! 
-          CALL h5_fixname_f(filename1, fix_filename1, H5P_DEFAULT_F, error)
-          if (error .ne. 0) then
-              write(*,*) "Cannot modify filename"
-              stop
-          endif
-    CALL h5fcreate_f(fix_filename1, H5F_ACC_TRUNC_F, file1_id, error)
+    CALL h5fcreate_f(filename1, H5F_ACC_TRUNC_F, file1_id, error)
     CALL check("h5fcreate_f", error, total_error)
 
-          CALL h5_fixname_f(filename2, fix_filename2, H5P_DEFAULT_F, error)
-          if (error .ne. 0) then
-              write(*,*) "Cannot modify filename"
-              stop
-          endif
-    CALL h5fcreate_f(fix_filename2, H5F_ACC_TRUNC_F, file2_id, error)
+    CALL h5fcreate_f(filename2, H5F_ACC_TRUNC_F, file2_id, error)
     CALL check("h5fcreate_f", error, total_error)
 
     !
@@ -514,10 +497,10 @@
     !
     !Open the files.
     !
-    CALL h5fopen_f (fix_filename1, H5F_ACC_RDWR_F, file1_id, error)
+    CALL h5fopen_f (filename1, H5F_ACC_RDWR_F, file1_id, error)
     CALL check("h5fopen_f", error, total_error)
 
-    CALL h5fopen_f (fix_filename2, H5F_ACC_RDWR_F, file2_id, error)
+    CALL h5fopen_f (filename2, H5F_ACC_RDWR_F, file2_id, error)
     CALL check("h5fopen_f", error, total_error)
 
     !
@@ -618,10 +601,10 @@
     !
     !Open the files.
     !
-    CALL h5fopen_f (fix_filename1, H5F_ACC_RDWR_F, file1_id, error)
+    CALL h5fopen_f (filename1, H5F_ACC_RDWR_F, file1_id, error)
     CALL check("h5fopen_f", error, total_error)
 
-    CALL h5fopen_f (fix_filename2, H5F_ACC_RDWR_F, file2_id, error)
+    CALL h5fopen_f (filename2, H5F_ACC_RDWR_F, file2_id, error)
     CALL check("h5fopen_f", error, total_error)
 
     !
@@ -681,27 +664,25 @@
     CALL h5fclose_f(file2_id, error)
     CALL check("h5fclose_f", error, total_error)
 
+    !
+    ! Close FORTRAN predefined datatypes.
+    !
+!    CALL h5close_types_f(error)
+!    CALL check("h5close_types_f", error, total_error)
 
-          if(cleanup) CALL h5_cleanup_f(filename1, H5P_DEFAULT_F, error)
-              CALL check("h5_cleanup_f", error, total_error)
-          if(cleanup) CALL h5_cleanup_f(filename2, H5P_DEFAULT_F, error)
-              CALL check("h5_cleanup_f", error, total_error)
-     RETURN
   END SUBROUTINE  test_select_element
 
 
-  SUBROUTINE test_basic_select(cleanup, total_error)
+  SUBROUTINE test_basic_select(total_error)
     USE HDF5 ! This module contains all necessary modules 
 
     IMPLICIT NONE
-    LOGICAL, INTENT(IN)  :: cleanup
     INTEGER, INTENT(OUT) :: total_error 
 
      !
      !the dataset is stored in file "testselect.h5"
      !
-     CHARACTER(LEN=10), PARAMETER :: filename = "testselect"
-     CHARACTER(LEN=80) :: fix_filename 
+     CHARACTER(LEN=13), PARAMETER :: filename = "testselect.h5"
 
      !
      !dataspace rank 
@@ -741,12 +722,13 @@
      !
      !start block for getting the selected hyperslab 
      !
-     INTEGER(HSIZE_T) :: startblock = 0
+     INTEGER(HSIZE_T), DIMENSION(2) :: startblock = (/0,0/)
 
      !
      !start point for getting the selected elements 
      !
-     INTEGER(HSIZE_T)  :: startpoint = 0
+     INTEGER(HSIZE_T), DIMENSION(2) :: startpoint = (/0,0/)
+!     INTEGER(HSIZE_T), DIMENSION(2) :: startpoint = (/1,1/)
 
      !
      !Stride of the hyperslab in the file 
@@ -761,7 +743,7 @@
      !
      !array to give selected points' coordinations 
      !
-     INTEGER(HSIZE_T), DIMENSION(RANK, NUMPS) :: coord
+     INTEGER(HSSIZE_T), DIMENSION(RANK, NUMPS) :: coord
 
      !
      !Size of the hyperslab in memory 
@@ -792,7 +774,7 @@
      INTEGER(HSIZE_T), ALLOCATABLE, DIMENSION(:) :: pointlist
 
      !
-     !start and end bounds in the current dataspace selection 
+     !start and end bounds in the current dataspac selection 
      !
      INTEGER(HSIZE_T), DIMENSION(RANK) :: startout, endout
 
@@ -815,7 +797,7 @@
      !flag to check operation success 
      !
      INTEGER :: error, error_n 
-     INTEGER(HSIZE_T), DIMENSION(3) :: data_dims
+     INTEGER, DIMENSION(7) :: data_dims
 
      !
      !initialize the coord array to give the selected points' position 
@@ -840,16 +822,16 @@
      coord(2,9) = 3
      coord(1,10) = 5
      coord(2,10) = 5
+     !
+     !Initialize FORTRAN predifined datatypes
+     !
+!     CALL h5init_types_f(error) 
+!     CALL check("h5init_types_f", error, total_error)
 
      !
      !Create a new file using default properties.
      ! 
-          CALL h5_fixname_f(filename, fix_filename, H5P_DEFAULT_F, error)
-          if (error .ne. 0) then
-              write(*,*) "Cannot modify filename"
-              stop
-          endif
-     CALL h5fcreate_f(fix_filename, H5F_ACC_TRUNC_F, file_id, error)
+     CALL h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error)
      CALL check("h5fcreate_f", error, total_error)
 
      !
@@ -894,7 +876,7 @@
      !
      !Open the file.
      !
-     CALL h5fopen_f (fix_filename, H5F_ACC_RDONLY_F, file_id, error)
+     CALL h5fopen_f (filename, H5F_ACC_RDONLY_F, file_id, error)
      CALL check("h5fopen_f", error, total_error)
        
      !
@@ -1026,11 +1008,12 @@
      CALL h5fclose_f(file_id, error)
      CALL check("h5fclose_f", error, total_error)
 
+     !
+     ! Close FORTRAN predefined datatypes.
+     !
+!     CALL h5close_types_f(error)
+!     CALL check("h5close_types_f", error, total_error)
 
-          if(cleanup) CALL h5_cleanup_f(filename, H5P_DEFAULT_F, error)
-              CALL check("h5_cleanup_f", error, total_error)
-
-     RETURN
   END SUBROUTINE  test_basic_select
 
 

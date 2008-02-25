@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,28 +8,27 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/* Programmer:	Robb Matzke <matzke@llnl.gov>
+/*
+ * Programmer:	Robb Matzke <matzke@llnl.gov>
  *		Wednesday, October 15, 1997
  *
  * Purpose:	Tests various aspects of indexed raw data storage.
  */
-
 #define H5F_PACKAGE		/*suppress error about including H5Fpkg	  */
 
 #include "h5test.h"
 #include "H5private.h"
 #include "H5Dprivate.h"
-#include "H5Eprivate.h"
 #include "H5Iprivate.h"
 #include "H5Pprivate.h"
 #include "H5Fpkg.h"
 #include "H5Gprivate.h"
+#include "H5MMprivate.h"
 #include "H5Oprivate.h"
-#include "H5Pprivate.h"
 #include "H5Vprivate.h"
 
 const char *FILENAME[] = {
@@ -43,14 +41,8 @@ const char *FILENAME[] = {
 #define TEST_MEDIUM	0x0002
 #define TEST_LARGE	0x0004
 
-/* The datatype of the dataset operated on by this test */
-#define TEST_DATATYPE   H5T_NATIVE_UCHAR
-
-#define TEST_CHUNK_SIZE 50
-#define TEST_SPARSE_SIZE 1000000
-
-hsize_t chunk_dims[H5O_LAYOUT_NDIMS];
-hsize_t zero[H5O_LAYOUT_NDIMS];
+hsize_t align_g[3] = {50, 50, 50};
+hssize_t zero[H5O_LAYOUT_NDIMS];
 
 
 /*-------------------------------------------------------------------------
@@ -74,21 +66,21 @@ print_array(uint8_t *array, size_t nx, size_t ny, size_t nz)
 
     for (i = 0; i < nx; i++) {
 	if (nz > 1) {
-	    fprintf(stderr,"i=%lu:\n", (unsigned long)i);
+	    printf("i=%lu:\n", (unsigned long)i);
 	} else {
-	    fprintf(stderr,"%03lu:", (unsigned long)i);
+	    printf("%03lu:", (unsigned long)i);
 	}
 
 	for (j = 0; j < ny; j++) {
 	    if (nz > 1)
-		fprintf(stderr,"%03lu:", (unsigned long)j);
+		printf("%03lu:", (unsigned long)j);
 	    for (k = 0; k < nz; k++) {
-		fprintf(stderr," %3d", *array++);
+		printf(" %3d", *array++);
 	    }
 	    if (nz > 1)
-		fprintf(stderr,"\n");
+		printf("\n");
 	}
-	fprintf(stderr,"\n");
+	printf("\n");
     }
 }
 
@@ -99,7 +91,7 @@ print_array(uint8_t *array, size_t nx, size_t ny, size_t nz)
  * Purpose:	Creates a new object that refers to a indexed storage of raw
  *		data.  No raw data is stored.
  *
- * Return:	Success:	ID of dataset
+ * Return:	Success:	0
  *
  *		Failure:	-1
  *
@@ -107,44 +99,51 @@ print_array(uint8_t *array, size_t nx, size_t ny, size_t nz)
  *		Wednesday, October 15, 1997
  *
  * Modifications:
- *              Converted to use datasets instead of directly messing with
- *              the istore routines, etc. since the new raw data architecture
- *              performs hyperslab operations at a higher level than the
- *              istore routines did and the new istore routines can't handle
- *              I/O on more than one chunk at a time. QAK - 2003/04/16
  *
  *-------------------------------------------------------------------------
  */
-static hid_t
-new_object(hid_t f, const char *name, int ndims, hsize_t dims[], hsize_t cdims[])
+static int
+new_object(H5F_t *f, const char *name, unsigned ndims, H5G_entry_t *ent/*out*/)
 {
-    hid_t dataset;      /* Dataset ID */
-    hid_t space;        /* Dataspace ID */
-    hid_t dcpl;         /* Dataset creation property list ID */
+    H5O_layout_t	    layout;
+    unsigned		    u;
 
-    /* Create the dataset creation property list */
-    if ((dcpl=H5Pcreate(H5P_DATASET_CREATE)) < 0) TEST_ERROR;
+    /* Create the object header */
+    if (H5O_create(f, 64, ent)) {
+	H5_FAILED();
+	puts("    H5O_create() = NULL");
+	goto error;
+    }
 
-    /* Set the chunk dimensions */
-    if(H5Pset_chunk(dcpl, ndims, cdims) < 0) TEST_ERROR;
+    /* create chunked storage */
+    layout.type = H5D_CHUNKED;
+    layout.ndims = ndims;
+    for (u = 0; u < ndims; u++) {
+	if (u < (int)NELMTS(align_g)) {
+	    layout.dim[u] = align_g[u];
+	} else {
+	    layout.dim[u] = 2;
+	}
+    }
+    H5F_arr_create(f, &layout/*in,out*/);
+    if (H5O_modify(ent, H5O_LAYOUT, H5O_NEW_MESG, 0, &layout) < 0) {
+	H5_FAILED();
+	puts("    H5O_modify istore message failure.");
+	goto error;
+    }
 
-    /* Create the dataspace */
-    if((space = H5Screate_simple(ndims, dims, NULL)) < 0) TEST_ERROR;
+    /* Give the object header a name */
+    if (H5G_insert(H5G_entof(H5G_rootof(f)), name, ent) < 0) {
+	H5_FAILED();
+	printf("    H5G_insert(f, name=\"%s\", ent) failed\n", name);
+	goto error;
+    }
 
-    /* Create the dataset */
-    if((dataset = H5Dcreate2(f, name, TEST_DATATYPE, space, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0) TEST_ERROR;
+    /* Close the header */
+    H5O_close(ent);
+    return 0;
 
-    /* Clean up */
-
-    /* Close property lists */
-    if(H5Pclose(dcpl) < 0) TEST_ERROR;
-
-    /* Close dataspace */
-    if(H5Sclose(space) < 0) TEST_ERROR;
-
-    return dataset;
-
-error:
+ error:
     return -1;
 }
 
@@ -167,28 +166,18 @@ error:
  *-------------------------------------------------------------------------
  */
 static herr_t
-test_create(hid_t f, const char *prefix)
+test_create(H5F_t *f, const char *prefix)
 {
-    hid_t       dataset;        /* Dataset ID */
-    hsize_t     dims[H5O_LAYOUT_NDIMS+1]; /* Dimensions of dataset */
-    char        name[256];      /* Dataset name */
-    unsigned    u;              /* Local index variable */
+    H5G_entry_t		    handle;
+    unsigned		    u;
+    char		    name[256];
 
     TESTING("istore create");
 
-    dims[0]=TEST_CHUNK_SIZE;
-    for (u = 1; u <= H5S_MAX_RANK; u++) {
-        /* Initialize the dimension size in this new dimension */
-        dims[u]=TEST_CHUNK_SIZE;
-
-        /* Create chunked dataset of this dimensionality */
+    for (u = 1; u <= H5O_LAYOUT_NDIMS; u++) {
 	HDsnprintf(name, sizeof name, "%s_%02u", prefix, u);
-	if ((dataset=new_object(f, name, (int)u, dims, chunk_dims)) < 0)
+	if (new_object(f, name, u, &handle) < 0)
 	    return FAIL;
-
-        /* Close dataset created */
-        if(H5Dclose(dataset) < 0)
-            return FAIL;
     }
 
     PASSED();
@@ -215,21 +204,20 @@ test_create(hid_t f, const char *prefix)
  *-------------------------------------------------------------------------
  */
 static herr_t
-test_extend(hid_t f, const char *prefix,
+test_extend(H5F_t *f, const char *prefix,
 	    size_t nx, size_t ny, size_t nz)
 {
-    hid_t               dataset;        /* Dataset ID */
-    hid_t               fspace;         /* Dataset's file dataspace */
-    hid_t               mspace;         /* Dataset's memory dataspace */
-    size_t		i, j, k, ctr;
-    int			ndims;
+    H5G_entry_t		handle;
+    hsize_t		i, j, k, ctr;
+    unsigned			ndims;
     uint8_t		*buf = NULL, *check = NULL, *whole = NULL;
     char		dims[64], s[256], name[256];
-    hsize_t		offset[3];
-    hsize_t		max_corner[3];
+    hssize_t		offset[3];
+    hssize_t		max_corner[3];
     hsize_t		size[3];
     hsize_t		whole_size[3];
     hsize_t		nelmts;
+    H5O_layout_t	layout;
 
     if (!nz) {
 	if (!ny) {
@@ -247,12 +235,28 @@ test_extend(hid_t f, const char *prefix,
 		(unsigned long) nx, (unsigned long) ny, (unsigned long) nz);
     }
 
-    sprintf(s, "istore extend: %s", dims);
-    TESTING(s);
-    buf = HDmalloc(nx * ny * nz);
-    check = HDmalloc(nx * ny * nz);
-    whole = HDcalloc((size_t)1, nx * ny * nz);
+    sprintf(s, "Testing istore extend: %s", dims);
+    printf("%-70s", s);
+    buf = H5MM_malloc(nx * ny * nz);
+    check = H5MM_malloc(nx * ny * nz);
+    whole = H5MM_calloc(nx*ny*nz);
 
+    /* Build the new empty object */
+    sprintf(name, "%s_%s", prefix, dims);
+    if (new_object(f, name, ndims, &handle) < 0) {
+	printf("    Cannot create %u-d object `%s'\n", ndims, name);
+	goto error;
+    }
+    if (NULL == H5O_read(&handle, H5O_LAYOUT, 0, &layout)) {
+	H5_FAILED();
+	puts("    Unable to read istore message.");
+	goto error;
+    }
+    if (ndims != layout.ndims) {
+	H5_FAILED();
+	printf("    Header read error: istore.ndims != %d\n", ndims);
+	goto error;
+    }
     whole_size[0] = nx;
     whole_size[1] = ny;
     whole_size[2] = nz;
@@ -260,18 +264,8 @@ test_extend(hid_t f, const char *prefix,
     max_corner[1] = 0;
     max_corner[2] = 0;
 
-    /* Build the new empty object */
-    sprintf(name, "%s_%s", prefix, dims);
-    if ((dataset=new_object(f, name, ndims, whole_size, whole_size)) < 0) {
-	fprintf(stderr,"    Cannot create %u-d object `%s'\n", ndims, name);
-	goto error;
-    }
-
-    /* Get dataset's dataspace */
-    if((fspace=H5Dget_space(dataset)) < 0) TEST_ERROR;
-
     for (ctr = 0;
-	 H5V_vector_lt_u((unsigned)ndims, max_corner, whole_size);
+	 H5V_vector_lt_s(ndims, max_corner, (hssize_t*)whole_size);
 	 ctr++) {
 
 	/* Size and location */
@@ -294,77 +288,72 @@ test_extend(hid_t f, const char *prefix,
 
 #if 0
 	if (0 == ctr)
-	    fprintf(stderr,"\n");
-	fprintf(stderr,"    Insert: ctr=%lu, corner=(%ld", (unsigned long)ctr, (long)offset[0]);
+	    printf("\n");
+	printf("    Insert: ctr=%d, corner=(%d", ctr, offset[0]);
 	if (ndims > 1)
-	    fprintf(stderr,",%ld", (long)offset[1]);
+	    printf(",%d", offset[1]);
 	if (ndims > 2)
-	    fprintf(stderr,",%ld", (long)offset[2]);
-	fprintf(stderr,"), size=(%lu", (unsigned long)size[0]);
+	    printf(",%d", offset[2]);
+	printf("), size=(%d", size[0]);
 	if (ndims > 1)
-	    fprintf(stderr,",%lu", (unsigned long)size[1]);
+	    printf(",%d", size[1]);
 	if (ndims > 2)
-	    fprintf(stderr,",%lu", (unsigned long)size[2]);
-	fprintf(stderr,"), %lu element%s", (unsigned long)nelmts, 1 == nelmts ? "" : "s");
+	    printf(",%d", size[2]);
+	printf("), %d element%s", nelmts, 1 == nelmts ? "" : "s");
 	if (0 == nelmts)
-	    fprintf(stderr," *SKIPPED*");
-	fprintf(stderr,"\n");
+	    printf(" *SKIPPED*");
+	printf("\n");
 #endif
 
 	/* Fill the source array */
 	if (0 == nelmts) continue;
-	HDmemset(buf, (signed)(128+ctr), (size_t)nelmts);
-
-        /* Create dataspace for selection in memory */
-        if((mspace=H5Screate_simple(1,&nelmts,NULL)) < 0) TEST_ERROR;
-
-        /* Select region in file dataspace */
-        if(H5Sselect_hyperslab(fspace,H5S_SELECT_SET,offset,NULL,size,NULL) < 0) TEST_ERROR;
+	memset(buf, (signed)(128+ctr), (size_t)nelmts);
 
 	/* Write to disk */
-	if (H5Dwrite(dataset, TEST_DATATYPE, mspace, fspace, H5P_DEFAULT, buf) < 0) {
+	if (H5F_arr_write(f, H5P_DEFAULT, &layout, NULL, NULL, NULL, size,
+			  size, zero, offset, buf)<0) {
 	    H5_FAILED();
-	    fprintf(stderr,"    Write failed: ctr=%lu\n", (unsigned long)ctr);
+	    printf("    Write failed: ctr=%lu\n", (unsigned long)ctr);
 	    goto error;
 	}
 
 	/* Read from disk */
-	HDmemset(check, 0xff, (size_t)nelmts);
-	if (H5Dread(dataset, TEST_DATATYPE, mspace, fspace, H5P_DEFAULT, check) < 0) {
+	memset(check, 0xff, (size_t)nelmts);
+	if (H5F_arr_read(f, H5P_DEFAULT, &layout, NULL, NULL, NULL, size,
+			 size, zero, offset, check)<0) {
 	    H5_FAILED();
-	    fprintf(stderr,"    Read failed: ctr=%lu\n", (unsigned long)ctr);
+	    printf("    Read failed: ctr=%lu\n", (unsigned long)ctr);
 	    goto error;
 	}
-	if (HDmemcmp(buf, check, (size_t)nelmts)) {
+	if (memcmp(buf, check, (size_t)nelmts)) {
 	    H5_FAILED();
-	    fprintf(stderr,"    Read check failed: ctr=%lu\n", (unsigned long)ctr);
-	    fprintf(stderr,"    Wrote:\n");
+	    printf("    Read check failed: ctr=%lu\n", (unsigned long)ctr);
+	    printf("    Wrote:\n");
 	    print_array(buf, (size_t)size[0], (size_t)size[1],
 			(size_t)size[2]);
-	    fprintf(stderr,"    Read:\n");
+	    printf("    Read:\n");
 	    print_array(check, (size_t)size[0], (size_t)size[1],
 			(size_t)size[2]);
 	    goto error;
 	}
 
-        /* Close memory dataspace */
-        if(H5Sclose(mspace) < 0) TEST_ERROR;
-
 	/* Write to `whole' buffer for later checking */
-	H5V_hyper_copy((unsigned)ndims, size,
+	H5V_hyper_copy(ndims, size,
 		       whole_size, offset, whole,	/*dst*/
 		       size, H5V_ZERO, buf);		/*src*/
 
 	/* Update max corner */
-	for (i=0; i<(size_t)ndims; i++)
-	    max_corner[i] = MAX(max_corner[i], offset[i]+size[i]);
+	for (i=0; i<(size_t)ndims; i++) {
+	    max_corner[i] = MAX(max_corner[i], offset[i]+(hssize_t)size[i]);
+	}
     }
 
     /* Now read the entire array back out and check it */
-    HDmemset(buf, 0xff, nx * ny * nz);
-    if (H5Dread(dataset, TEST_DATATYPE, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf) < 0) {
+    memset(buf, 0xff, nx * ny * nz);
+    if (H5F_arr_read(f, H5P_DEFAULT, &layout, NULL, NULL, NULL, whole_size,
+		     whole_size, zero, zero, buf)<0) {
 	H5_FAILED();
-	fprintf(stderr,"    Read failed for whole array.\n");
+	puts("    Read failed for whole array.");
 	goto error;
     }
     for (i=0; i<nx; i++) {
@@ -372,16 +361,16 @@ test_extend(hid_t f, const char *prefix,
 	    for (k=0; k<nz; k++) {
 		if (whole[i*ny*nz + j*nz + k] != buf[i*ny*nz + j*nz + k]) {
 		    H5_FAILED();
-		    fprintf(stderr,"    Check failed at i=%lu", (unsigned long)i);
+		    printf("    Check failed at i=%lu", (unsigned long)i);
 		    if (ndims > 1) {
-			fprintf(stderr,", j=%lu", (unsigned long)j);
+			printf(", j=%lu", (unsigned long)j);
 		    }
 		    if (ndims > 2) {
-			fprintf(stderr,", k=%lu", (unsigned long)k);
+			printf(", k=%lu", (unsigned long)k);
 		    }
-		    fprintf(stderr,"\n    Check array is:\n");
+		    printf("\n    Check array is:\n");
 		    print_array(whole, nx, ny, nz);
-		    fprintf(stderr,"    Value read is:\n");
+		    printf("    Value read is:\n");
 		    print_array(buf, nx, ny, nz);
 		    goto error;
 		}
@@ -389,24 +378,16 @@ test_extend(hid_t f, const char *prefix,
 	}
     }
 
-    /* Close dataset's dataspace */
-    if(H5Sclose(fspace) < 0) TEST_ERROR;
-
-    /* Close dataset */
-    if(H5Dclose(dataset) < 0) TEST_ERROR;
-
-    /* Free memory used */
-    HDfree(buf);
-    HDfree(check);
-    HDfree(whole);
-
+    H5MM_xfree(buf);
+    H5MM_xfree(check);
+    H5MM_xfree(whole);
     PASSED();
     return SUCCEED;
 
-error:
-    HDfree(buf);
-    HDfree(check);
-    HDfree(whole);
+  error:
+    H5MM_xfree(buf);
+    H5MM_xfree(check);
+    H5MM_xfree(whole);
     return FAIL;
 }
 
@@ -429,20 +410,17 @@ error:
  *-------------------------------------------------------------------------
  */
 static herr_t
-test_sparse(hid_t f, const char *prefix, size_t nblocks,
+test_sparse(H5F_t *f, const char *prefix, size_t nblocks,
 	    size_t nx, size_t ny, size_t nz)
 {
-    hid_t               dataset;        /* Dataset ID */
-    hid_t               fspace;         /* Dataset's file dataspace */
-    hid_t               mspace;         /* Dataset's memory dataspace */
-    int			ndims;
+    unsigned		ndims;
     hsize_t		ctr;
     char		dims[64], s[256], name[256];
-    hsize_t		offset[3];
+    hssize_t		offset[3];
     hsize_t		size[3], total = 0;
+    H5G_entry_t		handle;
+    H5O_layout_t	layout;
     uint8_t		*buf = NULL;
-    hsize_t		whole_size[3];  /* Size of dataset's dataspace */
-    size_t              u;              /* Local index variable */
 
     if (!nz) {
 	if (!ny) {
@@ -460,43 +438,33 @@ test_sparse(hid_t f, const char *prefix, size_t nblocks,
 		(unsigned long) nx, (unsigned long) ny, (unsigned long) nz);
     }
 
-    sprintf(s, "istore sparse: %s", dims);
-    TESTING(s);
-    buf = HDmalloc(nx * ny * nz);
-    HDmemset(buf, 128, nx * ny * nz);
-
-    /* Set dimensions of dataset */
-    for (u=0; u<(size_t)ndims; u++)
-        whole_size[u]=TEST_SPARSE_SIZE;
-
-    /* Set dimensions of selection */
-    size[0] = nx;
-    size[1] = ny;
-    size[2] = nz;
+    sprintf(s, "Testing istore sparse: %s", dims);
+    printf("%-70s", s);
+    buf = H5MM_malloc(nx * ny * nz);
 
     /* Build the new empty object */
     sprintf(name, "%s_%s", prefix, dims);
-    if ((dataset=new_object(f, name, ndims, whole_size, chunk_dims)) < 0) {
+    if (new_object(f, name, ndims, &handle) < 0) {
 	printf("    Cannot create %u-d object `%s'\n", ndims, name);
 	goto error;
     }
-
-    /* Get dataset's dataspace */
-    if((fspace=H5Dget_space(dataset)) < 0) TEST_ERROR;
-
-    /* Create dataspace for memory buffer */
-    if((mspace=H5Screate_simple(ndims,size,NULL)) < 0) TEST_ERROR;
-
+    if (NULL == H5O_read(&handle, H5O_LAYOUT, 0, &layout)) {
+	H5_FAILED();
+	printf("    Unable to read istore message\n");
+	goto error;
+    }
     for (ctr=0; ctr<nblocks; ctr++) {
-	offset[0] = (hsize_t)(HDrandom() % (TEST_SPARSE_SIZE-nx));
-	offset[1] = (hsize_t)(HDrandom() % (TEST_SPARSE_SIZE-ny));
-	offset[2] = (hsize_t)(HDrandom() % (TEST_SPARSE_SIZE-nz));
-
-        /* Select region in file dataspace */
-        if(H5Sselect_hyperslab(fspace,H5S_SELECT_SET,offset,NULL,size,NULL) < 0) TEST_ERROR;
+	offset[0] = rand() % 1000000;
+	offset[1] = rand() % 1000000;
+	offset[2] = rand() % 1000000;
+	size[0] = nx;
+	size[1] = ny;
+	size[2] = nz;
+	memset(buf, (signed)(128+ctr), nx * ny * nz);
 
 	/* write to disk */
-	if (H5Dwrite(dataset, TEST_DATATYPE, mspace, fspace, H5P_DEFAULT, buf) < 0) {
+	if (H5F_arr_write(f, H5P_DEFAULT, &layout, NULL, NULL, NULL, size,
+			  size, zero, offset, buf)<0) {
 	    H5_FAILED();
 	    printf("    Write failed: ctr=%lu\n", (unsigned long)ctr);
 	    printf("    offset=(%lu", (unsigned long) (offset[0]));
@@ -514,27 +482,18 @@ test_sparse(hid_t f, const char *prefix, size_t nblocks,
 	}
 	total += nx * ny * nz;
 #if 0
-	HDfprintf(stderr,"ctr: ctr=%Zu, total=%Zu\n", ctr, total);
+	printf("ctr: ctr=%d, total=%lu\n", ctr, (unsigned long) total);
 #endif
 
 	/* We don't test reading yet.... */
     }
 
-    /* Close memory dataspace */
-    if(H5Sclose(mspace) < 0) TEST_ERROR;
-
-    /* Close dataset's dataspace */
-    if(H5Sclose(fspace) < 0) TEST_ERROR;
-
-    /* Close dataset */
-    if(H5Dclose(dataset) < 0) TEST_ERROR;
-
-    HDfree(buf);
+    H5MM_xfree(buf);
     PASSED();
     return SUCCEED;
 
-error:
-    HDfree(buf);
+  error:
+    H5MM_xfree(buf);
     return FAIL;
 }
 
@@ -559,145 +518,129 @@ int
 main(int argc, char *argv[])
 {
     hid_t		fapl=-1, file=-1, fcpl=-1;
+    H5F_t		*f;
     herr_t		status;
     int			nerrors = 0;
     unsigned		size_of_test;
-    unsigned            u;              /* Local index variable */
     char		filename[1024];
-    const char         *envval = NULL;
 
-    /* Don't run this test using the split file driver */
-    envval = HDgetenv("HDF5_DRIVER");
-    if (envval == NULL)
-        envval = "nomatch";
-    if (HDstrcmp(envval, "split")) {
-	/* Parse arguments or assume these tests (`small', `medium' ) */
-	if (1 == argc) {
-	    size_of_test = TEST_SMALL;
-	} else {
-	    int			i;
-	    for (i = 1, size_of_test = 0; i < argc; i++) {
-		if (!strcmp(argv[i], "small")) {
-		    size_of_test |= TEST_SMALL;
-		} else if (!strcmp(argv[i], "medium")) {
-		    size_of_test |= TEST_MEDIUM;
-		} else if (!strcmp(argv[i], "large")) {
-		    size_of_test |= TEST_LARGE;
-		} else {
-		    printf("unrecognized argument: %s\n", argv[i]);
+    /* Parse arguments or assume `small' */
+    if (1 == argc) {
+	size_of_test = TEST_SMALL;
+    } else {
+	int			i;
+	for (i = 1, size_of_test = 0; i < argc; i++) {
+	    if (!strcmp(argv[i], "small")) {
+		size_of_test |= TEST_SMALL;
+	    } else if (!strcmp(argv[i], "medium")) {
+		size_of_test |= TEST_MEDIUM;
+	    } else if (!strcmp(argv[i], "large")) {
+		size_of_test |= TEST_LARGE;
+	    } else {
+		printf("unrecognized argument: %s\n", argv[i]);
 #if 0
-		    exit(1);
-#endif
-		}
-	    }
-	}
-	printf("Test sizes: ");
-	if (size_of_test & TEST_SMALL)
-	    printf(" SMALL");
-	if (size_of_test & TEST_MEDIUM)
-	    printf(" MEDIUM");
-	if (size_of_test & TEST_LARGE)
-	    printf(" LARGE");
-	printf("\n");
-
-	/* Set the random # seed */
-	HDsrandom((unsigned long)HDtime(NULL));
-
-	/* Reset library */
-	h5_reset();
-	fapl = h5_fileaccess();
-
-	/* Use larger file addresses... */
-	fcpl = H5Pcreate(H5P_FILE_CREATE);
-	H5Pset_sizes(fcpl, (size_t)8, (size_t)0);
-
-	/* Create the test file */
-	h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
-	if ((file=H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0) {
-	    printf("Cannot create file %s; test aborted\n", filename);
-	    exit(1);
-	}
-
-	/*
-	    * For testing file families, fool the library into thinking it already
-	    * allocated a whole bunch of data.
-	    */
-	if (H5FD_FAMILY==H5Pget_driver(fapl)) {
-	    haddr_t addr;
-	    H5F_t		*f;
-
-	    addr = 8 * ((uint64_t)1<<30);	/*8 GB */
-	    f=H5I_object(file);
-	    if (H5FDset_eoa(f->shared->lf, H5FD_MEM_DEFAULT, addr) < 0) {
-		printf("Cannot create large file family\n");
 		exit(1);
+#endif
 	    }
 	}
+    }
+    printf("Test sizes: ");
+    if (size_of_test & TEST_SMALL)
+	printf(" SMALL");
+    if (size_of_test & TEST_MEDIUM)
+	printf(" MEDIUM");
+    if (size_of_test & TEST_LARGE)
+	printf(" LARGE");
+    printf("\n");
 
-	/* Initialize chunk dimensions */
-	for (u = 0; u < H5O_LAYOUT_NDIMS; u++)
-	    chunk_dims[u]=TEST_CHUNK_SIZE;
+    /* Reset library */
+    h5_reset();
+    fapl = h5_fileaccess();
 
-	/*
-	    * Creation test: Creates empty objects with various raw data sizes
-	    * and alignments.
-	    */
-	status = test_create(file, "create");
-	nerrors += status < 0 ? 1 : 0;
+    /* Use larger file addresses... */
+    fcpl = H5Pcreate(H5P_FILE_CREATE);
+    H5Pset_sizes(fcpl, 8, 0);
 
-	if (size_of_test & TEST_SMALL) {
-	    status = test_extend(file, "extend", (size_t)10, (size_t)0, (size_t)0);
-	    nerrors += status < 0 ? 1 : 0;
-	    status = test_extend(file, "extend", (size_t)10, (size_t)10, (size_t)0);
-	    nerrors += status < 0 ? 1 : 0;
-	    status = test_extend(file, "extend", (size_t)10, (size_t)10, (size_t)10);
-	    nerrors += status < 0 ? 1 : 0;
-	}
-	if (size_of_test & TEST_MEDIUM) {
-	    status = test_extend(file, "extend", (size_t)10000, (size_t)0, (size_t)0);
-	    nerrors += status < 0 ? 1 : 0;
-	    status = test_extend(file, "extend", (size_t)2500, (size_t)10, (size_t)0);
-	    nerrors += status < 0 ? 1 : 0;
-	    status = test_extend(file, "extend", (size_t)10, (size_t)400, (size_t)10);
-	    nerrors += status < 0 ? 1 : 0;
-	}
-	if (size_of_test & TEST_SMALL) {
-	    status = test_sparse(file, "sparse", (size_t)100, (size_t)5, (size_t)0, (size_t)0);
-	    nerrors += status < 0 ? 1 : 0;
-	    status = test_sparse(file, "sparse", (size_t)100, (size_t)3, (size_t)4, (size_t)0);
-	    nerrors += status < 0 ? 1 : 0;
-	    status = test_sparse(file, "sparse", (size_t)100, (size_t)2, (size_t)3, (size_t)4);
-	    nerrors += status < 0 ? 1 : 0;
-	}
-	if (size_of_test & TEST_MEDIUM) {
-	    status = test_sparse(file, "sparse", (size_t)1000, (size_t)30, (size_t)0, (size_t)0);
-	    nerrors += status < 0 ? 1 : 0;
-	    status = test_sparse(file, "sparse", (size_t)2000, (size_t)7, (size_t)3, (size_t)0);
-	    nerrors += status < 0 ? 1 : 0;
-	    status = test_sparse(file, "sparse", (size_t)2000, (size_t)4, (size_t)2, (size_t)3);
-	    nerrors += status < 0 ? 1 : 0;
-	}
-	if (size_of_test & TEST_LARGE) {
-	    status = test_sparse(file, "sparse", (size_t)800, (size_t)50, (size_t)50, (size_t)50);
-	    nerrors += status < 0 ? 1 : 0;
-	}
-
-	/* Close the test file and exit */
-	H5Pclose(fcpl);
-	H5Fclose(file);
-
-	if (nerrors) {
-	    printf("***** %d I-STORE TEST%s FAILED! *****\n",
-		    nerrors, 1 == nerrors ? "" : "S");
+    /* Create the test file */
+    h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
+    if ((file=H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl))<0 ||
+	NULL==(f=H5I_object(file))) {
+	printf("Cannot create file %s; test aborted\n", filename);
+	exit(1);
+    }
+    
+    /*
+     * For testing file families, fool the library into thinking it already
+     * allocated a whole bunch of data.
+     */
+#ifdef H5_WANT_H5_V1_2_COMPAT
+    if (H5F_LOW_FAMILY==H5Pget_driver(fapl)) {
+#else /* H5_WANT_H5_V1_2_COMPAT */
+    if (H5FD_FAMILY==H5Pget_driver(fapl)) {
+#endif /* H5_WANT_H5_V1_2_COMPAT */
+	haddr_t addr;
+	addr = 8 * ((uint64_t)1<<30);	/*8 GB */
+	if (H5FDset_eoa(f->shared->lf, addr)<0) {
+	    printf("Cannot create large file family\n");
 	    exit(1);
 	}
+    }
 
-	printf("All i-store tests passed.\n");
-	h5_cleanup(FILENAME, fapl);
+    /*
+     * Creation test: Creates empty objects with various raw data sizes
+     * and alignments.
+     */
+    status = test_create(f, "create");
+    nerrors += status < 0 ? 1 : 0;
+
+    if (size_of_test & TEST_SMALL) {
+	status = test_extend(f, "extend", 10, 0, 0);
+	nerrors += status < 0 ? 1 : 0;
+	status = test_extend(f, "extend", 10, 10, 0);
+	nerrors += status < 0 ? 1 : 0;
+	status = test_extend(f, "extend", 10, 10, 10);
+	nerrors += status < 0 ? 1 : 0;
     }
-    else
-    {
-        puts("All i-store tests skipped - Incompatible with current Virtual File Driver");
+    if (size_of_test & TEST_MEDIUM) {
+	status = test_extend(f, "extend", 10000, 0, 0);
+	nerrors += status < 0 ? 1 : 0;
+	status = test_extend(f, "extend", 2500, 10, 0);
+	nerrors += status < 0 ? 1 : 0;
+	status = test_extend(f, "extend", 10, 400, 10);
+	nerrors += status < 0 ? 1 : 0;
     }
+    if (size_of_test & TEST_SMALL) {
+	status = test_sparse(f, "sparse", 100, 5, 0, 0);
+	nerrors += status < 0 ? 1 : 0;
+	status = test_sparse(f, "sparse", 100, 3, 4, 0);
+	nerrors += status < 0 ? 1 : 0;
+	status = test_sparse(f, "sparse", 100, 2, 3, 4);
+	nerrors += status < 0 ? 1 : 0;
+    }
+    if (size_of_test & TEST_MEDIUM) {
+	status = test_sparse(f, "sparse", 1000, 30, 0, 0);
+	nerrors += status < 0 ? 1 : 0;
+	status = test_sparse(f, "sparse", 2000, 7, 3, 0);
+	nerrors += status < 0 ? 1 : 0;
+	status = test_sparse(f, "sparse", 2000, 4, 2, 3);
+	nerrors += status < 0 ? 1 : 0;
+    }
+    if (size_of_test & TEST_LARGE) {
+	status = test_sparse(f, "sparse", 800, 50, 50, 50);
+	nerrors += status < 0 ? 1 : 0;
+    }
+
+    /* Close the test file and exit */
+    H5Pclose(fcpl);
+    H5Fclose(file);
+    
+    if (nerrors) {
+	printf("***** %d I-STORE TEST%s FAILED! *****\n",
+	       nerrors, 1 == nerrors ? "" : "S");
+	exit(1);
+    }
+
+    printf("All i-store tests passed.\n");
+    h5_cleanup(FILENAME, fapl);
     return 0;
 }

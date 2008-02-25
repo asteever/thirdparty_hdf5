@@ -1,5 +1,4 @@
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!   Copyright by The HDF Group.                                               *
 !   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
@@ -9,12 +8,12 @@
 !   of the source code distribution tree; Copyright.html can be found at the  *
 !   root level of an installed copy of the electronic HDF5 document set and   *
 !   is linked from the top-level documents page.  It can also be found at     *
-!   http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
-!   access to either file, you may request a copy from help@hdfgroup.org.     *
+!   http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+!   access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!
-   MODULE H5LIB
-     CONTAINS
+
+
+
 !----------------------------------------------------------------------
 ! Name:		h5open_f 
 !
@@ -48,10 +47,9 @@
 
         IMPLICIT NONE
         INTEGER, INTENT(OUT) :: error
-        INTEGER :: error_0, error_1, error_2, error_3
+        INTEGER :: error_0, error_1, error_2
 !        INTEGER, EXTERNAL :: h5init_types_c
 !        INTEGER, EXTERNAL :: h5init_flags_c
-!        INTEGER, EXTERNAL :: h5init1_flags_c
 !        INTEGER, EXTERNAL :: h5open_c
         
 !
@@ -60,7 +58,7 @@
         INTERFACE
           INTEGER FUNCTION h5open_c()
           !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-          !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5OPEN_C'::h5open_c
+          !MS$ATTRIBUTES C,reference,alias:'_H5OPEN_C'::h5open_c
           !DEC$ ENDIF
           END FUNCTION h5open_c
         END INTERFACE
@@ -71,63 +69,52 @@
           INTEGER(HID_T), DIMENSION(FLOATING_TYPES_LEN) :: f_types
           INTEGER(HID_T), DIMENSION(INTEGER_TYPES_LEN) :: i_types   
           !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-          !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5INIT_TYPES_C'::h5init_types_c
+          !MS$ATTRIBUTES C,reference,alias:'_H5INIT_TYPES_C'::h5init_types_c
           !DEC$ ENDIF
           END FUNCTION h5init_types_c
         END INTERFACE
         INTERFACE
           INTEGER FUNCTION h5init_flags_c(i_H5D_flags, &
+                                i_H5E_flags, &
                                 i_H5F_flags, &
                                 i_H5FD_flags, &
-                                i_H5FD_hid_flags, &
                                 i_H5G_flags, &
                                 i_H5I_flags, &
                                 i_H5P_flags, &
                                 i_H5R_flags, &
                                 i_H5S_flags, &
-                                i_H5T_flags, &               
-                                i_H5Z_flags)
+                                i_H5T_flags  )
           USE H5GLOBAL
           INTEGER i_H5F_flags(H5F_FLAGS_LEN)
           INTEGER i_H5G_flags(H5G_FLAGS_LEN)
           INTEGER i_H5D_flags(H5D_FLAGS_LEN)
           INTEGER i_H5FD_flags(H5FD_FLAGS_LEN)
-          INTEGER(HID_T) i_H5FD_hid_flags(H5FD_HID_FLAGS_LEN)
+          INTEGER i_H5E_flags(H5E_FLAGS_LEN)
           INTEGER i_H5I_flags(H5I_FLAGS_LEN)
-          INTEGER(HID_T) i_H5P_flags(H5P_FLAGS_LEN)
+          INTEGER i_H5P_flags(H5P_FLAGS_LEN)
           INTEGER i_H5R_flags(H5R_FLAGS_LEN)
           INTEGER i_H5S_flags(H5S_FLAGS_LEN)
           INTEGER i_H5T_flags(H5T_FLAGS_LEN)
-          INTEGER i_H5Z_flags(H5Z_FLAGS_LEN)
+
           !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-          !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5INIT_FLAGS_C'::h5init_flags_c
+          !MS$ATTRIBUTES C,reference,alias:'_H5INIT_FLAGS_C'::h5init_flags_c
           !DEC$ ENDIF
           END FUNCTION h5init_flags_c
-        END INTERFACE
-        INTERFACE
-          INTEGER FUNCTION h5init1_flags_c( i_H5LIB_flags )
-          USE H5GLOBAL
-          INTEGER i_H5LIB_flags(H5LIB_FLAGS_LEN)
-          !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-          !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5INIT1_FLAGS_C'::h5init1_flags_c
-          !DEC$ ENDIF
-          END FUNCTION h5init1_flags_c
         END INTERFACE
         error_0 = h5open_c()
         error_1 = h5init_types_c(predef_types, floating_types, integer_types)
         error_2 = h5init_flags_c(H5D_flags, &
+                                H5E_flags, &
                                 H5F_flags, &
                                 H5FD_flags, &
-                                H5FD_hid_flags, &
                                 H5G_flags, &
                                 H5I_flags, &
                                 H5P_flags, &
                                 H5R_flags, &
                                 H5S_flags, &
-                                H5T_flags, &
-                                H5Z_flags)
-        error_3 = h5init1_flags_c(H5LIB_flags )
-        error = error_0 + error_1 + error_2 + error_3
+                                H5T_flags  )
+        error = error_0 + error_1 + error_2
+
       END SUBROUTINE h5open_f
 
 !----------------------------------------------------------------------
@@ -169,7 +156,7 @@
         INTERFACE
           INTEGER FUNCTION h5close_c()
           !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-          !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5CLOSE_C'::h5close_c
+          !MS$ATTRIBUTES C,reference,alias:'_H5CLOSE_C'::h5close_c
           !DEC$ ENDIF
           END FUNCTION h5close_c
         END INTERFACE
@@ -185,7 +172,7 @@
           INTEGER(HID_T), DIMENSION(F_TYPES_LEN) :: f_types
           INTEGER(HID_T), DIMENSION(I_TYPES_LEN) :: i_types   
           !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-          !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5CLOSE_TYPES_C'::h5close_types_c
+          !MS$ATTRIBUTES C,reference,alias:'_H5CLOSE_TYPES_C'::h5close_types_c
           !DEC$ ENDIF
           END FUNCTION h5close_types_c
         END INTERFACE
@@ -197,182 +184,3 @@
 
       END SUBROUTINE h5close_f
         
-!----------------------------------------------------------------------
-! Name:		h5get_libversion_f 
-!
-! Purpose:	Returns the HDF5 LIbrary release number
-!
-! Inputs:  
-! Outputs:  
-!		majnum:		- major version of the library
-!		minum:		- minor version of the library
-!		relnum:		- release version of the library
-!		error:		- error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:
-!				NONE			
-!
-! Programmer:	Elena Pourmal
-!		September 24, 2002
-!
-! Comment:		
-!----------------------------------------------------------------------
-
-      SUBROUTINE h5get_libversion_f(majnum, minnum, relnum, error)
-!
-!This definition is needed for Windows DLLs
-!DEC$if defined(BUILD_HDF5_DLL)
-!DEC$attributes dllexport :: h5get_libversion_f
-!DEC$endif
-!
-        USE H5GLOBAL
-
-        IMPLICIT NONE
-        INTEGER, INTENT(OUT) :: majnum, minnum, relnum, error
-        INTERFACE
-          INTEGER FUNCTION h5get_libversion_c(majnum, minnum, relnum)
-          !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-          !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5GET_LIBVERSION_C'::h5get_libversion_c
-          !DEC$ ENDIF
-          INTEGER, INTENT(OUT) :: majnum, minnum, relnum
-          END FUNCTION h5get_libversion_c
-        END INTERFACE
-
-        error = h5get_libversion_c(majnum, minnum, relnum)
-
-      END SUBROUTINE h5get_libversion_f
-
-!----------------------------------------------------------------------
-! Name:		h5check_version_f 
-!
-! Purpose:	Verifies that library versions are consistent.
-!
-! Inputs:  
-!		majnum:		- major version of the library
-!		minum:		- minor version of the library
-!		relnum:		- release version of the library
-! Outputs:  
-!		error:		- error code		
-!				 	Success:  0
-!				 	Failure:  application aborts
-! Optional parameters:
-!				NONE			
-!
-! Programmer:	Elena Pourmal
-!		September 24, 2002
-!
-! Comment:		
-!----------------------------------------------------------------------
-
-      SUBROUTINE h5check_version_f(majnum, minnum, relnum, error)
-!
-!This definition is needed for Windows DLLs
-!DEC$if defined(BUILD_HDF5_DLL)
-!DEC$attributes dllexport :: h5check_version_f
-!DEC$endif
-!
-        USE H5GLOBAL
-
-        IMPLICIT NONE
-        INTEGER, INTENT(IN) :: majnum, minnum, relnum
-        INTEGER, INTENT(OUT) :: error
-        INTERFACE
-          INTEGER FUNCTION h5check_version_c(majnum, minnum, relnum)
-          !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-          !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5CHECK_VERSION_C'::h5check_version_c
-          !DEC$ ENDIF
-          INTEGER, INTENT(IN) :: majnum, minnum, relnum
-          END FUNCTION h5check_version_c
-        END INTERFACE
-
-        error = h5check_version_c(majnum, minnum, relnum)
-
-      END SUBROUTINE h5check_version_f
-
-!----------------------------------------------------------------------
-! Name:		h5garbage_collect_f 
-!
-! Purpose:	Garbage collects on all free-lists of all types.
-!
-! Inputs:  
-! Outputs:  
-!		error:		- error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:
-!				NONE			
-!
-! Programmer:	Elena Pourmal
-!		September 24, 2002
-!
-!
-! Comment:		
-!----------------------------------------------------------------------
-
-      SUBROUTINE h5garbage_collect_f(error)
-!
-!This definition is needed for Windows DLLs
-!DEC$if defined(BUILD_HDF5_DLL)
-!DEC$attributes dllexport :: h5garbage_collect_f
-!DEC$endif
-!
-        USE H5GLOBAL
-
-        IMPLICIT NONE
-        INTEGER, INTENT(OUT) :: error
-        INTERFACE
-          INTEGER FUNCTION h5garbage_collect_c()
-          !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-          !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5GARBAGE_COLLECT_C'::h5garbage_collect_c
-          !DEC$ ENDIF
-          END FUNCTION h5garbage_collect_c
-        END INTERFACE
-
-        error = h5garbage_collect_c()
-
-      END SUBROUTINE h5garbage_collect_f
-
-!----------------------------------------------------------------------
-! Name:		h5dont_atexit_f 
-!
-! Purpose:	Instructs library not to install atexit cleanup routine. 
-!
-! Inputs:  
-! Outputs:  
-!		error:		- error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:
-!				NONE			
-!
-! Programmer:	Elena Pourmal
-!		September 24, 2002
-!
-!
-! Comment:		
-!----------------------------------------------------------------------
-
-      SUBROUTINE h5dont_atexit_f(error)
-!
-!This definition is needed for Windows DLLs
-!DEC$if defined(BUILD_HDF5_DLL)
-!DEC$attributes dllexport :: h5dont_atexit_f
-!DEC$endif
-!
-        USE H5GLOBAL
-
-        IMPLICIT NONE
-        INTEGER, INTENT(OUT) :: error
-        INTERFACE
-          INTEGER FUNCTION h5dont_atexit_c()
-          !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-          !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5DONT_ATEXIT_C'::h5dont_atexit_c
-          !DEC$ ENDIF
-          END FUNCTION h5dont_atexit_c
-        END INTERFACE
-
-        error = h5dont_atexit_c()
-
-      END SUBROUTINE h5dont_atexit_f
-   END MODULE H5LIB

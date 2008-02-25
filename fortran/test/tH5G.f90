@@ -1,5 +1,4 @@
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!   Copyright by The HDF Group.                                               *
 !   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
@@ -9,25 +8,22 @@
 !   of the source code distribution tree; Copyright.html can be found at the  *
 !   root level of an installed copy of the electronic HDF5 document set and   *
 !   is linked from the top-level documents page.  It can also be found at     *
-!   http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
-!   access to either file, you may request a copy from help@hdfgroup.org.     *
+!   http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+!   access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!
-    SUBROUTINE group_test(cleanup, total_error)
+    SUBROUTINE group_test(total_error)
 
-!   This subroutine tests following functionalities: 
-!   h5gcreate_f, h5gopen_f, h5gclose_f, (?)h5gget_obj_info_idx_f,  h5gn_members_f
-!   h5glink(2)_f, h5gunlink_f, h5gmove(2)_f,  h5gget_linkval_f, h5gset_comment_f,
-!   h5gget_comment_f 
+!THis subroutine tests following functionalities: 
+! h5gcreate_f, h5gopen_f, h5gclose_f, (?)h5gget_obj_info_idx_f,  h5gn_members_f
+!h5glink_f, h5gunlink_f, h5gmove_f,  h5gget_linkval_f, h5gset_comment_f,
+! h5gget_comment_f 
 
      USE HDF5 ! This module contains all necessary modules 
         
      IMPLICIT NONE
-     LOGICAL, INTENT(IN)  :: cleanup
      INTEGER, INTENT(OUT) :: total_error 
 
-     CHARACTER(LEN=5), PARAMETER :: filename = "gtest"    !File name
-     CHARACTER(LEN=80) :: fix_filename
+     CHARACTER(LEN=8), PARAMETER :: filename = "gtest.h5"    !File name
      CHARACTER(LEN=33), PARAMETER :: comment = "Testing the group functionalities"  
                                               ! comment for this file
      CHARACTER(LEN=7), PARAMETER :: groupname1 = "MyGroup"  ! Group name
@@ -46,7 +42,6 @@
      INTEGER(HID_T) :: group2_id      ! Group identifier 
      INTEGER(HID_T) :: dset1_id    ! Dataset identifier 
      INTEGER(HID_T) :: dset2_id    ! Dataset identifier 
-     INTEGER(HID_T) :: dsetnew_id    ! Dataset identifier 
      INTEGER(HID_T) :: dspace_id  ! Data space identifier 
 
      INTEGER, DIMENSION(1) :: dset1_data = 34 ! Data value      
@@ -59,16 +54,11 @@
      CHARACTER(LEN=100) :: commentout !comment to the file
      INTEGER     ::   nmembers
      INTEGER     :: obj_type
-     INTEGER(HSIZE_T), DIMENSION(2) :: data_dims 
+     INTEGER, DIMENSION(7) :: data_dims 
      !
      ! Create the file.
      !
-          CALL h5_fixname_f(filename, fix_filename, H5P_DEFAULT_F, error)
-          if (error .ne. 0) then
-              write(*,*) "Cannot modify filename"
-              stop
-          endif
-     CALL h5fcreate_f(fix_filename, H5F_ACC_TRUNC_F, file_id, error)
+     CALL h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, error)
      CALL check("h5fcreate_f",error,total_error)
 
      !
@@ -123,8 +113,8 @@
      !
      !Create a hard link to the group2
      !
-     CALL h5glink2_f(file_id, groupname2, H5G_LINK_HARD_F, file_id, linkname2, error)   
-     CALL check("h5glink2_f",error,total_error)
+     CALL h5glink_f(file_id, H5G_LINK_HARD_F, groupname2, linkname2, error)   
+     CALL check("h5glink_f",error,total_error)
      !
      !Create a soft link to  dataset11
      !
@@ -151,7 +141,6 @@
      !
 !     CALL h5gget_obj_info_idx_f(file_id, linkname1, 2, name, obj_type, error)
 !     CALL check("h5gget_obj_info_idx_f", error, total_error) 
-! XXX: Fix problems with H5G_LINK_F! - QAK
 !     if (obj_type .ne. H5G_LINK_F) then
 !         write(*,*)  "got object  ", name, " type error ", obj_type
 !         total_error = total_error +1
@@ -212,19 +201,8 @@
          write(*,*)  "got comment  ", commentout, " is wrong"
          total_error = total_error +1
      end if
-     !
-     ! Move dataset1 to gourp2_id location
-     !
-     CALL h5dclose_f(dset1_id, error)
-     CALL check("h5dclose_f", error, total_error)   
 
-     CALL h5gmove2_f(file_id, dsetname1, group2_id, "dset1", error) 
-     CALL check("h5gmove2_f", error, total_error)  
-     !
-     ! Open dataset from the new location
-     !
-     Call h5dopen_f(file_id, "/MyGroup/Group_A/dset1" , dsetnew_id, error)
-     CALL check("h5dopen_f",error, total_error)
+
      !
      !release all the resources
      !
@@ -234,13 +212,10 @@
      CALL check("h5gclose_f", error, total_error)   
      CALL h5gclose_f(group2_id, error)
      CALL check("h5gclose_f", error, total_error)   
-     CALL h5dclose_f(dset2_id, error)
+     CALL h5dclose_f(dset1_id, error)
      CALL check("h5dclose_f", error, total_error)   
-     CALL h5dclose_f(dsetnew_id, error)
+     CALL h5dclose_f(dset2_id, error)
      CALL check("h5dclose_f", error, total_error)   
      CALL h5sclose_f(dspace_id, error)
      CALL check("h5sclose_f", error, total_error)   
-
-          if(cleanup) CALL h5_cleanup_f(filename, H5P_DEFAULT_F, error)
-              CALL check("h5_cleanup_f", error, total_error)
   END SUBROUTINE group_test

@@ -1,18 +1,17 @@
 // C++ informative line for the emacs editor: -*- C++ -*-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
- * All rights reserved.                                                      *
- *                                                                           *
- * This file is part of HDF5.  The full HDF5 copyright notice, including     *
- * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+  * Copyright by the Board of Trustees of the University of Illinois.         *
+  * All rights reserved.                                                      *
+  *                                                                           *
+  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
+  * terms governing use, modification, and redistribution, is contained in    *
+  * the files COPYING and Copyright.html.  COPYING can be found at the root   *
+  * of the source code distribution tree; Copyright.html can be found at the  *
+  * root level of an installed copy of the electronic HDF5 document set and   *
+  * is linked from the top-level documents page.  It can also be found at     *
+  * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+  * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
+  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef _H5Exception_H
 #define _H5Exception_H
@@ -21,145 +20,151 @@
 
 #ifndef H5_NO_NAMESPACE
 namespace H5 {
-#ifdef H5_NO_STD
-    #define H5std_string ::string
-#else
-    #define H5std_string std::string
-#endif
+using namespace std;
 #endif
 
-class H5_DLLCPP Exception {
+class __DLLCPP__ Exception {
    public:
+	// Default constructor
+	Exception();
+
 	// Creates an exception with a function name where the failure occurs
 	// and an optional detailed message
-	Exception(const H5std_string& func_name, const H5std_string& message = DEFAULT_MSG);
+	Exception( const string& func_name, const string& message = NULL);
+	Exception( const char* func_name, const char* message = NULL);
 
-	// Returns a character string that describes the error specified by
+	// copy constructor
+	Exception( const Exception& orig);
+
+	// Returns the character string that describes an error specified by
 	// a major error number.
-	H5std_string getMajorString( hid_t err_major_id ) const;
+	string getMajorString( H5E_major_t major_num ) const;
 
-	// Returns a character string that describes the error specified by
+	// Returns the character string that describes an error specified by
 	// a minor error number.
-	H5std_string getMinorString( hid_t err_minor_id ) const;
+	string getMinorString( H5E_minor_t minor_num ) const;
 
 	// Returns the detailed message set at the time the exception is thrown
-	H5std_string getDetailMsg() const;
+	string getDetailMsg() const;
 	const char* getCDetailMsg() const;	// C string of detailed message
-	H5std_string getFuncName() const;	// function name as a string object
-	const char* getCFuncName() const;	// function name as a char string
+	string getFuncName() const;	// function name as a string object
+	const char* getCFuncName() const;	// function name as a char string 
 
 	// Turns on the automatic error printing.
-	static void setAutoPrint( H5E_auto2_t& func, void* client_data);
+	static void setAutoPrint( H5E_auto_t func, void* client_data);
 
 	// Turns off the automatic error printing.
 	static void dontPrint();
 
-	// Retrieves the current settings for the automatic error stack
+	// Retrieves the current settings for the automatic error stack 
 	// traversal function and its data.
-	static void getAutoPrint( H5E_auto2_t& func, void** client_data);
+	static void getAutoPrint( H5E_auto_t& func, void** client_data);
 
 	// Clears the error stack for the current thread.
 	static void clearErrorStack();
 
-	// Walks the error stack for the current thread, calling the
+	// Walks the error stack for the current thread, calling the 
 	// specified function.
-	static void walkErrorStack( H5E_direction_t direction,
-				H5E_walk2_t func, void* client_data);
+	static void walkErrorStack( H5E_direction_t direction, 
+				H5E_walk_t func, void* client_data);
+
+	// Default error stack traversal callback function that prints 
+	// error messages to the specified output stream.
+	static void walkDefErrorStack( int n, H5E_error_t& err_desc,
+				void* client_data);
 
 	// Prints the error stack in a default manner.
 	virtual void printError( FILE* stream = NULL ) const;
-
-	// Default constructor
-	Exception();
-
-	// copy constructor
-	Exception( const Exception& orig);
 
 	// virtual Destructor
 	virtual ~Exception();
 
    private:
 // Because 'string' is not instantiated at compilation time, this
-// warning is displayed when building DLL; but the class is exported
-// so the warning is harmless
-#if defined(_WIN32)
+// warning is displayed; but the class is exported so the warning
+// is harmless
 #pragma warning(disable: 4251)
-#endif
-	H5std_string detail_message;
-	H5std_string func_name;
-
-   protected:
-        // Default value for detail_message
-        static const H5std_string DEFAULT_MSG;
+	string detailMessage;
+	string funcName;
 };
 
-class H5_DLLCPP FileIException : public Exception {
+class __DLLCPP__ FileIException : public Exception {
    public:
-	FileIException( const H5std_string& func_name, const H5std_string& message = DEFAULT_MSG);
 	FileIException();
+	FileIException( const string& func_name, const string& message = NULL);
+	FileIException( const char* func_name, const char* message = NULL);
 	virtual ~FileIException();
 };
 
-class H5_DLLCPP GroupIException : public Exception {
+class __DLLCPP__ GroupIException : public Exception {
    public:
-	GroupIException( const H5std_string& func_name, const H5std_string& message = DEFAULT_MSG);
 	GroupIException();
+	GroupIException( const string& func_name, const string& message=NULL);
+	GroupIException( const char* func_name, const char* message = NULL);
 	virtual ~GroupIException();
 };
 
-class H5_DLLCPP DataSpaceIException : public Exception {
+class __DLLCPP__ DataSpaceIException : public Exception {
    public:
-	DataSpaceIException(const H5std_string& func_name, const H5std_string& message = DEFAULT_MSG);
 	DataSpaceIException();
+	DataSpaceIException(const string& func_name, const string& message=NULL);
+	DataSpaceIException(const char* func_name, const char* message = NULL);
 	virtual ~DataSpaceIException();
 };
 
-class H5_DLLCPP DataTypeIException : public Exception {
+class __DLLCPP__ DataTypeIException : public Exception {
    public:
-	DataTypeIException(const H5std_string& func_name, const H5std_string& message = DEFAULT_MSG);
 	DataTypeIException();
+	DataTypeIException(const string& func_name, const string& message = NULL);
+	DataTypeIException(const char* func_name, const char* message = NULL);
 	virtual ~DataTypeIException();
 };
 
-class H5_DLLCPP PropListIException : public Exception {
+class __DLLCPP__ PropListIException : public Exception {
    public:
-	PropListIException(const H5std_string& func_name, const H5std_string& message = DEFAULT_MSG);
 	PropListIException();
+	PropListIException(const string& func_name, const string& message=NULL);
+	PropListIException(const char* func_name, const char* message = NULL);
 	virtual ~PropListIException();
 };
 
-class H5_DLLCPP DataSetIException : public Exception {
+class __DLLCPP__ DataSetIException : public Exception {
    public:
-	DataSetIException(const H5std_string& func_name, const H5std_string& message = DEFAULT_MSG);
 	DataSetIException();
+	DataSetIException(const string& func_name, const string& message=NULL);
+	DataSetIException(const char* func_name, const char* message = NULL);
 	virtual ~DataSetIException();
 };
 
-class H5_DLLCPP AttributeIException : public Exception {
+class __DLLCPP__ AttributeIException : public Exception {
    public:
-	AttributeIException(const H5std_string& func_name, const H5std_string& message = DEFAULT_MSG);
 	AttributeIException();
+	AttributeIException(const string& func_name, const string& message=NULL);
+	AttributeIException(const char* func_name, const char* message = NULL);
 	virtual ~AttributeIException();
 };
 
-class H5_DLLCPP ReferenceException : public Exception {
+class __DLLCPP__ ReferenceException : public Exception {
    public:
-	ReferenceException(const H5std_string& func_name, const H5std_string& message = DEFAULT_MSG);
 	ReferenceException();
+	ReferenceException(const string& func_name, const string& message=NULL);
+	ReferenceException(const char* func_name, const char* message = NULL);
 	virtual ~ReferenceException();
 };
 
-class H5_DLLCPP LibraryIException : public Exception {
+class __DLLCPP__ LibraryIException : public Exception {
    public:
-	LibraryIException(const H5std_string& func_name, const H5std_string& message = DEFAULT_MSG);
 	LibraryIException();
+	LibraryIException(const string& func_name, const string& message=NULL);
+	LibraryIException(const char* func_name, const char* message = NULL);
 	virtual ~LibraryIException();
 };
 
-class H5_DLLCPP IdComponentException : public Exception {
+class __DLLCPP__ IdComponentException : public Exception {
    public:
-	IdComponentException(const H5std_string& func_name, const H5std_string& message = DEFAULT_MSG);
 	IdComponentException();
+	IdComponentException(const string& func_name, const string& message=NULL);
+	IdComponentException(const char* func_name, const char* message = NULL);
 	virtual ~IdComponentException();
 };
 

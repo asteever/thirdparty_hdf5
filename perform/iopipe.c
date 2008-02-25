@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -23,23 +22,23 @@
 
 #ifdef H5_HAVE_WINSOCK_H
 #include <Winsock.h>
-#endif
+#endif 
 
 /*Winsock.h includes windows.h, due to the different value of
 WINVER, windows.h should be put before H5private.h. Kent yang 6/21/2001*/
 
 #if defined (__MWERKS__)
-#ifdef H5_HAVE_SYS_TIMEB
+#ifdef H5_HAVE_SYS_TIMEB 
 #undef H5_HAVE_SYS_TIMEB
 #endif
-#ifdef H5_HAVE_SYSTEM
+#ifdef H5_HAVE_SYSTEM 
 #undef H5_HAVE_SYSTEM
 #endif
 #endif /* __MWERKS__*/
 
 #include "H5private.h"
 
-#ifdef H5_HAVE_SYS_TIMEB
+#ifdef H5_HAVE_SYS_TIMEB 
 #include <sys/timeb.h>
 #endif
 
@@ -118,12 +117,12 @@ print_stats (const char *prefix,
 	      (double)(t_start->tv_usec)/1000.0);
 #endif
     bw = (double)nbytes / e_time;
-
+    
 #ifdef H5_HAVE_GETRUSAGE
-    printf (HEADING "%1.2fuser %1.2fsystem %1.2felapsed %1.2fMB/s\n",
+    printf (HEADING "%1.2fuser %1.2fsystem %1.2felapsed %1.2fMB/s\n", 
 	    prefix, u_time, s_time, e_time, bw/(1024*1024));
 #else
-    printf (HEADING "%1.2felapsed %1.2fMB/s\n",
+    printf (HEADING "%1.2felapsed %1.2fMB/s\n", 
 	    prefix, e_time, bw/(1024*1024));
 #endif
 
@@ -133,7 +132,7 @@ print_stats (const char *prefix,
 /*-------------------------------------------------------------------------
  * Function:	synchronize
  *
- * Purpose:
+ * Purpose:	
  *
  * Return:	void
  *
@@ -148,11 +147,15 @@ static void
 synchronize (void)
 {
 #ifdef H5_HAVE_SYSTEM
-#if defined(_WIN32) && ! defined(__CYGWIN__)
+#ifdef WIN32
+#ifdef __WATCOMC__
+	flushall();
+#else /* __WATCOMC__ */
 	_flushall();
+#endif /* __WATCOMC__ */
 #else
-    HDsystem ("sync");
-    HDsystem ("df >/dev/null");
+    system ("sync");
+    system ("df >/dev/null");
 #endif
 #if 0
     /*
@@ -169,11 +172,11 @@ synchronize (void)
 /*-------------------------------------------------------------------------
  * Function:	main
  *
- * Purpose:
+ * Purpose:	
  *
- * Return:	Success:
+ * Return:	Success:	
  *
- *		Failure:
+ *		Failure:	
  *
  * Programmer:	Robb Matzke
  *              Thursday, March 12, 1998
@@ -193,14 +196,14 @@ main (void)
     herr_t		status;
 #ifdef H5_HAVE_GETRUSAGE
     struct rusage	r_start, r_stop;
-#else
+#else 
     struct timeval r_start, r_stop;
-#endif
+#endif    
     struct timeval	t_start, t_stop;
     int			i, fd;
     hssize_t		n;
     off_t		offset;
-    hsize_t		start[2];
+    hssize_t		start[2];
     hsize_t		count[2];
 
 
@@ -215,22 +218,21 @@ main (void)
      */
     printf ("I/O request size is %1.1fMB\n",
 	    (double)(hssize_t)(size[0]*size[1])/1024.0*1024);
-
+    
     /* Open the files */
     file = H5Fcreate (HDF5_FILE_NAME, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
     assert (file>=0);
     fd = HDopen (RAW_FILE_NAME, O_RDWR|O_CREAT|O_TRUNC, 0666);
     assert (fd>=0);
-
+    
     /* Create the dataset */
     file_space = H5Screate_simple (2, size, size);
-    assert(file_space >= 0);
-    dset = H5Dcreate2(file, "dset", H5T_NATIVE_UCHAR, file_space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    assert(dset >= 0);
-    the_data = malloc((size_t)(size[0] * size[1]));
-
-    /* initial fill for lazy malloc */
-    memset(the_data, 0xAA, (size_t)(size[0] * size[1]));
+    assert (file_space>=0);
+    dset = H5Dcreate (file, "dset", H5T_NATIVE_UCHAR, file_space, H5P_DEFAULT);
+    assert (dset>=0);
+    the_data = malloc ((size_t)(size[0]*size[1]));
+    /*initial fill for lazy malloc*/
+    memset (the_data, 0xAA, (size_t)(size[0]*size[1]));
 
     /* Fill raw */
     synchronize ();
@@ -240,11 +242,11 @@ printf("Before getrusage() call\n");
 #endif
 #ifdef H5_HAVE_GETTIMEOFDAY
     gettimeofday (&t_start, NULL);
-#else
+#else 
 #ifdef H5_HAVE_SYS_TIMEB
 	_ftime(tbstart);
 #endif
-#endif
+#endif   
     fprintf (stderr, HEADING, "fill raw");
     for (i=0; i<nwrite; i++) {
 	putc (PROGRESS, stderr);
@@ -263,13 +265,13 @@ printf("Before getrusage() call\n");
 	t_start.tv_usec = tbstart->millitm;
 	t_stop.tv_sec = tbstop->time;
 	t_stop.tv_usec = tbstop->millitm;
-#endif
-#endif
+#endif	
+#endif 
     putc ('\n', stderr);
     print_stats ("fill raw",
 		 &r_start, &r_stop, &t_start, &t_stop,
 		 (size_t)(nread*size[0]*size[1]));
-
+    
 
     /* Fill hdf5 */
     synchronize ();
@@ -282,7 +284,7 @@ printf("Before getrusage() call\n");
 #ifdef H5_HAVE_SYS_TIMEB
 	_ftime(tbstart);
 #endif
-#endif
+#endif 
     fprintf (stderr, HEADING, "fill hdf5");
     for (i=0; i<nread; i++) {
 	putc (PROGRESS, stderr);
@@ -303,13 +305,13 @@ printf("Before getrusage() call\n");
 	t_start.tv_usec = tbstart->millitm;
 	t_stop.tv_sec = tbstop->time;
 	t_stop.tv_usec = tbstop->millitm;
-#endif
-#endif
+#endif	
+#endif 
     putc ('\n', stderr);
     print_stats ("fill hdf5",
 		 &r_start, &r_stop, &t_start, &t_stop,
 		 (size_t)(nread*size[0]*size[1]));
-
+    
     /* Write the raw dataset */
     synchronize ();
 #ifdef H5_HAVE_GETRUSAGE
@@ -321,7 +323,7 @@ printf("Before getrusage() call\n");
 #ifdef H5_HAVE_SYS_TIMEB
 	_ftime(tbstart);
 #endif
-#endif
+#endif 
     fprintf (stderr, HEADING, "out raw");
     for (i=0; i<nwrite; i++) {
 	putc (PROGRESS, stderr);
@@ -343,8 +345,8 @@ printf("Before getrusage() call\n");
 	t_start.tv_usec = tbstart->millitm;
 	t_stop.tv_sec = tbstop->time;
 	t_stop.tv_usec = tbstop->millitm;
-#endif
-#endif
+#endif	
+#endif 
     putc ('\n', stderr);
     print_stats ("out raw",
 		 &r_start, &r_stop, &t_start, &t_stop,
@@ -361,7 +363,7 @@ printf("Before getrusage() call\n");
 #ifdef H5_HAVE_SYS_TIMEB
 	_ftime(tbstart);
 #endif
-#endif
+#endif 
     fprintf (stderr, HEADING, "out hdf5");
     for (i=0; i<nwrite; i++) {
 	putc (PROGRESS, stderr);
@@ -382,8 +384,8 @@ printf("Before getrusage() call\n");
 	t_start.tv_usec = tbstart->millitm;
 	t_stop.tv_sec = tbstop->time;
 	t_stop.tv_usec = tbstop->millitm;
-#endif
-#endif
+#endif	
+#endif 
     putc ('\n', stderr);
     print_stats ("out hdf5",
 		 &r_start, &r_stop, &t_start, &t_stop,
@@ -400,7 +402,7 @@ printf("Before getrusage() call\n");
 #ifdef H5_HAVE_SYS_TIMEB
 	_ftime(tbstart);
 #endif
-#endif
+#endif 
     fprintf (stderr, HEADING, "in raw");
     for (i=0; i<nread; i++) {
 	putc (PROGRESS, stderr);
@@ -422,13 +424,13 @@ printf("Before getrusage() call\n");
 	t_start.tv_usec = tbstart->millitm;
 	t_stop.tv_sec = tbstop->time;
 	t_stop.tv_usec = tbstop->millitm;
-#endif
-#endif
+#endif	
+#endif 
     putc ('\n', stderr);
     print_stats ("in raw",
 		 &r_start, &r_stop, &t_start, &t_stop,
 		 (size_t)(nread*size[0]*size[1]));
-
+    
 
     /* Read the hdf5 dataset */
     synchronize ();
@@ -440,8 +442,8 @@ printf("Before getrusage() call\n");
 #else
 #ifdef H5_HAVE_SYS_TIMEB
 	_ftime(tbstart);
-#endif
-#endif
+#endif	
+#endif 
     fprintf (stderr, HEADING, "in hdf5");
     for (i=0; i<nread; i++) {
 	putc (PROGRESS, stderr);
@@ -463,7 +465,7 @@ printf("Before getrusage() call\n");
 	t_stop.tv_sec = tbstop->time;
 	t_stop.tv_usec = tbstop->millitm;
 #endif
-#endif
+#endif 
     putc ('\n', stderr);
     print_stats ("in hdf5",
 		 &r_start, &r_stop, &t_start, &t_stop,
@@ -484,8 +486,8 @@ printf("Before getrusage() call\n");
 #else
 #ifdef H5_HAVE_SYS_TIMEB
 	_ftime(tbstart);
-#endif
-#endif
+#endif	
+#endif 
     fprintf (stderr, HEADING, "in hdf5 partial");
     for (i=0; i<nread; i++) {
 	putc (PROGRESS, stderr);
@@ -506,20 +508,20 @@ printf("Before getrusage() call\n");
 	t_start.tv_usec = tbstart->millitm;
 	t_stop.tv_sec = tbstop->time;
 	t_stop.tv_usec = tbstop->millitm;
-#endif
-#endif
+#endif	
+#endif 
     putc ('\n', stderr);
     print_stats ("in hdf5 partial",
 		 &r_start, &r_stop, &t_start, &t_stop,
 		 (size_t)(nread*count[0]*count[1]));
+    
 
-
-
+    
     /* Close everything */
     HDclose (fd);
     H5Dclose (dset);
     H5Sclose (file_space);
     H5Fclose (file);
-
+    
     return 0;
 }

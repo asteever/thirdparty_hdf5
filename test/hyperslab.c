@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,11 +8,12 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/* Programmer:	Robb Matzke <matzke@llnl.gov>
+/*
+ * Programmer:	Robb Matzke <matzke@llnl.gov>
  *		Friday, October 10, 1997
  *
  * Purpose:	Hyperslab operations are rather complex, so this file
@@ -22,10 +22,15 @@
  *		because testing general dimensionalities would require us to
  *		rewrite much of the hyperslab stuff.
  */
-#include "h5test.h"
 #include "H5private.h"
-#include "H5Eprivate.h"
+#include "H5MMprivate.h"
 #include "H5Vprivate.h"
+
+#ifndef H5_HAVE_FUNCTION
+#undef __FUNCTION__
+#define __FUNCTION__ ""
+#endif
+#define AT() printf ("	 at %s:%d in %s()\n",__FILE__,__LINE__,__FUNCTION__);
 
 #define TEST_SMALL	0x0001
 #define TEST_MEDIUM	0x0002
@@ -33,10 +38,6 @@
 #define VARIABLE_SRC	0
 #define VARIABLE_DST	1
 #define VARIABLE_BOTH	2
-
-#define ARRAY_FILL_SIZE 4
-#define ARRAY_OFFSET_NDIMS 3
-
 
 /*-------------------------------------------------------------------------
  * Function:	init_full
@@ -63,9 +64,7 @@ init_full(uint8_t *array, size_t nx, size_t ny, size_t nz)
 	for (j=0; j<ny; j++) {
 	    for (k=0; k<nz; k++) {
 		total += acc;
-		*array = acc;
-		acc++;
-		array++;
+		*array++ = acc++;
 	    }
 	}
     }
@@ -118,7 +117,7 @@ print_array(uint8_t *array, size_t nx, size_t ny, size_t nz)
  *
  * Return:	Success:	0
  *
- *		Failure:
+ *		Failure:	
  *
  * Programmer:	Robb Matzke
  *		Friday, October 10, 1997
@@ -132,7 +131,7 @@ print_ref(size_t nx, size_t ny, size_t nz)
 {
     uint8_t		   *array;
 
-    array = HDcalloc(nx*ny*nz,sizeof(uint8_t));
+    array = H5MM_calloc(nx*ny*nz*sizeof(uint8_t));
 
     printf("Reference array:\n");
     init_full(array, nx, ny, nz);
@@ -163,7 +162,7 @@ test_fill(size_t nx, size_t ny, size_t nz,
     uint8_t	*dst = NULL;		/*destination array		*/
     hsize_t	hs_size[3];	    	/*hyperslab size		*/
     hsize_t	dst_size[3];	    	/*destination total size	*/
-    hsize_t	dst_offset[3];	    	/*offset of hyperslab in dest   */
+    hssize_t	dst_offset[3];	    	/*offset of hyperslab in dest   */
     unsigned	ref_value;  		/*reference value		*/
     unsigned	acc;	    		/*accumulator		    	*/
     size_t	i, j, k, dx, dy, dz;	/*counters		   	*/
@@ -195,7 +194,7 @@ test_fill(size_t nx, size_t ny, size_t nz,
     fflush(stdout);
 
     /* Allocate array */
-    dst = HDcalloc((size_t)1, nx * ny * nz);
+    dst = H5MM_calloc(nx*ny*nz);
     init_full(dst, nx, ny, nz);
 
     for (i = 0; i < nx; i += di) {
@@ -209,9 +208,9 @@ test_fill(size_t nx, size_t ny, size_t nz,
 			    dst_size[0] = nx;
 			    dst_size[1] = ny;
 			    dst_size[2] = nz;
-			    dst_offset[0] = i;
-			    dst_offset[1] = j;
-			    dst_offset[2] = k;
+			    dst_offset[0] = (hssize_t)i;
+			    dst_offset[1] = (hssize_t)j;
+			    dst_offset[2] = (hssize_t)k;
 			    hs_size[0] = dx;
 			    hs_size[1] = dy;
 			    hs_size[2] = dz;
@@ -289,11 +288,11 @@ test_fill(size_t nx, size_t ny, size_t nz,
 	}
     }
     puts(" PASSED");
-    HDfree(dst);
+    H5MM_xfree(dst);
     return SUCCEED;
 
   error:
-    HDfree(dst);
+    H5MM_xfree(dst);
     return FAIL;
 }
 
@@ -336,8 +335,8 @@ test_copy(int mode,
     hsize_t	hs_size[3];		/*hyperslab size		*/
     hsize_t	dst_size[3];		/*destination total size	*/
     hsize_t	src_size[3];		/*source total size		*/
-    hsize_t	dst_offset[3];		/*offset of hyperslab in dest	*/
-    hsize_t	src_offset[3];		/*offset of hyperslab in source */
+    hssize_t	dst_offset[3];		/*offset of hyperslab in dest	*/
+    hssize_t	src_offset[3];		/*offset of hyperslab in source */
     unsigned	ref_value;		/*reference value		*/
     unsigned	acc;			/*accumulator			*/
     hsize_t	i, j, k, dx, dy, dz;	/*counters		     	*/
@@ -399,8 +398,8 @@ test_copy(int mode,
     /*
      * Allocate arrays
      */
-    src = HDcalloc((size_t)1, nx * ny * nz);
-    dst = HDcalloc((size_t)1, nx * ny * nz);
+    src = H5MM_calloc(nx*ny*nz);
+    dst = H5MM_calloc(nx*ny*nz);
     init_full(src, nx, ny, nz);
 
     for (i=0; i<nx; i+=di) {
@@ -425,25 +424,25 @@ test_copy(int mode,
 				dst_offset[0] = 0;
 				dst_offset[1] = 0;
 				dst_offset[2] = 0;
-				src_offset[0] = i;
-				src_offset[1] = j;
-				src_offset[2] = k;
+				src_offset[0] = (hssize_t)i;
+				src_offset[1] = (hssize_t)j;
+				src_offset[2] = (hssize_t)k;
 				break;
 			    case VARIABLE_DST:
-				dst_offset[0] = i;
-				dst_offset[1] = j;
-				dst_offset[2] = k;
+				dst_offset[0] = (hssize_t)i;
+				dst_offset[1] = (hssize_t)j;
+				dst_offset[2] = (hssize_t)k;
 				src_offset[0] = 0;
 				src_offset[1] = 0;
 				src_offset[2] = 0;
 				break;
 			    case VARIABLE_BOTH:
-				dst_offset[0] = i;
-				dst_offset[1] = j;
-				dst_offset[2] = k;
-				src_offset[0] = i;
-				src_offset[1] = j;
-				src_offset[2] = k;
+				dst_offset[0] = (hssize_t)i;
+				dst_offset[1] = (hssize_t)j;
+				dst_offset[2] = (hssize_t)k;
+				src_offset[0] = (hssize_t)i;
+				src_offset[1] = (hssize_t)j;
+				src_offset[2] = (hssize_t)k;
 				break;
 			    default:
 				abort();
@@ -576,13 +575,18 @@ test_copy(int mode,
 	}
     }
     puts(" PASSED");
+#if defined(WIN32) && defined(_HDF5USEDLL_)
     HDfree(src);
     HDfree(dst);
+#else
+	H5MM_xfree(src);
+	H5MM_xfree(dst);
+#endif
     return SUCCEED;
 
   error:
-    HDfree(src);
-    HDfree(dst);
+    H5MM_xfree(src);
+    H5MM_xfree(dst);
     return FAIL;
 }
 
@@ -611,10 +615,10 @@ test_multifill(size_t nx)
 {
     hsize_t		    i, j;
     hsize_t		    size;
-    hsize_t		    src_stride;
-    hsize_t		    dst_stride;
+    hssize_t		    src_stride;
+    hssize_t		    dst_stride;
     char		    s[64];
-
+	
     struct a_struct {
 	int			left;
 	double			mid;
@@ -625,8 +629,15 @@ test_multifill(size_t nx)
     fflush(stdout);
 
     /* Initialize the source and destination */
-    src = HDmalloc(nx * sizeof(*src));
-    dst = HDmalloc(nx * sizeof(*dst));
+#if !defined(WIN32) && !defined(_HDF5USEDLL_)
+    src = H5MM_malloc(nx * sizeof(*src));
+    dst = H5MM_malloc(nx * sizeof(*dst));
+#else
+/*
+	to match the HDfree I plan on using to free this memory */
+	src = malloc(nx * sizeof(*src));
+    dst = malloc(nx * sizeof(*dst));
+#endif
     for (i = 0; i < nx; i++) {
 	src[i].left = 1111111;
 	src[i].mid = 12345.6789;
@@ -664,11 +675,7 @@ test_multifill(size_t nx)
     for (i = 0; i < nx; i++) {
 	if (dst[i].left != 3333333) {
 	    sprintf(s, "bad dst[%lu].left", (unsigned long)i);
-	} else if (!DBL_ABS_EQUAL(dst[i].mid, fill.mid)) {
-            /* Check if two DOUBLE values are equal.  If their difference
-             * is smaller than the EPSILON value for double, they are 
-             * considered equal. See the definition in h5test.h.
-             */
+	} else if (dst[i].mid != fill.mid) {
 	    sprintf(s, "bad dst[%lu].mid", (unsigned long)i);
 	} else if (dst[i].right != 4444444) {
 	    sprintf(s, "bad dst[%lu].right", (unsigned long)i);
@@ -693,15 +700,23 @@ test_multifill(size_t nx)
 	    goto error;
 	}
     }
-
+	
     puts(" PASSED");
-    HDfree(src);
-    HDfree(dst);
+#if !defined(WIN32) && !defined(_HDF5USEDLL_)
+    H5MM_xfree(src);
+    H5MM_xfree(dst);
+#else
+/*
+	The above calls to H5MM_xfree crash on NT but using free does not. 
+*/
+  	HDfree(src);
+	HDfree(dst);
+#endif
     return SUCCEED;
 
   error:
-    HDfree(src);
-    HDfree(dst);
+    H5MM_xfree(src);
+    H5MM_xfree(dst);
     return FAIL;
 }
 
@@ -737,9 +752,9 @@ test_endian(size_t nx)
     fflush(stdout);
 
     /* Initialize arrays */
-    src = HDmalloc(nx * 4);
-    init_full(src, nx, (size_t)4, (size_t)1);
-    dst = HDcalloc(nx , (size_t)4);
+    src = H5MM_malloc(nx * 4);
+    init_full(src, nx, 4, 1);
+    dst = H5MM_calloc(nx * 4);
 
     /* Initialize strides */
     src_stride[0] = 0;
@@ -750,7 +765,7 @@ test_endian(size_t nx)
     size[1] = 4;
 
     /* Copy the array */
-    H5V_stride_copy_s(2, (hsize_t)1, size, dst_stride, dst + 3, src_stride, src);
+    H5V_stride_copy(2, (hsize_t)1, size, dst_stride, dst + 3, src_stride, src);
 
     /* Compare */
     for (i = 0; i < nx; i++) {
@@ -766,9 +781,9 @@ test_endian(size_t nx)
 		    printf("   i=%lu, j=%lu\n",
 			   (unsigned long)i, (unsigned long)j);
 		    printf("   Source array is:\n");
-		    print_array(src, nx, (size_t)4, (size_t)1);
+		    print_array(src, nx, 4, 1);
 		    printf("\n	 Result is:\n");
-		    print_array(dst, nx, (size_t)4, (size_t)1);
+		    print_array(dst, nx, 4, 1);
 		}
 		goto error;
 	    }
@@ -776,13 +791,18 @@ test_endian(size_t nx)
     }
 
     puts(" PASSED");
-    HDfree(src);
-    HDfree(dst);
+#if defined(WIN32) && defined(_HDF5USEDLL_)
+	HDfree(src);
+	HDfree(dst);
+#else
+    H5MM_xfree(src);
+    H5MM_xfree(dst);
+#endif
     return SUCCEED;
 
   error:
-    HDfree(src);
-    HDfree(dst);
+    H5MM_xfree(src);
+    H5MM_xfree(dst);
     return FAIL;
 }
 
@@ -809,7 +829,7 @@ test_transpose(size_t nx, size_t ny)
     int	*src = NULL;
     int	*dst = NULL;
     hsize_t	i, j;
-    hsize_t	src_stride[2], dst_stride[2];
+    hssize_t	src_stride[2], dst_stride[2];
     hsize_t	size[2];
     char	s[256];
 
@@ -819,13 +839,13 @@ test_transpose(size_t nx, size_t ny)
     fflush(stdout);
 
     /* Initialize */
-    src = HDmalloc(nx * ny * sizeof(*src));
+    src = H5MM_malloc(nx * ny * sizeof(*src));
     for (i = 0; i < nx; i++) {
 	for (j = 0; j < ny; j++) {
 	    src[i * ny + j] = (int)(i * ny + j);
 	}
     }
-    dst = HDcalloc(nx*ny,sizeof(*dst));
+    dst = H5MM_calloc(nx*ny*sizeof(*dst));
 
     /* Build stride info */
     size[0] = nx;
@@ -878,13 +898,18 @@ test_transpose(size_t nx, size_t ny)
     }
 
     puts(" PASSED");
+#if !defined(WIN32) && !defined(_HDF5USEDLL_)
+    H5MM_xfree(src);
+    H5MM_xfree(dst);
+#else
     HDfree(src);
     HDfree(dst);
+#endif
     return SUCCEED;
 
   error:
-    HDfree(src);
-    HDfree(dst);
+    H5MM_xfree(src);
+    H5MM_xfree(dst);
     return FAIL;
 }
 
@@ -913,8 +938,8 @@ test_sub_super(size_t nx, size_t ny)
     uint8_t	*full = NULL;	/*original image		*/
     uint8_t	*half = NULL;	/*image at 1/2 resolution	*/
     uint8_t	*twice = NULL;	/*2x2 pixels			*/
-    hsize_t	src_stride[4];	/*source stride info		*/
-    hsize_t	dst_stride[4];	/*destination stride info	*/
+    hssize_t	src_stride[4];	/*source stride info		*/
+    hssize_t	dst_stride[4];	/*destination stride info	*/
     hsize_t	size[4];	/*number of sample points	*/
     hsize_t	i, j;
     char	s[256];
@@ -926,10 +951,10 @@ test_sub_super(size_t nx, size_t ny)
     fflush(stdout);
 
     /* Initialize */
-    full = HDmalloc(4 * nx * ny);
-    init_full(full, 2 * nx, 2 * ny, (size_t)1);
-    half = HDcalloc((size_t)1, nx * ny);
-    twice = HDcalloc((size_t)4, nx * ny);
+    full = H5MM_malloc(4 * nx * ny);
+    init_full(full, 2 * nx, 2 * ny, 1);
+    half = H5MM_calloc(nx*ny);
+    twice = H5MM_calloc(4*nx*ny);
 
     /* Setup */
     size[0] = nx;
@@ -956,9 +981,9 @@ test_sub_super(size_t nx, size_t ny)
 			   (unsigned long)i,
 			   (unsigned long)j);
 		    printf("   full is:\n");
-		    print_array(full, 2 * nx, 2 * ny, (size_t)1);
+		    print_array(full, 2 * nx, 2 * ny, 1);
 		    printf("\n	 half is:\n");
-		    print_array(half, nx, ny, (size_t)1);
+		    print_array(half, nx, ny, 1);
 		}
 		goto error;
 	    }
@@ -1028,9 +1053,9 @@ test_sub_super(size_t nx, size_t ny)
 		if (!isatty(1)) {
 		    AT();
 		    printf("   %s\n   Half is:\n", s);
-		    print_array(half, nx, ny, (size_t)1);
+		    print_array(half, nx, ny, 1);
 		    printf("\n	 Twice is:\n");
-		    print_array(twice, 2 * nx, 2 * ny, (size_t)1);
+		    print_array(twice, 2 * nx, 2 * ny, 1);
 		}
 		goto error;
 	    }
@@ -1038,150 +1063,15 @@ test_sub_super(size_t nx, size_t ny)
     }
     puts(" PASSED");
 
-    HDfree(full);
-    HDfree(half);
-    HDfree(twice);
+    H5MM_xfree(full);
+    H5MM_xfree(half);
+    H5MM_xfree(twice);
     return SUCCEED;
 
   error:
-    HDfree(full);
-    HDfree(half);
-    HDfree(twice);
-    return FAIL;
-}
-
-/*-------------------------------------------------------------------------
- * Function:	test_array_fill
- *
- * Purpose:	Tests H5V_array_fill routine by copying a multibyte value
- *              (an array of ints, in our case) into all the elements of an
- *              array.
- *
- * Return:	Success:	SUCCEED
- *
- *		Failure:	FAIL
- *
- * Programmer:	Quincey Koziol
- *		Monday, April 21, 2003
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-test_array_fill(size_t lo, size_t hi)
-{
-    int         *dst;           /* Destination                  */
-    int         src[ARRAY_FILL_SIZE]; /* Source to duplicate    */
-    size_t	u, v, w;        /* Local index variables        */
-    char	s[256];
-
-    sprintf(s, "array filling %4lu-%-4lu elements", (unsigned long)lo,(unsigned long)hi);
-    TESTING(s);
-
-    /* Initialize */
-    dst = HDcalloc(sizeof(int),ARRAY_FILL_SIZE * hi);
-
-    /* Setup */
-    for(u=0; u<ARRAY_FILL_SIZE; u++)
-        src[u]=(char)u;
-
-    /* Fill */
-    for(w=lo; w<=hi; w++) {
-        H5V_array_fill(dst,src,sizeof(src),w);
-
-        /* Check */
-        for(u=0; u<w; u++)
-            for(v=0; v<ARRAY_FILL_SIZE; v++)
-                if(dst[(u*ARRAY_FILL_SIZE)+v]!=src[v]) TEST_ERROR;
-
-        HDmemset(dst,0,sizeof(int)*ARRAY_FILL_SIZE*w);
-    } /* end for */
-    PASSED();
-
-    HDfree(dst);
-    return SUCCEED;
-
-  error:
-    HDfree(dst);
-    return FAIL;
-}
-
-/*-------------------------------------------------------------------------
- * Function:	test_array_offset_n_calc
- *
- * Purpose:	Tests H5V_array_offset and H5V_array_calc routines by comparing
- *              computed array offsets against calculated ones and then going
- *              back to the coordinates from the offset and checking those.
- *
- * Return:	Success:	SUCCEED
- *
- *		Failure:	FAIL
- *
- * Programmer:	Quincey Koziol
- *		Monday, April 21, 2003
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-test_array_offset_n_calc(size_t n, size_t x, size_t y, size_t z)
-{
-    hsize_t     *a, *temp_a;    /* Array for stored calculated offsets */
-    hsize_t     off;            /* Offset in array */
-    size_t	u, v, w;        /* Local index variables        */
-    hsize_t     dims[ARRAY_OFFSET_NDIMS];        /* X, Y & X coordinates of array to check */
-    hsize_t     coords[ARRAY_OFFSET_NDIMS];      /* X, Y & X coordinates to check offset of */
-    hsize_t     new_coords[ARRAY_OFFSET_NDIMS];  /* X, Y & X coordinates of offset */
-    char	s[256];
-
-    sprintf(s, "array offset %4lux%4lux%4lu elements", (unsigned long)z,(unsigned long)y,(unsigned long)x);
-    TESTING(s);
-
-    /* Initialize */
-    a = HDmalloc(sizeof(hsize_t) * x * y *z);
-    dims[0]=z;
-    dims[1]=y;
-    dims[2]=x;
-
-    /* Setup */
-    for(u=0, temp_a=a, off=0; u<z; u++)
-        for(v=0; v<y; v++)
-            for(w=0; w<x; w++)
-                *temp_a++ = off++;
-
-    /* Check offsets */
-    for(u=0; u<n; u++) {
-        /* Get random coordinate */
-        coords[0] = (hssize_t)(HDrandom() % z);
-        coords[1] = (hssize_t)(HDrandom() % y);
-        coords[2] = (hssize_t)(HDrandom() % x);
-
-        /* Get offset of coordinate */
-        off=H5V_array_offset(ARRAY_OFFSET_NDIMS,dims,coords);
-
-        /* Check offset of coordinate */
-        if(a[off]!=off) TEST_ERROR;
-
-        /* Get coordinates of offset */
-        if(H5V_array_calc(off,ARRAY_OFFSET_NDIMS,dims,new_coords)<0) TEST_ERROR;
-
-        /* Check computed coordinates */
-        for(v=0; v<ARRAY_OFFSET_NDIMS; v++)
-            if(coords[v]!=new_coords[v]) {
-                HDfprintf(stderr,"coords[%u]=%Hu, new_coords[%u]=%Hu\n",(unsigned)v,coords[v],(unsigned)v,new_coords[v]);
-                TEST_ERROR;
-            }
-    } /* end for */
-
-    PASSED();
-
-    HDfree(a);
-    return SUCCEED;
-
-  error:
-    HDfree(a);
+    H5MM_xfree(full);
+    H5MM_xfree(half);
+    H5MM_xfree(twice);
     return FAIL;
 }
 
@@ -1210,9 +1100,9 @@ main(int argc, char *argv[])
     int			    nerrors = 0;
     unsigned		    size_of_test;
 
-    /* Parse arguments or assume `small' & `medium' */
+    /* Parse arguments or assume `small' */
     if (1 == argc) {
-	size_of_test = TEST_SMALL | TEST_MEDIUM;
+	size_of_test = TEST_SMALL;
     } else {
 	int			i;
 	for (i = 1, size_of_test = 0; i < argc; i++) {
@@ -1233,114 +1123,103 @@ main(int argc, char *argv[])
 	printf(" MEDIUM");
     printf("\n");
 
-    /* Set the random # seed */
-    HDsrandom((unsigned long)HDtime(NULL));
-
     /*
-     * Open the library explicitly for thread-safe builds, so per-thread
-     * things are initialized correctly.
-     */
-#ifdef H5_HAVE_THREADSAFE
-    H5open();
-#endif  /* H5_HAVE_THREADSAFE */
-
-    /*
-     *------------------------------
+     *------------------------------ 
      * TEST HYPERSLAB FILL OPERATION
-     *------------------------------
+     *------------------------------ 
      */
     if (size_of_test & TEST_SMALL) {
-	status = test_fill((size_t)11, (size_t)0, (size_t)0, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1);
+	status = test_fill(11, 0, 0, 1, 1, 1, 1, 1, 1);
 	nerrors += status < 0 ? 1 : 0;
-	status = test_fill((size_t)11, (size_t)10, (size_t)0, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1);
+	status = test_fill(11, 10, 0, 1, 1, 1, 1, 1, 1);
 	nerrors += status < 0 ? 1 : 0;
-	status = test_fill((size_t)3, (size_t)5, (size_t)5, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1);
+	status = test_fill(3, 5, 5, 1, 1, 1, 1, 1, 1);
 	nerrors += status < 0 ? 1 : 0;
     }
     if (size_of_test & TEST_MEDIUM) {
-	status = test_fill((size_t)113, (size_t)0, (size_t)0, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1);
+	status = test_fill(113, 0, 0, 1, 1, 1, 1, 1, 1);
 	nerrors += status < 0 ? 1 : 0;
-	status = test_fill((size_t)15, (size_t)11, (size_t)0, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1);
+	status = test_fill(15, 11, 0, 1, 1, 1, 1, 1, 1);
 	nerrors += status < 0 ? 1 : 0;
-	status = test_fill((size_t)5, (size_t)7, (size_t)7, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1);
+	status = test_fill(5, 7, 7, 1, 1, 1, 1, 1, 1);
 	nerrors += status < 0 ? 1 : 0;
     }
    /*------------------------------
     * TEST HYPERSLAB COPY OPERATION
-    *------------------------------
+    *------------------------------ 
     */
 
     /* exhaustive, one-dimensional test */
     if (size_of_test & TEST_SMALL) {
-	status = test_copy(VARIABLE_SRC, (size_t)11, (size_t)0, (size_t)0, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1);
+	status = test_copy(VARIABLE_SRC, 11, 0, 0, 1, 1, 1, 1, 1, 1);
 	nerrors += status < 0 ? 1 : 0;
-	status = test_copy(VARIABLE_DST, (size_t)11, (size_t)0, (size_t)0, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1);
+	status = test_copy(VARIABLE_DST, 11, 0, 0, 1, 1, 1, 1, 1, 1);
 	nerrors += status < 0 ? 1 : 0;
-	status = test_copy(VARIABLE_BOTH, (size_t)11, (size_t)0, (size_t)0, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1);
+	status = test_copy(VARIABLE_BOTH, 11, 0, 0, 1, 1, 1, 1, 1, 1);
 	nerrors += status < 0 ? 1 : 0;
     }
     if (size_of_test & TEST_MEDIUM) {
-	status = test_copy(VARIABLE_SRC, (size_t)179, (size_t)0, (size_t)0, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1);
+	status = test_copy(VARIABLE_SRC, 179, 0, 0, 1, 1, 1, 1, 1, 1);
 	nerrors += status < 0 ? 1 : 0;
-	status = test_copy(VARIABLE_DST, (size_t)179, (size_t)0, (size_t)0, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1);
+	status = test_copy(VARIABLE_DST, 179, 0, 0, 1, 1, 1, 1, 1, 1);
 	nerrors += status < 0 ? 1 : 0;
-	status = test_copy(VARIABLE_BOTH, (size_t)179, (size_t)0, (size_t)0, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1);
+	status = test_copy(VARIABLE_BOTH, 179, 0, 0, 1, 1, 1, 1, 1, 1);
 	nerrors += status < 0 ? 1 : 0;
     }
     /* exhaustive, two-dimensional test */
     if (size_of_test & TEST_SMALL) {
-	status = test_copy(VARIABLE_SRC, (size_t)11, (size_t)10, (size_t)0, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1);
+	status = test_copy(VARIABLE_SRC, 11, 10, 0, 1, 1, 1, 1, 1, 1);
 	nerrors += status < 0 ? 1 : 0;
-	status = test_copy(VARIABLE_DST, (size_t)11, (size_t)10, (size_t)0, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1);
+	status = test_copy(VARIABLE_DST, 11, 10, 0, 1, 1, 1, 1, 1, 1);
 	nerrors += status < 0 ? 1 : 0;
-	status = test_copy(VARIABLE_BOTH, (size_t)11, (size_t)10, (size_t)0, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1);
+	status = test_copy(VARIABLE_BOTH, 11, 10, 0, 1, 1, 1, 1, 1, 1);
 	nerrors += status < 0 ? 1 : 0;
     }
     if (size_of_test & TEST_MEDIUM) {
-	status = test_copy(VARIABLE_SRC, (size_t)13, (size_t)19, (size_t)0, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1);
+	status = test_copy(VARIABLE_SRC, 13, 19, 0, 1, 1, 1, 1, 1, 1);
 	nerrors += status < 0 ? 1 : 0;
-	status = test_copy(VARIABLE_DST, (size_t)13, (size_t)19, (size_t)0, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1);
+	status = test_copy(VARIABLE_DST, 13, 19, 0, 1, 1, 1, 1, 1, 1);
 	nerrors += status < 0 ? 1 : 0;
-	status = test_copy(VARIABLE_BOTH, (size_t)13, (size_t)19, (size_t)0, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1);
+	status = test_copy(VARIABLE_BOTH, 13, 19, 0, 1, 1, 1, 1, 1, 1);
 	nerrors += status < 0 ? 1 : 0;
     }
     /* sparse, two-dimensional test */
     if (size_of_test & TEST_MEDIUM) {
-	status = test_copy(VARIABLE_SRC, (size_t)73, (size_t)67, (size_t)0, (size_t)7, (size_t)11, (size_t)1, (size_t)13, (size_t)11, (size_t)1);
+	status = test_copy(VARIABLE_SRC, 73, 67, 0, 7, 11, 1, 13, 11, 1);
 	nerrors += status < 0 ? 1 : 0;
-	status = test_copy(VARIABLE_DST, (size_t)73, (size_t)67, (size_t)0, (size_t)7, (size_t)11, (size_t)1, (size_t)13, (size_t)11, (size_t)1);
+	status = test_copy(VARIABLE_DST, 73, 67, 0, 7, 11, 1, 13, 11, 1);
 	nerrors += status < 0 ? 1 : 0;
-	status = test_copy(VARIABLE_BOTH, (size_t)73, (size_t)67, (size_t)0, (size_t)7, (size_t)11, (size_t)1, (size_t)13, (size_t)11, (size_t)1);
+	status = test_copy(VARIABLE_BOTH, 73, 67, 0, 7, 11, 1, 13, 11, 1);
 	nerrors += status < 0 ? 1 : 0;
     }
     /* exhaustive, three-dimensional test */
     if (size_of_test & TEST_SMALL) {
-	status = test_copy(VARIABLE_SRC, (size_t)3, (size_t)5, (size_t)5, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1);
+	status = test_copy(VARIABLE_SRC, 3, 5, 5, 1, 1, 1, 1, 1, 1);
 	nerrors += status < 0 ? 1 : 0;
-	status = test_copy(VARIABLE_DST, (size_t)3, (size_t)5, (size_t)5, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1);
+	status = test_copy(VARIABLE_DST, 3, 5, 5, 1, 1, 1, 1, 1, 1);
 	nerrors += status < 0 ? 1 : 0;
-	status = test_copy(VARIABLE_BOTH, (size_t)3, (size_t)5, (size_t)5, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1);
+	status = test_copy(VARIABLE_BOTH, 3, 5, 5, 1, 1, 1, 1, 1, 1);
 	nerrors += status < 0 ? 1 : 0;
     }
     if (size_of_test & TEST_MEDIUM) {
-	status = test_copy(VARIABLE_SRC, (size_t)7, (size_t)9, (size_t)5, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1);
+	status = test_copy(VARIABLE_SRC, 7, 9, 5, 1, 1, 1, 1, 1, 1);
 	nerrors += status < 0 ? 1 : 0;
-	status = test_copy(VARIABLE_DST, (size_t)7, (size_t)9, (size_t)5, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1);
+	status = test_copy(VARIABLE_DST, 7, 9, 5, 1, 1, 1, 1, 1, 1);
 	nerrors += status < 0 ? 1 : 0;
-	status = test_copy(VARIABLE_BOTH, (size_t)7, (size_t)9, (size_t)5, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1, (size_t)1);
+	status = test_copy(VARIABLE_BOTH, 7, 9, 5, 1, 1, 1, 1, 1, 1);
 	nerrors += status < 0 ? 1 : 0;
     }
    /*---------------------
     * TEST MULTI-BYTE FILL
-    *---------------------
+    *--------------------- 
     */
 
     if (size_of_test & TEST_SMALL) {
-	status = test_multifill((size_t)10);
+	status = test_multifill(10);
 	nerrors += status < 0 ? 1 : 0;
     }
     if (size_of_test & TEST_MEDIUM) {
-	status = test_multifill((size_t)500000);
+	status = test_multifill(500000);
 	nerrors += status < 0 ? 1 : 0;
     }
    /*---------------------------
@@ -1349,58 +1228,32 @@ main(int argc, char *argv[])
     */
 
     if (size_of_test & TEST_SMALL) {
-	status = test_endian((size_t)10);
+	status = test_endian(10);
 	nerrors += status < 0 ? 1 : 0;
-	status = test_transpose((size_t)9, (size_t)9);
+	status = test_transpose(9, 9);
 	nerrors += status < 0 ? 1 : 0;
-	status = test_transpose((size_t)3, (size_t)11);
+	status = test_transpose(3, 11);
 	nerrors += status < 0 ? 1 : 0;
     }
     if (size_of_test & TEST_MEDIUM) {
-	status = test_endian((size_t)800000);
+	status = test_endian(800000);
 	nerrors += status < 0 ? 1 : 0;
-	status = test_transpose((size_t)1200, (size_t)1200);
+	status = test_transpose(1200, 1200);
 	nerrors += status < 0 ? 1 : 0;
-	status = test_transpose((size_t)800, (size_t)1800);
+	status = test_transpose(800, 1800);
 	nerrors += status < 0 ? 1 : 0;
     }
    /*-------------------------
     * TEST SAMPLING OPERATIONS
-    *-------------------------
+    *------------------------- 
     */
 
     if (size_of_test & TEST_SMALL) {
-	status = test_sub_super((size_t)5, (size_t)10);
+	status = test_sub_super(5, 10);
 	nerrors += status < 0 ? 1 : 0;
     }
     if (size_of_test & TEST_MEDIUM) {
-	status = test_sub_super((size_t)480, (size_t)640);
-	nerrors += status < 0 ? 1 : 0;
-    }
-   /*-------------------------
-    * TEST ARRAY FILL OPERATIONS
-    *-------------------------
-    */
-
-    if (size_of_test & TEST_SMALL) {
-	status = test_array_fill((size_t)1, (size_t)9);
-	nerrors += status < 0 ? 1 : 0;
-    }
-    if (size_of_test & TEST_MEDIUM) {
-	status = test_array_fill((size_t)9, (size_t)257);
-	nerrors += status < 0 ? 1 : 0;
-    }
-   /*-------------------------
-    * TEST ARRAY OFFSET OPERATIONS
-    *-------------------------
-    */
-
-    if (size_of_test & TEST_SMALL) {
-	status = test_array_offset_n_calc((size_t)20, (size_t)7, (size_t)11, (size_t)13);
-	nerrors += status < 0 ? 1 : 0;
-    }
-    if (size_of_test & TEST_MEDIUM) {
-	status = test_array_offset_n_calc((size_t)500, (size_t)71, (size_t)193, (size_t)347);
+	status = test_sub_super(480, 640);
 	nerrors += status < 0 ? 1 : 0;
     }
 
@@ -1416,9 +1269,5 @@ main(int argc, char *argv[])
 	exit(1);
     }
     printf("All hyperslab tests passed.\n");
-
-#ifdef H5_HAVE_THREADSAFE
-    H5close();
-#endif  /* H5_HAVE_THREADSAFE */
     return 0;
 }

@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef PIO_TIMER__
@@ -33,10 +32,6 @@ typedef enum timer_type_ {
     HDF5_DATASET_CREATE,
     HDF5_MPI_WRITE,
     HDF5_MPI_READ,
-    HDF5_FILE_READ_OPEN,
-    HDF5_FILE_READ_CLOSE,
-    HDF5_FILE_WRITE_OPEN,
-    HDF5_FILE_WRITE_CLOSE,
     HDF5_FINE_WRITE_FIXED_DIMS,
     HDF5_FINE_READ_FIXED_DIMS,
     HDF5_GROSS_WRITE_FIXED_DIMS,

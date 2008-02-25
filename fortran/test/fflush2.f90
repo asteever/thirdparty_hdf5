@@ -1,5 +1,4 @@
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!   Copyright by The HDF Group.                                               *
 !   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
@@ -9,10 +8,9 @@
 !   of the source code distribution tree; Copyright.html can be found at the  *
 !   root level of an installed copy of the electronic HDF5 document set and   *
 !   is linked from the top-level documents page.  It can also be found at     *
-!   http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
-!   access to either file, you may request a copy from help@hdfgroup.org.     *
+!   http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+!   access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!
 !
 ! Purpose:	This is the second half of a two-part test that makes sure
 !		that a file can be read after an application crashes as long
@@ -26,8 +24,10 @@
         
      IMPLICIT NONE
 
-     CHARACTER(LEN=7), PARAMETER :: filename = "fflush1"
-     CHARACTER(LEN=80) :: fix_filename
+     !
+     !the respective filename is "fflush1.h5" 
+     !
+     CHARACTER(LEN=10), PARAMETER :: filename = "fflush1.h5"
 
      !
      !data space rank and dimensions
@@ -80,7 +80,7 @@
      !data buffers 
      !         
      INTEGER, DIMENSION(NX,NY) :: data_out
-     INTEGER(HSIZE_T), DIMENSION(2) :: data_dims
+     INTEGER, DIMENSION(7) :: data_dims
      data_dims(1) = NX
      data_dims(2) = NY
 
@@ -88,18 +88,12 @@
      !Initialize FORTRAN predifined datatypes
      !
      CALL h5open_f(error) 
-          CALL check("h5open_f",error,total_error)
+          CALL check("h5init_types_f",error,total_error)
 
      !
      !Open the file.
      !
-          CALL h5_fixname_f(filename, fix_filename, H5P_DEFAULT_F, error)
-          if (error .ne. 0) then
-              write(*,*) "Cannot modify filename"
-              CALL h5_exit_f (1)
-          endif
-	  print *, "filename=", filename, "fix_filename=", fix_filename
-     CALL h5fopen_f(fix_filename, H5F_ACC_RDONLY_F, file_id, error)
+     CALL h5fopen_f(filename, H5F_ACC_RDONLY_F, file_id, error)
           CALL check("h5fopen_f",error,total_error)
 
      !
@@ -141,9 +135,11 @@
           CALL check("h5gopen_f",error,total_error)
     
      !
-     !In case error happens, exit.
+     !In case error happens, jump to stop.
      !
-     IF (error == -1) CALL h5_exit_f (1)
+     IF (error == -1) THEN
+          001 STOP
+     END IF
     
      !
      !Close the datatype
@@ -171,12 +167,8 @@
 
      !
      !Close FORTRAN predifined datatypes
-      !
-     CALL h5_cleanup_f(filename, H5P_DEFAULT_F, error)
+     !
      CALL h5close_f(error)
          CALL check("h5close_types_f",error,total_error)
-     
-     ! if errors detected, exit with non-zero code.
-     IF (total_error .ne. 0) CALL h5_exit_f (1)
 
      END PROGRAM FFLUSH2EXAMPLE
