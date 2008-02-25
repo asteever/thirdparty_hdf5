@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -53,16 +52,16 @@ H5_DLL hid_t H5FD_register(const void *cls, size_t size);
 H5_DLL H5FD_t *H5FD_open(const char *name, unsigned flags, hid_t fapl_id,
 		  haddr_t maxaddr);
 H5_DLL herr_t H5FD_close(H5FD_t *file);
+H5_DLL herr_t H5FD_free_freelist(H5FD_t *file);
 H5_DLL int H5FD_cmp(const H5FD_t *f1, const H5FD_t *f2);
 H5_DLL int H5FD_query(const H5FD_t *f, unsigned long *flags/*out*/);
 H5_DLL haddr_t H5FD_alloc(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, hsize_t size);
 H5_DLL herr_t H5FD_free(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, hsize_t size);
 H5_DLL haddr_t H5FD_realloc(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t old_addr,
 		     hsize_t old_size, hsize_t new_size);
-H5_DLL haddr_t H5FD_get_eoa(const H5FD_t *file, H5FD_mem_t type);
-H5_DLL herr_t H5FD_set_eoa(H5FD_t *file, H5FD_mem_t type, haddr_t addr);
+H5_DLL haddr_t H5FD_get_eoa(const H5FD_t *file);
+H5_DLL herr_t H5FD_set_eoa(H5FD_t *file, haddr_t addr);
 H5_DLL haddr_t H5FD_get_eof(const H5FD_t *file);
-H5_DLL haddr_t H5FD_get_maxaddr(const H5FD_t *file);
 H5_DLL herr_t H5FD_read(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t size,
 		 void *buf/*out*/);
 H5_DLL herr_t H5FD_write(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t size,
@@ -75,7 +74,5 @@ H5_DLL htri_t H5FD_can_extend(const H5FD_t *file, H5FD_mem_t type, haddr_t addr,
     hsize_t size, hsize_t extra_requested);
 H5_DLL herr_t H5FD_extend(H5FD_t *file, H5FD_mem_t type, haddr_t addr,
     hsize_t size, hsize_t extra_requested);
-H5_DLL herr_t H5FD_aggr_reset(H5FD_t *file, H5FD_blk_aggr_t *aggr, hid_t dxpl_id);
 
 #endif /* !_H5FDprivate_H */
-

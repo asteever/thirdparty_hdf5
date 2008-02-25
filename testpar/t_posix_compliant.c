@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* A series of tests for posix compliance
@@ -57,7 +56,6 @@
 static char*		testfile = NULL;
 static int		err_flag = 0;
 static int		max_err_print = 5;
-int			nmismatches = 0;	/* warnings encountered */
 
 /* globals needed for getopt
  * Although they *should* be defined in unistd.h */
@@ -436,7 +434,6 @@ static int allwrite_allread_interlaced(int numprocs, int rank, int write_size)
 
 	}
     }
-    nmismatches += counter;
     mpio_result = MPI_File_close(&fh);
     CHECK_SUCCESS(mpio_result);
 
@@ -558,7 +555,6 @@ static int allwrite_allread_overlap(int numprocs, int rank, int write_size)
     	}
     }
 
-    nmismatches += counter;
     mpio_result = MPI_File_close(&fh);
     CHECK_SUCCESS(mpio_result);
     HDfree(writebuf);
@@ -680,62 +676,6 @@ static int onewrite_allread_interlaced(int numprocs, int rank, int write_size)
 
 }
 
-static int find_writesize(int rank, int numprocs, int size)
-{
-    /* Largest number in the file */
-    int tmp = (size-1)*numprocs;
-    int x = 0;
-    int write_size = 0;
-
-    /* Find largest multiple not greater than tmp */
-    while(x <= tmp)
-    {
-	if( (rank == 0) || (rank == 1) )
-	    x+=2;
-	else
-	    x += (rank+1);
-
-	write_size++;
-    }
-
-    return write_size;
-}
-
-static void vrfy_elements(int* a, int* b, int size, int rank)
-{
-    int i, counter = 0;
-
-    for(i=0; i<size; i++)
-    {
-	if(a[i] != b[i])
-	{
-	    if( (rank == 0) && (counter == 0))
-		printf("\n");
-	    if(counter++ < max_err_print)
-		fprintf(stderr, "Arrays do not match!  Prcoess %d, element %d: [%d, %d]\n", rank, i, a[i], b[i]);
-	    else if(counter++ == max_err_print+1)
-		fprintf(stderr, "Printed %d errors.  Omitting the rest\n", max_err_print);
-	    err_flag = -1;
-	}
-    }
-    nmismatches += counter;
-    fflush(stderr);
-    fflush(stdout);
-}
-
-/* print an explanation message by MAIN (0) process.
- */
-header_msg(void)
-{
-    printf(
-"Purpose:\n"
-"This tests if the file system is posix compliant when POSIX and MPI IO APIs\n"
-"are used.  This is for information only and always exits with 0 even when\n"
-"non-compliance errors are encounter.  This is to prevent this test from\n"
-"aborting the remaining parallel HDF5 tests unnecessarily.\n\n"
-    );
-}
-
 int main(int argc, char* argv[])
 {
 
@@ -751,8 +691,6 @@ int main(int argc, char* argv[])
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    if (rank == 0)
-	header_msg();
     while((opt = getopt(argc, argv, optstring)) != -1)
     {
 	switch(opt)
@@ -810,9 +748,7 @@ int main(int argc, char* argv[])
 	    testfile = strdup(TESTFNAME);
 	}
     }
-    printf("Process %d: testfile=%s\n", rank, testfile);
-    fflush(stdout);
-    MPI_Barrier(MPI_COMM_WORLD);
+    printf("Proc %d: testfile=%s\n", rank, testfile);
 
     if(write_size == 0)
     {
@@ -910,13 +846,52 @@ int main(int argc, char* argv[])
 done:
     if (testfile)
 	HDfree(testfile);
-    if (rank == 0){
-	printf("\nSummary:\n");
-	fflush(stdout);
-    }
     MPI_Barrier(MPI_COMM_WORLD);
-    printf("Process %d: encountered %d mismatches.\n", rank, nmismatches);
     MPI_Finalize();
 
     return 0;
+}
+
+
+
+static int find_writesize(int rank, int numprocs, int size)
+{
+    /* Largest number in the file */
+    int tmp = (size-1)*numprocs;
+    int x = 0;
+    int write_size = 0;
+
+    /* Find largest multiple not greater than tmp */
+    while(x <= tmp)
+    {
+	if( (rank == 0) || (rank == 1) )
+	    x+=2;
+	else
+	    x += (rank+1);
+
+	write_size++;
+    }
+
+    return write_size;
+}
+
+static void vrfy_elements(int* a, int* b, int size, int rank)
+{
+    int i, counter = 0;
+
+    for(i=0; i<size; i++)
+    {
+	if(a[i] != b[i])
+	{
+	    if( (rank == 0) && (counter == 0))
+		printf("\n");
+	    if(counter++ < max_err_print)
+		fprintf(stderr, "Arrays do not match!  Prcoess %d, element %d: [%d, %d]\n", rank, i, a[i], b[i]);
+	    else if(counter++ == max_err_print+1)
+		fprintf(stderr, "Printed %d errors.  Omitting the rest\n", max_err_print);
+	    err_flag = -1;
+	}
+    }
+    fflush(stderr);
+    fflush(stdout);
 }

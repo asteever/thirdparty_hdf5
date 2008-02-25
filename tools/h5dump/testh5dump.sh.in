@@ -1,6 +1,5 @@
 #! /bin/sh
 #
-# Copyright by The HDF Group.
 # Copyright by the Board of Trustees of the University of Illinois.
 # All rights reserved.
 #
@@ -10,8 +9,8 @@
 # of the source code distribution tree; Copyright.html can be found at the
 # root level of an installed copy of the electronic HDF5 document set and
 # is linked from the top-level documents page.  It can also be found at
-# http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-# access to either file, you may request a copy from help@hdfgroup.org.
+# http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
+# access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 #
 # Tests for the h5dump tool
 
@@ -23,16 +22,8 @@ USE_FILTER_FLETCHER32="@USE_FILTER_FLETCHER32@"
 USE_FILTER_NBIT="@USE_FILTER_NBIT@"
 USE_FILTER_SCALEOFFSET="@USE_FILTER_SCALEOFFSET@"
 
-DUMPER=h5dump                     # The tool name
-DUMPER_BIN=`pwd`/$DUMPER          # The path of the tool binary
-TESTDIR=`pwd`/../testfiles
-
-H5DIFF=../h5diff/h5diff           # The h5diff tool name 
-H5DIFF_BIN=`pwd`/$H5DIFF          # The path of the h5diff  tool binary
-
-H5IMPORT=../h5import/h5import     # The h5import tool name 
-H5IMPORT_BIN=`pwd`/$H5IMPORT      # The path of the h5import  tool binary
-
+DUMPER=h5dump               # The tool name
+DUMPER_BIN=`pwd`/$DUMPER    # The path of the tool binary
 
 CMP='cmp -s'
 DIFF='diff -c'
@@ -45,7 +36,7 @@ if test -z "$srcdir"; then
    srcdir=.
 fi
 
-test -d $TESTDIR || mkdir $TESTDIR
+test -d ../testfiles || mkdir ../testfiles
 
 # Print a line-line message left justified in a field of 70 characters
 # beginning with the word "Testing".
@@ -64,80 +55,40 @@ TESTING() {
 # non-zero value.
 #
 TOOLTEST() {
+   expect="$srcdir/../testfiles/$1"
+   actual="../testfiles/`basename $1 .ddl`.out"
+   actual_err="../testfiles/`basename $1 .ddl`.err"
+   shift
 
-    expect="$srcdir/../testfiles/$1"
-    actual="../testfiles/`basename $1 .ddl`.out"
-    actual_err="../testfiles/`basename $1 .ddl`.err"
-    shift
-
-    # Run test.
-    TESTING $DUMPER $@
-    (
+   # Run test.
+   TESTING $DUMPER $@
+   (
       echo "#############################"
       echo "Expected output for '$DUMPER $@'" 
       echo "#############################"
-	  cd $srcdir/../testfiles
-  	  $RUNSERIAL $DUMPER_BIN $@
-    ) >$actual 2>$actual_err
-    cat $actual_err >> $actual
+      cd $srcdir/../testfiles
+      $RUNSERIAL $DUMPER_BIN $@
+   ) >$actual 2>$actual_err
+   cat $actual_err >> $actual
 
-	if [ ! -f $expect ]; then
+
+   if [ ! -f $expect ]; then
     # Create the expect file if it doesn't yet exist.
-     echo " CREATED"
-     cp $actual $expect
-    elif $CMP $expect $actual; then
-     echo " PASSED"
-    else
-     echo "*FAILED*"
-     echo "    Expected result (*.ddl) differs from actual result (*.out)"
-	 nerrors="`expr $nerrors + 1`"
-	 test yes = "$verbose" && $DIFF $expect $actual |sed 's/^/    /'
-    fi
+    echo " CREATED"
+    cp $actual $expect
+   elif $CMP $expect $actual; then
+      echo " PASSED"
+   else
+      echo "*FAILED*"
+      echo "    Expected result (*.ddl) differs from actual result (*.out)"
+      nerrors="`expr $nerrors + 1`"
+      test yes = "$verbose" && $DIFF $expect $actual |sed 's/^/    /'
+   fi
 
-    # Clean up output file
-    if test -z "$HDF5_NOCLEANUP"; then
-	 rm -f $actual $actual_err
-    fi
-
-}
-
-
-# same as TOOLTEST but does not print the header Expected output
-# used for the binary tests that expect a full path in -o
-TOOLTEST1() {
-
-    expect="$srcdir/../testfiles/$1"
-    actual="../testfiles/`basename $1 .ddl`.out"
-    actual_err="../testfiles/`basename $1 .ddl`.err"
-    shift
-
-    # Run test.
-    TESTING $DUMPER $@
-    (
-      
-	  cd $srcdir/../testfiles
-  	  $RUNSERIAL $DUMPER_BIN $@
-    ) >$actual 2>$actual_err
-    cat $actual_err >> $actual
-
-	if [ ! -f $expect ]; then
-    # Create the expect file if it doesn't yet exist.
-     echo " CREATED"
-     cp $actual $expect
-    elif $CMP $expect $actual; then
-     echo " PASSED"
-    else
-     echo "*FAILED*"
-     echo "    Expected result (*.ddl) differs from actual result (*.out)"
-	 nerrors="`expr $nerrors + 1`"
-	 test yes = "$verbose" && $DIFF $expect $actual |sed 's/^/    /'
-    fi
-
-    # Clean up output file
-    if test -z "$HDF5_NOCLEANUP"; then
-	 rm -f $actual $actual_err
-    fi
-
+   # Clean up output file
+   if test -z "$HDF5_NOCLEANUP"; then
+      rm -f $actual $actual_err
+   fi
 }
 
 
@@ -147,78 +98,11 @@ SKIP() {
 	  echo  " -SKIP-"
 }
   
-# Print a line-line message left justified in a field of 70 characters
-#
-PRINT_H5DIFF() {
- SPACES="                                                               "
- echo " Running h5diff $* $SPACES" | cut -c1-70 | tr -d '\012'
-}
-
-
-# Call the h5diff tool
-#
-DIFFTEST() 
-{
-    PRINT_H5DIFF  $@
-    (
-     cd $srcdir/../testfiles
-     if [ "`uname -s`" = "TFLOPS O/S" ]; then
-      $RUNSERIAL $H5DIFF_BIN $@ -q
-     else
-      $RUNSERIAL $H5DIFF_BIN "$@" -q
-     fi
-    )
-    RET=$?
-    if [ $RET != 0 ] ; then
-         echo "*FAILED*"
-         nerrors="`expr $nerrors + 1`"
-    else
-         echo " PASSED"
-    fi
-        
-}
-
-# Print a line-line message left justified in a field of 70 characters
-# beginning with the word "Verifying".
-#
-PRINT_H5IMPORT() {
- SPACES="                                                               "
- echo " Running h5import $* $SPACES" | cut -c1-70 | tr -d '\012'
-}
-
-# Call the h5import tool
-#
-IMPORTTEST() 
-{
-    # remove the output hdf5 file if it exists
-    hdf5_file="$srcdir/../testfiles/$5"
-    if [ -f $hdf5_file ]; then
-     rm -f $hdf5_file
-    fi
-
-    PRINT_H5IMPORT  $@
-    (
-     cd $srcdir/../testfiles
-     if [ "`uname -s`" = "TFLOPS O/S" ]; then
-      $RUNSERIAL $H5IMPORT_BIN $@
-     else
-      $RUNSERIAL $H5IMPORT_BIN "$@" 
-     fi
-    )
-    RET=$?
-    if [ $RET != 0 ] ; then
-         echo "*FAILED*"
-         nerrors="`expr $nerrors + 1`"
-    else
-         echo " PASSED"
-    fi
-        
-}
 
 
 ##############################################################################
 ##############################################################################
-###			  T H E   T E S T S                                            ###
+###			  T H E   T E S T S                                ###
 ##############################################################################
 ##############################################################################
 
@@ -241,12 +125,10 @@ TOOLTEST tattr-3.ddl --header -a /attr2 --attribute=/attr tattr.h5
 # test for displaying attributes in shared datatype (also in group and dataset)
 TOOLTEST tnamed_dtype_attr.ddl tnamed_dtype_attr.h5
 
-# test for displaying soft links and user-defined links
+# test for displaying soft links
 TOOLTEST tslink-1.ddl tslink.h5
-TOOLTEST tudlink-1.ddl tudlink.h5
 # test for displaying the selected link
 TOOLTEST tslink-2.ddl -l slink2 tslink.h5
-TOOLTEST tudlink-2.ddl -l udlink2 tudlink.h5
 
 # tests for hard links
 TOOLTEST thlink-1.ddl thlink.h5
@@ -260,7 +142,7 @@ TOOLTEST tcomp-1.ddl tcompound.h5
 # test for named data types
 TOOLTEST tcomp-2.ddl -t /type1 --datatype /type2 --datatype=/group1/type3 tcompound.h5
 # test for unamed type 
-TOOLTEST tcomp-3.ddl -t /#6632 -g /group2 tcompound.h5
+TOOLTEST tcomp-3.ddl -t /#6632:0 -g /group2 tcompound.h5
 # test complicated compound datatype
 TOOLTEST tcomp-4.ddl tcompound_complex.h5
 
@@ -325,8 +207,7 @@ TOOLTEST tall-2B.ddl -A -r tall.h5
 TOOLTEST tall-4s.ddl --dataset=/g1/g1.1/dset1.1.1 --start=1,1 --stride=2,3 --count=3,2 --block=1,1 tall.h5
 TOOLTEST tall-5s.ddl -d "/g1/g1.1/dset1.1.2[0;2;10;]" tall.h5
 TOOLTEST tdset-3s.ddl -d "/dset1[1,1;;;]" tdset.h5
-# block
-# TOOLTEST tdset2-1s.ddl -d "/dset1[;3,2;4,4;1,4]" tdset2.h5
+TOOLTEST tdset2-1s.ddl -d "/dset1[;3,2;4,4;1,4]" tdset2.h5
 
 # test printing characters in ASCII instead of decimal
 TOOLTEST tchar1.ddl -r tchar.h5
@@ -372,19 +253,6 @@ TOOLTEST tstring2.ddl -r -d str4 tstr3.h5
 # array indices print/not print
 TOOLTEST tindicesyes.ddl taindices.h5
 TOOLTEST tindicesno.ddl -y taindices.h5
-
-########## array indices with subsetting
-# 1D case
-TOOLTEST tindicessub1.ddl -d 1d -s 1 -S 10 -c 2  -k 3 taindices.h5
-
-# 2D case
-TOOLTEST tindicessub2.ddl -d 2d -s 1,2  -S 3,3 -c 3,2 -k 2,2 taindices.h5
-
-# 3D case
-TOOLTEST tindicessub3.ddl -d 3d -s 0,1,2 -S 1,3,3 -c 2,2,2  -k 1,2,2  taindices.h5
-
-# 4D case
-TOOLTEST tindicessub4.ddl -d 4d -s 0,0,1,2  -c 2,2,3,2 -S 1,1,3,3 -k 1,1,2,2  taindices.h5
 
 
 # tests for filters
@@ -439,21 +307,12 @@ else
 fi
 # user defined
 TOOLTEST tuserfilter.ddl -H  -p -d myfilter  tfilters.h5
-
-# test for displaying objects with very long names
-TOOLTEST tlonglinks.ddl tlonglinks.h5
-
-# dimensions over 4GB, print boundary 
-TOOLTEST tbigdims.ddl -d dset4gb -s 4294967284 -c 22 tbigdims.h5
-
-# hyperslab read
-TOOLTEST thyperslab.ddl thyperslab.h5
-
-
-#
     
 # test for displaying dataset and attribute of null space
 TOOLTEST tnullspace.ddl tnullspace.h5
+
+# test for displaying objects with very long names
+TOOLTEST tlonglinks.ddl tlonglinks.h5
 
 # test for long double (some systems do not have long double)
 #TOOLTEST tldouble.ddl tldouble.h5
@@ -462,41 +321,10 @@ TOOLTEST tnullspace.ddl tnullspace.h5
 TOOLTEST tvms.ddl tvms.h5
 
 # test for binary output
-TOOLTEST1   tbin1.ddl -d integer -o $TESTDIR/out1.bin -b LE    tbinary.h5
-TOOLTEST1   tbin2.ddl -d float  -o $TESTDIR/out2.bin -b BE     tbinary.h5
+TOOLTEST tbin.ddl -d integer -b out.bin test1.h5
 
-# the MEMORY test can be validated with h5import/h5diff
-TOOLTEST1   tbin3.ddl -d integer -o $TESTDIR/out3.bin -b MEMORY tbinary.h5
-IMPORTTEST $TESTDIR/out3.bin -c out3.h5import -o $TESTDIR/out3.h5
-DIFFTEST   tbinary.h5 $TESTDIR/out3.h5 /integer /integer
-
-TOOLTEST1   tbin4.ddl -d double  -o $TESTDIR/out4.bin -b FILE   tbinary.h5
-   
-# Clean up binary output files
-if test -z "$HDF5_NOCLEANUP"; then
- rm -f $TESTDIR/out[1-4].bin
- rm -f $TESTDIR/out3.h5
-fi
-
-
-# test for dataset region references 
-TOOLTEST tdatareg.ddl tdatareg.h5
-
-# tests for group creation order
-# "1" tracked, "2" name, root tracked
-TOOLTEST tordergr1.ddl --group=1 --sort_by=creation_order --sort_order=ascending tordergr.h5
-TOOLTEST tordergr2.ddl --group=1 --sort_by=creation_order --sort_order=descending tordergr.h5
-TOOLTEST tordergr3.ddl -g 2 -q name -z ascending tordergr.h5
-TOOLTEST tordergr4.ddl -g 2 -q name -z descending tordergr.h5
-TOOLTEST tordergr5.ddl -q creation_order tordergr.h5
-
-# tests for attribute order
-TOOLTEST torderattr1.ddl -H --sort_by=name --sort_order=ascending torderattr.h5
-TOOLTEST torderattr2.ddl -H --sort_by=name --sort_order=descending torderattr.h5
-TOOLTEST torderattr3.ddl -H --sort_by=creation_order --sort_order=ascending torderattr.h5
-TOOLTEST torderattr4.ddl -H --sort_by=creation_order --sort_order=descending torderattr.h5
-
-
+# test for binary output using a file type form -F DI
+TOOLTEST tbin2.ddl -d integer -b out2.bin -F DI test1.h5
 
 if test $nerrors -eq 0 ; then
    echo "All $DUMPER tests passed."

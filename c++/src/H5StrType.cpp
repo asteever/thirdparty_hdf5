@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <string>
@@ -75,7 +74,7 @@ StrType::StrType( const PredType& pred_type ) : AtomType()
 ///		its overloaded below as StrType(0, size).
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-StrType::StrType( const PredType& pred_type, const size_t& size ) : AtomType()
+StrType::StrType( const PredType& pred_type, const size_t size ) : AtomType()
 {
    // use DataType::copy to make a copy of the string predefined type
    // then set its length
@@ -103,7 +102,7 @@ StrType::StrType( const int dummy, const size_t& size ) : AtomType()
 {
    // use DataType::copy to make a copy of the string predefined type
    // then set its length
-   copy(PredType::C_S1);
+   copy(H5T_C_S1);
    setSize(size);
 }
 
@@ -164,9 +163,9 @@ H5T_cset_t StrType::getCset() const
 //--------------------------------------------------------------------------
 // Function:	StrType::setCset
 ///\brief	Sets character set to be used.
-///\param	cset - IN: character set type, which can be:
-///		\li \c H5T_CSET_ASCII (0) - Character set is US ASCII.
+///\param	cset - IN: character set type
 ///\exception	H5::DataTypeIException
+///		\li \c H5T_CSET_ASCII (0) - Character set is US ASCII.
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 void StrType::setCset( H5T_cset_t cset ) const
@@ -180,7 +179,7 @@ void StrType::setCset( H5T_cset_t cset ) const
 }
 
 //--------------------------------------------------------------------------
-// Function:	StrType::getStrpad
+// Function:	StrType::getCset
 ///\brief	Retrieves the storage mechanism for of this string datatype.
 ///\return	String storage mechanism, which can be:
 ///		\li \c H5T_STR_NULLTERM (0) - Null terminate (as C does)

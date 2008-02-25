@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -82,7 +81,7 @@ H5FO_create(const H5F_t *f)
     assert(f->shared);
 
     /* Create container used to store open object info */
-    if((f->shared->open_objs = H5SL_create(H5SL_TYPE_HADDR, 0.5, (size_t)16)) == NULL)
+    if((f->shared->open_objs=H5SL_create(H5SL_TYPE_HADDR,0.5,16))==NULL)
         HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "unable to create open object container")
 
 done:
@@ -400,7 +399,7 @@ H5FO_top_create(H5F_t *f)
     HDassert(f);
 
     /* Create container used to store open object info */
-    if((f->obj_count = H5SL_create(H5SL_TYPE_HADDR, 0.5, (size_t)16)) == NULL)
+    if((f->obj_count = H5SL_create(H5SL_TYPE_HADDR, 0.5, 16)) == NULL)
         HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "unable to create open object container")
 
 done:

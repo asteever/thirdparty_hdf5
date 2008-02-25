@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -98,8 +97,8 @@ static H5FD_t *H5FD_family_open(const char *name, unsigned flags,
 static herr_t H5FD_family_close(H5FD_t *_file);
 static int H5FD_family_cmp(const H5FD_t *_f1, const H5FD_t *_f2);
 static herr_t H5FD_family_query(const H5FD_t *_f1, unsigned long *flags);
-static haddr_t H5FD_family_get_eoa(const H5FD_t *_file, H5FD_mem_t type);
-static herr_t H5FD_family_set_eoa(H5FD_t *_file, H5FD_mem_t type, haddr_t eoa);
+static haddr_t H5FD_family_get_eoa(const H5FD_t *_file);
+static herr_t H5FD_family_set_eoa(H5FD_t *_file, haddr_t eoa);
 static haddr_t H5FD_family_get_eof(const H5FD_t *_file);
 static herr_t  H5FD_family_get_handle(H5FD_t *_file, hid_t fapl, void** file_handle);
 static herr_t H5FD_family_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr,
@@ -258,7 +257,7 @@ H5Pset_fapl_family(hid_t fapl_id, hsize_t msize, hid_t memb_fapl_id)
     H5P_genplist_t *plist;      /* Property list pointer */
 
     FUNC_ENTER_API(H5Pset_fapl_family, FAIL)
-    H5TRACE3("e", "ihi", fapl_id, msize, memb_fapl_id);
+    H5TRACE3("e","ihi",fapl_id,msize,memb_fapl_id);
 
 
     /* Check arguments */
@@ -317,7 +316,7 @@ H5Pget_fapl_family(hid_t fapl_id, hsize_t *msize/*out*/,
     herr_t      ret_value=SUCCEED;       /* Return value */
 
     FUNC_ENTER_API(H5Pget_fapl_family, FAIL)
-    H5TRACE3("e", "ixx", fapl_id, msize, memb_fapl_id);
+    H5TRACE3("e","ixx",fapl_id,msize,memb_fapl_id);
 
     if(NULL == (plist = H5P_object_verify(fapl_id,H5P_FILE_ACCESS)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access list")
@@ -613,21 +612,27 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FD_family_sb_encode(H5FD_t *_file, char *name/*out*/, unsigned char *buf/*out*/)
+H5FD_family_sb_encode(H5FD_t *_file, char *name/*out*/,
+		     unsigned char *buf/*out*/)
 {
     H5FD_family_t	*file = (H5FD_family_t*)_file;
+    unsigned char	*p = buf;
+    uint64_t            msize;
+    herr_t ret_value=SUCCEED;   /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5FD_family_sb_encode)
+    FUNC_ENTER_NOAPI(H5FD_family_sb_encode, FAIL)
 
     /* Name and version number */
-    HDstrncpy(name, "NCSAfami", (size_t)8);
+    strncpy(name, "NCSAfami",8);
     name[8] = '\0';
 
-    /* Store member file size */
-    UINT64ENCODE(buf, (uint64_t)file->memb_size);
+    /* copy member file size */
+    msize = (uint64_t)file->memb_size;
+    UINT64ENCODE(p, msize);
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5FD_family_sb_encode() */
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+}
 
 
 /*-------------------------------------------------------------------------
@@ -654,8 +659,9 @@ static herr_t
 H5FD_family_sb_decode(H5FD_t *_file, const char UNUSED *name, const unsigned char *buf)
 {
     H5FD_family_t	*file = (H5FD_family_t*)_file;
-    uint64_t            msize;
-    herr_t ret_value = SUCCEED;   /* Return value */
+    uint64_t            msize = 0;
+    char                err_msg[128];
+    herr_t ret_value=SUCCEED;   /* Return value */
 
     FUNC_ENTER_NOAPI(H5FD_family_sb_decode, FAIL)
 
@@ -669,19 +675,18 @@ H5FD_family_sb_decode(H5FD_t *_file, const char UNUSED *name, const unsigned cha
     if(file->mem_newsize) {
         file->memb_size = file->mem_newsize;
         HGOTO_DONE(ret_value)
-    } /* end if */
+    }
 
     /* Default - use the saved member size */
-    if(file->pmem_size == H5F_FAMILY_DEFAULT)
+    if(file->pmem_size == H5F_FAMILY_DEFAULT) {
        file->pmem_size = msize;
+    }
 
     /* Check if member size from file access property is correct */
     if(msize != file->pmem_size) {
-        char                err_msg[128];
-
-        sprintf(err_msg, "family member size should be %lu, is %lu", (unsigned long)msize, (unsigned long)file->pmem_size);
+        sprintf(err_msg, "family member size should be %lu", (unsigned long)msize);
         HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, err_msg)
-    } /* end if */
+    }
 
     /* Update member file size to the size saved in the superblock.
      * That's the size intended to be. */
@@ -689,7 +694,7 @@ H5FD_family_sb_decode(H5FD_t *_file, const char UNUSED *name, const unsigned cha
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5FD_family_sb_decode() */
+}
 
 
 /*-------------------------------------------------------------------------
@@ -1007,14 +1012,11 @@ done:
  *              Wednesday, August  4, 1999
  *
  * Modifications:
- *              Raymond Lu
- *              21 Dec. 2006
- *              Added the parameter TYPE.  It's only used for MULTI driver.
  *
  *-------------------------------------------------------------------------
  */
 static haddr_t
-H5FD_family_get_eoa(const H5FD_t *_file, H5FD_mem_t UNUSED type)
+H5FD_family_get_eoa(const H5FD_t *_file)
 {
     const H5FD_family_t	*file = (const H5FD_family_t*)_file;
     haddr_t ret_value;   /* Return value */
@@ -1042,14 +1044,11 @@ done:
  *              Wednesday, August  4, 1999
  *
  * Modifications:
- *              Raymond Lu
- *              21 Dec. 2006
- *              Added the parameter TYPE.  It's only used for MULTI driver.
  *
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FD_family_set_eoa(H5FD_t *_file, H5FD_mem_t type, haddr_t eoa)
+H5FD_family_set_eoa(H5FD_t *_file, haddr_t eoa)
 {
     H5FD_family_t	*file = (H5FD_family_t*)_file;
     haddr_t		addr=eoa;
@@ -1088,11 +1087,11 @@ H5FD_family_set_eoa(H5FD_t *_file, H5FD_mem_t type, haddr_t eoa)
         /* Set the EOA marker for the member */
         H5_CHECK_OVERFLOW(file->memb_size,hsize_t,haddr_t);
         if (addr>(haddr_t)file->memb_size) {
-            if(H5FD_set_eoa(file->memb[u], type, (haddr_t)file->memb_size)<0)
+            if(H5FD_set_eoa(file->memb[u], (haddr_t)file->memb_size)<0)
                 HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "unable to set file eoa")
             addr -= file->memb_size;
         } else {
-            if(H5FD_set_eoa(file->memb[u], type, addr)<0)
+            if(H5FD_set_eoa(file->memb[u], addr)<0)
                 HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "unable to set file eoa")
             addr = 0;
         }

@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <stdio.h>
@@ -128,7 +127,7 @@ main (int argc, const char *argv[])
 {
   char *ifname;
   void *edata;
-  H5E_auto2_t func;
+  H5E_auto_stack_t func;
   hid_t ifile;
   hsize_t usize;
   htri_t testval;
@@ -136,8 +135,8 @@ main (int argc, const char *argv[])
   hid_t plist;
 
   /* Disable error reporting */
-  H5Eget_auto2(H5E_DEFAULT, &func, &edata);
-  H5Eset_auto2(H5E_DEFAULT, NULL, NULL);
+  H5Eget_auto_stack(H5E_DEFAULT, &func, &edata);
+  H5Eset_auto_stack(H5E_DEFAULT, NULL, NULL);
 
   parse_command_line (argc, argv);
 
@@ -188,4 +187,3 @@ main (int argc, const char *argv[])
 
   return (EXIT_SUCCESS);
 }
-

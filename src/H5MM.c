@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*-------------------------------------------------------------------------
@@ -166,24 +165,29 @@ done:
  *		matzke@llnl.gov
  *		Jul 10 1997
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 char *
 H5MM_xstrdup(const char *s)
 {
-    char	*ret_value = NULL;
+    char	*ret_value=NULL;
 
     /* Use FUNC_ENTER_NOAPI_NOINIT_NOFUNC here to avoid performance issues */
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5MM_xstrdup)
+    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5MM_xstrdup);
 
-    if(s) {
+    if (s) {
         ret_value = H5MM_malloc(HDstrlen(s) + 1);
-        HDassert(ret_value);
+        assert (ret_value);
         HDstrcpy(ret_value, s);
     } /* end if */
 
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5MM_xstrdup() */
+#ifdef LATER
+done:
+#endif /* LATER */
+    FUNC_LEAVE_NOAPI(ret_value);
+}
 
 
 /*-------------------------------------------------------------------------
@@ -240,6 +244,8 @@ done:
  *		matzke@llnl.gov
  *		Jul 10 1997
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 void *
@@ -248,8 +254,8 @@ H5MM_xfree(void *mem)
     /* Use FUNC_ENTER_NOAPI_NOINIT_NOFUNC here to avoid performance issues */
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5MM_xfree);
 
-    if(mem)
+    if (mem)
         HDfree(mem);
 
     FUNC_LEAVE_NOAPI(NULL);
-} /* end H5MM_xfree() */
+}

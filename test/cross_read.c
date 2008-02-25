@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -75,25 +74,25 @@ static int read_data(char *fname)
     /*
      * Open the file and the dataset.
      */
-    if((file = H5Fopen(pathname, H5F_ACC_RDONLY, H5P_DEFAULT)) < 0)
+    if((file = H5Fopen(pathname, H5F_ACC_RDONLY, H5P_DEFAULT))<0)
         TEST_ERROR;
-    if((dataset = H5Dopen2(file, DATASETNAME, H5P_DEFAULT)) < 0)
+    if((dataset = H5Dopen(file, DATASETNAME))<0)
         TEST_ERROR;
 
     /*
      * Get datatype and dataspace handles and then query
      * dataset class, order, size, rank and dimensions.
      */
-    if((dt = H5Dget_type(dataset)) < 0)     /* datatype handle */
+    if((dt = H5Dget_type(dataset))<0)     /* datatype handle */
         TEST_ERROR;
-    if((datatype = H5Tget_native_type(dt, H5T_DIR_DEFAULT)) < 0)
+    if((datatype = H5Tget_native_type(dt, H5T_DIR_DEFAULT))<0)
         TEST_ERROR;
 
     /*
      * Read data from hyperslab in the file into the hyperslab in
      * memory and display.
      */
-    if(H5Dread(dataset, datatype, H5S_ALL, H5S_ALL, H5P_DEFAULT, data_out) < 0)
+    if(H5Dread(dataset, datatype, H5S_ALL, H5S_ALL, H5P_DEFAULT, data_out)<0)
         TEST_ERROR;
 
     /* Check results */

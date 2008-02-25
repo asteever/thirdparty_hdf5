@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -46,8 +45,7 @@ typedef enum {
     H5SL_TYPE_STR,      /* Skip list keys are 'char *'s (ie. strings) */
     H5SL_TYPE_HSIZE,    /* Skip list keys are 'hsize_t's */
     H5SL_TYPE_UNSIGNED, /* Skip list keys are 'unsigned's */
-    H5SL_TYPE_SIZE,     /* Skip list keys are 'size_t's */
-    H5SL_TYPE_OBJ       /* Skip list keys are 'H5_obj_t's */
+    H5SL_TYPE_SIZE      /* Skip list keys are 'size_t's */
 } H5SL_type_t;
 
 /**********/

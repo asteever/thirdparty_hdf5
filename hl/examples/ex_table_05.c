@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -26,12 +25,9 @@
  *-------------------------------------------------------------------------
  */
 
-#define NFIELDS       (hsize_t)   5
-#define NRECORDS      (hsize_t)   8
-#define NRECORDS_ADD  (hsize_t)   3
-#define TABLE_NAME               "table"
-
-
+#define NFIELDS  (hsize_t)       5
+#define NRECORDS (hsize_t)       8
+#define TABLE_NAME "table"
 
 int main( void )
 {
@@ -95,15 +91,21 @@ int main( void )
  int        i;
 
  /* Define new values for the field "Pressure"  */
- float      pressure_in  [NRECORDS_ADD] =
- { 0.0f,1.0f,2.0f};
+ float      pressure_in  [NRECORDS] =
+ { 0.0f,1.0f,2.0f,3.0f,4.0f,5.0f,6.0f,7.0f };
+
  int        field_index_pre[1]     = { 3 };
  int        field_index_pos[2]     = { 1,2 };
 
  /* Define new values for the fields "Latitude,Longitude"  */
- Position   position_in[NRECORDS_ADD] = { {0,0},
+ Position   position_in[NRECORDS] = { {0,0},
  {10,10},
- {20,20} };
+ {20,20},
+ {30,30},
+ {40,40},
+ {50,50},
+ {60,60},
+ {70,70} };
 
  size_t field_sizes_pos[2]=
  {
@@ -136,18 +138,16 @@ int main( void )
  /* Write the pressure field starting at record 2 */
  nfields  = 1;
  start    = 2;
- nrecords = NRECORDS_ADD;
+ nrecords = 3;
  status=H5TBwrite_fields_index( file_id, TABLE_NAME, nfields, field_index_pre, start, nrecords,
    sizeof( float ), 0, field_sizes_pre, pressure_in  );
-
 
  /* Write the new longitude and latitude information starting at record 2  */
  nfields  = 2;
  start    = 2;
- nrecords = NRECORDS_ADD;
+ nrecords = 3;
  status=H5TBwrite_fields_index( file_id, TABLE_NAME, nfields, field_index_pos, start, nrecords,
    sizeof( Position ), field_offset_pos, field_sizes_pos, position_in  );
-
 
  /* read the table */
  status=H5TBread_table( file_id, TABLE_NAME, dst_size, dst_offset, dst_sizes, dst_buf );
@@ -163,11 +163,7 @@ int main( void )
   printf ("\n");
  }
 
-
-  /* close type */
- H5Tclose( string_type );
- 
- /* close the file */
+ /* Close the file. */
  H5Fclose( file_id );
 
  return 0;

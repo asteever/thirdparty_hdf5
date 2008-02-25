@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -36,11 +35,7 @@ get_filesize(const char *filename)
     int		mpierr;
     MPI_File	fd;
     MPI_Offset	filesize;
-#ifndef H5_HAVE_MPI_GET_SIZE
-    struct stat stat_buf;
-#endif
 
-#ifdef H5_HAVE_MPI_GET_SIZE
     mpierr = MPI_File_open(MPI_COMM_SELF, (char*)filename, MPI_MODE_RDONLY,
 	MPI_INFO_NULL, &fd);
     VRFY((mpierr == MPI_SUCCESS), "");
@@ -50,16 +45,6 @@ get_filesize(const char *filename)
 
     mpierr = MPI_File_close(&fd);
     VRFY((mpierr == MPI_SUCCESS), "");
-#else
-    /* Some systems (only SGI Altix Propack 4 so far) doesn't return correct
-     * file size for MPI_File_get_size.  Use stat instead.
-     */
-    if((mpierr=stat(filename, &stat_buf))<0)
-    VRFY((mpierr == MPI_SUCCESS), "");
-
-    /* Hopefully this casting is safe */
-    filesize = (MPI_Offset)(stat_buf.st_size);
-#endif
 
     return(filesize);
 }
@@ -126,34 +111,46 @@ create_chunked_dataset(const char *filename, int nchunks, write_type write_patte
 	VRFY((file_id >= 0), "H5Fcreate");
 
 	/* Modify dataset creation properties, i.e. enable chunking  */
-	cparms = H5Pcreate(H5P_DATASET_CREATE);
+	cparms = H5Pcreate (H5P_DATASET_CREATE);
 	VRFY((cparms >= 0), "");
 
 	hrc = H5Pset_alloc_time(cparms, H5D_ALLOC_TIME_EARLY);
 	VRFY((hrc >= 0), "");
 
-	hrc = H5Pset_chunk(cparms, 1, chunk_dims);
+	hrc = H5Pset_chunk ( cparms, 1, chunk_dims);
 	VRFY((hrc >= 0), "");
 
 	/* Create a new dataset within the file using cparms creation properties. */
-	dataset = H5Dcreate2(file_id, DATASETNAME, H5T_NATIVE_UCHAR, dataspace, H5P_DEFAULT, cparms, H5P_DEFAULT);
+	dataset = H5Dcreate (file_id, DATASETNAME, H5T_NATIVE_UCHAR, dataspace, cparms);
 	VRFY((dataset >= 0), "");
 
-	if(write_pattern == sec_last) {
-            HDmemset(buffer, 100, CHUNKSIZE);
+	switch (write_pattern) {
 
-            count[0] = 1;
-            stride[0] = 1;
-            block[0] = chunk_dims[0];
-            offset[0] = (nchunks-2)*chunk_dims[0];
+	    /* writes only the second to last chunk */
+	    case sec_last:
 
-            hrc = H5Sselect_hyperslab(dataspace, H5S_SELECT_SET, offset, stride, count, block);
-                VRFY((hrc >= 0), "");
+		memset(buffer, 100, CHUNKSIZE);
 
-            /* Write sec_last chunk */
-            hrc = H5Dwrite(dataset, H5T_NATIVE_UCHAR, memspace, dataspace, H5P_DEFAULT, buffer);
-            VRFY((hrc >= 0), "H5Dwrite");
-        } /* end if */
+		count[0] = 1;
+		stride[0] = 1;
+		block[0] = chunk_dims[0];
+		offset[0] = (nchunks-2)*chunk_dims[0];
+
+		hrc = H5Sselect_hyperslab(dataspace, H5S_SELECT_SET, offset, stride, count, block);
+		    VRFY((hrc >= 0), "");
+
+		/* Write sec_last chunk */
+		hrc = H5Dwrite(dataset, H5T_NATIVE_UCHAR, memspace, dataspace, H5P_DEFAULT, buffer);
+		VRFY((hrc >= 0), "H5Dwrite");
+
+		break;
+
+
+	    /* doesn't write anything */
+	    case none:
+
+		break;
+	}
 
 	/* Close resources */
 	hrc = H5Dclose (dataset);
@@ -175,7 +172,7 @@ create_chunked_dataset(const char *filename, int nchunks, write_type write_patte
 
 	/* verify file size */
 	filesize = get_filesize(filename);
-	est_filesize = nchunks * CHUNKSIZE * sizeof(unsigned char);
+	est_filesize = nchunks*CHUNKSIZE*sizeof(unsigned char);
 	VRFY((filesize >= est_filesize), "file size check");
 
     }
@@ -238,7 +235,7 @@ parallel_access_dataset(const char *filename, int nchunks, access_type action, h
 
     /* Open dataset*/
     if (*dataset<0){
-        *dataset = H5Dopen2(*file_id, DATASETNAME, H5P_DEFAULT);
+        *dataset = H5Dopen(*file_id, DATASETNAME);
         VRFY((*dataset >= 0), "");
     }
 
@@ -278,7 +275,7 @@ parallel_access_dataset(const char *filename, int nchunks, access_type action, h
         /* only extends the dataset */
         case extend_only:
             /* Extend dataset*/
-            hrc = H5Dset_extent(*dataset, size);
+            hrc = H5Dextend(*dataset, size);
             VRFY((hrc >= 0), "");
 
             break;
@@ -369,7 +366,7 @@ void verify_data(const char *filename, int nchunks, write_type write_pattern, in
 
     /* Open dataset*/
     if (*dataset<0){
-        *dataset = H5Dopen2(*file_id, DATASETNAME, H5P_DEFAULT);
+        *dataset = H5Dopen(*file_id, DATASETNAME);
         VRFY((*dataset >= 0), "");
     }
 

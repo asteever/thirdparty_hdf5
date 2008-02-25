@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <string>
@@ -60,9 +59,11 @@ ArrayType::ArrayType( const hid_t existing_id ) : DataType( existing_id )
    // Get the dimensions of the existing array and store it in this array
    dimensions = new hsize_t[rank];
    //hsize_t rdims2[H5S_MAX_RANK];
-   int ret_value = H5Tget_array_dims2(id, dimensions);
+   int ret_value = H5Tget_array_dims(id, dimensions, NULL);
    if (ret_value < 0)
-      throw DataTypeIException("ArrayType::getArrayDims", "H5Tget_array_dims2 failed");
+   {
+      throw DataTypeIException("ArrayType::getArrayDims", "H5Tget_array_dims failed");
+   }
 }
 
 //--------------------------------------------------------------------------
@@ -90,9 +91,11 @@ ArrayType::ArrayType( const ArrayType& original ) : DataType( original )
 //--------------------------------------------------------------------------
 ArrayType::ArrayType(const DataType& base_type, int ndims, const hsize_t* dims) : DataType()
 {
-   hid_t new_type_id = H5Tarray_create2(base_type.getId(), ndims, dims);
+   hid_t new_type_id = H5Tarray_create(base_type.getId(), ndims, dims, NULL);
    if (new_type_id < 0)
-      throw DataTypeIException("ArrayType constructor", "H5Tarray_create2 failed");
+   {
+      throw DataTypeIException("ArrayType constructor", "H5Tarray_create failed");
+   }
    id = new_type_id;
    rank = ndims;
    dimensions = new hsize_t[rank];
@@ -135,9 +138,11 @@ int ArrayType::getArrayDims(hsize_t* dims)
    // if the array's dimensions have not been stored, retrieve them via C API
    if (dimensions == NULL)
    {
-      int ndims = H5Tget_array_dims2(id, dims);
+      int ndims = H5Tget_array_dims(id, dims, NULL);
       if (ndims < 0)
-         throw DataTypeIException("ArrayType::getArrayDims", "H5Tget_array_dims2 failed");
+      {
+         throw DataTypeIException("ArrayType::getArrayDims", "H5Tget_array_dims failed");
+      }
       // store the array's info in memory
       rank = ndims;
       dimensions = new hsize_t[rank];

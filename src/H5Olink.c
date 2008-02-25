@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*-------------------------------------------------------------------------
@@ -21,36 +20,34 @@
  *
  * Purpose:             Link messages.
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 
-#define H5G_PACKAGE		/*suppress error about including H5Gpkg	  */
-#define H5O_PACKAGE		/*suppress error about including H5Opkg	  */
+#define H5O_PACKAGE	/*suppress error about including H5Opkg	  */
 
 #include "H5private.h"		/* Generic Functions			*/
 #include "H5Eprivate.h"		/* Error handling		  	*/
 #include "H5FLprivate.h"	/* Free lists                           */
-#include "H5Gpkg.h"		/* Groups		  		*/
-#include "H5Iprivate.h"         /* IDs                                  */
-#include "H5Lprivate.h"		/* Links                                */
 #include "H5MMprivate.h"	/* Memory management			*/
 #include "H5Opkg.h"             /* Object headers			*/
 
 
+#ifdef H5_GROUP_REVISION
 /* PRIVATE PROTOTYPES */
-static void *H5O_link_decode(H5F_t *f, hid_t dxpl_id, unsigned mesg_flags, const uint8_t *p);
-static herr_t H5O_link_encode(H5F_t *f, hbool_t disable_shared, uint8_t *p, const void *_mesg);
-static void *H5O_link_copy(const void *_mesg, void *_dest);
-static size_t H5O_link_size(const H5F_t *f, hbool_t disable_shared, const void *_mesg);
+static void *H5O_link_decode(H5F_t *f, hid_t dxpl_id, const uint8_t *p);
+static herr_t H5O_link_encode(H5F_t *f, uint8_t *p, const void *_mesg);
+static size_t H5O_link_size(const H5F_t *f, const void *_mesg);
 static herr_t H5O_link_reset(void *_mesg);
 static herr_t H5O_link_free(void *_mesg);
-static herr_t H5O_link_pre_copy_file(H5F_t *file_src, const void *mesg_src,
-    hbool_t *deleted, const H5O_copy_t *cpy_info, void *udata);
+static herr_t H5O_link_delete(H5F_t *f, hid_t dxpl_id, const void *_mesg, hbool_t adj_link);
+static herr_t H5O_link_pre_copy_file(H5F_t *file_src, const H5O_msg_class_t *type,
+    void *mesg_src, hbool_t *deleted, const H5O_copy_t *cpy_info, void *udata);
 static void *H5O_link_copy_file(H5F_t *file_src, void *native_src,
-    H5F_t *file_dst, hbool_t *recompute_size, H5O_copy_t *cpy_info, void *udata,
-    hid_t dxpl_id);
-static herr_t H5O_link_post_copy_file(const H5O_loc_t *src_oloc, const void *mesg_src, H5O_loc_t *dst_oloc,
-    void *mesg_dst, hid_t dxpl_id, H5O_copy_t *cpy_info);
+    H5F_t *file_dst, hid_t dxpl_id, H5O_copy_t *cpy_info, void *udata);
+static herr_t H5O_link_post_copy_file(const H5O_loc_t *parent_src_oloc, const void *mesg_src, H5O_loc_t *dst_oloc,
+    void *mesg_dst, hbool_t *modified, hid_t dxpl_id, H5O_copy_t *cpy_info);
 static herr_t H5O_link_debug(H5F_t *f, hid_t dxpl_id, const void *_mesg,
     FILE * stream, int indent, int fwidth);
 
@@ -59,7 +56,6 @@ const H5O_msg_class_t H5O_MSG_LINK[1] = {{
     H5O_LINK_ID,            	/*message id number             */
     "link",                 	/*message name for debugging    */
     sizeof(H5O_link_t),     	/*native message size           */
-    0,				/* messages are sharable?       */
     H5O_link_decode,        	/*decode message                */
     H5O_link_encode,        	/*encode message                */
     H5O_link_copy,          	/*copy the native value         */
@@ -68,35 +64,23 @@ const H5O_msg_class_t H5O_MSG_LINK[1] = {{
     H5O_link_free,	        /* free method			*/
     H5O_link_delete,	       	/* file delete method		*/
     NULL,			/* link method			*/
+    NULL,		    	/*get share method		*/
     NULL, 			/*set share method		*/
-    NULL,		    	/*can share method		*/
     H5O_link_pre_copy_file,	/* pre copy native value to file */
     H5O_link_copy_file,		/* copy native value to file    */
     H5O_link_post_copy_file,	/* post copy native value to file    */
-    NULL,			/* get creation index		*/
-    NULL,			/* set creation index		*/
     H5O_link_debug          	/*debug the message             */
 }};
 
 /* Current version of link information */
 #define H5O_LINK_VERSION 	1
 
-/* Flags for link flag encoding */
-#define H5O_LINK_NAME_SIZE              0x03    /* 2-bit field for size of name length */
-#define H5O_LINK_STORE_CORDER           0x04    /* Whether to store creation index */
-#define H5O_LINK_STORE_LINK_TYPE        0x08    /* Whether to store non-default link type */
-#define H5O_LINK_STORE_NAME_CSET        0x10    /* Whether to store non-default name character set */
-#define H5O_LINK_ALL_FLAGS              (H5O_LINK_NAME_SIZE | H5O_LINK_STORE_CORDER | H5O_LINK_STORE_LINK_TYPE | H5O_LINK_STORE_NAME_CSET)
-
-/* Individual definitions of name size values */
-#define H5O_LINK_NAME_1                 0x00    /* Use 1-byte value for name length */
-#define H5O_LINK_NAME_2                 0x01    /* Use 2-byte value for name length */
-#define H5O_LINK_NAME_4                 0x02    /* Use 4-byte value for name length */
-#define H5O_LINK_NAME_8                 0x03    /* Use 8-byte value for name length */
+#endif /* H5_GROUP_REVISION */
 
 /* Declare a free list to manage the H5O_link_t struct */
 H5FL_DEFINE_STATIC(H5O_link_t);
 
+#ifdef H5_GROUP_REVISION
 
 /*-------------------------------------------------------------------------
  * Function:    H5O_link_decode
@@ -112,15 +96,16 @@ H5FL_DEFINE_STATIC(H5O_link_t);
  *              koziol@ncsa.uiuc.edu
  *              Aug 29 2005
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 static void *
-H5O_link_decode(H5F_t *f, hid_t UNUSED dxpl_id, unsigned UNUSED mesg_flags,
-    const uint8_t *p)
+H5O_link_decode(H5F_t *f, hid_t UNUSED dxpl_id, const uint8_t *p)
 {
     H5O_link_t          *lnk = NULL;    /* Pointer to link message */
-    size_t              len = 0;        /* Length of a string in the message */
-    unsigned char       link_flags;     /* Flags for encoding link info */
+    uint16_t            len;            /* Length of a string in the message */
+    uint32_t            tmp_time;       /* Temporary copy of the time */
     void                *ret_value;     /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5O_link_decode)
@@ -137,67 +122,25 @@ H5O_link_decode(H5F_t *f, hid_t UNUSED dxpl_id, unsigned UNUSED mesg_flags,
     if(NULL == (lnk = H5FL_CALLOC(H5O_link_t)))
 	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
 
-    /* Get the encoding flags for the link */
-    link_flags = *p++;
-    if(link_flags & ~H5O_LINK_ALL_FLAGS)
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "bad flag value for message")
-
-    /* Check for non-default link type */
-    if(link_flags & H5O_LINK_STORE_LINK_TYPE) {
-        /* Get the type of the link */
-        lnk->type = *p++;
-        if(lnk->type < H5L_TYPE_HARD || lnk->type > H5L_TYPE_MAX)
-            HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "bad link type")
-    } /* end if */
-    else
-        lnk->type = H5L_TYPE_HARD;
+    /* Get the type of the link */
+    lnk->type = *p++;
+    if(lnk->type < H5L_LINK_HARD || lnk->type > H5L_LINK_SOFT)
+        HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "bad link type")
 
     /* Get the link creation time from the file */
-    if(link_flags & H5O_LINK_STORE_CORDER) {
-        INT64DECODE(p, lnk->corder)
-        lnk->corder_valid = TRUE;
-    } /* end if */
-    else {
-        lnk->corder = 0;
-        lnk->corder_valid = FALSE;
-    } /* end else */
+    UINT32DECODE(p, tmp_time)
+    lnk->ctime = (time_t)tmp_time;
 
-    /* Check for non-default name character set */
-    if(link_flags & H5O_LINK_STORE_NAME_CSET) {
-        /* Get the link name's character set */
-        lnk->cset = (H5T_cset_t)*p++;
-        if(lnk->cset < H5T_CSET_ASCII || lnk->cset > H5T_CSET_UTF8)
-            HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "bad cset type")
-    } /* end if */
-    else
-        lnk->cset = H5T_CSET_ASCII;
-
-    /* Get the length of the link's name */
-    switch(link_flags & H5O_LINK_NAME_SIZE) {
-        case 0:     /* 1 byte size */
-            len = *p++;
-            break;
-
-        case 1:     /* 2 byte size */
-            UINT16DECODE(p, len);
-            break;
-
-        case 2:     /* 4 byte size */
-            UINT32DECODE(p, len);
-            break;
-
-        case 3:     /* 8 byte size */
-            UINT64DECODE(p, len);
-            break;
-
-        default:
-            HDassert(0 && "bad size for name");
-    } /* end switch */
-    if(len == 0)
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "invalid name length")
+    /* Get the link name's character set */
+    lnk->cset = (H5T_cset_t)*p++;
+    if(lnk->cset < H5T_CSET_ASCII || lnk->cset > H5T_CSET_UTF8)
+        HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "bad cset type")
 
     /* Get the link's name */
-    if(NULL == (lnk->name = H5MM_malloc(len + 1)))
+    UINT16DECODE(p, len)
+    if(len == 0)
+        HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "invalid name length")
+    if(NULL == (lnk->name = H5MM_malloc((size_t)len + 1)))
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
     HDmemcpy(lnk->name, p, len);
     lnk->name[len] = '\0';
@@ -205,12 +148,12 @@ H5O_link_decode(H5F_t *f, hid_t UNUSED dxpl_id, unsigned UNUSED mesg_flags,
 
     /* Get the appropriate information for each type of link */
     switch(lnk->type) {
-        case H5L_TYPE_HARD:
+        case H5L_LINK_HARD:
             /* Get the address of the object the link points to */
             H5F_addr_decode(f, &p, &(lnk->u.hard.addr));
             break;
 
-        case H5L_TYPE_SOFT:
+        case H5L_LINK_SOFT:
             /* Get the link value */
             UINT16DECODE(p, len)
             if(len == 0)
@@ -222,37 +165,21 @@ H5O_link_decode(H5F_t *f, hid_t UNUSED dxpl_id, unsigned UNUSED mesg_flags,
             p += len;
             break;
 
-        /* User-defined links */
         default:
-            if(lnk->type < H5L_TYPE_UD_MIN || lnk->type > H5L_TYPE_MAX)
-                HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "unknown link type")
-
-            /* A UD link.  Get the user-supplied data */
-            UINT16DECODE(p, len)
-            lnk->u.ud.size = len;
-            if(len > 0)
-            {
-                if(NULL == (lnk->u.ud.udata = H5MM_malloc((size_t)len)))
-                    HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
-                HDmemcpy(lnk->u.ud.udata, p, len);
-                p += len;
-            }
-            else
-                lnk->u.ud.udata = NULL;
+            HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "unknown link type")
+            break;
     } /* end switch */
 
     /* Set return value */
-    ret_value = lnk;
+    ret_value=lnk;
 
 done:
     if(ret_value == NULL)
         if(lnk != NULL) {
             if(lnk->name != NULL)
                 H5MM_xfree(lnk->name);
-            if(lnk->type == H5L_TYPE_SOFT && lnk->u.soft.name != NULL)
+            if(lnk->type == H5L_LINK_SOFT && lnk->u.soft.name != NULL)
                 H5MM_xfree(lnk->u.soft.name);
-            if(lnk->type >= H5L_TYPE_UD_MIN && lnk->u.ud.size > 0 && lnk->u.ud.udata != NULL)
-                H5MM_xfree(lnk->u.ud.udata);
             H5FL_FREE(H5O_link_t, lnk);
         } /* end if */
 
@@ -271,14 +198,16 @@ done:
  *              koziol@ncsa.uiuc.edu
  *              Aug 29 2005
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_link_encode(H5F_t *f, hbool_t UNUSED disable_shared, uint8_t *p, const void *_mesg)
+H5O_link_encode(H5F_t *f, uint8_t *p, const void *_mesg)
 {
-    const H5O_link_t    *lnk = (const H5O_link_t *) _mesg;
-    uint64_t            len;            /* Length of a string in the message */
-    unsigned char       link_flags;     /* Flags for encoding link info */
+    const H5O_link_t       *lnk = (const H5O_link_t *) _mesg;
+    uint16_t                len;            /* Length of a string in the message */
+    uint32_t                tmp_time;       /* Temporary copy of the time */
 
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_link_encode)
 
@@ -287,98 +216,50 @@ H5O_link_encode(H5F_t *f, hbool_t UNUSED disable_shared, uint8_t *p, const void 
     HDassert(p);
     HDassert(lnk);
 
-    /* Get length of link's name */
-    len = (uint64_t)HDstrlen(lnk->name);
-    HDassert(len > 0);
-
     /* encode */
     *p++ = H5O_LINK_VERSION;
 
-    /* The encoding flags for the link */
-    if(len > 4294967295)
-        link_flags = H5O_LINK_NAME_8;
-    else if(len > 65535)
-        link_flags = H5O_LINK_NAME_4;
-    else if(len > 255)
-        link_flags = H5O_LINK_NAME_2;
-    else
-        link_flags = H5O_LINK_NAME_1;
-    link_flags |= lnk->corder_valid ? H5O_LINK_STORE_CORDER : 0;
-    link_flags |= (lnk->type != H5L_TYPE_HARD) ? H5O_LINK_STORE_LINK_TYPE : 0;
-    link_flags |= (lnk->cset != H5T_CSET_ASCII) ? H5O_LINK_STORE_NAME_CSET : 0;
-    *p++ = link_flags;
+    /* Store the type of the link */
+    *p++ = lnk->type;
 
-    /* Store the type of a non-default link */
-    if(link_flags & H5O_LINK_STORE_LINK_TYPE)
-        *p++ = lnk->type;
+    /* Store the link creation time from the file */
+    tmp_time = lnk->ctime;
+    UINT32ENCODE(p, tmp_time)
 
-    /* Store the link creation order in the file, if its valid */
-    if(lnk->corder_valid)
-        INT64ENCODE(p, lnk->corder)
-
-    /* Store a non-default link name character set */
-    if(link_flags & H5O_LINK_STORE_NAME_CSET)
-        *p++ = (uint8_t)lnk->cset;
-
-    /* Store the link name's length */
-    switch(link_flags & H5O_LINK_NAME_SIZE) {
-        case 0:     /* 1 byte size */
-            *p++ = len;
-            break;
-
-        case 1:     /* 2 byte size */
-            UINT16ENCODE(p, len);
-            break;
-
-        case 2:     /* 4 byte size */
-            UINT32ENCODE(p, len);
-            break;
-
-        case 3:     /* 8 byte size */
-            UINT64ENCODE(p, len);
-            break;
-
-        default:
-            HDassert(0 && "bad size for name");
-    } /* end switch */
+    /* Store the link name's character set */
+    *p++ = (uint8_t)lnk->cset;
 
     /* Store the link's name */
-    HDmemcpy(p, lnk->name, (size_t)len);
+    len = (uint16_t)HDstrlen(lnk->name);
+    HDassert(len > 0);
+    UINT16ENCODE(p, len)
+    HDmemcpy(p, lnk->name, len);
     p += len;
 
     /* Store the appropriate information for each type of link */
     switch(lnk->type) {
-        case H5L_TYPE_HARD:
+        case H5L_LINK_HARD:
             /* Store the address of the object the link points to */
             H5F_addr_encode(f, &p, lnk->u.hard.addr);
             break;
 
-        case H5L_TYPE_SOFT:
+        case H5L_LINK_SOFT:
             /* Store the link value */
             len = (uint16_t)HDstrlen(lnk->u.soft.name);
             HDassert(len > 0);
             UINT16ENCODE(p, len)
-            HDmemcpy(p, lnk->u.soft.name, (size_t)len);
+            HDmemcpy(p, lnk->u.soft.name, len);
             p += len;
             break;
 
-        /* User-defined links */
         default:
-            HDassert(lnk->type >= H5L_TYPE_UD_MIN && lnk->type <= H5L_TYPE_MAX);
-
-            /* Store the user-supplied data, however long it is */
-            len = (uint16_t)lnk->u.ud.size;
-            UINT16ENCODE(p, len)
-            if(len > 0)
-            {
-                HDmemcpy(p, lnk->u.ud.udata, (size_t)len);
-                p+=len;
-            }
+            HDassert((lnk->type == H5L_LINK_HARD) || (lnk->type == H5L_LINK_SOFT));
             break;
     } /* end switch */
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5O_link_encode() */
+#endif /* H5_GROUP_REVISION */
 
 
 /*-------------------------------------------------------------------------
@@ -395,10 +276,12 @@ H5O_link_encode(H5F_t *f, hbool_t UNUSED disable_shared, uint8_t *p, const void 
  *              koziol@ncsa.uiuc.edu
  *              Aug 29 2005
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
-static void *
-H5O_link_copy(const void *_mesg, void *_dest)
+void *
+H5O_link_copy(const void *_mesg, void *_dest, unsigned UNUSED update_flags)
 {
     const H5O_link_t    *lnk = (const H5O_link_t *) _mesg;
     H5O_link_t          *dest = (H5O_link_t *) _dest;
@@ -406,40 +289,27 @@ H5O_link_copy(const void *_mesg, void *_dest)
 
     FUNC_ENTER_NOAPI_NOINIT(H5O_link_copy)
 
-    /* Check args */
+    /* check args */
     HDassert(lnk);
     if(!dest && NULL == (dest = H5FL_MALLOC(H5O_link_t)))
 	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
 
-    /* Copy static information */
+    /* copy */
     *dest = *lnk;
-
-    /* Duplicate the link's name */
     HDassert(lnk->name);
-    if(NULL == (dest->name = H5MM_xstrdup(lnk->name)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "can't duplicate link name")
-
-    /* Copy other information needed for different link types */
-    if(lnk->type == H5L_TYPE_SOFT) {
-        if(NULL == (dest->u.soft.name = H5MM_xstrdup(lnk->u.soft.name)))
-            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "can't duplicate soft link value")
-    } /* end if */
-    else if(lnk->type >= H5L_TYPE_UD_MIN) {
-        if(lnk->u.ud.size > 0) {
-            if(NULL == (dest->u.ud.udata = H5MM_malloc(lnk->u.ud.size)))
-                HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
-            HDmemcpy(dest->u.ud.udata, lnk->u.ud.udata, lnk->u.ud.size);
-        } /* end if */
-    } /* end if */
+    dest->name = H5MM_xstrdup(lnk->name);
+    if(lnk->type == H5L_LINK_SOFT)
+        dest->u.soft.name = H5MM_xstrdup(lnk->u.soft.name);
 
     /* Set return value */
-    ret_value = dest;
+    ret_value=dest;
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_link_copy() */
 
 
+#ifdef H5_GROUP_REVISION
 /*-------------------------------------------------------------------------
  * Function:    H5O_link_size
  *
@@ -458,52 +328,34 @@ done:
  *-------------------------------------------------------------------------
  */
 static size_t
-H5O_link_size(const H5F_t *f, hbool_t UNUSED disable_shared, const void *_mesg)
+H5O_link_size(const H5F_t *f, const void *_mesg)
 {
     const H5O_link_t *lnk = (const H5O_link_t *)_mesg;
-    uint64_t name_len;    /* Length of name */
-    size_t name_size;   /* Size of encoded name length */
     size_t ret_value;   /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_link_size)
 
-    /* Get name's length */
-    name_len = (uint64_t)HDstrlen(lnk->name);
-
-    /* Determine correct value for name size bits */
-    if(name_len > 4294967295)
-        name_size = 8;
-    else if(name_len > 65535)
-        name_size = 4;
-    else if(name_len > 255)
-        name_size = 2;
-    else
-        name_size = 1;
-
     /* Set return value */
     ret_value = 1 +                     /* Version */
-                1 +                     /* Link encoding flags */
-                (lnk->type != H5L_TYPE_HARD ? 1 : 0) + /* Link type */
-                (lnk->corder_valid ? 8 : 0) + /* Creation order */
-                (lnk->cset != H5T_CSET_ASCII ? 1 : 0) + /* Character set */
-                name_size +             /* Name length */
-                name_len;               /* Name */
+                1 +                     /* Link type */
+                4 +                     /* Creation time */
+                1 +                     /* Character set */
+                2 +                     /* Name length */
+                HDstrlen(lnk->name);    /* Name */
 
     /* Add the appropriate length for each type of link */
     switch(lnk->type) {
-        case H5L_TYPE_HARD:
+        case H5L_LINK_HARD:
             ret_value += H5F_SIZEOF_ADDR(f);
             break;
 
-        case H5L_TYPE_SOFT:
+        case H5L_LINK_SOFT:
             ret_value += 2 +                            /* Link value length */
                         HDstrlen(lnk->u.soft.name);     /* Link value */
             break;
 
-        default: /* Default is user-defined link type */
-            HDassert(lnk->type >= H5L_TYPE_UD_MIN);
-            ret_value += 2 +                            /* User-defined data size */
-                         lnk->u.ud.size;                /* User-defined data */
+        default:
+            HDassert((lnk->type == H5L_LINK_HARD) || (lnk->type == H5L_LINK_SOFT));
             break;
     } /* end switch */
 
@@ -533,12 +385,8 @@ H5O_link_reset(void *_mesg)
 
     if(lnk) {
         /* Free information for link (but don't free link pointer) */
-        if(lnk->type == H5L_TYPE_SOFT)
+        if(lnk->type == H5L_LINK_SOFT)
             lnk->u.soft.name = H5MM_xfree(lnk->u.soft.name);
-        else if (lnk->type >= H5L_TYPE_UD_MIN) {
-            if(lnk->u.ud.size > 0)
-                lnk->u.ud.udata = H5MM_xfree(lnk->u.ud.udata);
-        } /* end if */
         lnk->name = H5MM_xfree(lnk->name);
     } /* end if */
 
@@ -587,21 +435,20 @@ H5O_link_free(void *_mesg)
  *
  *-------------------------------------------------------------------------
  */
-herr_t
-H5O_link_delete(H5F_t *f, hid_t dxpl_id, H5O_t UNUSED *open_oh, void *_mesg)
+static herr_t
+H5O_link_delete(H5F_t *f, hid_t dxpl_id, const void *_mesg, hbool_t adj_link)
 {
-    H5O_link_t *lnk = (H5O_link_t *)_mesg;
+    const H5O_link_t *lnk = (const H5O_link_t *)_mesg;
     herr_t ret_value = SUCCEED;   /* Return value */
 
-    FUNC_ENTER_NOAPI(H5O_link_delete, FAIL)
+    FUNC_ENTER_NOAPI_NOINIT(H5O_link_delete)
 
     /* check args */
     HDassert(f);
     HDassert(lnk);
 
-    /* Check for adjusting the link count when the link is removed */
-    /* Adjust the reference count of the object when a hard link is removed */
-    if(lnk->type == H5L_TYPE_HARD) {
+    /* Decrement reference count to the object, for hard links */
+    if(lnk->type == H5L_LINK_HARD) {
         H5O_loc_t oloc;
 
         /* Construct object location for object, in order to decrement it's ref count */
@@ -610,36 +457,10 @@ H5O_link_delete(H5F_t *f, hid_t dxpl_id, H5O_t UNUSED *open_oh, void *_mesg)
         HDassert(H5F_addr_defined(lnk->u.hard.addr));
         oloc.addr = lnk->u.hard.addr;
 
-        /* Decrement the ref count for the object */
-        if(H5O_link(&oloc, -1, dxpl_id) < 0)
-            HGOTO_ERROR(H5E_OHDR, H5E_CANTFREE, FAIL, "unable to decrement object link count")
-    } /* end if */
-    /* Perform the "delete" callback when a user-defined link is removed */
-    else if(lnk->type >= H5L_TYPE_UD_MIN) {
-        const H5L_class_t   *link_class;         /* User-defined link class */
-
-        /* Get the link class for this type of link. */
-        if(NULL == (link_class = H5L_find_class(lnk->type)))
-            HGOTO_ERROR(H5E_LINK, H5E_NOTREGISTERED, FAIL, "link class not registered")
-
-        /* Check for delete callback */
-        if(link_class->del_func) {
-            hid_t file_id;           /* ID for the file the link is located in (passed to user callback) */
-
-            /* Get a file ID for the file the link is in */
-            if((file_id = H5F_get_id(f)) < 0)
-                HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "unable to get file ID")
-
-            /* Call user-defined link's 'delete' callback */
-            if((link_class->del_func)(lnk->name, file_id, lnk->u.ud.udata, lnk->u.ud.size) < 0) {
-                H5I_dec_ref(file_id);
-                HGOTO_ERROR(H5E_OHDR, H5E_CALLBACK, FAIL, "link deletion callback returned failure")
-            } /* end if */
-
-            /* Release the file ID */
-            if(H5I_dec_ref(file_id) < 0)
-                HGOTO_ERROR(H5E_OHDR, H5E_CANTCLOSEFILE, FAIL, "can't close file")
-        } /* end if */
+        /* Decrement the ref count for the object, if requested */
+        if(adj_link)
+            if(H5O_link(&oloc, -1, dxpl_id)<0)
+                HGOTO_ERROR(H5E_OHDR, H5E_CANTFREE, FAIL, "unable to decrement object link count")
     } /* end if */
 
 done:
@@ -663,8 +484,9 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_link_pre_copy_file(H5F_t UNUSED *file_src, const void UNUSED *native_src,
-    hbool_t *deleted, const H5O_copy_t *cpy_info, void UNUSED *udata)
+H5O_link_pre_copy_file(H5F_t UNUSED *file_src, const H5O_msg_class_t UNUSED *type,
+    void UNUSED *native_src, hbool_t *deleted, const H5O_copy_t *cpy_info,
+    void UNUSED *udata)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_link_pre_copy_file)
 
@@ -700,28 +522,47 @@ H5O_link_pre_copy_file(H5F_t UNUSED *file_src, const void UNUSED *native_src,
  */
 static void *
 H5O_link_copy_file(H5F_t UNUSED *file_src, void *native_src, H5F_t UNUSED *file_dst,
-    hbool_t UNUSED *recompute_size, H5O_copy_t UNUSED *cpy_info, void UNUSED *udata,
-    hid_t UNUSED dxpl_id)
+    hid_t UNUSED dxpl_id, H5O_copy_t UNUSED *cpy_info, void UNUSED *udata)
 {
-    H5O_link_t  *link_src = (H5O_link_t *)native_src;
-    H5O_link_t  *link_dst = NULL;
-    void        *ret_value;          /* Return value */
+    H5O_link_t           *link_src = (H5O_link_t *) native_src;
+    H5O_link_t           *link_dst = NULL;
+    void                 *ret_value;          /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5O_link_copy_file)
 
     /* check args */
     HDassert(link_src);
+    HDassert(file_dst);
     HDassert(cpy_info);
     HDassert(cpy_info->max_depth < 0 || cpy_info->curr_depth < cpy_info->max_depth);
 
-    /* Sanity check source link type */
-    if(link_src->type > H5L_TYPE_SOFT && link_src->type < H5L_TYPE_UD_MIN)
-        HGOTO_ERROR(H5E_SYM, H5E_BADVALUE, NULL, "unrecognized built-in link type")
+    /* Allocate space for the destination stab */
+    if(NULL == (link_dst = H5FL_MALLOC(H5O_link_t)))
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
 
-    /* Allocate "blank" link for destination */
-    /* (values will be filled in during 'post copy' operation) */
-    if(NULL == (link_dst = H5FL_CALLOC(H5O_link_t)))
-	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+    /* Copy top-level information */
+    *link_dst = *link_src;
+
+    /* Deep copy the link's name */
+    if(NULL == (link_dst->name = H5MM_xstrdup(link_src->name)))
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+
+    /* "Deep copy" other information for each kind of link */
+    switch(link_src->type) {
+        case H5L_LINK_HARD:
+            /* Set link's address undefined here, will be fixed up in "post copy" callback */
+            link_dst->u.hard.addr = HADDR_UNDEF;
+            break;
+
+        case H5L_LINK_SOFT:
+            /* Copy the soft link's value */
+            if(NULL == (link_dst->u.soft.name = H5MM_xstrdup(link_src->u.soft.name)))
+                HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+            break;
+
+        default:
+            HGOTO_ERROR(H5E_SYM, H5E_BADVALUE, NULL, "unrecognized link type")
+    } /* end switch */
 
     /* Set return value */
     ret_value = link_dst;
@@ -729,7 +570,7 @@ H5O_link_copy_file(H5F_t UNUSED *file_src, void *native_src, H5F_t UNUSED *file_
 done:
     if(!ret_value)
         if(link_dst)
-            H5O_link_free(link_dst);
+            H5FL_FREE(H5O_link_t, link_dst);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5O_link_copy_file() */
@@ -748,12 +589,13 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_link_post_copy_file(const H5O_loc_t *src_oloc, const void *mesg_src,
-    H5O_loc_t *dst_oloc, void *mesg_dst, hid_t dxpl_id, H5O_copy_t *cpy_info)
+H5O_link_post_copy_file(const H5O_loc_t *parent_src_oloc, const void *mesg_src, H5O_loc_t *dst_oloc, void *mesg_dst,
+    hbool_t *modified, hid_t dxpl_id, H5O_copy_t *cpy_info)
 {
-    const H5O_link_t    *link_src = (const H5O_link_t *)mesg_src;
-    H5O_link_t          *link_dst = (H5O_link_t *)mesg_dst;
-    herr_t              ret_value = SUCCEED;    /* Return value */
+    H5O_link_t           *link_src = (H5O_link_t *)mesg_src;    /* Casting away const OK... -QAK */
+    H5O_link_t           tmp_link_src;
+    H5O_link_t           *link_dst = (H5O_link_t *)mesg_dst;
+    herr_t               ret_value = SUCCEED;          /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5O_link_post_copy_file)
 
@@ -763,13 +605,81 @@ H5O_link_post_copy_file(const H5O_loc_t *src_oloc, const void *mesg_src,
     HDassert(H5F_addr_defined(dst_oloc->addr));
     HDassert(dst_oloc->file);
     HDassert(link_dst);
+    HDassert(modified && *modified == FALSE);
     HDassert(cpy_info);
     HDassert(cpy_info->max_depth < 0 || cpy_info->curr_depth < cpy_info->max_depth);
 
-    /* Copy the link (and the object it points to) */
-    if(H5G_link_copy_file(dst_oloc->file, dxpl_id, link_src, src_oloc, link_dst,
-            cpy_info) < 0)
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTCOPY, FAIL, "unable to copy link")
+    /* Expand soft link */
+    if(H5G_LINK_SOFT == link_src->type && cpy_info->expand_soft_link) {
+        H5G_stat_t  statbuf;        /* Information about object pointed to by soft link */
+        H5G_loc_t   grp_loc;        /* Group location for parent of soft link */
+        H5G_name_t  grp_path;       /* Path for parent of soft link */
+
+        /* Make a temporary copy, so that it will not change the info in the cache */
+        HDmemcpy(&tmp_link_src, link_src, sizeof(H5O_link_t));
+        link_src = &tmp_link_src;
+
+        /* Set up group location for soft link to start in */
+        H5G_name_reset(&grp_path);
+        grp_loc.path = &grp_path;
+        grp_loc.oloc = (H5O_loc_t *)parent_src_oloc;    /* Casting away const OK... -QAK */
+
+        /* Check if the object pointed by the soft link exists in the source file */
+        /* (It would be more efficient to make a specialized traversal callback,
+         *      but this is good enough for now... -QAK)
+         */
+        if(H5G_get_objinfo(&grp_loc, link_src->u.soft.name, TRUE, &statbuf, H5AC_ind_dxpl_id) >= 0) {
+            /* Convert temp. copy of source soft link to hard link */
+#if H5_SIZEOF_UINT64_T > H5_SIZEOF_LONG
+            link_src->u.hard.addr = (((haddr_t)statbuf.objno[1]) << (8 * sizeof(long))) | (haddr_t)statbuf.objno[0];
+#else
+            link_src->u.hard.addr = statbuf.objno[0];
+#endif
+            link_src->type = H5G_LINK_HARD;
+
+            /* Convert destination link to hard link */
+            link_dst->type = H5G_LINK_HARD;
+            link_dst->u.soft.name = H5MM_xfree(link_dst->u.soft.name);
+        } /* end if */
+    } /* if ((H5G_CACHED_SLINK == src_ent->type)... */
+
+    /* Additional "deep copy" for each kind of link */
+    switch(link_src->type) {
+        case H5L_LINK_HARD:
+            /* Copy the object pointed to */
+            {
+                H5O_loc_t src_oloc;             /* Temporary object location for source object */
+                H5O_loc_t new_oloc;             /* Temporary object location for source object */
+
+                /* Build temporary object location for source */
+                H5O_loc_reset(&src_oloc);
+                src_oloc.file = parent_src_oloc->file;
+                HDassert(H5F_addr_defined(link_src->u.hard.addr));
+                src_oloc.addr = link_src->u.hard.addr;
+
+                /* Build temporary object location for destination */
+                H5O_loc_reset(&new_oloc);
+                new_oloc.file = dst_oloc->file;
+
+                /* Copy the shared object from source to destination */
+                if(H5O_copy_header_map(&src_oloc, &new_oloc, dxpl_id, cpy_info, TRUE) < 0)
+                    HGOTO_ERROR(H5E_OHDR, H5E_CANTCOPY, FAIL, "unable to copy object")
+
+                /* Update link information with new destination object's address */
+                link_dst->u.hard.addr = new_oloc.addr;
+
+                /* Indicate that the destination message was modified */
+                *modified = TRUE;
+            } /* end case */
+            break;
+
+        case H5L_LINK_SOFT:
+            HGOTO_DONE(SUCCEED)
+            break;
+
+        default:
+            HGOTO_ERROR(H5E_SYM, H5E_BADVALUE, FAIL, "unrecognized link type")
+    } /* end switch */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -787,16 +697,19 @@ done:
  *              koziol@ncsa.uiuc.edu
  *              Aug 29 2005
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 static herr_t
 H5O_link_debug(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const void *_mesg, FILE * stream,
 	       int indent, int fwidth)
 {
-    const H5O_link_t    *lnk = (const H5O_link_t *) _mesg;
-    herr_t               ret_value = SUCCEED;          /* Return value */
+    const H5O_link_t       *lnk = (const H5O_link_t *) _mesg;
+    struct tm		*tm;
+    char		buf[128];
 
-    FUNC_ENTER_NOAPI_NOINIT(H5O_link_debug)
+    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_link_debug)
 
     /* check args */
     HDassert(f);
@@ -806,14 +719,13 @@ H5O_link_debug(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const void *_mesg, FILE * 
     HDassert(fwidth >= 0);
 
     HDfprintf(stream, "%*s%-*s %s\n", indent, "", fwidth,
-	      "Link Type:", (lnk->type == H5L_TYPE_HARD ? "Hard" :
-                  (lnk->type == H5L_TYPE_SOFT ? "Soft" :
-                  (lnk->type == H5L_TYPE_EXTERNAL ? "External" :
-                  (lnk->type >= H5L_TYPE_UD_MIN ? "User-defined" : "Unknown")))));
+	      "Link Type:", (lnk->type == H5L_LINK_HARD ? "Hard" :
+                  (lnk->type == H5L_LINK_SOFT ? "Soft" : "Unknown")));
 
-    if(lnk->corder_valid)
-        HDfprintf(stream, "%*s%-*s %a\n", indent, "", fwidth,
-                  "Creation Order:", lnk->corder);
+    tm = HDlocaltime(&(lnk->ctime));
+    HDstrftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S %Z", tm);
+    HDfprintf(stream, "%*s%-*s %s\n", indent, "", fwidth,
+	      "Creation Time:", buf);
 
     HDfprintf(stream, "%*s%-*s %s\n", indent, "", fwidth,
 	      "Link Name Character Set:", (lnk->cset == H5T_CSET_ASCII ?
@@ -821,39 +733,22 @@ H5O_link_debug(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const void *_mesg, FILE * 
     HDfprintf(stream, "%*s%-*s %s\n", indent, "", fwidth,
 	      "Link Name:", lnk->name);
 
-    /* Display link-specific information */
     switch(lnk->type) {
-        case H5L_TYPE_HARD:
+        case H5L_LINK_HARD:
             HDfprintf(stream, "%*s%-*s %a\n", indent, "", fwidth,
                       "Object address:", lnk->u.hard.addr);
             break;
 
-        case H5L_TYPE_SOFT:
+        case H5L_LINK_SOFT:
             HDfprintf(stream, "%*s%-*s %s\n", indent, "", fwidth,
                       "Link Value:", lnk->u.soft.name);
             break;
 
         default:
-            if(lnk->type >= H5L_TYPE_UD_MIN) {
-                if(lnk->type == H5L_TYPE_EXTERNAL) {
-                    const char * objname = (const char *)lnk->u.ud.udata + (HDstrlen(lnk->u.ud.udata) + 1);
-
-                    HDfprintf(stream, "%*s%-*s %s\n", indent, "", fwidth,
-                              "External File Name:", lnk->u.ud.udata);
-                    HDfprintf(stream, "%*s%-*s %s\n", indent, "", fwidth,
-                              "External Object Name:", objname);
-                } /* end if */
-                else {
-                    HDfprintf(stream, "%*s%-*s %Zu\n", indent, "", fwidth,
-                              "User-Defined Link Size:", lnk->u.ud.size);
-                } /* end else */
-            } /* end if */
-            else
-                HGOTO_ERROR(H5E_SYM, H5E_BADVALUE, FAIL, "unrecognized link type")
             break;
     } /* end switch */
 
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5O_link_debug() */
+#endif /* H5_GROUP_REVISION */
 

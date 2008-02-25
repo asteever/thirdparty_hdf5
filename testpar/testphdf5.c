@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -33,9 +32,8 @@ int ndatasets = 300;			/* number of datasets to create*/
 int ngroups = 512;                      /* number of groups to create in root
                                          * group. */
 int facc_type = FACC_MPIO;		/*Test file access type */
-int dxfer_coll_type = DXFER_COLLECTIVE_IO;
 
-H5E_auto2_t old_func;		        /* previous error handler */
+H5E_auto_t old_func;		        /* previous error handler */
 void *old_client_data;			/* previous error handler arg.*/
 
 /* other option flags */
@@ -170,9 +168,6 @@ parse_options(int argc, char **argv)
 			    break;
 		case 'p':   /* Use the MPI-POSIX driver access */
 			    facc_type = FACC_MPIPOSIX;
-			    break;
-		case 'i':   /* Collective MPI-IO access with independent IO  */
-			    dxfer_coll_type = DXFER_INDEPENDENT_IO;
 			    break;
 		case '2':   /* Use the split-file driver with MPIO access */
 			    /* Can use $HDF5_METAPREFIX to define the */
@@ -309,6 +304,27 @@ create_faccess_plist(MPI_Comm comm, MPI_Info info, int l_facc_type,
     return (ret_pl);
 }
 
+/*
+ * Check the size of a file using MPI routines
+ */
+MPI_Offset
+h5_mpi_get_file_size(const char *filename, MPI_Comm comm, MPI_Info info)
+{
+    MPI_File	fh;             /* MPI file handle */
+    MPI_Offset	size=0;         /* File size to return */
+
+    if (MPI_SUCCESS != MPI_File_open(comm, (char*)filename, MPI_MODE_RDONLY, info, &fh))
+        goto done;
+
+    if (MPI_SUCCESS != (MPI_File_get_size(fh, &size)))
+        goto done;
+
+    if (MPI_SUCCESS != MPI_File_close(&fh))
+        size=0;
+
+done:
+    return(size);
+}
 
 int main(int argc, char **argv)
 {
@@ -365,13 +381,8 @@ int main(int argc, char **argv)
 	    "extendible dataset collective read", PARATESTFILE);
     AddTest("eidsetw2", extend_writeInd2, NULL,
 	    "extendible dataset independent write #2", PARATESTFILE);
-    AddTest("selnone", none_selection_chunk, NULL,
-            "chunked dataset with none-selection", PARATESTFILE);
-
     AddTest("calloc", test_chunk_alloc, NULL,
 	    "parallel extend Chunked allocation on serial file", PARATESTFILE);
-    AddTest("fltread", test_filter_read, NULL,
-	    "parallel read of dataset written serially with filters", PARATESTFILE);
 
 #ifdef H5_HAVE_FILTER_DEFLATE
     AddTest("cmpdsetr", compress_readAll, NULL,
@@ -399,12 +410,12 @@ int main(int argc, char **argv)
 	    "collective group and dataset write", &collngroups_params);
     AddTest("ingrpr", independent_group_read, NULL,
 	    "independent group and dataset read", &collngroups_params);
- /* By default, do not run big dataset on _WIN32. */
-#ifdef _WIN32
-    AddTest("-bigdset", big_dataset, NULL, 
+ /* By default, do not run big dataset on WIN32. */
+#ifdef WIN32
+    AddTest("-bigdset", big_dataset, NULL,
             "big dataset test", PARATESTFILE);
 #else
-				 AddTest("bigdset", big_dataset, NULL, 
+				 AddTest("bigdset", big_dataset, NULL,
             "big dataset test", PARATESTFILE);
 #endif
     AddTest("fill", dataset_fillvalue, NULL,
@@ -442,8 +453,8 @@ int main(int argc, char **argv)
     AddTest((mpi_size < 3)? "-cchunk10" : "cchunk10",
 	coll_chunk10,NULL,
 	"multiple chunk collective IO transferring to independent IO",PARATESTFILE);
-          
-         
+
+
 
 /* irregular collective IO tests*/
     AddTest("ccontw",
@@ -520,13 +531,6 @@ int main(int argc, char **argv)
 	       "   Using MPIPOSIX driver\n"
 	       "===================================\n");
     }
-
-    if (dxfer_coll_type == DXFER_INDEPENDENT_IO && MAINPROCESS){
-	printf("===================================\n"
-	       "   Using Independent I/O with file set view to replace collective I/O \n"
-	       "===================================\n");
-    }
-
 
     /* Perform requested testing */
     PerformTests();

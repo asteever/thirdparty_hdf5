@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -32,14 +31,52 @@
 #include "H5MMprivate.h"        /* Memory Management                    */
 
 /* Private macros */
+#define H5G_NO_CHANGE   (-1)            /*see H5G_ent_modified()             */
 
 /* Private prototypes */
+#ifdef NOT_YET
+static herr_t H5G_ent_modified(H5G_entry_t *ent, H5G_type_t cache_type);
+#endif /* NOT_YET */
 static herr_t H5G_ent_encode(H5F_t *f, uint8_t **pp, const H5G_entry_t *ent);
 static herr_t H5G_ent_decode(H5F_t *f, const uint8_t **pp,
 			      H5G_entry_t *ent/*out*/);
 
 /* Declare extern the PQ free list for the wrapped strings */
 H5FL_BLK_EXTERN(str_buf);
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5G_ent_modified
+ *
+ * Purpose:     This function should be called after you make any
+ *              modifications to a symbol table entry cache.  Supply the new
+ *              type for the cache.  If CACHE_TYPE is the constant
+ *              H5G_NO_CHANGE then the cache type isn't changed--just the
+ *              dirty bit is set.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  Robb Matzke
+ *              Friday, September 19, 1997
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5G_ent_modified(H5G_entry_t *ent, H5G_type_t cache_type)
+{
+    FUNC_ENTER_NOAPI_NOFUNC(H5G_ent_modified)
+
+    HDassert(ent);
+
+    /* Update cache type, if requested */
+    if (H5G_NO_CHANGE != cache_type)
+        ent->type = cache_type;
+    ent->dirty = TRUE;
+
+    FUNC_LEAVE_NOAPI(SUCCEED)
+} /* end H5G_ent_modified */
 
 
 /*-------------------------------------------------------------------------
@@ -129,7 +166,7 @@ H5G_ent_decode(H5F_t *f, const uint8_t **pp, H5G_entry_t *ent)
     H5F_addr_decode(f, pp, &(ent->header));
     UINT32DECODE(*pp, tmp);
     *pp += 4; /*reserved*/
-    ent->type=(H5G_cache_type_t)tmp;
+    ent->type=(H5G_type_t)tmp;
 
     /* decode scratch-pad */
     switch (ent->type) {
@@ -147,8 +184,7 @@ H5G_ent_decode(H5F_t *f, const uint8_t **pp, H5G_entry_t *ent)
             break;
 
         default:
-            /* Error or unknown type. Bail out. */
-            return -1;
+            HDabort();
     }
 
     *pp = p_ret + H5G_SIZEOF_ENTRY(f);
@@ -261,8 +297,7 @@ H5G_ent_encode(H5F_t *f, uint8_t **pp, const H5G_entry_t *ent)
                 break;
 
             default:
-                /* Unknown cached type. Bail out. */
-                return -1;
+                HDabort();
         }
     } else {
         H5F_ENCODE_LENGTH(f, *pp, 0);
@@ -363,8 +398,10 @@ H5G_ent_reset(H5G_entry_t *ent)
  *
  * Purpose:     Convert a link to a symbol table entry
  *
- * Return:	Success:	Non-negative
- *		Failure:	Negative
+ * Return:      Success:        Non-negative, with *pp pointing to the first byte
+ *                              after the last symbol.
+ *
+ *              Failure:        Negative
  *
  * Programmer:  Quincey Koziol
  *              koziol@ncsa.uiuc.edu
@@ -373,8 +410,8 @@ H5G_ent_reset(H5G_entry_t *ent)
  *-------------------------------------------------------------------------
  */
 herr_t
-H5G_ent_convert(H5F_t *f, hid_t dxpl_id, H5HL_t *heap, const char *name,
-    const H5O_link_t *lnk, H5G_entry_t *ent)
+H5G_ent_convert(H5F_t *f, haddr_t heap_addr, const char *name, const H5O_link_t *lnk,
+    H5G_entry_t *ent, hid_t dxpl_id)
 {
     size_t	name_offset;            /* Offset of name in heap */
     herr_t      ret_value = SUCCEED;    /* Return value */
@@ -383,7 +420,7 @@ H5G_ent_convert(H5F_t *f, hid_t dxpl_id, H5HL_t *heap, const char *name,
 
     /* check arguments */
     HDassert(f);
-    HDassert(heap);
+    HDassert(H5F_addr_defined(heap_addr));
     HDassert(name);
     HDassert(lnk);
 
@@ -393,24 +430,24 @@ H5G_ent_convert(H5F_t *f, hid_t dxpl_id, H5HL_t *heap, const char *name,
     /*
      * Add the new name to the heap.
      */
-    name_offset = H5HL_insert(f, dxpl_id, heap, HDstrlen(name) + 1, name);
+    name_offset = H5HL_insert(f, dxpl_id, heap_addr, HDstrlen(name) + 1, name);
     if(0 == name_offset || (size_t)(-1) == name_offset)
 	HGOTO_ERROR(H5E_SYM, H5E_CANTINSERT, H5B_INS_ERROR, "unable to insert symbol name into heap")
     ent->name_off = name_offset;
 
     /* Build correct information for symbol table entry based on link type */
     switch(lnk->type) {
-        case H5L_TYPE_HARD:
+        case H5L_LINK_HARD:
             ent->type = H5G_NOTHING_CACHED;
             ent->header = lnk->u.hard.addr;
             break;
 
-        case H5L_TYPE_SOFT:
+        case H5L_LINK_SOFT:
             {
                 size_t	lnk_offset;		/* Offset to sym-link value	*/
 
                 /* Insert link value into local heap */
-                if((size_t)(-1) == (lnk_offset = H5HL_insert(f, dxpl_id, heap,
+                if((size_t)(-1) == (lnk_offset = H5HL_insert(f, dxpl_id, heap_addr,
                         HDstrlen(lnk->u.soft.name) + 1, lnk->u.soft.name)))
                     HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, FAIL, "unable to write link value to local heap")
 
@@ -420,7 +457,7 @@ H5G_ent_convert(H5F_t *f, hid_t dxpl_id, H5HL_t *heap, const char *name,
             break;
 
         default:
-          HGOTO_ERROR(H5E_SYM, H5E_BADVALUE, FAIL, "unrecognized link type")
+            HGOTO_ERROR(H5E_SYM, H5E_BADVALUE, FAIL, "unrecognized link type")
     } /* end switch */
 
     /* Set the file for the entry */
@@ -445,17 +482,17 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5G_ent_debug(H5F_t UNUSED *f, const H5G_entry_t *ent, FILE *stream,
-    int indent, int fwidth, H5HL_t *heap)
+H5G_ent_debug(H5F_t UNUSED *f, hid_t dxpl_id, const H5G_entry_t *ent, FILE * stream,
+	      int indent, int fwidth, haddr_t heap)
 {
     const char		*lval = NULL;
     int nested_indent, nested_fwidth;
 
-    FUNC_ENTER_NOAPI_NOFUNC(H5G_ent_debug)
+    FUNC_ENTER_NOAPI_NOFUNC(H5G_ent_debug);
 
     /* Calculate the indent & field width values for nested information */
-    nested_indent = indent + 3;
-    nested_fwidth = MAX(0, fwidth - 3);
+    nested_indent=indent+3;
+    nested_fwidth=MAX(0,fwidth-3);
 
     HDfprintf(stream, "%*s%-*s %lu\n", indent, "", fwidth,
 	      "Name offset into private heap:",
@@ -469,7 +506,7 @@ H5G_ent_debug(H5F_t UNUSED *f, const H5G_entry_t *ent, FILE *stream,
 	      ent->dirty ? "Yes" : "No");
     HDfprintf(stream, "%*s%-*s ", indent, "", fwidth,
 	      "Cache info type:");
-    switch(ent->type) {
+    switch (ent->type) {
         case H5G_NOTHING_CACHED:
             HDfprintf(stream, "Nothing Cached\n");
             break;
@@ -487,18 +524,22 @@ H5G_ent_debug(H5F_t UNUSED *f, const H5G_entry_t *ent, FILE *stream,
             break;
 
         case H5G_CACHED_SLINK:
-            HDfprintf(stream, "Symbolic Link\n");
+            HDfprintf (stream, "Symbolic Link\n");
             HDfprintf(stream, "%*s%-*s\n", indent, "", fwidth,
                       "Cached information:");
-            HDfprintf(stream, "%*s%-*s %lu\n", nested_indent, "", nested_fwidth,
+            HDfprintf (stream, "%*s%-*s %lu\n", nested_indent, "", nested_fwidth,
                        "Link value offset:",
                        (unsigned long)(ent->cache.slink.lval_offset));
-            if(heap) {
-                lval = H5HL_offset_into(ent->file, heap, ent->cache.slink.lval_offset);
-                HDfprintf(stream, "%*s%-*s %s\n", nested_indent, "", nested_fwidth,
+            if (heap>0 && H5F_addr_defined(heap)) {
+                const H5HL_t *heap_ptr;
+
+                heap_ptr = H5HL_protect(ent->file, dxpl_id, heap);
+                lval = H5HL_offset_into(ent->file, heap_ptr, ent->cache.slink.lval_offset);
+                HDfprintf (stream, "%*s%-*s %s\n", nested_indent, "", nested_fwidth,
                            "Link value:",
                            lval);
-            } /* end if */
+                H5HL_unprotect(ent->file, dxpl_id, heap_ptr, heap, H5AC__NO_FLAGS_SET);
+            }
             else
                 HDfprintf(stream, "%*s%-*s\n", nested_indent, "", nested_fwidth, "Warning: Invalid heap address given, name not displayed!");
             break;
@@ -506,8 +547,8 @@ H5G_ent_debug(H5F_t UNUSED *f, const H5G_entry_t *ent, FILE *stream,
         default:
             HDfprintf(stream, "*** Unknown symbol type %d\n", ent->type);
             break;
-    } /* end switch */
+    }
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5G_ent_debug() */
+    FUNC_LEAVE_NOAPI(SUCCEED);
+}
 

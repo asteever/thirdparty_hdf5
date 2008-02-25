@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,81 +8,102 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*-------------------------------------------------------------------------
  *
  * Created:		H5Glink.c
- *			Nov 13 2006
- *			Quincey Koziol <koziol@hdfgroup.org>
+ *			Sep  5 2005
+ *			Quincey Koziol <koziol@ncsa.uiuc.edu>
  *
- * Purpose:		Functions for handling links in groups.
+ * Purpose:		Functions for handling link messages.
  *
  *-------------------------------------------------------------------------
  */
-
-/****************/
-/* Module Setup */
-/****************/
-
 #define H5G_PACKAGE		/*suppress error about including H5Gpkg	  */
 
 
-/***********/
-/* Headers */
-/***********/
+/* Packages needed by this file... */
 #include "H5private.h"		/* Generic Functions			*/
 #include "H5Eprivate.h"		/* Error handling		  	*/
 #include "H5Gpkg.h"		/* Groups		  		*/
 #include "H5HLprivate.h"	/* Local Heaps				*/
-#include "H5Iprivate.h"         /* IDs                                  */
-#include "H5Lprivate.h"		/* Links                                */
+#include "H5Iprivate.h"		/* IDs			  		*/
 #include "H5MMprivate.h"	/* Memory management			*/
 
+#ifdef H5_GROUP_REVISION
+/* Private typedefs */
 
-/****************/
-/* Local Macros */
-/****************/
+/* Data structure to hold table of links for a group */
+typedef struct {
+    size_t      nlinks;         /* # of links in table */
+    H5O_link_t *lnks;           /* Pointer to array of links */
+} H5G_link_table_t;
 
+/* User data for link message iteration when building link table */
+typedef struct {
+    H5G_link_table_t *ltable;   /* Pointer to link table to build */
+    size_t curr_lnk;            /* Current link to operate on */
+} H5G_link_ud1_t;
 
-/******************/
-/* Local Typedefs */
-/******************/
+/* User data for deleting a link in the link messages */
+typedef struct {
+    /* downward */
+    const char *name;           /* Name to search for */
+    H5F_t       *file;          /* File that object header is located within */
+    hid_t       dxpl_id;        /* DXPL during insertion */
 
+    /* upward */
+    H5G_obj_t *obj_type;        /* Type of object deleted */
+} H5G_link_ud2_t;
 
-/********************/
-/* Package Typedefs */
-/********************/
+/* User data for link message iteration when querying object info */
+typedef struct {
+    /* downward */
+    const char *name;           /* Name to search for */
+    H5F_t       *file;          /* File that object header is located within */
+    hid_t       dxpl_id;        /* DXPL during insertion */
 
+    /* upward */
+    H5G_stat_t *statbuf;        /* Stat buffer for info */
+} H5G_link_ud3_t;
 
-/********************/
-/* Local Prototypes */
-/********************/
+/* User data for link message iteration when querying object location */
+typedef struct {
+    /* downward */
+    const char *name;           /* Name to search for */
 
+    /* upward */
+    H5O_link_t *lnk;            /* Link struct to fill in */
+    hbool_t found;              /* Flag to indicate that the object was found */
+} H5G_link_ud4_t;
 
-/*********************/
-/* Package Variables */
-/*********************/
+/* User data for link message iteration when querying soft link value */
+typedef struct {
+    /* downward */
+    const char *name;           /* Name to search for */
+    size_t size;                /* Buffer size for link value */
 
+    /* upward */
+    char *buf;                  /* Buffer to fill with link value */
+} H5G_link_ud5_t;
 
-/*****************************/
-/* Library Private Variables */
-/*****************************/
+/* Private macros */
 
-
-/*******************/
-/* Local Variables */
-/*******************/
-
+/* PRIVATE PROTOTYPES */
+static int H5G_link_cmp_name(const void *lnk1, const void *lnk2);
+static herr_t H5G_link_build_table_cb(const void *_mesg, unsigned idx, void *_udata);
+static herr_t H5G_link_build_table(H5O_loc_t *oloc, hid_t dxpl_id,
+    H5G_link_table_t *ltable);
+static herr_t H5G_link_release_table(H5G_link_table_t *ltable);
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5G_link_cmp_name_inc
+ * Function:	H5G_link_cmp_name
  *
- * Purpose:	Callback routine for comparing two link names, in
- *              increasing alphabetic order
+ * Purpose:	Callback routine for comparing two link messages.
  *
  * Return:	An integer less than, equal to, or greater than zero if the
  *              first argument is considered to be respectively less than,
@@ -97,544 +117,112 @@
  *
  *-------------------------------------------------------------------------
  */
-int
-H5G_link_cmp_name_inc(const void *lnk1, const void *lnk2)
+static int
+H5G_link_cmp_name(const void *lnk1, const void *lnk2)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5G_link_cmp_name_inc)
+    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5G_link_cmp_name)
 
     FUNC_LEAVE_NOAPI(HDstrcmp(((const H5O_link_t *)lnk1)->name, ((const H5O_link_t *)lnk2)->name))
-} /* end H5G_link_cmp_name_inc() */
+} /* end H5G_link_cmp_name() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5G_link_cmp_name_dec
+ * Function:	H5G_link_build_table_cb
  *
- * Purpose:	Callback routine for comparing two link names, in
- *              decreasing alphabetic order
+ * Purpose:	Callback routine for searching 'link' messages for a particular
+ *              name.
  *
- * Return:	An integer less than, equal to, or greater than zero if the
- *              second argument is considered to be respectively less than,
- *              equal to, or greater than the first.  If two members compare
- *              as equal, their order in the sorted array is undefined.
- *              (i.e. opposite strcmp())
+ * Return:	Non-negative on success/Negative on failure
  *
  * Programmer:	Quincey Koziol
  *		koziol@ncsa.uiuc.edu
- *		Sep 25 2006
+ *		Sep  5 2005
  *
  *-------------------------------------------------------------------------
  */
-int
-H5G_link_cmp_name_dec(const void *lnk1, const void *lnk2)
+static herr_t
+H5G_link_build_table_cb(const void *_mesg, unsigned UNUSED idx, void *_udata)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5G_link_cmp_name_dec)
+    const H5O_link_t *lnk = (const H5O_link_t *)_mesg;  /* Pointer to link */
+    H5G_link_ud1_t *udata = (H5G_link_ud1_t *)_udata;     /* 'User data' passed in */
+    herr_t ret_value=H5O_ITER_CONT;             /* Return value */
 
-    FUNC_LEAVE_NOAPI(HDstrcmp(((const H5O_link_t *)lnk2)->name, ((const H5O_link_t *)lnk1)->name))
-} /* end H5G_link_cmp_name_dec() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5G_link_cmp_corder_inc
- *
- * Purpose:	Callback routine for comparing two link creation orders, in
- *              increasing order
- *
- * Return:	An integer less than, equal to, or greater than zero if the
- *              first argument is considered to be respectively less than,
- *              equal to, or greater than the second.  If two members compare
- *              as equal, their order in the sorted array is undefined.
- *
- * Programmer:	Quincey Koziol
- *		koziol@hdfgroup.org
- *		Nov  6 2006
- *
- *-------------------------------------------------------------------------
- */
-int
-H5G_link_cmp_corder_inc(const void *lnk1, const void *lnk2)
-{
-    int ret_value;              /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5G_link_cmp_corder_inc)
-
-    if(((const H5O_link_t *)lnk1)->corder < ((const H5O_link_t *)lnk2)->corder)
-        ret_value = -1;
-    else if(((const H5O_link_t *)lnk1)->corder > ((const H5O_link_t *)lnk2)->corder)
-        ret_value = 1;
-    else
-        ret_value = 0;
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5G_link_cmp_corder_inc() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5G_link_cmp_corder_dec
- *
- * Purpose:	Callback routine for comparing two link creation orders, in
- *              decreasing order
- *
- * Return:	An integer less than, equal to, or greater than zero if the
- *              second argument is considered to be respectively less than,
- *              equal to, or greater than the first.  If two members compare
- *              as equal, their order in the sorted array is undefined.
- *
- * Programmer:	Quincey Koziol
- *		koziol@hdfgroup.org
- *		Nov  6 2006
- *
- *-------------------------------------------------------------------------
- */
-int
-H5G_link_cmp_corder_dec(const void *lnk1, const void *lnk2)
-{
-    int ret_value;              /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5G_link_cmp_corder_dec)
-
-    if(((const H5O_link_t *)lnk1)->corder < ((const H5O_link_t *)lnk2)->corder)
-        ret_value = 1;
-    else if(((const H5O_link_t *)lnk1)->corder > ((const H5O_link_t *)lnk2)->corder)
-        ret_value = -1;
-    else
-        ret_value = 0;
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5G_link_cmp_corder_dec() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5G_ent_to_link
- *
- * Purpose:     Convert a symbol table entry to a link
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *		koziol@hdfgroup.org
- *		Sep 16 2006
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5G_ent_to_link(H5F_t *f, H5O_link_t *lnk, const H5HL_t *heap,
-    const H5G_entry_t *ent, const char *name)
-{
-    FUNC_ENTER_NOAPI_NOFUNC(H5G_ent_to_link)
+    FUNC_ENTER_NOAPI_NOINIT(H5G_link_build_table_cb)
 
     /* check arguments */
-    HDassert(f);
     HDassert(lnk);
-    HDassert(heap);
-    HDassert(ent);
-    HDassert(name);
+    HDassert(udata);
+    HDassert(udata->curr_lnk < udata->ltable->nlinks);
 
-    /* Set (default) common info for link */
-    lnk->cset = H5F_DEFAULT_CSET;
-    lnk->corder = 0;
-    lnk->corder_valid = FALSE;       /* Creation order not valid for this link */
-    lnk->name = H5MM_xstrdup(name);
-    HDassert(lnk->name);
+    /* Copy link message into table */
+    if(H5O_copy(H5O_LINK_ID, lnk, &(udata->ltable->lnks[udata->curr_lnk])) == NULL)
+        HGOTO_ERROR(H5E_SYM, H5E_CANTCOPY, H5O_ITER_ERROR, "can't copy link message")
 
-    /* Object is a symbolic or hard link */
-    if(ent->type == H5G_CACHED_SLINK) {
-        const char *s;          /* Pointer to link value */
-
-        s = H5HL_offset_into(f, heap, ent->cache.slink.lval_offset);
-        HDassert(s);
-
-        /* Copy the link value */
-        lnk->u.soft.name = H5MM_xstrdup(s);
-
-        /* Set link type */
-        lnk->type = H5L_TYPE_SOFT;
-    } /* end if */
-    else {
-        /* Set address of object */
-        lnk->u.hard.addr = ent->header;
-
-        /* Set link type */
-        lnk->type = H5L_TYPE_HARD;
-    } /* end else */
-
-    FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5G_ent_to_link() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5G_ent_to_info
- *
- * Purpose:     Make link info for a symbol table entry
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *		koziol@hdfgroup.org
- *		Nov 16 2006
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5G_ent_to_info(H5F_t *f, H5L_info_t *info, const H5HL_t *heap,
-    const H5G_entry_t *ent)
-{
-    FUNC_ENTER_NOAPI_NOFUNC(H5G_ent_to_info)
-
-    /* check arguments */
-    HDassert(f);
-    HDassert(info);
-    HDassert(heap);
-    HDassert(ent);
-
-    /* Set (default) common info for info */
-    info->cset = H5F_DEFAULT_CSET;
-    info->corder = 0;
-    info->corder_valid = FALSE;       /* Creation order not valid for this link */
-
-    /* Object is a symbolic or hard link */
-    if(ent->type == H5G_CACHED_SLINK) {
-        const char *s;          /* Pointer to link value */
-
-        s = H5HL_offset_into(f, heap, ent->cache.slink.lval_offset);
-        HDassert(s);
-
-        /* Get the link value size */
-        info->u.val_size = HDstrlen(s) + 1;
-
-        /* Set link type */
-        info->type = H5L_TYPE_SOFT;
-    } /* end if */
-    else {
-        /* Set address of object */
-        info->u.address = ent->header;
-
-        /* Set link type */
-        info->type = H5L_TYPE_HARD;
-    } /* end else */
-
-    FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5G_ent_to_info() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5G_link_to_info
- *
- * Purpose:	Retrieve information from a link object 
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Tuesday, November  7 2006
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5G_link_to_info(const H5O_link_t *lnk, H5L_info_t *info)
-{
-    herr_t ret_value = SUCCEED;         /* Return value */
-
-    FUNC_ENTER_NOAPI(H5G_link_to_info, FAIL)
-
-    /* Sanity check */
-    HDassert(lnk);
-
-    /* Get information from the link */
-    if(info) {
-        info->cset = lnk->cset;
-        info->corder = lnk->corder;
-        info->corder_valid = lnk->corder_valid;
-        info->type = lnk->type;
-
-        switch(lnk->type) {
-            case H5L_TYPE_HARD:
-                info->u.address = lnk->u.hard.addr;
-                break;
-
-            case H5L_TYPE_SOFT:
-                info->u.val_size = HDstrlen(lnk->u.soft.name) + 1; /*count the null terminator*/
-                break;
-
-            default:
-            {
-                const H5L_class_t *link_class;      /* User-defined link class */
-
-                if(lnk->type < H5L_TYPE_UD_MIN || lnk->type > H5L_TYPE_MAX)
-                    HGOTO_ERROR(H5E_LINK, H5E_BADTYPE, FAIL, "unknown link class")
-
-                /* User-defined link; call its query function to get the link udata size. */
-                /* Get the link class for this type of link.  It's okay if the class
-                 * isn't registered, though--we just can't give any more information
-                 * about it
-                 */
-                link_class = H5L_find_class(lnk->type);
-
-                if(link_class != NULL && link_class->query_func != NULL) {
-                    ssize_t cb_ret;             /* Return value from UD callback */
-
-                    /* Call the link's query routine to retrieve the user-defined link's value size */
-                    /* (in case the query routine packs/unpacks the link value in some way that changes its size) */
-                    if((cb_ret = (link_class->query_func)(lnk->name, lnk->u.ud.udata, lnk->u.ud.size, NULL, (size_t)0)) < 0)
-                        HGOTO_ERROR(H5E_LINK, H5E_CALLBACK, FAIL, "query buffer size callback returned failure")
-
-                    info->u.val_size = cb_ret;
-                } /* end if */
-                else
-                    info->u.val_size = 0;
-            } /* end case */
-        } /* end switch */
-    } /* end if */
+    /* Increment current link entry to operate on */
+    udata->curr_lnk++;
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5G_link_to_info() */
+} /* end H5G_link_build_table_cb() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5G_link_to_loc
+ * Function:	H5G_link_build_table
  *
- * Purpose:	Build group location from group and link object 
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Monday, November 20 2006
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5G_link_to_loc(const H5G_loc_t *grp_loc, const H5O_link_t *lnk,
-    H5G_loc_t *obj_loc)
-{
-    herr_t ret_value = SUCCEED;         /* Return value */
-
-    FUNC_ENTER_NOAPI(H5G_link_to_loc, FAIL)
-
-    /* Sanity check */
-    HDassert(grp_loc);
-    HDassert(lnk);
-    HDassert(obj_loc);
-
-    /*
-     * Build location from the link
-     */
-
-    /* Check for unknown library-internal link */
-    if(lnk->type > H5L_TYPE_BUILTIN_MAX && lnk->type < H5L_TYPE_UD_MIN)
-        HGOTO_ERROR(H5E_SYM, H5E_UNSUPPORTED, FAIL, "unknown link type")
-
-    /* Build object's group hier. location */
-    if(H5G_name_set(grp_loc->path, obj_loc->path, lnk->name) < 0)
-        HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, FAIL, "cannot set name")
-
-    /* Set the object location, if it's a hard link set the address also */
-    obj_loc->oloc->file = grp_loc->oloc->file;
-    obj_loc->oloc->holding_file = FALSE;
-    if(lnk->type == H5L_TYPE_HARD)
-        obj_loc->oloc->addr = lnk->u.hard.addr;
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5G_link_to_loc() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5G_link_copy_file
- *
- * Purpose:     Copy a link and the object it points to from one file to
- *              another.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *		koziol@hdfgroup.org
- *		Sep 29 2006
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5G_link_copy_file(H5F_t *dst_file, hid_t dxpl_id, const H5O_link_t *_src_lnk,
-    const H5O_loc_t *src_oloc, H5O_link_t *dst_lnk, H5O_copy_t *cpy_info)
-{
-    H5O_link_t tmp_src_lnk;             /* Temporary copy of src link, when needed */
-    const H5O_link_t *src_lnk = _src_lnk; /* Source link */
-    hbool_t dst_lnk_init = FALSE;       /* Whether the destination link is initialized */
-    herr_t ret_value = SUCCEED;         /* Return value */
-
-    FUNC_ENTER_NOAPI(H5G_link_copy_file, FAIL)
-
-    /* check arguments */
-    HDassert(dst_file);
-    HDassert(src_lnk);
-    HDassert(dst_lnk);
-    HDassert(cpy_info);
-
-    /* Expand soft link */
-    if(H5L_TYPE_SOFT == src_lnk->type && cpy_info->expand_soft_link) {
-        H5O_info_t  oinfo;          /* Information about object pointed to by soft link */
-        H5G_loc_t   grp_loc;        /* Group location holding soft link */
-        H5G_name_t  grp_path;       /* Path for group holding soft link */
-
-        /* Make a temporary copy, so that it will not change the info in the cache */
-        if(NULL == H5O_msg_copy(H5O_LINK_ID, src_lnk, &tmp_src_lnk))
-            HGOTO_ERROR(H5E_OHDR, H5E_CANTCOPY, H5_ITER_ERROR, "unable to copy message")
-
-        /* Set up group location for soft link to start in */
-        H5G_name_reset(&grp_path);
-        grp_loc.path = &grp_path;
-        grp_loc.oloc = (H5O_loc_t *)src_oloc;    /* Casting away const OK -QAK */
-
-        /* Check if the object pointed by the soft link exists in the source file */
-        if(H5G_loc_info(&grp_loc, tmp_src_lnk.u.soft.name, FALSE, &oinfo, H5P_DEFAULT, dxpl_id) >= 0) {
-            /* Convert soft link to hard link */
-            tmp_src_lnk.u.soft.name = H5MM_xfree(tmp_src_lnk.u.soft.name);
-            tmp_src_lnk.type = H5L_TYPE_HARD;
-            tmp_src_lnk.u.hard.addr = oinfo.addr;
-            src_lnk = &tmp_src_lnk;
-        } /* end if */
-        else {
-            /* Discard any errors from a dangling soft link */
-            H5E_clear_stack(NULL);
-
-            /* Release any information copied for temporary src link */
-            H5O_msg_reset(H5O_LINK_ID, &tmp_src_lnk);
-        } /* end else */
-    } /* end if */
-
-    /* Copy src link information to dst link information */
-    if(NULL == H5O_msg_copy(H5O_LINK_ID, src_lnk, dst_lnk))
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTCOPY, H5_ITER_ERROR, "unable to copy message")
-    dst_lnk_init = TRUE;
-
-    /* Check if object in source group is a hard link & copy it */
-    if(H5L_TYPE_HARD == src_lnk->type) {
-        H5O_loc_t new_dst_oloc;     /* Copied object location in destination */
-        H5O_loc_t tmp_src_oloc;     /* Temporary object location for source object */
-
-        /* Set up copied object location to fill in */
-        H5O_loc_reset(&new_dst_oloc);
-        new_dst_oloc.file = dst_file;
-
-        /* Build temporary object location for source */
-        H5O_loc_reset(&tmp_src_oloc);
-        tmp_src_oloc.file = src_oloc->file;
-        HDassert(H5F_addr_defined(src_lnk->u.hard.addr));
-        tmp_src_oloc.addr = src_lnk->u.hard.addr;
-
-        /* Copy the shared object from source to destination */
-        if(H5O_copy_header_map(&tmp_src_oloc, &new_dst_oloc, dxpl_id, cpy_info, TRUE) < 0)
-            HGOTO_ERROR(H5E_OHDR, H5E_CANTCOPY, H5_ITER_ERROR, "unable to copy object")
-
-        /* Copy new destination object's information for eventual insertion */
-        dst_lnk->u.hard.addr = new_dst_oloc.addr;
-    } /* end if */
-
-done:
-    /* Check if we used a temporary src link */
-    if(src_lnk != _src_lnk) {
-        HDassert(src_lnk == &tmp_src_lnk);
-        H5O_msg_reset(H5O_LINK_ID, &tmp_src_lnk);
-    } /* end if */
-    if(ret_value < 0)
-        if(dst_lnk_init)
-            H5O_msg_reset(H5O_LINK_ID, dst_lnk);
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5G_link_copy_file() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5G_link_sort_table
- *
- * Purpose:     Sort table containing a list of links for a group
+ * Purpose:     Builds a table containing a sorted (alphabetically) list of
+ *              links for a group
  *
  * Return:	Success:        Non-negative
  *		Failure:	Negative
  *
  * Programmer:	Quincey Koziol
- *	        Nov 20, 2006
+ *	        Sep  6, 2005
  *
  *-------------------------------------------------------------------------
  */
-herr_t
-H5G_link_sort_table(H5G_link_table_t *ltable, H5_index_t idx_type,
-    H5_iter_order_t order)
+static herr_t
+H5G_link_build_table(H5O_loc_t *oloc, hid_t dxpl_id, H5G_link_table_t *ltable)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5G_link_sort_table)
+    H5O_linfo_t	linfo;		        /* Link info message */
+    herr_t	ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT(H5G_link_build_table)
 
     /* Sanity check */
-    HDassert(ltable);
+    HDassert(oloc);
 
-    /* Pick appropriate sorting routine */
-    if(idx_type == H5_INDEX_NAME) {
-        if(order == H5_ITER_INC)
-            HDqsort(ltable->lnks, ltable->nlinks, sizeof(H5O_link_t), H5G_link_cmp_name_inc);
-        else if(order == H5_ITER_DEC)
-            HDqsort(ltable->lnks, ltable->nlinks, sizeof(H5O_link_t), H5G_link_cmp_name_dec);
-        else
-            HDassert(order == H5_ITER_NATIVE);
+    /* Retrieve the link info */
+    if(NULL == H5O_read(oloc, H5O_LINFO_ID, 0, &linfo, dxpl_id))
+        HGOTO_ERROR(H5E_SYM, H5E_BADMESG, FAIL, "can't get link info")
+
+    /* Set size of table */
+    H5_CHECK_OVERFLOW(linfo.nlinks, hsize_t, size_t);
+    ltable->nlinks = (size_t)linfo.nlinks;
+
+    /* Allocate space for the table entries */
+    if(ltable->nlinks > 0) {
+        H5G_link_ud1_t udata;               /* User data for iteration callback */
+
+        if((ltable->lnks = H5MM_malloc(sizeof(H5O_link_t) * ltable->nlinks)) == NULL)
+            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
+
+        /* Set up user data for iteration */
+        udata.ltable = ltable;
+        udata.curr_lnk = 0;
+
+        /* Iterate through the link messages, adding them to the table */
+        if(H5O_iterate(oloc, H5O_LINK_ID, H5G_link_build_table_cb, &udata, dxpl_id) < 0)
+            HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "error iterating over link messages")
+
+        /* Sort link table (XXX: alphabetically, for now) */
+        HDqsort(ltable->lnks, ltable->nlinks, sizeof(H5O_link_t), H5G_link_cmp_name);
     } /* end if */
-    else {
-        HDassert(idx_type == H5_INDEX_CRT_ORDER);
-        if(order == H5_ITER_INC)
-            HDqsort(ltable->lnks, ltable->nlinks, sizeof(H5O_link_t), H5G_link_cmp_corder_inc);
-        else if(order == H5_ITER_DEC)
-            HDqsort(ltable->lnks, ltable->nlinks, sizeof(H5O_link_t), H5G_link_cmp_corder_dec);
-        else
-            HDassert(order == H5_ITER_NATIVE);
-    } /* end else */
+    else
+        ltable->lnks = NULL;
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5G_link_sort_table() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5G_link_iterate_table
- *
- * Purpose:     Iterate over table containing a list of links for a group,
- *              making appropriate callbacks
- *
- * Return:	Success:        Non-negative
- *		Failure:	Negative
- *
- * Programmer:	Quincey Koziol
- *	        Nov 20, 2006
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5G_link_iterate_table(const H5G_link_table_t *ltable, hsize_t skip,
-    hsize_t *last_lnk, const H5G_lib_iterate_t op, void *op_data)
-{
-    size_t u;                           /* Local index variable */
-    herr_t ret_value = H5_ITER_CONT;   /* Return value */
-
-    FUNC_ENTER_NOAPI(H5G_link_iterate_table, FAIL)
-
-    /* Sanity check */
-    HDassert(ltable);
-    HDassert(op);
-
-    /* Skip over links, if requested */
-    if(last_lnk)
-        *last_lnk += skip;
-
-    /* Iterate over link messages */
-    H5_ASSIGN_OVERFLOW(/* To: */ u, /* From: */ skip, /* From: */ hsize_t, /* To: */ size_t)
-    for(; u < ltable->nlinks && !ret_value; u++) {
-        /* Make the callback */
-        ret_value = (op)(&(ltable->lnks[u]), op_data);
-
-        /* Increment the number of entries passed through */
-        if(last_lnk)
-            (*last_lnk)++;
-    } /* end for */
-
-    /* Check for callback failure and pass along return value */
-    if(ret_value < 0)
-        HERROR(H5E_SYM, H5E_CANTNEXT, "iteration operator failed");
-
+done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5G_link_iterate_table() */
+} /* end H5G_link_build_table() */
 
 
 /*-------------------------------------------------------------------------
@@ -650,10 +238,10 @@ H5G_link_iterate_table(const H5G_link_table_t *ltable, hsize_t skip,
  *
  *-------------------------------------------------------------------------
  */
-herr_t
+static herr_t
 H5G_link_release_table(H5G_link_table_t *ltable)
 {
-    size_t      u;                      /* Local index variable */
+    size_t              u;              /* Local index variable */
     herr_t	ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5G_link_release_table)
@@ -665,7 +253,7 @@ H5G_link_release_table(H5G_link_table_t *ltable)
     if(ltable->nlinks > 0) {
         /* Free link message information */
         for(u = 0; u < ltable->nlinks; u++)
-            if(H5O_msg_reset(H5O_LINK_ID, &(ltable->lnks[u])) < 0)
+            if(H5O_reset(H5O_LINK_ID, &(ltable->lnks[u])) < 0)
                 HGOTO_ERROR(H5E_SYM, H5E_CANTFREE, FAIL, "unable to release link message")
 
         /* Free table of links */
@@ -680,42 +268,461 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5G_link_name_replace
+ * Function:	H5G_link_convert
  *
- * Purpose:	Determine the type of object referred to (for hard links) or
- *              the link type (for soft links and user-defined links).
+ * Purpose:	Converts a group entry into a link object.
  *
  * Return:	Non-negative on success/Negative on failure
  *
  * Programmer:	Quincey Koziol
- *		koziol@hdfgroup.org
- *		Nov 13 2006
+ *		koziol@ncsa.uiuc.edu
+ *		Sep  5 2005
  *
  *-------------------------------------------------------------------------
  */
 herr_t
-H5G_link_name_replace(H5F_t *file, hid_t dxpl_id, H5RS_str_t *grp_full_path_r,
-    const H5O_link_t *lnk)
+H5G_link_convert(H5O_link_t *lnk, const H5G_entry_t *ent, const H5HL_t *heap,
+    const char *name)
 {
-    H5RS_str_t *obj_path_r = NULL;      /* Full path for link being removed */
     herr_t ret_value = SUCCEED;         /* Return value */
 
-    FUNC_ENTER_NOAPI(H5G_link_name_replace, FAIL)
+    FUNC_ENTER_NOAPI(H5G_link_convert, FAIL)
+
+    /* Check arguments. */
+    HDassert(lnk);
+    HDassert(ent);
+    HDassert(name);
+
+    /* Create link message from object entry */
+    HDassert(ent->type == H5G_NOTHING_CACHED || ent->type == H5G_CACHED_SLINK);
+/* XXX: Set character set & creation time for real? */
+    lnk->cset = H5F_CRT_DEFAULT_CSET;
+    lnk->ctime = 0;
+    lnk->name = H5MM_xstrdup(name);   /* Casting away const OK -QAK */
+    HDassert(lnk->name);
+    switch(ent->type) {
+        case H5G_NOTHING_CACHED:
+            lnk->type = H5G_LINK_HARD;
+            lnk->u.hard.addr = ent->header;
+            break;
+
+        case H5G_CACHED_SLINK:
+            {
+                const char *s;          /* Pointer to link value in heap */
+
+                lnk->type = H5G_LINK_SOFT;
+
+                s = H5HL_offset_into(ent->file, heap, ent->cache.slink.lval_offset);
+                HDassert(s);
+
+                /* Copy to link */
+                lnk->u.soft.name = H5MM_xstrdup(s);
+                HDassert(lnk->u.soft.name);
+            }
+            break;
+
+        default:
+            HGOTO_ERROR(H5E_SYM, H5E_BADVALUE, FAIL, "unrecognized link type")
+    } /* end switch */
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5G_link_convert() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5G_link_insert
+ *
+ * Purpose:	Insert a new symbol into the table described by GRP_ENT in
+ *		file F.	 The name of the new symbol is NAME and its symbol
+ *		table entry is OBJ_ENT.
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Quincey Koziol
+ *		koziol@ncsa.uiuc.edu
+ *		Sep  6 2005
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5G_link_insert(H5O_loc_t *grp_oloc, H5O_link_t *obj_lnk,
+    hid_t dxpl_id)
+{
+    herr_t     ret_value = SUCCEED;       /* Return value */
+
+    FUNC_ENTER_NOAPI(H5G_link_insert, FAIL)
 
     /* check arguments */
-    HDassert(file);
+    HDassert(grp_oloc && grp_oloc->file);
+    HDassert(obj_lnk);
 
-    /* Search the open IDs and replace names for unlinked object */
-    if(grp_full_path_r) {
-        obj_path_r = H5G_build_fullpath_refstr_str(grp_full_path_r, lnk->name);
-        if(H5G_name_replace(lnk, H5G_NAME_DELETE, file, obj_path_r, NULL, NULL, dxpl_id) < 0)
-            HGOTO_ERROR(H5E_SYM, H5E_CANTDELETE, FAIL, "unable to replace name")
+    /* Insert link message into group */
+    if(H5O_modify(grp_oloc, H5O_LINK_ID, H5O_NEW_MESG, 0, H5O_UPDATE_TIME, obj_lnk, dxpl_id) < 0)
+        HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, FAIL, "can't create message")
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5G_link_insert() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5G_link_get_name_by_idx
+ *
+ * Purpose:     Returns the name of objects in the group by giving index.
+ *
+ * Return:	Success:        Non-negative
+ *		Failure:	Negative
+ *
+ * Programmer:	Quincey Koziol
+ *	        Sep  6, 2005
+ *
+ *-------------------------------------------------------------------------
+ */
+ssize_t
+H5G_link_get_name_by_idx(H5O_loc_t *oloc, hsize_t idx, char* name,
+    size_t size, hid_t dxpl_id)
+{
+    H5G_link_table_t    ltable = {0, NULL};         /* Link table */
+    ssize_t		ret_value;      /* Return value */
+
+    FUNC_ENTER_NOAPI(H5G_link_get_name_by_idx, FAIL)
+
+    /* Sanity check */
+    HDassert(oloc);
+
+    /* Build table of all link messages */
+    if(H5G_link_build_table(oloc, dxpl_id, &ltable) < 0)
+        HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, FAIL, "can't create link message table")
+
+    /* Check for going out of bounds */
+    if(idx >= ltable.nlinks)
+	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "index out of bound")
+
+    /* Get the length of the name */
+    ret_value = (ssize_t)HDstrlen(ltable.lnks[idx].name);
+
+    /* Copy the name into the user's buffer, if given */
+    if(name) {
+        HDstrncpy(name, ltable.lnks[idx].name, MIN((size_t)(ret_value+1),size));
+        if((size_t)ret_value >= size)
+            name[size-1]='\0';
     } /* end if */
 
 done:
-    if(obj_path_r)
-        H5RS_decr(obj_path_r);
+    /* Release link table */
+    if(ltable.lnks) {
+        /* Free link table information */
+        if(H5G_link_release_table(&ltable) < 0)
+            HDONE_ERROR(H5E_SYM, H5E_CANTFREE, FAIL, "unable to release link table")
+    } /* end if */
 
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5G_link_name_replace() */
+} /* end H5G_link_get_name_by_idx() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5G_link_get_type_by_idx
+ *
+ * Purpose:     Returns the type of objects in the group by giving index.
+ *
+ * Return:	Success:        Non-negative
+ *		Failure:	Negative
+ *
+ * Programmer:	Quincey Koziol
+ *	        Sep 12, 2005
+ *
+ *-------------------------------------------------------------------------
+ */
+H5G_obj_t
+H5G_link_get_type_by_idx(H5O_loc_t *oloc, hsize_t idx, hid_t dxpl_id)
+{
+    H5G_link_table_t    ltable = {0, NULL};         /* Link table */
+    H5G_obj_t		ret_value;      /* Return value */
+
+    FUNC_ENTER_NOAPI(H5G_link_get_type_by_idx, H5G_UNKNOWN)
+
+    /* Sanity check */
+    HDassert(oloc);
+
+    /* Build table of all link messages */
+    if(H5G_link_build_table(oloc, dxpl_id, &ltable) < 0)
+        HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, H5G_UNKNOWN, "can't create link message table")
+
+    /* Check for going out of bounds */
+    if(idx >= ltable.nlinks)
+	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, H5G_UNKNOWN, "index out of bound")
+
+    /* Determine type of object */
+    if(ltable.lnks[idx].type == H5G_LINK_SOFT)
+        ret_value = H5G_LINK;
+    else {
+        H5O_loc_t tmp_oloc;             /* Temporary object location */
+
+        /* Build temporary object location */
+        tmp_oloc.file = oloc->file;
+        tmp_oloc.addr = ltable.lnks[idx].u.hard.addr;
+
+        /* Get the type of the object */
+        if((ret_value = H5O_obj_type(&tmp_oloc, dxpl_id)) == H5G_UNKNOWN)
+            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, H5G_UNKNOWN, "can't determine object type")
+    } /* end else */
+
+done:
+    /* Release link table */
+    if(ltable.lnks) {
+        /* Free link table information */
+        if(H5G_link_release_table(&ltable) < 0)
+            HDONE_ERROR(H5E_SYM, H5E_CANTFREE, H5G_UNKNOWN, "unable to release link table")
+    } /* end if */
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5G_link_get_type_by_idx() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5G_link_remove_cb
+ *
+ * Purpose:	Callback routine for deleting 'link' message for a particular
+ *              name.
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Quincey Koziol
+ *		koziol@ncsa.uiuc.edu
+ *		Sep  5 2005
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5G_link_remove_cb(const void *_mesg, unsigned UNUSED idx, void *_udata)
+{
+    const H5O_link_t *lnk = (const H5O_link_t *)_mesg;  /* Pointer to link */
+    H5G_link_ud2_t *udata = (H5G_link_ud2_t *)_udata;     /* 'User data' passed in */
+    herr_t ret_value = H5O_ITER_CONT;           /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5G_link_remove_cb)
+
+    /* check arguments */
+    HDassert(lnk);
+    HDassert(udata);
+
+    /* If we've found the right link, get the object type */
+    if(HDstrcmp(lnk->name, udata->name) == 0) {
+        if(lnk->type == H5G_LINK_SOFT)
+            *(udata->obj_type) = H5G_LINK;
+        else {
+            H5O_loc_t tmp_oloc;             /* Temporary object location */
+
+            /* Build temporary object location */
+            tmp_oloc.file = udata->file;
+            tmp_oloc.addr = lnk->u.hard.addr;
+
+            /* Get the type of the object */
+            /* Note: no way to check for error :-( */
+            *(udata->obj_type) = H5O_obj_type(&tmp_oloc, udata->dxpl_id);
+        } /* end else */
+
+        /* Stop the iteration, we found the correct link */
+        HGOTO_DONE(H5O_ITER_STOP)
+    } /* end if */
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5G_link_remove_cb() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5G_link_remove
+ *
+ * Purpose:	Remove NAME from links.
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Quincey Koziol
+ *              Monday, September 19, 2005
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5G_link_remove(const H5O_loc_t *oloc, const char *name, H5G_obj_t *obj_type,
+    hid_t dxpl_id)
+{
+    H5G_link_ud2_t udata;               /* Data to pass through OH iteration */
+    herr_t ret_value = SUCCEED;         /* Return value */
+
+    FUNC_ENTER_NOAPI(H5G_link_remove, FAIL)
+
+    HDassert(oloc && oloc->file);
+    HDassert(name && *name);
+
+    /* Initialize data to pass through object header iteration */
+    udata.name = name;
+    udata.file = oloc->file;
+    udata.dxpl_id = dxpl_id;
+    udata.obj_type = obj_type;
+
+    /* Iterate over the link messages to delete the right one */
+    if(H5O_remove_op(oloc, H5O_LINK_ID, H5O_FIRST, H5G_link_remove_cb, &udata, TRUE, dxpl_id) < 0)
+        HGOTO_ERROR(H5E_SYM, H5E_CANTDELETE, FAIL, "unable to delete link message")
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5G_link_remove() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5G_link_iterate
+ *
+ * Purpose:	Iterate over the objects in a group
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Quincey Koziol
+ *              Monday, October  3, 2005
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5G_link_iterate(H5O_loc_t *oloc, hid_t gid, int skip, int *last_obj,
+    H5G_iterate_t op, void *op_data, hid_t dxpl_id)
+{
+    H5G_link_table_t    ltable = {0, NULL};     /* Link table */
+    size_t              u;                      /* Local index variable */
+    herr_t		ret_value;
+
+    FUNC_ENTER_NOAPI(H5G_link_iterate, FAIL)
+
+    /* Sanity check */
+    HDassert(oloc);
+    HDassert(H5I_GROUP == H5I_get_type(gid));
+    HDassert(last_obj);
+    HDassert(op);
+
+    /* Build table of all link messages */
+    if(H5G_link_build_table(oloc, dxpl_id, &ltable) < 0)
+        HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, H5B_ITER_ERROR, "can't create link message table")
+
+    /* Check for going out of bounds */
+    if(skip > 0 && (size_t)skip >= ltable.nlinks)
+	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, H5B_ITER_ERROR, "index out of bound")
+
+    /* Iterate over link messages */
+    for(u = 0, ret_value = H5B_ITER_CONT; u < ltable.nlinks && !ret_value; u++) {
+        if(skip > 0)
+            --skip;
+        else
+            ret_value = (op)(gid, ltable.lnks[u].name, op_data);
+
+        /* Increment the number of entries passed through */
+        /* (whether we skipped them or not) */
+        (*last_obj)++;
+    } /* end for */
+
+    /* Check for callback failure and pass along return value */
+    if(ret_value < 0)
+        HERROR(H5E_SYM, H5E_CANTNEXT, "iteration operator failed");
+
+done:
+    /* Release link table */
+    if(ltable.lnks) {
+        /* Free link table information */
+        if(H5G_link_release_table(&ltable) < 0)
+            HDONE_ERROR(H5E_SYM, H5E_CANTFREE, H5B_ITER_ERROR, "unable to release link table")
+    } /* end if */
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5G_link_iterate() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5G_link_lookup_cb
+ *
+ * Purpose:	Callback routine for searching 'link' messages for a particular
+ *              name & gettting object location for it
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Quincey Koziol
+ *		koziol@ncsa.uiuc.edu
+ *		Sep 20 2005
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5G_link_lookup_cb(const void *_mesg, unsigned UNUSED idx, void *_udata)
+{
+    const H5O_link_t *lnk = (const H5O_link_t *)_mesg;  /* Pointer to link */
+    H5G_link_ud4_t *udata = (H5G_link_ud4_t *)_udata;     /* 'User data' passed in */
+    herr_t ret_value = H5O_ITER_CONT;           /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT(H5G_link_lookup_cb)
+
+    /* check arguments */
+    HDassert(lnk);
+    HDassert(udata);
+
+    /* Check for name to get information */
+    if(HDstrcmp(lnk->name, udata->name) == 0) {
+        if(udata->lnk) {
+            /* Copy link information */
+            if(H5O_copy(H5O_LINK_ID, lnk, udata->lnk) == NULL)
+                HGOTO_ERROR(H5E_SYM, H5E_CANTCOPY, H5O_ITER_ERROR, "can't copy link message")
+        } /* end if */
+
+        /* Indicate that the correct link was found */
+        udata->found = TRUE;
+
+        /* Stop iteration now */
+        HGOTO_DONE(H5O_ITER_STOP)
+    } /* end if */
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5G_link_lookup_cb() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5G_link_lookup
+ *
+ * Purpose:	Look up an object relative to a group, using link messages.
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Quincey Koziol
+ *		koziol@ncsa.uiuc.edu
+ *		Sep 20 2005
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5G_link_lookup(H5O_loc_t *oloc, const char *name, H5O_link_t *lnk,
+    hid_t dxpl_id)
+{
+    H5G_link_ud4_t udata;               /* User data for iteration callback */
+    herr_t     ret_value = SUCCEED;     /* Return value */
+
+    FUNC_ENTER_NOAPI(H5G_link_lookup, FAIL)
+
+    /* check arguments */
+    HDassert(lnk && oloc->file);
+    HDassert(name && *name);
+
+    /* Set up user data for iteration */
+    udata.name = name;
+    udata.lnk = lnk;
+    udata.found = FALSE;
+
+    /* Iterate through the link messages, adding them to the table */
+    if(H5O_iterate(oloc, H5O_LINK_ID, H5G_link_lookup_cb, &udata, dxpl_id) < 0)
+        HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "error iterating over link messages")
+
+    /* Check if we found the link we were looking for */
+    if(!udata.found)
+        HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "object not found")
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5G_link_lookup() */
+#endif /* H5_GROUP_REVISION */
 

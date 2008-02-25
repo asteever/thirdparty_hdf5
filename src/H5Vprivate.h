@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -345,31 +344,21 @@ static const char LogTable256[] =
  *-------------------------------------------------------------------------
  */
 static H5_inline unsigned UNUSED
-H5V_log2_gen(uint64_t n)
+H5V_log2_gen(hsize_t n)
 {
-    unsigned r;                         /* r will be log2(n) */
+    unsigned r = 0;                     /* r will be log2(n) */
     register unsigned int t, tt, ttt;   /* temporaries */
 
-#ifdef H5_BAD_LOG2_CODE_GENERATED
-    if(n > (uint64_t)0x7fffffffffffffff)
-        r = 63;
-    else {
-        n &= (uint64_t)0x7fffffffffffffff;
-#endif /* H5_BAD_LOG2_CODE_GENERATED */
-        if((ttt = (unsigned)(n >> 32)))
-            if((tt = (unsigned)(n >> 48)))
-                r = (t = (unsigned)(n >> 56)) ? 56 + LogTable256[t] : 48 + LogTable256[tt & 0xFF];
-            else
-                r = (t = (unsigned)(n >> 40)) ? 40 + LogTable256[t] : 32 + LogTable256[ttt & 0xFF];
+    if((ttt = (unsigned)(n >> 32)))
+        if((tt = (unsigned)(n >> 48)))
+            r = (t = (unsigned)(n >> 56)) ? 56 + LogTable256[t] : 48 + LogTable256[tt & 0xFF];
         else
-            if((tt = (unsigned)(n >> 16)))
-                r = (t = (unsigned)(n >> 24)) ? 24 + LogTable256[t] : 16 + LogTable256[tt & 0xFF];
-            else
-                /* Added 'uint8_t' cast to pacify PGCC compiler */
-                r = (t = (unsigned)(n >> 8)) ? 8 + LogTable256[t] : LogTable256[(uint8_t)n];
-#ifdef H5_BAD_LOG2_CODE_GENERATED
-    } /* end else */
-#endif /* H5_BAD_LOG2_CODE_GENERATED  */
+            r = (t = (unsigned)(n >> 40)) ? 40 + LogTable256[t] : 32 + LogTable256[ttt & 0xFF];
+    else
+        if((tt = (unsigned)(n >> 16)))
+            r = (t = (unsigned)(n >> 24)) ? 24 + LogTable256[t] : 16 + LogTable256[tt & 0xFF];
+        else
+            r = (t = (unsigned)(n >> 8)) ? 8 + LogTable256[t] : LogTable256[n];
 
     return(r);
 } /* H5V_log2_gen() */

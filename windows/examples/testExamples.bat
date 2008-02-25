@@ -1,4 +1,3 @@
-@REM Copyright by The HDF Group.
 @REM Copyright by the Board of Trustees of the University of Illinois.
 @REM All rights reserved.
 @REM
@@ -8,8 +7,8 @@
 @REM of the source code distribution tree; Copyright.html can be found at the
 @REM root level of an installed copy of the electronic HDF5 document set and
 @REM is linked from the top-level documents page.  It can also be found at
-@REM http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-@REM access to either file, you may request a copy from help@hdfgroup.org.
+@REM http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
+@REM access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 
 @ECHO OFF
 REM This batch file is used to test HDF5 C examples.
@@ -35,7 +34,6 @@ attributetest >> ..\%1.txt
 compoundtest >> ..\%1.txt
 extendwritetest >> ..\%1.txt
 grouptest >> ..\%1.txt
-intermgrouptest >> ..\%1.txt
 selectest >> ..\%1.txt
 writetest >> ..\%1.txt
 chunkread >> ..\%1.txt
@@ -61,7 +59,6 @@ attributetestdll >> ..\%1.txt
 compoundtestdll >> ..\%1.txt
 extendwritetestdll >> ..\%1.txt
 grouptestdll >> ..\%1.txt
-intermgrouptestdll >> ..\%1.txt
 selectestdll >> ..\%1.txt
 writetestdll >> ..\%1.txt
 chunkreaddll >> ..\%1.txt
@@ -92,7 +89,6 @@ attributetest >> ..\%1.txt
 compoundtest >> ..\%1.txt
 extendwritetest >> ..\%1.txt
 grouptest >> ..\%1.txt
-intermgrouptest >> ..\%1.txt
 selectest >> ..\%1.txt
 writetest >> ..\%1.txt
 chunkread >> ..\%1.txt
@@ -118,7 +114,6 @@ attributetestdll >> ..\%1.txt
 compoundtestdll >> ..\%1.txt
 extendwritetestdll >> ..\%1.txt
 grouptestdll >> ..\%1.txt
-intermgrouptestdll >> ..\%1.txt
 selectestdll >> ..\%1.txt
 writetestdll >> ..\%1.txt
 chunkreaddll >> ..\%1.txt

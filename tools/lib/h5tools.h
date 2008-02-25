@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -27,28 +26,8 @@
 #define ESCAPE_HTML             1
 #define OPT(X,S)                ((X) ? (X) : (S))
 #define OPTIONAL_LINE_BREAK     "\001"  /* Special strings embedded in the output */
-#define START_OF_DATA       0x0001
-#define END_OF_DATA     0x0002
-
-/*
- * The output functions need a temporary buffer to hold a piece of the
- * dataset while it's being printed. This constant sets the limit on the
- * size of that temporary buffer in bytes. For efficiency's sake, choose the
- * largest value suitable for your machine (for testing use a small value).
- */
-#if 1
-#define H5TOOLS_BUFSIZE         (1024 * 1024)
-#else
-#define H5TOOLS_BUFSIZE         (1024)
-#endif 
-
-/*
- * Maximum size used in a call to malloc
- */
-#define H5TOOLS_MALLOCSIZE      (128 * 1024 * 1024)
-
-/* format for hsize_t */
-#define HSIZE_T_FORMAT   "%"H5_PRINTF_LL_WIDTH"u"
+#define START_OF_DATA		0x0001
+#define END_OF_DATA		0x0002
 
 /*
  * Information about how to format output.
@@ -348,7 +327,7 @@ typedef struct h5tools_context_t {
     size_t cur_column;                       /*current column for output */
     size_t cur_elmt;                         /*current element/output line */
     int  need_prefix;                        /*is line prefix needed? */
-    unsigned ndims;                          /*dimensionality  */
+    int  ndims;                              /*dimensionality  */
     hsize_t p_min_idx[H5S_MAX_RANK];         /*min selected index */
     hsize_t p_max_idx[H5S_MAX_RANK];         /*max selected index */
     int  prev_multiline;                     /*was prev datum multiline? */
@@ -380,23 +359,21 @@ extern int     bin_form;            /* binary form */
 
 
 /* Strings for output */
-#define H5_TOOLS_GROUP           "GROUP"
-#define H5_TOOLS_DATASET         "DATASET"
-#define H5_TOOLS_DATATYPE        "DATATYPE"
+#define GROUP           "GROUP"
+#define DATASET         "DATASET"
+#define DATATYPE        "DATATYPE"
 
 /* Definitions of useful routines */
 extern void     h5tools_init(void);
 extern void     h5tools_close(void);
-extern hid_t    h5tools_fopen(const char *fname, unsigned flags, hid_t fapl,
-                    const char *driver, char *drivername, size_t drivername_len);
+extern hid_t    h5tools_fopen(const char *fname, const char *driver,
+                              char *drivername, size_t drivername_len,
+                              int argc, const char *argv[]);
 extern int      h5tools_dump_dset(FILE *stream, const h5tool_format_t *info, hid_t dset,
                                   hid_t p_typ, struct subset_t *sset, int indentlevel);
 extern int      h5tools_dump_mem(FILE *stream, const h5tool_format_t *info, hid_t obj_id,
                                  hid_t type, hid_t space, void *mem, int indentlevel);
 extern hid_t    h5tools_get_native_type(hid_t type);
-extern hid_t    h5tools_get_little_endian_type(hid_t type);
-extern hid_t    h5tools_get_big_endian_type(hid_t type);
-
 
 extern void     h5tools_dump_simple_data(FILE *stream, const h5tool_format_t *info, hid_t container,
                          h5tools_context_t *ctx/*in,out*/, unsigned flags,

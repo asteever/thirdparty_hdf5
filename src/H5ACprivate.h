@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*-------------------------------------------------------------------------
@@ -59,9 +58,6 @@ typedef enum {
     H5AC_FHEAP_DBLOCK_ID, /*fractal heap direct block		     */
     H5AC_FHEAP_IBLOCK_ID, /*fractal heap indirect block		     */
     H5AC_FSPACE_HDR_ID,	/*free space header			     */
-    H5AC_FSPACE_SINFO_ID,/*free space sections			     */
-    H5AC_SOHM_TABLE_ID, /*shared object header message master table  */
-    H5AC_SOHM_LIST_ID,  /*shared message index stored as a list      */
     H5AC_TEST_ID,	/*test entry -- not used for actual files    */
     H5AC_NTYPES		/* Number of types, must be last             */
 } H5AC_type_t;
@@ -116,10 +112,6 @@ typedef enum {
  * SIZE:	Report the size (on disk) of the specified cache object.
  *		Note that the space allocated on disk may not be contiguous.
  */
-
-#define H5AC_CALLBACK__NO_FLAGS_SET             H5C_CALLBACK__NO_FLAGS_SET
-#define H5AC_CALLBACK__SIZE_CHANGED_FLAG	H5C_CALLBACK__SIZE_CHANGED_FLAG
-#define H5AC_CALLBACK__RENAMED_FLAG             H5C_CALLBACK__RENAMED_FLAG
 
 typedef H5C_load_func_t		H5AC_load_func_t;
 typedef H5C_flush_func_t	H5AC_flush_func_t;
@@ -201,7 +193,6 @@ extern hid_t H5AC_ind_dxpl_id;
   /* hbool_t     open_trace_file        = */ FALSE,                           \
   /* hbool_t     close_trace_file       = */ FALSE,                           \
   /* char        trace_file_name[]      = */ "",                              \
-  /* hbool_t     evictions_enabled      = */ TRUE,                            \
   /* hbool_t     set_initial_size       = */ TRUE,                            \
   /* size_t      initial_size           = */ ( 1 * 1024 * 1024),              \
   /* double      min_clean_fraction     = */ 0.5,                             \
@@ -213,10 +204,6 @@ extern hid_t H5AC_ind_dxpl_id;
   /* double      increment              = */ 2.0,                             \
   /* hbool_t     apply_max_increment    = */ TRUE,                            \
   /* size_t      max_increment          = */ (4 * 1024 * 1024),               \
-  /* enum H5C_cache_flash_incr_mode       */                                  \
-  /*                    flash_incr_mode = */ H5C_flash_incr__add_space,       \
-  /* double      flash_multiple         = */ 1.0,                             \
-  /* double      flash_threshold        = */ 0.25,                            \
   /* enum H5C_cache_decr_mode decr_mode = */ H5C_decr__age_out_with_threshold,\
   /* double      upper_hr_threshold     = */ 0.999,                           \
   /* double      decrement              = */ 0.9,                             \
@@ -238,17 +225,16 @@ extern hid_t H5AC_ind_dxpl_id;
  * the equivalent flags from H5Cprivate.h.
  */
 
-#define H5AC__NO_FLAGS_SET		  H5C__NO_FLAGS_SET
-#define H5AC__SET_FLUSH_MARKER_FLAG	  H5C__SET_FLUSH_MARKER_FLAG
-#define H5AC__DELETED_FLAG		  H5C__DELETED_FLAG
-#define H5AC__DIRTIED_FLAG		  H5C__DIRTIED_FLAG
-#define H5AC__SIZE_CHANGED_FLAG		  H5C__SIZE_CHANGED_FLAG
-#define H5AC__PIN_ENTRY_FLAG		  H5C__PIN_ENTRY_FLAG
-#define H5AC__UNPIN_ENTRY_FLAG		  H5C__UNPIN_ENTRY_FLAG
-#define H5AC__FLUSH_INVALIDATE_FLAG	  H5C__FLUSH_INVALIDATE_FLAG
-#define H5AC__FLUSH_CLEAR_ONLY_FLAG	  H5C__FLUSH_CLEAR_ONLY_FLAG
-#define H5AC__FLUSH_MARKED_ENTRIES_FLAG   H5C__FLUSH_MARKED_ENTRIES_FLAG
-#define H5AC__FLUSH_IGNORE_PROTECTED_FLAG H5C__FLUSH_IGNORE_PROTECTED_FLAG
+#define H5AC__NO_FLAGS_SET		H5C__NO_FLAGS_SET
+#define H5AC__SET_FLUSH_MARKER_FLAG	H5C__SET_FLUSH_MARKER_FLAG
+#define H5AC__DELETED_FLAG		H5C__DELETED_FLAG
+#define H5AC__DIRTIED_FLAG		H5C__DIRTIED_FLAG
+#define H5AC__SIZE_CHANGED_FLAG		H5C__SIZE_CHANGED_FLAG
+#define H5AC__PIN_ENTRY_FLAG		H5C__PIN_ENTRY_FLAG
+#define H5AC__UNPIN_ENTRY_FLAG		H5C__UNPIN_ENTRY_FLAG
+#define H5AC__FLUSH_INVALIDATE_FLAG	H5C__FLUSH_INVALIDATE_FLAG
+#define H5AC__FLUSH_CLEAR_ONLY_FLAG	H5C__FLUSH_CLEAR_ONLY_FLAG
+#define H5AC__FLUSH_MARKED_ENTRIES_FLAG	H5C__FLUSH_MARKED_ENTRIES_FLAG
 
 
 /* #defines of flags used to report entry status in the

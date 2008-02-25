@@ -1,7 +1,10 @@
-HDF5 "tbinary.h5" {
-DATASET "float" {
-   DATATYPE  H5T_IEEE_F32LE
-   DATASPACE  SIMPLE { ( 6 ) / ( 6 ) }
+#############################
+Expected output for 'h5dump -d integer -b out2.bin -F DI test1.h5'
+#############################
+HDF5 "test1.h5" {
+DATASET "integer" {
+   DATATYPE  H5T_STD_I32LE
+   DATASPACE  SIMPLE { ( 2 ) / ( 2 ) }
    DATA {
    }
 }

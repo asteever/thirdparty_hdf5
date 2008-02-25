@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*-------------------------------------------------------------------------
@@ -53,6 +52,14 @@
 #endif
 #define H5B_MAGIC	"TREE"		/*tree node magic number	     */
 #define H5B_SIZEOF_MAGIC 4		/*size of magic number		     */
+
+/* Define return values from operator callback function for H5B_iterate */
+/* (Actually, any postive value will cause the iterator to stop and pass back
+ *      that positive value to the function that called the iterator)
+ */
+#define H5B_ITER_ERROR  (-1)
+#define H5B_ITER_CONT   (0)
+#define H5B_ITER_STOP   (1)
 
 /****************************/
 /* Library Private Typedefs */
@@ -124,13 +131,6 @@ typedef struct H5B_class_t {
     herr_t	(*debug_key)(FILE*, H5F_t*, hid_t, int, int, const void*, const void*);
 } H5B_class_t;
 
-/* "user data" for iterating over B-tree when collecting B-tree metadata size */
-typedef struct H5B_info_ud_t {
-    void    *udata;                     /* Node type's 'udata' for loading */
-    hsize_t *btree_size;                /* Accumulated size for B-tree metadata */
-} H5B_info_ud_t;
-
-
 /*****************************/
 /* Library-private Variables */
 /*****************************/
@@ -144,22 +144,19 @@ H5FL_EXTERN(H5B_shared_t);
 /***************************************/
 H5_DLL size_t H5B_nodesize(const H5F_t *f, const H5B_shared_t *shared,
 			   size_t *total_nkey_size);
-H5_DLL herr_t H5B_create(H5F_t *f, hid_t dxpl_id, const H5B_class_t *type, void *udata,
+H5_DLL herr_t H5B_create (H5F_t *f, hid_t dxpl_id, const H5B_class_t *type, void *udata,
 			   haddr_t *addr_p/*out*/);
-H5_DLL herr_t H5B_find(H5F_t *f, hid_t dxpl_id, const H5B_class_t *type, haddr_t addr,
+H5_DLL herr_t H5B_find (H5F_t *f, hid_t dxpl_id, const H5B_class_t *type, haddr_t addr,
 			 void *udata);
-H5_DLL herr_t H5B_insert(H5F_t *f, hid_t dxpl_id, const H5B_class_t *type, haddr_t addr,
+H5_DLL herr_t H5B_insert (H5F_t *f, hid_t dxpl_id, const H5B_class_t *type, haddr_t addr,
                            void *udata);
-H5_DLL herr_t H5B_iterate(H5F_t *f, hid_t dxpl_id, const H5B_class_t *type, H5B_operator_t
+H5_DLL herr_t H5B_iterate (H5F_t *f, hid_t dxpl_id, const H5B_class_t *type, H5B_operator_t
                             op, haddr_t addr, void *udata);
-H5_DLL herr_t H5B_iterate_size(H5F_t *f, hid_t dxpl_id, const H5B_class_t *type, H5B_operator_t
-                            op, haddr_t addr, H5B_info_ud_t *bh_udata);
 H5_DLL herr_t H5B_remove(H5F_t *f, hid_t dxpl_id, const H5B_class_t *type, haddr_t addr,
 			  void *udata);
 H5_DLL herr_t H5B_delete(H5F_t *f, hid_t dxpl_id, const H5B_class_t *type, haddr_t addr,
                         void *udata);
-H5_DLL herr_t H5B_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE * stream,
+H5_DLL herr_t H5B_debug (H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE * stream,
 			  int indent, int fwidth, const H5B_class_t *type,
 			  void *udata);
-#endif /* _H5Bprivate_H */
-
+#endif

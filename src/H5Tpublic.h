@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -497,16 +496,14 @@ H5_DLLVAR hid_t H5T_NATIVE_INT_FAST64_g;
 H5_DLLVAR hid_t H5T_NATIVE_UINT_FAST64_g;
 
 /* Operations defined on all datatypes */
+H5_DLL hid_t H5Topen(hid_t loc_id, const char *name);
 H5_DLL hid_t H5Tcreate(H5T_class_t type, size_t size);
 H5_DLL hid_t H5Tcopy(hid_t type_id);
 H5_DLL herr_t H5Tclose(hid_t type_id);
 H5_DLL htri_t H5Tequal(hid_t type1_id, hid_t type2_id);
 H5_DLL herr_t H5Tlock(hid_t type_id);
-H5_DLL herr_t H5Tcommit2(hid_t loc_id, const char *name, hid_t type_id,
-    hid_t lcpl_id, hid_t tcpl_id, hid_t tapl_id);
-H5_DLL hid_t H5Topen2(hid_t loc_id, const char *name, hid_t tapl_id);
-H5_DLL herr_t H5Tcommit_anon(hid_t loc_id, hid_t type_id, hid_t tcpl_id, hid_t tapl_id);
-H5_DLL hid_t H5Tget_create_plist(hid_t type_id);
+H5_DLL herr_t H5Tcommit(hid_t loc_id, const char *name, hid_t type_id);
+H5_DLL herr_t H5Tcommit_expand(hid_t loc_id, hid_t type_id, hid_t tcpl_id, hid_t tapl_id);
 H5_DLL htri_t H5Tcommitted(hid_t type_id);
 H5_DLL herr_t H5Tencode(hid_t obj_id, void *buf, size_t *nalloc);
 H5_DLL hid_t H5Tdecode(const void *buf);
@@ -528,10 +525,10 @@ H5_DLL herr_t H5Tenum_valueof(hid_t type, const char *name,
 H5_DLL hid_t H5Tvlen_create(hid_t base_id);
 
 /* Operations defined on array datatypes */
-H5_DLL hid_t H5Tarray_create2(hid_t base_id, unsigned ndims,
-            const hsize_t dim[/* ndims */]);
+H5_DLL hid_t H5Tarray_create(hid_t base_id, int ndims,
+            const hsize_t dim[/* ndims */], const int perm[/* ndims */]);
 H5_DLL int H5Tget_array_ndims(hid_t type_id);
-H5_DLL int H5Tget_array_dims2(hid_t type_id, hsize_t dims[]);
+H5_DLL int H5Tget_array_dims(hid_t type_id, hsize_t dims[], int perm[]);
 
 /* Operations defined on opaque datatypes */
 H5_DLL herr_t H5Tset_tag(hid_t type, const char *tag);
@@ -591,30 +588,7 @@ H5_DLL htri_t H5Tcompiler_conv(hid_t src_id, hid_t dst_id);
 H5_DLL herr_t H5Tconvert(hid_t src_id, hid_t dst_id, size_t nelmts,
 			  void *buf, void *background, hid_t plist_id);
 
-/* Symbols defined for compatibility with previous versions of the HDF5 API.
- * 
- * Use of these symbols is deprecated.
- */
-#ifndef H5_NO_DEPRECATED_SYMBOLS
-
-/* Macros */
-
-
-/* Typedefs */
-
-
-/* Function prototypes */
-H5_DLL herr_t H5Tcommit1(hid_t loc_id, const char *name, hid_t type_id);
-H5_DLL hid_t H5Topen1(hid_t loc_id, const char *name);
-H5_DLL hid_t H5Tarray_create1(hid_t base_id, int ndims,
-            const hsize_t dim[/* ndims */],
-            const int perm[/* ndims */]);
-H5_DLL int H5Tget_array_dims1(hid_t type_id, hsize_t dims[], int perm[]);
-
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
-
 #ifdef __cplusplus
 }
 #endif
-#endif /* _H5Tpublic_H */
-
+#endif

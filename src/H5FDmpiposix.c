@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -99,7 +98,7 @@ typedef struct H5FD_mpiposix_t {
     size_t      blksize;        /* Block size of file system            */
 #endif
     hbool_t     use_gpfs;       /* Use GPFS to write things             */
-#ifndef _WIN32
+#ifndef WIN32
     /*
      * On most systems the combination of device and i-node number uniquely
      * identify a file.
@@ -108,7 +107,7 @@ typedef struct H5FD_mpiposix_t {
     ino_t	inode;		/*file i-node number		*/
 #else
     /*
-     * On _WIN32 the low-order word of a unique identifier associated with the
+     * On WIN32 the low-order word of a unique identifier associated with the
      * file and the volume serial number uniquely identify a file. This number
      * (which, both? -rpm) may change when the system is restarted or when the
      * file is opened. After a process opens a file, the identifier is
@@ -138,7 +137,7 @@ typedef struct H5FD_mpiposix_t {
 #   define file_offset_t	off64_t
 #   define file_seek		lseek64
 #   define file_truncate	ftruncate64
-#elif defined (_WIN32) && !defined(__MWERKS__)
+#elif defined (WIN32) && !defined(__MWERKS__)
 # /*MSVC*/
 #   define file_offset_t __int64
 #   define file_seek _lseeki64
@@ -182,8 +181,8 @@ static H5FD_t *H5FD_mpiposix_open(const char *name, unsigned flags, hid_t fapl_i
 static herr_t H5FD_mpiposix_close(H5FD_t *_file);
 static int H5FD_mpiposix_cmp(const H5FD_t *_f1, const H5FD_t *_f2);
 static herr_t H5FD_mpiposix_query(const H5FD_t *_f1, unsigned long *flags);
-static haddr_t H5FD_mpiposix_get_eoa(const H5FD_t *_file, H5FD_mem_t UNUSED type);
-static herr_t H5FD_mpiposix_set_eoa(H5FD_t *_file, H5FD_mem_t type, haddr_t addr);
+static haddr_t H5FD_mpiposix_get_eoa(const H5FD_t *_file);
+static herr_t H5FD_mpiposix_set_eoa(H5FD_t *_file, haddr_t addr);
 static haddr_t H5FD_mpiposix_get_eof(const H5FD_t *_file);
 static herr_t  H5FD_mpiposix_get_handle(H5FD_t *_file, hid_t fapl, void** file_handle);
 static herr_t H5FD_mpiposix_read(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, haddr_t addr,
@@ -365,7 +364,7 @@ H5Pset_fapl_mpiposix(hid_t fapl_id, MPI_Comm comm, hbool_t use_gpfs)
     herr_t ret_value;
 
     FUNC_ENTER_API(H5Pset_fapl_mpiposix, FAIL)
-    H5TRACE3("e", "iMcb", fapl_id, comm, use_gpfs);
+    H5TRACE3("e","iMcb",fapl_id,comm,use_gpfs);
 
     /* Check arguments */
     if(NULL == (plist = H5P_object_verify(fapl_id,H5P_FILE_ACCESS)))
@@ -424,7 +423,7 @@ H5Pget_fapl_mpiposix(hid_t fapl_id, MPI_Comm *comm/*out*/, hbool_t *use_gpfs/*ou
     herr_t      ret_value=SUCCEED;      /* Return value */
 
     FUNC_ENTER_API(H5Pget_fapl_mpiposix, FAIL)
-    H5TRACE3("e", "ixx", fapl_id, comm, use_gpfs);
+    H5TRACE3("e","ixx",fapl_id,comm,use_gpfs);
 
     if(NULL == (plist = H5P_object_verify(fapl_id,H5P_FILE_ACCESS)))
         HGOTO_ERROR(H5E_PLIST, H5E_BADTYPE, FAIL, "not a file access list")
@@ -620,7 +619,7 @@ H5FD_mpiposix_open(const char *name, unsigned flags, hid_t fapl_id,
     H5FD_mpiposix_fapl_t	_fa;            /* Private copy of default file access property list information */
     H5P_genplist_t              *plist;         /* Property list pointer */
     h5_stat_t                   sb;             /* Portable 'stat' struct */
-#ifdef _WIN32
+#ifdef WIN32
     HFILE filehandle;
     struct _BY_HANDLE_FILE_INFORMATION fileinfo;
     int results;
@@ -754,7 +753,7 @@ H5FD_mpiposix_open(const char *name, unsigned flags, hid_t fapl_id,
     file->fd = fd;
     file->eof = sb.st_size;
 
-    /* for _WIN32 support. _WIN32 'stat' does not have st_blksize and st_blksize
+    /* for WIN32 support. WIN32 'stat' does not have st_blksize and st_blksize
        is only used for the H5_HAVE_GPFS case */
 #ifdef H5_HAVE_GPFS
     file->blksize = sb.st_blksize;
@@ -773,7 +772,7 @@ H5FD_mpiposix_open(const char *name, unsigned flags, hid_t fapl_id,
     file->op = OP_UNKNOWN;
 
     /* Set the information for the file's device and inode */
-#ifdef _WIN32
+#ifdef WIN32
     filehandle = _get_osfhandle(fd);
     results = GetFileInformationByHandle((HANDLE)filehandle, &fileinfo);
     file->fileindexhi = fileinfo.nFileIndexHigh;
@@ -868,7 +867,7 @@ H5FD_mpiposix_cmp(const H5FD_t *_f1, const H5FD_t *_f2)
 
     FUNC_ENTER_NOAPI(H5FD_mpiposix_cmp, H5FD_VFD_DEFAULT)
 
-#ifdef _WIN32
+#ifdef WIN32
     if (f1->fileindexhi < f2->fileindexhi) HGOTO_DONE(-1)
     if (f1->fileindexhi > f2->fileindexhi) HGOTO_DONE(1)
 
@@ -952,14 +951,11 @@ done:
  *              Thursday, July 11, 2002
  *
  * Modifications:
- *              Raymond Lu
- *              21 Dec. 2006
- *              Added the parameter TYPE.  It's only used for MULTI driver.
  *
  *-------------------------------------------------------------------------
  */
 static haddr_t
-H5FD_mpiposix_get_eoa(const H5FD_t *_file, H5FD_mem_t UNUSED type)
+H5FD_mpiposix_get_eoa(const H5FD_t *_file)
 {
     const H5FD_mpiposix_t *file = (const H5FD_mpiposix_t*)_file;
     haddr_t ret_value;          /* Return value */
@@ -991,14 +987,11 @@ done:
  *              Thursday, July 11, 2002
  *
  * Modifications:
- *              Raymond Lu
- *              21 Dec. 2006
- *              Added the parameter TYPE.  It's only used for MULTI driver.
  *
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FD_mpiposix_set_eoa(H5FD_t *_file, H5FD_mem_t UNUSED type, haddr_t addr)
+H5FD_mpiposix_set_eoa(H5FD_t *_file, haddr_t addr)
 {
     H5FD_mpiposix_t	*file = (H5FD_mpiposix_t*)_file;
     herr_t ret_value=SUCCEED;   /* Return value */
@@ -1383,10 +1376,10 @@ static herr_t
 H5FD_mpiposix_flush(H5FD_t *_file, hid_t UNUSED dxpl_id, unsigned UNUSED closing)
 {
     H5FD_mpiposix_t	*file = (H5FD_mpiposix_t*)_file;
-#ifdef _WIN32
+#ifdef WIN32
     HFILE filehandle;   /* Windows file handle */
     LARGE_INTEGER li;   /* 64-bit integer for SetFilePointer() call */
-#endif /* _WIN32 */
+#endif /* WIN32 */
     int			mpi_code;	/* MPI return code */
     herr_t              ret_value=SUCCEED;
 
@@ -1399,7 +1392,7 @@ H5FD_mpiposix_flush(H5FD_t *_file, hid_t UNUSED dxpl_id, unsigned UNUSED closing
     if(file->eoa>file->last_eoa) {
         /* Use the round-robin process to truncate (extend) the file */
         if(file->mpi_rank == H5_PAR_META_WRITE) {
-#ifdef _WIN32
+#ifdef WIN32
             /* Map the posix file handle to a Windows file handle */
             filehandle = _get_osfhandle(file->fd);
 
@@ -1409,10 +1402,10 @@ H5FD_mpiposix_flush(H5FD_t *_file, hid_t UNUSED dxpl_id, unsigned UNUSED closing
             SetFilePointer((HANDLE)filehandle,li.LowPart,&li.HighPart,FILE_BEGIN);
             if(SetEndOfFile((HANDLE)filehandle)==0)
                 HGOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to extend file properly")
-#else /* _WIN32 */
+#else /* WIN32 */
             if(-1==file_truncate(file->fd, (file_offset_t)file->eoa))
                 HGOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to extend file properly")
-#endif /* _WIN32 */
+#endif /* WIN32 */
         } /* end if */
 
         /* Don't let any proc return until all have extended the file.

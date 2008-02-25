@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -31,31 +30,7 @@
 /* Get package's private header */
 #include "H5Lprivate.h"
 
-/* Other private headers needed by this file */
 
-
-/**************************/
-/* Package Private Macros */
-/**************************/
-
-
-/****************************/
-/* Package Private Typedefs */
-/****************************/
-
-
-/*****************************/
-/* Package Private Variables */
-/*****************************/
-
-
-/******************************/
-/* Package Private Prototypes */
-/******************************/
-
-H5_DLL herr_t H5L_create_ud(const H5G_loc_t *link_loc, const char *link_name,
-    const void * ud_data, size_t ud_data_size, H5L_type_t type,
-    hid_t lcpl_id, hid_t lapl_id, hid_t dxpl_id);
 
 #endif /* _H5Lpkg_H */
 

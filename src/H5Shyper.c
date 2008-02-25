@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -57,11 +56,9 @@ static hssize_t H5S_hyper_serial_size(const H5S_t *space);
 static herr_t H5S_hyper_serialize(const H5S_t *space, uint8_t *buf);
 static herr_t H5S_hyper_deserialize(H5S_t *space, const uint8_t *buf);
 static herr_t H5S_hyper_bounds(const H5S_t *space, hsize_t *start, hsize_t *end);
-static herr_t H5S_hyper_offset(const H5S_t *space, hsize_t *offset);
 static htri_t H5S_hyper_is_contiguous(const H5S_t *space);
 static htri_t H5S_hyper_is_single(const H5S_t *space);
 static htri_t H5S_hyper_is_regular(const H5S_t *space);
-static herr_t H5S_hyper_adjust_u(H5S_t *space, const hsize_t *offset);
 static herr_t H5S_hyper_iter_init(H5S_sel_iter_t *iter, const H5S_t *space);
 
 /* Selection iteration callbacks */
@@ -91,11 +88,9 @@ const H5S_select_class_t H5S_sel_hyper[1] = {{
     H5S_hyper_serialize,
     H5S_hyper_deserialize,
     H5S_hyper_bounds,
-    H5S_hyper_offset,
     H5S_hyper_is_contiguous,
     H5S_hyper_is_single,
     H5S_hyper_is_regular,
-    H5S_hyper_adjust_u,
     H5S_hyper_iter_init,
 }};
 
@@ -277,17 +272,12 @@ H5S_hyper_iter_init(H5S_sel_iter_t *iter, const H5S_t *space)
         /* Don't flatten adjacent elements into contiguous block if the
          * element size is 0.  This is for the H5S_select_shape_same() code.
          */
-        if(iter->elmt_size > 0) {
+        if(iter->elmt_size>0) {
             /* Check for any "contiguous" blocks that can be flattened */
-            for(u = (rank - 1); u > 0; u--) {
-                if(tdiminfo[u].count == 1 && tdiminfo[u].block == mem_size[u]) {
+            for(u=rank-1; u>0; u--) {
+                if(tdiminfo[u].count==1 && tdiminfo[u].block==mem_size[u])
                     cont_dim++;
-                    iter->u.hyp.flattened[u] = TRUE;
-                } /* end if */
-                else
-                    iter->u.hyp.flattened[u] = FALSE;
             } /* end for */
-            iter->u.hyp.flattened[0] = FALSE;
         } /* end if */
 
         /* Check if the regular selection can be "flattened" */
@@ -437,59 +427,23 @@ H5S_hyper_iter_coords (const H5S_sel_iter_t *iter, hsize_t *coords)
     /* Check for a single "regular" hyperslab */
     if(iter->u.hyp.diminfo_valid) {
         /* Check if this is a "flattened" regular hyperslab selection */
-        if(iter->u.hyp.iter_rank != 0 && iter->u.hyp.iter_rank < iter->rank) {
-            int u, v;           /* Dimension indices */
+        if(iter->u.hyp.iter_rank!=0 && iter->u.hyp.iter_rank<iter->rank) {
+            unsigned flat_dim;  /* The rank of the flattened dimension */
 
-            /* Set the starting rank of both the "natural" & "flattened" dimensions */
-            u = iter->rank - 1;
-            v = iter->u.hyp.iter_rank - 1;
+            /* Get the rank of the flattened dimension */
+            flat_dim=iter->u.hyp.iter_rank-1;
 
-            /* Construct the "natural" dimensions from a set of flattened coordinates */
-            while(u >= 0) {
-                if(iter->u.hyp.flattened[u]) {
-                    int begin = u;      /* The rank of the first flattened dimension */
+            /* Copy the coordinates up to where things got flattened */
+            HDmemcpy(coords,iter->u.hyp.off,sizeof(hsize_t)*flat_dim);
 
-                    /* Walk up through as many flattened dimensions as possible */
-                    do {
-                        u--;
-                    } while(u >= 0 && iter->u.hyp.flattened[u]);
-
-                    /* Compensate for possibly overshooting dim 0 */
-                    if(u < 0)
-                        u = 0;
-
-                    /* Sanity check */
-                    HDassert(v >= 0);
-
-                    /* Compute the coords for the flattened dimensions */
-                    H5V_array_calc(iter->u.hyp.off[v], (unsigned)((begin - u) + 1), &(iter->dims[u]), &(coords[u]));
-
-                    /* Continue to faster dimension in both indices */
-                    u--;
-                    v--;
-                } /* end if */
-                else {
-                    /* Walk up through as many non-flattened dimensions as possible */
-                    while(u >= 0 && !iter->u.hyp.flattened[u]) {
-                        /* Sanity check */
-                        HDassert(v >= 0);
-
-                        /* Copy the coordinate */
-                        coords[u] = iter->u.hyp.off[v];
-
-                        /* Continue to faster dimension in both indices */
-                        u--;
-                        v--;
-                    } /* end while */
-                } /* end else */
-            } /* end while */
-            HDassert(v < 0);
+            /* Compute the coordinates for the flattened dimensions */
+            H5V_array_calc(iter->u.hyp.off[flat_dim],iter->rank-flat_dim,&(iter->dims[flat_dim]),&(coords[flat_dim]));
         } /* end if */
         else
-            HDmemcpy(coords, iter->u.hyp.off, sizeof(hsize_t) * iter->rank);
+            HDmemcpy(coords,iter->u.hyp.off,sizeof(hsize_t)*iter->rank);
     } /* end if */
     else
-        HDmemcpy(coords, iter->u.hyp.off, sizeof(hsize_t) * iter->rank);
+        HDmemcpy(coords,iter->u.hyp.off,sizeof(hsize_t)*iter->rank);
 
     FUNC_LEAVE_NOAPI(SUCCEED);
 }   /* H5S_hyper_iter_coords() */
@@ -1908,7 +1862,7 @@ H5Sget_select_hyper_nblocks(hid_t spaceid)
     hssize_t ret_value;             /* return value */
 
     FUNC_ENTER_API(H5Sget_select_hyper_nblocks, FAIL);
-    H5TRACE1("Hs", "i", spaceid);
+    H5TRACE1("Hs","i",spaceid);
 
     /* Check args */
     if (NULL == (space=H5I_object_verify(spaceid, H5I_DATASPACE)))
@@ -2558,7 +2512,7 @@ H5S_get_select_hyper_blocklist(H5S_t *space, hbool_t internal, hsize_t startbloc
         hid_t dsid;             IN: Dataspace ID of selection to query
         hsize_t startblock;     IN: Hyperslab block to start with
         hsize_t numblocks;      IN: Number of hyperslab blocks to get
-        hsize_t buf[];          OUT: List of hyperslab blocks selected
+        hsize_t *buf;           OUT: List of hyperslab blocks selected
  RETURNS
     Non-negative on success, negative on failure
  DESCRIPTION
@@ -2579,14 +2533,13 @@ H5S_get_select_hyper_blocklist(H5S_t *space, hbool_t internal, hsize_t startbloc
  REVISION LOG
 --------------------------------------------------------------------------*/
 herr_t
-H5Sget_select_hyper_blocklist(hid_t spaceid, hsize_t startblock,
-    hsize_t numblocks, hsize_t buf[/*numblocks*/])
+H5Sget_select_hyper_blocklist(hid_t spaceid, hsize_t startblock, hsize_t numblocks, hsize_t *buf)
 {
     H5S_t	*space = NULL;      /* Dataspace to modify selection of */
     herr_t ret_value;        /* return value */
 
     FUNC_ENTER_API(H5Sget_select_hyper_blocklist, FAIL);
-    H5TRACE4("e", "ihh*[a2]h", spaceid, startblock, numblocks, buf);
+    H5TRACE4("e","ihh*h",spaceid,startblock,numblocks,buf);
 
     /* Check args */
     if(buf==NULL)
@@ -2752,114 +2705,6 @@ done:
 
 /*--------------------------------------------------------------------------
  NAME
-    H5S_hyper_offset
- PURPOSE
-    Gets the linear offset of the first element for the selection.
- USAGE
-    herr_t H5S_hyper_offset(space, offset)
-        const H5S_t *space;     IN: Dataspace pointer of selection to query
-        hsize_t *offset;        OUT: Linear offset of first element in selection
- RETURNS
-    Non-negative on success, negative on failure
- DESCRIPTION
-    Retrieves the linear offset (in "units" of elements) of the first element
-    selected within the dataspace.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
-    Calling this function on a "none" selection returns fail.
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5S_hyper_offset(const H5S_t *space, hsize_t *offset)
-{
-    const hssize_t *sel_offset; /* Pointer to the selection's offset */
-    const hsize_t *dim_size;    /* Pointer to a dataspace's extent */
-    hsize_t accum;              /* Accumulator for dimension sizes */
-    int rank;                   /* Dataspace rank */
-    int i;                      /* index variable */
-    herr_t ret_value = SUCCEED; /* Return value */
-
-    FUNC_ENTER_NOAPI(H5S_hyper_offset, FAIL)
-
-    HDassert(space);
-    HDassert(offset);
-
-    /* Start at linear offset 0 */
-    *offset = 0;
-
-    /* Set up pointers to arrays of values */
-    rank = space->extent.rank;
-    sel_offset = space->select.offset;
-    dim_size = space->extent.size;
-
-    /* Check for a "regular" hyperslab selection */
-    if(space->select.sel_info.hslab->diminfo_valid) {
-        const H5S_hyper_dim_t *diminfo = space->select.sel_info.hslab->opt_diminfo; /* Local alias for diminfo */
-
-        /* Loop through starting coordinates, calculating the linear offset */
-        accum = 1;
-        for(i = (rank - 1); i >= 0; i--) {
-            hssize_t hyp_offset = (hssize_t)diminfo[i].start + sel_offset[i]; /* Hyperslab's offset in this dimension */
-
-            /* Check for offset moving selection out of the dataspace */
-            if(hyp_offset < 0 || (hsize_t)hyp_offset >= dim_size[i])
-                HGOTO_ERROR(H5E_DATASPACE, H5E_BADRANGE, FAIL, "offset moves selection out of bounds")
-
-            /* Add the hyperslab's offset in this dimension to the total linear offset */
-            *offset += hyp_offset * accum;
-
-            /* Increase the accumulator */
-            accum *= dim_size[i];
-        } /* end for */
-    } /* end if */
-    else {
-        const H5S_hyper_span_t *span;           /* Hyperslab span node */
-        hsize_t dim_accum[H5S_MAX_RANK];        /* Accumulators, for each dimension */
-
-        /* Calculate the accumulator for each dimension */
-        accum = 1;
-        for(i = (rank - 1); i >= 0; i--) {
-            /* Set the accumulator for this dimension */
-            dim_accum[i] = accum;
-
-            /* Increase the accumulator */
-            accum *= dim_size[i];
-        } /* end for */
-
-        /* Get information for the first span, in the slowest changing dimension */
-        span = space->select.sel_info.hslab->span_lst->head;
-
-        /* Work down the spans, computing the linear offset */
-        i = 0;
-        while(span) {
-            hssize_t hyp_offset = (hssize_t)span->low + sel_offset[i]; /* Hyperslab's offset in this dimension */
-
-            /* Check for offset moving selection out of the dataspace */
-            if(hyp_offset < 0 || (hsize_t)hyp_offset >= dim_size[i])
-                HGOTO_ERROR(H5E_DATASPACE, H5E_BADRANGE, FAIL, "offset moves selection out of bounds")
-
-            /* Add the hyperslab's offset in this dimension to the total linear offset */
-            *offset += hyp_offset * dim_accum[i];
-
-            /* Advance to first span in "down" dimension */
-            if(span->down) {
-                HDassert(span->down->head);
-                span = span->down->head;
-            } /* end if */
-            else
-                span = NULL;
-            i++;
-        } /* end while */
-    } /* end else */
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-}   /* H5S_hyper_offset() */
-
-
-/*--------------------------------------------------------------------------
- NAME
     H5S_hyper_is_contiguous
  PURPOSE
     Check if a hyperslab selection is contiguous within the dataspace extent.
@@ -2879,10 +2724,12 @@ done:
 htri_t
 H5S_hyper_is_contiguous(const H5S_t *space)
 {
+    H5S_hyper_span_info_t *spans;   /* Hyperslab span info node */
+    H5S_hyper_span_t *span;         /* Hyperslab span node */
+    unsigned u;                     /* index variable */
     unsigned small_contiguous,      /* Flag for small contiguous block */
         large_contiguous;           /* Flag for large contiguous block */
-    unsigned u;                     /* index variable */
-    htri_t ret_value = FALSE;       /* Return value */
+    htri_t ret_value=FALSE;         /* return value */
 
     FUNC_ENTER_NOAPI_NOFUNC(H5S_hyper_is_contiguous);
 
@@ -2941,9 +2788,6 @@ H5S_hyper_is_contiguous(const H5S_t *space)
             ret_value=TRUE;
     } /* end if */
     else {
-        H5S_hyper_span_info_t *spans;   /* Hyperslab span info node */
-        H5S_hyper_span_t *span;         /* Hyperslab span node */
-
         /*
          * For a hyperslab to be contiguous, it must have only one block and
          * (either it's size must be the same as the dataspace extent's in all
@@ -4280,37 +4124,35 @@ done:
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-htri_t
+herr_t
 H5S_hyper_normalize_offset(H5S_t *space, hssize_t *old_offset)
 {
     unsigned u;                         /* Local index variable */
-    herr_t ret_value = FALSE;           /* Return value */
+    herr_t      ret_value=SUCCEED;       /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT(H5S_hyper_normalize_offset)
+    FUNC_ENTER_NOAPI_NOINIT(H5S_hyper_normalize_offset);
 
-    HDassert(space);
+    assert(space);
 
-    /* Check for hyperslab selection & offset changed */
-    if(H5S_GET_SELECT_TYPE(space) == H5S_SEL_HYPERSLABS && space->select.offset_changed) {
+    /* Check for 'all' selection, instead of a hyperslab selection */
+    /* (Technically, this check shouldn't be in the "hyperslab" routines...) */
+    if(H5S_GET_SELECT_TYPE(space)==H5S_SEL_HYPERSLABS) {
         /* Copy & invert the selection offset */
-        for(u = 0; u<space->extent.rank; u++) {
+        for(u=0; u<space->extent.rank; u++) {
             old_offset[u] = space->select.offset[u];
             space->select.offset[u] = -space->select.offset[u];
         } /* end for */
 
         /* Call the existing 'adjust' routine */
-        if(H5S_hyper_adjust_s(space, space->select.offset) < 0)
-            HGOTO_ERROR(H5E_DATASPACE, H5E_BADSELECT, FAIL, "can't perform hyperslab normalization")
+        if(H5S_hyper_adjust_s(space, space->select.offset)<0)
+            HGOTO_ERROR(H5E_DATASPACE, H5E_BADSELECT, FAIL, "can't perform hyperslab normalization");
 
         /* Zero out the selection offset */
         HDmemset(space->select.offset, 0, sizeof(hssize_t) * space->extent.rank);
-
-        /* Indicate that the offset was normalized */
-        ret_value = TRUE;
     } /* end if */
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 }   /* H5S_hyper_normalize_offset() */
 
 
@@ -4338,22 +4180,25 @@ done:
 herr_t
 H5S_hyper_denormalize_offset(H5S_t *space, const hssize_t *old_offset)
 {
-    herr_t      ret_value = SUCCEED;    /* Return value */
+    herr_t      ret_value=SUCCEED;       /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT(H5S_hyper_denormalize_offset)
+    FUNC_ENTER_NOAPI_NOINIT(H5S_hyper_denormalize_offset);
 
-    HDassert(space);
-    HDassert(H5S_GET_SELECT_TYPE(space) == H5S_SEL_HYPERSLABS);
+    assert(space);
 
-    /* Call the existing 'adjust' routine */
-    if(H5S_hyper_adjust_s(space, old_offset) < 0)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_BADSELECT, FAIL, "can't perform hyperslab normalization")
+    /* Check for 'all' selection, instead of a hyperslab selection */
+    /* (Technically, this check shouldn't be in the "hyperslab" routines...) */
+    if(H5S_GET_SELECT_TYPE(space)==H5S_SEL_HYPERSLABS) {
+        /* Call the existing 'adjust' routine */
+        if(H5S_hyper_adjust_s(space, old_offset)<0)
+            HGOTO_ERROR(H5E_DATASPACE, H5E_BADSELECT, FAIL, "can't perform hyperslab normalization");
 
-    /* Copy the selection offset over */
-    HDmemcpy(space->select.offset, old_offset, sizeof(hssize_t) * space->extent.rank);
+        /* Copy the selection offset over */
+        HDmemcpy(space->select.offset, old_offset, sizeof(hssize_t) * space->extent.rank);
+    } /* end if */
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 }   /* H5S_hyper_denormalize_offset() */
 
 
@@ -6269,7 +6114,7 @@ H5Sselect_hyperslab(hid_t space_id, H5S_seloper_t op, const hsize_t start[],
     herr_t      ret_value=SUCCEED;       /* Return value */
 
     FUNC_ENTER_API(H5Sselect_hyperslab, FAIL);
-    H5TRACE6("e", "iSs*h*h*h*h", space_id, op, start, stride, count, block);
+    H5TRACE6("e","iSs*h*h*h*h",space_id,op,start,stride,count,block);
 
     /* Check args */
     if (NULL == (space=H5I_object_verify(space_id, H5I_DATASPACE)))
@@ -6864,7 +6709,7 @@ H5Sselect_hyperslab(hid_t space_id, H5S_seloper_t op, const hsize_t start[],
     herr_t      ret_value=SUCCEED;       /* Return value */
 
     FUNC_ENTER_API(H5Sselect_hyperslab, FAIL);
-    H5TRACE6("e", "iSs*h*h*h*h", space_id, op, start, stride, count, block);
+    H5TRACE6("e","iSs*h*h*h*h",space_id,op,start,stride,count,block);
 
     /* Check args */
     if (NULL == (space=H5I_object_verify(space_id, H5I_DATASPACE)))
@@ -6933,7 +6778,7 @@ H5Scombine_hyperslab(hid_t space_id, H5S_seloper_t op, const hsize_t start[],
     hid_t	ret_value;
 
     FUNC_ENTER_API(H5Scombine_hyperslab, FAIL);
-    H5TRACE6("i", "iSs*h*h*h*h", space_id, op, start, stride, count, block);
+    H5TRACE6("i","iSs*h*h*h*h",space_id,op,start,stride,count,block);
 
     /* Check args */
     if (NULL == (space=H5I_object_verify(space_id, H5I_DATASPACE)))
@@ -6945,7 +6790,7 @@ H5Scombine_hyperslab(hid_t space_id, H5S_seloper_t op, const hsize_t start[],
         HGOTO_ERROR(H5E_ARGS, H5E_UNSUPPORTED, FAIL, "invalid selection operation");
 
     /* Copy the first dataspace */
-    if (NULL == (new_space = H5S_copy (space, TRUE, TRUE)))
+    if (NULL==(new_space=H5S_copy (space, TRUE)))
         HGOTO_ERROR (H5E_DATASPACE, H5E_CANTINIT, NULL, "unable to copy data space");
 
     /* Go modify the selection in the new dataspace */
@@ -7001,7 +6846,7 @@ H5S_combine_select (H5S_t *space1, H5S_seloper_t op, H5S_t *space2)
             HGOTO_ERROR(H5E_DATASPACE, H5E_UNINITIALIZED, NULL, "dataspace does not have span tree");
 
     /* Copy the first dataspace */
-    if (NULL == (new_space = H5S_copy (space1, TRUE, TRUE)))
+    if (NULL==(new_space=H5S_copy (space1, TRUE)))
         HGOTO_ERROR (H5E_DATASPACE, H5E_CANTINIT, NULL, "unable to copy data space");
 
     /* Free the current selection for the new dataspace */
@@ -7058,7 +6903,7 @@ H5Scombine_select(hid_t space1_id, H5S_seloper_t op, hid_t space2_id)
     hid_t	ret_value;
 
     FUNC_ENTER_API(H5Scombine_select, FAIL);
-    H5TRACE3("i", "iSsi", space1_id, op, space2_id);
+    H5TRACE3("i","iSsi",space1_id,op,space2_id);
 
     /* Check args */
     if (NULL == (space1=H5I_object_verify(space1_id, H5I_DATASPACE)))
@@ -7183,7 +7028,7 @@ H5Sselect_select(hid_t space1_id, H5S_seloper_t op, hid_t space2_id)
     herr_t      ret_value=SUCCEED;       /* Return value */
 
     FUNC_ENTER_API(H5Sselect_select, FAIL);
-    H5TRACE3("e", "iSsi", space1_id, op, space2_id);
+    H5TRACE3("e","iSsi",space1_id,op,space2_id);
 
     /* Check args */
     if (NULL == (space1=H5I_object_verify(space1_id, H5I_DATASPACE)))

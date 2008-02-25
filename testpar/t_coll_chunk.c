@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "testphdf5.h"
@@ -36,7 +35,7 @@ static void coll_chunktest(const char* filename,int chunk_factor,int select_fact
 /*-------------------------------------------------------------------------
  * Function:	coll_chunk1
  *
- * Purpose:	Wrapper to test the collective chunk IO for regular JOINT 
+ * Purpose:	Wrapper to test the collective chunk IO for regular JOINT
                 selection with a single chunk
  *
  * Return:	Success:	0
@@ -53,7 +52,7 @@ static void coll_chunktest(const char* filename,int chunk_factor,int select_fact
 
 /* ------------------------------------------------------------------------
  *  Descriptions for the selection: One big singluar selection inside one chunk
- *  Two dimensions, 
+ *  Two dimensions,
  *
  *  dim1       = SPACE_DIM1(5760)*mpi_size
  *  dim2       = SPACE_DIM2(3)
@@ -83,7 +82,7 @@ coll_chunk1(void)
 /*-------------------------------------------------------------------------
  * Function:	coll_chunk2
  *
- * Purpose:	Wrapper to test the collective chunk IO for regular DISJOINT 
+ * Purpose:	Wrapper to test the collective chunk IO for regular DISJOINT
                 selection with a single chunk
  *
  * Return:	Success:	0
@@ -100,7 +99,7 @@ coll_chunk1(void)
 
  /* ------------------------------------------------------------------------
  *  Descriptions for the selection: many disjoint selections inside one chunk
- *  Two dimensions, 
+ *  Two dimensions,
  *
  *  dim1       = SPACE_DIM1*mpi_size(5760)
  *  dim2       = SPACE_DIM2(3)
@@ -112,7 +111,7 @@ coll_chunk1(void)
  *  count1     = SPACE_DIM2/stride(3/3 = 1)
  *  start0     = mpi_rank*SPACE_DIM1
  *  start1     = 0
- *  
+ *
  * ------------------------------------------------------------------------
  */
 void
@@ -130,7 +129,7 @@ coll_chunk2(void)
 /*-------------------------------------------------------------------------
  * Function:	coll_chunk3
  *
- * Purpose:	Wrapper to test the collective chunk IO for regular JOINT 
+ * Purpose:	Wrapper to test the collective chunk IO for regular JOINT
                 selection with at least number of 2*mpi_size chunks
  *
  * Return:	Success:	0
@@ -159,7 +158,7 @@ coll_chunk2(void)
  *  count1     = SPACE_DIM2(3)
  *  start0     = mpi_rank*SPACE_DIM1
  *  start1     = 0
- *  
+ *
  * ------------------------------------------------------------------------
  */
 
@@ -181,7 +180,7 @@ coll_chunk3(void)
 /*-------------------------------------------------------------------------
  * Function:	coll_chunk4
  *
- * Purpose:	Wrapper to test the collective chunk IO for regular JOINT 
+ * Purpose:	Wrapper to test the collective chunk IO for regular JOINT
                 selection with at least number of 2*mpi_size chunks
  *
  * Return:	Success:	0
@@ -210,7 +209,7 @@ coll_chunk3(void)
  *  count1     = SPACE_DIM2(3)
  *  start0     = mpi_rank*SPACE_DIM1
  *  start1     = 0
- *  
+ *
  * ------------------------------------------------------------------------
  */
 
@@ -231,7 +230,7 @@ coll_chunk4(void)
 /*-------------------------------------------------------------------------
  * Function:	coll_chunk4
  *
- * Purpose:	Wrapper to test the collective chunk IO for regular JOINT 
+ * Purpose:	Wrapper to test the collective chunk IO for regular JOINT
                 selection with at least number of 2*mpi_size chunks
  *
  * Return:	Success:	0
@@ -260,7 +259,7 @@ coll_chunk4(void)
  *  count1     = SPACE_DIM2(3)
  *  start0     = mpi_rank*SPACE_DIM1
  *  start1     = 0
- *  
+ *
  * ------------------------------------------------------------------------
  */
 
@@ -281,7 +280,7 @@ coll_chunk5(void)
 /*-------------------------------------------------------------------------
  * Function:	coll_chunk6
  *
- * Purpose:	Wrapper to test the collective chunk IO for regular JOINT 
+ * Purpose:	Wrapper to test the collective chunk IO for regular JOINT
                 selection with at least number of 2*mpi_size chunks
  *
  * Return:	Success:	0
@@ -310,7 +309,7 @@ coll_chunk5(void)
  *  count1     = SPACE_DIM2(3)
  *  start0     = mpi_rank*SPACE_DIM1
  *  start1     = 0
- *  
+ *
  * ------------------------------------------------------------------------
  */
 
@@ -331,7 +330,7 @@ coll_chunk6(void)
 /*-------------------------------------------------------------------------
  * Function:	coll_chunk7
  *
- * Purpose:	Wrapper to test the collective chunk IO for regular JOINT 
+ * Purpose:	Wrapper to test the collective chunk IO for regular JOINT
                 selection with at least number of 2*mpi_size chunks
  *
  * Return:	Success:	0
@@ -360,7 +359,7 @@ coll_chunk6(void)
  *  count1     = SPACE_DIM2(3)
  *  start0     = mpi_rank*SPACE_DIM1
  *  start1     = 0
- *  
+ *
  * ------------------------------------------------------------------------
  */
 
@@ -381,7 +380,7 @@ coll_chunk7(void)
 /*-------------------------------------------------------------------------
  * Function:	coll_chunk8
  *
- * Purpose:	Wrapper to test the collective chunk IO for regular JOINT 
+ * Purpose:	Wrapper to test the collective chunk IO for regular JOINT
                 selection with at least number of 2*mpi_size chunks
  *
  * Return:	Success:	0
@@ -410,7 +409,7 @@ coll_chunk7(void)
  *  count1     = SPACE_DIM2(3)
  *  start0     = mpi_rank*SPACE_DIM1
  *  start1     = 0
- *  
+ *
  * ------------------------------------------------------------------------
  */
 
@@ -431,7 +430,7 @@ coll_chunk8(void)
 /*-------------------------------------------------------------------------
  * Function:	coll_chunk9
  *
- * Purpose:	Wrapper to test the collective chunk IO for regular JOINT 
+ * Purpose:	Wrapper to test the collective chunk IO for regular JOINT
                 selection with at least number of 2*mpi_size chunks
  *
  * Return:	Success:	0
@@ -460,7 +459,7 @@ coll_chunk8(void)
  *  count1     = SPACE_DIM2(3)
  *  start0     = mpi_rank*SPACE_DIM1
  *  start1     = 0
- *  
+ *
  * ------------------------------------------------------------------------
  */
 
@@ -481,7 +480,7 @@ coll_chunk9(void)
 /*-------------------------------------------------------------------------
  * Function:	coll_chunk10
  *
- * Purpose:	Wrapper to test the collective chunk IO for regular JOINT 
+ * Purpose:	Wrapper to test the collective chunk IO for regular JOINT
                 selection with at least number of 2*mpi_size chunks
  *
  * Return:	Success:	0
@@ -510,7 +509,7 @@ coll_chunk9(void)
  *  count1     = SPACE_DIM2(3)
  *  start0     = mpi_rank*SPACE_DIM1
  *  start1     = 0
- *  
+ *
  * ------------------------------------------------------------------------
  */
 
@@ -535,7 +534,7 @@ coll_chunk10(void)
  * Purpose:     The real testing routine for regular selection of collective
                 chunking storage
                 testing both write and read,
-		If anything fails, it may be read or write. There is no 
+		If anything fails, it may be read or write. There is no
 		separation test between read and write.
  *
  * Return:	Success:	0
@@ -598,14 +597,14 @@ coll_chunktest(const char* filename,
 
 
   /* allocate memory for data buffer */
-  data_array1 = (int *)malloc(dims[0] * dims[1] * sizeof(int));
+  data_array1 = (int *)malloc(dims[0]*dims[1]*sizeof(int));
   VRFY((data_array1 != NULL), "data_array1 malloc succeeded");
 
   /* set up dimensions of the slab this process accesses */
   ccslab_set(mpi_rank, mpi_size, start, count, stride, block, select_factor);
 
   file_dataspace = H5Screate_simple(2, dims, NULL);
-  VRFY((file_dataspace >= 0), "file dataspace created succeeded");
+  VRFY((file_dataspace >= 0),"file dataspace created succeeded");
 
   crp_plist = H5Pcreate(H5P_DATASET_CREATE);
   VRFY((crp_plist >= 0),"");
@@ -614,36 +613,32 @@ coll_chunktest(const char* filename,
   chunk_dims[0] = dims[0]/chunk_factor;
 
   /* to decrease the testing time, maintain bigger chunk size */
- 
+
   (chunk_factor == 1) ? (chunk_dims[1] = SPACE_DIM2) : (chunk_dims[1] = SPACE_DIM2/2);
   status = H5Pset_chunk(crp_plist, 2, chunk_dims);
   VRFY((status >= 0),"chunk creation property list succeeded");
 
-  dataset = H5Dcreate2(file, DSET_COLLECTIVE_CHUNK_NAME, H5T_NATIVE_INT,
-		      file_dataspace, H5P_DEFAULT, crp_plist, H5P_DEFAULT);
+  dataset = H5Dcreate(file,DSET_COLLECTIVE_CHUNK_NAME,H5T_NATIVE_INT,
+		      file_dataspace,crp_plist);
   VRFY((dataset >= 0),"dataset created succeeded");
 
   status = H5Pclose(crp_plist);
-  VRFY((status >= 0), "");
+  VRFY((status >= 0),"");
 
   /*put some trivial data in the data array */
-  ccdataset_fill(start, stride, count,block, data_array1);
+  ccdataset_fill(start, stride,count,block, data_array1);
   MESG("data_array initialized");
 
-  status = H5Sselect_hyperslab(file_dataspace, H5S_SELECT_SET, start, stride,
+  status=H5Sselect_hyperslab(file_dataspace, H5S_SELECT_SET, start, stride,
 			     count, block);
   VRFY((status >= 0),"hyperslab selection succeeded");
 
   /* set up the collective transfer property list */
   xfer_plist = H5Pcreate(H5P_DATASET_XFER);
-  VRFY((xfer_plist >= 0), "");
+  VRFY((xfer_plist >= 0),"");
 
   status = H5Pset_dxpl_mpio(xfer_plist, H5FD_MPIO_COLLECTIVE);
   VRFY((status>= 0),"MPIO collective transfer property succeeded");
-  if(dxfer_coll_type == DXFER_INDEPENDENT_IO) {
-     status = H5Pset_dxpl_mpio_collective_opt(xfer_plist, H5FD_MPIO_INDIVIDUAL_IO);
-     VRFY((status>= 0),"set independent IO collectively succeeded");
-  }
 
   switch(api_option){
 	case API_LINK_HARD:
@@ -676,59 +671,56 @@ coll_chunktest(const char* filename,
 	break;
 	default:
 	;
-   } 
-   
+   }
+
 #ifdef H5_HAVE_INSTRUMENTED_LIBRARY
   if(facc_type == FACC_MPIO) {
-      switch(api_option) {
-            case API_LINK_HARD:
-               prop_value = H5D_XFER_COLL_CHUNK_DEF;
-               status = H5Pinsert2(xfer_plist, H5D_XFER_COLL_CHUNK_LINK_HARD_NAME, H5D_XFER_COLL_CHUNK_SIZE, &prop_value,
-                           NULL, NULL, NULL, NULL, NULL, NULL);
-               VRFY((status >= 0),"testing property list inserted succeeded");
-            break;
+  switch(api_option){
+	case API_LINK_HARD:
+           prop_value = H5D_XFER_COLL_CHUNK_DEF;
+           status = H5Pinsert(xfer_plist,H5D_XFER_COLL_CHUNK_LINK_HARD_NAME,H5D_XFER_COLL_CHUNK_SIZE,&prop_value,
+                       NULL,NULL,NULL,NULL,NULL,NULL);
+           VRFY((status >= 0),"testing property list inserted succeeded");
+	break;
+	case API_MULTI_HARD:
+           prop_value = H5D_XFER_COLL_CHUNK_DEF;
+           status = H5Pinsert(xfer_plist,H5D_XFER_COLL_CHUNK_MULTI_HARD_NAME,H5D_XFER_COLL_CHUNK_SIZE,&prop_value,
+                       NULL,NULL,NULL,NULL,NULL,NULL);
+           VRFY((status >= 0),"testing property list inserted succeeded");
+	break;
+	case API_LINK_TRUE:
+           prop_value = H5D_XFER_COLL_CHUNK_DEF;
+           status = H5Pinsert(xfer_plist,H5D_XFER_COLL_CHUNK_LINK_NUM_TRUE_NAME,H5D_XFER_COLL_CHUNK_SIZE,&prop_value,
+                       NULL,NULL,NULL,NULL,NULL,NULL);
+           VRFY((status >= 0),"testing property list inserted succeeded");
+	break;
+	case API_LINK_FALSE:
+           prop_value = H5D_XFER_COLL_CHUNK_DEF;
+           status = H5Pinsert(xfer_plist,H5D_XFER_COLL_CHUNK_LINK_NUM_FALSE_NAME,H5D_XFER_COLL_CHUNK_SIZE,&prop_value,
+                       NULL,NULL,NULL,NULL,NULL,NULL);
+           VRFY((status >= 0),"testing property list inserted succeeded");
 
-            case API_MULTI_HARD:
-               prop_value = H5D_XFER_COLL_CHUNK_DEF;   
-               status = H5Pinsert2(xfer_plist, H5D_XFER_COLL_CHUNK_MULTI_HARD_NAME, H5D_XFER_COLL_CHUNK_SIZE, &prop_value,
-                           NULL, NULL, NULL, NULL, NULL, NULL);
-               VRFY((status >= 0),"testing property list inserted succeeded");
-            break;
+	break;
+	case API_MULTI_COLL:
+           prop_value = H5D_XFER_COLL_CHUNK_DEF;
+           status = H5Pinsert(xfer_plist,H5D_XFER_COLL_CHUNK_MULTI_RATIO_COLL_NAME,H5D_XFER_COLL_CHUNK_SIZE,&prop_value,
+                       NULL,NULL,NULL,NULL,NULL,NULL);
+           VRFY((status >= 0),"testing property list inserted succeeded");
 
-            case API_LINK_TRUE:
-               prop_value = H5D_XFER_COLL_CHUNK_DEF;   
-               status = H5Pinsert2(xfer_plist, H5D_XFER_COLL_CHUNK_LINK_NUM_TRUE_NAME, H5D_XFER_COLL_CHUNK_SIZE, &prop_value,
-                           NULL, NULL, NULL, NULL, NULL, NULL);
-               VRFY((status >= 0),"testing property list inserted succeeded");
-            break;
+	break;
+	case API_MULTI_IND:
+           prop_value = H5D_XFER_COLL_CHUNK_DEF;
+           status = H5Pinsert(xfer_plist,H5D_XFER_COLL_CHUNK_MULTI_RATIO_IND_NAME,H5D_XFER_COLL_CHUNK_SIZE,&prop_value,
+                       NULL,NULL,NULL,NULL,NULL,NULL);
+           VRFY((status >= 0),"testing property list inserted succeeded");
 
-            case API_LINK_FALSE:
-               prop_value = H5D_XFER_COLL_CHUNK_DEF;   
-               status = H5Pinsert2(xfer_plist, H5D_XFER_COLL_CHUNK_LINK_NUM_FALSE_NAME, H5D_XFER_COLL_CHUNK_SIZE, &prop_value,
-                           NULL, NULL, NULL, NULL, NULL, NULL);
-               VRFY((status >= 0),"testing property list inserted succeeded");
-            break;
-
-            case API_MULTI_COLL:
-               prop_value = H5D_XFER_COLL_CHUNK_DEF;   
-               status = H5Pinsert2(xfer_plist, H5D_XFER_COLL_CHUNK_MULTI_RATIO_COLL_NAME, H5D_XFER_COLL_CHUNK_SIZE, &prop_value,
-                           NULL, NULL, NULL, NULL, NULL, NULL);
-               VRFY((status >= 0),"testing property list inserted succeeded");
-            break;
-
-            case API_MULTI_IND:
-               prop_value = H5D_XFER_COLL_CHUNK_DEF;   
-               status = H5Pinsert2(xfer_plist, H5D_XFER_COLL_CHUNK_MULTI_RATIO_IND_NAME, H5D_XFER_COLL_CHUNK_SIZE, &prop_value,
-                           NULL, NULL, NULL, NULL, NULL, NULL);
-               VRFY((status >= 0),"testing property list inserted succeeded");
-            break;
-
-            default:
-                ;
-       } 
+	break;
+	default:
+	;
+   }
    }
 #endif
-  
+
   /* write data collectively */
   status = H5Dwrite(dataset, H5T_NATIVE_INT, H5S_ALL, file_dataspace,
 		    xfer_plist, data_array1);
@@ -736,40 +728,40 @@ coll_chunktest(const char* filename,
 
 #ifdef H5_HAVE_INSTRUMENTED_LIBRARY
   if(facc_type == FACC_MPIO) {
-      switch(api_option){
-            case API_LINK_HARD:
-               status = H5Pget(xfer_plist,H5D_XFER_COLL_CHUNK_LINK_HARD_NAME,&prop_value);
-               VRFY((status >= 0),"testing property list get succeeded");
-               VRFY((prop_value == 0),"API to set LINK COLLECTIVE IO without optimization succeeded");
-            break;
-            case API_MULTI_HARD:
-               status = H5Pget(xfer_plist,H5D_XFER_COLL_CHUNK_MULTI_HARD_NAME,&prop_value);
-               VRFY((status >= 0),"testing property list get succeeded");
-               VRFY((prop_value == 0),"API to set MULTI-CHUNK COLLECTIVE IO without optimization succeeded");
-            break;
-            case API_LINK_TRUE:
-               status = H5Pget(xfer_plist,H5D_XFER_COLL_CHUNK_LINK_NUM_TRUE_NAME,&prop_value);
-               VRFY((status >= 0),"testing property list get succeeded");
-               VRFY((prop_value == 0),"API to set LINK COLLECTIVE IO with true optimization succeeded");
-            break;
-            case API_LINK_FALSE:
-               status = H5Pget(xfer_plist,H5D_XFER_COLL_CHUNK_LINK_NUM_FALSE_NAME,&prop_value);
-               VRFY((status >= 0),"testing property list get succeeded");
-               VRFY((prop_value == 0),"API to set LINK IO transferring to multi-chunk IO succeeded");
-            break;
-            case API_MULTI_COLL:
-               status = H5Pget(xfer_plist,H5D_XFER_COLL_CHUNK_MULTI_RATIO_COLL_NAME,&prop_value);
-               VRFY((status >= 0),"testing property list get succeeded");
-               VRFY((prop_value == 0),"API to set MULTI-CHUNK COLLECTIVE IO with optimization succeeded");
-            break;
-            case API_MULTI_IND:
-               status = H5Pget(xfer_plist,H5D_XFER_COLL_CHUNK_MULTI_RATIO_IND_NAME,&prop_value);
-               VRFY((status >= 0),"testing property list get succeeded");
-               VRFY((prop_value == 0),"API to set MULTI-CHUNK IO transferring to independent IO  succeeded");
-            break;
-            default:
-            ;
-       } 
+  switch(api_option){
+	case API_LINK_HARD:
+           status = H5Pget(xfer_plist,H5D_XFER_COLL_CHUNK_LINK_HARD_NAME,&prop_value);
+           VRFY((status >= 0),"testing property list get succeeded");
+           VRFY((prop_value == 0),"API to set LINK COLLECTIVE IO without optimization succeeded");
+	break;
+	case API_MULTI_HARD:
+           status = H5Pget(xfer_plist,H5D_XFER_COLL_CHUNK_MULTI_HARD_NAME,&prop_value);
+           VRFY((status >= 0),"testing property list get succeeded");
+           VRFY((prop_value == 0),"API to set MULTI-CHUNK COLLECTIVE IO without optimization succeeded");
+	break;
+	case API_LINK_TRUE:
+           status = H5Pget(xfer_plist,H5D_XFER_COLL_CHUNK_LINK_NUM_TRUE_NAME,&prop_value);
+           VRFY((status >= 0),"testing property list get succeeded");
+           VRFY((prop_value == 0),"API to set LINK COLLECTIVE IO with true optimization succeeded");
+	break;
+	case API_LINK_FALSE:
+           status = H5Pget(xfer_plist,H5D_XFER_COLL_CHUNK_LINK_NUM_FALSE_NAME,&prop_value);
+           VRFY((status >= 0),"testing property list get succeeded");
+           VRFY((prop_value == 0),"API to set LINK IO transferring to multi-chunk IO succeeded");
+	break;
+	case API_MULTI_COLL:
+           status = H5Pget(xfer_plist,H5D_XFER_COLL_CHUNK_MULTI_RATIO_COLL_NAME,&prop_value);
+           VRFY((status >= 0),"testing property list get succeeded");
+           VRFY((prop_value == 0),"API to set MULTI-CHUNK COLLECTIVE IO with optimization succeeded");
+	break;
+	case API_MULTI_IND:
+           status = H5Pget(xfer_plist,H5D_XFER_COLL_CHUNK_MULTI_RATIO_IND_NAME,&prop_value);
+           VRFY((status >= 0),"testing property list get succeeded");
+           VRFY((prop_value == 0),"API to set MULTI-CHUNK IO transferring to independent IO  succeeded");
+	break;
+	default:
+	;
+   }
    }
 #endif
 
@@ -787,7 +779,7 @@ coll_chunktest(const char* filename,
 
   if (data_array1) HDfree(data_array1);
 
-  
+
   /* Use collective read to verify the correctness of collective write. */
 
   /* allocate memory for data buffer */
@@ -808,7 +800,7 @@ coll_chunktest(const char* filename,
   VRFY((status >= 0),"");
 
   /* open the collective dataset*/
-  dataset = H5Dopen2(file, DSET_COLLECTIVE_CHUNK_NAME, H5P_DEFAULT);
+  dataset = H5Dopen(file, DSET_COLLECTIVE_CHUNK_NAME);
   VRFY((dataset >= 0), "");
 
   /* set up dimensions of the slab this process accesses */
@@ -828,11 +820,6 @@ coll_chunktest(const char* filename,
 
   status = H5Pset_dxpl_mpio(xfer_plist, H5FD_MPIO_COLLECTIVE);
   VRFY((status>= 0),"MPIO collective transfer property succeeded");
-  if(dxfer_coll_type == DXFER_INDEPENDENT_IO) {
-     status = H5Pset_dxpl_mpio_collective_opt(xfer_plist,H5FD_MPIO_INDIVIDUAL_IO);
-     VRFY((status>= 0),"set independent IO collectively succeeded");
-  }
-
 
   status = H5Dread(dataset, H5T_NATIVE_INT, H5S_ALL, file_dataspace,
                    xfer_plist, data_array1);
@@ -864,12 +851,12 @@ coll_chunktest(const char* filename,
 
 /* Set up the selection */
 static void
-ccslab_set(int mpi_rank, 
-	   int mpi_size, 
-	   hsize_t start[], 
+ccslab_set(int mpi_rank,
+	   int mpi_size,
+	   hsize_t start[],
 	   hsize_t count[],
-	   hsize_t stride[], 
-	   hsize_t block[], 
+	   hsize_t stride[],
+	   hsize_t block[],
 	   int mode)
 {
 
@@ -918,7 +905,7 @@ ccslab_set(int mpi_rank,
     case BYROW_SELECTUNBALANCE:
       /* The first one-third of the number of processes only
          select top half of the domain, The rest will select the bottom
-         half of the domain. */   
+         half of the domain. */
 
         block[0]  = 1;
 	count[0]  = 2;
@@ -928,9 +915,9 @@ ccslab_set(int mpi_rank,
         start[1]  = 0;
         stride[1] = 1;
 	if((mpi_rank *3)<(mpi_size*2)) start[0]  = mpi_rank;
-	else start[0] = 1 + SPACE_DIM1*mpi_size/2 + (mpi_rank-2*mpi_size/3);      
+	else start[0] = 1 + SPACE_DIM1*mpi_size/2 + (mpi_rank-2*mpi_size/3);
         break;
-         
+
     case BYROW_SELECTINCHUNK:
       /* Each process will only select one chunk */
 
@@ -972,10 +959,10 @@ ccslab_set(int mpi_rank,
  * Assume dimension rank is 2.
  */
 static void
-ccdataset_fill(hsize_t start[], 
+ccdataset_fill(hsize_t start[],
 	       hsize_t stride[],
-	       hsize_t count[], 
-	       hsize_t block[], 
+	       hsize_t count[],
+	       hsize_t block[],
 	       DATATYPE * dataset)
 {
     DATATYPE *dataptr = dataset;
@@ -1007,8 +994,8 @@ ccdataset_fill(hsize_t start[],
  * Print the first block of the content of the dataset.
  */
 static void
-ccdataset_print(hsize_t start[], 
-		hsize_t block[], 
+ccdataset_print(hsize_t start[],
+		hsize_t block[],
 		DATATYPE * dataset)
 
 {
@@ -1038,11 +1025,11 @@ ccdataset_print(hsize_t start[],
  * Print the content of the dataset.
  */
 static int
-ccdataset_vrfy(hsize_t start[], 
-	       hsize_t count[], 
-	       hsize_t stride[], 
-	       hsize_t block[], 
-	       DATATYPE *dataset, 
+ccdataset_vrfy(hsize_t start[],
+	       hsize_t count[],
+	       hsize_t stride[],
+	       hsize_t block[],
+	       DATATYPE *dataset,
 	       DATATYPE *original)
 {
     hsize_t i, j,k1,k2;

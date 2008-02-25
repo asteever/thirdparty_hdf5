@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -848,17 +847,17 @@ do_write(results *res, file_descr *fd, parameters *parms, long ndsets,
 		}/* end else */
 
 		sprintf(dname, "Dataset_%ld", ndset);
-		h5ds_id = H5Dcreate2(fd->h5fd, dname, ELMT_H5_TYPE,
-			h5dset_space_id, H5P_DEFAULT, h5dcpl, H5P_DEFAULT);
+		h5ds_id = H5Dcreate(fd->h5fd, dname, ELMT_H5_TYPE,
+			h5dset_space_id, h5dcpl);
 
-		if(h5ds_id < 0) {
+		if (h5ds_id < 0) {
 		    fprintf(stderr, "HDF5 Dataset Create failed\n");
 		    GOTOERROR(FAIL);
 		}
 
 		hrc = H5Pclose(h5dcpl);
 		/* verifying the close of the dcpl */
-		if(hrc < 0) {
+		if (hrc < 0) {
 		    fprintf(stderr, "HDF5 Property List Close failed\n");
 		    GOTOERROR(FAIL);
 		}
@@ -1667,12 +1666,12 @@ do_read(results *res, file_descr *fd, parameters *parms, long ndsets,
 	    break;
     } /* end switch */
 
-    for(ndset = 1; ndset <= ndsets; ++ndset) {
+    for (ndset = 1; ndset <= ndsets; ++ndset) {
 
 	/* Calculate dataset offset within a file */
 
 	/* create dataset */
-	switch(parms->io_type) {
+	switch (parms->io_type) {
 	    case POSIXIO:
 	    case MPIO:
 		/* both posix and mpi io just need dataset offset in file*/
@@ -1681,11 +1680,12 @@ do_read(results *res, file_descr *fd, parameters *parms, long ndsets,
 
 	    case PHDF5:
 		sprintf(dname, "Dataset_%ld", ndset);
-		h5ds_id = H5Dopen2(fd->h5fd, dname, H5P_DEFAULT);
-		if(h5ds_id < 0) {
+		h5ds_id = H5Dopen(fd->h5fd, dname);
+		if (h5ds_id < 0) {
 		    fprintf(stderr, "HDF5 Dataset open failed\n");
 		    GOTOERROR(FAIL);
 		}
+
 		break;
 	}
 

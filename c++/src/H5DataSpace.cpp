@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifdef OLD_HEADER_FILENAME
@@ -137,8 +136,10 @@ void DataSpace::copy( const DataSpace& like_space )
 DataSpace& DataSpace::operator=( const DataSpace& rhs )
 {
     if (this != &rhs)
-        copy(rhs);
-    return(*this);
+    {
+	copy(rhs);
+	return(*this);
+    }
 }
 
 //--------------------------------------------------------------------------
@@ -454,7 +455,7 @@ void DataSpace::getSelectBounds ( hsize_t* start, hsize_t* end ) const
 /// http://hdf.ncsa.uiuc.edu/HDF5/doc/RM_H5S.html#Dataspace-SelectElements
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-void DataSpace::selectElements ( H5S_seloper_t op, const size_t num_elements, const hsize_t *coord) const
+void DataSpace::selectElements ( H5S_seloper_t op, const size_t num_elements, const hsize_t *coord[ ] ) const
 {
    herr_t ret_value;
    ret_value = H5Sselect_elements( id, op, num_elements, coord );

@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -25,33 +24,11 @@
 /* Private headers needed by this file */
 #include "H5Gprivate.h"		/* Groups				*/
 
-
-/**************************/
-/* Library Private Macros */
-/**************************/
-
-
-/****************************/
-/* Library Private Typedefs */
-/****************************/
-
 /* Forward references of package typedefs */
 typedef struct H5A_t H5A_t;
-typedef struct H5A_attr_iter_op_t H5A_attr_iter_op_t;
 
-
-/*****************************/
-/* Library-private Variables */
-/*****************************/
-
-
-/***************************************/
-/* Library-private Function Prototypes */
-/***************************************/
-
-/* General attribute routines */
+/* Library private functions in package */
 H5_DLL struct H5O_loc_t *H5A_oloc(H5A_t *attr);
 H5_DLL H5G_name_t *H5A_nameof(H5A_t *attr);
 
-#endif /* _H5Aprivate_H */
-
+#endif

@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*-------------------------------------------------------------------------
@@ -488,9 +487,6 @@ static const char * H5AC_entry_type_names[H5AC_NTYPES] =
     "fractal heap direct blocks",
     "fractal heap indirect blocks",
     "free space headers",
-    "free space sections",
-    "shared OH message master table",
-    "shared OH message index",
     "test entry"	/* for testing only -- not used for actual files */
 };
 
@@ -1872,14 +1868,6 @@ done:
  *		JRM - 6/6/06
  *		Added trace file support.
  *
- *		JRM - 3/18/07
- *		Modified code to support the new flags parameter for 
- *		H5C_protect().  For now, that means passing in the 
- *		H5C_READ_ONLY_FLAG if rw == H5AC_READ.
- *
- *		Also updated the trace file output to save the 
- *		rw parameter, since we are now doing something with it.
- *
  *-------------------------------------------------------------------------
  */
 void *
@@ -1889,10 +1877,9 @@ H5AC_protect(H5F_t *f,
              haddr_t addr,
 	     const void *udata1,
              void *udata2,
-             H5AC_protect_t rw)
+             H5AC_protect_t UNUSED rw)
 {
     /* char *		fcn_name = "H5AC_protect"; */
-    unsigned		protect_flags = H5C__NO_FLAGS_SET;
     void *		thing = (void *)NULL;
     void *		ret_value;      /* Return value */
 #if H5AC__TRACE_FILE_ENABLED
@@ -1905,16 +1892,11 @@ H5AC_protect(H5F_t *f,
 
     /* check args */
     HDassert(f);
-    HDassert(f->shared);
     HDassert(f->shared->cache);
     HDassert(type);
     HDassert(type->flush);
     HDassert(type->load);
     HDassert(H5F_addr_defined(addr));
-
-    /* Check for invalid access request */
-    if(0 == (f->intent & H5F_ACC_RDWR) && rw == H5AC_WRITE)
-	HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, NULL, "no write intent on file")
 
 #if H5AC__TRACE_FILE_ENABLED
     /* For the protect call, only the addr and type id is really necessary 
@@ -1928,32 +1910,11 @@ H5AC_protect(H5F_t *f,
          ( H5C_get_trace_file_ptr(f->shared->cache, &trace_file_ptr) >= 0 ) &&
          ( trace_file_ptr != NULL ) ) {
 
-	char * rw_string;
-
-        if ( rw == H5AC_WRITE ) {
-
-	    rw_string = "H5AC_WRITE";
-
-	} else if ( rw == H5AC_READ ) {
-
-	    rw_string = "H5AC_READ";
-
-	} else {
-
-	    rw_string = "???";
-	}
-
-        sprintf(trace, "H5AC_protect %lx %d %s",
+        sprintf(trace, "H5AC_protect %lx %d",
 	        (unsigned long)addr,
-		(int)(type->id),
-		rw_string);
+		(int)(type->id));
     }
 #endif /* H5AC__TRACE_FILE_ENABLED */
-
-    if ( rw == H5AC_READ ) {
-
-	protect_flags |= H5C__READ_ONLY_FLAG;
-    }
 
     thing = H5C_protect(f,
                         dxpl_id,
@@ -1962,8 +1923,7 @@ H5AC_protect(H5F_t *f,
                         type,
                         addr,
                         udata1,
-                        udata2,
-			protect_flags);
+                        udata2);
 
     if ( thing == NULL ) {
 
@@ -2040,7 +2000,7 @@ H5AC_resize_pinned_entry(H5F_t * f,
          ( H5C_get_trace_file_ptr(f->shared->cache, &trace_file_ptr) >= 0 ) &&
          ( trace_file_ptr != NULL ) ) {
 
-        sprintf(trace, "H5AC_resize_pinned_entry 0x%lx %d",
+        sprintf(trace, "H5AC_resize_pinned_entry 0x%lx %d %d",
 	        (unsigned long)(((H5C_cache_entry_t *)thing)->addr),
 		(int)new_size);
     }
@@ -2311,7 +2271,7 @@ H5AC_unprotect(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type, haddr_t addr,
          ( H5C_get_trace_file_ptr(f->shared->cache, &trace_file_ptr) >= 0 ) &&
          ( trace_file_ptr != NULL ) ) {
 
-        sprintf(trace, "H5AC_unprotect %lx %d",
+        sprintf(trace, "H5AC_protect %lx %d",
 	        (unsigned long)addr,
 		(int)(type->id));
 
@@ -2537,19 +2497,6 @@ done:
  *		JRM - 6/8/06
  *		Added support for the new trace file related fields.
  *
- *		JRM - 7/28/07
- *		Added support for the new evictions enabled related fields.
- *		
- *		Observe that H5AC_get_cache_auto_resize_config() and 
- *		H5AC_set_cache_auto_resize_config() are becoming generic
- *		metadata cache configuration routines as they gain 
- *		switches for functions that are only tenuously related 
- *		to auto resize configuration.
- *
- *		JRM - 1/2/08
- *		Added support for the new flash cache increment related
- *		fields.
- *
  *-------------------------------------------------------------------------
  */
 
@@ -2559,7 +2506,6 @@ H5AC_get_cache_auto_resize_config(H5AC_t * cache_ptr,
 {
     herr_t result;
     herr_t ret_value = SUCCEED;      /* Return value */
-    hbool_t evictions_enabled;
     H5C_auto_size_ctl_t internal_config;
 
     FUNC_ENTER_NOAPI(H5AC_get_cache_auto_resize_config, FAIL)
@@ -2595,14 +2541,6 @@ H5AC_get_cache_auto_resize_config(H5AC_t * cache_ptr,
                     "H5C_get_cache_auto_resize_config() failed.")
     }
 
-    result = H5C_get_evictions_enabled((H5C_t *)cache_ptr, &evictions_enabled);
-
-    if ( result < 0 ) {
-
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-		    "H5C_get_resize_enabled() failed.")
-    }
-
     if ( internal_config.rpt_fcn == NULL ) {
 
         config_ptr->rpt_fcn_enabled = FALSE;
@@ -2615,7 +2553,6 @@ H5AC_get_cache_auto_resize_config(H5AC_t * cache_ptr,
     config_ptr->open_trace_file        = FALSE;
     config_ptr->close_trace_file       = FALSE;
     config_ptr->trace_file_name[0]     = '\0';
-    config_ptr->evictions_enabled      = evictions_enabled;
     config_ptr->set_initial_size       = internal_config.set_initial_size;
     config_ptr->initial_size           = internal_config.initial_size;
     config_ptr->min_clean_fraction     = internal_config.min_clean_fraction;
@@ -2629,9 +2566,6 @@ H5AC_get_cache_auto_resize_config(H5AC_t * cache_ptr,
     config_ptr->max_increment          = internal_config.max_increment;
     config_ptr->decr_mode              = internal_config.decr_mode;
     config_ptr->upper_hr_threshold     = internal_config.upper_hr_threshold;
-    config_ptr->flash_incr_mode	       = internal_config.flash_incr_mode;
-    config_ptr->flash_multiple	       = internal_config.flash_multiple;
-    config_ptr->flash_threshold	       = internal_config.flash_threshold;
     config_ptr->decrement              = internal_config.decrement;
     config_ptr->apply_max_decrement    = internal_config.apply_max_decrement;
     config_ptr->max_decrement          = internal_config.max_decrement;
@@ -2814,19 +2748,6 @@ done:
  *		John Mainzer -- 6/7/06
  *		Added trace file support.
  *
- *		John Mainzer -- 7/28/07
- *		Added support for the new evictions enabled related fields.
- *		
- *		Observe that H5AC_get_cache_auto_resize_config() and 
- *		H5AC_set_cache_auto_resize_config() are becoming generic
- *		metadata cache configuration routines as they gain 
- *		switches for functions that are only tenuously related 
- *		to auto resize configuration.
- *
- *		John Mainzer -- 1/3/07
- *		Updated trace file code to record the new flash cache 
- *		size increase related fields.
- *
  *-------------------------------------------------------------------------
  */
 
@@ -2837,6 +2758,7 @@ H5AC_set_cache_auto_resize_config(H5AC_t * cache_ptr,
     /* const char *        fcn_name = "H5AC_set_cache_auto_resize_config"; */
     herr_t              result;
     herr_t              ret_value = SUCCEED;      /* Return value */
+    int                 name_len;
     H5C_auto_size_ctl_t internal_config;
 #if H5AC__TRACE_FILE_ENABLED
     H5AC_cache_config_t trace_config = H5AC__DEFAULT_CACHE_CONFIG;
@@ -2873,11 +2795,56 @@ H5AC_set_cache_auto_resize_config(H5AC_t * cache_ptr,
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "bad cache_ptr on entry.")
     }
 
-    result = H5AC_validate_config(config_ptr);
+    if ( config_ptr == NULL ) {
 
-    if ( result != SUCCEED ) {
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "NULL config_ptr on entry.")
+    }
 
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Bad cache configuration");
+    if ( config_ptr->version != H5AC__CURR_CACHE_CONFIG_VERSION ) {
+
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Unknown config version.")
+    }
+
+    if ( ( config_ptr->rpt_fcn_enabled != TRUE ) &&
+         ( config_ptr->rpt_fcn_enabled != FALSE ) ) {
+
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, \
+                    "config_ptr->rpt_fcn_enabled must be either TRUE or FALSE.")
+    }
+
+    if ( ( config_ptr->open_trace_file != TRUE ) &&
+         ( config_ptr->open_trace_file != FALSE ) ) {
+
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, \
+                    "config_ptr->open_trace_file must be either TRUE or FALSE.")
+    }
+
+    if ( ( config_ptr->close_trace_file != TRUE ) &&
+         ( config_ptr->close_trace_file != FALSE ) ) {
+
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, \
+                  "config_ptr->close_trace_file must be either TRUE or FALSE.")
+    }
+
+    /* don't bother to test trace_file_name unless open_trace_file is TRUE */
+    if ( config_ptr->open_trace_file ) {
+
+        /* Can't really test the trace_file_name field without trying to
+         * open the file, so we will content ourselves with a couple of
+         * sanity checks on the length of the file name.
+         */
+        name_len = HDstrlen(config_ptr->trace_file_name);
+
+        if ( name_len <= 0 ) {
+
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, \
+                        "config_ptr->trace_file_name is empty.")
+
+        } else if ( name_len > H5AC__MAX_TRACE_FILE_NAME_LEN ) {
+
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, \
+                        "config_ptr->trace_file_name too long.")
+        }
     }
 
     if ( config_ptr->open_trace_file ) {
@@ -2950,16 +2917,6 @@ H5AC_set_cache_auto_resize_config(H5AC_t * cache_ptr,
                     "H5C_set_cache_auto_resize_config() failed.")
     }
 
-
-    result = H5C_set_evictions_enabled((H5C_t *)cache_ptr,
-                                       config_ptr->evictions_enabled);
-
-    if ( result < 0 ) {
-
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-                    "H5C_set_evictions_enabled() failed.")
-    }
-
 #ifdef H5_HAVE_PARALLEL
     if ( cache_ptr->aux_ptr != NULL ) {
 
@@ -2980,14 +2937,13 @@ done:
          ( trace_file_ptr != NULL ) ) {
 
 	HDfprintf(trace_file_ptr, 
-                  "%s %d %d %d %d \"%s\" %d %d %d %f %d %d %ld %d %f %f %d %f %f %d %d %d %f %f %d %d %d %d %f %d %d\n", 
+                  "%s %d %d %d %d \"%s\" %d %d %f %d %d %ld %d %f %f %d %d %d %f %f %d %d %d %d %f %d %d\n", 
 		  "H5AC_set_cache_auto_resize_config",
 		  trace_config.version,
 		  (int)(trace_config.rpt_fcn_enabled),
 		  (int)(trace_config.open_trace_file),
 		  (int)(trace_config.close_trace_file),
 		  trace_config.trace_file_name,
-		  (int)(trace_config.evictions_enabled),
 		  (int)(trace_config.set_initial_size),
 		  (int)(trace_config.initial_size),
 		  trace_config.min_clean_fraction,
@@ -2997,9 +2953,6 @@ done:
 		  (int)(trace_config.incr_mode),
 		  trace_config.lower_hr_threshold,
 		  trace_config.increment,
-		  (int)(trace_config.flash_incr_mode),
-		  trace_config.flash_multiple,
-		  trace_config.flash_threshold,
 		  (int)(trace_config.apply_max_increment),
 		  (int)(trace_config.max_increment),
 		  (int)(trace_config.decr_mode),
@@ -3047,13 +3000,6 @@ done:
  *              be caught until the directives contained in these fields
  *              are applied.
  *              					JRM - 5/15/06
- *
- *	      - Added code testing the evictions enabled field.  At 
- *	        present this consists of verifying that if 
- *	        evictions_enabled is FALSE, then automatic cache 
- *		resizing in disabled.
- *
- *	        					JRM - 7/28/07
  *
  *-------------------------------------------------------------------------
  */
@@ -3119,21 +3065,6 @@ H5AC_validate_config(H5AC_cache_config_t * config_ptr)
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, \
                         "config_ptr->trace_file_name too long.")
 	}
-    }
-
-    if ( ( config_ptr->evictions_enabled != TRUE ) &&
-         ( config_ptr->evictions_enabled != FALSE ) ) {
-
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, \
-            "config_ptr->evictions_enabled must be either TRUE or FALSE.")
-    }
-
-    if ( ( config_ptr->evictions_enabled == FALSE ) &&
-	 ( ( config_ptr->incr_mode != H5C_incr__off ) || 
-	   ( config_ptr->incr_mode != H5C_decr__off ) ) ) {
-
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, \
-                    "Can't disable evictions while auto-resize is enabled.")
     }
 
     if ( config_ptr->dirty_bytes_threshold < H5AC__MIN_DIRTY_BYTES_THRESHOLD ) {
@@ -3632,9 +3563,7 @@ done:
  *
  * Modifications:
  *
- *              Updated function for flash cache increment fields.
- *
- *              				JRM -- 1/2/08
+ *              None.
  *
  *-------------------------------------------------------------------------
  */
@@ -3677,9 +3606,6 @@ H5AC_ext_config_2_int_config(H5AC_cache_config_t * ext_conf_ptr,
     int_conf_ptr->increment              = ext_conf_ptr->increment;
     int_conf_ptr->apply_max_increment    = ext_conf_ptr->apply_max_increment;
     int_conf_ptr->max_increment          = ext_conf_ptr->max_increment;
-    int_conf_ptr->flash_incr_mode	 = ext_conf_ptr->flash_incr_mode;
-    int_conf_ptr->flash_multiple	 = ext_conf_ptr->flash_multiple;
-    int_conf_ptr->flash_threshold	 = ext_conf_ptr->flash_threshold;
 
     int_conf_ptr->decr_mode              = ext_conf_ptr->decr_mode;
     int_conf_ptr->upper_hr_threshold     = ext_conf_ptr->upper_hr_threshold;

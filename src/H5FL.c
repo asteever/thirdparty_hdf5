@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -99,10 +98,6 @@ typedef struct H5FL_blk_gc_list_t {
 static H5FL_blk_gc_list_t H5FL_blk_gc_head={0,NULL};
 
 #ifdef H5FL_TRACK
-
-/* Extra headers needed */
-#include "H5CSprivate.h"	/* Function stack			*/
-
 /* Head of "outstanding allocations" list */
 static H5FL_track_t *H5FL_out_head_g = NULL;
 #endif /* H5FL_TRACK */
@@ -381,7 +376,7 @@ H5FL_reg_malloc(H5FL_reg_head_t *head H5FL_TRACK_PARAMS)
 
 #ifdef H5FL_TRACK
     /* Copy allocation location information */
-    ((H5FL_track_t *)ret_value)->stack = H5MM_calloc(sizeof(H5CS_t));
+    ((H5FL_track_t *)ret_value)->stack = H5MM_malloc(sizeof(H5CS_t));
     H5CS_copy_stack(((H5FL_track_t *)ret_value)->stack);
     ((H5FL_track_t *)ret_value)->file = H5MM_strdup(call_file);
     ((H5FL_track_t *)ret_value)->func = H5MM_strdup(call_func);
@@ -879,7 +874,7 @@ H5FL_blk_malloc(H5FL_blk_head_t *head, size_t size H5FL_TRACK_PARAMS)
 
 #ifdef H5FL_TRACK
     /* Copy allocation location information */
-    ((H5FL_track_t *)ret_value)->stack = H5MM_calloc(sizeof(H5CS_t));
+    ((H5FL_track_t *)ret_value)->stack = H5MM_malloc(sizeof(H5CS_t));
     H5CS_copy_stack(((H5FL_track_t *)ret_value)->stack);
     ((H5FL_track_t *)ret_value)->file = H5MM_strdup(call_file);
     ((H5FL_track_t *)ret_value)->func = H5MM_strdup(call_func);
@@ -1508,11 +1503,11 @@ H5FL_arr_malloc(H5FL_arr_head_t *head, size_t elem)
         if(H5FL_arr_init(head)<0)
             HGOTO_ERROR (H5E_RESOURCE, H5E_CANTINIT, NULL, "can't initialize 'array' blocks")
 
-    /* Sanity check that the number of elements is supported */
-    assert(elem<=(unsigned) head->maxelem);
-
     /* Get the set of the memory block */
     mem_size=head->list_arr[elem].size;
+
+    /* Sanity check that the number of elements is supported */
+    assert((int)elem<=head->maxelem);
 
     /* Check for nodes available on the free list first */
     if(head->list_arr[elem].list!=NULL) {

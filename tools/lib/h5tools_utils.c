@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -30,7 +29,6 @@
 
 #include "h5tools_utils.h"
 #include "H5private.h"
-#include "h5trav.h"
 
 /* global variables */
 int   nCols = 80;
@@ -45,18 +43,20 @@ static void init_table(table_t **tbl);
 #ifdef H5DUMP_DEBUG
 static void dump_table(char* tablename, table_t *table);
 #endif  /* H5DUMP_DEBUG */
-static void add_obj(table_t *table, haddr_t objno, const char *objname, hbool_t recorded);
+static void add_obj(table_t *table, haddr_t objno, char *objname, hbool_t recorded);
+static char * build_obj_path_name(const char *prefix, const char *name);
+static herr_t find_objs_cb(hid_t group, const char *name, void *op_data);
 
 
 /*-------------------------------------------------------------------------
- * Function:    error_msg
+ * Function:	error_msg
  *
- * Purpose: Print a nicely formatted error message to stderr flushing the
+ * Purpose:	Print a nicely formatted error message to stderr flushing the
  *              stdout stream first.
  *
- * Return:  Nothing
+ * Return:	Nothing
  *
- * Programmer:  Bill Wendling
+ * Programmer:	Bill Wendling
  *              Tuesday, 20. February 2001
  *
  * Modifications:
@@ -78,14 +78,14 @@ error_msg(const char *progname, const char *fmt, ...)
 
 
 /*-------------------------------------------------------------------------
- * Function:    warn_msg
+ * Function:	warn_msg
  *
- * Purpose: Print a nicely formatted warning message to stderr flushing
+ * Purpose:	Print a nicely formatted warning message to stderr flushing
  *              the stdout stream first.
  *
- * Return:  Nothing
+ * Return:	Nothing
  *
- * Programmer:  Bill Wendling
+ * Programmer:	Bill Wendling
  *              Tuesday, 20. February 2001
  *
  * Modifications:
@@ -99,30 +99,30 @@ warn_msg(const char *progname, const char *fmt, ...)
 
     va_start(ap, fmt);
     HDfflush(stdout);
-#ifdef _WIN32
+#ifdef WIN32
     HDfprintf(stdout, "%s warning: ", progname);
     HDvfprintf(stdout, fmt, ap);
-#else /* _WIN32 */
+#else /* WIN32 */
     HDfprintf(stderr, "%s warning: ", progname);
     HDvfprintf(stderr, fmt, ap);
-#endif /* _WIN32 */
+#endif /* WIN32 */
     va_end(ap);
 }
 
 
 /*-------------------------------------------------------------------------
- * Function:    get_option
+ * Function:	get_option
  *
- * Purpose: Determine the command-line options a user specified. We can
- *      accept both short and long type command-lines.
+ * Purpose:	Determine the command-line options a user specified. We can
+ *		accept both short and long type command-lines.
  *
- * Return:  Success:    The short valued "name" of the command line
- *              parameter or EOF if there are no more
- *              parameters to process.
+ * Return:	Success:	The short valued "name" of the command line
+ * 				parameter or EOF if there are no more
+ * 				parameters to process.
  *
- *      Failure:    A question mark.
+ *		Failure:	A question mark.
  *
- * Programmer:  Bill Wendling
+ * Programmer:	Bill Wendling
  *              Friday, 5. January 2001
  *
  * Modifications:
@@ -282,7 +282,7 @@ indentation(int x)
  * Function:    print_version
  *
  * Purpose:     Print the program name and the version information which is
- *      defined the same as the HDF5 library version.
+ *		defined the same as the HDF5 library version.
  *
  * Return:      void
  *
@@ -377,9 +377,9 @@ dump_table(char* tablename, table_t *table)
 
     printf("%s: # of entries = %d\n", tablename,table->nobjs);
     for (u = 0; u < table->nobjs; u++)
-    HDfprintf(stdout,"%a %s %d %d\n", table->objs[u].objno,
-           table->objs[u].objname,
-           table->objs[u].displayed, table->objs[u].recorded);
+	HDfprintf(stdout,"%a %s %d %d\n", table->objs[u].objno,
+	       table->objs[u].objname,
+	       table->objs[u].displayed, table->objs[u].recorded);
 }
 
 
@@ -426,12 +426,41 @@ search_obj(table_t *table, haddr_t objno)
 {
     unsigned u;
 
-    for(u = 0; u < table->nobjs; u++)
-        if(table->objs[u].objno == objno)
-            return &(table->objs[u]);
+    for (u = 0; u < table->nobjs; u++)
+        if (table->objs[u].objno == objno)
+	    return &(table->objs[u]);
 
     return NULL;
 }
+
+
+/*-------------------------------------------------------------------------
+ * Function:    build_obj_path_name
+ *
+ * Purpose:     Allocate space & build path name from prefix & name
+ *
+ * Return:      Success:    SUCCEED
+ *
+ *              Failure:    FAIL
+ *
+ * Programmer:  Quincey Koziol
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+static char *
+build_obj_path_name(const char *prefix, const char *name)
+{
+    char *path;
+
+    path = HDmalloc(HDstrlen(prefix) + HDstrlen(name) + 2);
+    HDstrcpy(path, prefix);
+    HDstrcat(path,"/");
+    HDstrcat(path,name); /* absolute name of the data set */
+
+    return(path);
+} /* end build_obj_path_name() */
 
 
 /*-------------------------------------------------------------------------
@@ -450,65 +479,92 @@ search_obj(table_t *table, haddr_t objno)
  *-------------------------------------------------------------------------
  */
 static herr_t
-find_objs_cb(const char *name, const H5O_info_t *oinfo, const char *already_seen,
-    void *op_data)
+find_objs_cb(hid_t group, const char *name, void *op_data)
 {
+    H5G_stat_t statbuf;
     find_objs_t *info = (find_objs_t*)op_data;
     herr_t ret_value = 0;
 
-    switch(oinfo->type) {
-        case H5O_TYPE_GROUP:
-            if(NULL == already_seen)
-                add_obj(info->group_table, oinfo->addr, name, TRUE);
-            break;
+    if(H5Gget_objinfo(group, name, FALSE, &statbuf) < 0)
+        ret_value = FAIL;
+    else {
+        haddr_t objno;              /* Compact form of object's location */
 
-        case H5O_TYPE_DATASET:
-            if(NULL == already_seen) {
-                hid_t dset;
+        objno = (haddr_t)statbuf.objno[0] | ((haddr_t)statbuf.objno[1] << (8 * sizeof(long)));
+        switch (statbuf.type) {
+            char *tmp;
 
-                /* Add the dataset to the list of objects */
-                add_obj(info->dset_table, oinfo->addr, name, TRUE);
+            case H5G_GROUP:
+                if (search_obj(info->group_table, objno) == NULL) {
+                    char *old_prefix;
 
-                /* Check for a dataset that uses a named datatype */
-                if((dset = H5Dopen2(info->fid, name, H5P_DEFAULT)) >= 0) {
-                    hid_t type = H5Dget_type(dset);
+                    tmp = build_obj_path_name(info->prefix, name);
+                    add_obj(info->group_table, objno, tmp, TRUE);
 
-                    if(H5Tcommitted(type) > 0) {
-                        H5O_info_t type_oinfo;
+                    old_prefix = info->prefix;
+                    info->prefix = tmp;
 
-                        H5Oget_info(type, &type_oinfo);
-                        if(search_obj(info->type_table, type_oinfo.addr) == NULL)
-                            add_obj(info->type_table, type_oinfo.addr, name, FALSE);
-                    } /* end if */
+                    if(H5Giterate(group, name, NULL, find_objs_cb, (void *)info) < 0)
+                        ret_value = FAIL;
 
-                    H5Tclose(type);
-                    H5Dclose(dset);
+                    info->prefix = old_prefix;
                 } /* end if */
-                else
-                    ret_value = FAIL;
-            } /* end if */
-            break;
+                break;
 
-        case H5O_TYPE_NAMED_DATATYPE:
-        {
-            obj_t *found_obj;
+            case H5G_DATASET:
+                if (search_obj(info->dset_table, objno) == NULL) {
+                    hid_t dset;
 
-            if((found_obj = search_obj(info->type_table, oinfo->addr)) == NULL)
-                add_obj(info->type_table, oinfo->addr, name, TRUE);
-            else {
-                /* Use latest version of name */
-                HDfree(found_obj->objname);
-                found_obj->objname = HDstrdup(name);
+                    tmp = build_obj_path_name(info->prefix, name);
+                    add_obj(info->dset_table, objno, tmp, TRUE);
 
-                /* Mark named datatype as having valid name */
-                found_obj->recorded = TRUE;
-            } /* end else */
-            break;
+                    if ((dset = H5Dopen (group, name)) >= 0) {
+                        hid_t type;
+
+                        type = H5Dget_type(dset);
+
+                        if (H5Tcommitted(type) > 0) {
+                            H5Gget_objinfo(type, ".", TRUE, &statbuf);
+                            objno = (haddr_t)statbuf.objno[0] | ((haddr_t)statbuf.objno[1] << (8 * sizeof(long)));
+
+                            if (search_obj(info->type_table, objno) == NULL) {
+                                char *type_name = HDstrdup(tmp);
+
+                                add_obj(info->type_table, objno, type_name, FALSE);
+                            } /* end if */
+                        }
+
+                        H5Tclose(type);
+                        H5Dclose(dset);
+                    } else {
+                        ret_value = FAIL;
+                    }
+                } /* end if */
+                break;
+
+            case H5G_TYPE:
+            {
+                obj_t *found_obj;
+
+                tmp = build_obj_path_name(info->prefix, name);
+                if ((found_obj = search_obj(info->type_table, objno)) == NULL)
+                    add_obj(info->type_table, objno, tmp, TRUE);
+                else {
+                    /* Use latest version of name */
+                    HDfree(found_obj->objname);
+                    found_obj->objname = HDstrdup(tmp);
+
+                    /* Mark named datatype as having valid name */
+                    found_obj->recorded = TRUE;
+                } /* end else */
+                break;
+            }
+
+            default:
+                /* Ignore links, etc. */
+                break;
         }
-
-        default:
-            break;
-    } /* end switch */
+    } /* end else */
 
     return ret_value;
 }
@@ -539,13 +595,13 @@ init_objs(hid_t fid, find_objs_t *info, table_t **group_table,
     init_table(type_table);
 
     /* Init the find_objs_t */
-    info->fid = fid;
+    info->prefix = (char *)"";
     info->group_table = *group_table;
     info->type_table = *type_table;
     info->dset_table = *dset_table;
 
     /* Find all shared objects */
-    return(h5trav_visit(fid, "/", TRUE, TRUE, find_objs_cb, NULL, info));
+    return(H5Giterate(fid, "/", NULL, find_objs_cb, (void *)info));
 }
 
 
@@ -564,22 +620,22 @@ init_objs(hid_t fid, find_objs_t *info, table_t **group_table,
  *-------------------------------------------------------------------------
  */
 static void
-add_obj(table_t *table, haddr_t objno, const char *objname, hbool_t record)
+add_obj(table_t *table, haddr_t objno, char *objname, hbool_t record)
 {
     unsigned u;
 
     /* See if we need to make table larger */
-    if(table->nobjs == table->size) {
+    if (table->nobjs == table->size) {
         table->size *= 2;
-        table->objs = HDrealloc(table->objs, table->size * sizeof(table->objs[0]));
-    } /* end if */
+        table->objs = HDrealloc(table->objs, table->size * sizeof(obj_t));
+    }
 
     /* Increment number of objects in table */
     u = table->nobjs++;
 
     /* Set information about object */
     table->objs[u].objno = objno;
-    table->objs[u].objname = HDstrdup(objname);
+    table->objs[u].objname = objname;
     table->objs[u].recorded = record;
     table->objs[u].displayed = 0;
 }

@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*-----------------------------------------------------------------------------
@@ -58,7 +57,6 @@ H5_DLL hid_t H5I_register(H5I_type_t type, void *object);
 H5_DLL void *H5I_object(hid_t id);
 H5_DLL void *H5I_object_verify(hid_t id, H5I_type_t id_type);
 H5_DLL H5I_type_t H5I_get_type(hid_t id);
-H5_DLL hid_t H5I_get_file_id(hid_t);
 H5_DLL void *H5I_remove(hid_t id);
 H5_DLL void *H5I_remove_verify(hid_t id, H5I_type_t id_type);
 H5_DLL void *H5I_search(H5I_type_t type, H5I_search_func_t func, void *key);
@@ -69,5 +67,4 @@ H5_DLL int H5I_inc_type_ref(H5I_type_t type);
 H5_DLL herr_t H5I_dec_type_ref(H5I_type_t type);
 H5_DLL int H5I_get_type_ref(H5I_type_t type);
 
-#endif /* _H5Iprivate_H */
-
+#endif

@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifdef OLD_HEADER_FILENAME
@@ -31,7 +30,6 @@
 #include "H5CommonFG.h"
 #include "H5DataType.h"
 #include "H5DataSpace.h"
-#include "H5private.h"
 
 #ifndef H5_NO_NAMESPACE
 namespace H5 {
@@ -130,23 +128,18 @@ void Attribute::read( const DataType& mem_type, void *buf ) const
 ///\param	strg      - IN: Buffer for read string
 ///\exception	H5::AttributeIException
 // Programmer	Binh-Minh Ribler - Apr, 2003
-// Modification
-//		2006/12/9 - H5Aread allocates memory for character string
-//			    buffer with malloc, therefore, no allocation here,
-//			    but HDfree is needed. - BMR
 //--------------------------------------------------------------------------
 void Attribute::read( const DataType& mem_type, H5std_string& strg ) const
 {
-   char* strg_C;  // temporary C-string for C API
-
-   // call C API to get the attribute string of chars
-   herr_t ret_value = H5Aread( id, mem_type.getId(), &strg_C);
+   size_t size = mem_type.getSize();
+   char* strg_C = new char[size+1];  // temporary C-string for C API
+   herr_t ret_value = H5Aread( id, mem_type.getId(), &strg_C );
    if( ret_value < 0 )
    {
       throw AttributeIException("Attribute::read", "H5Aread failed");
    }
-   strg = strg_C;	// get 'string' from the C char*
-   HDfree(strg_C);
+   strg = strg_C;
+   delete []strg_C;
 }
 
 //--------------------------------------------------------------------------

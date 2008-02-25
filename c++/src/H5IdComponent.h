@@ -1,6 +1,5 @@
 // C++ informative line for the emacs editor: -*- C++ -*-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -10,8 +9,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef _IdComponent_H
@@ -23,7 +22,6 @@
 namespace H5 {
 #endif
 
-class DataSpace;
 class H5_DLLCPP IdComponent {
    public:
 	// Increment reference counter.
@@ -38,19 +36,11 @@ class H5_DLLCPP IdComponent {
 	int getCounter(const hid_t obj_id) const;
 	int getCounter() const;
 
-	// Returns an HDF5 object type, given the object id.
+	// Returns an HDF object type, given the object id.
 	static H5I_type_t getHDFObjType(const hid_t obj_id);
 
-	// Assignment operator.
+	// Assignment operator
 	IdComponent& operator=( const IdComponent& rhs );
-
-        void reference(void* ref, const char* name, const DataSpace& dataspace,
-                        H5R_type_t ref_type = H5R_DATASET_REGION) const;
-        void reference(void* ref, const char* name) const;
-        void reference(void* ref, const H5std_string& name) const;
-
-	// Open a referenced HDF5 object.
-	void dereference(IdComponent& obj, void* ref);
 
 	// Sets the identifier of this object to a new value.
 	void setId(const hid_t new_id);
@@ -95,13 +85,10 @@ class H5_DLLCPP IdComponent {
 	hid_t p_get_file_id();
 
 	// Creates a reference to an HDF5 object or a dataset region.
-	void p_reference(void* ref, const char* name, hid_t space_id, H5R_type_t ref_type) const;
-	void* p_reference(const char* name, hid_t space_id, H5R_type_t ref_type) const; // will be removed
+	void* p_reference(const char* name, hid_t space_id, H5R_type_t ref_type) const;
 
-#ifndef H5_NO_DEPRECATED_SYMBOLS
 	// Retrieves the type of object that an object reference points to.
 	H5G_obj_t p_get_obj_type(void *ref, H5R_type_t ref_type) const;
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
 
 	// Retrieves a dataspace with the region pointed to selected.
 	hid_t p_get_region(void *ref, H5R_type_t ref_type) const;

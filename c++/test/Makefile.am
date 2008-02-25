@@ -1,5 +1,4 @@
 #
-# Copyright by The HDF Group.
 # Copyright by the Board of Trustees of the University of Illinois.
 # All rights reserved.
 #
@@ -9,8 +8,8 @@
 # of the source code distribution tree; Copyright.html can be found at the
 # root level of an installed copy of the electronic HDF5 document set and
 # is linked from the top-level documents page.  It can also be found at
-# http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-# access to either file, you may request a copy from help@hdfgroup.org.
+# http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
+# access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 ##
 ## Makefile.am
 ## Run automake to generate a Makefile.in from this file.
@@ -35,11 +34,10 @@ TEST_PROG=dsets testhdf5
 check_PROGRAMS=$(TEST_PROG)
 
 # The tests depend on the hdf5 library, test library, and the c++ library
-LDADD=$(LIBH5TEST) $(LIBH5CPP) $(LIBHDF5)
+LDADD=$(LIBH5CPP) $(LIBH5TEST) $(LIBHDF5)
 
 dsets_SOURCES=dsets.cpp h5cpputil.cpp
-testhdf5_SOURCES=testhdf5.cpp tattr.cpp tcompound.cpp tfile.cpp tfilter.cpp \
-	th5s.cpp trefer.cpp ttypes.cpp tvlstr.cpp h5cpputil.cpp
+testhdf5_SOURCES=testhdf5.cpp tattr.cpp tfile.cpp th5s.cpp h5cpputil.cpp
 
 # Tell conclude.am that these are C++ tests.
 HDF_CXX=yes

@@ -1,6 +1,5 @@
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -10,8 +9,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <stdio.h>
@@ -21,15 +20,15 @@
 /* 
  This program reads binary output from h5dump (-b option).
  To use change the following 3 symbols accordingly.
- For example, to read 2 elements of a float type , define
+ For example, to read 6 elements of a float type , define
 
-  #define NELMTS     2
+  #define NELMTS     6
   #define TYPE       float
   #define FORMAT     "%f "
 
 */
 
-#define NELMTS     6
+#define NELMTS     2
 #define TYPE       int
 #define FORMAT     "%d "
 
@@ -40,7 +39,7 @@
  *
  * Return: void
  *
- * Programmer:  Pedro Vicente Nunes
+ * Programmer:	Pedro Vicente Nunes
  *
  * Modifications:
  *

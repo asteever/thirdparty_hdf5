@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /***********************************************************
@@ -188,8 +187,8 @@ test_h5s_basic(void)
     fid1 = H5Fopen(testfile, H5F_ACC_RDONLY, H5P_DEFAULT);
     CHECK_I(fid1, "H5Fopen");
     if (fid1 >= 0){
-	dset1 = H5Dopen2(fid1, "dset", H5P_DEFAULT);
-	VERIFY(dset1, FAIL, "H5Dopen2");
+	dset1 = H5Dopen(fid1, "dset");
+	VERIFY(dset1, FAIL, "H5Dopen");
 	ret = H5Fclose(fid1);
 	CHECK_I(ret, "H5Fclose");
     }
@@ -203,21 +202,6 @@ test_h5s_basic(void)
     sid1 = H5Screate_simple(SPACE1_RANK, dims1, NULL);
     VERIFY(sid1, FAIL, "H5Screate_simple");
 
-    dims1[0] = H5S_UNLIMITED;
-    sid1 = H5Screate_simple(SPACE1_RANK, dims1, NULL);
-    VERIFY(sid1, FAIL, "H5Screate_simple");
-
-    dims1[0]=0;
-    sid1 = H5Screate(H5S_SIMPLE);
-    CHECK(sid1, FAIL, "H5Screate");
-
-    ret = H5Sset_extent_simple(sid1,SPACE1_RANK,dims1,NULL);
-    VERIFY(ret, FAIL, "H5Sset_extent_simple");
-
-    ret = H5Sclose(sid1);
-    CHECK_I(ret, "H5Sclose");
-
-    dims1[0] = H5S_UNLIMITED;
     sid1 = H5Screate(H5S_SIMPLE);
     CHECK(sid1, FAIL, "H5Screate");
 
@@ -243,12 +227,12 @@ test_h5s_basic(void)
 
     /* This dataset's space has no extent; it should not be created */
     H5E_BEGIN_TRY {
-    dset1 = H5Dcreate2(fid1, BASICDATASET, H5T_NATIVE_INT, sid1, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    dset1 = H5Dcreate(fid1, BASICDATASET, H5T_NATIVE_INT, sid1, H5P_DEFAULT);
     } H5E_END_TRY
-    VERIFY(dset1, FAIL, "H5Dcreate2");
+    VERIFY(dset1, FAIL, "H5Dcreate");
 
-    dset1 = H5Dcreate2(fid1, BASICDATASET2, H5T_NATIVE_INT, sid2, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(dset1, FAIL, "H5Dcreate2");
+    dset1 = H5Dcreate(fid1, BASICDATASET2, H5T_NATIVE_INT, sid2, H5P_DEFAULT);
+    CHECK(dset1, FAIL, "H5Dcreate");
 
     /* Try some writes with the bad dataspace (sid1) */
     H5E_BEGIN_TRY {
@@ -280,9 +264,10 @@ test_h5s_basic(void)
 
     /* Now use the bad dataspace as the space for an attribute */
     H5E_BEGIN_TRY {
-    aid1 = H5Acreate2(dset1, BASICATTR, H5T_NATIVE_INT, sid1, H5P_DEFAULT, H5P_DEFAULT);
+    aid1 = H5Acreate(dset1, BASICATTR,
+                        H5T_NATIVE_INT, sid1, H5P_DEFAULT);
     } H5E_END_TRY
-    VERIFY(aid1, FAIL, "H5Acreate2");
+    VERIFY(aid1, FAIL, "H5Acreate");
 
     /* Make sure that dataspace reads using the bad dataspace fail */
     H5E_BEGIN_TRY {
@@ -378,13 +363,13 @@ test_h5s_null(void)
         hsize_t	coord[1][1]; /* Coordinates for point selection */
 
         coord[0][0]=0;
-	ret = H5Sselect_elements(sid, H5S_SELECT_SET, (size_t)1, coord);
+	ret = H5Sselect_elements(sid, H5S_SELECT_SET, 1, (const hsize_t **)coord);
     } H5E_END_TRY;
     VERIFY(ret, FAIL, "H5Sselect_elements");
 
     /* Create first dataset */
-    did = H5Dcreate2(fid, NULLDATASET, H5T_NATIVE_UINT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(did, FAIL, "H5Dcreate2");
+    did = H5Dcreate(fid, NULLDATASET, H5T_NATIVE_UINT, sid, H5P_DEFAULT);
+    CHECK(did, FAIL, "H5Dcreate");
 
     /* Write "nothing" to the dataset */
     ret = H5Dwrite(did, H5T_NATIVE_UINT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &uval);
@@ -405,8 +390,8 @@ test_h5s_null(void)
     VERIFY(val, 1, "H5Dread");
 
     /* Create an attribute for the group */
-    attr = H5Acreate2(did, NULLATTR, H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(attr, FAIL, "H5Acreate2");
+    attr=H5Acreate(did,NULLATTR,H5T_NATIVE_INT,sid,H5P_DEFAULT);
+    CHECK(attr, FAIL, "H5Acreate");
 
     /* Write "nothing" to the attribute */
     ret = H5Awrite(attr, H5T_NATIVE_INT, &val);
@@ -462,8 +447,8 @@ test_h5s_null(void)
     CHECK(fid, FAIL, "H5Fopen");
 
     /* Reopen the dataset */
-    did = H5Dopen2(fid, NULLDATASET, H5P_DEFAULT);
-    CHECK(did, FAIL, "H5Dopen2");
+    did = H5Dopen(fid, NULLDATASET);
+    CHECK(did, FAIL, "H5Dopen");
 
     /* Get the space of the dataset */
     dset_sid = H5Dget_space(did);
@@ -494,8 +479,8 @@ test_h5s_null(void)
     CHECK(ret, FAIL, "H5Sclose");
 
     /* Open the attribute for the dataset */
-    attr = H5Aopen(did, NULLATTR, H5P_DEFAULT);
-    CHECK(attr, FAIL, "H5Aopen");
+    attr=H5Aopen_name(did,NULLATTR);
+    CHECK(attr, FAIL, "H5Aopen_name");
 
     /* Get the space of the dataset */
     attr_sid = H5Aget_space(attr);
@@ -559,6 +544,8 @@ test_h5s_encode(void)
     /* Output message about test being performed */
     MESSAGE(5, ("Testing Dataspace Encoding and Decoding\n"));
 
+    H5open();
+
     /*-------------------------------------------------------------------------
      * Test encoding and decoding of simple dataspace and hyperslab selection.
      *-------------------------------------------------------------------------
@@ -574,7 +561,7 @@ test_h5s_encode(void)
     CHECK(ret, FAIL, "H5Sencode");
 
     if(sbuf_size>0)
-        sbuf = (unsigned char*)HDcalloc((size_t)1, sbuf_size);
+        sbuf = (unsigned char*)calloc(1, sbuf_size);
 
     /* Try decoding bogus buffer */
     H5E_BEGIN_TRY {
@@ -629,7 +616,7 @@ test_h5s_encode(void)
     CHECK(ret, FAIL, "H5Sencode");
 
     if(null_size>0)
-        null_sbuf = (unsigned char*)HDcalloc((size_t)1, null_size);
+        null_sbuf = (unsigned char*)calloc(1, null_size);
 
     ret = H5Sencode(sid2, null_sbuf, &null_size);
     CHECK(ret, FAIL, "H5Sencode");
@@ -661,7 +648,7 @@ test_h5s_encode(void)
     CHECK(ret, FAIL, "H5Sencode");
 
     if(scalar_size>0)
-        scalar_buf = (unsigned char*)HDcalloc((size_t)1, scalar_size);
+        scalar_buf = (unsigned char*)calloc(1, scalar_size);
 
     ret = H5Sencode(sid3, scalar_buf, &scalar_size);
     CHECK(ret, FAIL, "H5Sencode");
@@ -689,9 +676,9 @@ test_h5s_encode(void)
     ret = H5Sclose(decoded_sid3);
     CHECK(ret, FAIL, "H5Sclose");
 
-    HDfree(sbuf);
-    HDfree(null_sbuf);
-    HDfree(scalar_buf);
+    free(sbuf);
+    free(null_sbuf);
+    free(scalar_buf);
 }				/* test_h5s_encode() */
 
 /****************************************************************
@@ -738,8 +725,8 @@ test_h5s_scalar_write(void)
     VERIFY(ext_type, H5S_SCALAR, "H5Sget_simple_extent_type");
 
     /* Create a dataset */
-    dataset = H5Dcreate2(fid1, "Dataset1", H5T_NATIVE_UINT, sid1, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(dataset, FAIL, "H5Dcreate2");
+    dataset=H5Dcreate(fid1,"Dataset1",H5T_NATIVE_UINT,sid1,H5P_DEFAULT);
+    CHECK(dataset, FAIL, "H5Dcreate");
 
     ret = H5Dwrite(dataset, H5T_NATIVE_UINT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &space3_data);
     CHECK(ret, FAIL, "H5Dwrite");
@@ -783,10 +770,10 @@ test_h5s_scalar_read(void)
     CHECK(fid1, FAIL, "H5Fopen");
 
     /* Create a dataset */
-    dataset = H5Dopen2(fid1, "Dataset1", H5P_DEFAULT);
-    CHECK(dataset, FAIL, "H5Dopen2");
+    dataset=H5Dopen(fid1,"Dataset1");
+    CHECK(dataset, FAIL, "H5Dopen");
 
-    sid1 = H5Dget_space(dataset);
+    sid1=H5Dget_space(dataset);
     CHECK(sid1, FAIL, "H5Dget_space");
 
     n = H5Sget_simple_extent_npoints(sid1);
@@ -882,8 +869,8 @@ test_h5s_compound_scalar_write(void)
     VERIFY(rank, 0, "H5Sget_simple_extent_dims");
 
     /* Create a dataset */
-    dataset = H5Dcreate2(fid1, "Dataset1", tid1, sid1, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(dataset, FAIL, "H5Dcreate2");
+    dataset=H5Dcreate(fid1,"Dataset1",tid1,sid1,H5P_DEFAULT);
+    CHECK(dataset, FAIL, "H5Dcreate");
 
     ret = H5Dwrite(dataset, tid1, H5S_ALL, H5S_ALL, H5P_DEFAULT, &space4_data);
     CHECK(ret, FAIL, "H5Dwrite");
@@ -928,10 +915,10 @@ test_h5s_compound_scalar_read(void)
     CHECK(fid1, FAIL, "H5Fopen");
 
     /* Create a dataset */
-    dataset = H5Dopen2(fid1, "Dataset1", H5P_DEFAULT);
-    CHECK(dataset, FAIL, "H5Dopen2");
+    dataset=H5Dopen(fid1,"Dataset1");
+    CHECK(dataset, FAIL, "H5Dopen");
 
-    sid1 = H5Dget_space(dataset);
+    sid1=H5Dget_space(dataset);
     CHECK(sid1, FAIL, "H5Dget_space");
 
     n = H5Sget_simple_extent_npoints(sid1);
@@ -996,7 +983,7 @@ test_h5s_chunk(void)
     hsize_t csize[2];
     int i,j;
 
-    fileID = H5Fcreate(DATAFILE, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    fileID = H5Fcreate(DATAFILE,H5F_ACC_TRUNC,H5P_DEFAULT,H5P_DEFAULT);
     CHECK(fileID, FAIL, "H5Fcreate");
 
     plist_id = H5Pcreate(H5P_DATASET_CREATE);
@@ -1013,49 +1000,48 @@ test_h5s_chunk(void)
     space_id = H5Screate_simple(2, dims, NULL);
     CHECK(space_id, FAIL, "H5Screate_simple");
 
-    dsetID = H5Dcreate2(fileID, "coords", H5T_NATIVE_FLOAT, space_id, H5P_DEFAULT, plist_id, H5P_DEFAULT);
-    CHECK(dsetID, FAIL, "H5Dcreate2");
+    dsetID = H5Dcreate(fileID,"coords",H5T_NATIVE_FLOAT,space_id,plist_id);
+    CHECK(dsetID, FAIL, "H5Dcreate");
 
     /* Initialize float array */
-    for(i = 0; i < 50000; i++)
-        for(j = 0; j < 3; j++)
-            chunk_data_flt[i][j] = (float)((i + 1) * 2.5 - j * 100.3);
+    for(i=0; i<50000; i++)
+        for(j=0; j<3; j++)
+            chunk_data_flt[i][j]=(float)(i*2.5-j*100.3);
 
-    status = H5Dwrite(dsetID, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, chunk_data_flt);
+    status= H5Dwrite(dsetID,H5T_NATIVE_FLOAT,H5S_ALL,H5S_ALL,H5P_DEFAULT,chunk_data_flt);
     CHECK(status, FAIL, "H5Dwrite");
 
-    status = H5Pclose(plist_id);
+    status=H5Pclose(plist_id);
     CHECK(status, FAIL, "H5Pclose");
-    status = H5Sclose(space_id);
+    status=H5Sclose(space_id);
     CHECK(status, FAIL, "H5Sclose");
-    status = H5Dclose(dsetID);
+    status=H5Dclose(dsetID);
     CHECK(status, FAIL, "H5Dclose");
-    status = H5Fclose(fileID);
+    status=H5Fclose(fileID);
     CHECK(status, FAIL, "H5Fclose");
 
     /* Reset/initialize the data arrays to read in */
-    HDmemset(chunk_data_dbl, 0, sizeof(double) * 50000 * 3);
-    HDmemset(chunk_data_flt, 0, sizeof(float) * 50000 * 3);
+    HDmemset(chunk_data_dbl,0,sizeof(double)*50000*3);
+    HDmemset(chunk_data_flt,0,sizeof(float)*50000*3);
 
-    fileID = H5Fopen(DATAFILE, H5F_ACC_RDONLY, H5P_DEFAULT);
+    fileID = H5Fopen(DATAFILE,H5F_ACC_RDONLY,H5P_DEFAULT);
     CHECK(fileID, FAIL, "H5Fopen");
-    dsetID = H5Dopen2(fileID, "coords", H5P_DEFAULT);
-    CHECK(dsetID, FAIL, "H5Dopen2");
+    dsetID = H5Dopen(fileID,"coords");
+    CHECK(dsetID, FAIL, "H5Dopen");
 
-    status= H5Dread (dsetID, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, chunk_data_dbl);
+    status= H5Dread (dsetID,H5T_NATIVE_DOUBLE,H5S_ALL,H5S_ALL,H5P_DEFAULT,chunk_data_dbl);
     CHECK(status, FAIL, "H5Dread");
-    status= H5Dread (dsetID, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, chunk_data_flt);
+    status= H5Dread (dsetID,H5T_NATIVE_FLOAT,H5S_ALL,H5S_ALL,H5P_DEFAULT,chunk_data_flt);
     CHECK(status, FAIL, "H5Dread");
 
-    status = H5Dclose(dsetID);
+    status=H5Dclose(dsetID);
     CHECK(status, FAIL, "H5Dclose");
-    status = H5Fclose(fileID);
+    status=H5Fclose(fileID);
     CHECK(status, FAIL, "H5Fclose");
 
     for(i=0; i<50000; i++) {
         for(j=0; j<3; j++) {
-            /* Check if the two values are within 0.001% range. */
-            if(!DBL_REL_EQUAL(chunk_data_dbl[i][j],chunk_data_flt[i][j], 0.00001))
+            if(chunk_data_dbl[i][j]!=chunk_data_flt[i][j])
                 TestErrPrintf("chunk_data_dbl[%d][%d]=%f, chunk_data_flt[%d][%d]=%f\n",i,j,chunk_data_dbl[i][j],i,j,chunk_data_flt[i][j]);
         } /* end for */
     } /* end for */

@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <string>
@@ -167,33 +166,6 @@ void DSetCreatPropList::setDeflate( int level ) const
       throw PropListIException("DSetCreatPropList::setDeflate",
 		"H5Pset_deflate failed");
    }
-}
-
-//--------------------------------------------------------------------------
-// Function:	DSetCreatPropList::setSzip
-///\brief	Sets up for the use of the SZIP compression filter.
-///\param	options_mask     - IN: A bit-mask conveying the desired SZIP 
-///			options.  Valid values are H5_SZIP_EC_OPTION_MASK 
-///			and H5_SZIP_NN_OPTION_MASK.
-///\param	pixels_per_block - IN: Number of pixels or data elements in 
-///			each data block.
-///\exception	H5::PropListIException
-///\par Description
-///		The associate C function sets an SZIP compression filter, 
-///		H5Z_FILTER_SZIP, for a dataset.  For more information about
-///		SZIP and usage, please refer to the C layer Reference 
-///		Manual at:
-/// http://hdfgroup.org/HDF5/doc/RM_H5P.html#Property-SetSzip
-// Programmer	Binh-Minh Ribler - Jan, 2007
-//--------------------------------------------------------------------------
-void DSetCreatPropList::setSzip(unsigned int options_mask, unsigned int pixels_per_block) const
-{
-    herr_t ret_value = H5Pset_szip(id, options_mask, pixels_per_block);
-    if( ret_value < 0 )
-    {
-	throw PropListIException("DSetCreatPropList::setSzip",
-		"H5Pset_szip failed");
-    }
 }
 
 //--------------------------------------------------------------------------
@@ -362,11 +334,13 @@ H5Z_filter_t DSetCreatPropList::getFilter(int filter_number,
 	size_t namelen, char name[], unsigned int& filter_config) const
 {
    H5Z_filter_t filter_id;
-   filter_id = H5Pget_filter2(id, filter_number, &flags, &cd_nelmts,
+   filter_id = H5Pget_filter( id, filter_number, &flags, &cd_nelmts,
 				cd_values, namelen, name, &filter_config);
    if( filter_id == H5Z_FILTER_ERROR )
+   {
       throw PropListIException("DSetCreatPropList::getFilter",
-                "H5Pget_filter2 returned H5Z_FILTER_ERROR");
+                "H5Pget_filter returned H5Z_FILTER_ERROR");
+   }
    else
       return(filter_id);
 }
@@ -390,11 +364,13 @@ void DSetCreatPropList::getFilterById(H5Z_filter_t filter_id,
 	unsigned int &flags, size_t &cd_nelmts, unsigned int* cd_values,
 	size_t namelen, char name[], unsigned int &filter_config) const
 {
-   herr_t ret_value = H5Pget_filter_by_id2(id, filter_id, &flags, &cd_nelmts,
-				cd_values, namelen, name, &filter_config);
+   herr_t ret_value = H5Pget_filter_by_id(id, filter_id, &flags, &cd_nelmts,
+				cd_values, namelen, name, &filter_config );
    if (ret_value < 0)
+   {
       throw PropListIException("DSetCreatPropList::getFilterById",
-                "H5Pget_filter_by_id2 failed");
+                "H5Pget_filter_by_id failed");
+   }
 }
 
 //--------------------------------------------------------------------------
@@ -462,7 +438,7 @@ bool DSetCreatPropList::allFiltersAvail()
 /// http://hdf.ncsa.uiuc.edu/HDF5/doc/RM_H5P.html#Property-SetShuffle
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-void DSetCreatPropList::setShuffle() const
+void DSetCreatPropList::setShuffle()
 {
    herr_t ret_value = H5Pset_shuffle(id);
    if( ret_value < 0 )
@@ -574,7 +550,7 @@ void DSetCreatPropList::setFillTime(H5D_fill_time_t fill_time)
 ///\exception	H5::PropListIException
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-void DSetCreatPropList::setFletcher32() const
+void DSetCreatPropList::setFletcher32()
 {
    herr_t ret_value = H5Pset_fletcher32(id);
    if( ret_value < 0 )

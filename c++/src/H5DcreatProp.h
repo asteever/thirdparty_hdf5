@@ -1,6 +1,5 @@
 // C++ informative line for the emacs editor: -*- C++ -*-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -10,8 +9,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef _H5DSCreatPropList_H
@@ -96,16 +95,13 @@ class H5_DLLCPP DSetCreatPropList : public PropList {
 	void setExternal( const char* name, off_t offset, hsize_t size ) const;
 
 	// Adds a filter to the filter pipeline.
-	void setFilter( H5Z_filter_t filter, unsigned int flags = 0, size_t cd_nelmts = 0, const unsigned int cd_values[] = NULL) const;
+	void setFilter( H5Z_filter_t filter, unsigned int flags, size_t cd_nelmts, const unsigned int cd_values[] ) const;
 
 	// Sets Fletcher32 checksum of EDC for this property list.
-	void setFletcher32() const;
+	void setFletcher32();
 
 	// Sets method of the shuffle filter.
-	void setShuffle() const;
-
-	// Sets SZIP compression method.
-	void setSzip(unsigned int options_mask, unsigned int pixels_per_block) const;
+	void setShuffle();
 
 	// Returns this class name
 	virtual H5std_string fromClass () const { return("DSetCreatPropList"); }

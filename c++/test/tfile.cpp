@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*****************************************************************************
@@ -91,10 +90,11 @@ const H5std_string    FILE4("tfile4.h5");
  *
  *-------------------------------------------------------------------------
  */
-static void test_file_create()
+static void
+test_file_create(void)
 {
     // Output message about test being performed
-    SUBTEST("Testing File Creation I/O");
+    MESSAGE(5, ("Testing File Creation I/O\n"));
 
     // Test create with various sequences of H5F_ACC_EXCL and
     // H5F_ACC_TRUNC flags
@@ -185,7 +185,7 @@ static void test_file_create()
     }
     catch (InvalidActionException E)
     {
-        cerr << " *FAILED*" << endl;
+        cerr << " FAILED" << endl;
         cerr << "    <<<  " << E.getDetailMsg() << "  >>>" << endl << endl;
         if (file1 != NULL) // clean up
             delete file1;
@@ -193,7 +193,7 @@ static void test_file_create()
     // catch all other exceptions
     catch (Exception E)
     {
-	issue_fail_msg("test_file_create()", __LINE__, __FILE__, E.getCDetailMsg());
+	issue_fail_msg(E.getCFuncName(), __LINE__, __FILE__, E.getCDetailMsg());
         if (file1 != NULL) // clean up
             delete file1;
     }
@@ -267,12 +267,11 @@ static void test_file_create()
 
 	// Release file-creation template
 	delete tmpl1;
-	PASSED();
     }
     // catch all exceptions
     catch (Exception E)
     {
-	issue_fail_msg("test_file_create()", __LINE__, __FILE__, E.getCDetailMsg());
+	issue_fail_msg(E.getCFuncName(), __LINE__, __FILE__, E.getCDetailMsg());
 	if (tmpl1 != NULL)  // clean up
 	    delete tmpl1;
     }
@@ -299,10 +298,11 @@ static void test_file_create()
  *
  *-------------------------------------------------------------------------
  */
-static void test_file_open()
+static void
+test_file_open(void)
 {
     // Output message about test being performed
-    SUBTEST("Testing File Opening I/O");
+    MESSAGE(5, ("Testing File Opening I/O\n"));
 
     try {
 
@@ -325,11 +325,10 @@ static void test_file_open()
         tmpl1.getSymk( iparm1, iparm2);
         verify_val(iparm1, F2_SYM_INTERN_K, "FileCreatPropList::getSymk", __LINE__, __FILE__);
         verify_val(iparm2, F2_SYM_LEAF_K, "FileCreatPropList::getSymk", __LINE__, __FILE__);
-	PASSED();
     }   // end of try block
 
     catch( Exception E ) {
-        issue_fail_msg("test_file_open()", __LINE__, __FILE__, E.getCDetailMsg());
+        issue_fail_msg(E.getCFuncName(), __LINE__, __FILE__, E.getCDetailMsg());
     }
 }   // test_file_open()
 
@@ -348,10 +347,11 @@ static void test_file_open()
  *
  *-------------------------------------------------------------------------
  */
-static void test_file_size()
+static void
+test_file_size(void)
 {
     // Output message about test being performed
-    SUBTEST("Testing File Size");
+    MESSAGE(5, ("Testing File Size\n"));
 
     hid_t	fapl_id;
     fapl_id = h5_fileaccess(); // in h5test.c, returns a file access template
@@ -374,12 +374,11 @@ static void test_file_size()
 
         // Check if file size is reasonable.  It's supposed to be 2KB now.
         if(file_size<1*KB || file_size>4*KB)
-            issue_fail_msg("test_file_size()", __LINE__, __FILE__);
-	PASSED();
+            issue_fail_msg("H5File::getFileSize", __LINE__, __FILE__);
     }   // end of try block
 
     catch( Exception E ) {
-        issue_fail_msg("test_file_size()", __LINE__, __FILE__, E.getCDetailMsg());
+        issue_fail_msg(E.getCFuncName(), __LINE__, __FILE__, E.getCDetailMsg());
     }
 
     // use C test utility routine to close property list.
@@ -416,10 +415,11 @@ typedef struct s1_t {
     float        b;
 } s1_t;
 
-static void test_file_name()
+static void
+test_file_name()
 {
     // Output message about test being performed
-    SUBTEST("Testing File Name");
+    MESSAGE(5, ("Testing File Name\n"));
 
     H5std_string file_name;
     try {
@@ -468,11 +468,10 @@ static void test_file_name()
 	// Get and verify file name
 	comp_type.getFileName();
 	verify_val(file_name, FILE4, "CompType::getFileName", __LINE__, __FILE__);
-	PASSED();
     }   // end of try block
 
     catch (Exception E) {
-        issue_fail_msg("test_file_name()", __LINE__, __FILE__, E.getCDetailMsg());
+        issue_fail_msg(E.getCFuncName(), __LINE__, __FILE__, E.getCDetailMsg());
     }
 
 }   // test_file_name()
@@ -492,10 +491,8 @@ static void test_file_name()
  *
  *-------------------------------------------------------------------------
  */
-#ifdef __cplusplus
-extern "C"
-#endif
-void test_file()
+void
+test_file(void)
 {
     // Output message about test being performed
     MESSAGE(5, ("Testing File I/O operations\n"));
@@ -520,13 +517,11 @@ void test_file()
  *
  *-------------------------------------------------------------------------
  */
-#ifdef __cplusplus
-extern "C"
-#endif
-void cleanup_file()
+void
+cleanup_file(void)
 {
-    HDremove(FILE1.c_str());
-    HDremove(FILE2.c_str());
-    HDremove(FILE3.c_str());
-    HDremove(FILE4.c_str());
+    remove(FILE1.c_str());
+    remove(FILE2.c_str());
+    remove(FILE3.c_str());
+    remove(FILE4.c_str());
 }   // cleanup_file

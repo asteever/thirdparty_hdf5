@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -391,7 +390,7 @@ static int without_hardware_g = 0;
 void some_dummy_func(float x);
 static hbool_t overflows(unsigned char *origin_bits, hid_t src_id, size_t dst_num_bits);
 static int my_isnan(dtype_t type, void *val);
-static int my_isinf(int endian, unsigned char *val, size_t size,
+static int my_isinf(dtype_t type, int endian, unsigned char *val, size_t size,
         size_t mpos, size_t msize, size_t epos, size_t esize);
 
 /*-------------------------------------------------------------------------
@@ -725,8 +724,8 @@ static int test_particular_fp_integer(void)
     hbool_t     flag;
     double      src_d = (double)SCHAR_MAX;
     signed char dst_c;
-    unsigned char *buf1 = NULL, *buf2 = NULL;
-    unsigned char *saved_buf1 = NULL, *saved_buf2 = NULL;
+    unsigned char *buf1, *buf2;
+    unsigned char *saved_buf1, *saved_buf2;
     size_t      src_size1, src_size2;
     size_t      dst_size1, dst_size2;
     float       src_f = (float)INT_MAX;
@@ -979,42 +978,45 @@ test_derived_flt(void)
         goto error;
     }
 
-    if(H5Tset_ebias(tid1, 511) < 0) {
+    if(H5Tset_ebias(tid1, 511)<0) {
         H5_FAILED();
         printf("Can't set exponent bias\n");
         goto error;
     }
-    if(H5Tset_pad(tid1, H5T_PAD_ZERO, H5T_PAD_ZERO) < 0) {
+    if(H5Tset_pad(tid1, H5T_PAD_ZERO, H5T_PAD_ZERO)<0) {
         H5_FAILED();
         printf("Can't set padding\n");
         goto error;
     }
 
-    if(H5Tcommit2(file, "new float type 1", tid1, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT) < 0) {
+    if(H5Tcommit(file, "new float type 1", tid1)<0) {
         H5_FAILED();
         printf("Can't set inpad\n");
         goto error;
     }
-    if(H5Tclose(tid1) < 0) {
+    if(H5Tclose(tid1)<0) {
         H5_FAILED();
         printf("Can't close datatype\n");
         goto error;
     }
 
-    if((tid1 = H5Topen2(file, "new float type 1", H5P_DEFAULT)) < 0)
-        FAIL_PUTS_ERROR("Can't open datatype")
-    if(H5Tget_fields(tid1, &spos, &epos, &esize, &mpos, &msize) < 0) {
+    if((tid1 = H5Topen(file, "new float type 1"))<0) {
+        H5_FAILED();
+        printf("Can't open datatype\n");
+        goto error;
+    }
+    if(H5Tget_fields(tid1, &spos, &epos, &esize, &mpos, &msize)<0) {
         H5_FAILED();
         printf("Can't get fields\n");
         goto error;
     }
-    if(spos != 44 || epos != 34 || esize != 10 || mpos != 3 || msize != 31) {
+    if(spos!=44 || epos!=34 || esize!=10 || mpos!=3 || msize!=31) {
         H5_FAILED();
         printf("Wrong field values\n");
         goto error;
     }
 
-    if(H5Tget_precision(tid1) != 42) {
+    if(H5Tget_precision(tid1)!=42) {
         H5_FAILED();
         printf("Can't get precision or wrong precision\n");
         goto error;
@@ -1138,42 +1140,45 @@ test_derived_flt(void)
         printf("Can't set size\n");
         goto error;
     }
-    if(H5Tset_ebias(tid2, 63) < 0) {
+    if(H5Tset_ebias(tid2, 63)<0) {
         H5_FAILED();
         printf("Can't set size\n");
         goto error;
     }
-    if(H5Tset_pad(tid2, H5T_PAD_ZERO, H5T_PAD_ZERO) < 0) {
+    if(H5Tset_pad(tid2, H5T_PAD_ZERO, H5T_PAD_ZERO)<0) {
         H5_FAILED();
         printf("Can't set padding\n");
         goto error;
     }
 
-    if(H5Tcommit2(file, "new float type 2", tid2, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT) < 0) {
+    if(H5Tcommit(file, "new float type 2", tid2)<0) {
         H5_FAILED();
         printf("Can't set inpad\n");
         goto error;
     }
-    if(H5Tclose(tid2) < 0) {
+    if(H5Tclose(tid2)<0) {
         H5_FAILED();
         printf("Can't close datatype\n");
         goto error;
     }
 
-    if((tid2 = H5Topen2(file, "new float type 2", H5P_DEFAULT)) < 0)
-        FAIL_PUTS_ERROR("Can't open datatype")
-    if(H5Tget_fields(tid2, &spos, &epos, &esize, &mpos, &msize) < 0) {
+    if((tid2 = H5Topen(file, "new float type 2"))<0) {
+        H5_FAILED();
+        printf("Can't open datatype\n");
+        goto error;
+    }
+    if(H5Tget_fields(tid2, &spos, &epos, &esize, &mpos, &msize)<0) {
         H5_FAILED();
         printf("Can't get fields\n");
         goto error;
     }
-    if(spos != 23 || epos != 16 || esize != 7 || mpos != 0 || msize != 16) {
+    if(spos!=23 || epos!=16 || esize!=7 || mpos!=0 || msize!=16) {
         H5_FAILED();
         printf("Wrong field values\n");
         goto error;
     }
 
-    if(H5Tget_precision(tid2) != 24) {
+    if(H5Tget_precision(tid2)!=24) {
         H5_FAILED();
         printf("Can't get precision or wrong precision\n");
         goto error;
@@ -1397,43 +1402,47 @@ test_derived_integer(void)
         goto error;
     }
 
-    if(H5Tset_precision(tid1, 24) < 0) {
+    if(H5Tset_precision(tid1,24)<0) {
         H5_FAILED();
         printf("Can't set precision\n");
         goto error;
     }
 
-    if(H5Tset_order(tid1, H5T_ORDER_BE) < 0) {
+    if(H5Tset_order(tid1, H5T_ORDER_BE)<0) {
         H5_FAILED();
         printf("Can't set order\n");
         goto error;
     }
 
-    if(H5Tcommit2(file, "new integer type 1", tid1, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT) < 0) {
+    if(H5Tcommit(file, "new integer type 1", tid1)<0) {
         H5_FAILED();
         printf("Can't commit data type\n");
         goto error;
     }
 
-    if(H5Tclose(tid1) < 0) {
+    if(H5Tclose(tid1)<0) {
         H5_FAILED();
         printf("Can't close datatype\n");
         goto error;
     }
 
-    if((tid1 = H5Topen2(file, "new integer type 1", H5P_DEFAULT)) < 0)
-        FAIL_PUTS_ERROR("Can't open datatype")
-    if(H5Tget_precision(tid1) != 24) {
+    if((tid1 = H5Topen(file, "new integer type 1"))<0) {
+        H5_FAILED();
+        printf("Can't open datatype\n");
+        goto error;
+    }
+
+    if(H5Tget_precision(tid1)!=24) {
         H5_FAILED();
         printf("Can't get precision or wrong precision\n");
         goto error;
     }
-    if(H5Tget_offset(tid1) != 0) {
+    if(H5Tget_offset(tid1)!=0) {
         H5_FAILED();
         printf("Can't get offset or wrong offset\n");
         goto error;
     }
-    if(H5Tget_size(tid1) != 3) {
+    if(H5Tget_size(tid1)!=3) {
         H5_FAILED();
         printf("Can't get size or wrong size\n");
         goto error;
@@ -1458,43 +1467,47 @@ test_derived_integer(void)
         goto error;
     }
 
-    if(H5Tset_offset(tid2, 10) < 0) {
+    if(H5Tset_offset(tid2,10)<0) {
         H5_FAILED();
         printf("Can't set offset\n");
         goto error;
     }
 
-    if(H5Tset_sign(tid2, H5T_SGN_2) < 0) {
+    if(H5Tset_sign(tid2,H5T_SGN_2)<0) {
         H5_FAILED();
         printf("Can't set offset\n");
         goto error;
     }
 
-    if(H5Tcommit2(file, "new integer type 2", tid2, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT) < 0) {
+    if(H5Tcommit(file, "new integer type 2", tid2)<0) {
         H5_FAILED();
         printf("Can't commit data type\n");
         goto error;
     }
 
-    if(H5Tclose(tid2) < 0) {
+    if(H5Tclose(tid2)<0) {
         H5_FAILED();
         printf("Can't close datatype\n");
         goto error;
     }
 
-    if((tid2 = H5Topen2(file, "new integer type 2", H5P_DEFAULT)) < 0)
-        FAIL_PUTS_ERROR("Can't open datatype")
-    if(H5Tget_precision(tid2) != 48) {
+    if((tid2 = H5Topen(file, "new integer type 2"))<0) {
+        H5_FAILED();
+        printf("Can't open datatype\n");
+        goto error;
+    }
+
+    if(H5Tget_precision(tid2)!=48) {
         H5_FAILED();
         printf("Can't get precision or wrong precision\n");
         goto error;
     }
-    if(H5Tget_offset(tid2) != 10) {
+    if(H5Tget_offset(tid2)!=10) {
         H5_FAILED();
         printf("Can't get offset or wrong offset\n");
         goto error;
     }
-    if(H5Tget_size(tid2) != 8) {
+    if(H5Tget_size(tid2)!=8) {
         H5_FAILED();
         printf("Can't get size or wrong size\n");
         goto error;
@@ -2704,7 +2717,7 @@ my_isnan(dtype_t type, void *val)
  *-------------------------------------------------------------------------
  */
 static int
-my_isinf(int endian, unsigned char *val, size_t size,
+my_isinf(dtype_t type, int endian, unsigned char *val, size_t size,
         size_t mpos, size_t msize, size_t epos, size_t esize)
 {
     unsigned char *bits;
@@ -2788,9 +2801,7 @@ test_conv_flt_1 (const char *name, int run_test, hid_t src, hid_t dst)
     unsigned char	*hw=NULL;		/*ptr to hardware-conv'd*/
     int			underflow;		/*underflow occurred	*/
     int			overflow;		/*overflow occurred	*/
-#ifdef H5_VMS
     int			maximal;		/*maximal value occurred, for VMS only.	*/
-#endif /* H5_VMS */
     int 		uflow=0;		/*underflow debug counters*/
     size_t		j, k;			/*counters		*/
     int			sendian;		/* source type endianess */
@@ -3182,11 +3193,11 @@ test_conv_flt_1 (const char *name, int run_test, hid_t src, hid_t dst)
                 if (underflow &&
                         HDfabsf(x) <= FLT_MIN && HDfabsf(hw_f) <= FLT_MIN)
                     continue;	/* all underflowed, no error */
-                if (overflow && my_isinf(dendian, buf+j*sizeof(float),
+                if (overflow && my_isinf(dst_type, dendian, buf+j*sizeof(float),
                         dst_size, dst_mpos, dst_msize, dst_epos, dst_esize))
                     continue;	/* all overflowed, no error */
 #ifdef H5_VMS
-                if (maximal && my_isinf(dendian, buf+j*sizeof(float),
+                if (maximal && my_isinf(dst_type, dendian, buf+j*sizeof(float),
                         dst_size, dst_mpos, dst_msize, dst_epos, dst_esize))
                     continue;	/* maximal value, no error */
 #endif /*H5_VMS*/
@@ -3198,11 +3209,11 @@ test_conv_flt_1 (const char *name, int run_test, hid_t src, hid_t dst)
                 if (underflow &&
                         HDfabs(x) <= DBL_MIN && HDfabs(hw_d) <= DBL_MIN)
                     continue;	/* all underflowed, no error */
-                if (overflow && my_isinf(dendian, buf+j*sizeof(double),
+                if (overflow && my_isinf(dst_type, dendian, buf+j*sizeof(double),
                         dst_size, dst_mpos, dst_msize, dst_epos, dst_esize))
                     continue;	/* all overflowed, no error */
 #ifdef H5_VMS
-                if (maximal && my_isinf(dendian, buf+j*sizeof(double),
+                if (maximal && my_isinf(dst_type, dendian, buf+j*sizeof(double),
                         dst_size, dst_mpos, dst_msize, dst_epos, dst_esize))
                     continue;	/* maximal value, no error */
 #endif /*H5_VMS*/
@@ -5138,7 +5149,7 @@ run_fp_int_conv(const char *name)
 #endif
             }
 #endif /*H5_LDOUBLE_TO_LLONG_ACCURATE*/
-#if defined(H5_FP_TO_ULLONG_RIGHT_MAXIMUM) && defined(H5_LDOUBLE_TO_LLONG_ACCURATE)
+#if H5_FP_TO_ULLONG_RIGHT_MAXIMUM && H5_LDOUBLE_TO_LLONG_ACCURATE
             nerrors += test_conv_int_fp(name, test_values, H5T_NATIVE_LDOUBLE, H5T_NATIVE_ULLONG);
 #else /*H5_FP_TO_ULLONG_RIGHT_MAXIMUM && H5_LDOUBLE_TO_LLONG_ACCURATE*/
             {

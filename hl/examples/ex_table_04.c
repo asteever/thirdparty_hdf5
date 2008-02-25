@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "hdf5.h"
@@ -25,10 +24,9 @@
  *-------------------------------------------------------------------------
  */
 
-#define NFIELDS       (hsize_t)   5
-#define NRECORDS      (hsize_t)   8
-#define NRECORDS_ADD  (hsize_t)   3
-#define TABLE_NAME               "table"
+#define NFIELDS  (hsize_t)  5
+#define NRECORDS (hsize_t)  8
+#define TABLE_NAME          "table"
 
 int main( void )
 {
@@ -70,6 +68,8 @@ int main( void )
                                sizeof( dst_buf[0].temperature)};
  size_t field_offset_pos[2] = { HOFFSET( Position, lati ),
                                 HOFFSET( Position, longi )};
+ size_t field_offset_namepre[2] = { HOFFSET( NamePressure, name ),
+                                    HOFFSET( NamePressure, pressure )};
  const char *field_names[NFIELDS]  =     /* Define field information */
  { "Name","Latitude", "Longitude", "Pressure", "Temperature" };
  hid_t      field_type[NFIELDS];
@@ -84,21 +84,36 @@ int main( void )
  herr_t     status;
  int        i;
  Particle  *p_data = NULL;               /* Initially no data */
- float      pressure_in [NRECORDS_ADD] = /* Define new values for the field "Pressure"  */
- { 0.0f,1.0f,2.0f};
- Position   position_in[NRECORDS_ADD] = {/* Define new values for "Latitude,Longitude"  */
+ float      pressure_in [NRECORDS] =     /* Define new values for the field "Pressure"  */
+ { 0.0f,1.0f,2.0f,3.0f,4.0f,5.0f,6.0f,7.0f };
+ Position   position_in[NRECORDS] = {    /* Define new values for "Latitude,Longitude"  */
  {0,0},
  {10,10},
- {20,20}};
- NamePressure   namepre_in[NRECORDS_ADD] =/* Define new values for "Name,Pressure"  */
+ {20,20},
+ {30,30},
+ {40,40},
+ {50,50},
+ {60,60},
+ {70,70} };
+ NamePressure   namepre_in[NRECORDS] =  /* Define new values for "Name,Pressure"  */
  { {"zero",0.0f},
  {"one",   1.0f},
  {"two",   2.0f},
- };
+ {"three", 3.0f},
+ {"four",  4.0f},
+ {"five",  5.0f},
+ {"six",   6.0f},
+ {"seven", 7.0f},
+  };
  size_t field_sizes_pos[2]=
  {
   sizeof(position_in[0].longi),
   sizeof(position_in[0].lati)
+ };
+ size_t field_sizes_namepre[2]=
+ {
+  sizeof(namepre_in[0].name),
+  sizeof(namepre_in[0].pressure)
  };
  size_t field_sizes_pre[1]=
  {
@@ -124,13 +139,13 @@ int main( void )
 
  /* Write the pressure field starting at record 2 */
  start    = 2;
- nrecords = NRECORDS_ADD;
+ nrecords = 3;
  status=H5TBwrite_fields_name( file_id, TABLE_NAME, "Pressure", start, nrecords,
    sizeof( float ), 0, field_sizes_pre, pressure_in  );
 
  /* Write the new longitude and latitude information starting at record 2 */
  start    = 2;
- nrecords = NRECORDS_ADD;
+ nrecords = 3;
  status=H5TBwrite_fields_name( file_id, TABLE_NAME, "Latitude,Longitude", start, nrecords,
    sizeof( Position ), field_offset_pos, field_sizes_pos,  position_in  );
 
@@ -153,10 +168,7 @@ int main( void )
  *-------------------------------------------------------------------------
  */
 
-  /* close type */
- H5Tclose( string_type );
- 
- /* close the file */
+ /* Close the file. */
  H5Fclose( file_id );
 
  return 0;

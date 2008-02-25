@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*-------------------------------------------------------------------------
@@ -21,11 +20,13 @@
  *
  * Purpose:             Symbol table messages.
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 
-#define H5G_PACKAGE		/*suppress error about including H5Gpkg	  */
-#define H5O_PACKAGE		/*suppress error about including H5Opkg	  */
+#define H5O_PACKAGE	/*suppress error about including H5Opkg	  */
+#define H5G_PACKAGE	/*suppress error about including H5Gpkg	  */
 
 #include "H5private.h"		/* Generic Functions			*/
 #include "H5Eprivate.h"		/* Error handling		  	*/
@@ -36,17 +37,16 @@
 
 
 /* PRIVATE PROTOTYPES */
-static void *H5O_stab_decode(H5F_t *f, hid_t dxpl_id, unsigned mesg_flags, const uint8_t *p);
-static herr_t H5O_stab_encode(H5F_t *f, hbool_t disable_shared, uint8_t *p, const void *_mesg);
-static void *H5O_stab_copy(const void *_mesg, void *_dest);
-static size_t H5O_stab_size(const H5F_t *f, hbool_t disable_shared, const void *_mesg);
+static void *H5O_stab_decode(H5F_t *f, hid_t dxpl_id, const uint8_t *p);
+static herr_t H5O_stab_encode(H5F_t *f, uint8_t *p, const void *_mesg);
+static void *H5O_stab_copy(const void *_mesg, void *_dest, unsigned update_flags);
+static size_t H5O_stab_size(const H5F_t *f, const void *_mesg);
 static herr_t H5O_stab_free(void *_mesg);
-static herr_t H5O_stab_delete(H5F_t *f, hid_t dxpl_id, H5O_t *open_oh, void *_mesg);
+static herr_t H5O_stab_delete(H5F_t *f, hid_t dxpl_id, const void *_mesg, hbool_t adj_link);
 static void *H5O_stab_copy_file(H5F_t *file_src, void *native_src,
-    H5F_t *file_dst, hbool_t *recompute_size, H5O_copy_t *cpy_info, void *udata,
-    hid_t dxpl_id);
-static herr_t H5O_stab_post_copy_file(const H5O_loc_t *src_oloc, const void *mesg_src, H5O_loc_t *dst_oloc,
-    void *mesg_dst, hid_t dxpl_id, H5O_copy_t *cpy_info);
+    H5F_t *file_dst, hid_t dxpl_id, H5O_copy_t *cpy_info, void *udata);
+static herr_t H5O_stab_post_copy_file(const H5O_loc_t *parent_src_oloc, const void *mesg_src, H5O_loc_t *dst_oloc,
+    void *mesg_dst, hbool_t *modified, hid_t dxpl_id, H5O_copy_t *cpy_info);
 static herr_t H5O_stab_debug(H5F_t *f, hid_t dxpl_id, const void *_mesg,
     FILE * stream, int indent, int fwidth);
 
@@ -55,7 +55,6 @@ const H5O_msg_class_t H5O_MSG_STAB[1] = {{
     H5O_STAB_ID,            	/*message id number             */
     "stab",                 	/*message name for debugging    */
     sizeof(H5O_stab_t),     	/*native message size           */
-    0,				/* messages are sharable?       */
     H5O_stab_decode,        	/*decode message                */
     H5O_stab_encode,        	/*encode message                */
     H5O_stab_copy,          	/*copy the native value         */
@@ -64,13 +63,11 @@ const H5O_msg_class_t H5O_MSG_STAB[1] = {{
     H5O_stab_free,	        /* free method			*/
     H5O_stab_delete,	        /* file delete method		*/
     NULL,			/* link method			*/
+    NULL,		    	/*get share method		*/
     NULL, 			/*set share method		*/
-    NULL,		    	/*can share method		*/
     NULL,			/* pre copy native value to file */
     H5O_stab_copy_file,		/* copy native value to file    */
     H5O_stab_post_copy_file,	/* post copy native value to file    */
-    NULL,			/* get creation index		*/
-    NULL,			/* set creation index		*/
     H5O_stab_debug         	/*debug the message             */
 }};
 
@@ -92,11 +89,12 @@ H5FL_DEFINE_STATIC(H5O_stab_t);
  *              matzke@llnl.gov
  *              Aug  6 1997
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 static void *
-H5O_stab_decode(H5F_t *f, hid_t UNUSED dxpl_id, unsigned UNUSED mesg_flags,
-    const uint8_t *p)
+H5O_stab_decode(H5F_t *f, hid_t UNUSED dxpl_id, const uint8_t *p)
 {
     H5O_stab_t          *stab=NULL;
     void                *ret_value;     /* Return value */
@@ -137,10 +135,12 @@ done:
  *              matzke@llnl.gov
  *              Aug  6 1997
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_stab_encode(H5F_t *f, hbool_t UNUSED disable_shared, uint8_t *p, const void *_mesg)
+H5O_stab_encode(H5F_t *f, uint8_t *p, const void *_mesg)
 {
     const H5O_stab_t       *stab = (const H5O_stab_t *) _mesg;
 
@@ -173,31 +173,33 @@ H5O_stab_encode(H5F_t *f, hbool_t UNUSED disable_shared, uint8_t *p, const void 
  *              matzke@llnl.gov
  *              Aug  6 1997
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 static void *
-H5O_stab_copy(const void *_mesg, void *_dest)
+H5O_stab_copy(const void *_mesg, void *_dest, unsigned UNUSED update_flags)
 {
     const H5O_stab_t       *stab = (const H5O_stab_t *) _mesg;
     H5O_stab_t             *dest = (H5O_stab_t *) _dest;
     void                *ret_value;     /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT(H5O_stab_copy)
+    FUNC_ENTER_NOAPI_NOINIT(H5O_stab_copy);
 
     /* check args */
-    HDassert(stab);
-    if(!dest && NULL == (dest = H5FL_MALLOC(H5O_stab_t)))
+    assert(stab);
+    if (!dest && NULL==(dest = H5FL_MALLOC(H5O_stab_t)))
 	HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
 
     /* copy */
     *dest = *stab;
 
     /* Set return value */
-    ret_value = dest;
+    ret_value=dest;
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5O_stab_copy() */
+    FUNC_LEAVE_NOAPI(ret_value);
+}
 
 
 /*-------------------------------------------------------------------------
@@ -215,10 +217,12 @@ done:
  *              matzke@llnl.gov
  *              Aug  6 1997
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 static size_t
-H5O_stab_size(const H5F_t *f, hbool_t UNUSED disable_shared, const void UNUSED *_mesg)
+H5O_stab_size(const H5F_t *f, const void UNUSED *_mesg)
 {
     size_t ret_value;   /* Return value */
 
@@ -268,21 +272,23 @@ H5O_stab_free (void *mesg)
  * Programmer:  Quincey Koziol
  *              Thursday, March 20, 2003
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_stab_delete(H5F_t *f, hid_t dxpl_id, H5O_t UNUSED *open_oh, void *mesg)
+H5O_stab_delete(H5F_t *f, hid_t dxpl_id, const void *mesg, hbool_t adj_link)
 {
-    herr_t ret_value = SUCCEED;   /* Return value */
+    herr_t ret_value=SUCCEED;   /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5O_stab_delete)
 
     /* check args */
-    HDassert(f);
-    HDassert(mesg);
+    assert(f);
+    assert(mesg);
 
     /* Free the file space for the symbol table */
-    if(H5G_stab_delete(f, dxpl_id, mesg) < 0)
+    if (H5G_stab_delete(f, dxpl_id, mesg, adj_link)<0)
         HGOTO_ERROR(H5E_OHDR, H5E_CANTFREE, FAIL, "unable to free symbol table")
 
 done:
@@ -306,8 +312,7 @@ done:
  */
 static void *
 H5O_stab_copy_file(H5F_t *file_src, void *native_src, H5F_t *file_dst,
-    hbool_t UNUSED *recompute_size, H5O_copy_t UNUSED *cpy_info, void UNUSED *udata,
-    hid_t dxpl_id)
+    hid_t dxpl_id, H5O_copy_t UNUSED *cpy_info, void UNUSED *udata)
 {
     H5O_stab_t          *stab_src = (H5O_stab_t *) native_src;
     H5O_stab_t          *stab_dst = NULL;
@@ -357,17 +362,19 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_stab_post_copy_file(const H5O_loc_t *src_oloc, const void *mesg_src, H5O_loc_t *dst_oloc,
-    void *mesg_dst, hid_t dxpl_id, H5O_copy_t *cpy_info)
+H5O_stab_post_copy_file(const H5O_loc_t *parent_src_oloc, const void *mesg_src, H5O_loc_t *dst_oloc,
+    void *mesg_dst, hbool_t UNUSED *modified, hid_t dxpl_id, H5O_copy_t *cpy_info)
 {
+    H5G_bt_it_ud5_t     udata;      /* B-tree user data */
     const H5O_stab_t    *stab_src = (const H5O_stab_t *)mesg_src;
     H5O_stab_t          *stab_dst = (H5O_stab_t *)mesg_dst;
-    H5G_bt_it_cpy_t     udata;      /* B-tree user data */
+    H5F_t               *file_src = parent_src_oloc->file;
     herr_t ret_value = SUCCEED;   /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5O_stab_post_copy_file)
 
     /* check args */
+    HDassert(file_src);
     HDassert(stab_src);
     HDassert(H5F_addr_defined(dst_oloc->addr));
     HDassert(dst_oloc->file);
@@ -379,14 +386,14 @@ H5O_stab_post_copy_file(const H5O_loc_t *src_oloc, const void *mesg_src, H5O_loc
         HGOTO_DONE(SUCCEED)
 
     /* Set up B-tree iteration user data */
-    udata.src_oloc = src_oloc;
+    udata.src_oloc = (H5O_loc_t *)parent_src_oloc;      /* Casting away const OK - QAK */
     udata.src_heap_addr = stab_src->heap_addr;
     udata.dst_file = dst_oloc->file;
     udata.dst_stab = stab_dst;
     udata.cpy_info = cpy_info;
 
     /* Iterate over objects in group, copying them */
-    if((H5B_iterate(src_oloc->file, dxpl_id, H5B_SNODE, H5G_node_copy, stab_src->btree_addr, &udata)) < 0)
+    if((H5B_iterate(file_src, dxpl_id, H5B_SNODE, H5G_node_copy, stab_src->btree_addr, &udata)) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, FAIL, "iteration operator failed")
 
 done:

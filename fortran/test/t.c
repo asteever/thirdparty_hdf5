@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "t.h"
@@ -129,3 +128,22 @@ nh5_exit_c(int_f *status)
     HDexit((int)*status);
 }   /* h5_exit_c */
 
+
+/*----------------------------------------------------------------------------
+ * Name:        h5_group_revision_c
+ * Purpose:     Checks if H5_GROUP_REVISION variable defined
+ * Inputs:
+ * Returns:     1 if defines, 0 otherwise
+ * Programmer:  Elena Pourmal
+ *              Saturday, May 13, 2006
+ * Modifications:
+ *---------------------------------------------------------------------------*/
+int_f
+nh5_group_revision_c()
+{
+    int_f ret =0;
+#ifdef H5_GROUP_REVISION
+       ret = 1;
+#endif
+    return ret;
+}   /* h5_group_revision_c */

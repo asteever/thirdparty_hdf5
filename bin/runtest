@@ -1,6 +1,5 @@
 #! /bin/sh
 #
-# Copyright by The HDF Group.
 # Copyright by the Board of Trustees of the University of Illinois.
 # All rights reserved.
 #
@@ -10,8 +9,8 @@
 # of the source code distribution tree; Copyright.html can be found at the
 # root level of an installed copy of the electronic HDF5 document set and
 # is linked from the top-level documents page.  It can also be found at
-# http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-# access to either file, you may request a copy from help@hdfgroup.org.
+# http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
+# access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 #
 
 # run the hdf5/bin/snapshot
@@ -41,7 +40,7 @@ PROGNAME="bin/runtest $DEBUGMODE"
 
 # Setup
 HOSTNAME=`hostname | cut -f1 -d.`	# no domain part
-TODAY=`date +%m%d%a`
+TODAY=`date +%y%m%d`
 WEEKDAY=`date +%a`
 H5VER=			# default to current CVS version
 H5VERSION=		# default to current CVS version
@@ -700,7 +699,7 @@ sleep 10
 #################################
 if [ "$TESTHOST" = -all ]; then
     if [ -f $ALLHOSTSFILE ]; then
-	TESTHOST=`sed -e '/^#/d;/^ *$/d' $ALLHOSTSFILE`
+	TESTHOST=`sed -e s/#.*// $ALLHOSTSFILE`
     else
 	PRINT "could not access the all-hosts-file ($ALLHOSTSFILE)"
 	USAGE

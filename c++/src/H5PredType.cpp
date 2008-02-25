@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <string>
@@ -259,26 +258,18 @@ const PredType PredType::NATIVE_UINT_FAST64( H5T_NATIVE_UINT_FAST64 );
 PredType& PredType::operator=( const PredType& rhs )
 {
     if (this != &rhs)
+    {
 	copy(rhs);
-    return(*this);
+	return(*this);
+    }
 }
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 // These dummy functions do not inherit from DataType - they'll
 // throw an DataTypeIException if invoked.
-void PredType::commit( H5File& loc, const char* name )
-{
-   throw DataTypeIException("PredType::commit", "Error: Attempted to commit a predefined datatype.  Invalid operation!" );
-}
-
-void PredType::commit( H5File& loc, const H5std_string& name )
-{
-   commit( loc, name.c_str());
-}
-
 void PredType::commit( H5Object& loc, const char* name )
 {
-   throw DataTypeIException("PredType::commit", "Error: Attempted to commit a predefined datatype.  Invalid operation!" );
+   throw DataTypeIException("PredType::commit", "Attempting to commit a predefined datatype.  This operation is invalid" );
 }
 
 void PredType::commit( H5Object& loc, const H5std_string& name )

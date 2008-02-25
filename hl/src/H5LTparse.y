@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 %{
@@ -42,7 +41,7 @@ int csindex = -1;                /*pointer to the top of compound stack*/
 /*structure for array type information*/
 struct arr_info {
     hsize_t             dims[H5S_MAX_RANK];     /*size of each dimension, limited to 32 dimensions*/
-    unsigned            ndims;                  /*number of dimensions*/
+    int                 ndims;                  /*number of dimensions*/
     hbool_t             is_dim;                 /*flag to lexer for dimension*/
 };
 /*stack for nested array type*/
@@ -211,7 +210,7 @@ offset          :       NUMBER
 array_type      :       H5T_ARRAY_TOKEN { asindex++; /*pushd onto the stack*/ }
                         '{' dim_list ddl_type '}'
                         { 
-                          $<ival>$ = H5Tarray_create2($<ival>5, arr_stack[asindex].ndims, arr_stack[asindex].dims);
+                          $<ival>$ = H5Tarray_create($<ival>5, arr_stack[asindex].ndims, arr_stack[asindex].dims, NULL);
                           arr_stack[asindex].ndims = 0;
                           asindex--;
                           H5Tclose($<ival>5);
@@ -221,7 +220,7 @@ dim_list        :
                 |       dim_list dim
                 ;
 dim             :       '[' { arr_stack[asindex].is_dim = 1; /*notice lexer of dimension size*/ }
-                        dimsize { unsigned ndims = arr_stack[asindex].ndims;
+                        dimsize { int ndims = arr_stack[asindex].ndims;
                                   arr_stack[asindex].dims[ndims] = (hsize_t)yylval.ival; 
                                   arr_stack[asindex].ndims++;
                                   arr_stack[asindex].is_dim = 0; 

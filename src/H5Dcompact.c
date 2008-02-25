@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -66,58 +65,6 @@ H5FL_BLK_EXTERN(type_conv);
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5D_compact_fill
- *
- * Purpose:	Write fill values to a compactly stored dataset.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *		May 6, 2007
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5D_compact_fill(H5D_t *dset, hid_t dxpl_id)
-{
-    H5D_fill_buf_info_t fb_info;        /* Dataset's fill buffer info */
-    hbool_t     fb_info_init = FALSE;   /* Whether the fill value buffer has been initialized */
-    herr_t	ret_value = SUCCEED;	/* Return value */
-
-    FUNC_ENTER_NOAPI(H5D_compact_fill, FAIL)
-
-    /* Check args */
-    HDassert(TRUE == H5P_isa_class(dxpl_id, H5P_DATASET_XFER));
-    HDassert(dset && H5D_COMPACT == dset->shared->layout.type);
-    HDassert(dset->shared->layout.u.compact.buf);
-    HDassert(dset->shared->type);
-    HDassert(dset->shared->space);
-
-    /* Initialize the fill value buffer */
-    /* (use the compact dataset storage buffer as the fill value buffer) */
-    if(H5D_fill_init(&fb_info, dset->shared->layout.u.compact.buf, FALSE,
-            NULL, NULL, NULL, NULL,
-            &dset->shared->dcpl_cache.fill, dset->shared->type,
-            dset->shared->type_id, (size_t)0, dset->shared->layout.u.compact.size, dxpl_id) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "can't initialize fill buffer info")
-    fb_info_init = TRUE;
-
-    /* Check for VL datatype & non-default fill value */
-    if(fb_info.has_vlen_fill_type)
-        /* Fill the buffer with VL datatype fill values */
-        if(H5D_fill_refill_vl(&fb_info, fb_info.elmts_per_buf, dxpl_id) < 0)
-            HGOTO_ERROR(H5E_DATASET, H5E_CANTCONVERT, FAIL, "can't refill fill value buffer")
-
-done:
-    /* Release the fill buffer info, if it's been initialized */
-    if(fb_info_init && H5D_fill_term(&fb_info) < 0)
-        HDONE_ERROR(H5E_DATASET, H5E_CANTFREE, FAIL, "Can't release fill buffer info")
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5D_compact_fill() */
-
-
-/*-------------------------------------------------------------------------
  * Function:    H5D_compact_readvv
  *
  * Purpose:     Reads some data vectors from a dataset into a buffer.
@@ -139,7 +86,7 @@ ssize_t
 H5D_compact_readvv(const H5D_io_info_t *io_info,
     size_t dset_max_nseq, size_t *dset_curr_seq, size_t dset_size_arr[], hsize_t dset_offset_arr[],
     size_t mem_max_nseq, size_t *mem_curr_seq, size_t mem_size_arr[], hsize_t mem_offset_arr[],
-    haddr_t UNUSED addr, void UNUSED *pointer/*in*/, void *buf)
+    void *buf)
 {
     ssize_t ret_value;          /* Return value */
 
@@ -181,7 +128,7 @@ ssize_t
 H5D_compact_writevv(const H5D_io_info_t *io_info,
     size_t dset_max_nseq, size_t *dset_curr_seq, size_t dset_size_arr[], hsize_t dset_offset_arr[],
     size_t mem_max_nseq, size_t *mem_curr_seq, size_t mem_size_arr[], hsize_t mem_offset_arr[],
-    haddr_t UNUSED addr, void UNUSED *pointer/*in*/, const void *buf)
+    const void *buf)
 {
     ssize_t ret_value;          /* Return value */
 
@@ -193,7 +140,6 @@ H5D_compact_writevv(const H5D_io_info_t *io_info,
     if((ret_value=H5V_memcpyvv(io_info->dset->shared->layout.u.compact.buf,dset_max_nseq,dset_curr_seq,dset_size_arr,dset_offset_arr,buf,mem_max_nseq,mem_curr_seq,mem_size_arr,mem_offset_arr))<0)
         HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "vectorized memcpy failed")
 
-    /* Mark the compact dataset's buffer as dirty */
     io_info->dset->shared->layout.u.compact.dirty = TRUE;
 
 done:
@@ -214,8 +160,8 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5D_compact_copy(H5F_t *f_src, H5O_layout_t *layout_src, H5F_t *f_dst, 
-    H5O_layout_t *layout_dst, H5T_t *dt_src, H5O_copy_t *cpy_info, hid_t dxpl_id)
+H5D_compact_copy(const H5O_layout_t *layout_src, H5F_t *f_dst,  H5O_layout_t *layout_dst,
+    H5T_t *dt_src, hid_t dxpl_id)
 {
     hid_t       tid_src = -1;           /* Datatype ID for source datatype */
     hid_t       tid_dst = -1;           /* Datatype ID for destination datatype */
@@ -230,17 +176,14 @@ H5D_compact_copy(H5F_t *f_src, H5O_layout_t *layout_src, H5F_t *f_dst,
 
     /* Check args */
     HDassert(layout_src && H5D_COMPACT == layout_src->type);
-    HDassert(f_src);
     HDassert(f_dst);
     HDassert(layout_dst && H5D_COMPACT == layout_dst->type);
-    HDassert(dt_src);
 
-    /* Create datatype ID for src datatype, so it gets freed */
-    if((tid_src = H5I_register(H5I_DATATYPE, dt_src)) < 0)
-        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTREGISTER, FAIL, "unable to register source file datatype")
-
-    /* If there's a VLEN source datatype, do type conversion information */
-    if(H5T_detect_class(dt_src, H5T_VLEN) > 0) {
+    /* If there's a source datatype, set up type conversion information */
+    if (!dt_src)
+        /* Type conversion not necessary */
+        HDmemcpy(layout_dst->u.compact.buf, layout_src->u.compact.buf, layout_src->u.compact.size);
+    else {
         H5T_path_t  *tpath_src_mem, *tpath_mem_dst;   /* Datatype conversion paths */
         H5T_t *dt_dst;              /* Destination datatype */
         H5T_t *dt_mem;              /* Memory datatype */
@@ -252,11 +195,15 @@ H5D_compact_copy(H5F_t *f_src, H5O_layout_t *layout_src, H5F_t *f_dst,
         size_t max_dt_size;         /* Max atatype size */
         hsize_t buf_dim;            /* Dimension for buffer */
 
+        /* Create datatype ID for src datatype */
+        if((tid_src = H5I_register(H5I_DATATYPE, dt_src)) < 0)
+            HGOTO_ERROR(H5E_DATATYPE, H5E_CANTREGISTER, FAIL, "unable to register source file datatype")
+
         /* create a memory copy of the variable-length datatype */
         if(NULL == (dt_mem = H5T_copy(dt_src, H5T_COPY_TRANSIENT)))
             HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "unable to copy")
         if((tid_mem = H5I_register(H5I_DATATYPE, dt_mem)) < 0)
-            HGOTO_ERROR(H5E_DATATYPE, H5E_CANTREGISTER, FAIL, "unable to register memory datatype")
+            HGOTO_ERROR (H5E_DATATYPE, H5E_CANTREGISTER, FAIL, "unable to register memory datatype")
 
         /* create variable-length datatype at the destinaton file */
         if(NULL == (dt_dst = H5T_copy(dt_src, H5T_COPY_TRANSIENT)))
@@ -331,31 +278,6 @@ H5D_compact_copy(H5F_t *f_src, H5O_layout_t *layout_src, H5F_t *f_dst,
         if(H5D_vlen_reclaim(tid_mem, buf_space, H5P_DATASET_XFER_DEFAULT, reclaim_buf) < 0)
             HGOTO_ERROR(H5E_DATASET, H5E_BADITER, FAIL, "unable to reclaim variable-length data")
     } /* end if */
-    else if(H5T_get_class(dt_src, FALSE) == H5T_REFERENCE) {
-        if(f_src != f_dst) {
-            /* Check for expanding references */
-            if(cpy_info->expand_ref) {
-                size_t ref_count;
-
-                /* Determine # of reference elements to copy */
-                ref_count = layout_src->u.compact.size / H5T_get_size(dt_src);
-
-                /* Copy objects referenced in source buffer to destination file and set destination elements */
-                if(H5O_copy_expand_ref(f_src, layout_src->u.compact.buf, dxpl_id, f_dst,
-                        layout_dst->u.compact.buf, ref_count, H5T_get_ref_type(dt_src), cpy_info) < 0)
-                    HGOTO_ERROR(H5E_DATASET, H5E_CANTCOPY, FAIL, "unable to copy reference attribute")
-            } /* end if */
-            else
-                /* Reset value to zero */
-                HDmemset(layout_dst->u.compact.buf, 0, layout_src->u.compact.size);
-        } /* end if */
-        else
-            /* Type conversion not necessary */
-            HDmemcpy(layout_dst->u.compact.buf, layout_src->u.compact.buf, layout_src->u.compact.size);
-    } /* end if */
-    else 
-        /* Type conversion not necessary */
-        HDmemcpy(layout_dst->u.compact.buf, layout_src->u.compact.buf, layout_src->u.compact.size);
 
 done:
     if(buf_sid > 0)

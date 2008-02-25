@@ -1,6 +1,5 @@
 #! /bin/sh
 #
-# Copyright by The HDF Group.
 # Copyright by the Board of Trustees of the University of Illinois.
 # All rights reserved.
 #
@@ -10,8 +9,8 @@
 # of the source code distribution tree; Copyright.html can be found at the
 # root level of an installed copy of the electronic HDF5 document set and
 # is linked from the top-level documents page.  It can also be found at
-# http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-# access to either file, you may request a copy from help@hdfgroup.org.
+# http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
+# access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 #
 # Tests for the h5dump tool
 
@@ -119,8 +118,6 @@ TOOLTEST tcompound_complex.h5.xml --xml tcompound_complex.h5
 TOOLTEST tobjref.h5.xml --xml tobjref.h5
 TOOLTEST topaque.h5.xml --xml topaque.h5
 TOOLTEST tslink.h5.xml --xml tslink.h5
-TOOLTEST tudlink.h5.xml --xml tudlink.h5
-TOOLTEST textlink.h5.xml --xml textlink.h5
 TOOLTEST tstr.h5.xml --xml tstr.h5
 TOOLTEST tstr2.h5.xml --xml tstr2.h5
 TOOLTEST tref.h5.xml --xml tref.h5
@@ -176,15 +173,6 @@ TOOLTEST tempty-nons-uri.h5.xml --xml --xml-ns=":" --xml-dtd="http://somewhere.n
 TOOLTEST tempty-dtd-uri.h5.xml --xml --use-dtd --xml-dtd="http://somewhere.net" tempty.h5
 
 TOOLTEST tall-2A.h5.xml --xml -A tall.h5
-
-
-# tests for attribute order
-TOOLTEST torderattr1.h5.xml --xml -H --sort_by=name --sort_order=ascending torderattr.h5
-TOOLTEST torderattr2.h5.xml --xml -H --sort_by=name --sort_order=descending torderattr.h5
-TOOLTEST torderattr3.h5.xml --xml -H --sort_by=creation_order --sort_order=ascending torderattr.h5
-TOOLTEST torderattr4.h5.xml --xml -H --sort_by=creation_order --sort_order=descending torderattr.h5
-
-
 
 
 if test $nerrors -eq 0 ; then

@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "h5diff.h"
@@ -90,29 +89,26 @@ void parallel_print(const char* format, ...)
  va_end(ap);
 }
 
+
 /*-------------------------------------------------------------------------
- * Function: print_dimensions
+ * Function: print_dims
  *
- * Purpose: print dimensions 
+ * Purpose: print dimensions
+ *
+ * Programmer: Pedro Vicente, pvn@ncsa.uiuc.edu
+ *
+ * Date: May 9, 2003
  *
  *-------------------------------------------------------------------------
  */
-void
-print_dimensions (int rank, hsize_t *dims)
+void print_dims( int r, hsize_t *d )
 {
-    int i;
-
-    parallel_print("[" );
-    for ( i = 0; i < rank-1; i++)
-    {
-        parallel_print("%"H5_PRINTF_LL_WIDTH"u", (unsigned long_long)dims[i]);
-        parallel_print("x");
-    }
-    parallel_print("%"H5_PRINTF_LL_WIDTH"u", (unsigned long_long)dims[rank-1]);
-    parallel_print("]" );
-    
+ int i;
+ parallel_print("[ " );
+ for ( i=0; i<r; i++ )
+  parallel_print("%"H5_PRINTF_LL_WIDTH"u ",(unsigned long_long)d[i]  );
+ parallel_print("] " );
 }
-
 
 /*-------------------------------------------------------------------------
  * Function: print_type
@@ -261,22 +257,21 @@ diff_basename(const char *name)
  *-------------------------------------------------------------------------
  */
 const char*
-get_type(h5trav_type_t type)
+get_type(int type)
 {
-    switch(type) {
-        case H5TRAV_TYPE_DATASET:
-            return("H5G_DATASET");
-        case H5TRAV_TYPE_GROUP:
-            return("H5G_GROUP");
-        case H5TRAV_TYPE_NAMED_DATATYPE:
-            return("H5G_TYPE");
-        case H5TRAV_TYPE_LINK:
-            return("H5G_LINK");
-        case H5TRAV_TYPE_UDLINK:
-            return("H5G_UDLINK");
-        default:
-            return("unknown type");
-    }
+ switch (type)
+ {
+ case H5G_DATASET:
+  return("H5G_DATASET");
+ case H5G_GROUP:
+  return("H5G_GROUP");
+ case H5G_TYPE:
+  return("H5G_TYPE");
+ case H5G_LINK:
+  return("H5G_LINK");
+ default:
+  return("user defined type");
+ }
 }
 
 /*-------------------------------------------------------------------------

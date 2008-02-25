@@ -1,5 +1,4 @@
 #
-# Copyright by The HDF Group.
 # Copyright by the Board of Trustees of the University of Illinois.
 # All rights reserved.
 #
@@ -9,8 +8,8 @@
 # of the source code distribution tree; Copyright.html can be found at the
 # root level of an installed copy of the electronic HDF5 document set and
 # is linked from the top-level documents page.  It can also be found at
-# http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-# access to either file, you may request a copy from help@hdfgroup.org.
+# http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
+# access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 ##
 ## Makefile.am
 ## Run automake to generate a Makefile.in from this file.
@@ -154,15 +153,6 @@ check-install: installcheck
 # so 'make trace' only needs to recurse into that directory.
 trace:
 	@(cd src && $(MAKE) $(AM_MAKEFLAGS) $@) || exit 1;
-
-# Run tests with different Virtual File Drivers.
-# Currently, only invoke check-vfd in the test directory.
-check-vfd:
-	@@SETX@; for d in src test; do                                 \
-	  if test $$d != .; then                                       \
-	    (cd $$d && $(MAKE) $(AM_MAKEFLAGS) $@) || exit 1;          \
-	  fi;                                                          \
-	done
 
 # Automake wants to make config.status depend on configure.  This
 # makes sense, but config.status can't always be regenerated

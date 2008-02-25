@@ -1,6 +1,5 @@
 // C++ informative line for the emacs editor: -*- C++ -*-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -10,8 +9,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef _H5Exception_H
@@ -49,14 +48,14 @@ class H5_DLLCPP Exception {
 	const char* getCFuncName() const;	// function name as a char string
 
 	// Turns on the automatic error printing.
-	static void setAutoPrint( H5E_auto2_t& func, void* client_data);
+	static void setAutoPrint( H5E_auto_stack_t& func, void* client_data);
 
 	// Turns off the automatic error printing.
 	static void dontPrint();
 
 	// Retrieves the current settings for the automatic error stack
 	// traversal function and its data.
-	static void getAutoPrint( H5E_auto2_t& func, void** client_data);
+	static void getAutoPrint( H5E_auto_stack_t& func, void** client_data);
 
 	// Clears the error stack for the current thread.
 	static void clearErrorStack();
@@ -64,7 +63,7 @@ class H5_DLLCPP Exception {
 	// Walks the error stack for the current thread, calling the
 	// specified function.
 	static void walkErrorStack( H5E_direction_t direction,
-				H5E_walk2_t func, void* client_data);
+				H5E_walk_stack_t func, void* client_data);
 
 	// Prints the error stack in a default manner.
 	virtual void printError( FILE* stream = NULL ) const;
@@ -82,7 +81,7 @@ class H5_DLLCPP Exception {
 // Because 'string' is not instantiated at compilation time, this
 // warning is displayed when building DLL; but the class is exported
 // so the warning is harmless
-#if defined(_WIN32)
+#if defined(WIN32)
 #pragma warning(disable: 4251)
 #endif
 	H5std_string detail_message;
