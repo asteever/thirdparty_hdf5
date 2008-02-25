@@ -603,7 +603,7 @@ H5G_link_sort_table(H5G_link_table_t *ltable, H5_index_t idx_type,
  */
 herr_t
 H5G_link_iterate_table(const H5G_link_table_t *ltable, hsize_t skip,
-    hsize_t *last_lnk, const H5G_lib_iterate_t op, void *op_data)
+    hsize_t *last_lnk, hid_t gid, const H5G_link_iterate_t *lnk_op, void *op_data)
 {
     size_t u;                           /* Local index variable */
     herr_t ret_value = H5_ITER_CONT;   /* Return value */
@@ -612,7 +612,7 @@ H5G_link_iterate_table(const H5G_link_table_t *ltable, hsize_t skip,
 
     /* Sanity check */
     HDassert(ltable);
-    HDassert(op);
+    HDassert(lnk_op);
 
     /* Skip over links, if requested */
     if(last_lnk)
@@ -621,8 +621,30 @@ H5G_link_iterate_table(const H5G_link_table_t *ltable, hsize_t skip,
     /* Iterate over link messages */
     H5_ASSIGN_OVERFLOW(/* To: */ u, /* From: */ skip, /* From: */ hsize_t, /* To: */ size_t)
     for(; u < ltable->nlinks && !ret_value; u++) {
-        /* Make the callback */
-        ret_value = (op)(&(ltable->lnks[u]), op_data);
+        /* Check which kind of callback to make */
+        switch(lnk_op->op_type) {
+            case H5G_LINK_OP_OLD:
+                /* Make the old-type application callback */
+                ret_value = (lnk_op->u.old_op)(gid, ltable->lnks[u].name, op_data);
+                break;
+
+            case H5G_LINK_OP_APP:
+                {
+                    H5L_info_t info;    /* Link info */
+
+                    /* Retrieve the info for the link */
+                    if(H5G_link_to_info(&(ltable->lnks[u]), &info) < 0)
+                        HGOTO_ERROR(H5E_SYM, H5E_CANTGET, H5_ITER_ERROR, "unable to get info for link")
+
+                    /* Make the application callback */
+                    ret_value = (lnk_op->u.app_op)(gid, ltable->lnks[u].name, &info, op_data);
+                }
+                break;
+
+            case H5G_LINK_OP_LIB:
+                /* Call the library's callback */
+                ret_value = (lnk_op->u.lib_op)(&(ltable->lnks[u]), op_data);
+        } /* end switch */
 
         /* Increment the number of entries passed through */
         if(last_lnk)
@@ -633,6 +655,7 @@ H5G_link_iterate_table(const H5G_link_table_t *ltable, hsize_t skip,
     if(ret_value < 0)
         HERROR(H5E_SYM, H5E_CANTNEXT, "iteration operator failed");
 
+done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5G_link_iterate_table() */
 
@@ -680,7 +703,7 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5G_link_name_replace
+ * Function:	H5G_link_obj_type
  *
  * Purpose:	Determine the type of object referred to (for hard links) or
  *              the link type (for soft links and user-defined links).
@@ -695,9 +718,10 @@ done:
  */
 herr_t
 H5G_link_name_replace(H5F_t *file, hid_t dxpl_id, H5RS_str_t *grp_full_path_r,
-    const H5O_link_t *lnk)
+    const char *lnk_name, H5L_type_t lnk_type, haddr_t lnk_addr)
 {
     H5RS_str_t *obj_path_r = NULL;      /* Full path for link being removed */
+    H5G_obj_t grp_obj_type;             /* Type of link/object being deleted */
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_NOAPI(H5G_link_name_replace, FAIL)
@@ -705,10 +729,45 @@ H5G_link_name_replace(H5F_t *file, hid_t dxpl_id, H5RS_str_t *grp_full_path_r,
     /* check arguments */
     HDassert(file);
 
+    /* Look up the object type for each type of link */
+    switch(lnk_type) {
+        case H5L_TYPE_HARD:
+            {
+                H5O_loc_t tmp_oloc;             /* Temporary object location */
+                H5O_type_t obj_type;            /* Type of object at location */
+
+                /* Build temporary object location */
+                tmp_oloc.file = file;
+                tmp_oloc.addr = lnk_addr;
+
+                /* Get the type of the object */
+                if(H5O_obj_type(&tmp_oloc, &obj_type, dxpl_id) < 0)
+                    HGOTO_ERROR(H5E_SYM, H5E_CANTGET, H5G_UNKNOWN, "can't get object type")
+
+                /* Map to group object type */
+                if(H5G_UNKNOWN == (grp_obj_type = H5G_map_obj_type(obj_type)))
+                    HGOTO_ERROR(H5E_SYM, H5E_BADTYPE, H5G_UNKNOWN, "can't determine object type")
+            }
+            break;
+
+        case H5L_TYPE_SOFT:
+            /* Get the object's type */
+            grp_obj_type = H5G_LINK;
+            break;
+
+        default:  /* User-defined link */
+            if(lnk_type < H5L_TYPE_UD_MIN)
+               HGOTO_ERROR(H5E_SYM, H5E_BADVALUE, FAIL, "unknown link type")
+
+            /* Get the object's type */
+            grp_obj_type = H5G_UDLINK;
+    } /* end switch */
+
     /* Search the open IDs and replace names for unlinked object */
     if(grp_full_path_r) {
-        obj_path_r = H5G_build_fullpath_refstr_str(grp_full_path_r, lnk->name);
-        if(H5G_name_replace(lnk, H5G_NAME_DELETE, file, obj_path_r, NULL, NULL, dxpl_id) < 0)
+        obj_path_r = H5G_build_fullpath_refstr_str(grp_full_path_r, lnk_name);
+        if(H5G_name_replace(grp_obj_type, file, obj_path_r,
+                NULL, NULL, NULL, H5G_NAME_DELETE) < 0)
             HGOTO_ERROR(H5E_SYM, H5E_CANTDELETE, FAIL, "unable to replace name")
     } /* end if */
 

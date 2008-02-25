@@ -143,13 +143,17 @@ H5O_layout_decode(H5F_t *f, hid_t UNUSED dxpl_id, unsigned UNUSED mesg_flags,
 
         /* Read the size */
         if(mesg->type != H5D_CHUNKED) {
+            size_t temp_dim[H5O_LAYOUT_NDIMS];
+
+            for(u = 0; u < ndims; u++)
+                UINT32DECODE(p, temp_dim[u]);
+
             /* Don't compute size of contiguous storage here, due to possible
              * truncation of the dimension sizes when they were stored in this
              * version of the layout message.  Compute the contiguous storage
              * size in the dataset code, where we've got the dataspace
              * information available also.  - QAK 5/26/04
              */
-            p += ndims * 4;     /* Skip over dimension sizes (32-bit quantities) */
         } /* end if */
         else {
             mesg->u.chunk.ndims=ndims;
@@ -177,16 +181,6 @@ H5O_layout_decode(H5F_t *f, hid_t UNUSED dxpl_id, unsigned UNUSED mesg_flags,
 
         /* Interpret the rest of the message according to the layout class */
         switch(mesg->type) {
-            case H5D_COMPACT:
-                UINT16DECODE(p, mesg->u.compact.size);
-                if(mesg->u.compact.size > 0) {
-                    if(NULL == (mesg->u.compact.buf = H5MM_malloc(mesg->u.compact.size)))
-                        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed for compact data buffer")
-                    HDmemcpy(mesg->u.compact.buf, p, mesg->u.compact.size);
-                    p += mesg->u.compact.size;
-                } /* end if */
-                break;
-
             case H5D_CONTIGUOUS:
                 H5F_addr_decode(f, &p, &(mesg->u.contig.addr));
                 H5F_DECODE_LENGTH(f, p, mesg->u.contig.size);
@@ -208,6 +202,16 @@ H5O_layout_decode(H5F_t *f, hid_t UNUSED dxpl_id, unsigned UNUSED mesg_flags,
                 /* Compute chunk size */
                 for(u = 1, mesg->u.chunk.size = mesg->u.chunk.dim[0]; u < mesg->u.chunk.ndims; u++)
                     mesg->u.chunk.size *= mesg->u.chunk.dim[u];
+                break;
+
+            case H5D_COMPACT:
+                UINT16DECODE(p, mesg->u.compact.size);
+                if(mesg->u.compact.size > 0) {
+                    if(NULL == (mesg->u.compact.buf = H5MM_malloc(mesg->u.compact.size)))
+                        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed for compact data buffer")
+                    HDmemcpy(mesg->u.compact.buf, p, mesg->u.compact.size);
+                    p += mesg->u.compact.size;
+                } /* end if */
                 break;
 
             default:
@@ -279,20 +283,6 @@ H5O_layout_encode(H5F_t *f, hbool_t UNUSED disable_shared, uint8_t *p, const voi
 
     /* Write out layout class specific information */
     switch(mesg->type) {
-        case H5D_COMPACT:
-            /* Size of raw data */
-            UINT16ENCODE(p, mesg->u.compact.size);
-
-            /* Raw data */
-            if(mesg->u.compact.size > 0) {
-                if(mesg->u.compact.buf)
-                    HDmemcpy(p, mesg->u.compact.buf, mesg->u.compact.size);
-                else
-                    HDmemset(p, 0, mesg->u.compact.size);
-                p += mesg->u.compact.size;
-            } /* end if */
-            break;
-
         case H5D_CONTIGUOUS:
             H5F_addr_encode(f, &p, mesg->u.contig.addr);
             H5F_ENCODE_LENGTH(f, p, mesg->u.contig.size);
@@ -309,6 +299,20 @@ H5O_layout_encode(H5F_t *f, hbool_t UNUSED disable_shared, uint8_t *p, const voi
             /* Dimension sizes */
             for(u = 0; u < mesg->u.chunk.ndims; u++)
                 UINT32ENCODE(p, mesg->u.chunk.dim[u]);
+            break;
+
+        case H5D_COMPACT:
+            /* Size of raw data */
+            UINT16ENCODE(p, mesg->u.compact.size);
+
+            /* Raw data */
+            if(mesg->u.compact.size > 0) {
+                if(mesg->u.compact.buf)
+                    HDmemcpy(p, mesg->u.compact.buf, mesg->u.compact.size);
+                else
+                    HDmemset(p, 0, mesg->u.compact.size);
+                p += mesg->u.compact.size;
+            } /* end if */
             break;
 
         default:
@@ -402,11 +406,6 @@ H5O_layout_meta_size(const H5F_t *f, const void *_mesg)
                 1;                      /* layout class type                    */
 
     switch(mesg->type) {
-        case H5D_COMPACT:
-            /* Size of raw data */
-            ret_value += 2;
-            break;
-
         case H5D_CONTIGUOUS:
             ret_value += H5F_SIZEOF_ADDR(f);    /* Address of data */
             ret_value += H5F_SIZEOF_SIZE(f);    /* Length of data */
@@ -422,6 +421,11 @@ H5O_layout_meta_size(const H5F_t *f, const void *_mesg)
 
             /* Dimension sizes */
             ret_value += mesg->u.chunk.ndims * 4;
+            break;
+
+        case H5D_COMPACT:
+            /* Size of raw data */
+            ret_value += 2;
             break;
 
         default:

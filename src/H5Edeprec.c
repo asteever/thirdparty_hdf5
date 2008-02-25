@@ -82,7 +82,6 @@
 /*******************/
 
 
-#ifndef H5_NO_DEPRECATED_SYMBOLS
 
 /*--------------------------------------------------------------------------
 NAME
@@ -118,7 +117,7 @@ H5E_init_deprec_interface(void)
  *
  *-------------------------------------------------------------------------
  */
-char *
+const char *
 H5Eget_major(H5E_major_t maj)
 {
     H5E_msg_t   *msg;           /* Pointer to error message */
@@ -166,7 +165,7 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-char *
+const char *
 H5Eget_minor(H5E_minor_t min)
 {
     H5E_msg_t   *msg;           /* Pointer to error message */
@@ -202,7 +201,7 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5Epush1
+ * Function:	H5Epush
  *
  * Purpose:	This function definition is for backward compatibility only.
  *              It doesn't have error stack and error class as parameters.
@@ -222,13 +221,13 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Epush1(const char *file, const char *func, unsigned line,
+H5Epush(const char *file, const char *func, unsigned line,
         H5E_major_t maj, H5E_minor_t min, const char *str)
 {
     herr_t	ret_value = SUCCEED;    /* Return value */
 
     /* Don't clear the error stack! :-) */
-    FUNC_ENTER_API_NOCLEAR(H5Epush1, FAIL)
+    FUNC_ENTER_API_NOCLEAR(H5Epush, FAIL)
     H5TRACE6("e", "*s*sIuii*s", file, func, line, maj, min, str);
 
     /* Push the error on the default error stack */
@@ -237,11 +236,11 @@ H5Epush1(const char *file, const char *func, unsigned line,
 
 done:
     FUNC_LEAVE_API(ret_value)
-} /* end H5Epush1() */
+} /* end H5Epush() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5Eclear1
+ * Function:	H5Eclear
  *
  * Purpose:	This function is for backward compatbility.
  *              Clears the error stack for the specified error stack.
@@ -254,12 +253,12 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Eclear1(void)
+H5Eclear(void)
 {
     herr_t ret_value = SUCCEED; /* Return value */
 
     /* Don't clear the error stack! :-) */
-    FUNC_ENTER_API_NOCLEAR(H5Eclear1, FAIL)
+    FUNC_ENTER_API_NOCLEAR(H5Eclear, FAIL)
     H5TRACE0("e","");
 
     /* Clear the default error stack */
@@ -268,11 +267,11 @@ H5Eclear1(void)
 
 done:
     FUNC_LEAVE_API(ret_value)
-} /* end H5Eclear1() */
+} /* end H5Eclear() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5Eprint1
+ * Function:	H5Eprint
  *
  * Purpose:	This function is for backward compatbility.
  *              Prints the error stack in some default way.  This is just a
@@ -288,29 +287,29 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Eprint1(FILE *stream)
+H5Eprint(FILE *stream)
 {
     H5E_t   *estack;            /* Error stack to operate on */
     herr_t ret_value = SUCCEED; /* Return value */
 
     /* Don't clear the error stack! :-) */
-    FUNC_ENTER_API_NOCLEAR(H5Eprint1, FAIL)
+    FUNC_ENTER_API_NOCLEAR(H5Eprint, FAIL)
     /*NO TRACE*/
 
     if(NULL == (estack = H5E_get_my_stack())) /*lint !e506 !e774 Make lint 'constant value Boolean' in non-threaded case */
         HGOTO_ERROR(H5E_ERROR, H5E_CANTGET, FAIL, "can't get current error stack")
 
     /* Print error stack */
-    if(H5E_print(estack, stream, TRUE) < 0)
+    if(H5E_print2(estack, stream, TRUE) < 0)
         HGOTO_ERROR(H5E_ERROR, H5E_CANTLIST, FAIL, "can't display error stack")
 
 done:
     FUNC_LEAVE_API(ret_value)
-} /* end H5Eprint1() */
+} /* end H5Eprint() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5Ewalk1
+ * Function:	H5Ewalk
  *
  * Purpose:	This function is for backward compatbility.
  *              Walks the error stack for the current thread and calls some
@@ -324,32 +323,29 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Ewalk1(H5E_direction_t direction, H5E_walk1_t func, void *client_data)
+H5Ewalk(H5E_direction_t direction, H5E_walk_t func, void *client_data)
 {
     H5E_t   *estack;            /* Error stack to operate on */
-    H5E_walk_op_t walk_op;      /* Error stack walking callback */
     herr_t ret_value = SUCCEED; /* Return value */
 
     /* Don't clear the error stack! :-) */
-    FUNC_ENTER_API_NOCLEAR(H5Ewalk1, FAIL)
+    FUNC_ENTER_API_NOCLEAR(H5Ewalk, FAIL)
     /*NO TRACE*/
 
     if(NULL == (estack = H5E_get_my_stack())) /*lint !e506 !e774 Make lint 'constant value Boolean' in non-threaded case */
         HGOTO_ERROR(H5E_ERROR, H5E_CANTGET, FAIL, "can't get current error stack")
 
     /* Walk the error stack */
-    walk_op.vers = 1;
-    walk_op.u.func1 = func;
-    if(H5E_walk(estack, direction, &walk_op, client_data) < 0)
+    if(H5E_walk2(estack, direction, func, NULL, TRUE, client_data) < 0)
         HGOTO_ERROR(H5E_ERROR, H5E_CANTLIST, FAIL, "can't walk error stack")
 
 done:
     FUNC_LEAVE_API(ret_value)
-} /* end H5Ewalk1() */
+} /* end H5Ewalk() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5Eget_auto1
+ * Function:	H5Eget_auto
  *
  * Purpose:	This function is for backward compatbility.
  *              Returns the current settings for the automatic error stack
@@ -365,13 +361,13 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Eget_auto1(H5E_auto1_t *func, void **client_data)
+H5Eget_auto(H5E_auto_t *func, void **client_data)
 {
     H5E_t   *estack;            /* Error stack to operate on */
-    H5E_auto_op_t auto_op;      /* Error stack operator */
+    H5E_auto_op_t f;            /* Error stack function */
     herr_t ret_value = SUCCEED;   /* Return value */
 
-    FUNC_ENTER_API(H5Eget_auto1, FAIL)
+    FUNC_ENTER_API(H5Eget_auto, FAIL)
     H5TRACE2("e", "*x**x", func, client_data);
 
     /* Retrieve default error stack */
@@ -379,18 +375,18 @@ H5Eget_auto1(H5E_auto1_t *func, void **client_data)
         HGOTO_ERROR(H5E_ERROR, H5E_CANTGET, FAIL, "can't get current error stack")
 
     /* Get the automatic error reporting information */
-    if(H5E_get_auto(estack, &auto_op, client_data) < 0)
+    if(H5E_get_auto2(estack, FALSE, &f, client_data) < 0)
         HGOTO_ERROR(H5E_ERROR, H5E_CANTGET, FAIL, "can't get automatic error info")
     if(func)
-        *func = auto_op.u.func1;
+        *func = f.efunc;
 
 done:
     FUNC_LEAVE_API(ret_value)
-} /* end H5Eget_auto1() */
+} /* end H5Eget_auto() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5Eset_auto1
+ * Function:	H5Eset_auto
  *
  * Purpose:	This function is for backward compatbility.
  *              Turns on or off automatic printing of errors for certain
@@ -399,7 +395,7 @@ done:
  *              call FUNC passing it CLIENT_DATA as an argument.
  *
  *		The default values before this function is called are
- *		H5Eprint1() with client data being the standard error stream,
+ *		H5Eprint() with client data being the standard error stream,
  *		stderr.
  *
  *		Automatic stack traversal is always in the H5E_WALK_DOWNWARD
@@ -413,27 +409,25 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Eset_auto1(H5E_auto1_t func, void *client_data)
+H5Eset_auto(H5E_auto_t func, void *client_data)
 {
     H5E_t   *estack;            /* Error stack to operate on */
-    H5E_auto_op_t auto_op;      /* Error stack operator */
+    H5E_auto_op_t f;            /* Error stack function */
     herr_t ret_value = SUCCEED; /* Return value */
 
     /* Don't clear the error stack! :-) */
-    FUNC_ENTER_API_NOCLEAR(H5Eset_auto1, FAIL)
+    FUNC_ENTER_API_NOCLEAR(H5Eset_auto, FAIL)
     H5TRACE2("e", "x*x", func, client_data);
 
     if(NULL == (estack = H5E_get_my_stack())) /*lint !e506 !e774 Make lint 'constant value Boolean' in non-threaded case */
         HGOTO_ERROR(H5E_ERROR, H5E_CANTGET, FAIL, "can't get current error stack")
 
     /* Set the automatic error reporting information */
-    auto_op.vers = 1;
-    auto_op.u.func1 = func;
-    if(H5E_set_auto(estack, &auto_op, client_data) < 0)
+    f.efunc = func;
+    if(H5E_set_auto2(estack, FALSE, &f, client_data) < 0)
         HGOTO_ERROR(H5E_ERROR, H5E_CANTSET, FAIL, "can't set automatic error info")
 
 done:
     FUNC_LEAVE_API(ret_value)
-} /* end H5Eset_auto1() */
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
+} /* end H5Eset_auto() */
 

@@ -65,9 +65,7 @@
 /* Local Prototypes */
 /********************/
 
-#ifndef H5_NO_DEPRECATED_SYMBOLS
 static herr_t H5D_extend(H5D_t *dataset, const hsize_t *size, hid_t dxpl_id);
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
 
 
 /*********************/
@@ -106,10 +104,9 @@ H5D_init_deprec_interface(void)
     FUNC_LEAVE_NOAPI(H5D_init())
 } /* H5D_init_deprec_interface() */
 
-#ifndef H5_NO_DEPRECATED_SYMBOLS
 
 /*-------------------------------------------------------------------------
- * Function:	H5Dcreate1
+ * Function:	H5Dcreate
  *
  * Purpose:	Creates a new dataset named NAME at LOC_ID, opens the
  *		dataset for access, and associates with that dataset constant
@@ -138,7 +135,7 @@ H5D_init_deprec_interface(void)
  *-------------------------------------------------------------------------
  */
 hid_t
-H5Dcreate1(hid_t loc_id, const char *name, hid_t type_id, hid_t space_id,
+H5Dcreate(hid_t loc_id, const char *name, hid_t type_id, hid_t space_id,
 	  hid_t dcpl_id)
 {
     H5G_loc_t	    loc;                /* Object location to insert dataset into */
@@ -146,7 +143,7 @@ H5Dcreate1(hid_t loc_id, const char *name, hid_t type_id, hid_t space_id,
     const H5S_t    *space;              /* Dataspace for dataset */
     hid_t           ret_value;          /* Return value */
 
-    FUNC_ENTER_API(H5Dcreate1, FAIL)
+    FUNC_ENTER_API(H5Dcreate, FAIL)
     H5TRACE5("i", "i*siii", loc_id, name, type_id, space_id, dcpl_id);
 
     /* Check arguments */
@@ -179,19 +176,18 @@ done:
             HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, FAIL, "unable to release dataset")
 
     FUNC_LEAVE_API(ret_value)
-} /* end H5Dcreate1() */
+} /* end H5Dcreate() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5Dopen1
+ * Function:	H5Dopen
  *
  * Purpose:	Finds a dataset named NAME at LOC_ID, opens it, and returns
  *		its ID.	 The dataset should be close when the caller is no
  *		longer interested in it.
  *
- * Note:	Deprecated in favor of H5Dopen2
- *
  * Return:	Success:	A new dataset ID
+ *
  *		Failure:	FAIL
  *
  * Programmer:	Robb Matzke
@@ -200,7 +196,7 @@ done:
  *-------------------------------------------------------------------------
  */
 hid_t
-H5Dopen1(hid_t loc_id, const char *name)
+H5Dopen(hid_t loc_id, const char *name)
 {
     H5D_t       *dset = NULL;
     H5G_loc_t	 loc;		        /* Object location of group */
@@ -212,7 +208,7 @@ H5Dopen1(hid_t loc_id, const char *name)
     hid_t        dxpl_id = H5AC_dxpl_id;    /* dxpl to use to open datset */
     hid_t        ret_value;
 
-    FUNC_ENTER_API(H5Dopen1, FAIL)
+    FUNC_ENTER_API(H5Dopen, FAIL)
     H5TRACE2("i", "i*s", loc_id, name);
 
     /* Check args */
@@ -258,7 +254,7 @@ done:
     } /* end if */
 
     FUNC_LEAVE_API(ret_value)
-} /* end H5Dopen1() */
+} /* end H5Dopen() */
 
 
 /*-------------------------------------------------------------------------
@@ -268,8 +264,6 @@ done:
  *		SIZE. The dimensionality of SIZE is the same as the data
  *		space of the dataset being changed.
  *
- * Note:	Deprecated in favor of H5Dset_extent
- *
  * Return:	Non-negative on success/Negative on failure
  *
  * Programmer:	Robb Matzke
@@ -278,7 +272,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Dextend(hid_t dset_id, const hsize_t size[])
+H5Dextend(hid_t dset_id, const hsize_t *size)
 {
     H5D_t	*dset;
     herr_t       ret_value = SUCCEED;  /* Return value */
@@ -327,9 +321,30 @@ H5D_extend(H5D_t *dataset, const hsize_t *size, hid_t dxpl_id)
     HDassert(dataset);
     HDassert(size);
 
-    /* Check if the filters in the DCPL will need to encode, and if so, can they? */
-    if(H5D_check_filters(dataset) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "can't apply filters")
+    /* Check if the filters in the DCPL will need to encode, and if so, can they?
+     * Filters need encoding if fill value is defined and a fill policy is set that requires
+     * writing on an extend.
+     */
+    fill = &dataset->shared->dcpl_cache.fill;
+    if(!dataset->shared->checked_filters) {
+        H5D_fill_value_t fill_status;       /* Whether the fill value is defined */
+
+        /* Retrieve the "defined" status of the fill value */
+        if(H5P_is_fill_value_defined(fill, &fill_status) < 0)
+            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Couldn't retrieve fill value from dataset.")
+
+        /* See if we can check the filter status */
+        if(fill_status == H5D_FILL_VALUE_DEFAULT || fill_status == H5D_FILL_VALUE_USER_DEFINED) {
+            if(fill->fill_time == H5D_FILL_TIME_ALLOC ||
+                    (fill->fill_time == H5D_FILL_TIME_IFSET && fill_status == H5D_FILL_VALUE_USER_DEFINED)) {
+                /* Filters must have encoding enabled. Ensure that all filters can be applied */
+                if(H5Z_can_apply(dataset->shared->dcpl_id, dataset->shared->type_id) < 0)
+                    HGOTO_ERROR(H5E_PLINE, H5E_CANAPPLY, FAIL, "can't apply filters")
+
+                dataset->shared->checked_filters = TRUE;
+            } /* end if */
+        } /* end if */
+    } /* end if */
 
     /*
      * NOTE: Restrictions on extensions were checked when the dataset was
@@ -344,23 +359,22 @@ H5D_extend(H5D_t *dataset, const hsize_t *size, hid_t dxpl_id)
 
     /* Updated the dataset's info if the dataspace was successfully extended */
     if(changed) {
+	/* Save the new dataspace in the file if necessary */
+	if(H5S_write(&(dataset->oloc), space, TRUE, dxpl_id) < 0)
+	    HGOTO_ERROR(H5E_DATASET, H5E_WRITEERROR, FAIL, "unable to update file with new dataspace")
+
         /* Update the index values for the cached chunks for this dataset */
         if(H5D_CHUNKED == dataset->shared->layout.type)
             if(H5D_istore_update_cache(dataset, dxpl_id) < 0)
                 HGOTO_ERROR(H5E_DATASET, H5E_WRITEERROR, FAIL, "unable to update cached chunk indices")
 
 	/* Allocate space for the new parts of the dataset, if appropriate */
-        fill = &dataset->shared->dcpl_cache.fill;
         if(fill->alloc_time == H5D_ALLOC_TIME_EARLY)
-            if(H5D_alloc_storage(dataset->oloc.file, dxpl_id, dataset, H5D_ALLOC_EXTEND, FALSE) < 0)
+            if(H5D_alloc_storage(dataset->oloc.file, dxpl_id, dataset, H5D_ALLOC_EXTEND, TRUE, FALSE) < 0)
                 HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to initialize dataset with fill value")
-
-        /* Mark the dataspace as dirty, for later writing to the file */
-        dataset->shared->space_dirty = TRUE;
     } /* end if */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D_extend() */
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
 

@@ -90,7 +90,7 @@ MPI_Info    h5_io_info_g=MPI_INFO_NULL;/* MPI INFO object for IO */
  */
 static const char *multi_letters = "msbrglo";
 
-static herr_t h5_errors(hid_t estack, void *client_data);
+static herr_t h5_errors(void *client_data);
 
 
 /*-------------------------------------------------------------------------
@@ -110,10 +110,10 @@ static herr_t h5_errors(hid_t estack, void *client_data);
  *-------------------------------------------------------------------------
  */
 static herr_t
-h5_errors(hid_t estack, void UNUSED *client_data)
+h5_errors(void UNUSED *client_data)
 {
     H5_FAILED();
-    H5Eprint2(estack, stdout);
+    H5Eprint(stdout);
     return 0;
 }
 
@@ -210,23 +210,12 @@ h5_cleanup(const char *base_name[], hid_t fapl)
 void
 h5_reset(void)
 {
+    char	filename[1024];
+
     HDfflush(stdout);
     HDfflush(stderr);
     H5close();
-    H5Eset_auto2(H5E_DEFAULT, h5_errors, NULL);
-
-/*
- * I commented this chunk of code out because it's not clear what diagnostics
- *      were being output and under what circumstances, and creating this file
- *      is throwing off debugging some of the tests.  I can't see any _direct_
- *      harm in keeping this section of code, but I can't see any _direct_
- *      benefit right now either.  If we figure out under which circumstances
- *      diagnostics are being output, we should enable this behavior based on
- *      appropriate configure flags/macros.  QAK - 2007/12/20
- */
-#ifdef OLD_WAY
-{
-    char	filename[1024];
+    H5Eset_auto(h5_errors, NULL);
 
     /*
      * Cause the library to emit some diagnostics early so they don't
@@ -236,13 +225,11 @@ h5_reset(void)
     H5E_BEGIN_TRY {
 	hid_t file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT,
 			       H5P_DEFAULT);
-	hid_t grp = H5Gcreate2(file, "emit", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+	hid_t grp = H5Gcreate(file, "emit", (size_t)0);
 	H5Gclose(grp);
 	H5Fclose(file);
 	HDunlink(filename);
     } H5E_END_TRY;
-}
-#endif /* OLD_WAY */
 }
 
 
@@ -597,10 +584,9 @@ h5_fileaccess(void)
 	 * and copy buffer size to the default values. */
 	if (H5Pset_fapl_direct(fapl, 1024, 4096, 8*4096)<0) return -1;
 #endif
-    } else if(!HDstrcmp(name, "latest")) {
+    } else if (!HDstrcmp(name, "latest")) {
 	/* use the latest format */
-	if(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0)
-            return -1;
+	if (H5Pset_latest_format(fapl, TRUE)<0) return -1;
     } else {
 	/* Unknown driver */
 	return -1;

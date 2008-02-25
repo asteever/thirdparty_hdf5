@@ -548,7 +548,6 @@ void* H5File::Reference(const H5std_string& name) const
    return(Reference(name.c_str()));
 }
 
-#ifndef H5_NO_DEPRECATED_SYMBOLS
 //--------------------------------------------------------------------------
 // Function:	H5File::getObjType
 ///\brief	Retrieves the type of object that an object reference points to.
@@ -573,7 +572,6 @@ H5G_obj_t H5File::getObjType(void *ref, H5R_type_t ref_type) const
       throw FileIException("H5File::getObjType", E.getDetailMsg());
    }
 }
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
 
 //--------------------------------------------------------------------------
 // Function:	H5File::getRegion

@@ -220,7 +220,7 @@ H5SM_init(H5F_t *f, H5P_genplist_t * fc_plist, const H5O_loc_t *ext_loc, hid_t d
     /* Check for sharing attributes in this file, which means that creation
      *  indices must be tracked on object header message in the file.
      */
-    if(type_flags_used & H5O_SHMESG_ATTR_FLAG)
+    if(type_flags_used & H5O_MESG_ATTR_FLAG)
         f->shared->store_msg_crt_idx = TRUE;
 
     /* Write shared message information to the superblock extension */
@@ -263,18 +263,22 @@ H5SM_type_to_flag(unsigned type_id, unsigned *type_flag)
 
     /* Translate the H5O type_id into an H5SM type flag */
     switch(type_id) {
-        case H5O_FILL_ID:
-            type_id = H5O_FILL_NEW_ID;
-            /* Fall through... */
-
         case H5O_SDSPACE_ID:
-        case H5O_DTYPE_ID:
-        case H5O_FILL_NEW_ID:
-        case H5O_PLINE_ID:
-        case H5O_ATTR_ID:
-            *type_flag = (unsigned)1 << type_id;
+            *type_flag = H5O_MESG_SDSPACE_FLAG;
             break;
-
+        case H5O_DTYPE_ID:
+            *type_flag = H5O_MESG_DTYPE_FLAG;
+            break;
+        case H5O_FILL_ID:
+        case H5O_FILL_NEW_ID:
+            *type_flag = H5O_MESG_FILL_FLAG;
+            break;
+        case H5O_PLINE_ID:
+            *type_flag = H5O_MESG_PLINE_FLAG;
+            break;
+        case H5O_ATTR_ID:
+            *type_flag = H5O_MESG_ATTR_FLAG;
+            break;
         default:
             HGOTO_ERROR(H5E_OHDR, H5E_BADTYPE, FAIL, "unknown message type ID")
     } /* end switch */
@@ -303,7 +307,7 @@ done:
 ssize_t
 H5SM_get_index(const H5SM_master_table_t *table, unsigned type_id)
 {
-    size_t x;
+    ssize_t x;
     unsigned type_flag;
     ssize_t ret_value = FAIL;
 
@@ -318,7 +322,7 @@ H5SM_get_index(const H5SM_master_table_t *table, unsigned type_id)
      */
     for(x = 0; x < table->num_indexes; ++x)
         if(table->indexes[x].mesg_types & type_flag)
-            HGOTO_DONE((ssize_t)x)
+            HGOTO_DONE(x)
 
     /* At this point, ret_value is either the location of the correct
      * index or it's still FAIL because we didn't find an index.
@@ -1824,7 +1828,7 @@ H5SM_get_info(const H5O_loc_t *ext_loc, H5P_genplist_t *fc_plist, hid_t dxpl_id)
             /* Check for sharing attributes in this file, which means that creation
              *  indices must be tracked on object header message in the file.
              */
-            if(index_flags[u] & H5O_SHMESG_ATTR_FLAG)
+            if(index_flags[u] & H5O_MESG_ATTR_FLAG)
                 shared->store_msg_crt_idx = TRUE;
         } /* end for */
 
@@ -2492,7 +2496,6 @@ herr_t
 H5SM_ih_size(H5F_t *f, hid_t dxpl_id, H5F_info_t *finfo)
 {
     H5SM_master_table_t *table = NULL;          /* SOHM master table */
-    H5HF_t              *fheap = NULL;          /* Fractal heap handle */
     unsigned    	u;                      /* Local index variable */
     herr_t              ret_value = SUCCEED;    /* Return value */
 
@@ -2522,27 +2525,14 @@ H5SM_ih_size(H5F_t *f, hid_t dxpl_id, H5F_info_t *finfo)
         else if(table->indexes[u].index_type == H5SM_LIST)
 	    finfo->sohm.msgs_info.index_size += H5SM_LIST_SIZE(f, table->indexes[u].list_max);
 
-        /* Check for heap for this index */
-	if(H5F_addr_defined(table->indexes[u].heap_addr)) {
-            /* Open the fractal heap for this index */
-            if(NULL == (fheap = H5HF_open(f, dxpl_id, table->indexes[u].heap_addr)))
-                HGOTO_ERROR(H5E_HEAP, H5E_CANTOPENOBJ, FAIL, "unable to open fractal heap")
-
-            /* Get heap storage size */
-	    if(H5HF_size(fheap, dxpl_id, &(finfo->sohm.msgs_info.heap_size)) < 0)
+        /* Get heap storage size */
+	if(H5F_addr_defined(table->indexes[u].heap_addr))
+	    if(H5HF_size(f, dxpl_id, table->indexes[u].heap_addr, &(finfo->sohm.msgs_info.heap_size)) < 0)
 		HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, FAIL, "can't retrieve fractal heap storage info")
-
-            /* Release the fractal heap */
-            if(H5HF_close(fheap, dxpl_id) < 0)
-                HGOTO_ERROR(H5E_HEAP, H5E_CLOSEERROR, FAIL, "can't close fractal heap")
-            fheap = NULL;
-        } /* end if */
     } /* end for */
 
 done:
     /* Release resources */
-    if(fheap && H5HF_close(fheap, dxpl_id) < 0)
-        HDONE_ERROR(H5E_HEAP, H5E_CLOSEERROR, FAIL, "can't close fractal heap")
     if(table && H5AC_unprotect(f, dxpl_id, H5AC_SOHM_TABLE, f->shared->sohm_addr, table, H5AC__NO_FLAGS_SET) < 0)
         HDONE_ERROR(H5E_CACHE, H5E_CANTRELEASE, FAIL, "unable to close SOHM master table")
 

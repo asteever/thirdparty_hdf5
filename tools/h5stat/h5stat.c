@@ -47,7 +47,8 @@ typedef struct ohdr_info_t {
 
 /* Info to pass to the iteration functions */
 typedef struct iter_t {
-    hid_t fid;                          /* File ID */
+    const char *container;              /* Full name of the container object */
+    unsigned long curr_depth;           /* Current depth of hierarchy */
 
     unsigned long uniq_groups;          /* Number of unique groups */
     unsigned long uniq_dsets;           /* Number of unique datasets */
@@ -55,6 +56,7 @@ typedef struct iter_t {
     unsigned long uniq_links;           /* Number of unique links */
     unsigned long uniq_others;          /* Number of other unique objects */
 
+    unsigned long max_depth;            /* Maximum depth of hierarchy */
     unsigned long max_links;            /* Maximum # of links to an object */
     hsize_t max_fanout;                 /* Maximum fanout from a group */
     unsigned long num_small_groups[SIZE_SMALL_GROUPS];     /* Size of small groups tracked */
@@ -93,6 +95,16 @@ typedef struct iter_t {
 } iter_t;
 
 
+/* Table containing object id and object name */
+static struct {
+    int  nalloc;                /* number of slots allocated */
+    int  nobjs;                 /* number of objects */
+    struct {
+        haddr_t id;             /* object number */
+        char *name;             /* full object name */
+    } *obj;
+} idtab_g;
+
 const char *progname = "h5stat";
 int               d_status = EXIT_SUCCESS;
 static int        display_all = TRUE;
@@ -103,11 +115,16 @@ static int        display_group = FALSE;
 static int        display_dset_metadata = FALSE;
 static int        display_dset = FALSE;
 static int        display_dtype_metadata = FALSE;
+/* Not used yet 11/17/06 EIP
+static int        display_dtype = FALSE;
+*/
 static int        display_object = FALSE;
 static int        display_attr = FALSE;
 
 /* a structure for handling the order command-line parameters come in */
 struct handler_t {
+    void (*func)(void *);
+    int flag;
     char *obj;
 };
 
@@ -248,6 +265,123 @@ ceil_log10(unsigned long x)
 
 
 /*-------------------------------------------------------------------------
+ * Function: sym_insert
+ *
+ * Purpose: Add a symbol to the table.
+ *
+ * Return: void
+ *
+ * Programmer: Robb Matzke
+ *              Thursday, January 21, 1999
+ *
+ *-------------------------------------------------------------------------
+ */
+static void
+sym_insert(H5O_info_t *oi, const char *name)
+{
+    /* Don't add it if the link count is 1 because such an object can only
+     * have one name. */
+    if(oi->rc > 1) {
+        int  n;
+
+        /* Extend the table */
+        if(idtab_g.nobjs >= idtab_g.nalloc) {
+            idtab_g.nalloc = MAX(256, 2 * idtab_g.nalloc);
+            idtab_g.obj = realloc(idtab_g.obj, idtab_g.nalloc * sizeof(idtab_g.obj[0]));
+        } /* end if */
+
+        /* Insert the entry */
+        n = idtab_g.nobjs++;
+        idtab_g.obj[n].id = oi->addr;
+        idtab_g.obj[n].name = strdup(name);
+    } /* end if */
+} /* end sym_insert() */
+
+
+/*-------------------------------------------------------------------------
+ * Function: sym_lookup
+ *
+ * Purpose: Find another name for the specified object.
+ *
+ * Return: Success: Ptr to another name.
+ *
+ *  Failure: NULL
+ *
+ * Programmer: Robb Matzke
+ *              Thursday, January 21, 1999
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+static char *
+sym_lookup(H5O_info_t *oi)
+{
+    int  n;
+
+    /*only one name possible*/
+    if(oi->rc < 2)
+        return NULL;
+
+    for(n = 0; n < idtab_g.nobjs; n++)
+        if(idtab_g.obj[n].id == oi->addr)
+            return idtab_g.obj[n].name;
+
+    return NULL;
+} /* end sym_lookup() */
+
+
+/*-------------------------------------------------------------------------
+ * Function: fix_name
+ *
+ * Purpose: Returns a malloc'd buffer that contains the PATH and BASE
+ *  names separated by a single slash. It also removes duplicate
+ *  and trailing slashes.
+ *
+ * Return: Success: Ptr to fixed name from malloc()
+ *
+ *  Failure: NULL
+ *
+ * Programmer: Robb Matzke
+ *              Thursday, January 21, 1999
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+static char *
+fix_name(const char *path, const char *base)
+{
+    size_t n = (path ? strlen(path) : 0) + (base ? strlen(base) : 0) + 3;
+    char *s = malloc(n), prev='\0';
+    size_t len = 0;
+
+    if (path) {
+        /* Path, followed by slash */
+        for (/*void*/; *path; path++)
+            if ('/'!=*path || '/'!=prev)
+                prev = s[len++] = *path;
+        if ('/' != prev)
+            prev = s[len++] = '/';
+    }
+
+    if (base) {
+        /* Base name w/o trailing slashes */
+        const char *end = base + strlen(base);
+        while (end > base && '/' == end[-1])
+            --end;
+
+        for (/*void*/; base < end; base++)
+            if ('/' != *base || '/' != prev)
+                prev = s[len++] = *base;
+    }
+
+    s[len] = '\0';
+    return s;
+}
+
+
+/*-------------------------------------------------------------------------
  * Function: attribute_stats
  *
  * Purpose: Gather statistics about attributes on an object
@@ -324,31 +458,39 @@ attribute_stats(iter_t *iter, const H5O_info_t *oi)
  *-------------------------------------------------------------------------
  */
 static herr_t
-group_stats(iter_t *iter, const char *name, const H5O_info_t *oi)
+group_stats(hid_t group, const char *name, const char *fullname,
+    const H5O_info_t *oi, H5G_iterate_t walk, iter_t *iter)
 {
-    H5G_info_t 		ginfo;                  /* Group information */
+    hid_t 		gid;                    /* Group ID */
+    const char 		*last_container;
+    hsize_t 		num_objs;
     unsigned 		bin;                   	/* "bin" the number of objects falls in */
     herr_t 		ret;
 
     /* Gather statistics about this type of object */
     iter->uniq_groups++;
+    if(iter->curr_depth > iter->max_depth)
+	iter->max_depth = iter->curr_depth;
 
     /* Get object header information */
     iter->group_ohdr_info.total_size += oi->hdr.space.total;
     iter->group_ohdr_info.free_size += oi->hdr.space.free;
 
-    /* Get group information */
-    ret = H5Gget_info_by_name(iter->fid, name, &ginfo, H5P_DEFAULT);
+    gid = H5Gopen(group, name);
+    assert(gid > 0);
+
+    /* Get number of links in this group */
+    ret = H5Gget_num_objs(gid, &num_objs);
     assert(ret >= 0);
 
     /* Update link stats */
-    if(ginfo.nlinks < SIZE_SMALL_GROUPS)
-        (iter->num_small_groups[(size_t)ginfo.nlinks])++;
-    if(ginfo.nlinks > iter->max_fanout)
-        iter->max_fanout = ginfo.nlinks;
+    if(num_objs < SIZE_SMALL_GROUPS)
+        (iter->num_small_groups[(size_t)num_objs])++;
+    if(num_objs > iter->max_fanout)
+        iter->max_fanout = num_objs;
 
     /* Add group count to proper bin */
-    bin = ceil_log10((unsigned long)ginfo.nlinks);
+    bin = ceil_log10((unsigned long)num_objs);
     if((bin + 1) > iter->group_nbins) {
         /* Allocate more storage for info about dataset's datatype */
         iter->group_bins = realloc(iter->group_bins, (bin + 1) * sizeof(unsigned long));
@@ -373,6 +515,22 @@ group_stats(iter_t *iter, const char *name, const H5O_info_t *oi)
     ret = attribute_stats(iter, oi);
     assert(ret >= 0);
 
+    /* Close current group */
+    ret = H5Gclose(gid);
+    assert(ret >= 0);
+
+    /* Update current container info */
+    last_container = iter->container;
+    iter->container = fullname;
+    iter->curr_depth++;
+
+    /* Recursively descend into current group's objects */
+    H5Giterate(group, name, NULL, walk, iter);
+
+    /* Revert current container info */
+    iter->container = last_container;
+    iter->curr_depth--;
+     
     return 0;
 } /* end group_stats() */
 
@@ -404,7 +562,7 @@ group_stats(iter_t *iter, const char *name, const H5O_info_t *oi)
  *-------------------------------------------------------------------------
  */
 static herr_t
-dataset_stats(iter_t *iter, const char *name, const H5O_info_t *oi)
+dataset_stats(hid_t group, const char *name, const H5O_info_t *oi, iter_t *iter)
 {
     unsigned 		bin;               /* "bin" the number of objects falls in */
     hid_t 		did;               /* Dataset ID */
@@ -430,7 +588,7 @@ dataset_stats(iter_t *iter, const char *name, const H5O_info_t *oi)
     iter->dset_ohdr_info.total_size += oi->hdr.space.total;
     iter->dset_ohdr_info.free_size += oi->hdr.space.free;
 
-    did = H5Dopen2(iter->fid, name, H5P_DEFAULT);
+    did = H5Dopen(group, name);
     assert(did > 0);
 
     /* Update dataset metadata info */
@@ -546,7 +704,11 @@ dataset_stats(iter_t *iter, const char *name, const H5O_info_t *oi)
        if(nfltr == 0)
            iter->dset_comptype[0]++;
         for(u = 0; u < (unsigned)nfltr; u++) {
-            fltr = H5Pget_filter2(dcpl, u, 0, 0, 0, 0, 0, NULL);
+#ifdef H5_WANT_H5_V1_6_COMPAT
+            fltr = H5Pget_filter(dcpl, u, 0, 0, 0, 0, 0);
+#else /* H5_WANT_H5_V1_6_COMPAT */
+            fltr = H5Pget_filter(dcpl, u, 0, 0, 0, 0, 0, NULL);
+#endif /* H5_WANT_H5_V1_6_COMPAT */
             if(fltr < (H5_NFILTERS_IMPL - 1))
                 iter->dset_comptype[fltr]++;
             else
@@ -565,43 +727,64 @@ dataset_stats(iter_t *iter, const char *name, const H5O_info_t *oi)
 
 
 /*-------------------------------------------------------------------------
- * Function: obj_stats
+ * Function: walk
  *
- * Purpose: Gather statistics about an object
+ * Purpose: Gather statistics about the file
  *
  * Return: Success: 0
- *
- *  Failure: -1
+ *  	   Failure: -1
  *
  * Programmer: Quincey Koziol
- *             Tuesday, November 6, 2007
+ *             Tuesday, August 16, 2005
+ *
+ * Modifications:
  *
  *-------------------------------------------------------------------------
  */
 static herr_t
-obj_stats(const char *path, const H5O_info_t *oi, const char *already_visited,
-    void *_iter)
+walk(hid_t group, const char *name, void *_iter)
 {
     iter_t *iter = (iter_t *)_iter;
+    H5O_info_t oi;
+    char *fullname = NULL;
+    char *s;
+    herr_t ret;                     /* Generic return value */
 
-    /* If the object has already been seen then just return */
-    if(NULL == already_visited) {
-        /* Gather some general statistics about the object */
-        if(oi->rc > iter->max_links)
-            iter->max_links = oi->rc;
+    /* Get the full object name */
+    fullname = fix_name(iter->container, name);
 
-        switch(oi->type) {
-            case H5O_TYPE_GROUP:
-                group_stats(iter, path, oi);
+    /* Get object information */
+    ret = H5Oget_info(group, name, &oi, H5P_DEFAULT);
+    assert(ret >= 0);
+
+    /* If the object has already been printed then just show the object ID
+     * and return. */
+    if((s = sym_lookup(&oi))) {
+        printf("%s same as %s\n", name, s);
+    } else {
+        sym_insert(&oi, fullname);
+
+        /* Gather some statistics about the object */
+        if(oi.rc > iter->max_links)
+            iter->max_links = oi.rc;
+
+        switch(oi.type) {
+            case H5G_GROUP:
+                group_stats(group, name, fullname, &oi, walk, iter);
                 break;
 
-            case H5O_TYPE_DATASET:
-                dataset_stats(iter, path, oi);
+            case H5G_DATASET:
+                dataset_stats(group, name, &oi, iter);
                 break;
 
-            case H5O_TYPE_NAMED_DATATYPE:
+            case H5G_TYPE:
                 /* Gather statistics about this type of object */
                 iter->uniq_types++;
+                break;
+
+            case H5G_LINK:
+                /* Gather statistics about links and UD links */
+                iter->uniq_links++;
                 break;
 
             default:
@@ -609,46 +792,13 @@ obj_stats(const char *path, const H5O_info_t *oi, const char *already_visited,
                 iter->uniq_others++;
                 break;
         } /* end switch */
-    } /* end if */
+    }
+
+    if(fullname)
+        free(fullname);
 
     return 0;
-} /* end obj_stats() */
-
-
-/*-------------------------------------------------------------------------
- * Function: lnk_stats
- *
- * Purpose: Gather statistics about a link
- *
- * Return: Success: 0
- *
- *  Failure: -1
- *
- * Programmer: Quincey Koziol
- *             Tuesday, November 6, 2007
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-lnk_stats(const char UNUSED *path, const H5L_info_t *li, void *_iter)
-{
-    iter_t *iter = (iter_t *)_iter;
-
-    switch(li->type) {
-        case H5L_TYPE_SOFT:
-        case H5L_TYPE_EXTERNAL:
-            /* Gather statistics about links and UD links */
-            iter->uniq_links++;
-            break;
-
-        default:
-            /* Gather statistics about this type of object */
-            iter->uniq_others++;
-            break;
-    } /* end switch() */
-
-    return 0;
-} /* end lnk_stats() */
+}
 
 
 /*-------------------------------------------------------------------------
@@ -681,77 +831,66 @@ parse_command_line(int argc, const char *argv[])
     /* parse command line options */
     while ((opt = get_option(argc, argv, s_opts, l_opts)) != EOF) {
         switch ((char)opt) {
-            case 'A':
-                display_all = FALSE;
-                display_attr = TRUE;
-                break;
-
-            case 'F':
-                display_all = FALSE;
-                display_file_metadata = TRUE;
-                break;
-
-            case 'f':
-                display_all = FALSE;
-                display_file = TRUE;
-                break;
-
-            case 'G':
-                display_all = FALSE;
-                display_group_metadata = TRUE;
-                break;
-
-            case 'g':
-                display_all = FALSE;
-                display_group = TRUE;
-                break;
-
-            case 'T':
-                display_all = FALSE;
-                display_dtype_metadata = TRUE;
-                break;
-
-            case 'D':
-                display_all = FALSE;
-                display_dset_metadata = TRUE;
-                break;
-
-            case 'd':
-                display_all = FALSE;
-                display_dset = TRUE;
-                break;
-
-            case 'h':
-                usage(progname);
-                leave(EXIT_SUCCESS);
-
-            case 'V':
-                print_version(progname);
-                leave(EXIT_SUCCESS);
-                break;
-
-            case 'O':
-                display_object = TRUE;
-                for(i = 0; i < argc; i++)
-                    if(!hand[i].obj) {
-                        hand[i].obj = HDstrdup(opt_arg);
-                        break;
-                    } /* end if */
-                break;
-
-            default:
-                usage(progname);
-                leave(EXIT_FAILURE);
-        } /* end switch */
-    } /* end while */
+        case 'A':
+            display_all = FALSE;
+            display_attr = TRUE;
+	    break;
+        case 'F':
+            display_all = FALSE;
+            display_file_metadata = TRUE;
+            break;
+        case 'f':
+            display_all = FALSE;
+            display_file = TRUE;
+            break;
+        case 'G':
+            display_all = FALSE;
+            display_group_metadata = TRUE;
+            break;
+        case 'g':
+            display_all = FALSE;
+            display_group = TRUE;
+            break;
+        case 'T':
+            display_all = FALSE;
+            display_dtype_metadata = TRUE;
+            break;
+        case 'D':
+            display_all = FALSE;
+            display_dset_metadata = TRUE;
+            break;
+        case 'd':
+            display_all = FALSE;
+            display_dset = TRUE;
+            break;
+        case 'h':
+            usage(progname);
+            leave(EXIT_SUCCESS);
+        case 'V':
+            print_version(progname);
+            leave(EXIT_SUCCESS);
+            break;
+        case 'O':
+            display_object = TRUE;
+            for (i = 0; i < argc; i++)
+                if (!hand[i].obj) {
+                    hand[i].obj = HDstrdup(opt_arg);
+                    hand[i].flag = 1;
+                    break;
+                }
+            break;
+        default:
+            usage(progname);
+            leave(EXIT_FAILURE);
+        }
+    }
 
     /* check for file name to be processed */
     if (argc <= opt_ind) {
         error_msg(progname, "missing file name\n");
         usage(progname);
         leave(EXIT_FAILURE);
-    } /* end if */
-
+    }
     return hand;
 }
 
@@ -771,13 +910,13 @@ parse_command_line(int argc, const char *argv[])
  *-------------------------------------------------------------------------
  */
 static herr_t
-iter_init(iter_t *iter, hid_t fid)
+iter_init(iter_t *iter)
 {
     /* Clear everything to zeros */
-    HDmemset(iter, 0, sizeof(*iter));
+    memset(iter, 0, sizeof(*iter));
 
-    /* Set the file ID for later use in callbacks */
-    iter->fid = fid;
+    /* Initialize non-zero information */
+    iter->container = "/";
 
     return 0;
 }
@@ -809,6 +948,7 @@ print_file_info(const iter_t *iter)
     printf("\t# of unique links: %lu\n", iter->uniq_links);
     printf("\t# of unique other: %lu\n", iter->uniq_others);
     printf("\tMax. # of links to object: %lu\n", iter->max_links);
+    printf("\tMax. depth of hierarchy: %lu\n", iter->max_depth);
     HDfprintf(stdout, "\tMax. # of objects in group: %Hu\n", iter->max_fanout);
 
     return 0;
@@ -1173,6 +1313,8 @@ main(int argc, const char *argv[])
     const char     	*fname = NULL;
     hid_t           	fid;
     struct handler_t   *hand;
+    char            	root[] = "/";
+    int             	i;
     H5F_info_t      	finfo;
 
 
@@ -1182,23 +1324,26 @@ main(int argc, const char *argv[])
     /* Initialize h5tools lib */
     h5tools_init();
     hand = parse_command_line (argc, argv);
-    if(!hand) {
+    if (!hand) {
         error_msg(progname, "unable to parse command line arguments \n");
         leave(EXIT_FAILURE);
-    } /* end if */
+    }
 
     fname = argv[opt_ind];
+    hand[opt_ind].obj = root;
+    hand[opt_ind].flag = 1;
+    if (display_object) hand[opt_ind].flag = 0;
 
     printf("Filename: %s\n", fname);
 
     fid = H5Fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT);
-    if(fid < 0) {
+    if (fid < 0) {
         error_msg(progname, "unable to open file \"%s\"\n", fname);
         leave(EXIT_FAILURE);
-    } /* end if */
+    }
 
     /* Initialize iter structure */
-    iter_init(&iter, fid);
+    iter_init(&iter);
     
     /* Get storge info for SOHM's btree/list/heap and superblock extension */
     if(H5Fget_info(fid, &finfo) < 0)
@@ -1208,23 +1353,17 @@ main(int argc, const char *argv[])
 	iter.SM_hdr_storage_size = finfo.sohm.hdr_size;
 	iter.SM_index_storage_size = finfo.sohm.msgs_info.index_size;
 	iter.SM_heap_storage_size = finfo.sohm.msgs_info.heap_size;
-    } /* end else */
+    }
 
     /* Walk the objects or all file */
-    if(display_object) {
-        unsigned u;
-
-        u = 0;
-        while(hand[u].obj) {
-            h5trav_visit(fid, hand[u].obj, TRUE, TRUE, obj_stats, lnk_stats, &iter);
-            print_statistics(hand[u].obj, &iter);
-            u++;
-        } /* end while */
-    } /* end if */
-    else {
-        h5trav_visit(fid, "/", TRUE, TRUE, obj_stats, lnk_stats, &iter);
-        print_statistics("/", &iter);
-    } /* end else */
+    for(i = 0; i < argc; i++) { 
+         if(hand[i].obj) {
+              if(hand[i].flag) {
+                   walk(fid, hand[i].obj, &iter);
+                   print_statistics(hand[i].obj, &iter);
+              }
+         }
+    }
 
     free(hand);
 

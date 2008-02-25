@@ -22,9 +22,7 @@
 # Blank lines and lines beginning with '#' are ignored
 #
 # The format of this file is as follows:
-#  <type>: <base routine name>; <list of parameter types for function>; <version introduced>, <list of revised versions>
-#
-# Where <type> is either 'FUNCTION' or 'TYPEDEF'
+#  <type>, <base routine name>, <version introduced>, <list of revised versions>
 #
 # For example, the following sample input shows two functions with different
 # API versions for each.  The example below shows H5Gfoo being added to the
@@ -36,8 +34,8 @@
 # revised in the v1.6 branch (so there should be two versioned names for the
 # routine: H5Gbar1 and H5Gbar2).
 #
-# FUNCTION: H5Gfoo; ; v10, v14, v18
-# FUNCTION: H5Gbar; ; v12, v16
+# FUNCTION, H5Gfoo, v10, v14, v18
+# FUNCTION, H5Gbar, v12, v16
 #
 # Programmer: Quincey Koziol
 # Creation Date: 2007/07/10
@@ -45,30 +43,6 @@
 # API function names
 # (although not required, it's easier to compare this file with the headers
 #       generated if the list below is in alphanumeric sort order - QAK)
-FUNCTION: H5Acreate; ; v10, v18
-FUNCTION: H5Aiterate; H5A_operator; v10, v18
-FUNCTION: H5Dcreate; ; v10, v18
-FUNCTION: H5Dopen; ; v10, v18
-FUNCTION: H5Eclear; ; v10, v18
-FUNCTION: H5Eget_auto; ; v10, v18
-FUNCTION: H5Eprint; ; v10, v18
-FUNCTION: H5Epush; ; v14, v18
-FUNCTION: H5Eset_auto; ; v10, v18
-FUNCTION: H5Ewalk; H5E_walk, H5E_error; v10, v18
-FUNCTION: H5Gcreate; ; v10, v18
-FUNCTION: H5Gopen; ; v10, v18
-FUNCTION: H5Pget_filter; ; v10, v18
-FUNCTION: H5Pget_filter_by_id; ; v16, v18
-FUNCTION: H5Pinsert; ; v14, v18
-FUNCTION: H5Pregister; ; v14, v18
-FUNCTION: H5Rget_obj_type; ; v16, v18
-FUNCTION: H5Tarray_create; ; v14, v18
-FUNCTION: H5Tcommit; ; v10, v18
-FUNCTION: H5Tget_array_dims; ; v14, v18
-FUNCTION: H5Topen; ; v10, v18
-
-# API typedefs
-# (although not required, it's easier to compare this file with the headers
-#       generated if the list below is in alphanumeric sort order - QAK)
-TYPEDEF: H5E_auto; v10, v18
+#FUNCTION, H5Gcreate, v10, v14, v18
+#FUNCTION, H5Gopen, v12, v18
 

@@ -26,18 +26,17 @@ $ cobj= "h5dump.c, h5dumpgentest.c "
 $                               
 $ ccc 'cobj 
 $ type sys$input
-       Creating h5dumpgentest ...
+       Creating h5dumpgentest
 $ link     h5dumpgentest, -
            [-.lib]libh5tools.olb/lib,[-.-.src]hdf5.olb/lib,zlib_dir:libz.olb/lib 
 $ type sys$input
- 	Finished  h5dumpgentest
-
+ 	Created  h5dumpgentest
 $
 $ type sys$input
-       Creating h5dump ...
+       Creating h5dump
 $ link     h5dump, -
            [-.lib]libh5tools.olb/lib,[-.-.src]hdf5.olb/lib,zlib_dir:libz.olb/lib
 $ type sys$input
-	Finished  h5dump
+	Created  h5dump
 $!
 $ exit

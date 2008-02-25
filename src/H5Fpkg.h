@@ -87,7 +87,7 @@ typedef struct H5F_file_t {
     unsigned	sohm_vers;	/* Version of shared message table on disk */
     unsigned	sohm_nindexes;	/* Number of shared messages indexes in the table */
     haddr_t	driver_addr;	/* File driver information block address*/
-    haddr_t	maxaddr;	/* Maximum address for file             */
+    hbool_t     fam_to_sec2;    /* Is h5repart changing driver from family to sec2 */
 
     H5AC_t      *cache;		/* The object cache			*/
     H5AC_cache_config_t
@@ -105,8 +105,7 @@ typedef struct H5F_file_t {
     hsize_t	alignment;	/* Alignment				*/
     unsigned	gc_ref;		/* Garbage-collect references?		*/
     hbool_t	latest_format;	/* Always use the latest format?	*/
-    hbool_t	store_msg_crt_idx;  /* Store creation index for object header messages?	*/
-    hbool_t     fam_to_sec2;    /* Is h5repart changing driver from family to sec2? */
+    hbool_t	store_msg_crt_idx;	/* Store creation index for object header messages?	*/
     int	ncwfs;			/* Num entries on cwfs list		*/
     struct H5HG_heap_t **cwfs;	/* Global heap cache			*/
     struct H5G_t *root_grp;	/* Open root group			*/

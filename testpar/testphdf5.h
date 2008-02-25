@@ -188,7 +188,7 @@ typedef int DATATYPE;
 extern int dim0, dim1;				/*Dataset dimensions */
 extern int chunkdim0, chunkdim1;		/*Chunk dimensions */
 extern int nerrors;				/*errors count */
-extern H5E_auto2_t old_func;			/* previous error handler */
+extern H5E_auto_t old_func;			/* previous error handler */
 extern void *old_client_data;			/*previous error handler arg.*/
 extern int facc_type;				/*Test file access type */
 extern int dxfer_coll_type;
@@ -211,7 +211,6 @@ void dataset_readInd(void);
 void dataset_readAll(void);
 void extend_readInd(void);
 void extend_readAll(void);
-void none_selection_chunk(void);
 void test_chunk_alloc(void);
 void test_filter_read(void);
 void compact_dataset(void);

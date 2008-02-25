@@ -22,9 +22,9 @@
  *
  * Purpose: compare attributes located in LOC1_ID and LOC2_ID, which are
  *  obtained either from
- * loc_id = H5Gopen2(fid, name, H5P_DEFAULT);
- * loc_id = H5Dopen2(fid, name);
- * loc_id = H5Topen2(fid, name, H5P_DEFAULT);
+ * loc_id = H5Gopen( fid, name);
+ * loc_id = H5Dopen( fid, name);
+ * loc_id = H5Topen( fid, name);
  *
  * Return: number of differences found
  *
@@ -65,54 +65,55 @@ hsize_t diff_attr(hid_t loc1_id,
  char       name2[512];
  char       np1[512];
  char       np2[512];
- H5O_info_t oinfo1, oinfo2;     /* Object info */
- unsigned   u;                  /* Local index variable */
- hsize_t    nfound = 0;
- hsize_t    nfound_total = 0;
+ int        n1, n2, i, j;
+ hsize_t    nfound=0;
+ hsize_t    nfound_total=0;
  int        cmp=1;
 
- if(H5Oget_info(loc1_id, &oinfo1) < 0)
+ if ((n1 = H5Aget_num_attrs(loc1_id))<0)
   goto error;
- if(H5Oget_info(loc2_id, &oinfo2) < 0)
+ if ((n2 = H5Aget_num_attrs(loc2_id))<0)
   goto error;
 
- if(oinfo1.num_attrs != oinfo2.num_attrs)
+ if (n1!=n2)
   return 1;
 
- for(u = 0; u < (unsigned)oinfo1.num_attrs; u++)
+ for ( i = 0; i < n1; i++)
  {
   /* reset buffers for every attribute, we might goto out and call free */
-  buf1 = NULL;
-  buf2 = NULL;
+  buf1=NULL;
+  buf2=NULL;
 
   /* open attribute */
-  if((attr1_id = H5Aopen_by_idx(loc1_id, ".", H5_INDEX_CRT_ORDER, H5_ITER_INC, (hsize_t)u, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+  if ((attr1_id = H5Aopen_idx(loc1_id, (unsigned)i))<0)
    goto error;
    /* get name */
-  if(H5Aget_name(attr1_id, 255, name1) < 0)
+  if (H5Aget_name( attr1_id, 255, name1 )<0)
    goto error;
 
   /* use the name on the first file to open the second file */
   H5E_BEGIN_TRY 
   {
-   if((attr2_id = H5Aopen(loc2_id, name1, H5P_DEFAULT)) < 0)
+   if ((attr2_id = H5Aopen_name(loc2_id, name1))<0)
+   {
     goto error;
+   }
   } H5E_END_TRY;
 
   /* get name */
-  if(H5Aget_name(attr2_id, 255, name2) < 0)
+  if (H5Aget_name( attr2_id, 255, name2 )<0)
    goto error;
 
   /* get the file datatype  */
-  if((ftype1_id = H5Aget_type(attr1_id)) < 0)
+  if ((ftype1_id = H5Aget_type( attr1_id )) < 0 )
    goto error;
-  if((ftype2_id = H5Aget_type(attr2_id)) < 0)
+  if ((ftype2_id = H5Aget_type( attr2_id )) < 0 )
    goto error;
 
   /* get the dataspace handle  */
-  if((space1_id = H5Aget_space(attr1_id)) < 0)
+  if ((space1_id = H5Aget_space( attr1_id )) < 0 )
    goto error;
-  if((space2_id = H5Aget_space(attr2_id)) < 0)
+  if ((space2_id = H5Aget_space( attr2_id )) < 0 )
    goto error;
 
   /* get dimensions  */
@@ -147,7 +148,6 @@ hsize_t diff_attr(hid_t loc1_id,
   */
   if (cmp)
   {
-     int j;
 
   /*-------------------------------------------------------------------------
    * read to memory
@@ -168,20 +168,7 @@ hsize_t diff_attr(hid_t loc1_id,
    if ((msize2=H5Tget_size(mtype2_id))==0)
     goto error;
 
-   /*assert(msize1==msize2);*/
-
-   if ( msize1 != msize2)
-   {
-
-       if (options->m_verbose)
-            printf("Comparison not possible: different string sizes for attribute <%s>\n",
-             name1);
-
-       options->not_cmp=1;
-       continue;
-
-
-   }
+   assert(msize1==msize2);
 
    buf1=(void *) HDmalloc((unsigned)(nelmts1*msize1));
    buf2=(void *) HDmalloc((unsigned)(nelmts1*msize2));
@@ -300,7 +287,7 @@ hsize_t diff_attr(hid_t loc1_id,
    HDfree(buf2);
 
   nfound_total += nfound;
- } /* u */
+ } /* i */
 
  return nfound_total;
 

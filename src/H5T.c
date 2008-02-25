@@ -2003,6 +2003,8 @@ done:
  * Programmer:	Raymond Lu
  *		November 4, 2002
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 htri_t
@@ -2015,37 +2017,15 @@ H5Tis_variable_str(hid_t dtype_id)
     H5TRACE1("t", "i", dtype_id);
 
     /* Check args */
-    if(NULL == (dt = H5I_object_verify(dtype_id, H5I_DATATYPE)))
+    if (NULL == (dt = H5I_object_verify(dtype_id,H5I_DATATYPE)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data type");
 
     /* Set return value */
-    if((ret_value = H5T_is_variable_str(dt)) < 0)
-        HGOTO_ERROR(H5E_DATATYPE, H5E_UNSUPPORTED, FAIL, "can't determine if datatype is VL-string");
+    ret_value=H5T_IS_VL_STRING(dt->shared);
 
 done:
     FUNC_LEAVE_API(ret_value);
-} /* end H5Tis_variable_str() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5T_is_variable_str
- *
- * Purpose:	Check whether a datatype is a variable-length string
- *
- * Return:	TRUE (1) or FALSE (0) on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *		October 17, 2007
- *
- *-------------------------------------------------------------------------
- */
-htri_t
-H5T_is_variable_str(const H5T_t *dt)
-{
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5T_is_variable_str)
-
-    FUNC_LEAVE_NOAPI(H5T_IS_VL_STRING(dt->shared));
-} /* end H5T_is_variable_str() */
+}
 
 
 /*-------------------------------------------------------------------------
@@ -2211,7 +2191,7 @@ done:
  *-------------------------------------------------------------------------
  */
 H5T_t *
-H5T_get_super(const H5T_t *dt)
+H5T_get_super(H5T_t *dt)
 {
     H5T_t	*ret_value=NULL;
 
@@ -3017,7 +2997,7 @@ H5T_create(H5T_class_t type, size_t size)
             HGOTO_ERROR(H5E_DATATYPE, H5E_UNSUPPORTED, NULL, "base type required - use H5Tvlen_create()");
 
         case H5T_ARRAY:  /* Array datatype */
-            HGOTO_ERROR(H5E_DATATYPE, H5E_UNSUPPORTED, NULL, "base type required - use H5Tarray_create2()");
+            HGOTO_ERROR(H5E_DATATYPE, H5E_UNSUPPORTED, NULL, "base type required - use H5Tarray_create()");
 
         default:
             HGOTO_ERROR(H5E_INTERNAL, H5E_UNSUPPORTED, NULL, "unknown data type class");
@@ -4712,7 +4692,7 @@ done:
 H5O_loc_t *
 H5T_oloc(H5T_t *dt)
 {
-    H5O_loc_t *ret_value = NULL;
+    H5O_loc_t *ret_value;
 
     FUNC_ENTER_NOAPI(H5T_oloc, NULL)
 
@@ -4751,7 +4731,7 @@ done:
 H5G_name_t *
 H5T_nameof(H5T_t *dt)
 {
-    H5G_name_t *ret_value = NULL;
+    H5G_name_t *ret_value;
 
     FUNC_ENTER_NOAPI(H5T_nameof, NULL)
 

@@ -97,8 +97,8 @@ $TOOLTEST: SUBROUTINE
 $
 $ len =  F$LENGTH(P1)
 $ base = F$EXTRACT(0,len-2,P1)
-$ actual = base + "h5lsout"
-$ actual_err = base + "h5lserr"
+$ actual = base + "out"
+$ actual_err = base + "err"
 $
 $ begin = "Testing h5ls "
 $ !
@@ -117,7 +117,7 @@ $ if F$SEARCH(actual_err) .NES. ""
 $ then
 $ set message/notext/nofacility/noidentification/noseverity
 $    append 'actual_err' 'actual'
-$ set message/text/facility/identification/severity
+$ set message/ntext/facility/identification/severity
 $ endif
 $ !
 $ ! Compare the results
@@ -150,9 +150,8 @@ $ append h5ls_temp.dif h5ls.log
 $ !
 $ ! Delete temporary files
 $ !
-$ if F$SEARCH("*.h5lserr;*")   then del *.h5lserr;*
-$ if F$SEARCH("*.h5lsout;*")   then del *.h5lsout;*
-$ if F$SEARCH("*.dif;*")   then del *.dif;*
+$! del *.out;*
+$! del *.dif;*
 $ !
 $ENDSUBROUTINE
 

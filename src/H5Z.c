@@ -1252,34 +1252,42 @@ done:
  * Programmer: James Laird and Nat Furrer
  *              Monday, June 7, 2004
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
-herr_t
-H5Zget_filter_info(H5Z_filter_t filter, unsigned int *filter_config_flags)
+herr_t H5Zget_filter_info(H5Z_filter_t filter, unsigned int *filter_config_flags)
 {
-    H5Z_class_t *fclass;
-    herr_t ret_value = SUCCEED;
+    herr_t ret_value=SUCCEED;
+    H5Z_class_t * fclass;
 
     FUNC_ENTER_API(H5Zget_filter_info, FAIL)
-    H5TRACE2("e", "Zf*Iu", filter, filter_config_flags);
 
-    /* Look up the filter class info */
-    if(NULL == (fclass = H5Z_find(filter)))
+    fclass = H5Z_find(filter);
+
+#ifdef H5_WANT_H5_V1_6_COMPAT
+    if(fclass == NULL && filter_config_flags != NULL) {
+        *filter_config_flags = 0;
+        HGOTO_DONE(SUCCEED)
+    } /* end if */
+#else
+    if(fclass == NULL)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Filter not defined")
+#endif /* H5_WANT_H5_V1_6_COMPAT */
 
-    /* Set the filter config flags for the application */
-    if(filter_config_flags != NULL) {
+    if(filter_config_flags != NULL)
+    {
         *filter_config_flags = 0;
 
         if(fclass->encoder_present)
             *filter_config_flags |= H5Z_FILTER_CONFIG_ENCODE_ENABLED;
         if(fclass->decoder_present)
             *filter_config_flags |= H5Z_FILTER_CONFIG_DECODE_ENABLED;
-    } /* end if */
+    }
 
 done:
     FUNC_LEAVE_API(ret_value)
-} /* end H5Zget_filter_info() */
+}
 
 
 /*-------------------------------------------------------------------------

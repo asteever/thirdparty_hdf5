@@ -113,28 +113,18 @@ H5_DLL herr_t H5Dvlen_reclaim(hid_t type_id, hid_t space_id, hid_t plist_id, voi
 H5_DLL herr_t H5Dvlen_get_buf_size(hid_t dataset_id, hid_t type_id, hid_t space_id, hsize_t *size);
 H5_DLL herr_t H5Dfill(const void *fill, hid_t fill_type, void *buf,
         hid_t buf_type, hid_t space);
-H5_DLL herr_t H5Dset_extent(hid_t dset_id, const hsize_t size[]);
+H5_DLL herr_t H5Dset_extent(hid_t dset_id, const hsize_t *size);
 H5_DLL herr_t H5Ddebug(hid_t dset_id);
 
-/* Symbols defined for compatibility with previous versions of the HDF5 API.
+/* Functions and variables defined for compatibility with previous versions
+ * of the HDF5 API.
  * 
- * Use of these symbols is deprecated.
+ * Use of these functions and variables is deprecated.
  */
-#ifndef H5_NO_DEPRECATED_SYMBOLS
-
-/* Macros */
-
-
-/* Typedefs */
-
-
-/* Function prototypes */
-H5_DLL hid_t H5Dcreate1(hid_t file_id, const char *name, hid_t type_id,
-    hid_t space_id, hid_t dcpl_id);
-H5_DLL hid_t H5Dopen1(hid_t file_id, const char *name);
-H5_DLL herr_t H5Dextend(hid_t dset_id, const hsize_t size[]);
-
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
+H5_DLL hid_t H5Dcreate(hid_t file_id, const char *name, hid_t type_id,
+    hid_t space_id, hid_t plist_id);
+H5_DLL hid_t H5Dopen(hid_t file_id, const char *name);
+H5_DLL herr_t H5Dextend(hid_t dset_id, const hsize_t *size);
 
 #ifdef __cplusplus
 }

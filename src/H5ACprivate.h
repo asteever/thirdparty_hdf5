@@ -201,7 +201,6 @@ extern hid_t H5AC_ind_dxpl_id;
   /* hbool_t     open_trace_file        = */ FALSE,                           \
   /* hbool_t     close_trace_file       = */ FALSE,                           \
   /* char        trace_file_name[]      = */ "",                              \
-  /* hbool_t     evictions_enabled      = */ TRUE,                            \
   /* hbool_t     set_initial_size       = */ TRUE,                            \
   /* size_t      initial_size           = */ ( 1 * 1024 * 1024),              \
   /* double      min_clean_fraction     = */ 0.5,                             \
@@ -213,10 +212,6 @@ extern hid_t H5AC_ind_dxpl_id;
   /* double      increment              = */ 2.0,                             \
   /* hbool_t     apply_max_increment    = */ TRUE,                            \
   /* size_t      max_increment          = */ (4 * 1024 * 1024),               \
-  /* enum H5C_cache_flash_incr_mode       */                                  \
-  /*                    flash_incr_mode = */ H5C_flash_incr__add_space,       \
-  /* double      flash_multiple         = */ 1.0,                             \
-  /* double      flash_threshold        = */ 0.25,                            \
   /* enum H5C_cache_decr_mode decr_mode = */ H5C_decr__age_out_with_threshold,\
   /* double      upper_hr_threshold     = */ 0.999,                           \
   /* double      decrement              = */ 0.9,                             \

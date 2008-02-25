@@ -163,9 +163,14 @@ H5O_sdspace_decode(H5F_t *f, hid_t UNUSED dxpl_id, unsigned UNUSED mesg_flags,
     if(sdim->rank > 0) {
         if(NULL == (sdim->size = (hsize_t *)H5FL_ARR_MALLOC(hsize_t, (size_t)sdim->rank)))
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
-
-        for(i = 0; i < sdim->rank; i++)
+        for(i = 0; i < sdim->rank; i++) {
             H5F_DECODE_LENGTH(f, p, sdim->size[i]);
+#ifndef H5_HAVE_LARGE_HSIZET
+            /* Rudimentary check for overflow of the dimension size */
+            if(sdim->size[i] == 0)
+                HGOTO_ERROR(H5E_DATASPACE, H5E_BADSIZE, NULL, "invalid size detected")
+#endif /* H5_HAVE_LARGE_HSIZET */
+        } /* end for */
 
         if(flags & H5S_VALID_MAX) {
             if(NULL == (sdim->max = (hsize_t *)H5FL_ARR_MALLOC(hsize_t, (size_t)sdim->rank)))
@@ -309,7 +314,7 @@ H5O_sdspace_copy(const void *mesg, void *dest)
 	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
 
     /* Copy extent information */
-    if(H5S_extent_copy(dst, src, TRUE) < 0)
+    if(H5S_extent_copy(dst, src) < 0)
         HGOTO_ERROR(H5E_DATASPACE, H5E_CANTCOPY, NULL, "can't copy extent")
 
     /* Set return value */
@@ -435,7 +440,7 @@ H5O_sdspace_free(void *mesg)
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_sdspace_pre_copy_file(H5F_t UNUSED *file_src, const void *mesg_src,
+H5O_sdspace_pre_copy_file(H5F_t *file_src, const void *mesg_src,
     hbool_t UNUSED *deleted, const H5O_copy_t UNUSED *cpy_info, void *_udata)
 {
     const H5S_extent_t *src_space_extent = (const H5S_extent_t *)mesg_src;  /* Source dataspace extent */
@@ -460,7 +465,7 @@ H5O_sdspace_pre_copy_file(H5F_t UNUSED *file_src, const void *mesg_src,
             HGOTO_ERROR(H5E_DATASPACE, H5E_NOSPACE, FAIL, "dataspace extent allocation failed")
 
         /* Create a copy of the dataspace extent */
-        if(H5S_extent_copy(udata->src_space_extent, src_space_extent, TRUE) < 0)
+        if(H5S_extent_copy(udata->src_space_extent, src_space_extent) < 0)
             HGOTO_ERROR(H5E_DATASPACE, H5E_CANTCOPY, FAIL, "can't copy extent")
     } /* end if */
 

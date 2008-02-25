@@ -112,7 +112,7 @@ int main(void)
      * it holds.  For the simple case, we'll put every message that could be
      * shared in this single index.
      */
-    ret = H5Pset_shared_mesg_index(fcpl_id, 0, H5O_SHMESG_ALL_FLAG, 40);
+    ret = H5Pset_shared_mesg_index(fcpl_id, 0, H5O_MESG_ALL_FLAG, 40);
     if(ret < 0) goto error;
 
     /* The other property that can be set for shared messages is the
@@ -148,7 +148,7 @@ int main(void)
      * will be about the same size as a normal file (with just a little extra
      * overhead).
      */
-    ret = H5Pset_shared_mesg_index(fcpl_id, 0, H5O_SHMESG_ALL_FLAG, 1000);
+    ret = H5Pset_shared_mesg_index(fcpl_id, 0, H5O_MESG_ALL_FLAG, 1000);
     if(ret < 0) goto error;
 
     ret = create_standard_file("only_huge_mesgs_file.h5", fcpl_id);
@@ -159,7 +159,7 @@ int main(void)
      * attributes (which might make sense if we were going to use committed
      * datatypes).  We could change the flags on the index:
      */
-    ret = H5Pset_shared_mesg_index(fcpl_id, 0, H5O_SHMESG_SDSPACE_FLAG | H5O_SHMESG_ATTR_FLAG, 40);
+    ret = H5Pset_shared_mesg_index(fcpl_id, 0, H5O_MESG_SDSPACE_FLAG | H5O_MESG_ATTR_FLAG, 40);
     if(ret < 0) goto error;
 
     ret = create_standard_file("only_dspaces_and_attrs_file.h5", fcpl_id);
@@ -172,9 +172,9 @@ int main(void)
      */
     ret = H5Pset_shared_mesg_nindexes(fcpl_id, 2);
     if(ret < 0) goto error;
-    ret = H5Pset_shared_mesg_index(fcpl_id, 0, H5O_SHMESG_DTYPE_FLAG | H5O_SHMESG_SDSPACE_FLAG, 40);
+    ret = H5Pset_shared_mesg_index(fcpl_id, 0, H5O_MESG_DTYPE_FLAG | H5O_MESG_SDSPACE_FLAG, 40);
     if(ret < 0) goto error;
-    ret = H5Pset_shared_mesg_index(fcpl_id, 1, H5O_SHMESG_ATTR_FLAG, 40);
+    ret = H5Pset_shared_mesg_index(fcpl_id, 1, H5O_MESG_ATTR_FLAG, 40);
     if(ret < 0) goto error;
     
     ret = create_standard_file("separate_indexes_file.h5", fcpl_id);
@@ -187,7 +187,7 @@ int main(void)
      */
     ret = H5Pset_shared_mesg_nindexes(fcpl_id, 1);
     if(ret < 0) goto error;
-    ret = H5Pset_shared_mesg_index(fcpl_id, 0, H5O_SHMESG_ALL_FLAG, 40);
+    ret = H5Pset_shared_mesg_index(fcpl_id, 0, H5O_MESG_ALL_FLAG, 40);
     if(ret < 0) goto error;
 
     ret = H5Pset_shared_mesg_phase_change(fcpl_id, 5, 0);
@@ -261,9 +261,9 @@ create_standard_file(const char *filename, hid_t fcpl_id)
      * disk, so this type will be an array type rather than an atomic type.
      * However, any type can be shared.
      */
-    temp_type_id = H5Tarray_create2(H5T_NATIVE_INT, 10, dims);
+    temp_type_id = H5Tarray_create(H5T_NATIVE_INT, 10, dims, NULL);
     if(temp_type_id < 0) goto error;
-    type_id  = H5Tarray_create2(temp_type_id, 10, dims);
+    type_id  = H5Tarray_create(temp_type_id, 10, dims, NULL);
     if(type_id < 0) goto error;
     ret = H5Tclose(temp_type_id);
     if(ret < 0) goto error;
@@ -288,15 +288,14 @@ create_standard_file(const char *filename, hid_t fcpl_id)
     /* Begin using the messages many times.  Do this by creating datasets
      * that use this datatype, dataspace, and have this attribute.
      */
-    for(x = 0; x < NUM_DATASETS; ++x) {
+    for(x=0; x<NUM_DATASETS; ++x) {
        /* Create a dataset */
-       dset_id = H5Dcreate2(file_id, DSETNAME[x], type_id, space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+       dset_id = H5Dcreate(file_id, DSETNAME[x], type_id, space_id, H5P_DEFAULT);
        if(dset_id < 0) goto error;
 
        /* Create an attribute on the dataset */
-       attr_id = H5Acreate2(dset_id, "attr_name", attr_type_id, attr_space_id, H5P_DEFAULT, H5P_DEFAULT);
+       attr_id = H5Acreate(dset_id, "attr_name", attr_type_id, attr_space_id, H5P_DEFAULT);
        if(attr_id < 0) goto error;
-
        /* Write data to the attribute */
        ret = H5Awrite(attr_id, H5T_NATIVE_INT, attr_data);
        if(ret < 0) goto error;

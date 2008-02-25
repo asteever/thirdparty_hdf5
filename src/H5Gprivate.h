@@ -128,7 +128,6 @@ typedef struct {
 /* Forward declarations (for prototypes & struct definitions) */
 struct H5P_genplist_t;
 struct H5O_loc_t;
-struct H5O_link_t;
 struct H5O_t;
 
 /*
@@ -159,12 +158,7 @@ H5_DLL herr_t H5G_free_grp_name(H5G_t *grp);
 H5_DLL herr_t H5G_get_shared_count(H5G_t *grp);
 H5_DLL herr_t H5G_mount(H5G_t *grp);
 H5_DLL herr_t H5G_unmount(H5G_t *grp);
-#ifndef H5_NO_DEPRECATED_SYMBOLS
 H5_DLL H5G_obj_t H5G_map_obj_type(H5O_type_t obj_type);
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
-H5_DLL herr_t H5G_visit(hid_t loc_id, const char *group_name,
-    H5_index_t idx_type, H5_iter_order_t order, H5L_iterate_t op, void *op_data,
-    hid_t lapl_id, hid_t dxpl_id);
 
 /*
  * These functions operate on symbol table nodes.
@@ -184,15 +178,14 @@ H5_DLL herr_t H5G_obj_ent_encode(const H5F_t *f, uint8_t **pp,
 /*
  * These functions operate on group hierarchy names.
  */
-H5_DLL herr_t H5G_name_replace(const struct H5O_link_t *lnk, H5G_names_op_t op,
-    H5F_t *src_file, H5RS_str_t *src_full_path_r, H5F_t *dst_file,
-    H5RS_str_t *dst_full_path_r, hid_t dxpl_id);
+H5_DLL herr_t H5G_name_replace(H5G_obj_t type, H5F_t *src_file,
+    H5RS_str_t *src_full_path_r, H5RS_str_t *new_name, H5F_t *dst_file,
+    H5RS_str_t *dst_full_path_r, H5G_names_op_t op);
 H5_DLL herr_t H5G_name_reset(H5G_name_t *name);
 H5_DLL herr_t H5G_name_copy(H5G_name_t *dst, const H5G_name_t *src, H5_copy_depth_t depth);
 H5_DLL herr_t H5G_name_free(H5G_name_t *name);
-H5_DLL ssize_t H5G_get_name(hid_t id, char *name/*out*/, size_t size,
-    hid_t lapl_id, hid_t dxpl_id);
-H5_DLL ssize_t H5G_get_name_by_addr(hid_t fid, hid_t lapl_id, hid_t dxpl_id,
+H5_DLL ssize_t H5G_get_name(hid_t id, char *name/*out*/, size_t size, hid_t dxpl_id);
+H5_DLL ssize_t H5G_get_refobj_name(hid_t fid, hid_t dxpl_id,
     const struct H5O_loc_t *loc, char* name, size_t size);
 
 /*
@@ -207,10 +200,6 @@ H5_DLL herr_t H5G_loc_find_by_idx(H5G_loc_t *loc, const char *group_name,
 H5_DLL herr_t H5G_loc_info(H5G_loc_t *loc, const char *name,
     hbool_t want_ih_info, H5O_info_t *oinfo/*out*/, hid_t lapl_id,
     hid_t dxpl_id);
-H5_DLL herr_t H5G_loc_set_comment(H5G_loc_t *loc, const char *name,
-    const char *comment, hid_t lapl_id, hid_t dxpl_id);
-H5_DLL ssize_t H5G_loc_get_comment(H5G_loc_t *loc, const char *name,
-    char *comment/*out*/, size_t bufsize, hid_t lapl_id, hid_t dxpl_id);
 H5_DLL herr_t H5G_loc_reset(H5G_loc_t *loc);
 H5_DLL herr_t H5G_loc_free(H5G_loc_t *loc);
 
