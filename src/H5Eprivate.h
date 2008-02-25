@@ -1,17 +1,14 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
- * All rights reserved.                                                      *
- *                                                                           *
- * This file is part of HDF5.  The full HDF5 copyright notice, including     *
- * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/****************************************************************************
+ * NCSA HDF                                                                 *
+ * Software Development Group                                               *
+ * National Center for Supercomputing Applications                          *
+ * University of Illinois at Urbana-Champaign                               *
+ * 605 E. Springfield, Champaign IL 61820                                   *
+ *                                                                          *
+ * For conditions of distribution and use, see the accompanying             *
+ * hdf/COPYING file.                                                        *
+ *                                                                          *
+ ****************************************************************************/
 
 /*
  *  Header file for error values, etc.
@@ -19,111 +16,118 @@
 #ifndef _H5Eprivate_H
 #define _H5Eprivate_H
 
-#include "H5Epublic.h"
+#include <H5Epublic.h>
 
 /* Private headers needed by this file */
-#include "H5private.h"
-
-/* Typedef for error stack (defined in H5Epkg.h) */
-typedef struct H5E_t H5E_t;
+#include <H5private.h>
 
 /*
- * HERROR macro, used to facilitate error reporting between a FUNC_ENTER()
- * and a FUNC_LEAVE() within a function body.  The arguments are the major
- * error number, the minor error number, and a description of the error.
- */
-#define HERROR(maj_id, min_id, str) H5E_push_stack(NULL, __FILE__, FUNC, __LINE__, H5E_ERR_CLS_g, maj_id, min_id, str)
+   ======================================================================
+   Error codes
 
-/*
- * HCOMMON_ERROR macro, used by HDONE_ERROR and HGOTO_ERROR
- * (Shouldn't need to be used outside this header file)
+   NOTE: Remember to update the error_messages[] structure later in this file
+   whenever errors are added/deleted from this list.
+   ======================================================================
  */
-#define HCOMMON_ERROR(maj, min, str)  				              \
-   HERROR(maj, min, str);						      \
-   (void)H5E_dump_api_stack((int)H5_IS_API(FUNC));
 
-/*
- * HDONE_ERROR macro, used to facilitate error reporting between a
- * FUNC_ENTER() and a FUNC_LEAVE() within a function body, but _AFTER_ the
- * "done:" label.  The arguments are
- * the major error number, the minor error number, a return value, and a
- * description of the error.
- * (This macro can also be used to push an error and set the return value
- *      without jumping to any labels)
- */
-#define HDONE_ERROR(maj, min, ret_val, str) {				      \
-   HCOMMON_ERROR(maj, min, str);					      \
+/* HERROR macro, used to facilitate error reporting.  Assumes that
+   there's a variable called FUNC which holds the function name.
+   Assume that func and file are both stored in static space, or at
+   least be not corrupted in the meanwhile. */
+#define HERROR(maj, min, str) H5Epush (H5E_thrdid_g, maj, min,                \
+                                       FUNC, __FILE__, __LINE__, str)
+
+/* HRETURN_ERROR macro, used to facilitate error reporting.  Makes
+   same assumptions as HERROR.  IN ADDITION, this macro causes
+   a return from the calling routine */
+#define HRETURN_ERROR(maj, min, ret_val, str) {                               \
+   HERROR (maj, min, str);                                                    \
+   PABLO_TRACE_OFF (PABLO_MASK, pablo_func_id);                               \
+   return (ret_val);                                                          \
+}
+
+/* HRETURN macro, similar to HRETURN_ERROR() except for success */
+#define HRETURN(ret_val) {                                                    \
+   PABLO_TRACE_OFF (PABLO_MASK, pablo_func_id);                               \
+   return (ret_val);                                                          \
+}
+
+/* HGOTO_ERROR macro, used to facilitate error reporting.  Makes
+   same assumptions as HERROR.  IN ADDITION, this macro causes
+   a jump to the label 'done' which should be in every fucntion
+   Also there is an assumption of a variable 'ret_value' */
+#define HGOTO_ERROR(maj, min, ret_val, str) {                                 \
+   HERROR (maj, min,  str);                                                   \
    ret_value = ret_val;                                                       \
+   goto done;                                                                 \
 }
 
-/*
- * HGOTO_ERROR macro, used to facilitate error reporting between a
- * FUNC_ENTER() and a FUNC_LEAVE() within a function body.  The arguments are
- * the major error number, the minor error number, the return value, and an
- * error string.  The return value is assigned to a variable `ret_value' and
- * control branches to the `done' label.
- */
-#define HGOTO_ERROR(maj, min, ret_val, str) {				      \
-   HCOMMON_ERROR(maj, min, str);					      \
-   HGOTO_DONE(ret_val)						              \
-}
-
-/*
- * HGOTO_DONE macro, used to facilitate normal return between a FUNC_ENTER()
- * and a FUNC_LEAVE() within a function body. The argument is the return
- * value which is assigned to the `ret_value' variable.	 Control branches to
- * the `done' label.
- */
+/* HGOTO_DONE macro, used to facilitate the new error reporting model.
+   This macro is just a wrapper to set the return value and jump to the 'done'
+   label.  Also assumption of a variable 'ret_value' */
 #define HGOTO_DONE(ret_val) {ret_value = ret_val; goto done;}
 
-/* Library-private functions defined in H5E package */
-H5_DLL herr_t H5E_init(void);
-H5_DLL herr_t H5E_push_stack(H5E_t *estack, const char *file, const char *func, unsigned line,
-                            hid_t cls_id, hid_t maj_id, hid_t min_id, const char *desc);
-H5_DLL herr_t H5E_clear_stack(H5E_t *estack);
-H5_DLL herr_t H5E_dump_api_stack(int is_api);
+/* H5ECLEAR macro, used to facilitate the new error reporting model.
+   This macro is just a wrapper to clear the error stack with the thread
+   error ID */
+#define H5ECLEAR H5Eclear(H5E_thrdid_g)
+
+/* Maximum length of function name to push onto error stack */
+#define MAX_FUNC_NAME   32
 
 /*
- * Macros handling system error messages as described in C standard.
- * These macros assume errnum is a valid system error code.
+ * error_messages is the list of error messages in the system, kept as
+ * error_code-message pairs.
  */
+typedef struct H5E_major_mesg_t {
+    H5E_major_t error_code;
+    const char  *str;
+} H5E_major_mesg_t;
 
-/* Retrieve the error code description string and push it onto the error
- * stack.
- */
-#define	HSYS_ERROR(errnum) {						      \
-    HERROR(H5E_INTERNAL, H5E_SYSERRSTR, HDstrerror(errnum));                  \
-}
-#define	HSYS_DONE_ERROR(majorcode, minorcode, retcode, str) {		      \
-    HSYS_ERROR(errno);							      \
-    HDONE_ERROR(majorcode, minorcode, retcode, str);			      \
-}
-#define	HSYS_GOTO_ERROR(majorcode, minorcode, retcode, str) {		      \
-    HSYS_ERROR(errno);							      \
-    HGOTO_ERROR(majorcode, minorcode, retcode, str);			      \
-}
+typedef struct H5E_minor_mesg_t {
+    H5E_minor_t error_code;
+    const char  *str;
+} H5E_minor_mesg_t;
 
-#ifdef H5_HAVE_PARALLEL
+/* Function pointer to report errors through */
+struct H5E_t;                           /*forward decl                       */
+typedef herr_t (*H5E_push_t)(struct H5E_t *estack, H5E_major_t maj_num,
+                             H5E_minor_t min_num, const char *function_name,
+			     const char *file_name, intn line,
+			     const char *desc);
+
 /*
- * MPI error handling macros.
+ * We use a stack to hold the errors plus we keep track of the function, file
+ * and line where the error occurs.
  */
 
-extern	char	H5E_mpi_error_str[MPI_MAX_ERROR_STRING];
-extern	int	H5E_mpi_error_str_len;
+/* the structure of the error stack element */
+typedef struct H5E_error_t {
+    H5E_major_t maj_num;                  /*major error number               */
+    H5E_minor_t min_num;                  /*minor error number               */
+    char        func_name[MAX_FUNC_NAME]; /*function where error occur       */
+    const char  *file_name;               /*file where error occur           */
+    intn        line;                     /*line in file where error occurs  */
+    char        *desc;                    /*optional supplied description    */
+} H5E_error_t;
 
-#define	HMPI_ERROR(mpierr){						      \
-    MPI_Error_string(mpierr, H5E_mpi_error_str, &H5E_mpi_error_str_len);      \
-    HERROR(H5E_INTERNAL, H5E_MPIERRSTR, H5E_mpi_error_str);                   \
-}
-#define	HMPI_DONE_ERROR(retcode, str, mpierr){				      \
-    HMPI_ERROR(mpierr);							      \
-    HDONE_ERROR(H5E_INTERNAL, H5E_MPI, retcode, str);			      \
-}
-#define	HMPI_GOTO_ERROR(retcode, str, mpierr){				      \
-    HMPI_ERROR(mpierr);							      \
-    HGOTO_ERROR(H5E_INTERNAL, H5E_MPI, retcode, str);			      \
-}
-#endif /* H5_HAVE_PARALLEL */
+/* Structure to store error information for a thread */
+typedef struct H5E_t {
+    uintn       nelmts; /*num elements allocated in the stack                */
+    uintn       top;    /*index of the next open stack element               */
+    H5E_error_t *stack; /*pointer to the error stack                         */
+    H5E_push_t  push;   /*func that pushes new error on stack                */
+} H5E_t;
 
-#endif /* _H5Eprivate_H */
+/* Private global variables in H5E.c */
+extern hid_t H5E_thrdid_g; /* Thread-specific "global" error-handler ID */
+extern hbool_t install_atexit; /* Whether to install the atexit routine */
+extern const hbool_t H5E_clearable_g; /* Safe to call H5Eclear() on enter?*/
 
+herr_t H5E_close (H5E_t *estack);
+herr_t H5E_clear (H5E_t *estack);
+herr_t H5E_print (H5E_t *estack, FILE * file);
+herr_t H5E_push (H5E_t *estack, H5E_major_t maj_num, H5E_minor_t min_num,
+                 const char *function_name, const char *file_name, intn line,
+                 const char *desc);
+#endif

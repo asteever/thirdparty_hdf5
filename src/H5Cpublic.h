@@ -1,59 +1,70 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
- * All rights reserved.                                                      *
- *                                                                           *
- * This file is part of HDF5.  The full HDF5 copyright notice, including     *
- * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/****************************************************************************
+ * NCSA HDF                                                                 *
+ * Software Development Group                                               *
+ * National Center for Supercomputing Applications                          *
+ * University of Illinois at Urbana-Champaign                               *
+ * 605 E. Springfield, Champaign IL 61820                                   *
+ *                                                                          *
+ * For conditions of distribution and use, see the accompanying             *
+ * hdf/COPYING file.                                                        *
+ *                                                                          *
+ ****************************************************************************/
 
-/*-------------------------------------------------------------------------
- *
- * Created:	H5Cproto.h
- *              June 4, 2005
- *              John Mainzer
- *
- * Purpose:     Public include file for cache functions.
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
+/*
+ * This file contains function prototypes for each exported function in the
+ * H5C module.
  */
 #ifndef _H5Cpublic_H
 #define _H5Cpublic_H
 
+/* Default Template for creation, access, etc. templates */
+#define H5C_DEFAULT     (-2)
+
 /* Public headers needed by this file */
-#include "H5public.h"
+#include <H5public.h>
+#include <H5Apublic.h>
+#include <H5Dpublic.h>
+
+/* Template classes */
+typedef enum H5C_class_t {
+    H5C_NO_CLASS         = -1,  /*error return value                         */
+    H5C_FILE_CREATE      = 0,   /*file creation template                     */
+    H5C_FILE_ACCESS      = 1,   /*file access template                       */
+    H5C_DATASET_CREATE   = 2,   /*dataset creation template                  */
+    H5C_DATASET_XFER     = 3,   /*dataset transfer template                  */
+
+    H5C_NCLASSES         = 4    /*this must be last!                         */
+} H5C_class_t;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-enum H5C_cache_incr_mode
-{
-    H5C_incr__off,
-    H5C_incr__threshold
-};
-
-enum H5C_cache_flash_incr_mode
-{
-    H5C_flash_incr__off,
-    H5C_flash_incr__add_space
-};
-
-enum H5C_cache_decr_mode
-{
-    H5C_decr__off,
-    H5C_decr__threshold,
-    H5C_decr__age_out,
-    H5C_decr__age_out_with_threshold
-};
+/* Public functions */
+hid_t H5Ccreate (H5C_class_t type);
+herr_t H5Cclose (hid_t tid);
+hid_t H5Ccopy (hid_t tid);
+H5C_class_t H5Cget_class (hid_t tid);
+herr_t H5Cget_version (hid_t tid, int *boot/*out*/, int *heap/*out*/,
+                       int *freelist/*out*/, int *stab/*out*/,
+                       int *shhdr/*out*/);
+herr_t H5Cset_userblock (hid_t tid, size_t size);
+herr_t H5Cget_userblock (hid_t tid, size_t *size);
+herr_t H5Cset_sizes (hid_t tid, size_t sizeof_addr, size_t sizeof_size);
+herr_t H5Cget_sizes (hid_t tid, size_t *sizeof_addr/*out*/,
+                     size_t *sizeof_size/*out*/);
+herr_t H5Cset_sym_k (hid_t tid, int ik, int lk);
+herr_t H5Cget_sym_k (hid_t tid, int *ik/*out*/, int *lk/*out*/);
+herr_t H5Cset_istore_k (hid_t tid, int ik);
+herr_t H5Cget_istore_k (hid_t tid, int *ik/*out*/);
+herr_t H5Cset_layout (hid_t tid, H5D_layout_t layout);
+H5D_layout_t H5Cget_layout (hid_t tid);
+herr_t H5Cset_chunk (hid_t tid, int ndims, const size_t dim[]);
+int H5Cget_chunk (hid_t tid, int max_ndims, size_t dim[]/*out*/);
+#ifdef HAVE_PARALLEL
+herr_t H5Cset_mpi (hid_t tid, MPI_Comm comm, MPI_Info info, uintn access_mode);
+/* herr_t H5Cget_mpi (hid_t tid, int *ik); */  /* not defined yet */
+#endif
 
 #ifdef __cplusplus
 }

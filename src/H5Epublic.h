@@ -1,17 +1,14 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
- * All rights reserved.                                                      *
- *                                                                           *
- * This file is part of HDF5.  The full HDF5 copyright notice, including     *
- * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/****************************************************************************
+ * NCSA HDF                                                                 *
+ * Software Development Group                                               *
+ * National Center for Supercomputing Applications                          *
+ * University of Illinois at Urbana-Champaign                               *
+ * 605 E. Springfield, Champaign IL 61820                                   *
+ *                                                                          *
+ * For conditions of distribution and use, see the accompanying             *
+ * hdf/COPYING file.                                                        *
+ *                                                                          *
+ ****************************************************************************/
 
 /*
  * This file contains public declarations for the H5E module.
@@ -22,207 +19,113 @@
 #include <stdio.h>              /*FILE arg of H5Eprint()                     */
 
 /* Public headers needed by this file */
-#include "H5public.h"
-#include "H5Ipublic.h"
-
-/* Value for the default error stack */
-#define H5E_DEFAULT             0
-
-/* Different kinds of error information */
-typedef enum H5E_type_t {
-    H5E_MAJOR,
-    H5E_MINOR
-} H5E_type_t;
-
-/* Information about an error; element of error stack */
-typedef struct H5E_error2_t {
-    hid_t       cls_id;         /*class ID                           */
-    hid_t       maj_num;	/*major error ID		     */
-    hid_t       min_num;	/*minor error number		     */
-    unsigned	line;		/*line in file where error occurs    */
-    const char	*func_name;   	/*function in which error occurred   */
-    const char	*file_name;	/*file in which error occurred       */
-    const char	*desc;		/*optional supplied description      */
-} H5E_error2_t;
-
-/* When this header is included from a private header, don't make calls to H5open() */
-#undef H5OPEN
-#ifndef _H5private_H
-#define H5OPEN          H5open(),
-#else   /* _H5private_H */
-#define H5OPEN
-#endif  /* _H5private_H */
-
-/* HDF5 error class */
-#define H5E_ERR_CLS		(H5OPEN H5E_ERR_CLS_g)
-H5_DLLVAR hid_t H5E_ERR_CLS_g;
-
-/* Include the automatically generated public header information */
-/* (This includes the list of major and minor error codes for the library) */
-#include "H5Epubgen.h"
+#include <H5public.h>
+#include <H5Apublic.h>
 
 /*
- * One often needs to temporarily disable automatic error reporting when
- * trying something that's likely or expected to fail.  The code to try can
- * be nested between calls to H5Eget_auto() and H5Eset_auto(), but it's
- * easier just to use this macro like:
- * 	H5E_BEGIN_TRY {
- *	    ...stuff here that's likely to fail...
- *      } H5E_END_TRY;
- *
- * Warning: don't break, return, or longjmp() from the body of the loop or
- *	    the error reporting won't be properly restored!
- *
- * These two macros still use the old API functions for backward compatibility
- * purpose.
+ * Declare an enumerated type which holds all the valid major HDF error codes.
  */
-#ifndef H5_NO_DEPRECATED_SYMBOLS
-#define H5E_BEGIN_TRY {							      \
-    unsigned H5E_saved_is_v2;					              \
-    union {								      \
-        H5E_auto1_t efunc1;						      \
-        H5E_auto2_t efunc2;					              \
-    } H5E_saved;							      \
-    void *H5E_saved_edata;						      \
-								    	      \
-    (void)H5Eauto_is_v2(H5E_DEFAULT, &H5E_saved_is_v2);		              \
-    if(H5E_saved_is_v2) {						      \
-        (void)H5Eget_auto2(H5E_DEFAULT, &H5E_saved.efunc2, &H5E_saved_edata); \
-        (void)H5Eset_auto2(H5E_DEFAULT, NULL, NULL);		              \
-    } else {								      \
-        (void)H5Eget_auto1(&H5E_saved.efunc1, &H5E_saved_edata);		      \
-        (void)H5Eset_auto1(NULL, NULL);					      \
-    }
+typedef enum H5E_major_t {
+    H5E_NONE_MAJOR       = 0,   /*special zero, no error                     */
+    H5E_ARGS,                   /*invalid arguments to routine               */
+    H5E_RESOURCE,               /*resource unavailable                       */
+    H5E_INTERNAL,               /* Internal error (too specific to document
+                                 * in detail)
+                                 */
+    H5E_FILE,                   /*file Accessability                         */
+    H5E_IO,                     /*Low-level I/O                              */
+    H5E_FUNC,                   /*function Entry/Exit                        */
+    H5E_ATOM,                   /*object Atom                                */
+    H5E_CACHE,                  /*object Cache                               */
+    H5E_BTREE,                  /*B-Tree Node                                */
+    H5E_SYM,                    /*symbol Table                               */
+    H5E_HEAP,                   /*Heap                                       */
+    H5E_OHDR,                   /*object Header                              */
+    H5E_DATATYPE,               /*Datatype                                   */
+    H5E_DATASPACE,              /*Dataspace                                  */
+    H5E_DATASET,                /*Dataset                                    */
+    H5E_STORAGE,                /*data storage                               */
+    H5E_TEMPLATE                /*Templates                                  */
+} H5E_major_t;
 
-#define H5E_END_TRY							      \
-    if(H5E_saved_is_v2)							      \
-        (void)H5Eset_auto2(H5E_DEFAULT, H5E_saved.efunc2, H5E_saved_edata);   \
-    else								      \
-        (void)H5Eset_auto1(H5E_saved.efunc1, H5E_saved_edata);		      \
-}
-#else /* H5_NO_DEPRECATED_SYMBOLS */
-#define H5E_BEGIN_TRY {							      \
-    H5E_auto_t saved_efunc;						      \
-    void *H5E_saved_edata;						      \
-								    	      \
-    (void)H5Eget_auto(H5E_DEFAULT, &saved_efunc, &H5E_saved_edata);	      \
-    (void)H5Eset_auto(H5E_DEFAULT, NULL, NULL);
+/* Declare an enumerated type which holds all the valid minor HDF error codes */
+typedef enum H5E_minor_t {
+    H5E_NONE_MINOR       = 0,   /*special zero, no error                     */
 
-#define H5E_END_TRY							      \
-    (void)H5Eset_auto(H5E_DEFAULT, saved_efunc, H5E_saved_edata);	      \
-}
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
+    /* Argument errors */
+    H5E_UNINITIALIZED,          /*information is unitialized                 */
+    H5E_UNSUPPORTED,            /*feature is unsupported                     */
+    H5E_BADTYPE,                /*incorrect type found                       */
+    H5E_BADRANGE,               /*argument out of range                      */
+    H5E_BADVALUE,               /*bad value for argument                     */
 
-/*
- * Public API Convenience Macros for Error reporting - Documented
- */
-/* Use the Standard C __FILE__ & __LINE__ macros instead of typing them in */
-#define H5Epush_sim(func, cls, maj, min, str) H5Epush2(H5E_DEFAULT, __FILE__, func, __LINE__, cls, maj, min, str)
+    /* Resource errors */
+    H5E_NOSPACE,                /*no space available for allocation          */
 
-/*
- * Public API Convenience Macros for Error reporting - Undocumented
- */
-/* Use the Standard C __FILE__ & __LINE__ macros instead of typing them in */
-/*  And return after pushing error onto stack */
-#define H5Epush_ret(func, cls, maj, min, str, ret) {			      \
-    H5Epush2(H5E_DEFAULT, __FILE__, func, __LINE__, cls, maj, min, str);      \
-    return(ret);							      \
-}
+    /* File accessability errors */
+    H5E_FILEEXISTS,             /*file already exists                        */
+    H5E_FILEOPEN,               /*file already open                          */
+    H5E_CANTCREATE,             /*Can't create file                          */
+    H5E_CANTOPENFILE,           /*Can't open file                            */
+    H5E_NOTHDF5,                /*not an HDF5 format file                    */
+    H5E_BADFILE,                /*bad file ID accessed                       */
+    H5E_TRUNCATED,              /*file has been truncated                    */
 
-/* Use the Standard C __FILE__ & __LINE__ macros instead of typing them in
- * And goto a label after pushing error onto stack.
- */
-#define H5Epush_goto(func, cls, maj, min, str, label) {			      \
-    H5Epush2(H5E_DEFAULT, __FILE__, func, __LINE__, cls, maj, min, str);      \
-    goto label;								      \
-}
+    /* Generic low-level file I/O errors */
+    H5E_SEEKERROR,              /*seek failed                                */
+    H5E_READERROR,              /*read failed                                */
+    H5E_WRITEERROR,             /*write failed                               */
+    H5E_CLOSEERROR,             /*close failed                               */
 
-/* Error stack traversal direction */
-typedef enum H5E_direction_t {
-    H5E_WALK_UPWARD	= 0,		/*begin deep, end at API function    */
-    H5E_WALK_DOWNWARD	= 1		/*begin at API function, end deep    */
-} H5E_direction_t;
+    /* Function entry/exit interface errors */
+    H5E_CANTINIT,               /*Can't initialize interface                 */
+    H5E_ALREADYINIT,            /*object already initialized                 */
 
+    /* Object atom related errors */
+    H5E_BADATOM,                /*Can't find atom information                */
+    H5E_CANTREGISTER,           /*Can't register new atom                    */
+
+    /* Cache related errors */
+    H5E_CANTFLUSH,              /*Can't flush object from cache              */
+    H5E_CANTLOAD,               /*Can't load object into cache               */
+    H5E_PROTECT,                /*protected object error                     */
+    H5E_NOTCACHED,              /*object not currently cached                */
+
+    /* B-tree related errors */
+    H5E_NOTFOUND,               /*object not found                           */
+    H5E_EXISTS,                 /*object already exists                      */
+    H5E_CANTENCODE,             /*Can't encode value                         */
+    H5E_CANTDECODE,             /*Can't decode value                         */
+    H5E_CANTSPLIT,              /*Can't split node                           */
+    H5E_CANTINSERT,             /*Can't insert object                        */
+    H5E_CANTLIST,               /*Can't list node                            */
+
+    /* Object header related errors */
+    H5E_LINKCOUNT,              /*bad object header link count               */
+    H5E_VERSION,                /*wrong version number                       */
+    H5E_ALIGNMENT,              /*alignment error                            */
+    H5E_BADMESG,                /*unrecognized message                       */
+
+    /* Group related errors */
+    H5E_CANTOPENOBJ,            /*Can't open object                          */
+    H5E_COMPLEN,                /*name component is too long                 */
+    H5E_CWG,                    /*problem with current working group         */
+    H5E_LINK                    /*link count failure                         */
+} H5E_minor_t;
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* Error stack traversal callback function pointers */
-typedef herr_t (*H5E_walk2_t)(unsigned n, const H5E_error2_t *err_desc,
-    void *client_data);
-typedef herr_t (*H5E_auto2_t)(hid_t estack, void *client_data);
-
-/* Public API functions */
-H5_DLL hid_t  H5Eregister_class(const char *cls_name, const char *lib_name,
-    const char *version);
-H5_DLL herr_t H5Eunregister_class(hid_t class_id);
-H5_DLL herr_t H5Eclose_msg(hid_t err_id);
-H5_DLL hid_t  H5Ecreate_msg(hid_t cls, H5E_type_t msg_type, const char *msg);
-H5_DLL hid_t  H5Ecreate_stack(void);
-H5_DLL hid_t  H5Eget_current_stack(void);
-H5_DLL herr_t H5Eclose_stack(hid_t stack_id);
-H5_DLL ssize_t H5Eget_class_name(hid_t class_id, char *name, size_t size);
-H5_DLL herr_t H5Eset_current_stack(hid_t err_stack_id);
-H5_DLL herr_t H5Epush2(hid_t err_stack, const char *file, const char *func, unsigned line,
-    hid_t cls_id, hid_t maj_id, hid_t min_id, const char *msg, ...);
-H5_DLL herr_t H5Epop(hid_t err_stack, size_t count);
-H5_DLL herr_t H5Eprint2(hid_t err_stack, FILE *stream);
-H5_DLL herr_t H5Ewalk2(hid_t err_stack, H5E_direction_t direction, H5E_walk2_t func,
-    void *client_data);
-H5_DLL herr_t H5Eget_auto2(hid_t estack_id, H5E_auto2_t *func, void **client_data);
-H5_DLL herr_t H5Eset_auto2(hid_t estack_id, H5E_auto2_t func, void *client_data);
-H5_DLL herr_t H5Eclear2(hid_t err_stack);
-H5_DLL herr_t H5Eauto_is_v2(hid_t err_stack, unsigned *is_stack);
-H5_DLL ssize_t H5Eget_msg(hid_t msg_id, H5E_type_t *type, char *msg,
-    size_t size);
-H5_DLL ssize_t H5Eget_num(hid_t error_stack_id);
-
-
-/* Symbols defined for compatibility with previous versions of the HDF5 API.
- * 
- * Use of these symbols is deprecated.
- */
-#ifndef H5_NO_DEPRECATED_SYMBOLS
-
-/* Typedefs */
-
-/* Alias major & minor error types to hid_t's, for compatibility with new
- *      error API in v1.8
- */
-typedef hid_t   H5E_major_t;
-typedef hid_t   H5E_minor_t;
-
-/* Information about an error element of error stack. */
-typedef struct H5E_error1_t {
-    H5E_major_t maj_num;                /*major error number                 */
-    H5E_minor_t min_num;                /*minor error number                 */
-    const char  *func_name;             /*function in which error occurred   */
-    const char  *file_name;             /*file in which error occurred       */
-    unsigned    line;                   /*line in file where error occurs    */
-    const char  *desc;                  /*optional supplied description      */
-} H5E_error1_t;
-
-/* Error stack traversal callback function pointers */
-typedef herr_t (*H5E_walk1_t)(int n, H5E_error1_t *err_desc, void *client_data);
-typedef herr_t (*H5E_auto1_t)(void *client_data);
-
-/* Function prototypes */
-H5_DLL herr_t H5Eclear1(void);
-H5_DLL herr_t H5Eget_auto1(H5E_auto1_t *func, void **client_data);
-H5_DLL herr_t H5Epush1(const char *file, const char *func, unsigned line,
-    H5E_major_t maj, H5E_minor_t min, const char *str);
-H5_DLL herr_t H5Eprint1(FILE *stream);
-H5_DLL herr_t H5Eset_auto1(H5E_auto1_t func, void *client_data);
-H5_DLL herr_t H5Ewalk1(H5E_direction_t direction, H5E_walk1_t func,
-    void *client_data);
-H5_DLL char *H5Eget_major(H5E_major_t maj);
-H5_DLL char *H5Eget_minor(H5E_minor_t min);
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
+hid_t H5Ecreate (uintn initial_stack_nelmts);
+herr_t H5Eclose (hid_t estack_id);
+herr_t H5Epush (hid_t estack_id, H5E_major_t maj_num, H5E_minor_t min_num,
+                const char *function_name, const char *file_name, intn line,
+                const char *desc);
+herr_t H5Eclear (hid_t estack_id);
+herr_t H5Eprint (hid_t estack_id, FILE * file);
 
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* end _H5Epublic_H */
-
+#endif

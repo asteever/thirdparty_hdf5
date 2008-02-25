@@ -1,17 +1,14 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
- * All rights reserved.                                                      *
- *                                                                           *
- * This file is part of HDF5.  The full HDF5 copyright notice, including     *
- * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/****************************************************************************
+ * NCSA HDF                                                                 *
+ * Software Development Group                                               *
+ * National Center for Supercomputing Applications                          *
+ * University of Illinois at Urbana-Champaign                               *
+ * 605 E. Springfield, Champaign IL 61820                                   *
+ *                                                                          *
+ * For conditions of distribution and use, see the accompanying             *
+ * hdf/COPYING file.                                                        *
+ *                                                                          *
+ ****************************************************************************/
 
 /*
  * This file contains private information about the H5P module
@@ -19,95 +16,111 @@
 #ifndef _H5Pprivate_H
 #define _H5Pprivate_H
 
-/* Include package's public header */
-#include "H5Ppublic.h"
+#include <H5Ppublic.h>
 
 /* Private headers needed by this file */
-#include "H5private.h"		/* Generic Functions			*/
-#include "H5Oprivate.h"		/* Object headers		  	*/
+#include <H5private.h>
+#include <H5Gprivate.h>         /*for H5G_entry_t                            */
+#include <H5Oprivate.h>
 
-/**************************/
-/* Library Private Macros */
-/**************************/
+#define H5P_RESERVED_ATOMS  2
 
-/* ========  String creation property names ======== */
-#define H5P_STRCRT_CHAR_ENCODING_NAME  "character_encoding"     /* Character set encoding for string */
+/* Flags to indicate special dataspace features are active */
+#define H5P_VALID_MAX   0x01
+#define H5P_VALID_PERM  0x02
 
+typedef struct H5P_hyperslab_t {
+    intn        *start;                 /* Location of start of hyperslab */
+    size_t      *count;                 /* Number of elements in hyperslab */
+    size_t      *stride;                /* Packing of values of hyperslab */
+} H5P_hyperslab_t;
 
-/****************************/
-/* Library Private Typedefs */
-/****************************/
+typedef struct H5P_simple_t {
+    intn        rank;                   /*number of dimensions               */
+    size_t      *size;                  /*dimension sizes                    */
+    size_t      *max;                   /*maximum dimension sizes or NULL    */
+    intn        *perm;                  /*dimension permutations or NULL     */
+} H5P_simple_t;
 
-/* Forward declarations for anonymous H5P objects */
-typedef struct H5P_genplist_t H5P_genplist_t;
-typedef struct H5P_genclass_t H5P_genclass_t;
+typedef struct H5P_t {
+    H5P_class_t         type;           /*type of dimensionality object      */
+    union {
+        H5P_simple_t    simple;         /*simple dimensionality information  */
+    } u;
+    uintn hslab_def;                    /* Whether the hyperslab is defined */
+    H5P_hyperslab_t h;                  /* Hyperslab information */
+} H5P_t;
 
+/*
+ * This structure contains information about how the elements of a data space
+ * are numbered.
+ */
+typedef struct H5P_number_t {
+    int _place_holder;                  /*remove this field!                 */
+} H5P_number_t;
 
-/*****************************/
-/* Library Private Variables */
-/*****************************/
+/*
+ * Callbacks for data space conversion.
+ */
+typedef struct H5P_tconv_t {
+    /* Initialize element numbering information */
+    size_t (*init)(const struct H5O_layout_t *layout, const H5P_t *mem_space,
+                   const H5P_t *file_space, H5P_number_t *numbering/*out*/);
 
+    /* Gather elements from disk to type conversion buffer */
+    size_t (*fgath)(H5F_t *f, const struct H5O_layout_t *layout,
+                    size_t elmt_size, const H5P_t *file_space,
+                    const H5P_number_t *numbering, size_t start, size_t nelmts,
+                    void *tconv_buf/*out*/);
 
-/******************************/
-/* Library Private Prototypes */
-/******************************/
+    /* Scatter elements from type conversion buffer to application buffer */
+    herr_t (*mscat)(const void *tconv_buf, size_t elmt_size,
+                    const H5P_t *mem_space, const H5P_number_t *numbering,
+                    size_t start, size_t nelmts, void *buf/*out*/);
 
-/* Package initialization routine */
-H5_DLL herr_t H5P_init(void);
+    /* Gather elements from app buffer to type conversion buffer */
+    size_t (*mgath)(const void *buf, size_t elmt_size,
+                    const H5P_t *mem_space, const H5P_number_t *numbering,
+                    size_t start, size_t nelmts, void *tconv_buf/*out*/);
 
-/* Internal versions of API routines */
-H5_DLL herr_t H5P_close(void *_plist);
-H5_DLL hid_t H5P_create_id(H5P_genclass_t *pclass);
-H5_DLL hid_t H5P_copy_plist(H5P_genplist_t *old_plist);
-H5_DLL herr_t H5P_get(H5P_genplist_t *plist, const char *name, void *value);
-H5_DLL herr_t H5P_set(H5P_genplist_t *plist, const char *name, const void *value);
-H5_DLL herr_t H5P_insert(H5P_genplist_t *plist, const char *name, size_t size,
-    void *value, H5P_prp_set_func_t prp_set, H5P_prp_get_func_t prp_get,
-    H5P_prp_delete_func_t prp_delete, H5P_prp_copy_func_t prp_copy,
-    H5P_prp_compare_func_t prp_cmp, H5P_prp_close_func_t prp_close);
-H5_DLL herr_t H5P_remove(hid_t plist_id, H5P_genplist_t *plist, const char *name);
-H5_DLL htri_t H5P_exist_plist(H5P_genplist_t *plist, const char *name);
-H5_DLL char *H5P_get_class_name(H5P_genclass_t *pclass);
-H5_DLL herr_t H5P_get_nprops_pclass(const H5P_genclass_t *pclass, size_t *nprops,
-    hbool_t recurse);
-H5_DLL herr_t H5P_register(H5P_genclass_t *pclass, const char *name, size_t size,
-    const void *def_value, H5P_prp_create_func_t prp_create, H5P_prp_set_func_t prp_set,
-    H5P_prp_get_func_t prp_get, H5P_prp_delete_func_t prp_delete,
-    H5P_prp_copy_func_t prp_copy, H5P_prp_compare_func_t prp_cmp,
-    H5P_prp_close_func_t prp_close);
-H5_DLL hid_t H5P_get_driver(H5P_genplist_t *plist);
-H5_DLL void * H5P_get_driver_info(H5P_genplist_t *plist);
-H5_DLL herr_t H5P_set_driver(H5P_genplist_t *plist, hid_t new_driver_id,
-            const void *new_driver_info);
-H5_DLL herr_t H5P_set_vlen_mem_manager(H5P_genplist_t *plist,
-        H5MM_allocate_t alloc_func, void *alloc_info, H5MM_free_t free_func,
-        void *free_info);
-H5_DLL herr_t H5P_is_fill_value_defined(const H5O_fill_t *fill,
-        H5D_fill_value_t *status);
-H5_DLL int H5P_fill_value_cmp(const void *value1, const void *value2,
-    size_t size);
+    /* Scatter elements from type conversion buffer to disk */
+    herr_t (*fscat)(H5F_t *f, const struct H5O_layout_t *layout,
+                    size_t elmt_size, const H5P_t *file_space,
+                    const H5P_number_t *numbering, size_t start, size_t nelmts,
+                    const void *tconv_buf);
+} H5P_conv_t;
 
-/* *SPECIAL* Don't make more of these! -QAK */
-H5_DLL htri_t H5P_isa_class(hid_t plist_id, hid_t pclass_id);
-H5_DLL void *H5P_object_verify(hid_t plist_id, hid_t pclass_id);
+H5P_t *H5P_copy (const H5P_t *src);
+herr_t H5P_close (H5P_t *ds);
+size_t H5P_get_npoints (const H5P_t *ds);
+intn H5P_get_ndims (const H5P_t *ds);
+intn H5P_get_dims (const H5P_t *ds, size_t dims[]/*out*/);
+herr_t H5P_modify (H5G_entry_t *ent, const H5P_t *space);
+H5P_t *H5P_read (H5F_t *f, H5G_entry_t *ent);
+intn H5P_cmp (const H5P_t *ds1, const H5P_t *ds2);
+hbool_t H5P_is_simple (const H5P_t *sdim);
+uintn H5P_nelem (const H5P_t *space);
+const H5P_conv_t *H5P_find (const H5P_t *mem_space, const H5P_t *file_space);
+intn H5P_get_hyperslab (const H5P_t *ds, int offset[]/*out*/,
+			size_t size[]/*out*/, size_t stride[]/*out*/);
+intn H5P_extend (H5P_t *space, const size_t *size);
 
-/* Private functions to "peek" at properties of a certain type */
-H5_DLL unsigned H5P_peek_unsigned(H5P_genplist_t *plist, const char *name);
-H5_DLL hid_t H5P_peek_hid_t(H5P_genplist_t *plist, const char *name);
-H5_DLL void *H5P_peek_voidp(H5P_genplist_t *plist, const char *name);
-H5_DLL size_t H5P_peek_size_t(H5P_genplist_t *plist, const char *name);
-
-/* Private DCPL routines */
-H5_DLL herr_t H5P_modify_filter(H5P_genplist_t *plist, H5Z_filter_t filter,
-    unsigned flags, size_t cd_nelmts, const unsigned cd_values[/*cd_nelmts*/]);
-H5_DLL herr_t H5P_get_filter_by_id(H5P_genplist_t *plist, H5Z_filter_t id,
-    unsigned int *flags/*out*/, size_t *cd_nelmts/*in_out*/,
-    unsigned cd_values[]/*out*/, size_t namelen, char name[]/*out*/,
-    unsigned *filter_config);
-H5_DLL herr_t H5P_fill_value_defined(H5P_genplist_t *plist,
-    H5D_fill_value_t *status);
-H5_DLL herr_t H5P_get_fill_value(H5P_genplist_t *plist, const H5T_t *type,
-    void *value, hid_t dxpl_id);
-
-#endif /* _H5Pprivate_H */
-
+/* Conversion functions for simple data spaces */
+size_t H5P_simp_init (const struct H5O_layout_t *layout,
+                      const H5P_t *mem_space, const H5P_t *file_space,
+                      H5P_number_t *numbering/*out*/);
+size_t H5P_simp_fgath (H5F_t *f, const struct H5O_layout_t *layout,
+                       size_t elmt_size, const H5P_t *file_space,
+                       const H5P_number_t *numbering, size_t start,
+                       size_t nelmts, void *tconv_buf/*out*/);
+herr_t H5P_simp_mscat (const void *tconv_buf, size_t elmt_size,
+                       const H5P_t *mem_space, const H5P_number_t *numbering,
+                       size_t start, size_t nelmts, void *buf/*out*/);
+size_t H5P_simp_mgath (const void *buf, size_t elmt_size,
+                       const H5P_t *mem_space, const H5P_number_t *numbering,
+                       size_t start, size_t nelmts, void *tconv_buf/*out*/);
+herr_t H5P_simp_fscat (H5F_t *f, const struct H5O_layout_t *layout,
+                       size_t elmt_size, const H5P_t *file_space,
+                       const H5P_number_t *numbering, size_t start,
+                       size_t nelmts, const void *tconv_buf);
+#endif

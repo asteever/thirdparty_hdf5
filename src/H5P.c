@@ -1,1516 +1,1294 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
- * All rights reserved.                                                      *
- *                                                                           *
- * This file is part of HDF5.  The full HDF5 copyright notice, including     *
- * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/****************************************************************************
+* NCSA HDF                                                                 *
+* Software Development Group                                               *
+* National Center for Supercomputing Applications                          *
+* University of Illinois at Urbana-Champaign                               *
+* 605 E. Springfield, Champaign IL 61820                                   *
+*                                                                          *
+* For conditions of distribution and use, see the accompanying             *
+* hdf/COPYING file.                                                        *
+*                                                                          *
+****************************************************************************/
 
-/* Programmer:  Quincey Koziol <koziol@ncsa.uiuc.edu>
- *
- * Purpose:	Generic Property Functions
- */
+#ifdef RCSID
+static char             RcsId[] = "@(#)$Revision$";
+#endif
 
-/****************/
-/* Module Setup */
-/****************/
+/* $Id$ */
 
-#define H5P_PACKAGE		/*suppress error about including H5Ppkg	  */
+#include <H5private.h>          /* Generic Functions                      */
+#include <H5Aprivate.h>         /* Atom Functions                 */
+#include <H5Eprivate.h>         /* Error handling                 */
+#include <H5MMprivate.h>        /* Memory Management functions            */
+#include <H5Oprivate.h>         /*object headers                  */
+#include <H5Pprivate.h>         /* Data-space functions                   */
 
 /* Interface initialization */
-#define H5_INTERFACE_INIT_FUNC	H5P_init_pub_interface
-
-
-/***********/
-/* Headers */
-/***********/
-#include "H5private.h"		/* Generic Functions			*/
-#include "H5Eprivate.h"		/* Error handling		  	*/
-#include "H5Iprivate.h"		/* IDs			  		*/
-#include "H5Ppkg.h"		/* Property lists		  	*/
-
-/****************/
-/* Local Macros */
-/****************/
-
-
-/******************/
-/* Local Typedefs */
-/******************/
-
-
-/********************/
-/* Local Prototypes */
-/********************/
-
-
-/*********************/
-/* Package Variables */
-/*********************/
-
-
-/*****************************/
-/* Library Private Variables */
-/*****************************/
-
-
-/*******************/
-/* Local Variables */
-/*******************/
+#define PABLO_MASK      H5P_mask
+#define INTERFACE_INIT  H5P_init_interface
+static intn             interface_initialize_g = FALSE;
+static herr_t           H5P_init_interface(void);
+static void             H5P_term_interface(void);
 
 
 /*--------------------------------------------------------------------------
 NAME
-   H5P_init_pub_interface -- Initialize interface-specific information
+   H5P_init_interface -- Initialize interface-specific information
 USAGE
-    herr_t H5P_init_pub_interface()
+    herr_t H5P_init_interface()
+   
 RETURNS
-    Non-negative on success/Negative on failure
+   SUCCEED/FAIL
 DESCRIPTION
-    Initializes any interface-specific data or routines.  (Just calls
-    H5P_init() currently).
+    Initializes any interface-specific data or routines.
 
 --------------------------------------------------------------------------*/
 static herr_t
-H5P_init_pub_interface(void)
+H5P_init_interface(void)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5P_init_pub_interface)
+    herr_t                  ret_value = SUCCEED;
+    FUNC_ENTER(H5P_init_interface, FAIL);
 
-    FUNC_LEAVE_NOAPI(H5P_init())
-} /* H5P_init_pub_interface() */
+    /* Initialize the atom group for the file IDs */
+    if ((ret_value = H5A_init_group(H5_DATASPACE, H5A_DATASPACEID_HASHSIZE,
+				    H5P_RESERVED_ATOMS,
+				    (herr_t (*)(void *)) H5P_close)) != FAIL) {
+        ret_value = H5_add_exit(&H5P_term_interface);
+    }
+    FUNC_LEAVE(ret_value);
+}
 
 
 /*--------------------------------------------------------------------------
  NAME
-    H5Pcopy
+    H5P_term_interface
  PURPOSE
-    Routine to copy a property list or class
+    Terminate various H5P objects
  USAGE
-    hid_t H5Pcopy(id)
-        hid_t id;           IN: Property list or class ID to copy
+    void H5P_term_interface()
  RETURNS
-    Success: valid property list ID on success (non-negative)
-    Failure: negative
+    SUCCEED/FAIL
  DESCRIPTION
-    Copy a property list or class and return the ID.  This routine calls the
-    class 'copy' callback after any property 'copy' callbacks are called
-    (assuming all property 'copy' callbacks return successfully).
-
+    Release the atom group and any other resources allocated.
  GLOBAL VARIABLES
  COMMENTS, BUGS, ASSUMPTIONS
+     Can't report errors...
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
+static void
+H5P_term_interface(void)
+{
+    H5A_destroy_group(H5_DATASPACE);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Pcreate_simple
+ *
+ * Purpose:     Creates a new simple data space object and opens it for
+ *		access. The DIMS argument is the size of the simple dataset
+ *		and the MAXDIMS argument is the upper limit on the size of
+ *		the dataset.  MAXDIMS may be the null pointer in which case
+ *		the upper limit is the same as DIMS.  If an element of
+ *		MAXDIMS is zero then the corresponding dimension is unlimited,
+ *		otherwise no element of MAXDIMS should be smaller than the
+ *		corresponding element of DIMS.
+ *
+ * Return:      Success:        The ID for the new simple data space object.
+ *
+ *              Failure:        FAIL
+ *
+ * Errors:
+ *
+ * Programmer:  Quincey Koziol
+ *              Tuesday, January  27, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
 hid_t
-H5Pcopy(hid_t id)
+H5Pcreate_simple(int rank, const size_t *dims, const size_t *maxdims)
 {
-    void *obj;                 /* Property object to copy */
-    hid_t ret_value=FALSE;      /* return value */
-
-    FUNC_ENTER_API(H5Pcopy, FAIL);
-    H5TRACE1("i", "i", id);
-
-    if(H5P_DEFAULT==id)
-        HGOTO_DONE(H5P_DEFAULT);
-
-    /* Check arguments. */
-    if(H5I_GENPROP_LST != H5I_get_type(id) && H5I_GENPROP_CLS != H5I_get_type(id))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not property object");
-    if(NULL == (obj = H5I_object(id)))
-        HGOTO_ERROR(H5E_PLIST, H5E_NOTFOUND, FAIL, "property object doesn't exist");
-
-    /* Compare property lists */
-    if(H5I_GENPROP_LST == H5I_get_type(id)) {
-        if((ret_value = H5P_copy_plist(obj)) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTCOPY, FAIL, "can't copy property list");
-    } /* end if */
-    /* Must be property classes */
-    else {
-        H5P_genclass_t *copy_class;      /* Copy of class */
-
-        /* Copy the class */
-        if((copy_class = H5P_copy_pclass(obj)) == NULL)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTCOPY, FAIL, "can't copy property class");
-
-        /* Get an atom for the copied class */
-        if((ret_value = H5I_register(H5I_GENPROP_CLS, copy_class)) < 0) {
-            H5P_close_class(copy_class);
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to atomize property list class");
-        } /* end if */
-    } /* end else */
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pcopy() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pcreate_class
- PURPOSE
-    Create a new property list class.
- USAGE
-    hid_t H5Pcreate_class(parent, name, cls_create, create_data,
-                cls_close, close_data)
-        hid_t parent;       IN: Property list class ID of parent class
-        const char *name;   IN: Name of class we are creating
-        H5P_cls_create_func_t cls_create;   IN: The callback function to call
-                                    when each property list in this class is
-                                    created.
-        void *create_data;  IN: Pointer to user data to pass along to class
-                                    creation callback.
-        H5P_cls_copy_func_t cls_copy;   IN: The callback function to call
-                                    when each property list in this class is
-                                    copied.
-        void *copy_data;  IN: Pointer to user data to pass along to class
-                                    copy callback.
-        H5P_cls_close_func_t cls_close;     IN: The callback function to call
-                                    when each property list in this class is
-                                    closed.
-        void *close_data;   IN: Pointer to user data to pass along to class
-                                    close callback.
- RETURNS
-    Returns a valid property list class ID on success, NULL on failure.
- DESCRIPTION
-    Allocates memory and attaches a class to the property list class hierarchy.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-hid_t
-H5Pcreate_class(hid_t parent, const char *name,
-    H5P_cls_create_func_t cls_create, void *create_data,
-    H5P_cls_copy_func_t cls_copy, void *copy_data,
-    H5P_cls_close_func_t cls_close, void *close_data
-    )
-{
-    H5P_genclass_t	*par_class = NULL;  /* Pointer to the parent class */
-    H5P_genclass_t	*pclass = NULL;     /* Property list class created */
-    hid_t	ret_value;                  /* Return value		   */
-
-    FUNC_ENTER_API(H5Pcreate_class, FAIL);
-    H5TRACE8("i", "i*sx*xx*xx*x", parent, name, cls_create, create_data, cls_copy,
-             copy_data, cls_close, close_data);
-
-    /* Check arguments. */
-    if(H5P_DEFAULT!=parent && (H5I_GENPROP_CLS!=H5I_get_type(parent)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list class");
-    if(!name || !*name)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid class name");
-    if((create_data!=NULL && cls_create==NULL)
-            || (copy_data!=NULL && cls_copy==NULL)
-            || (close_data!=NULL && cls_close==NULL))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "data specified, but no callback provided");
-
-    /* Get the pointer to the parent class */
-    if(parent==H5P_DEFAULT)
-        par_class=NULL;
-    else if(NULL == (par_class = H5I_object(parent)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "can't retrieve parent class");
-
-    /* Create the new property list class */
-    if(NULL==(pclass=H5P_create_class(par_class, name, 0, cls_create, create_data, cls_copy, copy_data, cls_close, close_data)))
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTCREATE, FAIL, "unable to create property list class");
-
-    /* Get an atom for the class */
-    if((ret_value = H5I_register(H5I_GENPROP_CLS, pclass)) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to atomize property list class");
-
-done:
-    if(ret_value<0 && pclass)
-        H5P_close_class(pclass);
-
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pcreate_class() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pcreate
- PURPOSE
-    Routine to create a new property list of a property list class.
- USAGE
-    hid_t H5Pcreate(cls_id)
-        hid_t cls_id;       IN: Property list class create list from
- RETURNS
-    Returns a valid property list ID on success, FAIL on failure.
- DESCRIPTION
-        Creates a property list of a given class.  If a 'create' callback
-    exists for the property list class, it is called before the
-    property list is passed back to the user.  If 'create' callbacks exist for
-    any individual properties in the property list, they are called before the
-    class 'create' callback.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-hid_t
-H5Pcreate(hid_t cls_id)
-{
-    H5P_genclass_t	*pclass;   /* Property list class to modify */
-    hid_t ret_value;               /* return value */
-
-    FUNC_ENTER_API(H5Pcreate, FAIL);
-    H5TRACE1("i", "i", cls_id);
-
-    /* Check arguments. */
-    if(NULL == (pclass = H5I_object_verify(cls_id, H5I_GENPROP_CLS)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list class");
-
-    /* Create the new property list */
-    if((ret_value = H5P_create_id(pclass)) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTCREATE, FAIL, "unable to create property list");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pcreate() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pregister2
- PURPOSE
-    Routine to register a new property in a property list class.
- USAGE
-    herr_t H5Pregister2(class, name, size, default, prp_create, prp_set, prp_get, prp_close)
-        hid_t class;            IN: Property list class to close
-        const char *name;       IN: Name of property to register
-        size_t size;            IN: Size of property in bytes
-        void *def_value;        IN: Pointer to buffer containing default value
-                                    for property in newly created property lists
-        H5P_prp_create_func_t prp_create;   IN: Function pointer to property
-                                    creation callback
-        H5P_prp_set_func_t prp_set; IN: Function pointer to property set callback
-        H5P_prp_get_func_t prp_get; IN: Function pointer to property get callback
-        H5P_prp_delete_func_t prp_delete; IN: Function pointer to property delete callback
-        H5P_prp_copy_func_t prp_copy; IN: Function pointer to property copy callback
-        H5P_prp_compare_func_t prp_cmp; IN: Function pointer to property compare callback
-        H5P_prp_close_func_t prp_close; IN: Function pointer to property close
-                                    callback
- RETURNS
-    Returns non-negative on success, negative on failure.
- DESCRIPTION
-        Registers a new property with a property list class.  The property will
-    exist in all property list objects of that class after this routine is
-    finished.  The name of the property must not already exist.  The default
-    property value must be provided and all new property lists created with this
-    property will have the property value set to the default provided.  Any of
-    the callback routines may be set to NULL if they are not needed.
-
-        Zero-sized properties are allowed and do not store any data in the
-    property list.  These may be used as flags to indicate the presence or
-    absence of a particular piece of information.  The 'default' pointer for a
-    zero-sized property may be set to NULL.  The property 'create' & 'close'
-    callbacks are called for zero-sized properties, but the 'set' and 'get'
-    callbacks are never called.
-
-        The 'create' callback is called when a new property list with this
-    property is being created.  H5P_prp_create_func_t is defined as:
-        typedef herr_t (*H5P_prp_create_func_t)(hid_t prop_id, const char *name,
-                size_t size, void *initial_value);
-    where the parameters to the callback function are:
-        hid_t prop_id;      IN: The ID of the property list being created.
-        const char *name;   IN: The name of the property being modified.
-        size_t size;        IN: The size of the property value
-        void *initial_value; IN/OUT: The initial value for the property being created.
-                                (The 'default' value passed to H5Pregister2)
-    The 'create' routine may modify the value to be set and those changes will
-    be stored as the initial value of the property.  If the 'create' routine
-    returns a negative value, the new property value is not copied into the
-    property and the property list creation routine returns an error value.
-
-        The 'set' callback is called before a new value is copied into the
-    property.  H5P_prp_set_func_t is defined as:
-        typedef herr_t (*H5P_prp_set_func_t)(hid_t prop_id, const char *name,
-            size_t size, void *value);
-    where the parameters to the callback function are:
-        hid_t prop_id;      IN: The ID of the property list being modified.
-        const char *name;   IN: The name of the property being modified.
-        size_t size;        IN: The size of the property value
-        void *new_value;    IN/OUT: The value being set for the property.
-    The 'set' routine may modify the value to be set and those changes will be
-    stored as the value of the property.  If the 'set' routine returns a
-    negative value, the new property value is not copied into the property and
-    the property list set routine returns an error value.
-
-        The 'get' callback is called before a value is retrieved from the
-    property.  H5P_prp_get_func_t is defined as:
-        typedef herr_t (*H5P_prp_get_func_t)(hid_t prop_id, const char *name,
-            size_t size, void *value);
-    where the parameters to the callback function are:
-        hid_t prop_id;      IN: The ID of the property list being queried.
-        const char *name;   IN: The name of the property being queried.
-        size_t size;        IN: The size of the property value
-        void *value;        IN/OUT: The value being retrieved for the property.
-    The 'get' routine may modify the value to be retrieved and those changes
-    will be returned to the calling function.  If the 'get' routine returns a
-    negative value, the property value is returned and the property list get
-    routine returns an error value.
-
-        The 'delete' callback is called when a property is deleted from a
-    property list.  H5P_prp_del_func_t is defined as:
-        typedef herr_t (*H5P_prp_del_func_t)(hid_t prop_id, const char *name,
-            size_t size, void *value);
-    where the parameters to the callback function are:
-        hid_t prop_id;      IN: The ID of the property list the property is deleted from.
-        const char *name;   IN: The name of the property being deleted.
-        size_t size;        IN: The size of the property value
-        void *value;        IN/OUT: The value of the property being deleted.
-    The 'delete' routine may modify the value passed in, but the value is not
-    used by the library when the 'delete' routine returns.  If the
-    'delete' routine returns a negative value, the property list deletion
-    routine returns an error value but the property is still deleted.
-
-        The 'copy' callback is called when a property list with this
-    property is copied.  H5P_prp_copy_func_t is defined as:
-        typedef herr_t (*H5P_prp_copy_func_t)(const char *name, size_t size,
-            void *value);
-    where the parameters to the callback function are:
-        const char *name;   IN: The name of the property being copied.
-        size_t size;        IN: The size of the property value
-        void *value;        IN: The value of the property being copied.
-    The 'copy' routine may modify the value to be copied and those changes will be
-    stored as the value of the property.  If the 'copy' routine returns a
-    negative value, the new property value is not copied into the property and
-    the property list copy routine returns an error value.
-
-        The 'compare' callback is called when a property list with this
-    property is compared to another property list.  H5P_prp_compare_func_t is
-    defined as:
-        typedef int (*H5P_prp_compare_func_t)( void *value1, void *value2,
-            size_t size);
-    where the parameters to the callback function are:
-        const void *value1; IN: The value of the first property being compared.
-        const void *value2; IN: The value of the second property being compared.
-        size_t size;        IN: The size of the property value
-    The 'compare' routine may not modify the values to be compared.  The
-    'compare' routine should return a positive value if VALUE1 is greater than
-    VALUE2, a negative value if VALUE2 is greater than VALUE1 and zero if VALUE1
-    and VALUE2 are equal.
-
-        The 'close' callback is called when a property list with this
-    property is being destroyed.  H5P_prp_close_func_t is defined as:
-        typedef herr_t (*H5P_prp_close_func_t)(const char *name, size_t size,
-            void *value);
-    where the parameters to the callback function are:
-        const char *name;   IN: The name of the property being closed.
-        size_t size;        IN: The size of the property value
-        void *value;        IN: The value of the property being closed.
-    The 'close' routine may modify the value passed in, but the value is not
-    used by the library when the 'close' routine returns.  If the
-    'close' routine returns a negative value, the property list close
-    routine returns an error value but the property list is still closed.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
-        The 'set' callback function may be useful to range check the value being
-    set for the property or may perform some tranformation/translation of the
-    value set.  The 'get' callback would then [probably] reverse the
-    transformation, etc.  A single 'get' or 'set' callback could handle
-    multiple properties by performing different actions based on the property
-    name or other properties in the property list.
-
-        I would like to say "the property list is not closed" when a 'close'
-    routine fails, but I don't think that's possible due to other properties in
-    the list being successfully closed & removed from the property list.  I
-    suppose that it would be possible to just remove the properties which have
-    successful 'close' callbacks, but I'm not happy with the ramifications
-    of a mangled, un-closable property list hanging around...  Any comments? -QAK
-
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5Pregister2(hid_t cls_id, const char *name, size_t size, void *def_value,
-    H5P_prp_create_func_t prp_create, H5P_prp_set_func_t prp_set,
-    H5P_prp_get_func_t prp_get, H5P_prp_delete_func_t prp_delete,
-    H5P_prp_copy_func_t prp_copy, H5P_prp_compare_func_t prp_cmp,
-    H5P_prp_close_func_t prp_close)
-{
-    H5P_genclass_t	*pclass;   /* Property list class to modify */
-    herr_t ret_value;     /* return value */
-
-    FUNC_ENTER_API(H5Pregister2, FAIL);
-    H5TRACE11("e", "i*sz*xxxxxxxx", cls_id, name, size, def_value, prp_create,
-             prp_set, prp_get, prp_delete, prp_copy, prp_cmp, prp_close);
-
-    /* Check arguments. */
-    if(NULL == (pclass = H5I_object_verify(cls_id, H5I_GENPROP_CLS)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list class");
-    if(!name || !*name)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid class name");
-    if(size>0 && def_value==NULL)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "properties >0 size must have default");
-
-    /* Create the new property list class */
-    if((ret_value = H5P_register(pclass,name,size,def_value,prp_create,prp_set,prp_get,prp_delete,prp_copy,prp_cmp,prp_close)) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to register property in class");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pregister2() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pinsert2
- PURPOSE
-    Routine to insert a new property in a property list.
- USAGE
-    herr_t H5Pinsert2(plist, name, size, value, prp_set, prp_get, prp_close)
-        hid_t plist;            IN: Property list to add property to
-        const char *name;       IN: Name of property to add
-        size_t size;            IN: Size of property in bytes
-        void *value;            IN: Pointer to the value for the property
-        H5P_prp_set_func_t prp_set; IN: Function pointer to property set callback
-        H5P_prp_get_func_t prp_get; IN: Function pointer to property get callback
-        H5P_prp_delete_func_t prp_delete; IN: Function pointer to property delete callback
-        H5P_prp_copy_func_t prp_copy; IN: Function pointer to property copy callback
-        H5P_prp_compare_func_t prp_cmp; IN: Function pointer to property compare callback
-        H5P_prp_close_func_t prp_close; IN: Function pointer to property close
-                                    callback
- RETURNS
-    Returns non-negative on success, negative on failure.
- DESCRIPTION
-        Inserts a temporary property into a property list.  The property will
-    exist only in this property list object.  The name of the property must not
-    already exist.  The value must be provided unless the property is zero-
-    sized.  Any of the callback routines may be set to NULL if they are not
-    needed.
-
-        Zero-sized properties are allowed and do not store any data in the
-    property list.  These may be used as flags to indicate the presence or
-    absence of a particular piece of information.  The 'value' pointer for a
-    zero-sized property may be set to NULL.  The property 'close' callback is
-    called for zero-sized properties, but the 'set' and 'get' callbacks are
-    never called.
-
-        The 'set' callback is called before a new value is copied into the
-    property.  H5P_prp_set_func_t is defined as:
-        typedef herr_t (*H5P_prp_set_func_t)(hid_t prop_id, const char *name,
-            size_t size, void *value);
-    where the parameters to the callback function are:
-        hid_t prop_id;      IN: The ID of the property list being modified.
-        const char *name;   IN: The name of the property being modified.
-        size_t size;        IN: The size of the property value
-        void *new_value;    IN/OUT: The value being set for the property.
-    The 'set' routine may modify the value to be set and those changes will be
-    stored as the value of the property.  If the 'set' routine returns a
-    negative value, the new property value is not copied into the property and
-    the property list set routine returns an error value.
-
-        The 'get' callback is called before a value is retrieved from the
-    property.  H5P_prp_get_func_t is defined as:
-        typedef herr_t (*H5P_prp_get_func_t)(hid_t prop_id, const char *name,
-            size_t size, void *value);
-    where the parameters to the callback function are:
-        hid_t prop_id;      IN: The ID of the property list being queried.
-        const char *name;   IN: The name of the property being queried.
-        size_t size;        IN: The size of the property value
-        void *value;        IN/OUT: The value being retrieved for the property.
-    The 'get' routine may modify the value to be retrieved and those changes
-    will be returned to the calling function.  If the 'get' routine returns a
-    negative value, the property value is returned and the property list get
-    routine returns an error value.
-
-        The 'delete' callback is called when a property is deleted from a
-    property list.  H5P_prp_del_func_t is defined as:
-        typedef herr_t (*H5P_prp_del_func_t)(hid_t prop_id, const char *name,
-            size_t size, void *value);
-    where the parameters to the callback function are:
-        hid_t prop_id;      IN: The ID of the property list the property is deleted from.
-        const char *name;   IN: The name of the property being deleted.
-        size_t size;        IN: The size of the property value
-        void *value;        IN/OUT: The value of the property being deleted.
-    The 'delete' routine may modify the value passed in, but the value is not
-    used by the library when the 'delete' routine returns.  If the
-    'delete' routine returns a negative value, the property list deletion
-    routine returns an error value but the property is still deleted.
-
-        The 'copy' callback is called when a property list with this
-    property is copied.  H5P_prp_copy_func_t is defined as:
-        typedef herr_t (*H5P_prp_copy_func_t)(const char *name, size_t size,
-            void *value);
-    where the parameters to the callback function are:
-        const char *name;   IN: The name of the property being copied.
-        size_t size;        IN: The size of the property value
-        void *value;        IN: The value of the property being copied.
-    The 'copy' routine may modify the value to be copied and those changes will be
-    stored as the value of the property.  If the 'copy' routine returns a
-    negative value, the new property value is not copied into the property and
-    the property list copy routine returns an error value.
-
-        The 'compare' callback is called when a property list with this
-    property is compared to another property list.  H5P_prp_compare_func_t is
-    defined as:
-        typedef int (*H5P_prp_compare_func_t)( void *value1, void *value2,
-            size_t size);
-    where the parameters to the callback function are:
-        const void *value1; IN: The value of the first property being compared.
-        const void *value2; IN: The value of the second property being compared.
-        size_t size;        IN: The size of the property value
-    The 'compare' routine may not modify the values to be compared.  The
-    'compare' routine should return a positive value if VALUE1 is greater than
-    VALUE2, a negative value if VALUE2 is greater than VALUE1 and zero if VALUE1
-    and VALUE2 are equal.
-
-        The 'close' callback is called when a property list with this
-    property is being destroyed.  H5P_prp_close_func_t is defined as:
-        typedef herr_t (*H5P_prp_close_func_t)(const char *name, size_t size,
-            void *value);
-    where the parameters to the callback function are:
-        const char *name;   IN: The name of the property being closed.
-        size_t size;        IN: The size of the property value
-        void *value;        IN: The value of the property being closed.
-    The 'close' routine may modify the value passed in, but the value is not
-    used by the library when the 'close' routine returns.  If the
-    'close' routine returns a negative value, the property list close
-    routine returns an error value but the property list is still closed.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
-        The 'set' callback function may be useful to range check the value being
-    set for the property or may perform some tranformation/translation of the
-    value set.  The 'get' callback would then [probably] reverse the
-    transformation, etc.  A single 'get' or 'set' callback could handle
-    multiple properties by performing different actions based on the property
-    name or other properties in the property list.
-
-        There is no 'create' callback routine for temporary property list
-    objects, the initial value is assumed to have any necessary setup already
-    performed on it.
-
-        I would like to say "the property list is not closed" when a 'close'
-    routine fails, but I don't think that's possible due to other properties in
-    the list being successfully closed & removed from the property list.  I
-    suppose that it would be possible to just remove the properties which have
-    successful 'close' callbacks, but I'm not happy with the ramifications
-    of a mangled, un-closable property list hanging around...  Any comments? -QAK
-
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5Pinsert2(hid_t plist_id, const char *name, size_t size, void *value,
-    H5P_prp_set_func_t prp_set, H5P_prp_get_func_t prp_get,
-    H5P_prp_delete_func_t prp_delete, H5P_prp_copy_func_t prp_copy,
-    H5P_prp_compare_func_t prp_cmp, H5P_prp_close_func_t prp_close)
-{
-    H5P_genplist_t	*plist;    /* Property list to modify */
-    herr_t ret_value;           /* return value */
-
-    FUNC_ENTER_API(H5Pinsert2, FAIL);
-    H5TRACE10("e", "i*sz*xxxxxxx", plist_id, name, size, value, prp_set, prp_get,
-             prp_delete, prp_copy, prp_cmp, prp_close);
-
-    /* Check arguments. */
-    if(NULL == (plist = H5I_object_verify(plist_id, H5I_GENPROP_LST)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list")
-    if(!name || !*name)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid property name")
-    if(size > 0 && value == NULL)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "properties >0 size must have default")
-
-    /* Create the new property list class */
-    if((ret_value = H5P_insert(plist, name, size, value, prp_set, prp_get, prp_delete, prp_copy, prp_cmp, prp_close)) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to register property in plist")
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pinsert2() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pset
- PURPOSE
-    Routine to set a property's value in a property list.
- USAGE
-    herr_t H5P_set(plist_id, name, value)
-        hid_t plist_id;         IN: Property list to find property in
-        const char *name;       IN: Name of property to set
-        void *value;            IN: Pointer to the value for the property
- RETURNS
-    Returns non-negative on success, negative on failure.
- DESCRIPTION
-        Sets a new value for a property in a property list.  The property name
-    must exist or this routine will fail.  If there is a 'set' callback routine
-    registered for this property, the 'value' will be passed to that routine and
-    any changes to the 'value' will be used when setting the property value.
-    The information pointed at by the 'value' pointer (possibly modified by the
-    'set' callback) is copied into the property list value and may be changed
-    by the application making the H5Pset call without affecting the property
-    value.
-
-        If the 'set' callback routine returns an error, the property value will
-    not be modified.  This routine may not be called for zero-sized properties
-    and will return an error in that case.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5Pset(hid_t plist_id, const char *name, void *value)
-{
-    H5P_genplist_t *plist;      /* Property list to modify */
-    herr_t ret_value=SUCCEED;   /* return value */
-
-    FUNC_ENTER_API(H5Pset, FAIL);
-    H5TRACE3("e", "i*s*x", plist_id, name, value);
-
-    /* Check arguments. */
-    if(NULL == (plist = H5I_object_verify(plist_id, H5I_GENPROP_LST)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list");
-    if(!name || !*name)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid property name");
-    if(value==NULL)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalied property value");
-
-    /* Go set the value */
-    if(H5P_set(plist,name,value) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to set value in plist");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pset() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pexist
- PURPOSE
-    Routine to query the existance of a property in a property object.
- USAGE
-    htri_t H5P_exist(id, name)
-        hid_t id;           IN: Property object ID to check
-        const char *name;   IN: Name of property to check for
- RETURNS
-    Success: Positive if the property exists in the property object, zero
-            if the property does not exist.
-    Failure: negative value
- DESCRIPTION
-        This routine checks if a property exists within a property list or
-    class.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-htri_t
-H5Pexist(hid_t id, const char *name)
-{
-    H5P_genplist_t	*plist;    /* Property list to query */
-    H5P_genclass_t	*pclass;   /* Property class to query */
-    htri_t ret_value;           /* return value */
-
-    FUNC_ENTER_API(H5Pexist, FAIL);
-    H5TRACE2("t", "i*s", id, name);
-
-    /* Check arguments. */
-    if(H5I_GENPROP_LST != H5I_get_type(id) && H5I_GENPROP_CLS != H5I_get_type(id))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property object");
-    if(!name || !*name)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid property name");
-
-    /* Check for the existance of the property in the list or class */
-    if(H5I_GENPROP_LST == H5I_get_type(id)) {
-        if(NULL == (plist = H5I_object(id)))
-            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list");
-        if((ret_value = H5P_exist_plist(plist, name)) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "property does not exist in list");
-    } /* end if */
-    else
-        if(H5I_GENPROP_CLS == H5I_get_type(id)) {
-            if(NULL == (pclass = H5I_object(id)))
-                HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property class");
-            if((ret_value = H5P_exist_pclass(pclass, name)) < 0)
-                HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "property does not exist in class");
-        } /* end if */
-        else
-            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property object");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pexist() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pget_size
- PURPOSE
-    Routine to query the size of a property in a property list or class.
- USAGE
-    herr_t H5Pget_size(id, name)
-        hid_t id;               IN: ID of property list or class to check
-        const char *name;       IN: Name of property to query
-        size_t *size;           OUT: Size of property
- RETURNS
-    Success: non-negative value
-    Failure: negative value
- DESCRIPTION
-        This routine retrieves the size of a property's value in bytes.  Zero-
-    sized properties are allowed and return a value of 0.  This function works
-    for both property lists and classes.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5Pget_size(hid_t id, const char *name, size_t *size)
-{
-    H5P_genclass_t	*pclass;   /* Property class to query */
-    H5P_genplist_t	*plist;    /* Property list to query */
-    herr_t ret_value;           /* return value */
-
-    FUNC_ENTER_API(H5Pget_size, FAIL);
-    H5TRACE3("e", "i*s*z", id, name, size);
-
-    /* Check arguments. */
-    if(H5I_GENPROP_LST != H5I_get_type(id) && H5I_GENPROP_CLS != H5I_get_type(id))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property object");
-    if(!name || !*name)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid property name");
-    if(size==NULL)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid property size");
-
-    if(H5I_GENPROP_LST == H5I_get_type(id)) {
-        if(NULL == (plist = H5I_object(id)))
-            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list");
-
-        /* Check the property size */
-        if((ret_value = H5P_get_size_plist(plist, name, size)) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to query size in plist");
-    } /* end if */
-    else
-        if(H5I_GENPROP_CLS == H5I_get_type(id)) {
-            if(NULL == (pclass = H5I_object(id)))
-                HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list");
-
-            /* Check the property size */
-            if((ret_value = H5P_get_size_pclass(pclass, name, size)) < 0)
-                HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to query size in plist");
-        } /* end if */
-        else
-            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property object");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pget_size() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pget_class
- PURPOSE
-    Routine to query the class of a generic property list
- USAGE
-    hid_t H5Pget_class(plist_id)
-        hid_t plist_id;         IN: Property list to query
- RETURNS
-    Success: ID of class object
-    Failure: negative
- DESCRIPTION
-    This routine retrieves the class of a property list.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
-    Change the name of this function to H5Pget_class (and remove old H5Pget_class)
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-hid_t
-H5Pget_class(hid_t plist_id)
-{
-    H5P_genplist_t	*plist;         /* Property list to query */
-    H5P_genclass_t	*pclass=NULL;   /* Property list class */
-    hid_t ret_value=FAIL;           /* return value */
-
-    FUNC_ENTER_API(H5Pget_class, FAIL);
-    H5TRACE1("i", "i", plist_id);
-
-    /* Check arguments. */
-    if(NULL == (plist = H5I_object_verify(plist_id, H5I_GENPROP_LST)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list");
-
-    /* Retrieve the property list class */
-    if((pclass = H5P_get_class(plist)) == NULL)
-        HGOTO_ERROR(H5E_PLIST, H5E_NOTFOUND, FAIL, "unable to query class of property list");
-
-    /* Increment the outstanding references to the class object */
-    if(H5P_access_class(pclass, H5P_MOD_INC_REF) < 0)
-        HGOTO_ERROR (H5E_PLIST, H5E_CANTINIT, FAIL,"Can't increment class ID ref count");
-
-    /* Get an atom for the class */
-    if((ret_value = H5I_register(H5I_GENPROP_CLS, pclass)) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to atomize property list class");
-
-done:
-    if(ret_value<0 && pclass)
-        H5P_close_class(pclass);
-
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pget_class() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pget_nprops
- PURPOSE
-    Routine to query the size of a property in a property list or class.
- USAGE
-    herr_t H5Pget_nprops(id, nprops)
-        hid_t id;               IN: ID of Property list or class to check
-        size_t *nprops;         OUT: Number of properties in the property object
- RETURNS
-    Success: non-negative value
-    Failure: negative value
- DESCRIPTION
-        This routine retrieves the number of properties in a property list or
-    class.  If a property class ID is given, the number of registered properties
-    in the class is returned in NPROPS.  If a property list ID is given, the
-    current number of properties in the list is returned in NPROPS.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5Pget_nprops(hid_t id, size_t *nprops)
-{
-    H5P_genplist_t	*plist;    /* Property list to query */
-    H5P_genclass_t	*pclass;   /* Property class to query */
-    herr_t ret_value=SUCCEED;      /* return value */
-
-    FUNC_ENTER_API(H5Pget_nprops, FAIL);
-    H5TRACE2("e", "i*z", id, nprops);
-
-    /* Check arguments. */
-    if(H5I_GENPROP_LST != H5I_get_type(id) && H5I_GENPROP_CLS != H5I_get_type(id))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property object");
-    if(nprops==NULL)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid property nprops pointer");
-
-    if(H5I_GENPROP_LST == H5I_get_type(id)) {
-        if(NULL == (plist = H5I_object(id)))
-            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list");
-        if(H5P_get_nprops_plist(plist, nprops) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to query # of properties in plist");
-    } /* end if */
-    else
-        if(H5I_GENPROP_CLS == H5I_get_type(id)) {
-            if(NULL == (pclass = H5I_object(id)))
-                HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property class");
-            if(H5P_get_nprops_pclass(pclass, nprops, FALSE) < 0)
-                HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to query # of properties in pclass");
-        } /* end if */
-        else
-            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property object");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pget_nprops() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pequal
- PURPOSE
-    Routine to query whether two property lists or two property classes are equal
- USAGE
-    htri_t H5Pequal(id1, id2)
-        hid_t id1;         IN: Property list or class ID to compare
-        hid_t id2;         IN: Property list or class ID to compare
- RETURNS
-    Success: TRUE if equal, FALSE if unequal
-    Failure: negative
- DESCRIPTION
-    Determines whether two property lists or two property classes are equal.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-htri_t
-H5Pequal(hid_t id1, hid_t id2)
-{
-    void *obj1, *obj2;          /* Property objects to compare */
-    htri_t ret_value = FALSE;     /* return value */
-
-    FUNC_ENTER_API(H5Pequal, FAIL)
-    H5TRACE2("t", "ii", id1, id2);
-
-    /* Check arguments. */
-    if((H5I_GENPROP_LST != H5I_get_type(id1) && H5I_GENPROP_CLS != H5I_get_type(id1))
-            || (H5I_GENPROP_LST != H5I_get_type(id2) && H5I_GENPROP_CLS != H5I_get_type(id2)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not property objects")
-    if(H5I_get_type(id1) != H5I_get_type(id2))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not the same kind of property objects")
-    if(NULL == (obj1 = H5I_object(id1)) || NULL == (obj2 = H5I_object(id2)))
-        HGOTO_ERROR(H5E_PLIST, H5E_NOTFOUND, FAIL, "property object doesn't exist")
-
-    /* Compare property lists */
-    if(H5I_GENPROP_LST == H5I_get_type(id1)) {
-        if(H5P_cmp_plist(obj1, obj2) == 0)
-            ret_value = TRUE;
-    } /* end if */
-    /* Must be property classes */
-    else {
-        if(H5P_cmp_class(obj1, obj2) == 0)
-            ret_value = TRUE;
-    } /* end else */
-
-done:
-    FUNC_LEAVE_API(ret_value)
-}   /* H5Pequal() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pisa_class
- PURPOSE
-    Routine to query whether a property list is a certain class
- USAGE
-    hid_t H5Pisa_class(plist_id, pclass_id)
-        hid_t plist_id;         IN: Property list to query
-        hid_t pclass_id;        IN: Property class to query
- RETURNS
-    Success: TRUE (1) or FALSE (0)
-    Failure: negative
- DESCRIPTION
-    This routine queries whether a property list is a member of the property
-    list class.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
-    What about returning a value indicating that the property class is further
-    up the class hierarchy?
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-htri_t
-H5Pisa_class(hid_t plist_id, hid_t pclass_id)
-{
-    htri_t ret_value;                   /* return value */
-
-    FUNC_ENTER_API(H5Pisa_class, FAIL);
-    H5TRACE2("t", "ii", plist_id, pclass_id);
-
-    /* Check arguments. */
-    if(H5I_GENPROP_LST != H5I_get_type(plist_id))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list");
-    if(H5I_GENPROP_CLS != H5I_get_type(pclass_id))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property class");
-
-    /* Compare the property list's class against the other class */
-    if((ret_value = H5P_isa_class(plist_id, pclass_id)) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to compare property list classes");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pisa_class() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Piterate
- PURPOSE
-    Routine to iterate over the properties in a property list or class
- USAGE
-    int H5Piterate(pclass_id, idx, iter_func, iter_data)
-        hid_t id;                   IN: ID of property object to iterate over
-        int *idx;                   IN/OUT: Index of the property to begin with
-        H5P_iterate_t iter_func;    IN: Function pointer to function to be
-                                        called with each property iterated over.
-        void *iter_data;            IN/OUT: Pointer to iteration data from user
- RETURNS
-    Success: Returns the return value of the last call to ITER_FUNC if it was
-                non-zero, or zero if all properties have been processed.
-    Failure: negative value
- DESCRIPTION
-    This routine iterates over the properties in the property object specified
-with ID.  The properties in both property lists and classes may be iterated
-over with this function.  For each property in the object, the ITER_DATA and
-some additional information, specified below, are passed to the ITER_FUNC
-function.  The iteration begins with the IDX property in the object and the
-next element to be processed by the operator is returned in IDX.  If IDX is
-NULL, then the iterator starts at the first property; since no stopping point
-is returned in this case, the iterator cannot be restarted if one of the calls
-to its operator returns non-zero.  The IDX value is 0-based (ie. to start at
-the "first" property, the IDX value should be 0).
-
-The prototype for H5P_iterate_t is:
-    typedef herr_t (*H5P_iterate_t)(hid_t id, const char *name, void *iter_data);
-The operation receives the property list or class identifier for the object
-being iterated over, ID, the name of the current property within the object,
-NAME, and the pointer to the operator data passed in to H5Piterate, ITER_DATA.
-
-The return values from an operator are:
-    Zero causes the iterator to continue, returning zero when all properties
-        have been processed.
-    Positive causes the iterator to immediately return that positive value,
-        indicating short-circuit success. The iterator can be restarted at the
-        index of the next property.
-    Negative causes the iterator to immediately return that value, indicating
-        failure. The iterator can be restarted at the index of the next
-        property.
-
-H5Piterate assumes that the properties in the object identified by ID remains
-unchanged through the iteration.  If the membership changes during the
-iteration, the function's behavior is undefined.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-int
-H5Piterate(hid_t id, int *idx, H5P_iterate_t iter_func, void *iter_data)
-{
-    int fake_idx = 0;       /* Index when user doesn't provide one */
-    int ret_value;          /* return value */
-
-    FUNC_ENTER_API(H5Piterate, FAIL);
-    H5TRACE4("Is", "i*Isx*x", id, idx, iter_func, iter_data);
-
-    /* Check arguments. */
-    if(H5I_GENPROP_LST != H5I_get_type(id) && H5I_GENPROP_CLS != H5I_get_type(id))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property object");
-    if(iter_func == NULL)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid iteration callback");
-
-    if(H5I_GENPROP_LST == H5I_get_type(id)) {
-        /* Iterate over a property list */
-        if((ret_value = H5P_iterate_plist(id, (idx ? idx : &fake_idx), iter_func, iter_data)) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to iterate over list");
-    } /* end if */
-    else
-        if(H5I_GENPROP_CLS == H5I_get_type(id)) {
-            /* Iterate over a property class */
-            if((ret_value = H5P_iterate_pclass(id, (idx ? idx : &fake_idx), iter_func, iter_data)) < 0)
-                HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to iterate over class");
-        } /* end if */
-        else
-            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property object");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Piterate() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pget
- PURPOSE
-    Routine to query the value of a property in a property list.
- USAGE
-    herr_t H5Pget(plist_id, name, value)
-        hid_t plist_id;         IN: Property list to check
-        const char *name;       IN: Name of property to query
-        void *value;            OUT: Pointer to the buffer for the property value
- RETURNS
-    Returns non-negative on success, negative on failure.
- DESCRIPTION
-        Retrieves a copy of the value for a property in a property list.  The
-    property name must exist or this routine will fail.  If there is a
-    'get' callback routine registered for this property, the copy of the
-    value of the property will first be passed to that routine and any changes
-    to the copy of the value will be used when returning the property value
-    from this routine.
-        If the 'get' callback routine returns an error, 'value' will not be
-    modified and this routine will return an error.  This routine may not be
-    called for zero-sized properties.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5Pget(hid_t plist_id, const char *name, void *value)
-{
-    H5P_genplist_t *plist;      /* Property list pointer */
-    herr_t ret_value=SUCCEED;   /* return value */
-
-    FUNC_ENTER_API(H5Pget, FAIL);
-    H5TRACE3("e", "i*s*x", plist_id, name, value);
-
-    /* Check arguments. */
-    if(NULL == (plist = H5I_object_verify(plist_id, H5I_GENPROP_LST)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list");
-    if(!name || !*name)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid property name");
-    if(value==NULL)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalied property value");
-
-    /* Go get the value */
-    if(H5P_get(plist,name,value) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "unable to query property value");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pget() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Premove
- PURPOSE
-    Routine to remove a property from a property list.
- USAGE
-    herr_t H5Premove(plist_id, name)
-        hid_t plist_id;         IN: Property list to modify
-        const char *name;       IN: Name of property to remove
- RETURNS
-    Returns non-negative on success, negative on failure.
- DESCRIPTION
-        Removes a property from a property list.  Both properties which were
-    in existance when the property list was created (i.e. properties registered
-    with H5Pregister2) and properties added to the list after it was created
-    (i.e. added with H5Pinsert2) may be removed from a property list.
-    Properties do not need to be removed a property list before the list itself
-    is closed, they will be released automatically when H5Pclose is called.
-    The 'close' callback for this property is called before the property is
-    release, if the callback exists.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5Premove(hid_t plist_id, const char *name)
-{
-    H5P_genplist_t	*plist;    /* Property list to modify */
-    herr_t ret_value;           /* return value */
-
-    FUNC_ENTER_API(H5Premove, FAIL);
-    H5TRACE2("e", "i*s", plist_id, name);
-
-    /* Check arguments. */
-    if(NULL == (plist = H5I_object_verify(plist_id, H5I_GENPROP_LST)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list");
-    if(!name || !*name)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid property name");
-
-    /* Create the new property list class */
-    if((ret_value = H5P_remove(plist_id,plist,name)) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTDELETE, FAIL, "unable to remove property");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Premove() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pcopy_prop
- PURPOSE
-    Routine to copy a property from one list or class to another
- USAGE
-    herr_t H5Pcopy_prop(dst_id, src_id, name)
-        hid_t dst_id;               IN: ID of destination property list or class
-        hid_t src_id;               IN: ID of source property list or class
-        const char *name;           IN: Name of property to copy
- RETURNS
-    Success: non-negative value.
-    Failure: negative value.
- DESCRIPTION
-    Copies a property from one property list or class to another.
-
-    If a property is copied from one class to another, all the property
-    information will be first deleted from the destination class and then the
-    property information will be copied from the source class into the
-    destination class.
-
-    If a property is copied from one list to another, the property will be
-    first deleted from the destination list (generating a call to the 'close'
-    callback for the property, if one exists) and then the property is copied
-    from the source list to the destination list (generating a call to the
-    'copy' callback for the property, if one exists).
-
-    If the property does not exist in the destination class or list, this call
-    is equivalent to calling H5Pregister2 or H5Pinsert2 (for a class or list, as
-    appropriate) and the 'create' callback will be called in the case of the
-    property being copied into a list (if such a callback exists for the
-    property).
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5Pcopy_prop(hid_t dst_id, hid_t src_id, const char *name)
-{
-    void *src_obj, *dst_obj;    /* Property objects to copy between */
-    herr_t ret_value=SUCCEED;      /* return value */
-
-    FUNC_ENTER_API(H5Pcopy_prop, FAIL);
-    H5TRACE3("e", "ii*s", dst_id, src_id, name);
-
-    /* Check arguments. */
-    if((H5I_GENPROP_LST != H5I_get_type(src_id) && H5I_GENPROP_CLS != H5I_get_type(src_id))
-            || (H5I_GENPROP_LST != H5I_get_type(dst_id) && H5I_GENPROP_CLS != H5I_get_type(dst_id)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not property objects");
-    if(H5I_get_type(src_id) != H5I_get_type(dst_id))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not the same kind of property objects");
-    if(!name || !*name)
-        HGOTO_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL, "no name given");
-    if(NULL == (src_obj = H5I_object(src_id)) || NULL == (dst_obj = H5I_object(dst_id)))
-        HGOTO_ERROR(H5E_PLIST, H5E_NOTFOUND, FAIL, "property object doesn't exist");
-
-    /* Compare property lists */
-    if(H5I_GENPROP_LST == H5I_get_type(src_id)) {
-        if(H5P_copy_prop_plist(dst_id, src_id, name) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTCOPY, FAIL, "can't copy property between lists");
-    } /* end if */
-    /* Must be property classes */
-    else {
-        if(H5P_copy_prop_pclass(dst_obj, src_obj, name) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTCOPY, FAIL, "can't copy property between classes");
-    } /* end else */
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pcopy_prop() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Punregister
- PURPOSE
-    Routine to remove a property from a property list class.
- USAGE
-    herr_t H5Punregister(pclass_id, name)
-        hid_t pclass_id;         IN: Property list class to modify
-        const char *name;       IN: Name of property to remove
- RETURNS
-    Returns non-negative on success, negative on failure.
- DESCRIPTION
-        Removes a property from a property list class.  Future property lists
-    created of that class will not contain this property.  Existing property
-    lists containing this property are not affected.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5Punregister(hid_t pclass_id, const char *name)
-{
-    H5P_genclass_t	*pclass;   /* Property list class to modify */
-    herr_t ret_value;           /* return value */
-
-    FUNC_ENTER_API(H5Punregister, FAIL);
-    H5TRACE2("e", "i*s", pclass_id, name);
-
-    /* Check arguments. */
-    if(NULL == (pclass = H5I_object_verify(pclass_id, H5I_GENPROP_CLS)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list class");
-    if(!name || !*name)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid property name");
-
-    /* Remove the property list from class */
-    if((ret_value = H5P_unregister(pclass, name)) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to remove property from class");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Punregister() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pclose
- PURPOSE
-    Routine to close a property list.
- USAGE
-    herr_t H5Pclose(plist_id)
-        hid_t plist_id;       IN: Property list to close
- RETURNS
-    Returns non-negative on success, negative on failure.
- DESCRIPTION
-        Closes a property list.  If a 'close' callback exists for the property
-    list class, it is called before the property list is destroyed.  If 'close'
-    callbacks exist for any individual properties in the property list, they are
-    called after the class 'close' callback.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5Pclose(hid_t plist_id)
-{
-    herr_t ret_value=SUCCEED;      /* return value */
-
-    FUNC_ENTER_API(H5Pclose, FAIL);
-    H5TRACE1("e", "i", plist_id);
-
-    if(plist_id==H5P_DEFAULT)
-        HGOTO_DONE(SUCCEED);
-
-    /* Check arguments. */
-    if(H5I_GENPROP_LST != H5I_get_type(plist_id))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list");
-
-    /* Close the property list */
-    if(H5I_dec_ref(plist_id) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTFREE, FAIL, "can't close");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pclose() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pget_class_name
- PURPOSE
-    Routine to query the name of a generic property list class
- USAGE
-    char *H5Pget_class_name(pclass_id)
-        hid_t pclass_id;         IN: Property class to query
- RETURNS
-    Success: Pointer to a malloc'ed string containing the class name
-    Failure: NULL
- DESCRIPTION
-        This routine retrieves the name of a generic property list class.
-    The pointer to the name must be free'd by the user for successful calls.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-char *
-H5Pget_class_name(hid_t pclass_id)
-{
-    H5P_genclass_t	*pclass;    /* Property class to query */
-    char *ret_value;       /* return value */
-
-    FUNC_ENTER_API(H5Pget_class_name, NULL);
-
-    /* Check arguments. */
-    if(NULL == (pclass = H5I_object_verify(pclass_id, H5I_GENPROP_CLS)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a property class");
-
-    /* Get the property list class name */
-    if((ret_value = H5P_get_class_name(pclass)) == NULL)
-        HGOTO_ERROR(H5E_PLIST, H5E_NOTFOUND, NULL, "unable to query name of class");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pget_class_name() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pget_class_parent
- PURPOSE
-    routine to query the parent class of a generic property class
- USAGE
-    hid_t H5Pget_class_parent(pclass_id)
-        hid_t pclass_id;         IN: Property class to query
- RETURNS
-    Success: ID of parent class object
-    Failure: NULL
- DESCRIPTION
-    This routine retrieves an ID for the parent class of a property class.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-hid_t
-H5Pget_class_parent(hid_t pclass_id)
-{
-    H5P_genclass_t	*pclass;    /* Property class to query */
-    H5P_genclass_t	*parent=NULL;   /* Parent's property class */
-    hid_t ret_value;       /* return value */
-
-    FUNC_ENTER_API(H5Pget_class_parent, FAIL);
-    H5TRACE1("i", "i", pclass_id);
-
-    /* Check arguments. */
-    if(NULL == (pclass = H5I_object_verify(pclass_id, H5I_GENPROP_CLS)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property class");
-
-    /* Retrieve the property class's parent */
-    if((parent = H5P_get_class_parent(pclass)) == NULL)
-        HGOTO_ERROR(H5E_PLIST, H5E_NOTFOUND, FAIL, "unable to query class of property list");
-
-    /* Increment the outstanding references to the class object */
-    if(H5P_access_class(parent, H5P_MOD_INC_REF) < 0)
-        HGOTO_ERROR (H5E_PLIST, H5E_CANTINIT, FAIL,"Can't increment class ID ref count");
-
-    /* Get an atom for the class */
-    if((ret_value = H5I_register(H5I_GENPROP_CLS, parent)) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to atomize property list class");
-
-done:
-    if(ret_value<0 && parent)
-        H5P_close_class(parent);
-
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pget_class_parent() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pclose_class
- PURPOSE
-    Close a property list class.
- USAGE
-    herr_t H5Pclose_class(cls_id)
-        hid_t cls_id;       IN: Property list class ID to class
-
- RETURNS
-    Returns non-negative on success, negative on failure.
- DESCRIPTION
-    Releases memory and de-attach a class from the property list class hierarchy.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5Pclose_class(hid_t cls_id)
-{
-    hid_t	ret_value = SUCCEED;    /* Return value			*/
-
-    FUNC_ENTER_API(H5Pclose_class, FAIL);
-    H5TRACE1("e", "i", cls_id);
+    H5P_t       *ds = NULL;
+    hid_t       ret_value = FAIL;
+    int		i;
+
+    FUNC_ENTER(H5Pcreate, FAIL);
 
     /* Check arguments */
-    if(H5I_GENPROP_CLS != H5I_get_type(cls_id))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list class");
+    if (rank<0) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "dimensionality cannot be negative");
+    }
+    if (!dims) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "no dimensions specified");
+    }
+    if (maxdims) {
+	for (i=0; i<rank; i++) {
+	    if (maxdims[i] && maxdims[i]<dims[i]) {
+		HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+			       "maxdims is smaller than dims");
+	    }
+	}
+    }
 
-    /* Close the property list class */
-    if(H5I_dec_ref(cls_id) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTFREE, FAIL, "can't close");
+    /* Create a new data space */
+    ds = H5MM_xcalloc(1, sizeof(H5P_t));
+#ifdef LATER /* QAK */
+    if(rank>0)  /* for creating simple dataspace */
+      {
+#endif /* LATER */
+        ds->type = H5P_SIMPLE;
+        ds->hslab_def = FALSE;    /* no hyperslab defined currently */
+
+        /* Initialize rank and dimensions */
+        ds->u.simple.rank = rank;
+
+        ds->u.simple.size = H5MM_xcalloc(1, rank*sizeof(size_t));
+        HDmemcpy(ds->u.simple.size, dims, rank*sizeof(size_t));
+
+        if (maxdims) {
+        ds->u.simple.max = H5MM_xcalloc(1, rank*sizeof(size_t));
+        HDmemcpy (ds->u.simple.max, maxdims, rank*sizeof(size_t));
+        }
+#ifdef LATER /* QAK */
+      } /* end if */
+    else /* rank==0, for scalar data space */
+      {
+        ds->type = H5P_SCALAR;
+      } /* end else */
+#endif /* LATER */
+    
+    /* Register the new data space and get an ID for it */
+    if ((ret_value = H5A_register(H5_DATASPACE, ds)) < 0) {
+        HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL,
+                    "unable to register data space for ID");
+    }
+
+ done:
+    if (ret_value < 0) {
+        H5MM_xfree(ds);
+    }
+    FUNC_LEAVE(ret_value);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Pclose
+ *
+ * Purpose:     Release access to a data space object.
+ *
+ * Return:      Success:        SUCCEED
+ *
+ *              Failure:        FAIL
+ *
+ * Errors:
+ *
+ * Programmer:  Robb Matzke
+ *              Tuesday, December  9, 1997
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pclose(hid_t space_id)
+{
+    FUNC_ENTER(H5Pclose, FAIL);
+
+    /* Check args */
+    if (H5_DATASPACE != H5A_group(space_id) ||
+        NULL == H5A_object(space_id)) {
+        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space");
+    }
+    /* When the reference count reaches zero the resources are freed */
+    if (H5A_dec_ref(space_id) < 0) {
+        HRETURN_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "problem freeing id");
+    }
+    FUNC_LEAVE(SUCCEED);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:    H5P_close
+ *
+ * Purpose:     Releases all memory associated with a data space.
+ *
+ * Return:      Success:        SUCCEED
+ *
+ *              Failure:        FAIL
+ *
+ * Programmer:  Robb Matzke
+ *              Tuesday, December  9, 1997
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5P_close(H5P_t *ds)
+{
+    FUNC_ENTER(H5P_close, FAIL);
+
+    assert(ds);
+
+    switch (ds->type) {
+    case H5P_SCALAR:
+        /*void */
+        break;
+
+    case H5P_SIMPLE:
+        H5MM_xfree(ds->u.simple.size);
+        H5MM_xfree(ds->u.simple.max);
+        H5MM_xfree(ds->u.simple.perm);
+        break;
+
+    case H5P_COMPLEX:
+        /* nothing */
+        break;
+
+    default:
+        assert("unknown data space type" && 0);
+        break;
+    }
+    if(ds->hslab_def==TRUE) {
+        H5MM_xfree(ds->h.start);
+        H5MM_xfree(ds->h.count);
+        H5MM_xfree(ds->h.stride);
+    } /* end if */
+    H5MM_xfree(ds);
+
+    FUNC_LEAVE(SUCCEED);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pcopy
+ *
+ * Purpose:	Copies a dataspace.
+ *
+ * Return:	Success:	ID of the new dataspace
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *              Friday, January 30, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+hid_t
+H5Pcopy (hid_t space_id)
+{
+    H5P_t	*src = NULL;
+    H5P_t	*dst = NULL;
+    hid_t	ret_value = FAIL;
+    
+    FUNC_ENTER (H5Pcopy, FAIL);
+
+    /* Check args */
+    if (H5_DATASPACE!=H5A_group (space_id) ||
+	NULL==(src=H5A_object (space_id))) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space");
+    }
+
+    /* Copy */
+    if (NULL==(dst=H5P_copy (src))) {
+	HRETURN_ERROR (H5E_DATASPACE, H5E_CANTINIT, FAIL,
+		       "unable to copy data space");
+    }
+
+    /* Atomize */
+    if ((ret_value=H5A_register (H5_DATASPACE, dst))<0) {
+	HRETURN_ERROR (H5E_ATOM, H5E_CANTREGISTER, FAIL,
+		       "unable to register data space atom");
+    }
+
+    FUNC_LEAVE (ret_value);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5P_copy
+ *
+ * Purpose:     Copies a data space.
+ *
+ * Return:      Success:        A pointer to a new copy of SRC
+ *
+ *              Failure:        NULL
+ *
+ * Programmer:  Robb Matzke
+ *              Thursday, December  4, 1997
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+H5P_t *
+H5P_copy(const H5P_t *src)
+{
+    H5P_t                  *dst = NULL;
+    int                     i;
+
+    FUNC_ENTER(H5P_copy, NULL);
+
+    dst = H5MM_xmalloc(sizeof(H5P_t));
+    *dst = *src;
+
+    switch (dst->type) {
+    case H5P_SCALAR:
+        /*void */
+        break;
+
+    case H5P_SIMPLE:
+        if (dst->u.simple.size) {
+            dst->u.simple.size = H5MM_xmalloc(dst->u.simple.rank *
+                                              sizeof(dst->u.simple.size[0]));
+            for (i = 0; i < dst->u.simple.rank; i++) {
+                dst->u.simple.size[i] = src->u.simple.size[i];
+            }
+        }
+        if (dst->u.simple.max) {
+            dst->u.simple.max = H5MM_xmalloc(dst->u.simple.rank *
+                                             sizeof(dst->u.simple.max[0]));
+            for (i = 0; i < dst->u.simple.rank; i++) {
+                dst->u.simple.max[i] = src->u.simple.max[i];
+            }
+        }
+        if (dst->u.simple.perm) {
+            dst->u.simple.perm = H5MM_xmalloc(dst->u.simple.rank *
+                                              sizeof(dst->u.simple.perm[0]));
+            for (i = 0; i < dst->u.simple.rank; i++) {
+                dst->u.simple.perm[i] = src->u.simple.perm[i];
+            }
+        }
+        break;
+
+    case H5P_COMPLEX:
+        /*void */
+        break;
+
+    default:
+        assert("unknown data space type" && 0);
+        break;
+    }
+
+    FUNC_LEAVE(dst);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Pget_npoints
+ *
+ * Purpose:     Determines how many data points a data set has.
+ *
+ * Return:      Success:        Number of data points in the data set.
+ *
+ *              Failure:        0
+ *
+ * Programmer:  Robb Matzke
+ *              Tuesday, December  9, 1997
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+size_t
+H5Pget_npoints(hid_t space_id)
+{
+    H5P_t                  *ds = NULL;
+    size_t                  ret_value = 0;
+
+    FUNC_ENTER(H5Pget_npoints, 0);
+
+    /* Check args */
+    if (H5_DATASPACE != H5A_group(space_id) ||
+        NULL == (ds = H5A_object(space_id))) {
+        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, 0, "not a data space");
+    }
+    ret_value = H5P_get_npoints(ds);
+
+    FUNC_LEAVE(ret_value);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:    H5P_get_npoints
+ *
+ * Purpose:     Determines how many data points a data set has.
+ *
+ * Return:      Success:        Number of data points in the data set.
+ *
+ *              Failure:        0
+ *
+ * Programmer:  Robb Matzke
+ *              Tuesday, December  9, 1997
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+size_t
+H5P_get_npoints(const H5P_t *ds)
+{
+    size_t                  ret_value = 0;
+    intn                    i;
+
+    FUNC_ENTER(H5P_get_npoints, 0);
+
+    /* check args */
+    assert(ds);
+
+    switch (ds->type) {
+    case H5P_SCALAR:
+        ret_value = 1;
+        break;
+
+    case H5P_SIMPLE:
+	/*
+	 * Count the elements selected by the hypeslab if there is one,
+	 * otherwise count all the elements.
+	 */
+	if (ds->hslab_def) {
+	    for (ret_value=1, i=0; i<ds->u.simple.rank; i++) {
+		ret_value *= ds->h.count[i];
+	    }
+	} else {
+	    for (ret_value=1, i=0; i<ds->u.simple.rank; i++) {
+		ret_value *= ds->u.simple.size[i];
+	    }
+        }
+        break;
+
+    case H5P_COMPLEX:
+        HRETURN_ERROR(H5E_DATASPACE, H5E_UNSUPPORTED, 0,
+                      "complex data spaces are not supported yet");
+
+    default:
+        assert("unknown data space class" && 0);
+        HRETURN_ERROR(H5E_DATASPACE, H5E_UNSUPPORTED, 0,
+                      "internal error (unknown data space class)");
+    }
+
+    FUNC_LEAVE(ret_value);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Pget_ndims
+ *
+ * Purpose:     Determines the dimensionality of a data space.
+ *
+ * Return:      Success:        The number of dimensions in a data space.
+ *
+ *              Failure:        FAIL
+ *
+ * Programmer:  Robb Matzke
+ *              Thursday, December 11, 1997
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+int
+H5Pget_ndims(hid_t space_id)
+{
+    H5P_t                  *ds = NULL;
+    intn                   ret_value = 0;
+
+    FUNC_ENTER(H5Pget_ndims, FAIL);
+
+    /* Check args */
+    if (H5_DATASPACE != H5A_group(space_id) ||
+        NULL == (ds = H5A_object(space_id))) {
+        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space");
+    }
+    ret_value = H5P_get_ndims(ds);
+
+    FUNC_LEAVE(ret_value);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:    H5P_get_ndims
+ *
+ * Purpose:     Returns the number of dimensions in a data space.
+ *
+ * Return:      Success:        Non-negative number of dimensions.  Zero
+ *                              implies a scalar.
+ *
+ *              Failure:        FAIL
+ *
+ * Programmer:  Robb Matzke
+ *              Thursday, December 11, 1997
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+intn
+H5P_get_ndims(const H5P_t *ds)
+{
+    intn                    ret_value = FAIL;
+
+    FUNC_ENTER(H5P_get_ndims, FAIL);
+
+    /* check args */
+    assert(ds);
+
+    switch (ds->type) {
+    case H5P_SCALAR:
+        ret_value = 0;
+        break;
+
+    case H5P_SIMPLE:
+        ret_value = ds->u.simple.rank;
+        break;
+
+    case H5P_COMPLEX:
+        HRETURN_ERROR(H5E_DATASPACE, H5E_UNSUPPORTED, FAIL,
+                      "complex data spaces are not supported yet");
+
+    default:
+        assert("unknown data space class" && 0);
+        HRETURN_ERROR(H5E_DATASPACE, H5E_UNSUPPORTED, FAIL,
+                      "internal error (unknown data space class)");
+    }
+
+    FUNC_LEAVE(ret_value);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Pget_dims
+ *
+ * Purpose:     Returns the size in each dimension of a data space DS through
+ *              the DIMS argument.
+ *
+ * Return:      Success:        Number of dimensions, the same value as
+ *                              returned by H5Pget_ndims().
+ *
+ *              Failure:        FAIL
+ *
+ * Programmer:  Robb Matzke
+ *              Thursday, December 11, 1997
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+int
+H5Pget_dims(hid_t space_id, size_t dims[]/*out*/)
+{
+
+    H5P_t                  *ds = NULL;
+    intn                   ret_value = 0;
+
+    FUNC_ENTER(H5Pget_dims, FAIL);
+
+    /* Check args */
+    if (H5_DATASPACE != H5A_group(space_id) ||
+        NULL == (ds = H5A_object(space_id))) {
+        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space");
+    }
+    if (!dims) {
+        HRETURN_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no output buffer");
+    }
+    ret_value = H5P_get_dims(ds, dims);
+
+    FUNC_LEAVE(ret_value);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:    H5P_get_dims
+ *
+ * Purpose:     Returns the size in each dimension of a data space.  This
+ *              function may not be meaningful for all types of data spaces.
+ *
+ * Return:      Success:        Number of dimensions.  Zero implies scalar.
+ *
+ *              Failure:        FAIL
+ *
+ * Programmer:  Robb Matzke
+ *              Thursday, December 11, 1997
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+intn
+H5P_get_dims(const H5P_t *ds, size_t dims[])
+{
+    intn                    ret_value = FAIL;
+    intn                    i;
+
+    FUNC_ENTER(H5P_get_dims, FAIL);
+
+    /* check args */
+    assert(ds);
+    assert(dims);
+
+    switch (ds->type) {
+    case H5P_SCALAR:
+        ret_value = 0;
+        break;
+
+    case H5P_SIMPLE:
+        ret_value = ds->u.simple.rank;
+        for (i = 0; i < ret_value; i++) {
+            dims[i] = ds->u.simple.size[i];
+        }
+        break;
+
+    case H5P_COMPLEX:
+        HRETURN_ERROR(H5E_DATASPACE, H5E_UNSUPPORTED, FAIL,
+                      "complex data spaces are not supported yet");
+
+    default:
+        assert("unknown data space class" && 0);
+        HRETURN_ERROR(H5E_DATASPACE, H5E_UNSUPPORTED, FAIL,
+                      "internal error (unknown data space class)");
+    }
+
+    FUNC_LEAVE(ret_value);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:    H5P_modify
+ *
+ * Purpose:     Updates a data space by writing a message to an object
+ *              header.
+ *
+ * Return:      Success:        SUCCEED
+ *
+ *              Failure:        FAIL
+ *
+ * Programmer:  Robb Matzke
+ *              Tuesday, December  9, 1997
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5P_modify(H5G_entry_t *ent, const H5P_t *ds)
+{
+    FUNC_ENTER(H5P_modify, FAIL);
+
+    assert(ent);
+    assert(ds);
+
+    switch (ds->type) {
+    case H5P_SCALAR:
+        HRETURN_ERROR(H5E_DATASPACE, H5E_UNSUPPORTED, FAIL,
+                      "scalar data spaces are not implemented yet");
+
+    case H5P_SIMPLE:
+        if (H5O_modify(ent, H5O_SDSPACE, 0, 0, &(ds->u.simple)) < 0) {
+            HRETURN_ERROR(H5E_DATASPACE, H5E_CANTINIT, FAIL,
+                          "can't update simple data space message");
+        }
+        break;
+
+    case H5P_COMPLEX:
+        HRETURN_ERROR(H5E_DATASPACE, H5E_UNSUPPORTED, FAIL,
+                      "complex data spaces are not implemented yet");
+
+    default:
+        assert("unknown data space class" && 0);
+        break;
+    }
+
+    FUNC_LEAVE(SUCCEED);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:    H5P_read
+ *
+ * Purpose:     Reads the data space from an object header.
+ *
+ * Return:      Success:        Pointer to a new data space.
+ *
+ *              Failure:        NULL
+ *
+ * Programmer:  Robb Matzke
+ *              Tuesday, December  9, 1997
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+H5P_t *
+H5P_read(H5F_t *f, H5G_entry_t *ent)
+{
+    H5P_t                  *ds = NULL;
+
+    FUNC_ENTER(H5P_read, NULL);
+
+    /* check args */
+    assert(f);
+    assert(ent);
+
+    ds = H5MM_xcalloc(1, sizeof(H5P_t));
+
+    if (H5O_read(ent, H5O_SDSPACE, 0, &(ds->u.simple))) {
+        ds->type = H5P_SIMPLE;
+
+    } else {
+        ds->type = H5P_SCALAR;
+    }
+
+    FUNC_LEAVE(ds);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:    H5P_cmp
+ *
+ * Purpose:     Compares two data spaces.
+ *
+ * Return:      Success:        0 if DS1 and DS2 are the same.
+ *                              <0 if DS1 is less than DS2.
+ *                              >0 if DS1 is greater than DS2.
+ *
+ *              Failure:        0, never fails
+ *
+ * Programmer:  Robb Matzke
+ *              Wednesday, December 10, 1997
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+intn
+H5P_cmp(const H5P_t *ds1, const H5P_t *ds2)
+{
+    intn                    i;
+
+    FUNC_ENTER(H5P_cmp, 0);
+
+    /* check args */
+    assert(ds1);
+    assert(ds2);
+
+    /* compare */
+    if (ds1->type < ds2->type)
+        HRETURN(-1);
+    if (ds1->type > ds2->type)
+        HRETURN(1);
+
+    switch (ds1->type) {
+    case H5P_SIMPLE:
+        if (ds1->u.simple.rank < ds2->u.simple.rank)
+            HRETURN(-1);
+        if (ds1->u.simple.rank > ds2->u.simple.rank)
+            HRETURN(1);
+
+        for (i = 0; i < ds1->u.simple.rank; i++) {
+            if (ds1->u.simple.size[i] < ds2->u.simple.size[i])
+                HRETURN(-1);
+            if (ds1->u.simple.size[i] > ds2->u.simple.size[i])
+                HRETURN(1);
+        }
+
+        /* don't compare max dimensions */
+
+        for (i = 0; i < ds1->u.simple.rank; i++) {
+            if ((ds1->u.simple.perm ? ds1->u.simple.perm[i] : i) <
+                (ds2->u.simple.perm ? ds2->u.simple.perm[i] : i))
+                HRETURN(-1);
+            if ((ds1->u.simple.perm ? ds2->u.simple.perm[i] : i) >
+                (ds2->u.simple.perm ? ds2->u.simple.perm[i] : i))
+                HRETURN(1);
+        }
+
+        /* Check if we should compare hyperslab definitions */
+        if(ds1->hslab_def==TRUE && ds2->hslab_def==TRUE) {
+            for (i = 0; i < ds1->u.simple.rank; i++) {
+                if (ds1->h.start[i] < ds2->h.start[i])
+                    HRETURN(-1);
+                if (ds1->h.start[i] > ds2->h.start[i])
+                    HRETURN(1);
+                if (ds1->h.count[i] < ds2->h.count[i])
+                    HRETURN(-1);
+                if (ds1->h.count[i] > ds2->h.count[i])
+                    HRETURN(1);
+                if (ds1->h.stride[i] < ds2->h.stride[i])
+                    HRETURN(-1);
+                if (ds1->h.stride[i] > ds2->h.stride[i])
+                    HRETURN(1);
+            }
+	} else {
+            if(ds1->hslab_def!=ds2->hslab_def)
+                HRETURN(ds1->hslab_def==TRUE ? 1 : -1);
+	}
+
+        break;
+
+    default:
+        assert("not implemented yet" && 0);
+    }
+
+    FUNC_LEAVE(0);
+}
+
+
+/*--------------------------------------------------------------------------
+ NAME
+    H5P_is_simple
+ PURPOSE
+    Check if a dataspace is simple (internal)
+ USAGE
+    hbool_t H5P_is_simple(sdim)
+        H5P_t *sdim;            IN: Pointer to dataspace object to query
+ RETURNS
+    TRUE/FALSE/FAIL
+ DESCRIPTION
+        This function determines the if a dataspace is "simple". ie. if it
+    has orthogonal, evenly spaced dimensions.
+--------------------------------------------------------------------------*/
+hbool_t
+H5P_is_simple(const H5P_t *sdim)
+{
+    hbool_t                 ret_value = FAIL;
+
+    FUNC_ENTER(H5P_is_simple, FAIL);
+
+    /* Check args and all the boring stuff. */
+    assert(sdim);
+    ret_value = sdim->type == H5P_SIMPLE ? TRUE : FALSE;      /* Currently all dataspaces are simple, but check anyway */
+
+    FUNC_LEAVE(ret_value);
+}
+
+
+/*--------------------------------------------------------------------------
+ NAME
+    H5Pis_simple
+ PURPOSE
+    Check if a dataspace is simple
+ USAGE
+    hbool_t H5Pis_simple(sid)
+        hid_t sid;            IN: ID of dataspace object to query
+ RETURNS
+    TRUE/FALSE/FAIL
+ DESCRIPTION
+        This function determines the if a dataspace is "simple". ie. if it
+    has orthogonal, evenly spaced dimensions.
+--------------------------------------------------------------------------*/
+hbool_t 
+H5Pis_simple(hid_t sid)
+{
+    H5P_t                  *space = NULL;       /* dataspace to modify */
+    hbool_t                 ret_value = FAIL;
+
+    FUNC_ENTER(H5Pis_simple, FAIL);
+
+    /* Check args and all the boring stuff. */
+    if ((space = H5A_object(sid)) == NULL)
+        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "not a data space");
+
+    ret_value = H5P_is_simple(space);
+
+  done:
+    if (ret_value == FAIL) {   /* Error condition cleanup */
+
+    }                           /* end if */
+    /* Normal function cleanup */
+    FUNC_LEAVE(ret_value);
+}
+
+
+/*--------------------------------------------------------------------------
+ NAME
+    H5Pset_space
+ PURPOSE
+    Determine the size of a dataspace
+ USAGE
+    herr_t H5Pset_space(sid, rank, dims)
+        hid_t sid;            IN: Dataspace object to query
+        intn rank;            IN: # of dimensions for the dataspace
+        const size_t *dims;   IN: Size of each dimension for the dataspace
+ RETURNS
+    SUCCEED/FAIL
+ DESCRIPTION
+        This function sets the number and size of each dimension in the
+    dataspace.  Setting RANK to a value of zero allows scalar objects to be
+    created.  Dimensions are specified from slowest to fastest changing in the
+    DIMS array (i.e. 'C' order).  Setting the size of a dimension to zero
+    indicates that the dimension is of unlimited size and should be allowed to
+    expand.  Currently, only the first dimension in the array (the slowest) may
+    be unlimited in size.
+--------------------------------------------------------------------------*/
+herr_t
+H5Pset_space(hid_t sid, int rank, const size_t *dims)
+{
+    H5P_t                  *space = NULL;       /* dataspace to modify */
+    intn                    u;  /* local counting variable */
+    herr_t                  ret_value = SUCCEED;
+
+    FUNC_ENTER(H5Pset_space, FAIL);
+
+    /* Check args */
+    if ((space = H5A_object(sid)) == NULL)
+        HRETURN_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "not a data space");
+    if (rank > 0 && dims == NULL)
+        HRETURN_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no dimensions specified");
+    if (rank<0)
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL, "invalid rank");
+    if (dims) {
+	for (u=0; u<rank; u++) {
+	    if (dims[u]<=0) {
+		HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+			       "invalid dimension size");
+	    }
+	}
+    }
+
+    /* shift out of the previous state to a "simple" dataspace */
+    switch (space->type) {
+    case H5P_SCALAR:
+    case H5P_SIMPLE:
+        /* do nothing */
+        break;
+
+    case H5P_COMPLEX:
+        /*
+         * eventually this will destroy whatever "complex" dataspace info
+         * is retained, right now it's an error
+         */
+        /* Fall through to report error */
+
+    default:
+        HRETURN_ERROR(H5E_DATASPACE, H5E_BADVALUE, FAIL,
+		      "unknown data space class");
+    }
+    space->type = H5P_SIMPLE;
+
+    /* Reset hyperslab definition, if one is defined */
+    if(space->hslab_def==TRUE) {
+        H5MM_xfree(space->h.start);
+        H5MM_xfree(space->h.count);
+        H5MM_xfree(space->h.stride);
+        space->hslab_def=FALSE;
+    }
+
+    if (rank == 0) {            /* scalar variable */
+        space->type = H5P_SCALAR;
+        space->u.simple.rank = 0;       /* set to scalar rank */
+        if (space->u.simple.size != NULL)
+            space->u.simple.size = H5MM_xfree(space->u.simple.size);
+        if (space->u.simple.max != NULL)
+            space->u.simple.max = H5MM_xfree(space->u.simple.max);
+        if (space->u.simple.perm != NULL)
+            space->u.simple.max = H5MM_xfree(space->u.simple.perm);
+    } else {
+        /* Free the old space for now */
+        if (space->u.simple.size != NULL)
+            space->u.simple.size = H5MM_xfree(space->u.simple.size);
+        if (space->u.simple.max != NULL)
+            space->u.simple.max = H5MM_xfree(space->u.simple.max);
+        if (space->u.simple.perm != NULL)
+            space->u.simple.perm = H5MM_xfree(space->u.simple.perm);
+
+        /* Set the rank and copy the dims */
+        space->u.simple.rank = rank;
+        space->u.simple.size = H5MM_xcalloc(rank, sizeof(size_t));
+        HDmemcpy(space->u.simple.size, dims, sizeof(size_t) * rank);
+
+    }
+    FUNC_LEAVE(ret_value);
+}
+
+/*--------------------------------------------------------------------------
+ NAME
+    H5Pset_hyperslab
+ PURPOSE
+    Select a hyperslab from a simple dataspace
+ USAGE
+    herr_t H5Pset_hyperslab(sid, start, count, stride)
+        hid_t sid;            IN: Dataspace object to select hyperslab from
+        const int *start;  IN: Starting location for hyperslab to select
+        const size_t *count;  IN: Number of elements in hyperslab
+        const size_t *stride; IN: Packing of elements in hyperslab
+ RETURNS
+    SUCCEED/FAIL
+ DESCRIPTION
+        This function selects a hyperslab from a simple dataspace.  The stride
+    array may be used to sub-sample the hyperslab chosen, a value of 1 in each
+    position of the stride array selects contiguous elements in the array,
+    a value of 2 selects every other element, etc.  If the stride parameter is
+    set to NULL, a contiguous hyperslab is chosen.  The values in the start and
+    count arrays may be negative, to allow for selecting hyperslabs in chunked
+    datasets which extend in arbitrary directions.
+--------------------------------------------------------------------------*/
+herr_t
+H5Pset_hyperslab(hid_t sid, const int *start, const size_t *count, const size_t *stride)
+{
+    H5P_t                  *space = NULL;       /* dataspace to modify */
+    size_t                 *tmp_stride=NULL;    /* temp. copy of stride */
+    intn                    u;  /* local counting variable */
+    herr_t                  ret_value = SUCCEED;
+
+    FUNC_ENTER(H5Pset_hyperslab, FAIL);
+
+    /* Get the object */
+    if (H5_DATASPACE != H5A_group(sid) || (space = H5A_object(sid)) == NULL)
+        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "not a data space");
+    if (start == NULL || count==NULL)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+		    "invalid hyperslab selected");
+
+    /* We can't modify other types of dataspaces currently, so error out */
+    if (space->type!=H5P_SIMPLE)
+        HGOTO_ERROR(H5E_DATASPACE, H5E_BADVALUE, FAIL,
+		    "unknown dataspace type");
+
+    /* Set up stride values for later use */
+    tmp_stride= H5MM_xmalloc(space->u.simple.rank*sizeof(tmp_stride[0]));
+    for (u=0; u<space->u.simple.rank; u++) {
+        tmp_stride[u] = stride ? stride[u] : 1;
+    }
+
+    /* Range check arguments */
+    for (u=0; u<space->u.simple.rank; u++) {
+        if (start[u]<0 || start[u]>=space->u.simple.size[u]) {
+            HGOTO_ERROR(H5E_DATASPACE, H5E_BADRANGE, FAIL,
+			"hyperslab bounds out of range");
+	}
+	if (start[u]<0 ||
+	    start[u]+(count[u]*tmp_stride[u])>space->u.simple.size[u]) {
+            HGOTO_ERROR(H5E_DATASPACE, H5E_BADRANGE, FAIL,
+			"hyperslab bounds out of range");
+	}
+    }
+
+    /* Allocate space for the hyperslab information */
+    if (NULL==space->h.start) {
+        space->h.start= H5MM_xcalloc(space->u.simple.rank,sizeof(intn));
+        space->h.count= H5MM_xcalloc(space->u.simple.rank,sizeof(size_t));
+        space->h.stride= H5MM_xcalloc(space->u.simple.rank,sizeof(size_t));
+    }
+
+    /* Build hyperslab */
+    for(u=0; u<space->u.simple.rank; u++) {
+        space->h.start[u] = start[u];
+        space->h.count[u] = count[u];
+        space->h.stride[u] = tmp_stride[u];
+    }
+    space->hslab_def=TRUE;
 
 done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pclose_class() */
+    if (ret_value == FAIL) {    /* Error condition cleanup */
 
+    }                           /* end if */
+
+    /* Normal function cleanup */
+    H5MM_xfree(tmp_stride);
+    FUNC_LEAVE(ret_value);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_hyperslab
+ *
+ * Purpose:	Retrieves information about the hyperslab from a simple data
+ *		space.  If no hyperslab has been defined then the hyperslab
+ *		is the same as the entire array.
+ *
+ * Return:	Success:	Hyperslab dimensionality.
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *              Wednesday, January 28, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+int
+H5Pget_hyperslab (hid_t sid, int offset[]/*out*/, size_t size[]/*out*/,
+		  size_t stride[]/*out*/)
+{
+    const H5P_t	*ds = NULL;
+    intn	ret_value = FAIL;
+    
+    FUNC_ENTER (H5Pget_hyperslab, FAIL);
+
+    /* Check args */
+    if (H5_DATASPACE!=H5A_group (sid) || NULL==(ds=H5A_object (sid))) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space");
+    }
+
+    /* Get hyperslab info */
+    if ((ret_value=H5P_get_hyperslab (ds, offset, size, stride))<0) {
+	HRETURN_ERROR (H5E_DATASPACE, H5E_CANTINIT, FAIL,
+		       "unable to retrieve hyperslab information");
+    }
+
+    FUNC_LEAVE (ret_value);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:	H5P_get_hyperslab
+ *
+ * Purpose:	Retrieves information about the hyperslab from a simple data
+ *		space.  If no hyperslab has been defined then the hyperslab
+ *		is the same as the entire array.
+ *
+ * Return:	Success:	Hyperslab dimensionality.
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *              Wednesday, January 28, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+intn
+H5P_get_hyperslab (const H5P_t *ds, int offset[]/*out*/,
+		   size_t size[]/*out*/, size_t stride[]/*out*/)
+{
+    intn		i;
+    intn		ret_value = FAIL;
+    
+    FUNC_ENTER (H5P_get_hyperslab, FAIL);
+
+    /* Check args */
+    assert (ds);
+    switch (ds->type) {
+    case H5P_SCALAR:
+	break;
+
+    case H5P_SIMPLE:
+	if (ds->hslab_def) {
+	    for (i=0; i<ds->u.simple.rank; i++) {
+		if (offset) offset[i] = ds->h.start[i];
+		if (size) size[i] = ds->h.count[i];
+		if (stride) stride[i] = ds->h.stride[i];
+	    }
+	} else {
+	    for (i=0; i<ds->u.simple.rank; i++) {
+		if (offset) offset[i] = 0;
+		if (size) size[i] = ds->u.simple.size[i];
+		if (stride) stride[i] = 1;
+	    }
+	}
+	ret_value = ds->u.simple.rank;
+	break;
+
+    case H5P_COMPLEX:	/*fall through*/
+    default:
+	HRETURN_ERROR (H5E_DATASPACE, H5E_UNSUPPORTED, FAIL,
+		       "hyperslabs not supported for this type of space");
+    }
+
+    FUNC_LEAVE (ret_value);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5P_find
+ *
+ * Purpose:	Given two data spaces (MEM_SPACE and FILE_SPACE) this
+ *		function locates the data space conversion functions and
+ *		initializes CONV to point to them.  The CONV contains
+ *		function pointers for converting in either direction.
+ *
+ * Return:	Success:	Pointer to a data space conversion callback
+ *				list.
+ *
+ *		Failure:	NULL
+ *
+ * Programmer:	Robb Matzke
+ *              Wednesday, January 21, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+const H5P_conv_t *
+H5P_find (const H5P_t *mem_space, const H5P_t *file_space)
+{
+    static H5P_conv_t		_conv;
+    static const H5P_conv_t 	*conv = NULL;
+    
+    FUNC_ENTER (H5P_find, NULL);
+
+    /* Check args */
+    assert (mem_space && H5P_SIMPLE==mem_space->type);
+    assert (file_space && H5P_SIMPLE==file_space->type);
+
+    /*
+     * We can't do conversion if the source and destination select a
+     * different number of data points.
+     */
+    if (H5P_get_npoints (mem_space) != H5P_get_npoints (file_space)) {
+	HRETURN_ERROR (H5E_DATASPACE, H5E_BADRANGE, NULL,
+		       "memory and file data spaces are different sizes");
+    }
+
+    /*
+     * Initialize pointers.  This will eventually be a table lookup based
+     * on the source and destination data spaces, similar to H5T_find(), but
+     * for now we only support simple data spaces.
+     */
+    if (!conv) {
+	_conv.init = H5P_simp_init;
+	_conv.fgath = H5P_simp_fgath;
+	_conv.mscat = H5P_simp_mscat;
+	_conv.mgath = H5P_simp_mgath;
+	_conv.fscat = H5P_simp_fscat;
+	conv = &_conv;
+    }
+    
+    FUNC_LEAVE (conv);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:	H5P_extend
+ *
+ * Purpose:	Extend the dimensions of a data space.
+ *
+ * Return:	Success:	Number of dimensions whose size increased.
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *              Friday, January 30, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+intn
+H5P_extend (H5P_t *space, const size_t *size)
+{
+    intn		i, ret_value=0;
+    
+    FUNC_ENTER (H5P_extend, FAIL);
+
+    /* Check args */
+    assert (space && H5P_SIMPLE==space->type);
+    assert (size);
+
+    for (i=0; i<space->u.simple.rank; i++) {
+	if (space->u.simple.size[i]<size[i]) {
+	    if (space->u.simple.max &&
+		H5P_UNLIMITED!=space->u.simple.max[i] &&
+		space->u.simple.max[i]<size[i]) {
+		HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+			       "dimension cannot be increased");
+	    }
+	    ret_value++;
+	}
+    }
+
+    /* Update */
+    if (ret_value) {
+	for (i=0; i<space->u.simple.rank; i++) {
+	    if (space->u.simple.size[i]<size[i]) {
+		space->u.simple.size[i] = size[i];
+	    }
+	}
+    }
+
+    FUNC_LEAVE (ret_value);
+}
+		

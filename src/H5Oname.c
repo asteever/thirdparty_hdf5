@@ -1,19 +1,8 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
- * All rights reserved.                                                      *
- *                                                                           *
- * This file is part of HDF5.  The full HDF5 copyright notice, including     *
- * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
 /*-------------------------------------------------------------------------
+ * Copyright (C) 1997   National Center for Supercomputing Applications.
+ *                      All rights reserved.
+ *
+ *-------------------------------------------------------------------------
  *
  * Created:             H5Oname.c
  *                      Aug 12 1997
@@ -21,49 +10,43 @@
  *
  * Purpose:             Object name message.
  *
+ * Modifications:       
+ *
  *-------------------------------------------------------------------------
  */
+#include <H5private.h>
+#include <H5Eprivate.h>
+#include <H5MMprivate.h>
+#include <H5Oprivate.h>
 
-#define H5O_PACKAGE		/*suppress error about including H5Opkg	  */
-
-#include "H5private.h"		/* Generic Functions			*/
-#include "H5Eprivate.h"		/* Error handling		  	*/
-#include "H5MMprivate.h"	/* Memory management			*/
-#include "H5Opkg.h"             /* Object headers			*/
-
+#define PABLO_MASK      H5O_name_mask
 
 /* PRIVATE PROTOTYPES */
-static void *H5O_name_decode(H5F_t *f, hid_t dxpl_id, unsigned mesg_flags, const uint8_t *p);
-static herr_t H5O_name_encode(H5F_t *f, hbool_t disable_shared, uint8_t *p, const void *_mesg);
+static void *H5O_name_decode(H5F_t *f, size_t raw_size, const uint8 *p);
+static herr_t H5O_name_encode(H5F_t *f, size_t raw_size, uint8 *p,
+			      const void *_mesg);
 static void *H5O_name_copy(const void *_mesg, void *_dest);
-static size_t H5O_name_size(const H5F_t *f, hbool_t disable_shared, const void *_mesg);
+static size_t H5O_name_size(H5F_t *f, const void *_mesg);
 static herr_t H5O_name_reset(void *_mesg);
-static herr_t H5O_name_debug(H5F_t *f, hid_t dxpl_id, const void *_mesg, FILE * stream,
-			     int indent, int fwidth);
+static herr_t H5O_name_debug(H5F_t *f, const void *_mesg, FILE * stream,
+			     intn indent, intn fwidth);
 
-/* This message derives from H5O message class */
-const H5O_msg_class_t H5O_MSG_NAME[1] = {{
-    H5O_NAME_ID,            	/*message id number             */
-    "name",                 	/*message name for debugging    */
-    sizeof(H5O_name_t),     	/*native message size           */
-    0,				/* messages are sharable?       */
-    H5O_name_decode,        	/*decode message                */
-    H5O_name_encode,        	/*encode message                */
-    H5O_name_copy,          	/*copy the native value         */
-    H5O_name_size,          	/*raw message size              */
-    H5O_name_reset,         	/*free internal memory          */
-    NULL,			/* free method			*/
-    NULL,		        /* file delete method		*/
-    NULL,			/* link method			*/
-    NULL,			/*set share method		*/
-    NULL,		    	/*can share method		*/
-    NULL,			/* pre copy native value to file */
-    NULL,			/* copy native value to file    */
-    NULL,			/* post copy native value to file    */
-    NULL,			/* get creation index		*/
-    NULL,			/* set creation index		*/
-    H5O_name_debug         	/*debug the message             */
+/* This message derives from H5O */
+const H5O_class_t H5O_NAME[1] = {{
+    H5O_NAME_ID,            /*message id number             */
+    "name",                 /*message name for debugging    */
+    sizeof(H5O_name_t),     /*native message size           */
+    H5O_name_decode,        /*decode message                */
+    H5O_name_encode,        /*encode message                */
+    H5O_name_copy,          /*copy the native value         */
+    H5O_name_size,          /*raw message size              */
+    H5O_name_reset,         /*free internal memory          */
+    H5O_name_debug,         /*debug the message             */
 }};
+
+/* Interface initialization */
+static hbool_t interface_initialize_g = FALSE;
+#define INTERFACE_INIT  NULL
 
 
 /*-------------------------------------------------------------------------
@@ -80,46 +63,39 @@ const H5O_msg_class_t H5O_MSG_NAME[1] = {{
  *              matzke@llnl.gov
  *              Aug 12 1997
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
-static void *
-H5O_name_decode(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, unsigned UNUSED mesg_flags,
-    const uint8_t *p)
+static void            *
+H5O_name_decode(H5F_t *f, size_t raw_size, const uint8 *p)
 {
-    H5O_name_t          *mesg;
-    void                *ret_value;     /* Return value */
+    H5O_name_t             *mesg;
+    char                   *s;
 
-    FUNC_ENTER_NOAPI_NOINIT(H5O_name_decode);
+    FUNC_ENTER(H5O_name_decode, NULL);
 
     /* check args */
     assert(f);
     assert(p);
 
     /* decode */
-    if (NULL==(mesg = H5MM_calloc(sizeof(H5O_name_t))) ||
-            NULL==(mesg->s = H5MM_malloc (HDstrlen((const char*)p)+1)))
-	HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
-    HDstrcpy(mesg->s, (const char*)p);
+    mesg = H5MM_xcalloc(1, sizeof(H5O_name_t));
+    s = H5MM_xmalloc(raw_size);
+    HDmemcpy(s, p, raw_size);
+    mesg->s = s;
 
-    /* Set return value */
-    ret_value=mesg;
-
-done:
-    if(ret_value==NULL) {
-        if(mesg)
-            H5MM_xfree (mesg);
-    } /* end if */
-
-    FUNC_LEAVE_NOAPI(ret_value);
+    FUNC_LEAVE(mesg);
 }
-
 
 /*-------------------------------------------------------------------------
  * Function:    H5O_name_encode
  *
  * Purpose:     Encodes a name message.
  *
- * Return:      Non-negative on success/Negative on failure
+ * Return:      Success:        SUCCEED
+ *
+ *              Failure:        FAIL
  *
  * Programmer:  Robb Matzke
  *              matzke@llnl.gov
@@ -130,23 +106,28 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_name_encode(H5F_t UNUSED *f, hbool_t UNUSED disable_shared, uint8_t *p, const void *_mesg)
+H5O_name_encode(H5F_t *f, size_t raw_size, uint8 *p, const void *_mesg)
 {
     const H5O_name_t       *mesg = (const H5O_name_t *) _mesg;
+    size_t                  size;
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_name_encode);
+    FUNC_ENTER(H5O_name_encode, FAIL);
 
     /* check args */
     assert(f);
     assert(p);
     assert(mesg && mesg->s);
 
+    /* message size */
+    size = HDstrlen(mesg->s) + 1;
+    assert(size <= raw_size);
+
     /* encode */
-    HDstrcpy((char*)p, mesg->s);
+    HDmemcpy(p, mesg->s, size);
+    HDmemset(p + size, 0, raw_size - size);
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+    FUNC_LEAVE(SUCCEED);
 }
-
 
 /*-------------------------------------------------------------------------
  * Function:    H5O_name_copy
@@ -166,32 +147,25 @@ H5O_name_encode(H5F_t UNUSED *f, hbool_t UNUSED disable_shared, uint8_t *p, cons
  *
  *-------------------------------------------------------------------------
  */
-static void *
+static void            *
 H5O_name_copy(const void *_mesg, void *_dest)
 {
     const H5O_name_t       *mesg = (const H5O_name_t *) _mesg;
     H5O_name_t             *dest = (H5O_name_t *) _dest;
-    void                *ret_value;     /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT(H5O_name_copy);
+    FUNC_ENTER(H5O_name_copy, NULL);
 
     /* check args */
     assert(mesg);
-    if (!dest && NULL==(dest = H5MM_calloc(sizeof(H5O_name_t))))
-	HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
+    if (!dest)
+        dest = H5MM_xcalloc(1, sizeof(H5O_name_t));
 
     /* copy */
     *dest = *mesg;
-    if((dest->s = H5MM_xstrdup(mesg->s))==NULL)
-	HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
+    dest->s = H5MM_xstrdup(mesg->s);
 
-    /* Set return value */
-    ret_value=dest;
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
+    FUNC_LEAVE((void *) dest);
 }
-
 
 /*-------------------------------------------------------------------------
  * Function:    H5O_name_size
@@ -203,7 +177,7 @@ done:
  *
  * Return:      Success:        Message data size in bytes w/o alignment.
  *
- *              Failure:        Negative
+ *              Failure:        FAIL
  *
  * Programmer:  Robb Matzke
  *              matzke@llnl.gov
@@ -214,22 +188,20 @@ done:
  *-------------------------------------------------------------------------
  */
 static size_t
-H5O_name_size(const H5F_t UNUSED *f, hbool_t UNUSED disable_shared, const void *_mesg)
+H5O_name_size(H5F_t *f, const void *_mesg)
 {
     const H5O_name_t       *mesg = (const H5O_name_t *) _mesg;
-    size_t                  ret_value;
+    size_t                  size;
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_name_size);
+    FUNC_ENTER(H5O_name_size, FAIL);
 
     /* check args */
     assert(f);
     assert(mesg);
 
-    ret_value = mesg->s ? HDstrlen(mesg->s) + 1 : 0;
-
-    FUNC_LEAVE_NOAPI(ret_value);
+    size = mesg->s ? HDstrlen(mesg->s) + 1 : 0;
+    FUNC_LEAVE(size);
 }
-
 
 /*-------------------------------------------------------------------------
  * Function:    H5O_name_reset
@@ -237,7 +209,9 @@ H5O_name_size(const H5F_t UNUSED *f, hbool_t UNUSED disable_shared, const void *
  * Purpose:     Frees internal pointers and resets the message to an
  *              initial state.
  *
- * Return:      Non-negative on success/Negative on failure
+ * Return:      Success:        SUCCEED
+ *
+ *              Failure:        FAIL
  *
  * Programmer:  Robb Matzke
  *              matzke@llnl.gov
@@ -252,7 +226,7 @@ H5O_name_reset(void *_mesg)
 {
     H5O_name_t             *mesg = (H5O_name_t *) _mesg;
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_name_reset);
+    FUNC_ENTER(H5O_name_reset, FAIL);
 
     /* check args */
     assert(mesg);
@@ -260,16 +234,17 @@ H5O_name_reset(void *_mesg)
     /* reset */
     mesg->s = H5MM_xfree(mesg->s);
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+    FUNC_LEAVE(SUCCEED);
 }
-
 
 /*-------------------------------------------------------------------------
  * Function:    H5O_name_debug
  *
  * Purpose:     Prints debugging info for the message.
  *
- * Return:      Non-negative on success/Negative on failure
+ * Return:      Success:        SUCCEED
+ *
+ *              Failure:        FAIL
  *
  * Programmer:  Robb Matzke
  *              matzke@llnl.gov
@@ -280,12 +255,12 @@ H5O_name_reset(void *_mesg)
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_name_debug(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const void *_mesg, FILE *stream,
-	       int indent, int fwidth)
+H5O_name_debug(H5F_t *f, const void *_mesg, FILE * stream,
+               intn indent, intn fwidth)
 {
-    const H5O_name_t	*mesg = (const H5O_name_t *)_mesg;
+    const H5O_name_t       *mesg = (const H5O_name_t *) _mesg;
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_name_debug);
+    FUNC_ENTER(H5O_name_debug, FAIL);
 
     /* check args */
     assert(f);
@@ -298,5 +273,5 @@ H5O_name_debug(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const void *_mesg, FILE *s
             "Name:",
             mesg->s);
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
+    FUNC_LEAVE(SUCCEED);
 }
