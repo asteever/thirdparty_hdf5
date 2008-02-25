@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* Unicode test */
@@ -68,7 +67,7 @@ void dump_string(const char * string);
 void test_fl_string(hid_t fid, const char *string)
 {
   hid_t dtype_id, space_id, dset_id;
-  hsize_t dims = 1;
+  hsize_t dims=1;
   char read_buf[MAX_STRING_LENGTH];
   H5T_cset_t cset;
   herr_t ret;
@@ -78,22 +77,21 @@ void test_fl_string(hid_t fid, const char *string)
    */
   dtype_id = H5Tcopy(H5T_C_S1);
   CHECK(dtype_id, FAIL, "H5Tcopy");
-  ret = H5Tset_size(dtype_id, (size_t)MAX_STRING_LENGTH);
+  ret=H5Tset_size(dtype_id, MAX_STRING_LENGTH);
   CHECK(ret, FAIL, "H5Tset_size");
-  cset = H5Tget_cset(dtype_id);
+  cset=H5Tget_cset(dtype_id);
   VERIFY(cset, H5T_CSET_ASCII, "H5Tget_cset");
-  ret = H5Tset_cset(dtype_id, H5T_CSET_UTF8);
+  ret=H5Tset_cset(dtype_id, H5T_CSET_UTF8);
   CHECK(ret, FAIL, "H5Tset_cset");
-  cset = H5Tget_cset(dtype_id);
+  cset=H5Tget_cset(dtype_id);
   VERIFY(cset, H5T_CSET_UTF8, "H5Tget_cset");
 
   /* Create dataspace for a dataset */
   space_id = H5Screate_simple(RANK, &dims, NULL);
   CHECK(space_id, FAIL, "H5Screate_simple");
-
   /* Create a dataset */
-  dset_id = H5Dcreate2(fid, DSET1_NAME, dtype_id, space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  CHECK(dset_id, FAIL, "H5Dcreate2");
+  dset_id=H5Dcreate(fid, DSET1_NAME, dtype_id, space_id, H5P_DEFAULT);
+  CHECK(dset_id, FAIL, "H5Dcreate");
 
   /* Write UTF-8 string to dataset */
   ret = H5Dwrite(dset_id, dtype_id, H5S_ALL, H5S_ALL, H5P_DEFAULT, string);
@@ -103,15 +101,15 @@ void test_fl_string(hid_t fid, const char *string)
   ret = H5Dread(dset_id, dtype_id, H5S_ALL, H5S_ALL, H5P_DEFAULT, read_buf);
   CHECK(ret, FAIL, "H5Dread");
 
-  VERIFY(HDstrcmp(string, read_buf), 0, "strcmp");
+  VERIFY(strcmp(string, read_buf), 0, "strcmp");
 
   /* Close all */
-  ret = H5Dclose(dset_id);
+  ret=H5Dclose(dset_id);
   CHECK(ret, FAIL, "H5Dclose");
 
-  ret = H5Tclose(dtype_id);
+  ret=H5Tclose(dtype_id);
   CHECK(ret, FAIL, "H5Tclose");
-  ret = H5Sclose(space_id);
+  ret=H5Sclose(space_id);
   CHECK(ret, FAIL, "H5Sclose");
 }
 
@@ -124,195 +122,195 @@ void test_fl_string(hid_t fid, const char *string)
  */
 void test_strpad(hid_t UNUSED fid, const char *string)
 {
-    /* buf is used to hold the data that H5Tconvert operates on. */
-    char     buf[LONG_BUF_SIZE];
+  /* buf is used to hold the data that H5Tconvert operates on. */
+  char     buf[LONG_BUF_SIZE];
 
-    /* cmpbuf holds the output that H5Tconvert should produce,
-     * to compare against the actual output. */
-    char     cmpbuf[LONG_BUF_SIZE];
+  /* cmpbuf holds the output that H5Tconvert should produce,
+   * to compare against the actual output. */
+  char     cmpbuf[LONG_BUF_SIZE];
 
-    /* new_string is a slightly modified version of the UTF-8
-     * string to make the tests run more smoothly. */
-    char     new_string[MAX_STRING_LENGTH + 2];
+  /* new_string is a slightly modified version of the UTF-8
+   * string to make the tests run more smoothly. */
+  char     new_string[MAX_STRING_LENGTH + 2];
 
-    size_t   length;  /* Length of new_string in bytes */
-    size_t   small_len;  /* Size of the small datatype */
-    size_t   big_len;   /* Size of the larger datatype */
-    hid_t    src_type, dst_type;
-    herr_t   ret;
+  unsigned int length;  /* Length of new_string in bytes */
+  unsigned int small_len;  /* Size of the small datatype */
+  unsigned int big_len;   /* Size of the larger datatype */
+  hid_t    src_type, dst_type;
+  herr_t   ret;
 
-    /* The following tests are simpler if the UTF-8 string contains
-     * the right number of bytes (even or odd, depending on the test).
-     * We create a 'new_string' whose length is convenient by prepending
-     * an 'x' to 'string' when necessary. */
-    length = HDstrlen(string);
-    if(length % 2 != 1)
-    {
-      HDstrcpy(new_string, "x");
-      HDstrcat(new_string, string);
-      length++;
-    } else {
-      HDstrcpy(new_string, string);
-    }
-
-
-    /* Convert a null-terminated string to a shorter and longer null
-     * terminated string. */
-
-    /* Create a src_type that holds the UTF-8 string and its final NULL */
-    big_len = length + 1;                     /* +1 byte for final NULL */
-    src_type = mkstr(big_len, H5T_STR_NULLTERM);
-    CHECK(src_type, FAIL, "mkstr");
-    /* Create a dst_type that holds half of the UTF-8 string and a final
-     * NULL */
-    small_len = (length + 1) / 2;
-    dst_type = mkstr(small_len, H5T_STR_NULLTERM);
-    CHECK(dst_type, FAIL, "mkstr");
-
-    /* Fill the buffer with two copies of the UTF-8 string, each with a
-     * terminating NULL.  It will look like "abcdefg\0abcdefg\0". */
-    strncpy(buf, new_string, big_len);
-    strncpy(&buf[big_len], new_string, big_len);
-
-    ret = H5Tconvert(src_type, dst_type, (size_t)2, buf, NULL, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Tconvert");
-
-    /* After conversion, the buffer should look like
-     * "abc\0abc\0abcdefg\0".  Note that this is just what the bytes look
-     * like; UTF-8 characters may well have been truncated.
-     * To check that the conversion worked properly, we'll build this
-     * string manually. */
-    HDstrncpy(cmpbuf, new_string, small_len - 1);
-    cmpbuf[small_len - 1] = '\0';
-    HDstrncpy(&cmpbuf[small_len], new_string, small_len -1);
-    cmpbuf[2 * small_len - 1] = '\0';
-    HDstrcpy(&cmpbuf[2 * small_len], new_string);
-
-    VERIFY(HDmemcmp(buf, cmpbuf, 2*big_len), 0, "HDmemcmp");
-
-    /* Now convert from smaller datatype to bigger datatype.  This should
-     * leave our buffer looking like: "abc\0\0\0\0\0abc\0\0\0\0\0" */
-    ret = H5Tconvert(dst_type, src_type, (size_t)2, buf, NULL, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Tconvert");
-
-    /* First fill the buffer with NULLs */
-    HDmemset(cmpbuf, '\0', (size_t)LONG_BUF_SIZE);
-    /* Copy in the characters */
-    HDstrncpy(cmpbuf, new_string, small_len -1);
-    HDstrncpy(&cmpbuf[big_len], new_string, small_len -1);
-
-    VERIFY(HDmemcmp(buf, cmpbuf, 2*big_len), 0, "HDmemcmp");
-
-    ret = H5Tclose(src_type);
-    CHECK(ret, FAIL, "H5Tclose");
-    ret = H5Tclose(dst_type);
-    CHECK(ret, FAIL, "H5Tclose");
+  /* The following tests are simpler if the UTF-8 string contains
+   * the right number of bytes (even or odd, depending on the test).
+   * We create a 'new_string' whose length is convenient by prepending
+   * an 'x' to 'string' when necessary. */
+  length = strlen(string);
+  if(length % 2 != 1)
+  {
+    strcpy(new_string, "x");
+    strcat(new_string, string);
+    length++;
+  } else {
+    strcpy(new_string, string);
+  }
 
 
-    /* Now test null padding.  Null-padded strings do *not* need
-     * terminating NULLs, so the sizes of the datatypes are slightly
-     * different and we want a string with an even number of characters. */
-    length = HDstrlen(string);
-    if(length % 2 != 0)
-    {
-      HDstrcpy(new_string, "x");
-      HDstrcat(new_string, string);
-      length++;
-    } else {
-      HDstrcpy(new_string, string);
-    }
+  /* Convert a null-terminated string to a shorter and longer null
+   * terminated string. */
 
-    /* Create a src_type that holds the UTF-8 string */
-    big_len = length;
-    src_type = mkstr(big_len, H5T_STR_NULLPAD);
-    CHECK(src_type, FAIL, "mkstr");
-    /* Create a dst_type that holds half of the UTF-8 string */
-    small_len = length / 2;
-    dst_type = mkstr(small_len, H5T_STR_NULLPAD);
-    CHECK(dst_type, FAIL, "mkstr");
+  /* Create a src_type that holds the UTF-8 string and its final NULL */
+  big_len = length + 1;                     /* +1 byte for final NULL */
+  src_type = mkstr(big_len, H5T_STR_NULLTERM);
+  CHECK(src_type, FAIL, "mkstr");
+  /* Create a dst_type that holds half of the UTF-8 string and a final
+   * NULL */
+  small_len = (length +1) / 2;
+  dst_type = mkstr(small_len, H5T_STR_NULLTERM);
+  CHECK(dst_type, FAIL, "mkstr");
 
-    /* Fill the buffer with two copies of the UTF-8 string.
-     * It will look like "abcdefghabcdefgh". */
-    strncpy(buf, new_string, big_len);
-    strncpy(&buf[big_len], new_string, big_len);
+  /* Fill the buffer with two copies of the UTF-8 string, each with a
+   * terminating NULL.  It will look like "abcdefg\0abcdefg\0". */
+  strncpy(buf, new_string, big_len);
+  strncpy(&buf[big_len], new_string, big_len);
 
-    ret = H5Tconvert(src_type, dst_type, (size_t)2, buf, NULL, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Tconvert");
+  ret = H5Tconvert(src_type, dst_type, 2, buf, NULL, H5P_DEFAULT);
+  CHECK(ret, FAIL, "H5Tconvert");
 
-    /* After conversion, the buffer should look like
-     * "abcdabcdabcdefgh".  Note that this is just what the bytes look
-     * like; UTF-8 characters may well have been truncated.
-     * To check that the conversion worked properly, we'll build this
-     * string manually. */
-    HDstrncpy(cmpbuf, new_string, small_len);
-    HDstrncpy(&cmpbuf[small_len], new_string, small_len);
-    HDstrncpy(&cmpbuf[2 * small_len], new_string, big_len);
+  /* After conversion, the buffer should look like
+   * "abc\0abc\0abcdefg\0".  Note that this is just what the bytes look
+   * like; UTF-8 characters may well have been truncated.
+   * To check that the conversion worked properly, we'll build this
+   * string manually. */
+  strncpy(cmpbuf, new_string, small_len -1);
+  cmpbuf[small_len - 1] = '\0';
+  strncpy(&cmpbuf[small_len], new_string, small_len -1);
+  cmpbuf[2 * small_len - 1] = '\0';
+  strcpy(&cmpbuf[2 * small_len], new_string);
 
-    VERIFY(HDmemcmp(buf, cmpbuf, 2*big_len), 0, "HDmemcmp");
+  VERIFY(HDmemcmp(buf, cmpbuf, 2*big_len), 0, "HDmemcmp");
 
-    /* Now convert from smaller datatype to bigger datatype.  This should
-     * leave our buffer looking like: "abcd\0\0\0\0abcd\0\0\0\0" */
-    ret = H5Tconvert(dst_type, src_type, (size_t)2, buf, NULL, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Tconvert");
+  /* Now convert from smaller datatype to bigger datatype.  This should
+   * leave our buffer looking like: "abc\0\0\0\0\0abc\0\0\0\0\0" */
+  ret = H5Tconvert(dst_type, src_type, 2, buf, NULL, H5P_DEFAULT);
+  CHECK(ret, FAIL, "H5Tconvert");
 
-    /* First fill the buffer with NULLs */
-    HDmemset(cmpbuf, '\0', (size_t)LONG_BUF_SIZE);
-    /* Copy in the characters */
-    HDstrncpy(cmpbuf, new_string, small_len);
-    HDstrncpy(&cmpbuf[big_len], new_string, small_len);
+  /* First fill the buffer with NULLs */
+  HDmemset(cmpbuf, '\0', LONG_BUF_SIZE);
+  /* Copy in the characters */
+  strncpy(cmpbuf, new_string, small_len -1);
+  strncpy(&cmpbuf[big_len], new_string, small_len -1);
 
-    VERIFY(HDmemcmp(buf, cmpbuf, 2*big_len), 0, "HDmemcmp");
+  VERIFY(HDmemcmp(buf, cmpbuf, 2*big_len), 0, "HDmemcmp");
 
-    ret = H5Tclose(src_type);
-    CHECK(ret, FAIL, "H5Tclose");
-    ret = H5Tclose(dst_type);
-    CHECK(ret, FAIL, "H5Tclose");
+  ret = H5Tclose(src_type);
+  CHECK(ret, FAIL, "H5Tclose");
+  ret = H5Tclose(dst_type);
+  CHECK(ret, FAIL, "H5Tclose");
 
 
-    /* Test space padding.  This is very similar to null-padding; we can
-       use the same values of length, small_len, and big_len. */
+  /* Now test null padding.  Null-padded strings do *not* need
+   * terminating NULLs, so the sizes of the datatypes are slightly
+   * different and we want a string with an even number of characters. */
+  length = strlen(string);
+  if(length % 2 != 0)
+  {
+    strcpy(new_string, "x");
+    strcat(new_string, string);
+    length++;
+  } else {
+    strcpy(new_string, string);
+  }
 
-    src_type = mkstr(big_len, H5T_STR_SPACEPAD);
-    CHECK(src_type, FAIL, "mkstr");
-    dst_type = mkstr(small_len, H5T_STR_SPACEPAD);
-    CHECK(src_type, FAIL, "mkstr");
+  /* Create a src_type that holds the UTF-8 string */
+  big_len = length;
+  src_type = mkstr(big_len, H5T_STR_NULLPAD);
+  CHECK(src_type, FAIL, "mkstr");
+  /* Create a dst_type that holds half of the UTF-8 string */
+  small_len = length / 2;
+  dst_type = mkstr(small_len, H5T_STR_NULLPAD);
+  CHECK(dst_type, FAIL, "mkstr");
 
-    /* Fill the buffer with two copies of the UTF-8 string.
-     * It will look like "abcdefghabcdefgh". */
-    HDstrcpy(buf, new_string);
-    HDstrcpy(&buf[big_len], new_string);
+  /* Fill the buffer with two copies of the UTF-8 string.
+   * It will look like "abcdefghabcdefgh". */
+  strncpy(buf, new_string, big_len);
+  strncpy(&buf[big_len], new_string, big_len);
 
-    ret = H5Tconvert(src_type, dst_type, (size_t)2, buf, NULL, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Tconvert");
+  ret = H5Tconvert(src_type, dst_type, 2, buf, NULL, H5P_DEFAULT);
+  CHECK(ret, FAIL, "H5Tconvert");
 
-    /* After conversion, the buffer should look like
-     * "abcdabcdabcdefgh".  Note that this is just what the bytes look
-     * like; UTF-8 characters may have been truncated.
-     * To check that the conversion worked properly, we'll build this
-     * string manually. */
-    HDstrncpy(cmpbuf, new_string, small_len);
-    HDstrncpy(&cmpbuf[small_len], new_string, small_len);
-    HDstrncpy(&cmpbuf[2 * small_len], new_string, big_len);
+  /* After conversion, the buffer should look like
+   * "abcdabcdabcdefgh".  Note that this is just what the bytes look
+   * like; UTF-8 characters may well have been truncated.
+   * To check that the conversion worked properly, we'll build this
+   * string manually. */
+  strncpy(cmpbuf, new_string, small_len);
+  strncpy(&cmpbuf[small_len], new_string, small_len);
+  strncpy(&cmpbuf[2 * small_len], new_string, big_len);
 
-    VERIFY(HDmemcmp(buf, cmpbuf, 2*big_len), 0, "HDmemcmp");
+  VERIFY(HDmemcmp(buf, cmpbuf, 2*big_len), 0, "HDmemcmp");
 
-    /* Now convert from smaller datatype to bigger datatype.  This should
-     * leave our buffer looking like: "abcd    abcd    " */
-    ret = H5Tconvert(dst_type, src_type, (size_t)2, buf, NULL, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Tconvert");
+  /* Now convert from smaller datatype to bigger datatype.  This should
+   * leave our buffer looking like: "abcd\0\0\0\0abcd\0\0\0\0" */
+  ret = H5Tconvert(dst_type, src_type, 2, buf, NULL, H5P_DEFAULT);
+  CHECK(ret, FAIL, "H5Tconvert");
 
-    /* First fill the buffer with spaces */
-    HDmemset(cmpbuf, ' ', (size_t)LONG_BUF_SIZE);
-    /* Copy in the characters */
-    HDstrncpy(cmpbuf, new_string, small_len);
-    HDstrncpy(&cmpbuf[big_len], new_string, small_len);
+  /* First fill the buffer with NULLs */
+  HDmemset(cmpbuf, '\0', LONG_BUF_SIZE);
+  /* Copy in the characters */
+  strncpy(cmpbuf, new_string, small_len);
+  strncpy(&cmpbuf[big_len], new_string, small_len);
 
-    VERIFY(HDmemcmp(buf, cmpbuf, 2*big_len), 0, "HDmemcmp");
+  VERIFY(HDmemcmp(buf, cmpbuf, 2*big_len), 0, "HDmemcmp");
 
-    ret = H5Tclose(src_type);
-    CHECK(ret, FAIL, "H5Tclose");
-    ret = H5Tclose(dst_type);
-    CHECK(ret, FAIL, "H5Tclose");
+  ret = H5Tclose(src_type);
+  CHECK(ret, FAIL, "H5Tclose");
+  ret = H5Tclose(dst_type);
+  CHECK(ret, FAIL, "H5Tclose");
+
+
+  /* Test space padding.  This is very similar to null-padding; we can
+     use the same values of length, small_len, and big_len. */
+
+  src_type = mkstr(big_len, H5T_STR_SPACEPAD);
+  CHECK(src_type, FAIL, "mkstr");
+  dst_type = mkstr(small_len, H5T_STR_SPACEPAD);
+  CHECK(src_type, FAIL, "mkstr");
+
+  /* Fill the buffer with two copies of the UTF-8 string.
+   * It will look like "abcdefghabcdefgh". */
+  strcpy(buf, new_string);
+  strcpy(&buf[big_len], new_string);
+
+  ret = H5Tconvert(src_type, dst_type, 2, buf, NULL, H5P_DEFAULT);
+  CHECK(ret, FAIL, "H5Tconvert");
+
+  /* After conversion, the buffer should look like
+   * "abcdabcdabcdefgh".  Note that this is just what the bytes look
+   * like; UTF-8 characters may have been truncated.
+   * To check that the conversion worked properly, we'll build this
+   * string manually. */
+  strncpy(cmpbuf, new_string, small_len);
+  strncpy(&cmpbuf[small_len], new_string, small_len);
+  strncpy(&cmpbuf[2 * small_len], new_string, big_len);
+
+  VERIFY(HDmemcmp(buf, cmpbuf, 2*big_len), 0, "HDmemcmp");
+
+  /* Now convert from smaller datatype to bigger datatype.  This should
+   * leave our buffer looking like: "abcd    abcd    " */
+  ret = H5Tconvert(dst_type, src_type, 2, buf, NULL, H5P_DEFAULT);
+  CHECK(ret, FAIL, "H5Tconvert");
+
+  /* First fill the buffer with spaces */
+  HDmemset(cmpbuf, ' ', LONG_BUF_SIZE);
+  /* Copy in the characters */
+  strncpy(cmpbuf, new_string, small_len);
+  strncpy(&cmpbuf[big_len], new_string, small_len);
+
+  VERIFY(HDmemcmp(buf, cmpbuf, 2*big_len), 0, "HDmemcmp");
+
+  ret = H5Tclose(src_type);
+  CHECK(ret, FAIL, "H5Tclose");
+  ret = H5Tclose(dst_type);
+  CHECK(ret, FAIL, "H5Tclose");
 }
 
 
@@ -323,7 +321,7 @@ void test_strpad(hid_t UNUSED fid, const char *string)
 void test_vl_string(hid_t fid, const char *string)
 {
   hid_t type_id, space_id, dset_id;
-  hsize_t dims = 1;
+  hsize_t dims=1;
   hsize_t size;  /* Number of bytes used */
   char *read_buf[1];
   herr_t ret;
@@ -339,27 +337,27 @@ void test_vl_string(hid_t fid, const char *string)
   CHECK(ret, FAIL, "H5Tset_size");
 
   /* Create a dataset */
-  dset_id = H5Dcreate2(fid, VL_DSET1_NAME, type_id, space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  CHECK(dset_id, FAIL, "H5Dcreate2");
+  dset_id=H5Dcreate(fid, VL_DSET1_NAME, type_id, space_id, H5P_DEFAULT);
+  CHECK(dset_id, FAIL, "H5Dcreate");
 
   /* Write dataset to disk */
-  ret = H5Dwrite(dset_id, type_id, H5S_ALL, H5S_ALL, H5P_DEFAULT, &string);
+  ret=H5Dwrite(dset_id, type_id, H5S_ALL, H5S_ALL, H5P_DEFAULT, &string);
   CHECK(ret, FAIL, "H5Dwrite");
 
   /* Make certain the correct amount of memory will be used */
-  ret = H5Dvlen_get_buf_size(dset_id, type_id, space_id, &size);
+  ret=H5Dvlen_get_buf_size(dset_id, type_id, space_id, &size);
   CHECK(ret, FAIL, "H5Dvlen_get_buf_size");
-  VERIFY(size, (hsize_t)HDstrlen(string) + 1, "H5Dvlen_get_buf_size");
+  VERIFY(size, (hsize_t)strlen(string) + 1, "H5Dvlen_get_buf_size");
 
   /* Read dataset from disk */
-  ret = H5Dread(dset_id, type_id, H5S_ALL, H5S_ALL, H5P_DEFAULT, read_buf);
+  ret=H5Dread(dset_id, type_id, H5S_ALL, H5S_ALL, H5P_DEFAULT, read_buf);
   CHECK(ret, FAIL, "H5Dread");
 
   /* Compare data read in */
-  VERIFY(HDstrcmp(string, read_buf[0]), 0, "strcmp");
+  VERIFY(strcmp(string, read_buf[0]), 0, "strcmp");
 
   /* Reclaim the read VL data */
-  ret = H5Dvlen_reclaim(type_id, space_id, H5P_DEFAULT, read_buf);
+  ret=H5Dvlen_reclaim(type_id, space_id, H5P_DEFAULT, read_buf);
   CHECK(ret, FAIL, "H5Dvlen_reclaim");
 
   /* Close all */
@@ -375,11 +373,6 @@ void test_vl_string(hid_t fid, const char *string)
  * test_objnames
  * Tests that UTF-8 can be used for object names in the file.
  * Tests groups, datasets, named datatypes, and soft links.
- * Note that this test doesn't actually mark the names as being
- * in UTF-8.  At the time this test was written, that feature
- * didn't exist in HDF5, and when the character encoding property
- * was added to links it didn't change how they were stored in the file,
- * -JML 2/2/2006
  */
 void test_objnames(hid_t fid, const char* string)
 {
@@ -392,57 +385,57 @@ void test_objnames(hid_t fid, const char* string)
   herr_t ret;
 
   /* Create a group with a UTF-8 name */
-  grp_id = H5Gcreate2(fid, string, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  CHECK(grp_id, FAIL, "H5Gcreate2");
+  grp_id = H5Gcreate(fid, string, 0);
+  CHECK(grp_id, FAIL, "H5Gcreate");
 
   /* Set a comment on the group to test that we can access the group
    * Also test that UTF-8 comments can be read.
    */
-  ret = H5Oset_comment_by_name(fid, string, string, H5P_DEFAULT);
-  CHECK(ret, FAIL, "H5Oset_comment_by_name");
-  ret = H5Oget_comment_by_name(fid, string, read_buf, (size_t)MAX_STRING_LENGTH, H5P_DEFAULT);
-  CHECK(ret, FAIL, "H5Oget_comment_by_name");
+  ret = H5Gset_comment(fid, string, string);
+  CHECK(ret, FAIL, "H5Gset_comment");
+  ret = H5Gget_comment(fid, string, MAX_STRING_LENGTH, read_buf);
+  CHECK(ret, FAIL, "H5Gget_comment");
 
   ret = H5Gclose(grp_id);
   CHECK(ret, FAIL, "H5Gclose");
 
-  VERIFY(HDstrcmp(string, read_buf), 0, "strcmp");
+  VERIFY(strcmp(string, read_buf), 0, "strcmp");
 
   /* Create a new dataset with a UTF-8 name */
-  grp1_id = H5Gcreate2(fid, GROUP1_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  CHECK(grp1_id, FAIL, "H5Gcreate2");
+  grp1_id = H5Gcreate(fid, GROUP1_NAME, 0);
+  CHECK(grp1_id, FAIL, "H5Gcreate");
 
   space_id = H5Screate_simple(RANK, &dims, NULL);
   CHECK(space_id, FAIL, "H5Screate_simple");
-  dset_id = H5Dcreate2(grp1_id, string, H5T_NATIVE_INT, space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  CHECK(dset_id, FAIL, "H5Dcreate2");
+  dset_id=H5Dcreate(grp1_id, string, H5T_NATIVE_INT, space_id, H5P_DEFAULT);
+  CHECK(dset_id, FAIL, "H5Dcreate");
 
   /* Make sure that dataset can be opened again */
-  ret = H5Dclose(dset_id);
+  ret=H5Dclose(dset_id);
   CHECK(ret, FAIL, "H5Dclose");
-  ret = H5Sclose(space_id);
+  ret=H5Sclose(space_id);
   CHECK(ret, FAIL, "H5Sclose");
 
-  dset_id = H5Dopen2(grp1_id, string, H5P_DEFAULT);
-  CHECK(ret, FAIL, "H5Dopen2");
-  ret = H5Dclose(dset_id);
+  dset_id=H5Dopen(grp1_id, string);
+  CHECK(ret, FAIL, "H5Dopen");
+  ret=H5Dclose(dset_id);
   CHECK(ret, FAIL, "H5Dclose");
   ret = H5Gclose(grp1_id);
   CHECK(ret, FAIL, "H5Gclose");
 
   /* Do the same for a named datatype */
-  grp2_id = H5Gcreate2(fid, GROUP2_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  CHECK(grp2_id, FAIL, "H5Gcreate2");
+  grp2_id = H5Gcreate(fid, GROUP2_NAME, 0);
+  CHECK(grp2_id, FAIL, "H5Gcreate");
 
-  type_id = H5Tcreate(H5T_OPAQUE, (size_t)1);
+  type_id = H5Tcreate(H5T_OPAQUE, 1);
   CHECK(type_id, FAIL, "H5Tcreate");
-  ret = H5Tcommit2(grp2_id, string, type_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  CHECK(type_id, FAIL, "H5Tcommit2");
+  ret = H5Tcommit(grp2_id, string, type_id);
+  CHECK(type_id, FAIL, "H5Tcommit");
   ret = H5Tclose(type_id);
   CHECK(type_id, FAIL, "H5Tclose");
 
-  type_id = H5Topen2(grp2_id, string, H5P_DEFAULT);
-  CHECK(type_id, FAIL, "H5Topen2");
+  type_id = H5Topen(grp2_id, string);
+  CHECK(type_id, FAIL, "H5Topen");
   ret = H5Tclose(type_id);
   CHECK(type_id, FAIL, "H5Tclose");
 
@@ -451,8 +444,8 @@ void test_objnames(hid_t fid, const char* string)
 
   space_id = H5Screate_simple(RANK, &dims, NULL);
   CHECK(space_id, FAIL, "H5Screate_simple");
-  dset_id = H5Dcreate2(grp2_id, DSET3_NAME, H5T_STD_REF_OBJ, space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  CHECK(ret, FAIL, "H5Dcreate2");
+  dset_id=H5Dcreate(grp2_id, DSET3_NAME, H5T_STD_REF_OBJ, space_id, H5P_DEFAULT);
+  CHECK(ret, FAIL, "H5Dcreate");
 
   /* Create reference to named datatype */
   ret = H5Rcreate(&obj_ref, grp2_id, string, H5R_OBJECT, -1);
@@ -484,20 +477,20 @@ void test_objnames(hid_t fid, const char* string)
    * pointing through the hard link to the datatype.  Give the soft
    * link a name in UTF-8.  Ensure that the soft link works. */
 
-  grp3_id = H5Gcreate2(fid, GROUP3_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  CHECK(grp3_id, FAIL, "H5Gcreate2");
+  grp3_id = H5Gcreate(fid, GROUP3_NAME, 0);
+  CHECK(grp3_id, FAIL, "H5Gcreate");
 
-  ret = H5Lcreate_hard(fid, GROUP2_NAME, grp3_id, GROUP2_NAME, H5P_DEFAULT, H5P_DEFAULT);
-  CHECK(ret, FAIL, "H5Lcreate_hard");
+  ret = H5Glink2(fid, GROUP2_NAME, H5G_LINK_HARD, grp3_id, GROUP2_NAME);
+  CHECK(ret, FAIL, "H5Glink2");
   HDstrcpy(path_buf, GROUP2_NAME);
   HDstrcat(path_buf, "/");
   HDstrcat(path_buf, string);
-  ret = H5Lcreate_hard(grp3_id, path_buf, H5L_SAME_LOC, string, H5P_DEFAULT, H5P_DEFAULT);
-  CHECK(ret, FAIL, "H5Lcreate_hard");
+  ret = H5Glink(grp3_id, H5G_LINK_SOFT, path_buf, string);
+  CHECK(ret, FAIL, "H5Glink");
 
   /* Open named datatype using soft link */
-  type_id = H5Topen2(grp3_id, string, H5P_DEFAULT);
-  CHECK(type_id, FAIL, "H5Topen2");
+  type_id = H5Topen(grp3_id, string);
+  CHECK(type_id, FAIL, "H5Topen");
 
   ret = H5Tclose(type_id);
   CHECK(type_id, FAIL, "H5Tclose");
@@ -520,20 +513,20 @@ void test_attrname(hid_t fid, const char * string)
  /* Create a new group and give it an attribute whose
   * name and value are UTF-8 strings.
   */
-  group_id = H5Gcreate2(fid, GROUP4_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  CHECK(group_id, FAIL, "H5Gcreate2");
+  group_id = H5Gcreate(fid, GROUP4_NAME, 0);
+  CHECK(group_id, FAIL, "H5Gcreate");
 
   space_id = H5Screate_simple(RANK, &dims, NULL);
   CHECK(space_id, FAIL, "H5Screate_simple");
   dtype_id = H5Tcopy(H5T_C_S1);
   CHECK(dtype_id, FAIL, "H5Tcopy");
-  ret = H5Tset_size(dtype_id, (size_t)MAX_STRING_LENGTH);
+  ret=H5Tset_size(dtype_id, MAX_STRING_LENGTH);
   CHECK(ret, FAIL, "H5Tset_size");
 
   /* Create the attribute and check that its name is correct */
-  attr_id = H5Acreate2(group_id, string, dtype_id, space_id, H5P_DEFAULT, H5P_DEFAULT);
-  CHECK(attr_id, FAIL, "H5Acreate2");
-  ret = H5Aget_name(attr_id, (size_t)MAX_STRING_LENGTH, read_buf);
+  attr_id = H5Acreate(group_id, string, dtype_id, space_id, H5P_DEFAULT);
+  CHECK(attr_id, FAIL, "H5Acreate");
+  ret = H5Aget_name(attr_id, MAX_STRING_LENGTH, read_buf);
   CHECK(ret, FAIL, "H5Aget_name");
   ret = strcmp(read_buf, string);
   VERIFY(ret, 0, "strcmp");
@@ -559,7 +552,7 @@ void test_attrname(hid_t fid, const char * string)
 }
 
 /*
- * test_compound
+ * test_attrname
  * Test that compound datatypes can have UTF-8 field names.
  */
 void test_compound(hid_t fid, const char * string)
@@ -600,8 +593,8 @@ void test_compound(hid_t fid, const char * string)
   CHECK(ret, FAIL, "H5Tinsert");
 
   /* Check that the field name was stored correctly */
-  readbuf = H5Tget_member_name(s1_tid, 0);
-  ret = HDstrcmp(readbuf, string);
+  readbuf=H5Tget_member_name(s1_tid, 0);
+  ret = strcmp(readbuf, string);
   VERIFY(ret, 0, "strcmp");
   free(readbuf);
 
@@ -622,8 +615,8 @@ void test_compound(hid_t fid, const char * string)
   /* Create the dataspace and dataset. */
   space_id = H5Screate_simple(1, &dim, NULL);
   CHECK(space_id, FAIL, "H5Screate_simple");
-  dset_id = H5Dcreate2(fid, DSET4_NAME, s1_tid, space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  CHECK(dset_id, FAIL, "H5Dcreate2");
+  dset_id = H5Dcreate(fid, DSET4_NAME, s1_tid, space_id, H5P_DEFAULT);
+  CHECK(dset_id, FAIL, "H5Dcreate");
 
   /* Write data to the dataset. */
   ret = H5Dwrite(dset_id, s1_tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, &s1);
@@ -686,7 +679,7 @@ void test_enum(hid_t UNUSED fid, const char * string)
   ret = H5Tenum_valueof(type_id, string, &val);
   CHECK(ret, FAIL, "H5Tenum_valueof");
   VERIFY(val, E1_WHITE, "H5Tenum_valueof");
-  ret = H5Tenum_nameof(type_id, &val, readbuf, (size_t)MAX_STRING_LENGTH);
+  ret = H5Tenum_nameof(type_id, &val, readbuf, MAX_STRING_LENGTH);
   CHECK(ret, FAIL, "H5Tenum_nameof");
   ret = strcmp(readbuf, string);
   VERIFY(ret, 0, "strcmp");
@@ -707,7 +700,7 @@ void test_opaque(hid_t UNUSED fid, const char * string)
   herr_t ret;
 
   /* Create an opaque type and give it a UTF-8 tag */
-  type_id = H5Tcreate(H5T_OPAQUE, (size_t)4);
+  type_id = H5Tcreate(H5T_OPAQUE, 4);
   CHECK(type_id, FAIL, "H5Tcreate");
   ret = H5Tset_tag(type_id, string);
   CHECK(ret, FAIL, "H5Tset_tag");
@@ -732,9 +725,9 @@ void test_opaque(hid_t UNUSED fid, const char * string)
 static hid_t mkstr(size_t len, H5T_str_t strpad)
 {
     hid_t       t;
-    if((t = H5Tcopy(H5T_C_S1)) < 0) return -1;
-    if(H5Tset_size(t, len) < 0) return -1;
-    if(H5Tset_strpad(t, strpad) < 0) return -1;
+    if ((t=H5Tcopy(H5T_C_S1))<0) return -1;
+    if (H5Tset_size(t, len)<0) return -1;
+    if (H5Tset_strpad(t, strpad)<0) return -1;
     return t;
 }
 

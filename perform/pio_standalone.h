@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef PIO_STANDALONE_H__
@@ -47,9 +46,9 @@
  * And now for a couple non-Posix functions...  Watch out for systems that
  * define these in terms of macros.
  */
-#ifdef _WIN32
+#ifdef WIN32
 #define HDstrdup(S)				   _strdup(S)
-#else /* _WIN32 */
+#else /* WIN32 */
 
 #if !defined strdup && !defined H5_HAVE_STRDUP
 extern char *strdup(const char *s);
@@ -57,7 +56,7 @@ extern char *strdup(const char *s);
 
 #define HDstrdup(S)				  strdup(S)
 
-#endif /* _WIN32 */
+#endif /* WIN32 */
 
 #define HDstrcmp(S,T)			  strcmp(S,T)
 #define HDstrlen(S)				  strlen(S)
@@ -74,7 +73,7 @@ extern char *strdup(const char *s);
 #endif
 #define HDclose(F)				  close(F)
 
-#ifdef _WIN32
+#ifdef WIN32
      #ifdef __MWERKS__
         #define HDlseek(F,O,W)  lseek(F,O,W)
      #else /*MSVS */
@@ -95,7 +94,7 @@ extern char *strdup(const char *s);
 
 #define HDread(F,M,Z)		read(F,M,Z)
 
-#ifdef _WIN32
+#ifdef WIN32
      #ifdef __MWERKS__
      #define HDstat(S,B)   stat(S,B)
      #else /*MSVC*/
@@ -105,7 +104,7 @@ extern char *strdup(const char *s);
 #define HDstat(S,B)  stat(S,B)
 #endif
 
-#ifdef _WIN32
+#ifdef WIN32
      #ifdef __MWERKS__
      #define HDfstat(F,B)       fstat(F,B)
      typedef struct stat		h5_stat_t;

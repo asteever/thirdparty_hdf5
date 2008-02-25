@@ -1,6 +1,5 @@
 // C++ informative line for the emacs editor: -*- C++ -*-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -10,8 +9,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 // Class AtomType is a base class, from which IntType, FloatType, StrType,
@@ -25,12 +24,11 @@
 #ifndef H5_NO_NAMESPACE
 namespace H5 {
 #endif
-
 class H5_DLLCPP AtomType : public DataType {
    public:
 	// Returns the byte order of an atomic datatype.
-	H5T_order_t getOrder() const;
 	H5T_order_t getOrder( H5std_string& order_string ) const;
+	H5T_order_t getOrder() const;
 
 	// Sets the byte ordering of an atomic datatype.
 	void setOrder( H5T_order_t order ) const;
@@ -57,8 +55,8 @@ class H5_DLLCPP AtomType : public DataType {
 	// Sets the total size for an atomic datatype.
 	void setSize( size_t size ) const;
 
-	// Returns this class name
-	virtual H5std_string fromClass () const { return("AtomType"); }
+        // Returns this class name
+        virtual H5std_string fromClass () const { return("AtomType"); }
 
 	// Copy constructor - makes copy of the original object
 	AtomType( const AtomType& original );

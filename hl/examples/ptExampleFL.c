@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "hdf5.h"
@@ -51,9 +50,8 @@ int main(void)
  fid=H5Fcreate("packet_table_FLexample.h5",H5F_ACC_TRUNC,H5P_DEFAULT,H5P_DEFAULT);
 
     /* Create a fixed-length packet table within the file */
-    /* This table's "packets" will be simple integers and it will use compression
-     * level 5. */
- ptable = H5PTcreate_fl(fid, "Packet Test Dataset", H5T_NATIVE_INT, (hsize_t)100, 5);
+    /* This table's "packets" will be simple integers. */
+ ptable = H5PTcreate_fl(fid, "Packet Test Dataset", H5T_NATIVE_INT, (hsize_t)1);
  if(ptable == H5I_INVALID_HID)
      goto out;
 
@@ -72,7 +70,7 @@ int main(void)
  if(err < 0)
      goto out;
 
- printf("Number of packets in packet table after five appends: %d\n", (int)count);
+ printf("Number of packets in packet table after five appends: %d\n", count);
 
     /* Initialize packet table's "current record" */
  err = H5PTcreate_index(ptable);

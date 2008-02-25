@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -50,7 +49,6 @@ typedef struct H5FD_core_t {
     haddr_t	eoa;			/*end of allocated region	*/
     haddr_t	eof;			/*current allocated size	*/
     size_t	increment;		/*multiples for mem allocation	*/
-    hbool_t	backing_store;		/*write to file name on flush	*/
     int		fd;			/*backing store file descriptor	*/
     hbool_t	dirty;			/*changes not saved?		*/
 } H5FD_core_t;
@@ -91,8 +89,8 @@ static H5FD_t *H5FD_core_open(const char *name, unsigned flags, hid_t fapl_id,
 			      haddr_t maxaddr);
 static herr_t H5FD_core_close(H5FD_t *_file);
 static int H5FD_core_cmp(const H5FD_t *_f1, const H5FD_t *_f2);
-static haddr_t H5FD_core_get_eoa(const H5FD_t *_file, H5FD_mem_t type);
-static herr_t H5FD_core_set_eoa(H5FD_t *_file, H5FD_mem_t type, haddr_t addr);
+static haddr_t H5FD_core_get_eoa(const H5FD_t *_file);
+static herr_t H5FD_core_set_eoa(H5FD_t *_file, haddr_t addr);
 static haddr_t H5FD_core_get_eof(const H5FD_t *_file);
 static herr_t  H5FD_core_get_handle(H5FD_t *_file, hid_t fapl, void** file_handle);
 static herr_t H5FD_core_read(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, haddr_t addr,
@@ -248,7 +246,7 @@ H5Pset_fapl_core(hid_t fapl_id, size_t increment, hbool_t backing_store)
     herr_t ret_value;
 
     FUNC_ENTER_API(H5Pset_fapl_core, FAIL)
-    H5TRACE3("e", "izb", fapl_id, increment, backing_store);
+    H5TRACE3("e","izb",fapl_id,increment,backing_store);
 
     /* Check argument */
     if(NULL == (plist = H5P_object_verify(fapl_id,H5P_FILE_ACCESS)))
@@ -295,7 +293,7 @@ H5Pget_fapl_core(hid_t fapl_id, size_t *increment/*out*/,
     herr_t      ret_value=SUCCEED;       /* Return value */
 
     FUNC_ENTER_API(H5Pget_fapl_core, FAIL)
-    H5TRACE3("e", "ixx", fapl_id, increment, backing_store);
+    H5TRACE3("e","ixx",fapl_id,increment,backing_store);
 
     if(NULL == (plist = H5P_object_verify(fapl_id,H5P_FILE_ACCESS)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list")
@@ -370,29 +368,23 @@ done:
  * Modifications:
  *		Robb Matzke, 1999-10-19
  *		The backing store file is created and opened if specified.
- *              
- *              Raymond Lu, 2006-11-30
- *              Enabled the driver to read an existing file depending on 
- *              the setting of the backing_store and file open flags.
  *-------------------------------------------------------------------------
  */
 static H5FD_t *
-H5FD_core_open(const char *name, unsigned flags, hid_t fapl_id,
+H5FD_core_open(const char *name, unsigned UNUSED flags, hid_t fapl_id,
 	       haddr_t maxaddr)
 {
-    int			o_flags;
     H5FD_core_t		*file=NULL;
     H5FD_core_fapl_t	*fa=NULL;
     H5P_genplist_t *plist;      /* Property list pointer */
-    h5_stat_t		sb;
     int			fd=-1;
     H5FD_t		*ret_value;
 
     FUNC_ENTER_NOAPI(H5FD_core_open, NULL)
 
     /* Check arguments */
-    if (!name || !*name)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "invalid file name")
+    if (!(H5F_ACC_CREAT & flags))
+        HGOTO_ERROR(H5E_ARGS, H5E_UNSUPPORTED, NULL, "must create core files, not open them")
     if (0==maxaddr || HADDR_UNDEF==maxaddr)
         HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, NULL, "bogus maxaddr")
     if (ADDR_OVERFLOW(maxaddr))
@@ -403,25 +395,17 @@ H5FD_core_open(const char *name, unsigned flags, hid_t fapl_id,
         fa = H5P_get_driver_info(plist);
     } /* end if */
 
-    /* Build the open flags */
-    o_flags = (H5F_ACC_RDWR & flags) ? O_RDWR : O_RDONLY;
-    if (H5F_ACC_TRUNC & flags) o_flags |= O_TRUNC;
-    if (H5F_ACC_CREAT & flags) o_flags |= O_CREAT;
-    if (H5F_ACC_EXCL & flags) o_flags |= O_EXCL;
-
-    /* Open backing store.  The only case that backing store is off is when
-     * the backing_store flag is off and H5F_ACC_CREAT is on. */
-    if(fa->backing_store || !(H5F_ACC_CREAT & flags)) {
-        if (fa && (fd=HDopen(name, o_flags, 0666))<0)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open file")
-    }
+    /* Open backing store */
+    if (fa && fa->backing_store && name &&
+            (fd=HDopen(name, (O_CREAT|O_TRUNC|O_RDWR), 0666))<0)
+        HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to open backing store")
 
     /* Create the new file struct */
     if (NULL==(file=H5MM_calloc(sizeof(H5FD_core_t))))
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "unable to allocate file struct")
     file->fd = fd;
     if (name && *name)
-        file->name = H5MM_xstrdup(name);
+        file->name = HDstrdup(name);
 
     /*
      * The increment comes from either the file access property list or the
@@ -429,34 +413,6 @@ H5FD_core_open(const char *name, unsigned flags, hid_t fapl_id,
      * the default value instead.
      */
     file->increment = (fa && fa->increment>0) ?  fa->increment : H5FD_CORE_INCREMENT;
-
-    /* If save data in backing store. */
-    file->backing_store = fa->backing_store;
-
-    /* If an existing file is opened, load the whole file into memory. */
-    if(!(H5F_ACC_CREAT & flags)) {
-        unsigned char *x=NULL;
-        size_t size;
-
-        if (HDfstat(file->fd, &sb)<0)
-            HSYS_GOTO_ERROR(H5E_FILE, H5E_BADFILE, NULL, "unable to fstat file")
-
-	size = (size_t)sb.st_size;
-
-        if(size) {
-            if (NULL==file->mem)
-                x = (unsigned char*)H5MM_malloc(size);
-
-            if (!x)
-                HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "unable to allocate memory block")
-
-            file->mem = x;
-            file->eof = size;
-
-            if(HDread(file->fd, file->mem, size)<0)
-                HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to read file")
-        }
-    }
 
     /* Set return value */
     ret_value=(H5FD_t *)file;
@@ -571,14 +527,11 @@ done:
  *              Monday, August  2, 1999
  *
  * Modifications:
- *              Raymond Lu
- *              21 Dec. 2006
- *              Added the parameter TYPE.  It's only used for MULTI driver.
  *
  *-------------------------------------------------------------------------
  */
 static haddr_t
-H5FD_core_get_eoa(const H5FD_t *_file, H5FD_mem_t UNUSED type)
+H5FD_core_get_eoa(const H5FD_t *_file)
 {
     haddr_t ret_value;   /* Return value */
 
@@ -609,14 +562,11 @@ done:
  *              Thursday, July 29, 1999
  *
  * Modifications:
- *              Raymond Lu
- *              21 Dec. 2006
- *              Added the parameter TYPE.  It's only used for MULTI driver.
  *
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FD_core_set_eoa(H5FD_t *_file, H5FD_mem_t UNUSED type, haddr_t addr)
+H5FD_core_set_eoa(H5FD_t *_file, haddr_t addr)
 {
     H5FD_core_t	*file = (H5FD_core_t*)_file;
     herr_t      ret_value=SUCCEED;       /* Return value */
@@ -826,9 +776,9 @@ H5FD_core_write(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, had
             x = H5MM_malloc(new_eof);
         else
             x = H5MM_realloc(file->mem, new_eof);
-#ifdef H5_CLEAR_MEMORY
+#ifdef H5_USING_PURIFY
 HDmemset(x + file->eof, 0, (size_t)(new_eof - file->eof));
-#endif /* H5_CLEAR_MEMORY */
+#endif /* H5_USING_PURIFY */
         if (!x)
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "unable to allocate memory block")
         file->mem = x;
@@ -858,9 +808,7 @@ done:
  *              Friday, October 15, 1999
  *
  * Modifications:
- *              Raymond Lu, 2006-11-30
- *              Added a condition check for backing store flag, for an
- *              existing file can be opened for read and write now. 
+ *
  *-------------------------------------------------------------------------
  */
 /* ARGSUSED */
@@ -873,7 +821,7 @@ H5FD_core_flush(H5FD_t *_file, hid_t UNUSED dxpl_id, unsigned UNUSED closing)
     FUNC_ENTER_NOAPI(H5FD_core_flush, FAIL)
 
     /* Write to backing store */
-    if (file->dirty && file->fd>=0 && file->backing_store) {
+    if (file->dirty && file->fd>=0) {
         haddr_t size = file->eof;
         unsigned char *ptr = file->mem;
 

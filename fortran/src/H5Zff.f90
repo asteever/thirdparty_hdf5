@@ -1,5 +1,4 @@
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!   Copyright by The HDF Group.                                               *
 !   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
@@ -9,8 +8,8 @@
 !   of the source code distribution tree; Copyright.html can be found at the  *
 !   root level of an installed copy of the electronic HDF5 document set and   *
 !   is linked from the top-level documents page.  It can also be found at     *
-!   http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
-!   access to either file, you may request a copy from help@hdfgroup.org.     *
+!   http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+!   access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
 !
 !
@@ -63,7 +62,7 @@
               INTEGER FUNCTION h5zunregister_c (filter)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5ZUNREGISTER_C':: h5zunregister_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5ZUNREGISTER_C':: h5zunregister_c
               !DEC$ ENDIF
               INTEGER, INTENT(IN) :: filter
               END FUNCTION h5zunregister_c
@@ -118,7 +117,7 @@
               INTEGER FUNCTION h5zfilter_avail_c(filter, flag) 
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5ZFILTER_AVAIL_C'::h5zfilter_avail_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5ZFILTER_AVAIL_C'::h5zfilter_avail_c
               !DEC$ ENDIF
               INTEGER, INTENT(IN) :: filter
               INTEGER :: flag
@@ -182,7 +181,7 @@
               INTEGER FUNCTION h5zget_filter_info_c(filter, config_flags) 
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5ZGET_FILTER_INFO_C'::h5zget_filter_info_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5ZGET_FILTER_INFO_C'::h5zget_filter_info_c
               !DEC$ ENDIF
               INTEGER, INTENT(IN) :: filter
               INTEGER, INTENT(OUT) :: config_flags

@@ -1,5 +1,4 @@
 #
-# Copyright by The HDF Group.
 # Copyright by the Board of Trustees of the University of Illinois.
 # All rights reserved.
 #
@@ -9,8 +8,8 @@
 # of the source code distribution tree; Copyright.html can be found at the
 # root level of an installed copy of the electronic HDF5 document set and
 # is linked from the top-level documents page.  It can also be found at
-# http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-# access to either file, you may request a copy from help@hdfgroup.org.
+# http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
+# access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 ##
 ## Makefile.am
 ## Run automake to generate a Makefile.in from this file.
@@ -24,7 +23,6 @@ include $(top_srcdir)/config/commence.am
 # These are the programs that 'make all' or 'make prog' will build and
 # which 'make check' will run.  List them in the order they should be run.
 TEST_PROG=create readdata writedata compound extend_ds chunks h5group
-TEST_SCRIPT=testh5c++.sh
 
 # These are the example files to be installed
 INSTALL_FILES=create.cpp readdata.cpp writedata.cpp compound.cpp         \
@@ -41,8 +39,8 @@ HDF_CXX=yes
 EXAMPLEDIR=$(docdir)/hdf5/examples/c++
 
 # How to build programs using h5c++
-$(EXTRA_PROG): $(H5CPP)
-	$(H5CPP) $(H5CCFLAGS) $(CPPFLAGS) -o $@ $(srcdir)/$@.cpp
+$(EXTRA_PROG): $(LIBHDF5) $(LIBH5CPP)
+	$(H5CPP) $(CPPFLAGS) -o $@ $(srcdir)/$@.cpp
 
 # List dependencies for each program.  Normally, automake would take
 # care of this for us, but if we tell automake about the programs it

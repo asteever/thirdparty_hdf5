@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* This files contains C stubs for H5F Fortran APIs */
@@ -497,9 +496,9 @@ nh5fget_freespace_c ( hid_t_f *file_id , hssize_t_f *free_space)
 int_f
 nh5fget_name_c(hid_t_f *obj_id, size_t_f *size, _fcd buf, size_t_f *buflen)
 {
-    char *c_buf = NULL;           /* Buffer to hold C string */
-    ssize_t size_c = -1;
-    int_f ret_value = 0;          /* Return value */
+    char *c_buf=NULL;           /* Buffer to hold C string */
+    ssize_t size_c;
+    int_f ret_value=0;          /* Return value */
 
      /*
       * Allocate buffer to hold name of an attribute

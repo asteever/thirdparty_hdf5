@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* common definitions used by all parallel hdf5 test programs. */
@@ -55,8 +54,6 @@ enum H5TEST_COLL_CHUNK_API {API_NONE=0,API_LINK_HARD,
 #define FACC_MULTI      0x4     /* Multi File */
 #define FACC_MPIPOSIX   0x8     /* MPIPOSIX */
 
-#define DXFER_COLLECTIVE_IO 0x1  /* Collective IO*/
-#define DXFER_INDEPENDENT_IO 0x2 /* Independent IO collectively */
 /*Constants for collective chunk definitions */
 #define SPACE_DIM1 24
 #define SPACE_DIM2 4
@@ -188,10 +185,9 @@ typedef int DATATYPE;
 extern int dim0, dim1;				/*Dataset dimensions */
 extern int chunkdim0, chunkdim1;		/*Chunk dimensions */
 extern int nerrors;				/*errors count */
-extern H5E_auto2_t old_func;			/* previous error handler */
+extern H5E_auto_t old_func;			/* previous error handler */
 extern void *old_client_data;			/*previous error handler arg.*/
 extern int facc_type;				/*Test file access type */
-extern int dxfer_coll_type;
 
 /* Test program prototypes */
 void multiple_dset_write(void);
@@ -211,9 +207,7 @@ void dataset_readInd(void);
 void dataset_readAll(void);
 void extend_readInd(void);
 void extend_readAll(void);
-void none_selection_chunk(void);
 void test_chunk_alloc(void);
-void test_filter_read(void);
 void compact_dataset(void);
 void null_dataset(void);
 void big_dataset(void);

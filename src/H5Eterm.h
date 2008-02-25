@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* Generated automatically by bin/make_err -- do not edit */
@@ -26,7 +25,6 @@ H5E_DATASET_g=
 H5E_FUNC_g=    
 H5E_STORAGE_g=    
 H5E_FILE_g=    
-H5E_SOHM_g=    
 H5E_SYM_g=    
 H5E_VFL_g=    
 H5E_INTERNAL_g=    
@@ -35,7 +33,6 @@ H5E_REFERENCE_g=
 H5E_DATASPACE_g=    
 H5E_RESOURCE_g=    
 H5E_PLIST_g=    
-H5E_LINK_g=    
 H5E_DATATYPE_g=    
 H5E_RS_g=    
 H5E_HEAP_g=    
@@ -50,7 +47,6 @@ H5E_TST_g=
 H5E_ARGS_g=    
 H5E_ERROR_g=    
 H5E_PLINE_g=    
-H5E_FSPACE_g=    
 H5E_CACHE_g= (-1);
 
 /* Reset minor error IDs */
@@ -73,16 +69,12 @@ H5E_ALREADYEXISTS_g=
 H5E_CANTLOCK_g=    
 H5E_CANTUNLOCK_g=    
 H5E_CANTGC_g=    
-H5E_CANTGETSIZE_g=    
-H5E_OBJOPEN_g=
+H5E_CANTGETSIZE_g=
 
 /* Heap errors */    
 H5E_CANTRESTORE_g=    
 H5E_CANTCOMPUTE_g=    
-H5E_CANTEXTEND_g=    
-H5E_CANTATTACH_g=    
-H5E_CANTUPDATE_g=    
-H5E_CANTOPERATE_g=
+H5E_CANTEXTEND_g=
 
 /* Function entry/exit interface errors */    
 H5E_CANTINIT_g=    
@@ -94,11 +86,6 @@ H5E_CANTGET_g=
 H5E_CANTSET_g=    
 H5E_DUPCLASS_g=
 
-/* Free space errors */    
-H5E_CANTMERGE_g=    
-H5E_CANTREVIVE_g=    
-H5E_CANTSHRINK_g=
-
 /* Object header related errors */    
 H5E_LINKCOUNT_g=    
 H5E_VERSION_g=    
@@ -106,8 +93,7 @@ H5E_ALIGNMENT_g=
 H5E_BADMESG_g=    
 H5E_CANTDELETE_g=    
 H5E_BADITER_g=    
-H5E_CANTPACK_g=    
-H5E_CANTRESET_g=
+H5E_CANTPACK_g=
 
 /* System level errors */    
 H5E_SYSERRSTR_g=
@@ -117,13 +103,14 @@ H5E_NOFILTER_g=
 H5E_CALLBACK_g=    
 H5E_CANAPPLY_g=    
 H5E_SETLOCAL_g=    
-H5E_NOENCODER_g=    
-H5E_CANTFILTER_g=
+H5E_NOENCODER_g=
 
 /* Group related errors */    
 H5E_CANTOPENOBJ_g=    
 H5E_CANTCLOSEOBJ_g=    
 H5E_COMPLEN_g=    
+H5E_LINK_g=    
+H5E_SLINK_g=    
 H5E_PATH_g=
 
 /* No error */    
@@ -162,16 +149,7 @@ H5E_CANTUNPROTECT_g=
 H5E_CANTPIN_g=    
 H5E_CANTUNPIN_g=    
 H5E_CANTMARKDIRTY_g=    
-H5E_CANTDIRTY_g=    
-H5E_CANTEXPUNGE_g=    
-H5E_CANTRESIZE_g=
-
-/* Link related errors */    
-H5E_TRAVERSE_g=    
-H5E_NLINKS_g=    
-H5E_NOTREGISTERED_g=    
-H5E_CANTMOVE_g=    
-H5E_CANTSORT_g=
+H5E_CANTDIRTY_g=
 
 /* Parallel MPI errors */    
 H5E_MPI_g=    
@@ -186,13 +164,6 @@ H5E_CANTNEXT_g=
 H5E_BADSELECT_g=    
 H5E_CANTCOMPARE_g=
 
-/* Argument errors */    
-H5E_UNINITIALIZED_g=    
-H5E_UNSUPPORTED_g=    
-H5E_BADTYPE_g=    
-H5E_BADRANGE_g=    
-H5E_BADVALUE_g=
-
 /* B-tree related errors */    
 H5E_NOTFOUND_g=    
 H5E_EXISTS_g=    
@@ -203,8 +174,14 @@ H5E_CANTREDISTRIBUTE_g=
 H5E_CANTSWAP_g=    
 H5E_CANTINSERT_g=    
 H5E_CANTLIST_g=    
-H5E_CANTMODIFY_g=    
-H5E_CANTREMOVE_g=
+H5E_CANTMODIFY_g=
+
+/* Argument errors */    
+H5E_UNINITIALIZED_g=    
+H5E_UNSUPPORTED_g=    
+H5E_BADTYPE_g=    
+H5E_BADRANGE_g=    
+H5E_BADVALUE_g=
 
 /* Datatype conversion errors */    
 H5E_CANTCONVERT_g=    

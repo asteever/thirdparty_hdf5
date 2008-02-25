@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <string.h>
@@ -29,75 +28,19 @@ int  input_len;
 char *myinput;
 int  indent = 0;
 
-
-
-
 /*-------------------------------------------------------------------------
  *
  * internal functions
  *
  *-------------------------------------------------------------------------
  */
-static herr_t H5LT_get_attribute_mem(hid_t loc_id,
-                           const char *obj_name,
-                           const char *attr_name,
-                           hid_t mem_type_id,
-                           void *data);
 
-/*-------------------------------------------------------------------------
- * Function: H5LT_make_dataset
- *
- * Purpose: Creates and writes a dataset of a type tid
- *
- * Return: Success: 0, Failure: -1
- *
- * Programmer: Quincey Koziol, koziol@hdfgroup.org
- *
- * Date: October 10, 2007
- *
- *-------------------------------------------------------------------------
- */
+herr_t H5LT_open_id( hid_t loc_id,
+                     const char *obj_name,
+                     int obj_type );
 
-static herr_t
-H5LT_make_dataset_numerical( hid_t loc_id,
-                         const char *dset_name,
-                         int rank,
-                         const hsize_t *dims,
-                         hid_t tid,
-                         const void *data )
-{
-    hid_t   did = -1, sid = -1;
-
-    /* Create the data space for the dataset. */
-    if((sid = H5Screate_simple(rank, dims, NULL)) < 0)
-        return -1;
-
-    /* Create the dataset. */
-    if((did = H5Dcreate2(loc_id, dset_name, tid, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
-        goto out;
-
-    /* Write the dataset only if there is data to write */
-    if(data)
-        if(H5Dwrite(did, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, data) < 0)
-            goto out;
-
-    /* End access to the dataset and release resources used by it. */
-    if(H5Dclose(did) < 0)
-        return -1;
-
-    /* Terminate access to the data space. */
-    if(H5Sclose(sid) < 0)
-        return -1;
-
-    return 0;
-
-out:
-    H5E_BEGIN_TRY {
-        H5Dclose(did);
-        H5Sclose(sid);
-    } H5E_END_TRY;
-    return -1;
-}
+herr_t H5LT_close_id( hid_t obj_id,
+                      int obj_type );
 
 /*-------------------------------------------------------------------------
  *
@@ -132,7 +75,39 @@ herr_t H5LTmake_dataset( hid_t loc_id,
                          hid_t tid,
                          const void *data )
 {
-    return(H5LT_make_dataset_numerical(loc_id, dset_name, rank, dims, tid, data));
+
+ hid_t   did, sid;
+
+ /* Create the data space for the dataset. */
+ if ( (sid = H5Screate_simple( rank, dims, NULL )) < 0 )
+  return -1;
+
+ /* Create the dataset. */
+ if ( (did = H5Dcreate( loc_id, dset_name, tid, sid, H5P_DEFAULT )) < 0 )
+  goto out;
+
+ /* Write the dataset only if there is data to write */
+
+ if ( data )
+ {
+  if ( H5Dwrite( did, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, data ) < 0 )
+   goto out;
+ }
+
+ /* End access to the dataset and release resources used by it. */
+ if ( H5Dclose( did ) < 0 )
+  return -1;
+
+ /* Terminate access to the data space. */
+ if ( H5Sclose( sid ) < 0 )
+  return -1;
+
+ return 0;
+
+out:
+ H5Dclose( did );
+ H5Sclose( sid );
+ return -1;
 }
 
 /*-------------------------------------------------------------------------
@@ -160,7 +135,39 @@ herr_t H5LTmake_dataset_char( hid_t loc_id,
                               const hsize_t *dims,
                               const char *data )
 {
-    return(H5LT_make_dataset_numerical(loc_id, dset_name, rank, dims, H5T_NATIVE_CHAR, data));
+
+ hid_t   did, sid;
+
+ /* Create the data space for the dataset. */
+ if ( (sid = H5Screate_simple( rank, dims, NULL )) < 0 )
+  return -1;
+
+ /* Create the dataset. */
+ if ( (did = H5Dcreate( loc_id, dset_name, H5T_NATIVE_CHAR, sid, H5P_DEFAULT )) < 0 )
+  goto out;
+
+ /* Write the dataset only if there is data to write */
+
+ if ( data )
+ {
+  if ( H5Dwrite( did, H5T_NATIVE_CHAR, H5S_ALL, H5S_ALL, H5P_DEFAULT, data ) < 0 )
+   goto out;
+ }
+
+ /* End access to the dataset and release resources used by it. */
+ if ( H5Dclose( did ) < 0 )
+  return -1;
+
+ /* Terminate access to the data space. */
+ if ( H5Sclose( sid ) < 0 )
+  return -1;
+
+ return 0;
+
+out:
+ H5Dclose( did );
+ H5Sclose( sid );
+ return -1;
 }
 
 
@@ -190,7 +197,39 @@ herr_t H5LTmake_dataset_short( hid_t loc_id,
                                const hsize_t *dims,
                                const short *data )
 {
-    return(H5LT_make_dataset_numerical(loc_id, dset_name, rank, dims, H5T_NATIVE_SHORT, data));
+
+ hid_t   did, sid;
+
+ /* Create the data space for the dataset. */
+ if ( (sid = H5Screate_simple( rank, dims, NULL )) < 0 )
+  return -1;
+
+ /* Create the dataset. */
+ if ( (did = H5Dcreate( loc_id, dset_name, H5T_NATIVE_SHORT, sid, H5P_DEFAULT )) < 0 )
+  goto out;
+
+ /* Write the dataset only if there is data to write */
+
+ if ( data )
+ {
+  if ( H5Dwrite( did, H5T_NATIVE_SHORT, H5S_ALL, H5S_ALL, H5P_DEFAULT, data ) < 0 )
+   goto out;
+ }
+
+ /* End access to the dataset and release resources used by it. */
+ if ( H5Dclose( did ) < 0 )
+  return -1;
+
+ /* Terminate access to the data space. */
+ if ( H5Sclose( sid ) < 0 )
+  return -1;
+
+ return 0;
+
+out:
+ H5Dclose( did );
+ H5Sclose( sid );
+ return -1;
 }
 
 /*-------------------------------------------------------------------------
@@ -219,7 +258,39 @@ herr_t H5LTmake_dataset_int( hid_t loc_id,
                              const hsize_t *dims,
                              const int *data )
 {
-    return(H5LT_make_dataset_numerical(loc_id, dset_name, rank, dims, H5T_NATIVE_INT, data));
+
+ hid_t   did, sid;
+
+ /* Create the data space for the dataset. */
+ if ( (sid = H5Screate_simple( rank, dims, NULL )) < 0 )
+  return -1;
+
+ /* Create the dataset. */
+ if ( (did = H5Dcreate( loc_id, dset_name, H5T_NATIVE_INT, sid, H5P_DEFAULT )) < 0 )
+  goto out;
+
+ /* Write the dataset only if there is data to write */
+
+ if ( data )
+ {
+  if ( H5Dwrite( did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, data ) < 0 )
+   goto out;
+ }
+
+ /* End access to the dataset and release resources used by it. */
+ if ( H5Dclose( did ) < 0 )
+  return -1;
+
+ /* Terminate access to the data space. */
+ if ( H5Sclose( sid ) < 0 )
+  return -1;
+
+ return 0;
+
+out:
+ H5Dclose( did );
+ H5Sclose( sid );
+ return -1;
 }
 
 
@@ -250,7 +321,39 @@ herr_t H5LTmake_dataset_long( hid_t loc_id,
                               const hsize_t *dims,
                               const long *data )
 {
-    return(H5LT_make_dataset_numerical(loc_id, dset_name, rank, dims, H5T_NATIVE_LONG, data));
+
+ hid_t   did, sid;
+
+ /* Create the data space for the dataset. */
+ if ( (sid = H5Screate_simple( rank, dims, NULL )) < 0 )
+  return -1;
+
+ /* Create the dataset. */
+ if ( (did = H5Dcreate( loc_id, dset_name, H5T_NATIVE_LONG, sid, H5P_DEFAULT )) < 0 )
+  goto out;
+
+ /* Write the dataset only if there is data to write */
+
+ if ( data )
+ {
+  if ( H5Dwrite( did, H5T_NATIVE_LONG, H5S_ALL, H5S_ALL, H5P_DEFAULT, data ) < 0 )
+   goto out;
+ }
+
+ /* End access to the dataset and release resources used by it. */
+ if ( H5Dclose( did ) < 0 )
+  return -1;
+
+ /* Terminate access to the data space. */
+ if ( H5Sclose( sid ) < 0 )
+  return -1;
+
+ return 0;
+
+out:
+ H5Dclose( did );
+ H5Sclose( sid );
+ return -1;
 }
 
 /*-------------------------------------------------------------------------
@@ -279,7 +382,39 @@ herr_t H5LTmake_dataset_float( hid_t loc_id,
                                const hsize_t *dims,
                                const float *data )
 {
-    return(H5LT_make_dataset_numerical(loc_id, dset_name, rank, dims, H5T_NATIVE_FLOAT, data));
+
+ hid_t   did, sid;
+
+ /* Create the data space for the dataset. */
+ if ( (sid = H5Screate_simple( rank, dims, NULL )) < 0 )
+  return -1;
+
+ /* Create the dataset. */
+ if ( (did = H5Dcreate( loc_id, dset_name, H5T_NATIVE_FLOAT, sid, H5P_DEFAULT )) < 0 )
+  goto out;
+
+ /* Write the dataset only if there is data to write */
+
+ if ( data )
+ {
+  if ( H5Dwrite( did, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, data ) < 0 )
+   goto out;
+ }
+
+ /* End access to the dataset and release resources used by it. */
+ if ( H5Dclose( did ) < 0 )
+  return -1;
+
+ /* Terminate access to the data space. */
+ if ( H5Sclose( sid ) < 0 )
+  return -1;
+
+ return 0;
+
+out:
+ H5Dclose( did );
+ H5Sclose( sid );
+ return -1;
 }
 
 
@@ -310,7 +445,39 @@ herr_t H5LTmake_dataset_double( hid_t loc_id,
                                 const hsize_t *dims,
                                 const double *data )
 {
-    return(H5LT_make_dataset_numerical(loc_id, dset_name, rank, dims, H5T_NATIVE_DOUBLE, data));
+
+ hid_t   did, sid;
+
+ /* Create the data space for the dataset. */
+ if ( (sid = H5Screate_simple( rank, dims, NULL )) < 0 )
+  return -1;
+
+ /* Create the dataset. */
+ if ( (did = H5Dcreate( loc_id, dset_name, H5T_NATIVE_DOUBLE, sid, H5P_DEFAULT )) < 0 )
+  goto out;
+
+ /* Write the dataset only if there is data to write */
+
+ if ( data )
+ {
+  if ( H5Dwrite( did, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, data ) < 0 )
+   goto out;
+ }
+
+ /* End access to the dataset and release resources used by it. */
+ if ( H5Dclose( did ) < 0 )
+  return -1;
+
+ /* Terminate access to the data space. */
+ if ( H5Sclose( sid ) < 0 )
+  return -1;
+
+ return 0;
+
+out:
+ H5Dclose( did );
+ H5Sclose( sid );
+ return -1;
 }
 
 
@@ -338,93 +505,57 @@ herr_t H5LTmake_dataset_string(hid_t loc_id,
                                const char *dset_name,
                                const char *buf )
 {
-    hid_t   did = -1;
-    hid_t   sid = -1;
-    hid_t   tid = -1;
-    size_t  size;
 
-    /* create a string data type */
-    if((tid = H5Tcopy(H5T_C_S1)) < 0 )
-        goto out;
+ hid_t   did=-1;
+ hid_t   sid=-1;
+ hid_t   tid;
+ size_t  size;
 
-    size = strlen(buf) + 1; /* extra null term */
+ /* create a string data type */
+ if ( (tid = H5Tcopy( H5T_C_S1 )) < 0 )
+  goto out;
 
-    if(H5Tset_size(tid, size) < 0)
-        goto out;
+ size = strlen(buf) + 1; /* extra null term */
 
-    if(H5Tset_strpad(tid, H5T_STR_NULLTERM) < 0)
-        goto out;
+ if ( H5Tset_size(tid,size) < 0 )
+  goto out;
 
-    /* Create the data space for the dataset. */
-    if((sid = H5Screate(H5S_SCALAR)) < 0)
-        goto out;
+ if ( H5Tset_strpad(tid,H5T_STR_NULLTERM ) < 0 )
+  goto out;
 
-    /* Create the dataset. */
-    if((did = H5Dcreate2(loc_id, dset_name, tid, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
-        goto out;
+ /* Create the data space for the dataset. */
+ if ( (sid = H5Screate( H5S_SCALAR )) < 0 )
+  goto out;
 
-    /* Write the dataset only if there is data to write */
-    if(buf)
-        if(H5Dwrite(did, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf) < 0)
-            goto out;
+ /* Create the dataset. */
+ if ( (did = H5Dcreate(loc_id,dset_name,tid,sid,H5P_DEFAULT)) < 0 )
+  goto out;
 
-    /* close*/
-    if(H5Dclose(did) < 0)
-        return -1;
-    if(H5Sclose(sid) < 0)
-        return -1;
-    if(H5Tclose(tid) < 0)
-        goto out;
+ /* Write the dataset only if there is data to write */
 
-    return 0;
+ if (buf)
+ {
+  if ( H5Dwrite(did,tid,H5S_ALL,H5S_ALL,H5P_DEFAULT,buf) < 0 )
+   goto out;
+ }
 
-out:
-    H5E_BEGIN_TRY {
-        H5Dclose(did);
-        H5Tclose(tid);
-        H5Sclose(sid);
-    } H5E_END_TRY;
-    return -1;
-}
+ /* close*/
+ if ( H5Dclose(did) < 0 )
+  return -1;
+ if ( H5Sclose(sid) < 0 )
+  return -1;
+ if ( H5Tclose(tid) < 0 )
+  goto out;
 
-
-/*-------------------------------------------------------------------------
- * Function: H5LT_read_dataset
- *
- * Purpose: Reads a dataset from disk.
- *
- * Return: Success: 0, Failure: -1
- *
- * Programmer: Quincey Koziol, koziol@hdfgroup.org
- *
- * Date: October 8, 2007
- *
- *-------------------------------------------------------------------------
- */
-
-static herr_t
-H5LT_read_dataset_numerical(hid_t loc_id, const char *dset_name, hid_t tid, void *data)
-{
-    hid_t   did;
-
-    /* Open the dataset. */
-    if((did = H5Dopen2(loc_id, dset_name, H5P_DEFAULT)) < 0)
-        return -1;
-
-    /* Read */
-    if(H5Dread(did, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, data) < 0)
-        goto out;
-
-    /* End access to the dataset and release resources used by it. */
-    if(H5Dclose(did))
-        return -1;
-
-    return 0;
+ return 0;
 
 out:
-    H5Dclose(did);
-    return -1;
+  H5Dclose(did);
+  H5Tclose(tid);
+  H5Sclose(sid);
+ return -1;
 }
+
 
 /*-------------------------------------------------------------------------
  * Function: H5LTread_dataset
@@ -440,12 +571,31 @@ out:
  *-------------------------------------------------------------------------
  */
 
-herr_t H5LTread_dataset(hid_t loc_id,
-                        const char *dset_name,
-                        hid_t tid,
-                        void *data)
+herr_t H5LTread_dataset( hid_t loc_id,
+                         const char *dset_name,
+                         hid_t tid,
+                         void *data )
 {
-    return(H5LT_read_dataset_numerical(loc_id, dset_name, tid, data));
+ hid_t   did;
+
+ /* Open the dataset. */
+ if ( (did = H5Dopen( loc_id, dset_name )) < 0 )
+  return -1;
+
+ /* Read */
+ if ( H5Dread( did, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, data ) < 0 )
+  goto out;
+
+ /* End access to the dataset and release resources used by it. */
+ if ( H5Dclose( did ) )
+  return -1;
+
+ return 0;
+
+out:
+ H5Dclose( did );
+ return -1;
+
 }
 
 
@@ -467,7 +617,26 @@ herr_t H5LTread_dataset_char( hid_t loc_id,
                               const char *dset_name,
                               char *data )
 {
-    return(H5LT_read_dataset_numerical(loc_id, dset_name, H5T_NATIVE_CHAR, data));
+ hid_t   did;
+
+ /* Open the dataset. */
+ if ( (did = H5Dopen( loc_id, dset_name )) < 0 )
+  return -1;
+
+ /* Read */
+ if ( H5Dread( did, H5T_NATIVE_CHAR, H5S_ALL, H5S_ALL, H5P_DEFAULT, data ) < 0 )
+  goto out;
+
+ /* End access to the dataset and release resources used by it. */
+ if ( H5Dclose( did ) )
+  return -1;
+
+ return 0;
+
+out:
+ H5Dclose( did );
+ return -1;
+
 }
 
 /*-------------------------------------------------------------------------
@@ -488,7 +657,26 @@ herr_t H5LTread_dataset_short( hid_t loc_id,
                                const char *dset_name,
                                short *data )
 {
-    return(H5LT_read_dataset_numerical(loc_id, dset_name, H5T_NATIVE_SHORT, data));
+ hid_t   did;
+
+ /* Open the dataset. */
+ if ( (did = H5Dopen( loc_id, dset_name )) < 0 )
+  return -1;
+
+ /* Read */
+ if ( H5Dread( did, H5T_NATIVE_SHORT, H5S_ALL, H5S_ALL, H5P_DEFAULT, data ) < 0 )
+  goto out;
+
+ /* End access to the dataset and release resources used by it. */
+ if ( H5Dclose( did ) )
+  return -1;
+
+ return 0;
+
+out:
+ H5Dclose( did );
+ return -1;
+
 }
 
 /*-------------------------------------------------------------------------
@@ -509,7 +697,26 @@ herr_t H5LTread_dataset_int( hid_t loc_id,
                              const char *dset_name,
                              int *data )
 {
-    return(H5LT_read_dataset_numerical(loc_id, dset_name, H5T_NATIVE_INT, data));
+ hid_t   did;
+
+ /* Open the dataset. */
+ if ( (did = H5Dopen( loc_id, dset_name )) < 0 )
+  return -1;
+
+ /* Read */
+ if ( H5Dread( did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, data ) < 0 )
+  goto out;
+
+ /* End access to the dataset and release resources used by it. */
+ if ( H5Dclose( did ) )
+  return -1;
+
+ return 0;
+
+out:
+ H5Dclose( did );
+ return -1;
+
 }
 
 /*-------------------------------------------------------------------------
@@ -530,7 +737,26 @@ herr_t H5LTread_dataset_long( hid_t loc_id,
                               const char *dset_name,
                               long *data )
 {
-    return(H5LT_read_dataset_numerical(loc_id, dset_name, H5T_NATIVE_LONG, data));
+ hid_t   did;
+
+ /* Open the dataset. */
+ if ( (did = H5Dopen( loc_id, dset_name )) < 0 )
+  return -1;
+
+ /* Read */
+ if ( H5Dread( did, H5T_NATIVE_LONG, H5S_ALL, H5S_ALL, H5P_DEFAULT, data ) < 0 )
+  goto out;
+
+ /* End access to the dataset and release resources used by it. */
+ if ( H5Dclose( did ) )
+  return -1;
+
+ return 0;
+
+out:
+ H5Dclose( did );
+ return -1;
+
 }
 
 /*-------------------------------------------------------------------------
@@ -551,7 +777,26 @@ herr_t H5LTread_dataset_float( hid_t loc_id,
                                const char *dset_name,
                                float *data )
 {
-    return(H5LT_read_dataset_numerical(loc_id, dset_name, H5T_NATIVE_FLOAT, data));
+ hid_t   did;
+
+ /* Open the dataset. */
+ if ( (did = H5Dopen( loc_id, dset_name )) < 0 )
+  return -1;
+
+ /* Read */
+ if ( H5Dread( did, H5T_NATIVE_FLOAT, H5S_ALL, H5S_ALL, H5P_DEFAULT, data ) < 0 )
+  goto out;
+
+ /* End access to the dataset and release resources used by it. */
+ if ( H5Dclose( did ) )
+  return -1;
+
+ return 0;
+
+out:
+ H5Dclose( did );
+ return -1;
+
 }
 
 
@@ -573,7 +818,26 @@ herr_t H5LTread_dataset_double( hid_t loc_id,
                                 const char *dset_name,
                                 double *data )
 {
-    return(H5LT_read_dataset_numerical(loc_id, dset_name, H5T_NATIVE_DOUBLE, data));
+ hid_t   did;
+
+ /* Open the dataset. */
+ if ( (did = H5Dopen( loc_id, dset_name )) < 0 )
+  return -1;
+
+ /* Read */
+ if ( H5Dread( did, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, data ) < 0 )
+  goto out;
+
+ /* End access to the dataset and release resources used by it. */
+ if ( H5Dclose( did ) )
+  return -1;
+
+ return 0;
+
+out:
+ H5Dclose( did );
+ return -1;
+
 }
 
 
@@ -595,34 +859,33 @@ herr_t H5LTread_dataset_string( hid_t loc_id,
                                 const char *dset_name,
                                 char *buf )
 {
-    hid_t   did = -1;
-    hid_t   tid = -1;
+ hid_t   did;
+ hid_t   tid;
 
-    /* Open the dataset. */
-    if((did = H5Dopen2(loc_id, dset_name, H5P_DEFAULT)) < 0)
-        return -1;
+ /* Open the dataset. */
+ if ( (did = H5Dopen( loc_id, dset_name )) < 0 )
+  return -1;
 
-    if((tid = H5Dget_type(did)) < 0)
-        goto out;
+ if ( (tid = H5Dget_type(did)) < 0 )
+  goto out;
 
-    /* Read */
-    if(H5Dread(did, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf) < 0)
-        goto out;
+ /* Read */
+ if ( H5Dread(did,tid,H5S_ALL,H5S_ALL,H5P_DEFAULT,buf) < 0 )
+  goto out;
 
-    /* close */
-    if(H5Dclose(did))
-        goto out;
-    if(H5Tclose(tid))
-        return -1;
+ /* close */
+ if ( H5Dclose(did) )
+  goto out;
+ if ( H5Tclose(tid) )
+  return -1;
 
-    return 0;
+ return 0;
 
 out:
-    H5E_BEGIN_TRY {
-        H5Dclose(did);
-        H5Tclose(tid);
-    } H5E_END_TRY;
-    return -1;
+ H5Dclose( did );
+ H5Tclose( tid );
+ return -1;
+
 }
 
 
@@ -644,37 +907,36 @@ herr_t H5LTget_dataset_ndims( hid_t loc_id,
                               const char *dset_name,
                               int *rank )
 {
-    hid_t       did = -1;
-    hid_t       sid = -1;
+ hid_t       did;
+ hid_t       sid;
 
-    /* Open the dataset. */
-    if((did = H5Dopen2(loc_id, dset_name, H5P_DEFAULT)) < 0)
-        return -1;
+ /* Open the dataset. */
+ if ( (did = H5Dopen( loc_id, dset_name )) < 0 )
+  return -1;
 
-    /* Get the dataspace handle */
-    if((sid = H5Dget_space(did)) < 0)
-        goto out;
+ /* Get the dataspace handle */
+ if ( (sid = H5Dget_space( did )) < 0 )
+  goto out;
 
-    /* Get rank */
-    if((*rank = H5Sget_simple_extent_ndims(sid)) < 0)
-        goto out;
+ /* Get rank */
+ if ( (*rank = H5Sget_simple_extent_ndims( sid )) < 0 )
+  goto out;
 
-    /* Terminate access to the dataspace */
-    if(H5Sclose(sid) < 0)
-        goto out;
+ /* Terminate access to the dataspace */
+ if ( H5Sclose( sid ) < 0 )
+  goto out;
 
-    /* End access to the dataset */
-    if(H5Dclose(did))
-        return -1;
+ /* End access to the dataset */
+ if ( H5Dclose( did ) )
+  return -1;
 
-    return 0;
+ return 0;
 
 out:
-    H5E_BEGIN_TRY {
-        H5Dclose(did);
-        H5Sclose(sid);
-    } H5E_END_TRY;
-    return -1;
+ H5Dclose( did );
+ H5Sclose( sid );
+ return -1;
+
 }
 
 
@@ -699,56 +961,54 @@ herr_t H5LTget_dataset_info( hid_t loc_id,
                              H5T_class_t *type_class,
                              size_t *type_size )
 {
-    hid_t       did = -1;
-    hid_t       tid = -1;
-    hid_t       sid = -1;
+ hid_t       did;
+ hid_t       tid;
+ hid_t       sid;
 
-    /* open the dataset. */
-    if((did = H5Dopen2(loc_id, dset_name, H5P_DEFAULT)) < 0)
-        return -1;
+ /* open the dataset. */
+ if ( (did = H5Dopen( loc_id, dset_name )) < 0 )
+  return -1;
 
-    /* get an identifier for the datatype. */
-    tid = H5Dget_type(did);
+ /* get an identifier for the datatype. */
+ tid = H5Dget_type( did );
 
-    /* get the class. */
-    if(type_class != NULL)
-        *type_class = H5Tget_class(tid);
+ /* get the class. */
+ if (type_class!=NULL)
+  *type_class = H5Tget_class( tid );
 
-    /* get the size. */
-    if(type_size!=NULL)
-        *type_size = H5Tget_size(tid);
+ /* get the size. */
+ if (type_size!=NULL)
+  *type_size = H5Tget_size( tid );
 
-    if(dims != NULL) {
-        /* get the dataspace handle */
-        if((sid = H5Dget_space(did)) < 0)
-            goto out;
+ if (dims!=NULL)
+ {
+  /* get the dataspace handle */
+  if ( (sid = H5Dget_space( did )) < 0 )
+   goto out;
+  
+  /* get dimensions */
+  if ( H5Sget_simple_extent_dims( sid, dims, NULL) < 0 )
+   goto out;
+  
+  /* terminate access to the dataspace */
+  if ( H5Sclose( sid ) < 0 )
+   goto out;
+ }
 
-        /* get dimensions */
-        if(H5Sget_simple_extent_dims(sid, dims, NULL) < 0)
-            goto out;
+ /* release the datatype. */
+ if ( H5Tclose( tid ) )
+  return -1;
 
-        /* terminate access to the dataspace */
-        if(H5Sclose(sid) < 0)
-            goto out;
-    } /* end if */
+ /* end access to the dataset */
+ if ( H5Dclose( did ) )
+  return -1;
 
-    /* release the datatype. */
-    if(H5Tclose(tid))
-        return -1;
-
-    /* end access to the dataset */
-    if(H5Dclose(did))
-        return -1;
-
-    return 0;
+ return 0;
 
 out:
-    H5E_BEGIN_TRY {
-        H5Tclose(tid);
-        H5Sclose(sid);
-        H5Dclose(did);
-    } H5E_END_TRY;
-    return -1;
+ H5Tclose( tid );
+ H5Dclose( did );
+ return -1;
 
 }
 
@@ -768,27 +1028,32 @@ out:
  *-------------------------------------------------------------------------
  */
 
-static herr_t
-find_dataset(hid_t loc_id, const char *name, const H5L_info_t *linfo, void *op_data)
+static herr_t find_dataset( hid_t loc_id, const char *name, void *op_data)
 {
-    /* Define a default zero value for return. This will cause the iterator to continue if
-     * the dataset is not found yet.
-     */
-    int ret = 0;
 
-    /* Shut the compiler up */
-    loc_id = loc_id;
-    linfo = linfo;
+ /* Define a default zero value for return. This will cause the iterator to continue if
+  * the dataset is not found yet.
+  */
 
-    /* Define a positive value for return value if the dataset was found. This will
-     * cause the iterator to immediately return that positive value,
-     * indicating short-circuit success
-     */
-    if(strcmp(name, (char *)op_data) == 0)
-        ret = 1;
+ int ret = 0;
 
-    return ret;
+ char *dset_name = (char*)op_data;
+
+ /* Shut the compiler up */
+ loc_id=loc_id;
+
+ /* Define a positive value for return value if the dataset was found. This will
+  * cause the iterator to immediately return that positive value,
+  * indicating short-circuit success
+  */
+
+ if( strcmp( name, dset_name ) == 0 )
+  ret = 1;
+
+
+ return ret;
 }
+
 
 
 /*-------------------------------------------------------------------------
@@ -813,10 +1078,14 @@ find_dataset(hid_t loc_id, const char *name, const H5L_info_t *linfo, void *op_d
  *-------------------------------------------------------------------------
  */
 
-herr_t
-H5LTfind_dataset( hid_t loc_id, const char *dset_name )
+herr_t H5LTfind_dataset( hid_t loc_id, const char *dset_name )
 {
-    return H5Literate(loc_id, H5_INDEX_NAME, H5_ITER_INC, 0, find_dataset, (void *)dset_name);
+
+ herr_t  ret;
+
+ ret = H5Giterate( loc_id, ".", 0, find_dataset, (void *)dset_name );
+
+ return ret;
 }
 
 
@@ -857,10 +1126,16 @@ herr_t H5LTset_attribute_string( hid_t loc_id,
  hid_t      attr_id;
  hid_t      obj_id;
  int        has_attr;
+ H5G_stat_t statbuf;
  size_t     attr_size;
 
+
+ /* Get the type of object */
+ if (H5Gget_objinfo( loc_id, obj_name, 1, &statbuf )<0)
+  return -1;
+
  /* Open the object */
- if ((obj_id = H5Oopen(loc_id, obj_name, H5P_DEFAULT)) < 0)
+ if ((obj_id = H5LT_open_id( loc_id, obj_name, statbuf.type )) < 0)
   return -1;
 
  /* Create the attribute */
@@ -879,39 +1154,41 @@ herr_t H5LTset_attribute_string( hid_t loc_id,
   goto out;
 
  /* Verify if the attribute already exists */
- has_attr = H5LT_find_attribute(obj_id, attr_name);
+ has_attr = H5LT_find_attribute( obj_id, attr_name );
 
  /* The attribute already exists, delete it */
- if(has_attr == 1)
-   if(H5Adelete(obj_id, attr_name) < 0)
-     goto out;
+ if ( has_attr == 1 )
+ {
+  if ( H5Adelete( obj_id, attr_name ) < 0 )
+    goto out;
+ }
 
  /* Create and write the attribute */
 
- if((attr_id = H5Acreate2(obj_id, attr_name, attr_type, attr_space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+ if ( (attr_id = H5Acreate( obj_id, attr_name, attr_type, attr_space_id, H5P_DEFAULT )) < 0 )
   goto out;
 
- if(H5Awrite(attr_id, attr_type, attr_data) < 0)
+ if ( H5Awrite( attr_id, attr_type, attr_data ) < 0 )
   goto out;
 
- if(H5Aclose(attr_id) < 0)
+ if ( H5Aclose( attr_id ) < 0 )
   goto out;
 
- if(H5Sclose(attr_space_id) < 0)
+ if ( H5Sclose( attr_space_id ) < 0 )
   goto out;
 
- if(H5Tclose(attr_type) < 0)
+ if ( H5Tclose(attr_type) < 0 )
   goto out;
 
  /* Close the object */
- if(H5Oclose(obj_id) < 0)
+ if ( H5LT_close_id( obj_id, statbuf.type ) < 0 )
   return -1;
 
   return 0;
 
 out:
 
- H5Oclose(obj_id);
+ H5LT_close_id( obj_id, statbuf.type );
  return -1;
 }
 
@@ -947,9 +1224,14 @@ herr_t H5LT_set_attribute_numerical( hid_t loc_id,
  hid_t      obj_id, sid, attr_id;
  hsize_t    dim_size=size;
  int        has_attr;
+ H5G_stat_t statbuf;
+
+ /* Get the type of object */
+ if (H5Gget_objinfo(loc_id, obj_name, 1, &statbuf)<0)
+  return -1;
 
  /* Open the object */
- if ((obj_id = H5Oopen(loc_id, obj_name, H5P_DEFAULT)) < 0)
+ if ((obj_id = H5LT_open_id( loc_id, obj_name, statbuf.type )) < 0)
   return -1;
 
  /* Create the data space for the attribute. */
@@ -957,38 +1239,128 @@ herr_t H5LT_set_attribute_numerical( hid_t loc_id,
   goto out;
 
   /* Verify if the attribute already exists */
- has_attr = H5LT_find_attribute(obj_id, attr_name);
+ has_attr = H5LT_find_attribute( obj_id, attr_name );
 
  /* The attribute already exists, delete it */
- if(has_attr == 1)
-   if(H5Adelete(obj_id, attr_name) < 0)
-     goto out;
+ if ( has_attr == 1 )
+ {
+  if ( H5Adelete( obj_id, attr_name ) < 0 )
+    goto out;
+ }
 
  /* Create the attribute. */
- if((attr_id = H5Acreate2(obj_id, attr_name, tid, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+ if ( (attr_id = H5Acreate( obj_id, attr_name, tid, sid, H5P_DEFAULT )) < 0 )
   goto out;
 
  /* Write the attribute data. */
- if(H5Awrite(attr_id, tid, data) < 0)
+ if ( H5Awrite( attr_id, tid, data ) < 0 )
   goto out;
 
  /* Close the attribute. */
- if(H5Aclose(attr_id) < 0)
+ if ( H5Aclose( attr_id ) < 0 )
   goto out;
 
  /* Close the dataspace. */
- if(H5Sclose(sid) < 0)
+ if ( H5Sclose( sid ) < 0 )
   goto out;
 
  /* Close the object */
- if(H5Oclose(obj_id) < 0)
+ if ( H5LT_close_id( obj_id, statbuf.type ) < 0 )
   return -1;
 
  return 0;
 
 out:
- H5Oclose(obj_id);
+ H5LT_close_id( obj_id, statbuf.type );
  return -1;
+}
+
+/*-------------------------------------------------------------------------
+ * Function: H5LT_open_id
+ *
+ * Purpose: Private function used by H5LT_set_attribute_*
+ *
+ * Return: Success: 0, Failure: -1
+ *
+ * Programmer: Pedro Vicente, pvn@ncsa.uiuc.edu
+ *
+ * Date: September 19, 2002
+ *
+ * Comments:
+ *
+ *-------------------------------------------------------------------------
+ */
+
+herr_t H5LT_open_id( hid_t loc_id,
+                     const char *obj_name,
+                     int obj_type /*basic object type*/ )
+{
+
+ hid_t   obj_id = -1;
+
+ switch ( obj_type )
+ {
+  case H5G_DATASET:
+
+   /* Open the dataset. */
+   if ( (obj_id = H5Dopen( loc_id, obj_name )) < 0 )
+    return -1;
+   break;
+
+  case H5G_GROUP:
+
+   /* Open the group. */
+   if ( (obj_id = H5Gopen( loc_id, obj_name )) < 0 )
+    return -1;
+   break;
+
+  default:
+   return -1;
+ }
+
+ return obj_id;
+
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function: H5LT_close_id
+ *
+ * Purpose: Private function used by H5LT_set_attribute_*
+ *
+ * Return: Success: 0, Failure: -1
+ *
+ * Programmer: Pedro Vicente, pvn@ncsa.uiuc.edu
+ *
+ * Date: September 19, 2002
+ *
+ * Comments:
+ *
+ *-------------------------------------------------------------------------
+ */
+
+herr_t H5LT_close_id( hid_t obj_id,
+                      int obj_type /*basic object type*/ )
+{
+ switch ( obj_type )
+ {
+  case H5G_DATASET:
+   /* Close the dataset. */
+   if ( H5Dclose( obj_id ) < 0 )
+    return -1;
+   break;
+
+  case H5G_GROUP:
+  /* Close the group. */
+   if ( H5Gclose( obj_id ) < 0 )
+    return -1;
+   break;
+
+  default:
+   return -1;
+ }
+
+ return 0;
 }
 
 
@@ -1353,47 +1725,32 @@ herr_t H5LTset_attribute_double( hid_t loc_id,
  *
  *-------------------------------------------------------------------------
  */
-static herr_t
-find_attr(hid_t loc_id, const char *name, const H5A_info_t *ainfo,
-    void *op_data)
+
+static herr_t find_attr( hid_t loc_id, const char *name, void *op_data)
 {
-    int ret = H5_ITER_CONT;
 
-    /* Shut compiler up */
-    loc_id = loc_id; ainfo = ainfo;
+ /* Define a default zero value for return. This will cause the iterator to continue if
+  * the palette attribute is not found yet.
+  */
 
-    /* Define a positive value for return value if the attribute was found. This will
-     * cause the iterator to immediately return that positive value,
-     * indicating short-circuit success
-     */
-    if(strcmp(name, (char *)op_data) == 0)
-        ret = H5_ITER_STOP;
+ int ret = 0;
 
-    return ret;
+ char *attr_name = (char*)op_data;
+
+ /* Shut the compiler up */
+ loc_id=loc_id;
+
+ /* Define a positive value for return value if the attribute was found. This will
+  * cause the iterator to immediately return that positive value,
+  * indicating short-circuit success
+  */
+
+ if( strcmp( name, attr_name ) == 0 )
+  ret = 1;
+
+
+ return ret;
 }
-
-
-/*-------------------------------------------------------------------------
- * Function: H5LTfind_attribute
- *
- * Purpose: Inquires if an attribute named attr_name exists attached to
- *          the object loc_id.
- *
- * Programmer: Pedro Vicente, pvn@ncsa.uiuc.edu
- *
- * Date: May 17, 2006
- *
- * Comments:
- *  Calls the private version of the function
- *
- *-------------------------------------------------------------------------
- */
-
-herr_t H5LTfind_attribute( hid_t loc_id, const char* attr_name )
-{
- return H5LT_find_attribute(loc_id,attr_name);
-}
-
 
 
 /*-------------------------------------------------------------------------
@@ -1406,7 +1763,7 @@ herr_t H5LTfind_attribute( hid_t loc_id, const char* attr_name )
  * Date: June 21, 2001
  *
  * Comments:
- *  The function uses H5Aiterate2 with the operator function find_attr
+ *  The function uses H5Aiterate with the operator function find_attr
  *
  * Return:
  *  Success: The return value of the first operator that
@@ -1420,10 +1777,16 @@ herr_t H5LTfind_attribute( hid_t loc_id, const char* attr_name )
  *-------------------------------------------------------------------------
  */
 
-herr_t
-H5LT_find_attribute( hid_t loc_id, const char* attr_name )
+herr_t H5LT_find_attribute( hid_t loc_id, const char* attr_name )
 {
-    return H5Aiterate2(loc_id, H5_INDEX_NAME, H5_ITER_INC, NULL, find_attr, (void *)attr_name);
+
+ unsigned int attr_num;
+ herr_t       ret;
+
+ attr_num = 0;
+ ret = H5Aiterate( loc_id, &attr_num, find_attr, (void *)attr_name );
+
+ return ret;
 }
 
 
@@ -1449,25 +1812,30 @@ herr_t H5LTget_attribute_ndims( hid_t loc_id,
 {
  hid_t       attr_id;
  hid_t       sid;
+ H5G_stat_t  statbuf;
  hid_t       obj_id;
 
+ /* Get the type of object */
+ if (H5Gget_objinfo( loc_id, obj_name, 1, &statbuf )<0)
+  return -1;
+
  /* Open the object */
- if((obj_id = H5Oopen(loc_id, obj_name, H5P_DEFAULT)) < 0)
+ if ((obj_id = H5LT_open_id( loc_id, obj_name, statbuf.type )) < 0)
   return -1;
 
  /* Open the attribute. */
- if((attr_id = H5Aopen(obj_id, attr_name, H5P_DEFAULT)) < 0)
+ if ( ( attr_id = H5Aopen_name( obj_id, attr_name ) ) < 0 )
  {
-  H5Oclose(obj_id);
+  H5LT_close_id( obj_id, statbuf.type );
   return -1;
  }
 
  /* Get the dataspace handle */
- if((sid = H5Aget_space(attr_id)) < 0)
+ if ( (sid = H5Aget_space( attr_id )) < 0 )
   goto out;
 
  /* Get rank */
- if((*rank = H5Sget_simple_extent_ndims(sid)) < 0)
+ if ( (*rank = H5Sget_simple_extent_ndims( sid )) < 0 )
   goto out;
 
  /* Terminate access to the attribute */
@@ -1479,14 +1847,14 @@ herr_t H5LTget_attribute_ndims( hid_t loc_id,
   goto out;;
 
  /* Close the object */
- if(H5Oclose(obj_id) < 0 )
+ if ( H5LT_close_id( obj_id, statbuf.type ) < 0 )
   return -1;
 
  return 0;
 
 out:
  H5Aclose( attr_id );
- H5Oclose(obj_id);
+ H5LT_close_id( obj_id, statbuf.type );
  return -1;
 
 }
@@ -1516,24 +1884,29 @@ herr_t H5LTget_attribute_info( hid_t loc_id,
  hid_t       attr_id;
  hid_t       tid;
  hid_t       sid;
+ H5G_stat_t  statbuf;
  hid_t       obj_id;
 
+ /* Get the type of object */
+ if (H5Gget_objinfo( loc_id, obj_name, 1, &statbuf )<0)
+  return -1;
+
  /* Open the object */
- if((obj_id = H5Oopen(loc_id, obj_name, H5P_DEFAULT)) < 0)
+ if ((obj_id = H5LT_open_id( loc_id, obj_name, statbuf.type )) < 0)
   return -1;
 
   /* Open the attribute. */
- if((attr_id = H5Aopen(obj_id, attr_name, H5P_DEFAULT)) < 0)
+ if ( ( attr_id = H5Aopen_name( obj_id, attr_name ) ) < 0 )
  {
-  H5Oclose(obj_id);
+  H5LT_close_id( obj_id, statbuf.type );
   return -1;
  }
 
  /* Get an identifier for the datatype. */
- tid = H5Aget_type(attr_id);
+ tid = H5Aget_type( attr_id );
 
  /* Get the class. */
-  *type_class = H5Tget_class(tid);
+  *type_class = H5Tget_class( tid );
 
  /* Get the size. */
   *type_size = H5Tget_size( tid );
@@ -1559,21 +1932,69 @@ herr_t H5LTget_attribute_info( hid_t loc_id,
   goto out;
 
   /* Close the object */
- if(H5Oclose(obj_id) < 0 )
+ if ( H5LT_close_id( obj_id, statbuf.type ) < 0 )
   return -1;
 
  return 0;
 
 out:
- H5Tclose(tid);
- H5Aclose(attr_id);
- H5Oclose(obj_id);
+ H5Tclose( tid );
+ H5Aclose( attr_id );
+ H5LT_close_id( obj_id, statbuf.type );
  return -1;
 
 }
 
 
+/*-------------------------------------------------------------------------
+ *
+ * General functions
+ *
+ *-------------------------------------------------------------------------
+ */
 
+/*-------------------------------------------------------------------------
+ * Function: H5LTcreate_compound_type
+ *
+ * Purpose:
+ *
+ * Return: Success: 0, Failure: -1
+ *
+ * Programmer: Pedro Vicente, pvn@ncsa.uiuc.edu
+ *
+ * Date: September 18, 2001
+ *
+ * Comments:
+ *
+ * Modifications:
+ *
+ *
+ *-------------------------------------------------------------------------
+ */
+
+hid_t H5LTcreate_compound_type( hsize_t nfields, size_t size, const char *field_names[],
+                                const size_t *field_offset, const hid_t *field_types )
+{
+
+ hid_t   tid;
+ hsize_t i;
+
+ /* Create the memory data type. */
+ if ((tid = H5Tcreate (H5T_COMPOUND, size )) < 0 )
+  goto out;
+
+ /* Insert fields. */
+ for ( i = 0; i < nfields; i++)
+ {
+  if ( H5Tinsert(tid, field_names[i], field_offset[i], field_types[i] ) < 0 )
+   goto out;
+ }
+
+ return tid;
+
+out:
+ return -1;
+}
 
 /*-------------------------------------------------------------------------
  * Function: H5LTtext_to_dtype
@@ -1594,8 +2015,8 @@ out:
  */
 hid_t H5LTtext_to_dtype(const char *text, H5LT_lang_t lang_type)
 {
- extern int H5LTyyparse(void);
- hid_t   type_id;
+ extern int yyparse(void);
+ hid_t   type_id; 
 
  if(lang_type <= H5LT_LANG_ERR || lang_type >= H5LT_NO_LANG)
      goto out;
@@ -1604,11 +2025,11 @@ hid_t H5LTtext_to_dtype(const char *text, H5LT_lang_t lang_type)
      fprintf(stderr, "only DDL is supported for now.\n");
      goto out;
  }
-
+ 
  input_len = strlen(text);
  myinput = strdup(text);
 
- if((type_id = H5LTyyparse()) < 0)
+ if((type_id = yyparse())<0)
      goto out;
 
  free(myinput);
@@ -1674,17 +2095,17 @@ print_enum(hid_t type, char* str, int indt)
     size_t           dst_size;      /*destination value type size    */
     int              i;
     herr_t           ret = SUCCEED;
-
+    
     if((nmembs = H5Tget_nmembers(type))==0)
         goto out;
     assert(nmembs>0);
-    if((super = H5Tget_super(type)) < 0)
+    if((super = H5Tget_super(type))<0)
         goto out;
-
+   
     /* Use buffer of INT or UNSIGNED INT to print enum values because
      * we don't expect these values to be so big that INT or UNSIGNED
      * INT can't hold.
-     */
+     */ 
     if (H5T_SGN_NONE == H5Tget_sign(super)) {
         native = H5T_NATIVE_UINT;
     } else {
@@ -1693,7 +2114,7 @@ print_enum(hid_t type, char* str, int indt)
 
     super_size = H5Tget_size(super);
     dst_size = H5Tget_size(native);
-
+    
     /* Get the names and raw values of all members */
     name = (char**)calloc((size_t)nmembs, sizeof(char *));
     value = (unsigned char*)calloc((size_t)nmembs, MAX(dst_size, super_size));
@@ -1701,16 +2122,16 @@ print_enum(hid_t type, char* str, int indt)
     for (i = 0; i < nmembs; i++) {
  if((name[i] = H5Tget_member_name(type, (unsigned)i))==NULL)
             goto out;
- if(H5Tget_member_value(type, (unsigned)i, value + i * super_size) < 0)
+ if(H5Tget_member_value(type, (unsigned)i, value + i * super_size)<0)
             goto out;
     }
 
     /* Convert values to native data type */
     if (native > 0) {
-        if(H5Tconvert(super, native, (size_t)nmembs, value, NULL, H5P_DEFAULT) < 0)
+        if(H5Tconvert(super, native, (size_t)nmembs, value, NULL, H5P_DEFAULT)<0)
             goto out;
     }
-
+    
     /*
      * Sort members by increasing value
      *    ***not implemented yet***
@@ -1723,7 +2144,7 @@ print_enum(hid_t type, char* str, int indt)
         strcat(str, tmp_str);
  sprintf(tmp_str, "%*s   ", MAX(0, 16 - nchars), "");
         strcat(str, tmp_str);
-
+        
  if (H5T_SGN_NONE == H5Tget_sign(native)) {
      /*On SGI Altix(cobalt), wrong values were printed out with "value+i*dst_size"
       *strangely, unless use another pointer "copy".*/
@@ -1782,18 +2203,18 @@ herr_t H5LTdtype_to_text(hid_t dtype, char *str, H5LT_lang_t lang_type, size_t *
     size_t      str_len = INCREMENT;
     char        *text_str;
     herr_t      ret = -1;
-
+   
     if(lang_type <= H5LT_LANG_ERR || lang_type >= H5LT_NO_LANG)
         goto out;
 
     if(len && !str) {
         text_str = (char*)calloc(str_len, sizeof(char));
         text_str[0]='\0';
-        if((ret = H5LT_dtype_to_text(dtype, &text_str, lang_type, &str_len, 1)) < 0)
+        if((ret = H5LT_dtype_to_text(dtype, &text_str, lang_type, &str_len, 1))<0)
             goto out;
         *len = strlen(text_str) + 1;
     } else if(len && str) {
-        if((ret = H5LT_dtype_to_text(dtype, &str, lang_type, len, 0)) < 0)
+        if((ret = H5LT_dtype_to_text(dtype, &str, lang_type, len, 0))<0)
             goto out;
         str[*len-1] = '\0';
     }
@@ -1821,7 +2242,7 @@ out:
  *
  *-------------------------------------------------------------------------
  */
-herr_t H5LT_dtype_to_text(hid_t dtype, char **dt_str, H5LT_lang_t lang, size_t *slen,
+herr_t H5LT_dtype_to_text(hid_t dtype, char **dt_str, H5LT_lang_t lang, size_t *slen, 
                             hbool_t no_user_buf)
 {
     H5T_class_t tcls;
@@ -1838,15 +2259,15 @@ herr_t H5LT_dtype_to_text(hid_t dtype, char **dt_str, H5LT_lang_t lang, size_t *
            *dt_str = tmp;
         }
     }
-
+   
     if(lang != H5LT_DDL) {
         sprintf(*dt_str, "only DDL is supported for now");
         goto out;
     }
-
-    if((tcls = H5Tget_class(dtype)) < 0)
+    
+    if((tcls = H5Tget_class(dtype))<0)
         goto out;
-
+    
     switch (tcls) {
         case H5T_INTEGER:
             if (H5Tequal(dtype, H5T_STD_I8BE)) {
@@ -1941,15 +2362,15 @@ herr_t H5LT_dtype_to_text(hid_t dtype, char **dt_str, H5LT_lang_t lang, size_t *
             H5T_cset_t cset;
             htri_t is_vlstr;
 
-            if((tmp_type = H5Tcopy(dtype)) < 0)
+            if((tmp_type = H5Tcopy(dtype))<0)
                 goto out;
             if((size = H5Tget_size(tmp_type))==0)
                 goto out;
-            if((str_pad = H5Tget_strpad(tmp_type)) < 0)
+            if((str_pad = H5Tget_strpad(tmp_type))<0)
                 goto out;
-            if((cset = H5Tget_cset(tmp_type)) < 0)
+            if((cset = H5Tget_cset(tmp_type))<0)
                 goto out;
-            if((is_vlstr = H5Tis_variable_str(tmp_type)) < 0)
+            if((is_vlstr = H5Tis_variable_str(tmp_type))<0)
                 goto out;
 
             /* Print lead-in */
@@ -1987,18 +2408,18 @@ herr_t H5LT_dtype_to_text(hid_t dtype, char **dt_str, H5LT_lang_t lang, size_t *
 
 
             /* Reproduce a C type string */
-            if((str_type = H5Tcopy(H5T_C_S1)) < 0)
+            if((str_type = H5Tcopy(H5T_C_S1))<0)
                 goto out;
             if(is_vlstr) {
-                if(H5Tset_size(str_type, H5T_VARIABLE) < 0)
+                if(H5Tset_size(str_type, H5T_VARIABLE)<0)
                     goto out;
             } else {
-                if(H5Tset_size(str_type, size) < 0)
+                if(H5Tset_size(str_type, size)<0)
                     goto out;
             }
-            if(H5Tset_cset(str_type, cset) < 0)
+            if(H5Tset_cset(str_type, cset)<0)
                 goto out;
-            if(H5Tset_strpad(str_type, str_pad) < 0)
+            if(H5Tset_strpad(str_type, str_pad)<0)
                 goto out;
 
             indentation(indent + COL, *dt_str);
@@ -2007,19 +2428,19 @@ herr_t H5LT_dtype_to_text(hid_t dtype, char **dt_str, H5LT_lang_t lang, size_t *
             if (H5Tequal(tmp_type, str_type)) {
                 strcat(*dt_str, "CTYPE H5T_C_S1;\n");
                 goto next;
-            }
+            } 
 
             /* Change the endianness and see if they're equal. */
-            if((order = H5Tget_order(tmp_type)) < 0)
+            if((order = H5Tget_order(tmp_type))<0)
                 goto out;
             if(order==H5T_ORDER_LE) {
-                if(H5Tset_order(str_type, H5T_ORDER_LE) < 0)
+                if(H5Tset_order(str_type, H5T_ORDER_LE)<0)
                     goto out;
             } else if(order==H5T_ORDER_BE) {
-                if(H5Tset_order(str_type, H5T_ORDER_BE) < 0)
+                if(H5Tset_order(str_type, H5T_ORDER_BE)<0)
                     goto out;
             }
-
+            
             if (H5Tequal(tmp_type, str_type)) {
                 strcat(*dt_str, "H5T_C_S1;\n");
                 goto next;
@@ -2027,17 +2448,17 @@ herr_t H5LT_dtype_to_text(hid_t dtype, char **dt_str, H5LT_lang_t lang, size_t *
 
             /* If not equal to C variable-length string, check Fortran type.
              * Actually H5Tequal can't tell difference between H5T_C_S1 and H5T_FORTRAN_S1!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! */
-            if(H5Tclose(str_type) < 0)
+            if(H5Tclose(str_type)<0)
                 goto out;
-            if((str_type = H5Tcopy(H5T_FORTRAN_S1)) < 0)
+            if((str_type = H5Tcopy(H5T_FORTRAN_S1))<0)
                 goto out;
-            if(H5Tset_cset(str_type, cset) < 0)
+            if(H5Tset_cset(str_type, cset)<0)
                 goto out;
-            if(H5Tset_size(str_type, size) < 0)
+            if(H5Tset_size(str_type, size)<0)
                 goto out;
-            if(H5Tset_strpad(str_type, str_pad) < 0)
+            if(H5Tset_strpad(str_type, str_pad)<0)
                 goto out;
-
+            
             /* Are the two types equal? */
             if (H5Tequal(tmp_type, str_type)) {
                 strcat(*dt_str, "CTYPE H5T_FORTRAN_S1;\n");
@@ -2045,13 +2466,13 @@ herr_t H5LT_dtype_to_text(hid_t dtype, char **dt_str, H5LT_lang_t lang, size_t *
             }
 
             /* Change the endianness and see if they're equal. */
-            if((order = H5Tget_order(tmp_type)) < 0)
+            if((order = H5Tget_order(tmp_type))<0)
                 goto out;
             if(order==H5T_ORDER_LE) {
-                if(H5Tset_order(str_type, H5T_ORDER_LE) < 0)
+                if(H5Tset_order(str_type, H5T_ORDER_LE)<0)
                     goto out;
             } else if(order==H5T_ORDER_BE) {
-                if(H5Tset_order(str_type, H5T_ORDER_BE) < 0)
+                if(H5Tset_order(str_type, H5T_ORDER_BE)<0)
                     goto out;
             }
 
@@ -2079,7 +2500,7 @@ next:
             /* Print lead-in */
             sprintf(*dt_str, "H5T_OPAQUE {\n");
             indent += COL;
-
+            
             indentation(indent + COL, *dt_str);
             sprintf(tmp_str, "OPQ_SIZE %lu;\n", (unsigned long)H5Tget_size(dtype));
             strcat(*dt_str, tmp_str);
@@ -2087,7 +2508,7 @@ next:
             indentation(indent + COL, *dt_str);
             sprintf(tmp_str, "OPQ_TAG \"%s\";\n", H5Tget_tag(dtype));
             strcat(*dt_str, tmp_str);
-
+            
             /* Print closing */
             indent -= COL;
             indentation(indent + COL, *dt_str);
@@ -2104,20 +2525,20 @@ next:
             sprintf(*dt_str, "H5T_ENUM {\n");
             indent += COL;
             indentation(indent + COL, *dt_str);
-
-            if((super = H5Tget_super(dtype)) < 0)
+            
+            if((super = H5Tget_super(dtype))<0)
                 goto out;
-            if(H5LTdtype_to_text(super, NULL, lang, &super_len) < 0)
+            if(H5LTdtype_to_text(super, NULL, lang, &super_len)<0)
                 goto out;
             stmp = (char*)calloc(super_len, sizeof(char));
-            if(H5LTdtype_to_text(super, stmp, lang, &super_len) < 0)
-                goto out;
+            if(H5LTdtype_to_text(super, stmp, lang, &super_len)<0)
+                goto out;            
             strcat(*dt_str, stmp);
             free(stmp);
             strcat(*dt_str, ";\n");
             H5Tclose(super);
 
-            if(print_enum(dtype, *dt_str, indent) < 0)
+            if(print_enum(dtype, *dt_str, indent)<0)
                 goto out;
 
             /* Print closing */
@@ -2138,13 +2559,13 @@ next:
             indent += COL;
             indentation(indent + COL, *dt_str);
 
-            if((super = H5Tget_super(dtype)) < 0)
+            if((super = H5Tget_super(dtype))<0)
                 goto out;
-            if(H5LTdtype_to_text(super, NULL, lang, &super_len) < 0)
+            if(H5LTdtype_to_text(super, NULL, lang, &super_len)<0)
                 goto out;
             stmp = (char*)calloc(super_len, sizeof(char));
-            if(H5LTdtype_to_text(super, stmp, lang, &super_len) < 0)
-                goto out;
+            if(H5LTdtype_to_text(super, stmp, lang, &super_len)<0)
+                goto out;            
             strcat(*dt_str, stmp);
             free(stmp);
             strcat(*dt_str, "\n");
@@ -2171,9 +2592,9 @@ next:
             indentation(indent + COL, *dt_str);
 
             /* Get array information */
-            if((ndims = H5Tget_array_ndims(dtype)) < 0)
+            if((ndims = H5Tget_array_ndims(dtype))<0)
                 goto out;
-            if(H5Tget_array_dims2(dtype, dims) < 0)
+            if(H5Tget_array_dims(dtype, dims, NULL)<0)
                 goto out;
 
             /* Print array dimensions */
@@ -2183,13 +2604,13 @@ next:
             }
             strcat(*dt_str, " ");
 
-            if((super = H5Tget_super(dtype)) < 0)
+            if((super = H5Tget_super(dtype))<0)
                 goto out;
-            if(H5LTdtype_to_text(super, NULL, lang, &super_len) < 0)
+            if(H5LTdtype_to_text(super, NULL, lang, &super_len)<0)
                 goto out;
             stmp = (char*)calloc(super_len, sizeof(char));
-            if(H5LTdtype_to_text(super, stmp, lang, &super_len) < 0)
-                goto out;
+            if(H5LTdtype_to_text(super, stmp, lang, &super_len)<0)
+                goto out;            
             strcat(*dt_str, stmp);
             free(stmp);
             strcat(*dt_str, "\n");
@@ -2211,8 +2632,8 @@ next:
             size_t      mlen;
             char*       mtmp;
             int         nmembs;
-
-            if((nmembs = H5Tget_nmembers(dtype)) < 0)
+           
+            if((nmembs = H5Tget_nmembers(dtype))<0)
                 goto out;
 
             sprintf(*dt_str, "H5T_COMPOUND {\n");
@@ -2221,21 +2642,21 @@ next:
             for (i = 0; i < nmembs; i++) {
                 if((mname = H5Tget_member_name(dtype, (unsigned)i))==NULL)
                     goto out;
-                if((mtype = H5Tget_member_type(dtype, (unsigned)i)) < 0)
+                if((mtype = H5Tget_member_type(dtype, (unsigned)i))<0)
                     goto out;
                 moffset = H5Tget_member_offset(dtype, (unsigned)i);
                 indentation(indent + COL, *dt_str);
 
-                if((mclass = H5Tget_class(mtype)) < 0)
+                if((mclass = H5Tget_class(mtype))<0)
                     goto out;
                 if (H5T_COMPOUND == mclass)
                     indent += COL;
 
-                if(H5LTdtype_to_text(mtype, NULL, lang, &mlen) < 0)
+                if(H5LTdtype_to_text(mtype, NULL, lang, &mlen)<0)
                     goto out;
                 mtmp = (char*)calloc(mlen, sizeof(char));
-                if(H5LTdtype_to_text(mtype, mtmp, lang, &mlen) < 0)
-                    goto out;
+                if(H5LTdtype_to_text(mtype, mtmp, lang, &mlen)<0)
+                    goto out;            
                 strcat(*dt_str, mtmp);
                 free(mtmp);
 
@@ -2273,8 +2694,80 @@ out:
     return FAIL;
 }
 
+/*-------------------------------------------------------------------------
+ * Function: H5LTrepack
+ *
+ * Purpose: Packs/Unpacks data from buffers. This function transfers data from a packed
+ * data, src_buf, to a "natural byte aligned" (an n-byte item at an n-byte boundary)
+ * data, dst_buf, and vice-versa.
+ *
+ * Return: Success: 0, Failure: -1
+ *
+ * Programmer: Pedro Vicente, pvn@ncsa.uiuc.edu
+ *
+ * Date: January 17, 2002
+ *
+ * Comments:
+ *
+ * Modifications:
+ *
+ *
+ *-------------------------------------------------------------------------
+ */
 
+herr_t H5LTrepack( hsize_t nfields,
+                   hsize_t nrecords,
+                   size_t src_size,
+                   const size_t *src_offset,
+                   const size_t *src_sizes,
+                   size_t dst_size,
+                   const size_t *dst_offset,
+                   const size_t *dst_sizes,
+                   unsigned char *src_buf,
+                   unsigned char *dst_buf )
+{
+ hsize_t   i, j;
+ /* size of each field of destination data counting with padding */
+ size_t *size_pad = (size_t *)malloc((size_t)nfields * sizeof(size_t));
 
+ /* Shut compiler */
+ src_size=src_size;
+ src_offset=src_offset;
+
+ if ( size_pad == NULL )
+  goto out;
+
+ for ( i= 0; i < nfields; i++)
+ {
+
+  size_pad[i] = ( i == nfields-1 ? dst_size-dst_offset[i] : dst_offset[i+1]-dst_offset[i] );
+
+ }
+
+ /* Iterate tru the records */
+ for ( i = 0; i < nrecords; i++)
+ {
+  /* Iterate tru the members */
+  for ( j = 0; j < nfields; j++)
+  {
+
+   memcpy( dst_buf, src_buf, dst_sizes[j] );
+   dst_buf += size_pad[j];
+   src_buf += src_sizes[j];
+
+  }
+
+ }
+
+ if ( size_pad != NULL )
+  free( size_pad );
+
+return 0;
+
+out:
+ return -1;
+
+}
 
 
 /*-------------------------------------------------------------------------
@@ -2309,11 +2802,17 @@ herr_t H5LTget_attribute_string( hid_t loc_id,
                                  const char *attr_name,
                                  char *data )
 {
+
  /* identifiers */
  hid_t      obj_id;
+ H5G_stat_t statbuf;
+
+ /* Get the type of object */
+ if (H5Gget_objinfo(loc_id, obj_name, 1, &statbuf)<0)
+  return -1;
 
  /* Open the object */
- if ((obj_id = H5Oopen( loc_id, obj_name, H5P_DEFAULT)) < 0)
+ if ((obj_id = H5LT_open_id( loc_id, obj_name, statbuf.type )) < 0)
   return -1;
 
  /* Get the attribute */
@@ -2321,7 +2820,7 @@ herr_t H5LTget_attribute_string( hid_t loc_id,
   return -1;
 
  /* Close the object */
- if(H5Oclose(obj_id) < 0)
+ if ( H5LT_close_id( obj_id, statbuf.type ) < 0 )
   return -1;
 
  return 0;
@@ -2350,11 +2849,29 @@ herr_t H5LTget_attribute_char( hid_t loc_id,
                                 const char *attr_name,
                                 char *data )
 {
-    /* Get the attribute */
-    if(H5LT_get_attribute_mem(loc_id, obj_name, attr_name, H5T_NATIVE_CHAR, data) < 0)
-        return -1;
 
-    return 0;
+ /* identifiers */
+ hid_t      obj_id;
+ H5G_stat_t statbuf;
+
+ /* Get the type of object */
+ if (H5Gget_objinfo(loc_id, obj_name, 1, &statbuf)<0)
+  return -1;
+
+ /* Open the object */
+ if ((obj_id = H5LT_open_id( loc_id, obj_name, statbuf.type )) < 0)
+  return -1;
+
+ /* Get the attribute */
+ if ( H5LT_get_attribute_mem( obj_id, attr_name, H5T_NATIVE_CHAR, data ) < 0 )
+  return -1;
+
+ /* Close the object */
+ if ( H5LT_close_id( obj_id, statbuf.type ) < 0 )
+  return -1;
+
+ return 0;
+
 }
 
 /*-------------------------------------------------------------------------
@@ -2379,11 +2896,29 @@ herr_t H5LTget_attribute_uchar( hid_t loc_id,
                                 const char *attr_name,
                                 unsigned char *data )
 {
-    /* Get the attribute */
-    if(H5LT_get_attribute_mem(loc_id, obj_name, attr_name, H5T_NATIVE_UCHAR, data) < 0)
-        return -1;
 
-    return 0;
+ /* identifiers */
+ hid_t      obj_id;
+ H5G_stat_t statbuf;
+
+ /* Get the type of object */
+ if (H5Gget_objinfo(loc_id, obj_name, 1, &statbuf)<0)
+  return -1;
+
+ /* Open the object */
+ if ((obj_id = H5LT_open_id( loc_id, obj_name, statbuf.type )) < 0)
+  return -1;
+
+ /* Get the attribute */
+ if ( H5LT_get_attribute_mem( obj_id, attr_name, H5T_NATIVE_UCHAR, data ) < 0 )
+  return -1;
+
+ /* Close the object */
+ if ( H5LT_close_id( obj_id, statbuf.type ) < 0 )
+  return -1;
+
+ return 0;
+
 }
 
 
@@ -2410,11 +2945,29 @@ herr_t H5LTget_attribute_short( hid_t loc_id,
                                 const char *attr_name,
                                 short *data )
 {
-    /* Get the attribute */
-    if(H5LT_get_attribute_mem(loc_id, obj_name, attr_name, H5T_NATIVE_SHORT, data) < 0)
-        return -1;
 
-    return 0;
+ /* identifiers */
+ hid_t      obj_id;
+ H5G_stat_t statbuf;
+
+ /* Get the type of object */
+ if (H5Gget_objinfo(loc_id, obj_name, 1, &statbuf)<0)
+  return -1;
+
+ /* Open the object */
+ if ((obj_id = H5LT_open_id( loc_id, obj_name, statbuf.type )) < 0)
+  return -1;
+
+ /* Get the attribute */
+ if ( H5LT_get_attribute_mem( obj_id, attr_name, H5T_NATIVE_SHORT, data ) < 0 )
+  return -1;
+
+ /* Close the object */
+ if ( H5LT_close_id( obj_id, statbuf.type ) < 0 )
+  return -1;
+
+ return 0;
+
 }
 
 /*-------------------------------------------------------------------------
@@ -2439,11 +2992,29 @@ herr_t H5LTget_attribute_ushort( hid_t loc_id,
                                 const char *attr_name,
                                 unsigned short *data )
 {
-    /* Get the attribute */
-    if(H5LT_get_attribute_mem(loc_id, obj_name, attr_name, H5T_NATIVE_USHORT, data) < 0)
-        return -1;
 
-    return 0;
+ /* identifiers */
+ hid_t      obj_id;
+ H5G_stat_t statbuf;
+
+ /* Get the type of object */
+ if (H5Gget_objinfo(loc_id, obj_name, 1, &statbuf)<0)
+  return -1;
+
+ /* Open the object */
+ if ((obj_id = H5LT_open_id( loc_id, obj_name, statbuf.type )) < 0)
+  return -1;
+
+ /* Get the attribute */
+ if ( H5LT_get_attribute_mem( obj_id, attr_name, H5T_NATIVE_USHORT, data ) < 0 )
+  return -1;
+
+ /* Close the object */
+ if ( H5LT_close_id( obj_id, statbuf.type ) < 0 )
+  return -1;
+
+ return 0;
+
 }
 
 
@@ -2470,11 +3041,29 @@ herr_t H5LTget_attribute_int( hid_t loc_id,
                               const char *attr_name,
                               int *data )
 {
-    /* Get the attribute */
-    if(H5LT_get_attribute_mem(loc_id, obj_name, attr_name, H5T_NATIVE_INT, data) < 0)
-        return -1;
 
-    return 0;
+ /* identifiers */
+ hid_t      obj_id;
+ H5G_stat_t statbuf;
+
+ /* Get the type of object */
+ if (H5Gget_objinfo(loc_id, obj_name, 1, &statbuf)<0)
+  return -1;
+
+ /* Open the object */
+ if ((obj_id = H5LT_open_id( loc_id, obj_name, statbuf.type )) < 0)
+  return -1;
+
+ /* Get the attribute */
+ if ( H5LT_get_attribute_mem( obj_id, attr_name, H5T_NATIVE_INT, data ) < 0 )
+  return -1;
+
+ /* Close the object */
+ if ( H5LT_close_id( obj_id, statbuf.type ) < 0 )
+  return -1;
+
+ return 0;
+
 }
 
 /*-------------------------------------------------------------------------
@@ -2499,11 +3088,29 @@ herr_t H5LTget_attribute_uint( hid_t loc_id,
                               const char *attr_name,
                               unsigned int *data )
 {
-    /* Get the attribute */
-    if(H5LT_get_attribute_mem(loc_id, obj_name, attr_name, H5T_NATIVE_UINT, data) < 0)
-        return -1;
 
-    return 0;
+ /* identifiers */
+ hid_t      obj_id;
+ H5G_stat_t statbuf;
+
+ /* Get the type of object */
+ if (H5Gget_objinfo(loc_id, obj_name, 1, &statbuf)<0)
+  return -1;
+
+ /* Open the object */
+ if ((obj_id = H5LT_open_id( loc_id, obj_name, statbuf.type )) < 0)
+  return -1;
+
+ /* Get the attribute */
+ if ( H5LT_get_attribute_mem( obj_id, attr_name, H5T_NATIVE_UINT, data ) < 0 )
+  return -1;
+
+ /* Close the object */
+ if ( H5LT_close_id( obj_id, statbuf.type ) < 0 )
+  return -1;
+
+ return 0;
+
 }
 
 
@@ -2530,13 +3137,30 @@ herr_t H5LTget_attribute_long( hid_t loc_id,
                               const char *attr_name,
                               long *data )
 {
-    /* Get the attribute */
-    if(H5LT_get_attribute_mem(loc_id, obj_name, attr_name, H5T_NATIVE_LONG, data) < 0)
-        return -1;
 
-    return 0;
+ /* identifiers */
+ hid_t      obj_id;
+ H5G_stat_t statbuf;
+
+ /* Get the type of object */
+ if (H5Gget_objinfo(loc_id, obj_name, 1, &statbuf)<0)
+  return -1;
+
+ /* Open the object */
+ if ((obj_id = H5LT_open_id( loc_id, obj_name, statbuf.type )) < 0)
+  return -1;
+
+ /* Get the attribute */
+ if ( H5LT_get_attribute_mem( obj_id, attr_name, H5T_NATIVE_LONG, data ) < 0 )
+  return -1;
+
+ /* Close the object */
+ if ( H5LT_close_id( obj_id, statbuf.type ) < 0 )
+  return -1;
+
+ return 0;
+
 }
-
 /*-------------------------------------------------------------------------
  * Function: H5LTget_attribute_long_long
  *
@@ -2559,11 +3183,29 @@ herr_t H5LTget_attribute_long_long( hid_t loc_id,
                               const char *attr_name,
                               long_long *data )
 {
-    /* Get the attribute */
-    if(H5LT_get_attribute_mem(loc_id, obj_name, attr_name, H5T_NATIVE_LLONG, data) < 0)
-        return -1;
 
-    return 0;
+ /* identifiers */
+ hid_t      obj_id;
+ H5G_stat_t statbuf;
+
+ /* Get the type of object */
+ if (H5Gget_objinfo(loc_id, obj_name, 1, &statbuf)<0)
+  return -1;
+
+ /* Open the object */
+ if ((obj_id = H5LT_open_id( loc_id, obj_name, statbuf.type )) < 0)
+  return -1;
+
+ /* Get the attribute */
+ if ( H5LT_get_attribute_mem( obj_id, attr_name, H5T_NATIVE_LLONG, data ) < 0 )
+  return -1;
+
+ /* Close the object */
+ if ( H5LT_close_id( obj_id, statbuf.type ) < 0 )
+  return -1;
+
+ return 0;
+
 }
 
 
@@ -2589,11 +3231,29 @@ herr_t H5LTget_attribute_ulong( hid_t loc_id,
                               const char *attr_name,
                               unsigned long *data )
 {
-    /* Get the attribute */
-    if(H5LT_get_attribute_mem(loc_id, obj_name, attr_name, H5T_NATIVE_ULONG, data) < 0)
-        return -1;
 
-    return 0;
+ /* identifiers */
+ hid_t      obj_id;
+ H5G_stat_t statbuf;
+
+ /* Get the type of object */
+ if (H5Gget_objinfo(loc_id, obj_name, 1, &statbuf)<0)
+  return -1;
+
+ /* Open the object */
+ if ((obj_id = H5LT_open_id( loc_id, obj_name, statbuf.type )) < 0)
+  return -1;
+
+ /* Get the attribute */
+ if ( H5LT_get_attribute_mem( obj_id, attr_name, H5T_NATIVE_ULONG, data ) < 0 )
+  return -1;
+
+ /* Close the object */
+ if ( H5LT_close_id( obj_id, statbuf.type ) < 0 )
+  return -1;
+
+ return 0;
+
 }
 
 
@@ -2621,11 +3281,29 @@ herr_t H5LTget_attribute_float( hid_t loc_id,
                                 const char *attr_name,
                                 float *data )
 {
-    /* Get the attribute */
-    if(H5LT_get_attribute_mem(loc_id, obj_name, attr_name, H5T_NATIVE_FLOAT, data) < 0)
-        return -1;
 
-    return 0;
+ /* identifiers */
+ hid_t      obj_id;
+ H5G_stat_t statbuf;
+
+ /* Get the type of object */
+ if (H5Gget_objinfo(loc_id, obj_name, 1, &statbuf)<0)
+  return -1;
+
+ /* Open the object */
+ if ((obj_id = H5LT_open_id( loc_id, obj_name, statbuf.type )) < 0)
+  return -1;
+
+ /* Get the attribute */
+ if ( H5LT_get_attribute_mem( obj_id, attr_name, H5T_NATIVE_FLOAT, data ) < 0 )
+  return -1;
+
+ /* Close the object */
+ if ( H5LT_close_id( obj_id, statbuf.type ) < 0 )
+  return -1;
+
+ return 0;
+
 }
 
 
@@ -2653,11 +3331,29 @@ herr_t H5LTget_attribute_double( hid_t loc_id,
                                  const char *attr_name,
                                  double *data )
 {
-    /* Get the attribute */
-    if(H5LT_get_attribute_mem(loc_id, obj_name, attr_name, H5T_NATIVE_DOUBLE, data) < 0)
-        return -1;
 
-    return 0;
+ /* identifiers */
+ hid_t      obj_id;
+ H5G_stat_t statbuf;
+
+ /* Get the type of object */
+ if (H5Gget_objinfo(loc_id, obj_name, 1, &statbuf)<0)
+  return -1;
+
+ /* Open the object */
+ if ((obj_id = H5LT_open_id( loc_id, obj_name, statbuf.type )) < 0)
+  return -1;
+
+ /* Get the attribute */
+ if ( H5LT_get_attribute_mem( obj_id, attr_name, H5T_NATIVE_DOUBLE, data ) < 0 )
+  return -1;
+
+ /* Close the object */
+ if ( H5LT_close_id( obj_id, statbuf.type ) < 0 )
+  return -1;
+
+ return 0;
+
 }
 
 
@@ -2686,11 +3382,31 @@ herr_t H5LTget_attribute( hid_t loc_id,
                           hid_t mem_type_id,
                           void *data )
 {
-    /* Get the attribute */
-    if(H5LT_get_attribute_mem(loc_id, obj_name, attr_name, mem_type_id, data) < 0)
-        return -1;
 
-    return 0;
+ /* identifiers */
+ hid_t      obj_id;
+ H5G_stat_t statbuf;
+
+ /* Get the type of object */
+ if (H5Gget_objinfo(loc_id, obj_name, 1, &statbuf)<0)
+  return -1;
+
+ /* Open the object */
+ if ((obj_id = H5LT_open_id( loc_id, obj_name, statbuf.type )) < 0)
+  return -1;
+
+ /* Get the attribute */
+ if ( H5LT_get_attribute_mem( obj_id, attr_name, mem_type_id, data ) < 0 )
+ {
+  H5LT_close_id( obj_id, statbuf.type );
+  return -1;
+ }
+
+ /* Close the object */
+ if ( H5LT_close_id( obj_id, statbuf.type ) < 0 )
+  return -1;
+
+ return 0;
 }
 
 
@@ -2719,41 +3435,29 @@ herr_t H5LTget_attribute( hid_t loc_id,
  */
 
 
-static herr_t H5LT_get_attribute_mem(hid_t loc_id,
-                           const char *obj_name,
+herr_t H5LT_get_attribute_mem( hid_t obj_id,
                            const char *attr_name,
                            hid_t mem_type_id,
-                           void *data)
+                           void *data )
 {
-    /* identifiers */
-    hid_t obj_id = -1;
-    hid_t attr_id = -1;
 
-    /* Open the object */
-    if((obj_id = H5Oopen(loc_id, obj_name, H5P_DEFAULT)) < 0)
-        goto out;
+ /* identifiers */
+ hid_t attr_id;
 
-    if((attr_id = H5Aopen(obj_id, attr_name, H5P_DEFAULT)) < 0)
-        goto out;
+ if ( ( attr_id = H5Aopen_name( obj_id, attr_name ) ) < 0 )
+  return -1;
 
-    if(H5Aread(attr_id, mem_type_id, data) < 0)
-        goto out;
+ if ( H5Aread( attr_id, mem_type_id, data ) < 0 )
+  goto out;
 
-    if(H5Aclose(attr_id) < 0)
-        goto out;
-    attr_id = -1;
+ if ( H5Aclose( attr_id ) < 0 )
+  return -1;
 
-    /* Close the object */
-    if(H5Oclose(obj_id) < 0)
-      goto out;
-    obj_id = -1;
-
-    return 0;
+ return 0;
 
 out:
-    if(attr_id > 0)
-        H5Aclose(attr_id);
-    return -1;
+ H5Aclose( attr_id );
+ return -1;
 }
 
 /*-------------------------------------------------------------------------
@@ -2782,16 +3486,16 @@ herr_t H5LT_get_attribute_disk( hid_t loc_id,
  hid_t attr_id;
  hid_t attr_type;
 
- if(( attr_id = H5Aopen(loc_id, attr_name, H5P_DEFAULT)) < 0)
+ if ( ( attr_id = H5Aopen_name( loc_id, attr_name ) ) < 0 )
   return -1;
 
- if((attr_type = H5Aget_type(attr_id)) < 0)
+ if ( (attr_type = H5Aget_type( attr_id )) < 0 )
   goto out;
 
- if(H5Aread(attr_id, attr_type, attr_out) < 0)
+ if ( H5Aread( attr_id, attr_type, attr_out ) < 0 )
   goto out;
 
- if(H5Tclose(attr_type) < 0)
+ if ( H5Tclose( attr_type )  < 0 )
   goto out;
 
  if ( H5Aclose( attr_id ) < 0 )
@@ -2837,26 +3541,28 @@ herr_t H5LT_set_attribute_string(hid_t dset_id,
  has_attr = H5LT_find_attribute(dset_id,name);
 
  /* the attribute already exists, delete it */
- if(has_attr == 1)
-  if(H5Adelete(dset_id, name) < 0)
+ if ( has_attr == 1 )
+ {
+  if ( H5Adelete(dset_id,name)<0)
     return FAIL;
+ }
 
 /*-------------------------------------------------------------------------
  * create the attribute type
  *-------------------------------------------------------------------------
  */
- if((tid = H5Tcopy(H5T_C_S1)) < 0)
+ if ((tid = H5Tcopy(H5T_C_S1))<0)
   return FAIL;
 
  size = strlen(buf) + 1; /* extra null term */
 
- if(H5Tset_size(tid,(size_t)size) < 0)
+ if (H5Tset_size(tid,(size_t)size)<0)
   goto out;
 
- if(H5Tset_strpad(tid, H5T_STR_NULLTERM) < 0)
+ if (H5Tset_strpad(tid,H5T_STR_NULLTERM)<0)
   goto out;
 
- if((sid = H5Screate(H5S_SCALAR)) < 0)
+ if ((sid = H5Screate(H5S_SCALAR))<0)
   goto out;
 
 
@@ -2864,19 +3570,19 @@ herr_t H5LT_set_attribute_string(hid_t dset_id,
  * create and write the attribute
  *-------------------------------------------------------------------------
  */
- if((aid = H5Acreate2(dset_id, name, tid, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+ if ((aid = H5Acreate(dset_id,name,tid,sid,H5P_DEFAULT))<0)
   goto out;
 
- if(H5Awrite(aid, tid, buf) < 0)
+ if (H5Awrite(aid,tid,buf)<0)
   goto out;
 
- if(H5Aclose(aid) < 0)
+ if (H5Aclose(aid)<0)
   goto out;
 
- if(H5Sclose(sid) < 0)
+ if (H5Sclose(sid)<0)
   goto out;
 
- if(H5Tclose(tid) < 0)
+ if (H5Tclose(tid)<0)
   goto out;
 
  return SUCCEED;
@@ -2891,5 +3597,4 @@ out:
  return FAIL;
 
 }
-
 

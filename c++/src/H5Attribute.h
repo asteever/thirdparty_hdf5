@@ -1,6 +1,5 @@
 // C++ informative line for the emacs editor: -*- C++ -*-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -10,8 +9,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef _H5Attribute_H
@@ -54,9 +53,6 @@ class H5_DLLCPP Attribute : public AbstractDs {
 	// Copy constructor: makes a copy of an existing Attribute object.
 	Attribute( const Attribute& original );
 
-	// Default constructor
-	Attribute();
-
 	// Destructor: properly terminates access to this attribute.
 	virtual ~Attribute();
 
@@ -67,11 +63,14 @@ class H5_DLLCPP Attribute : public AbstractDs {
 	// sub-types
 	virtual hid_t p_get_type() const;
 
-	// do not inherit H5Object::iterateAttrs
+	// do not inherit iterateAttrs from H5Object
 	int iterateAttrs() { return 0; }
 
-	// do not inherit H5Object::renameAttr
-	void renameAttr() {}
+	// do not inherit iterateAttrs from H5Object
+	void rename() {}
+
+	// Default constructor
+	Attribute();
 };
 #ifndef H5_NO_NAMESPACE
 }

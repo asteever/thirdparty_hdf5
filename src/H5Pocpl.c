@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,431 +8,188 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/*-------------------------------------------------------------------------
- *
- * Created:		H5Pocpl.c
- *			Nov 28 2006
- *			Quincey Koziol <koziol@hdfgroup.org>
- *
- * Purpose:		Object creation property list class routines
- *
- *-------------------------------------------------------------------------
- */
-
-/****************/
-/* Module Setup */
-/****************/
-#define H5O_PACKAGE		/*suppress error about including H5Opkg	  */
 #define H5P_PACKAGE		/*suppress error about including H5Ppkg	  */
 
-
-/***********/
-/* Headers */
-/***********/
+/* Private header files */
 #include "H5private.h"		/* Generic Functions			*/
 #include "H5Eprivate.h"		/* Error handling		  	*/
 #include "H5Iprivate.h"		/* IDs			  		*/
-#include "H5Opkg.h"             /* Object headers			*/
 #include "H5Ppkg.h"		/* Property lists		  	*/
 
+/* Local datatypes */
 
-/****************/
-/* Local Macros */
-/****************/
+/* Static function prototypes */
 
-/* ========= Object Creation properties ============ */
-/* Definitions for the max. # of attributes to store compactly */
-#define H5O_CRT_ATTR_MAX_COMPACT_SIZE   sizeof(unsigned)
-/* Definitions for the min. # of attributes to store densely */
-#define H5O_CRT_ATTR_MIN_DENSE_SIZE     sizeof(unsigned)
-/* Definitions for object header flags */
-#define H5O_CRT_OHDR_FLAGS_SIZE         sizeof(uint8_t)
-
-
-/******************/
-/* Local Typedefs */
-/******************/
-
-
-/********************/
-/* Package Typedefs */
-/********************/
-
-
-/********************/
-/* Local Prototypes */
-/********************/
-
-/* Property class callbacks */
-static herr_t H5P_ocrt_reg_prop(H5P_genclass_t *pclass);
-
-
-/*********************/
-/* Package Variables */
-/*********************/
-
-/* Object creation property list class library initialization object */
-const H5P_libclass_t H5P_CLS_OCRT[1] = {{
-    "object create",		/* Class name for debugging     */
-    &H5P_CLS_ROOT_g,		/* Parent class ID              */
-    &H5P_CLS_OBJECT_CREATE_g,	/* Pointer to class ID          */
-    NULL,			/* Pointer to default property list ID */
-    H5P_ocrt_reg_prop,		/* Default property registration routine */
-    NULL,		        /* Class creation callback      */
-    NULL,		        /* Class creation callback info */
-    NULL,			/* Class copy callback          */
-    NULL,		        /* Class copy callback info     */
-    NULL,			/* Class close callback         */
-    NULL 		        /* Class close callback info    */
-}};
-
-
-
-/*****************************/
-/* Library Private Variables */
-/*****************************/
-
-
-/*******************/
-/* Local Variables */
-/*******************/
-
-
+#ifdef H5_GROUP_REVISION
 
 /*-------------------------------------------------------------------------
- * Function:    H5P_ocrt_reg_prop
+ * Function:    H5Pset_create_intermediate_group
  *
- * Purpose:     Initialize the object creation property list class
+ * Purpose:     set crt_intmd_group so that H5Gcreate(), H5Dcreate, etc.
+ *              will create missing groups along the given path "name"
+ *
+ * Usage:       H5Pset_create_intermediate_group(plist_id, crt_intmd_group)
+ *              hid_t plist_id;			IN: Property list to create a new group
+ *              unsigned crt_intmd_group; 	IN: Flag to create intermediate group
+ *                                                  positive value -- to create intermediate group
+ *                                                  otherwise -- do not create intermediate group
+ *              For example, H5Pset_create_intermediate_group(plist_id, 1) to create intermediate group; 
+ *
+ * Note:        XXX: This property should really be an access property. -QAK
+ *              XXX: The property is used only at creation time. It should
+ *                   be a creation property. However, the property is not
+ *                   saved with the group. In that sense, it should be access
+ *                   property. We do not have a good solution for this kind
+ *                   of property. For now, it is used as a creation property. 
+ *                                                                      -PXC
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Quincey Koziol
- *              November 28, 2006
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5P_ocrt_reg_prop(H5P_genclass_t *pclass)
-{
-    unsigned attr_max_compact = H5O_CRT_ATTR_MAX_COMPACT_DEF;   /* Default max. compact attribute storage settings */
-    unsigned attr_min_dense = H5O_CRT_ATTR_MIN_DENSE_DEF;       /* Default min. dense attribute storage settings */
-    uint8_t ohdr_flags = H5O_CRT_OHDR_FLAGS_DEF;               /* Default object header flag settings */
-    herr_t ret_value = SUCCEED;         /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT(H5P_ocrt_reg_prop)
-
-    /* Register max. compact attribute storage property */
-    if(H5P_register(pclass, H5O_CRT_ATTR_MAX_COMPACT_NAME, H5O_CRT_ATTR_MAX_COMPACT_SIZE,
-             &attr_max_compact, NULL, NULL, NULL, NULL, NULL, NULL, NULL) < 0)
-         HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
-
-    /* Register min. dense attribute storage property */
-    if(H5P_register(pclass, H5O_CRT_ATTR_MIN_DENSE_NAME, H5O_CRT_ATTR_MIN_DENSE_SIZE,
-             &attr_min_dense, NULL, NULL, NULL, NULL, NULL, NULL, NULL) < 0)
-         HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
-
-    /* Register object header flags property */
-    if(H5P_register(pclass, H5O_CRT_OHDR_FLAGS_NAME, H5O_CRT_OHDR_FLAGS_SIZE,
-             &ohdr_flags, NULL, NULL, NULL, NULL, NULL, NULL, NULL) < 0)
-         HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5P_ocrt_reg_prop() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5Pset_attr_phase_change
- *
- * Purpose:	Sets the cutoff values for indexes storing attributes
- *              in object headers for this file.  If more than max_compact
- *              attributes are in an object header, the attributes will be
- *              moved to a heap and indexed with a B-tree.
- *              Likewise, an object header containing fewer than min_dense
- *              attributes will be converted back to storing the attributes
- *              directly in the object header.
- *
- *              If the max_compact is zero then attributes for this object will
- *              never be stored in the object header but will be always be
- *              stored in a heap.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *		Tuesday, November 28, 2006
- *
+ * Programmer:  Peter Cao
+ *              May 08, 2005
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Pset_attr_phase_change(hid_t plist_id, unsigned max_compact, unsigned min_dense)
+H5Pset_create_intermediate_group(hid_t plist_id, unsigned crt_intmd_group)
 {
-    H5P_genplist_t *plist;              /* Property list pointer */
-    herr_t ret_value = SUCCEED;         /* Return value */
+    H5P_genplist_t *plist;      /* Property list pointer */
+    herr_t ret_value = SUCCEED; /* Return value */
 
-    FUNC_ENTER_API(H5Pset_attr_phase_change, FAIL)
-    H5TRACE3("e", "iIuIu", plist_id, max_compact, min_dense);
-
-    /* Range check values */
-    if(max_compact < min_dense)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, FAIL, "max compact value must be >= min dense value")
-    if(max_compact > 65535)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, FAIL, "max compact value must be < 65536")
-    if(min_dense > 65535)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, FAIL, "min dense value must be < 65536")
+    FUNC_ENTER_API(H5Pset_create_intermediate_group, FAIL);
+    H5TRACE2("e","iIu",plist_id,crt_intmd_group);
 
     /* Get the plist structure */
     if(NULL == (plist = H5P_object_verify(plist_id, H5P_OBJECT_CREATE)))
         HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
 
-    /* Set property values */
-    if(H5P_set(plist, H5O_CRT_ATTR_MAX_COMPACT_NAME, &max_compact) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set max. # of compact attributes in property list")
-    if(H5P_set(plist, H5O_CRT_ATTR_MIN_DENSE_NAME, &min_dense) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set min. # of dense attributes in property list")
+    /* Set value */
+    crt_intmd_group = crt_intmd_group > 0 ? 1 : 0;
+    if(H5P_set(plist, H5G_CRT_INTERMEDIATE_GROUP_NAME, &crt_intmd_group) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set intermediate group creation flag")
 
 done:
     FUNC_LEAVE_API(ret_value)
-} /* end H5Pset_attr_phase_change */
+} /* end H5Pset_create_intermediate_group() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5Pget_attr_phase_change
+ * Function:    H5Pget_create_intermediate_group
  *
- * Purpose:	Gets the phase change values for attribute storage
+ * Purpose:     Returns the crt_intmd_group, which is set at H5Gcreate(hid_t loc_id,
+ *              const char* name, ... ) for create missing groups
  *
- * Return:	Non-negative on success/Negative on failure
+ * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:	Quincey Koziol
- *		Tuesday, November 28, 2006
- *
+ * Programmer:  Peter Cao
+ *              May 08, 2005
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Pget_attr_phase_change(hid_t plist_id, unsigned *max_compact, unsigned *min_dense)
+H5Pget_create_intermediate_group(hid_t plist_id, unsigned *crt_intmd_group /*out*/)
 {
-    H5P_genplist_t *plist;              /* Property list pointer */
-    herr_t ret_value = SUCCEED;         /* Return value */
+    H5P_genplist_t *plist;      /* Property list pointer */
+    herr_t ret_value = SUCCEED; /* return value */
 
-    FUNC_ENTER_API(H5Pget_attr_phase_change, FAIL)
-    H5TRACE3("e", "i*Iu*Iu", plist_id, max_compact, min_dense);
+    FUNC_ENTER_API(H5Pget_create_intermediate_group, FAIL);
+    H5TRACE2("e","ix",plist_id,crt_intmd_group);
 
     /* Get the plist structure */
     if(NULL == (plist = H5P_object_verify(plist_id, H5P_OBJECT_CREATE)))
         HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
 
     /* Get values */
-    if(max_compact) {
-        if(H5P_get(plist, H5O_CRT_ATTR_MAX_COMPACT_NAME, max_compact) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get max. # of compact attributes")
-    } /* end if */
-    if(min_dense) {
-        if(H5P_get(plist, H5O_CRT_ATTR_MIN_DENSE_NAME, min_dense) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get min. # of dense attributes")
-    } /* end if */
+    if(crt_intmd_group)
+        if(H5P_get(plist, H5G_CRT_INTERMEDIATE_GROUP_NAME, crt_intmd_group) < 0)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get intermediate group creation flag")
 
 done:
     FUNC_LEAVE_API(ret_value)
-} /* end H5Pget_attr_phase_change() */
+} /* end H5Pget_create_intermediate_group() */
+#endif /* H5_GROUP_REVISION */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5Pset_attr_creation_order
+ * Function:    H5Pset_copy_object
  *
- * Purpose:     Set the flags for creation order of attributes on an object
+ * Purpose:     Set properties when copying an object (group, dataset, and datatype)
+ *              from one location to another
  *
+ * Usage:       H5Pset_copy_group(plist_id, cpy_option)
+ *              hid_t plist_id;			IN: Property list to copy object 
+ *              unsigned cpy_option; 		IN: Options to copy object such as
+ *                  H5G_COPY_SHALLOW_HIERARCHY_FLAG    -- Copy only immediate members
+ *                  H5G_COPY_EXPAND_SOFT_LINK_FLAG     -- Expand soft links into new objects/
+ *                  H5G_COPY_EXPAND_EXT_LINK_FLAG      -- Expand external links into new objects 
+ *                  H5G_COPY_EXPAND_OBJ_REFERENCE_FLAG -- Copy objects that are pointed by references
+ *                  H5G_COPY_WITHOUT_ATTR_FLAG         -- Copy object without copying attributes
+*
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Quincey Koziol
- *              February  6, 2007
- *
+ * Programmer:  Peter Cao
+ *              March 13, 2006 
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Pset_attr_creation_order(hid_t plist_id, unsigned crt_order_flags)
+H5Pset_copy_object(hid_t plist_id, unsigned cpy_option)
 {
-    H5P_genplist_t *plist;              /* Property list pointer */
-    uint8_t ohdr_flags;                 /* Object header flags */
-    herr_t ret_value = SUCCEED;         /* Return value */
+    H5P_genplist_t *plist;      /* Property list pointer */
+    herr_t ret_value = SUCCEED; /* Return value */
 
-    FUNC_ENTER_API(H5Pset_attr_creation_order, FAIL)
-    H5TRACE2("e", "iIu", plist_id, crt_order_flags);
+    FUNC_ENTER_API(H5Pset_copy_object, FAIL)
+    H5TRACE2("e","iIu",plist_id,cpy_option);
 
-    /* Check for bad combination of flags */
-    if(!(crt_order_flags & H5P_CRT_ORDER_TRACKED) && (crt_order_flags & H5P_CRT_ORDER_INDEXED))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "tracking creation order is required for index")
+    /* Check parameters */
+    if(cpy_option & ~H5G_COPY_ALL)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unknown option specified")
 
     /* Get the plist structure */
-    if(NULL == (plist = H5P_object_verify(plist_id, H5P_OBJECT_CREATE)))
+    if(NULL == (plist = H5P_object_verify(plist_id, H5P_OBJECT_COPY)))
         HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
 
-    /* Get object header flags */
-    if(H5P_get(plist, H5O_CRT_OHDR_FLAGS_NAME, &ohdr_flags) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get object header flags")
-
-    /* Mask off previous attribute creation order flag settings */
-    ohdr_flags &= ~(H5O_HDR_ATTR_CRT_ORDER_TRACKED | H5O_HDR_ATTR_CRT_ORDER_INDEXED);
-
-    /* Update with new attribute creation order flags */
-    ohdr_flags |= (crt_order_flags & H5P_CRT_ORDER_TRACKED) ? H5O_HDR_ATTR_CRT_ORDER_TRACKED : 0;
-    ohdr_flags |= (crt_order_flags & H5P_CRT_ORDER_INDEXED) ? H5O_HDR_ATTR_CRT_ORDER_INDEXED : 0;
-
-    /* Set object header flags */
-    if(H5P_set(plist, H5O_CRT_OHDR_FLAGS_NAME, &ohdr_flags) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set object header flags")
+    /* Set value */
+    if(H5P_set(plist, H5G_CPY_OPTION_NAME, &cpy_option) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set copy object flag")
 
 done:
     FUNC_LEAVE_API(ret_value)
-} /* end H5Pset_attr_creation_order() */
+} /* end H5Pset_copy_object() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5Pget_attr_creation_order
+ * Function:    H5Pget_copy_object
  *
- * Purpose:     Returns the flags indicating creation order is tracked/indexed
- *              for attributes on an object.
- *
- * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Quincey Koziol
- *              February  6, 2007
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5Pget_attr_creation_order(hid_t plist_id, unsigned *crt_order_flags)
-{
-    herr_t ret_value = SUCCEED;   /* return value */
-
-    FUNC_ENTER_API(H5Pget_attr_creation_order, FAIL)
-    H5TRACE2("e", "i*Iu", plist_id, crt_order_flags);
-
-    /* Get values */
-    if(crt_order_flags) {
-        H5P_genplist_t *plist;      /* Property list pointer */
-        uint8_t ohdr_flags;         /* Object header flags */
-
-        /* Reset the value to return */
-        *crt_order_flags = 0;
-
-        /* Get the plist structure */
-        if(NULL == (plist = H5P_object_verify(plist_id, H5P_OBJECT_CREATE)))
-            HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
-
-        /* Get object header flags */
-        if(H5P_get(plist, H5O_CRT_OHDR_FLAGS_NAME, &ohdr_flags) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get object header flags")
-
-        /* Set creation order flags to return */
-        *crt_order_flags |= (ohdr_flags & H5O_HDR_ATTR_CRT_ORDER_TRACKED) ? H5P_CRT_ORDER_TRACKED : 0;
-        *crt_order_flags |= (ohdr_flags & H5O_HDR_ATTR_CRT_ORDER_INDEXED) ? H5P_CRT_ORDER_INDEXED : 0;
-    } /* end if */
-
-done:
-    FUNC_LEAVE_API(ret_value)
-} /* end H5Pget_attr_creation_order() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5Pset_obj_track_times
- *
- * Purpose:     Set whether the birth, access, modification & change times for
- *              an object are stored.
- *
- *              Birth time is the time the object was created.  Access time is
- *              the last time that metadata or raw data was read from this
- *              object.  Modification time is the last time the data for
- *              this object was changed (either writing raw data to a dataset
- *              or inserting/modifying/deleting a link in a group).  Change
- *              time is the last time the metadata for this object was written
- *              (adding/modifying/deleting an attribute on an object, extending
- *              the size of a dataset, etc).
- *
- *              If these times are not tracked, they will be reported as
- *              12:00 AM UDT, Jan. 1, 1970 (i.e. 0 seconds past the UNIX
- *              epoch) when queried.
+ * Purpose:     Returns the cpy_option, which is set for H5Gcopy(hid_t loc_id,
+ *              const char* name, ... ) for copying objects 
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Quincey Koziol
- *              March  1, 2007
- *
+ * Programmer:  Peter Cao
+ *              March 13, 2006 
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Pset_obj_track_times(hid_t plist_id, hbool_t track_times)
+H5Pget_copy_object(hid_t plist_id, unsigned *cpy_option /*out*/)
 {
-    H5P_genplist_t *plist;              /* Property list pointer */
-    uint8_t ohdr_flags;                 /* Object header flags */
-    herr_t ret_value = SUCCEED;         /* Return value */
+    H5P_genplist_t *plist;      /* Property list pointer */
+    herr_t ret_value = SUCCEED; /* return value */
 
-    FUNC_ENTER_API(H5Pset_obj_track_times, FAIL)
-    H5TRACE2("e", "ib", plist_id, track_times);
+    FUNC_ENTER_API(H5Pget_copy_object, FAIL)
+    H5TRACE2("e","ix",plist_id,cpy_option);
 
     /* Get the plist structure */
-    if(NULL == (plist = H5P_object_verify(plist_id, H5P_OBJECT_CREATE)))
+    if(NULL == (plist = H5P_object_verify(plist_id, H5P_OBJECT_COPY)))
         HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
 
-    /* Get object header flags */
-    if(H5P_get(plist, H5O_CRT_OHDR_FLAGS_NAME, &ohdr_flags) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get object header flags")
-
-    /* Mask off previous time tracking flag settings */
-    ohdr_flags &= ~H5O_HDR_STORE_TIMES;
-
-    /* Update with new time tracking flag */
-    ohdr_flags |= track_times ? H5O_HDR_STORE_TIMES : 0;
-
-    /* Set object header flags */
-    if(H5P_set(plist, H5O_CRT_OHDR_FLAGS_NAME, &ohdr_flags) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set object header flags")
-
-done:
-    FUNC_LEAVE_API(ret_value)
-} /* end H5Pset_obj_track_times() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5Pget_obj_track_times
- *
- * Purpose:     Returns whether times are tracked for an object.
- *
- * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Quincey Koziol
- *              March  1, 2007
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5Pget_obj_track_times(hid_t plist_id, hbool_t *track_times)
-{
-    herr_t ret_value = SUCCEED;   /* return value */
-
-    FUNC_ENTER_API(H5Pget_obj_track_times, FAIL)
-    H5TRACE2("e", "i*b", plist_id, track_times);
-
     /* Get values */
-    if(track_times) {
-        H5P_genplist_t *plist;      /* Property list pointer */
-        uint8_t ohdr_flags;         /* Object header flags */
-
-        /* Get the plist structure */
-        if(NULL == (plist = H5P_object_verify(plist_id, H5P_OBJECT_CREATE)))
-            HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
-
-        /* Get object header flags */
-        if(H5P_get(plist, H5O_CRT_OHDR_FLAGS_NAME, &ohdr_flags) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get object header flags")
-
-        /* Set track times flag to return */
-        *track_times = (ohdr_flags & H5O_HDR_STORE_TIMES) ? TRUE : FALSE;
-    } /* end if */
+    if(cpy_option)
+        if(H5P_get(plist, H5G_CPY_OPTION_NAME, cpy_option) < 0)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get object copy flag")
 
 done:
     FUNC_LEAVE_API(ret_value)
-} /* end H5Pget_obj_track_times() */
+} /* end H5Pget_copy_object() */
 

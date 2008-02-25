@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,15 +8,13 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* ptableTest.cpp */
 
 #include "ptableTest.h"
-
-using namespace H5;
 
 #define TEST_FILE "packettest.h5"
 
@@ -44,15 +41,11 @@ int main(void)
 
             num_errors += TestGetNext();
 
-            num_errors += TestCompress();
-
             num_errors += TestErrors();
 
             num_errors += SystemTest();
 
-#ifdef VLPT_REMOVED
             num_errors += VariableLengthTest();
-#endif /* VLPT_REMOVED */
 
         /* Terminate access to the file. */
         err = H5Fclose(fileID);
@@ -153,8 +146,8 @@ int TestCompoundDatatype()
     H5Tinsert(dtypeID, "charlie", HOFFSET( compoundType, c ), H5T_NATIVE_SHORT);
     H5Tinsert(dtypeID, "ebert", HOFFSET( compoundType, e ), H5T_NATIVE_INT);
 
-    /* Create packet table.  Explicitly specify no compression */
-    FL_PacketTable wrapper(fileID, "/compoundTest", dtypeID, 1, -1);
+    /* Create packet table */
+    FL_PacketTable wrapper(fileID, "/compoundTest", dtypeID, 1);
 
     if(! wrapper.IsValid())
       goto out;
@@ -200,7 +193,7 @@ int TestGetNext()
     TESTING("GetNextPacket")
 
     /* Create a dataset */
-    FL_PacketTable wrapper(fileID, "/TestGetNext", H5T_NATIVE_INT, 500);
+    FL_PacketTable wrapper(fileID, "/TestGetNext", H5T_NATIVE_INT, 1);
 
     if(! wrapper.IsValid())
       goto out;
@@ -217,10 +210,7 @@ int TestGetNext()
           goto out;
     }
 
-    /* Reset the index and check that it worked */
     wrapper.ResetIndex();
-    if(wrapper.GetIndex(error) != 0) goto out;
-    if(error < 0) goto out;
 
     /* Ensure that we can interate through the records and get the right ones */
     for(i = 1; i < 6; i++)
@@ -231,8 +221,6 @@ int TestGetNext()
     }
 
     wrapper.SetIndex(1);
-    if(wrapper.GetIndex(error) != 1) goto out;
-    if(error < 0) goto out;
 
     /* Ensure we can get multiple records with our index pointer */
     wrapper.GetNextPackets(2, records);
@@ -252,42 +240,6 @@ out:
     return 1;
 }
 
-int TestCompress()
-{
-   
-	unsigned int flags = 0;
-    unsigned int config = 0;
-    size_t cd_nelemts = 0;
-
-    TESTING("compression")
-#ifdef H5_HAVE_FILTER_DEFLATE 
-    try {
-        /* Create packet table with compression. */
-        FL_PacketTable wrapper(fileID, "/compressTest", H5T_NATIVE_CHAR, 100, 8);
-
-        /* Create an HDF5 C++ file object */
-        H5File file;
-        file.setId(fileID);
-
-        /* Make sure that the deflate filter is set by opening the packet table
-         * as a dataset and getting its creation property list */
-        DataSet dsetID = file.openDataSet("/compressTest");
-
-        DSetCreatPropList dcplID = dsetID.getCreatePlist();
-
-        dcplID.getFilterById(H5Z_FILTER_DEFLATE, flags, cd_nelemts, NULL, 0, NULL, config);
-    } catch (Exception e) {
-      H5_FAILED();
-      return 1;
-    }
-    PASSED();
-#else
-    SKIPPED();
-    puts("    deflate filter not enabled");
-#endif /* H5_HAVE_FILTER_DEFLATE */
-    return 0;
-}
-
 int TestGetPacket()
 {
     int record;
@@ -295,8 +247,8 @@ int TestGetPacket()
     int i;
     TESTING("GetPacket")
 
-    /* Create a dataset.  Explicitly specify no compression */
-    FL_PacketTable wrapper(fileID, "/TestGetPacket", H5T_NATIVE_INT, 1, -1);
+    /* Create a dataset */
+    FL_PacketTable wrapper(fileID, "/TestGetPacket", H5T_NATIVE_INT, 1);
 
     if(! wrapper.IsValid())
       goto out;
@@ -345,13 +297,13 @@ int TestErrors()
         wrapper.AppendPacket(&record);
 
     /* Try to confuse functions with bad indexes */
-    error = wrapper.GetPacket( (unsigned) -1, &record);
+    error = wrapper.GetPacket(-1, &record);
     if(error >= 0)
       goto out;
     error = wrapper.GetPacket(4, &record);
     if(error >= 0)
       goto out;
-    error = wrapper.GetPacket((unsigned) -250, &record);
+    error = wrapper.GetPacket(-250, &record);
     if(error >= 0)
       goto out;
     error = wrapper.GetPacket(3000, &record);
@@ -361,13 +313,13 @@ int TestErrors()
     if(error < 0)
       goto out;
 
-    error = wrapper.GetPackets((unsigned) -1, 1, records);
+    error = wrapper.GetPackets(-1, 1, records);
     if(error >= 0)
       goto out;
     error = wrapper.GetPackets(2, 4, records);
     if(error >= 0)
       goto out;
-    error = wrapper.GetPackets((unsigned) -60, (unsigned) -62, records);
+    error = wrapper.GetPackets(-60, -62, records);
      if(error >= 0)
       goto out;
     error = wrapper.GetPackets(10, 12, records);
@@ -387,18 +339,14 @@ int TestErrors()
       goto out;
 
     wrapper.ResetIndex();
-    error = wrapper.SetIndex((unsigned) -1);
+    error = wrapper.SetIndex(-1);
     if(error >= 0)
       goto out;
-    if(wrapper.GetIndex(error) != 0) goto out;
-    if(error < 0) goto out;
     error = wrapper.GetNextPacket(&record);
     if(error < 0)
       goto out;
     if(record != 1)
       goto out;
-    if(wrapper.GetIndex(error) != 1) goto out;
-    if(error < 0) goto out;
     error = wrapper.SetIndex(20);
     if(error >= 0)
       goto out;
@@ -413,8 +361,6 @@ int TestErrors()
       goto out;
     if(record != 4)
       goto out;
-    if(wrapper.GetIndex(error) != 4) goto out;
-    if(error < 0) goto out;
     error = wrapper.GetNextPacket(&record);
     if(error >= 0)
       goto out;
@@ -441,7 +387,6 @@ int SystemTest()
 
     hid_t dtypeID1, dtypeID2;
     unsigned int count;
-    int error;
 
     /* Creating two inter-related datatypes.  Create two datasets and put
      * one datatype in each. */
@@ -476,9 +421,9 @@ int SystemTest()
     ct2[0].g.c = 0;
     ct2[0].g.e = 3000;
 
-    /* Create the packet table datasets.  Make one of them compressed. */
+    /* Create the packet table datasets */
     FL_PacketTable wrapper1(fileID, "/SystemTest1", dtypeID1, 1);
-    FL_PacketTable wrapper2(fileID, "/SystemTest2", dtypeID2, 1, 5);
+    FL_PacketTable wrapper2(fileID, "/SystemTest2", dtypeID2, 1);
 
     if(! wrapper1.IsValid())
       goto out;
@@ -507,10 +452,6 @@ int SystemTest()
     wrapper1.ResetIndex();
     wrapper1.GetNextPacket(&ct1[1]);
     wrapper2.GetPacket(1, &ct2[2]);
-    if(wrapper1.GetIndex(error) != 1) goto out;
-    if(error < 0) goto out;
-    if(wrapper2.GetIndex(error) != 0) goto out;
-    if(error < 0) goto out;
 
     if(ct1[1].b != ct2[2].g.b)
       goto out;
@@ -523,7 +464,6 @@ out:
     return 1;
 }
 
-#ifdef VLPT_REMOVED
 int VariableLengthTest(void)
 {
     long test_long;
@@ -592,4 +532,3 @@ out:
     H5_FAILED();
     return 1;
 }
-#endif /* VLPT_REMOVED */

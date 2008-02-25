@@ -1,5 +1,4 @@
 #
-# Copyright by The HDF Group.
 # Copyright by the Board of Trustees of the University of Illinois.
 # All rights reserved.
 #
@@ -9,8 +8,8 @@
 # of the source code distribution tree; Copyright.html can be found at the
 # root level of an installed copy of the electronic HDF5 document set and
 # is linked from the top-level documents page.  It can also be found at
-# http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-# access to either file, you may request a copy from help@hdfgroup.org.
+# http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
+# access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 ##
 ## Makefile.am
 ## Run automake to generate a Makefile.in from this file.
@@ -22,7 +21,7 @@ include $(top_srcdir)/config/commence.am
 
 # Include src directory in both Fortran and C flags (C compiler is used
 # for linking).
-INCLUDES=-I$(top_srcdir)/src
+INCLUDES += -I$(top_srcdir)/src
 AM_FCFLAGS=-I$(top_srcdir)/src -I$(top_srcdir)/fortran/src
 
 AM_FCLIBS=$(LIBHDF5)
@@ -90,7 +89,7 @@ uninstall-local:
 
 # Also install and uninstall (uninstall-local above) h5fc script
 install-exec-local:
-	@$(INSTALL) h5fc $(bindir)/$(H5FC_NAME)
+	@$(INSTALL) h5fc $(bindir)/$(H5FC_NAME)   
 
 # Install libhdf5_fortran.settings in lib directory
 settingsdir=$(libdir)
@@ -126,15 +125,14 @@ BUILT_SOURCES = H5f90i_gen.h
 #Specify what Automake needs to create: first the H5fort_type_defines.h
 # header, then H5match_types which includes that header, then
 # it needs to run H5match_types.
-H5fortran_types.f90 H5f90i_gen.h: H5match_types$(EXEEXT)
+H5fortran_types.f90 H5f90i_gen.h: H5match_types.c H5fort_type_defines.h
+	$(MAKE) $(AM_MAKEFLAGS) H5match_types$(EXEEXT)
 	$(RUNSERIAL) ./H5match_types$(EXEEXT)
 
 # H5fort_type_defines.h is created by running H5fortran_detect.
 # Obviously, H5fortran_detect needs to be built first.
 H5fort_type_defines.h: H5fortran_detect$(EXEEXT)
 	$(RUNSERIAL) ./H5fortran_detect$(EXEEXT) > H5fort_type_defines.h
-
-H5match_types.$(OBJEXT): H5fort_type_defines.h
 
 # Automake knows how to build fortran programs if we tell it the source
 # files.

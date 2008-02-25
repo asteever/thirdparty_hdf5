@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -66,7 +65,7 @@ typedef struct H5FD_sec2_t {
     haddr_t	eof;			/*end of file; current file size*/
     haddr_t	pos;			/*current file I/O position	*/
     int		op;			/*last operation		*/
-#ifndef _WIN32
+#ifndef WIN32
     /*
      * On most systems the combination of device and i-node number uniquely
      * identify a file.
@@ -79,7 +78,7 @@ typedef struct H5FD_sec2_t {
 #endif /*H5_VMS*/
 #else
     /*
-     * On _WIN32 the low-order word of a unique identifier associated with the
+     * On WIN32 the low-order word of a unique identifier associated with the
      * file and the volume serial number uniquely identify a file. This number
      * (which, both? -rpm) may change when the system is restarted or when the
      * file is opened. After a process opens a file, the identifier is
@@ -110,7 +109,7 @@ typedef struct H5FD_sec2_t {
 #   define file_offset_t	off64_t
 #   define file_seek		lseek64
 #   define file_truncate	ftruncate64
-#elif defined (_WIN32) && !defined(__MWERKS__)
+#elif defined (WIN32) && !defined(__MWERKS__)
 # /*MSVC*/
 #   define file_offset_t __int64
 #   define file_seek _lseeki64
@@ -150,8 +149,8 @@ static H5FD_t *H5FD_sec2_open(const char *name, unsigned flags, hid_t fapl_id,
 static herr_t H5FD_sec2_close(H5FD_t *_file);
 static int H5FD_sec2_cmp(const H5FD_t *_f1, const H5FD_t *_f2);
 static herr_t H5FD_sec2_query(const H5FD_t *_f1, unsigned long *flags);
-static haddr_t H5FD_sec2_get_eoa(const H5FD_t *_file, H5FD_mem_t type);
-static herr_t H5FD_sec2_set_eoa(H5FD_t *_file, H5FD_mem_t type, haddr_t addr);
+static haddr_t H5FD_sec2_get_eoa(const H5FD_t *_file);
+static herr_t H5FD_sec2_set_eoa(H5FD_t *_file, haddr_t addr);
 static haddr_t H5FD_sec2_get_eof(const H5FD_t *_file);
 static herr_t  H5FD_sec2_get_handle(H5FD_t *_file, hid_t fapl, void** file_handle);
 static herr_t H5FD_sec2_read(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, haddr_t addr,
@@ -225,10 +224,13 @@ H5FD_sec2_init_interface(void)
  *		library.
  *
  * Return:	Success:	The driver ID for the sec2 driver.
+ *
  *		Failure:	Negative.
  *
  * Programmer:	Robb Matzke
  *              Thursday, July 29, 1999
+ *
+ * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -239,15 +241,15 @@ H5FD_sec2_init(void)
 
     FUNC_ENTER_NOAPI(H5FD_sec2_init, FAIL)
 
-    if(H5I_VFL != H5I_get_type(H5FD_SEC2_g))
-        H5FD_SEC2_g = H5FD_register(&H5FD_sec2_g, sizeof(H5FD_class_t));
+    if (H5I_VFL!=H5I_get_type(H5FD_SEC2_g))
+        H5FD_SEC2_g = H5FD_register(&H5FD_sec2_g,sizeof(H5FD_class_t));
 
     /* Set return value */
-    ret_value = H5FD_SEC2_g;
+    ret_value=H5FD_SEC2_g;
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5FD_sec2_init() */
+}
 
 
 /*---------------------------------------------------------------------------
@@ -299,7 +301,7 @@ H5Pset_fapl_sec2(hid_t fapl_id)
     herr_t ret_value;
 
     FUNC_ENTER_API(H5Pset_fapl_sec2, FAIL)
-    H5TRACE1("e", "i", fapl_id);
+    H5TRACE1("e","i",fapl_id);
 
     if(NULL == (plist = H5P_object_verify(fapl_id,H5P_FILE_ACCESS)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list")
@@ -337,7 +339,7 @@ H5FD_sec2_open(const char *name, unsigned flags, hid_t UNUSED fapl_id,
     int	o_flags;
     int		fd=(-1);
     H5FD_sec2_t	*file=NULL;
-#ifdef _WIN32
+#ifdef WIN32
     HFILE filehandle;
     struct _BY_HANDLE_FILE_INFORMATION fileinfo;
 #endif
@@ -377,7 +379,7 @@ H5FD_sec2_open(const char *name, unsigned flags, hid_t UNUSED fapl_id,
     H5_ASSIGN_OVERFLOW(file->eof,sb.st_size,h5_stat_size_t,haddr_t);
     file->pos = HADDR_UNDEF;
     file->op = OP_UNKNOWN;
-#ifdef _WIN32
+#ifdef WIN32
     filehandle = _get_osfhandle(fd);
     (void)GetFileInformationByHandle((HANDLE)filehandle, &fileinfo);
     file->fileindexhi = fileinfo.nFileIndexHigh;
@@ -468,7 +470,7 @@ H5FD_sec2_cmp(const H5FD_t *_f1, const H5FD_t *_f2)
 
     FUNC_ENTER_NOAPI(H5FD_sec2_cmp, H5FD_VFD_DEFAULT)
 
-#ifdef _WIN32
+#ifdef WIN32
     if (f1->fileindexhi < f2->fileindexhi) HGOTO_DONE(-1)
     if (f1->fileindexhi > f2->fileindexhi) HGOTO_DONE(1)
 
@@ -557,14 +559,11 @@ done:
  *              Monday, August  2, 1999
  *
  * Modifications:
- *              Raymond Lu
- *              21 Dec. 2006
- *              Added the parameter TYPE.  It's only used for MULTI driver.
  *
  *-------------------------------------------------------------------------
  */
 static haddr_t
-H5FD_sec2_get_eoa(const H5FD_t *_file, H5FD_mem_t UNUSED type)
+H5FD_sec2_get_eoa(const H5FD_t *_file)
 {
     const H5FD_sec2_t	*file = (const H5FD_sec2_t*)_file;
     haddr_t ret_value;  /* Return value */
@@ -594,14 +593,11 @@ done:
  *              Thursday, July 29, 1999
  *
  * Modifications:
- *              Raymond Lu
- *              21 Dec. 2006
- *              Added the parameter TYPE.  It's only used for MULTI driver.
  *
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FD_sec2_set_eoa(H5FD_t *_file, H5FD_mem_t UNUSED type, haddr_t addr)
+H5FD_sec2_set_eoa(H5FD_t *_file, haddr_t addr)
 {
     H5FD_sec2_t	*file = (H5FD_sec2_t*)_file;
     herr_t ret_value=SUCCEED;   /* Return value */
@@ -738,7 +734,7 @@ H5FD_sec2_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, hadd
             nbytes = HDread(file->fd, buf, size);
         } while (-1==nbytes && EINTR==errno);
         if (-1==nbytes) /* error */
-            HSYS_GOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, "file read failed")
+            HGOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, "file read failed")
         if (0==nbytes) {
             /* end of file but not end of format address space */
             HDmemset(buf, 0, size);
@@ -822,7 +818,7 @@ H5FD_sec2_write(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, had
             nbytes = HDwrite(file->fd, buf, size);
         } while (-1==nbytes && EINTR==errno);
         if (-1==nbytes) /* error */
-            HSYS_GOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "file write failed")
+            HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "file write failed")
         assert(nbytes>0);
         assert((size_t)nbytes<=size);
         H5_CHECK_OVERFLOW(nbytes,ssize_t,size_t);
@@ -879,7 +875,7 @@ H5FD_sec2_flush(H5FD_t *_file, hid_t UNUSED dxpl_id, unsigned UNUSED closing)
 
     /* Extend the file to make sure it's large enough */
     if (file->eoa!=file->eof) {
-#ifdef _WIN32
+#ifdef WIN32
         HFILE filehandle;   /* Windows file handle */
         LARGE_INTEGER li;   /* 64-bit integer for SetFilePointer() call */
 
@@ -892,10 +888,10 @@ H5FD_sec2_flush(H5FD_t *_file, hid_t UNUSED dxpl_id, unsigned UNUSED closing)
         (void)SetFilePointer((HANDLE)filehandle,li.LowPart,&li.HighPart,FILE_BEGIN);
         if(SetEndOfFile((HANDLE)filehandle)==0)
             HGOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to extend file properly")
-#else /* _WIN32 */
+#else /* WIN32 */
         if (-1==file_truncate(file->fd, (file_offset_t)file->eoa))
             HSYS_GOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to extend file properly")
-#endif /* _WIN32 */
+#endif /* WIN32 */
 
         /* Update the eof value */
         file->eof = file->eoa;

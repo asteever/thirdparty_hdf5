@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /***********************************************************
@@ -48,29 +47,29 @@ test_time_commit(void)
 
     tid = H5Tcopy (H5T_UNIX_D32LE);
     CHECK(tid, FAIL, "H5Tcopy");
-    status = H5Tcommit2(file_id, "Committed D32LE type", tid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(status, FAIL, "H5Tcommit2");
+    status = H5Tcommit(file_id, "Committed D32LE type", tid);
+    CHECK(status, FAIL, "H5Tcommit");
     status = H5Tclose (tid);
     CHECK(status, FAIL, "H5Tclose");
 
     tid = H5Tcopy (H5T_UNIX_D32BE);
     CHECK(tid, FAIL, "H5Tcopy");
-    status = H5Tcommit2(file_id, "Committed D32BE type", tid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(status, FAIL, "H5Tcommit2");
+    status = H5Tcommit(file_id, "Committed D32BE type", tid);
+    CHECK(status, FAIL, "H5Tcommit");
     status = H5Tclose (tid);
     CHECK(status, FAIL, "H5Tclose");
 
     tid = H5Tcopy (H5T_UNIX_D64LE);
     CHECK(tid, FAIL, "H5Tcopy");
-    status = H5Tcommit2(file_id, "Committed D64LE type", tid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(status, FAIL, "H5Tcommit2");
+    status = H5Tcommit(file_id, "Committed D64LE type", tid);
+    CHECK(status, FAIL, "H5Tcommit");
     status = H5Tclose (tid);
     CHECK(status, FAIL, "H5Tclose");
 
     tid = H5Tcopy (H5T_UNIX_D64BE);
     CHECK(tid, FAIL, "H5Tcopy");
-    status = H5Tcommit2(file_id, "Committed D64BE type", tid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(status, FAIL, "H5Tcommit2");
+    status = H5Tcommit(file_id, "Committed D64BE type", tid);
+    CHECK(status, FAIL, "H5Tcommit");
     status = H5Tclose (tid);
     CHECK(status, FAIL, "H5Tclose");
 
@@ -81,8 +80,8 @@ test_time_commit(void)
     file_id = H5Fopen(DATAFILE, H5F_ACC_RDWR, H5P_DEFAULT);
     CHECK(file_id, FAIL, "H5Fopen");
 
-    tid = H5Topen2(file_id, "Committed D32LE type", H5P_DEFAULT);
-    CHECK(tid, FAIL, "H5Topen2");
+    tid = H5Topen(file_id, "Committed D32LE type");
+    CHECK(tid, FAIL, "H5Topen");
 
     if(!H5Tequal(tid, H5T_UNIX_D32LE))
         TestErrPrintf("H5T_UNIX_D32LE datatype not found\n");
@@ -90,8 +89,8 @@ test_time_commit(void)
     status = H5Tclose (tid);
     CHECK(status, FAIL, "H5Tclose");
 
-    tid = H5Topen2(file_id, "Committed D32BE type", H5P_DEFAULT);
-    CHECK(tid, FAIL, "H5Topen2");
+    tid = H5Topen(file_id, "Committed D32BE type");
+    CHECK(tid, FAIL, "H5Topen");
 
     if(!H5Tequal(tid, H5T_UNIX_D32BE))
         TestErrPrintf("H5T_UNIX_D32BE datatype not found\n");
@@ -99,8 +98,8 @@ test_time_commit(void)
     status = H5Tclose (tid);
     CHECK(status, FAIL, "H5Tclose");
 
-    tid = H5Topen2(file_id, "Committed D64LE type", H5P_DEFAULT);
-    CHECK(tid, FAIL, "H5Topen2");
+    tid = H5Topen(file_id, "Committed D64LE type");
+    CHECK(tid, FAIL, "H5Topen");
 
     if(!H5Tequal(tid, H5T_UNIX_D64LE))
         TestErrPrintf("H5T_UNIX_D64LE datatype not found");
@@ -108,8 +107,8 @@ test_time_commit(void)
     status = H5Tclose (tid);
     CHECK(status, FAIL, "H5Tclose");
 
-    tid = H5Topen2(file_id, "Committed D64BE type", H5P_DEFAULT);
-    CHECK(tid, FAIL, "H5Topen2");
+    tid = H5Topen(file_id, "Committed D64BE type");
+    CHECK(tid, FAIL, "H5Topen");
 
     if(!H5Tequal(tid, H5T_UNIX_D64BE))
         TestErrPrintf("H5T_UNIX_D64BE datatype not found");
@@ -150,8 +149,8 @@ test_time_io(void)
     CHECK(sid, FAIL, "H5Screate");
 
     /* Create a dataset with a time datatype */
-    dsid = H5Dcreate2(fid, DATASETNAME, H5T_UNIX_D32LE, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(dsid, FAIL, "H5Dcreate2");
+    dsid = H5Dcreate(fid, DATASETNAME, H5T_UNIX_D32LE, sid, H5P_DEFAULT);
+    CHECK(dsid, FAIL, "H5Dcreate");
 
     /* Initialize time data value */
     timenow = HDtime(NULL);
@@ -174,8 +173,8 @@ test_time_io(void)
     fid = H5Fopen(DATAFILE, H5F_ACC_RDWR, H5P_DEFAULT);
     CHECK(fid, FAIL, "H5Fopen");
 
-    dsid = H5Dopen2(fid, DATASETNAME, H5P_DEFAULT);
-    CHECK(dsid, FAIL, "H5Dopen2");
+    dsid = H5Dopen(fid, DATASETNAME);
+    CHECK(dsid, FAIL, "H5Dopen");
 
 tid = H5Dget_type(dsid);
 CHECK(tid, FAIL, "H5Dget_type");

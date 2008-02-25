@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,26 +8,26 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+                                                                                                                                                             
 /* A series of tests for posix compliance
  *
- * These tests do increasingly complicated sets of writes followed by reads.
+ * These tests do increasingly complicated sets of writes followed by reads. 
  * POSIX standards say that any read that can be proven to occur after a write
  * must include the data in that write.  These tests attempt to verify whether the
  * underlying filesystem and i/o layer provide such guarantees.
  *
  * There are two sets of tests, one which uses POSIX i/o (fread, fwrite) and one which
  * uses MPI I/O (MPI_File_read, MPI_File_write).  Each set has multiple sub-tests, which
- * test varying patters of writes and reads.
- *
+ * test varying patters of writes and reads.  
+ * 
  *
  * TODO:
  * 	Add corresponding posix i/o tests for each MPI i/o test.  Currently, not all of the
  * 	MPI IO tests are implemented using fwrite/fread.
- *
+ * 
  * Leon Arber
  * larber@ncsa.uiuc.edu
 */
@@ -39,7 +38,7 @@
  * then run it as an MPI application.  E.g.,
  *     mpirun -np 3 ./t_posix_compliant
  */
-
+ 
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
@@ -57,7 +56,6 @@
 static char*		testfile = NULL;
 static int		err_flag = 0;
 static int		max_err_print = 5;
-int			nmismatches = 0;	/* warnings encountered */
 
 /* globals needed for getopt
  * Although they *should* be defined in unistd.h */
@@ -92,7 +90,7 @@ static void vrfy_elements(int* a, int* b, int size, int rank);
 static int find_writesize(int rank, int numprocs, int write_size);
 
 
-/* All writes are to non-overlapping locations in the file
+/* All writes are to non-overlapping locations in the file 
  * Then, each task reads another tasks' data
  * */
 
@@ -124,7 +122,7 @@ static int allwrite_allread_blocks(int numprocs, int rank, int write_size)
 
     mpio_result = MPI_File_read_at(fh, offset, readbuf, write_size, MPI_INT, &Status);
     CHECK_SUCCESS(mpio_result);
-
+    
     vrfy_elements(writebuf, readbuf, write_size, rank);
 
     mpio_result = MPI_File_close(&fh);
@@ -174,9 +172,9 @@ static int posix_allwrite_allread_blocks(int numprocs, int rank, int write_size)
 	perror("fwrite");
 	MPI_Abort(MPI_COMM_WORLD, 1);
     }
-
+       	
     MPI_Barrier(MPI_COMM_WORLD);
-
+    
     offset = ( (rank+(numprocs-1)) % numprocs)*write_size*sizeof(int);
 
     ret = fseek(file, offset, SEEK_SET);
@@ -194,7 +192,7 @@ static int posix_allwrite_allread_blocks(int numprocs, int rank, int write_size)
 	perror("Error encountered in fread");
 	MPI_Abort(MPI_COMM_WORLD, 1);
     }
-
+   
     vrfy_elements(writebuf, readbuf, write_size, rank);
 
     fclose(file);
@@ -253,9 +251,9 @@ static int posix_onewrite_allread_blocks(int numprocs, int rank, int write_size)
 	    }
 	}
 
-    }
+    }  	
     MPI_Barrier(MPI_COMM_WORLD);
-
+    
     offset = rank*write_size*sizeof(int);
 
     ret = fseek(file, offset, SEEK_SET);
@@ -273,7 +271,7 @@ static int posix_onewrite_allread_blocks(int numprocs, int rank, int write_size)
 	perror("Error encountered in fread");
 	MPI_Abort(MPI_COMM_WORLD, 1);
     }
-
+   
     vrfy_elements(writebuf, readbuf, write_size, rank);
 
     fclose(file);
@@ -333,9 +331,9 @@ static int posix_onewrite_allread_interlaced(int numprocs, int rank, int write_s
 	    }
 	}
 
-    }
+    }  	
     MPI_Barrier(MPI_COMM_WORLD);
-
+    
     index = 0;
     for(offset = rank*sizeof(int); offset<numprocs*write_size*sizeof(int); offset+=(numprocs*sizeof(int)))
     {
@@ -358,7 +356,7 @@ static int posix_onewrite_allread_interlaced(int numprocs, int rank, int write_s
 
 	index++;
     }
-
+    
     for(i=0; i<write_size; i++)
 	writebuf[i] = i;
 
@@ -395,7 +393,7 @@ static int allwrite_allread_interlaced(int numprocs, int rank, int write_size)
 	writebuf[i] = i;
 
 
-    amode = MPI_MODE_CREATE | MPI_MODE_RDWR | MPI_MODE_DELETE_ON_CLOSE;
+    amode = MPI_MODE_CREATE | MPI_MODE_RDWR | MPI_MODE_DELETE_ON_CLOSE; 
     mpio_result = MPI_File_open(MPI_COMM_WORLD, testfile, amode, MPI_INFO_NULL, &fh);
     CHECK_SUCCESS(mpio_result);
 
@@ -404,15 +402,15 @@ static int allwrite_allread_interlaced(int numprocs, int rank, int write_size)
 
     mpio_result = MPI_Type_commit(&filetype);
     CHECK_SUCCESS(mpio_result);
-
+    
     mpio_result = MPI_File_set_view(fh, rank*sizeof(int), MPI_INT, filetype, "native", MPI_INFO_NULL);
     CHECK_SUCCESS(mpio_result);
-
+    
     mpio_result = MPI_File_write(fh, writebuf, write_size, MPI_INT, &Status);
     CHECK_SUCCESS(mpio_result);
 
     MPI_Barrier(MPI_COMM_WORLD);
-
+    
     mpio_result = MPI_File_set_view(fh, 0, MPI_BYTE, MPI_BYTE, "native", MPI_INFO_NULL);
     CHECK_SUCCESS(mpio_result);
 
@@ -436,7 +434,6 @@ static int allwrite_allread_interlaced(int numprocs, int rank, int write_size)
 
 	}
     }
-    nmismatches += counter;
     mpio_result = MPI_File_close(&fh);
     CHECK_SUCCESS(mpio_result);
 
@@ -449,7 +446,7 @@ static int allwrite_allread_interlaced(int numprocs, int rank, int write_size)
 
 /* Overlapping pattern works as follows (this test requires at least 2 procs:
  * Writes:
- * Task 0: 0	2	4	6	etc...
+ * Task 0: 0	2	4	6	etc... 
  * Task 1:    1	    3       5      7    etc...
  * Task 2: 0	    3		6	etc..
  * Task 3: 0		4		8	etc...
@@ -480,7 +477,7 @@ static int allwrite_allread_interlaced(int numprocs, int rank, int write_size)
 
 static int allwrite_allread_overlap(int numprocs, int rank, int write_size)
 {
-
+ 
     MPI_File	fh = MPI_FILE_NULL;
     int		mpio_result;
     int		amode, i, counter = 0;
@@ -494,7 +491,7 @@ static int allwrite_allread_overlap(int numprocs, int rank, int write_size)
 	fprintf(stderr, "The allwrite_allread_overlap test requires at least 2 procs\n");
 	return -1;
     }
-
+    
     if(rank == 0)
     {
 	for(i=0; i<write_size*(numprocs-1); i++)
@@ -514,7 +511,7 @@ static int allwrite_allread_overlap(int numprocs, int rank, int write_size)
     amode = MPI_MODE_CREATE | MPI_MODE_RDWR | MPI_MODE_DELETE_ON_CLOSE;
     mpio_result = MPI_File_open(MPI_COMM_WORLD, testfile, amode, MPI_INFO_NULL, &fh);
     CHECK_SUCCESS(mpio_result);
-
+    
     if( (rank == 0) || (rank == 1) )
 	mpio_result = MPI_Type_vector(write_size*(numprocs-1), 1, 2, MPI_INT, &filetype);
     else
@@ -523,13 +520,13 @@ static int allwrite_allread_overlap(int numprocs, int rank, int write_size)
 
     mpio_result = MPI_Type_commit(&filetype);
     CHECK_SUCCESS(mpio_result);
-
+ 
     if( rank == 1)
 	mpio_result = MPI_File_set_view(fh, sizeof(int), MPI_INT, filetype, "native", MPI_INFO_NULL);
-    else
+    else	
 	mpio_result = MPI_File_set_view(fh, 0, MPI_INT, filetype, "native", MPI_INFO_NULL);
     CHECK_SUCCESS(mpio_result);
-
+    
     if( rank == (numprocs - 1))
 	mpio_result = MPI_File_write(fh, writebuf, write_size, MPI_INT, &Status);
     else
@@ -547,7 +544,7 @@ static int allwrite_allread_overlap(int numprocs, int rank, int write_size)
     for(i=0; i<write_size*(numprocs-1); i++)
     {
 	if(i != readbuf[i])
-	{
+	{	
     	    if( (rank == 0) && (counter == 0))
 		    printf("\n");
 	    if(counter++ < max_err_print)
@@ -558,7 +555,6 @@ static int allwrite_allread_overlap(int numprocs, int rank, int write_size)
     	}
     }
 
-    nmismatches += counter;
     mpio_result = MPI_File_close(&fh);
     CHECK_SUCCESS(mpio_result);
     HDfree(writebuf);
@@ -607,7 +603,7 @@ static int onewrite_allread_blocks(int numprocs, int rank, int write_size)
     CHECK_SUCCESS(mpio_result);
 
     vrfy_elements(writebuf, readbuf, write_size, rank);
-
+ 
     mpio_result = MPI_File_close(&fh);
     CHECK_SUCCESS(mpio_result);
     HDfree(writebuf);
@@ -638,17 +634,17 @@ static int onewrite_allread_interlaced(int numprocs, int rank, int write_size)
     amode = MPI_MODE_CREATE | MPI_MODE_RDWR | MPI_MODE_DELETE_ON_CLOSE;
     mpio_result = MPI_File_open(MPI_COMM_WORLD, testfile, amode, MPI_INFO_NULL, &fh);
     CHECK_SUCCESS(mpio_result);
-
+ 	
     mpio_result = MPI_Type_vector(write_size, 1, numprocs, MPI_INT, &filetype);
     CHECK_SUCCESS(mpio_result);
 
     mpio_result = MPI_Type_commit(&filetype);
     CHECK_SUCCESS(mpio_result);
-
+ 
     if(rank == (rand() % numprocs))
     {
 	for(i=0; i<write_size; i++)
-	{
+	{ 
 	    int j;
 	    for(j=0; j<numprocs; j++)
 		writebuf[j] = i;
@@ -659,7 +655,7 @@ static int onewrite_allread_interlaced(int numprocs, int rank, int write_size)
     }
 
     MPI_Barrier(MPI_COMM_WORLD);
-
+ 
     mpio_result = MPI_File_set_view(fh, rank*sizeof(int), MPI_INT, filetype, "native", MPI_INFO_NULL);
     CHECK_SUCCESS(mpio_result);
 
@@ -668,7 +664,7 @@ static int onewrite_allread_interlaced(int numprocs, int rank, int write_size)
 
     for(i=0; i<write_size; i++)
 	writebuf[i] = i;
-
+    
     vrfy_elements(writebuf, readbuf, write_size, rank);
 
     mpio_result = MPI_File_close(&fh);
@@ -680,62 +676,6 @@ static int onewrite_allread_interlaced(int numprocs, int rank, int write_size)
 
 }
 
-static int find_writesize(int rank, int numprocs, int size)
-{
-    /* Largest number in the file */
-    int tmp = (size-1)*numprocs;
-    int x = 0;
-    int write_size = 0;
-
-    /* Find largest multiple not greater than tmp */
-    while(x <= tmp)
-    {
-	if( (rank == 0) || (rank == 1) )
-	    x+=2;
-	else
-	    x += (rank+1);
-
-	write_size++;
-    }
-
-    return write_size;
-}
-
-static void vrfy_elements(int* a, int* b, int size, int rank)
-{
-    int i, counter = 0;
-
-    for(i=0; i<size; i++)
-    {
-	if(a[i] != b[i])
-	{
-	    if( (rank == 0) && (counter == 0))
-		printf("\n");
-	    if(counter++ < max_err_print)
-		fprintf(stderr, "Arrays do not match!  Prcoess %d, element %d: [%d, %d]\n", rank, i, a[i], b[i]);
-	    else if(counter++ == max_err_print+1)
-		fprintf(stderr, "Printed %d errors.  Omitting the rest\n", max_err_print);
-	    err_flag = -1;
-	}
-    }
-    nmismatches += counter;
-    fflush(stderr);
-    fflush(stdout);
-}
-
-/* print an explanation message by MAIN (0) process.
- */
-header_msg(void)
-{
-    printf(
-"Purpose:\n"
-"This tests if the file system is posix compliant when POSIX and MPI IO APIs\n"
-"are used.  This is for information only and always exits with 0 even when\n"
-"non-compliance errors are encounter.  This is to prevent this test from\n"
-"aborting the remaining parallel HDF5 tests unnecessarily.\n\n"
-    );
-}
-
 int main(int argc, char* argv[])
 {
 
@@ -744,15 +684,13 @@ int main(int argc, char* argv[])
     int	write_size = 0;
     char    optstring[] = "h x m p: s: v:";
     char *prefix;
-
+    
     err_flag = 0;
-
+    
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-    if (rank == 0)
-	header_msg();
     while((opt = getopt(argc, argv, optstring)) != -1)
     {
 	switch(opt)
@@ -790,7 +728,7 @@ int main(int argc, char* argv[])
 		break;
 	}
     }
-
+    
     if( (optind < argc) && (rank == 0))
 	fprintf(stderr, "Unkown command-line argument passed.  Continuing anyway...\n");
 
@@ -810,10 +748,8 @@ int main(int argc, char* argv[])
 	    testfile = strdup(TESTFNAME);
 	}
     }
-    printf("Process %d: testfile=%s\n", rank, testfile);
-    fflush(stdout);
-    MPI_Barrier(MPI_COMM_WORLD);
-
+    printf("Proc %d: testfile=%s\n", rank, testfile);
+    
     if(write_size == 0)
     {
 	lb = 1024;
@@ -829,7 +765,7 @@ int main(int argc, char* argv[])
 	ub = write_size+1;
 	inc = 2;
     }
-
+    
 #ifndef STANDALONE
     /* set alarm. */
     ALARM_ON;
@@ -839,7 +775,7 @@ int main(int argc, char* argv[])
     {
 	if(rank == 0)
 	    printf("\nTesting size %d\n", write_size);
-
+	
 	if(mpi_tests)
 	{
 	    if(rank == 0)
@@ -865,7 +801,7 @@ int main(int argc, char* argv[])
 	    onewrite_allread_blocks(numprocs, rank, write_size/(numprocs*sizeof(int)));
 	    PRINT_RESULT();
 	    MPI_Barrier(MPI_COMM_WORLD);
-
+	    
 	    if(rank == 0)
 		printf("Testing onewrite_allread_interlaced with MPI IO\t\t"); fflush(stdout);
 	    onewrite_allread_interlaced(numprocs, rank, write_size/(numprocs*sizeof(int)));
@@ -892,7 +828,7 @@ int main(int argc, char* argv[])
 	    posix_onewrite_allread_interlaced(numprocs, rank, write_size/(numprocs*sizeof(int)));
 	    PRINT_RESULT();
 	    MPI_Barrier(MPI_COMM_WORLD);
-
+	
 	/*    if(rank == 0)
 		printf("Testing allwrite_allread_overlap with POSIX IO\t\t"); fflush(stdout);
 	    posix_allwrite_allread_overlap(numprocs, rank, write_size);
@@ -910,13 +846,52 @@ int main(int argc, char* argv[])
 done:
     if (testfile)
 	HDfree(testfile);
-    if (rank == 0){
-	printf("\nSummary:\n");
-	fflush(stdout);
-    }
     MPI_Barrier(MPI_COMM_WORLD);
-    printf("Process %d: encountered %d mismatches.\n", rank, nmismatches);
     MPI_Finalize();
 
     return 0;
+}
+
+
+
+static int find_writesize(int rank, int numprocs, int size)
+{
+    /* Largest number in the file */
+    int tmp = (size-1)*numprocs;
+    int x = 0;
+    int write_size = 0;
+    
+    /* Find largest multiple not greater than tmp */
+    while(x <= tmp)
+    {
+	if( (rank == 0) || (rank == 1) )
+	    x+=2;
+	else
+	    x += (rank+1);
+
+	write_size++;
+    }
+ 
+    return write_size;
+}
+
+static void vrfy_elements(int* a, int* b, int size, int rank)
+{
+    int i, counter = 0;
+
+    for(i=0; i<size; i++)
+    {
+	if(a[i] != b[i])
+	{
+	    if( (rank == 0) && (counter == 0))
+		printf("\n");
+	    if(counter++ < max_err_print)
+		fprintf(stderr, "Arrays do not match!  Prcoess %d, element %d: [%d, %d]\n", rank, i, a[i], b[i]);
+	    else if(counter++ == max_err_print+1)
+		fprintf(stderr, "Printed %d errors.  Omitting the rest\n", max_err_print);
+	    err_flag = -1;
+	}
+    }
+    fflush(stderr);
+    fflush(stdout);
 }

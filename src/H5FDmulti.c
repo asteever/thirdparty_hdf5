@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -32,7 +31,7 @@
 /*lint --emacro( {534, 830}, H5P_DEFAULT, H5P_FILE_ACCESS, H5P_DATASET_XFER) */
 /*lint --emacro( {534, 830}, H5F_ACC_DEBUG, H5F_ACC_RDWR) */
 /*lint --emacro( {534, 830}, H5FD_MULTI) */
-/*lint -esym( 534, H5Eclear2, H5Epush2) */
+/*lint -esym( 534, H5Eclear_stack, H5Epush_stack) */
 
 #include "hdf5.h"
 
@@ -107,9 +106,7 @@ typedef struct H5FD_multi_t {
     H5FD_multi_fapl_t fa;	/*driver-specific file access properties*/
     haddr_t	memb_next[H5FD_MEM_NTYPES];/*addr of next member	*/
     H5FD_t	*memb[H5FD_MEM_NTYPES];	/*member pointers		*/
-    /*haddr_t	eoa;*/		/*end of allocated addresses.  Took it out
-                                 *because individual files have their own
-                                 *eoa.                                  */
+    haddr_t	eoa;		/*end of allocated addresses		*/
     unsigned	flags;		/*file open flags saved for debugging	*/
     char	*name;		/*name passed to H5Fopen or H5Fcreate	*/
 } H5FD_multi_t;
@@ -140,8 +137,8 @@ static H5FD_t *H5FD_multi_open(const char *name, unsigned flags,
 static herr_t H5FD_multi_close(H5FD_t *_file);
 static int H5FD_multi_cmp(const H5FD_t *_f1, const H5FD_t *_f2);
 static herr_t H5FD_multi_query(const H5FD_t *_f1, unsigned long *flags);
-static haddr_t H5FD_multi_get_eoa(const H5FD_t *_file, H5FD_mem_t type);
-static herr_t H5FD_multi_set_eoa(H5FD_t *_file, H5FD_mem_t type, haddr_t eoa);
+static haddr_t H5FD_multi_get_eoa(const H5FD_t *_file);
+static herr_t H5FD_multi_set_eoa(H5FD_t *_file, haddr_t eoa);
 static haddr_t H5FD_multi_get_eof(const H5FD_t *_file);
 static herr_t  H5FD_multi_get_handle(H5FD_t *_file, hid_t fapl, void** file_handle);
 static haddr_t H5FD_multi_alloc(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, hsize_t size);
@@ -235,7 +232,7 @@ hid_t
 H5FD_multi_init(void)
 {
     /* Clear the error stack */
-    H5Eclear2(H5E_DEFAULT);
+    H5Eclear_stack(H5E_DEFAULT);
 
     if (H5I_VFL!=H5Iget_type(H5FD_MULTI_g)) {
 	H5FD_MULTI_g = H5FDregister(&H5FD_multi_g);
@@ -304,7 +301,7 @@ H5Pset_fapl_split(hid_t fapl, const char *meta_ext, hid_t meta_plist_id,
     /*NO TRACE*/
 
     /* Clear the error stack */
-    H5Eclear2(H5E_DEFAULT);
+    H5Eclear_stack(H5E_DEFAULT);
 
     /* Initialize */
     ALL_MEMBERS(mt) {
@@ -448,7 +445,7 @@ H5Pset_fapl_multi(hid_t fapl_id, const H5FD_mem_t *memb_map,
     /*NO TRACE*/
 
     /* Clear the error stack */
-    H5Eclear2(H5E_DEFAULT);
+    H5Eclear_stack(H5E_DEFAULT);
 
     /* Check arguments and supply default values */
     if(H5I_GENPROP_LST != H5Iget_type(fapl_id) ||
@@ -549,7 +546,7 @@ H5Pget_fapl_multi(hid_t fapl_id, H5FD_mem_t *memb_map/*out*/,
     /*NO TRACE*/
 
     /* Clear the error stack */
-    H5Eclear2(H5E_DEFAULT);
+    H5Eclear_stack(H5E_DEFAULT);
 
     if(H5I_GENPROP_LST != H5Iget_type(fapl_id) ||
             TRUE != H5Pisa_class(fapl_id, H5P_FILE_ACCESS))
@@ -616,7 +613,7 @@ H5Pset_dxpl_multi(hid_t dxpl_id, const hid_t *memb_dxpl)
     /*NO TRACE*/
 
     /* Clear the error stack */
-    H5Eclear2(H5E_DEFAULT);
+    H5Eclear_stack(H5E_DEFAULT);
 
     /* Check arguments */
     if (TRUE!=H5Pisa_class(dxpl_id,  H5P_DATASET_XFER))
@@ -668,7 +665,7 @@ H5Pget_dxpl_multi(hid_t dxpl_id, hid_t *memb_dxpl/*out*/)
     /*NO TRACE*/
 
     /* Clear the error stack */
-    H5Eclear2(H5E_DEFAULT);
+    H5Eclear_stack(H5E_DEFAULT);
 
     if (TRUE!=H5Pisa_class(dxpl_id, H5P_DATASET_XFER))
         H5Epush_ret(func, H5E_ERR_CLS, H5E_PLIST, H5E_BADTYPE, "not a file access property list", -1)
@@ -715,7 +712,7 @@ H5FD_multi_sb_size(H5FD_t *_file)
     hsize_t		nbytes = 8; /*size of header*/
 
     /* Clear the error stack */
-    H5Eclear2(H5E_DEFAULT);
+    H5Eclear_stack(H5E_DEFAULT);
 
     /* How many unique files? */
     UNIQUE_MEMBERS(file->fa.memb_map, mt) {
@@ -773,17 +770,15 @@ H5FD_multi_sb_encode(H5FD_t *_file, char *name/*out*/,
     static const char *func="H5FD_multi_sb_encode";  /* Function Name for error reporting */
 
     /* Clear the error stack */
-    H5Eclear2(H5E_DEFAULT);
+    H5Eclear_stack(H5E_DEFAULT);
 
     /* Name and version number */
-    strncpy(name, "NCSAmulti", (size_t)8);
+    strncpy(name, "NCSAmulti",8);
     name[8] = '\0';
 
     assert(7==H5FD_MEM_NTYPES);
-
-    for (m=H5FD_MEM_SUPER; m<H5FD_MEM_NTYPES; m=(H5FD_mem_t)(m+1)) {
+    for (m=H5FD_MEM_SUPER; m<H5FD_MEM_NTYPES; m=(H5FD_mem_t)(m+1))
         buf[m-1] = (unsigned char)file->fa.memb_map[m];
-    }
     buf[6] = 0;
     buf[7] = 0;
 
@@ -797,7 +792,7 @@ H5FD_multi_sb_encode(H5FD_t *_file, char *name/*out*/,
     p = buf+8;
     assert(sizeof(haddr_t)<=8);
     UNIQUE_MEMBERS(file->fa.memb_map, mt) {
-        memb_eoa = H5FDget_eoa(file->memb[mt], mt);
+        memb_eoa = H5FDget_eoa(file->memb[mt]);
         memcpy(p, &(file->fa.memb_addr[mt]), sizeof(haddr_t));
         p += sizeof(haddr_t);
         memcpy(p, &memb_eoa, sizeof(haddr_t));
@@ -860,7 +855,7 @@ H5FD_multi_sb_decode(H5FD_t *_file, const char *name, const unsigned char *buf)
     static const char *func="H5FD_multi_sb_decode";  /* Function Name for error reporting */
 
     /* Clear the error stack */
-    H5Eclear2(H5E_DEFAULT);
+    H5Eclear_stack(H5E_DEFAULT);
 
     /* Make sure the name/version number is correct */
     if (strcmp(name, "NCSAmult"))
@@ -877,13 +872,11 @@ H5FD_multi_sb_decode(H5FD_t *_file, const char *name, const unsigned char *buf)
      * Read the map and count the unique members.
      */
     memset(map, 0, sizeof map);
-
     for (i=0; i<6; i++) {
         map[i+1] = (H5FD_mem_t)buf[i];
         if (file->fa.memb_map[i+1]!=map[i+1])
             map_changed=TRUE;
     }
-
     UNIQUE_MEMBERS(map, mt) {
         nseen++;
     } END_MEMBERS;
@@ -971,7 +964,7 @@ H5FD_multi_sb_decode(H5FD_t *_file, const char *name, const unsigned char *buf)
     /* Set the EOA marker for all open files */
     UNIQUE_MEMBERS(file->fa.memb_map, mt) {
         if (file->memb[mt])
-            if(H5FDset_eoa(file->memb[mt], mt, memb_eoa[mt])<0)
+            if(H5FDset_eoa(file->memb[mt], memb_eoa[mt])<0)
                 H5Epush_ret(func, H5E_ERR_CLS, H5E_INTERNAL, H5E_CANTSET, "set_eoa() failed", -1)
     } END_MEMBERS;
 
@@ -1004,7 +997,7 @@ H5FD_multi_fapl_get(H5FD_t *_file)
     H5FD_multi_t	*file = (H5FD_multi_t*)_file;
 
     /* Clear the error stack */
-    H5Eclear2(H5E_DEFAULT);
+    H5Eclear_stack(H5E_DEFAULT);
 
     return H5FD_multi_fapl_copy(&(file->fa));
 }
@@ -1037,7 +1030,7 @@ H5FD_multi_fapl_copy(const void *_old_fa)
     assert(new_fa);
 
     /* Clear the error stack */
-    H5Eclear2(H5E_DEFAULT);
+    H5Eclear_stack(H5E_DEFAULT);
 
     memcpy(new_fa, old_fa, sizeof(H5FD_multi_fapl_t));
     ALL_MEMBERS(mt) {
@@ -1087,7 +1080,7 @@ H5FD_multi_fapl_free(void *_fa)
     static const char *func="H5FD_multi_fapl_free";  /* Function Name for error reporting */
 
     /* Clear the error stack */
-    H5Eclear2(H5E_DEFAULT);
+    H5Eclear_stack(H5E_DEFAULT);
 
     ALL_MEMBERS(mt) {
 	if (fa->memb_fapl[mt]>=0)
@@ -1129,7 +1122,7 @@ H5FD_multi_dxpl_copy(const void *_old_dx)
     assert(new_dx);
 
     /* Clear the error stack */
-    H5Eclear2(H5E_DEFAULT);
+    H5Eclear_stack(H5E_DEFAULT);
 
     memcpy(new_dx, old_dx, sizeof(H5FD_multi_dxpl_t));
     ALL_MEMBERS(mt) {
@@ -1173,7 +1166,7 @@ H5FD_multi_dxpl_free(void *_dx)
     static const char *func="H5FD_multi_dxpl_free";  /* Function Name for error reporting */
 
     /* Clear the error stack */
-    H5Eclear2(H5E_DEFAULT);
+    H5Eclear_stack(H5E_DEFAULT);
 
     ALL_MEMBERS(mt) {
         if (dx->memb_dxpl[mt]>=0)
@@ -1215,7 +1208,7 @@ H5FD_multi_open(const char *name, unsigned flags, hid_t fapl_id,
     static const char *func="H5FD_multi_open";  /* Function Name for error reporting */
 
     /* Clear the error stack */
-    H5Eclear2(H5E_DEFAULT);
+    H5Eclear_stack(H5E_DEFAULT);
 
     /* Check arguments */
     if (!name || !*name)
@@ -1227,7 +1220,7 @@ H5FD_multi_open(const char *name, unsigned flags, hid_t fapl_id,
      * Initialize the file from the file access properties, using default
      * values if necessary.
      */
-    if (NULL==(file=calloc((size_t)1, sizeof(H5FD_multi_t))))
+    if (NULL==(file=calloc(1, sizeof(H5FD_multi_t))))
         H5Epush_ret(func, H5E_ERR_CLS, H5E_RESOURCE, H5E_NOSPACE, "memory allocation failed", NULL)
     if (H5P_FILE_ACCESS_DEFAULT==fapl_id || H5FD_MULTI!=H5Pget_driver(fapl_id)) {
         close_fapl = fapl_id = H5Pcreate(H5P_FILE_ACCESS);
@@ -1310,7 +1303,7 @@ H5FD_multi_close(H5FD_t *_file)
     static const char *func="H5FD_multi_close";  /* Function Name for error reporting */
 
     /* Clear the error stack */
-    H5Eclear2(H5E_DEFAULT);
+    H5Eclear_stack(H5E_DEFAULT);
 
     /* Close as many members as possible */
     ALL_MEMBERS(mt) {
@@ -1376,7 +1369,7 @@ H5FD_multi_cmp(const H5FD_t *_f1, const H5FD_t *_f2)
     int			cmp=0;
 
     /* Clear the error stack */
-    H5Eclear2(H5E_DEFAULT);
+    H5Eclear_stack(H5E_DEFAULT);
 
     ALL_MEMBERS(mt) {
         out_mt = mt;
@@ -1442,80 +1435,18 @@ H5FD_multi_query(const H5FD_t *_f, unsigned long *flags /* out */)
  *              Wednesday, August  4, 1999
  *
  * Modifications:
- *              Raymond Lu
- *              21 Dec. 2006
- *              Added the parameter TYPE.  It's only used for MULTI driver.
- *              If the TYPE is H5FD_MEM_DEFAULT, simply find the biggest
- *              EOA of individual file because the EOA for the whole file
- *              is meaningless.
  *
  *-------------------------------------------------------------------------
  */
 static haddr_t
-H5FD_multi_get_eoa(const H5FD_t *_file, H5FD_mem_t type)
+H5FD_multi_get_eoa(const H5FD_t *_file)
 {
     const H5FD_multi_t	*file = (const H5FD_multi_t*)_file;
-    haddr_t eoa = 0;
-    haddr_t memb_eoa = 0;
-    static const char *func="H5FD_multi_eof";  /* Function Name for error reporting */
 
     /* Clear the error stack */
-    H5Eclear2(H5E_DEFAULT);
+    H5Eclear_stack(H5E_DEFAULT);
 
-    /* The library used to have EOA for the whole file.  But it's
-     * taken out because it makes little sense for MULTI files.
-     * However, the library sometimes queries it through H5F_get_eoa.
-     * Here the code finds the biggest EOA for individual file if
-     * the query is from H5F_get_eoa (TYPE is H5FD_MEM_DEFAULT).
-     */ 
-    if(H5FD_MEM_DEFAULT == type) {
-        UNIQUE_MEMBERS(file->fa.memb_map, mt) {
-	    if (file->memb[mt]) {
-                /* Retrieve EOA */
-	        H5E_BEGIN_TRY {
-                    memb_eoa = H5FDget_eoa(file->memb[mt], mt);
-	        } H5E_END_TRY;
-
-	        if (HADDR_UNDEF==memb_eoa)
-                    H5Epush_ret(func, H5E_ERR_CLS, H5E_INTERNAL, H5E_BADVALUE, "member file has unknown eoa", HADDR_UNDEF)
-	    } else if (file->fa.relax) {
-	        /*
-	         * The member is not open yet (maybe it doesn't exist). Make the
-	         * best guess about the end-of-file.
-	         */
-	        memb_eoa = file->memb_next[mt];
-	        assert(HADDR_UNDEF!=memb_eoa);
-	    } else {
-                H5Epush_ret(func, H5E_ERR_CLS, H5E_INTERNAL, H5E_BADVALUE, "bad eoa", HADDR_UNDEF)
-	    }
-
-            if(memb_eoa > eoa)
-                eoa = memb_eoa;
-        } END_MEMBERS;
-    } else {
-        H5FD_mem_t mmt = file->fa.memb_map[type];
-        if (H5FD_MEM_DEFAULT==mmt) mmt = type;        
-
-	if (file->memb[mmt]) {
-            H5E_BEGIN_TRY {
-	        eoa = H5FDget_eoa(file->memb[mmt], mmt);
-            } H5E_END_TRY;
-
-	    if (HADDR_UNDEF==eoa)
-                H5Epush_ret(func, H5E_ERR_CLS, H5E_INTERNAL, H5E_BADVALUE, "member file has unknown eoa", HADDR_UNDEF)
-	} else if (file->fa.relax) {
-	    /*
-	     * The member is not open yet (maybe it doesn't exist). Make the
-	     * best guess about the end-of-file.
-	     */
-	    eoa = file->memb_next[mmt];
-	    assert(HADDR_UNDEF!=eoa);
-	 } else {
-            H5Epush_ret(func, H5E_ERR_CLS, H5E_INTERNAL, H5E_BADVALUE, "bad eoa", HADDR_UNDEF)
-	 }
-    }
-
-    return eoa;
+    return file->eoa;
 }
 
 
@@ -1535,29 +1466,43 @@ H5FD_multi_get_eoa(const H5FD_t *_file, H5FD_mem_t type)
  *              Wednesday, August  4, 1999
  *
  * Modifications:
- *              Raymond Lu
- *              10 January 2007
- *              EOA for the whole file is discarded because it's meaningless
- *              for MULTI file.  This function only sets eoa for individual
- *              file.
  *
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FD_multi_set_eoa(H5FD_t *_file, H5FD_mem_t type, haddr_t eoa)
+H5FD_multi_set_eoa(H5FD_t *_file, haddr_t eoa)
 {
     H5FD_multi_t	*file = (H5FD_multi_t*)_file;
+    H5FD_mem_t		mt, mmt;
     herr_t		status;
     static const char *func="H5FD_multi_set_eoa";  /* Function Name for error reporting */
 
     /* Clear the error stack */
-    H5Eclear2(H5E_DEFAULT);
+    H5Eclear_stack(H5E_DEFAULT);
 
-    H5E_BEGIN_TRY {
-	status = H5FDset_eoa(file->memb[type], type, eoa);
-    } H5E_END_TRY;
-    if (status<0)
-        H5Epush_ret(func, H5E_ERR_CLS, H5E_FILE, H5E_BADVALUE, "member H5FDset_eoa failed", -1)
+    /* Find the subfile in which the new EOA value falls */
+    for (mt=H5FD_MEM_SUPER; mt<H5FD_MEM_NTYPES; mt=(H5FD_mem_t)(mt+1)) {
+	mmt = file->fa.memb_map[mt];
+	if (H5FD_MEM_DEFAULT==mmt) mmt = mt;
+	assert(mmt>0 && mmt<H5FD_MEM_NTYPES);
+
+	if (eoa>=file->fa.memb_addr[mmt] && eoa<file->memb_next[mmt]) {
+	    break;
+	}
+    }
+    assert(mt<H5FD_MEM_NTYPES);
+
+    /* Set subfile eoa */
+    if (file->memb[mmt]) {
+	H5E_BEGIN_TRY {
+	    status = H5FDset_eoa(file->memb[mmt], eoa-file->fa.memb_addr[mmt]);
+	} H5E_END_TRY;
+	if (status<0)
+            H5Epush_ret(func, H5E_ERR_CLS, H5E_FILE, H5E_BADVALUE, "member H5FDset_eoa failed", -1)
+    }
+
+    /* Save new eoa for return later */
+    file->eoa = eoa;
 
     return 0;
 }
@@ -1579,10 +1524,6 @@ H5FD_multi_set_eoa(H5FD_t *_file, H5FD_mem_t type, haddr_t eoa)
  *              Wednesday, August  4, 1999
  *
  * Modifications:
- *              Raymond Lu
- *              5 January 2007
- *              Multi driver no longer has EOA for the whole file.  Calculate
- *              it in the same way as EOF instead.
  *
  *-------------------------------------------------------------------------
  */
@@ -1590,50 +1531,37 @@ static haddr_t
 H5FD_multi_get_eof(const H5FD_t *_file)
 {
     const H5FD_multi_t	*file = (const H5FD_multi_t*)_file;
-    haddr_t		eof=0, tmp_eof;
-    haddr_t		eoa=0, tmp_eoa;
+    haddr_t		eof=0, tmp;
     static const char *func="H5FD_multi_eof";  /* Function Name for error reporting */
 
     /* Clear the error stack */
-    H5Eclear2(H5E_DEFAULT);
+    H5Eclear_stack(H5E_DEFAULT);
 
     UNIQUE_MEMBERS(file->fa.memb_map, mt) {
 	if (file->memb[mt]) {
-            /* Retrieve EOF */
 	    H5E_BEGIN_TRY {
-		tmp_eof = H5FDget_eof(file->memb[mt]);
+		tmp = H5FDget_eof(file->memb[mt]);
 	    } H5E_END_TRY;
-
-	    if (HADDR_UNDEF==tmp_eof)
+	    if (HADDR_UNDEF==tmp)
                 H5Epush_ret(func, H5E_ERR_CLS, H5E_INTERNAL, H5E_BADVALUE, "member file has unknown eof", HADDR_UNDEF)
-	    if (tmp_eof>0) tmp_eof += file->fa.memb_addr[mt];
+	    if (tmp>0) tmp += file->fa.memb_addr[mt];
 
-            /* Retrieve EOA */
-	    H5E_BEGIN_TRY {
-		tmp_eoa = H5FDget_eoa(file->memb[mt], mt);
-	    } H5E_END_TRY;
-
-	    if (HADDR_UNDEF==tmp_eoa)
-                H5Epush_ret(func, H5E_ERR_CLS, H5E_INTERNAL, H5E_BADVALUE, "member file has unknown eoa", HADDR_UNDEF)
 	} else if (file->fa.relax) {
 	    /*
 	     * The member is not open yet (maybe it doesn't exist). Make the
 	     * best guess about the end-of-file.
 	     */
-	    tmp_eof = file->memb_next[mt];
-	    assert(HADDR_UNDEF!=tmp_eof);
+	    tmp = file->memb_next[mt];
+	    assert(HADDR_UNDEF!=tmp);
 
-	    tmp_eoa = file->memb_next[mt];
-	    assert(HADDR_UNDEF!=tmp_eoa);
 	} else {
             H5Epush_ret(func, H5E_ERR_CLS, H5E_INTERNAL, H5E_BADVALUE, "bad eof", HADDR_UNDEF)
 	}
 
-	if (tmp_eof>eof) eof = tmp_eof;
-	if (tmp_eoa>eoa) eoa = tmp_eoa;
+	if (tmp>eof) eof = tmp;
     } END_MEMBERS;
 
-    return MAX(eoa, eof);
+    return MAX(file->eoa, eof);
 }
 
 
@@ -1700,21 +1628,14 @@ H5FD_multi_alloc(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, hsize_t size)
     if (HADDR_UNDEF==(addr=H5FDalloc(file->memb[mmt], type, dxpl_id, size)))
         H5Epush_ret(func, H5E_ERR_CLS, H5E_INTERNAL, H5E_BADVALUE, "member file can't alloc", HADDR_UNDEF)
     addr += file->fa.memb_addr[mmt];
-
-/*#ifdef TMP
     if ( addr + size > file->eoa ) {
 
 	if ( H5FD_multi_set_eoa(_file, addr + size) < 0 ) {
-
+        
             H5Epush_ret(func, H5E_ERR_CLS, H5E_INTERNAL, H5E_BADVALUE, \
 			"can't set eoa", HADDR_UNDEF)
 	}
     }
-#else
-    if ( addr + size > file->eoa )
-	file->eoa = addr + size;
-#endif */
-
     return addr;
 }
 
@@ -1742,7 +1663,7 @@ H5FD_multi_free(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, hsi
     H5FD_mem_t		mmt;
 
     /* Clear the error stack */
-    H5Eclear2(H5E_DEFAULT);
+    H5Eclear_stack(H5E_DEFAULT);
 
     mmt = file->fa.memb_map[type];
     if (H5FD_MEM_DEFAULT==mmt) mmt = type;
@@ -1782,7 +1703,7 @@ H5FD_multi_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, siz
     haddr_t		start_addr=0;
 
     /* Clear the error stack */
-    H5Eclear2(H5E_DEFAULT);
+    H5Eclear_stack(H5E_DEFAULT);
 
     /* Get the data transfer properties */
     if (H5P_FILE_ACCESS_DEFAULT!=dxpl_id && H5FD_MULTI==H5Pget_driver(dxpl_id)) {
@@ -1837,7 +1758,7 @@ H5FD_multi_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, si
     haddr_t		start_addr=0;
 
     /* Clear the error stack */
-    H5Eclear2(H5E_DEFAULT);
+    H5Eclear_stack(H5E_DEFAULT);
 
     /* Get the data transfer properties */
     if (H5P_FILE_ACCESS_DEFAULT!=dxpl_id && H5FD_MULTI==H5Pget_driver(dxpl_id)) {
@@ -1910,7 +1831,7 @@ H5FD_multi_flush(H5FD_t *_file, hid_t dxpl_id, unsigned closing)
 
     for (mt=1; mt<H5FD_MEM_NTYPES; mt++) {
 	if (HADDR_UNDEF!=file->memb_addr[mt]) {
-	    haddr_t eoa = H5FDget_eoa(file->memb[mt], mt);
+	    haddr_t eoa = H5FDget_eoa(file->memb[mt]);
 	    fprintf(stderr, "    %6d %20llu %20llu %20llu %s\n",
 		    (int)mt, (unsigned long_long)(file->memb_addr[mt]),
 		    (unsigned long_long)eoa,
@@ -1921,7 +1842,7 @@ H5FD_multi_flush(H5FD_t *_file, hid_t dxpl_id, unsigned closing)
 #endif
 
     /* Clear the error stack */
-    H5Eclear2(H5E_DEFAULT);
+    H5Eclear_stack(H5E_DEFAULT);
 
     /* Flush each file */
     for (mt=H5FD_MEM_SUPER; mt<H5FD_MEM_NTYPES; mt=(H5FD_mem_t)(mt+1)) {
@@ -1959,7 +1880,7 @@ static int
 compute_next(H5FD_multi_t *file)
 {
     /* Clear the error stack */
-    H5Eclear2(H5E_DEFAULT);
+    H5Eclear_stack(H5E_DEFAULT);
 
     ALL_MEMBERS(mt) {
 	file->memb_next[mt] = HADDR_UNDEF;
@@ -2006,7 +1927,7 @@ open_members(H5FD_multi_t *file)
     static const char *func="(H5FD_multi)open_members";  /* Function Name for error reporting */
 
     /* Clear the error stack */
-    H5Eclear2(H5E_DEFAULT);
+    H5Eclear_stack(H5E_DEFAULT);
 
     UNIQUE_MEMBERS(file->fa.memb_map, mt) {
 	if (file->memb[mt]) continue; /*already open*/

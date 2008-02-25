@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 %{
@@ -42,7 +41,7 @@ int csindex = -1;                /*pointer to the top of compound stack*/
 /*structure for array type information*/
 struct arr_info {
     hsize_t             dims[H5S_MAX_RANK];     /*size of each dimension, limited to 32 dimensions*/
-    unsigned            ndims;                  /*number of dimensions*/
+    int                 ndims;                  /*number of dimensions*/
     hbool_t             is_dim;                 /*flag to lexer for dimension*/
 };
 /*stack for nested array type*/
@@ -211,7 +210,7 @@ offset          :       NUMBER
 array_type      :       H5T_ARRAY_TOKEN { asindex++; /*pushd onto the stack*/ }
                         '{' dim_list ddl_type '}'
                         { 
-                          $<ival>$ = H5Tarray_create2($<ival>5, arr_stack[asindex].ndims, arr_stack[asindex].dims);
+                          $<ival>$ = H5Tarray_create($<ival>5, arr_stack[asindex].ndims, arr_stack[asindex].dims, NULL);
                           arr_stack[asindex].ndims = 0;
                           asindex--;
                           H5Tclose($<ival>5);
@@ -221,7 +220,7 @@ dim_list        :
                 |       dim_list dim
                 ;
 dim             :       '[' { arr_stack[asindex].is_dim = 1; /*notice lexer of dimension size*/ }
-                        dimsize { unsigned ndims = arr_stack[asindex].ndims;
+                        dimsize { int ndims = arr_stack[asindex].ndims;
                                   arr_stack[asindex].dims[ndims] = (hsize_t)yylval.ival; 
                                   arr_stack[asindex].ndims++;
                                   arr_stack[asindex].is_dim = 0; 
@@ -333,33 +332,12 @@ enum_def        :       '"' enum_symbol '"' {
                                             }
                         enum_val ';'
                             {
-                                char char_val=(char)yylval.ival;
-                                short short_val=(short)yylval.ival;
-                                int int_val=(int)yylval.ival;
-                                long long_val=(long)yylval.ival;
-                                long_long llong_val=(long_long)yylval.ival;
-                                hid_t super = H5Tget_super(enum_id);
-                                hid_t native = H5Tget_native_type(super, H5T_DIR_ASCEND);
-                                
+                                int memb_val;
                                 if(is_enum && is_enum_memb) { /*if it's an enum member*/
-                                    /*To handle machines of different endianness*/
-                                    if(H5Tequal(native, H5T_NATIVE_SCHAR) || H5Tequal(native, H5T_NATIVE_UCHAR))
-                                        H5Tenum_insert(enum_id, enum_memb_symbol, &char_val);
-                                    else if(H5Tequal(native, H5T_NATIVE_SHORT) || H5Tequal(native, H5T_NATIVE_USHORT))
-                                        H5Tenum_insert(enum_id, enum_memb_symbol, &short_val);
-                                    else if(H5Tequal(native, H5T_NATIVE_INT) || H5Tequal(native, H5T_NATIVE_UINT))
-                                        H5Tenum_insert(enum_id, enum_memb_symbol, &int_val);
-                                    else if(H5Tequal(native, H5T_NATIVE_LONG) || H5Tequal(native, H5T_NATIVE_ULONG))
-                                        H5Tenum_insert(enum_id, enum_memb_symbol, &long_val);
-                                    else if(H5Tequal(native, H5T_NATIVE_LLONG) || H5Tequal(native, H5T_NATIVE_ULLONG))
-                                        H5Tenum_insert(enum_id, enum_memb_symbol, &llong_val);
-
+                                    H5Tenum_insert(enum_id, enum_memb_symbol, (memb_val=yylval.ival,&memb_val));
                                     is_enum_memb = 0; 
                                     if(enum_memb_symbol) free(enum_memb_symbol);
                                 }
-
-                                H5Tclose(super);
-                                H5Tclose(native);
                             }
                 ;
 enum_symbol     :       STRING

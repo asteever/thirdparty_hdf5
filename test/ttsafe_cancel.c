@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /********************************************************************
@@ -30,7 +29,7 @@
  *   ttsafe_cancel.h5
  *
  * HDF5 APIs exercised in thread:
- * H5Screate_simple, H5Tcopy, H5Tset_order, H5Dcreate2, H5Dclose,
+ * H5Screate_simple, H5Tcopy, H5Tset_order, H5Dcreate, H5Dclose,
  * H5Dwrite, H5Dread, H5Diterate, H5Tclose, H5Sclose.
  *
  * Created: May 15 2000
@@ -101,7 +100,7 @@ void tts_cancel(void)
     ret=pthread_cancel(childthread);
     assert(ret==0);
 
-    dataset = H5Dopen2(cancel_file, DATASETNAME, H5P_DEFAULT);
+    dataset = H5Dopen(cancel_file, DATASETNAME);
     assert(dataset>=0);
     ret=H5Dread(dataset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &buffer);
     assert(ret>=0);
@@ -130,18 +129,18 @@ void *tts_cancel_thread(void UNUSED *arg)
 
     /* define dataspace for dataset */
     dimsf[0] = 1;
-    dataspace = H5Screate_simple(1, dimsf, NULL);
-    assert(dataspace >= 0);
+    dataspace = H5Screate_simple(1,dimsf,NULL);
+    assert(dataspace>=0);
 
     /* define datatype for the data using native little endian integers */
     datatype = H5Tcopy(H5T_NATIVE_INT);
-    assert(datatype >= 0);
-    ret = H5Tset_order(datatype, H5T_ORDER_LE);
-    assert(ret >= 0);
+    assert(datatype>=0);
+    ret=H5Tset_order(datatype, H5T_ORDER_LE);
+    assert(ret>=0);
 
     /* create a new dataset within the file */
-    dataset = H5Dcreate2(cancel_file, DATASETNAME, datatype, dataspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    assert(dataset >= 0);
+    dataset = H5Dcreate(cancel_file, DATASETNAME, datatype, dataspace, H5P_DEFAULT);
+    assert(dataset>=0);
 
     /* If thread is cancelled, make cleanup call */
     cleanup_structure = (cancel_cleanup_t*)malloc(sizeof(cancel_cleanup_t));
@@ -149,7 +148,7 @@ void *tts_cancel_thread(void UNUSED *arg)
     cleanup_structure->datatype = datatype;
     cleanup_structure->dataspace = dataspace;
     pthread_cleanup_push(cancellation_cleanup, cleanup_structure);
-
+	
 
     datavalue = 1;
     ret=H5Dwrite(dataset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &datavalue);
@@ -178,7 +177,7 @@ void *tts_cancel_thread(void UNUSED *arg)
      * execute the cleanup routine.
      */
     pthread_cleanup_pop(0);
-
+	
     return NULL;
 }
 

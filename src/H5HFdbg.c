@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*-------------------------------------------------------------------------
@@ -29,7 +28,6 @@
 /****************/
 
 #define H5HF_PACKAGE		/*suppress error about including H5HFpkg  */
-#define H5HF_DEBUGGING          /* Need access to fractal heap debugging routines */
 
 /***********/
 /* Headers */
@@ -49,26 +47,6 @@
 /******************/
 /* Local Typedefs */
 /******************/
-
-/* User data for direct block debugging iterator callback */
-typedef struct {
-    FILE *stream;               /* Stream for output */
-    int indent;                 /* Indention amount */
-    int fwidth;                 /* Field width mount */
-    haddr_t dblock_addr;        /* Direct block's address */
-    hsize_t dblock_size;        /* Direct block's size */
-    uint8_t *marker;            /* 'Marker' array for free space */
-    size_t sect_count;          /* Number of free space sections in block */
-    size_t amount_free;         /* Amount of free space in block */
-} H5HF_debug_iter_ud1_t;
-
-/* User data for free space section iterator callback */
-typedef struct {
-    H5FS_t *fspace;             /* Free space manager */
-    FILE *stream;               /* Stream for output */
-    int indent;                 /* Indention amount */
-    int fwidth;                 /* Field width mount */
-} H5HF_debug_iter_ud2_t;
 
 
 /********************/
@@ -214,74 +192,34 @@ H5HF_hdr_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream, int indent, 
      * Print the values.
      */
     HDfprintf(stream, "%*s%-*s %s\n", indent, "", fwidth,
-	      "Heap is:",
-	      hdr->man_dtable.curr_root_rows > 0 ? "Indirect" : "Direct");
-    HDfprintf(stream, "%*s%-*s %t\n", indent, "", fwidth,
-	      "Objects stored in 'debugging' format:",
-	      hdr->debug_objs);
-    HDfprintf(stream, "%*s%-*s %t\n", indent, "", fwidth,
-	      "'Write once' flag:",
-	      hdr->write_once);
-    HDfprintf(stream, "%*s%-*s %t\n", indent, "", fwidth,
-	      "'Huge' object IDs have wrapped:",
-	      hdr->huge_ids_wrapped);
+	      "Heap address mapping method:",
+	      ((hdr->addrmap) == H5HF_ABSOLUTE ? "Absolute" :
+	      ((hdr->addrmap) == H5HF_MAPPED ? "Mapped" :
+              "Unknown!")));
+    HDfprintf(stream, "%*s%-*s %lu\n", indent, "", fwidth,
+	      "Min. size of standalone object:",
+	      (unsigned long)hdr->standalone_size);
     HDfprintf(stream, "%*s%-*s %Hu\n", indent, "", fwidth,
-	      "Free space in managed blocks:",
+	      "Total free space in managed blocks:",
 	      hdr->total_man_free);
     HDfprintf(stream, "%*s%-*s %Hu\n", indent, "", fwidth,
-	      "Managed space data block size:",
+	      "Total # of free entries for standalone blocks:",
+	      hdr->total_std_free);
+    HDfprintf(stream, "%*s%-*s %Hu\n", indent, "", fwidth,
+	      "Total data block size:",
+	      hdr->total_size);
+    HDfprintf(stream, "%*s%-*s %Hu\n", indent, "", fwidth,
+	      "Total managed space data block size:",
 	      hdr->man_size);
     HDfprintf(stream, "%*s%-*s %Hu\n", indent, "", fwidth,
-	      "Total managed space allocated:",
-	      hdr->man_alloc_size);
+	      "Total standalone space data block size:",
+	      hdr->std_size);
     HDfprintf(stream, "%*s%-*s %Hu\n", indent, "", fwidth,
-	      "Offset of managed space iterator:",
-	      hdr->man_iter_off);
-    HDfprintf(stream, "%*s%-*s %Hu\n", indent, "", fwidth,
-	      "Number of managed objects in heap:",
-	      hdr->man_nobjs);
-    HDfprintf(stream, "%*s%-*s %a\n", indent, "", fwidth,
-	      "Address of free space manager for managed blocks:",
-	      hdr->fs_addr);
-    HDfprintf(stream, "%*s%-*s %lu\n", indent, "", fwidth,
-	      "Max. size of managed object:",
-	      (unsigned long)hdr->max_man_size);
-    HDfprintf(stream, "%*s%-*s %Hu\n", indent, "", fwidth,
-	      "'Huge' object space used:",
-	      hdr->huge_size);
-    HDfprintf(stream, "%*s%-*s %Hu\n", indent, "", fwidth,
-	      "Number of 'huge' objects in heap:",
-	      hdr->huge_nobjs);
-    HDfprintf(stream, "%*s%-*s %Hu\n", indent, "", fwidth,
-	      "ID of next 'huge' object:",
-	      hdr->huge_next_id);
-    HDfprintf(stream, "%*s%-*s %a\n", indent, "", fwidth,
-	      "Address of v2 B-tree for 'huge' objects:",
-	      hdr->huge_bt2_addr);
-    HDfprintf(stream, "%*s%-*s %Hu\n", indent, "", fwidth,
-	      "'Tiny' object space used:",
-	      hdr->tiny_size);
-    HDfprintf(stream, "%*s%-*s %Hu\n", indent, "", fwidth,
-	      "Number of 'tiny' objects in heap:",
-	      hdr->tiny_nobjs);
+	      "Number of objects in heap:",
+	      hdr->nobjs);
 
     HDfprintf(stream, "%*sManaged Objects Doubling-Table Info...\n", indent, "");
-    H5HF_dtable_debug(&hdr->man_dtable, stream, indent + 3, MAX(0, fwidth - 3));
-
-    /* Print information about I/O filters */
-    if(hdr->filter_len > 0) {
-        HDfprintf(stream, "%*sI/O filter Info...\n", indent, "");
-        if(hdr->man_dtable.curr_root_rows == 0) {
-            HDfprintf(stream, "%*s%-*s %Zu\n", indent + 3, "", MAX(0, fwidth - 3),
-                      "Compressed size of root direct block:",
-                      hdr->pline_root_direct_size);
-            HDfprintf(stream, "%*s%-*s %x\n", indent + 3, "", MAX(0, fwidth - 3),
-                      "Filter mask for root direct block:",
-                      hdr->pline_root_direct_filter_mask);
-        } /* end if */
-        H5O_debug_id(H5O_PLINE_ID, f, dxpl_id, &(hdr->pline), stream,
-                             indent + 3, MAX(0, fwidth - 3));
-    } /* end if */
+    H5HF_dtable_debug(&hdr->man_dtable, stream, indent + 3, MAX(0, fwidth -3));
 
 done:
     if(hdr && H5AC_unprotect(f, dxpl_id, H5AC_FHEAP_HDR, addr, hdr, H5AC__NO_FLAGS_SET) < 0)
@@ -289,90 +227,6 @@ done:
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5HF_hdr_debug() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5HF_dblock_debug_cb
- *
- * Purpose:	Detect free space within a direct block
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *		koziol@ncsa.uiuc.edu
- *		May 13 2006
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5HF_dblock_debug_cb(const H5FS_section_info_t *_sect, void *_udata)
-{
-    const H5HF_free_section_t *sect = (const H5HF_free_section_t *)_sect;       /* Section to dump info */
-    H5HF_debug_iter_ud1_t *udata = (H5HF_debug_iter_ud1_t *)_udata;         /* User data for callbacks */
-    haddr_t sect_start, sect_end;       /* Section's beginning and ending offsets */
-    haddr_t dblock_start, dblock_end;   /* Direct block's beginning and ending offsets */
-
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5HF_dblock_debug_cb)
-
-    /*
-     * Check arguments.
-     */
-    HDassert(sect);
-    HDassert(udata);
-
-    /* Set up some local variables, for convenience */
-    sect_start = sect->sect_info.addr;
-    sect_end = (sect->sect_info.addr + sect->sect_info.size) - 1;
-    HDassert(sect_end >= sect_start);
-    dblock_start = udata->dblock_addr;
-    dblock_end = (udata->dblock_addr + udata->dblock_size) - 1;
-    HDassert(dblock_end >= dblock_start);
-
-    /* Check for overlap between free space section & direct block */
-    if((sect_start <= dblock_end && sect_end >=dblock_start) || /* section within or overlaps w/beginning of direct block*/
-            (sect_start <= dblock_end && sect_end >=dblock_end)) {  /* section overlaps w/end of direct block */
-        char temp_str[32];      /* Temporary string for formatting */
-        size_t start, end;      /* Start & end of the overlapping area */
-        size_t len;             /* Length of the overlapping area */
-        size_t overlap;         /* Track any overlaps */
-        unsigned u;             /* Local index variable */
-
-        /* Calculate the starting & ending */
-        if(sect_start < dblock_start)
-            start = 0;
-        else
-            H5_ASSIGN_OVERFLOW(/* To: */ start, /* From: */ (sect_start - dblock_start), /* From: */ hsize_t, /* To: */ size_t)
-        if(sect_end > dblock_end)
-            H5_ASSIGN_OVERFLOW(/* To: */ end, /* From: */ udata->dblock_size, /* From: */ hsize_t, /* To: */ size_t)
-        else
-            H5_ASSIGN_OVERFLOW(/* To: */ end, /* From: */ ((sect_end - dblock_start) + 1), /* From: */ hsize_t, /* To: */ size_t)
-
-        /* Calculate the length */
-        len = end - start;
-
-        sprintf(temp_str, "Section #%u:", (unsigned)udata->sect_count);
-	HDfprintf(udata->stream, "%*s%-*s %8Zu, %8Zu\n", udata->indent + 3, "", MAX(0, udata->fwidth - 9),
-		temp_str,
-		start, len);
-        udata->sect_count++;
-
-        /* Mark this node's free space & check for overlaps w/other sections */
-        overlap = 0;
-        for(u = start; u < end; u++) {
-            if(udata->marker[u])
-                overlap++;
-            udata->marker[u] = 1;
-        } /* end for */
-
-        /* Flag overlaps */
-        if (overlap)
-            fprintf(udata->stream, "***THAT FREE BLOCK OVERLAPPED A PREVIOUS ONE!\n");
-        else
-            udata->amount_free += len;
-    } /* end if */
-
-    FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5HF_dblock_debug_cb() */
 
 
 /*-------------------------------------------------------------------------
@@ -394,9 +248,13 @@ H5HF_dblock_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream,
 {
     H5HF_hdr_t	*hdr = NULL;            /* Fractal heap header info */
     H5HF_direct_t *dblock = NULL;       /* Fractal heap direct block info */
+    H5HF_direct_free_node_t *node;      /* Pointer to free list node for block */
     size_t	blk_prefix_size;        /* Size of prefix for block */
-    size_t	amount_free;            /* Amount of free space in block */
+    unsigned    node_count = 0;         /* Number of free space nodes */
+    size_t	amount_free = 0;        /* Amount of free space in block */
     uint8_t	*marker = NULL;         /* Track free space for block */
+    size_t	overlap;                /* Number of free space overlaps */
+    size_t	u;                      /* Local index variable */
     herr_t      ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_NOAPI(H5HF_dblock_debug, FAIL)
@@ -424,6 +282,12 @@ H5HF_dblock_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream,
     if(NULL == (dblock = H5HF_man_dblock_protect(hdr, dxpl_id, addr, block_size, NULL, 0, H5AC_READ)))
 	HGOTO_ERROR(H5E_HEAP, H5E_CANTLOAD, FAIL, "unable to load fractal heap direct block")
 
+    /* Check for valid free list */
+    if(!dblock->free_list)
+        if(H5HF_man_dblock_build_freelist(dblock, addr) < 0)
+            HGOTO_ERROR(H5E_HEAP, H5E_CANTDECODE, FAIL, "can't decode free list for block")
+    HDassert(dblock->free_list);
+
     /* Print opening message */
     HDfprintf(stream, "%*sFractal Heap Direct Block...\n", indent, "");
 
@@ -436,56 +300,58 @@ H5HF_dblock_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream,
     HDfprintf(stream, "%*s%-*s %Hu\n", indent, "", fwidth,
 	      "Offset of direct block in heap:",
 	      dblock->block_off);
-    blk_prefix_size = H5HF_MAN_ABS_DIRECT_OVERHEAD(hdr);
+    blk_prefix_size = H5HF_MAN_ABS_DIRECT_OVERHEAD_DBLOCK(hdr, dblock);
     HDfprintf(stream, "%*s%-*s %Zu\n", indent, "", fwidth,
 	      "Size of block header:",
               blk_prefix_size);
     HDfprintf(stream, "%*s%-*s %Zu\n", indent, "", fwidth,
 	      "Size of block offsets:",
 	      dblock->blk_off_size);
+    HDfprintf(stream, "%*s%-*s %Zu\n", indent, "", fwidth,
+	      "Total free space in block:",
+	      dblock->blk_free_space);
+    HDfprintf(stream, "%*s%-*s %Zu\n", indent, "", fwidth,
+	      "Offset of free list head:",
+	      dblock->free_list_head);
 
-    /* Allocate space for the free space markers */
+    /*
+     * Traverse the free list and check that all free blocks fall within
+     * the block and that no two free blocks point to the same region of
+     * the block.  */
     if(NULL == (marker = H5MM_calloc(dblock->size)))
 	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
 
-    /* Initialize the free space information for the heap */
-    if(H5HF_space_start(hdr, dxpl_id, FALSE) < 0)
-        HGOTO_ERROR(H5E_HEAP, H5E_CANTINIT, FAIL, "can't initialize heap free space")
+    node = dblock->free_list->first;
+    if(node)
+        HDfprintf(stream, "%*sFree Blocks (offset, next offset, size):\n", indent, "");
+    while(node) {
+        char temp_str[32];
 
-    /* If there is a free space manager for the heap, check for sections that overlap this block */
-    if(hdr->fspace) {
-        H5HF_debug_iter_ud1_t udata;        /* User data for callbacks */
+        sprintf(temp_str, "Block #%u:", node_count);
+	HDfprintf(stream, "%*s%-*s %8Zu, %8Zu, %8Zu\n", indent + 3, "", MAX(0, fwidth - 9),
+		temp_str,
+		node->my_offset, node->next_offset, node->size);
 
-        /* Prepare user data for section iteration callback */
-        udata.stream = stream;
-        udata.indent = indent;
-        udata.fwidth = fwidth;
-        udata.dblock_addr = dblock->block_off;
-        udata.dblock_size = block_size;
-        udata.marker = marker;
-        udata.sect_count = 0;
-        udata.amount_free = 0;
+	if (node->my_offset + node->size > dblock->size)
+	    fprintf(stream, "***THAT FREE BLOCK IS OUT OF BOUNDS!\n");
+        else {
+            /* Mark this node's free space & check for overlaps w/other free space */
+	    for(u = overlap = 0; u < node->size; u++) {
+		if(marker[node->my_offset + u])
+		    overlap++;
+		marker[node->my_offset + u] = 1;
+	    } /* end for */
 
-        /* Print header */
-        HDfprintf(stream, "%*sFree Blocks (offset, size):\n", indent, "");
+	    if (overlap)
+		fprintf(stream, "***THAT FREE BLOCK OVERLAPPED A PREVIOUS ONE!\n");
+	    else
+		amount_free += node->size;
+	} /* end else */
 
-        /* Iterate over the free space sections, to detect overlaps with this block */
-        if(H5FS_sect_iterate(f, dxpl_id, hdr->fspace, H5HF_dblock_debug_cb, &udata) < 0)
-            HGOTO_ERROR(H5E_HEAP, H5E_BADITER, FAIL, "can't iterate over heap's free space")
-
-        /* Close the free space information */
-        if(H5HF_space_close(hdr, dxpl_id) < 0)
-            HGOTO_ERROR(H5E_HEAP, H5E_CANTRELEASE, FAIL, "can't release free space info")
-
-        /* Keep the amount of space free */
-        amount_free = udata.amount_free;
-
-        /* Check for no free space */
-        if(amount_free == 0)
-            HDfprintf(stream, "%*s<none>\n", indent + 3, "");
-    } /* end if */
-    else
-        amount_free = 0;
+        /* Avance to next node */
+        node = node->next;
+        node_count++;
+    } /* end while */
 
     HDfprintf(stream, "%*s%-*s %.2f%%\n", indent, "", fwidth,
             "Percent of available space for data used:",
@@ -494,14 +360,13 @@ H5HF_dblock_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream,
     /*
      * Print the data in a VMS-style octal dump.
      */
-    H5_buffer_dump(stream, indent, dblock->blk, marker, (size_t)0, dblock->size);
+    H5_buffer_dump(stream, indent, dblock->blk, marker, 0, dblock->size);
 
 done:
     if(dblock && H5AC_unprotect(f, dxpl_id, H5AC_FHEAP_DBLOCK, addr, dblock, H5AC__NO_FLAGS_SET) < 0)
         HDONE_ERROR(H5E_HEAP, H5E_PROTECT, FAIL, "unable to release fractal heap direct block")
     if(hdr && H5AC_unprotect(f, dxpl_id, H5AC_FHEAP_HDR, hdr_addr, hdr, H5AC__NO_FLAGS_SET) < 0)
         HDONE_ERROR(H5E_HEAP, H5E_PROTECT, FAIL, "unable to release fractal heap header")
-    H5MM_xfree(marker);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5HF_dblock_debug() */
@@ -526,8 +391,9 @@ H5HF_iblock_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream,
 {
     H5HF_hdr_t	*hdr = NULL;            /* Fractal heap header info */
     H5HF_indirect_t *iblock = NULL;     /* Fractal heap direct block info */
-    hbool_t did_protect;                /* Whether we protected the indirect block or not */
+    size_t dblock_size;                 /* Current direct block size */
     char temp_str[64];                  /* Temporary string, for formatting */
+    hsize_t     child_free_space;       /* Block's children's free space */
     size_t	u, v;                   /* Local index variable */
     herr_t      ret_value = SUCCEED;    /* Return value */
 
@@ -551,13 +417,18 @@ H5HF_iblock_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream,
 	HGOTO_ERROR(H5E_HEAP, H5E_CANTLOAD, FAIL, "unable to load fractal heap header")
 
     /*
-     * Load the heap indirect block
+     * Load the heap direct block
      */
-    if(NULL == (iblock = H5HF_man_iblock_protect(hdr, dxpl_id, addr, nrows, NULL, 0, FALSE, H5AC_READ, &did_protect)))
+    if(NULL == (iblock = H5HF_man_iblock_protect(hdr, dxpl_id, addr, nrows, NULL, 0, H5AC_READ)))
 	HGOTO_ERROR(H5E_HEAP, H5E_CANTLOAD, FAIL, "unable to load fractal heap indirect block")
 
     /* Print opening message */
     HDfprintf(stream, "%*sFractal Heap Indirect Block...\n", indent, "");
+
+    /* Compute the child free space */
+    child_free_space = 0;
+    for(u = 0; u < (iblock->nrows * hdr->man_dtable.cparam.width); u++)
+        child_free_space += iblock->ents[u].free_space;
 
     /*
      * Print the values.
@@ -568,6 +439,9 @@ H5HF_iblock_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream,
     HDfprintf(stream, "%*s%-*s %Hu\n", indent, "", fwidth,
 	      "Offset of indirect block in heap:",
 	      iblock->block_off);
+    HDfprintf(stream, "%*s%-*s %Hu\n", indent, "", fwidth,
+	      "Total children free space:",
+	      child_free_space);
     HDfprintf(stream, "%*s%-*s %Zu\n", indent, "", fwidth,
 	      "Size of indirect block:",
 	      iblock->size);
@@ -582,10 +456,7 @@ H5HF_iblock_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream,
 	      hdr->man_dtable.max_direct_rows);
 
     /* Print the entry tables */
-    if(hdr->filter_len > 0)
-        HDfprintf(stream, "%*sDirect Block Entries: (address/compressed size/filter mask)\n", indent, "");
-    else
-        HDfprintf(stream, "%*sDirect Block Entries: (address)\n", indent, "");
+    HDfprintf(stream, "%*sDirect Block Entries (address, free space):\n", indent, "");
     for(u = 0; u < hdr->man_dtable.max_direct_rows && u < iblock->nrows; u++) {
         sprintf(temp_str, "Row #%u: (block size: %lu)", (unsigned)u, (unsigned long)hdr->man_dtable.row_block_size[u]);
         HDfprintf(stream, "%*s%-*s\n", indent + 3, "", MAX(0, fwidth - 3),
@@ -594,24 +465,19 @@ H5HF_iblock_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream,
             size_t off = (u * hdr->man_dtable.cparam.width) + v;
 
             sprintf(temp_str, "Col #%u:", (unsigned)v);
-            if(hdr->filter_len > 0)
-                HDfprintf(stream, "%*s%-*s %9a/%6Zu/%x\n", indent + 6, "", MAX(0, fwidth - 6),
-                        temp_str,
-                        iblock->ents[off].addr,
-                        iblock->filt_ents[off].size,
-                        iblock->filt_ents[off].filter_mask);
-            else
-                HDfprintf(stream, "%*s%-*s %9a\n", indent + 6, "", MAX(0, fwidth - 6),
-                        temp_str,
-                        iblock->ents[off].addr);
+            HDfprintf(stream, "%*s%-*s %9a, %8Zu\n", indent + 6, "", MAX(0, fwidth - 6),
+                    temp_str,
+                    iblock->ents[off].addr,
+                    iblock->ents[off].free_space);
         } /* end for */
+        dblock_size *= 2;
     } /* end for */
     HDfprintf(stream, "%*sIndirect Block Entries:\n", indent, "");
     if(iblock->nrows > hdr->man_dtable.max_direct_rows) {
         unsigned    first_row_bits;         /* Number of bits used bit addresses in first row */
         unsigned    num_indirect_rows;      /* Number of rows of blocks in each indirect block */
 
-        first_row_bits = H5V_log2_of2((uint32_t)hdr->man_dtable.cparam.start_block_size) +
+        first_row_bits = H5V_log2_of2(hdr->man_dtable.cparam.start_block_size) +
                             H5V_log2_of2(hdr->man_dtable.cparam.width);
         for(u = hdr->man_dtable.max_direct_rows; u < iblock->nrows; u++) {
             num_indirect_rows = (H5V_log2_gen(hdr->man_dtable.row_block_size[u]) - first_row_bits) + 1;
@@ -622,9 +488,10 @@ H5HF_iblock_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream,
                 size_t off = (u * hdr->man_dtable.cparam.width) + v;
 
                 sprintf(temp_str, "Col #%u:", (unsigned)v);
-                HDfprintf(stream, "%*s%-*s %9a\n", indent + 6, "", MAX(0, fwidth - 6),
+                HDfprintf(stream, "%*s%-*s %9a, %8Hu\n", indent + 6, "", MAX(0, fwidth - 6),
                         temp_str,
-                        iblock->ents[off].addr);
+                        iblock->ents[off].addr,
+                        iblock->ents[off].free_space);
             } /* end for */
         } /* end for */
     } /* end if */
@@ -632,135 +499,13 @@ H5HF_iblock_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream,
         HDfprintf(stream, "%*s%-*s\n", indent + 3, "", MAX(0, fwidth - 3),
                   "<none>");
 
+
 done:
-    if(iblock && H5HF_man_iblock_unprotect(iblock, dxpl_id, H5AC__NO_FLAGS_SET, did_protect) < 0)
+    if(iblock && H5AC_unprotect(f, dxpl_id, H5AC_FHEAP_IBLOCK, addr, iblock, H5AC__NO_FLAGS_SET) < 0)
         HDONE_ERROR(H5E_HEAP, H5E_PROTECT, FAIL, "unable to release fractal heap direct block")
     if(hdr && H5AC_unprotect(f, dxpl_id, H5AC_FHEAP_HDR, hdr_addr, hdr, H5AC__NO_FLAGS_SET) < 0)
         HDONE_ERROR(H5E_HEAP, H5E_PROTECT, FAIL, "unable to release fractal heap header")
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5HF_iblock_debug() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5HF_sects_debug_cb
- *
- * Purpose:	Prints debugging info about a free space section for a fractal heap.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *		koziol@ncsa.uiuc.edu
- *		May 13 2006
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5HF_sects_debug_cb(const H5FS_section_info_t *_sect, void *_udata)
-{
-    const H5HF_free_section_t *sect = (const H5HF_free_section_t *)_sect;       /* Section to dump info */
-    H5HF_debug_iter_ud2_t *udata = (H5HF_debug_iter_ud2_t *)_udata;         /* User data for callbacks */
-    herr_t      ret_value = SUCCEED;    /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT(H5HF_sects_debug_cb)
-
-    /*
-     * Check arguments.
-     */
-    HDassert(sect);
-    HDassert(udata);
-
-    /* Print generic section information */
-    HDfprintf(udata->stream, "%*s%-*s %s\n", udata->indent, "", udata->fwidth,
-	      "Section type:",
-	      (sect->sect_info.type == H5HF_FSPACE_SECT_SINGLE ? "single" :
-                  (sect->sect_info.type == H5HF_FSPACE_SECT_FIRST_ROW ? "first row" :
-                  (sect->sect_info.type == H5HF_FSPACE_SECT_NORMAL_ROW ? "normal row" : "unknown"))));
-    HDfprintf(udata->stream, "%*s%-*s %a\n", udata->indent, "", udata->fwidth,
-	      "Section address:",
-	      sect->sect_info.addr);
-    HDfprintf(udata->stream, "%*s%-*s %Hu\n", udata->indent, "", udata->fwidth,
-	      "Section size:",
-	      sect->sect_info.size);
-#ifdef QAK
-    HDfprintf(udata->stream, "%*s%-*s %s\n", udata->indent, "", udata->fwidth,
-	      "Section state:",
-	      (sect->sect_info.state == H5FS_SECT_LIVE ? "live" : "serialized"));
-#endif /* QAK */
-
-    /* Dump section-specific debugging information */
-    if(H5FS_sect_debug(udata->fspace, _sect, udata->stream, udata->indent + 3, MAX(0, udata->fwidth - 3)) < 0)
-        HGOTO_ERROR(H5E_HEAP, H5E_BADITER, FAIL, "can't dump section's debugging info")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5HF_sects_debug_cb() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5HF_sects_debug
- *
- * Purpose:	Prints debugging info about free space sections for a fractal heap.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *		koziol@ncsa.uiuc.edu
- *		May  9 2006
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5HF_sects_debug(H5F_t *f, hid_t dxpl_id, haddr_t fh_addr,
-    FILE *stream, int indent, int fwidth)
-{
-    H5HF_hdr_t	*hdr = NULL;            /* Fractal heap header info */
-    herr_t      ret_value = SUCCEED;    /* Return value */
-
-    FUNC_ENTER_NOAPI(H5HF_sects_debug, FAIL)
-
-    /*
-     * Check arguments.
-     */
-    HDassert(f);
-    HDassert(H5F_addr_defined(fh_addr));
-    HDassert(stream);
-    HDassert(indent >= 0);
-    HDassert(fwidth >= 0);
-
-    /*
-     * Load the fractal heap header.
-     */
-    if(NULL == (hdr = H5AC_protect(f, dxpl_id, H5AC_FHEAP_HDR, fh_addr, NULL, NULL, H5AC_READ)))
-	HGOTO_ERROR(H5E_HEAP, H5E_CANTLOAD, FAIL, "unable to load fractal heap header")
-
-    /* Initialize the free space information for the heap */
-    if(H5HF_space_start(hdr, dxpl_id, FALSE) < 0)
-        HGOTO_ERROR(H5E_HEAP, H5E_CANTINIT, FAIL, "can't initialize heap free space")
-
-    /* If there is a free space manager for the heap, iterate over them */
-    if(hdr->fspace) {
-        H5HF_debug_iter_ud2_t udata;        /* User data for callbacks */
-
-        /* Prepare user data for section iteration callback */
-        udata.fspace = hdr->fspace;
-        udata.stream = stream;
-        udata.indent = indent;
-        udata.fwidth = fwidth;
-
-        /* Iterate over all the free space sections */
-        if(H5FS_sect_iterate(f, dxpl_id, hdr->fspace, H5HF_sects_debug_cb, &udata) < 0)
-            HGOTO_ERROR(H5E_HEAP, H5E_BADITER, FAIL, "can't iterate over heap's free space")
-
-        /* Close the free space information */
-        if(H5HF_space_close(hdr, dxpl_id) < 0)
-            HGOTO_ERROR(H5E_HEAP, H5E_CANTRELEASE, FAIL, "can't release free space info")
-    } /* end if */
-
-done:
-    if(hdr && H5AC_unprotect(f, dxpl_id, H5AC_FHEAP_HDR, fh_addr, hdr, H5AC__NO_FLAGS_SET) < 0)
-        HDONE_ERROR(H5E_HEAP, H5E_PROTECT, FAIL, "unable to release fractal heap header")
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5HF_sects_debug() */
 

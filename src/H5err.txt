@@ -1,4 +1,3 @@
-# Copyright by The HDF Group.
 # Copyright by the Board of Trustees of the University of Illinois.
 # All rights reserved.
 #
@@ -8,8 +7,8 @@
 # of the source code distribution tree; Copyright.html can be found at the
 # root level of an installed copy of the electronic HDF5 document set and
 # is linked from the top-level documents page.  It can also be found at
-# http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-# access to either file, you may request a copy from help@hdfgroup.org.
+# http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
+# access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 #
 
 # This file is used to generate the various headers that are needed for the
@@ -53,7 +52,6 @@ MAJOR, H5E_IO, Low-level I/O
 MAJOR, H5E_FUNC, Function entry/exit
 MAJOR, H5E_ATOM, Object atom
 MAJOR, H5E_CACHE, Object cache
-MAJOR, H5E_LINK, Links
 MAJOR, H5E_BTREE, B-Tree node
 MAJOR, H5E_SYM, Symbol table
 MAJOR, H5E_HEAP, Heap
@@ -72,8 +70,6 @@ MAJOR, H5E_TST, Ternary Search Trees
 MAJOR, H5E_RS, Reference Counted Strings
 MAJOR, H5E_ERROR, Error API
 MAJOR, H5E_SLIST, Skip Lists
-MAJOR, H5E_FSPACE, Free Space Manager
-MAJOR, H5E_SOHM, Shared Object Header Messages
 MAJOR, H5E_NONE_MAJOR, No error
 
 # Sections (for grouping minor errors)
@@ -84,7 +80,6 @@ SECTION, FILE, Generic low-level file I/O errors
 SECTION, FUNC, Function entry/exit interface errors
 SECTION, ATOM, Object atom related errors
 SECTION, CACHE, Cache related errors
-SECTION, LINK, Link related errors
 SECTION, BTREE, B-tree related errors
 SECTION, OHDR, Object header related errors
 SECTION, GROUP, Group related errors
@@ -93,7 +88,6 @@ SECTION, DSPACE, Dataspace errors
 SECTION, PLIST, Property list errors
 SECTION, MPI, Parallel MPI errors
 SECTION, HEAP, Heap errors
-SECTION, FSPACE, Free space errors
 SECTION, PIPELINE, I/O pipeline errors
 SECTION, SYSTEM, System level errors
 SECTION, NONE, No error
@@ -117,7 +111,6 @@ MINOR, RESOURCE, H5E_CANTLOCK, Unable to lock object
 MINOR, RESOURCE, H5E_CANTUNLOCK, Unable to unlock object
 MINOR, RESOURCE, H5E_CANTGC, Unable to garbage collect
 MINOR, RESOURCE, H5E_CANTGETSIZE, Unable to compute size
-MINOR, RESOURCE, H5E_OBJOPEN, Object is already open
 
 # File accessability errors
 MINOR, FILEACC, H5E_FILEEXISTS, File already exists
@@ -166,8 +159,6 @@ MINOR, CACHE, H5E_CANTPIN, Unable to pin cache entry
 MINOR, CACHE, H5E_CANTUNPIN, Unable to un-pin cache entry
 MINOR, CACHE, H5E_CANTMARKDIRTY, Unable to mark a pinned entry as dirty
 MINOR, CACHE, H5E_CANTDIRTY, Unable to mark metadata as dirty
-MINOR, CACHE, H5E_CANTEXPUNGE, Unable to expunge a metadata cache entry
-MINOR, CACHE, H5E_CANTRESIZE, Unable to resize a metadata cache entry
 
 # B-tree related errors
 MINOR, BTREE, H5E_NOTFOUND, Object not found
@@ -180,7 +171,6 @@ MINOR, BTREE, H5E_CANTSWAP, Unable to swap records
 MINOR, BTREE, H5E_CANTINSERT, Unable to insert object
 MINOR, BTREE, H5E_CANTLIST, Unable to list node
 MINOR, BTREE, H5E_CANTMODIFY, Unable to modify record
-MINOR, BTREE, H5E_CANTREMOVE, Unable to remove object
 
 # Object header related errors
 MINOR, OHDR, H5E_LINKCOUNT, Bad object header link count
@@ -190,12 +180,13 @@ MINOR, OHDR, H5E_BADMESG, Unrecognized message
 MINOR, OHDR, H5E_CANTDELETE, Can't delete message
 MINOR, OHDR, H5E_BADITER, Iteration failed
 MINOR, OHDR, H5E_CANTPACK, Can't pack messages
-MINOR, OHDR, H5E_CANTRESET, Can't reset object
 
 # Group related errors
 MINOR, GROUP, H5E_CANTOPENOBJ, Can't open object
 MINOR, GROUP, H5E_CANTCLOSEOBJ, Can't close object
 MINOR, GROUP, H5E_COMPLEN, Name component is too long
+MINOR, GROUP, H5E_LINK, Link count failure
+MINOR, GROUP, H5E_SLINK, Symbolic link error
 MINOR, GROUP, H5E_PATH, Problem with path to object
 
 # Datatype conversion errors
@@ -215,13 +206,6 @@ MINOR, PLIST, H5E_CANTGET, Can't get value
 MINOR, PLIST, H5E_CANTSET, Can't set value
 MINOR, PLIST, H5E_DUPCLASS, Duplicate class name in parent class
 
-# Link errors
-MINOR, LINK, H5E_TRAVERSE, Link traversal failure
-MINOR, LINK, H5E_NLINKS, Too many soft links in path
-MINOR, LINK, H5E_NOTREGISTERED, Link class not registered
-MINOR, LINK, H5E_CANTMOVE, Move callback returned error
-MINOR, LINK, H5E_CANTSORT, Can't sort objects
-
 # Parallel MPI errors
 MINOR, MPI, H5E_MPI, Some MPI function failed
 MINOR, MPI, H5E_MPIERRSTR, MPI Error String
@@ -231,14 +215,6 @@ MINOR, MPI, H5E_CANTRECV, Can't receive data
 MINOR, HEAP, H5E_CANTRESTORE, Can't restore condition
 MINOR, HEAP, H5E_CANTCOMPUTE, Can't compute value
 MINOR, HEAP, H5E_CANTEXTEND, Can't extend heap's space
-MINOR, HEAP, H5E_CANTATTACH, Can't attach object
-MINOR, HEAP, H5E_CANTUPDATE, Can't update object
-MINOR, HEAP, H5E_CANTOPERATE, Can't operate on object
-
-# Free space manager errors
-MINOR, FSPACE, H5E_CANTMERGE, Can't merge objects
-MINOR, FSPACE, H5E_CANTREVIVE, Can't revive object
-MINOR, FSPACE, H5E_CANTSHRINK, Can't shrink container
 
 # I/O pipeline errors
 MINOR, PIPELINE, H5E_NOFILTER, Requested filter is not available
@@ -246,7 +222,6 @@ MINOR, PIPELINE, H5E_CALLBACK, Callback failed
 MINOR, PIPELINE, H5E_CANAPPLY, Error from filter 'can apply' callback
 MINOR, PIPELINE, H5E_SETLOCAL, Error from filter 'set local' callback
 MINOR, PIPELINE, H5E_NOENCODER, Filter present but encoding disabled
-MINOR, PIPELINE, H5E_CANTFILTER, Filter operation failed
 
 # System level errors
 MINOR, SYSTEM, H5E_SYSERRSTR, System error message

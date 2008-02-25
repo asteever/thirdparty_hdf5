@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,13 +8,13 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*-------------------------------------------------------------------------
  *
- * Created:             H5ACpublic.h
+ * Created:             H5ACproto.h
  *                      Jul 10 1997
  *                      Robb Matzke <matzke@llnl.gov>
  *
@@ -36,30 +35,23 @@
 extern "C" {
 #endif
 
-#define H5AC__MAX_TRACE_FILE_NAME_LEN	1024
-
 /****************************************************************************
  *
  * structure H5AC_cache_config_t
  *
  * H5AC_cache_config_t is a public structure intended for use in public APIs.
- * At least in its initial incarnation, it is basicaly a copy of struct
- * H5C_auto_size_ctl_t, minus the report_fcn field, and plus the
- * dirty_bytes_threshold field.
+ * At least in its initial incarnation, it is basicaly a copy of struct 
+ * H5C_auto_size_ctl_t, minus the report_fcn field, and plus the 
+ * dirty_bytes_threshold field.  
  *
- * The report_fcn field is omitted, as including it would require us to
+ * The report_fcn field is omitted, as including it would require us to 
  * make H5C_t structure public.
  *
  * The dirty_bytes_threshold field does not appear in H5C_auto_size_ctl_t,
  * as synchronization between caches on different processes is handled at
- * the H5AC level, not at the level of H5C.  Note however that there is
+ * the H5AC level, not at the level of H5C.  Note however that there is 
  * considerable interaction between this value and the other fields in this
  * structure.
- *
- * Similarly, the open_trace_file, close_trace_file, and trace_file_name
- * fields do not appear in H5C_auto_size_ctl_t, as most trace file 
- * issues are handled at the H5AC level.  The one exception is storage of
- * the pointer to the trace file, which is handled by H5C.
  *
  * The structure is in H5ACpublic.h as we may wish to allow different
  * configuration options for metadata and raw data caches.
@@ -76,55 +68,6 @@ extern "C" {
  *	automatic cache resize code is run, and reports on its activities.
  *
  *	This is a debugging function, and should normally be turned off.
- *
- * open_trace_file: Boolean field indicating whether the trace_file_name
- * 	field should be used to open a trace file for the cache.
- *
- * 	The trace file is a debuging feature that allow the capture of
- * 	top level metadata cache requests for purposes of debugging and/or
- * 	optimization.  This field should normally be set to FALSE, as 
- * 	trace file collection imposes considerable overhead.
- *
- * 	This field should only be set to TRUE when the trace_file_name
- * 	contains the full path of the desired trace file, and either
- * 	there is no open trace file on the cache, or the close_trace_file
- * 	field is also TRUE.
- *
- * close_trace_file: Boolean field indicating whether the current trace
- * 	file (if any) should be closed.
- *
- * 	See the above comments on the open_trace_file field.  This field
- * 	should be set to FALSE unless there is an open trace file on the
- * 	cache that you wish to close.
- *
- * trace_file_name: Full path of the trace file to be opened if the
- * 	open_trace_file field is TRUE.
- *
- * 	In the parallel case, an ascii representation of the mpi rank of 
- * 	the process will be appended to the file name to yield a unique
- * 	trace file name for each process.
- *
- * 	The length of the path must not exceed H5AC__MAX_TRACE_FILE_NAME_LEN
- * 	characters.
- *
- * evictions_enabled:  Boolean field used to either report the current
- * 	evictions enabled status of the cache, or to set the cache's 
- *	evictions enabled status.
- *
- * 	In general, the metadata cache should always be allowed to 
- * 	evict entries.  However, in some cases it is advantageous to 
- * 	disable evictions briefly, and thereby postpone metadata 
- * 	writes.  However, this must be done with care, as the cache
- * 	can grow quickly.  If you do this, re-enable evictions as
- * 	soon as possible and monitor cache size.
- *
- * 	At present, evictions can only be disabled if automatic
- * 	cache resizing is also disabled (that is, ( incr_mode ==
- *	H5C_incr__off ) && ( decr_mode == H5C_decr__off )).  There
- *	is no logical reason why this should be so, but it simplifies
- *	implementation and testing, and I can't think of any reason
- *	why it would be desireable.  If you can think of one, I'll
- *	revisit the issue.
  *
  * set_initial_size: Boolean flag indicating whether the size of the
  *      initial size of the cache is to be set to the value given in
@@ -179,9 +122,6 @@ extern "C" {
  *              at its maximum size, or if the cache is not already using
  *              all available space.
  *
- *      Note that you must set decr_mode to H5C_incr__off if you 
- *      disable metadata cache entry evictions.
- *
  * lower_hr_threshold: Lower hit rate threshold.  If the increment mode
  *      (incr_mode) is H5C_incr__threshold and the hit rate drops below the
  *      value supplied in this field in an epoch, increment the cache size by
@@ -207,61 +147,6 @@ extern "C" {
  * max_increment: If enabled by the apply_max_increment field described
  *      above, this field contains the maximum number of bytes by which the
  *      cache size can be increased in a single re-size.
- *
- * flash_incr_mode:  Instance of the H5C_cache_flash_incr_mode enumerated
- *      type whose value indicates whether and by which algorithm we should
- *      make flash increases in the size of the cache to accomodate insertion
- *      of large entries and large increases in the size of a single entry.
- *
- *      The addition of the flash increment mode was occasioned by performance
- *      problems that appear when a local heap is increased to a size in excess
- *      of the current cache size.  While the existing re-size code dealt with
- *      this eventually, performance was very bad for the remainder of the 
- *      epoch.
- *
- *      At present, there are two possible values for the flash_incr_mode:
- *
- *      H5C_flash_incr__off:  Don't perform flash increases in the size of
- *              the cache.
- *
- *      H5C_flash_incr__add_space:  Let x be either the size of a newly
- *              newly inserted entry, or the number of bytes by which the
- *              size of an existing entry has been increased.
- *
- *              If
- *                      x > flash_threshold * current max cache size,
- *
- *              increase the current maximum cache size by x * flash_multiple
- *              less any free space in the cache, and star a new epoch.  For
- *              now at least, pay no attention to the maximum increment.
- *
- *      In both of the above cases, the flash increment pays no attention to
- *      the maximum increment (at least in this first incarnation), but DOES
- *      stay within max_size.
- *
- *      With a little thought, it should be obvious that the above flash
- *      cache size increase algorithm is not sufficient for all circumstances --
- *      for example, suppose the user round robins through 
- *      (1/flash_threshold) +1 groups, adding one data set to each on each
- *      pass.  Then all will increase in size at about the same time, requiring
- *      the max cache size to at least double to maintain acceptable
- *      performance, however the above flash increment algorithm will not be
- *      triggered.
- *
- *      Hopefully, the add space algorithms detailed above will be sufficient 
- *      for the performance problems encountered to date.  However, we should 
- *      expect to revisit the issue.
- *
- * flash_multiple: Double containing the multiple described above in the
- *      H5C_flash_incr__add_space section of the discussion of the 
- *      flash_incr_mode section.  This field is ignored unless flash_incr_mode 
- *      is H5C_flash_incr__add_space.
- *
- * flash_threshold: Double containing the factor by which current max cache size
- *      is multiplied to obtain the size threshold for the add_space flash
- *      increment algorithm.  The field is ignored unless flash_incr_mode is
- *      H5C_flash_incr__add_space.
- *
  *
  *
  * Cache size decrease control fields:
@@ -293,9 +178,6 @@ extern "C" {
  *              attempt to reduce the cache size when the hit rate observed
  *              over the last epoch exceeds the value provided in the
  *              upper_hr_threshold field.
- *
- *      Note that you must set decr_mode to H5C_decr__off if you 
- *      disable metadata cache entry evictions.
  *
  * upper_hr_threshold: Upper hit rate threshold.  The use of this field
  *      varies according to the current decr_mode:
@@ -353,95 +235,85 @@ extern "C" {
  *      The value of this field must be in the range [0.0, 1.0].  I would
  *      expect typical values to be in the range of 0.01 to 0.1.
  *
- *
+ * 
  * Parallel Configuration Fields:
  *
  * In PHDF5, all operations that modify metadata must be executed collectively.
- * We used to think that this was enough to ensure consistency across the
+ * We used to think that this was enough to ensure consistency across the 
  * metadata caches, but since we allow processes to read metadata individually,
- * the order of dirty entries in the LRU list can vary across processes,
+ * the order of dirty entries in the LRU list can vary across processes, 
  * which can result in inconsistencies between the caches.
  *
- * To prevent this, only the metadata cache on process 0 is allowed to write
+ * To prevent this, only the metadata cache on process 0 is allowed to write 
  * to file, and then only after synchronizing with the other caches.  After
  * it writes entries to file, it sends the base addresses of the now clean
  * entries to the other caches, so they can mark these entries clean as well.
  *
- * The different caches know when to synchronize caches by counting the
+ * The different caches know when to synchronize caches by counting the 
  * number of bytes of dirty metadata created by the collective operations
- * modifying metadata.  Whenever this count exceeds a user specified
- * threshold (see below), process 0 flushes down to its minimum clean size,
+ * modifying metadata.  Whenever this count exceeds a user specified 
+ * threshold (see below), process 0 flushes down to its minimum clean size, 
  * and then sends the list of newly cleaned entries to the other caches.
  *
- * dirty_bytes_threshold:  Threshold of dirty byte creation used to
- * 	synchronize updates between caches. (See above for outline and
+ * dirty_bytes_threshold:  Threshold of dirty byte creation used to 
+ * 	synchronize updates between caches. (See above for outline and 
  *	motivation.)
  *
- *	This value MUST be consistant across all processes accessing the
+ *	This value MUST be consistant across all processes accessing the 
  *	file.  This field is ignored unless HDF5 has been compiled for
  *	parallel.
  *
  ****************************************************************************/
 
-#define H5AC__CURR_CACHE_CONFIG_VERSION 1
+#define H5AC__CURR_CACHE_CONFIG_VERSION  1
 
 typedef struct H5AC_cache_config_t
 {
     /* general configuration fields: */
-    int                      version;
+    int                         version;
 
-    hbool_t		     rpt_fcn_enabled;
+    hbool_t			rpt_fcn_enabled;
 
-    hbool_t		     open_trace_file;
-    hbool_t                  close_trace_file;
-    char                     trace_file_name[H5AC__MAX_TRACE_FILE_NAME_LEN + 1];
+    hbool_t                     set_initial_size;
+    size_t                      initial_size;
 
-    hbool_t                  evictions_enabled;
+    double                      min_clean_fraction;
 
-    hbool_t                  set_initial_size;
-    size_t                   initial_size;
+    size_t                      max_size;
+    size_t                      min_size;
 
-    double                   min_clean_fraction;
-
-    size_t                   max_size;
-    size_t                   min_size;
-
-    long int                 epoch_length;
+    long int                    epoch_length;
 
 
     /* size increase control fields: */
-    enum H5C_cache_incr_mode incr_mode;
+    enum H5C_cache_incr_mode    incr_mode;
 
-    double                   lower_hr_threshold;
+    double                      lower_hr_threshold;
 
-    double                   increment;
+    double                      increment;
 
-    hbool_t                  apply_max_increment;
-    size_t                   max_increment;
-
-    enum H5C_cache_flash_incr_mode      flash_incr_mode;
-    double                              flash_multiple;
-    double                              flash_threshold;
+    hbool_t                     apply_max_increment;
+    size_t                      max_increment;
 
 
     /* size decrease control fields: */
-    enum H5C_cache_decr_mode decr_mode;
+    enum H5C_cache_decr_mode    decr_mode;
 
-    double                   upper_hr_threshold;
+    double                      upper_hr_threshold;
 
-    double                   decrement;
+    double                      decrement;
 
-    hbool_t                  apply_max_decrement;
-    size_t                   max_decrement;
+    hbool_t                     apply_max_decrement;
+    size_t                      max_decrement;
 
-    int                      epochs_before_eviction;
+    int                         epochs_before_eviction;
 
-    hbool_t                  apply_empty_reserve;
-    double                   empty_reserve;
+    hbool_t                     apply_empty_reserve;
+    double                      empty_reserve;
 
 
     /* parallel configuration fields: */
-    int                      dirty_bytes_threshold;
+    int				dirty_bytes_threshold;
 
 } H5AC_cache_config_t;
 

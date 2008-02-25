@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -42,17 +41,6 @@
 
 /* Get needed headers */
 #include "H5SLprivate.h"        /* Skip lists */
-
-/* With the introduction of the fractal heap, it is now possible for 
- * entries to be dirtied, resized, and/or renamed in the flush callbacks.
- * As a result, on flushes, it may be necessary to make multiple passes
- * through the slist before it is empty.  The H5C__MAX_PASSES_ON_FLUSH
- * #define is used to set an upper limit on the number of passes.
- * The current value was obtained via personal communication with 
- * Quincey.  I have applied a fudge factor of 2.
- */
-
-#define H5C__MAX_PASSES_ON_FLUSH	4
 
 
 #define H5C__HASH_TABLE_LEN     (64 * 1024) /* must be a power of 2 */
@@ -91,7 +79,7 @@
  *
  *						JRM - 7/19/04
  *
- * The TBBT has since been replaced with a skip list.  This change
+ * The TBBT has since been replaced with a skip list.  This change 
  * greatly predates this note.
  *
  *						JRM - 9/26/05
@@ -99,22 +87,7 @@
  * magic:	Unsigned 32 bit integer always set to H5C__H5C_T_MAGIC.  This
  *		field is used to validate pointers to instances of H5C_t.
  *
- * flush_in_progress: Boolean flag indicating whether a flush is in 
- * 		progress.
- *
- * trace_file_ptr:  File pointer pointing to the trace file, which is used
- *              to record cache operations for use in simulations and design
- *              studies.  This field will usually be NULL, indicating that
- *              no trace file should be recorded.
- *
- *              Since much of the code supporting the parallel metadata
- *              cache is in H5AC, we don't write the trace file from 
- *              H5C.  Instead, H5AC reads the trace_file_ptr as needed.
- *
- *              When we get to using H5C in other places, we may add
- *              code to write trace file data at the H5C level as well.
- *
- * aux_ptr:	Pointer to void used to allow wrapper code to associate
+ * aux_ptr:	Pointer to void used to allow wrapper code to associate 
  *		its data with an instance of H5C_t.  The H5C cache code
  *		sets this field to NULL, and otherwise leaves it alone.
  *
@@ -169,23 +142,11 @@
  *		the cache uses the following write_permitted field to
  *		determine whether writes are permitted.
  *
- * write_permitted: If check_write_permitted is NULL, this boolean flag
+ * write_permitted: If check_write_permitted is NULL, this boolean flag 
  *		indicates whether writes are permitted.
  *
- * log_flush:	If provided, this function is called whenever a dirty
+ * log_flush:	If provided, this function is called whenever a dirty 
  *		entry is flushed to disk.
- *
- *
- * In cases where memory is plentiful, and performance is an issue, it
- * is useful to disable all cache evictions, and thereby postpone metadata
- * writes.  The following field is used to implement this.
- *
- * evictions_enabled:  Boolean flag that is initialized to TRUE.  When
- * 		this flag is set to FALSE, the metadata cache will not 
- * 		attempt to evict entries to make space for newly protected
- * 		entries, and instead the will grow without limit.
- * 		
- * 		Needless to say, this feature must be used with care.
  *
  *
  * The cache requires an index to facilitate searching for entries.  The
@@ -226,7 +187,7 @@
  * on how frequently the cache is flushed.  We will see how it goes.
  *
  * For now at least, I will not remove dirty entries from the list as they
- * are flushed. (this has been changed -- dirty entries are now removed from
+ * are flushed. (this has been changed -- dirty entries are now removed from 
  * the skip list as they are flushed.  JRM - 10/25/05)
  *
  * slist_len:   Number of entries currently in the skip list
@@ -248,19 +209,6 @@
  *                 attempting to evict entries from the cache.  While we
  *                 don't use this at present, I hope that this will allow
  *                 some optimizations when I get to it.
- *
- * With the addition of the fractal heap, the cache must now deal with
- * the case in which entries may be dirtied, renamed, or have their sizes
- * changed during a flush.  To allow sanity checks in this situation, the
- * following two fields have been added.  They are only compiled in when
- * H5C_DO_SANITY_CHECKS is TRUE.
- *
- * slist_len_increase: Number of entries that have been added to the 
- * 		slist since the last time this field was set to zero.
- *
- * slist_size_increase: Total size of all entries that have been added
- * 		to the slist since the last time this field was set to
- * 		zero.
  *
  *
  * When a cache entry is protected, it must be removed from the LRU
@@ -287,22 +235,22 @@
  *
  * For very frequently used entries, the protect/unprotect overhead can
  * become burdensome.  To avoid this overhead, I have modified the cache
- * to allow entries to be "pinned".  A pinned entry is similar to a
+ * to allow entries to be "pinned".  A pinned entry is similar to a 
  * protected entry, in the sense that it cannot be evicted, and that
  * the entry can be modified at any time.
  *
  * Pinning an entry has the following implications:
  *
  *	1) A pinned entry cannot be evicted.  Thus unprotected
- *         pinned entries reside in the pinned entry list, instead
+ *         pinned entries reside in the pinned entry list, instead 
  *         of the LRU list(s) (or other lists maintained by the current
  *         replacement policy code).
- *
+ *                 
  *      2) A pinned entry can be accessed or modified at any time.
  *         Therefore, the cache must check with the entry owner
  *         before flushing it.  If permission is denied, the
  *         cache just skips the entry in the flush.
- *
+ * 
  *      3) A pinned entry can be marked as dirty (and possibly
  *         change size) while it is unprotected.
  *
@@ -315,20 +263,20 @@
  *
  * Maintaining the pinned entry list requires the following fields:
  *
- * pel_len:	Number of entries currently residing on the pinned
+ * pel_len:	Number of entries currently residing on the pinned 
  * 		entry list.
  *
  * pel_size:	Number of bytes of cache entries currently residing on
  * 		the pinned entry list.
  *
  * pel_head_ptr: Pointer to the head of the doubly linked list of pinned
- * 		but not protected entries.  Note that cache entries on
+ * 		but not protected entries.  Note that cache entries on 
  * 		this list are linked by their next and prev fields.
  *
  *              This field is NULL if the list is empty.
  *
  * pel_tail_ptr: Pointer to the tail of the doubly linked list of pinned
- * 		but not protected entries.  Note that cache entries on
+ * 		but not protected entries.  Note that cache entries on 
  * 		this list are linked by their next and prev fields.
  *
  *              This field is NULL if the list is empty.
@@ -465,18 +413,6 @@
  *		all the ways this can happen, we simply set this flag when
  *		we receive a new configuration.
  *
- * flash_size_increase_possible: Depending on the configuration data given
- * 		in the resize_ctl field, it may or may not be possible
- * 		for a flash size increase to occur.  We set this flag
- * 		whenever we receive a new configuration so as to avoid 
- * 		repeated calculations.
- *
- * flash_size_increase_threshold: If a flash cache size increase is possible,
- * 		this field is used to store the minimum size of a new entry
- * 		or size increase needed to trigger a flash cache size 
- * 		increase.  Note that this field must be updated whenever 
- * 		the size of the cache is changed.
- *
  * size_decrease_possible:  Depending on the configuration data given
  *              in the resize_ctl field, it may or may not be possible
  *              to decrease the size of the cache.  Rather than test for
@@ -592,34 +528,10 @@
  *		equal to the array index has not been in cache when
  *		requested in the current epoch.
  *
- * write_protects:  Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.  The 
- *		cells are used to record the number of times an entry with 
- *		type id equal to the array index has been write protected 
- *		in the current epoch.
- *
- * 		Observe that (hits + misses) = (write_protects + read_protects).
- *
- * read_protects: Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.  The cells
- *              are used to record the number of times an entry with type id
- *              equal to the array index has been read protected in the
- *              current epoch.
- *
- *              Observe that (hits + misses) = (write_protects + read_protects).
- *
- * max_read_protects:  Array of int32 of length H5C__MAX_NUM_TYPE_IDS + 1. 
- * 		The cells are used to maximum number of simultaneous read 
- * 		protects on any entry with type id equal to the array index 
- * 		in the current epoch.
- *
  * insertions:  Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.  The cells
  *		are used to record the number of times an entry with type
  *		id equal to the array index has been inserted into the
  *		cache in the current epoch.
- *
- * pinned_insertions:  Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.  
- * 		The cells are used to record the number of times an entry 
- * 		with type id equal to the array index has been inserted 
- * 		pinned into the cache in the current epoch.
  *
  * clears:      Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.  The cells
  *		are used to record the number of times an entry with type
@@ -641,16 +553,6 @@
  *		id equal to the array index has been renamed in the current
  *		epoch.
  *
- * entry_flush_renames: Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.  
- * 		The cells are used to record the number of times an entry 
- * 		with type id equal to the array index has been renamed
- * 		during its flush callback in the current epoch.
- *
- * cache_flush_renames: Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.  
- * 		The cells are used to record the number of times an entry 
- * 		with type id equal to the array index has been renamed
- * 		during a cache flush in the current epoch.
- *
  * pins:        Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.  The cells
  *		are used to record the number of times an entry with type
  *		id equal to the array index has been pinned in the current
@@ -666,35 +568,26 @@
  *		id equal to the array index has been marked dirty while pinned
  *		in the current epoch.
  *
- * pinned_flushes:  Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.  The
- * 		cells are used to record the number of times an  entry
- * 		with type id equal to the array index has been flushed while
+ * pinned_flushes:  Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.  The 
+ * 		cells are used to record the number of times an  entry 
+ * 		with type id equal to the array index has been flushed while 
  * 		pinned in the current epoch.
  *
- * pinned_cleared:  Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.  The
- * 		cells are used to record the number of times an  entry
- * 		with type id equal to the array index has been cleared while
+ * pinned_cleared:  Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.  The 
+ * 		cells are used to record the number of times an  entry 
+ * 		with type id equal to the array index has been cleared while 
  * 		pinned in the current epoch.
  *
- * size_increases:  Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.
- *		The cells are used to record the number of times an entry
+ *
+ * size_increases:  Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.  
+ *		The cells are used to record the number of times an entry 
  *		with type id equal to the array index has increased in
  *		size in the current epoch.
  *
- * size_decreases:  Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.
- *		The cells are used to record the number of times an entry
+ * size_decreases:  Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.  
+ *		The cells are used to record the number of times an entry 
  *		with type id equal to the array index has decreased in
  *		size in the current epoch.
- *
- * entry_flush_size_changes:  Array of int64 of length 
- * 		H5C__MAX_NUM_TYPE_IDS + 1.  The cells are used to record 
- * 		the number of times an entry with type id equal to the 
- * 		array index has changed size while in its flush callback.
- *
- * cache_flush_size_changes:  Array of int64 of length 
- * 		H5C__MAX_NUM_TYPE_IDS + 1.  The cells are used to record 
- * 		the number of times an entry with type id equal to the 
- * 		array index has changed size during a cache flush
  *
  * total_ht_insertions: Number of times entries have been inserted into the
  *		hash table in the current epoch.
@@ -769,8 +662,8 @@
  *		the cache in the current epoch.
  *
  * max_pins:	Array of size_t of length H5C__MAX_NUM_TYPE_IDS + 1.  The cells
- *              are used to record the maximum number of times that any single
- *              entry with type id equal to the array index that has been
+ *              are used to record the maximum number of times that any single 
+ *              entry with type id equal to the array index that has been 
  *              marked as pinned in the cache in the current epoch.
  *
  *
@@ -802,16 +695,12 @@
  ****************************************************************************/
 
 #define H5C__H5C_T_MAGIC	0x005CAC0E
-#define H5C__MAX_NUM_TYPE_IDS	16
+#define H5C__MAX_NUM_TYPE_IDS	12
 #define H5C__PREFIX_LEN		32
 
 struct H5C_t
 {
     uint32_t			magic;
-
-    hbool_t			flush_in_progress;
-
-    FILE *			trace_file_ptr;
 
     void *			aux_ptr;
 
@@ -826,8 +715,6 @@ struct H5C_t
 
     H5C_log_flush_func_t	log_flush;
 
-    hbool_t			evictions_enabled;
-
     int32_t                     index_len;
     size_t                      index_size;
     H5C_cache_entry_t *		(index[H5C__HASH_TABLE_LEN]);
@@ -836,10 +723,7 @@ struct H5C_t
     int32_t                     slist_len;
     size_t                      slist_size;
     H5SL_t *                    slist_ptr;
-#if H5C_DO_SANITY_CHECKS
-    int64_t			slist_len_increase;
-    int64_t			slist_size_increase;
-#endif /* H5C_DO_SANITY_CHECKS */
+
 
     int32_t                     pl_len;
     size_t                      pl_size;
@@ -867,8 +751,6 @@ struct H5C_t
     H5C_cache_entry_t *	        dLRU_tail_ptr;
 
     hbool_t			size_increase_possible;
-    hbool_t			flash_size_increase_possible;
-    size_t			flash_size_increase_threshold; 
     hbool_t			size_decrease_possible;
     hbool_t			resize_enabled;
     hbool_t			cache_full;
@@ -891,17 +773,11 @@ struct H5C_t
     /* stats fields */
     int64_t                     hits[H5C__MAX_NUM_TYPE_IDS + 1];
     int64_t                     misses[H5C__MAX_NUM_TYPE_IDS + 1];
-    int64_t                     write_protects[H5C__MAX_NUM_TYPE_IDS + 1];
-    int64_t                     read_protects[H5C__MAX_NUM_TYPE_IDS + 1];
-    int32_t                     max_read_protects[H5C__MAX_NUM_TYPE_IDS + 1];
     int64_t                     insertions[H5C__MAX_NUM_TYPE_IDS + 1];
-    int64_t                     pinned_insertions[H5C__MAX_NUM_TYPE_IDS + 1];
     int64_t                     clears[H5C__MAX_NUM_TYPE_IDS + 1];
     int64_t                     flushes[H5C__MAX_NUM_TYPE_IDS + 1];
     int64_t                     evictions[H5C__MAX_NUM_TYPE_IDS + 1];
     int64_t                     renames[H5C__MAX_NUM_TYPE_IDS + 1];
-    int64_t                     entry_flush_renames[H5C__MAX_NUM_TYPE_IDS + 1];
-    int64_t                     cache_flush_renames[H5C__MAX_NUM_TYPE_IDS + 1];
     int64_t                     pins[H5C__MAX_NUM_TYPE_IDS + 1];
     int64_t                     unpins[H5C__MAX_NUM_TYPE_IDS + 1];
     int64_t                     dirty_pins[H5C__MAX_NUM_TYPE_IDS + 1];
@@ -909,10 +785,6 @@ struct H5C_t
     int64_t                     pinned_clears[H5C__MAX_NUM_TYPE_IDS + 1];
     int64_t                     size_increases[H5C__MAX_NUM_TYPE_IDS + 1];
     int64_t                     size_decreases[H5C__MAX_NUM_TYPE_IDS + 1];
-    int64_t                     entry_flush_size_changes
-	    				[H5C__MAX_NUM_TYPE_IDS + 1];
-    int64_t                     cache_flush_size_changes
-	    				[H5C__MAX_NUM_TYPE_IDS + 1];
 
     int64_t			total_ht_insertions;
     int64_t			total_ht_deletions;
