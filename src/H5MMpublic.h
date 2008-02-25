@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*-------------------------------------------------------------------------
@@ -33,8 +32,8 @@
 #include "H5public.h"
 
 /* These typedefs are currently used for VL datatype allocation/freeing */
-typedef void *(*H5MM_allocate_t)(size_t size, void *alloc_info);
-typedef void (*H5MM_free_t)(void *mem, void *free_info);
+typedef void *(* H5MM_allocate_t)(size_t size,void *info);
+typedef void (* H5MM_free_t)(void *mem, void *free_info);
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,5 +42,4 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif
-#endif /* _H5MMpublic_H */
-
+#endif

@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,14 +8,19 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef _PH5DIFF_H__
 #define _PH5DIFF_H__
 
+/* use a larger output buffer for Tflops which does not support vsnprintf. */
+#ifdef __PUMAGON__
 #define PRINT_DATA_MAX_SIZE 	512
+#else
+#define PRINT_DATA_MAX_SIZE 	512
+#endif
 #define OUTBUFF_SIZE 		(PRINT_DATA_MAX_SIZE*4)
 /* Send from manager to workers */
 #define MPI_TAG_ARGS		1
@@ -36,12 +40,12 @@ extern int	g_nTasks;
 extern unsigned char g_Parallel;
 extern char    outBuff[];
 extern int	outBuffOffset;
-extern FILE *	overflow_file;
+extern FILE*		overflow_file;
 
 struct diff_args
 {
     char	name[256];
-    h5trav_type_t   type;
+    H5G_obj_t   type;
     diff_opt_t	options;
 };
 
@@ -55,5 +59,5 @@ struct diffs_found
 #include <mpi.h>
 #endif
 
-#endif  /* _PH5DIFF_H__ */
 
+#endif  /* _PH5DIFF_H__ */

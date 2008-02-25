@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -127,7 +126,7 @@ static void *H5HG_peek(H5F_t *f, hid_t dxpl_id, H5HG_t *hobj);
 static H5HG_heap_t *H5HG_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void *udata1,
 			      void *udata2);
 static herr_t H5HG_flush(H5F_t *f, hid_t dxpl_id, hbool_t dest, haddr_t addr,
-			 H5HG_heap_t *heap, unsigned UNUSED * flags_ptr);
+			 H5HG_heap_t *heap);
 static herr_t H5HG_dest(H5F_t *f, H5HG_heap_t *heap);
 static herr_t H5HG_clear(H5F_t *f, H5HG_heap_t *heap, hbool_t destroy);
 static herr_t H5HG_compute_size(const H5F_t *f, const H5HG_heap_t *heap, size_t *size_ptr);
@@ -200,7 +199,7 @@ H5HG_create (H5F_t *f, hid_t dxpl_id, size_t size)
     haddr_t	addr;
     size_t	n;
 
-    FUNC_ENTER_NOAPI_NOINIT(H5HG_create)
+    FUNC_ENTER_NOAPI(H5HG_create, HADDR_UNDEF);
 
     /* Check args */
     assert (f);
@@ -223,9 +222,9 @@ H5HG_create (H5F_t *f, hid_t dxpl_id, size_t size)
     if (NULL==(heap->chunk = H5FL_BLK_MALLOC (heap_chunk,size)))
 	HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, HADDR_UNDEF, \
                      "memory allocation failed");
-#ifdef H5_CLEAR_MEMORY
-HDmemset(heap->chunk, 0, size);
-#endif /* H5_CLEAR_MEMORY */
+#ifdef H5_USING_PURIFY
+HDmemset(heap->chunk,0,size);
+#endif /* H5_USING_PURIFY */
     heap->nalloc = H5HG_NOBJS (f, size);
     heap->nused = 1; /* account for index 0, which is used for the free object */
     if (NULL==(heap->obj = H5FL_SEQ_MALLOC (H5HG_obj_t,heap->nalloc)))
@@ -233,7 +232,7 @@ HDmemset(heap->chunk, 0, size);
                      "memory allocation failed");
 
     /* Initialize the header */
-    HDmemcpy (heap->chunk, H5HG_MAGIC, (size_t)H5HG_SIZEOF_MAGIC);
+    HDmemcpy (heap->chunk, H5HG_MAGIC, H5HG_SIZEOF_MAGIC);
     p = heap->chunk + H5HG_SIZEOF_MAGIC;
     *p++ = H5HG_VERSION;
     *p++ = 0; /*reserved*/
@@ -341,16 +340,16 @@ H5HG_load (H5F_t *f, hid_t dxpl_id, haddr_t addr, const void UNUSED * udata1,
     assert (!udata2);
 
     /* Read the initial 4k page */
-    if(NULL == (heap = H5FL_CALLOC (H5HG_heap_t)))
+    if (NULL==(heap = H5FL_CALLOC (H5HG_heap_t)))
 	HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
     heap->addr = addr;
-    if(NULL == (heap->chunk = H5FL_BLK_MALLOC(heap_chunk, (size_t)H5HG_MINSIZE)))
+    if (NULL==(heap->chunk = H5FL_BLK_MALLOC (heap_chunk,H5HG_MINSIZE)))
 	HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
-    if(H5F_block_read(f, H5FD_MEM_GHEAP, addr, (size_t)H5HG_MINSIZE, dxpl_id, heap->chunk)<0)
+    if (H5F_block_read(f, H5FD_MEM_GHEAP, addr, H5HG_MINSIZE, dxpl_id, heap->chunk)<0)
 	HGOTO_ERROR (H5E_HEAP, H5E_READERROR, NULL, "unable to read global heap collection");
 
     /* Magic number */
-    if(HDmemcmp(heap->chunk, H5HG_MAGIC, (size_t)H5HG_SIZEOF_MAGIC))
+    if (HDmemcmp (heap->chunk, H5HG_MAGIC, H5HG_SIZEOF_MAGIC))
 	HGOTO_ERROR (H5E_HEAP, H5E_CANTLOAD, NULL, "bad global heap collection signature");
     p = heap->chunk + H5HG_SIZEOF_MAGIC;
 
@@ -456,24 +455,26 @@ H5HG_load (H5F_t *f, hid_t dxpl_id, haddr_t addr, const void UNUSED * udata1,
      * necessary to make room. We remove the right-most entry that has less
      * free space than this heap.
      */
-    if (!f->shared->cwfs) {
-        f->shared->cwfs = H5MM_malloc (H5HG_NCWFS*sizeof(H5HG_heap_t*));
-        if (NULL==f->shared->cwfs)
-            HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
-        f->shared->ncwfs = 1;
-        f->shared->cwfs[0] = heap;
-    } else if (H5HG_NCWFS==f->shared->ncwfs) {
-        for (i=H5HG_NCWFS-1; i>=0; --i) {
-            if (f->shared->cwfs[i]->obj[0].size < heap->obj[0].size) {
-                HDmemmove (f->shared->cwfs+1, f->shared->cwfs, i * sizeof(H5HG_heap_t*));
-                f->shared->cwfs[0] = heap;
-                break;
-            }
-        }
-    } else {
-        HDmemmove (f->shared->cwfs+1, f->shared->cwfs, f->shared->ncwfs*sizeof(H5HG_heap_t*));
-        f->shared->ncwfs += 1;
-        f->shared->cwfs[0] = heap;
+    if (heap->obj[0].size>0) {
+	if (!f->shared->cwfs) {
+	    f->shared->cwfs = H5MM_malloc (H5HG_NCWFS*sizeof(H5HG_heap_t*));
+	    if (NULL==f->shared->cwfs)
+		HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
+	    f->shared->ncwfs = 1;
+	    f->shared->cwfs[0] = heap;
+	} else if (H5HG_NCWFS==f->shared->ncwfs) {
+	    for (i=H5HG_NCWFS-1; i>=0; --i) {
+		if (f->shared->cwfs[i]->obj[0].size < heap->obj[0].size) {
+		    HDmemmove (f->shared->cwfs+1, f->shared->cwfs, i * sizeof(H5HG_heap_t*));
+		    f->shared->cwfs[0] = heap;
+		    break;
+		}
+	    }
+	} else {
+	    HDmemmove (f->shared->cwfs+1, f->shared->cwfs, f->shared->ncwfs*sizeof(H5HG_heap_t*));
+	    f->shared->ncwfs += 1;
+	    f->shared->cwfs[0] = heap;
+	}
     }
 
     ret_value = heap;
@@ -505,17 +506,10 @@ done:
  *	Quincey Koziol, 2002-7-180
  *	Added dxpl parameter to allow more control over I/O from metadata
  *      cache.
- *
- *      JRM -- 8/21/06
- *      Added the flags_ptr parameter.  This parameter exists to
- *      allow the flush routine to report to the cache if the
- *      entry is resized or renamed as a result of the flush.
- *      *flags_ptr is set to H5C_CALLBACK__NO_FLAGS_SET on entry.
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5HG_flush (H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5HG_heap_t *heap, unsigned UNUSED * flags_ptr)
+H5HG_flush (H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5HG_heap_t *heap)
 {
     herr_t      ret_value=SUCCEED;       /* Return value */
 
@@ -577,11 +571,8 @@ H5HG_dest (H5F_t *f, H5HG_heap_t *heap)
             break;
         }
     }
-
-    if(heap->chunk)
-        heap->chunk = H5FL_BLK_FREE(heap_chunk,heap->chunk);
-    if(heap->obj)
-        heap->obj = H5FL_SEQ_FREE(H5HG_obj_t,heap->obj);
+    heap->chunk = H5FL_BLK_FREE(heap_chunk,heap->chunk);
+    heap->obj = H5FL_SEQ_FREE(H5HG_obj_t,heap->obj);
     H5FL_FREE (H5HG_heap_t,heap);
 
     FUNC_LEAVE_NOAPI(SUCCEED);
@@ -843,9 +834,9 @@ H5HG_extend (H5F_t *f, H5HG_heap_t *heap, size_t size, unsigned * heap_flags_ptr
     /* Re-allocate the heap information in memory */
     if (NULL==(new_chunk = H5FL_BLK_REALLOC (heap_chunk, heap->chunk, heap->size+need)))
         HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL, "new heap allocation failed");
-#ifdef H5_CLEAR_MEMORY
-HDmemset(new_chunk + heap->size, 0, need);
-#endif /* H5_CLEAR_MEMORY */
+#ifdef H5_USING_PURIFY
+HDmemset(new_chunk+heap->size,0,need);
+#endif /* H5_USING_PURIFY */
 
     /* Adjust the size of the heap */
     old_size=heap->size;
@@ -1090,63 +1081,57 @@ done:
  *-------------------------------------------------------------------------
  */
 void *
-H5HG_read(H5F_t *f, hid_t dxpl_id, H5HG_t *hobj, void *object/*out*/,
-    size_t *buf_size)
+H5HG_read (H5F_t *f, hid_t dxpl_id, H5HG_t *hobj, void *object/*out*/)
 {
     H5HG_heap_t	*heap = NULL;
+    int	i;
     size_t	size;
     uint8_t	*p = NULL;
     void	*ret_value;
 
-    FUNC_ENTER_NOAPI(H5HG_read, NULL)
+    FUNC_ENTER_NOAPI(H5HG_read, NULL);
 
     /* Check args */
-    HDassert(f);
-    HDassert(hobj);
+    assert (f);
+    assert (hobj);
 
     /* Load the heap */
-    if(NULL == (heap = H5AC_protect(f, dxpl_id, H5AC_GHEAP, hobj->addr, NULL, NULL, H5AC_READ)))
-	HGOTO_ERROR(H5E_HEAP, H5E_CANTLOAD, NULL, "unable to load heap")
+    if (NULL == (heap = H5AC_protect(f, dxpl_id, H5AC_GHEAP, hobj->addr, NULL, NULL, H5AC_READ)))
+	HGOTO_ERROR (H5E_HEAP, H5E_CANTLOAD, NULL, "unable to load heap");
 
-    HDassert(hobj->idx < heap->nused);
-    HDassert(heap->obj[hobj->idx].begin);
+    assert (hobj->idx<heap->nused);
+    assert (heap->obj[hobj->idx].begin);
     size = heap->obj[hobj->idx].size;
-    p = heap->obj[hobj->idx].begin + H5HG_SIZEOF_OBJHDR(f);
-    /* Allocate a buffer for the object read in, if the user didn't give one */
-    if(!object && NULL == (object = H5MM_malloc(size)))
-	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
-    HDmemcpy(object, p, size);
+    p = heap->obj[hobj->idx].begin + H5HG_SIZEOF_OBJHDR (f);
+    if (!object && NULL==(object = H5MM_malloc (size)))
+	HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
+    HDmemcpy (object, p, size);
 
     /*
      * Advance the heap in the CWFS list. We might have done this already
      * with the H5AC_protect(), but it won't hurt to do it twice.
      */
-    if(heap->obj[0].begin) {
-        int	i;
-
-	for(i = 0; i < f->shared->ncwfs; i++)
-	    if(f->shared->cwfs[i] == heap) {
-		if(i) {
-		    f->shared->cwfs[i] = f->shared->cwfs[i - 1];
-		    f->shared->cwfs[i - 1] = heap;
-		} /* end if */
+    if (heap->obj[0].begin) {
+	for (i=0; i<f->shared->ncwfs; i++) {
+	    if (f->shared->cwfs[i]==heap) {
+		if (i) {
+		    f->shared->cwfs[i] = f->shared->cwfs[i-1];
+		    f->shared->cwfs[i-1] = heap;
+		}
 		break;
-	    } /* end if */
-    } /* end if */
-
-    /* If the caller would like to know the heap object's size, set that */
-    if(buf_size)
-        *buf_size = size;
+	    }
+	}
+    }
 
     /* Set return value */
-    ret_value = object;
+    ret_value=object;
 
 done:
-    if(heap && H5AC_unprotect(f, dxpl_id, H5AC_GHEAP, hobj->addr, heap, H5AC__NO_FLAGS_SET)<0)
-        HDONE_ERROR(H5E_HEAP, H5E_PROTECT, NULL, "unable to release object header")
+    if (heap && H5AC_unprotect(f, dxpl_id, H5AC_GHEAP, hobj->addr, heap, H5AC__NO_FLAGS_SET)<0)
+        HDONE_ERROR(H5E_HEAP, H5E_PROTECT, NULL, "unable to release object header");
 
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5HG_read() */
+    FUNC_LEAVE_NOAPI(ret_value);
+}
 
 
 /*-------------------------------------------------------------------------

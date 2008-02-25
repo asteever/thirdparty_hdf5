@@ -1,5 +1,4 @@
 #
-# Copyright by The HDF Group.
 # Copyright by the Board of Trustees of the University of Illinois.
 # All rights reserved.
 #
@@ -9,8 +8,8 @@
 # of the source code distribution tree; Copyright.html can be found at the
 # root level of an installed copy of the electronic HDF5 document set and
 # is linked from the top-level documents page.  It can also be found at
-# http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-# access to either file, you may request a copy from help@hdfgroup.org.
+# http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
+# access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 ##
 ## Makefile.am
 ## Run automake to generate a Makefile.in from this file.
@@ -21,18 +20,18 @@
 include $(top_srcdir)/config/commence.am
 
 # Include src directory
-INCLUDES=-I$(top_srcdir)/src -I$(top_srcdir)/tools/lib
+INCLUDES+=-I$(top_srcdir)/src
 
 #test script and program
 TEST_PROG=h5repart_gentest
-TEST_SCRIPT=testh5repart.sh $(srcdir)/testh5mkgrp.sh
+TEST_SCRIPT=testh5repart.sh
 
 check_PROGRAMS=$(TEST_PROG) repart_test
 check_SCRIPTS=$(TEST_SCRIPT)
-SCRIPT_DEPEND=h5repart$(EXEEXT) h5mkgrp$(EXEEXT)
+SCRIPT_DEPEND=h5repart$(EXEEXT)
 
 # These are our main targets, the tools
-bin_PROGRAMS=h5debug h5repart h5mkgrp
+bin_PROGRAMS=h5debug h5repart h5stat
 bin_SCRIPTS=h5redeploy
 
 # Tell automake to clean h5redeploy script
@@ -47,7 +46,7 @@ CHECK_CLEANFILES+=*.h5 ../testfiles/fst_family*.h5 ../testfiles/scd_family*.h5
 DISTCLEANFILES=h5cc testh5repart.sh
 
 # All programs rely on hdf5 library and h5tools library
-LDADD=$(LIBH5TOOLS) $(LIBHDF5)
+LDADD=$(LIBHDF5) $(LIBH5TOOLS)
 
 # h5cc needs custom install and uninstall rules, since it may be
 # named h5pcc if hdf5 is being built in parallel mode.

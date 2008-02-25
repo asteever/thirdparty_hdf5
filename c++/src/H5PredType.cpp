@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <string>
@@ -179,14 +178,6 @@ const PredType PredType::NATIVE_HBOOL( H5T_NATIVE_HBOOL );
 
 const PredType PredType::NATIVE_INT8( H5T_NATIVE_INT8 );
 const PredType PredType::NATIVE_UINT8( H5T_NATIVE_UINT8 );
-const PredType PredType::NATIVE_INT16( H5T_NATIVE_INT16 );
-const PredType PredType::NATIVE_UINT16( H5T_NATIVE_UINT16 );
-const PredType PredType::NATIVE_INT32( H5T_NATIVE_INT32 );
-const PredType PredType::NATIVE_UINT32( H5T_NATIVE_UINT32 );
-const PredType PredType::NATIVE_INT64( H5T_NATIVE_INT64 );
-const PredType PredType::NATIVE_UINT64( H5T_NATIVE_UINT64 );
-
-// LEAST types
 #if H5_SIZEOF_INT_LEAST8_T != 0
 const PredType PredType::NATIVE_INT_LEAST8( H5T_NATIVE_INT_LEAST8 );
 #endif /* H5_SIZEOF_INT_LEAST8_T */
@@ -194,6 +185,8 @@ const PredType PredType::NATIVE_INT_LEAST8( H5T_NATIVE_INT_LEAST8 );
 const PredType PredType::NATIVE_UINT_LEAST8( H5T_NATIVE_UINT_LEAST8 );
 #endif /* H5_SIZEOF_UINT_LEAST8_T */
 
+const PredType PredType::NATIVE_INT16( H5T_NATIVE_INT16 );
+const PredType PredType::NATIVE_UINT16( H5T_NATIVE_UINT16 );
 #if H5_SIZEOF_INT_LEAST16_T != 0
 const PredType PredType::NATIVE_INT_LEAST16( H5T_NATIVE_INT_LEAST16 );
 #endif /* H5_SIZEOF_INT_LEAST16_T */
@@ -201,6 +194,8 @@ const PredType PredType::NATIVE_INT_LEAST16( H5T_NATIVE_INT_LEAST16 );
 const PredType PredType::NATIVE_UINT_LEAST16( H5T_NATIVE_UINT_LEAST16 );
 #endif /* H5_SIZEOF_UINT_LEAST16_T */
 
+const PredType PredType::NATIVE_INT32( H5T_NATIVE_INT32 );
+const PredType PredType::NATIVE_UINT32( H5T_NATIVE_UINT32 );
 #if H5_SIZEOF_INT_LEAST32_T != 0
 const PredType PredType::NATIVE_INT_LEAST32( H5T_NATIVE_INT_LEAST32 );
 #endif /* H5_SIZEOF_INT_LEAST32_T */
@@ -208,6 +203,8 @@ const PredType PredType::NATIVE_INT_LEAST32( H5T_NATIVE_INT_LEAST32 );
 const PredType PredType::NATIVE_UINT_LEAST32( H5T_NATIVE_UINT_LEAST32 );
 #endif /* H5_SIZEOF_UINT_LEAST32_T */
 
+const PredType PredType::NATIVE_INT64( H5T_NATIVE_INT64 );
+const PredType PredType::NATIVE_UINT64( H5T_NATIVE_UINT64 );
 #if H5_SIZEOF_INT_LEAST64_T != 0
 const PredType PredType::NATIVE_INT_LEAST64( H5T_NATIVE_INT_LEAST64 );
 #endif /* H5_SIZEOF_INT_LEAST64_T */
@@ -215,34 +212,16 @@ const PredType PredType::NATIVE_INT_LEAST64( H5T_NATIVE_INT_LEAST64 );
 const PredType PredType::NATIVE_UINT_LEAST64( H5T_NATIVE_UINT_LEAST64 );
 #endif /* H5_SIZEOF_UINT_LEAST64_T */
 
-// FAST types
-#if H5_SIZEOF_INT_FAST8_T != 0
-const PredType PredType::NATIVE_INT_FAST8( H5T_NATIVE_INT_FAST8 );
-#endif /* H5_SIZEOF_INT_FAST8_T */
-#if H5_SIZEOF_UINT_FAST8_T != 0
-const PredType PredType::NATIVE_UINT_FAST8( H5T_NATIVE_UINT_FAST8 );
-#endif /* H5_SIZEOF_UINT_FAST8_T */
-
-#if H5_SIZEOF_INT_FAST16_T != 0
-const PredType PredType::NATIVE_INT_FAST16( H5T_NATIVE_INT_FAST16 );
-#endif /* H5_SIZEOF_INT_FAST16_T */
-#if H5_SIZEOF_UINT_FAST16_T != 0
-const PredType PredType::NATIVE_UINT_FAST16( H5T_NATIVE_UINT_FAST16 );
-#endif /* H5_SIZEOF_UINT_FAST16_T */
-
-#if H5_SIZEOF_INT_FAST32_T != 0
-const PredType PredType::NATIVE_INT_FAST32( H5T_NATIVE_INT_FAST32 );
-#endif /* H5_SIZEOF_INT_FAST32_T */
-#if H5_SIZEOF_UINT_FAST32_T != 0
-const PredType PredType::NATIVE_UINT_FAST32( H5T_NATIVE_UINT_FAST32 );
-#endif /* H5_SIZEOF_UINT_FAST32_T */
-
-#if H5_SIZEOF_INT_FAST64_T != 0
-const PredType PredType::NATIVE_INT_FAST64( H5T_NATIVE_INT_FAST64 );
-#endif /* H5_SIZEOF_INT_FAST64_T */
-#if H5_SIZEOF_UINT_FAST64_T != 0
-const PredType PredType::NATIVE_UINT_FAST64( H5T_NATIVE_UINT_FAST64 );
-#endif /* H5_SIZEOF_UINT_FAST64_T */
+// These are new types and waiting for enabling with C99; currently,
+// the H5T_NATIVE_xxx_FASTn are -1 on sol.  11/14/05
+//const PredType PredType::NATIVE_INT_FAST8( H5T_NATIVE_INT_FAST8 );
+//const PredType PredType::NATIVE_UINT_FAST8( H5T_NATIVE_UINT_FAST8 );
+//const PredType PredType::NATIVE_INT_FAST16( H5T_NATIVE_INT_FAST16 );
+//const PredType PredType::NATIVE_UINT_FAST16( H5T_NATIVE_UINT_FAST16 );
+//const PredType PredType::NATIVE_INT_FAST32( H5T_NATIVE_INT_FAST32 );
+//const PredType PredType::NATIVE_UINT_FAST32( H5T_NATIVE_UINT_FAST32 );
+//const PredType PredType::NATIVE_INT_FAST64( H5T_NATIVE_INT_FAST64 );
+//const PredType PredType::NATIVE_UINT_FAST64( H5T_NATIVE_UINT_FAST64 );
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 
 //--------------------------------------------------------------------------
@@ -259,26 +238,18 @@ const PredType PredType::NATIVE_UINT_FAST64( H5T_NATIVE_UINT_FAST64 );
 PredType& PredType::operator=( const PredType& rhs )
 {
     if (this != &rhs)
-	copy(rhs);
-    return(*this);
+    {
+        copy(rhs);
+        return(*this);
+    }
 }
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 // These dummy functions do not inherit from DataType - they'll
 // throw an DataTypeIException if invoked.
-void PredType::commit( H5File& loc, const char* name )
-{
-   throw DataTypeIException("PredType::commit", "Error: Attempted to commit a predefined datatype.  Invalid operation!" );
-}
-
-void PredType::commit( H5File& loc, const H5std_string& name )
-{
-   commit( loc, name.c_str());
-}
-
 void PredType::commit( H5Object& loc, const char* name )
 {
-   throw DataTypeIException("PredType::commit", "Error: Attempted to commit a predefined datatype.  Invalid operation!" );
+   throw DataTypeIException("PredType::commit", "Attempting to commit a predefined datatype.  This operation is invalid" );
 }
 
 void PredType::commit( H5Object& loc, const H5std_string& name )

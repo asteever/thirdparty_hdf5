@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -45,17 +44,13 @@ main(int argc, char *argv[])
 
     /* Tests are generally arranged from least to most complexity... */
     AddTest("config", test_configure, cleanup_configure, "Configure definitions", NULL);
-    AddTest("metadata", test_metadata, cleanup_metadata, "Encoding/decoding metadata", NULL);
-    AddTest("checksum", test_checksum, cleanup_checksum, "Checksum algorithm", NULL);
+    AddTest("metadata", test_metadata, cleanup_metadata, "Encode/decode metadata code", NULL);
     AddTest("tst", test_tst, NULL,  "Ternary Search Trees", NULL);
     AddTest("heap", test_heap, NULL,  "Memory Heaps", NULL);
     AddTest("skiplist", test_skiplist, NULL,  "Skip Lists", NULL);
     AddTest("refstr", test_refstr, NULL,  "Reference Counted Strings", NULL);
     AddTest("file", test_file, cleanup_file, "Low-Level File I/O", NULL);
-    AddTest("objects", test_h5o, cleanup_h5o, "Generic Object Functions", NULL);
     AddTest("h5s",  test_h5s,  cleanup_h5s,  "Dataspaces", NULL);
-    AddTest("coords",  test_coords,  cleanup_coords,  "Dataspace coordinates", NULL);
-    AddTest("sohm", test_sohm, cleanup_sohm,  "Shared Object Header Messages", NULL);
     AddTest("attr", test_attr, cleanup_attr,  "Attributes", NULL);
     AddTest("select", test_select, cleanup_select,  "Selections", NULL);
     AddTest("time", test_time, cleanup_time,  "Time Datatypes", NULL);

@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*-------------------------------------------------------------------------
@@ -21,10 +20,12 @@
  *
  * Purpose:             Group Information messages.
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 
-#define H5O_PACKAGE		/*suppress error about including H5Opkg	  */
+#define H5O_PACKAGE	/*suppress error about including H5Opkg	  */
 
 #include "H5private.h"		/* Generic Functions			*/
 #include "H5Eprivate.h"		/* Error handling		  	*/
@@ -32,11 +33,12 @@
 #include "H5Opkg.h"             /* Object headers			*/
 
 
+#ifdef H5_GROUP_REVISION
 /* PRIVATE PROTOTYPES */
-static void *H5O_ginfo_decode(H5F_t *f, hid_t dxpl_id, unsigned mesg_flags, const uint8_t *p);
-static herr_t H5O_ginfo_encode(H5F_t *f, hbool_t disable_shared, uint8_t *p, const void *_mesg);
-static void *H5O_ginfo_copy(const void *_mesg, void *_dest);
-static size_t H5O_ginfo_size(const H5F_t *f, hbool_t disable_shared, const void *_mesg);
+static void *H5O_ginfo_decode(H5F_t *f, hid_t dxpl_id, const uint8_t *p);
+static herr_t H5O_ginfo_encode(H5F_t *f, uint8_t *p, const void *_mesg);
+static void *H5O_ginfo_copy(const void *_mesg, void *_dest, unsigned update_flags);
+static size_t H5O_ginfo_size(const H5F_t *f, const void *_mesg);
 static herr_t H5O_ginfo_free(void *_mesg);
 static herr_t H5O_ginfo_debug(H5F_t *f, hid_t dxpl_id, const void *_mesg,
 			     FILE * stream, int indent, int fwidth);
@@ -46,7 +48,6 @@ const H5O_msg_class_t H5O_MSG_GINFO[1] = {{
     H5O_GINFO_ID,            	/*message id number             */
     "ginfo",                 	/*message name for debugging    */
     sizeof(H5O_ginfo_t),     	/*native message size           */
-    0,				/* messages are sharable?       */
     H5O_ginfo_decode,        	/*decode message                */
     H5O_ginfo_encode,        	/*encode message                */
     H5O_ginfo_copy,          	/*copy the native value         */
@@ -55,23 +56,16 @@ const H5O_msg_class_t H5O_MSG_GINFO[1] = {{
     H5O_ginfo_free,	        /* free method			*/
     NULL,	        	/* file delete method		*/
     NULL,			/* link method			*/
+    NULL,		    	/*get share method		*/
     NULL, 			/*set share method		*/
-    NULL,		    	/*can share method		*/
     NULL,			/* pre copy native value to file */
     NULL,			/* copy native value to file    */
     NULL,			/* post copy native value to file    */
-    NULL,			/* get creation index		*/
-    NULL,			/* set creation index		*/
     H5O_ginfo_debug          	/*debug the message             */
 }};
 
 /* Current version of group info information */
-#define H5O_GINFO_VERSION 	0
-
-/* Flags for group info flag encoding */
-#define H5O_GINFO_STORE_PHASE_CHANGE    0x01
-#define H5O_GINFO_STORE_EST_ENTRY_INFO  0x02
-#define H5O_GINFO_ALL_FLAGS             (H5O_GINFO_STORE_PHASE_CHANGE | H5O_GINFO_STORE_EST_ENTRY_INFO)
+#define H5O_GINFO_VERSION 	1
 
 /* Declare a free list to manage the H5O_ginfo_t struct */
 H5FL_DEFINE_STATIC(H5O_ginfo_t);
@@ -91,22 +85,23 @@ H5FL_DEFINE_STATIC(H5O_ginfo_t);
  *              koziol@ncsa.uiuc.edu
  *              Aug 30 2005
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 static void *
-H5O_ginfo_decode(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, unsigned UNUSED mesg_flags,
-    const uint8_t *p)
+H5O_ginfo_decode(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const uint8_t *p)
 {
     H5O_ginfo_t         *ginfo = NULL;  /* Pointer to group information message */
-    unsigned char       flags;          /* Flags for encoding group info */
     void                *ret_value;     /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5O_ginfo_decode)
 
     /* check args */
+    HDassert(f);
     HDassert(p);
 
-    /* Version of message */
+    /* decode */
     if(*p++ != H5O_GINFO_VERSION)
         HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "bad version number for message")
 
@@ -114,35 +109,19 @@ H5O_ginfo_decode(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, unsigned UNUSED mesg_fla
     if(NULL == (ginfo = H5FL_CALLOC(H5O_ginfo_t)))
 	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
 
-    /* Get the flags for the group */
-    flags = *p++;
-    if(flags & ~H5O_GINFO_ALL_FLAGS)
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "bad flag value for message")
-    ginfo->store_link_phase_change = (flags & H5O_GINFO_STORE_PHASE_CHANGE) ? TRUE : FALSE;
-    ginfo->store_est_entry_info = (flags & H5O_GINFO_STORE_EST_ENTRY_INFO) ? TRUE : FALSE;
+    /* Get the local heap size hint */
+    UINT32DECODE(p, ginfo->lheap_size_hint)
 
     /* Get the max. # of links to store compactly & the min. # of links to store densely */
-    if(ginfo->store_link_phase_change) {
-        UINT16DECODE(p, ginfo->max_compact)
-        UINT16DECODE(p, ginfo->min_dense)
-    } /* end if */
-    else {
-        ginfo->max_compact = H5G_CRT_GINFO_MAX_COMPACT;
-        ginfo->min_dense = H5G_CRT_GINFO_MIN_DENSE;
-    } /* end else */
+    UINT32DECODE(p, ginfo->max_compact)
+    UINT32DECODE(p, ginfo->min_dense)
 
     /* Get the estimated # of entries & name lengths */
-    if(ginfo->store_est_entry_info) {
-        UINT16DECODE(p, ginfo->est_num_entries)
-        UINT16DECODE(p, ginfo->est_name_len)
-    } /* end if */
-    else {
-        ginfo->est_num_entries = H5G_CRT_GINFO_EST_NUM_ENTRIES;
-        ginfo->est_name_len = H5G_CRT_GINFO_EST_NAME_LEN;
-    } /* end if */
+    UINT32DECODE(p, ginfo->est_num_entries)
+    UINT32DECODE(p, ginfo->est_name_len)
 
     /* Set return value */
-    ret_value = ginfo;
+    ret_value=ginfo;
 
 done:
     if(ret_value == NULL)
@@ -164,39 +143,35 @@ done:
  *              koziol@ncsa.uiuc.edu
  *              Aug 30 2005
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_ginfo_encode(H5F_t UNUSED *f, hbool_t UNUSED disable_shared, uint8_t *p, const void *_mesg)
+H5O_ginfo_encode(H5F_t UNUSED *f, uint8_t *p, const void *_mesg)
 {
-    const H5O_ginfo_t  *ginfo = (const H5O_ginfo_t *) _mesg;
-    unsigned char       flags;          /* Flags for encoding group info */
+    const H5O_ginfo_t       *ginfo = (const H5O_ginfo_t *) _mesg;
 
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_ginfo_encode)
 
     /* check args */
+    HDassert(f);
     HDassert(p);
     HDassert(ginfo);
 
-    /* Message version */
+    /* encode */
     *p++ = H5O_GINFO_VERSION;
 
-    /* The flags for the group info */
-    flags = ginfo->store_link_phase_change ?  H5O_GINFO_STORE_PHASE_CHANGE : 0;
-    flags |= ginfo->store_est_entry_info ?  H5O_GINFO_STORE_EST_ENTRY_INFO : 0;
-    *p++ = flags;
+    /* Store the local heap size hint for the group */
+    UINT32ENCODE(p, ginfo->lheap_size_hint)
 
     /* Store the max. # of links to store compactly & the min. # of links to store densely */
-    if(ginfo->store_link_phase_change) {
-        UINT16ENCODE(p, ginfo->max_compact)
-        UINT16ENCODE(p, ginfo->min_dense)
-    } /* end if */
+    UINT32ENCODE(p, ginfo->max_compact)
+    UINT32ENCODE(p, ginfo->min_dense)
 
-    /* Estimated # of entries & name lengths */
-    if(ginfo->store_est_entry_info) {
-        UINT16ENCODE(p, ginfo->est_num_entries)
-        UINT16ENCODE(p, ginfo->est_name_len)
-    } /* end if */
+    /* Store the estimated # of entries & name lengths */
+    UINT32ENCODE(p, ginfo->est_num_entries)
+    UINT32ENCODE(p, ginfo->est_name_len)
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5O_ginfo_encode() */
@@ -216,13 +191,15 @@ H5O_ginfo_encode(H5F_t UNUSED *f, hbool_t UNUSED disable_shared, uint8_t *p, con
  *              koziol@ncsa.uiuc.edu
  *              Aug 30 2005
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 static void *
-H5O_ginfo_copy(const void *_mesg, void *_dest)
+H5O_ginfo_copy(const void *_mesg, void *_dest, unsigned UNUSED update_flags)
 {
-    const H5O_ginfo_t   *ginfo = (const H5O_ginfo_t *)_mesg;
-    H5O_ginfo_t         *dest = (H5O_ginfo_t *)_dest;
+    const H5O_ginfo_t   *ginfo = (const H5O_ginfo_t *) _mesg;
+    H5O_ginfo_t         *dest = (H5O_ginfo_t *) _dest;
     void                *ret_value;     /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5O_ginfo_copy)
@@ -236,7 +213,7 @@ H5O_ginfo_copy(const void *_mesg, void *_dest)
     *dest = *ginfo;
 
     /* Set return value */
-    ret_value = dest;
+    ret_value=dest;
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -258,27 +235,24 @@ done:
  *              koziol@ncsa.uiuc.edu
  *              Aug 30 2005
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 static size_t
-H5O_ginfo_size(const H5F_t UNUSED *f, hbool_t UNUSED disable_shared, const void *_mesg)
+H5O_ginfo_size(const H5F_t UNUSED *f, const void UNUSED *_mesg)
 {
-    const H5O_ginfo_t   *ginfo = (const H5O_ginfo_t *)_mesg;
     size_t ret_value;   /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_ginfo_size)
 
     /* Set return value */
     ret_value = 1 +                     /* Version */
-                1 +                     /* Flags */
-                (ginfo->store_link_phase_change ? (
-                    2 +                 /* "Max compact" links */
-                    2                   /* "Min dense" links */
-                ) : 0) +                /* "Min dense" links */
-                (ginfo->store_est_entry_info ? (
-                    2 +                 /* Estimated # of entries in group */
-                    2                   /* Estimated length of name of entry in group */
-                ) : 0);
+                4 +                     /* Local heap size hint */
+                4 +                     /* "Max compact" links */
+                4 +                     /* "Min dense" links */
+                4 +                     /* Estimated # of entries in group */
+                4;                      /* Estimated length of name of entry in group */
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_ginfo_size() */
@@ -293,6 +267,8 @@ H5O_ginfo_size(const H5F_t UNUSED *f, hbool_t UNUSED disable_shared, const void 
  *
  * Programmer:	Quincey Koziol
  *              Tuesday, August 30, 2005
+ *
+ * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -320,6 +296,8 @@ H5O_ginfo_free(void *mesg)
  *              koziol@ncsa.uiuc.edu
  *              Aug 30 2005
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -338,14 +316,21 @@ H5O_ginfo_debug(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const void *_mesg, FILE *
     HDassert(fwidth >= 0);
 
     HDfprintf(stream, "%*s%-*s %u\n", indent, "", fwidth,
+	      "Local heap size hint:", ginfo->lheap_size_hint);
+
+    HDfprintf(stream, "%*s%-*s %u\n", indent, "", fwidth,
 	      "Max. compact links:", ginfo->max_compact);
+
     HDfprintf(stream, "%*s%-*s %u\n", indent, "", fwidth,
 	      "Min. dense links:", ginfo->min_dense);
+
     HDfprintf(stream, "%*s%-*s %u\n", indent, "", fwidth,
 	      "Estimated # of objects in group:", ginfo->est_num_entries);
+
     HDfprintf(stream, "%*s%-*s %u\n", indent, "", fwidth,
 	      "Estimated length of object in group's name:", ginfo->est_name_len);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5O_ginfo_debug() */
+#endif /* H5_GROUP_REVISION */
 

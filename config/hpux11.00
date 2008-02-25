@@ -1,6 +1,5 @@
 #							-*- shell-script -*-
 #
-# Copyright by The HDF Group.
 # Copyright by the Board of Trustees of the University of Illinois.
 # All rights reserved.
 #
@@ -10,8 +9,8 @@
 # of the source code distribution tree; Copyright.html can be found at the
 # root level of an installed copy of the electronic HDF5 document set and
 # is linked from the top-level documents page.  It can also be found at
-# http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-# access to either file, you may request a copy from help@hdfgroup.org.
+# http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
+# access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 
 
 # This file is part of the HDF5 build script.  It is processed shortly
@@ -19,11 +18,6 @@
 # the various compile modes.
 #
 # See BlankForm in this directory for details.
-
-# Shared libraries don't work for all compilers under HPUX11.00.  This is a
-# known bug in libtool (as of June 2006).
-# Disable shared libraries until we can be sure they work.
-enable_shared="${enable_shared:-no}"
 
 # Default compiler is `cc'
 if test "X-" =  "X-$CC"; then

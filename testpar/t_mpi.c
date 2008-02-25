@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -202,11 +201,9 @@ test_mpio_gb_file(char *filename)
     int ntimes;			/* how many times */
     char  *buf = NULL;
     char  expected;
-    MPI_Offset  size;
     MPI_Offset  mpi_off;
     MPI_Offset  mpi_off_old;
     MPI_Status  mpi_stat;
-    struct stat stat_buf;
     int is_signed, sizeof_mpi_offset;
 
     nerrs = 0;
@@ -378,44 +375,6 @@ test_mpio_gb_file(char *filename)
 	 */
 	mrc = MPI_Barrier(MPI_COMM_WORLD);
 	VRFY((mrc==MPI_SUCCESS), "Sync before leaving test");
-
-        /* 
-         * Check if MPI_File_get_size works correctly.  Some systems (only SGI Altix 
-         * Propack 4 so far) return wrong file size.  It can be avoided by reconfiguring
-         * with "--disable-mpi-size".  
-         */
-#ifdef H5_HAVE_MPI_GET_SIZE
-	printf("Test if MPI_File_get_size works correctly with %s\n", filename);
-
-	mrc = MPI_File_open(MPI_COMM_WORLD, filename, MPI_MODE_RDONLY, info, &fh);
-        VRFY((mrc==MPI_SUCCESS), "");
-
-        if (MAINPROCESS){			/* only process 0 needs to check it*/
-            mrc = MPI_File_get_size(fh, &size);
-	    VRFY((mrc==MPI_SUCCESS), "");
-
-            mrc=stat(filename, &stat_buf);
-	    VRFY((mrc==0), "");
-           
-            /* Hopefully this casting is safe */
-            if(size != (MPI_Offset)(stat_buf.st_size)) {
-                printf("Warning: MPI_File_get_size doesn't return correct file size.  To avoid using it in the library, reconfigure and rebuild the library with --disable-mpi-size.\n");
-            }
-        }
-
-	/* close file and free the communicator */
-	mrc = MPI_File_close(&fh);
-	VRFY((mrc==MPI_SUCCESS), "MPI_FILE_CLOSE");
-
-	/*
-	 * one more sync to ensure all processes have done reading
-	 * before ending this test.
-	 */
-	mrc = MPI_Barrier(MPI_COMM_WORLD);
-	VRFY((mrc==MPI_SUCCESS), "Sync before leaving test");
-#else
-        printf("Skipped testing MPI_File_get_size because it's disabled\n");
-#endif
     }
 
 finish:
@@ -874,7 +833,7 @@ static int test_mpio_derived_dtype(char *filename) {
 
 Function: test_mpio_special_collective
 
-Test Whether collective IO is still working when more than one process
+Test Whether collective IO is still working when more than one process 
 has no contribution to IO. To properly test this case, at least FOUR
 processes are needed.
 
@@ -908,7 +867,7 @@ static int test_mpio_special_collective(char *filename) {
     char writedata[2];
     char *buf;
     char expect_val;
-    int  i, irank;
+    int  i, irank; 
     int  count,bufcount;
     int blocklens[2];
     MPI_Aint offsets[2];
@@ -924,7 +883,7 @@ static int test_mpio_special_collective(char *filename) {
     /* create MPI data type */
     etype = MPI_BYTE;
     if(mpi_rank == 0 || mpi_rank == 1) {
-        count = DIMSIZE;
+        count = DIMSIZE;    
         bufcount = 1;
     }
     else {
@@ -936,8 +895,8 @@ static int test_mpio_special_collective(char *filename) {
     offsets[0] = mpi_rank*count;
     blocklens[1] = count;
     offsets[1] = (mpi_size+mpi_rank)*count;
-
-    if(count !=0) {
+    
+    if(count !=0) { 
       if((mpi_err= MPI_Type_hindexed(2,blocklens,offsets,etype,&filetype))
        != MPI_SUCCESS){
       	MPI_Error_string(mpi_err, mpi_err_str, &mpi_err_strlen);
@@ -1010,7 +969,7 @@ static int test_mpio_special_collective(char *filename) {
 	printf("MPI_File_close failed. \n");
 	return 1;
     };
-
+    
     mpi_err = MPI_Barrier(MPI_COMM_WORLD);
 #ifdef H5_MPI_SPECIAL_COLLECTIVE_IO_WORKS
     if(retcode != 0) {
@@ -1249,14 +1208,14 @@ main(int argc, char **argv)
      */
     if(mpi_size !=4){
       MPI_BANNER("MPIO special collective io test SKIPPED.");
-      if(mpi_rank == 0){
+      if(mpi_rank == 0){ 
         printf("Use FOUR processes to run this test\n");
         printf("If you still see the <test SKIPPED>, use <-vh> option to verify the test\n");
   }
       ret_code = 0;
       goto sc_finish;
     }
-
+    
 #ifdef H5_MPI_SPECIAL_COLLECTIVE_IO_WORKS
     MPI_BANNER("MPIO special collective io test...");
     ret_code = test_mpio_special_collective(filenames[0]);
@@ -1271,7 +1230,7 @@ main(int argc, char **argv)
     }
 #endif
 
-sc_finish:
+sc_finish: 
     ret_code = errors_sum(ret_code);
     if (mpi_rank==0 && ret_code > 0){
 	printf("***FAILED with %d total errors\n", ret_code);

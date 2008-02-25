@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*-------------------------------------------------------------------------
@@ -92,8 +91,6 @@ H5B2_hdr_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream, int indent, 
 {
     H5B2_t	*bt2 = NULL;            /* B-tree header info */
     H5B2_shared_t *shared;              /* Shared B-tree information */
-    unsigned    u;                      /* Local index variable */
-    char                temp_str[128];  /* Temporary string, for formatting */
     herr_t      ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_NOAPI(H5B2_hdr_debug, FAIL)
@@ -111,11 +108,11 @@ H5B2_hdr_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream, int indent, 
     /*
      * Load the B-tree header.
      */
-    if(NULL == (bt2 = (H5B2_t *)H5AC_protect(f, dxpl_id, H5AC_BT2_HDR, addr, type, NULL, H5AC_READ)))
+    if(NULL == (bt2 = H5AC_protect(f, dxpl_id, H5AC_BT2_HDR, addr, type, NULL, H5AC_READ)))
 	HGOTO_ERROR(H5E_BTREE, H5E_CANTLOAD, FAIL, "unable to load B-tree header")
 
     /* Get the pointer to the shared B-tree info */
-    shared = (H5B2_shared_t *)H5RC_GET_OBJ(bt2->shared);
+    shared = H5RC_GET_OBJ(bt2->shared);
     HDassert(shared);
 
     /* Print opening message */
@@ -126,17 +123,8 @@ H5B2_hdr_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream, int indent, 
      */
     HDfprintf(stream, "%*s%-*s %s\n", indent, "", fwidth,
 	      "Tree type ID:",
-	      (shared->type->id == H5B2_TEST_ID ? "H5B2_TEST_ID" :
-                  (shared->type->id == H5B2_FHEAP_HUGE_INDIR_ID ? "H5B2_FHEAP_HUGE_INDIR_ID" :
-                  (shared->type->id == H5B2_FHEAP_HUGE_FILT_INDIR_ID ? "H5B2_FHEAP_HUGE_FILT_INDIR_ID" :
-                  (shared->type->id == H5B2_FHEAP_HUGE_DIR_ID ? "H5B2_FHEAP_HUGE_DIR_ID" :
-                  (shared->type->id == H5B2_FHEAP_HUGE_FILT_DIR_ID ? "H5B2_FHEAP_HUGE_FILT_DIR_ID" :
-                  (shared->type->id == H5B2_GRP_DENSE_NAME_ID ? "H5B2_GRP_DENSE_NAME_ID" :
-                  (shared->type->id == H5B2_GRP_DENSE_CORDER_ID ? "H5B2_GRP_DENSE_CORDER_ID" :
-                  (shared->type->id == H5B2_SOHM_INDEX_ID ? "H5B2_SOHM_INDEX_ID" :
-                  (shared->type->id == H5B2_ATTR_DENSE_NAME_ID ? "H5B2_ATTR_DENSE_NAME_ID" :
-                  (shared->type->id == H5B2_ATTR_DENSE_CORDER_ID ? "H5B2_ATTR_DENSE_CORDER_ID" :
-              "Unknown!")))))))))));
+	      ((shared->type->id) == H5B2_TEST_ID ? "H5B2_TEST_ID" :
+              "Unknown!"));
     HDfprintf(stream, "%*s%-*s %Zu\n", indent, "", fwidth,
 	      "Size of node:",
 	      shared->node_size);
@@ -148,7 +136,7 @@ H5B2_hdr_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream, int indent, 
 	      bt2->cache_info.is_dirty ? "True" : "False");
     HDfprintf(stream, "%*s%-*s %u\n", indent, "", fwidth,
 	      "Depth:",
-	      shared->depth);
+	      bt2->depth);
     HDfprintf(stream, "%*s%-*s %Hu\n", indent, "", fwidth,
 	      "Number of records in tree:",
 	      bt2->root.all_nrec);
@@ -158,21 +146,30 @@ H5B2_hdr_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream, int indent, 
     HDfprintf(stream, "%*s%-*s %a\n", indent, "", fwidth,
 	      "Address of root node:",
 	      bt2->root.addr);
+    HDfprintf(stream, "%*s%-*s %Zu\n", indent, "", fwidth,
+	      "Max. number of records per internal node:",
+	      shared->internal_nrec);
+    HDfprintf(stream, "%*s%-*s %Zu\n", indent, "", fwidth,
+	      "Max. number of records per leaf node:",
+	      shared->leaf_nrec);
     HDfprintf(stream, "%*s%-*s %u\n", indent, "", fwidth,
 	      "Split percent:",
 	      shared->split_percent);
     HDfprintf(stream, "%*s%-*s %u\n", indent, "", fwidth,
 	      "Merge percent:",
 	      shared->merge_percent);
-
-    /* Print relevant node info */
-    HDfprintf(stream, "%*sNode Info: (max_nrec/split_nrec/merge_nrec)\n", indent, "");
-    for(u = 0; u < (shared->depth + 1); u++) {
-        sprintf(temp_str, "Depth %u:", u);
-        HDfprintf(stream, "%*s%-*s (%u/%u/%u)\n", indent + 3, "", MAX(0, fwidth - 3),
-            temp_str,
-            shared->node_info[u].max_nrec, shared->node_info[u].split_nrec, shared->node_info[u].merge_nrec);
-    } /* end for */
+    HDfprintf(stream, "%*s%-*s %Zu\n", indent, "", fwidth,
+	      "Internal records to split at:",
+	      shared->split_int_nrec);
+    HDfprintf(stream, "%*s%-*s %Zu\n", indent, "", fwidth,
+	      "Leaf records to split at:",
+	      shared->split_leaf_nrec);
+    HDfprintf(stream, "%*s%-*s %Zu\n", indent, "", fwidth,
+	      "Internal records to merge at:",
+	      shared->merge_int_nrec);
+    HDfprintf(stream, "%*s%-*s %Zu\n", indent, "", fwidth,
+	      "Leaf records to merge at:",
+	      shared->merge_leaf_nrec);
 
 done:
     if(bt2 && H5AC_unprotect(f, dxpl_id, H5AC_BT2_HDR, addr, bt2, H5AC__NO_FLAGS_SET) < 0)
@@ -197,7 +194,7 @@ done:
  */
 herr_t
 H5B2_int_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream, int indent, int fwidth,
-    const H5B2_class_t *type, haddr_t hdr_addr, unsigned nrec, unsigned depth)
+    const H5B2_class_t *type, haddr_t hdr_addr, unsigned nrec)
 {
     H5B2_t	*bt2 = NULL;
     H5B2_internal_t	*internal = NULL;
@@ -223,17 +220,17 @@ H5B2_int_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream, int indent, 
     /*
      * Load the B-tree header.
      */
-    if(NULL == (bt2 = (H5B2_t *)H5AC_protect(f, dxpl_id, H5AC_BT2_HDR, hdr_addr, type, NULL, H5AC_READ)))
+    if(NULL == (bt2 = H5AC_protect(f, dxpl_id, H5AC_BT2_HDR, hdr_addr, type, NULL, H5AC_READ)))
 	HGOTO_ERROR(H5E_BTREE, H5E_CANTLOAD, FAIL, "unable to load B-tree header")
 
     /* Get the pointer to the shared B-tree info */
-    shared = (H5B2_shared_t *)H5RC_GET_OBJ(bt2->shared);
+    shared = H5RC_GET_OBJ(bt2->shared);
     HDassert(shared);
 
     /*
      * Load the B-tree internal node
      */
-    if(NULL == (internal = H5B2_protect_internal(f, dxpl_id, bt2->shared, addr, nrec, depth, H5AC_READ)))
+    if(NULL == (internal = H5AC_protect(f, dxpl_id, H5AC_BT2_INT, addr, &nrec, bt2->shared, H5AC_READ)))
 	HGOTO_ERROR(H5E_BTREE, H5E_CANTLOAD, FAIL, "unable to load B-tree internal node")
 
     /* Release the B-tree header */
@@ -242,27 +239,15 @@ H5B2_int_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream, int indent, 
     bt2 = NULL;
 
     /* Print opening message */
-    if(internal->depth == 1)
-        HDfprintf(stream, "%*sv2 B-tree Internal 'Leaf' Node...\n", indent, "");
-    else
-        HDfprintf(stream, "%*sv2 B-tree Internal 'Branch' Node...\n", indent, "");
+    HDfprintf(stream, "%*sv2 B-tree Internal Node...\n", indent, "");
 
     /*
      * Print the values.
      */
     HDfprintf(stream, "%*s%-*s %s\n", indent, "", fwidth,
 	      "Tree type ID:",
-	      (shared->type->id == H5B2_TEST_ID ? "H5B2_TEST_ID" :
-                  (shared->type->id == H5B2_FHEAP_HUGE_INDIR_ID ? "H5B2_FHEAP_HUGE_INDIR_ID" :
-                  (shared->type->id == H5B2_FHEAP_HUGE_FILT_INDIR_ID ? "H5B2_FHEAP_HUGE_FILT_INDIR_ID" :
-                  (shared->type->id == H5B2_FHEAP_HUGE_DIR_ID ? "H5B2_FHEAP_HUGE_DIR_ID" :
-                  (shared->type->id == H5B2_FHEAP_HUGE_FILT_DIR_ID ? "H5B2_FHEAP_HUGE_FILT_DIR_ID" :
-                  (shared->type->id == H5B2_GRP_DENSE_NAME_ID ? "H5B2_GRP_DENSE_NAME_ID" :
-                  (shared->type->id == H5B2_GRP_DENSE_CORDER_ID ? "H5B2_GRP_DENSE_CORDER_ID" :
-                  (shared->type->id == H5B2_SOHM_INDEX_ID ? "H5B2_SOHM_INDEX_ID" :
-                  (shared->type->id == H5B2_ATTR_DENSE_NAME_ID ? "H5B2_ATTR_DENSE_NAME_ID" :
-                  (shared->type->id == H5B2_ATTR_DENSE_CORDER_ID ? "H5B2_ATTR_DENSE_CORDER_ID" :
-              "Unknown!")))))))))));
+	      ((shared->type->id)==H5B2_TEST_ID ? "H5B2_TEST_ID" :
+              "Unknown!"));
     HDfprintf(stream, "%*s%-*s %Zu\n", indent, "", fwidth,
 	      "Size of node:",
 	      shared->node_size);
@@ -352,17 +337,17 @@ H5B2_leaf_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream, int indent,
     /*
      * Load the B-tree header.
      */
-    if(NULL == (bt2 = (H5B2_t *)H5AC_protect(f, dxpl_id, H5AC_BT2_HDR, hdr_addr, type, NULL, H5AC_READ)))
+    if(NULL == (bt2 = H5AC_protect(f, dxpl_id, H5AC_BT2_HDR, hdr_addr, type, NULL, H5AC_READ)))
 	HGOTO_ERROR(H5E_BTREE, H5E_CANTLOAD, FAIL, "unable to load B-tree header")
 
     /* Get the pointer to the shared B-tree info */
-    shared = (H5B2_shared_t *)H5RC_GET_OBJ(bt2->shared);
+    shared = H5RC_GET_OBJ(bt2->shared);
     HDassert(shared);
 
     /*
      * Load the B-tree leaf node
      */
-    if(NULL == (leaf = (H5B2_leaf_t *)H5AC_protect(f, dxpl_id, H5AC_BT2_LEAF, addr, &nrec, bt2->shared, H5AC_READ)))
+    if(NULL == (leaf = H5AC_protect(f, dxpl_id, H5AC_BT2_LEAF, addr, &nrec, bt2->shared, H5AC_READ)))
 	HGOTO_ERROR(H5E_BTREE, H5E_CANTLOAD, FAIL, "unable to load B-tree leaf node")
 
     /* Release the B-tree header */
@@ -378,17 +363,8 @@ H5B2_leaf_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream, int indent,
      */
     HDfprintf(stream, "%*s%-*s %s\n", indent, "", fwidth,
 	      "Tree type ID:",
-	      (shared->type->id == H5B2_TEST_ID ? "H5B2_TEST_ID" :
-                  (shared->type->id == H5B2_FHEAP_HUGE_INDIR_ID ? "H5B2_FHEAP_HUGE_INDIR_ID" :
-                  (shared->type->id == H5B2_FHEAP_HUGE_FILT_INDIR_ID ? "H5B2_FHEAP_HUGE_FILT_INDIR_ID" :
-                  (shared->type->id == H5B2_FHEAP_HUGE_DIR_ID ? "H5B2_FHEAP_HUGE_DIR_ID" :
-                  (shared->type->id == H5B2_FHEAP_HUGE_FILT_DIR_ID ? "H5B2_FHEAP_HUGE_FILT_DIR_ID" :
-                  (shared->type->id == H5B2_GRP_DENSE_NAME_ID ? "H5B2_GRP_DENSE_NAME_ID" :
-                  (shared->type->id == H5B2_GRP_DENSE_CORDER_ID ? "H5B2_GRP_DENSE_CORDER_ID" :
-                  (shared->type->id == H5B2_SOHM_INDEX_ID ? "H5B2_SOHM_INDEX_ID" :
-                  (shared->type->id == H5B2_ATTR_DENSE_NAME_ID ? "H5B2_ATTR_DENSE_NAME_ID" :
-                  (shared->type->id == H5B2_ATTR_DENSE_CORDER_ID ? "H5B2_ATTR_DENSE_CORDER_ID" :
-              "Unknown!")))))))))));
+	      ((shared->type->id)==H5B2_TEST_ID ? "H5B2_TEST_ID" :
+              "Unknown!"));
     HDfprintf(stream, "%*s%-*s %Zu\n", indent, "", fwidth,
 	      "Size of node:",
 	      shared->node_size);

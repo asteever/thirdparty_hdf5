@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "hdf5.h"
@@ -26,6 +25,7 @@ char *h5_fixname(const char *base_name, hid_t fapl, char *fullname, size_t size)
 #   define nh5_fixname_c              H5_FC_FUNC_(h5_fixname_c, H5_FIXNAME_C)
 #   define nh5_cleanup_c              H5_FC_FUNC_(h5_cleanup_c, H5_CLEANUP_C)
 #   define nh5_exit_c                 H5_FC_FUNC_(h5_exit_c, H5_EXIT_C)
+#   define nh5_group_revision_c       H5_FC_FUNC_(h5_group_revision_c, H5_GROUP_REVISION_C)
 
 H5_FCTESTDLL int_f nh5_fixname_c
 (_fcd base_name, size_t_f *base_namelen, hid_t_f *fapl, _fcd full_name, size_t_f *full_namelen);
@@ -36,3 +36,4 @@ H5_FCTESTDLL int_f nh5_cleanup_c
 H5_FCTESTDLL void nh5_exit_c
 (int_f *status);
 
+H5_FCTESTDLL int_f nh5_group_revision_c();

@@ -1,5 +1,4 @@
 #
-# Copyright by The HDF Group.
 # Copyright by the Board of Trustees of the University of Illinois.
 # All rights reserved.
 #
@@ -9,8 +8,8 @@
 # of the source code distribution tree; Copyright.html can be found at the
 # root level of an installed copy of the electronic HDF5 document set and
 # is linked from the top-level documents page.  It can also be found at
-# http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-# access to either file, you may request a copy from help@hdfgroup.org.
+# http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
+# access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 #
 ##
 ## Makefile.am
@@ -21,7 +20,7 @@
 
 include $(top_srcdir)/config/commence.am
 
-INCLUDES=-I$(top_srcdir)/src -I$(top_srcdir)/hl/src -I$(top_builddir)/hl/src \
+INCLUDES+=-I$(top_srcdir)/src -I$(top_srcdir)/hl/src -I$(top_builddir)/hl/src \
          -I$(top_srcdir)/fortran/src -I$(top_builddir)/fortran/src
 AM_FCFLAGS=-I$(top_builddir)/fortran/src $(F9XMODFLAG)$(top_builddir)/fortran/src
 
@@ -42,7 +41,7 @@ endif
 #endif
 
 libhdf5hl_fortran_la_SOURCES=H5LTfc.c  H5IMfc.c H5IMcc.c H5TBfc.c H5LTff.f90  \
-                H5IMff.f90 H5TBff.f90
+                H5IMff.f90 H5TBff.f90 
 
 # Fortran module files can have different extensions and different names
 # (e.g., different capitalizations) on different platforms.  Write rules
@@ -71,8 +70,8 @@ uninstall-local:
 # determining this automagically (like we do with the C files). So, when
 # doing a parallel make, some modules could be made way before the
 # modules they depend upon are actually made. *sigh*
-H5LTff.lo:          $(srcdir)/H5LTff.f90
+H5LTff.lo:          $(srcdir)/H5LTff.f90 
 H5IMff.lo:          $(srcdir)/H5IMff.f90
-H5TBff.lo:          $(srcdir)/H5TBff.f90
+H5TBff.lo:          $(srcdir)/H5TBff.f90 
 
 include $(top_srcdir)/config/conclude.am

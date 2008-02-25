@@ -1,5 +1,4 @@
 $!#
-$!# Copyright by The HDF Group.
 $!# Copyright by the Board of Trustees of the University of Illinois.
 $!# All rights reserved.
 $!#
@@ -9,8 +8,8 @@ $!# the files COPYING and Copyright.html.  COPYING can be found at the root
 $!# of the source code distribution tree; Copyright.html can be found at the
 $!# root level of an installed copy of the electronic HDF5 document set and
 $!# is linked from the top-level documents page.  It can also be found at
-$!# http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-$!# access to either file, you may request a copy from help@hdfgroup.org.
+$!# http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
+$!# access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 $!#
 $! Makefile for VMS systems.
 $!
@@ -23,20 +22,19 @@ $ type sys$input
  	Creating  testhdf5
 $
 $ cobj= "h5test.c, testframe.c, testhdf5.c, tarray.c, tattr.c, tconfig.c, "+-
-        "tchecksum.c,"+- 
-        "tfile.c, tgenprop.c, th5o.c, th5s.c, tcoords.c, theap.c, tid.c, titerate.c,"+- 
+        "tfile.c, tgenprop.c,th5s.c, theap.c, tid.c, titerate.c,"+- 
         "tmeta.c, tmisc.c, ttime.c, trefer.c, trefstr.c,"+-
-        "tselect.c, tsohm.c, tskiplist.c, ttst.c, tunicode.c, tvltypes.c,"+-
+        "tselect.c, tskiplist.c, ttst.c, tunicode.c, tvltypes.c,"+-
         "tvlstr.c, cache_common.c"
 $!                              
 $ ccc 'cobj 
 $ library/create/replace []libh5test h5test, testframe, cache_common
 $ type sys$input
        Creating libh5test
-$ link     testhdf5,tarray,tattr,tchecksum,tconfig, -
-           tfile,tgenprop,th5o,th5s,tcoords,theap,tid,titerate, -
+$ link     testhdf5,tarray,tattr,tconfig, -
+           tfile,tgenprop,th5s,theap,tid,titerate, -
            tmeta,tmisc,ttime,trefer,trefstr, -
-           tselect,tsohm,tskiplist,ttst,tunicode,tvltypes, -
+           tselect,tskiplist,ttst,tunicode,tvltypes, -
            tvlstr, -
            libh5test.olb/lib,[-.src]hdf5.olb/lib,zlib_dir:libz.olb/lib
 $
@@ -58,7 +56,6 @@ $!
 $ type sys$input
        Creating ohdr test
 $ ccc  ohdr
-
 $ link ohdr, -
        libh5test.olb/lib,[-.src]hdf5.olb/lib,zlib_dir:libz.olb/lib
 $!

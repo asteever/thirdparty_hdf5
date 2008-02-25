@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -45,7 +44,7 @@
 #   include <sys/stat.h>
 #endif
 
-#ifdef _WIN32
+#ifdef WIN32
 #   include <io.h>
 #	include <fcntl.h>
 #endif
@@ -216,13 +215,13 @@ main (int argc, char *argv[])
     int		dst_is_family;		/*is dst name a family name?	*/
     int		dst_membno=0;		/*destination member number	*/
 
-#if defined(_WIN32) && ! defined (__MWERKS__)
-    __int64	left_overs=0;		/*amount of zeros left over	*/
-    __int64	src_offset=0;		/*offset in source member	*/
-    __int64	dst_offset=0;		/*offset in destination member	*/
-    __int64	src_size;		/*source logical member size	*/
-    __int64	src_act_size;		/*source actual member size	*/
-    __int64	dst_size=1 GB;		/*destination logical memb size	*/
+#if defined(WIN32) && ! defined (__MWERKS__)
+    _int64	left_overs=0;		/*amount of zeros left over	*/
+    _int64	src_offset=0;		/*offset in source member	*/
+    _int64	dst_offset=0;		/*offset in destination member	*/
+    _int64	src_size;		/*source logical member size	*/
+    _int64	src_act_size;		/*source actual member size	*/
+    _int64	dst_size=1 GB;		/*destination logical memb size	*/
 #else
     off_t	left_overs=0;		/*amount of zeros left over	*/
     off_t	src_offset=0;		/*offset in source member	*/

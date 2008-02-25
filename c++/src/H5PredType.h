@@ -1,6 +1,5 @@
 // C++ informative line for the emacs editor: -*- C++ -*-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -10,8 +9,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 // PredType holds the definition of all the HDF5 predefined datatypes.
@@ -153,76 +152,51 @@ class H5_DLLCPP PredType : public AtomType {
 
 	static const PredType NATIVE_INT8;
 	static const PredType NATIVE_UINT8;
-	static const PredType NATIVE_INT16;
-	static const PredType NATIVE_UINT16;
-	static const PredType NATIVE_INT32;
-	static const PredType NATIVE_UINT32;
-	static const PredType NATIVE_INT64;
-	static const PredType NATIVE_UINT64;
-
-// LEAST types
 #if H5_SIZEOF_INT_LEAST8_T != 0
 	static const PredType NATIVE_INT_LEAST8;
 #endif /* H5_SIZEOF_INT_LEAST8_T */
 #if H5_SIZEOF_UINT_LEAST8_T != 0
 	static const PredType NATIVE_UINT_LEAST8;
 #endif /* H5_SIZEOF_UINT_LEAST8_T */
+	//static const PredType NATIVE_INT_FAST8;
+	//static const PredType NATIVE_UINT_FAST8;
 
+	static const PredType NATIVE_INT16;
+	static const PredType NATIVE_UINT16;
 #if H5_SIZEOF_INT_LEAST16_T != 0
 	static const PredType NATIVE_INT_LEAST16;
 #endif /* H5_SIZEOF_INT_LEAST16_T */
 #if H5_SIZEOF_UINT_LEAST16_T != 0
 	static const PredType NATIVE_UINT_LEAST16;
 #endif /* H5_SIZEOF_UINT_LEAST16_T */
+	//static const PredType NATIVE_INT_FAST16;
+	//static const PredType NATIVE_UINT_FAST16;
 
+	static const PredType NATIVE_INT32;
+	static const PredType NATIVE_UINT32;
 #if H5_SIZEOF_INT_LEAST32_T != 0
 	static const PredType NATIVE_INT_LEAST32;
 #endif /* H5_SIZEOF_INT_LEAST32_T */
 #if H5_SIZEOF_UINT_LEAST32_T != 0
 	static const PredType NATIVE_UINT_LEAST32;
 #endif /* H5_SIZEOF_UINT_LEAST32_T */
+	//static const PredType NATIVE_INT_FAST32;
+	//static const PredType NATIVE_UINT_FAST32;
 
+	static const PredType NATIVE_INT64;
+	static const PredType NATIVE_UINT64;
 #if H5_SIZEOF_INT_LEAST64_T != 0
 	static const PredType NATIVE_INT_LEAST64;
 #endif /* H5_SIZEOF_INT_LEAST64_T */
 #if H5_SIZEOF_UINT_LEAST64_T != 0
 	static const PredType NATIVE_UINT_LEAST64;
 #endif /* H5_SIZEOF_UINT_LEAST64_T */
-
-// FAST types
-#if H5_SIZEOF_INT_FAST8_T != 0
-	static const PredType NATIVE_INT_FAST8;
-#endif /* H5_SIZEOF_INT_FAST8_T */
-#if H5_SIZEOF_UINT_FAST8_T != 0
-	static const PredType NATIVE_UINT_FAST8;
-#endif /* H5_SIZEOF_UINT_FAST8_T */
-
-#if H5_SIZEOF_INT_FAST16_T != 0
-	static const PredType NATIVE_INT_FAST16;
-#endif /* H5_SIZEOF_INT_FAST16_T */
-#if H5_SIZEOF_UINT_FAST16_T != 0
-	static const PredType NATIVE_UINT_FAST16;
-#endif /* H5_SIZEOF_UINT_FAST16_T */
-
-#if H5_SIZEOF_INT_FAST32_T != 0
-	static const PredType NATIVE_INT_FAST32;
-#endif /* H5_SIZEOF_INT_FAST32_T */
-#if H5_SIZEOF_UINT_FAST32_T != 0
-	static const PredType NATIVE_UINT_FAST32;
-#endif /* H5_SIZEOF_UINT_FAST32_T */
-
-#if H5_SIZEOF_INT_FAST64_T != 0
-	static const PredType NATIVE_INT_FAST64;
-#endif /* H5_SIZEOF_INT_FAST64_T */
-#if H5_SIZEOF_UINT_FAST64_T != 0
-	static const PredType NATIVE_UINT_FAST64;
-#endif /* H5_SIZEOF_UINT_FAST64_T */
+	//static const PredType NATIVE_INT_FAST64;
+	//static const PredType NATIVE_UINT_FAST64;
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 	// These dummy functions do not inherit from DataType - they'll
 	// throw a DataTypeIException if invoked.
-	void commit( H5File& loc, const H5std_string& name );
-	void commit( H5File& loc, const char* name );
 	void commit( H5Object& loc, const H5std_string& name );
 	void commit( H5Object& loc, const char* name );
 	bool committed();

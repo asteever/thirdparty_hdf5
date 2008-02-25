@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -58,10 +57,10 @@ static herr_t H5T_vlen_disk_setnull(H5F_t *f, hid_t dxpl_id, void *_vl, void *_b
 
 /* Default settings for variable-length allocation routines */
 static H5T_vlen_alloc_info_t H5T_vlen_def_vl_alloc_info ={
-    H5D_VLEN_ALLOC,
-    H5D_VLEN_ALLOC_INFO,
-    H5D_VLEN_FREE,
-    H5D_VLEN_FREE_INFO
+    H5D_XFER_VLEN_ALLOC_DEF,
+    H5D_XFER_VLEN_ALLOC_INFO_DEF,
+    H5D_XFER_VLEN_FREE_DEF,
+    H5D_XFER_VLEN_FREE_INFO_DEF
 };
 
 
@@ -112,23 +111,23 @@ H5Tvlen_create(hid_t base_id)
     hid_t	ret_value;	        /*return value			*/
 
     FUNC_ENTER_API(H5Tvlen_create, FAIL)
-    H5TRACE1("i", "i", base_id);
+    H5TRACE1("i","i",base_id);
 
     /* Check args */
-    if(NULL == (base = H5I_object_verify(base_id, H5I_DATATYPE)))
+    if (NULL==(base=H5I_object_verify(base_id,H5I_DATATYPE)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not an valid base datatype")
 
     /* Create up VL datatype */
-    if((dt = H5T_vlen_create(base)) == NULL)
+    if ((dt=H5T_vlen_create(base))==NULL)
         HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "invalid VL location")
 
     /* Atomize the type */
-    if((ret_value = H5I_register(H5I_DATATYPE, dt)) < 0)
+    if ((ret_value=H5I_register(H5I_DATATYPE, dt))<0)
         HGOTO_ERROR(H5E_DATATYPE, H5E_CANTREGISTER, FAIL, "unable to register datatype")
 
 done:
     FUNC_LEAVE_API(ret_value)
-} /* end H5Tvlen_create() */
+}
 
 
 /*-------------------------------------------------------------------------
@@ -157,7 +156,7 @@ H5T_vlen_create(const H5T_t *base)
     FUNC_ENTER_NOAPI_NOINIT(H5T_vlen_create)
 
     /* Check args */
-    HDassert(base);
+    assert(base);
 
     /* Build new type */
     if(NULL == (dt = H5T_alloc()))
@@ -171,22 +170,19 @@ H5T_vlen_create(const H5T_t *base)
     dt->shared->force_conv = TRUE;
     dt->shared->parent = H5T_copy(base, H5T_COPY_ALL);
 
-    /* Inherit encoding version from base type */
-    dt->shared->version = base->shared->version;
-
     /* This is a sequence, not a string */
     dt->shared->u.vlen.type = H5T_VLEN_SEQUENCE;
 
     /* Set up VL information */
-    if(H5T_set_loc(dt, NULL, H5T_LOC_MEMORY) < 0)
+    if (H5T_set_loc(dt, NULL, H5T_LOC_MEMORY)<0)
         HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, NULL, "invalid datatype location")
 
     /* Set return value */
-    ret_value = dt;
+    ret_value=dt;
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5T_vlen_create() */
+}
 
 
 /*-------------------------------------------------------------------------
@@ -287,7 +283,7 @@ H5T_vlen_set_loc(const H5T_t *dt, H5F_t *f, H5T_loc_t loc)
                 break;
 
             default:
-                HGOTO_ERROR(H5E_DATATYPE, H5E_BADRANGE, FAIL, "invalid VL datatype location")
+                HGOTO_ERROR (H5E_DATATYPE, H5E_BADRANGE, FAIL, "invalid VL datatype location")
         } /* end switch */ /*lint !e788 All appropriate cases are covered */
     } /* end if */
 
@@ -834,7 +830,7 @@ H5T_vlen_disk_read(H5F_t *f, hid_t dxpl_id, void *_vl, void *buf, size_t UNUSED 
     /* Check if this sequence actually has any data */
     if(hobjid.addr>0) {
         /* Read the VL information from disk */
-        if(H5HG_read(f,dxpl_id,&hobjid,buf, NULL)==NULL)
+        if(H5HG_read(f,dxpl_id,&hobjid,buf)==NULL)
             HGOTO_ERROR(H5E_DATATYPE, H5E_READERROR, FAIL, "Unable to read VL information")
     } /* end if */
 

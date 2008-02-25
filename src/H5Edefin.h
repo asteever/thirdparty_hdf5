@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* Generated automatically by bin/make_err -- do not edit */
@@ -25,7 +24,6 @@ hid_t H5E_DATASET_g        = FAIL;      /* Dataset */
 hid_t H5E_FUNC_g           = FAIL;      /* Function entry/exit */
 hid_t H5E_STORAGE_g        = FAIL;      /* Data storage */
 hid_t H5E_FILE_g           = FAIL;      /* File accessability */
-hid_t H5E_SOHM_g           = FAIL;      /* Shared Object Header Messages */
 hid_t H5E_SYM_g            = FAIL;      /* Symbol table */
 hid_t H5E_VFL_g            = FAIL;      /* Virtual File Layer */
 hid_t H5E_INTERNAL_g       = FAIL;      /* Internal error (too specific to document in detail) */
@@ -34,7 +32,6 @@ hid_t H5E_REFERENCE_g      = FAIL;      /* References */
 hid_t H5E_DATASPACE_g      = FAIL;      /* Dataspace */
 hid_t H5E_RESOURCE_g       = FAIL;      /* Resource unavailable */
 hid_t H5E_PLIST_g          = FAIL;      /* Property lists */
-hid_t H5E_LINK_g           = FAIL;      /* Links */
 hid_t H5E_DATATYPE_g       = FAIL;      /* Datatype */
 hid_t H5E_RS_g             = FAIL;      /* Reference Counted Strings */
 hid_t H5E_HEAP_g           = FAIL;      /* Heap */
@@ -72,15 +69,11 @@ hid_t H5E_CANTLOCK_g       = FAIL;      /* Unable to lock object */
 hid_t H5E_CANTUNLOCK_g     = FAIL;      /* Unable to unlock object */
 hid_t H5E_CANTGC_g         = FAIL;      /* Unable to garbage collect */
 hid_t H5E_CANTGETSIZE_g    = FAIL;      /* Unable to compute size */
-hid_t H5E_OBJOPEN_g        = FAIL;      /* Object is already open */
 
 /* Heap errors */
 hid_t H5E_CANTRESTORE_g    = FAIL;      /* Can't restore condition */
 hid_t H5E_CANTCOMPUTE_g    = FAIL;      /* Can't compute value */
 hid_t H5E_CANTEXTEND_g     = FAIL;      /* Can't extend heap's space */
-hid_t H5E_CANTATTACH_g     = FAIL;      /* Can't attach object */
-hid_t H5E_CANTUPDATE_g     = FAIL;      /* Can't update object */
-hid_t H5E_CANTOPERATE_g    = FAIL;      /* Can't operate on object */
 
 /* Function entry/exit interface errors */
 hid_t H5E_CANTINIT_g       = FAIL;      /* Unable to initialize object */
@@ -105,7 +98,6 @@ hid_t H5E_BADMESG_g        = FAIL;      /* Unrecognized message */
 hid_t H5E_CANTDELETE_g     = FAIL;      /* Can't delete message */
 hid_t H5E_BADITER_g        = FAIL;      /* Iteration failed */
 hid_t H5E_CANTPACK_g       = FAIL;      /* Can't pack messages */
-hid_t H5E_CANTRESET_g      = FAIL;      /* Can't reset object */
 
 /* System level errors */
 hid_t H5E_SYSERRSTR_g      = FAIL;      /* System error message */
@@ -116,12 +108,13 @@ hid_t H5E_CALLBACK_g       = FAIL;      /* Callback failed */
 hid_t H5E_CANAPPLY_g       = FAIL;      /* Error from filter 'can apply' callback */
 hid_t H5E_SETLOCAL_g       = FAIL;      /* Error from filter 'set local' callback */
 hid_t H5E_NOENCODER_g      = FAIL;      /* Filter present but encoding disabled */
-hid_t H5E_CANTFILTER_g     = FAIL;      /* Filter operation failed */
 
 /* Group related errors */
 hid_t H5E_CANTOPENOBJ_g    = FAIL;      /* Can't open object */
 hid_t H5E_CANTCLOSEOBJ_g   = FAIL;      /* Can't close object */
 hid_t H5E_COMPLEN_g        = FAIL;      /* Name component is too long */
+hid_t H5E_LINK_g           = FAIL;      /* Link count failure */
+hid_t H5E_SLINK_g          = FAIL;      /* Symbolic link error */
 hid_t H5E_PATH_g           = FAIL;      /* Problem with path to object */
 
 /* No error */
@@ -161,15 +154,6 @@ hid_t H5E_CANTPIN_g        = FAIL;      /* Unable to pin cache entry */
 hid_t H5E_CANTUNPIN_g      = FAIL;      /* Unable to un-pin cache entry */
 hid_t H5E_CANTMARKDIRTY_g  = FAIL;      /* Unable to mark a pinned entry as dirty */
 hid_t H5E_CANTDIRTY_g      = FAIL;      /* Unable to mark metadata as dirty */
-hid_t H5E_CANTEXPUNGE_g    = FAIL;      /* Unable to expunge a metadata cache entry */
-hid_t H5E_CANTRESIZE_g     = FAIL;      /* Unable to resize a metadata cache entry */
-
-/* Link related errors */
-hid_t H5E_TRAVERSE_g       = FAIL;      /* Link traversal failure */
-hid_t H5E_NLINKS_g         = FAIL;      /* Too many soft links in path */
-hid_t H5E_NOTREGISTERED_g  = FAIL;      /* Link class not registered */
-hid_t H5E_CANTMOVE_g       = FAIL;      /* Move callback returned error */
-hid_t H5E_CANTSORT_g       = FAIL;      /* Can't sort objects */
 
 /* Parallel MPI errors */
 hid_t H5E_MPI_g            = FAIL;      /* Some MPI function failed */
@@ -184,13 +168,6 @@ hid_t H5E_CANTNEXT_g       = FAIL;      /* Can't move to next iterator location 
 hid_t H5E_BADSELECT_g      = FAIL;      /* Invalid selection */
 hid_t H5E_CANTCOMPARE_g    = FAIL;      /* Can't compare objects */
 
-/* Argument errors */
-hid_t H5E_UNINITIALIZED_g  = FAIL;      /* Information is uinitialized */
-hid_t H5E_UNSUPPORTED_g    = FAIL;      /* Feature is unsupported */
-hid_t H5E_BADTYPE_g        = FAIL;      /* Inappropriate type */
-hid_t H5E_BADRANGE_g       = FAIL;      /* Out of range */
-hid_t H5E_BADVALUE_g       = FAIL;      /* Bad value */
-
 /* B-tree related errors */
 hid_t H5E_NOTFOUND_g       = FAIL;      /* Object not found */
 hid_t H5E_EXISTS_g         = FAIL;      /* Object already exists */
@@ -203,6 +180,13 @@ hid_t H5E_CANTINSERT_g     = FAIL;      /* Unable to insert object */
 hid_t H5E_CANTLIST_g       = FAIL;      /* Unable to list node */
 hid_t H5E_CANTMODIFY_g     = FAIL;      /* Unable to modify record */
 hid_t H5E_CANTREMOVE_g     = FAIL;      /* Unable to remove object */
+
+/* Argument errors */
+hid_t H5E_UNINITIALIZED_g  = FAIL;      /* Information is uinitialized */
+hid_t H5E_UNSUPPORTED_g    = FAIL;      /* Feature is unsupported */
+hid_t H5E_BADTYPE_g        = FAIL;      /* Inappropriate type */
+hid_t H5E_BADRANGE_g       = FAIL;      /* Out of range */
+hid_t H5E_BADVALUE_g       = FAIL;      /* Bad value */
 
 /* Datatype conversion errors */
 hid_t H5E_CANTCONVERT_g    = FAIL;      /* Can't convert datatypes */

@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* Programmer:  Quincey Koziol <koziol@ncsa.uiuc.edu>
@@ -71,7 +70,7 @@
 /*-------------------------------------------------------------------------
  * Function:	H5B2_stat_info
  *
- * Purpose:	Retrieve metadata statistics for a v2 B-tree
+ * Purpose:	Retrieve metadata statistics for the fractal heap
  *
  * Return:	Success:	non-negative
  *
@@ -87,7 +86,6 @@ H5B2_stat_info(H5F_t *f, hid_t dxpl_id, const H5B2_class_t *type,
     haddr_t addr, H5B2_stat_t *info)
 {
     H5B2_t	*bt2 = NULL;            /* Pointer to the B-tree header */
-    H5B2_shared_t *shared;              /* Pointer to B-tree's shared information */
     herr_t	ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5B2_stat_info)
@@ -99,15 +97,10 @@ H5B2_stat_info(H5F_t *f, hid_t dxpl_id, const H5B2_class_t *type,
     HDassert(info);
 
     /* Look up the B-tree header */
-    if(NULL == (bt2 = (H5B2_t *)H5AC_protect(f, dxpl_id, H5AC_BT2_HDR, addr, type, NULL, H5AC_READ)))
+    if(NULL == (bt2 = H5AC_protect(f, dxpl_id, H5AC_BT2_HDR, addr, type, NULL, H5AC_READ)))
 	HGOTO_ERROR(H5E_BTREE, H5E_CANTPROTECT, FAIL, "unable to load B-tree header")
 
-    /* Get pointer to reference counted shared B-tree info */
-    shared = (H5B2_shared_t *)H5RC_GET_OBJ(bt2->shared);
-
-    /* Get information about the B-tree */
-    info->depth = shared->depth;
-    info->nrecords = bt2->root.all_nrec;
+/* XXX: Fill in metadata statistics for the heap */
 
 done:
     /* Release B-tree header node */

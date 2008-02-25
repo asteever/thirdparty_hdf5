@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -27,6 +26,9 @@
 #include "hdf5.h"
 
 #define MAX_PAL 768
+
+/* set the name length restriction to 64 charachters */
+#define VSNAMELENMAX 64 /* this is a carryover from HDF4 */
 
 /* typedef H5T_NATIVE_UINT8  BYTE; */
 typedef unsigned char BYTE;
@@ -159,7 +161,7 @@ int hdfWriteGIF(FILE *fp, BYTE *pic, int ptype, int w, int h, BYTE *rmap,
                 int colorstyle, int BitsPerPixel);
 
 /* WRITEHDF.C */
-int WriteHDF(GIFTOMEM , CHAR * , CHAR *);
+int WriteHDF(GIFTOMEM , CHAR *);
 
 /* Function:    ReadHDF
 ** Return:      0 on completion without error, -1 on error

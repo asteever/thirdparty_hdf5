@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -19,9 +18,8 @@
 
 #include "hdf5.h"
 #include "h5trav.h"
-#include "H5Zprivate.h"	/* H5Z_COMMON_CD_VALUES */	
-
-
+#include "h5diff.h"
+#include "h5tools.h"
 
 #define H5FOPENERROR "unable to open file"
 
@@ -49,17 +47,15 @@ typedef struct {
  H5Z_FILTER_SHUFFLE     2 , shuffle the data
  H5Z_FILTER_FLETCHER32  3 , letcher32 checksum of EDC
  H5Z_FILTER_SZIP        4 , szip compression
- H5Z_FILTER_NBIT        5 , nbit compression
- H5Z_FILTER_SCALEOFFSET 6 , scaleoffset compression
+ H5Z_FILTER_NBIT        5 , nbit compression              
+ H5Z_FILTER_SCALEOFFSET 6 , scaleoffset compression      
 */
 
-/* #define CD_VALUES H5Z_COMMON_CD_VALUES */
-#define CD_VALUES 20
+#define CDVALUES 2
 
 typedef struct {
- H5Z_filter_t filtn;                           /* filter identification number */
- unsigned     cd_values[CD_VALUES];            /* filter client data values */
- size_t       cd_nelmts;                       /* filter client number of values */
+ H5Z_filter_t filtn;               /* filter identification number */
+ int          cd_values[CDVALUES]; /* filter client data values */
 } filter_info_t;
 
 /* chunk lengths along each dimension and rank */
@@ -84,9 +80,9 @@ typedef struct {
 
 /* store a table of all objects */
 typedef struct {
- unsigned int size;
- unsigned int nelems;
- pack_info_t  *objs;
+ int         size;
+ int         nelems;
+ pack_info_t *objs;
 } pack_opttbl_t;
 
 
@@ -100,18 +96,11 @@ typedef struct {
  pack_opttbl_t   *op_tbl;     /*table with all -c and -f options */
  int             all_layout;  /*apply the layout to all objects */
  int             all_filter;  /*apply the filter to all objects */
- filter_info_t   filter_g[H5_REPACK_MAX_NFILTERS];    /*global filter array for the ALL case */
- int             n_filter_g;  /*number of global filters */
+ filter_info_t   filter_g;    /*global filter INFO for the ALL case */
  chunk_info_t    chunk_g;     /*global chunk INFO for the ALL case */
  H5D_layout_t    layout_g;    /*global layout information for the ALL case */
- int             verbose;     /*verbose mode */
- hsize_t         threshold;   /*minimum size to compress, in bytes */
- int             use_native;  /*use a native type in write */  
- int             latest;      /*pack file with the latest file format */
- int             grp_compact; /* Set the maximum number of links to store as header messages in the group */
- int             grp_indexed; /* Set the minimum number of links to store in the indexed format */
- int             msg_size[8]; /* Minumum size of shared messages: dataspace, 
-                                 datatype, fill value, filter pipleline, attribute */
+ int verbose;                 /*verbose mode */
+ hsize_t threshold;               /*minimum size to compress, in bytes */
 } pack_opt_t;
 
 
@@ -125,7 +114,8 @@ typedef struct {
 extern "C" {
 #endif
 
-int h5repack           (const char* infile, const char* outfile, pack_opt_t *options);
+int h5repack           (const char* infile, const char* outfile, pack_opt_t *options,
+                        int argc, const char *argv[]);
 int h5repack_addfilter (const char* str, pack_opt_t *options);
 int h5repack_addlayout (const char* str, pack_opt_t *options);
 int h5repack_init      (pack_opt_t *options, int verbose);
@@ -147,29 +137,46 @@ int h5repack_cmpdcpl   (const char *fname1,
  */
 
 
-/*-------------------------------------------------------------------------
- * copy module
- *-------------------------------------------------------------------------
- */
+int check_objects(const char* fname,
+                  pack_opt_t *options,
+                  int argc, 
+                  const char *argv[]);
 
-int copy_objects   (const char* fnamein,
-                    const char* fnameout,
+int copy_objects(const char* fnamein,
+                 const char* fnameout,
+                 pack_opt_t *options,
+                 int argc, 
+                 const char *argv[]);
+
+void print_objlist(const char *filename,
+                   int nobjects,
+                   trav_info_t *travi );
+
+int do_copy_objects(hid_t fidin,
+                    hid_t fidout,
+                    trav_table_t *travt,
                     pack_opt_t *options);
+
+int copy_attr(hid_t loc_in,
+              hid_t loc_out,
+              pack_opt_t *options
+              );
 
 int do_copy_refobjs(hid_t fidin,
                     hid_t fidout,
                     trav_table_t *travt,
-                    pack_opt_t *options); 
+                    pack_opt_t *options); /* repack options */
 
-/*-------------------------------------------------------------------------
- * filters and verify module
- *-------------------------------------------------------------------------
- */
+
+
+void read_info(const char *filename,pack_opt_t *options);
 void init_packobject(pack_info_t *obj);
+int print_filters(hid_t dcpl_id);
+
 
 
 /*-------------------------------------------------------------------------
- * filters and copy module
+ * filters
  *-------------------------------------------------------------------------
  */
 
@@ -177,8 +184,33 @@ int apply_filters(const char* name,    /* object name from traverse list */
                   int rank,            /* rank of dataset */
                   hsize_t *dims,       /* dimensions of dataset */
                   hid_t dcpl_id,       /* dataset creation property list */
-                  pack_opt_t *options, /* repack options */
-                  int *has_filter);    /* (OUT) object NAME has a filter */
+                  hid_t type_id,       /* datatype */
+                  pack_opt_t *options); /* repack options */
+
+int has_filter(hid_t dcpl_id,
+               H5Z_filter_t filtnin);
+
+
+int can_read(const char* name,    /* object name from traverse list */
+             hid_t dcpl_id,       /* dataset creation property list */
+             pack_opt_t *options); /* repack options */
+
+
+/*-------------------------------------------------------------------------
+ * layout functions
+ *-------------------------------------------------------------------------
+ */
+
+int has_layout(hid_t dcpl_id,
+               pack_info_t *obj);
+
+int layout_this(hid_t dcpl_id,             /* DCPL from input object */
+                const char* name,          /* object name from traverse list */
+                pack_opt_t *options,       /* repack options */
+                pack_info_t *pack /*OUT*/) /* object to apply layout */;
+
+int apply_layout(hid_t dcpl_id,
+                 pack_info_t *pack);  /* info about object  */
 
 
 /*-------------------------------------------------------------------------
@@ -206,14 +238,15 @@ pack_info_t* options_get_object( const char *path,
 obj_list_t* parse_filter(const char *str,
                          int *n_objs,
                          filter_info_t *filt,
-                         pack_opt_t *options,
-                         int *is_glb);
+                         pack_opt_t *options);
 
 obj_list_t* parse_layout(const char *str,
                          int *n_objs,
                          pack_info_t *pack,    /* info about object */
                          pack_opt_t *options);
 
+const char* get_sfilter (H5Z_filter_t filtn);
+int         parse_number(char *str);
 
 
 

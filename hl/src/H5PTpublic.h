@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef _H5PTpublic_H
@@ -31,14 +30,11 @@ extern "C" {
 H5_HLDLL hid_t H5PTcreate_fl ( hid_t loc_id,
                       const char *dset_name,
                       hid_t dtype_id,
-                      hsize_t chunk_size,
-                      int compression );
+                      hsize_t chunk_size );
 
-#ifdef VLPT_REMOVED
 H5_HLDLL hid_t H5PTcreate_vl ( hid_t loc_id,
                       const char *dset_name,
                       hsize_t chunk_size );
-#endif /* VLPT_REMOVED */
 
 H5_HLDLL hid_t H5PTopen( hid_t loc_id,
                 const char *dset_name );
@@ -54,7 +50,7 @@ H5_HLDLL herr_t  H5PTclose( hid_t table_id );
  */
 
 H5_HLDLL herr_t  H5PTappend( hid_t table_id,
-                   size_t nrecords,
+                   hsize_t nrecords,
                    const void * data );
 
 /*-------------------------------------------------------------------------
@@ -66,12 +62,12 @@ H5_HLDLL herr_t  H5PTappend( hid_t table_id,
 
 
 H5_HLDLL herr_t  H5PTget_next( hid_t table_id,
-                     size_t nrecords,
+                     hsize_t nrecords,
                      void * data );
 
 H5_HLDLL herr_t  H5PTread_packets( hid_t table_id,
                          hsize_t start,
-                         size_t nrecords,
+                         hsize_t nrecords,
                          void *data );
 
 /*-------------------------------------------------------------------------
@@ -87,9 +83,7 @@ H5_HLDLL herr_t  H5PTget_num_packets( hid_t table_id,
 
 H5_HLDLL herr_t  H5PTis_valid( hid_t table_id );
 
-#ifdef VLPT_REMOVED
 H5_HLDLL herr_t  H5PTis_varlen( hid_t table_id );
-#endif /* VLPT_REMOVED */
 
 /*-------------------------------------------------------------------------
  *
@@ -103,9 +97,6 @@ H5_HLDLL herr_t  H5PTcreate_index( hid_t table_id );
 H5_HLDLL herr_t  H5PTset_index( hid_t table_id,
                              hsize_t pt_index );
 
-H5_HLDLL herr_t  H5PTget_index( hid_t table_id,
-                             hsize_t *pt_index );
-
 /*-------------------------------------------------------------------------
  *
  * Memory Management functions
@@ -113,11 +104,9 @@ H5_HLDLL herr_t  H5PTget_index( hid_t table_id,
  *-------------------------------------------------------------------------
  */
 
-#ifdef VLPT_REMOVED
 H5_HLDLL herr_t  H5PTfree_vlen_readbuff( hid_t table_id,
-                               size_t bufflen,
+                               hsize_t bufflen,
                                void * buff );
-#endif /* VLPT_REMOVED */
 
 #ifdef __cplusplus
 }

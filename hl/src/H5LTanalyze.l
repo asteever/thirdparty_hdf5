@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 %{
@@ -140,7 +139,7 @@ OPQ_TAG          {return token(OPQ_TAG_TOKEN);}
                         if( is_str_size || (is_enum && is_enum_memb) || 
                             is_opq_size || (asindex>-1 && arr_stack[asindex].is_dim) ||
                             (csindex>-1 && cmpd_stack[csindex].is_field) ) {
-                            H5LTyylval.ival = atoi(yytext);
+                            yylval.ival = atoi(yytext);
                             return NUMBER; 
                         } else
                             REJECT;
@@ -157,7 +156,7 @@ OPQ_TAG          {return token(OPQ_TAG_TOKEN);}
                     return token('"');
                  }
 <TAG_STRING>[^\"]+       {
-                    H5LTyylval.sval = strdup(yytext);
+                    yylval.sval = strdup(yytext);
                     BEGIN INITIAL;
                     return STRING;
                  }
@@ -181,7 +180,7 @@ int my_yyinput(char *buf, int max_size)
    return ret;
 }
 
-int H5LTyyerror(char *msg)
+int yyerror(char *msg)
 {
    printf("ERROR: %s before \"%s\".\n", msg, yytext);
 }

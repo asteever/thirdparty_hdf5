@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*-------------------------------------------------------------------------
@@ -33,24 +32,15 @@
 /* Private headers needed by this file */
 #include "H5Fprivate.h"		/* File access				*/
 #include "H5FLprivate.h"	/* Free Lists                           */
+#include "H5SLprivate.h"	/* Skip lists				*/
 
 /**************************/
 /* Library Private Macros */
 /**************************/
 
-/* Flags for H5FS_section_class_t 'flags' field */
-#define H5FS_CLS_GHOST_OBJ      0x01    /* Objects in this class shouldn't be
-                                         *      serialized to the file.
-                                         */
-#define H5FS_CLS_SEPAR_OBJ      0x02    /* Objects in this class shouldn't
-                                         *      participate in merge operations
-                                         */
-#define H5FS_CLS_MERGE_SYM      0x04    /* Objects in this class only merge
-                                         *      with other objects in this class
-                                         */
-
 /* Flags for H5FS_add() */
 #define H5FS_ADD_DESERIALIZING  0x01    /* Free space is being deserialized
+                                         *      (for package use only)
                                          */
 #define H5FS_ADD_RETURNED_SPACE 0x02    /* Section was previously allocated
                                          *      and is being returned to the
@@ -58,24 +48,13 @@
                                          *      as a result of freeing an
                                          *      object)
                                          */
-#define H5FS_ADD_SKIP_VALID     0x04    /* Don't check validity after adding
-                                         *      this section.  (state of the
-                                         *      managed sections is in flux)
-                                         */
-
-/* Flags for deserialize callback  */
-#define H5FS_DESERIALIZE_NO_ADD  0x01   /* Don't add section to free space
-                                         *      manager after it's deserialized
-                                         *      (its only here for it's side-
-                                         *      effects).
-                                         */
 
 
 /****************************/
 /* Library Private Typedefs */
 /****************************/
 
-/* Free space info (forward decl - defined in H5FSpkg.h) */
+/* Free space info (forward decl - defined in H5FS.c) */
 typedef struct H5FS_t H5FS_t;
 
 /* Forward declaration free space section info */
@@ -84,40 +63,36 @@ typedef struct H5FS_section_info_t H5FS_section_info_t;
 /* Free space section class info */
 typedef struct H5FS_section_class_t {
     /* Class variables */
-    const unsigned type;                /* Type of free space section */
-    size_t serial_size;                 /* Size of serialized form of section */
-    unsigned flags;                     /* Class flags */
-    void *cls_private;                  /* Class private information */
+    const unsigned type;                        /* Type of free space section */
+    size_t serial_size;                         /* Size of serialized form of section */
 
     /* Class methods */
-    herr_t (*init_cls)(struct H5FS_section_class_t *, void *);          /* Routine to initialize class-specific settings */
-    herr_t (*term_cls)(struct H5FS_section_class_t *);                  /* Routine to terminate class-specific settings */
+    herr_t (*init_cls)(struct H5FS_section_class_t *, const void *);    /* Routine to initialize class-specific settings */
 
     /* Object methods */
-    herr_t (*add)(H5FS_section_info_t *, unsigned *, void *);       /* Routine called when section is about to be added to manager */
-    herr_t (*serialize)(const struct H5FS_section_class_t *, const H5FS_section_info_t *, uint8_t *);        /* Routine to serialize a "live" section into a buffer */
-    H5FS_section_info_t *(*deserialize)(const struct H5FS_section_class_t *, hid_t dxpl_id, const uint8_t *, haddr_t, hsize_t, unsigned *);     /* Routine to deserialize a buffer into a "live" section */
-    htri_t (*can_merge)(const H5FS_section_info_t *, const H5FS_section_info_t *, void *);  /* Routine to determine if two nodes are mergable */
+    herr_t (*serialize)(const H5FS_section_info_t *, uint8_t *);        /* Routine to serialize a "live" section into a buffer */
+    herr_t (*deserialize)(struct H5FS_section_class_t *cls, const uint8_t *,
+            haddr_t, hsize_t, H5FS_section_info_t **);  /* Routine to deserialize a buffer into a "live" section */
+    htri_t (*can_merge)(const H5FS_section_info_t *, const H5FS_section_info_t *,
+            void *);     /* Routine to determine if two nodes are mergable */
     herr_t (*merge)(H5FS_section_info_t *, H5FS_section_info_t *, void *);      /* Routine to merge two nodes */
-    htri_t (*can_shrink)(const H5FS_section_info_t *, void *);        /* Routine to determine if node can shrink container */
+    htri_t (*can_shrink)(H5FS_section_info_t *, void *);     /* Routine to determine if node can shrink container */
     herr_t (*shrink)(H5FS_section_info_t **, void *);   /* Routine to shrink container */
-    herr_t (*free)(H5FS_section_info_t *);              /* Routine to free node */
-    herr_t (*valid)(const struct H5FS_section_class_t *, const H5FS_section_info_t *);   /* Routine to check if a section is valid */
-    herr_t (*debug)(const H5FS_section_info_t *, FILE *, int , int );   /* Routine to dump debugging information about a section */
+    herr_t (*free)(H5FS_section_info_t *);      /* Routine to free node */
+    herr_t (*debug)(const H5FS_section_info_t *, FILE *,
+            int , int );                                /* Routine to dump debugging information about a section */
 } H5FS_section_class_t;
-
-/* State of section ("live" or "serialized") */
-typedef enum H5FS_section_state_t {
-    H5FS_SECT_LIVE,             /* Section has "live" memory references */
-    H5FS_SECT_SERIALIZED        /* Section is in "serialized" form */
-} H5FS_section_state_t;
 
 /* Free space section info */
 struct H5FS_section_info_t {
-    haddr_t     addr;                   /* Offset of free space section in the address space */
-    hsize_t     size;                   /* Size of free space section */
-    unsigned    type;                   /* Type of free space section (i.e. class) */
-    H5FS_section_state_t state;         /* Whether the section is in "serialized" or "live" form */
+    haddr_t     addr;                           /* Address of free space section in the address space */
+                                                /* (Not actually used as address, used as unique ID for free space node) */
+    hsize_t     size;                           /* Size of free space section */
+    H5FS_section_class_t *cls;                  /* Class of free space section */
+    enum {
+            H5FS_SECT_LIVE,                     /* Section has "live" memory references */
+            H5FS_SECT_SERIALIZED}               /* Section is in "serialized" form */
+        state;                                  /* Whether the section is in "serialized" or "live" form */
 };
 
 /* Free space client IDs for identifying user of free space */
@@ -143,7 +118,7 @@ typedef herr_t (*H5FS_operator_t)(const H5FS_section_info_t *sect,
 /*****************************/
 /* Library-private Variables */
 /*****************************/
-
+ 
 /* Declare a free list to manage the H5FS_section_class_t sequence information */
 H5FL_SEQ_EXTERN(H5FS_section_class_t);
 
@@ -151,32 +126,18 @@ H5FL_SEQ_EXTERN(H5FS_section_class_t);
 /***************************************/
 /* Library-private Function Prototypes */
 /***************************************/
-
-/* Free space manager routines */
 H5_DLL H5FS_t *H5FS_create(H5F_t *f, hid_t dxpl_id, haddr_t *fs_addr,
     const H5FS_create_t *fs_create, size_t nclasses,
-    const H5FS_section_class_t *classes[], void *cls_init_udata);
+    H5FS_section_class_t *classes, const void *cls_init_udata);
 H5_DLL H5FS_t *H5FS_open(H5F_t *f, hid_t dxpl_id, haddr_t fs_addr,
-    size_t nclasses, const H5FS_section_class_t *classes[], void *cls_init_udata);
-H5_DLL herr_t H5FS_size(const H5F_t *f, const H5FS_t *fspace, hsize_t *meta_size);
-H5_DLL herr_t H5FS_delete(H5F_t *f, hid_t dxpl_id, haddr_t fs_addr);
-H5_DLL herr_t H5FS_close(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace);
-
-/* Free space section routines */
-H5_DLL herr_t H5FS_sect_add(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace,
+    size_t nclasses, H5FS_section_class_t *classes, const void *cls_init_udata);
+H5_DLL herr_t H5FS_add(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace,
     H5FS_section_info_t *node, unsigned flags, void *op_data);
-H5_DLL herr_t H5FS_sect_remove(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace,
-    H5FS_section_info_t *node);
-H5_DLL htri_t H5FS_sect_find(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace,
+H5_DLL htri_t H5FS_find(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace,
     hsize_t request, H5FS_section_info_t **node);
-H5_DLL herr_t H5FS_sect_iterate(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace, H5FS_operator_t op, void *op_data);
-H5_DLL herr_t H5FS_get_sect_count(const H5FS_t *fspace, hsize_t *nsects);
-H5_DLL herr_t H5FS_sect_change_class(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace,
-    H5FS_section_info_t *sect, unsigned new_class);
-
-/* Debugging routines for dumping file structures */
-H5_DLL herr_t H5FS_sect_debug(const H5FS_t *fspace, const H5FS_section_info_t *sect,
-    FILE *stream, int indent, int fwidth);
+H5_DLL herr_t H5FS_iterate(H5FS_t *fspace, H5FS_operator_t op, void *op_data);
+H5_DLL herr_t H5FS_flush(H5F_t *f, hid_t dxpl_id, unsigned flags);
+H5_DLL herr_t H5FS_close(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace);
 
 #endif /* _H5FSprivate_H */
 

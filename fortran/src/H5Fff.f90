@@ -1,5 +1,4 @@
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!   Copyright by The HDF Group.                                               *
 !   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
@@ -9,8 +8,8 @@
 !   of the source code distribution tree; Copyright.html can be found at the  *
 !   root level of an installed copy of the electronic HDF5 document set and   *
 !   is linked from the top-level documents page.  It can also be found at     *
-!   http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
-!   access to either file, you may request a copy from help@hdfgroup.org.     *
+!   http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+!   access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
 !
 !
@@ -81,7 +80,7 @@
                                creation_prp_default, access_prp_default, file_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FCREATE_C':: h5fcreate_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5FCREATE_C':: h5fcreate_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name 
               CHARACTER(LEN=*), INTENT(IN) :: name
@@ -167,7 +166,7 @@
               INTEGER FUNCTION h5fflush_c(object_id, scope)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FFLUSH_C':: h5fflush_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5FFLUSH_C':: h5fflush_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: object_id
               INTEGER, INTENT(IN) :: scope
@@ -235,7 +234,7 @@
                                           child_id, access_prp_default)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FMOUNT_C':: h5fmount_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5FMOUNT_C':: h5fmount_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name 
               INTEGER(HID_T), INTENT(IN) :: loc_id 
@@ -303,7 +302,7 @@
               INTEGER FUNCTION h5funmount_c(loc_id, name, namelen)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FUNMOUNT_C':: h5funmount_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5FUNMOUNT_C':: h5funmount_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name 
               INTEGER(HID_T), INTENT(IN) :: loc_id 
@@ -372,7 +371,7 @@
                                access_prp_default, file_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FOPEN_C':: h5fopen_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5FOPEN_C':: h5fopen_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               CHARACTER(LEN=*), INTENT(IN) :: name
@@ -437,7 +436,7 @@
               INTEGER FUNCTION h5freopen_c(file_id, ret_file_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FREOPEN_C':: h5freopen_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5FREOPEN_C':: h5freopen_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: file_id
               INTEGER(HID_T), INTENT(OUT) :: ret_file_id
@@ -495,7 +494,7 @@
               INTEGER FUNCTION h5fget_create_plist_c(file_id, prop_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-!DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FGET_CREATE_PLIST_C':: h5fget_create_plist_c
+!MS$ATTRIBUTES C,reference,alias:'_H5FGET_CREATE_PLIST_C':: h5fget_create_plist_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: file_id
               INTEGER(HID_T), INTENT(OUT) :: prop_id
@@ -553,7 +552,7 @@
               INTEGER FUNCTION h5fget_access_plist_c(file_id, access_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-!DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FGET_CREATE_PLIST_C':: h5fget_access_plist_c
+!MS$ATTRIBUTES C,reference,alias:'_H5FGET_CREATE_PLIST_C':: h5fget_access_plist_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: file_id
               INTEGER(HID_T), INTENT(OUT) :: access_id
@@ -614,7 +613,7 @@
               INTEGER FUNCTION h5fis_hdf5_c(name, namelen, flag)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FIS_HDF5_C':: h5fis_hdf5_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5FIS_HDF5_C':: h5fis_hdf5_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               CHARACTER(LEN=*), INTENT(IN) :: name
@@ -673,7 +672,7 @@
               INTEGER FUNCTION h5fclose_c(file_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FCLOSE_C':: h5fclose_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5FCLOSE_C':: h5fclose_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: file_id
               END FUNCTION h5fclose_c
@@ -730,7 +729,7 @@
               INTEGER FUNCTION h5fget_obj_count_c(file_id, obj_type, obj_count)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-       !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FGET_OBJ_COUNT_C':: h5fget_obj_count_c
+       !MS$ATTRIBUTES C,reference,alias:'_H5FGET_OBJ_COUNT_C':: h5fget_obj_count_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: file_id
               INTEGER, INTENT(IN)  :: obj_type      ! Object type
@@ -791,7 +790,7 @@
               INTEGER FUNCTION h5fget_obj_ids_c(file_id, obj_type, max_objs, obj_ids)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-       !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FGET_OBJ_IDS_C':: h5fget_obj_ids_c
+       !MS$ATTRIBUTES C,reference,alias:'_H5FGET_OBJ_IDS_C':: h5fget_obj_ids_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: file_id
               INTEGER, INTENT(IN)  :: obj_type      
@@ -845,7 +844,7 @@
               INTEGER FUNCTION h5fget_freespace_c(file_id, free_space)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-       !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FGET_FREESPACE_C':: h5fget_freespace_c
+       !MS$ATTRIBUTES C,reference,alias:'_H5FGET_FREESPACE_C':: h5fget_freespace_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: file_id
               INTEGER(HSSIZE_T), INTENT(OUT) :: free_space 
@@ -898,7 +897,7 @@
               INTEGER FUNCTION h5fget_name_c(obj_id, size, buf, buflen)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FGET_NAME_C'::h5fget_name_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5FGET_NAME_C'::h5fget_name_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: buf
               INTEGER(HID_T), INTENT(IN) :: obj_id
@@ -948,7 +947,7 @@
               INTEGER FUNCTION h5fget_filesize_c(file_id, size)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FGET_FILESIZE_C'::h5fget_filesize_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5FGET_FILESIZE_C'::h5fget_filesize_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: file_id
               INTEGER(HSIZE_T), INTENT(OUT) :: size

@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* Packet Table wrapper classes
@@ -60,7 +59,6 @@
             return false;
     }
 
-#ifdef VLPT_REMOVED
     /* IsVariableLength
      * Return 1 if this packet table is a Variable Length packet table,
      * return 0 if it is Fixed Length.  Returns -1 if the table is
@@ -70,7 +68,6 @@
     {
         return H5PTis_varlen(table_id);
     }
-#endif /* VLPT_REMOVED */
 
     /* ResetIndex
      * Sets the index to point to the first packet in the packet table
@@ -84,24 +81,9 @@
      * Sets the index to point to the packet specified by index.
      * Returns 0 on success, negative on failure (if index is out of bounds)
      */
-    int PacketTable::SetIndex(hsize_t index)
+    int PacketTable::SetIndex(unsigned int index)
     {
         return H5PTset_index(table_id, index);
-    }
-
-    /* SetIndex
-     * Sets the index to point to the packet specified by index.
-     * Returns 0 on success, negative on failure (if index is out of bounds)
-     */
-    hsize_t PacketTable::GetIndex(int &error)
-    {
-        hsize_t index;
-
-        error = H5PTget_index(table_id, &index);
-        if(error < 0)
-           return 0;
-        else
-           return index;
     }
 
     /* GetPacketCount
@@ -127,9 +109,9 @@
      * the packet table, the ID of the datatype of the set, and the size
      * of a memory chunk used in chunking.
      */
-    FL_PacketTable::FL_PacketTable(hid_t fileID, char* name, hid_t dtypeID, hsize_t chunkSize, int compression)
+    FL_PacketTable::FL_PacketTable(hid_t fileID, char* name, hid_t dtypeID, int chunkSize)
     {
-        table_id = H5PTcreate_fl ( fileID, name, dtypeID, chunkSize, compression);
+        table_id = H5PTcreate_fl ( fileID, name, dtypeID, chunkSize);
     }
 
     /* "Open" Constructor
@@ -138,13 +120,11 @@
      */
     FL_PacketTable::FL_PacketTable(hid_t fileID, char* name) : PacketTable(fileID, name)
     {
-#ifdef VLPT_REMOVED
         if( H5PTis_varlen(table_id) != 0 )    // If this is not a fixed-length table
         {
             H5PTclose(table_id);
             table_id = -1;
         }
-#endif /* VLPT_REMOVED */
     }
 
     /* AppendPacket
@@ -162,7 +142,7 @@
      * to be added and a pointer to their location in memory.
      * Returns 0 on success, -1 on failure.
      */
-    int FL_PacketTable::AppendPackets(size_t numPackets, void * data)
+    int FL_PacketTable::AppendPackets(unsigned int numPackets, void * data)
     {
         return H5PTappend(table_id, numPackets, data);
     }
@@ -173,7 +153,7 @@
      * to memory where the data should be stored.
      * Returns 0 on success, negative on failure
      */
-    int FL_PacketTable::GetPacket(hsize_t index, void * data)
+    int FL_PacketTable::GetPacket(unsigned int index, void * data)
     {
         return H5PTread_packets(table_id, index, 1, data);
     }
@@ -184,7 +164,7 @@
      * the memory where these packets should be stored.
      * Returns 0 on success, negative on failure.
      */
-    int FL_PacketTable::GetPackets(hsize_t startIndex, hsize_t endIndex, void * data)
+    int FL_PacketTable::GetPackets(unsigned int startIndex, unsigned int endIndex, void * data)
     {
         // Make sure the range of indexes is valid
         if (startIndex > endIndex)
@@ -210,13 +190,12 @@
      * Returns 0 on success, negative on failure.  Index
      * is not advanced on failure.
      */
-    int FL_PacketTable::GetNextPackets(size_t numPackets, void * data)
+    int FL_PacketTable::GetNextPackets(unsigned int numPackets, void * data)
     {
         return H5PTget_next(table_id, numPackets, data);
     }
 
 
-#ifdef VLPT_REMOVED
     /********************************/
     /* Variable-Length Packet Table */
     /********************************/
@@ -226,7 +205,7 @@
      * Takes the ID of the file the packet table will be created in, the name of
      * the packet table, and the size of a memory chunk used in chunking.
      */
-    VL_PacketTable::VL_PacketTable(hid_t fileID, char* name, hsize_t chunkSize)
+    VL_PacketTable::VL_PacketTable(hid_t fileID, char* name, int chunkSize)
     {
         table_id = H5PTcreate_vl ( fileID, name, chunkSize);
     }
@@ -250,7 +229,7 @@
      * in bytes.
      * Returns 0 on success, negative on failure.
      */
-       int VL_PacketTable::AppendPacket(void * data, size_t length)
+       int VL_PacketTable::AppendPacket(void * data, unsigned int length)
     {
         hvl_t packet;
 
@@ -266,7 +245,7 @@
      * packets to be added and a pointer to an array of hvl_t structs in memory.
      * Returns 0 on success, negative on failure.
      */
-    int VL_PacketTable::AppendPackets(size_t numPackets, hvl_t * data)
+    int VL_PacketTable::AppendPackets(unsigned int numPackets, hvl_t * data)
     {
         return H5PTappend(table_id, numPackets, data);
     }
@@ -277,7 +256,7 @@
      * to a hvl_t struct in which to store the packet's size and location.
      * Returns 0 on success, negative on failure.
      */
-    int VL_PacketTable::GetPacket(hsize_t index, hvl_t * data)
+    int VL_PacketTable::GetPacket(unsigned int index, hvl_t * data)
     {
         return H5PTread_packets(table_id, index, 1, data);
     }
@@ -288,7 +267,7 @@
      * of hvl_t structs in memory in which to store pointers to the packets.
      * Returns 0 on success, negative on failure.
      */
-    int VL_PacketTable::GetPackets(hsize_t startIndex, hsize_t endIndex, hvl_t * data)
+    int VL_PacketTable::GetPackets(unsigned int startIndex, unsigned int endIndex, hvl_t * data)
     {
         // Make sure the range of indexes is valid
         if (startIndex > endIndex)
@@ -315,7 +294,7 @@
      * Returns 0 on success, negative on failure.  Index
      * is not advanced on failure.
      */
-    int VL_PacketTable::GetNextPackets(size_t numPackets, hvl_t * data)
+    int VL_PacketTable::GetNextPackets(unsigned int numPackets, hvl_t * data)
     {
         return H5PTget_next(table_id, numPackets, data);
     }
@@ -326,8 +305,7 @@
      * location in memory.
      * Returns 0 on success, negative on error.
      */
-    int VL_PacketTable::FreeReadbuff(size_t numStructs, hvl_t * buffer)
+    int VL_PacketTable::FreeReadbuff(unsigned int numStructs, hvl_t * buffer)
     {
         return H5PTfree_vlen_readbuff( table_id, numStructs, buffer);
     }
-#endif /* VLPT_REMOVED */

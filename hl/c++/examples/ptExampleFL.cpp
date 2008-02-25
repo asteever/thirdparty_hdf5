@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "H5PacketTable.h"
@@ -47,8 +46,8 @@ int main(void)
     if(fileID <0)
         fprintf(stderr, "Couldn't create file.\n");
 
-    /* Create a fixed-length packet table with compression level 5. */
-    FL_PacketTable ptable(fileID, "/examplePacketTable", H5T_NATIVE_INT, 100, 5);
+    /* Create a fixed-length packet table. */
+    FL_PacketTable ptable(fileID, "/examplePacketTable", H5T_NATIVE_INT, 1);
     if(! ptable.IsValid())
         fprintf(stderr, "Unable to create packet table.");
 

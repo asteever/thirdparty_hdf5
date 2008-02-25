@@ -1,5 +1,4 @@
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!   Copyright by The HDF Group.                                               *
 !   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
@@ -9,8 +8,8 @@
 !   of the source code distribution tree; Copyright.html can be found at the  *
 !   root level of an installed copy of the electronic HDF5 document set and   *
 !   is linked from the top-level documents page.  It can also be found at     *
-!   http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
-!   access to either file, you may request a copy from help@hdfgroup.org.     *
+!   http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+!   access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
 !
 !
@@ -90,7 +89,7 @@
                                full_name, full_namelen)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5_FIXNAME_C':: h5_fixname_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5_FIXNAME_C':: h5_fixname_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: base_name 
               !DEC$ATTRIBUTES reference :: full_name 
@@ -146,7 +145,7 @@
               INTEGER FUNCTION h5_cleanup_c(base_name, base_namelen, fapl)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5_CLEANUP_C':: h5_cleanup_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5_CLEANUP_C':: h5_cleanup_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: base_name 
               CHARACTER(LEN=*), INTENT(IN) :: base_name
@@ -192,7 +191,7 @@
             INTERFACE
               SUBROUTINE h5_exit_c(status)
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5_EXIT_C':: h5_exit_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5_EXIT_C':: h5_exit_c
               !DEC$ ENDIF
               INTEGER, INTENT(IN) :: status
               END SUBROUTINE h5_exit_c
@@ -202,3 +201,38 @@
 
           END SUBROUTINE h5_exit_f
 
+!----------------------------------------------------------------------
+! Name:		h5_group_revision_f 
+!
+! Purpose: Checks if group revisions are defined	
+!
+! Inputs:  
+!
+! Outputs:  
+!	flag	
+!
+! Programmer:	Elena Pourmal
+!		May 13, 2006
+!
+!
+!----------------------------------------------------------------------
+          SUBROUTINE h5_group_revision_f(flag)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5_group_revision_f
+!DEC$endif
+            IMPLICIT NONE
+            INTEGER, INTENT(OUT) :: flag         ! Return code
+            INTEGER              :: flag1
+            INTERFACE
+              INTEGER FUNCTION h5_group_revision_c()
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !MS$ATTRIBUTES C,reference,alias:'_H5_GROUP_REVISION_C':: h5_group_revision_c
+              !DEC$ ENDIF
+              END FUNCTION h5_group_revision_c
+            END INTERFACE
+
+            flag =  h5_group_revision_c()
+
+          END SUBROUTINE h5_group_revision_f

@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* Programmer:  Quincey Koziol <koziol@ncsa.uiuc.edu>
@@ -94,249 +93,43 @@ H5HF_get_cparam_test(const H5HF_t *fh, H5HF_create_t *cparam)
     HDassert(cparam);
 
     /* Get fractal heap creation parameters */
-    if(fh->hdr->id_len == (unsigned)(1 + fh->hdr->heap_off_size + fh->hdr->heap_len_size))
-        cparam->id_len = 0;
-    else if(fh->hdr->id_len == (1 + fh->hdr->sizeof_size + fh->hdr->sizeof_addr))
-        cparam->id_len = 1;
-    else
-        cparam->id_len = fh->hdr->id_len;
-    cparam->max_man_size = fh->hdr->max_man_size;
+    cparam->addrmap = fh->hdr->addrmap;
+    cparam->standalone_size = fh->hdr->standalone_size;
     HDmemcpy(&(cparam->managed), &(fh->hdr->man_dtable.cparam), sizeof(H5HF_dtable_cparam_t));
-    H5O_msg_copy(H5O_PLINE_ID, &(fh->hdr->pline), &(cparam->pline));
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* H5HF_get_cparam_test() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5HF_cmp_cparam_test
+ * Function:	H5HF_get_dblock_overhead
  *
- * Purpose:	Compare the parameters used to create the fractal heap
+ * Purpose:	Retrieve the size of direct block overhead
  *
- * Return:	Success:	non-negative
- *		Failure:	negative
- *
- * Programmer:	Quincey Koziol
- *              Monday, August 14, 2006
- *
- *-------------------------------------------------------------------------
- */
-int
-H5HF_cmp_cparam_test(const H5HF_create_t *cparam1, const H5HF_create_t *cparam2)
-{
-    int ret_value;         /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5HF_cmp_cparam_test)
-
-    /* Check arguments. */
-    HDassert(cparam1);
-    HDassert(cparam2);
-
-    /* Compare doubling table parameters */
-    if((ret_value = HDmemcmp(&(cparam1->managed), &(cparam2->managed), sizeof(H5HF_dtable_cparam_t))))
-        HGOTO_DONE(ret_value)
-
-    /* Compare other general parameters for heap */
-    if(cparam1->max_man_size < cparam2->max_man_size)
-        HGOTO_DONE(-1)
-    else if(cparam1->max_man_size > cparam2->max_man_size)
-        HGOTO_DONE(1)
-    if(cparam1->id_len < cparam2->id_len)
-        HGOTO_DONE(-1)
-    else if(cparam1->id_len > cparam2->id_len)
-        HGOTO_DONE(1)
-
-    /* Compare "important" parameters for any I/O pipeline filters */
-    if(cparam1->pline.nused < cparam2->pline.nused)
-        HGOTO_DONE(-1)
-    else if(cparam1->pline.nused > cparam2->pline.nused)
-        HGOTO_DONE(1)
-    else {
-        size_t u, v;       /* Local index variables */
-
-        /* Compare each filter */
-        for(u = 0; u < cparam1->pline.nused; u++) {
-            /* Check filter ID */
-            if(cparam1->pline.filter[u].id < cparam2->pline.filter[u].id)
-                HGOTO_DONE(-1)
-            else if(cparam1->pline.filter[u].id > cparam2->pline.filter[u].id)
-                HGOTO_DONE(1)
-
-            /* Check filter flags */
-            if(cparam1->pline.filter[u].flags < cparam2->pline.filter[u].flags)
-                HGOTO_DONE(-1)
-            else if(cparam1->pline.filter[u].flags > cparam2->pline.filter[u].flags)
-                HGOTO_DONE(1)
-
-/* Don't worry about comparing the filter names right now... */
-/* (they are expanded during the encode/decode process, but aren't copied
- *      during the H5Z_append operation, generating false positive failures)
- */
-#ifdef QAK
-            /* Check filter name */
-HDfprintf(stderr, "%s: Check 1.0\n", "H5HF_cmp_cparam_test");
-HDfprintf(stderr, "%s: cparam1->pline.filter[%Zu].name = %s\n", "H5HF_cmp_cparam_test", u, (cparam1->pline.filter[u].name ? cparam1->pline.filter[u].name : "<nil>"));
-HDfprintf(stderr, "%s: cparam2->pline.filter[%Zu].name = %s\n", "H5HF_cmp_cparam_test", u, (cparam2->pline.filter[u].name ? cparam2->pline.filter[u].name : "<nil>"));
-            if(!cparam1->pline.filter[u].name && cparam2->pline.filter[u].name)
-                HGOTO_DONE(-1)
-            else if(cparam1->pline.filter[u].name && !cparam2->pline.filter[u].name)
-                HGOTO_DONE(1)
-            else if(cparam1->pline.filter[u].name && cparam2->pline.filter[u].name) {
-                if((ret_value = HDstrcmp(cparam1->pline.filter[u].name, cparam2->pline.filter[u].name)))
-                    HGOTO_DONE(ret_value)
-            } /* end if */
-#endif /* QAK */
-
-            /* Check # of filter parameters */
-            if(cparam1->pline.filter[u].cd_nelmts < cparam2->pline.filter[u].cd_nelmts)
-                HGOTO_DONE(-1)
-            else if(cparam1->pline.filter[u].cd_nelmts > cparam2->pline.filter[u].cd_nelmts)
-                HGOTO_DONE(1)
-
-            /* Check filter parameters */
-            for(v = 0; v < cparam1->pline.filter[u].cd_nelmts; v++) {
-                if(cparam1->pline.filter[u].cd_values[v] < cparam2->pline.filter[u].cd_values[v])
-                    HGOTO_DONE(-1)
-                else if(cparam1->pline.filter[u].cd_values[v] > cparam2->pline.filter[u].cd_values[v])
-                    HGOTO_DONE(1)
-            } /* end for */
-
-        } /* end for */
-    } /* end else */
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5HF_cmp_cparam_test() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5HF_get_max_root_rows
- *
- * Purpose:	Retrieve the max. # of rows in the root indirect block
- *
- * Return:	Success:	Max. # of rows in root indirect block
+ * Return:	Success:	Size of direct block overhead
  *
  *		Failure:	0
  *
  * Programmer:	Quincey Koziol
- *              Monday, May 22, 2006
+ *              Tuesday, May  9, 2006
  *
  *-------------------------------------------------------------------------
  */
-unsigned
-H5HF_get_max_root_rows(const H5HF_t *fh)
+size_t
+H5HF_get_dblock_overhead(const H5HF_t *fh)
 {
-    unsigned	ret_value;              /* Return value */
+    size_t	ret_value;              /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5HF_get_max_root_rows)
+    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5HF_get_dblock_overhead)
 
     /* Check arguments. */
     HDassert(fh);
 
-    /* Return max. # of rows in root indirect block */
-    ret_value = fh->hdr->man_dtable.max_root_rows;
+    /* Return direct block overhead */
+    ret_value = H5HF_MAN_ABS_DIRECT_OVERHEAD(fh->hdr);
 
     FUNC_LEAVE_NOAPI(ret_value)
-} /* H5HF_get_max_root_rows() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5HF_get_dtable_width_test
- *
- * Purpose:	Retrieve the width of the doubling table for a heap
- *
- * Return:	Success:	Width of the doubling table
- *
- *		Failure:	0
- *
- * Programmer:	Quincey Koziol
- *              Monday, May 22, 2006
- *
- *-------------------------------------------------------------------------
- */
-unsigned
-H5HF_get_dtable_width_test(const H5HF_t *fh)
-{
-    unsigned	ret_value;              /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5HF_get_dtable_width_test)
-
-    /* Check arguments. */
-    HDassert(fh);
-
-    /* Return width of doubling table */
-    ret_value = fh->hdr->man_dtable.cparam.width;
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5HF_get_dtable_width_test() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5HF_get_dtable_max_drows_test
- *
- * Purpose:	Retrieve the max. # of direct block rows in any indirect block
- *
- * Return:	Success:	Max. # of direct block rows
- *
- *		Failure:	0
- *
- * Programmer:	Quincey Koziol
- *              Monday, May 22, 2006
- *
- *-------------------------------------------------------------------------
- */
-unsigned
-H5HF_get_dtable_max_drows_test(const H5HF_t *fh)
-{
-    unsigned	ret_value;              /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5HF_get_dtable_max_drows_test)
-
-    /* Check arguments. */
-    HDassert(fh);
-
-    /* Return max. # of direct blocks in any indirect block */
-    ret_value = fh->hdr->man_dtable.max_direct_rows;
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5HF_get_dtable_max_drows_test() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5HF_get_iblock_max_drows_test
- *
- * Purpose:	Retrieve the max. # of direct block rows in an indirect block
- *
- * Note:        POS is indexed from 1 and is only really working for the
- *              2nd-level indirect blocks (i.e. indirect blocks with
- *              only direct block children)
- *
- * Return:	Success:	Max. # of direct block rows
- *
- *		Failure:	0
- *
- * Programmer:	Quincey Koziol
- *              Monday, May 22, 2006
- *
- *-------------------------------------------------------------------------
- */
-unsigned
-H5HF_get_iblock_max_drows_test(const H5HF_t *fh, unsigned pos)
-{
-    unsigned	ret_value;              /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5HF_get_iblock_max_drows_test)
-
-    /* Check arguments. */
-    HDassert(fh);
-    HDassert(pos);
-
-    /* Return max. # of direct blocks in this indirect block row */
-    ret_value = pos + (fh->hdr->man_dtable.max_direct_bits -
-            fh->hdr->man_dtable.first_row_bits) + 1;
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5HF_get_iblock_max_drows_test() */
+} /* H5HF_get_dblock_overhead() */
 
 
 /*-------------------------------------------------------------------------
@@ -396,7 +189,7 @@ H5HF_get_dblock_free_test(const H5HF_t *fh, unsigned row)
     HDassert(fh);
 
     /* Return direct block free space */
-    ret_value = fh->hdr->man_dtable.row_tot_dblock_free[row];
+    ret_value = fh->hdr->man_dtable.row_dblock_free[row];
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5HF_get_dblock_free_test() */
@@ -405,7 +198,7 @@ H5HF_get_dblock_free_test(const H5HF_t *fh, unsigned row)
 /*-------------------------------------------------------------------------
  * Function:	H5HF_get_id_off_test
  *
- * Purpose:	Retrieve the offset for a [managed] heap ID
+ * Purpose:	Retrieve the offset for a heap ID
  *
  * Return:	Success:	non-negative
  *
@@ -429,106 +222,9 @@ H5HF_get_id_off_test(const H5HF_t *fh, const void *_id, hsize_t *obj_off)
     HDassert(id);
     HDassert(obj_off);
 
-    /* Get the offset for a 'normal' heap ID */
-    id++;
-    UINT64DECODE_VAR(id, *obj_off, fh->hdr->heap_off_size);
+    /* Get the offset for a heap ID */
+    UINT64DECODE_VAR(id, *obj_off, fh->hdr->heap_off_size);                           \
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* H5HF_get_id_off_test() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5HF_get_id_type_test
- *
- * Purpose:	Retrieve the type of a heap ID
- *
- * Return:	Success:	non-negative
- *		Failure:	negative
- *
- * Programmer:	Quincey Koziol
- *              Monday, August 14, 2006
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5HF_get_id_type_test(const void *_id, unsigned char *obj_type)
-{
-    const uint8_t *id = (const uint8_t *)_id;   /* Object ID */
-
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5HF_get_id_type_test)
-
-    /* Check arguments. */
-    HDassert(id);
-    HDassert(obj_type);
-
-    /* Get the type for a heap ID */
-    *obj_type = *id & H5HF_ID_TYPE_MASK;
-
-    FUNC_LEAVE_NOAPI(SUCCEED)
-} /* H5HF_get_id_type_test() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5HF_get_tiny_info_test
- *
- * Purpose:	Retrieve information about tiny object's ID length
- *
- * Return:	Success:	non-negative
- *		Failure:	negative
- *
- * Programmer:	Quincey Koziol
- *              Monday, August 14, 2006
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5HF_get_tiny_info_test(const H5HF_t *fh, size_t *max_len,
-    hbool_t *len_extended)
-{
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5HF_get_tiny_info_test)
-
-    /* Check arguments. */
-    HDassert(fh);
-    HDassert(fh->hdr);
-    HDassert(max_len);
-    HDassert(len_extended);
-
-    /* Retrieve information about tiny object's ID encoding in a heap */
-    *max_len = fh->hdr->tiny_max_len;
-    *len_extended = fh->hdr->tiny_len_extended;
-
-    FUNC_LEAVE_NOAPI(SUCCEED)
-} /* H5HF_get_tiny_info_test() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5HF_get_huge_info_test
- *
- * Purpose:	Retrieve information about huge object's ID length
- *
- * Return:	Success:	non-negative
- *		Failure:	negative
- *
- * Programmer:	Quincey Koziol
- *              Monday, August 14, 2006
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5HF_get_huge_info_test(const H5HF_t *fh, hsize_t *next_id, hbool_t *ids_direct)
-{
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5HF_get_huge_info_test)
-
-    /* Check arguments. */
-    HDassert(fh);
-    HDassert(fh->hdr);
-    HDassert(ids_direct);
-
-    /* Retrieve information about tiny object's ID encoding in a heap */
-    if(next_id)
-        *next_id = fh->hdr->huge_next_id;
-    *ids_direct = fh->hdr->huge_ids_direct;
-
-    FUNC_LEAVE_NOAPI(SUCCEED)
-} /* H5HF_get_huge_info_test() */
 

@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 
@@ -33,13 +32,13 @@
 
 int main( void )
 {
- typedef struct Particle
+ typedef struct Particle 
  {
   char   name[16];
   int    lati;
   int    longi;
   float  pressure;
-  double temperature;
+  double temperature; 
  } Particle;
 
  Particle  dst_buf[NRECORDS];
@@ -51,19 +50,19 @@ int main( void )
                                 HOFFSET( Particle, longi ),
                                 HOFFSET( Particle, pressure ),
                                 HOFFSET( Particle, temperature )};
-
+ 
  Particle  p = {"zero",0,0, 0.0f, 0.0};
  size_t dst_sizes[NFIELDS] = { sizeof( p.name),
                                sizeof( p.lati),
                                sizeof( p.longi),
                                sizeof( p.pressure),
                                sizeof( p.temperature)};
-
+  
  /* Define field information */
- const char *field_names[NFIELDS]  =
+ const char *field_names[NFIELDS]  = 
  { "Name","Latitude", "Longitude", "Pressure", "Temperature" };
- /* Fill value particle */
- Particle   fill_data[1] =
+ /* Fill value particle */ 
+ Particle   fill_data[1] = 
 	{ {"no data",-1,-1, -99.0f, -99.0} };
  hid_t      field_type[NFIELDS];
  hid_t      string_type;
@@ -74,8 +73,8 @@ int main( void )
  herr_t     status;
  int        i;
 
- /* Define 2 new particles to write */
- Particle  particle_in[NRECORDS_WRITE] =
+ /* Define 2 new particles to write */ 
+ Particle  particle_in[NRECORDS_WRITE] = 
  { {"zero",0,0, 0.0f, 0.0},
  {"one",10,10, 1.0f, 10.0} };
 
@@ -96,21 +95,21 @@ int main( void )
   file_id,
   TABLE_NAME,
   NFIELDS,
-  NRECORDS,
-  dst_size,
-  field_names,
-  dst_offset,
-  field_type,
-  chunk_size,
-  fill_data,
+  NRECORDS, 
+  dst_size, 
+  field_names, 
+  dst_offset, 
+  field_type, 
+  chunk_size, 
+  fill_data,       
   0,           /* no compression */
   NULL );      /* no data written */
 
 
  /* Overwrite 2 records starting at record 0 */
- start    = 0;
- nrecords = NRECORDS_WRITE;
- status=H5TBwrite_records( file_id, TABLE_NAME, start, nrecords, dst_size, dst_offset,
+ start    = 0;      
+ nrecords = NRECORDS_WRITE; 
+ status=H5TBwrite_records( file_id, TABLE_NAME, start, nrecords, dst_size, dst_offset, 
   dst_sizes, particle_in);
 
  /* read the table */
@@ -118,7 +117,7 @@ int main( void )
 
  /* print it by rows */
  for (i=0; i<NRECORDS; i++) {
-  printf ("%-5s %-5d %-5d %-5f %-5f",
+  printf ("%-5s %-5d %-5d %-5f %-5f", 
    dst_buf[i].name,
    dst_buf[i].lati,
    dst_buf[i].longi,
@@ -126,11 +125,8 @@ int main( void )
    dst_buf[i].temperature);
   printf ("\n");
  }
-
-  /* close type */
- H5Tclose( string_type );
  
- /* close the file */
+ /* Close the file. */
  H5Fclose( file_id );
 
  return 0;

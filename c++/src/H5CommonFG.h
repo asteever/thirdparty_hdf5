@@ -1,6 +1,5 @@
 // C++ informative line for the emacs editor: -*- C++ -*-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -10,8 +9,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 // CommonFG is a protocol class.  Its existence is simply to provide the
@@ -69,17 +68,6 @@ class H5_DLLCPP CommonFG {
 	// Returns the number of objects in this group.
 	hsize_t getNumObjs() const;
 
-	// Retrieves the name of an object in this group, given the
-	// object's index.
-	ssize_t getObjnameByIdx(hsize_t idx, H5std_string& name, size_t size) const;
-	H5std_string getObjnameByIdx(hsize_t idx) const;
-
-#ifndef H5_NO_DEPRECATED_SYMBOLS
-	// Returns the type of an object in this group, given the
-	// object's index.
-	H5G_obj_t getObjTypeByIdx(hsize_t idx) const;
-	H5G_obj_t getObjTypeByIdx(hsize_t idx, H5std_string& type_name) const;
-
 	// Returns information about an HDF5 object, given by its name,
 	// at this location.
 	void getObjinfo(const char* name, hbool_t follow_link, H5G_stat_t& statbuf) const;
@@ -87,16 +75,25 @@ class H5_DLLCPP CommonFG {
 	void getObjinfo(const char* name, H5G_stat_t& statbuf) const;
 	void getObjinfo(const H5std_string& name, H5G_stat_t& statbuf) const;
 
+	// Retrieves the name of an object in this group, given the
+	// object's index.
+	ssize_t getObjnameByIdx(hsize_t idx, H5std_string& name, size_t size) const;
+	H5std_string getObjnameByIdx(hsize_t idx) const;
+
+	// Returns the type of an object in this group, given the
+	// object's index.
+	H5G_obj_t getObjTypeByIdx(hsize_t idx) const;
+	H5G_obj_t getObjTypeByIdx(hsize_t idx, H5std_string& type_name) const;
+
 	// Iterates over the elements of this group - not implemented in
 	// C++ style yet.
 	int iterateElems(const char* name, int *idx, H5G_iterate_t op, void *op_data);
 	int iterateElems(const H5std_string& name, int *idx, H5G_iterate_t op, void *op_data);
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
 
 	// Creates a link of the specified type from new_name to current_name;
 	// both names are interpreted relative to the specified location id.
-	void link(H5L_type_t link_type, const char* curr_name, const char* new_name) const;
-	void link(H5L_type_t link_type, const H5std_string& curr_name, const H5std_string& new_name) const;
+	void link(H5G_link_t link_type, const char* curr_name, const char* new_name) const;
+	void link(H5G_link_t link_type, const H5std_string& curr_name, const H5std_string& new_name) const;
 
 	// Removes the specified name at this location.
 	void unlink(const char* name) const;
@@ -154,7 +151,7 @@ class H5_DLLCPP CommonFG {
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 
 	/// For subclasses, H5File and Group, to throw appropriate exception.
-	virtual void throwException(const H5std_string& func_name, const H5std_string& msg) const = 0;
+	virtual void throwException(const H5std_string func_name, const H5std_string msg) const = 0;
 
 	// Default constructor.
 	CommonFG();

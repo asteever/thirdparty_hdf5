@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* This files contains C stubs for H5T Fortran APIs */
@@ -20,7 +19,7 @@
 
 /*----------------------------------------------------------------------------
  * Name:        h5topen_c
- * Purpose:     Call H5Topen2 to open a datatype
+ * Purpose:     Call H5Topen to open a datatype
  * Inputs:      loc_id - file or group identifier
  *              name - name of the datatype within file or  group
  *              namelen - name length
@@ -33,36 +32,36 @@
 int_f
 nh5topen_c (hid_t_f *loc_id, _fcd name, int_f *namelen, hid_t_f *type_id)
 {
-    char *c_name = NULL;
-    hid_t c_type_id;
-    int ret_value = -1;
+     int ret_value = -1;
+     char *c_name;
+     int c_namelen;
+     hid_t c_type_id;
+     hid_t c_loc_id;
 
-    /*
-     * Convert FORTRAN name to C name
-     */
-    if(NULL == (c_name = (char *)HD5f2cstring(name, (size_t)*namelen)))
-        goto done;
+     /*
+      * Convert FORTRAN name to C name
+      */
+     c_namelen = *namelen;
+     c_name = (char *)HD5f2cstring(name, c_namelen);
+     if (c_name == NULL) return ret_value;
 
-    /*
-     * Call H5Topen2 function.
-     */
-    if((c_type_id = H5Topen2((hid_t)*loc_id, c_name, H5P_DEFAULT)) < 0)
-        goto done;
-    *type_id = (hid_t_f)c_type_id;
+     /*
+      * Call H5Topen function.
+      */
+     c_loc_id = *loc_id;
+     c_type_id = H5Topen(c_loc_id, c_name);
 
-    ret_value = 0;
-
-done:
-    if(c_name)
-        HDfree(c_name);
-
-    return ret_value;
+     if (c_type_id < 0) return ret_value;
+     *type_id = (hid_t_f)c_type_id;
+     HDfree(c_name);
+     ret_value = 0;
+     return ret_value;
 }
 
 
 /*----------------------------------------------------------------------------
  * Name:        h5tcommit_c
- * Purpose:     Call H5Tcommit2 to commit a datatype
+ * Purpose:     Call H5Tcommit to commit a datatype
  * Inputs:      loc_id - file or group identifier
  *              name - name of the datatype within file or  group
  *              namelen - name length
@@ -73,25 +72,32 @@ done:
  * Modifications:
  *---------------------------------------------------------------------------*/
 int_f
-nh5tcommit_c(hid_t_f *loc_id, _fcd name, int_f *namelen, hid_t_f *type_id)
+nh5tcommit_c (hid_t_f *loc_id, _fcd name, int_f *namelen, hid_t_f *type_id)
 {
-    char *c_name = NULL;
-    int ret_value = -1;
+     int ret_value = -1;
+     char *c_name;
+     int c_namelen;
+     hid_t c_type_id;
+     hid_t c_loc_id;
+     herr_t status;
 
-    /* Convert FORTRAN name to C name */
-    if(NULL == (c_name = (char *)HD5f2cstring(name, (size_t)*namelen)))
-        goto done;
+     /*
+      * Convert FORTRAN name to C name
+      */
+     c_namelen = *namelen;
+     c_name = (char *)HD5f2cstring(name, c_namelen);
+     if (c_name == NULL) return ret_value;
 
-    /* Call H5Tcommit2 function */
-    if(H5Tcommit2((hid_t)*loc_id, c_name, (hid_t)*type_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT) < 0)
-        goto done;
-
-    ret_value = 0;
-
-done:
-    if(c_name)
-        HDfree(c_name);
-    return ret_value;
+     /*
+      * Call H5Tcommit function.
+      */
+     c_loc_id = *loc_id;
+     c_type_id = *type_id;
+     status = H5Tcommit(c_loc_id, c_name, c_type_id);
+     HDfree(c_name);
+     if (status < 0) return ret_value;
+     ret_value = 0;
+     return ret_value;
 }
 
 /*----------------------------------------------------------------------------
@@ -987,7 +993,7 @@ nh5tget_member_name_c ( hid_t_f *type_id ,int_f* idx, _fcd member_name, int_f *n
   c_name = H5Tget_member_name(c_type_id, c_index);
   if (c_name == NULL ) return ret_value;
 
-  HD5packFstring(c_name, _fcdtocp(member_name), strlen(c_name));
+  HD5packFstring(c_name, _fcdtocp(member_name), (int)strlen(c_name));
   *namelen = (int_f)strlen(c_name);
   HDfree(c_name);
   ret_value = 0;
@@ -1011,7 +1017,7 @@ nh5tget_member_index_c (hid_t_f *type_id, _fcd name, int_f *namelen, int_f *idx)
 {
      int ret_value = -1;
      char *c_name;
-     size_t c_namelen;
+     int c_namelen;
      hid_t c_type_id;
      int c_index;
 
@@ -1070,7 +1076,7 @@ nh5tget_member_offset_c ( hid_t_f *type_id ,int_f* member_no, size_t_f * offset)
 
 /*----------------------------------------------------------------------------
  * Name:        h5tget_array_dims_c
- * Purpose:     Call H5Tget_array_dims2 to get
+ * Purpose:     Call H5Tget_array_dims to get
  *              dimensions of array datatype
  * Inputs:      type_id - identifier of the array datatype
  * Outputs:     dims -  dimensions(sizes of dimensions) of the array
@@ -1083,23 +1089,33 @@ nh5tget_member_offset_c ( hid_t_f *type_id ,int_f* member_no, size_t_f * offset)
 int_f
 nh5tget_array_dims_c ( hid_t_f *type_id , hsize_t_f * dims)
 {
-    hsize_t c_dims[H5S_MAX_RANK];
-    int rank, i;
-    int ret_value = -1;
+  int ret_value = -1;
+  hid_t c_type_id;
+  hsize_t * c_dims;
+  int rank, i;
+  herr_t status;
 
-    if((rank = H5Tget_array_ndims((hid_t)*type_id)) < 0)
-        goto DONE;
+  rank = H5Tget_array_ndims((hid_t)*type_id);
+  if (rank < 0) return ret_value;
+  c_dims = (hsize_t*)malloc(sizeof(hsize_t)*rank);
+  if(!c_dims) return ret_value;
 
-    if(H5Tget_array_dims2((hid_t)*type_id, c_dims) < 0)
-        goto DONE;
+  c_type_id = (hid_t)*type_id;
+  status = H5Tget_array_dims(c_type_id, c_dims, NULL);
+  if (status < 0) {
+             HDfree(c_dims);
+             return ret_value;
+  }
 
-    for(i = 0; i < rank; i++)
-        dims[(rank - i) - 1] = (hsize_t_f)c_dims[i];
+  for(i =0; i < rank; i++)
+  {
+      dims[rank-i-1] = (hsize_t_f)c_dims[i];
+  }
 
-    ret_value = 0;
+  ret_value = 0;
+  HDfree(c_dims);
 
-DONE:
-    return ret_value;
+  return ret_value;
 }
 
 /*----------------------------------------------------------------------------
@@ -1238,7 +1254,7 @@ nh5tinsert_c(hid_t_f *type_id, _fcd name, int_f* namelen, size_t_f *offset, hid_
   hid_t c_type_id;
   hid_t c_field_id;
   char* c_name;
-  size_t c_namelen;
+  int c_namelen;
   size_t c_offset;
   herr_t error;
 
@@ -1286,7 +1302,7 @@ nh5tpack_c(hid_t_f * type_id)
 
 /*----------------------------------------------------------------------------
  * Name:        h5tarray_create_c
- * Purpose:     Call H5Tarray_create2 to create array datatype
+ * Purpose:     Call H5Tarray_create to create array datatype
  * Inputs:      base_id - identifier of array base datatype
  *              rank - array's rank
  *              dims - Size of new member array
@@ -1299,26 +1315,38 @@ nh5tpack_c(hid_t_f * type_id)
 int_f
 nh5tarray_create_c(hid_t_f * base_id, int_f *rank, hsize_t_f* dims, hid_t_f* type_id)
 {
-    hsize_t c_dims[H5S_MAX_RANK];
-    hid_t c_type_id;
-    unsigned u;                 /* Local index variable */
-    int ret_value = -1;
+  int ret_value = -1;
+  hid_t c_base_id;
+  hid_t c_type_id;
+  int c_rank;
+  hsize_t *c_dims;
+  int i;
+
+  c_dims = (hsize_t*)malloc(sizeof(hsize_t)*(*rank));
+  if(!c_dims) return ret_value;
 
 
-    /*
-     * Transpose dimension arrays because of C-FORTRAN storage order
-     */
-    for(u = 0; u < (unsigned)*rank ; u++)
-        c_dims[u] =  (hsize_t)dims[(*rank - u) - 1];
+  /*
+   * Transpose dimension arrays because of C-FORTRAN storage order
+   */
+  for (i = 0; i < *rank ; i++) {
+     c_dims[i] =  (hsize_t)dims[*rank - i - 1];
+  }
 
-    if((c_type_id = H5Tarray_create2((hid_t)*base_id, (unsigned)*rank, c_dims)) < 0)
-        goto DONE;
+  c_base_id = (hid_t)*base_id;
+  c_rank = (int)*rank;
+  c_type_id = H5Tarray_create(c_base_id, c_rank, c_dims, NULL);
 
-    *type_id = (hid_t_f)c_type_id;
-    ret_value = 0;
+  if(c_type_id < 0) {
+          HDfree(c_dims);
+          return ret_value;
+  }
 
-DONE:
-    return ret_value;
+  *type_id = (hid_t_f)c_type_id;
+  ret_value = 0;
+  HDfree(c_dims);
+  return ret_value;
+
 }
 
 
@@ -1368,7 +1396,7 @@ nh5tenum_insert_c(hid_t_f *type_id, _fcd name, int_f* namelen, int_f* value)
   int ret_value = -1;
   hid_t c_type_id;
   char* c_name;
-  size_t c_namelen;
+  int c_namelen;
   int_f c_value;
   herr_t error;
 
@@ -1415,7 +1443,7 @@ nh5tenum_nameof_c(hid_t_f *type_id, int_f* value, _fcd name, size_t_f* namelen)
   c_name = (char *)malloc(sizeof(char)*c_namelen);
   c_type_id = (hid_t)*type_id;
   error = H5Tenum_nameof(c_type_id, &c_value, c_name, c_namelen);
-  HD5packFstring(c_name, _fcdtocp(name), strlen(c_name));
+  HD5packFstring(c_name, _fcdtocp(name), (int)strlen(c_name));
   HDfree(c_name);
 
   if(error < 0) return ret_value;
@@ -1443,7 +1471,7 @@ nh5tenum_valueof_c(hid_t_f *type_id, _fcd name, int_f* namelen, int_f* value)
   int ret_value = -1;
   hid_t c_type_id;
   char* c_name;
-  size_t c_namelen;
+  int c_namelen;
   herr_t error;
   c_namelen = *namelen;
   c_name = (char *)HD5f2cstring(name, c_namelen);
@@ -1511,7 +1539,7 @@ nh5tset_tag_c(hid_t_f* type_id, _fcd tag, int_f* namelen)
   hid_t c_type_id;
   herr_t status;
   char* c_tag;
-  size_t c_namelen;
+  int c_namelen;
 
   c_namelen = *namelen;
   c_tag = (char *)HD5f2cstring(tag, c_namelen);
@@ -1548,7 +1576,7 @@ nh5tget_tag_c(hid_t_f* type_id, _fcd tag, int_f* taglen)
   c_tag = H5Tget_tag(c_type_id);
   if (c_tag == NULL ) return ret_value;
 
-  HD5packFstring(c_tag, _fcdtocp(tag), strlen(c_tag));
+  HD5packFstring(c_tag, _fcdtocp(tag), (int)strlen(c_tag));
   *taglen = (int_f)HDstrlen(c_tag);
   HDfree(c_tag);
   ret_value = 0;

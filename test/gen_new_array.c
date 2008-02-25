@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -93,8 +92,8 @@ main(void)
         printf("field 1 insert<0!\n");
 
     /* Creat the array datatype */
-    arr_type = H5Tarray_create2(H5T_NATIVE_FLOAT, ARRAY1_RANK, tdims1);
-    if(arr_type < 0)
+    arr_type=H5Tarray_create(H5T_NATIVE_FLOAT,ARRAY1_RANK,tdims1,NULL);
+    if(arr_type<0)
         printf("arr_type<0!\n");
 
     /* Insert float array field */
@@ -108,8 +107,8 @@ main(void)
         printf("field 3 array close<0!\n");
 
     /* Creat the array datatype */
-    arr_type = H5Tarray_create2(H5T_NATIVE_LONG, ARRAY1_RANK, tdims1);
-    if(arr_type < 0)
+    arr_type=H5Tarray_create(H5T_NATIVE_LONG,ARRAY1_RANK,tdims1,NULL);
+    if(arr_type<0)
         printf("arr_type<0!\n");
 
     /* Insert long array field */
@@ -128,7 +127,7 @@ main(void)
         printf("field 4 insert<0!\n");
 
     /* Create the dataset with compound array fields */
-    dset = H5Dcreate2(file, "Dataset1", type, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    dset = H5Dcreate(file, "Dataset1", type, space, H5P_DEFAULT);
     if(dset<0)
         printf("dset<0!\n");
     H5Dclose(dset);
@@ -137,12 +136,12 @@ main(void)
     H5Tclose(type);
 
     /* Create the compound datatype with array fields */
-    type = H5Tarray_create2(H5T_NATIVE_INT, ARRAY1_RANK, tdims1);
-    if(type < 0)
+    type = H5Tarray_create(H5T_NATIVE_INT, ARRAY1_RANK, tdims1, NULL);
+    if(type<0)
         printf("type<0!\n");
 
     /* Create the dataset with array datatype */
-    dset = H5Dcreate2(file, "Dataset2", type, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    dset = H5Dcreate(file, "Dataset2", type, space, H5P_DEFAULT);
     if(dset<0)
         printf("dset<0!\n");
     H5Dclose(dset);

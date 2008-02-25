@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* This files contains C stubs for H5R Fortran APIs */
@@ -36,7 +35,7 @@ nh5rcreate_object_c (haddr_t_f *ref, hid_t_f *loc_id, _fcd name, int_f *namelen)
      hid_t c_loc_id;
      int ret_value_c;
      char *c_name;
-     size_t c_namelen;
+     int c_namelen;
      hobj_ref_t ref_c;
 
      /*
@@ -83,7 +82,7 @@ nh5rcreate_region_c (int_f *ref, hid_t_f *loc_id, _fcd name, int_f *namelen, hid
      hid_t c_space_id;
      int ret_value_c;
      char *c_name;
-     size_t c_namelen;
+     int c_namelen;
      hdset_reg_ref_t ref_c;
 
      /*
@@ -220,22 +219,20 @@ nh5rget_region_region_c (hid_t_f *dset_id, int_f *ref, hid_t_f *space_id)
 int_f
 nh5rget_object_type_obj_c (hid_t_f *dset_id, haddr_t_f *ref, int_f *obj_type)
 {
-     H5O_type_t c_obj_type;
+     int ret_value = -1;
+     hid_t c_dset_id;
+     int c_obj_type;
      hobj_ref_t ref_c;
-     int_f ret_value = -1;
 
-     ref_c = *ref;
+     ref_c=*ref;
 
      /*
       * Call H5Rget_object_type function.
       */
-     if(H5Rget_obj_type2((hid_t)*dset_id, H5R_OBJECT, &ref_c, &c_obj_type) < 0)
-         return ret_value;
-
+     c_dset_id = *dset_id;
+     c_obj_type = H5Rget_obj_type(c_dset_id, H5R_OBJECT, &ref_c);
+     if(c_obj_type < 0) return ret_value;
      *obj_type = (int_f)c_obj_type;
-
      ret_value = 0;
-
      return ret_value;
 }
-

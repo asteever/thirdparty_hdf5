@@ -1,7 +1,5 @@
 ## config/commence.am
-## (Use double hashes for copyright notice so that automake treats it as
-## comments and does not pass it to Makefile.in)
-## Copyright by The HDF Group.
+##
 ## Copyright by the Board of Trustees of the University of Illinois.
 ## All rights reserved.
 ##
@@ -11,8 +9,8 @@
 ## of the source code distribution tree; Copyright.html can be found at the
 ## root level of an installed copy of the electronic HDF5 document set and
 ## is linked from the top-level documents page.  It can also be found at
-## http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-## access to either file, you may request a copy from help@hdfgroup.org.
+## http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
+## access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 
 
 ## Textually included in the beginning of every HDF5 Makefile.am
@@ -21,6 +19,10 @@
 # Shell commands used in Makefiles
 RM=rm -f
 CP=cp
+TIME=time
+
+# Path for hl needed in hdf5.h
+INCLUDES=-I$(top_srcdir)/hl/src
 
 # Hardcode SHELL to be /bin/sh.  Most machines have this shell, and
 # on at least one machine configure fails to detect its existence (janus).
@@ -55,16 +57,23 @@ docdir = $(exec_prefix)/doc
 # Scripts used to build examples
 # If only shared libraries have been installed, have h5cc build examples with
 # shared libraries instead of static libraries
-H5CC=$(bindir)/h5cc
-H5CC_PP=$(bindir)/h5pcc
-H5FC=$(bindir)/h5fc
-H5FC_PP=$(bindir)/h5pfc
-H5CPP=$(bindir)/h5c++
+if BUILD_SHARED_ONLY_CONDITIONAL
+  H5CC=$(bindir)/h5cc -shlib
+  H5CC_PP=$(bindir)/h5pcc -shlib
+  H5FC=$(bindir)/h5fc -shlib
+  H5FC_PP=$(bindir)/h5pfc -shlib
+  H5CPP=$(bindir)/h5c++ -shlib
+else
+  H5CC=$(bindir)/h5cc
+  H5CC_PP=$(bindir)/h5pcc
+  H5FC=$(bindir)/h5fc
+  H5FC_PP=$(bindir)/h5pfc
+  H5CPP=$(bindir)/h5c++
+endif
   
 
 # H5_CFLAGS holds flags that should be used as CFLAGS when building hdf5,
 # but which shouldn't be exported to h5cc for building other programs.
-
 CFLAGS=@CFLAGS@ @H5_CFLAGS@
 CPPFLAGS=@CPPFLAGS@ @H5_CPPFLAGS@
 FCFLAGS=@FCFLAGS@ @H5_FCFLAGS@
@@ -80,10 +89,10 @@ F9XMODFLAG=@F9XMODFLAG@
 
 # Set the paths for AFS installs of autotools for Linux machines
 # Ideally, these tools should never be needed during the build.
-AUTOCONF=/home1/packages/autoconf/autoconf-2.60/bin/autoconf
-AUTOMAKE=/home1/packages/automake/automake-1.9.6/bin/automake-1.9
-AUTOHEADER=/home1/packages/autoconf/autoconf-2.60/bin/autoheader
-ACLOCAL=/home1/packages/automake/automake-1.9.6/bin/aclocal-1.9 -I /afs/ncsa/projects/hdf/packages/libtool_1.5.14/Linux_2.4/share/aclocal
+ACLOCAL=/afs/ncsa/projects/hdf/packages/automake_1.9.5/Linux_2.4/bin/aclocal -I /afs/ncsa/projects/hdf/packages/libtool_1.5.14/Linux_2.4/share/aclocal
+AUTOHEADER=/afs/ncsa/projects/hdf/packages/autoconf_2.59/Linux_2.4/bin/autoheader
+AUTOMAKE=/afs/ncsa/projects/hdf/packages/automake_1.9.5/Linux_2.4/bin/automake
+AUTOCONF=/afs/ncsa/projects/hdf/packages/autoconf_2.59/Linux_2.4/bin/autoconf
 
 # .chkexe files are used to mark tests that have run successfully.
 # .chklog files are output from those tests.
@@ -96,8 +105,5 @@ CHECK_CLEANFILES=*.chkexe *.chklog *.clog
 # exists.
 .PHONY: build-check-clean build-check-p build-check-s build-lib build-progs \
         build-tests check-clean check-install check-p check-s check-vfd \
-        install-doc lib progs tests uninstall-doc _exec_check-s _test help
-
-help:
-	@$(top_srcdir)/bin/makehelp
+        install-doc lib progs tests uninstall-doc _exec_check-s _test
 

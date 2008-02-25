@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*-------------------------------------------------------------------------
@@ -55,7 +54,7 @@ static herr_t H5B_serialize(const H5F_t *f, const H5B_t *bt);
 
 /* Metadata cache callbacks */
 static H5B_t *H5B_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void *_type, void *udata);
-static herr_t H5B_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5B_t *b, unsigned UNUSED * flags_ptr);
+static herr_t H5B_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5B_t *b);
 static herr_t H5B_clear(H5F_t *f, H5B_t *b, hbool_t destroy);
 static herr_t H5B_compute_size(const H5F_t *f, const H5B_t *bt, size_t *size_ptr);
 
@@ -107,7 +106,7 @@ H5B_serialize(const H5F_t *f, const H5B_t *bt)
     HDassert(f);
     HDassert(bt);
     HDassert(bt->rc_shared);
-    shared=(H5B_shared_t *)H5RC_GET_OBJ(bt->rc_shared);
+    shared=H5RC_GET_OBJ(bt->rc_shared);
     HDassert(shared);
 
     p = shared->page;
@@ -190,7 +189,7 @@ H5B_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void *_type, void *udata)
     HDmemset(&bt->cache_info,0,sizeof(H5AC_info_t));
     if((bt->rc_shared=(type->get_shared)(f, udata))==NULL)
 	HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL, "can't retrieve B-tree node buffer")
-    shared=(H5B_shared_t *)H5RC_GET_OBJ(bt->rc_shared);
+    shared=H5RC_GET_OBJ(bt->rc_shared);
     HDassert(shared);
     if (NULL==(bt->native=H5FL_BLK_MALLOC(native_block,shared->sizeof_keys)) ||
             NULL==(bt->child=H5FL_SEQ_MALLOC(haddr_t,(size_t)shared->two_k)))
@@ -259,16 +258,10 @@ done:
  *		matzke@llnl.gov
  *		Jun 23 1997
  *
- * Changes:     JRM -- 8/21/06
- *              Added the flags_ptr parameter.  This parameter exists to
- *              allow the flush routine to report to the cache if the
- *              entry is resized or renamed as a result of the flush.
- *              *flags_ptr is set to H5C_CALLBACK__NO_FLAGS_SET on entry.
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5B_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5B_t *bt, unsigned UNUSED * flags_ptr)
+H5B_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5B_t *bt)
 {
     H5B_shared_t        *shared;        /* Pointer to shared B-tree info */
     herr_t      ret_value = SUCCEED;    /* Return value */
@@ -279,7 +272,7 @@ H5B_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5B_t *bt, uns
     HDassert(f);
     HDassert(H5F_addr_defined(addr));
     HDassert(bt);
-    shared=(H5B_shared_t *)H5RC_GET_OBJ(bt->rc_shared);
+    shared=H5RC_GET_OBJ(bt->rc_shared);
     HDassert(shared);
     HDassert(shared->type);
     HDassert(shared->type->encode);
@@ -406,7 +399,7 @@ H5B_compute_size(const H5F_t *f, const H5B_t *bt, size_t *size_ptr)
     HDassert(f);
     HDassert(bt);
     HDassert(bt->rc_shared);
-    shared=(H5B_shared_t *)H5RC_GET_OBJ(bt->rc_shared);
+    shared=H5RC_GET_OBJ(bt->rc_shared);
     HDassert(shared);
     HDassert(shared->type);
     HDassert(size_ptr);

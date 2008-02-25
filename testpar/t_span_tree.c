@@ -1,6 +1,5 @@
 
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -10,8 +9,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -312,8 +311,8 @@ void coll_write_test(int chunk_factor)
   VRFY((ret >= 0),"Fill value creation property list succeeded");
 
   if(chunk_factor != 0) {
-    chunk_dims[0] = fsdim[0] / chunk_factor;
-    chunk_dims[1] = fsdim[1] / chunk_factor;
+    chunk_dims[0] = fsdim[0]/chunk_factor;
+    chunk_dims[1] = fsdim[1]/chunk_factor;
     ret = H5Pset_chunk(dcrt_plist, 2, chunk_dims);
     VRFY((ret >= 0),"chunk creation property list succeeded");
   }
@@ -333,10 +332,10 @@ void coll_write_test(int chunk_factor)
    * Create dataset in the file. Notice that creation
    * property list dcrt_plist is used.
    */
-  datasetc = H5Dcreate2(file, "collect_write", H5T_NATIVE_INT, fspaceid, H5P_DEFAULT, dcrt_plist, H5P_DEFAULT);
+  datasetc = H5Dcreate(file, "collect_write", H5T_NATIVE_INT, fspaceid, dcrt_plist);
   VRFY((datasetc >= 0),"dataset created succeeded");
 
-  dataseti = H5Dcreate2(file, "independ_write", H5T_NATIVE_INT, fspaceid, H5P_DEFAULT, dcrt_plist, H5P_DEFAULT);
+  dataseti = H5Dcreate(file, "independ_write", H5T_NATIVE_INT, fspaceid, dcrt_plist);
   VRFY((dataseti >= 0),"dataset created succeeded");
 
   /* The First selection for FILE
@@ -349,7 +348,7 @@ void coll_write_test(int chunk_factor)
    */
 
   start[0]  = FHSTART0;
-  start[1]  = FHSTART1 + mpi_rank * FHSTRIDE1 * FHCOUNT1;
+  start[1]  = FHSTART1+mpi_rank*FHSTRIDE1*FHCOUNT1;
   stride[0] = FHSTRIDE0;
   stride[1] = FHSTRIDE1;
   count[0]  = FHCOUNT0;
@@ -415,11 +414,6 @@ void coll_write_test(int chunk_factor)
 
   ret = H5Pset_dxpl_mpio(dxfer_plist, H5FD_MPIO_COLLECTIVE);
   VRFY((ret >= 0),"MPIO data transfer property list succeed");
-  if(dxfer_coll_type == DXFER_INDEPENDENT_IO) {
-     ret = H5Pset_dxpl_mpio_collective_opt(dxfer_plist,H5FD_MPIO_INDIVIDUAL_IO);
-     VRFY((ret>= 0),"set independent IO collectively succeeded");
-  }
-
 
   /* collective write */
   ret = H5Dwrite(datasetc, H5T_NATIVE_INT, mspaceid1, fspaceid, dxfer_plist, vector);
@@ -483,11 +477,11 @@ void coll_write_test(int chunk_factor)
   /*
    * Open the dataset.
    */
-  datasetc = H5Dopen2(file,"collect_write", H5P_DEFAULT);
-  VRFY((datasetc >= 0),"H5Dopen2 succeeded");
+  datasetc = H5Dopen(file,"collect_write");
+  VRFY((datasetc >= 0),"H5Dopen succeeded");
 
-  dataseti = H5Dopen2(file,"independ_write", H5P_DEFAULT);
-  VRFY((dataseti >= 0),"H5Dopen2 succeeded");
+  dataseti = H5Dopen(file,"independ_write");
+  VRFY((dataseti >= 0),"H5Dopen succeeded");
 
   /*
    * Get dataspace of the open dataset.
@@ -760,8 +754,8 @@ void coll_read_test(int chunk_factor)
   /*
    * Open the dataset.
    */
-  dataseti = H5Dopen2(file,"independ_write", H5P_DEFAULT);
-  VRFY((dataseti >= 0),"H5Dopen2 succeeded");
+  dataseti = H5Dopen(file,"independ_write");
+  VRFY((dataseti >= 0),"H5Dopen succeeded");
 
   /*
    * Get dataspace of the open dataset.
@@ -877,11 +871,6 @@ void coll_read_test(int chunk_factor)
 
   ret = H5Pset_dxpl_mpio(dxfer_plist, H5FD_MPIO_COLLECTIVE);
   VRFY((ret >= 0),"MPIO data transfer property list succeed");
-  if(dxfer_coll_type == DXFER_INDEPENDENT_IO) {
-     ret = H5Pset_dxpl_mpio_collective_opt(dxfer_plist,H5FD_MPIO_INDIVIDUAL_IO);
-     VRFY((ret>= 0),"set independent IO collectively succeeded");
-  }
-
 
   /* Collective read */
   ret = H5Dread(dataseti, H5T_NATIVE_INT, mspaceid, fspaceid1,

@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -81,20 +80,20 @@ main (void)
      * Create a new dataset within the file using cparms
      * creation properties.
      */
-    dataset = H5Dcreate2(file, DATASETNAME, H5T_NATIVE_INT, dataspace, H5P_DEFAULT,
-			cparms, H5P_DEFAULT);
+    dataset = H5Dcreate(file, DATASETNAME, H5T_NATIVE_INT, dataspace,
+			cparms);
 
     /*
      * Extend the dataset. This call assures that dataset is at least 3 x 3.
      */
     size[0]   = 3;
     size[1]   = 3;
-    status = H5Dset_extent(dataset, size);
+    status = H5Dextend (dataset, size);
 
     /*
      * Select a hyperslab.
      */
-    filespace = H5Dget_space(dataset);
+    filespace = H5Dget_space (dataset);
     offset[0] = 0;
     offset[1] = 0;
     status = H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset, NULL,
@@ -112,12 +111,12 @@ main (void)
     dims[0]   = dims1[0] + dims2[0];
     size[0]   = dims[0];
     size[1]   = dims[1];
-    status = H5Dset_extent(dataset, size);
+    status = H5Dextend (dataset, size);
 
     /*
      * Select a hyperslab.
      */
-    filespace = H5Dget_space(dataset);
+    filespace = H5Dget_space (dataset);
     offset[0] = 3;
     offset[1] = 0;
     status = H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset, NULL,
@@ -140,12 +139,12 @@ main (void)
     dims[1]   = dims1[1] + dims3[1];
     size[0]   = dims[0];
     size[1]   = dims[1];
-    status = H5Dset_extent(dataset, size);
+    status = H5Dextend (dataset, size);
 
     /*
      * Select a hyperslab
      */
-    filespace = H5Dget_space(dataset);
+    filespace = H5Dget_space (dataset);
     offset[0] = 0;
     offset[1] = 3;
     status = H5Sselect_hyperslab(filespace, H5S_SELECT_SET, offset, NULL,

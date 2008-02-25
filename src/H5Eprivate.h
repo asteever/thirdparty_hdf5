@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -24,8 +23,44 @@
 /* Private headers needed by this file */
 #include "H5private.h"
 
-/* Typedef for error stack (defined in H5Epkg.h) */
-typedef struct H5E_t H5E_t;
+#define H5E_NSLOTS	32	/*number of slots in an error stack	     */
+#define H5E_RESERVED_ATOMS  0
+
+/* Error class */
+typedef struct H5E_cls_t {
+    char *cls_name;             /* Name of error class */
+    char *lib_name;             /* Name of library within class */
+    char *lib_vers;             /* Version of library */
+} H5E_cls_t;
+
+/* Major or minor message */
+typedef struct H5E_msg_t {
+    char        *msg;           /* Message for error */
+    H5E_type_t   type;          /* Type of error (major or minor) */
+    H5E_cls_t   *cls;           /* Which error class this message belongs to */
+} H5E_msg_t;
+
+/* Error stack */
+typedef struct H5E_t {
+    size_t nused;		        /* Num slots currently used in stack  */
+    H5E_error_stack_t slot[H5E_NSLOTS];	/* Array of error records	     */
+    hbool_t  new_api;                   /* Indicate that the function pointer is for the new (stack) API or the old */
+    union {
+        H5E_auto_t  func;                   /* Function for 'automatic' error reporting */
+        H5E_auto_stack_t  func_stack;       /* Function for 'automatic' error reporting */
+    } u;
+    void *auto_data;                    /* Callback data for 'automatic error reporting */
+} H5E_t;
+
+/* Printing information */
+typedef struct H5E_print_t {
+    FILE        *stream;
+    H5E_cls_t   cls;
+} H5E_print_t;
+
+/* HDF5 error class */
+#define    H5E_CLS_NAME         "HDF5"
+#define    H5E_CLS_LIB_NAME     "HDF5"
 
 /*
  * HERROR macro, used to facilitate error reporting between a FUNC_ENTER()
@@ -52,7 +87,7 @@ typedef struct H5E_t H5E_t;
  *      without jumping to any labels)
  */
 #define HDONE_ERROR(maj, min, ret_val, str) {				      \
-   HCOMMON_ERROR(maj, min, str);					      \
+   HCOMMON_ERROR (maj, min, str);					      \
    ret_value = ret_val;                                                       \
 }
 
@@ -64,8 +99,8 @@ typedef struct H5E_t H5E_t;
  * control branches to the `done' label.
  */
 #define HGOTO_ERROR(maj, min, ret_val, str) {				      \
-   HCOMMON_ERROR(maj, min, str);					      \
-   HGOTO_DONE(ret_val)						              \
+   HCOMMON_ERROR (maj, min, str);					      \
+   HGOTO_DONE (ret_val)						              \
 }
 
 /*
@@ -77,11 +112,11 @@ typedef struct H5E_t H5E_t;
 #define HGOTO_DONE(ret_val) {ret_value = ret_val; goto done;}
 
 /* Library-private functions defined in H5E package */
-H5_DLL herr_t H5E_init(void);
-H5_DLL herr_t H5E_push_stack(H5E_t *estack, const char *file, const char *func, unsigned line,
+H5_DLL herr_t  H5E_init(void);
+H5_DLL herr_t  H5E_push_stack(H5E_t *estack, const char *file, const char *func, unsigned line,
                             hid_t cls_id, hid_t maj_id, hid_t min_id, const char *desc);
-H5_DLL herr_t H5E_clear_stack(H5E_t *estack);
-H5_DLL herr_t H5E_dump_api_stack(int is_api);
+H5_DLL herr_t  H5E_clear_stack(H5E_t *estack);
+H5_DLL herr_t  H5E_dump_api_stack(int is_api);
 
 /*
  * Macros handling system error messages as described in C standard.
@@ -91,14 +126,14 @@ H5_DLL herr_t H5E_dump_api_stack(int is_api);
 /* Retrieve the error code description string and push it onto the error
  * stack.
  */
-#define	HSYS_ERROR(errnum) {						      \
+#define	HSYS_ERROR(errnum){						      \
     HERROR(H5E_INTERNAL, H5E_SYSERRSTR, HDstrerror(errnum));                  \
 }
-#define	HSYS_DONE_ERROR(majorcode, minorcode, retcode, str) {		      \
+#define	HSYS_DONE_ERROR(majorcode, minorcode, retcode, str){				      \
     HSYS_ERROR(errno);							      \
     HDONE_ERROR(majorcode, minorcode, retcode, str);			      \
 }
-#define	HSYS_GOTO_ERROR(majorcode, minorcode, retcode, str) {		      \
+#define	HSYS_GOTO_ERROR(majorcode, minorcode, retcode, str){				      \
     HSYS_ERROR(errno);							      \
     HGOTO_ERROR(majorcode, minorcode, retcode, str);			      \
 }
@@ -123,7 +158,6 @@ extern	int	H5E_mpi_error_str_len;
     HMPI_ERROR(mpierr);							      \
     HGOTO_ERROR(H5E_INTERNAL, H5E_MPI, retcode, str);			      \
 }
-#endif /* H5_HAVE_PARALLEL */
+#endif
 
-#endif /* _H5Eprivate_H */
-
+#endif

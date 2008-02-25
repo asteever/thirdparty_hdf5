@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -125,6 +124,7 @@ H5FL_DEFINE_STATIC(H5I_id_info_t);
 
 /*--------------------- Local function prototypes ---------------------------*/
 static H5I_id_info_t *H5I_find_id(hid_t id);
+static hid_t H5I_get_file_id(hid_t obj_id);
 #ifdef H5I_DEBUG_OUTPUT
 static herr_t H5I_debug(H5I_type_t type);
 #endif /* H5I_DEBUG_OUTPUT */
@@ -1076,7 +1076,7 @@ H5Iget_type(hid_t id)
     H5I_type_t		ret_value = H5I_BADID;
 
     FUNC_ENTER_API(H5Iget_type, H5I_BADID);
-    H5TRACE1("It", "i", id);
+    H5TRACE1("It","i",id);
 
     ret_value = H5I_get_type(id);
 
@@ -1261,7 +1261,7 @@ H5Idec_ref(hid_t id)
     int ret_value;                      /* Return value */
 
     FUNC_ENTER_API(H5Idec_ref, FAIL);
-    H5TRACE1("Is", "i", id);
+    H5TRACE1("Is","i",id);
 
     /* Check arguments */
     if (id<0)
@@ -1386,7 +1386,7 @@ H5Iinc_ref(hid_t id)
     int ret_value;                      /* Return value */
 
     FUNC_ENTER_API(H5Iinc_ref, FAIL);
-    H5TRACE1("Is", "i", id);
+    H5TRACE1("Is","i",id);
 
     /* Check arguments */
     if (id<0)
@@ -1471,7 +1471,7 @@ H5Iget_ref(hid_t id)
     int ret_value;                      /* Return value */
 
     FUNC_ENTER_API(H5Iget_ref, FAIL);
-    H5TRACE1("Is", "i", id);
+    H5TRACE1("Is","i",id);
 
     /* Check arguments */
     if (id<0)
@@ -1557,7 +1557,7 @@ H5Iinc_type_ref(H5I_type_t type)
     int ret_value;                      /* Return value */
 
     FUNC_ENTER_API(H5Iinc_type_ref, FAIL);
-    H5TRACE1("Is", "It", type);
+    H5TRACE1("Is","It",type);
 
     /* Check arguments */
     if (type<=0 || type >= H5I_next_type)
@@ -1744,7 +1744,7 @@ H5Iget_type_ref(H5I_type_t type)
     int ret_value;                      /* Return value */
 
     FUNC_ENTER_API(H5Iget_type_ref, FAIL);
-    H5TRACE1("Is", "It", type);
+    H5TRACE1("Is","It",type);
 
     /* Check arguments */
     if (type<=0 || type >= H5I_next_type)
@@ -2000,10 +2000,10 @@ H5Iget_name(hid_t id, char *name/*out*/, size_t size)
     ssize_t       ret_value;
 
     FUNC_ENTER_API(H5Iget_name, FAIL)
-    H5TRACE3("Zs", "ixz", id, name, size);
+    H5TRACE3("Zs","ixz",id,name,size);
 
     /* Call internal group routine to retrieve object's name */
-    if((ret_value = H5G_get_name(id, name, size, H5P_DEFAULT, H5AC_ind_dxpl_id)) < 0)
+    if((ret_value = H5G_get_name(id, name, size)) < 0)
 	HGOTO_ERROR(H5E_ATOM, H5E_CANTGET, FAIL, "can't retrieve object name")
 
 done:
@@ -2034,7 +2034,7 @@ H5Iget_file_id(hid_t obj_id)
     hid_t		ret_value;
 
     FUNC_ENTER_API(H5Iget_file_id, FAIL);
-    H5TRACE1("i", "i", obj_id);
+    H5TRACE1("i","i",obj_id);
 
     if((ret_value = H5I_get_file_id(obj_id))<0)
         HGOTO_ERROR (H5E_ATOM, H5E_CANTGET, FAIL, "can't retrieve file ID");
@@ -2059,7 +2059,7 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-hid_t
+static hid_t
 H5I_get_file_id(hid_t obj_id)
 {
     H5G_loc_t loc;              /* Location of object */
@@ -2077,11 +2077,15 @@ H5I_get_file_id(hid_t obj_id)
         if(H5I_inc_ref(ret_value) < 0)
             HGOTO_ERROR(H5E_ATOM, H5E_CANTSET, FAIL, "incrementing file ID failed")
     }
-    else if(type == H5I_DATATYPE || type == H5I_GROUP || type == H5I_DATASET || type == H5I_ATTR) {
+    else if(type == H5I_DATATYPE) {
         if(H5G_loc(obj_id, &loc) < 0)
-            HGOTO_ERROR(H5E_ATOM, H5E_CANTGET, FAIL, "can't get object location")
-        if((ret_value = H5F_get_id(loc.oloc->file)) < 0)
-            HGOTO_ERROR(H5E_ATOM, H5E_CANTGET, FAIL, "can't get file ID")
+            HGOTO_ERROR(H5E_ATOM, H5E_CANTGET, FAIL, "not a named datatype")
+        ret_value = H5F_get_id(loc.oloc->file);
+    }
+    else if(type == H5I_GROUP || type == H5I_DATASET || type == H5I_ATTR) {
+        if(H5G_loc(obj_id, &loc) < 0)
+            HGOTO_ERROR(H5E_ATOM, H5E_CANTGET, FAIL, "can't get symbol table info")
+        ret_value = H5F_get_id(loc.oloc->file);
     }
     else
         HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, FAIL, "invalid object ID")
