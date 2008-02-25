@@ -94,7 +94,7 @@
  *-------------------------------------------------------------------------
  */
 herr_t
-H5HF_space_start(H5HF_hdr_t *hdr, hid_t dxpl_id, hbool_t may_create)
+H5HF_space_start(H5HF_hdr_t *hdr, hid_t dxpl_id)
 {
     const H5FS_section_class_t *classes[] = { /* Free space section classes implemented for fractal heap */
         H5HF_FSPACE_SECT_CLS_SINGLE,
@@ -118,22 +118,19 @@ H5HF_space_start(H5HF_hdr_t *hdr, hid_t dxpl_id, hbool_t may_create)
             HGOTO_ERROR(H5E_HEAP, H5E_CANTINIT, FAIL, "can't initialize free space info")
     } /* end if */
     else {
-        /* Check if we are allowed to create the free space manager */
-        if(may_create) {
-            H5FS_create_t fs_create;        /* Free space creation parameters */
+        H5FS_create_t fs_create;        /* Free space creation parameters */
 
-            /* Set the free space creation parameters */
-            fs_create.client = H5FS_CLIENT_FHEAP_ID;
-            fs_create.shrink_percent = H5HF_FSPACE_SHRINK;
-            fs_create.expand_percent = H5HF_FSPACE_EXPAND;
-            fs_create.max_sect_size = hdr->man_dtable.cparam.max_direct_size;
-            fs_create.max_sect_addr = hdr->man_dtable.cparam.max_index;
+        /* Set the free space creation parameters */
+        fs_create.client = H5FS_CLIENT_FHEAP_ID;
+        fs_create.shrink_percent = H5HF_FSPACE_SHRINK;
+        fs_create.expand_percent = H5HF_FSPACE_EXPAND;
+        fs_create.max_sect_size = hdr->man_dtable.cparam.max_direct_size;
+        fs_create.max_sect_addr = hdr->man_dtable.cparam.max_index;
 
-            /* Create the free space structure for the heap */
-            if(NULL == (hdr->fspace = H5FS_create(hdr->f, dxpl_id, &hdr->fs_addr,
-                    &fs_create, NELMTS(classes), classes, hdr)))
-                HGOTO_ERROR(H5E_HEAP, H5E_CANTINIT, FAIL, "can't initialize free space info")
-        } /* end if */
+        /* Create the free space structure for the heap */
+        if(NULL == (hdr->fspace = H5FS_create(hdr->f, dxpl_id, &hdr->fs_addr,
+                &fs_create, NELMTS(classes), classes, hdr)))
+            HGOTO_ERROR(H5E_HEAP, H5E_CANTINIT, FAIL, "can't initialize free space info")
     } /* end else */
 
 done:
@@ -173,7 +170,7 @@ H5HF_space_add(H5HF_hdr_t *hdr, hid_t dxpl_id, H5HF_free_section_t *node,
 
     /* Check if the free space for the heap has been initialized */
     if(!hdr->fspace)
-        if(H5HF_space_start(hdr, dxpl_id, TRUE) < 0)
+        if(H5HF_space_start(hdr, dxpl_id) < 0)
             HGOTO_ERROR(H5E_HEAP, H5E_CANTINIT, FAIL, "can't initialize heap free space")
 
     /* Construct user data */
@@ -207,7 +204,7 @@ done:
 htri_t
 H5HF_space_find(H5HF_hdr_t *hdr, hid_t dxpl_id, hsize_t request, H5HF_free_section_t **node)
 {
-    htri_t node_found = FALSE;  /* Whether an existing free list node was found */
+    htri_t node_found;          /* Whether an existing free list node was found */
     htri_t ret_value;           /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5HF_space_find)
@@ -221,13 +218,12 @@ H5HF_space_find(H5HF_hdr_t *hdr, hid_t dxpl_id, hsize_t request, H5HF_free_secti
 
     /* Check if the free space for the heap has been initialized */
     if(!hdr->fspace)
-        if(H5HF_space_start(hdr, dxpl_id, FALSE) < 0)
+        if(H5HF_space_start(hdr, dxpl_id) < 0)
             HGOTO_ERROR(H5E_HEAP, H5E_CANTINIT, FAIL, "can't initialize heap free space")
 
     /* Search for free space in the heap */
-    if(hdr->fspace)
-        if((node_found = H5FS_sect_find(hdr->f, dxpl_id, hdr->fspace, request, (H5FS_section_info_t **)node)) < 0)
-            HGOTO_ERROR(H5E_HEAP, H5E_CANTALLOC, FAIL, "can't locate free space in fractal heap")
+    if((node_found = H5FS_sect_find(hdr->f, dxpl_id, hdr->fspace, request, (H5FS_section_info_t **)node)) < 0)
+        HGOTO_ERROR(H5E_HEAP, H5E_CANTALLOC, FAIL, "can't locate free space in fractal heap")
 
     /* Set return value */
     ret_value = node_found;
@@ -235,51 +231,6 @@ H5HF_space_find(H5HF_hdr_t *hdr, hid_t dxpl_id, hsize_t request, H5HF_free_secti
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5HF_space_find() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5HF_space_size
- *
- * Purpose:	Query the size of the heap's free space info on disk
- *
- * Return:	Success:	non-negative
- *		Failure:	negative
- *
- * Programmer:	Quincey Koziol
- *		koziol@hdfgroup.org
- *		August 14 2007
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5HF_space_size(H5HF_hdr_t *hdr, hid_t dxpl_id, hsize_t *fs_size)
-{
-    herr_t ret_value = SUCCEED;         /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT(H5HF_space_size)
-
-    /*
-     * Check arguments.
-     */
-    HDassert(hdr);
-    HDassert(fs_size);
-
-    /* Check if the free space for the heap has been initialized */
-    if(!hdr->fspace)
-        if(H5HF_space_start(hdr, dxpl_id, FALSE) < 0)
-            HGOTO_ERROR(H5E_HEAP, H5E_CANTINIT, FAIL, "can't initialize heap free space")
-
-    /* Get free space metadata size */
-    if(hdr->fspace) {
-        if(H5FS_size(hdr->f, hdr->fspace, fs_size) < 0)
-            HGOTO_ERROR(H5E_FSPACE, H5E_CANTGET, FAIL, "can't retrieve FS meta storage info")
-    } /* end if */
-    else
-        *fs_size = 0;
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5HF_space_size() */
 
 
 /*-------------------------------------------------------------------------

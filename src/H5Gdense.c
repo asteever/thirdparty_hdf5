@@ -36,9 +36,9 @@
 /***********/
 #include "H5private.h"		/* Generic Functions			*/
 #include "H5Eprivate.h"		/* Error handling		  	*/
+#include "H5FLprivate.h"	/* Free lists                           */
 #include "H5Gpkg.h"		/* Groups		  		*/
 #include "H5MMprivate.h"	/* Memory management			*/
-#include "H5WBprivate.h"        /* Wrapped Buffers                      */
 
 
 /****************/
@@ -90,8 +90,9 @@ typedef struct {
     hsize_t     count;                  /* # of links examined               */
 
     /* downward (from application) */
+    hid_t       gid;                    /* Group ID for application callback */
     hsize_t     skip;                   /* Number of links to skip           */
-    H5G_lib_iterate_t op;               /* Callback for each link            */
+    const H5G_link_iterate_t *lnk_op;   /* Callback for each link            */
     void        *op_data;               /* Callback data for each link       */
 
     /* upward */
@@ -251,6 +252,9 @@ typedef struct {
 /* Local Variables */
 /*******************/
 
+/* Declare a free list to manage the serialized link information */
+H5FL_BLK_DEFINE(ser_link);
+
 
 
 /*-------------------------------------------------------------------------
@@ -369,7 +373,6 @@ H5G_dense_insert(H5F_t *f, hid_t dxpl_id, const H5O_linfo_t *linfo,
     H5G_bt2_ud_ins_t udata;             /* User data for v2 B-tree insertion */
     H5HF_t *fheap = NULL;               /* Fractal heap handle */
     size_t link_size;                   /* Size of serialized link in the heap */
-    H5WB_t *wb = NULL;                  /* Wrapped buffer for link data */
     uint8_t link_buf[H5G_LINK_BUF_SIZE];        /* Buffer for serializing link */
     void *link_ptr = NULL;              /* Pointer to serialized link */
     herr_t ret_value = SUCCEED;         /* Return value */
@@ -394,13 +397,13 @@ HDfprintf(stderr, "%s: linfo->name_bt2_addr = %a\n", FUNC, linfo->name_bt2_addr)
 HDfprintf(stderr, "%s: HDstrlen(lnk->name) = %Zu, link_size = %Zu\n", FUNC, HDstrlen(lnk->name), link_size);
 #endif /* QAK */
 
-    /* Wrap the local buffer for serialized link */
-    if(NULL == (wb = H5WB_wrap(link_buf, sizeof(link_buf))))
-        HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, FAIL, "can't wrap buffer")
-
-    /* Get a pointer to a buffer that's large enough for link */
-    if(NULL == (link_ptr = H5WB_actual(wb, link_size)))
-        HGOTO_ERROR(H5E_SYM, H5E_NOSPACE, FAIL, "can't get actual buffer")
+    /* Allocate space for serialized link, if necessary */
+    if(link_size > sizeof(link_buf)) {
+        if(NULL == (link_ptr = H5FL_BLK_MALLOC(ser_link, link_size)))
+            HGOTO_ERROR(H5E_SYM, H5E_NOSPACE, FAIL, "memory allocation failed")
+    } /* end if */
+    else
+        link_ptr = link_buf;
 
     /* Create serialized form of link */
     if(H5O_msg_encode(f, H5O_LINK_ID, FALSE, link_ptr, lnk) < 0)
@@ -441,8 +444,8 @@ done:
     /* Release resources */
     if(fheap && H5HF_close(fheap, dxpl_id) < 0)
         HDONE_ERROR(H5E_SYM, H5E_CLOSEERROR, FAIL, "can't close fractal heap")
-    if(wb && H5WB_unwrap(wb) < 0)
-        HDONE_ERROR(H5E_SYM, H5E_CLOSEERROR, FAIL, "can't close wrapped buffer")
+    if(link_ptr && link_ptr != link_buf)
+        H5FL_BLK_FREE(ser_link, link_ptr);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5G_dense_insert() */
@@ -798,6 +801,7 @@ H5G_dense_build_table(H5F_t *f, hid_t dxpl_id, const H5O_linfo_t *linfo,
     /* Allocate space for the table entries */
     if(ltable->nlinks > 0) {
         H5G_dense_bt_ud_t udata;       /* User data for iteration callback */
+        H5G_link_iterate_t lnk_op;      /* Link operator */
 
         /* Allocate the table to store the links */
         if((ltable->lnks = H5MM_malloc(sizeof(H5O_link_t) * ltable->nlinks)) == NULL)
@@ -807,8 +811,12 @@ H5G_dense_build_table(H5F_t *f, hid_t dxpl_id, const H5O_linfo_t *linfo,
         udata.ltable = ltable;
         udata.curr_lnk = 0;
 
+        /* Build iterator operator */
+        lnk_op.op_type = H5G_LINK_OP_LIB;
+        lnk_op.u.lib_op = H5G_dense_build_table_cb;
+
         /* Iterate over the links in the group, building a table of the link messages */
-        if(H5G_dense_iterate(f, dxpl_id, linfo, H5_INDEX_NAME, H5_ITER_NATIVE, (hsize_t)0, NULL, H5G_dense_build_table_cb, &udata) < 0)
+        if(H5G_dense_iterate(f, dxpl_id, linfo, H5_INDEX_NAME, H5_ITER_NATIVE, (hsize_t)0, NULL, (hid_t)0, &lnk_op, &udata) < 0)
             HGOTO_ERROR(H5E_SYM, H5E_CANTNEXT, FAIL, "error iterating over links")
 
         /* Sort link table in correct iteration order */
@@ -898,8 +906,30 @@ H5G_dense_iterate_bt2_cb(const void *_record, void *_bt2_udata)
                 H5G_dense_iterate_fh_cb, &fh_udata) < 0)
             HGOTO_ERROR(H5E_SYM, H5E_CANTOPERATE, H5_ITER_ERROR, "heap op callback failed")
 
-        /* Make the callback */
-        ret_value = (bt2_udata->op)(fh_udata.lnk, bt2_udata->op_data);
+        /* Check which type of callback to make */
+        switch(bt2_udata->lnk_op->op_type) {
+            case H5G_LINK_OP_OLD:
+                /* Make the old-type application callback */
+                ret_value = (bt2_udata->lnk_op->u.old_op)(bt2_udata->gid, fh_udata.lnk->name, bt2_udata->op_data);
+                break;
+
+            case H5G_LINK_OP_APP:
+                {
+                    H5L_info_t info;    /* Link info */
+
+                    /* Retrieve the info for the link */
+                    if(H5G_link_to_info(fh_udata.lnk, &info) < 0)
+                        HGOTO_ERROR(H5E_SYM, H5E_CANTGET, H5_ITER_ERROR, "unable to get info for link")
+
+                    /* Make the application callback */
+                    ret_value = (bt2_udata->lnk_op->u.app_op)(bt2_udata->gid, fh_udata.lnk->name, &info, bt2_udata->op_data);
+                }
+                break;
+
+            case H5G_LINK_OP_LIB:
+                /* Call the library's callback */
+                ret_value = (bt2_udata->lnk_op->u.lib_op)(fh_udata.lnk, bt2_udata->op_data);
+        } /* end switch */
 
         /* Release the space allocated for the link */
         H5O_msg_free(H5O_LINK_ID, fh_udata.lnk);
@@ -934,7 +964,7 @@ done:
 herr_t
 H5G_dense_iterate(H5F_t *f, hid_t dxpl_id, const H5O_linfo_t *linfo,
     H5_index_t idx_type, H5_iter_order_t order, hsize_t skip, hsize_t *last_lnk,
-    H5G_lib_iterate_t op, void *op_data)
+    hid_t gid, const H5G_link_iterate_t *lnk_op, void *op_data)
 {
     H5HF_t *fheap = NULL;               /* Fractal heap handle */
     H5G_link_table_t ltable = {0, NULL};      /* Table of links */
@@ -949,7 +979,7 @@ H5G_dense_iterate(H5F_t *f, hid_t dxpl_id, const H5O_linfo_t *linfo,
      */
     HDassert(f);
     HDassert(linfo);
-    HDassert(op);
+    HDassert(lnk_op && lnk_op->u.lib_op);
 
     /* Determine the address of the index to use */
     if(idx_type == H5_INDEX_NAME) {
@@ -988,9 +1018,10 @@ H5G_dense_iterate(H5F_t *f, hid_t dxpl_id, const H5O_linfo_t *linfo,
         udata.f = f;
         udata.dxpl_id = dxpl_id;
         udata.fheap = fheap;
+        udata.gid = gid;
         udata.skip = skip;
         udata.count = 0;
-        udata.op = op;
+        udata.lnk_op = lnk_op;
         udata.op_data = op_data;
 
         /* Iterate over the records in the v2 B-tree's "native" order */
@@ -1008,7 +1039,7 @@ H5G_dense_iterate(H5F_t *f, hid_t dxpl_id, const H5O_linfo_t *linfo,
             HGOTO_ERROR(H5E_SYM, H5E_CANTGET, FAIL, "error building table of links")
 
         /* Iterate over links in table */
-        if((ret_value = H5G_link_iterate_table(&ltable, skip, last_lnk, op, op_data)) < 0)
+        if((ret_value = H5G_link_iterate_table(&ltable, skip, last_lnk, gid, lnk_op, op_data)) < 0)
             HERROR(H5E_SYM, H5E_CANTNEXT, "iteration operator failed");
     } /* end else */
 
@@ -1223,6 +1254,82 @@ done:
 
 
 /*-------------------------------------------------------------------------
+ * Function:	H5G_dense_get_type_by_idx
+ *
+ * Purpose:     Returns the type of objects in the group by giving index.
+ *
+ * Note:	This routine assumes a lookup on the link name index in
+ *		increasing order and isn't currently set up to be as
+ *		flexible as other routines in this code module, because
+ *		the H5Gget_objtype_by_idx that it's supporting is
+ *		deprecated.
+ *
+ * Return:	Success:        Non-negative, object type
+ *		Failure:	Negative
+ *
+ * Programmer:	Quincey Koziol
+ *		koziol@hdfgroup.org
+ *		Sep 19 2006
+ *
+ *-------------------------------------------------------------------------
+ */
+H5G_obj_t
+H5G_dense_get_type_by_idx(H5F_t *f, hid_t dxpl_id, H5O_linfo_t *linfo,
+    hsize_t idx)
+{
+    H5G_link_table_t ltable = {0, NULL};         /* Table of links */
+    H5G_obj_t ret_value;        /* Return value */
+
+    FUNC_ENTER_NOAPI(H5G_dense_get_type_by_idx, H5G_UNKNOWN)
+
+    /*
+     * Check arguments.
+     */
+    HDassert(f);
+    HDassert(linfo);
+
+    /* Build the table of links for this group */
+    if(H5G_dense_build_table(f, dxpl_id, linfo, H5_INDEX_NAME, H5_ITER_INC, &ltable) < 0)
+        HGOTO_ERROR(H5E_SYM, H5E_CANTGET, H5G_UNKNOWN, "error building table of links")
+
+    /* Check for going out of bounds */
+    if(idx >= ltable.nlinks)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, H5G_UNKNOWN, "index out of bound")
+
+    /* Determine type of object */
+    if(ltable.lnks[idx].type == H5L_TYPE_SOFT)
+        ret_value = H5G_LINK;
+    else if(ltable.lnks[idx].type >= H5L_TYPE_UD_MIN)
+        ret_value = H5G_UDLINK;
+    else if(ltable.lnks[idx].type == H5L_TYPE_HARD) {
+        H5O_loc_t tmp_oloc;             /* Temporary object location */
+        H5O_type_t obj_type;            /* Type of object at location */
+
+        /* Build temporary object location */
+        tmp_oloc.file = f;
+        tmp_oloc.addr = ltable.lnks[idx].u.hard.addr;
+
+        /* Get the type of the object */
+        if(H5O_obj_type(&tmp_oloc, &obj_type, dxpl_id) < 0)
+            HGOTO_ERROR(H5E_SYM, H5E_CANTGET, H5G_UNKNOWN, "can't get object type")
+
+        /* Map to group object type */
+        if(H5G_UNKNOWN == (ret_value = H5G_map_obj_type(obj_type)))
+            HGOTO_ERROR(H5E_SYM, H5E_BADTYPE, H5G_UNKNOWN, "can't determine object type")
+    } else {
+        HGOTO_ERROR(H5E_SYM, H5E_BADTYPE, H5G_UNKNOWN, "unknown link type")
+    } /* end else */
+
+done:
+    /* Release link table */
+    if(ltable.lnks && H5G_link_release_table(&ltable) < 0)
+        HDONE_ERROR(H5E_SYM, H5E_CANTFREE, H5G_UNKNOWN, "unable to release link table")
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5G_dense_get_type_by_idx() */
+
+
+/*-------------------------------------------------------------------------
  * Function:	H5G_dense_remove_fh_cb
  *
  * Purpose:	Callback for fractal heap operator when removing links
@@ -1264,12 +1371,12 @@ H5G_dense_remove_fh_cb(const void *obj, size_t UNUSED obj_len, void *_udata)
 
     /* Replace open objects' names, if requested */
     if(udata->replace_names)
-        if(H5G_link_name_replace(udata->f, udata->dxpl_id, udata->grp_full_path_r, lnk) < 0)
+        if(H5G_link_name_replace(udata->f, udata->dxpl_id, udata->grp_full_path_r, lnk->name, lnk->type, lnk->u.hard.addr) < 0)
             HGOTO_ERROR(H5E_SYM, H5E_CANTRENAME, FAIL, "unable to rename open objects")
 
     /* Perform the deletion action on the link, if requested */
     /* (call message "delete" callback directly: *ick* - QAK) */
-    if(H5O_link_delete(udata->f, udata->dxpl_id, NULL, lnk) < 0)
+    if(H5O_link_delete(udata->f, udata->dxpl_id, lnk) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_CANTDELETE, FAIL, "unable to delete link")
 
 done:
@@ -1506,12 +1613,12 @@ H5G_dense_remove_by_idx_bt2_cb(const void *_record, void *_bt2_udata)
     } /* end if */
 
     /* Replace open objects' names */
-    if(H5G_link_name_replace(bt2_udata->f, bt2_udata->dxpl_id, bt2_udata->grp_full_path_r, fh_udata.lnk) < 0)
+    if(H5G_link_name_replace(bt2_udata->f, bt2_udata->dxpl_id, bt2_udata->grp_full_path_r, fh_udata.lnk->name, fh_udata.lnk->type, fh_udata.lnk->u.hard.addr) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_CANTRENAME, FAIL, "unable to rename open objects")
 
     /* Perform the deletion action on the link */
     /* (call link message "delete" callback directly: *ick* - QAK) */
-    if(H5O_link_delete(bt2_udata->f, bt2_udata->dxpl_id, NULL, fh_udata.lnk) < 0)
+    if(H5O_link_delete(bt2_udata->f, bt2_udata->dxpl_id, fh_udata.lnk) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_CANTDELETE, FAIL, "unable to delete link")
 
     /* Release the space allocated for the link */
@@ -1715,82 +1822,4 @@ H5G_dense_delete(H5F_t *f, hid_t dxpl_id, H5O_linfo_t *linfo, hbool_t adj_link)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5G_dense_delete() */
-
-#ifndef H5_NO_DEPRECATED_SYMBOLS
-
-/*-------------------------------------------------------------------------
- * Function:	H5G_dense_get_type_by_idx
- *
- * Purpose:     Returns the type of objects in the group by giving index.
- *
- * Note:	This routine assumes a lookup on the link name index in
- *		increasing order and isn't currently set up to be as
- *		flexible as other routines in this code module, because
- *		the H5Gget_objtype_by_idx that it's supporting is
- *		deprecated.
- *
- * Return:	Success:        Non-negative, object type
- *		Failure:	Negative
- *
- * Programmer:	Quincey Koziol
- *		koziol@hdfgroup.org
- *		Sep 19 2006
- *
- *-------------------------------------------------------------------------
- */
-H5G_obj_t
-H5G_dense_get_type_by_idx(H5F_t *f, hid_t dxpl_id, H5O_linfo_t *linfo,
-    hsize_t idx)
-{
-    H5G_link_table_t ltable = {0, NULL};         /* Table of links */
-    H5G_obj_t ret_value;        /* Return value */
-
-    FUNC_ENTER_NOAPI(H5G_dense_get_type_by_idx, H5G_UNKNOWN)
-
-    /*
-     * Check arguments.
-     */
-    HDassert(f);
-    HDassert(linfo);
-
-    /* Build the table of links for this group */
-    if(H5G_dense_build_table(f, dxpl_id, linfo, H5_INDEX_NAME, H5_ITER_INC, &ltable) < 0)
-        HGOTO_ERROR(H5E_SYM, H5E_CANTGET, H5G_UNKNOWN, "error building table of links")
-
-    /* Check for going out of bounds */
-    if(idx >= ltable.nlinks)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, H5G_UNKNOWN, "index out of bound")
-
-    /* Determine type of object */
-    if(ltable.lnks[idx].type == H5L_TYPE_SOFT)
-        ret_value = H5G_LINK;
-    else if(ltable.lnks[idx].type >= H5L_TYPE_UD_MIN)
-        ret_value = H5G_UDLINK;
-    else if(ltable.lnks[idx].type == H5L_TYPE_HARD) {
-        H5O_loc_t tmp_oloc;             /* Temporary object location */
-        H5O_type_t obj_type;            /* Type of object at location */
-
-        /* Build temporary object location */
-        tmp_oloc.file = f;
-        tmp_oloc.addr = ltable.lnks[idx].u.hard.addr;
-
-        /* Get the type of the object */
-        if(H5O_obj_type(&tmp_oloc, &obj_type, dxpl_id) < 0)
-            HGOTO_ERROR(H5E_SYM, H5E_CANTGET, H5G_UNKNOWN, "can't get object type")
-
-        /* Map to group object type */
-        if(H5G_UNKNOWN == (ret_value = H5G_map_obj_type(obj_type)))
-            HGOTO_ERROR(H5E_SYM, H5E_BADTYPE, H5G_UNKNOWN, "can't determine object type")
-    } else {
-        HGOTO_ERROR(H5E_SYM, H5E_BADTYPE, H5G_UNKNOWN, "unknown link type")
-    } /* end else */
-
-done:
-    /* Release link table */
-    if(ltable.lnks && H5G_link_release_table(&ltable) < 0)
-        HDONE_ERROR(H5E_SYM, H5E_CANTFREE, H5G_UNKNOWN, "unable to release link table")
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5G_dense_get_type_by_idx() */
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
 

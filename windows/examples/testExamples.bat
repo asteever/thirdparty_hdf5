@@ -35,7 +35,6 @@ attributetest >> ..\%1.txt
 compoundtest >> ..\%1.txt
 extendwritetest >> ..\%1.txt
 grouptest >> ..\%1.txt
-intermgrouptest >> ..\%1.txt
 selectest >> ..\%1.txt
 writetest >> ..\%1.txt
 chunkread >> ..\%1.txt
@@ -61,7 +60,6 @@ attributetestdll >> ..\%1.txt
 compoundtestdll >> ..\%1.txt
 extendwritetestdll >> ..\%1.txt
 grouptestdll >> ..\%1.txt
-intermgrouptestdll >> ..\%1.txt
 selectestdll >> ..\%1.txt
 writetestdll >> ..\%1.txt
 chunkreaddll >> ..\%1.txt
@@ -92,7 +90,6 @@ attributetest >> ..\%1.txt
 compoundtest >> ..\%1.txt
 extendwritetest >> ..\%1.txt
 grouptest >> ..\%1.txt
-intermgrouptest >> ..\%1.txt
 selectest >> ..\%1.txt
 writetest >> ..\%1.txt
 chunkread >> ..\%1.txt
@@ -118,7 +115,6 @@ attributetestdll >> ..\%1.txt
 compoundtestdll >> ..\%1.txt
 extendwritetestdll >> ..\%1.txt
 grouptestdll >> ..\%1.txt
-intermgrouptestdll >> ..\%1.txt
 selectestdll >> ..\%1.txt
 writetestdll >> ..\%1.txt
 chunkreaddll >> ..\%1.txt

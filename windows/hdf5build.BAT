@@ -1,225 +1,221 @@
-@echo OFF
-rem Copyright by The HDF Group.
-rem Copyright by the Board of Trustees of the University of Illinois.
-rem All rights reserved.
-rem
-rem This file is part of HDF5.  The full HDF5 copyright notice, including
-rem terms governing use, modification, and redistribution, is contained in
-rem the files COPYING and Copyright.html.  COPYING can be found at the root
-rem of the source code distribution tree; Copyright.html can be found at the
-rem root level of an installed copy of the electronic HDF5 document set and
-rem is linked from the top-level documents page.  It can also be found at
-rem http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-rem access to either file, you may request a copy from helphdfgroup.org.
+@REM Copyright by The HDF Group.
+@REM Copyright by the Board of Trustees of the University of Illinois.
+@REM All rights reserved.
+@REM
+@REM This file is part of HDF5.  The full HDF5 copyright notice, including
+@REM terms governing use, modification, and redistribution, is contained in
+@REM the files COPYING and Copyright.html.  COPYING can be found at the root
+@REM of the source code distribution tree; Copyright.html can be found at the
+@REM root level of an installed copy of the electronic HDF5 document set and
+@REM is linked from the top-level documents page.  It can also be found at
+@REM http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
+@REM access to either file, you may request a copy from help@hdfgroup.org.
 
+@REM File Name: hdf5build.bat
+@REM This batch file is used to build HDF5 Libraries and Tools.
+@REM There are 4 options for this batch file:
+@REM   1. hdf5build                -- Build HDF5 tools and c library
+@REM   2. hdf5build enablecpp      -- Build HDF5 tools and c/c++ library
+@REM   3. hdf5build enablefortran  -- Build HDF5 tools and c/fortran library
+@REM   4. hdf5build enableall      -- Build HDF5 tools and c/c++/fortran library
+@REM By Xuan Bai
+@REM Created: Aug. 16, 2004
+@REM Last Updated: Oct. 6, 2004
 
-rem File Name: hdf5build.bat
-rem This batch file is used to build HDF5 Libraries and Tools.
-rem This batch file takes the following options:
-rem .  /fort             Build HDF5 with Fortran libraries
-rem .  /useenv           Build HDF5 using compiler settings defined
-rem .                    in the environment, rather than the IDE.
-rem .  /?                Help information
-rem By Xuan Bai
-rem Created: Aug. 16, 2004
-rem Last Updated: July 13, 2007
+@ECHO OFF
+if %1.==. GOTO BUILDC
+if "%1"=="/?" GOTO HELP
+if %1==enablecpp GOTO BUILDCPP
+if %1==enablefortran GOTO BUILDF90
+if %1==enableall GOTO BUILDALL
+GOTO WRONG
 
-rem This batch file makes the following assumptions:
-rem    - The appropriate version of Visual Studio is installed and setup
-rem    - The directory structure is setup from a fresh source copy
-rem    - copy_hdf.bat has already been run from the ./windows directory
-rem    - Visual Studio already contains the required paths for external libraries
-rem    - szip and zlib DLLs are already placed in an accessible directory
-rem    - hdf5_ext_szip or hdf5_ext_zlib have been set accordingly
-rem    - if building with the /useenv option, szip and zlib paths have been added
-rem      to %include% and %libpath% as necessary.
+:BUILDC
+type nul > build_results.txt
+echo ***************************************************************************** >> build_results.txt
+echo                         Build H5Tinit.exe >> build_results.txt
+echo ***************************************************************************** >> build_results.txt
 
-rem By default, only C and C++ libraries are built.
+cd windows\misc\typegen\h5tinit
+msdev h5tinit.dsp  /make "h5tinit - Win32 Debug" /Rebuild /out ..\..\..\..\h5tinit.log
+cd ..\..\..\..\
+more h5tinit.log >> build_results.txt
+del h5tinit.log
 
-setlocal enabledelayedexpansion
-pushd %~dp0
+echo ***************************************************************************** >> build_results.txt
+echo                         Build HDF5 C Library and Tools >> build_results.txt
+echo ***************************************************************************** >> build_results.txt
 
-set nerrors=0
-goto main
+cd src
+h5tinit.exe > h5tinit.c
 
-rem Print a help message
-:help
+cd ..\windows\proj\all
+msdev all.dsw /make "all - ALL" /Rebuild /out ..\..\..\all.log
+cd ..\..\..\
+more all.log >> build_results.txt
+del all.log
+GOTO END
 
-    echo.Builds HDF5 Libraries and Tools.
-    echo.
-    echo.Usage: %~nx0 [OPTION]
-    echo.
-    echo.   /fort             Build HDF5 with Fortran libraries
-    echo.   /useenv           Build HDF5 using compiler settings defined
-    echo.                     in the environment, rather than the IDE.
-    echo.   /?                Help information
+:BUILDCPP
+type nul > build_results.txt
+echo ***************************************************************************** >> build_results.txt
+echo                         Build H5Tinit.exe >> build_results.txt
+echo ***************************************************************************** >> build_results.txt
 
-    exit /b 0
+cd windows\misc\typegen\h5tinit
+msdev h5tinit.dsp  /make "h5tinit - Win32 Debug" /Rebuild /out ..\..\..\..\h5tinit.log
+cd ..\..\..\..\
+more h5tinit.log >> build_results.txt
+del h5tinit.log
 
+echo ***************************************************************************** >> build_results.txt
+echo                         Build HDF5 C/C++ Libraries and Tools >> build_results.txt
+echo ***************************************************************************** >> build_results.txt
 
-rem Parse through the parameters sent to file, and set appropriate variables
-:parse_params
+cd src
+h5tinit.exe > h5tinit.c
 
-    for %%a in (%*) do (
-        if "%%a"=="/fort" (
-            rem Enable Fortran
-            set hdf5_enablefortran=true
-            
-        ) else if "%%a"=="/useenv" (
-            rem Pass /useenv flag to devenv
-            set hdf5_useenv=true
-            
-        ) else if "%%a"=="/?" (
-            rem Set errorlevel 1 and send to help
-            call :help
-            exit /b 1
-            
-        ) else (
-            rem Set errorlevel 2 to send to help if we receive a bad parameter
-            echo.Unknown option: %%a
-            call :help
-            exit /b 2
-        )
-    )
-    
-    exit /b 0
+cd ..\windows\proj\all
+msdev all.dsw /make "hl_test_table_cpp - ALL" "hl_test_table_cppdll - ALL" "testhdf5_cppdll - ALL" "testhdf5_cpp - ALL" "dsets_cppdll - ALL" "dsets_cpp - ALL" "all - ALL" /Rebuild /out ..\..\..\all.log
+cd ..\..\..\
+more all.log >> build_results.txt
+del all.log
+GOTO END
 
+:BUILDF90
+type nul > build_results.txt
+echo ***************************************************************************** >> build_results.txt
+echo                         Build H5Tinit.exe >> build_results.txt
+echo ***************************************************************************** >> build_results.txt
 
-rem Setup our environment
-:setup
+cd windows\misc\typegen\h5tinit
+msdev h5tinit.dsp  /make "h5tinit - Win32 Debug" /Rebuild /out ..\..\..\..\h5tinit.log
+cd ..\..\..\..\
+more h5tinit.log >> build_results.txt
+del h5tinit.log
 
-    rem Constants
-    
-    echo.Setting up environment
+echo ***************************************************************************** >> build_results.txt
+echo                         Generate H5f90i_gen.h and H5fortran_types.f90
+echo ***************************************************************************** >> build_results.txt
 
-    rem By default, use all.sln, unless hdf5_enablefortran is set
-    if defined hdf5_enablefortran (
-        echo.Building Fortran projects enabled
-        set hdf5_sln="%CD%\windows\proj\all_fortran\all_fortran.sln"
-    ) else (
-        set hdf5_sln="%CD%\windows\proj\all\all.sln"
-    )
-    
-    
-    rem Setup Visual Studio environment.  By default, use the Visual Studio 
-    rem 2005 environment.
-    
-    set ccflags=
-    
-    rem Currently VS2005 is the only compiler supported.  --SJW 9/26/07
-    echo.Using Visual Studio 2005
-    
-    if not defined hdf5_enablefortran (
-        if defined vs80comntools (
-            rem This sets the Visual Studio path and environment variables
-            call "%vs80comntools%\vsvars32.bat"
-        ) else (
-            echo.Error: Cannot setup Visual Studio 2005 environment.  Please
-            echo.make sure VS80COMNTOOLS is defined in the environment.
-            exit /b 1
-        )
-        
-    ) else (
-        echo.with Intel Visual Fortran 9.1
-        
-        if defined ifort_compiler91 (
-            rem This sets the Intel Fortran 9.1 environment, as well as
-            rem setting the appropriate Visual Studio environment
-            
-            rem Assume 32-bit environment
-            call "%ifort_compiler91%\IA32\Bin\ifortvars.bat"
-        ) else (
-            echo.Error: Cannot setup Intel Fortran 9.1 environment.  Please
-            echo.make sure IFORT_COMPILER91 is defined in the environment.
-            exit /b 1
-        )
-    )
-        
-    if defined hdf5_useenv (
-        rem This will tell Visual Studio to use include, library, etc. paths
-        rem defined by %INCLUDE% %LIBPATH%, etc.  Assume the user has already
-        rem added external library paths to these variables.
-        set ccflags=%ccflags% /useenv
-    )
+REM Generate H5fortran_detect.f90
+cd windows\misc\H5fortran_detect_gen
+dfdev H5fortran_detect_gen.dsp /make "H5fortran_detect_gen - Win32 Debug" /Rebuild /out ..\..\..\H5fortran_detect_gen.log
+cd ..\..\..\fortran\src
+H5fortran_detect_gen.exe > H5fortran_detect.f90
+del H5fortran_detect_gen.exe
+cd ..\..\
+more H5fortran_detect_gen.log >> build_results.txt
+del H5fortran_detect_gen.log
 
-    exit /b 0
+REM Generate H5fort_type_defines.h
+cd windows\misc\fortrantypegen
+dfdev H5fortran_detect.dsp /make "H5fortran_detect - Win32 Debug" /Rebuild /out ..\..\..\H5fortran_detect.log
+cd ..\..\..\fortran\src
+H5fortran_detect.exe > H5fort_type_defines.h
+del H5fortran_detect.exe
+cd ..\..\
+more H5fortran_detect.log >> build_results.txt
+del H5fortran_detect.log
 
+REM Generate H5f90i_gen.h and H5fortran_types.f90
+cd windows\misc\matchtypegen
+dfdev H5match_types.dsp /make "H5match_types - Win32 Debug" /Rebuild /out ..\..\..\H5match_types.log
+cd ..\..\..\fortran\src
+H5match_types.exe
+del H5match_types.exe
+cd ..\..\
+more H5match_types.log >> build_results.txt
+del H5match_types.log
 
-rem Build the HDF5 libraries.  By default, C and C++ libraries are built.
-:all
+echo ***************************************************************************** >> build_results.txt
+echo                         Build HDF5 C/Fortran Libraries and Tools >> build_results.txt
+echo ***************************************************************************** >> build_results.txt
 
-    echo.Building HDF5
+cd src
+h5tinit.exe > h5tinit.c
 
-    echo.*****************************************************************************
-    echo.                        Build HDF5 Library and Tools
-    echo.*****************************************************************************
-    echo.
+cd ..\windows\proj\all
+msdev all.dsw /make "hl_test_image_fortrandll - ALL" "hl_test_lite_fortrandll - ALL" "hl_test_table_fortrandll - ALL" "hl_test_image_fortran - ALL" "hl_test_lite_fortran - ALL" "hl_test_table_fortran - ALL" "testhdf5_fortrandll - ALL" "testhdf5_fortran - ALL" "flush2_fortrandll - ALL" "flush2_fortran - ALL" "flush1_fortrandll - ALL" "flush1_fortran - ALL" "all - ALL" /Rebuild /out ..\..\..\all.log
+cd ..\..\..\
+more all.log >> build_results.txt
+del all.log
+GOTO END
 
-    rem Build both debug and release versions
-    for %%a in (debug release) DO (
-        echo.Building %%a libraries...
-        devenv .\windows\proj\all\all.sln %ccflags% /rebuild %%a
-        if !errorlevel! neq 0 exit /b
-    )
+:BUILDALL
+type nul > build_results.txt
+echo ***************************************************************************** >> build_results.txt
+echo                         Build H5Tinit.exe >> build_results.txt
+echo ***************************************************************************** >> build_results.txt
 
-    exit /b
+cd windows\misc\typegen\h5tinit
+msdev h5tinit.dsp  /make "h5tinit - Win32 Debug" /Rebuild /out ..\..\..\..\h5tinit.log
+cd ..\..\..\..\
+more h5tinit.log >> build_results.txt
+del h5tinit.log
+echo ***************************************************************************** >> build_results.txt
+echo                         Generate H5f90i_gen.h and H5fortran_types.f90
+echo ***************************************************************************** >> build_results.txt
 
+REM Generate H5fortran_detect.f90
+cd windows\misc\H5fortran_detect_gen
+dfdev H5fortran_detect_gen.dsp /make "H5fortran_detect_gen - Win32 Debug" /Rebuild /out ..\..\..\H5fortran_detect_gen.log
+cd ..\..\..\fortran\src
+H5fortran_detect_gen.exe > H5fortran_detect.f90
+del H5fortran_detect_gen.exe
+cd ..\..\
+more H5fortran_detect_gen.log >> build_results.txt
+del H5fortran_detect_gen.log
 
-rem Handle errors
-:error
+REM Generate H5fort_type_defines.h
+cd windows\misc\fortrantypegen
+dfdev H5fortran_detect.dsp /make "H5fortran_detect - Win32 Debug" /Rebuild /out ..\..\..\H5fortran_detect.log
+cd ..\..\..\fortran\src
+H5fortran_detect.exe > H5fort_type_defines.h
+del H5fortran_detect.exe
+cd ..\..\
+more H5fortran_detect.log >> build_results.txt
+del H5fortran_detect.log
 
-    rem For now, our error handling consists of setting nerrors and quitting
-    echo.HDF5 build failed.
-    set /a nerrors=%nerrors%+1
-    goto end
-    
-    rem We'll never really get here, but we keep this line for consistency.
-    exit /b
+REM Generate H5f90i_gen.h and H5fortran_types.f90
+cd windows\misc\matchtypegen
+dfdev H5match_types.dsp /make "H5match_types - Win32 Debug" /Rebuild /out ..\..\..\H5match_types.log
+cd ..\..\..\fortran\src
+H5match_types.exe
+del H5match_types.exe
+cd ..\..\
+more H5match_types.log >> build_results.txt
+del H5match_types.log
 
+echo ***************************************************************************** >> build_results.txt
+echo                         Build HDF5 C/C++/Fortran Libraries and Tools >> build_results.txt
+echo ***************************************************************************** >> build_results.txt
 
-rem This is where the magic happens
-:main
+cd src
+h5tinit.exe > h5tinit.c
 
-    call :parse_params %*
-    if %errorlevel% neq 0 (
-        if !errorlevel! equ 1 (
-            rem This isn't an error case-- this means /? was specified.  Simply
-            rem quit.
-            goto end
-            
-        ) else (
-            rem Error case.
-            echo.Error parsing parameters!
-            goto error
-        )
-    )
-    
-    call :setup
-    if %errorlevel% neq 0 (
-        echo.Error setting up build environment.
-        goto error
-    )
+cd ..\windows\proj\all
+msdev all.dsw /make "hl_test_image_fortrandll - ALL" "hl_test_lite_fortrandll - ALL" "hl_test_table_fortrandll - ALL" "hl_test_image_fortran - ALL" "hl_test_lite_fortran - ALL" "hl_test_table_fortran - ALL" "testhdf5_fortrandll - ALL" "testhdf5_fortran - ALL" "flush2_fortrandll - ALL" "flush2_fortran - ALL" "flush1_fortrandll - ALL" "flush1_fortran - ALL" "testhdf5_cppdll - ALL" "testhdf5_cpp - ALL" "dsets_cppdll - ALL" "dsets_cpp - ALL" "hl_test_table_cpp - ALL" "hl_test_table_cppdll - ALL" "all - ALL" /Rebuild /out ..\..\..\all.log
+cd ..\..\..\
+more all.log >> build_results.txt
+del all.log
+GOTO END
 
-    echo.Building HDF5 Libraries and Tools
-    echo.
+:WRONG
+echo The syntax of the command is incorrect.
+echo.
 
-    echo.*****************************************************************************
-    echo.                        Build HDF5 Libraries and Tools
-    echo.*****************************************************************************
-    echo.
+:HELP
+echo Builds HDF5 Libraries and Tools.
+echo.
+echo hdf5build [OPTION]
+echo.
+echo Please use one of the following options!
+echo.
+echo    hdf5build                   Build HDF5 C Library and Tools
+echo    hdf5build enablecpp         Build HDF5 C/C++ Libraries and Tools
+echo    hdf5build enablefortran     Build HDF5 C/Fortran Libraries and Tools
+echo    hdf5build enableall         Build HDF5 C/C++/Fortran Libraries and Tools
+echo    hdf5build /?                Help information
 
-
-    call :all
-    if %errorlevel% neq 0 (
-        echo.Error building HDF5 libraries!
-        goto error
-    )
-
-    if "%nerrors%"=="0" (
-        echo. All HDF5 libraries and tools build successfully!
-    )
-    rem Fall through to end
-
-:end
-    popd
-    endlocal & exit /b %nerrors%
+:END

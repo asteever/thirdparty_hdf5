@@ -40,11 +40,10 @@ static herr_t H5O_linfo_encode(H5F_t *f, hbool_t disable_shared, uint8_t *p, con
 static void *H5O_linfo_copy(const void *_mesg, void *_dest);
 static size_t H5O_linfo_size(const H5F_t *f, hbool_t disable_shared, const void *_mesg);
 static herr_t H5O_linfo_free(void *_mesg);
-static herr_t H5O_linfo_delete(H5F_t *f, hid_t dxpl_id, H5O_t *open_oh,
-    void *_mesg);
-static void *H5O_linfo_copy_file(H5F_t *file_src, void *native_src,
-    H5F_t *file_dst, hbool_t *recompute_size, H5O_copy_t *cpy_info,
-    void *udata, hid_t dxpl_id);
+static herr_t H5O_linfo_delete(H5F_t *f, hid_t dxpl_id, const void *_mesg);
+static void *H5O_linfo_copy_file(H5F_t *file_src, 
+    void *native_src, H5F_t *file_dst, hid_t dxpl_id, H5O_copy_t *cpy_info,
+    void *udata);
 static herr_t H5O_linfo_post_copy_file(const H5O_loc_t *parent_src_oloc, const void *mesg_src, H5O_loc_t *dst_oloc,
     void *mesg_dst, hid_t dxpl_id, H5O_copy_t *cpy_info);
 static herr_t H5O_linfo_debug(H5F_t *f, hid_t dxpl_id, const void *_mesg,
@@ -55,7 +54,7 @@ const H5O_msg_class_t H5O_MSG_LINFO[1] = {{
     H5O_LINFO_ID,            	/*message id number             */
     "linfo",                 	/*message name for debugging    */
     sizeof(H5O_linfo_t),     	/*native message size           */
-    0,				/* messages are sharable?       */
+    FALSE,			/* messages are sharable?       */
     H5O_linfo_decode,        	/*decode message                */
     H5O_linfo_encode,        	/*encode message                */
     H5O_linfo_copy,          	/*copy the native value         */
@@ -339,9 +338,9 @@ H5O_linfo_free(void *mesg)
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_linfo_delete(H5F_t *f, hid_t dxpl_id, H5O_t UNUSED *open_oh, void *_mesg)
+H5O_linfo_delete(H5F_t *f, hid_t dxpl_id, const void *_mesg)
 {
-    H5O_linfo_t *linfo = (H5O_linfo_t *)_mesg;
+    const H5O_linfo_t *linfo = (const H5O_linfo_t *)_mesg;
     herr_t ret_value = SUCCEED;   /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5O_linfo_delete)
@@ -352,7 +351,7 @@ H5O_linfo_delete(H5F_t *f, hid_t dxpl_id, H5O_t UNUSED *open_oh, void *_mesg)
 
     /* If the group is using "dense" link storage, delete it */
     if(H5F_addr_defined(linfo->fheap_addr))
-        if(H5G_dense_delete(f, dxpl_id, linfo, TRUE) < 0)
+        if(H5G_dense_delete(f, dxpl_id, (H5O_linfo_t *)linfo, TRUE) < 0)   /* Casting away const OK - QAK */
             HGOTO_ERROR(H5E_OHDR, H5E_CANTFREE, FAIL, "unable to free dense link storage")
 
 done:
@@ -376,8 +375,7 @@ done:
  */
 static void *
 H5O_linfo_copy_file(H5F_t UNUSED *file_src, void *native_src, H5F_t *file_dst,
-    hbool_t UNUSED *recompute_size, H5O_copy_t *cpy_info, void UNUSED *udata,
-    hid_t dxpl_id)
+    hid_t dxpl_id, H5O_copy_t *cpy_info, void UNUSED *udata)
 {
     H5O_linfo_t          *linfo_src = (H5O_linfo_t *) native_src;
     H5O_linfo_t          *linfo_dst = NULL;
@@ -513,6 +511,7 @@ H5O_linfo_post_copy_file(const H5O_loc_t *src_oloc, const void *mesg_src,
     /* Check for copying dense link storage */
     if(H5F_addr_defined(linfo_src->fheap_addr)) {
         H5O_linfo_postcopy_ud_t udata;          /* User data for iteration callback */
+        H5G_link_iterate_t lnk_op;              /* Link operator */
 
         /* Set up dense link iteration user data */
         udata.src_oloc = src_oloc;
@@ -521,8 +520,12 @@ H5O_linfo_post_copy_file(const H5O_loc_t *src_oloc, const void *mesg_src,
         udata.dxpl_id = dxpl_id;
         udata.cpy_info = cpy_info;
 
+        /* Build iterator operator */
+        lnk_op.op_type = H5G_LINK_OP_LIB;
+        lnk_op.u.lib_op = H5O_linfo_post_copy_file_cb;
+
         /* Iterate over the links in the group, building a table of the link messages */
-        if(H5G_dense_iterate(src_oloc->file, dxpl_id, linfo_src, H5_INDEX_NAME, H5_ITER_NATIVE, (hsize_t)0, NULL, H5O_linfo_post_copy_file_cb, &udata) < 0)
+        if(H5G_dense_iterate(src_oloc->file, dxpl_id, linfo_src, H5_INDEX_NAME, H5_ITER_NATIVE, (hsize_t)0, NULL, (hid_t)0, &lnk_op, &udata) < 0)
             HGOTO_ERROR(H5E_SYM, H5E_CANTNEXT, FAIL, "error iterating over links")
     } /* end if */
 

@@ -66,58 +66,6 @@ H5FL_BLK_EXTERN(type_conv);
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5D_compact_fill
- *
- * Purpose:	Write fill values to a compactly stored dataset.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *		May 6, 2007
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5D_compact_fill(H5D_t *dset, hid_t dxpl_id)
-{
-    H5D_fill_buf_info_t fb_info;        /* Dataset's fill buffer info */
-    hbool_t     fb_info_init = FALSE;   /* Whether the fill value buffer has been initialized */
-    herr_t	ret_value = SUCCEED;	/* Return value */
-
-    FUNC_ENTER_NOAPI(H5D_compact_fill, FAIL)
-
-    /* Check args */
-    HDassert(TRUE == H5P_isa_class(dxpl_id, H5P_DATASET_XFER));
-    HDassert(dset && H5D_COMPACT == dset->shared->layout.type);
-    HDassert(dset->shared->layout.u.compact.buf);
-    HDassert(dset->shared->type);
-    HDassert(dset->shared->space);
-
-    /* Initialize the fill value buffer */
-    /* (use the compact dataset storage buffer as the fill value buffer) */
-    if(H5D_fill_init(&fb_info, dset->shared->layout.u.compact.buf, FALSE,
-            NULL, NULL, NULL, NULL,
-            &dset->shared->dcpl_cache.fill, dset->shared->type,
-            dset->shared->type_id, (size_t)0, dset->shared->layout.u.compact.size, dxpl_id) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "can't initialize fill buffer info")
-    fb_info_init = TRUE;
-
-    /* Check for VL datatype & non-default fill value */
-    if(fb_info.has_vlen_fill_type)
-        /* Fill the buffer with VL datatype fill values */
-        if(H5D_fill_refill_vl(&fb_info, fb_info.elmts_per_buf, dxpl_id) < 0)
-            HGOTO_ERROR(H5E_DATASET, H5E_CANTCONVERT, FAIL, "can't refill fill value buffer")
-
-done:
-    /* Release the fill buffer info, if it's been initialized */
-    if(fb_info_init && H5D_fill_term(&fb_info) < 0)
-        HDONE_ERROR(H5E_DATASET, H5E_CANTFREE, FAIL, "Can't release fill buffer info")
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5D_compact_fill() */
-
-
-/*-------------------------------------------------------------------------
  * Function:    H5D_compact_readvv
  *
  * Purpose:     Reads some data vectors from a dataset into a buffer.
@@ -139,7 +87,7 @@ ssize_t
 H5D_compact_readvv(const H5D_io_info_t *io_info,
     size_t dset_max_nseq, size_t *dset_curr_seq, size_t dset_size_arr[], hsize_t dset_offset_arr[],
     size_t mem_max_nseq, size_t *mem_curr_seq, size_t mem_size_arr[], hsize_t mem_offset_arr[],
-    haddr_t UNUSED addr, void UNUSED *pointer/*in*/, void *buf)
+    void *buf)
 {
     ssize_t ret_value;          /* Return value */
 
@@ -181,7 +129,7 @@ ssize_t
 H5D_compact_writevv(const H5D_io_info_t *io_info,
     size_t dset_max_nseq, size_t *dset_curr_seq, size_t dset_size_arr[], hsize_t dset_offset_arr[],
     size_t mem_max_nseq, size_t *mem_curr_seq, size_t mem_size_arr[], hsize_t mem_offset_arr[],
-    haddr_t UNUSED addr, void UNUSED *pointer/*in*/, const void *buf)
+    const void *buf)
 {
     ssize_t ret_value;          /* Return value */
 

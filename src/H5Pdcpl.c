@@ -28,7 +28,6 @@
 /* Module Setup */
 /****************/
 #define H5P_PACKAGE		/*suppress error about including H5Ppkg	  */
-#define H5Z_PACKAGE		/*suppress error about including H5Zpkg	  */
 
 
 /***********/
@@ -40,7 +39,7 @@
 #include "H5Iprivate.h"		/* IDs			  		*/
 #include "H5MMprivate.h"	/* Memory management			*/
 #include "H5Ppkg.h"		/* Property lists		  	*/
-#include "H5Zpkg.h"		/* Data filters				*/
+#include "H5Zprivate.h"		/* Data filters				*/
 
 
 /****************/
@@ -61,7 +60,7 @@
 /* Definitions for fill value.  size=0 means fill value will be 0 as
  * library default; size=-1 means fill value is undefined. */
 #define H5D_CRT_FILL_VALUE_SIZE    sizeof(H5O_fill_t)
-#define H5D_CRT_FILL_VALUE_DEF     {{0, NULL, H5O_NULL_ID, {{0, HADDR_UNDEF}}}, H5O_FILL_VERSION_2, NULL, 0, NULL, H5D_ALLOC_TIME_LATE, H5D_FILL_TIME_IFSET, FALSE}
+#define H5D_CRT_FILL_VALUE_DEF     {{0, {{NULL, HADDR_UNDEF, FALSE}}}, NULL, 0, NULL, H5D_ALLOC_TIME_LATE, H5D_FILL_TIME_IFSET, FALSE}
 #define H5D_CRT_FILL_VALUE_CMP     H5P_fill_value_cmp
 /* Definitions for space allocation time state */
 #define H5D_CRT_ALLOC_TIME_STATE_SIZE   sizeof(unsigned)
@@ -72,7 +71,7 @@
 #define H5D_CRT_EXT_FILE_LIST_CMP  H5P_dcrt_ext_file_list_cmp
 /* Definitions for data filter pipeline */
 #define H5D_CRT_DATA_PIPELINE_SIZE sizeof(H5O_pline_t)
-#define H5D_CRT_DATA_PIPELINE_DEF  {{0, NULL, H5O_NULL_ID, {{0, HADDR_UNDEF}}}, H5O_PLINE_VERSION_1, 0, 0, NULL}
+#define H5D_CRT_DATA_PIPELINE_DEF  {{0, {{NULL, HADDR_UNDEF, FALSE}}}, 0, 0, NULL}
 #define H5D_CRT_DATA_PIPELINE_CMP  H5P_dcrt_data_pipeline_cmp
 
 
@@ -126,9 +125,6 @@ const H5P_libclass_t H5P_CLS_DCRT[1] = {{
 /*****************************/
 /* Library Private Variables */
 /*****************************/
-
-/* Declare extern the free list to manage blocks of type conversion data */
-H5FL_BLK_EXTERN(type_conv);
 
 
 
@@ -1053,68 +1049,6 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5P_modify_filter
- *
- * Purpose:	Modifies the specified FILTER in the
- *		transient or permanent output filter pipeline
- *		depending on whether PLIST is a dataset creation or dataset
- *		transfer property list.  The FLAGS argument specifies certain
- *		general properties of the filter and is documented below.
- *		The CD_VALUES is an array of CD_NELMTS integers which are
- *		auxiliary data for the filter.  The integer vlues will be
- *		stored in the dataset object header as part of the filter
- *		information.
- *
- * 		The FLAGS argument is a bit vector of the following fields:
- *
- * 		H5Z_FLAG_OPTIONAL(0x0001)
- *		If this bit is set then the filter is optional.  If the
- *		filter fails during an H5Dwrite() operation then the filter
- *		is just excluded from the pipeline for the chunk for which it
- *		failed; the filter will not participate in the pipeline
- *		during an H5Dread() of the chunk.  If this bit is clear and
- *		the filter fails then the entire I/O operation fails.
- *      If this bit is set but encoding is disabled for a filter,
- *      attempting to write will generate an error.
- *
- * Note:	This function currently supports only the permanent filter
- *		pipeline.  That is, PLIST_ID must be a dataset creation
- *		property list.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Wednesday, October 17, 2007
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5P_modify_filter(H5P_genplist_t *plist, H5Z_filter_t filter, unsigned flags,
-    size_t cd_nelmts, const unsigned cd_values[/*cd_nelmts*/])
-{
-    H5O_pline_t         pline;
-    herr_t ret_value = SUCCEED;   /* return value */
-
-    FUNC_ENTER_NOAPI(H5P_modify_filter, FAIL)
-
-    /* Get the pipeline property to append to */
-    if(H5P_get(plist, H5D_CRT_DATA_PIPELINE_NAME, &pline) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get pipeline")
-
-    /* Modify the filter parameters of the I/O pipeline */
-    if(H5Z_modify(&pline, filter, flags, cd_nelmts, cd_values) < 0)
-        HGOTO_ERROR(H5E_PLINE, H5E_CANTINIT, FAIL, "unable to add filter to pipeline")
-
-    /* Put the I/O pipeline information back into the property list */
-    if(H5P_set(plist, H5D_CRT_DATA_PIPELINE_NAME, &pline) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set pipeline")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5P_modify_filter() */
-
-
-/*-------------------------------------------------------------------------
  * Function:	H5Pmodify_filter
  *
  * Purpose:	Modifies the specified FILTER in the
@@ -1156,8 +1090,9 @@ herr_t
 H5Pmodify_filter(hid_t plist_id, H5Z_filter_t filter, unsigned int flags,
 	       size_t cd_nelmts, const unsigned int cd_values[/*cd_nelmts*/])
 {
-    H5P_genplist_t *plist;              /* Property list pointer */
-    herr_t ret_value = SUCCEED;         /* return value */
+    H5O_pline_t         pline;
+    H5P_genplist_t *plist;      /* Property list pointer */
+    herr_t ret_value=SUCCEED;   /* return value */
 
     FUNC_ENTER_API(H5Pmodify_filter, FAIL)
     H5TRACE5("e", "iZfIuz*[a3]Iu", plist_id, filter, flags, cd_nelmts, cd_values);
@@ -1174,9 +1109,17 @@ H5Pmodify_filter(hid_t plist_id, H5Z_filter_t filter, unsigned int flags,
     if(NULL == (plist = H5P_object_verify(plist_id,H5P_DATASET_CREATE)))
         HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
 
+    /* Get the pipeline property to append to */
+    if(H5P_get(plist, H5D_CRT_DATA_PIPELINE_NAME, &pline) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get pipeline")
+
     /* Modify the filter parameters of the I/O pipeline */
-    if(H5P_modify_filter(plist, filter, flags, cd_nelmts, cd_values) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTINIT, FAIL, "can't modify filter")
+    if(H5Z_modify(&pline, filter, flags, cd_nelmts, cd_values) < 0)
+        HGOTO_ERROR(H5E_PLINE, H5E_CANTINIT, FAIL, "unable to add filter to pipeline")
+
+    /* Put the I/O pipeline information back into the property list */
+    if(H5P_set(plist, H5D_CRT_DATA_PIPELINE_NAME, &pline) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set pipeline")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -1393,7 +1336,7 @@ H5P_get_filter(const H5Z_filter_info_t *filter, unsigned int *flags/*out*/,
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5Pget_filter2
+ * Function:	H5Pget_filter
  *
  * Purpose:	This is the query counterpart of H5Pset_filter() and returns
  *		information about a particular filter number in a permanent
@@ -1416,23 +1359,41 @@ H5P_get_filter(const H5Z_filter_info_t *filter, unsigned int *flags/*out*/,
  *
  *-------------------------------------------------------------------------
  */
+#ifdef H5_WANT_H5_V1_6_COMPAT
 H5Z_filter_t
-H5Pget_filter2(hid_t plist_id, unsigned idx, unsigned int *flags/*out*/,
+H5Pget_filter(hid_t plist_id, unsigned idx, unsigned int *flags/*out*/,
+	       size_t *cd_nelmts/*in_out*/, unsigned cd_values[]/*out*/,
+	       size_t namelen, char name[]/*out*/)
+#else /* H5_WANT_H5_V1_6_COMPAT */
+H5Z_filter_t
+H5Pget_filter(hid_t plist_id, unsigned idx, unsigned int *flags/*out*/,
 	       size_t *cd_nelmts/*in_out*/, unsigned cd_values[]/*out*/,
 	       size_t namelen, char name[]/*out*/,
-               unsigned *filter_config /*out*/)
+               unsigned *_filter_config /*out*/)
+#endif /* H5_WANT_H5_V1_6_COMPAT */
 {
     H5O_pline_t         pline;  /* Filter pipeline */
     const H5Z_filter_info_t *filter;  /* Pointer to filter information */
     H5P_genplist_t *plist;      /* Property list pointer */
+#ifdef H5_WANT_H5_V1_6_COMPAT
+   unsigned *filter_config = NULL;     /* Filter configuration */
+#else /* H5_WANT_H5_V1_6_COMPAT */
+   unsigned *filter_config = _filter_config;    /* Filter configuration */
+#endif /* H5_WANT_H5_V1_6_COMPAT */
     H5Z_filter_t ret_value;     /* return value */
 
-    FUNC_ENTER_API(H5Pget_filter2, H5Z_FILTER_ERROR)
-    H5TRACE8("Zf", "iIux*zxzxx", plist_id, idx, flags, cd_nelmts, cd_values,
-             namelen, name, filter_config);
+    FUNC_ENTER_API(H5Pget_filter, H5Z_FILTER_ERROR)
+#ifdef H5_WANT_H5_V1_6_COMPAT
+    H5TRACE7("Zf","iIux*zxzx",plist_id,idx,flags,cd_nelmts,cd_values,namelen,
+             name);
+#else /* H5_WANT_H5_V1_6_COMPAT */
+    H5TRACE8("Zf","iIux*zxzx*Iu",plist_id,idx,flags,cd_nelmts,cd_values,namelen,
+             name,_filter_config);
+#endif /* H5_WANT_H5_V1_6_COMPAT */
 
     /* Check args */
-    if(cd_nelmts || cd_values) {
+    if(cd_nelmts || cd_values)
+{
         /*
          * It's likely that users forget to initialize this on input, so
          * we'll check that it has a reasonable value.  The actual number
@@ -1476,61 +1437,11 @@ H5Pget_filter2(hid_t plist_id, unsigned idx, unsigned int *flags/*out*/,
 
 done:
     FUNC_LEAVE_API(ret_value)
-} /* end H5Pget_filter2() */
+} /* end H5Pget_filter() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5P_get_filter_by_id
- *
- * Purpose:	This is an additional query counterpart of H5Pset_filter() and
- *              returns information about a particular filter in a permanent
- *		or transient pipeline depending on whether PLIST_ID is a
- *		dataset creation or transfer property list.  On input,
- *		CD_NELMTS indicates the number of entries in the CD_VALUES
- *		array allocated by the caller while on exit it contains the
- *		number of values defined by the filter.  FILTER_CONFIG is a bit
- *      field contaning encode/decode flags from H5Zpublic.h.  The ID
- *      should be the filter ID to retrieve the parameters for.  If the
- *      filter is not set for the property list, an error will be returned.
- *
- * Return:	Success:	Non-negative
- *		Failure:	Negative
- *
- * Programmer:	Quincey Koziol
- *              Wednesday, October 17, 2007
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5P_get_filter_by_id(H5P_genplist_t *plist, H5Z_filter_t id, unsigned int *flags/*out*/,
-    size_t *cd_nelmts/*in_out*/, unsigned cd_values[]/*out*/,
-    size_t namelen, char name[]/*out*/, unsigned *filter_config)
-{
-    H5O_pline_t         pline;  /* Filter pipeline */
-    H5Z_filter_info_t *filter;  /* Pointer to filter information */
-    herr_t ret_value = SUCCEED;   /* Return value */
-
-    FUNC_ENTER_NOAPI(H5P_get_filter_by_id, FAIL)
-
-    /* Get pipeline info */
-    if(H5P_get(plist, H5D_CRT_DATA_PIPELINE_NAME, &pline) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get pipeline")
-
-    /* Get pointer to filter in pipeline */
-    if(NULL == (filter = H5Z_filter_info(&pline, id)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "filter ID is invalid")
-
-    /* Get filter information */
-    if(H5P_get_filter(filter, flags, cd_nelmts, cd_values, namelen, name, filter_config) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, H5Z_FILTER_ERROR, "can't get filter info")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5P_get_filter_by_id() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5Pget_filter_by_id2
+ * Function:	H5Pget_filter_by_id
  *
  * Purpose:	This is an additional query counterpart of H5Pset_filter() and
  *              returns information about a particular filter in a permanent
@@ -1551,29 +1462,49 @@ done:
  *
  *-------------------------------------------------------------------------
  */
+#ifdef H5_WANT_H5_V1_6_COMPAT
 herr_t
-H5Pget_filter_by_id2(hid_t plist_id, H5Z_filter_t id, unsigned int *flags/*out*/,
+H5Pget_filter_by_id(hid_t plist_id, H5Z_filter_t id, unsigned int *flags/*out*/,
     size_t *cd_nelmts/*in_out*/, unsigned cd_values[]/*out*/,
-    size_t namelen, char name[]/*out*/, unsigned *filter_config)
+    size_t namelen, char name[]/*out*/)
+#else
+herr_t
+H5Pget_filter_by_id(hid_t plist_id, H5Z_filter_t id, unsigned int *flags/*out*/,
+    size_t *cd_nelmts/*in_out*/, unsigned cd_values[]/*out*/,
+    size_t namelen, char name[]/*out*/, unsigned *_filter_config)
+#endif /* H5_WANT_H5_V1_6_COMPAT */
 {
+    H5O_pline_t         pline;  /* Filter pipeline */
+    H5Z_filter_info_t *filter;  /* Pointer to filter information */
     H5P_genplist_t *plist;      /* Property list pointer */
+#ifdef H5_WANT_H5_V1_6_COMPAT
+   unsigned *filter_config = NULL;     /* Filter configuration */
+#else /* H5_WANT_H5_V1_6_COMPAT */
+   unsigned *filter_config = _filter_config;    /* Filter configuration */
+#endif /* H5_WANT_H5_V1_6_COMPAT */
     herr_t ret_value = SUCCEED;   /* Return value */
 
-    FUNC_ENTER_API(H5Pget_filter_by_id2, FAIL)
-    H5TRACE8("e", "iZfx*zxzx*Iu", plist_id, id, flags, cd_nelmts, cd_values,
-             namelen, name, filter_config);
+    FUNC_ENTER_API(H5Pget_filter_by_id, FAIL)
+#ifdef H5_WANT_H5_V1_6_COMPAT
+    H5TRACE7("e","iZfx*zxzx",plist_id,id,flags,cd_nelmts,cd_values,namelen,
+             name);
+#else
+    H5TRACE8("e","iZfx*zxzx*Iu",plist_id,id,flags,cd_nelmts,cd_values,namelen,
+             name,_filter_config);
+#endif /* H5_WANT_H5_V1_6_COMPAT */
 
     /* Check args */
-    if(cd_nelmts || cd_values) {
+    if(cd_nelmts || cd_values)
+{
         /*
          * It's likely that users forget to initialize this on input, so
          * we'll check that it has a reasonable value.  The actual number
          * is unimportant because the H5O layer will detect when a message
          * is too large.
          */
-        if(cd_nelmts && *cd_nelmts > 256)
+        if(cd_nelmts && *cd_nelmts>256)
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "probable uninitialized *cd_nelmts argument")
-        if(cd_nelmts && *cd_nelmts > 0 && !cd_values)
+        if(cd_nelmts && *cd_nelmts>0 && !cd_values)
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "client data values not supplied")
 
         /*
@@ -1588,13 +1519,21 @@ H5Pget_filter_by_id2(hid_t plist_id, H5Z_filter_t id, unsigned int *flags/*out*/
     if(NULL == (plist = H5P_object_verify(plist_id, H5P_DATASET_CREATE)))
         HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
 
-    /* Get filter info */
-    if(H5P_get_filter_by_id(plist, id, flags, cd_nelmts, cd_values, namelen, name, filter_config) < 0)
+    /* Get pipeline info */
+    if(H5P_get(plist, H5D_CRT_DATA_PIPELINE_NAME, &pline) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get pipeline")
+
+    /* Get pointer to filter in pipeline */
+    if(NULL == (filter = H5Z_filter_info(&pline, id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "filter ID is invalid")
+
+    /* Get filter information */
+    if(H5P_get_filter(filter, flags, cd_nelmts, cd_values, namelen, name, filter_config) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, H5Z_FILTER_ERROR, "can't get filter info")
 
 done:
     FUNC_LEAVE_API(ret_value)
-} /* end H5Pget_filter_by_id2() */
+} /* end H5Pget_filter_by_id() */
 
 
 /*-------------------------------------------------------------------------
@@ -2083,8 +2022,7 @@ H5Pset_fill_value(hid_t plist_id, hid_t type_id, const void *value)
     H5O_fill_reset_dyn(&fill);
 
     if(value) {
-        H5T_t *type;            /* Datatype for fill value */
-        H5T_path_t *tpath;      /* Conversion information */
+        H5T_t		*type;          /* Datatype for fill value */
 
         /* Retrieve pointer to datatype */
 	if(NULL == (type = H5I_object_verify(type_id, H5I_DATATYPE)))
@@ -2097,30 +2035,6 @@ H5Pset_fill_value(hid_t plist_id, hid_t type_id, const void *value)
         if(NULL == (fill.buf = H5MM_malloc((size_t)fill.size)))
             HGOTO_ERROR(H5E_RESOURCE, H5E_CANTINIT, FAIL, "memory allocation failed for fill value")
         HDmemcpy(fill.buf, value, (size_t)fill.size);
-
-        /* Set up type conversion function */
-        if(NULL == (tpath = H5T_path_find(type, type, NULL, NULL, H5AC_ind_dxpl_id, FALSE)))
-            HGOTO_ERROR(H5E_DATASET, H5E_UNSUPPORTED, FAIL, "unable to convert between src and dest data types")
-
-        /* If necessary, convert fill value datatypes (which copies VL components, etc.) */
-        if(!H5T_path_noop(tpath)) {
-            uint8_t *bkg_buf = NULL;    /* Background conversion buffer */
-
-            /* Allocate a background buffer */
-            if(H5T_path_bkg(tpath) && NULL == (bkg_buf = H5FL_BLK_CALLOC(type_conv, (size_t)fill.size)))
-                HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
-
-            /* Convert the fill value */
-            if(H5T_convert(tpath, type_id, type_id, (size_t)1, (size_t)0, (size_t)0, fill.buf, bkg_buf, H5AC_ind_dxpl_id) < 0) {
-                if(bkg_buf)
-                    H5FL_BLK_FREE(type_conv, bkg_buf);
-                HGOTO_ERROR(H5E_DATASET, H5E_CANTCONVERT, FAIL, "datatype conversion failed")
-            } /* end if */
-
-            /* Release the background buffer */
-            if(bkg_buf)
-                H5FL_BLK_FREE(type_conv, bkg_buf);
-        } /* end if */
     }  /* end if */
     else
         fill.size = (-1);
@@ -2132,101 +2046,6 @@ H5Pset_fill_value(hid_t plist_id, hid_t type_id, const void *value)
 done:
     FUNC_LEAVE_API(ret_value)
 } /* end H5Pset_fill_value() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5P_get_fill_value
- *
- * Purpose:	Queries the fill value property of a dataset creation
- *		property list.  The fill value is returned through the VALUE
- *		pointer and the memory is allocated by the caller.  The fill
- *		value will be converted from its current datatype to the
- *		specified TYPE.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Wednesday, October 17, 2007
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5P_get_fill_value(H5P_genplist_t *plist, const H5T_t *type, void *value/*out*/,
-    hid_t dxpl_id)
-{
-    H5O_fill_t          fill;                   /* Fill value to retrieve */
-    H5T_path_t		*tpath;		        /*type conversion info	*/
-    void		*buf = NULL;		/*conversion buffer	*/
-    void		*bkg = NULL;		/*conversion buffer	*/
-    hid_t		src_id = -1;		/*source datatype id	*/
-    hid_t		dst_id = -1;		/*destination datatype id	*/
-    herr_t              ret_value = SUCCEED;    /* Return value */
-
-    FUNC_ENTER_NOAPI(H5P_get_fill_value, FAIL)
-
-    /*
-     * If no fill value is defined then return an error.  We can't even
-     * return zero because we don't know the datatype of the dataset and
-     * datatype conversion might not have resulted in zero.  If fill value
-     * is undefined, also return error.
-     */
-    if(H5P_get(plist, H5D_CRT_FILL_VALUE_NAME, &fill) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get fill value")
-    if(fill.size == -1)
-	HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "fill value is undefined")
-
-    /* Check for "default" fill value */
-    if(fill.size == 0) {
-	HDmemset(value, 0, H5T_get_size(type));
-   	HGOTO_DONE(SUCCEED);
-    } /* end if */
-
-     /*
-     * Can we convert between the source and destination datatypes?
-     */
-    if(NULL == (tpath = H5T_path_find(fill.type, type, NULL, NULL, dxpl_id, FALSE)))
-        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "unable to convert between src and dst datatypes")
-    if((src_id = H5I_register(H5I_DATATYPE, H5T_copy(fill.type, H5T_COPY_TRANSIENT))) < 0)
-        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "unable to copy/register datatype")
-
-    /*
-     * Data type conversions are always done in place, so we need a buffer
-     * other than the fill value buffer that is large enough for both source
-     * and destination.  The app-supplied buffer might do okay.
-     */
-    if(H5T_get_size(type) >= H5T_get_size(fill.type)) {
-        buf = value;
-        if(H5T_path_bkg(tpath) && NULL == (bkg = H5MM_malloc(H5T_get_size(type))))
-            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for type conversion")
-    } /* end if */
-    else {
-        if(NULL == (buf = H5MM_malloc(H5T_get_size(fill.type))))
-            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for type conversion")
-        if(H5T_path_bkg(tpath))
-            bkg = value;
-    } /* end else */
-    HDmemcpy(buf, fill.buf, H5T_get_size(fill.type));
-
-    /* Do the conversion */
-    if((dst_id = H5I_register(H5I_DATATYPE, H5T_copy(type, H5T_COPY_TRANSIENT))) < 0)
-        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "unable to copy/register datatype")
-    if(H5T_convert(tpath, src_id, dst_id, (size_t)1, (size_t)0, (size_t)0, buf, bkg, dxpl_id) < 0)
-        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "datatype conversion failed")
-    if(buf != value)
-        HDmemcpy(value, buf, H5T_get_size(type));
-
-done:
-    if(buf != value)
-        H5MM_xfree(buf);
-    if(bkg != value)
-        H5MM_xfree(bkg);
-    if(src_id >= 0)
-        H5I_dec_ref(src_id);
-    if(dst_id >= 0)
-        H5I_dec_ref(dst_id);
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5P_get_fill_value() */
 
 
 /*-------------------------------------------------------------------------
@@ -2249,7 +2068,12 @@ herr_t
 H5Pget_fill_value(hid_t plist_id, hid_t type_id, void *value/*out*/)
 {
     H5P_genplist_t      *plist;                 /* Property list pointer */
-    H5T_t		*type;		        /* Datatype		*/
+    H5O_fill_t          fill;                   /* Fill value to retrieve */
+    H5T_t		*type;		        /*datatype		*/
+    H5T_path_t		*tpath;		        /*type conversion info	*/
+    void		*buf = NULL;		/*conversion buffer	*/
+    void		*bkg = NULL;		/*conversion buffer	*/
+    hid_t		src_id = -1;		/*source datatype id	*/
     herr_t              ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_API(H5Pget_fill_value, FAIL)
@@ -2265,11 +2089,63 @@ H5Pget_fill_value(hid_t plist_id, hid_t type_id, void *value/*out*/)
     if(NULL == (plist = H5P_object_verify(plist_id, H5P_DATASET_CREATE)))
         HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
 
-    /* Get the fill value */
-    if(H5P_get_fill_value(plist, type, value, H5AC_ind_dxpl_id) < 0)
+    /*
+     * If no fill value is defined then return an error.  We can't even
+     * return zero because we don't know the datatype of the dataset and
+     * datatype conversion might not have resulted in zero.  If fill value
+     * is undefined, also return error.
+     */
+    if(H5P_get(plist, H5D_CRT_FILL_VALUE_NAME, &fill) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get fill value")
+    if(fill.size == -1)
+	HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "fill value is undefined")
+
+    /* Check for "default" fill value */
+    if(fill.size == 0) {
+	HDmemset(value, 0, H5T_get_size(type));
+   	HGOTO_DONE(SUCCEED);
+    } /* end if */
+
+     /*
+     * Can we convert between the source and destination datatypes?
+     */
+    if(NULL == (tpath = H5T_path_find(fill.type, type, NULL, NULL, H5AC_dxpl_id, FALSE)))
+        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "unable to convert between src and dst datatypes")
+    src_id = H5I_register(H5I_DATATYPE, H5T_copy(fill.type, H5T_COPY_TRANSIENT));
+    if(src_id < 0)
+        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "unable to copy/register datatype")
+
+    /*
+     * Data type conversions are always done in place, so we need a buffer
+     * other than the fill value buffer that is large enough for both source
+     * and destination.  The app-supplied buffer might do okay.
+     */
+    if(H5T_get_size(type) >= H5T_get_size(fill.type)) {
+        buf = value;
+        if(H5T_path_bkg(tpath) && NULL == (bkg = H5MM_malloc(H5T_get_size(type))))
+            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for type conversion")
+    } /* end if */
+    else {
+        if(NULL == (buf = H5MM_malloc(H5T_get_size(fill.type))))
+            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for type conversion")
+        if(H5T_path_bkg(tpath))
+            bkg = value;
+    } /* end else */
+    HDmemcpy(buf, fill.buf, H5T_get_size(fill.type));
+
+    /* Do the conversion */
+    if(H5T_convert(tpath, src_id, type_id, (size_t)1, (size_t)0, (size_t)0, buf, bkg, H5AC_dxpl_id) < 0)
+        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "datatype conversion failed")
+    if(buf != value)
+        HDmemcpy(value, buf, H5T_get_size(type));
 
 done:
+    if(buf != value)
+        H5MM_xfree(buf);
+    if(bkg != value)
+        H5MM_xfree(bkg);
+    if(src_id >= 0)
+        H5I_dec_ref(src_id);
     FUNC_LEAVE_API(ret_value)
 } /* end H5Pget_fill_value() */
 
@@ -2316,41 +2192,6 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5P_fill_value_defined
- *
- * Purpose:	Check if fill value is defined.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:  Quincey Koziol
- *              Wednesday, October 17, 2007
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5P_fill_value_defined(H5P_genplist_t *plist, H5D_fill_value_t *status)
-{
-    H5O_fill_t	        fill;                   /* Fill value to query */
-    herr_t		ret_value = SUCCEED;
-
-    FUNC_ENTER_NOAPI(H5P_fill_value_defined, FAIL)
-
-    HDassert(status);
-
-    /* Get the fill value struct */
-    if(H5P_get(plist, H5D_CRT_FILL_VALUE_NAME, &fill) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get fill value")
-
-    /* Get the fill-value status */
-    if(H5P_is_fill_value_defined(&fill, status) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "can't check fill value status")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5P_fill_value_defined() */
-
-
-/*-------------------------------------------------------------------------
  * Function:    H5Pfill_value_defined
  *
  * Purpose:	Check if fill value is defined.
@@ -2366,6 +2207,7 @@ herr_t
 H5Pfill_value_defined(hid_t plist_id, H5D_fill_value_t *status)
 {
     H5P_genplist_t 	*plist;                 /* Property list to query */
+    H5O_fill_t	        fill;                   /* Fill value to query */
     herr_t		ret_value = SUCCEED;
 
     FUNC_ENTER_API(H5Pfill_value_defined, FAIL)
@@ -2377,8 +2219,12 @@ H5Pfill_value_defined(hid_t plist_id, H5D_fill_value_t *status)
     if(NULL == (plist = H5P_object_verify(plist_id, H5P_DATASET_CREATE)))
         HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
 
+    /* Get the fill value struct */
+    if(H5P_get(plist, H5D_CRT_FILL_VALUE_NAME, &fill) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get fill value")
+
     /* Get the fill-value status */
-    if(H5P_fill_value_defined(plist, status) < 0)
+    if(H5P_is_fill_value_defined(&fill, status) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, FAIL, "can't check fill value status")
 
 done:
@@ -2608,159 +2454,4 @@ H5Pget_fill_time(hid_t plist_id, H5D_fill_time_t *fill_time/*out*/)
 done:
     FUNC_LEAVE_API(ret_value)
 } /* end H5Pget_fill_time() */
-
-#ifndef H5_NO_DEPRECATED_SYMBOLS
-
-/*-------------------------------------------------------------------------
- * Function:	H5Pget_filter1
- *
- * Purpose:	This is the query counterpart of H5Pset_filter() and returns
- *		information about a particular filter number in a permanent
- *		or transient pipeline depending on whether PLIST_ID is a
- *		dataset creation or transfer property list.  On input,
- *		CD_NELMTS indicates the number of entries in the CD_VALUES
- *		array allocated by the caller while on exit it contains the
- *		number of values defined by the filter.  The IDX
- *      should be a value between zero and N-1 as described for
- *      H5Pget_nfilters() and the function will return failure if the
- *      filter number is out of range.
- *
- * Return:	Success:	Filter identification number.
- *
- *		Failure:	H5Z_FILTER_ERROR (Negative)
- *
- * Programmer:	Robb Matzke
- *              Wednesday, April 15, 1998
- *
- *-------------------------------------------------------------------------
- */
-H5Z_filter_t
-H5Pget_filter1(hid_t plist_id, unsigned idx, unsigned int *flags/*out*/,
-	       size_t *cd_nelmts/*in_out*/, unsigned cd_values[]/*out*/,
-	       size_t namelen, char name[]/*out*/)
-{
-    H5O_pline_t         pline;  /* Filter pipeline */
-    const H5Z_filter_info_t *filter;  /* Pointer to filter information */
-    H5P_genplist_t *plist;      /* Property list pointer */
-    H5Z_filter_t ret_value;     /* return value */
-
-    FUNC_ENTER_API(H5Pget_filter1, H5Z_FILTER_ERROR)
-    H5TRACE7("Zf", "iIux*zxzx", plist_id, idx, flags, cd_nelmts, cd_values, namelen,
-             name);
-
-    /* Check args */
-    if(cd_nelmts || cd_values) {
-        /*
-         * It's likely that users forget to initialize this on input, so
-         * we'll check that it has a reasonable value.  The actual number
-         * is unimportant because the H5O layer will detect when a message
-         * is too large.
-         */
-        if(cd_nelmts && *cd_nelmts > 256)
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, H5Z_FILTER_ERROR, "probable uninitialized *cd_nelmts argument")
-        if(cd_nelmts && *cd_nelmts > 0 && !cd_values)
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, H5Z_FILTER_ERROR, "client data values not supplied")
-
-        /*
-         * If cd_nelmts is null but cd_values is non-null then just ignore
-         * cd_values
-         */
-        if(!cd_nelmts)
-            cd_values = NULL;
-    } /* end if */
-
-    /* Get the plist structure */
-    if(NULL == (plist = H5P_object_verify(plist_id, H5P_DATASET_CREATE)))
-        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, H5Z_FILTER_ERROR, "can't find object for ID")
-
-    /* Get pipeline info */
-    if(H5P_get(plist, H5D_CRT_DATA_PIPELINE_NAME, &pline) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, H5Z_FILTER_ERROR, "can't get pipeline")
-
-    /* Check more args */
-    if(idx >= pline.nused)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, H5Z_FILTER_ERROR, "filter number is invalid")
-
-    /* Set pointer to particular filter to query */
-    filter = &pline.filter[idx];
-
-    /* Get filter information */
-    if(H5P_get_filter(filter, flags, cd_nelmts, cd_values, namelen, name, NULL) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, H5Z_FILTER_ERROR, "can't get filter info")
-
-    /* Set return value */
-    ret_value = filter->id;
-
-done:
-    FUNC_LEAVE_API(ret_value)
-} /* end H5Pget_filter1() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5Pget_filter_by_id1
- *
- * Purpose:	This is an additional query counterpart of H5Pset_filter() and
- *              returns information about a particular filter in a permanent
- *		or transient pipeline depending on whether PLIST_ID is a
- *		dataset creation or transfer property list.  On input,
- *		CD_NELMTS indicates the number of entries in the CD_VALUES
- *		array allocated by the caller while on exit it contains the
- *		number of values defined by the filter.  The ID
- *      should be the filter ID to retrieve the parameters for.  If the
- *      filter is not set for the property list, an error will be returned.
- *
- * Return:	Success:	Non-negative
- *		Failure:	Negative
- *
- * Programmer:	Quincey Koziol
- *              Friday, April  5, 2003
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5Pget_filter_by_id1(hid_t plist_id, H5Z_filter_t id, unsigned int *flags/*out*/,
-    size_t *cd_nelmts/*in_out*/, unsigned cd_values[]/*out*/,
-    size_t namelen, char name[]/*out*/)
-{
-    H5P_genplist_t *plist;      /* Property list pointer */
-    herr_t ret_value = SUCCEED;   /* Return value */
-
-    FUNC_ENTER_API(H5Pget_filter_by_id1, FAIL)
-    H5TRACE7("e", "iZfx*zxzx", plist_id, id, flags, cd_nelmts, cd_values, namelen,
-             name);
-
-    /* Check args */
-    if(cd_nelmts || cd_values) {
-        /*
-         * It's likely that users forget to initialize this on input, so
-         * we'll check that it has a reasonable value.  The actual number
-         * is unimportant because the H5O layer will detect when a message
-         * is too large.
-         */
-        if(cd_nelmts && *cd_nelmts > 256)
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "probable uninitialized *cd_nelmts argument")
-        if(cd_nelmts && *cd_nelmts > 0 && !cd_values)
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "client data values not supplied")
-
-        /*
-         * If cd_nelmts is null but cd_values is non-null then just ignore
-         * cd_values
-         */
-        if(!cd_nelmts)
-            cd_values = NULL;
-    } /* end if */
-
-    /* Get the plist structure */
-    if(NULL == (plist = H5P_object_verify(plist_id, H5P_DATASET_CREATE)))
-        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
-
-    /* Get filter info */
-    if(H5P_get_filter_by_id(plist, id, flags, cd_nelmts, cd_values, namelen, name, NULL) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, H5Z_FILTER_ERROR, "can't get filter info")
-
-done:
-    FUNC_LEAVE_API(ret_value)
-} /* end H5Pget_filter_by_id1() */
-
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
 

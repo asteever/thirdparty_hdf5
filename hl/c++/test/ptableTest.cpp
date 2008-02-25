@@ -254,13 +254,12 @@ out:
 
 int TestCompress()
 {
-   
-	unsigned int flags = 0;
+    unsigned int flags = 0;
     unsigned int config = 0;
     size_t cd_nelemts = 0;
 
     TESTING("compression")
-#ifdef H5_HAVE_FILTER_DEFLATE 
+
     try {
         /* Create packet table with compression. */
         FL_PacketTable wrapper(fileID, "/compressTest", H5T_NATIVE_CHAR, 100, 8);
@@ -280,11 +279,8 @@ int TestCompress()
       H5_FAILED();
       return 1;
     }
+
     PASSED();
-#else
-    SKIPPED();
-    puts("    deflate filter not enabled");
-#endif /* H5_HAVE_FILTER_DEFLATE */
     return 0;
 }
 

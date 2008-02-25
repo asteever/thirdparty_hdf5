@@ -1,6 +1,18 @@
-HDF5 version 1.9.0 currently under development
+HDF5 version 1.8.0-beta1 currently under development
 Please refer to the release_docs/INSTALL file for installation instructions.
 ------------------------------------------------------------------------------
+
+===========================================================================
+WARNING!!  WARNING!!  WARNING!!  WARNING!!  WARNING!!  WARNING!!  WARNING!!
+
+This code is currently using interim file format changes that will
+certainly change before the final 1.8.0 release.  Please feel free to
+test everything out (in fact, we'd welcome that!), but do _NOT_ keep any
+of the files produced as they will not be readable by later versions of
+the HDF5 software.
+
+WARNING!!  WARNING!!  WARNING!!  WARNING!!  WARNING!!  WARNING!!  WARNING!!
+===========================================================================
 
 This release is almost fully functional for the entire API defined in the
 documentation, see the RELEASE.txt file in the release_docs directory for information
@@ -9,8 +21,8 @@ instructions on compiling and installing the library.  The INSTALL_parallel
 file contains instructions on installing the parallel version of the
 library.  The INSTALL* files can be found in the release_docs/ directory.
 
-Documentation for this snapshot can be found at the following URL:
-http://www.hdfgroup.uiuc.edu/HDF5/doc_dev_snapshot/H5_dev/
+Documentation for this release can be found at the following URL:
+http://hdfgroup.org/HDF5/release/alpha/obtain518.html
 
 Four mailing lists are currently set up for use with the HDF5
 library.

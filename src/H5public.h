@@ -30,9 +30,6 @@
  */
 #include "H5pubconf.h"		/*from configure                             */
 
-/* API Version macro wrapper definitions */
-#include "H5version.h"
-
 #ifdef H5_HAVE_FEATURES_H
 #include <features.h>           /*for setting POSIX, BSD, etc. compatibility */
 #endif
@@ -70,11 +67,11 @@ extern "C" {
 
 /* Version numbers */
 #define H5_VERS_MAJOR	1	/* For major interface/format changes  	     */
-#define H5_VERS_MINOR	9	/* For minor interface/format changes  	     */
+#define H5_VERS_MINOR	8	/* For minor interface/format changes  	     */
 #define H5_VERS_RELEASE	0	/* For tweaks, bug-fixes, or development     */
-#define H5_VERS_SUBRELEASE ""	/* For pre-releases like snap0       */
+#define H5_VERS_SUBRELEASE "beta1"	/* For pre-releases like snap0       */
 				/* Empty string for real releases.           */
-#define H5_VERS_INFO    "HDF5 library version: 1.9.0"      /* Full version string */
+#define H5_VERS_INFO    "HDF5 library version: 1.8.0-beta1"      /* Full version string */
 
 #define H5check()	H5check_version(H5_VERS_MAJOR,H5_VERS_MINOR,	      \
 				        H5_VERS_RELEASE)
@@ -86,8 +83,9 @@ extern "C" {
  * The negative failure value is most commonly -1, but don't bet on it.  The
  * proper way to detect failure is something like:
  *
- * 	if((dset = H5Dopen2(file, name)) < 0)
- *	    fprintf(stderr, "unable to open the requested dataset\n");
+ * 	if ((dset = H5Dopen (file, name))<0) {
+ *	    fprintf (stderr, "unable to open the requested dataset\n");
+ *	}
  */
 typedef int herr_t;
 
@@ -147,17 +145,23 @@ typedef long_long ssize_t;
 #endif
 
 /*
- * The sizes of file objects have their own types defined here, use a 64-bit
- * type.
+ * The sizes of file objects have their own types defined here.  If large
+ * sizes are enabled then use a 64-bit data type, otherwise use the size of
+ * memory objects.
  */
-#if H5_SIZEOF_LONG_LONG >= 8
+#ifdef H5_HAVE_LARGE_HSIZET
+#   if H5_SIZEOF_LONG_LONG>=8
 typedef unsigned long_long 	hsize_t;
 typedef signed long_long	hssize_t;
 #       define H5_SIZEOF_HSIZE_T H5_SIZEOF_LONG_LONG
 #       define H5_SIZEOF_HSSIZE_T H5_SIZEOF_LONG_LONG
-#else
-#   error "nothing appropriate for hsize_t"
-#endif
+#   endif
+#else /* H5_HAVE_LARGE_HSIZET */
+typedef size_t			hsize_t;
+typedef ssize_t			hssize_t;
+#       define H5_SIZEOF_HSIZE_T H5_SIZEOF_SIZE_T
+#       define H5_SIZEOF_HSSIZE_T H5_SIZEOF_SIZE_T
+#endif /* H5_HAVE_LARGE_HSIZET */
 
 /*
  * File addresses have their own types.
@@ -293,14 +297,6 @@ typedef enum H5_index_t {
     H5_INDEX_N			/* Number of indices defined 		*/
 } H5_index_t;
 
-/*
- * Storage info struct used by H5O_info_t and H5F_info_t
- */
-typedef struct H5_ih_info_t {
-    hsize_t     index_size;     /* btree and/or list */
-    hsize_t     heap_size;
-} H5_ih_info_t;
-
 /* Functions in H5.c */
 H5_DLL herr_t H5open(void);
 H5_DLL herr_t H5close(void);
@@ -318,4 +314,3 @@ H5_DLL herr_t H5check_version(unsigned majnum, unsigned minnum,
 }
 #endif
 #endif
-

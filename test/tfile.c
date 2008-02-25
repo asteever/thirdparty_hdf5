@@ -233,12 +233,12 @@ test_file_create(void)
        CHECK(dataspace_id, FAIL, "H5Screate_simple");
 
        /* Create the dataset. */
-       dataset_id = H5Dcreate2(fid2, F2_DSET, H5T_NATIVE_INT, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-       CHECK(dataset_id, FAIL, "H5Dcreate2");
+       dataset_id = H5Dcreate(fid2, F2_DSET, H5T_NATIVE_INT, dataspace_id, H5P_DEFAULT);
+       CHECK(dataset_id, FAIL, "H5Dcreate");
 
-       for(i = 0; i < F2_DIM0; i++)
-           for(j = 0; j < F2_DIM1; j++)
-               data[i][j] = i * 10 + j;
+       for(i=0; i<F2_DIM0; i++)
+           for(j=0; j<F2_DIM1; j++)
+               data[i][j]=i*10+j;
 
        /* Write data to the new dataset */
        ret = H5Dwrite(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, data);
@@ -422,8 +422,8 @@ test_file_open(void)
     VERIFY(intent, H5F_ACC_RDONLY, "H5Fget_intent");
 
     /* Open dataset */
-    did = H5Dopen2(fid1, F2_DSET, H5P_DEFAULT);
-    CHECK(did, FAIL, "H5Dopen2");
+    did = H5Dopen(fid1, F2_DSET);
+    CHECK(did, FAIL, "H5Dopen");
 
     /* Check that the intent works even if NULL is passed in */
     ret = H5Fget_intent(fid1, NULL);
@@ -804,12 +804,13 @@ create_objects(hid_t fid1, hid_t fid2, hid_t *ret_did, hid_t *ret_gid1,
        CHECK(dataspace_id, FAIL, "H5Screate_simple");
 
        /* Create the dataset. */
-       dataset_id = H5Dcreate2(fid1, "/dset", H5T_NATIVE_INT, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-       CHECK(dataset_id, FAIL, "H5Dcreate2");
+       dataset_id = H5Dcreate(fid1, "/dset", H5T_NATIVE_INT, dataspace_id,
+                        H5P_DEFAULT);
+       CHECK(dataset_id, FAIL, "H5Dcreate");
 
-       for(i = 0; i < F2_DIM0; i++)
-           for(j = 0; j < F2_DIM1; j++)
-               data[i][j] = i * 10 + j;
+       for(i=0; i<F2_DIM0; i++)
+           for(j=0; j<F2_DIM1; j++)
+               data[i][j]=i*10+j;
 
        /* Write data to the new dataset */
        ret = H5Dwrite(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL,
@@ -827,18 +828,18 @@ create_objects(hid_t fid1, hid_t fid2, hid_t *ret_did, hid_t *ret_gid1,
     /* Create a group in the second file open */
     {
         hid_t   gid1, gid2, gid3;
-        gid1 = H5Gcreate2(fid2, "/group", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-        CHECK(gid1, FAIL, "H5Gcreate2");
+        gid1 = H5Gcreate(fid2, "/group", (size_t)0);
+        CHECK(gid1, FAIL, "H5Gcreate");
         if(ret_gid1 != NULL)
             *ret_gid1 = gid1;
 
-        gid2 = H5Gopen2(fid2, "/group", H5P_DEFAULT);
-        CHECK(gid2, FAIL, "H5Gopen2");
+        gid2 = H5Gopen(fid2, "/group");
+        CHECK(gid2, FAIL, "H5Gopen");
         if(ret_gid2 != NULL)
             *ret_gid2 = gid2;
 
-        gid3 = H5Gopen2(fid2, "/group", H5P_DEFAULT);
-        CHECK(gid3, FAIL, "H5Gopen2");
+        gid3 = H5Gopen(fid2, "/group");
+        CHECK(gid3, FAIL, "H5Gopen");
         if(ret_gid3 != NULL)
             *ret_gid3 = gid3;
     }
@@ -896,8 +897,8 @@ test_get_file_id(void)
     /* Create a group in the file.  Make a duplicated file ID from the group.
      * And close this duplicated ID
      */
-    group_id = H5Gcreate2(fid, GRP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(group_id, FAIL, "H5Gcreate2");
+    group_id = H5Gcreate(fid, GRP_NAME, (size_t)0);
+    CHECK(group_id, FAIL, "H5Gcreate");
 
     /* Test H5Iget_file_id() */
     check_file_id(fid, group_id);
@@ -916,8 +917,8 @@ test_get_file_id(void)
     fid = H5Fopen(FILE4, H5F_ACC_RDWR, H5P_DEFAULT);
     CHECK(fid, FAIL, "H5Fcreate");
 
-    group_id = H5Gopen2(fid, GRP_NAME, H5P_DEFAULT);
-    CHECK(group_id, FAIL, "H5Gopen2");
+    group_id = H5Gopen(fid, GRP_NAME);
+    CHECK(group_id, FAIL, "H5Gcreate");
 
     /* Test H5Iget_file_id() */
     check_file_id(fid, group_id);
@@ -940,8 +941,9 @@ test_get_file_id(void)
     dataspace_id = H5Screate_simple(F2_RANK, dims, NULL);
     CHECK(dataspace_id, FAIL, "H5Screate_simple");
 
-    dataset_id = H5Dcreate2(group_id, DSET_NAME, H5T_NATIVE_INT, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(dataset_id, FAIL, "H5Dcreate2");
+    dataset_id = H5Dcreate(group_id, DSET_NAME, H5T_NATIVE_INT, dataspace_id,
+                        H5P_DEFAULT);
+    CHECK(dataset_id, FAIL, "H5Dcreate");
 
     /* Test H5Iget_file_id() */
     check_file_id(fid, dataset_id);
@@ -949,8 +951,8 @@ test_get_file_id(void)
     /* Create an attribute for the dataset.  Make a duplicated file ID from
      * this attribute.  And close it.
      */
-    attr_id = H5Acreate2(dataset_id, ATTR_NAME, H5T_NATIVE_INT, dataspace_id, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Acreate2");
+    attr_id=H5Acreate(dataset_id,ATTR_NAME,H5T_NATIVE_INT,dataspace_id,H5P_DEFAULT);
+    CHECK(ret, FAIL, "H5Acreate");
 
     /* Test H5Iget_file_id() */
     check_file_id(fid, attr_id);
@@ -958,11 +960,11 @@ test_get_file_id(void)
     /* Create a named datatype.  Make a duplicated file ID from
      * this attribute.  And close it.
      */
-    datatype_id = H5Tcopy(H5T_NATIVE_INT);
-    CHECK(ret, FAIL, "H5Tcopy");
+    datatype_id=H5Tcopy(H5T_NATIVE_INT);
+    CHECK(ret, FAIL, "H5Acreate");
 
-    ret = H5Tcommit2(fid, TYPE_NAME, datatype_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Tcommit2");
+    ret = H5Tcommit(fid, TYPE_NAME, datatype_id);
+    CHECK(ret, FAIL, "H5Tcommit");
 
     /* Test H5Iget_file_id() */
     check_file_id(fid, datatype_id);
@@ -1147,8 +1149,8 @@ test_file_perm(void)
     CHECK(file, FAIL, "H5Fcreate");
 
     /* Create a dataset with the read-write file handle */
-    dset = H5Dcreate2(file, F2_DSET, H5T_NATIVE_INT, dspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(dset, FAIL, "H5Dcreate2");
+    dset = H5Dcreate(file, F2_DSET, H5T_NATIVE_INT, dspace, H5P_DEFAULT);
+    CHECK(dset, FAIL, "H5Dcreate");
 
     ret = H5Dclose(dset);
     CHECK(ret, FAIL, "H5Dclose");
@@ -1160,9 +1162,9 @@ test_file_perm(void)
 
     /* Create a dataset with the read-only file handle (should fail) */
     H5E_BEGIN_TRY {
-        dset = H5Dcreate2(filero, F2_DSET, H5T_NATIVE_INT, dspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        dset = H5Dcreate(filero, F2_DSET, H5T_NATIVE_INT, dspace, H5P_DEFAULT);
     } H5E_END_TRY;
-    VERIFY(dset, FAIL, "H5Dcreate2");
+    VERIFY(dset, FAIL, "H5Dcreate");
     if(dset!=FAIL) {
         ret = H5Dclose(dset);
         CHECK(ret, FAIL, "H5Dclose");
@@ -1226,8 +1228,8 @@ test_file_freespace(void)
     /* Create datasets in file */
     for(u = 0; u < 10; u++) {
         sprintf(name, "Dataset %u", u);
-        dset = H5Dcreate2(file, name, H5T_STD_U32LE, dspace, H5P_DEFAULT, dcpl, H5P_DEFAULT);
-        CHECK(dset, FAIL, "H5Dcreate2");
+        dset = H5Dcreate(file, name, H5T_STD_U32LE, dspace, dcpl);
+        CHECK(dset, FAIL, "H5Dcreate");
 
         ret = H5Dclose(dset);
         CHECK(ret, FAIL, "H5Dclose");
@@ -1244,13 +1246,16 @@ test_file_freespace(void)
     /* Check that there is the right amount of free space in the file */
     free_space = H5Fget_freespace(file);
     CHECK(free_space, FAIL, "H5Fget_freespace");
+#ifdef H5_HAVE_LARGE_HSIZET
     VERIFY(free_space, 2376, "H5Fget_freespace");
-
+#else /* H5_HAVE_LARGE_HSIZET */
+    VERIFY(free_space, 588, "H5Fget_freespace");        /* XXX: fix me */
+#endif /* H5_HAVE_LARGE_HSIZET */
     /* Delete datasets in file */
     for(u = 0; u < 10; u++) {
         sprintf(name, "Dataset %u", u);
-        ret = H5Ldelete(file, name, H5P_DEFAULT);
-        CHECK(ret, FAIL, "H5Ldelete");
+        ret = H5Gunlink(file, name);
+        CHECK(ret, FAIL, "H5Gunlink");
     } /* end for */
 
     /* Check that there is the right amount of free space in the file */
@@ -1369,8 +1374,8 @@ test_file_open_dot(void)
     CHECK(fid, FAIL, "H5Fcreate");
 
     /* Create a group in the HDF5 file */
-    gid = H5Gcreate2(fid, GRP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(gid, FAIL, "H5Gcreate2");
+    gid = H5Gcreate(fid, GRP_NAME, (size_t)0);
+    CHECK(gid, FAIL, "H5Gcreate");
 
     /* Create a dataspace for creating datasets */
     sid = H5Screate(H5S_SCALAR);
@@ -1378,27 +1383,27 @@ test_file_open_dot(void)
 
     /* Create a dataset with no name using the file ID */
     H5E_BEGIN_TRY {
-        did = H5Dcreate2(fid, ".", H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        did = H5Dcreate(fid, ".", H5T_NATIVE_INT, sid, H5P_DEFAULT);
     } H5E_END_TRY;
-    VERIFY(did, FAIL, "H5Dcreate2");
+    VERIFY(did, FAIL, "H5Dcreate");
 
     /* Create a dataset with no name using the group ID */
     H5E_BEGIN_TRY {
-        did = H5Dcreate2(gid, ".", H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        did = H5Dcreate(gid, ".", H5T_NATIVE_INT, sid, H5P_DEFAULT);
     } H5E_END_TRY;
-    VERIFY(did, FAIL, "H5Dcreate2");
+    VERIFY(did, FAIL, "H5Dcreate");
 
     /* Open a dataset with no name using the file ID */
     H5E_BEGIN_TRY {
-        did = H5Dopen2(fid, ".", H5P_DEFAULT);
+        did = H5Dopen(fid, ".");
     } H5E_END_TRY;
-    VERIFY(did, FAIL, "H5Dopen2");
+    VERIFY(did, FAIL, "H5Dopen");
 
     /* Open a dataset with no name using the group ID */
     H5E_BEGIN_TRY {
-        did = H5Dopen2(gid, ".", H5P_DEFAULT);
+        did = H5Dopen(gid, ".");
     } H5E_END_TRY;
-    VERIFY(did, FAIL, "H5Dopen2");
+    VERIFY(did, FAIL, "H5Dopen");
 
     /* Make a copy of a datatype to use for creating a named datatype */
     tid = H5Tcopy(H5T_NATIVE_INT);
@@ -1406,50 +1411,50 @@ test_file_open_dot(void)
 
     /* Create a named datatype with no name using the file ID */
     H5E_BEGIN_TRY {
-        ret = H5Tcommit2(fid, ".", tid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        ret = H5Tcommit(fid, ".", tid);
     } H5E_END_TRY;
-    VERIFY(ret, FAIL, "H5Tcommit2");
+    VERIFY(ret, FAIL, "H5Tcommit");
 
     /* Create a named datatype with no name using the group ID */
     H5E_BEGIN_TRY {
-        ret = H5Tcommit2(gid, ".", tid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        ret = H5Tcommit(gid, ".", tid);
     } H5E_END_TRY;
-    VERIFY(ret, FAIL, "H5Tcommit2");
+    VERIFY(ret, FAIL, "H5Tcommit");
 
     /* Open a named datatype with no name using the file ID */
     H5E_BEGIN_TRY {
-        tid2 = H5Topen2(fid, ".", H5P_DEFAULT);
+        tid2 = H5Topen(fid, ".");
     } H5E_END_TRY;
-    VERIFY(tid2, FAIL, "H5Topen2");
+    VERIFY(tid2, FAIL, "H5Topen");
 
     /* Open a named datatype with no name using the group ID */
     H5E_BEGIN_TRY {
-        tid2 = H5Topen2(gid, ".", H5P_DEFAULT);
+        tid2 = H5Topen(gid, ".");
     } H5E_END_TRY;
-    VERIFY(tid2, FAIL, "H5Topen2");
+    VERIFY(tid2, FAIL, "H5Topen");
 
     /* Create a group with no name using the file ID */
     H5E_BEGIN_TRY {
-        gid2 = H5Gcreate2(fid, ".", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        gid2 = H5Gcreate(fid, ".", (size_t)0);
     } H5E_END_TRY;
-    VERIFY(gid2, FAIL, "H5Gcreate2");
+    VERIFY(gid2, FAIL, "H5Gcreate");
 
     /* Create a group with no name using the group ID */
     H5E_BEGIN_TRY {
-        gid2 = H5Gcreate2(gid, ".", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        gid2 = H5Gcreate(gid, ".", (size_t)0);
     } H5E_END_TRY;
-    VERIFY(gid2, FAIL, "H5Gcreate2");
+    VERIFY(gid2, FAIL, "H5Gcreate");
 
     /* Open a group with no name using the file ID (should open the root group) */
-    gid2 = H5Gopen2(fid, ".", H5P_DEFAULT);
-    CHECK(gid2, FAIL, "H5Gopen2");
+    gid2 = H5Gopen(fid, ".");
+    CHECK(gid2, FAIL, "H5Gopen");
 
     ret = H5Gclose(gid2);
     CHECK(ret, FAIL, "H5Gclose");
 
     /* Open a group with no name using the group ID (should open the group again) */
-    gid2 = H5Gopen2(gid, ".", H5P_DEFAULT);
-    CHECK(gid2, FAIL, "H5Gopen2");
+    gid2 = H5Gopen(gid, ".");
+    CHECK(gid2, FAIL, "H5Gopen");
 
     ret = H5Gclose(gid2);
     CHECK(ret, FAIL, "H5Gclose");
@@ -1502,16 +1507,16 @@ test_file_open_overlap(void)
     VERIFY(intent, H5F_ACC_RDWR, "H5Fget_intent");
 
     /* Create a group in file */
-    gid = H5Gcreate2(fid1, GROUP1, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(gid, FAIL, "H5Gcreate2");
+    gid = H5Gcreate(fid1, GROUP1, (size_t)0);
+    CHECK(gid, FAIL, "H5Gcreate");
 
     /* Create dataspace for dataset */
     sid = H5Screate(H5S_SCALAR);
     CHECK(sid, FAIL, "H5Screate");
 
     /* Create dataset in group w/first file ID */
-    did1 = H5Dcreate2(gid, DSET1, H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(did1, FAIL, "H5Dcreate2");
+    did1 = H5Dcreate(gid, DSET1, H5T_NATIVE_INT, sid, H5P_DEFAULT);
+    CHECK(did1, FAIL, "H5Dcreate");
 
     /* Check number of objects opened in first file */
     nobjs = H5Fget_obj_count(fid1, H5F_OBJ_LOCAL|H5F_OBJ_ALL);
@@ -1531,8 +1536,8 @@ test_file_open_overlap(void)
 
 
     /* Create dataset with second file ID */
-    did2 = H5Dcreate2(fid2, DSET2, H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(did2, FAIL, "H5Dcreate2");
+    did2 = H5Dcreate(fid2, DSET2, H5T_NATIVE_INT, sid, H5P_DEFAULT);
+    CHECK(did2, FAIL, "H5Dcreate");
 
     /* Check number of objects opened in first file */
     nobjs = H5Fget_obj_count(fid2, H5F_OBJ_ALL);
@@ -1590,8 +1595,8 @@ test_file_getname(void)
     VERIFY_STR(name, FILE1, "H5Fget_name");
 
     /* Create a group in the root group */
-    group_id = H5Gcreate2(file_id, TESTA_GROUPNAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(group_id, FAIL, "H5Gcreate2");
+    group_id = H5Gcreate(file_id, TESTA_GROUPNAME, (size_t)0);
+    CHECK(group_id, FAIL, "H5Gcreate");
 
     /* Get and verify file name */
     name_len = H5Fget_name(group_id, name, (size_t)TESTA_NAME_BUF_SIZE);
@@ -1610,8 +1615,8 @@ test_file_getname(void)
     VERIFY(name_len, FAIL, "H5Fget_name");
 
     /* Create a new dataset */
-    dataset_id = H5Dcreate2(file_id, TESTA_DSETNAME, H5T_NATIVE_INT, space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(dataset_id, FAIL, "H5Dcreate2");
+    dataset_id = H5Dcreate(file_id, TESTA_DSETNAME, H5T_NATIVE_INT, space_id, H5P_DEFAULT);
+    CHECK(dataset_id, FAIL, "H5Dcreate");
 
     /* Get and verify file name */
     name_len = H5Fget_name(dataset_id, name, (size_t)TESTA_NAME_BUF_SIZE);
@@ -1619,8 +1624,8 @@ test_file_getname(void)
     VERIFY_STR(name, FILE1, "H5Fget_name");
 
     /* Create an attribute for the dataset */
-    attr_id = H5Acreate2(dataset_id, TESTA_ATTRNAME, H5T_NATIVE_INT, space_id, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(attr_id, FAIL, "H5Acreate2");
+    attr_id = H5Acreate(dataset_id,TESTA_ATTRNAME,H5T_NATIVE_INT,space_id,H5P_DEFAULT);
+    CHECK(attr_id, FAIL, "H5Acreate");
 
     /* Get and verify file name */
     name_len = H5Fget_name(attr_id, name, (size_t)TESTA_NAME_BUF_SIZE);
@@ -1639,8 +1644,8 @@ test_file_getname(void)
     CHECK(ret, FAIL, "H5Tinsert");
 
     /* Save it on file */
-    ret = H5Tcommit2(file_id, TESTA_DTYPENAME, type_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Tcommit2");
+    ret = H5Tcommit(file_id, TESTA_DTYPENAME, type_id);
+    CHECK(ret, FAIL, "H5Tcommit");
 
     /* Get and verify file name */
     name_len = H5Fget_name(type_id, name, (size_t)TESTA_NAME_BUF_SIZE);
@@ -1690,10 +1695,10 @@ test_file_double_root_open(void)
     file2_id = H5Fopen (FILE1, H5F_ACC_RDONLY, H5P_DEFAULT);
     CHECK(file2_id, FAIL, "H5Fopen");
 
-    grp1_id  = H5Gopen2(file1_id, "/", H5P_DEFAULT);
-    CHECK(grp1_id, FAIL, "H5Gopen2");
-    grp2_id  = H5Gopen2(file2_id, "/", H5P_DEFAULT);
-    CHECK(grp2_id, FAIL, "H5Gopen2");
+    grp1_id  = H5Gopen(file1_id, "/");
+    CHECK(grp1_id, FAIL, "H5Gopen");
+    grp2_id  = H5Gopen(file2_id, "/");
+    CHECK(grp2_id, FAIL, "H5Gopen");
 
     /* Note "assymetric" close order */
     ret = H5Gclose(grp1_id);
@@ -1729,10 +1734,10 @@ test_file_double_group_open(void)
     file2_id = H5Fopen (FILE1, H5F_ACC_RDONLY, H5P_DEFAULT);
     CHECK(file2_id, FAIL, "H5Fopen");
 
-    grp1_id  = H5Gcreate2(file1_id, GRP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(grp1_id, FAIL, "H5Gcreate2");
-    grp2_id  = H5Gopen2(file2_id, GRP_NAME, H5P_DEFAULT);
-    CHECK(grp2_id, FAIL, "H5Gopen2");
+    grp1_id  = H5Gcreate(file1_id, GRP_NAME, (size_t)0);
+    CHECK(grp1_id, FAIL, "H5Gcreate");
+    grp2_id  = H5Gopen(file2_id, GRP_NAME);
+    CHECK(grp2_id, FAIL, "H5Gopen");
 
     /* Note "assymetric" close order */
     ret = H5Gclose(grp1_id);
@@ -1773,10 +1778,10 @@ test_file_double_dataset_open(void)
     space_id = H5Screate(H5S_SCALAR);
     CHECK(space_id, FAIL, "H5Screate");
 
-    dset1_id  = H5Dcreate2(file1_id, DSET_NAME, H5T_NATIVE_INT, space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(dset1_id, FAIL, "H5Dcreate2");
-    dset2_id  = H5Dopen2(file2_id, DSET_NAME, H5P_DEFAULT);
-    CHECK(dset2_id, FAIL, "H5Dopen2");
+    dset1_id  = H5Dcreate(file1_id, DSET_NAME, H5T_NATIVE_INT, space_id, H5P_DEFAULT);
+    CHECK(dset1_id, FAIL, "H5Dcreate");
+    dset2_id  = H5Dopen(file2_id, DSET_NAME);
+    CHECK(dset2_id, FAIL, "H5Dopen");
 
     /* Close "supporting" dataspace */
     ret = H5Sclose(space_id);
@@ -1818,10 +1823,10 @@ test_file_double_datatype_open(void)
 
     type1_id  = H5Tcopy(H5T_NATIVE_INT);
     CHECK(type1_id, FAIL, "H5Tcopy");
-    ret  = H5Tcommit2(file1_id, TYPE_NAME, type1_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Tcommit2");
-    type2_id  = H5Topen2(file2_id, TYPE_NAME, H5P_DEFAULT);
-    CHECK(type2_id, FAIL, "H5Topen2");
+    ret  = H5Tcommit(file1_id, TYPE_NAME, type1_id);
+    CHECK(ret, FAIL, "H5Tcommit");
+    type2_id  = H5Topen(file2_id, TYPE_NAME);
+    CHECK(type2_id, FAIL, "H5Topen");
 
     /* Note "assymetric" close order */
     ret = H5Tclose(type1_id);

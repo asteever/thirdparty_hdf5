@@ -61,6 +61,8 @@ typedef struct {
 /* User data for iteration when opening an attribute */
 typedef struct {
     /* down */
+    H5F_t *f;                   /* Pointer to file attribute is in */
+    hid_t dxpl_id;              /* DXPL for operation */
     const char *name;           /* Name of attribute to open */
 
     /* up */
@@ -114,15 +116,6 @@ typedef struct {
     /* up */
     hbool_t found;              /* Found attribute to delete */
 } H5O_iter_rm_t;
-
-/* User data for iteration when checking if an attribute exists */
-typedef struct {
-    /* down */
-    const char *name;           /* Name of attribute to open */
-
-    /* up */
-    hbool_t found;              /* Found attribute */
-} H5O_iter_xst_t;
 
 
 /********************/
@@ -375,7 +368,7 @@ H5O_attr_create(const H5O_loc_t *loc, hid_t dxpl_id, H5A_t *attr)
          *      *ick* -QAK, 2007/01/08
          */
         if(attr_rc > 1) {
-            if(H5O_attr_delete(loc->file, dxpl_id, oh, attr) < 0)
+            if(H5O_attr_delete(loc->file, dxpl_id, attr) < 0)
                 HGOTO_ERROR(H5E_ATTR, H5E_CANTDELETE, FAIL, "unable to delete attribute")
         } /* end if */
     } /* end if */
@@ -490,6 +483,8 @@ H5O_attr_open_by_name(const H5O_loc_t *loc, const char *name, hid_t dxpl_id)
         H5O_mesg_operator_t op;         /* Wrapper for operator */
 
         /* Set up user data for callback */
+        udata.f = loc->file;
+        udata.dxpl_id = dxpl_id;
         udata.name = name;
         udata.attr = NULL;
 
@@ -603,7 +598,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5O_attr_update_shared(H5F_t *f, hid_t dxpl_id, H5O_t *oh, H5A_t *attr,
+H5O_attr_update_shared(H5F_t *f, hid_t dxpl_id, H5A_t *attr,
     H5O_shared_t *update_sh_mesg)
 {
     H5O_shared_t sh_mesg;               /* Shared object header message */
@@ -618,16 +613,12 @@ H5O_attr_update_shared(H5F_t *f, hid_t dxpl_id, H5O_t *oh, H5A_t *attr,
     HDassert(attr);
 
     /* Extract shared message info from current attribute (for later use) */
-    if(H5O_set_shared(&sh_mesg, &(attr->sh_loc)) < 0)
+    if(H5O_shared_copy(&sh_mesg, &(attr->sh_loc)) < 0)
         HGOTO_ERROR(H5E_ATTR, H5E_CANTCOPY, FAIL, "can't get shared message")
-
-    /* Reset existing sharing information */
-    if(H5O_msg_reset_share(H5O_ATTR_ID, attr) < 0)
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, FAIL, "unable to reset attribute sharing")
 
     /* Store new version of message as a SOHM */
     /* (should always work, since we're not changing the size of the attribute) */
-    if((shared_mesg = H5SM_try_share(f, dxpl_id, oh, H5O_ATTR_ID, attr, NULL)) == 0)
+    if((shared_mesg = H5SM_try_share(f, dxpl_id, H5O_ATTR_ID, attr)) == 0)
         HGOTO_ERROR(H5E_ATTR, H5E_BADMESG, FAIL, "attribute changed sharing status")
     else if(shared_mesg < 0)
         HGOTO_ERROR(H5E_ATTR, H5E_BADMESG, FAIL, "can't share attribute")
@@ -639,25 +630,23 @@ H5O_attr_update_shared(H5F_t *f, hid_t dxpl_id, H5O_t *oh, H5A_t *attr,
     /* If the newly shared attribute needs to share "ownership" of the shared
      *      components (ie. its reference count is 1), increment the reference
      *      count on any shared components of the attribute, so that they won't
-     *      be removed from the file by the following "delete" operation on the
-     *      original attribute shared message info.  (Essentially a "copy on
-     *      write" operation).
+     *      be removed from the file.  (Essentially a "copy on write" operation).
      *
      *      *ick* -QAK, 2007/01/08
      */
     if(attr_rc == 1) {
         /* Increment reference count on attribute components */
-        if(H5O_attr_link(f, dxpl_id, oh, attr) < 0)
+        if(H5O_attr_link(f, dxpl_id, attr) < 0)
             HGOTO_ERROR(H5E_ATTR, H5E_LINKCOUNT, FAIL, "unable to adjust attribute link count")
     } /* end if */
 
     /* Remove the old attribute from the SOHM storage */
-    if(H5SM_delete(f, dxpl_id, oh, &sh_mesg) < 0)
+    if(H5SM_try_delete(f, dxpl_id, H5O_ATTR_ID, &sh_mesg) < 0)
         HGOTO_ERROR(H5E_ATTR, H5E_CANTFREE, FAIL, "unable to delete shared attribute in shared storage")
 
     /* Extract updated shared message info from modified attribute, if requested */
     if(update_sh_mesg)
-        if(H5O_set_shared(update_sh_mesg, &(attr->sh_loc)) < 0)
+        if(H5O_shared_copy(update_sh_mesg, &(attr->sh_loc)) < 0)
             HGOTO_ERROR(H5E_ATTR, H5E_CANTCOPY, FAIL, "can't get shared message")
 
 done:
@@ -680,7 +669,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_attr_write_cb(H5O_t *oh, H5O_mesg_t *mesg/*in,out*/,
+H5O_attr_write_cb(H5O_t UNUSED *oh, H5O_mesg_t *mesg/*in,out*/,
     unsigned UNUSED sequence, hbool_t *oh_modified, void *_udata/*in,out*/)
 {
     H5O_iter_wrt_t *udata = (H5O_iter_wrt_t *)_udata;   /* Operator user data */
@@ -695,21 +684,19 @@ H5O_attr_write_cb(H5O_t *oh, H5O_mesg_t *mesg/*in,out*/,
 
     /* Check for correct attribute message to modify */
     if(HDstrcmp(((H5A_t *)mesg->native)->name, udata->attr->name) == 0) {
+        /* Update the shared attribute in the SOHM storage */
+        if(mesg->flags & H5O_MSG_FLAG_SHARED) {
+            if(H5O_attr_update_shared(udata->f, udata->dxpl_id, udata->attr, (H5O_shared_t *)mesg->native) < 0)
+                HGOTO_ERROR(H5E_ATTR, H5E_CANTUPDATE, H5_ITER_ERROR, "unable to update attribute in shared storage")
+        } /* end if */
+
         /* Allocate storage for the message's data, if necessary */
         if(((H5A_t *)mesg->native)->data == NULL)
             if(NULL == (((H5A_t *)mesg->native)->data = H5FL_BLK_MALLOC(attr_buf, udata->attr->data_size)))
                 HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, H5_ITER_ERROR, "memory allocation failed")
 
         /* Copy the data into the header message */
-        /* (Needs to occur before updating the shared message, or the hash
-         *      value on the old & new messages will be the same)
-         */
         HDmemcpy(((H5A_t *)mesg->native)->data, udata->attr->data, udata->attr->data_size);
-
-        /* Update the shared attribute in the SOHM storage */
-        if(mesg->flags & H5O_MSG_FLAG_SHARED)
-            if(H5O_attr_update_shared(udata->f, udata->dxpl_id, oh, udata->attr, (H5O_shared_t *)mesg->native) < 0)
-                HGOTO_ERROR(H5E_ATTR, H5E_CANTUPDATE, H5_ITER_ERROR, "unable to update attribute in shared storage")
 
         /* Mark message as dirty */
         mesg->dirty = TRUE;
@@ -883,15 +870,9 @@ H5O_attr_rename_mod_cb(H5O_t *oh, H5O_mesg_t *mesg/*in,out*/,
 
     /* Find correct attribute message to rename */
     if(HDstrcmp(((H5A_t *)mesg->native)->name, udata->old_name) == 0) {
-        unsigned old_version = ((H5A_t *)mesg->native)->version;        /* Old version of the attribute */
-
         /* Change the name for the attribute */
         H5MM_xfree(((H5A_t *)mesg->native)->name);
         ((H5A_t *)mesg->native)->name = H5MM_xstrdup(udata->new_name);
-
-        /* Recompute the version to encode the attribute with */
-        if(H5A_set_version(udata->f, ((H5A_t *)mesg->native)) < 0)
-            HGOTO_ERROR(H5E_ATTR, H5E_CANTSET, H5_ITER_ERROR, "unable to update attribute version")
 
         /* Mark message as dirty */
         mesg->dirty = TRUE;
@@ -899,7 +880,7 @@ H5O_attr_rename_mod_cb(H5O_t *oh, H5O_mesg_t *mesg/*in,out*/,
         /* Check for shared message */
         if(mesg->flags & H5O_MSG_FLAG_SHARED) {
             /* Update the shared attribute in the SOHM storage */
-            if(H5O_attr_update_shared(udata->f, udata->dxpl_id, oh, mesg->native, NULL) < 0)
+            if(H5O_attr_update_shared(udata->f, udata->dxpl_id, mesg->native, NULL) < 0)
                 HGOTO_ERROR(H5E_ATTR, H5E_CANTUPDATE, H5_ITER_ERROR, "unable to update attribute in shared storage")
         } /* end if */
         else {
@@ -907,8 +888,7 @@ H5O_attr_rename_mod_cb(H5O_t *oh, H5O_mesg_t *mesg/*in,out*/,
             HDassert(H5O_msg_is_shared(H5O_ATTR_ID, (H5A_t *)mesg->native) == FALSE);
 
             /* Check for attribute message changing size */
-            if(HDstrlen(udata->new_name) != HDstrlen(udata->old_name) ||
-                    old_version != ((H5A_t *)mesg->native)->version) {
+            if(HDstrlen(udata->new_name) != HDstrlen(udata->old_name)) {
                 H5A_t *attr;            /* Attribute to re-add */
 
                 /* Take ownership of the message's native info (the attribute) 
@@ -1234,12 +1214,12 @@ H5O_attr_remove_update(const H5O_loc_t *loc, H5O_t *oh, H5O_ainfo_t *ainfo,
                 else if(shared_mesg == 0) {
                     /* Increment reference count on attribute components */
                     /* (so that they aren't deleted when the dense attribute storage is deleted) */
-                    if(H5O_attr_link(loc->file, dxpl_id, oh, &(atable.attrs[u])) < 0)
+                    if(H5O_attr_link(loc->file, dxpl_id, &(atable.attrs[u])) < 0)
                         HGOTO_ERROR(H5E_ATTR, H5E_LINKCOUNT, FAIL, "unable to adjust attribute link count")
                 } /* end if */
                 else {
-                    /* Reset 'shared' status, so attribute will be shared again */
-                    atable.attrs[u].sh_loc.type = H5O_SHARE_TYPE_UNSHARED;
+                    /* Reset 'shared' status, so attributes will be shared again */
+                    atable.attrs[u].sh_loc.flags = 0;
                 } /* end else */
 
                 /* Insert attribute message into object header */
@@ -1555,6 +1535,44 @@ H5O_attr_count_real(H5F_t *f, hid_t dxpl_id, H5O_t *oh)
 
 
 /*-------------------------------------------------------------------------
+ * Function:	H5O_attr_count
+ *
+ * Purpose:	Determine the # of attributes on an object
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Quincey Koziol
+ *		Monday, December 11, 2006
+ *
+ *-------------------------------------------------------------------------
+ */
+int
+H5O_attr_count(const H5O_loc_t *loc, hid_t dxpl_id)
+{
+    H5O_t *oh = NULL;                   /* Pointer to actual object header */
+    int ret_value;                      /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT(H5O_attr_count)
+
+    /* Check arguments */
+    HDassert(loc);
+
+    /* Protect the object header to iterate over */
+    if(NULL == (oh = (H5O_t *)H5AC_protect(loc->file, dxpl_id, H5AC_OHDR, loc->addr, NULL, NULL, H5AC_READ)))
+	HGOTO_ERROR(H5E_ATTR, H5E_CANTLOAD, FAIL, "unable to load object header")
+
+    /* Retrieve # of attributes on object */
+    ret_value = (int)H5O_attr_count_real(loc->file, dxpl_id, oh);
+
+done:
+    if(oh && H5AC_unprotect(loc->file, dxpl_id, H5AC_OHDR, loc->addr, oh, H5AC__NO_FLAGS_SET) < 0)
+        HDONE_ERROR(H5E_ATTR, H5E_PROTECT, FAIL, "unable to release object header")
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5O_attr_count */
+
+
+/*-------------------------------------------------------------------------
  * Function:	H5O_attr_exists_cb
  *
  * Purpose:	Object header iterator callback routine to check for an
@@ -1661,114 +1679,4 @@ done:
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_attr_exists */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5O_attr_bh_info
- *
- * Purpose:     For 1.8 attribute, returns storage amount for btree and fractal heap
- *
- * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Vailin Choi
- *              June 19, 2007
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5O_attr_bh_info(H5F_t *f, hid_t dxpl_id, H5O_t *oh, H5_ih_info_t *bh_info)
-{
-    H5HF_t      *fheap = NULL;              /* Fractal heap handle */
-    herr_t      ret_value = SUCCEED;        /* Return value */
-
-    FUNC_ENTER_NOAPI(H5O_attr_bh_info, FAIL)
-
-    HDassert(f);
-    HDassert(oh);
-    HDassert(bh_info);
-
-    /* Attributes are only stored in fractal heap & indexed w/v2 B-tree in later versions */
-    if(oh->version > H5O_VERSION_1) {
-        H5O_ainfo_t ainfo;          /* Attribute information for object */
-
-        /* Check for attribute info stored */
-        if(NULL == H5A_get_ainfo(f, dxpl_id, oh, &ainfo))
-            /* Clear error stack from not finding attribute info */
-            H5E_clear_stack(NULL);
-        else {
-            /* Get storage size of creation order index, if it's used */
-            if(H5F_addr_defined(ainfo.corder_bt2_addr))
-                if(H5B2_iterate_size(f, dxpl_id, H5A_BT2_CORDER, ainfo.corder_bt2_addr, &(bh_info->index_size)) < 0)
-                    HGOTO_ERROR(H5E_BTREE, H5E_CANTGET, FAIL, "can't retrieve B-tree storage info")
-
-            /* Get storage size of name index, if it's used */
-            if(H5F_addr_defined(ainfo.name_bt2_addr))
-                if(H5B2_iterate_size(f, dxpl_id, H5A_BT2_NAME, ainfo.name_bt2_addr, &(bh_info->index_size)) < 0)
-                    HGOTO_ERROR(H5E_BTREE, H5E_CANTGET, FAIL, "can't retrieve B-tree storage info")
-
-            /* Get storage size of fractal heap, if it's used */
-            if(H5F_addr_defined(ainfo.fheap_addr)) {
-                /* Open the fractal heap for attributes */
-                if(NULL == (fheap = H5HF_open(f, dxpl_id, ainfo.fheap_addr)))
-                    HGOTO_ERROR(H5E_HEAP, H5E_CANTOPENOBJ, FAIL, "unable to open fractal heap")
-
-                /* Get heap storage size */
-                if(H5HF_size(fheap, dxpl_id, &(bh_info->heap_size)) < 0)
-                    HGOTO_ERROR(H5E_BTREE, H5E_CANTGET, FAIL, "can't retrieve B-tree storage info")
-
-                /* Release the fractal heap */
-                if(H5HF_close(fheap, dxpl_id) < 0)
-                    HGOTO_ERROR(H5E_HEAP, H5E_CLOSEERROR, FAIL, "can't close fractal heap")
-                fheap = NULL;
-            } /* end if */
-        } /* end else */
-    } /* end if */
-
-done:
-    /* Release resources */
-    if(fheap && H5HF_close(fheap, dxpl_id) < 0)
-        HDONE_ERROR(H5E_HEAP, H5E_CLOSEERROR, FAIL, "can't close fractal heap")
-
-    FUNC_LEAVE_NOAPI(ret_value)
-}   /* H5O_attr_bh_info() */
-
-#ifndef H5_NO_DEPRECATED_SYMBOLS
-
-/*-------------------------------------------------------------------------
- * Function:	H5O_attr_count
- *
- * Purpose:	Determine the # of attributes on an object
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *		Monday, December 11, 2006
- *
- *-------------------------------------------------------------------------
- */
-int
-H5O_attr_count(const H5O_loc_t *loc, hid_t dxpl_id)
-{
-    H5O_t *oh = NULL;                   /* Pointer to actual object header */
-    int ret_value;                      /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT(H5O_attr_count)
-
-    /* Check arguments */
-    HDassert(loc);
-
-    /* Protect the object header to iterate over */
-    if(NULL == (oh = (H5O_t *)H5AC_protect(loc->file, dxpl_id, H5AC_OHDR, loc->addr, NULL, NULL, H5AC_READ)))
-	HGOTO_ERROR(H5E_ATTR, H5E_CANTLOAD, FAIL, "unable to load object header")
-
-    /* Retrieve # of attributes on object */
-    ret_value = (int)H5O_attr_count_real(loc->file, dxpl_id, oh);
-
-done:
-    if(oh && H5AC_unprotect(loc->file, dxpl_id, H5AC_OHDR, loc->addr, oh, H5AC__NO_FLAGS_SET) < 0)
-        HDONE_ERROR(H5E_ATTR, H5E_PROTECT, FAIL, "unable to release object header")
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5O_attr_count */
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
 

@@ -3,19 +3,9 @@
 /* Define if your system generates wrong code for log2 routine. */
 #undef BAD_LOG2_CODE_GENERATED
 
-/* Define if the memory buffers being written to disk should be cleared before
-   writing. */
-#undef CLEAR_MEMORY
-
 /* Define if your system can handle converting denormalized floating-point
    values. */
 #undef CONVERT_DENORMAL_FLOAT
-
-/* Define if C++ compiler recognizes offsetof */
-#undef CXX_HAVE_OFFSETOF
-
-/* Define the default virtual file driver to compile */
-#undef DEFAULT_VFD
 
 /* Define if `dev_t' is a scalar */
 #undef DEV_T_IS_SCALAR
@@ -216,14 +206,17 @@
 /* Define to 1 if you have the <mpe.h> header file. */
 #undef HAVE_MPE_H
 
-/* Define if MPI_File_get_size works correctly */
-#undef HAVE_MPI_GET_SIZE
-
 /* Define if `MPI_Comm_c2f' and `MPI_Comm_f2c' exists */
 #undef HAVE_MPI_MULTI_LANG_Comm
 
 /* Define if `MPI_Info_c2f' and `MPI_Info_f2c' exists */
 #undef HAVE_MPI_MULTI_LANG_Info
+
+/* Define to 1 if you have the <netinet/in.h> header file. */
+#undef HAVE_NETINET_IN_H
+
+/* Define to 1 if you have the <netinet/tcp.h> header file. */
+#undef HAVE_NETINET_TCP_H
 
 /* Define if we have parallel support */
 #undef HAVE_PARALLEL
@@ -246,14 +239,14 @@
 /* Define to 1 if you have the `sigaction' function. */
 #undef HAVE_SIGACTION
 
-/* Define to 1 if you have the `siglongjmp' function. */
-#undef HAVE_SIGLONGJMP
-
 /* Define to 1 if you have the `signal' function. */
 #undef HAVE_SIGNAL
 
 /* Define to 1 if you have the `snprintf' function. */
 #undef HAVE_SNPRINTF
+
+/* Define if `socklen_t' is defined */
+#undef HAVE_SOCKLEN_T
 
 /* Define to 1 if you have the `srandom' function. */
 #undef HAVE_SRANDOM
@@ -276,6 +269,9 @@
 /* Define to 1 if you have the `strdup' function. */
 #undef HAVE_STRDUP
 
+/* Define if the stream virtual file driver should be compiled */
+#undef HAVE_STREAM
+
 /* Define to 1 if you have the <strings.h> header file. */
 #undef HAVE_STRINGS_H
 
@@ -296,6 +292,9 @@
 
 /* Define to 1 if you have the `system' function. */
 #undef HAVE_SYSTEM
+
+/* Define to 1 if you have the <sys/filio.h> header file. */
+#undef HAVE_SYS_FILIO_H
 
 /* Define to 1 if you have the <sys/fpu.h> header file. */
 #undef HAVE_SYS_FPU_H
@@ -428,9 +427,6 @@
 
 /* Define if your system can handle special collective IO properly. */
 #undef MPI_SPECIAL_COLLECTIVE_IO_WORKS
-
-/* Define if deprecated public API symbols are disabled */
-#undef NO_DEPRECATED_SYMBOLS
 
 /* Define if shared writing must be disabled (CodeWarrior only) */
 #undef NO_SHARED_WRITING
@@ -570,9 +566,6 @@
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
-/* Define if strict file format checks are enabled */
-#undef STRICT_FORMAT_CHECKS
-
 /* Define if your system supports pthread_attr_setscope(&attribute,
    PTHREAD_SCOPE_SYSTEM) call. */
 #undef SYSTEM_SCOPE_THREADS
@@ -595,14 +588,6 @@
    floating-point values. */
 #undef ULONG_TO_FP_BOTTOM_BIT_ACCURATE
 
-/* Define using v1.6 public API symbols by default */
-#undef USE_16_API
-
-/* Define if a memory checking tool will be used on the library, to cause
-   library to be very picky about memory operations and also disable the
-   internal free list manager code. */
-#undef USING_MEMCHECKER
-
 /* Version number of package */
 #undef VERSION
 
@@ -615,6 +600,9 @@
 
 /* Check exception handling functions during data conversions */
 #undef WANT_DCONV_EXCEPTION
+
+/* Define if the HDF5 v1.6 compatibility functions are to be compiled in */
+#undef WANT_H5_V1_6_COMPAT
 
 /* Define to 1 if your processor stores words with the most significant byte
    first (like Motorola and SPARC, unlike Intel and VAX). */

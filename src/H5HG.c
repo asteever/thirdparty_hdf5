@@ -200,7 +200,7 @@ H5HG_create (H5F_t *f, hid_t dxpl_id, size_t size)
     haddr_t	addr;
     size_t	n;
 
-    FUNC_ENTER_NOAPI_NOINIT(H5HG_create)
+    FUNC_ENTER_NOAPI(H5HG_create, HADDR_UNDEF);
 
     /* Check args */
     assert (f);
@@ -223,9 +223,9 @@ H5HG_create (H5F_t *f, hid_t dxpl_id, size_t size)
     if (NULL==(heap->chunk = H5FL_BLK_MALLOC (heap_chunk,size)))
 	HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, HADDR_UNDEF, \
                      "memory allocation failed");
-#ifdef H5_CLEAR_MEMORY
-HDmemset(heap->chunk, 0, size);
-#endif /* H5_CLEAR_MEMORY */
+#ifdef H5_USING_PURIFY
+HDmemset(heap->chunk,0,size);
+#endif /* H5_USING_PURIFY */
     heap->nalloc = H5HG_NOBJS (f, size);
     heap->nused = 1; /* account for index 0, which is used for the free object */
     if (NULL==(heap->obj = H5FL_SEQ_MALLOC (H5HG_obj_t,heap->nalloc)))
@@ -456,24 +456,26 @@ H5HG_load (H5F_t *f, hid_t dxpl_id, haddr_t addr, const void UNUSED * udata1,
      * necessary to make room. We remove the right-most entry that has less
      * free space than this heap.
      */
-    if (!f->shared->cwfs) {
-        f->shared->cwfs = H5MM_malloc (H5HG_NCWFS*sizeof(H5HG_heap_t*));
-        if (NULL==f->shared->cwfs)
-            HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
-        f->shared->ncwfs = 1;
-        f->shared->cwfs[0] = heap;
-    } else if (H5HG_NCWFS==f->shared->ncwfs) {
-        for (i=H5HG_NCWFS-1; i>=0; --i) {
-            if (f->shared->cwfs[i]->obj[0].size < heap->obj[0].size) {
-                HDmemmove (f->shared->cwfs+1, f->shared->cwfs, i * sizeof(H5HG_heap_t*));
-                f->shared->cwfs[0] = heap;
-                break;
-            }
-        }
-    } else {
-        HDmemmove (f->shared->cwfs+1, f->shared->cwfs, f->shared->ncwfs*sizeof(H5HG_heap_t*));
-        f->shared->ncwfs += 1;
-        f->shared->cwfs[0] = heap;
+    if (heap->obj[0].size>0) {
+	if (!f->shared->cwfs) {
+	    f->shared->cwfs = H5MM_malloc (H5HG_NCWFS*sizeof(H5HG_heap_t*));
+	    if (NULL==f->shared->cwfs)
+		HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
+	    f->shared->ncwfs = 1;
+	    f->shared->cwfs[0] = heap;
+	} else if (H5HG_NCWFS==f->shared->ncwfs) {
+	    for (i=H5HG_NCWFS-1; i>=0; --i) {
+		if (f->shared->cwfs[i]->obj[0].size < heap->obj[0].size) {
+		    HDmemmove (f->shared->cwfs+1, f->shared->cwfs, i * sizeof(H5HG_heap_t*));
+		    f->shared->cwfs[0] = heap;
+		    break;
+		}
+	    }
+	} else {
+	    HDmemmove (f->shared->cwfs+1, f->shared->cwfs, f->shared->ncwfs*sizeof(H5HG_heap_t*));
+	    f->shared->ncwfs += 1;
+	    f->shared->cwfs[0] = heap;
+	}
     }
 
     ret_value = heap;
@@ -843,9 +845,9 @@ H5HG_extend (H5F_t *f, H5HG_heap_t *heap, size_t size, unsigned * heap_flags_ptr
     /* Re-allocate the heap information in memory */
     if (NULL==(new_chunk = H5FL_BLK_REALLOC (heap_chunk, heap->chunk, heap->size+need)))
         HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL, "new heap allocation failed");
-#ifdef H5_CLEAR_MEMORY
-HDmemset(new_chunk + heap->size, 0, need);
-#endif /* H5_CLEAR_MEMORY */
+#ifdef H5_USING_PURIFY
+HDmemset(new_chunk+heap->size,0,need);
+#endif /* H5_USING_PURIFY */
 
     /* Adjust the size of the heap */
     old_size=heap->size;

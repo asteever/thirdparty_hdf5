@@ -25,8 +25,7 @@
  *
  *-------------------------------------------------------------------------
  */
-#if defined (H5DIFF_DEBUG)
-static void
+void
 print_size (int rank, hsize_t *dims)
 {
     int i;
@@ -41,7 +40,6 @@ print_size (int rank, hsize_t *dims)
     parallel_print("]\n" );
     
 }
-#endif /* H5DIFF_DEBUG */
 
 
 
@@ -65,11 +63,11 @@ hsize_t diff_dataset( hid_t file1_id,
                       const char *obj2_name,
                       diff_opt_t *options)
 {
- hid_t   did1 = -1;
- hid_t   did2 = -1;
- hid_t   dcpl1 = -1;
- hid_t   dcpl2 = -1;
- hsize_t nfound = 0;
+ hid_t   did1=-1;
+ hid_t   did2=-1;
+ hid_t   dcpl1=-1;
+ hid_t   dcpl2=-1;
+ hsize_t nfound=0;
 
 /*-------------------------------------------------------------------------
  * open the handles
@@ -78,21 +76,23 @@ hsize_t diff_dataset( hid_t file1_id,
  /* disable error reporting */
  H5E_BEGIN_TRY {
  /* Open the datasets */
- if((did1 = H5Dopen2(file1_id, obj1_name, H5P_DEFAULT)) < 0) {
-  printf("Cannot open dataset <%s>\n", obj1_name);
+ if ( (did1 = H5Dopen(file1_id,obj1_name)) < 0 )
+ {
+  printf("Cannot open dataset <%s>\n", obj1_name );
   goto error;
  }
- if((did2 = H5Dopen2(file2_id, obj2_name, H5P_DEFAULT)) < 0) {
-  printf("Cannot open dataset <%s>\n", obj2_name);
+ if ( (did2 = H5Dopen(file2_id,obj2_name)) < 0 )
+ {
+  printf("Cannot open dataset <%s>\n", obj2_name );
   goto error;
  }
  /* enable error reporting */
  } H5E_END_TRY;
 
 
- if((dcpl1 = H5Dget_create_plist(did1)) < 0)
+ if ((dcpl1=H5Dget_create_plist(did1))<0)
   goto error;
- if((dcpl2 = H5Dget_create_plist(did2)) < 0)
+ if ((dcpl2=H5Dget_create_plist(did2))<0)
   goto error;
 
 /*-------------------------------------------------------------------------
@@ -151,50 +151,6 @@ error:
  * Programmer: Pedro Vicente, pvn@ncsa.uiuc.edu
  *
  * Date: May 9, 2003
- *
- * Modifications: 
- *
- *
- * October 2006:  Read by hyperslabs for big datasets.
- *
- *  A threshold of H5TOOLS_MALLOCSIZE (128 MB) is the limit upon which I/O hyperslab is done
- *  i.e., if the memory needed to read a dataset is greater than this limit, 
- *  then hyperslab I/O is done instead of one operation I/O 
- *  For each dataset, the memory needed is calculated according to
- *
- *  memory needed = number of elements * size of each element
- *
- *  if the memory needed is lower than H5TOOLS_MALLOCSIZE, then the following operations 
- *  are done
- *
- *  H5Dread( input_dataset1 )
- *  H5Dread( input_dataset2 )
- *
- *  with all elements in the datasets selected. If the memory needed is greater than 
- *  H5TOOLS_MALLOCSIZE, then the following operations are done instead:
- *
- *  a strip mine is defined for each dimension k (a strip mine is defined as a 
- *  hyperslab whose size is memory manageable) according to the formula
- *
- *  (1) strip_mine_size[k ] = MIN(dimension[k ], H5TOOLS_BUFSIZE / size of memory type)
- *
- *  where H5TOOLS_BUFSIZE is a constant currently defined as 1MB. This formula assures 
- *  that for small datasets (small relative to the H5TOOLS_BUFSIZE constant), the strip 
- *  mine size k is simply defined as its dimension k, but for larger datasets the 
- *  hyperslab size is still memory manageable.
- *  a cycle is done until the number of elements in the dataset is reached. In each 
- *  iteration, two parameters are defined for the function H5Sselect_hyperslab, 
- *  the start and size of each hyperslab, according to
- *
- *  (2) hyperslab_size [k] = MIN(dimension[k] - hyperslab_offset[k], strip_mine_size [k])
- *
- *  where hyperslab_offset [k] is initially set to zero, and later incremented in 
- *  hyperslab_size[k] offsets. The reason for the operation 
- *
- *  dimension[k] - hyperslab_offset[k]
- *
- *  in (2) is that, when using the strip mine size, it assures that the "remaining" part 
- *  of the dataset that does not fill an entire strip mine is processed.
  *
  *-------------------------------------------------------------------------
  */
@@ -279,6 +235,8 @@ hsize_t diff_datasetid( hid_t did1,
 
  storage_size1=H5Dget_storage_size(did1);
  storage_size2=H5Dget_storage_size(did2);
+ if (storage_size1<0 || storage_size2<0)
+  goto error;
 
  if (storage_size1==0 || storage_size2==0)
  {
@@ -313,10 +271,10 @@ hsize_t diff_datasetid( hid_t did1,
  * memory type and sizes
  *-------------------------------------------------------------------------
  */
- if ((m_tid1=h5tools_get_native_type(f_tid1)) < 0)
+ if ((m_tid1=h5tools_get_native_type(f_tid1))<0)
   goto error;
 
- if ((m_tid2=h5tools_get_native_type(f_tid2)) < 0)
+ if ((m_tid2=h5tools_get_native_type(f_tid2))<0)
   goto error;
 
  m_size1 = H5Tget_size( m_tid1 );
@@ -376,7 +334,7 @@ hsize_t diff_datasetid( hid_t did1,
   {
    H5Tclose(m_tid1);
 
-   if ((m_tid1=h5tools_get_native_type(f_tid2)) < 0)
+   if ((m_tid1=h5tools_get_native_type(f_tid2))<0)
     goto error;
 
    m_size1 = H5Tget_size( m_tid1 );
@@ -385,7 +343,7 @@ hsize_t diff_datasetid( hid_t did1,
   {
    H5Tclose(m_tid2);
 
-   if ((m_tid2=h5tools_get_native_type(f_tid1)) < 0)
+   if ((m_tid2=h5tools_get_native_type(f_tid1))<0)
     goto error;
 
    m_size2 = H5Tget_size( m_tid2 );
@@ -493,11 +451,11 @@ hsize_t diff_datasetid( hid_t did1,
      hs_size[i] = MIN(dims1[i] - hs_offset[i], sm_size[i]);
      hs_nelmts *= hs_size[i];
     }
-    if (H5Sselect_hyperslab(sid1, H5S_SELECT_SET, hs_offset, NULL, hs_size, NULL) < 0)
+    if (H5Sselect_hyperslab(sid1, H5S_SELECT_SET, hs_offset, NULL, hs_size, NULL)<0)
      goto error;
-    if (H5Sselect_hyperslab(sid2, H5S_SELECT_SET, hs_offset, NULL, hs_size, NULL) < 0)
+    if (H5Sselect_hyperslab(sid2, H5S_SELECT_SET, hs_offset, NULL, hs_size, NULL)<0)
      goto error;
-    if (H5Sselect_hyperslab(sm_space, H5S_SELECT_SET, zero, NULL, &hs_nelmts, NULL) < 0)
+    if (H5Sselect_hyperslab(sm_space, H5S_SELECT_SET, zero, NULL, &hs_nelmts, NULL)<0)
      goto error;
    } 
    else 
@@ -690,10 +648,10 @@ int diff_can_type( hid_t       f_tid1, /* file data type */
  *-------------------------------------------------------------------------
  */
 
- if ((tclass1=H5Tget_class(f_tid1)) < 0)
+ if ((tclass1=H5Tget_class(f_tid1))<0)
   return -1;
 
- if ((tclass2=H5Tget_class(f_tid2)) < 0)
+ if ((tclass2=H5Tget_class(f_tid2))<0)
   return -1;
 
  if ( tclass1 != tclass2 )

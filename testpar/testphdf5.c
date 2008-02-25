@@ -35,7 +35,7 @@ int ngroups = 512;                      /* number of groups to create in root
 int facc_type = FACC_MPIO;		/*Test file access type */
 int dxfer_coll_type = DXFER_COLLECTIVE_IO;
 
-H5E_auto2_t old_func;		        /* previous error handler */
+H5E_auto_t old_func;		        /* previous error handler */
 void *old_client_data;			/* previous error handler arg.*/
 
 /* other option flags */
@@ -365,13 +365,8 @@ int main(int argc, char **argv)
 	    "extendible dataset collective read", PARATESTFILE);
     AddTest("eidsetw2", extend_writeInd2, NULL,
 	    "extendible dataset independent write #2", PARATESTFILE);
-    AddTest("selnone", none_selection_chunk, NULL,
-            "chunked dataset with none-selection", PARATESTFILE);
-
     AddTest("calloc", test_chunk_alloc, NULL,
 	    "parallel extend Chunked allocation on serial file", PARATESTFILE);
-    AddTest("fltread", test_filter_read, NULL,
-	    "parallel read of dataset written serially with filters", PARATESTFILE);
 
 #ifdef H5_HAVE_FILTER_DEFLATE
     AddTest("cmpdsetr", compress_readAll, NULL,
@@ -399,8 +394,8 @@ int main(int argc, char **argv)
 	    "collective group and dataset write", &collngroups_params);
     AddTest("ingrpr", independent_group_read, NULL,
 	    "independent group and dataset read", &collngroups_params);
- /* By default, do not run big dataset on _WIN32. */
-#ifdef _WIN32
+ /* By default, do not run big dataset on WIN32. */
+#ifdef WIN32
     AddTest("-bigdset", big_dataset, NULL, 
             "big dataset test", PARATESTFILE);
 #else

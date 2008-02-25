@@ -823,14 +823,19 @@ test_compress(void)
     /* Open the packet table as a regular dataset and make sure that the 
      * compression filter is set.
      */
-    dset_id = H5Dopen2(fid1, "Compressed Test Dataset", H5P_DEFAULT);
+    dset_id = H5Dopen(fid1, "Compressed Test Dataset");
     if( dset_id < 0) TEST_ERROR;
 
     plist_id = H5Dget_create_plist(dset_id);
     if( plist_id < 0) TEST_ERROR;
 
-    err = H5Pget_filter_by_id2(plist_id, H5Z_FILTER_DEFLATE, NULL, &num_elems,
+#ifdef H5_WANT_H5_V1_6_COMPAT
+    err = H5Pget_filter_by_id(plist_id, H5Z_FILTER_DEFLATE, NULL, &num_elems,
+                      filter_vals, 0, NULL);
+#else
+    err = H5Pget_filter_by_id(plist_id, H5Z_FILTER_DEFLATE, NULL, &num_elems,
                       filter_vals, 0, NULL, NULL);
+#endif
     if( err < 0) TEST_ERROR;
 
     /* The compression level should be 8, the value we passed in */
@@ -853,15 +858,20 @@ test_compress(void)
     /* Open the packet table as a regular dataset and make sure that the 
      * compression filter is not set.
      */
-    dset_id = H5Dopen2(fid1, "Uncompressed Dataset", H5P_DEFAULT);
+    dset_id = H5Dopen(fid1, "Uncompressed Dataset");
     if( dset_id < 0) TEST_ERROR;
 
     plist_id = H5Dget_create_plist(dset_id);
     if( plist_id < 0) TEST_ERROR;
 
     H5E_BEGIN_TRY {
-    err = H5Pget_filter_by_id2(plist_id, H5Z_FILTER_DEFLATE, NULL, &num_elems,
+#ifdef H5_WANT_H5_V1_6_COMPAT
+    err = H5Pget_filter_by_id(plist_id, H5Z_FILTER_DEFLATE, NULL, &num_elems,
+                      filter_vals, 0, NULL);
+#else
+    err = H5Pget_filter_by_id(plist_id, H5Z_FILTER_DEFLATE, NULL, &num_elems,
                       filter_vals, 0, NULL, NULL);
+#endif
     if( err >= 0) TEST_ERROR;
     } H5E_END_TRY
 
@@ -945,7 +955,7 @@ static int test_error(hid_t fid)
 
   /* Open a high-level non-packet (H5TB) table and try to */
   /* execute commands on it. */
-  if((id=H5Dopen2(fid, H5TB_TABLE_NAME, H5P_DEFAULT)) <0)
+  if((id=H5Dopen(fid, H5TB_TABLE_NAME)) <0)
     goto out;
   id_open = 1;
 

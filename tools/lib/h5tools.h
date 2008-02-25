@@ -45,7 +45,7 @@
 /*
  * Maximum size used in a call to malloc
  */
-#define H5TOOLS_MALLOCSIZE      (128 * 1024 * 1024)
+#define H5TOOLS_MALLOCSIZE      ((size_t)1024 * 1024 * 1024)
 
 /* format for hsize_t */
 #define HSIZE_T_FORMAT   "%"H5_PRINTF_LL_WIDTH"u"
@@ -348,7 +348,7 @@ typedef struct h5tools_context_t {
     size_t cur_column;                       /*current column for output */
     size_t cur_elmt;                         /*current element/output line */
     int  need_prefix;                        /*is line prefix needed? */
-    unsigned ndims;                          /*dimensionality  */
+    int  ndims;                              /*dimensionality  */
     hsize_t p_min_idx[H5S_MAX_RANK];         /*min selected index */
     hsize_t p_max_idx[H5S_MAX_RANK];         /*max selected index */
     int  prev_multiline;                     /*was prev datum multiline? */
@@ -380,9 +380,9 @@ extern int     bin_form;            /* binary form */
 
 
 /* Strings for output */
-#define H5_TOOLS_GROUP           "GROUP"
-#define H5_TOOLS_DATASET         "DATASET"
-#define H5_TOOLS_DATATYPE        "DATATYPE"
+#define GROUP           "GROUP"
+#define DATASET         "DATASET"
+#define DATATYPE        "DATATYPE"
 
 /* Definitions of useful routines */
 extern void     h5tools_init(void);

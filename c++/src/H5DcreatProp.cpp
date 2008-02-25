@@ -362,11 +362,13 @@ H5Z_filter_t DSetCreatPropList::getFilter(int filter_number,
 	size_t namelen, char name[], unsigned int& filter_config) const
 {
    H5Z_filter_t filter_id;
-   filter_id = H5Pget_filter2(id, filter_number, &flags, &cd_nelmts,
+   filter_id = H5Pget_filter( id, filter_number, &flags, &cd_nelmts,
 				cd_values, namelen, name, &filter_config);
    if( filter_id == H5Z_FILTER_ERROR )
+   {
       throw PropListIException("DSetCreatPropList::getFilter",
-                "H5Pget_filter2 returned H5Z_FILTER_ERROR");
+                "H5Pget_filter returned H5Z_FILTER_ERROR");
+   }
    else
       return(filter_id);
 }
@@ -390,11 +392,13 @@ void DSetCreatPropList::getFilterById(H5Z_filter_t filter_id,
 	unsigned int &flags, size_t &cd_nelmts, unsigned int* cd_values,
 	size_t namelen, char name[], unsigned int &filter_config) const
 {
-   herr_t ret_value = H5Pget_filter_by_id2(id, filter_id, &flags, &cd_nelmts,
-				cd_values, namelen, name, &filter_config);
+   herr_t ret_value = H5Pget_filter_by_id(id, filter_id, &flags, &cd_nelmts,
+				cd_values, namelen, name, &filter_config );
    if (ret_value < 0)
+   {
       throw PropListIException("DSetCreatPropList::getFilterById",
-                "H5Pget_filter_by_id2 failed");
+                "H5Pget_filter_by_id failed");
+   }
 }
 
 //--------------------------------------------------------------------------

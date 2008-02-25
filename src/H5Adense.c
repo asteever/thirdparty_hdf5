@@ -42,7 +42,6 @@
 #include "H5MMprivate.h"	/* Memory management			*/
 #include "H5Opkg.h"		/* Object headers			*/
 #include "H5SMprivate.h"	/* Shared object header messages        */
-#include "H5WBprivate.h"        /* Wrapped Buffers                      */
 
 
 /****************/
@@ -166,6 +165,9 @@ typedef struct H5A_bt2_ud_rmbi_t {
 /*******************/
 /* Local Variables */
 /*******************/
+
+/* Declare a free list to manage the serialized attribute information */
+H5FL_BLK_DEFINE(ser_attr);
 
 
 
@@ -362,7 +364,7 @@ H5A_dense_open(H5F_t *f, hid_t dxpl_id, const H5O_ainfo_t *ainfo, const char *na
         } /* end if */
     } /* end if */
 
-    /* Create the "udata" information for v2 B-tree record find */
+    /* Create the "udata" information for v2 B-tree record modify */
     udata.f = f;
     udata.dxpl_id = dxpl_id;
     udata.fheap = fheap;
@@ -408,8 +410,8 @@ H5A_dense_insert(H5F_t *f, hid_t dxpl_id, const H5O_ainfo_t *ainfo, H5A_t *attr)
     H5A_bt2_ud_ins_t udata;             /* User data for v2 B-tree insertion */
     H5HF_t *fheap = NULL;               /* Fractal heap handle for attributes */
     H5HF_t *shared_fheap = NULL;        /* Fractal heap handle for shared header messages */
-    H5WB_t *wb = NULL;                  /* Wrapped buffer for attribute data */
     uint8_t attr_buf[H5A_ATTR_BUF_SIZE]; /* Buffer for serializing message */
+    void *attr_ptr = NULL;              /* Pointer to serialized message */
     unsigned mesg_flags = 0;            /* Flags for storing message */
     htri_t attr_sharable;               /* Flag indicating attributes are sharable */
     herr_t ret_value = SUCCEED;         /* Return value */
@@ -440,11 +442,11 @@ H5A_dense_insert(H5F_t *f, hid_t dxpl_id, const H5O_ainfo_t *ainfo, H5A_t *attr)
             mesg_flags |= H5O_MSG_FLAG_SHARED;
         else {
             /* Should this attribute be written as a SOHM? */
-            if(H5SM_try_share(f, dxpl_id, NULL, H5O_ATTR_ID, attr, &mesg_flags) < 0)
+            if((shared_mesg = H5SM_try_share(f, dxpl_id, H5O_ATTR_ID, attr)) > 0)
+                /* Mark the message as shared */
+                mesg_flags |= H5O_MSG_FLAG_SHARED;
+            else if(shared_mesg < 0)
                 HGOTO_ERROR(H5E_ATTR, H5E_WRITEERROR, FAIL, "error determining if message should be shared")
-
-            /* Attributes can't be "unique be shareable" yet */
-            HDassert(!(mesg_flags & H5O_MSG_FLAG_SHAREABLE));
         } /* end else */
 
         /* Retrieve the address of the shared message's fractal heap */
@@ -472,20 +474,19 @@ H5A_dense_insert(H5F_t *f, hid_t dxpl_id, const H5O_ainfo_t *ainfo, H5A_t *attr)
         udata.id = attr->sh_loc.u.heap_id;
     } /* end if */
     else {
-        void *attr_ptr;         /* Pointer to serialized message */
-        size_t attr_size;       /* Size of serialized attribute in the heap */
+        size_t attr_size;                   /* Size of serialized attribute in the heap */
 
         /* Find out the size of buffer needed for serialized message */
         if((attr_size = H5O_msg_raw_size(f, H5O_ATTR_ID, FALSE, attr)) == 0)
             HGOTO_ERROR(H5E_ATTR, H5E_CANTGETSIZE, FAIL, "can't get message size")
 
-        /* Wrap the local buffer for serialized attributes */
-        if(NULL == (wb = H5WB_wrap(attr_buf, sizeof(attr_buf))))
-            HGOTO_ERROR(H5E_ATTR, H5E_CANTINIT, FAIL, "can't wrap buffer")
-
-        /* Get a pointer to a buffer that's large enough for attribute */
-        if(NULL == (attr_ptr = H5WB_actual(wb, attr_size)))
-            HGOTO_ERROR(H5E_ATTR, H5E_NOSPACE, FAIL, "can't get actual buffer")
+        /* Allocate space for serialized message, if necessary */
+        if(attr_size > sizeof(attr_buf)) {
+            if(NULL == (attr_ptr = H5FL_BLK_MALLOC(ser_attr, attr_size)))
+                HGOTO_ERROR(H5E_ATTR, H5E_NOSPACE, FAIL, "memory allocation failed")
+        } /* end if */
+        else
+            attr_ptr = attr_buf;
 
         /* Create serialized form of attribute or shared message */
         if(H5O_msg_encode(f, H5O_ATTR_ID, FALSE, (unsigned char *)attr_ptr, attr) < 0)
@@ -528,8 +529,8 @@ done:
         HDONE_ERROR(H5E_ATTR, H5E_CLOSEERROR, FAIL, "can't close fractal heap")
     if(fheap && H5HF_close(fheap, dxpl_id) < 0)
         HDONE_ERROR(H5E_ATTR, H5E_CLOSEERROR, FAIL, "can't close fractal heap")
-    if(wb && H5WB_unwrap(wb) < 0)
-        HDONE_ERROR(H5E_ATTR, H5E_CLOSEERROR, FAIL, "can't close wrapped buffer")
+    if(attr_ptr && attr_ptr != attr_buf)
+        (void)H5FL_BLK_FREE(ser_attr, attr_ptr);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5A_dense_insert() */
@@ -591,8 +592,8 @@ H5A_dense_write_bt2_cb(void *_record, void *_op_data, hbool_t *changed)
 {
     H5A_dense_bt2_name_rec_t *record = (H5A_dense_bt2_name_rec_t *)_record; /* Record from B-tree */
     H5A_bt2_od_wrt_t *op_data = (H5A_bt2_od_wrt_t *)_op_data;       /* "op data" from v2 B-tree modify */
-    H5WB_t *wb = NULL;                  /* Wrapped buffer for attribute data */
     uint8_t attr_buf[H5A_ATTR_BUF_SIZE]; /* Buffer for serializing attribute */
+    void *attr_ptr = NULL;              /* Pointer to serialized attribute */
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5A_dense_write_bt2_cb)
@@ -606,7 +607,7 @@ H5A_dense_write_bt2_cb(void *_record, void *_op_data, hbool_t *changed)
     /* Check for modifying shared attribute */
     if(record->flags & H5O_MSG_FLAG_SHARED) {
         /* Update the shared attribute in the SOHM info */
-        if(H5O_attr_update_shared(op_data->f, op_data->dxpl_id, NULL, op_data->attr, NULL) < 0)
+        if(H5O_attr_update_shared(op_data->f, op_data->dxpl_id, op_data->attr, NULL) < 0)
             HGOTO_ERROR(H5E_ATTR, H5E_CANTUPDATE, FAIL, "unable to update attribute in shared storage")
 
         /* Update record's heap ID */
@@ -637,20 +638,19 @@ H5A_dense_write_bt2_cb(void *_record, void *_op_data, hbool_t *changed)
         *changed = TRUE;
     } /* end if */
     else {
-        void *attr_ptr;         /* Pointer to serialized message */
-        size_t attr_size;       /* Size of serialized attribute in the heap */
+        size_t attr_size;               /* Size of serialized attribute in the heap */
 
         /* Find out the size of buffer needed for serialized attribute */
         if((attr_size = H5O_msg_raw_size(op_data->f, H5O_ATTR_ID, FALSE, op_data->attr)) == 0)
             HGOTO_ERROR(H5E_ATTR, H5E_CANTGETSIZE, FAIL, "can't get attribute size")
 
-        /* Wrap the local buffer for serialized attributes */
-        if(NULL == (wb = H5WB_wrap(attr_buf, sizeof(attr_buf))))
-            HGOTO_ERROR(H5E_ATTR, H5E_CANTINIT, FAIL, "can't wrap buffer")
-
-        /* Get a pointer to a buffer that's large enough for attribute */
-        if(NULL == (attr_ptr = H5WB_actual(wb, attr_size)))
-            HGOTO_ERROR(H5E_ATTR, H5E_NOSPACE, FAIL, "can't get actual buffer")
+        /* Allocate space for serialized attribute, if necessary */
+        if(attr_size > sizeof(attr_buf)) {
+            if(NULL == (attr_ptr = H5FL_BLK_MALLOC(ser_attr, attr_size)))
+                HGOTO_ERROR(H5E_ATTR, H5E_NOSPACE, FAIL, "memory allocation failed")
+        } /* end if */
+        else
+            attr_ptr = attr_buf;
 
         /* Create serialized form of attribute */
         if(H5O_msg_encode(op_data->f, H5O_ATTR_ID, FALSE, (unsigned char *)attr_ptr, op_data->attr) < 0)
@@ -674,8 +674,8 @@ H5A_dense_write_bt2_cb(void *_record, void *_op_data, hbool_t *changed)
 
 done:
     /* Release resources */
-    if(wb && H5WB_unwrap(wb) < 0)
-        HDONE_ERROR(H5E_ATTR, H5E_CLOSEERROR, FAIL, "can't close wrapped buffer")
+    if(attr_ptr && attr_ptr != attr_buf)
+        (void)H5FL_BLK_FREE(ser_attr, attr_ptr);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5A_dense_write_bt2_cb() */
@@ -811,7 +811,7 @@ H5A_dense_copy_fh_cb(const void *obj, size_t UNUSED obj_len, void *_udata)
 
     /* Check whether we should "reconstitute" the shared message info */
     if(udata->record->flags & H5O_MSG_FLAG_SHARED)
-        H5SM_reconstitute(&(udata->attr->sh_loc), udata->f, H5O_ATTR_ID, udata->record->id);
+        H5SM_reconstitute(&(udata->attr->sh_loc), udata->record->id);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -900,16 +900,12 @@ H5A_dense_rename(H5F_t *f, hid_t dxpl_id, const H5O_ainfo_t *ainfo, const char *
     else if(shared_mesg > 0) {
         /* Reset shared status of copy */
         /* (so it will get shared again if necessary) */
-        attr_copy->sh_loc.type = H5O_SHARE_TYPE_UNSHARED;
+        attr_copy->sh_loc.flags = 0;
     } /* end if */
 
     /* Change name of attribute */
     H5MM_xfree(attr_copy->name);
     attr_copy->name = H5MM_xstrdup(new_name);
-
-    /* Recompute the version to encode the attribute with */
-    if(H5A_set_version(f, attr_copy) < 0)
-        HGOTO_ERROR(H5E_ATTR, H5E_CANTSET, FAIL, "unable to update attribute version")
 
     /* Insert renamed attribute back into dense storage */
     /* (Possibly making it shared) */
@@ -933,14 +929,14 @@ H5A_dense_rename(H5F_t *f, hid_t dxpl_id, const H5O_ainfo_t *ainfo, const char *
          */
         if(attr_rc == 1) {
             /* Increment reference count on attribute components */
-            if(H5O_attr_link(f, dxpl_id, NULL, attr_copy) < 0)
+            if(H5O_attr_link(f, dxpl_id, attr_copy) < 0)
                 HGOTO_ERROR(H5E_ATTR, H5E_LINKCOUNT, FAIL, "unable to adjust attribute link count")
         } /* end if */
     } /* end if */
     else if(shared_mesg == 0) {
         /* Increment reference count on attribute components */
         /* (so that they aren't deleted when the attribute is removed shortly) */
-        if(H5O_attr_link(f, dxpl_id, NULL, attr_copy) < 0)
+        if(H5O_attr_link(f, dxpl_id, attr_copy) < 0)
             HGOTO_ERROR(H5E_ATTR, H5E_LINKCOUNT, FAIL, "unable to adjust attribute link count")
     } /* end if */
     else if(shared_mesg < 0)
@@ -1024,12 +1020,10 @@ H5A_dense_iterate_bt2_cb(const void *_record, void *_bt2_udata)
                 break;
             }
 
-#ifndef H5_NO_DEPRECATED_SYMBOLS
             case H5A_ATTR_OP_APP:
                 /* Make the application callback */
                 ret_value = (bt2_udata->attr_op->u.app_op)(bt2_udata->loc_id, fh_udata.attr->name, bt2_udata->op_data);
                 break;
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
 
             case H5A_ATTR_OP_LIB:
                 /* Call the library's callback */
@@ -1215,7 +1209,7 @@ H5A_dense_remove_bt2_cb(const void *_record, void *_udata)
         /* Set up the user data for the v2 B-tree 'record remove' callback */
         udata->common.corder = attr->crt_idx;
 
-        /* Remove the record from the creation order index v2 B-tree */
+        /* Remove the record from the name index v2 B-tree */
         if(H5B2_remove(udata->common.f, udata->common.dxpl_id, H5A_BT2_CORDER, udata->corder_bt2_addr, udata, NULL, NULL) < 0)
             HGOTO_ERROR(H5E_SYM, H5E_CANTREMOVE, FAIL, "unable to remove attribute from creation order index v2 B-tree")
     } /* end if */
@@ -1223,13 +1217,13 @@ H5A_dense_remove_bt2_cb(const void *_record, void *_udata)
     /* Check for removing shared attribute */
     if(record->flags & H5O_MSG_FLAG_SHARED) {
         /* Decrement the reference count on the shared attribute message */
-        if(H5SM_delete(udata->common.f, udata->common.dxpl_id, NULL, &(attr->sh_loc)) < 0)
+        if(H5SM_try_delete(udata->common.f, udata->common.dxpl_id, H5O_ATTR_ID, &(attr->sh_loc)) < 0)
             HGOTO_ERROR(H5E_ATTR, H5E_CANTFREE, FAIL, "unable to delete shared attribute")
     } /* end if */
     else {
         /* Perform the deletion action on the attribute */
         /* (takes care of shared & committed datatype/dataspace components) */
-        if(H5O_attr_delete(udata->common.f, udata->common.dxpl_id, NULL, attr) < 0)
+        if(H5O_attr_delete(udata->common.f, udata->common.dxpl_id, attr) < 0)
             HGOTO_ERROR(H5E_ATTR, H5E_CANTDELETE, FAIL, "unable to delete attribute")
 
         /* Remove record from fractal heap */
@@ -1346,8 +1340,6 @@ H5A_dense_remove_by_idx_bt2_cb(const void *_record, void *_bt2_udata)
     const H5A_dense_bt2_name_rec_t *record = (const H5A_dense_bt2_name_rec_t *)_record; /* v2 B-tree record */
     H5A_bt2_ud_rmbi_t *bt2_udata = (H5A_bt2_ud_rmbi_t *)_bt2_udata;         /* User data for callback */
     H5A_fh_ud_cp_t fh_udata;            /* User data for fractal heap 'op' callback */
-    H5O_shared_t sh_loc;                /* Shared message info for attribute */
-    hbool_t use_sh_loc;                 /* Whether to use the attribute's shared location or the separate one */
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5A_dense_remove_by_idx_bt2_cb)
@@ -1364,23 +1356,10 @@ H5A_dense_remove_by_idx_bt2_cb(const void *_record, void *_bt2_udata)
     else
         fheap = bt2_udata->fheap;
 
-    /* Check whether to make a copy of the attribute or just need the shared location info */
-    if(H5F_addr_defined(bt2_udata->other_bt2_addr) || !(record->flags & H5O_MSG_FLAG_SHARED)) {
-        /* Call fractal heap 'op' routine, to make copy of attribute to remove */
-        if(H5HF_op(fheap, bt2_udata->dxpl_id, &record->id, H5A_dense_copy_fh_cb, &fh_udata) < 0)
-            HGOTO_ERROR(H5E_ATTR, H5E_CANTOPERATE, FAIL, "attribute removal callback failed")
-        HDassert(fh_udata.attr);
-
-        /* Use the attribute's shared location */
-        use_sh_loc = FALSE;
-    } /* end if */
-    else {
-        /* Create a shared message location from the heap ID for this record */
-        H5SM_reconstitute(&sh_loc, bt2_udata->f, H5O_ATTR_ID, record->id);
-
-        /* Use the separate shared location */
-        use_sh_loc = TRUE;
-    } /* end else */
+    /* Call fractal heap 'op' routine, to make copy of attribute to remove */
+    if(H5HF_op(fheap, bt2_udata->dxpl_id, &record->id, H5A_dense_copy_fh_cb, &fh_udata) < 0)
+        HGOTO_ERROR(H5E_ATTR, H5E_CANTOPERATE, FAIL, "attribute removal callback failed")
+    HDassert(fh_udata.attr);
 
     /* Check for removing the link from the "other" index (creation order, when name used and vice versa) */
     if(H5F_addr_defined(bt2_udata->other_bt2_addr)) {
@@ -1421,22 +1400,14 @@ H5A_dense_remove_by_idx_bt2_cb(const void *_record, void *_bt2_udata)
 
     /* Check for removing shared attribute */
     if(record->flags & H5O_MSG_FLAG_SHARED) {
-        H5O_shared_t *sh_loc_ptr;       /* Pointer to shared message info for attribute */
-
-        /* Set up pointer to correct shared location */
-        if(use_sh_loc)
-            sh_loc_ptr = &sh_loc;
-        else
-            sh_loc_ptr = &(fh_udata.attr->sh_loc);
-
         /* Decrement the reference count on the shared attribute message */
-        if(H5SM_delete(bt2_udata->f, bt2_udata->dxpl_id, NULL, sh_loc_ptr) < 0)
+        if(H5SM_try_delete(bt2_udata->f, bt2_udata->dxpl_id, H5O_ATTR_ID, &(fh_udata.attr->sh_loc)) < 0)
             HGOTO_ERROR(H5E_ATTR, H5E_CANTFREE, FAIL, "unable to delete shared attribute")
     } /* end if */
     else {
         /* Perform the deletion action on the attribute */
         /* (takes care of shared & committed datatype/dataspace components) */
-        if(H5O_attr_delete(bt2_udata->f, bt2_udata->dxpl_id, NULL, fh_udata.attr) < 0)
+        if(H5O_attr_delete(bt2_udata->f, bt2_udata->dxpl_id, fh_udata.attr) < 0)
             HGOTO_ERROR(H5E_ATTR, H5E_CANTDELETE, FAIL, "unable to delete attribute")
 
         /* Remove record from fractal heap */
@@ -1695,10 +1666,10 @@ H5A_dense_delete_bt2_cb(const void *_record, void *_bt2_udata)
         H5O_shared_t sh_mesg;   /* Temporary shared message info */
 
         /* "reconstitute" the shared message info for the attribute */
-        H5SM_reconstitute(&sh_mesg, bt2_udata->f, H5O_ATTR_ID, record->id);
+        H5SM_reconstitute(&sh_mesg, record->id);
 
         /* Decrement the reference count on the shared attribute message */
-        if(H5SM_delete(bt2_udata->f, bt2_udata->dxpl_id, NULL, &sh_mesg) < 0)
+        if(H5SM_try_delete(bt2_udata->f, bt2_udata->dxpl_id, H5O_ATTR_ID, &sh_mesg) < 0)
             HGOTO_ERROR(H5E_ATTR, H5E_CANTFREE, FAIL, "unable to delete shared attribute")
     } /* end if */
     else {
@@ -1719,7 +1690,7 @@ H5A_dense_delete_bt2_cb(const void *_record, void *_bt2_udata)
 
         /* Perform the deletion action on the attribute */
         /* (takes care of shared/committed datatype & dataspace components) */
-        if(H5O_attr_delete(bt2_udata->f, bt2_udata->dxpl_id, NULL, fh_udata.attr) < 0)
+        if(H5O_attr_delete(bt2_udata->f, bt2_udata->dxpl_id, fh_udata.attr) < 0)
             HGOTO_ERROR(H5E_ATTR, H5E_CANTDELETE, FAIL, "unable to delete attribute")
     } /* end else */
 
@@ -1772,6 +1743,7 @@ H5A_dense_delete(H5F_t *f, hid_t dxpl_id, H5O_ainfo_t *ainfo)
     udata.name = NULL;
     udata.name_hash = 0;
     udata.flags = 0;
+    udata.corder = 0;
     udata.found_op = NULL;       /* v2 B-tree comparison callback */
     udata.found_op_data = NULL;
 

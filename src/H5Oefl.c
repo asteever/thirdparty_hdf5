@@ -35,8 +35,7 @@ static void *H5O_efl_copy(const void *_mesg, void *_dest);
 static size_t H5O_efl_size(const H5F_t *f, hbool_t disable_shared, const void *_mesg);
 static herr_t H5O_efl_reset(void *_mesg);
 static void *H5O_efl_copy_file(H5F_t *file_src, void *mesg_src,
-    H5F_t *file_dst, hbool_t *recompute_size, H5O_copy_t *cpy_info,
-    void *udata, hid_t dxpl_id);
+    H5F_t *file_dst, hid_t dxpl_id, H5O_copy_t *cpy_info, void *udata);
 static herr_t H5O_efl_debug(H5F_t *f, hid_t dxpl_id, const void *_mesg, FILE * stream,
 			    int indent, int fwidth);
 
@@ -45,7 +44,7 @@ const H5O_msg_class_t H5O_MSG_EFL[1] = {{
     H5O_EFL_ID,		    	/*message id number		*/
     "external file list",   	/*message name for debugging    */
     sizeof(H5O_efl_t),	    	/*native message size	    	*/
-    0,				/* messages are sharable?       */
+    FALSE,			/* messages are sharable?       */
     H5O_efl_decode,	    	/*decode message		*/
     H5O_efl_encode,	    	/*encode message		*/
     H5O_efl_copy,	    	/*copy native value		*/
@@ -122,14 +121,14 @@ H5O_efl_decode(H5F_t *f, hid_t dxpl_id, unsigned UNUSED mesg_flags,
 #ifndef NDEBUG
     HDassert(H5F_addr_defined(mesg->heap_addr));
 
-    if(NULL == (heap = H5HL_protect(f, dxpl_id, mesg->heap_addr, H5AC_READ)))
+    if(NULL == (heap = H5HL_protect(f, dxpl_id, mesg->heap_addr)))
         HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, NULL, "unable to read protect link value")
 
     s = H5HL_offset_into(f, heap, 0);
 
     HDassert(s && !*s);
 
-    if(H5HL_unprotect(f, dxpl_id, heap, mesg->heap_addr) < 0)
+    if(H5HL_unprotect(f, dxpl_id, heap, mesg->heap_addr, H5AC__NO_FLAGS_SET) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, NULL, "unable to read unprotect link value")
     heap = NULL;
 #endif
@@ -139,7 +138,7 @@ H5O_efl_decode(H5F_t *f, hid_t dxpl_id, unsigned UNUSED mesg_flags,
     if(NULL == mesg->slot)
 	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
 
-    if(NULL == (heap = H5HL_protect(f, dxpl_id, mesg->heap_addr, H5AC_READ)))
+    if(NULL == (heap = H5HL_protect(f, dxpl_id, mesg->heap_addr)))
         HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, NULL, "unable to read protect link value")
     for(u = 0; u < mesg->nused; u++) {
 	/* Name */
@@ -158,7 +157,7 @@ H5O_efl_decode(H5F_t *f, hid_t dxpl_id, unsigned UNUSED mesg_flags,
 	HDassert(mesg->slot[u].size > 0);
     } /* end for */
 
-    if(H5HL_unprotect(f, dxpl_id, heap, mesg->heap_addr) < 0)
+    if(H5HL_unprotect(f, dxpl_id, heap, mesg->heap_addr, H5AC__NO_FLAGS_SET) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, NULL, "unable to read unprotect link value")
     heap = NULL;
 
@@ -418,14 +417,12 @@ done:
  */
 static void *
 H5O_efl_copy_file(H5F_t UNUSED *file_src, void *mesg_src, H5F_t *file_dst,
-    hbool_t UNUSED *recompute_size, H5O_copy_t UNUSED *cpy_info,
-    void UNUSED *_udata, hid_t dxpl_id)
+    hid_t dxpl_id, H5O_copy_t UNUSED *cpy_info, void UNUSED *_udata)
 {
-    H5O_efl_t   *efl_src = (H5O_efl_t *) mesg_src;
-    H5O_efl_t   *efl_dst = NULL;
-    H5HL_t      *heap = NULL;                           /* Pointer to local heap for EFL file names */
-    size_t      idx, size, name_offset, heap_size;
-    void        *ret_value;          /* Return value */
+    H5O_efl_t     *efl_src = (H5O_efl_t *) mesg_src;
+    H5O_efl_t     *efl_dst = NULL;
+    size_t        idx, size, name_offset, heap_size;
+    void          *ret_value;          /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5O_efl_copy_file)
 
@@ -435,27 +432,22 @@ H5O_efl_copy_file(H5F_t UNUSED *file_src, void *mesg_src, H5F_t *file_dst,
 
     /* Allocate space for the destination efl */
     if(NULL == (efl_dst = H5MM_calloc(sizeof(H5O_efl_t))))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+        HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
 
     /* Copy the "top level" information */
     HDmemcpy(efl_dst, efl_src, sizeof(H5O_efl_t));
 
-    /* Determine size needed for destination heap */
-    heap_size = H5HL_ALIGN(1);  /* "empty" name */
+    /* create name heap */
+    heap_size = H5HL_ALIGN(1);
     for(idx = 0; idx < efl_src->nused; idx++)
         heap_size += H5HL_ALIGN(HDstrlen(efl_src->slot[idx].name) + 1);
 
-    /* Create name heap */
     if(H5HL_create(file_dst, dxpl_id, heap_size, &efl_dst->heap_addr/*out*/) < 0)
-        HGOTO_ERROR(H5E_EFL, H5E_CANTINIT, NULL, "can't create heap")
+        HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, NULL, "can't create heap")
 
-    /* Pin the heap down in memory */
-    if(NULL == (heap = H5HL_protect(file_dst, dxpl_id, efl_dst->heap_addr, H5AC_WRITE)))
-        HGOTO_ERROR(H5E_EFL, H5E_PROTECT, NULL, "unable to protect EFL file name heap")
-
-    /* Insert "empty" name first */
-    if((size_t)(-1) == (name_offset = H5HL_insert(file_dst, dxpl_id, heap, (size_t)1, "")))
-        HGOTO_ERROR(H5E_EFL, H5E_CANTINSERT, NULL, "can't insert file name into heap")
+    name_offset = H5HL_insert(file_dst, dxpl_id, efl_dst->heap_addr, (size_t)1, "");
+    if((size_t)(-1) == name_offset)
+        HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, NULL, "can't initialize heap")
     HDassert(0 == name_offset);
 
     /* allocate array of external file entries */
@@ -471,18 +463,14 @@ H5O_efl_copy_file(H5F_t UNUSED *file_src, void *mesg_src, H5F_t *file_dst,
     /* copy the name from the source */
     for(idx = 0; idx < efl_src->nused; idx++) {
         efl_dst->slot[idx].name = H5MM_xstrdup(efl_src->slot[idx].name);
-        if((size_t)(-1) == (efl_dst->slot[idx].name_offset = H5HL_insert(file_dst, dxpl_id, heap,
-                HDstrlen(efl_dst->slot[idx].name) + 1, efl_dst->slot[idx].name)))
-            HGOTO_ERROR(H5E_EFL, H5E_CANTINSERT, NULL, "can't insert file name into heap")
+        efl_dst->slot[idx].name_offset = H5HL_insert(file_dst, dxpl_id, efl_dst->heap_addr,
+            HDstrlen(efl_dst->slot[idx].name) + 1, efl_dst->slot[idx].name);
     } /* end for */
 
     /* Set return value */
     ret_value = efl_dst;
 
 done:
-    /* Release resources */
-    if(heap && H5HL_unprotect(file_dst, dxpl_id, heap, efl_dst->heap_addr) < 0)
-        HDONE_ERROR(H5E_EFL, H5E_PROTECT, NULL, "unable to unprotect EFL file name heap")
     if(!ret_value)
         if(efl_dst)
             H5MM_xfree(efl_dst);

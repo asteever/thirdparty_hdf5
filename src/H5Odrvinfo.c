@@ -41,7 +41,7 @@ const H5O_msg_class_t H5O_MSG_DRVINFO[1] = {{
     H5O_DRVINFO_ID,             /*message id number                     */
     "driver info",		/*message name for debugging            */
     sizeof(H5O_drvinfo_t),	/*native message size                   */
-    0,				/* messages are sharable?       */
+    FALSE,			/* messages are sharable?       */
     H5O_drvinfo_decode,		/*decode message                        */
     H5O_drvinfo_encode,		/*encode message                        */
     H5O_drvinfo_copy,           /*copy the native value                 */
@@ -50,7 +50,7 @@ const H5O_msg_class_t H5O_MSG_DRVINFO[1] = {{
     NULL,                       /* free method				*/
     NULL,			/* file delete method			*/
     NULL,			/* link method				*/
-    NULL,			/*set share method		*/
+    NULL,	                /* set share method			*/
     NULL,		    	/*can share method		        */
     NULL,			/* pre copy native value to file	*/
     NULL,			/* copy native value to file		*/
@@ -79,7 +79,7 @@ const H5O_msg_class_t H5O_MSG_DRVINFO[1] = {{
  *-------------------------------------------------------------------------
  */
 static void *
-H5O_drvinfo_decode(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, unsigned UNUSED mesg_flags,
+H5O_drvinfo_decode(H5F_t *f, hid_t UNUSED dxpl_id, unsigned UNUSED mesg_flags,
     const uint8_t *p)
 {
     H5O_drvinfo_t	*mesg;          /* Native message */
@@ -138,7 +138,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_drvinfo_encode(H5F_t UNUSED *f, hbool_t UNUSED disable_shared, uint8_t *p, const void *_mesg)
+H5O_drvinfo_encode(H5F_t *f, hbool_t UNUSED disable_shared, uint8_t *p, const void *_mesg)
 {
     const H5O_drvinfo_t *mesg = (const H5O_drvinfo_t *)_mesg;
 
@@ -224,7 +224,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static size_t
-H5O_drvinfo_size(const H5F_t UNUSED *f, hbool_t UNUSED disable_shared, const void *_mesg)
+H5O_drvinfo_size(const H5F_t *f, hbool_t UNUSED disable_shared, const void *_mesg)
 {
     const H5O_drvinfo_t *mesg = (const H5O_drvinfo_t *)_mesg;
     size_t                   ret_value;

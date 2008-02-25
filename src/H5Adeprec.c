@@ -105,15 +105,14 @@ H5A_init_deprec_interface(void)
     FUNC_LEAVE_NOAPI(H5A_init())
 } /* H5A_init_deprec_interface() */
 
-#ifndef H5_NO_DEPRECATED_SYMBOLS
 
 /*--------------------------------------------------------------------------
  NAME
-    H5Acreate1
+    H5Acreate
  PURPOSE
     Creates an attribute on an object
  USAGE
-    hid_t H5Acreate1(loc_id, name, type_id, space_id, plist_id)
+    hid_t H5Acreate (loc_id, name, type_id, space_id, plist_id)
         hid_t loc_id;       IN: Object (dataset or group) to be attached to
         const char *name;   IN: Name of attribute to create
         hid_t type_id;      IN: ID of datatype for attribute
@@ -130,12 +129,9 @@ H5A_init_deprec_interface(void)
     The attribute ID returned from this function must be released with H5Aclose
     or resource leaks will develop.
 
- NOTE
-    Deprecated in favor of H5Acreate2
-
 --------------------------------------------------------------------------*/
 hid_t
-H5Acreate1(hid_t loc_id, const char *name, hid_t type_id, hid_t space_id,
+H5Acreate(hid_t loc_id, const char *name, hid_t type_id, hid_t space_id,
 	  hid_t plist_id)
 {
     H5G_loc_t           loc;                    /* Object location */
@@ -143,7 +139,7 @@ H5Acreate1(hid_t loc_id, const char *name, hid_t type_id, hid_t space_id,
     H5S_t		*space;                 /* Dataspace to use for attribute */
     hid_t		ret_value;              /* Return value */
 
-    FUNC_ENTER_API(H5Acreate1, FAIL)
+    FUNC_ENTER_API(H5Acreate, FAIL)
     H5TRACE5("i", "i*siii", loc_id, name, type_id, space_id, plist_id);
 
     /* check arguments */
@@ -166,7 +162,7 @@ H5Acreate1(hid_t loc_id, const char *name, hid_t type_id, hid_t space_id,
 
 done:
     FUNC_LEAVE_API(ret_value)
-} /* H5Acreate1() */
+} /* H5Acreate() */
 
 
 /*--------------------------------------------------------------------------
@@ -188,8 +184,6 @@ done:
     H5Aclose or resource leaks will develop.
         The location object may be either a group or a dataset, both of
     which may have any sort of attribute.
- NOTE
-    Deprecated in favor of H5Aopen
 --------------------------------------------------------------------------*/
 hid_t
 H5Aopen_name(hid_t loc_id, const char *name)
@@ -246,8 +240,6 @@ done:
     H5Aclose or resource leaks will develop.
         The location object may be either a group or a dataset, both of
     which may have any sort of attribute.
- NOTE
-    Deprecated in favor of H5Aopen_by_idx
 --------------------------------------------------------------------------*/
 hid_t
 H5Aopen_idx(hid_t loc_id, unsigned idx)
@@ -298,8 +290,6 @@ done:
  DESCRIPTION
         This function returns the number of attributes attached to a dataset or
     group, 'location_id'.
- NOTE
-    Deprecated in favor of H5Oget_info
 --------------------------------------------------------------------------*/
 int
 H5Aget_num_attrs(hid_t loc_id)
@@ -345,16 +335,57 @@ done:
 } /* H5Aget_num_attrs() */
 
 
+/*-------------------------------------------------------------------------
+ * Function:	H5Arename
+ *
+ * Purpose:     Rename an attribute
+ *
+ * Return:	Success:             Non-negative
+ *		Failure:             Negative
+ *
+ * Programmer:	Raymond Lu
+ *              October 23, 2002
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Arename(hid_t loc_id, const char *old_name, const char *new_name)
+{
+    H5G_loc_t	loc;	                /* Object location */
+    herr_t	ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_API(H5Arename, FAIL)
+    H5TRACE3("e", "i*s*s", loc_id, old_name, new_name);
+
+    /* check arguments */
+    if(!old_name || !new_name)
+	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "name is nil")
+    if(H5I_ATTR == H5I_get_type(loc_id))
+	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "location is not valid for an attribute")
+    if(H5G_loc(loc_id, & loc) < 0)
+	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
+
+    /* Avoid thrashing things if the names are the same */
+    if(HDstrcmp(old_name, new_name))
+        /* Call attribute rename routine */
+        if(H5O_attr_rename(loc.oloc, H5AC_dxpl_id, old_name, new_name) < 0)
+            HGOTO_ERROR(H5E_ATTR, H5E_CANTRENAME, FAIL, "can't rename attribute")
+
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* H5Arename() */
+
+
 /*--------------------------------------------------------------------------
  NAME
-    H5Aiterate1
+    H5Aiterate
  PURPOSE
     Calls a user's function for each attribute on an object
  USAGE
-    herr_t H5Aiterate1(loc_id, attr_num, op, data)
+    herr_t H5Aiterate (loc_id, attr_num, op, data)
         hid_t loc_id;       IN: Object (dataset or group) to be iterated over
         unsigned *attr_num; IN/OUT: Starting (IN) & Ending (OUT) attribute number
-        H5A_operator1_t op;  IN: User's function to pass each attribute to
+        H5A_operator_t op;  IN: User's function to pass each attribute to
         void *op_data;      IN/OUT: User's data to pass through to iterator operator function
  RETURNS
         Returns a negative value if something is wrong, the return value of the
@@ -379,18 +410,16 @@ done:
         C. Negative causes the iterator to immediately return that value,
             indicating failure.  The iterator can be restarted at the next
             attribute.
- NOTE
-    Deprecated in favor of H5Aiterate2
 --------------------------------------------------------------------------*/
 herr_t
-H5Aiterate1(hid_t loc_id, unsigned *attr_num, H5A_operator1_t op, void *op_data)
+H5Aiterate(hid_t loc_id, unsigned *attr_num, H5A_operator_t op, void *op_data)
 {
     H5A_attr_iter_op_t  attr_op;        /* Attribute operator */
     hsize_t		start_idx;      /* Index of attribute to start iterating at */
     hsize_t		last_attr;      /* Index of last attribute examined */
     herr_t	        ret_value;      /* Return value */
 
-    FUNC_ENTER_API(H5Aiterate1, FAIL)
+    FUNC_ENTER_API(H5Aiterate, FAIL)
     H5TRACE4("e", "i*Iux*x", loc_id, attr_num, op, op_data);
 
     /* check arguments */
@@ -412,6 +441,45 @@ H5Aiterate1(hid_t loc_id, unsigned *attr_num, H5A_operator1_t op, void *op_data)
 
 done:
     FUNC_LEAVE_API(ret_value)
-} /* H5Aiterate1() */
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
+} /* H5Aiterate() */
+
+
+/*--------------------------------------------------------------------------
+ NAME
+    H5Adelete
+ PURPOSE
+    Deletes an attribute from a location
+ USAGE
+    herr_t H5Adelete (loc_id, name)
+        hid_t loc_id;       IN: Object (dataset or group) to have attribute deleted from
+        const char *name;   IN: Name of attribute to delete
+ RETURNS
+    Non-negative on success/Negative on failure
+ DESCRIPTION
+    This function removes the named attribute from a dataset or group.
+--------------------------------------------------------------------------*/
+herr_t
+H5Adelete(hid_t loc_id, const char *name)
+{
+    H5G_loc_t	loc;		        /* Object location */
+    herr_t	ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_API(H5Adelete, FAIL)
+    H5TRACE2("e", "i*s", loc_id, name);
+
+    /* check arguments */
+    if(H5I_ATTR == H5I_get_type(loc_id))
+	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "location is not valid for an attribute")
+    if(H5G_loc(loc_id, &loc) < 0)
+	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
+    if(!name || !*name)
+	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no name")
+
+    /* Delete the attribute from the location */
+    if(H5O_attr_remove(loc.oloc, name, H5AC_dxpl_id) < 0)
+        HGOTO_ERROR(H5E_ATTR, H5E_CANTDELETE, FAIL, "unable to delete attribute")
+
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* H5Adelete() */
 

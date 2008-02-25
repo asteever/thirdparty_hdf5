@@ -598,14 +598,14 @@ coll_chunktest(const char* filename,
 
 
   /* allocate memory for data buffer */
-  data_array1 = (int *)malloc(dims[0] * dims[1] * sizeof(int));
+  data_array1 = (int *)malloc(dims[0]*dims[1]*sizeof(int));
   VRFY((data_array1 != NULL), "data_array1 malloc succeeded");
 
   /* set up dimensions of the slab this process accesses */
   ccslab_set(mpi_rank, mpi_size, start, count, stride, block, select_factor);
 
   file_dataspace = H5Screate_simple(2, dims, NULL);
-  VRFY((file_dataspace >= 0), "file dataspace created succeeded");
+  VRFY((file_dataspace >= 0),"file dataspace created succeeded");
 
   crp_plist = H5Pcreate(H5P_DATASET_CREATE);
   VRFY((crp_plist >= 0),"");
@@ -619,29 +619,29 @@ coll_chunktest(const char* filename,
   status = H5Pset_chunk(crp_plist, 2, chunk_dims);
   VRFY((status >= 0),"chunk creation property list succeeded");
 
-  dataset = H5Dcreate2(file, DSET_COLLECTIVE_CHUNK_NAME, H5T_NATIVE_INT,
-		      file_dataspace, H5P_DEFAULT, crp_plist, H5P_DEFAULT);
+  dataset = H5Dcreate(file,DSET_COLLECTIVE_CHUNK_NAME,H5T_NATIVE_INT,
+		      file_dataspace,crp_plist);
   VRFY((dataset >= 0),"dataset created succeeded");
 
   status = H5Pclose(crp_plist);
-  VRFY((status >= 0), "");
+  VRFY((status >= 0),"");
 
   /*put some trivial data in the data array */
-  ccdataset_fill(start, stride, count,block, data_array1);
+  ccdataset_fill(start, stride,count,block, data_array1);
   MESG("data_array initialized");
 
-  status = H5Sselect_hyperslab(file_dataspace, H5S_SELECT_SET, start, stride,
+  status=H5Sselect_hyperslab(file_dataspace, H5S_SELECT_SET, start, stride,
 			     count, block);
   VRFY((status >= 0),"hyperslab selection succeeded");
 
   /* set up the collective transfer property list */
   xfer_plist = H5Pcreate(H5P_DATASET_XFER);
-  VRFY((xfer_plist >= 0), "");
+  VRFY((xfer_plist >= 0),"");
 
   status = H5Pset_dxpl_mpio(xfer_plist, H5FD_MPIO_COLLECTIVE);
   VRFY((status>= 0),"MPIO collective transfer property succeeded");
   if(dxfer_coll_type == DXFER_INDEPENDENT_IO) {
-     status = H5Pset_dxpl_mpio_collective_opt(xfer_plist, H5FD_MPIO_INDIVIDUAL_IO);
+     status = H5Pset_dxpl_mpio_collective_opt(xfer_plist,H5FD_MPIO_INDIVIDUAL_IO);
      VRFY((status>= 0),"set independent IO collectively succeeded");
   }
 
@@ -680,51 +680,48 @@ coll_chunktest(const char* filename,
    
 #ifdef H5_HAVE_INSTRUMENTED_LIBRARY
   if(facc_type == FACC_MPIO) {
-      switch(api_option) {
+      switch(api_option){
             case API_LINK_HARD:
                prop_value = H5D_XFER_COLL_CHUNK_DEF;
-               status = H5Pinsert2(xfer_plist, H5D_XFER_COLL_CHUNK_LINK_HARD_NAME, H5D_XFER_COLL_CHUNK_SIZE, &prop_value,
-                           NULL, NULL, NULL, NULL, NULL, NULL);
+               status = H5Pinsert(xfer_plist,H5D_XFER_COLL_CHUNK_LINK_HARD_NAME,H5D_XFER_COLL_CHUNK_SIZE,&prop_value,
+                           NULL,NULL,NULL,NULL,NULL,NULL);
                VRFY((status >= 0),"testing property list inserted succeeded");
             break;
-
             case API_MULTI_HARD:
                prop_value = H5D_XFER_COLL_CHUNK_DEF;   
-               status = H5Pinsert2(xfer_plist, H5D_XFER_COLL_CHUNK_MULTI_HARD_NAME, H5D_XFER_COLL_CHUNK_SIZE, &prop_value,
-                           NULL, NULL, NULL, NULL, NULL, NULL);
+               status = H5Pinsert(xfer_plist,H5D_XFER_COLL_CHUNK_MULTI_HARD_NAME,H5D_XFER_COLL_CHUNK_SIZE,&prop_value,
+                           NULL,NULL,NULL,NULL,NULL,NULL);
                VRFY((status >= 0),"testing property list inserted succeeded");
             break;
-
             case API_LINK_TRUE:
                prop_value = H5D_XFER_COLL_CHUNK_DEF;   
-               status = H5Pinsert2(xfer_plist, H5D_XFER_COLL_CHUNK_LINK_NUM_TRUE_NAME, H5D_XFER_COLL_CHUNK_SIZE, &prop_value,
-                           NULL, NULL, NULL, NULL, NULL, NULL);
+               status = H5Pinsert(xfer_plist,H5D_XFER_COLL_CHUNK_LINK_NUM_TRUE_NAME,H5D_XFER_COLL_CHUNK_SIZE,&prop_value,
+                           NULL,NULL,NULL,NULL,NULL,NULL);
                VRFY((status >= 0),"testing property list inserted succeeded");
             break;
-
             case API_LINK_FALSE:
                prop_value = H5D_XFER_COLL_CHUNK_DEF;   
-               status = H5Pinsert2(xfer_plist, H5D_XFER_COLL_CHUNK_LINK_NUM_FALSE_NAME, H5D_XFER_COLL_CHUNK_SIZE, &prop_value,
-                           NULL, NULL, NULL, NULL, NULL, NULL);
+               status = H5Pinsert(xfer_plist,H5D_XFER_COLL_CHUNK_LINK_NUM_FALSE_NAME,H5D_XFER_COLL_CHUNK_SIZE,&prop_value,
+                           NULL,NULL,NULL,NULL,NULL,NULL);
                VRFY((status >= 0),"testing property list inserted succeeded");
+            
             break;
-
             case API_MULTI_COLL:
                prop_value = H5D_XFER_COLL_CHUNK_DEF;   
-               status = H5Pinsert2(xfer_plist, H5D_XFER_COLL_CHUNK_MULTI_RATIO_COLL_NAME, H5D_XFER_COLL_CHUNK_SIZE, &prop_value,
-                           NULL, NULL, NULL, NULL, NULL, NULL);
+               status = H5Pinsert(xfer_plist,H5D_XFER_COLL_CHUNK_MULTI_RATIO_COLL_NAME,H5D_XFER_COLL_CHUNK_SIZE,&prop_value,
+                           NULL,NULL,NULL,NULL,NULL,NULL);
                VRFY((status >= 0),"testing property list inserted succeeded");
+            
             break;
-
             case API_MULTI_IND:
                prop_value = H5D_XFER_COLL_CHUNK_DEF;   
-               status = H5Pinsert2(xfer_plist, H5D_XFER_COLL_CHUNK_MULTI_RATIO_IND_NAME, H5D_XFER_COLL_CHUNK_SIZE, &prop_value,
-                           NULL, NULL, NULL, NULL, NULL, NULL);
+               status = H5Pinsert(xfer_plist,H5D_XFER_COLL_CHUNK_MULTI_RATIO_IND_NAME,H5D_XFER_COLL_CHUNK_SIZE,&prop_value,
+                           NULL,NULL,NULL,NULL,NULL,NULL);
                VRFY((status >= 0),"testing property list inserted succeeded");
+            
             break;
-
             default:
-                ;
+            ;
        } 
    }
 #endif
@@ -808,7 +805,7 @@ coll_chunktest(const char* filename,
   VRFY((status >= 0),"");
 
   /* open the collective dataset*/
-  dataset = H5Dopen2(file, DSET_COLLECTIVE_CHUNK_NAME, H5P_DEFAULT);
+  dataset = H5Dopen(file, DSET_COLLECTIVE_CHUNK_NAME);
   VRFY((dataset >= 0), "");
 
   /* set up dimensions of the slab this process accesses */

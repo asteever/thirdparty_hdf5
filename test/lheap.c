@@ -58,11 +58,11 @@ main(void)
     H5F_t	*f=NULL;		/*hdf5 file pointer		*/
     char	filename[1024];		/*file name			*/
     haddr_t	heap_addr;		/*local heap address		*/
-    H5HL_t      *heap = NULL;           /*local heap			*/
     size_t	obj[NOBJS];		/*offsets within the heap	*/
     int		i, j;			/*miscellaneous counters	*/
     char	buf[1024];		/*the value to store		*/
     const char	*s;			/*value to read			*/
+    const char  *envval = NULL;         /*value from environment        */
 
     /* Reset library */
     h5_reset();
@@ -86,26 +86,17 @@ main(void)
 	H5Eprint2(H5E_DEFAULT, stdout);
 	goto error;
     }
-    if (NULL == (heap = H5HL_protect(f, H5P_DATASET_XFER_DEFAULT, heap_addr, H5AC_WRITE))) {
-        H5_FAILED();
-        H5Eprint2(H5E_DEFAULT, stdout);
-        goto error;
-    }
     for(i = 0; i < NOBJS; i++) {
         sprintf(buf, "%03d-", i);
         for (j=4; j<i; j++) buf[j] = '0' + j%10;
         if (j>4) buf[j] = '\0';
 
-        if ((size_t)(-1)==(obj[i]=H5HL_insert(f, H5P_DATASET_XFER_DEFAULT, heap, strlen(buf)+1, buf))) {
+        if ((size_t)(-1)==(obj[i]=H5HL_insert(f, H5P_DATASET_XFER_DEFAULT, heap_addr, strlen(buf)+1,
+					      buf))) {
 	    H5_FAILED();
 	    H5Eprint2(H5E_DEFAULT, stdout);
 	    goto error;
 	}
-    }
-    if (H5HL_unprotect(f, H5P_DATASET_XFER_DEFAULT, heap, heap_addr) < 0) {
-        H5_FAILED();
-        H5Eprint2(H5E_DEFAULT, stdout);
-        goto error;
     }
     if (H5Fclose(file)<0) goto error;
     PASSED();
@@ -114,50 +105,63 @@ main(void)
      * Test reading from the heap...
      */
 
-    TESTING("local heap read");
-    h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
-    if ((file=H5Fopen(filename, H5F_ACC_RDONLY, fapl))<0) goto error;
-    if (NULL==(f=H5I_object(file))) {
-        H5_FAILED();
-        H5Eprint2(H5E_DEFAULT, stdout);
-        goto error;
+    /* Don't run this test using the core file driver */
+    envval = HDgetenv("HDF5_DRIVER");
+    if (envval == NULL)
+        envval = "nomatch";
+    if (HDstrcmp(envval, "core")) {
+        TESTING("local heap read");
+	h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
+	if ((file=H5Fopen(filename, H5F_ACC_RDONLY, fapl))<0) goto error;
+	if (NULL==(f=H5I_object(file))) {
+	    H5_FAILED();
+	    H5Eprint2(H5E_DEFAULT, stdout);
+	    goto error;
+	}
+	for (i=0; i<NOBJS; i++) {
+	    H5HL_t *heap = NULL;
+
+	    sprintf(buf, "%03d-", i);
+	    for (j=4; j<i; j++) buf[j] = '0' + j%10;
+	    if (j>4) buf[j] = '\0';
+
+	    if (NULL == (heap = H5HL_protect(f, H5P_DATASET_XFER_DEFAULT, heap_addr))) {
+		H5_FAILED();
+		H5Eprint2(H5E_DEFAULT, stdout);
+		goto error;
+	    }
+
+	    if (NULL == (s = H5HL_offset_into(f, heap, obj[i]))) {
+		H5_FAILED();
+		H5Eprint2(H5E_DEFAULT, stdout);
+		goto error;
+	    }
+
+	    if (strcmp(s, buf)) {
+		H5_FAILED();
+		printf("    i=%d, heap offset=%lu\n", i, (unsigned long)(obj[i]));
+		printf("    got: \"%s\"\n", s);
+		printf("    ans: \"%s\"\n", buf);
+		goto error;
+	    }
+
+	    if (H5HL_unprotect(f, H5P_DATASET_XFER_DEFAULT, heap, heap_addr, H5AC__NO_FLAGS_SET) < 0) {
+		H5_FAILED();
+		H5Eprint2(H5E_DEFAULT, stdout);
+		goto error;
+	    }
+	}
+
+        if (H5Fclose(file)<0) goto error;
+        PASSED();
+        puts("All local heap tests passed.");
+        h5_cleanup(FILENAME, fapl);
     }
-    for (i=0; i<NOBJS; i++) {
-        sprintf(buf, "%03d-", i);
-        for (j=4; j<i; j++) buf[j] = '0' + j%10;
-        if (j>4) buf[j] = '\0';
-
-        if (NULL == (heap = H5HL_protect(f, H5P_DATASET_XFER_DEFAULT, heap_addr, H5AC_READ))) {
-            H5_FAILED();
-            H5Eprint2(H5E_DEFAULT, stdout);
-            goto error;
-        }
-
-        if (NULL == (s = H5HL_offset_into(f, heap, obj[i]))) {
-            H5_FAILED();
-            H5Eprint2(H5E_DEFAULT, stdout);
-            goto error;
-        }
-
-        if (strcmp(s, buf)) {
-            H5_FAILED();
-            printf("    i=%d, heap offset=%lu\n", i, (unsigned long)(obj[i]));
-            printf("    got: \"%s\"\n", s);
-            printf("    ans: \"%s\"\n", buf);
-            goto error;
-        }
-
-        if (H5HL_unprotect(f, H5P_DATASET_XFER_DEFAULT, heap, heap_addr) < 0) {
-            H5_FAILED();
-            H5Eprint2(H5E_DEFAULT, stdout);
-            goto error;
-        }
+    else
+    {
+        SKIPPED();
+        puts("    Test not compatible with current Virtual File Driver");
     }
-
-    if (H5Fclose(file)<0) goto error;
-    PASSED();
-    puts("All local heap tests passed.");
-    h5_cleanup(FILENAME, fapl);
 
     return 0;
 

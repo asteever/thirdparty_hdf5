@@ -96,7 +96,7 @@ static int test_dsets( void )
 
  /* Read dataset using the basic HDF5 API */
 
- if ( ( dataset_id = H5Dopen2(file_id, DSET0_NAME, H5P_DEFAULT) ) < 0 )
+ if ( ( dataset_id = H5Dopen ( file_id, DSET0_NAME) ) < 0 )
   goto out;
 
  if ( H5Dread ( dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, data_int_out ) < 0 )
@@ -398,82 +398,87 @@ out:
  *-------------------------------------------------------------------------
  */
 
-static int test_attr(void)
+static int test_attr( void )
 {
-    hid_t   file_id;
-    hid_t   dataset_id;
-    hid_t   group_id;
-    hid_t   space_id;
-    hsize_t dims[1] = { 5 };
 
-    /* Create a new file using default properties. */
-    file_id = H5Fcreate(FILE_NAME2, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+ hid_t   file_id;
+ hid_t   dataset_id;
+ hid_t   group_id;
+ hid_t   space_id;
+ hsize_t dims[1] = { 5 };
 
-    /*-------------------------------------------------------------------------
-    * Create a dataset named "dset" on the root group
-    *-------------------------------------------------------------------------
-    */
+ /* Create a new file using default properties. */
+ file_id = H5Fcreate( FILE_NAME2, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT );
 
-    /* Create the data space  */
-    if((space_id = H5Screate_simple(1, dims, NULL)) < 0) goto out;
+/*-------------------------------------------------------------------------
+ * Create a dataset named "dset" on the root group
+ *-------------------------------------------------------------------------
+ */
 
-    /* Create the dataset */
-    if((dataset_id = H5Dcreate2(file_id , "dset", H5T_NATIVE_INT, space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) goto out;
+ /* Create the data space  */
+ if ((space_id = H5Screate_simple( 1, dims, NULL ))<0) goto out;
 
-    /* Close */
-    H5Dclose(dataset_id);
+ /* Create the dataset */
+ if ((dataset_id = H5Dcreate( file_id , "dset", H5T_NATIVE_INT, space_id,
+  H5P_DEFAULT ))<0) goto out;
 
-    /*-------------------------------------------------------------------------
-    * Create a group named "grp" on the root group
-    *-------------------------------------------------------------------------
-    */
+ /* Close */
+ H5Dclose( dataset_id );
 
-    /* Create a group. */
-    if((group_id = H5Gcreate2(file_id, "grp", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) goto out;
+/*-------------------------------------------------------------------------
+ * Create a group named "grp" on the root group
+ *-------------------------------------------------------------------------
+ */
 
-    /* Close */
-    H5Gclose(group_id);
+ /* Create a group. */
+ if ((group_id = H5Gcreate( file_id, "grp", (size_t)0 ))<0)
+  goto out;
 
-    /*-------------------------------------------------------------------------
-    *
-    * Create attributes in the root group
-    * Note that we are calling the H5LTset_attribute functions with the name "."
-    *
-    *-------------------------------------------------------------------------
-    */
-    if(make_attributes(file_id, ".") < 0) goto out;
+ /* Close */
+ H5Gclose( group_id );
 
-    /*-------------------------------------------------------------------------
-    *
-    * Create attributes in the dataset "dset"
-    *
-    *-------------------------------------------------------------------------
-    */
-    if(make_attributes(file_id, "dset") < 0) goto out;
+/*-------------------------------------------------------------------------
+ *
+ * Create attributes in the root group
+	* Note that we are calling the H5LTset_attribute functions with the name "."
+ *
+ *-------------------------------------------------------------------------
+ */
+ if (make_attributes( file_id, "." )<0)
+  goto out;
 
-    /*-------------------------------------------------------------------------
-    *
-    * Create attributes in the group "grp"
-    *
-    *-------------------------------------------------------------------------
-    */
-    if(make_attributes(file_id, "grp") < 0) goto out;
+/*-------------------------------------------------------------------------
+ *
+ * Create attributes in the dataset "dset"
+ *
+ *-------------------------------------------------------------------------
+ */
+ if (make_attributes( file_id, "dset" )<0)
+  goto out;
 
-    /*-------------------------------------------------------------------------
-    * end
-    *-------------------------------------------------------------------------
-    */
-    /* Close the file. */
-    H5Fclose(file_id);
+/*-------------------------------------------------------------------------
+ *
+ * Create attributes in the group "grp"
+	*
+ *-------------------------------------------------------------------------
+ */
+ if (make_attributes( file_id, "grp" )<0)
+  goto out;
 
-    return 0;
+/*-------------------------------------------------------------------------
+ * end
+ *-------------------------------------------------------------------------
+ */
+ /* Close the file. */
+ H5Fclose( file_id );
+
+ return 0;
 
 out:
-    /* Close the file. */
-    H5Fclose(file_id);
-
-    H5_FAILED();
-    return -1;
+ /* Close the file. */
+	H5Fclose( file_id );
+ H5_FAILED();
+ return -1;
 }
 
 /*-------------------------------------------------------------------------
@@ -1420,7 +1425,7 @@ static int test_arrays(void)
     if(ndims != 3)
         goto out;
 
-    if(H5Tget_array_dims2(dtype, dims) < 0)
+    if(H5Tget_array_dims(dtype, dims, NULL) < 0)
         goto out;
     if(dims[0] != 5 || dims[1] != 7 || dims[2] != 13)
         goto out;

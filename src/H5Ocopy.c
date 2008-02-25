@@ -253,8 +253,10 @@ H5Ocopy(hid_t src_loc_id, const char *src_name, hid_t dst_loc_id,
         HGOTO_ERROR(H5E_OHDR, H5E_CANTCOPY, FAIL, "unable to copy object")
 
 done:
-    if(loc_found && H5G_loc_free(&src_loc) < 0)
-        HDONE_ERROR(H5E_SYM, H5E_CANTRELEASE, FAIL, "can't free location")
+    if(loc_found) {
+        if(H5G_loc_free(&src_loc) < 0)
+            HDONE_ERROR(H5E_SYM, H5E_CANTRELEASE, FAIL, "can't free location")
+    }
     if(obj_open)
         H5O_close(&src_oloc);
 
@@ -299,11 +301,12 @@ H5O_copy_header_real(const H5O_loc_t *oloc_src, H5O_loc_t *oloc_dst /*out */,
     const H5O_msg_class_t  *copy_type;              /* Type of message to use for copying */
     const H5O_obj_class_t  *obj_class = NULL;       /* Type of object we are copying */
     void                   *udata = NULL;           /* User data for passing to message callbacks */
-    uint64_t               dst_oh_size;             /* Total size of the destination OH */
+    size_t                 dst_oh_size;             /* Total size of the destination OH */
     size_t                 dst_oh_null;             /* Size of the null message to add to destination OH */
     unsigned               dst_oh_gap;              /* Size of the gap in chunk #0 of destination OH */
     uint8_t                *current_pos;            /* Current position in destination image */
     size_t                 msghdr_size;
+    hbool_t                shared;                  /* Whether copy_file callback created a shared message */
     herr_t                 ret_value = SUCCEED;
 
     FUNC_ENTER_NOAPI_NOINIT(H5O_copy_header_real)
@@ -338,6 +341,7 @@ H5O_copy_header_real(const H5O_loc_t *oloc_src, H5O_loc_t *oloc_dst /*out */,
     /* Initialize header information */
     oh_dst->version = oh_src->version;
     oh_dst->flags = oh_src->flags;
+    oh_dst->skipped_mesg_size = oh_src->skipped_mesg_size;
     oh_dst->link_msgs_seen = oh_src->link_msgs_seen;
     oh_dst->attr_msgs_seen = oh_src->attr_msgs_seen;
     oh_dst->sizeof_size = H5F_SIZEOF_SIZE(oloc_dst->file);
@@ -396,7 +400,7 @@ H5O_copy_header_real(const H5O_loc_t *oloc_src, H5O_loc_t *oloc_dst /*out */,
 
         if(copy_type->pre_copy_file) {
             /* Decode the message if necessary. */
-            H5O_LOAD_NATIVE(oloc_src->file, dxpl_id, oh_src, mesg_src, FAIL)
+            H5O_LOAD_NATIVE(oloc_src->file, dxpl_id, mesg_src, FAIL)
 
             /* Perform "pre copy" operation on message */
             if((copy_type->pre_copy_file)(oloc_src->file, mesg_src->native, &(deleted[mesgno]), cpy_info, udata) < 0)
@@ -463,43 +467,39 @@ H5O_copy_header_real(const H5O_loc_t *oloc_src, H5O_loc_t *oloc_dst /*out */,
 
         /* copy this message into destination file */
         if(copy_type->copy_file) {
-            htri_t is_shared;           /* Whether message is shared */
-            hbool_t recompute_size;     /* Whether copy_file callback created a shared message */
+            hbool_t recompute_size = FALSE;     /* Whether to recompute the destination message's size */
 
             /* Decode the message if necessary. */
-            H5O_LOAD_NATIVE(oloc_src->file, dxpl_id, oh_src, mesg_src, FAIL)
+            H5O_LOAD_NATIVE(oloc_src->file, dxpl_id, mesg_src, FAIL)
 
             /* Copy the source message */
-            recompute_size = FALSE;
             if((mesg_dst->native = H5O_msg_copy_file(copy_type, 
-                    oloc_src->file, mesg_src->native, oloc_dst->file,
-                    &recompute_size, cpy_info, udata, dxpl_id)) == NULL)
+                    oloc_src->file, mesg_src->native, oloc_dst->file, dxpl_id,
+                    &shared, cpy_info, udata)) == NULL)
                 HGOTO_ERROR(H5E_OHDR, H5E_CANTCOPY, FAIL, "unable to copy object header message")
 
-            /* Check if new message is shared */
-            if((is_shared = H5O_msg_is_shared(copy_type->id, mesg_dst->native)) < 0)
-                HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "unable to query message's shared status")
-
             /* In being copied, the message may have become shared or stopped
-             * being shared, set/unset its sharing flag.
+             * being shared.  If its sharing status has changed, recalculate
+             * its size and set/unset its sharing flag.
              */
-            if(is_shared && !(mesg_dst->flags & H5O_MSG_FLAG_SHARED)) {
+            if(shared == TRUE && !(mesg_dst->flags & H5O_MSG_FLAG_SHARED)) {
+                /* Set shared flag */
                 mesg_dst->flags |= H5O_MSG_FLAG_SHARED;
 
-                /* Recompute message size (mesg_dst->native is really shared) */
-                 recompute_size = TRUE;
-            } /* end if */
-            else if(!is_shared && (mesg_dst->flags & H5O_MSG_FLAG_SHARED)) {
-                mesg_dst->flags &= ~H5O_MSG_FLAG_SHARED;
-
-                /* Recompute message size (msg_dest->native is no longer shared) */
+                /* Recompute shared message size (mesg_dst->native is really
+                 * shared)
+                 */
                 recompute_size = TRUE;
             } /* end if */
+            else if(shared == FALSE && (mesg_dst->flags & H5O_MSG_FLAG_SHARED)) {
+                /* Unset shared flag */
+                mesg_dst->flags &= ~H5O_MSG_FLAG_SHARED;
 
-            /* Recompute message's size */
-            /* (its sharing status or one of its components (for attributes)
-             *  could have changed)
-             */
+                /* Recompute native message size (msg_dest->native is no longer
+                 * shared)
+                 */
+                recompute_size = TRUE;
+            } /* end else */
             if(recompute_size)
                 mesg_dst->raw_size = H5O_ALIGN_OH(oh_dst,
                         H5O_msg_raw_size(oloc_dst->file, mesg_dst->type->id, FALSE, mesg_dst->native));
@@ -570,12 +570,12 @@ H5O_copy_header_real(const H5O_loc_t *oloc_src, H5O_loc_t *oloc_dst /*out */,
     addr_new = oh_dst->chunk[0].addr;
 
     /* Create memory image for the new chunk */
-    if(NULL == (oh_dst->chunk[0].image = H5FL_BLK_MALLOC(chunk_image, (size_t)dst_oh_size)))
+    if(NULL == (oh_dst->chunk[0].image = H5FL_BLK_MALLOC(chunk_image, dst_oh_size)))
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
 
     /* Set dest. chunk information */
     oh_dst->chunk[0].dirty = TRUE;
-    oh_dst->chunk[0].size = (size_t)dst_oh_size;
+    oh_dst->chunk[0].size = dst_oh_size;
     oh_dst->chunk[0].gap = dst_oh_gap;
 
     /* Set up raw pointers and copy messages that didn't need special
@@ -583,7 +583,7 @@ H5O_copy_header_real(const H5O_loc_t *oloc_src, H5O_loc_t *oloc_dst /*out */,
      * allocated.
      */
     HDassert(H5O_SIZEOF_MSGHDR_OH(oh_src) == H5O_SIZEOF_MSGHDR_OH(oh_dst));
-    msghdr_size = H5O_SIZEOF_MSGHDR_OH(oh_dst);
+    msghdr_size = H5O_SIZEOF_MSGHDR_OH(oh_src);
 
     current_pos = oh_dst->chunk[0].image;
 
@@ -647,7 +647,7 @@ H5O_copy_header_real(const H5O_loc_t *oloc_src, H5O_loc_t *oloc_dst /*out */,
     } /* end if */
 
     /* Make sure we filled the chunk, except for room at the end for a checksum */
-    HDassert(current_pos + dst_oh_gap + dst_oh_null + H5O_SIZEOF_CHKSUM_OH(oh_dst) == (size_t)dst_oh_size + oh_dst->chunk[0].image);
+    HDassert(current_pos + dst_oh_gap + dst_oh_null + H5O_SIZEOF_CHKSUM_OH(oh_dst) == dst_oh_size + oh_dst->chunk[0].image);
 
     /* Set the dest. object location to the first chunk address */
     HDassert(H5F_addr_defined(addr_new));
@@ -698,9 +698,6 @@ H5O_copy_header_real(const H5O_loc_t *oloc_src, H5O_loc_t *oloc_dst /*out */,
             /* Sanity check destination message */
             HDassert(mesg_dst->type == mesg_src->type);
             HDassert(mesg_dst->native);
-
-            /* the object header is needed in the post copy for shared message */
-            cpy_info->oh_dst = oh_dst;
 
             /* Perform "post copy" operation on message */
             if((copy_type->post_copy_file)(oloc_src, mesg_src->native, oloc_dst,

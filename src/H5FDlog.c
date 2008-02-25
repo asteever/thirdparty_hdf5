@@ -95,7 +95,7 @@ typedef struct H5FD_log_t {
     size_t  iosize;         /* Size of I/O information buffers */
     FILE   *logfp;          /* Log file pointer */
     H5FD_log_fapl_t fa;	/*driver-specific file access properties*/
-#ifndef _WIN32
+#ifndef WIN32
     /*
      * On most systems the combination of device and i-node number uniquely
      * identify a file.
@@ -104,7 +104,7 @@ typedef struct H5FD_log_t {
     ino_t	inode;			/*file i-node number		*/
 #else
     /*
-     * On _WIN32 the low-order word of a unique identifier associated with the
+     * On WIN32 the low-order word of a unique identifier associated with the
      * file and the volume serial number uniquely identify a file. This number
      * (which, both? -rpm) may change when the system is restarted or when the
      * file is opened. After a process opens a file, the identifier is
@@ -134,7 +134,7 @@ typedef struct H5FD_log_t {
 #ifdef H5_HAVE_LSEEK64
 #   define file_offset_t	off64_t
 #   define file_seek		lseek64
-#elif defined (_WIN32)
+#elif defined (WIN32)
 #   ifdef __MWERKS__
 #       define file_offset_t off_t
 #       define file_seek lseek
@@ -234,11 +234,7 @@ static const H5FD_class_t H5FD_log_g = {
     H5FD_log_flush,				/*flush			*/
     NULL,                                       /*lock                  */
     NULL,                                       /*unlock                */
-#ifdef OLD_WAY
     H5FD_FLMAP_NOLIST 				/*fl_map		*/
-#else /* OLD_WAY */
-    H5FD_FLMAP_SINGLE 				/*fl_map		*/
-#endif /* OLD_WAY */
 };
 
 
@@ -506,7 +502,7 @@ H5FD_log_open(const char *name, unsigned flags, hid_t fapl_id,
     int		fd=(-1);
     H5FD_log_t	*file=NULL;
     H5FD_log_fapl_t	*fa;     /* File access property list information */
-#ifdef _WIN32
+#ifdef WIN32
     HFILE filehandle;
     struct _BY_HANDLE_FILE_INFORMATION fileinfo;
 #endif
@@ -549,7 +545,7 @@ H5FD_log_open(const char *name, unsigned flags, hid_t fapl_id,
     H5_ASSIGN_OVERFLOW(file->eof,sb.st_size,h5_stat_size_t,haddr_t);
     file->pos = HADDR_UNDEF;
     file->op = OP_UNKNOWN;
-#ifdef _WIN32
+#ifdef WIN32
     filehandle = _get_osfhandle(fd);
     (void)GetFileInformationByHandle((HANDLE)filehandle, &fileinfo);
     file->fileindexhi = fileinfo.nFileIndexHigh;
@@ -750,7 +746,7 @@ H5FD_log_cmp(const H5FD_t *_f1, const H5FD_t *_f2)
 
     FUNC_ENTER_NOAPI(H5FD_log_cmp, H5FD_VFD_DEFAULT)
 
-#ifdef _WIN32
+#ifdef WIN32
     if (f1->fileindexhi < f2->fileindexhi) HGOTO_DONE(-1)
     if (f1->fileindexhi > f2->fileindexhi) HGOTO_DONE(1)
 
@@ -865,7 +861,7 @@ H5FD_log_alloc(H5FD_t *_file, H5FD_mem_t type, hid_t UNUSED dxpl_id, hsize_t siz
         } /* end if */
 
         if(file->fa.flags&H5FD_LOG_ALLOC)
-            HDfprintf(file->logfp,"%10a-%10a (%10Hu bytes) (%s) Allocated\n",addr,addr+size-1,size,flavors[type]);
+            HDfprintf(file->logfp,"%10a-%10a (%10Hu bytes) Allocated, flavor=%s\n",addr,addr+size-1,size,flavors[type]);
     } /* end if */
 
     /* Set return value */
@@ -1039,7 +1035,7 @@ done:
  */
 /* ARGSUSED */
 static herr_t
-H5FD_log_read(H5FD_t *_file, H5FD_mem_t type, hid_t UNUSED dxpl_id, haddr_t addr,
+H5FD_log_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, haddr_t addr,
 	       size_t size, void *buf/*out*/)
 {
     H5FD_log_t		*file = (H5FD_log_t*)_file;
@@ -1079,8 +1075,11 @@ H5FD_log_read(H5FD_t *_file, H5FD_mem_t type, hid_t UNUSED dxpl_id, haddr_t addr
 
         /* Log information about the read */
         if(file->fa.flags&H5FD_LOG_LOC_READ) {
-            HDfprintf(file->logfp,"%10a-%10a (%10Zu bytes) (%s) Read\n",addr,addr+size-1,size,flavors[type]);
-/* XXX: Verify the flavor information, if we have it? */
+            /* Output the flavor information, if we have it */
+            if(file->fa.flags&H5FD_LOG_FLAVOR)
+                HDfprintf(file->logfp,"%10a-%10a (%10Zu bytes) Read, flavor=%s\n",addr,addr+size-1,size,flavors[file->flavor[addr]]);
+            else
+                HDfprintf(file->logfp,"%10a-%10a (%10Zu bytes) Read\n",addr,addr+size-1,size);
         } /* end if */
     } /* end if */
 
@@ -1265,7 +1264,11 @@ H5FD_log_write(H5FD_t *_file, H5FD_mem_t type, hid_t UNUSED dxpl_id, haddr_t add
 
     /* Log information about the write */
     if(file->fa.flags&H5FD_LOG_LOC_WRITE) {
-        HDfprintf(file->logfp,"%10a-%10a (%10Zu bytes) (%s) Written",orig_addr,orig_addr+orig_size-1,orig_size,flavors[type]);
+        /* Output the flavor information, if desired */
+        if(file->fa.flags&H5FD_LOG_FLAVOR)
+            HDfprintf(file->logfp,"%10a-%10a (%10Zu bytes) (%s) Written",orig_addr,orig_addr+orig_size-1,orig_size,flavors[file->flavor[orig_addr]]);
+        else
+            HDfprintf(file->logfp,"%10a-%10a (%10Zu bytes) Written",orig_addr,orig_addr+orig_size-1,orig_size);
 
         /* Check if this is the first write into a "default" section, grabbed by the metadata agregation algorithm */
         if(file->fa.flags&H5FD_LOG_FLAVOR) {

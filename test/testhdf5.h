@@ -69,16 +69,15 @@
 }
 
 /* Used to make certain a return value _is_ a value */
-#define VERIFY(_x, _val, where) do {					      \
-    long __x = (long)_x, __val = (long)_val;				      \
-    if(GetTestVerbosity() >= VERBO_HI) {				      \
+#define VERIFY(x, val, where) do {					      \
+    if (GetTestVerbosity()>=VERBO_HI) {					      \
 	print_func("   Call to routine: %15s at line %4d in %s had value "    \
-		   "%ld \n", (where), (int)__LINE__, __FILE__, __x);	      \
+		   "%ld \n", (where), (int)__LINE__, __FILE__, (long)(x));    \
     }									      \
-    if((__x) != (__val)) {						      \
+    if ((x) != (val)) {							      \
 	TestErrPrintf("*** UNEXPECTED VALUE from %s should be %ld, but is %ld at line %4d " \
-		   "in %s\n", (where), __val, __x, (int)__LINE__, __FILE__);  \
-	H5Eprint2(H5E_DEFAULT, stdout);					      \
+		   "in %s\n", (where), (long)(val), (long)(x), (int)__LINE__, __FILE__); \
+	H5Eprint2(H5E_DEFAULT, stdout);				      \
     }									      \
 } while(0)
 
@@ -133,7 +132,6 @@ void                    test_file(void);
 void                    test_h5o(void);
 void                    test_h5t(void);
 void                    test_h5s(void);
-void                    test_coords(void);
 void                    test_h5d(void);
 void                    test_attr(void);
 void                    test_select(void);
@@ -157,7 +155,6 @@ void                    cleanup_checksum(void);
 void                    cleanup_file(void);
 void                    cleanup_h5o(void);
 void                    cleanup_h5s(void);
-void                    cleanup_coords(void);
 void                    cleanup_attr(void);
 void                    cleanup_select(void);
 void                    cleanup_time(void);

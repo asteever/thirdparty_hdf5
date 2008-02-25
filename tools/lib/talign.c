@@ -63,12 +63,12 @@ int main(void)
     fil = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
     if (fil < 0) {
-        puts("*FAILED*");
-        return 1;
+            puts("*FAILED*");
+            return 1;
     }
 
     H5E_BEGIN_TRY {
-        H5Ldelete(fil, setname, H5P_DEFAULT);
+            H5Gunlink(fil, setname);
     } H5E_END_TRY;
 
     cs6 = H5Tcopy(H5T_C_S1);
@@ -79,12 +79,12 @@ int main(void)
     H5Tinsert(cmp, "Awkward length", 0, cs6);
 
     cdim[0] = sizeof(fok) / sizeof(float);
-    array_dt = H5Tarray_create2(H5T_NATIVE_FLOAT, 1, cdim);
+    array_dt = H5Tarray_create(H5T_NATIVE_FLOAT, 1, cdim, NULL);
     H5Tinsert(cmp, "Ok", sizeof(string5), array_dt);
     H5Tclose(array_dt);
 
     cdim[0] = sizeof(fnok) / sizeof(float);
-    array_dt = H5Tarray_create2(H5T_NATIVE_FLOAT, 1, cdim);
+    array_dt = H5Tarray_create(H5T_NATIVE_FLOAT, 1, cdim, NULL);
     H5Tinsert(cmp, "Not Ok", sizeof(fok) + sizeof(string5), array_dt);
     H5Tclose(array_dt);
 
@@ -93,7 +93,7 @@ int main(void)
     cmp1 = H5Tcreate(H5T_COMPOUND, sizeof(fok));
 
     cdim[0] = sizeof(fok) / sizeof(float);
-    array_dt = H5Tarray_create2(H5T_NATIVE_FLOAT, 1, cdim);
+    array_dt = H5Tarray_create(H5T_NATIVE_FLOAT, 1, cdim, NULL);
     H5Tinsert(cmp1, "Ok", 0, array_dt);
     H5Tclose(array_dt);
 
@@ -103,7 +103,7 @@ int main(void)
     cmp3 = H5Tcreate(H5T_COMPOUND, sizeof(fnok));
 
     cdim[0] = sizeof(fnok) / sizeof(float);
-    array_dt = H5Tarray_create2(H5T_NATIVE_FLOAT, 1, cdim);
+    array_dt = H5Tarray_create(H5T_NATIVE_FLOAT, 1, cdim, NULL);
     H5Tinsert(cmp3, "Not Ok", 0, array_dt);
     H5Tclose(array_dt);
 
@@ -116,7 +116,7 @@ int main(void)
      */
     dim[0] = 1;
     spc = H5Screate_simple(1, dim, NULL);
-    set = H5Dcreate2(fil, setname, cmp, spc, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    set = H5Dcreate(fil, setname, cmp, spc, H5P_DEFAULT);
 
     H5Dwrite(set, cmp1, spc, H5S_ALL, plist, fok);
     H5Dwrite(set, cmp2, spc, H5S_ALL, plist, string5);
@@ -127,17 +127,17 @@ int main(void)
     /* Now open the set, and read it back in */
     data = malloc(H5Tget_size(fix));
 
-    if(!data) {
+    if (!data) {
         perror("malloc() failed");
         abort();
     }
 
-    set = H5Dopen2(fil, setname, H5P_DEFAULT);
+    set = H5Dopen(fil, setname);
 
     H5Dread(set, fix, spc, H5S_ALL, H5P_DEFAULT, data);
     fptr = (float *)(data + H5Tget_member_offset(fix, 1));
 
-    if(fok[0] != fptr[0] || fok[1] != fptr[1]
+    if (fok[0] != fptr[0] || fok[1] != fptr[1]
                     || fnok[0] != fptr[2] || fnok[1] != fptr[3]) {
         result = 1;
         printf("%14s (%2d) %6s = %s\n",

@@ -833,7 +833,7 @@ HDfprintf(stderr, "%s: hdr->man_dtable.curr_root_rows = %u\n", FUNC, hdr->man_dt
 #ifdef QAK
 HDfprintf(stderr, "%s: dblock_addr = %a\n", FUNC, dblock_addr);
 #endif /* QAK */
-        if(NULL == (dblock = H5HF_man_dblock_protect(hdr, dxpl_id, dblock_addr, dblock_size, sect->u.single.parent, sect->u.single.par_entry, H5AC_WRITE)))
+        if(NULL == (dblock = H5HF_man_dblock_protect(hdr, dxpl_id, dblock_addr, dblock_size, sect->u.single.parent, sect->u.single.par_entry, H5AC_READ)))
             HGOTO_ERROR(H5E_HEAP, H5E_CANTPROTECT, FAIL, "unable to load fractal heap direct block")
         HDassert(H5F_addr_eq(dblock->block_off + dblock_overhead, sect->sect_info.addr));
 
@@ -1186,7 +1186,7 @@ HDfprintf(stderr, "%s: (*sect).sect_info = {%a, %Hu, %u}\n", FUNC, (*sect)->sect
 HDfprintf(stderr, "%s: dblock_addr = %a\n", FUNC, dblock_addr);
 #endif /* QAK */
     if(NULL == (dblock = H5HF_man_dblock_protect(hdr, dxpl_id, dblock_addr, 
-            dblock_size, (*sect)->u.single.parent, (*sect)->u.single.par_entry, H5AC_WRITE)))
+            dblock_size, (*sect)->u.single.parent, (*sect)->u.single.par_entry, H5AC_READ)))
         HGOTO_ERROR(H5E_HEAP, H5E_CANTPROTECT, FAIL, "unable to load fractal heap direct block")
     HDassert(H5F_addr_eq(dblock->block_off + dblock_size, (*sect)->sect_info.addr + (*sect)->sect_info.size));
 
@@ -3909,12 +3909,9 @@ HDfprintf(stderr, "%s: nrows_moved2 = %u\n", FUNC, nrows_moved2);
 
         /* Check if we need to move additional rows */
         if(nrows_moved2 > 0) {
-            H5HF_free_section_t **new_dir_rows;         /* Pointer to new array of direct row pointers */
-
             /* Extend the first section's row array */
-            if(NULL == (new_dir_rows = H5MM_realloc(sect1->u.indirect.dir_rows, sizeof(H5HF_free_section_t *) * new_dir_nrows1)))
+            if(NULL == (sect1->u.indirect.dir_rows = H5MM_realloc(sect1->u.indirect.dir_rows, sizeof(H5HF_free_section_t *) * new_dir_nrows1)))
                 HGOTO_ERROR(H5E_HEAP, H5E_NOSPACE, FAIL, "allocation failed for row section pointer array")
-            sect1->u.indirect.dir_rows = new_dir_rows;
 
             /* Transfer the second section's rows to first section */
             HDmemcpy(&sect1->u.indirect.dir_rows[sect1->u.indirect.dir_nrows], 
@@ -3955,12 +3952,9 @@ HDfprintf(stderr, "%s: nrows_moved2 = %u\n", FUNC, nrows_moved2);
             sect2->u.indirect.indir_ents = NULL;
         } /* end if */
         else {
-            H5HF_free_section_t **new_indir_ents;       /* Pointer to new array of indirect entries */
-
             /* Extend the first section's entry array */
-            if(NULL == (new_indir_ents = H5MM_realloc(sect1->u.indirect.indir_ents, sizeof(H5HF_free_section_t *) * new_indir_nents1)))
+            if(NULL == (sect1->u.indirect.indir_ents = H5MM_realloc(sect1->u.indirect.indir_ents, sizeof(H5HF_free_section_t *) * new_indir_nents1)))
                 HGOTO_ERROR(H5E_HEAP, H5E_NOSPACE, FAIL, "allocation failed for row section pointer array")
-            sect1->u.indirect.indir_ents = new_indir_ents;
 
             /* Transfer the second section's entries to first section */
             HDmemcpy(&sect1->u.indirect.indir_ents[sect1->u.indirect.indir_nents], 

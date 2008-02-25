@@ -37,7 +37,6 @@
 #include "H5Eprivate.h"		/* Error handling		  	*/
 #include "H5FSpkg.h"		/* File free space			*/
 #include "H5Vprivate.h"		/* Vectors and arrays 			*/
-#include "H5WBprivate.h"        /* Wrapped Buffers                      */
 
 /****************/
 /* Local Macros */
@@ -46,9 +45,6 @@
 /* File free space format version #'s */
 #define H5FS_HDR_VERSION        0               /* Header */
 #define H5FS_SINFO_VERSION      0               /* Serialized sections */
-
-/* Size of stack buffer for serialized headers */
-#define H5FS_HDR_BUF_SIZE               256
 
 
 /******************/
@@ -122,6 +118,9 @@ const H5AC_class_t H5AC_FSPACE_SINFO[1] = {{
 /* Local Variables */
 /*******************/
 
+/* Declare a free list to manage free space header data to/from disk */
+H5FL_BLK_DEFINE_STATIC(header_block);
+
 /* Declare a free list to manage free space section data to/from disk */
 H5FL_BLK_DEFINE_STATIC(sect_block);
 
@@ -147,9 +146,7 @@ H5FS_cache_hdr_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void *_fs_prot,
     H5FS_t		*fspace = NULL; /* Free space header info */
     const H5FS_prot_t   *fs_prot = (const H5FS_prot_t *)_fs_prot;       /* User data for protecting */
     size_t		size;           /* Header size */
-    H5WB_t              *wb = NULL;     /* Wrapped buffer for header data */
-    uint8_t             hdr_buf[H5FS_HDR_BUF_SIZE]; /* Buffer for header */
-    uint8_t		*hdr;           /* Pointer to header buffer */
+    uint8_t		*buf = NULL;    /* Temporary buffer */
     const uint8_t	*p;             /* Pointer into raw data buffer */
     uint32_t            stored_chksum;  /* Stored metadata checksum value */
     uint32_t            computed_chksum; /* Computed metadata checksum value */
@@ -173,22 +170,18 @@ HDfprintf(stderr, "%s: Load free space header, addr = %a\n", FUNC, addr);
     /* Set free space manager's internal information */
     fspace->addr = addr;
 
-    /* Wrap the local buffer for serialized header info */
-    if(NULL == (wb = H5WB_wrap(hdr_buf, sizeof(hdr_buf))))
-        HGOTO_ERROR(H5E_FSPACE, H5E_CANTINIT, NULL, "can't wrap buffer")
-
     /* Compute the size of the free space header on disk */
     size = H5FS_HEADER_SIZE(f);
 
-    /* Get a pointer to a buffer that's large enough for header */
-    if(NULL == (hdr = H5WB_actual(wb, size)))
-        HGOTO_ERROR(H5E_FSPACE, H5E_NOSPACE, NULL, "can't get actual buffer")
+    /* Allocate temporary buffer */
+    if((buf = H5FL_BLK_MALLOC(header_block, size)) == NULL)
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
 
     /* Read header from disk */
-    if(H5F_block_read(f, H5FD_MEM_FSPACE_HDR, addr, size, dxpl_id, hdr) < 0)
+    if(H5F_block_read(f, H5FD_MEM_FSPACE_HDR, addr, size, dxpl_id, buf) < 0)
 	HGOTO_ERROR(H5E_FSPACE, H5E_READERROR, NULL, "can't read free space header")
 
-    p = hdr;
+    p = buf;
 
     /* Magic number */
     if(HDmemcmp(p, H5FS_HDR_MAGIC, (size_t)H5FS_SIZEOF_MAGIC))
@@ -244,12 +237,12 @@ HDfprintf(stderr, "%s: Load free space header, addr = %a\n", FUNC, addr);
     H5F_DECODE_LENGTH(f, p, fspace->alloc_sect_size);
 
     /* Compute checksum on indirect block */
-    computed_chksum = H5_checksum_metadata(hdr, (size_t)(p - hdr), 0);
+    computed_chksum = H5_checksum_metadata(buf, (size_t)(p - buf), 0);
 
     /* Metadata checksum */
     UINT32DECODE(p, stored_chksum);
 
-    HDassert((size_t)(p - hdr) == size);
+    HDassert((size_t)(p - buf) == size);
 
     /* Verify checksum */
     if(stored_chksum != computed_chksum)
@@ -259,9 +252,8 @@ HDfprintf(stderr, "%s: Load free space header, addr = %a\n", FUNC, addr);
     ret_value = fspace;
 
 done:
-    /* Release resources */
-    if(wb && H5WB_unwrap(wb) < 0)
-        HDONE_ERROR(H5E_FSPACE, H5E_CLOSEERROR, NULL, "can't close wrapped buffer")
+    if(buf)
+        H5FL_BLK_FREE(header_block, buf);
     if(!ret_value && fspace)
         (void)H5FS_cache_hdr_dest(f, fspace);
 
@@ -292,8 +284,6 @@ done:
 static herr_t
 H5FS_cache_hdr_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5FS_t *fspace, unsigned UNUSED * flags_ptr)
 {
-    H5WB_t      *wb = NULL;             /* Wrapped buffer for header data */
-    uint8_t     hdr_buf[H5FS_HDR_BUF_SIZE]; /* Buffer for header */
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5FS_cache_hdr_flush)
@@ -307,24 +297,19 @@ HDfprintf(stderr, "%s: Flushing free space header, addr = %a, destroy = %u\n", F
     HDassert(fspace);
 
     if(fspace->cache_info.is_dirty) {
-        uint8_t	*hdr;                   /* Pointer to header buffer */
-        uint8_t *p;                     /* Pointer into raw data buffer */
+        uint8_t	*buf = NULL;        /* Temporary raw data buffer */
+        uint8_t *p;                 /* Pointer into raw data buffer */
         uint32_t metadata_chksum;       /* Computed metadata checksum value */
-        size_t	size;                   /* Header size on disk */
-
-        /* Wrap the local buffer for serialized header info */
-        if(NULL == (wb = H5WB_wrap(hdr_buf, sizeof(hdr_buf))))
-            HGOTO_ERROR(H5E_FSPACE, H5E_CANTINIT, FAIL, "can't wrap buffer")
+        size_t	size;               /* Header size on disk */
 
         /* Compute the size of the free space header on disk */
         size = H5FS_HEADER_SIZE(f);
 
-        /* Get a pointer to a buffer that's large enough for header */
-        if(NULL == (hdr = H5WB_actual(wb, size)))
-            HGOTO_ERROR(H5E_FSPACE, H5E_NOSPACE, FAIL, "can't get actual buffer")
+        /* Allocate temporary buffer */
+        if((buf = H5FL_BLK_MALLOC(header_block, size)) == NULL)
+            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
 
-        /* Get temporary pointer to header */
-        p = hdr;
+        p = buf;
 
         /* Magic number */
         HDmemcpy(p, H5FS_HDR_MAGIC, (size_t)H5FS_SIZEOF_MAGIC);
@@ -373,15 +358,17 @@ HDfprintf(stderr, "%s: Flushing free space header, addr = %a, destroy = %u\n", F
         H5F_ENCODE_LENGTH(f, p, fspace->alloc_sect_size);
 
         /* Compute checksum */
-        metadata_chksum = H5_checksum_metadata(hdr, (size_t)(p - hdr), 0);
+        metadata_chksum = H5_checksum_metadata(buf, (size_t)(p - buf), 0);
 
         /* Metadata checksum */
         UINT32ENCODE(p, metadata_chksum);
 
 	/* Write the free space header. */
-        HDassert((size_t)(p - hdr) == size);
-	if(H5F_block_write(f, H5FD_MEM_FSPACE_HDR, addr, size, dxpl_id, hdr) < 0)
+        HDassert((size_t)(p - buf) == size);
+	if(H5F_block_write(f, H5FD_MEM_FSPACE_HDR, addr, size, dxpl_id, buf) < 0)
 	    HGOTO_ERROR(H5E_FSPACE, H5E_CANTFLUSH, FAIL, "unable to save free space header to disk")
+
+        H5FL_BLK_FREE(header_block, buf);
 
 	fspace->cache_info.is_dirty = FALSE;
     } /* end if */
@@ -391,10 +378,6 @@ HDfprintf(stderr, "%s: Flushing free space header, addr = %a, destroy = %u\n", F
 	    HGOTO_ERROR(H5E_FSPACE, H5E_CANTFREE, FAIL, "unable to destroy free space header")
 
 done:
-    /* Release resources */
-    if(wb && H5WB_unwrap(wb) < 0)
-        HDONE_ERROR(H5E_FSPACE, H5E_CLOSEERROR, FAIL, "can't close wrapped buffer")
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5FS_cache_hdr_flush() */
 
@@ -869,8 +852,6 @@ HDfprintf(stderr, "%s: Flushing free space header, addr = %a, destroy = %u\n", F
     HDassert(f);
     HDassert(H5F_addr_defined(addr));
     HDassert(sinfo);
-    HDassert(sinfo->fspace);
-    HDassert(sinfo->fspace->sect_cls);
 
     if(sinfo->cache_info.is_dirty) {
         H5FS_iter_ud_t udata;       /* User data for callbacks */

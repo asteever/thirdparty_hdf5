@@ -26,7 +26,7 @@ dnl
 dnl NOTE: Don't forget to change the version number here when we do a
 dnl release!!!
 dnl
-AC_INIT([HDF5], [1.9.0], [help@hdfgroup.org])
+AC_INIT([HDF5], [1.8.0-beta1], [help@hdfgroup.org])
 AC_CONFIG_SRCDIR([src/H5.c])
 AM_CONFIG_HEADER([src/H5config.h])
 
@@ -95,7 +95,7 @@ dnl
 DEFAULT_LIBS=""
 
 dnl Support F9X variable to define Fortran compiler if FC variable is
-dnl not used.  This should be deprecated in the future.
+dnl not used.  This should be depreciated in the future.
 if test "x" = "x$FC"; then
   FC=${F9X}
 fi
@@ -199,12 +199,32 @@ case $host_os in
     ;;
 esac
 
+AC_ARG_ENABLE([hsizet],
+              [AC_HELP_STRING([--disable-hsizet],
+                              [Datasets can normally be larger than
+                               memory and/or files but some compilers are
+                               unable to handle this (including versions
+                               of GCC before 2.8.0). Disabling the
+                               feature causes dataset sizes to be
+                               restricted to the size of core memory, or
+                               'size_t'.])],
+              [HSIZET=$enableval])
+
 AC_MSG_CHECKING([for sizeof hsize_t and hssize_t])
+
 AC_SUBST(HSIZET)
-AC_MSG_RESULT([large])
-HSIZET=large
-AC_DEFINE([HAVE_LARGE_HSIZET], [1],
-          [Define if it's safe to use `long long' for hsize_t and hssize_t])
+case $HSIZET in
+  no|small)
+    AC_MSG_RESULT([small])
+    HSIZET=small
+    ;;
+  *)
+    AC_MSG_RESULT([large])
+    HSIZET=large
+    AC_DEFINE([HAVE_LARGE_HSIZET], [1],
+              [Define if it's safe to use `long long' for hsize_t and hssize_t])
+    ;;
+esac
 
 host_config="none"
 for f in $host_cpu-$host_vendor-$host_os \
@@ -424,27 +444,6 @@ int main(void) {
      CXXFLAGS="${CXXFLAGS} -DBOOL_NOTDEFINED"
   ])
 
-  AC_MSG_CHECKING([if $CXX has offsetof extension])
-    AC_TRY_COMPILE([
-  #include <stdio.h>
-  #include <stddef.h>
-    ],[
-    struct index_st
-    {
-      unsigned char type;
-      unsigned char num;
-      unsigned int len;
-    };
-    typedef struct index_st index_t;
-    int x,y;
-    x = offsetof(struct index_st, len);
-    y = offsetof(index_t, num)
-    ],
-    AC_DEFINE([CXX_HAVE_OFFSETOF], [1],
-    [Define if C++ compiler recognizes offsetof])
-    AC_MSG_RESULT([yes]),
-    AC_MSG_RESULT([no]))
-
   AC_MSG_CHECKING([if $CXX can handle static cast])
   AC_TRY_RUN([
 int main(void) {
@@ -660,25 +659,6 @@ case "$CC_BASENAME" in
   mpcc|mpcc_r)
     dnl The IBM compiler
     PARALLEL="$CC_BASENAME"
-    ;;
-
-  cmpicc)
-    dnl The ChaMPIon compiler on NCSA tungsten. The cmpirun command on tungsten 
-    dnl isn't in the same path as cmpicc.
-    PARALLEL=cmpicc
-    AC_MSG_CHECKING([for cmpirun])
-
-    dnl Is there an cmpirun?
-    if test -x cmpirun; then
-      AC_MSG_RESULT([cmpirun])
-      RUNSERIAL="${RUNSERIAL:-none}"
-
-      if test -z "$RUNPARALLEL"; then
-        RUNPARALLEL="cmpirun -np \$\${NPROCS:=3}"
-      fi
-    else
-      AC_MSG_RESULT([none])
-    fi
     ;;
 
   *)
@@ -1011,7 +991,7 @@ AC_ARG_ENABLE(production,
                               [Determines how to run the compiler.])])
 
 case "X-$enable_production" in
-  X-|X-yes)
+  X-yes)
     enable_production="yes"
     AC_MSG_RESULT([production])
 
@@ -1053,7 +1033,7 @@ case "X-$enable_production" in
     H5_CXXFLAGS="$H5_CXXFLAGS $PROD_CXXFLAGS"
     H5_FCFLAGS="$H5_FCFLAGS $PROD_FCFLAGS"
     ;;
-  X-no)
+  X-|X-no)
     enable_production="no"
     AC_MSG_RESULT([development])
     CONFIG_MODE=development
@@ -1702,6 +1682,25 @@ if test "X$THREADSAFE" = "Xyes"; then
 fi
 
 dnl ----------------------------------------------------------------------
+dnl Check if they would like the HDF5 v1.6 compatibility functions
+dnl compiled in
+dnl
+AC_MSG_CHECKING([whether HDF5 v1.6 compatibility functions enabled])
+AC_ARG_ENABLE([hdf5v1_6],
+              [AC_HELP_STRING([--enable-hdf5v1_6],
+                              [Compile the HDF5 v1.6 compatibility
+                               interface [default=no]])],
+              [HDF5_V1_6_COMPAT=$enableval])
+
+if test "$HDF5_V1_6_COMPAT" = "yes"; then
+  AC_MSG_RESULT([yes])
+  AC_DEFINE([WANT_H5_V1_6_COMPAT], [1],
+            [Define if the HDF5 v1.6 compatibility functions are to be compiled in])
+else
+  AC_MSG_RESULT([no])
+fi
+
+dnl ----------------------------------------------------------------------
 dnl How does one figure out the local time zone?  Anyone know of a
 dnl Posix way to do this?
 dnl
@@ -1728,21 +1727,13 @@ AC_MSG_RESULT([no]))
 
 dnl Check whether the global variable `timezone' is defined.
 AC_MSG_CHECKING([for global timezone variable])
-
-case "'uname'" in
-  CYGWIN*)
-    AC_MSG_RESULT([disabled in CYGWIN])
-    ;;
-  *)
-    AC_TRY_LINK([
-    #include <sys/time.h>
-    #include <time.h>], [timezone=0;],
-    AC_DEFINE([HAVE_TIMEZONE], [1],
-              [Define if `timezone' is a global variable])
-    AC_MSG_RESULT([yes]),
-    AC_MSG_RESULT([no]))
-    ;;
-esac
+AC_TRY_LINK([
+#include <sys/time.h>
+#include <time.h>], [timezone=0;],
+AC_DEFINE([HAVE_TIMEZONE], [1],
+          [Define if `timezone' is a global variable])
+AC_MSG_RESULT([yes]),
+AC_MSG_RESULT([no]))
 
 dnl Check whether `struct timezone' is defined.
 AC_STRUCT_TIMEZONE
@@ -1838,7 +1829,7 @@ dnl Check for functions.
 dnl tmpfile needed by h5pdiff.
 dnl
 AC_CHECK_FUNCS(alarm fork frexpf frexpl gethostname getpwuid getrusage)
-AC_CHECK_FUNCS(BSDgettimeofday siglongjmp longjmp setsysinfo sigaction)
+AC_CHECK_FUNCS(BSDgettimeofday longjmp setsysinfo sigaction)
 AC_CHECK_FUNCS(signal snprintf vasprintf strdup system waitpid)
 AC_CHECK_FUNCS(rand_r random srandom)
 AC_CHECK_FUNCS(tmpfile)
@@ -2036,7 +2027,6 @@ esac
    
 dnl ----------------------------------------------------------------------
 dnl Turn on debugging by setting compiler flags
-dnl This must come after the enable-production since it depends on production.
 dnl
 AC_MSG_CHECKING(for debug flags)
 AC_ARG_ENABLE([debug],
@@ -2044,24 +2034,14 @@ AC_ARG_ENABLE([debug],
                               [Turn on debugging in all packages. One may
                                also specify a comma-separated list of
                                package names without the leading H5 or
-                               the word no. The default is most packages
-			       if production is disabled; no if it is enabled.
-                               ])],
+                               the word no. The default is most
+                               packages.])],
               [DEBUG_PKG=$enableval])
-
-dnl Default to no if producton is enabled
-if test "X-$DEBUG_PKG" = X- ; then
-    if test "$enable_production" = yes ; then
-	DEBUG_PKG=no
-    else
-	DEBUG_PKG=yes
-    fi
-fi
 
 AC_SUBST([DEBUG_PKG])
 all_packages="ac,b,b2,d,e,f,g,hg,hl,i,mf,mm,o,p,s,t,v,z"
 case "X-$DEBUG_PKG" in
-  X-yes)
+  X-|X-yes)
     DEBUG_PKG="d,e,f,g,hg,i,mm,o,p,s,t,v,z"
     H5_CPPFLAGS="$H5_CPPFLAGS -UNDEBUG"
     AC_MSG_RESULT([default ($DEBUG_PKG)])
@@ -2196,65 +2176,6 @@ case "X-$INSTRUMENT" in
   X-no|*)
     AC_MSG_RESULT([no])
     INSTRUMENT_LIBRARY=no
-    ;;
-esac
-
-dnl ----------------------------------------------------------------------
-dnl Check if they would like to securely clear file buffers before they are
-dnl     written.
-dnl
-AC_SUBST([CLEARFILEBUF])
-AC_MSG_CHECKING([whether to clear file buffers])
-AC_ARG_ENABLE([clear-file-buffers],
-              [AC_HELP_STRING([--enable-clear-file-buffers],
-                              [Securely clear file buffers before writing
-                              to file.  Default=yes.])],
-              [CLEARFILEBUF=$enableval])
-
-case "X-$CLEARFILEBUF" in
-  *)
-      CLEARFILEBUF=yes
-      AC_MSG_RESULT([yes])
-      AC_DEFINE([CLEAR_MEMORY], [1],
-                [Define if the memory buffers being written to disk should be
-                cleared before writing.])
-    ;;
-  X-no)
-      CLEARFILEBUF=no
-      AC_MSG_RESULT([no])
-    ;;
-esac
-
-dnl ----------------------------------------------------------------------
-dnl Check if they would like to use a memory checking tool (like valgrind's
-dnl     'memcheck' tool, or Rational Purify, etc) and the library should be
-dnl     more scrupulous with it's memory operations.  Enabling this also
-dnl     disables the library's free space manager code.
-dnl
-AC_SUBST([USINGMEMCHECKER])
-AC_MSG_CHECKING([whether a memory checking tool will be used])
-AC_ARG_ENABLE([using-memchecker],
-              [AC_HELP_STRING([--enable-using-memchecker],
-                              [Enable this option if a memory allocation and/or
-                              bounds checking tool will be used on the HDF5
-                              library.  Enabling this causes the library to be
-                              more picky about it's memory operations and also
-                              disables the library's free space manager code.
-                              Default=no.])],
-              [USINGMEMCHECKER=$enableval])
-
-case "X-$USINGMEMCHECKER" in
-  X-yes)
-      USINGMEMCHECKER=yes
-      AC_MSG_RESULT([yes])
-      AC_DEFINE([USING_MEMCHECKER], [1],
-                [Define if a memory checking tool will be used on the library,
-                to cause library to be very picky about memory operations and
-                also disable the internal free list manager code.])
-    ;;
-  *)
-      USINGMEMCHECKER=no
-      AC_MSG_RESULT([no])
     ;;
 esac
 
@@ -2520,37 +2441,6 @@ if test -n "$PARALLEL"; then
   fi
 
 dnl ----------------------------------------------------------------------
-dnl Set the flag to indicate that the MPI_File_get_size() function
-dnl works.  The default is enabled unless the user knows the function
-dnl doesn't work on the system and disables it.  (This flag should be set
-dnl for all machines except for SGI Altix Propack 4 where the function 
-dnl doesn't return correct file size.)
-dnl
-AC_ARG_ENABLE([mpi-size],
-              [AC_HELP_STRING([--enable-mpi-size],
-                              [Some systems (only SGI Altix Propack 4 so far) return wrong value
-                               from MPI_File_get_size.  By disabling this function, the library
-                               will replace it with stat to get the correct file size.
-                               [default=yes]])],
-              [MPI_GET_SIZE=$enableval])
-
-AC_MSG_CHECKING([if MPI_File_get_size is enabled])
-
-AC_SUBST(MPI_GET_SIZE)
-case "X-$MPI_GET_SIZE" in
-  X-no)
-    AC_MSG_RESULT([no])
-    MPI_GET_SIZE=no
-    ;;
-  X-yes|*)
-    AC_MSG_RESULT([yes])
-    MPI_GET_SIZE=yes
-    AC_DEFINE([HAVE_MPI_GET_SIZE], [1],
-              [Define if MPI_File_get_size works correctly])
-    ;;
-esac
-
-dnl ----------------------------------------------------------------------
 dnl Check to see whether the complicate MPI derived datatype works. 
 dnl In Dec. 20th, 2004, we found that IBM's MPIO implemention didn't
 dnl handle with the displacement of the complicate MPI type derived datatype 
@@ -2667,33 +2557,71 @@ if test 1 = 2; then
             [Define if shared writing must be disabled (CodeWarrior only)])
 fi
 
-dnl --------------------------------------------------------------------------
-dnl Should the Default Virtual File Driver be compiled?
+dnl -----------------------------------------------------------------------------
+dnl Should the Stream Virtual File Driver be compiled in ?
 dnl
+AC_MSG_CHECKING([for Stream Virtual File Driver support])
+AC_ARG_ENABLE([stream-vfd],
+              [AC_HELP_STRING([--enable-stream-vfd],
+                              [Build the Stream Virtual File Driver
+                               [default=yes]])],
+              [STREAM_VFD=$enableval],
+              [STREAM_VFD=default])
 
-AC_MSG_CHECKING([for Default Virtual File Driver definition])
-AC_ARG_WITH([default-vfd],
-            [AC_HELP_STRING([--with-default-vfd=driver],
-                            [Specify default file driver
-                             [default=sec2]])],,
-            withval=sec2)
-
-if test "X$withval" = "Xsec2"; then
-    AC_MSG_RESULT([yes])
-    default_vfd=yes
-    vfd_define=H5FD_SEC2
-elif test "X$withval" = "Xstdio"; then
-    AC_MSG_RESULT([yes])
-    default_vfd=yes
-    vfd_define=H5FD_STDIO
-else
-    AC_MSG_RESULT([no])
-    default_vfd=no
+dnl If the user explicitly disabled Stream VFD, say so.
+if test "$STREAM_VFD" != "yes" -a "$STREAM_VFD" != "default"; then
+  AC_MSG_RESULT([not configured])
 fi
 
-if test "X$default_vfd" = "Xyes"; then
-  AC_DEFINE_UNQUOTED([DEFAULT_VFD], [$vfd_define],
-            [Define the default virtual file driver to compile])
+dnl If stream VFD is being used with parallel, disable it, unless the user
+dnl explicity enables it via the '--enable-stream_vfd' option.
+if test "$STREAM_VFD" = "default" -a "X${enable_parallel}" = "Xyes"; then
+    AC_MSG_RESULT([disabled in parallel])
+    STREAM_VFD=no
+elif test "$STREAM_VFD" = "yes" -a "X${enable_parallel}" = "Xyes"; then
+    AC_MSG_RESULT([enabled by user])
+elif test "$STREAM_VFD" = "default" -a "X${PARALLEL}" != "X"; then
+    AC_MSG_RESULT([disabled when a parallel compiler is being used])
+    STREAM_VFD=no
+elif test "$STREAM_VFD" = "yes" -a "X${PARALLEL}" != "X"; then
+    AC_MSG_RESULT([enabled by user])
+elif test "$STREAM_VFD" = "yes"; then
+    AC_MSG_RESULT([yes])
+fi
+
+if test "$STREAM_VFD" = "default"; then
+    AC_MSG_RESULT([yes])
+    STREAM_VFD=yes
+fi
+
+dnl Otherwise, use Stream VFD.
+if test "$STREAM_VFD" = "yes"; then
+  AC_CHECK_HEADERS([netinet/in.h])
+  AC_CHECK_HEADERS([netinet/tcp.h], , , [#include <netinet/in.h>])
+  AC_CHECK_HEADERS([sys/filio.h])
+  AC_DEFINE([HAVE_STREAM], [1],
+            [Define if the stream virtual file driver should be compiled])
+
+  dnl Check if 'socklen_t' available
+  AC_MSG_CHECKING([if socklen_t is defined])
+  AC_TRY_COMPILE([
+#include <stdio.h>
+#include <stdlib.h>
+#ifdef HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+#ifdef HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_SOCKET_H
+#include <sys/socket.h>
+#endif
+  ],
+    [socklen_t foo; return 0;],
+    AC_DEFINE([HAVE_SOCKLEN_T], 1, [Define if `socklen_t' is defined])
+    AC_MSG_RESULT([yes]),
+    AC_MSG_RESULT([no])
+  )
 fi
 
 dnl ----------------------------------------------------------------------
@@ -3600,95 +3528,6 @@ fi
 AM_CONDITIONAL([BUILD_ALL_CONDITIONAL], [test "X$BUILD_ALL" = "Xyes"])
 
 dnl ----------------------------------------------------------------------
-dnl Enable deprecated public API symbols
-dnl
-AC_SUBST([DEPRECATED_SYMBOLS])
-AC_MSG_CHECKING([if deprecated public symbols are available]);
-AC_ARG_ENABLE([deprecated-symbols],
-              [AC_HELP_STRING([--enable-deprecated-symbols],
-                     [Enable deprecated public API symbols [default=yes]])],
-             [DEPREC_SYMBOLS=$enableval],
-             [DEPREC_SYMBOLS=yes])
-
-case "X-$DEPREC_SYMBOLS" in
-  X-yes)
-    AC_MSG_RESULT([yes])
-    DEPRECATED_SYMBOLS=yes
-    ;;
-  X-no|*)
-    AC_MSG_RESULT([no])
-    DEPRECATED_SYMBOLS=no
-    AC_DEFINE([NO_DEPRECATED_SYMBOLS], [1],
-              [Define if deprecated public API symbols are disabled])
-    ;;
-esac
-
-dnl --------------------------------------------------------------------------
-dnl Which version of the public APIs should the 'base' versioned symbols use?
-dnl
-
-AC_SUBST([DEFAULT_API_VERSION])
-AC_MSG_CHECKING([which version of public symbols to use by default])
-AC_ARG_WITH([default-api-version],
-            [AC_HELP_STRING([--with-default-api-version=(v16|v18)],
-                            [Specify default release version of public symbols
-                             [default=v18]])],,
-            withval=v18)
-
-if test "X$withval" = "Xv16"; then
-    AC_MSG_RESULT([v16])
-    DEFAULT_API_VERSION=v16
-    AC_DEFINE([USE_16_API], [1],
-              [Define using v1.6 public API symbols by default])
-elif test "X$withval" = "Xv18"; then
-    AC_MSG_RESULT([v18])
-    DEFAULT_API_VERSION=v18
-else
-    AC_MSG_ERROR([invalid version of public symbols given])
-fi
-
-dnl It's an error to try to disable deprecated public API symbols while
-dnl choosing an older version of the public API as the default.
-if test "X${DEFAULT_API_VERSION}" != "Xv18" -a "X${DEPRECATED_SYMBOLS}" = "Xno" ; then
-  AC_MSG_ERROR([Removing old public API symbols not allowed when using them as default public API symbols])
-fi
-
-
-dnl ----------------------------------------------------------------------
-dnl Enable strict file format checks
-dnl
-AC_SUBST([STRICT_FORMAT_CHECKS])
-AC_MSG_CHECKING([Whether to perform strict file format checks]);
-AC_ARG_ENABLE([strict-format-checks],
-              [AC_HELP_STRING([--enable-strict-format-checks],
-                     [Enable strict file format checks, default=yes if
-                        debug flag is enabled, no otherwise])],
-             [STRICT_CHECKS=$enableval])
-
-dnl Default to yes if debug is enabled
-if test "X-$STRICT_CHECKS" = X- ; then
-  if test -z "$DEBUG_PKG" ; then
-    STRICT_CHECKS=no
-  else
-    STRICT_CHECKS=yes
-  fi
-fi
-
-case "X-$STRICT_CHECKS" in
-  X-yes)
-    AC_MSG_RESULT([yes])
-    STRICT_FORMAT_CHECKS=yes
-    AC_DEFINE([STRICT_FORMAT_CHECKS], [1],
-              [Define if strict file format checks are enabled])
-    ;;
-  X-no|*)
-    AC_MSG_RESULT([no])
-    STRICT_FORMAT_CHECKS=no
-    ;;
-esac
-
-
-dnl ----------------------------------------------------------------------
 dnl Create automake conditionals to tell automake makefiles which directories
 dnl need to be compiled
 
@@ -3747,7 +3586,6 @@ AC_CONFIG_FILES([src/libhdf5.settings
                  Makefile
                  src/Makefile
                  test/Makefile
-                 test/testerror.sh
                  testpar/Makefile
                  testpar/testph5.sh
                  perform/Makefile
@@ -3767,8 +3605,7 @@ AC_CONFIG_FILES([src/libhdf5.settings
                  tools/misc/Makefile
                  tools/misc/h5cc
                  tools/misc/testh5repart.sh
-                 tools/h5stat/testh5stat.sh
-                 tools/h5stat/Makefile
+                 tools/misc/testh5stat.sh
                  examples/Makefile
                  examples/testh5cc.sh
                  c++/Makefile
@@ -3938,20 +3775,8 @@ IF_YES_NO "$enable_static"
 PRINT_N "  Statically Linked Executables"
 IF_YES_NO "$STATIC_EXEC"
 
-PRINT_N "Default Version of Public Symbols"
-PRINT $DEFAULT_API_VERSION
-
-PRINT_N " With Deprecated Public Symbols"
-IF_YES_NO "$DEPRECATED_SYMBOLS"
-
 PRINT_N "                        Tracing"
 IF_YES_NO "$TRACE_API"
-
-PRINT_N "Clear file buffers before write"
-IF_YES_NO "$CLEARFILEBUF"
-
-PRINT_N "           Using memory checker"
-IF_YES_NO "$USINGMEMCHECKER"
 
 PRINT_N "   Optimization Instrumentation"
 IF_YES_NO "$INSTRUMENT"
@@ -3992,14 +3817,14 @@ IF_YES_NO "$HAVE_DMALLOC"
 PRINT_N "         Function Stack Tracing"
 IF_ENABLED_DISABLED "$CODESTACK"
 
+PRINT_N "                 Group Revision"
+IF_ENABLED_DISABLED "$GROUPREVISION"
+
 PRINT_N "                           GPFS"
 IF_YES_NO "$GPFS"
 
-PRINT_N "      Strict File Format Checks"
-IF_ENABLED_DISABLED "$STRICT_FORMAT_CHECKS"
-
-PRINT_N "            Default API Mapping"
-PRINT "$DEFAULT_API_VERSION"
+PRINT_N "        HDF5 v1.6 Compatibility"
+IF_YES_NO "$HDF5_V1_6_COMPAT"
 
 PRINT_N "                        hsize_t"
 case "$HSIZET" in
@@ -4027,6 +3852,9 @@ else
   PRINT "No"
 fi
 
+
+PRINT_N "                     Stream VFD"
+IF_ENABLED_DISABLED "$STREAM_VFD"
 
 PRINT_N "                     Direct VFD"
 IF_ENABLED_DISABLED "$DIRECT_VFD"

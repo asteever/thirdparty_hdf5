@@ -57,7 +57,6 @@
 /* Local Typedefs */
 /******************/
 
-#ifndef H5_NO_DEPRECATED_SYMBOLS
 /* User data for path traversal routine for getting object info */
 typedef struct {
     H5G_stat_t  *statbuf;			/* Stat buffer about object */
@@ -80,14 +79,15 @@ static herr_t H5G_link_hard(hid_t cur_loc_id, const char *cur_name,
     hid_t new_loc_id, const char *new_name);
 static herr_t H5G_move(hid_t src_loc_id, const char *src_name,
     hid_t dst_loc_id, const char *dst_name);
+static herr_t H5G_set_comment(H5G_loc_t *loc, const char *name,
+    const char *buf, hid_t dxpl_id);
+static int H5G_get_comment(H5G_loc_t *loc, const char *name,
+    size_t bufsize, char *buf, hid_t dxpl_id);
 static herr_t H5G_get_objinfo_cb(H5G_loc_t *grp_loc/*in*/, const char *name,
     const H5O_link_t *lnk, H5G_loc_t *obj_loc, void *_udata/*in,out*/,
     H5G_own_loc_t *own_loc/*out*/);
 static herr_t H5G_get_objinfo(const H5G_loc_t *loc, const char *name,
     hbool_t follow_link, H5G_stat_t *statbuf/*out*/, hid_t dxpl_id);
-static H5G_obj_t H5G_obj_get_type_by_idx(H5O_loc_t *oloc, hsize_t idx,
-    hid_t dxpl_id);
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
 
 
 /*********************/
@@ -126,52 +126,9 @@ H5G_init_deprec_interface(void)
     FUNC_LEAVE_NOAPI(H5G_init())
 } /* H5G_init_deprec_interface() */
 
-#ifndef H5_NO_DEPRECATED_SYMBOLS
 
 /*-------------------------------------------------------------------------
- * Function:	H5G_map_obj_type
- *
- * Purpose:	Maps the object type to the older "group" object type
- *
- * Return:	Object type (can't fail)
- *
- * Programmer:	Quincey Koziol
- *              Tuesday, November 21, 2006
- *
- *-------------------------------------------------------------------------
- */
-H5G_obj_t
-H5G_map_obj_type(H5O_type_t obj_type)
-{
-    H5G_obj_t ret_value;        /* Return value */
-
-    /* Use FUNC_ENTER_NOAPI_NOINIT_NOFUNC here to avoid performance issues */
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5G_map_obj_type)
-
-    /* Map object type to older "group" object type */
-    switch(obj_type) {
-        case H5O_TYPE_GROUP:
-            ret_value = H5G_GROUP;
-            break;
-
-        case H5O_TYPE_DATASET:
-            ret_value = H5G_DATASET;
-            break;
-
-        case H5O_TYPE_NAMED_DATATYPE:
-            ret_value = H5G_TYPE;
-            break;
-
-        default:
-            ret_value = H5G_UNKNOWN;
-    } /* end switch */
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5G_map_obj_type() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5Gcreate1
+ * Function:	H5Gcreate
  *
  * Purpose:	Creates a new group relative to LOC_ID and gives it the
  *		specified NAME.  The group is opened for write access
@@ -181,8 +138,6 @@ H5G_map_obj_type(H5O_type_t obj_type)
  *		reserve to store the names that will appear in this
  *		group. If a non-positive value is supplied for the SIZE_HINT
  *		then a default size is chosen.
- *
- * Note:	Deprecated in favor of H5Gcreate2
  *
  * Return:	Success:	The object ID of a new, empty group open for
  *				writing.  Call H5Gclose() when finished with
@@ -196,14 +151,14 @@ H5G_map_obj_type(H5O_type_t obj_type)
  *-------------------------------------------------------------------------
  */
 hid_t
-H5Gcreate1(hid_t loc_id, const char *name, size_t size_hint)
+H5Gcreate(hid_t loc_id, const char *name, size_t size_hint)
 {
     H5G_loc_t	    loc;                /* Location to create group */
     H5G_t	   *grp = NULL;         /* New group created */
     hid_t           tmp_gcpl = (-1);    /* Temporary group creation property list */
     hid_t	    ret_value;          /* Return value */
 
-    FUNC_ENTER_API(H5Gcreate1, FAIL)
+    FUNC_ENTER_API(H5Gcreate, FAIL)
     H5TRACE3("i", "i*sz", loc_id, name, size_hint);
 
     /* Check arguments */
@@ -225,8 +180,8 @@ H5Gcreate1(hid_t loc_id, const char *name, size_t size_hint)
         if((tmp_gcpl = H5P_copy_plist(gc_plist)) < 0)
             HGOTO_ERROR(H5E_SYM, H5E_CANTGET, FAIL, "unable to copy the creation property list")
 
-        /* Get pointer to the copied property list */
-        if(NULL == (gc_plist = H5I_object(tmp_gcpl)))
+        /* Get the copy of the property list */
+        if(NULL == (gc_plist = H5I_object(H5P_GROUP_CREATE_DEFAULT)))
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list")
 
         /* Get the group info property */
@@ -258,16 +213,14 @@ done:
             HDONE_ERROR(H5E_SYM, H5E_CLOSEERROR, FAIL, "unable to release group")
 
     FUNC_LEAVE_API(ret_value)
-} /* end H5Gcreate1() */
+} /* end H5Gcreate() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5Gopen1
+ * Function:	H5Gopen
  *
  * Purpose:	Opens an existing group for modification.  When finished,
  *		call H5Gclose() to close it and release resources.
- *
- * Note:	Deprecated in favor of H5Gopen2
  *
  * Return:	Success:	Object ID of the group.
  *
@@ -279,13 +232,18 @@ done:
  *-------------------------------------------------------------------------
  */
 hid_t
-H5Gopen1(hid_t loc_id, const char *name)
+H5Gopen(hid_t loc_id, const char *name)
 {
-    H5G_t       *grp = NULL;            /* Group opened */
-    H5G_loc_t	loc;                    /* Location of parent for group */
+    H5G_t       *grp = NULL;
+    H5G_loc_t	loc;
+    H5G_loc_t   grp_loc;                /* Location used to open group */
+    H5G_name_t  grp_path;            	/* Opened object group hier. path */
+    H5O_loc_t   grp_oloc;            	/* Opened object object location */
+    H5O_type_t  obj_type;               /* Type of object at location */
+    hbool_t     loc_found = FALSE;      /* Location at 'name' found */
     hid_t       ret_value;              /* Return value */
 
-    FUNC_ENTER_API(H5Gopen1, FAIL)
+    FUNC_ENTER_API(H5Gopen, FAIL)
     H5TRACE2("i", "i*s", loc_id, name);
 
     /* Check args */
@@ -294,8 +252,24 @@ H5Gopen1(hid_t loc_id, const char *name)
     if(!name || !*name)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no name")
 
+    /* Set up opened group location to fill in */
+    grp_loc.oloc = &grp_oloc;
+    grp_loc.path = &grp_path;
+    H5G_loc_reset(&grp_loc);
+
+    /* Find the group object */
+    if(H5G_loc_find(&loc, name, &grp_loc/*out*/, H5P_DEFAULT, H5AC_dxpl_id) < 0)
+        HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "group not found")
+    loc_found = TRUE;
+
+    /* Check that the object found is the correct type */
+    if(H5O_obj_type(&grp_oloc, &obj_type, H5AC_dxpl_id) < 0)
+        HGOTO_ERROR(H5E_SYM, H5E_CANTGET, FAIL, "can't get object type")
+    if(obj_type != H5O_TYPE_GROUP)
+        HGOTO_ERROR(H5E_SYM, H5E_BADTYPE, FAIL, "not a group")
+
     /* Open the group */
-    if((grp = H5G_open_name(&loc, name, H5P_DEFAULT, H5AC_dxpl_id)) == NULL)
+    if((grp = H5G_open(&grp_loc, H5AC_dxpl_id)) == NULL)
         HGOTO_ERROR(H5E_SYM, H5E_CANTOPENOBJ, FAIL, "unable to open group")
 
     /* Register an atom for the group */
@@ -304,12 +278,18 @@ H5Gopen1(hid_t loc_id, const char *name)
 
 done:
     if(ret_value < 0) {
-        if(grp && H5G_close(grp) < 0)
-            HDONE_ERROR(H5E_SYM, H5E_CLOSEERROR, FAIL, "unable to release group")
+        if(grp) {
+            if(H5G_close(grp) < 0)
+                HDONE_ERROR(H5E_SYM, H5E_CLOSEERROR, FAIL, "unable to release group")
+        } /* end if */
+        else {
+            if(loc_found && H5G_loc_free(&grp_loc) < 0)
+                HDONE_ERROR(H5E_SYM, H5E_CANTRELEASE, FAIL, "can't free location")
+        } /* end else */
     } /* end if */
 
     FUNC_LEAVE_API(ret_value)
-} /* end H5Gopen1() */
+} /* end H5Gopen() */
 
 
 /*-------------------------------------------------------------------------
@@ -321,7 +301,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Glink(hid_t cur_loc_id, H5G_link_t type, const char *cur_name, const char *new_name)
+H5Glink(hid_t cur_loc_id, H5L_type_t type, const char *cur_name, const char *new_name)
 {
     herr_t ret_value = SUCCEED;         /* Return value */
 
@@ -366,7 +346,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Glink2(hid_t cur_loc_id, const char *cur_name, H5G_link_t type,
+H5Glink2(hid_t cur_loc_id, const char *cur_name, H5L_type_t type,
     hid_t new_loc_id, const char *new_name)
 {
     herr_t ret_value = SUCCEED;         /* Return value */
@@ -632,6 +612,56 @@ done:
 
 
 /*-------------------------------------------------------------------------
+ * Function:	H5Gget_objname_by_idx
+ *
+ * Purpose:     Returns the name of objects in the group by giving index.
+ *              If `name' is non-NULL then write up to `size' bytes into that
+ *              buffer and always return the length of the entry name.
+ *              Otherwise `size' is ignored and the function does not store the name,
+ *              just returning the number of characters required to store the name.
+ *              If an error occurs then the buffer pointed to by `name' (NULL or non-NULL)
+ *              is unchanged and the function returns a negative value.
+ *              If a zero is returned for the name's length, then there is no name
+ *              associated with the ID.
+ *
+ * Note:	Deprecated in favor of H5Lget_name_by_idx
+ *
+ * Return:	Success:        Non-negative
+ *		Failure:	Negative
+ *
+ * Programmer:	Raymond Lu
+ *	        Nov 20, 2002
+ *
+ *-------------------------------------------------------------------------
+ */
+ssize_t
+H5Gget_objname_by_idx(hid_t loc_id, hsize_t idx, char *name, size_t size)
+{
+    H5G_loc_t		loc;            /* Object location */
+    H5O_type_t          obj_type;       /* Type of object at location */
+    ssize_t		ret_value;
+
+    FUNC_ENTER_API(H5Gget_objname_by_idx, FAIL)
+    H5TRACE4("Zs", "ih*sz", loc_id, idx, name, size);
+
+    /* Check args */
+    if(H5G_loc(loc_id, &loc) < 0)
+	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location ID")
+    if(H5O_obj_type(loc.oloc, &obj_type, H5AC_ind_dxpl_id) < 0)
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "can't get object type")
+    if(obj_type != H5O_TYPE_GROUP)
+        HGOTO_ERROR(H5E_DATASET, H5E_BADTYPE, FAIL, "not a group")
+
+    /* Call internal function */
+    if((ret_value = H5G_obj_get_name_by_idx(loc.oloc, H5_INDEX_NAME, H5_ITER_INC, idx, name, size, H5AC_ind_dxpl_id)) < 0)
+	HGOTO_ERROR(H5E_SYM, H5E_BADTYPE, FAIL, "can't get object name")
+
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* end H5Gget_objname_by_idx() */
+
+
+/*-------------------------------------------------------------------------
  * Function:	H5Gset_comment
  *
  * Purpose:     Gives the specified object a comment.  The COMMENT string
@@ -639,7 +669,7 @@ done:
  *		one comment at a time.  Passing NULL for the COMMENT argument
  *		will remove the comment property from the object.
  *
- * Note:	Deprecated in favor of H5Oset_comment/H5Oset_comment_by_name
+ * Note:	Deprecated in favor of using attributes on group
  *
  * Return:	Non-negative on success/Negative on failure
  *
@@ -662,7 +692,7 @@ H5Gset_comment(hid_t loc_id, const char *name, const char *comment)
     if(!name || !*name)
 	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no name specified")
 
-    if(H5G_loc_set_comment(&loc, name, comment, H5P_DEFAULT, H5AC_dxpl_id) < 0)
+    if(H5G_set_comment(&loc, name, comment, H5AC_dxpl_id) < 0)
 	HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, FAIL, "unable to set comment value")
 
 done:
@@ -680,7 +710,7 @@ done:
  *		have a comment value then no bytes are copied to the BUF
  *		buffer.
  *
- * Note:	Deprecated in favor of H5Oget_comment/H5Oget_comment_by_name
+ * Note:	Deprecated in favor of using attributes on group
  *
  * Return:	Success:	Number of characters in the comment counting
  *				the null terminator.  The value returned may
@@ -709,12 +739,123 @@ H5Gget_comment(hid_t loc_id, const char *name, size_t bufsize, char *buf)
     if(bufsize > 0 && !buf)
 	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no buffer specified")
 
-    if((ret_value = (int)H5G_loc_get_comment(&loc, name, buf, bufsize, H5P_DEFAULT, H5AC_ind_dxpl_id)) < 0)
+    if((ret_value = H5G_get_comment(&loc, name, bufsize, buf, H5AC_ind_dxpl_id)) < 0)
 	HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, FAIL, "unable to get comment value")
 
 done:
     FUNC_LEAVE_API(ret_value)
 } /* end H5Gget_comment() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5G_set_comment
+ *
+ * Purpose:	(Re)sets the comment for an object.
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Robb Matzke
+ *              Monday, July 20, 1998
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5G_set_comment(H5G_loc_t *loc, const char *name, const char *buf, hid_t dxpl_id)
+{
+    H5G_loc_t   obj_loc;                  /* Object's location */
+    H5G_name_t	path;
+    H5O_loc_t	oloc;
+    hbool_t     loc_valid = FALSE;
+    H5O_name_t	comment;
+    herr_t      ret_value = SUCCEED;       /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT(H5G_set_comment)
+
+    /* Get the symbol table entry for the object */
+    obj_loc.path = &path;
+    obj_loc.oloc = &oloc;
+    H5G_loc_reset(&obj_loc);
+    if(H5G_loc_find(loc, name, &obj_loc/*out*/, H5P_DEFAULT, dxpl_id) < 0)
+	HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "object not found")
+    loc_valid = TRUE;
+
+    /* Remove the previous comment message if any */
+    if(H5O_msg_remove(obj_loc.oloc, H5O_NAME_ID, 0, TRUE, dxpl_id) < 0)
+        H5E_clear_stack(NULL);
+
+    /* Add the new message */
+    if(buf && *buf) {
+        /* Casting away const OK -QAK */
+	comment.s = (char *)buf;
+	if(H5O_msg_create(obj_loc.oloc, H5O_NAME_ID, 0, H5O_UPDATE_TIME, &comment, dxpl_id) < 0)
+	    HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, FAIL, "unable to set comment object header message")
+    } /* end if */
+
+done:
+    /* Release obj_loc */
+    if(loc_valid && H5G_loc_free(&obj_loc) < 0)
+        HDONE_ERROR(H5E_SYM, H5E_CANTRELEASE, FAIL, "unable to free location")
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5G_set_comment() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5G_get_comment
+ *
+ * Purpose:	Get the comment value for an object.
+ *
+ * Return:	Success:	Number of bytes in the comment including the
+ *				null terminator.  Zero if the object has no
+ *				comment.
+ *
+ *		Failure:	Negative
+ *
+ * Programmer:	Robb Matzke
+ *              Monday, July 20, 1998
+ *
+ *-------------------------------------------------------------------------
+ */
+static int
+H5G_get_comment(H5G_loc_t *loc, const char *name, size_t bufsize, char *buf, hid_t dxpl_id)
+{
+    H5O_name_t	comment;
+    H5G_loc_t	obj_loc;               /* Object's location */
+    H5G_name_t	path;
+    H5O_loc_t	oloc;
+    hbool_t     loc_valid = FALSE;
+    int	ret_value;                     /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT(H5G_get_comment)
+
+    /* Get the symbol table entry for the object */
+    obj_loc.path = &path;
+    obj_loc.oloc = &oloc;
+    H5G_loc_reset(&obj_loc);
+    if(H5G_loc_find(loc, name, &obj_loc/*out*/, H5P_DEFAULT, dxpl_id) < 0)
+	HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "object not found")
+    loc_valid = TRUE;
+
+    /* Get the message */
+    comment.s = NULL;
+    if(NULL == H5O_msg_read(obj_loc.oloc, H5O_NAME_ID, &comment, dxpl_id)) {
+	if(buf && bufsize > 0)
+            buf[0] = '\0';
+	ret_value = 0;
+    } else {
+        if(buf && bufsize)
+	   HDstrncpy(buf, comment.s, bufsize);
+	ret_value = (int)HDstrlen(comment.s);
+	H5O_msg_reset(H5O_NAME_ID, &comment);
+    } /* end else */
+
+done:
+    /* Release obj_loc */
+    if(loc_valid && H5G_loc_free(&obj_loc) < 0)
+        HDONE_ERROR(H5E_SYM, H5E_CANTRELEASE, FAIL, "unable to free location")
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5G_get_comment() */
 
 
 /*-------------------------------------------------------------------------
@@ -770,10 +911,10 @@ H5Giterate(hid_t loc_id, const char *name, int *idx_p, H5G_iterate_t op,
 
     /* Build link operator info */
     lnk_op.op_type = H5G_LINK_OP_OLD;
-    lnk_op.op_func.op_old = op;
+    lnk_op.u.old_op = op;
 
     /* Call private function. */
-    if((ret_value = H5G_iterate(loc_id, name, H5_INDEX_NAME, H5_ITER_INC, idx, &last_obj, &lnk_op, op_data, H5P_DEFAULT, H5AC_ind_dxpl_id)) < 0)
+    if((ret_value = H5G_obj_iterate(loc_id, name, H5_INDEX_NAME, H5_ITER_INC, idx, &last_obj, &lnk_op, op_data, H5AC_ind_dxpl_id)) < 0)
 	HGOTO_ERROR(H5E_SYM, H5E_BADITER, FAIL, "group iteration failed")
 
     /* Set the index we stopped at */
@@ -786,52 +927,45 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5Gget_num_objs
+ * Function:	H5Gget_objtype_by_idx
  *
- * Purpose:     Returns the number of objects in the group.  It iterates
- *              all B-tree leaves and sum up total number of group members.
+ * Purpose:     Returns the type of objects in the group by giving index.
  *
- * Note:	Deprecated in favor of H5Gget_info
+ * Note:	Deprecated in favor of H5Lget_info/H5Oget_info
  *
- * Return:	Success:        Non-negative
- *		Failure:	Negative
+ * Return:	Success:        H5G_GROUP(1), H5G_DATASET(2), H5G_TYPE(3)
+ *		Failure:	H5G_UNKNOWN
  *
  * Programmer:	Raymond Lu
  *	        Nov 20, 2002
  *
  *-------------------------------------------------------------------------
  */
-herr_t
-H5Gget_num_objs(hid_t loc_id, hsize_t *num_objs)
+H5G_obj_t
+H5Gget_objtype_by_idx(hid_t loc_id, hsize_t idx)
 {
-    H5G_loc_t		loc;            /* Location of object */
-    H5G_info_t          grp_info;       /* Group information */
+    H5G_loc_t		loc;            /* Object location */
     H5O_type_t          obj_type;       /* Type of object at location */
-    herr_t		ret_value = SUCCEED;
+    H5G_obj_t		ret_value;
 
-    FUNC_ENTER_API(H5Gget_num_objs, FAIL)
-    H5TRACE2("e", "i*h", loc_id, num_objs);
+    FUNC_ENTER_API(H5Gget_objtype_by_idx, H5G_UNKNOWN)
+    H5TRACE2("Go", "ih", loc_id, idx);
 
     /* Check args */
     if(H5G_loc(loc_id, &loc) < 0)
-	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location ID")
+	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, H5G_UNKNOWN, "not a location ID")
     if(H5O_obj_type(loc.oloc, &obj_type, H5AC_ind_dxpl_id) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_CANTGET, FAIL, "can't get object type")
     if(obj_type != H5O_TYPE_GROUP)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a group")
-    if(!num_objs)
-	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "bad pointer to # of objects")
+        HGOTO_ERROR(H5E_SYM, H5E_BADTYPE, FAIL, "not a group")
 
-    /* Retrieve information about the group */
-    if(H5G_obj_info(loc.oloc, &grp_info, H5AC_ind_dxpl_id) < 0)
-	HGOTO_ERROR(H5E_SYM, H5E_CANTCOUNT, FAIL, "can't determine")
-
-    /* Set the number of objects [sic: links] in the group */
-    *num_objs = grp_info.nlinks;
+    /* Call internal function*/
+    if((ret_value = H5G_obj_get_type_by_idx(loc.oloc, idx, H5AC_ind_dxpl_id)) == H5G_UNKNOWN)
+	HGOTO_ERROR(H5E_SYM, H5E_BADTYPE, FAIL, "can't get object type")
 
 done:
     FUNC_LEAVE_API(ret_value)
-} /* end H5Gget_num_objs() */
+} /* end H5Gget_objtype_by_idx() */
 
 
 /*-------------------------------------------------------------------------
@@ -918,8 +1052,7 @@ H5G_get_objinfo_cb(H5G_loc_t *grp_loc/*in*/, const char UNUSED *name, const H5O_
             H5O_info_t oinfo;           /* Object information */
 
             /* Go retrieve the object information */
-            /* (don't need index & heap info) */
-            if(H5O_get_info(obj_loc->oloc, udata->dxpl_id, FALSE, &oinfo) < 0)
+            if(H5O_get_info(obj_loc->oloc, &oinfo, udata->dxpl_id) < 0)
                 HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "unable to get object info")
 
             /* Get mapped object type */
@@ -1026,19 +1159,12 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5Gget_objname_by_idx
+ * Function:	H5Gget_num_objs
  *
- * Purpose:     Returns the name of objects in the group by giving index.
- *              If `name' is non-NULL then write up to `size' bytes into that
- *              buffer and always return the length of the entry name.
- *              Otherwise `size' is ignored and the function does not store the name,
- *              just returning the number of characters required to store the name.
- *              If an error occurs then the buffer pointed to by `name' (NULL or non-NULL)
- *              is unchanged and the function returns a negative value.
- *              If a zero is returned for the name's length, then there is no name
- *              associated with the ID.
+ * Purpose:     Returns the number of objects in the group.  It iterates
+ *              all B-tree leaves and sum up total number of group members.
  *
- * Note:	Deprecated in favor of H5Lget_name_by_idx
+ * Note:	Deprecated in favor of H5Gget_info
  *
  * Return:	Success:        Non-negative
  *		Failure:	Negative
@@ -1048,125 +1174,35 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-ssize_t
-H5Gget_objname_by_idx(hid_t loc_id, hsize_t idx, char *name, size_t size)
+herr_t
+H5Gget_num_objs(hid_t loc_id, hsize_t *num_objs)
 {
-    H5G_loc_t		loc;            /* Object location */
+    H5G_loc_t		loc;            /* Location of object */
+    H5G_info_t          grp_info;       /* Group information */
     H5O_type_t          obj_type;       /* Type of object at location */
-    ssize_t		ret_value;
+    herr_t		ret_value = SUCCEED;
 
-    FUNC_ENTER_API(H5Gget_objname_by_idx, FAIL)
-    H5TRACE4("Zs", "ih*sz", loc_id, idx, name, size);
+    FUNC_ENTER_API(H5Gget_num_objs, FAIL)
+    H5TRACE2("e", "i*h", loc_id, num_objs);
 
     /* Check args */
     if(H5G_loc(loc_id, &loc) < 0)
 	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location ID")
     if(H5O_obj_type(loc.oloc, &obj_type, H5AC_ind_dxpl_id) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "can't get object type")
-    if(obj_type != H5O_TYPE_GROUP)
-        HGOTO_ERROR(H5E_DATASET, H5E_BADTYPE, FAIL, "not a group")
-
-    /* Call internal function */
-    if((ret_value = H5G_obj_get_name_by_idx(loc.oloc, H5_INDEX_NAME, H5_ITER_INC, idx, name, size, H5AC_ind_dxpl_id)) < 0)
-	HGOTO_ERROR(H5E_SYM, H5E_BADTYPE, FAIL, "can't get object name")
-
-done:
-    FUNC_LEAVE_API(ret_value)
-} /* end H5Gget_objname_by_idx() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5Gget_objtype_by_idx
- *
- * Purpose:     Returns the type of objects in the group by giving index.
- *
- * Note:	Deprecated in favor of H5Lget_info/H5Oget_info
- *
- * Return:	Success:        H5G_GROUP(1), H5G_DATASET(2), H5G_TYPE(3)
- *		Failure:	H5G_UNKNOWN
- *
- * Programmer:	Raymond Lu
- *	        Nov 20, 2002
- *
- *-------------------------------------------------------------------------
- */
-H5G_obj_t
-H5Gget_objtype_by_idx(hid_t loc_id, hsize_t idx)
-{
-    H5G_loc_t		loc;            /* Object location */
-    H5O_type_t          obj_type;       /* Type of object at location */
-    H5G_obj_t		ret_value;
-
-    FUNC_ENTER_API(H5Gget_objtype_by_idx, H5G_UNKNOWN)
-    H5TRACE2("Go", "ih", loc_id, idx);
-
-    /* Check args */
-    if(H5G_loc(loc_id, &loc) < 0)
-	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, H5G_UNKNOWN, "not a location ID")
-    if(H5O_obj_type(loc.oloc, &obj_type, H5AC_ind_dxpl_id) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_CANTGET, FAIL, "can't get object type")
     if(obj_type != H5O_TYPE_GROUP)
-        HGOTO_ERROR(H5E_SYM, H5E_BADTYPE, FAIL, "not a group")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a group")
+    if(!num_objs)
+	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "bad pointer to # of objects")
 
-    /* Call internal function*/
-    if((ret_value = H5G_obj_get_type_by_idx(loc.oloc, idx, H5AC_ind_dxpl_id)) == H5G_UNKNOWN)
-	HGOTO_ERROR(H5E_SYM, H5E_BADTYPE, FAIL, "can't get object type")
+    /* Retrieve information about the group */
+    if(H5G_obj_info(loc.oloc, &grp_info, H5AC_ind_dxpl_id) < 0)
+	HGOTO_ERROR(H5E_SYM, H5E_CANTCOUNT, FAIL, "can't determine")
+
+    /* Set the number of objects [sic: links] in the group */
+    *num_objs = grp_info.nlinks;
 
 done:
     FUNC_LEAVE_API(ret_value)
-} /* end H5Gget_objtype_by_idx() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5G_obj_get_type_by_idx
- *
- * Purpose:     Private function for H5Gget_objtype_by_idx.
- *              Returns the type of objects in the group by giving index.
- *
- * Return:	Success:        H5G_GROUP(1), H5G_DATASET(2), H5G_TYPE(3)
- *
- *		Failure:	Negative
- *
- * Programmer:	Raymond Lu
- *	        Nov 20, 2002
- *
- *-------------------------------------------------------------------------
- */
-static H5G_obj_t
-H5G_obj_get_type_by_idx(H5O_loc_t *oloc, hsize_t idx, hid_t dxpl_id)
-{
-    H5O_linfo_t	linfo;		/* Link info message */
-    H5G_obj_t ret_value;        /* Return value */
-
-    FUNC_ENTER_NOAPI(H5G_obj_get_type_by_idx, H5G_UNKNOWN)
-
-    /* Sanity check */
-    HDassert(oloc);
-
-    /* Attempt to get the link info for this group */
-    if(H5G_obj_get_linfo(oloc, &linfo, dxpl_id)) {
-        if(H5F_addr_defined(linfo.fheap_addr)) {
-            /* Get the object's name from the dense link storage */
-            if((ret_value = H5G_dense_get_type_by_idx(oloc->file, dxpl_id, &linfo, idx)) < 0)
-                HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, H5G_UNKNOWN, "can't locate type")
-        } /* end if */
-        else {
-            /* Get the object's type from the link messages */
-            if((ret_value = H5G_compact_get_type_by_idx(oloc, dxpl_id, &linfo, idx)) < 0)
-                HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, H5G_UNKNOWN, "can't locate type")
-        } /* end else */
-    } /* end if */
-    else {
-        /* Clear error stack from not finding the link info message */
-        H5E_clear_stack(NULL);
-
-        /* Get the object's type from the symbol table */
-        if((ret_value = H5G_stab_get_type_by_idx(oloc, idx, dxpl_id)) < 0)
-            HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, H5G_UNKNOWN, "can't locate type")
-    } /* end else */
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5G_obj_get_type_by_idx() */
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
+} /* end H5Gget_num_objs() */
 

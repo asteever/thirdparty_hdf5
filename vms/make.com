@@ -17,13 +17,16 @@ $!
 $! This file copies all make files from the VMS directory to the 
 $! source directories and builds libraries, tests, and utilties
 $!
+$ copy [.c__.examples]*.com     [-.c__.examples]
 $ copy [.c__.src]make.com       [-.c__.src]
 $ copy [.c__.test]*.com         [-.c__.test]
+$ copy [.fortran.examples]*.com [-.fortran.examples]
 $ copy [.fortran.src]make.com   [-.fortran.src]
 $ copy [.fortran.test]*.com     [-.fortran.test]
 $ copy [.src]make.com           [-.src]
 $ copy [.src]h5pubconf.h        [-.src]
 $ copy [.test]*.com             [-.test]
+$ copy [.examples]*.com         [-.examples]
 $ copy [.tools.h5copy]*.com     [-.tools.h5copy]
 $ copy [.tools.h5dump]*.com     [-.tools.h5dump]
 $ copy [.tools.h5ls]*.com       [-.tools.h5ls]
@@ -32,12 +35,11 @@ $ copy [.tools.h5repack]*.com   [-.tools.h5repack]
 $ copy [.tools.h5import]*.com   [-.tools.h5import]
 $ copy [.tools.h5jam]*.com      [-.tools.h5jam]
 $ copy [.tools.lib]make.com     [-.tools.lib]
-$ copy [.tools.testfiles]*.ddl  [-.tools.testfiles]
 $!
 $! Define location of ZLIB library. If you do not have it on your system, download
 $! source code from http://www.zlib.net/, build and install on your system
-$ define zlib_dir sys$sysusers:[pourmale.zlib-1_2_3]
-$! define zlib_dir sys$sysusers:[pourmale.zlib-1_2_3-ieee]
+$! define zlib_dir sys$sysusers:[pourmale.zlib-1_2_3]
+$ define zlib_dir sys$sysusers:[pourmale.zlib-1_2_3-ieee]
 $!
 $! Set up compilation flags here
 $! Do not remove define=H5_VMS and standard=strict_ansi qualifiers.
@@ -121,12 +123,25 @@ $ @make.com
 $!
 $ write sys$output "Building C++ library"
 $ set def 'hdf5cxx_src'
-$ copy *.cpp *.cxx
+$ rename *.cpp *.cxx
 $ @make.com
 $!
 $ write sys$output "Building C++ library tests"
 $ set def 'hdf5cxx_test'
-$ copy *.cpp *.cxx
+$ rename *.cpp *.cxx
+$ @make.com
+$!
+$ write sys$output "Building C examples"
+$ set def 'hdf5examples'
+$ @make.com
+$!
+$ write sys$output "Building Fortran examples"
+$ set def 'hdf5fortran_examples'
+$ @make.com
+$!
+$ write sys$output "Building C++ examples"
+$ set def 'hdf5cxx_examples'
+$ rename *.cpp *.cxx
 $ @make.com
 $!
 $ set def 'hdf5top'

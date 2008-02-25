@@ -116,11 +116,8 @@ H5O_SHARED_ENCODE(H5F_t *f, hbool_t disable_shared, uint8_t *p, const void *_mes
 #error "Need to define H5O_SHARED_ENCODE_REAL macro!"
 #endif /* H5O_SHARED_ENCODE_REAL */
 
-    /* Sanity check */
-    HDassert(sh_mesg->type == H5O_SHARE_TYPE_UNSHARED || sh_mesg->msg_type_id == H5O_SHARED_TYPE->id);
-
-    /* Check for message stored elsewhere */
-    if(H5O_IS_STORED_SHARED(sh_mesg->type) && !disable_shared) {
+    /* Check for shared message */
+    if(H5O_IS_SHARED(sh_mesg->flags) && !disable_shared) {
         /* Encode shared message into buffer */
         if(H5O_shared_encode(f, p, sh_mesg) < 0)
 	    HGOTO_ERROR(H5E_OHDR, H5E_CANTENCODE, FAIL, "unable to encode shared message")
@@ -171,8 +168,8 @@ H5O_SHARED_SIZE(const H5F_t *f, hbool_t disable_shared, const void *_mesg)
 #error "Need to define H5O_SHARED_SIZE_REAL macro!"
 #endif /* H5O_SHARED_SIZE_REAL */
 
-    /* Check for message stored elsewhere */
-    if(H5O_IS_STORED_SHARED(sh_mesg->type) && !disable_shared) {
+    /* Check for shared message */
+    if(H5O_IS_SHARED(sh_mesg->flags) && !disable_shared) {
         /* Retrieve encoded size of shared message */
         if(0 == (ret_value = H5O_shared_size(f, sh_mesg)))
 	    HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, 0, "unable to retrieve encoded size of shared message")
@@ -207,9 +204,9 @@ done:
  *-------------------------------------------------------------------------
  */
 static H5_inline herr_t
-H5O_SHARED_DELETE(H5F_t *f, hid_t dxpl_id, H5O_t *open_oh, void *_mesg)
+H5O_SHARED_DELETE(H5F_t *f, hid_t dxpl_id, const void *_mesg)
 {
-    H5O_shared_t *sh_mesg = (H5O_shared_t *)_mesg;     /* Pointer to shared message portion of actual message */
+    const H5O_shared_t *sh_mesg = (const H5O_shared_t *)_mesg;     /* Pointer to shared message portion of actual message */
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5O_SHARED_DELETE)
@@ -221,16 +218,16 @@ H5O_SHARED_DELETE(H5F_t *f, hid_t dxpl_id, H5O_t *open_oh, void *_mesg)
 #error "Need to define H5O_SHARED_DELETE macro!"
 #endif /* H5O_SHARED_DELETE */
 
-    /* Check for message tracked elsewhere */
-    if(H5O_IS_TRACKED_SHARED(sh_mesg->type)) {
+    /* Check for shared message */
+    if(H5O_IS_SHARED(sh_mesg->flags)) {
         /* Decrement the reference count on the shared message/object */
-        if(H5O_shared_delete(f, dxpl_id, open_oh, H5O_SHARED_TYPE, sh_mesg) < 0)
+        if(H5O_shared_delete(f, dxpl_id, sh_mesg, H5O_SHARED_TYPE) < 0)
 	    HGOTO_ERROR(H5E_OHDR, H5E_CANTDEC, FAIL, "unable to decrement ref count for shared message")
     } /* end if */
 #ifdef H5O_SHARED_DELETE_REAL
     else {
         /* Decrement the reference count on the native message directly */
-        if(H5O_SHARED_DELETE_REAL(f, dxpl_id, open_oh, _mesg) < 0)
+        if(H5O_SHARED_DELETE_REAL(f, dxpl_id, _mesg) < 0)
 	    HGOTO_ERROR(H5E_OHDR, H5E_CANTDEC, FAIL, "unable to decrement ref count for native message")
     } /* end else */
 #endif /* H5O_SHARED_DELETE_REAL */
@@ -259,9 +256,9 @@ done:
  *-------------------------------------------------------------------------
  */
 static H5_inline herr_t
-H5O_SHARED_LINK(H5F_t *f, hid_t dxpl_id, H5O_t *open_oh, void *_mesg)
+H5O_SHARED_LINK(H5F_t *f, hid_t dxpl_id, const void *_mesg)
 {
-    H5O_shared_t *sh_mesg = (H5O_shared_t *)_mesg;     /* Pointer to shared message portion of actual message */
+    const H5O_shared_t *sh_mesg = (const H5O_shared_t *)_mesg;     /* Pointer to shared message portion of actual message */
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5O_SHARED_LINK)
@@ -273,16 +270,16 @@ H5O_SHARED_LINK(H5F_t *f, hid_t dxpl_id, H5O_t *open_oh, void *_mesg)
 #error "Need to define H5O_SHARED_LINK macro!"
 #endif /* H5O_SHARED_LINK */
 
-    /* Check for message tracked elsewhere */
-    if(H5O_IS_TRACKED_SHARED(sh_mesg->type)) {
+    /* Check for shared message */
+    if(H5O_IS_SHARED(sh_mesg->flags)) {
         /* Increment the reference count on the shared message/object */
-        if(H5O_shared_link(f, dxpl_id, open_oh, H5O_SHARED_TYPE, sh_mesg) < 0)
+        if(H5O_shared_link(f, dxpl_id, sh_mesg, H5O_SHARED_TYPE) < 0)
 	    HGOTO_ERROR(H5E_OHDR, H5E_CANTINC, FAIL, "unable to increment ref count for shared message")
     } /* end if */
 #ifdef H5O_SHARED_LINK_REAL
     else {
         /* Increment the reference count on the native message directly */
-        if(H5O_SHARED_LINK_REAL(f, dxpl_id, open_oh, _mesg) < 0)
+        if(H5O_SHARED_LINK_REAL(f, dxpl_id, _mesg) < 0)
 	    HGOTO_ERROR(H5E_OHDR, H5E_CANTINC, FAIL, "unable to increment ref count for native message")
     } /* end else */
 #endif /* H5O_SHARED_LINK_REAL */
@@ -310,8 +307,9 @@ done:
  *-------------------------------------------------------------------------
  */
 static H5_inline void *
-H5O_SHARED_COPY_FILE(H5F_t *file_src, void *_native_src, H5F_t *file_dst,
-    hbool_t *recompute_size, H5O_copy_t *cpy_info, void *udata, hid_t dxpl_id)
+H5O_SHARED_COPY_FILE(H5F_t *file_src,
+    void *_native_src, H5F_t *file_dst, hid_t dxpl_id, H5O_copy_t *cpy_info,
+    void *udata)
 {
     void *dst_mesg = NULL;      /* Destination message */
     void *ret_value;            /* Return value */
@@ -327,7 +325,7 @@ H5O_SHARED_COPY_FILE(H5F_t *file_src, void *_native_src, H5F_t *file_dst,
 
 #ifdef H5O_SHARED_COPY_FILE_REAL
     /* Call native message's copy file callback to copy the message */
-    if(NULL == (dst_mesg = H5O_SHARED_COPY_FILE_REAL(file_src, H5O_SHARED_TYPE, _native_src, file_dst, recompute_size, cpy_info, udata, dxpl_id)))
+    if(NULL == (dst_mesg = H5O_SHARED_COPY_FILE_REAL(file_src, H5O_SHARED_TYPE, _native_src, file_dst, dxpl_id, cpy_info, udata)))
         HGOTO_ERROR(H5E_OHDR, H5E_CANTCOPY, NULL, "unable to copy native message to another file")
 #else /* H5O_SHARED_COPY_FILE_REAL */
     /* No copy file callback defined, just copy the message itself */
@@ -339,8 +337,8 @@ H5O_SHARED_COPY_FILE(H5F_t *file_src, void *_native_src, H5F_t *file_dst,
     HDmemset(dst_mesg, 0, sizeof(H5O_shared_t));
 
     /* Handle sharing destination message */
-    if(H5O_shared_copy_file(file_src, file_dst, H5O_SHARED_TYPE,
-            _native_src, dst_mesg, recompute_size, cpy_info, udata, dxpl_id) < 0)
+    if(H5O_shared_copy_file(file_src, file_dst, dxpl_id, H5O_SHARED_TYPE,
+            _native_src, dst_mesg, cpy_info, udata) < 0)
         HGOTO_ERROR(H5E_OHDR, H5E_WRITEERROR, NULL, "unable to determine if message should be shared")
 
     /* Set return value */
@@ -353,61 +351,6 @@ done:
     
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_SHARED_COPY_FILE() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5O_SHARED_POST_COPY_FILE
- *
- * Purpose:     Copies a message from _SRC to _DEST in file
- *
- * Note:        The actual name of this routine can be different in each source
- *              file that this header file is included in, and must be defined
- *              prior to including this header file.
- *
- * Return:      Success:        Non-negative
- *              Failure:        Negative
- *
- * Programmer:  Peter Cao
- *              May 25, 2007
- *
- *-------------------------------------------------------------------------
- */
-static H5_inline herr_t
-H5O_SHARED_POST_COPY_FILE(const H5O_loc_t *oloc_src, const void *mesg_src,
-    H5O_loc_t *oloc_dst, void *mesg_dst, hid_t dxpl_id, H5O_copy_t *cpy_info)
-{
-    const H5O_shared_t  *shared_dst = (const H5O_shared_t *)mesg_dst; /* Alias to shared info in native source */
-    herr_t ret_value = SUCCEED;         /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT(H5O_SHARED_POST_COPY_FILE)
-
-    HDassert(oloc_src->file);
-    HDassert(oloc_dst->file);
-    HDassert(mesg_src);
-    HDassert(mesg_dst);
-
-#ifndef H5O_SHARED_TYPE
-#error "Need to define H5O_SHARED_TYPE macro!"
-#endif /* H5O_SHARED_TYPE */
-#ifndef H5O_SHARED_POST_COPY_FILE
-#error "Need to define H5O_SHARED_POST_COPY_FILE macro!"
-#endif /* H5O_SHARED_POST_COPY_FILE */
-
-#ifdef H5O_SHARED_POST_COPY_FILE_REAL
-    /* Call native message's copy file callback to copy the message */
-    if(H5O_SHARED_POST_COPY_FILE_REAL(oloc_src, mesg_src, oloc_dst, mesg_dst, dxpl_id, cpy_info) <0 ) 
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTCOPY, FAIL, "unable to copy native message to another file")
-#endif /* H5O_SHARED_POST_COPY_FILE_REAL */
-
-    /* update only shared message after the post copy */
-    if(H5O_msg_is_shared(shared_dst->msg_type_id, mesg_dst)) {
-        if(H5O_shared_post_copy_file(oloc_dst->file, dxpl_id, cpy_info->oh_dst, mesg_dst) < 0)
-            HGOTO_ERROR(H5E_OHDR, H5E_WRITEERROR, FAIL, "unable to fix shared message in post copy")
-    }
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5O_SHARED_POST_COPY_FILE() */
 
 
 /*-------------------------------------------------------------------------
@@ -446,8 +389,8 @@ H5O_SHARED_DEBUG(H5F_t *f, hid_t dxpl_id, const void *_mesg, FILE *stream,
 #error "Need to define H5O_SHARED_DEBUG_REAL macro!"
 #endif /* H5O_SHARED_DEBUG_REAL */
 
-    /* Check for message stored elsewhere */
-    if(H5O_IS_STORED_SHARED(sh_mesg->type)) {
+    /* Check for shared message */
+    if(H5O_IS_SHARED(sh_mesg->flags)) {
         /* Print shared message information */
         if(H5O_shared_debug(sh_mesg, stream, indent, fwidth) < 0)
             HGOTO_ERROR(H5E_OHDR, H5E_WRITEERROR, FAIL, "unable to display shared message info")
@@ -456,6 +399,7 @@ H5O_SHARED_DEBUG(H5F_t *f, hid_t dxpl_id, const void *_mesg, FILE *stream,
     /* Call native message's debug callback */
     if(H5O_SHARED_DEBUG_REAL(f, dxpl_id, _mesg, stream, indent, fwidth) < 0)
         HGOTO_ERROR(H5E_OHDR, H5E_WRITEERROR, FAIL, "unable to display native message info")
+
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

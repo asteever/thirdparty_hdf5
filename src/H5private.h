@@ -140,12 +140,12 @@
 #endif
 
 
-#ifdef _WIN32
+#ifdef WIN32
 
 #define VC_EXTRALEAN		/*Exclude rarely-used stuff from Windows headers */
 #include <windows.h>
 
-#endif /*_WIN32*/
+#endif /*WIN32*/
 
 /* H5_inline */
 #ifndef H5_inline
@@ -412,12 +412,13 @@
 #   define SIZET_MAX	((size_t)(ssize_t)(-1))
 #   define SSIZET_MAX	((ssize_t)(((size_t)1<<(8*sizeof(ssize_t)-1))-1))
 #endif
-
-/*
- * Maximum & minimum values for our typedefs.
- */
+#ifdef H5_HAVE_LARGE_HSIZET
 #define	HSIZET_MAX	((hsize_t)ULLONG_MAX)
 #define	HSSIZET_MAX	((hssize_t)LLONG_MAX)
+#else /* H5_HAVE_LARGE_HSIZET */
+#define HSIZET_MAX	((hsize_t)SIZET_MAX)
+#define HSSIZET_MAX	((hssize_t)SSIZET_MAX)
+#endif /* H5_HAVE_LARGE_HSIZET */
 #define HSSIZET_MIN	(~(HSSIZET_MAX))
 
 /*
@@ -484,12 +485,6 @@ typedef enum {
     H5_COPY_SHALLOW,    /* Shallow copy from source to destination, just copy field pointers */
     H5_COPY_DEEP        /* Deep copy from source to destination, including duplicating fields pointed to */
 } H5_copy_depth_t;
-
-/* Unique object "position" */
-typedef struct {
-    unsigned long fileno;       /* The unique identifier for the file of the object */
-    haddr_t addr;               /* The unique address of the object's header in that file */
-} H5_obj_t;
 
 /*
  * Redefine all the POSIX functions.  We should never see a POSIX
@@ -569,11 +564,11 @@ typedef struct {
 #define HDfgetc(F)		fgetc(F)
 #define HDfgetpos(F,P)		fgetpos(F,P)
 #define HDfgets(S,N,F)		fgets(S,N,F)
-#ifdef _WIN32
+#ifdef WIN32
 #define HDfileno(F)		_fileno(F)
-#else /* _WIN32 */
+#else /* WIN32 */
 #define HDfileno(F)		fileno(F)
-#endif /* _WIN32 */
+#endif /* WIN32 */
 #define HDfloor(X)		floor(X)
 #define HDfmod(X,Y)		fmod(X,Y)
 #define HDfopen(S,M)		fopen(S,M)
@@ -598,18 +593,14 @@ H5_DLL int HDfprintf (FILE *stream, const char *fmt, ...);
 #define HDfrexpl(X,N)		frexp(X,N)
 #endif /* H5_HAVE_FREXPL */
 /* fscanf() variable arguments */
-#ifdef H5_HAVE_FSEEKO
-     #define HDfseek(F,O,W)	fseeko(F,O,W)
-#else
-     #define HDfseek(F,O,W)	fseek(F,O,W)
-#endif
+#define HDfseek(F,O,W)		fseek(F,O,W)
 #define HDfsetpos(F,P)		fsetpos(F,P)
 /* definitions related to the file stat utilities.
  * Windows have its own function names.
  * For Unix, if off_t is not 64bit big, try use the pseudo-standard
  * xxx64 versions if available.
  */
-#ifdef _WIN32
+#ifdef WIN32
     #ifdef __MWERKS__
     #define HDfstat(F,B)        fstat(F,B)
     #define HDstat(S,B)   	stat(S,B)
@@ -679,18 +670,14 @@ H5_DLL int HDfprintf (FILE *stream, const char *fmt, ...);
 #define HDlog(X)		log(X)
 #define HDlog10(X)		log10(X)
 #define HDlongjmp(J,N)		longjmp(J,N)
-#ifdef _WIN32
+#ifdef WIN32
      #ifdef __MWERKS__
         #define HDlseek(F,O,W)  lseek(F,O,W)
      #else /*MSVS */
         #define HDlseek(F,O,W)  _lseeki64(F,O,W)
      #endif
 #else
-     #ifdef H5_HAVE_FSEEK64
-        #define HDlseek(F,O,W)	lseek64(F,O,W)
-     #else
-        #define HDlseek(F,O,W)	lseek(F,O,W)
-     #endif
+#define HDlseek(F,O,W)		lseek(F,O,W)
 #endif
 #define HDmalloc(Z)		malloc(Z)
 #define HDposix_memalign(P,A,Z) posix_memalign(P,A,Z)
@@ -706,18 +693,18 @@ H5_DLL int HDfprintf (FILE *stream, const char *fmt, ...);
 #define HDmemcpy(X,Y,Z)		memcpy((char*)(X),(const char*)(Y),Z)
 #define HDmemmove(X,Y,Z)	memmove((char*)(X),(const char*)(Y),Z)
 /*
- * The (void*) cast just avoids a compiler warning in _WIN32
+ * The (void*) cast just avoids a compiler warning in WIN32
  */
-#ifdef _WIN32
+#ifdef WIN32
 #define HDmemset(X,C,Z)		memset((void*)(X),C,Z)
-#else /* _WIN32 */
+#else /* WIN32 */
 #define HDmemset(X,C,Z)		memset(X,C,Z)
-#endif /* _WIN32 */
-#ifdef _WIN32
+#endif /* WIN32 */
+#ifdef WIN32
 #define HDmkdir(S,M)		_mkdir(S)
-#else /* _WIN32 */
+#else /* WIN32 */
 #define HDmkdir(S,M)		mkdir(S,M)
-#endif /* _WIN32 */
+#endif /* WIN32 */
 #define HDmkfifo(S,M)		mkfifo(S,M)
 #define HDmktime(T)		mktime(T)
 #define HDmodf(X,Y)		modf(X,Y)
@@ -754,14 +741,8 @@ H5_DLL int HDrand(void);
 #define HDreaddir(D)		readdir(D)
 #define HDrealloc(M,Z)		realloc(M,Z)
 #ifdef H5_VMS
-#ifdef __cplusplus
-extern "C" {
-#endif
-int HDremove_all(const char * fname);
-#ifdef __cplusplus
-}
-#endif
 #define HDremove(S) 		HDremove_all(S)
+int HDremove_all(const char * fname);
 #else
 #define HDremove(S)		remove(S)
 #endif /*H5_VMS*/
@@ -777,12 +758,8 @@ int HDremove_all(const char * fname);
 #define HDsetpgid(P,PG)		setpgid(P,PG)
 #define HDsetsid()		setsid()
 #define HDsetuid(U)		setuid(U)
-/* Windows does not permit setting the buffer size to values
-   less than 2.  */
-#ifndef _WIN32
+#ifndef WIN32
 #define HDsetvbuf(F,S,M,Z)	setvbuf(F,S,M,Z)
-#else
-#define HDsetvbuf(F,S,M,Z)  setvbuf(F,S,M,(Z>1?Z:2))
 #endif
 #define HDsigaction(N,A)	sigaction(N,A)
 #define HDsigaddset(S,N)	sigaddset(S,N)
@@ -799,7 +776,7 @@ int HDremove_all(const char * fname);
 #define HDsin(X)		sin(X)
 #define HDsinh(X)		sinh(X)
 #define HDsleep(N)		sleep(N)
-#ifdef _WIN32
+#ifdef WIN32
 #define HDsnprintf              _snprintf /*varargs*/
 #else
 #define HDsnprintf		snprintf /*varargs*/
@@ -863,7 +840,7 @@ H5_DLL int64_t HDstrtoll (const char *s, const char **rest, int base);
 #define HDumask(N)		umask(N)
 #define HDuname(S)		uname(S)
 #define HDungetc(C,F)		ungetc(C,F)
-#ifdef _WIN32
+#ifdef WIN32
 #define HDunlink(S)             _unlink(S)
 #else
 #define HDunlink(S)		unlink(S)
@@ -876,7 +853,7 @@ H5_DLL int64_t HDstrtoll (const char *s, const char **rest, int base);
 #define HDvfprintf(F,FMT,A)	vfprintf(F,FMT,A)
 #define HDvprintf(FMT,A)	vprintf(FMT,A)
 #define HDvsprintf(S,FMT,A)	vsprintf(S,FMT,A)
-#ifdef _WIN32
+#ifdef WIN32
 #   define HDvsnprintf(S,N,FMT,A) _vsnprintf(S,N,FMT,A)
 #else
 #   define HDvsnprintf(S,N,FMT,A) vsnprintf(S,N,FMT,A)
@@ -899,9 +876,9 @@ H5_DLL int64_t HDstrtoll (const char *s, const char **rest, int base);
  * And now for a couple non-Posix functions...  Watch out for systems that
  * define these in terms of macros.
  */
-#ifdef _WIN32
+#ifdef WIN32
 #define HDstrdup(S)    _strdup(S)
-#else /* _WIN32 */
+#else /* WIN32 */
 
 #if !defined strdup && !defined H5_HAVE_STRDUP
 extern char *strdup(const char *s);
@@ -909,7 +886,7 @@ extern char *strdup(const char *s);
 
 #define HDstrdup(S)     strdup(S)
 
-#endif /* _WIN32 */
+#endif /* WIN32 */
 
 
 /*
@@ -1415,7 +1392,6 @@ H5_DLL uint32_t H5_checksum_fletcher32(const void *data, size_t len);
 H5_DLL uint32_t H5_checksum_crc(const void *data, size_t len);
 H5_DLL uint32_t H5_checksum_lookup3(const void *data, size_t len, uint32_t initval);
 H5_DLL uint32_t H5_checksum_metadata(const void *data, size_t len, uint32_t initval);
-H5_DLL uint32_t H5_hash_string(const char *str);
 
 /* Functions for debugging */
 H5_DLL herr_t H5_buffer_dump(FILE *stream, int indent, uint8_t *buf,

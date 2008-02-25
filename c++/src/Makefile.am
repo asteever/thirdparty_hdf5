@@ -49,7 +49,7 @@ include_HEADERS=H5Cpp.h H5AbstractDs.h H5AtomType.h H5Attribute.h H5Classes.h \
         H5DcreatProp.h H5DxferProp.h H5EnumType.h H5Exception.h H5FaccProp.h  \
         H5FcreatProp.h H5File.h H5FloatType.h H5Group.h H5IdComponent.h       \
         H5Include.h H5IntType.h H5Library.h H5Object.h H5PredType.h           \
-        H5PropList.h H5StrType.h H5CppDoc.h H5ArrayType.h H5VarLenType.h      
+        H5PropList.h H5StrType.h H5CppDoc.h H5ArrayType.h H5VarLenType.h
 
 # h5c++ and libhdf5.settings are generated during configure.  Remove only when
 # distclean.

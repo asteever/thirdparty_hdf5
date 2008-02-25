@@ -266,9 +266,7 @@ H5G_traverse_ud(const H5G_loc_t *grp_loc/*in,out*/, const H5O_link_t *lnk,
     /* We have a copy of the location and we're holding the file open.
      * Close the open ID the user passed back.
      */
-    if(H5I_dec_ref(cb_return) < 0)
-        HGOTO_ERROR(H5E_ATOM, H5E_CANTRELEASE, FAIL, "unable to close atom from UD callback")
-    cb_return = (-1);
+    H5Idec_ref(cb_return);
 
 done:
     /* Close location given to callback. */
@@ -278,11 +276,11 @@ done:
 
     if(ret_value < 0 && cb_return > 0)
         if(H5I_dec_ref(cb_return) < 0)
-            HDONE_ERROR(H5E_ATOM, H5E_CANTRELEASE, FAIL, "unable to close atom from UD callback")
+              HDONE_ERROR(H5E_ATOM, H5E_CANTRELEASE, FAIL, "unable to close atom from UD callback")
 
-    /* Close the LAPL, if we copied one */
+    /* Close the LAPL, if we copied the default one */
     if(lapl_id > 0 && H5I_dec_ref(lapl_id) < 0)
-        HDONE_ERROR(H5E_ATOM, H5E_CANTRELEASE, FAIL, "unable to close copied link access property list")
+          HDONE_ERROR(H5E_ATOM, H5E_CANTRELEASE, FAIL, "unable to close copied link access property list")
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5G_traverse_ud() */
@@ -591,11 +589,11 @@ H5G_traverse_real(const H5G_loc_t *_loc, const char *name, unsigned target,
     obj_loc.oloc = &obj_oloc;
     obj_loc.path = &obj_path;
 
-#if defined(H5_USING_MEMCHECKER) || !defined(NDEBUG)
+#if defined(H5_USING_PURIFY) || !defined(NDEBUG)
     /* Clear group location */
     if(H5G_loc_reset(&grp_loc) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_CANTOPENOBJ, FAIL, "unable to reset location")
-#endif /* H5_USING_MEMCHECKER */
+#endif /* H5_USING_PURIFY */
 
     /* Deep copy of the starting location to group location */
     if(H5G_loc_copy(&grp_loc, &loc, H5_COPY_DEEP) < 0)
@@ -607,15 +605,13 @@ H5G_traverse_real(const H5G_loc_t *_loc, const char *name, unsigned target,
         HGOTO_ERROR(H5E_SYM, H5E_CANTOPENOBJ, FAIL, "unable to reset location")
 
     /* Check for needing a larger buffer for the individual path name components */
-    if((HDstrlen(name) + 1) > H5G_comp_alloc_g) {
-        char *new_comp;                 /* New component buffer */
-        size_t new_alloc;               /* New component buffer size */
-
-        new_alloc = MAX3(1024, (2 * H5G_comp_alloc_g), (HDstrlen(name) + 1));
-        if(NULL == (new_comp = H5MM_realloc(H5G_comp_g, new_alloc)))
+    if(HDstrlen(name) + 1 > H5G_comp_alloc_g) {
+        H5G_comp_alloc_g = MAX3(1024, 2 * H5G_comp_alloc_g, HDstrlen(name) + 1);
+        H5G_comp_g = H5MM_realloc(H5G_comp_g, H5G_comp_alloc_g);
+        if(!H5G_comp_g) {
+            H5G_comp_alloc_g = 0;
             HGOTO_ERROR(H5E_SYM, H5E_NOSPACE, FAIL, "unable to allocate component buffer")
-        H5G_comp_g = new_comp;
-        H5G_comp_alloc_g = new_alloc;
+        } /* end if */
     } /* end if */
 
     /* Traverse the path */

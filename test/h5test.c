@@ -26,11 +26,11 @@
 #include <sys/stat.h>
 #include "h5test.h"
 
-#ifdef _WIN32
+#ifdef WIN32
 #include <process.h>
 #include <direct.h>
 #include <winsock.h>
-#endif  /* _WIN32 */
+#endif  /* WIN32 */
 
 /*
  * Define these environment variables or constants to influence functions in
@@ -90,7 +90,7 @@ MPI_Info    h5_io_info_g=MPI_INFO_NULL;/* MPI INFO object for IO */
  */
 static const char *multi_letters = "msbrglo";
 
-static herr_t h5_errors(hid_t estack, void *client_data);
+static herr_t h5_errors(void *client_data);
 
 
 /*-------------------------------------------------------------------------
@@ -110,10 +110,10 @@ static herr_t h5_errors(hid_t estack, void *client_data);
  *-------------------------------------------------------------------------
  */
 static herr_t
-h5_errors(hid_t estack, void UNUSED *client_data)
+h5_errors(void UNUSED *client_data)
 {
     H5_FAILED();
-    H5Eprint2(estack, stdout);
+    H5Eprint(stdout);
     return 0;
 }
 
@@ -210,23 +210,12 @@ h5_cleanup(const char *base_name[], hid_t fapl)
 void
 h5_reset(void)
 {
+    char	filename[1024];
+
     HDfflush(stdout);
     HDfflush(stderr);
     H5close();
-    H5Eset_auto2(H5E_DEFAULT, h5_errors, NULL);
-
-/*
- * I commented this chunk of code out because it's not clear what diagnostics
- *      were being output and under what circumstances, and creating this file
- *      is throwing off debugging some of the tests.  I can't see any _direct_
- *      harm in keeping this section of code, but I can't see any _direct_
- *      benefit right now either.  If we figure out under which circumstances
- *      diagnostics are being output, we should enable this behavior based on
- *      appropriate configure flags/macros.  QAK - 2007/12/20
- */
-#ifdef OLD_WAY
-{
-    char	filename[1024];
+    H5Eset_auto(h5_errors, NULL);
 
     /*
      * Cause the library to emit some diagnostics early so they don't
@@ -236,13 +225,11 @@ h5_reset(void)
     H5E_BEGIN_TRY {
 	hid_t file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT,
 			       H5P_DEFAULT);
-	hid_t grp = H5Gcreate2(file, "emit", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+	hid_t grp = H5Gcreate(file, "emit", (size_t)0);
 	H5Gclose(grp);
 	H5Fclose(file);
 	HDunlink(filename);
     } H5E_END_TRY;
-}
-#endif /* OLD_WAY */
 }
 
 
@@ -300,7 +287,7 @@ h5_fixname(const char *base_name, hid_t fapl, char *fullname, size_t size)
 
 	if (H5FD_FAMILY == driver)
 	    suffix = "%05d.h5";
-	else if (H5FD_MULTI == driver)
+	else if (H5FD_CORE == driver || H5FD_MULTI == driver)
 	    suffix = NULL;
     }
 
@@ -541,7 +528,7 @@ h5_fileaccess(void)
 	if (H5Pset_fapl_stdio(fapl)<0) return -1;
     } else if (!HDstrcmp(name, "core")) {
 	/* In-core temporary file with 1MB increment */
-	if (H5Pset_fapl_core(fapl, (size_t)1024*1024, TRUE)<0) return -1;
+	if (H5Pset_fapl_core(fapl, (size_t)1024*1024, FALSE)<0) return -1;
     } else if (!HDstrcmp(name, "split")) {
 	/* Split meta data and raw data each using default driver */
 	if (H5Pset_fapl_split(fapl,
@@ -583,7 +570,7 @@ h5_fileaccess(void)
 	if (H5Pset_fapl_family(fapl, fam_size, H5P_DEFAULT)<0)
             return -1;
     } else if (!HDstrcmp(name, "log")) {
-        unsigned log_flags = H5FD_LOG_LOC_IO | H5FD_LOG_ALLOC;
+        unsigned log_flags = H5FD_LOG_LOC_IO;
 
         /* Log file access */
         if ((val = HDstrtok(NULL, " \t\n\r")))
@@ -597,10 +584,6 @@ h5_fileaccess(void)
 	 * and copy buffer size to the default values. */
 	if (H5Pset_fapl_direct(fapl, 1024, 4096, 8*4096)<0) return -1;
 #endif
-    } else if(!HDstrcmp(name, "latest")) {
-	/* use the latest format */
-	if(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0)
-            return -1;
     } else {
 	/* Unknown driver */
 	return -1;
@@ -649,7 +632,7 @@ void
 h5_show_hostname(void)
 {
     char	hostname[80];
-#ifdef _WIN32
+#ifdef WIN32
      WSADATA wsaData;
      int err;
 #endif
@@ -667,7 +650,7 @@ h5_show_hostname(void)
 	    printf("thread 0.");
     }
 #elif defined(H5_HAVE_THREADSAFE)
-#ifdef _WIN32
+#ifdef WIN32
     printf("some thread: no way to know the thread number from pthread on windows.");
 #else
     printf("thread %d.", (int)pthread_self());
@@ -676,7 +659,7 @@ h5_show_hostname(void)
 #else
     printf("thread 0.");
 #endif
-#ifdef _WIN32
+#ifdef WIN32
 
    err = WSAStartup( MAKEWORD(2,2), &wsaData );
    if ( err != 0 ) {
@@ -706,7 +689,7 @@ h5_show_hostname(void)
 #else
     printf(" gethostname not supported\n");
 #endif
-#ifdef _WIN32
+#ifdef WIN32
     WSACleanup();
 #endif
 }

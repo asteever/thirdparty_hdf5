@@ -52,13 +52,13 @@
  * but we need to assign each kind of message to a different bit so that
  * one index can hold multiple types.)
  */
-#define H5O_SHMESG_NONE_FLAG    0x0000          /* No shared messages */
-#define H5O_SHMESG_SDSPACE_FLAG ((unsigned)1 << 0x0001) /* Simple Dataspace Message.  */
-#define H5O_SHMESG_DTYPE_FLAG   ((unsigned)1 << 0x0003) /* Datatype Message.  */
-#define H5O_SHMESG_FILL_FLAG    ((unsigned)1 << 0x0005) /* Fill Value Message. */
-#define H5O_SHMESG_PLINE_FLAG   ((unsigned)1 << 0x000b) /* Filter pipeline message.  */
-#define H5O_SHMESG_ATTR_FLAG    ((unsigned)1 << 0x000c) /* Attribute Message.  */
-#define H5O_SHMESG_ALL_FLAG     (H5O_SHMESG_SDSPACE_FLAG | H5O_SHMESG_DTYPE_FLAG | H5O_SHMESG_FILL_FLAG | H5O_SHMESG_PLINE_FLAG | H5O_SHMESG_ATTR_FLAG)
+#define H5O_MESG_NONE_FLAG     0x0000          /* No shared messages */
+#define H5O_MESG_SDSPACE_FLAG  0x0001          /* Simple Dataspace Message.  */
+#define H5O_MESG_DTYPE_FLAG    0x0002          /* Datatype Message.  */
+#define H5O_MESG_FILL_FLAG     0x0004          /* Fill Value Message. */
+#define H5O_MESG_PLINE_FLAG    0x0008          /* Filter pipeline message.  */
+#define H5O_MESG_ATTR_FLAG     0x0010          /* Attribute Message.  */
+#define H5O_MESG_ALL_FLAG      (H5O_MESG_SDSPACE_FLAG | H5O_MESG_DTYPE_FLAG | H5O_MESG_FILL_FLAG | H5O_MESG_PLINE_FLAG | H5O_MESG_ATTR_FLAG)
 
 /* Object header status flag definitions */
 #define H5O_HDR_CHUNK0_SIZE             0x03    /* 2-bit field indicating # of bytes to store the size of chunk 0's data */
@@ -77,17 +77,23 @@
 /*******************/
 /* Public Typedefs */
 /*******************/
+/* A struct that's part of the H5G_stat_t routine (deprecated) */
+typedef struct H5O_stat_t {
+    hsize_t size;               /* Total size of object header in file */
+    hsize_t free;               /* Free space within object header */
+    unsigned nmesgs;            /* Number of object header messages */
+    unsigned nchunks;           /* Number of object header chunks */
+} H5O_stat_t;
 
 /* Types of objects in file */
 typedef enum H5O_type_t {
     H5O_TYPE_UNKNOWN = -1,	/* Unknown object type		*/
     H5O_TYPE_GROUP,	        /* Object is a group		*/
     H5O_TYPE_DATASET,		/* Object is a dataset		*/
-    H5O_TYPE_NAMED_DATATYPE, 	/* Object is a named data type	*/
-    H5O_TYPE_NTYPES             /* Number of different object types (must be last!) */
+    H5O_TYPE_NAMED_DATATYPE 	/* Object is a named data type	*/
 } H5O_type_t;
 
-/* Information struct for object (for H5Oget_info/H5Oget_info_by_name/H5Oget_info_by_idx) */
+/* Information struct for object (for H5Oget_info/H5Oget_info_by_idx) */
 typedef struct H5O_info_t {
     unsigned long 	fileno;		/* File number that object is located in */
     haddr_t 		addr;		/* Object address in file	*/
@@ -114,19 +120,12 @@ typedef struct H5O_info_t {
             uint64_t shared;		/* Flags to indicate message type is shared in header */
         } mesg;
     } hdr;
-    /* Extra metadata storage for obj & attributes */
-    struct {
-        H5_ih_info_t   obj;             /* v1/v2 B-tree & local/fractal heap for groups, B-tree for chunked datasets */
-        H5_ih_info_t   attr;            /* v2 B-tree & heap for attributes */
-    } meta_size;
+    hsize_t             meta_size;      /* Size of additional metadata for an object */
+                                        /* (B-tree & heap for groups, B-tree for chunked dataset, etc.) */
 } H5O_info_t;
 
 /* Typedef for message creation indexes */
 typedef uint32_t H5O_msg_crt_idx_t;
-
-/* Prototype for H5Ovisit/H5Ovisit_by_name() operator */
-typedef herr_t (*H5O_iterate_t)(hid_t obj, const char *name, const H5O_info_t *info,
-    void *op_data);
 
 
 /********************/
@@ -145,52 +144,16 @@ H5_DLL hid_t H5Oopen(hid_t loc_id, const char *name, hid_t lapl_id);
 H5_DLL hid_t H5Oopen_by_addr(hid_t loc_id, haddr_t addr);
 H5_DLL hid_t H5Oopen_by_idx(hid_t loc_id, const char *group_name,
     H5_index_t idx_type, H5_iter_order_t order, hsize_t n, hid_t lapl_id);
-H5_DLL herr_t H5Oget_info(hid_t loc_id, H5O_info_t *oinfo);
-H5_DLL herr_t H5Oget_info_by_name(hid_t loc_id, const char *name, H5O_info_t *oinfo,
+H5_DLL herr_t H5Oget_info(hid_t loc_id, const char *name, H5O_info_t *oinfo,
     hid_t lapl_id);
 H5_DLL herr_t H5Oget_info_by_idx(hid_t loc_id, const char *group_name,
     H5_index_t idx_type, H5_iter_order_t order, hsize_t n, H5O_info_t *oinfo,
     hid_t lapl_id);
-H5_DLL herr_t H5Olink(hid_t obj_id, hid_t new_loc_id, const char *new_name,
-    hid_t lcpl_id, hid_t lapl_id);
 H5_DLL herr_t H5Oincr_refcount(hid_t object_id);
 H5_DLL herr_t H5Odecr_refcount(hid_t object_id);
 H5_DLL herr_t H5Ocopy(hid_t src_loc_id, const char *src_name, hid_t dst_loc_id,
     const char *dst_name, hid_t ocpypl_id, hid_t lcpl_id);
-H5_DLL herr_t H5Oset_comment(hid_t obj_id, const char *comment);
-H5_DLL herr_t H5Oset_comment_by_name(hid_t loc_id, const char *name,
-    const char *comment, hid_t lapl_id);
-H5_DLL ssize_t H5Oget_comment(hid_t obj_id, char *comment, size_t bufsize);
-H5_DLL ssize_t H5Oget_comment_by_name(hid_t loc_id, const char *name,
-    char *comment, size_t bufsize, hid_t lapl_id);
-H5_DLL herr_t H5Ovisit(hid_t obj_id, H5_index_t idx_type, H5_iter_order_t order,
-    H5O_iterate_t op, void *op_data);
-H5_DLL herr_t H5Ovisit_by_name(hid_t loc_id, const char *obj_name,
-    H5_index_t idx_type, H5_iter_order_t order, H5O_iterate_t op,
-    void *op_data, hid_t lapl_id);
 H5_DLL herr_t H5Oclose(hid_t object_id);
-
-/* Symbols defined for compatibility with previous versions of the HDF5 API.
- * 
- * Use of these symbols is deprecated.
- */
-#ifndef H5_NO_DEPRECATED_SYMBOLS
-
-/* Macros */
-
-/* Typedefs */
-
-/* A struct that's part of the H5G_stat_t routine (deprecated) */
-typedef struct H5O_stat_t {
-    hsize_t size;               /* Total size of object header in file */
-    hsize_t free;               /* Free space within object header */
-    unsigned nmesgs;            /* Number of object header messages */
-    unsigned nchunks;           /* Number of object header chunks */
-} H5O_stat_t;
-
-/* Function prototypes */
-
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
 
 #ifdef __cplusplus
 }

@@ -65,10 +65,6 @@
 /* Local Prototypes */
 /********************/
 
-#ifndef H5_NO_DEPRECATED_SYMBOLS
-static herr_t H5D_extend(H5D_t *dataset, const hsize_t *size, hid_t dxpl_id);
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
-
 
 /*********************/
 /* Package Variables */
@@ -106,10 +102,9 @@ H5D_init_deprec_interface(void)
     FUNC_LEAVE_NOAPI(H5D_init())
 } /* H5D_init_deprec_interface() */
 
-#ifndef H5_NO_DEPRECATED_SYMBOLS
 
 /*-------------------------------------------------------------------------
- * Function:	H5Dcreate1
+ * Function:	H5Dcreate
  *
  * Purpose:	Creates a new dataset named NAME at LOC_ID, opens the
  *		dataset for access, and associates with that dataset constant
@@ -138,7 +133,7 @@ H5D_init_deprec_interface(void)
  *-------------------------------------------------------------------------
  */
 hid_t
-H5Dcreate1(hid_t loc_id, const char *name, hid_t type_id, hid_t space_id,
+H5Dcreate(hid_t loc_id, const char *name, hid_t type_id, hid_t space_id,
 	  hid_t dcpl_id)
 {
     H5G_loc_t	    loc;                /* Object location to insert dataset into */
@@ -146,7 +141,7 @@ H5Dcreate1(hid_t loc_id, const char *name, hid_t type_id, hid_t space_id,
     const H5S_t    *space;              /* Dataspace for dataset */
     hid_t           ret_value;          /* Return value */
 
-    FUNC_ENTER_API(H5Dcreate1, FAIL)
+    FUNC_ENTER_API(H5Dcreate, FAIL)
     H5TRACE5("i", "i*siii", loc_id, name, type_id, space_id, dcpl_id);
 
     /* Check arguments */
@@ -179,19 +174,18 @@ done:
             HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, FAIL, "unable to release dataset")
 
     FUNC_LEAVE_API(ret_value)
-} /* end H5Dcreate1() */
+} /* end H5Dcreate() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5Dopen1
+ * Function:	H5Dopen
  *
  * Purpose:	Finds a dataset named NAME at LOC_ID, opens it, and returns
  *		its ID.	 The dataset should be close when the caller is no
  *		longer interested in it.
  *
- * Note:	Deprecated in favor of H5Dopen2
- *
  * Return:	Success:	A new dataset ID
+ *
  *		Failure:	FAIL
  *
  * Programmer:	Robb Matzke
@@ -200,7 +194,7 @@ done:
  *-------------------------------------------------------------------------
  */
 hid_t
-H5Dopen1(hid_t loc_id, const char *name)
+H5Dopen(hid_t loc_id, const char *name)
 {
     H5D_t       *dset = NULL;
     H5G_loc_t	 loc;		        /* Object location of group */
@@ -212,7 +206,7 @@ H5Dopen1(hid_t loc_id, const char *name)
     hid_t        dxpl_id = H5AC_dxpl_id;    /* dxpl to use to open datset */
     hid_t        ret_value;
 
-    FUNC_ENTER_API(H5Dopen1, FAIL)
+    FUNC_ENTER_API(H5Dopen, FAIL)
     H5TRACE2("i", "i*s", loc_id, name);
 
     /* Check args */
@@ -258,109 +252,5 @@ done:
     } /* end if */
 
     FUNC_LEAVE_API(ret_value)
-} /* end H5Dopen1() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5Dextend
- *
- * Purpose:	This function makes sure that the dataset is at least of size
- *		SIZE. The dimensionality of SIZE is the same as the data
- *		space of the dataset being changed.
- *
- * Note:	Deprecated in favor of H5Dset_extent
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Robb Matzke
- *		Friday, January 30, 1998
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5Dextend(hid_t dset_id, const hsize_t size[])
-{
-    H5D_t	*dset;
-    herr_t       ret_value = SUCCEED;  /* Return value */
-
-    FUNC_ENTER_API(H5Dextend, FAIL)
-    H5TRACE2("e", "i*h", dset_id, size);
-
-    /* Check args */
-    if(NULL == (dset = (H5D_t *)H5I_object_verify(dset_id, H5I_DATASET)))
-	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataset")
-    if(!size)
-	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no size specified")
-
-    /* Increase size */
-    if(H5D_extend(dset, size, H5AC_dxpl_id) < 0)
-	HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to extend dataset")
-
-done:
-    FUNC_LEAVE_API(ret_value)
-} /* end H5Dextend() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5D_extend
- *
- * Purpose:	Increases the size of a dataset.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Robb Matzke
- *		Friday, January 30, 1998
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5D_extend(H5D_t *dataset, const hsize_t *size, hid_t dxpl_id)
-{
-    htri_t changed;                     /* Flag to indicate that the dataspace was successfully extended */
-    H5S_t *space;                       /* Dataset's dataspace */
-    H5O_fill_t *fill;                   /* Dataset's fill value */
-    herr_t ret_value = SUCCEED;         /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT(H5D_extend)
-
-    /* Check args */
-    HDassert(dataset);
-    HDassert(size);
-
-    /* Check if the filters in the DCPL will need to encode, and if so, can they? */
-    if(H5D_check_filters(dataset) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "can't apply filters")
-
-    /*
-     * NOTE: Restrictions on extensions were checked when the dataset was
-     *	     created.  All extensions are allowed here since none should be
-     *	     able to muck things up.
-     */
-
-    /* Increase the size of the data space */
-    space = dataset->shared->space;
-    if((changed = H5S_extend(space, size)) < 0)
-	HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to increase size of data space")
-
-    /* Updated the dataset's info if the dataspace was successfully extended */
-    if(changed) {
-        /* Update the index values for the cached chunks for this dataset */
-        if(H5D_CHUNKED == dataset->shared->layout.type)
-            if(H5D_istore_update_cache(dataset, dxpl_id) < 0)
-                HGOTO_ERROR(H5E_DATASET, H5E_WRITEERROR, FAIL, "unable to update cached chunk indices")
-
-	/* Allocate space for the new parts of the dataset, if appropriate */
-        fill = &dataset->shared->dcpl_cache.fill;
-        if(fill->alloc_time == H5D_ALLOC_TIME_EARLY)
-            if(H5D_alloc_storage(dataset->oloc.file, dxpl_id, dataset, H5D_ALLOC_EXTEND, FALSE) < 0)
-                HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to initialize dataset with fill value")
-
-        /* Mark the dataspace as dirty, for later writing to the file */
-        dataset->shared->space_dirty = TRUE;
-    } /* end if */
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5D_extend() */
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
+} /* end H5Dopen() */
 

@@ -68,7 +68,7 @@ void dump_string(const char * string);
 void test_fl_string(hid_t fid, const char *string)
 {
   hid_t dtype_id, space_id, dset_id;
-  hsize_t dims = 1;
+  hsize_t dims=1;
   char read_buf[MAX_STRING_LENGTH];
   H5T_cset_t cset;
   herr_t ret;
@@ -80,20 +80,19 @@ void test_fl_string(hid_t fid, const char *string)
   CHECK(dtype_id, FAIL, "H5Tcopy");
   ret = H5Tset_size(dtype_id, (size_t)MAX_STRING_LENGTH);
   CHECK(ret, FAIL, "H5Tset_size");
-  cset = H5Tget_cset(dtype_id);
+  cset=H5Tget_cset(dtype_id);
   VERIFY(cset, H5T_CSET_ASCII, "H5Tget_cset");
-  ret = H5Tset_cset(dtype_id, H5T_CSET_UTF8);
+  ret=H5Tset_cset(dtype_id, H5T_CSET_UTF8);
   CHECK(ret, FAIL, "H5Tset_cset");
-  cset = H5Tget_cset(dtype_id);
+  cset=H5Tget_cset(dtype_id);
   VERIFY(cset, H5T_CSET_UTF8, "H5Tget_cset");
 
   /* Create dataspace for a dataset */
   space_id = H5Screate_simple(RANK, &dims, NULL);
   CHECK(space_id, FAIL, "H5Screate_simple");
-
   /* Create a dataset */
-  dset_id = H5Dcreate2(fid, DSET1_NAME, dtype_id, space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  CHECK(dset_id, FAIL, "H5Dcreate2");
+  dset_id=H5Dcreate(fid, DSET1_NAME, dtype_id, space_id, H5P_DEFAULT);
+  CHECK(dset_id, FAIL, "H5Dcreate");
 
   /* Write UTF-8 string to dataset */
   ret = H5Dwrite(dset_id, dtype_id, H5S_ALL, H5S_ALL, H5P_DEFAULT, string);
@@ -103,15 +102,15 @@ void test_fl_string(hid_t fid, const char *string)
   ret = H5Dread(dset_id, dtype_id, H5S_ALL, H5S_ALL, H5P_DEFAULT, read_buf);
   CHECK(ret, FAIL, "H5Dread");
 
-  VERIFY(HDstrcmp(string, read_buf), 0, "strcmp");
+  VERIFY(strcmp(string, read_buf), 0, "strcmp");
 
   /* Close all */
-  ret = H5Dclose(dset_id);
+  ret=H5Dclose(dset_id);
   CHECK(ret, FAIL, "H5Dclose");
 
-  ret = H5Tclose(dtype_id);
+  ret=H5Tclose(dtype_id);
   CHECK(ret, FAIL, "H5Tclose");
-  ret = H5Sclose(space_id);
+  ret=H5Sclose(space_id);
   CHECK(ret, FAIL, "H5Sclose");
 }
 
@@ -323,7 +322,7 @@ void test_strpad(hid_t UNUSED fid, const char *string)
 void test_vl_string(hid_t fid, const char *string)
 {
   hid_t type_id, space_id, dset_id;
-  hsize_t dims = 1;
+  hsize_t dims=1;
   hsize_t size;  /* Number of bytes used */
   char *read_buf[1];
   herr_t ret;
@@ -339,27 +338,27 @@ void test_vl_string(hid_t fid, const char *string)
   CHECK(ret, FAIL, "H5Tset_size");
 
   /* Create a dataset */
-  dset_id = H5Dcreate2(fid, VL_DSET1_NAME, type_id, space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  CHECK(dset_id, FAIL, "H5Dcreate2");
+  dset_id=H5Dcreate(fid, VL_DSET1_NAME, type_id, space_id, H5P_DEFAULT);
+  CHECK(dset_id, FAIL, "H5Dcreate");
 
   /* Write dataset to disk */
-  ret = H5Dwrite(dset_id, type_id, H5S_ALL, H5S_ALL, H5P_DEFAULT, &string);
+  ret=H5Dwrite(dset_id, type_id, H5S_ALL, H5S_ALL, H5P_DEFAULT, &string);
   CHECK(ret, FAIL, "H5Dwrite");
 
   /* Make certain the correct amount of memory will be used */
-  ret = H5Dvlen_get_buf_size(dset_id, type_id, space_id, &size);
+  ret=H5Dvlen_get_buf_size(dset_id, type_id, space_id, &size);
   CHECK(ret, FAIL, "H5Dvlen_get_buf_size");
-  VERIFY(size, (hsize_t)HDstrlen(string) + 1, "H5Dvlen_get_buf_size");
+  VERIFY(size, (hsize_t)strlen(string) + 1, "H5Dvlen_get_buf_size");
 
   /* Read dataset from disk */
-  ret = H5Dread(dset_id, type_id, H5S_ALL, H5S_ALL, H5P_DEFAULT, read_buf);
+  ret=H5Dread(dset_id, type_id, H5S_ALL, H5S_ALL, H5P_DEFAULT, read_buf);
   CHECK(ret, FAIL, "H5Dread");
 
   /* Compare data read in */
-  VERIFY(HDstrcmp(string, read_buf[0]), 0, "strcmp");
+  VERIFY(strcmp(string, read_buf[0]), 0, "strcmp");
 
   /* Reclaim the read VL data */
-  ret = H5Dvlen_reclaim(type_id, space_id, H5P_DEFAULT, read_buf);
+  ret=H5Dvlen_reclaim(type_id, space_id, H5P_DEFAULT, read_buf);
   CHECK(ret, FAIL, "H5Dvlen_reclaim");
 
   /* Close all */
@@ -392,57 +391,57 @@ void test_objnames(hid_t fid, const char* string)
   herr_t ret;
 
   /* Create a group with a UTF-8 name */
-  grp_id = H5Gcreate2(fid, string, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  CHECK(grp_id, FAIL, "H5Gcreate2");
+  grp_id = H5Gcreate(fid, string, (size_t)0);
+  CHECK(grp_id, FAIL, "H5Gcreate");
 
   /* Set a comment on the group to test that we can access the group
    * Also test that UTF-8 comments can be read.
    */
-  ret = H5Oset_comment_by_name(fid, string, string, H5P_DEFAULT);
-  CHECK(ret, FAIL, "H5Oset_comment_by_name");
-  ret = H5Oget_comment_by_name(fid, string, read_buf, (size_t)MAX_STRING_LENGTH, H5P_DEFAULT);
-  CHECK(ret, FAIL, "H5Oget_comment_by_name");
+  ret = H5Gset_comment(fid, string, string);
+  CHECK(ret, FAIL, "H5Gset_comment");
+  ret = H5Gget_comment(fid, string, (size_t)MAX_STRING_LENGTH, read_buf);
+  CHECK(ret, FAIL, "H5Gget_comment");
 
   ret = H5Gclose(grp_id);
   CHECK(ret, FAIL, "H5Gclose");
 
-  VERIFY(HDstrcmp(string, read_buf), 0, "strcmp");
+  VERIFY(strcmp(string, read_buf), 0, "strcmp");
 
   /* Create a new dataset with a UTF-8 name */
-  grp1_id = H5Gcreate2(fid, GROUP1_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  CHECK(grp1_id, FAIL, "H5Gcreate2");
+  grp1_id = H5Gcreate(fid, GROUP1_NAME, (size_t)0);
+  CHECK(grp1_id, FAIL, "H5Gcreate");
 
   space_id = H5Screate_simple(RANK, &dims, NULL);
   CHECK(space_id, FAIL, "H5Screate_simple");
-  dset_id = H5Dcreate2(grp1_id, string, H5T_NATIVE_INT, space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  CHECK(dset_id, FAIL, "H5Dcreate2");
+  dset_id=H5Dcreate(grp1_id, string, H5T_NATIVE_INT, space_id, H5P_DEFAULT);
+  CHECK(dset_id, FAIL, "H5Dcreate");
 
   /* Make sure that dataset can be opened again */
-  ret = H5Dclose(dset_id);
+  ret=H5Dclose(dset_id);
   CHECK(ret, FAIL, "H5Dclose");
-  ret = H5Sclose(space_id);
+  ret=H5Sclose(space_id);
   CHECK(ret, FAIL, "H5Sclose");
 
-  dset_id = H5Dopen2(grp1_id, string, H5P_DEFAULT);
-  CHECK(ret, FAIL, "H5Dopen2");
-  ret = H5Dclose(dset_id);
+  dset_id=H5Dopen(grp1_id, string);
+  CHECK(ret, FAIL, "H5Dopen");
+  ret=H5Dclose(dset_id);
   CHECK(ret, FAIL, "H5Dclose");
   ret = H5Gclose(grp1_id);
   CHECK(ret, FAIL, "H5Gclose");
 
   /* Do the same for a named datatype */
-  grp2_id = H5Gcreate2(fid, GROUP2_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  CHECK(grp2_id, FAIL, "H5Gcreate2");
+  grp2_id = H5Gcreate(fid, GROUP2_NAME, (size_t)0);
+  CHECK(grp2_id, FAIL, "H5Gcreate");
 
   type_id = H5Tcreate(H5T_OPAQUE, (size_t)1);
   CHECK(type_id, FAIL, "H5Tcreate");
-  ret = H5Tcommit2(grp2_id, string, type_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  CHECK(type_id, FAIL, "H5Tcommit2");
+  ret = H5Tcommit(grp2_id, string, type_id);
+  CHECK(type_id, FAIL, "H5Tcommit");
   ret = H5Tclose(type_id);
   CHECK(type_id, FAIL, "H5Tclose");
 
-  type_id = H5Topen2(grp2_id, string, H5P_DEFAULT);
-  CHECK(type_id, FAIL, "H5Topen2");
+  type_id = H5Topen(grp2_id, string);
+  CHECK(type_id, FAIL, "H5Topen");
   ret = H5Tclose(type_id);
   CHECK(type_id, FAIL, "H5Tclose");
 
@@ -451,8 +450,8 @@ void test_objnames(hid_t fid, const char* string)
 
   space_id = H5Screate_simple(RANK, &dims, NULL);
   CHECK(space_id, FAIL, "H5Screate_simple");
-  dset_id = H5Dcreate2(grp2_id, DSET3_NAME, H5T_STD_REF_OBJ, space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  CHECK(ret, FAIL, "H5Dcreate2");
+  dset_id=H5Dcreate(grp2_id, DSET3_NAME, H5T_STD_REF_OBJ, space_id, H5P_DEFAULT);
+  CHECK(ret, FAIL, "H5Dcreate");
 
   /* Create reference to named datatype */
   ret = H5Rcreate(&obj_ref, grp2_id, string, H5R_OBJECT, -1);
@@ -484,20 +483,20 @@ void test_objnames(hid_t fid, const char* string)
    * pointing through the hard link to the datatype.  Give the soft
    * link a name in UTF-8.  Ensure that the soft link works. */
 
-  grp3_id = H5Gcreate2(fid, GROUP3_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  CHECK(grp3_id, FAIL, "H5Gcreate2");
+  grp3_id = H5Gcreate(fid, GROUP3_NAME, (size_t)0);
+  CHECK(grp3_id, FAIL, "H5Gcreate");
 
-  ret = H5Lcreate_hard(fid, GROUP2_NAME, grp3_id, GROUP2_NAME, H5P_DEFAULT, H5P_DEFAULT);
-  CHECK(ret, FAIL, "H5Lcreate_hard");
+  ret = H5Glink2(fid, GROUP2_NAME, H5G_LINK_HARD, grp3_id, GROUP2_NAME);
+  CHECK(ret, FAIL, "H5Glink2");
   HDstrcpy(path_buf, GROUP2_NAME);
   HDstrcat(path_buf, "/");
   HDstrcat(path_buf, string);
-  ret = H5Lcreate_hard(grp3_id, path_buf, H5L_SAME_LOC, string, H5P_DEFAULT, H5P_DEFAULT);
-  CHECK(ret, FAIL, "H5Lcreate_hard");
+  ret = H5Glink(grp3_id, H5G_LINK_SOFT, path_buf, string);
+  CHECK(ret, FAIL, "H5Glink");
 
   /* Open named datatype using soft link */
-  type_id = H5Topen2(grp3_id, string, H5P_DEFAULT);
-  CHECK(type_id, FAIL, "H5Topen2");
+  type_id = H5Topen(grp3_id, string);
+  CHECK(type_id, FAIL, "H5Topen");
 
   ret = H5Tclose(type_id);
   CHECK(type_id, FAIL, "H5Tclose");
@@ -520,8 +519,8 @@ void test_attrname(hid_t fid, const char * string)
  /* Create a new group and give it an attribute whose
   * name and value are UTF-8 strings.
   */
-  group_id = H5Gcreate2(fid, GROUP4_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  CHECK(group_id, FAIL, "H5Gcreate2");
+  group_id = H5Gcreate(fid, GROUP4_NAME, (size_t)0);
+  CHECK(group_id, FAIL, "H5Gcreate");
 
   space_id = H5Screate_simple(RANK, &dims, NULL);
   CHECK(space_id, FAIL, "H5Screate_simple");
@@ -531,8 +530,8 @@ void test_attrname(hid_t fid, const char * string)
   CHECK(ret, FAIL, "H5Tset_size");
 
   /* Create the attribute and check that its name is correct */
-  attr_id = H5Acreate2(group_id, string, dtype_id, space_id, H5P_DEFAULT, H5P_DEFAULT);
-  CHECK(attr_id, FAIL, "H5Acreate2");
+  attr_id = H5Acreate(group_id, string, dtype_id, space_id, H5P_DEFAULT);
+  CHECK(attr_id, FAIL, "H5Acreate");
   ret = H5Aget_name(attr_id, (size_t)MAX_STRING_LENGTH, read_buf);
   CHECK(ret, FAIL, "H5Aget_name");
   ret = strcmp(read_buf, string);
@@ -600,8 +599,8 @@ void test_compound(hid_t fid, const char * string)
   CHECK(ret, FAIL, "H5Tinsert");
 
   /* Check that the field name was stored correctly */
-  readbuf = H5Tget_member_name(s1_tid, 0);
-  ret = HDstrcmp(readbuf, string);
+  readbuf=H5Tget_member_name(s1_tid, 0);
+  ret = strcmp(readbuf, string);
   VERIFY(ret, 0, "strcmp");
   free(readbuf);
 
@@ -622,8 +621,8 @@ void test_compound(hid_t fid, const char * string)
   /* Create the dataspace and dataset. */
   space_id = H5Screate_simple(1, &dim, NULL);
   CHECK(space_id, FAIL, "H5Screate_simple");
-  dset_id = H5Dcreate2(fid, DSET4_NAME, s1_tid, space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-  CHECK(dset_id, FAIL, "H5Dcreate2");
+  dset_id = H5Dcreate(fid, DSET4_NAME, s1_tid, space_id, H5P_DEFAULT);
+  CHECK(dset_id, FAIL, "H5Dcreate");
 
   /* Write data to the dataset. */
   ret = H5Dwrite(dset_id, s1_tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, &s1);

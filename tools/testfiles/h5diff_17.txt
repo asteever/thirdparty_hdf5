@@ -1,10 +1,9 @@
 #############################
-Expected output for 'h5diff -v h5diff_basic1.h5 h5diff_basic2.h5'
+Expected output for 'h5diff h5diff_basic1.h5 h5diff_basic2.h5 -v'
 #############################
 
 file1     file2
 ---------------------------------------
-    x      x    /              
     x      x    /g1            
     x           /g1/d1         
     x           /g1/d2         
@@ -19,15 +18,9 @@ file1     file2
     x           /g1/dset8      
     x           /g1/dset9      
     x           /g1/fp1        
-    x           /g1/fp15       
-    x           /g1/fp16       
-    x           /g1/fp17       
-    x           /g1/fp18       
     x           /g1/fp2        
            x    /g2            
 
-group  : </> and </>
-0 differences found
 group  : </g1> and </g1>
 0 differences found
 dataset: </g1/dset1> and </g1/dset1>
@@ -40,3 +33,5 @@ position        dset1           dset1           difference
 [ 1 1 ]          1               1.001           0.001          
 [ 2 1 ]          0               1               1              
 5 differences found
+group  : </> and </>
+0 differences found

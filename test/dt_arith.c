@@ -979,42 +979,45 @@ test_derived_flt(void)
         goto error;
     }
 
-    if(H5Tset_ebias(tid1, 511) < 0) {
+    if(H5Tset_ebias(tid1, 511)<0) {
         H5_FAILED();
         printf("Can't set exponent bias\n");
         goto error;
     }
-    if(H5Tset_pad(tid1, H5T_PAD_ZERO, H5T_PAD_ZERO) < 0) {
+    if(H5Tset_pad(tid1, H5T_PAD_ZERO, H5T_PAD_ZERO)<0) {
         H5_FAILED();
         printf("Can't set padding\n");
         goto error;
     }
 
-    if(H5Tcommit2(file, "new float type 1", tid1, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT) < 0) {
+    if(H5Tcommit(file, "new float type 1", tid1)<0) {
         H5_FAILED();
         printf("Can't set inpad\n");
         goto error;
     }
-    if(H5Tclose(tid1) < 0) {
+    if(H5Tclose(tid1)<0) {
         H5_FAILED();
         printf("Can't close datatype\n");
         goto error;
     }
 
-    if((tid1 = H5Topen2(file, "new float type 1", H5P_DEFAULT)) < 0)
-        FAIL_PUTS_ERROR("Can't open datatype")
-    if(H5Tget_fields(tid1, &spos, &epos, &esize, &mpos, &msize) < 0) {
+    if((tid1 = H5Topen(file, "new float type 1"))<0) {
+        H5_FAILED();
+        printf("Can't open datatype\n");
+        goto error;
+    }
+    if(H5Tget_fields(tid1, &spos, &epos, &esize, &mpos, &msize)<0) {
         H5_FAILED();
         printf("Can't get fields\n");
         goto error;
     }
-    if(spos != 44 || epos != 34 || esize != 10 || mpos != 3 || msize != 31) {
+    if(spos!=44 || epos!=34 || esize!=10 || mpos!=3 || msize!=31) {
         H5_FAILED();
         printf("Wrong field values\n");
         goto error;
     }
 
-    if(H5Tget_precision(tid1) != 42) {
+    if(H5Tget_precision(tid1)!=42) {
         H5_FAILED();
         printf("Can't get precision or wrong precision\n");
         goto error;
@@ -1138,42 +1141,45 @@ test_derived_flt(void)
         printf("Can't set size\n");
         goto error;
     }
-    if(H5Tset_ebias(tid2, 63) < 0) {
+    if(H5Tset_ebias(tid2, 63)<0) {
         H5_FAILED();
         printf("Can't set size\n");
         goto error;
     }
-    if(H5Tset_pad(tid2, H5T_PAD_ZERO, H5T_PAD_ZERO) < 0) {
+    if(H5Tset_pad(tid2, H5T_PAD_ZERO, H5T_PAD_ZERO)<0) {
         H5_FAILED();
         printf("Can't set padding\n");
         goto error;
     }
 
-    if(H5Tcommit2(file, "new float type 2", tid2, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT) < 0) {
+    if(H5Tcommit(file, "new float type 2", tid2)<0) {
         H5_FAILED();
         printf("Can't set inpad\n");
         goto error;
     }
-    if(H5Tclose(tid2) < 0) {
+    if(H5Tclose(tid2)<0) {
         H5_FAILED();
         printf("Can't close datatype\n");
         goto error;
     }
 
-    if((tid2 = H5Topen2(file, "new float type 2", H5P_DEFAULT)) < 0)
-        FAIL_PUTS_ERROR("Can't open datatype")
-    if(H5Tget_fields(tid2, &spos, &epos, &esize, &mpos, &msize) < 0) {
+    if((tid2 = H5Topen(file, "new float type 2"))<0) {
+        H5_FAILED();
+        printf("Can't open datatype\n");
+        goto error;
+    }
+    if(H5Tget_fields(tid2, &spos, &epos, &esize, &mpos, &msize)<0) {
         H5_FAILED();
         printf("Can't get fields\n");
         goto error;
     }
-    if(spos != 23 || epos != 16 || esize != 7 || mpos != 0 || msize != 16) {
+    if(spos!=23 || epos!=16 || esize!=7 || mpos!=0 || msize!=16) {
         H5_FAILED();
         printf("Wrong field values\n");
         goto error;
     }
 
-    if(H5Tget_precision(tid2) != 24) {
+    if(H5Tget_precision(tid2)!=24) {
         H5_FAILED();
         printf("Can't get precision or wrong precision\n");
         goto error;
@@ -1397,43 +1403,47 @@ test_derived_integer(void)
         goto error;
     }
 
-    if(H5Tset_precision(tid1, 24) < 0) {
+    if(H5Tset_precision(tid1,24)<0) {
         H5_FAILED();
         printf("Can't set precision\n");
         goto error;
     }
 
-    if(H5Tset_order(tid1, H5T_ORDER_BE) < 0) {
+    if(H5Tset_order(tid1, H5T_ORDER_BE)<0) {
         H5_FAILED();
         printf("Can't set order\n");
         goto error;
     }
 
-    if(H5Tcommit2(file, "new integer type 1", tid1, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT) < 0) {
+    if(H5Tcommit(file, "new integer type 1", tid1)<0) {
         H5_FAILED();
         printf("Can't commit data type\n");
         goto error;
     }
 
-    if(H5Tclose(tid1) < 0) {
+    if(H5Tclose(tid1)<0) {
         H5_FAILED();
         printf("Can't close datatype\n");
         goto error;
     }
 
-    if((tid1 = H5Topen2(file, "new integer type 1", H5P_DEFAULT)) < 0)
-        FAIL_PUTS_ERROR("Can't open datatype")
-    if(H5Tget_precision(tid1) != 24) {
+    if((tid1 = H5Topen(file, "new integer type 1"))<0) {
+        H5_FAILED();
+        printf("Can't open datatype\n");
+        goto error;
+    }
+
+    if(H5Tget_precision(tid1)!=24) {
         H5_FAILED();
         printf("Can't get precision or wrong precision\n");
         goto error;
     }
-    if(H5Tget_offset(tid1) != 0) {
+    if(H5Tget_offset(tid1)!=0) {
         H5_FAILED();
         printf("Can't get offset or wrong offset\n");
         goto error;
     }
-    if(H5Tget_size(tid1) != 3) {
+    if(H5Tget_size(tid1)!=3) {
         H5_FAILED();
         printf("Can't get size or wrong size\n");
         goto error;
@@ -1458,43 +1468,47 @@ test_derived_integer(void)
         goto error;
     }
 
-    if(H5Tset_offset(tid2, 10) < 0) {
+    if(H5Tset_offset(tid2,10)<0) {
         H5_FAILED();
         printf("Can't set offset\n");
         goto error;
     }
 
-    if(H5Tset_sign(tid2, H5T_SGN_2) < 0) {
+    if(H5Tset_sign(tid2,H5T_SGN_2)<0) {
         H5_FAILED();
         printf("Can't set offset\n");
         goto error;
     }
 
-    if(H5Tcommit2(file, "new integer type 2", tid2, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT) < 0) {
+    if(H5Tcommit(file, "new integer type 2", tid2)<0) {
         H5_FAILED();
         printf("Can't commit data type\n");
         goto error;
     }
 
-    if(H5Tclose(tid2) < 0) {
+    if(H5Tclose(tid2)<0) {
         H5_FAILED();
         printf("Can't close datatype\n");
         goto error;
     }
 
-    if((tid2 = H5Topen2(file, "new integer type 2", H5P_DEFAULT)) < 0)
-        FAIL_PUTS_ERROR("Can't open datatype")
-    if(H5Tget_precision(tid2) != 48) {
+    if((tid2 = H5Topen(file, "new integer type 2"))<0) {
+        H5_FAILED();
+        printf("Can't open datatype\n");
+        goto error;
+    }
+
+    if(H5Tget_precision(tid2)!=48) {
         H5_FAILED();
         printf("Can't get precision or wrong precision\n");
         goto error;
     }
-    if(H5Tget_offset(tid2) != 10) {
+    if(H5Tget_offset(tid2)!=10) {
         H5_FAILED();
         printf("Can't get offset or wrong offset\n");
         goto error;
     }
-    if(H5Tget_size(tid2) != 8) {
+    if(H5Tget_size(tid2)!=8) {
         H5_FAILED();
         printf("Can't get size or wrong size\n");
         goto error;
@@ -5138,7 +5152,7 @@ run_fp_int_conv(const char *name)
 #endif
             }
 #endif /*H5_LDOUBLE_TO_LLONG_ACCURATE*/
-#if defined(H5_FP_TO_ULLONG_RIGHT_MAXIMUM) && defined(H5_LDOUBLE_TO_LLONG_ACCURATE)
+#if H5_FP_TO_ULLONG_RIGHT_MAXIMUM && H5_LDOUBLE_TO_LLONG_ACCURATE
             nerrors += test_conv_int_fp(name, test_values, H5T_NATIVE_LDOUBLE, H5T_NATIVE_ULLONG);
 #else /*H5_FP_TO_ULLONG_RIGHT_MAXIMUM && H5_LDOUBLE_TO_LLONG_ACCURATE*/
             {

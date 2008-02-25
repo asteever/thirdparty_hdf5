@@ -24,15 +24,12 @@
 #define H5_SIZEOF_LONG_DOUBLE 8
 #define H5_SIZEOF_OFF_T 4
 #define H5_SIZEOF_SHORT 2
-#ifndef _WIN64
 #define H5_SIZEOF_SIZE_T 4
-#else
-#define H5_SIZEOF_SIZE_T 8
-#endif
 
 /*#if defined __INTEL_COMPILER
 #define H5_SIZEOF_LONG_DOUBLE 12
 #else*/
+
 /*#endif*/
 
 /*#define H5_HAVE_TM_ZONE 1 windows do not use this constant.*/  
@@ -78,25 +75,13 @@ in the file file_io.win32.c and including it on the projects
 #define H5_HAVE_STRDUP 1
 #define H5_HAVE_SYSTEM 1
 #define H5_HAVE_VSNPRINTF 1
-#define H5_HAVE_IO_H 1
+#define  H5_HAVE_IO_H 1
 #define H5_HAVE_SETJMP_H 1
 #define H5_HAVE_STDDEF_H 1
 #define H5_HAVE_SYS_STAT_H 1
 #define H5_HAVE_SYS_TIMEB 1
 #define H5_HAVE_SYS_TYPES_H 1
 #define H5_HAVE_WINSOCK_H 1
-#define H5_HAVE_STATI64 1
-
- /* These 64-bit functions are only supported in  .NET Framework 2.0 or later */
- #if _MSC_VER >= 1400
- #define H5_HAVE_FSEEKI64 1
- #define H5_HAVE_CHSIZE_S 1
- #define H5_HAVE_FTELLI64 1
- #endif /* _MSC_VER >= 1400 */
-
-/* comment the following line out if the memory buffers being written to 
-   disk should not be cleared before writing. */
-#define H5_CLEAR_MEMORY 1
 
 /* comment the following line out if you are not using check sum filter*/
 #define H5_HAVE_FILTER_FLETCHER32 1
@@ -117,26 +102,6 @@ in the file file_io.win32.c and including it on the projects
 /* comment the following two lines out if you are not using szip filter*/
 #define H5_HAVE_SZLIB_H 1
 #define H5_HAVE_FILTER_SZIP 1
-
-/* change the following line if you would like to change the default file driver */
-#define H5_DEFAULT_VFD H5FD_WINDOWS
-
-/* comment the following line out if you don't want to build the windows file
-   driver */
-#define H5_HAVE_WINDOWS 1
-
-#ifdef H5_HAVE_WINDOWS
-
-/* uncomment the following line if you would like to use the buffered stdio
-   functions in the Windows file driver. */
-// #define WINDOWS_USE_STDIO 1
-
-/* this value controls the maximum data written in one write call in the
- * Windows file driver.  Safe values are between 1 <= IO_BUF_SIZE <= 2GB-1.
- * The default is 1GB. */
-#define WINDOWS_MAX_BUF 1073741824
-
-#endif /* H5_HAVE_WINDOWS */
 
 /* comment the following line out if you are not using N-bit filter*/
 /* #define H5_HAVE_FILTER_NBIT 1*/
@@ -188,12 +153,17 @@ in the file file_io.win32.c and including it on the projects
 
 /* Check exception handling functions during data conversions */
 #define H5_WANT_DCONV_EXCEPTION 1
+#if _MSC_VER >=1400
+/* visual studio 2005 doesn't support size of setvbuf to be less thn 1,This is a hacking, we would like to wait
+visual studio 2005 to fix this problem.
+*/
+
+#define HDsetvbuf(F,S,M,Z) (((Z)>1)?setvbuf(F,S,M,Z):setvbuf(F,S,M,2))
+
+#else
+#define HDsetvbuf(F,S,M,Z) setvbuf(F,S,M,Z)
+#endif
 
 
 /* uncomment the following line if we want parallel HDF5 support */
 /* #define H5_HAVE_PARALLEL  */
-
-/* uncomment the following line if you need the library to perform "strict" 
-   memory operations, which is useful when debugging with a memory checking 
-   tool like Purify, etc. */
-/* #define H5_USING_MEMCHECKER  1  */

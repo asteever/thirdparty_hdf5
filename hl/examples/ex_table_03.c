@@ -127,10 +127,7 @@ int main( void )
   printf ("\n");
  }
 
-  /* close type */
- H5Tclose( string_type );
- 
- /* close the file */
+ /* Close the file. */
  H5Fclose( file_id );
 
  return 0;

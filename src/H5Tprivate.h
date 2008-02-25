@@ -30,9 +30,6 @@
 #include "H5Gprivate.h"		/* Groups 			  	*/
 #include "H5Rprivate.h"		/* References				*/
 
-/* Macro for size of temporary buffers to contain a single element */
-#define H5T_ELEM_BUF_SIZE       256
-
 /* Forward references of package typedefs */
 typedef struct H5T_t H5T_t;
 typedef struct H5T_stats_t H5T_stats_t;
@@ -67,18 +64,6 @@ typedef struct H5T_conv_cb_t {
     void*                       user_data;
 } H5T_conv_cb_t;
 
-/* Values for the optimization of compound data reading and writing.  They indicate
- * whether the fields of the source and destination are subset of each other and
- * there is no conversion needed.  It's for the Chicago company.
- */
-typedef enum {
-    H5T_SUBSET_BADVALUE = -1,   /* Invalid value */
-    H5T_SUBSET_FALSE = 0,       /* Source and destination aren't subset of each other */ 
-    H5T_SUBSET_SRC,             /* Source is the subset of dest and no conversion is needed */
-    H5T_SUBSET_DST,             /* Dest is the subset of source and no conversion is needed */
-    H5T_SUBSET_CAP              /* Must be the last value */
-} H5T_subset_t;
-
 /* Forward declarations for prototype arguments */
 struct H5O_t;
 
@@ -91,7 +76,6 @@ H5_DLL herr_t H5T_init(void);
 H5_DLL H5T_t *H5T_copy(const H5T_t *old_dt, H5T_copy_t method);
 H5_DLL herr_t H5T_lock(H5T_t *dt, hbool_t immutable);
 H5_DLL herr_t H5T_close(H5T_t *dt);
-H5_DLL H5T_t *H5T_get_super(const H5T_t *dt);
 H5_DLL H5T_class_t H5T_get_class(const H5T_t *dt, htri_t internal);
 H5_DLL htri_t H5T_detect_class(const H5T_t *dt, H5T_class_t cls);
 H5_DLL size_t H5T_get_size(const H5T_t *dt);
@@ -106,7 +90,6 @@ H5_DLL H5T_path_t *H5T_path_find(const H5T_t *src, const H5T_t *dst,
 				  const char *name, H5T_conv_t func, hid_t dxpl_id, hbool_t is_api);
 H5_DLL hbool_t H5T_path_noop(const H5T_path_t *p);
 H5_DLL H5T_bkg_t H5T_path_bkg(const H5T_path_t *p);
-H5_DLL H5T_subset_t H5T_path_compound_subset(const H5T_path_t *p);
 H5_DLL herr_t H5T_convert(H5T_path_t *tpath, hid_t src_id, hid_t dst_id,
 			   size_t nelmts, size_t buf_stride, size_t bkg_stride,
                            void *buf, void *bkg, hid_t dset_xfer_plist);
@@ -115,8 +98,6 @@ H5_DLL herr_t H5T_vlen_get_alloc_info(hid_t dxpl_id, H5T_vlen_alloc_info_t **vl_
 H5_DLL htri_t H5T_set_loc(H5T_t *dt, H5F_t *f, H5T_loc_t loc);
 H5_DLL htri_t H5T_is_sensible(const H5T_t *dt);
 H5_DLL uint32_t H5T_hash(H5F_t * file, const H5T_t *dt);
-H5_DLL herr_t H5T_set_latest_version(H5T_t *dt);
-H5_DLL htri_t H5T_is_variable_str(const H5T_t *dt);
 
 /* Reference specific functions */
 H5_DLL H5R_type_t H5T_get_ref_type(const H5T_t *dt);
@@ -125,20 +106,5 @@ H5_DLL H5R_type_t H5T_get_ref_type(const H5T_t *dt);
 H5_DLL H5T_t *H5T_open(const H5G_loc_t *loc, hid_t dxpl_id);
 H5_DLL htri_t H5T_committed(const H5T_t *type);
 H5_DLL int H5T_link(const H5T_t *type, int adjust, hid_t dxpl_id);
-H5_DLL herr_t H5T_update_shared(H5T_t *type);
 
-/* Field functions (for both compound & enumerated types) */
-H5_DLL int H5T_get_nmembers(const H5T_t *dt);
-H5_DLL H5T_t *H5T_get_member_type(const H5T_t *dt, unsigned membno);
-H5_DLL size_t H5T_get_member_offset(const H5T_t *dt, unsigned membno);
-
-/* Atomic functions */
-H5_DLL H5T_order_t H5T_get_order(const H5T_t *dt);
-H5_DLL size_t H5T_get_precision(const H5T_t *dt);
-H5_DLL int H5T_get_offset(const H5T_t *dt);
-
-/* Fixed-point functions */
-H5_DLL H5T_sign_t H5T_get_sign(H5T_t const *dt);
-
-#endif /* _H5Tprivate_H */
-
+#endif

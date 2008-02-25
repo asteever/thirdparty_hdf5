@@ -27,7 +27,7 @@
 #include "H5MMprivate.h"	/* Memory management			*/
 #include "H5Opkg.h"             /* Object headers			*/
 
-#if defined (_WIN32) && !defined (__MWERKS__)
+#if defined (WIN32) && !defined (__MWERKS__)
 #include <sys/types.h>
 #include <sys/timeb.h>
 #endif
@@ -51,7 +51,7 @@ const H5O_msg_class_t H5O_MSG_MTIME[1] = {{
     H5O_MTIME_ID,		/*message id number		*/
     "mtime",			/*message name for debugging	*/
     sizeof(time_t),		/*native message size		*/
-    0,				/* messages are sharable?       */
+    FALSE,			/* messages are sharable?       */
     H5O_mtime_decode,		/*decode message		*/
     H5O_mtime_encode,		/*encode message		*/
     H5O_mtime_copy,		/*copy the native value		*/
@@ -76,7 +76,7 @@ const H5O_msg_class_t H5O_MSG_MTIME_NEW[1] = {{
     H5O_MTIME_NEW_ID,		/*message id number		*/
     "mtime_new",		/*message name for debugging	*/
     sizeof(time_t),		/*native message size		*/
-    0,				/* messages are sharable?       */
+    FALSE,			/* messages are sharable?       */
     H5O_mtime_new_decode,	/*decode message		*/
     H5O_mtime_new_encode,	/*encode message		*/
     H5O_mtime_copy,		/*copy the native value		*/
@@ -247,7 +247,7 @@ H5O_mtime_decode(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, unsigned UNUSED mesg_fla
 
 	the_time -= tz.tz_minuteswest * 60 - (tm.tm_isdst ? 3600 : 0);
     }
-#elif defined (_WIN32)
+#elif defined (WIN32)
   #if !defined (__MWERKS__) /* MSVC */
     {
      struct timeb timebuffer;
@@ -264,7 +264,7 @@ H5O_mtime_decode(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, unsigned UNUSED mesg_fla
     ;
 
   #endif /*__MWERKS__*/
-#else /* _WIN32 */
+#else /* WIN32 */
     /*
      * The catch-all.  If we can't convert a character string universal
      * coordinated time to a time_t value reliably then we can't decode the
