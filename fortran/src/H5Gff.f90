@@ -1,5 +1,4 @@
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!   Copyright by The HDF Group.                                               *
 !   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
@@ -9,10 +8,9 @@
 !   of the source code distribution tree; Copyright.html can be found at the  *
 !   root level of an installed copy of the electronic HDF5 document set and   *
 !   is linked from the top-level documents page.  It can also be found at     *
-!   http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
-!   access to either file, you may request a copy from help@hdfgroup.org.     *
+!   http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+!   access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!
 !
 ! This file contains Fortran90 interfaces for H5F functions.
 ! 
@@ -78,7 +76,7 @@
                                size_hint_default, grp_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5GCREATE_C'::h5gcreate_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5GCREATE_C'::h5gcreate_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: loc_id
@@ -145,7 +143,7 @@
               INTEGER FUNCTION h5gopen_c(loc_id, name, namelen, grp_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5GOPEN_C'::h5gopen_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5GOPEN_C'::h5gopen_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: loc_id
@@ -202,7 +200,7 @@
               INTEGER FUNCTION h5gclose_c(grp_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5GCLOSE_C'::h5gclose_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5GCLOSE_C'::h5gclose_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: grp_id
               END FUNCTION h5gclose_c
@@ -270,7 +268,7 @@
                                obj_name, obj_namelen, obj_type)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5GGET_OBJ_INFO_IDX_C'::h5gget_obj_info_idx_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5GGET_OBJ_INFO_IDX_C'::h5gget_obj_info_idx_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               !DEC$ATTRIBUTES reference :: obj_name
@@ -341,7 +339,7 @@
               INTEGER FUNCTION h5gn_members_c(loc_id, name, namelen, nmembers)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5GN_MEMBERS_C'::h5gn_members_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5GN_MEMBERS_C'::h5gn_members_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: loc_id
@@ -421,7 +419,7 @@
                               
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5GLINK_C'::h5glink_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5GLINK_C'::h5glink_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: current_name
               !DEC$ATTRIBUTES reference :: new_name
@@ -439,88 +437,6 @@
             hdferr = h5glink_c(loc_id, link_type, current_name, &
                                current_namelen, new_name, new_namelen)
           END SUBROUTINE h5glink_f
-
-!----------------------------------------------------------------------
-! Name:		h5glink2_f 
-!
-! Purpose: 	Creates a link of the specified type from new_name 
-!		to current_name. current_name and new_name are interpreted
-!               releative to current and new location identifiers.	
-!
-! Inputs:  
-!		cur_loc_id	- location identifier
-!		cur_name	- name of the existing object if link is a 
-!				  hard link. Can be anything for the soft link. 
-!		link_type	- link type
-!				  Possible values are:
-!				  H5G_LINK_HARD_F (0) or
-!				  H5G_LINK_SOFT_F (1) 
-!		new_loc_id	- new location identifier
-!		new_name	- new name for the object
-! Outputs:  
-!		hdferr:		- error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:
-!				NONE
-!
-! Programmer:	Elena Pourmal
-!		September 25, 2002
-!
-! Comment:		
-!----------------------------------------------------------------------
-
-          SUBROUTINE h5glink2_f(cur_loc_id, cur_name, link_type, new_loc_id, &
-                                                   new_name, hdferr)
-!
-!This definition is needed for Windows DLLs
-!DEC$if defined(BUILD_HDF5_DLL)
-!DEC$attributes dllexport :: h5glink2_f
-!DEC$endif
-!
-
-            IMPLICIT NONE
-            INTEGER(HID_T), INTENT(IN) :: cur_loc_id   ! File or group identifier 
-            CHARACTER(LEN=*), INTENT(IN) :: cur_name   
-                                                   ! Current name of an object 
-            INTEGER, INTENT(IN) :: link_type       ! link type
-                                                   ! Possible values are:
-                                                   ! H5G_LINK_HARD_F (0) or
-                                                   ! H5G_LINK_SOFT_F (1) 
-            
-            INTEGER(HID_T), INTENT(IN) :: new_loc_id ! File or group identifier 
-            CHARACTER(LEN=*), INTENT(IN) :: new_name ! New name of an object
-            INTEGER, INTENT(OUT) :: hdferr         ! Error code
-            
-            INTEGER :: cur_namelen ! Lenghth of the current_name string
-            INTEGER :: new_namelen ! Lenghth of the new_name string
-
-            INTERFACE
-              INTEGER FUNCTION h5glink2_c(cur_loc_id, cur_name, cur_namelen, &
-                               link_type, new_loc_id, &
-                               new_name, new_namelen)
-                              
-              USE H5GLOBAL
-              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5GLINK2_C'::h5glink2_c
-              !DEC$ ENDIF
-              !DEC$ATTRIBUTES reference :: cur_name
-              !DEC$ATTRIBUTES reference :: new_name
-              INTEGER(HID_T), INTENT(IN) :: cur_loc_id 
-              INTEGER(HID_T), INTENT(IN) :: new_loc_id 
-              INTEGER, INTENT(IN) :: link_type
-              CHARACTER(LEN=*), INTENT(IN) :: cur_name
-              CHARACTER(LEN=*), INTENT(IN) :: new_name
-              INTEGER :: cur_namelen
-              INTEGER :: new_namelen
-              END FUNCTION h5glink2_c
-            END INTERFACE
-            
-            cur_namelen = LEN(cur_name)
-            new_namelen = LEN(new_name)
-            hdferr = h5glink2_c(cur_loc_id, cur_name, cur_namelen, link_type, &
-                               new_loc_id, new_name, new_namelen)
-          END SUBROUTINE h5glink2_f
 
 !----------------------------------------------------------------------
 ! Name:		h5gunlink_f 
@@ -571,7 +487,7 @@
               INTEGER FUNCTION h5gunlink_c(loc_id, name, namelen)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5GUNLINK_C'::h5gunlink_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5GUNLINK_C'::h5gunlink_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: loc_id
@@ -635,7 +551,7 @@
               INTEGER FUNCTION h5gmove_c(loc_id, name, namelen, new_name, new_namelen)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5GMOVE_C'::h5gmove_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5GMOVE_C'::h5gmove_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               !DEC$ATTRIBUTES reference :: new_name
@@ -651,75 +567,6 @@
             new_namelen = LEN(new_name)
             hdferr = h5gmove_c(loc_id, name, namelen, new_name, new_namelen)
           END SUBROUTINE h5gmove_f
-
-!----------------------------------------------------------------------
-! Name:		h5gmove2_f 
-!
-! Purpose:	Renames an object within an HDF5 file.  	
-!
-! Inputs:  
-!		src_loc_id	- original location identifier
-!		src_name	- object's name at specified original location
-!		dst_loc_id	- original location identifier
-!		dst_name	- object's new name
-! Outputs:  
-!		hdferr:		- error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:
-!				NONE
-!
-! Programmer:	Elena Pourmal
-!		September 25, 2002
-!
-! Comment:		
-!----------------------------------------------------------------------
-
-          
-          SUBROUTINE h5gmove2_f(src_loc_id, src_name, dst_loc_id, dst_name, hdferr)
-!
-!This definition is needed for Windows DLLs
-!DEC$if defined(BUILD_HDF5_DLL)
-!DEC$attributes dllexport :: h5gmove2_f
-!DEC$endif
-!
-
-            IMPLICIT NONE
-            INTEGER(HID_T), INTENT(IN)   :: src_loc_id  ! File or group identifier 
-            CHARACTER(LEN=*), INTENT(IN) :: src_name    ! Original name of an object 
-            INTEGER(HID_T), INTENT(IN)   :: dst_loc_id  ! File or group identifier 
-            CHARACTER(LEN=*), INTENT(IN) :: dst_name    ! New name of an object
-            INTEGER, INTENT(OUT)         :: hdferr      ! Error code
-            
-            INTEGER :: src_namelen         ! Length of the current_name string
-            INTEGER :: dst_namelen         ! Lenghth of the new_name string
-
-!            INTEGER, EXTERNAL :: h5gmove2_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5gmove2_c(src_loc_id, src_name, src_namelen, &
-                               dst_loc_id, dst_name, dst_namelen)
-              USE H5GLOBAL
-              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5GMOVE2_C'::h5gmove2_c
-              !DEC$ ENDIF
-              !DEC$ATTRIBUTES reference :: src_name
-              !DEC$ATTRIBUTES reference :: dst_name
-              INTEGER(HID_T), INTENT(IN) :: src_loc_id
-              INTEGER(HID_T), INTENT(IN) :: dst_loc_id
-              CHARACTER(LEN=*), INTENT(IN) :: src_name
-              CHARACTER(LEN=*), INTENT(IN) :: dst_name
-              INTEGER :: src_namelen
-              INTEGER :: dst_namelen
-              END FUNCTION h5gmove2_c
-            END INTERFACE
-            
-            src_namelen = LEN(src_name)
-            dst_namelen = LEN(dst_name)
-            hdferr = h5gmove2_c(src_loc_id, src_name, src_namelen,&
-                    dst_loc_id,  dst_name, dst_namelen)
-          END SUBROUTINE h5gmove2_f
 
 !----------------------------------------------------------------------
 ! Name:		h5gget_linkval_f 
@@ -778,7 +625,7 @@
               INTEGER FUNCTION h5gget_linkval_c(loc_id, name, namelen, size, buffer)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5GGET_LINKVAL_C'::h5gget_linkval_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5GGET_LINKVAL_C'::h5gget_linkval_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               !DEC$ATTRIBUTES reference :: buffer 
@@ -845,7 +692,7 @@
                                                 comment, commentlen)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5GSET_COMMENT_C'::h5gset_comment_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5GSET_COMMENT_C'::h5gset_comment_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name 
               !DEC$ATTRIBUTES reference :: comment 
@@ -915,7 +762,7 @@
                                                 size, buffer)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5GGET_COMMENT_C'::h5gget_comment_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5GGET_COMMENT_C'::h5gget_comment_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name 
               !DEC$ATTRIBUTES reference :: buffer 

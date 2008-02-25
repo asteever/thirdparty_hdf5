@@ -1,5 +1,5 @@
+
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!   Copyright by The HDF Group.                                               *
 !   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
@@ -9,8 +9,8 @@
 !   of the source code distribution tree; Copyright.html can be found at the  *
 !   root level of an installed copy of the electronic HDF5 document set and   *
 !   is linked from the top-level documents page.  It can also be found at     *
-!   http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
-!   access to either file, you may request a copy from help@hdfgroup.org.     *
+!   http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+!   access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
 !
 ! 
@@ -118,7 +118,7 @@
     !flag to check operation success 
     !
     INTEGER :: error, error_n 
-    INTEGER(HSIZE_T), DIMENSION(3) :: data_dims
+    INTEGER, DIMENSION(7) :: data_dims
 
 
     !
@@ -372,7 +372,7 @@
     !
     !Points positions in the file 
     !
-    INTEGER(HSIZE_T), DIMENSION(RANK,NUMP) :: coord
+    INTEGER(HSSIZE_T), DIMENSION(RANK,NUMP) :: coord
 
     !
     !data buffers 
@@ -399,7 +399,7 @@
     !
     INTEGER :: error 
     LOGICAL :: status
-    INTEGER(HSIZE_T), DIMENSION(3) :: data_dims
+    INTEGER, DIMENSION(7) :: data_dims
 
 
     !
@@ -741,12 +741,13 @@
      !
      !start block for getting the selected hyperslab 
      !
-     INTEGER(HSIZE_T) :: startblock = 0
+     INTEGER(HSIZE_T), DIMENSION(2) :: startblock = (/0,0/)
 
      !
      !start point for getting the selected elements 
      !
-     INTEGER(HSIZE_T)  :: startpoint = 0
+     INTEGER(HSIZE_T), DIMENSION(2) :: startpoint = (/0,0/)
+!     INTEGER(HSIZE_T), DIMENSION(2) :: startpoint = (/1,1/)
 
      !
      !Stride of the hyperslab in the file 
@@ -761,7 +762,7 @@
      !
      !array to give selected points' coordinations 
      !
-     INTEGER(HSIZE_T), DIMENSION(RANK, NUMPS) :: coord
+     INTEGER(HSSIZE_T), DIMENSION(RANK, NUMPS) :: coord
 
      !
      !Size of the hyperslab in memory 
@@ -792,7 +793,7 @@
      INTEGER(HSIZE_T), ALLOCATABLE, DIMENSION(:) :: pointlist
 
      !
-     !start and end bounds in the current dataspace selection 
+     !start and end bounds in the current dataspac selection 
      !
      INTEGER(HSIZE_T), DIMENSION(RANK) :: startout, endout
 
@@ -815,7 +816,7 @@
      !flag to check operation success 
      !
      INTEGER :: error, error_n 
-     INTEGER(HSIZE_T), DIMENSION(3) :: data_dims
+     INTEGER, DIMENSION(7) :: data_dims
 
      !
      !initialize the coord array to give the selected points' position 

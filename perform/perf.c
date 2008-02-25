@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,13 +8,13 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/*
+/* 
  * Author: Albert Cheng of NCSA, May 1, 2001.
- * This is derived from code given to me by Robert Ross.
+ * This is derived from code given to me by Robert Ross. 
  *
  * NOTE: This code assumes that all command line arguments make it out to all
  * the processes that make up the parallel job, which isn't always the case.
@@ -120,11 +119,11 @@ int main(int argc, char **argv)
 
 	if (mynod == 0) printf("# Using hdf5-io calls.\n");
 
-
-	/* kindof a weird hack- if the location of the pvfstab file was
+	
+	/* kindof a weird hack- if the location of the pvfstab file was 
 	 * specified on the command line, then spit out this location into
 	 * the appropriate environment variable: */
-
+	
 #if H5_HAVE_SETENV
 /* no setenv or unsetenv */
 	if (opt_pvfstab_set) {
@@ -134,12 +133,12 @@ int main(int argc, char **argv)
 		}
 	}
 #endif
-
+	
 	/* this is how much of the file data is covered on each iteration of
 	 * the test.  used to help determine the seek offset on each
 	 * iteration */
 	iter_jump = nprocs * opt_block;
-
+		
 	/* setup a buffer of data to write */
 	if (!(tmp = (char *) malloc(opt_block + 256))) {
 		perror("malloc");
@@ -162,7 +161,7 @@ int main(int argc, char **argv)
 
 	mpio_pl = H5Pcreate (H5P_FILE_ACCESS);
 	VRFY((acc_tpl >= 0), "", H5FATAL);
-	ret = H5Pset_fapl_mpio(mpio_pl, MPI_COMM_WORLD, MPI_INFO_NULL);
+	ret = H5Pset_fapl_mpio(mpio_pl, MPI_COMM_WORLD, MPI_INFO_NULL);     
 	VRFY((ret >= 0), "", H5FATAL);
 
 	/* set optional allocation alignment */
@@ -180,7 +179,7 @@ int main(int argc, char **argv)
 	/* setup file access template */
 	acc_tpl = H5Pcreate (H5P_FILE_ACCESS);
 	VRFY((acc_tpl >= 0), "", H5FATAL);
-	ret = H5Pset_fapl_mpio(acc_tpl, MPI_COMM_WORLD, MPI_INFO_NULL);
+	ret = H5Pset_fapl_mpio(acc_tpl, MPI_COMM_WORLD, MPI_INFO_NULL);     
 	VRFY((ret >= 0), "", H5FATAL);
 
 	/* set optional allocation alignment */
@@ -191,128 +190,130 @@ int main(int argc, char **argv)
     }
 
     /* create the parallel file */
-    fid = H5Fcreate(opt_file, H5F_ACC_TRUNC, H5P_DEFAULT, acc_tpl);
+    fid=H5Fcreate(opt_file,H5F_ACC_TRUNC,H5P_DEFAULT,acc_tpl);
     VRFY((fid >= 0), "H5Fcreate succeeded", H5FATAL);
 
     /* define a contiquous dataset of opt_iter*nprocs*opt_block chars */
-    dims[0] = opt_iter * nprocs * opt_block;
-    sid = H5Screate_simple(RANK, dims, NULL);
+    dims[0] = opt_iter*nprocs*opt_block;
+    sid = H5Screate_simple (RANK, dims, NULL);
     VRFY((sid >= 0), "H5Screate_simple succeeded", H5FATAL);
-    dataset = H5Dcreate2(fid, "Dataset1", H5T_NATIVE_CHAR, sid,
-			H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    VRFY((dataset >= 0), "H5Dcreate2 succeeded", H5FATAL);
+    dataset = H5Dcreate(fid, "Dataset1", H5T_NATIVE_CHAR, sid,
+			H5P_DEFAULT);
+    VRFY((dataset >= 0), "H5Dcreate succeeded", H5FATAL);
 
     /* create the memory dataspace and the file dataspace */
     dims[0] = opt_block;
-    mem_dataspace = H5Screate_simple(RANK, dims, NULL);
+    mem_dataspace = H5Screate_simple (RANK, dims, NULL);
     VRFY((mem_dataspace >= 0), "", H5FATAL);
-    file_dataspace = H5Dget_space(dataset);
+    file_dataspace = H5Dget_space (dataset);
     VRFY((file_dataspace >= 0), "H5Dget_space succeeded", H5FATAL);
 
-    /* now each process writes a block of opt_block chars in round robbin
-     * fashion until the whole dataset is covered.
-     */
-    for(j=0; j < opt_iter; j++) {
-        /* setup a file dataspace selection */
-        start[0] = (j*iter_jump)+(mynod*opt_block);
-        stride[0] = block[0] = opt_block;
-        count[0]= 1;
-        ret=H5Sselect_hyperslab(file_dataspace, H5S_SELECT_SET, start, stride, count, block);
-        VRFY((ret >= 0), "H5Sset_hyperslab succeeded", H5FATAL);
+	/* now each process writes a block of opt_block chars in round robbin
+	 * fashion until the whole dataset is covered.
+	 */
+	for (j=0; j < opt_iter; j++) {
+	    /* setup a file dataspace selection */
+	    start[0] = (j*iter_jump)+(mynod*opt_block);
+	    stride[0] = block[0] = opt_block;
+	    count[0]= 1;
+	    ret=H5Sselect_hyperslab(file_dataspace, H5S_SELECT_SET, start, stride, count, block); 
+	    VRFY((ret >= 0), "H5Sset_hyperslab succeeded", H5FATAL);
 
-            if (opt_correct) /* fill in buffer for iteration */ {
-                    for (i=mynod+j, check=buf; i<opt_block; i++,check++) *check=(char)i;
-            }
+		if (opt_correct) /* fill in buffer for iteration */ {
+			for (i=mynod+j, check=buf; i<opt_block; i++,check++) *check=(char)i;
+		}
 
-            /* discover the starting time of the operation */
-       MPI_Barrier(MPI_COMM_WORLD);
-       stim = MPI_Wtime();
+		/* discover the starting time of the operation */
+	   MPI_Barrier(MPI_COMM_WORLD);
+	   stim = MPI_Wtime();
 
-        /* write data */
-        ret = H5Dwrite(dataset, H5T_NATIVE_CHAR, mem_dataspace, file_dataspace,
-                H5P_DEFAULT, buf);
-        VRFY((ret >= 0), "H5Dwrite dataset1 succeeded", !H5FATAL);
+    /* write data */
+    ret = H5Dwrite(dataset, H5T_NATIVE_CHAR, mem_dataspace, file_dataspace,
+	    H5P_DEFAULT, buf);					    
+    VRFY((ret >= 0), "H5Dwrite dataset1 succeeded", !H5FATAL);
 
-            /* discover the ending time of the operation */
-       etim = MPI_Wtime();
+		/* discover the ending time of the operation */
+	   etim = MPI_Wtime();
 
-       write_tim += (etim - stim);
+	   write_tim += (etim - stim);
+		
+		/* we are done with this "write" iteration */
+	}
 
-            /* we are done with this "write" iteration */
-    }
-
-    /* close dataset and file */
+    /* close dataset and file */					    
     ret=H5Dclose(dataset);
     VRFY((ret >= 0), "H5Dclose succeeded", H5FATAL);
-    ret=H5Fclose(fid);
+    ret=H5Fclose(fid);							    
     VRFY((ret >= 0), "H5Fclose succeeded", H5FATAL);
 
 
 
-    /* wait for everyone to synchronize at this point */
-    MPI_Barrier(MPI_COMM_WORLD);
+	/* wait for everyone to synchronize at this point */
+	MPI_Barrier(MPI_COMM_WORLD);
 
     /* reopen the file for reading */
     fid=H5Fopen(opt_file,H5F_ACC_RDONLY,acc_tpl);
     VRFY((fid >= 0), "", H5FATAL);
 
     /* open the dataset */
-    dataset = H5Dopen2(fid, "Dataset1", H5P_DEFAULT);
+    dataset = H5Dopen(fid, "Dataset1");
     VRFY((dataset >= 0), "H5Dopen succeeded", H5FATAL);
 
     /* we can re-use the same mem_dataspace and file_dataspace
      * the H5Dwrite used since the dimension size is the same.
      */
 
-    /* we are going to repeat the read the same pattern the write used */
-    for (j=0; j < opt_iter; j++) {
-        /* setup a file dataspace selection */
-        start[0] = (j*iter_jump)+(mynod*opt_block);
-        stride[0] = block[0] = opt_block;
-        count[0]= 1;
-        ret=H5Sselect_hyperslab(file_dataspace, H5S_SELECT_SET, start, stride, count, block);
-        VRFY((ret >= 0), "H5Sset_hyperslab succeeded", H5FATAL);
-            /* seek to the appropriate spot give the current iteration and
-             * rank within the MPI processes */
+	/* we are going to repeat the read the same pattern the write used */
+	for (j=0; j < opt_iter; j++) {
+	    /* setup a file dataspace selection */
+	    start[0] = (j*iter_jump)+(mynod*opt_block);
+	    stride[0] = block[0] = opt_block;
+	    count[0]= 1;
+	    ret=H5Sselect_hyperslab(file_dataspace, H5S_SELECT_SET, start, stride, count, block); 
+	    VRFY((ret >= 0), "H5Sset_hyperslab succeeded", H5FATAL);
+		/* seek to the appropriate spot give the current iteration and
+		 * rank within the MPI processes */
 
-            /* discover the start time */
-       MPI_Barrier(MPI_COMM_WORLD);
-       stim = MPI_Wtime();
+		/* discover the start time */
+	   MPI_Barrier(MPI_COMM_WORLD);
+	   stim = MPI_Wtime();
 
-        /* read in the file data */
-        if (!opt_correct){
-            ret = H5Dread(dataset, H5T_NATIVE_CHAR, mem_dataspace, file_dataspace, H5P_DEFAULT, buf);
-        }
-        else{
-            ret = H5Dread(dataset, H5T_NATIVE_CHAR, mem_dataspace, file_dataspace, H5P_DEFAULT, buf2);
-        }
-        myerrno = errno;
+    /* read data */
+		/* read in the file data */
+		if (!opt_correct){
+    ret = H5Dread(dataset, H5T_NATIVE_CHAR, mem_dataspace, file_dataspace,
+	    H5P_DEFAULT, buf);					    
+		}
+		else{
+    ret = H5Dread(dataset, H5T_NATIVE_CHAR, mem_dataspace, file_dataspace,
+	    H5P_DEFAULT, buf2);					    
+		}
+		myerrno = errno;
+		/* discover the end time */
+	   etim = MPI_Wtime();
+	   read_tim += (etim - stim);
+    VRFY((ret >= 0), "H5Dwrite dataset1 succeeded", !H5FATAL);
 
-        /* discover the end time */
-       etim = MPI_Wtime();
-       read_tim += (etim - stim);
-        VRFY((ret >= 0), "H5Dwrite dataset1 succeeded", !H5FATAL);
 
+	   if (ret < 0) fprintf(stderr, "node %d, read error, loc = %Ld: %s\n",
+			mynod, mynod*opt_block, strerror(myerrno));
 
-       if (ret < 0) fprintf(stderr, "node %d, read error, loc = %Ld: %s\n",
-                    mynod, mynod*opt_block, strerror(myerrno));
+		/* if the user wanted to check correctness, compare the write
+		 * buffer to the read buffer */
+		if (opt_correct && memcmp(buf, buf2, opt_block)) {
+			fprintf(stderr, "node %d, correctness test failed\n", mynod);
+			my_correct = 0;
+			MPI_Allreduce(&my_correct, &correct, 1, MPI_INT, MPI_MIN,
+				MPI_COMM_WORLD);
+		}
 
-        /* if the user wanted to check correctness, compare the write
-         * buffer to the read buffer */
-        if (opt_correct && memcmp(buf, buf2, opt_block)) {
-                fprintf(stderr, "node %d, correctness test failed\n", mynod);
-                my_correct = 0;
-                MPI_Allreduce(&my_correct, &correct, 1, MPI_INT, MPI_MIN,
-                        MPI_COMM_WORLD);
-        }
+		/* we are done with this read iteration */
+	}
 
-        /* we are done with this read iteration */
-    }
-
-    /* close dataset and file */
+    /* close dataset and file */					    
     ret=H5Dclose(dataset);
     VRFY((ret >= 0), "H5Dclose succeeded", H5FATAL);
-    ret=H5Fclose(fid);
+    ret=H5Fclose(fid);							    
     VRFY((ret >= 0), "H5Fclose succeeded", H5FATAL);
 
 	/* compute the read and write times */
@@ -324,7 +325,7 @@ int main(int argc, char **argv)
 		MPI_COMM_WORLD);
 
 	/* calculate the average from the sum */
-	ave_read_tim = ave_read_tim / nprocs;
+	ave_read_tim = ave_read_tim / nprocs; 
 
 	MPI_Allreduce(&write_tim, &max_write_tim, 1, MPI_DOUBLE, MPI_MAX,
 		MPI_COMM_WORLD);
@@ -334,33 +335,33 @@ int main(int argc, char **argv)
 		MPI_COMM_WORLD);
 
 	/* calculate the average from the sum */
-	ave_write_tim = ave_write_tim / nprocs;
-
+	ave_write_tim = ave_write_tim / nprocs; 
+	
 	/* print out the results on one node */
 	if (mynod == 0) {
 	   read_bw = ((int64_t)(opt_block*nprocs*opt_iter))/(max_read_tim*1000000.0);
 	   write_bw = ((int64_t)(opt_block*nprocs*opt_iter))/(max_write_tim*1000000.0);
-
+		
 			printf("nr_procs = %d, nr_iter = %d, blk_sz = %ld\n", nprocs,
 		opt_iter, (long)opt_block);
-
+			
 			printf("# total_size = %ld\n", (long)(opt_block*nprocs*opt_iter));
-
-			printf("# Write:  min_time = %f, max_time = %f, mean_time = %f\n",
+			
+			printf("# Write:  min_time = %f, max_time = %f, mean_time = %f\n", 
 				min_write_tim, max_write_tim, ave_write_tim);
-			printf("# Read:  min_time = %f, max_time = %f, mean_time = %f\n",
+			printf("# Read:  min_time = %f, max_time = %f, mean_time = %f\n", 
 				min_read_tim, max_read_tim, ave_read_tim);
-
+		
 	   printf("Write bandwidth = %f Mbytes/sec\n", write_bw);
 	   printf("Read bandwidth = %f Mbytes/sec\n", read_bw);
-
+		
 		if (opt_correct) {
 			printf("Correctness test %s.\n", correct ? "passed" : "failed");
 		}
 	}
 
 
-die_jar_jar_die:
+die_jar_jar_die:	
 
 #if H5_HAVE_SETENV
 /* no setenv or unsetenv */
@@ -369,7 +370,7 @@ die_jar_jar_die:
 		unsetenv("PVFSTAB_FILE");
 	}
 #endif
-
+	
 	free(tmp);
 	if (opt_correct) free(tmp2);
 	MPI_Finalize();
@@ -379,7 +380,7 @@ die_jar_jar_die:
 int parse_args(int argc, char **argv)
 {
 	int c;
-
+	
 	while ((c = getopt(argc, argv, "s:b:i:f:p:a:2:c")) != EOF) {
 		switch (c) {
 			case 's': /* stripe */
@@ -443,7 +444,7 @@ int parse_args(int argc, char **argv)
 double Wtime()
 {
 	struct timeval t;
-
+	
 	gettimeofday(&t, NULL);
 	return((double)t.tv_sec + (double)t.tv_usec / 1000000);
 }
@@ -459,7 +460,7 @@ double Wtime()
 #else /* H5_HAVE_PARALLEL */
 /* dummy program since H5_HAVE_PARALLE is not configured in */
 int
-main(int UNUSED argc, char UNUSED **argv)
+main()
 {
 printf("No parallel performance because parallel is not configured in\n");
 return(0);

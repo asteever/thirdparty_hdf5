@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -44,11 +43,11 @@
 /*-------------------------------------------------------------------------
  * Function:	main
  *
- * Purpose:
+ * Purpose:	
  *
- * Return:	Success:
+ * Return:	Success:	
  *
- *		Failure:
+ *		Failure:	
  *
  * Programmer:	Robb Matzke
  *              Monday, October 26, 1998
@@ -107,7 +106,7 @@ main(void)
         printf("field 3 insert<0!\n");
 
     /* Create the dataset with compound non-array fields */
-    dset = H5Dcreate2(file, "Dataset1", type, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    dset = H5Dcreate(file, "Dataset1", type, space, H5P_DEFAULT);
     if(dset<0)
         printf("dset<0!\n");
     H5Dclose(dset);
@@ -141,7 +140,7 @@ main(void)
         printf("field 4 insert<0!\n");
 
     /* Create the dataset with compound array fields */
-    dset = H5Dcreate2(file, "Dataset2", type, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    dset = H5Dcreate(file, "Dataset2", type, space, H5P_DEFAULT);
     if(dset<0)
         printf("dset<0!\n");
     H5Dclose(dset);

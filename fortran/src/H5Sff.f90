@@ -1,5 +1,4 @@
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!   Copyright by The HDF Group.                                               *
 !   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
@@ -9,10 +8,9 @@
 !   of the source code distribution tree; Copyright.html can be found at the  *
 !   root level of an installed copy of the electronic HDF5 document set and   *
 !   is linked from the top-level documents page.  It can also be found at     *
-!   http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
-!   access to either file, you may request a copy from help@hdfgroup.org.     *
+!   http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+!   access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!
 !
 ! This file contains Fortran90 interfaces for H5S functions.
 ! 
@@ -74,7 +72,7 @@
               INTEGER FUNCTION h5screate_simple_c(rank, dims, maxdims, space_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5SCREATE_SIMPLE_C'::h5screate_simple_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5SCREATE_SIMPLE_C'::h5screate_simple_c
               !DEC$ ENDIF
               INTEGER, INTENT(IN) :: rank
               INTEGER(HSIZE_T), INTENT(IN) :: dims(rank)
@@ -141,7 +139,7 @@
               INTEGER FUNCTION h5sclose_c(space_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5SCLOSE_C'::h5sclose_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5SCLOSE_C'::h5sclose_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: space_id
               END FUNCTION h5sclose_c
@@ -190,7 +188,6 @@
                                                  ! Possible values are:
                                                  !  H5S_SCALAR_F (0)
                                                  !  H5S_SIMPLE_F(1)
-                                                 !  H5S_NULL_F(2)
             INTEGER(HID_T), INTENT(OUT) :: space_id ! Dataspace identifier 
             INTEGER, INTENT(OUT) :: hdferr          ! Error code
 
@@ -201,7 +198,7 @@
               INTEGER FUNCTION h5screate_c(classtype, space_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5SCREATE_C'::h5screate_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5SCREATE_C'::h5screate_c
               !DEC$ ENDIF
               INTEGER, INTENT(IN) :: classtype
               INTEGER(HID_T), INTENT(OUT) :: space_id
@@ -258,7 +255,7 @@
               INTEGER FUNCTION h5scopy_c(space_id, new_space_id)  
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5SCOPY_C'::h5scopy_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5SCOPY_C'::h5scopy_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: space_id
               INTEGER(HID_T), INTENT(OUT):: new_space_id
@@ -317,7 +314,7 @@
               INTEGER FUNCTION h5sget_select_hyper_nblocks_c (space_id, num_blocks)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-!DEC$ ATTRIBUTES C,reference,decorate,alias:'H5SGET_SELECT_HYPER_NBLOCKS_C'::h5sget_select_hyper_nblocks_c
+!MS$ATTRIBUTES C,reference,alias:'_H5SGET_SELECT_HYPER_NBLOCKS_C'::h5sget_select_hyper_nblocks_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: space_id
               INTEGER(HSSIZE_T), INTENT(OUT) :: num_blocks 
@@ -366,7 +363,7 @@
 
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: space_id ! Dataspace identifier 
-            INTEGER(HSIZE_T), INTENT(IN) :: startblock 
+            INTEGER(HSIZE_T), DIMENSION(*), INTENT(IN) :: startblock 
                                              !Hyperslab block to start with. 
             INTEGER(HSIZE_T), INTENT(IN) :: num_blocks 
                                              !number of hyperslab blocks 
@@ -385,10 +382,10 @@
                                                               num_blocks, buf )
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-            !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5SGET_SELECT_HYPER_BLOCKLIST_C'::h5sget_select_hyper_blocklist_c
+            !MS$ATTRIBUTES C,reference,alias:'_H5SGET_SELECT_HYPER_BLOCKLIST_C'::h5sget_select_hyper_blocklist_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: space_id 
-              INTEGER(HSIZE_T), INTENT(IN) :: startblock 
+              INTEGER(HSIZE_T), DIMENSION(*), INTENT(IN) :: startblock 
               INTEGER(HSIZE_T), INTENT(IN) :: num_blocks 
               INTEGER(HSIZE_T), DIMENSION(*), INTENT(OUT) :: buf 
               END FUNCTION h5sget_select_hyper_blocklist_c
@@ -452,7 +449,7 @@
               INTEGER FUNCTION h5sget_select_bounds_c(space_id, start, end)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-!DEC$ ATTRIBUTES C,reference,decorate,alias:'H5SGET_SELECT_BOUNDS_C'::h5sget_select_bounds_c
+!MS$ATTRIBUTES C,reference,alias:'_H5SGET_SELECT_BOUNDS_C'::h5sget_select_bounds_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: space_id
               INTEGER(HSIZE_T), DIMENSION(*), INTENT(OUT) :: start
@@ -512,7 +509,7 @@
               INTEGER FUNCTION h5sget_select_elem_npoints_c (space_id, num_points)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-!DEC$ ATTRIBUTES C,reference,decorate,alias:'H5SGET_SELECT_ELEM_NPOINTS_C'::h5sget_select_elem_npoints_c
+!MS$ATTRIBUTES C,reference,alias:'_H5SGET_SELECT_ELEM_NPOINTS_C'::h5sget_select_elem_npoints_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: space_id
               INTEGER(HSSIZE_T), INTENT(OUT) :: num_points 
@@ -560,7 +557,7 @@
 !
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: space_id ! Dataspace identifier 
-            INTEGER(HSIZE_T), INTENT(IN) :: startpoint 
+            INTEGER(HSIZE_T),DIMENSION(*), INTENT(IN) :: startpoint 
                                              !Element point to start with. 
             INTEGER(HSIZE_T), INTENT(IN) :: num_points 
                                              !Number of element points to get 
@@ -576,10 +573,10 @@
                                                               num_points, buf )
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-!DEC$ ATTRIBUTES C,reference,decorate,alias:'H5SGET_SELECT_ELEM_POINTLIST_C'::h5sget_select_elem_pointlist_c
+!MS$ATTRIBUTES C,reference,alias:'_H5SGET_SELECT_ELEM_POINTLIST_C'::h5sget_select_elem_pointlist_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: space_id
-              INTEGER(HSIZE_T), INTENT(IN) :: startpoint 
+              INTEGER(HSIZE_T),DIMENSION(*), INTENT(IN) :: startpoint 
               INTEGER(HSIZE_T), INTENT(IN) :: num_points 
               INTEGER(HSIZE_T), DIMENSION(*), INTENT(OUT) :: buf 
               END FUNCTION h5sget_select_elem_pointlist_c
@@ -636,13 +633,13 @@
             INTEGER, INTENT(IN) :: rank     ! Number of dataspace dimensions 
             INTEGER(SIZE_T), INTENT(IN) :: num_elements  ! Number of elements to be
                                                  ! selected
-            INTEGER(HSIZE_T), & 
+            INTEGER(HSSIZE_T), & 
             DIMENSION(rank,num_elements), INTENT(IN) :: coord 
                                           ! Array with the coordinates
                                           ! of the selected elements
                                           ! coord(rank, num_elements)
             INTEGER, INTENT(OUT) :: hdferr     ! Error code
-            INTEGER(HSIZE_T), ALLOCATABLE, DIMENSION(:,:) :: c_coord
+            INTEGER(HSSIZE_T), ALLOCATABLE, DIMENSION(:,:) :: c_coord
             INTEGER :: error, i,j
 
 !            INTEGER, EXTERNAL :: h5sselect_elements_c
@@ -653,12 +650,12 @@
                                num_elements,c_c_coord)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5SSELECT_ELEMENTS_C'::h5sselect_elements_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5SSELECT_ELEMENTS_C'::h5sselect_elements_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: space_id
               INTEGER, INTENT(IN) :: operator
               INTEGER(SIZE_T), INTENT(IN) :: num_elements
-              INTEGER(HSIZE_T),DIMENSION(*) :: c_c_coord
+              INTEGER(HSSIZE_T),DIMENSION(*) :: c_c_coord
               END FUNCTION h5sselect_elements_c
             END INTERFACE
 
@@ -719,7 +716,7 @@
               INTEGER FUNCTION h5sselect_all_c(space_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5SSELECT_ALL_C'::h5sselect_all_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5SSELECT_ALL_C'::h5sselect_all_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: space_id
               END FUNCTION h5sselect_all_c
@@ -773,7 +770,7 @@
               INTEGER FUNCTION h5sselect_none_c(space_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5SSELECT_NONE_C'::h5sselect_none_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5SSELECT_NONE_C'::h5sselect_none_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: space_id 
               END FUNCTION h5sselect_none_c
@@ -831,7 +828,7 @@
               INTEGER FUNCTION h5sselect_valid_c(space_id, flag) 
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5SSELECT_VALID_C'::h5sselect_valid_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5SSELECT_VALID_C'::h5sselect_valid_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: space_id
               INTEGER :: flag
@@ -890,7 +887,7 @@
               INTEGER FUNCTION h5sget_simple_extent_npoints_c( space_id, npoints) 
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5SGET_SIMPLE_EXTENT_NPOINTS_C'::h5sget_simple_extent_npoints_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5SGET_SIMPLE_EXTENT_NPOINTS_C'::h5sget_simple_extent_npoints_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: space_id
               INTEGER(HSIZE_T), INTENT(OUT) :: npoints
@@ -947,7 +944,7 @@
               INTEGER FUNCTION h5sget_select_npoints_c(space_id, npoints) 
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5SGET_SELECT_NPOINTS_C'::h5sget_select_npoints_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5SGET_SELECT_NPOINTS_C'::h5sget_select_npoints_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: space_id
               INTEGER(HSSIZE_T), INTENT(OUT) :: npoints
@@ -1003,7 +1000,7 @@
               INTEGER FUNCTION h5sget_simple_extent_ndims_c(space_id, rank) 
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5SGET_SIMPLE_EXTENT_NDIMS_C'::h5sget_simple_extent_ndims_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5SGET_SIMPLE_EXTENT_NDIMS_C'::h5sget_simple_extent_ndims_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: space_id
               INTEGER, INTENT(OUT) :: rank
@@ -1067,7 +1064,7 @@
               INTEGER FUNCTION h5sget_simple_extent_dims_c(space_id, dims, maxdims)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5SGET_SIMPLE_EXTENT_DIMS_C'::h5sget_simple_extent_dims_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5SGET_SIMPLE_EXTENT_DIMS_C'::h5sget_simple_extent_dims_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: space_id
               INTEGER(HSIZE_T), DIMENSION(*), INTENT(OUT) :: dims
@@ -1091,7 +1088,6 @@
 !				  H5S_NO_CLASS_F (-1)
 !				  H5S_SCALAR_F (0)
 !				  H5S_SIMPLE_F (1)
-!				  H5S_NULL_F   (2)
 !		hdferr:		- error code		
 !				 	Success:  0
 !				 	Failure: -1   
@@ -1123,7 +1119,6 @@
                                                    !  H5S_NO_CLASS_F (-1)
                                                    !  H5S_SCALAR_F (0)
                                                    !  H5S_SIMPLE_F (1)
-                                                   !  H5S_NULL_F   (2)
             INTEGER, INTENT(OUT) :: hdferr         ! Error code
 
 !            INTEGER, EXTERNAL :: h5sget_simple_extent_type_c
@@ -1133,7 +1128,7 @@
               INTEGER FUNCTION h5sget_simple_extent_type_c(space_id, classtype)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5SGET_SIMPLE_EXTENT_TYPE_C'::h5sget_simple_extent_type_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5SGET_SIMPLE_EXTENT_TYPE_C'::h5sget_simple_extent_type_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: space_id
               INTEGER, INTENT(OUT) :: classtype
@@ -1201,7 +1196,7 @@
                                current_size,  maximum_size) 
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5SSET_EXTENT_SIMPLE_C'::h5sset_extent_simple_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5SSET_EXTENT_SIMPLE_C'::h5sset_extent_simple_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: space_id
               INTEGER, INTENT(IN) :: rank
@@ -1264,7 +1259,7 @@
               INTEGER FUNCTION h5sis_simple_c(space_id, flag) 
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5SIS_SIMPLE_C'::h5sis_simple_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5SIS_SIMPLE_C'::h5sis_simple_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: space_id
               INTEGER :: flag
@@ -1324,7 +1319,7 @@
               INTEGER FUNCTION h5soffset_simple_c(space_id, offset) 
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5SOFFSET_SIMPLE_C'::h5soffset_simple_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5SOFFSET_SIMPLE_C'::h5soffset_simple_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: space_id
               INTEGER(HSSIZE_T), DIMENSION(*), INTENT(IN) ::  offset
@@ -1384,7 +1379,7 @@
               INTEGER FUNCTION h5sextent_copy_c(dest_space_id, source_space_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5SEXTENT_COPY_C'::h5sextent_copy_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5SEXTENT_COPY_C'::h5sextent_copy_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: dest_space_id
               INTEGER(HID_T), INTENT(IN) :: source_space_id
@@ -1437,7 +1432,7 @@
               INTEGER FUNCTION h5sset_extent_none_c(space_id) 
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5SSET_EXTENT_NONE_C'::h5sset_extent_none_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5SSET_EXTENT_NONE_C'::h5sset_extent_none_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: space_id
               END FUNCTION h5sset_extent_none_c
@@ -1493,7 +1488,7 @@
                                                 ! H5S_SELECT_SET_F (0)
                                                 ! H5S_SELECT_OR_F (1)
                                                 !  
-            INTEGER(HSIZE_T), DIMENSION(*), INTENT(IN) :: start
+            INTEGER(HSSIZE_T), DIMENSION(*), INTENT(IN) :: start
                                           ! Starting coordinates of the hyperslab 
             INTEGER(HSIZE_T), DIMENSION(*), INTENT(IN) :: count 
                                           ! Number of blocks to select 
@@ -1517,11 +1512,11 @@
                                start, count, stride, block)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5SSELECT_HYPERSLAB_C'::h5sselect_hyperslab_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5SSELECT_HYPERSLAB_C'::h5sselect_hyperslab_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: space_id
               INTEGER, INTENT(IN) :: operator
-              INTEGER(HSIZE_T), DIMENSION(*), INTENT(IN) :: start
+              INTEGER(HSSIZE_T), DIMENSION(*), INTENT(IN) :: start
               INTEGER(HSIZE_T), DIMENSION(*), INTENT(IN) :: count
               INTEGER(HSIZE_T), DIMENSION(*), OPTIONAL, INTENT(IN) :: stride
               INTEGER(HSIZE_T), DIMENSION(*), OPTIONAL, INTENT(IN) :: block 
@@ -1580,366 +1575,5 @@
             deallocate(def_stride)
  
           END SUBROUTINE h5sselect_hyperslab_f
-!----------------------------------------------------------------------
-! Name:		h5scombine_hyperslab_f 
-!
-! Purpose:	Combine a hyperslab selection with the current 
-!               selection for a dataspace 
-!
-! Inputs:  
-!		space_id	- dataspace of selection to use 
-!		operator	- flag, valid values are:
-!				  H5S_SELECT_NOOP_F 
-!				  H5S_SELECT_SET_F 
-!				  H5S_SELECT_OR_F 
-!				  H5S_SELECT_AND_F 
-!				  H5S_SELECT_XOR_F 
-!				  H5S_SELECT_NOTB_F 
-!				  H5S_SELECT_NOTA_F 
-!				  H5S_SELECT_APPEND_F 
-!				  H5S_SELECT_PREPEND_F 
-!		start		- array with hyperslab offsets
-!		count		- number of blocks included in the 
-!				  hyperslab
-! Outputs:  
-!               hyper_id        - identifier for the new hyperslab
-!		hdferr:		- error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:
-!		stride		- array with hyperslab strides
-!		block		- array with hyperslab block sizes 
-!
-! Programmer:	Elena Pourmal
-!		October 7, 2002
-!
-! Modifications: 	
-!
-! Comment:	Commented out until 1.6 ? 10/08/2002	
-!----------------------------------------------------------------------
-
-!          SUBROUTINE h5scombine_hyperslab_f(space_id, operator, start, count, &
-!                                            hyper_id,  hdferr, stride, block) 
-!
-!This definition is needed for Windows DLLs
-!DEC$if defined(BUILD_HDF5_DLL)
-!DEC$attributes dllexport :: h5scombine_hyperslab_f
-!DEC$endif
-!
-!            IMPLICIT NONE
-!            INTEGER(HID_T), INTENT(IN) :: space_id ! Dataspace identifier 
-!            INTEGER, INTENT(IN) :: operator     ! Flag, valid values are:
-						!  H5S_SELECT_NOOP_F 
-						!  H5S_SELECT_SET_F 
-						!  H5S_SELECT_OR_F 
-						!  H5S_SELECT_AND_F 
-						!  H5S_SELECT_XOR_F 
-						!  H5S_SELECT_NOTB_F 
-						!  H5S_SELECT_NOTA_F 
-						!  H5S_SELECT_APPEND_F 
-						!  H5S_SELECT_PREPEND_F 
-                                                !  
-!            INTEGER(HSIZE_T), DIMENSION(*), INTENT(IN) :: start
-                                          ! Starting coordinates of the hyperslab 
-!            INTEGER(HSIZE_T), DIMENSION(*), INTENT(IN) :: count 
-                                          ! Number of blocks to select 
-                                          ! from dataspace 
-!            INTEGER(HID_T), INTENT(OUT) :: hyper_id ! New hyperslab identifier 
-!            INTEGER, INTENT(OUT) :: hdferr     ! Error code
-!            INTEGER(HSIZE_T), DIMENSION(:), OPTIONAL, INTENT(IN) :: stride
-                                          ! Array of how many elements to move
-                                          ! in each direction
-!            INTEGER(HSIZE_T), DIMENSION(:), OPTIONAL, INTENT(IN) :: block 
-                                          ! Sizes of element block
-!            INTEGER(HSIZE_T), DIMENSION(:), ALLOCATABLE :: def_block 
-!            INTEGER(HSIZE_T), DIMENSION(:), ALLOCATABLE :: def_stride
-!            INTEGER :: rank
-!            INTEGER :: error1, error2 
-
-!            INTERFACE
-!              INTEGER FUNCTION h5scombine_hyperslab_c(space_id, operator, &
-!                               start, count, stride, block, hyper_id)
-!              USE H5GLOBAL
-!             !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-!             !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5SCOMBINE_HYPERSLAB_C'::h5scombine_hyperslab_c
-!             !DEC$ ENDIF
-!              INTEGER(HID_T), INTENT(IN) :: space_id
-!              INTEGER, INTENT(IN) :: operator
-!              INTEGER(HSIZE_T), DIMENSION(*), INTENT(IN) :: start
-!              INTEGER(HSIZE_T), DIMENSION(*), INTENT(IN) :: count
-!              INTEGER(HSIZE_T), DIMENSION(*), OPTIONAL, INTENT(IN) :: stride
-!              INTEGER(HSIZE_T), DIMENSION(*), OPTIONAL, INTENT(IN) :: block 
-!              INTEGER(HID_T), INTENT(OUT) :: hyper_id
-!              END FUNCTION h5scombine_hyperslab_c
-!            END INTERFACE
-
-!            if (present(stride).and. present(block)) then
-!            hdferr = h5scombine_hyperslab_c(space_id, operator, start, count, &
-!                                           stride, block, hyper_id)
-!            return
-!            endif
-            ! Case of optional parameters.
-            !
-            ! Find the rank of the dataspace to allocate memery for
-            ! default stride and block arrays.
-            !
-!            CALL h5sget_simple_extent_ndims_f(space_id, rank, hdferr)
-!            if( hdferr .EQ. -1) return
-            !
-!            if (present(stride).and. .not.present(block)) then
-!            allocate(def_block(rank), stat=error1)
-!                if (error1.NE.0) then
-!                    hdferr = -1
-!                    return
-!                endif
-!            def_block = 1
-!            hdferr = h5scombine_hyperslab_c(space_id, operator, start, count, &
-!                                           stride, def_block, hyper_id)
-!            deallocate(def_block)
-!            return
-!            endif
-
-!            if (.not.present(stride).and. present(block)) then
-!            allocate(def_stride(rank), stat=error2)
-!                if (error2.NE.0) then
-!                    hdferr = -1
-!                    return
-!                endif
-!            def_stride = 1
-!            hdferr = h5scombine_hyperslab_c(space_id, operator, start, count, &
-!                                           def_stride, block, hyper_id)
-!            deallocate(def_stride)
-!            return
-!            endif
-!            allocate(def_block(rank), stat=error1)
-!            allocate(def_stride(rank), stat=error2)
-!                if ((error1.NE.0) .OR. (error2.NE.0)) then
-!                    hdferr = -1
-!                    return
-!                endif
-!            def_block = 1
-!            def_stride = 1
-!            hdferr = h5scombine_hyperslab_c(space_id, operator, start, count, &
-!                                           def_stride, def_block, hyper_id)
-!            deallocate(def_block)
-!            deallocate(def_stride)
- 
-!          END SUBROUTINE h5scombine_hyperslab_f
-
-!----------------------------------------------------------------------
-! Name:		h5scombine_select_f 
-!
-! Purpose:	Combine two hyperslab selections with an operation 
-!               and return a dataspace with resulting selection.
-!
-! Inputs:  
-!		space1_id	- dataspace of selection to use 
-!		operator	- flag, valid values are:
-!				  H5S_SELECT_NOOP_F 
-!				  H5S_SELECT_SET_F 
-!				  H5S_SELECT_OR_F 
-!				  H5S_SELECT_AND_F 
-!				  H5S_SELECT_XOR_F 
-!				  H5S_SELECT_NOTB_F 
-!				  H5S_SELECT_NOTA_F 
-!				  H5S_SELECT_APPEND_F 
-!				  H5S_SELECT_PREPEND_F 
-!		space2_id	- dataspace of selection to use 
-! Outputs:  
-!               ds_id           - idataspace identifier with the new selection
-!		hdferr:		- error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:		- NONE
-!
-! Programmer:	Elena Pourmal
-!		October 7, 2002
-!
-! Modifications: 	
-!
-! Comment: commented out until 1.6 release(?) 10/08/2002		
-!----------------------------------------------------------------------
-
-!          SUBROUTINE h5scombine_select_f(space1_id, operator, space2_id, &
-!                                            ds_id,  hdferr) 
-!
-!This definition is needed for Windows DLLs
-!DEC$if defined(BUILD_HDF5_DLL)
-!DEC$attributes dllexport :: h5scombine_select_f
-!DEC$endif
-!
-!            IMPLICIT NONE
-!            INTEGER(HID_T), INTENT(IN) :: space1_id ! First dataspace identifier 
-!            INTEGER(HID_T), INTENT(IN) :: space2_id ! Second dataspace identifier 
-!            INTEGER, INTENT(IN) :: operator     ! Flag, valid values are:
-						!  H5S_SELECT_NOOP_F 
-						!  H5S_SELECT_SET_F 
-						!  H5S_SELECT_OR_F 
-						!  H5S_SELECT_AND_F 
-						!  H5S_SELECT_XOR_F 
-						!  H5S_SELECT_NOTB_F 
-						!  H5S_SELECT_NOTA_F 
-						!  H5S_SELECT_APPEND_F 
-						!  H5S_SELECT_PREPEND_F 
-                                                !  
-!            INTEGER(HID_T), INTENT(OUT) :: ds_id ! New dataspace identifier 
-!            INTEGER, INTENT(OUT) :: hdferr     ! Error code
-!
-!            INTERFACE
-!              INTEGER FUNCTION h5scombine_select_c(space1_id, operator, &
-!                               space2_id, ds_id)
-!              USE H5GLOBAL
-!             !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-!             !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5SCOMBINE_SELECT_C'::h5scombine_select_c
-!             !DEC$ ENDIF
-!              INTEGER(HID_T), INTENT(IN) :: space1_id
-!              INTEGER(HID_T), INTENT(IN) :: space2_id
-!              INTEGER, INTENT(IN) :: operator
-!              INTEGER(HID_T), INTENT(OUT) :: ds_id
-!              END FUNCTION h5scombine_select_c
-!            END INTERFACE
-
-!            hdferr = h5scombine_select_c(space1_id, operator, space2_id, &
-!                                         ds_id)
-!            return
- 
-!          END SUBROUTINE h5scombine_select_f
-
-!----------------------------------------------------------------------
-! Name:		h5sselect_select_f 
-!
-! Purpose:	Refine a hyperslab selection with an operation 
-!               using second hyperslab
-!
-! Inputs:  
-!		space1_id	- dataspace of selection  to modify
-!		operator	- flag, valid values are:
-!				  H5S_SELECT_NOOP_F 
-!				  H5S_SELECT_SET_F 
-!				  H5S_SELECT_OR_F 
-!				  H5S_SELECT_AND_F 
-!				  H5S_SELECT_XOR_F 
-!				  H5S_SELECT_NOTB_F 
-!				  H5S_SELECT_NOTA_F 
-!				  H5S_SELECT_APPEND_F 
-!				  H5S_SELECT_PREPEND_F 
-!		space2_id	- dataspace of selection to use 
-!				  
-! Outputs:  
-!		hdferr:		- error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:		- NONE
-!
-! Programmer:	Elena Pourmal
-!		October 7, 2002
-!
-! Modifications: 	
-!
-! Comment:Commented out until 1.6 release(?) 10/08/2002 EIP		
-!----------------------------------------------------------------------
-
-!          SUBROUTINE h5sselect_select_f(space1_id, operator, space2_id, &
-!                                        hdferr) 
-!
-!This definition is needed for Windows DLLs
-!DEC$if defined(BUILD_HDF5_DLL)
-!DEC$attributes dllexport :: h5sselect_select_f
-!DEC$endif
-!
-!            IMPLICIT NONE
-!            INTEGER(HID_T), INTENT(INOUT) :: space1_id ! Dataspace identifier to
-                                                       ! modify 
-!            INTEGER(HID_T), INTENT(IN) :: space2_id ! Second dataspace identifier 
-!            INTEGER, INTENT(IN) :: operator     ! Flag, valid values are:
-						!  H5S_SELECT_NOOP_F 
-						!  H5S_SELECT_SET_F 
-						!  H5S_SELECT_OR_F 
-						!  H5S_SELECT_AND_F 
-						!  H5S_SELECT_XOR_F 
-						!  H5S_SELECT_NOTB_F 
-						!  H5S_SELECT_NOTA_F 
-						!  H5S_SELECT_APPEND_F 
-						!  H5S_SELECT_PREPEND_F 
-                                                !  
-!            INTEGER, INTENT(OUT) :: hdferr     ! Error code
-
-!            INTERFACE
-!              INTEGER FUNCTION h5sselect_select_c(space1_id, operator, &
-!                               space2_id)
-!              USE H5GLOBAL
-!             !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-!             !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5SSELECT_SELECT_C'::h5sselect_select_c
-!             !DEC$ ENDIF
-!              INTEGER(HID_T), INTENT(INOUT) :: space1_id
-!              INTEGER(HID_T), INTENT(IN) :: space2_id
-!              INTEGER, INTENT(IN) :: operator
-!              END FUNCTION h5sselect_select_c
-!            END INTERFACE
-
-!            hdferr = h5sselect_select_c(space1_id, operator, space2_id)
-!            return
- 
-!          END SUBROUTINE h5sselect_select_f
-
-!----------------------------------------------------------------------
-! Name:		h5sget_select_type_f 
-!
-! Purpose:	Retrieve the type of selection
-!
-! Inputs:  
-!		space_id	- dataspace iidentifier with selection
-! Outputs:  
-!		type    	- flag, valid values are:
-!				  H5S_SEL_ERROR_F 
-!				  H5S_SEL_NONE_F 
-!				  H5S_SEL_POINTS_F 
-!				  H5S_SEL_HYPERSLABS_F 
-!				  H5S_SEL_ALL_F 
-!		hdferr:		- error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:		- NONE
-!
-! Programmer:	Elena Pourmal
-!		October 7, 2002
-!
-! Modifications: 	
-!
-! Comment:		
-!----------------------------------------------------------------------
-
-          SUBROUTINE h5sget_select_type_f(space_id, type, hdferr) 
-!
-!This definition is needed for Windows DLLs
-!DEC$if defined(BUILD_HDF5_DLL)
-!DEC$attributes dllexport :: h5sget_select_type_f
-!DEC$endif
-!
-            IMPLICIT NONE
-            INTEGER(HID_T), INTENT(INOUT) :: space_id ! Dataspace identifier to
-            INTEGER, INTENT(OUT) :: type        ! Selection type
-						!  H5S_SEL_ERROR_F 
-						!  H5S_SEL_NONE_F 
-						!  H5S_SEL_POINTS_F 
-						!  H5S_SEL_HYPERSLABS_F 
-						!  H5S_SEL_ALL_F 
-            INTEGER, INTENT(OUT) :: hdferr     ! Error code
-
-            INTERFACE
-              INTEGER FUNCTION h5sget_select_type_c(space_id, type)
-              USE H5GLOBAL
-              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5SGET_SELECT_TYPE_C'::h5sget_select_type_c
-              !DEC$ ENDIF
-              INTEGER(HID_T), INTENT(IN) :: space_id
-              INTEGER, INTENT(OUT) :: type
-              END FUNCTION h5sget_select_type_c
-            END INTERFACE
-
-            hdferr = h5sget_select_type_c(space_id, type)
-            return
- 
-          END SUBROUTINE h5sget_select_type_f
 
       END MODULE H5S

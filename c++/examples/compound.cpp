@@ -1,17 +1,16 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
- * All rights reserved.                                                      *
- *                                                                           *
- * This file is part of HDF5.  The full HDF5 copyright notice, including     *
- * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+  * Copyright by the Board of Trustees of the University of Illinois.         *
+  * All rights reserved.                                                      *
+  *                                                                           *
+  * This file is part of HDF5.  The full HDF5 copyright notice, including     *
+  * terms governing use, modification, and redistribution, is contained in    *
+  * the files COPYING and Copyright.html.  COPYING can be found at the root   *
+  * of the source code distribution tree; Copyright.html can be found at the  *
+  * root level of an installed copy of the electronic HDF5 document set and   *
+  * is linked from the top-level documents page.  It can also be found at     *
+  * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+  * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
+  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
  * This example shows how to create a compound datatype,
@@ -19,31 +18,27 @@
  * and read back fields' subsets.
  */
 
+#include <string>
+#ifndef H5_NO_NAMESPACE
+using namespace std;
+#endif
+
 #ifdef OLD_HEADER_FILENAME
 #include <iostream.h>
 #else
 #include <iostream>
 #endif
-#include <string>
-
-#ifndef H5_NO_NAMESPACE
-#ifndef H5_NO_STD
-    using std::cout;
-    using std::endl;
-#endif  // H5_NO_STD
-#endif
-
 #include "H5Cpp.h"
 
 #ifndef H5_NO_NAMESPACE
-    using namespace H5;
+using namespace H5;
 #endif
 
-const H5std_string FILE_NAME( "SDScompound.h5" );
-const H5std_string DATASET_NAME( "ArrayOfStructures" );
-const H5std_string MEMBER1( "a_name" );
-const H5std_string MEMBER2( "b_name" );
-const H5std_string MEMBER3( "c_name" );
+const string FILE_NAME( "SDScompound.h5" );
+const string DATASET_NAME( "ArrayOfStructures" );
+const string MEMBER1( "a_name" );
+const string MEMBER2( "b_name" );
+const string MEMBER3( "c_name" );
 const int   LENGTH = 10;
 const int   RANK = 1;
 
@@ -51,15 +46,15 @@ int main(void)
 {
    /* First structure  and dataset*/
    typedef struct s1_t {
-	int    a;
+	int      a;
 	float  b;
-	double c;
+	double c; 
    } s1_t;
 
    /* Second structure (subset of s1_t)  and dataset*/
    typedef struct s2_t {
 	double c;
-	int    a;
+	int      a;
    } s2_t;
 
    // Try block to detect exceptions raised by any of the calls inside it
@@ -68,8 +63,8 @@ int main(void)
       /*
        * Initialize the data
        */
-      int  i;
-      s1_t s1[LENGTH];
+      int        i;
+      s1_t       s1[LENGTH];
       for (i = 0; i< LENGTH; i++)
       {
          s1[i].a = i;
@@ -78,15 +73,9 @@ int main(void)
       }
 
       /*
-       * Turn off the auto-printing when failure occurs so that we can
-       * handle the errors appropriately
-       */
-      Exception::dontPrint();
-
-      /*
        * Create the data space.
        */
-      hsize_t dim[] = {LENGTH};   /* Dataspace dimensions */
+      hsize_t    dim[] = {LENGTH};   /* Dataspace dimensions */
       DataSpace space( RANK, dim );
 
       /*
@@ -95,21 +84,21 @@ int main(void)
       H5File* file = new H5File( FILE_NAME, H5F_ACC_TRUNC );
 
       /*
-       * Create the memory datatype.
+       * Create the memory datatype. 
        */
       CompType mtype1( sizeof(s1_t) );
       mtype1.insertMember( MEMBER1, HOFFSET(s1_t, a), PredType::NATIVE_INT);
       mtype1.insertMember( MEMBER3, HOFFSET(s1_t, c), PredType::NATIVE_DOUBLE);
       mtype1.insertMember( MEMBER2, HOFFSET(s1_t, b), PredType::NATIVE_FLOAT);
 
-      /*
+      /* 
        * Create the dataset.
        */
       DataSet* dataset;
-      dataset = new DataSet(file->createDataSet(DATASET_NAME, mtype1, space));
+      dataset = new DataSet( file->createDataSet( DATASET_NAME, mtype1, space ));
 
       /*
-       * Write data to the dataset;
+       * Wtite data to the dataset; 
        */
       dataset->write( s1, mtype1 );
 
@@ -118,6 +107,16 @@ int main(void)
        */
       delete dataset;
       delete file;
+ 
+      // Get the class of the first member in mtype1, then get its type
+      H5T_class_t member1_class = mtype1.getMemberClass( 2 );
+      if( member1_class == H5T_FLOAT )
+      {
+	 FloatType member2 = mtype1.getMemberFloatType( 2 );
+	 string norm_string;
+	 H5T_norm_t norm = member2.getNorm( norm_string );
+	 cout << "Normalization type is " << norm_string << endl;
+      }
 
       /*
        * Open the file and the dataset.
@@ -125,7 +124,7 @@ int main(void)
       file = new H5File( FILE_NAME, H5F_ACC_RDONLY );
       dataset = new DataSet (file->openDataSet( DATASET_NAME ));
 
-      /*
+      /* 
        * Create a datatype for s2
        */
       CompType mtype2( sizeof(s2_t) );
@@ -137,7 +136,7 @@ int main(void)
        * Read two fields c and a from s1 dataset. Fields in the file
        * are found by their names "c_name" and "a_name".
        */
-      s2_t s2[LENGTH];
+      s2_t       s2[LENGTH];
       dataset->read( s2, mtype2 );
 
       /*
@@ -149,11 +148,11 @@ int main(void)
       cout << endl;
 
       cout << endl << "Field a : " << endl;
-      for( i = 0; i < LENGTH; i++)
+      for( i = 0; i < LENGTH; i++) 
 	 cout << s2[i].a << " ";
       cout << endl;
 
-      /*
+      /* 
        * Create a datatype for s3.
        */
       CompType mtype3( sizeof(float) );
@@ -163,7 +162,7 @@ int main(void)
       /*
        * Read field b from s1 dataset. Field in the file is found by its name.
        */
-      float s3[LENGTH];  // Third "structure" - used to read float field of s1
+      float s3[LENGTH];  // Third "structure" - used to read float field of s1)
       dataset->read( s3, mtype3 );
 
       /*
@@ -185,28 +184,24 @@ int main(void)
    catch( FileIException error )
    {
       error.printError();
-      return -1;
    }
 
    // catch failure caused by the DataSet operations
    catch( DataSetIException error )
    {
       error.printError();
-      return -1;
    }
 
    // catch failure caused by the DataSpace operations
    catch( DataSpaceIException error )
    {
       error.printError();
-      return -1;
    }
 
    // catch failure caused by the DataSpace operations
    catch( DataTypeIException error )
    {
       error.printError();
-      return -1;
    }
 
    return 0;

@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,9 +8,11 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/* $Id$ */
 
 /*
  * Parallel tests for file operations
@@ -31,7 +32,7 @@
  * sooner or later due to barrier mixed up.
  */
 void
-test_split_comm_access(void)
+test_split_comm_access(char *filename)
 {
     int mpi_size, mpi_rank;
     MPI_Comm comm;
@@ -40,12 +41,9 @@ test_split_comm_access(void)
     int newrank, newprocs;
     hid_t fid;			/* file IDs */
     hid_t acc_tpl;		/* File access properties */
-    hbool_t use_gpfs = FALSE;   /* Use GPFS hints */
     herr_t ret;			/* generic return value */
-    const char *filename;
 
-    filename = GetTestParameters();
-    if (VERBOSE_MED)
+    if (verbose)
 	printf("Split Communicator access test on file %s\n",
 	    filename);
 
@@ -68,7 +66,7 @@ test_split_comm_access(void)
 	MPI_Comm_rank(comm,&sub_mpi_rank);
 
 	/* setup file access template */
-	acc_tpl = create_faccess_plist(comm, info, facc_type, use_gpfs);
+	acc_tpl = create_faccess_plist(comm, info, facc_type);
 	VRFY((acc_tpl >= 0), "");
 
 	/* create the file collectively */
@@ -83,9 +81,9 @@ test_split_comm_access(void)
 	ret=H5Fclose(fid);
 	VRFY((ret >= 0), "");
 
-	/* delete the test file */
+	/* detele the test file */
 	if (sub_mpi_rank == 0){
-	    mrc = MPI_File_delete((char *)filename, info);
+	    mrc = MPI_File_delete(filename, info);
 	    /*VRFY((mrc==MPI_SUCCESS), ""); */
 	}
     }

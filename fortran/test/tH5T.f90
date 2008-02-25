@@ -1,5 +1,5 @@
+
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!   Copyright by The HDF Group.                                               *
 !   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
@@ -9,8 +9,8 @@
 !   of the source code distribution tree; Copyright.html can be found at the  *
 !   root level of an installed copy of the electronic HDF5 document set and   *
 !   is linked from the top-level documents page.  It can also be found at     *
-!   http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
-!   access to either file, you may request a copy from help@hdfgroup.org.     *
+!   http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+!   access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
 !
     SUBROUTINE compoundtest(cleanup, total_error)
@@ -82,12 +82,12 @@
      CHARACTER(LEN=256) :: member_name 
      INTEGER :: len ! Lenght of the name of the compound datatype member 
      INTEGER :: member_index ! index of the field
+     LOGICAL :: flag
      INTEGER(HSIZE_T), DIMENSION(3) :: array_dims=(/2,3,4/)
      INTEGER :: array_dims_range = 3
      INTEGER :: elements = 24 ! number of elements in the array_dims array.
      INTEGER(SIZE_T) :: sizechar
-     INTEGER(HSIZE_T), DIMENSION(1) :: data_dims
-     LOGICAL :: flag = .TRUE.
+     INTEGER, DIMENSION(7) :: data_dims
      data_dims(1) = dimsize
      !
      ! Initialize data buffer.
@@ -111,7 +111,7 @@
      !
      CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
          CALL check("h5pcreate_f", error, total_error)
-     CALL h5pset_preserve_f(plist_id, flag, error)
+     CALL h5pset_preserve_f(plist_id, 1, error)
          CALL check("h5pset_preserve_f", error, total_error)
      !
      ! Create a new file using default properties.
@@ -306,13 +306,13 @@
          endif
      !
      !  Go through the members and find out their names and offsets.
-     !  Also see if name corresponds to the index
      !
      do i = 1, num_members
         CALL h5tget_member_name_f(dtype_id, i-1, member_name, len, error)
          CALL check("h5tget_member_name_f", error, total_error)
         CALL h5tget_member_offset_f(dtype_id, i-1, offset_out, error)
          CALL check("h5tget_member_offset_f", error, total_error)
+
         CALL h5tget_member_index_f(dtype_id, member_name(1:len), member_index, error)
          CALL check("h5tget_member_index_f", error, total_error)
          if(member_index .ne. i-1) then
@@ -335,12 +335,6 @@
                 write(*,*) "Wrong member type returned for character member"
                 total_error = total_error + 1
              endif 
-             CALL h5tget_member_class_f(dtype_id, i-1, class, error)
-              CALL check("h5tget_member_class_f",error, total_error)
-              if (class .ne. H5T_STRING_F) then
-                 write(*,*) "Wrong class returned for character member"
-                 total_error = total_error + 1
-              endif
         CASE("integer_field")
              if(offset_out .ne. type_sizec) then
                write(*,*) "Offset of the integer member is incorrect"
@@ -354,12 +348,6 @@
                 write(*,*) "Wrong member type returned for integer memebr"
                 total_error = total_error + 1
              endif 
-             CALL h5tget_member_class_f(dtype_id, i-1, class, error)
-              CALL check("h5tget_member_class_f",error, total_error)
-              if (class .ne. H5T_INTEGER_F) then
-                 write(*,*) "Wrong class returned for INTEGER member"
-                 total_error = total_error + 1
-              endif
         CASE("double_field")
              if(offset_out .ne. (type_sizec+type_sizei)) then
                write(*,*) "Offset of the double precision member is incorrect"
@@ -373,12 +361,6 @@
                 write(*,*) "Wrong member type returned for double precision memebr"
                 total_error = total_error + 1
              endif 
-             CALL h5tget_member_class_f(dtype_id, i-1, class, error)
-              CALL check("h5tget_member_class_f",error, total_error)
-              if (class .ne. H5T_FLOAT_F) then
-                 write(*,*) "Wrong class returned for double precision member"
-                 total_error = total_error + 1
-              endif
         CASE("real_field")
              if(offset_out .ne. (type_sizec+type_sizei+type_sized)) then
                write(*,*) "Offset of the real member is incorrect"
@@ -392,12 +374,6 @@
                 write(*,*) "Wrong member type returned for real memebr"
                 total_error = total_error + 1
              endif 
-             CALL h5tget_member_class_f(dtype_id, i-1, class, error)
-              CALL check("h5tget_member_class_f",error, total_error)
-              if (class .ne. H5T_FLOAT_F) then
-                 write(*,*) "Wrong class returned for real member"
-                 total_error = total_error + 1
-              endif
         CASE DEFAULT
                write(*,*) "Wrong member's name"
                total_error = total_error + 1
@@ -480,7 +456,7 @@
          CALL check("h5dread_f", error, total_error)
          do i = 1, dimsize
             if (real_member_out(i) .ne. real_member(i)) then
-                write(*,*) " Wrong real precision data is read back "
+                write(*,*) " Wrong double precision data is read back "
                 total_error = total_error + 1
             endif
          enddo
@@ -735,92 +711,3 @@
 
      RETURN
      END SUBROUTINE basic_data_type_test
-
-    SUBROUTINE enumtest(cleanup, total_error)
-
-    USE HDF5
-    IMPLICIT none
-
-    LOGICAL, INTENT(IN)  :: cleanup
-    INTEGER, INTENT(OUT) :: total_error 
-    CHARACTER(LEN=4), PARAMETER :: filename="enum"
-    CHARACTER(LEN=80) :: fix_filename
-    CHARACTER(LEN=8), PARAMETER :: dsetname="enumdset"
-    CHARACTER(LEN=4)            :: true ="TRUE"
-    CHARACTER(LEN=5)            :: false="FALSE"
-    CHARACTER(LEN=5)            :: mem_name 
-
-    INTEGER(HID_T) :: file_id
-    INTEGER(HID_T) :: dset_id
-    INTEGER(HID_T) :: dspace_id
-    INTEGER(HID_T) :: dtype_id
-    INTEGER        :: error
-    INTEGER        :: value
-    INTEGER(HSIZE_T), DIMENSION(1) :: dsize
-    INTEGER(SIZE_T) :: buf_size 
-    INTEGER, DIMENSION(2) :: data
-    INTEGER(HSIZE_T), DIMENSION(7) :: dims
-
-    dims(1) = 2
-    dsize(1) = 2
-    data(1) = 1
-    data(2) = 0
-     !
-     ! Create a new file using default properties.
-     ! 
-          CALL h5_fixname_f(filename, fix_filename, H5P_DEFAULT_F, error)
-          if (error .ne. 0) then
-              write(*,*) "Cannot modify filename"
-              stop
-          endif
-    CALL h5fcreate_f(fix_filename,H5F_ACC_TRUNC_F,file_id,error)
-        CALL check("h5fcreate_f", error, total_error)
-    !
-    ! Create enumeration datatype with tow values
-    !
-    CALL h5tenum_create_f(H5T_NATIVE_INTEGER,dtype_id,error)
-        CALL check("h5tenum_create_f", error, total_error)
-    CALL h5tenum_insert_f(dtype_id,true,data(1),error)
-        CALL check("h5tenum_insert_f", error, total_error)
-    CALL h5tenum_insert_f(dtype_id,false,data(2),error)
-        CALL check("h5tenum_insert_f", error, total_error)
-    !
-    ! Create write  and close a dataset with enum datatype
-    !
-    CALL h5screate_simple_f(1,dsize,dspace_id,error)
-        CALL check("h5screate_simple_f", error, total_error)
-    CALL h5dcreate_f(file_id,dsetname,dtype_id,dspace_id,dset_id,error)
-        CALL check("h5dcreate_f", error, total_error)
-    CALL h5dwrite_f(dset_id,dtype_id,data,dims,error)
-        CALL check("h5dwrite_f", error, total_error)
-    CALL h5dclose_f(dset_id,error)
-        CALL check("h5dclose_f", error, total_error)
-    CALL h5sclose_f(dspace_id,error)
-        CALL check("h5sclose_f", error, total_error)
-    !
-    ! Get value of "TRUE"
-    !
-    CALL h5tenum_valueof_f(dtype_id, "TRUE", value, error)
-        CALL check("h5tenum_valueof_f", error, total_error)
-        if (value .ne. 1) then
-            write(*,*) " Value of TRUE is not 1, error"
-            total_error = total_error + 1
-        endif 
-    !
-    !  Get name of 0
-    !
-    value = 0
-    buf_size = 5
-    CALL h5tenum_nameof_f(dtype_id,  value, buf_size, mem_name, error)
-         CALL check("h5tenum_nameof_f", error, total_error)
-         if (mem_name .ne. "FALSE") then
-             write(*,*) " Wrong name for 0 value"
-             total_error = total_error + 1
-         endif
-    CALL h5tclose_f(dtype_id,error)
-        CALL check("h5tclose_f", error, total_error)
-    CALL h5fclose_f(file_id,error)
-        CALL check("h5fclose_f", error, total_error)
-    RETURN
-    END SUBROUTINE enumtest 
-

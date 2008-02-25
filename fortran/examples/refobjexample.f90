@@ -1,5 +1,5 @@
+
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!   Copyright by The HDF Group.                                               *
 !   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
@@ -9,10 +9,10 @@
 !   of the source code distribution tree; Copyright.html can be found at the  *
 !   root level of an installed copy of the electronic HDF5 document set and   *
 !   is linked from the top-level documents page.  It can also be found at     *
-!   http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
-!   access to either file, you may request a copy from help@hdfgroup.org.     *
+!   http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+!   access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!
+
 !
 !    This program shows how to create and store references to the objects.
 !    Program creates a file, two groups, a dataset to store integer data and 
@@ -51,7 +51,7 @@
      TYPE(hobj_ref_t_f), DIMENSION(4) ::  ref_out
      INTEGER, DIMENSION(5) :: data = (/1, 2, 3, 4, 5/)
      INTEGER :: class
-     INTEGER(HSIZE_T), DIMENSION(2) :: data_dims, ref_size
+     INTEGER, DIMENSION(7) :: data_dims, ref_size
      !
      !  Initialize FORTRAN interface. 
      !

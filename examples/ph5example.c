@@ -1,18 +1,3 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
- * All rights reserved.                                                      *
- *                                                                           *
- * This file is part of HDF5.  The full HDF5 copyright notice, including     *
- * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
 /*
  * Example of using the parallel HDF5 library to access datasets.
  * Last revised: April 24, 2001.
@@ -27,7 +12,7 @@
  * each dataset in an independent mode and prints them out.
  * All processes collectively close the datasets and the file.
  *
- * The need of requirement of parallel file prefix is that in general
+ * The need of requirement of parallel file prefix is that in general 
  * the current working directory in which compiling is done, is not suitable
  * for parallel I/O and there is no standard pathname for parallel file
  * systems.  In some cases, the parallel file name may even needs some
@@ -96,10 +81,10 @@ int dowrite=1;				/* write test */
 int docleanup=1;			/* cleanup */
 
 /* Prototypes */
-void slab_set(hsize_t start[], hsize_t count[], hsize_t stride[], int mode);
-void dataset_fill(hsize_t start[], hsize_t count[], hsize_t stride[], DATATYPE * dataset);
-void dataset_print(hsize_t start[], hsize_t count[], hsize_t stride[], DATATYPE * dataset);
-int dataset_vrfy(hsize_t start[], hsize_t count[], hsize_t stride[], DATATYPE *dataset, DATATYPE *original);
+void slab_set(hssize_t start[], hsize_t count[], hsize_t stride[], int mode);
+void dataset_fill(hssize_t start[], hsize_t count[], hsize_t stride[], DATATYPE * dataset);
+void dataset_print(hssize_t start[], hsize_t count[], hsize_t stride[], DATATYPE * dataset);
+int dataset_vrfy(hssize_t start[], hsize_t count[], hsize_t stride[], DATATYPE *dataset, DATATYPE *original);
 void phdf5writeInd(char *filename);
 void phdf5readInd(char *filename);
 void phdf5writeAll(char *filename);
@@ -117,7 +102,7 @@ void cleanup(void);
  * Assume dimension rank is 2.
  */
 void
-slab_set(hsize_t start[], hsize_t count[], hsize_t stride[], int mode)
+slab_set(hssize_t start[], hsize_t count[], hsize_t stride[], int mode)
 {
     switch (mode){
     case BYROW:
@@ -157,10 +142,10 @@ slab_set(hsize_t start[], hsize_t count[], hsize_t stride[], int mode)
  * Assume dimension rank is 2 and data is stored contiguous.
  */
 void
-dataset_fill(hsize_t start[], hsize_t count[], hsize_t stride[], DATATYPE * dataset)
+dataset_fill(hssize_t start[], hsize_t count[], hsize_t stride[], DATATYPE * dataset)
 {
     DATATYPE *dataptr = dataset;
-    hsize_t i, j;
+    int i, j;
 
     /* put some trivial data in the data_array */
     for (i=0; i < count[0]; i++){
@@ -174,14 +159,14 @@ dataset_fill(hsize_t start[], hsize_t count[], hsize_t stride[], DATATYPE * data
 /*
  * Print the content of the dataset.
  */
-void dataset_print(hsize_t start[], hsize_t count[], hsize_t stride[], DATATYPE * dataset)
+void dataset_print(hssize_t start[], hsize_t count[], hsize_t stride[], DATATYPE * dataset)
 {
     DATATYPE *dataptr = dataset;
-    hsize_t i, j;
+    int i, j;
 
     /* print the slab read */
     for (i=0; i < count[0]; i++){
-	printf("Row %lu: ", (unsigned long)(i*stride[0]+start[0]));
+	printf("Row %d: ", (int)(i*stride[0]+start[0]));
 	for (j=0; j < count[1]; j++){
 	    printf("%03d ", *dataptr++);
 	}
@@ -193,12 +178,11 @@ void dataset_print(hsize_t start[], hsize_t count[], hsize_t stride[], DATATYPE 
 /*
  * Print the content of the dataset.
  */
-int dataset_vrfy(hsize_t start[], hsize_t count[], hsize_t stride[], DATATYPE *dataset, DATATYPE *original)
+int dataset_vrfy(hssize_t start[], hsize_t count[], hsize_t stride[], DATATYPE *dataset, DATATYPE *original)
 {
 #define MAX_ERR_REPORT	10		/* Maximum number of errors reported */
 
-    hsize_t i, j;
-    int nerr;
+    int i, j, nerr;
 
     /* print it if verbose */
     if (verbose)
@@ -210,9 +194,9 @@ int dataset_vrfy(hsize_t start[], hsize_t count[], hsize_t stride[], DATATYPE *d
 	    if (*dataset++ != *original++){
 		nerr++;
 		if (nerr <= MAX_ERR_REPORT){
-		    printf("Dataset Verify failed at [%lu][%lu](row %lu, col %lu): expect %d, got %d\n",
-			(unsigned long)i, (unsigned long)j,
-			(unsigned long)(i*stride[0]+start[0]), (unsigned long)(j*stride[1]+start[1]),
+		    printf("Dataset Verify failed at [%d][%d](row %d, col %d): expect %d, got %d\n",
+			i, j,
+			(int)(i*stride[0]+start[0]), (int)(j*stride[1]+start[1]),
 			*(dataset-1), *(original-1));
 		}
 	    }
@@ -247,11 +231,11 @@ phdf5writeInd(char *filename)
 	{SPACE1_DIM1,SPACE1_DIM2};	/* dataspace dim sizes */
     DATATYPE data_array1[SPACE1_DIM1][SPACE1_DIM2];	/* data buffer */
 
-    hsize_t start[SPACE1_RANK];			/* for hyperslab setting */
+    hssize_t   start[SPACE1_RANK];			/* for hyperslab setting */
     hsize_t count[SPACE1_RANK], stride[SPACE1_RANK];	/* for hyperslab setting */
 
     herr_t ret;         	/* Generic return value */
-
+    
     MPI_Comm comm = MPI_COMM_WORLD;
     MPI_Info info = MPI_INFO_NULL;
 
@@ -259,24 +243,24 @@ phdf5writeInd(char *filename)
 	printf("Independent write test on file %s\n", filename);
 
     /* -------------------
-     * START AN HDF5 FILE
+     * START AN HDF5 FILE 
      * -------------------*/
     /* setup file access template with parallel IO access. */
     acc_tpl1 = H5Pcreate (H5P_FILE_ACCESS);
     assert(acc_tpl1 != FAIL);
     MESG("H5Pcreate access succeed");
     /* set Parallel access with communicator */
-    ret = H5Pset_fapl_mpio(acc_tpl1, comm, info);
+    ret = H5Pset_fapl_mpio(acc_tpl1, comm, info);     
     assert(ret != FAIL);
     MESG("H5Pset_fapl_mpio succeed");
 
     /* create the file collectively */
-    fid1 = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, acc_tpl1);
+    fid1=H5Fcreate(filename,H5F_ACC_TRUNC,H5P_DEFAULT,acc_tpl1);
     assert(fid1 != FAIL);
     MESG("H5Fcreate succeed");
 
     /* Release file-access template */
-    ret = H5Pclose(acc_tpl1);
+    ret=H5Pclose(acc_tpl1);
     assert(ret != FAIL);
 
 
@@ -285,22 +269,22 @@ phdf5writeInd(char *filename)
      * and the slabs local to the MPI process.
      * ------------------------- */
     /* setup dimensionality object */
-    sid1 = H5Screate_simple(SPACE1_RANK, dims1, NULL);
+    sid1 = H5Screate_simple (SPACE1_RANK, dims1, NULL);
     assert (sid1 != FAIL);
     MESG("H5Screate_simple succeed");
 
-
+    
     /* create a dataset collectively */
-    dataset1 = H5Dcreate2(fid1, DATASETNAME1, H5T_NATIVE_INT, sid1,
-			H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    dataset1 = H5Dcreate(fid1, DATASETNAME1, H5T_NATIVE_INT, sid1,
+			H5P_DEFAULT);
     assert(dataset1 != FAIL);
-    MESG("H5Dcreate2 succeed");
+    MESG("H5Dcreate succeed");
 
     /* create another dataset collectively */
-    dataset2 = H5Dcreate2(fid1, DATASETNAME2, H5T_NATIVE_INT, sid1,
-			H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    dataset2 = H5Dcreate(fid1, DATASETNAME2, H5T_NATIVE_INT, sid1,
+			H5P_DEFAULT);
     assert(dataset2 != FAIL);
-    MESG("H5Dcreate2 succeed");
+    MESG("H5Dcreate succeed");
 
 
 
@@ -312,18 +296,16 @@ phdf5writeInd(char *filename)
     stride[0] = 1;
     stride[1] =1;
 if (verbose)
-    printf("start[]=(%lu,%lu), count[]=(%lu,%lu), total datapoints=%lu\n",
-	(unsigned long)start[0], (unsigned long)start[1],
-        (unsigned long)count[0], (unsigned long)count[1],
-        (unsigned long)(count[0]*count[1]));
+    printf("start[]=(%d,%d), count[]=(%d,%d), total datapoints=%d\n",
+	start[0], start[1], count[0], count[1], count[0]*count[1]);
 
     /* put some trivial data in the data_array */
     dataset_fill(start, count, stride, &data_array1[0][0]);
     MESG("data_array initialized");
 
     /* create a file dataspace independently */
-    file_dataspace = H5Dget_space (dataset1);
-    assert(file_dataspace != FAIL);
+    file_dataspace = H5Dget_space (dataset1);				    
+    assert(file_dataspace != FAIL);					    
     MESG("H5Dget_space succeed");
     ret=H5Sselect_hyperslab(file_dataspace, H5S_SELECT_SET, start, stride,
 	    count, NULL);
@@ -335,21 +317,21 @@ if (verbose)
     assert (mem_dataspace != FAIL);
 
     /* write data independently */
-    ret = H5Dwrite(dataset1, H5T_NATIVE_INT, mem_dataspace, file_dataspace,
-	    H5P_DEFAULT, data_array1);
+    ret = H5Dwrite(dataset1, H5T_NATIVE_INT, mem_dataspace, file_dataspace,	    
+	    H5P_DEFAULT, data_array1);					    
     assert(ret != FAIL);
     MESG("H5Dwrite succeed");
 
     /* write data independently */
-    ret = H5Dwrite(dataset2, H5T_NATIVE_INT, mem_dataspace, file_dataspace,
-	    H5P_DEFAULT, data_array1);
+    ret = H5Dwrite(dataset2, H5T_NATIVE_INT, mem_dataspace, file_dataspace,	    
+	    H5P_DEFAULT, data_array1);					    
     assert(ret != FAIL);
     MESG("H5Dwrite succeed");
 
     /* release dataspace ID */
     H5Sclose(file_dataspace);
 
-    /* close dataset collectively */
+    /* close dataset collectively */					    
     ret=H5Dclose(dataset1);
     assert(ret != FAIL);
     MESG("H5Dclose1 succeed");
@@ -360,8 +342,8 @@ if (verbose)
     /* release all IDs created */
     H5Sclose(sid1);
 
-    /* close the file collectively */
-    H5Fclose(fid1);
+    /* close the file collectively */					    
+    H5Fclose(fid1);							    
 }
 
 /* Example of using the parallel HDF5 library to read a dataset */
@@ -376,7 +358,7 @@ phdf5readInd(char *filename)
     DATATYPE data_array1[SPACE1_DIM1][SPACE1_DIM2];	/* data buffer */
     DATATYPE data_origin1[SPACE1_DIM1][SPACE1_DIM2];	/* expected data buffer */
 
-    hsize_t start[SPACE1_RANK];			/* for hyperslab setting */
+    hssize_t   start[SPACE1_RANK];			/* for hyperslab setting */
     hsize_t count[SPACE1_RANK], stride[SPACE1_RANK];	/* for hyperslab setting */
 
     herr_t ret;         	/* Generic return value */
@@ -391,7 +373,7 @@ phdf5readInd(char *filename)
     acc_tpl1 = H5Pcreate (H5P_FILE_ACCESS);
     assert(acc_tpl1 != FAIL);
     /* set Parallel access with communicator */
-    ret = H5Pset_fapl_mpio(acc_tpl1, comm, info);
+    ret = H5Pset_fapl_mpio(acc_tpl1, comm, info);     
     assert(ret != FAIL);
 
 
@@ -404,11 +386,11 @@ phdf5readInd(char *filename)
     assert(ret != FAIL);
 
     /* open the dataset1 collectively */
-    dataset1 = H5Dopen2(fid1, DATASETNAME1, H5P_DEFAULT);
+    dataset1 = H5Dopen(fid1, DATASETNAME1);
     assert(dataset1 != FAIL);
 
     /* open another dataset collectively */
-    dataset2 = H5Dopen2(fid1, DATASETNAME1, H5P_DEFAULT);
+    dataset2 = H5Dopen(fid1, DATASETNAME1);
     assert(dataset2 != FAIL);
 
 
@@ -420,10 +402,8 @@ phdf5readInd(char *filename)
     stride[0] = 1;
     stride[1] =1;
 if (verbose)
-    printf("start[]=(%lu,%lu), count[]=(%lu,%lu), total datapoints=%lu\n",
-        (unsigned long)start[0], (unsigned long)start[1],
-        (unsigned long)count[0], (unsigned long)count[1],
-        (unsigned long)(count[0]*count[1]));
+    printf("start[]=(%d,%d), count[]=(%d,%d), total datapoints=%d\n",
+    start[0], start[1], count[0], count[1], count[0]*count[1]);
 
     /* create a file dataspace independently */
     file_dataspace = H5Dget_space (dataset1);
@@ -494,11 +474,11 @@ phdf5writeAll(char *filename)
 	{SPACE1_DIM1,SPACE1_DIM2};	/* dataspace dim sizes */
     DATATYPE data_array1[SPACE1_DIM1][SPACE1_DIM2];	/* data buffer */
 
-    hsize_t start[SPACE1_RANK];			/* for hyperslab setting */
+    hssize_t   start[SPACE1_RANK];			/* for hyperslab setting */
     hsize_t count[SPACE1_RANK], stride[SPACE1_RANK];	/* for hyperslab setting */
 
     herr_t ret;         	/* Generic return value */
-
+    
     MPI_Comm comm = MPI_COMM_WORLD;
     MPI_Info info = MPI_INFO_NULL;
 
@@ -506,14 +486,14 @@ phdf5writeAll(char *filename)
 	printf("Collective write test on file %s\n", filename);
 
     /* -------------------
-     * START AN HDF5 FILE
+     * START AN HDF5 FILE 
      * -------------------*/
     /* setup file access template with parallel IO access. */
     acc_tpl1 = H5Pcreate (H5P_FILE_ACCESS);
     assert(acc_tpl1 != FAIL);
     MESG("H5Pcreate access succeed");
     /* set Parallel access with communicator */
-    ret = H5Pset_fapl_mpio(acc_tpl1, comm, info);
+    ret = H5Pset_fapl_mpio(acc_tpl1, comm, info);     
     assert(ret != FAIL);
     MESG("H5Pset_fapl_mpio succeed");
 
@@ -536,16 +516,16 @@ phdf5writeAll(char *filename)
     assert (sid1 != FAIL);
     MESG("H5Screate_simple succeed");
 
-
+    
     /* create a dataset collectively */
-    dataset1 = H5Dcreate2(fid1, DATASETNAME1, H5T_NATIVE_INT, sid1, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    dataset1 = H5Dcreate(fid1, DATASETNAME1, H5T_NATIVE_INT, sid1, H5P_DEFAULT);
     assert(dataset1 != FAIL);
-    MESG("H5Dcreate2 succeed");
+    MESG("H5Dcreate succeed");
 
     /* create another dataset collectively */
-    dataset2 = H5Dcreate2(fid1, DATASETNAME2, H5T_NATIVE_INT, sid1, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    dataset2 = H5Dcreate(fid1, DATASETNAME2, H5T_NATIVE_INT, sid1, H5P_DEFAULT);
     assert(dataset2 != FAIL);
-    MESG("H5Dcreate2 2 succeed");
+    MESG("H5Dcreate 2 succeed");
 
     /*
      * Set up dimensions of the slab this process accesses.
@@ -554,14 +534,12 @@ phdf5writeAll(char *filename)
     /* Dataset1: each process takes a block of rows. */
     slab_set(start, count, stride, BYROW);
 if (verbose)
-    printf("start[]=(%lu,%lu), count[]=(%lu,%lu), total datapoints=%lu\n",
-	(unsigned long)start[0], (unsigned long)start[1],
-        (unsigned long)count[0], (unsigned long)count[1],
-        (unsigned long)(count[0]*count[1]));
+    printf("start[]=(%d,%d), count[]=(%d,%d), total datapoints=%d\n",
+	start[0], start[1], count[0], count[1], count[0]*count[1]);
 
     /* create a file dataspace independently */
-    file_dataspace = H5Dget_space (dataset1);
-    assert(file_dataspace != FAIL);
+    file_dataspace = H5Dget_space (dataset1);				    
+    assert(file_dataspace != FAIL);					    
     MESG("H5Dget_space succeed");
     ret=H5Sselect_hyperslab(file_dataspace, H5S_SELECT_SET, start, stride,
 	    count, NULL);
@@ -589,7 +567,7 @@ if (verbose)
 
     /* write data collectively */
     ret = H5Dwrite(dataset1, H5T_NATIVE_INT, mem_dataspace, file_dataspace,
-	    xfer_plist, data_array1);
+	    xfer_plist, data_array1);					    
     assert(ret != FAIL);
     MESG("H5Dwrite succeed");
 
@@ -603,10 +581,8 @@ if (verbose)
     /* Dataset2: each process takes a block of columns. */
     slab_set(start, count, stride, BYCOL);
 if (verbose)
-    printf("start[]=(%lu,%lu), count[]=(%lu,%lu), total datapoints=%lu\n",
-	(unsigned long)start[0], (unsigned long)start[1],
-        (unsigned long)count[0], (unsigned long)count[1],
-        (unsigned long)(count[0]*count[1]));
+    printf("start[]=(%d,%d), count[]=(%d,%d), total datapoints=%d\n",
+	start[0], start[1], count[0], count[1], count[0]*count[1]);
 
     /* put some trivial data in the data_array */
     dataset_fill(start, count, stride, &data_array1[0][0]);
@@ -617,8 +593,8 @@ if (verbose)
     }
 
     /* create a file dataspace independently */
-    file_dataspace = H5Dget_space (dataset1);
-    assert(file_dataspace != FAIL);
+    file_dataspace = H5Dget_space (dataset1);				    
+    assert(file_dataspace != FAIL);					    
     MESG("H5Dget_space succeed");
     ret=H5Sselect_hyperslab(file_dataspace, H5S_SELECT_SET, start, stride,
 	    count, NULL);
@@ -646,7 +622,7 @@ if (verbose)
 
     /* write data independently */
     ret = H5Dwrite(dataset2, H5T_NATIVE_INT, mem_dataspace, file_dataspace,
-	    xfer_plist, data_array1);
+	    xfer_plist, data_array1);					    
     assert(ret != FAIL);
     MESG("H5Dwrite succeed");
 
@@ -658,7 +634,7 @@ if (verbose)
 
     /*
      * All writes completed.  Close datasets collectively
-     */
+     */					    
     ret=H5Dclose(dataset1);
     assert(ret != FAIL);
     MESG("H5Dclose1 succeed");
@@ -669,8 +645,8 @@ if (verbose)
     /* release all IDs created */
     H5Sclose(sid1);
 
-    /* close the file collectively */
-    H5Fclose(fid1);
+    /* close the file collectively */					    
+    H5Fclose(fid1);							    
 }
 
 /*
@@ -694,7 +670,7 @@ phdf5readAll(char *filename)
     DATATYPE data_array1[SPACE1_DIM1][SPACE1_DIM2];	/* data buffer */
     DATATYPE data_origin1[SPACE1_DIM1][SPACE1_DIM2];	/* expected data buffer */
 
-    hsize_t start[SPACE1_RANK];			/* for hyperslab setting */
+    hssize_t   start[SPACE1_RANK];			/* for hyperslab setting */
     hsize_t count[SPACE1_RANK], stride[SPACE1_RANK];	/* for hyperslab setting */
 
     herr_t ret;         	/* Generic return value */
@@ -706,14 +682,14 @@ phdf5readAll(char *filename)
 	printf("Collective read test on file %s\n", filename);
 
     /* -------------------
-     * OPEN AN HDF5 FILE
+     * OPEN AN HDF5 FILE 
      * -------------------*/
     /* setup file access template with parallel IO access. */
     acc_tpl1 = H5Pcreate (H5P_FILE_ACCESS);
     assert(acc_tpl1 != FAIL);
     MESG("H5Pcreate access succeed");
     /* set Parallel access with communicator */
-    ret = H5Pset_fapl_mpio(acc_tpl1, comm, info);
+    ret = H5Pset_fapl_mpio(acc_tpl1, comm, info);     
     assert(ret != FAIL);
     MESG("H5Pset_fapl_mpio succeed");
 
@@ -731,14 +707,14 @@ phdf5readAll(char *filename)
      * Open the datasets in it
      * ------------------------- */
     /* open the dataset1 collectively */
-    dataset1 = H5Dopen2(fid1, DATASETNAME1, H5P_DEFAULT);
+    dataset1 = H5Dopen(fid1, DATASETNAME1);
     assert(dataset1 != FAIL);
-    MESG("H5Dopen2 succeed");
+    MESG("H5Dopen succeed");
 
     /* open another dataset collectively */
-    dataset2 = H5Dopen2(fid1, DATASETNAME1, H5P_DEFAULT);
+    dataset2 = H5Dopen(fid1, DATASETNAME1);
     assert(dataset2 != FAIL);
-    MESG("H5Dopen2 2 succeed");
+    MESG("H5Dopen 2 succeed");
 
     /*
      * Set up dimensions of the slab this process accesses.
@@ -747,14 +723,12 @@ phdf5readAll(char *filename)
     /* Dataset1: each process takes a block of columns. */
     slab_set(start, count, stride, BYCOL);
 if (verbose)
-    printf("start[]=(%lu,%lu), count[]=(%lu,%lu), total datapoints=%lu\n",
-	(unsigned long)start[0], (unsigned long)start[1],
-        (unsigned long)count[0], (unsigned long)count[1],
-        (unsigned long)(count[0]*count[1]));
+    printf("start[]=(%d,%d), count[]=(%d,%d), total datapoints=%d\n",
+	start[0], start[1], count[0], count[1], count[0]*count[1]);
 
     /* create a file dataspace independently */
-    file_dataspace = H5Dget_space (dataset1);
-    assert(file_dataspace != FAIL);
+    file_dataspace = H5Dget_space (dataset1);				    
+    assert(file_dataspace != FAIL);					    
     MESG("H5Dget_space succeed");
     ret=H5Sselect_hyperslab(file_dataspace, H5S_SELECT_SET, start, stride,
 	    count, NULL);
@@ -782,7 +756,7 @@ if (verbose)
 
     /* read data collectively */
     ret = H5Dread(dataset1, H5T_NATIVE_INT, mem_dataspace, file_dataspace,
-	    xfer_plist, data_array1);
+	    xfer_plist, data_array1);					    
     assert(ret != FAIL);
     MESG("H5Dread succeed");
 
@@ -800,14 +774,12 @@ if (verbose)
     /* Dataset2: each process takes a block of rows. */
     slab_set(start, count, stride, BYROW);
 if (verbose)
-    printf("start[]=(%lu,%lu), count[]=(%lu,%lu), total datapoints=%lu\n",
-	(unsigned long)start[0], (unsigned long)start[1],
-        (unsigned long)count[0], (unsigned long)count[1],
-        (unsigned long)(count[0]*count[1]));
+    printf("start[]=(%d,%d), count[]=(%d,%d), total datapoints=%d\n",
+	start[0], start[1], count[0], count[1], count[0]*count[1]);
 
     /* create a file dataspace independently */
-    file_dataspace = H5Dget_space (dataset1);
-    assert(file_dataspace != FAIL);
+    file_dataspace = H5Dget_space (dataset1);				    
+    assert(file_dataspace != FAIL);					    
     MESG("H5Dget_space succeed");
     ret=H5Sselect_hyperslab(file_dataspace, H5S_SELECT_SET, start, stride,
 	    count, NULL);
@@ -835,7 +807,7 @@ if (verbose)
 
     /* read data independently */
     ret = H5Dread(dataset2, H5T_NATIVE_INT, mem_dataspace, file_dataspace,
-	    xfer_plist, data_array1);
+	    xfer_plist, data_array1);					    
     assert(ret != FAIL);
     MESG("H5Dread succeed");
 
@@ -851,7 +823,7 @@ if (verbose)
 
     /*
      * All reads completed.  Close datasets collectively
-     */
+     */					    
     ret=H5Dclose(dataset1);
     assert(ret != FAIL);
     MESG("H5Dclose1 succeed");
@@ -859,8 +831,8 @@ if (verbose)
     assert(ret != FAIL);
     MESG("H5Dclose2 succeed");
 
-    /* close the file collectively */
-    H5Fclose(fid1);
+    /* close the file collectively */					    
+    H5Fclose(fid1);							    
 }
 
 /*
@@ -904,9 +876,9 @@ test_split_comm_access(char filenames[][PATH_MAX])
 	/* setup file access template */
 	acc_tpl = H5Pcreate (H5P_FILE_ACCESS);
 	assert(acc_tpl != FAIL);
-
+	
 	/* set Parallel access with communicator */
-	ret = H5Pset_fapl_mpio(acc_tpl, comm, info);
+	ret = H5Pset_fapl_mpio(acc_tpl, comm, info);     
 	assert(ret != FAIL);
 
 	/* create the file collectively */
@@ -931,7 +903,7 @@ test_split_comm_access(char filenames[][PATH_MAX])
  * Show command usage
  */
 void
-usage(void)
+usage()
 {
     printf("Usage: testphdf5 [-f <prefix>] [-r] [-w] [-v]\n");
     printf("\t-f\tfile prefix for parallel test files.\n");
@@ -1056,7 +1028,7 @@ cleanup(void)
 int
 main(int argc, char **argv)
 {
-    int mpi_namelen;
+    int mpi_namelen;		
     char mpi_name[MPI_MAX_PROCESSOR_NAME];
     int i, n;
 
@@ -1124,7 +1096,7 @@ finish:
 #else /* H5_HAVE_PARALLEL */
 /* dummy program since H5_HAVE_PARALLE is not configured in */
 int
-main(void)
+main()
 {
 printf("No PHDF5 example because parallel is not configured in\n");
 return(0);

@@ -1,5 +1,5 @@
+
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!   Copyright by The HDF Group.                                               *
 !   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
@@ -9,8 +9,8 @@
 !   of the source code distribution tree; Copyright.html can be found at the  *
 !   root level of an installed copy of the electronic HDF5 document set and   *
 !   is linked from the top-level documents page.  It can also be found at     *
-!   http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
-!   access to either file, you may request a copy from help@hdfgroup.org.     *
+!   http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+!   access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
 !
 !
@@ -83,7 +83,7 @@
      !data buffers 
      !         
      INTEGER, DIMENSION(NX,NY) :: data_in, data_out
-     INTEGER(HSIZE_T), DIMENSION(2) :: data_dims
+     INTEGER, DIMENSION(7) :: data_dims
      data_dims(1) = NX
      data_dims(2) = NY
 
@@ -108,7 +108,7 @@
           CALL h5_fixname_f(filename, fix_filename, H5P_DEFAULT_F, error)
           if (error .ne. 0) then
               write(*,*) "Cannot modify filename"
-              CALL h5_exit_f (1)
+              stop
           endif
      CALL h5fcreate_f(fix_filename, H5F_ACC_TRUNC_F, file_id, error)
           CALL check("h5fcreate_f",error,total_error)
@@ -144,8 +144,9 @@
      CALL H5fflush_f(file_id, H5F_SCOPE_GLOBAL_F, error)
           CALL check("h5fflush_f",error,total_error)
 
-     ! if errors detected, exit with non-zero code.
-     IF (total_error .ne. 0) CALL h5_exit_f (1)
+     ! if errors detected, exit with non-zero code. This is not truly fortran
+     ! standard but likely supported by most fortran compilers.
+     IF (total_error .ne. 0) CALL exit (total_error)
 
 
      001 STOP

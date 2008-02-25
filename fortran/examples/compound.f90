@@ -1,5 +1,4 @@
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!   Copyright by The HDF Group.                                               *
 !   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
@@ -9,10 +8,10 @@
 !   of the source code distribution tree; Copyright.html can be found at the  *
 !   root level of an installed copy of the electronic HDF5 document set and   *
 !   is linked from the top-level documents page.  It can also be found at     *
-!   http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
-!   access to either file, you may request a copy from help@hdfgroup.org.     *
+!   http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+!   access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!
+
 !
 ! This program creates a dataset that is one dimensional array of
 ! structures  {
@@ -63,7 +62,7 @@
      DOUBLE PRECISION, DIMENSION(dimsize) :: double_member
      REAL, DIMENSION(dimsize)             :: real_member
      INTEGER :: i
-     INTEGER(HSIZE_T), DIMENSION(1) :: data_dims 
+     INTEGER, DIMENSION(7) :: data_dims 
      data_dims(1) = dimsize
      !
      ! Initialize data buffer.
@@ -87,7 +86,7 @@
      ! during write/read to/from dataset with compound datatype.
      !
      CALL h5pcreate_f(H5P_DATASET_XFER_F, plist_id, error)
-     CALL h5pset_preserve_f(plist_id, .TRUE., error)
+     CALL h5pset_preserve_f(plist_id, 1, error)
 
      !
      ! Create a new file using default properties.

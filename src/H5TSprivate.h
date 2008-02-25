@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*-------------------------------------------------------------------------
@@ -36,7 +35,7 @@
 /* Library level data structures */
 
 typedef struct H5TS_mutex_struct {
-    pthread_t owner_thread;		/* current lock owner */
+    pthread_t *owner_thread;		/* current lock owner */
     pthread_mutex_t atomic_lock;	/* lock for atomicity of new mechanism */
     pthread_cond_t cond_var;		/* condition variable */
     unsigned int lock_count;
@@ -45,7 +44,6 @@ typedef struct H5TS_mutex_struct {
 /* Extern global variables */
 extern pthread_once_t H5TS_first_init_g;
 extern pthread_key_t H5TS_errstk_key_g;
-extern pthread_key_t H5TS_funcstk_key_g;
 
 #if defined c_plusplus || defined __cplusplus
 extern      "C"

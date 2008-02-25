@@ -1,5 +1,4 @@
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!   Copyright by The HDF Group.                                               *
 !   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
@@ -9,10 +8,9 @@
 !   of the source code distribution tree; Copyright.html can be found at the  *
 !   root level of an installed copy of the electronic HDF5 document set and   *
 !   is linked from the top-level documents page.  It can also be found at     *
-!   http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
-!   access to either file, you may request a copy from help@hdfgroup.org.     *
+!   http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+!   access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!
 !
 ! This file contains Fortran90 interfaces for H5F functions.
 ! 
@@ -69,8 +67,8 @@
             INTEGER(HID_T), OPTIONAL, INTENT(IN) :: access_prp
                                                    ! File access property list
                                                    ! identifier
-            INTEGER(HID_T) :: creation_prp_default 
-            INTEGER(HID_T) :: access_prp_default
+            INTEGER :: creation_prp_default 
+            INTEGER :: access_prp_default
             INTEGER :: namelen ! Length of the name character string
 
 !            INTEGER, EXTERNAL :: h5fcreate_c
@@ -81,14 +79,14 @@
                                creation_prp_default, access_prp_default, file_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FCREATE_C':: h5fcreate_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5FCREATE_C':: h5fcreate_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name 
               CHARACTER(LEN=*), INTENT(IN) :: name
               INTEGER, INTENT(IN) :: access_flags
               INTEGER(HID_T), INTENT(OUT) :: file_id
-              INTEGER(HID_T), INTENT(IN) :: creation_prp_default
-              INTEGER(HID_T), INTENT(IN) :: access_prp_default
+              INTEGER, INTENT(IN) :: creation_prp_default
+              INTEGER, INTENT(IN) :: access_prp_default
               INTEGER :: namelen
               END FUNCTION h5fcreate_c
             END INTERFACE
@@ -117,6 +115,7 @@
 !				  H5F_SCOPE_GLOBAL_F
 !				  H5F_SCOPE_LOCAL_F
 ! Outputs:  
+!		file_id		- file identifier
 !		hdferr:		- error code		
 !				 	Success:  0
 !				 	Failure: -1   
@@ -167,7 +166,7 @@
               INTEGER FUNCTION h5fflush_c(object_id, scope)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FFLUSH_C':: h5fflush_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5FFLUSH_C':: h5fflush_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: object_id
               INTEGER, INTENT(IN) :: scope
@@ -224,7 +223,7 @@
             INTEGER(HID_T), OPTIONAL, INTENT(IN) :: access_prp
                                                    ! File access property list
                                                    ! identifier
-            INTEGER(HID_T) :: access_prp_default 
+            INTEGER :: access_prp_default 
             INTEGER :: namelen ! Length of the name character string
   
 !            INTEGER, EXTERNAL :: h5fmount_c
@@ -235,7 +234,7 @@
                                           child_id, access_prp_default)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FMOUNT_C':: h5fmount_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5FMOUNT_C':: h5fmount_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name 
               INTEGER(HID_T), INTENT(IN) :: loc_id 
@@ -303,7 +302,7 @@
               INTEGER FUNCTION h5funmount_c(loc_id, name, namelen)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FUNMOUNT_C':: h5funmount_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5FUNMOUNT_C':: h5funmount_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name 
               INTEGER(HID_T), INTENT(IN) :: loc_id 
@@ -361,7 +360,7 @@
             INTEGER(HID_T), OPTIONAL, INTENT(IN) :: access_prp
                                                    ! File access property list
                                                    ! identifier
-            INTEGER(HID_T) :: access_prp_default 
+            INTEGER :: access_prp_default 
             INTEGER :: namelen ! Length of the name character string
 
 !            INTEGER, EXTERNAL :: h5fopen_c
@@ -372,13 +371,13 @@
                                access_prp_default, file_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FOPEN_C':: h5fopen_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5FOPEN_C':: h5fopen_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               CHARACTER(LEN=*), INTENT(IN) :: name
               INTEGER :: namelen
               INTEGER, INTENT(IN) :: access_flags
-              INTEGER(HID_T), INTENT(IN) :: access_prp_default
+              INTEGER, INTENT(IN) :: access_prp_default
               INTEGER(HID_T), INTENT(OUT) :: file_id
               END FUNCTION h5fopen_c
             END INTERFACE
@@ -437,7 +436,7 @@
               INTEGER FUNCTION h5freopen_c(file_id, ret_file_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FREOPEN_C':: h5freopen_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5FREOPEN_C':: h5freopen_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: file_id
               INTEGER(HID_T), INTENT(OUT) :: ret_file_id
@@ -495,7 +494,7 @@
               INTEGER FUNCTION h5fget_create_plist_c(file_id, prop_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-!DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FGET_CREATE_PLIST_C':: h5fget_create_plist_c
+!MS$ATTRIBUTES C,reference,alias:'_H5FGET_CREATE_PLIST_C':: h5fget_create_plist_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: file_id
               INTEGER(HID_T), INTENT(OUT) :: prop_id
@@ -553,7 +552,7 @@
               INTEGER FUNCTION h5fget_access_plist_c(file_id, access_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-!DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FGET_CREATE_PLIST_C':: h5fget_access_plist_c
+!MS$ATTRIBUTES C,reference,alias:'_H5FGET_CREATE_PLIST_C':: h5fget_access_plist_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: file_id
               INTEGER(HID_T), INTENT(OUT) :: access_id
@@ -614,7 +613,7 @@
               INTEGER FUNCTION h5fis_hdf5_c(name, namelen, flag)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FIS_HDF5_C':: h5fis_hdf5_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5FIS_HDF5_C':: h5fis_hdf5_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               CHARACTER(LEN=*), INTENT(IN) :: name
@@ -673,7 +672,7 @@
               INTEGER FUNCTION h5fclose_c(file_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FCLOSE_C':: h5fclose_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5FCLOSE_C':: h5fclose_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: file_id
               END FUNCTION h5fclose_c
@@ -682,280 +681,5 @@
             hdferr = h5fclose_c(file_id)
 
           END SUBROUTINE h5fclose_f
-
-!----------------------------------------------------------------------
-! Name:		h5fget_obj_count_f
-!
-! Purpose:	Gets number of the objects open within a file
-!
-! Inputs:  
-!		file_id		- file identifier
-!               obj_type        - type of the object; possible values are:
-!                                 H5F_OBJ_FILE_F 
-!                                 H5F_OBJ_DATASET_F 
-!                                 H5F_OBJ_GROUP_F 
-!                                 H5F_OBJ_DATATYPE_F 
-!                                 H5F_OBJ_ALL_F 
-! Outputs:  
-!               obj_count       - number of open objects
-!		hdferr:		- error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:
-!				NONE
-!
-! Programmer:	Elena Pourmal
-!		September 30, 2002
-!
-! Modifications: 	
-!
-! Comment:		
-!----------------------------------------------------------------------
-          
-          SUBROUTINE h5fget_obj_count_f(file_id, obj_type, obj_count, hdferr)
-!
-!This definition is needed for Windows DLLs
-!DEC$if defined(BUILD_HDF5_DLL)
-!DEC$attributes dllexport :: h5fget_obj_count_f
-!DEC$endif
-!
-
-            IMPLICIT NONE
-            INTEGER(HID_T), INTENT(IN) :: file_id ! File identifier
-            INTEGER, INTENT(IN)  :: obj_type      ! Object type
-            INTEGER, INTENT(OUT) :: obj_count     ! Number of open objects
-            INTEGER, INTENT(OUT) :: hdferr        ! Error code
-
-            INTERFACE
-              INTEGER FUNCTION h5fget_obj_count_c(file_id, obj_type, obj_count)
-              USE H5GLOBAL
-              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-       !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FGET_OBJ_COUNT_C':: h5fget_obj_count_c
-              !DEC$ ENDIF
-              INTEGER(HID_T), INTENT(IN) :: file_id
-              INTEGER, INTENT(IN)  :: obj_type      ! Object type
-              INTEGER, INTENT(OUT) :: obj_count    ! Number of open objects
-              END FUNCTION h5fget_obj_count_c
-            END INTERFACE
-
-            hdferr = h5fget_obj_count_c(file_id, obj_type, obj_count)
-
-          END SUBROUTINE h5fget_obj_count_f
-
-!----------------------------------------------------------------------
-! Name:		h5fget_obj_ids_f
-!
-! Purpose:	Get list of open objects identifiers within a file
-!
-! Inputs:  
-!		file_id		- file identifier
-!               obj_type        - type of the object; possible values are:
-!                                 H5F_OBJ_FILE_F 
-!                                 H5F_OBJ_DATASET_F 
-!                                 H5F_OBJ_GROUP_F 
-!                                 H5F_OBJ_DATATYPE_F 
-!                                 H5F_OBJ_ALL_F 
-! Outputs:  
-!               obj_ids         - array of open object identifiers
-!		hdferr:		- error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:
-!				NONE
-!
-! Programmer:	Elena Pourmal
-!		September 30, 2002
-!
-! Modifications: 	
-!
-! Comment:		
-!----------------------------------------------------------------------
-          
-          SUBROUTINE h5fget_obj_ids_f(file_id, obj_type, max_objs, obj_ids, hdferr)
-!
-!This definition is needed for Windows DLLs
-!DEC$if defined(BUILD_HDF5_DLL)
-!DEC$attributes dllexport :: h5fget_obj_ids_f
-!DEC$endif
-!
-
-            IMPLICIT NONE
-            INTEGER(HID_T), INTENT(IN) :: file_id ! File identifier
-            INTEGER, INTENT(IN)  :: obj_type   ! Object type
-            INTEGER, INTENT(IN)  :: max_objs   ! Maximum # of objects to retrieve
-            INTEGER(HID_T), DIMENSION(*), INTENT(INOUT) :: obj_ids
-                                               ! Array of open objects iidentifiers
-            INTEGER, INTENT(OUT) :: hdferr        ! Error code
-
-            INTERFACE
-              INTEGER FUNCTION h5fget_obj_ids_c(file_id, obj_type, max_objs, obj_ids)
-              USE H5GLOBAL
-              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-       !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FGET_OBJ_IDS_C':: h5fget_obj_ids_c
-              !DEC$ ENDIF
-              INTEGER(HID_T), INTENT(IN) :: file_id
-              INTEGER, INTENT(IN)  :: obj_type      
-              INTEGER, INTENT(IN)  :: max_objs
-              INTEGER(HID_T), DIMENSION(*), INTENT(INOUT) :: obj_ids  
-              END FUNCTION h5fget_obj_ids_c
-            END INTERFACE
-
-            hdferr = h5fget_obj_ids_c(file_id, obj_type, max_objs, obj_ids)
-
-          END SUBROUTINE h5fget_obj_ids_f
-
-!----------------------------------------------------------------------
-! Name:		h5fget_freespace_f
-!
-! Purpose:	Get amount of free space within a file
-!
-! Inputs:  
-!		file_id		- file identifier
-! Outputs:  
-!               free_space      - amount of free space in file
-!		hdferr:		- error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:
-!				NONE
-!
-! Programmer:	Quincey Koziol
-!		October 7, 2003
-!
-! Modifications: 	
-!
-! Comment:		
-!----------------------------------------------------------------------
-          
-          SUBROUTINE h5fget_freespace_f(file_id, free_space, hdferr)
-!
-!This definition is needed for Windows DLLs
-!DEC$if defined(BUILD_HDF5_DLL)
-!DEC$attributes dllexport :: h5fget_freespace_f
-!DEC$endif
-!
-
-            IMPLICIT NONE
-            INTEGER(HID_T), INTENT(IN) :: file_id ! File identifier
-            INTEGER(HSSIZE_T), INTENT(OUT) :: free_space 
-                                             !amount of free space in file
-            INTEGER, INTENT(OUT) :: hdferr        ! Error code
-
-            INTERFACE
-              INTEGER FUNCTION h5fget_freespace_c(file_id, free_space)
-              USE H5GLOBAL
-              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-       !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FGET_FREESPACE_C':: h5fget_freespace_c
-              !DEC$ ENDIF
-              INTEGER(HID_T), INTENT(IN) :: file_id
-              INTEGER(HSSIZE_T), INTENT(OUT) :: free_space 
-              END FUNCTION h5fget_freespace_c
-            END INTERFACE
-
-            hdferr = h5fget_freespace_c(file_id, free_space)
-
-          END SUBROUTINE h5fget_freespace_f
-
-!----------------------------------------------------------------------
-! Name:		h5fget_name_f 
-!
-! Purpose: 	Gets the name of the file from the object identifier
-!
-! Inputs:  
-!		obj_id		- object identifier
-! Inputs/Outputs:
-!		buf		- buffer to read name in
-! Outputs:  
-!		size		- actual size of the name
-!		hdferr:		- error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:
-!
-! Programmer:	Elena Pourmal
-!		July 6, 2004
-!
-!----------------------------------------------------------------------
-
-
-          SUBROUTINE h5fget_name_f(obj_id, buf, size, hdferr) 
-!This definition is needed for Windows DLLs
-!DEC$if defined(BUILD_HDF5_DLL)
-!DEC$attributes dllexport :: h5fget_name_f
-!DEC$endif
-            IMPLICIT NONE
-            INTEGER(HID_T), INTENT(IN) :: obj_id   ! Object identifier 
-            CHARACTER(LEN=*), INTENT(INOUT) :: buf   
-                                                   ! Buffer to hold file name
-            INTEGER(SIZE_T), INTENT(OUT) :: size   ! Size of the file name
-            INTEGER, INTENT(OUT) :: hdferr         ! Error code: 0 on success,
-                                                   ! -1 if fail
-            INTEGER(SIZE_T) :: buflen
-!            INTEGER, EXTERNAL :: h5fget_name_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5fget_name_c(obj_id, size, buf, buflen)
-              USE H5GLOBAL
-              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FGET_NAME_C'::h5fget_name_c
-              !DEC$ ENDIF
-              !DEC$ATTRIBUTES reference :: buf
-              INTEGER(HID_T), INTENT(IN) :: obj_id
-              INTEGER(SIZE_T), INTENT(OUT) :: size
-              INTEGER(SIZE_T) :: buflen
-              CHARACTER(LEN=*), INTENT(OUT) :: buf
-              END FUNCTION h5fget_name_c
-            END INTERFACE
-            buflen = LEN(buf)
-            hdferr = h5fget_name_c(obj_id, size, buf, buflen)
-          END SUBROUTINE h5fget_name_f
-
-!----------------------------------------------------------------------
-! Name:		h5fget_filesize_f 
-!
-! Purpose: 	Retrieves the file size of the HDF5 file.
-!
-! Inputs:  
-!		file_id		- file identifier
-! Outputs:  
-!		size		- file size 
-!		hdferr:		- error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:
-!
-! Programmer:	Elena Pourmal
-!		July 7, 2004
-!
-!----------------------------------------------------------------------
-
-
-          SUBROUTINE h5fget_filesize_f(file_id, size, hdferr) 
-!This definition is needed for Windows DLLs
-!DEC$if defined(BUILD_HDF5_DLL)
-!DEC$attributes dllexport :: h5fget_filesize_f
-!DEC$endif
-            IMPLICIT NONE
-            INTEGER(HID_T), INTENT(IN) :: file_id  ! file identifier
-            INTEGER(HSIZE_T), INTENT(OUT) :: size  ! Size of the file 
-            INTEGER, INTENT(OUT) :: hdferr         ! Error code: 0 on success,
-                                                   ! -1 if fail
-!            INTEGER, EXTERNAL :: h5fget_filesize_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5fget_filesize_c(file_id, size)
-              USE H5GLOBAL
-              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FGET_FILESIZE_C'::h5fget_filesize_c
-              !DEC$ ENDIF
-              INTEGER(HID_T), INTENT(IN) :: file_id
-              INTEGER(HSIZE_T), INTENT(OUT) :: size
-              END FUNCTION h5fget_filesize_c
-            END INTERFACE
-            hdferr = h5fget_filesize_c(file_id, size)
-          END SUBROUTINE h5fget_filesize_f
-
 
       END MODULE H5F

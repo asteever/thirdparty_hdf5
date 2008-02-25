@@ -1,5 +1,5 @@
+
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!   Copyright by The HDF Group.                                               *
 !   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
@@ -9,8 +9,8 @@
 !   of the source code distribution tree; Copyright.html can be found at the  *
 !   root level of an installed copy of the electronic HDF5 document set and   *
 !   is linked from the top-level documents page.  It can also be found at     *
-!   http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
-!   access to either file, you may request a copy from help@hdfgroup.org.     *
+!   http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+!   access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
 !
 !
@@ -26,8 +26,6 @@
      INTEGER :: error 
      INTEGER :: mounting_total_error = 0
      INTEGER :: reopen_total_error = 0
-     INTEGER :: fclose_total_error = 0
-     INTEGER :: fspace_total_error = 0
      INTEGER :: dataset_total_error = 0
      INTEGER :: extend_dataset_total_error = 0
      INTEGER :: refobj_total_error = 0
@@ -38,30 +36,25 @@
      INTEGER :: basic_select_total_error = 0
      INTEGER :: total_error_compoundtest = 0
      INTEGER :: basic_datatype_total_error = 0
-     INTEGER :: enum_total_error = 0
      INTEGER :: external_total_error = 0
-     INTEGER :: multi_file_total_error = 0
      INTEGER :: attribute_total_error = 0
      INTEGER :: identifier_total_error = 0
      INTEGER :: group_total_error = 0
      INTEGER :: error_total_error = 0
      INTEGER :: vl_total_error = 0
-     INTEGER :: z_total_error = 0
-     INTEGER :: sz_total_error = 0
      INTEGER :: majnum, minnum, relnum
      CHARACTER(LEN=8) error_string
      CHARACTER(LEN=8) :: success = ' PASSED '
      CHARACTER(LEN=8) :: failure = '*FAILED*'
-     CHARACTER(LEN=8) :: skip = '--SKIP--'
      CHARACTER(LEN=4) :: e_format ='(8a)'
      LOGICAL :: cleanup = .TRUE.
 !     LOGICAL :: cleanup = .FALSE.
-     LOGICAL :: szip_flag
 
      CALL h5open_f(error) 
      write(*,*) '                       ==========================                            '
      write(*,*) '                              FORTRAN tests '
      write(*,*) '                       ==========================                            '
+
      CALL h5get_libversion_f(majnum, minnum, relnum, total_error)
      if(total_error .eq. 0) then
 
@@ -76,9 +69,11 @@
      endif
      write(*,*)
 !     CALL h5check_version_f(1,4,4,total_error)
+
 !     write(*,*) '========================================='
 !     write(*,*) 'Testing FILE Interface                   '
 !     write(*,*) '========================================='
+
      error_string = failure
      CALL mountingtest(cleanup, mounting_total_error)
      IF (mounting_total_error == 0) error_string = success
@@ -87,6 +82,7 @@
 
      write(*, fmt = e_format) error_string 
      total_error = total_error + mounting_total_error 
+
      error_string = failure
      CALL reopentest(cleanup, reopen_total_error)
      IF (reopen_total_error == 0) error_string = success
@@ -95,25 +91,6 @@
      write(*, fmt = e_format) error_string
      total_error = total_error + reopen_total_error 
 
-!DEC$ if defined(H5_VMS)
-     goto 100
-!DEC$ else
-     error_string = failure
-     CALL file_close(cleanup, fclose_total_error)
-     IF (fclose_total_error == 0) error_string = success
-     write(*, fmt = '(21a)', advance = 'no') ' File open/close test'     
-     write(*, fmt = '(49x,a)', advance = 'no') ' ' 
-     write(*, fmt = e_format) error_string
-     total_error = total_error + fclose_total_error 
-!DEC$ endif
-100  continue
-     error_string = failure
-     CALL file_space(cleanup, fspace_total_error)
-     IF (fspace_total_error == 0) error_string = success
-     write(*, fmt = '(21a)', advance = 'no') ' File free space test'     
-     write(*, fmt = '(49x,a)', advance = 'no') ' ' 
-     write(*, fmt = e_format) error_string
-     total_error = total_error + fspace_total_error 
 
 !     write(*,*)
 !     write(*,*) '========================================='
@@ -127,6 +104,7 @@
      write(*, fmt = '(57x,a)', advance = 'no')  ' '
      write(*, fmt = e_format) error_string
      total_error = total_error + dataset_total_error 
+
      error_string = failure
      CALL extenddsettest(cleanup, extend_dataset_total_error)
      IF (extend_dataset_total_error == 0)  error_string = success
@@ -134,6 +112,7 @@
      write(*, fmt = '(46x,a)', advance = 'no') ' '
      write(*, fmt = e_format) error_string
      total_error = total_error + extend_dataset_total_error 
+
 !     write(*,*)
 !     write(*,*) '========================================='
 !     write(*,*) 'Testing DATASPACE Interface             '
@@ -203,6 +182,7 @@
 !     write(*,*) '========================================='
 !     write(*,*) 'Testing DATATYPE interface               '
 !     write(*,*) '========================================='
+
      error_string = failure
      CALL basic_data_type_test(cleanup, basic_datatype_total_error)
      IF (basic_datatype_total_error == 0) error_string = success
@@ -218,13 +198,7 @@
      write(*, fmt = '(47x,a)', advance = 'no')  ' '
      write(*, fmt = e_format) error_string
      total_error = total_error + total_error_compoundtest
-     error_string = failure
-     CALL enumtest(cleanup, enum_total_error)
-     IF (enum_total_error == 0) error_string = success
-     write(*, fmt = '(19a)', advance = 'no') ' Enum datatype test'     
-     write(*, fmt = '(51x,a)', advance = 'no')  ' '
-     write(*, fmt = e_format) error_string
-     total_error = total_error + enum_total_error 
+
 !     write(*,*)
 !     write(*,*) '========================================='
 !     write(*,*) 'Testing PROPERTY interface               ' 
@@ -237,16 +211,7 @@
      write(*, fmt = '(48x,a)', advance = 'no')  ' '
      write(*, fmt = e_format) error_string
      total_error = total_error + external_total_error 
-
-     error_string = failure
-!     error_string = skip
-     cleanup = .FALSE.
-     CALL multi_file_test(cleanup, multi_file_total_error)
-     IF (multi_file_total_error == 0) error_string = success
-     write(*, fmt = '(23a)', advance = 'no') ' Multi file driver test'     
-     write(*, fmt = '(47x,a)', advance = 'no')  ' '
-     write(*, fmt = e_format) error_string
-     total_error = total_error + multi_file_total_error 
+    
 !     write(*,*)
 !     write(*,*) '========================================='
 !     write(*,*) 'Testing ATTRIBUTE interface              ' 
@@ -272,23 +237,6 @@
      write(*, fmt = '(54x,a)', advance = 'no')  ' '
      write(*, fmt = e_format) error_string
      total_error = total_error + identifier_total_error 
-     error_string = failure
-     CALL filters_test(cleanup, z_total_error)
-     IF (z_total_error == 0) error_string = success
-     write(*, fmt = '(13a)', advance = 'no') ' Filters test'     
-     write(*, fmt = '(57x,a)', advance = 'no')  ' '
-     write(*, fmt = e_format) error_string
-     total_error = total_error + z_total_error 
-
-     CALL szip_test(szip_flag, cleanup, sz_total_error)
-     IF (sz_total_error == 0) error_string = success
-     ! Reset the flag is compression was not available 
-     IF (.NOT. szip_flag) error_string = skip
-     IF (sz_total_error .gt. 0) error_string = failure
-     write(*, fmt = '(18a)', advance = 'no') ' SZIP filter test'     
-     write(*, fmt = '(53x,a)', advance = 'no')  ' '
-     write(*, fmt = e_format) error_string
-     if(sz_total_error .gt. 0) total_error = total_error + sz_total_error 
 
 !     write(*,*)
 !     write(*,*) '========================================='
@@ -301,7 +249,7 @@
      write(*, fmt = '(11a)', advance = 'no') ' Group test'     
      write(*, fmt = '(59x,a)', advance = 'no')  ' '
      write(*, fmt = e_format) error_string
-     total_error = total_error + group_total_error 
+     total_error = total_error + identifier_total_error 
 
      error_string = failure
      CALL error_report_test(cleanup, error_total_error)
@@ -331,8 +279,9 @@
 
      CALL h5close_f(error)
 
-     ! if errors detected, exit with non-zero code.
-     IF (total_error .ne. 0) CALL h5_exit_f (1)
+     ! if errors detected, exit with non-zero code. This is not truly fortran
+     ! standard but likely supported by most fortran compilers.
+     IF (total_error .ne. 0) CALL exit (total_error)
 
     END PROGRAM fortranlibtest
 

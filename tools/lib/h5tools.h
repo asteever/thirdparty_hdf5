@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -24,36 +23,18 @@
 
 #include "hdf5.h"
 
+#if H5_VERS_MAJOR == 1 && H5_VERS_MINOR == 2
+#define VERSION12
+#endif	/* H5_VERS_MAJOR == 1 && H5_VERS_MINOR == 2 */
+
 #define ESCAPE_HTML             1
 #define OPT(X,S)                ((X) ? (X) : (S))
 #define OPTIONAL_LINE_BREAK     "\001"  /* Special strings embedded in the output */
-#define START_OF_DATA       0x0001
-#define END_OF_DATA     0x0002
-
-/*
- * The output functions need a temporary buffer to hold a piece of the
- * dataset while it's being printed. This constant sets the limit on the
- * size of that temporary buffer in bytes. For efficiency's sake, choose the
- * largest value suitable for your machine (for testing use a small value).
- */
-#if 1
-#define H5TOOLS_BUFSIZE         (1024 * 1024)
-#else
-#define H5TOOLS_BUFSIZE         (1024)
-#endif 
-
-/*
- * Maximum size used in a call to malloc
- */
-#define H5TOOLS_MALLOCSIZE      (128 * 1024 * 1024)
-
-/* format for hsize_t */
-#define HSIZE_T_FORMAT   "%"H5_PRINTF_LL_WIDTH"u"
 
 /*
  * Information about how to format output.
  */
-typedef struct h5tool_format_t {
+typedef struct h5dump_t {
     /*
      * Fields associated with formatting numeric data.  If a datatype matches
      * multiple formats based on its size, then the first applicable format
@@ -80,7 +61,7 @@ typedef struct h5tool_format_t {
      *   fmt_uchar:  The printf() format to use when rendering data which is
      *               typed `unsigned char'. The default is `%u'. This format
      *               is used only if the `ascii' field is zero.
-     *
+     *   
      *   fmt_short:  The printf() format to use when rendering data which is
      *               typed `short'. The default is `%d'.
      *
@@ -103,7 +84,7 @@ typedef struct h5tool_format_t {
      *
      *   fmt_double: The printf() format to use when rendering data which is
      *               typed `double'. The default is `%g'.
-     *
+     * 
      *   fmt_float:  The printf() format to use when rendering data which is
      *               typed `float'. The default is `%g'.
      *
@@ -163,7 +144,7 @@ typedef struct h5tool_format_t {
     const char  *arr_sep;
     const char  *arr_suf;
     int         arr_linebreak;
-
+    
     /*
      * Fields associated with compound data types.
      *
@@ -182,8 +163,8 @@ typedef struct h5tool_format_t {
      *
      *   suf:       A string to print at the end of each compound type.  The
      *              default is  right curly brace.
-     *
-     *   end:       a string to print after we reach the last element of
+     *              
+     *   end:       a string to print after we reach the last element of 
      *              each compound type. prints out before the suf.
      */
     const char  *cmpd_name;
@@ -205,8 +186,8 @@ typedef struct h5tool_format_t {
      *
      *   suf:       A string to print at the end of each vlen type.  The
      *              default is a right parentheses.
-     *
-     *   end:       a string to print after we reach the last element of
+     *              
+     *   end:       a string to print after we reach the last element of 
      *              each compound type. prints out before the suf.
      */
     const char  *vlen_sep;
@@ -231,7 +212,7 @@ typedef struct h5tool_format_t {
     const char  *elmt_fmt;
     const char  *elmt_suf1;
     const char  *elmt_suf2;
-
+    
     /*
      * Fields associated with the index values printed at the left edge of
      * each line of output.
@@ -252,7 +233,7 @@ typedef struct h5tool_format_t {
     const char  *idx_n_fmt;             /*index number format           */
     const char  *idx_sep;               /*separator between numbers     */
     const char  *idx_fmt;               /*entire index format           */
-
+    
     /*
      * Fields associated with entire lines.
      *
@@ -280,7 +261,7 @@ typedef struct h5tool_format_t {
      *   suf:       This character string will be appended to each line of
      *              output.  It should not contain line feeds.  The default
      *              is the empty string.
-     *
+     *   
      *   sep:       A character string to be printed after every line feed
      *              defaulting to the empty string.  It should end with a
      *              line feed.
@@ -303,7 +284,7 @@ typedef struct h5tool_format_t {
      *              should the following element begin on the next line? The
      *              default is to start the next element on the same line
      *              unless it wouldn't fit.
-     *
+     *              
      * indentlevel: a string that shows how far to indent if extra spacing
      *              is needed. dumper uses it.
      */
@@ -336,77 +317,170 @@ typedef struct h5tool_format_t {
     const char *dset_ptformat_pre;
     const char *dset_ptformat;
 
-    /*print array indices in output matrix */
-    int pindex;
+} h5dump_t;
 
-    /*escape non printable characters */
-    int do_escape;
+typedef struct dump_header{
+    const char *name;
+    const char *filebegin;
+    const char *fileend;
+    const char *bootblockbegin;
+    const char *bootblockend;
+    const char *groupbegin;
+    const char *groupend;
+    const char *datasetbegin;
+    const char *datasetend;
+    const char *attributebegin;
+    const char *attributeend;
+    const char *datatypebegin;
+    const char *datatypeend;
+    const char *dataspacebegin;
+    const char *dataspaceend;
+    const char *databegin;
+    const char *dataend;
+    const char *softlinkbegin;
+    const char *softlinkend;
+    const char *subsettingbegin;
+    const char *subsettingend;
+    const char *startbegin;
+    const char *startend;
+    const char *stridebegin;
+    const char *strideend;
+    const char *countbegin;
+    const char *countend;
+    const char *blockbegin;
+    const char *blockend;
 
-} h5tool_format_t;
+    const char *fileblockbegin;
+    const char *fileblockend;
+    const char *bootblockblockbegin;
+    const char *bootblockblockend;
+    const char *groupblockbegin;
+    const char *groupblockend;
+    const char *datasetblockbegin;
+    const char *datasetblockend;
+    const char *attributeblockbegin;
+    const char *attributeblockend;
+    const char *datatypeblockbegin;
+    const char *datatypeblockend;
+    const char *dataspaceblockbegin;
+    const char *dataspaceblockend;
+    const char *datablockbegin;
+    const char *datablockend;
+    const char *softlinkblockbegin;
+    const char *softlinkblockend;
+    const char *strblockbegin;
+    const char *strblockend;
+    const char *enumblockbegin;
+    const char *enumblockend;
+    const char *structblockbegin;
+    const char *structblockend;
+    const char *vlenblockbegin;
+    const char *vlenblockend;
+    const char *subsettingblockbegin;
+    const char *subsettingblockend;
+    const char *startblockbegin;
+    const char *startblockend;
+    const char *strideblockbegin;
+    const char *strideblockend;
+    const char *countblockbegin;
+    const char *countblockend;
+    const char *blockblockbegin;
+    const char *blockblockend;
+
+    const char *dataspacedescriptionbegin;
+    const char *dataspacedescriptionend;
+    const char *dataspacedimbegin;
+    const char *dataspacedimend;
+
+} dump_header;
 
 typedef struct h5tools_context_t {
-    size_t cur_column;                       /*current column for output */
-    size_t cur_elmt;                         /*current element/output line */
-    int  need_prefix;                        /*is line prefix needed? */
-    unsigned ndims;                          /*dimensionality  */
-    hsize_t p_min_idx[H5S_MAX_RANK];         /*min selected index */
-    hsize_t p_max_idx[H5S_MAX_RANK];         /*max selected index */
-    int  prev_multiline;                     /*was prev datum multiline? */
-    size_t prev_prefix_len;                  /*length of previous prefix */
-    int  continuation;                       /*continuation of previous data?*/
-    hsize_t size_last_dim;                   /*the size of the last dimension,
-                                              *needed so we can break after each
-                                              *row */
-    int  indent_level;                 /*the number of times we need some
-                                       *extra indentation */
-    int  default_indent_level;        /*this is used when the indent level gets changed */
-    hsize_t acc[H5S_MAX_RANK];        /* accumulator position */
-    hsize_t pos[H5S_MAX_RANK];        /* matrix position */
-    hsize_t sm_pos;                   /* current stripmine element position */
+    size_t	cur_column;	/*current column for output	*/
+    size_t	cur_elmt;	/*current element/output line	*/
+    int		need_prefix;	/*is line prefix needed?	*/
+    int		ndims;		/*dimensionality		*/
+    hsize_t	p_min_idx[H5S_MAX_RANK]; /*min selected index	*/
+    hsize_t	p_max_idx[H5S_MAX_RANK]; /*max selected index	*/
+    int		prev_multiline;	/*was prev datum multiline?	*/
+    size_t	prev_prefix_len;/*length of previous prefix	*/
+    int		continuation;	/*continuation of previous data?*/
+    int		size_last_dim;  /*the size of the last dimension,
+                                 *needed so we can break after each
+                                 *row */
+    int		indent_level;   /*the number of times we need some
+                                 *extra indentation */
+    int		default_indent_level; /*this is used when the indent
+                                       *level gets changed */
 } h5tools_context_t;
 
 /* a structure to hold the subsetting particulars for a dataset */
 struct subset_t {
-    hsize_t *start;
+    hssize_t *start;
     hsize_t *stride;
     hsize_t *count;
     hsize_t *block;
 };
 
-extern FILE   *rawdatastream;       /* output stream for raw data */
-extern int     bin_output;          /* binary output */
-extern int     bin_form;            /* binary form */
+/*if we get a new program that needs to use the library add its name here*/
+typedef enum {
+    UNKNOWN = 0,
+    H5LS,
+    H5DUMP
+} ProgType;
 
+/* taken from h5dump.h */
+#define ATTRIBUTE_DATA  0
+#define DATASET_DATA    1
+#define ENUM_DATA       2
 
+#define COL             3
 
-/* Strings for output */
-#define H5_TOOLS_GROUP           "GROUP"
-#define H5_TOOLS_DATASET         "DATASET"
-#define H5_TOOLS_DATATYPE        "DATATYPE"
+extern int     indent;              /*how far in to indent the line         */
+extern FILE   *rawdatastream;       /*output stream for raw data            */
+
+/* taken from h5dump.h*/
+#define ATTRIBUTE       "ATTRIBUTE"
+#define BLOCK           "BLOCK"
+#define BOOT_BLOCK      "BOOT_BLOCK"
+#define COMPRESSION     "COMPRESSION"
+#define CONCATENATOR    "//"
+#define COMPLEX         "COMPLEX"
+#define COUNT           "COUNT"
+#define CSET            "CSET"
+#define CTYPE           "CTYPE"
+#define DATA            "DATA"
+#define DATASET         "DATASET"
+#define DATASPACE       "DATASPACE"
+#define DATATYPE        "DATATYPE"
+#define EXTERNAL        "EXTERNAL"
+#define FILENO          "FILENO"
+#define GROUPNAME       "GROUP"
+#define HARDLINK        "HARDLINK"
+#define NLINK           "NLINK"
+#define OBJID           "OBJECTID"
+#define OBJNO           "OBJNO"
+#define SCALAR          "SCALAR"
+#define SIMPLE          "SIMPLE"
+#define SOFTLINK        "SOFTLINK"
+#define STORAGELAYOUT   "STORAGELAYOUT"
+#define START           "START"
+#define STRIDE          "STRIDE"
+#define STRSIZE         "STRSIZE"
+#define STRPAD          "STRPAD"
+#define SUBSET          "SUBSET"
+
+#define BEGIN           "{"
+#define END             "}"
 
 /* Definitions of useful routines */
 extern void     h5tools_init(void);
 extern void     h5tools_close(void);
-extern hid_t    h5tools_fopen(const char *fname, unsigned flags, hid_t fapl,
-                    const char *driver, char *drivername, size_t drivername_len);
-extern int      h5tools_dump_dset(FILE *stream, const h5tool_format_t *info, hid_t dset,
+extern hid_t    h5tools_fopen(const char *fname, const char *driver,
+                              char *drivername, size_t drivername_len);
+extern hid_t    h5tools_fixtype(hid_t f_type);
+extern int      h5tools_dump_dset(FILE *stream, const h5dump_t *info, hid_t dset,
                                   hid_t p_typ, struct subset_t *sset, int indentlevel);
-extern int      h5tools_dump_mem(FILE *stream, const h5tool_format_t *info, hid_t obj_id,
+extern int      h5tools_dump_mem(FILE *stream, const h5dump_t *info, hid_t obj_id,
                                  hid_t type, hid_t space, void *mem, int indentlevel);
-extern hid_t    h5tools_get_native_type(hid_t type);
-extern hid_t    h5tools_get_little_endian_type(hid_t type);
-extern hid_t    h5tools_get_big_endian_type(hid_t type);
 
-
-extern void     h5tools_dump_simple_data(FILE *stream, const h5tool_format_t *info, hid_t container,
-                         h5tools_context_t *ctx/*in,out*/, unsigned flags,
-                         hsize_t nelmts, hid_t type, void *_mem);
-
-extern int      h5tools_canreadf(const char* name,
-                                 hid_t dcpl_id);
-extern int      h5tools_can_encode(H5Z_filter_t filtn);
-
-void            init_acc_pos(h5tools_context_t *ctx, hsize_t *dims);
-
-#endif /* H5TOOLS_H__ */
-
+#endif	/* H5TOOLS_H__ */

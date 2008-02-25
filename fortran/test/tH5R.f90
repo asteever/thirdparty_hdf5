@@ -1,5 +1,5 @@
+
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!   Copyright by The HDF Group.                                               *
 !   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
@@ -9,8 +9,8 @@
 !   of the source code distribution tree; Copyright.html can be found at the  *
 !   root level of an installed copy of the electronic HDF5 document set and   *
 !   is linked from the top-level documents page.  It can also be found at     *
-!   http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
-!   access to either file, you may request a copy from help@hdfgroup.org.     *
+!   http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+!   access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
 !
 !
@@ -49,9 +49,9 @@
           INTEGER :: rankr = 1 
           TYPE(hobj_ref_t_f), DIMENSION(4) ::  ref
           TYPE(hobj_ref_t_f), DIMENSION(4) ::  ref_out
-          INTEGER(HSIZE_T), DIMENSION(1) :: ref_dim
+          INTEGER, DIMENSION(7) :: ref_dim
           INTEGER, DIMENSION(5) :: data = (/1, 2, 3, 4, 5/)
-          INTEGER(HSIZE_T), DIMENSION(2) :: data_dims
+          INTEGER, DIMENSION(7) :: data_dims
 
 
           !
@@ -159,7 +159,7 @@
           !
           CALL h5rget_object_type_f(dsetr_id, ref(3), obj_type, error) 
               CALL check("h5rget_object_type_f",error,total_error)
-          if (obj_type == H5G_DATASET_F) then 
+          if (obj_type == 2) then 
               CALL h5rdereference_f(dsetr_id, ref(3), dset1_id, error)
                   CALL check("h5rdereference_f",error,total_error)
           
@@ -173,7 +173,7 @@
           !
           CALL h5rget_object_type_f(dsetr_id, ref(4), obj_type, error) 
               CALL check("h5rget_object_type_f",error,total_error)
-          if (obj_type == H5G_TYPE_F) then 
+          if (obj_type == 3) then 
               CALL h5rdereference_f(dsetr_id, ref(4), type_id, error)
                   CALL check("h5rdereference_f",error,total_error)
           end if
@@ -220,17 +220,17 @@
           INTEGER     ::   error
           TYPE(hdset_reg_ref_t_f) , DIMENSION(2) :: ref     ! Buffers to store references
           TYPE(hdset_reg_ref_t_f) , DIMENSION(2) :: ref_out !
-          INTEGER(HSIZE_T), DIMENSION(2) :: ref_dim
-          INTEGER(HSIZE_T), DIMENSION(2) :: data_dims
+          INTEGER, DIMENSION(7) :: ref_dim
+          INTEGER, DIMENSION(7) :: data_dims
           INTEGER(HSIZE_T), DIMENSION(2) :: dims = (/2,9/)  ! Datasets dimensions
           INTEGER(HSIZE_T), DIMENSION(1) :: dimsr = (/2/)   ! 
-          INTEGER(HSIZE_T), DIMENSION(2) :: start
+          INTEGER(HSSIZE_T), DIMENSION(2) :: start
           INTEGER(HSIZE_T), DIMENSION(2) :: count
           INTEGER :: rankr = 1 
           INTEGER :: rank = 2
           INTEGER , DIMENSION(2,9) ::  data 
           INTEGER , DIMENSION(2,9) ::  data_out = 0 
-          INTEGER(HSIZE_T) , DIMENSION(2,3) :: coord
+          INTEGER(HSSIZE_T) , DIMENSION(2,3) :: coord
           INTEGER(SIZE_T) ::num_points = 3  ! Number of selected points
           INTEGER :: i, j
           coord = reshape((/1,1,2,7,1,9/), (/2,3/))   ! Coordinates of selected points

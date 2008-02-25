@@ -1,5 +1,4 @@
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!   Copyright by The HDF Group.                                               *
 !   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
@@ -9,10 +8,9 @@
 !   of the source code distribution tree; Copyright.html can be found at the  *
 !   root level of an installed copy of the electronic HDF5 document set and   *
 !   is linked from the top-level documents page.  It can also be found at     *
-!   http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
-!   access to either file, you may request a copy from help@hdfgroup.org.     *
+!   http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+!   access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!
 !
 ! This file contains FORTRAN90 interfaces for H5T functions
 !
@@ -70,7 +68,7 @@
               INTEGER FUNCTION h5topen_c(loc_id, name, namelen, type_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TOPEN_C'::h5topen_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TOPEN_C'::h5topen_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference ::name 
               INTEGER(HID_T), INTENT(IN) :: loc_id
@@ -134,7 +132,7 @@
               INTEGER FUNCTION h5tcommit_c(loc_id, name, namelen, type_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TCOMMIT_C'::h5tcommit_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TCOMMIT_C'::h5tcommit_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference ::name 
               INTEGER(HID_T), INTENT(IN) :: loc_id
@@ -194,7 +192,7 @@
               INTEGER FUNCTION  h5tcopy_c(type_id, new_type_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TCOPY_C'::h5tcopy_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TCOPY_C'::h5tcopy_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id
               INTEGER(HID_T), INTENT(OUT) :: new_type_id
@@ -253,7 +251,7 @@
               INTEGER FUNCTION h5tequal_c(type1_id, type2_id, c_flag)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TEQUAL_C'::h5tequal_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TEQUAL_C'::h5tequal_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type1_id 
               INTEGER(HID_T), INTENT(IN) :: type2_id 
@@ -309,7 +307,7 @@
               INTEGER FUNCTION h5tclose_c(type_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TCLOSE_C'::h5tclose_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TCLOSE_C'::h5tclose_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id
               END FUNCTION h5tclose_c
@@ -384,7 +382,7 @@
               INTEGER FUNCTION h5tget_class_c(type_id, class)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TGET_CLASS_C'::h5tget_class_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TGET_CLASS_C'::h5tget_class_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id 
               INTEGER, INTENT(OUT) :: class
@@ -439,7 +437,7 @@
               INTEGER FUNCTION h5tget_size_c(type_id, size)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TGET_SIZE_C'::h5tget_size_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TGET_SIZE_C'::h5tget_size_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id
               INTEGER(SIZE_T), INTENT(OUT) :: size
@@ -494,7 +492,7 @@
               INTEGER FUNCTION h5tset_size_c(type_id, size)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TSET_SIZE_C'::h5tset_size_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TSET_SIZE_C'::h5tset_size_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id
               INTEGER(SIZE_T), INTENT(IN) :: size
@@ -557,7 +555,7 @@
               INTEGER FUNCTION h5tget_order_c(type_id, order)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TGET_ORDER_C'::h5tget_order_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TGET_ORDER_C'::h5tget_order_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id
               INTEGER, INTENT(OUT) :: order
@@ -620,7 +618,7 @@
               INTEGER FUNCTION h5tset_order_c(type_id, order)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TSET_ORDER_C'::h5tset_order_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TSET_ORDER_C'::h5tset_order_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id
               INTEGER, INTENT(IN) :: order
@@ -675,7 +673,7 @@
               INTEGER FUNCTION h5tget_precision_c (type_id, precision)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TGET_PRECISION_C'::h5tget_precision_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TGET_PRECISION_C'::h5tget_precision_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id 
               INTEGER(SIZE_T), INTENT(OUT) :: precision 
@@ -729,7 +727,7 @@
               INTEGER FUNCTION h5tset_precision_c (type_id, precision)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TSET_PRECISION_C'::h5tset_precision_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TSET_PRECISION_C'::h5tset_precision_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id 
               INTEGER(SIZE_T), INTENT(IN) :: precision 
@@ -784,7 +782,7 @@
               INTEGER FUNCTION h5tget_offset_c(type_id, offset)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TGET_OFFSET_C'::h5tget_offset_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TGET_OFFSET_C'::h5tget_offset_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id 
               INTEGER(SIZE_T), INTENT(OUT) :: offset 
@@ -839,7 +837,7 @@
               INTEGER FUNCTION h5tset_offset_c(type_id, offset)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TSET_OFFSET_C'::h5tset_offset_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TSET_OFFSET_C'::h5tset_offset_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id 
               INTEGER(SIZE_T), INTENT(IN) :: offset 
@@ -911,7 +909,7 @@
               INTEGER FUNCTION h5tget_pad_c(type_id, lsbpad, msbpad)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TGET_PAD_C'::h5tget_pad_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TGET_PAD_C'::h5tget_pad_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id
               INTEGER, INTENT(OUT) :: lsbpad 
@@ -983,7 +981,7 @@
               USE H5GLOBAL
               INTEGER(HID_T), INTENT(IN) :: type_id
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TSET_PAD_C'::h5tset_pad_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TSET_PAD_C'::h5tset_pad_c
               !DEC$ ENDIF
               INTEGER, INTENT(IN) :: lsbpad 
               INTEGER, INTENT(IN) :: msbpad
@@ -1047,7 +1045,7 @@
               INTEGER FUNCTION h5tget_sign_c(type_id, sign)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TGET_SIGN_C'::h5tget_sign_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TGET_SIGN_C'::h5tget_sign_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id
               INTEGER, INTENT(OUT) :: sign
@@ -1111,7 +1109,7 @@
               INTEGER FUNCTION h5tset_sign_c(type_id, sign)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TSET_SIGN_C'::h5tset_sign_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TSET_SIGN_C'::h5tset_sign_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id
               INTEGER, INTENT(IN) :: sign
@@ -1171,7 +1169,7 @@
               INTEGER FUNCTION h5tget_fields_c(type_id, epos, esize, mpos, msize)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TGET_FIELDS_C'::h5tget_fields_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TGET_FIELDS_C'::h5tget_fields_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id
               INTEGER, INTENT(OUT) :: epos  
@@ -1235,7 +1233,7 @@
               INTEGER FUNCTION h5tset_fields_c(type_id, epos, esize, mpos, msize)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TSET_FIELDS_C'::h5tset_fields_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TSET_FIELDS_C'::h5tset_fields_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id
               INTEGER, INTENT(IN) :: epos  
@@ -1292,7 +1290,7 @@
               INTEGER FUNCTION h5tget_ebias_c(type_id, ebias)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TGET_EBIAS_C'::h5tget_ebias_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TGET_EBIAS_C'::h5tget_ebias_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id 
               INTEGER(SIZE_T), INTENT(OUT) :: ebias
@@ -1347,7 +1345,7 @@
               INTEGER FUNCTION h5tset_ebias_c(type_id, ebias)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TSET_EBIAS_C'::h5tset_ebias_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TSET_EBIAS_C'::h5tset_ebias_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id 
               INTEGER(SIZE_T), INTENT(IN) :: ebias
@@ -1410,7 +1408,7 @@
               INTEGER FUNCTION h5tget_norm_c(type_id, norm)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TGET_NORM_C'::h5tget_norm_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TGET_NORM_C'::h5tget_norm_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id
               INTEGER, INTENT(OUT) :: norm
@@ -1473,7 +1471,7 @@
               INTEGER FUNCTION h5tset_norm_c(type_id, norm)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TSET_NORM_C'::h5tset_norm_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TSET_NORM_C'::h5tset_norm_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id
               INTEGER, INTENT(IN) :: norm
@@ -1538,7 +1536,7 @@
               INTEGER FUNCTION h5tget_inpad_c(type_id, padtype)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TGET_INPAD_C'::h5tget_inpad_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TGET_INPAD_C'::h5tget_inpad_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id
               INTEGER, INTENT(OUT) :: padtype
@@ -1601,7 +1599,7 @@
               INTEGER FUNCTION h5tset_inpad_c(type_id, padtype)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TSET_INPAD_C'::h5tset_inpad_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TSET_INPAD_C'::h5tset_inpad_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id
               INTEGER, INTENT(IN) :: padtype
@@ -1659,7 +1657,7 @@
               INTEGER FUNCTION h5tget_cset_c(type_id, cset)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TGET_CSET_C'::h5tget_cset_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TGET_CSET_C'::h5tget_cset_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id
               INTEGER, INTENT(OUT) :: cset
@@ -1717,7 +1715,7 @@
               INTEGER FUNCTION h5tset_cset_c(type_id, cset)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TSET_CSET_C'::h5tset_cset_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TSET_CSET_C'::h5tset_cset_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id
               INTEGER, INTENT(IN) :: cset
@@ -1776,7 +1774,7 @@
               INTEGER FUNCTION h5tget_strpad_c(type_id, strpad)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TGET_STRPAD_C'::h5tget_strpad_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TGET_STRPAD_C'::h5tget_strpad_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id
               INTEGER, INTENT(OUT) :: strpad
@@ -1835,7 +1833,7 @@
               INTEGER FUNCTION h5tset_strpad_c(type_id, strpad)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TSET_STRPAD_C'::h5tset_strpad_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TSET_STRPAD_C'::h5tset_strpad_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id
               INTEGER, INTENT(IN) :: strpad
@@ -1890,7 +1888,7 @@
               INTEGER FUNCTION h5tget_nmembers_c(type_id, num_members)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TGET_NMEMBERS_C'::h5tget_nmembers_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TGET_NMEMBERS_C'::h5tget_nmembers_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id
               INTEGER, INTENT(OUT) :: num_members
@@ -1927,7 +1925,7 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5tget_member_name_f(type_id, index, member_name,  namelen, hdferr) 
+          SUBROUTINE h5tget_member_name_f(type_id,index, member_name,  namelen, hdferr) 
 !
 !This definition is needed for Windows DLLs
 !DEC$if defined(BUILD_HDF5_DLL)
@@ -1949,7 +1947,7 @@
               INTEGER FUNCTION h5tget_member_name_c(type_id, index, member_name, namelen)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TGET_MEMBER_NAME_C'::h5tget_member_name_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TGET_MEMBER_NAME_C'::h5tget_member_name_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: member_name
               INTEGER(HID_T), INTENT(IN) :: type_id 
@@ -2009,7 +2007,7 @@
               INTEGER FUNCTION h5tget_member_offset_c(type_id, member_no, offset )
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TGET_MEMBER_OFFSET_C'::h5tget_member_offset_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TGET_MEMBER_OFFSET_C'::h5tget_member_offset_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id
               INTEGER, INTENT(IN) :: member_no
@@ -2019,63 +2017,6 @@
 
             hdferr = h5tget_member_offset_c(type_id, member_no, offset )
           END SUBROUTINE h5tget_member_offset_f
-!----------------------------------------------------------------------
-! Name:		h5tget_member_index_f 
-!
-! Purpose: 	Retrieves the index of a compound or enumeration datatype member. 
-!
-! Inputs:  
-!		type_id		- datatype identifier
-!		name		- name of the field or member whose index to
-!                                 to be retrieved from the datatype.
-! Outputs:  
-!               index           - 0-based index of the filed or member (0 to N-1)
-!		hdferr:		- error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:
-!				NONE
-!
-! Programmer:	Elena Pourmal
-!		September 26, 2002
-!
-! Modifications:
-!
-! Comment:		
-!----------------------------------------------------------------------
-
-          SUBROUTINE h5tget_member_index_f(type_id, name, index, hdferr) 
-!
-!This definition is needed for Windows DLLs
-!DEC$if defined(BUILD_HDF5_DLL)
-!DEC$attributes dllexport :: h5tget_member_index_f
-!DEC$endif
-!
-            IMPLICIT NONE
-            INTEGER(HID_T), INTENT(IN) :: type_id  ! Datatype identifier 
-            CHARACTER(LEN=*), INTENT(IN) :: name   ! Field or member name
-            INTEGER, INTENT(OUT) :: index          ! Field or member index
-            INTEGER, INTENT(OUT) :: hdferr          ! Error code
-            INTEGER :: namelen          ! Name length 
-
-            INTERFACE
-              INTEGER FUNCTION h5tget_member_index_c(type_id, name, namelen, index)
-              USE H5GLOBAL
-              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TGET_MEMBER_INDEX_C'::h5tget_member_index_c
-              !DEC$ ENDIF
-              !DEC$ATTRIBUTES reference ::name 
-              INTEGER(HID_T), INTENT(IN) :: type_id
-              CHARACTER(LEN=*), INTENT(IN) :: name
-              INTEGER, INTENT(IN)  :: namelen
-              INTEGER, INTENT(OUT) :: index  
-              END FUNCTION h5tget_member_index_c
-            END INTERFACE
-
-            namelen = LEN(name)
-            hdferr = h5tget_member_index_c(type_id, name, namelen, index)
-          END SUBROUTINE h5tget_member_index_f
-
 
 !----------------------------------------------------------------------
 ! Name:		h5tget_member_dim_f 
@@ -2170,7 +2111,7 @@
               INTEGER FUNCTION h5tget_array_dims_c(type_id, dims)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TGET_ARRAY_DIMS_C'::h5tget_array_dims_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TGET_ARRAY_DIMS_C'::h5tget_array_dims_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id
               INTEGER(HSIZE_T),DIMENSION(*), INTENT(OUT) ::  dims
@@ -2226,7 +2167,7 @@
               INTEGER FUNCTION h5tget_array_ndims_c(type_id, ndims)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TGET_ARRAY_NDIMS_C'::h5tget_array_ndims_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TGET_ARRAY_NDIMS_C'::h5tget_array_ndims_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id
               INTEGER, INTENT(OUT) ::  ndims
@@ -2283,7 +2224,7 @@
               INTEGER FUNCTION h5tget_super_c(type_id, base_type_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TGET_SUPER_C'::h5tget_super_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TGET_SUPER_C'::h5tget_super_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id 
               INTEGER(HID_T), INTENT(OUT) :: base_type_id
@@ -2342,7 +2283,7 @@
               INTEGER FUNCTION h5tget_member_type_c(type_id, field_idx , datatype)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TGET_MEMBER_TYPE_C'::h5tget_member_type_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TGET_MEMBER_TYPE_C'::h5tget_member_type_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id
               INTEGER, INTENT(IN) :: field_idx
@@ -2406,7 +2347,7 @@
               INTEGER FUNCTION h5tcreate_c(class, size, type_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TCREATE_C'::h5tcreate_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TCREATE_C'::h5tcreate_c
               !DEC$ ENDIF
               INTEGER, INTENT(IN) :: class 
               INTEGER(SIZE_T), INTENT(IN) :: size 
@@ -2469,7 +2410,7 @@
               INTEGER FUNCTION h5tinsert_c(type_id, name, namelen, offset, field_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TINSERT_C'::h5tinsert_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TINSERT_C'::h5tinsert_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: type_id
@@ -2526,7 +2467,7 @@
               INTEGER FUNCTION h5tpack_c(type_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TPACK_C'::h5tpack_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TPACK_C'::h5tpack_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id
               END FUNCTION h5tpack_c
@@ -2640,7 +2581,7 @@
               INTEGER FUNCTION h5tarray_create_c(base_id, rank, dims, type_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TARRAY_CREATE_C'::h5tarray_create_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TARRAY_CREATE_C'::h5tarray_create_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: base_id
               INTEGER, INTENT(IN) ::  rank
@@ -2701,7 +2642,7 @@
               INTEGER FUNCTION h5tenum_create_c(parent_id, new_type_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TENUM_CREATE_C'::h5tenum_create_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TENUM_CREATE_C'::h5tenum_create_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: parent_id 
               INTEGER(HID_T), INTENT(OUT) :: new_type_id 
@@ -2756,7 +2697,7 @@
               INTEGER FUNCTION h5tenum_insert_c(type_id, name, namelen, value)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TENUM_INSERT_C'::h5tenum_insert_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TENUM_INSERT_C'::h5tenum_insert_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: type_id 
@@ -2819,7 +2760,7 @@
               INTEGER FUNCTION h5tenum_nameof_c(type_id, value, name, namelen)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TENUM_NAMEOF_C'::h5tenum_nameof_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TENUM_NAMEOF_C'::h5tenum_nameof_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: type_id 
@@ -2880,7 +2821,7 @@
               INTEGER FUNCTION h5tenum_valueof_c(type_id, name, namelen,  value)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TENUM_VALUEOF_C'::h5tenum_valueof_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TENUM_VALUEOF_C'::h5tenum_valueof_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: type_id 
@@ -2940,7 +2881,7 @@
               INTEGER FUNCTION h5tget_member_value_c(type_id, member_no, value)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TGET_MEMBER_VALUE_C'::h5tget_member_value_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TGET_MEMBER_VALUE_C'::h5tget_member_value_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: type_id 
               INTEGER, INTENT(IN) :: member_no
@@ -2998,7 +2939,7 @@
               INTEGER FUNCTION h5tset_tag_c(type_id, tag, namelen)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TSET_TAG_C'::h5tset_tag_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TSET_TAG_C'::h5tset_tag_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: tag
               INTEGER(HID_T), INTENT(IN) :: type_id
@@ -3058,7 +2999,7 @@
               INTEGER FUNCTION h5tget_tag_c(type_id, tag, taglen)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TGET_TAG_C'::h5tget_tag_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TGET_TAG_C'::h5tget_tag_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: tag
               INTEGER(HID_T), INTENT(IN) :: type_id
@@ -3069,6 +3010,64 @@
 
             hdferr = h5tget_tag_c(type_id, tag, taglen)
           END SUBROUTINE h5tget_tag_f
+
+!----------------------------------------------------------------------
+! Name:		h5tget_member_index_f 
+!
+! Purpose: 	Retrieves the index of a compound or enumeration datatype member. 
+!
+! Inputs:  
+!		type_id		- datatype identifier
+!		name		- name of the field or member whose index to
+!                                 to be retrieved from the datatype.
+! Outputs:  
+!               index           - 0-based index of the filed or member (0 to N-1)
+!		hdferr:		- error code		
+!				 	Success:  0
+!				 	Failure: -1   
+! Optional parameters:
+!				NONE
+!
+! Programmer:	Elena Pourmal
+!		September 26, 2002
+!
+! Modifications:
+!
+! Comment:		
+!----------------------------------------------------------------------
+
+          SUBROUTINE h5tget_member_index_f(type_id, name, index, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5tget_member_index_f
+!DEC$endif
+!
+            IMPLICIT NONE
+            INTEGER(HID_T), INTENT(IN) :: type_id  ! Datatype identifier 
+            CHARACTER(LEN=*), INTENT(IN) :: name   ! Field or member name
+            INTEGER, INTENT(OUT) :: index          ! Field or member index
+            INTEGER, INTENT(OUT) :: hdferr          ! Error code
+            INTEGER :: namelen          ! Name length 
+
+            INTERFACE
+              INTEGER FUNCTION h5tget_member_index_c(type_id, name, namelen, index)
+              USE H5GLOBAL
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !MS$ATTRIBUTES C,reference,alias:'_H5TGET_MEMBER_INDEX_C'::h5tget_member_index_c
+              !DEC$ ENDIF
+              !DEC$ATTRIBUTES reference ::name 
+              INTEGER(HID_T), INTENT(IN) :: type_id
+              CHARACTER(LEN=*), INTENT(IN) :: name
+              INTEGER, INTENT(IN)  :: namelen
+              INTEGER, INTENT(OUT) :: index  
+              END FUNCTION h5tget_member_index_c
+            END INTERFACE
+
+            namelen = LEN(name)
+            hdferr = h5tget_member_index_c(type_id, name, namelen, index)
+          END SUBROUTINE h5tget_member_index_f
+
 
 !----------------------------------------------------------------------
 ! Name:		h5tvlen_create_f 
@@ -3109,7 +3108,7 @@
               INTEGER FUNCTION h5tvlen_create_c(type_id, vltype_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TVLEN_CREATE_C'::h5tvlen_create_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5TVLEN_CREATE_C'::h5tvlen_create_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN)  :: type_id
               INTEGER(HID_T), INTENT(OUT) :: vltype_id
@@ -3119,134 +3118,4 @@
             hdferr = h5tvlen_create_c(type_id, vltype_id)
           END SUBROUTINE h5tvlen_create_f
 
-!----------------------------------------------------------------------
-! Name:		h5tis_variable_str_f 
-!
-! Purpose: 	Determines whether a dattype is a variable string.
-!
-! Inputs:  
-!		type_id	-  	- datartpe identifier
-! Outputs:  
-!		status		- flag to indicate if datatype
-!				  is a variable string
-!		hdferr:		- error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:
-!				NONE
-!
-! Programmer:	Elena Pourmal
-!		March 12, 2003
-!
-! Modifications: 	
-!
-! Comment:		
-!----------------------------------------------------------------------
-
-          SUBROUTINE h5tis_variable_str_f(type_id, status, hdferr) 
-!
-!This definition is needed for Windows DLLs
-!DEC$if defined(BUILD_HDF5_DLL)
-!DEC$attributes dllexport :: h5tis_variable_str_f
-!DEC$endif
-!
-
-            IMPLICIT NONE
-            INTEGER(HID_T), INTENT(IN) :: type_id  ! Datatype identifier 
-            LOGICAL, INTENT(OUT) :: status      ! Flag, idicates if datatype
-                                                ! is a variable string or not ( TRUE or
-                                                ! FALSE)  
-            INTEGER, INTENT(OUT) :: hdferr      ! Error code
-            INTEGER :: flag                     ! "TRUE/FALSE/ERROR from C" 
-
-!            INTEGER, EXTERNAL :: h5tis_variable_str_c
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5tis_variable_str_c(type_id, flag) 
-              USE H5GLOBAL
-              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TIS_VARIABLE_STR_C'::h5tis_variable_str_c
-              !DEC$ ENDIF
-              INTEGER(HID_T), INTENT(IN) :: type_id
-              INTEGER :: flag
-              END FUNCTION h5tis_variable_str_c
-            END INTERFACE
-
-            hdferr = h5tis_variable_str_c(type_id, flag)
-            status = .TRUE.
-            if (flag .EQ. 0) status = .FALSE.
- 
-          END SUBROUTINE h5tis_variable_str_f
-
-!----------------------------------------------------------------------
-! Name:		h5tget_member_class_f 
-!
-! Purpose:      Returns datatype class of compound datatype member.
-!
-! Inputs:  
-!		type_id	-  	- datartpe identifier
-!               member_no       - index of compound datatype member
-! Outputs:  
-!               class           - class type for compound dadtype member
-!                                 Can be one of the follwoing classes:
-!                                 H5T_NO_CLASS_F (error)
-!                                 H5T_INTEGER_F
-!                                 H5T_FLOAT_F
-!                                 H5T_TIME_F
-!                                 H5T_STRING_F
-!                                 H5T_BITFIELD_F
-!                                 H5T_OPAQUE_F
-!                                 H5T_COMPOUND_F
-!                                 H5T_REFERENCE_F
-!                                 H5T_ENUM_F
-!                                 H5T_VLEN_F
-!                                 H5T_ARRAY_F
-!		hdferr:		- error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:
-!				NONE
-!
-! Programmer:	Elena Pourmal
-!		April 6, 2005
-!
-! Modifications: 	
-!
-! Comment:		
-!----------------------------------------------------------------------
-
-          SUBROUTINE h5tget_member_class_f(type_id, member_no, class, hdferr) 
-!
-!This definition is needed for Windows DLLs
-!DEC$if defined(BUILD_HDF5_DLL)
-!DEC$attributes dllexport :: h5tget_member_class_f
-!DEC$endif
-!
-
-            IMPLICIT NONE
-            INTEGER(HID_T), INTENT(IN) :: type_id  ! Datatype identifier 
-            INTEGER, INTENT(IN)       :: member_no  ! Member number
-            INTEGER, INTENT(OUT)     :: class      ! Member class
-            INTEGER, INTENT(OUT) :: hdferr      ! Error code
-
-!  MS FORTRAN needs explicit interface for C functions called here.
-!
-            INTERFACE
-              INTEGER FUNCTION h5tget_member_class_c(type_id, member_no, class) 
-              USE H5GLOBAL
-              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TGET_MEMBER_CLASS_C'::h5tget_member_class_c
-              !DEC$ ENDIF
-              INTEGER(HID_T), INTENT(IN) :: type_id
-              INTEGER, INTENT(IN)       :: member_no 
-              INTEGER, INTENT(OUT)     :: class    
-              END FUNCTION h5tget_member_class_c
-            END INTERFACE
-
-            hdferr = h5tget_member_class_c(type_id, member_no, class)
- 
-          END SUBROUTINE h5tget_member_class_f
-
-!----------------------------------------------------------------------
       END MODULE H5T

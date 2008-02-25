@@ -1,19 +1,5 @@
 #							-*- shell-script -*-
 #
-# Copyright by The HDF Group.
-# Copyright by the Board of Trustees of the University of Illinois.
-# All rights reserved.
-#
-# This file is part of HDF5.  The full HDF5 copyright notice, including
-# terms governing use, modification, and redistribution, is contained in
-# the files COPYING and Copyright.html.  COPYING can be found at the root
-# of the source code distribution tree; Copyright.html can be found at the
-# root level of an installed copy of the electronic HDF5 document set and
-# is linked from the top-level documents page.  It can also be found at
-# http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-# access to either file, you may request a copy from help@hdfgroup.org.
-
-
 # This file is part of the HDF5 build script.  It is processed shortly
 # after configure starts and defines, among other things, flags for
 # the various compile modes.
@@ -96,25 +82,3 @@ ac_cv_sizeof_uint_fast64_t=${ac_cv_sizeof_uint_fast64_t=8}
 # Don't cache size_t and off_t because they depend on if -D_LARGE_FILES is used
 #ac_cv_sizeof_size_t=${ac_cv_sizeof_size_t=4}
 #ac_cv_sizeof_off_t=${ac_cv_sizeof_off_t=8}
-
-# The default Fortran 90 compiler
-
-if test "X-" = "X-$FC"; then
-  FC=xlf
-fi
-
-if test "X-" = "X-$f9x_flags_set"; then
-  F9XSUFFIXFLAG="-qsuffix=f=f90"
-  FCFLAGS="$FCFLAGS -static -O ${F9XSUFFIXFLAG} -qmoddir=./ -k"
-  FSEARCH_DIRS="-I./ -I../src"
-  DEBUG_FCFLAGS="-O"
-  PROD_FCFLAGS="-O"
-  PROFILE_FCFLAGS="-O"
-  f9x_flags_set=yes
-fi
-
-# The default C++ compiler
-
-# Use AIX supplied C++ compiler by default.
-CXX=${CXX=xlC}
-hdf5_mpi_complex_derived_datatype_works=${hdf5_mpi_complex_derived_datatype_works='no'}

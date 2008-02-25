@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -22,7 +21,6 @@
 
 #define H5S_PACKAGE		/*suppress error about including H5Spkg	  */
 
-
 #include "H5private.h"
 #include "H5Eprivate.h"
 #include "H5Iprivate.h"
@@ -30,437 +28,277 @@
 #include "H5Vprivate.h"
 #include "H5Dprivate.h"
 
-/* Static function prototypes */
+/* Interface initialization */
+#define PABLO_MASK      H5Snone_mask
+#define INTERFACE_INIT  NULL
+static int             interface_initialize_g = 0;
 
-/* Selection callbacks */
-static herr_t H5S_none_copy(H5S_t *dst, const H5S_t *src, hbool_t share_selection);
-static herr_t H5S_none_get_seq_list(const H5S_t *space, unsigned flags,
-    H5S_sel_iter_t *iter, size_t maxseq, size_t maxbytes,
-    size_t *nseq, size_t *nbytes, hsize_t *off, size_t *len);
-static herr_t H5S_none_release(H5S_t *space);
-static htri_t H5S_none_is_valid(const H5S_t *space);
-static hssize_t H5S_none_serial_size(const H5S_t *space);
-static herr_t H5S_none_serialize(const H5S_t *space, uint8_t *buf);
-static herr_t H5S_none_deserialize(H5S_t *space, const uint8_t *buf);
-static herr_t H5S_none_bounds(const H5S_t *space, hsize_t *start, hsize_t *end);
-static herr_t H5S_none_offset(const H5S_t *space, hsize_t *off);
-static htri_t H5S_none_is_contiguous(const H5S_t *space);
-static htri_t H5S_none_is_single(const H5S_t *space);
-static htri_t H5S_none_is_regular(const H5S_t *space);
-static herr_t H5S_none_adjust_u(H5S_t *space, const hsize_t *offset);
-static herr_t H5S_none_iter_init(H5S_sel_iter_t *iter, const H5S_t *space);
+static herr_t H5S_none_init (const struct H5O_layout_t *layout,
+			    const H5S_t *space, H5S_sel_iter_t *iter);
+static hsize_t H5S_none_favail (const H5S_t *space, const H5S_sel_iter_t *iter,
+			      hsize_t max);
+static hsize_t H5S_none_fgath (H5F_t *f, const struct H5O_layout_t *layout,
+			     const struct H5O_pline_t *pline,
+			     const struct H5O_fill_t *fill,
+			     const struct H5O_efl_t *efl, size_t elmt_size,
+			     const H5S_t *file_space,
+			     H5S_sel_iter_t *file_iter, hsize_t nelmts,
+			     hid_t dxpl_id, void *buf/*out*/);
+static herr_t H5S_none_fscat (H5F_t *f, const struct H5O_layout_t *layout,
+			     const struct H5O_pline_t *pline,
+			     const struct H5O_fill_t *fill,
+			     const struct H5O_efl_t *efl, size_t elmt_size,
+			     const H5S_t *file_space,
+			     H5S_sel_iter_t *file_iter, hsize_t nelmts,
+			     hid_t dxpl_id, const void *buf);
+static hsize_t H5S_none_mgath (const void *_buf, size_t elmt_size,
+			     const H5S_t *mem_space, H5S_sel_iter_t *mem_iter,
+			     hsize_t nelmts, void *_tconv_buf/*out*/);
+static herr_t H5S_none_mscat (const void *_tconv_buf, size_t elmt_size,
+			     const H5S_t *mem_space, H5S_sel_iter_t *mem_iter,
+			     hsize_t nelmts, void *_buf/*out*/);
+static herr_t H5S_select_none(H5S_t *space);
 
-/* Selection iteration callbacks */
-static herr_t H5S_none_iter_coords(const H5S_sel_iter_t *iter, hsize_t *coords);
-static herr_t H5S_none_iter_block(const H5S_sel_iter_t *iter, hsize_t *start, hsize_t *end);
-static hsize_t H5S_none_iter_nelmts(const H5S_sel_iter_t *iter);
-static htri_t H5S_none_iter_has_next_block(const H5S_sel_iter_t *iter);
-static herr_t H5S_none_iter_next(H5S_sel_iter_t *sel_iter, size_t nelem);
-static herr_t H5S_none_iter_next_block(H5S_sel_iter_t *sel_iter);
-static herr_t H5S_none_iter_release(H5S_sel_iter_t *sel_iter);
-
-/* Selection properties for "none" selections */
-const H5S_select_class_t H5S_sel_none[1] = {{
-    H5S_SEL_NONE,
-
-    /* Methods on selection */
-    H5S_none_copy,
-    H5S_none_get_seq_list,
-    H5S_none_release,
-    H5S_none_is_valid,
-    H5S_none_serial_size,
-    H5S_none_serialize,
-    H5S_none_deserialize,
-    H5S_none_bounds,
-    H5S_none_offset,
-    H5S_none_is_contiguous,
-    H5S_none_is_single,
-    H5S_none_is_regular,
-    H5S_none_adjust_u,
-    H5S_none_iter_init,
+const H5S_fconv_t	H5S_NONE_FCONV[1] = {{
+    "none", 					/*name			*/
+    H5S_SEL_NONE,				/*selection type	*/
+    H5S_none_init,				/*initialize		*/
+    H5S_none_favail,				/*available		*/
+    H5S_none_fgath,				/*gather		*/
+    H5S_none_fscat,				/*scatter		*/
 }};
 
-/* Iteration properties for "none" selections */
-static const H5S_sel_iter_class_t H5S_sel_iter_none[1] = {{
-    H5S_SEL_NONE,
-
-    /* Methods on selection iterator */
-    H5S_none_iter_coords,
-    H5S_none_iter_block,
-    H5S_none_iter_nelmts,
-    H5S_none_iter_has_next_block,
-    H5S_none_iter_next,
-    H5S_none_iter_next_block,
-    H5S_none_iter_release,
+const H5S_mconv_t	H5S_NONE_MCONV[1] = {{
+    "none", 					/*name			*/
+    H5S_SEL_NONE,				/*selection type	*/
+    H5S_none_init,				/*initialize		*/
+    H5S_none_mgath,				/*gather		*/
+    H5S_none_mscat, 				/*scatter		*/
 }};
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5S_none_iter_init
+ * Function:	H5S_none_init
  *
- * Purpose:	Initializes iteration information for "none" selection.
+ * Purpose:	Initializes iteration information for none selection.
  *
  * Return:	non-negative on success, negative on failure.
  *
  * Programmer:	Quincey Koziol
- *              Tuesday, June 16, 1998
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5S_none_iter_init (H5S_sel_iter_t *iter, const H5S_t UNUSED *space)
-{
-    FUNC_ENTER_NOAPI_NOFUNC(H5S_none_iter_init);
-
-    /* Check args */
-    assert (space && H5S_SEL_NONE==H5S_GET_SELECT_TYPE(space));
-    assert (iter);
-
-    /* Initialize type of selection iterator */
-    iter->type=H5S_sel_iter_none;
-
-    FUNC_LEAVE_NOAPI(SUCCEED);
-}   /* H5S_none_iter_init() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5S_none_iter_coords
- *
- * Purpose:	Retrieve the current coordinates of iterator for current
- *              selection
- *
- * Return:	non-negative on success, negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Tuesday, April 22, 2003
+ *              Tuesday, October 29, 2002
  *
  * Modifications:
  *
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5S_none_iter_coords (const H5S_sel_iter_t UNUSED *iter, hsize_t UNUSED *coords)
+H5S_none_init(const struct H5O_layout_t UNUSED *layout,
+	       const H5S_t UNUSED *space, H5S_sel_iter_t UNUSED *sel_iter)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_none_iter_coords);
+    FUNC_ENTER(H5S_none_init, FAIL);
 
     /* Check args */
-    assert (iter);
-    assert (coords);
+    assert(layout);
+    assert(space && H5S_SEL_NONE==space->select.type);
+    assert(sel_iter);
 
-    FUNC_LEAVE_NOAPI(FAIL);
-}   /* H5S_none_iter_coords() */
+    FUNC_LEAVE (SUCCEED);
+} /* H5S_none_init() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5S_none_iter_block
+ * Function:	H5S_none_favail
  *
- * Purpose:	Retrieve the current block of iterator for current
- *              selection
+ * Purpose:	Figure out the optimal number of elements to transfer to/from
+ *		the file.
  *
- * Return:	non-negative on success, negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Monday, June 2, 2003
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5S_none_iter_block (const H5S_sel_iter_t UNUSED *iter, hsize_t UNUSED *start, hsize_t UNUSED *end)
-{
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_none_iter_block);
-
-    /* Check args */
-    assert (iter);
-    assert (start);
-    assert (end);
-
-    FUNC_LEAVE_NOAPI(FAIL);
-}   /* H5S_none_iter_block() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5S_none_iter_nelmts
- *
- * Purpose:	Return number of elements left to process in iterator
- *
- * Return:	non-negative number of elements on success, zero on failure
+ * Return:	zero always.
  *
  * Programmer:	Quincey Koziol
- *              Tuesday, June 16, 1998
+ *              Tuesday, October 29, 2002
  *
  * Modifications:
  *
  *-------------------------------------------------------------------------
  */
 static hsize_t
-H5S_none_iter_nelmts (const H5S_sel_iter_t UNUSED *iter)
+H5S_none_favail(const H5S_t UNUSED *space, const H5S_sel_iter_t UNUSED *sel_iter, hsize_t UNUSED max)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_none_iter_nelmts);
+    FUNC_ENTER(H5S_none_favail, 0);
 
     /* Check args */
-    assert (iter);
+    assert(space && H5S_SEL_NONE==space->select.type);
+    assert(sel_iter);
 
-    FUNC_LEAVE_NOAPI(0);
-}   /* H5S_none_iter_nelmts() */
+    FUNC_LEAVE(0);
+}   /* H5S_none_favail() */
 
 
-/*--------------------------------------------------------------------------
- NAME
-    H5S_none_iter_has_next_block
- PURPOSE
-    Check if there is another block left in the current iterator
- USAGE
-    htri_t H5S_none_iter_has_next_block(iter)
-        const H5S_sel_iter_t *iter;       IN: Pointer to selection iterator
- RETURNS
-    Non-negative (TRUE/FALSE) on success/Negative on failure
- DESCRIPTION
-    Check if there is another block available in the selection iterator.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-static htri_t
-H5S_none_iter_has_next_block(const H5S_sel_iter_t UNUSED *iter)
+/*-------------------------------------------------------------------------
+ * Function:	H5S_none_fgath
+ *
+ * Purpose:	Gathers data points from file F and accumulates them in the
+ *		type conversion buffer BUF.  The LAYOUT argument describes
+ *		how the data is stored on disk and EFL describes how the data
+ *		is organized in external files.  ELMT_SIZE is the size in
+ *		bytes of a datum which this function treats as opaque.
+ *		FILE_SPACE describes the data space of the dataset on disk
+ *		and the elements that have been selected for reading (via
+ *		hyperslab, etc).  This function will copy at most NELMTS
+ *		elements.
+ *
+ * Return:	0 always
+ *
+ * Programmer:	Quincey Koziol
+ *              Tuesday, October 29, 2002
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+static hsize_t
+H5S_none_fgath (H5F_t UNUSED *f, const struct H5O_layout_t UNUSED *layout,
+	       const struct H5O_pline_t UNUSED *pline,
+	       const struct H5O_fill_t UNUSED *fill, const struct H5O_efl_t UNUSED *efl,
+	       size_t UNUSED elmt_size, const H5S_t UNUSED *file_space,
+	       H5S_sel_iter_t UNUSED *file_iter, hsize_t UNUSED nelmts, hid_t UNUSED dxpl_id,
+	       void UNUSED *buf/*out*/)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_none_iter_has_next_block);
+    FUNC_ENTER(H5S_none_fgath, 0);
 
     /* Check args */
-    assert (iter);
+    assert(f);
+    assert(layout);
+    assert(elmt_size>0);
+    assert(file_space && H5S_SEL_NONE==file_space->select.type);
+    assert(file_iter);
+    assert(nelmts>0);
+    assert(buf);
 
-    FUNC_LEAVE_NOAPI(FAIL);
-}   /* H5S_none_iter_has_next_block() */
+    FUNC_LEAVE(0);
+} /* H5S_none_fgath() */
 
 
-/*--------------------------------------------------------------------------
- NAME
-    H5S_none_iter_next
- PURPOSE
-    Increment selection iterator
- USAGE
-    herr_t H5S_none_iter_next(iter, nelem)
-        H5S_sel_iter_t *iter;       IN: Pointer to selection iterator
-        size_t nelem;               IN: Number of elements to advance by
- RETURNS
-    Non-negative on success/Negative on failure
- DESCRIPTION
-    Advance selection iterator to the NELEM'th next element in the selection.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
+/*-------------------------------------------------------------------------
+ * Function:	H5S_none_fscat
+ *
+ * Purpose:	Scatters dataset elements from the type conversion buffer BUF
+ *		to the file F where the data points are arranged according to
+ *		the file data space FILE_SPACE and stored according to
+ *		LAYOUT and EFL. Each element is ELMT_SIZE bytes.
+ *		The caller is requesting that NELMTS elements are copied.
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Quincey Koziol
+ *              Tuesday, October 29, 2002
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
 static herr_t
-H5S_none_iter_next(H5S_sel_iter_t UNUSED *iter, size_t UNUSED nelem)
+H5S_none_fscat (H5F_t UNUSED *f, const struct H5O_layout_t UNUSED *layout,
+	       const struct H5O_pline_t UNUSED *pline, const struct H5O_fill_t UNUSED *fill,
+	       const struct H5O_efl_t UNUSED *efl, size_t UNUSED elmt_size,
+	       const H5S_t UNUSED *file_space, H5S_sel_iter_t UNUSED *file_iter,
+	       hsize_t UNUSED nelmts, hid_t UNUSED dxpl_id, const void UNUSED *buf)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_none_iter_next);
+    FUNC_ENTER(H5S_none_fscat, FAIL);
 
     /* Check args */
-    assert (iter);
-    assert (nelem>0);
+    assert(f);
+    assert(layout);
+    assert(elmt_size>0);
+    assert(file_space && H5S_SEL_NONE==file_space->select.type);
+    assert(file_iter);
+    assert(nelmts>0);
+    assert(buf);
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
-}   /* H5S_none_iter_next() */
+    FUNC_LEAVE(SUCCEED);
+}   /* H5S_none_fscat() */
 
 
-/*--------------------------------------------------------------------------
- NAME
-    H5S_none_iter_next_block
- PURPOSE
-    Increment selection iterator to next block
- USAGE
-    herr_t H5S_none_iter_next(iter)
-        H5S_sel_iter_t *iter;       IN: Pointer to selection iterator
- RETURNS
-    Non-negative on success/Negative on failure
- DESCRIPTION
-    Advance selection iterator to the next block in the selection.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-static herr_t
-H5S_none_iter_next_block(H5S_sel_iter_t UNUSED *iter)
+/*-------------------------------------------------------------------------
+ * Function:	H5S_none_mgath
+ *
+ * Purpose:	Gathers dataset elements from application memory BUF and
+ *		copies them into the data type conversion buffer TCONV_BUF.
+ *		Each element is ELMT_SIZE bytes and arranged in application
+ *		memory according to MEM_SPACE.  
+ *		The caller is requesting that at most NELMTS be gathered.
+ *
+ * Return:	0 always
+ *
+ * Programmer:	Quincey Koziol
+ *              Tuesday, October 29, 2002
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+static hsize_t
+H5S_none_mgath (const void UNUSED *_buf, size_t UNUSED elmt_size,
+	       const H5S_t UNUSED *mem_space, H5S_sel_iter_t UNUSED *mem_iter,
+	       hsize_t UNUSED nelmts, void UNUSED *tconv_buf/*out*/)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_none_iter_next);
+    FUNC_ENTER(H5S_none_mgath, 0);
 
     /* Check args */
-    assert (iter);
+    assert(_buf);
+    assert(elmt_size>0);
+    assert(mem_space && H5S_SEL_NONE==mem_space->select.type);
+    assert(mem_iter);
+    assert(nelmts>0);
+    assert(tconv_buf);
 
-    FUNC_LEAVE_NOAPI(FAIL);
-}   /* H5S_none_iter_next_block() */
+    FUNC_LEAVE(0);
+}   /* H5S_none_mgath() */
 
 
-/*--------------------------------------------------------------------------
- NAME
-    H5S_none_iter_release
- PURPOSE
-    Release "none" selection iterator information for a dataspace
- USAGE
-    herr_t H5S_none_iter_release(iter)
-        H5S_sel_iter_t *iter;       IN: Pointer to selection iterator
- RETURNS
-    Non-negative on success/Negative on failure
- DESCRIPTION
-    Releases all information for a dataspace "none" selection iterator
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
+/*-------------------------------------------------------------------------
+ * Function:	H5S_none_mscat
+ *
+ * Purpose:	Scatters NELMTS data points from the type conversion buffer
+ *		TCONV_BUF to the application buffer BUF.  Each element is
+ *		ELMT_SIZE bytes and they are organized in application memory
+ *		according to MEM_SPACE.
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Quincey Koziol
+ *              Tuesday, October 29, 2002
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
 static herr_t
-H5S_none_iter_release (H5S_sel_iter_t UNUSED * iter)
+H5S_none_mscat (const void UNUSED *tconv_buf, size_t UNUSED elmt_size,
+	       const H5S_t UNUSED *mem_space, H5S_sel_iter_t UNUSED *mem_iter,
+	       hsize_t UNUSED nelmts, void UNUSED *_buf/*out*/)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_none_iter_release);
+    FUNC_ENTER (H5S_none_mscat, FAIL);
 
     /* Check args */
-    assert (iter);
+    assert(tconv_buf);
+    assert(elmt_size>0);
+    assert(mem_space && H5S_SEL_NONE==mem_space->select.type);
+    assert(mem_iter);
+    assert(nelmts>0);
+    assert(_buf);
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
-}   /* H5S_none_iter_release() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5S_none_release
- PURPOSE
-    Release none selection information for a dataspace
- USAGE
-    herr_t H5S_none_release(space)
-        H5S_t *space;       IN: Pointer to dataspace
- RETURNS
-    Non-negative on success/Negative on failure
- DESCRIPTION
-    Releases "none" selection information for a dataspace
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-static herr_t
-H5S_none_release (H5S_t UNUSED * space)
-{
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_none_release);
-
-    /* Check args */
-    assert (space);
-
-    FUNC_LEAVE_NOAPI(SUCCEED);
-}   /* H5S_none_release() */
+    FUNC_LEAVE(SUCCEED);
+}   /* H5S_none_mscat() */
 
 
 /*--------------------------------------------------------------------------
  NAME
-    H5S_none_copy
- PURPOSE
-    Copy a selection from one dataspace to another
- USAGE
-    herr_t H5S_none_copy(dst, src)
-        H5S_t *dst;  OUT: Pointer to the destination dataspace
-        H5S_t *src;  IN: Pointer to the source dataspace
- RETURNS
-    Non-negative on success/Negative on failure
- DESCRIPTION
-    Copies the 'none' selection information from the source
-    dataspace to the destination dataspace.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-static herr_t
-H5S_none_copy(H5S_t *dst, const H5S_t UNUSED *src, hbool_t UNUSED share_selection)
-{
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_none_copy);
-
-    assert(src);
-    assert(dst);
-
-    /* Set number of elements in selection */
-    dst->select.num_elem=0;
-
-    FUNC_LEAVE_NOAPI(SUCCEED);
-} /* end H5S_none_copy() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5S_none_is_valid
- PURPOSE
-    Check whether the selection fits within the extent, with the current
-    offset defined.
- USAGE
-    htri_t H5S_none_is_valid(space);
-        H5S_t *space;             IN: Dataspace pointer to query
- RETURNS
-    TRUE if the selection fits within the extent, FALSE if it does not and
-        Negative on an error.
- DESCRIPTION
-    Determines if the current selection at the current offet fits within the
-    extent for the dataspace.  Offset is irrelevant for this type of selection.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-static htri_t
-H5S_none_is_valid (const H5S_t UNUSED *space)
-{
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_none_is_valid);
-
-    assert(space);
-
-    FUNC_LEAVE_NOAPI(TRUE);
-} /* end H5S_none_is_valid() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5S_none_serial_size
- PURPOSE
-    Determine the number of bytes needed to store the serialized "none"
-        selection information.
- USAGE
-    hssize_t H5S_none_serial_size(space)
-        H5S_t *space;             IN: Dataspace pointer to query
- RETURNS
-    The number of bytes required on success, negative on an error.
- DESCRIPTION
-    Determines the number of bytes required to serialize an "none"
-    selection for storage on disk.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-static hssize_t
-H5S_none_serial_size (const H5S_t UNUSED *space)
-{
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_none_serial_size);
-
-    assert(space);
-
-    /* Basic number of bytes required to serialize point selection:
-     *  <type (4 bytes)> + <version (4 bytes)> + <padding (4 bytes)> +
-     *      <length (4 bytes)> = 16 bytes
-     */
-    FUNC_LEAVE_NOAPI(16);
-} /* end H5S_none_serial_size() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5S_none_serialize
+    H5S_none_select_serialize
  PURPOSE
     Serialize the current selection into a user-provided buffer.
  USAGE
-    herr_t H5S_none_serialize(space, buf)
+    herr_t H5S_none_select_serialize(space, buf)
         H5S_t *space;           IN: Dataspace pointer of selection to serialize
         uint8 *buf;             OUT: Buffer to put serialized selection into
  RETURNS
@@ -473,30 +311,34 @@ H5S_none_serial_size (const H5S_t UNUSED *space)
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-static herr_t
-H5S_none_serialize (const H5S_t *space, uint8_t *buf)
+herr_t
+H5S_none_select_serialize (const H5S_t *space, uint8_t *buf)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_none_serialize);
+    herr_t ret_value=FAIL;  /* return value */
+
+    FUNC_ENTER (H5S_none_select_serialize, FAIL);
 
     assert(space);
 
     /* Store the preamble information */
-    UINT32ENCODE(buf, (uint32_t)H5S_GET_SELECT_TYPE(space));  /* Store the type of selection */
+    UINT32ENCODE(buf, (uint32_t)space->select.type);  /* Store the type of selection */
     UINT32ENCODE(buf, (uint32_t)1);  /* Store the version number */
     UINT32ENCODE(buf, (uint32_t)0);  /* Store the un-used padding */
     UINT32ENCODE(buf, (uint32_t)0);  /* Store the additional information length */
 
-    FUNC_LEAVE_NOAPI(SUCCEED);
-}   /* H5S_none_serialize() */
+    /* Set success */
+    ret_value=SUCCEED;
 
+    FUNC_LEAVE (ret_value);
+}   /* H5S_none_select_serialize() */
 
 /*--------------------------------------------------------------------------
  NAME
-    H5S_none_deserialize
+    H5S_none_select_deserialize
  PURPOSE
     Deserialize the current selection from a user-provided buffer.
  USAGE
-    herr_t H5S_none_deserialize(space, buf)
+    herr_t H5S_none_select_deserialize(space, buf)
         H5S_t *space;           IN/OUT: Dataspace pointer to place selection into
         uint8 *buf;             IN: Buffer to retrieve serialized selection from
  RETURNS
@@ -509,212 +351,23 @@ H5S_none_serialize (const H5S_t *space, uint8_t *buf)
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-static herr_t
-H5S_none_deserialize (H5S_t *space, const uint8_t UNUSED *buf)
+herr_t
+H5S_none_select_deserialize (H5S_t *space, const uint8_t UNUSED *buf)
 {
-    herr_t ret_value;  /* return value */
+    herr_t ret_value=FAIL;  /* return value */
 
-    FUNC_ENTER_NOAPI_NOINIT(H5S_none_deserialize);
+    FUNC_ENTER (H5S_none_select_deserialize, FAIL);
 
     assert(space);
 
     /* Change to "none" selection */
-    if((ret_value=H5S_select_none(space))<0)
+    if((ret_value=H5S_select_none(space))<0) {
         HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDELETE, FAIL, "can't change selection");
+    } /* end if */
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value);
-}   /* H5S_none_deserialize() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5S_none_bounds
- PURPOSE
-    Gets the bounding box containing the selection.
- USAGE
-    herr_t H5S_none_bounds(space, start, end)
-        H5S_t *space;           IN: Dataspace pointer of selection to query
-        hsize_t *start;         OUT: Starting coordinate of bounding box
-        hsize_t *end;           OUT: Opposite coordinate of bounding box
- RETURNS
-    Non-negative on success, negative on failure
- DESCRIPTION
-    Retrieves the bounding box containing the current selection and places
-    it into the user's buffers.  The start and end buffers must be large
-    enough to hold the dataspace rank number of coordinates.  The bounding box
-    exactly contains the selection, ie. if a 2-D element selection is currently
-    defined with the following points: (4,5), (6,8) (10,7), the bounding box
-    with be (4, 5), (10, 8).  Calling this function on a "none" selection
-    returns fail.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-static herr_t
-H5S_none_bounds(const H5S_t UNUSED *space, hsize_t UNUSED *start, hsize_t UNUSED *end)
-{
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_none_bounds);
-
-    assert(space);
-    assert(start);
-    assert(end);
-
-    FUNC_LEAVE_NOAPI(FAIL);
-}   /* H5Sget_none_bounds() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5S_none_offset
- PURPOSE
-    Gets the linear offset of the first element for the selection.
- USAGE
-    herr_t H5S_none_offset(space, offset)
-        const H5S_t *space;     IN: Dataspace pointer of selection to query
-        hsize_t *offset;        OUT: Linear offset of first element in selection
- RETURNS
-    Non-negative on success, negative on failure
- DESCRIPTION
-    Retrieves the linear offset (in "units" of elements) of the first element
-    selected within the dataspace.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
-    Calling this function on a "none" selection returns fail.
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5S_none_offset(const H5S_t *space, hsize_t *offset)
-{
-    FUNC_ENTER_NOAPI_NOFUNC(H5S_none_offset)
-
-    HDassert(space);
-    HDassert(offset);
-
-    FUNC_LEAVE_NOAPI(FAIL)
-}   /* H5S_none_offset() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5S_none_is_contiguous
- PURPOSE
-    Check if a "none" selection is contiguous within the dataspace extent.
- USAGE
-    htri_t H5S_none_is_contiguous(space)
-        H5S_t *space;           IN: Dataspace pointer to check
- RETURNS
-    TRUE/FALSE/FAIL
- DESCRIPTION
-    Checks to see if the current selection in the dataspace is contiguous.
-    This is primarily used for reading the entire selection in one swoop.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-static htri_t
-H5S_none_is_contiguous(const H5S_t UNUSED *space)
-{
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_none_is_contiguous);
-
-    assert(space);
-
-    FUNC_LEAVE_NOAPI(FALSE);
-}   /* H5S_none_is_contiguous() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5S_none_is_single
- PURPOSE
-    Check if a "none" selection is a single block within the dataspace extent.
- USAGE
-    htri_t H5S_none_is_single(space)
-        H5S_t *space;           IN: Dataspace pointer to check
- RETURNS
-    TRUE/FALSE/FAIL
- DESCRIPTION
-    Checks to see if the current selection in the dataspace is a single block.
-    This is primarily used for reading the entire selection in one swoop.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-static htri_t
-H5S_none_is_single(const H5S_t UNUSED *space)
-{
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_none_is_single);
-
-    assert(space);
-
-    FUNC_LEAVE_NOAPI(FALSE);
-}   /* H5S_none_is_single() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5S_none_is_regular
- PURPOSE
-    Check if a "none" selection is "regular"
- USAGE
-    htri_t H5S_none_is_regular(space)
-        const H5S_t *space;     IN: Dataspace pointer to check
- RETURNS
-    TRUE/FALSE/FAIL
- DESCRIPTION
-    Checks to see if the current selection in a dataspace is the a regular
-    pattern.
-    This is primarily used for reading the entire selection in one swoop.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-static htri_t
-H5S_none_is_regular(const H5S_t UNUSED *space)
-{
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_none_is_regular);
-
-    /* Check args */
-    assert(space);
-
-    FUNC_LEAVE_NOAPI(TRUE);
-}   /* H5S_none_is_regular() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5S_none_adjust_u
- PURPOSE
-    Adjust an "none" selection by subtracting an offset
- USAGE
-    herr_t H5S_none_adjust_u(space, offset)
-        H5S_t *space;           IN/OUT: Pointer to dataspace to adjust
-        const hsize_t *offset; IN: Offset to subtract
- RETURNS
-    Non-negative on success, negative on failure
- DESCRIPTION
-    Moves selection by subtracting an offset from it.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5S_none_adjust_u(H5S_t UNUSED *space, const hsize_t UNUSED *offset)
-{
-    FUNC_ENTER_NOAPI_NOFUNC(H5S_none_adjust_u)
-
-    /* Check args */
-    HDassert(space);
-    HDassert(offset);
-
-    FUNC_LEAVE_NOAPI(FAIL)
-}   /* H5S_none_adjust_u() */
+    FUNC_LEAVE (ret_value);
+}   /* H5S_none_select_deserialize() */
 
 
 /*--------------------------------------------------------------------------
@@ -734,27 +387,26 @@ H5S_none_adjust_u(H5S_t UNUSED *space, const hsize_t UNUSED *offset)
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-herr_t H5S_select_none (H5S_t *space)
+static herr_t H5S_select_none (H5S_t *space)
 {
     herr_t ret_value=SUCCEED;  /* return value */
 
-    FUNC_ENTER_NOAPI(H5S_select_none, FAIL);
+    FUNC_ENTER (H5S_select_none, FAIL);
 
     /* Check args */
     assert(space);
 
     /* Remove current selection first */
-    if(H5S_SELECT_RELEASE(space)<0)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDELETE, FAIL, "can't release hyperslab");
-
-    /* Set number of elements in selection */
-    space->select.num_elem=0;
+    if(H5S_select_release(space)<0) {
+        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDELETE, FAIL,
+            "can't release hyperslab");
+    } /* end if */
 
     /* Set selection type */
-    space->select.type=H5S_sel_none;
+    space->select.type=H5S_SEL_NONE;
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value);
+    FUNC_LEAVE (ret_value);
 }   /* H5S_select_none() */
 
 
@@ -778,77 +430,62 @@ done:
 herr_t H5Sselect_none (hid_t spaceid)
 {
     H5S_t	*space = NULL;  /* Dataspace to modify selection of */
-    herr_t ret_value;  /* return value */
+    herr_t ret_value=FAIL;  /* return value */
 
-    FUNC_ENTER_API(H5Sselect_none, FAIL);
+    FUNC_ENTER (H5Sselect_none, FAIL);
 
     /* Check args */
-    if (NULL == (space=H5I_object_verify(spaceid, H5I_DATASPACE)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space");
+    if (H5I_DATASPACE != H5I_get_type(spaceid) ||
+            NULL == (space=H5I_object(spaceid))) {
+        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space");
+    }
 
     /* Change to "none" selection */
-    if((ret_value=H5S_select_none(space))<0)
+    if((ret_value=H5S_select_none(space))<0) {
         HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDELETE, FAIL, "can't change selection");
+    } /* end if */
 
 done:
-    FUNC_LEAVE_API(ret_value);
+    FUNC_LEAVE (ret_value);
 }   /* H5Sselect_none() */
 
 
 /*--------------------------------------------------------------------------
  NAME
-    H5S_none_get_seq_list
+    H5S_none_select_iterate
  PURPOSE
-    Create a list of offsets & lengths for a selection
+    Iterate over a none selection, calling a user's function for each
+        element. (i.e. the user's function is not called because there are
+        zero elements selected)
  USAGE
-    herr_t H5S_none_get_seq_list(space,flags,iter,maxseq,maxelem,nseq,nelem,off,len)
-        H5S_t *space;           IN: Dataspace containing selection to use.
-        unsigned flags;         IN: Flags for extra information about operation
-        H5S_sel_iter_t *iter;   IN/OUT: Selection iterator describing last
-                                    position of interest in selection.
-        size_t maxseq;          IN: Maximum number of sequences to generate
-        size_t maxelem;         IN: Maximum number of elements to include in the
-                                    generated sequences
-        size_t *nseq;           OUT: Actual number of sequences generated
-        size_t *nelem;          OUT: Actual number of elements in sequences generated
-        hsize_t *off;           OUT: Array of offsets
-        size_t *len;            OUT: Array of lengths
+    herr_t H5S_none_select_iterate(buf, type_id, space, op, operator_data)
+        void *buf;      IN/OUT: Buffer containing elements to iterate over
+        hid_t type_id;  IN: Datatype ID of BUF array.
+        H5S_t *space;   IN: Dataspace object containing selection to iterate over
+        H5D_operator_t op; IN: Function pointer to the routine to be
+                                called for each element in BUF iterated over.
+        void *operator_data;    IN/OUT: Pointer to any user-defined data
+                                associated with the operation.
  RETURNS
-    Non-negative on success/Negative on failure.
+    Returns success (0).
  DESCRIPTION
-    Use the selection in the dataspace to generate a list of byte offsets and
-    lengths for the region(s) selected.  Start/Restart from the position in the
-    ITER parameter.  The number of sequences generated is limited by the MAXSEQ
-    parameter and the number of sequences actually generated is stored in the
-    NSEQ parameter.
  GLOBAL VARIABLES
  COMMENTS, BUGS, ASSUMPTIONS
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-static herr_t
-H5S_none_get_seq_list(const H5S_t UNUSED *space, unsigned UNUSED flags, H5S_sel_iter_t UNUSED *iter,
-    size_t UNUSED maxseq, size_t UNUSED maxelem, size_t *nseq, size_t *nelem,
-    hsize_t UNUSED *off, size_t UNUSED *len)
+herr_t
+H5S_none_select_iterate(void UNUSED *buf, hid_t UNUSED type_id, H5S_t UNUSED *space, H5D_operator_t UNUSED op,
+        void UNUSED *operator_data)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_none_get_seq_list);
+    herr_t ret_value=SUCCEED;      /* return value */
 
-    /* Check args */
+    FUNC_ENTER (H5S_none_select_iterate, FAIL);
+
+    assert(buf);
     assert(space);
-    assert(iter);
-    assert(maxseq>0);
-    assert(maxelem>0);
-    assert(nseq);
-    assert(nelem);
-    assert(off);
-    assert(len);
+    assert(op);
+    assert(H5I_DATATYPE == H5I_get_type(type_id));
 
-    /* "none" selections don't generate sequences of bytes */
-    *nseq=0;
-
-    /* They don't use any elements, either */
-    *nelem=0;
-
-    FUNC_LEAVE_NOAPI(SUCCEED);
-} /* end H5S_none_get_seq_list() */
-
+    FUNC_LEAVE (ret_value);
+}   /* H5S_hyper_select_iterate() */
