@@ -35,6 +35,6 @@ SCRIPT_DEPEND=h5import$(EXEEXT)
 bin_PROGRAMS=h5import
 
 # All programs depend on the main hdf5 library and the tools library
-LDADD=$(LIBH5TOOLS) $(LIBHDF5)
+LDADD=$(LIBHDF5) $(LIBH5TOOLS)
 
 include $(top_srcdir)/config/conclude.am

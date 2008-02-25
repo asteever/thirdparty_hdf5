@@ -896,8 +896,6 @@ if (szip_can_encode) {
   GOERROR;
  if (h5repack_verify(FNAME7OUT,&pack_options)<=0)
   GOERROR;
- if (h5repack_cmpdcpl(FNAME7,FNAME7OUT)<=0)
-  GOERROR;
  if (h5repack_end (&pack_options) < 0)
   GOERROR;
 
@@ -1099,7 +1097,6 @@ if (szip_can_encode) {
  SKIPPED();
 #endif
 
-
   TESTING("    adding nbit filter");
 
 #ifdef H5_HAVE_FILTER_NBIT
@@ -1120,8 +1117,6 @@ if (szip_can_encode) {
 #else
  SKIPPED();
 #endif
-
-
  TESTING("    copy of scaleoffset filter");
 
 #ifdef H5_HAVE_FILTER_SCALEOFFSET
@@ -1183,8 +1178,6 @@ if (szip_can_encode) {
 #else
  SKIPPED();
 #endif
-
-
 
 /*-------------------------------------------------------------------------
  * file with all filters
@@ -1359,36 +1352,6 @@ if (szip_can_encode) {
  if (h5repack_end (&pack_options) < 0)
   GOERROR;
  PASSED();
-
-
-/*-------------------------------------------------------------------------
- * test several global filters
- *-------------------------------------------------------------------------
- */
-
-  TESTING("    several global filters");
-
-#if defined (H5_HAVE_FILTER_DEFLATE) && defined (H5_HAVE_FILTER_SHUFFLE) 
-
- if (h5repack_init (&pack_options, 0) < 0)
-  GOERROR;
- if (h5repack_addfilter("GZIP=1",&pack_options) < 0)
-  GOERROR;
- if (h5repack_addfilter("SHUF",&pack_options) < 0)
-  GOERROR;
- if (h5repack(FNAME11,FNAME11OUT,&pack_options) < 0)
-  GOERROR;
- if (h5diff(FNAME11,FNAME11OUT,NULL,NULL,&diff_options) >0)
-  GOERROR;
- if (h5repack_verify(FNAME11OUT,&pack_options)<=0)
-  GOERROR;
- if (h5repack_end (&pack_options) < 0)
-  GOERROR;
-
- PASSED();
-#else
- SKIPPED();
-#endif
 
 
 /*-------------------------------------------------------------------------

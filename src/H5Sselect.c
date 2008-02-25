@@ -62,20 +62,17 @@ static herr_t H5S_select_iter_next_block(H5S_sel_iter_t *iter);
 herr_t
 H5S_select_offset(H5S_t *space, const hssize_t *offset)
 {
-    FUNC_ENTER_NOAPI_NOFUNC(H5S_select_offset)
+    FUNC_ENTER_NOAPI_NOFUNC(H5S_select_offset);
 
     /* Check args */
-    HDassert(space);
-    HDassert(space->extent.rank);
-    HDassert(offset);
+    assert(space);
+    assert(space->extent.rank);
+    assert(offset);
 
     /* Copy the offset over */
-    HDmemcpy(space->select.offset, offset, sizeof(hssize_t)*space->extent.rank);
+    HDmemcpy(space->select.offset,offset,sizeof(hssize_t)*space->extent.rank);
 
-    /* Indicate that the offset was changed */
-    space->select.offset_changed = TRUE;
-
-    FUNC_LEAVE_NOAPI(SUCCEED)
+    FUNC_LEAVE_NOAPI(SUCCEED);
 }   /* H5S_select_offset() */
 
 
@@ -491,8 +488,8 @@ done:
  USAGE
     herr_t H5S_get_select_bounds(space, start, end)
         hid_t dsid;             IN: Dataspace ID of selection to query
-        hsize_t start[];        OUT: Starting coordinate of bounding box
-        hsize_t end[];          OUT: Opposite coordinate of bounding box
+        hsize_t *start;         OUT: Starting coordinate of bounding box
+        hsize_t *end;           OUT: Opposite coordinate of bounding box
  RETURNS
     Non-negative on success, negative on failure
  DESCRIPTION
@@ -514,7 +511,7 @@ done:
  REVISION LOG
 --------------------------------------------------------------------------*/
 herr_t
-H5Sget_select_bounds(hid_t spaceid, hsize_t start[], hsize_t end[])
+H5Sget_select_bounds(hid_t spaceid, hsize_t *start, hsize_t *end)
 {
     H5S_t	*space = NULL;      /* Dataspace to modify selection of */
     herr_t ret_value;        /* return value */
@@ -578,46 +575,6 @@ H5S_get_select_bounds(const H5S_t *space, hsize_t *start, hsize_t *end)
 
     FUNC_LEAVE_NOAPI(ret_value);
 }   /* H5S_get_select_bounds() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5S_get_select_offset
- PURPOSE
-    Gets the linear offset of the first element for the selection.
- USAGE
-    herr_t H5S_get_select_offset(space, offset)
-        const H5S_t *space;     IN: Dataspace pointer of selection to query
-        hsize_t *offset;        OUT: Linear offset of first element in selection
- RETURNS
-    Non-negative on success, negative on failure
- DESCRIPTION
-    Retrieves the linear offset (in "units" of elements) of the first element
-    selected within the dataspace.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
-        The offset calculation _does_ include the current offset of the
-    selection within the dataspace extent.
-
-        Calling this function on a "none" selection returns fail.
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5S_get_select_offset(const H5S_t *space, hsize_t *offset)
-{
-    herr_t ret_value;        /* return value */
-
-    FUNC_ENTER_NOAPI_NOFUNC(H5S_get_select_offset)
-
-    /* Check args */
-    HDassert(space);
-    HDassert(offset);
-
-    ret_value = (*space->select.type->offset)(space, offset);
-
-    FUNC_LEAVE_NOAPI(ret_value)
-}   /* H5S_get_select_offset() */
 
 
 /*--------------------------------------------------------------------------
@@ -801,9 +758,10 @@ H5S_select_iter_init(H5S_sel_iter_t *sel_iter, const H5S_t *space, size_t elmt_s
     /* Save the dataspace's rank */
     sel_iter->rank=space->extent.rank;
 
-    /* Point to the dataspace dimensions, if there are any */
-    if(sel_iter->rank > 0)
-        sel_iter->dims = space->extent.size;
+    if(sel_iter->rank>0) {
+        /* Point to the dataspace dimensions */
+        sel_iter->dims=space->extent.size;
+    } /* end if */
     else
         sel_iter->dims = NULL;
 

@@ -91,11 +91,6 @@ static herr_t H5O_visit(hid_t loc_id, const char *obj_name, H5_index_t idx_type,
 /*********************/
 
 /* Header message ID to class mapping */
-
-/* Remember to increment H5O_MSG_TYPES in H5Opkg.h when adding a new
- * message.
- */
-
 const H5O_msg_class_t *const H5O_msg_class_g[] = {
     H5O_MSG_NULL,		/*0x0000 Null				*/
     H5O_MSG_SDSPACE,		/*0x0001 Dataspace			*/
@@ -179,10 +174,6 @@ H5FL_EXTERN(H5_obj_t);
  * Programmer:	Quincey Koziol
  *              Thursday, January 18, 2007
  *
- * Changes:     JRM -- 12/12/07
- *              Added santity check verifying that H5O_msg_class_g
- *              is big enough.
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -193,8 +184,6 @@ H5O_init_interface(void)
     /* H5O interface sanity checks */
     HDassert(H5O_MSG_TYPES == NELMTS(H5O_msg_class_g));
     HDassert(sizeof(H5O_fheap_id_t) == H5O_FHEAP_ID_LEN);
-
-    HDassert(H5O_UNKNOWN_ID < H5O_MSG_TYPES);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5O_init_interface() */
@@ -893,7 +882,6 @@ H5Ovisit(hid_t obj_id, H5_index_t idx_type, H5_iter_order_t order,
     herr_t      ret_value;              /* Return value */
 
     FUNC_ENTER_API(H5Ovisit, FAIL)
-    H5TRACE5("e", "iIiIox*x", obj_id, idx_type, order, op, op_data);
 
     /* Check args */
     if(idx_type <= H5_INDEX_UNKNOWN || idx_type >= H5_INDEX_N)
@@ -951,8 +939,6 @@ H5Ovisit_by_name(hid_t loc_id, const char *obj_name, H5_index_t idx_type,
     herr_t      ret_value;              /* Return value */
 
     FUNC_ENTER_API(H5Ovisit_by_name, FAIL)
-    H5TRACE7("e", "i*sIiIox*xi", loc_id, obj_name, idx_type, order, op, op_data,
-             lapl_id);
 
     /* Check args */
     if(!obj_name || !*obj_name)
@@ -1088,14 +1074,6 @@ H5O_create(H5F_t *f, hid_t dxpl_id, size_t size_hint, hid_t ocpl_id,
         oh->version = H5O_VERSION_1;
     oh->sizeof_size = H5F_SIZEOF_SIZE(f);
     oh->sizeof_addr = H5F_SIZEOF_ADDR(f);
-#ifdef H5O_ENABLE_BAD_MESG_COUNT
-    /* Check whether the "bad message count" property is set */
-    if(H5P_exist_plist(oc_plist, H5O_BAD_MESG_COUNT_NAME) > 0) {
-        /* Retrieve bad message count flag */
-        if(H5P_get(oc_plist, H5O_BAD_MESG_COUNT_NAME, &oh->store_bad_mesg_count) < 0)
-            HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "can't get bad message count flag")
-    } /* end if */
-#endif /* H5O_ENABLE_BAD_MESG_COUNT */
 
     /* Set initial status flags */
     oh->flags = oh_flags;

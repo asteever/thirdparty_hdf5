@@ -565,10 +565,6 @@
 			</FileConfiguration>
 		</File>
 		<File
-			RelativePath="..\..\..\test\tcoords.c"
-			>
-		</File>
-		<File
 			RelativePath="..\..\..\test\testframe.c"
 			>
 			<FileConfiguration

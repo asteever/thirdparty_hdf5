@@ -85,10 +85,7 @@ int main( void )
  /* print */
  printf ("Table has %d fields and %d records\n",(int)nfields_out,(int)nrecords_out);
 
-  /* close type */
- H5Tclose( string_type );
- 
- /* close the file */
+ /* Close the file. */
  H5Fclose( file_id );
 
  return 0;
