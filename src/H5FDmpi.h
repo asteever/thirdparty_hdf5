@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -31,11 +30,11 @@
 #define H5D_ONE_LINK_CHUNK_IO_THRESHOLD 0
 /***** Macros for multi-chunk collective IO case. *****/
 /* The default value of the threshold to do collective IO for this chunk.
-   If the average percentage of processes per chunk is greater than the default value,
+   If the average number of processes per chunk is greater than the default value,
    collective IO is done for this chunk.
 */
 
-#define H5D_MULTI_CHUNK_IO_COL_THRESHOLD 60
+#define H5D_MULTI_CHUNK_IO_COL_THRESHOLD 50
 /* Type of I/O for data transfer properties */
 typedef enum H5FD_mpio_xfer_t {
     H5FD_MPIO_INDEPENDENT = 0, 		/*zero is the default*/
@@ -44,16 +43,10 @@ typedef enum H5FD_mpio_xfer_t {
 
 /* Type of I/O for data transfer properties */
 typedef enum H5FD_mpio_chunk_opt_t {
-    H5FD_MPIO_CHUNK_DEFAULT = 0,
-    H5FD_MPIO_CHUNK_ONE_IO,  		/*zero is the default*/
-    H5FD_MPIO_CHUNK_MULTI_IO
+    H5FD_MPIO_OPT_IGNORE = 0,
+    H5FD_MPIO_OPT_ONE_IO,  		/*zero is the default*/
+    H5FD_MPIO_OPT_MULTI_IO
 } H5FD_mpio_chunk_opt_t;
-
-/* Type of I/O for data transfer properties */
-typedef enum H5FD_mpio_collective_opt_t {
-    H5FD_MPIO_COLLECTIVE_IO = 0,
-    H5FD_MPIO_INDIVIDUAL_IO  		/*zero is the default*/
-} H5FD_mpio_collective_opt_t;
 
 
 #ifdef H5_HAVE_PARALLEL
@@ -68,6 +61,7 @@ typedef struct H5FD_class_mpi_t {
 #endif /* H5_HAVE_PARALLEL */
 
 /* Include all the MPI VFL headers */
+#include "H5FDfphdf5.h"		/* Flexible PHDF5 file driver		*/
 #include "H5FDmpio.h"           /* MPI I/O file driver			*/
 #include "H5FDmpiposix.h"       /* MPI/posix I/O file driver            */
 
@@ -75,7 +69,7 @@ typedef struct H5FD_class_mpi_t {
 
 /* Single macro to check for all file drivers that use MPI */
 #define IS_H5FD_MPI(file)  \
-        (IS_H5FD_MPIO(file) || IS_H5FD_MPIPOSIX(file))
+        (IS_H5FD_MPIO(file) || IS_H5FD_MPIPOSIX(file) || IS_H5FD_FPHDF5(file))
 
 #ifdef H5_HAVE_PARALLEL
 /* ======== Temporary data transfer properties ======== */

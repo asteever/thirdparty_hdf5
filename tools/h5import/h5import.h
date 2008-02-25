@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -214,7 +213,7 @@ static int  CompressionTypeStrToInt(char *temp);
 static int  getCompressionParameter(struct Input *in, FILE** strm);
 static int  getExternalFilename(struct Input *in, FILE** strm);
 static int  getMaximumDimensionSizes(struct Input *in, FILE **strm);
-static int  processDataFile(char *infile, struct Input *in, FILE **strm, hid_t file_id);
+static int  processDataFile(char *infile, struct Input *in, FILE **strm);
 static int  readIntegerData(FILE **strm, struct Input *in);
 static int  readFloatData(FILE **strm, struct Input *in);
 static int  allocateIntegerStorage(struct Input *in);
@@ -224,7 +223,6 @@ hid_t       createInputDataType(struct Input *in);
 static int  readUIntegerData(FILE **strm, struct Input *in);
 static int  allocateUIntegerStorage(struct Input *in);
 static int  validateConfigurationParameters(struct Input * in);
-static int  processStrData(FILE **strm, struct Input *in, hid_t file_id);
 
 #endif  /* H5IMPORT_H__ */
 

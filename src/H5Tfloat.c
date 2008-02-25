@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -84,7 +83,7 @@ H5Tget_fields(hid_t type_id, size_t *spos/*out*/,
     herr_t      ret_value=SUCCEED;       /* Return value */
 
     FUNC_ENTER_API(H5Tget_fields, FAIL)
-    H5TRACE6("e", "ixxxxx", type_id, spos, epos, esize, mpos, msize);
+    H5TRACE6("e","ixxxxx",type_id,spos,epos,esize,mpos,msize);
 
     /* Check args */
     if (NULL == (dt = H5I_object_verify(type_id,H5I_DATATYPE)))
@@ -136,7 +135,7 @@ H5Tset_fields(hid_t type_id, size_t spos, size_t epos, size_t esize,
     herr_t      ret_value=SUCCEED;       /* Return value */
 
     FUNC_ENTER_API(H5Tset_fields, FAIL)
-    H5TRACE6("e", "izzzzz", type_id, spos, epos, esize, mpos, msize);
+    H5TRACE6("e","izzzzz",type_id,spos,epos,esize,mpos,msize);
 
     /* Check args */
     if (NULL == (dt = H5I_object_verify(type_id,H5I_DATATYPE)))
@@ -199,7 +198,7 @@ H5Tget_ebias(hid_t type_id)
     size_t	ret_value;
 
     FUNC_ENTER_API(H5Tget_ebias, 0)
-    H5TRACE1("z", "i", type_id);
+    H5TRACE1("z","i",type_id);
 
     /* Check args */
     if (NULL == (dt = H5I_object_verify(type_id,H5I_DATATYPE)))
@@ -240,7 +239,7 @@ H5Tset_ebias(hid_t type_id, size_t ebias)
     herr_t      ret_value=SUCCEED;       /* Return value */
 
     FUNC_ENTER_API(H5Tset_ebias, FAIL)
-    H5TRACE2("e", "iz", type_id, ebias);
+    H5TRACE2("e","iz",type_id,ebias);
 
     /* Check args */
     if (NULL == (dt = H5I_object_verify(type_id,H5I_DATATYPE)))
@@ -286,7 +285,7 @@ H5Tget_norm(hid_t type_id)
     H5T_norm_t	ret_value;
 
     FUNC_ENTER_API(H5Tget_norm, H5T_NORM_ERROR)
-    H5TRACE1("Tn", "i", type_id);
+    H5TRACE1("Tn","i",type_id);
 
     /* Check args */
     if (NULL == (dt = H5I_object_verify(type_id,H5I_DATATYPE)))
@@ -328,7 +327,7 @@ H5Tset_norm(hid_t type_id, H5T_norm_t norm)
     herr_t      ret_value=SUCCEED;       /* Return value */
 
     FUNC_ENTER_API(H5Tset_norm, FAIL)
-    H5TRACE2("e", "iTn", type_id, norm);
+    H5TRACE2("e","iTn",type_id,norm);
 
     /* Check args */
     if (NULL == (dt = H5I_object_verify(type_id,H5I_DATATYPE)))
@@ -378,7 +377,7 @@ H5Tget_inpad(hid_t type_id)
     H5T_pad_t	ret_value;
 
     FUNC_ENTER_API(H5Tget_inpad, H5T_PAD_ERROR)
-    H5TRACE1("Tp", "i", type_id);
+    H5TRACE1("Tp","i",type_id);
 
     /* Check args */
     if (NULL == (dt = H5I_object_verify(type_id,H5I_DATATYPE)))
@@ -422,7 +421,7 @@ H5Tset_inpad(hid_t type_id, H5T_pad_t pad)
     herr_t      ret_value=SUCCEED;       /* Return value */
 
     FUNC_ENTER_API(H5Tset_inpad, FAIL)
-    H5TRACE2("e", "iTp", type_id, pad);
+    H5TRACE2("e","iTp",type_id,pad);
 
     /* Check args */
     if (NULL == (dt = H5I_object_verify(type_id,H5I_DATATYPE)))

@@ -1,6 +1,5 @@
 #							-*- shell-script -*-
 #
-# Copyright by The HDF Group.
 # Copyright by the Board of Trustees of the University of Illinois.
 # All rights reserved.
 #
@@ -10,8 +9,8 @@
 # of the source code distribution tree; Copyright.html can be found at the
 # root level of an installed copy of the electronic HDF5 document set and
 # is linked from the top-level documents page.  It can also be found at
-# http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-# access to either file, you may request a copy from help@hdfgroup.org.
+# http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
+# access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 
 
 # This file is part of the HDF5 build script.  It is processed shortly
@@ -104,7 +103,7 @@ case $CC_BASENAME in
   gcc)
     CFLAGS="$CFLAGS -Wsign-compare" #Only works for some versions
     DEBUG_CFLAGS="-g -fverbose-asm"
-    DEBUG_CPPFLAGS=
+    DEBUG_CPPFLAGS="-DH5F_OPT_SEEK=0 -DH5F_LOW_DFLT=H5F_LOW_SEC2"
     PROD_CFLAGS="-O3 -fomit-frame-pointer"
     PROD_CPPFLAGS=
     PROFILE_CFLAGS="-pg"
@@ -114,7 +113,7 @@ case $CC_BASENAME in
   cc)
     CFLAGS="$CFLAGS"
     DEBUG_CFLAGS="-g -h zero -h scalar0"
-    DEBUG_CPPFLAGS=
+    DEBUG_CPPFLAGS="-DH5F_OPT_SEEK=0 -DH5F_LOW_DFLT=H5F_LOW_SEC2"
     PROD_CFLAGS="-O2 -h scalar0"
     PROD_CPPFLAGS=
     PROFILE_CFLAGS="-pg"
@@ -124,7 +123,7 @@ case $CC_BASENAME in
   *)
     CFLAGS="$CFLAGS -ansi"
     DEBUG_CFLAGS="-g"
-    DEBUG_CPPFLAGS=
+    DEBUG_CPPFLAGS="-DH5F_OPT_SEEK=0 -DH5F_LOW_DFLT=H5F_LOW_SEC2"
     PROD_CFLAGS="-O"
     PROD_CPPFLAGS=
     PROFILE_CFLAGS="-pg"

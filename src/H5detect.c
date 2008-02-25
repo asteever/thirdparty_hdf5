@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,14 +8,13 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*keep this declaration near the top of this file -RPM*/
 static const char *FileHeader = "\n\
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *\n\
- * Copyright by The HDF Group.                                               *\n\
  * Copyright by the Board of Trustees of the University of Illinois.         *\n\
  * All rights reserved.                                                      *\n\
  *                                                                           *\n\
@@ -26,8 +24,8 @@ static const char *FileHeader = "\n\
  * of the source code distribution tree; Copyright.html can be found at the  *\n\
  * root level of an installed copy of the electronic HDF5 document set and   *\n\
  * is linked from the top-level documents page.  It can also be found at     *\n\
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *\n\
- * access to either file, you may request a copy from help@hdfgroup.org.     *\n\
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *\n\
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *\n\
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *";
 /*
  *
@@ -493,9 +491,7 @@ sigbus_handler(int UNUSED signo)
 {
     signal(SIGBUS, sigbus_handler);
     longjmp(jbuf_g, 1);
-#ifdef H5_HAVE_SIGLONGJMP
     siglongjmp(jbuf_g, 1);
-#endif /* H5_HAVE_SIGLONGJMP */
 }
 
 
@@ -1090,7 +1086,7 @@ bit.\n";
      * The FQDM of this host or the empty string.
      */
 #ifdef H5_HAVE_GETHOSTNAME
-#ifdef _WIN32
+#ifdef WIN32
 /* windows DLL cannot recognize gethostname, so turn off on windows for the time being!
     KY, 2003-1-14 */
     host_name[0] = '\0';

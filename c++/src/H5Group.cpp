@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifdef OLD_HEADER_FILENAME
@@ -80,25 +79,13 @@ hid_t Group::getLocId() const
 Group::Group( const hid_t group_id ) : H5Object( group_id ) {}
 
 //--------------------------------------------------------------------------
-// Function:	Group overload constructor - dereference
-///\brief	Given a reference to some object, returns that group
-///             obj - IN: Location reference object is in
-///\param	ref - IN: Reference pointer
-///\parDescription
-///		\c obj can be DataSet, Group, H5File, or named DataType, that 
-///		is a datatype that has been named by DataType::commit.
-// Programmer	Binh-Minh Ribler - Oct, 2006
-//--------------------------------------------------------------------------
-Group::Group(IdComponent& obj, void* ref) : H5Object()
-{
-   IdComponent::dereference(obj, ref);
-}
-
-//--------------------------------------------------------------------------
 // Function:	Group::Reference
-///\brief	Important!!! - This functions may not work correctly, it 
-///		will be removed in the near future.  Please use similar
-///		Group::reference instead!
+///\brief	Creates a reference to an HDF5 object or a dataset region.
+///\param	name - IN: Name of the object to be referenced
+///\param	dataspace - IN: Dataspace with selection
+///\param	ref_type - IN: Type of reference; default to \c H5R_DATASET_REGION
+///\return	A reference
+///\exception	H5::GroupIException
 // Programmer	Binh-Minh Ribler - May, 2004
 //--------------------------------------------------------------------------
 void* Group::Reference(const char* name, DataSpace& dataspace, H5R_type_t ref_type) const
@@ -113,9 +100,16 @@ void* Group::Reference(const char* name, DataSpace& dataspace, H5R_type_t ref_ty
 
 //--------------------------------------------------------------------------
 // Function:	Group::Reference
-///\brief	Important!!! - This functions may not work correctly, it 
-///		will be removed in the near future.  Please use similar
-///		Group::reference instead!
+///\brief	This is an overloaded function, provided for your convenience.
+///		It differs from the above function in that it only creates
+///		a reference to an HDF5 object, not to a dataset region.
+///\param	name - IN: Name of the object to be referenced
+///\return	A reference
+///\exception	H5::GroupIException
+///\par Description
+//		This function passes H5R_OBJECT and -1 to the protected
+//		function for it to pass to the C API H5Rcreate
+//		to create a reference to the named object.
 // Programmer	Binh-Minh Ribler - May, 2004
 //--------------------------------------------------------------------------
 void* Group::Reference(const char* name) const
@@ -130,29 +124,27 @@ void* Group::Reference(const char* name) const
 
 //--------------------------------------------------------------------------
 // Function:	Group::Reference
-///\brief	Important!!! - This functions may not work correctly, it 
-///		will be removed in the near future.  Please use similar
-///		Group::reference instead!
-// Programmer	Binh-Minh Ribler - May, 2004
+///\brief	This is an overloaded function, provided for your convenience.
+///		It differs from the above function in that it takes an
+///		\c std::string for the object's name.
+///\param	name - IN: Name of the object to be referenced
+// Programmer   Binh-Minh Ribler - May, 2004
 //--------------------------------------------------------------------------
 void* Group::Reference(const H5std_string& name) const
 {
    return(Reference(name.c_str()));
 }
 
-#ifndef H5_NO_DEPRECATED_SYMBOLS
 //--------------------------------------------------------------------------
 // Function:	Group::getObjType
 ///\brief	Retrieves the type of object that an object reference points to.
-///\param	ref      - IN: Reference to query
-///\param	ref_type - IN: Type of reference to query, valid values are:
-///		\li \c H5R_OBJECT \tReference is an object reference.
-///		\li \c H5R_DATASET_REGION \tReference is a dataset region reference.
+///\param		ref      - IN: Reference to query
+///\param		ref_type - IN: Type of reference to query
 ///\return	An object type, which can be one of the following:
-///			H5G_LINK Object is a symbolic link.
-///			H5G_GROUP Object is a group.
-///			H5G_DATASET   Object is a dataset.
-///			H5G_TYPE Object is a named datatype
+//			H5G_LINK Object is a symbolic link.
+//			H5G_GROUP Object is a group.
+//			H5G_DATASET   Object is a dataset.
+//			H5G_TYPE Object is a named datatype
 ///\exception	H5::GroupIException
 // Programmer	Binh-Minh Ribler - May, 2004
 //--------------------------------------------------------------------------
@@ -165,7 +157,6 @@ H5G_obj_t Group::getObjType(void *ref, H5R_type_t ref_type) const
       throw GroupIException("Group::getObjType", E.getDetailMsg());
    }
 }
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
 
 //--------------------------------------------------------------------------
 // Function:	Group::getRegion
@@ -196,16 +187,13 @@ DataSpace Group::getRegion(void *ref, H5R_type_t ref_type) const
 //--------------------------------------------------------------------------
 void Group::close()
 {
-    if (p_valid_id(id))
-    {
-	herr_t ret_value = H5Gclose( id );
-	if( ret_value < 0 )
-	{
-	    throw GroupIException("Group::close", "H5Gclose failed");
-	}
-	// reset the id because the group that it represents is now closed
-	id = 0;
-    }
+   herr_t ret_value = H5Gclose( id );
+   if( ret_value < 0 )
+   {
+      throw GroupIException("Group::close", "H5Gclose failed");
+   }
+   // reset the id because the group that it represents is now closed
+   id = 0;
 }
 
 //--------------------------------------------------------------------------
@@ -222,7 +210,7 @@ void Group::close()
 //		implementation of Group.
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-void Group::throwException(const H5std_string& func_name, const H5std_string& msg) const
+void Group::throwException(const H5std_string func_name, const H5std_string msg) const
 {
    H5std_string full_name = func_name;
    full_name.insert(0, "Group::");
@@ -234,19 +222,19 @@ void Group::throwException(const H5std_string& func_name, const H5std_string& ms
 ///\brief	Properly terminates access to this group.
 // Programmer	Binh-Minh Ribler - 2000
 // Modification
-//		- Replaced resetIdComponent() with decRefCount() to use C
-//		library ID reference counting mechanism - BMR, Feb 20, 2005
-//		- Replaced decRefCount with close() to let the C library
-//		handle the reference counting - BMR, Jun 1, 2006
+//		Replaced resetIdComponent with decRefCount to use C library
+//		ID reference counting mechanism - June 1, 2004
 //--------------------------------------------------------------------------
 Group::~Group()
 {
+   // The group id will be closed properly
     try {
-	close();
+        decRefCount();
     }
     catch (Exception close_error) {
-	cerr << "Group::~Group - " << close_error.getDetailMsg() << endl;
+        cerr << "Group::~Group - " << close_error.getDetailMsg() << endl;
     }
+
 }
 
 #ifndef H5_NO_NAMESPACE

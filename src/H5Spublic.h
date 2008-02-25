@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -84,7 +83,7 @@ typedef enum {
     H5S_SEL_POINTS	= 1,    /* Sequence of points selected	*/
     H5S_SEL_HYPERSLABS  = 2,    /* "New-style" hyperslab selection defined	*/
     H5S_SEL_ALL		= 3,    /* Entire extent selected	*/
-    H5S_SEL_N			/*THIS MUST BE LAST		*/
+    H5S_SEL_N		= 4	/*THIS MUST BE LAST		*/
 }H5S_sel_type;
 
 #ifdef __cplusplus
@@ -107,6 +106,7 @@ H5_DLL int H5Sget_simple_extent_ndims(hid_t space_id);
 H5_DLL int H5Sget_simple_extent_dims(hid_t space_id, hsize_t dims[],
 				      hsize_t maxdims[]);
 H5_DLL htri_t H5Sis_simple(hid_t space_id);
+H5_DLL herr_t H5Sset_space(hid_t space_id, int rank, const hsize_t *dims);
 H5_DLL hssize_t H5Sget_select_npoints(hid_t spaceid);
 H5_DLL herr_t H5Sselect_hyperslab(hid_t space_id, H5S_seloper_t op,
 				   const hsize_t start[],
@@ -126,23 +126,21 @@ H5_DLL hid_t H5Scombine_select(hid_t space1_id, H5S_seloper_t op,
                                   hid_t space2_id);
 #endif /* NEW_HYPERSLAB_API */
 H5_DLL herr_t H5Sselect_elements(hid_t space_id, H5S_seloper_t op,
-    size_t num_elem, const hsize_t *coord);
+				  size_t num_elemn,
+				  const hsize_t **coord);
 H5_DLL H5S_class_t H5Sget_simple_extent_type(hid_t space_id);
 H5_DLL herr_t H5Sset_extent_none(hid_t space_id);
 H5_DLL herr_t H5Sextent_copy(hid_t dst_id,hid_t src_id);
-H5_DLL htri_t H5Sextent_equal(hid_t sid1, hid_t sid2);
+H5_DLL herr_t H5Sextent_equal(hid_t sid1, hid_t sid2);
 H5_DLL herr_t H5Sselect_all(hid_t spaceid);
 H5_DLL herr_t H5Sselect_none(hid_t spaceid);
 H5_DLL herr_t H5Soffset_simple(hid_t space_id, const hssize_t *offset);
 H5_DLL htri_t H5Sselect_valid(hid_t spaceid);
 H5_DLL hssize_t H5Sget_select_hyper_nblocks(hid_t spaceid);
 H5_DLL hssize_t H5Sget_select_elem_npoints(hid_t spaceid);
-H5_DLL herr_t H5Sget_select_hyper_blocklist(hid_t spaceid, hsize_t startblock,
-    hsize_t numblocks, hsize_t buf[/*numblocks*/]);
-H5_DLL herr_t H5Sget_select_elem_pointlist(hid_t spaceid, hsize_t startpoint,
-    hsize_t numpoints, hsize_t buf[/*numpoints*/]);
-H5_DLL herr_t H5Sget_select_bounds(hid_t spaceid, hsize_t start[],
-    hsize_t end[]);
+H5_DLL herr_t H5Sget_select_hyper_blocklist(hid_t spaceid, hsize_t startblock, hsize_t numblocks, hsize_t *buf);
+H5_DLL herr_t H5Sget_select_elem_pointlist(hid_t spaceid, hsize_t startpoint, hsize_t numpoints, hsize_t *buf);
+H5_DLL herr_t H5Sget_select_bounds(hid_t spaceid, hsize_t *start, hsize_t *end);
 H5_DLL H5S_sel_type H5Sget_select_type(hid_t spaceid);
 
 #ifdef __cplusplus

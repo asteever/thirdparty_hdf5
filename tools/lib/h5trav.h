@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef H5TRAV_H__
@@ -18,45 +17,20 @@
 
 #include "hdf5.h"
 
-/* Typedefs for visiting objects */
-typedef herr_t (*h5trav_obj_func_t)(const char *path_name, const H5O_info_t *oinfo,
-        const char *first_seen, void *udata);
-typedef herr_t (*h5trav_lnk_func_t)(const char *path_name, const H5L_info_t *linfo,
-        void *udata);
-
-/*-------------------------------------------------------------------------
- * public enum to specify type of an object
- * the TYPE can be:
- *    H5TRAV_TYPE_UNKNOWN = -1,
- *    H5TRAV_TYPE_GROUP,            Object is a group
- *    H5TRAV_TYPE_DATASET,          Object is a dataset
- *    H5TRAV_TYPE_TYPE,             Object is a named datatype
- *    H5TRAV_TYPE_LINK,             Object is a symbolic link
- *    H5TRAV_TYPE_UDLINK,           Object is a user-defined link
- *-------------------------------------------------------------------------
- */
-typedef enum {
-    H5TRAV_TYPE_UNKNOWN = -1,   /* Unknown object type */
-    H5TRAV_TYPE_GROUP,          /* Object is a group */
-    H5TRAV_TYPE_DATASET,        /* Object is a dataset */
-    H5TRAV_TYPE_NAMED_DATATYPE, /* Object is a named datatype */
-    H5TRAV_TYPE_LINK,           /* Object is a symbolic link */
-    H5TRAV_TYPE_UDLINK          /* Object is a user-defined link */
-} h5trav_type_t;
-
 /*-------------------------------------------------------------------------
  * public struct to store name and type of an object
+ * the TYPE can be:
+ *    H5G_UNKNOWN = -1,
+ *    H5G_GROUP,		    Object is a group
+ *    H5G_DATASET,		    Object is a dataset
+ *    H5G_TYPE,			    Object is a named data type
+ *    H5G_LINK,		            Object is a symbolic link
  *-------------------------------------------------------------------------
  */
-typedef struct trav_path_t {
-    char      *path;
-    h5trav_type_t type;
-} trav_path_t;
 
 typedef struct trav_info_t {
-    size_t      nalloc;
-    size_t      nused;
-    trav_path_t *paths;
+	char      *name;
+	H5G_obj_t type;
 } trav_info_t;
 
 
@@ -65,7 +39,7 @@ typedef struct trav_info_t {
  *-------------------------------------------------------------------------
  */
 typedef struct trav_link_t {
-    char      *new_name;
+	char      *new_name;
 } trav_link_t;
 
 
@@ -75,13 +49,14 @@ typedef struct trav_link_t {
  */
 
 typedef struct trav_obj_t {
-    haddr_t     objno;     /* object address */
+    haddr_t     objno;     /* object number from H5Gget_objinfo */
     unsigned    flags[2];  /* h5diff.object is present or not in both files*/
     char        *name;     /* name */
-    h5trav_type_t type;    /* type of object */
+    int         displayed; /* hard link already traversed once */
+    H5G_obj_t   type;      /* type of object */
     trav_link_t *links;    /* array of possible link names */
-    size_t      sizelinks; /* size of links array */
-    size_t      nlinks;    /* number of links */
+    int         sizelinks; /* size of links array */
+    int         nlinks;    /* number of links */
 } trav_obj_t;
 
 
@@ -91,9 +66,9 @@ typedef struct trav_obj_t {
  */
 
 typedef struct trav_table_t {
-    size_t      size;
-    size_t      nobjs;
-    trav_obj_t *objs;
+	int        size;
+	int        nobjs;
+	trav_obj_t *objs;
 } trav_table_t;
 
 
@@ -107,46 +82,26 @@ extern "C" {
 #endif
 
 /*-------------------------------------------------------------------------
- * "h5trav general" public functions
- *-------------------------------------------------------------------------
- */
-int h5trav_visit(hid_t file_id, const char *grp_name, hbool_t visit_start,
-    hbool_t recurse, h5trav_obj_func_t visit_obj, h5trav_lnk_func_t visit_lnk,
-    void *udata);
-
-/*-------------------------------------------------------------------------
  * "h5trav info" public functions
  *-------------------------------------------------------------------------
  */
-int h5trav_getinfo(hid_t file_id, trav_info_t *info);
-ssize_t h5trav_getindex(const trav_info_t *info, const char *obj);
+int  h5trav_getinfo( hid_t fid, trav_info_t *info, int print );
+int  h5trav_getindex( const char *obj, int nobjs, trav_info_t *info );
+void h5trav_freeinfo( trav_info_t *info, int nobjs );
+void h5trav_printinfo(int nobjs, trav_info_t *info);
 
 /*-------------------------------------------------------------------------
  * "h5trav table" public functions
  *-------------------------------------------------------------------------
  */
 
+int  h5trav_getindext(const char *obj,trav_table_t *travt);
 int  h5trav_gettable(hid_t fid, trav_table_t *travt);
-int  h5trav_getindext(const char *obj, const trav_table_t *travt);
-
-/*-------------------------------------------------------------------------
- * "h5trav print" public functions
- *-------------------------------------------------------------------------
- */
-int h5trav_print(hid_t fid);
+void h5trav_printtable(trav_table_t *table);
 
 #ifdef __cplusplus
 }
 #endif
-
-/*-------------------------------------------------------------------------
- * info private functions
- *-------------------------------------------------------------------------
- */
-
-void trav_info_init(trav_info_t **info);
-
-void trav_info_free(trav_info_t *info);
 
 /*-------------------------------------------------------------------------
  * table private functions
@@ -157,10 +112,23 @@ void trav_table_init(trav_table_t **table);
 
 void trav_table_free(trav_table_t *table);
 
+int  trav_table_search(haddr_t objno,
+                       trav_table_t *table );
+
+void trav_table_add(haddr_t objno,
+                    char *objname,
+                    H5G_obj_t type,
+                    trav_table_t *table);
+
 void trav_table_addflags(unsigned *flags,
                          char *objname,
-                         h5trav_type_t type,
+                         H5G_obj_t type,
                          trav_table_t *table);
 
-#endif  /* H5TRAV_H__ */
 
+void trav_table_addlink(trav_table_t *table,
+                        int j /* the object index */,
+                        char *path );
+
+
+#endif  /* H5TRAV_H__ */

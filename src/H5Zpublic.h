@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* Programmer:  Robb Matzke <matzke@llnl.gov>
@@ -20,9 +19,6 @@
 #ifndef _H5Zpublic_H
 #define _H5Zpublic_H
 
-/* Public headers needed by this file */
-#include "H5public.h"
-
 /*
  * Filter identifiers.  Values 0 through 255 are for filters defined by the
  * HDF5 library.  Values 256 through 511 are available for testing new
@@ -31,35 +27,25 @@
  * appear in the HDF5 files.
  */
 typedef int H5Z_filter_t;
-
-/* Filter IDs */
 #define H5Z_FILTER_ERROR	(-1)	/*no filter			*/
 #define H5Z_FILTER_NONE		0	/*reserved indefinitely		*/
+#define H5Z_FILTER_ALL	 	0	/*symbol to remove all filters in H5Premove_filter		*/
 #define H5Z_FILTER_DEFLATE	1 	/*deflation like gzip	     	*/
 #define H5Z_FILTER_SHUFFLE      2       /*shuffle the data              */
-#define H5Z_FILTER_FLETCHER32   3       /*fletcher32 checksum of EDC    */
-#define H5Z_FILTER_SZIP         4       /*szip compression              */
-#define H5Z_FILTER_NBIT         5       /*nbit compression              */
-#define H5Z_FILTER_SCALEOFFSET  6       /*scale+offset compression      */
-#define H5Z_FILTER_RESERVED     256	/*filter ids below this value are reserved for library use */
+#define H5Z_FILTER_FLETCHER32   3       /*fletcher32 checksum of EDC       */
+#define H5Z_FILTER_SZIP         4       /*szip compression               */
+#define H5Z_FILTER_NBIT         5       /*nbit compression               */
+#define H5Z_FILTER_SCALEOFFSET  6       /*scaleoffset compression        */
+#define H5Z_FILTER_RESERVED     256	/*filter ids below this value are reserved */
 #define H5Z_FILTER_MAX		65535	/*maximum filter id		*/
+#define H5Z_MAX_NFILTERS        32      /* Maximum number of filters allowed in a pipeline (should probably be allowed to be an unlimited amount) */
 
-/* General macros */
-#define H5Z_FILTER_ALL	 	0	/* Symbol to remove all filters in H5Premove_filter */
-#define H5Z_MAX_NFILTERS        32      /* Maximum number of filters allowed in a pipeline */
-                                        /* (should probably be allowed to be an
-                                         * unlimited amount, but currently each
-                                         * filter uses a bit in a 32-bit field,
-                                         * so the format would have to be
-                                         * changed to accomodate that)
-                                         */
-
-/* Flags for filter definition (stored) */
+/* Flags for filter definition */
 #define H5Z_FLAG_DEFMASK	0x00ff	/*definition flag mask		*/
 #define H5Z_FLAG_MANDATORY      0x0000  /*filter is mandatory		*/
 #define H5Z_FLAG_OPTIONAL	0x0001	/*filter is optional		*/
 
-/* Additional flags for filter invocation (not stored) */
+/* Additional flags for filter invocation */
 #define H5Z_FLAG_INVMASK	0xff00	/*invocation flag mask		*/
 #define H5Z_FLAG_REVERSE	0x0100	/*reverse direction; read	*/
 #define H5Z_FLAG_SKIP_EDC	0x0200	/*skip EDC filters for read	*/
@@ -73,25 +59,6 @@ typedef int H5Z_filter_t;
 #define H5_SZIP_EC_OPTION_MASK          4
 #define H5_SZIP_NN_OPTION_MASK          32
 #define H5_SZIP_MAX_PIXELS_PER_BLOCK    32
-
-/* Macros for the shuffle filter */
-#define H5Z_SHUFFLE_USER_NPARMS    0    /* Number of parameters that users can set */
-#define H5Z_SHUFFLE_TOTAL_NPARMS   1    /* Total number of parameters for filter */
- 
-/* Macros for the szip filter */
-#define H5Z_SZIP_USER_NPARMS    2       /* Number of parameters that users can set */
-#define H5Z_SZIP_TOTAL_NPARMS   4       /* Total number of parameters for filter */
-#define H5Z_SZIP_PARM_MASK      0       /* "User" parameter for option mask */
-#define H5Z_SZIP_PARM_PPB       1       /* "User" parameter for pixels-per-block */
-#define H5Z_SZIP_PARM_BPP       2       /* "Local" parameter for bits-per-pixel */
-#define H5Z_SZIP_PARM_PPS       3       /* "Local" parameter for pixels-per-scanline */
-   
-/* Macros for the nbit filter */
-#define H5Z_NBIT_USER_NPARMS     0     /* Number of parameters that users can set */
-
-/* Macros for the scale offset filter */
-#define H5Z_SCALEOFFSET_USER_NPARMS      2    /* Number of parameters that users can set */
-
 
 /* Special parameters for ScaleOffset filter*/
 #define H5Z_SO_INT_MINBITS_DEFAULT 0
@@ -207,7 +174,7 @@ typedef size_t (*H5Z_func_t)(unsigned int flags, size_t cd_nelmts,
  * contain a pointers to the filter function and timing statistics.
  */
 typedef struct H5Z_class_t {
-    int version;                /* Version number of the H5Z_class_t struct */
+    int version;            /* Version number of the H5Z_class_t struct */
     H5Z_filter_t id;		/* Filter ID number			     */
     unsigned encoder_present;   /* Does this filter have an encoder? */
     unsigned decoder_present;   /* Does this filter have a decoder? */

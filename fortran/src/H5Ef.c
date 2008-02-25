@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* This files contains C stubs for H5E Fortran APIs */
@@ -38,7 +37,7 @@ nh5eclear_c( )
   /*
    * Call H5Eclear function.
    */
-  status = H5Eclear2(H5E_DEFAULT);
+  status = H5Eclear_stack(H5E_DEFAULT);
   if(status < 0) return ret_val;
   ret_val = 0;
   return ret_val;
@@ -63,16 +62,16 @@ nh5eprint_c1(_fcd name, int_f* namelen)
   herr_t status;
   FILE * file;
   char* c_name;
-  size_t c_namelen;
+  int c_namelen;
   c_namelen = *namelen;
   c_name = (char*)HD5f2cstring(name, c_namelen);
   if(c_name == NULL) return ret_val;
   file = fopen(c_name, "a");
        if(!file) goto DONE;
   /*
-   * Call H5Eprint2 function.
+   * Call H5Eprint function.
    */
-  status = H5Eprint2(H5E_DEFAULT, file);
+  status = H5Eprint_stack(H5E_DEFAULT, file);
   if (status >=0 ) ret_val = 0;
   fclose(file);
 
@@ -100,9 +99,9 @@ nh5eprint_c2()
   herr_t status;
 
   /*
-   * Call H5Eprint2 function.
+   * Call H5Eprint function.
    */
-  status = H5Eprint2(H5E_DEFAULT, NULL);
+  status = H5Eprint_stack(H5E_DEFAULT, NULL);
   if(status >= 0) ret_val = 0;
   return ret_val;
 }
@@ -122,7 +121,7 @@ int_f
 nh5eget_major_c(int_f* error_no, _fcd name, size_t_f* namelen)
 {
   int ret_val = -1;
-  char *c_name = NULL;
+  char *c_name;
   size_t c_namelen;
   hid_t c_error_no;
   c_error_no = (hid_t)*error_no;
@@ -156,7 +155,7 @@ int_f
 nh5eget_minor_c(int_f* error_no, _fcd name, size_t_f* namelen)
 {
   int ret_val = -1;
-  char *c_name = NULL;
+  char *c_name;
   size_t c_namelen;
   hid_t c_error_no;
   c_error_no = (hid_t)*error_no;
@@ -189,12 +188,12 @@ int_f
 nh5eset_auto_c(int_f* printflag)
 {
   int ret_val = -1;
-  herr_t status = -1;
+  herr_t status;
 
   if (*printflag == 1)
-    status = H5Eset_auto2(H5E_DEFAULT, H5Eprint2, stderr);
-  else if (*printflag == 0)
-    status = H5Eset_auto2(H5E_DEFAULT, NULL, NULL);
+    status = H5Eset_auto_stack(H5E_DEFAULT, (H5E_auto_stack_t)H5Eprint, stderr);
+  if (*printflag == 0)
+    status = H5Eset_auto_stack(H5E_DEFAULT, NULL,NULL);
   if (status >= 0) ret_val = 0;
   return ret_val;
 }

@@ -1,6 +1,5 @@
 #							-*- shell-script -*-
 #
-# Copyright by The HDF Group.
 # Copyright by the Board of Trustees of the University of Illinois.
 # All rights reserved.
 #
@@ -10,8 +9,8 @@
 # of the source code distribution tree; Copyright.html can be found at the
 # root level of an installed copy of the electronic HDF5 document set and
 # is linked from the top-level documents page.  It can also be found at
-# http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-# access to either file, you may request a copy from help@hdfgroup.org.
+# http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
+# access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 
 
 # This file is part of the HDF5 build script.  It is processed shortly
@@ -19,20 +18,9 @@
 # the various compile modes.
 
 # Use Intel C compiler by default (if it's available).
-# Use mpicc for parallel by default.
-if test "X$CC" = "X"; then
-    if test "X-$enable_parallel" = "X-yes"; then
-	CC=mpicc
-	CC_BASENAME=mpicc
-    elif which icc > /dev/null; then
-	CC=icc
-	CC_BASENAME=icc
-    fi
-fi
-
-# Define RUNPARALLEL if parallel mode is enabled or a parallel compiler used.
-if test "X-$enable_parallel" = "X-yes" -o X-$CC_BASENAME = X-mpicc; then
-    RUNPARALLEL=${RUNPARALLEL="mpirun -np \$\${NPROCS:=3}"}
+if test "X$CC" = "X" && which icc > /dev/null; then
+  CC=icc
+  CC_BASENAME=icc
 fi
 
 #----------------------------------------------------------------------------
@@ -63,12 +51,8 @@ esac
 # The default Fortran 90 compiler
 
 # Use Intel Fortran compiler by default.
-if test X-$enable_fortran = X-yes -a "X-$FC" = "X-"; then
-    if test "X-$enable_parallel" = "X-yes"; then
-	FC=mpif90
-    else
-	FC="ifort"
-    fi
+if test "X-$FC" = "X-"; then
+  FC="ifort"
 fi
 
 case $FC in

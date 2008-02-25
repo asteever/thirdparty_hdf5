@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* Packet Table wrapper classes
@@ -24,11 +23,7 @@
 #ifndef H5PTWRAP_H
 #define H5PTWRAP_H
 
-/* Public HDF5 header */
-#include "hdf5.h"
-
 #include "H5PTpublic.h"
-#include "H5api_adpt.h"
 
 class H5_HLCPPDLL  PacketTable
 {
@@ -56,14 +51,12 @@ public:
      */
     bool IsValid();
 
-#ifdef VLPT_REMOVED
     /* IsVariableLength
      * Return 1 if this packet table is a Variable Length packet table,
      * return 0 if it is Fixed Length.  Returns -1 if the table is
      * invalid (not open).
      */
     int IsVariableLength();
-#endif /* VLPT_REMOVED */
 
     /* ResetIndex
      * Sets the "current packet" index to point to the first packet in the
@@ -75,13 +68,7 @@ public:
      * Sets the current packet to point to the packet specified by index.
      * Returns 0 on success, negative on failure (if index is out of bounds)
      */
-    int SetIndex(hsize_t index);
-
-    /* GetIndex
-     * Returns the position of the current packet.
-     * On failure, returns 0 and error is set to negative.
-     */
-    hsize_t GetIndex(int& error);
+    int SetIndex(unsigned int index);
 
     /* GetPacketCount
      * Returns the number of packets in the packet table.  Error
@@ -90,7 +77,7 @@ public:
      */
     hsize_t GetPacketCount(int& error);
 
-    hsize_t GetPacketCount()
+    unsigned int GetPacketCount()
     {
         int ignoreError;
         return GetPacketCount(ignoreError);
@@ -106,11 +93,10 @@ public:
     /* Constructor
      * Creates a packet table in which to store fixed length packets.
      * Takes the ID of the file the packet table will be created in, the name of
-     * the packet table, the ID of the datatype of the set, the size
-     * of a memory chunk used in chunking, and the desired compression level
-     * (0-9, or -1 for no compression).
+     * the packet table, the ID of the datatype of the set, and the size
+     * of a memory chunk used in chunking.
      */
-    FL_PacketTable(hid_t fileID, char* name, hid_t dtypeID, hsize_t chunkSize, int compression = -1);
+    FL_PacketTable(hid_t fileID, char* name, hid_t dtypeID, int chunkSize);
 
     /* "Open" Constructor
      * Opens an existing fixed-length packet table.
@@ -130,7 +116,7 @@ public:
      * to be added and a pointer to their location in memory.
      * Returns 0 on success, -1 on failure.
      */
-    int AppendPackets(size_t numPackets, void * data);
+    int AppendPackets(unsigned int numPackets, void * data);
 
     /* GetPacket (indexed)
      * Gets a single packet from the packet table.  Takes the index
@@ -138,7 +124,7 @@ public:
      * to memory where the data should be stored.
      * Returns 0 on success, negative on failure
      */
-    int GetPacket(hsize_t index, void * data);
+    int GetPacket(unsigned int index, void * data);
 
     /* GetPackets (multiple packets)
      * Gets multiple packets at once, all packets between
@@ -146,7 +132,7 @@ public:
      * the memory where these packets should be stored.
      * Returns 0 on success, negative on failure.
      */
-    int GetPackets(hsize_t startIndex, hsize_t endIndex, void * data);
+    int GetPackets(unsigned int startIndex, unsigned int endIndex, void * data);
 
     /* GetNextPacket (single packet)
      * Gets the next packet in the packet table.  Takes a pointer to
@@ -162,10 +148,9 @@ public:
      * Returns 0 on success, negative on failure.  Index
      * is not advanced on failure.
      */
-    int GetNextPackets(size_t numPackets, void * data);
+    int GetNextPackets(unsigned int numPackets, void * data);
 };
 
-#ifdef VLPT_REMOVED
 class H5_HLCPPDLL  VL_PacketTable : virtual public PacketTable
 {
 public:
@@ -174,7 +159,7 @@ public:
      * Takes the ID of the file the packet table will be created in, the name of
      * the packet table, and the size of a memory chunk used in chunking.
      */
-    VL_PacketTable(hid_t fileID, char* name, hsize_t chunkSize);
+    VL_PacketTable(hid_t fileID, char* name, int chunkSize);
 
     /* "Open" Constructor
      * Opens an existing variable-length packet table.
@@ -188,7 +173,7 @@ public:
      * in bytes.
      * Returns 0 on success, negative on failure.
      */
-    int AppendPacket(void * data, size_t length);
+    int AppendPacket(void * data, unsigned int length);
 
     /* AppendPackets (multiple packets)
      * Adds multiple variable-length packets to the packet table.  Takes the
@@ -196,7 +181,7 @@ public:
      * hvl_t structs in memory.
      * Returns 0 on success, negative on failure.
      */
-    int AppendPackets(size_t numPackets, hvl_t * data);
+    int AppendPackets(unsigned int numPackets, hvl_t * data);
 
     /* GetPacket (indexed)
      * Gets a single variable-length packet from the packet table.  Takes
@@ -204,7 +189,7 @@ public:
      * to a hvl_t struct in which to store the packet's size and location.
      * Returns 0 on success, negative on failure.
      */
-    int GetPacket(hsize_t index, hvl_t * data);
+    int GetPacket(unsigned int index, hvl_t * data);
 
     /* GetPackets (multiple packets)
      * Gets multiple variable-length packets at once, all packets between
@@ -212,7 +197,7 @@ public:
      * of hvl_t structs in memory in which to store pointers to the packets.
      * Returns 0 on success, negative on failure.
      */
-    int GetPackets(hsize_t startIndex, hsize_t endIndex, hvl_t * data);
+    int GetPackets(unsigned int startIndex, unsigned int endIndex, hvl_t * data);
 
     /* GetNextPacket (single packet)
      * Gets the next packet in the packet table.  Takes a pointer to
@@ -229,7 +214,7 @@ public:
      * Returns 0 on success, negative on failure.  Index
      * is not advanced on failure.
      */
-    int GetNextPackets(size_t numPackets, hvl_t * data);
+    int GetNextPackets(unsigned int numPackets, hvl_t * data);
 
     /* FreeReadbuff
      * Frees the buffers created when variable-length packets are read.
@@ -237,8 +222,7 @@ public:
      * location in memory.
      * Returns 0 on success, negative on error.
      */
-    int FreeReadbuff(size_t numStructs, hvl_t * buffer);
+    int FreeReadbuff(unsigned int numStructs, hvl_t * buffer);
 };
-#endif /* VLPT_REMOVED */
 
 #endif /* H5PTWRAP_H */

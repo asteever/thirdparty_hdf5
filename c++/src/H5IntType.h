@@ -1,6 +1,5 @@
 // C++ informative line for the emacs editor: -*- C++ -*-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -10,8 +9,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef _H5IntType_H
@@ -20,7 +19,6 @@
 #ifndef H5_NO_NAMESPACE
 namespace H5 {
 #endif
-
 class H5_DLLCPP IntType : public AtomType {
    public:
 	// Creates a integer type using a predefined type
@@ -36,7 +34,7 @@ class H5_DLLCPP IntType : public AtomType {
 	void setSign( H5T_sign_t sign ) const;
 
 	// Returns this class name
-	virtual H5std_string fromClass () const { return("IntType"); }
+        virtual H5std_string fromClass () const { return("IntType"); }
 
 	// Default constructor
 	IntType();

@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -87,8 +86,7 @@ main (void)
     * Buffers' initialization.
     */
    vector[0] = vector[MSPACE1_DIM - 1] = -1;
-   for(i = 1; i < MSPACE1_DIM - 1; i++)
-       vector[i] = i;
+   for (i = 1; i < MSPACE1_DIM - 1; i++) vector[i] = i;
 
    /*
     * Create a file.
@@ -110,7 +108,7 @@ main (void)
      * Create dataset in the file. Notice that creation
      * property list plist is used.
      */
-    dataset = H5Dcreate2(file, "Matrix in file", H5T_NATIVE_INT, fid, H5P_DEFAULT, plist, H5P_DEFAULT);
+    dataset = H5Dcreate(file, "Matrix in file", H5T_NATIVE_INT, fid, plist);
 
     /*
      * Select hyperslab for the dataset in the file, using 3x2 blocks,
@@ -171,7 +169,8 @@ main (void)
     coord[2][0] = 3; coord[2][1] = 5;
     coord[3][0] = 5; coord[3][1] = 6;
 
-    ret = H5Sselect_elements(fid, H5S_SELECT_SET, NPOINTS, coord);
+    ret = H5Sselect_elements(fid, H5S_SELECT_SET, NPOINTS,
+                             (const hsize_t **)coord);
 
     /*
      * Write new selection of points to the dataset.
@@ -216,7 +215,7 @@ main (void)
     /*
      * Open the dataset.
      */
-    dataset = H5Dopen2(file, "Matrix in file", H5P_DEFAULT);
+    dataset = H5Dopen(file,"Matrix in file");
 
     /*
      * Get dataspace of the open dataset.
@@ -302,9 +301,8 @@ main (void)
      *                     0  0  0  0  0  0  0  0  0
      *                     0  0  0  0  0  0  0  0  0
      */
-    for(i = 0; i < MSPACE_DIM1; i++) {
-        for(j = 0; j < MSPACE_DIM2; j++)
-            printf("%3d  ", matrix_out[i][j]);
+    for (i=0; i < MSPACE_DIM1; i++) {
+        for(j=0; j < MSPACE_DIM2; j++) printf("%3d  ", matrix_out[i][j]);
         printf("\n");
     }
 
@@ -331,4 +329,3 @@ main (void)
 
     return 0;
 }
-

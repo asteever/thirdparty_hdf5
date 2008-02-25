@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "hdf5.h"
@@ -60,18 +59,18 @@ int main(void)
  if (H5LTmake_dataset_int(fid,DS_2_NAME,rankds,s2_dim,s2_wbuf)<0)
   goto out;
 
-
+	
 /*-------------------------------------------------------------------------
  * attach the DS_1_NAME dimension scale to DSET_NAME at dimension 0
  *-------------------------------------------------------------------------
  */
 
  /* get the dataset id for DSET_NAME */
- if ((did = H5Dopen2(fid,DSET_NAME, H5P_DEFAULT))<0)
+ if ((did = H5Dopen(fid,DSET_NAME))<0)
   goto out;
 
  /* get the DS dataset id */
- if ((dsid = H5Dopen2(fid,DS_1_NAME, H5P_DEFAULT))<0)
+ if ((dsid = H5Dopen(fid,DS_1_NAME))<0)
   goto out;
 
  /* attach the DS_1_NAME dimension scale to DSET_NAME at dimension index 0 */
@@ -88,7 +87,7 @@ int main(void)
  */
 
  /* get the DS dataset id */
- if ((dsid = H5Dopen2(fid,DS_2_NAME, H5P_DEFAULT))<0)
+ if ((dsid = H5Dopen(fid,DS_2_NAME))<0)
   goto out;
 
  /* attach the DS_2_NAME dimension scale to DSET_NAME as the 2nd dimension (index 1)  */
@@ -101,7 +100,7 @@ int main(void)
 
  /* close file */
  H5Fclose(fid);
-
+ 
  return 0;
 
 out:

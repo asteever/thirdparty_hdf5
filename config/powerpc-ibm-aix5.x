@@ -1,6 +1,5 @@
 #							-*- shell-script -*-
 #
-# Copyright by The HDF Group.
 # Copyright by the Board of Trustees of the University of Illinois.
 # All rights reserved.
 #
@@ -10,17 +9,16 @@
 # of the source code distribution tree; Copyright.html can be found at the
 # root level of an installed copy of the electronic HDF5 document set and
 # is linked from the top-level documents page.  It can also be found at
-# http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-# access to either file, you may request a copy from help@hdfgroup.org.
+# http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
+# access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 
-# Configuration file for building on the IBM POWER AIX platforms.
+
 # This file is part of the HDF5 build script.  It is processed shortly
 # after configure starts and defines, among other things, flags for
 # the various compile modes.
 
 # Use AIX supplied C compiler by default, xlc for serial, mpcc_r for parallel.
 # Use -D_LARGE_FILES by default to support large file size.
-# Make sure this is applied to other API compile options such as C++.
 if test "X-" =  "X-$CC"; then
   if test "X-$enable_parallel" = "X-yes"; then
     CC=mpcc_r
@@ -47,8 +45,7 @@ case $CC_BASENAME in
     # Turn off shared lib option.  It causes some test suite to fail.
     enable_shared="${enable_shared:-no}"
     # Use -D_LARGE_FILES by default to support large file size.
-    # Make sure this is applied to other API compile options such as C++.
-    CFLAGS="-qlanglvl=stdc99 -D_LARGE_FILES $CFLAGS"
+    CFLAGS="-qlanglvl=ansi -D_LARGE_FILES -DSTDC $CFLAGS"
     DEBUG_CFLAGS="-g -qfullpath"
     DEBUG_CPPFLAGS=
     # -O causes test/dtypes to fail badly. Turn it off for now.
@@ -156,7 +153,6 @@ CXX=${CXX=xlC}
 
 # Added -qweaksymbol to suppress linker messages warning of duplicate
 # symbols; these warnings are harmless. - BMR
-# Use -D_LARGE_FILES by default to support large file size.
-CXXFLAGS="$CXXFLAGS -qweaksymbol -D_LARGE_FILES"
+CXXFLAGS="$CXXFLAGS -qweaksymbol"
 
 

@@ -1,5 +1,4 @@
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!   Copyright by The HDF Group.                                               *
 !   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
@@ -9,8 +8,8 @@
 !   of the source code distribution tree; Copyright.html can be found at the  *
 !   root level of an installed copy of the electronic HDF5 document set and   *
 !   is linked from the top-level documents page.  It can also be found at     *
-!   http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
-!   access to either file, you may request a copy from help@hdfgroup.org.     *
+!   http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+!   access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
 !
     MODULE H5GLOBAL
@@ -205,7 +204,6 @@
       INTEGER :: H5G_GROUP_F
       INTEGER :: H5G_DATASET_F
       INTEGER :: H5G_TYPE_F
-! XXX: Fix problems with H5G_LINK_F! - QAK
       INTEGER :: H5G_LINK_F
       INTEGER :: H5G_LINK_ERROR_F
       INTEGER :: H5G_LINK_HARD_F
@@ -215,7 +213,6 @@
       EQUIVALENCE(H5G_flags(2), H5G_GROUP_F)
       EQUIVALENCE(H5G_flags(3), H5G_DATASET_F)
       EQUIVALENCE(H5G_flags(4), H5G_TYPE_F) 
-! XXX: Fix problems with H5G_LINK_F! - QAK
       EQUIVALENCE(H5G_flags(5), H5G_LINK_F)
       EQUIVALENCE(H5G_flags(6), H5G_LINK_ERROR_F) 
       EQUIVALENCE(H5G_flags(7), H5G_LINK_HARD_F) 
@@ -315,7 +312,7 @@
 !
 ! H5FD file drivers flags declaration
 !
-      INTEGER, PARAMETER :: H5FD_HID_FLAGS_LEN = 7
+      INTEGER, PARAMETER :: H5FD_HID_FLAGS_LEN = 8
       INTEGER(HID_T) H5FD_hid_flags(H5FD_HID_FLAGS_LEN)
 !DEC$if defined(BUILD_HDF5_DLL)
 !DEC$ ATTRIBUTES DLLEXPORT :: /H5FD_HID_FLAGS/
@@ -329,6 +326,7 @@
       INTEGER(HID_T) :: H5FD_MULTI_F
       INTEGER(HID_T) :: H5FD_SEC2_F
       INTEGER(HID_T) :: H5FD_STDIO_F
+      INTEGER(HID_T) :: H5FD_STREAM_F
 
       EQUIVALENCE(H5FD_hid_flags(1), H5FD_CORE_F)
       EQUIVALENCE(H5FD_hid_flags(2), H5FD_FAMILY_F)
@@ -337,6 +335,7 @@
       EQUIVALENCE(H5FD_hid_flags(5), H5FD_MULTI_F)
       EQUIVALENCE(H5FD_hid_flags(6), H5FD_SEC2_F)
       EQUIVALENCE(H5FD_hid_flags(7), H5FD_STDIO_F)
+      EQUIVALENCE(H5FD_hid_flags(8), H5FD_STREAM_F)
 
       
 
@@ -380,17 +379,17 @@
       INTEGER(HID_T) ::  H5P_FILE_ACCESS_F 
       INTEGER(HID_T) ::  H5P_DATASET_CREATE_F
       INTEGER(HID_T) ::  H5P_DATASET_XFER_F 
-      INTEGER(HID_T) ::  H5P_FILE_MOUNT_F 
+      INTEGER(HID_T) ::  H5P_MOUNT_F 
       INTEGER(HID_T) ::  H5P_DEFAULT_F 
-      INTEGER(HID_T) ::  H5P_ROOT_F 
+      INTEGER(HID_T) ::  H5P_NO_CLASS_F 
 
       EQUIVALENCE(H5P_flags(1), H5P_FILE_CREATE_F)
       EQUIVALENCE(H5P_flags(2), H5P_FILE_ACCESS_F)
       EQUIVALENCE(H5P_flags(3), H5P_DATASET_CREATE_F)
       EQUIVALENCE(H5P_flags(4), H5P_DATASET_XFER_F)
-      EQUIVALENCE(H5P_flags(5), H5P_FILE_MOUNT_F)
+      EQUIVALENCE(H5P_flags(5), H5P_MOUNT_F)
       EQUIVALENCE(H5P_flags(6), H5P_DEFAULT_F)
-      EQUIVALENCE(H5P_flags(7), H5P_ROOT_F)
+      EQUIVALENCE(H5P_flags(7), H5P_NO_CLASS_F)
 
 !
 ! H5P flags declaration

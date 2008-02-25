@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,15 +8,15 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #ifndef H5DUMP_H__
 #define H5DUMP_H__
 
 #include "hdf5.h"
 
-#define H5DUMP_MAX_RANK     H5S_MAX_RANK
+#define H5DUMP_MAX_RANK		H5S_MAX_RANK
 
 #define ATTRIBUTE_DATA  0
 #define DATASET_DATA    1
@@ -46,8 +45,7 @@
 #define S_SIMPLE        "SIMPLE"
 #define S_NULL          "NULL"
 #define SOFTLINK        "SOFTLINK"
-#define EXTLINK         "EXTERNAL_LINK"
-#define UDLINK          "USERDEFINED_LINK"
+#define STORAGELAYOUT   "STORAGELAYOUT"
 #define START           "START"
 #define STRIDE          "STRIDE"
 #define STRSIZE         "STRSIZE"
@@ -93,10 +91,6 @@ typedef struct h5dump_header_t {
     const char *dataend;
     const char *softlinkbegin;
     const char *softlinkend;
-    const char *extlinkbegin;
-    const char *extlinkend;
-    const char *udlinkbegin;
-    const char *udlinkend;
     const char *subsettingbegin;
     const char *subsettingend;
     const char *startbegin;
@@ -126,10 +120,6 @@ typedef struct h5dump_header_t {
     const char *datablockend;
     const char *softlinkblockbegin;
     const char *softlinkblockend;
-    const char *extlinkblockbegin;
-    const char *extlinkblockend;
-    const char *udlinkblockbegin;
-    const char *udlinkblockend;
     const char *strblockbegin;
     const char *strblockend;
     const char *enumblockbegin;

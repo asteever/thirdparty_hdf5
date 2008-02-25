@@ -1,6 +1,5 @@
 // C++ informative line for the emacs editor: -*- C++ -*-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -10,8 +9,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef _H5File_H
@@ -37,8 +36,8 @@ class H5_DLLCPP H5File : public IdComponent, public CommonFG {
 	void openFile(const char* name, unsigned int flags,
 	    const FileAccPropList& access_plist = FileAccPropList::DEFAULT);
 
-	// Close this file.
-	virtual void close();
+        // Close this file.
+        virtual void close();
 
 	// Flushes all buffers associated with this file to disk
 	void flush(H5F_scope_t scope) const;
@@ -52,8 +51,8 @@ class H5_DLLCPP H5File : public IdComponent, public CommonFG {
 	// Gets the name of this file.
 	H5std_string getFileName() const;
 
-	// Retrieves the file size of an opened file.
-	hsize_t getFileSize() const;
+        // Retrieves the file size of an opened file.
+        hsize_t getFileSize() const;
 
 	// Returns the amount of free space in the file.
 	hssize_t getFreeSpace() const;
@@ -67,10 +66,8 @@ class H5_DLLCPP H5File : public IdComponent, public CommonFG {
 	// and datatypes) in the same file.
 	void getObjIDs(unsigned types, int max_objs, hid_t *oid_list) const;
 
-#ifndef H5_NO_DEPRECATED_SYMBOLS
 	// Retrieves the type of object that an object reference points to.
-	H5G_obj_t getObjType(void *ref, H5R_type_t ref_type = H5R_OBJECT) const;
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
+	H5G_obj_t getObjType(void *ref, H5R_type_t ref_type) const;
 
 	// Retrieves a dataspace with the region pointed to selected.
 	DataSpace getRegion(void *ref, H5R_type_t ref_type = H5R_DATASET_REGION) const;
@@ -87,19 +84,19 @@ class H5_DLLCPP H5File : public IdComponent, public CommonFG {
 	void reOpen();	// added for better name
 	void reopen();
 
-	// Creates a reference to a named HDF5 object or to a dataset region
+	// Creates a reference to a named Hdf5 object or to a dataset region
 	// in this object.
-	void* Reference(const char* name, DataSpace& dataspace, H5R_type_t ref_type = H5R_DATASET_REGION) const; // will be obsolete
+	void* Reference(const char* name, DataSpace& dataspace, H5R_type_t ref_type = H5R_DATASET_REGION) const;
 
 	// Creates a reference to a named Hdf5 object in this object.
-	void* Reference(const char* name) const; // will be obsolete
-	void* Reference(const H5std_string& name) const; // will be obsolete
+	void* Reference(const char* name) const;
+	void* Reference(const H5std_string& name) const;
 
 	// Returns this class name
 	virtual H5std_string fromClass () const { return("H5File"); }
 
 	// Throw file exception.
-	virtual void throwException(const H5std_string& func_name, const H5std_string& msg) const;
+	virtual void throwException(const H5std_string func_name, const H5std_string msg) const;
 
 	// Gets the file id
 	virtual hid_t getLocId() const;

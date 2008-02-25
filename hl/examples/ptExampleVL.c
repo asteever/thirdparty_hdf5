@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "hdf5.h"
@@ -28,7 +27,6 @@
 
 int main(void)
 {
-#ifdef VLPT_REMOVED
  hid_t          fid;        /* File identifier */
  hid_t          ptable;     /* Packet table identifier */
 
@@ -39,6 +37,7 @@ int main(void)
     /* Buffers to hold data */
  hvl_t writeBuffer[5];
  hvl_t readBuffer[5];
+ hsize_t chunk_size=1;
 
     /* This example has two different sizes of "record": longs and shorts */
  long longBuffer[5];
@@ -69,7 +68,7 @@ int main(void)
  fid=H5Fcreate("packet_table_VLexample.h5",H5F_ACC_TRUNC,H5P_DEFAULT,H5P_DEFAULT);
 
     /* Create a variable-length packet table within the file */
- ptable = H5PTcreate_vl(fid, "Packet Test Dataset", (hsize_t)1);
+ ptable = H5PTcreate_vl(fid, "Packet Test Dataset", chunk_size);
  if(ptable == H5I_INVALID_HID)
      goto out;
 
@@ -112,15 +111,12 @@ int main(void)
 
     /* Close the file */
  H5Fclose(fid);
-#endif /* VLPT_REMOVED */
 
  return 0;
 
-#ifdef VLPT_REMOVED
  out: /* An error has occurred.  Clean up and exit. */
     fprintf(stderr, "An error has occurred!\n");
     H5PTclose(ptable);
     H5Fclose(fid);
     return -1;
-#endif /* VLPT_REMOVED */
 }

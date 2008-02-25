@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,12 +8,16 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef _H5LTpublic_H
 #define _H5LTpublic_H
+
+
+/* Public headers needed by this file */
+#include "H5public.h"
 
 typedef enum H5LT_lang_t {
     H5LT_LANG_ERR = -1, /*this is the first*/
@@ -23,6 +26,8 @@ typedef enum H5LT_lang_t {
     H5LT_FORTRAN  = 2,  /*for Fortran*/
     H5LT_NO_LANG  = 3   /*this is the last*/
 } H5LT_lang_t;
+
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -329,18 +334,25 @@ H5_HLDLL herr_t  H5LTget_attribute_info( hid_t loc_id,
  *-------------------------------------------------------------------------
  */
 
+
+H5_HLDLL hid_t H5LTcreate_compound_type( hsize_t nfields, size_t size, const char *field_names[],
+                                const size_t *field_offset, const hid_t *field_types );
+
 H5_HLDLL hid_t H5LTtext_to_dtype(const char *text, H5LT_lang_t lang_type);
 H5_HLDLL herr_t H5LTdtype_to_text(hid_t dtype, char *str, H5LT_lang_t lang_type, size_t *len);
 
+H5_HLDLL herr_t  H5LTrepack( hsize_t nfields,
+                   hsize_t nrecords,
+                   size_t src_size,
+                   const size_t *src_offset,
+                   const size_t *src_sizes,
+                   size_t dst_size,
+                   const size_t *dst_offset,
+                   const size_t *dst_sizes,
+                   unsigned char *src_buf,
+                   unsigned char *dst_buf );
 
-/*-------------------------------------------------------------------------
- *
- * Utility functions
- *
- *-------------------------------------------------------------------------
- */
 
-H5_HLDLL herr_t  H5LTfind_attribute( hid_t loc_id, const char *name );
 
 
 #ifdef __cplusplus
@@ -348,4 +360,3 @@ H5_HLDLL herr_t  H5LTfind_attribute( hid_t loc_id, const char *name );
 #endif
 
 #endif
-

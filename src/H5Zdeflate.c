@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -118,21 +117,18 @@ H5Z_filter_deflate (unsigned flags, size_t cd_nelmts,
 	    }
             else {
                 /* If we're not done and just ran out of buffer space, get more */
-                if(0 == z_strm.avail_out) {
-                    void	*new_outbuf;         /* Pointer to new output buffer */
-
+                if (0==z_strm.avail_out) {
                     /* Allocate a buffer twice as big */
                     nalloc *= 2;
-                    if(NULL == (new_outbuf = H5MM_realloc(outbuf, nalloc))) {
+                    if (NULL==(outbuf = H5MM_realloc(outbuf, nalloc))) {
                         (void)inflateEnd(&z_strm);
                         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, 0, "memory allocation failed for deflate uncompression")
-                    } /* end if */
-                    outbuf = new_outbuf;
+                    }
 
                     /* Update pointers to buffer for next set of uncompressed data */
                     z_strm.next_out = (unsigned char*)outbuf + z_strm.total_out;
                     z_strm.avail_out = (uInt)(nalloc - z_strm.total_out);
-                } /* end if */
+                }
             } /* end else */
 	} while(status==Z_OK);
 

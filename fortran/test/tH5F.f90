@@ -1,5 +1,4 @@
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!   Copyright by The HDF Group.                                               *
 !   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
@@ -9,8 +8,8 @@
 !   of the source code distribution tree; Copyright.html can be found at the  *
 !   root level of an installed copy of the electronic HDF5 document set and   *
 !   is linked from the top-level documents page.  It can also be found at     *
-!   http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
-!   access to either file, you may request a copy from help@hdfgroup.org.     *
+!   http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+!   access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
 !
 !
@@ -697,8 +696,6 @@
           LOGICAL, INTENT(IN) :: cleanup
           INTEGER, INTENT(OUT) :: total_error 
           INTEGER              :: error
-          INTEGER flag 
-          INTEGER :: free_space_out
      
           !
           CHARACTER(LEN=10), PARAMETER :: filename = "file_space"
@@ -749,7 +746,8 @@
           ! Check the free space now
           CALL h5fget_freespace_f(fid, free_space, error)
                CALL check("h5fget_freespace_f",error,total_error)
-               if(error .eq.0 .and. free_space .ne. 0) then
+!               if(error .eq.0 .and. free_space .ne. 232) then
+               if(error .eq.0 .and. free_space .ne. 1024) then
                  total_error = total_error + 1
                  write(*,*) "3: Wrong amount of free space reported, ", free_space
                endif

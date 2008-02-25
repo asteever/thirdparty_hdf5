@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,76 +8,96 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#define H5P_PACKAGE		/*suppress error about including H5Ppkg	  */
+
+/* Private header files */
+#include "H5private.h"		/* Generic Functions			*/
+#include "H5Aprivate.h"		/* Datasets				*/
+#include "H5Eprivate.h"		/* Error handling		  	*/
+#include "H5Ppkg.h"		/* Property lists		  	*/
+#include "H5Tprivate.h"		/* Datatypes				*/
+
+/* Local datatypes */
+
+/* Static function prototypes */
+
+#ifdef H5_GROUP_REVISION
+
 /*-------------------------------------------------------------------------
+ * Function:  H5Pset_char_encoding
  *
- * Created:		H5Pacpl.c
- *			January  2 2006
- *			James Laird <jlaird@ncsa.uiuc.edu>
+ * Purpose:   Sets the character encoding of the attribute's name.
  *
- * Purpose:		Attribute creation property list class routines
+ * Return:    Non-negative on success/Negative on failure
+ *
+ * Programmer:        James Laird
+ *            Wednesday, October 26, 2005
+ *
+ * Modifications:
  *
  *-------------------------------------------------------------------------
  */
+herr_t
+H5Pset_char_encoding(hid_t plist_id, H5T_cset_t encoding)
+{
+    H5P_genplist_t *plist;      /* Property list pointer */
+    herr_t ret_value=SUCCEED;   /* return value */
 
-/****************/
-/* Module Setup */
-/****************/
-#define H5P_PACKAGE		/*suppress error about including H5Ppkg	  */
+    FUNC_ENTER_API(H5Pset_char_encoding, FAIL);
+    H5TRACE2("e","iTc",plist_id,encoding);
 
-/***********/
-/* Headers */
-/***********/
-#include "H5private.h"		/* Generic Functions			*/
-#include "H5Eprivate.h"		/* Error handling		  	*/
-#include "H5Ppkg.h"		/* Property lists		  	*/
+    /* Check arguments */
+    if (encoding <= H5T_CSET_ERROR || encoding >= H5T_NCSET)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, FAIL, "character encoding is not valid")
 
+    /* Get the plist structure */
+    if(NULL == (plist = H5P_object_verify(plist_id,H5P_ATTRIBUTE_CREATE)))
+        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
 
-/****************/
-/* Local Macros */
-/****************/
+    /* Set the character encoding */
+    if(H5P_set(plist, H5A_CHAR_ENCODING_NAME, &encoding) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set character encoding")
 
+done:
+    FUNC_LEAVE_API(ret_value);
+} /* end H5P_set_char_encoding() */
 
-/******************/
-/* Local Typedefs */
-/******************/
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Pget_char_encoding
+ *
+ * Purpose:     Gets the character encoding of the attribute's name.
+ *
+ * Return:      Non-negative on success/Negative on failure
+ *
+ * Programmer:  James Laird
+ *              November 1, 2005
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_char_encoding(hid_t plist_id, H5T_cset_t *encoding /*out*/)
+{
+    H5P_genplist_t *plist;      /* Property list pointer */
+    herr_t ret_value = SUCCEED; /* return value */
 
+    FUNC_ENTER_API(H5Pget_char_encoding, FAIL);
+    H5TRACE2("e","ix",plist_id,encoding);
 
-/********************/
-/* Package Typedefs */
-/********************/
+    /* Get the plist structure */
+    if(NULL == (plist = H5P_object_verify(plist_id, H5P_OBJECT_CREATE)))
+        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
 
+    /* Get value */
+    if(encoding)
+        if(H5P_get(plist, H5A_CHAR_ENCODING_NAME, encoding) < 0)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get character encoding flag")
 
-/********************/
-/* Local Prototypes */
-/********************/
-
-
-/*********************/
-/* Package Variables */
-/*********************/
-
-/* Attribute creation property list class library initialization object */
-const H5P_libclass_t H5P_CLS_ACRT[1] = {{
-    "attribute create",		/* Class name for debugging     */
-    &H5P_CLS_STRING_CREATE_g,	/* Parent class ID              */
-    &H5P_CLS_ATTRIBUTE_CREATE_g, /* Pointer to class ID          */
-    &H5P_LST_ATTRIBUTE_CREATE_g, /* Pointer to default property list ID */
-    NULL,			/* Default property registration routine */
-    NULL,		        /* Class creation callback      */
-    NULL,		        /* Class creation callback info */
-    NULL,			/* Class copy callback          */
-    NULL,		        /* Class copy callback info     */
-    NULL,			/* Class close callback         */
-    NULL 		        /* Class close callback info    */
-}};
-
-
-/*****************************/
-/* Library Private Variables */
-/*****************************/
-
+done:
+    FUNC_LEAVE_API(ret_value);
+} /* end H5Pget_create_intermediate_group() */
+#endif /* H5_GROUP_REVISION */
 

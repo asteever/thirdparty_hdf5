@@ -1,5 +1,4 @@
 $!#
-$!# Copyright by The HDF Group.
 $!# Copyright by the Board of Trustees of the University of Illinois.
 $!# All rights reserved.
 $!#
@@ -9,36 +8,37 @@ $!# the files COPYING and Copyright.html.  COPYING can be found at the root
 $!# of the source code distribution tree; Copyright.html can be found at the
 $!# root level of an installed copy of the electronic HDF5 document set and
 $!# is linked from the top-level documents page.  It can also be found at
-$!# http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-$!# access to either file, you may request a copy from help@hdfgroup.org.
+$!# http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
+$!# access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 $!#
 $! Makefile for VMS systems.
 $!
 $! Make h5import tool 
 $!
-$! ccopt = "/float=ieee_float"
+$ ccopt = "/float=ieee_float"
 $
-$ ccc := cc 'ccopt /include=([-.-.src], [-.lib])
+$ ccc := cc 'ccopt /debug/define=H5_VMS/include=([-.-.src], [-.lib])
 $ type sys$input
-       Creating  h5import ...
+	Creating  h5import
 $!
 $ cobj= "h5import, h5importtest "
 
 $!                               
 $ ccc 'cobj 
 $
+$ type sys$input
+       Creating h5import
 $ link     h5import,-
-           [-.lib]libh5tools.olb/lib,[-.-.src]hdf5.olb/lib,zlib_dir:libz.olb/lib
+           [-.lib]libh5tools.olb/lib,[-.-.src]hdf5.olb/lib
+!               sys$clib/lib
 $ type sys$input
-       Finished  h5import
-
+	Created  h5import
 $!
 $ type sys$input
-       Creating h5importtest ...
+       Creating h5importtest
 $ link     h5importtest, -
-           [-.lib]libh5tools.olb/lib,[-.-.src]hdf5.olb/lib,zlib_dir:libz.olb/lib
+           [-.lib]libh5tools.olb/lib,[-.-.src]hdf5.olb/lib
+!               sys$clib/lib
 $ type sys$input
-       Finished  h5importtest
-
+	Created  h5importtest
 $!
-$ exit

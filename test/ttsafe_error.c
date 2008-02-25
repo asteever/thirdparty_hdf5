@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /********************************************************************
@@ -29,7 +28,7 @@
  *
  * HDF5 APIs exercised in thread:
  *
- *     H5Screate_simple, H5Tcopy, H5Tset_order, H5Dcreate2, H5Dclose,
+ *     H5Screate_simple, H5Tcopy, H5Tset_order, H5Dcreate, H5Dclose,
  *     H5Tclose, H5Sclose.
  *
  * Created: Apr 28 2000
@@ -55,8 +54,8 @@
 #define EXPECTED_ERROR_DEPTH	8
 #define WRITE_NUMBER		37
 
-static herr_t error_callback(hid_t , void *);
-static herr_t walk_error_callback(unsigned, const H5E_error2_t *, void *);
+static herr_t error_callback(void *);
+static herr_t walk_error_callback(unsigned, const H5E_error_t *, void *);
 static void *tts_error_thread(void *);
 
 /* Global variables */
@@ -88,20 +87,17 @@ void tts_error(void)
     expected[1].maj_num = H5E_DATASET;
     expected[1].min_num = H5E_CANTINIT;
 
-    expected[2].maj_num = H5E_LINK;
-    expected[2].min_num = H5E_CANTINIT;
+    expected[2].maj_num = H5E_SYM;
+    expected[2].min_num = H5E_EXISTS;
 
     expected[3].maj_num = H5E_SYM;
-    expected[3].min_num = H5E_CANTINSERT;
+    expected[3].min_num = H5E_NOTFOUND;
 
     expected[4].maj_num = H5E_SYM;
-    expected[4].min_num = H5E_NOTFOUND;
+    expected[4].min_num = H5E_CALLBACK;
 
     expected[5].maj_num = H5E_SYM;
-    expected[5].min_num = H5E_CALLBACK;
-
-    expected[6].maj_num = H5E_SYM;
-    expected[6].min_num = H5E_EXISTS;
+    expected[5].min_num = H5E_EXISTS;
 
     /* set up mutex for global count of errors */
     ret=pthread_mutex_init(&error_mutex, NULL);
@@ -139,8 +135,8 @@ void tts_error(void)
     if (error_count != NUM_THREAD - 1)
         TestErrPrintf("Error: %d threads failed instead of %d\n", error_count, NUM_THREAD-1);
 
-    dataset = H5Dopen2(error_file, DATASETNAME, H5P_DEFAULT);
-    assert(dataset >= 0);
+    dataset = H5Dopen(error_file, DATASETNAME);
+    assert(dataset>=0);
 
     ret=H5Dread(dataset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &value);
     assert(ret>=0);
@@ -163,48 +159,48 @@ void *tts_error_thread(void UNUSED *arg)
 {
     hid_t dataspace, datatype, dataset;
     hsize_t dimsf[1]; /* dataset dimensions */
-    H5E_auto2_t old_error_cb;
+    H5E_auto_stack_t old_error_cb;
     void *old_error_client_data;
     int value;
     int ret;
 
     /* preserve previous error stack handler */
-    H5Eget_auto2(H5E_DEFAULT, &old_error_cb, &old_error_client_data); 
+    H5Eget_auto_stack(H5E_DEFAULT, &old_error_cb, &old_error_client_data);
 
     /* set each thread's error stack handler */
-    H5Eset_auto2(H5E_DEFAULT, error_callback, NULL); 
+    H5Eset_auto(error_callback, NULL);
 
     /* define dataspace for dataset */
     dimsf[0] = 1;
-    dataspace = H5Screate_simple(1, dimsf, NULL);
-    assert(dataspace >= 0);
+    dataspace = H5Screate_simple(1,dimsf,NULL);
+    assert(dataspace>=0);
 
     /* define datatype for the data using native little endian integers */
     datatype = H5Tcopy(H5T_NATIVE_INT);
-    assert(datatype >= 0);
+    assert(datatype>=0);
     H5Tset_order(datatype, H5T_ORDER_LE);
 
     /* create a new dataset within the file */
-    dataset = H5Dcreate2(error_file, DATASETNAME, datatype, dataspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    if(dataset >= 0) {   /* not an error */
+    dataset = H5Dcreate(error_file, DATASETNAME, datatype, dataspace, H5P_DEFAULT);
+    if (dataset >= 0) {   /* not an error */
         value = WRITE_NUMBER;
         H5Dwrite(dataset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &value);
         H5Dclose(dataset);
-    } /* end if */
+    }
 
-    ret = H5Tclose(datatype);
-    assert(ret >= 0);
-    ret = H5Sclose(dataspace);
-    assert(ret >= 0);
+    ret=H5Tclose(datatype);
+    assert(ret>=0);
+    ret=H5Sclose(dataspace);
+    assert(ret>=0);
 
     /* turn our error stack handler off */
-    H5Eset_auto2(H5E_DEFAULT, old_error_cb, old_error_client_data); 
+    H5Eset_auto_stack(H5E_DEFAULT, old_error_cb, old_error_client_data);
 
     return NULL;
 }
 
 static
-herr_t error_callback(hid_t estack_id, void *client_data)
+herr_t error_callback(void *client_data)
 {
     int ret;
 
@@ -213,11 +209,11 @@ herr_t error_callback(hid_t estack_id, void *client_data)
     error_count++;
     ret=pthread_mutex_unlock(&error_mutex);
     assert(ret==0);
-    return H5Ewalk2(H5E_DEFAULT, H5E_WALK_DOWNWARD, walk_error_callback, client_data);
+    return H5Ewalk(H5E_WALK_DOWNWARD, walk_error_callback, client_data);
 }
 
 static
-herr_t walk_error_callback(unsigned n, const H5E_error2_t *err_desc, void UNUSED *client_data)
+herr_t walk_error_callback(unsigned n, const H5E_error_t *err_desc, void UNUSED *client_data)
 {
     hid_t maj_num, min_num;
 

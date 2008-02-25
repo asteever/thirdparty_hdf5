@@ -1,5 +1,4 @@
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!   Copyright by The HDF Group.                                               *
 !   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
@@ -9,8 +8,8 @@
 !   of the source code distribution tree; Copyright.html can be found at the  *
 !   root level of an installed copy of the electronic HDF5 document set and   *
 !   is linked from the top-level documents page.  It can also be found at     *
-!   http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
-!   access to either file, you may request a copy from help@hdfgroup.org.     *
+!   http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+!   access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
 !
 ! Fortran parallel example.  Copied from Tutorial's example program of
@@ -23,11 +22,10 @@
      IMPLICIT NONE
 
      INCLUDE 'mpif.h'
-     CHARACTER(LEN=10), PARAMETER :: default_fname = "sds.h5"  ! Default name
+     ! Hard coded the file name.  Change it according to where your PFS is.
+     CHARACTER(LEN=20), PARAMETER :: filename = "/tmp/sds.h5"  ! File name
      CHARACTER(LEN=8), PARAMETER :: dsetname = "IntArray" ! Dataset name
 
-     CHARACTER(LEN=100) :: filename  ! File name
-     INTEGER        :: fnamelen	     ! File name length
      INTEGER(HID_T) :: file_id       ! File identifier 
      INTEGER(HID_T) :: dset_id       ! Dataset identifier 
      INTEGER(HID_T) :: filespace     ! Dataspace identifier in file 
@@ -73,19 +71,6 @@
      !
      CALL h5pcreate_f(H5P_FILE_ACCESS_F, plist_id, error)
      CALL h5pset_fapl_mpio_f(plist_id, comm, info, error)
-
-     !
-     ! Figure out the filename to use.  If your system does not support
-     ! getenv, comment that statement with this,
-     ! filename = ""
-     CALL getenv("HDF5_PARAPREFIX", filename)
-     fnamelen = LEN_TRIM(filename)
-     if ( fnamelen == 0 ) then
-	filename = default_fname
-     else
-	filename = filename(1:fnamelen) // "/" // default_fname
-     endif
-     print *, "Using filename = ", filename
 
      !
      ! Create the file collectively.

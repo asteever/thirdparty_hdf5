@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #include <string.h>
 #include <stdlib.h>
@@ -18,8 +17,6 @@
 
 #include "gif.h"
 #include "H5IMpublic.h"
-
-#define PAL_NAME "global"
 
 /*-------------------------------------------------------------------------
  * Function: WriteHDF
@@ -41,7 +38,6 @@ WriteHDF(GIFTOMEM GifMemoryStruct, char *HDFName , char *GIFFileName)
 {
     GIFHEAD          gifHead;           /* GIF Header structure            */
     GIFIMAGEDESC    *gifImageDesc;      /* Logical Image Descriptor struct */
-    int              has_pal=0;
 
     long ImageCount;                    /* number of images */
 #ifdef UNUSED
@@ -78,17 +74,15 @@ WriteHDF(GIFTOMEM GifMemoryStruct, char *HDFName , char *GIFFileName)
 
     /* first create the global palette if there is one */
     if (gifHead.PackedField & 0x80) { /* global palette exists */
-        hsize_t dims[2]; /* specify the dimensions of the palette */
+        hsize_t dims[2];	/* specify the dimensions of the palette */
 
         /* size of the palette is tablesize (rows) X 3 (columns) */
         dims[0] = gifHead.TableSize;
         dims[1] = 3;
         
         /* make a palette */
-        if (H5IMmake_palette(file_id,PAL_NAME,dims,(unsigned char *)gifHead.HDFPalette)<0)
+        if (H5IMmake_palette(file_id,"Global Palette",dims,(unsigned char *)gifHead.HDFPalette)<0)
          return -1;
-
-        has_pal=1;
     }
 
     for(i = 0; i < ImageCount; i++) {
@@ -108,11 +102,8 @@ WriteHDF(GIFTOMEM GifMemoryStruct, char *HDFName , char *GIFFileName)
          return -1;
       
         /* attach the palette to the image dataset */
-        if (has_pal)
-        {
-            if (H5IMlink_palette(file_id,ImageName,PAL_NAME)<0)
-                return -1;
-        }
+        if (H5IMlink_palette(file_id,ImageName,"Global Palette")<0)
+         return -1;
     }
 
     /* close the H5 file */

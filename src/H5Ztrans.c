@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #define H5Z_PACKAGE		/*suppress error about including H5Zpkg	  */
@@ -666,7 +665,7 @@ H5Z_parse_term(H5Z_token *current, H5Z_datval_ptrs* dat_val_pointers)
                 new_node->rchild = H5Z_parse_factor(current, dat_val_pointers);
 
                 if (!new_node->rchild) {
-                    H5Z_xform_destroy_parse_tree(new_node);
+                    H5Z_xform_destroy_parse_tree(term);
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "Error parsing data transform expression")
                 }
 
@@ -686,7 +685,7 @@ H5Z_parse_term(H5Z_token *current, H5Z_datval_ptrs* dat_val_pointers)
                 term = new_node;
 
                 if (!new_node->rchild) {
-                    H5Z_xform_destroy_parse_tree(new_node);
+                    H5Z_xform_destroy_parse_tree(term);
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "Error parsing data transform expression")
                 }
                 break;
@@ -872,17 +871,16 @@ done:
 static H5Z_node *
 H5Z_new_node(H5Z_token_type type)
 {
-    H5Z_node* ret_value = NULL;
+    H5Z_node* new_node;
 
-    FUNC_ENTER_NOAPI(H5Z_new_node, NULL);
+    FUNC_ENTER_NOAPI_NOFUNC(H5Z_new_node)
 
-    ret_value = H5MM_calloc(sizeof(H5Z_node));
-    if(ret_value == NULL)
-	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "Ran out of memory trying to allocate space for nodes in the parse tree")
+	new_node = H5MM_calloc(sizeof(H5Z_node));
+    assert(new_node);
 
-    ret_value->type = type;
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
+    new_node->type = type;
+
+    FUNC_LEAVE_NOAPI(new_node);
 }
 
 
@@ -910,7 +908,7 @@ H5Z_xform_eval(H5Z_data_xform_t *data_xform_prop, void* array, size_t array_size
 
     FUNC_ENTER_NOAPI(H5Z_xform_eval, FAIL)
 
-    HDassert(data_xform_prop);
+	assert(data_xform_prop);
 
     tree=data_xform_prop->parse_root;
 
@@ -967,24 +965,28 @@ H5Z_xform_eval(H5Z_data_xform_t *data_xform_prop, void* array, size_t array_size
 	{
 	    for(i=0; i<data_xform_prop->dat_val_pointers->num_ptrs; i++)
 	    {
-		if( (data_xform_prop->dat_val_pointers->ptr_dat_val[i] = (void*)H5MM_malloc(array_size*H5Tget_size(array_type))) == NULL)
+		if( (data_xform_prop->dat_val_pointers->ptr_dat_val[i] = (void*)HDmalloc(array_size*H5Tget_size(array_type))) == NULL)
 		    HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "Ran out of memory trying to allocate space for data in data transform")
 
-                HDmemcpy(data_xform_prop->dat_val_pointers->ptr_dat_val[i], array, array_size*H5Tget_size(array_type));
+			HDmemcpy(data_xform_prop->dat_val_pointers->ptr_dat_val[i], array, array_size*H5Tget_size(array_type));
 	    }
 	}
-
 	if(H5Z_xform_eval_full(tree, array_size, array_type, &res) < 0)
 	    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "error while performing data transform")
+	else
+	{
+	    HDmemcpy(array, res.value.dat_val, array_size*H5Tget_size(array_type));
 
-	if(data_xform_prop->dat_val_pointers->num_ptrs > 1)	
-	    HDmemcpy(array, res.value.dat_val, array_size * H5Tget_size(array_type));
+	    /* Free the temporary arrays we used */
 
-        /* Free the temporary arrays we used */
-        if(data_xform_prop->dat_val_pointers->num_ptrs > 1)
-            for(i=0; i<data_xform_prop->dat_val_pointers->num_ptrs; i++)
-                HDfree(data_xform_prop->dat_val_pointers->ptr_dat_val[i]);
+	    if(data_xform_prop->dat_val_pointers->num_ptrs > 1)
+	    {
+		for(i=0; i<data_xform_prop->dat_val_pointers->num_ptrs; i++)
+		    HDfree(data_xform_prop->dat_val_pointers->ptr_dat_val[i]);
+	    }
+	}
     }
+
 
 done:
     if(ret_value < 0)
@@ -1323,6 +1325,7 @@ H5Z_do_op(H5Z_node* tree)
 
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5Z_do_op)
 
+
     if(tree->type == H5Z_XFORM_DIVIDE)
 	H5Z_XFORM_DO_OP3(/)
     else if(tree->type == H5Z_XFORM_MULT)
@@ -1372,7 +1375,7 @@ H5Z_xform_create(const char *expr)
     if((data_xform_prop = H5MM_calloc(sizeof(H5Z_data_xform_t)))==NULL)
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "unable to allocate memory for data transform info")
 
-    if((data_xform_prop->dat_val_pointers = H5MM_malloc(sizeof(H5Z_datval_ptrs))) == NULL)
+    if((data_xform_prop->dat_val_pointers = HDmalloc(sizeof(H5Z_datval_ptrs))) == NULL)
 	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "unable to allocate memory for data transform array storage")
 
     /* copy the user's string into the property */
@@ -1390,7 +1393,7 @@ H5Z_xform_create(const char *expr)
      * we don't need to allocate any space since no array will have to be
      * stored */
     if(count > 0)
-	if((data_xform_prop->dat_val_pointers->ptr_dat_val = (void**) H5MM_calloc(count * sizeof(void**))) == NULL)
+	if((data_xform_prop->dat_val_pointers->ptr_dat_val = (void**) HDcalloc(count, sizeof(void**))) == NULL)
 	    HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "unable to allocate memory for pointers in transform array")
 
     /* Initialize the num_ptrs field, which will be used to keep track of the number of copies
@@ -1418,10 +1421,6 @@ done:
                 H5Z_xform_destroy_parse_tree(data_xform_prop->parse_root);
             if(data_xform_prop->xform_exp)
                 H5MM_xfree(data_xform_prop->xform_exp);
-	    if(count > 0 && data_xform_prop->dat_val_pointers->ptr_dat_val)
-		H5MM_xfree(data_xform_prop->dat_val_pointers->ptr_dat_val);
-	    if(data_xform_prop->dat_val_pointers)
-		H5MM_xfree(data_xform_prop->dat_val_pointers);
             H5MM_xfree(data_xform_prop);
         } /* end if */
     } /* end if */
@@ -1455,7 +1454,7 @@ H5Z_xform_destroy(H5Z_data_xform_t *data_xform_prop)
     FUNC_ENTER_NOAPI_NOFUNC(H5Z_xform_destroy)
 
     if(data_xform_prop) {
-	/* Destroy the parse tree */
+        /* Destroy the parse tree */
         H5Z_xform_destroy_parse_tree(data_xform_prop->parse_root);
 
         /* Free the expression */
@@ -1516,7 +1515,7 @@ H5Z_xform_copy(H5Z_data_xform_t **data_xform_prop)
         if((new_data_xform_prop->xform_exp = H5MM_xstrdup((*data_xform_prop)->xform_exp))==NULL)
             HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL, "unable to allocate memory for data transform expression")
 
-	if((new_data_xform_prop->dat_val_pointers = H5MM_malloc(sizeof(H5Z_datval_ptrs))) == NULL)
+	if((new_data_xform_prop->dat_val_pointers = HDmalloc(sizeof(H5Z_datval_ptrs))) == NULL)
 	    HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "unable to allocate memory for data transform array storage")
 
 	/* Find the number of times "x" is used in this equation, and allocate room for storing that many points */
@@ -1527,7 +1526,7 @@ H5Z_xform_copy(H5Z_data_xform_t **data_xform_prop)
 	}
 
 	if(count > 0)
-	    if((new_data_xform_prop->dat_val_pointers->ptr_dat_val = (void**) H5MM_calloc(count * sizeof(void**))) == NULL)
+	    if((new_data_xform_prop->dat_val_pointers->ptr_dat_val = (void**) HDcalloc(count, sizeof(void**))) == NULL)
 		HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "unable to allocate memory for pointers in transform array")
 
 	/* Zero out num_pointers prior to H5Z_xform_cop_tree call; that call will increment it to the right amount */

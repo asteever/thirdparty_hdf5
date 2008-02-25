@@ -1,6 +1,5 @@
 #							-*- shell-script -*-
 #
-# Copyright by The HDF Group.
 # Copyright by the Board of Trustees of the University of Illinois.
 # All rights reserved.
 #
@@ -10,8 +9,8 @@
 # of the source code distribution tree; Copyright.html can be found at the
 # root level of an installed copy of the electronic HDF5 document set and
 # is linked from the top-level documents page.  It can also be found at
-# http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-# access to either file, you may request a copy from help@hdfgroup.org.
+# http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
+# access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 
 
 # This file is part of the HDF5 build script.  It is processed shortly
@@ -31,7 +30,7 @@ fi
 
 # Try solaris native compiler flags
 if test "X-" = "X-$cc_flags_set"; then
-  H5_CFLAGS="$H5_CFLAGS -erroff=%none -DBSD_COMP"
+  CFLAGS="$CFLAGS -erroff=%none -DBSD_COMP"
   DEBUG_CFLAGS="-g -xildoff"
   DEBUG_CPPFLAGS=
   PROD_CFLAGS="-O -s"
@@ -96,14 +95,14 @@ cxx_vers_patch=`echo $cxx_version | cut -f3 -d.`
 # Specify the "-features=tmplife" if the compiler can handle this...
 if test -n "$cxx_version"; then
   if test $cxx_vers_major -ge 5 -a $cxx_vers_minor -ge 3 -o $cxx_vers_major -gt 5; then
-    H5_CXXFLAGS="$H5_CXXFLAGS -features=tmplife"
+    CXXFLAGS="$CXXFLAGS -features=tmplife"
   fi
 fi
 
 # Try solaris native compiler flags
 if test -z "$cxx_flags_set"; then
-  H5_CXXFLAGS="$H5_CXXFLAGS -instances=static"
-  H5_CPPFLAGS="$H5_CPPFLAGS -LANG:std"
+  CXXFLAGS="$CXXFLAGS -instances=static"
+  CPPFLAGS="$CPPFLAGS -LANG:std"
   DEBUG_CXXFLAGS=-g
   DEBUG_CPPFLAGS=
   PROD_CXXFLAGS="-O -s"

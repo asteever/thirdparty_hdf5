@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* Test user-created identifiers (hid_t's) and identifier types. */
@@ -72,7 +71,7 @@ static int basic_id_test(void)
 		goto out;
 
 		/* Register a type */
-	myType = H5Iregister_type((size_t)64, 0, (H5I_free_t) free );
+	myType = H5Iregister_type(64, 0, (H5I_free_t) free );
 
 	CHECK(myType, H5I_BADID, "H5Iregister_type");
 	if(myType == H5I_BADID)
@@ -108,7 +107,7 @@ static int basic_id_test(void)
 		goto out;
 
 	H5E_BEGIN_TRY
-		testSize = H5Iget_name(arrayID, nameString, (size_t)9);
+		testSize = H5Iget_name(arrayID, nameString, 9);
 	H5E_END_TRY
 
 	VERIFY(testSize, -1, "H5Iget_name");
@@ -165,7 +164,7 @@ static int basic_id_test(void)
         H5E_END_TRY
 
 	/* Register another type and another object in that type */
-	myType = H5Iregister_type((size_t)64, 0, (H5I_free_t) free );
+	myType = H5Iregister_type(64, 0, (H5I_free_t) free );
 
 	CHECK(myType, H5I_BADID, "H5Iregister_type");
 	if(myType == H5I_BADID)
@@ -294,7 +293,7 @@ static int id_predefined_test(void )
 		goto out;
 
 	/* Create a datatype ID and try to perform illegal functions on it */
-	typeID = H5Tcreate(H5T_OPAQUE, (size_t)42);
+	typeID = H5Tcreate(H5T_OPAQUE, 42);
 	CHECK(typeID, H5I_INVALID_HID, "H5Tcreate");
 	if(typeID == H5I_INVALID_HID)
 		goto out;
@@ -354,7 +353,7 @@ static int test_id_type_list(void)
 	H5I_type_t testType;
 	int i;	/* Just a counter variable */
 
-	startType = H5Iregister_type((size_t)8, 0, (H5I_free_t) free );
+	startType = H5Iregister_type(8, 0, (H5I_free_t) free );
 	CHECK(startType, H5I_BADID, "H5Iregister_type");
 	if(startType == H5I_BADID)
 		goto out;
@@ -369,7 +368,7 @@ static int test_id_type_list(void)
 	/* Create types up to MAX_NUM_TYPES */
 	for(i = startType + 1; i < MAX_NUM_TYPES; i++)
 	{
-		currentType = H5Iregister_type((size_t)8, 0, (H5I_free_t) free );
+		currentType = H5Iregister_type(8, 0, (H5I_free_t) free );
 		CHECK(currentType, H5I_BADID, "H5Iregister_type");
 		if(currentType == H5I_BADID)
 			goto out;
@@ -378,7 +377,7 @@ static int test_id_type_list(void)
 	/* Wrap around to low type ID numbers */
 	for(i = H5I_NTYPES; i < startType; i++)
 	{
-		currentType = H5Iregister_type((size_t)8, 0, (H5I_free_t) free );
+		currentType = H5Iregister_type(8, 0, (H5I_free_t) free );
 		CHECK(currentType, H5I_BADID, "H5Iregister_type");
 		if(currentType == H5I_BADID)
 			goto out;
@@ -386,7 +385,7 @@ static int test_id_type_list(void)
 
 	/* There should be no room at the inn for a new ID type*/
 	H5E_BEGIN_TRY
-		testType = H5Iregister_type((size_t)8, 0, (H5I_free_t) free );
+		testType = H5Iregister_type(8, 0, (H5I_free_t) free );
 	H5E_END_TRY
 
 	VERIFY(testType, H5I_BADID, "H5Iregister_type");
@@ -395,7 +394,7 @@ static int test_id_type_list(void)
 
 	/* Now delete a type and try to insert again */
 	H5Idestroy_type(H5I_NTYPES);
-	testType = H5Iregister_type((size_t)8, 0, (H5I_free_t) free );
+	testType = H5Iregister_type(8, 0, (H5I_free_t) free );
 
 	VERIFY(testType, H5I_NTYPES, "H5Iregister_type");
 	if(testType != H5I_NTYPES)

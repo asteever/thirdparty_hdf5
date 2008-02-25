@@ -3,7 +3,6 @@ require 5.003;
 $indent=4;
 
 #
-# Copyright by The HDF Group.
 # Copyright by the Board of Trustees of the University of Illinois.
 # All rights reserved.
 #
@@ -13,8 +12,8 @@ $indent=4;
 # of the source code distribution tree; Copyright.html can be found at the
 # root level of an installed copy of the electronic HDF5 document set and
 # is linked from the top-level documents page.  It can also be found at
-# http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-# access to either file, you may request a copy from help@hdfgroup.org.
+# http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
+# access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 #
 
 # Create error headers
@@ -32,7 +31,6 @@ sub print_copyright ($) {
     my $fh = shift;
 
     print $fh "/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *\n";
-    print $fh " * Copyright by The HDF Group.                                               *\n";
     print $fh " * Copyright by the Board of Trustees of the University of Illinois.         *\n";
     print $fh " * All rights reserved.                                                      *\n";
     print $fh " *                                                                           *\n";
@@ -42,8 +40,8 @@ sub print_copyright ($) {
     print $fh " * of the source code distribution tree; Copyright.html can be found at the  *\n";
     print $fh " * root level of an installed copy of the electronic HDF5 document set and   *\n";
     print $fh " * is linked from the top-level documents page.  It can also be found at     *\n";
-    print $fh " * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *\n";
-    print $fh " * access to either file, you may request a copy from help\@hdfgroup.org.     *\n";
+    print $fh " * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *\n";
+    print $fh " * access to either file, you may request a copy from hdfhelp\@ncsa.uiuc.edu. *\n";
     print $fh " * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */\n";
 }
 

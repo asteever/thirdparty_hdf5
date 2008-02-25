@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <string>
@@ -192,7 +191,7 @@ H5T_class_t CompType::getMemberClass( unsigned member_num ) const
    if( member_class == H5T_NO_CLASS )
    {
       throw DataTypeIException("CompType::getMemberClass",
-		"H5Tget_member_class returns H5T_NO_CLASS");
+                "H5Tget_member_class returns H5T_NO_CLASS");
    }
    return(member_class);
 }
@@ -256,26 +255,6 @@ ArrayType CompType::getMemberArrayType( unsigned member_num ) const
 }
 
 //--------------------------------------------------------------------------
-// Function:	CompType::getMemberCompType
-///\brief	Returns the compound datatype of the specified member in this
-///		compound datatype.
-///\param	member_num - IN: Zero-based index of the member
-///\return	CompType instance
-///\exception	H5::DataTypeIException
-// Programmer	Binh-Minh Ribler - 2000
-//--------------------------------------------------------------------------
-CompType CompType::getMemberCompType( unsigned member_num ) const
-{
-   try {
-      CompType comptype(p_get_member_type(member_num));
-      return(comptype);
-   }
-   catch (DataTypeIException E) {
-      throw DataTypeIException("CompType::getMemberCompType", E.getDetailMsg());
-   }
-}
-
-//--------------------------------------------------------------------------
 // Function:	CompType::getMemberEnumType
 ///\brief	Returns the enumeration datatype of the specified member in
 ///		this compound datatype.
@@ -292,6 +271,26 @@ EnumType CompType::getMemberEnumType( unsigned member_num ) const
    }
    catch (DataTypeIException E) {
       throw DataTypeIException("CompType::getMemberEnumType", E.getDetailMsg());
+   }
+}
+
+//--------------------------------------------------------------------------
+// Function:	CompType::getMemberCompType
+///\brief	Returns the compound datatype of the specified member in this
+///		compound datatype.
+///\param	member_num - IN: Zero-based index of the member
+///\return	CompType instance
+///\exception	H5::DataTypeIException
+// Programmer	Binh-Minh Ribler - 2000
+//--------------------------------------------------------------------------
+CompType CompType::getMemberCompType( unsigned member_num ) const
+{
+   try {
+      CompType comptype(p_get_member_type(member_num));
+      return(comptype);
+   }
+   catch (DataTypeIException E) {
+      throw DataTypeIException("CompType::getMemberCompType", E.getDetailMsg());
    }
 }
 

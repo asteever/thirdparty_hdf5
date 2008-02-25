@@ -1,5 +1,4 @@
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!   Copyright by The HDF Group.                                               *
 !   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
@@ -9,8 +8,8 @@
 !   of the source code distribution tree; Copyright.html can be found at the  *
 !   root level of an installed copy of the electronic HDF5 document set and   *
 !   is linked from the top-level documents page.  It can also be found at     *
-!   http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
-!   access to either file, you may request a copy from help@hdfgroup.org.     *
+!   http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+!   access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
 !
     SUBROUTINE group_test(cleanup, total_error)
@@ -151,7 +150,6 @@
      !
 !     CALL h5gget_obj_info_idx_f(file_id, linkname1, 2, name, obj_type, error)
 !     CALL check("h5gget_obj_info_idx_f", error, total_error) 
-! XXX: Fix problems with H5G_LINK_F! - QAK
 !     if (obj_type .ne. H5G_LINK_F) then
 !         write(*,*)  "got object  ", name, " type error ", obj_type
 !         total_error = total_error +1

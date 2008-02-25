@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -38,12 +37,12 @@
  *
  * Based on: compress.c - File compression ala IEEE Computer, June 1984.
  *
- * Spencer W. Thomas       (decvax!harpo!utah-cs!utah-gr!thomas)
- * Jim McKie               (decvax!mcvax!jim)
- * Steve Davies            (decvax!vax135!petsd!peora!srd)
- * Ken Turkowski           (decvax!decwrl!turtlevax!ken)
- * James A. Woods          (decvax!ihnp4!ames!jaw)
- * Joe Orost               (decvax!vax135!petsd!joe)
+ *	Spencer W. Thomas       (decvax!harpo!utah-cs!utah-gr!thomas)
+ *	Jim McKie               (decvax!mcvax!jim)
+ *	Steve Davies            (decvax!vax135!petsd!peora!srd)
+ *	Ken Turkowski           (decvax!decwrl!turtlevax!ken)
+ *	James A. Woods          (decvax!ihnp4!ames!jaw)
+ *	Joe Orost               (decvax!vax135!petsd!joe)
  *****************************************************************/
 
 
@@ -53,8 +52,8 @@
 
 #include "gif.h"
 
-typedef BYTE  byte;
-typedef long int count_int;
+typedef BYTE		byte;
+typedef long int	count_int;
 
 /* indicies into conv24MB */
 #define CONV24_8BIT  0
@@ -172,11 +171,11 @@ static unsigned long cur_accum = 0;
 static int           cur_bits = 0;
 
 #define MAXCODE(n_bits)     ( (1 << (n_bits)) - 1)
-#ifndef _WIN32
+#ifndef WIN32
 #define min(a,b)        ((a>b) ? b : a)
 #endif
-#define XV_BITS 12    /* BITS was already defined on some systems */
-#define MSDOS 1
+#define XV_BITS	12    /* BITS was already defined on some systems */
+#define MSDOS	1
 #define HSIZE  5003            /* 80% occupancy */
 
 typedef unsigned char   char_type;
@@ -516,7 +515,7 @@ flush_char(void)
 {
     if (a_count > 0) {
         fputc( a_count, g_outfile );
-        fwrite( accum, (size_t)1, (size_t)a_count, g_outfile);
+        fwrite( accum, 1, (size_t)a_count, g_outfile);
         a_count = 0;
     }
 }
