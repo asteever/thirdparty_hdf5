@@ -1,23 +1,10 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
- * All rights reserved.                                                      *
- *                                                                           *
- * This file is part of HDF5.  The full HDF5 copyright notice, including     *
- * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/* $Id$ */
 
 /*
  * Parallel tests for file operations
  */
 
-#include "testphdf5.h"
+#include <testphdf5.h>
 
 /*
  * test file access by communicator besides COMM_WORLD.
@@ -31,7 +18,7 @@
  * sooner or later due to barrier mixed up.
  */
 void
-test_split_comm_access(void)
+test_split_comm_access(char *filename[])
 {
     int mpi_size, mpi_rank;
     MPI_Comm comm;
@@ -40,14 +27,11 @@ test_split_comm_access(void)
     int newrank, newprocs;
     hid_t fid;			/* file IDs */
     hid_t acc_tpl;		/* File access properties */
-    hbool_t use_gpfs = FALSE;   /* Use GPFS hints */
     herr_t ret;			/* generic return value */
-    const char *filename;
 
-    filename = GetTestParameters();
-    if (VERBOSE_MED)
-	printf("Split Communicator access test on file %s\n",
-	    filename);
+    if (verbose)
+	printf("Split Communicator access test on file %s %s\n",
+	    filename[0], filename[1]);
 
     /* set up MPI parameters */
     MPI_Comm_size(MPI_COMM_WORLD,&mpi_size);
@@ -68,29 +52,29 @@ test_split_comm_access(void)
 	MPI_Comm_rank(comm,&sub_mpi_rank);
 
 	/* setup file access template */
-	acc_tpl = create_faccess_plist(comm, info, facc_type, use_gpfs);
-	VRFY((acc_tpl >= 0), "");
+	acc_tpl = H5Pcreate (H5P_FILE_ACCESS);
+	VRFY((acc_tpl != FAIL), "");
+	
+	/* set Parallel access with communicator */
+	ret = H5Pset_mpi(acc_tpl, comm, info);     
+	VRFY((ret != FAIL), "");
 
 	/* create the file collectively */
-	fid=H5Fcreate(filename,H5F_ACC_TRUNC,H5P_DEFAULT,acc_tpl);
-	VRFY((fid >= 0), "H5Fcreate succeeded");
+	fid=H5Fcreate(filename[color],H5F_ACC_TRUNC,H5P_DEFAULT,acc_tpl);
+	VRFY((fid != FAIL), "H5Fcreate succeeded");
 
 	/* Release file-access template */
 	ret=H5Pclose(acc_tpl);
-	VRFY((ret >= 0), "");
+	VRFY((ret != FAIL), "");
 
 	/* close the file */
 	ret=H5Fclose(fid);
-	VRFY((ret >= 0), "");
+	VRFY((ret != FAIL), "");
 
-	/* delete the test file */
+	/* detele the test file */
 	if (sub_mpi_rank == 0){
-	    mrc = MPI_File_delete((char *)filename, info);
-	    /*VRFY((mrc==MPI_SUCCESS), ""); */
+	    mrc = MPI_File_delete(filename[color], info);
+	    VRFY((mrc==MPI_SUCCESS), "");
 	}
     }
-    mrc = MPI_Barrier(MPI_COMM_WORLD);
-    VRFY((mrc==MPI_SUCCESS), "final MPI_Barrier succeeded");
 }
-
-

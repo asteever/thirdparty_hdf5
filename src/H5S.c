@@ -1,75 +1,34 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
- * All rights reserved.                                                      *
- *                                                                           *
- * This file is part of HDF5.  The full HDF5 copyright notice, including     *
- * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/****************************************************************************
+* NCSA HDF								   *
+* Software Development Group						   *
+* National Center for Supercomputing Applications			   *
+* University of Illinois at Urbana-Champaign				   *
+* 605 E. Springfield, Champaign IL 61820				   *
+*									   *
+* For conditions of distribution and use, see the accompanying		   *
+* hdf/COPYING file.							   *
+*									   *
+****************************************************************************/
 
-#define H5S_PACKAGE		/*suppress error about including H5Spkg	  */
+#ifdef RCSID
+static char		RcsId[] = "@(#)$Revision$";
+#endif
+
+/* $Id$ */
+
+#include <H5private.h>		/* Generic Functions			  */
+#include <H5Iprivate.h>		/* ID Functions		  */
+#include <H5Eprivate.h>		/* Error handling		  */
+#include <H5MMprivate.h>	/* Memory Management functions		  */
+#include <H5Oprivate.h>		/* object headers		  */
+#include <H5Sprivate.h>		/* Data-space functions			  */
 
 /* Interface initialization */
-#define H5_INTERFACE_INIT_FUNC	H5S_init_interface
-
-
-#define _H5S_IN_H5S_C
-#include "H5private.h"		/* Generic Functions			*/
-#include "H5Eprivate.h"		/* Error handling		  	*/
-#include "H5Fprivate.h"		/* Files				*/
-#include "H5FLprivate.h"	/* Free lists                           */
-#include "H5Iprivate.h"		/* IDs			  		*/
-#include "H5MMprivate.h"	/* Memory management			*/
-#include "H5Oprivate.h"		/* Object headers		  	*/
-#include "H5Spkg.h"		/* Dataspaces 				*/
-
-/* Local macro definitions */
-
-/* Number of reserved IDs in ID group */
-#define H5S_RESERVED_ATOMS  2
-
-/* Version of datatype encoding */
-#define H5S_ENCODE_VERSION      0
-
-/* Local static function prototypes */
-static herr_t H5S_set_extent_simple (H5S_t *space, unsigned rank,
-    const hsize_t *dims, const hsize_t *max);
-static htri_t H5S_is_simple(const H5S_t *sdim);
-static herr_t H5S_encode(H5S_t *obj, unsigned char *buf, size_t *nalloc);
-static H5S_t *H5S_decode(const unsigned char *buf);
-static htri_t H5S_extent_equal(const H5S_t *ds1, const H5S_t *ds2);
-
-#ifdef H5S_DEBUG
-/* Names of the selection names, for debugging */
-static const char *H5S_sel_names[]={
-    "none", "point", "hyperslab", "all"
-};
-
-/* The path table, variable length */
-static H5S_iostats_t		**H5S_iostats_g = NULL;
-static size_t			H5S_aiostats_g = 0;	/*entries allocated*/
-static size_t			H5S_niostats_g = 0;	/*entries used*/
-#endif /* H5S_DEBUG */
-
-#ifdef H5_HAVE_PARALLEL
-/* Global vars whose value can be set from environment variable also */
-hbool_t H5S_mpi_opt_types_g = TRUE;
-#endif /* H5_HAVE_PARALLEL */
-
-/* Declare a free list to manage the H5S_extent_t struct */
-H5FL_DEFINE(H5S_extent_t);
-
-/* Declare a free list to manage the H5S_t struct */
-H5FL_DEFINE(H5S_t);
-
-/* Declare a free list to manage the array's of hsize_t's */
-H5FL_ARR_DEFINE(hsize_t,H5S_MAX_RANK);
+#define PABLO_MASK	H5S_mask
+#define INTERFACE_INIT	H5S_init_interface
+static intn		interface_initialize_g = FALSE;
+static herr_t		H5S_init_interface(void);
+static void		H5S_term_interface(void);
 
 
 /*--------------------------------------------------------------------------
@@ -77,9 +36,9 @@ NAME
    H5S_init_interface -- Initialize interface-specific information
 USAGE
     herr_t H5S_init_interface()
-
+   
 RETURNS
-    Non-negative on success/Negative on failure
+   SUCCEED/FAIL
 DESCRIPTION
     Initializes any interface-specific data or routines.
 
@@ -87,25 +46,15 @@ DESCRIPTION
 static herr_t
 H5S_init_interface(void)
 {
-    herr_t ret_value=SUCCEED;   /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT(H5S_init_interface);
+    herr_t		    ret_value = SUCCEED;
+    FUNC_ENTER(H5S_init_interface, FAIL);
 
     /* Initialize the atom group for the file IDs */
-    if(H5I_register_type(H5I_DATASPACE, (size_t)H5I_DATASPACEID_HASHSIZE, H5S_RESERVED_ATOMS, (H5I_free_t)H5S_close) < 0)
-	HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINIT, FAIL, "unable to initialize interface")
-
-#ifdef H5_HAVE_PARALLEL
-    {
-        /* Allow MPI buf-and-file-type optimizations? */
-        const char *s = HDgetenv ("HDF5_MPI_OPT_TYPES");
-        if (s && HDisdigit(*s))
-            H5S_mpi_opt_types_g = (int)HDstrtol (s, NULL, 0);
+    if ((ret_value = H5I_init_group(H5_DATASPACE, H5I_DATASPACEID_HASHSIZE,
+            H5S_RESERVED_ATOMS, (herr_t (*)(void *)) H5S_close)) != FAIL) {
+        ret_value = H5_add_exit(&H5S_term_interface);
     }
-#endif /* H5_HAVE_PARALLEL */
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
+    FUNC_LEAVE(ret_value);
 }
 
 
@@ -117,7 +66,7 @@ done:
  USAGE
     void H5S_term_interface()
  RETURNS
-    Non-negative on success/Negative on failure
+    SUCCEED/FAIL
  DESCRIPTION
     Release the atom group and any other resources allocated.
  GLOBAL VARIABLES
@@ -126,160 +75,11 @@ done:
  EXAMPLES
  REVISION LOG
 --------------------------------------------------------------------------*/
-int
+static void
 H5S_term_interface(void)
 {
-    int	n=0;
-#ifdef H5S_DEBUG
-    size_t	i;
-    int		j, nprints=0;
-    H5S_iostats_t	*path=NULL;
-    char	buf[256];
-#endif /* H5S_DEBUG */
-
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_term_interface);
-
-    if (H5_interface_initialize_g) {
-	if ((n=H5I_nmembers(H5I_DATASPACE))) {
-	    H5I_clear_type(H5I_DATASPACE, FALSE);
-	} else {
-#ifdef H5S_DEBUG
-	    /*
-	     * Print statistics about each conversion path.
-	     */
-	    if (H5DEBUG(S)) {
-		for (i=0; i<H5S_niostats_g; i++) {
-		    path = H5S_iostats_g[i];
-		    for (j=0; j<2; j++) {
-			if (0==path->stats[j].gath_ncalls &&
-			    0==path->stats[j].scat_ncalls &&
-			    0==path->stats[j].bkg_ncalls &&
-			    0==path->stats[j].read_ncalls &&
-			    0==path->stats[j].write_ncalls) {
-			    continue;
-			}
-			if (0==nprints++) {
-			    fprintf(H5DEBUG(S), "H5S: data space conversion "
-				    "statistics:\n");
-			    fprintf(H5DEBUG(S),
-				    "   %-16s %10s %10s %8s %8s %8s %10s\n",
-				    "Memory <> File", "Bytes", "Calls",
-				    "User", "System", "Elapsed", "Bandwidth");
-			    fprintf(H5DEBUG(S),
-				    "   %-16s %10s %10s %8s %8s %8s %10s\n",
-				    "--------------", "-----", "-----",
-				    "----", "------", "-------", "---------");
-			}
-
-			/* Summary */
-			sprintf(buf, "%s %c %s",
-				H5S_sel_names[path->mtype], 0==j?'>':'<', H5S_sel_names[path->ftype]);
-			fprintf(H5DEBUG(S), "   %-16s\n", buf);
-
-			/* Gather */
-			if (path->stats[j].gath_ncalls) {
-			    H5_bandwidth(buf,
-					 (double)(path->stats[j].gath_nbytes),
-					 path->stats[j].gath_timer.etime);
-			    HDfprintf(H5DEBUG(S),
-				      "   %16s %10Hu %10Hu %8.2f %8.2f %8.2f "
-				      "%10s\n", "gather",
-				      path->stats[j].gath_nbytes,
-				      path->stats[j].gath_ncalls,
-				      path->stats[j].gath_timer.utime,
-				      path->stats[j].gath_timer.stime,
-				      path->stats[j].gath_timer.etime,
-				      buf);
-			}
-
-			/* Scatter */
-			if (path->stats[j].scat_ncalls) {
-			    H5_bandwidth(buf,
-					 (double)(path->stats[j].scat_nbytes),
-					 path->stats[j].scat_timer.etime);
-			    HDfprintf(H5DEBUG(S),
-				      "   %16s %10Hu %10Hu %8.2f %8.2f %8.2f "
-				      "%10s\n", "scatter",
-				      path->stats[j].scat_nbytes,
-				      path->stats[j].scat_ncalls,
-				      path->stats[j].scat_timer.utime,
-				      path->stats[j].scat_timer.stime,
-				      path->stats[j].scat_timer.etime,
-				      buf);
-			}
-
-			/* Background */
-			if (path->stats[j].bkg_ncalls) {
-			    H5_bandwidth(buf,
-					 (double)(path->stats[j].bkg_nbytes),
-					 path->stats[j].bkg_timer.etime);
-			    HDfprintf(H5DEBUG(S),
-				      "   %16s %10Hu %10Hu %8.2f %8.2f %8.2f "
-				      "%10s\n", "background",
-				      path->stats[j].bkg_nbytes,
-				      path->stats[j].bkg_ncalls,
-				      path->stats[j].bkg_timer.utime,
-				      path->stats[j].bkg_timer.stime,
-				      path->stats[j].bkg_timer.etime,
-				      buf);
-			}
-
-			/* Read */
-			if (path->stats[j].read_ncalls) {
-			    H5_bandwidth(buf,
-					 (double)(path->stats[j].read_nbytes),
-					 path->stats[j].read_timer.etime);
-			    HDfprintf(H5DEBUG(S),
-				      "   %16s %10Hu %10Hu %8.2f %8.2f %8.2f "
-				      "%10s\n", "read",
-				      path->stats[j].read_nbytes,
-				      path->stats[j].read_ncalls,
-				      path->stats[j].read_timer.utime,
-				      path->stats[j].read_timer.stime,
-				      path->stats[j].read_timer.etime,
-				      buf);
-			}
-
-			/* Write */
-			if (path->stats[j].write_ncalls) {
-			    H5_bandwidth(buf,
-					 (double)(path->stats[j].write_nbytes),
-					 path->stats[j].write_timer.etime);
-			    HDfprintf(H5DEBUG(S),
-				      "   %16s %10Hu %10Hu %8.2f %8.2f %8.2f "
-				      "%10s\n", "write",
-				      path->stats[j].write_nbytes,
-				      path->stats[j].write_ncalls,
-				      path->stats[j].write_timer.utime,
-				      path->stats[j].write_timer.stime,
-				      path->stats[j].write_timer.etime,
-				      buf);
-			}
-		    }
-		}
-	    }
-#endif /* H5S_DEBUG */
-
-	    /* Free data types */
-	    H5I_dec_type_ref(H5I_DATASPACE);
-
-#ifdef H5S_DEBUG
-	    /* Clear/free conversion table */
-	    for (i=0; i<H5S_niostats_g; i++)
-                H5MM_xfree(H5S_iostats_g[i]);
-	    H5S_iostats_g = H5MM_xfree(H5S_iostats_g);
-	    H5S_niostats_g = H5S_aiostats_g = 0;
-#endif /* H5S_DEBUG */
-
-	    /* Shut down interface */
-	    H5_interface_initialize_g = 0;
-	    n = 1; /*H5I*/
-	}
-    }
-
-    FUNC_LEAVE_NOAPI(n);
+    H5I_destroy_group(H5_DATASPACE);
 }
-
 
 /*--------------------------------------------------------------------------
  NAME
@@ -292,8 +92,8 @@ H5S_term_interface(void)
  RETURNS
     Pointer to dataspace on success, NULL on failure
  DESCRIPTION
-    Creates a new dataspace of a given type.  The extent is undefined and the
-    selection is set to the "all" selection.
+    Creates a new dataspace of a given type.  The extent & selection are
+    undefined
  GLOBAL VARIABLES
  COMMENTS, BUGS, ASSUMPTIONS
  EXAMPLES
@@ -302,60 +102,22 @@ H5S_term_interface(void)
 H5S_t *
 H5S_create(H5S_class_t type)
 {
-    H5S_t *new_ds = NULL;    /* New dataspace created */
-    H5S_t *ret_value;           /* Return value */
+    H5S_t *ret_value = NULL;
 
-    FUNC_ENTER_NOAPI(H5S_create, NULL)
+    FUNC_ENTER(H5S_create, NULL);
 
     /* Create a new data space */
-    if(NULL == (new_ds = H5FL_MALLOC(H5S_t)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+    if((ret_value = H5MM_calloc(sizeof(H5S_t)))!=NULL)
+    {
+        ret_value->extent.type = type;
+        ret_value->select.type = H5S_SEL_ALL;  /* Entire extent selected by default */
+    }
 
-    /* Initialize default dataspace state */
-    new_ds->extent.type = type;
-    if(type == H5S_NULL)
-        new_ds->extent.version = H5O_SDSPACE_VERSION_2;
-    else
-        new_ds->extent.version = H5O_SDSPACE_VERSION_1;
-    new_ds->extent.rank = 0;
-    new_ds->extent.size = new_ds->extent.max = NULL;
-
-    switch(type) {
-        case H5S_SCALAR:
-            new_ds->extent.nelem = 1;
-            break;
-
-        case H5S_SIMPLE:
-        case H5S_NULL:
-            new_ds->extent.nelem = 0;
-            break;
-
-        default:
-            HDassert("unknown dataspace (extent) type" && 0);
-            break;
-    } /* end switch */
-
-    /* Start with "all" selection */
-    if(H5S_select_all(new_ds, FALSE) < 0)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTSET, NULL, "unable to set all selection")
-
-    /* Reset common selection info pointer */
-    new_ds->select.sel_info.hslab = NULL;
-
-    /* Reset "shared" info on extent */
-    if(H5O_msg_reset_share(H5O_SDSPACE_ID, &(new_ds->extent.sh_loc)) < 0)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTRESET, NULL, "unable to reset shared component info")
-
-    /* Set return value */
-    ret_value = new_ds;
-
+#ifdef LATER
 done:
-    if(ret_value == NULL && new_ds)
-        H5S_close(new_ds);
-
-    FUNC_LEAVE_NOAPI(ret_value)
+#endif
+    FUNC_LEAVE(ret_value);
 } /* end H5S_create() */
-
 
 /*--------------------------------------------------------------------------
  NAME
@@ -376,110 +138,97 @@ done:
  REVISION LOG
 --------------------------------------------------------------------------*/
 hid_t
-H5Screate(H5S_class_t type)
+H5Screate (H5S_class_t type)
 {
-    H5S_t *new_ds=NULL;         /* New dataspace structure */
-    hid_t ret_value;            /* Return value */
+    H5S_t  *new_ds=NULL;
+    hid_t	ret_value = FAIL;
 
-    FUNC_ENTER_API(H5Screate, FAIL);
-    H5TRACE1("i", "Sc", type);
+    FUNC_ENTER(H5Screate, FAIL);
+    H5TRACE1("i","Sc",type);
 
     /* Check args */
-    if(type <= H5S_NO_CLASS || type > H5S_NULL)  /* don't allow complex dataspace yet */
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid dataspace type")
+    if(type<=H5S_NO_CLASS || type> H5S_SIMPLE)  /* don't allow complex dataspace yet */
+        HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+                   "invalid dataspace type");
 
-    if(NULL == (new_ds = H5S_create(type)))
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTCREATE, FAIL, "unable to create dataspace")
+    if (NULL==(new_ds=H5S_create(type))) {
+        HRETURN_ERROR (H5E_DATASPACE, H5E_CANTCREATE, FAIL, "unable to create dataspace");
+    }
 
     /* Atomize */
-    if((ret_value = H5I_register (H5I_DATASPACE, new_ds)) < 0)
-        HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to register data space atom")
+    if ((ret_value=H5I_register (H5_DATASPACE, new_ds))<0) {
+        HGOTO_ERROR (H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to register data space atom");
+    }
 
 done:
-    if(ret_value < 0 && new_ds)
-        H5S_close(new_ds);
-
-    FUNC_LEAVE_API(ret_value);
+    if (ret_value < 0) {
+    }
+    FUNC_LEAVE(ret_value);
 } /* end H5Screate() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5S_extent_release
- *
- * Purpose:	Releases all memory associated with a dataspace extent.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *		Thursday, July 23, 1998
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5S_extent_release(H5S_extent_t *extent)
-{
-    herr_t ret_value=SUCCEED;   /* Return value */
-
-    FUNC_ENTER_NOAPI(H5S_extent_release, FAIL);
-
-    assert(extent);
-
-    /* Release extent */
-    if(extent->type==H5S_SIMPLE) {
-        if(extent->size)
-            H5FL_ARR_FREE(hsize_t,extent->size);
-        if(extent->max)
-            H5FL_ARR_FREE(hsize_t,extent->max);
-    } /* end if */
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
-}   /* end H5S_extent_release() */
-
 
 /*-------------------------------------------------------------------------
  * Function:	H5S_close
  *
  * Purpose:	Releases all memory associated with a data space.
  *
- * Return:	Non-negative on success/Negative on failure
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
  *
  * Programmer:	Robb Matzke
  *		Tuesday, December  9, 1997
+ *
+ * Modifications:
  *
  *-------------------------------------------------------------------------
  */
 herr_t
 H5S_close(H5S_t *ds)
 {
-    herr_t ret_value = SUCCEED;   /* Return value */
+    FUNC_ENTER(H5S_close, FAIL);
 
-    FUNC_ENTER_NOAPI(H5S_close, FAIL)
-
-    HDassert(ds);
+    assert(ds);
 
     /* Release selection (this should come before the extent release) */
-    H5S_SELECT_RELEASE(ds);
+    H5S_select_release(ds);
 
-    /* Release extent */
-    H5S_extent_release(&ds->extent);
+    /* release extent */
+    switch (ds->extent.type) {
+        case H5S_NO_CLASS:
+            /*nothing needed */
+            break;
+
+        case H5S_SCALAR:
+            /*nothing needed */
+            break;
+
+        case H5S_SIMPLE:
+            H5S_release_simple(&(ds->extent.u.simple));
+            break;
+
+        case H5S_COMPLEX:
+            /* nothing yet */
+            break;
+
+        default:
+            assert("unknown dataspace (extent) type" && 0);
+            break;
+    }
 
     /* Release the main structure */
-    H5FL_FREE(H5S_t, ds);
+    H5MM_xfree(ds);
 
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5S_close() */
-
+    FUNC_LEAVE(SUCCEED);
+}
 
 /*-------------------------------------------------------------------------
  * Function:	H5Sclose
  *
  * Purpose:	Release access to a data space object.
  *
- * Return:	Non-negative on success/Negative on failure
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
  *
  * Errors:
  *
@@ -491,25 +240,54 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Sclose(hid_t space_id)
+H5Sclose (hid_t space_id)
 {
-    herr_t ret_value=SUCCEED;   /* Return value */
-
-    FUNC_ENTER_API(H5Sclose, FAIL);
-    H5TRACE1("e", "i", space_id);
+    FUNC_ENTER(H5Sclose, FAIL);
+    H5TRACE1("e","i",space_id);
 
     /* Check args */
-    if (NULL == H5I_object_verify(space_id,H5I_DATASPACE))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space")
-
+    if (H5_DATASPACE != H5I_group(space_id) ||
+        NULL == H5I_object(space_id)) {
+        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space");
+    }
     /* When the reference count reaches zero the resources are freed */
-    if (H5I_dec_ref(space_id) < 0)
-        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "problem freeing id")
-
-done:
-    FUNC_LEAVE_API(ret_value);
+    if (H5I_dec_ref(space_id) < 0) {
+        HRETURN_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "problem freeing id");
+    }
+    FUNC_LEAVE(SUCCEED);
 }
+
+/*-------------------------------------------------------------------------
+ * Function:	H5S_release_simple
+ *
+ * Purpose:	Releases all memory associated with a simple data space.
+ *          (but doesn't free the simple space itself)
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Quincey Koziol
+ *		Friday, April  17, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5S_release_simple(H5S_simple_t *simple)
+{
+    FUNC_ENTER(H5S_release_simple, FAIL);
 
+    assert(simple);
+
+    if(simple->size)
+        H5MM_xfree(simple->size);
+    if(simple->max)
+        H5MM_xfree(simple->max);
+
+    FUNC_LEAVE(SUCCEED);
+}
 
 /*-------------------------------------------------------------------------
  * Function:	H5Scopy
@@ -518,7 +296,7 @@ done:
  *
  * Return:	Success:	ID of the new dataspace
  *
- *		Failure:	Negative
+ *		Failure:	FAIL
  *
  * Programmer:	Robb Matzke
  *		Friday, January 30, 1998
@@ -528,74 +306,32 @@ done:
  *-------------------------------------------------------------------------
  */
 hid_t
-H5Scopy(hid_t space_id)
+H5Scopy (hid_t space_id)
 {
-    H5S_t	*src;
+    H5S_t	*src = NULL;
     H5S_t	*dst = NULL;
-    hid_t	ret_value;
-
-    FUNC_ENTER_API(H5Scopy, FAIL);
-    H5TRACE1("i", "i", space_id);
+    hid_t	ret_value = FAIL;
+    
+    FUNC_ENTER (H5Scopy, FAIL);
+    H5TRACE1("i","i",space_id);
 
     /* Check args */
-    if (NULL==(src=(H5S_t *)H5I_object_verify(space_id, H5I_DATASPACE)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space")
+    if (H5_DATASPACE!=H5I_group (space_id) || NULL==(src=H5I_object (space_id))) {
+        HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space");
+    }
 
     /* Copy */
-    if (NULL == (dst = H5S_copy(src, FALSE, TRUE)))
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINIT, FAIL, "unable to copy data space")
+    if (NULL==(dst=H5S_copy (src))) {
+        HRETURN_ERROR (H5E_DATASPACE, H5E_CANTINIT, FAIL, "unable to copy data space");
+    }
 
     /* Atomize */
-    if ((ret_value=H5I_register (H5I_DATASPACE, dst))<0)
-        HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to register data space atom")
+    if ((ret_value=H5I_register (H5_DATASPACE, dst))<0) {
+        HRETURN_ERROR (H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to register data space atom");
+    }
 
-done:
-    if(ret_value<0) {
-        if(dst!=NULL)
-            H5S_close(dst);
-    } /* end if */
-
-    FUNC_LEAVE_API(ret_value);
+    FUNC_LEAVE (ret_value);
 }
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5Sextent_copy
- *
- * Purpose:	Copies a dataspace extent.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *		Thursday, July 23, 1998
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5Sextent_copy(hid_t dst_id,hid_t src_id)
-{
-    H5S_t	*src;
-    H5S_t	*dst;
-    hid_t	ret_value = SUCCEED;
-
-    FUNC_ENTER_API(H5Sextent_copy, FAIL)
-    H5TRACE2("e", "ii", dst_id, src_id);
-
-    /* Check args */
-    if(NULL == (src = (H5S_t *)H5I_object_verify(src_id, H5I_DATASPACE)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space")
-    if(NULL == (dst = (H5S_t *)H5I_object_verify(dst_id, H5I_DATASPACE)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space")
-
-    /* Copy */
-    if(H5S_extent_copy(&(dst->extent), &(src->extent), TRUE) < 0)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTCOPY, FAIL, "can't copy extent")
-
-done:
-    FUNC_LEAVE_API(ret_value)
-} /* end H5Sextent_copy() */
 
 
 /*-------------------------------------------------------------------------
@@ -603,7 +339,7 @@ done:
  *
  * Purpose:	Copies a dataspace extent
  *
- * Return:	Non-negative on success/Negative on failure
+ * Return:	SUCCEED/FAIL
  *
  * Programmer:	Quincey Koziol
  *		Wednesday, June  3, 1998
@@ -613,66 +349,54 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5S_extent_copy(H5S_extent_t *dst, const H5S_extent_t *src, hbool_t copy_max)
+H5S_extent_copy(H5S_extent_t *dst, const H5S_extent_t *src)
 {
-    unsigned u;
-    herr_t ret_value = SUCCEED;   /* Return value */
+    int			    i;
 
-    FUNC_ENTER_NOAPI(H5S_extent_copy, FAIL)
+    FUNC_ENTER(H5S_extent_copy, FAIL);
 
     /* Copy the regular fields */
-    dst->type = src->type;
-    dst->version = src->version;
-    dst->nelem = src->nelem;
-    dst->rank = src->rank;
+    *dst=*src;
 
     switch (src->type) {
-        case H5S_NULL:
         case H5S_SCALAR:
-            dst->size = NULL;
-            dst->max = NULL;
+            /*nothing needed */
             break;
 
         case H5S_SIMPLE:
-            if(src->size) {
-                dst->size = (hsize_t *)H5FL_ARR_MALLOC(hsize_t, (size_t)src->rank);
-                for(u = 0; u < src->rank; u++)
-                    dst->size[u] = src->size[u];
-            } /* end if */
-            else
-                dst->size = NULL;
-            if(copy_max && src->max) {
-                dst->max = (hsize_t *)H5FL_ARR_MALLOC(hsize_t, (size_t)src->rank);
-                for(u = 0; u < src->rank; u++)
-                    dst->max[u] = src->max[u];
-            } /* end if */
-            else
-                dst->max = NULL;
+            if (src->u.simple.size) {
+                dst->u.simple.size = H5MM_malloc(src->u.simple.rank *
+                                  sizeof(src->u.simple.size[0]));
+                for (i = 0; i < src->u.simple.rank; i++) {
+                    dst->u.simple.size[i] = src->u.simple.size[i];
+                }
+            }
+            if (src->u.simple.max) {
+                dst->u.simple.max = H5MM_malloc(src->u.simple.rank *
+                                 sizeof(src->u.simple.max[0]));
+                for (i = 0; i < src->u.simple.rank; i++) {
+                    dst->u.simple.max[i] = src->u.simple.max[i];
+                }
+            }
+            break;
+
+        case H5S_COMPLEX:
+            /*void */
             break;
 
         default:
-            HDassert("unknown data space type" && 0);
+            assert("unknown data space type" && 0);
             break;
-    } /* end switch */
+    }
 
-    /* Copy the shared object info */
-    if(H5O_set_shared(&(dst->sh_loc), &(src->sh_loc)) < 0)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTCOPY, FAIL, "can't copy shared information")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5S_extent_copy() */
-
+    FUNC_LEAVE(SUCCEED);
+}
 
 /*-------------------------------------------------------------------------
  * Function:	H5S_copy
  *
  * Purpose:	Copies a data space, by copying the extent and selection through
- *          H5S_extent_copy and H5S_select_copy.  If the SHARE_SELECTION flag
- *          is set, then the selection can be shared between the source and
- *          destination dataspaces.  (This should only occur in situations
- *          where the destination dataspace will immediately change to a new
- *          selection)
+ *          H5S_extent_copy and H5S_select_copy
  *
  * Return:	Success:	A pointer to a new copy of SRC
  *
@@ -686,79 +410,91 @@ done:
  *-------------------------------------------------------------------------
  */
 H5S_t *
-H5S_copy(const H5S_t *src, hbool_t share_selection, hbool_t copy_max)
+H5S_copy(const H5S_t *src)
 {
     H5S_t		   *dst = NULL;
-    H5S_t		   *ret_value;   /* Return value */
 
-    FUNC_ENTER_NOAPI(H5S_copy, NULL)
+    FUNC_ENTER(H5S_copy, NULL);
 
-    if(NULL == (dst = H5FL_MALLOC(H5S_t)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+    if (NULL==(dst = H5MM_malloc(sizeof(H5S_t)))) {
+	HRETURN_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL,
+		       "memory allocation failed");
+    }
+    *dst = *src;
 
     /* Copy the source dataspace's extent */
-    if(H5S_extent_copy(&(dst->extent), &(src->extent), copy_max) < 0)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTCOPY, NULL, "can't copy extent")
+    if (H5S_extent_copy(&(dst->extent),&(src->extent))<0)
+        HRETURN_ERROR(H5E_DATASPACE, H5E_CANTCOPY, NULL, "can't copy extent");
 
     /* Copy the source dataspace's selection */
-    if(H5S_select_copy(dst, src, share_selection) < 0)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTCOPY, NULL, "can't copy select")
+    if (H5S_select_copy(dst,src)<0)
+        HRETURN_ERROR(H5E_DATASPACE, H5E_CANTCOPY, NULL, "can't copy select");
 
-    /* Set the return value */
-    ret_value = dst;
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5S_copy() */
+    FUNC_LEAVE(dst);
+}
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5S_get_simple_extent_npoints
+ * Function:	H5S_extent_npoints
  *
  * Purpose:	Determines how many data points a dataset extent has.
  *
  * Return:	Success:	Number of data points in the dataset extent.
  *
- *		Failure:	negative
+ *		Failure:	0
  *
  * Programmer:	Robb Matzke
  *		Tuesday, December  9, 1997
- *
- * Note:        This routine participates in the "Inlining C function pointers"
- *              pattern, don't call it directly, use the appropriate macro
- *              defined in H5Sprivate.h.
  *
  * Modifications:
  *  Changed Name - QAK 7/7/98
  *
  *-------------------------------------------------------------------------
  */
-hssize_t
-H5S_get_simple_extent_npoints(const H5S_t *ds)
+hsize_t
+H5S_extent_npoints(const H5S_t *ds)
 {
-    hssize_t    ret_value;
+    hsize_t		    ret_value = 0;
+    intn		    i;
 
-    FUNC_ENTER_NOAPI(H5S_get_simple_extent_npoints, -1);
+    FUNC_ENTER(H5S_extent_npoints, 0);
 
     /* check args */
     assert(ds);
 
-    /* Get the number of elements in extent */
-    ret_value = ds->extent.nelem;
+    switch (ds->extent.type) {
+        case H5S_SCALAR:
+            ret_value = 1;
+            break;
 
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
+        case H5S_SIMPLE:
+            for (ret_value=1, i=0; i<ds->extent.u.simple.rank; i++) {
+                ret_value *= ds->extent.u.simple.size[i];
+            }
+            break;
+
+        case H5S_COMPLEX:
+            HRETURN_ERROR(H5E_DATASPACE, H5E_UNSUPPORTED, 0,
+                  "complex data spaces are not supported yet");
+
+        default:
+            assert("unknown data space class" && 0);
+            HRETURN_ERROR(H5E_DATASPACE, H5E_UNSUPPORTED, 0,
+                  "internal error (unknown data space class)");
+    }
+
+    FUNC_LEAVE(ret_value);
 }
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5Sget_simple_extent_npoints
+ * Function:	H5Sextent_npoints
  *
  * Purpose:	Determines how many data points a dataset extent has.
  *
  * Return:	Success:	Number of data points in the dataset.
  *
- *		Failure:	negative
+ *		Failure:	0
  *
  * Programmer:	Robb Matzke
  *		Tuesday, December  9, 1997
@@ -768,25 +504,23 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-hssize_t
-H5Sget_simple_extent_npoints(hid_t space_id)
+hsize_t
+H5Sextent_npoints (hid_t space_id)
 {
-    H5S_t		   *ds;
-    hssize_t		    ret_value;
+    H5S_t		   *ds = NULL;
+    hsize_t		    ret_value = 0;
 
-    FUNC_ENTER_API(H5Sget_simple_extent_npoints, FAIL);
-    H5TRACE1("Hs", "i", space_id);
+    FUNC_ENTER(H5Sextent_npoints, 0);
+    H5TRACE1("h","i",space_id);
 
     /* Check args */
-    if (NULL == (ds = (H5S_t *)H5I_object_verify(space_id, H5I_DATASPACE)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space")
+    if (H5_DATASPACE != H5I_group(space_id) || NULL == (ds = H5I_object(space_id))) {
+        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, 0, "not a data space");
+    }
+    ret_value = H5S_extent_npoints(ds);
 
-    ret_value = H5S_GET_EXTENT_NPOINTS(ds);
-
-done:
-    FUNC_LEAVE_API(ret_value);
+    FUNC_LEAVE(ret_value);
 }
-
 
 /*-------------------------------------------------------------------------
  * Function:	H5S_get_npoints_max
@@ -812,58 +546,58 @@ done:
 hsize_t
 H5S_get_npoints_max(const H5S_t *ds)
 {
-    hsize_t	    ret_value;
-    unsigned	    u;
+    hsize_t		    ret_value = 0;
+    intn		    i;
 
-    FUNC_ENTER_NOAPI(H5S_get_npoints_max, 0);
+    FUNC_ENTER(H5S_get_npoints_max, 0);
 
     /* check args */
     assert(ds);
 
-    switch (H5S_GET_EXTENT_TYPE(ds)) {
-        case H5S_NULL:
-            ret_value = 0;
-            break;
-
+    switch (ds->extent.type) {
         case H5S_SCALAR:
             ret_value = 1;
             break;
 
         case H5S_SIMPLE:
-            if (ds->extent.max) {
-                for (ret_value=1, u=0; u<ds->extent.rank; u++) {
-                    if (H5S_UNLIMITED==ds->extent.max[u]) {
-                        ret_value = HSIZET_MAX;
+            if (ds->extent.u.simple.max) {
+                for (ret_value=1, i=0; i<ds->extent.u.simple.rank; i++) {
+                    if (H5S_UNLIMITED==ds->extent.u.simple.max[i]) {
+                        ret_value = MAX_HSIZET;
                         break;
+                    } else {
+                        ret_value *= ds->extent.u.simple.max[i];
                     }
-                    else
-                        ret_value *= ds->extent.max[u];
                 }
-            }
-            else {
-                for (ret_value=1, u=0; u<ds->extent.rank; u++)
-                    ret_value *= ds->extent.size[u];
+            } else {
+                for (ret_value=1, i=0; i<ds->extent.u.simple.rank; i++) {
+                    ret_value *= ds->extent.u.simple.size[i];
+                }
             }
             break;
 
+        case H5S_COMPLEX:
+            HRETURN_ERROR(H5E_DATASPACE, H5E_UNSUPPORTED, 0,
+                  "complex data spaces are not supported yet");
+
         default:
             assert("unknown data space class" && 0);
-            HGOTO_ERROR(H5E_DATASPACE, H5E_UNSUPPORTED, 0, "internal error (unknown data space class)")
+            HRETURN_ERROR(H5E_DATASPACE, H5E_UNSUPPORTED, 0,
+                  "internal error (unknown data space class)");
     }
 
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
+    FUNC_LEAVE(ret_value);
 }
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5Sget_simple_extent_ndims
+ * Function:	H5Sextent_ndims
  *
  * Purpose:	Determines the dimensionality of a data space.
  *
  * Return:	Success:	The number of dimensions in a data space.
  *
- *		Failure:	Negative
+ *		Failure:	FAIL
  *
  * Programmer:	Robb Matzke
  *		Thursday, December 11, 1997
@@ -873,83 +607,82 @@ done:
  *-------------------------------------------------------------------------
  */
 int
-H5Sget_simple_extent_ndims(hid_t space_id)
+H5Sextent_ndims (hid_t space_id)
 {
-    H5S_t		   *ds;
-    int		   ret_value;
+    H5S_t		   *ds = NULL;
+    intn		   ret_value = 0;
 
-    FUNC_ENTER_API(H5Sget_simple_extent_ndims, FAIL);
-    H5TRACE1("Is", "i", space_id);
+    FUNC_ENTER(H5Sextent_ndims, FAIL);
+    H5TRACE1("Is","i",space_id);
 
     /* Check args */
-    if (NULL == (ds = (H5S_t *)H5I_object_verify(space_id, H5I_DATASPACE)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space")
+    if (H5_DATASPACE != H5I_group(space_id) || NULL == (ds = H5I_object(space_id))) {
+        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space");
+    }
+    ret_value = H5S_extent_ndims(ds);
 
-    ret_value = H5S_GET_EXTENT_NDIMS(ds);
-
-done:
-    FUNC_LEAVE_API(ret_value);
+    FUNC_LEAVE(ret_value);
 }
-
 
 /*-------------------------------------------------------------------------
- * Function:	H5S_get_simple_extent_ndims
+ * Function:	H5S_extent_ndims
  *
  * Purpose:	Returns the number of dimensions in a data space.
  *
  * Return:	Success:	Non-negative number of dimensions.  Zero
  *				implies a scalar.
  *
- *		Failure:	Negative
+ *		Failure:	FAIL
  *
  * Programmer:	Robb Matzke
  *		Thursday, December 11, 1997
- *
- * Note:        This routine participates in the "Inlining C function pointers"
- *              pattern, don't call it directly, use the appropriate macro
- *              defined in H5Sprivate.h.
  *
  * Modifications:
  *
  *-------------------------------------------------------------------------
  */
-int
-H5S_get_simple_extent_ndims(const H5S_t *ds)
+intn
+H5S_extent_ndims(const H5S_t *ds)
 {
-    int		    ret_value;
+    intn		    ret_value = FAIL;
 
-    FUNC_ENTER_NOAPI(H5S_get_simple_extent_ndims, FAIL);
+    FUNC_ENTER(H5S_extent_ndims, FAIL);
 
     /* check args */
     assert(ds);
 
-    switch (H5S_GET_EXTENT_TYPE(ds)) {
-        case H5S_NULL:
+    switch (ds->extent.type) {
         case H5S_SCALAR:
-        case H5S_SIMPLE:
-            ret_value = ds->extent.rank;
+            ret_value = 0;
             break;
+
+        case H5S_SIMPLE:
+            ret_value = ds->extent.u.simple.rank;
+            break;
+
+        case H5S_COMPLEX:
+            HRETURN_ERROR(H5E_DATASPACE, H5E_UNSUPPORTED, FAIL,
+                  "complex data spaces are not supported yet");
 
         default:
             assert("unknown data space class" && 0);
-            HGOTO_ERROR(H5E_DATASPACE, H5E_UNSUPPORTED, FAIL, "internal error (unknown data space class)")
+            HRETURN_ERROR(H5E_DATASPACE, H5E_UNSUPPORTED, FAIL,
+                  "internal error (unknown data space class)");
     }
 
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
+    FUNC_LEAVE(ret_value);
 }
-
 
 /*-------------------------------------------------------------------------
- * Function:	H5Sget_simple_extent_dims
+ * Function:	H5Sextent_dims
  *
  * Purpose:	Returns the size and maximum sizes in each dimension of
  *		a data space DS through	the DIMS and MAXDIMS arguments.
  *
  * Return:	Success:	Number of dimensions, the same value as
- *				returned by H5Sget_simple_extent_ndims().
+ *				returned by H5Sextent_ndims().
  *
- *		Failure:	Negative
+ *		Failure:	FAIL
  *
  * Programmer:	Robb Matzke
  *		Thursday, December 11, 1997
@@ -963,35 +696,32 @@ done:
  *-------------------------------------------------------------------------
  */
 int
-H5Sget_simple_extent_dims(hid_t space_id, hsize_t dims[]/*out*/,
-			  hsize_t maxdims[]/*out*/)
+H5Sextent_dims (hid_t space_id, hsize_t dims[]/*out*/, hsize_t maxdims[]/*out*/)
 {
-    H5S_t		   *ds;
-    int		   ret_value;
+    H5S_t		   *ds = NULL;
+    intn		   ret_value = 0;
 
-    FUNC_ENTER_API(H5Sget_simple_extent_dims, FAIL);
-    H5TRACE3("Is", "ixx", space_id, dims, maxdims);
+    FUNC_ENTER(H5Sextent_dims, FAIL);
+    H5TRACE3("Is","ixx",space_id,dims,maxdims);
 
     /* Check args */
-    if (NULL == (ds = (H5S_t *)H5I_object_verify(space_id, H5I_DATASPACE)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataspace")
+    if (H5_DATASPACE != H5I_group(space_id) || NULL == (ds = H5I_object(space_id))) {
+        HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space");
+    }
+    ret_value = H5S_extent_dims(ds, dims, maxdims);
 
-    ret_value = H5S_get_simple_extent_dims(ds, dims, maxdims);
-
-done:
-    FUNC_LEAVE_API(ret_value);
+    FUNC_LEAVE(ret_value);
 }
-
 
 /*-------------------------------------------------------------------------
- * Function:	H5S_get_simple_extent_dims
+ * Function:	H5S_extent_dims
  *
  * Purpose:	Returns the size in each dimension of a data space.  This
  *		function may not be meaningful for all types of data spaces.
  *
  * Return:	Success:	Number of dimensions.  Zero implies scalar.
  *
- *		Failure:	Negative
+ *		Failure:	FAIL
  *
  * Programmer:	Robb Matzke
  *		Thursday, December 11, 1997
@@ -1000,121 +730,95 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-int
-H5S_get_simple_extent_dims(const H5S_t *ds, hsize_t dims[], hsize_t max_dims[])
+intn
+H5S_extent_dims(const H5S_t *ds, hsize_t dims[], hsize_t max_dims[])
 {
-    int	ret_value;
-    int	i;
+    intn	ret_value = FAIL;
+    intn	i;
 
-    FUNC_ENTER_NOAPI(H5S_get_simple_extent_dims, FAIL);
+    FUNC_ENTER(H5S_extent_dims, FAIL);
 
     /* check args */
     assert(ds);
 
-    switch (H5S_GET_EXTENT_TYPE(ds)) {
-        case H5S_NULL:
+    switch (ds->extent.type) {
         case H5S_SCALAR:
             ret_value = 0;
             break;
 
         case H5S_SIMPLE:
-            ret_value = ds->extent.rank;
+            ret_value = ds->extent.u.simple.rank;
             for (i=0; i<ret_value; i++) {
                 if (dims)
-                    dims[i] = ds->extent.size[i];
+                    dims[i] = ds->extent.u.simple.size[i];
                 if (max_dims) {
-                    if (ds->extent.max)
-                        max_dims[i] = ds->extent.max[i];
-                    else
-                        max_dims[i] = ds->extent.size[i];
+                    if (ds->extent.u.simple.max) {
+                        max_dims[i] = ds->extent.u.simple.max[i];
+                    } else {
+                        max_dims[i] = ds->extent.u.simple.size[i];
+                    }
                 }
             }
             break;
 
+        case H5S_COMPLEX:
+            HRETURN_ERROR(H5E_DATASPACE, H5E_UNSUPPORTED, FAIL,
+                  "complex data spaces are not supported yet");
+
         default:
             assert("unknown data space class" && 0);
-            HGOTO_ERROR(H5E_DATASPACE, H5E_UNSUPPORTED, FAIL, "internal error (unknown data space class)")
+            HRETURN_ERROR(H5E_DATASPACE, H5E_UNSUPPORTED, FAIL,
+                  "internal error (unknown data space class)");
     }
 
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
+    FUNC_LEAVE(ret_value);
 }
-
 
 /*-------------------------------------------------------------------------
- * Function:	H5S_write
+ * Function:	H5S_modify
  *
  * Purpose:	Updates a data space by writing a message to an object
  *		header.
  *
- * Return:	Non-negative on success/Negative on failure
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
  *
  * Programmer:	Robb Matzke
  *		Tuesday, December  9, 1997
  *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5S_write(H5F_t *f, hid_t dxpl_id, H5O_t *oh, unsigned update_flags, H5S_t *ds)
-{
-    herr_t ret_value = SUCCEED;   /* Return value */
-
-    FUNC_ENTER_NOAPI(H5S_write, FAIL)
-
-    HDassert(f);
-    HDassert(oh);
-    HDassert(ds);
-    HDassert(H5S_GET_EXTENT_TYPE(ds) >= 0);
-
-    /* Write the current dataspace extent to the dataspace message */
-    if(H5O_msg_write_oh(f, dxpl_id, oh, H5O_SDSPACE_ID, 0, update_flags, &(ds->extent)) < 0)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINIT, FAIL, "can't update simple dataspace message")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5S_write() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5S_append
- *
- * Purpose:	Updates a data space by adding a message to an object
- *		header.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *		Tuesday, December 31, 2002
- *
  * Modifications:
  *
- *              John Mainzer, 6/6/05
- *              Updated function to use the new dirtied parameter of
- *              H5AC_unprotect() instead of manipulating the is_dirty
- *              field of the cache info.
- *
  *-------------------------------------------------------------------------
  */
 herr_t
-H5S_append(H5F_t *f, hid_t dxpl_id, H5O_t *oh, H5S_t *ds)
+H5S_modify(H5G_entry_t *ent, const H5S_t *ds)
 {
-    herr_t ret_value = SUCCEED;   /* Return value */
+    FUNC_ENTER(H5S_modify, FAIL);
 
-    FUNC_ENTER_NOAPI(H5S_append, FAIL)
+    assert(ent);
+    assert(ds);
 
-    HDassert(f);
-    HDassert(oh);
-    HDassert(ds);
-    HDassert(H5S_GET_EXTENT_TYPE(ds) >= 0);
+    switch (ds->extent.type) {
+        case H5S_SCALAR:
+        case H5S_SIMPLE:
+            if (H5O_modify(ent, H5O_SDSPACE, 0, 0, &(ds->extent.u.simple)) < 0) {
+                HRETURN_ERROR(H5E_DATASPACE, H5E_CANTINIT, FAIL,
+                      "can't update simple data space message");
+            }
+            break;
 
-    /* Add the dataspace message to the object header */
-    if(H5O_msg_append_oh(f, dxpl_id, oh, H5O_SDSPACE_ID, 0, 0, &(ds->extent)) < 0)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINIT, FAIL, "can't add simple dataspace message")
+        case H5S_COMPLEX:
+            HRETURN_ERROR(H5E_DATASPACE, H5E_UNSUPPORTED, FAIL,
+                  "complex data spaces are not implemented yet");
 
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5S_append() */
+        default:
+            assert("unknown data space class" && 0);
+            break;
+    }
 
+    FUNC_LEAVE(SUCCEED);
+}
 
 /*-------------------------------------------------------------------------
  * Function:	H5S_read
@@ -1128,40 +832,110 @@ done:
  * Programmer:	Robb Matzke
  *		Tuesday, December  9, 1997
  *
+ * Modifications:
+ *	Robb Matzke, 9 Jun 1998
+ *	Removed the unused file argument since the file is now part of the
+ *	ENT argument.
  *-------------------------------------------------------------------------
  */
 H5S_t *
-H5S_read(const H5O_loc_t *loc, hid_t dxpl_id)
+H5S_read(H5G_entry_t *ent)
 {
-    H5S_t	   *ds = NULL;          /* Dataspace to return */
-    H5S_t	   *ret_value;          /* Return value */
+    H5S_t		   *ds = NULL;
 
-    FUNC_ENTER_NOAPI(H5S_read, NULL)
+    FUNC_ENTER(H5S_read, NULL);
 
     /* check args */
-    HDassert(loc);
+    assert(ent);
 
-    if(NULL == (ds = H5FL_CALLOC(H5S_t)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
-
-    if(H5O_msg_read(loc, H5O_SDSPACE_ID, &(ds->extent), dxpl_id) == NULL)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINIT, NULL, "unable to load dataspace info from dataset header")
+    if (NULL==(ds = H5MM_calloc(sizeof(H5S_t)))) {
+        HRETURN_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL,
+		       "memory allocation failed");
+    }
+    
+    if (H5O_read(ent, H5O_SDSPACE, 0, &(ds->extent.u.simple))) {
+        ds->extent.type = H5S_SIMPLE;
+    } else {
+        ds->extent.type = H5S_SCALAR;
+    }
 
     /* Default to entire dataspace being selected */
-    if(H5S_select_all(ds, FALSE) < 0)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTSET, NULL, "unable to set all selection")
+    ds->select.type=H5S_SEL_ALL;
 
-    /* Set the value for successful return */
-    ret_value = ds;
+    FUNC_LEAVE(ds);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:	H5S_cmp
+ *
+ * Purpose:	Compares two data space extents.
+ *
+ * Return:	Success:	0 if DS1 and DS2 are the same.
+ *				<0 if DS1 is less than DS2.
+ *				>0 if DS1 is greater than DS2.
+ *
+ *		Failure:	0, never fails
+ *
+ * Programmer:	Robb Matzke
+ *		Wednesday, December 10, 1997
+ *
+ * Modifications:
+ *      6/9/98 Changed to only compare extents - QAK
+ *
+ *-------------------------------------------------------------------------
+ */
+intn
+H5S_cmp(const H5S_t *ds1, const H5S_t *ds2)
+{
+    intn		    i;
 
-done:
-    if(ret_value == NULL) {
-        if(ds != NULL)
-            H5FL_FREE(H5S_t, ds);
-    } /* end if */
+    FUNC_ENTER(H5S_cmp, 0);
 
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5S_read() */
+    /* check args */
+    assert(ds1);
+    assert(ds2);
+
+    /* compare */
+    if (ds1->extent.type < ds2->extent.type)
+        HRETURN(-1);
+    if (ds1->extent.type > ds2->extent.type)
+        HRETURN(1);
+
+    switch (ds1->extent.type) {
+        case H5S_SIMPLE:
+            if (ds1->extent.u.simple.rank < ds2->extent.u.simple.rank)
+                HRETURN(-1);
+            if (ds1->extent.u.simple.rank > ds2->extent.u.simple.rank)
+                HRETURN(1);
+
+            for (i = 0; i < ds1->extent.u.simple.rank; i++) {
+                if (ds1->extent.u.simple.size[i] < ds2->extent.u.simple.size[i])
+                    HRETURN(-1);
+                if (ds1->extent.u.simple.size[i] > ds2->extent.u.simple.size[i])
+                    HRETURN(1);
+            }
+
+            /* don't compare max dimensions */
+
+#ifdef LATER
+            for (i = 0; i < ds1->extent.u.simple.rank; i++) {
+                if ((ds1->extent.u.simple.perm ? ds1->extent.u.simple.perm[i] : i) <
+                        (ds2->extent.u.simple.perm ? ds2->extent.u.simple.perm[i] : i))
+                    HRETURN(-1);
+                if ((ds1->extent.u.simple.perm ? ds2->extent.u.simple.perm[i] : i) >
+                        (ds2->extent.u.simple.perm ? ds2->extent.u.simple.perm[i] : i))
+                    HRETURN(1);
+            }
+#endif
+
+            break;
+
+        default:
+            assert("not implemented yet" && 0);
+    }
+
+    FUNC_LEAVE(0);
+}
 
 
 /*--------------------------------------------------------------------------
@@ -1170,7 +944,7 @@ done:
  PURPOSE
     Check if a dataspace is simple (internal)
  USAGE
-    htri_t H5S_is_simple(sdim)
+    hbool_t H5S_is_simple(sdim)
 	H5S_t *sdim;		IN: Pointer to dataspace object to query
  RETURNS
     TRUE/FALSE/FAIL
@@ -1178,22 +952,19 @@ done:
 	This function determines the if a dataspace is "simple". ie. if it
     has orthogonal, evenly spaced dimensions.
 --------------------------------------------------------------------------*/
-static htri_t
+hbool_t
 H5S_is_simple(const H5S_t *sdim)
 {
-    htri_t		    ret_value;
+    hbool_t		    ret_value = FAIL;
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_is_simple)
+    FUNC_ENTER(H5S_is_simple, FAIL);
 
     /* Check args and all the boring stuff. */
-    HDassert(sdim);
+    assert(sdim);
+    ret_value = sdim->extent.type == H5S_SIMPLE ? TRUE : FALSE;
 
-    /* H5S_NULL shouldn't be simple dataspace */
-    ret_value = (H5S_GET_EXTENT_TYPE(sdim) == H5S_SIMPLE ||
-	  H5S_GET_EXTENT_TYPE(sdim) == H5S_SCALAR) ? TRUE : FALSE;
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5S_is_simple() */
+    FUNC_LEAVE(ret_value);
+}
 
 
 /*--------------------------------------------------------------------------
@@ -1202,31 +973,35 @@ H5S_is_simple(const H5S_t *sdim)
  PURPOSE
     Check if a dataspace is simple
  USAGE
-    htri_t H5Sis_simple(space_id)
-	hid_t space_id;	      IN: ID of dataspace object to query
+    hbool_t H5Sis_simple(sid)
+	hid_t sid;	      IN: ID of dataspace object to query
  RETURNS
     TRUE/FALSE/FAIL
  DESCRIPTION
 	This function determines the if a dataspace is "simple". ie. if it
     has orthogonal, evenly spaced dimensions.
 --------------------------------------------------------------------------*/
-htri_t
-H5Sis_simple(hid_t space_id)
+hbool_t
+H5Sis_simple (hid_t sid)
 {
-    H5S_t		   *space;	/* dataspace to modify */
-    htri_t		    ret_value;
+    H5S_t		   *space = NULL;	/* dataspace to modify */
+    hbool_t		    ret_value = FAIL;
 
-    FUNC_ENTER_API(H5Sis_simple, FAIL);
-    H5TRACE1("t", "i", space_id);
+    FUNC_ENTER(H5Sis_simple, FAIL);
+    H5TRACE1("b","i",sid);
 
     /* Check args and all the boring stuff. */
-    if ((space = (H5S_t *)H5I_object_verify(space_id,H5I_DATASPACE)) == NULL)
-	HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "not a data space")
+    if ((space = H5I_object(sid)) == NULL)
+	HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "not a data space");
 
     ret_value = H5S_is_simple(space);
 
   done:
-    FUNC_LEAVE_API(ret_value);
+    if (ret_value == FAIL) {   /* Error condition cleanup */
+
+    }				/* end if */
+    /* Normal function cleanup */
+    FUNC_LEAVE(ret_value);
 }
 
 
@@ -1236,73 +1011,73 @@ H5Sis_simple(hid_t space_id)
  PURPOSE
     Sets the size of a simple dataspace
  USAGE
-    herr_t H5Sset_extent_simple(space_id, rank, dims, max)
-        hid_t space_id;	      IN: Dataspace object to query
-        int rank;	      IN: # of dimensions for the dataspace
+    herr_t H5Sset_extent_simple(sid, rank, dims, max)
+        hid_t sid;	      IN: Dataspace object to query
+        intn rank;	      IN: # of dimensions for the dataspace
         const size_t *dims;   IN: Size of each dimension for the dataspace
- 	const size_t *max;    IN: Maximum size of each dimension for the
- 				  dataspace
+        const size_t *max;    IN: Maximum size of each dimension for the dataspace
  RETURNS
-    Non-negative on success/Negative on failure
+    SUCCEED/FAIL
  DESCRIPTION
-    This function sets the number and size of each dimension in the
-    dataspace. Setting RANK to a value of zero converts the dataspace to a
-    scalar dataspace.  Dimensions are specified from slowest to fastest
-    changing in the DIMS array (i.e. 'C' order).  Setting the size of a
-    dimension in the MAX array to zero indicates that the dimension is of
-    unlimited size and should be allowed to expand.  If MAX is NULL, the
-    dimensions in the DIMS array are used as the maximum dimensions.
-    Currently, only the first dimension in the array (the slowest) may be
-    unlimited in size.
-
- MODIFICATION
-    A null dataspace cannot be created from simple space with this function.
-
-    Christian Chilan 01/17/2007
-    Verifies that each element of DIMS is not equal to H5S_UNLIMITED.
-
+	This function sets the number and size of each dimension in the
+    dataspace.	Setting RANK to a value of zero converts the dataspace to a
+    scalar dataspace.  Dimensions are specified from slowest to fastest changing
+    in the DIMS array (i.e. 'C' order).  Setting the size of a dimension in the
+    MAX array to zero indicates that the dimension is of unlimited size and
+    should be allowed to expand.  If MAX is NULL, the dimensions in the DIMS
+    array are used as the maximum dimensions.  Currently, only the first
+    dimension in the array (the slowest) may be unlimited in size.
 --------------------------------------------------------------------------*/
 herr_t
-H5Sset_extent_simple(hid_t space_id, int rank, const hsize_t dims[/*rank*/],
-		      const hsize_t max[/*rank*/])
+H5Sset_extent_simple (hid_t sid, int rank, const hsize_t *dims,
+		      const hsize_t *max)
 {
-    H5S_t	*space;	/* dataspace to modify */
-    int	u;	/* local counting variable */
-    herr_t ret_value=SUCCEED;   /* Return value */
+    H5S_t		   *space = NULL;	/* dataspace to modify */
+    intn		    u;	/* local counting variable */
 
-    FUNC_ENTER_API(H5Sset_extent_simple, FAIL);
-    H5TRACE4("e", "iIs*[a1]h*[a1]h", space_id, rank, dims, max);
+    FUNC_ENTER(H5Sset_extent_simple, FAIL);
+    H5TRACE4("e","iIs*h*h",sid,rank,dims,max);
 
     /* Check args */
-    if ((space = (H5S_t *)H5I_object_verify(space_id,H5I_DATASPACE)) == NULL)
-        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "not a data space")
-    if (rank > 0 && dims == NULL)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no dimensions specified")
-    if (rank<0 || rank>H5S_MAX_RANK)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid rank")
+    if ((space = H5I_object(sid)) == NULL) {
+        HRETURN_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "not a data space");
+    }
+    if (rank > 0 && dims == NULL) {
+        HRETURN_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no dimensions specified");
+    }
+    if (rank<0) {
+        HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL, "invalid rank");
+    }
+#ifdef OLD_WAY
     if (dims) {
         for (u=0; u<rank; u++) {
-            if (H5S_UNLIMITED==dims[u])
-                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "current dimension must have a specific size, not H5S_UNLIMITED")
-            if (((max!=NULL && max[u]!=H5S_UNLIMITED) || max==NULL) && dims[u]==0)
-                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid dimension size")
+            if (((max!=NULL && max[u]!=H5S_UNLIMITED) || max==NULL) && dims[u]==0) {
+                HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL, "invalid dimension size");
+            }
         }
     }
+#endif /* OLD_WAY */
     if (max!=NULL) {
-        if(dims==NULL)
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "maximum dimension specified, but no current dimensions specified")
+        if(dims==NULL) {
+            HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+			   "maximum dimension specified, but no current "
+			   "dimensions specified");
+	}
         for (u=0; u<rank; u++) {
-            if (max[u]!=H5S_UNLIMITED && max[u]<dims[u])
-                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid maximum dimension size")
+            if (max[u]!=H5S_UNLIMITED && max[u]<dims[u]) {
+                HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+			       "invalid maximum dimension size");
+            }
         }
     }
 
     /* Do it */
-    if (H5S_set_extent_simple(space, (unsigned)rank, dims, max)<0)
-	HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINIT, FAIL, "unable to set simple extent")
+    if (H5S_set_extent_simple(space, rank, dims, max)<0) {
+	HRETURN_ERROR(H5E_DATASPACE, H5E_CANTINIT, FAIL,
+		      "unable to set simple extent");
+    }
 
-done:
-    FUNC_LEAVE_API(ret_value);
+    FUNC_LEAVE(SUCCEED);
 }
 
 
@@ -1312,7 +1087,9 @@ done:
  * Purpose:	This is where the real work happens for
  *		H5Sset_extent_simple().
  *
- * Return:	Non-negative on success/Negative on failure
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
  *
  * Programmer:	Robb Matzke (copied from H5Sset_extent_simple)
  *              Wednesday, July  8, 1998
@@ -1321,79 +1098,69 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-static herr_t
-H5S_set_extent_simple(H5S_t *space, unsigned rank, const hsize_t *dims,
+herr_t
+H5S_set_extent_simple (H5S_t *space, int rank, const hsize_t *dims,
 		       const hsize_t *max)
 {
-    unsigned u;                 /* Local index variable */
-    herr_t ret_value = SUCCEED;   /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT(H5S_set_extent_simple)
+    FUNC_ENTER(H5S_set_extent_simple, FAIL);
 
     /* Check args */
-    HDassert(rank <= H5S_MAX_RANK);
-    HDassert(0 == rank || dims);
+    assert(rank>=0);
+    assert(0==rank || dims);
+    
+    /* shift out of the previous state to a "simple" dataspace */
+    switch (space->extent.type) {
+        case H5S_SCALAR:
+            /* do nothing */
+            break;
 
-    /* shift out of the previous state to a "simple" dataspace.  */
-    if(H5S_extent_release(&space->extent) < 0)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTFREE, FAIL, "failed to release previous dataspace extent")
+        case H5S_SIMPLE:
+            H5S_release_simple(&(space->extent.u.simple));
+            break;
 
-    if(rank == 0) {		/* scalar variable */
+        case H5S_COMPLEX:
+        /*
+         * eventually this will destroy whatever "complex" dataspace info
+         * is retained, right now it's an error
+         */
+        /* Fall through to report error */
+
+        default:
+            HRETURN_ERROR(H5E_DATASPACE, H5E_BADVALUE, FAIL,
+                  "unknown data space class");
+    }
+
+    if (rank == 0) {		/* scalar variable */
         space->extent.type = H5S_SCALAR;
-        space->extent.nelem = 1;
-        space->extent.rank = 0;	/* set to scalar rank */
-    } /* end if */
-    else {
-        hsize_t nelem;  /* Number of elements in extent */
-
+        space->extent.u.simple.rank = 0;	/* set to scalar rank */
+    } else {
         space->extent.type = H5S_SIMPLE;
 
-        /* Set the rank and allocate space for the dims */
-        space->extent.rank = rank;
-        space->extent.size = (hsize_t *)H5FL_ARR_MALLOC(hsize_t, (size_t)rank);
-
-        /* Copy the dimensions & compute the number of elements in the extent */
-        for(u = 0, nelem = 1; u < space->extent.rank; u++) {
-            space->extent.size[u] = dims[u];
-            nelem *= dims[u];
-        } /* end for */
-        space->extent.nelem = nelem;
+        /* Set the rank and copy the dims */
+        space->extent.u.simple.rank = rank;
+        space->extent.u.simple.size = H5MM_malloc(rank*sizeof(hsize_t));
+        HDmemcpy(space->extent.u.simple.size, dims, sizeof(hsize_t) * rank);
 
         /* Copy the maximum dimensions if specified */
-        if(max != NULL) {
-            space->extent.max = (hsize_t *)H5FL_ARR_MALLOC(hsize_t, (size_t)rank);
-            HDmemcpy(space->extent.max, max, sizeof(hsize_t) * rank);
+        if(max!=NULL) {
+            space->extent.u.simple.max = H5MM_malloc(rank*sizeof(hsize_t));
+            HDmemcpy(space->extent.u.simple.max, max, sizeof(hsize_t) * rank);
         } /* end if */
-        else
-            space->extent.max = NULL;
-    } /* end else */
+    }
+    FUNC_LEAVE(SUCCEED);
+}
 
-    /* Selection related cleanup */
-
-    /* Set offset to zeros */
-    for(u = 0; u < space->extent.rank; u++)
-        space->select.offset[u] = 0;
-    space->select.offset_changed = FALSE;
-
-    /* If the selection is 'all', update the number of elements selected */
-    if(H5S_GET_SELECT_TYPE(space) == H5S_SEL_ALL)
-        if(H5S_select_all(space, FALSE) < 0)
-            HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDELETE, FAIL, "can't change selection")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5S_set_extent_simple() */
-
-#ifdef H5S_DEBUG
 
 /*-------------------------------------------------------------------------
  * Function:	H5S_find
  *
  * Purpose:	Given two data spaces (MEM_SPACE and FILE_SPACE) this
- *		function returns a pointer to the conversion path information,
- *		creating a new conversion path entry if necessary.
+ *		function locates the data space conversion functions and
+ *		initializes CONV to point to them.  The CONV contains
+ *		function pointers for converting in either direction.
  *
- * Return:	Success:	Ptr to a conversion path entry
+ * Return:	Success:	Pointer to a data space conversion callback
+ *				list.
  *
  *		Failure:	NULL
  *
@@ -1402,87 +1169,192 @@ done:
  *
  * Modifications:
  *
- * 	Quincey Koziol
- *	Instead of returning a point into the data space conversion table we
- *	copy all the information into a user-supplied CONV buffer and return
- *	non-negative on success or negative on failure.
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5S_find (H5S_conv_t *conv, const H5S_t *mem_space, const H5S_t *file_space)
+{
+    FUNC_ENTER (H5S_find, FAIL);
+
+    /* Check args */
+    assert (conv);
+    assert (mem_space && (H5S_SIMPLE==mem_space->extent.type || H5S_SCALAR==mem_space->extent.type));
+    assert (file_space && (H5S_SIMPLE==file_space->extent.type || H5S_SCALAR==mem_space->extent.type));
+
+    /*
+     * We can't do conversion if the source and destination select a
+     * different number of data points.
+     */
+    if (H5S_select_npoints (mem_space) != H5S_select_npoints (file_space)) {
+        HRETURN_ERROR (H5E_DATASPACE, H5E_BADRANGE, FAIL,
+		       "memory and file data spaces are different sizes");
+    }
+
+#ifdef OLD_WAY
+    /*
+     * Initialize pointers.  This will eventually be a table lookup based
+     * on the source and destination data spaces, similar to H5T_find(), but
+     * for now we only support simple data spaces.
+     */
+    if (!conv) {
+        _conv.init = H5S_simp_init;
+        _conv.fgath = H5S_simp_fgath;
+        _conv.mscat = H5S_simp_mscat;
+        _conv.mgath = H5S_simp_mgath;
+        _conv.fscat = H5S_simp_fscat;
+        _conv.read = H5S_simp_read;
+        _conv.write = H5S_simp_write;
+        conv = &_conv;
+    }
+#else
+    /* Set up the function pointers for file transfers */
+    switch(file_space->select.type) {
+        case H5S_SEL_POINTS:
+#ifdef QAK
+printf("%s: file space has point selection\n",FUNC);
+#endif /* QAK */
+            conv->finit = H5S_point_init;
+            conv->favail = H5S_point_favail;
+            conv->fgath = H5S_point_fgath;
+            conv->fscat = H5S_point_fscat;
+            conv->read = NULL;
+            conv->write = NULL;
+            break;
+
+        case H5S_SEL_ALL:
+#ifdef QAK
+printf("%s: file space has all selection\n",FUNC);
+#endif /* QAK */
+            conv->finit = H5S_all_init;
+            conv->favail = H5S_all_favail;
+            conv->fgath = H5S_all_fgath;
+            conv->fscat = H5S_all_fscat;
+            conv->read = NULL;
+            conv->write = NULL;
+            break;
+
+        case H5S_SEL_HYPERSLABS:
+#ifdef QAK
+printf("%s: file space has hyperslab selection\n",FUNC);
+#endif /* QAK */
+            conv->finit = H5S_hyper_init;
+            conv->favail = H5S_hyper_favail;
+            conv->fgath = H5S_hyper_fgath;
+            conv->fscat = H5S_hyper_fscat;
+            conv->read = NULL;
+            conv->write = NULL;
+            break;
+
+        case H5S_SEL_NONE:
+        default:
+#ifdef QAK
+printf("%s: file space has unknown selection\n",FUNC);
+#endif /* QAK */
+            HRETURN_ERROR (H5E_DATASPACE, H5E_BADVALUE, FAIL,
+                   "invalid file dataspace selection type");
+    } /* end switch */
+
+    /* Set up the function pointers for background & memory transfers */
+    switch(mem_space->select.type) {
+        case H5S_SEL_POINTS:
+#ifdef QAK
+printf("%s: memory space has point selection\n",FUNC);
+#endif /* QAK */
+            conv->minit = H5S_point_init;
+            conv->binit = H5S_point_init;
+            conv->mgath = H5S_point_mgath;
+            conv->mscat = H5S_point_mscat;
+            conv->read = NULL;
+            conv->write = NULL;
+            break;
+
+        case H5S_SEL_ALL:
+#ifdef QAK
+printf("%s: memory space has all selection\n",FUNC);
+#endif /* QAK */
+            conv->minit = H5S_all_init;
+            conv->binit = H5S_all_init;
+            conv->mgath = H5S_all_mgath;
+            conv->mscat = H5S_all_mscat;
+            conv->read = NULL;
+            conv->write = NULL;
+            break;
+
+        case H5S_SEL_HYPERSLABS:
+#ifdef QAK
+printf("%s: memory space has hyperslab selection\n",FUNC);
+#endif /* QAK */
+            conv->minit = H5S_hyper_init;
+            conv->binit = H5S_hyper_init;
+            conv->mgath = H5S_hyper_mgath;
+            conv->mscat = H5S_hyper_mscat;
+            conv->read = NULL;
+            conv->write = NULL;
+            break;
+
+        case H5S_SEL_NONE:
+        default:
+#ifdef QAK
+printf("%s: memory space has unknown selection\n",FUNC);
+#endif /* QAK */
+            HRETURN_ERROR (H5E_DATASPACE, H5E_BADVALUE, FAIL,
+                   "invalid file dataspace selection type");
+    } /* end switch */
+#endif /* OLD_WAY */
+    
+    FUNC_LEAVE (SUCCEED);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:	H5S_extend
  *
- * 	Robb Matzke, 11 Aug 1998
- *	Returns a pointer into the conversion path table.  A path entry
- *	contains pointers to the memory and file half of the conversion (the
- *	pointers registered in the H5S_fconv_g[] and H5S_mconv_g[] tables)
- *	along with other data whose scope is the conversion path (like path
- *	statistics).
+ * Purpose:	Extend the dimensions of a data space.
  *
- *	John Mainzer, 8/30/04
- *	Modified code to check with all other processes that have the
- *	file open before OKing collective I/O.
+ * Return:	Success:	Number of dimensions whose size increased.
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *		Friday, January 30, 1998
+ *
+ * Modifications:
  *
  *-------------------------------------------------------------------------
  */
-H5S_iostats_t *
-H5S_find (const H5S_t *mem_space, const H5S_t *file_space)
+intn
+H5S_extend (H5S_t *space, const hsize_t *size)
 {
-    H5S_iostats_t	*path=NULL;  /* Space conversion path */
-    size_t	u;      /* Index variable */
-    H5S_iostats_t *ret_value;   /* Return value */
-
-    FUNC_ENTER_NOAPI(H5S_find, NULL);
+    intn		i, ret_value=0;
+    
+    FUNC_ENTER (H5S_extend, FAIL);
 
     /* Check args */
-    assert (mem_space && (H5S_SIMPLE==H5S_GET_EXTENT_TYPE(mem_space) ||
-                          H5S_NULL==H5S_GET_EXTENT_TYPE(mem_space) ||
-			  H5S_SCALAR==H5S_GET_EXTENT_TYPE(mem_space)));
-    assert (file_space && (H5S_SIMPLE==H5S_GET_EXTENT_TYPE(file_space) ||
-                           H5S_NULL==H5S_GET_EXTENT_TYPE(file_space) ||
-			   H5S_SCALAR==H5S_GET_EXTENT_TYPE(file_space)));
+    assert (space && H5S_SIMPLE==space->extent.type);
+    assert (size);
 
-    /*
-     * Is this path already present in the data space conversion path table?
-     * If so then return a pointer to that entry.
-     */
-    for (u=0; u<H5S_niostats_g; u++)
-        if (H5S_iostats_g[u]->ftype==H5S_GET_SELECT_TYPE(file_space) &&
-                H5S_iostats_g[u]->mtype==H5S_GET_SELECT_TYPE(mem_space))
-            HGOTO_DONE(H5S_iostats_g[u]);
+    for (i=0; i<space->extent.u.simple.rank; i++) {
+        if (space->extent.u.simple.size[i]<size[i]) {
+            if (space->extent.u.simple.max &&
+                    H5S_UNLIMITED!=space->extent.u.simple.max[i] &&
+                    space->extent.u.simple.max[i]<size[i]) {
+                HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+                       "dimension cannot be increased");
+            }
+            ret_value++;
+        }
+    }
 
-    /*
-     * The path wasn't found.  Create a new path.
-     */
-    if (NULL==(path = H5MM_calloc(sizeof(*path))))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed for data space conversion path")
+    /* Update */
+    if (ret_value) {
+        for (i=0; i<space->extent.u.simple.rank; i++) {
+            if (space->extent.u.simple.size[i]<size[i]) {
+                space->extent.u.simple.size[i] = size[i];
+            }
+        }
+    }
 
-    /* Initialize file & memory conversion functions */
-    path->ftype = H5S_GET_SELECT_TYPE(file_space);
-    path->mtype = H5S_GET_SELECT_TYPE(mem_space);
-
-    /*
-     * Add the new path to the table.
-     */
-    if (H5S_niostats_g>=H5S_aiostats_g) {
-        size_t n = MAX(10, 2*H5S_aiostats_g);
-        H5S_iostats_t **p = H5MM_realloc(H5S_iostats_g, n*sizeof(H5S_iostats_g[0]));
-
-        if (NULL==p)
-            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed for data space conversion path table")
-        H5S_aiostats_g = n;
-        H5S_iostats_g = p;
-    } /* end if */
-    H5S_iostats_g[H5S_niostats_g++] = path;
-
-    /* Set the return value */
-    ret_value=path;
-
-done:
-    if(ret_value==NULL) {
-        if(path!=NULL)
-            H5MM_xfree(path);
-    } /* end if */
-
-    FUNC_LEAVE_NOAPI(ret_value);
-} /* end H5S_find() */
-#endif /* H5S_DEBUG */
-
+    FUNC_LEAVE (ret_value);
+}
 
 /*-------------------------------------------------------------------------
  * Function:	H5Screate_simple
@@ -1498,848 +1370,62 @@ done:
  *
  * Return:	Success:	The ID for the new simple data space object.
  *
- *		Failure:	Negative
+ *		Failure:	FAIL
  *
  * Errors:
  *
  * Programmer:	Quincey Koziol
  *		Tuesday, January  27, 1998
  *
- * Modifications: Christian Chilan 01/17/2007
- *                Verifies that each element of DIMS is not equal to
- *                H5S_UNLIMITED.
+ * Modifications:
  *
  *-------------------------------------------------------------------------
  */
 hid_t
-H5Screate_simple(int rank, const hsize_t dims[/*rank*/],
-		  const hsize_t maxdims[/*rank*/])
+H5Screate_simple (int rank, const hsize_t *dims, const hsize_t *maxdims)
 {
-    hid_t	ret_value;
+    hid_t	ret_value = FAIL;
     H5S_t	*space = NULL;
     int		i;
 
-    FUNC_ENTER_API(H5Screate_simple, FAIL);
-    H5TRACE3("i", "Is*[a0]h*[a0]h", rank, dims, maxdims);
+    FUNC_ENTER(H5Screate, FAIL);
+    H5TRACE3("i","Is*h*h",rank,dims,maxdims);
 
     /* Check arguments */
-    if (rank<0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "dimensionality cannot be negative")
-    if (rank>H5S_MAX_RANK)
-	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "dimensionality is too large")
-    if (!dims && dims!=0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no dimensions specified")
-    /* Check whether the current dimensions are valid */
-    for (i=0; i<rank; i++) {
-        if (H5S_UNLIMITED==dims[i])
-            HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "current dimension must have a specific size, not H5S_UNLIMITED")
-        if (maxdims) {
-            if (H5S_UNLIMITED!=maxdims[i] && maxdims[i]<dims[i])
-                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "maxdims is smaller than dims")
-            if (H5S_UNLIMITED!=maxdims[i] && dims[i]==0)
-                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "zero sized dimension for non-unlimited dimension")
-        }
-        else {
-            if (dims[i]==0)
-                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "zero sized dimension for non-unlimited dimension")
+    if (rank<0) {
+        HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "dimensionality cannot be negative");
+    }
+    if (!dims && dims!=0) {
+        HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "no dimensions specified");
+    }
+    if (maxdims) {
+        for (i=0; i<rank; i++) {
+            if (H5S_UNLIMITED!=maxdims[i] && maxdims[i]<dims[i]) {
+                HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+                       "maxdims is smaller than dims");
+            }
         }
     }
 
     /* Create the space and set the extent */
-    if(NULL==(space=H5S_create_simple((unsigned)rank,dims,maxdims)))
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTCREATE, FAIL, "can't create simple dataspace")
-
+    if(NULL==(space=H5S_create(H5S_SIMPLE))) {
+        HGOTO_ERROR (H5E_DATASPACE, H5E_CANTCREATE, FAIL,
+		     "can't create simple dataspace");
+    }
+    if(H5S_set_extent_simple(space,rank,dims,maxdims)<0) {
+        HGOTO_ERROR (H5E_DATASPACE, H5E_CANTINIT, FAIL,
+		     "can't set dimensions");
+    }
+    
     /* Atomize */
-    if ((ret_value=H5I_register (H5I_DATASPACE, space))<0)
-        HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to register dataspace ID")
-
-done:
-    if (ret_value<0) {
-        if (space!=NULL)
-            H5S_close(space);
-    } /* end if */
-
-    FUNC_LEAVE_API(ret_value);
+    if ((ret_value=H5I_register (H5_DATASPACE, space))<0) {
+        HGOTO_ERROR (H5E_ATOM, H5E_CANTREGISTER, FAIL,
+		     "unable to register data space atom");
+    }
+    
+ done:
+    if (ret_value<0 && space) H5S_close(space);
+    FUNC_LEAVE(ret_value);
 }
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5S_create_simple
- *
- * Purpose:	Internal function to create simple dataspace
- *
- * Return:	Success:	The ID for the new simple data space object.
- *		Failure:	Negative
- *
- * Errors:
- *
- * Programmer:	Quincey Koziol
- *		Thursday, April  3, 2003
- *
- * Modifications:
- *              Extracted from H5Screate_simple
- *              Quincey Koziol, Thursday, April  3, 2003
- *
- *-------------------------------------------------------------------------
- */
-H5S_t *
-H5S_create_simple(unsigned rank, const hsize_t dims[/*rank*/],
-		  const hsize_t maxdims[/*rank*/])
-{
-    H5S_t	*ret_value;     /* Return value */
-
-    FUNC_ENTER_NOAPI(H5S_create_simple, NULL);
-
-    /* Check arguments */
-    assert(rank <=H5S_MAX_RANK);
-
-    /* Create the space and set the extent */
-    if(NULL==(ret_value=H5S_create(H5S_SIMPLE)))
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTCREATE, NULL, "can't create simple dataspace")
-    if(H5S_set_extent_simple(ret_value,rank,dims,maxdims)<0)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINIT, NULL, "can't set dimensions")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
-} /* end H5S_create_simple() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5Sencode
- *
- * Purpose:	Given a dataspace ID, converts the object description
- *              (including selection) into binary in a buffer.
- *
- * Return:	Success:	non-negative
- *
- *		Failure:	negative
- *
- * Programmer:	Raymond Lu
- *              slu@ncsa.uiuc.edu
- *              July 14, 2004
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5Sencode(hid_t obj_id, void *buf, size_t *nalloc)
-{
-    H5S_t       *dspace;
-    herr_t      ret_value=SUCCEED;
-
-    FUNC_ENTER_API (H5Sencode, FAIL);
-    H5TRACE3("e", "i*x*z", obj_id, buf, nalloc);
-
-    /* Check argument and retrieve object */
-    if (NULL==(dspace=(H5S_t *)H5I_object_verify(obj_id, H5I_DATASPACE)))
-	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataspace")
-
-    if(H5S_encode(dspace, (unsigned char *)buf, nalloc)<0)
-	HGOTO_ERROR(H5E_DATATYPE, H5E_CANTENCODE, FAIL, "can't encode datatype")
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5S_encode
- *
- * Purpose:	Private function for H5Sencode.  Converts an object
- *              description for data space and its selection into binary
- *              in a buffer.
- *
- * Return:	Success:	non-negative
- *		Failure:	negative
- *
- * Programmer:	Raymond Lu
- *              slu@ncsa.uiuc.edu
- *              July 14, 2004
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5S_encode(H5S_t *obj, unsigned char *buf, size_t *nalloc)
-{
-    size_t      extent_size;    /* Size of serialized dataspace extent */
-    hssize_t    sselect_size;   /* Signed size of serialized dataspace selection */
-    size_t      select_size;    /* Size of serialized dataspace selection */
-    H5F_t       *f = NULL;      /* Fake file structure*/
-    herr_t      ret_value = SUCCEED;
-
-    FUNC_ENTER_NOAPI_NOINIT(H5S_encode)
-
-    /* Allocate "fake" file structure */
-    if(NULL == (f = H5F_fake_alloc((size_t)0)))
-	HGOTO_ERROR(H5E_DATASPACE, H5E_CANTALLOC, FAIL, "can't allocate fake file struct")
-
-    /* Find out the size of buffer needed for extent */
-    if((extent_size = H5O_msg_raw_size(f, H5O_SDSPACE_ID, TRUE, obj)) == 0)
-	HGOTO_ERROR(H5E_DATASPACE, H5E_BADSIZE, FAIL, "can't find dataspace size")
-
-    /* Find out the size of buffer needed for selection */
-    if((sselect_size = H5S_SELECT_SERIAL_SIZE(obj)) < 0)
-	HGOTO_ERROR(H5E_DATASPACE, H5E_BADSIZE, FAIL, "can't find dataspace selection size")
-    H5_ASSIGN_OVERFLOW(select_size, sselect_size, hssize_t, size_t);
-
-    /* Verify the size of buffer.  If it's not big enough, simply return the
-     * right size without filling the buffer. */
-    if(!buf || *nalloc < (extent_size + select_size + 1 + 1 + 1 + 4))
-        *nalloc = extent_size + select_size + 1 + 1 + 1 + 4;
-    else {
-        /* Encode the type of the information */
-        *buf++ = H5O_SDSPACE_ID;
-
-        /* Encode the version of the dataspace information */
-        *buf++ = H5S_ENCODE_VERSION;
-
-        /* Encode the "size of size" information */
-        *buf++ = (unsigned char)H5F_SIZEOF_SIZE(f);
-
-        /* Encode size of extent information. Pointer is actually moved in this macro. */
-        UINT32ENCODE(buf, extent_size);
-
-        /* Encode the extent part of dataspace */
-        if(H5O_msg_encode(f, H5O_SDSPACE_ID, TRUE, buf, obj) < 0)
-            HGOTO_ERROR(H5E_DATASPACE, H5E_CANTENCODE, FAIL, "can't encode extent space")
-        buf += extent_size;
-
-        /* Encode the selection part of dataspace.  */
-        if(H5S_SELECT_SERIALIZE(obj, buf) < 0)
-            HGOTO_ERROR(H5E_DATASPACE, H5E_CANTENCODE, FAIL, "can't encode select space")
-    } /* end else */
-
-done:
-    /* Release fake file structure */
-    if(f && H5F_fake_free(f) < 0)
-        HDONE_ERROR(H5E_DATASPACE, H5E_CANTRELEASE, FAIL, "unable to release fake file struct")
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5S_encode() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5Sdecode
- *
- * Purpose:	Decode a binary object description of dataspace and
- *              return a new object handle.
- *
- * Return:	Success:	dataspace ID(non-negative)
- *
- *		Failure:	negative
- *
- * Programmer:	Raymond Lu
- *              slu@ncsa.uiuc.edu
- *              July 14, 2004
- *
- *-------------------------------------------------------------------------
- */
-hid_t
-H5Sdecode(const void *buf)
-{
-    H5S_t       *ds;
-    hid_t       ret_value;
-
-    FUNC_ENTER_API (H5Sdecode, FAIL)
-    H5TRACE1("i", "*x", buf);
-
-    if(buf == NULL)
-	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "empty buffer")
-
-    if((ds = H5S_decode((const unsigned char *)buf)) == NULL)
-	HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDECODE, FAIL, "can't decode object")
-
-    /* Register the type and return the ID */
-    if((ret_value = H5I_register(H5I_DATASPACE, ds)) < 0)
-	HGOTO_ERROR(H5E_DATASPACE, H5E_CANTREGISTER, FAIL, "unable to register dataspace")
-
-done:
-    FUNC_LEAVE_API(ret_value)
-} /* end H5Sdecode() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5S_decode
- *
- * Purpose:	Private function for H5Sdecode.  Reconstructs a binary
- *              description of dataspace and returns a new object handle.
- *
- * Return:	Success:	dataspace ID(non-negative)
- *
- *		Failure:	negative
- *
- * Programmer:	Raymond Lu
- *              slu@ncsa.uiuc.edu
- *              July 14, 2004
- *
- *-------------------------------------------------------------------------
- */
-static H5S_t*
-H5S_decode(const unsigned char *buf)
-{
-    H5S_t       *ds;
-    H5S_extent_t *extent;
-    size_t      extent_size;            /* size of the extent message*/
-    H5F_t       *f = NULL;              /* Fake file structure*/
-    size_t      sizeof_size;            /* 'Size of sizes' for file */
-    H5S_t       *ret_value;
-
-    FUNC_ENTER_NOAPI_NOINIT(H5S_decode)
-
-    /* Decode the type of the information */
-    if(*buf++ != H5O_SDSPACE_ID)
-	HGOTO_ERROR(H5E_DATASPACE, H5E_BADMESG, NULL, "not an encoded dataspace")
-
-    /* Decode the version of the dataspace information */
-    if(*buf++ != H5S_ENCODE_VERSION)
-	HGOTO_ERROR(H5E_DATASPACE, H5E_VERSION, NULL, "unknown version of encoded dataspace")
-
-    /* Decode the "size of size" information */
-    sizeof_size = *buf++;
-
-    /* Allocate "fake" file structure */
-    if(NULL == (f = H5F_fake_alloc(sizeof_size)))
-	HGOTO_ERROR(H5E_DATASPACE, H5E_CANTALLOC, NULL, "can't allocate fake file struct")
-
-    /* Decode size of extent information */
-    UINT32DECODE(buf, extent_size);
-
-    /* Decode the extent part of dataspace */
-    /* (pass mostly bogus file pointer and bogus DXPL) */
-    if((extent = (H5S_extent_t *)H5O_msg_decode(f, H5P_DEFAULT, H5O_SDSPACE_ID, buf))==NULL)
-	HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDECODE, NULL, "can't decode object")
-    buf += extent_size;
-
-    /* Copy the extent into dataspace structure */
-    if((ds = H5FL_CALLOC(H5S_t))==NULL)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed for data space conversion path table")
-    if(H5O_msg_copy(H5O_SDSPACE_ID, extent, &(ds->extent)) == NULL)
-	HGOTO_ERROR(H5E_DATASPACE, H5E_CANTCOPY, NULL, "can't copy object")
-    if(H5S_extent_release(extent) < 0)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTDELETE, NULL, "can't release previous dataspace")
-    H5FL_FREE(H5S_extent_t, extent);
-
-    /* Initialize to "all" selection. Deserialization relies on valid existing selection. */
-    if(H5S_select_all(ds, FALSE) < 0)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTSET, NULL, "unable to set all selection")
-
-    /* Decode the select part of dataspace.  I believe this part always exists. */
-    if(H5S_SELECT_DESERIALIZE(ds, buf) < 0)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDECODE, NULL, "can't decode space selection")
-
-    /* Set return value */
-    ret_value = ds;
-
-done:
-    /* Release fake file structure */
-    if(f && H5F_fake_free(f) < 0)
-        HDONE_ERROR(H5E_DATASPACE, H5E_CANTRELEASE, NULL, "unable to release fake file struct")
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5S_decode() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5S_get_simple_extent_type
- *
- * Purpose:	Internal function for retrieving the type of extent for a dataspace object
- *
- * Return:	Success:	The class of the dataspace object
- *
- *		Failure:	N5S_NO_CLASS
- *
- * Errors:
- *
- * Programmer:	Quincey Koziol
- *		Thursday, September 28, 2000
- *
- * Note:        This routine participates in the "Inlining C function pointers"
- *              pattern, don't call it directly, use the appropriate macro
- *              defined in H5Sprivate.h.
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-H5S_class_t
-H5S_get_simple_extent_type(const H5S_t *space)
-{
-    H5S_class_t	ret_value;
-
-    FUNC_ENTER_NOAPI(H5S_get_simple_extent_type, H5S_NO_CLASS);
-
-    assert(space);
-
-    ret_value=H5S_GET_EXTENT_TYPE(space);
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5Sget_simple_extent_type
- *
- * Purpose:	Retrieves the type of extent for a dataspace object
- *
- * Return:	Success:	The class of the dataspace object
- *
- *		Failure:	N5S_NO_CLASS
- *
- * Errors:
- *
- * Programmer:	Quincey Koziol
- *		Thursday, July 23, 1998
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-H5S_class_t
-H5Sget_simple_extent_type(hid_t sid)
-{
-    H5S_t	*space;
-    H5S_class_t	ret_value;
-
-    FUNC_ENTER_API(H5Sget_simple_extent_type, H5S_NO_CLASS);
-    H5TRACE1("Sc", "i", sid);
-
-    /* Check arguments */
-    if (NULL == (space = (H5S_t *)H5I_object_verify(sid, H5I_DATASPACE)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, H5S_NO_CLASS, "not a dataspace")
-
-    ret_value=H5S_GET_EXTENT_TYPE(space);
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Sset_extent_none
- PURPOSE
-    Resets the extent of a dataspace back to "none"
- USAGE
-    herr_t H5Sset_extent_none(space_id)
-        hid_t space_id;	      IN: Dataspace object to reset
- RETURNS
-    Non-negative on success/Negative on failure
- DESCRIPTION
-	This function resets the type of a dataspace back to "none" with no
-    extent information stored for the dataspace.
---------------------------------------------------------------------------*/
-herr_t
-H5Sset_extent_none(hid_t space_id)
-{
-    H5S_t		   *space;	/* dataspace to modify */
-    herr_t                  ret_value=SUCCEED;  /* Return value */
-
-    FUNC_ENTER_API(H5Sset_extent_none, FAIL);
-    H5TRACE1("e", "i", space_id);
-
-    /* Check args */
-    if (NULL == (space = (H5S_t *)H5I_object_verify(space_id, H5I_DATASPACE)))
-        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "not a data space")
-
-    /* Clear the previous extent from the dataspace */
-    if(H5S_extent_release(&space->extent)<0)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTDELETE, FAIL, "can't release previous dataspace")
-
-    space->extent.type=H5S_NO_CLASS;
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* end H5Sset_extent_none() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Soffset_simple
- PURPOSE
-    Changes the offset of a selection within a simple dataspace extent
- USAGE
-    herr_t H5Soffset_simple(space_id, offset)
-        hid_t space_id;	        IN: Dataspace object to reset
-        const hssize_t *offset; IN: Offset to position the selection at
- RETURNS
-    Non-negative on success/Negative on failure
- DESCRIPTION
-	This function creates an offset for the selection within an extent, allowing
-    the same shaped selection to be moved to different locations within a
-    dataspace without requiring it to be re-defined.
---------------------------------------------------------------------------*/
-herr_t
-H5Soffset_simple(hid_t space_id, const hssize_t *offset)
-{
-    H5S_t		   *space;	/* dataspace to modify */
-    herr_t                  ret_value=SUCCEED;  /* Return value */
-
-    FUNC_ENTER_API(H5Soffset_simple, FAIL);
-    H5TRACE2("e", "i*Hs", space_id, offset);
-
-    /* Check args */
-    if (NULL == (space = (H5S_t *)H5I_object_verify(space_id, H5I_DATASPACE)))
-        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "not a data space")
-    if (space->extent.rank==0 || (H5S_GET_EXTENT_TYPE(space)==H5S_SCALAR
-            || H5S_GET_EXTENT_TYPE(space)==H5S_NULL))
-        HGOTO_ERROR(H5E_ATOM, H5E_UNSUPPORTED, FAIL, "can't set offset on scalar or null dataspace")
-    if (offset == NULL)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no offset specified")
-
-    /* Set the selection offset */
-    if(H5S_select_offset(space,offset)<0)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINIT, FAIL, "can't set offset")
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* end H5Soffset_simple() */
-
-
-/*-------------------------------------------------------------------------
- * Function: H5S_set_extent
- *
- * Purpose: Modify the dimensions of a data space. Based on H5S_extend
- *
- * Return: Success: Non-negative
- *
- * Failure: Negative
- *
- * Programmer: Pedro Vicente, pvn@ncsa.uiuc.edu
- *
- * Date: March 13, 2002
- *
- *-------------------------------------------------------------------------
- */
-int
-H5S_set_extent(H5S_t *space, const hsize_t *size)
-{
-    unsigned u;                 /* Local index variable */
-    herr_t ret_value = 0;       /* Return value */
-
-    FUNC_ENTER_NOAPI(H5S_set_extent, FAIL);
-
-    /* Check args */
-    HDassert(space && H5S_SIMPLE == H5S_GET_EXTENT_TYPE(space));
-    HDassert(size);
-
-    /* Verify that the dimensions being changed are allowed to change */
-    for(u = 0; u < space->extent.rank; u++) {
-        if(space->extent.size[u] != size[u]) {
-            if(space->extent.max && H5S_UNLIMITED != space->extent.max[u] &&
-                     space->extent.max[u] < size[u])
-                 HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "dimension cannot be modified")
-            ret_value++;
-        } /* end if */
-    } /* end for */
-
-    /* Update */
-    if(ret_value)
-        H5S_set_extent_real(space, size);
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
-}
-
-/*-------------------------------------------------------------------------
- * Function: H5S_has_extent
- *
- * Purpose: Determines if a simple dataspace's extent has been set (e.g.,
- *          by H5Sset_extent_simple() ).  Helps avoid write errors.
- *
- * Return: TRUE if dataspace has extent set
- *         FALSE if dataspace's extent is uninitialized
- *
- * Programmer: James Laird
- *
- * Date: July 23, 2004
- *
- *-------------------------------------------------------------------------
- */
-hbool_t
-H5S_has_extent(const H5S_t *ds)
-{
-    htri_t ret_value;
-    FUNC_ENTER_NOAPI(H5S_has_extent, FAIL)
-
-    assert(ds);
-
-    if(ds->extent.rank==0 && ds->extent.nelem == 0 && ds->extent.type != H5S_NULL)
-        ret_value = FALSE;
-    else
-        ret_value = TRUE;
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-}
-
-
-/*-------------------------------------------------------------------------
- * Function: H5S_set_extent_real
- *
- * Purpose: Modify the dimensions of a data space. Based on H5S_extend
- *
- * Return: Success: Non-negative
- *
- * Failure: Negative
- *
- * Programmer: Pedro Vicente, pvn@ncsa.uiuc.edu
- *
- * Date: March 13, 2002
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5S_set_extent_real( H5S_t *space, const hsize_t *size )
-{
-    hsize_t nelem;      /* Number of elements in extent */
-    unsigned u;         /* Local index variable */
-    herr_t ret_value=SUCCEED;   /* Return value */
-
-    FUNC_ENTER_NOAPI(H5S_set_extent_real, FAIL );
-
-    /* Check args */
-    assert(space && H5S_SIMPLE==H5S_GET_EXTENT_TYPE(space));
-    assert(size);
-
-    /* Change the dataspace size & re-compute the number of elements in the extent */
-    for (u=0, nelem=1; u < space->extent.rank; u++ ) {
-        space->extent.size[u] = size[u];
-        nelem*=space->extent.size[u];
-    } /* end for */
-    space->extent.nelem = nelem;
-
-    /* If the selection is 'all', update the number of elements selected */
-    if(H5S_GET_SELECT_TYPE(space)==H5S_SEL_ALL)
-        if(H5S_select_all(space, FALSE)<0)
-            HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDELETE, FAIL, "can't change selection")
-
-    /* Mark the dataspace as no longer shared if it was before */
-    if(H5O_msg_reset_share(H5O_SDSPACE_ID, space) < 0)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTRESET, FAIL, "can't stop sharing dataspace")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value);
-} /* end H5S_set_extent_real() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5Sextent_equal
- *
- * Purpose:	Determines if two dataspace extents are equal.
- *
- * Return:	Success:	TRUE if equal, FALSE if unequal
- *
- *		Failure:	Negative
- *
- * Programmer:	Quincey Koziol
- *		Monday, October 24, 2005
- *
- *-------------------------------------------------------------------------
- */
-htri_t
-H5Sextent_equal(hid_t space1_id, hid_t space2_id)
-{
-    const H5S_t	*ds1, *ds2;     /* Dataspaces to compare */
-    htri_t	ret_value;
-
-    FUNC_ENTER_API(H5Sextent_equal, FAIL)
-    H5TRACE2("t", "ii", space1_id, space2_id);
-
-    /* check args */
-    if(NULL == (ds1 = (const H5S_t *)H5I_object_verify(space1_id, H5I_DATASPACE)) ||
-            NULL == (ds2 = (const H5S_t *)H5I_object_verify(space2_id, H5I_DATASPACE)))
-	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataspace")
-
-    /* Check dataspaces for extent's equality */
-    if((ret_value = H5S_extent_equal(ds1, ds2)) < 0)
-	HGOTO_ERROR(H5E_DATASPACE, H5E_CANTCOMPARE, FAIL, "dataspace comparison failed")
-
-done:
-    FUNC_LEAVE_API(ret_value)
-} /* end H5Sextent_equal() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5S_extent_equal
- PURPOSE
-    Check if two dataspaces have equal extents
- USAGE
-    htri_t H5S_extent_equal(ds1, ds2)
-        H5S_t *ds1, *ds2;	        IN: Dataspace objects to compare
- RETURNS
-     TRUE if equal, FALSE if unequal on succeess/Negative on failure
- DESCRIPTION
-	Compare two dataspaces if their extents are identical.
---------------------------------------------------------------------------*/
-static htri_t
-H5S_extent_equal(const H5S_t *ds1, const H5S_t *ds2)
-{
-    unsigned u;                 /* Local index variable */
-    htri_t ret_value = TRUE;    /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_extent_equal)
-
-    /* Check args */
-    HDassert(ds1);
-    HDassert(ds2);
-
-    /* Make certain the dataspaces are the same type */
-    if(ds1->extent.type != ds2->extent.type)
-        HGOTO_DONE(FALSE)
-
-    /* Make certain the dataspaces are the same rank */
-    if(ds1->extent.rank != ds2->extent.rank)
-        HGOTO_DONE(FALSE)
-
-    /* Make certain the dataspaces' current dimensions are the same size */
-    if(ds1->extent.rank > 0) {
-        HDassert(ds1->extent.size);
-        HDassert(ds2->extent.size);
-        for(u = 0; u < ds1->extent.rank; u++)
-            if(ds1->extent.size[u] != ds2->extent.size[u])
-                HGOTO_DONE(FALSE)
-    } /* end if */
-
-    /* Make certain the dataspaces' maximum dimensions are the same size */
-    if(ds1->extent.rank > 0) {
-        /* Check for no maximum dimensions on dataspaces */
-        if(ds1->extent.max != NULL && ds2->extent.max != NULL) {
-            for(u = 0; u < ds1->extent.rank; u++)
-                if(ds1->extent.max[u] != ds2->extent.max[u])
-                    HGOTO_DONE(FALSE)
-        } /* end if */
-        else
-            if((ds1->extent.max == NULL && ds2->extent.max != NULL) ||
-                    (ds1->extent.max != NULL && ds2->extent.max == NULL))
-                HGOTO_DONE(FALSE)
-    } /* end if */
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5S_extent_equal() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5S_extent_nelem
- *
- * Purpose:	Determines how many elements a dataset extent describes.
- *
- * Return:	Success:	Number of data points in the dataset extent.
- *		Failure:	negative
- *
- * Programmer:	Quincey Koziol
- *		Thursday, November 30, 2006
- *
- *-------------------------------------------------------------------------
- */
-hsize_t
-H5S_extent_nelem(const H5S_extent_t *ext)
-{
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_extent_nelem)
-
-    /* check args */
-    HDassert(ext);
-
-    /* Return the number of elements in extent */
-    FUNC_LEAVE_NOAPI(ext->nelem)
-} /* end H5S_extent_nelem() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5S_set_latest_version
- *
- * Purpose:     Set the encoding for a dataspace to the latest version.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:  Quincey Koziol
- *              Tuesday, July 24, 2007
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5S_set_latest_version(H5S_t *ds)
-{
-    herr_t ret_value = SUCCEED;         /* Return value */
-
-    FUNC_ENTER_NOAPI(H5S_set_latest_version, FAIL)
-
-    /* Sanity check */
-    HDassert(ds);
-
-    /* Set encoding of extent to latest version */
-    ds->extent.version = H5O_SDSPACE_VERSION_LATEST;
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5S_set_latest_version() */
-
-#ifndef H5_NO_DEPRECATED_SYMBOLS
-
-/*-------------------------------------------------------------------------
- * Function:	H5S_extend
- *
- * Purpose:	Extend the dimensions of a data space.
- *
- * Return:	Success:	Number of dimensions whose size increased.
- *
- *		Failure:	Negative
- *
- * Programmer:	Robb Matzke
- *		Friday, January 30, 1998
- *
- *-------------------------------------------------------------------------
- */
-int
-H5S_extend(H5S_t *space, const hsize_t *size)
-{
-    unsigned	u;
-    int	ret_value = 0;
-
-    FUNC_ENTER_NOAPI(H5S_extend, FAIL)
-
-    /* Check args */
-    HDassert(space && H5S_SIMPLE == H5S_GET_EXTENT_TYPE(space));
-    HDassert(size);
-
-    /* Check through all the dimensions to see if modifying the dataspace is allowed */
-    for(u = 0; u < space->extent.rank; u++) {
-        if(space->extent.size[u]<size[u]) {
-            if(space->extent.max && H5S_UNLIMITED!=space->extent.max[u] &&
-                    space->extent.max[u]<size[u])
-                HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "dimension cannot be increased")
-            ret_value++;
-        } /* end if */
-    } /* end for */
-
-    /* Update */
-    if(ret_value) {
-        hsize_t nelem;  /* Number of elements in extent */
-
-        /* Change the dataspace size & re-compute the number of elements in the extent */
-        for(u = 0, nelem = 1; u < space->extent.rank; u++) {
-            if(space->extent.size[u] < size[u])
-                space->extent.size[u] = size[u];
-
-            nelem *= space->extent.size[u];
-        } /* end for */
-        space->extent.nelem = nelem;
-
-        /* If the selection is 'all', update the number of elements selected */
-        if(H5S_GET_SELECT_TYPE(space) == H5S_SEL_ALL)
-            if(H5S_select_all(space, FALSE) < 0)
-                HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDELETE, FAIL, "can't change selection")
-
-        /* Mark the dataspace as no longer shared if it was before */
-        if(H5O_msg_reset_share(H5O_SDSPACE_ID, space) < 0)
-            HGOTO_ERROR(H5E_DATASPACE, H5E_CANTRESET, FAIL, "can't stop sharing dataspace")
-    } /* end if */
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5S_extend() */
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
-

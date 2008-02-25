@@ -1,1516 +1,2773 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
- * All rights reserved.                                                      *
- *                                                                           *
- * This file is part of HDF5.  The full HDF5 copyright notice, including     *
- * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+/****************************************************************************
+* NCSA HDF								   *
+* Software Development Group						   *
+* National Center for Supercomputing Applications			   *
+* University of Illinois at Urbana-Champaign				   *
+* 605 E. Springfield, Champaign IL 61820				   *
+*									   *
+* For conditions of distribution and use, see the accompanying		   *
+* hdf/COPYING file.							   *
+*									   *
+****************************************************************************/
 
-/* Programmer:  Quincey Koziol <koziol@ncsa.uiuc.edu>
- *
- * Purpose:	Generic Property Functions
- */
+#ifdef RCSID
+static char		RcsId[] = "@(#)$Revision$";
+#endif
 
-/****************/
-/* Module Setup */
-/****************/
+/* $Id$ */
 
-#define H5P_PACKAGE		/*suppress error about including H5Ppkg	  */
+#include <stdarg.h>
 
-/* Interface initialization */
-#define H5_INTERFACE_INIT_FUNC	H5P_init_pub_interface
+/* Private header files */
+#include <H5private.h>		/* Generic Functions			*/
+#include <H5Iprivate.h>		/* IDs			  	*/
+#include <H5Bprivate.h>		/* B-tree subclass names	  	*/
+#include <H5Dprivate.h>		/* Datasets				*/
+#include <H5Eprivate.h>		/* Error handling		  	*/
+#include <H5MMprivate.h>	/* Memory management			*/
+#include <H5Pprivate.h>		/* Property lists		  	*/
 
+#define PABLO_MASK	H5P_mask
 
-/***********/
-/* Headers */
-/***********/
-#include "H5private.h"		/* Generic Functions			*/
-#include "H5Eprivate.h"		/* Error handling		  	*/
-#include "H5Iprivate.h"		/* IDs			  		*/
-#include "H5Ppkg.h"		/* Property lists		  	*/
+/* Is the interface initialized? */
+static hbool_t		interface_initialize_g = FALSE;
+#define INTERFACE_INIT H5P_init_interface
+static herr_t		H5P_init_interface(void);
 
-/****************/
-/* Local Macros */
-/****************/
+/* PRIVATE PROTOTYPES */
+static void		H5P_term_interface(void);
 
-
-/******************/
-/* Local Typedefs */
-/******************/
-
-
-/********************/
-/* Local Prototypes */
-/********************/
-
-
-/*********************/
-/* Package Variables */
-/*********************/
-
-
-/*****************************/
-/* Library Private Variables */
-/*****************************/
-
-
-/*******************/
-/* Local Variables */
-/*******************/
-
-
 /*--------------------------------------------------------------------------
 NAME
-   H5P_init_pub_interface -- Initialize interface-specific information
+   H5P_init_interface -- Initialize interface-specific information
 USAGE
-    herr_t H5P_init_pub_interface()
+    herr_t H5P_init_interface()
+   
 RETURNS
-    Non-negative on success/Negative on failure
+   SUCCEED/FAIL
 DESCRIPTION
-    Initializes any interface-specific data or routines.  (Just calls
-    H5P_init() currently).
+    Initializes any interface-specific data or routines.
 
 --------------------------------------------------------------------------*/
 static herr_t
-H5P_init_pub_interface(void)
+H5P_init_interface(void)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5P_init_pub_interface)
+    herr_t		    ret_value = SUCCEED;
+    intn		    i;
+    herr_t		    status;
 
-    FUNC_LEAVE_NOAPI(H5P_init())
-} /* H5P_init_pub_interface() */
+    FUNC_ENTER(H5P_init_interface, FAIL);
+
+    /*
+     * Make sure the file creation and file access default property lists are
+     * initialized since this might be done at run-time instead of compile
+     * time.
+     */
+    if (H5F_init_interface ()<0) {
+	HRETURN_ERROR (H5E_INTERNAL, H5E_CANTINIT, FAIL,
+		       "unable to initialize H5F and H5P interfaces");
+    }
+
+    assert(H5P_NCLASSES <= H5_TEMPLATE_MAX - H5_TEMPLATE_0);
+
+    /*
+     * Initialize the mappings between property list classes and atom
+     * groups. We keep the two separate because property list classes are
+     * publicly visible but atom groups aren't.
+     */
+    for (i = 0; i < H5P_NCLASSES; i++) {
+	status = H5I_init_group((H5I_group_t)(H5_TEMPLATE_0 +i),
+				H5I_TEMPID_HASHSIZE, 0, NULL);
+	if (status < 0) ret_value = FAIL;
+    }
+    if (ret_value < 0) {
+	HRETURN_ERROR(H5E_ATOM, H5E_CANTINIT, FAIL,
+		      "unable to initialize atom group");
+    }
+    
+    /*
+     * Register cleanup function.
+     */
+    if (H5_add_exit(H5P_term_interface) < 0) {
+	HRETURN_ERROR(H5E_INTERNAL, H5E_CANTINIT, FAIL,
+		      "unable to install atexit function");
+    }
+    
+    FUNC_LEAVE(ret_value);
+}
+
+/*--------------------------------------------------------------------------
+ NAME
+    H5P_term_interface
+ PURPOSE
+    Terminate various H5P objects
+ USAGE
+    void H5P_term_interface()
+ RETURNS
+    SUCCEED/FAIL
+ DESCRIPTION
+    Release the atom group and any other resources allocated.
+ GLOBAL VARIABLES
+ COMMENTS, BUGS, ASSUMPTIONS
+     Can't report errors...
+ EXAMPLES
+ REVISION LOG
+--------------------------------------------------------------------------*/
+static void
+H5P_term_interface(void)
+{
+    intn		    i;
+
+    for (i = 0; i < H5P_NCLASSES; i++) {
+	H5I_destroy_group((H5I_group_t)(H5_TEMPLATE_0 + i));
+    }
+}
+
+/*--------------------------------------------------------------------------
+ NAME
+    H5Pcreate
+ PURPOSE
+    Returns a copy of the default property list for some class of property
+ *  lists.
+ USAGE
+    herr_t H5Pcreate (type)
+	H5P_class_t type;	IN: Property list class whose default is
+ *				    desired.
+ RETURNS
+    Property list ID or FAIL
+ 
+ ERRORS
+    ARGS      BADVALUE	    Unknown property list class. 
+    ATOM      CANTINIT	    Can't register property list. 
+    INTERNAL  UNSUPPORTED   Not implemented yet. 
+
+ DESCRIPTION
+    Returns a copy of the default property list for some class of property
+ *  lists.
+--------------------------------------------------------------------------*/
+hid_t
+H5Pcreate (H5P_class_t type)
+{
+    hid_t		    ret_value = FAIL;
+    void		   *tmpl = NULL;
+
+    FUNC_ENTER(H5Pcreate, FAIL);
+    H5TRACE1("i","p",type);
+
+    /* Allocate a new property list and initialize it with default values */
+    switch (type) {
+    case H5P_FILE_CREATE:
+	if (NULL==(tmpl = H5MM_malloc(sizeof(H5F_create_t)))) {
+	    HRETURN_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL,
+			   "memory allocation failed");
+	}
+	memcpy(tmpl, &H5F_create_dflt, sizeof(H5F_create_t));
+	break;
+
+    case H5P_FILE_ACCESS:
+	if (NULL==(tmpl = H5MM_malloc(sizeof(H5F_access_t)))) {
+	    HRETURN_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL,
+			   "memory allocation failed");
+	}
+	memcpy(tmpl, &H5F_access_dflt, sizeof(H5F_access_t));
+	break;
+
+    case H5P_DATASET_CREATE:
+	if (NULL==(tmpl = H5MM_malloc(sizeof(H5D_create_t)))) {
+	    HRETURN_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL,
+			   "memory allocation failed");
+	}
+	memcpy(tmpl, &H5D_create_dflt, sizeof(H5D_create_t));
+	break;
+
+    case H5P_DATASET_XFER:
+	if (NULL==(tmpl = H5MM_malloc(sizeof(H5D_xfer_t)))) {
+	    HRETURN_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL,
+			   "memory allocation failed");
+	}
+	memcpy(tmpl, &H5D_xfer_dflt, sizeof(H5D_xfer_t));
+	break;
+
+    default:
+	HRETURN_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+		      "unknown property list class");
+    }
+
+    /* Atomize the new property list */
+    if ((ret_value = H5P_create(type, tmpl)) < 0) {
+	HRETURN_ERROR(H5E_ATOM, H5E_CANTINIT, FAIL,
+		      "unable to register property list");
+    }
+    FUNC_LEAVE(ret_value);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:	H5P_create
+ *
+ * Purpose:	Given a pointer to some property list struct, atomize the
+ *		property list and return its ID. The property list memory is
+ *		not copied, so the caller should not free it; it will be
+ *		freed by H5P_release().
+ *
+ * Return:	Success:	A new property list ID.
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *		Wednesday, December  3, 1997
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+hid_t
+H5P_create(H5P_class_t type, void *tmpl)
+{
+    hid_t	ret_value = FAIL;
+
+    FUNC_ENTER(H5P_create, FAIL);
+
+    /* check args */
+    assert(type >= 0 && type < H5P_NCLASSES);
+    assert(tmpl);
+
+    /* Atomize the new property list */
+    if ((ret_value=H5I_register((H5I_group_t)(H5_TEMPLATE_0+type), tmpl)) < 0) {
+	HRETURN_ERROR(H5E_ATOM, H5E_CANTINIT, FAIL,
+		      "unable to register property list");
+    }
+    
+    FUNC_LEAVE(ret_value);
+}
+
+/*--------------------------------------------------------------------------
+ NAME
+    H5Pclose
+ PURPOSE
+    Release access to a property list object.
+ USAGE
+    herr_t H5Pclose(oid)
+	hid_t oid;	 IN: property list object to release access to
+ RETURNS
+    SUCCEED/FAIL
+ DESCRIPTION
+	This function releases access to a property list object
+--------------------------------------------------------------------------*/
+herr_t
+H5Pclose (hid_t tid)
+{
+    H5P_class_t		type;
+    void		*tmpl = NULL;
+
+    FUNC_ENTER(H5Pclose, FAIL);
+    H5TRACE1("e","i",tid);
+
+    /* Check arguments */
+    if ((type=H5P_get_class (tid))<0 ||
+	NULL==(tmpl=H5I_object (tid))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list");
+    }
+	
+    /*
+     * Chuck the object!  When the reference count reaches zero then
+     * H5I_dec_ref() removes it from the group and we should free it.  The
+     * free function is not registered as part of the group because it takes
+     * an extra argument.
+     */
+    if (0==H5I_dec_ref(tid)) H5P_close (type, tmpl);
+
+    FUNC_LEAVE (SUCCEED);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5P_close
+ *
+ * Purpose:	Closes a property list and frees the memory associated with
+ *		the property list.
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *		Wednesday, February 18, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5P_close (H5P_class_t type, void *tmpl)
+{
+    H5F_access_t	*fa_list = (H5F_access_t*)tmpl;
+    H5D_create_t	*dc_list = (H5D_create_t*)tmpl;
+    
+    FUNC_ENTER (H5P_close, FAIL);
+
+    /* Check args */
+    if (!tmpl) HRETURN (SUCCEED);
+
+    /* Some property lists may need to do special things */
+    switch (type) {
+    case H5P_FILE_ACCESS:
+	switch (fa_list->driver) {
+	case H5F_LOW_ERROR:
+	case H5F_LOW_SEC2:
+	case H5F_LOW_STDIO:
+	case H5F_LOW_CORE:
+	    /* Nothing to do */
+	    break;
+
+	case H5F_LOW_MPIO:
+#ifdef LATER
+	    /* Need to free the COMM and INFO objects too. */
+#endif
+	    break;
+
+	case H5F_LOW_SPLIT:
+	    /* Free member info */
+	    fa_list->driver = H5F_LOW_ERROR; /*prevent cycles*/
+	    H5P_close (H5P_FILE_ACCESS, fa_list->u.split.meta_access);
+	    H5P_close (H5P_FILE_ACCESS, fa_list->u.split.raw_access);
+	    H5MM_xfree (fa_list->u.split.meta_ext);
+	    H5MM_xfree (fa_list->u.split.raw_ext);
+	    break;
+
+	case H5F_LOW_FAMILY:
+	    /* Free member info */
+	    H5P_close (H5P_FILE_ACCESS, fa_list->u.fam.memb_access);
+	    break;
+	}
+	break;
+	
+    case H5P_FILE_CREATE:
+	/*nothing to do*/
+	break;
+	
+    case H5P_DATASET_CREATE:
+	H5O_reset (H5O_EFL, &(dc_list->efl));
+	break;
+
+    case H5P_DATASET_XFER:
+	/*nothing to do*/
+	break;
+
+    default:
+	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
+		       "unknown property list class");
+    }
+
+    /* Free the property list struct and return */
+    H5MM_xfree(tmpl);
+    FUNC_LEAVE(SUCCEED);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_class
+ *
+ * Purpose:	Returns the class identifier for a property list.
+ *
+ * Return:	Success:	A property list class
+ *
+ *		Failure:	H5P_NO_CLASS (-1)
+ *
+ * Programmer:	Robb Matzke
+ *		Wednesday, December  3, 1997
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+H5P_class_t
+H5Pget_class (hid_t tid)
+{
+    H5I_group_t		    group;
+    H5P_class_t		    ret_value = H5P_NO_CLASS;
+
+    FUNC_ENTER(H5Pget_class, H5P_NO_CLASS);
+    H5TRACE1("p","i",tid);
+
+    if ((group = H5I_group(tid)) < 0 ||
+#ifndef NDEBUG
+	group >= H5_TEMPLATE_MAX ||
+#endif
+	group < H5_TEMPLATE_0) {
+	HRETURN_ERROR(H5E_ATOM, H5E_BADATOM, H5P_NO_CLASS,
+		      "not a property list");
+    }
+    ret_value = (H5P_class_t)(group - H5_TEMPLATE_0);
+    FUNC_LEAVE(ret_value);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5P_get_class
+ *
+ * Purpose:	Internal function for getting the property list class.
+ *
+ * Return:	Success:	A property list class
+ *
+ *		Failure:	H5P_NO_CLASS (-1)
+ *
+ * Programmer:	Robb Matzke
+ *              Tuesday, July  7, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+H5P_class_t
+H5P_get_class(hid_t tid)
+{
+    H5I_group_t		    group;
+    H5P_class_t		    ret_value = H5P_NO_CLASS;
+
+    FUNC_ENTER(H5P_get_class, H5P_NO_CLASS);
+
+    if ((group = H5I_group(tid)) < 0 ||
+#ifndef NDEBUG
+	group >= H5_TEMPLATE_MAX ||
+#endif
+	group < H5_TEMPLATE_0) {
+	HRETURN_ERROR(H5E_ATOM, H5E_BADATOM, H5P_NO_CLASS,
+		      "not a property list");
+    }
+    ret_value = (H5P_class_t)(group - H5_TEMPLATE_0);
+    FUNC_LEAVE(ret_value);
+}
+    
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_version
+ *
+ * Purpose:	Retrieves version information for various parts of a file.
+ *
+ *		BOOT:		The file boot block.
+ *		HEAP:		The global heap.
+ *		FREELIST:	The global free list.
+ *		STAB:		The root symbol table entry.
+ *		SHHDR:		Shared object headers.
+ *
+ *		Any (or even all) of the output arguments can be null
+ *		pointers.
+ *
+ * Return:	Success:	SUCCEED, version information is returned
+ *				through the arguments.
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *		Wednesday, January  7, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_version (hid_t tid, int *boot/*out*/, int *freelist/*out*/,
+	       int *stab/*out*/, int *shhdr/*out*/)
+{
+    H5F_create_t	   *tmpl = NULL;
+
+    FUNC_ENTER(H5Pget_version, FAIL);
+    H5TRACE5("e","ixxxx",tid,boot,freelist,stab,shhdr);
+
+    /* Check arguments */
+    if (H5P_FILE_CREATE != H5P_get_class(tid) ||
+	NULL == (tmpl = H5I_object(tid))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a file creation property list");
+    }
+    /* Get values */
+    if (boot) *boot = tmpl->bootblock_ver;
+    if (freelist) *freelist = tmpl->freespace_ver;
+    if (stab) *stab = tmpl->objectdir_ver;
+    if (shhdr) *shhdr = tmpl->sharedheader_ver;
+
+    FUNC_LEAVE(SUCCEED);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_userblock
+ *
+ * Purpose:	Sets the userblock size field of a file creation property
+ *		list.
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *		Tuesday, January  6, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_userblock (hid_t tid, hsize_t size)
+{
+    uintn		    i;
+    H5F_create_t	   *tmpl = NULL;
+
+    FUNC_ENTER(H5Pset_userblock, FAIL);
+    H5TRACE2("e","ih",tid,size);
+
+    /* Check arguments */
+    if (H5P_FILE_CREATE != H5P_get_class(tid) ||
+	NULL == (tmpl = H5I_object(tid))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a file creation property list");
+    }
+    for (i=8; i<8*sizeof(hsize_t); i++) {
+	hsize_t p2 = 8==i ? 0 : ((hsize_t)1<<i);
+	if (size == p2) break;
+    }
+    if (i>=8*sizeof(hsize_t)) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+		      "userblock size is not valid");
+    }
+    /* Set value */
+    tmpl->userblock_size = size;
+
+    FUNC_LEAVE(SUCCEED);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_userblock
+ *
+ * Purpose:	Queries the size of a user block in a file creation property
+ *		list.
+ *
+ * Return:	Success:	SUCCEED, size returned through SIZE argument.
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *		Wednesday, January  7, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_userblock (hid_t tid, hsize_t *size)
+{
+    H5F_create_t	*tmpl = NULL;
+
+    FUNC_ENTER(H5Pget_userblock, FAIL);
+    H5TRACE2("e","i*h",tid,size);
+
+    /* Check args */
+    if (H5P_FILE_CREATE != H5P_get_class(tid) ||
+	NULL == (tmpl = H5I_object(tid))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a file creation property list");
+    }
+    /* Get value */
+    if (size) *size = tmpl->userblock_size;
+
+    FUNC_LEAVE(SUCCEED);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_alignment
+ *
+ * Purpose:	Sets the alignment properties of a file access property list
+ *		so that any file object >= THRESHOLD bytes will be aligned on
+ *		an address which is a multiple of ALIGNMENT.  The addresses
+ *		are relative to the end of the user block; the alignment is
+ *		calculated by subtracting the user block size from the
+ *		absolute file address and then adjusting the address to be a
+ *		multiple of ALIGNMENT.
+ *
+ *		Default values for THRESHOLD and ALIGNMENT are one, implying
+ *		no alignment.  Generally the default values will result in
+ *		the best performance for single-process access to the file.
+ *		For MPI-IO and other parallel systems, choose an alignment
+ *		which is a multiple of the disk block size.
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *              Tuesday, June  9, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_alignment (hid_t fapl_id, hsize_t threshold, hsize_t alignment)
+{
+    H5F_access_t	*fapl = NULL;
+    
+    FUNC_ENTER (H5Pset_alignment, FAIL);
+    H5TRACE3("e","ihh",fapl_id,threshold,alignment);
+
+    /* Check args */
+    if (H5P_FILE_ACCESS != H5P_get_class (fapl_id) ||
+	NULL == (fapl = H5I_object (fapl_id))) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
+		       "not a file access property list");
+    }
+    if (alignment<1) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "alignment must be positive");
+    }
+
+    /* Set values */
+    fapl->threshold = threshold;
+    fapl->alignment = alignment;
+
+    FUNC_LEAVE (SUCCEED);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_alignment
+ *
+ * Purpose:	Returns the current settings for alignment properties from a
+ *		file access property list.  The THRESHOLD and/or ALIGNMENT
+ *		pointers may be null pointers.
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *              Tuesday, June  9, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_alignment (hid_t fapl_id, hsize_t *threshold/*out*/,
+		  hsize_t *alignment/*out*/)
+{
+    H5F_access_t	*fapl = NULL;
+
+    FUNC_ENTER (H5Pget_alignment, FAIL);
+    H5TRACE3("e","ixx",fapl_id,threshold,alignment);
+
+    /* Check args */
+    if (H5P_FILE_ACCESS != H5P_get_class (fapl_id) ||
+	NULL == (fapl = H5I_object (fapl_id))) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
+		       "not a file access property list");
+    }
+
+    /* Get values */
+    if (threshold) *threshold = fapl->threshold;
+    if (alignment) *alignment = fapl->alignment;
+
+    FUNC_LEAVE (SUCCEED);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_sizes
+ *
+ * Purpose:	Sets file size-of addresses and sizes.	TID should be a file
+ *		creation property list.  A value of zero causes the property
+ *		to not change.
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *		Tuesday, January  6, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_sizes (hid_t tid, size_t sizeof_addr, size_t sizeof_size)
+{
+    H5F_create_t	   *tmpl = NULL;
+
+    FUNC_ENTER(H5Pset_sizeof_addr, FAIL);
+    H5TRACE3("e","izz",tid,sizeof_addr,sizeof_size);
+
+    /* Check arguments */
+    if (H5P_FILE_CREATE != H5P_get_class(tid) ||
+	NULL == (tmpl = H5I_object(tid))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a file creation property list");
+    }
+    if (sizeof_addr) {
+	if (sizeof_addr != 2 && sizeof_addr != 4 &&
+	    sizeof_addr != 8 && sizeof_addr != 16) {
+	    HRETURN_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+			  "file haddr_t size is not valid");
+	}
+    }
+    if (sizeof_size) {
+	if (sizeof_size != 2 && sizeof_size != 4 &&
+	    sizeof_size != 8 && sizeof_size != 16) {
+	    HRETURN_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+			  "file size_t size is not valid");
+	}
+    }
+    /* Set value */
+    if (sizeof_addr)
+	tmpl->sizeof_addr = sizeof_addr;
+    if (sizeof_size)
+	tmpl->sizeof_size = sizeof_size;
+
+    FUNC_LEAVE(SUCCEED);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_sizes
+ *
+ * Purpose:	Returns the size of address and size quantities stored in a
+ *		file according to a file creation property list.  Either (or
+ *		even both) SIZEOF_ADDR and SIZEOF_SIZE may be null pointers.
+ *
+ * Return:	Success:	SUCCEED, sizes returned through arguments.
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *		Wednesday, January  7, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_sizes (hid_t tid,
+	     size_t *sizeof_addr /*out */ , size_t *sizeof_size /*out */ )
+{
+    H5F_create_t	   *tmpl = NULL;
+
+    FUNC_ENTER(H5Pget_sizes, FAIL);
+    H5TRACE3("e","ixx",tid,sizeof_addr,sizeof_size);
+
+    /* Check args */
+    if (H5P_FILE_CREATE != H5P_get_class(tid) ||
+	NULL == (tmpl = H5I_object(tid))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a file creation property list");
+    }
+    /* Get values */
+    if (sizeof_addr)
+	*sizeof_addr = tmpl->sizeof_addr;
+    if (sizeof_size)
+	*sizeof_size = tmpl->sizeof_size;
+
+    FUNC_LEAVE(SUCCEED);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_sym_k
+ *
+ * Purpose:	IK is one half the rank of a tree that stores a symbol
+ *		table for a group.  Internal nodes of the symbol table are on
+ *		average 75% full.  That is, the average rank of the tree is
+ *		1.5 times the value of IK.
+ *
+ *		LK is one half of the number of symbols that can be stored in
+ *		a symbol table node.  A symbol table node is the leaf of a
+ *		symbol table tree which is used to store a group.  When
+ *		symbols are inserted randomly into a group, the group's
+ *		symbol table nodes are 75% full on average.  That is, they
+ *		contain 1.5 times the number of symbols specified by LK.
+ *
+ *		Either (or even both) of IK and LK can be zero in which case
+ *		that value is left unchanged.
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *		Tuesday, January  6, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_sym_k (hid_t tid, int ik, int lk)
+{
+    H5F_create_t	   *tmpl = NULL;
+
+    FUNC_ENTER(H5Pset_sym_k, FAIL);
+    H5TRACE3("e","iIsIs",tid,ik,lk);
+
+    /* Check arguments */
+    if (H5P_FILE_CREATE != H5P_get_class(tid) ||
+	NULL == (tmpl = H5I_object(tid))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a file creation property list");
+    }
+    /* Set values */
+    if (ik > 0) {
+	tmpl->btree_k[H5B_SNODE_ID] = ik;
+    }
+    if (lk > 0) {
+	tmpl->sym_leaf_k = lk;
+    }
+    FUNC_LEAVE(SUCCEED);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_sym_k
+ *
+ * Purpose:	Retrieves the symbol table B-tree 1/2 rank (IK) and the
+ *		symbol table leaf node 1/2 size (LK).  See H5Pset_sym_k() for
+ *		details. Either (or even both) IK and LK may be null
+ *		pointers.
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *		Wednesday, January  7, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_sym_k (hid_t tid, int *ik /*out */ , int *lk /*out */ )
+{
+    H5F_create_t	   *tmpl = NULL;
+
+    FUNC_ENTER(H5Pget_sym_k, FAIL);
+    H5TRACE3("e","ixx",tid,ik,lk);
+
+    /* Check arguments */
+    if (H5P_FILE_CREATE != H5P_get_class(tid) ||
+	NULL == (tmpl = H5I_object(tid))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a file creation property list");
+    }
+    /* Get values */
+    if (ik)
+	*ik = tmpl->btree_k[H5B_SNODE_ID];
+    if (lk)
+	*lk = tmpl->sym_leaf_k;
+
+    FUNC_LEAVE(SUCCEED);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_istore_k
+ *
+ * Purpose:	IK is one half the rank of a tree that stores chunked raw
+ *		data.  On average, such a tree will be 75% full, or have an
+ *		average rank of 1.5 times the value of IK.
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *		Tuesday, January  6, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_istore_k (hid_t tid, int ik)
+{
+    H5F_create_t	   *tmpl = NULL;
+
+    FUNC_ENTER(H5Pset_istore_k, FAIL);
+    H5TRACE2("e","iIs",tid,ik);
+
+    /* Check arguments */
+    if (H5P_FILE_CREATE != H5P_get_class(tid) ||
+	NULL == (tmpl = H5I_object(tid))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a file creation property list");
+    }
+    if (ik <= 0) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+		      "istore IK value must be positive");
+    }
+    /* Set value */
+    tmpl->btree_k[H5B_ISTORE_ID] = ik;
+
+    FUNC_LEAVE(SUCCEED);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_istore_k
+ *
+ * Purpose:	Queries the 1/2 rank of an indexed storage B-tree.  See
+ *		H5Pset_istore_k() for details.	The argument IK may be the
+ *		null pointer.
+ *
+ * Return:	Success:	SUCCEED, size returned through IK
+ *
+ *		Failure:	
+ *
+ * Programmer:	Robb Matzke
+ *		Wednesday, January  7, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_istore_k (hid_t tid, int *ik /*out */ )
+{
+    H5F_create_t	   *tmpl = NULL;
+
+    FUNC_ENTER(H5Pget_istore_k, FAIL);
+    H5TRACE2("e","ix",tid,ik);
+
+    /* Check arguments */
+    if (H5P_FILE_CREATE != H5P_get_class(tid) ||
+	NULL == (tmpl = H5I_object(tid))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a file creation property list");
+    }
+    /* Get value */
+    if (ik)
+	*ik = tmpl->btree_k[H5B_ISTORE_ID];
+
+    FUNC_LEAVE(SUCCEED);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_layout
+ *
+ * Purpose:	Sets the layout of raw data in the file.
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *		Tuesday, January  6, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_layout (hid_t tid, H5D_layout_t layout)
+{
+    H5D_create_t	   *tmpl = NULL;
+
+    FUNC_ENTER(H5Pset_layout, FAIL);
+    H5TRACE2("e","iDl",tid,layout);
+
+    /* Check arguments */
+    if (H5P_DATASET_CREATE != H5P_get_class(tid) ||
+	NULL == (tmpl = H5I_object(tid))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a dataset creation property list");
+    }
+    if (layout < 0 || layout >= H5D_NLAYOUTS) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADRANGE, FAIL,
+		      "raw data layout method is not valid");
+    }
+    /* Set value */
+    tmpl->layout = layout;
+
+    FUNC_LEAVE(SUCCEED);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_layout
+ *
+ * Purpose:	Retrieves layout type of a dataset creation property list.
+ *
+ * Return:	Success:	The layout type
+ *
+ *		Failure:	H5D_LAYOUT_ERROR (-1, same as FAIL)
+ *
+ * Programmer:	Robb Matzke
+ *		Wednesday, January  7, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+H5D_layout_t
+H5Pget_layout (hid_t tid)
+{
+    H5D_create_t	   *tmpl = NULL;
+
+    FUNC_ENTER(H5Pget_layout, H5D_LAYOUT_ERROR);
+    H5TRACE1("Dl","i",tid);
+
+    /* Check arguments */
+    if (H5P_DATASET_CREATE != H5P_get_class(tid) ||
+	NULL == (tmpl = H5I_object(tid))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, H5D_LAYOUT_ERROR,
+		      "not a dataset creation property list");
+    }
+    FUNC_LEAVE(tmpl->layout);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_chunk
+ *
+ * Purpose:	Sets the number of dimensions and the size of each chunk to
+ *		the values specified.  The dimensionality of the chunk should
+ *		match the dimensionality of the data space.
+ *
+ *		As a side effect, the layout method is changed to
+ *		H5D_CHUNKED.
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *		Tuesday, January  6, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_chunk (hid_t tid, int ndims, const hsize_t dim[])
+{
+    int			    i;
+    H5D_create_t	   *tmpl = NULL;
+
+    FUNC_ENTER(H5Pset_chunk, FAIL);
+    H5TRACE3("e","iIs*h",tid,ndims,dim);
+
+    /* Check arguments */
+    if (H5P_DATASET_CREATE != H5P_get_class(tid) ||
+	NULL == (tmpl = H5I_object(tid))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a dataset creation property list");
+    }
+    if (ndims <= 0) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADRANGE, FAIL,
+		      "chunk dimensionality must be positive");
+    }
+    if ((size_t)ndims > NELMTS(tmpl->chunk_size)) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADRANGE, FAIL,
+		      "chunk dimensionality is too large");
+    }
+    if (!dim) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+		      "no chunk dimensions specified");
+    }
+    for (i=0; i<ndims; i++) {
+	if (dim[i] <= 0) {
+	    HRETURN_ERROR(H5E_ARGS, H5E_BADRANGE, FAIL,
+			  "all chunk dimensions must be positive");
+	}
+    }
+
+    /* Set value */
+    tmpl->layout = H5D_CHUNKED;
+    tmpl->chunk_ndims = ndims;
+    for (i = 0; i < ndims; i++) {
+	tmpl->chunk_size[i] = dim[i];
+    }
+
+    FUNC_LEAVE(SUCCEED);
+}
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_chunk
+ *
+ * Purpose:	Retrieves the chunk size of chunked layout.  The chunk
+ *		dimensionality is returned and the chunk size in each
+ *		dimension is returned through the DIM argument.	 At most
+ *		MAX_NDIMS elements of DIM will be initialized.
+ *
+ * Return:	Success:	Positive Chunk dimensionality.
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *		Wednesday, January  7, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+int
+H5Pget_chunk (hid_t tid, int max_ndims, hsize_t dim[]/*out*/)
+{
+    int			i;
+    H5D_create_t	*tmpl = NULL;
+
+    FUNC_ENTER(H5Pget_chunk, FAIL);
+    H5TRACE3("Is","iIsx",tid,max_ndims,dim);
+
+    /* Check arguments */
+    if (H5P_DATASET_CREATE != H5P_get_class(tid) ||
+	NULL == (tmpl = H5I_object(tid))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a dataset creation property list");
+    }
+    if (H5D_CHUNKED != tmpl->layout) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL,
+		      "not a chunked storage layout");
+    }
+    for (i=0; i<tmpl->chunk_ndims && i<max_ndims && dim; i++) {
+	dim[i] = tmpl->chunk_size[i];
+    }
+
+    FUNC_LEAVE(tmpl->chunk_ndims);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_external
+ *
+ * Purpose:	Adds an external file to the list of external files. PLIST_ID
+ *		should be an object ID for a dataset creation property list.
+ *		NAME is the name of an external file, OFFSET is the location
+ *		where the data starts in that file, and SIZE is the number of
+ *		bytes reserved in the file for the data.
+ *
+ *		If a dataset is split across multiple files then the files
+ *		should be defined in order. The total size of the dataset is
+ *		the sum of the SIZE arguments for all the external files.  If
+ *		the total size is larger than the size of a dataset then the
+ *		dataset can be extended (provided the data space also allows
+ *		the extending).
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *		Tuesday, March	3, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_external (hid_t plist_id, const char *name, off_t offset, hsize_t size)
+{
+    int			idx;
+    size_t		total, tmp;
+    H5D_create_t	*plist = NULL;
+
+    FUNC_ENTER(H5Pset_external, FAIL);
+    H5TRACE4("e","isoh",plist_id,name,offset,size);
+
+    /* Check arguments */
+    if (H5P_DATASET_CREATE != H5P_get_class(plist_id) ||
+	NULL == (plist = H5I_object(plist_id))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a dataset creation property list");
+    }
+    if (!name || !*name) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "no name given");
+    }
+    if (offset<0) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "negative external file offset");
+    }
+    if (size<=0) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "zero size");
+    }
+    if (plist->efl.nused>0 &&
+	H5O_EFL_UNLIMITED==plist->efl.slot[plist->efl.nused-1].size) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "previous file size is unlimited");
+    }
+    if (H5O_EFL_UNLIMITED!=size) {
+	for (idx=0, total=size; idx<plist->efl.nused; idx++, total=tmp) {
+	    tmp = total + plist->efl.slot[idx].size;
+	    if (tmp <= total) {
+		HRETURN_ERROR (H5E_EFL, H5E_OVERFLOW, FAIL,
+			       "total external data size overflowed");
+	    }
+	}
+    }
+    
+    /* Add to the list */
+    if (plist->efl.nused>=plist->efl.nalloc) {
+	intn na = plist->efl.nalloc + H5O_EFL_ALLOC;
+	H5O_efl_entry_t *x = H5MM_realloc (plist->efl.slot,
+					   na*sizeof(H5O_efl_entry_t));
+	if (!x) {
+	    HRETURN_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL,
+			   "memory allocation failed");
+	}
+	plist->efl.nalloc = na;
+	plist->efl.slot = x;
+    }
+    idx = plist->efl.nused;
+    plist->efl.slot[idx].name_offset = 0; /*not entered into heap yet*/
+    plist->efl.slot[idx].name = H5MM_xstrdup (name);
+    plist->efl.slot[idx].offset = offset;
+    plist->efl.slot[idx].size = size;
+    plist->efl.nused++;
+
+    FUNC_LEAVE(SUCCEED);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_external_count
+ *
+ * Purpose:	Returns the number of external files for this dataset.
+ *
+ * Return:	Success:	Number of external files
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *              Tuesday, March  3, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+int
+H5Pget_external_count (hid_t plist_id)
+{
+    H5D_create_t	*plist = NULL;
+    
+    FUNC_ENTER (H5Pget_external_count, FAIL);
+    H5TRACE1("Is","i",plist_id);
+    
+    /* Check arguments */
+    if (H5P_DATASET_CREATE != H5P_get_class(plist_id) ||
+	NULL == (plist = H5I_object(plist_id))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a dataset creation property list");
+    }
+
+    /* Return */
+    FUNC_LEAVE (plist->efl.nused);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_external
+ *
+ * Purpose:	Returns information about an external file.  External files
+ *		are numbered from zero to N-1 where N is the value returned
+ *		by H5Pget_external_count().  At most NAME_SIZE characters are
+ *		copied into the NAME array.  If the external file name is
+ *		longer than NAME_SIZE with the null terminator, then the
+ *		return value is not null terminated (similar to strncpy()).
+ *
+ *		If NAME_SIZE is zero or NAME is the null pointer then the
+ *		external file name is not returned.  If OFFSET or SIZE are
+ *		null pointers then the corresponding information is not
+ *		returned.
+ *
+ * See Also:	H5Pset_external()
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *              Tuesday, March  3, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_external (hid_t plist_id, int idx, size_t name_size, char *name/*out*/,
+		 off_t *offset/*out*/, hsize_t *size/*out*/)
+{
+    H5D_create_t	*plist = NULL;
+    
+    FUNC_ENTER (H5Pget_external, FAIL);
+    H5TRACE6("e","iIszxxx",plist_id,idx,name_size,name,offset,size);
+    
+    /* Check arguments */
+    if (H5P_DATASET_CREATE != H5P_get_class(plist_id) ||
+	NULL == (plist = H5I_object(plist_id))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a dataset creation property list");
+    }
+    if (idx<0 || idx>=plist->efl.nused) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADRANGE, FAIL,
+		       "external file index is out of range");
+    }
+
+    /* Return values */
+    if (name_size>0 && name) {
+	strncpy (name, plist->efl.slot[idx].name, name_size);
+    }
+    if (offset) *offset = plist->efl.slot[idx].offset;
+    if (size) *size = plist->efl.slot[idx].size;
+
+    FUNC_LEAVE (SUCCEED);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_driver
+ *
+ * Purpose:	Return the ID of the low-level file driver.  TID should be a
+ *		file access property list.
+ *
+ * Return:	Success:	A low-level driver ID
+ *
+ *		Failure:	H5F_LOW_ERROR (a negative value)
+ *
+ * Programmer:	Robb Matzke
+ *		Thursday, February 26, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+H5F_driver_t
+H5Pget_driver (hid_t tid)
+{
+    H5F_access_t	*tmpl = NULL;
+
+    FUNC_ENTER (H5Pget_driver, H5F_LOW_ERROR);
+    H5TRACE1("Fd","i",tid);
+
+    /* Check arguments */
+    if (H5P_FILE_ACCESS != H5P_get_class (tid) ||
+	NULL == (tmpl = H5I_object (tid))) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, H5F_LOW_ERROR,
+		       "not a file access property list");
+    }
+
+    FUNC_LEAVE (tmpl->driver);
+}
+    
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_stdio
+ *
+ * Purpose:	Set the low level file driver to use the functions declared
+ *		in the stdio.h file: fopen(), fseek() or fseek64(), fread(),
+ *		fwrite(), and fclose().
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *		Thursday, February 19, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_stdio (hid_t tid)
+{
+    H5F_access_t	*tmpl = NULL;
+    
+    FUNC_ENTER (H5Pset_stdio, FAIL);
+    H5TRACE1("e","i",tid);
+
+    /* Check arguments */
+    if (H5P_FILE_ACCESS != H5P_get_class(tid) ||
+	NULL == (tmpl = H5I_object(tid))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a file access property list");
+    }
+
+    /* Set driver */
+    tmpl->driver = H5F_LOW_STDIO;
+
+    FUNC_LEAVE (SUCCEED);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_stdio
+ *
+ * Purpose:	If the file access property list is set to the stdio driver
+ *		then this function returns zero; otherwise it returns a
+ *		negative value.	 In the future, additional arguments may be
+ *		added to this function to match those added to H5Pset_stdio().
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *		Thursday, February 26, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_stdio (hid_t tid)
+{
+    H5F_access_t	*tmpl = NULL;
+
+    FUNC_ENTER (H5Pget_stdio, FAIL);
+    H5TRACE1("e","i",tid);
+
+    /* Check arguments */
+    if (H5P_FILE_ACCESS != H5P_get_class (tid) ||
+	NULL == (tmpl = H5I_object (tid))) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
+		       "not a file access property list");
+    }
+    if (H5F_LOW_STDIO != tmpl->driver) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "the stdio driver is not set");
+    }
+
+    FUNC_LEAVE (SUCCEED);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_sec2
+ *
+ * Purpose:	Set the low-level file driver to use the functions declared
+ *		in the unistd.h file: open(), lseek() or lseek64(), read(),
+ *		write(), and close().
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *		Thursday, February 19, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_sec2 (hid_t tid)
+{
+    H5F_access_t	*tmpl = NULL;
+    
+    FUNC_ENTER (H5Pset_sec2, FAIL);
+    H5TRACE1("e","i",tid);
+
+    /* Check arguments */
+    if (H5P_FILE_ACCESS != H5P_get_class(tid) ||
+	NULL == (tmpl = H5I_object(tid))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a file access property list");
+    }
+
+    /* Set driver */
+    tmpl->driver = H5F_LOW_SEC2;
+
+    FUNC_LEAVE (SUCCEED);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_sec2
+ *
+ * Purpose:	If the file access property list is set to the sec2 driver
+ *		then this function returns zero; otherwise it returns a
+ *		negative value.	 In the future, additional arguments may be
+ *		added to this function to match those added to H5Pset_sec2().
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *		Thursday, February 26, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_sec2 (hid_t tid)
+{
+    H5F_access_t	*tmpl = NULL;
+
+    FUNC_ENTER (H5Pget_sec2, FAIL);
+    H5TRACE1("e","i",tid);
+
+    /* Check arguments */
+    if (H5P_FILE_ACCESS != H5P_get_class (tid) ||
+	NULL == (tmpl = H5I_object (tid))) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
+		       "not a file access property list");
+    }
+    if (H5F_LOW_SEC2 != tmpl->driver) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "the sec2 driver is not set");
+    }
+
+    FUNC_LEAVE (SUCCEED);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_core
+ *
+ * Purpose:	Set the low-level file driver to use malloc() and free().
+ *		This driver is restricted to temporary files which are not
+ *		larger than the amount of virtual memory available. The
+ *		INCREMENT argument determines the file block size and memory
+ *		will be allocated in multiples of INCREMENT bytes. A liberal
+ *		INCREMENT results in fewer calls to realloc() and probably
+ *		less memory fragmentation.
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *		Thursday, February 19, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_core (hid_t tid, size_t increment)
+{
+    H5F_access_t	*tmpl = NULL;
+    
+    FUNC_ENTER (H5Pset_core, FAIL);
+    H5TRACE2("e","iz",tid,increment);
+
+    /* Check arguments */
+    if (H5P_FILE_ACCESS != H5P_get_class(tid) ||
+	NULL == (tmpl = H5I_object(tid))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a file access property list");
+    }
+    if (increment<1) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "increment must be positive");
+    }
+
+    /* Set driver */
+    tmpl->driver = H5F_LOW_CORE;
+    tmpl->u.core.increment = increment;
+
+    FUNC_LEAVE (SUCCEED);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_core
+ *
+ * Purpose:	If the file access property list is set to the core driver
+ *		then this function returns zero; otherwise it returns a
+ *		negative value.	 On success, the block size is returned
+ *		through the INCREMENT argument if it isn't the null pointer.
+ *		In the future, additional arguments may be added to this
+ *		function to match those added to H5Pset_core().
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *		Thursday, February 26, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_core (hid_t tid, size_t *increment/*out*/)
+{
+    H5F_access_t	*tmpl = NULL;
+
+    FUNC_ENTER (H5Pget_core, FAIL);
+    H5TRACE2("e","ix",tid,increment);
+
+    /* Check arguments */
+    if (H5P_FILE_ACCESS != H5P_get_class (tid) ||
+	NULL == (tmpl = H5I_object (tid))) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
+		       "not a file access property list");
+    }
+    if (H5F_LOW_CORE != tmpl->driver) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "the core driver is not set");
+    }
+
+    /* Return values */
+    if (increment) {
+	*increment = tmpl->u.core.increment;
+    }
+    
+    FUNC_LEAVE (SUCCEED);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_split
+ *
+ * Purpose:	Set the low-level driver to split meta data from raw data,
+ *		storing meta data in one file and raw data in another file.
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *		Thursday, February 19, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_split (hid_t tid, const char *meta_ext, hid_t meta_tid,
+	      const char *raw_ext, hid_t raw_tid)
+{
+    H5F_access_t	*tmpl = NULL;
+    H5F_access_t	*meta_tmpl = &H5F_access_dflt;
+    H5F_access_t	*raw_tmpl = &H5F_access_dflt;
+    
+    FUNC_ENTER (H5Pset_split, FAIL);
+    H5TRACE5("e","isisi",tid,meta_ext,meta_tid,raw_ext,raw_tid);
+
+    /* Check arguments */
+    if (H5P_FILE_ACCESS != H5P_get_class(tid) ||
+	NULL == (tmpl = H5I_object(tid))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a file access property list");
+    }
+    if (H5P_DEFAULT!=meta_tid &&
+	(H5P_FILE_ACCESS != H5P_get_class(meta_tid) ||
+	 NULL == (meta_tmpl = H5I_object(meta_tid)))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a file access property list");
+    }
+    if (H5P_DEFAULT!=raw_tid &&
+	(H5P_FILE_ACCESS != H5P_get_class(raw_tid) ||
+	 NULL == (raw_tmpl = H5I_object(raw_tid)))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a file access property list");
+    }
+
+    /* Set driver */
+    tmpl->driver = H5F_LOW_SPLIT;
+    tmpl->u.split.meta_access = H5P_copy (H5P_FILE_ACCESS, meta_tmpl);
+    tmpl->u.split.raw_access = H5P_copy (H5P_FILE_ACCESS, raw_tmpl);
+    tmpl->u.split.meta_ext = H5MM_xstrdup (meta_ext);
+    tmpl->u.split.raw_ext = H5MM_xstrdup (raw_ext);
+
+    FUNC_LEAVE (SUCCEED);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_split
+ *
+ * Purpose:	If the file access property list is set to the sec2 driver
+ *		then this function returns zero; otherwise it returns a
+ *		negative value.	 On success, at most META_EXT_SIZE characters
+ *		are copied to the META_EXT buffer if non-null and at most
+ *		RAW_EXT_SIZE characters are copied to the RAW_EXT buffer if
+ *		non-null.  If the actual extension is larger than the number
+ *		of characters requested then the buffer will not be null
+ *		terminated (that is, behavior like strncpy()).	In addition,
+ *		if META_PROPERTIES and/or RAW_PROPERTIES are non-null then
+ *		the file access property list of the meta file and/or raw
+ *		file is copied and its OID returned through these arguments.
+ *		In the future, additional arguments may be added to this
+ *		function to match those added to H5Pset_sec2().
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *		Thursday, February 26, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_split (hid_t tid, size_t meta_ext_size, char *meta_ext/*out*/,
+	      hid_t *meta_properties/*out*/, size_t raw_ext_size,
+	      char *raw_ext/*out*/, hid_t *raw_properties/*out*/)
+{
+    H5F_access_t	*tmpl = NULL;
+
+    FUNC_ENTER (H5Pget_split, FAIL);
+    H5TRACE7("e","izxxzxx",tid,meta_ext_size,meta_ext,meta_properties,
+             raw_ext_size,raw_ext,raw_properties);
+
+    /* Check arguments */
+    if (H5P_FILE_ACCESS != H5P_get_class (tid) ||
+	NULL == (tmpl = H5I_object (tid))) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
+		       "not a file access property list");
+    }
+    if (H5F_LOW_SPLIT != tmpl->driver) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "the split driver is not set");
+    }
+
+    /* Reset output args for error handling */
+    if (meta_ext && meta_ext_size>0) *meta_ext = '\0';
+    if (raw_ext && raw_ext_size>0) *raw_ext = '\0';
+    if (meta_properties) *meta_properties = FAIL;
+    if (raw_properties) *raw_properties = FAIL;
+
+    /* Output arguments */
+    if (meta_ext && meta_ext_size>0) {
+	if (tmpl->u.split.meta_ext) {
+	    strncpy (meta_ext, tmpl->u.split.meta_ext, meta_ext_size);
+	} else {
+	    strncpy (meta_ext, ".meta", meta_ext_size);
+	}
+    }
+    if (raw_ext && raw_ext_size>0) {
+	if (tmpl->u.split.raw_ext) {
+	    strncpy (raw_ext, tmpl->u.split.raw_ext, raw_ext_size);
+	} else {
+	    strncpy (raw_ext, ".raw", raw_ext_size);
+	}
+    }
+    if (meta_properties) {
+	assert (tmpl->u.split.meta_access);
+	*meta_properties = H5P_create (H5P_FILE_ACCESS,
+				       H5P_copy (H5P_FILE_ACCESS,
+						 tmpl->u.split.meta_access));
+    }
+    if (raw_properties) {
+	assert (tmpl->u.split.raw_access);
+	*raw_properties = H5P_create (H5P_FILE_ACCESS,
+				      H5P_copy (H5P_FILE_ACCESS,
+						tmpl->u.split.raw_access));
+    }
+    
+    FUNC_LEAVE (SUCCEED);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_family
+ *
+ * Purpose:	Sets the low-level driver to stripe the hdf5 address space
+ *		across a family of files.  The MEMB_SIZE argument indicates
+ *		the size in bytes of each family member and is only
+ *		meaningful when creating new files or opening families that
+ *		have only one member.
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *		Thursday, February 19, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_family (hid_t tid, hsize_t memb_size, hid_t memb_tid)
+{
+    
+    H5F_access_t	*tmpl = NULL;
+    H5F_access_t	*memb_tmpl = &H5F_access_dflt;
+    
+    FUNC_ENTER (H5Pset_family, FAIL);
+    H5TRACE3("e","ihi",tid,memb_size,memb_tid);
+
+    /* Check arguments */
+    if (H5P_FILE_ACCESS != H5P_get_class(tid) ||
+	NULL == (tmpl = H5I_object(tid))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a file access property list");
+    }
+    if (memb_size && memb_size<1024) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADRANGE, FAIL,
+		       "family member size is too small");
+    }
+    if (H5P_DEFAULT!=memb_tid &&
+	(H5P_FILE_ACCESS != H5P_get_class(memb_tid) ||
+	 NULL == (tmpl = H5I_object(memb_tid)))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a file access property list");
+    }
+
+    /* Set driver */
+    tmpl->driver = H5F_LOW_FAMILY;
+    H5F_addr_reset (&(tmpl->u.fam.memb_size));
+    H5F_addr_inc (&(tmpl->u.fam.memb_size), memb_size);
+    tmpl->u.fam.memb_access = H5P_copy (H5P_FILE_ACCESS, memb_tmpl);
+
+    FUNC_LEAVE (SUCCEED);
+}
+    
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_family
+ *
+ * Purpose:	If the file access property list is set to the family driver
+ *		then this function returns zero; otherwise it returns a
+ *		negative value.	 On success, if MEMB_TID is a non-null
+ *		pointer it will be initialized with the id of an open
+ *		property list: the file access property list for the family
+ *		members.  In the future, additional arguments may be added to
+ *		this function to match those added to H5Pset_family().
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *		Thursday, February 26, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_family (hid_t tid, hsize_t *memb_size/*out*/, hid_t *memb_tid/*out*/)
+{
+    H5F_access_t	*tmpl = NULL;
+
+    FUNC_ENTER (H5Pget_family, FAIL);
+    H5TRACE3("e","ixx",tid,memb_size,memb_tid);
+
+    /* Check arguments */
+    if (H5P_FILE_ACCESS != H5P_get_class (tid) ||
+	NULL == (tmpl = H5I_object (tid))) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
+		       "not a file access property list");
+    }
+    if (H5F_LOW_FAMILY != tmpl->driver) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "the family driver is not set");
+    }
+
+    /* Output args */
+    if (memb_size) {
+	*memb_size = tmpl->u.fam.memb_size.offset;
+    }
+    if (memb_tid) {
+	assert (tmpl->u.fam.memb_access);
+	*memb_tid = H5P_create (H5P_FILE_ACCESS,
+				H5P_copy (H5P_FILE_ACCESS,
+					  tmpl->u.fam.memb_access));
+    }
+	
+    FUNC_LEAVE (SUCCEED);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_cache
+ *
+ * Purpose:	Set the number of objects in the meta data cache and the
+ *		total number of bytes in the raw data chunk cache.
+ *
+ * 		The RDCC_W0 value should be between 0 and 1 inclusive and
+ *		indicates how much chunks that have been fully read are
+ *		favored for preemption.  A value of zero means fully read
+ *		chunks are treated no differently than other chunks (the
+ *		preemption is strictly LRU) while a value of one means fully
+ *		read chunks are always preempted before other chunks.
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *              Tuesday, May 19, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_cache (hid_t tid, int mdc_nelmts, size_t rdcc_nbytes,
+	      double rdcc_w0)
+{
+    H5F_access_t	*fapl = NULL;
+    
+    FUNC_ENTER (H5Pset_cache, FAIL);
+    H5TRACE4("e","iIszd",tid,mdc_nelmts,rdcc_nbytes,rdcc_w0);
+
+    /* Check arguments */
+    if (H5P_FILE_ACCESS!=H5P_get_class (tid) ||
+	NULL==(fapl=H5I_object (tid))) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
+		       "not a file access property list");
+    }
+    if (mdc_nelmts<0) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "meta data cache size must be non-negative");
+    }
+    if (rdcc_w0<0.0 || rdcc_w0>1.0) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "raw data cache w0 value must be between 0.0 and 1.0 "
+		       "inclusive");
+    }
+
+    /* Set sizes */
+    fapl->mdc_nelmts = mdc_nelmts;
+    fapl->rdcc_nbytes = rdcc_nbytes;
+    fapl->rdcc_w0 = rdcc_w0;
+
+    FUNC_LEAVE (SUCCEED);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_cache
+ *
+ * Purpose:	Retrieves the maximum possible number of elements in the meta
+ *		data cache and the maximum possible number of bytes and the
+ *		RDCC_W0 value in the raw data chunk cache.  Any (or all)
+ *		arguments may be null pointers in which case the corresponding
+ *		datum is not returned.
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *              Tuesday, May 19, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_cache (hid_t tid, int *mdc_nelmts, size_t *rdcc_nbytes,
+	      double *rdcc_w0)
+{
+    H5F_access_t	*fapl = NULL;
+    
+    FUNC_ENTER (H5Pget_cache, FAIL);
+    H5TRACE4("e","i*Is*z*d",tid,mdc_nelmts,rdcc_nbytes,rdcc_w0);
+
+    /* Check arguments */
+    if (H5P_FILE_ACCESS!=H5P_get_class (tid) ||
+	NULL==(fapl=H5I_object (tid))) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
+		       "not a file access property list");
+    }
+
+    /* Get sizes */
+    if (mdc_nelmts) *mdc_nelmts = fapl->mdc_nelmts;
+    if (rdcc_nbytes) *rdcc_nbytes = fapl->rdcc_nbytes;
+    if (rdcc_w0) *rdcc_w0 = fapl->rdcc_w0;
+
+    FUNC_LEAVE (SUCCEED);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_buffer
+ *
+ * Purpose:	Given a dataset transfer property list, set the maximum size
+ *		for the type conversion buffer and background buffer and
+ *		optionally supply pointers to application-allocated buffers.
+ *		If the buffer size is smaller than the entire amount of data
+ *		being transfered between application and file, and a type
+ *		conversion buffer or background buffer is required then
+ *		strip mining will be used.  However, certain restrictions
+ *		apply for the size of buffer which can be used for strip
+ *		mining.  For instance, when strip mining a 100x200x300
+ *		hyperslab of a simple data space the buffer must be large
+ *		enough to hold a 1x200x300 slab.
+ *
+ *		If TCONV and/or BKG are null pointers then buffers will be
+ *		allocated and freed during the data transfer.
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *              Monday, March 16, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_buffer (hid_t plist_id, size_t size, void *tconv, void *bkg)
+{
+    H5D_xfer_t		*plist = NULL;
+    
+    FUNC_ENTER (H5Pset_buffer, FAIL);
+    H5TRACE4("e","izxx",plist_id,size,tconv,bkg);
+
+    /* Check arguments */
+    if (H5P_DATASET_XFER != H5P_get_class (plist_id) ||
+	NULL == (plist = H5I_object (plist_id))) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
+		       "not a dataset transfer property list");
+    }
+    if (size<=0) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "buffer size must not be zero");
+    }
+
+    /* Update property list */
+    plist->buf_size = size;
+    plist->tconv_buf = tconv;
+    plist->bkg_buf = bkg;
+
+    FUNC_LEAVE (SUCCEED);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_buffer
+ *
+ * Purpose:	Reads values previously set with H5Pset_buffer().
+ *
+ * Return:	Success:	Buffer size.
+ *
+ *		Failure:	0
+ *
+ * Programmer:	Robb Matzke
+ *              Monday, March 16, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+size_t
+H5Pget_buffer (hid_t plist_id, void **tconv/*out*/, void **bkg/*out*/)
+{
+    H5D_xfer_t		*plist = NULL;
+    
+    FUNC_ENTER (H5Pget_buffer, 0);
+    H5TRACE3("z","ixx",plist_id,tconv,bkg);
+
+    /* Check arguments */
+    if (H5P_DATASET_XFER != H5P_get_class (plist_id) ||
+	NULL == (plist = H5I_object (plist_id))) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, 0,
+		       "not a dataset transfer property list");
+    }
+
+    /* Return values */
+    if (tconv) *tconv = plist->tconv_buf;
+    if (bkg) *bkg = plist->bkg_buf;
+
+    FUNC_LEAVE (plist->buf_size);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_preserve
+ *
+ * Purpose:	When reading or writing compound data types and the
+ *		destination is partially initialized and the read/write is
+ *		intended to initialize the other members, one must set this
+ *		property to TRUE.  Otherwise the I/O pipeline treats the
+ *		destination datapoints as completely uninitialized.
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *              Tuesday, March 17, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_preserve (hid_t plist_id, hbool_t status)
+{
+    H5D_xfer_t		*plist = NULL;
+    
+    FUNC_ENTER (H5Pset_preserve, FAIL);
+    H5TRACE2("e","ib",plist_id,status);
+
+    /* Check arguments */
+    if (H5P_DATASET_XFER != H5P_get_class (plist_id) ||
+	NULL == (plist = H5I_object (plist_id))) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
+		       "not a dataset transfer property list");
+    }
+
+    /* Update property list */
+    plist->need_bkg = status ? H5T_BKG_YES : H5T_BKG_NO;
+
+    FUNC_LEAVE (SUCCEED);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_preserve
+ *
+ * Purpose:	The inverse of H5Pset_preserve()
+ *
+ * Return:	Success:	TRUE or FALSE
+ *
+ *		Failure:	-1
+ *
+ * Programmer:	Robb Matzke
+ *              Tuesday, March 17, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+int
+H5Pget_preserve (hid_t plist_id)
+{
+    H5D_xfer_t		*plist = NULL;
+    
+    FUNC_ENTER (H5Pset_preserve, FAIL);
+    H5TRACE1("Is","i",plist_id);
+
+    /* Check arguments */
+    if (H5P_DATASET_XFER != H5P_get_class (plist_id) ||
+	NULL == (plist = H5I_object (plist_id))) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
+		       "not a dataset transfer property list");
+    }
+
+    FUNC_LEAVE (plist->need_bkg?TRUE:FALSE);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_compression
+ *
+ * Purpose:	Sets the compression method in a dataset creation property
+ *		list.  This sets default values for the compression
+ *		attributes by setting the flags to zero and supplying no
+ *		compression client data.  It's probably better to use
+ *		specific compression initialization functions like
+ *		H5Pset_deflate().
+ *
+ *		The FLAGS, CD_SIZE, and CLIENT_DATA are copied to the
+ *		property list and eventually to the file and passed to the
+ *		compression functions.
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *              Wednesday, April 15, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_compression (hid_t plist_id, H5Z_method_t method, unsigned int flags,
+		    size_t cd_size, const void *client_data)
+{
+    H5D_create_t	*plist = NULL;
+    
+    FUNC_ENTER (H5Pset_compression, FAIL);
+    H5TRACE5("e","iZmIuzx",plist_id,method,flags,cd_size,client_data);
+
+    /* Check arguments */
+    if (H5P_DATASET_CREATE!=H5P_get_class (plist_id) ||
+	NULL==(plist=H5I_object (plist_id))) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
+		       "not a dataset creation property list");
+    }
+    if (method<0 || method>H5Z_USERDEF_MAX) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "invalid compression method");
+    }
+
+    /* Clear any previous compression method info, then set new value */
+    H5O_reset (H5O_COMPRESS, &(plist->compress));
+    plist->compress.method = method;
+    plist->compress.flags = flags;
+    plist->compress.cd_size = cd_size;
+    if (cd_size) {
+	if (NULL==(plist->compress.client_data = H5MM_malloc (cd_size))) {
+	    HRETURN_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL,
+			   "memory allocation failed");
+	}
+	HDmemcpy (plist->compress.client_data, client_data, cd_size);
+    }
+    FUNC_LEAVE (SUCCEED);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_compression
+ *
+ * Purpose:	Gets the compression method information from a dataset
+ *		creation property list.  The CLIENT_DATA buffer is initially
+ *		CD_SIZE bytes.  On return, CLIENT_DATA will be initialized
+ *		with at most that many bytes, and CD_SIZE will contain the
+ *		actual size of the client data, which might be larger than
+ *		its original value.
+ *
+ * Return:	Success:	Compression method.
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *              Wednesday, April 15, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+H5Z_method_t
+H5Pget_compression (hid_t plist_id, unsigned int *flags/*out*/,
+		    size_t *cd_size/*in_out*/, void *client_data/*out*/)
+{
+    H5D_create_t	*plist = NULL;
+    
+    FUNC_ENTER (H5Pget_compression, FAIL);
+    H5TRACE4("Zm","ix*zx",plist_id,flags,cd_size,client_data);
+    
+    /* Check arguments */
+    if (H5P_DATASET_CREATE!=H5P_get_class (plist_id) ||
+	NULL==(plist=H5I_object (plist_id))) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
+		       "not a dataset creation property list");
+    }
+
+    /* Output values */
+    if (flags) *flags = plist->compress.flags;
+    if (cd_size) {
+	if (*cd_size>0 && client_data) {
+	    HDmemcpy (client_data, plist->compress.client_data,
+		      MIN(plist->compress.cd_size, *cd_size));
+	}
+	*cd_size = plist->compress.cd_size;
+    }
+
+    FUNC_LEAVE (plist->compress.method);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_deflate
+ *
+ * Purpose:	Sets the compression method for a dataset creation property
+ *		list to H5D_COMPRESS_DEFLATE and the compression level to
+ *		LEVEL which should be a value between zero and nine,
+ *		inclusive.  Lower compression levels are faster but result in
+ *		less compression.  This is the same algorithm as used by the
+ *		GNU gzip program.
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *              Wednesday, April 15, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_deflate (hid_t plist_id, int level)
+{
+    H5D_create_t	*plist = NULL;
+    
+    FUNC_ENTER (H5Pset_deflate, FAIL);
+    H5TRACE2("e","iIs",plist_id,level);
+
+    /* Check arguments */
+    if (H5P_DATASET_CREATE!=H5P_get_class (plist_id) ||
+	NULL==(plist=H5I_object (plist_id))) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
+		       "not a dataset creation property list");
+    }
+    if (level<0 || level>9) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "invalid deflate level");
+    }
+
+    /* Clear previous compression parameters */
+    H5O_reset (H5O_COMPRESS, &(plist->compress));
+    plist->compress.method = H5Z_DEFLATE;
+    plist->compress.flags = level;
+
+    FUNC_LEAVE (SUCCEED);
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_deflate
+ *
+ * Purpose:	Returns the deflate compression level from a dataset creation
+ *		property list that uses that method.
+ *
+ * Return:	Success:	A value between zero and nine, inclusive.
+ *				Smaller values indicate faster compression
+ *				while higher values indicate better
+ *				compression ratios.
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *              Wednesday, April 15, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+int
+H5Pget_deflate (hid_t plist_id)
+{
+    H5D_create_t	*plist = NULL;
+    
+    FUNC_ENTER (H5Pget_deflate, FAIL);
+    H5TRACE1("Is","i",plist_id);
+    
+    /* Check arguments */
+    if (H5P_DATASET_CREATE!=H5P_get_class (plist_id) ||
+	NULL==(plist=H5I_object (plist_id))) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
+		       "not a dataset creation property list");
+    }
+    if (H5Z_DEFLATE!=plist->compress.method) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "deflate method is not being used");
+    }
+
+    FUNC_LEAVE (plist->compress.flags % 10);
+}
+
+
+#ifdef HAVE_PARALLEL
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_mpi
+ *
+ * Signature:	herr_t H5Pset_mpi(hid_t tid, MPI_Comm comm, MPI_Info info)
+ *
+ * Purpose:	Store the access mode for MPIO call and the user supplied
+ *		communicator and info in the access property list which can
+ *		then be used to open file.  This function is available only
+ *		in the parallel HDF5 library and is not a collective
+ *		function.
+ *
+ * Parameters:
+ *		hid_t tid 
+ *		    ID of property list to modify 
+ *		MPI_Comm comm 
+ *		    MPI communicator to be used for file open as defined in
+ *		    MPI_FILE_OPEN of MPI-2.  This function  does not make a
+ *		    duplicated communicator. Any modification to comm after
+ *		    this function call returns may have undetermined effect
+ *		    to the access property list.  Users should call this
+ *		    function again to setup the property list.
+ *		MPI_Info info 
+ *		    MPI info object to be used for file open as defined in
+ *		    MPI_FILE_OPEN of MPI-2.  This function  does not make a
+ *		    duplicated info. Any modification to info after
+ *		    this function call returns may have undetermined effect
+ *		    to the access property list.  Users should call this
+ *		    function again to setup the property list.
+ *	     
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Albert Cheng
+ *		Feb 3, 1998
+ *
+ * Modifications:
+ *
+ *	Robb Matzke, 18 Feb 1998
+ *	Check all arguments before the property list is updated so we don't
+ *	leave the property list in a bad state if something goes wrong.  Also,
+ *	the property list data type changed to allow more generality so all
+ *	the mpi-related stuff is in the `u.mpi' member.  The `access_mode'
+ *	will contain only mpi-related flags defined in H5Fpublic.h.
+ *
+ *	Albert Cheng, Apr 16, 1998
+ *	Removed the access_mode argument.  The access_mode is changed
+ *	to be controlled by data transfer property list during data
+ *	read/write calls.
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_mpi (hid_t tid, MPI_Comm comm, MPI_Info info)
+{
+    H5F_access_t	   *tmpl = NULL;
+
+    FUNC_ENTER(H5Pset_mpi, FAIL);
+    H5TRACE3("e","iMcMi",tid,comm,info);
+
+    /* Check arguments */
+    if (H5P_FILE_ACCESS != H5P_get_class(tid) ||
+	NULL == (tmpl = H5I_object(tid))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a file access property list");
+    }
+    
+#ifdef LATER
+    /*
+     * Need to verify comm and info contain sensible information.
+     */
+#endif
+
+    tmpl->driver = H5F_LOW_MPIO;
+    tmpl->u.mpio.comm = comm;
+    tmpl->u.mpio.info = info;
+
+    FUNC_LEAVE(SUCCEED);
+}
+#endif /*HAVE_PARALLEL*/
+
+
+#ifdef HAVE_PARALLEL
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_mpi
+ *
+ * Purpose:	If the file access property list is set to the mpi driver
+ *		then this function returns zero; otherwise it returns a
+ *		negative value.	 In the future, additional arguments may be
+ *		added to this function to match those added to H5Pset_mpi().
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *		Thursday, February 26, 1998
+ *
+ * Modifications:
+ *
+ *	Albert Cheng, Apr 16, 1998
+ *	Removed the access_mode argument.  The access_mode is changed
+ *	to be controlled by data transfer property list during data
+ *	read/write calls.
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_mpi (hid_t tid, MPI_Comm *comm, MPI_Info *info)
+{
+    H5F_access_t	*tmpl = NULL;
+
+    FUNC_ENTER (H5Pget_mpi, FAIL);
+    H5TRACE3("e","i*Mc*Mi",tid,comm,info);
+
+    /* Check arguments */
+    if (H5P_FILE_ACCESS != H5P_get_class (tid) ||
+	NULL == (tmpl = H5I_object (tid))) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADTYPE, FAIL,
+		       "not a file access property list");
+    }
+    if (H5F_LOW_MPIO != tmpl->driver) {
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "the mpi driver is not set");
+    }
+    *comm = tmpl->u.mpio.comm;
+    *info = tmpl->u.mpio.info;
+
+    FUNC_LEAVE (SUCCEED);
+}
+#endif /*HAVE_PARALLEL*/
+
+
+#ifdef HAVE_PARALLEL
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_xfer
+ *
+ * Signature:	herr_t H5Pset_xfer(hid_t tid, H5D_transfer_t data_xfer_mode)
+ *
+ * Purpose:	Set the transfer mode of the dataset transfer property list.
+ *		The list can then be used to control the I/O transfer mode
+ *		during dataset accesses.  This function is available only
+ *		in the parallel HDF5 library and is not a collective function.
+ *
+ * Parameters:
+ *		hid_t tid 
+ *		    ID of a dataset transfer property list
+ *		H5D_transfer_t data_xfer_mode
+ *		    Data transfer modes: 
+ *			H5D_XFER_INDEPENDENT 
+ *			    Use independent I/O access. 
+ *			H5D_XFER_COLLECTIVE 
+ *			    Use MPI collective I/O access. 
+ *			H5D_XFER_DFLT 
+ *			    Use default I/O access.  Currently,
+ *			    independent is the default mode.
+ *			
+ *	     
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Albert Cheng
+ *		April 2, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_xfer (hid_t tid, H5D_transfer_t data_xfer_mode)
+{
+    H5D_xfer_t		*plist = NULL;
+
+    FUNC_ENTER(H5Pset_xfer, FAIL);
+    H5TRACE2("e","iDt",tid,data_xfer_mode);
+
+    /* Check arguments */
+    if (H5P_DATASET_XFER != H5P_get_class(tid) ||
+	NULL == (plist = H5I_object(tid))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a dataset transfer property list");
+    }
+    
+    switch (data_xfer_mode){
+    case H5D_XFER_INDEPENDENT:
+    case H5D_XFER_COLLECTIVE:
+    case H5D_XFER_DFLT:
+	plist->xfer_mode = data_xfer_mode;
+	break;
+    default:
+	HRETURN_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL,
+		       "invalid dataset transfer mode");
+    }
+
+    FUNC_LEAVE(SUCCEED);
+}
+#endif /*HAVE_PARALLEL*/
+
+
+#ifdef HAVE_PARALLEL
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_xfer
+ *
+ * Purpose:	Reads the transfer mode current set in the property list.
+ *		This function is available only in the parallel HDF5 library
+ *		and is not a collective function.
+ *
+ * Return:	Success:	SUCCEED
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Albert Cheng
+ *		April 2, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_xfer (hid_t tid, H5D_transfer_t *data_xfer_mode)
+{
+    H5D_xfer_t		*plist = NULL;
+
+    FUNC_ENTER (H5Pget_xfer, FAIL);
+    H5TRACE2("e","i*Dt",tid,data_xfer_mode);
+
+    /* Check arguments */
+    if (H5P_DATASET_XFER != H5P_get_class(tid) ||
+	NULL == (plist = H5I_object(tid))) {
+	HRETURN_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL,
+		      "not a dataset transfer property list");
+    }
+
+    *data_xfer_mode = plist->xfer_mode;
+
+    FUNC_LEAVE (SUCCEED);
+}
+#endif /*HAVE_PARALLEL*/
 
 
 /*--------------------------------------------------------------------------
  NAME
     H5Pcopy
  PURPOSE
-    Routine to copy a property list or class
+    Copy a property list
  USAGE
-    hid_t H5Pcopy(id)
-        hid_t id;           IN: Property list or class ID to copy
+    hid_t H5P_copy(tid)
+	hid_t tid;	  IN: property list object to copy
  RETURNS
-    Success: valid property list ID on success (non-negative)
-    Failure: negative
- DESCRIPTION
-    Copy a property list or class and return the ID.  This routine calls the
-    class 'copy' callback after any property 'copy' callbacks are called
-    (assuming all property 'copy' callbacks return successfully).
+    Returns property list ID (atom) on success, FAIL on failure
 
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
+ ERRORS
+    ARGS      BADRANGE	    Unknown property list class. 
+    ATOM      BADATOM	    Can't unatomize property list. 
+    ATOM      CANTREGISTER  Register the atom for the new property list. 
+    INTERNAL  UNSUPPORTED   Dataset transfer properties are not implemented
+			    yet. 
+    INTERNAL  UNSUPPORTED   File access properties are not implemented yet. 
+
+ DESCRIPTION
+ * This function creates a new copy of a property list with all the same
+ * parameter settings.
 --------------------------------------------------------------------------*/
 hid_t
-H5Pcopy(hid_t id)
+H5Pcopy (hid_t tid)
 {
-    void *obj;                 /* Property object to copy */
-    hid_t ret_value=FALSE;      /* return value */
+    const void		   *tmpl = NULL;
+    void		   *new_tmpl = NULL;
+    H5P_class_t		    type;
+    hid_t		    ret_value = FAIL;
+    H5I_group_t		    group;
 
-    FUNC_ENTER_API(H5Pcopy, FAIL);
-    H5TRACE1("i", "i", id);
+    FUNC_ENTER(H5Pcopy, FAIL);
+    H5TRACE1("i","i",tid);
 
-    if(H5P_DEFAULT==id)
-        HGOTO_DONE(H5P_DEFAULT);
+    /* Check args */
+    if (NULL == (tmpl = H5I_object(tid)) ||
+	(type = H5P_get_class(tid)) < 0 ||
+	(group = H5I_group(tid)) < 0) {
+	HRETURN_ERROR(H5E_ATOM, H5E_BADATOM, FAIL,
+		      "unable to unatomize property list");
+    }
 
-    /* Check arguments. */
-    if(H5I_GENPROP_LST != H5I_get_type(id) && H5I_GENPROP_CLS != H5I_get_type(id))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not property object");
-    if(NULL == (obj = H5I_object(id)))
-        HGOTO_ERROR(H5E_PLIST, H5E_NOTFOUND, FAIL, "property object doesn't exist");
+    /* Copy it */
+    if (NULL==(new_tmpl=H5P_copy (type, tmpl))) {
+	HRETURN_ERROR (H5E_INTERNAL, H5E_CANTINIT, FAIL,
+		       "unable to copy property list");
+    }
 
-    /* Compare property lists */
-    if(H5I_GENPROP_LST == H5I_get_type(id)) {
-        if((ret_value = H5P_copy_plist(obj)) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTCOPY, FAIL, "can't copy property list");
-    } /* end if */
-    /* Must be property classes */
-    else {
-        H5P_genclass_t *copy_class;      /* Copy of class */
-
-        /* Copy the class */
-        if((copy_class = H5P_copy_pclass(obj)) == NULL)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTCOPY, FAIL, "can't copy property class");
-
-        /* Get an atom for the copied class */
-        if((ret_value = H5I_register(H5I_GENPROP_CLS, copy_class)) < 0) {
-            H5P_close_class(copy_class);
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to atomize property list class");
-        } /* end if */
-    } /* end else */
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pcopy() */
-
+    /* Register the atom for the new property list */
+    if ((ret_value = H5I_register(group, new_tmpl)) < 0) {
+	HRETURN_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL,
+		      "unable to atomize property list pointer");
+    }
+    FUNC_LEAVE(ret_value);
+}
 
-/*--------------------------------------------------------------------------
- NAME
-    H5Pcreate_class
- PURPOSE
-    Create a new property list class.
- USAGE
-    hid_t H5Pcreate_class(parent, name, cls_create, create_data,
-                cls_close, close_data)
-        hid_t parent;       IN: Property list class ID of parent class
-        const char *name;   IN: Name of class we are creating
-        H5P_cls_create_func_t cls_create;   IN: The callback function to call
-                                    when each property list in this class is
-                                    created.
-        void *create_data;  IN: Pointer to user data to pass along to class
-                                    creation callback.
-        H5P_cls_copy_func_t cls_copy;   IN: The callback function to call
-                                    when each property list in this class is
-                                    copied.
-        void *copy_data;  IN: Pointer to user data to pass along to class
-                                    copy callback.
-        H5P_cls_close_func_t cls_close;     IN: The callback function to call
-                                    when each property list in this class is
-                                    closed.
-        void *close_data;   IN: Pointer to user data to pass along to class
-                                    close callback.
- RETURNS
-    Returns a valid property list class ID on success, NULL on failure.
- DESCRIPTION
-    Allocates memory and attaches a class to the property list class hierarchy.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-hid_t
-H5Pcreate_class(hid_t parent, const char *name,
-    H5P_cls_create_func_t cls_create, void *create_data,
-    H5P_cls_copy_func_t cls_copy, void *copy_data,
-    H5P_cls_close_func_t cls_close, void *close_data
-    )
+/*-------------------------------------------------------------------------
+ * Function:	H5P_copy
+ *
+ * Purpose:	Creates a new property list and initializes it with some
+ *		other property list.
+ *
+ * Return:	Success:	Ptr to new property list
+ *
+ *		Failure:	NULL
+ *
+ * Programmer:	Robb Matzke
+ *		Tuesday, February  3, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+void *
+H5P_copy (H5P_class_t type, const void *src)
 {
-    H5P_genclass_t	*par_class = NULL;  /* Pointer to the parent class */
-    H5P_genclass_t	*pclass = NULL;     /* Property list class created */
-    hid_t	ret_value;                  /* Return value		   */
+    size_t		size;
+    void		*dst = NULL;
+    int			i;
+    const H5D_create_t	*dc_src = NULL;
+    H5D_create_t	*dc_dst = NULL;
+    const H5F_access_t	*fa_src = NULL;
+    H5F_access_t	*fa_dst = NULL;
+    
+    FUNC_ENTER (H5P_copy, NULL);
+    
+    /* How big is the property list */
+    switch (type) {
+    case H5P_FILE_CREATE:
+	size = sizeof(H5F_create_t);
+	break;
 
-    FUNC_ENTER_API(H5Pcreate_class, FAIL);
-    H5TRACE8("i", "i*sx*xx*xx*x", parent, name, cls_create, create_data, cls_copy,
-             copy_data, cls_close, close_data);
+    case H5P_FILE_ACCESS:
+	size = sizeof(H5F_access_t);
+	break;
 
-    /* Check arguments. */
-    if(H5P_DEFAULT!=parent && (H5I_GENPROP_CLS!=H5I_get_type(parent)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list class");
-    if(!name || !*name)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid class name");
-    if((create_data!=NULL && cls_create==NULL)
-            || (copy_data!=NULL && cls_copy==NULL)
-            || (close_data!=NULL && cls_close==NULL))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "data specified, but no callback provided");
+    case H5P_DATASET_CREATE:
+	size = sizeof(H5D_create_t);
+	break;
 
-    /* Get the pointer to the parent class */
-    if(parent==H5P_DEFAULT)
-        par_class=NULL;
-    else if(NULL == (par_class = H5I_object(parent)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "can't retrieve parent class");
+    case H5P_DATASET_XFER:
+	size = sizeof(H5D_xfer_t);
+	break;
 
-    /* Create the new property list class */
-    if(NULL==(pclass=H5P_create_class(par_class, name, 0, cls_create, create_data, cls_copy, copy_data, cls_close, close_data)))
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTCREATE, FAIL, "unable to create property list class");
-
-    /* Get an atom for the class */
-    if((ret_value = H5I_register(H5I_GENPROP_CLS, pclass)) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to atomize property list class");
-
-done:
-    if(ret_value<0 && pclass)
-        H5P_close_class(pclass);
-
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pcreate_class() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pcreate
- PURPOSE
-    Routine to create a new property list of a property list class.
- USAGE
-    hid_t H5Pcreate(cls_id)
-        hid_t cls_id;       IN: Property list class create list from
- RETURNS
-    Returns a valid property list ID on success, FAIL on failure.
- DESCRIPTION
-        Creates a property list of a given class.  If a 'create' callback
-    exists for the property list class, it is called before the
-    property list is passed back to the user.  If 'create' callbacks exist for
-    any individual properties in the property list, they are called before the
-    class 'create' callback.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-hid_t
-H5Pcreate(hid_t cls_id)
-{
-    H5P_genclass_t	*pclass;   /* Property list class to modify */
-    hid_t ret_value;               /* return value */
-
-    FUNC_ENTER_API(H5Pcreate, FAIL);
-    H5TRACE1("i", "i", cls_id);
-
-    /* Check arguments. */
-    if(NULL == (pclass = H5I_object_verify(cls_id, H5I_GENPROP_CLS)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list class");
+    default:
+	HRETURN_ERROR(H5E_ARGS, H5E_BADRANGE, NULL,
+		      "unknown property list class");
+    }
 
     /* Create the new property list */
-    if((ret_value = H5P_create_id(pclass)) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTCREATE, FAIL, "unable to create property list");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pcreate() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pregister2
- PURPOSE
-    Routine to register a new property in a property list class.
- USAGE
-    herr_t H5Pregister2(class, name, size, default, prp_create, prp_set, prp_get, prp_close)
-        hid_t class;            IN: Property list class to close
-        const char *name;       IN: Name of property to register
-        size_t size;            IN: Size of property in bytes
-        void *def_value;        IN: Pointer to buffer containing default value
-                                    for property in newly created property lists
-        H5P_prp_create_func_t prp_create;   IN: Function pointer to property
-                                    creation callback
-        H5P_prp_set_func_t prp_set; IN: Function pointer to property set callback
-        H5P_prp_get_func_t prp_get; IN: Function pointer to property get callback
-        H5P_prp_delete_func_t prp_delete; IN: Function pointer to property delete callback
-        H5P_prp_copy_func_t prp_copy; IN: Function pointer to property copy callback
-        H5P_prp_compare_func_t prp_cmp; IN: Function pointer to property compare callback
-        H5P_prp_close_func_t prp_close; IN: Function pointer to property close
-                                    callback
- RETURNS
-    Returns non-negative on success, negative on failure.
- DESCRIPTION
-        Registers a new property with a property list class.  The property will
-    exist in all property list objects of that class after this routine is
-    finished.  The name of the property must not already exist.  The default
-    property value must be provided and all new property lists created with this
-    property will have the property value set to the default provided.  Any of
-    the callback routines may be set to NULL if they are not needed.
-
-        Zero-sized properties are allowed and do not store any data in the
-    property list.  These may be used as flags to indicate the presence or
-    absence of a particular piece of information.  The 'default' pointer for a
-    zero-sized property may be set to NULL.  The property 'create' & 'close'
-    callbacks are called for zero-sized properties, but the 'set' and 'get'
-    callbacks are never called.
-
-        The 'create' callback is called when a new property list with this
-    property is being created.  H5P_prp_create_func_t is defined as:
-        typedef herr_t (*H5P_prp_create_func_t)(hid_t prop_id, const char *name,
-                size_t size, void *initial_value);
-    where the parameters to the callback function are:
-        hid_t prop_id;      IN: The ID of the property list being created.
-        const char *name;   IN: The name of the property being modified.
-        size_t size;        IN: The size of the property value
-        void *initial_value; IN/OUT: The initial value for the property being created.
-                                (The 'default' value passed to H5Pregister2)
-    The 'create' routine may modify the value to be set and those changes will
-    be stored as the initial value of the property.  If the 'create' routine
-    returns a negative value, the new property value is not copied into the
-    property and the property list creation routine returns an error value.
-
-        The 'set' callback is called before a new value is copied into the
-    property.  H5P_prp_set_func_t is defined as:
-        typedef herr_t (*H5P_prp_set_func_t)(hid_t prop_id, const char *name,
-            size_t size, void *value);
-    where the parameters to the callback function are:
-        hid_t prop_id;      IN: The ID of the property list being modified.
-        const char *name;   IN: The name of the property being modified.
-        size_t size;        IN: The size of the property value
-        void *new_value;    IN/OUT: The value being set for the property.
-    The 'set' routine may modify the value to be set and those changes will be
-    stored as the value of the property.  If the 'set' routine returns a
-    negative value, the new property value is not copied into the property and
-    the property list set routine returns an error value.
-
-        The 'get' callback is called before a value is retrieved from the
-    property.  H5P_prp_get_func_t is defined as:
-        typedef herr_t (*H5P_prp_get_func_t)(hid_t prop_id, const char *name,
-            size_t size, void *value);
-    where the parameters to the callback function are:
-        hid_t prop_id;      IN: The ID of the property list being queried.
-        const char *name;   IN: The name of the property being queried.
-        size_t size;        IN: The size of the property value
-        void *value;        IN/OUT: The value being retrieved for the property.
-    The 'get' routine may modify the value to be retrieved and those changes
-    will be returned to the calling function.  If the 'get' routine returns a
-    negative value, the property value is returned and the property list get
-    routine returns an error value.
-
-        The 'delete' callback is called when a property is deleted from a
-    property list.  H5P_prp_del_func_t is defined as:
-        typedef herr_t (*H5P_prp_del_func_t)(hid_t prop_id, const char *name,
-            size_t size, void *value);
-    where the parameters to the callback function are:
-        hid_t prop_id;      IN: The ID of the property list the property is deleted from.
-        const char *name;   IN: The name of the property being deleted.
-        size_t size;        IN: The size of the property value
-        void *value;        IN/OUT: The value of the property being deleted.
-    The 'delete' routine may modify the value passed in, but the value is not
-    used by the library when the 'delete' routine returns.  If the
-    'delete' routine returns a negative value, the property list deletion
-    routine returns an error value but the property is still deleted.
-
-        The 'copy' callback is called when a property list with this
-    property is copied.  H5P_prp_copy_func_t is defined as:
-        typedef herr_t (*H5P_prp_copy_func_t)(const char *name, size_t size,
-            void *value);
-    where the parameters to the callback function are:
-        const char *name;   IN: The name of the property being copied.
-        size_t size;        IN: The size of the property value
-        void *value;        IN: The value of the property being copied.
-    The 'copy' routine may modify the value to be copied and those changes will be
-    stored as the value of the property.  If the 'copy' routine returns a
-    negative value, the new property value is not copied into the property and
-    the property list copy routine returns an error value.
-
-        The 'compare' callback is called when a property list with this
-    property is compared to another property list.  H5P_prp_compare_func_t is
-    defined as:
-        typedef int (*H5P_prp_compare_func_t)( void *value1, void *value2,
-            size_t size);
-    where the parameters to the callback function are:
-        const void *value1; IN: The value of the first property being compared.
-        const void *value2; IN: The value of the second property being compared.
-        size_t size;        IN: The size of the property value
-    The 'compare' routine may not modify the values to be compared.  The
-    'compare' routine should return a positive value if VALUE1 is greater than
-    VALUE2, a negative value if VALUE2 is greater than VALUE1 and zero if VALUE1
-    and VALUE2 are equal.
-
-        The 'close' callback is called when a property list with this
-    property is being destroyed.  H5P_prp_close_func_t is defined as:
-        typedef herr_t (*H5P_prp_close_func_t)(const char *name, size_t size,
-            void *value);
-    where the parameters to the callback function are:
-        const char *name;   IN: The name of the property being closed.
-        size_t size;        IN: The size of the property value
-        void *value;        IN: The value of the property being closed.
-    The 'close' routine may modify the value passed in, but the value is not
-    used by the library when the 'close' routine returns.  If the
-    'close' routine returns a negative value, the property list close
-    routine returns an error value but the property list is still closed.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
-        The 'set' callback function may be useful to range check the value being
-    set for the property or may perform some tranformation/translation of the
-    value set.  The 'get' callback would then [probably] reverse the
-    transformation, etc.  A single 'get' or 'set' callback could handle
-    multiple properties by performing different actions based on the property
-    name or other properties in the property list.
-
-        I would like to say "the property list is not closed" when a 'close'
-    routine fails, but I don't think that's possible due to other properties in
-    the list being successfully closed & removed from the property list.  I
-    suppose that it would be possible to just remove the properties which have
-    successful 'close' callbacks, but I'm not happy with the ramifications
-    of a mangled, un-closable property list hanging around...  Any comments? -QAK
-
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5Pregister2(hid_t cls_id, const char *name, size_t size, void *def_value,
-    H5P_prp_create_func_t prp_create, H5P_prp_set_func_t prp_set,
-    H5P_prp_get_func_t prp_get, H5P_prp_delete_func_t prp_delete,
-    H5P_prp_copy_func_t prp_copy, H5P_prp_compare_func_t prp_cmp,
-    H5P_prp_close_func_t prp_close)
-{
-    H5P_genclass_t	*pclass;   /* Property list class to modify */
-    herr_t ret_value;     /* return value */
-
-    FUNC_ENTER_API(H5Pregister2, FAIL);
-    H5TRACE11("e", "i*sz*xxxxxxxx", cls_id, name, size, def_value, prp_create,
-             prp_set, prp_get, prp_delete, prp_copy, prp_cmp, prp_close);
-
-    /* Check arguments. */
-    if(NULL == (pclass = H5I_object_verify(cls_id, H5I_GENPROP_CLS)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list class");
-    if(!name || !*name)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid class name");
-    if(size>0 && def_value==NULL)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "properties >0 size must have default");
-
-    /* Create the new property list class */
-    if((ret_value = H5P_register(pclass,name,size,def_value,prp_create,prp_set,prp_get,prp_delete,prp_copy,prp_cmp,prp_close)) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to register property in class");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pregister2() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pinsert2
- PURPOSE
-    Routine to insert a new property in a property list.
- USAGE
-    herr_t H5Pinsert2(plist, name, size, value, prp_set, prp_get, prp_close)
-        hid_t plist;            IN: Property list to add property to
-        const char *name;       IN: Name of property to add
-        size_t size;            IN: Size of property in bytes
-        void *value;            IN: Pointer to the value for the property
-        H5P_prp_set_func_t prp_set; IN: Function pointer to property set callback
-        H5P_prp_get_func_t prp_get; IN: Function pointer to property get callback
-        H5P_prp_delete_func_t prp_delete; IN: Function pointer to property delete callback
-        H5P_prp_copy_func_t prp_copy; IN: Function pointer to property copy callback
-        H5P_prp_compare_func_t prp_cmp; IN: Function pointer to property compare callback
-        H5P_prp_close_func_t prp_close; IN: Function pointer to property close
-                                    callback
- RETURNS
-    Returns non-negative on success, negative on failure.
- DESCRIPTION
-        Inserts a temporary property into a property list.  The property will
-    exist only in this property list object.  The name of the property must not
-    already exist.  The value must be provided unless the property is zero-
-    sized.  Any of the callback routines may be set to NULL if they are not
-    needed.
-
-        Zero-sized properties are allowed and do not store any data in the
-    property list.  These may be used as flags to indicate the presence or
-    absence of a particular piece of information.  The 'value' pointer for a
-    zero-sized property may be set to NULL.  The property 'close' callback is
-    called for zero-sized properties, but the 'set' and 'get' callbacks are
-    never called.
-
-        The 'set' callback is called before a new value is copied into the
-    property.  H5P_prp_set_func_t is defined as:
-        typedef herr_t (*H5P_prp_set_func_t)(hid_t prop_id, const char *name,
-            size_t size, void *value);
-    where the parameters to the callback function are:
-        hid_t prop_id;      IN: The ID of the property list being modified.
-        const char *name;   IN: The name of the property being modified.
-        size_t size;        IN: The size of the property value
-        void *new_value;    IN/OUT: The value being set for the property.
-    The 'set' routine may modify the value to be set and those changes will be
-    stored as the value of the property.  If the 'set' routine returns a
-    negative value, the new property value is not copied into the property and
-    the property list set routine returns an error value.
-
-        The 'get' callback is called before a value is retrieved from the
-    property.  H5P_prp_get_func_t is defined as:
-        typedef herr_t (*H5P_prp_get_func_t)(hid_t prop_id, const char *name,
-            size_t size, void *value);
-    where the parameters to the callback function are:
-        hid_t prop_id;      IN: The ID of the property list being queried.
-        const char *name;   IN: The name of the property being queried.
-        size_t size;        IN: The size of the property value
-        void *value;        IN/OUT: The value being retrieved for the property.
-    The 'get' routine may modify the value to be retrieved and those changes
-    will be returned to the calling function.  If the 'get' routine returns a
-    negative value, the property value is returned and the property list get
-    routine returns an error value.
-
-        The 'delete' callback is called when a property is deleted from a
-    property list.  H5P_prp_del_func_t is defined as:
-        typedef herr_t (*H5P_prp_del_func_t)(hid_t prop_id, const char *name,
-            size_t size, void *value);
-    where the parameters to the callback function are:
-        hid_t prop_id;      IN: The ID of the property list the property is deleted from.
-        const char *name;   IN: The name of the property being deleted.
-        size_t size;        IN: The size of the property value
-        void *value;        IN/OUT: The value of the property being deleted.
-    The 'delete' routine may modify the value passed in, but the value is not
-    used by the library when the 'delete' routine returns.  If the
-    'delete' routine returns a negative value, the property list deletion
-    routine returns an error value but the property is still deleted.
-
-        The 'copy' callback is called when a property list with this
-    property is copied.  H5P_prp_copy_func_t is defined as:
-        typedef herr_t (*H5P_prp_copy_func_t)(const char *name, size_t size,
-            void *value);
-    where the parameters to the callback function are:
-        const char *name;   IN: The name of the property being copied.
-        size_t size;        IN: The size of the property value
-        void *value;        IN: The value of the property being copied.
-    The 'copy' routine may modify the value to be copied and those changes will be
-    stored as the value of the property.  If the 'copy' routine returns a
-    negative value, the new property value is not copied into the property and
-    the property list copy routine returns an error value.
-
-        The 'compare' callback is called when a property list with this
-    property is compared to another property list.  H5P_prp_compare_func_t is
-    defined as:
-        typedef int (*H5P_prp_compare_func_t)( void *value1, void *value2,
-            size_t size);
-    where the parameters to the callback function are:
-        const void *value1; IN: The value of the first property being compared.
-        const void *value2; IN: The value of the second property being compared.
-        size_t size;        IN: The size of the property value
-    The 'compare' routine may not modify the values to be compared.  The
-    'compare' routine should return a positive value if VALUE1 is greater than
-    VALUE2, a negative value if VALUE2 is greater than VALUE1 and zero if VALUE1
-    and VALUE2 are equal.
-
-        The 'close' callback is called when a property list with this
-    property is being destroyed.  H5P_prp_close_func_t is defined as:
-        typedef herr_t (*H5P_prp_close_func_t)(const char *name, size_t size,
-            void *value);
-    where the parameters to the callback function are:
-        const char *name;   IN: The name of the property being closed.
-        size_t size;        IN: The size of the property value
-        void *value;        IN: The value of the property being closed.
-    The 'close' routine may modify the value passed in, but the value is not
-    used by the library when the 'close' routine returns.  If the
-    'close' routine returns a negative value, the property list close
-    routine returns an error value but the property list is still closed.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
-        The 'set' callback function may be useful to range check the value being
-    set for the property or may perform some tranformation/translation of the
-    value set.  The 'get' callback would then [probably] reverse the
-    transformation, etc.  A single 'get' or 'set' callback could handle
-    multiple properties by performing different actions based on the property
-    name or other properties in the property list.
-
-        There is no 'create' callback routine for temporary property list
-    objects, the initial value is assumed to have any necessary setup already
-    performed on it.
-
-        I would like to say "the property list is not closed" when a 'close'
-    routine fails, but I don't think that's possible due to other properties in
-    the list being successfully closed & removed from the property list.  I
-    suppose that it would be possible to just remove the properties which have
-    successful 'close' callbacks, but I'm not happy with the ramifications
-    of a mangled, un-closable property list hanging around...  Any comments? -QAK
-
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5Pinsert2(hid_t plist_id, const char *name, size_t size, void *value,
-    H5P_prp_set_func_t prp_set, H5P_prp_get_func_t prp_get,
-    H5P_prp_delete_func_t prp_delete, H5P_prp_copy_func_t prp_copy,
-    H5P_prp_compare_func_t prp_cmp, H5P_prp_close_func_t prp_close)
-{
-    H5P_genplist_t	*plist;    /* Property list to modify */
-    herr_t ret_value;           /* return value */
-
-    FUNC_ENTER_API(H5Pinsert2, FAIL);
-    H5TRACE10("e", "i*sz*xxxxxxx", plist_id, name, size, value, prp_set, prp_get,
-             prp_delete, prp_copy, prp_cmp, prp_close);
-
-    /* Check arguments. */
-    if(NULL == (plist = H5I_object_verify(plist_id, H5I_GENPROP_LST)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list")
-    if(!name || !*name)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid property name")
-    if(size > 0 && value == NULL)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "properties >0 size must have default")
-
-    /* Create the new property list class */
-    if((ret_value = H5P_insert(plist, name, size, value, prp_set, prp_get, prp_delete, prp_copy, prp_cmp, prp_close)) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to register property in plist")
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pinsert2() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pset
- PURPOSE
-    Routine to set a property's value in a property list.
- USAGE
-    herr_t H5P_set(plist_id, name, value)
-        hid_t plist_id;         IN: Property list to find property in
-        const char *name;       IN: Name of property to set
-        void *value;            IN: Pointer to the value for the property
- RETURNS
-    Returns non-negative on success, negative on failure.
- DESCRIPTION
-        Sets a new value for a property in a property list.  The property name
-    must exist or this routine will fail.  If there is a 'set' callback routine
-    registered for this property, the 'value' will be passed to that routine and
-    any changes to the 'value' will be used when setting the property value.
-    The information pointed at by the 'value' pointer (possibly modified by the
-    'set' callback) is copied into the property list value and may be changed
-    by the application making the H5Pset call without affecting the property
-    value.
-
-        If the 'set' callback routine returns an error, the property value will
-    not be modified.  This routine may not be called for zero-sized properties
-    and will return an error in that case.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5Pset(hid_t plist_id, const char *name, void *value)
-{
-    H5P_genplist_t *plist;      /* Property list to modify */
-    herr_t ret_value=SUCCEED;   /* return value */
-
-    FUNC_ENTER_API(H5Pset, FAIL);
-    H5TRACE3("e", "i*s*x", plist_id, name, value);
-
-    /* Check arguments. */
-    if(NULL == (plist = H5I_object_verify(plist_id, H5I_GENPROP_LST)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list");
-    if(!name || !*name)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid property name");
-    if(value==NULL)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalied property value");
-
-    /* Go set the value */
-    if(H5P_set(plist,name,value) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to set value in plist");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pset() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pexist
- PURPOSE
-    Routine to query the existance of a property in a property object.
- USAGE
-    htri_t H5P_exist(id, name)
-        hid_t id;           IN: Property object ID to check
-        const char *name;   IN: Name of property to check for
- RETURNS
-    Success: Positive if the property exists in the property object, zero
-            if the property does not exist.
-    Failure: negative value
- DESCRIPTION
-        This routine checks if a property exists within a property list or
-    class.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-htri_t
-H5Pexist(hid_t id, const char *name)
-{
-    H5P_genplist_t	*plist;    /* Property list to query */
-    H5P_genclass_t	*pclass;   /* Property class to query */
-    htri_t ret_value;           /* return value */
-
-    FUNC_ENTER_API(H5Pexist, FAIL);
-    H5TRACE2("t", "i*s", id, name);
-
-    /* Check arguments. */
-    if(H5I_GENPROP_LST != H5I_get_type(id) && H5I_GENPROP_CLS != H5I_get_type(id))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property object");
-    if(!name || !*name)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid property name");
-
-    /* Check for the existance of the property in the list or class */
-    if(H5I_GENPROP_LST == H5I_get_type(id)) {
-        if(NULL == (plist = H5I_object(id)))
-            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list");
-        if((ret_value = H5P_exist_plist(plist, name)) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "property does not exist in list");
-    } /* end if */
-    else
-        if(H5I_GENPROP_CLS == H5I_get_type(id)) {
-            if(NULL == (pclass = H5I_object(id)))
-                HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property class");
-            if((ret_value = H5P_exist_pclass(pclass, name)) < 0)
-                HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "property does not exist in class");
-        } /* end if */
-        else
-            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property object");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pexist() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pget_size
- PURPOSE
-    Routine to query the size of a property in a property list or class.
- USAGE
-    herr_t H5Pget_size(id, name)
-        hid_t id;               IN: ID of property list or class to check
-        const char *name;       IN: Name of property to query
-        size_t *size;           OUT: Size of property
- RETURNS
-    Success: non-negative value
-    Failure: negative value
- DESCRIPTION
-        This routine retrieves the size of a property's value in bytes.  Zero-
-    sized properties are allowed and return a value of 0.  This function works
-    for both property lists and classes.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5Pget_size(hid_t id, const char *name, size_t *size)
-{
-    H5P_genclass_t	*pclass;   /* Property class to query */
-    H5P_genplist_t	*plist;    /* Property list to query */
-    herr_t ret_value;           /* return value */
-
-    FUNC_ENTER_API(H5Pget_size, FAIL);
-    H5TRACE3("e", "i*s*z", id, name, size);
-
-    /* Check arguments. */
-    if(H5I_GENPROP_LST != H5I_get_type(id) && H5I_GENPROP_CLS != H5I_get_type(id))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property object");
-    if(!name || !*name)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid property name");
-    if(size==NULL)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid property size");
-
-    if(H5I_GENPROP_LST == H5I_get_type(id)) {
-        if(NULL == (plist = H5I_object(id)))
-            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list");
-
-        /* Check the property size */
-        if((ret_value = H5P_get_size_plist(plist, name, size)) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to query size in plist");
-    } /* end if */
-    else
-        if(H5I_GENPROP_CLS == H5I_get_type(id)) {
-            if(NULL == (pclass = H5I_object(id)))
-                HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list");
-
-            /* Check the property size */
-            if((ret_value = H5P_get_size_pclass(pclass, name, size)) < 0)
-                HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to query size in plist");
-        } /* end if */
-        else
-            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property object");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pget_size() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pget_class
- PURPOSE
-    Routine to query the class of a generic property list
- USAGE
-    hid_t H5Pget_class(plist_id)
-        hid_t plist_id;         IN: Property list to query
- RETURNS
-    Success: ID of class object
-    Failure: negative
- DESCRIPTION
-    This routine retrieves the class of a property list.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
-    Change the name of this function to H5Pget_class (and remove old H5Pget_class)
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-hid_t
-H5Pget_class(hid_t plist_id)
-{
-    H5P_genplist_t	*plist;         /* Property list to query */
-    H5P_genclass_t	*pclass=NULL;   /* Property list class */
-    hid_t ret_value=FAIL;           /* return value */
-
-    FUNC_ENTER_API(H5Pget_class, FAIL);
-    H5TRACE1("i", "i", plist_id);
-
-    /* Check arguments. */
-    if(NULL == (plist = H5I_object_verify(plist_id, H5I_GENPROP_LST)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list");
-
-    /* Retrieve the property list class */
-    if((pclass = H5P_get_class(plist)) == NULL)
-        HGOTO_ERROR(H5E_PLIST, H5E_NOTFOUND, FAIL, "unable to query class of property list");
-
-    /* Increment the outstanding references to the class object */
-    if(H5P_access_class(pclass, H5P_MOD_INC_REF) < 0)
-        HGOTO_ERROR (H5E_PLIST, H5E_CANTINIT, FAIL,"Can't increment class ID ref count");
-
-    /* Get an atom for the class */
-    if((ret_value = H5I_register(H5I_GENPROP_CLS, pclass)) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to atomize property list class");
-
-done:
-    if(ret_value<0 && pclass)
-        H5P_close_class(pclass);
-
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pget_class() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pget_nprops
- PURPOSE
-    Routine to query the size of a property in a property list or class.
- USAGE
-    herr_t H5Pget_nprops(id, nprops)
-        hid_t id;               IN: ID of Property list or class to check
-        size_t *nprops;         OUT: Number of properties in the property object
- RETURNS
-    Success: non-negative value
-    Failure: negative value
- DESCRIPTION
-        This routine retrieves the number of properties in a property list or
-    class.  If a property class ID is given, the number of registered properties
-    in the class is returned in NPROPS.  If a property list ID is given, the
-    current number of properties in the list is returned in NPROPS.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5Pget_nprops(hid_t id, size_t *nprops)
-{
-    H5P_genplist_t	*plist;    /* Property list to query */
-    H5P_genclass_t	*pclass;   /* Property class to query */
-    herr_t ret_value=SUCCEED;      /* return value */
-
-    FUNC_ENTER_API(H5Pget_nprops, FAIL);
-    H5TRACE2("e", "i*z", id, nprops);
-
-    /* Check arguments. */
-    if(H5I_GENPROP_LST != H5I_get_type(id) && H5I_GENPROP_CLS != H5I_get_type(id))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property object");
-    if(nprops==NULL)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid property nprops pointer");
-
-    if(H5I_GENPROP_LST == H5I_get_type(id)) {
-        if(NULL == (plist = H5I_object(id)))
-            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list");
-        if(H5P_get_nprops_plist(plist, nprops) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to query # of properties in plist");
-    } /* end if */
-    else
-        if(H5I_GENPROP_CLS == H5I_get_type(id)) {
-            if(NULL == (pclass = H5I_object(id)))
-                HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property class");
-            if(H5P_get_nprops_pclass(pclass, nprops, FALSE) < 0)
-                HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to query # of properties in pclass");
-        } /* end if */
-        else
-            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property object");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pget_nprops() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pequal
- PURPOSE
-    Routine to query whether two property lists or two property classes are equal
- USAGE
-    htri_t H5Pequal(id1, id2)
-        hid_t id1;         IN: Property list or class ID to compare
-        hid_t id2;         IN: Property list or class ID to compare
- RETURNS
-    Success: TRUE if equal, FALSE if unequal
-    Failure: negative
- DESCRIPTION
-    Determines whether two property lists or two property classes are equal.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-htri_t
-H5Pequal(hid_t id1, hid_t id2)
-{
-    void *obj1, *obj2;          /* Property objects to compare */
-    htri_t ret_value = FALSE;     /* return value */
-
-    FUNC_ENTER_API(H5Pequal, FAIL)
-    H5TRACE2("t", "ii", id1, id2);
-
-    /* Check arguments. */
-    if((H5I_GENPROP_LST != H5I_get_type(id1) && H5I_GENPROP_CLS != H5I_get_type(id1))
-            || (H5I_GENPROP_LST != H5I_get_type(id2) && H5I_GENPROP_CLS != H5I_get_type(id2)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not property objects")
-    if(H5I_get_type(id1) != H5I_get_type(id2))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not the same kind of property objects")
-    if(NULL == (obj1 = H5I_object(id1)) || NULL == (obj2 = H5I_object(id2)))
-        HGOTO_ERROR(H5E_PLIST, H5E_NOTFOUND, FAIL, "property object doesn't exist")
-
-    /* Compare property lists */
-    if(H5I_GENPROP_LST == H5I_get_type(id1)) {
-        if(H5P_cmp_plist(obj1, obj2) == 0)
-            ret_value = TRUE;
-    } /* end if */
-    /* Must be property classes */
-    else {
-        if(H5P_cmp_class(obj1, obj2) == 0)
-            ret_value = TRUE;
-    } /* end else */
-
-done:
-    FUNC_LEAVE_API(ret_value)
-}   /* H5Pequal() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pisa_class
- PURPOSE
-    Routine to query whether a property list is a certain class
- USAGE
-    hid_t H5Pisa_class(plist_id, pclass_id)
-        hid_t plist_id;         IN: Property list to query
-        hid_t pclass_id;        IN: Property class to query
- RETURNS
-    Success: TRUE (1) or FALSE (0)
-    Failure: negative
- DESCRIPTION
-    This routine queries whether a property list is a member of the property
-    list class.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
-    What about returning a value indicating that the property class is further
-    up the class hierarchy?
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-htri_t
-H5Pisa_class(hid_t plist_id, hid_t pclass_id)
-{
-    htri_t ret_value;                   /* return value */
-
-    FUNC_ENTER_API(H5Pisa_class, FAIL);
-    H5TRACE2("t", "ii", plist_id, pclass_id);
-
-    /* Check arguments. */
-    if(H5I_GENPROP_LST != H5I_get_type(plist_id))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list");
-    if(H5I_GENPROP_CLS != H5I_get_type(pclass_id))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property class");
-
-    /* Compare the property list's class against the other class */
-    if((ret_value = H5P_isa_class(plist_id, pclass_id)) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to compare property list classes");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pisa_class() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Piterate
- PURPOSE
-    Routine to iterate over the properties in a property list or class
- USAGE
-    int H5Piterate(pclass_id, idx, iter_func, iter_data)
-        hid_t id;                   IN: ID of property object to iterate over
-        int *idx;                   IN/OUT: Index of the property to begin with
-        H5P_iterate_t iter_func;    IN: Function pointer to function to be
-                                        called with each property iterated over.
-        void *iter_data;            IN/OUT: Pointer to iteration data from user
- RETURNS
-    Success: Returns the return value of the last call to ITER_FUNC if it was
-                non-zero, or zero if all properties have been processed.
-    Failure: negative value
- DESCRIPTION
-    This routine iterates over the properties in the property object specified
-with ID.  The properties in both property lists and classes may be iterated
-over with this function.  For each property in the object, the ITER_DATA and
-some additional information, specified below, are passed to the ITER_FUNC
-function.  The iteration begins with the IDX property in the object and the
-next element to be processed by the operator is returned in IDX.  If IDX is
-NULL, then the iterator starts at the first property; since no stopping point
-is returned in this case, the iterator cannot be restarted if one of the calls
-to its operator returns non-zero.  The IDX value is 0-based (ie. to start at
-the "first" property, the IDX value should be 0).
-
-The prototype for H5P_iterate_t is:
-    typedef herr_t (*H5P_iterate_t)(hid_t id, const char *name, void *iter_data);
-The operation receives the property list or class identifier for the object
-being iterated over, ID, the name of the current property within the object,
-NAME, and the pointer to the operator data passed in to H5Piterate, ITER_DATA.
-
-The return values from an operator are:
-    Zero causes the iterator to continue, returning zero when all properties
-        have been processed.
-    Positive causes the iterator to immediately return that positive value,
-        indicating short-circuit success. The iterator can be restarted at the
-        index of the next property.
-    Negative causes the iterator to immediately return that value, indicating
-        failure. The iterator can be restarted at the index of the next
-        property.
-
-H5Piterate assumes that the properties in the object identified by ID remains
-unchanged through the iteration.  If the membership changes during the
-iteration, the function's behavior is undefined.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-int
-H5Piterate(hid_t id, int *idx, H5P_iterate_t iter_func, void *iter_data)
-{
-    int fake_idx = 0;       /* Index when user doesn't provide one */
-    int ret_value;          /* return value */
-
-    FUNC_ENTER_API(H5Piterate, FAIL);
-    H5TRACE4("Is", "i*Isx*x", id, idx, iter_func, iter_data);
-
-    /* Check arguments. */
-    if(H5I_GENPROP_LST != H5I_get_type(id) && H5I_GENPROP_CLS != H5I_get_type(id))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property object");
-    if(iter_func == NULL)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid iteration callback");
-
-    if(H5I_GENPROP_LST == H5I_get_type(id)) {
-        /* Iterate over a property list */
-        if((ret_value = H5P_iterate_plist(id, (idx ? idx : &fake_idx), iter_func, iter_data)) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to iterate over list");
-    } /* end if */
-    else
-        if(H5I_GENPROP_CLS == H5I_get_type(id)) {
-            /* Iterate over a property class */
-            if((ret_value = H5P_iterate_pclass(id, (idx ? idx : &fake_idx), iter_func, iter_data)) < 0)
-                HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to iterate over class");
-        } /* end if */
-        else
-            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property object");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Piterate() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pget
- PURPOSE
-    Routine to query the value of a property in a property list.
- USAGE
-    herr_t H5Pget(plist_id, name, value)
-        hid_t plist_id;         IN: Property list to check
-        const char *name;       IN: Name of property to query
-        void *value;            OUT: Pointer to the buffer for the property value
- RETURNS
-    Returns non-negative on success, negative on failure.
- DESCRIPTION
-        Retrieves a copy of the value for a property in a property list.  The
-    property name must exist or this routine will fail.  If there is a
-    'get' callback routine registered for this property, the copy of the
-    value of the property will first be passed to that routine and any changes
-    to the copy of the value will be used when returning the property value
-    from this routine.
-        If the 'get' callback routine returns an error, 'value' will not be
-    modified and this routine will return an error.  This routine may not be
-    called for zero-sized properties.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5Pget(hid_t plist_id, const char *name, void *value)
-{
-    H5P_genplist_t *plist;      /* Property list pointer */
-    herr_t ret_value=SUCCEED;   /* return value */
-
-    FUNC_ENTER_API(H5Pget, FAIL);
-    H5TRACE3("e", "i*s*x", plist_id, name, value);
-
-    /* Check arguments. */
-    if(NULL == (plist = H5I_object_verify(plist_id, H5I_GENPROP_LST)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list");
-    if(!name || !*name)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid property name");
-    if(value==NULL)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalied property value");
-
-    /* Go get the value */
-    if(H5P_get(plist,name,value) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "unable to query property value");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pget() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Premove
- PURPOSE
-    Routine to remove a property from a property list.
- USAGE
-    herr_t H5Premove(plist_id, name)
-        hid_t plist_id;         IN: Property list to modify
-        const char *name;       IN: Name of property to remove
- RETURNS
-    Returns non-negative on success, negative on failure.
- DESCRIPTION
-        Removes a property from a property list.  Both properties which were
-    in existance when the property list was created (i.e. properties registered
-    with H5Pregister2) and properties added to the list after it was created
-    (i.e. added with H5Pinsert2) may be removed from a property list.
-    Properties do not need to be removed a property list before the list itself
-    is closed, they will be released automatically when H5Pclose is called.
-    The 'close' callback for this property is called before the property is
-    release, if the callback exists.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5Premove(hid_t plist_id, const char *name)
-{
-    H5P_genplist_t	*plist;    /* Property list to modify */
-    herr_t ret_value;           /* return value */
-
-    FUNC_ENTER_API(H5Premove, FAIL);
-    H5TRACE2("e", "i*s", plist_id, name);
-
-    /* Check arguments. */
-    if(NULL == (plist = H5I_object_verify(plist_id, H5I_GENPROP_LST)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list");
-    if(!name || !*name)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid property name");
-
-    /* Create the new property list class */
-    if((ret_value = H5P_remove(plist_id,plist,name)) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTDELETE, FAIL, "unable to remove property");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Premove() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pcopy_prop
- PURPOSE
-    Routine to copy a property from one list or class to another
- USAGE
-    herr_t H5Pcopy_prop(dst_id, src_id, name)
-        hid_t dst_id;               IN: ID of destination property list or class
-        hid_t src_id;               IN: ID of source property list or class
-        const char *name;           IN: Name of property to copy
- RETURNS
-    Success: non-negative value.
-    Failure: negative value.
- DESCRIPTION
-    Copies a property from one property list or class to another.
-
-    If a property is copied from one class to another, all the property
-    information will be first deleted from the destination class and then the
-    property information will be copied from the source class into the
-    destination class.
-
-    If a property is copied from one list to another, the property will be
-    first deleted from the destination list (generating a call to the 'close'
-    callback for the property, if one exists) and then the property is copied
-    from the source list to the destination list (generating a call to the
-    'copy' callback for the property, if one exists).
-
-    If the property does not exist in the destination class or list, this call
-    is equivalent to calling H5Pregister2 or H5Pinsert2 (for a class or list, as
-    appropriate) and the 'create' callback will be called in the case of the
-    property being copied into a list (if such a callback exists for the
-    property).
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5Pcopy_prop(hid_t dst_id, hid_t src_id, const char *name)
-{
-    void *src_obj, *dst_obj;    /* Property objects to copy between */
-    herr_t ret_value=SUCCEED;      /* return value */
-
-    FUNC_ENTER_API(H5Pcopy_prop, FAIL);
-    H5TRACE3("e", "ii*s", dst_id, src_id, name);
-
-    /* Check arguments. */
-    if((H5I_GENPROP_LST != H5I_get_type(src_id) && H5I_GENPROP_CLS != H5I_get_type(src_id))
-            || (H5I_GENPROP_LST != H5I_get_type(dst_id) && H5I_GENPROP_CLS != H5I_get_type(dst_id)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not property objects");
-    if(H5I_get_type(src_id) != H5I_get_type(dst_id))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not the same kind of property objects");
-    if(!name || !*name)
-        HGOTO_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL, "no name given");
-    if(NULL == (src_obj = H5I_object(src_id)) || NULL == (dst_obj = H5I_object(dst_id)))
-        HGOTO_ERROR(H5E_PLIST, H5E_NOTFOUND, FAIL, "property object doesn't exist");
-
-    /* Compare property lists */
-    if(H5I_GENPROP_LST == H5I_get_type(src_id)) {
-        if(H5P_copy_prop_plist(dst_id, src_id, name) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTCOPY, FAIL, "can't copy property between lists");
-    } /* end if */
-    /* Must be property classes */
-    else {
-        if(H5P_copy_prop_pclass(dst_obj, src_obj, name) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTCOPY, FAIL, "can't copy property between classes");
-    } /* end else */
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pcopy_prop() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Punregister
- PURPOSE
-    Routine to remove a property from a property list class.
- USAGE
-    herr_t H5Punregister(pclass_id, name)
-        hid_t pclass_id;         IN: Property list class to modify
-        const char *name;       IN: Name of property to remove
- RETURNS
-    Returns non-negative on success, negative on failure.
- DESCRIPTION
-        Removes a property from a property list class.  Future property lists
-    created of that class will not contain this property.  Existing property
-    lists containing this property are not affected.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5Punregister(hid_t pclass_id, const char *name)
-{
-    H5P_genclass_t	*pclass;   /* Property list class to modify */
-    herr_t ret_value;           /* return value */
-
-    FUNC_ENTER_API(H5Punregister, FAIL);
-    H5TRACE2("e", "i*s", pclass_id, name);
-
-    /* Check arguments. */
-    if(NULL == (pclass = H5I_object_verify(pclass_id, H5I_GENPROP_CLS)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list class");
-    if(!name || !*name)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid property name");
-
-    /* Remove the property list from class */
-    if((ret_value = H5P_unregister(pclass, name)) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to remove property from class");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Punregister() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pclose
- PURPOSE
-    Routine to close a property list.
- USAGE
-    herr_t H5Pclose(plist_id)
-        hid_t plist_id;       IN: Property list to close
- RETURNS
-    Returns non-negative on success, negative on failure.
- DESCRIPTION
-        Closes a property list.  If a 'close' callback exists for the property
-    list class, it is called before the property list is destroyed.  If 'close'
-    callbacks exist for any individual properties in the property list, they are
-    called after the class 'close' callback.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5Pclose(hid_t plist_id)
-{
-    herr_t ret_value=SUCCEED;      /* return value */
-
-    FUNC_ENTER_API(H5Pclose, FAIL);
-    H5TRACE1("e", "i", plist_id);
-
-    if(plist_id==H5P_DEFAULT)
-        HGOTO_DONE(SUCCEED);
-
-    /* Check arguments. */
-    if(H5I_GENPROP_LST != H5I_get_type(plist_id))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list");
-
-    /* Close the property list */
-    if(H5I_dec_ref(plist_id) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTFREE, FAIL, "can't close");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pclose() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pget_class_name
- PURPOSE
-    Routine to query the name of a generic property list class
- USAGE
-    char *H5Pget_class_name(pclass_id)
-        hid_t pclass_id;         IN: Property class to query
- RETURNS
-    Success: Pointer to a malloc'ed string containing the class name
-    Failure: NULL
- DESCRIPTION
-        This routine retrieves the name of a generic property list class.
-    The pointer to the name must be free'd by the user for successful calls.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-char *
-H5Pget_class_name(hid_t pclass_id)
-{
-    H5P_genclass_t	*pclass;    /* Property class to query */
-    char *ret_value;       /* return value */
-
-    FUNC_ENTER_API(H5Pget_class_name, NULL);
-
-    /* Check arguments. */
-    if(NULL == (pclass = H5I_object_verify(pclass_id, H5I_GENPROP_CLS)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a property class");
-
-    /* Get the property list class name */
-    if((ret_value = H5P_get_class_name(pclass)) == NULL)
-        HGOTO_ERROR(H5E_PLIST, H5E_NOTFOUND, NULL, "unable to query name of class");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pget_class_name() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pget_class_parent
- PURPOSE
-    routine to query the parent class of a generic property class
- USAGE
-    hid_t H5Pget_class_parent(pclass_id)
-        hid_t pclass_id;         IN: Property class to query
- RETURNS
-    Success: ID of parent class object
-    Failure: NULL
- DESCRIPTION
-    This routine retrieves an ID for the parent class of a property class.
-
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-hid_t
-H5Pget_class_parent(hid_t pclass_id)
-{
-    H5P_genclass_t	*pclass;    /* Property class to query */
-    H5P_genclass_t	*parent=NULL;   /* Parent's property class */
-    hid_t ret_value;       /* return value */
-
-    FUNC_ENTER_API(H5Pget_class_parent, FAIL);
-    H5TRACE1("i", "i", pclass_id);
-
-    /* Check arguments. */
-    if(NULL == (pclass = H5I_object_verify(pclass_id, H5I_GENPROP_CLS)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property class");
-
-    /* Retrieve the property class's parent */
-    if((parent = H5P_get_class_parent(pclass)) == NULL)
-        HGOTO_ERROR(H5E_PLIST, H5E_NOTFOUND, FAIL, "unable to query class of property list");
-
-    /* Increment the outstanding references to the class object */
-    if(H5P_access_class(parent, H5P_MOD_INC_REF) < 0)
-        HGOTO_ERROR (H5E_PLIST, H5E_CANTINIT, FAIL,"Can't increment class ID ref count");
-
-    /* Get an atom for the class */
-    if((ret_value = H5I_register(H5I_GENPROP_CLS, parent)) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "unable to atomize property list class");
-
-done:
-    if(ret_value<0 && parent)
-        H5P_close_class(parent);
-
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pget_class_parent() */
-
-
-/*--------------------------------------------------------------------------
- NAME
-    H5Pclose_class
- PURPOSE
-    Close a property list class.
- USAGE
-    herr_t H5Pclose_class(cls_id)
-        hid_t cls_id;       IN: Property list class ID to class
-
- RETURNS
-    Returns non-negative on success, negative on failure.
- DESCRIPTION
-    Releases memory and de-attach a class from the property list class hierarchy.
- GLOBAL VARIABLES
- COMMENTS, BUGS, ASSUMPTIONS
- EXAMPLES
- REVISION LOG
---------------------------------------------------------------------------*/
-herr_t
-H5Pclose_class(hid_t cls_id)
-{
-    hid_t	ret_value = SUCCEED;    /* Return value			*/
-
-    FUNC_ENTER_API(H5Pclose_class, FAIL);
-    H5TRACE1("e", "i", cls_id);
-
-    /* Check arguments */
-    if(H5I_GENPROP_CLS != H5I_get_type(cls_id))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list class");
-
-    /* Close the property list class */
-    if(H5I_dec_ref(cls_id) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTFREE, FAIL, "can't close");
-
-done:
-    FUNC_LEAVE_API(ret_value);
-}   /* H5Pclose_class() */
-
+    if (NULL==(dst = H5MM_malloc(size))) {
+	HRETURN_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL,
+		       "memory allocation failed");
+    }
+    HDmemcpy(dst, src, size);
+
+    /* Deep-copy pointers */
+    switch (type) {
+    case H5P_FILE_CREATE:
+	break;
+	
+    case H5P_FILE_ACCESS:
+	fa_src = (const H5F_access_t*)src;
+	fa_dst = (H5F_access_t*)dst;
+	switch (fa_src->driver) {
+	case H5F_LOW_ERROR:
+	case H5F_LOW_SEC2:
+	case H5F_LOW_STDIO:
+	case H5F_LOW_CORE:
+	case H5F_LOW_MPIO:
+	    /* Nothing to do */
+	    break;
+	    
+	case H5F_LOW_FAMILY:
+	    fa_dst->u.fam.memb_access = H5P_copy (H5P_FILE_ACCESS,
+						  fa_src->u.fam.memb_access);
+	    break;
+
+	case H5F_LOW_SPLIT:
+	    fa_dst->u.split.meta_access=H5P_copy (H5P_FILE_ACCESS,
+						  fa_src->u.split.meta_access);
+	    fa_dst->u.split.raw_access = H5P_copy (H5P_FILE_ACCESS,
+						   fa_src->u.split.raw_access);
+	    break;
+	}
+	break;
+	
+    case H5P_DATASET_CREATE:
+	dc_src = (const H5D_create_t*)src;
+	dc_dst = (H5D_create_t*)dst;
+	
+	if (dc_src->efl.nalloc>0) {
+	    dc_dst->efl.slot = H5MM_malloc (dc_dst->efl.nalloc *
+					    sizeof(H5O_efl_entry_t));
+	    if (NULL==dc_dst->efl.slot) {
+		HRETURN_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL,
+			       "memory allocation failed");
+	    }
+	    for (i=0; i<dc_src->efl.nused; i++) {
+		char *s = H5MM_xstrdup (dc_src->efl.slot[i].name);
+		dc_dst->efl.slot[i] = dc_src->efl.slot[i];
+		dc_dst->efl.slot[i].name = s;
+	    }
+	}
+	break;
+	
+    case H5P_DATASET_XFER:
+	break;
+
+    default:
+	HRETURN_ERROR(H5E_ARGS, H5E_BADRANGE, NULL,
+		      "unknown property list class");
+    }
+
+    FUNC_LEAVE (dst);
+}

@@ -1,19 +1,7 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
- * All rights reserved.                                                      *
- *                                                                           *
- * This file is part of HDF5.  The full HDF5 copyright notice, including     *
- * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
 /*
+ * Copyright (C) 1998 NCSA
+ *                    All rights reserved.
+ *
  * Programmer:  Robb Matzke <matzke@llnl.gov>
  *              Tuesday, March 31, 1998
  *
@@ -21,22 +9,58 @@
  *		collections but the collections are not related to one
  *		another by anything that appears in the file format.
  */
-#include "h5test.h"
-#include "H5private.h"
-#include "H5Eprivate.h"
-#include "H5Fprivate.h"
-#include "H5Gprivate.h"
-#include "H5HGprivate.h"
-#include "H5Iprivate.h"
-#include "H5Pprivate.h"
+#include <H5private.h>
+#include <H5Eprivate.h>
+#include <H5Fprivate.h>
+#include <H5Gprivate.h>
+#include <H5HGprivate.h>
+#include <H5Pprivate.h>
 
-const char *FILENAME[] = {
-    "gheap1",
-    "gheap2",
-    "gheap3",
-    "gheap4",
-    NULL
-};
+#ifndef HAVE_FUNCTION
+#   undef __FUNCTION__
+#   define __FUNCTION__ ""
+#endif
+
+#define TEST_FILE_NAME0		"gheap0.h5"
+#define TEST_FILE_NAME1		"gheap1.h5"
+#define TEST_FILE_NAME2		"gheap2.h5"
+#define TEST_FILE_NAME3		"gheap3.h5"
+#define TEST_FILE_NAME4		"gheap4.h5"
+
+#define FAILED(S) {							      \
+    puts ("*FAILED*");							      \
+    printf ("    Failed at %s:%d in %s()%s%s\n",			      \
+	    __FILE__, __LINE__, __FUNCTION__,				      \
+	    (S)&&*(S)?": ":"", (S)?(S):"");				      \
+    H5Eprint (stdout);							      \
+}
+
+
+/*-------------------------------------------------------------------------
+ * Function:	emit_diagnostics
+ *
+ * Purpose:	If debugging is turned on then this function will cause the
+ *		library to emit it's diagnostic messages now instead of when
+ *		we're trying to make the output look nice.
+ *
+ * Return:	void
+ *
+ * Programmer:	Robb Matzke
+ *              Tuesday, March 31, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+static void
+emit_diagnostics (void)
+{
+    H5F_t *f = H5F_open (TEST_FILE_NAME0, H5F_ACC_CREAT|H5F_ACC_RDWR|H5F_ACC_TRUNC,
+			 NULL, NULL);
+    H5G_t *g = H5G_create (f->shared->root_grp, "emit", 0);
+    H5G_close (g);
+    H5F_close (f);
+}
 
 
 /*-------------------------------------------------------------------------
@@ -47,7 +71,7 @@ const char *FILENAME[] = {
  *
  * Return:	Success:	0
  *
- *		Failure:	number of errors
+ *		Failure:	-1
  *
  * Programmer:	Robb Matzke
  *              Tuesday, March 31, 1998
@@ -57,31 +81,30 @@ const char *FILENAME[] = {
  *-------------------------------------------------------------------------
  */
 static int
-test_1 (hid_t fapl)
+test_1 (void)
 {
-    hid_t	file=-1;
-    H5F_t 	*f=NULL;
+    H5F_t 	*f;
     H5HG_t	obj[1024];
-    uint8_t	out[1024];
-    uint8_t	in[1024];
+    uint8	out[1024];
+    uint8	in[1024];
     int		i;
     size_t	size;
     herr_t	status;
-    int		nerrors=0;
-    char	filename[1024];
+    int		retval = 0;
 
-    TESTING("monotonically increasing lengths");
+    printf ("%-70s", "...monotonically increasing lengths");
+    fflush (stdout);
 
     /* Open a clean file */
-    h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
-    if ((file=H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl))<0)
-	goto error;
-    if (NULL==(f=H5I_object(file))) {
-	H5_FAILED();
-	puts("    Unable to create file");
-	goto error;
+    H5Eclear ();
+    f = H5F_open (TEST_FILE_NAME1,
+		  H5F_ACC_CREAT|H5F_ACC_RDWR|H5F_ACC_TRUNC|H5F_ACC_DEBUG,
+		  NULL, NULL);
+    if (!f) {
+	FAILED ("unable to create file");
+	return -1;
     }
-
+    
     /*
      * Write the objects, monotonically increasing in length.  Since this is
      * a clean file, the addresses allocated for the collections should also
@@ -90,16 +113,14 @@ test_1 (hid_t fapl)
     for (i=0; i<1024; i++) {
 	size = i+1;
 	memset (out, 'A'+i%26, size);
-	H5Eclear2(H5E_DEFAULT);
-	status = H5HG_insert (f, H5P_DATASET_XFER_DEFAULT, size, out, obj+i);
+	H5Eclear ();
+	status = H5HG_insert (f, size, out, obj+i);
 	if (status<0) {
-	    H5_FAILED();
-	    puts("    Unable to insert object into global heap");
-	    nerrors++;
-	} else if (i && H5F_addr_gt (obj[i-1].addr, obj[i].addr)) {
-	    H5_FAILED();
-	    puts("    Collection addresses are not monotonically increasing");
-	    nerrors++;
+	    FAILED ("unable to insert object into global heap");
+	    --retval;
+	} else if (i && H5F_addr_gt (&(obj[i-1].addr), &(obj[i].addr))) {
+	    FAILED ("collection addresses are not monotonically increasing");
+	    --retval;
 	}
     }
 
@@ -109,28 +130,19 @@ test_1 (hid_t fapl)
     for (i=0; i<1024; i++) {
 	size = i+1;
 	memset (out, 'A'+i%26, size);
-	H5Eclear2(H5E_DEFAULT);
-	if (NULL==H5HG_read (f, H5P_DATASET_XFER_DEFAULT, obj+i, in, NULL)) {
-	    H5_FAILED();
-	    puts("    Unable to read object");
-	    nerrors++;
+	H5Eclear ();
+	if (NULL==H5HG_read (f, obj+i, in)) {
+	    FAILED ("unable to read object");
+	    --retval;
 	} else if (memcmp (in, out, size)) {
-	    H5_FAILED();
-	    puts("    Value read doesn't match value written");
-	    nerrors++;
+	    FAILED ("value read doesn't match value written");
+	    --retval;
 	}
     }
-
-    if (H5Fclose(file)<0) goto error;
-    if (nerrors) goto error;
-    PASSED();
-    return 0;
-
- error:
-    H5E_BEGIN_TRY {
-	H5Fclose(file);
-    } H5E_END_TRY;
-    return MAX(1, nerrors);
+    
+    puts (" PASSED");
+    H5F_close (f);
+    return retval;
 }
 
 
@@ -142,7 +154,7 @@ test_1 (hid_t fapl)
  *
  * Return:	Success:	0
  *
- *		Failure:        number of errors
+ *		Failure:	-1
  *
  * Programmer:	Robb Matzke
  *              Tuesday, March 31, 1998
@@ -152,41 +164,41 @@ test_1 (hid_t fapl)
  *-------------------------------------------------------------------------
  */
 static int
-test_2 (hid_t fapl)
+test_2 (void)
 {
-    hid_t	file=-1;
-    H5F_t 	*f=NULL;
+    H5F_t 	*f;
     H5HG_t	obj[1024];
-    uint8_t	out[1024];
-    uint8_t	in[1024];
+    uint8	out[1024];
+    uint8	in[1024];
     int		i;
     size_t	size;
-    int		nerrors=0;
-    char	filename[1024];
+    herr_t	status;
+    int		retval = 0;
 
-    TESTING("monotonically decreasing lengths");
+    printf ("%-70s", "...monotonically decreasing lengths");
+    fflush (stdout);
 
     /* Open a clean file */
-    h5_fixname(FILENAME[1], fapl, filename, sizeof filename);
-    if ((file=H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl))<0)
-	goto error;
-    if (NULL==(f=H5I_object(file))) {
-	H5_FAILED();
-	puts("    Unable to create file");
-	goto error;
+    H5Eclear ();
+    f = H5F_open (TEST_FILE_NAME2,
+		  H5F_ACC_CREAT|H5F_ACC_RDWR|H5F_ACC_TRUNC|H5F_ACC_DEBUG,
+		  NULL, NULL);
+    if (!f) {
+	FAILED ("unable to create file");
+	return -1;
     }
-
+    
     /*
      * Write the objects, monotonically decreasing in length.
      */
     for (i=0; i<1024; i++) {
 	size = 1024-i;
 	memset (out, 'A'+i%26, size);
-	H5Eclear2(H5E_DEFAULT);
-	if (H5HG_insert (f, H5P_DATASET_XFER_DEFAULT, size, out, obj+i)<0) {
-	    H5_FAILED();
-	    puts("    Unable to insert object into global heap");
-	    nerrors++;
+	H5Eclear ();
+	status = H5HG_insert (f, size, out, obj+i);
+	if (status<0) {
+	    FAILED ("unable to insert object into global heap");
+	    --retval;
 	}
     }
 
@@ -196,28 +208,19 @@ test_2 (hid_t fapl)
     for (i=0; i<1024; i++) {
 	size = 1024-i;
 	memset (out, 'A'+i%26, size);
-	H5Eclear2(H5E_DEFAULT);
-	if (NULL==H5HG_read (f, H5P_DATASET_XFER_DEFAULT, obj+i, in, NULL)) {
-	    H5_FAILED();
-	    puts("    Unable to read object");
-	    nerrors++;
+	H5Eclear ();
+	if (NULL==H5HG_read (f, obj+i, in)) {
+	    FAILED ("unable to read object");
+	    --retval;
 	} else if (memcmp (in, out, size)) {
-	    H5_FAILED();
-	    puts("    Value read doesn't match value written");
-	    nerrors++;
+	    FAILED ("value read doesn't match value written");
+	    --retval;
 	}
     }
-
-    if (H5Fclose(file)<0) goto error;
-    if (nerrors) goto error;
-    PASSED();
-    return 0;
-
- error:
-    H5E_BEGIN_TRY {
-	H5Fclose(file);
-    } H5E_END_TRY;
-    return MAX(1, nerrors);
+    
+    puts (" PASSED");
+    H5F_close (f);
+    return retval;
 }
 
 
@@ -229,7 +232,7 @@ test_2 (hid_t fapl)
  *
  * Return:	Success:	0
  *
- *		Failure:	number of errors
+ *		Failure:	-1
  *
  * Programmer:	Robb Matzke
  *              Tuesday, March 31, 1998
@@ -239,63 +242,53 @@ test_2 (hid_t fapl)
  *-------------------------------------------------------------------------
  */
 static int
-test_3 (hid_t fapl)
+test_3 (void)
 {
-    hid_t	file=-1;
-    H5F_t 	*f=NULL;
+    H5F_t 	*f;
     H5HG_t	obj[1024];
-    uint8_t	out[1024];
+    uint8	out[1024];
     int		i;
     size_t	size;
     herr_t	status;
-    int		nerrors=0;
-    char	filename[1024];
+    int		retval = 0;
 
-    TESTING("complete object removal");
+    printf ("%-70s", "...complete object removal");
+    fflush (stdout);
 
     /* Open a clean file */
-    h5_fixname(FILENAME[2], fapl, filename, sizeof filename);
-    if ((file=H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl))<0)
-	goto error;
-    if (NULL==(f=H5I_object(file))) {
-	H5_FAILED();
-	puts("    Unable to create file");
-	goto error;
+    H5Eclear ();
+    f = H5F_open (TEST_FILE_NAME3,
+		  H5F_ACC_CREAT|H5F_ACC_RDWR|H5F_ACC_TRUNC|H5F_ACC_DEBUG,
+		  NULL, NULL);
+    if (!f) {
+	FAILED ("unable to create file");
+	return -1;
     }
 
     /* Create some stuff */
     for (i=0; i<1024; i++) {
 	size = i%30+100;
 	memset (out, 'A'+i%26, size);
-	H5Eclear2(H5E_DEFAULT);
-	status = H5HG_insert (f, H5P_DATASET_XFER_DEFAULT, size, out, obj+i);
+	H5Eclear ();
+	status = H5HG_insert (f, size, out, obj+i);
 	if (status<0) {
-	    H5_FAILED();
-	    puts("    Unable to insert object into global heap");
-	    nerrors++;
+	    FAILED ("unable to insert object into global heap");
+	    --retval;
 	}
     }
 
     /* Remove everything */
     for (i=0; i<1024; i++) {
-	status = H5HG_remove (f, H5P_DATASET_XFER_DEFAULT, obj+i);
+	status = H5HG_remove (f, obj+i);
 	if (status<0) {
-	    H5_FAILED();
-	    puts("    Unable to remove object");
-	    nerrors++;
+	    FAILED ("unable to remove object");
+	    --retval;
 	}
     }
-
-    if (H5Fclose(file)<0) goto error;
-    if (nerrors) goto error;
-    PASSED();
-    return 0;
-
- error:
-    H5E_BEGIN_TRY {
-	H5Fclose(file);
-    } H5E_END_TRY;
-    return MAX(1, nerrors);
+    
+    puts (" PASSED");
+    H5F_close (f);
+    return retval;
 }
 
 
@@ -308,7 +301,7 @@ test_3 (hid_t fapl)
  *
  * Return:	Success:	0
  *
- *		Failure:	number of errors
+ *		Failure:	-1
  *
  * Programmer:	Robb Matzke
  *              Tuesday, March 31, 1998
@@ -318,69 +311,88 @@ test_3 (hid_t fapl)
  *-------------------------------------------------------------------------
  */
 static int
-test_4 (hid_t fapl)
+test_4 (void)
 {
-    hid_t	file=-1;
-    H5F_t 	*f=NULL;
+    H5F_t 	*f;
     H5HG_t	obj[1024];
-    uint8_t	out[1024];
+    uint8	out[1024];
     int		i;
     size_t	size;
     herr_t	status;
-    int		nerrors=0;
-    char	filename[1024];
+    int		retval = 0;
 
-    TESTING("partial object removal");
+    printf ("%-70s", "...partial object removal");
+    fflush (stdout);
 
     /* Open a clean file */
-    h5_fixname(FILENAME[3], fapl, filename, sizeof filename);
-    if ((file=H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl))<0)
-	goto error;
-    if (NULL==(f=H5I_object(file))) {
-	H5_FAILED();
-	puts("    Unable to create file");
-	goto error;
+    H5Eclear ();
+    f = H5F_open (TEST_FILE_NAME4,
+		  H5F_ACC_CREAT|H5F_ACC_RDWR|H5F_ACC_TRUNC|H5F_ACC_DEBUG,
+		  NULL, NULL);
+    if (!f) {
+	FAILED ("unable to create file");
+	return -1;
     }
+
 
     for (i=0; i<1024; i++) {
 	/* Insert */
 	size = i%30+100;
 	memset (out, 'A'+i%26, size);
-	H5Eclear2(H5E_DEFAULT);
-	status = H5HG_insert (f, H5P_DATASET_XFER_DEFAULT, size, out, obj+i);
+	H5Eclear ();
+	status = H5HG_insert (f, size, out, obj+i);
 	if (status<0) {
-	    H5_FAILED();
-	    puts("    Unable to insert object into global heap");
-	    nerrors++;
+	    FAILED ("unable to insert object into global heap");
+	    --retval;
 	}
 
 	/*
 	 * Remove every third one beginning with the second, but after the
 	 * next one has already been inserted.  That is, insert A, B, C;
 	 * remove B, insert D, E, F; remove E; etc.
-	 */
+	 */ 
 	if (1==i%3) {
-	    H5Eclear2(H5E_DEFAULT);
-	    status = H5HG_remove (f, H5P_DATASET_XFER_DEFAULT, obj+i-1);
+	    H5Eclear ();
+	    status = H5HG_remove (f, obj+i-1);
 	    if (status<0) {
-		H5_FAILED();
-		puts("    Unable to remove object");
-		nerrors++;
+		FAILED ("unable to remove object");
+		--retval;
 	    }
 	    memset (obj+i-1, 0, sizeof *obj);
 	}
     }
 
-    if (H5Fclose(file)<0) goto error;
-    if (nerrors) goto error;
-    PASSED();
-    return 0;
+    puts (" PASSED");
+    H5F_close (f);
+    return retval;
+}
+    
 
- error:
-    H5E_BEGIN_TRY {
-	H5Fclose(file);
-    } H5E_END_TRY;
-    return MAX(1, nerrors);
+
+/*-------------------------------------------------------------------------
+ * Function:	cleanup
+ *
+ * Purpose:	Cleanup temporary test files
+ *
+ * Return:	none
+ *
+ * Programmer:	Albert Cheng
+ *              May 28, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+static void
+cleanup(void)
+{
+    if (!getenv ("HDF5_NOCLEANUP")) {
+	remove(TEST_FILE_NAME0);
+	remove(TEST_FILE_NAME1);
+	remove(TEST_FILE_NAME2);
+	remove(TEST_FILE_NAME3);
+	remove(TEST_FILE_NAME4);
+    }
 }
 
 
@@ -403,23 +415,22 @@ test_4 (hid_t fapl)
 int
 main (void)
 {
-    int		nerrors=0;
-    hid_t	fapl;
+    int		nfailed=0;
 
-    h5_reset();
-    fapl = h5_fileaccess();
+    emit_diagnostics ();
+    
+    
+    nfailed += test_1()<0 ? 1 : 0;
+    nfailed += test_2()<0 ? 1 : 0;
+    nfailed += test_3()<0 ? 1 : 0;
+    nfailed += test_4()<0 ? 1 : 0;
 
-    nerrors += test_1(fapl);
-    nerrors += test_2(fapl);
-    nerrors += test_3(fapl);
-    nerrors += test_4(fapl);
-    if (nerrors) goto error;
-
-    puts("All global heap tests passed.");
-    h5_cleanup(FILENAME, fapl);
-    return 0;
-
- error:
-    puts("*** TESTS FAILED ***");
-    return 1;
+    if (nfailed) {
+	printf ("*** %d global heap test%s failed ***\n",
+		nfailed, 1==nfailed?"":"s");
+    } else {
+	printf ("All global heap tests passed.\n");
+	cleanup();
+    }
+    return nfailed?-1:0;
 }

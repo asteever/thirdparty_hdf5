@@ -1,36 +1,60 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
- * All rights reserved.                                                      *
- *                                                                           *
- * This file is part of HDF5.  The full HDF5 copyright notice, including     *
- * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
 /*
+ * Copyright (C) 1998 NCSA
+ *                    All rights reserved.
+ *
  * Programmer:  Robb Matzke <matzke@llnl.gov>
  *              Tuesday, March  3, 1998
  *
  * Purpose:	Tests datasets stored in external raw files.
  */
-#include "h5test.h"
+#include <assert.h>
+#include <fcntl.h>
+#include <hdf5.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
-/* File for external link test.  Created with gen_udlinks.c */
-#define LINKED_FILE  "be_extlink2.h5"
+#include <H5config.h>
+#ifndef HAVE_ATTRIBUTE
+#   undef __attribute__
+#   define __attribute__(X) /*void*/
+#   define __unused__ /*void*/
+#else
+#   define __unused__ __attribute__((unused))
+#endif
 
-const char *FILENAME[] = {
-    "extern_1",
-    "extern_2",
-    "extern_3",
-    "extern_4",
-    NULL
-};
+#define TEST_FILE_NAME1		"extern_1.h5"
+#define TEST_FILE_NAME2		"extern_2.h5"
+#define TEST_FILE_NAME3		"extern_3.h5"
+
+static int nerrors_g = 0;
+
+
+/*-------------------------------------------------------------------------
+ * Function:	display_error_cb
+ *
+ * Purpose:	Displays the error stack after printing "*FAILED*".
+ *
+ * Return:	Success:	0
+ *
+ *		Failure:	-1
+ *
+ * Programmer:	Robb Matzke
+ *              Wednesday, March  4, 1998
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+display_error_cb (void __unused__ *client_data)
+{
+    puts ("*FAILED*");
+    H5Eprint (stdout);
+    nerrors_g++;
+    return 0;
+}
 
 
 /*-------------------------------------------------------------------------
@@ -66,7 +90,7 @@ same_contents (const char *name1, const char *name2)
 	assert (n1>=0 && (size_t)n1<=sizeof(buf1));
 	assert (n2>=0 && (size_t)n2<=sizeof(buf2));
 	assert (n1==n2);
-
+	
 	if (n1<=0 && n2<=0) break;
 	if (memcmp (buf1, buf2, (size_t)n1)) {
 	    close (fd1);
@@ -81,498 +105,376 @@ same_contents (const char *name1, const char *name2)
 
 
 /*-------------------------------------------------------------------------
- * Function:	test_1a
+ * Function:	test_1
  *
- * Purpose:	Tests a non-extendible dataset with a single external file.
+ * Purpose:	Describes various external datasets in an HDF5 file without
+ *		actually creating the external raw files.
  *
- * Return:	Success:	0
- *
- *		Failure:	number of errors
+ * Return:	void
  *
  * Programmer:	Robb Matzke
- *              Monday, November 23, 1998
+ *              Tuesday, March  3, 1998
  *
  * Modifications:
  *
  *-------------------------------------------------------------------------
  */
-static int
-test_1a(hid_t file)
+static void
+test_1 (void) 
 {
-    hid_t	dcpl=-1;		/*dataset creation properties	*/
-    hid_t	space=-1;		/*data space			*/
-    hid_t	dset=-1;		/*dataset			*/
-    hsize_t	cur_size[1];		/*data space current size	*/
-    hsize_t	max_size[1];		/*data space maximum size	*/
-    int		n;			/*number of external files	*/
-    char	name[256];		/*external file name		*/
-    off_t	file_offset;		/*external file offset		*/
-    hsize_t	file_size;		/*sizeof external file segment	*/
+    hid_t	file, plist, space, dset, grp;
+    herr_t	status;
+    hsize_t	size[2], max_size[2];
+    herr_t	(*func)(void*) = NULL;
+    void	*client_data = NULL;
+    int		n;
+	
+    
+    /*
+     * Create the file and an initial group.  This causes messages about
+     * debugging to be emitted before we start playing games with what the
+     * output looks like.
+     */
+    file = H5Fcreate (TEST_FILE_NAME1, H5F_ACC_TRUNC|H5F_ACC_DEBUG,
+		      H5P_DEFAULT, H5P_DEFAULT);
+    assert (file>=0);
+    grp = H5Gcreate (file, "emit-diagnostics", 8);
+    H5Gclose (grp);
 
-    TESTING("fixed-size data space, exact storage");
+    /*
+     * A single external file for a non-extendible dataset.
+     */
+    do {
+	printf ("%-70s", "...fixed-size data space, exact storage");
+	fflush (stdout);
+	plist = H5Pcreate (H5P_DATASET_CREATE);
+	assert (plist>=0);
+	status = H5Pset_external (plist, "ext1.data", 0, (hsize_t)400);
+	assert (status>=0);
 
-    /* Create the dataset */
-    if((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0) goto error;
-    cur_size[0] = max_size[0] = 100;
-    if(H5Pset_external(dcpl, "ext1.data", (off_t)0,
-	(hsize_t)(max_size[0] * sizeof(int))) < 0) goto error;
-    if((space = H5Screate_simple(1, cur_size, max_size)) < 0) goto error;
-    if((dset = H5Dcreate2(file, "dset1", H5T_NATIVE_INT, space, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
-	goto error;
-    if(H5Dclose(dset) < 0) goto error;
-    if(H5Sclose(space) < 0) goto error;
-    if(H5Pclose(dcpl) < 0) goto error;
+	size[0] = max_size[0] = 100;
+	space = H5Screate_simple (1, size, max_size);
+	assert (space>=0);
 
-    /* Read dataset creation information */
-    if((dset = H5Dopen2(file, "dset1", H5P_DEFAULT)) < 0) goto error;
+	/* Create the dataset, the `dset1' name is used later too */
+	dset = H5Dcreate (file, "dset1", H5T_NATIVE_INT, space, plist);
+	if (dset<0) break;
+	H5Dclose (dset);
+	puts (" PASSED");
+    } while (0);
+    H5Sclose (space);
+    H5Pclose (plist);
 
-    /* Test dataset address.  Should be undefined. */
-    if(H5Dget_offset(dset) != HADDR_UNDEF) goto error;
+    /*
+     * A single external file which is too small to represent all the data.
+     */
+    do {
+	printf ("%-70s", "...external storage is too small");
+	fflush (stdout);
+	plist = H5Pcreate (H5P_DATASET_CREATE);
+	assert (plist>=0);
+	status = H5Pset_external (plist, "ext1.data", 0, (hsize_t)399);
+	assert (status>=0);
 
-    if((dcpl = H5Dget_create_plist(dset)) < 0) goto error;
-    if((n = H5Pget_external_count(dcpl)) < 0) goto error;
-    if(1 != n) {
-	H5_FAILED();
-	puts("    Returned external count is wrong.");
-	printf("   got: %d\n    ans: 1\n", n);
-	goto error;
-    }
-    HDstrcpy(name + sizeof(name) - 4, "...");
-    if(H5Pget_external(dcpl, 0, sizeof(name) - 4, name, &file_offset,
-			 &file_size) < 0) goto error;
-    if(file_offset != 0) {
-	H5_FAILED();
-	puts("    Wrong file offset.");
-	printf("    got: %lu\n    ans: 0\n", (unsigned long)file_offset);
-	goto error;
-    }
-    if(file_size != (max_size[0] * sizeof(int))) {
-	H5_FAILED();
-	puts("    Wrong file size.");
-	printf("    got: %lu\n    ans: %lu\n", (unsigned long)file_size,
-		(unsigned long)max_size[0]*sizeof(int));
-	goto error;
-    }
-    if (H5Pclose (dcpl) < 0) goto error;
-    if (H5Dclose (dset) < 0) goto error;
-    PASSED();
-    return 0;
- error:
-    H5E_BEGIN_TRY {
-	H5Pclose(dcpl);
-	H5Sclose(space);
-	H5Dclose(dset);
-    } H5E_END_TRY;
-    return 1;
-}
+	size[0] = max_size[0] = 100;
+	space = H5Screate_simple (1, size, max_size);
+	assert (space>=0);
 
-
-/*-------------------------------------------------------------------------
- * Function:	test_1b
- *
- * Purpose:	Test a single external file which is too small to represent
- *		all the data.
- *
- * Return:	Success:	0
- *
- *		Failure:	number of errors
- *
- * Programmer:	Robb Matzke
- *              Monday, November 23, 1998
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static int
-test_1b(hid_t file)
-{
-    hid_t	dcpl = -1;		/*dataset creation properties	*/
-    hid_t	space = -1;		/*data space			*/
-    hid_t	dset = -1;		/*dataset			*/
-    hsize_t	cur_size[1];		/*current data space size	*/
-    hsize_t	max_size[1];		/*maximum data space size	*/
+	H5Eget_auto (&func, &client_data);
+	H5Eset_auto (NULL, NULL);
+	dset = H5Dcreate (file, "dset2", H5T_NATIVE_INT, space, plist);
+	H5Eset_auto (func, client_data);
+	
+	if (dset>=0) {
+	    puts ("*FAILED*");
+	    printf ("   Small external file succeeded instead of failing\n");
+	    nerrors_g++;
+	    H5Dclose (dset);
+	    break;
+	}
+	puts (" PASSED");
+    } while (0);
+    H5Sclose (space);
+    H5Pclose (plist);
 
-    TESTING("external storage is too small");
-    if((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0) goto error;
-    cur_size[0] = max_size[0] = 100;
-    if(H5Pset_external(dcpl, "ext1.data", (off_t)0,
-	(hsize_t)(max_size[0] * sizeof(int) - 1)) < 0) goto error;
-    if((space = H5Screate_simple(1, cur_size, max_size)) < 0) goto error;
-    H5E_BEGIN_TRY {
-	dset = H5Dcreate2(file, "dset2", H5T_NATIVE_INT, space, H5P_DEFAULT, dcpl, H5P_DEFAULT);
-    } H5E_END_TRY;
-    if(dset >= 0) {
-	H5_FAILED();
-	puts("    Small external file succeeded instead of failing.");
-	goto error;
-    }
-    if(H5Sclose(space) < 0) goto error;
-    if(H5Pclose(dcpl) < 0) goto error;
+    /*
+     * A single external file which is large enough to represent the current
+     * data and large enough to represent the eventual size of the data.
+     */
+    do {
+	printf ("%-70s", "...extendible dataspace, exact external size");
+	fflush (stdout);
+	plist = H5Pcreate (H5P_DATASET_CREATE);
+	assert (plist>=0);
+	status = H5Pset_external (plist, "ext1.data", 0, (hsize_t)800);
+	assert (status>=0);
 
-    PASSED();
-    return 0;
+	size[0] = 100;
+	max_size[0] = 200;
+	space = H5Screate_simple (1, size, max_size);
+	assert (space>=0);
 
- error:
-    H5E_BEGIN_TRY {
-	H5Sclose(space);
-	H5Pclose(dcpl);
-	H5Dclose(dset);
-    } H5E_END_TRY;
-    return 1;
-}
+	dset = H5Dcreate (file, "dset3", H5T_NATIVE_INT, space, plist);
+	if (dset<0) break;
+	H5Dclose (dset);
+	puts (" PASSED");
+    } while (0);
+    H5Sclose (space);
+    H5Pclose (plist);
 
-
-/*-------------------------------------------------------------------------
- * Function:	test_1c
- *
- * Purpose:	Test a single external file which is large enough to
- *		represent the current data and large enough to represent the
- *		eventual size of the data.
- *
- * Return:	Success:	0
- *
- *		Failure:	number of errors
- *
- * Programmer:	Robb Matzke
- *              Monday, November 23, 1998
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static int
-test_1c(hid_t file)
-{
-    hid_t	dcpl=-1;		/*dataset creation properties	*/
-    hid_t	space=-1;		/*data space			*/
-    hid_t	dset=-1;		/*dataset			*/
-    hsize_t	cur_size[1];		/*current data space size       */
-    hsize_t	max_size[1];		/*maximum data space size	*/
 
-    TESTING("extendible dataspace, exact external size");
+    /*
+     * A single external file which is large enough for the current data size
+     * but not large enough for the eventual size.
+     */
+    do {
+	printf ("%-70s", "...extendible dataspace, "
+		"external storage is too small");
+	fflush (stdout);
+	plist = H5Pcreate (H5P_DATASET_CREATE);
+	assert (plist>=0);
+	status = H5Pset_external (plist, "ext1.data", 0, (hsize_t)799);
+	assert (status>=0);
 
-    if((dcpl = H5Pcreate (H5P_DATASET_CREATE)) < 0) goto error;
-    cur_size[0] = 100;
-    max_size[0] = 200;
-    if(H5Pset_external(dcpl, "ext1.data", (off_t)0,
-	(hsize_t)(max_size[0] * sizeof(int))) < 0) goto error;
-    if((space = H5Screate_simple(1, cur_size, max_size)) < 0) goto error;
-    if((dset = H5Dcreate2(file, "dset3", H5T_NATIVE_INT, space, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
-	goto error;
-    if(H5Dclose(dset) < 0) goto error;
-    if(H5Sclose(space) < 0) goto error;
-    if(H5Pclose(dcpl) < 0) goto error;
+	size[0] = 100;
+	max_size[0] = 200;
+	space = H5Screate_simple (1, size, max_size);
+	assert (space>=0);
 
-    PASSED();
-    return 0;
+	H5Eget_auto (&func, &client_data);
+	H5Eset_auto (NULL, NULL);
+	dset = H5Dcreate (file, "dset4", H5T_NATIVE_INT, space, plist);
+	H5Eset_auto (func, client_data);
+	
+	if (dset>=0) {
+	    puts ("*FAILED*");
+	    printf ("   Small external file succeeded instead of failing\n");
+	    H5Dclose (dset);
+	    nerrors_g++;
+	    break;
+	}
+	puts (" PASSED");
+    } while (0);
+    H5Sclose (space);
+    H5Pclose (plist);
 
-error:
-    H5E_BEGIN_TRY {
-	H5Dclose(dset);
-	H5Pclose(dcpl);
-	H5Sclose(space);
-    } H5E_END_TRY;
-    return 1;
-}
+    /*
+     * A single external file of unlimited size and an unlimited data space.
+     */
+    do {
+	printf ("%-70s", "...unlimited dataspace, unlimited external storage");
+	fflush (stdout);
+	plist = H5Pcreate (H5P_DATASET_CREATE);
+	assert (plist>=0);
+	status = H5Pset_external (plist, "ext1.data", 0, H5F_UNLIMITED);
+	assert (status>=0);
 
-
-/*-------------------------------------------------------------------------
- * Function:	test_1d
- *
- * Purpose:	Test a single external file which is large enough for the
- *		current data size but not large enough for the eventual size.
- *
- * Return:	Success:	0
- *
- *		Failure:	number of errors
- *
- * Programmer:	Robb Matzke
- *              Monday, November 23, 1998
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static int
-test_1d(hid_t file)
-{
-    hid_t	dcpl=-1;		/*dataset creation properties	*/
-    hid_t	space=-1;		/*data space			*/
-    hid_t	dset=-1;		/*dataset			*/
-    hsize_t	cur_size[1];		/*current data space size       */
-    hsize_t	max_size[1];		/*maximum data space size	*/
+	size[0] = 100;
+	max_size[0] = H5S_UNLIMITED;
+	space = H5Screate_simple (1, size, max_size);
+	assert (space>=0);
 
-    TESTING("extendible dataspace, external storage is too small");
+	/* Create the dataset, the `dset5' name is used later too */
+	dset = H5Dcreate (file, "dset5", H5T_NATIVE_INT, space, plist);
+	if (dset<0) break;
+	H5Dclose (dset);
+	puts (" PASSED");
+    } while (0);
+    H5Sclose (space);
+    H5Pclose (plist);
 
-    if((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0) goto error;
-    cur_size[0] = 100;
-    max_size[0] = 200;
-    if(H5Pset_external(dcpl, "ext1.data", (off_t)0,
-	(hsize_t)(max_size[0] * sizeof(int) - 1)) < 0) goto error;
-    if((space = H5Screate_simple(1, cur_size, max_size)) < 0) goto error;
-    H5E_BEGIN_TRY {
-	dset = H5Dcreate2(file, "dset4", H5T_NATIVE_INT, space, H5P_DEFAULT, dcpl, H5P_DEFAULT);
-    } H5E_END_TRY;
-    if(dset >= 0) {
-	H5_FAILED();
-	puts("    Small external file succeeded instead of failing.");
-	goto error;
-    }
-    if(H5Sclose(space) < 0) goto error;
-    if(H5Pclose(dcpl) < 0) goto error;
+    /*
+     * Open one of the previous datasets and make sure it looks the same as
+     * when we wrote it.
+     */
+    do {
+	char	name[256];
+	off_t	file_offset;
+	hsize_t	file_size;
+	
+	printf ("%-70s", "...opening a dataset and reading the storage info");
+	fflush (stdout);
 
-    PASSED();
-    return 0;
+	dset = H5Dopen (file, "dset1");
+	assert (dset>=0);
+	plist = H5Dget_create_plist (dset);
+	assert (plist>=0);
 
- error:
-    H5E_BEGIN_TRY {
-	H5Dclose(dset);
-	H5Pclose(dcpl);
-	H5Sclose(space);
-    } H5E_END_TRY;
-    return 1;
-}
+	n = H5Pget_external_count (plist);
+	if (n<0) break;
+	if (1!=n) {
+	    puts ("*FAILED*");
+	    printf ("   Returned external count is wrong.\n");
+	    nerrors_g++;
+	    break;
+	}
+	strcpy (name+sizeof(name)-4, "...");
+	status = H5Pget_external (plist, 0, sizeof(name)-4, name,
+				  &file_offset, &file_size);
+	if (status<0) {
+	    printf ("   Unable to read first extern file info.\n");
+	    break;
+	} else if (file_offset!=0) {
+	    puts ("*FAILED*");
+	    printf ("   Wrong file offset.\n");
+	    nerrors_g++;
+	    break;
+	} else if (file_size!=400) {
+	    puts ("*FAILED*");
+	    printf ("   Wrong file size.\n");
+	    nerrors_g++;
+	    break;
+	}
+	puts (" PASSED");
+    } while (0);
+    H5Pclose (plist);
+    H5Dclose (dset);
 
-
-/*-------------------------------------------------------------------------
- * Function:	test_1e
- *
- * Purpose:	Test a single external file of unlimited size and an
- *		unlimited data space.
- *
- * Return:	Success:	0
- *
- *		Failure:	number of errors
- *
- * Programmer:	Robb Matzke
- *              Monday, November 23, 1998
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static int
-test_1e(hid_t file)
-{
-    hid_t	dcpl=-1;		/*dataset creation properties	*/
-    hid_t	space=-1;		/*data space			*/
-    hid_t	dset=-1;		/*dataset			*/
-    hsize_t	cur_size[1];		/*data space current size	*/
-    hsize_t	max_size[1];		/*data space maximum size	*/
-    int		n;			/*number of external files	*/
-    char	name[256];		/*external file name		*/
-    off_t	file_offset;		/*external file offset		*/
-    hsize_t	file_size;		/*sizeof external file segment	*/
+    /*
+     * Open one of the previous unlimited datasets and make sure it looks the
+     * same as when we wrote it.
+     */
+    do {
+	char	name[256];
+	off_t	file_offset;
+	hsize_t	file_size;
+	
+	printf ("%-70s", "...opening an unlimited dataset and reading the "
+		"storage info");
+	fflush (stdout);
 
-    TESTING("unlimited dataspace, unlimited external storage");
+	dset = H5Dopen (file, "dset5");
+	assert (dset>=0);
+	plist = H5Dget_create_plist (dset);
+	assert (plist>=0);
 
-    /* Create dataset */
-    if((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0) goto error;
-    if(H5Pset_external(dcpl, "ext1.data", (off_t)0, H5F_UNLIMITED) < 0) goto error;
-    cur_size[0] = 100;
-    max_size[0] = H5S_UNLIMITED;
-    if((space = H5Screate_simple(1, cur_size, max_size)) < 0) goto error;
-    if((dset = H5Dcreate2(file, "dset5", H5T_NATIVE_INT, space, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
-	goto error;
-    if(H5Dclose(dset) < 0) goto error;
-    if(H5Sclose(space) < 0) goto error;
-    if(H5Pclose(dcpl) < 0) goto error;
+	n = H5Pget_external_count (plist);
+	if (n<0) break;
+	if (1!=n) {
+	    puts ("*FAILED*");
+	    printf ("   Returned external count is wrong.\n");
+	    nerrors_g++;
+	    break;
+	}
+	strcpy (name+sizeof(name)-4, "...");
+	status = H5Pget_external (plist, 0, sizeof(name)-4, name,
+				  &file_offset, &file_size);
+	if (status<0) {
+	    printf ("   Unable to read first extern file info.\n");
+	    break;
+	} else if (file_offset!=0) {
+	    puts ("*FAILED*");
+	    printf ("   Wrong file offset.\n");
+	    nerrors_g++;
+	    break;
+	} else if (H5F_UNLIMITED!=file_size) {
+	    puts ("*FAILED*");
+	    printf ("   Wrong file size.\n");
+	    nerrors_g++;
+	    break;
+	}
+	puts (" PASSED");
+    } while (0);
+    H5Pclose (plist);
+    H5Dclose (dset);
 
-    /* Read dataset creation information */
-    if((dset = H5Dopen2(file, "dset5", H5P_DEFAULT)) < 0) goto error;
-    if((dcpl = H5Dget_create_plist(dset)) < 0) goto error;
-    if((n = H5Pget_external_count(dcpl)) < 0) goto error;
-    if(1 != n) {
-	H5_FAILED();
-	puts("    Returned external count is wrong.");
-	printf("    got: %d\n    ans: 1\n", n);
-	goto error;
-    }
-    HDstrcpy(name + sizeof(name) - 4, "...");
-    if(H5Pget_external(dcpl, 0, sizeof(name) - 4, name, &file_offset,
-			 &file_size) < 0) goto error;
-    if(file_offset != 0) {
-	H5_FAILED();
-	puts("    Wrong file offset.");
-	printf("    got: %lu\n    ans: 0\n", (unsigned long)file_offset);
-	goto error;
-    }
-    if(H5F_UNLIMITED != file_size) {
-	H5_FAILED();
-	puts("    Wrong file size.");
-	printf("    got: %lu\n    ans: INF\n", (unsigned long)file_size);
-	goto error;
-    }
-    if(H5Pclose(dcpl) < 0) goto error;
-    if(H5Dclose(dset) < 0) goto error;
+    /*
+     * Multiple external files for a dataset.
+     */
+    do {
+	printf ("%-70s", "...multiple external files");
+	fflush (stdout);
+	plist = H5Pcreate (H5P_DATASET_CREATE);
+	assert (plist>=0);
+	status = H5Pset_external (plist, "ext1.data", 0, (hsize_t)100);
+	assert (status>=0);
+	status = H5Pset_external (plist, "ext2.data", 0, (hsize_t)100);
+	assert (status>=0);
+	status = H5Pset_external (plist, "ext3.data", 0, (hsize_t)100);
+	assert (status>=0);
+	status = H5Pset_external (plist, "ext4.data", 0, (hsize_t)100);
+	assert (status>=0);
 
-    PASSED();
-    return 0;
+	size[0] = max_size[0] = 100;
+	space = H5Screate_simple (1, size, max_size);
+	assert (space>=0);
 
- error:
-    H5E_BEGIN_TRY {
-	H5Dclose(dset);
-	H5Pclose(dcpl);
-	H5Sclose(space);
-    } H5E_END_TRY;
-    return 1;
-}
+	dset = H5Dcreate (file, "dset6", H5T_NATIVE_INT, space, plist);
+	if (dset<0) break;
+	H5Dclose (dset);
+	puts (" PASSED");
+    } while (0);
+    H5Sclose (space);
+    H5Pclose (plist);
 
-
-/*-------------------------------------------------------------------------
- * Function:	test_1f
- *
- * Purpose:	Test multiple external files for a dataset.
- *
- * Return:	Success:	0
- *
- *		Failure:	number of errors
- *
- * Programmer:	Robb Matzke
- *              Monday, November 23, 1998
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static int
-test_1f(hid_t file)
-{
-    hid_t	dcpl=-1;		/*dataset creation properties	*/
-    hid_t	space=-1;		/*data space			*/
-    hid_t	dset=-1;		/*dataset			*/
-    hsize_t	cur_size[1];		/*data space current size	*/
-    hsize_t	max_size[1];		/*data space maximum size	*/
+    /*
+     * It should be impossible to define an unlimited external file and then
+     * follow it with another external file.
+     */
+    do {
+	printf ("%-70s", "...external file following unlimited file");
+	fflush (stdout);
+	plist = H5Pcreate (H5P_DATASET_CREATE);
+	assert (plist>=0);
+	status = H5Pset_external (plist, "ext1.data", 0, H5F_UNLIMITED);
+	assert (status>=0);
 
-    TESTING("multiple external files");
+	/* Next function should fail */
+	H5Eget_auto (&func, &client_data);
+	H5Eset_auto (NULL, NULL);
+	status = H5Pset_external (plist, "ext2.data", 0, (hsize_t)100);
+	H5Eset_auto (func, client_data);
+	if (status>=0) {
+	    puts ("*FAILED*");
+	    puts ("   H5Pset_external() succeeded when it should have failed");
+	    nerrors_g++;
+	    break;
+	}
 
-    if((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0) goto error;
-    cur_size[0] = max_size[0] = 100;
-    if(H5Pset_external(dcpl, "ext1.data", (off_t)0,
-	(hsize_t)(max_size[0]*sizeof(int)/4)) < 0) goto error;
-    if(H5Pset_external(dcpl, "ext2.data", (off_t)0,
-	(hsize_t)(max_size[0]*sizeof(int)/4)) < 0) goto error;
-    if(H5Pset_external(dcpl, "ext3.data", (off_t)0,
-	(hsize_t)(max_size[0]*sizeof(int)/4)) < 0) goto error;
-    if(H5Pset_external(dcpl, "ext4.data", (off_t)0,
-	(hsize_t)(max_size[0]*sizeof(int)/4)) < 0) goto error;
-    if((space = H5Screate_simple(1, cur_size, max_size)) < 0) goto error;
-    if((dset = H5Dcreate2(file, "dset6", H5T_NATIVE_INT, space, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
-	goto error;
-    if(H5Dclose(dset) < 0) goto error;
-    if(H5Sclose(space) < 0) goto error;
-    if(H5Pclose(dcpl) < 0) goto error;
+	/* Check the number of files */
+	n = H5Pget_external_count (plist);
+	if (n<0) break;
+	if (1!=n) {
+	    puts ("*FAILED*");
+	    puts ("   Wrong external file count returned.");
+	    nerrors_g++;
+	    break;
+	}
+	puts (" PASSED");
+    } while (0);
+    H5Pclose (plist);
 
-    PASSED();
-    return 0;
+    /*
+     * It should be impossible to create a set of external files whose total
+     * size overflows a size_t integer.
+     */
+    do {
+	printf ("%-70s", "...address overflow in external files");
+	fflush (stdout);
+	plist = H5Pcreate (H5P_DATASET_CREATE);
+	assert (plist>=0);
+	status = H5Pset_external (plist, "ext1.data", 0, H5F_UNLIMITED-1);
+	assert (status>=0);
 
-error:
-    H5E_BEGIN_TRY {
-	H5Dclose(dset);
-	H5Pclose(dcpl);
-	H5Sclose(space);
-    } H5E_END_TRY;
-    return 1;
-}
+	/* Next function should fail */
+	H5Eget_auto (&func, &client_data);
+	H5Eset_auto (NULL, NULL);
+	status = H5Pset_external (plist, "ext2.data", 0, (hsize_t)100);
+	H5Eset_auto (func, client_data);
+	if (status>=0) {
+	    puts ("*FAILED*");
+	    puts ("   H5Pset_external() succeeded when it should have failed");
+	    nerrors_g++;
+	    break;
+	}
+	puts (" PASSED");
+    } while (0);
+    H5Pclose (plist);
 
-
-/*-------------------------------------------------------------------------
- * Function:	test_1g
- *
- * Purpose:	It should be impossible to define an unlimited external file
- *		and then follow it with another external file.
- *
- * Return:	Success:	0
- *
- *		Failure:	number of errors
- *
- * Programmer:	Robb Matzke
- *              Monday, November 23, 1998
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static int
-test_1g(void)
-{
-    hid_t	dcpl=-1;		/*dataset creation properties	*/
-    herr_t	status;			/*function return status	*/
-    int		n;			/*number of external files	*/
 
-    TESTING("external file following unlimited file");
-    if ((dcpl=H5Pcreate (H5P_DATASET_CREATE)) < 0) goto error;
-    if (H5Pset_external(dcpl, "ext1.data", (off_t)0, H5F_UNLIMITED) < 0) goto error;
-    H5E_BEGIN_TRY {
-	status = H5Pset_external(dcpl, "ext2.data", (off_t)0, (hsize_t)100);
-    } H5E_END_TRY;
-    if (status>=0) {
-	H5_FAILED();
-	puts ("    H5Pset_external() succeeded when it should have failed.");
-	goto error;
-    }
-    if ((n = H5Pget_external_count(dcpl)) < 0) goto error;
-    if (1!=n) {
-	H5_FAILED();
-	puts("    Wrong external file count returned.");
-	goto error;
-    }
-    if (H5Pclose(dcpl) < 0) goto error;
-    PASSED();
-    return 0;
 
- error:
-    H5E_BEGIN_TRY {
-	H5Pclose(dcpl);
-    } H5E_END_TRY;
-    return 1;
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:	test_1h
- *
- * Purpose:	It should be impossible to create a set of external files
- *		whose total size overflows a size_t integer.
- *
- * Return:	Success:	0
- *
- *		Failure:	number of errors
- *
- * Programmer:	Robb Matzke
- *              Monday, November 23, 1998
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static int
-test_1h(void)
-{
-    hid_t	dcpl=-1;		/*dataset creation properties	*/
-    herr_t	status;			/*return status			*/
-
-    TESTING("address overflow in external files");
-    if((dcpl=H5Pcreate(H5P_DATASET_CREATE)) < 0) goto error;
-    if (H5Pset_external(dcpl, "ext1.data", (off_t)0, H5F_UNLIMITED-1) < 0) goto error;
-    H5E_BEGIN_TRY {
-	status = H5Pset_external(dcpl, "ext2.data", (off_t)0, (hsize_t)100);
-    } H5E_END_TRY;
-    if (status>=0) {
-	H5_FAILED();
-	puts("    H5Pset_external() succeeded when it should have failed.");
-	goto error;
-    }
-    if (H5Pclose(dcpl) < 0) goto error;
-    PASSED();
-    return 0;
-
- error:
-    H5E_BEGIN_TRY {
-	H5Pclose(dcpl);
-    } H5E_END_TRY;
-    return 1;
+    /* END OF TESTS */
+    H5Fclose (file);
 }
 
 
@@ -581,9 +483,7 @@ test_1h(void)
  *
  * Purpose:	Tests reading from an external file set.
  *
- * Return:	Success:	0
- *
- * 		Failure:	number of errors
+ * Return:	void
  *
  * Programmer:	Robb Matzke
  *              Wednesday, March  4, 1998
@@ -592,110 +492,147 @@ test_1h(void)
  *
  *-------------------------------------------------------------------------
  */
-static int
-test_2 (hid_t fapl)
+static void
+test_2 (void)
 {
-    hid_t	file=-1;		/*file to write to		*/
-    hid_t	dcpl=-1;		/*dataset creation properties	*/
-    hid_t	space=-1;		/*data space			*/
-    hid_t	dset=-1;		/*dataset			*/
-    hid_t	grp=-1;			/*group to emit diagnostics	*/
-    int		fd;			/*external file descriptors	*/
-    size_t	i, j;			/*miscellaneous counters	*/
-    hssize_t	n;			/*bytes of I/O			*/
-    char	filename[1024];		/*file names			*/
-    int		part[25], whole[100];	/*raw data buffers		*/
-    hsize_t	cur_size;		/*current data space size	*/
-    hid_t	hs_space;		/*hyperslab data space		*/
-    hsize_t	hs_start = 30;		/*hyperslab starting offset	*/
-    hsize_t	hs_count = 25;		/*hyperslab size		*/
-	int temparray[10] = {0x0f0f0f0f,0x0f0f0f0f,0x0f0f0f0f,0x0f0f0f0f,0x0f0f0f0f,0x0f0f0f0f,0x0f0f0f0f,0x0f0f0f0f,0x0f0f0f0f,0x0f0f0f0f};
+    hid_t	file, plist, space, dset, grp;
+    herr_t	status;
+    int		fd;
+    hsize_t	i, j;
+    hssize_t	n;
+    char	fname[64];
+    int		part[25], whole[100];
+    hsize_t	size;
 
-    TESTING("read external dataset");
-    
-    /* Write the data to external files directly */
+    /* Write the data to external files */
     for (i=0; i<4; i++) {
 	for (j=0; j<25; j++) {
 	    part[j] = (int)(i*25+j);
 	}
-	sprintf (filename, "extern_%lua.raw", (unsigned long)i+1);
-	fd = HDopen (filename, O_RDWR|O_CREAT|O_TRUNC, 0666);
+	
+	sprintf (fname, "extern_%lu.raw", (unsigned long)i+1);
+	fd = open (fname, O_RDWR|O_CREAT|O_TRUNC, 0666);
 	assert (fd>=0);
-/*	n = lseek (fd, (off_t)(i*10), SEEK_SET);
-*/
-	n = write(fd,temparray,(size_t)i*10);
+	n = lseek (fd, (off_t)(i*10), SEEK_SET);
 	assert (n>=0 && (size_t)n==i*10);
 	n = write (fd, part, sizeof(part));
 	assert (n==sizeof(part));
 	close (fd);
     }
-
+    
     /*
      * Create the file and an initial group.  This causes messages about
      * debugging to be emitted before we start playing games with what the
      * output looks like.
      */
-    h5_fixname(FILENAME[1], fapl, filename, sizeof filename);
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) FAIL_STACK_ERROR
-    if((grp = H5Gcreate2(file, "emit-diagnostics", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) FAIL_STACK_ERROR
-    if(H5Gclose(grp) < 0) FAIL_STACK_ERROR
+    file = H5Fcreate (TEST_FILE_NAME2, H5F_ACC_TRUNC|H5F_ACC_DEBUG,
+		      H5P_DEFAULT, H5P_DEFAULT);
+    assert (file>=0);
+    grp = H5Gcreate (file, "emit-diagnostics", 8);
+    H5Gclose (grp);
+
+    /* Create the external file list */
+    plist = H5Pcreate (H5P_DATASET_CREATE);
+    assert (plist>=0);
+    status = H5Pset_external (plist, "extern_1.raw", 0,
+			      (hsize_t)sizeof(part));
+    assert (status>=0);
+    status = H5Pset_external (plist, "extern_2.raw", 10,
+			      (hsize_t)sizeof(part));
+    assert (status>=0);
+    status = H5Pset_external (plist, "extern_3.raw", 20,
+			      (hsize_t)sizeof(part));
+    assert (status>=0);
+    status = H5Pset_external (plist, "extern_4.raw", 30,
+			      (hsize_t)sizeof(part));
+    assert (status>=0);
+
+    /* Create the data space */
+    size = 100;
+    space = H5Screate_simple (1, &size, NULL);
+    assert (space>=0);
 
     /* Create the dataset */
-    if((dcpl = H5Pcreate(H5P_DATASET_CREATE)) < 0) goto error;
-    if(H5Pset_external(dcpl, "extern_1a.raw",  (off_t)0, (hsize_t)sizeof part) < 0 ||
-            H5Pset_external(dcpl, "extern_2a.raw", (off_t)10, (hsize_t)sizeof part) < 0 ||
-            H5Pset_external(dcpl, "extern_3a.raw", (off_t)20, (hsize_t)sizeof part) < 0 ||
-            H5Pset_external(dcpl, "extern_4a.raw", (off_t)30, (hsize_t)sizeof part) < 0)
-	goto error;
-    cur_size = 100;
-    if((space = H5Screate_simple(1, &cur_size, NULL)) < 0) goto error;
-    if((dset = H5Dcreate2(file, "dset1", H5T_NATIVE_INT, space, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0) goto error;
+    dset = H5Dcreate (file, "dset1", H5T_NATIVE_INT, space, plist);
+    assert (dset>=0);
 
     /*
      * Read the entire dataset and compare with the original
      */
-    memset(whole, 0, sizeof(whole));
-    if(H5Dread(dset, H5T_NATIVE_INT, space, space, H5P_DEFAULT, whole) < 0) goto error;
-    for(i = 0; i < 100; i++)
-	if(whole[i] != (signed)i) {
-	    H5_FAILED();
-	    puts("    Incorrect value(s) read.");
-	    goto error;
-	} /* end if */
+    do {
+	/* Read from the dataset */
+	printf ("%-70s", "...reading entire dataset");
+	fflush (stdout);
 
+	memset (whole, 0, sizeof(whole));
+	status = H5Dread (dset, H5T_NATIVE_INT, space, space,
+			  H5P_DEFAULT, whole);
+	if (status<0) {
+	    puts ("   Failed to read dataset");
+	    break;
+	}
+
+	for (i=0; i<100; i++) {
+	    if (whole[i]!=(signed)i) {
+		puts ("*FAILED*");
+		puts ("   Incorrect value(s) read.");
+		nerrors_g++;
+		break;
+	    }
+	}
+	puts (" PASSED");
+    } while (0);
+
+
+    
     /*
      * Read the middle of the dataset
      */
-    if((hs_space = H5Scopy(space)) < 0) goto error;
-    if(H5Sselect_hyperslab(hs_space, H5S_SELECT_SET, &hs_start, NULL,
-			    &hs_count, NULL) < 0) goto error;
-    HDmemset(whole, 0, sizeof(whole));
-    if(H5Dread(dset, H5T_NATIVE_INT, hs_space, hs_space, H5P_DEFAULT,
-		 whole) < 0) goto error;
-    if(H5Sclose(hs_space) < 0) goto error;
-    for(i = hs_start; i<hs_start+hs_count; i++) {
-	if(whole[i] != (signed)i) {
-	    H5_FAILED();
-	    puts("    Incorrect value(s) read.");
-	    goto error;
+    do {
+	hid_t hs_space;
+	hssize_t hs_start = 30;
+	hsize_t hs_count = 25;
+
+	/* Read from the dataset */
+	printf ("%-70s", "...reading partial dataset");
+	fflush (stdout);
+
+	hs_space = H5Scopy (space);
+	assert (hs_space>=0);
+	status = H5Sselect_hyperslab (hs_space, H5S_SELECT_SET, &hs_start, NULL, &hs_count, NULL);
+	assert (status>=0);
+
+	memset (whole, 0, sizeof(whole));
+	status = H5Dread (dset, H5T_NATIVE_INT, hs_space, hs_space,
+			  H5P_DEFAULT, whole);
+	H5Sclose (hs_space);
+	if (status<0) {
+	    puts ("   Failed to read dataset");
+	    break;
 	}
-    }
 
-    if (H5Dclose(dset) < 0) goto error;
-    if (H5Pclose(dcpl) < 0) goto error;
-    if (H5Sclose(space) < 0) goto error;
-    if (H5Fclose(file) < 0) goto error;
-    PASSED();
-    return 0;
+#if 0
+	for (i=0; i<100; i++) {
+	    printf ("  #%02d %3d %s\n",
+		    i, whole[i], whole[i]==i?"":" <------------------------");
+	}
+#endif
 
- error:
-    H5E_BEGIN_TRY {
-	H5Dclose(dset);
-	H5Pclose(dcpl);
-	H5Sclose(space);
-	H5Fclose(file);
-    } H5E_END_TRY;
-    return 1;
+	for (i=hs_start; i<hs_start+hs_count; i++) {
+	    if (whole[i]!=(signed)i) {
+		puts ("*FAILED*");
+		puts ("   Incorrect value(s) read.");
+		nerrors_g++;
+		break;
+	    }
+	}
+	puts (" PASSED");
+    } while (0);
+    
+    H5Dclose (dset);
+    H5Pclose (plist);
+    H5Sclose (space);
+    H5Fclose (file);
 }
 
 
@@ -704,9 +641,7 @@ test_2 (hid_t fapl)
  *
  * Purpose:	Tests writing to an external file set.
  *
- * Return:	Success:	0
- *
- * 		Failure:	number of errors
+ * Return:	void
  *
  * Programmer:	Robb Matzke
  *              Wednesday, March  4, 1998
@@ -715,203 +650,159 @@ test_2 (hid_t fapl)
  *
  *-------------------------------------------------------------------------
  */
-static int
-test_3 (hid_t fapl)
+static void
+test_3 (void)
 {
-    hid_t	file=-1;		/*file to which to write	*/
-    hid_t	dcpl=-1;		/*dataset creation properties	*/
-    hid_t	mem_space=-1;		/*memory data space		*/
-    hid_t	file_space=-1;		/*file data space		*/
-    hid_t	dset=-1;		/*dataset			*/
-    unsigned	i;			/*miscellaneous counters	*/
-    int		fd;			/*external file descriptor	*/
-    int	    part[25],whole[100];	/*raw data buffers		*/
-    hsize_t	cur_size=100;		/*current data space size	*/
-    hsize_t	max_size=200;		/*maximum data space size	*/
-    hsize_t	hs_start=100;		/*hyperslab starting offset	*/
-    hsize_t	hs_count=100;		/*hyperslab size		*/
-    char	filename[1024];		/*file name			*/
-	int temparray[10] = {0x0f0f0f0f,0x0f0f0f0f,0x0f0f0f0f,0x0f0f0f0f,0x0f0f0f0f,0x0f0f0f0f,0x0f0f0f0f,0x0f0f0f0f,0x0f0f0f0f,0x0f0f0f0f};
+    hid_t	file, plist, mem_space, file_space, dset;
+    herr_t	status;
+    unsigned	i;
+    int		fd;
+    int		part[25], whole[100];
+    hssize_t	hs_start=100;
+    hsize_t	size=100, max_size=200, hs_count=100;
 
-    TESTING("write external dataset");
-
-    /* Create another file */
-    h5_fixname(FILENAME[2], fapl, filename, sizeof filename);
-    if ((file=H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) {
-	goto error;
-    }
+    /*
+     * Create another file
+     */
+    file = H5Fcreate (TEST_FILE_NAME3, H5F_ACC_TRUNC|H5F_ACC_DEBUG,
+		      H5P_DEFAULT, H5P_DEFAULT);
+    assert (file>=0);
 
     /* Create the external file list */
-    if((dcpl=H5Pcreate(H5P_DATASET_CREATE)) < 0) goto error;
-    if (H5Pset_external(dcpl, "extern_1b.raw", (off_t)0, (hsize_t)sizeof part) < 0 ||
-	H5Pset_external(dcpl, "extern_2b.raw", (off_t)10, (hsize_t)sizeof part) < 0 ||
-	H5Pset_external(dcpl, "extern_3b.raw", (off_t)20, (hsize_t)sizeof part) < 0 ||
-	H5Pset_external(dcpl, "extern_4b.raw", (off_t)30, H5F_UNLIMITED) < 0)
-	goto error;
+    plist = H5Pcreate (H5P_DATASET_CREATE);
+    assert (plist>=0);
+    status = H5Pset_external (plist, "extern_1b.raw", 0,
+			      (hsize_t)sizeof(part));
+    assert (status>=0);
+    status = H5Pset_external (plist, "extern_2b.raw", 10,
+			      (hsize_t)sizeof(part));
+    assert (status>=0);
+    status = H5Pset_external (plist, "extern_3b.raw", 20,
+			      (hsize_t)sizeof(part));
+    assert (status>=0);
+    status = H5Pset_external (plist, "extern_4b.raw", 30,
+			      H5F_UNLIMITED);
+    assert (status>=0);
 
     /* Make sure the output files are fresh*/
-    for (i=1; i<=4; i++) {
-	sprintf(filename, "extern_%db.raw", i);
-	if ((fd= open(filename, O_RDWR|O_CREAT|O_TRUNC, 0666)) < 0) {
-	    H5_FAILED();
-	    printf("    cannot open %s: %s\n", filename, strerror(errno));
-	    goto error;
-	}
+    fd = open ("extern_1b.raw", O_RDWR|O_CREAT|O_TRUNC, 0666);
+    close (fd);
+    fd = open ("extern_2b.raw", O_RDWR|O_CREAT|O_TRUNC, 0666);
+    close (fd);
+    fd = open ("extern_3b.raw", O_RDWR|O_CREAT|O_TRUNC, 0666);
+    close (fd);
+    fd = open ("extern_4b.raw", O_RDWR|O_CREAT|O_TRUNC, 0666);
+    close (fd);
 
-	write(fd, temparray, (i-1)*10);
-	close (fd);
-    }
+    /* Create the data space */
+    mem_space = H5Screate_simple (1, &size, &max_size);
+    assert (mem_space>=0);
+    file_space = H5Scopy (mem_space);
 
     /* Create the dataset */
-    if((mem_space = H5Screate_simple(1, &cur_size, &max_size)) < 0) goto error;
-    if((file_space = H5Scopy(mem_space)) < 0) goto error;
-    if((dset = H5Dcreate2(file, "dset1", H5T_NATIVE_INT, file_space, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0)
-	goto error;
+    dset = H5Dcreate (file, "dset1", H5T_NATIVE_INT, file_space, plist);
+    assert (dset>=0);
 
-    /* Write the entire dataset and compare with the original */
-    for(i = 0; i < cur_size; i++)
-        whole[i] = i;
-    if(H5Dwrite(dset, H5T_NATIVE_INT, mem_space, file_space, H5P_DEFAULT, whole) < 0) goto error;
-    for(i = 0; i < 4; i++) {
-	char name1[64], name2[64];
+    /*
+     * Write the entire dataset and compare with the original
+     */
+    do {
+	printf ("%-70s", "...writing entire dataset");
+	fflush (stdout);
 
-	sprintf(name1, "extern_%da.raw", i + 1);
-	sprintf(name2, "extern_%db.raw", i + 1);
-	if(!same_contents(name1, name2)) {
-	    H5_FAILED();
-	    puts ("   Output differs from expected value.");
-	    goto error;
-	} /* end if */
-    } /* end for */
+	for (i=0; i<size; i++) whole[i] = i;
+	status = H5Dwrite (dset, H5T_NATIVE_INT, mem_space, file_space,
+			   H5P_DEFAULT, whole);
+	if (status<0) break;
+	for (i=0; i<4; i++) {
+	    char name1[64], name2[64];
+	    sprintf (name1, "extern_%d.raw", i+1);
+	    sprintf (name2, "extern_%db.raw", i+1);
+	    if (!same_contents (name1, name2)) {
+		puts ("*FAIL*");
+		puts ("   Output differs from expected value.");
+		nerrors_g++;
+		break;
+	    }
+	}
+	puts (" PASSED");
+    } while (0);
 
-    /* Extend the dataset by another 100 elements */
-    if(H5Dset_extent(dset, &max_size) < 0) goto error;
-    if(H5Sclose(file_space) < 0) goto error;
-    if((file_space = H5Dget_space(dset)) < 0) goto error;
+    /*
+     * Extend the dataset by another 100 elements
+     */
+    do {
+	printf ("%-70s", "...extending external contiguous dataset");
+	fflush (stdout);
 
-    /* Write second half of dataset */
-    for(i = 0; i < hs_count; i++)
-        whole[i] = 100 + i;
-    if(H5Sselect_hyperslab(file_space, H5S_SELECT_SET, &hs_start, NULL, &hs_count, NULL) < 0) goto error;
-    if(H5Dwrite(dset, H5T_NATIVE_INT, mem_space, file_space, H5P_DEFAULT, whole) < 0) goto error;
+	if (H5Dextend (dset, &max_size)<0) break;
+	H5Sclose (file_space);
+	file_space = H5Dget_space (dset);
+	puts (" PASSED");
+    } while (0);
+
+    /*
+     * Write second half of dataset
+     */
+    do {
+	printf ("%-70s", "...writing to extended part of dataset");
+	fflush (stdout);
+
+	for (i=0; i<hs_count; i++) {
+	    whole[i] = 100+i;
+	}
+	status = H5Sselect_hyperslab (file_space, H5S_SELECT_SET, &hs_start, NULL, &hs_count, NULL);
+	assert (status>=0);
+	status = H5Dwrite (dset, H5T_NATIVE_INT, mem_space, file_space,
+			   H5P_DEFAULT, whole);
+	if (status<0) break;
+	puts (" PASSED");
+    } while (0);
+    
 
 
-    if(H5Dclose(dset) < 0) goto error;
-    if(H5Pclose(dcpl) < 0) goto error;
-    if(H5Sclose(mem_space) < 0) goto error;
-    if(H5Sclose(file_space) < 0) goto error;
-    if(H5Fclose(file) < 0) goto error;
-
-    PASSED();
-    return 0;
-
- error:
-    H5E_BEGIN_TRY {
-	H5Dclose(dset);
-	H5Pclose(dcpl);
-	H5Sclose(mem_space);
-	H5Sclose(file_space);
-	H5Fclose(file);
-    } H5E_END_TRY;
-    return 1;
+    H5Dclose (dset);
+    H5Pclose (plist);
+    H5Sclose (mem_space);
+    H5Sclose (file_space);
+    H5Fclose (file);
 }
+
 
 
 /*-------------------------------------------------------------------------
- * Function:	test_4
+ * Function:	cleanup
  *
- * Purpose:	Tests opening an external link twice.  It exposed a bug
- *              in the library.  This function tests the fix.  This test
- *              doesn't work with MULTI driver.
+ * Purpose:	Cleanup temporary test files
  *
- * Return:	Success:	0
+ * Return:	none
  *
- * 		Failure:	number of errors
- *
- * Programmer:	Raymond Lu
- *              5 November 2007
+ * Programmer:	Albert Cheng
+ *              May 28, 1998
  *
  * Modifications:
  *
  *-------------------------------------------------------------------------
  */
-static int
-test_4 (hid_t fapl)
+static void
+cleanup(void)
 {
-    hid_t       fid, gid, xid, xid2;
-    char	filename[1024];		/*file name			*/
-    char        pathname[1024];
-    char       *srcdir = getenv("srcdir"); /*where the src code is located*/
-    const char *envval = NULL;
-
-    TESTING("opening external link twice");
-
-    /* Don't run this test using the multi file driver */
-    envval = HDgetenv("HDF5_DRIVER");
-    if (envval == NULL)
-        envval = "nomatch";
-    if (HDstrcmp(envval, "multi") && HDstrcmp(envval, "family")) {
-        h5_fixname(FILENAME[3], fapl, filename, sizeof filename);
-
-        if((fid = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
-	    goto error;
-
-        if((gid = H5Gopen2(fid, "/", H5P_DEFAULT)) < 0)
-	    goto error;
-
-        pathname[0] = '\0';
-        /* Generate correct name for test file by prepending the source path */
-        if(srcdir && ((HDstrlen(srcdir) + HDstrlen(LINKED_FILE) + 1) < sizeof(pathname))) {
-            HDstrcpy(pathname, srcdir);
-            HDstrcat(pathname, "/");
-        }
-        HDstrcat(pathname, LINKED_FILE);
-
-        /* Create an external link to an existing file*/
-        if(H5Lcreate_external(pathname, "/group", gid, " link", H5P_DEFAULT, H5P_DEFAULT) < 0)
-	    goto error;
-
-        if(H5Gclose(gid) < 0)
-	    goto error;
-
-        if(H5Fclose(fid) < 0)
-	    goto error;
-
-        /* Reopen the file */
-        if((fid = H5Fopen(filename, H5F_ACC_RDONLY, fapl)) < 0)
-	    goto error;
-
-        /* Open the external link */
-        if((xid = H5Gopen2(fid, "/ link", H5P_DEFAULT)) < 0)
-	    goto error;
-
-        /* Open the external link twice */
-        if((xid2 = H5Gopen2(xid, ".", H5P_DEFAULT)) < 0)
-	    goto error;
-
-        if(H5Gclose(xid2) < 0)
-	    goto error;
-
-        if(H5Gclose(xid) < 0)
-	    goto error;
-
-        if(H5Fclose(fid) < 0)
-	    goto error;
-
-        PASSED();
-    } else 
-        SKIPPED();
-
-    return 0;
-
- error:
-    H5E_BEGIN_TRY {
-        H5Gclose(gid);
-        H5Gclose(xid);
-        H5Gclose(xid2);
-	H5Fclose(fid);
-    } H5E_END_TRY;
-    return 1;
+    if (!getenv ("HDF5_NOCLEANUP")) {
+	remove(TEST_FILE_NAME1);
+	remove(TEST_FILE_NAME2);
+	remove(TEST_FILE_NAME3);
+	/* not sure if the following file names can be #defined */
+	/* because some of them are created during runtime. */
+	/* List them out this way for now. */
+	remove("extern_1.raw");
+	remove("extern_1b.raw");
+	remove("extern_2.raw");
+	remove("extern_2b.raw");
+	remove("extern_3.raw");
+	remove("extern_3b.raw");
+	remove("extern_4.raw");
+	remove("extern_4b.raw");
+    }
 }
 
 
@@ -934,63 +825,18 @@ test_4 (hid_t fapl)
 int
 main (void)
 {
-    hid_t	fapl=-1;		/*file access properties	*/
-    hid_t	file=-1;		/*file for test_1* functions	*/
-    char	filename[1024];		/*file name for test_1* funcs	*/
-    hid_t	grp=-1;			/*group to emit diagnostics	*/
-    int		nerrors=0;		/*number of errors		*/
-    const char *envval = NULL;
+    H5Eset_auto (display_error_cb, NULL);
 
-    /* Don't run this test using the split file driver */
-    envval = HDgetenv("HDF5_DRIVER");
-    if (envval == NULL)
-        envval = "nomatch";
-    if (HDstrcmp(envval, "split")) {
-	h5_reset();
-	fapl = h5_fileaccess();
-	h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
-	if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) FAIL_STACK_ERROR
-	if((grp = H5Gcreate2(file, "emit-diagnostics", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) FAIL_STACK_ERROR
-	if(H5Gclose(grp) < 0) goto error;
+    test_1 ();
+    test_2 ();
+    test_3 ();
 
-	nerrors += test_1a(file);
-	nerrors += test_1b(file);
-	nerrors += test_1c(file);
-	nerrors += test_1d(file);
-	nerrors += test_1e(file);
-	nerrors += test_1f(file);
-	nerrors += test_1g();
-	nerrors += test_1h();
-	nerrors += test_2(fapl);
-	nerrors += test_3(fapl);
-	nerrors += test_4(fapl);
-	if (nerrors>0) goto error;
-
-	if (H5Fclose(file) < 0) goto error;
-	puts("All external storage tests passed.");
-	if (h5_cleanup(FILENAME, fapl)) {
-	    remove("extern_1a.raw");
-	    remove("extern_1b.raw");
-	    remove("extern_2a.raw");
-	    remove("extern_2b.raw");
-	    remove("extern_3a.raw");
-	    remove("extern_3b.raw");
-	    remove("extern_4a.raw");
-	    remove("extern_4b.raw");
-	}
+    if (0==nerrors_g) {
+	printf ("All external storage tests passed.\n");
+	cleanup();
+    } else {
+	printf ("%d TEST%s FAILED.\n", nerrors_g, 1==nerrors_g?"":"s");
     }
-    else
-    {
-	puts("All external storage tests skipped - Incompatible with current Virtual File Driver");
-    }
-    return 0;
 
-    error:
-	H5E_BEGIN_TRY {
-	    H5Fclose(file);
-	    H5Pclose(fapl);
-	} H5E_END_TRY;
-	nerrors = MAX(1, nerrors);
-	printf ("%d TEST%s FAILED.\n", nerrors, 1==nerrors?"":"s");
-	return 1;
+    return (nerrors_g?1:0);
 }
