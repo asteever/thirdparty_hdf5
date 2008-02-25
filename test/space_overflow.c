@@ -1,19 +1,7 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
- * All rights reserved.                                                      *
- *                                                                           *
- * This file is part of HDF5.  The full HDF5 copyright notice, including     *
- * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
 /*
+ * Copyright (C) 1998 NCSA
+ *                    All rights reserved.
+ *
  * Programmer:  Robb Matzke <matzke@llnl.gov>
  *              Monday, October 26, 1998
  *
@@ -26,17 +14,17 @@
  *		Don't forget to change H5S_MAX_RANK back to its original
  *		value and recompile once the test file is created.
  */
-#include "hdf5.h"
+#include <hdf5.h>
 
 
 /*-------------------------------------------------------------------------
  * Function:	main
  *
- * Purpose:
+ * Purpose:	
  *
- * Return:	Success:
+ * Return:	Success:	
  *
- *		Failure:
+ *		Failure:	
  *
  * Programmer:	Robb Matzke
  *              Monday, October 26, 1998
@@ -53,16 +41,9 @@ main(void)
     int		i;
 
     file = H5Fcreate("th5s.h5", H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-    if(file < 0)
-        printf("file<0!\n");
-    for(i = 0; i < H5S_MAX_RANK; i++)
-        cur_dim[i] = 1;
+    for (i=0; i<H5S_MAX_RANK; i++) cur_dim[i] = 1;
     space = H5Screate_simple(H5S_MAX_RANK, cur_dim, NULL);
-    if(space < 0)
-        printf("space<0!\n");
-    dset = H5Dcreate2(file, "dset", H5T_NATIVE_UCHAR, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    if(dset < 0)
-        printf("dset<0!\n");
+    dset = H5Dcreate(file, "dset", H5T_NATIVE_UCHAR, space, H5P_DEFAULT);
     H5Sclose(space);
     H5Dclose(dset);
     H5Fclose(file);
