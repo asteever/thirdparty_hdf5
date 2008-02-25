@@ -46,7 +46,7 @@ static void gen_file(void)
     char	attrname[30];
 
     fapl = H5Pcreate(H5P_FILE_ACCESS);
-    ret = H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST);
+    ret = H5Pset_latest_format(fapl, 1);
 
      /* Create dataset */
     file = H5Fcreate(FILE, H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
@@ -66,7 +66,7 @@ static void gen_file(void)
     dset_id = H5Dcreate2(file, DATASET_NAME, type_id, space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     for(i = 1; i <= NUM_ATTRS; i++) {
         sprintf(attrname, "%s%d", ATTR_NAME,i);
-        attr_id = H5Acreate2(dset_id, attrname, type_id, space_id, H5P_DEFAULT, H5P_DEFAULT);
+        attr_id = H5Acreate2(dset_id, ".", attrname, type_id, space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
         ret = H5Aclose(attr_id);
     } /* end for */
 

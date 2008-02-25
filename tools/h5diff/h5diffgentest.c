@@ -249,12 +249,10 @@ int test_basic(const char *fname1,
     
      
    /*-------------------------------------------------------------------------
-    * NaNs in H5T_NATIVE_FLOAT
+    * NaNs in floating point
     *-------------------------------------------------------------------------
     */
     {
-
-#if 1
         float data15[6];
         float data16[6];
 
@@ -274,78 +272,10 @@ int test_basic(const char *fname1,
 
         write_dset(gid1,1,dims1,"fp15",H5T_NATIVE_FLOAT,data15);
         write_dset(gid1,1,dims1,"fp16",H5T_NATIVE_FLOAT,data16);
-#else
 
-#define NU_ELMTS 1000000
-
-        hsize_t i;
-
-        hsize_t dims2[1] = { NU_ELMTS };
-
-        float *data15 = malloc (NU_ELMTS * sizeof(float) );
-        float *data16 = malloc (NU_ELMTS * sizeof(float) );
-
-        data15[0] = (float) sqrt( (double)-1 );
-        data15[1] = 1;
-        data15[2] = (float) sqrt( (double)-1 );
-        data15[3] = 1;
-        data15[4] = 1;
-        data15[5] = 1;
-
-        data16[0] = (float) sqrt( (double)-1 );
-        data16[1] = (float) sqrt( (double)-1 );
-        data16[2] = 1;
-        data16[3] = 1;
-        data16[4] = 1;
-        data16[5] = 1;
-
-        for ( i = 6; i < NU_ELMTS; i++ )
-        {
-            data15[i] = /*data15[0];*/ 2;
-            data16[i] = 1;
-        }
-
-        write_dset(gid1,1,dims2,"fp15",H5T_NATIVE_FLOAT,data15);
-        write_dset(gid1,1,dims2,"fp16",H5T_NATIVE_FLOAT,data16);
-
-        free( data15 );
-        free( data16 );
-#endif
-
-    }
-
-       
-        
-   /*-------------------------------------------------------------------------
-    * NaNs in H5T_NATIVE_DOUBLE
-    *-------------------------------------------------------------------------
-    */
-    {
-
-        double data17[6];
-        double data18[6];
-
-        data17[0] = sqrt( (double)-1 );
-        data17[1] = 1;
-        data17[2] = sqrt( (double)-1 );
-        data17[3] = 1;
-        data17[4] = 1;
-        data17[5] = 1;
-
-        data18[0] = (float) sqrt( (double)-1 );
-        data18[1] = (float) sqrt( (double)-1 );
-        data18[2] = 1;
-        data18[3] = 1;
-        data18[4] = 1;
-        data18[5] = 1;
-
-        write_dset(gid1,1,dims1,"fp17",H5T_NATIVE_DOUBLE,data17);
-        write_dset(gid1,1,dims1,"fp18",H5T_NATIVE_DOUBLE,data18);
-
-    }
         
 
-  
+    }
     
    /*-------------------------------------------------------------------------
     * close
@@ -1044,7 +974,7 @@ void write_attr_in(hid_t loc_id,
 
  sid = H5Screate_simple(1, dims, NULL);
  tid = H5Tvlen_create(H5T_NATIVE_INT);
- aid = H5Acreate2(loc_id, "vlen", tid, sid, H5P_DEFAULT, H5P_DEFAULT);
+ aid = H5Acreate2(loc_id, ".", "vlen", tid, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
  status = H5Awrite(aid, tid, buf5);
  assert(status >= 0);
  status = H5Dvlen_reclaim(tid, sid, H5P_DEFAULT, buf5);
@@ -1315,7 +1245,7 @@ position        enum2D of </g1> enum2D of </g1> difference
 
  sid = H5Screate_simple(2, dims2, NULL);
  tid = H5Tvlen_create(H5T_NATIVE_INT);
- aid = H5Acreate2(loc_id, "vlen2D", tid, sid, H5P_DEFAULT, H5P_DEFAULT);
+ aid = H5Acreate2(loc_id, ".", "vlen2D", tid, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
  status = H5Awrite(aid, tid, buf52);
  assert(status >= 0);
  status = H5Dvlen_reclaim(tid, sid, H5P_DEFAULT, buf52);
@@ -1712,7 +1642,7 @@ etc
 */
  sid = H5Screate_simple(3, dims3, NULL);
  tid = H5Tvlen_create(H5T_NATIVE_INT);
- aid = H5Acreate2(loc_id, "vlen3D", tid, sid, H5P_DEFAULT, H5P_DEFAULT);
+ aid = H5Acreate2(loc_id, ".", "vlen3D", tid, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
  status = H5Awrite(aid, tid, buf53);
  assert(status >= 0);
  status = H5Dvlen_reclaim(tid, sid, H5P_DEFAULT, buf53);
@@ -2455,7 +2385,7 @@ void gen_datareg(hid_t fid,
   coord[3][0]=2; coord[3][1]=5;
   coord[4][0]=1; coord[4][1]=7;
  }
- H5Sselect_elements(sid1,H5S_SELECT_SET,5,coord);
+ H5Sselect_elements(sid1,H5S_SELECT_SET,5,(const hsize_t **)coord);
  H5Sget_select_npoints(sid1);
 
  /* store second dataset region */
@@ -2603,7 +2533,7 @@ int write_attr(hid_t loc_id,
      goto out;
 
  /* create the attribute */
- if((aid = H5Acreate2(loc_id, name, tid, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+ if((aid = H5Acreate2(loc_id, ".", name, tid, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
      goto out;
 
  /* write */

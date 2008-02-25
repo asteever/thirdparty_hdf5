@@ -31,7 +31,7 @@
 
 static const char* MapIdToName(hid_t refobj_id,trav_table_t *travt);
 static int copy_refs_attr(hid_t loc_in, hid_t loc_out, pack_opt_t *options,
-                          trav_table_t *travt, hid_t fidout);
+    trav_table_t *travt, hid_t fidout);
 
 /*-------------------------------------------------------------------------
  * Function: do_copy_refobjs
@@ -422,7 +422,7 @@ static int copy_refs_attr(hid_t loc_in,
     int        j;
     unsigned   u;
 
-    if(H5Oget_info(loc_in, &oinfo) < 0)
+    if(H5Oget_info(loc_in, ".", &oinfo, H5P_DEFAULT) < 0)
         goto error;
 
     for(u = 0; u < (unsigned)oinfo.num_attrs; u++) {
@@ -522,7 +522,7 @@ static int copy_refs_attr(hid_t loc_in,
             * copy
             *-------------------------------------------------------------------------
             */
-            if((attr_out = H5Acreate2(loc_out, name, ftype_id, space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+            if((attr_out = H5Acreate2(loc_out, ".", name, ftype_id, space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
                 goto error;
             if(nelmts)
                 if(H5Awrite(attr_out, mtype_id, refbuf) < 0)
@@ -602,7 +602,7 @@ static int copy_refs_attr(hid_t loc_in,
             * copy
             *-------------------------------------------------------------------------
             */
-            if((attr_out = H5Acreate2(loc_out, name, ftype_id, space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+            if((attr_out = H5Acreate2(loc_out, ".", name, ftype_id, space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
                 goto error;
             if(nelmts)
                 if(H5Awrite(attr_out, mtype_id, refbuf) < 0)
@@ -664,7 +664,7 @@ static const char* MapIdToName(hid_t refobj_id,
             H5O_info_t   ref_oinfo;     /* Stat for the refobj id */
 
             /* obtain information to identify the referenced object uniquely */
-            if(H5Oget_info(refobj_id, &ref_oinfo) < 0)
+            if(H5Oget_info(refobj_id, ".", &ref_oinfo, H5P_DEFAULT) < 0)
                 return NULL;
 
             if(ref_oinfo.addr == travt->objs[i].objno)

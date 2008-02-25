@@ -111,7 +111,7 @@ test_misc(hid_t fapl, hbool_t new_format)
     if((g1 = H5Gcreate2(fid, "test_1a", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
     if((g2 = H5Gcreate2(g1, "sub_1", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
     if((g3 = H5Gcreate2(fid, "test_1b", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
-    if(H5Oset_comment(g3, "hello world") < 0) TEST_ERROR
+    if(H5Oset_comment(g3, ".", "hello world", H5P_DEFAULT) < 0) TEST_ERROR
     if(H5Gclose(g1) < 0) TEST_ERROR
     if(H5Gclose(g2) < 0) TEST_ERROR
     if(H5Gclose(g3) < 0) TEST_ERROR
@@ -120,7 +120,7 @@ test_misc(hid_t fapl, hbool_t new_format)
     if((g1 = H5Gopen2(fid, "/test_1a", H5P_DEFAULT)) < 0) TEST_ERROR
     if((g2 = H5Gopen2(fid, "/test_1a/sub_1", H5P_DEFAULT)) < 0) TEST_ERROR
     if((g3 = H5Gopen2(fid, "/test_1b", H5P_DEFAULT)) < 0) TEST_ERROR
-    if(H5Oget_comment_by_name(g3, "././.", comment, sizeof comment, H5P_DEFAULT) < 0) TEST_ERROR
+    if(H5Oget_comment(g3, "././.", comment, sizeof comment, H5P_DEFAULT) < 0) TEST_ERROR
     if(HDstrcmp(comment, "hello world")) {
 	H5_FAILED();
 	puts("    Read the wrong comment string from the group.");
@@ -416,7 +416,7 @@ lifecycle(hid_t fapl2)
     if(H5G_is_new_dense_test(gid) != FALSE) TEST_ERROR
 
     /* Check that the object header is only one chunk and the space has been allocated correctly */
-    if(H5Oget_info(gid, &oinfo) < 0) TEST_ERROR
+    if(H5Oget_info(gid, ".", &oinfo, H5P_DEFAULT) < 0) TEST_ERROR
     if(oinfo.hdr.space.total != 151) TEST_ERROR
     if(oinfo.hdr.space.free != 0) TEST_ERROR
     if(oinfo.hdr.nmesgs != 6) TEST_ERROR
@@ -438,7 +438,7 @@ lifecycle(hid_t fapl2)
     if(H5G_is_new_dense_test(gid) != TRUE) TEST_ERROR
 
     /* Check that the object header is still one chunk and the space has been allocated correctly */
-    if(H5Oget_info(gid, &oinfo) < 0) TEST_ERROR
+    if(H5Oget_info(gid, ".", &oinfo, H5P_DEFAULT) < 0) TEST_ERROR
     if(oinfo.hdr.space.total != 151) TEST_ERROR
     if(oinfo.hdr.space.free != 92) TEST_ERROR
     if(oinfo.hdr.nmesgs != 3) TEST_ERROR
@@ -1128,8 +1128,8 @@ main(void)
         /* Copy the file access property list */
         if((fapl2 = H5Pcopy(fapl)) < 0) TEST_ERROR
 
-        /* Set the "use the latest version of the format" bounds for creating objects in the file */
-        if(H5Pset_libver_bounds(fapl2, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0) TEST_ERROR
+        /* Set the "use the latest version of the format" flag for creating objects in the file */
+        if(H5Pset_latest_format(fapl2, TRUE) < 0) TEST_ERROR
 
         /* Loop over using new group format */
         for(new_format = FALSE; new_format <= TRUE; new_format++) {

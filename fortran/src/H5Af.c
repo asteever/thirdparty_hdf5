@@ -49,7 +49,7 @@ nh5acreate_c(hid_t_f *obj_id, _fcd name, size_t_f *namelen, hid_t_f *type_id,
      /*
       * Call H5Acreate2 function.
       */
-    if((*attr_id = (hid_t_f)H5Acreate2((hid_t)*obj_id, c_name, (hid_t)*type_id, (hid_t)*space_id, (hid_t)*crt_prp, H5P_DEFAULT)) < 0)
+    if((*attr_id = (hid_t_f)H5Acreate2((hid_t)*obj_id, ".", c_name, (hid_t)*type_id, (hid_t)*space_id, (hid_t)*crt_prp, H5P_DEFAULT, H5P_DEFAULT)) < 0)
         HGOTO_DONE(FAIL);
 
 done:
@@ -85,7 +85,7 @@ nh5aopen_name_c (hid_t_f *obj_id, _fcd name, size_t_f *namelen, hid_t_f *attr_id
      /*
       * Call H5Aopen function.
       */
-     if((*attr_id = (hid_t_f)H5Aopen((hid_t)*obj_id, c_name, H5P_DEFAULT)) < 0)
+     if((*attr_id = (hid_t_f)H5Aopen((hid_t)*obj_id, ".", c_name, H5P_DEFAULT, H5P_DEFAULT)) < 0)
          HGOTO_DONE(FAIL);
 
 done:
@@ -813,7 +813,7 @@ done:
 
 /*----------------------------------------------------------------------------
  * Name:        h5adelete_c
- * Purpose:     Call H5Adelete to delete an attribute
+ * Purpose:     Call H5Adelete2 to delete an attribute
  * Inputs:      obj_id - object identifier
  *              name - name of the attribute
  *              namelen - name length
@@ -835,9 +835,9 @@ nh5adelete_c (hid_t_f *obj_id, _fcd name, size_t_f *namelen)
         HGOTO_DONE(FAIL);
 
      /*
-      * Call H5Adelete function.
+      * Call H5Adelete2 function.
       */
-     if(H5Adelete((hid_t)*obj_id, c_name) < 0)
+     if(H5Adelete2((hid_t)*obj_id, ".", c_name, H5P_DEFAULT) < 0)
          HGOTO_DONE(FAIL);
 
 done:
@@ -945,7 +945,7 @@ nh5aget_num_attrs_c (hid_t_f *obj_id, int_f *attr_num)
     /*
      * Call H5Oget_info function.
      */
-    if(H5Oget_info((hid_t)*obj_id, &oinfo) < 0)
+    if(H5Oget_info((hid_t)*obj_id, ".", &oinfo, H5P_DEFAULT) < 0)
         HGOTO_DONE(FAIL);
 
     /* Set number of attributes */

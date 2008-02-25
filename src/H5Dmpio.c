@@ -109,14 +109,14 @@ typedef struct H5D_common_coll_info_t {
 /********************/
 
 static herr_t 
-H5D_multi_chunk_collective_io(H5D_io_info_t *io_info,H5D_chunk_map_t *fm,const void *buf, 
+H5D_multi_chunk_collective_io(H5D_io_info_t *io_info,fm_map *fm,const void *buf, 
 			      hbool_t do_write);
 static herr_t
-H5D_multi_chunk_collective_io_no_opt(H5D_io_info_t *io_info,H5D_chunk_map_t *fm,const void *buf,
+H5D_multi_chunk_collective_io_no_opt(H5D_io_info_t *io_info,fm_map *fm,const void *buf,
                               hbool_t do_write);
 
 static herr_t
-H5D_link_chunk_collective_io(H5D_io_info_t *io_info,H5D_chunk_map_t *fm,const void *buf, 
+H5D_link_chunk_collective_io(H5D_io_info_t *io_info,fm_map *fm,const void *buf, 
 			     hbool_t do_write,int sum_chunk);
 
 static herr_t 
@@ -131,13 +131,13 @@ H5D_final_collective_io(H5D_io_info_t *io_info,MPI_Datatype*mpi_file_type,
 			 const void *buf, hbool_t do_write);
 static herr_t 
 H5D_sort_chunk(H5D_io_info_t * io_info,
-	       H5D_chunk_map_t *fm,
+	       fm_map *fm,
 	       H5D_chunk_addr_info_t chunk_addr_info_array[],
 	       int many_chunk_opt);
 
 static herr_t 
 H5D_obtain_mpio_mode(H5D_io_info_t* io_info, 
-		     H5D_chunk_map_t *fm,
+		     fm_map *fm,
 		     uint8_t assign_io_mode[],
 		     haddr_t chunk_addr[]);
 
@@ -145,10 +145,10 @@ static herr_t H5D_ioinfo_make_ind(H5D_io_info_t *io_info);
 static herr_t H5D_ioinfo_make_coll_opt(H5D_io_info_t *io_info);
 static herr_t H5D_ioinfo_make_coll(H5D_io_info_t *io_info);
 static herr_t H5D_mpio_get_min_chunk(const H5D_io_info_t *io_info,
-    const H5D_chunk_map_t *fm, int *min_chunkf);
+    const fm_map *fm, int *min_chunkf);
 static int H5D_cmp_chunk_addr(const void *addr1, const void *addr2);
 static herr_t H5D_mpio_get_sum_chunk(const H5D_io_info_t *io_info,
-		       const H5D_chunk_map_t *fm, int *sum_chunkf);
+		       const fm_map *fm, int *sum_chunkf);
 
 
 /*********************/
@@ -300,7 +300,7 @@ done:
  */
 #ifndef H5_MPI_SPECIAL_COLLECTIVE_IO_WORKS
 herr_t
-H5D_mpio_chunk_adjust_iomode(H5D_io_info_t *io_info, const H5D_chunk_map_t *fm)
+H5D_mpio_chunk_adjust_iomode(H5D_io_info_t *io_info, const fm_map *fm)
 {
    int   min_chunk;
    herr_t ret_value = SUCCEED;
@@ -541,7 +541,7 @@ done:
  */
 static herr_t
 H5D_mpio_get_min_chunk(const H5D_io_info_t *io_info,
-    const H5D_chunk_map_t *fm, int *min_chunkf)
+    const fm_map *fm, int *min_chunkf)
 {
     int num_chunkf;             /* Number of chunks to iterate over */
     int mpi_code;               /* MPI return code */
@@ -550,7 +550,7 @@ H5D_mpio_get_min_chunk(const H5D_io_info_t *io_info,
     FUNC_ENTER_NOAPI_NOINIT(H5D_mpio_get_min_chunk);
 
     /* Get the number of chunks to perform I/O on */
-    num_chunkf = H5SL_count(fm->sel_chunks);
+    num_chunkf = H5SL_count(fm->fsel);
 
     /* Determine the minimum # of chunks for all processes */
     if (MPI_SUCCESS != (mpi_code = MPI_Allreduce(&num_chunkf, min_chunkf, 1, MPI_INT, MPI_MIN, io_info->comm)))
@@ -575,7 +575,7 @@ done:
  */
 static herr_t
 H5D_mpio_get_sum_chunk(const H5D_io_info_t *io_info,
-                       const H5D_chunk_map_t *fm, int *sum_chunkf)
+                       const fm_map *fm, int *sum_chunkf)
 {
     int num_chunkf;             /* Number of chunks to iterate over */
     size_t ori_num_chunkf;
@@ -586,7 +586,7 @@ H5D_mpio_get_sum_chunk(const H5D_io_info_t *io_info,
 
     /* Get the number of chunks to perform I/O on */
     num_chunkf = 0;
-    ori_num_chunkf = H5SL_count(fm->sel_chunks);
+    ori_num_chunkf = H5SL_count(fm->fsel);
     H5_ASSIGN_OVERFLOW(num_chunkf,ori_num_chunkf,size_t,int);
 
     /* Determine the summation of number of chunks for all processes */
@@ -677,7 +677,7 @@ H5D_contig_collective_io(H5D_io_info_t *io_info,
  *-------------------------------------------------------------------------
  */
 herr_t 
-H5D_chunk_collective_io(H5D_io_info_t *io_info,H5D_chunk_map_t *fm,const void *buf, hbool_t do_write) 
+H5D_chunk_collective_io(H5D_io_info_t *io_info,fm_map *fm,const void *buf, hbool_t do_write) 
 {
 
     int               io_option = H5D_MULTI_CHUNK_IO_MORE_OPT;
@@ -811,7 +811,7 @@ done:
  */
 
 static herr_t
-H5D_link_chunk_collective_io(H5D_io_info_t *io_info,H5D_chunk_map_t *fm,const void *buf, hbool_t do_write,int sum_chunk)
+H5D_link_chunk_collective_io(H5D_io_info_t *io_info,fm_map *fm,const void *buf, hbool_t do_write,int sum_chunk)
 {
       size_t	       src_type_size;		/*size of source type	*/
       size_t	       dst_type_size;	        /*size of destination type*/
@@ -856,7 +856,7 @@ H5D_link_chunk_collective_io(H5D_io_info_t *io_info,H5D_chunk_map_t *fm,const vo
         H5D_chunk_info_t *chunk_info;
         H5D_storage_t  store;
  
-        chunk_node = H5SL_first(fm->sel_chunks);
+        chunk_node = H5SL_first(fm->fsel);
 	if(chunk_node == NULL) {
             if(H5D_istore_chunkmap(io_info, &chunk_base_addr, fm->down_chunks) < 0)
                 HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "can't get chunk address");
@@ -884,7 +884,7 @@ H5D_link_chunk_collective_io(H5D_io_info_t *io_info,H5D_chunk_map_t *fm,const vo
       }
 
       /* Allocate chunking information */
-      ori_num_chunk        = H5SL_count(fm->sel_chunks);
+      ori_num_chunk        = H5SL_count(fm->fsel);
       H5_ASSIGN_OVERFLOW(num_chunk,ori_num_chunk,size_t,int);
 
 #ifdef H5D_DEBUG
@@ -1058,7 +1058,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5D_multi_chunk_collective_io(H5D_io_info_t *io_info,H5D_chunk_map_t *fm,const void *buf, hbool_t do_write) 
+H5D_multi_chunk_collective_io(H5D_io_info_t *io_info,fm_map *fm,const void *buf, hbool_t do_write) 
 {
       unsigned          i, total_chunk;
       hsize_t           ori_total_chunk;
@@ -1114,7 +1114,7 @@ H5D_multi_chunk_collective_io(H5D_io_info_t *io_info,H5D_chunk_map_t *fm,const v
 #endif
 	select_chunk = fm->select_chunk[i];
 	if(select_chunk == 1){/* Have selection elements in this chunk. Find the chunk info. */
-	   if(NULL ==(chunk_node = H5SL_first(fm->sel_chunks)))
+	   if(NULL ==(chunk_node = H5SL_first(fm->fsel)))
 	    HGOTO_ERROR(H5E_STORAGE, H5E_CANTGET, FAIL,"couldn't get chunk node from skipped list");
 
 	    while(chunk_node){
@@ -1182,7 +1182,7 @@ H5D_multi_chunk_collective_io(H5D_io_info_t *io_info,H5D_chunk_map_t *fm,const v
             if(HADDR_UNDEF==(caddr = H5D_istore_get_addr(io_info, &udata)))
                 HGOTO_ERROR(H5E_STORAGE, H5E_CANTGET, FAIL,"couldn't get chunk info from skipped list");
 
-            if(H5D_istore_if_load(io_info, caddr)) {
+            if (H5D_istore_if_load(dataset, caddr)) {
                 accessed_bytes = chunk_info->chunk_points * H5T_get_size(dataset->shared->type);
                 if((do_write && (accessed_bytes != dataset->shared->layout.u.chunk.size)) || !do_write)
                     relax=FALSE;
@@ -1206,13 +1206,12 @@ H5D_multi_chunk_collective_io(H5D_io_info_t *io_info,H5D_chunk_map_t *fm,const v
             }
 
             /* Release the cache lock on the chunk. */
-            if(chunk) {
-                if(!do_write)
-                    dirty = FALSE;
+            if (H5D_istore_if_load(dataset, caddr)) {
+                if(!do_write) dirty = FALSE;
 
 	        if(H5D_istore_unlock(io_info, dirty, idx_hint, chunk, accessed_bytes) < 0)
 		    HGOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, "unable to unlock raw data chunk")
-	    } /* end if */
+	    }
 #else
             if(!last_io_mode_coll)
                 /* using independent I/O with file setview.*/
@@ -1278,7 +1277,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t 
-H5D_multi_chunk_collective_io_no_opt(H5D_io_info_t *io_info,H5D_chunk_map_t *fm,const void *buf, hbool_t do_write) 
+H5D_multi_chunk_collective_io_no_opt(H5D_io_info_t *io_info,fm_map *fm,const void *buf, hbool_t do_write) 
 {
       int               count_chunk,min_num_chunk;
       haddr_t           chunk_addr;
@@ -1313,7 +1312,7 @@ H5D_multi_chunk_collective_io_no_opt(H5D_io_info_t *io_info,H5D_chunk_map_t *fm,
       count_chunk = 0;
   
       /* Get first node in chunk skip list */
-      chunk_node=H5SL_first(fm->sel_chunks);
+      chunk_node=H5SL_first(fm->fsel);
  
        /* Iterate through chunks to be operated on */
       while(chunk_node) {
@@ -1367,7 +1366,7 @@ H5D_multi_chunk_collective_io_no_opt(H5D_io_info_t *io_info,H5D_chunk_map_t *fm,
             if(make_ind) {/*independent I/O */
                 /* Load the chunk into cache.  But if the whole chunk is written,
                  * simply allocate space instead of load the chunk. */
-                if(H5D_istore_if_load(io_info, chunk_addr)) {
+                if (H5D_istore_if_load(dataset, chunk_addr)) {
                     accessed_bytes = chunk_info->chunk_points * H5T_get_size(dataset->shared->type);
                     if((do_write && (accessed_bytes != dataset->shared->layout.u.chunk.size)) || !do_write)
                         relax=FALSE;
@@ -1390,14 +1389,13 @@ H5D_multi_chunk_collective_io_no_opt(H5D_io_info_t *io_info,H5D_chunk_map_t *fm,
                 }
 
                 /* Release the cache lock on the chunk. */
-                if(chunk) {
-                    if(!do_write)
-                        dirty = FALSE;
+                if (H5D_istore_if_load(dataset, chunk_addr)) {
+                    if(!do_write) dirty = FALSE;
 
 		    if(H5D_istore_unlock(io_info, dirty, idx_hint, chunk, accessed_bytes) < 0)
 			HGOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, "unable to unlock raw data chunk")
-		} /* end if */
-            } /* end if */
+		}
+            }
             else { /*collective I/O */
               if(H5D_inter_collective_io(io_info,chunk_info->fspace,chunk_info->mspace,
                      chunk_addr,buf,do_write ) < 0)
@@ -1580,7 +1578,7 @@ done:
    
    Parameters:
                 Input: H5D_io_info_t* io_info,
-		       H5D_chunk_map_t *fm(global chunk map struct)
+		       fm_map *fm(global chunk map struct)
 		Input/Output:  H5D_chunk_addr_info_t chunk_addr_info_array[]   : array to store chunk address and information 
                        many_chunk_opt                         : flag to optimize the way to obtain chunk addresses 
                                                                 for many chunks
@@ -1596,7 +1594,7 @@ done:
 
 static herr_t 
 H5D_sort_chunk(H5D_io_info_t * io_info,
-	       H5D_chunk_map_t *fm,
+	       fm_map *fm,
 	       H5D_chunk_addr_info_t chunk_addr_info_array[],
 	       int many_chunk_opt)
 {
@@ -1618,7 +1616,7 @@ H5D_sort_chunk(H5D_io_info_t * io_info,
   
     FUNC_ENTER_NOAPI_NOINIT(H5D_sort_chunk)
 
-    num_chunks =  H5SL_count(fm->sel_chunks);
+    num_chunks =  H5SL_count(fm->fsel);
 #ifdef H5D_DEBUG
   if(H5DEBUG(D)) 
     HDfprintf(H5DEBUG(D),"many_chunk_opt= %d\n",many_chunk_opt);
@@ -1657,7 +1655,7 @@ H5D_sort_chunk(H5D_io_info_t * io_info,
     } /* end if */
 
     /* Get first node in chunk skip list */
-    if(NULL ==(chunk_node = H5SL_first(fm->sel_chunks)))
+    if(NULL ==(chunk_node = H5SL_first(fm->fsel)))
 	  HGOTO_ERROR(H5E_STORAGE, H5E_CANTGET, FAIL,"couldn't get chunk node from skipped list");
     /* Set dataset storage for I/O info */
     io_info->store = &store;
@@ -1746,7 +1744,7 @@ done:
    Parameters:
 
                 Input: H5D_io_info_t* io_info,
-		       H5D_chunk_map_t *fm,(global chunk map struct)
+		       fm_map *fm,(global chunk map struct)
 		Output: uint8_t assign_io_mode[], : IO mode, collective, independent or none
 		        haddr_t chunk_addr[],     : chunk address array for each chunk
  *
@@ -1761,7 +1759,7 @@ done:
 
 static herr_t 
 H5D_obtain_mpio_mode(H5D_io_info_t* io_info, 
-		     H5D_chunk_map_t *fm,
+		     fm_map *fm,
 		     uint8_t assign_io_mode[],
 		     haddr_t chunk_addr[])
 {
@@ -1843,7 +1841,7 @@ H5D_obtain_mpio_mode(H5D_io_info_t* io_info,
   
   mem_cleanup       = 1;
 
-  chunk_node        = H5SL_first(fm->sel_chunks);
+  chunk_node        = H5SL_first(fm->fsel);
 
   /*Obtain the regularity and selection information for all chunks in this process. */
   while(chunk_node){

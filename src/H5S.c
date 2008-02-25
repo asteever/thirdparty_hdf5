@@ -542,7 +542,7 @@ H5Scopy(hid_t space_id)
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space")
 
     /* Copy */
-    if (NULL == (dst = H5S_copy(src, FALSE, TRUE)))
+    if (NULL==(dst=H5S_copy (src, FALSE)))
         HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINIT, FAIL, "unable to copy data space")
 
     /* Atomize */
@@ -580,22 +580,22 @@ H5Sextent_copy(hid_t dst_id,hid_t src_id)
     H5S_t	*dst;
     hid_t	ret_value = SUCCEED;
 
-    FUNC_ENTER_API(H5Sextent_copy, FAIL)
+    FUNC_ENTER_API(H5Sextent_copy, FAIL);
     H5TRACE2("e", "ii", dst_id, src_id);
 
     /* Check args */
-    if(NULL == (src = (H5S_t *)H5I_object_verify(src_id, H5I_DATASPACE)))
+    if (NULL==(src=(H5S_t *)H5I_object_verify(src_id, H5I_DATASPACE)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space")
-    if(NULL == (dst = (H5S_t *)H5I_object_verify(dst_id, H5I_DATASPACE)))
+    if (NULL==(dst=(H5S_t *)H5I_object_verify(dst_id, H5I_DATASPACE)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space")
 
     /* Copy */
-    if(H5S_extent_copy(&(dst->extent), &(src->extent), TRUE) < 0)
+    if (H5S_extent_copy(&(dst->extent),&(src->extent))<0)
         HGOTO_ERROR(H5E_DATASPACE, H5E_CANTCOPY, FAIL, "can't copy extent")
 
 done:
-    FUNC_LEAVE_API(ret_value)
-} /* end H5Sextent_copy() */
+    FUNC_LEAVE_API(ret_value);
+}
 
 
 /*-------------------------------------------------------------------------
@@ -613,7 +613,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5S_extent_copy(H5S_extent_t *dst, const H5S_extent_t *src, hbool_t copy_max)
+H5S_extent_copy(H5S_extent_t *dst, const H5S_extent_t *src)
 {
     unsigned u;
     herr_t ret_value = SUCCEED;   /* Return value */
@@ -641,13 +641,13 @@ H5S_extent_copy(H5S_extent_t *dst, const H5S_extent_t *src, hbool_t copy_max)
             } /* end if */
             else
                 dst->size = NULL;
-            if(copy_max && src->max) {
+            if(src->max) {
                 dst->max = (hsize_t *)H5FL_ARR_MALLOC(hsize_t, (size_t)src->rank);
                 for(u = 0; u < src->rank; u++)
                     dst->max[u] = src->max[u];
             } /* end if */
             else
-                dst->max = NULL;
+                dst->max=NULL;
             break;
 
         default:
@@ -686,7 +686,7 @@ done:
  *-------------------------------------------------------------------------
  */
 H5S_t *
-H5S_copy(const H5S_t *src, hbool_t share_selection, hbool_t copy_max)
+H5S_copy(const H5S_t *src, hbool_t share_selection)
 {
     H5S_t		   *dst = NULL;
     H5S_t		   *ret_value;   /* Return value */
@@ -697,7 +697,7 @@ H5S_copy(const H5S_t *src, hbool_t share_selection, hbool_t copy_max)
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
 
     /* Copy the source dataspace's extent */
-    if(H5S_extent_copy(&(dst->extent), &(src->extent), copy_max) < 0)
+    if(H5S_extent_copy(&(dst->extent), &(src->extent)) < 0)
         HGOTO_ERROR(H5E_DATASPACE, H5E_CANTCOPY, NULL, "can't copy extent")
 
     /* Copy the source dataspace's selection */
@@ -1055,20 +1055,27 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5S_write(H5F_t *f, hid_t dxpl_id, H5O_t *oh, unsigned update_flags, H5S_t *ds)
+H5S_write(H5O_loc_t *loc, const H5S_t *ds, hbool_t update_time, hid_t dxpl_id)
 {
     herr_t ret_value = SUCCEED;   /* Return value */
 
     FUNC_ENTER_NOAPI(H5S_write, FAIL)
 
-    HDassert(f);
-    HDassert(oh);
+    HDassert(loc);
     HDassert(ds);
-    HDassert(H5S_GET_EXTENT_TYPE(ds) >= 0);
 
-    /* Write the current dataspace extent to the dataspace message */
-    if(H5O_msg_write_oh(f, dxpl_id, oh, H5O_SDSPACE_ID, 0, update_flags, &(ds->extent)) < 0)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINIT, FAIL, "can't update simple dataspace message")
+    switch(H5S_GET_EXTENT_TYPE(ds)) {
+        case H5S_NULL:
+        case H5S_SCALAR:
+        case H5S_SIMPLE:
+            if(H5O_msg_write(loc, H5O_SDSPACE_ID, 0, update_time, &(ds->extent), dxpl_id) < 0)
+                HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINIT, FAIL, "can't update simple dataspace message")
+            break;
+
+        default:
+            HDassert("unknown dataspace class" && 0);
+            break;
+    } /* end switch */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1096,7 +1103,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5S_append(H5F_t *f, hid_t dxpl_id, H5O_t *oh, H5S_t *ds)
+H5S_append(H5F_t *f, hid_t dxpl_id, struct H5O_t *oh, const H5S_t *ds)
 {
     herr_t ret_value = SUCCEED;   /* Return value */
 
@@ -1105,11 +1112,19 @@ H5S_append(H5F_t *f, hid_t dxpl_id, H5O_t *oh, H5S_t *ds)
     HDassert(f);
     HDassert(oh);
     HDassert(ds);
-    HDassert(H5S_GET_EXTENT_TYPE(ds) >= 0);
 
-    /* Add the dataspace message to the object header */
-    if(H5O_msg_append_oh(f, dxpl_id, oh, H5O_SDSPACE_ID, 0, 0, &(ds->extent)) < 0)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINIT, FAIL, "can't add simple dataspace message")
+    switch (H5S_GET_EXTENT_TYPE(ds)) {
+        case H5S_NULL:
+        case H5S_SCALAR:
+        case H5S_SIMPLE:
+            if(H5O_msg_append(f, dxpl_id, oh, H5O_SDSPACE_ID, 0, 0, &(ds->extent)) < 0)
+                HGOTO_ERROR(H5E_DATASPACE, H5E_CANTINIT, FAIL, "can't update simple data space message")
+            break;
+
+        default:
+            assert("unknown data space class" && 0);
+            break;
+    }
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1373,7 +1388,6 @@ H5S_set_extent_simple(H5S_t *space, unsigned rank, const hsize_t *dims,
     /* Set offset to zeros */
     for(u = 0; u < space->extent.rank; u++)
         space->select.offset[u] = 0;
-    space->select.offset_changed = FALSE;
 
     /* If the selection is 'all', update the number of elements selected */
     if(H5S_GET_SELECT_TYPE(space) == H5S_SEL_ALL)

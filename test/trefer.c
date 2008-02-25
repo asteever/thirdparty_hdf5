@@ -111,7 +111,7 @@ test_reference_obj(void)
     CHECK(group, FAIL, "H5Gcreate2");
 
     /* Set group's comment */
-    ret = H5Oset_comment(group, write_comment);
+    ret = H5Oset_comment(group, ".", write_comment, H5P_DEFAULT);
     CHECK(ret, FAIL, "H5Oset_comment");
 
     /* Create a dataset (inside Group1) */
@@ -250,7 +250,7 @@ test_reference_obj(void)
     CHECK(group, FAIL, "H5Rdereference");
 
     /* Get group's comment */
-    ret = H5Oget_comment(group, read_comment, (size_t)10);
+    ret = H5Oget_comment(group, ".", read_comment, (size_t)10, H5P_DEFAULT);
     CHECK(ret, FAIL, "H5Oget_comment");
 
     /* Check for correct comment value */
@@ -407,7 +407,7 @@ test_reference_region(void)
     coord1[7][0] = 9; coord1[7][1] = 0;
     coord1[8][0] = 7; coord1[8][1] = 1;
     coord1[9][0] = 3; coord1[9][1] = 3;
-    ret = H5Sselect_elements(sid2, H5S_SELECT_SET, (size_t)POINT1_NPOINTS, coord1);
+    ret = H5Sselect_elements(sid2, H5S_SELECT_SET, (size_t)POINT1_NPOINTS, (const hsize_t **)coord1);
     CHECK(ret, FAIL, "H5Sselect_elements");
 
     ret = (int)H5Sget_select_npoints(sid2);
@@ -679,7 +679,7 @@ test_reference_region_1D(void)
     coord1[7][0] = 89;
     coord1[8][0] = 97;
     coord1[9][0] = 03;
-    ret = H5Sselect_elements(sid3, H5S_SELECT_SET, (size_t)POINT1_NPOINTS, coord1);
+    ret = H5Sselect_elements(sid3, H5S_SELECT_SET, (size_t)POINT1_NPOINTS, (const hsize_t **)coord1);
     CHECK(ret, FAIL, "H5Sselect_elements");
 
     ret = (int)H5Sget_select_npoints(sid3);
@@ -1077,11 +1077,11 @@ test_reference_group(void)
     CHECK(gid, FAIL, "H5Rdereference");
 
     /* Iterate through objects in dereferenced group */
-    ret = H5Literate(gid, H5_INDEX_NAME, H5_ITER_INC, NULL, test_deref_iter_op, &count);
+    ret = H5Literate(gid, ".", H5_INDEX_NAME, H5_ITER_INC, NULL, test_deref_iter_op, &count, H5P_DEFAULT);
     CHECK(ret, FAIL, "H5Literate");
 
     /* Various queries on the group opened */
-    ret = H5Gget_info(gid, &ginfo);
+    ret = H5Gget_info(gid, ".", &ginfo, H5P_DEFAULT);
     CHECK(ret, FAIL, "H5Gget_info");
     VERIFY(ginfo.nlinks, 3, "H5Gget_info");
 
@@ -1264,7 +1264,7 @@ test_reference_compat(void)
     coord1[7][0] = 9; coord1[7][1] = 0;
     coord1[8][0] = 7; coord1[8][1] = 1;
     coord1[9][0] = 3; coord1[9][1] = 3;
-    ret = H5Sselect_elements(sid2, H5S_SELECT_SET, (size_t)POINT1_NPOINTS, coord1);
+    ret = H5Sselect_elements(sid2, H5S_SELECT_SET, (size_t)POINT1_NPOINTS, (const hsize_t **)coord1);
     CHECK(ret, FAIL, "H5Sselect_elements");
 
     /* Create second dataset region */

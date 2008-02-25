@@ -94,11 +94,11 @@ typedef enum dtype_t {
 static int num_opaque_conversions_g = 0;
 
 static int opaque_check(int tag_it);
-static herr_t convert_opaque(hid_t st, hid_t dt,
+static herr_t convert_opaque(hid_t UNUSED st, hid_t UNUSED dt,
                H5T_cdata_t *cdata,
-	       size_t nelmts, size_t buf_stride,
-               size_t bkg_stride, void *_buf,
-	       void *bkg, hid_t dset_xfer_plid);
+	       size_t UNUSED nelmts, size_t UNUSED buf_stride,
+               size_t UNUSED bkg_stride, void UNUSED *_buf,
+	       void UNUSED *bkg, hid_t UNUSED dset_xfer_plid);
 static int opaque_long(void);
 static int opaque_funcs(void);
 
@@ -2475,7 +2475,7 @@ test_transient (hid_t fapl)
 
     /* It should not be possible to create an attribute for a transient type */
     H5E_BEGIN_TRY {
-	status = H5Acreate2(type, "attr1", H5T_NATIVE_INT, space, H5P_DEFAULT, H5P_DEFAULT);
+	status = H5Acreate2(type, ".", "attr1", H5T_NATIVE_INT, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     } H5E_END_TRY;
     if (status>=0) {
 	H5_FAILED();
@@ -2622,8 +2622,8 @@ test_named (hid_t fapl)
     }
 
     /* It should be possible to define an attribute for the named type */
-    if((attr1 = H5Acreate2(type, "attr1", H5T_NATIVE_UCHAR, space,
-			  H5P_DEFAULT, H5P_DEFAULT)) < 0) goto error;
+    if((attr1 = H5Acreate2(type, ".", "attr1", H5T_NATIVE_UCHAR, space,
+			  H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) goto error;
     for(i = 0; i < (size_t)ds_size[0]; i++)
         for(j = 0; j < (size_t)ds_size[1]; j++)
             attr_data[i][j] = (int)(i * ds_size[1] + j);
@@ -4369,7 +4369,7 @@ test_latest(void)
         FAIL_STACK_ERROR
 
     /* Get information about datatype on disk */
-    if(H5Oget_info_by_name(file, compnd_type, &oi, H5P_DEFAULT) < 0)
+    if(H5Oget_info(file, compnd_type, &oi, H5P_DEFAULT) < 0)
         FAIL_STACK_ERROR
     old_dtype_oh_size = oi.hdr.space.total;
 
@@ -4394,7 +4394,7 @@ test_latest(void)
         FAIL_STACK_ERROR
 
     /* Get information about datatype on disk */
-    if(H5Oget_info_by_name(file, compnd_type, &oi, H5P_DEFAULT) < 0)
+    if(H5Oget_info(file, compnd_type, &oi, H5P_DEFAULT) < 0)
         FAIL_STACK_ERROR
 
     /* Check that the object header info is still the same */
@@ -4410,10 +4410,10 @@ test_latest(void)
         FAIL_STACK_ERROR
 
 
-    /* Set the 'use the latest format' bounds in the FAPL */
+    /* Set the 'use the latest format' flag in the FAPL */
     if((fapl = H5Pcreate(H5P_FILE_ACCESS)) < 0)
         FAIL_STACK_ERROR
-    if(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0)
+    if(H5Pset_latest_format(fapl, TRUE) < 0)
         FAIL_STACK_ERROR
 
     /* Create file using default FAPL */
@@ -4430,7 +4430,7 @@ test_latest(void)
         FAIL_STACK_ERROR
 
     /* Get information about datatype on disk */
-    if(H5Oget_info_by_name(file, compnd_type, &oi, H5P_DEFAULT) < 0)
+    if(H5Oget_info(file, compnd_type, &oi, H5P_DEFAULT) < 0)
         FAIL_STACK_ERROR
     new_dtype_oh_size = oi.hdr.space.total;
     
@@ -4459,7 +4459,7 @@ test_latest(void)
         FAIL_STACK_ERROR
 
     /* Get information about datatype on disk */
-    if(H5Oget_info_by_name(file, compnd_type, &oi, H5P_DEFAULT) < 0)
+    if(H5Oget_info(file, compnd_type, &oi, H5P_DEFAULT) < 0)
         FAIL_STACK_ERROR
 
     /* Check that the object header info is still the same */

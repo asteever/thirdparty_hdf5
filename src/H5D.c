@@ -197,7 +197,7 @@ done:
  *		create other datasets.
  *
  *              The resulting ID should be linked into the file with
- *              H5Olink or it will be deleted when closed.
+ *              H5Llink or it will be deleted when closed.
  *
  * Return:	Success:	The object ID of the new dataset.  At this
  *				point, the dataset is ready to receive its
@@ -417,15 +417,15 @@ H5Dget_space(hid_t dset_id)
     H5TRACE1("i", "i", dset_id);
 
     /* Check args */
-    if(NULL == (dset = (H5D_t *)H5I_object_verify(dset_id, H5I_DATASET)))
+    if(NULL==(dset=(H5D_t *)H5I_object_verify(dset_id, H5I_DATASET)))
 	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataset")
 
     /* Read the data space message and return a data space object */
-    if(NULL == (space = H5S_copy(dset->shared->space, FALSE, TRUE)))
+    if(NULL==(space=H5S_copy (dset->shared->space, FALSE)))
 	HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to get data space")
 
     /* Create an atom */
-    if((ret_value = H5I_register (H5I_DATASPACE, space)) < 0)
+    if((ret_value=H5I_register (H5I_DATASPACE, space)) < 0)
 	HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to register data space")
 
 done:
@@ -988,7 +988,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Dset_extent(hid_t dset_id, const hsize_t size[])
+H5Dset_extent(hid_t dset_id, const hsize_t *size)
 {
     H5D_t *dset;                /* Dataset for this operation */
     herr_t ret_value = SUCCEED; /* Return value */

@@ -610,7 +610,7 @@ usage(const char *prog)
     fprintf(stdout, "  OPTIONS\n");
     fprintf(stdout, "     -h, --help           Print a usage message and exit\n");
     fprintf(stdout, "     -n, --contents       Print a list of the file contents and exit\n");
-    fprintf(stdout, "     -B, --superblock     Print the content of the super block\n");
+    fprintf(stdout, "     -B, --bootblock      Print the content of the boot block\n");
     fprintf(stdout, "     -H, --header         Print the header only; no data is displayed\n");
     fprintf(stdout, "     -A, --onlyattr       Print the header and value of attributes\n");
     fprintf(stdout, "     -i, --object-ids     Print the object ids\n");
@@ -620,7 +620,7 @@ usage(const char *prog)
     fprintf(stdout, "     -a P, --attribute=P  Print the specified attribute\n");
     fprintf(stdout, "     -d P, --dataset=P    Print the specified dataset\n");
     fprintf(stdout, "     -y, --noindex        Do not print array indices with the data\n");
-    fprintf(stdout, "     -p, --properties     Print dataset filters, storage layout and fill value\n");
+    fprintf(stdout, "     -p,   --properties   Print dataset filters, storage layout and fill value\n");
     fprintf(stdout, "     -f D, --filedriver=D Specify which driver to open the file with\n");
     fprintf(stdout, "     -g P, --group=P      Print the specified group and all members\n");
     fprintf(stdout, "     -l P, --soft-link=P  Print the value(s) of the specified soft link\n");
@@ -678,8 +678,7 @@ usage(const char *prog)
     fprintf(stdout, "\n");
     fprintf(stdout, "      h5dump -d /foo -s \"0,1\" -S \"1,1\" -c \"2,3\" -k \"2,2\" quux.h5\n");
     fprintf(stdout, "\n");
-    fprintf(stdout, "  3) Saving dataset 'dset' in file quux.h5 to binary file 'out.bin'\n");
-    fprintf(stdout, "        using a little-endian type\n");
+    fprintf(stdout, "  3) Saving dataset 'dset' in file quux.h5 to binary file 'out.bin' using a little-endian type \n");
     fprintf(stdout, "\n");
     fprintf(stdout, "      h5dump -d /dset -b LE -o out.bin quux.h5\n");
     fprintf(stdout, "\n");
@@ -723,7 +722,7 @@ print_datatype(hid_t type,unsigned in_group)
         H5O_info_t  oinfo;
         obj_t  *obj;    /* Found object */
 
-        H5Oget_info(type, &oinfo);
+        H5Oget_info(type, ".", &oinfo, H5P_DEFAULT);
         obj = search_obj(type_table, oinfo.addr);
 
         if(obj) {
@@ -1238,7 +1237,7 @@ dump_attr_cb(hid_t oid, const char *attr_name, const H5A_info_t UNUSED *info, vo
     begin_obj(dump_header_format->attributebegin, attr_name,
           dump_header_format->attributeblockbegin);
 
-    if((attr_id = H5Aopen(oid, attr_name, H5P_DEFAULT)) < 0) {
+    if((attr_id = H5Aopen(oid, ".", attr_name, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
         indentation(indent + COL);
         error_msg(progname, "unable to open attribute \"%s\"\n", attr_name);
         indentation(indent);
@@ -1322,7 +1321,7 @@ dump_selected_attr(hid_t loc_id, const char *name)
         return FAIL;
     } /* end if */
 
-    if((attr_id = H5Aopen(oid, attr_name, H5P_DEFAULT)) >= 0) {
+    if((attr_id = H5Aopen(oid, ".", attr_name, H5P_DEFAULT, H5P_DEFAULT)) >= 0) {
         hid_t type, space;
 
         type = H5Aget_type(attr_id);
@@ -1394,7 +1393,7 @@ dump_all_cb(hid_t group, const char *name, const H5L_info_t *linfo, void UNUSED 
         H5O_info_t  oinfo;
 
         /* Stat the object */
-        if(H5Oget_info_by_name(group, name, &oinfo, H5P_DEFAULT) < 0) {
+        if(H5Oget_info(group, name, &oinfo, H5P_DEFAULT) < 0) {
             error_msg(progname, "unable to get object information for \"%s\"\n", name);
             d_status = EXIT_FAILURE;
             ret = FAIL;
@@ -1817,9 +1816,9 @@ dump_named_datatype(hid_t tid, const char *name)
       in the datatype's create property list for attributes, then, sort by creation order, otherwise by name */
     
     if( (sort_by == H5_INDEX_CRT_ORDER) && (attr_crt_order_flags & H5P_CRT_ORDER_TRACKED))
-        H5Aiterate2(tid, sort_by, sort_order, NULL, dump_attr_cb, NULL);
+        H5Aiterate2(tid, ".", sort_by, sort_order, NULL, dump_attr_cb, NULL, H5P_DEFAULT);
     else
-        H5Aiterate2(tid, H5_INDEX_NAME, sort_order, NULL, dump_attr_cb, NULL);
+        H5Aiterate2(tid, ".", H5_INDEX_NAME, sort_order, NULL, dump_attr_cb, NULL, H5P_DEFAULT);
 
     indent -= COL;
     end_obj(dump_header_format->datatypeend,
@@ -1907,7 +1906,7 @@ dump_group(hid_t gid, const char *name)
             }
     } /* end if */
 
-    H5Oget_info(gid, &oinfo);
+    H5Oget_info(gid, ".", &oinfo, H5P_DEFAULT);
 
     if(oinfo.rc > 1) {
         obj_t  *found_obj;    /* Found object */
@@ -1929,18 +1928,18 @@ dump_group(hid_t gid, const char *name)
             /* attribute iteration: if there is a request to do H5_INDEX_CRT_ORDER and tracking order is set
                in the group for attributes, then, sort by creation order, otherwise by name */
             
-            if((sort_by == H5_INDEX_CRT_ORDER) && (attr_crt_order_flags & H5P_CRT_ORDER_TRACKED))
-                H5Aiterate2(gid, sort_by, sort_order, NULL, dump_attr_cb, NULL);
+            if( (sort_by == H5_INDEX_CRT_ORDER) && (attr_crt_order_flags & H5P_CRT_ORDER_TRACKED))
+                H5Aiterate2(gid, ".", sort_by, sort_order, NULL, dump_attr_cb, NULL, H5P_DEFAULT);
             else
-                H5Aiterate2(gid, H5_INDEX_NAME, sort_order, NULL, dump_attr_cb, NULL);
+                H5Aiterate2(gid, ".", H5_INDEX_NAME, sort_order, NULL, dump_attr_cb, NULL, H5P_DEFAULT);
             
             /* if there is a request to do H5_INDEX_CRT_ORDER and tracking order is set
                in the group, then, sort by creation order, otherwise by name */
             
-            if((sort_by == H5_INDEX_CRT_ORDER) && (crt_order_flags & H5P_CRT_ORDER_TRACKED))
-                H5Literate(gid, sort_by, sort_order, NULL, dump_all_cb, NULL);
+            if( (sort_by == H5_INDEX_CRT_ORDER) && (crt_order_flags & H5P_CRT_ORDER_TRACKED))
+                H5Literate(gid, ".", sort_by, sort_order, NULL, dump_all_cb, NULL, H5P_DEFAULT);
             else
-                H5Literate(gid, H5_INDEX_NAME, sort_order, NULL, dump_all_cb, NULL);
+                H5Literate(gid, ".", H5_INDEX_NAME, sort_order, NULL, dump_all_cb, NULL, H5P_DEFAULT);
 
         }
     } 
@@ -1952,18 +1951,18 @@ dump_group(hid_t gid, const char *name)
         /* attribute iteration: if there is a request to do H5_INDEX_CRT_ORDER and tracking order is set
            in the group for attributes, then, sort by creation order, otherwise by name */
             
-        if((sort_by == H5_INDEX_CRT_ORDER) && (attr_crt_order_flags & H5P_CRT_ORDER_TRACKED))
-            H5Aiterate2(gid, sort_by, sort_order, NULL, dump_attr_cb, NULL);
+        if( (sort_by == H5_INDEX_CRT_ORDER) && (attr_crt_order_flags & H5P_CRT_ORDER_TRACKED))
+            H5Aiterate2(gid, ".", sort_by, sort_order, NULL, dump_attr_cb, NULL, H5P_DEFAULT);
         else
-            H5Aiterate2(gid, H5_INDEX_NAME, sort_order, NULL, dump_attr_cb, NULL); 
+            H5Aiterate2(gid, ".", H5_INDEX_NAME, sort_order, NULL, dump_attr_cb, NULL, H5P_DEFAULT); 
 
          /* if there is a request to do H5_INDEX_CRT_ORDER and tracking order is set
             in the group, then, sort by creation order, otherwise by name */
 
-        if((sort_by == H5_INDEX_CRT_ORDER) && (crt_order_flags & H5P_CRT_ORDER_TRACKED))
-            H5Literate(gid, sort_by, sort_order, NULL, dump_all_cb, NULL);
+         if( (sort_by == H5_INDEX_CRT_ORDER) && (crt_order_flags & H5P_CRT_ORDER_TRACKED))
+            H5Literate(gid, ".", sort_by, sort_order, NULL, dump_all_cb, NULL, H5P_DEFAULT);
         else
-            H5Literate(gid, H5_INDEX_NAME, sort_order, NULL, dump_all_cb, NULL); 
+            H5Literate(gid, ".", H5_INDEX_NAME, sort_order, NULL, dump_all_cb, NULL, H5P_DEFAULT); 
 
         
     }
@@ -2058,9 +2057,9 @@ dump_dataset(hid_t did, const char *name, struct subset_t *sset)
     in the group for attributes, then, sort by creation order, otherwise by name */
     
     if( (sort_by == H5_INDEX_CRT_ORDER) && (attr_crt_order_flags & H5P_CRT_ORDER_TRACKED))
-        H5Aiterate2(did, sort_by, sort_order, NULL, dump_attr_cb, NULL);
+        H5Aiterate2(did, ".", sort_by, sort_order, NULL, dump_attr_cb, NULL, H5P_DEFAULT);
     else
-        H5Aiterate2(did, H5_INDEX_NAME, sort_order, NULL, dump_attr_cb, NULL);
+        H5Aiterate2(did, ".", H5_INDEX_NAME, sort_order, NULL, dump_attr_cb, NULL, H5P_DEFAULT);
 
     indent -= COL;
 
@@ -2380,7 +2379,7 @@ dump_comment(hid_t obj_id)
     char comment[50];
 
     comment[0] = '\0';
-    H5Oget_comment(obj_id, comment, sizeof(comment));
+    H5Oget_comment(obj_id, ".", comment, sizeof(comment), H5P_DEFAULT);
 
     if(comment[0]) {
         indentation(indent);
@@ -2756,7 +2755,7 @@ static void
 dump_fcpl(hid_t fid)
 {
     hid_t    fcpl;      /* file creation property list ID */
-    hid_t    fapl;      /* file access property list ID */
+    hid_t         fapl;      /* file access property list ID */
     hsize_t  userblock; /* userblock size retrieved from FCPL */
     size_t   off_size;  /* size of offsets in the file */
     size_t   len_size;  /* size of lengths in the file */
@@ -2764,7 +2763,7 @@ dump_fcpl(hid_t fid)
     unsigned freelist;  /* free list version # */
     unsigned stab;      /* symbol table entry version # */
     unsigned shhdr;     /* shared object header version # */
-    hid_t    fdriver;   /* file driver */
+    hid_t    fdriver;    /* file driver */
     char     dname[32]; /* buffer to store driver name */
     unsigned sym_lk;    /* symbol table B-tree leaf 'K' value */
     unsigned sym_ik;    /* symbol table B-tree internal 'K' value */
@@ -2781,7 +2780,7 @@ dump_fcpl(hid_t fid)
     fdriver=H5Pget_driver(fapl);
     H5Pclose(fapl);
 
-   /*-------------------------------------------------------------------------
+    /*-------------------------------------------------------------------------
     * SUPER_BLOCK
     *-------------------------------------------------------------------------
     */
@@ -3181,8 +3180,6 @@ parse_subset_params(char *dset)
  *              Tuesday, 9. January 2001
  *
  * Modifications:
- *  Pedro Vicente, Tuesday, January 15, 2008
- *  check for block overlap
  *
  *-------------------------------------------------------------------------
  */
@@ -3255,39 +3252,7 @@ handle_datasets(hid_t fid, char *dset, void *data)
         }
     }
 
-    
-   /*-------------------------------------------------------------------------
-    * check for block overlap
-    *-------------------------------------------------------------------------
-    */
-
-    if(sset) 
-    {
-        hid_t sid = H5Dget_space(dsetid);
-        unsigned int ndims = H5Sget_simple_extent_ndims(sid);
-        unsigned int i;
-        
-        for ( i = 0; i < ndims; i++)
-        {
-            if ( sset->count[i] > 1 )
-            {
-                
-                if ( sset->stride[i] < sset->block[i] )
-                {
-                    error_msg(progname, "wrong subset selection; blocks overlap\n");
-                    d_status = EXIT_FAILURE;
-                    return;
-                    
-                }                                
-                
-            }
-            
-        } 
-        H5Sclose(sid);
-        
-    }
-
-    H5Oget_info(dsetid, &oinfo);
+    H5Oget_info(dsetid, ".", &oinfo, H5P_DEFAULT);
     if(oinfo.rc > 1) {
         obj_t  *found_obj;    /* Found object */
 
@@ -3986,7 +3951,7 @@ main(int argc, const char *argv[])
     /* allocate and initialize internal data structure */
     init_prefix(&prefix, prefix_len);
 
-    /* Prepare to find objects that might be targets of a reference */
+    /* find all objects that might be targets of a reference */
     fill_ref_path_table(fid);
 
     if(doxml) {
@@ -4128,6 +4093,7 @@ done:
     free_table(type_table);
 
     HDfree(prefix);
+    HDfree(info.prefix);
     HDfree(fname);
 
     /* To Do:  clean up XML table */
@@ -4523,7 +4489,7 @@ xml_print_datatype(hid_t type, unsigned in_group)
         obj_t  *found_obj;    /* Found object */
 
         /* detect a shared datatype, output only once */
-        H5Oget_info(type, &oinfo);
+        H5Oget_info(type, ".", &oinfo, H5P_DEFAULT);
         found_obj = search_obj(type_table, oinfo.addr);
 
         if(found_obj) {
@@ -4884,7 +4850,7 @@ xml_dump_datatype(hid_t type)
         obj_t  *found_obj;    /* Found object */
 
         /* Datatype is a shared or named datatype */
-        H5Oget_info(type, &oinfo);
+        H5Oget_info(type, ".", &oinfo, H5P_DEFAULT);
         found_obj = search_obj(type_table, oinfo.addr);
 
         if(found_obj) {
@@ -5133,7 +5099,7 @@ xml_dump_attr(hid_t attr, const char *attr_name, const H5A_info_t UNUSED *info,
     printf("<%sAttribute Name=\"%s\">\n",xmlnsprefix, t_aname);
     free(t_aname);
 
-    if ((attr_id = H5Aopen(attr, attr_name, H5P_DEFAULT)) >= 0) {
+    if ((attr_id = H5Aopen(attr, ".", attr_name, H5P_DEFAULT, H5P_DEFAULT)) >= 0) {
         type = H5Aget_type(attr_id);
         space = H5Aget_space(attr_id);
         space_type = H5Sget_simple_extent_type(space);
@@ -5375,7 +5341,8 @@ xml_dump_group(hid_t gid, const char *name)
 
     if(HDstrcmp(name, "/") == 0) {
         isRoot = 1;
-        tmp = HDstrdup("/");
+        tmp = HDmalloc(2);
+        HDstrcpy(tmp, "/");
     } else {
         tmp = HDmalloc(HDstrlen(prefix) + HDstrlen(name) + 2);
         HDstrcpy(tmp, prefix);
@@ -5392,7 +5359,7 @@ xml_dump_group(hid_t gid, const char *name)
     indentation(indent);
     indent += COL;
 
-    H5Oget_info(gid, &oinfo);
+    H5Oget_info(gid, ".", &oinfo, H5P_DEFAULT);
     if(oinfo.rc > 1) {
         obj_t  *found_obj;    /* Found object */
 
@@ -5433,8 +5400,8 @@ xml_dump_group(hid_t gid, const char *name)
                 ptrstr = malloc(100);
                 t_objname = xml_escape_the_name(found_obj->objname);
                 par_name = xml_escape_the_name(par);
-                xml_name_to_XID(found_obj->objname, ptrstr, 100, 1);
-                xml_name_to_XID(par, parentxid, 100, 1);
+                xml_name_to_XID(par,parentxid,100,1);
+                xml_name_to_XID(found_obj->objname,ptrstr,100,1);
                 printf("<%sGroupPtr OBJ-XID=\"%s\" H5Path=\"%s\" "
                             "Parents=\"%s\" H5ParentPaths=\"%s\" />\n",
                             xmlnsprefix,
@@ -5464,10 +5431,10 @@ xml_dump_group(hid_t gid, const char *name)
 
                 /* 1.  do all the attributes of the group */
                
-                if((sort_by == H5_INDEX_CRT_ORDER) && (attr_crt_order_flags & H5P_CRT_ORDER_TRACKED))
-                    H5Aiterate2(gid, sort_by, sort_order, NULL, dump_function_table->dump_attribute_function, NULL);
+                if( (sort_by == H5_INDEX_CRT_ORDER) && (attr_crt_order_flags & H5P_CRT_ORDER_TRACKED))
+                    H5Aiterate2(gid, ".", sort_by, sort_order, NULL, dump_function_table->dump_attribute_function, NULL, H5P_DEFAULT);
                 else
-                    H5Aiterate2(gid, H5_INDEX_NAME, sort_order, NULL, dump_function_table->dump_attribute_function, NULL);
+                    H5Aiterate2(gid, ".", H5_INDEX_NAME, sort_order, NULL, dump_function_table->dump_attribute_function, NULL, H5P_DEFAULT);
 
                 if(isRoot && unamedtype) {
                     unsigned u;
@@ -5488,9 +5455,9 @@ xml_dump_group(hid_t gid, const char *name)
                 /* iterate through all the links */
 
                 if( (sort_by == H5_INDEX_CRT_ORDER) && (crt_order_flags & H5P_CRT_ORDER_TRACKED))
-                    H5Literate(gid, sort_by, sort_order, NULL, dump_all_cb, NULL);
+                    H5Literate(gid, ".", sort_by, sort_order, NULL, dump_all_cb, NULL, H5P_DEFAULT);
                 else
-                    H5Literate(gid, H5_INDEX_NAME, sort_order, NULL, dump_all_cb, NULL);
+                    H5Literate(gid, ".", H5_INDEX_NAME, sort_order, NULL, dump_all_cb, NULL, H5P_DEFAULT);
 
 
             }
@@ -5528,10 +5495,10 @@ xml_dump_group(hid_t gid, const char *name)
 
         /* 1.  do all the attributes of the group */
         
-        if((sort_by == H5_INDEX_CRT_ORDER) && (attr_crt_order_flags & H5P_CRT_ORDER_TRACKED))
-            H5Aiterate2(gid, sort_by, sort_order, NULL, dump_function_table->dump_attribute_function, NULL);
+        if( (sort_by == H5_INDEX_CRT_ORDER) && (attr_crt_order_flags & H5P_CRT_ORDER_TRACKED))
+            H5Aiterate2(gid, ".", sort_by, sort_order, NULL, dump_function_table->dump_attribute_function, NULL, H5P_DEFAULT);
         else
-            H5Aiterate2(gid, H5_INDEX_NAME, sort_order, NULL, dump_function_table->dump_attribute_function, NULL);
+            H5Aiterate2(gid, ".", H5_INDEX_NAME, sort_order, NULL, dump_function_table->dump_attribute_function, NULL, H5P_DEFAULT);
 
 
         if(isRoot && unamedtype) {
@@ -5553,9 +5520,9 @@ xml_dump_group(hid_t gid, const char *name)
         /* iterate through all the links */
 
         if( (sort_by == H5_INDEX_CRT_ORDER) && (crt_order_flags & H5P_CRT_ORDER_TRACKED))
-            H5Literate(gid, sort_by, sort_order, NULL, dump_all_cb, NULL);
+            H5Literate(gid, ".", sort_by, sort_order, NULL, dump_all_cb, NULL, H5P_DEFAULT);
         else
-            H5Literate(gid, H5_INDEX_NAME, sort_order, NULL, dump_all_cb, NULL);
+            H5Literate(gid, ".", H5_INDEX_NAME, sort_order, NULL, dump_all_cb, NULL, H5P_DEFAULT);
     }
 
     indent -= COL;
@@ -6186,10 +6153,10 @@ xml_dump_dataset(hid_t did, const char *name, struct subset_t UNUSED * sset)
 
     indent += COL;
 
-    if((sort_by == H5_INDEX_CRT_ORDER) && (attr_crt_order_flags & H5P_CRT_ORDER_TRACKED))
-        H5Aiterate2(did, sort_by, sort_order, NULL, dump_function_table->dump_attribute_function, NULL);
+    if( (sort_by == H5_INDEX_CRT_ORDER) && (attr_crt_order_flags & H5P_CRT_ORDER_TRACKED))
+        H5Aiterate2(did, ".", sort_by, sort_order, NULL, dump_function_table->dump_attribute_function, NULL, H5P_DEFAULT);
     else
-        H5Aiterate2(did, H5_INDEX_NAME, sort_order, NULL, dump_function_table->dump_attribute_function, NULL);
+        H5Aiterate2(did, ".", H5_INDEX_NAME, sort_order, NULL, dump_function_table->dump_attribute_function, NULL, H5P_DEFAULT);
 
     indent -= COL;
     tempi = H5Dget_storage_size(did);

@@ -49,7 +49,7 @@ const char *FILENAME[] = {
     NULL
 };
 
-#define COMPAT_BASENAME "family_v16_"
+#define COMPAT_BASENAME "family_v1.6_"
 
 
 /*-------------------------------------------------------------------------
@@ -787,7 +787,7 @@ error:
  *              The source file was created by the test/file_handle.c
  *              of the v1.6 library.  Then tools/misc/h5repart.c was
  *              used to concantenated.  The command was "h5repart -m 5k
- *              family_file%05d.h5 family_v16_%05d.h5".
+ *              family_file%05d.h5 family_v1.6_%05d.h5".
  *
  * Return:      Success:        0
  *              Failure:        -1
@@ -1055,7 +1055,7 @@ test_multi(void)
     if((aspace = H5Screate_simple(1, adims, NULL)) < 0)
         TEST_ERROR;
 
-    if((attr = H5Acreate2(root, "Metadata", atype, aspace, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+    if((attr = H5Acreate2(root, ".", "Metadata", atype, aspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
         TEST_ERROR;
 
     if(H5Awrite(attr, atype, meta) < 0)

@@ -63,6 +63,7 @@ herr_t H5IMmake_image_8bitf(hid_t loc_id,
  /* initialize the image dimensions */
  dims[0] = height;
  dims[1] = width;
+ dims[2] = 1;
 
 /*-------------------------------------------------------------------------
  * create and write the dataset
@@ -484,7 +485,7 @@ herr_t H5IM_get_palette(hid_t loc_id,
  if(has_pal ==  1)
  {
 
-  if((attr_id = H5Aopen(image_id, "PALETTE", H5P_DEFAULT)) < 0)
+  if((attr_id = H5Aopen(image_id, ".", "PALETTE", H5P_DEFAULT, H5P_DEFAULT)) < 0)
    goto out;
 
   if((attr_type = H5Aget_type(attr_id)) < 0)

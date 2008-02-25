@@ -5,7 +5,7 @@ usage: h5dump [OPTIONS] file
   OPTIONS
      -h, --help           Print a usage message and exit
      -n, --contents       Print a list of the file contents and exit
-     -B, --superblock     Print the content of the super block
+     -B, --bootblock      Print the content of the boot block
      -H, --header         Print the header only; no data is displayed
      -A, --onlyattr       Print the header and value of attributes
      -i, --object-ids     Print the object ids
@@ -15,7 +15,7 @@ usage: h5dump [OPTIONS] file
      -a P, --attribute=P  Print the specified attribute
      -d P, --dataset=P    Print the specified dataset
      -y, --noindex        Do not print array indices with the data
-     -p, --properties     Print dataset filters, storage layout and fill value
+     -p,   --properties   Print dataset filters, storage layout and fill value
      -f D, --filedriver=D Specify which driver to open the file with
      -g P, --group=P      Print the specified group and all members
      -l P, --soft-link=P  Print the value(s) of the specified soft link
@@ -73,8 +73,7 @@ usage: h5dump [OPTIONS] file
 
       h5dump -d /foo -s "0,1" -S "1,1" -c "2,3" -k "2,2" quux.h5
 
-  3) Saving dataset 'dset' in file quux.h5 to binary file 'out.bin'
-        using a little-endian type
+  3) Saving dataset 'dset' in file quux.h5 to binary file 'out.bin' using a little-endian type 
 
       h5dump -d /dset -b LE -o out.bin quux.h5
 

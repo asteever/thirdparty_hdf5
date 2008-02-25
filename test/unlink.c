@@ -451,9 +451,9 @@ check_new_move(hid_t fapl)
         FAIL_STACK_ERROR
 
     /* Get hard link info */
-    if(H5Oget_info_by_name(file, "/group2/group_new_name", &oi_hard1, H5P_DEFAULT) < 0)
+    if(H5Oget_info(file, "/group2/group_new_name", &oi_hard1, H5P_DEFAULT) < 0)
         FAIL_STACK_ERROR
-    if(H5Oget_info_by_name(file, "/group1/hard", &oi_hard2, H5P_DEFAULT) < 0)
+    if(H5Oget_info(file, "/group1/hard", &oi_hard2, H5P_DEFAULT) < 0)
         FAIL_STACK_ERROR
 
     /* Check hard links */
@@ -824,7 +824,7 @@ test_filespace(hid_t fapl)
         sprintf(objname,"%s %u",ATTRNAME,u);
 
         /* Create an attribute on the first dataset */
-        if((attr = H5Acreate2(dataset, objname, H5T_NATIVE_INT, attr_space, H5P_DEFAULT, H5P_DEFAULT)) < 0) FAIL_STACK_ERROR
+        if((attr = H5Acreate2(dataset, ".", objname, H5T_NATIVE_INT, attr_space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) FAIL_STACK_ERROR
 
         /* Don't worry about writing the attribute - it will have a fill value */
 
@@ -832,7 +832,7 @@ test_filespace(hid_t fapl)
         if(H5Aclose(attr) < 0) FAIL_STACK_ERROR
 
         /* Create an attribute on the second dataset */
-        if((attr = H5Acreate2(dataset2, objname, H5T_NATIVE_INT, attr_space, H5P_DEFAULT, H5P_DEFAULT)) < 0) FAIL_STACK_ERROR
+        if((attr = H5Acreate2(dataset2, ".", objname, H5T_NATIVE_INT, attr_space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) FAIL_STACK_ERROR
 
         /* Don't worry about writing the attribute - it will have a fill value */
 
@@ -1191,7 +1191,7 @@ test_filespace(hid_t fapl)
     if((attr_space = H5Screate_simple(FILESPACE_ATTR_NDIMS, attr_dims, NULL)) < 0) FAIL_STACK_ERROR
 
     /* Create an attribute on the dataset */
-    if((attr = H5Acreate2(dataset, ATTRNAME, H5T_NATIVE_INT, attr_space, H5P_DEFAULT, H5P_DEFAULT)) < 0) FAIL_STACK_ERROR
+    if((attr = H5Acreate2(dataset, ".", ATTRNAME, H5T_NATIVE_INT, attr_space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) FAIL_STACK_ERROR
 
     /* Don't worry about writing the attribute - it will have a fill value */
 
@@ -1200,7 +1200,7 @@ test_filespace(hid_t fapl)
 
     /* Create another attribute with same name */
     H5E_BEGIN_TRY {
-        attr = H5Acreate2(dataset, ATTRNAME, H5T_NATIVE_INT, attr_space, H5P_DEFAULT, H5P_DEFAULT);
+        attr = H5Acreate2(dataset, ".", ATTRNAME, H5T_NATIVE_INT, attr_space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     } H5E_END_TRY;
     if(attr >= 0) {
         H5Aclose(attr);
@@ -2204,7 +2204,7 @@ test_full_group_compact(hid_t fapl)
     /* Check reference count on objects to keep */
     for(u = 0; u < FULL_GROUP_NUM_KEEP; u++) {
         sprintf(objname, "/keep/keep %u\n", u);
-        if(H5Oget_info_by_name(file_id, objname, &oi, H5P_DEFAULT) < 0) FAIL_STACK_ERROR
+        if(H5Oget_info(file_id, objname, &oi, H5P_DEFAULT) < 0) FAIL_STACK_ERROR
         if(oi.rc != 2) TEST_ERROR
     } /* end for */
 
@@ -2221,7 +2221,7 @@ test_full_group_compact(hid_t fapl)
     /* Check reference count on objects to keep */
     for(u = 0; u < FULL_GROUP_NUM_KEEP; u++) {
         sprintf(objname, "/keep/keep %u\n", u);
-        if(H5Oget_info_by_name(file_id, objname, &oi, H5P_DEFAULT) < 0) FAIL_STACK_ERROR
+        if(H5Oget_info(file_id, objname, &oi, H5P_DEFAULT) < 0) FAIL_STACK_ERROR
         if(oi.rc != 1) TEST_ERROR
     } /* end for */
 
@@ -2350,7 +2350,7 @@ test_full_group_dense(hid_t fapl)
     /* Check reference count on objects to keep */
     for(u = 0; u < FULL_GROUP_NUM_KEEP; u++) {
         sprintf(objname, "/keep/keep %u\n", u);
-        if(H5Oget_info_by_name(file_id, objname, &oi, H5P_DEFAULT) < 0) FAIL_STACK_ERROR
+        if(H5Oget_info(file_id, objname, &oi, H5P_DEFAULT) < 0) FAIL_STACK_ERROR
         if(oi.rc != 2) TEST_ERROR
     } /* end for */
 
@@ -2367,7 +2367,7 @@ test_full_group_dense(hid_t fapl)
     /* Check reference count on objects to keep */
     for(u = 0; u < FULL_GROUP_NUM_KEEP; u++) {
         sprintf(objname, "/keep/keep %u\n", u);
-        if(H5Oget_info_by_name(file_id, objname, &oi, H5P_DEFAULT) < 0) FAIL_STACK_ERROR
+        if(H5Oget_info(file_id, objname, &oi, H5P_DEFAULT) < 0) FAIL_STACK_ERROR
         if(oi.rc != 1) TEST_ERROR
     } /* end for */
 
@@ -2441,8 +2441,8 @@ main(void)
         /* Copy the file access property list */
         if((fapl2 = H5Pcopy(fapl)) < 0) TEST_ERROR
 
-        /* Set the "use the latest version of the format" bounds for creating objects in the file */
-        if(H5Pset_libver_bounds(fapl2, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0) TEST_ERROR
+        /* Set the "use the latest version of the format" flag for creating objects in the file */
+        if(H5Pset_latest_format(fapl2, TRUE) < 0) TEST_ERROR
 
         /* Test with old & new format groups */
         for(new_format = FALSE; new_format <= TRUE; new_format++) {

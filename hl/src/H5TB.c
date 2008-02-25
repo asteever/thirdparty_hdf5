@@ -220,7 +220,7 @@ herr_t H5TBmake_table( const char *table_title,
    sprintf(aux, "%s", "_FILL");
    strcat(attr_name, aux);
 
-   if((attr_id = H5Acreate2(did, attr_name, field_types[i], sid, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+   if((attr_id = H5Acreate2(did, ".", attr_name, field_types[i], sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
     goto out;
 
    if(H5Awrite(attr_id, field_types[i], tmp_buf+field_offset[i]) < 0)
@@ -1353,7 +1353,9 @@ herr_t H5TBdelete_record( hid_t loc_id,
  size_t   *src_offset;
  size_t   *src_sizes;
  hsize_t  nrows;
+#if defined (SHRINK)
  hsize_t  dims[1];
+#endif
 
 
 /*-------------------------------------------------------------------------
@@ -1441,9 +1443,11 @@ herr_t H5TBdelete_record( hid_t loc_id,
  * Change the table dimension
  *-------------------------------------------------------------------------
  */
+#if defined (SHRINK)
  dims[0] = ntotal_records - nrecords;
  if(H5Dset_extent( did, dims ) < 0)
   goto out;
+#endif
 
  /* End access to the dataset */
  if(H5Dclose( did ) < 0)
@@ -1973,7 +1977,7 @@ herr_t H5TBcombine_tables( hid_t loc_id1,
    sprintf(aux, "%s", "_FILL");
    strcat(attr_name, aux);
 
-   if((attr_id = H5Acreate2(dataset_id3, attr_name, member_type_id, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+   if((attr_id = H5Acreate2(dataset_id3, ".", attr_name, member_type_id, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
     goto out;
 
    if(H5Awrite(attr_id, member_type_id, tmp_fill_buf+member_offset) < 0)
@@ -2546,7 +2550,7 @@ herr_t H5TBinsert_field( hid_t loc_id,
    sprintf(aux, "%s", "_FILL");
    strcat(attr_name, aux);
 
-   if((attr_id = H5Acreate2(dataset_id1, attr_name, member_type_id, space_id1, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+   if((attr_id = H5Acreate2(dataset_id1, ".", attr_name, member_type_id, space_id1, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
     goto out;
 
    if(H5Awrite(attr_id, member_type_id, tmp_fill_buf+member_offset) < 0)
@@ -2577,7 +2581,7 @@ herr_t H5TBinsert_field( hid_t loc_id,
    if((member_type_id = H5Tget_member_type(type_id1, (unsigned)nfields - 1)) < 0)
     goto out;
 
-   if((attr_id = H5Acreate2(dataset_id1, attr_name, member_type_id, space_id1, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+   if((attr_id = H5Acreate2(dataset_id1, ".", attr_name, member_type_id, space_id1, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
     goto out;
 
    if(H5Awrite(attr_id, member_type_id, fill_data) < 0)
@@ -3031,7 +3035,7 @@ herr_t H5TBdelete_field( hid_t loc_id,
    sprintf(aux, "%s", "_FILL");
    strcat(attr_name, aux);
 
-   if((attr_id = H5Acreate2(dataset_id1, attr_name, member_type_id, space_id1, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+   if((attr_id = H5Acreate2(dataset_id1, ".", attr_name, member_type_id, space_id1, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
     goto out;
 
    if(H5Awrite(attr_id, member_type_id, tmp_fill_buf+member_offset) < 0)

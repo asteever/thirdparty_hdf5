@@ -816,7 +816,7 @@ find_dataset(hid_t loc_id, const char *name, const H5L_info_t *linfo, void *op_d
 herr_t
 H5LTfind_dataset( hid_t loc_id, const char *dset_name )
 {
-    return H5Literate(loc_id, H5_INDEX_NAME, H5_ITER_INC, 0, find_dataset, (void *)dset_name);
+    return H5Literate(loc_id, ".", H5_INDEX_NAME, H5_ITER_INC, 0, find_dataset, (void *)dset_name, H5P_DEFAULT );
 }
 
 
@@ -883,12 +883,12 @@ herr_t H5LTset_attribute_string( hid_t loc_id,
 
  /* The attribute already exists, delete it */
  if(has_attr == 1)
-   if(H5Adelete(obj_id, attr_name) < 0)
+   if(H5Adelete2(obj_id, ".", attr_name, H5P_DEFAULT) < 0)
      goto out;
 
  /* Create and write the attribute */
 
- if((attr_id = H5Acreate2(obj_id, attr_name, attr_type, attr_space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+ if((attr_id = H5Acreate2(obj_id, ".", attr_name, attr_type, attr_space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
   goto out;
 
  if(H5Awrite(attr_id, attr_type, attr_data) < 0)
@@ -961,11 +961,11 @@ herr_t H5LT_set_attribute_numerical( hid_t loc_id,
 
  /* The attribute already exists, delete it */
  if(has_attr == 1)
-   if(H5Adelete(obj_id, attr_name) < 0)
+   if(H5Adelete2(obj_id, ".", attr_name, H5P_DEFAULT) < 0)
      goto out;
 
  /* Create the attribute. */
- if((attr_id = H5Acreate2(obj_id, attr_name, tid, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+ if((attr_id = H5Acreate2(obj_id, ".", attr_name, tid, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
   goto out;
 
  /* Write the attribute data. */
@@ -1423,7 +1423,7 @@ herr_t H5LTfind_attribute( hid_t loc_id, const char* attr_name )
 herr_t
 H5LT_find_attribute( hid_t loc_id, const char* attr_name )
 {
-    return H5Aiterate2(loc_id, H5_INDEX_NAME, H5_ITER_INC, NULL, find_attr, (void *)attr_name);
+    return H5Aiterate2(loc_id, ".", H5_INDEX_NAME, H5_ITER_INC, NULL, find_attr, (void *)attr_name, H5P_DEFAULT);
 }
 
 
@@ -1456,7 +1456,7 @@ herr_t H5LTget_attribute_ndims( hid_t loc_id,
   return -1;
 
  /* Open the attribute. */
- if((attr_id = H5Aopen(obj_id, attr_name, H5P_DEFAULT)) < 0)
+ if((attr_id = H5Aopen(obj_id, ".", attr_name, H5P_DEFAULT, H5P_DEFAULT)) < 0)
  {
   H5Oclose(obj_id);
   return -1;
@@ -1523,7 +1523,7 @@ herr_t H5LTget_attribute_info( hid_t loc_id,
   return -1;
 
   /* Open the attribute. */
- if((attr_id = H5Aopen(obj_id, attr_name, H5P_DEFAULT)) < 0)
+ if((attr_id = H5Aopen(obj_id, ".", attr_name, H5P_DEFAULT, H5P_DEFAULT)) < 0)
  {
   H5Oclose(obj_id);
   return -1;
@@ -2733,7 +2733,7 @@ static herr_t H5LT_get_attribute_mem(hid_t loc_id,
     if((obj_id = H5Oopen(loc_id, obj_name, H5P_DEFAULT)) < 0)
         goto out;
 
-    if((attr_id = H5Aopen(obj_id, attr_name, H5P_DEFAULT)) < 0)
+    if((attr_id = H5Aopen(obj_id, ".", attr_name, H5P_DEFAULT, H5P_DEFAULT)) < 0)
         goto out;
 
     if(H5Aread(attr_id, mem_type_id, data) < 0)
@@ -2782,7 +2782,7 @@ herr_t H5LT_get_attribute_disk( hid_t loc_id,
  hid_t attr_id;
  hid_t attr_type;
 
- if(( attr_id = H5Aopen(loc_id, attr_name, H5P_DEFAULT)) < 0)
+ if(( attr_id = H5Aopen(loc_id, ".", attr_name, H5P_DEFAULT, H5P_DEFAULT)) < 0)
   return -1;
 
  if((attr_type = H5Aget_type(attr_id)) < 0)
@@ -2837,20 +2837,22 @@ herr_t H5LT_set_attribute_string(hid_t dset_id,
  has_attr = H5LT_find_attribute(dset_id,name);
 
  /* the attribute already exists, delete it */
- if(has_attr == 1)
-  if(H5Adelete(dset_id, name) < 0)
+ if ( has_attr == 1 )
+ {
+  if(H5Adelete2(dset_id, ".", name, H5P_DEFAULT) < 0)
     return FAIL;
+ }
 
 /*-------------------------------------------------------------------------
  * create the attribute type
  *-------------------------------------------------------------------------
  */
- if((tid = H5Tcopy(H5T_C_S1)) < 0)
+ if ((tid = H5Tcopy(H5T_C_S1)) < 0)
   return FAIL;
 
  size = strlen(buf) + 1; /* extra null term */
 
- if(H5Tset_size(tid,(size_t)size) < 0)
+ if (H5Tset_size(tid,(size_t)size) < 0)
   goto out;
 
  if(H5Tset_strpad(tid, H5T_STR_NULLTERM) < 0)
@@ -2864,7 +2866,7 @@ herr_t H5LT_set_attribute_string(hid_t dset_id,
  * create and write the attribute
  *-------------------------------------------------------------------------
  */
- if((aid = H5Acreate2(dset_id, name, tid, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+ if((aid = H5Acreate2(dset_id, ".", name, tid, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
   goto out;
 
  if(H5Awrite(aid, tid, buf) < 0)

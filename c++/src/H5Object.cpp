@@ -103,7 +103,7 @@ Attribute H5Object::createAttribute( const char* name, const DataType& data_type
    hid_t type_id = data_type.getId();
    hid_t space_id = data_space.getId();
    hid_t plist_id = create_plist.getId();
-   hid_t attr_id = H5Acreate2(id, name, type_id, space_id, plist_id, H5P_DEFAULT );
+   hid_t attr_id = H5Acreate2(id, ".", name, type_id, space_id, plist_id, H5P_DEFAULT, H5P_DEFAULT );
 
    // If the attribute id is valid, create and return the Attribute object
    if( attr_id > 0 )
@@ -137,7 +137,7 @@ Attribute H5Object::createAttribute( const H5std_string& name, const DataType& d
 //--------------------------------------------------------------------------
 Attribute H5Object::openAttribute( const char* name ) const
 {
-   hid_t attr_id = H5Aopen( id, name, H5P_DEFAULT );
+   hid_t attr_id = H5Aopen( id, ".", name, H5P_DEFAULT, H5P_DEFAULT );
    if( attr_id > 0 )
    {
       Attribute attr( attr_id );
@@ -209,7 +209,7 @@ int H5Object::iterateAttrs( attr_operator_t user_op, unsigned *_idx, void *op_da
 
    // call the C library routine H5Aiterate2 to iterate the attributes
    hsize_t idx = (hsize_t)*_idx;
-   int ret_value = H5Aiterate2(id, H5_INDEX_NAME, H5_ITER_INC, &idx, userAttrOpWrpr, (void *) userData);
+   int ret_value = H5Aiterate2(id, ".", H5_INDEX_NAME, H5_ITER_INC, &idx, userAttrOpWrpr, (void *) userData, H5P_DEFAULT);
 
    // release memory
    delete userData;
@@ -235,7 +235,7 @@ int H5Object::getNumAttrs() const
 {
    H5O_info_t oinfo;    /* Object info */
 
-   if(H5Oget_info(id, &oinfo) < 0)
+   if(H5Oget_info(id, ".", &oinfo, H5P_DEFAULT) < 0)
       throw AttributeIException(inMemFunc("getNumAttrs"), "H5Oget_info failed");
    else
       return( (int)oinfo.num_attrs );
@@ -250,9 +250,9 @@ int H5Object::getNumAttrs() const
 //--------------------------------------------------------------------------
 void H5Object::removeAttr( const char* name ) const
 {
-   herr_t ret_value = H5Adelete(id, name);
+   herr_t ret_value = H5Adelete2(id, ".", name, H5P_DEFAULT);
    if( ret_value < 0 )
-      throw AttributeIException(inMemFunc("removeAttr"), "H5Adelete failed");
+      throw AttributeIException(inMemFunc("removeAttr"), "H5Adelete2 failed");
 }
 
 //--------------------------------------------------------------------------
@@ -277,9 +277,9 @@ void H5Object::removeAttr( const H5std_string& name ) const
 //--------------------------------------------------------------------------
 void H5Object::renameAttr(const char* oldname, const char* newname) const
 {
-   herr_t ret_value = H5Arename(id, oldname, newname);
+   herr_t ret_value = H5Arename2(id, ".", oldname, newname, H5P_DEFAULT);
    if (ret_value < 0)
-      throw AttributeIException(inMemFunc("renameAttr"), "H5Arename failed");
+      throw AttributeIException(inMemFunc("renameAttr"), "H5Arename2 failed");
 }
 
 //--------------------------------------------------------------------------

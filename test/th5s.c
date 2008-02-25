@@ -280,7 +280,7 @@ test_h5s_basic(void)
 
     /* Now use the bad dataspace as the space for an attribute */
     H5E_BEGIN_TRY {
-    aid1 = H5Acreate2(dset1, BASICATTR, H5T_NATIVE_INT, sid1, H5P_DEFAULT, H5P_DEFAULT);
+    aid1 = H5Acreate2(dset1, ".", BASICATTR, H5T_NATIVE_INT, sid1, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     } H5E_END_TRY
     VERIFY(aid1, FAIL, "H5Acreate2");
 
@@ -378,7 +378,7 @@ test_h5s_null(void)
         hsize_t	coord[1][1]; /* Coordinates for point selection */
 
         coord[0][0]=0;
-	ret = H5Sselect_elements(sid, H5S_SELECT_SET, (size_t)1, coord);
+	ret = H5Sselect_elements(sid, H5S_SELECT_SET, (size_t)1, (const hsize_t **)coord);
     } H5E_END_TRY;
     VERIFY(ret, FAIL, "H5Sselect_elements");
 
@@ -405,7 +405,7 @@ test_h5s_null(void)
     VERIFY(val, 1, "H5Dread");
 
     /* Create an attribute for the group */
-    attr = H5Acreate2(did, NULLATTR, H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT);
+    attr = H5Acreate2(did, ".", NULLATTR, H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     CHECK(attr, FAIL, "H5Acreate2");
 
     /* Write "nothing" to the attribute */
@@ -494,7 +494,7 @@ test_h5s_null(void)
     CHECK(ret, FAIL, "H5Sclose");
 
     /* Open the attribute for the dataset */
-    attr = H5Aopen(did, NULLATTR, H5P_DEFAULT);
+    attr = H5Aopen(did, ".", NULLATTR, H5P_DEFAULT, H5P_DEFAULT);
     CHECK(attr, FAIL, "H5Aopen");
 
     /* Get the space of the dataset */

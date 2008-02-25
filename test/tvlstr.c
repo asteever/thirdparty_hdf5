@@ -597,7 +597,7 @@ static void test_write_vl_string_attribute(void)
     CHECK(dataspace, FAIL, "H5Screate");
 
     /* Test creating a "normal" sized string attribute */
-    att = H5Acreate2(root, "test_scalar", type, dataspace, H5P_DEFAULT, H5P_DEFAULT);
+    att = H5Acreate2(root, ".", "test_scalar", type, dataspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     CHECK(att, FAIL, "H5Acreate2");
 
     ret = H5Awrite(att, type, &string_att);
@@ -615,7 +615,7 @@ static void test_write_vl_string_attribute(void)
     CHECK(ret, FAIL, "HAclose");
 
     /* Test creating a "large" sized string attribute */
-    att = H5Acreate2(root, "test_scalar_large", type, dataspace, H5P_DEFAULT, H5P_DEFAULT);
+    att = H5Acreate2(root, ".", "test_scalar_large", type, dataspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     CHECK(att, FAIL, "H5Acreate2");
 
     string_att_write = (char*)HDcalloc((size_t)8192, sizeof(char));
@@ -680,7 +680,7 @@ static void test_read_vl_string_attribute(void)
     CHECK(root, FAIL, "H5Gopen2");
 
     /* Test reading "normal" sized string attribute */
-    att = H5Aopen(root, "test_scalar", H5P_DEFAULT);
+    att = H5Aopen(root, ".", "test_scalar", H5P_DEFAULT, H5P_DEFAULT);
     CHECK(att, FAIL, "H5Aopen");
 
     ret = H5Aread(att, type, &string_att_check);
@@ -695,7 +695,7 @@ static void test_read_vl_string_attribute(void)
     CHECK(ret, FAIL, "HAclose");
 
     /* Test reading "large" sized string attribute */
-    att = H5Aopen(root, "test_scalar_large", H5P_DEFAULT);
+    att = H5Aopen(root, ".", "test_scalar_large", H5P_DEFAULT, H5P_DEFAULT);
     CHECK(att, FAIL, "H5Aopen");
 
     ret = H5Aread(att, type, &string_att_check);

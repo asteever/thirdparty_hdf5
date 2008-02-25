@@ -49,6 +49,7 @@ herr_t H5IMmake_image_8bit( hid_t loc_id,
   /* Initialize the image dimensions */
  dims[0] = height;
  dims[1] = width;
+ dims[2] = 1;
 
  /* Make the dataset */
  if ( H5LTmake_dataset( loc_id, dset_name, IMAGE8_RANK, dims, H5T_NATIVE_UCHAR, buffer ) < 0)
@@ -206,7 +207,7 @@ find_palette(hid_t loc_id, const char *name, const H5A_info_t *ainfo,
 
 herr_t H5IM_find_palette( hid_t loc_id )
 {
-    return H5Aiterate2(loc_id, H5_INDEX_NAME, H5_ITER_INC, NULL, find_palette, NULL);
+    return H5Aiterate2(loc_id, ".", H5_INDEX_NAME, H5_ITER_INC, NULL, find_palette, NULL, H5P_DEFAULT);
 }
 
 
@@ -262,7 +263,7 @@ herr_t H5IMget_image_info( hid_t loc_id,
  if(has_attr == 1)
  {
 
-  if((attr_id = H5Aopen(did, "INTERLACE_MODE", H5P_DEFAULT)) < 0)
+  if((attr_id = H5Aopen(did, ".", "INTERLACE_MODE", H5P_DEFAULT, H5P_DEFAULT)) < 0)
    goto out;
 
   if((attr_type = H5Aget_type(attr_id)) < 0)
@@ -331,7 +332,7 @@ herr_t H5IMget_image_info( hid_t loc_id,
  if(has_pal ==  1)
  {
 
-  if((attr_id = H5Aopen(did, "PALETTE", H5P_DEFAULT)) < 0)
+  if((attr_id = H5Aopen(did, ".", "PALETTE", H5P_DEFAULT, H5P_DEFAULT)) < 0)
    goto out;
 
   if((attr_type = H5Aget_type(attr_id)) < 0)
@@ -546,7 +547,7 @@ herr_t H5IMlink_palette( hid_t loc_id,
    goto out;
 
   /* Create the attribute "PALETTE" to be attached to the image*/
-  if((attr_id = H5Acreate2(image_id, "PALETTE", attr_type, attr_space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+  if((attr_id = H5Acreate2(image_id, ".", "PALETTE", attr_type, attr_space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
    goto out;
 
   /* Create a reference. The reference is created on the local id.  */
@@ -573,7 +574,7 @@ herr_t H5IMlink_palette( hid_t loc_id,
  */
  else if(ok_pal ==  1)
  {
-  if((attr_id = H5Aopen(image_id, "PALETTE", H5P_DEFAULT)) < 0)
+  if((attr_id = H5Aopen(image_id, ".", "PALETTE", H5P_DEFAULT, H5P_DEFAULT)) < 0)
    goto out;
   
   if((attr_type = H5Aget_type(attr_id)) < 0)
@@ -596,7 +597,7 @@ herr_t H5IMlink_palette( hid_t loc_id,
    goto out;
  
   /* The attribute must be deleted, in order to the new one can reflect the changes*/
-  if(H5Adelete(image_id, "PALETTE") < 0)
+  if(H5Adelete2(image_id, ".", "PALETTE", H5P_DEFAULT) < 0)
    goto out;
   
   /* Create a new reference for this palette. */
@@ -616,7 +617,7 @@ herr_t H5IMlink_palette( hid_t loc_id,
   if(H5Aclose(attr_id) < 0)
    goto out;
 
-  if((attr_id = H5Acreate2(image_id, "PALETTE", attr_type, attr_space_id, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+  if((attr_id = H5Acreate2(image_id, ".", "PALETTE", attr_type, attr_space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
    goto out;
   
   /* Write the attribute with the new references */
@@ -706,7 +707,7 @@ herr_t H5IMunlink_palette( hid_t loc_id,
  /* The attribute exists, open it */
  else if(ok_pal ==  1)
  {
-  if((attr_id = H5Aopen(image_id, "PALETTE", H5P_DEFAULT)) < 0)
+  if((attr_id = H5Aopen(image_id, ".", "PALETTE", H5P_DEFAULT, H5P_DEFAULT)) < 0)
    goto out;
 
   if((attr_type = H5Aget_type(attr_id)) < 0)
@@ -718,23 +719,24 @@ herr_t H5IMunlink_palette( hid_t loc_id,
   /* Check if it is really a reference */
   if(attr_class == H5T_REFERENCE)
   {
+
    /* Delete the attribute */
-   if(H5Adelete(image_id, "PALETTE") < 0)
+   if(H5Adelete2(image_id, ".", "PALETTE", H5P_DEFAULT) < 0)
     goto out;
 
   }  /* H5T_REFERENCE */
 
-  if(H5Tclose(attr_type) < 0)
+  if ( H5Tclose( attr_type ) < 0)
    goto out;
 
   /* Close the attribute. */
-  if(H5Aclose(attr_id) < 0)
+  if ( H5Aclose( attr_id ) < 0)
    goto out;
 
  } /* ok_pal */
 
   /* Close the image dataset. */
- if(H5Dclose(image_id) < 0)
+ if ( H5Dclose( image_id ) < 0)
   return -1;
 
  return 0;
@@ -787,7 +789,7 @@ herr_t H5IMget_npalettes( hid_t loc_id,
  if(has_pal ==  1 )
  {
 
-  if((attr_id = H5Aopen(image_id, "PALETTE", H5P_DEFAULT)) < 0)
+  if((attr_id = H5Aopen(image_id, ".", "PALETTE", H5P_DEFAULT, H5P_DEFAULT)) < 0)
    goto out;
 
   if((attr_type = H5Aget_type(attr_id)) < 0)
@@ -879,7 +881,7 @@ herr_t H5IMget_palette_info( hid_t loc_id,
  
  if(has_pal ==  1)
  {
-  if((attr_id = H5Aopen(image_id, "PALETTE", H5P_DEFAULT)) < 0)
+  if((attr_id = H5Aopen(image_id, ".", "PALETTE", H5P_DEFAULT, H5P_DEFAULT)) < 0)
    goto out;
   
   if((attr_type = H5Aget_type(attr_id)) < 0)
@@ -991,7 +993,7 @@ herr_t H5IMget_palette( hid_t loc_id,
 
  if(has_pal ==  1 )
  {
-  if((attr_id = H5Aopen(image_id, "PALETTE", H5P_DEFAULT)) < 0)
+  if((attr_id = H5Aopen(image_id, ".", "PALETTE", H5P_DEFAULT, H5P_DEFAULT)) < 0)
    goto out;
   
   if((attr_type = H5Aget_type(attr_id)) < 0)
@@ -1096,7 +1098,7 @@ herr_t H5IMis_image( hid_t loc_id,
  else if(has_class ==  1)
  {
 
-  if((attr_id = H5Aopen(did, "CLASS", H5P_DEFAULT)) < 0)
+  if((attr_id = H5Aopen(did, ".", "CLASS", H5P_DEFAULT, H5P_DEFAULT)) < 0)
    goto out;
 
   if((attr_type = H5Aget_type(attr_id)) < 0)
@@ -1181,7 +1183,7 @@ herr_t H5IMis_palette( hid_t loc_id,
  else if(has_class ==  1)
  {
 
-  if((attr_id = H5Aopen(did, "CLASS", H5P_DEFAULT)) < 0)
+  if((attr_id = H5Aopen(did, ".", "CLASS", H5P_DEFAULT, H5P_DEFAULT)) < 0)
    goto out;
 
   if((attr_type = H5Aget_type(attr_id)) < 0)

@@ -146,7 +146,7 @@ test_iter_group(hid_t fapl, hbool_t new_format)
     /* Test iterating over empty group */
     info.command = RET_ZERO;
     idx = 0;
-    ret = H5Literate(file, H5_INDEX_NAME, H5_ITER_INC, &idx, liter_cb, &info);
+    ret = H5Literate(file, "/", H5_INDEX_NAME, H5_ITER_INC, &idx, liter_cb, &info, H5P_DEFAULT);
     VERIFY(ret, SUCCEED, "H5Literate");
 
     datatype = H5Tcopy(H5T_NATIVE_INT);
@@ -208,7 +208,7 @@ test_iter_group(hid_t fapl, hbool_t new_format)
     root_group = H5Gopen2(file, "/", H5P_DEFAULT);
     CHECK(root_group, FAIL, "H5Gopen2");
 
-    ret = H5Gget_info(root_group, &ginfo);
+    ret = H5Gget_info(root_group, ".", &ginfo, H5P_DEFAULT);
     CHECK(ret, FAIL, "H5Gget_info");
     VERIFY(ginfo.nlinks, (NDATASETS + 2), "H5Gget_info");
 
@@ -234,7 +234,7 @@ test_iter_group(hid_t fapl, hbool_t new_format)
      * iterate through B-tree for group members in internal library design.
      *  (Same as test above, but with the file ID instead of opening the root group)
      */
-    ret = H5Gget_info(file, &ginfo);
+    ret = H5Gget_info(file, ".", &ginfo, H5P_DEFAULT);
     CHECK(ret, FAIL, "H5Gget_info");
     VERIFY(ginfo.nlinks, NDATASETS + 2, "H5Gget_info");
 
@@ -257,35 +257,35 @@ test_iter_group(hid_t fapl, hbool_t new_format)
     info.command = RET_ZERO;
     idx = (hsize_t)-1;
     H5E_BEGIN_TRY {
-        ret = H5Literate(file, H5_INDEX_NAME, H5_ITER_INC, &idx, liter_cb, &info);
+        ret = H5Literate(file, "/", H5_INDEX_NAME, H5_ITER_INC, &idx, liter_cb, &info, H5P_DEFAULT);
     } H5E_END_TRY;
     VERIFY(ret, FAIL, "H5Literate");
 
     /* Test skipping exactly as many entries as in the group */
     idx = NDATASETS + 2;
     H5E_BEGIN_TRY {
-        ret = H5Literate(file, H5_INDEX_NAME, H5_ITER_INC, &idx, liter_cb, &info);
+        ret = H5Literate(file, "/", H5_INDEX_NAME, H5_ITER_INC, &idx, liter_cb, &info, H5P_DEFAULT);
     } H5E_END_TRY;
     VERIFY(ret, FAIL, "H5Literate");
 
     /* Test skipping more entries than are in the group */
     idx = NDATASETS + 3;
     H5E_BEGIN_TRY {
-        ret = H5Literate(file, H5_INDEX_NAME, H5_ITER_INC, &idx, liter_cb, &info);
+        ret = H5Literate(file, "/", H5_INDEX_NAME, H5_ITER_INC, &idx, liter_cb, &info, H5P_DEFAULT);
     } H5E_END_TRY;
     VERIFY(ret, FAIL, "H5Literate");
 
     /* Test all objects in group, when callback always returns 0 */
     info.command = RET_ZERO;
     idx = 0;
-    if((ret = H5Literate(file, H5_INDEX_NAME, H5_ITER_INC, &idx, liter_cb, &info)) > 0)
+    if((ret = H5Literate(file, "/", H5_INDEX_NAME, H5_ITER_INC, &idx, liter_cb, &info, H5P_DEFAULT)) > 0)
         TestErrPrintf("Group iteration function didn't return zero correctly!\n");
 
     /* Test all objects in group, when callback always returns 1 */
     /* This also tests the "restarting" ability, because the index changes */
     info.command = RET_TWO;
     idx = i = 0;
-    while((ret = H5Literate(file, H5_INDEX_NAME, H5_ITER_INC, &idx, liter_cb, &info)) > 0) {
+    while((ret = H5Literate(file, "/", H5_INDEX_NAME, H5_ITER_INC, &idx, liter_cb, &info, H5P_DEFAULT)) > 0) {
         /* Verify return value from iterator gets propagated correctly */
         VERIFY(ret, 2, "H5Literate");
 
@@ -310,7 +310,7 @@ test_iter_group(hid_t fapl, hbool_t new_format)
     /* This also tests the "restarting" ability, because the index changes */
     info.command = new_format ? RET_CHANGE2 : RET_CHANGE;
     idx = i = 0;
-    while((ret = H5Literate(file, H5_INDEX_NAME, H5_ITER_INC, &idx, liter_cb, &info)) >= 0) {
+    while((ret = H5Literate(file, "/", H5_INDEX_NAME, H5_ITER_INC, &idx, liter_cb, &info, H5P_DEFAULT)) >= 0) {
         /* Verify return value from iterator gets propagated correctly */
         VERIFY(ret, 1, "H5Literate");
 
@@ -408,7 +408,7 @@ static void test_iter_attr(hid_t fapl, hbool_t new_format)
 
     for(i = 0; i < NATTR; i++) {
         sprintf(name, "Attribute %02d", i);
-        attribute = H5Acreate2(dataset, name, H5T_NATIVE_INT, filespace, H5P_DEFAULT, H5P_DEFAULT);
+        attribute = H5Acreate2(dataset, ".", name, H5T_NATIVE_INT, filespace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
         CHECK(attribute, FAIL, "H5Acreate2");
 
         /* Keep a copy of the attribute names around for later */
@@ -443,28 +443,28 @@ static void test_iter_attr(hid_t fapl, hbool_t new_format)
     /* Test skipping exactly as many attributes as there are */
     idx = NATTR;
     H5E_BEGIN_TRY {
-        ret = H5Aiterate2(dataset, H5_INDEX_NAME, H5_ITER_INC, &idx, aiter_cb, &info);
+        ret = H5Aiterate2(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, &idx, aiter_cb, &info, H5P_DEFAULT);
     } H5E_END_TRY;
     VERIFY(ret, FAIL, "H5Aiterate2");
 
     /* Test skipping more attributes than there are */
     idx = NATTR + 1;
     H5E_BEGIN_TRY {
-        ret = H5Aiterate2(dataset, H5_INDEX_NAME, H5_ITER_INC, &idx, aiter_cb, &info);
+        ret = H5Aiterate2(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, &idx, aiter_cb, &info, H5P_DEFAULT);
     } H5E_END_TRY;
     VERIFY(ret, FAIL, "H5Aiterate2");
 
     /* Test all attributes on dataset, when callback always returns 0 */
     info.command = RET_ZERO;
     idx = 0;
-    if((ret = H5Aiterate2(dataset, H5_INDEX_NAME, H5_ITER_INC, &idx, aiter_cb, &info)) > 0)
+    if((ret = H5Aiterate2(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, &idx, aiter_cb, &info, H5P_DEFAULT)) > 0)
         TestErrPrintf("Attribute iteration function didn't return zero correctly!\n");
 
     /* Test all attributes on dataset, when callback always returns 1 */
     /* This also tests the "restarting" ability, because the index changes */
     info.command = RET_TWO;
     idx = i = 0;
-    while((ret = H5Aiterate2(dataset, H5_INDEX_NAME, H5_ITER_INC, &idx, aiter_cb, &info)) > 0) {
+    while((ret = H5Aiterate2(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, &idx, aiter_cb, &info, H5P_DEFAULT)) > 0) {
         /* Verify return value from iterator gets propagated correctly */
         VERIFY(ret, 2, "H5Aiterate2");
 
@@ -490,7 +490,7 @@ static void test_iter_attr(hid_t fapl, hbool_t new_format)
     /* This also tests the "restarting" ability, because the index changes */
     info.command = new_format ? RET_CHANGE2 : RET_CHANGE;
     idx = i = 0;
-    while((ret = H5Aiterate2(dataset, H5_INDEX_NAME, H5_ITER_INC, &idx, aiter_cb, &info)) > 0) {
+    while((ret = H5Aiterate2(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, &idx, aiter_cb, &info, H5P_DEFAULT)) > 0) {
         /* Verify return value from iterator gets propagated correctly */
         VERIFY(ret, 1, "H5Aiterate2");
 
@@ -554,8 +554,8 @@ liter_cb2(hid_t loc_id, const char *name, const H5L_info_t UNUSED *link_info,
     /*
      * Get type of the object and check it.
      */
-    ret = H5Oget_info_by_name(loc_id, name, &oinfo, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Oget_info_by_name");
+    ret = H5Oget_info(loc_id, name, &oinfo, H5P_DEFAULT);
+    CHECK(ret, FAIL, "H5Oget_info");
 
     if(test_info->type != oinfo.type) {
         TestErrPrintf("test_info->type = %d, oinfo.type = %d\n", test_info->type, (int)oinfo.type);
@@ -670,13 +670,13 @@ test_iter_group_large(hid_t fapl)
 
     /* Iterate through the file to see members of the root group */
     curr_name = &names[0];
-    ret = H5Literate(file, H5_INDEX_NAME, H5_ITER_INC, NULL, liter_cb2, curr_name);
+    ret = H5Literate(file, "/", H5_INDEX_NAME, H5_ITER_INC, NULL, liter_cb2, curr_name, H5P_DEFAULT);
     CHECK(ret, FAIL, "H5Literate");
     for(i = 1; i < 100; i++) {
         hsize_t idx = i;
 
         curr_name = &names[i];
-        ret = H5Literate(file, H5_INDEX_NAME, H5_ITER_INC, &idx, liter_cb2, curr_name);
+        ret = H5Literate(file, "/", H5_INDEX_NAME, H5_ITER_INC, &idx, liter_cb2, curr_name, H5P_DEFAULT);
         CHECK(ret, FAIL, "H5Literate");
     } /* end for */
 
@@ -772,7 +772,7 @@ static void test_grp_memb_funcs(hid_t fapl)
     root_group = H5Gopen2(file, "/", H5P_DEFAULT);
     CHECK(root_group, FAIL, "H5Gopen2");
 
-    ret = H5Gget_info(root_group, &ginfo);
+    ret = H5Gget_info(root_group, ".", &ginfo, H5P_DEFAULT);
     CHECK(ret, FAIL, "H5Gget_info");
     VERIFY(ginfo.nlinks, (NDATASETS + 2), "H5Gget_info");
 
@@ -868,7 +868,7 @@ static void test_links(hid_t fapl)
     ret = H5Lcreate_hard(gid, "/g1", H5L_SAME_LOC, "hardlink", H5P_DEFAULT, H5P_DEFAULT);
     CHECK(ret, FAIL, "H5Lcreate_hard");
 
-    ret = H5Gget_info(gid, &ginfo);
+    ret = H5Gget_info(gid, ".", &ginfo, H5P_DEFAULT);
     CHECK(ret, FAIL, "H5Gget_info");
     VERIFY(ginfo.nlinks, 3, "H5Gget_info");
 
@@ -934,9 +934,9 @@ test_iterate(void)
     fapl2 = H5Pcopy(fapl);
     CHECK(fapl2, FAIL, "H5Pcopy");
 
-    /* Set the "use the latest version of the format" bounds for creating objects in the file */
-    ret = H5Pset_libver_bounds(fapl2, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST);
-    CHECK(ret, FAIL, "H5Pset_libver_bounds");
+    /* Set the "use the latest version of the format" flag for creating objects in the file */
+    ret = H5Pset_latest_format(fapl2, TRUE);
+    CHECK(ret, FAIL, "H5Pset_latest_format");
 
     /* These next tests use the same file */
     for(new_format = FALSE; new_format <= TRUE; new_format++) {

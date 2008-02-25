@@ -215,25 +215,25 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "btree2dll", "..\..\test\btr
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cache", "..\..\test\cache\cache.vcproj", "{4BAFED6D-07B4-465D-8C93-81A1C2EF02E0}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cache", "..\..\TEST\cache\cache.vcproj", "{4BAFED6D-07B4-465D-8C93-81A1C2EF02E0}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 		{A80D439C-37B4-4619-A122-1C69F567733B} = {A80D439C-37B4-4619-A122-1C69F567733B}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cache_api", "..\..\test\cache_api\cache_api.vcproj", "{4F8B23C1-9832-4C3B-A836-2FBB53F628A0}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cache_api", "..\..\TEST\cache_api\cache_api.vcproj", "{4F8B23C1-9832-4C3B-A836-2FBB53F628A0}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 		{A80D439C-37B4-4619-A122-1C69F567733B} = {A80D439C-37B4-4619-A122-1C69F567733B}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cache_apidll", "..\..\test\cache_apidll\cache_apidll.vcproj", "{EB5DE4FB-CC65-47BF-9D94-AC96B01B6A33}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cache_apidll", "..\..\TEST\cache_apidll\cache_apidll.vcproj", "{EB5DE4FB-CC65-47BF-9D94-AC96B01B6A33}"
 	ProjectSection(ProjectDependencies) = postProject
 		{54BDA057-C716-4807-A35E-73185DCB236D} = {54BDA057-C716-4807-A35E-73185DCB236D}
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cachedll", "..\..\test\cachedll\cachedll.vcproj", "{D0CEF98C-07B5-4A8A-9153-43FDF6B5F169}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cachedll", "..\..\TEST\cachedll\cachedll.vcproj", "{D0CEF98C-07B5-4A8A-9153-43FDF6B5F169}"
 	ProjectSection(ProjectDependencies) = postProject
 		{54BDA057-C716-4807-A35E-73185DCB236D} = {54BDA057-C716-4807-A35E-73185DCB236D}
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
@@ -261,25 +261,25 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cmpd_dsetdll", "..\..\test\
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cross_read", "..\..\test\cross_read\cross_read.vcproj", "{68A52165-E0EF-4019-B658-1AC734649955}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cross_read", "..\..\TEST\cross_read\cross_read.vcproj", "{68A52165-E0EF-4019-B658-1AC734649955}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 		{A80D439C-37B4-4619-A122-1C69F567733B} = {A80D439C-37B4-4619-A122-1C69F567733B}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cross_readdll", "..\..\test\cross_readdll\cross_readdll.vcproj", "{E1F98D07-4724-46CB-B327-5677C1C9266D}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cross_readdll", "..\..\TEST\cross_readdll\cross_readdll.vcproj", "{E1F98D07-4724-46CB-B327-5677C1C9266D}"
 	ProjectSection(ProjectDependencies) = postProject
 		{54BDA057-C716-4807-A35E-73185DCB236D} = {54BDA057-C716-4807-A35E-73185DCB236D}
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dangle", "..\..\test\dangle\dangle.vcproj", "{8C6D9C00-44A9-432F-B695-F56439C1B288}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dangle", "..\..\TEST\dangle\dangle.vcproj", "{8C6D9C00-44A9-432F-B695-F56439C1B288}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 		{A80D439C-37B4-4619-A122-1C69F567733B} = {A80D439C-37B4-4619-A122-1C69F567733B}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dangledll", "..\..\test\dangledll\dangledll.vcproj", "{D15E5D9B-A1A6-4935-889C-D880FD0068CE}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dangledll", "..\..\TEST\dangledll\dangledll.vcproj", "{D15E5D9B-A1A6-4935-889C-D880FD0068CE}"
 	ProjectSection(ProjectDependencies) = postProject
 		{54BDA057-C716-4807-A35E-73185DCB236D} = {54BDA057-C716-4807-A35E-73185DCB236D}
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
@@ -321,13 +321,13 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dt_arithdll", "..\..\test\d
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dtransform", "..\..\test\dtransform\dtransform.vcproj", "{F5109F4B-5869-40A7-BC6A-8130CA4BB987}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dtransform", "..\..\TEST\dtransform\dtransform.vcproj", "{F5109F4B-5869-40A7-BC6A-8130CA4BB987}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 		{A80D439C-37B4-4619-A122-1C69F567733B} = {A80D439C-37B4-4619-A122-1C69F567733B}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dtransformdll", "..\..\test\dtransformdll\dtransformdll.vcproj", "{0E0F449A-7998-4113-BDD2-A74E0B6D3466}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "dtransformdll", "..\..\TEST\dtransformdll\dtransformdll.vcproj", "{0E0F449A-7998-4113-BDD2-A74E0B6D3466}"
 	ProjectSection(ProjectDependencies) = postProject
 		{54BDA057-C716-4807-A35E-73185DCB236D} = {54BDA057-C716-4807-A35E-73185DCB236D}
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
@@ -411,7 +411,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "fheap", "..\..\test\fheap\f
 		{A80D439C-37B4-4619-A122-1C69F567733B} = {A80D439C-37B4-4619-A122-1C69F567733B}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "fheapdll", "..\..\test\fheapdll\fheapdll.vcproj", "{CEBB9980-4B77-4105-BFEB-4DCDBB1F5E35}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "fheapdll", "..\..\TEST\fheapdll\fheapdll.vcproj", "{CEBB9980-4B77-4105-BFEB-4DCDBB1F5E35}"
 	ProjectSection(ProjectDependencies) = postProject
 		{54BDA057-C716-4807-A35E-73185DCB236D} = {54BDA057-C716-4807-A35E-73185DCB236D}
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
@@ -453,7 +453,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "flush2dll", "..\..\test\flu
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "getname", "..\..\test\getname\getname.vcproj", "{B21CA611-6DAE-4051-8B4C-989E135711B1}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "getname", "..\..\TEST\getname\getname.vcproj", "{B21CA611-6DAE-4051-8B4C-989E135711B1}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 		{A80D439C-37B4-4619-A122-1C69F567733B} = {A80D439C-37B4-4619-A122-1C69F567733B}
@@ -465,7 +465,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "getnamedll", "..\..\test\ge
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "getub", "..\..\test\getub\getub.vcproj", "{2FC5DAE1-36D6-4783-A0F9-96D0B37687A8}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "getub", "..\..\TEST\getub\getub.vcproj", "{2FC5DAE1-36D6-4783-A0F9-96D0B37687A8}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 		{473ABB63-E5C6-4D8E-9380-5DC76E1EAB4A} = {473ABB63-E5C6-4D8E-9380-5DC76E1EAB4A}
@@ -527,19 +527,19 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5debugdll", "..\..\tools\h
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5diff", "..\..\tools\h5diff\h5diff.vcproj", "{1C5A9EC8-F882-4A8A-B773-E79CD46369AF}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5diff", "..\..\TOOLS\h5diff\h5diff.vcproj", "{1C5A9EC8-F882-4A8A-B773-E79CD46369AF}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 		{473ABB63-E5C6-4D8E-9380-5DC76E1EAB4A} = {473ABB63-E5C6-4D8E-9380-5DC76E1EAB4A}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5diffdll", "..\..\tools\h5diffdll\h5diffdll.vcproj", "{EC6B5EAD-D938-4211-A7B1-01C9D2C15160}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5diffdll", "..\..\TOOLS\h5diffdll\h5diffdll.vcproj", "{EC6B5EAD-D938-4211-A7B1-01C9D2C15160}"
 	ProjectSection(ProjectDependencies) = postProject
 		{832DD776-BC7F-40B5-90D0-E6448014CA5B} = {832DD776-BC7F-40B5-90D0-E6448014CA5B}
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5difftst", "..\..\tools\TESTFILES\h5difftst\h5difftst.vcproj", "{1F80CDF7-B1CB-4303-B282-A21EDC2BDCB4}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5difftst", "..\..\TOOLS\TESTFILES\h5difftst\h5difftst.vcproj", "{1F80CDF7-B1CB-4303-B282-A21EDC2BDCB4}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 	EndProjectSection
@@ -564,28 +564,26 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5dumptst", "..\..\tools\te
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5import", "..\..\tools\h5import\h5import.vcproj", "{9E588AD8-14BD-4BA3-B4EA-16D1D882C700}"
 	ProjectSection(ProjectDependencies) = postProject
-		{473ABB63-E5C6-4D8E-9380-5DC76E1EAB4A} = {473ABB63-E5C6-4D8E-9380-5DC76E1EAB4A}
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5importdll", "..\..\tools\h5importdll\h5importdll.vcproj", "{2DCDB978-79B7-4A3A-B24A-D908A49B7D50}"
 	ProjectSection(ProjectDependencies) = postProject
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
-		{832DD776-BC7F-40B5-90D0-E6448014CA5B} = {832DD776-BC7F-40B5-90D0-E6448014CA5B}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5importtst", "..\..\tools\TESTFILES\h5importtst\h5importtst.vcproj", "{AF696934-5004-4C1D-90C3-B434E92AFB89}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5importtst", "..\..\TOOLS\TESTFILES\h5importtst\h5importtst.vcproj", "{AF696934-5004-4C1D-90C3-B434E92AFB89}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5jam", "..\..\tools\h5jam\h5jam.vcproj", "{196F5935-2391-49A7-B6A2-410DF8149F0D}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5jam", "..\..\TOOLS\h5jam\h5jam.vcproj", "{196F5935-2391-49A7-B6A2-410DF8149F0D}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 		{473ABB63-E5C6-4D8E-9380-5DC76E1EAB4A} = {473ABB63-E5C6-4D8E-9380-5DC76E1EAB4A}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5jamtst", "..\..\tools\TESTFILES\h5jamtst\h5jamtst.vcproj", "{E8896FEE-8601-4AFC-91EA-6F9698574174}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5jamtst", "..\..\TOOLS\TESTFILES\h5jamtst\h5jamtst.vcproj", "{E8896FEE-8601-4AFC-91EA-6F9698574174}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 	EndProjectSection
@@ -602,7 +600,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5lsdll", "..\..\tools\h5ls
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5mkgrp", "..\..\tools\h5mkgrp\h5mkgrp.vcproj", "{ABBF8F3E-F1B5-45FA-8FD0-50B167511EDF}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5mkgrp", "..\..\TOOLS\h5mkgrp\h5mkgrp.vcproj", "{ABBF8F3E-F1B5-45FA-8FD0-50B167511EDF}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 		{473ABB63-E5C6-4D8E-9380-5DC76E1EAB4A} = {473ABB63-E5C6-4D8E-9380-5DC76E1EAB4A}
@@ -614,7 +612,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5repack", "..\..\tools\h5r
 		{473ABB63-E5C6-4D8E-9380-5DC76E1EAB4A} = {473ABB63-E5C6-4D8E-9380-5DC76E1EAB4A}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5repackdll", "..\..\tools\h5repackdll\h5repackdll.vcproj", "{854F7E09-CEB5-44CD-B924-3FFAC7936323}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5repackdll", "..\..\TOOLS\h5repackdll\h5repackdll.vcproj", "{854F7E09-CEB5-44CD-B924-3FFAC7936323}"
 	ProjectSection(ProjectDependencies) = postProject
 		{832DD776-BC7F-40B5-90D0-E6448014CA5B} = {832DD776-BC7F-40B5-90D0-E6448014CA5B}
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
@@ -632,7 +630,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5repart", "..\..\tools\h5r
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5repart_gentest", "..\..\tools\TESTFILES\h5repart_gentest\h5repart_gentest.vcproj", "{EBF7C380-5F58-462D-993D-75B53F83FA81}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5repart_gentest", "..\..\TOOLS\TESTFILES\h5repart_gentest\h5repart_gentest.vcproj", "{EBF7C380-5F58-462D-993D-75B53F83FA81}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 	EndProjectSection
@@ -642,33 +640,30 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5repartdll", "..\..\tools\
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5reparttst", "..\..\tools\TESTFILES\h5reparttst\h5reparttst.vcproj", "{53022A9D-F5B2-407C-9A29-3AC71B3E6DDC}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5reparttst", "..\..\TOOLS\TESTFILES\h5reparttst\h5reparttst.vcproj", "{53022A9D-F5B2-407C-9A29-3AC71B3E6DDC}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5stat", "..\..\tools\h5stat\h5stat.vcproj", "{405F6F0A-DBE6-4A4E-AAE2-D4D514BA0CF5}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5stat", "..\..\TOOLS\h5stat\h5stat.vcproj", "{405F6F0A-DBE6-4A4E-AAE2-D4D514BA0CF5}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 		{473ABB63-E5C6-4D8E-9380-5DC76E1EAB4A} = {473ABB63-E5C6-4D8E-9380-5DC76E1EAB4A}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5statdll", "..\..\tools\h5statdll\h5statdll.vcproj", "{165195D1-B742-4030-8B12-3FE94B829D45}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5statdll", "..\..\TOOLS\h5statdll\h5statdll.vcproj", "{165195D1-B742-4030-8B12-3FE94B829D45}"
 	ProjectSection(ProjectDependencies) = postProject
 		{832DD776-BC7F-40B5-90D0-E6448014CA5B} = {832DD776-BC7F-40B5-90D0-E6448014CA5B}
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5unjam", "..\..\tools\h5unjam\h5unjam.vcproj", "{52E83C17-2B68-44B5-881D-4F6338FB14C7}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5unjam", "..\..\TOOLS\h5unjam\h5unjam.vcproj", "{52E83C17-2B68-44B5-881D-4F6338FB14C7}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 		{473ABB63-E5C6-4D8E-9380-5DC76E1EAB4A} = {473ABB63-E5C6-4D8E-9380-5DC76E1EAB4A}
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hdf5", "..\hdf5\hdf5.vcproj", "{26346A09-C500-49E7-963A-D22A8E09AAB7}"
-	ProjectSection(ProjectDependencies) = postProject
-		{B123D196-2F43-4FEB-80B5-990F06DED319} = {B123D196-2F43-4FEB-80B5-990F06DED319}
-	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hdf5_cpp", "..\hdf5_cpp\hdf5_cpp.vcproj", "{FB74E351-0C4E-4173-B0D3-10DD12F2DCA5}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -682,7 +677,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hdf5_cppdll", "..\hdf5_cppd
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hdf5_f90cstub", "..\hdf5_f90cstub\hdf5_f90cstub.vcproj", "{CF055FEA-4433-439A-9688-BFD73D260706}"
 	ProjectSection(ProjectDependencies) = postProject
-		{B6430FB3-3BEF-48C3-84DD-98106C6F6113} = {B6430FB3-3BEF-48C3-84DD-98106C6F6113}
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 	EndProjectSection
 EndProject
@@ -692,9 +686,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hdf5_f90cstubdll", "..\hdf5
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hdf5_hl", "..\hdf5_hl\hdf5_hl.vcproj", "{9A124450-EC54-4813-B0B1-2CA96B695009}"
-	ProjectSection(ProjectDependencies) = postProject
-		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
-	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hdf5_hl_cpp", "..\hdf5_hl_cpp\hdf5_hl_cpp.vcproj", "{7693B383-C2CB-43FD-A428-598F73D214F7}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -715,9 +706,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hdf5_hl_f90cstubdll", "..\h
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hdf5_hl_f90cstub", "..\hdf5_hl_fortran\hdf5_hl_f90cstub.vcproj", "{01DA0D22-D220-4ACE-9EB0-EA3906098C0A}"
-	ProjectSection(ProjectDependencies) = postProject
-		{B6430FB3-3BEF-48C3-84DD-98106C6F6113} = {B6430FB3-3BEF-48C3-84DD-98106C6F6113}
-	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hdf5_hldll", "..\hdf5_hldll\hdf5_hldll.vcproj", "{CFB2CC74-5F03-494A-84E9-6BB8D2FBC43C}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -725,11 +713,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hdf5_hldll", "..\hdf5_hldll
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hdf5dll", "..\hdf5dll\hdf5dll.vcproj", "{C9535AD9-C61D-4691-A5CE-52EF359892AF}"
-	ProjectSection(ProjectDependencies) = postProject
-		{B123D196-2F43-4FEB-80B5-990F06DED319} = {B123D196-2F43-4FEB-80B5-990F06DED319}
-	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hl_test_ds", "..\..\hl\test\hl_test_ds\hl_test_ds.vcproj", "{6410E6D2-EDBF-439D-8C43-1AB0C37AC851}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hl_test_ds", "..\..\HL\TEST\hl_test_ds\hl_test_ds.vcproj", "{6410E6D2-EDBF-439D-8C43-1AB0C37AC851}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 		{9A124450-EC54-4813-B0B1-2CA96B695009} = {9A124450-EC54-4813-B0B1-2CA96B695009}
@@ -743,7 +728,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hl_test_dsdll", "..\..\hl\t
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hl_test_image", "..\..\hl\test\hl_test_image\hl_test_image.vcproj", "{03359B45-E43D-44B3-BDE5-8B14D9F0D827}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hl_test_image", "..\..\HL\TEST\hl_test_image\hl_test_image.vcproj", "{03359B45-E43D-44B3-BDE5-8B14D9F0D827}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 		{9A124450-EC54-4813-B0B1-2CA96B695009} = {9A124450-EC54-4813-B0B1-2CA96B695009}
@@ -757,7 +742,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hl_test_imagedll", "..\..\h
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hl_test_lite", "..\..\hl\test\hl_test_lite\hl_test_lite.vcproj", "{6FFCE804-EF4A-468F-A174-561934C153A1}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hl_test_lite", "..\..\HL\TEST\hl_test_lite\hl_test_lite.vcproj", "{6FFCE804-EF4A-468F-A174-561934C153A1}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 		{9A124450-EC54-4813-B0B1-2CA96B695009} = {9A124450-EC54-4813-B0B1-2CA96B695009}
@@ -771,7 +756,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hl_test_litedll", "..\..\hl
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hl_test_packet", "..\..\hl\test\hl_test_packet\hl_test_packet.vcproj", "{5CC7FFCE-2612-41B6-AF83-C1B61F67949B}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hl_test_packet", "..\..\HL\TEST\hl_test_packet\hl_test_packet.vcproj", "{5CC7FFCE-2612-41B6-AF83-C1B61F67949B}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 		{9A124450-EC54-4813-B0B1-2CA96B695009} = {9A124450-EC54-4813-B0B1-2CA96B695009}
@@ -785,7 +770,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hl_test_packetdll", "..\..\
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hl_test_table", "..\..\hl\test\hl_test_table\hl_test_table.vcproj", "{43069CE7-E7CB-4EBF-A6CC-31E7A06D3835}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hl_test_table", "..\..\HL\TEST\hl_test_table\hl_test_table.vcproj", "{43069CE7-E7CB-4EBF-A6CC-31E7A06D3835}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 		{9A124450-EC54-4813-B0B1-2CA96B695009} = {9A124450-EC54-4813-B0B1-2CA96B695009}
@@ -871,7 +856,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libtest_cstubdll", "..\..\f
 		{54BDA057-C716-4807-A35E-73185DCB236D} = {54BDA057-C716-4807-A35E-73185DCB236D}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libtest_cstub", "..\..\fortran\test\libtest_fortran\libtest_cstub.vcproj", "{2B93688D-D766-4295-ABFA-003CF905F8D8}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libtest_cstub", "..\..\FORTRAN\TEST\libtest_fortran\libtest_cstub.vcproj", "{2B93688D-D766-4295-ABFA-003CF905F8D8}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "links", "..\..\test\links\links.vcproj", "{8792D377-8105-4C67-87F1-115E48D0178F}"
 	ProjectSection(ProjectDependencies) = postProject
@@ -921,13 +906,13 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ntypesdll", "..\..\test\nty
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "objcopy", "..\..\test\objcopy\objcopy.vcproj", "{34C0FDFA-81D6-4652-B841-894BD1A15FB0}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "objcopy", "..\..\TEST\objcopy\objcopy.vcproj", "{34C0FDFA-81D6-4652-B841-894BD1A15FB0}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 		{A80D439C-37B4-4619-A122-1C69F567733B} = {A80D439C-37B4-4619-A122-1C69F567733B}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "objcopydll", "..\..\test\objcopydll\objcopydll.vcproj", "{794B7E1E-E6AD-456D-9F33-FCE317325EC4}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "objcopydll", "..\..\TEST\objcopydll\objcopydll.vcproj", "{794B7E1E-E6AD-456D-9F33-FCE317325EC4}"
 	ProjectSection(ProjectDependencies) = postProject
 		{54BDA057-C716-4807-A35E-73185DCB236D} = {54BDA057-C716-4807-A35E-73185DCB236D}
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
@@ -939,7 +924,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ohdr", "..\..\test\ohdr\ohd
 		{A80D439C-37B4-4619-A122-1C69F567733B} = {A80D439C-37B4-4619-A122-1C69F567733B}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ohdr_gentst", "..\..\test\ohdr_gentst\ohdr_gentst.vcproj", "{400D995A-CFC8-4D39-A449-88BE067834F8}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ohdr_gentst", "..\..\TEST\ohdr_gentst\ohdr_gentst.vcproj", "{400D995A-CFC8-4D39-A449-88BE067834F8}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 	EndProjectSection
@@ -960,31 +945,31 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "overheaddll", "..\..\test\o
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pool", "..\..\test\pool\pool.vcproj", "{9ADAE03A-2060-471E-A7B5-9D8F6995223A}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pool", "..\..\TEST\pool\pool.vcproj", "{9ADAE03A-2060-471E-A7B5-9D8F6995223A}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 		{A80D439C-37B4-4619-A122-1C69F567733B} = {A80D439C-37B4-4619-A122-1C69F567733B}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pooldll", "..\..\test\pooldll\pooldll.vcproj", "{DFE42486-47A2-487C-81B9-DDCDA9F07BF0}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pooldll", "..\..\TEST\pooldll\pooldll.vcproj", "{DFE42486-47A2-487C-81B9-DDCDA9F07BF0}"
 	ProjectSection(ProjectDependencies) = postProject
 		{54BDA057-C716-4807-A35E-73185DCB236D} = {54BDA057-C716-4807-A35E-73185DCB236D}
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "reserved", "..\..\test\reserved\reserved.vcproj", "{2248C52C-75DC-465B-A598-6E89CC93E00D}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "reserved", "..\..\TEST\reserved\reserved.vcproj", "{2248C52C-75DC-465B-A598-6E89CC93E00D}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 		{A80D439C-37B4-4619-A122-1C69F567733B} = {A80D439C-37B4-4619-A122-1C69F567733B}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "reserveddll", "..\..\test\reserveddll\reserveddll.vcproj", "{C2E6106F-1450-4F62-8D8E-17A93E986B26}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "reserveddll", "..\..\TEST\reserveddll\reserveddll.vcproj", "{C2E6106F-1450-4F62-8D8E-17A93E986B26}"
 	ProjectSection(ProjectDependencies) = postProject
 		{54BDA057-C716-4807-A35E-73185DCB236D} = {54BDA057-C716-4807-A35E-73185DCB236D}
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "set_extent", "..\..\test\set_extent\set_extent.vcproj", "{E81413CC-046C-42B0-B862-0BB81AED2854}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "set_extent", "..\..\TEST\set_extent\set_extent.vcproj", "{E81413CC-046C-42B0-B862-0BB81AED2854}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 		{A80D439C-37B4-4619-A122-1C69F567733B} = {A80D439C-37B4-4619-A122-1C69F567733B}
@@ -1008,31 +993,31 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "stabdll", "..\..\test\stabd
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "talign", "..\..\tools\talign\talign.vcproj", "{E6A9BFE8-84DE-46C0-A372-72087598018E}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "talign", "..\..\TOOLS\talign\talign.vcproj", "{E6A9BFE8-84DE-46C0-A372-72087598018E}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 		{473ABB63-E5C6-4D8E-9380-5DC76E1EAB4A} = {473ABB63-E5C6-4D8E-9380-5DC76E1EAB4A}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "taligndll", "..\..\tools\taligndll\taligndll.vcproj", "{3BBA31F8-2679-4655-975D-52FDA5ABD5C4}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "taligndll", "..\..\TOOLS\taligndll\taligndll.vcproj", "{3BBA31F8-2679-4655-975D-52FDA5ABD5C4}"
 	ProjectSection(ProjectDependencies) = postProject
 		{832DD776-BC7F-40B5-90D0-E6448014CA5B} = {832DD776-BC7F-40B5-90D0-E6448014CA5B}
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tellub", "..\..\test\tellub\tellub.vcproj", "{A26C50E9-D3FB-4490-9CD7-606EB2E77D21}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "tellub", "..\..\TEST\tellub\tellub.vcproj", "{A26C50E9-D3FB-4490-9CD7-606EB2E77D21}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 		{473ABB63-E5C6-4D8E-9380-5DC76E1EAB4A} = {473ABB63-E5C6-4D8E-9380-5DC76E1EAB4A}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "testh5repack_detect_szip", "..\..\tools\TESTFILES\testh5repack_detect_szip\testh5repack_detect_szip.vcproj", "{5EA5BDAD-3AE9-4BCA-AC1A-93B3B8499C30}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "testh5repack_detect_szip", "..\..\TOOLS\TESTFILES\testh5repack_detect_szip\testh5repack_detect_szip.vcproj", "{5EA5BDAD-3AE9-4BCA-AC1A-93B3B8499C30}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 		{473ABB63-E5C6-4D8E-9380-5DC76E1EAB4A} = {473ABB63-E5C6-4D8E-9380-5DC76E1EAB4A}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "testh5repack_detect_szipdll", "..\..\tools\TESTFILES\testh5repack_detect_szipdll\testh5repack_detect_szipdll.vcproj", "{E75602FF-F4E6-4F45-AD0D-EA49C0C66DEF}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "testh5repack_detect_szipdll", "..\..\TOOLS\TESTFILES\testh5repack_detect_szipdll\testh5repack_detect_szipdll.vcproj", "{E75602FF-F4E6-4F45-AD0D-EA49C0C66DEF}"
 	ProjectSection(ProjectDependencies) = postProject
 		{832DD776-BC7F-40B5-90D0-E6448014CA5B} = {832DD776-BC7F-40B5-90D0-E6448014CA5B}
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
@@ -1044,7 +1029,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "testhdf5", "..\..\test\test
 		{A80D439C-37B4-4619-A122-1C69F567733B} = {A80D439C-37B4-4619-A122-1C69F567733B}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "testhdf5_cpp", "..\..\c++\test\testhdf5_cpp\testhdf5_cpp.vcproj", "{EFA04391-B35B-44C0-AB27-1383D4C9E358}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "testhdf5_cpp", "..\..\C++\TEST\testhdf5_cpp\testhdf5_cpp.vcproj", "{EFA04391-B35B-44C0-AB27-1383D4C9E358}"
 	ProjectSection(ProjectDependencies) = postProject
 		{FB74E351-0C4E-4173-B0D3-10DD12F2DCA5} = {FB74E351-0C4E-4173-B0D3-10DD12F2DCA5}
 		{A80D439C-37B4-4619-A122-1C69F567733B} = {A80D439C-37B4-4619-A122-1C69F567733B}
@@ -1084,13 +1069,13 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "unlinkdll", "..\..\test\unl
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vfd", "..\..\test\vfd\vfd.vcproj", "{744EA5E0-18C8-4757-82DE-2D0CF11DBDDE}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vfd", "..\..\TEST\vfd\vfd.vcproj", "{744EA5E0-18C8-4757-82DE-2D0CF11DBDDE}"
 	ProjectSection(ProjectDependencies) = postProject
 		{26346A09-C500-49E7-963A-D22A8E09AAB7} = {26346A09-C500-49E7-963A-D22A8E09AAB7}
 		{A80D439C-37B4-4619-A122-1C69F567733B} = {A80D439C-37B4-4619-A122-1C69F567733B}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vfddll", "..\..\test\vfddll\vfddll.vcproj", "{0C5E3F36-3338-4B2C-A956-4D577B6119E7}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "vfddll", "..\..\TEST\vfddll\vfddll.vcproj", "{0C5E3F36-3338-4B2C-A956-4D577B6119E7}"
 	ProjectSection(ProjectDependencies) = postProject
 		{54BDA057-C716-4807-A35E-73185DCB236D} = {54BDA057-C716-4807-A35E-73185DCB236D}
 		{C9535AD9-C61D-4691-A5CE-52EF359892AF} = {C9535AD9-C61D-4691-A5CE-52EF359892AF}
@@ -1138,13 +1123,11 @@ Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "flush2_fortrandll", "..\..\
 EndProject
 Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "hdf5_fortran", "..\hdf5_fortran\hdf5_fortran.vfproj", "{26F2FDA4-17DC-4E1A-B9AC-124C460A4391}"
 	ProjectSection(ProjectDependencies) = postProject
-		{B6430FB3-3BEF-48C3-84DD-98106C6F6113} = {B6430FB3-3BEF-48C3-84DD-98106C6F6113}
 		{CF055FEA-4433-439A-9688-BFD73D260706} = {CF055FEA-4433-439A-9688-BFD73D260706}
 	EndProjectSection
 EndProject
 Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "hdf5_fortrandll", "..\hdf5_fortrandll\hdf5_fortrandll.vfproj", "{1063E387-0167-411C-85B9-96B043C4BDB3}"
 	ProjectSection(ProjectDependencies) = postProject
-		{B6430FB3-3BEF-48C3-84DD-98106C6F6113} = {B6430FB3-3BEF-48C3-84DD-98106C6F6113}
 		{668327AB-1F82-46EE-A157-CD79AB8BF323} = {668327AB-1F82-46EE-A157-CD79AB8BF323}
 	EndProjectSection
 EndProject
@@ -1249,20 +1232,6 @@ Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "testhdf5_fortrandll", "..\.
 		{1063E387-0167-411C-85B9-96B043C4BDB3} = {1063E387-0167-411C-85B9-96B043C4BDB3}
 		{668327AB-1F82-46EE-A157-CD79AB8BF323} = {668327AB-1F82-46EE-A157-CD79AB8BF323}
 		{1BFA0FE4-B924-4325-9EA1-3CB26BBAE31C} = {1BFA0FE4-B924-4325-9EA1-3CB26BBAE31C}
-	EndProjectSection
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "h5tinit", "..\..\misc\typegen\h5tinit\h5tinit.vcproj", "{B123D196-2F43-4FEB-80B5-990F06DED319}"
-EndProject
-Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "h5fortran_detect", "..\..\misc\typegen\h5fortran_detect\h5fortran_detect.vfproj", "{4505FF13-2C16-4348-8989-BB10AF85FB95}"
-EndProject
-Project("{6989167D-11E4-40FE-8C1A-2192A86A7E90}") = "h5fort_type_defines", "..\..\misc\typegen\h5fort_type_defines\h5fort_type_defines.vfproj", "{4D3CE514-F22D-4FBC-82FF-7A3BE15DAE10}"
-	ProjectSection(ProjectDependencies) = postProject
-		{4505FF13-2C16-4348-8989-BB10AF85FB95} = {4505FF13-2C16-4348-8989-BB10AF85FB95}
-	EndProjectSection
-EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "H5match_types", "..\..\misc\typegen\h5match_types\h5match_types.vcproj", "{B6430FB3-3BEF-48C3-84DD-98106C6F6113}"
-	ProjectSection(ProjectDependencies) = postProject
-		{4D3CE514-F22D-4FBC-82FF-7A3BE15DAE10} = {4D3CE514-F22D-4FBC-82FF-7A3BE15DAE10}
 	EndProjectSection
 EndProject
 Global
@@ -2685,38 +2654,6 @@ Global
 		{6923D270-FB9F-4F40-8268-9C542ADABD88}.Release|Win32.Build.0 = Release|Win32
 		{6923D270-FB9F-4F40-8268-9C542ADABD88}.Release|x64.ActiveCfg = Release|x64
 		{6923D270-FB9F-4F40-8268-9C542ADABD88}.Release|x64.Build.0 = Release|x64
-		{B123D196-2F43-4FEB-80B5-990F06DED319}.Debug|Win32.ActiveCfg = Debug|Win32
-		{B123D196-2F43-4FEB-80B5-990F06DED319}.Debug|Win32.Build.0 = Debug|Win32
-		{B123D196-2F43-4FEB-80B5-990F06DED319}.Debug|x64.ActiveCfg = Debug|x64
-		{B123D196-2F43-4FEB-80B5-990F06DED319}.Debug|x64.Build.0 = Debug|x64
-		{B123D196-2F43-4FEB-80B5-990F06DED319}.Release|Win32.ActiveCfg = Release|Win32
-		{B123D196-2F43-4FEB-80B5-990F06DED319}.Release|Win32.Build.0 = Release|Win32
-		{B123D196-2F43-4FEB-80B5-990F06DED319}.Release|x64.ActiveCfg = Release|x64
-		{B123D196-2F43-4FEB-80B5-990F06DED319}.Release|x64.Build.0 = Release|x64
-		{4505FF13-2C16-4348-8989-BB10AF85FB95}.Debug|Win32.ActiveCfg = Debug|Win32
-		{4505FF13-2C16-4348-8989-BB10AF85FB95}.Debug|Win32.Build.0 = Debug|Win32
-		{4505FF13-2C16-4348-8989-BB10AF85FB95}.Debug|x64.ActiveCfg = Debug|x64
-		{4505FF13-2C16-4348-8989-BB10AF85FB95}.Debug|x64.Build.0 = Debug|x64
-		{4505FF13-2C16-4348-8989-BB10AF85FB95}.Release|Win32.ActiveCfg = Release|Win32
-		{4505FF13-2C16-4348-8989-BB10AF85FB95}.Release|Win32.Build.0 = Release|Win32
-		{4505FF13-2C16-4348-8989-BB10AF85FB95}.Release|x64.ActiveCfg = Release|x64
-		{4505FF13-2C16-4348-8989-BB10AF85FB95}.Release|x64.Build.0 = Release|x64
-		{4D3CE514-F22D-4FBC-82FF-7A3BE15DAE10}.Debug|Win32.ActiveCfg = Debug|Win32
-		{4D3CE514-F22D-4FBC-82FF-7A3BE15DAE10}.Debug|Win32.Build.0 = Debug|Win32
-		{4D3CE514-F22D-4FBC-82FF-7A3BE15DAE10}.Debug|x64.ActiveCfg = Debug|x64
-		{4D3CE514-F22D-4FBC-82FF-7A3BE15DAE10}.Debug|x64.Build.0 = Debug|x64
-		{4D3CE514-F22D-4FBC-82FF-7A3BE15DAE10}.Release|Win32.ActiveCfg = Release|Win32
-		{4D3CE514-F22D-4FBC-82FF-7A3BE15DAE10}.Release|Win32.Build.0 = Release|Win32
-		{4D3CE514-F22D-4FBC-82FF-7A3BE15DAE10}.Release|x64.ActiveCfg = Release|x64
-		{4D3CE514-F22D-4FBC-82FF-7A3BE15DAE10}.Release|x64.Build.0 = Release|x64
-		{B6430FB3-3BEF-48C3-84DD-98106C6F6113}.Debug|Win32.ActiveCfg = Debug|Win32
-		{B6430FB3-3BEF-48C3-84DD-98106C6F6113}.Debug|Win32.Build.0 = Debug|Win32
-		{B6430FB3-3BEF-48C3-84DD-98106C6F6113}.Debug|x64.ActiveCfg = Debug|x64
-		{B6430FB3-3BEF-48C3-84DD-98106C6F6113}.Debug|x64.Build.0 = Debug|x64
-		{B6430FB3-3BEF-48C3-84DD-98106C6F6113}.Release|Win32.ActiveCfg = Release|Win32
-		{B6430FB3-3BEF-48C3-84DD-98106C6F6113}.Release|Win32.Build.0 = Release|Win32
-		{B6430FB3-3BEF-48C3-84DD-98106C6F6113}.Release|x64.ActiveCfg = Release|x64
-		{B6430FB3-3BEF-48C3-84DD-98106C6F6113}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

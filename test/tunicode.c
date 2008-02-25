@@ -398,10 +398,10 @@ void test_objnames(hid_t fid, const char* string)
   /* Set a comment on the group to test that we can access the group
    * Also test that UTF-8 comments can be read.
    */
-  ret = H5Oset_comment_by_name(fid, string, string, H5P_DEFAULT);
-  CHECK(ret, FAIL, "H5Oset_comment_by_name");
-  ret = H5Oget_comment_by_name(fid, string, read_buf, (size_t)MAX_STRING_LENGTH, H5P_DEFAULT);
-  CHECK(ret, FAIL, "H5Oget_comment_by_name");
+  ret = H5Oset_comment(fid, string, string, H5P_DEFAULT);
+  CHECK(ret, FAIL, "H5Oset_comment");
+  ret = H5Oget_comment(fid, string, read_buf, (size_t)MAX_STRING_LENGTH, H5P_DEFAULT);
+  CHECK(ret, FAIL, "H5Oget_comment");
 
   ret = H5Gclose(grp_id);
   CHECK(ret, FAIL, "H5Gclose");
@@ -531,7 +531,7 @@ void test_attrname(hid_t fid, const char * string)
   CHECK(ret, FAIL, "H5Tset_size");
 
   /* Create the attribute and check that its name is correct */
-  attr_id = H5Acreate2(group_id, string, dtype_id, space_id, H5P_DEFAULT, H5P_DEFAULT);
+  attr_id = H5Acreate2(group_id, ".", string, dtype_id, space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   CHECK(attr_id, FAIL, "H5Acreate2");
   ret = H5Aget_name(attr_id, (size_t)MAX_STRING_LENGTH, read_buf);
   CHECK(ret, FAIL, "H5Aget_name");

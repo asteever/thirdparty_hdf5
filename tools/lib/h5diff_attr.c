@@ -71,9 +71,9 @@ hsize_t diff_attr(hid_t loc1_id,
  hsize_t    nfound_total = 0;
  int        cmp=1;
 
- if(H5Oget_info(loc1_id, &oinfo1) < 0)
+ if(H5Oget_info(loc1_id, ".", &oinfo1, H5P_DEFAULT) < 0)
   goto error;
- if(H5Oget_info(loc2_id, &oinfo2) < 0)
+ if(H5Oget_info(loc2_id, ".", &oinfo2, H5P_DEFAULT) < 0)
   goto error;
 
  if(oinfo1.num_attrs != oinfo2.num_attrs)
@@ -95,7 +95,7 @@ hsize_t diff_attr(hid_t loc1_id,
   /* use the name on the first file to open the second file */
   H5E_BEGIN_TRY 
   {
-   if((attr2_id = H5Aopen(loc2_id, name1, H5P_DEFAULT)) < 0)
+   if((attr2_id = H5Aopen(loc2_id, ".", name1, H5P_DEFAULT, H5P_DEFAULT)) < 0)
     goto error;
   } H5E_END_TRY;
 
@@ -168,20 +168,7 @@ hsize_t diff_attr(hid_t loc1_id,
    if ((msize2=H5Tget_size(mtype2_id))==0)
     goto error;
 
-   /*assert(msize1==msize2);*/
-
-   if ( msize1 != msize2)
-   {
-
-       if (options->m_verbose)
-            printf("Comparison not possible: different string sizes for attribute <%s>\n",
-             name1);
-
-       options->not_cmp=1;
-       continue;
-
-
-   }
+   assert(msize1==msize2);
 
    buf1=(void *) HDmalloc((unsigned)(nelmts1*msize1));
    buf2=(void *) HDmalloc((unsigned)(nelmts1*msize2));

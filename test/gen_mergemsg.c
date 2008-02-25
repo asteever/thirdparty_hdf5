@@ -91,7 +91,7 @@ int main()
     assert(ret >= 0);
 
     /* Add 1st attribute on first group */
-    aid = H5Acreate2(gid, ATTR1, tid, sid, H5P_DEFAULT, H5P_DEFAULT);
+    aid = H5Acreate2(gid, ".", ATTR1, tid, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     assert(aid > 0);
 
     /* Close dataspace */
@@ -117,7 +117,7 @@ int main()
     assert(ret >= 0);
 
     /* Add 2nd attribute on first group */
-    aid = H5Acreate2(gid, ATTR2, tid, sid, H5P_DEFAULT, H5P_DEFAULT);
+    aid = H5Acreate2(gid, ".", ATTR2, tid, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     assert(aid > 0);
 
     /* Close dataspace */
@@ -158,7 +158,7 @@ int main()
     assert(gid > 0);
 
     /* Delete 2nd attribute */
-    ret = H5Adelete(gid, ATTR2);
+    ret = H5Adelete2(gid, ".", ATTR2, H5P_DEFAULT);
     assert(ret >= 0);
 
     /* Close first group */
@@ -191,7 +191,7 @@ int main()
     assert(ret >= 0);
 
     /* Add 3rd attribute on first group (smaller than 2nd attribute) */
-    aid = H5Acreate2(gid, ATTR3, tid, sid, H5P_DEFAULT, H5P_DEFAULT);
+    aid = H5Acreate2(gid, ".", ATTR3, tid, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     assert(aid > 0);
 
     /* Close dataspace */
@@ -225,7 +225,7 @@ int main()
     assert(gid > 0);
 
     /* Delete 3rd attribute */
-    ret = H5Adelete(gid, ATTR3);
+    ret = H5Adelete2(gid, ".", ATTR3, H5P_DEFAULT);
     assert(ret >= 0);
 
     /* Create dataspace for 3rd attribute */
@@ -239,7 +239,7 @@ int main()
     assert(ret >= 0);
 
     /* Re-create 2nd attribute on first group */
-    aid = H5Acreate2(gid, ATTR2, tid, sid, H5P_DEFAULT, H5P_DEFAULT);
+    aid = H5Acreate2(gid, ".", ATTR2, tid, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     assert(aid > 0);
 
     /* Close dataspace */
@@ -272,7 +272,7 @@ int main()
     assert(gid > 0);
 
     /* Delete 2nd attribute */
-    ret = H5Adelete(gid, ATTR2);
+    ret = H5Adelete2(gid, ".", ATTR2, H5P_DEFAULT);
     assert(ret >= 0);
 
     /* Close first group */
@@ -303,7 +303,7 @@ int main()
     assert(ret >= 0);
 
     /* Re-create 2nd attribute on first group */
-    aid = H5Acreate2(gid, ATTR2, tid, sid, H5P_DEFAULT, H5P_DEFAULT);
+    aid = H5Acreate2(gid, ".", ATTR2, tid, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     assert(aid > 0);
 
     /* Close dataspace */

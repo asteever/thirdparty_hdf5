@@ -340,7 +340,7 @@ void null_dataset(void)
     VRFY((ret >= 0), "H5Dwrite succeeded");
 
     /* Create an attribute for the group */
-    attr = H5Acreate2(dataset, attr_name, H5T_NATIVE_UINT, sid, H5P_DEFAULT, H5P_DEFAULT);
+    attr = H5Acreate2(dataset, ".", attr_name, H5T_NATIVE_UINT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     VRFY((attr >= 0), "H5Acreate2");
 
     /* Write "nothing" to the attribute(with type conversion) */
@@ -378,7 +378,7 @@ void null_dataset(void)
     VRFY((uval==2), "H5Dread");
 
     /* Open the attribute for the dataset */
-    attr = H5Aopen(dataset, attr_name, H5P_DEFAULT);
+    attr = H5Aopen(dataset, ".", attr_name, H5P_DEFAULT, H5P_DEFAULT);
     VRFY((attr >= 0), "H5Aopen");
 
     /* Try reading from the attribute(make certain our buffer is unmodified) */    ret = H5Aread(attr, H5T_NATIVE_INT, &val);
@@ -1296,7 +1296,7 @@ void write_attribute(hid_t obj_id, int this_type, int num)
     if(this_type == is_group) {
         sprintf(attr_name, "Group Attribute %d", num);
         sid = H5Screate(H5S_SCALAR);
-        aid = H5Acreate2(obj_id, attr_name, H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT);
+        aid = H5Acreate2(obj_id, ".", attr_name, H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
         H5Awrite(aid, H5T_NATIVE_INT,  &num);
         H5Aclose(aid);
         H5Sclose(sid);
@@ -1306,7 +1306,7 @@ void write_attribute(hid_t obj_id, int this_type, int num)
         for(i=0; i<8; i++)
             attr_data[i] = i;
         sid = H5Screate_simple(dspace_rank, dspace_dims, NULL);
-        aid = H5Acreate2(obj_id, attr_name, H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT);
+        aid = H5Acreate2(obj_id, ".", attr_name, H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
         H5Awrite(aid, H5T_NATIVE_INT, attr_data);
         H5Aclose(aid);
         H5Sclose(sid);
@@ -1326,7 +1326,7 @@ int read_attribute(hid_t obj_id, int this_type, int num)
 
     if(this_type == is_group) {
         sprintf(attr_name, "Group Attribute %d", num);
-        aid = H5Aopen(obj_id, attr_name, H5P_DEFAULT);
+        aid = H5Aopen(obj_id, ".", attr_name, H5P_DEFAULT, H5P_DEFAULT);
         if(MAINPROCESS) {
             H5Aread(aid, H5T_NATIVE_INT, &in_num);
             vrfy_errors =  dataset_vrfy(NULL, NULL, NULL, group_block, &in_num, &num);
@@ -1337,7 +1337,7 @@ int read_attribute(hid_t obj_id, int this_type, int num)
         sprintf(attr_name, "Dataset Attribute %d", num);
         for(i=0; i<8; i++)
             out_data[i] = i;
-        aid = H5Aopen(obj_id, attr_name, H5P_DEFAULT);
+        aid = H5Aopen(obj_id, ".", attr_name, H5P_DEFAULT, H5P_DEFAULT);
         if(MAINPROCESS) {
             H5Aread(aid, H5T_NATIVE_INT, in_data);
             vrfy_errors = dataset_vrfy(NULL, NULL, NULL, dset_block, in_data, out_data);
@@ -1598,7 +1598,7 @@ void io_mode_confusion(void)
                        mpi_rank, fcn_name);
 
         status = H5Sselect_elements(filespace, H5S_SELECT_SET, N,
-                                   &coord);
+                                   (const hsize_t **)&coord);
         VRFY((status >= 0 ), "H5Sselect_elements() failed");
     } else { /* select nothing */
         if(verbose )

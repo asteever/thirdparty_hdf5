@@ -18,12 +18,6 @@
 
 #include "hdf5.h"
 
-/* Typedefs for visiting objects */
-typedef herr_t (*h5trav_obj_func_t)(const char *path_name, const H5O_info_t *oinfo,
-        const char *first_seen, void *udata);
-typedef herr_t (*h5trav_lnk_func_t)(const char *path_name, const H5L_info_t *linfo,
-        void *udata);
-
 /*-------------------------------------------------------------------------
  * public enum to specify type of an object
  * the TYPE can be:
@@ -105,14 +99,6 @@ typedef struct trav_table_t {
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-/*-------------------------------------------------------------------------
- * "h5trav general" public functions
- *-------------------------------------------------------------------------
- */
-int h5trav_visit(hid_t file_id, const char *grp_name, hbool_t visit_start,
-    hbool_t recurse, h5trav_obj_func_t visit_obj, h5trav_lnk_func_t visit_lnk,
-    void *udata);
 
 /*-------------------------------------------------------------------------
  * "h5trav info" public functions

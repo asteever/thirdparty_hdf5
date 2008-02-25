@@ -152,11 +152,11 @@ herr_t H5DSattach_scale(hid_t did,
   return FAIL;
 
  /* get info for the dataset in the parameter list */
- if(H5Oget_info(did, &oi1) < 0)
+ if(H5Oget_info(did, ".", &oi1, H5P_DEFAULT) < 0)
   return FAIL;
 
  /* get info for the scale in the parameter list */
- if(H5Oget_info(dsid, &oi2) < 0)
+ if(H5Oget_info(dsid, ".", &oi2, H5P_DEFAULT) < 0)
   return FAIL;
 
  /* same object, not valid */
@@ -249,7 +249,7 @@ herr_t H5DSattach_scale(hid_t did,
    goto out;
 
   /* create the attribute */
-  if((aid = H5Acreate2(did, DIMENSION_LIST, tid, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+  if((aid = H5Acreate2(did, ".", DIMENSION_LIST, tid, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
    goto out;
 
   /* allocate and initialize the VL */
@@ -297,7 +297,7 @@ herr_t H5DSattach_scale(hid_t did,
 
  else if ( has_dimlist == 1 )
  {
-  if((aid = H5Aopen(did, DIMENSION_LIST, H5P_DEFAULT)) < 0)
+  if((aid = H5Aopen(did, ".", DIMENSION_LIST, H5P_DEFAULT, H5P_DEFAULT)) < 0)
    goto out;
 
   if((tid = H5Aget_type(aid)) < 0)
@@ -328,11 +328,11 @@ herr_t H5DSattach_scale(hid_t did,
     goto out;
 
    /* get info for DS in the parameter list */
-   if(H5Oget_info(dsid, &oi1) < 0)
+   if(H5Oget_info(dsid, ".", &oi1, H5P_DEFAULT) < 0)
     goto out;
 
    /* get info for this DS */
-   if(H5Oget_info(dsid_j, &oi2) < 0)
+   if(H5Oget_info(dsid_j, ".", &oi2, H5P_DEFAULT) < 0)
     goto out;
 
    /* same object, so this DS scale is already in this DIM IDX */
@@ -421,7 +421,7 @@ herr_t H5DSattach_scale(hid_t did,
    goto out;
 
   /* create the attribute */
-  if((aid = H5Acreate2(dsid, REFERENCE_LIST, tid, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+  if((aid = H5Acreate2(dsid, ".", REFERENCE_LIST, tid, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
    goto out;
 
   /* store the IDX information */
@@ -450,7 +450,7 @@ herr_t H5DSattach_scale(hid_t did,
 
  else if(has_reflist ==  1)
  {
-  if((aid = H5Aopen(dsid, REFERENCE_LIST, H5P_DEFAULT)) < 0)
+  if((aid = H5Aopen(dsid, ".", REFERENCE_LIST, H5P_DEFAULT, H5P_DEFAULT)) < 0)
    goto out;
 
   if((tid = H5Aget_type(aid)) < 0)
@@ -485,7 +485,7 @@ herr_t H5DSattach_scale(hid_t did,
  */
 
   /* the attribute must be deleted, in order to the new one can reflect the changes*/
-  if(H5Adelete(dsid, REFERENCE_LIST) < 0)
+  if (H5Adelete2(dsid, ".", REFERENCE_LIST, H5P_DEFAULT) < 0)
    goto out;
 
   /* store the IDX information (index of the dataset that has the DS) */
@@ -505,7 +505,7 @@ herr_t H5DSattach_scale(hid_t did,
    free(dims);
 
   /* create the attribute again with the changes of space */
-  if((aid = H5Acreate2(dsid, REFERENCE_LIST, tid, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+  if((aid = H5Acreate2(dsid, ".", REFERENCE_LIST, tid, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
    goto out;
 
   /* write the attribute with the new references */
@@ -612,11 +612,11 @@ herr_t H5DSdetach_scale(hid_t did,
   return FAIL;
 
  /* get info for the dataset in the parameter list */
- if(H5Oget_info(did, &oi1) < 0)
+ if(H5Oget_info(did, ".", &oi1, H5P_DEFAULT) < 0)
   return FAIL;
 
  /* get info for the scale in the parameter list */
- if(H5Oget_info(dsid, &oi2) < 0)
+ if(H5Oget_info(dsid, ".", &oi2, H5P_DEFAULT) < 0)
   return FAIL;
 
  /* same object, not valid */
@@ -674,7 +674,7 @@ herr_t H5DSdetach_scale(hid_t did,
  *-------------------------------------------------------------------------
  */
 
- if((aid = H5Aopen(did, DIMENSION_LIST, H5P_DEFAULT)) < 0)
+ if((aid = H5Aopen(did, ".", DIMENSION_LIST, H5P_DEFAULT, H5P_DEFAULT)) < 0)
   return FAIL;
 
  if((tid = H5Aget_type(aid)) < 0)
@@ -706,11 +706,11 @@ herr_t H5DSdetach_scale(hid_t did,
     goto out;
 
    /* get info for DS in the parameter list */
-   if(H5Oget_info(dsid, &oi1) < 0)
+   if(H5Oget_info(dsid, ".", &oi1, H5P_DEFAULT) < 0)
     goto out;
 
    /* get info for this DS */
-   if(H5Oget_info(dsid_j, &oi2) < 0)
+   if(H5Oget_info(dsid_j, ".", &oi2, H5P_DEFAULT) < 0)
     goto out;
 
    /* same object, reset */
@@ -758,7 +758,7 @@ herr_t H5DSdetach_scale(hid_t did,
  *-------------------------------------------------------------------------
  */
 
- if((aid = H5Aopen(dsid, REFERENCE_LIST, H5P_DEFAULT)) < 0)
+ if((aid = H5Aopen(dsid, ".", REFERENCE_LIST, H5P_DEFAULT, H5P_DEFAULT)) < 0)
   goto out;
 
  if((tid = H5Aget_type(aid)) < 0)
@@ -788,11 +788,11 @@ herr_t H5DSdetach_scale(hid_t did,
    goto out;
 
   /* get info for dataset in the parameter list */
-  if(H5Oget_info(did, &oi3) < 0)
+  if(H5Oget_info(did, ".", &oi3, H5P_DEFAULT) < 0)
    goto out;
 
   /* get info for this dataset */
-  if(H5Oget_info(did_i, &oi4) < 0)
+  if(H5Oget_info(did_i, ".", &oi4, H5P_DEFAULT) < 0)
    goto out;
 
   /* same object, reset. we want to detach only for this DIM */
@@ -835,7 +835,7 @@ herr_t H5DSdetach_scale(hid_t did,
  */
 
  /* the attribute must be deleted, in order to the new one can reflect the changes*/
- if(H5Adelete(dsid, REFERENCE_LIST) < 0)
+ if (H5Adelete2(dsid, ".", REFERENCE_LIST, H5P_DEFAULT) < 0)
   goto out;
 
  /* don't do anything for an empty array */
@@ -859,7 +859,7 @@ herr_t H5DSdetach_scale(hid_t did,
    goto out;
 
   /* create the attribute again with the changes of space */
-  if((aid = H5Acreate2(dsid, REFERENCE_LIST, tid, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+  if((aid = H5Acreate2(dsid, ".", REFERENCE_LIST, tid, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
    goto out;
 
   /* write the new attribute with the new references */
@@ -967,11 +967,11 @@ htri_t H5DSis_attached(hid_t did,
   return FAIL;
 
  /* get info for the dataset in the parameter list */
- if(H5Oget_info(did, &oi1) < 0)
+ if(H5Oget_info(did, ".", &oi1, H5P_DEFAULT) < 0)
   return FAIL;
 
  /* get info for the scale in the parameter list */
- if(H5Oget_info(dsid, &oi2) < 0)
+ if(H5Oget_info(dsid, ".", &oi2, H5P_DEFAULT) < 0)
   return FAIL;
 
  /* same object, not valid */
@@ -1019,7 +1019,7 @@ htri_t H5DSis_attached(hid_t did,
 
  if(has_dimlist == 1)
  {
-  if((aid = H5Aopen(did, DIMENSION_LIST, H5P_DEFAULT)) < 0)
+  if((aid = H5Aopen(did, ".", DIMENSION_LIST, H5P_DEFAULT, H5P_DEFAULT)) < 0)
    goto out;
 
   if((tid = H5Aget_type(aid)) < 0)
@@ -1049,11 +1049,11 @@ htri_t H5DSis_attached(hid_t did,
     goto out;
 
    /* get info for DS in the parameter list */
-   if(H5Oget_info(dsid, &oi1) < 0)
+   if(H5Oget_info(dsid, ".", &oi1, H5P_DEFAULT) < 0)
     goto out;
 
    /* get info for this DS */
-   if(H5Oget_info(dsid_j, &oi2) < 0)
+   if(H5Oget_info(dsid_j, ".", &oi2, H5P_DEFAULT) < 0)
     goto out;
 
    /* same object */
@@ -1096,7 +1096,7 @@ htri_t H5DSis_attached(hid_t did,
 
  if(has_reflist ==  1)
  {
-  if((aid = H5Aopen(dsid, REFERENCE_LIST, H5P_DEFAULT)) < 0)
+  if((aid = H5Aopen(dsid, ".", REFERENCE_LIST, H5P_DEFAULT, H5P_DEFAULT)) < 0)
    goto out;
 
   if((tid = H5Aget_type(aid)) < 0)
@@ -1135,11 +1135,11 @@ htri_t H5DSis_attached(hid_t did,
      goto out;
 
     /* get info for dataset in the parameter list */
-    if(H5Oget_info(did, &oi3) < 0)
+    if(H5Oget_info(did, ".", &oi3, H5P_DEFAULT) < 0)
      goto out;
 
     /* get info for this dataset */
-    if(H5Oget_info(did_i, &oi4) < 0)
+    if(H5Oget_info(did_i, ".", &oi4, H5P_DEFAULT) < 0)
      goto out;
 
     /* same object */
@@ -1278,7 +1278,7 @@ herr_t H5DSiterate_scales(hid_t did,
 
  else if(has_dimlist == 1)
  {
-  if((aid = H5Aopen(did, DIMENSION_LIST, H5P_DEFAULT)) < 0)
+  if((aid = H5Aopen(did, ".", DIMENSION_LIST, H5P_DEFAULT, H5P_DEFAULT)) < 0)
    goto out;
   if((tid = H5Aget_type(aid)) < 0)
    goto out;
@@ -1451,7 +1451,7 @@ herr_t H5DSset_label(hid_t did,
    goto out;
 
   /* create the attribute */
-  if((aid = H5Acreate2(did, DIMENSION_LABELS, tid, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0)
+  if((aid = H5Acreate2(did, ".", DIMENSION_LABELS, tid, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0)
    goto out;
 
   /* allocate and initialize */
@@ -1488,7 +1488,7 @@ herr_t H5DSset_label(hid_t did,
 
  else
  {
-  if((aid = H5Aopen(did, DIMENSION_LABELS, H5P_DEFAULT)) < 0)
+  if((aid = H5Aopen(did, ".", DIMENSION_LABELS, H5P_DEFAULT, H5P_DEFAULT)) < 0)
    goto out;
 
   if((tid = H5Aget_type(aid)) < 0)
@@ -1614,7 +1614,7 @@ ssize_t H5DSget_label(hid_t did,
  */
 
  assert (has_labels == 1);
-  if((aid = H5Aopen(did, DIMENSION_LABELS, H5P_DEFAULT)) < 0)
+  if((aid = H5Aopen(did, ".", DIMENSION_LABELS, H5P_DEFAULT, H5P_DEFAULT)) < 0)
    goto out;
 
   if((tid = H5Aget_type(aid)) < 0)
@@ -1730,7 +1730,7 @@ ssize_t H5DSget_scale_name(hid_t did,
  *-------------------------------------------------------------------------
  */
 
- if((aid = H5Aopen(did, "NAME", H5P_DEFAULT)) < 0)
+ if((aid = H5Aopen(did, ".", "NAME", H5P_DEFAULT, H5P_DEFAULT)) < 0)
   return FAIL;
 
  /* get space */
@@ -1839,7 +1839,7 @@ htri_t H5DSis_scale(hid_t did)
 
  else
  {
-  if((aid = H5Aopen(did, "CLASS", H5P_DEFAULT)) < 0)
+  if((aid = H5Aopen(did, ".", "CLASS", H5P_DEFAULT, H5P_DEFAULT)) < 0)
    goto out;
 
   if((tid = H5Aget_type(aid)) < 0)
@@ -1950,7 +1950,7 @@ int H5DSget_num_scales(hid_t did,
 
  else
  {
-  if((aid = H5Aopen(did, DIMENSION_LIST, H5P_DEFAULT)) < 0)
+  if((aid = H5Aopen(did, ".", DIMENSION_LIST, H5P_DEFAULT, H5P_DEFAULT)) < 0)
    goto out;
   if((tid = H5Aget_type(aid)) < 0)
    goto out;
@@ -2029,7 +2029,7 @@ herr_t H5DS_is_reserved(hid_t did)
   return 0;
 
  assert(has_class ==  1);
-  if((aid = H5Aopen(did, "CLASS", H5P_DEFAULT)) < 0)
+  if((aid = H5Aopen(did, ".", "CLASS", H5P_DEFAULT, H5P_DEFAULT)) < 0)
    goto out;
 
   if((tid = H5Aget_type(aid)) < 0)

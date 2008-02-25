@@ -379,7 +379,7 @@ gent_attribute(void)
     /* attribute 1 */
     dims[0] = 24;
     space = H5Screate_simple(1, dims, NULL);
-    attr = H5Acreate2(root, "attr1", H5T_STD_I8BE, space, H5P_DEFAULT, H5P_DEFAULT);
+    attr = H5Acreate2(root, ".", "attr1", H5T_STD_I8BE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     sprintf(buf, "attribute of root group");
     H5Awrite(attr, H5T_NATIVE_SCHAR, buf);
     H5Sclose(space);
@@ -388,7 +388,7 @@ gent_attribute(void)
     /* attribute 2 */
     dims[0] = 10;
     space = H5Screate_simple(1, dims, NULL);
-    attr = H5Acreate2(root, "attr2", H5T_STD_I32BE, space, H5P_DEFAULT, H5P_DEFAULT);
+    attr = H5Acreate2(root, ".", "attr2", H5T_STD_I32BE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
     for(i = 0; i < 10; i++) data[i] = i+1;
 
@@ -399,7 +399,7 @@ gent_attribute(void)
     /* attribute 3 */
     dims[0] = 10;
     space = H5Screate_simple(1, dims, NULL);
-    attr = H5Acreate2(root, "attr3", H5T_IEEE_F64BE, space, H5P_DEFAULT, H5P_DEFAULT);
+    attr = H5Acreate2(root, ".", "attr3", H5T_IEEE_F64BE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
     for(i = 0; i < 10; i++) d[i] = 0.1 * i;
 
@@ -409,7 +409,7 @@ gent_attribute(void)
 
     /* attribute 4 */
     space = H5Screate(H5S_SCALAR);
-    attr = H5Acreate2(root, "attr4", H5T_STD_I32BE, space, H5P_DEFAULT, H5P_DEFAULT);
+    attr = H5Acreate2(root, ".", "attr4", H5T_STD_I32BE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     H5Awrite(attr, H5T_NATIVE_INT, &point);
     H5Sclose(space);
     H5Aclose(attr);
@@ -418,7 +418,7 @@ gent_attribute(void)
     space = H5Screate(H5S_SCALAR);
     type = H5Tcopy(H5T_C_S1);
     H5Tset_size(type, 17);
-    attr = H5Acreate2(root, "attr5", type, space, H5P_DEFAULT, H5P_DEFAULT);
+    attr = H5Acreate2(root, ".", "attr5", type, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     H5Awrite(attr, type, string);
 
     H5Tclose(type);
@@ -930,7 +930,7 @@ static void gent_all(void)
 
     dims[0] = 10;
     space = H5Screate_simple(1, dims, NULL);
-    attr = H5Acreate2(group, "attr1", H5T_STD_I8BE, space, H5P_DEFAULT, H5P_DEFAULT);
+    attr = H5Acreate2(group, ".", "attr1", H5T_STD_I8BE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     sprintf(buf, "abcdefghi");
     H5Awrite(attr, H5T_NATIVE_SCHAR, buf);
     H5Sclose(space);
@@ -938,7 +938,7 @@ static void gent_all(void)
 
     dims[0] = 2; dims[1] = 2;
     space = H5Screate_simple(2, dims, NULL);
-    attr = H5Acreate2(group, "attr2", H5T_STD_I32BE, space, H5P_DEFAULT, H5P_DEFAULT);
+    attr = H5Acreate2(group, ".", "attr2", H5T_STD_I32BE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     data[0][0] = 0; data[0][1] = 1; data[1][0] = 2; data[1][1] = 3;
     H5Awrite(attr, H5T_NATIVE_INT, data);
     H5Sclose(space);
@@ -961,7 +961,7 @@ static void gent_all(void)
     /* attributes of dset1.1.1 */
     dims[0] = 27;
     space = H5Screate_simple(1, dims, NULL);
-    attr = H5Acreate2(dataset, "attr1", H5T_STD_I8BE, space, H5P_DEFAULT, H5P_DEFAULT);
+    attr = H5Acreate2(dataset, ".", "attr1", H5T_STD_I8BE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     sprintf(buf, "1st attribute of dset1.1.1");
     H5Awrite(attr, H5T_NATIVE_SCHAR, buf);
     H5Sclose(space);
@@ -969,7 +969,7 @@ static void gent_all(void)
 
     dims[0] = 27;
     space = H5Screate_simple(1, dims, NULL);
-    attr = H5Acreate2(dataset, "attr2", H5T_STD_I8BE, space, H5P_DEFAULT, H5P_DEFAULT);
+    attr = H5Acreate2(dataset, ".", "attr2", H5T_STD_I8BE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     sprintf(buf, "2nd attribute of dset1.1.1");
     H5Awrite(attr, H5T_NATIVE_SCHAR, buf);
     H5Sclose(space);
@@ -1164,7 +1164,7 @@ static void gent_many(void)
   /* add attributes to dset1 */
   dims[0] = 10;
   space2 = H5Screate_simple(1, dims, NULL);
-  attr = H5Acreate2(dataset, "attr1", H5T_STD_I8BE, space2, H5P_DEFAULT, H5P_DEFAULT);
+  attr = H5Acreate2(dataset, ".", "attr1", H5T_STD_I8BE, space2, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   sprintf(buf, "abcdefghi");
   H5Awrite(attr, H5T_NATIVE_CHAR, buf);
   H5Sclose(space2);
@@ -1172,7 +1172,7 @@ static void gent_many(void)
 
   dims[0] = 2; dims[1] = 2;
   space2 = H5Screate_simple(2, dims, NULL);
-  attr = H5Acreate2(dataset, "attr2", H5T_STD_I32BE, space2, H5P_DEFAULT, H5P_DEFAULT);
+  attr = H5Acreate2(dataset, ".", "attr2", H5T_STD_I32BE, space2, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   data[0][0] = 0; data[0][1] = 1; data[1][0] = 2; data[1][1] = 3;
   H5Awrite(attr, H5T_NATIVE_INT, data);
   H5Sclose(space2);
@@ -1180,7 +1180,7 @@ static void gent_many(void)
 
   dims[0] = 10;
   space2 = H5Screate_simple(1, dims, NULL);
-  attr = H5Acreate2(dataset, "attr3", H5T_IEEE_F64BE, space2, H5P_DEFAULT, H5P_DEFAULT);
+  attr = H5Acreate2(dataset, ".", "attr3", H5T_IEEE_F64BE, space2, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   for(i = 0; i < 10; i++)
       d[i] = 0.1 * i;
   H5Awrite(attr, H5T_NATIVE_DOUBLE, d);
@@ -1488,7 +1488,7 @@ hsize_t sdim;
 
   dims[0] = 3;
   space2 = H5Screate_simple(1, dims, NULL);
-  attr = H5Acreate2(dataset, "attr1", fxdlenstr2, space2, H5P_DEFAULT, H5P_DEFAULT);
+  attr = H5Acreate2(dataset, ".", "attr1", fxdlenstr2, space2, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   sprintf(&(buf2[0*LENSTR2]), "0123456789");
   sprintf(&(buf2[1*LENSTR2]), "abcdefghij");
   sprintf(&(buf2[2*LENSTR2]), "ABCDEFGHIJ");
@@ -1662,7 +1662,7 @@ static void gent_objref(void)
     group = H5Gcreate2(fid1, "Group1", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
     /* Set group's comment */
-    H5Oset_comment(group, write_comment);
+    H5Oset_comment(group, ".", write_comment, H5P_DEFAULT);
 
     /* Create a dataset (inside Group1) */
     dataset = H5Dcreate2(group, "Dataset1", H5T_STD_U32BE, sid1, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
@@ -1812,7 +1812,7 @@ static void gent_datareg(void)
     coord1[7][0]=9; coord1[7][1]=0;
     coord1[8][0]=7; coord1[8][1]=1;
     coord1[9][0]=3; coord1[9][1]=3;
-    H5Sselect_elements(sid2,H5S_SELECT_SET,POINT1_NPOINTS,coord1);
+    H5Sselect_elements(sid2,H5S_SELECT_SET,POINT1_NPOINTS,(const hsize_t **)coord1);
 
     H5Sget_select_npoints(sid2);
 
@@ -2882,51 +2882,51 @@ gent_group_comments(void)
 
     /* / */
     group = H5Gcreate2(fid, "/g1", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    H5Oset_comment_by_name(group, "/g1", "Comment for group /g1", H5P_DEFAULT);
+    H5Oset_comment(group, "/g1", "Comment for group /g1", H5P_DEFAULT);
     H5Gclose(group);
     group = H5Gcreate2(fid, "/g2", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    H5Oset_comment_by_name(group, "/g2", "Comment for group /g2", H5P_DEFAULT);
+    H5Oset_comment(group, "/g2", "Comment for group /g2", H5P_DEFAULT);
     H5Gclose(group);
     group = H5Gcreate2(fid, "/g3", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    H5Oset_comment_by_name(group, "/g3", "Comment for group /g3", H5P_DEFAULT);
+    H5Oset_comment(group, "/g3", "Comment for group /g3", H5P_DEFAULT);
     H5Gclose(group);
 
     /* /g1 */
     group = H5Gcreate2(fid, "/g1/g1.1", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    H5Oset_comment_by_name(group, "/g1/g1.1", "Comment for group /g1/g1.1", H5P_DEFAULT);
+    H5Oset_comment(group, "/g1/g1.1", "Comment for group /g1/g1.1", H5P_DEFAULT);
     H5Gclose(group);
     group = H5Gcreate2(fid, "/g1/g1.2", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    H5Oset_comment_by_name(group, "/g1/g1.2", "Comment for group /g1/g1.2", H5P_DEFAULT);
+    H5Oset_comment(group, "/g1/g1.2", "Comment for group /g1/g1.2", H5P_DEFAULT);
     H5Gclose(group);
 
     /* /g2 */
     group = H5Gcreate2(fid, "/g2/g2.1", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    H5Oset_comment_by_name(group, "/g2/g2.1", "Comment for group /g2/g2.1", H5P_DEFAULT);
+    H5Oset_comment(group, "/g2/g2.1", "Comment for group /g2/g2.1", H5P_DEFAULT);
     H5Gclose(group);
 
     /* /g3 */
     group = H5Gcreate2(fid, "/g3/g3.1", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    H5Oset_comment_by_name(group, "/g3/g3.1", "Comment for group /g3/g3.1", H5P_DEFAULT);
+    H5Oset_comment(group, "/g3/g3.1", "Comment for group /g3/g3.1", H5P_DEFAULT);
     H5Gclose(group);
     group = H5Gcreate2(fid, "/g3/g3.2", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    H5Oset_comment_by_name(group, "/g3/g3.2", "Comment for group /g3/g3.2", H5P_DEFAULT);
+    H5Oset_comment(group, "/g3/g3.2", "Comment for group /g3/g3.2", H5P_DEFAULT);
     H5Gclose(group);
     group = H5Gcreate2(fid, "/g3/g3.3", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    H5Oset_comment_by_name(group, "/g3/g3.3", "Comment for group /g3/g3.3", H5P_DEFAULT);
+    H5Oset_comment(group, "/g3/g3.3", "Comment for group /g3/g3.3", H5P_DEFAULT);
     H5Gclose(group);
     group = H5Gcreate2(fid, "/g3/g3.4", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    H5Oset_comment_by_name(group, "/g3/g3.4", "Comment for group /g3/g3.4", H5P_DEFAULT);
+    H5Oset_comment(group, "/g3/g3.4", "Comment for group /g3/g3.4", H5P_DEFAULT);
     H5Gclose(group);
 
     /* /g2/g2.1 */
     group = H5Gcreate2(fid, "/g2/g2.1/g2.1.1", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    H5Oset_comment_by_name(group, "/g2/g2.1/g2.1.1", "Comment for group /g2/g2.1/g2.1.1", H5P_DEFAULT);
+    H5Oset_comment(group, "/g2/g2.1/g2.1.1", "Comment for group /g2/g2.1/g2.1.1", H5P_DEFAULT);
     H5Gclose(group);
     group = H5Gcreate2(fid, "/g2/g2.1/g2.1.2", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    H5Oset_comment_by_name(group, "/g2/g2.1/g2.1.2", "Comment for group /g2/g2.1/g2.1.2", H5P_DEFAULT);
+    H5Oset_comment(group, "/g2/g2.1/g2.1.2", "Comment for group /g2/g2.1/g2.1.2", H5P_DEFAULT);
     H5Gclose(group);
     group = H5Gcreate2(fid, "/g2/g2.1/g2.1.3", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    H5Oset_comment_by_name(group, "/g2/g2.1/g2.1.3", "Comment for group /g2/g2.1/g2.1.3", H5P_DEFAULT);
+    H5Oset_comment(group, "/g2/g2.1/g2.1.3", "Comment for group /g2/g2.1/g2.1.3", H5P_DEFAULT);
     H5Gclose(group);
 
     H5Fclose(fid);
@@ -2951,7 +2951,7 @@ void gent_split_file(void)
 
     dims[0] = 1;
     space = H5Screate_simple(1, dims, NULL);
-    attr = H5Acreate2(root, "Metadata", atype, space, H5P_DEFAULT, H5P_DEFAULT);
+    attr = H5Acreate2(root, ".", "Metadata", atype, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     H5Awrite(attr, atype, meta);
     H5Tclose(atype);
     H5Sclose(space);
@@ -3121,7 +3121,7 @@ static void gent_vlstr(void)
     root = H5Gopen2(fid1, "/", H5P_DEFAULT);
     dataspace = H5Screate(H5S_SCALAR);
 
-    att = H5Acreate2(root, "test_scalar", tid1, dataspace, H5P_DEFAULT, H5P_DEFAULT);
+    att = H5Acreate2(root, ".", "test_scalar", tid1, dataspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     H5Awrite(att, tid1, &string_att);
 
     /* Close */
@@ -3322,7 +3322,7 @@ static void write_attr_in(hid_t loc_id,
 
  sid = H5Screate_simple(1, dims, NULL);
  tid = H5Tvlen_create(H5T_NATIVE_INT);
- aid = H5Acreate2(loc_id, "vlen", tid, sid, H5P_DEFAULT, H5P_DEFAULT);
+ aid = H5Acreate2(loc_id, ".", "vlen", tid, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
  status = H5Awrite(aid, tid, buf5);
  assert(status >= 0);
  status = H5Dvlen_reclaim(tid, sid, H5P_DEFAULT, buf5);
@@ -3433,7 +3433,7 @@ static void write_attr_in(hid_t loc_id,
 
  sid = H5Screate_simple(2, dims2, NULL);
  tid = H5Tvlen_create(H5T_NATIVE_INT);
- aid = H5Acreate2(loc_id, "vlen2D", tid, sid, H5P_DEFAULT, H5P_DEFAULT);
+ aid = H5Acreate2(loc_id, ".", "vlen2D", tid, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
  status = H5Awrite(aid, tid, buf52);
  assert(status >= 0);
  status = H5Dvlen_reclaim(tid, sid, H5P_DEFAULT, buf52);
@@ -3566,7 +3566,7 @@ static void write_attr_in(hid_t loc_id,
 
  sid = H5Screate_simple(3, dims3, NULL);
  tid = H5Tvlen_create(H5T_NATIVE_INT);
- aid = H5Acreate2(loc_id, "vlen3D", tid, sid, H5P_DEFAULT, H5P_DEFAULT);
+ aid = H5Acreate2(loc_id, ".", "vlen3D", tid, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
  status = H5Awrite(aid, tid, buf53);
  assert(status >= 0);
  status = H5Dvlen_reclaim(tid, sid, H5P_DEFAULT, buf53);
@@ -4157,7 +4157,7 @@ int write_attr(hid_t loc_id, int rank, hsize_t *dims, const char *attr_name,
  sid = H5Screate_simple(rank, dims, NULL);
 
  /* Create the attribute */
- aid = H5Acreate2(loc_id, attr_name, tid, sid, H5P_DEFAULT, H5P_DEFAULT);
+ aid = H5Acreate2(loc_id, ".", attr_name, tid, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
  /* Write the buf */
  if(buf)
@@ -4421,7 +4421,7 @@ static void gent_named_dtype_attr(void)
    assert(sid > 0);
 
    /* Create attribute on commited datatype */
-   aid = H5Acreate2(tid, F42_ATTRNAME, H5T_STD_I32LE, sid, H5P_DEFAULT, H5P_DEFAULT);
+   aid = H5Acreate2(tid, ".", F42_ATTRNAME, H5T_STD_I32LE, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
    assert(aid > 0);
 
    /* Write data into the attribute */
@@ -4438,7 +4438,7 @@ static void gent_named_dtype_attr(void)
    assert(did > 0);
 
    /* Create attribute on dataset */
-   aid = H5Acreate2(did, F42_ATTRNAME, tid, sid, H5P_DEFAULT, H5P_DEFAULT);
+   aid = H5Acreate2(did, ".", F42_ATTRNAME, tid, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
    assert(aid > 0);
 
    /* Write data into the attribute */
@@ -4455,7 +4455,7 @@ static void gent_named_dtype_attr(void)
    assert(gid > 0);
 
    /* Create attribute on group */
-   aid = H5Acreate2(gid, F42_ATTRNAME, tid, sid, H5P_DEFAULT, H5P_DEFAULT);
+   aid = H5Acreate2(gid, ".", F42_ATTRNAME, tid, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
    assert(aid > 0);
 
    /* Write data into the attribute */
@@ -4513,7 +4513,7 @@ static void gent_null_space(void)
     H5Dwrite(dataset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &dset_buf);
 
     /* attribute */
-    attr = H5Acreate2(root, "attr", H5T_NATIVE_UINT, space, H5P_DEFAULT, H5P_DEFAULT);
+    attr = H5Acreate2(root, ".", "attr", H5T_NATIVE_UINT, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     H5Awrite(attr, H5T_NATIVE_INT, &point); /* Nothing can be written */
 
     H5Dclose(dataset);
@@ -4658,7 +4658,7 @@ static void gent_filters(void)
  ret=make_dset(fid,"compact",sid,H5T_NATIVE_INT,dcpl,buf1);
  assert(ret >= 0);
 
- ret = H5Oset_comment_by_name(fid, "compact", "This is a dataset with compact storage", H5P_DEFAULT);
+ ret = H5Oset_comment(fid, "compact", "This is a dataset with compact storage", H5P_DEFAULT);
  assert(ret >= 0);
 
  ret = H5Pset_layout(dcpl, H5D_CONTIGUOUS);
@@ -4667,7 +4667,7 @@ static void gent_filters(void)
  ret=make_dset(fid,"contiguous",sid,H5T_NATIVE_INT,dcpl,buf1);
  assert(ret >= 0);
 
- ret = H5Oset_comment_by_name(fid, "contiguous", "This is a dataset with contiguous storage", H5P_DEFAULT);
+ ret = H5Oset_comment(fid, "contiguous", "This is a dataset with contiguous storage", H5P_DEFAULT);
  assert(ret >= 0);
 
  ret = H5Pset_layout(dcpl, H5D_CHUNKED);
@@ -4679,7 +4679,7 @@ static void gent_filters(void)
  ret=make_dset(fid,"chunked",sid,H5T_NATIVE_INT,dcpl,buf1);
  assert(ret >= 0);
 
- ret = H5Oset_comment_by_name(fid, "chunked", "This is a dataset with chunked storage", H5P_DEFAULT);
+ ret = H5Oset_comment(fid, "chunked", "This is a dataset with chunked storage", H5P_DEFAULT);
  assert(ret >= 0);
 
 /*-------------------------------------------------------------------------
@@ -4906,7 +4906,7 @@ static void gent_filters(void)
  ret = H5Tcommit2(fid, "mytype", tid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
  assert(ret >= 0);
 
- ret = H5Oset_comment_by_name(fid, "mytype", "This is a commited datatype", H5P_DEFAULT);
+ ret = H5Oset_comment(fid, "mytype", "This is a commited datatype", H5P_DEFAULT);
  assert(ret >= 0);
 
  ret = H5Tclose(tid);
@@ -5955,7 +5955,7 @@ gent_attr_creation_order(void)
     /* add attributes */
     for(i = 0; i < 3; i++) 
     {
-        if((aid = H5Acreate2(did, attr_name[i], H5T_NATIVE_UCHAR, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0) 
+        if((aid = H5Acreate2(did, ".", attr_name[i], H5T_NATIVE_UCHAR, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) 
             goto out;
         
         /* close attribute */
@@ -5979,7 +5979,7 @@ gent_attr_creation_order(void)
     /* add attributes */
     for(i = 0; i < 3; i++) 
     {
-        if((aid = H5Acreate2(did, attr_name[i], H5T_NATIVE_UCHAR, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0) 
+        if((aid = H5Acreate2(did, ".", attr_name[i], H5T_NATIVE_UCHAR, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) 
             goto out;
         
         /* close attribute */
@@ -6003,7 +6003,7 @@ gent_attr_creation_order(void)
     /* add attributes */
     for(i = 0; i < 3; i++) 
     {
-        if((aid = H5Acreate2(gid, attr_name[i], H5T_NATIVE_UCHAR, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0) 
+        if((aid = H5Acreate2(gid, ".", attr_name[i], H5T_NATIVE_UCHAR, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) 
             goto out;
         
         /* close attribute */
@@ -6026,7 +6026,7 @@ gent_attr_creation_order(void)
     /* add attributes */
     for(i = 0; i < 3; i++) 
     {
-        if((aid = H5Acreate2(gid, attr_name[i], H5T_NATIVE_UCHAR, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0) 
+        if((aid = H5Acreate2(gid, ".", attr_name[i], H5T_NATIVE_UCHAR, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) 
             goto out;
         
         /* close attribute */
@@ -6053,7 +6053,7 @@ gent_attr_creation_order(void)
     /* add attributes */
     for(i = 0; i < 3; i++) 
     {
-        if((aid = H5Acreate2(tid, attr_name[i], H5T_NATIVE_UCHAR, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0) 
+        if((aid = H5Acreate2(tid, ".", attr_name[i], H5T_NATIVE_UCHAR, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) 
             goto out;
         
         /* close attribute */
@@ -6079,7 +6079,7 @@ gent_attr_creation_order(void)
     /* add attributes */
     for(i = 0; i < 3; i++) 
     {
-        if((aid = H5Acreate2(tid, attr_name[i], H5T_NATIVE_UCHAR, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0) 
+        if((aid = H5Acreate2(tid, ".", attr_name[i], H5T_NATIVE_UCHAR, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) 
             goto out;
         
         /* close attribute */
@@ -6101,7 +6101,7 @@ gent_attr_creation_order(void)
     /* add attributes */
     for(i = 0; i < 3; i++) 
     {
-        if((aid = H5Acreate2(gid, attr_name[i], H5T_NATIVE_UCHAR, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0) 
+        if((aid = H5Acreate2(gid, ".", attr_name[i], H5T_NATIVE_UCHAR, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) 
             goto out;
         
         /* close attribute */
