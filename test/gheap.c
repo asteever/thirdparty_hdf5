@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -90,7 +89,7 @@ test_1 (hid_t fapl)
     for (i=0; i<1024; i++) {
 	size = i+1;
 	memset (out, 'A'+i%26, size);
-	H5Eclear2(H5E_DEFAULT);
+	H5Eclear_stack(H5E_DEFAULT);
 	status = H5HG_insert (f, H5P_DATASET_XFER_DEFAULT, size, out, obj+i);
 	if (status<0) {
 	    H5_FAILED();
@@ -109,8 +108,8 @@ test_1 (hid_t fapl)
     for (i=0; i<1024; i++) {
 	size = i+1;
 	memset (out, 'A'+i%26, size);
-	H5Eclear2(H5E_DEFAULT);
-	if (NULL==H5HG_read (f, H5P_DATASET_XFER_DEFAULT, obj+i, in, NULL)) {
+	H5Eclear_stack(H5E_DEFAULT);
+	if (NULL==H5HG_read (f, H5P_DATASET_XFER_DEFAULT, obj+i, in)) {
 	    H5_FAILED();
 	    puts("    Unable to read object");
 	    nerrors++;
@@ -182,7 +181,7 @@ test_2 (hid_t fapl)
     for (i=0; i<1024; i++) {
 	size = 1024-i;
 	memset (out, 'A'+i%26, size);
-	H5Eclear2(H5E_DEFAULT);
+	H5Eclear_stack(H5E_DEFAULT);
 	if (H5HG_insert (f, H5P_DATASET_XFER_DEFAULT, size, out, obj+i)<0) {
 	    H5_FAILED();
 	    puts("    Unable to insert object into global heap");
@@ -196,8 +195,8 @@ test_2 (hid_t fapl)
     for (i=0; i<1024; i++) {
 	size = 1024-i;
 	memset (out, 'A'+i%26, size);
-	H5Eclear2(H5E_DEFAULT);
-	if (NULL==H5HG_read (f, H5P_DATASET_XFER_DEFAULT, obj+i, in, NULL)) {
+	H5Eclear_stack(H5E_DEFAULT);
+	if (NULL==H5HG_read (f, H5P_DATASET_XFER_DEFAULT, obj+i, in)) {
 	    H5_FAILED();
 	    puts("    Unable to read object");
 	    nerrors++;
@@ -267,7 +266,7 @@ test_3 (hid_t fapl)
     for (i=0; i<1024; i++) {
 	size = i%30+100;
 	memset (out, 'A'+i%26, size);
-	H5Eclear2(H5E_DEFAULT);
+	H5Eclear_stack(H5E_DEFAULT);
 	status = H5HG_insert (f, H5P_DATASET_XFER_DEFAULT, size, out, obj+i);
 	if (status<0) {
 	    H5_FAILED();
@@ -346,7 +345,7 @@ test_4 (hid_t fapl)
 	/* Insert */
 	size = i%30+100;
 	memset (out, 'A'+i%26, size);
-	H5Eclear2(H5E_DEFAULT);
+	H5Eclear_stack(H5E_DEFAULT);
 	status = H5HG_insert (f, H5P_DATASET_XFER_DEFAULT, size, out, obj+i);
 	if (status<0) {
 	    H5_FAILED();
@@ -360,7 +359,7 @@ test_4 (hid_t fapl)
 	 * remove B, insert D, E, F; remove E; etc.
 	 */
 	if (1==i%3) {
-	    H5Eclear2(H5E_DEFAULT);
+	    H5Eclear_stack(H5E_DEFAULT);
 	    status = H5HG_remove (f, H5P_DATASET_XFER_DEFAULT, obj+i-1);
 	    if (status<0) {
 		H5_FAILED();

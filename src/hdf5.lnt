@@ -30,7 +30,7 @@
 -esym(534, HDfprintf, HDsnprintf, HDvsnprintf)
 -esym(534, H5E_clear_stack, H5E_push_stack)
 -esym(534, H5FL_arr_free, H5FL_blk_free, H5FL_reg_free, H5FL_seq_free)
--esym(534, H5CS_push, H5CS_pop)
+-esym(534, H5FS_push, H5FS_pop)
 -esym(534, H5I_clear_type, H5I_dec_type_ref)
 -esym(534, H5MM_xfree)
 -esym(534, H5RC_decr)
@@ -91,6 +91,7 @@
     The following files have had their FUNC_ENTER, FUNC_LEAVE & HGOTO*
     macros cleaned up, but have not been linted
     due to their dependencies on features that we don't support on Windows:
+        H5FDfphdf5.c
         H5FDmpio.c
         H5FDmpiposix.c
         H5FDstream.c

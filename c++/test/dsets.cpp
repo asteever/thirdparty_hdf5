@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*****************************************************************************
@@ -61,6 +60,7 @@ const int H5Z_FILTER_BOGUS = 305;
 // Local prototypes
 static size_t filter_bogus(unsigned int flags, size_t cd_nelmts,
     const unsigned int *cd_values, size_t nbytes, size_t *buf_size, void **buf);
+void cleanup_dsets(void);
 
 
 /*-------------------------------------------------------------------------
@@ -172,7 +172,7 @@ test_create( H5File& file)
     // catch all other exceptions
     catch (Exception E)
     {
-	issue_fail_msg("test_create", __LINE__, __FILE__);
+	issue_fail_msg(E.getCFuncName(), __LINE__, __FILE__);
 
 	// clean up and return with failure
 	if (dataset != NULL)
@@ -180,6 +180,41 @@ test_create( H5File& file)
 	return -1;
     }
 }   // test_create
+
+/*-------------------------------------------------------------------------
+ * Function:	check_values
+ *
+ * Purpose:	Checks a read value against the written value.  If they are
+ *		different, the function will print out a message and the
+ *		different values.  This function is made to reuse the code
+ *		segment that is used in various places throughout
+ *		test_compression and in test_simple_io.  Where the C version
+ *		of this code segment "goto error," this function will
+ *		return -1.
+ *
+ * Return:	Success:	0
+ *
+ *		Failure:	-1
+ *
+ * Programmer:	Binh-Minh Ribler (using C code segment for checking values)
+ *		Friday, February 6, 2001
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+static int
+check_values (hsize_t i, hsize_t j, int apoint, int acheck)
+{
+    if (apoint != acheck)
+    {
+	cerr << "    Read different values than written.\n" << endl;
+	cerr << "    At index " << (unsigned long)i << "," <<
+   	(unsigned long)j << endl;
+	return -1;
+    }
+    return 0;
+} // check_values
 
 /*-------------------------------------------------------------------------
  * Function:	test_simple_io
@@ -334,7 +369,7 @@ test_tconv( H5File& file)
 	// clean up and return with success
 	delete [] out;
 	delete [] in;
-	PASSED();
+	cerr << " PASSED" << endl;
 	return 0;
     }  // end try
 
@@ -971,7 +1006,7 @@ test_types(H5File& file)
  *-------------------------------------------------------------------------
  */
 int
-main()
+main(void)
 {
     hid_t	fapl_id;
     fapl_id = h5_fileaccess(); // in h5test.c, returns a file access template
@@ -1027,11 +1062,9 @@ main()
  *
  *-------------------------------------------------------------------------
  */
-#ifdef __cplusplus
-extern "C"
-#endif
-void cleanup_dsets()
+void
+cleanup_dsets(void)
 {
-    HDremove(FILE1.c_str());
+    remove(FILE1.c_str());
 } // cleanup_dsets
 

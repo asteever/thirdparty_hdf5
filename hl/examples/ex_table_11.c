@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,12 +8,11 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "hdf5.h"
-#include "hdf5_hl.h"
 #include <stdlib.h>
 
 /*-------------------------------------------------------------------------
@@ -31,17 +29,17 @@
 
 int main( void )
 {
- typedef struct Particle1
+ typedef struct Particle1 
  {
   char   name[16];
   int    lati;
   int    longi;
   float  pressure;
-  double temperature;
+  double temperature; 
  } Particle1;
-
+ 
 /* Define an array of Particles */
- Particle1  p_data[NRECORDS] = {
+ Particle1  p_data[NRECORDS] = { 
  {"zero",0,0, 0.0f, 0.0},
  {"one",10,10, 1.0f, 10.0},
  {"two",  20,20, 2.0f, 20.0},
@@ -51,7 +49,7 @@ int main( void )
  {"six",  60,60, 6.0f, 60.0},
  {"seven",70,70, 7.0f, 70.0}
   };
-
+ 
  /* Calculate the size and the offsets of our struct members in memory */
  size_t dst_size1 =  sizeof( Particle1 );
  size_t dst_offset1[NFIELDS] = { HOFFSET( Particle1, name ),
@@ -59,9 +57,9 @@ int main( void )
   HOFFSET( Particle1, longi ),
   HOFFSET( Particle1, pressure ),
   HOFFSET( Particle1, temperature )};
-
+ 
  /* Define field information */
- const char *field_names[NFIELDS]  =
+ const char *field_names[NFIELDS]  = 
  { "Name","Latitude", "Longitude", "Pressure", "Temperature" };
  hid_t      field_type[NFIELDS];
  hid_t      string_type;
@@ -71,14 +69,14 @@ int main( void )
  Particle1  fill_data[1] = { "no data",-1,-1, -99.0f, -99.0 };
  int        fill_data_new[1] = { -100 };
  hsize_t    position;
- herr_t     status;
+ herr_t     status; 
  hsize_t    nfields_out;
  hsize_t    nrecords_out;
-
+ 
  /* Define the inserted field information */
  hid_t      field_type_new = H5T_NATIVE_INT;
  int        data[NRECORDS] = { 0,1,2,3,4,5,6,7 };
-
+ 
  /* Initialize the field type */
  string_type = H5Tcopy( H5T_C_S1 );
  H5Tset_size( string_type, 16 );
@@ -87,18 +85,18 @@ int main( void )
  field_type[2] = H5T_NATIVE_INT;
  field_type[3] = H5T_NATIVE_FLOAT;
  field_type[4] = H5T_NATIVE_DOUBLE;
-
+ 
  /* Create a new file using default properties. */
  file_id = H5Fcreate( "ex_table_11.h5", H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT );
-
+ 
  /* Make the table */
- status=H5TBmake_table( "Table Title",file_id,TABLE_NAME,NFIELDS,NRECORDS,
-                         dst_size1,field_names, dst_offset1, field_type,
+ status=H5TBmake_table( "Table Title",file_id,TABLE_NAME,NFIELDS,NRECORDS, 
+                         dst_size1,field_names, dst_offset1, field_type, 
                          chunk_size, fill_data, compress, p_data  );
-
+ 
  /* Insert the new field at the end of the field list */
  position = NFIELDS;
- status=H5TBinsert_field( file_id, TABLE_NAME, "New Field", field_type_new, position,
+ status=H5TBinsert_field( file_id, TABLE_NAME, "New Field", field_type_new, position, 
   fill_data_new, data );
 
  /* Get table info  */
@@ -106,15 +104,12 @@ int main( void )
 
  /* print */
  printf ("Table has %d fields and %d records\n",(int)nfields_out,(int)nrecords_out);
-
-  /* close type */
- H5Tclose( string_type );
  
- /* close the file */
+ /* Close the file. */
  H5Fclose( file_id );
-
+ 
  return 0;
-
-
+ 
+ 
 }
 

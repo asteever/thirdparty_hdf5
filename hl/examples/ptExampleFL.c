@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,12 +8,11 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "hdf5.h"
-#include "hdf5_hl.h"
 #include <stdlib.h>
 
 /*-------------------------------------------------------------------------
@@ -39,6 +37,8 @@ int main(void)
     /* Buffers to hold data */
  int writeBuffer[5];
  int readBuffer[5];
+ hsize_t nrecords;
+ hsize_t chunk_size=1;
 
    /* Initialize buffers */
  for(x=0; x<5; x++)
@@ -51,19 +51,22 @@ int main(void)
  fid=H5Fcreate("packet_table_FLexample.h5",H5F_ACC_TRUNC,H5P_DEFAULT,H5P_DEFAULT);
 
     /* Create a fixed-length packet table within the file */
-    /* This table's "packets" will be simple integers and it will use compression
-     * level 5. */
- ptable = H5PTcreate_fl(fid, "Packet Test Dataset", H5T_NATIVE_INT, (hsize_t)100, 5);
+    /* This table's "packets" will be simple integers. */
+ ptable = H5PTcreate_fl(fid, "Packet Test Dataset", H5T_NATIVE_INT, chunk_size);
  if(ptable == H5I_INVALID_HID)
      goto out;
 
+ nrecords=1;
+
     /* Write one packet to the packet table */
- err = H5PTappend(ptable, (hsize_t)1, &(writeBuffer[0]) );
+ err = H5PTappend(ptable, nrecords, &(writeBuffer[0]) );
  if(err < 0)
      goto out;
 
+ nrecords=4;
+
     /* Write several packets to the packet table */
- err = H5PTappend(ptable, (hsize_t)4, &(writeBuffer[1]) );
+ err = H5PTappend(ptable, nrecords, &(writeBuffer[1]) );
  if(err < 0)
      goto out;
 
@@ -72,17 +75,18 @@ int main(void)
  if(err < 0)
      goto out;
 
- printf("Number of packets in packet table after five appends: %d\n", (int)count);
+ printf("Number of packets in packet table after five appends: %d\n", count);
 
     /* Initialize packet table's "current record" */
  err = H5PTcreate_index(ptable);
  if(err < 0)
      goto out;
 
+ nrecords=1;
     /* Iterate through packets, read each one back */
  for(x=0; x<5; x++)
  {
-    err = H5PTget_next(ptable, (hsize_t)1, &(readBuffer[x]) );
+    err = H5PTget_next(ptable, nrecords, &(readBuffer[x]) );
     if(err < 0)
 	goto out;
 

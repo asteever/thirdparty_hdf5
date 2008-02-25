@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*-------------------------------------------------------------------------
@@ -36,8 +35,8 @@
 /* Private headers needed by this file */
 
 /* Macros for turning off free lists in the library */
-/*#define H5_NO_FREE_LISTS*/
-#if defined H5_NO_FREE_LISTS || defined H5_USING_MEMCHECKER
+/* #define H5_NO_FREE_LISTS */
+#if defined H5_NO_FREE_LISTS || defined H5_USING_PURIFY
 #define H5_NO_REG_FREE_LISTS
 #define H5_NO_ARR_FREE_LISTS
 #define H5_NO_SEQ_FREE_LISTS
@@ -63,12 +62,9 @@
 /* Macro for inclusion in the free list allocation parameters */
 #define H5FL_TRACK_PARAMS       ,const char *call_file, const char *call_func, int call_line
 
-/* Forward declarations for structure fields */
-struct H5CS_t;
-
 /* Tracking information for each block */
 typedef struct H5FL_track_t {
-    struct H5CS_t *stack;      /* Function stack */
+    H5FS_t *stack;      /* Function stack */
     char *file;         /* Name of file containing calling function */
     char *func;         /* Name of calling function */
     int line;           /* Line # within calling function */
@@ -139,10 +135,10 @@ typedef struct H5FL_reg_head_t {
 #else /* H5_NO_REG_FREE_LISTS */
 #include "H5MMprivate.h"
 /* Common macro for H5FL_DEFINE & H5FL_DEFINE_STATIC */
-#define H5FL_DEFINE_COMMON(t) int UNUSED H5FL_REG_NAME(t)
+#define H5FL_DEFINE_COMMON(t) int H5FL_REG_NAME(t)
 
 #define H5FL_DEFINE(t)  H5_DLL H5FL_DEFINE_COMMON(t)
-#define H5FL_EXTERN(t)  extern H5_DLL H5FL_DEFINE_COMMON(t)
+#define H5FL_EXTERN(t)  extern H5_DLL int H5FL_REG_NAME(t)
 #define H5FL_DEFINE_STATIC(t)  static H5FL_DEFINE_COMMON(t)
 #define H5FL_MALLOC(t) (t *)H5MM_malloc(sizeof(t))
 #define H5FL_CALLOC(t) (t *)H5MM_calloc(sizeof(t))
@@ -209,14 +205,14 @@ typedef struct H5FL_blk_head_t {
 
 #else /* H5_NO_BLK_FREE_LISTS */
 /* Common macro for H5FL_BLK_DEFINE & H5FL_BLK_DEFINE_STATIC */
-#define H5FL_BLK_DEFINE_COMMON(t) int UNUSED H5FL_BLK_NAME(t)
+#define H5FL_BLK_DEFINE_COMMON(t) int H5FL_BLK_NAME(t)
 
 #define H5FL_BLK_DEFINE(t)      H5_DLL H5FL_BLK_DEFINE_COMMON(t)
-#define H5FL_BLK_EXTERN(t)      extern H5_DLL H5FL_BLK_DEFINE_COMMON(t)
+#define H5FL_BLK_EXTERN(t)      extern H5_DLL int H5FL_BLK_NAME(t)
 #define H5FL_BLK_DEFINE_STATIC(t)  static H5FL_BLK_DEFINE_COMMON(t)
 #define H5FL_BLK_MALLOC(t,size) (uint8_t *)H5MM_malloc(size)
 #define H5FL_BLK_CALLOC(t,size) (uint8_t *)H5MM_calloc(size)
-#define H5FL_BLK_FREE(t,blk) H5MM_xfree(blk)
+#define H5FL_BLK_FREE(t,blk) (uint8_t *)H5MM_xfree(blk)
 #define H5FL_BLK_REALLOC(t,blk,new_size) (uint8_t *)H5MM_realloc(blk,new_size)
 #define H5FL_BLK_AVAIL(t,size)  (FALSE)
 #endif /* H5_NO_BLK_FREE_LISTS */
@@ -253,7 +249,7 @@ typedef struct H5FL_arr_head_t {
  */
 #define H5FL_ARR_NAME(t)        H5_##t##_arr_free_list
 #ifndef H5_NO_ARR_FREE_LISTS
-/* Common macro for H5FL_ARR_DEFINE & H5FL_ARR_DEFINE_STATIC (and H5FL_BARR variants) */
+/* Common macro for H5FL_BLK_DEFINE & H5FL_BLK_DEFINE_STATIC */
 #define H5FL_ARR_DEFINE_COMMON(b,t,m) H5FL_arr_head_t H5FL_ARR_NAME(t)={0,0,0,#t"_arr",m+1,b,sizeof(t),NULL}
 
 /* Declare a free list to manage arrays of type 't' */
@@ -284,7 +280,7 @@ typedef struct H5FL_arr_head_t {
 #define H5FL_ARR_REALLOC(t,obj,new_elem) H5FL_arr_realloc(&(H5FL_ARR_NAME(t)),obj,new_elem)
 
 #else /* H5_NO_ARR_FREE_LISTS */
-/* Common macro for H5FL_ARR_DEFINE & H5FL_ARR_DEFINE_STATIC (and H5FL_BARR variants) */
+/* Common macro for H5FL_ARR_DEFINE & H5FL_ARR_DEFINE_STATIC */
 #define H5FL_ARR_DEFINE_COMMON(t,m) size_t H5FL_ARR_NAME(t)
 
 #define H5FL_ARR_DEFINE(t,m)    H5_DLL H5FL_ARR_DEFINE_COMMON(t,m) = 0
@@ -337,11 +333,11 @@ typedef struct H5FL_seq_head_t {
 #define H5FL_SEQ_REALLOC(t,obj,new_elem) (t *)H5FL_seq_realloc(&(H5FL_SEQ_NAME(t)),obj,new_elem H5FL_TRACK_INFO)
 
 #else /* H5_NO_SEQ_FREE_LISTS */
-/* Common macro for H5FL_SEQ_DEFINE & H5FL_SEQ_DEFINE_STATIC */
-#define H5FL_SEQ_DEFINE_COMMON(t) int UNUSED H5FL_SEQ_NAME(t)
+/* Common macro for H5FL_BLK_DEFINE & H5FL_BLK_DEFINE_STATIC */
+#define H5FL_SEQ_DEFINE_COMMON(t) int H5FL_SEQ_NAME(t)
 
 #define H5FL_SEQ_DEFINE(t)      H5_DLL H5FL_SEQ_DEFINE_COMMON(t)
-#define H5FL_SEQ_EXTERN(t)      extern H5_DLL H5FL_SEQ_DEFINE_COMMON(t)
+#define H5FL_SEQ_EXTERN(t)      extern H5_DLL int H5FL_SEQ_NAME(t)
 #define H5FL_SEQ_DEFINE_STATIC(t)  static H5FL_SEQ_DEFINE_COMMON(t)
 #define H5FL_SEQ_MALLOC(t,elem) (t *)H5MM_malloc((elem)*sizeof(t))
 #define H5FL_SEQ_CALLOC(t,elem) (t *)H5MM_calloc((elem)*sizeof(t))

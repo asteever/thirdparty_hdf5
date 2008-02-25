@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -100,11 +99,11 @@ test_heap_init(void)
 
     /* Sort random numbers into increasing order */
     HDmemcpy(inc_sort_num,rand_num,sizeof(test_obj)*NUM_ELEMS);
-    HDqsort(inc_sort_num, (size_t)NUM_ELEMS, sizeof(test_obj), tst_inc_sort);
+    HDqsort(inc_sort_num,NUM_ELEMS,sizeof(test_obj),tst_inc_sort);
 
     /* Sort random numbers into decreasing order */
     HDmemcpy(dec_sort_num,rand_num,sizeof(test_obj)*NUM_ELEMS);
-    HDqsort(dec_sort_num, (size_t)NUM_ELEMS, sizeof(test_obj), tst_dec_sort);
+    HDqsort(dec_sort_num,NUM_ELEMS,sizeof(test_obj),tst_dec_sort);
 } /* end test_tst_init() */
 
 /****************************************************************
@@ -311,8 +310,7 @@ test_heap_insert(void)
 **      "Core" routine called by test_heap_insert_many() routine.
 **
 ****************************************************************/
-static void
-test_heap_insert_many_core(H5HP_type_t heap_type, test_obj *arr, size_t nelem, int top_val)
+static void test_heap_insert_many_core(H5HP_type_t heap_type, test_obj *arr, size_t nelem, int top_val)
 {
     H5HP_t *heap;       /* Heap created */
     ssize_t num;        /* Number of elements in heap */
@@ -362,22 +360,22 @@ test_heap_insert_many(void)
     MESSAGE(6, ("Testing Inserting Many Objects Into Heaps\n"));
 
     /* Test creating a heap from random elements */
-    test_heap_insert_many_core(H5HP_MAX_HEAP, rand_num, (size_t)NUM_ELEMS, dec_sort_num[0].val);
+    test_heap_insert_many_core(H5HP_MAX_HEAP, rand_num,NUM_ELEMS,dec_sort_num[0].val);
 
     /* Test creating a heap from elements in increasing order */
-    test_heap_insert_many_core(H5HP_MAX_HEAP, inc_sort_num, (size_t)NUM_ELEMS, dec_sort_num[0].val);
+    test_heap_insert_many_core(H5HP_MAX_HEAP, inc_sort_num,NUM_ELEMS,dec_sort_num[0].val);
 
     /* Test creating a heap from elements in decreasing order */
-    test_heap_insert_many_core(H5HP_MAX_HEAP, dec_sort_num, (size_t)NUM_ELEMS, dec_sort_num[0].val);
+    test_heap_insert_many_core(H5HP_MAX_HEAP, dec_sort_num,NUM_ELEMS,dec_sort_num[0].val);
 
     /* Test creating a heap from random elements */
-    test_heap_insert_many_core(H5HP_MIN_HEAP, rand_num, (size_t)NUM_ELEMS, inc_sort_num[0].val);
+    test_heap_insert_many_core(H5HP_MIN_HEAP, rand_num,NUM_ELEMS,inc_sort_num[0].val);
 
     /* Test creating a heap from elements in increasing order */
-    test_heap_insert_many_core(H5HP_MIN_HEAP, inc_sort_num, (size_t)NUM_ELEMS, inc_sort_num[0].val);
+    test_heap_insert_many_core(H5HP_MIN_HEAP, inc_sort_num,NUM_ELEMS,inc_sort_num[0].val);
 
     /* Test creating a heap from elements in decreasing order */
-    test_heap_insert_many_core(H5HP_MIN_HEAP, dec_sort_num, (size_t)NUM_ELEMS, inc_sort_num[0].val);
+    test_heap_insert_many_core(H5HP_MIN_HEAP, dec_sort_num,NUM_ELEMS,inc_sort_num[0].val);
 
 } /* end test_heap_insert_many() */
 
@@ -672,22 +670,22 @@ test_heap_remove_many(void)
     MESSAGE(6, ("Testing Removing Many Objects From Heaps\n"));
 
     /* Test removing objects from maximum heap with random elements */
-    test_heap_remove_many_core(H5HP_MAX_HEAP, rand_num, (size_t)NUM_ELEMS);
+    test_heap_remove_many_core(H5HP_MAX_HEAP, rand_num,NUM_ELEMS);
 
     /* Test removing objects from maximum heap with elements already sorted in increasing order */
-    test_heap_remove_many_core(H5HP_MAX_HEAP, inc_sort_num, (size_t)NUM_ELEMS);
+    test_heap_remove_many_core(H5HP_MAX_HEAP, inc_sort_num,NUM_ELEMS);
 
     /* Test removing objects from maximum heap with elements already sorted in decreasing order */
-    test_heap_remove_many_core(H5HP_MAX_HEAP, dec_sort_num, (size_t)NUM_ELEMS);
+    test_heap_remove_many_core(H5HP_MAX_HEAP, dec_sort_num,NUM_ELEMS);
 
     /* Test removing objects from minimum heap with random elements */
-    test_heap_remove_many_core(H5HP_MIN_HEAP, rand_num, (size_t)NUM_ELEMS);
+    test_heap_remove_many_core(H5HP_MIN_HEAP, rand_num,NUM_ELEMS);
 
     /* Test removing objects from minimum heap with elements already sorted in increasing order */
-    test_heap_remove_many_core(H5HP_MIN_HEAP, inc_sort_num, (size_t)NUM_ELEMS);
+    test_heap_remove_many_core(H5HP_MIN_HEAP, inc_sort_num,NUM_ELEMS);
 
     /* Test removing objects from minimum heap with elements already sorted in decreasing order */
-    test_heap_remove_many_core(H5HP_MIN_HEAP, dec_sort_num, (size_t)NUM_ELEMS);
+    test_heap_remove_many_core(H5HP_MIN_HEAP, dec_sort_num,NUM_ELEMS);
 
 } /* end test_heap_remove_many() */
 

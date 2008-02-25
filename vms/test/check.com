@@ -1,5 +1,4 @@
 $!#
-$!# Copyright by The HDF Group.
 $!# Copyright by the Board of Trustees of the University of Illinois.
 $!# All rights reserved.
 $!#
@@ -9,16 +8,16 @@ $!# the files COPYING and Copyright.html.  COPYING can be found at the root
 $!# of the source code distribution tree; Copyright.html can be found at the
 $!# root level of an installed copy of the electronic HDF5 document set and
 $!# is linked from the top-level documents page.  It can also be found at
-$!# http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-$!# access to either file, you may request a copy from help@hdfgroup.org.
+$!# http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
+$!# access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 $!#
 $! Makefile for VMS systems.
 $!
 $! Run HDF5 C tests
 $!
 $ type sys$input
-       Running tests
-$! define sys$output check_vms.out
+       Running tests. Output will be saved in the check_vms.out file
+$ define sys$output check_vms.out
 $ 
 $ type sys$input
 -------			Running testhdf5 	-------
@@ -30,11 +29,11 @@ $ type sys$input
 $ run  lheap
 $ type sys$input
  
-$! type sys$input
-$!-------			Running fheap    	-------
-$! run  fheap
-$! type sys$input
-
+$ type sys$input
+-------			Running fheap    	-------
+$ run  fheap
+$ type sys$input
+ 
 $ type sys$input
 -------			Running ohdr    	-------
 $ run  ohdr 
@@ -96,11 +95,6 @@ $ run  dtypes
 $ type sys$input
  
 $ type sys$input
--------			Running dsets   	-------
-$ run  dsets
-$ type sys$input
- 
-$ type sys$input
 -------			Running cmpd_dset    	-------
 $ run  cmpd_dset
 $ type sys$input
@@ -113,11 +107,6 @@ $ type sys$input
 $ type sys$input
 -------			Running external    	-------
 $ run  external
-$ type sys$input
- 
-$ type sys$input
--------			Running objcopy    	-------
-$ run  objcopy 
 $ type sys$input
  
 $ type sys$input

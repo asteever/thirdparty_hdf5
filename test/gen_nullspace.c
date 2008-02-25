@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -51,7 +50,7 @@ main(void)
     assert(sid>0);
 
     /* Create dataset */
-    did = H5Dcreate2(fid, NULLDATASET, H5T_NATIVE_UINT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    did = H5Dcreate(fid, NULLDATASET, H5T_NATIVE_UINT, sid, H5P_DEFAULT);
     assert(did>0);
 
     /* Close the dataset */
@@ -59,15 +58,15 @@ main(void)
     assert(ret>=0);
 
     /* Open the root group */
-    gid = H5Gopen2(fid, "/", H5P_DEFAULT);
-    assert(gid > 0);
+    gid = H5Gopen(fid,"/");
+    assert(gid>0);
 
     /* Create an attribute for the group */
-    attr = H5Acreate2(gid, NULLATTR, H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT);
-    assert(attr > 0);
+    attr=H5Acreate(gid,NULLATTR,H5T_NATIVE_INT,sid,H5P_DEFAULT);
+    assert(attr>0);
 
     /* Close attribute */
-    ret = H5Aclose(attr);
+    ret=H5Aclose(attr);
     assert(ret>=0);
 
     /* Close the group */

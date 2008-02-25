@@ -1,5 +1,4 @@
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-!   Copyright by The HDF Group.                                               *
 !   Copyright by the Board of Trustees of the University of Illinois.         *
 !   All rights reserved.                                                      *
 !                                                                             *
@@ -9,8 +8,8 @@
 !   of the source code distribution tree; Copyright.html can be found at the  *
 !   root level of an installed copy of the electronic HDF5 document set and   *
 !   is linked from the top-level documents page.  It can also be found at     *
-!   http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
-!   access to either file, you may request a copy from help@hdfgroup.org.     *
+!   http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+!   access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
 ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
 !
 !
@@ -79,7 +78,7 @@
               INTEGER FUNCTION h5iget_type_c(obj_id, type)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5IGET_TYPE_C':: h5iget_type_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5IGET_TYPE_C':: h5iget_type_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: obj_id 
               INTEGER, INTENT(OUT) :: type
@@ -134,7 +133,7 @@
               INTEGER FUNCTION h5iget_name_c(obj_id, buf, buf_size, name_size)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5IGET_NAME_C'::h5iget_name_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5IGET_NAME_C'::h5iget_name_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: buf
               INTEGER(HID_T), INTENT(IN) :: obj_id
@@ -187,7 +186,7 @@
               INTEGER FUNCTION h5iinc_ref_c(obj_id, ref_count)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5IINC_REF_C':: h5iinc_ref_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5IINC_REF_C':: h5iinc_ref_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: obj_id 
               INTEGER, INTENT(OUT) :: ref_count
@@ -236,7 +235,7 @@
               INTEGER FUNCTION h5idec_ref_c(obj_id, ref_count)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5IDEC_REF_C':: h5idec_ref_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5IDEC_REF_C':: h5idec_ref_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: obj_id 
               INTEGER, INTENT(OUT) :: ref_count
@@ -285,7 +284,7 @@
               INTEGER FUNCTION h5iget_ref_c(obj_id, ref_count)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5IGET_REF_C':: h5iget_ref_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5IGET_REF_C':: h5iget_ref_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: obj_id 
               INTEGER, INTENT(OUT) :: ref_count
@@ -331,7 +330,7 @@
               INTEGER FUNCTION h5iget_file_id_c(obj_id, file_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5IGET_FILE_ID_C':: h5iget_file_id_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5IGET_FILE_ID_C':: h5iget_file_id_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN)  :: obj_id 
               INTEGER(HID_T), INTENT(OUT) :: file_id 

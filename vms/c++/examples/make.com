@@ -1,5 +1,4 @@
 $!#
-$!# Copyright by The HDF Group.
 $!# Copyright by the Board of Trustees of the University of Illinois.
 $!# All rights reserved.
 $!#
@@ -9,16 +8,15 @@ $!# the files COPYING and Copyright.html.  COPYING can be found at the root
 $!# of the source code distribution tree; Copyright.html can be found at the
 $!# root level of an installed copy of the electronic HDF5 document set and
 $!# is linked from the top-level documents page.  It can also be found at
-$!# http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-$!# access to either file, you may request a copy from help@hdfgroup.org.
+$!# http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
+$!# access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 $!#
 $!
 $! Make HDF5 C++ examples
 $!
-$ cxxopt = "/float=ieee_float/standard=strict_ansi/define=H5_VMS"
-$ define zlib_dir sys$sysusers:[pourmale.zlib-1_2_3]
+$! cxxopt = "/float=ieee_float/standard=strict_ansi/define=H5_VMS"
 $
-$ ccc := cxx 'cxxopt /include=([-.-.include])
+$ ccc := cxx 'cxxopt /include=([-.-.src], [-.src])
 $!
 $!
 $ cxxobj= "create.cxx, readdata.cxx, writedata.cxx, compound.cxx,"+-
@@ -30,48 +28,48 @@ $ type sys$input
 
        Creating create 
 $ cxxlink  create, -
-           [-.-.lib]hdf5_cplus.olb/lib, -
-           [-.-.lib]hdf5.olb/lib,zlib_dir:libz.olb/lib
+           [-.src]hdf5_cplus.olb/lib, -
+           [-.-.src]hdf5.olb/lib
 $ type sys$input
 
        Creating readdata  
 $ cxxlink  readdata, -
-           [-.-.lib]hdf5_cplus.olb/lib, -
-           [-.-.lib]hdf5.olb/lib,zlib_dir:libz.olb/lib
+           [-.src]hdf5_cplus.olb/lib, -
+           [-.-.src]hdf5.olb/lib
 $!
 $ type sys$input
 
        Creating writedata  
 $ cxxlink  writedata, -
-           [-.-.lib]hdf5_cplus.olb/lib, -
-           [-.-.lib]hdf5.olb/lib,zlib_dir:libz.olb/lib
+           [-.src]hdf5_cplus.olb/lib, -
+           [-.-.src]hdf5.olb/lib
 $ !                              
 $ type sys$input
 
        Creating compound 
 $ cxxlink  compound, -
-           [-.-.lib]hdf5_cplus.olb/lib, -
-           [-.-.lib]hdf5.olb/lib,zlib_dir:libz.olb/lib
+           [-.src]hdf5_cplus.olb/lib, -
+           [-.-.src]hdf5.olb/lib
 $!
 $ type sys$input
 
        Creating extend_ds  
 $ cxxlink  extend_ds, -
-           [-.-.lib]hdf5_cplus.olb/lib, -
-           [-.-.lib]hdf5.olb/lib,zlib_dir:libz.olb/lib
+           [-.src]hdf5_cplus.olb/lib, -
+           [-.-.src]hdf5.olb/lib
 $!
 $ type sys$input
 
        Creating chunks 
 $ cxxlink  chunks, -
-           [-.-.lib]hdf5_cplus.olb/lib, -
-           [-.-.lib]hdf5.olb/lib,zlib_dir:libz.olb/lib
+           [-.src]hdf5_cplus.olb/lib, -
+           [-.-.src]hdf5.olb/lib
 $!
 $ type sys$input
 
        Creating h5group 
 $ cxxlink  h5group, -
-           [-.-.lib]hdf5_cplus.olb/lib, -
-           [-.-.lib]hdf5.olb/lib,zlib_dir:libz.olb/lib
+           [-.src]hdf5_cplus.olb/lib, -
+           [-.-.src]hdf5.olb/lib
 $!
 $ exit

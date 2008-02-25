@@ -1,6 +1,5 @@
 // C++ informative line for the emacs editor: -*- C++ -*-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -10,8 +9,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #ifndef _H5FileAccPropList_H
@@ -25,9 +24,6 @@ namespace H5 {
 class H5_DLLCPP FileAccPropList : public PropList {
    public:
 	static const FileAccPropList DEFAULT;
-
-	// Creates a file access property list.
-	FileAccPropList();
 
 	// Modifies this property list to use the H5FD_STDIO driver
 	void setStdio() const;
@@ -125,6 +121,9 @@ class H5_DLLCPP FileAccPropList : public PropList {
 
 	// Returns this class name
 	virtual H5std_string fromClass () const { return("FileAccPropList"); }
+
+	// Creates a file access property list.
+	FileAccPropList();
 
 	// Copy constructor: creates a copy of a FileAccPropList object.
 	FileAccPropList( const FileAccPropList& original );

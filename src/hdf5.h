@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -28,9 +27,9 @@
 #include "H5Epublic.h"		/* Errors				*/
 #include "H5Fpublic.h"		/* Files				*/
 #include "H5FDpublic.h"		/* File drivers				*/
+#include "H5FPpublic.h"		/* Flexible Parallel HDF5               */
 #include "H5Gpublic.h"		/* Groups				*/
 #include "H5Ipublic.h"		/* ID management			*/
-#include "H5Lpublic.h"		/* Links				*/
 #include "H5MMpublic.h"		/* Memory management			*/
 #include "H5Opublic.h"		/* Object headers			*/
 #include "H5Ppublic.h"		/* Property lists			*/
@@ -47,9 +46,14 @@
 #include "H5FDmulti.h"		/* Usage-partitioned file family	*/
 #include "H5FDsec2.h"		/* POSIX unbuffered file I/O		*/
 #include "H5FDstdio.h"		/* Standard C buffered I/O		*/
-#ifdef H5_HAVE_WINDOWS
-#include "H5FDwindows.h"        /* Windows buffered I/O     */
-#endif
-#include "H5FDdirect.h"     	/* Linux direct I/O			*/
+#include "H5FDstream.h"     	/* In-memory files streamed via sockets */
+
+/* High Level */
+#if defined (H5_INCLUDE_HL)
+#include "H5DSpublic.h" /* dimension scales */
+#include "H5LTpublic.h" /* lite */
+#include "H5IMpublic.h" /* image */
+#include "H5TBpublic.h" /* table */
+#endif /*H5_INCLUDE_HL*/
 
 #endif

@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*-------------------------------------------------------------------------
@@ -39,11 +38,6 @@
 #include "H5Fprivate.h"		/* File access				*/
 #include "H5Cprivate.h"		/* cache				*/
 
-#ifdef H5_METADATA_TRACE_FILE
-#define H5AC__TRACE_FILE_ENABLED	1
-#else /* H5_METADATA_TRACE_FILE */
-#define H5AC__TRACE_FILE_ENABLED	0
-#endif /* H5_METADATA_TRACE_FILE */
 
 /* Types of metadata objects cached */
 typedef enum {
@@ -55,14 +49,10 @@ typedef enum {
     H5AC_BT2_HDR_ID,	/*v2 B-tree header			     */
     H5AC_BT2_INT_ID,	/*v2 B-tree internal node		     */
     H5AC_BT2_LEAF_ID,	/*v2 B-tree leaf node			     */
+    H5AC_TEST_ID,	/*test entry -- not used for actual files    */
     H5AC_FHEAP_HDR_ID,	/*fractal heap header			     */
     H5AC_FHEAP_DBLOCK_ID, /*fractal heap direct block		     */
     H5AC_FHEAP_IBLOCK_ID, /*fractal heap indirect block		     */
-    H5AC_FSPACE_HDR_ID,	/*free space header			     */
-    H5AC_FSPACE_SINFO_ID,/*free space sections			     */
-    H5AC_SOHM_TABLE_ID, /*shared object header message master table  */
-    H5AC_SOHM_LIST_ID,  /*shared message index stored as a list      */
-    H5AC_TEST_ID,	/*test entry -- not used for actual files    */
     H5AC_NTYPES		/* Number of types, must be last             */
 } H5AC_type_t;
 
@@ -116,10 +106,6 @@ typedef enum {
  * SIZE:	Report the size (on disk) of the specified cache object.
  *		Note that the space allocated on disk may not be contiguous.
  */
-
-#define H5AC_CALLBACK__NO_FLAGS_SET             H5C_CALLBACK__NO_FLAGS_SET
-#define H5AC_CALLBACK__SIZE_CHANGED_FLAG	H5C_CALLBACK__SIZE_CHANGED_FLAG
-#define H5AC_CALLBACK__RENAMED_FLAG             H5C_CALLBACK__RENAMED_FLAG
 
 typedef H5C_load_func_t		H5AC_load_func_t;
 typedef H5C_flush_func_t	H5AC_flush_func_t;
@@ -198,10 +184,6 @@ extern hid_t H5AC_ind_dxpl_id;
 {                                                                             \
   /* int         version                = */ H5C__CURR_AUTO_SIZE_CTL_VER,     \
   /* hbool_t     rpt_fcn_enabled        = */ FALSE,                           \
-  /* hbool_t     open_trace_file        = */ FALSE,                           \
-  /* hbool_t     close_trace_file       = */ FALSE,                           \
-  /* char        trace_file_name[]      = */ "",                              \
-  /* hbool_t     evictions_enabled      = */ TRUE,                            \
   /* hbool_t     set_initial_size       = */ TRUE,                            \
   /* size_t      initial_size           = */ ( 1 * 1024 * 1024),              \
   /* double      min_clean_fraction     = */ 0.5,                             \
@@ -213,10 +195,6 @@ extern hid_t H5AC_ind_dxpl_id;
   /* double      increment              = */ 2.0,                             \
   /* hbool_t     apply_max_increment    = */ TRUE,                            \
   /* size_t      max_increment          = */ (4 * 1024 * 1024),               \
-  /* enum H5C_cache_flash_incr_mode       */                                  \
-  /*                    flash_incr_mode = */ H5C_flash_incr__add_space,       \
-  /* double      flash_multiple         = */ 1.0,                             \
-  /* double      flash_threshold        = */ 0.25,                            \
   /* enum H5C_cache_decr_mode decr_mode = */ H5C_decr__age_out_with_threshold,\
   /* double      upper_hr_threshold     = */ 0.999,                           \
   /* double      decrement              = */ 0.9,                             \
@@ -238,66 +216,32 @@ extern hid_t H5AC_ind_dxpl_id;
  * the equivalent flags from H5Cprivate.h.
  */
 
-#define H5AC__NO_FLAGS_SET		  H5C__NO_FLAGS_SET
-#define H5AC__SET_FLUSH_MARKER_FLAG	  H5C__SET_FLUSH_MARKER_FLAG
-#define H5AC__DELETED_FLAG		  H5C__DELETED_FLAG
-#define H5AC__DIRTIED_FLAG		  H5C__DIRTIED_FLAG
-#define H5AC__SIZE_CHANGED_FLAG		  H5C__SIZE_CHANGED_FLAG
-#define H5AC__PIN_ENTRY_FLAG		  H5C__PIN_ENTRY_FLAG
-#define H5AC__UNPIN_ENTRY_FLAG		  H5C__UNPIN_ENTRY_FLAG
-#define H5AC__FLUSH_INVALIDATE_FLAG	  H5C__FLUSH_INVALIDATE_FLAG
-#define H5AC__FLUSH_CLEAR_ONLY_FLAG	  H5C__FLUSH_CLEAR_ONLY_FLAG
-#define H5AC__FLUSH_MARKED_ENTRIES_FLAG   H5C__FLUSH_MARKED_ENTRIES_FLAG
-#define H5AC__FLUSH_IGNORE_PROTECTED_FLAG H5C__FLUSH_IGNORE_PROTECTED_FLAG
+#define H5AC__NO_FLAGS_SET		H5C__NO_FLAGS_SET
+#define H5AC__SET_FLUSH_MARKER_FLAG	H5C__SET_FLUSH_MARKER_FLAG
+#define H5AC__DELETED_FLAG		H5C__DELETED_FLAG
+#define H5AC__DIRTIED_FLAG		H5C__DIRTIED_FLAG
+#define H5AC__SIZE_CHANGED_FLAG		H5C__SIZE_CHANGED_FLAG
+#define H5AC__FLUSH_INVALIDATE_FLAG	H5C__FLUSH_INVALIDATE_FLAG
+#define H5AC__FLUSH_CLEAR_ONLY_FLAG	H5C__FLUSH_CLEAR_ONLY_FLAG
+#define H5AC__FLUSH_MARKED_ENTRIES_FLAG	H5C__FLUSH_MARKED_ENTRIES_FLAG
 
 
-/* #defines of flags used to report entry status in the
- * H5AC_get_entry_status() call.
- */
-
-#define H5AC_ES__IN_CACHE	0x0001
-#define H5AC_ES__IS_DIRTY	0x0002
-#define H5AC_ES__IS_PROTECTED	0x0004
-#define H5AC_ES__IS_PINNED	0x0008
-
-
-/* external function declarations: */
 
 H5_DLL herr_t H5AC_init(void);
 H5_DLL herr_t H5AC_create(const H5F_t *f, H5AC_cache_config_t *config_ptr);
-H5_DLL herr_t H5AC_get_entry_status(H5F_t * f, haddr_t addr,
-				    unsigned * status_ptr);
 H5_DLL herr_t H5AC_set(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type,
                        haddr_t addr, void *thing, unsigned int flags);
-H5_DLL herr_t H5AC_pin_protected_entry(H5F_t * f, void *  thing);
-H5_DLL void * H5AC_protect(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type,
-                           haddr_t addr, const void *udata1, void *udata2,
-                           H5AC_protect_t rw);
-H5_DLL herr_t H5AC_resize_pinned_entry(H5F_t * f,
-                                       void *  thing,
-                                       size_t  new_size);
-H5_DLL herr_t H5AC_unpin_entry(H5F_t * f,
-		               void *  thing);
+H5_DLL void *H5AC_protect(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type,
+                          haddr_t addr, const void *udata1, void *udata2,
+                          H5AC_protect_t rw);
 H5_DLL herr_t H5AC_unprotect(H5F_t *f, hid_t dxpl_id,
                              const H5AC_class_t *type, haddr_t addr,
 			     void *thing, unsigned flags);
 H5_DLL herr_t H5AC_flush(H5F_t *f, hid_t dxpl_id, unsigned flags);
-H5_DLL herr_t H5AC_mark_pinned_entry_dirty(H5F_t * f,
-		                           void *  thing,
-					   hbool_t size_changed,
-                                           size_t  new_size);
-H5_DLL herr_t H5AC_mark_pinned_or_protected_entry_dirty(H5F_t * f,
-		                                        void *  thing);
 H5_DLL herr_t H5AC_rename(H5F_t *f, const H5AC_class_t *type,
 			   haddr_t old_addr, haddr_t new_addr);
 
 H5_DLL herr_t H5AC_dest(H5F_t *f, hid_t dxpl_id);
-
-H5_DLL herr_t H5AC_expunge_entry(H5F_t *f, hid_t dxpl_id,
-                                 const H5AC_class_t *type, haddr_t addr);
-
-H5_DLL herr_t H5AC_set_write_done_callback(H5C_t * cache_ptr,
-                                           void (* write_done)(void));
 H5_DLL herr_t H5AC_stats(const H5F_t *f);
 
 H5_DLL herr_t H5AC_get_cache_auto_resize_config(H5AC_t * cache_ptr,
@@ -318,11 +262,6 @@ H5_DLL herr_t H5AC_set_cache_auto_resize_config(H5AC_t * cache_ptr,
                                                H5AC_cache_config_t *config_ptr);
 
 H5_DLL herr_t H5AC_validate_config(H5AC_cache_config_t * config_ptr);
-
-H5_DLL herr_t H5AC_close_trace_file( H5AC_t * cache_ptr);
-
-H5_DLL herr_t H5AC_open_trace_file(H5AC_t * cache_ptr,
-		                   const char * trace_file_name);
 
 #endif /* !_H5ACprivate_H */
 

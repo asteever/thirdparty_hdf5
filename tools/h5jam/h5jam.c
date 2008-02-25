@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,13 +8,14 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <stdio.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+
 #ifdef H5_HAVE_UNISTD_H
 #include <unistd.h>
 #endif
@@ -44,7 +44,7 @@ char *ub_file = NULL;
  * parameters. The long-named ones can be partially spelled. When
  * adding more, make sure that they don't clash with each other.
  */
-static const char *s_opts = "hi:u:o:c:V";	/* add more later ? */
+static const char *s_opts = "hi:u:o:c";	/* add more later ? */
 static struct long_options l_opts[] = {
   {"help", no_arg, 'h'},
   {"hel", no_arg, 'h'},
@@ -87,9 +87,6 @@ usage (const char *prog)
   fprintf (stdout, "\n");
   fprintf (stdout, "       %s -h \n", prog);
   fprintf (stdout, "           Print a usage message and exit\n");
-  fprintf (stdout, "       %s -V \n", prog);
-  fprintf (stdout, "           Print HDF5 library version and exit\n");
-
 }
 
 /*-------------------------------------------------------------------------
@@ -133,9 +130,6 @@ parse_command_line (int argc, const char *argv[])
 	case 'h':
 	  usage (progname);
 	  exit (EXIT_SUCCESS);
-    case 'V':
-	  print_version (progname);
-	  exit (EXIT_SUCCESS);
 	case '?':
 	default:
 	  usage (progname);
@@ -165,7 +159,7 @@ main (int argc, const char *argv[])
   int h5fid;
   int ofid;
   void *edata;
-  H5E_auto2_t func;
+  H5E_auto_stack_t func;
   hid_t ifile;
   hid_t plist;
   herr_t status;
@@ -181,8 +175,8 @@ main (int argc, const char *argv[])
   int res;
 
   /* Disable error reporting */
-  H5Eget_auto2(H5E_DEFAULT, &func, &edata);
-  H5Eset_auto2(H5E_DEFAULT, NULL, NULL);
+  H5Eget_auto_stack (H5E_DEFAULT, &func, &edata);
+  H5Eset_auto_stack (H5E_DEFAULT, NULL, NULL);
 
   parse_command_line (argc, argv);
 
@@ -523,22 +517,22 @@ compute_user_block_size (hsize_t ublock_size)
  *  Returns the size of the padded file.
  */
 hsize_t
-write_pad(int ofile, hsize_t where)
+write_pad (int ofile, hsize_t where)
 {
-    unsigned int i;
-    char buf[1];
-    hsize_t psize;
+  unsigned int i;
+  char buf[1];
+  hsize_t psize;
 
-    buf[0] = '\0';
+  buf[0] = '\0';
 
-    HDlseek(ofile, (off_t) where, SEEK_SET);
+  HDlseek (ofile, (off_t) where, SEEK_SET);
 
-    psize = compute_user_block_size (where);
-    psize -= where;
+  psize = compute_user_block_size (where);
+  psize -= where;
 
-    for(i = 0; i < psize; i++)
-        HDwrite (ofile, buf, 1);
-
-    return(where + psize);	/* the new size of the file. */
+  for (i = 0; i < psize; i++)
+    {
+      HDwrite (ofile, buf, 1);
+    }
+  return (where + psize);	/* the new size of the file. */
 }
-

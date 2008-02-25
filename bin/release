@@ -1,6 +1,5 @@
 #!/bin/sh
 #
-# Copyright by The HDF Group.
 # Copyright by the Board of Trustees of the University of Illinois.
 # All rights reserved.
 #
@@ -10,8 +9,8 @@
 # of the source code distribution tree; Copyright.html can be found at the
 # root level of an installed copy of the electronic HDF5 document set and
 # is linked from the top-level documents page.  It can also be found at
-# http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-# access to either file, you may request a copy from help@hdfgroup.org.
+# http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
+# access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 #
 
 # Make a release of hdf5.  The command-line switches are:
@@ -20,8 +19,6 @@
 #               placed.  By default, the directory is ./releases
 #
 #  --nocheck	Ignore errors in MANIFEST file.
-#          
-#  --private	Make a private release with today's date in version information.
 #          
 # The other command-line options are the names of the programs to use
 # for compressing the resulting tar archive (if none are given then
@@ -122,7 +119,7 @@ check=yes
 today=`date +%Y%m%d`
 pmode='no'
 tmpdir="../#release_tmp.$$"	# tmp work directory
-DOC_URL=http://svn.hdfgroup.uiuc.edu/hdf5doc/trunk
+DOC_URL=http://sleipnir/svn/repos/hdf5doc/trunk
 CPPLUS_RM_NAME=cpplus_RM
 
 # Restore previous Version information
@@ -267,9 +264,9 @@ for comp in $methods; do
 	doc)
 	    test "$verbose" && echo "   Creating docs..." 1>&2
 	    # Check out docs from svn repo
-	    (cd $tmpdir; svn co $DOC_URL > /dev/null) || exit 1
+	    (cd $tmpdir; svn co $DOC_URL > /dev/null)
 	    # Create doxygen C++ RM
-	    (cd c++/src && doxygen cpp_doc_config > /dev/null ) || exit 1
+	    (cd c++/src && doxygen cpp_doc_config >& /dev/null ) || exit 1
 	    # Replace version of C++ RM with just-created version
 	    rm -rf $tmpdir/trunk/html/$CPPLUS_RM_NAME
 	    mv c++/src/$CPPLUS_RM_NAME $tmpdir/trunk/html/$CPPLUS_RM_NAME

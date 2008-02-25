@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -84,7 +83,7 @@ H5Tenum_create(hid_t parent_id)
     hid_t	ret_value;	        /*return value			*/
 
     FUNC_ENTER_API(H5Tenum_create, FAIL)
-    H5TRACE1("i", "i", parent_id);
+    H5TRACE1("i","i",parent_id);
 
     /* Check args */
     if (NULL==(parent=H5I_object_verify(parent_id,H5I_DATATYPE)) || H5T_INTEGER!=parent->shared->type)
@@ -170,7 +169,7 @@ H5Tenum_insert(hid_t type, const char *name, const void *value)
     herr_t      ret_value=SUCCEED;       /* Return value */
 
     FUNC_ENTER_API(H5Tenum_insert, FAIL)
-    H5TRACE3("e", "i*s*x", type, name, value);
+    H5TRACE3("e","isx",type,name,value);
 
     /* Check args */
     if (NULL==(dt=H5I_object_verify(type,H5I_DATATYPE)))
@@ -280,7 +279,7 @@ H5Tget_member_value(hid_t type, unsigned membno, void *value/*out*/)
     herr_t      ret_value=SUCCEED;       /* Return value */
 
     FUNC_ENTER_API(H5Tget_member_value, FAIL)
-    H5TRACE3("e", "iIux", type, membno, value);
+    H5TRACE3("e","iIux",type,membno,value);
 
     if (NULL==(dt=H5I_object_verify(type,H5I_DATATYPE)))
 	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data type")
@@ -363,7 +362,7 @@ H5Tenum_nameof(hid_t type, const void *value, char *name/*out*/, size_t size)
     herr_t      ret_value=SUCCEED;       /* Return value */
 
     FUNC_ENTER_API(H5Tenum_nameof, FAIL)
-    H5TRACE4("e", "i*xxz", type, value, name, size);
+    H5TRACE4("e","ixxz",type,value,name,size);
 
     /* Check args */
     if (NULL==(dt=H5I_object_verify(type,H5I_DATATYPE)))
@@ -503,7 +502,7 @@ H5Tenum_valueof(hid_t type, const char *name, void *value/*out*/)
     herr_t      ret_value=SUCCEED;       /* Return value */
 
     FUNC_ENTER_API(H5Tenum_valueof, FAIL)
-    H5TRACE3("e", "i*sx", type, name, value);
+    H5TRACE3("e","isx",type,name,value);
 
     /* Check args */
     if (NULL==(dt=H5I_object_verify(type,H5I_DATATYPE)))

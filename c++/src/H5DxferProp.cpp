@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <string>
@@ -42,11 +41,11 @@ DSetMemXferPropList::DSetMemXferPropList() : PropList(H5P_DATASET_XFER) {}
 // Function	DSetMemXferPropList copy constructor
 ///\brief	Copy constructor: makes a copy of the original
 ///		DSetMemXferPropList object
-///\param	original - IN: Original dataset memory and transfer property
+///\param	orig - IN: The original dataset memory and transfer property
 ///				list object to copy
 // Programmer:	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-DSetMemXferPropList::DSetMemXferPropList(const DSetMemXferPropList& original ) : PropList( original ) {}
+DSetMemXferPropList::DSetMemXferPropList( const DSetMemXferPropList& orig ) : PropList( orig ) {}
 
 //--------------------------------------------------------------------------
 // Function	DSetMemXferPropList overloaded constructor
@@ -189,7 +188,7 @@ void DSetMemXferPropList::setTypeConvCB( H5T_conv_except_func_t op, void *user_d
    if( ret_value < 0 )
    {
       throw PropListIException("DSetMemXferPropList::setTypeConvCB",
-		"H5Pset_type_conv_cb failed");
+                "H5Pset_type_conv_cb failed");
    }
 }
 
@@ -207,7 +206,7 @@ void DSetMemXferPropList::getTypeConvCB( H5T_conv_except_func_t *op, void **user
    if( ret_value < 0 )
    {
       throw PropListIException("DSetMemXferPropList::getTypeConvCB",
-		"H5Pget_type_conv_cb failed");
+                "H5Pget_type_conv_cb failed");
    }
 }
 
@@ -326,7 +325,7 @@ void DSetMemXferPropList::setSmallDataBlockSize(hsize_t size)
 // Function:	DSetMemXferPropList::getSmallDataBlockSize
 ///\brief	Returns the current small data block size setting.
 ///\return	Size of the small data block, in bytes
-///\exception	H5::PropListIException
+///\exception   H5::PropListIException
 // Programmer:	Binh-Minh Ribler - April, 2004
 //--------------------------------------------------------------------------
 hsize_t DSetMemXferPropList::getSmallDataBlockSize()
@@ -363,7 +362,7 @@ void DSetMemXferPropList::setHyperVectorSize(size_t vector_size)
 }
 
 //--------------------------------------------------------------------------
-// Function:	DSetMemXferPropList::getHyperVectorSize
+// Function:	DSetMemXferPropList::getSmallDataBlockSize
 ///\brief	Returns the number of I/O vectors to be read/written in
 ///		hyperslab I/O.
 ///\return	Number of I/O vectors

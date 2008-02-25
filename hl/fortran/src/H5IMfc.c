@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,14 +8,16 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /* This files contains C stubs for H5D Fortran APIs */
 
+#include "H5IMprivate.h"
 #include "H5IMcc.h"
 #include "H5LTf90proto.h"
+#include "../../../fortran/src/H5f90i_gen.h"
 
 
 /*-------------------------------------------------------------------------
@@ -63,7 +64,7 @@ nh5immake_image_8bit_c (hid_t_f *loc_id,
  * Call H5IMmake_image_8bitf function.
  */
  c_loc_id = (hid_t)*loc_id;
- ret = H5IMmake_image_8bitf(c_loc_id,c_name,(hsize_t)*width,(hsize_t)*height,buf);
+ ret = H5IMmake_image_8bitf(c_loc_id,c_name,*width,*height,buf);
 
  if (ret < 0) return ret_value;
  ret_value = 0;
@@ -174,7 +175,7 @@ nh5immake_image_24bit_c (hid_t_f *loc_id,
  */
  c_loc_id = (hid_t)*loc_id;
 
- ret = H5IMmake_image_24bitf(c_loc_id,c_name,(hsize_t)*width,(hsize_t)*height,c_il,buf);
+ ret = H5IMmake_image_24bitf(c_loc_id,c_name,*width,*height,c_il,buf);
 
  if (ret < 0) return ret_value;
  ret_value = 0;

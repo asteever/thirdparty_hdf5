@@ -1,6 +1,5 @@
 // C++ informative line for the emacs editor: -*- C++ -*-
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -10,8 +9,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 // Class DataSet inherits from AbstractDs and provides accesses to a dataset.
@@ -51,12 +50,9 @@ class H5_DLLCPP DataSet : public AbstractDs {
 	// Returns the amount of storage size required for this dataset.
 	hsize_t getStorageSize() const;
 
-	// Returns the number of bytes required to store VL data.
+	// not yet implemented??
 	hsize_t getVlenBufSize( DataType& type, DataSpace& space ) const;
-
-	// Reclaims VL datatype memory buffers.
-	static void vlenReclaim(const DataType& type, const DataSpace& space, const DSetMemXferPropList& xfer_plist, void* buf );
-	static void vlenReclaim(void *buf, const DataType& type, const DataSpace& space = DataSpace::ALL, const DSetMemXferPropList& xfer_plist = DSetMemXferPropList::DEFAULT);
+	void vlenReclaim( DataType& type, DataSpace& space, DSetMemXferPropList& xfer_plist, void* buf ) const;
 
 	// Reads the data of this dataset and stores it in the provided buffer.
 	// The memory and file dataspaces and the transferring property list
@@ -73,10 +69,8 @@ class H5_DLLCPP DataSet : public AbstractDs {
 	// Iterates the selected elements in the specified dataspace - not implemented in C++ style yet
         int iterateElems( void* buf, const DataType& type, const DataSpace& space, H5D_operator_t op, void* op_data = NULL );
 
-#ifndef H5_NO_DEPRECATED_SYMBOLS
 	// Retrieves the type of object that an object reference points to.
-	H5G_obj_t getObjType(void *ref, H5R_type_t ref_type = H5R_OBJECT) const;
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
+	H5G_obj_t getObjType(void *ref, H5R_type_t ref_type) const;
 
 	// Retrieves a dataspace with the region pointed to selected.
 	DataSpace getRegion(void *ref, H5R_type_t ref_type = H5R_DATASET_REGION) const;
@@ -86,23 +80,20 @@ class H5_DLLCPP DataSet : public AbstractDs {
 	void* Reference(const char* name, DataSpace& dataspace, H5R_type_t ref_type = H5R_DATASET_REGION) const;
 
 	// Creates a reference to a named Hdf5 object in this object.
-	void* Reference(const char* name) const; // will be obsolete
-	void* Reference(const H5std_string& name) const; // will be obsolete
+	void* Reference(const char* name) const;
+	void* Reference(const H5std_string& name) const;
 
 	// Returns this class name
 	virtual H5std_string fromClass () const { return("DataSet"); }
 
-	// Creates a dataset by way of dereference.
-	DataSet(IdComponent& obj, void* ref);
+	// Creates a copy of an existing DataSet using its id.
+	DataSet(const hid_t existing_id);
 
 	// Default constructor.
 	DataSet();
 
 	// Copy constructor.
 	DataSet( const DataSet& original );
-
-	// Creates a copy of an existing DataSet using its id.
-	DataSet(const hid_t existing_id);
 
 	// Destructor: properly terminates access to this dataset.
 	virtual ~DataSet();

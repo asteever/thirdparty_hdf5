@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #define H5F_PACKAGE		/*suppress error about including H5Fpkg	  */
@@ -45,7 +44,7 @@ RETURNS
     Non-negative on success/Negative on failure
 DESCRIPTION
     Initializes any interface-specific data or routines.  (Just calls
-    H5F_init() currently).
+    H5F_init_iterface currently).
 
 --------------------------------------------------------------------------*/
 static herr_t
@@ -133,7 +132,7 @@ H5F_mount(H5G_loc_t *loc, const char *name, H5F_t *child,
     HDassert(loc);
     HDassert(name && *name);
     HDassert(child);
-    HDassert(TRUE == H5P_isa_class(plist_id, H5P_FILE_MOUNT));
+    HDassert(TRUE == H5P_isa_class(plist_id,H5P_MOUNT));
 
     /* Set up dataset location to fill in */
     mp_loc.oloc = &mp_oloc;
@@ -142,22 +141,13 @@ H5F_mount(H5G_loc_t *loc, const char *name, H5F_t *child,
 
     /*
      * Check that the child isn't mounted, that the mount point exists, that
-     * the mount point wasn't reached via external link, that
      * the parent & child files have the same file close degree, and
      * that the mount wouldn't introduce a cycle in the mount tree.
      */
     if(child->mtab.parent)
         HGOTO_ERROR(H5E_FILE, H5E_MOUNT, FAIL, "file is already mounted")
-    if(H5G_loc_find(loc, name, &mp_loc/*out*/, H5P_DEFAULT, dxpl_id) < 0)
+    if(H5G_loc_find(loc, name, &mp_loc/*out*/, dxpl_id) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "group not found")
-    /* If the mount location is holding its file open, that file will close
-     * and remove the mount as soon as we exit this function.  Prevent the
-     * user from doing this.
-     */
-    if(mp_loc.oloc->holding_file != FALSE)
-        HGOTO_ERROR(H5E_FILE, H5E_MOUNT, FAIL, "mount path cannot contain links to external files")    
-
-    /* Open the mount point group */
     if(NULL == (mount_point = H5G_open(&mp_loc, dxpl_id)))
         HGOTO_ERROR(H5E_FILE, H5E_MOUNT, FAIL, "mount point not found")
 
@@ -205,11 +195,11 @@ H5F_mount(H5G_loc_t *loc, const char *name, H5F_t *child,
 	HGOTO_ERROR(H5E_FILE, H5E_MOUNT, FAIL, "mount point is already in use")
 
     /* Make room in the table */
-    if(parent->mtab.nmounts >= parent->mtab.nalloc) {
-	unsigned n = MAX(16, 2 * parent->mtab.nalloc);
+    if(parent->mtab.nmounts>=parent->mtab.nalloc) {
+	unsigned n = MAX(16, 2*parent->mtab.nalloc);
 	H5F_mount_t *x = H5MM_realloc(parent->mtab.child,
 				      n * sizeof(parent->mtab.child[0]));
-	if(!x)
+	if (!x)
 	    HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for mount table")
 	parent->mtab.child = x;
 	parent->mtab.nalloc = n;
@@ -235,22 +225,13 @@ H5F_mount(H5G_loc_t *loc, const char *name, H5F_t *child,
 
     /* Search the open IDs and replace names for mount operation */
     /* We pass H5G_UNKNOWN as object type; search all IDs */
-    if(H5G_name_replace(NULL, H5G_NAME_MOUNT, mp_loc.oloc->file,
-            mp_loc.path->full_path_r, root_loc.oloc->file, root_loc.path->full_path_r,
-            dxpl_id) < 0)
+    if(H5G_name_replace(H5G_UNKNOWN, &mp_loc, NULL, &root_loc, H5G_NAME_MOUNT) < 0)
 	HGOTO_ERROR(H5E_FILE, H5E_MOUNT, FAIL, "unable to replace name")
 
 done:
-    if(ret_value < 0) {
-        if(mount_point) {
-            if(H5G_close(mount_point) < 0)
-                HDONE_ERROR(H5E_FILE, H5E_CANTCLOSEOBJ, FAIL, "unable to close mounted group")
-        } /* end if */
-        else {
-            if(H5G_loc_free(&mp_loc) < 0)
-                HDONE_ERROR(H5E_SYM, H5E_CANTRELEASE, FAIL, "unable to free mount location")
-        } /* end else */
-    } /* end if */
+    if(ret_value < 0 && mount_point)
+	if(H5G_close(mount_point) < 0)
+            HDONE_ERROR(H5E_FILE, H5E_CANTCLOSEOBJ, FAIL, "unable to close mounted group")
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5F_mount() */
@@ -304,7 +285,7 @@ H5F_unmount(H5G_loc_t *loc, const char *name, hid_t dxpl_id)
      * If we get the root group and the file has a parent in the mount tree,
      * then we must have found the mount point.
      */
-    if(H5G_loc_find(loc, name, &mp_loc/*out*/, H5P_DEFAULT, dxpl_id) < 0)
+    if(H5G_loc_find(loc, name, &mp_loc/*out*/, dxpl_id) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "group not found")
     mp_loc_setup = TRUE;
     child = mp_loc.oloc->file;
@@ -370,9 +351,7 @@ H5F_unmount(H5G_loc_t *loc, const char *name, hid_t dxpl_id)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unable to get path for root group")
 
     /* Search the open IDs replace names to reflect unmount operation */
-    if(H5G_name_replace(NULL, H5G_NAME_UNMOUNT, mp_loc.oloc->file,
-            mp_loc.path->full_path_r, root_loc.oloc->file, root_loc.path->full_path_r,
-            dxpl_id) < 0)
+    if(H5G_name_replace(H5G_UNKNOWN, &mp_loc, NULL, &root_loc, H5G_NAME_UNMOUNT) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, FAIL, "unable to replace name")
 
     /* Eliminate the mount point from the table */
@@ -483,7 +462,7 @@ H5Fmount(hid_t loc_id, const char *name, hid_t child_id, hid_t plist_id)
     herr_t      ret_value=SUCCEED;       /* Return value */
 
     FUNC_ENTER_API(H5Fmount, FAIL)
-    H5TRACE4("e", "i*sii", loc_id, name, child_id, plist_id);
+    H5TRACE4("e","isii",loc_id,name,child_id,plist_id);
 
     /* Check arguments */
     if(H5G_loc(loc_id, &loc) < 0)
@@ -493,9 +472,9 @@ H5Fmount(hid_t loc_id, const char *name, hid_t child_id, hid_t plist_id)
     if(NULL == (child = H5I_object_verify(child_id,H5I_FILE)))
 	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file")
     if(H5P_DEFAULT == plist_id)
-        plist_id = H5P_FILE_MOUNT_DEFAULT;
+        plist_id = H5P_MOUNT_DEFAULT;
     else
-        if(TRUE != H5P_isa_class(plist_id, H5P_FILE_MOUNT))
+        if(TRUE != H5P_isa_class(plist_id, H5P_MOUNT))
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not property list")
 
     /* Do the mount */
@@ -533,7 +512,7 @@ H5Funmount(hid_t loc_id, const char *name)
     herr_t      ret_value=SUCCEED;       /* Return value */
 
     FUNC_ENTER_API(H5Funmount, FAIL)
-    H5TRACE2("e", "i*s", loc_id, name);
+    H5TRACE2("e","is",loc_id,name);
 
     /* Check args */
     if(H5G_loc(loc_id, &loc) < 0)

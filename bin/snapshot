@@ -1,6 +1,5 @@
 #!/bin/sh
 #
-# Copyright by The HDF Group.
 # Copyright by the Board of Trustees of the University of Illinois.
 # All rights reserved.
 #
@@ -10,14 +9,14 @@
 # of the source code distribution tree; Copyright.html can be found at the
 # root level of an installed copy of the electronic HDF5 document set and
 # is linked from the top-level documents page.  It can also be found at
-# http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-# access to either file, you may request a copy from help@hdfgroup.org.
+# http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
+# access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 
 # This script should be run nightly from cron.  It checks out hdf5
-# from the source repository and compares it against the previous
+# from the CVS source tree and compares it against the previous
 # snapshot.  If anything significant changed then a new snapshot is
 # created, the minor version number is incremented, and the change is
-# checked back into the source repository.
+# checked back into the CVS repository.
 #
 
 # function definitions
@@ -30,14 +29,6 @@ EXIT_BANNER()
 {
 TIMESTAMP "Exit $PROGNAME with status=$?"
 }
-
-# Show current total disk usage.
-DISKUSAGE()
-{
-    du -ks | \
-    ( read x y; echo "Disk Usage=$x KB" )
-}
-
 
 # MAIN
 # SGI /bin/sh replaces $0 as function name if used in a function.
@@ -53,13 +44,17 @@ uname -a
 # setup exit banner message
 trap EXIT_BANNER 0
 
-# Dump environment variables before option parsing
-echo ===Dumping environment variables before option parsing ===
+# Dump environment variables
+echo ===Dumping environment variables===
 printenv | sort
-echo ===Done Dumping environment variables before option parsing ===
+echo ===Done Dumping environment variables===
 
-# snapshots release directory.  Default relative to $BASEDIR.
-ReleaseDir_default=release_dir
+# Where are the snapshots stored?
+#ARCHIVES_default=/afs/ncsa/ftp/HDF/pub/outgoing/hdf5/snapshots
+# Since file format is unstable, put snapshot files in a temporary non-
+# anonymous ftp accessiable directory.
+ARCHIVES_default=/afs/ncsa/ftp/HDF/pub/outgoing/hdf5/unstable_format
+ARCHIVES=$ARCHIVES_default
 
 # Where is the zlib library?
 # At NCSA, half of the machines have it in /usr/lib, the other half at
@@ -72,9 +67,6 @@ METHODS="gzip bzip2 md5 doc"
 
 # Use User's MAKE if set.  Else use generic make.
 MAKE=${MAKE:-make}
-
-# Default check action.
-CHECKVAL=check
 
 #
 # Command options
@@ -186,18 +178,15 @@ while [ $# -gt 0 ] ; do
 	    fi
 	    ZLIB="$1"
 	    ;;
-	releasedir)
+	archive)
 	    shift
 	    if [ $# -lt 1 ]; then
-		echo "Release directory name missing"
+		echo "Archive pathname missing"
 		errcode=1
 		cmd="help"
 		break
 	    fi
-	    ReleaseDir="$1"
-	    ;;
-	check-vfd)
-	    CHECKVAL=check-vfd
+	    ARCHIVES="$1"
 	    ;;
 	--*)
 	    OP_CONFIGURE="$OP_CONFIGURE $1"
@@ -222,21 +211,16 @@ while [ $# -gt 0 ] ; do
     shift
 done
 
-# Dump environment variables after option parsing
-echo ===Dumping environment variables after option parsing ===
-printenv | sort
-echo ===Done Dumping environment variables after option parsing ===
-
 if [ "$cmd" = help ]; then
     set -
     cat <<EOF
 Usage: $PROGNAME [all] [checkout] [diff] [test] [srcdir] [release] [help]
 	[clean] [distclean] [echo] [deploy <dir>] [deploydir <dir>]
-	[zlib <zlib_path>] [releasedir <dir>] [srcdirname <dir>] [check-vfd]
+	[zlib <zlib_path>] [archive <arch_path>] [srcdirname <dir>]
 	[op-configure <option>] [--<option>]
     all:      Run all commands (checkout, test & release)
               [Default is all]
-    checkout: Run source checkout
+    checkout: Run cvs checkout
     diff:     Run diff on current and previous versions.  Exit 0 if
               no significant differences are found.  Otherwise, non-zero.
     deploy:   deploy binary to directory <dir>
@@ -264,11 +248,9 @@ Usage: $PROGNAME [all] [checkout] [diff] [test] [srcdir] [release] [help]
     zlib <zlib_path>:
               Use <zlib_path> as the ZLIB locations
               [Default is $ZLIB_default]
-    releasedir <dir>:
-              Use <dir> as the release directory
-              [Default is $ReleaseDir_default]
-    check-vfd:
-	      Run make check-vfd instead of just make check.
+    archive <arch_path>:
+              Use <arch_path> as the release ARCHIVE area
+              [Default is $ARCHIVES_default]
     op-configure <option>:
               Pass <option> to the configure command
               E.g., "snapshot op-configure --enable-parallel"
@@ -303,12 +285,11 @@ fi
 
 CURRENT=${BASEDIR}/current
 PREVIOUS=${BASEDIR}/previous
-ReleaseDir=${ReleaseDir:=${BASEDIR}/${ReleaseDir_default}}
 HOSTNAME=`hostname | cut -f1 -d.`	# no domain part
 if [ $H5VERSION != hdf5 ]; then
-    SVNVERSION="hdf5/branches/$H5VERSION"
+    CVSVERSION="-r $H5VERSION"
 else
-    SVNVERSION=hdf5/trunk		# use the default (trunk) version
+    CVSVERSION=				# use the default (main) version
 fi
 
 # Try finding a version of diff that supports the -I option too.
@@ -319,13 +300,13 @@ for d in `echo $PATH | sed -e 's/:/ /g'` ; do
 done
 
 #=============================
-# Run source checkout
+# Run CVS checkout
 #=============================
 if [ "$cmd" = "all" -o -n "$cmdcheckout" ]; then
     TIMESTAMP "checkout"
     # If there is a Makefile in ${CURRENT}, the last test done in it
     # has not been distclean'ed.  They would interfere with other
-    # --srcdir build since make considers the files in ${CURRENT}
+    # --srcdir build since make considers the files in ${CURRENT} 
     # take precedence over files in its own build-directory.  Run
     # a "make distclean" to clean them all out.  This is not really
     # part of the "checkout" functions but this is the most convenient
@@ -333,10 +314,14 @@ if [ "$cmd" = "all" -o -n "$cmdcheckout" ]; then
     # regardless of the return code of distclean.
     ( cd ${CURRENT}; test -f Makefile && ${MAKE} distclean)
 
-    SVNROOT=http://svn.hdfgroup.uiuc.edu
-    # Check out the current version from source repository.
-    (cd $BASEDIR; svn -q co ${SVNROOT}/${SVNVERSION} current ) || exit 1
-fi # Do source checkout
+    # verify proper cvs setting
+    if [ -z "$CVSROOT" ]; then
+	echo "CVSROOT not defined!" 1>&2
+	exit 1
+    fi
+    # Check out the current version from CVS
+    (cd $BASEDIR; cvs -Q co -P -d current ${CVSVERSION} hdf5 ) || exit 1
+fi # Do CVS checkout
 
 
 #=============================
@@ -404,15 +389,15 @@ if [ "$cmd" = "all" -o -n "$cmdtest" -o -n "$cmddiff" ]; then
 	    TIMESTAMP "configure" && \
 	    ${srcdir:+${CURRENT}/}${CONFIGURE} && \
 	    TIMESTAMP "make" && \
-	    ${MAKE} && DISKUSAGE \
-	    TIMESTAMP ${CHECKVAL} && \
-	    ${MAKE} ${CHECKVAL} && DISKUSAGE \
+	    ${MAKE} && \
+	    TIMESTAMP "check" && \
+	    ${MAKE} check && \
 	    TIMESTAMP "install" && \
-	    ${MAKE} install-all && DISKUSAGE \
+	    ${MAKE} install-all && \
 	    TIMESTAMP "check-install" && \
-	    ${MAKE} check-install && DISKUSAGE \
+	    ${MAKE} check-install && \
 	    TIMESTAMP "uninstall" && \
-	    ${MAKE} uninstall-all) && DISKUSAGE ; then
+	    ${MAKE} uninstall-all); then
 	    :
 	else
 	    errcode=$?
@@ -429,12 +414,7 @@ fi # Test the HDF5 library
 if [ -n "$DEPLOYDIRNAME" ]; then
     if [ "$snapshot" = "yes" ]; then
 	TIMESTAMP "deploy"
-        if (cd ${TESTDIR} &&
-            ${CURRENT}/bin/deploy ${deploydir}/${DEPLOYDIRNAME} && \
-            TIMESTAMP "clean" && \
-            ${MAKE} clean && \
-            TIMESTAMP "check-install prefix=${deploydir}/${DEPLOYDIRNAME}" && \
-            ${MAKE} check-install prefix=${deploydir}/${DEPLOYDIRNAME}); then
+	if (cd ${TESTDIR} && ${CURRENT}/bin/deploy ${deploydir}/${DEPLOYDIRNAME}); then
 	    :	#continue
 	else
 	    errcode=$?
@@ -445,7 +425,7 @@ fi # Deploy
 
 
 #=============================
-# Run Release snapshot, update version, and commit to source repository
+# Run Release snapshot, update version, and commit to cvs and tag
 #=============================
 if [ "$cmd" = "all" -o -n "$cmdrel" ]; then
     if [ "$snapshot" = "yes" ]; then
@@ -453,21 +433,21 @@ if [ "$cmd" = "all" -o -n "$cmdrel" ]; then
 	(cd ${CURRENT} && ${MAKE} distclean)
 	(
 	    # Turn on exit on error in the sub-shell so that it does not
-	    # commit source if errors encounter here.
+	    # cvs commit if errors encounter here.
 	    set -e
 	    cd ${CURRENT}
 	    RELEASE_VERSION="`perl bin/h5vers -v`"
-	    echo "Making snapshot release ($RELEASE_VERSION) to ${ReleaseDir}..."
-	    bin/release -d $ReleaseDir $METHODS
+	    echo "Making snapshot release ($RELEASE_VERSION) to ${ARCHIVES}..."
+	    bin/release -d $ARCHIVES $METHODS
 	    perl bin/h5vers -i
-	    svn -q commit -m "Snapshot $RELEASE_VERSION"
+	    cvs -Q commit -m "Snapshot $RELEASE_VERSION"
 	)
 	errcode=$?
     fi
 
     # Replace the previous version with the current version.
     # Should check if the errcode of the release process but there
-    # are other failures after release was done (e.g. h5vers or svn failures)
+    # are other failures after release was done (e.g. h5vers or cvs failures)
     # that should allow the replacement to occure.
     rm -rf ${PREVIOUS}
     mv ${CURRENT} ${PREVIOUS}

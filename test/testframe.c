@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -26,7 +25,7 @@
 /*
  * Definitions for the testing structure.
  */
-#define MAXNUMOFTESTS   45
+#define MAXNUMOFTESTS   40
 #define MAXTESTNAME     16
 #define MAXTESTDESC     64
 
@@ -135,7 +134,7 @@ void TestInit(const char *ProgName, void (*private_usage)(void), int (*private_p
      * half the functions this test calls are private, so automatic error
      * reporting wouldn't do much good since it's triggered at the API layer.
      */
-    H5Eset_auto2(H5E_DEFAULT, NULL, NULL);
+    H5Eset_auto(NULL, NULL);
 
     /*
      * Record the program name and private routines if provided.
@@ -379,52 +378,33 @@ int SetTestVerbosity(int newval)
 
 /*
  * Retrieve the TestExpress mode for the testing framework
- Values:
- 0: Exhaustive run
-    Tests should take as long as necessary
- 1: Full run.  Default if HDF5TestExpress is not defined
-    Tests should take no more than 30 minutes
- 2: Quick run
-    Tests should take no more than 10 minutes
- 3: Smoke test.  Default if HDF5TestExpress is set to a value other than 0-3
-    Tests should take less than 1 minute
-
- Design:
+ * Values: non-zero means TestExpress mode is on, 0 means off.
+ *
+ * Design:
  If the environment variable $HDF5TestExpress is defined,
- then test programs should skip some tests so that they
- complete sooner.
+ then an intensive test should run the test in an express
+ mode such that it completes sooner.
 
  Terms:
- A "test" is a single executable, even if it contains multiple
- sub-tests.
- The standard system for test times is a Linux machine running in
- NFS space (to catch tests that involve a great deal of disk I/O).
+ Intensive means tests that take more than minutes, say 5 minutes,
+ to complete.
+ "sooner" means tests will finish under 5 minutes.
+ Express mode--probably use smaller test sizes, or skip some tests.
+ Test program should print a caution that it is running the express
+ mode.
 
  Implementation:
  I think this can be easily implemented in the test library (libh5test.a)
  so that all tests can just call it to check the status of $HDF5TestExpress.
+ For now, it is just defined or not, the actual value does not matter.
+ It is possible to define levels of express but I could not think of a
+ good use case for it.
  */
 int GetTestExpress(void)
 {
-    char * env_val;
-
     /* set it here for now.  Should be done in something like h5test_init(). */
-    if(TestExpress==-1)
-    {
-       env_val = getenv("HDF5TestExpress");
-
-       if(env_val == NULL)
-         SetTestExpress(1);
-       else if(strcmp(env_val, "0") == 0)
-         SetTestExpress(0);
-       else if(strcmp(env_val, "1") == 0)
-         SetTestExpress(1);
-       else if(strcmp(env_val, "2") == 0)
-         SetTestExpress(2);
-       else
-         SetTestExpress(3);
-    }
-
+    if (TestExpress==-1)
+	SetTestExpress(getenv("HDF5TestExpress")? 1 : 0);
     return(TestExpress);
 }
 

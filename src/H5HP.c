@@ -1,5 +1,4 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
  * Copyright by the Board of Trustees of the University of Illinois.         *
  * All rights reserved.                                                      *
  *                                                                           *
@@ -9,8 +8,8 @@
  * of the source code distribution tree; Copyright.html can be found at the  *
  * root level of an installed copy of the electronic HDF5 document set and   *
  * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
+ * http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have     *
+ * access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu. *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
@@ -349,7 +348,7 @@ H5HP_create(H5HP_type_t heap_type)
         HGOTO_ERROR(H5E_HEAP,H5E_NOSPACE,NULL,"memory allocation failed");
 
     /* Allocate the array to store the heap entries */
-    if((new_heap->heap = H5FL_SEQ_MALLOC(H5HP_ent_t, (size_t)(H5HP_START_SIZE + 1)))==NULL)
+    if((new_heap->heap=H5FL_SEQ_MALLOC(H5HP_ent_t, H5HP_START_SIZE+1))==NULL)
         HGOTO_ERROR(H5E_HEAP,H5E_NOSPACE,NULL,"memory allocation failed");
 
     /* Set the internal fields */
@@ -621,11 +620,11 @@ H5HP_remove(H5HP_t *heap, int *val, void **obj)
     /* Restore heap condition, if there are objects on the heap */
     if(heap->nobjs>0) {
         if(heap->type==H5HP_MAX_HEAP) {
-            if(H5HP_sink_max(heap, (size_t)1) < 0)
+            if(H5HP_sink_max(heap,1)<0)
                 HGOTO_ERROR(H5E_HEAP, H5E_CANTDELETE, FAIL, "unable to restore heap condition");
         } /* end if */
         else {
-            if(H5HP_sink_min(heap, (size_t)1) < 0)
+            if(H5HP_sink_min(heap,1)<0)
                 HGOTO_ERROR(H5E_HEAP, H5E_CANTDELETE, FAIL, "unable to restore heap condition");
         } /* end else */
     } /* end if */

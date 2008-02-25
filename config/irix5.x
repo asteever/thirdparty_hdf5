@@ -1,6 +1,5 @@
 #							-*- shell-script -*-
 #
-# Copyright by The HDF Group.
 # Copyright by the Board of Trustees of the University of Illinois.
 # All rights reserved.
 #
@@ -10,8 +9,8 @@
 # of the source code distribution tree; Copyright.html can be found at the
 # root level of an installed copy of the electronic HDF5 document set and
 # is linked from the top-level documents page.  It can also be found at
-# http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have
-# access to either file, you may request a copy from help@hdfgroup.org.
+# http://hdf.ncsa.uiuc.edu/HDF5/doc/Copyright.html.  If you do not have
+# access to either file, you may request a copy from hdfhelp@ncsa.uiuc.edu.
 
 
 # This file is part of the HDF5 build script.  It is processed shortly
@@ -39,7 +38,7 @@ RANLIB=:
 
 case "X-$CC_BASENAME" in
   X-gcc)
-    H5_CFLAGS="$H5_CFLAGS -Wsign-compare" #Only works for some versions
+    CFLAGS="$CFLAGS -Wsign-compare" #Only works for some versions
     DEBUG_CFLAGS="-g -fverbose-asm"
     DEBUG_CPPFLAGS=
     PROD_CFLAGS="-O3"
@@ -56,7 +55,7 @@ case "X-$CC_BASENAME" in
     #CFLAGS="$CFLAGS -ansi"
 
     # Always turn off these compiler warnings:
-    H5_CFLAGS="$H5_CFLAGS -woff 799"
+    CFLAGS="$CFLAGS -woff 799"
 
     # Extra debugging flags
     DEBUG_CFLAGS=-g
