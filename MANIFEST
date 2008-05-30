@@ -190,10 +190,11 @@
 ./fortran/src/H5Gff.f90
 ./fortran/src/H5If.c
 ./fortran/src/H5Iff.f90
+./fortran/test/tH5O.f90
 ./fortran/src/H5Lf.c
 ./fortran/src/H5Lff.f90
-./fortran/src/H5Of.c
 ./fortran/src/H5Off.f90
+./fortran/src/H5Of.c
 ./fortran/src/H5Pf.c
 ./fortran/src/H5Pff.f90
 ./fortran/src/H5Rf.c
@@ -217,7 +218,7 @@
 ./fortran/src/Makefile.am
 ./fortran/src/Makefile.in
 ./fortran/src/README
-./fortran/src/README_DEVELOPEMENT 	_DO_NOT_DISTRIBUTE_
+./fortran/src/README_DEVELOPEMENT       _DO_NOT_DISTRIBUTE_
 ./fortran/src/h5fc.in
 ./fortran/src/libhdf5_fortran.settings.in
 
@@ -238,7 +239,6 @@
 ./fortran/test/tH5G.f90
 ./fortran/test/tH5G_1_8.f90
 ./fortran/test/tH5I.f90
-./fortran/test/tH5O.f90
 ./fortran/test/tH5P.f90
 ./fortran/test/tH5R.f90
 ./fortran/test/tH5S.f90
@@ -400,7 +400,7 @@
 
 ./release_docs/COPYING
 ./release_docs/HISTORY-1_0-1_8_0_rc3.txt
-./release_docs/HISTORY-1_9.txt
+./release_docs/HISTORY-1_8.txt
 ./release_docs/INSTALL
 ./release_docs/INSTALL_Cygwin.txt
 ./release_docs/INSTALL_MinGW.txt
@@ -866,7 +866,6 @@
 ./test/test_filters_le.hdf5
 ./test/test_filters_be.hdf5
 ./test/gen_filters.c
-./test/chunk_info.c
 
 ./test/testfiles/err_compat_1
 ./test/testfiles/err_compat_2
@@ -914,69 +913,39 @@
 ./tools/h5import/h5import.c
 ./tools/h5import/h5importtest.c
 ./tools/h5import/h5importtestutil.sh
-
-#tesfiles for h5import
-./tools/h5import/testfiles/binin32.h5
-./tools/h5import/testfiles/binin16.h5
-./tools/h5import/testfiles/txtfp32.txt
-./tools/h5import/testfiles/txtstr.conf
-./tools/h5import/testfiles/txtfp32.conf
-./tools/h5import/testfiles/binin8w.conf
-./tools/h5import/testfiles/binin8.h5
-./tools/h5import/testfiles/txtfp64.conf
-./tools/h5import/testfiles/binuin32.conf
-./tools/h5import/testfiles/txtuin32.txt
-./tools/h5import/testfiles/binuin16.conf
-./tools/h5import/testfiles/txtstr.h5
-./tools/h5import/testfiles/txtfp32.h5
-./tools/h5import/testfiles/txtin32.h5
-./tools/h5import/testfiles/txtin16.h5
-./tools/h5import/testfiles/binin8w.h5
-./tools/h5import/testfiles/txtin32.txt
-./tools/h5import/testfiles/binfp64.conf
-./tools/h5import/testfiles/binin8.conf
-./tools/h5import/testfiles/txtin8.conf
-./tools/h5import/testfiles/binfp64.h5
-./tools/h5import/testfiles/txtstr.txt
-./tools/h5import/testfiles/txtin32.conf
-./tools/h5import/testfiles/txtin16.conf
-./tools/h5import/testfiles/txtin8.h5
-./tools/h5import/testfiles/txtuin32.conf
-./tools/h5import/testfiles/txtuin16.conf
-./tools/h5import/testfiles/binin32.conf
-./tools/h5import/testfiles/binin16.conf
-./tools/h5import/testfiles/txtfp64.h5
-./tools/h5import/testfiles/txtin16.txt
-./tools/h5import/testfiles/txtfp64.txt
-./tools/h5import/testfiles/binuin32.h5
-./tools/h5import/testfiles/binuin16.h5
-./tools/h5import/testfiles/txtuin32.h5
-./tools/h5import/testfiles/txtuin16.h5
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+./tools/h5import/testfiles/conbfp32
+./tools/h5import/testfiles/conbfp64
+./tools/h5import/testfiles/conbin16
+./tools/h5import/testfiles/conbin32
+./tools/h5import/testfiles/conbin8
+./tools/h5import/testfiles/conbuin16
+./tools/h5import/testfiles/conbuin32
+./tools/h5import/testfiles/fp1
+./tools/h5import/testfiles/fp2
+./tools/h5import/testfiles/in1
+./tools/h5import/testfiles/textfp32
+./tools/h5import/testfiles/textfp64
+./tools/h5import/testfiles/textin16
+./tools/h5import/testfiles/textin32
+./tools/h5import/testfiles/textin8
+./tools/h5import/testfiles/textuin16
+./tools/h5import/testfiles/textuin32
+./tools/h5import/testfiles/test1.h5
+./tools/h5import/testfiles/test2.h5
+./tools/h5import/testfiles/test3.h5
+./tools/h5import/testfiles/test4.h5
+./tools/h5import/testfiles/test5.h5
+./tools/h5import/testfiles/test6.h5
+./tools/h5import/testfiles/test7.h5
+./tools/h5import/testfiles/test8.h5
+./tools/h5import/testfiles/test9.h5
+./tools/h5import/testfiles/test10.h5
+./tools/h5import/testfiles/test11.h5
+./tools/h5import/testfiles/test12.h5
+./tools/h5import/testfiles/test13.h5
+./tools/h5import/testfiles/teststr.h5
+./tools/h5import/testfiles/txtstr
+./tools/h5import/testfiles/textstr
 
 
 
@@ -1708,7 +1677,6 @@
 ./windows/COPYING
 ./windows/hdf5bt.BAT
 ./windows/hdf5build.BAT
-./windows/hdf5build_examples.BAT
 ./windows/hdf5check.BAT
 ./windows/InstallcppExamples.BAT
 ./windows/install_dll.BAT
@@ -1936,9 +1904,6 @@
 ./windows/proj/hdf5_hl_fortran/hdf5_hl_fortran.vfproj
 ./windows/proj/hdf5_hl_fortrandll/hdf5_hl_fortrandll.vfproj
 
-# Visual Studio Property Sheets
-./windows/proj/property_sheets/remove-posix-warnings.vsprops
-
 # Windows-maintainted Source
 ./windows/src/H5pubconf.h
 ./windows/src/H5Tinit.c
@@ -1957,8 +1922,6 @@
 ./windows/test/cache_apidll/cache_apidll.vcproj
 ./windows/test/cachedll/cachedll.vcproj
 ./windows/test/chunk/chunk.vcproj
-./windows/test/chunk_info/chunk_info.vcproj
-./windows/test/chunk_infodll/chunk_infodll.vcproj
 ./windows/test/chunkdll/chunkdll.vcproj
 ./windows/test/cmpd_dset/cmpd_dset.vcproj
 ./windows/test/cmpd_dsetdll/cmpd_dsetdll.vcproj
@@ -2209,8 +2172,6 @@
 ./windows_vnet/test/cache_apidll/cache_apidll.vcproj
 ./windows_vnet/test/cachedll/cachedll.vcproj
 ./windows_vnet/test/chunk/chunk.vcproj
-./windows_vnet/test/chunk_info/chunk_info.vcproj
-./windows_vnet/test/chunk_infodll/chunk_infodll.vcproj
 ./windows_vnet/test/chunkdll/chunkdll.vcproj
 ./windows_vnet/test/cmpd_dset/cmpd_dset.vcproj
 ./windows_vnet/test/cmpd_dsetdll/cmpd_dsetdll.vcproj

@@ -91,7 +91,7 @@
 				BrowseInformation="1"
 				WarningLevel="3"
 				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="3"
+				DebugInformationFormat="4"
 				CompileAs="0"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
@@ -101,7 +101,7 @@
 				OutputFile=".\../../../test/chunk/Debug/chunk.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
-				IgnoreDefaultLibraryNames=""
+				IgnoreDefaultLibraryNames="libc.lib"
 				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile=".\../../../test/chunk/Debug/chunk.pdb"
 				SubSystem="1"
@@ -164,7 +164,7 @@
 				OutputFile=".\../../../test/chunk/Release/chunk.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
-				IgnoreDefaultLibraryNames=""
+				IgnoreDefaultLibraryNames="libcd.lib"
 				ProgramDatabaseFile=".\../../../test/chunk/Release/chunk.pdb"
 				SubSystem="1"
 				TargetMachine="1"/>

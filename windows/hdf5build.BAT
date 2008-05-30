@@ -16,8 +16,6 @@ rem access to either file, you may request a copy from helphdfgroup.org.
 rem File Name: hdf5build.bat
 rem This batch file is used to build HDF5 Libraries and Tools.
 rem This batch file takes the following options:
-rem .  /vs7              Build HDF5 using Visual Studio .NET 2003 
-rem .                    Note: Default is Visual Studio 2005
 rem .  /fort             Build HDF5 with Fortran libraries
 rem .  /useenv           Build HDF5 using compiler settings defined
 rem .                    in the environment, rather than the IDE.
@@ -54,8 +52,6 @@ rem Print a help message
     echo.
     echo.Usage: %~nx0 [OPTION]
     echo.
-    echo.   /vs7              Build HDF5 using Visual Studio .NET 2003 
-    echo.                     Note: Default is Visual Studio 2005
     echo.   /fort             Build HDF5 with Fortran libraries
     echo.   /useenv           Build HDF5 using compiler settings defined
     echo.                     in the environment, rather than the IDE.
@@ -68,10 +64,7 @@ rem Parse through the parameters sent to file, and set appropriate variables
 :parse_params
 
     for %%a in (%*) do (
-        if "%%a"=="/vs7" (
-            rem Use Visual Studio .NET 2003
-            set hdf5_vnet=true
-        ) else if "%%a"=="/fort" (
+        if "%%a"=="/fort" (
             rem Enable Fortran
             set hdf5_enablefortran=true
             
@@ -102,30 +95,12 @@ rem Setup our environment
     
     echo.Setting up environment
 
-    rem Sanity check-- make sure VS.NET isn't specified with Fortran or x64
-    if defined hdf5_vnet (
-        if defined hdf5_enablefortran (
-            echo.Error: Building Fortran libraries with Visual Studio .NET is unsupported
-            exit /b 1
-        )
-        if "%PROCESSOR_ARCHITECTURE%"=="AMD64" (
-            echo.Error: Building HDF5 on x64 with Visual Studio .NET is unsupported
-            exit /b 1
-        )
-    )
-
-    rem Figure out which solution file to use based on configuration
-    if defined hdf5_vnet (
-        echo.Using Visual Studio .NET 2003
-            set hdf5_sln="%CD%\windows_vnet\proj\all\all.sln"
+    rem By default, use all.sln, unless hdf5_enablefortran is set
+    if defined hdf5_enablefortran (
+        echo.Building Fortran projects enabled
+        set hdf5_sln="%CD%\windows\proj\all_fortran\all_fortran.sln"
     ) else (
-        echo.Using Visual Studio 2005
-        if defined hdf5_enablefortran (
-            echo.Building Fortran projects enabled
-            set hdf5_sln="%CD%\windows\proj\all_fortran\all_fortran.sln"
-        ) else (
-            set hdf5_sln="%CD%\windows\proj\all\all.sln"
-        )
+        set hdf5_sln="%CD%\windows\proj\all\all.sln"
     )
     
     
@@ -145,49 +120,40 @@ rem Setup our environment
     
     set ccflags=
     
-    if defined hdf5_vnet (
-        if defined vs71comntools (
-            rem This sets the Visual Studio .NET path and environment variables
-            call "%vs71comntools%\vsvars32.bat" 
+    rem Currently VS2005 is the only compiler supported.  --SJW 9/26/07
+    echo.Using Visual Studio 2005
+    
+    if not defined hdf5_enablefortran (
+        if defined vs80comntools (
+            rem This sets the Visual Studio path and environment variables
+            if %hdf5_platform%==Win32 (
+                call "%vs80comntools%\..\..\VC\vcvarsall.bat" x86
+            ) else (
+                call "%vs80comntools%\..\..\VC\vcvarsall.bat" x86_amd64
+            )
+
         ) else (
-            echo.Error: Cannot setup Visual Studio .NET 2003 environment.  Please
-            echo.make sure VS71COMNTOOLS is defined in the environment.
+            echo.Error: Cannot setup Visual Studio 2005 environment.  Please
+            echo.make sure VS80COMNTOOLS is defined in the environment.
             exit /b 1
         )
+        
     ) else (
-        rem Assume Visual Studio 2005
-        if not defined hdf5_enablefortran (
-            if defined vs80comntools (
-                rem This sets the Visual Studio 2005 path and environment variables
-                if %hdf5_platform%==Win32 (
-                    call "%vs80comntools%\..\..\VC\vcvarsall.bat" x86
-                ) else (
-                    call "%vs80comntools%\..\..\VC\vcvarsall.bat" x86_amd64
-                )
-
-            ) else (
-                echo.Error: Cannot setup Visual Studio 2005 environment.  Please
-                echo.make sure VS80COMNTOOLS is defined in the environment.
-                exit /b 1
-            )
+        echo.with Intel Visual Fortran 9.1
+        
+        if defined ifort_compiler91 (
+            rem This sets the Intel Fortran 9.1 environment, as well as
+            rem setting the appropriate Visual Studio environment
             
+            if %hdf5_platform%==Win32 (
+                call "%ifort_compiler91%\IA32\Bin\ifortvars.bat"
+            ) else (
+                call "%ifort_compiler91%\em64t\Bin\ifortvars.bat"
+            )
         ) else (
-            echo.with Intel Visual Fortran 9.1
-            
-            if defined ifort_compiler91 (
-                rem This sets the Intel Fortran 9.1 environment, as well as
-                rem setting the appropriate Visual Studio environment
-                
-                if %hdf5_platform%==Win32 (
-                    call "%ifort_compiler91%\IA32\Bin\ifortvars.bat"
-                ) else (
-                    call "%ifort_compiler91%\em64t\Bin\ifortvars.bat"
-                )
-            ) else (
-                echo.Error: Cannot setup Intel Fortran 9.1 environment.  Please
-                echo.make sure IFORT_COMPILER91 is defined in the environment.
-                exit /b 1
-            )
+            echo.Error: Cannot setup Intel Fortran 9.1 environment.  Please
+            echo.make sure IFORT_COMPILER91 is defined in the environment.
+            exit /b 1
         )
     )
         
@@ -214,13 +180,7 @@ rem Build the HDF5 libraries.  By default, C and C++ libraries are built.
     rem Build both debug and release versions
     for %%a in (debug release) DO (
         echo.Building %hdf5_platform% %%a libraries...
-        rem Only add hdf5_platform if using Visual Studio 2005, because Visual Studio
-        rem .NET doesn't like the syntax
-        if defined hdf5_vnet (
-            devenv %hdf5_sln% %ccflags% /rebuild %%a
-        ) else (
-            devenv %hdf5_sln% %ccflags% /rebuild "%%a|%hdf5_platform%"
-        )
+        devenv %hdf5_sln% %ccflags% /rebuild "%%a|%hdf5_platform%"
         if !errorlevel! neq 0 exit /b
     )
 

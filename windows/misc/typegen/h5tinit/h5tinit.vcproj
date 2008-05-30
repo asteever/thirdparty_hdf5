@@ -22,7 +22,7 @@
 			OutputDirectory="..\..\..\..\src"
 			IntermediateDirectory="$(OutDir)"
 			ConfigurationType="1"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops;..\..\..\proj\property_sheets\remove-posix-warnings.vsprops"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -73,9 +73,8 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="WS2_32.lib"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\Release/h5tinit.pdb"
 				SubSystem="1"
@@ -113,7 +112,7 @@
 			OutputDirectory="..\..\..\..\src"
 			IntermediateDirectory="$(OutDir)"
 			ConfigurationType="1"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops;..\..\..\proj\property_sheets\remove-posix-warnings.vsprops"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -165,9 +164,8 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="WS2_32.lib"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\Release/h5tinit.pdb"
 				SubSystem="1"
@@ -205,7 +203,7 @@
 			OutputDirectory="..\..\..\..\src"
 			IntermediateDirectory="$(OutDir)"
 			ConfigurationType="1"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops;..\..\..\proj\property_sheets\remove-posix-warnings.vsprops"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -240,7 +238,7 @@
 				ProgramDataBaseFileName=".\Debug/"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
-				DebugInformationFormat="3"
+				DebugInformationFormat="4"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -255,9 +253,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="WS2_32.lib"
+				AdditionalDependencies="odbc32.lib odbccp32.lib WS2_32.lib"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\Debug/h5tinit.pdb"
@@ -296,7 +294,7 @@
 			OutputDirectory="..\..\..\..\src"
 			IntermediateDirectory="$(OutDir)"
 			ConfigurationType="1"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops;..\..\..\proj\property_sheets\remove-posix-warnings.vsprops"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC71.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -347,9 +345,9 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="WS2_32.lib"
+				AdditionalDependencies="odbc32.lib odbccp32.lib WS2_32.lib"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\Debug/h5tinit.pdb"

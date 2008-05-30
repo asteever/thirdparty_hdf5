@@ -43,7 +43,7 @@
 				OutputFile=".\../../../test/ohdr/Release/ohdr.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
-				IgnoreDefaultLibraryNames=""
+				IgnoreDefaultLibraryNames="libcd.lib"
 				ForceSymbolReferences="_gethostname@8"
 				ProgramDatabaseFile=".\../../../test/ohdr/Release/ohdr.pdb"
 				SubSystem="1"
@@ -211,7 +211,7 @@
 				ProgramDataBaseFileName=".\../../../test/ohdr/Debug/"
 				WarningLevel="3"
 				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="3"
+				DebugInformationFormat="4"
 				CompileAs="0"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
@@ -221,7 +221,7 @@
 				OutputFile=".\../../../test/ohdr/Debug/ohdr.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
-				IgnoreDefaultLibraryNames=""
+				IgnoreDefaultLibraryNames="libc.lib"
 				ForceSymbolReferences="_gethostname@8"
 				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile=".\../../../test/ohdr/Debug/ohdr.pdb"

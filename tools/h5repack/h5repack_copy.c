@@ -323,7 +323,7 @@ out:
  *   H5Ocopy or not is if a change of filters or layout is requested by the user 
  *   then use read/write else use H5Ocopy. 
  *
- * May, 1, 2008: Add a printing of the compression ratio of old size / new size
+ *  May, 1, 2008: Add a printing of the compression ratio of old size / new size
  *
  *-------------------------------------------------------------------------
  */
@@ -669,7 +669,7 @@ int do_copy_objects(hid_t fidin,
                                 {
                                     hssize_t a, b;
 
-                                    /* get the storage size of the output dataset */
+                                    /* get the storage size of the input dataset */
                                     dsize_out=H5Dget_storage_size(dset_out);
 
                                     /* compression ratio = uncompressed size /  compressed size */
@@ -677,7 +677,7 @@ int do_copy_objects(hid_t fidin,
                                     a = dsize_in; b = dsize_out;
                                     if (b!=0)
                                         ratio = (double) a / (double) b;
-                                  
+
                                     print_dataset_info(dcpl_out,travt->objs[i].name,ratio);
                                 }
                                 else
@@ -1237,4 +1237,6 @@ done:
 
     return status;    
 }
+
+
 

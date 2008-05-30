@@ -43,7 +43,7 @@
 				OutputFile=".\../../../tools/h5repart/Release/h5repart.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
-				IgnoreDefaultLibraryNames=""
+				IgnoreDefaultLibraryNames="libcd.lib"
 				ProgramDatabaseFile=".\../../../tools/h5repart/Release/h5repart.pdb"
 				SubSystem="1"
 				TargetMachine="1"/>
@@ -93,7 +93,7 @@
 				ProgramDataBaseFileName=".\../../../tools/h5repart/Debug/"
 				WarningLevel="3"
 				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="3"
+				DebugInformationFormat="4"
 				CompileAs="0"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
@@ -103,7 +103,7 @@
 				OutputFile=".\../../../tools/h5repart/Debug/h5repart.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
-				IgnoreDefaultLibraryNames=""
+				IgnoreDefaultLibraryNames="libc.lib"
 				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile=".\../../../tools/h5repart/Debug/h5repart.pdb"
 				SubSystem="1"

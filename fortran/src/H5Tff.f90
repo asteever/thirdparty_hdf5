@@ -1204,7 +1204,7 @@ CONTAINS
             INTEGER(SIZE_T), INTENT(OUT) :: esize  ! size of exponent in bits
             INTEGER(SIZE_T), INTENT(OUT) :: mpos   ! mantissa bit-position 
             INTEGER(SIZE_T), INTENT(OUT) :: msize  ! size of mantissa in bits
-            INTEGER, INTENT(OUT) :: hdferr        ! Error code
+            INTEGER, INTENT(OUT) :: hdferr         ! Error code
 
 !            INTEGER, EXTERNAL :: h5tget_fields_c
 !  MS FORTRAN needs explicit interface for C functions called here.
@@ -3041,7 +3041,7 @@ CONTAINS
 !  MS FORTRAN needs explicit interface for C functions called here.
 !
             INTERFACE
-              INTEGER FUNCTION h5tset_tag_c(type_id, tag, taglen)
+              INTEGER FUNCTION h5tset_tag_c(type_id, tag, namelen)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
               !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5TSET_TAG_C'::h5tset_tag_c

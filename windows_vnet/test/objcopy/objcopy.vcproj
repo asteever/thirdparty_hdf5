@@ -32,7 +32,7 @@
 				ProgramDataBaseFileName=".\../../../test/objcopy/Debug/"
 				WarningLevel="3"
 				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="3"
+				DebugInformationFormat="4"
 				CompileAs="0"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
@@ -104,7 +104,7 @@
 				OutputFile=".\../../../test/objcopy/Release/objcopy.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
-				IgnoreDefaultLibraryNames=""
+				IgnoreDefaultLibraryNames="libcd.lib"
 				ForceSymbolReferences="_gethostname@8"
 				ProgramDatabaseFile=".\../../../test/objcopy/Release/objcopy.pdb"
 				SubSystem="1"

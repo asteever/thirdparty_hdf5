@@ -208,7 +208,7 @@
 				ProgramDataBaseFileName=".\../../../test/testhdf5dll/Debug/"
 				WarningLevel="3"
 				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="3"
+				DebugInformationFormat="4"
 				CompileAs="0"/>
 			<Tool
 				Name="VCCustomBuildTool"/>

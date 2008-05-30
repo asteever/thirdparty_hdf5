@@ -94,7 +94,7 @@
 				ProgramDataBaseFileName=".\../../../../hl/test/hl_test_packet/Debug/"
 				WarningLevel="3"
 				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="3"
+				DebugInformationFormat="4"
 				CompileAs="0"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
@@ -104,7 +104,7 @@
 				OutputFile=".\../../../../hl/test/hl_test_packet/Debug/hl_test_packet.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
-				IgnoreDefaultLibraryNames=""
+				IgnoreDefaultLibraryNames="libc.lib"
 				ForceSymbolReferences="_gethostname@8"
 				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile=".\../../../../hl/test/hl_test_packet/Debug/hl_test_packet.pdb"

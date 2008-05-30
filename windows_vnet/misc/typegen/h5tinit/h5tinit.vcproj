@@ -37,7 +37,6 @@
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="WS2_32.lib"
 				OutputFile=".\..\..\..\..\src/h5tinit.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
@@ -92,12 +91,12 @@
 				ProgramDataBaseFileName=".\..\..\..\..\src/"
 				WarningLevel="3"
 				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="3"/>
+				DebugInformationFormat="4"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="WS2_32.lib"
+				AdditionalDependencies="odbc32.lib odbccp32.lib WS2_32.lib"
 				OutputFile=".\..\..\..\..\src/h5tinit.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"

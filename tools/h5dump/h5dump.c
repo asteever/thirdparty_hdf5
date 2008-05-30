@@ -64,6 +64,7 @@ static const char   *driver = NULL;      /* The driver to open the file with. */
 static const h5dump_header_t *dump_header_format;
 static const char   *fp_format = NULL;
 
+
 /* things to display or which are set via command line parameters */
 static int          display_all       = TRUE;
 static int          display_oid       = FALSE;
@@ -107,6 +108,7 @@ static void     add_prefix(char **prfx, size_t *prfx_len, const char *name);
 /* callback function used by H5Literate() */
 static herr_t   dump_all_cb(hid_t group, const char *name, const H5L_info_t *linfo, void *op_data);
 static int      dump_extlink(const char *filename, const char *targname);
+
 
 
 static h5tool_format_t         dataformat = {
@@ -1379,7 +1381,7 @@ dump_selected_attr(hid_t loc_id, const char *name)
  *  RMcG, November 2000
  *   Added XML support. Also, optionally checks the op_data argument
  *
- *  PVN, May 2008
+ * PVN, May 2008
  *   Dump external links
  *
  *-------------------------------------------------------------------------
@@ -1669,7 +1671,6 @@ dump_all_cb(hid_t group, const char *name, const H5L_info_t *linfo, void UNUSED 
                             printf("TARGETFILE \"%s\"\n", filename);
                             indentation(indent + COL);
                             printf("TARGETPATH \"%s\"\n", targname);
-
 
                             /* dump the external link */
                             dump_extlink(filename,targname);
@@ -2476,7 +2477,7 @@ dump_dcpl(hid_t dcpl_id,hid_t type_id, hid_t obj_id)
     unsigned         szip_pixels_per_block;
     hsize_t          chsize[64];     /* chunk size in elements */
     int              rank;           /* rank */
-    char             name[256];      /* external file name       */
+    char                name[256];          /* external file name       */
     off_t            offset;         /* offset of external file     */
     hsize_t          size;           /* size of external file   */
     H5D_fill_value_t fvstatus;
@@ -2493,7 +2494,7 @@ dump_dcpl(hid_t dcpl_id,hid_t type_id, hid_t obj_id)
     next=H5Pget_external_count(dcpl_id);
     strcpy(f_name,"\0");
 
-   /*-------------------------------------------------------------------------
+    /*-------------------------------------------------------------------------
     * STORAGE_LAYOUT
     *-------------------------------------------------------------------------
     */
@@ -2514,7 +2515,7 @@ dump_dcpl(hid_t dcpl_id,hid_t type_id, hid_t obj_id)
         indentation(indent + COL);
 
 
-        /* if there are filters, print a compression ratio */
+       /* if there are filters, print a compression ratio */
         if ( nfilters )
         {
 
@@ -2556,7 +2557,7 @@ dump_dcpl(hid_t dcpl_id,hid_t type_id, hid_t obj_id)
                 }
                 size = nelmts * datum_size;
 
-                a = size; b = storage_size;
+                 a = size; b = storage_size;
 
                 /* compression ratio = uncompressed size /  compressed size */
 
@@ -2646,7 +2647,7 @@ dump_dcpl(hid_t dcpl_id,hid_t type_id, hid_t obj_id)
             printf("%s\n",END);
         }
     }
-    /*-------------------------------------------------------------------------
+   /*-------------------------------------------------------------------------
     * FILTERS
     *-------------------------------------------------------------------------
     */
@@ -2656,10 +2657,8 @@ dump_dcpl(hid_t dcpl_id,hid_t type_id, hid_t obj_id)
     printf("%s %s\n", FILTERS, BEGIN);
     indent += COL;
 
-    if (nfilters) 
-    {
-        for (i=0; i<nfilters; i++) 
-        {
+    if (nfilters) {
+        for (i=0; i<nfilters; i++) {
             cd_nelmts = NELMTS(cd_values);
             filtn = H5Pget_filter2(dcpl_id, (unsigned)i, &filt_flags, &cd_nelmts,
                 cd_values, sizeof(f_name), f_name, NULL);
@@ -3125,7 +3124,8 @@ set_sort_order(const char *form)
  *              Tuesday, 9. January 2001
  *
  * Modifications:
- *  PVN, May 2008
+ *
+ * PVN, May 2008
  *   add an extra parameter PE, to allow printing/not printing of error messages
  *
  *-------------------------------------------------------------------------
@@ -3272,8 +3272,8 @@ parse_subset_params(char *dset)
  *              Tuesday, 9. January 2001
  *
  * Modifications:
- *  Pedro Vicente, January 15, 2008
- *  check for block overlap
+ *  Pedro Vicente, Tuesday, January 15, 2008
+ *  check for block overlap\
  *
  *  Pedro Vicente, May 8, 2008
  *   added a flag PE that prints/not prints error messages
@@ -3301,7 +3301,6 @@ handle_datasets(hid_t fid, const char *dset, void *data, int pe)
                 dump_header_format->datasetblockend);
             d_status = EXIT_FAILURE;
         }
-        
         return;
     } /* end if */
 
@@ -3428,9 +3427,7 @@ handle_datasets(hid_t fid, const char *dset, void *data, int pe)
  * Programmer:  Bill Wendling
  *              Tuesday, 9. January 2001
  *
- * Modifications: 
- *
- * Pedro Vicente, September 26, 2007
+ * Modifications: Pedro Vicente, September 26, 2007
  *  handle creation order
  *
  * Pedro Vicente, May 8, 2008
@@ -3456,7 +3453,6 @@ handle_groups(hid_t fid, const char *group, void UNUSED * data, int pe)
             end_obj(dump_header_format->groupend, dump_header_format->groupblockend);
             d_status = EXIT_FAILURE;
         }
-        
     } 
     else 
     {
@@ -3533,6 +3529,8 @@ handle_links(hid_t fid, const char *links, void UNUSED * data, int pe)
 
                     if(H5Lunpack_elink_val(buf, linfo.u.val_size, NULL, &elink_file, &elink_path)>=0) {
                         indentation(COL);
+                        printf("LINKCLASS %d\n", linfo.type);
+                        indentation(COL);
                         printf("TARGETFILE \"%s\"\n", elink_file);
                         indentation(COL);
                         printf("TARGETPATH \"%s\"\n", elink_path);
@@ -3597,7 +3595,8 @@ handle_datatypes(hid_t fid, const char *type, void UNUSED * data, int pe)
         {
             char name[128];
 
-            if(!type_table->objs[idx].recorded) {
+            if(!type_table->objs[idx].recorded) 
+            {
                 /* unamed datatype */
                 sprintf(name, "/#"H5_PRINTF_HADDR_FMT, type_table->objs[idx].objno);
 
@@ -3621,8 +3620,7 @@ handle_datatypes(hid_t fid, const char *type, void UNUSED * data, int pe)
                     dump_header_format->datatypeblockend);
                 d_status = EXIT_FAILURE;
             }
-            
-        } 
+        }
         else 
         {
             hid_t dsetid = H5Dopen2(fid, type_table->objs[idx].objname, H5P_DEFAULT);
@@ -3881,6 +3879,9 @@ parse_start:
             /* specify alternative floating point printing format */
             fp_format = opt_arg;
             break;
+
+
+
 
         case 'X':
             /* specify XML namespace (default="hdf5:"), or none */
@@ -6722,3 +6723,4 @@ fail:
     return FAIL;
     
 }
+

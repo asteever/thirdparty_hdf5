@@ -31,7 +31,7 @@
 				ProgramDataBaseFileName=".\../../../tools/h5dump/Debug/"
 				WarningLevel="3"
 				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="3"
+				DebugInformationFormat="4"
 				CompileAs="0"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
@@ -41,7 +41,7 @@
 				OutputFile=".\../../../tools/h5dump/Debug/h5dump.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
-				IgnoreDefaultLibraryNames=""
+				IgnoreDefaultLibraryNames="libc.lib"
 				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile=".\../../../tools/h5dump/Debug/h5dump.pdb"
 				SubSystem="1"
@@ -104,7 +104,7 @@
 				OutputFile=".\../../../tools/h5dump/Release/h5dump.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
-				IgnoreDefaultLibraryNames=""
+				IgnoreDefaultLibraryNames="libcd.lib"
 				ProgramDatabaseFile=".\../../../tools/h5dump/Release/h5dump.pdb"
 				SubSystem="1"
 				TargetMachine="1"/>

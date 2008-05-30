@@ -26,7 +26,7 @@ dnl
 dnl NOTE: Don't forget to change the version number here when we do a
 dnl release!!!
 dnl
-AC_INIT([HDF5], [1.9.6], [help@hdfgroup.org])
+AC_INIT([HDF5], [1.8.1], [help@hdfgroup.org])
 AC_CONFIG_SRCDIR([src/H5.c])
 AM_CONFIG_HEADER([src/H5config.h])
 
@@ -917,8 +917,8 @@ esac
 dnl ----------------------------------------------------------------------
 dnl Create libtool.  If shared/static libraries are going to be enabled
 dnl or disabled, it should happen before these macros.
-AC_LIBTOOL_DLOPEN
-AM_PROG_LIBTOOL
+LT_PREREQ([2.2])
+LT_INIT([dlopen])
 
 dnl Post processing to patch up some deficiencies in libtool (as of
 dnl Libtool 1.5.14)
@@ -1082,7 +1082,7 @@ AC_ARG_ENABLE(production,
                               [Determines how to run the compiler.])])
 
 case "X-$enable_production" in
-  X-yes)
+  X-|X-yes)
     enable_production="yes"
     AC_MSG_RESULT([production])
 
@@ -1124,7 +1124,7 @@ case "X-$enable_production" in
     H5_CXXFLAGS="$H5_CXXFLAGS $PROD_CXXFLAGS"
     H5_FCFLAGS="$H5_FCFLAGS $PROD_FCFLAGS"
     ;;
-  X-|X-no)
+  X-no)
     enable_production="no"
     AC_MSG_RESULT([development])
     CONFIG_MODE=development
@@ -1751,6 +1751,17 @@ AC_ARG_ENABLE([threadsafe],
               [AC_HELP_STRING([--enable-threadsafe],
                               [Enable thread safe capability])],
               THREADSAFE=$enableval)
+
+dnl The --enable-threadsafe flag is not compatible with --enable-cxx.
+dnl If the user tried to specify both flags, throw an error.
+if test "X${HDF_CXX}" = "Xyes" -a "X${enable_threadsafe}" = "Xyes"; then
+  AC_MSG_ERROR([--enable-cxx and --enable-threadsafe flags are incompatible])
+fi
+
+dnl --enable-threadsafe is also incompatible with --enable-fortran.
+if test "X${HDF_FORTRAN}" = "Xyes" -a "X${enable_threadsafe}" = "Xyes"; then
+  AC_MSG_ERROR([--enable-fortran and --enable-threadsafe flags are incompatible])
+fi
 
 case "X-$THREADSAFE" in
   X-|X-no)

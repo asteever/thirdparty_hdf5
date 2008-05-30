@@ -128,7 +128,7 @@ H5HF_size(const H5HF_t *fh, hid_t dxpl_id, hsize_t *heap_size)
 {
     H5HF_hdr_t *hdr;                            /* Fractal heap header */
     herr_t      ret_value = SUCCEED;            /* Return value */
-    hsize_t	meta_size = 0;			/* free space storage size */
+    hsize_t     meta_size = 0;                  /* free space storage size */
 
     FUNC_ENTER_NOAPI(H5HF_size, FAIL)
 

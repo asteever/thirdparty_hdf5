@@ -242,7 +242,7 @@
 				ProgramDataBaseFileName=".\../../../examples/selectestdll/Debug/"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
-				DebugInformationFormat="3"
+				DebugInformationFormat="4"
 				CompileAs="0"
 			/>
 			<Tool

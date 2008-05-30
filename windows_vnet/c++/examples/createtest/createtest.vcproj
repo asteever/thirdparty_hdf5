@@ -32,7 +32,7 @@
 				ProgramDataBaseFileName=".\../../../../c++/examples/createtest/Debug/"
 				WarningLevel="3"
 				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="3"
+				DebugInformationFormat="4"
 				CompileAs="0"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
@@ -43,7 +43,7 @@
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
 				AdditionalLibraryDirectories="..\..\..\..\proj\hdf5_cpp\debug,..\..\..\..\hdf5lib\debug\lib"
-				IgnoreDefaultLibraryNames=""
+				IgnoreDefaultLibraryNames="libc.lib"
 				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile=".\../../../../c++/examples/createtest/Debug/createtest.pdb"
 				SubSystem="1"
@@ -107,7 +107,7 @@
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
 				AdditionalLibraryDirectories="..\..\..\..\proj\hdf5_cpp\release,..\..\..\..\hdf5lib\release\lib"
-				IgnoreDefaultLibraryNames=""
+				IgnoreDefaultLibraryNames="libcpp.lib"
 				ProgramDatabaseFile=".\../../../../c++/examples/createtest/Release/createtest.pdb"
 				SubSystem="1"
 				TargetMachine="1"/>

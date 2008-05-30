@@ -93,7 +93,7 @@
 				ProgramDataBaseFileName=".\../../../tools/h5unjam/Debug/"
 				WarningLevel="3"
 				SuppressStartupBanner="TRUE"
-				DebugInformationFormat="3"
+				DebugInformationFormat="4"
 				CompileAs="0"/>
 			<Tool
 				Name="VCCustomBuildTool"/>
@@ -103,7 +103,7 @@
 				OutputFile=".\../../../tools/h5unjam/Debug/h5unjam.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
-				IgnoreDefaultLibraryNames=""
+				IgnoreDefaultLibraryNames="libc.lib"
 				GenerateDebugInformation="TRUE"
 				ProgramDatabaseFile=".\../../../tools/h5unjam/Debug/h5unjam.pdb"
 				SubSystem="1"

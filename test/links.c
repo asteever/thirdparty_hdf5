@@ -47,10 +47,10 @@ const char *FILENAME[] = {
     "links6",  /* 9 */
     "links7",  /* 10 */
     "links8",  /* 11 */
-    "extlinks0",  	/* 12: main files */
-    "tmp/extlinks0",  	/* 13: */
-    "extlinks1",  	/* 14: target files */
-    "tmp/extlinks1",  	/* 15: */
+    "extlinks0",	/* 12: main files */
+    "tmp/extlinks0",	/* 13: */
+    "extlinks1",	/* 14: target files */
+    "tmp/extlinks1",	/* 15: */
     "extlinks2",	/* 16: */
     "tmp/extlinks2",	/* 17: */
     "extlinks3",	/* 18: */
@@ -65,13 +65,13 @@ const char *FILENAME[] = {
     "extlinks9",	/* 27: */
     "tmp/extlinks9",	/* 28: */
     "extlinks10",	/* 29: */ /* TESTS for windows */
-    "tmp/extlinks10",	/* 30: */ 
-    "tmp/extlinks11",	/* 31: */ 
-    "tmp/extlinks12",	/* 32: */ 
+    "tmp/extlinks10",	/* 30: */
+    "tmp/extlinks11",	/* 31: */
+    "tmp/extlinks12",	/* 32: */
     "extlinks13",	/* 33: */
-    "tmp/extlinks13",	/* 34: */ 
-    "tmp/extlinks14",	/* 35: */ 
-    "tmp/extlinks15",	/* 36: */ 
+    "tmp/extlinks13",	/* 34: */
+    "tmp/extlinks14",	/* 35: */
+    "tmp/extlinks15",	/* 36: */
     NULL
 };
 
