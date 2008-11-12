@@ -14,114 +14,29 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include "h5diff.h"
-#include "ph5diff.h"
 #include "H5private.h"
-#include "h5tools.h"
-
-
-/* global variables */
-int      g_nTasks = 1;
-unsigned char  g_Parallel = 0;  /*0 for serial, 1 for parallel */
-char     outBuff[OUTBUFF_SIZE];
-int      outBuffOffset;
-FILE*    overflow_file = NULL;
-
-/*-------------------------------------------------------------------------
- * Function: parallel_print
- *
- * Purpose: wrapper for printf for use in parallel mode.
- *
- * Programmer: Leon Arber
- *
- * Date: December 1, 2004
- *
- *-------------------------------------------------------------------------
- */
-void parallel_print(const char* format, ...)
-{
- int  bytes_written;
- va_list ap;
-
- va_start(ap, format);
-
- if(!g_Parallel)
-  vprintf(format, ap);
- else
- {
-
-  if(overflow_file == NULL) /*no overflow has occurred yet */
-  {
-#if 0
-   printf("calling HDvsnprintf: OUTBUFF_SIZE=%ld, outBuffOffset=%ld, ", (long)OUTBUFF_SIZE, (long)outBuffOffset);
-#endif
-   bytes_written = HDvsnprintf(outBuff+outBuffOffset, OUTBUFF_SIZE-outBuffOffset, format, ap);
-#if 0
-   printf("bytes_written=%ld\n", (long)bytes_written);
-#endif
-   va_end(ap);
-   va_start(ap, format);
-
-#if 0
-   printf("Result: bytes_written=%ld, OUTBUFF_SIZE-outBuffOffset=%ld\n", (long)bytes_written, (long)OUTBUFF_SIZE-outBuffOffset);
-#endif
-
-   if ((bytes_written < 0) ||
-#ifdef H5_VSNPRINTF_WORKS
-    (bytes_written >= (OUTBUFF_SIZE-outBuffOffset))
-#else
-    ((bytes_written+1) == (OUTBUFF_SIZE-outBuffOffset))
-#endif
-    )
-   {
-    /* Terminate the outbuff at the end of the previous output */
-    outBuff[outBuffOffset] = '\0';
-
-    overflow_file = HDtmpfile();
-    if(overflow_file == NULL)
-     fprintf(stderr, "warning: could not create overflow file.  Output may be truncated.\n");
-    else
-     bytes_written = HDvfprintf(overflow_file, format, ap);
-   }
-   else
-    outBuffOffset += bytes_written;
-  }
-  else
-   bytes_written = HDvfprintf(overflow_file, format, ap);
-
- }
- va_end(ap);
-}
 
 /*-------------------------------------------------------------------------
  * Function: print_dimensions
  *
- * Purpose: print dimensions
+ * Purpose: print dimensions 
  *
  *-------------------------------------------------------------------------
  */
 void
 print_dimensions (int rank, hsize_t *dims)
 {
-    int  i;
+    int i;
 
-    if ( rank > 0 )
+    printf("[" );
+    for ( i = 0; i < rank-1; i++)
     {
-        
-        parallel_print("[" );
-        for ( i = 0; i < rank-1; i++)
-        {
-            parallel_print(HSIZE_T_FORMAT, dims[i]);
-            parallel_print("x");
-        }
-        
-        parallel_print(HSIZE_T_FORMAT,  dims[rank-1]);
-        parallel_print("]" );
+        printf("%"H5_PRINTF_LL_WIDTH"u", (unsigned long_long)dims[i]);
+        printf("x");
     }
-    else
-    {
-        parallel_print("H5S_SCALAR" );
-    }
-
+    printf("%"H5_PRINTF_LL_WIDTH"u", (unsigned long_long)dims[rank-1]);
+    printf("]" );
+    
 }
 
 
@@ -203,7 +118,7 @@ void print_type(hid_t type)
             printf("undefined integer");
         }
         break;
-
+        
     case H5T_FLOAT:
         if (H5Tequal(type, H5T_IEEE_F32BE)) {
             printf("H5T_IEEE_F32BE");
@@ -225,9 +140,11 @@ void print_type(hid_t type)
             printf("undefined float");
         }
         break;
-
+        
     }/*switch*/
 }
+
+
 
 /*-------------------------------------------------------------------------
  * Function: diff_basename
@@ -244,19 +161,19 @@ const char*
 diff_basename(const char *name)
 {
     size_t i;
-
+    
     if (name==NULL)
         return NULL;
-
+    
     /* Find the end of the base name */
     i = strlen(name);
     while (i>0 && '/'==name[i-1])
         --i;
-
+    
     /* Skip backward over base name */
     while (i>0 && '/'!=name[i-1])
         --i;
-
+    
     return(name+i);
 }
 
@@ -272,21 +189,20 @@ diff_basename(const char *name)
  *-------------------------------------------------------------------------
  */
 const char*
-get_type(h5trav_type_t type)
+get_type(int type)
 {
-    switch(type) {
-        case H5TRAV_TYPE_DATASET:
-            return("H5G_DATASET");
-        case H5TRAV_TYPE_GROUP:
-            return("H5G_GROUP");
-        case H5TRAV_TYPE_NAMED_DATATYPE:
-            return("H5G_TYPE");
-        case H5TRAV_TYPE_LINK:
-            return("H5G_LINK");
-        case H5TRAV_TYPE_UDLINK:
-            return("H5G_UDLINK");
-        default:
-            return("unknown type");
+    switch (type)
+    {
+    case H5G_DATASET:
+        return("H5G_DATASET");
+    case H5G_GROUP:
+        return("H5G_GROUP");
+    case H5G_TYPE:
+        return("H5G_TYPE");
+    case H5G_LINK:
+        return("H5G_LINK");
+    default:
+        return("user defined type");
     }
 }
 
@@ -370,11 +286,7 @@ get_class(H5T_class_t tclass)
  */
 void print_found(hsize_t nfound)
 {
- if(g_Parallel)
-  parallel_print("%"H5_PRINTF_LL_WIDTH"u differences found\n", (unsigned long_long)nfound);
- else
-  HDfprintf(stdout,"%Hu differences found\n",nfound);
+ HDfprintf(stdout,"%Hu differences found\n",nfound);
 }
-
 
 

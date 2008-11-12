@@ -13,15 +13,21 @@
  * access to either file, you may request a copy from help@hdfgroup.org.     *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#include "H5TA.h"
+
 #include <stdlib.h>
-#include <string.h>
-#include "h5hltest.h"
-#include "H5TBpublic.h"
+#include <assert.h>
 
 #define TEST_FILE_BE "test_table_be.hdf5"
 #define TEST_FILE_LE "test_table_le.hdf5"
 #define TEST_FILE_CRAY "test_table_cray.hdf5"
 
+/* Compiler optimization on Cray X1s can cause this file not to compile.
+ * Turn it off.
+ */
+#ifdef __crayx1
+#pragma OPTIMIZE OFF
+#endif
 
 /*-------------------------------------------------------------------------
  * Table API test
@@ -354,6 +360,7 @@ int test_table(hid_t fid, int write)
  PASSED();
  }
 
+
  TESTING2("reading table");
 
 /*-------------------------------------------------------------------------
@@ -591,7 +598,7 @@ int test_table(hid_t fid, int write)
   wbufd[i].pressure = wbuf[i].pressure;
   wbufd[i].temperature = wbuf[i].temperature;
   strcpy(wbufd[i].name, wbuf[i].name );
-
+  
  }
 
 
@@ -935,8 +942,8 @@ int test_table(hid_t fid, int write)
   goto out;
 
   {
-
-
+   
+   
    /* compare the read values with the initial values */
    for( i = 0; i < NRECORDS; i++ )
    {
@@ -1098,7 +1105,7 @@ int test_table(hid_t fid, int write)
   }
  }
 
-
+ 
 
  PASSED();
 
@@ -1354,6 +1361,7 @@ int test_table(hid_t fid, int write)
  PASSED();
  }
 
+
 /*-------------------------------------------------------------------------
  *
  * Functions tested:
@@ -1371,6 +1379,7 @@ int test_table(hid_t fid, int write)
                     field_names,field_offset,field_type,
                     chunk_size,fill,compress,wbuf)<0)
                     goto out;
+
 
  /* delete the field */
  if ( H5TBdelete_field(fid, "table14", "Pressure" ) < 0 )

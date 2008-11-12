@@ -29,6 +29,7 @@
 #include <fcntl.h>
 #include <math.h>
 #include <sys/time.h>
+#include <sys/uio.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -42,13 +43,13 @@
 
 #include <zlib.h>
 
-#if defined(MSDOS) || defined(OS2) || defined(_WIN32)
+#if defined(MSDOS) || defined(OS2) || defined(WIN32)
 #  include <fcntl.h>
 #  include <io.h>
 #  define SET_BINARY_MODE(file)     setmode(fileno(file), O_BINARY)
 #else
 #  define SET_BINARY_MODE(file)     /* nothing */
-#endif  /* MSDOS || OS2 || _WIN32 */
+#endif  /* MSDOS || OS2 || WIN32 */
 
 #ifdef VMS
 #  define unlink        delete
@@ -321,18 +322,14 @@ uncompress_buffer(Bytef *dest, uLongf *destLen, const Bytef *source,
 static void
 get_unique_name(void)
 {
-    const char *prefix = "", *tmpl = "zip_perf.data";
+    const char *prefix = "/tmp", *tmpl = "/zip_perf.data";
     const char *env = getenv("HDF5_PREFIX");
 
-    if (env) {
+    if (env)
         prefix = env;
-        strcat(prefix, "/");
-    }
 
-    if (option_prefix) {
+    if (option_prefix)
         prefix = option_prefix;
-        strcat(prefix, "/");
-    }
 
     filename = calloc(1, strlen(prefix) + strlen(tmpl) + 1);
 

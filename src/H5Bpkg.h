@@ -74,7 +74,6 @@ H5FL_EXTERN(H5B_t);
 /******************************/
 /* Package Private Prototypes */
 /******************************/
-H5_DLL herr_t H5B_dest(H5F_t *f, H5B_t *b);
+herr_t H5B_dest(H5F_t *f, H5B_t *b);
 
 #endif /*_H5Bpkg_H*/
-

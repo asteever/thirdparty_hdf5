@@ -16,16 +16,16 @@
 #include "h5tools.h"
 
 /*-------------------------------------------------------------------------
- * Function: h5tools_get_native_type
+ * Function:    h5tools_get_native_type
  *
  * Purpose: Wrapper around H5Tget_native_type() to work around
- *  Problems with bitfields.
+ *      Problems with bitfields.
  *
- * Return: Success:    datatype ID
+ * Return:  Success:    datatype ID
  *
- *  Failure:    FAIL
+ *      Failure:    FAIL
  *
- * Programmer: Quincey Koziol
+ * Programmer:  Quincey Koziol
  *              Tuesday, October  5, 2004
  *
  * Modifications:
@@ -46,7 +46,6 @@ h5tools_get_native_type(hid_t type)
 
     return(p_type);
 }
-
 
 /*-------------------------------------------------------------------------
  * Function: h5tools_get_little_endian_type
@@ -75,7 +74,7 @@ h5tools_get_little_endian_type(hid_t tid)
  size       = H5Tget_size(tid);
  sign       = H5Tget_sign(tid);
 
- switch( type_class )
+ switch( type_class ) 
  {
  case H5T_INTEGER:
   {
@@ -88,7 +87,7 @@ h5tools_get_little_endian_type(hid_t tid)
    else if ( size == 8 && sign == H5T_SGN_2)
     p_type=H5Tcopy(H5T_STD_I64LE);
    else if ( size == 1 && sign == H5T_SGN_NONE)
-    p_type=H5Tcopy(H5T_STD_U8LE);
+    p_type=H5Tcopy(H5T_STD_U8LE); 
    else if ( size == 2 && sign == H5T_SGN_NONE)
     p_type=H5Tcopy(H5T_STD_U16LE);
    else if ( size == 4 && sign == H5T_SGN_NONE)
@@ -97,14 +96,14 @@ h5tools_get_little_endian_type(hid_t tid)
     p_type=H5Tcopy(H5T_STD_U64LE);
   }
   break;
-
+  
  case H5T_FLOAT:
   if ( size == 4)
    p_type=H5Tcopy(H5T_IEEE_F32LE);
   else if ( size == 8)
    p_type=H5Tcopy(H5T_IEEE_F64LE);
   break;
-
+  
  case H5T_TIME:
  case H5T_BITFIELD:
  case H5T_OPAQUE:
@@ -115,10 +114,10 @@ h5tools_get_little_endian_type(hid_t tid)
  case H5T_VLEN:
  case H5T_ARRAY:
   break;
-
+   
  default:
   break;
-
+  
  }
 
  return(p_type);
@@ -152,7 +151,7 @@ h5tools_get_big_endian_type(hid_t tid)
  size       = H5Tget_size(tid);
  sign       = H5Tget_sign(tid);
 
- switch( type_class )
+ switch( type_class ) 
  {
  case H5T_INTEGER:
   {
@@ -165,7 +164,7 @@ h5tools_get_big_endian_type(hid_t tid)
    else if ( size == 8 && sign == H5T_SGN_2)
     p_type=H5Tcopy(H5T_STD_I64BE);
    else if ( size == 1 && sign == H5T_SGN_NONE)
-    p_type=H5Tcopy(H5T_STD_U8BE);
+    p_type=H5Tcopy(H5T_STD_U8BE); 
    else if ( size == 2 && sign == H5T_SGN_NONE)
     p_type=H5Tcopy(H5T_STD_U16BE);
    else if ( size == 4 && sign == H5T_SGN_NONE)
@@ -174,14 +173,14 @@ h5tools_get_big_endian_type(hid_t tid)
     p_type=H5Tcopy(H5T_STD_U64BE);
   }
   break;
-
+  
  case H5T_FLOAT:
   if ( size == 4)
    p_type=H5Tcopy(H5T_IEEE_F32BE);
   else if ( size == 8)
    p_type=H5Tcopy(H5T_IEEE_F64BE);
   break;
-
+  
  case H5T_TIME:
  case H5T_BITFIELD:
  case H5T_OPAQUE:
@@ -192,13 +191,12 @@ h5tools_get_big_endian_type(hid_t tid)
  case H5T_VLEN:
  case H5T_ARRAY:
   break;
-
+   
  default:
   break;
-
+  
  }
 
-
+ 
  return(p_type);
 }
-

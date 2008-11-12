@@ -27,7 +27,7 @@ usage: h5diff [OPTIONS] file1 file2 [obj1[obj2]]
  Compare criteria
 
  If no objects [obj1[obj2]] are specified, h5diff only compares objects
-   with the same absolute path in both files
+   with the same absolute path in both files.
 
  The compare criteria is:
    1) datasets: numerical array differences 2) groups: name string difference

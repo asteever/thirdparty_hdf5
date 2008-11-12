@@ -55,7 +55,6 @@ FILE9="$INDIR/$SRCFILE9"
 FILE10="$INDIR/$SRCFILE10"
 FILE11="$INDIR/$SRCFILE11"
 
-
 H5DIFF=h5diff               # The tool name
 H5DIFF_BIN=`pwd`/$H5DIFF    # The path of the tool binary
 
@@ -206,7 +205,7 @@ TOOLTEST() {
 	#echo "#############################"
 	#echo "Expected output for '$H5DIFF $@'" 
 	#echo "#############################"
-	#cd $srcdir/testfiles
+	#cd $srcdir/../testfiles
 	if [ "`uname -s`" = "TFLOPS O/S" ]; then
 	    eval $RUNCMD $H5DIFF_BIN $@
 	else
@@ -305,21 +304,20 @@ TOOLTEST h5diff_13.txt -r $FILE1 $FILE2
 TESTING $H5DIFF -r $SRCFILE1 $SRCFILE2 g1/dset1 g1/dset2
 TOOLTEST h5diff_14.txt  -r $FILE1 $FILE2 g1/dset1 g1/dset2
 
+
 # 1.5 with -d
 TESTING $H5DIFF --report --delta=5 $SRCFILE1 $SRCFILE2 g1/dset3 g1/dset4
 TOOLTEST h5diff_15.txt --report --delta=5 $FILE1 $FILE2 g1/dset3 g1/dset4
 
 # 1.6.1 with -p (int)
 TESTING $H5DIFF -v -p 0.02 $SRCFILE1 $SRCFILE1 g1/dset5 g1/dset6
-TOOLTEST h5diff_16_1.txt -v -p 0.02 $FILE1 $FILE1 g1/dset5 g1/dset6
+TOOLTEST h5diff_16_1.txt -v -p 0.02  $FILE1 $FILE1 g1/dset5 g1/dset6
 
-# 1.6.2 with -p (unsigned long_long)
-TESTING $H5DIFF --verbose --relative=0.02 $SRCFILE1 $SRCFILE1 g1/dset7 g1/dset8
-TOOLTEST h5diff_16_2.txt --verbose --relative=0.02 $FILE1 $FILE1 g1/dset7 g1/dset8
+
 
 # 1.6.3 with -p (double)
 TESTING $H5DIFF -v -p 0.02 $SRCFILE1 $SRCFILE1 g1/dset9 g1/dset10
-TOOLTEST h5diff_16_3.txt -v -p 0.02 $FILE1 $FILE1 g1/dset9 g1/dset10
+TOOLTEST h5diff_16_3.txt -v -p 0.02  $FILE1 $FILE1 g1/dset9 g1/dset10
 
 # 1.7 verbose mode
 TESTING $H5DIFF -v $SRCFILE1 $SRCFILE2
@@ -416,6 +414,7 @@ TOOLTEST h5diff_57.txt -v $FILE4 $FILE4 dset7a dset7b
 # 5.8 (region reference)
 TESTING $H5DIFF -v $SRCFILE7 $SRCFILE8  refreg
 TOOLTEST h5diff_58.txt -v $FILE7 $FILE8 refreg
+
 
 # ##############################################################################
 # # Error messages

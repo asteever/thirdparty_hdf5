@@ -40,7 +40,7 @@
     if ((ret) == (val)) {						      \
 	TestErrPrintf("*** UNEXPECTED RETURN from %s is %ld at line %4d "     \
 		   "in %s\n", where, (long)(ret), (int)__LINE__, __FILE__);   \
-	H5Eprint2(H5E_DEFAULT, stdout);				      \
+	H5Eprint (stdout);						      \
     }									      \
 } while(0)
 
@@ -52,7 +52,7 @@
    if ((ret)<0) {							      \
       TestErrPrintf ("*** UNEXPECTED RETURN from %s is %ld line %4d in %s\n", \
                   (where), (long)(ret), (int)__LINE__, __FILE__);	      \
-      H5Eprint2(H5E_DEFAULT, stdout);				      \
+      H5Eprint (stdout);						      \
    }									      \
 }
 
@@ -64,21 +64,20 @@
    if (!(ret)) {							      \
       TestErrPrintf ("*** UNEXPECTED RETURN from %s is NULL line %4d in %s\n", \
                   (where), (int)__LINE__, __FILE__);			      \
-      H5Eprint2(H5E_DEFAULT, stdout);				      \
+      H5Eprint (stdout);						      \
    }									      \
 }
 
-/* Used to make certain a return value _is_ a value */
-#define VERIFY(_x, _val, where) do {					      \
-    long __x = (long)_x, __val = (long)_val;				      \
-    if(GetTestVerbosity() >= VERBO_HI) {				      \
+/* Used to make certain a scalar return value _is_ a value */
+#define VERIFY(x, val, where) do {					      \
+    if (GetTestVerbosity()>=VERBO_HI) {					      \
 	print_func("   Call to routine: %15s at line %4d in %s had value "    \
-		   "%ld \n", (where), (int)__LINE__, __FILE__, __x);	      \
+		   "%ld \n", (where), (int)__LINE__, __FILE__, (long)(x));    \
     }									      \
-    if((__x) != (__val)) {						      \
+    if ((x) != (val)) {							      \
 	TestErrPrintf("*** UNEXPECTED VALUE from %s should be %ld, but is %ld at line %4d " \
-		   "in %s\n", (where), __val, __x, (int)__LINE__, __FILE__);  \
-	H5Eprint2(H5E_DEFAULT, stdout);					      \
+		   "in %s\n", (where), (long)(val), (long)(x), (int)__LINE__, __FILE__); \
+	H5Eprint (stdout);						      \
     }									      \
 } while(0)
 
@@ -91,7 +90,7 @@
     if (HDstrcmp(x, val)) {					              \
 	TestErrPrintf("*** UNEXPECTED VALUE from %s should be %s, but is %s at line %4d " \
 		   "in %s\n", where, val, x, (int)__LINE__, __FILE__);        \
-	H5Eprint2(H5E_DEFAULT, stdout);				      \
+	H5Eprint (stdout);					              \
     }									      \
 } while(0)
 
@@ -102,11 +101,11 @@
 		   "%ld\n", func, (int)__LINE__, __FILE__, (long)(ret));      \
     }									      \
     if (GetTestVerbosity()>=VERBO_HI)					      \
-        H5Eprint2(H5E_DEFAULT, stdout);				      \
+        H5Eprint(stdout);					              \
     if ((ret) == FAIL) {						      \
 	TestErrPrintf("*** UNEXPECTED RETURN from %s is %ld at line %4d "     \
 		   "in %s\n", func, (long)(ret), (int)__LINE__, __FILE__);    \
-	H5Eprint2(H5E_DEFAULT, stdout);				      \
+	H5Eprint (stdout);						      \
     }									      \
 } while(0)
 
@@ -125,12 +124,10 @@ extern "C" {
 
 /* Prototypes for the test routines */
 void                    test_metadata(void);
-void                    test_checksum(void);
 void                    test_tst(void);
 void                    test_heap(void);
 void                    test_refstr(void);
 void                    test_file(void);
-void                    test_h5o(void);
 void                    test_h5t(void);
 void                    test_h5s(void);
 void                    test_coords(void);
@@ -146,16 +143,11 @@ void                    test_array(void);
 void                    test_genprop(void);
 void			test_configure(void);
 void			test_misc(void);
-void			test_ids(void);
 void			test_skiplist(void);
-void			test_sohm(void);
-void			test_unicode(void);
 
 /* Prototypes for the cleanup routines */
 void                    cleanup_metadata(void);
-void                    cleanup_checksum(void);
 void                    cleanup_file(void);
-void                    cleanup_h5o(void);
 void                    cleanup_h5s(void);
 void                    cleanup_coords(void);
 void                    cleanup_attr(void);
@@ -168,9 +160,7 @@ void                    cleanup_iterate(void);
 void                    cleanup_array(void);
 void                    cleanup_genprop(void);
 void			cleanup_configure(void);
-void			cleanup_sohm(void);
 void			cleanup_misc(void);
-void			cleanup_unicode(void);
 
 #ifdef __cplusplus
 }

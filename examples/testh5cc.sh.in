@@ -14,10 +14,10 @@
 # access to either file, you may request a copy from help@hdfgroup.org.
 #
 # Tests for the h5cc compiler tool
-# Created: Albert Cheng, 2007/4/11
+# Created: Albert Cheng, 2007/3/13
 #
 # Modification:
-#	Albert Cheng, 2008/9/27
+#	Albert Cheng, 2007/4/13
 #	Added -shlib tests and verbose control.
 #
 
@@ -118,7 +118,6 @@ EOF
 # An HDF5 sample program that calls hdf5 functions.
 cat > $hdf5main <<EOF
 #include "hdf5.h"
-#define H5_USE_16_API
 #define H5FILE_NAME        "tmp.h5"
 int
 main (void)
@@ -135,7 +134,7 @@ main (void)
 
     printf("HDF5 C Sample program ran successfully. File %s generated.\n", H5FILE_NAME);
     remove(H5FILE_NAME);
-
+ 
     return 0;
 }     
 EOF

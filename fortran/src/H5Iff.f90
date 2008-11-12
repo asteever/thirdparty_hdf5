@@ -52,7 +52,13 @@
 !
 ! Comment:		
 !----------------------------------------------------------------------
-          SUBROUTINE h5iget_type_f(obj_id, type, hdferr)
+          SUBROUTINE h5iget_type_f(obj_id, type, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5iget_type_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: obj_id  !Object identifier 
             INTEGER, INTENT(OUT) :: type !type of an object. 
@@ -73,7 +79,7 @@
               INTEGER FUNCTION h5iget_type_c(obj_id, type)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5IGET_TYPE_C':: h5iget_type_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5IGET_TYPE_C':: h5iget_type_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: obj_id 
               INTEGER, INTENT(OUT) :: type
@@ -108,7 +114,11 @@
 !----------------------------------------------------------------------
 
 
-          SUBROUTINE h5iget_name_f(obj_id, buf, buf_size, name_size, hdferr)
+          SUBROUTINE h5iget_name_f(obj_id, buf, buf_size, name_size, hdferr) 
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5iget_name_f
+!DEC$endif
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: obj_id     ! Object identifier 
             INTEGER(SIZE_T), INTENT(IN) :: buf_size  ! Buffer size 
@@ -124,7 +134,7 @@
               INTEGER FUNCTION h5iget_name_c(obj_id, buf, buf_size, name_size)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5IGET_NAME_C'::h5iget_name_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5IGET_NAME_C'::h5iget_name_c
               !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: buf
               INTEGER(HID_T), INTENT(IN) :: obj_id
@@ -158,7 +168,13 @@
 !
 ! Comment:		
 !----------------------------------------------------------------------
-          SUBROUTINE h5iinc_ref_f(obj_id, ref_count, hdferr)
+          SUBROUTINE h5iinc_ref_f(obj_id, ref_count, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5iinc_ref_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: obj_id  !Object identifier 
             INTEGER, INTENT(OUT) :: ref_count !Current reference count of ID
@@ -171,7 +187,7 @@
               INTEGER FUNCTION h5iinc_ref_c(obj_id, ref_count)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5IINC_REF_C':: h5iinc_ref_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5IINC_REF_C':: h5iinc_ref_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: obj_id 
               INTEGER, INTENT(OUT) :: ref_count
@@ -201,7 +217,13 @@
 !
 ! Comment:		
 !----------------------------------------------------------------------
-          SUBROUTINE h5idec_ref_f(obj_id, ref_count, hdferr)
+          SUBROUTINE h5idec_ref_f(obj_id, ref_count, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5idec_ref_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: obj_id  !Object identifier 
             INTEGER, INTENT(OUT) :: ref_count !Current reference count of ID
@@ -214,7 +236,7 @@
               INTEGER FUNCTION h5idec_ref_c(obj_id, ref_count)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5IDEC_REF_C':: h5idec_ref_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5IDEC_REF_C':: h5idec_ref_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: obj_id 
               INTEGER, INTENT(OUT) :: ref_count
@@ -244,7 +266,13 @@
 !
 ! Comment:		
 !----------------------------------------------------------------------
-          SUBROUTINE h5iget_ref_f(obj_id, ref_count, hdferr)
+          SUBROUTINE h5iget_ref_f(obj_id, ref_count, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5iget_ref_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: obj_id  !Object identifier 
             INTEGER, INTENT(OUT) :: ref_count !Current reference count of ID
@@ -257,7 +285,7 @@
               INTEGER FUNCTION h5iget_ref_c(obj_id, ref_count)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5IGET_REF_C':: h5iget_ref_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5IGET_REF_C':: h5iget_ref_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: obj_id 
               INTEGER, INTENT(OUT) :: ref_count
@@ -287,7 +315,13 @@
 !
 ! Comment:		
 !----------------------------------------------------------------------
-          SUBROUTINE h5iget_file_id_f(obj_id, file_id, hdferr)
+          SUBROUTINE h5iget_file_id_f(obj_id, file_id, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5iget_file_id_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN)  :: obj_id   ! Object identifier 
             INTEGER(HID_T), INTENT(OUT) :: file_id  ! File identifier
@@ -297,7 +331,7 @@
               INTEGER FUNCTION h5iget_file_id_c(obj_id, file_id)
               USE H5GLOBAL
               !DEC$ IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5IGET_FILE_ID_C':: h5iget_file_id_c
+              !MS$ATTRIBUTES C,reference,alias:'_H5IGET_FILE_ID_C':: h5iget_file_id_c
               !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN)  :: obj_id 
               INTEGER(HID_T), INTENT(OUT) :: file_id 

@@ -52,6 +52,10 @@
     !
     INTEGER(HSIZE_T), DIMENSION(3) :: dimsm = (/7,7,3/)
 
+    !
+    !to get Dataset dimensions 
+    !
+    INTEGER(HSIZE_T), DIMENSION(2) :: dims_out
 
     !
     !Dataset dimensions 
@@ -99,18 +103,21 @@
     !
     INTEGER :: memrank = 3
 
-
+    !
+    !integer to get the dataspace rank from dataset
+    !
+    INTEGER :: rank 
 
 
     !
     !general purpose integer 
     !
-    INTEGER :: i, j 
+    INTEGER :: i, j, k 
 
     !
     !flag to check operation success 
     !
-    INTEGER :: error 
+    INTEGER :: error, error_n 
     INTEGER(HSIZE_T), DIMENSION(3) :: data_dims
 
 
@@ -390,7 +397,8 @@
     !
     !flag to check operation success 
     !
-    INTEGER :: error
+    INTEGER :: error 
+    LOGICAL :: status
     INTEGER(HSIZE_T), DIMENSION(3) :: data_dims
 
 
@@ -712,7 +720,8 @@
 
      INTEGER(HID_T) :: file_id       ! File identifier 
      INTEGER(HID_T) :: dset_id       ! Dataset identifier 
-     INTEGER(HID_T) :: dataspace     ! Dataspace identifier
+     INTEGER(HID_T) :: dataspace     ! Dataspace identifier 
+     INTEGER(HID_T) :: memspace      ! memspace identifier 
 
      !
      !Dataset dimensions 
@@ -754,6 +763,10 @@
      !
      INTEGER(HSIZE_T), DIMENSION(RANK, NUMPS) :: coord
 
+     !
+     !Size of the hyperslab in memory 
+     !
+     INTEGER(HSIZE_T), DIMENSION(3) :: count_out = (/3,4,1/)
 
      !
      !Number of hyperslabs selected in the current dataspace 
@@ -789,12 +802,20 @@
      INTEGER, DIMENSION(5,6) :: data
 
      !
+     !output buffer 
+     !
+     INTEGER, DIMENSION(7,7,3) :: data_out
+
+     !
+     !general purpose integer 
+     !
+     INTEGER :: i, j, k 
+
+     !
      !flag to check operation success 
      !
-     INTEGER :: error
+     INTEGER :: error, error_n 
      INTEGER(HSIZE_T), DIMENSION(3) :: data_dims
-
-     INTEGER :: i
 
      !
      !initialize the coord array to give the selected points' position 
@@ -918,7 +939,7 @@
      CALL h5sget_select_hyper_blocklist_f(dataspace, startblock, &
                                           num_blocks, blocklist, error)
      CALL check("h5sget_select_hyper_blocklist_f", error, total_error)
-!     write(*,*) (blocklist(i), i =1, num_blocks*RANK*2)
+     !write(*,*) (blocklist(i), i =1, num_blocks*RANK*2)
      !result of blocklist selected is:
      !1,  1,  2,  2,  4,  1,  5,  2,  1,  4,  2,  5,  4,  4,  5,  5     
 
@@ -1119,6 +1140,7 @@ SUBROUTINE test_select_point(cleanup, total_error)
   CALL h5sselect_elements_f(sid1, H5S_SELECT_SET_F, SPACE1_RANK, INT(POINT1_NPOINTS,size_t), coord1, error)
   CALL check("h5sselect_elements_f", error, total_error)
 
+
   !/* Verify correct elements selected */
 
   CALL h5sget_select_elem_pointlist_f(sid1, INT(0,hsize_t), INT(POINT1_NPOINTS,hsize_t),temp_coord1,error)
@@ -1151,7 +1173,7 @@ SUBROUTINE test_select_point(cleanup, total_error)
   CALL h5sselect_elements_f(sid1, H5S_SELECT_APPEND_F, SPACE1_RANK, INT(POINT1_NPOINTS,size_t), coord1, error)
   CALL check("h5sselect_elements_f", error, total_error)
   ! /* Verify correct elements selected */
-  
+
   CALL h5sget_select_elem_pointlist_f(sid1, INT(POINT1_NPOINTS,hsize_t), INT(POINT1_NPOINTS,hsize_t),temp_coord1,error)
   CALL check("h5sget_select_elem_pointlist_f", error, total_error)
 
@@ -1179,7 +1201,6 @@ SUBROUTINE test_select_point(cleanup, total_error)
 
   CALL h5sselect_elements_f(sid2, H5S_SELECT_SET_F, SPACE2_RANK, INT(POINT1_NPOINTS,size_t), coord2, error)
   CALL check("h5sselect_elements_f", error, total_error)
-
 
   !/* Verify correct elements selected */
   
@@ -1332,7 +1353,6 @@ SUBROUTINE test_select_point(cleanup, total_error)
   !/* Close file */
   CALL h5fclose_f(fid1, error)
   CALL check("h5fclose_f", error, total_error)
-
 
   IF(cleanup) CALL h5_cleanup_f(filename, H5P_DEFAULT_F, error)
   CALL check("h5_cleanup_f", error, total_error)
