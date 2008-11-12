@@ -4,7 +4,6 @@
 	Version="8.00"
 	Name="btree2dll"
 	ProjectGUID="{34EEE194-B77E-453E-9C59-252C0421188A}"
-	RootNamespace="btree2dll"
 	>
 	<Platforms>
 		<Platform
@@ -76,7 +75,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib WS2_32.lib"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\../../../test/btree2dll/Debug/btree2dll.pdb"
@@ -168,7 +167,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib WS2_32.lib"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\../../../test/btree2dll/Debug/btree2dll.pdb"
@@ -260,7 +259,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib WS2_32.lib"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\../../../test/btree2dll/Release/btree2dll.pdb"
 				SubSystem="1"
@@ -352,7 +351,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib WS2_32.lib"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\../../../test/btree2dll/Release/btree2dll.pdb"
 				SubSystem="1"

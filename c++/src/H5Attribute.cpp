@@ -34,6 +34,7 @@
 #include "H5DataSpace.h"
 #include "H5File.h"
 #include "H5Attribute.h"
+#include "H5private.h"          // for HDfree
 
 #ifndef H5_NO_NAMESPACE
 namespace H5 {
@@ -95,7 +96,7 @@ void Attribute::write( const DataType& mem_type, const void *buf ) const
 //--------------------------------------------------------------------------
 // Function:	Attribute::write
 ///\brief	This is an overloaded member function, provided for convenience.
-///		It writes a \a std::string to this attribute.
+///		It writes a \a H5std_string to this attribute.
 ///\param	mem_type  - IN: Attribute datatype (in memory)
 ///\param	strg      - IN: Data to be written
 ///\exception	H5::AttributeIException
@@ -134,7 +135,7 @@ void Attribute::read( const DataType& mem_type, void *buf ) const
 //--------------------------------------------------------------------------
 // Function:	Attribute::read
 ///\brief	This is an overloaded member function, provided for convenience.
-///		It reads a \a std::string from this attribute.
+///		It reads a \a H5std_string from this attribute.
 ///\param	mem_type  - IN: Attribute datatype (in memory)
 ///\param	strg      - IN: Buffer for read string
 ///\exception	H5::AttributeIException
@@ -147,29 +148,46 @@ void Attribute::read( const DataType& mem_type, void *buf ) const
 //--------------------------------------------------------------------------
 void Attribute::read( const DataType& mem_type, H5std_string& strg ) const
 {
-   // Get the attribute size and allocate temporary C-string for C API
-   hsize_t attr_size = H5Aget_storage_size(id);
-   if (attr_size <= 0)
-   {
-      throw AttributeIException("Attribute::read", "Unable to get attribute size before reading");
-   }
-   char* strg_C = new char [(size_t)attr_size+1];
-   if (strg_C == NULL)
-   {
-      throw AttributeIException("Attribute::read", "Unable to allocate buffer to read the attribute");
-   }
+    // Get the size of the attribute data.
+    hsize_t attr_size = H5Aget_storage_size(id);
+    if (attr_size <= 0)
+    {
+	throw AttributeIException("Attribute::read", "Unable to get attribute size before reading");
+    }
 
-   // Call C API to get the attribute data, a string of chars
-   herr_t ret_value = H5Aread(id, mem_type.getId(), &strg_C);
-   if( ret_value < 0 )
-   {
-      throw AttributeIException("Attribute::read", "H5Aread failed");
-   }
+    // Check if this attribute has variable-len string or fixed-len string and
+    // proceed appropriately.
+    bool is_variable_len = H5Tis_variable_str(mem_type.getId());
+    char *strg_C;
+    void *ptr;
+    if (!is_variable_len)	// only allocate for fixed-len string
+    {
+	strg_C = new char [(size_t)attr_size+1];
+	ptr = strg_C;
+    }
+    else
+    {
+	// no allocation for variable-len string; C library will
+	ptr = &strg_C;
+    }
 
-   // Get 'string' from the C char* and release resource
-   strg_C[attr_size] = '\0';
-   strg = strg_C;
-   delete []strg_C;
+    // Call C API to get the attribute data, a string of chars
+    herr_t ret_value = H5Aread(id, mem_type.getId(), ptr);
+
+    // Get string from the C char* and release resource allocated locally
+    if (!is_variable_len)
+    {
+	strg_C[attr_size] = '\0';
+	strg = strg_C;
+	delete []strg_C;
+    }
+    // Get string from the C char* and release resource allocated by C API
+    else
+    {
+	strg = strg_C;
+	HDfree(strg_C);
+    }
+    ptr = NULL;
 }
 
 //--------------------------------------------------------------------------

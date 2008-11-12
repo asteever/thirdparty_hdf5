@@ -3,6 +3,7 @@
 	ProjectType="Visual C++"
 	Version="7.10"
 	Name="h5tinit"
+	RootNamespace="h5tinit"
 	SccProjectName=""
 	SccLocalPath="">
 	<Platforms>
@@ -13,7 +14,7 @@
 		<Configuration
 			Name="Release|Win32"
 			OutputDirectory=".\..\..\..\..\src\h5tinit\Release"
-			IntermediateDirectory=".\..\..\..\..\src\h5tinit\Release"
+			IntermediateDirectory=".\..\..\..\..\src"
 			ConfigurationType="1"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
@@ -51,7 +52,7 @@
 			<Tool
 				Name="VCPostBuildEventTool"
 				Description="Generating H5tinit.c"
-				CommandLine=".\..\..\..\..\src\h5tinit\Release\h5tinit.exe &gt; ..\..\..\..\src\H5tinit.c"/>
+				CommandLine=".\..\..\..\..\src\h5tinit\Release\h5tinit.exe &gt;.\..\..\..\..\src\H5tinit.c"/>
 			<Tool
 				Name="VCPreBuildEventTool"/>
 			<Tool
@@ -74,7 +75,7 @@
 		<Configuration
 			Name="Debug|Win32"
 			OutputDirectory=".\..\..\..\..\src\h5tinit\Debug"
-			IntermediateDirectory=".\..\..\..\..\src\h5tinit\Debug"
+			IntermediateDirectory=".\..\..\..\..\src"
 			ConfigurationType="1"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="FALSE"
@@ -113,7 +114,7 @@
 			<Tool
 				Name="VCPostBuildEventTool"
 				Description="Generating H5tinit.c"
-				CommandLine=".\..\..\..\..\src\h5tinit\Debug\h5tinit.exe &gt; ..\..\..\..\src\H5tinit.c"/>
+				CommandLine=".\..\..\..\..\src\h5tinit\Debug\h5tinit.exe &gt; .\..\..\..\..\src\H5tinit.c"/>
 			<Tool
 				Name="VCPreBuildEventTool"/>
 			<Tool

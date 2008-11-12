@@ -1436,33 +1436,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\..\src\H5EA.c">
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAcache.c">
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAdbg.c">
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAdblock.c">
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAhdr.c">
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAiblock.c">
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAint.c">
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAstat.c">
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAtest.c">
-			</File>
-			<File
 				RelativePath="..\..\..\src\H5Edeprec.c">
 				<FileConfiguration
 					Name="Debug|Win32">
@@ -1568,6 +1541,9 @@
 						PreprocessorDefinitions=""
 						BrowseInformation="1"/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\..\src\H5Faccum.c">
 			</File>
 			<File
 				RelativePath="..\..\..\src\H5FD.c">
@@ -1716,6 +1692,9 @@
 						PreprocessorDefinitions=""
 						BrowseInformation="1"/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\..\src\H5FDint.c">
 			</File>
 			<File
 				RelativePath="..\..\..\src\H5FDlog.c">
@@ -2078,6 +2057,9 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\..\src\H5Fio.c">
+			</File>
+			<File
 				RelativePath="..\..\..\src\H5FL.c">
 				<FileConfiguration
 					Name="Debug|Win32">
@@ -2150,6 +2132,9 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\..\src\H5Fmpi.c">
+			</File>
+			<File
 				RelativePath="..\..\..\src\H5FO.c">
 				<FileConfiguration
 					Name="Debug|Win32">
@@ -2185,6 +2170,9 @@
 						PreprocessorDefinitions=""
 						BrowseInformation="1"/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\..\src\H5Fquery.c">
 			</File>
 			<File
 				RelativePath="..\..\..\src\H5FS.c">
@@ -2362,6 +2350,12 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\..\src\H5FSstat.c">
+			</File>
+			<File
+				RelativePath="..\..\..\src\H5FStest.c">
+			</File>
+			<File
 				RelativePath="..\..\..\src\H5Fsuper.c">
 				<FileConfiguration
 					Name="Debug|Win32">
@@ -2502,6 +2496,9 @@
 						PreprocessorDefinitions=""
 						BrowseInformation="1"/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\..\src\H5Gcache.c">
 			</File>
 			<File
 				RelativePath="..\..\..\src\H5Gcompact.c">
@@ -3597,6 +3594,9 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\..\..\src\H5HGcache.c">
+			</File>
+			<File
 				RelativePath="..\..\..\src\H5HGdbg.c">
 				<FileConfiguration
 					Name="Debug|Win32">
@@ -3669,6 +3669,9 @@
 						PreprocessorDefinitions=""
 						BrowseInformation="1"/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\..\src\H5HLcache.c">
 			</File>
 			<File
 				RelativePath="..\..\..\src\H5HLdbg.c">
@@ -3887,6 +3890,15 @@
 						PreprocessorDefinitions=""
 						BrowseInformation="1"/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\..\src\H5MFaggr.c">
+			</File>
+			<File
+				RelativePath="..\..\..\src\H5MFdbg.c">
+			</File>
+			<File
+				RelativePath="..\..\..\src\H5MFsection.c">
 			</File>
 			<File
 				RelativePath="..\..\..\src\H5MM.c">
@@ -7766,12 +7778,6 @@
 			</File>
 			<File
 				RelativePath="..\..\..\src\H5Dpublic.h">
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EApkg.h">
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAprivate.h">
 			</File>
 			<File
 				RelativePath="..\..\..\src\H5Epkg.h">

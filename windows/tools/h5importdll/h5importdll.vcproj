@@ -4,7 +4,6 @@
 	Version="8.00"
 	Name="h5importdll"
 	ProjectGUID="{2DCDB978-79B7-4A3A-B24A-D908A49B7D50}"
-	RootNamespace="h5importdll"
 	>
 	<Platforms>
 		<Platform
@@ -73,7 +72,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\../../../tools/h5importdll/Release/h5importdll.pdb"
 				SubSystem="1"
@@ -161,7 +160,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\../../../tools/h5importdll/Release/h5importdll.pdb"
 				SubSystem="1"
@@ -249,7 +248,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\../../../tools/h5importdll/Debug/h5importdll.pdb"
@@ -339,7 +338,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\../../../tools/h5importdll/Debug/h5importdll.pdb"

@@ -47,7 +47,7 @@
 int
 print_objname (diff_opt_t * options, hsize_t nfound)
 {
-    return ((options->m_verbose || nfound) && !options->m_quiet) ? 1 : 0;
+ return ((options->m_verbose || nfound) && !options->m_quiet) ? 1 : 0;
 }
 
 /*-------------------------------------------------------------------------
@@ -350,11 +350,6 @@ out:
  * Modifications: Jan 2005 Leon Arber, larber@uiuc.edu
  *    Added support for parallel diffing
  *
- * Pedro Vicente, pvn@hdfgroup.org, Nov 4, 2008
- *    Compare the graph and make h5diff return 1 for difference if
- * 1) the number of objects in file1 is not the same as in file2
- * 2) the graph does not match, i.e same names (absolute path)
- * 3) objects with the same name are not of the same type
  *-------------------------------------------------------------------------
  */
 hsize_t diff_match(hid_t file1_id,

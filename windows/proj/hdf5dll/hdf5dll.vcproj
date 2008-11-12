@@ -4,7 +4,6 @@
 	Version="8.00"
 	Name="hdf5dll"
 	ProjectGUID="{C9535AD9-C61D-4691-A5CE-52EF359892AF}"
-	RootNamespace="hdf5dll"
 	>
 	<Platforms>
 		<Platform
@@ -76,7 +75,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib $(HDF5_EXT_ZLIB) $(HDF5_EXT_SZIP)"
 				OutputFile="$(OutDir)\hdf5ddll.dll"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ManifestFile="$(TargetPath).intermediate.manifest"
 				GenerateDebugInformation="true"
@@ -169,7 +168,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib $(HDF5_EXT_ZLIB) $(HDF5_EXT_SZIP)"
 				OutputFile="$(OutDir)\hdf5ddll.dll"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ManifestFile="$(TargetPath).intermediate.manifest"
 				GenerateDebugInformation="true"
@@ -264,7 +263,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib $(HDF5_EXT_ZLIB) $(HDF5_EXT_SZIP)"
 				OutputFile="$(OutDir)\hdf5dll.dll"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ManifestFile="$(TargetPath).intermediate.manifest"
 				ProgramDatabaseFile="$(TargetDir)$(TargetName).pdb"
@@ -358,7 +357,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib $(HDF5_EXT_ZLIB) $(HDF5_EXT_SZIP)"
 				OutputFile="$(OutDir)\hdf5dll.dll"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ManifestFile="$(TargetPath).intermediate.manifest"
 				ProgramDatabaseFile="$(TargetDir)$(TargetName).pdb"
@@ -1780,46 +1779,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\..\src\H5EA.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAcache.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAdbg.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAdblock.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAhdr.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAiblock.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAint.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAsblock.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAstat.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAtest.c"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\src\H5Edeprec.c"
 				>
 				<FileConfiguration
@@ -1946,10 +1905,6 @@
 						ProgramDataBaseFileName="../../../proj/hdf5dll/Release/"
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5Faccum.c"
-				>
 			</File>
 			<File
 				RelativePath="..\..\..\src\H5FD.c"
@@ -2142,10 +2097,6 @@
 						ProgramDataBaseFileName="../../../proj/hdf5dll/Release/"
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5FDint.c"
-				>
 			</File>
 			<File
 				RelativePath="..\..\..\src\H5FDlog.c"
@@ -2552,10 +2503,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\..\src\H5Fio.c"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\src\H5FL.c"
 				>
 				<FileConfiguration
@@ -2644,10 +2591,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\..\src\H5Fmpi.c"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\src\H5FO.c"
 				>
 				<FileConfiguration
@@ -2694,10 +2637,6 @@
 						ProgramDataBaseFileName="../../../proj/hdf5dll/Release/"
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5Fquery.c"
-				>
 			</File>
 			<File
 				RelativePath="..\..\..\src\H5FS.c"
@@ -2900,14 +2839,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\..\src\H5FSstat.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5FStest.c"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\src\H5Fsuper.c"
 				>
 				<FileConfiguration
@@ -3074,10 +3005,6 @@
 						PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_HDF5DLL_;ZLIB_DLL;_SZDLL_"
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5Gcache.c"
-				>
 			</File>
 			<File
 				RelativePath="..\..\..\src\H5Gcompact.c"
@@ -4352,10 +4279,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\..\src\H5HGcache.c"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\src\H5HGdbg.c"
 				>
 				<FileConfiguration
@@ -4450,10 +4373,6 @@
 						ProgramDataBaseFileName="../../../proj/hdf5dll/Release/"
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5HLcache.c"
-				>
 			</File>
 			<File
 				RelativePath="..\..\..\src\H5HLdbg.c"
@@ -4726,18 +4645,6 @@
 						ProgramDataBaseFileName="../../../proj/hdf5dll/Release/"
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5MFaggr.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5MFdbg.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5MFsection.c"
-				>
 			</File>
 			<File
 				RelativePath="..\..\..\src\H5MM.c"
@@ -9289,14 +9196,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\src\H5EApkg.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAprivate.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\src\H5Epkg.h"
 				>
 			</File>
@@ -9469,6 +9368,58 @@
 				>
 			</File>
 		</Filter>
+		<File
+			RelativePath="..\..\..\src\H5Faccum.c"
+			>
+		</File>
+		<File
+			RelativePath="..\..\..\src\H5FDint.c"
+			>
+		</File>
+		<File
+			RelativePath="..\..\..\src\H5Fio.c"
+			>
+		</File>
+		<File
+			RelativePath="..\..\..\src\H5Fmpi.c"
+			>
+		</File>
+		<File
+			RelativePath="..\..\..\src\H5Fquery.c"
+			>
+		</File>
+		<File
+			RelativePath="..\..\..\src\H5FSstat.c"
+			>
+		</File>
+		<File
+			RelativePath="..\..\..\src\H5FStest.c"
+			>
+		</File>
+		<File
+			RelativePath="..\..\..\src\H5Gcache.c"
+			>
+		</File>
+		<File
+			RelativePath="..\..\..\src\H5HGcache.c"
+			>
+		</File>
+		<File
+			RelativePath="..\..\..\src\H5HLcache.c"
+			>
+		</File>
+		<File
+			RelativePath="..\..\..\src\H5MFaggr.c"
+			>
+		</File>
+		<File
+			RelativePath="..\..\..\src\H5MFdbg.c"
+			>
+		</File>
+		<File
+			RelativePath="..\..\..\src\H5MFsection.c"
+			>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>

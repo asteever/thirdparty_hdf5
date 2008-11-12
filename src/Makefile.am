@@ -51,8 +51,6 @@ libhdf5_la_SOURCES= H5.c H5checksum.c H5dbg.c H5system.c H5timer.c H5trace.c \
         H5Dio.c \
         H5Distore.c H5Dmpio.c H5Doh.c H5Dscatgath.c H5Dselect.c H5Dtest.c \
         H5E.c H5Edeprec.c H5Eint.c \
-        H5EA.c H5EAcache.c H5EAdbg.c H5EAdblock.c H5EAhdr.c H5EAiblock.c \
-        H5EAint.c H5EAsblock.c H5EAstat.c H5EAtest.c \
         H5F.c H5Faccum.c H5Fdbg.c H5Ffake.c H5Fio.c H5Fmount.c H5Fmpi.c H5Fquery.c \
         H5Fsfile.c H5Fsuper.c H5Ftest.c \
         H5FD.c H5FDcore.c  \
@@ -81,7 +79,7 @@ libhdf5_la_SOURCES= H5.c H5checksum.c H5dbg.c H5system.c H5timer.c H5trace.c \
         H5Oname.c H5Onull.c H5Opline.c H5Orefcount.c \
         H5Osdspace.c H5Oshared.c H5Ostab.c \
         H5Oshmesg.c H5Otest.c H5Ounknown.c \
-        H5P.c H5Pacpl.c H5Pdapl.c H5Pdcpl.c \
+        H5P.c H5Pacpl.c H5Pdcpl.c \
         H5Pdeprec.c H5Pdxpl.c H5Pfapl.c H5Pfcpl.c H5Pfmpl.c \
         H5Pgcpl.c H5Pint.c \
         H5Plapl.c H5Plcpl.c H5Pocpl.c H5Pocpypl.c H5Pstrcpl.c H5Ptest.c \

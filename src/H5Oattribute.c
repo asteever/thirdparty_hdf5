@@ -40,8 +40,8 @@
 #include "H5MMprivate.h"	/* Memory management			*/
 #include "H5Opkg.h"             /* Object headers			*/
 #include "H5SMprivate.h"	/* Shared Object Header Messages	*/
-#include "H5Iprivate.h"         /* IDs                                  */
-#include "H5Fprivate.h"         /* File                                 */
+#include "H5Iprivate.h"		/* IDs			  		*/
+#include "H5Fprivate.h"		/* File 			        */
 
 
 /****************/
@@ -503,10 +503,10 @@ H5O_attr_open_by_name(const H5O_loc_t *loc, const char *name, hid_t dxpl_id)
         if(NULL == (ret_value = H5A_copy(NULL, exist_attr)))
             HGOTO_ERROR(H5E_ATTR, H5E_CANTCOPY, NULL, "can't copy existing attribute")
     } else {
-        if(H5F_addr_defined(ainfo.fheap_addr)) { /* open attribute with dense storage */
+        if(H5F_addr_defined(ainfo.fheap_addr)) { /* Open attribute with dense storage */
             if(NULL == (ret_value = H5A_dense_open(loc->file, dxpl_id, &ainfo, name)))
                 HGOTO_ERROR(H5E_ATTR, H5E_CANTOPENOBJ, NULL, "can't open attribute")
-        } else {
+        } else { /* Open attribute in compact storage */
             H5O_iter_opn_t udata;           /* User data for callback */
             H5O_mesg_operator_t op;         /* Wrapper for operator */
 
@@ -696,7 +696,7 @@ htri_t H5O_attr_find_opened_attr(const H5O_loc_t *loc, H5A_t **attr, const char*
             HGOTO_ERROR(H5E_ATTR, H5E_CANTGET, FAIL, "can't IDs of opened attributes")
 
         for(i=0; i<num_open_attr; i++) {
-            if(NULL == (*attr = (H5A_t *)H5I_object_verify(attr_id_list[i], H5I_ATTR)))
+            if(NULL == (*attr = (H5A_t *)H5I_object(attr_id_list[i])))
                 HGOTO_ERROR(H5E_ATTR, H5E_BADTYPE, FAIL, "not an attribute")
 
             /* Get file serial number for attribute */

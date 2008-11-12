@@ -67,6 +67,7 @@ set nerrors=0
 set verbose=yes
 
 
+
 goto main
 
 
@@ -114,7 +115,7 @@ rem was unavailable)
 rem Call the h5diff tool
 rem
 :difftest
-    %h5diff_bin% -q -c %*
+    %h5diff_bin% -q %*
     if %errorlevel% neq 0 (
         call :verify *FAILED* %*
         set /a nerrors=!nerrors!+1

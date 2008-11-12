@@ -48,10 +48,10 @@ const char *FILENAME[] = {
     "links6",  /* 9 */
     "links7",  /* 10 */
     "links8",  /* 11 */
-    "extlinks0",  	/* 12: main files */
-    "tmp/extlinks0",  	/* 13: */
-    "extlinks1",  	/* 14: target files */
-    "tmp/extlinks1",  	/* 15: */
+    "extlinks0",	/* 12: main files */
+    "tmp/extlinks0",	/* 13: */
+    "extlinks1",	/* 14: target files */
+    "tmp/extlinks1",	/* 15: */
     "extlinks2",	/* 16: */
     "tmp/extlinks2",	/* 17: */
     "extlinks3",	/* 18: */

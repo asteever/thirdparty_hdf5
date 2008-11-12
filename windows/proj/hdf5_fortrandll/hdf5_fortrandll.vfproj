@@ -4,14 +4,14 @@
 		<Platform Name="Win32"/>
 		<Platform Name="x64"/></Platforms>
 	<Configurations>
-		<Configuration Name="Debug|Win32" OutputDirectory="..\..\..\proj\$(ProjectName)\$(ConfigurationName)" IntermediateDirectory="$(OutDir)" DeleteExtensionsOnClean="*.obj;*.mod;*.pdb;*.asm;*.map;*.dyn;*.dpi;*.tmp;*.log;*.ilk;*.exe;$(TargetPath)" ConfigurationType="typeDynamicLibrary" Command="$(TargetPath)">
-				<Tool Name="VFMidlTool" PreprocessorDefinitions="_DEBUG" MkTypLibCompatible="true" SuppressStartupBanner="true" TargetEnvironment="midlTargetWin32" TypeLibraryName="$(OUTDIR)/hdf5_fortrandll.tlb"/>
+		<Configuration Name="Debug|Win32" OutputDirectory="..\..\..\proj\$(ProjectName)\$(ConfigurationName)" IntermediateDirectory="$(OutDir)" DeleteExtensionsOnClean="*.obj;*.mod;*.pdb;*.asm;*.map;*.dyn;*.dpi;*.tmp;*.log;*.ilk;*.exe;$(TargetPath)" ConfigurationType="typeDynamicLibrary" MustRebuild="true" Command="$(TargetPath)">
+				<Tool Name="VFMidlTool" SwitchesHaveChanged="true" PreprocessorDefinitions="_DEBUG" MkTypLibCompatible="true" SuppressStartupBanner="true" TargetEnvironment="midlTargetWin32" TypeLibraryName="$(OUTDIR)/hdf5_fortrandll.tlb"/>
 				<Tool Name="VFPreBuildEventTool"/>
-				<Tool Name="VFFortranCompilerTool" AdditionalOptions="/dll" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" AdditionalIncludeDirectories="Debug/" PreprocessorDefinitions="HDF5F90_WINDOWS,BUILD_HDF5_DLL" FPS4Symbols="true" WarnArgMismatch="true" ModulePath="$(INTDIR)/" ObjectFile="$(INTDIR)/" AssemblerListingLocation="$(INTDIR)/" BoundsCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL" CompileOnly="true"/>
+				<Tool Name="VFFortranCompilerTool" SwitchesHaveChanged="true" AdditionalOptions="/dll" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" AdditionalIncludeDirectories="Debug/" PreprocessorDefinitions="HDF5F90_WINDOWS,BUILD_HDF5_DLL" FPS4Symbols="true" WarnArgMismatch="true" ModulePath="$(INTDIR)/" ObjectFile="$(INTDIR)/" AssemblerListingLocation="$(INTDIR)/" BoundsCheck="true" RuntimeLibrary="rtMultiThreadedDebugDLL" CompileOnly="true"/>
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFCustomBuildTool"/>
 				<Tool Name="VFLinkerTool" SwitchesHaveChanged="true" MustRebuild="true" OutputFile="$(OutDir)\hdf5_fortranddll.dll" LinkIncremental="linkIncrementalYes" SuppressStartupBanner="true" ModuleDefinitionFile="..\..\..\fortran\src\hdf5_fortrandll.def" GenerateDebugInformation="true" SubSystem="subSystemWindows" ImportLibrary="$(TargetDir)$(TargetName).lib" LinkDLL="true" AdditionalDependencies="kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib"/>
-				<Tool Name="VFResourceCompilerTool" PreprocessorDefinitions="_DEBUG" Culture="rcEnglishUS" ResourceOutputFileName="$(INTDIR)/$(InputName).res"/>
+				<Tool Name="VFResourceCompilerTool" SwitchesHaveChanged="true" PreprocessorDefinitions="_DEBUG" Culture="rcEnglishUS" ResourceOutputFileName="$(INTDIR)/$(InputName).res"/>
 				<Tool Name="VFPreLinkEventTool"/></Configuration>
 		<Configuration Name="Release|Win32" OutputDirectory="..\..\..\proj\$(ProjectName)\$(ConfigurationName)" IntermediateDirectory="$(OutDir)" DeleteExtensionsOnClean="*.obj;*.mod;*.pdb;*.asm;*.map;*.dyn;*.dpi;*.tmp;*.log;*.ilk;*.exe;$(TargetPath)" ConfigurationType="typeDynamicLibrary" MustRebuild="true" Command="$(TargetPath)">
 				<Tool Name="VFMidlTool" SwitchesHaveChanged="true" PreprocessorDefinitions="NDEBUG" MkTypLibCompatible="true" SuppressStartupBanner="true" TargetEnvironment="midlTargetWin32" TypeLibraryName="$(OUTDIR)/hdf5_fortrandll.tlb"/>
@@ -49,6 +49,7 @@
 		<File RelativePath="..\..\..\fortran\src\H5Eff.f90"/>
 		<File RelativePath="..\..\..\fortran\src\H5f90global.f90"/>
 		<File RelativePath="..\..\..\fortran\src\H5Fff.f90"/>
+		<File RelativePath="..\..\..\fortran\src\H5fortran_flags.f90"/>
 		<File RelativePath="..\..\..\fortran\src\H5fortran_types.f90"/>
 		<File RelativePath="..\..\..\fortran\src\H5Gff.f90"/>
 		<File RelativePath="..\..\..\fortran\src\H5Iff.f90"/>
