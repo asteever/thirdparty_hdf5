@@ -67,10 +67,11 @@ class H5_DLLCPP H5File : public IdComponent, public CommonFG {
 	// and datatypes) in the same file.
 	void getObjIDs(unsigned types, size_t max_objs, hid_t *oid_list) const;
 
-#ifndef H5_NO_DEPRECATED_SYMBOLS
 	// Retrieves the type of object that an object reference points to.
+	H5G_obj_t getRefObjType(void *ref, H5R_type_t ref_type = H5R_OBJECT) const;
+
+	// Deprecated in favor of getRefObjType
 	H5G_obj_t getObjType(void *ref, H5R_type_t ref_type = H5R_OBJECT) const;
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
 
 	// Retrieves a dataspace with the region pointed to selected.
 	DataSpace getRegion(void *ref, H5R_type_t ref_type = H5R_DATASET_REGION) const;
@@ -115,6 +116,10 @@ class H5_DLLCPP H5File : public IdComponent, public CommonFG {
 	// H5File destructor.
 	virtual ~H5File();
 
+   protected:
+	// Sets the HDF5 file id.
+	virtual void p_setId(const hid_t new_id);
+
    private:
 	hid_t id;	// HDF5 file id
 
@@ -134,10 +139,6 @@ class H5_DLLCPP H5File : public IdComponent, public CommonFG {
 
 	// Retrieves a dataspace with the region pointed to selected.
 	hid_t p_get_region(void *ref, H5R_type_t ref_type) const;
-
-   protected:
-	// Sets the HDF5 file id.
-	virtual void p_setId(const hid_t new_id);
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 

@@ -45,12 +45,6 @@
  *
  *              Robb Matzke, LLNL, 2003-06-05
  *              The size does not include the object header, just the data.
- *
- *              John Mainzer, 6/17/05
- *              Modified the function to use the new dirtied parameter of
- *              of H5AC_unprotect() instead of modifying the is_dirty
- *              field of the cache info.
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -73,7 +67,7 @@ H5HG_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream, int indent,
     assert(indent >= 0);
     assert(fwidth >= 0);
 
-    if (NULL == (h = (H5HG_heap_t *)H5AC_protect(f, dxpl_id, H5AC_GHEAP, addr, NULL, NULL, H5AC_READ)))
+    if (NULL == (h = H5AC_protect(f, dxpl_id, H5AC_GHEAP, addr, NULL, NULL, H5AC_READ)))
         HGOTO_ERROR(H5E_HEAP, H5E_CANTLOAD, FAIL, "unable to load global heap collection");
 
     fprintf(stream, "%*sGlobal Heap Collection...\n", indent, "");
@@ -113,7 +107,7 @@ H5HG_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream, int indent,
 		     (unsigned long)H5HG_ALIGN(h->obj[u].size));
 	    p = h->obj[u].begin + H5HG_SIZEOF_OBJHDR (f);
 	    for (j=0; j<h->obj[u].size; j+=16) {
-		fprintf (stream, "%*s%04u: ", indent+6, "", j);
+		fprintf (stream, "%*s%04d: ", indent+6, "", j);
 		for (k=0; k<16; k++) {
 		    if (8==k) fprintf (stream, " ");
 		    if (j+k<h->obj[u].size) {
@@ -132,7 +126,7 @@ H5HG_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream, int indent,
     }
 
 done:
-    if (h && H5AC_unprotect(f, dxpl_id, H5AC_GHEAP, addr, h, H5AC__NO_FLAGS_SET) != SUCCEED)
+    if (h && H5AC_unprotect(f, dxpl_id, H5AC_GHEAP, addr, h, FALSE) != SUCCEED)
         HDONE_ERROR(H5E_HEAP, H5E_PROTECT, FAIL, "unable to release object header");
 
     FUNC_LEAVE_NOAPI(ret_value);

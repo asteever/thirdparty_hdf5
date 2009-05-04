@@ -13,6 +13,7 @@
  * access to either file, you may request a copy from help@hdfgroup.org.     *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+
 /*
  *
  * Data and structure definitions for h5import
@@ -68,7 +69,7 @@
 #define H5DT_UINT8     unsigned char
 #define H5DT_UINT16    unsigned short
 #define H5DT_UINT32    unsigned int
-#define H5DT_INT64     long long
+#define H5DT_INT64     long_long
 #define H5DT_UINT64    unsigned H5DT_INT64
 
 struct path_info
@@ -80,7 +81,7 @@ struct path_info
 struct Input
 {
   struct path_info path;
-  int inputClass;
+  int inputClass; /* 0 to 7, read string from configuration file, translated to int   */
   int inputSize;
   int rank;
   hsize_t* sizeOfDimension;

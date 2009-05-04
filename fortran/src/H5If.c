@@ -55,10 +55,6 @@ nh5iget_type_c (hid_t_f *obj_id, int_f *type)
  * Programmer:  Elena Pourmal
  *              Wednesday, March 12, 2003
  * Modifications:
- *               Changed the size of c_buf_size to c_buf_size + 1, which
- *               fixes the problem of truncating the string by 1 if the
- *               exact size of the string (buf_size) is passed in.
- *               M.S. Breitenfeld, April 21, 2008
  *---------------------------------------------------------------------------*/
 int_f
 nh5iget_name_c(hid_t_f *obj_id, _fcd buf, size_t_f *buf_size, size_t_f *name_size)
@@ -70,10 +66,10 @@ nh5iget_name_c(hid_t_f *obj_id, _fcd buf, size_t_f *buf_size, size_t_f *name_siz
      char *c_buf =NULL;
 
      /*
-      * Allocate buffer to hold name of an object
+      * Allocate buffer to hold name of an object 
       */
-     c_buf_size = (size_t)*buf_size +1;
-     c_buf = (char *)HDmalloc(c_buf_size);
+     c_buf_size = (size_t)*buf_size;
+     c_buf = (char *)HDmalloc(c_buf_size +1);
      if (c_buf == NULL) return ret_value;
 
      /*
@@ -86,7 +82,7 @@ nh5iget_name_c(hid_t_f *obj_id, _fcd buf, size_t_f *buf_size, size_t_f *name_siz
      /*
       * Convert C name to FORTRAN and place it in the given buffer
       */
-      HD5packFstring(c_buf, _fcdtocp(buf), c_buf_size-1);
+      HD5packFstring(c_buf, _fcdtocp(buf), (int)c_buf_size);
       *name_size = (size_t_f)c_size;
       ret_value = 0;
 
@@ -207,36 +203,6 @@ nh5iget_file_id_c(hid_t_f *obj_id, hid_t_f *file_id)
     /* Set output & return values */
     *file_id=(hid_t_f)c_file_id;
     ret_value=0;
-
-done:
-      return ret_value;
-}
-
-/*----------------------------------------------------------------------------
- * Name:        h5iis_valid_c
- * Purpose:     Calls H5Iis_valid 
- * Inputs:      obj_id - object identifier
- * Outputs:     0 = false, 1 = true
- * Returns:     0 on success, -1 on failure
- * Programmer:  Elena Pourmal
- *              Tuesday, August 24, 2004
- * Modifications:
- *---------------------------------------------------------------------------*/
-int_f
-nh5iis_valid_c(hid_t_f *obj_id, int_f *c_valid)
-{
-     int ret_value;
-     htri_t c_ret_value;
-     
-     /*
-      * Call H5Iis_valid
-      */
-     if ((c_ret_value = H5Iis_valid(*obj_id)) < 0)
-       HGOTO_DONE(FAIL);
-
-     /* Set output & return values */
-     *c_valid = (int_f)c_ret_value;
-     ret_value=0;
 
 done:
       return ret_value;

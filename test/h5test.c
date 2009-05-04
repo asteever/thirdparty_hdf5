@@ -26,11 +26,11 @@
 #include <sys/stat.h>
 #include "h5test.h"
 
-#ifdef _WIN32
+#ifdef WIN32
 #include <process.h>
 #include <direct.h>
 #include <winsock.h>
-#endif  /* _WIN32 */
+#endif  /* WIN32 */
 
 /*
  * Define these environment variables or constants to influence functions in
@@ -90,7 +90,7 @@ MPI_Info    h5_io_info_g=MPI_INFO_NULL;/* MPI INFO object for IO */
  */
 static const char *multi_letters = "msbrglo";
 
-static herr_t h5_errors(hid_t estack, void *client_data);
+static herr_t h5_errors(void *client_data);
 
 
 /*-------------------------------------------------------------------------
@@ -110,10 +110,10 @@ static herr_t h5_errors(hid_t estack, void *client_data);
  *-------------------------------------------------------------------------
  */
 static herr_t
-h5_errors(hid_t estack, void UNUSED *client_data)
+h5_errors(void UNUSED *client_data)
 {
     H5_FAILED();
-    H5Eprint2(estack, stdout);
+    H5Eprint(stdout);
     return 0;
 }
 
@@ -210,23 +210,12 @@ h5_cleanup(const char *base_name[], hid_t fapl)
 void
 h5_reset(void)
 {
+    char	filename[1024];
+
     HDfflush(stdout);
     HDfflush(stderr);
     H5close();
-    H5Eset_auto2(H5E_DEFAULT, h5_errors, NULL);
-
-/*
- * I commented this chunk of code out because it's not clear what diagnostics
- *      were being output and under what circumstances, and creating this file
- *      is throwing off debugging some of the tests.  I can't see any _direct_
- *      harm in keeping this section of code, but I can't see any _direct_
- *      benefit right now either.  If we figure out under which circumstances
- *      diagnostics are being output, we should enable this behavior based on
- *      appropriate configure flags/macros.  QAK - 2007/12/20
- */
-#ifdef OLD_WAY
-{
-    char	filename[1024];
+    H5Eset_auto(h5_errors, NULL);
 
     /*
      * Cause the library to emit some diagnostics early so they don't
@@ -236,13 +225,11 @@ h5_reset(void)
     H5E_BEGIN_TRY {
 	hid_t file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT,
 			       H5P_DEFAULT);
-	hid_t grp = H5Gcreate2(file, "emit", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+	hid_t grp = H5Gcreate(file, "emit", 0);
 	H5Gclose(grp);
 	H5Fclose(file);
 	HDunlink(filename);
     } H5E_END_TRY;
-}
-#endif /* OLD_WAY */
 }
 
 
@@ -300,14 +287,14 @@ h5_fixname(const char *base_name, hid_t fapl, char *fullname, size_t size)
 
 	if (H5FD_FAMILY == driver)
 	    suffix = "%05d.h5";
-	else if (H5FD_MULTI == driver)
+	else if (H5FD_CORE == driver || H5FD_MULTI == driver)
 	    suffix = NULL;
     }
 
     /* Must first check fapl is not H5P_DEFAULT (-1) because H5FD_XXX
      * could be of value -1 if it is not defined.
      */
-    isppdriver = H5P_DEFAULT != fapl &&
+    isppdriver = H5P_DEFAULT != fapl && 
 	(H5FD_MPIO==driver || H5FD_MPIPOSIX==driver);
 
     /* Check HDF5_NOCLEANUP environment setting.
@@ -480,16 +467,16 @@ h5_fixname(const char *base_name, hid_t fapl, char *fullname, size_t size)
  *
  *-------------------------------------------------------------------------
  */
-const char *
+char *
 h5_rmprefix(const char *filename)
 {
-    const char *ret_ptr;
+    char *ret_ptr;
 
     if ((ret_ptr = HDstrstr(filename, ":")) == NULL)
 	ret_ptr = filename;
     else
 	ret_ptr++;
-
+    
     return(ret_ptr);
 }
 
@@ -541,7 +528,7 @@ h5_fileaccess(void)
 	if (H5Pset_fapl_stdio(fapl)<0) return -1;
     } else if (!HDstrcmp(name, "core")) {
 	/* In-core temporary file with 1MB increment */
-	if (H5Pset_fapl_core(fapl, (size_t)1, TRUE)<0) return -1;
+	if (H5Pset_fapl_core(fapl, 1024*1024, FALSE)<0) return -1;
     } else if (!HDstrcmp(name, "split")) {
 	/* Split meta data and raw data each using default driver */
 	if (H5Pset_fapl_split(fapl,
@@ -562,13 +549,13 @@ h5_fileaccess(void)
 	HDmemset(memb_name, 0, sizeof memb_name);
 	HDmemset(memb_addr, 0, sizeof memb_addr);
 
-	HDassert(HDstrlen(multi_letters)==H5FD_MEM_NTYPES);
-	for(mt = H5FD_MEM_DEFAULT; mt < H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t, mt)) {
+	assert(HDstrlen(multi_letters)==H5FD_MEM_NTYPES);
+	for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t,mt)) {
 	    memb_fapl[mt] = H5P_DEFAULT;
 	    sprintf(sv[mt], "%%s-%c.h5", multi_letters[mt]);
 	    memb_name[mt] = sv[mt];
-	    memb_addr[mt] = (haddr_t)MAX(mt - 1, 0) * (HADDR_MAX / 10);
-	} /* end for */
+	    memb_addr[mt] = MAX(mt-1,0)*(HADDR_MAX/10);
+	}
 
 	if (H5Pset_fapl_multi(fapl, memb_map, memb_fapl, memb_name,
 			      memb_addr, FALSE)<0) {
@@ -583,24 +570,25 @@ h5_fileaccess(void)
 	if (H5Pset_fapl_family(fapl, fam_size, H5P_DEFAULT)<0)
             return -1;
     } else if (!HDstrcmp(name, "log")) {
-        unsigned log_flags = H5FD_LOG_LOC_IO | H5FD_LOG_ALLOC;
+#ifdef H5_WANT_H5_V1_4_COMPAT
+        long verbosity = 1;
+
+        /* Log file access */
+        if ((val = strtok(NULL, " \t\n\r")))
+            verbosity = strtol(val, NULL, 0);
+
+        if (H5Pset_fapl_log(fapl, NULL, (int)verbosity) < 0)
+	    return -1;
+#else /* H5_WANT_H5_V1_4_COMPAT */
+        unsigned log_flags = H5FD_LOG_LOC_IO;
 
         /* Log file access */
         if ((val = HDstrtok(NULL, " \t\n\r")))
             log_flags = (unsigned)HDstrtol(val, NULL, 0);
 
-        if (H5Pset_fapl_log(fapl, NULL, log_flags, (size_t)0) < 0)
+        if (H5Pset_fapl_log(fapl, NULL, log_flags, 0) < 0)
 	    return -1;
-    } else if (!HDstrcmp(name, "direct")) {
-#ifdef H5_HAVE_DIRECT
-	/* Linux direct read() and write() system calls.  Set memory boundary, file block size,
-	 * and copy buffer size to the default values. */
-	if (H5Pset_fapl_direct(fapl, 1024, 4096, 8*4096)<0) return -1;
-#endif
-    } else if(!HDstrcmp(name, "latest")) {
-	/* use the latest format */
-	if(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0)
-            return -1;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
     } else {
 	/* Unknown driver */
 	return -1;
@@ -649,7 +637,7 @@ void
 h5_show_hostname(void)
 {
     char	hostname[80];
-#ifdef _WIN32
+#ifdef WIN32
      WSADATA wsaData;
      int err;
 #endif
@@ -667,11 +655,16 @@ h5_show_hostname(void)
 	    printf("thread 0.");
     }
 #elif defined(H5_HAVE_THREADSAFE)
-    printf("thread %lu.", HDpthread_self_ulong());
+#ifdef WIN32
+    printf("some thread: no way to know the thread number from pthread on windows.");
+#else
+    printf("thread %d.", (int)pthread_self());
+#endif
+
 #else
     printf("thread 0.");
 #endif
-#ifdef _WIN32
+#ifdef WIN32
 
    err = WSAStartup( MAKEWORD(2,2), &wsaData );
    if ( err != 0 ) {
@@ -694,14 +687,15 @@ h5_show_hostname(void)
 
 #endif
 #ifdef H5_HAVE_GETHOSTNAME
-    if (gethostname(hostname, (size_t)80) < 0)
+    if (gethostname(hostname, 80) < 0){
 	printf(" gethostname failed\n");
+    }
     else
 	printf(" hostname=%s\n", hostname);
 #else
     printf(" gethostname not supported\n");
 #endif
-#ifdef _WIN32
+#ifdef WIN32
     WSACleanup();
 #endif
 }
@@ -837,103 +831,30 @@ h5_dump_info_object(MPI_Info info)
 
 
 /*-------------------------------------------------------------------------
- * Function:	h5_get_file_size
+ * Function:    h5_get_file_size
  *
- * Purpose:	Get the current size of a file (in bytes)
+ * Purpose:     Get the current size of a file (in bytes)
  *
- * Return:	Success:	Size of file in bytes
- *		Failure:	-1
+ * Return:      Success:        Size of file in bytes
+ *              Failure:        -1
  *
- * Programmer:	Quincey Koziol
+ * Programmer:  Quincey Koziol
  *              Saturday, March 22, 2003
+ *
+ * Modifications:
+ *      Albert Cheng, Nov 22, 2006
+ *      Changed Failure return value to -1.
  *
  *-------------------------------------------------------------------------
  */
 h5_stat_size_t
-h5_get_file_size(const char *filename, hid_t fapl)
+h5_get_file_size(const char *filename)
 {
-    char temp[2048];    /* Temporary buffer for file names */
-    h5_stat_t	sb;     /* Structure for querying file info */
-	int j = 0;
+    h5_stat_t	sb;
 
-    if(fapl == H5P_DEFAULT) {
-        /* Get the file's statistics */
-        if(0 == HDstat(filename, &sb))
-            return((h5_stat_size_t)sb.st_size);
-    } /* end if */
-    else {
-        hid_t	driver;         /* VFD used for file */
-
-        /* Get the driver used when creating the file */
-        if((driver = H5Pget_driver(fapl)) < 0)
-            return(-1);
-
-        /* Check for simple cases */
-        if(driver == H5FD_SEC2 || driver == H5FD_STDIO || driver == H5FD_CORE ||
-#ifdef H5_HAVE_PARALLEL
-                driver == H5FD_MPIO || driver == H5FD_MPIPOSIX ||
-#endif /* H5_HAVE_PARALLEL */
-#ifdef H5_HAVE_WINDOWS
-                driver == H5FD_WINDOWS || 
-#endif /* H5_HAVE_WINDOWS */
-#ifdef H5_HAVE_DIRECT
-                driver == H5FD_DIRECT || 
-#endif /* H5_HAVE_DIRECT */
-                driver == H5FD_LOG) {
-            /* Get the file's statistics */
-            if(0 == HDstat(filename, &sb))
-                return((h5_stat_size_t)sb.st_size);
-        } /* end if */
-        else if(driver == H5FD_MULTI) {
-            H5FD_mem_t mt;
-            h5_stat_size_t tot_size = 0;
-
-            HDassert(HDstrlen(multi_letters) == H5FD_MEM_NTYPES);
-            for(mt = H5FD_MEM_DEFAULT; mt < H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t, mt)) {
-                /* Create the filename to query */
-                HDsnprintf(temp, sizeof temp, "%s-%c.h5", filename, multi_letters[mt]);
-
-                /* Check for existence of file */
-                if(0 == HDaccess(temp, F_OK)) {
-                    /* Get the file's statistics */
-                    if(0 != HDstat(temp, &sb))
-                        return(-1);
-
-                    /* Add to total size */
-                    tot_size += (h5_stat_size_t)sb.st_size;
-                } /* end if */
-            } /* end for */
-
-            /* Return total size */
-            return(tot_size);
-        } /* end if */
-        else if(driver == H5FD_FAMILY) {
-            h5_stat_size_t tot_size = 0;
-
-            /* Try all filenames possible, until we find one that's missing */
-            for(j = 0; /*void*/; j++) {
-                /* Create the filename to query */
-                HDsnprintf(temp, sizeof temp, filename, j);
-
-                /* Check for existence of file */
-                if(HDaccess(temp, F_OK) < 0)
-                    break;
-
-                /* Get the file's statistics */
-                if(0 != HDstat(temp, &sb))
-                    return(-1);
-
-                /* Add to total size */
-                tot_size += (h5_stat_size_t)sb.st_size;
-            } /* end for */
-
-            /* Return total size */
-            return(tot_size);
-        } /* end if */
-        else {
-            HDassert(0 && "Unknown VFD!");
-        } /* end else */
-    } /* end else */
+    /* Get the file's statistics */
+    if (HDstat(filename, &sb)==0)
+        return((h5_stat_size_t)sb.st_size);
 
     return(-1);
 } /* end get_file_size() */
@@ -1025,70 +946,58 @@ int h5_szip_can_encode(void )
  *              4/4/05
  *
  * Modifications:
- *		Use original getenv if MPI is not initialized. This happens
- *		one uses the PHDF5 library to build a serial nature code.
- *		Albert 2006/04/07
  *
  *-------------------------------------------------------------------------
  */
-char *
-getenv_all(MPI_Comm comm, int root, const char* name)
+
+char* getenv_all(MPI_Comm comm, int root, const char* name)
 {
-    int mpi_size, mpi_rank, mpi_initialized;
-    int len;
+    int nID;
+    int len = -1;
     static char* env = NULL;
+    MPI_Status Status;
 
     assert(name);
 
-    MPI_Initialized(&mpi_initialized);
-    if(!mpi_initialized) {
-	/* use original getenv */
-	if(env)
-	    HDfree(env);
+    MPI_Comm_rank(comm, &nID);
+
+    /* The root task does the getenv call
+     * and sends the result to the other tasks */
+    if(nID == root)
+    {
 	env = HDgetenv(name);
-    } /* end if */
-    else {
-	MPI_Comm_rank(comm, &mpi_rank);
-	MPI_Comm_size(comm, &mpi_size);
-	assert(root < mpi_size);
-
-	/* The root task does the getenv call
-	 * and sends the result to the other tasks */
-	if(mpi_rank == root) {
-	    env = HDgetenv(name);
-	    if(env) {
-		len = HDstrlen(env);
-		MPI_Bcast(&len, 1, MPI_INT, root, comm);
-		MPI_Bcast(env, len, MPI_CHAR, root, comm);
-	    }
-	    else {
-		/* len -1 indicates that the variable was not in the environment */
-		len = -1;
-		MPI_Bcast(&len, 1, MPI_INT, root, comm);
-	    }
-	}
-	else {
+	if(env)
+	{
+	    len = HDstrlen(env);
 	    MPI_Bcast(&len, 1, MPI_INT, root, comm);
-	    if(len >= 0) {
-		if(env == NULL)
-		    env = (char*) HDmalloc(len+1);
-		else if(strlen(env) < len)
-		    env = (char*) HDrealloc(env, len+1);
+	    MPI_Bcast(env, len, MPI_CHAR, root, comm);
+	}
+	/* len -1 indicates that the variable was not in the environment */
+	else
+	    MPI_Bcast(&len, 1, MPI_INT, root, comm);
+    }
+    else
+    {
+	MPI_Bcast(&len, 1, MPI_INT, root, comm);
+	if(len >= 0)
+	{
+	    if(env == NULL)
+		env = (char*) HDmalloc(len+1);
+	    else if(strlen(env) < len)
+		env = (char*) HDrealloc(env, len+1);
 
-		MPI_Bcast(env, len, MPI_CHAR, root, comm);
-		env[len] = '\0';
-	    }
-	    else {
-		if(env)
-		    HDfree(env);
-		env = NULL;
-	    }
+	    MPI_Bcast(env, len, MPI_CHAR, root, comm);
+	    env[len] = '\0';
+	}
+	else
+	{
+	    if(env)
+		HDfree(env);
+	    env = NULL;
 	}
     }
 
-#ifndef NDEBUG
     MPI_Barrier(comm);
-#endif
 
     return env;
 }

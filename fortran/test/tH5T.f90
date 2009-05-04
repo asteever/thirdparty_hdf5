@@ -27,7 +27,7 @@
 ! The following H5T interface functions are tested:
 ! h5tcopy_f, h5tset(get)_size_f, h5tcreate_f, h5tinsert_f,  h5tclose_f,
 ! h5tget_class_f, h5tget_member_name_f, h5tget_member_offset_f, h5tget_member_type_f,
-! h5tequal_f, h5tinsert_array_f, h5tcommit_f, h5tencode_f, h5tdecode_f
+! h5tequal_f, h5tinsert_array_f, h5tcommit_f
 
 
      USE HDF5 ! This module contains all necessary modules 
@@ -88,12 +88,6 @@
      INTEGER(SIZE_T) :: sizechar
      INTEGER(HSIZE_T), DIMENSION(1) :: data_dims
      LOGICAL :: flag = .TRUE.
-     
-     CHARACTER(LEN=1024) :: cmpd_buf
-     INTEGER(SIZE_T) :: cmpd_buf_size=0
-     INTEGER(HID_T) :: decoded_sid1
-     INTEGER(HID_T) :: decoded_tid1
-
      data_dims(1) = dimsize
      !
      ! Initialize data buffer.
@@ -182,36 +176,7 @@
      !
      offset = offset + type_sized  ! Offset of the last member is 14
      CALL h5tinsert_f(dtype_id, "real_field", offset, H5T_NATIVE_REAL, error)
-     CALL check("h5tinsert_f", error, total_error)
-
-!!$     !/*-----------------------------------------------------------------------
-!!$     ! * Test encoding and decoding compound  datatypes
-!!$     ! *-----------------------------------------------------------------------
-!!$     !*/
-!!$     !    /* Encode compound type in a buffer */
-!!$
-!!$     !         First find the buffer size
-!!$
-!!$     CALL H5Tencode_f(dtype_id, cmpd_buf, cmpd_buf_size, error)
-!!$     CALL check("H5Tencode_f", error, total_error)
-!!$
-!!$     ! /* Try decoding bogus buffer */
-!!$
-!!$     CALL H5Tdecode_f(cmpd_buf, decoded_tid1, error)
-!!$     CALL VERIFY("H5Tdecode_f", error, -1, total_error)  
-!!$     
-!!$     CALL H5Tencode_f(dtype_id, cmpd_buf, cmpd_buf_size, error)
-!!$     CALL check("H5Tencode_f", error, total_error)
-!!$
-!!$     ! /* Decode from the compound buffer and return an object handle */
-!!$     CALL H5Tdecode_f(cmpd_buf, decoded_tid1, error)
-!!$     CALL check("H5Tdecode_f", error, total_error)  
-!!$
-!!$     ! /* Verify that the datatype was copied exactly */
-!!$     
-!!$     CALL H5Tequal_f(decoded_tid1, dtype_id, flag, error)
-!!$     CALL check("H5Tequal_f", error, total_error) 
-!!$     CALL VerifyLogical("H5Tequal_f", flag, .TRUE., total_error)
+         CALL check("h5tinsert_f", error, total_error)
 
      !
      ! Create the dataset with compound datatype.
@@ -392,7 +357,7 @@
              CALL h5tget_member_class_f(dtype_id, i-1, class, error)
               CALL check("h5tget_member_class_f",error, total_error)
               if (class .ne. H5T_INTEGER_F) then
-                 write(*,*) "Wrong class returned for INTEGER member"
+                 write(*,*) "Wrong class returned for integer member"
                  total_error = total_error + 1
               endif
         CASE("double_field")
@@ -515,38 +480,12 @@
          CALL check("h5dread_f", error, total_error)
          do i = 1, dimsize
             if (real_member_out(i) .ne. real_member(i)) then
-                write(*,*) " Wrong real precision data is read back "
+                write(*,*) " Wrong double precision data is read back "
                 total_error = total_error + 1
             endif
          enddo
      !
-     ! *-----------------------------------------------------------------------
-     ! * Test encoding and decoding compound datatypes
-     ! *-----------------------------------------------------------------------
-     !
-     !    /* Encode compound type in a buffer */
-     !         -- First find the buffer size
 
-     CALL H5Tencode_f(dtype_id, cmpd_buf, cmpd_buf_size, error)
-     CALL check("H5Tencode_f", error, total_error)
-
-     ! /* Try decoding bogus buffer */
-
-     CALL H5Tdecode_f(cmpd_buf, decoded_tid1, error)
-     CALL VERIFY("H5Tdecode_f", error, -1, total_error)  
-     
-     CALL H5Tencode_f(dtype_id, cmpd_buf, cmpd_buf_size, error)
-     CALL check("H5Tencode_f", error, total_error)
-
-     ! /* Decode from the compound buffer and return an object handle */
-     CALL H5Tdecode_f(cmpd_buf, decoded_tid1, error)
-     CALL check("H5Tdecode_f", error, total_error)  
-
-     ! /* Verify that the datatype was copied exactly */
-     
-     CALL H5Tequal_f(decoded_tid1, dtype_id, flag, error)
-     CALL check("H5Tequal_f", error, total_error) 
-     CALL VerifyLogical("H5Tequal_f", flag, .TRUE., total_error)
      !
      ! Close all open objects.
      !
@@ -800,7 +739,7 @@
     SUBROUTINE enumtest(cleanup, total_error)
 
     USE HDF5
-    IMPLICIT NONE
+    IMPLICIT none
 
     LOGICAL, INTENT(IN)  :: cleanup
     INTEGER, INTENT(OUT) :: total_error 
@@ -843,20 +782,20 @@
     ! Create enumeration datatype with tow values
     !
     CALL h5tenum_create_f(H5T_NATIVE_INTEGER,dtype_id,error)
-    CALL check("h5tenum_create_f", error, total_error)
-    CALL h5tenum_insert_f(dtype_id,true,DATA(1),error)
-    CALL check("h5tenum_insert_f", error, total_error)
-    CALL h5tenum_insert_f(dtype_id,false,DATA(2),error)
-    CALL check("h5tenum_insert_f", error, total_error)
+        CALL check("h5tenum_create_f", error, total_error)
+    CALL h5tenum_insert_f(dtype_id,true,data(1),error)
+        CALL check("h5tenum_insert_f", error, total_error)
+    CALL h5tenum_insert_f(dtype_id,false,data(2),error)
+        CALL check("h5tenum_insert_f", error, total_error)
     !
     ! Create write  and close a dataset with enum datatype
     !
     CALL h5screate_simple_f(1,dsize,dspace_id,error)
-    CALL check("h5screate_simple_f", error, total_error)
+        CALL check("h5screate_simple_f", error, total_error)
     CALL h5dcreate_f(file_id,dsetname,dtype_id,dspace_id,dset_id,error)
-    CALL check("h5dcreate_f", error, total_error)
-    CALL h5dwrite_f(dset_id,dtype_id,DATA,dims,error)
-    CALL check("h5dwrite_f", error, total_error)
+        CALL check("h5dcreate_f", error, total_error)
+    CALL h5dwrite_f(dset_id,dtype_id,data,dims,error)
+        CALL check("h5dwrite_f", error, total_error)
 
     CALL H5Dget_type_f(dset_id, dtype, error)
     CALL check("H5Dget_type_f", error, total_error)
@@ -884,40 +823,41 @@
     CALL VERIFY("H5Tget_native_type_f", INT(class), INT(H5T_ENUM_F), total_error) 
     
     CALL h5dclose_f(dset_id,error)
-    CALL check("h5dclose_f", error, total_error)
+        CALL check("h5dclose_f", error, total_error)
     CALL h5sclose_f(dspace_id,error)
-    CALL check("h5sclose_f", error, total_error)
+        CALL check("h5sclose_f", error, total_error)
     !
     ! Get value of "TRUE"
     !
     CALL h5tenum_valueof_f(dtype_id, "TRUE", value, error)
-    CALL check("h5tenum_valueof_f", error, total_error)
-    IF (value .NE. 1) THEN
-       WRITE(*,*) " Value of TRUE is not 1, error"
-       total_error = total_error + 1
-    ENDIF
+        CALL check("h5tenum_valueof_f", error, total_error)
+        if (value .ne. 1) then
+            write(*,*) " Value of TRUE is not 1, error"
+            total_error = total_error + 1
+        endif 
     !
     !  Get name of 0
     !
     value = 0
     buf_size = 5
     CALL h5tenum_nameof_f(dtype_id,  value, buf_size, mem_name, error)
-    CALL check("h5tenum_nameof_f", error, total_error)
-    IF (mem_name .NE. "FALSE") THEN
-       WRITE(*,*) " Wrong name for 0 value"
-       total_error = total_error + 1
-    ENDIF
-
+         CALL check("h5tenum_nameof_f", error, total_error)
+         if (mem_name .ne. "FALSE") then
+             write(*,*) " Wrong name for 0 value"
+             total_error = total_error + 1
+         endif
     CALL h5tclose_f(dtype_id,error)
-    CALL check("h5tclose_f", error, total_error)
+        CALL check("h5tclose_f", error, total_error)
     CALL h5fclose_f(file_id,error)
-    CALL check("h5fclose_f", error, total_error)
+        CALL check("h5fclose_f", error, total_error)
 
     IF(cleanup) CALL h5_cleanup_f(filename, H5P_DEFAULT_F, error)
     CALL check("h5_cleanup_f", error, total_error)
 
+
     RETURN
-  END SUBROUTINE enumtest
+    END SUBROUTINE enumtest 
+
 
 !/*-------------------------------------------------------------------------
 ! * Function:    test_derived_flt
@@ -1122,3 +1062,6 @@ SUBROUTINE test_derived_flt(cleanup, total_error)
   CALL check("h5_cleanup_f", error, total_error)
 
 END SUBROUTINE test_derived_flt
+
+
+

@@ -92,7 +92,6 @@ main(int argc, char *argv[])
     AddTest("iterate", test_iterate, cleanup_iterate,  "Group & Attribute Iteration", NULL);
     AddTest("array", test_array, cleanup_array,  "Array Datatypes", NULL);
     AddTest("genprop", test_genprop, cleanup_genprop,  "Generic Properties", NULL);
-    AddTest("id", test_ids, NULL,  "User-Created Identifiers", NULL);
 
 Comment out tests that are not done yet */
 

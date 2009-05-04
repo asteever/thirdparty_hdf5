@@ -67,7 +67,7 @@ PropList::PropList(const PropList& original) : IdComponent(original)
 // Description
 //		This function calls H5Pcreate to create a new property list
 //		if the given id, plist_id, is that of a property class.  If
-//		the given id is equal to H5P_ROOT, then set this
+//		the given id is equal to H5P_NO_CLASS, then set this
 //		property's id to H5P_DEFAULT, otherwise, to the given id.
 //		Note: someone else added this code without comments and this
 //		description was what I came up with from reading the code.
@@ -84,7 +84,7 @@ PropList::PropList( const hid_t plist_id ) : IdComponent()
 	}
     }
     else {
-	if(plist_id==H5P_ROOT)
+	if(plist_id==H5P_NO_CLASS)
 	    id=H5P_DEFAULT;
 	else
 	    id=plist_id;
@@ -99,7 +99,7 @@ PropList::PropList( const hid_t plist_id ) : IdComponent()
 // Programmer	Binh-Minh Ribler - 2000
 // Modification
 //		- Replaced resetIdComponent() with decRefCount() to use C
-//		library ID reference counting mechanism - BMR, Jun 1, 2004
+//		library ID reference counting mechanism - BMR, Feb 20, 2005
 //		- Replaced decRefCount with close() to let the C library
 //		handle the reference counting - BMR, Jun 1, 2006
 //--------------------------------------------------------------------------
@@ -224,10 +224,10 @@ hid_t PropList::getId() const
 
 //--------------------------------------------------------------------------
 // Function:    PropList::p_setId
-///\brief       Sets the identifier of this object to a new value.
+///\brief       Sets the identifier of this property list to a new value.
 ///
-///\exception   H5::IdComponentException when the attempt to close the HDF5
-///             object fails
+///\exception   H5::IdComponentException when the attempt to close the
+///             currently open property list fails
 // Description:
 //              The underlaying reference counting in the C library ensures
 //              that the current valid id of this object is properly closed.
@@ -243,8 +243,8 @@ void PropList::p_setId(const hid_t new_id)
     catch (Exception close_error) {
         throw PropListIException(inMemFunc("p_setId"), close_error.getDetailMsg());
     }
-   // reset object's id to the given id
-   id = new_id;
+    // reset object's id to the given id
+    id = new_id;
 }
 
 //--------------------------------------------------------------------------
@@ -273,17 +273,17 @@ void PropList::close()
 //--------------------------------------------------------------------------
 // Function:	PropList::getClass
 ///\brief	Returns the class of this property list, i.e. \c H5P_FILE_CREATE...
-///\return	The property list class if it is not equal to \c H5P_ROOT
+///\return	The property list class if it is not equal to \c H5P_NO_CLASS
 ///\exception	H5::PropListIException
 // Programmer	Binh-Minh Ribler - April, 2004
 //--------------------------------------------------------------------------
 hid_t PropList::getClass() const
 {
    hid_t plist_class = H5Pget_class( id );
-   if( plist_class == H5P_ROOT )
+   if( plist_class == H5P_NO_CLASS )
    {
       throw PropListIException(inMemFunc("getClass"),
-		"H5Pget_class failed - returned H5P_ROOT");
+		"H5Pget_class failed - returned H5P_NO_CLASS");
    }
    return( plist_class );
 }
@@ -565,7 +565,7 @@ void PropList::setProperty(const H5std_string& name, void* value) const
 /// 		It differs from the above function only in what arguments it
 ///		accepts.
 ///\param	name - IN: Name of property to set - \c H5std_string
-///\param	strg - IN: Value for the property is a \c std::string
+///\param	strg - IN: Value for the property is a \c H5std_string
 // Programmer:  Binh-Minh Ribler - April, 2004
 //--------------------------------------------------------------------------
 void PropList::setProperty(const H5std_string& name, H5std_string& strg) const
@@ -671,7 +671,7 @@ PropList PropList::getClassParent() const
 // Programmer	Binh-Minh Ribler - 2000
 // Modification
 //		- Replaced resetIdComponent() with decRefCount() to use C
-//		library ID reference counting mechanism - BMR, Jun 1, 2004
+//		library ID reference counting mechanism - BMR, Feb 20, 2005
 //		- Replaced decRefCount with close() to let the C library
 //		handle the reference counting - BMR, Jun 1, 2006
 //--------------------------------------------------------------------------
@@ -681,7 +681,7 @@ PropList::~PropList()
 	close();
     }
     catch (Exception close_error) {
-	cerr << "PropList::~PropList - " << close_error.getDetailMsg() << endl;
+	cerr << inMemFunc("~PropList - ") << close_error.getDetailMsg() << endl;
     }
 }
 

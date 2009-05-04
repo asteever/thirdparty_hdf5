@@ -27,14 +27,6 @@
 #include "H5Bprivate.h"
 #include "H5Pprivate.h"
 
-/*
- * This file needs to access private information from the H5F package.
- * This file also needs to access the file testing code.
- */
-#define H5F_PACKAGE
-#define H5F_TESTING
-#include "H5Fpkg.h"		/* File access	 			*/
-
 #define F1_USERBLOCK_SIZE  (hsize_t)0
 #define F1_OFFSET_SIZE	   sizeof(haddr_t)
 #define F1_LENGTH_SIZE	   sizeof(hsize_t)
@@ -87,8 +79,6 @@
 #define TESTA_NX 4
 #define TESTA_NY 5
 
-#define USERBLOCK_SIZE      ((hsize_t) 512)
-
 static void
 create_objects(hid_t, hid_t, hid_t *, hid_t *, hid_t *, hid_t *);
 static void
@@ -110,14 +100,18 @@ test_file_create(void)
     size_t		parm;		/*file-creation parameters	*/
     size_t		parm2;		/*file-creation parameters	*/
     unsigned		iparm;
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    int		iparm2;
+#else /* H5_WANT_H5_V1_4_COMPAT */
     unsigned		iparm2;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
     herr_t		ret;		/*generic return value		*/
 
     /* Output message about test being performed */
     MESSAGE(5, ("Testing Low-Level File Creation I/O\n"));
 
     /* First ensure the file does not exist */
-    HDremove(FILE1);
+    remove(FILE1);
 
     /* Try opening a non-existant file */
     fid1 = H5Fopen(FILE1, H5F_ACC_RDWR, H5P_DEFAULT);
@@ -134,19 +128,14 @@ test_file_create(void)
      * try to create the same file with H5F_ACC_TRUNC. This should fail
      * because fid1 is the same file and is currently open.
      */
-#ifndef H5_HAVE_FILE_VERSIONS
     fid2 = H5Fcreate(FILE1, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
     VERIFY(fid2, FAIL, "H5Fcreate");
-#endif /*H5_DONT_HAVE_FILE_VERSIONS*/
 
     /* Close all files */
     ret = H5Fclose(fid1);
     CHECK(ret, FAIL, "H5Fclose");
-
-#ifndef H5_HAVE_FILE_VERSIONS
     ret = H5Fclose(fid2);
     VERIFY(ret, FAIL, "H5Fclose"); /*file should not have been open */
-#endif /*H5_HAVE_FILE_VERSIONS*/
 
     /*
      * Try again with H5F_ACC_EXCL. This should fail because the file already
@@ -159,7 +148,6 @@ test_file_create(void)
     fid1 = H5Fcreate(FILE1, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
     CHECK(fid1, FAIL, "H5Fcreate");
 
-#ifndef H5_HAVE_FILE_VERSIONS
     /*
      * Try to truncate first file again. This should fail because fid1 is the
      * same file and is currently open.
@@ -173,7 +161,6 @@ test_file_create(void)
      */
     fid2 = H5Fcreate(FILE1, H5F_ACC_EXCL, H5P_DEFAULT, H5P_DEFAULT);
     VERIFY(fid2, FAIL, "H5Fcreate");
-#endif /*H5_HAVE_FILE_VERSIONS*/
 
     /* Get the file-creation template */
     tmpl1 = H5Fget_create_plist(fid1);
@@ -243,12 +230,12 @@ test_file_create(void)
        CHECK(dataspace_id, FAIL, "H5Screate_simple");
 
        /* Create the dataset. */
-       dataset_id = H5Dcreate2(fid2, F2_DSET, H5T_NATIVE_INT, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-       CHECK(dataset_id, FAIL, "H5Dcreate2");
+       dataset_id = H5Dcreate(fid2, F2_DSET, H5T_NATIVE_INT, dataspace_id, H5P_DEFAULT);
+       CHECK(dataset_id, FAIL, "H5Dcreate");
 
-       for(i = 0; i < F2_DIM0; i++)
-           for(j = 0; j < F2_DIM1; j++)
-               data[i][j] = i * 10 + j;
+       for(i=0; i<F2_DIM0; i++)
+           for(j=0; j<F2_DIM1; j++)
+               data[i][j]=i*10+j;
 
        /* Write data to the new dataset */
        ret = H5Dwrite(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, data);
@@ -357,8 +344,11 @@ test_file_open(void)
     size_t		parm;		/*file-creation parameters	*/
     size_t		parm2;		/*file-creation parameters	*/
     unsigned		iparm;
+#ifdef H5_WANT_H5_V1_4_COMPAT
+    int		iparm2;
+#else /* H5_WANT_H5_V1_4_COMPAT */
     unsigned		iparm2;
-    unsigned		intent;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
     herr_t		ret;		/*generic return value		*/
 
     /*
@@ -371,11 +361,6 @@ test_file_open(void)
     /* Open first file */
     fid1 = H5Fopen(FILE2, H5F_ACC_RDWR, H5P_DEFAULT);
     CHECK(fid1, FAIL, "H5Fopen");
-
-    /* Get the intent */
-    ret = H5Fget_intent(fid1, &intent);
-    CHECK(ret, FAIL, "H5Fget_intent");
-    VERIFY(intent, H5F_ACC_RDWR, "H5Fget_intent");
 
     /* Get the file-creation template */
     tmpl1 = H5Fget_create_plist(fid1);
@@ -426,18 +411,9 @@ test_file_open(void)
     fid1 = H5Fopen(FILE2, H5F_ACC_RDONLY, fapl_id);
     CHECK(fid1, FAIL, "H5Fopen");
 
-    /* Check the intent */
-    ret = H5Fget_intent(fid1, &intent);
-    CHECK(ret, FAIL, "H5Fget_intent");
-    VERIFY(intent, H5F_ACC_RDONLY, "H5Fget_intent");
-
     /* Open dataset */
-    did = H5Dopen2(fid1, F2_DSET, H5P_DEFAULT);
-    CHECK(did, FAIL, "H5Dopen2");
-
-    /* Check that the intent works even if NULL is passed in */
-    ret = H5Fget_intent(fid1, NULL);
-    CHECK(ret, FAIL, "H5Fget_intent");
+    did = H5Dopen(fid1, F2_DSET);
+    CHECK(did, FAIL, "H5Dopen");
 
     /* Close first open */
     ret = H5Fclose(fid1);
@@ -446,10 +422,6 @@ test_file_open(void)
     /* Open file for second time, which should fail. */
     fid2 = H5Fopen(FILE2, H5F_ACC_RDWR, fapl_id);
     VERIFY(fid2, FAIL, "H5Fopen");
-
-    /* Check that the intent fails for an invalid ID */
-    ret = H5Fget_intent(fid1, &intent);
-    VERIFY(ret, FAIL, "H5Fget_intent");
 
     /* Close dataset from first open */
     ret = H5Dclose(did);
@@ -814,12 +786,13 @@ create_objects(hid_t fid1, hid_t fid2, hid_t *ret_did, hid_t *ret_gid1,
        CHECK(dataspace_id, FAIL, "H5Screate_simple");
 
        /* Create the dataset. */
-       dataset_id = H5Dcreate2(fid1, "/dset", H5T_NATIVE_INT, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-       CHECK(dataset_id, FAIL, "H5Dcreate2");
+       dataset_id = H5Dcreate(fid1, "/dset", H5T_NATIVE_INT, dataspace_id,
+                        H5P_DEFAULT);
+       CHECK(dataset_id, FAIL, "H5Dcreate");
 
-       for(i = 0; i < F2_DIM0; i++)
-           for(j = 0; j < F2_DIM1; j++)
-               data[i][j] = i * 10 + j;
+       for(i=0; i<F2_DIM0; i++)
+           for(j=0; j<F2_DIM1; j++)
+               data[i][j]=i*10+j;
 
        /* Write data to the new dataset */
        ret = H5Dwrite(dataset_id, H5T_NATIVE_INT, H5S_ALL, H5S_ALL,
@@ -837,18 +810,18 @@ create_objects(hid_t fid1, hid_t fid2, hid_t *ret_did, hid_t *ret_gid1,
     /* Create a group in the second file open */
     {
         hid_t   gid1, gid2, gid3;
-        gid1 = H5Gcreate2(fid2, "/group", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-        CHECK(gid1, FAIL, "H5Gcreate2");
+        gid1 = H5Gcreate(fid2, "/group", (size_t)0);
+        CHECK(gid1, FAIL, "H5Gcreate");
         if(ret_gid1 != NULL)
             *ret_gid1 = gid1;
 
-        gid2 = H5Gopen2(fid2, "/group", H5P_DEFAULT);
-        CHECK(gid2, FAIL, "H5Gopen2");
+        gid2 = H5Gopen(fid2, "/group");
+        CHECK(gid2, FAIL, "H5Gopen");
         if(ret_gid2 != NULL)
             *ret_gid2 = gid2;
 
-        gid3 = H5Gopen2(fid2, "/group", H5P_DEFAULT);
-        CHECK(gid3, FAIL, "H5Gopen2");
+        gid3 = H5Gopen(fid2, "/group");
+        CHECK(gid3, FAIL, "H5Gopen");
         if(ret_gid3 != NULL)
             *ret_gid3 = gid3;
     }
@@ -888,17 +861,11 @@ test_get_file_id(void)
     hid_t		datatype_id, dataset_id, dataspace_id, group_id, attr_id;
     hid_t               plist;
     hsize_t             dims[F2_RANK];
-    unsigned            intent;
     herr_t              ret;
 
     /* Create a file */
     fid = H5Fcreate(FILE4, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
     CHECK(fid, FAIL, "H5Fcreate");
-
-    /* Check the intent */
-    ret = H5Fget_intent(fid, &intent);
-    CHECK(ret, FAIL, "H5Fget_intent");
-    VERIFY(intent, H5F_ACC_RDWR, "H5Fget_intent");
 
     /* Test H5Iget_file_id() */
     check_file_id(fid, fid);
@@ -906,8 +873,8 @@ test_get_file_id(void)
     /* Create a group in the file.  Make a duplicated file ID from the group.
      * And close this duplicated ID
      */
-    group_id = H5Gcreate2(fid, GRP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(group_id, FAIL, "H5Gcreate2");
+    group_id = H5Gcreate(fid, GRP_NAME, (size_t)0);
+    CHECK(group_id, FAIL, "H5Gcreate");
 
     /* Test H5Iget_file_id() */
     check_file_id(fid, group_id);
@@ -926,8 +893,8 @@ test_get_file_id(void)
     fid = H5Fopen(FILE4, H5F_ACC_RDWR, H5P_DEFAULT);
     CHECK(fid, FAIL, "H5Fcreate");
 
-    group_id = H5Gopen2(fid, GRP_NAME, H5P_DEFAULT);
-    CHECK(group_id, FAIL, "H5Gopen2");
+    group_id = H5Gopen(fid, GRP_NAME);
+    CHECK(group_id, FAIL, "H5Gcreate");
 
     /* Test H5Iget_file_id() */
     check_file_id(fid, group_id);
@@ -950,8 +917,9 @@ test_get_file_id(void)
     dataspace_id = H5Screate_simple(F2_RANK, dims, NULL);
     CHECK(dataspace_id, FAIL, "H5Screate_simple");
 
-    dataset_id = H5Dcreate2(group_id, DSET_NAME, H5T_NATIVE_INT, dataspace_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(dataset_id, FAIL, "H5Dcreate2");
+    dataset_id = H5Dcreate(group_id, DSET_NAME, H5T_NATIVE_INT, dataspace_id,
+                        H5P_DEFAULT);
+    CHECK(dataset_id, FAIL, "H5Dcreate");
 
     /* Test H5Iget_file_id() */
     check_file_id(fid, dataset_id);
@@ -959,8 +927,8 @@ test_get_file_id(void)
     /* Create an attribute for the dataset.  Make a duplicated file ID from
      * this attribute.  And close it.
      */
-    attr_id = H5Acreate2(dataset_id, ATTR_NAME, H5T_NATIVE_INT, dataspace_id, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Acreate2");
+    attr_id=H5Acreate(dataset_id,ATTR_NAME,H5T_NATIVE_INT,dataspace_id,H5P_DEFAULT);
+    CHECK(ret, FAIL, "H5Acreate");
 
     /* Test H5Iget_file_id() */
     check_file_id(fid, attr_id);
@@ -968,11 +936,11 @@ test_get_file_id(void)
     /* Create a named datatype.  Make a duplicated file ID from
      * this attribute.  And close it.
      */
-    datatype_id = H5Tcopy(H5T_NATIVE_INT);
+    datatype_id=H5Tcopy(H5T_NATIVE_INT);
     CHECK(ret, FAIL, "H5Tcopy");
 
-    ret = H5Tcommit2(fid, TYPE_NAME, datatype_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Tcommit2");
+    ret = H5Tcommit(fid, TYPE_NAME, datatype_id);
+    CHECK(ret, FAIL, "H5Tcommit");
 
     /* Test H5Iget_file_id() */
     check_file_id(fid, datatype_id);
@@ -1157,22 +1125,21 @@ test_file_perm(void)
     CHECK(file, FAIL, "H5Fcreate");
 
     /* Create a dataset with the read-write file handle */
-    dset = H5Dcreate2(file, F2_DSET, H5T_NATIVE_INT, dspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(dset, FAIL, "H5Dcreate2");
+    dset = H5Dcreate(file, F2_DSET, H5T_NATIVE_INT, dspace, H5P_DEFAULT);
+    CHECK(dset, FAIL, "H5Dcreate");
 
     ret = H5Dclose(dset);
     CHECK(ret, FAIL, "H5Dclose");
 
-#ifndef H5_CANNOT_OPEN_TWICE
     /* Open the file (with read-only permission) */
     filero = H5Fopen(FILE2, H5F_ACC_RDONLY, H5P_DEFAULT);
     CHECK(filero, FAIL, "H5Fopen");
 
     /* Create a dataset with the read-only file handle (should fail) */
     H5E_BEGIN_TRY {
-        dset = H5Dcreate2(filero, F2_DSET, H5T_NATIVE_INT, dspace, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        dset = H5Dcreate(filero, F2_DSET, H5T_NATIVE_INT, dspace, H5P_DEFAULT);
     } H5E_END_TRY;
-    VERIFY(dset, FAIL, "H5Dcreate2");
+    VERIFY(dset, FAIL, "H5Dcreate");
     if(dset!=FAIL) {
         ret = H5Dclose(dset);
         CHECK(ret, FAIL, "H5Dclose");
@@ -1180,7 +1147,6 @@ test_file_perm(void)
 
     ret = H5Fclose(filero);
     CHECK(ret, FAIL, "H5Fclose");
-#endif /*H5_CANNOT_OPEN_TWICE*/
 
     ret = H5Fclose(file);
     CHECK(ret, FAIL, "H5Fclose");
@@ -1201,8 +1167,6 @@ static void
 test_file_freespace(void)
 {
     hid_t    file;      /* File opened with read-write permission */
-    h5_stat_size_t empty_filesize;      /* Size of file when empty */
-    h5_stat_size_t mod_filesize;        /* Size of file after being modified */
     hssize_t free_space;        /* Amount of free space in file */
     hid_t    dspace;    /* Dataspace ID */
     hid_t    dset;      /* Dataset ID */
@@ -1214,19 +1178,9 @@ test_file_freespace(void)
     /* Output message about test being performed */
     MESSAGE(5, ("Testing Low-Level File Free Space\n"));
 
-    /* Create an "empty" file */
+    /* Create the file (with read-write permission) */
     file = H5Fcreate(FILE1, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
     CHECK(file, FAIL, "H5Fcreate");
-
-    ret = H5Fclose(file);
-    CHECK_I(ret, "H5Fclose");
-
-    /* Get the "empty" file size */
-    empty_filesize = h5_get_file_size(FILE1, H5P_DEFAULT);
-
-    /* Re-open the file (with read-write permission) */
-    file = H5Fopen(FILE1, H5F_ACC_RDWR, H5P_DEFAULT);
-    CHECK_I(file, "H5Fopen");
 
     /* Check that the free space is 0 */
     free_space = H5Fget_freespace(file);
@@ -1242,14 +1196,14 @@ test_file_freespace(void)
     CHECK(dcpl, FAIL, "H5Pcreate");
 
     /* Set the space allocation time to early */
-    ret = H5Pset_alloc_time(dcpl, H5D_ALLOC_TIME_EARLY);
+    ret = H5Pset_alloc_time(dcpl,H5D_ALLOC_TIME_EARLY);
     CHECK(ret, FAIL, "H5Pset_alloc_time");
 
     /* Create datasets in file */
-    for(u = 0; u < 10; u++) {
-        sprintf(name, "Dataset %u", u);
-        dset = H5Dcreate2(file, name, H5T_STD_U32LE, dspace, H5P_DEFAULT, dcpl, H5P_DEFAULT);
-        CHECK(dset, FAIL, "H5Dcreate2");
+    for(u=0; u<10; u++) {
+        sprintf(name,"Dataset %u",u);
+        dset = H5Dcreate(file, name, H5T_STD_U32LE, dspace, dcpl);
+        CHECK(dset, FAIL, "H5Dcreate");
 
         ret = H5Dclose(dset);
         CHECK(ret, FAIL, "H5Dclose");
@@ -1260,35 +1214,30 @@ test_file_freespace(void)
     CHECK(ret, FAIL, "H5Sclose");
 
     /* Close dataset creation property list */
-    ret = H5Pclose(dcpl);
+    ret=H5Pclose(dcpl);
     CHECK(ret, FAIL, "H5Pclose");
 
     /* Check that there is the right amount of free space in the file */
     free_space = H5Fget_freespace(file);
     CHECK(free_space, FAIL, "H5Fget_freespace");
-    VERIFY(free_space, 2008, "H5Fget_freespace");
+    VERIFY(free_space, 168, "H5Fget_freespace");
 
     /* Delete datasets in file */
-    for(u = 0; u < 10; u++) {
-        sprintf(name, "Dataset %u", u);
-        ret = H5Ldelete(file, name, H5P_DEFAULT);
-        CHECK(ret, FAIL, "H5Ldelete");
+    for(u=0; u<10; u++) {
+        sprintf(name,"Dataset %u",u);
+        ret = H5Gunlink(file, name);
+        CHECK(ret, FAIL, "H5Gunlink");
     } /* end for */
 
     /* Check that there is the right amount of free space in the file */
     free_space = H5Fget_freespace(file);
     CHECK(free_space, FAIL, "H5Fget_freespace");
-    VERIFY(free_space, 0, "H5Fget_freespace");
+    VERIFY(free_space, 3584, "H5Fget_freespace");
 
     /* Close file */
     ret = H5Fclose(file);
     CHECK(ret, FAIL, "H5Fclose");
 
-    /* Get the file size after modifications*/
-    mod_filesize = h5_get_file_size(FILE1, H5P_DEFAULT);
-
-    /* Check that the file reverted to empty size */
-    VERIFY(mod_filesize, empty_filesize, "H5Fget_freespace");
 } /* end test_file_freespace() */
 
 /****************************************************************
@@ -1397,8 +1346,8 @@ test_file_open_dot(void)
     CHECK(fid, FAIL, "H5Fcreate");
 
     /* Create a group in the HDF5 file */
-    gid = H5Gcreate2(fid, GRP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(gid, FAIL, "H5Gcreate2");
+    gid = H5Gcreate(fid, GRP_NAME, (size_t)0);
+    CHECK(gid, FAIL, "H5Gcreate");
 
     /* Create a dataspace for creating datasets */
     sid = H5Screate(H5S_SCALAR);
@@ -1406,27 +1355,27 @@ test_file_open_dot(void)
 
     /* Create a dataset with no name using the file ID */
     H5E_BEGIN_TRY {
-        did = H5Dcreate2(fid, ".", H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        did = H5Dcreate(fid, ".", H5T_NATIVE_INT, sid, H5P_DEFAULT);
     } H5E_END_TRY;
-    VERIFY(did, FAIL, "H5Dcreate2");
+    VERIFY(did, FAIL, "H5Dcreate");
 
     /* Create a dataset with no name using the group ID */
     H5E_BEGIN_TRY {
-        did = H5Dcreate2(gid, ".", H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        did = H5Dcreate(gid, ".", H5T_NATIVE_INT, sid, H5P_DEFAULT);
     } H5E_END_TRY;
-    VERIFY(did, FAIL, "H5Dcreate2");
+    VERIFY(did, FAIL, "H5Dcreate");
 
     /* Open a dataset with no name using the file ID */
     H5E_BEGIN_TRY {
-        did = H5Dopen2(fid, ".", H5P_DEFAULT);
+        did = H5Dopen(fid, ".");
     } H5E_END_TRY;
-    VERIFY(did, FAIL, "H5Dopen2");
+    VERIFY(did, FAIL, "H5Dopen");
 
     /* Open a dataset with no name using the group ID */
     H5E_BEGIN_TRY {
-        did = H5Dopen2(gid, ".", H5P_DEFAULT);
+        did = H5Dopen(gid, ".");
     } H5E_END_TRY;
-    VERIFY(did, FAIL, "H5Dopen2");
+    VERIFY(did, FAIL, "H5Dopen");
 
     /* Make a copy of a datatype to use for creating a named datatype */
     tid = H5Tcopy(H5T_NATIVE_INT);
@@ -1434,50 +1383,50 @@ test_file_open_dot(void)
 
     /* Create a named datatype with no name using the file ID */
     H5E_BEGIN_TRY {
-        ret = H5Tcommit2(fid, ".", tid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        ret = H5Tcommit(fid, ".", tid);
     } H5E_END_TRY;
-    VERIFY(ret, FAIL, "H5Tcommit2");
+    VERIFY(ret, FAIL, "H5Tcommit");
 
     /* Create a named datatype with no name using the group ID */
     H5E_BEGIN_TRY {
-        ret = H5Tcommit2(gid, ".", tid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        ret = H5Tcommit(gid, ".", tid);
     } H5E_END_TRY;
-    VERIFY(ret, FAIL, "H5Tcommit2");
+    VERIFY(ret, FAIL, "H5Tcommit");
 
     /* Open a named datatype with no name using the file ID */
     H5E_BEGIN_TRY {
-        tid2 = H5Topen2(fid, ".", H5P_DEFAULT);
+        tid2 = H5Topen(fid, ".");
     } H5E_END_TRY;
-    VERIFY(tid2, FAIL, "H5Topen2");
+    VERIFY(tid2, FAIL, "H5Topen");
 
     /* Open a named datatype with no name using the group ID */
     H5E_BEGIN_TRY {
-        tid2 = H5Topen2(gid, ".", H5P_DEFAULT);
+        tid2 = H5Topen(gid, ".");
     } H5E_END_TRY;
-    VERIFY(tid2, FAIL, "H5Topen2");
+    VERIFY(tid2, FAIL, "H5Topen");
 
     /* Create a group with no name using the file ID */
     H5E_BEGIN_TRY {
-        gid2 = H5Gcreate2(fid, ".", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        gid2 = H5Gcreate(fid, ".", (size_t)0);
     } H5E_END_TRY;
-    VERIFY(gid2, FAIL, "H5Gcreate2");
+    VERIFY(gid2, FAIL, "H5Gcreate");
 
     /* Create a group with no name using the group ID */
     H5E_BEGIN_TRY {
-        gid2 = H5Gcreate2(gid, ".", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+        gid2 = H5Gcreate(gid, ".", (size_t)0);
     } H5E_END_TRY;
-    VERIFY(gid2, FAIL, "H5Gcreate2");
+    VERIFY(gid2, FAIL, "H5Gcreate");
 
     /* Open a group with no name using the file ID (should open the root group) */
-    gid2 = H5Gopen2(fid, ".", H5P_DEFAULT);
-    CHECK(gid2, FAIL, "H5Gopen2");
+    gid2 = H5Gopen(fid, ".");
+    CHECK(gid2, FAIL, "H5Gopen");
 
     ret = H5Gclose(gid2);
     CHECK(ret, FAIL, "H5Gclose");
 
     /* Open a group with no name using the group ID (should open the group again) */
-    gid2 = H5Gopen2(gid, ".", H5P_DEFAULT);
-    CHECK(gid2, FAIL, "H5Gopen2");
+    gid2 = H5Gopen(gid, ".");
+    CHECK(gid2, FAIL, "H5Gopen");
 
     ret = H5Gclose(gid2);
     CHECK(ret, FAIL, "H5Gclose");
@@ -1510,7 +1459,6 @@ test_file_open_overlap(void)
     hid_t gid;
     hid_t sid;
     int nobjs;          /* # of open objects */
-    unsigned intent;
     herr_t ret;         /* Generic return value */
 
     /* Output message about test being performed */
@@ -1524,22 +1472,17 @@ test_file_open_overlap(void)
     fid2 = H5Fopen(FILE1, H5F_ACC_RDWR, H5P_DEFAULT);
     CHECK(fid2, FAIL, "H5Fopen");
 
-    /* Check the intent */
-    ret = H5Fget_intent(fid1, &intent);
-    CHECK(ret, FAIL, "H5Fget_intent");
-    VERIFY(intent, H5F_ACC_RDWR, "H5Fget_intent");
-
     /* Create a group in file */
-    gid = H5Gcreate2(fid1, GROUP1, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(gid, FAIL, "H5Gcreate2");
+    gid = H5Gcreate(fid1, GROUP1, (size_t)0);
+    CHECK(gid, FAIL, "H5Gcreate");
 
     /* Create dataspace for dataset */
     sid = H5Screate(H5S_SCALAR);
     CHECK(sid, FAIL, "H5Screate");
 
     /* Create dataset in group w/first file ID */
-    did1 = H5Dcreate2(gid, DSET1, H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(did1, FAIL, "H5Dcreate2");
+    did1 = H5Dcreate(gid, DSET1, H5T_NATIVE_INT, sid, H5P_DEFAULT);
+    CHECK(did1, FAIL, "H5Dcreate");
 
     /* Check number of objects opened in first file */
     nobjs = H5Fget_obj_count(fid1, H5F_OBJ_LOCAL|H5F_OBJ_ALL);
@@ -1559,8 +1502,8 @@ test_file_open_overlap(void)
 
 
     /* Create dataset with second file ID */
-    did2 = H5Dcreate2(fid2, DSET2, H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(did2, FAIL, "H5Dcreate2");
+    did2 = H5Dcreate(fid2, DSET2, H5T_NATIVE_INT, sid, H5P_DEFAULT);
+    CHECK(did2, FAIL, "H5Dcreate");
 
     /* Check number of objects opened in first file */
     nobjs = H5Fget_obj_count(fid2, H5F_OBJ_ALL);
@@ -1613,16 +1556,16 @@ test_file_getname(void)
     CHECK(file_id, FAIL, "H5Fcreate");
 
     /* Get and verify file name */
-    name_len = H5Fget_name(file_id, name, (size_t)TESTA_NAME_BUF_SIZE);
+    name_len = H5Fget_name(file_id, name, TESTA_NAME_BUF_SIZE);
     CHECK(name_len, FAIL, "H5Fget_name");
     VERIFY_STR(name, FILE1, "H5Fget_name");
 
     /* Create a group in the root group */
-    group_id = H5Gcreate2(file_id, TESTA_GROUPNAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(group_id, FAIL, "H5Gcreate2");
+    group_id = H5Gcreate(file_id, TESTA_GROUPNAME, 0);
+    CHECK(group_id, FAIL, "H5Gcreate");
 
     /* Get and verify file name */
-    name_len = H5Fget_name(group_id, name, (size_t)TESTA_NAME_BUF_SIZE);
+    name_len = H5Fget_name(group_id, name, TESTA_NAME_BUF_SIZE);
     CHECK(name_len, FAIL, "H5Fget_name");
     VERIFY_STR(name, FILE1, "H5Fget_name");
 
@@ -1633,25 +1576,25 @@ test_file_getname(void)
     /* Try get file name from data space.  Supposed to fail because
      * it's illegal operation. */
     H5E_BEGIN_TRY {
-        name_len = H5Fget_name(space_id, name, (size_t)TESTA_NAME_BUF_SIZE);
+        name_len = H5Fget_name(space_id, name, TESTA_NAME_BUF_SIZE);
     } H5E_END_TRY;
     VERIFY(name_len, FAIL, "H5Fget_name");
 
     /* Create a new dataset */
-    dataset_id = H5Dcreate2(file_id, TESTA_DSETNAME, H5T_NATIVE_INT, space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(dataset_id, FAIL, "H5Dcreate2");
+    dataset_id = H5Dcreate(file_id, TESTA_DSETNAME, H5T_NATIVE_INT, space_id, H5P_DEFAULT);
+    CHECK(dataset_id, FAIL, "H5Dcreate");
 
     /* Get and verify file name */
-    name_len = H5Fget_name(dataset_id, name, (size_t)TESTA_NAME_BUF_SIZE);
+    name_len = H5Fget_name(dataset_id, name, TESTA_NAME_BUF_SIZE);
     CHECK(name_len, FAIL, "H5Fget_name");
     VERIFY_STR(name, FILE1, "H5Fget_name");
 
     /* Create an attribute for the dataset */
-    attr_id = H5Acreate2(dataset_id, TESTA_ATTRNAME, H5T_NATIVE_INT, space_id, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(attr_id, FAIL, "H5Acreate2");
+    attr_id = H5Acreate(dataset_id,TESTA_ATTRNAME,H5T_NATIVE_INT,space_id,H5P_DEFAULT);
+    CHECK(attr_id, FAIL, "H5Acreate");
 
     /* Get and verify file name */
-    name_len = H5Fget_name(attr_id, name, (size_t)TESTA_NAME_BUF_SIZE);
+    name_len = H5Fget_name(attr_id, name, TESTA_NAME_BUF_SIZE);
     CHECK(name_len, FAIL, "H5Fget_name");
     VERIFY_STR(name, FILE1, "H5Fget_name");
 
@@ -1667,11 +1610,11 @@ test_file_getname(void)
     CHECK(ret, FAIL, "H5Tinsert");
 
     /* Save it on file */
-    ret = H5Tcommit2(file_id, TESTA_DTYPENAME, type_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Tcommit2");
+    ret = H5Tcommit(file_id, TESTA_DTYPENAME, type_id);
+    CHECK(ret, FAIL, "H5Tcommit");
 
     /* Get and verify file name */
-    name_len = H5Fget_name(type_id, name, (size_t)TESTA_NAME_BUF_SIZE);
+    name_len = H5Fget_name(type_id, name, TESTA_NAME_BUF_SIZE);
     CHECK(name_len, FAIL, "H5Fget_name");
     VERIFY_STR(name, FILE1, "H5Fget_name");
 
@@ -1706,8 +1649,8 @@ test_file_getname(void)
 static void
 test_file_double_root_open(void)
 {
-    hid_t file1_id, file2_id;
-    hid_t grp1_id, grp2_id;
+    hid_t file1_id, file2_id; 
+    hid_t grp1_id, grp2_id; 
     herr_t ret;         /* Generic return value */
 
     /* Output message about test being performed */
@@ -1718,10 +1661,10 @@ test_file_double_root_open(void)
     file2_id = H5Fopen (FILE1, H5F_ACC_RDONLY, H5P_DEFAULT);
     CHECK(file2_id, FAIL, "H5Fopen");
 
-    grp1_id  = H5Gopen2(file1_id, "/", H5P_DEFAULT);
-    CHECK(grp1_id, FAIL, "H5Gopen2");
-    grp2_id  = H5Gopen2(file2_id, "/", H5P_DEFAULT);
-    CHECK(grp2_id, FAIL, "H5Gopen2");
+    grp1_id  = H5Gopen(file1_id, "/");
+    CHECK(grp1_id, FAIL, "H5Gopen");
+    grp2_id  = H5Gopen(file2_id, "/");
+    CHECK(grp2_id, FAIL, "H5Gopen");
 
     /* Note "assymetric" close order */
     ret = H5Gclose(grp1_id);
@@ -1745,8 +1688,8 @@ test_file_double_root_open(void)
 static void
 test_file_double_group_open(void)
 {
-    hid_t file1_id, file2_id;
-    hid_t grp1_id, grp2_id;
+    hid_t file1_id, file2_id; 
+    hid_t grp1_id, grp2_id; 
     herr_t ret;         /* Generic return value */
 
     /* Output message about test being performed */
@@ -1757,10 +1700,10 @@ test_file_double_group_open(void)
     file2_id = H5Fopen (FILE1, H5F_ACC_RDONLY, H5P_DEFAULT);
     CHECK(file2_id, FAIL, "H5Fopen");
 
-    grp1_id  = H5Gcreate2(file1_id, GRP_NAME, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(grp1_id, FAIL, "H5Gcreate2");
-    grp2_id  = H5Gopen2(file2_id, GRP_NAME, H5P_DEFAULT);
-    CHECK(grp2_id, FAIL, "H5Gopen2");
+    grp1_id  = H5Gcreate(file1_id, GRP_NAME, (size_t)0);
+    CHECK(grp1_id, FAIL, "H5Gcreate");
+    grp2_id  = H5Gopen(file2_id, GRP_NAME);
+    CHECK(grp2_id, FAIL, "H5Gopen");
 
     /* Note "assymetric" close order */
     ret = H5Gclose(grp1_id);
@@ -1784,9 +1727,9 @@ test_file_double_group_open(void)
 static void
 test_file_double_dataset_open(void)
 {
-    hid_t file1_id, file2_id;
-    hid_t dset1_id, dset2_id;
-    hid_t space_id;
+    hid_t file1_id, file2_id; 
+    hid_t dset1_id, dset2_id; 
+    hid_t space_id; 
     herr_t ret;         /* Generic return value */
 
     /* Output message about test being performed */
@@ -1801,10 +1744,10 @@ test_file_double_dataset_open(void)
     space_id = H5Screate(H5S_SCALAR);
     CHECK(space_id, FAIL, "H5Screate");
 
-    dset1_id  = H5Dcreate2(file1_id, DSET_NAME, H5T_NATIVE_INT, space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(dset1_id, FAIL, "H5Dcreate2");
-    dset2_id  = H5Dopen2(file2_id, DSET_NAME, H5P_DEFAULT);
-    CHECK(dset2_id, FAIL, "H5Dopen2");
+    dset1_id  = H5Dcreate(file1_id, DSET_NAME, H5T_NATIVE_INT, space_id, H5P_DEFAULT);
+    CHECK(dset1_id, FAIL, "H5Dcreate");
+    dset2_id  = H5Dopen(file2_id, DSET_NAME);
+    CHECK(dset2_id, FAIL, "H5Dopen");
 
     /* Close "supporting" dataspace */
     ret = H5Sclose(space_id);
@@ -1832,8 +1775,8 @@ test_file_double_dataset_open(void)
 static void
 test_file_double_datatype_open(void)
 {
-    hid_t file1_id, file2_id;
-    hid_t type1_id, type2_id;
+    hid_t file1_id, file2_id; 
+    hid_t type1_id, type2_id; 
     herr_t ret;         /* Generic return value */
 
     /* Output message about test being performed */
@@ -1846,10 +1789,10 @@ test_file_double_datatype_open(void)
 
     type1_id  = H5Tcopy(H5T_NATIVE_INT);
     CHECK(type1_id, FAIL, "H5Tcopy");
-    ret  = H5Tcommit2(file1_id, TYPE_NAME, type1_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Tcommit2");
-    type2_id  = H5Topen2(file2_id, TYPE_NAME, H5P_DEFAULT);
-    CHECK(type2_id, FAIL, "H5Topen2");
+    ret  = H5Tcommit(file1_id, TYPE_NAME, type1_id);
+    CHECK(ret, FAIL, "H5Tcommit");
+    type2_id  = H5Topen(file2_id, TYPE_NAME);
+    CHECK(type2_id, FAIL, "H5Topen");
 
     /* Note "assymetric" close order */
     ret = H5Tclose(type1_id);
@@ -1862,168 +1805,6 @@ test_file_double_datatype_open(void)
     ret = H5Fclose(file2_id);
     CHECK(ret, FAIL, "H5Fclose");
 } /* end test_file_double_dataset_open() */
-
-/****************************************************************
-**
-**  test_userblock_file_size(): low-level file test routine.
-**      This test checks that the presence of a userblock
-**      affects the file size in the expected manner, and that
-**      the filesize is not changed by reopening the file.  It
-**      creates two files which are identical except that one
-**      contains a userblock, and verifies that their file sizes
-**      differ exactly by the userblock size.
-**
-*****************************************************************/
-static void
-test_userblock_file_size(void)
-{
-    hid_t file1_id, file2_id;
-    hid_t group1_id, group2_id;
-    hid_t dset1_id, dset2_id;
-    hid_t space_id;
-    hid_t fcpl2_id;
-    hsize_t dims[2] = {3, 4};
-    hsize_t filesize1, filesize2, filesize;
-    herr_t ret;         /* Generic return value */
-
-    /* Output message about test being performed */
-    MESSAGE(5, ("Testing file size with user block\n"));
-
-    /* Create property list with userblock size set */
-    fcpl2_id = H5Pcreate(H5P_FILE_CREATE);
-    CHECK(fcpl2_id, FAIL, "H5Pcreate");
-    ret = H5Pset_userblock(fcpl2_id, USERBLOCK_SIZE);
-    CHECK(ret, FAIL, "H5Pset_userblock");
-
-    /* Create files.  Onyl file2 with have a userblock. */
-    file1_id = H5Fcreate(FILE1, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(file1_id, FAIL, "H5Fcreate");
-    file2_id = H5Fcreate(FILE2, H5F_ACC_TRUNC, fcpl2_id, H5P_DEFAULT);
-    CHECK(file2_id, FAIL, "H5Fcreate");
-
-    /* Create groups */
-    group1_id = H5Gcreate2(file1_id, GROUP1, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(group1_id, FAIL, "H5Gcreate2");
-    group2_id = H5Gcreate2(file2_id, GROUP1, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(group2_id, FAIL, "H5Gcreate2");
-
-    /* Create dataspace */
-    space_id = H5Screate_simple(2, dims, NULL);
-    CHECK(space_id, FAIL, "H5Screate_simple");
-
-    /* Create datasets */
-    dset1_id = H5Dcreate2(file1_id, DSET2, H5T_NATIVE_INT, space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(dset1_id, FAIL, "H5Dcreate2");
-    dset2_id = H5Dcreate2(file2_id, DSET2, H5T_NATIVE_INT, space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(dset2_id, FAIL, "H5Dcreate2");
-
-    /* Close IDs */
-    ret = H5Dclose(dset1_id);
-    CHECK(ret, FAIL, "H5Dclose");
-    ret = H5Dclose(dset2_id);
-    CHECK(ret, FAIL, "H5Dclose");
-    ret = H5Sclose(space_id);
-    CHECK(ret, FAIL, "H5Sclose");
-    ret = H5Gclose(group1_id);
-    CHECK(ret, FAIL, "H5Gclose");
-    ret = H5Gclose(group2_id);
-    CHECK(ret, FAIL, "H5Gclose");
-    ret = H5Pclose(fcpl2_id);
-    CHECK(ret, FAIL, "H5Pclose");
-
-    /* Close files */
-    ret = H5Fclose(file1_id);
-    CHECK(ret, FAIL, "H5Fclose");
-    ret = H5Fclose(file2_id);
-    CHECK(ret, FAIL, "H5Fclose");
-
-    /* Reopen files */
-    file1_id = H5Fopen(FILE1, H5F_ACC_RDWR, H5P_DEFAULT);
-    CHECK(file1_id, FAIL, "H5Fopen");
-    file2_id = H5Fopen(FILE2, H5F_ACC_RDWR, H5P_DEFAULT);
-    CHECK(file2_id, FAIL, "H5Fopen");
-
-    /* Check file sizes */
-    ret = H5Fget_filesize(file1_id, &filesize1);
-    CHECK(ret, FAIL, "H5Fget_filesize");
-    ret = H5Fget_filesize(file2_id, &filesize2);
-    CHECK(ret, FAIL, "H5Fget_filesize");
-
-    /* Verify that the file sizes differ exactly by the userblock size */
-    VERIFY(filesize2, filesize1 + USERBLOCK_SIZE, "H5Fget_filesize");
-
-    /* Close files */
-    ret = H5Fclose(file1_id);
-    CHECK(ret, FAIL, "H5Fclose");
-    ret = H5Fclose(file2_id);
-    CHECK(ret, FAIL, "H5Fclose");
-
-    /* Reopen files */
-    file1_id = H5Fopen(FILE1, H5F_ACC_RDWR, H5P_DEFAULT);
-    CHECK(file1_id, FAIL, "H5Fopen");
-    file2_id = H5Fopen(FILE2, H5F_ACC_RDWR, H5P_DEFAULT);
-    CHECK(file2_id, FAIL, "H5Fopen");
-
-    /* Verify file sizes did not change */
-    ret = H5Fget_filesize(file1_id, &filesize);
-    CHECK(ret, FAIL, "H5Fget_filesize");
-    VERIFY(filesize, filesize1, "H5Fget_filesize");
-    ret = H5Fget_filesize(file2_id, &filesize);
-    CHECK(ret, FAIL, "H5Fget_filesize");
-    VERIFY(filesize, filesize2, "H5Fget_filesize");
-
-    /* Close files */
-    ret = H5Fclose(file1_id);
-    CHECK(ret, FAIL, "H5Fclose");
-    ret = H5Fclose(file2_id);
-    CHECK(ret, FAIL, "H5Fclose");
-} /* end test_userblock_file_size() */
-
-/****************************************************************
-**
-**  test_cached_stab_info(): low-level file test routine.
-**      This test checks that new files are created with cached
-**      symbol table information in the superblock (when using
-**      the old format).  This is necessary to ensure backwards
-**      compatibility with versions from 1.3.0 to 1.6.3.
-**
-*****************************************************************/
-static void
-test_cached_stab_info(void)
-{
-    hid_t file_id;
-    hid_t group_id;
-    herr_t ret;         /* Generic return value */
-
-    /* Output message about test being performed */
-    MESSAGE(5, ("Testing cached symbol table information\n"));
-
-    /* Create file */
-    file_id = H5Fcreate(FILE1, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(file_id, FAIL, "H5Fcreate");
-
-    /* Create group */
-    group_id = H5Gcreate2(file_id, GROUP1, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(group_id, FAIL, "H5Gcreate2");
-
-    /* Close file and group */
-    ret = H5Gclose(group_id);
-    CHECK(ret, FAIL, "H5Gclose");
-    ret = H5Fclose(file_id);
-    CHECK(ret, FAIL, "H5Fclose");
-
-    /* Reopen file */
-    file_id = H5Fopen(FILE1, H5F_ACC_RDONLY, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Fopen");
-
-    /* Verify the cached symbol table information */
-    ret = H5F_check_cached_stab_test(file_id);
-    CHECK(ret, FAIL, "H5F_check_cached_stab_test");
-
-    /* Close file */
-    ret = H5Fclose(file_id);
-    CHECK(ret, FAIL, "H5Fclose");
-} /* end test_cached_stab_info() */
 
 /****************************************************************
 **
@@ -2046,18 +1827,12 @@ test_file(void)
     test_file_freespace();      /* Test file free space information */
     test_file_ishdf5();         /* Test detecting HDF5 files correctly */
     test_file_open_dot();       /* Test opening objects with "." for a name */
-#ifndef H5_CANNOT_OPEN_TWICE
     test_file_open_overlap();   /* Test opening files in an overlapping manner */
-#endif /*H5_CANNOT_OPEN_TWICE*/
     test_file_getname();        /* Test basic H5Fget_name() functionality */
-#ifndef H5_CANNOT_OPEN_TWICE
     test_file_double_root_open();       /* Test opening root group from two files works properly */
     test_file_double_group_open();      /* Test opening same group from two files works properly */
     test_file_double_dataset_open();    /* Test opening same dataset from two files works properly */
     test_file_double_datatype_open();   /* Test opening same named datatype from two files works properly */
-#endif /*H5_CANNOT_OPEN_TWICE*/
-    test_userblock_file_size(); /* Tests that files created with a userblock have the correct size */
-    test_cached_stab_info();    /* Tests that files are created with cached stab info in the superblock */
 }				/* test_file() */
 
 
@@ -2078,9 +1853,8 @@ test_file(void)
 void
 cleanup_file(void)
 {
-    HDremove(FILE1);
-    HDremove(FILE2);
-    HDremove(FILE3);
-    HDremove(FILE4);
+    remove(FILE1);
+    remove(FILE2);
+    remove(FILE3);
+    remove(FILE4);
 }
-

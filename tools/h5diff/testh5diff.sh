@@ -55,7 +55,6 @@ FILE9="$INDIR/$SRCFILE9"
 FILE10="$INDIR/$SRCFILE10"
 FILE11="$INDIR/$SRCFILE11"
 
-
 H5DIFF=h5diff               # The tool name
 H5DIFF_BIN=`pwd`/$H5DIFF    # The path of the tool binary
 
@@ -65,7 +64,6 @@ DIFF='diff -c'
 nerrors=0
 verbose=yes
 pmode=			    # default to run h5diff tests
-mydomainname=`domainname 2>/dev/null`
 
 # The build (current) directory might be different than the source directory.
 if test -z "$srcdir"; then
@@ -207,7 +205,7 @@ TOOLTEST() {
 	#echo "#############################"
 	#echo "Expected output for '$H5DIFF $@'" 
 	#echo "#############################"
-	#cd $srcdir/testfiles
+	#cd $srcdir/../testfiles
 	if [ "`uname -s`" = "TFLOPS O/S" ]; then
 	    eval $RUNCMD $H5DIFF_BIN $@
 	else
@@ -306,21 +304,20 @@ TOOLTEST h5diff_13.txt -r $FILE1 $FILE2
 TESTING $H5DIFF -r $SRCFILE1 $SRCFILE2 g1/dset1 g1/dset2
 TOOLTEST h5diff_14.txt  -r $FILE1 $FILE2 g1/dset1 g1/dset2
 
+
 # 1.5 with -d
 TESTING $H5DIFF --report --delta=5 $SRCFILE1 $SRCFILE2 g1/dset3 g1/dset4
 TOOLTEST h5diff_15.txt --report --delta=5 $FILE1 $FILE2 g1/dset3 g1/dset4
 
 # 1.6.1 with -p (int)
 TESTING $H5DIFF -v -p 0.02 $SRCFILE1 $SRCFILE1 g1/dset5 g1/dset6
-TOOLTEST h5diff_16_1.txt -v -p 0.02 $FILE1 $FILE1 g1/dset5 g1/dset6
+TOOLTEST h5diff_16_1.txt -v -p 0.02  $FILE1 $FILE1 g1/dset5 g1/dset6
 
-# 1.6.2 with -p (unsigned long_long)
-TESTING $H5DIFF --verbose --relative=0.02 $SRCFILE1 $SRCFILE1 g1/dset7 g1/dset8
-TOOLTEST h5diff_16_2.txt --verbose --relative=0.02 $FILE1 $FILE1 g1/dset7 g1/dset8
+
 
 # 1.6.3 with -p (double)
 TESTING $H5DIFF -v -p 0.02 $SRCFILE1 $SRCFILE1 g1/dset9 g1/dset10
-TOOLTEST h5diff_16_3.txt -v -p 0.02 $FILE1 $FILE1 g1/dset9 g1/dset10
+TOOLTEST h5diff_16_3.txt -v -p 0.02  $FILE1 $FILE1 g1/dset9 g1/dset10
 
 # 1.7 verbose mode
 TESTING $H5DIFF -v $SRCFILE1 $SRCFILE2
@@ -417,6 +414,7 @@ TOOLTEST h5diff_57.txt -v $FILE4 $FILE4 dset7a dset7b
 # 5.8 (region reference)
 TESTING $H5DIFF -v $SRCFILE7 $SRCFILE8  refreg
 TOOLTEST h5diff_58.txt -v $FILE7 $FILE8 refreg
+
 
 # ##############################################################################
 # # Error messages
@@ -562,13 +560,8 @@ TESTING $H5DIFF -v  $SRCFILE2 $SRCFILE2
 TOOLTEST h5diff_90.txt -v $FILE2 $FILE2
 
 # 10. read by hyperslab, print indexes
-if test -n "$pmode" -a "$mydomainname" = hdfgroup.uiuc.edu; then
-    # skip this test which sometimes hangs in some THG machines
-    SKIP -v $SRCFILE9 $SRCFILE10
-else
-    TESTING $H5DIFF -v $SRCFILE9 $SRCFILE10
-    TOOLTEST h5diff_100.txt -v $FILE9 $FILE10 
-fi
+TESTING $H5DIFF -v $SRCFILE9 $SRCFILE10
+TOOLTEST h5diff_100.txt -v $FILE9 $FILE10 
 
 # 11. floating point comparison
 TESTING $H5DIFF -v  $SRCFILE1 $SRCFILE1 g1/d1  g1/d2 
@@ -576,7 +569,6 @@ TOOLTEST h5diff_101.txt -v $FILE1 $FILE1 g1/d1  g1/d2
 
 TESTING $H5DIFF -v  $SRCFILE1 $SRCFILE1  g1/fp1 g1/fp2 
 TOOLTEST h5diff_102.txt -v $FILE1 $FILE1 g1/fp1 g1/fp2 
-
 
 # not comparable -c flag
 TESTING $H5DIFF $SRCFILE2 $SRCFILE2 g2/dset1  g2/dset2
@@ -604,8 +596,6 @@ TOOLTEST h5diff_206.txt -c $FILE2 $FILE2 g2/dset7  g2/dset8
 
 TESTING $H5DIFF -c $SRCFILE2 $SRCFILE2 g2/dset8  g2/dset9
 TOOLTEST h5diff_207.txt -c $FILE2 $FILE2 g2/dset8  g2/dset9
-
-
 
 
 # ##############################################################################

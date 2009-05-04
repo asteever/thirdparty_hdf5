@@ -51,6 +51,12 @@ class H5_DLLCPP Attribute : public AbstractDs, public IdComponent {
 	void write(const DataType& mem_type, const void *buf ) const;
 	void write(const DataType& mem_type, const H5std_string& strg ) const;
 
+	// Retrieves the type of object that an object reference points to.
+        H5G_obj_t getRefObjType(void *ref, H5R_type_t ref_type = H5R_OBJECT) const;
+
+	// Deprecated in favor of getRefObjType.
+	H5G_obj_t getObjType(void *ref, H5R_type_t ref_type = H5R_OBJECT) const;
+
 	// Returns this class name
 	virtual H5std_string fromClass () const { return("Attribute"); }
 
@@ -81,12 +87,6 @@ class H5_DLLCPP Attribute : public AbstractDs, public IdComponent {
 	// defined in AbstractDs for generic datatype and specific
 	// sub-types
 	virtual hid_t p_get_type() const;
-
-	// do not inherit H5Object::iterateAttrs
-	int iterateAttrs() { return 0; }
-
-	// do not inherit H5Object::renameAttr
-	void renameAttr() {}
 };
 #ifndef H5_NO_NAMESPACE
 }

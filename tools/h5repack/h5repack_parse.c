@@ -17,7 +17,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
-
 #include "h5repack.h"
 #include "h5tools_utils.h"
 
@@ -35,8 +34,6 @@ extern char  *progname;
  *  SZIP, to apply the HDF5 SZIP filter (SZIP compression)
  *  SHUF, to apply the HDF5 shuffle filter
  *  FLET, to apply the HDF5 checksum filter
- *  NBIT, to apply the HDF5 NBIT filter (NBIT compression)
- *  SOFF, to apply the HDF5 scale+offset filter (compression)
  *  NONE, to remove the filter
  *
  * Examples:
@@ -49,6 +46,7 @@ extern char  *progname;
  *
  *-------------------------------------------------------------------------
  */
+
 
 
 obj_list_t* parse_filter(const char *str,
@@ -67,12 +65,12 @@ obj_list_t* parse_filter(const char *str,
     char        smask[3];
     obj_list_t* obj_list=NULL;
     unsigned    pixels_per_block;
-
-
+    
+    
     /* initialize compression  info */
     memset(filt,0,sizeof(filter_info_t));
     *is_glb = 0;
-
+    
     /* check for the end of object list and number of objects */
     for ( i = 0, n = 0; i < len; i++)
     {
@@ -86,23 +84,23 @@ obj_list_t* parse_filter(const char *str,
             n++;
         }
     }
-
+    
     if (end_obj==-1) /* missing : */
-    {
+    { 
         /* apply to all objects */
         options->all_filter=1;
         *is_glb = 1;
     }
-
+    
     n++;
-    obj_list = (obj_list_t*) malloc(n*sizeof(obj_list_t));
+    obj_list = malloc(n*sizeof(obj_list_t));
     if (obj_list==NULL)
     {
         error_msg(progname, "could not allocate object list\n");
         return NULL;
     }
     *n_objs=n;
-
+    
     /* get object list */
     for ( j = 0, k = 0, n = 0; j < end_obj; j++, k++)
     {
@@ -124,8 +122,8 @@ obj_list_t* parse_filter(const char *str,
         error_msg(progname, "input Error: Invalid compression type in <%s>\n",str);
         exit(1);
     }
-
-
+    
+    
     /* get filter additional parameters */
     m=0;
     for ( i=end_obj+1, k=0, j=0; i<len; i++,k++)
@@ -135,9 +133,9 @@ obj_list_t* parse_filter(const char *str,
         if ( c=='=' || i==len-1)
         {
             if ( c=='=') /*one more parameter */
-            {
+            {      
                 scomp[k]='\0';     /*cut space */
-
+                
                /*-------------------------------------------------------------------------
                 * H5Z_FILTER_SZIP
                 * szip has the format SZIP=<pixels per block,coding>
@@ -182,79 +180,22 @@ obj_list_t* parse_filter(const char *str,
                                     error_msg(progname, "szip mask must be 'NN' or 'EC' \n");
                                     exit(1);
                                 }
-
-
+                                
+                                
                             }
                         }
-
+                        
                     }  /* u */
                 } /*if */
-
-                  /*-------------------------------------------------------------------------
-                  * H5Z_FILTER_SCALEOFFSET
-                  * scaleoffset has the format SOFF=<scale_factor,scale_type>
-                  * scale_type can be
-                  *   integer datatype, H5Z_SO_INT (IN)
-                  *   float datatype using D-scaling method, H5Z_SO_FLOAT_DSCALE  (DS)
-                  *   float datatype using E-scaling method, H5Z_SO_FLOAT_ESCALE  (ES) , not yet implemented
-                  * for integer datatypes, scale_factor denotes Minimum Bits
-                  * for float datatypes, scale_factor denotes decimal scale factor
-                  *  examples
-                  *  SOFF=31,IN
-                  *  SOFF=3,DF
-                  *-------------------------------------------------------------------------
-                */
-
-                else if (strcmp(scomp,"SOFF")==0)
-                {
-                    l=-1; /* mask index check */
-                    for ( m=0,u=i+1; u<len; u++,m++)
-                    {
-                        if (str[u]==',')
-                        {
-                            stype[m]='\0'; /* end digit */
-                            l=0;  /* start 'IN' , 'DS', or 'ES' search */
-                            u++;  /* skip ',' */
-                        }
-                        c = str[u];
-                        if (!isdigit(c) && l==-1){
-                            if (obj_list) free(obj_list);
-                            error_msg(progname, "compression parameter is not a digit in <%s>\n",str);
-                            exit(1);
-                        }
-                        if (l==-1)
-                            stype[m]=c;
-                        else
-                        {
-                            smask[l]=c;
-                            l++;
-                            if (l==2)
-                            {
-                                smask[l]='\0';
-                                i=len-1; /* end */
-                                (*n_objs)--; /* we counted an extra ',' */
-                                if (strcmp(smask,"IN")==0)
-                                    filt->cd_values[j++]=H5Z_SO_INT;
-                                else if (strcmp(smask,"DS")==H5Z_SO_FLOAT_DSCALE)
-                                    filt->cd_values[j++]=H5Z_SO_FLOAT_DSCALE;
-                                else
-                                {
-                                    error_msg(progname, "scale type must be 'IN' or 'DS' \n");
-                                    exit(1);
-                                }
-
-                            }
-                        }
-
-                    }  /* u */
-                } /*if */
-
-
+                
+                 
+                
+                
                /*-------------------------------------------------------------------------
                 * all other filters
                 *-------------------------------------------------------------------------
                 */
-
+                
                 else
                 {
                     /* here we could have 1 or 2 digits  */
@@ -268,16 +209,16 @@ obj_list_t* parse_filter(const char *str,
                         }
                         stype[m]=c;
                     } /* u */
-
+                    
                     stype[m]='\0';
                 } /*if */
-
-
-
+                
+                
+                
                 filt->cd_values[j++]=atoi(stype);
                 i+=m; /* jump */
    }
-   else if (i==len-1)
+   else if (i==len-1) 
    { /*no more parameters */
        scomp[k+1]='\0';
        no_param=1;
@@ -287,7 +228,7 @@ obj_list_t* parse_filter(const char *str,
    * translate from string to filter symbol
    *-------------------------------------------------------------------------
    */
-
+   
   /*-------------------------------------------------------------------------
    * H5Z_FILTER_NONE
    *-------------------------------------------------------------------------
@@ -297,7 +238,7 @@ obj_list_t* parse_filter(const char *str,
        filt->filtn=H5Z_FILTER_NONE;
        filt->cd_nelmts = 0;
    }
-
+   
   /*-------------------------------------------------------------------------
    * H5Z_FILTER_DEFLATE
    *-------------------------------------------------------------------------
@@ -306,14 +247,14 @@ obj_list_t* parse_filter(const char *str,
    {
        filt->filtn=H5Z_FILTER_DEFLATE;
        filt->cd_nelmts = 1;
-       if (no_param)
+       if (no_param) 
        { /*no more parameters, GZIP must have parameter */
            if (obj_list) free(obj_list);
            error_msg(progname, "missing compression parameter in <%s>\n",str);
            exit(1);
        }
    }
-
+   
   /*-------------------------------------------------------------------------
    * H5Z_FILTER_SZIP
    *-------------------------------------------------------------------------
@@ -322,14 +263,14 @@ obj_list_t* parse_filter(const char *str,
    {
        filt->filtn=H5Z_FILTER_SZIP;
        filt->cd_nelmts = 2;
-       if (no_param)
+       if (no_param) 
        { /*no more parameters, SZIP must have parameter */
            if (obj_list) free(obj_list);
            error_msg(progname, "missing compression parameter in <%s>\n",str);
            exit(1);
        }
    }
-
+   
    /*-------------------------------------------------------------------------
    * H5Z_FILTER_SHUFFLE
    *-------------------------------------------------------------------------
@@ -360,36 +301,7 @@ obj_list_t* parse_filter(const char *str,
            exit(1);
        }
    }
-  /*-------------------------------------------------------------------------
-   * H5Z_FILTER_NBIT
-   *-------------------------------------------------------------------------
-   */
-   else if (strcmp(scomp,"NBIT")==0)
-   {
-       filt->filtn=H5Z_FILTER_NBIT;
-       filt->cd_nelmts = 0;
-       if (m>0)
-       { /*nbit does not have parameter */
-           if (obj_list) free(obj_list);
-           error_msg(progname, "extra parameter in NBIT <%s>\n",str);
-           exit(1);
-       }
-   }
-  /*-------------------------------------------------------------------------
-   * H5Z_FILTER_SCALEOFFSET
-   *-------------------------------------------------------------------------
-   */
-   else if (strcmp(scomp,"SOFF")==0)
-   {
-       filt->filtn=H5Z_FILTER_SCALEOFFSET;
-       filt->cd_nelmts = 2;
-       if (no_param)
-       { /*no more parameters, SOFF must have parameter */
-           if (obj_list) free(obj_list);
-           error_msg(progname, "missing compression parameter in <%s>\n",str);
-           exit(1);
-       }
-   }
+  
    else {
        if (obj_list) free(obj_list);
        error_msg(progname, "invalid filter type in <%s>\n",str);
@@ -397,12 +309,12 @@ obj_list_t* parse_filter(const char *str,
    }
   }
  } /*i*/
-
+ 
   /*-------------------------------------------------------------------------
    * check valid parameters
    *-------------------------------------------------------------------------
    */
-
+   
    switch (filt->filtn)
    {
 
@@ -410,7 +322,7 @@ obj_list_t* parse_filter(const char *str,
    * H5Z_FILTER_DEFLATE
    *-------------------------------------------------------------------------
    */
-
+       
    case H5Z_FILTER_DEFLATE:
        if (filt->cd_values[0]>9 )
        {
@@ -419,41 +331,42 @@ obj_list_t* parse_filter(const char *str,
            exit(1);
        }
        break;
-
+       
   /*-------------------------------------------------------------------------
    * H5Z_FILTER_SZIP
    *-------------------------------------------------------------------------
    */
-
+       
    case H5Z_FILTER_SZIP:
        pixels_per_block=filt->cd_values[0];
-       if ((pixels_per_block%2)==1)
+       if ((pixels_per_block%2)==1) 
        {
            if (obj_list) free(obj_list);
            error_msg(progname, "pixels_per_block is not even in <%s>\n",str);
            exit(1);
        }
-       if (pixels_per_block>H5_SZIP_MAX_PIXELS_PER_BLOCK)
+       if (pixels_per_block>H5_SZIP_MAX_PIXELS_PER_BLOCK) 
        {
            if (obj_list) free(obj_list);
            error_msg(progname, "pixels_per_block is too large in <%s>\n",str);
            exit(1);
        }
-       if ( (strcmp(smask,"NN")!=0) && (strcmp(smask,"EC")!=0) )
+       if ( (strcmp(smask,"NN")!=0) && (strcmp(smask,"EC")!=0) ) 
        {
            if (obj_list) free(obj_list);
            error_msg(progname, "szip mask must be 'NN' or 'EC' \n");
            exit(1);
        }
        break;
-   default:
-       break;
 
- 
+  
    };
-
+   
    return obj_list;
 }
+
+
+
 
 
 
@@ -491,12 +404,12 @@ obj_list_t* parse_layout(const char *str,
     char        sobj[MAX_NC_NAME];
     char        sdim[10];
     char        slayout[10];
-
-
+    
+    
     memset(sdim, '\0', sizeof(sdim));
     memset(sobj, '\0', sizeof(sobj));
     memset(slayout, '\0', sizeof(slayout));
-
+    
     /* check for the end of object list and number of objects */
     for ( i=0, n=0; i<len; i++)
     {
@@ -510,20 +423,20 @@ obj_list_t* parse_layout(const char *str,
             n++;
         }
     }
-
+    
     if (end_obj==-1) { /* missing : chunk all */
         options->all_layout=1;
     }
-
+    
     n++;
-    obj_list = (obj_list_t*) malloc(n*sizeof(obj_list_t));
+    obj_list=malloc(n*sizeof(obj_list_t));
     if (obj_list==NULL)
     {
         error_msg(progname, "could not allocate object list\n");
         return NULL;
     }
     *n_objs=n;
-
+    
     /* get object list */
     for ( j=0, k=0, n=0; j<end_obj; j++,k++)
     {
@@ -538,7 +451,7 @@ obj_list_t* parse_layout(const char *str,
             k=-1;
         }
     }
-
+    
     /* nothing after : */
     if (end_obj+1==(int)len)
     {
@@ -546,7 +459,7 @@ obj_list_t* parse_layout(const char *str,
         error_msg(progname, "in parse layout, no characters after : in <%s>\n",str);
         exit(1);
     }
-
+    
     /* get layout info */
     for ( j=end_obj+1, n=0; n<=5; j++,n++)
     {
@@ -570,30 +483,30 @@ obj_list_t* parse_layout(const char *str,
             slayout[n]=c;
         }
     } /* j */
-
-
+    
+    
     if ( pack->layout==H5D_CHUNKED )
     {
-
+        
     /*-------------------------------------------------------------------------
     * get chunk info
     *-------------------------------------------------------------------------
         */
         k=0;
-
+        
         if (j>(int)len)
         {
             if (obj_list) free(obj_list);
             error_msg(progname, "in parse layout,  <%s> Chunk dimensions missing\n",str);
             exit(1);
         }
-
+        
         for ( i=j, c_index=0; i<len; i++)
         {
             c = str[i];
             sdim[k]=c;
             k++; /*increment sdim index */
-
+            
             if (!isdigit(c) && c!='x'
                 && c!='N' && c!='O' && c!='N' && c!='E'
                 ){
@@ -602,7 +515,7 @@ obj_list_t* parse_layout(const char *str,
                     sdim,str);
                 exit(1);
             }
-
+            
             if ( c=='x' || i==len-1)
             {
                 if ( c=='x') {
@@ -638,15 +551,13 @@ obj_list_t* parse_layout(const char *str,
                 } /*if */
             } /*if c=='x' || i==len-1 */
         } /*i*/
-
-
+        
+        
     } /*H5D_CHUNKED*/
-
-
+    
+    
     return obj_list;
 }
-
-
 
 
 

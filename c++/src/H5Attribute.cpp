@@ -48,6 +48,9 @@ namespace H5 {
 // Function:	Attribute default constructor
 ///\brief	Default constructor: Creates a stub attribute
 // Programmer	Binh-Minh Ribler - May, 2004
+// Modification
+//	Jul, 08 No longer inherit data member 'id' from IdComponent.
+//		- bugzilla 1068
 //--------------------------------------------------------------------------
 Attribute::Attribute() : AbstractDs(), IdComponent(), id(0) {}
 
@@ -56,6 +59,9 @@ Attribute::Attribute() : AbstractDs(), IdComponent(), id(0) {}
 ///\brief	Copy constructor: makes a copy of the original Attribute object.
 ///\param	original  - IN: Original Attribute object to copy
 // Programmer	Binh-Minh Ribler - 2000
+// Modification
+//	Jul, 08 No longer inherit data member 'id' from IdComponent.
+//		- bugzilla 1068
 //--------------------------------------------------------------------------
 Attribute::Attribute(const Attribute& original) : AbstractDs(), IdComponent()
 {
@@ -70,6 +76,9 @@ Attribute::Attribute(const Attribute& original) : AbstractDs(), IdComponent()
 ///\param	existing_id - IN: Id of an existing attribute
 ///\exception	H5::AttributeIException
 // Programmer	Binh-Minh Ribler - 2000
+// Modification
+//	Jul, 08 No longer inherit data member 'id' from IdComponent.
+//		- bugzilla 1068
 //--------------------------------------------------------------------------
 Attribute::Attribute(const hid_t existing_id) : AbstractDs(), IdComponent()
 {
@@ -86,6 +95,7 @@ Attribute::Attribute(const hid_t existing_id) : AbstractDs(), IdComponent()
 //--------------------------------------------------------------------------
 void Attribute::write( const DataType& mem_type, const void *buf ) const
 {
+   // Call C function H5Awrite to write data in 'buf' to the attribute
    herr_t ret_value = H5Awrite( id, mem_type.getId(), buf );
    if( ret_value < 0 )
    {
@@ -142,6 +152,7 @@ void Attribute::write(const DataType& mem_type, const H5std_string& strg) const
 //--------------------------------------------------------------------------
 void Attribute::read( const DataType& mem_type, void *buf ) const
 {
+   // Call C function H5Aread to read attribute data into 'buf'
    herr_t ret_value = H5Aread( id, mem_type.getId(), buf );
    if( ret_value < 0 )
    {
@@ -392,22 +403,68 @@ H5std_string Attribute::getName( size_t buf_size ) const
 //--------------------------------------------------------------------------
 H5std_string Attribute::getName() const
 {
-   // Try with 256 characters for the name first, if the name's length
-   // returned is more than that then, read the name again with the
-   // appropriate space allocation
-   char* name_C = new char[256];  // temporary C-string for C API
-   ssize_t name_size = H5Aget_name(id, 255, name_C);
+   // Try with 0 and NULL to get the name size
+   ssize_t name_size = H5Aget_name(id, 0, NULL);
 
-   H5std_string attr_name;
-   if (name_size >= 256)
-      name_size = getName(name_size, attr_name);
+   // If H5Aget_name returns a negative value, raise an exception,
+   if (name_size < 0)
+   {
+      throw AttributeIException("Attribute::getName", "H5Aget_name failed with 0 and NULL");
+   }
+
+   // Allocate temporary C-string for C API
+   char* name_C = new char[name_size+1];  // temporary C-string for C API
+
+   // Calls C routine H5Aget_name again to get the name of the attribute
+   name_size = H5Aget_name(id, name_size+1, name_C);
+
+   // If H5Aget_name returns a negative value, raise an exception,
+   if (name_size < 0)
+   {
+      throw AttributeIException("Attribute::getName", "H5Aget_name failed");
+   }
 
    // otherwise, convert the C attribute name and return
-   else
-      attr_name = name_C;
-
+   H5std_string attr_name = name_C;
    delete []name_C;
-   return( attr_name );
+   return(attr_name);
+}
+
+//--------------------------------------------------------------------------
+// Function:	Attribute::getRefObjType
+///\brief	Retrieves the type of object that an object reference points to.
+///\param	ref	 - IN: Reference to query
+///\param	ref_type - IN: Type of reference to query, valid values are:
+///		\li \c H5R_OBJECT \tReference is an object reference.
+///		\li \c H5R_DATASET_REGION \tReference is a dataset region reference.
+///\return	An object type, which can be one of the following:
+///		\li \c H5G_LINK (0) \tObject is a symbolic link.
+///		\li \c H5G_GROUP (1) \tObject is a group.
+///		\li \c H5G_DATASET (2) \tObject is a dataset.
+///		\li \c H5G_TYPE Object (3) \tis a named datatype
+///\exception	H5::AttributeIException
+// Programmer	Binh-Minh Ribler - May, 2004
+//--------------------------------------------------------------------------
+H5G_obj_t Attribute::getRefObjType(void *ref, H5R_type_t ref_type) const
+{
+   try {
+      return(p_get_refobj_type(ref, ref_type));
+   }
+   catch (IdComponentException E) {
+      throw AttributeIException("Attribute::getRefObjType", E.getDetailMsg());
+   }
+}
+
+//--------------------------------------------------------------------------
+// Function:    Attribute::getObjType
+///\brief       This function was misnamed and will be deprecated in favor of
+///             Attribute::getRefObjType; please use getRefObjType instead.
+// Programmer   Binh-Minh Ribler - May, 2004
+// Note:        Replaced by getRefObjType. - BMR - Jul, 2008
+//--------------------------------------------------------------------------
+H5G_obj_t Attribute::getObjType(void *ref, H5R_type_t ref_type) const
+{
+    return(getRefObjType(ref, ref_type));
 }
 
 //--------------------------------------------------------------------------
@@ -426,14 +483,15 @@ hsize_t Attribute::getStorageSize() const
 }
 
 //--------------------------------------------------------------------------
-// Function:    Attribute::getId
-// Purpose:     Get the id of this attribute
-// Description:
+// Function:	Attribute::getId
+// Purpose:	Get the id of this group
+// Modification:
+//	May 2008 - BMR
 //		Class hierarchy is revised to address bugzilla 1068.  Class
 //		AbstractDS and Attribute are moved out of H5Object.  In
 //		addition, member IdComponent::id is moved into subclasses, and
 //		IdComponent::getId now becomes pure virtual function.
-// Programmer   Binh-Minh Ribler - May, 2008
+// Programmer	Binh-Minh Ribler - May, 2008
 //--------------------------------------------------------------------------
 hid_t Attribute::getId() const
 {
@@ -441,12 +499,13 @@ hid_t Attribute::getId() const
 }
 
 //--------------------------------------------------------------------------
-// Function:    Attribute::p_setId
-///\brief       Sets the identifier of this object to a new value.
+// Function:	Attribute::p_setId
+///\brief	Sets the identifier of this group to a new value.
 ///
 ///\exception   H5::IdComponentException when the attempt to close the HDF5
 ///		object fails
 // Description:
+// Modification
 //		The underlaying reference counting in the C library ensures
 //		that the current valid id of this object is properly closed.
 //		Then the object's id is reset to the new id.
@@ -461,8 +520,8 @@ void Attribute::p_setId(const hid_t new_id)
     catch (Exception close_error) {
 	throw AttributeIException("Attribute::p_setId", close_error.getDetailMsg());
     }
-   // reset object's id to the given id
-   id = new_id;
+    // reset object's id to the given id
+    id = new_id;
 }
 
 //--------------------------------------------------------------------------
@@ -494,7 +553,7 @@ void Attribute::close()
 // Programmer	Binh-Minh Ribler - 2000
 // Modification
 //		- Replaced resetIdComponent() with decRefCount() to use C
-//		library ID reference counting mechanism - BMR, Jun 1, 2004
+//		library ID reference counting mechanism - BMR, Feb 20, 2005
 //		- Replaced decRefCount with close() to let the C library
 //		handle the reference counting - BMR, Jun 1, 2006
 //--------------------------------------------------------------------------

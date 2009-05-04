@@ -59,10 +59,7 @@ DataSet::DataSet() : AbstractDs(), H5Object(), id(0) {}
 ///\param	existing_id - IN: Id of an existing dataset
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-DataSet::DataSet(const hid_t existing_id) : AbstractDs(), H5Object()
-{
-    id = existing_id;
-}
+DataSet::DataSet(const hid_t existing_id) : AbstractDs(), H5Object(), id(existing_id) {}
 
 //--------------------------------------------------------------------------
 // Function:	DataSet copy constructor
@@ -93,7 +90,7 @@ DataSet::DataSet(const DataSet& original) : AbstractDs(original), H5Object(origi
 //	Jul, 2008
 //		Added for application convenience.
 //--------------------------------------------------------------------------
-DataSet::DataSet(H5Object& obj, const void* ref, H5R_type_t ref_type) : AbstractDs(), H5Object()
+DataSet::DataSet(H5Object& obj, void* ref, H5R_type_t ref_type) : AbstractDs(), H5Object()
 {
     try {
 	id = p_dereference(obj.getId(), ref, ref_type);
@@ -116,7 +113,7 @@ DataSet::DataSet(H5Object& obj, const void* ref, H5R_type_t ref_type) : Abstract
 //	Jul, 2008
 //		Added for application convenience.
 //--------------------------------------------------------------------------
-DataSet::DataSet(H5File& h5file, const void* ref, H5R_type_t ref_type) : AbstractDs(), H5Object()
+DataSet::DataSet(H5File& h5file, void* ref, H5R_type_t ref_type) : AbstractDs(), H5Object()
 {
     try {
 	id = p_dereference(h5file.getId(), ref, ref_type);
@@ -139,7 +136,7 @@ DataSet::DataSet(H5File& h5file, const void* ref, H5R_type_t ref_type) : Abstrac
 //	Jul, 2008
 //		Added for application convenience.
 //--------------------------------------------------------------------------
-DataSet::DataSet(Attribute& attr, const void* ref, H5R_type_t ref_type) : AbstractDs(), H5Object()
+DataSet::DataSet(Attribute& attr, void* ref, H5R_type_t ref_type) : AbstractDs(), H5Object()
 {
     try {
 	id = p_dereference(attr.getId(), ref, ref_type);
@@ -312,7 +309,7 @@ void DataSet::vlenReclaim(const DataType& type, const DataSpace& space, const DS
 ///\param	buf - IN: Pointer to the buffer to be reclaimed
 ///\exception	H5::DataSetIException
 // Programmer	Binh-Minh Ribler - 2000
-//\parDescription
+//\par Description
 //		This function has better prototype for the users than the
 //		other, which might be removed at some point. BMR - 2006/12/20
 //--------------------------------------------------------------------------
@@ -363,7 +360,7 @@ void DataSet::read( void* buf, const DataType& mem_type, const DataSpace& mem_sp
 //--------------------------------------------------------------------------
 // Function:	DataSet::read
 ///\brief	This is an overloaded member function, provided for convenience.
-///		It takes a reference to a \c std::string for the buffer.
+///		It takes a reference to a \c H5std_string for the buffer.
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 void DataSet::read( H5std_string& strg, const DataType& mem_type, const DataSpace& mem_space, const DataSpace& file_space, const DSetMemXferPropList& xfer_plist ) const
@@ -414,7 +411,7 @@ void DataSet::write( const void* buf, const DataType& mem_type, const DataSpace&
 //--------------------------------------------------------------------------
 // Function:	DataSet::write
 ///\brief	This is an overloaded member function, provided for convenience.
-///		It takes a reference to a \c std::string for the buffer.
+///		It takes a reference to a \c H5std_string for the buffer.
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 void DataSet::write( const H5std_string& strg, const DataType& mem_type, const DataSpace& mem_space, const DataSpace& file_space, const DSetMemXferPropList& xfer_plist ) const
@@ -467,14 +464,16 @@ int DataSet::iterateElems( void* buf, const DataType& type, const DataSpace& spa
 ///		For more information, please see the Description section in
 ///		C layer Reference Manual at:
 ///\par
-/// http://hdf.ncsa.uiuc.edu/HDF5/doc/RM_H5D.html#Dataset-Extend
+/// <A HREF="../RM_H5D.html#Dataset-Extend">../RM_H5D.html#Dataset-Extend</A>
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 void DataSet::extend( const hsize_t* size ) const
 {
-   herr_t ret_value = H5Dset_extent( id, size );
-   if( ret_value < 0 )  // raise exception when H5Dset_extent returns a neg value
-      throw DataSetIException("DataSet::extend", "H5Dset_extent failed");
+   herr_t ret_value = H5Dextend( id, size );
+   if( ret_value < 0 )  // raise exception when H5Dextend returns a neg value
+   {
+      throw DataSetIException("DataSet::extend", "H5Dextend failed");
+   }
 }
 
 //--------------------------------------------------------------------------
@@ -522,14 +521,14 @@ void DataSet::fillMemBuf(void *buf, DataType& buf_type, DataSpace& space)
     }
 }
 
-#ifndef H5_NO_DEPRECATED_SYMBOLS
+#if 0
 //--------------------------------------------------------------------------
-// Function:	DataSet::getObjType
+// Function:	DataSet::getRefObjType
 ///\brief	Retrieves the type of object that an object reference points to.
+///\param	ref	 - IN: Reference to query
 ///\param	ref_type - IN: Type of reference to query, valid values are:
 ///		\li \c H5R_OBJECT \tReference is an object reference.
 ///		\li \c H5R_DATASET_REGION \tReference is a dataset region reference.
-///\param	ref      - IN: Reference to query
 ///\return	An object type, which can be one of the following:
 ///		\li \c H5G_LINK (0) \tObject is a symbolic link.
 ///		\li \c H5G_GROUP (1) \tObject is a group.
@@ -538,16 +537,28 @@ void DataSet::fillMemBuf(void *buf, DataType& buf_type, DataSpace& space)
 ///\exception	H5::DataSetIException
 // Programmer	Binh-Minh Ribler - May, 2004
 //--------------------------------------------------------------------------
-H5G_obj_t DataSet::getObjType(void *ref, H5R_type_t ref_type) const
+H5G_obj_t DataSet::getRefObjType(void *ref, H5R_type_t ref_type) const
 {
    try {
-      return(p_get_obj_type(ref, ref_type));
+      return(p_get_refobj_type(ref, ref_type));
    }
    catch (IdComponentException E) {
-      throw DataSetIException("DataSet::getObjType", E.getDetailMsg());
+      throw DataSetIException("DataSet::getRefObjType", E.getDetailMsg());
    }
 }
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
+#endif
+
+//--------------------------------------------------------------------------
+// Function:	DataSet::getObjType
+///\brief	This function was misnamed and will be deprecated in favor of
+///		H5Object::getRefObjType; please use getRefObjType instead.
+// Programmer	Binh-Minh Ribler - May, 2004
+// Note:	Replaced by getRefObjType. - BMR - Jul, 2008
+//--------------------------------------------------------------------------
+H5G_obj_t DataSet::getObjType(void *ref, H5R_type_t ref_type) const
+{
+    return(getRefObjType(ref, ref_type));
+}
 
 //--------------------------------------------------------------------------
 // Function:	DataSet::getRegion
@@ -571,14 +582,15 @@ DataSpace DataSet::getRegion(void *ref, H5R_type_t ref_type) const
 }
 
 //--------------------------------------------------------------------------
-// Function:    DataSet::getId
-// Purpose:     Get the id of this attribute
-// Description:
-//              Class hierarchy is revised to address bugzilla 1068.  Class
-//              AbstractDs and Attribute are moved out of H5Object.  In
-//              addition, member IdComponent::id is moved into subclasses, and
-//              IdComponent::getId now becomes pure virtual function.
-// Programmer   Binh-Minh Ribler - May, 2008
+// Function:	DataSet::getId
+// Purpose:	Get the id of this dataset
+// Modification:
+//	May 2008 - BMR
+//		Class hierarchy is revised to address bugzilla 1068.  Class
+//		AbstractDS and Attribute are moved out of H5Object.  In
+//		addition, member IdComponent::id is moved into subclasses, and
+//		IdComponent::getId now becomes pure virtual function.
+// Programmer	Binh-Minh Ribler - May, 2008
 //--------------------------------------------------------------------------
 hid_t DataSet::getId() const
 {
@@ -586,31 +598,28 @@ hid_t DataSet::getId() const
 }
 
 //--------------------------------------------------------------------------
-// Function:    DataSet::p_setId
-///\brief       Sets the identifier of this object to a new value.
+// Function:	DataSet::p_setId
+///\brief	Sets the identifier of this dataset to a new value.
 ///
-///\exception   H5::IdComponentException when the attempt to close the HDF5
-///             object fails
+///\exception	H5::DataSetIException when the attempt to close the 
+///		currently open dataset fails
 // Description:
-//              The underlaying reference counting in the C library ensures
-//              that the current valid id of this object is properly closed.
-//              Then the object's id is reset to the new id.
-// Programmer   Binh-Minh Ribler - 2000
+//		The underlaying reference counting in the C library ensures
+//		that the current valid id of this object is properly closed.
+//		Then the object's id is reset to the new id.
+// Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 void DataSet::p_setId(const hid_t new_id)
 {
     // handling references to this old id
     try {
-        close();
+	close();
     }
     catch (Exception close_error) {
-        throw DataSetIException(inMemFunc("p_setId"), close_error.getDetailMsg());
+	throw DataSetIException("DataSet::p_setId", close_error.getDetailMsg());
     }
-   // reset object's id to the given id
-   id = new_id;
-
-   // increment the reference counter of the new id
-   //incRefCount();
+    // reset object's id to the given id
+    id = new_id;
 }
 
 //--------------------------------------------------------------------------
@@ -642,7 +651,7 @@ void DataSet::close()
 // Programmer	Binh-Minh Ribler - 2000
 // Modification
 //		- Replaced resetIdComponent() with decRefCount() to use C
-//		library ID reference counting mechanism - BMR, Jun 1, 2004
+//		library ID reference counting mechanism - BMR, Feb 20, 2005
 //		- Replaced decRefCount with close() to let the C library
 //		handle the reference counting - BMR, Jun 1, 2006
 //--------------------------------------------------------------------------
