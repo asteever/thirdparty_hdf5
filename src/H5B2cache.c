@@ -94,7 +94,6 @@ const H5AC_class_t H5AC_BT2_HDR[1] = {{
     (H5AC_flush_func_t)H5B2_cache_hdr_flush,
     (H5AC_dest_func_t)H5B2_cache_hdr_dest,
     (H5AC_clear_func_t)H5B2_cache_hdr_clear,
-    (H5AC_notify_func_t)NULL,
     (H5AC_size_func_t)H5B2_cache_hdr_size,
 }};
 
@@ -105,7 +104,6 @@ const H5AC_class_t H5AC_BT2_INT[1] = {{
     (H5AC_flush_func_t)H5B2_cache_internal_flush,
     (H5AC_dest_func_t)H5B2_cache_internal_dest,
     (H5AC_clear_func_t)H5B2_cache_internal_clear,
-    (H5AC_notify_func_t)NULL,
     (H5AC_size_func_t)H5B2_cache_internal_size,
 }};
 
@@ -116,7 +114,6 @@ const H5AC_class_t H5AC_BT2_LEAF[1] = {{
     (H5AC_flush_func_t)H5B2_cache_leaf_flush,
     (H5AC_dest_func_t)H5B2_cache_leaf_dest,
     (H5AC_clear_func_t)H5B2_cache_leaf_clear,
-    (H5AC_notify_func_t)NULL,
     (H5AC_size_func_t)H5B2_cache_leaf_size,
 }};
 
@@ -205,7 +202,7 @@ H5B2_cache_hdr_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void *_type, vo
 
     /* B-tree type */
     if(*p++ != (uint8_t)type->id)
-	HGOTO_ERROR(H5E_BTREE, H5E_BADTYPE, NULL, "incorrect B-tree type")
+	HGOTO_ERROR(H5E_BTREE, H5E_CANTLOAD, NULL, "incorrect B-tree type")
 
     /* Node size (in bytes) */
     UINT32DECODE(p, node_size);
@@ -275,8 +272,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5B2_cache_hdr_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr,
-    H5B2_t *bt2, unsigned UNUSED * flags_ptr)
+H5B2_cache_hdr_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5B2_t *bt2, unsigned UNUSED * flags_ptr)
 {
     H5WB_t      *wb = NULL;             /* Wrapped buffer for header data */
     uint8_t     hdr_buf[H5B2_HDR_BUF_SIZE]; /* Buffer for header */
@@ -552,8 +548,8 @@ H5B2_cache_internal_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void *_uda
 	HGOTO_ERROR(H5E_BTREE, H5E_CANTLOAD, NULL, "wrong B-tree internal node version")
 
     /* B-tree type */
-    if(*p++ != (uint8_t)shared->type->id)
-	HGOTO_ERROR(H5E_BTREE, H5E_BADTYPE, NULL, "incorrect B-tree type")
+    if (*p++ != (uint8_t)shared->type->id)
+	HGOTO_ERROR(H5E_BTREE, H5E_CANTLOAD, NULL, "incorrect B-tree type")
 
     /* Allocate space for the native keys in memory */
     if((internal->int_native = (uint8_t *)H5FL_FAC_MALLOC(shared->node_info[udata->depth].nat_rec_fac)) == NULL)
@@ -920,7 +916,7 @@ H5B2_cache_leaf_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void *_nrec, v
 
     /* B-tree type */
     if(*p++ != (uint8_t)shared->type->id)
-	HGOTO_ERROR(H5E_BTREE, H5E_BADTYPE, NULL, "incorrect B-tree type")
+	HGOTO_ERROR(H5E_BTREE, H5E_CANTLOAD, NULL, "incorrect B-tree type")
 
     /* Allocate space for the native keys in memory */
     if((leaf->leaf_native = (uint8_t *)H5FL_FAC_MALLOC(shared->node_info[0].nat_rec_fac)) == NULL)

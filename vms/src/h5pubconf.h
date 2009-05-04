@@ -1,17 +1,3 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
- * Copyright by The HDF Group.                                               *
- * Copyright by the Board of Trustees of the University of Illinois.         *
- * All rights reserved.                                                      *
- *                                                                           *
- * This file is part of HDF5.  The full HDF5 copyright notice, including     *
- * terms governing use, modification, and redistribution, is contained in    *
- * the files COPYING and Copyright.html.  COPYING can be found at the root   *
- * of the source code distribution tree; Copyright.html can be found at the  *
- * root level of an installed copy of the electronic HDF5 document set and   *
- * is linked from the top-level documents page.  It can also be found at     *
- * http://hdfgroup.org/HDF5/doc/Copyright.html.  If you do not have          *
- * access to either file, you may request a copy from help@hdfgroup.org.     *
- * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /* src/H5config.h.  Generated from H5config.h.in by configure.  */
 /* src/H5config.h.in.  Generated from configure.in by autoheader.  */
 
@@ -44,10 +30,10 @@
 
 /* Define to a macro mangling the given C identifier (in lower and upper
    case), which must not contain underscores, for linking with Fortran. */
-/* #undef H5_FC_FUNC */
+/* #define H5_FC_FUNC(name,NAME) name ## _ */
 
 /* As FC_FUNC, but for C identifiers containing underscores. */
-/* #undef H5_FC_FUNC_ */
+/* #define H5_FC_FUNC_(name,NAME) name ## __ */
 
 /* Define if your system can handle overflow converting floating-point to
    integer values. */
@@ -144,7 +130,7 @@
 /* Define to 1 if you have the `ftruncate64' function. */
 /* #define H5_HAVE_FTRUNCATE64 1 */
 
-/* Define if the compiler understands the __FUNCTION__ keyword */
+/* Define if the compiler understand the __FUNCTION__ keyword */
 /* #define H5_HAVE_FUNCTION 1 */
 
 /* Define to 1 if you have the `GetConsoleScreenBufferInfo' function. */
@@ -390,11 +376,11 @@
 /* Define to 1 if you have the `waitpid' function. */
 #define H5_HAVE_WAITPID 1
 
-/* Define if your system has OpenVMS path name. This macro is added by hand. */
-#define H5_HAVE_VMS_PATH 1
-
 /* Define if your system has window style path name. */
 /* #undef H5_HAVE_WINDOW_PATH */
+
+/* Define if your system has OpenVMS path name. This macro is added by hand. */
+#define H5_HAVE_VMS_PATH 1
 
 /* Define to 1 if you have the <winsock.h> header file. */
 /* #undef H5_HAVE_WINSOCK_H */
@@ -413,10 +399,10 @@
 
 /* Define if your system can't handle converting floating-point values to long
    long. */
-/* #define H5_HW_FP_TO_LLONG_NOT_WORKS 1 */
+/* #undef H5_HW_FP_TO_LLONG_NOT_WORKS */
 
 /* Define if HDF5's high-level library headers should be included in hdf5.h */
-#define H5_INCLUDE_HL 1 
+#define H5_INCLUDE_HL 1
 
 /* Define if your system can accurately convert from integers to long double
    values. */
@@ -480,13 +466,13 @@
 #define H5_PACKAGE_NAME "HDF5"
 
 /* Define to the full name and version of this package. */
-#define H5_PACKAGE_STRING "HDF5 1.9.39"
+#define H5_PACKAGE_STRING "HDF5 1.8.3"
 
 /* Define to the one symbol short name of this package. */
 #define H5_PACKAGE_TARNAME "hdf5"
 
 /* Define to the version of this package. */
-#define H5_PACKAGE_VERSION "1.9.39"
+#define H5_PACKAGE_VERSION "1.8.3"
 
 /* Width for printf() for type `long long' or `__int64', use `ll' */
 #define H5_PRINTF_LL_WIDTH "ll"
@@ -591,7 +577,7 @@
 /* #define H5_SIZEOF_UINT_LEAST16_T 2 */
 
 /* The size of `uint_least32_t', as computed by sizeof. */
-/* #define H5_SIZEOF_UINT_LEAST32_T 4 */
+/* #define H5_SIZEOF_UINT_LEAST32_T 4  */
 
 /* The size of `uint_least64_t', as computed by sizeof. */
 /* #define H5_SIZEOF_UINT_LEAST64_T 8 */
@@ -606,7 +592,7 @@
 #define H5_STDC_HEADERS 1
 
 /* Define if strict file format checks are enabled */
-/* #define H5_STRICT_FORMAT_CHECKS 1 */
+/* #undef H5_STRICT_FORMAT_CHECKS */
 
 /* Define if your system supports pthread_attr_setscope(&attribute,
    PTHREAD_SCOPE_SYSTEM) call. */
@@ -631,7 +617,7 @@
 #define H5_ULONG_TO_FP_BOTTOM_BIT_ACCURATE 1
 
 /* Define using v1.6 public API symbols by default */
-/* #define H5_USE_16_API_DEFAULT 1 */
+/* #undef H5_USE_16_API_DEFAULT */
 
 /* Define if a memory checking tool will be used on the library, to cause
    library to be very picky about memory operations and also disable the
@@ -639,7 +625,7 @@
 /* #undef H5_USING_MEMCHECKER */
 
 /* Version number of package */
-#define H5_VERSION "1.9.39"
+#define H5_VERSION "1.8.3"
 
 /* Define if vsnprintf() returns the correct value for formatted strings that
    don't fit into size allowed */

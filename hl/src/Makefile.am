@@ -27,7 +27,7 @@ AM_CPPFLAGS=-I$(top_srcdir)/src
 # This library is our main target.
 lib_LTLIBRARIES=libhdf5_hl.la
 
-# Add libtool numbers to the HDF5 hl library (from config/lt_vers.am)
+# Add libtool numbers to the HDF5 HL library (from config/lt_vers.am)
 libhdf5_hl_la_LDFLAGS= -version-info $(LT_VERS_INTERFACE):$(LT_VERS_REVISION):$(LT_VERS_AGE)
 
 libhdf5_hl_la_SOURCES=H5DS.c H5IM.c H5LT.c H5LTanalyze.c H5LTparse.c H5PT.c H5TB.c

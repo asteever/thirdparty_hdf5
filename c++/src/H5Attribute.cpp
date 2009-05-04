@@ -152,8 +152,9 @@ void Attribute::read( const DataType& mem_type, void *buf ) const
 //--------------------------------------------------------------------------
 // Function:	Attribute::getInMemDataSize
 ///\brief	Gets the size in memory of the attribute's data.
+///\return	Size of data (in memory)
 ///\exception	H5::AttributeIException
-// Programmer	Binh-Minh Ribler - 2000
+// Programmer	Binh-Minh Ribler - Apr 2009
 //--------------------------------------------------------------------------
 size_t Attribute::getInMemDataSize() const
 {
@@ -206,6 +207,8 @@ size_t Attribute::getInMemDataSize() const
 //		Corrected a misunderstanding that H5Aread would allocate
 //		space for the buffer.  Obtained the attribute size and
 //		allocated memory properly. - BMR
+//	Apr 2009
+//		Used getInMemDataSize to get attribute data size. - BMR
 //--------------------------------------------------------------------------
 void Attribute::read(const DataType& mem_type, H5std_string& strg) const
 {

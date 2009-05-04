@@ -4,7 +4,6 @@
 	Version="8.00"
 	Name="libtest_cstubdll"
 	ProjectGUID="{1BFA0FE4-B924-4325-9EA1-3CB26BBAE31C}"
-	RootNamespace="libtest_cstubdll"
 	>
 	<Platforms>
 		<Platform
@@ -80,7 +79,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\libtest_cstubdll.dll"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\../../../../fortran/test/libtest_cstubdll/Release/libtest_cstubdll.pdb"
 				ImportLibrary=".\../../../../fortran/test/libtest_cstubdll/Release/libtest_cstubdll.lib"
@@ -174,7 +173,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\libtest_cstubdll.dll"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\../../../../fortran/test/libtest_cstubdll/Release/libtest_cstubdll.pdb"
 				ImportLibrary=".\../../../../fortran/test/libtest_cstubdll/Release/libtest_cstubdll.lib"
@@ -267,7 +266,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\libtest_cstubddll.dll"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\../../../../fortran/test/libtest_cstubdll/Debug/libtest_cstubddll.pdb"
@@ -361,7 +360,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\libtest_cstubddll.dll"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\../../../../fortran/test/libtest_cstubdll/Debug/libtest_cstubddll.pdb"

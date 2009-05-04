@@ -956,10 +956,7 @@ if(H5DEBUG(D))
 
                 /* Chunk address relative to the first chunk */
                 chunk_addr_info_array[u].chunk_addr -= ctg_store.contig.dset_addr;
-
-                /* Assign chunk address to MPI displacement */
-                /* (assume MPI_Aint big enough to hold it) */
-                chunk_disp_array[u] = (MPI_Aint)chunk_addr_info_array[u].chunk_addr;
+                H5_ASSIGN_OVERFLOW(chunk_disp_array[u], chunk_addr_info_array[u].chunk_addr, haddr_t, MPI_Aint);
             } /* end for */
 
             /* Initialize the buffer with the constant value 1 */

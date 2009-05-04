@@ -26,7 +26,7 @@ dnl
 dnl NOTE: Don't forget to change the version number here when we do a
 dnl release!!!
 dnl
-AC_INIT([HDF5], [1.9.39], [help@hdfgroup.org])
+AC_INIT([HDF5], [1.8.3], [help@hdfgroup.org])
 AC_CONFIG_SRCDIR([src/H5.c])
 AM_CONFIG_HEADER([src/H5config.h])
 
@@ -972,8 +972,8 @@ esac
 dnl ----------------------------------------------------------------------
 dnl Create libtool.  If shared/static libraries are going to be enabled
 dnl or disabled, it should happen before these macros.
-AC_LIBTOOL_DLOPEN
-AM_PROG_LIBTOOL
+LT_PREREQ([2.2])
+LT_INIT([dlopen])
 
 dnl Post processing to patch up some deficiencies in libtool (as of
 dnl Libtool 1.5.14)
@@ -1139,7 +1139,7 @@ AC_ARG_ENABLE(production,
                               [Determines how to run the compiler.])])
 
 case "X-$enable_production" in
-  X-yes)
+  X-|X-yes)
     enable_production="yes"
     AC_MSG_RESULT([production])
     CONFIG_MODE=production
@@ -1148,7 +1148,7 @@ case "X-$enable_production" in
     H5_CXXFLAGS="$H5_CXXFLAGS $PROD_CXXFLAGS"
     H5_FCFLAGS="$H5_FCFLAGS $PROD_FCFLAGS"
     ;;
-  X-|X-no)
+  X-no)
     enable_production="no"
     AC_MSG_RESULT([development])
     CONFIG_MODE=development
@@ -1306,7 +1306,6 @@ AC_C_BIGENDIAN
 AC_CHECK_SIZEOF([char], [1])
 AC_CHECK_SIZEOF([short], [2])
 AC_CHECK_SIZEOF([int], [4])
-AC_CHECK_SIZEOF([unsigned], [4])
 AC_CHECK_SIZEOF([long], [4])
 AC_CHECK_SIZEOF([long long], [8])
 AC_CHECK_SIZEOF([__int64], [8])
@@ -1640,7 +1639,7 @@ esac
 if test "x$HAVE_SZLIB" = "xyes" -a "x$HAVE_SZLIB_H" = "xyes"; then
     dnl SZLIB library is available.  Check if it can encode
     AC_MSG_CHECKING([for szlib encoder])
-
+    
     dnl Set LD_LIBRARY_PATH so encoder test can find the library and run.
     dnl Also add LL_PATH substitution to Makefiles so they can use the 
     dnl path as well, for testing examples.
@@ -1650,8 +1649,8 @@ if test "x$HAVE_SZLIB" = "xyes" -a "x$HAVE_SZLIB_H" = "xyes"; then
     export LD_LIBRARY_PATH="$szlib_lib:$LD_LIBRARY_PATH"
     fi
 
-    AC_SUBST([LL_PATH]) LL_PATH="$LD_LIBRARY_PATH"
-    
+    AC_SUBST([LL_PATH]) LL_PATH="$LD_LIBRARY_PATH"    
+
     AC_CACHE_VAL([hdf5_cv_szlib_can_encode],
         [AC_TRY_RUN([
         #include <szlib.h>
@@ -1669,14 +1668,14 @@ if test "x$HAVE_SZLIB" = "xyes" -a "x$HAVE_SZLIB_H" = "xyes"; then
     AC_DEFINE(HAVE_FILTER_SZIP, 1, 
             [Define if support for szip filter is enabled])
     USE_FILTER_SZIP="yes"
-    
+
     if test ${hdf5_cv_szlib_can_encode} = "yes"; then
         AC_MSG_RESULT([yes])
     fi 
     if test ${hdf5_cv_szlib_can_encode} = "no"; then
         AC_MSG_RESULT([no])
     fi 
-    
+
     dnl Add "szip" to external filter list
     if test ${hdf5_cv_szlib_can_encode} = "yes"; then
         if test "X$EXTERNAL_FILTERS" != "X"; then
@@ -1771,6 +1770,17 @@ AC_ARG_ENABLE([threadsafe],
               [AC_HELP_STRING([--enable-threadsafe],
                               [Enable thread safe capability])],
               THREADSAFE=$enableval)
+
+dnl The --enable-threadsafe flag is not compatible with --enable-cxx.
+dnl If the user tried to specify both flags, throw an error.
+if test "X${HDF_CXX}" = "Xyes" -a "X${enable_threadsafe}" = "Xyes"; then
+  AC_MSG_ERROR([--enable-cxx and --enable-threadsafe flags are incompatible])
+fi
+
+dnl --enable-threadsafe is also incompatible with --enable-fortran.
+if test "X${HDF_FORTRAN}" = "Xyes" -a "X${enable_threadsafe}" = "Xyes"; then
+  AC_MSG_ERROR([--enable-fortran and --enable-threadsafe flags are incompatible])
+fi
 
 case "X-$THREADSAFE" in
   X-|X-no)
@@ -2024,7 +2034,6 @@ AC_TRY_COMPILE(,[int __attribute__((unused)) x],
                          [Define if the __attribute__(()) extension is present])
                AC_MSG_RESULT([yes]),
                AC_MSG_RESULT([no]))
-
 AC_MSG_CHECKING([for __func__ extension])
 AC_TRY_COMPILE(,[ const char *fname = __func__; ],
                AC_DEFINE([HAVE_C99_FUNC], [1],
@@ -2032,7 +2041,7 @@ AC_TRY_COMPILE(,[ const char *fname = __func__; ],
                AC_MSG_RESULT([yes]),
                AC_MSG_RESULT([no]))
 AC_MSG_CHECKING([for __FUNCTION__ extension])
-AC_TRY_COMPILE(,[ const char *fname = __FUNCTION__; ],
+AC_TRY_COMPILE(,[(void)__FUNCTION__],
                AC_DEFINE([HAVE_FUNCTION], [1],
                          [Define if the compiler understands the __FUNCTION__ keyword])
                AC_MSG_RESULT([yes]),
@@ -2465,19 +2474,6 @@ case "X-$enable_parallel" in
 
       dnl Change to the C language
       AC_LANG_POP(Fortran)
-    fi
-
-    dnl Set RUNPARALLEL to mpirun if not set yet.
-    dnl Check for building on Cray if RUNPARALLEL is not yet set by checking
-    dnl for 'aprun' command (which is the parallel job launcher, like mpirun).
-    if test "X$PARALLEL" = "Xyes" -a -z "$RUNPARALLEL"; then
-        dnl Find the path where aprun is located.
-  	for path in `echo $PATH | ${TR} ":" " "`; do
-  	  if test -x $path/aprun; then
-            RUNPARALLEL="aprun -q -n \$\${NPROCS:=3}"
-  	    break;
-  	  fi
-	done
     fi
 
     dnl Set RUNPARALLEL to mpirun if not set yet.

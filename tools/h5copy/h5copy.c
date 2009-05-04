@@ -170,7 +170,7 @@ static int parse_flag(const char* str_flag, unsigned *flag)
   return -1;
  }
 
- *flag = (*flag) | fla;
+ *flag = fla;
 
  return 0;
 }

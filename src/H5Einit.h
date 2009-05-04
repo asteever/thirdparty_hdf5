@@ -154,11 +154,6 @@ if((msg = H5E_create_msg(cls, H5E_MAJOR, "Invalid arguments to routine"))==NULL)
     HGOTO_ERROR(H5E_ERROR, H5E_CANTINIT, FAIL, "error message initialization failed")
 if((H5E_ARGS_g = H5I_register(H5I_ERROR_MSG, msg, FALSE))<0)
     HGOTO_ERROR(H5E_ERROR, H5E_CANTREGISTER, FAIL, "can't register error message")
-assert(H5E_EARRAY_g==(-1));
-if((msg = H5E_create_msg(cls, H5E_MAJOR, "Extensible Array"))==NULL)
-    HGOTO_ERROR(H5E_ERROR, H5E_CANTINIT, FAIL, "error message initialization failed")
-if((H5E_EARRAY_g = H5I_register(H5I_ERROR_MSG, msg, FALSE))<0)
-    HGOTO_ERROR(H5E_ERROR, H5E_CANTREGISTER, FAIL, "can't register error message")
 assert(H5E_ERROR_g==(-1));
 if((msg = H5E_create_msg(cls, H5E_MAJOR, "Error API"))==NULL)
     HGOTO_ERROR(H5E_ERROR, H5E_CANTINIT, FAIL, "error message initialization failed")
@@ -621,21 +616,6 @@ assert(H5E_CANTRESIZE_g==(-1));
 if((msg = H5E_create_msg(cls, H5E_MINOR, "Unable to resize a metadata cache entry"))==NULL)
     HGOTO_ERROR(H5E_ERROR, H5E_CANTINIT, FAIL, "error message initialization failed")
 if((H5E_CANTRESIZE_g = H5I_register(H5I_ERROR_MSG, msg, FALSE))<0)
-    HGOTO_ERROR(H5E_ERROR, H5E_CANTREGISTER, FAIL, "can't register error message")
-assert(H5E_CANTDEPEND_g==(-1));
-if((msg = H5E_create_msg(cls, H5E_MINOR, "Unable to create a flush dependency"))==NULL)
-    HGOTO_ERROR(H5E_ERROR, H5E_CANTINIT, FAIL, "error message initialization failed")
-if((H5E_CANTDEPEND_g = H5I_register(H5I_ERROR_MSG, msg, FALSE))<0)
-    HGOTO_ERROR(H5E_ERROR, H5E_CANTREGISTER, FAIL, "can't register error message")
-assert(H5E_CANTUNDEPEND_g==(-1));
-if((msg = H5E_create_msg(cls, H5E_MINOR, "Unable to destroy a flush dependency"))==NULL)
-    HGOTO_ERROR(H5E_ERROR, H5E_CANTINIT, FAIL, "error message initialization failed")
-if((H5E_CANTUNDEPEND_g = H5I_register(H5I_ERROR_MSG, msg, FALSE))<0)
-    HGOTO_ERROR(H5E_ERROR, H5E_CANTREGISTER, FAIL, "can't register error message")
-assert(H5E_CANTNOTIFY_g==(-1));
-if((msg = H5E_create_msg(cls, H5E_MINOR, "Unable to notify object about action"))==NULL)
-    HGOTO_ERROR(H5E_ERROR, H5E_CANTINIT, FAIL, "error message initialization failed")
-if((H5E_CANTNOTIFY_g = H5I_register(H5I_ERROR_MSG, msg, FALSE))<0)
     HGOTO_ERROR(H5E_ERROR, H5E_CANTREGISTER, FAIL, "can't register error message")
 
 /* Link related errors */
