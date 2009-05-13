@@ -340,13 +340,6 @@ typedef struct H5O_efl_t {
  */
 #define H5O_LAYOUT_VERSION_3	3
 
-/* This version adds different types of indices to chunked datasets */
-#define H5O_LAYOUT_VERSION_4	4
-
-/* The latest version of the format.  Look through the 'encode'
- *      and 'size' callbacks for places to change when updating this. */
-#define H5O_LAYOUT_VERSION_LATEST H5O_LAYOUT_VERSION_4
-
 
 /* Forward declaration of structs used below */
 struct H5D_layout_ops_t;                /* Defined in H5Dpkg.h               */
@@ -546,13 +539,11 @@ typedef herr_t (*H5O_lib_operator_t)(H5O_t *oh, H5O_mesg_t *mesg/*in,out*/,
     unsigned sequence, hbool_t *oh_modified/*out*/, void *operator_data/*in,out*/);
 
 /* Some syntactic sugar to make the compiler happy with two different kinds of iterator callbacks */
-typedef enum H5O_mesg_operator_type_t {
-    H5O_MESG_OP_APP,            /* Application callback */
-    H5O_MESG_OP_LIB             /* Library internal callback */
-} H5O_mesg_operator_type_t;
-
 typedef struct {
-    H5O_mesg_operator_type_t op_type;
+    enum {
+        H5O_MESG_OP_APP,            /* Application callback */
+        H5O_MESG_OP_LIB             /* Library internal callback */
+    } op_type;
     union {
         H5O_operator_t app_op;      /* Application callback for each message */
         H5O_lib_operator_t lib_op;  /* Library internal callback for each message */

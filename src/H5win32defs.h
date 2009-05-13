@@ -33,13 +33,11 @@ typedef __int64             h5_stat_size_t;
 #define HDdup(F)            _dup(F)
 #define HDfdopen(N,S)       _fdopen(N,S)
 #define HDfileno(F)         _fileno(F)
-
-#if _MSC_VER > 1200
+#if _MSC_VER > 1310 /* Newer than VS.NET 2003 */
 #define HDftruncate(F,L)    _chsize_s(F,L)
 #else
 #define HDftruncate(F,L)    chsize(F,L)
 #endif
-
 #define HDfstat(F,B)        _fstati64(F,B)
 #define HDisatty(F)         _isatty(F)
 #define HDstat(S,B)         _stati64(S,B)
@@ -58,7 +56,6 @@ typedef __int64             h5_stat_size_t;
 #define HDunlink(S)         _unlink(S)
 #define HDvsnprintf(S,N,FMT,A) _vsnprintf(S,N,FMT,A)
 #define HDwrite(F,M,Z)      _write(F,M,Z)
-#define HDstrtoull(S,R,N)   _strtoui64(S,R,N)
 
 /* Non-POSIX functions */
 

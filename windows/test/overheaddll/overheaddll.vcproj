@@ -4,7 +4,6 @@
 	Version="8.00"
 	Name="overheaddll"
 	ProjectGUID="{71A1C081-FF1C-452B-B938-95551D565302}"
-	RootNamespace="overheaddll"
 	>
 	<Platforms>
 		<Platform
@@ -74,7 +73,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\../../../test/overheaddll/Debug/overheaddll.pdb"
@@ -164,7 +163,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\../../../test/overheaddll/Debug/overheaddll.pdb"
@@ -255,7 +254,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\../../../test/overheaddll/Release/overheaddll.pdb"
 				SubSystem="1"
@@ -346,7 +345,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\../../../test/overheaddll/Release/overheaddll.pdb"
 				SubSystem="1"

@@ -4,7 +4,6 @@
 	Version="8.00"
 	Name="h52gifdll"
 	ProjectGUID="{834DD32C-D078-441F-95F4-9CDE108B60AE}"
-	RootNamespace="h52gifdll"
 	>
 	<Platforms>
 		<Platform
@@ -76,7 +75,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\..\..\..\..\hl\tools\gifconvdll\h52gifdll\Release/h52gifdll.pdb"
 				SubSystem="1"
@@ -167,7 +166,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\..\..\..\..\hl\tools\gifconvdll\h52gifdll\Release/h52gifdll.pdb"
 				SubSystem="1"
@@ -256,7 +255,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\..\..\..\..\hl\tools\gifconvdll\h52gifdll\Debug/h52gifdll.pdb"
@@ -347,7 +346,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\..\..\..\..\hl\tools\gifconvdll\h52gifdll\Debug/h52gifdll.pdb"

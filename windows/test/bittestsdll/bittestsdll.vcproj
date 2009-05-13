@@ -4,7 +4,6 @@
 	Version="8.00"
 	Name="bittestsdll"
 	ProjectGUID="{E5C9E235-E10F-4F46-A94F-A112CD8D867E}"
-	RootNamespace="bittestsdll"
 	>
 	<Platforms>
 		<Platform
@@ -74,7 +73,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\../../../test/bittestsdll/Debug/bittestsdll.pdb"
@@ -164,7 +163,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\../../../test/bittestsdll/Debug/bittestsdll.pdb"
@@ -255,7 +254,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\../../../test/bittestsdll/Release/bittestsdll.pdb"
 				SubSystem="1"
@@ -346,7 +345,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\../../../test/bittestsdll/Release/bittestsdll.pdb"
 				SubSystem="1"

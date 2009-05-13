@@ -47,7 +47,6 @@ hid_t H5E_SLIST_g          = FAIL;      /* Skip Lists */
 hid_t H5E_EFL_g            = FAIL;      /* External file list */
 hid_t H5E_TST_g            = FAIL;      /* Ternary Search Trees */
 hid_t H5E_ARGS_g           = FAIL;      /* Invalid arguments to routine */
-hid_t H5E_EARRAY_g         = FAIL;      /* Extensible Array */
 hid_t H5E_ERROR_g          = FAIL;      /* Error API */
 hid_t H5E_PLINE_g          = FAIL;      /* Data filters */
 hid_t H5E_FSPACE_g         = FAIL;      /* Free Space Manager */
@@ -164,9 +163,6 @@ hid_t H5E_CANTMARKDIRTY_g  = FAIL;      /* Unable to mark a pinned entry as dirt
 hid_t H5E_CANTDIRTY_g      = FAIL;      /* Unable to mark metadata as dirty */
 hid_t H5E_CANTEXPUNGE_g    = FAIL;      /* Unable to expunge a metadata cache entry */
 hid_t H5E_CANTRESIZE_g     = FAIL;      /* Unable to resize a metadata cache entry */
-hid_t H5E_CANTDEPEND_g     = FAIL;      /* Unable to create a flush dependency */
-hid_t H5E_CANTUNDEPEND_g   = FAIL;      /* Unable to destroy a flush dependency */
-hid_t H5E_CANTNOTIFY_g     = FAIL;      /* Unable to notify object about action */
 
 /* Link related errors */
 hid_t H5E_TRAVERSE_g       = FAIL;      /* Link traversal failure */

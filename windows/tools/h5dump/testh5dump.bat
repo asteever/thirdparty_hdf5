@@ -405,7 +405,8 @@ rem ############################################################################
     call :tooltest tall-4s.ddl --dataset=/g1/g1.1/dset1.1.1 --start=1,1 --stride=2,3 --count=3,2 --block=1,1 tall.h5
     call :tooltest tall-5s.ddl -d "/g1/g1.1/dset1.1.2[0;2;10;]" tall.h5
     call :tooltest tdset-3s.ddl -d "/dset1[1,1;;;]" tdset.h5
-
+    rem block
+    rem call :tooltest tdset2-1s.ddl -d "/dset1[;3,2;4,4;1,4]" tdset2.h5
 
     rem test printing characters in ASCII instead of decimal
     call :tooltest tchar1.ddl -r tchar.h5
@@ -559,24 +560,26 @@ rem ############################################################################
     call :tooltest1   tbin1.ddl -d integer -o out1.bin -b LE tbinary.h5
 
     rem NATIVE default. the NATIVE test can be validated with h5import/h5diff
-    call :tooltest1   tbin1.ddl -d integer -o out1.bin -b MEMORY tbinary.h5
+    call :tooltest1   tbin1.ddl -d integer -o out1.bin  -b     tbinary.h5
     call :importtest out1.bin -c out3.h5import -o out1.h5
     call :difftest tbinary.h5 out1.h5 /integer /integer
-    
-    call :tooltest1 tbin2.ddl -b BE -d float -o out2.bin tbinary.h5
-    
+
+    call :tooltest1   tbin2.ddl -b BE -d float  -o out2.bin      tbinary.h5
+
     rem the NATIVE test can be validated with h5import/h5diff
-    call :tooltest1 tbin3.ddl -d integer -o out3.bin -b NATIVE tbinary.h5
+    call :tooltest1   tbin3.ddl -d integer -o out3.bin -b NATIVE tbinary.h5
     call :importtest out3.bin -c out3.h5import -o out3.h5
     call :difftest tbinary.h5 out3.h5 /integer /integer
 
-    call :tooltest1   tbin4.ddl -d double  -b FILE -o out4.bin    tbinary.h5
+    call :tooltest1   tbin4.ddl -d double  -o out4.bin -b FILE   tbinary.h5
        
     rem Clean up binary output files
     if not defined hdf5_nocleanup (
         for /l %%a in (1,1,4) do del /f %testdir%\out%%a.bin
         del /f %testdir%\out3.h5
     )
+    
+
 
     rem test for dataset region references 
     call :tooltest tdatareg.ddl tdatareg.h5
@@ -599,16 +602,15 @@ rem ############################################################################
     rem Note: Make sure to use PERCENT rather than "%", because Windows needs
     rem to handle it specially.  --SJW 5/12/08
     call :tooltest tfpformat.ddl -m PERCENT.7f tfpformat.h5
-
-    rem tests for traversal of external links
-    call :tooltest textlinksrc.ddl textlinksrc.h5
-    call :tooltest textlinkfar.ddl textlinkfar.h5
-
+    
     rem tests for traversal of external links
     call :tooltest textlinksrc.ddl textlinksrc.h5
     call :tooltest textlinkfar.ddl textlinkfar.h5
     
-    
+    rem tests for traversal of external links
+    call :tooltest textlinksrc.ddl textlinksrc.h5
+    call :tooltest textlinkfar.ddl textlinkfar.h5
+
     
     if %nerrors% equ 0 (
         echo.All %dumper% tests passed.

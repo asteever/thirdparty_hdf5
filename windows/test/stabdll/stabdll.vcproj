@@ -4,7 +4,6 @@
 	Version="8.00"
 	Name="stabdll"
 	ProjectGUID="{7CF4F18C-3C74-4EBB-AD76-F41575D7A5A0}"
-	RootNamespace="stabdll"
 	>
 	<Platforms>
 		<Platform
@@ -75,7 +74,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib WS2_32.lib"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\../../../test/stabdll/Debug/stabdll.pdb"
@@ -166,7 +165,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib WS2_32.lib"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\../../../test/stabdll/Debug/stabdll.pdb"
@@ -258,7 +257,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib WS2_32.lib"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\../../../test/stabdll/Release/stabdll.pdb"
 				SubSystem="1"
@@ -350,7 +349,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib WS2_32.lib"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\../../../test/stabdll/Release/stabdll.pdb"
 				SubSystem="1"

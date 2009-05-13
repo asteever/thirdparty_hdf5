@@ -28,8 +28,6 @@
 #define H5A_PACKAGE		/*suppress error about including H5Apkg  */
 #define H5B2_PACKAGE		/*suppress error about including H5B2pkg  */
 #define H5B2_TESTING		/*suppress warning about H5B2 testing funcs*/
-#define H5EA_PACKAGE		/*suppress error about including H5EApkg  */
-#define H5EA_TESTING		/*suppress warning about H5EA testing funcs*/
 #define H5F_PACKAGE		/*suppress error about including H5Fpkg	  */
 #define H5G_PACKAGE		/*suppress error about including H5Gpkg	  */
 #define H5HF_PACKAGE		/*suppress error about including H5HFpkg  */
@@ -41,7 +39,6 @@
 #include "H5B2pkg.h"		/* v2 B-trees				*/
 #include "H5Dprivate.h"		/* Datasets				*/
 #include "H5Eprivate.h"		/* Error handling		  	*/
-#include "H5EApkg.h"		/* Extensible Arrays			*/
 #include "H5Fpkg.h"             /* File access				*/
 #include "H5FSprivate.h"	/* Free space manager			*/
 #include "H5Gpkg.h"		/* Groups				*/
@@ -54,6 +51,7 @@
 /* File drivers */
 #include "H5FDfamily.h"
 
+#define INDENT  3
 #define VCOL    50
 
 
@@ -129,41 +127,6 @@ get_H5B2_class(const uint8_t *sig)
 
 
 /*-------------------------------------------------------------------------
- * Function:    get_H5EA_class
- *
- * Purpose:	Determine the extensible array class from the buffer read in.
- *              Extensible arrays are debugged through the array subclass.
- *              The subclass identifier is two bytes after the signature.
- *
- * Return:	Non-NULL on success/NULL on failure
- *
- * Programmer:	Quincey Koziol
- *		koziol@hdfgroup.org
- *		Sep 11 2008
- *
- *-------------------------------------------------------------------------
- */
-static const H5EA_class_t *
-get_H5EA_class(const uint8_t *sig)
-{
-    H5EA_cls_id_t clsid = (H5EA_cls_id_t)sig[H5_SIZEOF_MAGIC + 1];
-    const H5EA_class_t *cls;
-
-    switch(clsid) {
-        case H5EA_CLS_TEST_ID:
-            cls = H5EA_CLS_TEST;
-            break;
-
-        default:
-            fprintf(stderr, "Unknown array class %u\n", (unsigned)(clsid));
-            HDexit(4);
-    } /* end switch */
-
-    return(cls);
-} /* end get_H5EA_class() */
-
-
-/*-------------------------------------------------------------------------
  * Function:    main
  *
  * Usage:       debug FILENAME [OFFSET]
@@ -202,21 +165,21 @@ main(int argc, char *argv[])
     /*
      * Open the file and get the file descriptor.
      */
-    if((dxpl = H5Pcreate(H5P_DATASET_XFER)) < 0) {
+    if((dxpl = H5Pcreate (H5P_DATASET_XFER))<0) {
         fprintf(stderr, "cannot create dataset transfer property list\n");
         HDexit(1);
     } /* end if */
-    if((fapl = H5Pcreate(H5P_FILE_ACCESS)) < 0) {
+    if((fapl = H5Pcreate (H5P_FILE_ACCESS))<0) {
         fprintf(stderr, "cannot create file access property list\n");
         HDexit(1);
     } /* end if */
-    if(strchr(argv[1], '%'))
+    if(strchr (argv[1], '%'))
 	H5Pset_fapl_family (fapl, (hsize_t)0, H5P_DEFAULT);
     if((fid = H5Fopen(argv[1], H5F_ACC_RDONLY, fapl)) < 0) {
         fprintf(stderr, "cannot open file\n");
         HDexit(1);
     } /* end if */
-    if(NULL == (f = (H5F_t *)H5I_object(fid))) {
+    if(NULL == (f = H5I_object(fid))) {
         fprintf(stderr, "cannot obtain H5F_t pointer\n");
         HDexit(2);
     } /* end if */
@@ -225,13 +188,13 @@ main(int argc, char *argv[])
      * Parse command arguments.
      */
     if(argc > 2)
-        addr = (haddr_t)HDstrtoll(argv[2], NULL, 0);
+        addr = HDstrtoll(argv[2], NULL, 0);
     if(argc > 3)
-        extra = (haddr_t)HDstrtoll(argv[3], NULL, 0);
+        extra = HDstrtoll(argv[3], NULL, 0);
     if(argc > 4)
-        extra2 = (haddr_t)HDstrtoll(argv[4], NULL, 0);
+        extra2 = HDstrtoll(argv[4], NULL, 0);
     if(argc > 5)
-        extra3 = (haddr_t)HDstrtoll(argv[5], NULL, 0);
+        extra3 = HDstrtoll(argv[5], NULL, 0);
 
     /*
      * Read the signature at the specified file position.
@@ -434,65 +397,6 @@ main(int argc, char *argv[])
         } /* end if */
 
         status = H5SM_list_debug(f, H5P_DATASET_XFER_DEFAULT, addr, stdout, 0, VCOL, (unsigned) extra, (size_t) extra2);
-
-    } else if(!HDmemcmp(sig, H5EA_HDR_MAGIC, (size_t)H5_SIZEOF_MAGIC)) {
-        /*
-         * Debug an extensible aray header.
-         */
-        const H5EA_class_t *cls = get_H5EA_class(sig);
-        HDassert(cls);
-        status = H5EA__hdr_debug(f, H5P_DATASET_XFER_DEFAULT, addr, stdout, 0, VCOL, cls);
-
-    } else if(!HDmemcmp(sig, H5EA_IBLOCK_MAGIC, (size_t)H5_SIZEOF_MAGIC)) {
-        /*
-         * Debug an extensible aray index block.
-         */
-        const H5EA_class_t *cls = get_H5EA_class(sig);
-        HDassert(cls);
-
-        /* Check for enough valid parameters */
-        if(extra == 0) {
-            fprintf(stderr, "ERROR: Need extensible array header address in order to dump index block\n");
-            fprintf(stderr, "Extensible array index block usage:\n");
-            fprintf(stderr, "\th5debug <filename> <index block address> <array header address>\n");
-            HDexit(4);
-        } /* end if */
-
-        status = H5EA__iblock_debug(f, H5P_DATASET_XFER_DEFAULT, addr, stdout, 0, VCOL, cls, extra);
-
-    } else if(!HDmemcmp(sig, H5EA_SBLOCK_MAGIC, (size_t)H5_SIZEOF_MAGIC)) {
-        /*
-         * Debug an extensible aray super block.
-         */
-        const H5EA_class_t *cls = get_H5EA_class(sig);
-        HDassert(cls);
-
-        /* Check for enough valid parameters */
-        if(extra == 0 || extra2 == 0) {
-            fprintf(stderr, "ERROR: Need extensible array header address and super block index in order to dump super block\n");
-            fprintf(stderr, "Extensible array super block usage:\n");
-            fprintf(stderr, "\th5debug <filename> <super block address> <array header address> <super block index>\n");
-            HDexit(4);
-        } /* end if */
-
-        status = H5EA__sblock_debug(f, H5P_DATASET_XFER_DEFAULT, addr, stdout, 0, VCOL, cls, extra, (unsigned)extra2);
-
-    } else if(!HDmemcmp(sig, H5EA_DBLOCK_MAGIC, (size_t)H5_SIZEOF_MAGIC)) {
-        /*
-         * Debug an extensible aray data block.
-         */
-        const H5EA_class_t *cls = get_H5EA_class(sig);
-        HDassert(cls);
-
-        /* Check for enough valid parameters */
-        if(extra == 0 || extra2 == 0) {
-            fprintf(stderr, "ERROR: Need extensible array header address and # of elements in data block in order to dump data block\n");
-            fprintf(stderr, "Extensible array data block usage:\n");
-            fprintf(stderr, "\th5debug <filename> <data block address> <array header address> <# of elements in data block>\n");
-            HDexit(4);
-        } /* end if */
-
-        status = H5EA__dblock_debug(f, H5P_DATASET_XFER_DEFAULT, addr, stdout, 0, VCOL, cls, extra, (size_t)extra2);
 
     } else if(!HDmemcmp(sig, H5O_HDR_MAGIC, (size_t)H5_SIZEOF_MAGIC)) {
         /*

@@ -4,7 +4,6 @@
 	Version="8.00"
 	Name="h5dump"
 	ProjectGUID="{9A8352DF-AA1E-4FE0-9494-F9D6B4E10CA2}"
-	RootNamespace="h5dump"
 	>
 	<Platforms>
 		<Platform
@@ -75,7 +74,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib $(HDF5_EXT_ZLIB) $(HDF5_EXT_SZIP)"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				IgnoreDefaultLibraryNames=""
 				GenerateDebugInformation="true"
@@ -167,7 +166,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib $(HDF5_EXT_ZLIB) $(HDF5_EXT_SZIP)"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				IgnoreDefaultLibraryNames=""
 				GenerateDebugInformation="true"
@@ -260,7 +259,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib $(HDF5_EXT_ZLIB) $(HDF5_EXT_SZIP)"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				IgnoreDefaultLibraryNames=""
 				ProgramDatabaseFile=".\../../../tools/h5dump/Release/h5dump.pdb"
@@ -353,7 +352,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib $(HDF5_EXT_ZLIB) $(HDF5_EXT_SZIP)"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				IgnoreDefaultLibraryNames=""
 				ProgramDatabaseFile=".\../../../tools/h5dump/Release/h5dump.pdb"

@@ -4,7 +4,6 @@
 	Version="8.00"
 	Name="h5debugdll"
 	ProjectGUID="{D10F67D0-8057-49C2-A62A-12D0C512288E}"
-	RootNamespace="h5debugdll"
 	>
 	<Platforms>
 		<Platform
@@ -76,7 +75,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\../../../tools/h5debugdll/Release/h5debugdll.pdb"
 				SubSystem="1"
@@ -167,7 +166,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\../../../tools/h5debugdll/Release/h5debugdll.pdb"
 				SubSystem="1"
@@ -255,7 +254,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\../../../tools/h5debugdll/Debug/h5debugdll.pdb"
@@ -345,7 +344,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\../../../tools/h5debugdll/Debug/h5debugdll.pdb"

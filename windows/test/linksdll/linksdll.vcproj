@@ -4,7 +4,6 @@
 	Version="8.00"
 	Name="linksdll"
 	ProjectGUID="{27CCFE35-61A5-434F-8B83-9A40AE2AE8C5}"
-	RootNamespace="linksdll"
 	>
 	<Platforms>
 		<Platform
@@ -75,7 +74,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib WS2_32.lib"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\../../../test/linksdll/Debug/linksdll.pdb"
@@ -166,7 +165,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib WS2_32.lib"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\../../../test/linksdll/Debug/linksdll.pdb"
@@ -258,7 +257,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib WS2_32.lib"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\../../../test/linksdll/Release/linksdll.pdb"
 				SubSystem="1"
@@ -350,7 +349,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib WS2_32.lib"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\../../../test/linksdll/Release/linksdll.pdb"
 				SubSystem="1"

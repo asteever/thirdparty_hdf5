@@ -50,7 +50,6 @@
 #define H5E_EFL              (H5OPEN H5E_EFL_g)
 #define H5E_TST              (H5OPEN H5E_TST_g)
 #define H5E_ARGS             (H5OPEN H5E_ARGS_g)
-#define H5E_EARRAY           (H5OPEN H5E_EARRAY_g)
 #define H5E_ERROR            (H5OPEN H5E_ERROR_g)
 #define H5E_PLINE            (H5OPEN H5E_PLINE_g)
 #define H5E_FSPACE           (H5OPEN H5E_FSPACE_g)
@@ -81,7 +80,6 @@ H5_DLLVAR hid_t H5E_SLIST_g;         /* Skip Lists */
 H5_DLLVAR hid_t H5E_EFL_g;           /* External file list */
 H5_DLLVAR hid_t H5E_TST_g;           /* Ternary Search Trees */
 H5_DLLVAR hid_t H5E_ARGS_g;          /* Invalid arguments to routine */
-H5_DLLVAR hid_t H5E_EARRAY_g;        /* Extensible Array */
 H5_DLLVAR hid_t H5E_ERROR_g;         /* Error API */
 H5_DLLVAR hid_t H5E_PLINE_g;         /* Data filters */
 H5_DLLVAR hid_t H5E_FSPACE_g;        /* Free Space Manager */
@@ -266,9 +264,6 @@ H5_DLLVAR hid_t H5E_NOIDS_g;         /* Out of IDs for group */
 #define H5E_CANTDIRTY        (H5OPEN H5E_CANTDIRTY_g)
 #define H5E_CANTEXPUNGE      (H5OPEN H5E_CANTEXPUNGE_g)
 #define H5E_CANTRESIZE       (H5OPEN H5E_CANTRESIZE_g)
-#define H5E_CANTDEPEND       (H5OPEN H5E_CANTDEPEND_g)
-#define H5E_CANTUNDEPEND     (H5OPEN H5E_CANTUNDEPEND_g)
-#define H5E_CANTNOTIFY       (H5OPEN H5E_CANTNOTIFY_g)
 H5_DLLVAR hid_t H5E_CANTFLUSH_g;     /* Unable to flush data from cache */
 H5_DLLVAR hid_t H5E_CANTSERIALIZE_g; /* Unable to serialize data from cache */
 H5_DLLVAR hid_t H5E_CANTLOAD_g;      /* Unable to load metadata into cache */
@@ -285,9 +280,6 @@ H5_DLLVAR hid_t H5E_CANTMARKDIRTY_g; /* Unable to mark a pinned entry as dirty *
 H5_DLLVAR hid_t H5E_CANTDIRTY_g;     /* Unable to mark metadata as dirty */
 H5_DLLVAR hid_t H5E_CANTEXPUNGE_g;   /* Unable to expunge a metadata cache entry */
 H5_DLLVAR hid_t H5E_CANTRESIZE_g;    /* Unable to resize a metadata cache entry */
-H5_DLLVAR hid_t H5E_CANTDEPEND_g;    /* Unable to create a flush dependency */
-H5_DLLVAR hid_t H5E_CANTUNDEPEND_g;  /* Unable to destroy a flush dependency */
-H5_DLLVAR hid_t H5E_CANTNOTIFY_g;    /* Unable to notify object about action */
 
 /* Link related errors */
 #define H5E_TRAVERSE         (H5OPEN H5E_TRAVERSE_g)

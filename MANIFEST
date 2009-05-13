@@ -57,7 +57,6 @@
 ./bin/locate_sw
 ./bin/ltmain.sh
 ./bin/make_err
-./bin/make_overflow
 ./bin/make_vers
 ./bin/makehelp
 ./bin/missing
@@ -404,7 +403,7 @@
 
 ./release_docs/COPYING
 ./release_docs/HISTORY-1_0-1_8_0_rc3.txt
-./release_docs/HISTORY-1_9.txt
+./release_docs/HISTORY-1_8.txt
 ./release_docs/INSTALL
 ./release_docs/INSTALL_Cygwin.txt
 ./release_docs/INSTALL_MinGW.txt
@@ -428,8 +427,6 @@
 ./src/H5err.txt
 ./src/H5config.h.in
 ./src/H5detect.c
-./src/H5overflow.txt
-./src/H5overflow.h
 ./src/H5private.h
 ./src/H5public.h
 ./src/H5system.c
@@ -500,19 +497,6 @@
 ./src/H5Epubgen.h
 ./src/H5Epublic.h
 ./src/H5Eterm.h
-./src/H5EA.c
-./src/H5EAcache.c
-./src/H5EAdbg.c
-./src/H5EAdblkpage.c
-./src/H5EAdblock.c
-./src/H5EAhdr.c
-./src/H5EAiblock.c
-./src/H5EAint.c
-./src/H5EApkg.h
-./src/H5EAprivate.h
-./src/H5EAsblock.c
-./src/H5EAstat.c
-./src/H5EAtest.c
 ./src/H5F.c
 ./src/H5Faccum.c
 ./src/H5Fdbg.c
@@ -802,7 +786,6 @@
 ./test/dt_arith.c
 ./test/dtypes.c
 ./test/dtransform.c
-./test/earray.c
 ./test/enum.c
 ./test/extend.c
 ./test/external.c
@@ -908,7 +891,6 @@
 ./test/test_filters_le.hdf5
 ./test/test_filters_be.hdf5
 ./test/gen_filters.c
-./test/chunk_info.c
 
 ./test/testfiles/err_compat_1
 ./test/testfiles/err_compat_2
@@ -956,47 +938,45 @@
 ./tools/h5import/h5import.c
 ./tools/h5import/h5importtest.c
 ./tools/h5import/h5importtestutil.sh
-
-#tesfiles for h5import
-./tools/h5import/testfiles/binin32.h5
-./tools/h5import/testfiles/binin16.h5
-./tools/h5import/testfiles/txtfp32.txt
-./tools/h5import/testfiles/txtstr.conf
-./tools/h5import/testfiles/txtfp32.conf
-./tools/h5import/testfiles/binin8w.conf
-./tools/h5import/testfiles/binin8.h5
-./tools/h5import/testfiles/txtfp64.conf
-./tools/h5import/testfiles/binuin32.conf
-./tools/h5import/testfiles/txtuin32.txt
-./tools/h5import/testfiles/binuin16.conf
-./tools/h5import/testfiles/txtstr.h5
-./tools/h5import/testfiles/txtfp32.h5
-./tools/h5import/testfiles/txtin32.h5
-./tools/h5import/testfiles/txtin16.h5
-./tools/h5import/testfiles/binin8w.h5
-./tools/h5import/testfiles/txtin32.txt
+./tools/h5import/testfiles/binfp32.conf
 ./tools/h5import/testfiles/binfp64.conf
-./tools/h5import/testfiles/binin8.conf
-./tools/h5import/testfiles/txtin8.conf
-./tools/h5import/testfiles/binfp64.h5
-./tools/h5import/testfiles/txtstr.txt
-./tools/h5import/testfiles/txtin32.conf
-./tools/h5import/testfiles/txtin16.conf
-./tools/h5import/testfiles/txtin8.h5
-./tools/h5import/testfiles/txtuin32.conf
-./tools/h5import/testfiles/txtuin16.conf
-./tools/h5import/testfiles/binin32.conf
 ./tools/h5import/testfiles/binin16.conf
-./tools/h5import/testfiles/txtfp64.h5
-./tools/h5import/testfiles/txtin16.txt
-./tools/h5import/testfiles/txtfp64.txt
-./tools/h5import/testfiles/binuin32.h5
-./tools/h5import/testfiles/binuin16.h5
-./tools/h5import/testfiles/txtuin32.h5
-./tools/h5import/testfiles/txtuin16.h5
+./tools/h5import/testfiles/binin32.conf
+./tools/h5import/testfiles/binin8.conf
+./tools/h5import/testfiles/binuin16.conf
+./tools/h5import/testfiles/binuin32.conf
+./tools/h5import/testfiles/fp1.txt
+./tools/h5import/testfiles/fp2.txt
+./tools/h5import/testfiles/in1.txt
+./tools/h5import/testfiles/textfp32.conf
+./tools/h5import/testfiles/textfp64.conf
+./tools/h5import/testfiles/textin16.conf
+./tools/h5import/testfiles/textin32.conf
+./tools/h5import/testfiles/textin8.conf
+./tools/h5import/testfiles/textuin16.conf
+./tools/h5import/testfiles/textuin32.conf
+./tools/h5import/testfiles/test1.h5
+./tools/h5import/testfiles/test2.h5
+./tools/h5import/testfiles/test3.h5
+./tools/h5import/testfiles/test4.h5
+./tools/h5import/testfiles/test5.h5
+./tools/h5import/testfiles/test6.h5
+./tools/h5import/testfiles/test7.h5
+./tools/h5import/testfiles/test8.h5
+./tools/h5import/testfiles/test9.h5
+./tools/h5import/testfiles/test10.h5
+./tools/h5import/testfiles/test11.h5
+./tools/h5import/testfiles/test12.h5
+./tools/h5import/testfiles/test13.h5
+./tools/h5import/testfiles/test14.h5
+./tools/h5import/testfiles/test15.h5
+./tools/h5import/testfiles/textstr.conf
+./tools/h5import/testfiles/str.txt
 ./tools/h5import/testfiles/textpfe.conf
 ./tools/h5import/testfiles/in64.txt
-./tools/h5import/testfiles/test15.h5
+./tools/h5import/testfiles/in32.txt
+./tools/h5import/testfiles/in16.txt
+
 
 
 
@@ -1313,6 +1293,7 @@
 ./tools/testfiles/tfpformat.h5
 
 
+
 # Expected output from h5ls tests
 ./tools/testfiles/nosuchfile.ls
 ./tools/testfiles/help-1.ls
@@ -1418,18 +1399,6 @@
 
 
 #test files for h5diff
-./tools/h5diff/testfiles/h5diff_10.txt
-./tools/h5diff/testfiles/h5diff_11.txt
-./tools/h5diff/testfiles/h5diff_12.txt
-./tools/h5diff/testfiles/h5diff_13.txt
-./tools/h5diff/testfiles/h5diff_14.txt
-./tools/h5diff/testfiles/h5diff_15.txt
-./tools/h5diff/testfiles/h5diff_16_1.txt
-./tools/h5diff/testfiles/h5diff_16_2.txt
-./tools/h5diff/testfiles/h5diff_16_3.txt
-./tools/h5diff/testfiles/h5diff_17.txt
-./tools/h5diff/testfiles/h5diff_18.txt
-./tools/h5diff/testfiles/h5diff_19.txt
 ./tools/h5diff/testfiles/h5diff_20.txt
 ./tools/h5diff/testfiles/h5diff_21.txt
 ./tools/h5diff/testfiles/h5diff_22.txt
@@ -1439,15 +1408,7 @@
 ./tools/h5diff/testfiles/h5diff_26.txt
 ./tools/h5diff/testfiles/h5diff_27.txt
 ./tools/h5diff/testfiles/h5diff_28.txt
-./tools/h5diff/testfiles/h5diff_50.txt
-./tools/h5diff/testfiles/h5diff_51.txt
-./tools/h5diff/testfiles/h5diff_52.txt
-./tools/h5diff/testfiles/h5diff_53.txt
-./tools/h5diff/testfiles/h5diff_54.txt
-./tools/h5diff/testfiles/h5diff_55.txt
-./tools/h5diff/testfiles/h5diff_56.txt
-./tools/h5diff/testfiles/h5diff_57.txt
-./tools/h5diff/testfiles/h5diff_58.txt
+./tools/h5diff/testfiles/h5diff_basic1.h5
 ./tools/h5diff/testfiles/h5diff_600.txt
 ./tools/h5diff/testfiles/h5diff_603.txt
 ./tools/h5diff/testfiles/h5diff_604.txt
@@ -1456,6 +1417,11 @@
 ./tools/h5diff/testfiles/h5diff_607.txt
 ./tools/h5diff/testfiles/h5diff_608.txt
 ./tools/h5diff/testfiles/h5diff_609.txt
+./tools/h5diff/testfiles/h5diff_dset2.h5
+./tools/h5diff/testfiles/h5diff_70.txt
+./tools/h5diff/testfiles/h5diff_attr2.h5
+./tools/h5diff/testfiles/h5diff_types.h5
+./tools/h5diff/testfiles/h5diff_dtypes.h5
 ./tools/h5diff/testfiles/h5diff_610.txt
 ./tools/h5diff/testfiles/h5diff_612.txt
 ./tools/h5diff/testfiles/h5diff_613.txt
@@ -1463,9 +1429,20 @@
 ./tools/h5diff/testfiles/h5diff_615.txt
 ./tools/h5diff/testfiles/h5diff_616.txt
 ./tools/h5diff/testfiles/h5diff_617.txt
+./tools/h5diff/testfiles/h5diff_dset1.h5
 ./tools/h5diff/testfiles/h5diff_618.txt
 ./tools/h5diff/testfiles/h5diff_619.txt
+./tools/h5diff/testfiles/h5diff_80.txt
+./tools/h5diff/testfiles/h5diff_attr1.h5
+./tools/h5diff/testfiles/h5diff_empty.h5
+./tools/h5diff/testfiles/h5diff_100.txt
+./tools/h5diff/testfiles/h5diff_101.txt
+./tools/h5diff/testfiles/h5diff_102.txt
+./tools/h5diff/testfiles/h5diff_hyper2.h5
+./tools/h5diff/testfiles/h5diff_16_1.txt
+./tools/h5diff/testfiles/h5diff_16_2.txt
 ./tools/h5diff/testfiles/h5diff_621.txt
+./tools/h5diff/testfiles/h5diff_16_3.txt
 ./tools/h5diff/testfiles/h5diff_622.txt
 ./tools/h5diff/testfiles/h5diff_623.txt
 ./tools/h5diff/testfiles/h5diff_624.txt
@@ -1473,13 +1450,27 @@
 ./tools/h5diff/testfiles/h5diff_626.txt
 ./tools/h5diff/testfiles/h5diff_627.txt
 ./tools/h5diff/testfiles/h5diff_628.txt
+./tools/h5diff/testfiles/h5diff_10.txt
 ./tools/h5diff/testfiles/h5diff_629.txt
-./tools/h5diff/testfiles/h5diff_70.txt
-./tools/h5diff/testfiles/h5diff_80.txt
+./tools/h5diff/testfiles/h5diff_11.txt
+./tools/h5diff/testfiles/h5diff_12.txt
+./tools/h5diff/testfiles/h5diff_13.txt
+./tools/h5diff/testfiles/h5diff_50.txt
+./tools/h5diff/testfiles/h5diff_14.txt
+./tools/h5diff/testfiles/h5diff_51.txt
+./tools/h5diff/testfiles/h5diff_15.txt
+./tools/h5diff/testfiles/h5diff_52.txt
+./tools/h5diff/testfiles/h5diff_53.txt
+./tools/h5diff/testfiles/h5diff_17.txt
+./tools/h5diff/testfiles/h5diff_54.txt
+./tools/h5diff/testfiles/h5diff_18.txt
 ./tools/h5diff/testfiles/h5diff_90.txt
-./tools/h5diff/testfiles/h5diff_100.txt
-./tools/h5diff/testfiles/h5diff_101.txt
-./tools/h5diff/testfiles/h5diff_102.txt
+./tools/h5diff/testfiles/h5diff_55.txt
+./tools/h5diff/testfiles/h5diff_56.txt
+./tools/h5diff/testfiles/h5diff_57.txt
+./tools/h5diff/testfiles/h5diff_58.txt
+./tools/h5diff/testfiles/h5diff_basic2.h5
+./tools/h5diff/testfiles/h5diff_hyper1.h5
 ./tools/h5diff/testfiles/h5diff_200.txt
 ./tools/h5diff/testfiles/h5diff_201.txt
 ./tools/h5diff/testfiles/h5diff_202.txt
@@ -1490,40 +1481,31 @@
 ./tools/h5diff/testfiles/h5diff_207.txt
 
 
-./tools/h5diff/testfiles/h5diff_basic1.h5
-./tools/h5diff/testfiles/h5diff_basic2.h5
-./tools/h5diff/testfiles/h5diff_dtypes.h5
-./tools/h5diff/testfiles/h5diff_dset1.h5
-./tools/h5diff/testfiles/h5diff_dset2.h5
-./tools/h5diff/testfiles/h5diff_empty.h5
-./tools/h5diff/testfiles/h5diff_hyper1.h5
-./tools/h5diff/testfiles/h5diff_attr1.h5
-./tools/h5diff/testfiles/h5diff_hyper2.h5
-./tools/h5diff/testfiles/h5diff_attr2.h5
-./tools/h5diff/testfiles/h5diff_types.h5
 
 
 
 #test files for h5repack
+./tools/h5repack/testfiles/h5repack_szip.h5
 ./tools/h5repack/testfiles/h5repack_fill.h5
+./tools/h5repack/testfiles/ublock.bin
+./tools/h5repack/testfiles/h5repack_ext.bin
+./tools/h5repack/testfiles/h5repack_fletcher.h5
+./tools/h5repack/testfiles/h5repack_nbit.h5
+./tools/h5repack/testfiles/h5repack_shuffle.h5
 ./tools/h5repack/testfiles/h5repack_objs.h5
-./tools/h5repack/testfiles/h5repack_attr.h5
+./tools/h5repack/testfiles/h5repack.info
+./tools/h5repack/testfiles/h5repack_ext.h5
+./tools/h5repack/testfiles/h5repack_deflate.h5
 ./tools/h5repack/testfiles/h5repack_hlink.h5
+./tools/h5repack/testfiles/h5repack_filters.h5
+./tools/h5repack/testfiles/h5repack_soffset.h5
+./tools/h5repack/testfiles/h5repack_attr.h5
+./tools/h5repack/testfiles/h5repack_early.h5
 ./tools/h5repack/testfiles/h5repack_layout.h5
 ./tools/h5repack/testfiles/h5repack_layouto.h5
-./tools/h5repack/testfiles/h5repack_early.h5
-./tools/h5repack/testfiles/h5repack_szip.h5
-./tools/h5repack/testfiles/h5repack_deflate.h5
-./tools/h5repack/testfiles/h5repack_shuffle.h5
-./tools/h5repack/testfiles/h5repack_fletcher.h5
-./tools/h5repack/testfiles/h5repack_filters.h5
-./tools/h5repack/testfiles/h5repack_nbit.h5
-./tools/h5repack/testfiles/h5repack_soffset.h5
-./tools/h5repack/testfiles/h5repack.info
-./tools/h5repack/testfiles/h5repack_ext.bin
-./tools/h5repack/testfiles/h5repack_ext.h5
-./tools/h5repack/testfiles/ublock.bin
 ./tools/h5repack/testfiles/h5repack_named_dtypes.h5
+
+
 
 
 # jam utility and tests
@@ -1545,11 +1527,9 @@
 ./tools/h5jam/testfiles/twithub513.h5
 ./tools/h5jam/testfiles/u513.txt
 
-
-
 # test files for h5copy
-./tools/h5copy/testfiles/h5copytst.h5
 ./tools/h5copy/testfiles/h5copytst.out.ls
+./tools/h5copy/testfiles/h5copytst.h5
 
 # test files for h5mkgrp
 ./tools/testfiles/h5mkgrp_help.ls
@@ -1562,6 +1542,7 @@
 ./tools/testfiles/h5mkgrp_single.ls
 ./tools/testfiles/h5mkgrp_single_latest.ls
 ./tools/testfiles/h5mkgrp_version.ls
+
 
 
 # high level libraries
@@ -1643,8 +1624,6 @@
 ./hl/test/test_table_cray.hdf5
 ./hl/test/usa.wri
 ./hl/test/dtype_file.txt
-
-# tools
 ./hl/tools/COPYING
 ./hl/tools/Makefile.am
 ./hl/tools/Makefile.in
@@ -1660,8 +1639,9 @@
 ./hl/tools/gif2h5/writehdf.c
 ./hl/tools/gif2h5/h52gifgentst.c
 ./hl/tools/gif2h5/h52giftest.sh
-./hl/tools/gif2h5/testfiles/image1.gif
-./hl/tools/gif2h5/testfiles/h52giftst.h5
+# testfiles
+./hl/tools/testfiles/image1.gif
+./hl/tools/testfiles/h52giftst.h5
 
 
 # hl fortran
@@ -1734,7 +1714,6 @@
 ./vms/tools/h5copy/check_h5copy.com
 ./vms/tools/h5dump/make.com
 ./vms/tools/h5dump/check_h5dump.com
-./vms/tools/h5ls/check.com
 ./vms/tools/h5ls/check_h5ls.com
 ./vms/tools/h5ls/make.com
 ./vms/tools/h5diff/check_h5diff.com
@@ -1759,7 +1738,6 @@
 ./windows/COPYING
 ./windows/hdf5bt.BAT
 ./windows/hdf5build.BAT
-./windows/hdf5build_examples.BAT
 ./windows/hdf5check.BAT
 ./windows/InstallcppExamples.BAT
 ./windows/install_dll.BAT
@@ -2005,8 +1983,6 @@
 ./windows/test/cache_apidll/cache_apidll.vcproj
 ./windows/test/cachedll/cachedll.vcproj
 ./windows/test/chunk/chunk.vcproj
-./windows/test/chunk_info/chunk_info.vcproj
-./windows/test/chunk_infodll/chunk_infodll.vcproj
 ./windows/test/chunkdll/chunkdll.vcproj
 ./windows/test/cmpd_dset/cmpd_dset.vcproj
 ./windows/test/cmpd_dsetdll/cmpd_dsetdll.vcproj
@@ -2022,8 +1998,6 @@
 ./windows/test/dtransformdll/dtransformdll.vcproj
 ./windows/test/dtypes/dtypes.vcproj
 ./windows/test/dtypesdll/dtypesdll.vcproj
-./windows/test/earray/earray.vcproj
-./windows/test/earraydll/earraydll.vcproj
 ./windows/test/enum/enum.vcproj
 ./windows/test/enumdll/enumdll.vcproj
 ./windows/test/error_test/error_test.vcproj
@@ -2265,8 +2239,6 @@
 ./windows_vnet/test/cache_apidll/cache_apidll.vcproj
 ./windows_vnet/test/cachedll/cachedll.vcproj
 ./windows_vnet/test/chunk/chunk.vcproj
-./windows_vnet/test/chunk_info/chunk_info.vcproj
-./windows_vnet/test/chunk_infodll/chunk_infodll.vcproj
 ./windows_vnet/test/chunkdll/chunkdll.vcproj
 ./windows_vnet/test/cmpd_dset/cmpd_dset.vcproj
 ./windows_vnet/test/cmpd_dsetdll/cmpd_dsetdll.vcproj
@@ -2282,8 +2254,6 @@
 ./windows_vnet/test/dtransformdll/dtransformdll.vcproj
 ./windows_vnet/test/dtypes/dtypes.vcproj
 ./windows_vnet/test/dtypesdll/dtypesdll.vcproj
-./windows_vnet/test/earray/earray.vcproj
-./windows_vnet/test/earraydll/earraydll.vcproj
 ./windows_vnet/test/enum/enum.vcproj
 ./windows_vnet/test/enumdll/enumdll.vcproj
 ./windows_vnet/test/error_test/error_test.vcproj
@@ -2302,6 +2272,8 @@
 ./windows_vnet/test/flush1dll/flush1dll.vcproj
 ./windows_vnet/test/flush2/flush2.vcproj
 ./windows_vnet/test/flush2dll/flush2dll.vcproj
+./windows_vnet/test/freespace/freespace.vcproj
+./windows_vnet/test/freespacedll/freespacedll.vcproj
 ./windows_vnet/test/getname/getname.vcproj
 ./windows_vnet/test/getnamedll/getnamedll.vcproj
 ./windows_vnet/test/getub/getub.vcproj
@@ -2319,6 +2291,8 @@
 ./windows_vnet/test/libtestD/libtestD.vcproj
 ./windows_vnet/test/links/links.vcproj
 ./windows_vnet/test/linksdll/linksdll.vcproj
+./windows_vnet/test/mf/mf.vcproj
+./windows_vnet/test/mfdll/mfdll.vcproj
 ./windows_vnet/test/mount/mount.vcproj
 ./windows_vnet/test/mountdll/mountdll.vcproj
 ./windows_vnet/test/mtime/mtime.vcproj

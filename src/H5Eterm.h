@@ -48,7 +48,6 @@ H5E_SLIST_g=
 H5E_EFL_g=    
 H5E_TST_g=    
 H5E_ARGS_g=    
-H5E_EARRAY_g=    
 H5E_ERROR_g=    
 H5E_PLINE_g=    
 H5E_FSPACE_g=    
@@ -165,10 +164,7 @@ H5E_CANTUNPIN_g=
 H5E_CANTMARKDIRTY_g=    
 H5E_CANTDIRTY_g=    
 H5E_CANTEXPUNGE_g=    
-H5E_CANTRESIZE_g=    
-H5E_CANTDEPEND_g=    
-H5E_CANTUNDEPEND_g=    
-H5E_CANTNOTIFY_g=
+H5E_CANTRESIZE_g=
 
 /* Link related errors */    
 H5E_TRAVERSE_g=    

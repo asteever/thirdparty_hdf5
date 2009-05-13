@@ -4,7 +4,6 @@
 	Version="8.00"
 	Name="iopipedll"
 	ProjectGUID="{4E8105F2-56D4-45D6-9017-706F804052E7}"
-	RootNamespace="iopipedll"
 	>
 	<Platforms>
 		<Platform
@@ -74,7 +73,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\../../../test/iopipedll/Debug/iopipedll.pdb"
@@ -164,7 +163,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\../../../test/iopipedll/Debug/iopipedll.pdb"
@@ -255,7 +254,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\../../../test/iopipedll/Release/iopipedll.pdb"
 				SubSystem="1"
@@ -346,7 +345,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\../../../test/iopipedll/Release/iopipedll.pdb"
 				SubSystem="1"
