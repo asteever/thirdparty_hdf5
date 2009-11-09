@@ -106,7 +106,7 @@ test_1 (hid_t fapl)
     for (i=0; i<1024; i++) {
 	size = i+1;
 	memset (out, 'A'+i%26, size);
-	H5Eclear2(H5E_DEFAULT);
+	H5Eclear ();
 	status = H5HG_insert (f, H5P_DATASET_XFER_DEFAULT, size, out, obj+i);
 	if (status<0) {
 	    H5_FAILED();
@@ -125,8 +125,8 @@ test_1 (hid_t fapl)
     for (i=0; i<1024; i++) {
 	size = i+1;
 	memset (out, 'A'+i%26, size);
-	H5Eclear2(H5E_DEFAULT);
-	if (NULL==H5HG_read (f, H5P_DATASET_XFER_DEFAULT, obj+i, in, NULL)) {
+	H5Eclear ();
+	if (NULL==H5HG_read (f, H5P_DATASET_XFER_DEFAULT, obj+i, in)) {
 	    H5_FAILED();
 	    puts("    Unable to read object");
 	    nerrors++;
@@ -198,7 +198,7 @@ test_2 (hid_t fapl)
     for (i=0; i<1024; i++) {
 	size = 1024-i;
 	memset (out, 'A'+i%26, size);
-	H5Eclear2(H5E_DEFAULT);
+	H5Eclear ();
 	if (H5HG_insert (f, H5P_DATASET_XFER_DEFAULT, size, out, obj+i)<0) {
 	    H5_FAILED();
 	    puts("    Unable to insert object into global heap");
@@ -212,8 +212,8 @@ test_2 (hid_t fapl)
     for (i=0; i<1024; i++) {
 	size = 1024-i;
 	memset (out, 'A'+i%26, size);
-	H5Eclear2(H5E_DEFAULT);
-	if (NULL==H5HG_read (f, H5P_DATASET_XFER_DEFAULT, obj+i, in, NULL)) {
+	H5Eclear ();
+	if (NULL==H5HG_read (f, H5P_DATASET_XFER_DEFAULT, obj+i, in)) {
 	    H5_FAILED();
 	    puts("    Unable to read object");
 	    nerrors++;
@@ -283,7 +283,7 @@ test_3 (hid_t fapl)
     for (i=0; i<1024; i++) {
 	size = i%30+100;
 	memset (out, 'A'+i%26, size);
-	H5Eclear2(H5E_DEFAULT);
+	H5Eclear ();
 	status = H5HG_insert (f, H5P_DATASET_XFER_DEFAULT, size, out, obj+i);
 	if (status<0) {
 	    H5_FAILED();
@@ -362,7 +362,7 @@ test_4 (hid_t fapl)
 	/* Insert */
 	size = i%30+100;
 	memset (out, 'A'+i%26, size);
-	H5Eclear2(H5E_DEFAULT);
+	H5Eclear ();
 	status = H5HG_insert (f, H5P_DATASET_XFER_DEFAULT, size, out, obj+i);
 	if (status<0) {
 	    H5_FAILED();
@@ -376,7 +376,7 @@ test_4 (hid_t fapl)
 	 * remove B, insert D, E, F; remove E; etc.
 	 */
 	if (1==i%3) {
-	    H5Eclear2(H5E_DEFAULT);
+	    H5Eclear ();
 	    status = H5HG_remove (f, H5P_DATASET_XFER_DEFAULT, obj+i-1);
 	    if (status<0) {
 		H5_FAILED();
@@ -452,7 +452,7 @@ test_ooo_indices(hid_t fapl)
          * and down by 1000 so the previous set of insertions is preserved and
          * can be deleted. */
         for(j=1000*((~i&1)); j<1000*((~i&1)+1); j++) {
-            H5Eclear2(H5E_DEFAULT);
+            H5Eclear();
             status = H5HG_insert(f, H5P_DATASET_XFER_DEFAULT, sizeof(j), &j, &obj[j]);
             if (status<0)
                 GHEAP_REPEATED_ERR("    Unable to insert object into global heap")
@@ -465,7 +465,7 @@ test_ooo_indices(hid_t fapl)
         /* Remove the previous 1000 entries */
         if(i>0)
             for(j=1000*(i&1); j<1000*((i&1)+1); j++) {
-                H5Eclear2(H5E_DEFAULT);
+                H5Eclear();
                 status = H5HG_remove(f, H5P_DATASET_XFER_DEFAULT, &obj[j]);
                 if (status<0)
                     GHEAP_REPEATED_ERR("    Unable to remove object from global heap");
@@ -488,7 +488,7 @@ test_ooo_indices(hid_t fapl)
 
     /* Read the objects to make sure the heap is still readable */
     for(i=0; i<1000; i++) {
-        if(NULL == H5HG_read(f, H5P_DATASET_XFER_DEFAULT, &obj[i], &j, NULL))
+        if(NULL == H5HG_read(f, H5P_DATASET_XFER_DEFAULT, &obj[i], &j))
             goto error;
         if(i != j) {
             H5_FAILED();

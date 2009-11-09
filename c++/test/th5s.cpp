@@ -89,9 +89,6 @@ struct space4_struct {
     char c2;
  } space4_data={'v',987123,(float)-3.14,'g'}; /* Test data for 4th dataspace */
 
-/* Null dataspace */
-int space5_data = 7;
-
 /*-------------------------------------------------------------------------
  *
  * Function:	test_h5s_basic
@@ -112,7 +109,7 @@ int space5_data = 7;
  *		       with a special routine.
  *-------------------------------------------------------------------------
  */
-static void test_h5s_basic()
+static void test_h5s_basic(void)
 {
     hsize_t		dims1[] = {SPACE1_DIM1, SPACE1_DIM2, SPACE1_DIM3};
     hsize_t		dims2[] = {SPACE2_DIM1, SPACE2_DIM2, SPACE2_DIM3,
@@ -207,9 +204,6 @@ static void test_h5s_basic()
 	catch( FileIException E ) // catching higher dimensionality dataset
 	{} // do nothing, exception expected
 
-    // CHECK_I(ret, "H5Fclose");  // leave this here, later, fake a failure
-		// in the p_close see how this will handle it. - BMR
-
 	// Verify that incorrect dimensions don't work
 	dims1[0] = 0;
 	try {
@@ -267,7 +261,7 @@ static void test_h5s_basic()
  *		       with a special routine.
  *-------------------------------------------------------------------------
  */
-static void test_h5s_scalar_write()
+static void test_h5s_scalar_write(void)
 {
     // Output message about test being performed
     SUBTEST("Testing Scalar Dataspace Writing");
@@ -331,7 +325,7 @@ static void test_h5s_scalar_write()
  *		       with a special routine.
  *-------------------------------------------------------------------------
  */
-static void test_h5s_scalar_read()
+static void test_h5s_scalar_read(void)
 {
     hsize_t		tdims[4];	// Dimension array to test with
 
@@ -375,60 +369,6 @@ static void test_h5s_scalar_read()
 
 /*-------------------------------------------------------------------------
  *
- * Function:	test_h5s_null
- *
- * Purpose:	Test null H5S (dataspace) code
- *
- * Return:	none
- *
- * Programmer:	Raymond Lu (using C version)
- *              May 18, 2004
- *
- * Modifications:
- *      January, 2005: C tests' macro VERIFY casts values to 'long' for all
- *		       cases.  Since there are no operator<< for 'long long'
- *		       or int64 in VS C++ ostream, I casted the hssize_t values
- *		       passed to verify_val to 'long' as well.  If problems
- *		       arises later, this will have to be specificly handled
- *		       with a special routine.
- *-------------------------------------------------------------------------
- */
-static void test_h5s_null()
-{
-    // Output message about test being performed
-    SUBTEST("Testing Null Dataspace Writing");
-
-    try {
-	// Create file
-	H5File fid1(DATAFILE, H5F_ACC_TRUNC);
-
-	// Create scalar dataspace
-	DataSpace sid1(H5S_NULL);
-
-	hssize_t	n;	 	// Number of dataspace elements
-	n = sid1.getSimpleExtentNpoints();
-	verify_val((long)n, 0, "DataSpace::getSimpleExtentNpoints", __LINE__, __FILE__);
-
-	// Create a dataset
-	DataSet dataset = fid1.createDataSet("Dataset1", PredType::NATIVE_UINT,sid1);
-
-        // Try to write nothing to the dataset
-	dataset.write(&space5_data, PredType::NATIVE_INT);
-
-        // Read the data.  Make sure no change to the buffer
-	dataset.read(&space5_data, PredType::NATIVE_INT);
-	verify_val(space5_data, 7, "DataSet::read", __LINE__, __FILE__);
-
-	PASSED();
-    } // end of try block
-    catch (Exception E)
-    {
-	issue_fail_msg("test_h5s_null()", __LINE__, __FILE__, E.getCDetailMsg());
-    }
-}   // test_h5s_null()
-
-/*-------------------------------------------------------------------------
- *
  * Function:	test_h5s_compound_scalar_write
  *
  * Purpose:	Test scalar H5S (dataspace) writing for compound
@@ -448,7 +388,7 @@ static void test_h5s_null()
  *		       with a special routine.
  *-------------------------------------------------------------------------
  */
-static void test_h5s_compound_scalar_write()
+static void test_h5s_compound_scalar_write(void)
 {
     // Output message about test being performed
     SUBTEST("Testing Compound Dataspace Writing");
@@ -521,7 +461,7 @@ static void test_h5s_compound_scalar_write()
  *		       with a special routine.
  *-------------------------------------------------------------------------
  */
-static void test_h5s_compound_scalar_read()
+static void test_h5s_compound_scalar_read(void)
 {
     hsize_t		tdims[4];	// Dimension array to test with
 
@@ -591,7 +531,7 @@ static void test_h5s_compound_scalar_read()
 #ifdef __cplusplus
 extern "C"
 #endif
-void test_h5s()
+void test_h5s(void)
 {
     // Output message about test being performed
     MESSAGE(5, ("Testing Dataspaces\n"));
@@ -599,7 +539,6 @@ void test_h5s()
     test_h5s_basic();		// Test basic H5S code
     test_h5s_scalar_write();	// Test scalar H5S writing code
     test_h5s_scalar_read();	// Test scalar H5S reading code
-    test_h5s_null();		// Test null H5S code
     test_h5s_compound_scalar_write();	// Test compound datatype scalar H5S writing code
     test_h5s_compound_scalar_read();	// Test compound datatype scalar H5S reading code
 }   // test_h5s()
@@ -622,7 +561,7 @@ void test_h5s()
 #ifdef __cplusplus
 extern "C"
 #endif
-void cleanup_h5s()
+void cleanup_h5s(void)
 {
     HDremove(DATAFILE.c_str());
 }   // cleanup_h5s

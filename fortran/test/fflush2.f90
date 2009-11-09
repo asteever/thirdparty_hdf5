@@ -50,12 +50,21 @@
      ! dataset identifier
      !
      INTEGER(HID_T) :: dset_id
-
+ 
+     !
+     ! data space identifier
+     !
+     INTEGER(HID_T) :: dataspace
  
      !
      ! data type identifier
      !
      INTEGER(HID_T) :: dtype_id
+
+     ! 
+     !The dimensions for the dataset.
+     !
+     INTEGER(HSIZE_T), DIMENSION(2) :: dims = (/NX,NY/)
 
      !
      !flag to check operation success 
@@ -87,9 +96,8 @@
           CALL h5_fixname_f(filename, fix_filename, H5P_DEFAULT_F, error)
           if (error .ne. 0) then
               write(*,*) "Cannot modify filename"
-              CALL h5_exit_f (1)
+              stop
           endif
-	  print *, "filename=", filename, "fix_filename=", fix_filename
      CALL h5fopen_f(fix_filename, H5F_ACC_RDONLY_F, file_id, error)
           CALL check("h5fopen_f",error,total_error)
 
@@ -132,9 +140,11 @@
           CALL check("h5gopen_f",error,total_error)
     
      !
-     !In case error happens, exit.
+     !In case error happens, jump to stop.
      !
-     IF (error == -1) CALL h5_exit_f (1)
+     IF (error == -1) THEN
+          001 STOP
+     END IF
     
      !
      !Close the datatype

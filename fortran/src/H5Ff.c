@@ -134,7 +134,7 @@ nh5fmount_c (hid_t_f *loc_id, _fcd dsetname, int_f *namelen, hid_t_f *file_id, h
 {
      int ret_value = -1;
      char *c_name;
-     int_f c_namelen;
+     int c_namelen;
      hid_t c_loc_id;
      hid_t c_file_id;
      hid_t c_acc_prp;
@@ -154,7 +154,7 @@ nh5fmount_c (hid_t_f *loc_id, _fcd dsetname, int_f *namelen, hid_t_f *file_id, h
       * Convert FORTRAN name to C name
       */
      c_namelen = *namelen;
-     c_name = (char *)HD5f2cstring(dsetname, (size_t)c_namelen);
+     c_name = (char *)HD5f2cstring(dsetname, c_namelen);
      if (c_name == NULL) return ret_value;
 
      /*
@@ -444,9 +444,9 @@ nh5fget_obj_count_c ( hid_t_f *file_id , int_f *obj_type, size_t_f * obj_count)
  *              number of open objects
  *              Thursday, September 25, 2008 EIP
  *---------------------------------------------------------------------------*/
-
 int_f
-nh5fget_obj_ids_c ( hid_t_f *file_id , int_f *obj_type, size_t_f *max_objs, hid_t_f *obj_ids, size_t_f *num_objs)
+nh5fget_obj_ids_c ( hid_t_f *file_id , int_f *obj_type, size_t_f *max_objs, hid_t_f *obj_ids,
+size_t_f *num_objs)
 {
   int ret_value = 0;
   hid_t c_file_id;
@@ -509,9 +509,9 @@ nh5fget_freespace_c ( hid_t_f *file_id , hssize_t_f *free_space)
 int_f
 nh5fget_name_c(hid_t_f *obj_id, size_t_f *size, _fcd buf, size_t_f *buflen)
 {
-    char *c_buf = NULL;           /* Buffer to hold C string */
+    char *c_buf=NULL;           /* Buffer to hold C string */
     ssize_t size_c = -1;
-    int_f ret_value = 0;          /* Return value */
+    int_f ret_value=0;          /* Return value */
 
      /*
       * Allocate buffer to hold name of an attribute

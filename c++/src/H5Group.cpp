@@ -50,6 +50,9 @@ namespace H5 {
 // Function:	Group default constructor
 ///\brief	Default constructor: creates a stub Group.
 // Programmer	Binh-Minh Ribler - 2000
+// Modification
+//	Jul, 08	No longer inherit data member 'id' from IdComponent.
+//		- bugzilla 1068
 //--------------------------------------------------------------------------
 Group::Group() : H5Object(), id(0) {}
 
@@ -58,6 +61,9 @@ Group::Group() : H5Object(), id(0) {}
 ///\brief	Copy constructor: makes a copy of the original Group object.
 ///\param	original - IN: Original group to copy
 // Programmer	Binh-Minh Ribler - 2000
+// Modification
+//	Jul, 08	No longer inherit data member 'id' from IdComponent.
+//		- bugzilla 1068
 //--------------------------------------------------------------------------
 Group::Group(const Group& original) : H5Object(original)
 {
@@ -81,6 +87,9 @@ hid_t Group::getLocId() const
 ///\brief	Creates a Group object using the id of an existing group.
 ///\param	group_id - IN: Id of an existing group
 // Programmer	Binh-Minh Ribler - 2000
+// Modification
+//	Jul, 08	No longer inherit data member 'id' from IdComponent.
+//		- bugzilla 1068
 //--------------------------------------------------------------------------
 Group::Group(const hid_t existing_id) : H5Object()
 {
@@ -99,7 +108,7 @@ Group::Group(const hid_t existing_id) : H5Object()
 ///		is a datatype that has been named by DataType::commit.
 // Programmer	Binh-Minh Ribler - Oct, 2006
 //--------------------------------------------------------------------------
-Group::Group(H5Object& obj, const void* ref, H5R_type_t ref_type) : H5Object()
+Group::Group(H5Object& obj, void* ref, H5R_type_t ref_type) : H5Object()
 {
     try {
 	id = p_dereference(obj.getId(), ref, ref_type);
@@ -118,7 +127,7 @@ Group::Group(H5Object& obj, const void* ref, H5R_type_t ref_type) : H5Object()
 ///\exception	H5::ReferenceException
 // Programmer	Binh-Minh Ribler - Oct, 2006
 //--------------------------------------------------------------------------
-Group::Group(H5File& h5file, const void* ref, H5R_type_t ref_type) : H5Object()
+Group::Group(H5File& h5file, void* ref, H5R_type_t ref_type) : H5Object()
 {
     try {
 	id = p_dereference(h5file.getId(), ref, ref_type);
@@ -137,7 +146,7 @@ Group::Group(H5File& h5file, const void* ref, H5R_type_t ref_type) : H5Object()
 ///\exception	H5::ReferenceException
 // Programmer	Binh-Minh Ribler - Oct, 2006
 //--------------------------------------------------------------------------
-Group::Group(Attribute& attr, const void* ref, H5R_type_t ref_type) : H5Object()
+Group::Group(Attribute& attr, void* ref, H5R_type_t ref_type) : H5Object()
 {
     try {
 	id = p_dereference(attr.getId(), ref, ref_type);
@@ -147,38 +156,23 @@ Group::Group(Attribute& attr, const void* ref, H5R_type_t ref_type) : H5Object()
     }
 }
 
-#ifndef H5_NO_DEPRECATED_SYMBOLS
 //--------------------------------------------------------------------------
-// Function:	Group::getObjType
-///\brief	Retrieves the type of object that an object reference points to.
-///\param	ref      - IN: Reference to query
-///\param	ref_type - IN: Type of reference to query, valid values are:
-///		\li \c H5R_OBJECT \tReference is an object reference.
-///		\li \c H5R_DATASET_REGION \tReference is a dataset region reference.
-///\return	An object type, which can be one of the following:
-///			H5G_LINK Object is a symbolic link.
-///			H5G_GROUP Object is a group.
-///			H5G_DATASET   Object is a dataset.
-///			H5G_TYPE Object is a named datatype
-///\exception	H5::GroupIException
+// Function:	H5File::getObjType
+///\brief	This function was misnamed and will be deprecated in favor of
+///		H5Object::getRefObjType; please use getRefObjType instead.
 // Programmer	Binh-Minh Ribler - May, 2004
+// Note:	Replaced by getRefObjType. - BMR - Jul, 2008
 //--------------------------------------------------------------------------
 H5G_obj_t Group::getObjType(void *ref, H5R_type_t ref_type) const
 {
-   try {
-      return(p_get_obj_type(ref, ref_type));
-   }
-   catch (IdComponentException E) {
-      throw GroupIException("Group::getObjType", E.getDetailMsg());
-   }
+    return(getRefObjType(ref, ref_type));
 }
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
 
 //--------------------------------------------------------------------------
 // Function:	Group::getRegion
 ///\brief	Retrieves a dataspace with the region pointed to selected.
 ///\param	ref      - IN: Reference to get region of
-///\param	ref_type - IN: Type of reference to get region of - default
+///		ref_type - IN: Type of reference to get region of - default
 ///\return	DataSpace instance
 ///\exception	H5::GroupIException
 // Programmer	Binh-Minh Ribler - May, 2004
@@ -195,15 +189,15 @@ DataSpace Group::getRegion(void *ref, H5R_type_t ref_type) const
 }
 
 //--------------------------------------------------------------------------
-// Function:    Group::getId
-// Purpose:     Get the id of this attribute
+// Function:	Group::getId
+// Purpose:	Get the id of this group
 // Modification:
-//      May 2008 - BMR
-//              Class hierarchy is revised to address bugzilla 1068.  Class
-//              AbstractDS and Attribute are moved out of H5Object.  In
-//              addition, member IdComponent::id is moved into subclasses, and
-//              IdComponent::getId now becomes pure virtual function.
-// Programmer   Binh-Minh Ribler - May, 2008
+//	May 2008 - BMR
+//		Class hierarchy is revised to address bugzilla 1068.  Class
+//		AbstractDS and Attribute are moved out of H5Object.  In
+//		addition, member IdComponent::id is moved into subclasses, and
+//		IdComponent::getId now becomes pure virtual function.
+// Programmer	Binh-Minh Ribler - May, 2008
 //--------------------------------------------------------------------------
 hid_t Group::getId() const
 {
@@ -211,28 +205,28 @@ hid_t Group::getId() const
 }
 
 //--------------------------------------------------------------------------
-// Function:    Group::p_setId
-///\brief       Sets the identifier of this object to a new value.
+// Function:	Group::p_setId
+///\brief	Sets the identifier of this group to a new value.
 ///
-///\exception   H5::IdComponentException when the attempt to close the HDF5
-///             object fails
+///\exception	H5::IdComponentException when the attempt to close the 
+///		currently open group fails
 // Description:
-//              The underlaying reference counting in the C library ensures
-//              that the current valid id of this object is properly closed.
-//              Then the object's id is reset to the new id.
-// Programmer   Binh-Minh Ribler - 2000
+//		The underlaying reference counting in the C library ensures
+//		that the current valid id of this object is properly closed.
+//		Then the object's id is reset to the new id.
+// Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 void Group::p_setId(const hid_t new_id)
 {
     // handling references to this old id
     try {
-        close();
+	close();
     }
     catch (Exception close_error) {
-        throw GroupIException("Group::p_setId", close_error.getDetailMsg());
+	throw GroupIException("Group::p_setId", close_error.getDetailMsg());
     }
-   // reset object's id to the given id
-   id = new_id;
+    // reset object's id to the given id
+    id = new_id;
 }
 
 //--------------------------------------------------------------------------

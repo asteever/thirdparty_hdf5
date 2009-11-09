@@ -17,6 +17,9 @@
    FILE
    tfilter.cpp - HDF5 C++ testing various filters and their combination.
 
+   Note: This test file is not complete; it is made to test briefly the
+	 szip addition to the C++ library.  More through tests and organization
+	 will be done later - BMR 2007/1/30
  ***************************************************************************/
 
 #ifdef OLD_HEADER_FILENAME
@@ -48,26 +51,25 @@
 #define FILTER_CHUNK_DIM2 25
 
 // will do this function later or use it as guideline - BMR - 2007/01/26
-static herr_t test_filter_internal(hid_t fid, const char *name, hid_t dcpl,
+/*static herr_t test_filter_internal(hid_t fid, const char *name, hid_t dcpl, 
 		int if_fletcher32, int corrupted, hsize_t *dset_size)
 {
     cerr << "do nothing right now" << endl;
     return(0);
 }
+*/
 
 /* Temporary filter IDs used for testing */
 #define H5Z_FILTER_BOGUS        305
 static size_t filter_bogus(unsigned int flags, size_t cd_nelmts,
-    const unsigned int *cd_values, size_t nbytes, size_t *buf_size, void **buf);
+    const unsigned int *cd_values, size_t nbytes, size_t *buf_size, void **buf); 
 /* This message derives from H5Z */
-const H5Z_class2_t H5Z_BOGUS[1] = {{
-    H5Z_CLASS_T_VERS,       /* H5Z_class_t version */
+const H5Z_class_t H5Z_BOGUS[1] = {{
     H5Z_FILTER_BOGUS,           /* Filter id number             */
-    1, 1,               /* Encoding and decoding enabled */
     "bogus",                    /* Filter name for debugging    */
     NULL,                       /* The "can apply" callback     */
     NULL,                       /* The "set local" callback     */
-    (H5Z_func_t)filter_bogus,   /* The actual filter function   */
+    filter_bogus,               /* The actual filter function   */
 }};
 
 /*-------------------------------------------------------------------------
@@ -113,10 +115,11 @@ filter_bogus(unsigned int UNUSED flags, size_t UNUSED cd_nelmts,
 // Chunk dimensions
 const hsize_t chunk_size[2] = {FILTER_CHUNK_DIM1, FILTER_CHUNK_DIM2};
 
-static void test_null_filter()
+static void test_null_filter(void)
 {
     // Output message about test being performed
-    SUBTEST("'Null' filter");
+    SUBTEST("Testing 'Null' Filter");
+
     try {
 	//hsize_t  null_size;          // Size of dataset with null filter
 
@@ -124,8 +127,14 @@ static void test_null_filter()
 	DSetCreatPropList dsplist;
 	dsplist.setChunk(2, chunk_size);
 
+#ifdef H5_WANT_H5_V1_4_COMPAT
+	if (H5Zregister (H5Z_FILTER_BOGUS, "bogus", filter_bogus)<0)
+            throw Exception("test_null_filter", "H5Zregister failed");
+#else /* H5_WANT_H5_V1_4_COMPAT */
 	if (H5Zregister (H5Z_BOGUS)<0)
             throw Exception("test_null_filter", "H5Zregister failed");
+#endif /* H5_WANT_H5_V1_4_COMPAT */
+
 
 	// Set some pretent filter
 	dsplist.setFilter(H5Z_FILTER_BOGUS);
@@ -172,7 +181,7 @@ void test_szip_filter(H5File& file1)
     unsigned szip_pixels_per_block=4;
 
     // Output message about test being performed
-    SUBTEST("szip filter (with encoder)");
+    SUBTEST("Testing SZIP Filter (With Encoder)");
 
     if ( h5_szip_can_encode() == 1) {
     char* tconv_buf = new char [1000];
@@ -202,7 +211,7 @@ void test_szip_filter(H5File& file1)
         {
             for (j=0; j<size[1]; j++)
             {
-                points[i][j] = (int)n++;
+                points[i][j] = n++;
             }
         }
 
@@ -227,7 +236,7 @@ void test_szip_filter(H5File& file1)
     {
         issue_fail_msg("test_szip_filter()", __LINE__, __FILE__, E.getCDetailMsg());
     }
-    } // if szip presents
+    } // if szip presents 
     else {
 	SKIPPED();
     }
@@ -249,7 +258,7 @@ const H5std_string      FILE1("tfilters.h5");
 #ifdef __cplusplus
 extern "C"
 #endif
-void test_filters()
+void test_filters(void)
 {
     // Output message about test being performed
     MESSAGE(5, ("Testing Various Filters\n"));
@@ -258,8 +267,7 @@ void test_filters()
     fapl_id = h5_fileaccess(); // in h5test.c, returns a file access template
 
     int         nerrors=0;      // keep track of number of failures occurr
-    try
-    {
+    try {
         // Use the file access template id to create a file access prop. list
         FileAccPropList fapl(fapl_id);
 
@@ -292,7 +300,7 @@ void test_filters()
 #ifdef __cplusplus
 extern "C"
 #endif
-void cleanup_filters()
+void cleanup_filters(void)
 {
     HDremove(FILE1.c_str());
 }

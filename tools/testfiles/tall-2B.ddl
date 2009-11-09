@@ -44,10 +44,6 @@ GROUP "/" {
          }
       }
       GROUP "g1.2" {
-         EXTERNAL_LINK "extlink" {
-            TARGETFILE "somefile"
-            TARGETPATH "somepath"
-         }
          GROUP "g1.2.1" {
             SOFTLINK "slink" {
                LINKTARGET "somevalue"
@@ -63,9 +59,6 @@ GROUP "/" {
       DATASET "dset2.2" {
          DATATYPE  H5T_IEEE_F32BE
          DATASPACE  SIMPLE { ( 3, 5 ) / ( 3, 5 ) }
-      }
-      USERDEFINED_LINK "udlink" {
-         LINKCLASS 187
       }
    }
 }

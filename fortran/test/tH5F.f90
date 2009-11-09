@@ -629,6 +629,7 @@
                write(*,*) " File access lists should be equal, error "
                total_error=total_error + 1
           endif
+
           CALL h5fopen_f(fix_filename, H5F_ACC_RDWR_F, fid2, error, access_prp=fapl2)
                if( error .ne. -1) then
                    total_error = total_error + 1
@@ -676,12 +677,12 @@
               if(error .eq. 0) then
                  total_error = total_error + 1
                  write(*,*) "File should be closed at this point, error"
-              endif 
+              endif
 
-          if(cleanup) then
-              CALL h5_cleanup_f(filename, H5P_DEFAULT_F, error)
-              CALL check("h5_cleanup_f", error, total_error)
-          endif
+          IF(cleanup) THEN
+             CALL h5_cleanup_f(filename, H5P_DEFAULT_F, error)
+             CALL check("h5_cleanup_f", error, total_error)
+          ENDIF
           deallocate(obj_ids)
           RETURN
 
@@ -691,14 +692,15 @@
 !    The following subroutine tests h5fget_freespace_f
 !
 
-        SUBROUTINE file_space(filename, cleanup, total_error)
+        SUBROUTINE file_space(cleanup, total_error)
         USE HDF5  ! This module contains all necessary modules
           IMPLICIT NONE
-          CHARACTER(*), INTENT(IN) :: filename
           LOGICAL, INTENT(IN) :: cleanup
           INTEGER, INTENT(OUT) :: total_error 
           INTEGER              :: error
+     
           !
+          CHARACTER(LEN=10), PARAMETER :: filename = "file_space"
           CHARACTER(LEN=3), PARAMETER :: grpname = "grp"
           CHARACTER(LEN=80)  :: fix_filename 
 
@@ -720,7 +722,7 @@
                CALL check("h5fget_freespace_f",error,total_error)
                if(error .eq.0 .and. free_space .ne. 0) then
                  total_error = total_error + 1
-                 write(*,*) "1: Wrong amount of free space reported, ", free_space
+                 write(*,*) "Wrong amount of free space reported, ", free_space
                endif
 
           ! Create group in the file.
@@ -736,7 +738,7 @@
                CALL check("h5fget_freespace_f",error,total_error)
                if(error .eq.0 .and. free_space .ne. 0) then
                  total_error = total_error + 1
-                 write(*,*) "2: Wrong amount of free space reported, ", free_space
+                 write(*,*) "Wrong amount of free space reported, ", free_space
                endif
 
           !Unlink the group
@@ -746,9 +748,9 @@
           ! Check the free space now
           CALL h5fget_freespace_f(fid, free_space, error)
                CALL check("h5fget_freespace_f",error,total_error)
-               if(error .eq.0 .and. free_space .ne. 0) then
+               if(error .eq.0 .and. free_space .ne. 976) then
                  total_error = total_error + 1
-                 write(*,*) "3: Wrong amount of free space reported, ", free_space
+                 write(*,*) "Wrong amount of free space reported, ", free_space
                endif
 
           CALL h5fclose_f(fid, error)

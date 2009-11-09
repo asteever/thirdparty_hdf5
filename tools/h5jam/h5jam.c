@@ -165,7 +165,7 @@ main (int argc, const char *argv[])
   int h5fid;
   int ofid;
   void *edata;
-  H5E_auto2_t func;
+  H5E_auto_t func; 
   hid_t ifile;
   hid_t plist;
   herr_t status;
@@ -181,8 +181,8 @@ main (int argc, const char *argv[])
   int res;
 
   /* Disable error reporting */
-  H5Eget_auto2(H5E_DEFAULT, &func, &edata);
-  H5Eset_auto2(H5E_DEFAULT, NULL, NULL);
+  H5Eget_auto (&func, &edata);
+  H5Eset_auto (NULL, NULL);
 
   parse_command_line (argc, argv);
 

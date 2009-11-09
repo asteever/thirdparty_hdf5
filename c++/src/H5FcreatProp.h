@@ -30,10 +30,8 @@ class H5_DLLCPP FileCreatPropList : public PropList {
 	// Creates a file create property list.
 	FileCreatPropList();
 
-#ifndef H5_NO_DEPRECATED_SYMBOLS
 	// Retrieves version information for various parts of a file.
 	void getVersion( unsigned& super, unsigned& freelist, unsigned& stab, unsigned& shhdr ) const;
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
 
 	// Sets the userblock size field of a file creation property list.
 	void setUserblock( hsize_t size ) const;
@@ -48,12 +46,21 @@ class H5_DLLCPP FileCreatPropList : public PropList {
 	// Sets file size-of addresses and sizes.
 	void setSizes( size_t sizeof_addr = 4, size_t sizeof_size = 4 ) const;
 
+#ifdef H5_WANT_H5_V1_4_COMPAT
+	// Retrieves the size of the symbol table B-tree 1/2 rank and the
+	// symbol table leaf node 1/2 size.
+	void getSymk( int& int_nodes_k, int& leaf_nodes_k ) const;
+
+	// Sets the size of parameters used to control the symbol table nodes.
+	void setSymk( int int_nodes_k, int leaf_nodes_k ) const;
+#else /* H5_WANT_H5_V1_4_COMPAT */
 	// Retrieves the size of the symbol table B-tree 1/2 rank and the
 	// symbol table leaf node 1/2 size.
 	void getSymk( unsigned& int_nodes_k, unsigned& leaf_nodes_k ) const;
 
 	// Sets the size of parameters used to control the symbol table nodes.
 	void setSymk( unsigned int_nodes_k, unsigned leaf_nodes_k ) const;
+#endif /* H5_WANT_H5_V1_4_COMPAT */
 
 	// Returns the 1/2 rank of an indexed storage B-tree.
 	unsigned getIstorek() const;

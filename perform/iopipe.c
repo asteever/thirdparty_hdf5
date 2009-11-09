@@ -148,7 +148,7 @@ static void
 synchronize (void)
 {
 #ifdef H5_HAVE_SYSTEM
-#if defined(_WIN32) && ! defined(__CYGWIN__)
+#if defined(WIN32) && ! defined(__CYGWIN__)
 	_flushall();
 #else
     HDsystem ("sync");
@@ -224,13 +224,12 @@ main (void)
 
     /* Create the dataset */
     file_space = H5Screate_simple (2, size, size);
-    assert(file_space >= 0);
-    dset = H5Dcreate2(file, "dset", H5T_NATIVE_UCHAR, file_space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    assert(dset >= 0);
-    the_data = malloc((size_t)(size[0] * size[1]));
-
-    /* initial fill for lazy malloc */
-    memset(the_data, 0xAA, (size_t)(size[0] * size[1]));
+    assert (file_space>=0);
+    dset = H5Dcreate (file, "dset", H5T_NATIVE_UCHAR, file_space, H5P_DEFAULT);
+    assert (dset>=0);
+    the_data = malloc ((size_t)(size[0]*size[1]));
+    /*initial fill for lazy malloc*/
+    memset (the_data, 0xAA, (size_t)(size[0]*size[1]));
 
     /* Fill raw */
     synchronize ();
@@ -326,9 +325,9 @@ printf("Before getrusage() call\n");
     for (i=0; i<nwrite; i++) {
 	putc (PROGRESS, stderr);
 	fflush (stderr);
-	offset = HDlseek (fd, (off_t)0, SEEK_SET);
+	offset = lseek (fd, (off_t)0, SEEK_SET);
 	assert (0==offset);
-	n = HDwrite (fd, the_data, (size_t)(size[0]*size[1]));
+	n = write (fd, the_data, (size_t)(size[0]*size[1]));
 	assert (n>=0 && (size_t)n==size[0]*size[1]);
     }
 #ifdef H5_HAVE_GETRUSAGE
@@ -405,9 +404,9 @@ printf("Before getrusage() call\n");
     for (i=0; i<nread; i++) {
 	putc (PROGRESS, stderr);
 	fflush (stderr);
-	offset = HDlseek (fd, (off_t)0, SEEK_SET);
+	offset = lseek (fd, (off_t)0, SEEK_SET);
 	assert (0==offset);
-	n = HDread (fd, the_data, (size_t)(size[0]*size[1]));
+	n = read (fd, the_data, (size_t)(size[0]*size[1]));
 	assert (n>=0 && (size_t)n==size[0]*size[1]);
     }
 #ifdef H5_HAVE_GETRUSAGE

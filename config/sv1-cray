@@ -73,8 +73,8 @@ RANLIB=:
 # PROFILE_CPPFLAGS	library suitable for performance testing (like 
 # 			`-pg').  This may or may not include debugging 
 # 			or production flags.
-#
-# H5_CFLAGS		Flags can be added to this variable which
+#			
+# CFLAGS		Flags can be added to this variable which
 #			might already be partially initialized.  These 
 #			flags will always be passed to the compiler
 #			and should include switches to turn on full
@@ -83,14 +83,16 @@ RANLIB=:
 #			practices resulting in few if any
 #			warnings.
 #
-#			Warning flags do not have to be added to H5_CFLAGS
+#			Warning flags do not have to be added to CFLAGS
 #			variable if the compiler is the GNU gcc
 #			compiler or a descendent of gcc such as EGCS or PGCC.
 #
-# AM_CFLAGS             Flags added directly into this variable will
-#                       be propogated to the compiler wrapper scripts (h5cc,
-#                       h5c++, et cetera) in addition to being used to compile 
-#                       the library.
+#			The CFLAGS should contains *something* or else 
+#			configure will probably add `-g'.  For most
+#			systems this isn't a problem but some systems
+#			will disable optimizations in favor of the
+#			`-g'.
+#			
 #
 # These flags should be set according to the compiler being used.
 # There are two ways to check the compiler.  You can try using `-v' or 
@@ -101,7 +103,7 @@ RANLIB=:
 
 case $CC_BASENAME in
   gcc)
-    H5_CFLAGS="$H5_CFLAGS -Wsign-compare" #Only works for some versions
+    CFLAGS="$CFLAGS -Wsign-compare" #Only works for some versions
     DEBUG_CFLAGS="-g -fverbose-asm"
     DEBUG_CPPFLAGS=
     PROD_CFLAGS="-O3 -fomit-frame-pointer"
@@ -111,7 +113,7 @@ case $CC_BASENAME in
     ;;
 
   cc)
-    H5_CFLAGS="$H5_CFLAGS"
+    CFLAGS="$CFLAGS"
     DEBUG_CFLAGS="-g -h zero"
     DEBUG_CPPFLAGS=
     PROD_CFLAGS="-O2 -h scalar0 -h vector0 -h task1"
@@ -121,7 +123,7 @@ case $CC_BASENAME in
     ;;
 
   *)
-    H5_CFLAGS="$H5_CFLAGS -ansi"
+    CFLAGS="$CFLAGS -ansi"
     DEBUG_CFLAGS="-g"
     DEBUG_CPPFLAGS=
     PROD_CFLAGS="-O"
@@ -151,49 +153,3 @@ esac
 # Hard set the flag to indicate that converting denormalized floating-point
 # values doesn't work.
 hdf5_cv_convert_denormal_float=${hdf5_cv_convert_denormal_float='no'}
-
-# The default Fortran 90 compiler
-
-if test "X-" = "X-$FC"; then
-  FC=f90
-fi
-
-if test "X-" = "X-$f9x_flags_set"; then
-  F9XSUFFIXFLAG=""
-  FSEARCH_DIRS=""
-  H5_FCFLAGS="$H5_FCFLAGS -dp"
-  DEBUG_FCFLAGS="-dp"
-  PROD_FCFLAGS="-dp"
-  PROFILE_FCFLAGS="-dp"
-  f9x_flags_set=yes
-fi
-
-# The default C++ compiler
-
-if test -z "$CXX"; then
-  CXX="CC"
-  CXX_BASENAME=CC
-fi
-
-
-case $CXX_BASENAME in
-  g++)
-    H5_CXXFLAGS="$H5_CXXFLAGS -Wsign-compare" #Only works for some versions
-    DEBUG_CXXFLAGS="-g -fverbose-asm"
-    DEBUG_CPPFLAGS=
-    PROD_CXXFLAGS="-O3 -fomit-frame-pointer"
-    PROD_CPPFLAGS=
-    PROFILE_CXXFLAGS="-pg"
-    PROFILE_CPPFLAGS=
-    ;;
-
-  *)
-    H5_CXXFLAGS="$H5_CXXFLAGS -h instantiate=used"
-    DEBUG_CXXFLAGS="-g"
-    DEBUG_CPPFLAGS=
-    PROD_CXXFLAGS="-O"
-    PROD_CPPFLAGS=
-    PROFILE_CXXFLAGS="-pg"
-    PROFILE_CPPFLAGS=
-    ;;
-esac

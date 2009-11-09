@@ -22,6 +22,8 @@
 *************************************************************/
 
 #include "testhdf5.h"
+
+#include "H5private.h"
 #include "H5Fprivate.h"
 
 #define TEST_INT16_VALUE    -7641
@@ -64,7 +66,7 @@ test_metadata(void)
     uint8_t	*p;  /* pointer into the buffer being en/de-coded */
 
     /* Output message about test being performed */
-    MESSAGE(5, ("Testing Metadata Encoding/decoding\n"));
+    MESSAGE(5, ("Testing Metadata encode/decode code\n"));
 
     /* Start by encoding the values above */
     p = encode_buffer;

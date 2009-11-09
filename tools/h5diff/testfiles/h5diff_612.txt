@@ -12,7 +12,7 @@ usage: h5diff [OPTIONS] file1 file2 [obj1[obj2]]
    -q, --quiet             Quiet mode. Do not do output
    -c, --compare           List objects that are not comparable
    -N, --nan               Avoid NaNs detection
-   -n C, --count=C         Print differences up to C number, C is a positive integer.
+   -n C, --count=C         Print differences up to C number
    -d D, --delta=D         Print difference if (|a-b| > D), D is a positive number.
    -p R, --relative=R      Print difference if (|(a-b)/b| > R), R is a positive number.
    --use-system-epsilon    Print difference if (|a-b| > EPSILON),

@@ -367,10 +367,6 @@ nh5sget_select_elem_pointlist_c( hid_t_f *space_id ,hsize_t_f * startpoint,
     }
   }
 
-/*   for( i = 0; i < c_num_points*rank; i++) { */
-/*     printf("%i \n", (int)c_buf[i]+1); */
-/*   } */
-
   if (ret_value  >= 0  ) ret_value = 0;
 
   HDfree(c_buf);
@@ -533,7 +529,7 @@ nh5sget_simple_extent_ndims_c ( hid_t_f *space_id , int_f *ndims )
  *              of a dataspace
  * Inputs:      space_id - identifier of the dataspace
  * Outputs:     classtype - class type; possible values are:
- *              H5S_SCALAR_F (0), H5S_SIMPLE_F (1), H5S_NULL_F (2)
+ *              H5S_SCALAR_F (0), H5S_SIMPLE_F (1)
  * Returns:     0 on success, -1 on failure
  * Programmer:  Elena Pourmal
  *              Wednesday, August 11, 1999
@@ -554,7 +550,6 @@ nh5sget_simple_extent_type_c ( hid_t_f *space_id , int_f *classtype)
 /*
   if (c_classtype == H5S_SCALAR) *classtype = H5S_SCALAR_F;
   if (c_classtype == H5S_SIMPLE) *classtype = H5S_SIMPLE_F;
-  if (c_classtype == H5S_NULL)   *classtype = H5S_NULL_F;
 */
   return ret_value;
 }
@@ -847,141 +842,6 @@ DONE:
   if(c_block != NULL) HDfree(c_block);
   return ret_value;
 }
-#ifdef NEW_HYPERSLAB_API
-/*----------------------------------------------------------------------------
- * Name:        h5scombine_hyperslab_c
- * Purpose:     Call H5Scombine_hyperslab
- * Inputs:      space_id - identifier of the dataspace
- *              operator - defines how the new selection is combined
- *              start - offset of start of hyperslab
- *              count - number of blocks included in the hyperslab
- *              stride - hyperslab stride (interval between blocks)
- *              block - size of block in the hyperslab
- * Outputs:     hyper_id - identifier for the new dataspace
- * Returns:     0 on success, -1 on failure
- * Programmer:  Elena Pourmal
- *              Monday, October 7, 2002
- * Modifications:
- *---------------------------------------------------------------------------*/
-
-int_f
-nh5scombine_hyperslab_c ( hid_t_f *space_id , int_f *op, hsize_t_f *start, hsize_t_f *count, hsize_t_f *stride, hsize_t_f *block, hid_t_f *hyper_id)
-{
-  int ret_value = -1;
-  hid_t c_space_id;
-  hid_t c_hyper_id;
-  hsize_t *c_start = NULL;
-  hsize_t *c_count = NULL;
-  hsize_t *c_stride = NULL;
-  hsize_t *c_block = NULL;
-
-  H5S_seloper_t c_op;
-  herr_t  status;
-  int rank;
-  int i;
-
-  rank = H5Sget_simple_extent_ndims(*space_id);
-  if (rank < 0 ) return ret_value;
-  c_start = (hsize_t *)HDmalloc(sizeof(hsize_t)*rank);
-  if (c_start == NULL) goto DONE;
-
-  c_count = (hsize_t *)HDmalloc(sizeof(hsize_t)*rank);
-  if (c_count == NULL) goto DONE;
-
-  c_stride = (hsize_t *)HDmalloc(sizeof(hsize_t)*rank);
-  if (c_stride == NULL) goto DONE;
-
-  c_block = (hsize_t *)HDmalloc(sizeof(hsize_t)*rank);
-  if (c_block == NULL) goto DONE;
-
-
-  /*
-   * Reverse dimensions due to C-FORTRAN storage order.
-   */
-
-  for (i=0; i < rank; i++) {
-      int t= (rank - i) - 1;
-      c_start[i] = (hsize_t)start[t];
-      c_count[i] = (hsize_t)count[t];
-      c_stride[i] = (hsize_t)stride[t];
-      c_block[i] = (hsize_t)block[t];
-  }
-
-   c_op = (H5S_seloper_t)*op;
-
-  c_space_id = (hid_t)*space_id;
-  c_hyper_id = H5Scombine_hyperslab(c_space_id, c_op, c_start, c_stride, c_count, c_block);
-  if ( c_hyper_id < 0  ) goto DONE;
-  *hyper_id = (hid_t_f)c_hyper_id;
-  ret_value = 0;
-DONE:
-  if(c_start != NULL) HDfree(c_start);
-  if(c_count != NULL) HDfree(c_count);
-  if(c_stride!= NULL) HDfree(c_stride);
-  if(c_block != NULL) HDfree(c_block);
-  return ret_value;
-}
-/*----------------------------------------------------------------------------
- * Name:        h5scombine_select_c
- * Purpose:     Call H5Scombine_ select
- * Inputs:      space1_id - identifier of the first dataspace
- *              operator - defines how the new selection is combined
- *              space2_id - identifier of the second dataspace
- * Outputs:     ds_id   - identifier for the new dataspace
- * Returns:     0 on success, -1 on failure
- * Programmer:  Elena Pourmal
- *              Monday, October 7, 2002
- * Modifications:
- *---------------------------------------------------------------------------*/
-
-int_f
-nh5scombine_select_c ( hid_t_f *space1_id , int_f *op, hid_t_f *space2_id, hid_t_f *ds_id)
-{
-  int ret_value = -1;
-  hid_t c_space1_id;
-  hid_t c_space2_id;
-  hid_t c_ds_id;
-  H5S_seloper_t c_op;
-
-  c_op = (H5S_seloper_t)*op;
-
-  c_space1_id = (hid_t)*space1_id;
-  c_space2_id = (hid_t)*space2_id;
-  c_ds_id = H5Scombine_select(c_space1_id, c_op, c_space2_id);
-  if ( c_ds_id < 0  ) return ret_value;
-  *ds_id = (hid_t_f)c_ds_id;
-  ret_value = 0;
-  return ret_value;
-}
-/*----------------------------------------------------------------------------
- * Name:        h5sselect_select_c
- * Purpose:     Call H5Sselect_ select
- * Inputs:      space1_id - identifier of the first dataspace  to modify
- *              operator - defines how the new selection is combined
- *              space2_id - identifier of the second dataspace
- * Returns:     0 on success, -1 on failure
- * Programmer:  Elena Pourmal
- *              Monday, October 7, 2002
- * Modifications:
- *---------------------------------------------------------------------------*/
-
-int_f
-nh5sselect_select_c ( hid_t_f *space1_id , int_f *op, hid_t_f *space2_id)
-{
-  int ret_value = -1;
-  hid_t c_space1_id;
-  hid_t c_space2_id;
-  H5S_seloper_t c_op;
-
-  c_op = (H5S_seloper_t)*op;
-
-  c_space1_id = (hid_t)*space1_id;
-  c_space2_id = (hid_t)*space2_id;
-  if( H5Sselect_select(c_space1_id, c_op, c_space2_id)< 0) return ret_value;
-  ret_value = 0;
-  return ret_value;
-}
-#endif /*NEW_HYPERSLAB_API*/
 /*----------------------------------------------------------------------------
  * Name:        h5sget_select_type_c
  * Purpose:     Call H5Sget_select_type
@@ -1035,6 +895,11 @@ nh5sselect_elements_c ( hid_t_f *space_id , int_f *op, size_t_f *nelements,  hsi
   int i, j;
   hsize_t *c_coord;
   size_t c_nelements;
+/*
+  if (*op != H5S_SELECT_SET_F) return ret_value;
+*/
+/*   if (*op != H5S_SELECT_SET) return ret_value; */
+/*   c_op =  H5S_SELECT_SET; */
 
   c_op = (H5S_seloper_t)*op;
 
@@ -1053,130 +918,6 @@ nh5sselect_elements_c ( hid_t_f *space_id , int_f *op, size_t_f *nelements,  hsi
   status = H5Sselect_elements(c_space_id, c_op, c_nelements, c_coord);
   if ( status >= 0  ) ret_value = 0;
   HDfree(c_coord);
-  return ret_value;
-}
-
-/*----------------------------------------------------------------------------
- * Name:        h5sdecode_c
- * Purpose:     Call H5Sdecode
- * Inputs:
- *		buf     - Buffer for the data space object to be decoded.
- * Outputs:
- *              obj_id  - Object_id (non-negative)
- *
- * Returns:     0 on success, -1 on failure
- * Programmer:  M.S. Breitenfeld
- *              March 26, 2008
- * Modifications:
- *---------------------------------------------------------------------------*/
-
-int_f
-nh5sdecode_c ( _fcd buf, hid_t_f *obj_id )
-{
-  int ret_value = -1;
-  unsigned char *c_buf = NULL;  /* Buffer to hold C string */
-  hid_t c_obj_id;
-
-  /*
-   * Call H5Sdecode function.
-   */
-
-  c_buf = (unsigned char*)buf;
-
-  c_obj_id = H5Sdecode(c_buf);
-  if(c_obj_id < 0)
-    return ret_value;
-
-  *obj_id = (hid_t_f)c_obj_id;
-  ret_value = 0;
-
-  return ret_value;
-}
-
-/*----------------------------------------------------------------------------
- * Name:        h5sencode_c
- * Purpose:     Call H5Sencode
- * Inputs:
- *            obj_id - Identifier of the object to be encoded.
- *		 buf - Buffer for the object to be encoded into.
- *            nalloc - The size of the allocated buffer.
- * Returns:     0 on success, -1 on failure
- * Programmer:  M.S. Breitenfeld
- *              March 26, 2008
- * Modifications:
- *---------------------------------------------------------------------------*/
-
-int_f
-nh5sencode_c (_fcd buf, hid_t_f *obj_id, size_t_f *nalloc )
-{
-  int ret_value = -1;
-  unsigned char *c_buf = NULL;          /* Buffer to hold C string */
-  size_t c_size;
-
-  /* return just the size of the allocated buffer;
-   * equivalent to C routine for which 'name' is set equal to NULL
-   */
-
-  if (*nalloc == 0) {
-
-    if(H5Sencode((hid_t)*obj_id, c_buf, &c_size) < 0)
-      return ret_value;
-
-    *nalloc = (size_t_f)c_size;
-
-    ret_value = 0;
-    return ret_value;
-  }
-
-  c_size = (size_t)*nalloc;
-  /*
-   * Allocate buffer
-   */
-  if ((c_buf = HDmalloc(c_size)) == NULL)
-    return ret_value;
-  /*
-   * Call H5Sencode function.
-   */
-  if(H5Sencode((hid_t)*obj_id, c_buf, &c_size) < 0){
-    return ret_value;
-  }
-
-  /* copy the C buffer to the FORTRAN buffer.
-   * Can not use HD5packFstring because we don't want to
-   * eliminate the NUL terminator or pad remaining space
-   * with blanks.
-   */
-
-  HDmemcpy(_fcdtocp(buf),(char *)c_buf,c_size);
-
-  ret_value = 0;
-  if(c_buf) HDfree(c_buf);
-  return ret_value;
-}
-
-/*----------------------------------------------------------------------------
- * Name:        h5sextent_equal_c
- * Purpose:     Call H5Sextent_equal
- * Inputs:
- *		space1_id - First dataspace identifier.
- *              space2_id - Second dataspace identifier.
- * Outputs:
- *              equal - TRUE if equal, FALSE if unequal.
- * Returns:     0 on success, -1 on failure
- * Programmer:  M.S. Breitenfeld
- *              April 4, 2008
- * Modifications:
- *---------------------------------------------------------------------------*/
-
-int_f
-nh5sextent_equal_c ( hid_t_f * space1_id, hid_t_f *space2_id, hid_t_f *c_equal)
-{
-  int ret_value = -1;
-
-  if( (*c_equal = (hid_t_f)H5Sextent_equal((hid_t)*space1_id, (hid_t)*space2_id)) < 0)
-    return ret_value;
-
-  ret_value = 0;
   return ret_value;
 }
 

@@ -96,10 +96,7 @@ parse(int ac, char **av)
 }
 
 /* Handler for SIGABRT - catch the abort signal supposedly from check_version()
- * and exit(6).  Would have used 134 is the return code in Unix systems
- * but some systems (e.g., poe in AIX interprets exit(134) the same as
- * if the process has really been interrupted by the abort signal and prints
- * extra messages that confuse test script that is looking for matching output.
+ * and exit(134).  134 would have been the return code in Unix systems.
  * This handles the abort signal instead letting it interrupt the OS because
  * some systems may produce extra messages and/or produce core dump.
  * This tries to eliminate those side effects.
@@ -107,7 +104,7 @@ parse(int ac, char **av)
 void
 abort_intercept (int UNUSED sig)
 {
-    HDexit(6);
+    HDexit(134);
 }
 
 int

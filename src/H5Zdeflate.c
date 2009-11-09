@@ -37,11 +37,8 @@ static size_t H5Z_filter_deflate (unsigned flags, size_t cd_nelmts,
     const unsigned cd_values[], size_t nbytes, size_t *buf_size, void **buf);
 
 /* This message derives from H5Z */
-const H5Z_class2_t H5Z_DEFLATE[1] = {{
-    H5Z_CLASS_T_VERS,       /* H5Z_class_t version */
+const H5Z_class_t H5Z_DEFLATE[1] = {{
     H5Z_FILTER_DEFLATE,		/* Filter id number		*/
-    1,              /* encoder_present flag (set to true) */
-    1,              /* decoder_present flag (set to true) */
     "deflate",			/* Filter name for debugging	*/
     NULL,                       /* The "can apply" callback     */
     NULL,                       /* The "set local" callback     */
@@ -94,9 +91,9 @@ H5Z_filter_deflate (unsigned flags, size_t cd_nelmts,
         /* Set the uncompression parameters */
 	HDmemset(&z_strm, 0, sizeof(z_strm));
 	z_strm.next_in = *buf;
-        H5_ASSIGN_OVERFLOW(z_strm.avail_in,nbytes,size_t,unsigned);
+        H5_ASSIGN_OVERFLOW(z_strm.avail_in,nbytes,size_t,uInt);
 	z_strm.next_out = outbuf;
-        H5_ASSIGN_OVERFLOW(z_strm.avail_out,nalloc,size_t,unsigned);
+        H5_ASSIGN_OVERFLOW(z_strm.avail_out,nalloc,size_t,uInt);
 
         /* Initialize the uncompression routines */
 	if (Z_OK!=inflateInit(&z_strm))

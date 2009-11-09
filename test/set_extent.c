@@ -30,6 +30,7 @@
  *-------------------------------------------------------------------------
  */
 
+
 const char *FILENAME[] = {
     "set_extent1",
     "set_extent2",
@@ -43,15 +44,16 @@ const char *FILENAME[] = {
 #define EXT_FILE_NAME1 "ext1.bin"
 #define EXT_FILE_NAME2 "ext2.bin"
 
+
 #define RANK1 1
 #define RANK2 2
 #define RANK3 3
-#define DIM0  5
-#define DIM1  5
-#define DIM2  5
-#define DIMS0 3
-#define DIMS1 3
-#define DIMS2 3
+#define DIM0  4
+#define DIM1  4
+#define DIM2  4
+#define DIMS0 2
+#define DIMS1 2
+#define DIMS2 2
 #define DIME0 7
 #define DIME1 7
 #define DIME2 7
@@ -86,88 +88,34 @@ static int test_layouts( H5D_layout_t layout, hid_t fapl );
 
 int main( void )
 {
-    hid_t fapl;                 /* file access property list */
-    hid_t fapl2;                /* file access property list w/latest format set */
-    hbool_t new_format;         /* Whether to use the latest file format */
-    hbool_t chunk_cache;        /* Whether to enable chunk caching */
+
+    hid_t fapl;         /* file access property list */
     int	  nerrors = 0;
 
     h5_reset();
     fapl = h5_fileaccess();
 
-    /* Copy the file access property list */
-    if((fapl2 = H5Pcopy(fapl)) < 0) TEST_ERROR
-
-    /* Disable chunk caching on fapl2 */
-    if(H5Pset_cache(fapl2, 521, 0, 0, 0.) < 0) TEST_ERROR
-
-    /* Set the "use the latest version of the format" bounds for creating objects in the file */
-    if(H5Pset_libver_bounds(fapl2, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0) TEST_ERROR
-
-    /* Test with old & new format groups */
-    for(new_format = FALSE; new_format <= TRUE; new_format++) {
-        hid_t my_fapl;
-
-        /* Test chunked datasets with and without chunk cache */
-        for(chunk_cache = FALSE; chunk_cache <= TRUE; chunk_cache++) {
-            /* Output message about the type of format */
-            if(new_format)
-                printf("Testing with new file format");
-            else
-                printf("Testing with old file format");
-
-            /* Set the FAPL for the chunk cache settings */
-            if(chunk_cache) {
-                puts(" and chunk cache enabled:");
-                my_fapl = fapl;
-            } /* end if */
-            else {
-                puts(" and chunk cache disabled:");
-                my_fapl = fapl2;
-            } /* end else */
-
-            /* Set the FAPL for the type of format */
-            if(new_format) {
-                /* Set the "use the latest version of the format" bounds for
-                 * creating objects in the file */
-                if(H5Pset_libver_bounds(my_fapl, H5F_LIBVER_LATEST,
-                        H5F_LIBVER_LATEST) < 0) TEST_ERROR
-            } /* end if */
-            else
-                /* Set the "use the earliest version of the format" bounds for
-                 * creating objects in the file */
-                if(H5Pset_libver_bounds(my_fapl, H5F_LIBVER_EARLIEST,
-                        H5F_LIBVER_LATEST) < 0) TEST_ERROR
-
-            /* Tests which use chunked datasets */
-            nerrors += do_ranks( my_fapl ) < 0 ? 1 : 0;
-        } /* end for */
-
-        /* Tests which do not use chunked datasets */
-        nerrors += test_external( fapl ) < 0 ? 1 : 0;
-        nerrors += do_layouts( fapl ) < 0 ? 1 : 0;
-    } /* end for */
-
-    /* Close 2nd FAPL */
-    if(H5Pclose(fapl2) < 0) TEST_ERROR
-
-    h5_cleanup(FILENAME, fapl);
+    nerrors += do_ranks( fapl ) < 0 ? 1 : 0;
+    nerrors += test_external( fapl ) < 0 ? 1 : 0;
+    nerrors += do_layouts( fapl ) < 0 ? 1 : 0;
    
+    h5_cleanup(FILENAME, fapl);
     HDremove(EXT_FILE_NAME1);
     HDremove(EXT_FILE_NAME2);
 
-    if(nerrors)
-        goto error;
+    if(nerrors) 
+    {
+        printf("***** %d H5Dset_extent TEST%s FAILED! *****\n",
+            nerrors, 1 == nerrors ? "" : "S");
+        exit(1);
+    }
+
     puts("All H5Dset_extent tests passed.");
 
     return 0;
 
-error:
-    nerrors = MAX(1, nerrors);
-    printf("***** %d H5Dset_extent TEST%s FAILED! *****\n",
-            nerrors, 1 == nerrors ? "" : "S");
-    return 1;
 }
+
 
 
 /*-------------------------------------------------------------------------
@@ -182,7 +130,7 @@ static int do_ranks( hid_t fapl )
     hbool_t set_istore_k = 0;
       
       
-    TESTING_2("with fill value, no compression");
+    TESTING("with fill value, no compression");
 
     do_fillvalue = 1;
 
@@ -216,7 +164,7 @@ static int do_ranks( hid_t fapl )
     PASSED();
 
 
-    TESTING_2("no fill value, no compression");
+    TESTING("no fill value, no compression");
 
     do_fillvalue = 0;
 
@@ -237,7 +185,7 @@ static int do_ranks( hid_t fapl )
 
     PASSED();
     
-    TESTING_2("with fill value, with compression");
+    TESTING("with fill value, with compression");
 
 #ifdef H5_HAVE_FILTER_DEFLATE
 
@@ -275,7 +223,7 @@ static int do_ranks( hid_t fapl )
     SKIPPED();
 #endif
 
-    TESTING_2("no fill value, with compression");
+    TESTING("no fill value, with compression");
 
 #ifdef H5_HAVE_FILTER_DEFLATE
 
@@ -299,7 +247,7 @@ static int do_ranks( hid_t fapl )
     SKIPPED();
 #endif
 
-    TESTING_2("with non-default indexed storage B-tree");
+    TESTING("with non-default indexed storage B-tree");
 
     do_fillvalue = 1;
     set_istore_k = 1;
@@ -328,7 +276,7 @@ error:
 static int do_layouts( hid_t fapl )
 {
     
-    TESTING_2("storage layout use");
+    TESTING("storage layout use");
  
     if (test_layouts( H5D_COMPACT, fapl ) < 0)
     {
@@ -377,8 +325,9 @@ static int test_rank1( hbool_t do_compress,
     int     buf_r[DIM0];
     int     i;
     int     fillvalue = 1; 
-    int     comp_value; 
+    int     comp_value;
     char    filename[NAME_BUF_SIZE];
+
        
     if ( do_fill_value )
     {
@@ -474,7 +423,7 @@ static int test_rank1( hbool_t do_compress,
     */
     
     /* create a dataset */
-    if ((did = H5Dcreate2(fid , "dset1", H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0) 
+    if ((did = H5Dcreate(fid , "dset1", H5T_NATIVE_INT, sid, dcpl)) < 0) 
     {
         goto error;
     }
@@ -639,7 +588,7 @@ static int test_rank1( hbool_t do_compress,
             goto error;
         }
         
-        if ((did = H5Dopen2( fid , "dset1", H5P_DEFAULT ))<0) 
+        if ((did = H5Dopen( fid , "dset1" ))<0) 
         {
             goto error;
         }
@@ -824,7 +773,7 @@ static int test_rank1( hbool_t do_compress,
     {
         goto error;
     }
-    if ((did = H5Dcreate2(fid , "dset3", H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0) 
+    if ((did = H5Dcreate(fid , "dset3", H5T_NATIVE_INT, sid, dcpl)) < 0) 
     {
         goto error;
     }
@@ -949,7 +898,6 @@ static int test_rank2( hbool_t do_compress,
         }
         
     }
-    
     /* create a new file */
     h5_fixname(FILENAME[1], fapl, filename, sizeof filename);
     if ((fid = H5Fcreate(filename, H5F_ACC_TRUNC, fcpl, fapl)) < 0) 
@@ -957,7 +905,11 @@ static int test_rank2( hbool_t do_compress,
         goto error;
     }
 
-   
+    /* close property list */
+    if(H5Pclose(fcpl) < 0) 
+    {
+        goto error;
+    }
     
     /* create the data space with unlimited dimensions. */
     if ((sid = H5Screate_simple(RANK2, dims_o, maxdims)) < 0) 
@@ -1022,7 +974,7 @@ static int test_rank2( hbool_t do_compress,
     */
     
     /* create a dataset */
-    if ((did = H5Dcreate2(fid , "dset1", H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0) 
+    if ((did = H5Dcreate(fid , "dset1", H5T_NATIVE_INT, sid, dcpl)) < 0) 
     {
         goto error;
     }
@@ -1211,7 +1163,7 @@ static int test_rank2( hbool_t do_compress,
             goto error;
         }
         
-        if ((did = H5Dopen2( fid , "dset1", H5P_DEFAULT ))<0) 
+        if ((did = H5Dopen( fid , "dset1" ))<0) 
         {
             goto error;
         }
@@ -1411,7 +1363,7 @@ static int test_rank2( hbool_t do_compress,
     {
         goto error;
     }
-    if ((did = H5Dcreate2(fid , "dset3", H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0) 
+    if ((did = H5Dcreate(fid , "dset3", H5T_NATIVE_INT, sid, dcpl)) < 0) 
     {
         goto error;
     }
@@ -1444,12 +1396,6 @@ static int test_rank2( hbool_t do_compress,
     
     
     if (H5Pclose(dcpl) < 0) 
-    {
-        goto error;
-    }
-
-    /* close file creation property list */
-    if(H5Pclose(fcpl) < 0) 
     {
         goto error;
     }
@@ -1511,7 +1457,7 @@ static int test_rank3( hbool_t do_compress,
     int     i, j, k;
     int     fillvalue = 1; 
     int     comp_value; 
-    char	filename[NAME_BUF_SIZE];
+    char    filename[NAME_BUF_SIZE];
        
     if ( do_fill_value )
     {
@@ -1612,7 +1558,7 @@ static int test_rank3( hbool_t do_compress,
     */
     
     /* create a dataset */
-    if ((did = H5Dcreate2(fid , "dset1", H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0) 
+    if ((did = H5Dcreate(fid , "dset1", H5T_NATIVE_INT, sid, dcpl)) < 0) 
     {
         goto error;
     }
@@ -1796,7 +1742,7 @@ static int test_rank3( hbool_t do_compress,
             goto error;
         }
         
-        if ((did = H5Dopen2( fid , "dset1", H5P_DEFAULT ))<0) 
+        if ((did = H5Dopen( fid , "dset1"))<0) 
         {
             goto error;
         }
@@ -2005,7 +1951,7 @@ static int test_rank3( hbool_t do_compress,
     {
         goto error;
     }
-    if ((did = H5Dcreate2(fid , "dset3", H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0) 
+    if ((did = H5Dcreate(fid , "dset3", H5T_NATIVE_INT, sid, dcpl)) < 0) 
     {
         goto error;
     }
@@ -2072,7 +2018,7 @@ error:
  * test usage with external storage
  *-------------------------------------------------------------------------
  */
-static int test_external( hid_t fapl )
+static int test_external( hid_t fapl  )
 {
 
     hid_t   fid=-1;       
@@ -2090,7 +2036,7 @@ static int test_external( hid_t fapl )
     int     buf_ro[DIM0][DIM1];             /* original buffer for reading */    
     int     i, j;
     int     comp_value = 0;
-    char	filename[NAME_BUF_SIZE];
+    char    filename[NAME_BUF_SIZE];
    
 
     hsize_t size;        /* number of bytes reserved in the file for the data */
@@ -2109,22 +2055,30 @@ static int test_external( hid_t fapl )
         }
     }
 
-    TESTING_2("external file use");
+    TESTING("external file use");
   
     /* create a new file */
     h5_fixname(FILENAME[3], fapl, filename, sizeof filename);
     if ((fid = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) 
-        FAIL_STACK_ERROR
+    {
+        goto error;
+    }
   
     /* modify dataset creation properties */
     if ((dcpl = H5Pcreate (H5P_DATASET_CREATE)) < 0)
-        FAIL_STACK_ERROR
+    {
+        goto error;
+    }
     
     if(H5Pset_external(dcpl, EXT_FILE_NAME1, (off_t)0, size) < 0)
-        FAIL_STACK_ERROR
+    {
+        goto error;
+    }
 
     if(H5Pset_external(dcpl, EXT_FILE_NAME2, (off_t)0, size) < 0)
-        FAIL_STACK_ERROR
+    {
+        goto error;
+    }
     
     {
         
@@ -2133,8 +2087,7 @@ static int test_external( hid_t fapl )
         hsize_t	file_size;		/*sizeof external file segment	*/
         
         if(H5Pget_external(dcpl, 0, sizeof(name), name, &file_offset,
-                &file_size) < 0)
-            FAIL_STACK_ERROR
+            &file_size) < 0) goto error;
         
     }
 
@@ -2156,13 +2109,21 @@ static int test_external( hid_t fapl )
 
     /* create the data space with unlimited dimensions. */
     if ((sid = H5Screate_simple(RANK2, dims_o, maxdims)) < 0) 
-        FAIL_STACK_ERROR
-    if ((did = H5Dcreate2(fid , "dset1", H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0) 
-        FAIL_STACK_ERROR
+    {
+        goto error;
+    }
+    if ((did = H5Dcreate(fid , "dset1", H5T_NATIVE_INT, sid, dcpl)) < 0) 
+    {
+        goto error;
+    }
     if (H5Dwrite(did , H5T_NATIVE_INT, sid, H5S_ALL, H5P_DEFAULT, buf_o) < 0) 
-        FAIL_STACK_ERROR
+    {
+        goto error;
+    }
     if (H5Sclose(sid) < 0)
-        FAIL_STACK_ERROR
+    {
+        goto error;
+    }
 
 
     /*-------------------------------------------------------------------------
@@ -2172,7 +2133,7 @@ static int test_external( hid_t fapl )
 
      /* read */
     if (H5Dread(did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf_ro) < 0) 
-        FAIL_STACK_ERROR
+        goto error;
     
 #if defined (H5_SET_EXTENT_DEBUG)
     printf("\n");
@@ -2210,30 +2171,38 @@ static int test_external( hid_t fapl )
 
     /* set new dimensions for the array. */
     if (H5Dset_extent(did , dims_e) < 0)
-        FAIL_STACK_ERROR
+    {
+        goto error;
+    }
 
      /* get the space */
     if ((sid = H5Dget_space(did)) < 0)
-        FAIL_STACK_ERROR
+    {
+        goto error;
+    }
     
     /* get dimensions */
     if (H5Sget_simple_extent_dims(sid, dims_r, NULL) < 0) 
-        FAIL_STACK_ERROR
+    {
+        goto error;
+    }
     
     if (H5Sclose(sid) < 0)
-        FAIL_STACK_ERROR
+    {
+        goto error;
+    }
     
     
     /* check dimensions */
     for( i = 0; i < RANK2; i++ )
     {
         if (dims_r[i] != dims_e[i]) 
-            TEST_ERROR
+            goto error;
     }
     
     /* read */
     if (H5Dread(did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf_e) < 0) 
-        FAIL_STACK_ERROR
+        goto error;
 
    
     
@@ -2263,13 +2232,13 @@ static int test_external( hid_t fapl )
                 {
                     printf("buf_e[%d][%d] = %d\n", i, j, buf_e[i][j]);
                     printf("value = %d\n", comp_value);
-                    TEST_ERROR
+                    goto error;
                 } 
             } 
             else 
             {
                 if(buf_e[i][j] != buf_o[i][j]) 
-                    TEST_ERROR
+                    goto error;
             }
         }
     }
@@ -2289,24 +2258,32 @@ static int test_external( hid_t fapl )
     
     /* set new dimensions for the array. */
     if (H5Dset_extent(did , dims_s) < 0)
-        FAIL_STACK_ERROR
+    {
+        goto error;
+    }
     
     /* get the space */
     if ((sid = H5Dget_space(did)) < 0)
-        FAIL_STACK_ERROR
+    {
+        goto error;
+    }
     
     /* get dimensions */
     if (H5Sget_simple_extent_dims(sid, dims_r, NULL) < 0) 
-        FAIL_STACK_ERROR
+    {
+        goto error;
+    }
     
     if (H5Sclose(sid) < 0)
-        FAIL_STACK_ERROR
+    {
+        goto error;
+    }
     
     /* check dimensions */
     for( i = 0; i < RANK2; i++ )
     {
         if (dims_r[i] != dims_s[i]) 
-            TEST_ERROR
+            goto error;
     }
 
 
@@ -2319,7 +2296,9 @@ static int test_external( hid_t fapl )
     
     /* read */
     if (H5Dread( did, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf_s ) < 0) 
-        FAIL_STACK_ERROR
+    {
+        goto error;
+    }
     
 #if defined (H5_SET_EXTENT_DEBUG)
     printf("\n");
@@ -2345,7 +2324,7 @@ static int test_external( hid_t fapl )
             {
                 printf("buf_s[%d][%d] = %d\n", i, j, buf_s[i][j]);
                 printf("buf_o[%d][%d] = %d\n", i, j, buf_o[i][j]);
-                TEST_ERROR
+                goto error;
             } 
         }
     }
@@ -2368,7 +2347,7 @@ static int test_external( hid_t fapl )
         /* set new dimensions for the array. */
         if (H5Dset_extent(did , dims_e) == SUCCEED)
         {
-            TEST_ERROR
+            goto error;
         }
         
     } H5E_END_TRY;
@@ -2382,17 +2361,21 @@ static int test_external( hid_t fapl )
     
     
     if (H5Pclose(dcpl) < 0) 
-        FAIL_STACK_ERROR
-
-    if (H5Dclose( did ) < 0)
-        FAIL_STACK_ERROR
+    {
+        goto error;
+    }
 
     if (H5Fclose( fid ) < 0)
-        FAIL_STACK_ERROR
+    {
+        goto error;
+    }
 
     PASSED();
 
+
     return 0;
+    
+    
     
 error:
     
@@ -2404,6 +2387,7 @@ error:
         H5Fclose( fid );
     } H5E_END_TRY;
     return -1;
+    
 }
 
 
@@ -2411,7 +2395,7 @@ error:
  * test usage with layouts compact and contiguous
  *-------------------------------------------------------------------------
  */
-static int test_layouts( H5D_layout_t layout, hid_t fapl )
+static int test_layouts( H5D_layout_t layout, hid_t fapl  )
 {
 
     hid_t   fid=-1;       
@@ -2424,8 +2408,8 @@ static int test_layouts( H5D_layout_t layout, hid_t fapl )
     hsize_t dims_r[RANK2];                  /* read dimensions */ 
     int     buf_o[DIM0][DIM1];
     int     buf_r[DIM0][DIM1];
-    int     i, j; 
-    char	filename[NAME_BUF_SIZE];
+    int     i, j;
+    char    filename[NAME_BUF_SIZE];
    
     for( i = 0; i < DIM0; i++ )
     {
@@ -2461,7 +2445,7 @@ static int test_layouts( H5D_layout_t layout, hid_t fapl )
     }
          
     /* create a dataset */
-    if ((did = H5Dcreate2(fid , "dset1", H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0) 
+    if ((did = H5Dcreate(fid , "dset1", H5T_NATIVE_INT, sid, dcpl)) < 0) 
     {
         goto error;
     }
@@ -2660,4 +2644,7 @@ error:
     return -1;
     
 }
+
+
+ 
 

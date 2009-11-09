@@ -96,13 +96,13 @@ template <class Type1, class Type2>
     if (GetTestVerbosity()>=VERBO_HI)
     {
 	cerr << endl;
-        cerr << "   Call to routine: " << where << " at line " << line
+	cerr << "   Call to routine: " << where << " at line " << line
 	     << " in " << file_name <<  " had value " << x << endl;
     }
     if (x == value)
     {
 	cerr << endl;
-        cerr << "*** UNEXPECTED VALUE from " << where << " should not be "
+	cerr << "*** UNEXPECTED VALUE from " << where << " should not be "
 	     << value << " at line " << line << " in " << file_name << endl;
 	IncTestNumErrs();
 	throw TestFailedException(where, "");

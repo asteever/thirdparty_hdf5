@@ -650,7 +650,7 @@ static void test_vlstring_attribute()
 	// Test creating a "large" sized string attribute
 	gr_attr = root.createAttribute("test_scalar_large", vlst, att_space);
 
-	string_att_write = (char*)HDcalloc(8192, sizeof(char));
+	char *string_att_write= (char*)HDcalloc(8192, sizeof(char));
 	HDmemset(string_att_write, 'A', 8191);
 
 	// Write data to the attribute, then read it back.

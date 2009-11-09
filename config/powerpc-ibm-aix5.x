@@ -20,7 +20,6 @@
 
 # Use AIX supplied C compiler by default, xlc for serial, mpcc_r for parallel.
 # Use -D_LARGE_FILES by default to support large file size.
-# Make sure this is applied to other API compile options such as C++.
 if test "X-" =  "X-$CC"; then
   if test "X-$enable_parallel" = "X-yes"; then
     CC=mpcc_r
@@ -47,9 +46,8 @@ case $CC_BASENAME in
     # Turn off shared lib option.  It causes some test suite to fail.
     enable_shared="${enable_shared:-no}"
     # Use -D_LARGE_FILES by default to support large file size.
-    # Make sure this is applied to other API compile options such as C++.
-    AM_CFLAGS="-D_LARGE_FILES $AM_CFLAGS"
-    H5_CFLAGS="-qlanglvl=stdc99 $H5_CFLAGS"
+    # Use stdc99 to use C99 standard.
+    CFLAGS="-qlanglvl=stdc99 -D_LARGE_FILES $CFLAGS"
     DEBUG_CFLAGS="-g -qfullpath"
     DEBUG_CPPFLAGS=
     # -O causes test/dtypes to fail badly. Turn it off for now.
@@ -64,7 +62,7 @@ case $CC_BASENAME in
     ;;
 
   *)
-    H5_CFLAGS="$H5_CFLAGS -ansi"
+    CFLAGS="$CFLAGS -ansi"
     DEBUG_CFLAGS="-g"
     DEBUG_CPPFLAGS=
     PROD_CFLAGS="-O"
@@ -125,46 +123,7 @@ ac_cv_sizeof_uint_fast64_t=${ac_cv_sizeof_uint_fast64_t=8}
 #ac_cv_sizeof_size_t=${ac_cv_sizeof_size_t=4}
 #ac_cv_sizeof_off_t=${ac_cv_sizeof_off_t=8}
 
-# The default Fortran 90 compiler
-
-if test "X-" = "X-$FC"; then
-  if test "X-$enable_parallel" = "X-yes"; then
-    FC=mpxlf90_r
-  else
-    FC=xlf90
-  fi
-fi
-
-# While we try to avoid setting FCFLAGS directly for use in compilation, in 
-# this case we need the -k flag present for some configure checks. As such, 
-# the configure script saves the user's set FCFLAGS before running, and 
-# restores them when complete. We must then set up both FCFLAGS and H5_FCFLAGS 
-# to ensure the flag is present for both configure as well as for the build.
-if test "X-" = "X-$f9x_flags_set"; then
-  F9XSUFFIXFLAG="-qsuffix=f=f90"
-  FCFLAGS="$FCFLAGS -O ${F9XSUFFIXFLAG}"
-  H5_FCFLAGS="$H5_FCFLAGS -O ${F9XSUFFIXFLAG}"
-  FSEARCH_DIRS="-I./ -I../src"
-  DEBUG_FCFLAGS="-O"
-  PROD_FCFLAGS="-O"
-  PROFILE_FCFLAGS="-O"
-  f9x_flags_set=yes
-fi
-
 # With poe version 3.2.0.19 or lower(using lpp -l all | grep ppe.poe to check the version number, 
 # IBM MPI-IO implementation has a bug, 
 #it cannot generate correct MPI derived datatype. Please uncomment the following line:
-#hdf5_cv_mpi_complex_derived_datatype_works=${hdf5_cv_mpi_complex_derived_datatype_works='no'}
-
-# The default C++ compiler
-
-# Use AIX supplied C++ compiler by default.
-CXX=${CXX=xlC}
-
-# Added -qweaksymbol to suppress linker messages warning of duplicate
-# symbols; these warnings are harmless. - BMR
-# Use -D_LARGE_FILES by default to support large file size.
-H5_CXXFLAGS="$H5_CXXFLAGS -qweaksymbol"
-AM_CXXFLAGS="$AM_CXXFLAGS -D_LARGE_FILES"
-
-
+#hdf5_mpi_complex_derived_datatype_works=${hdf5_mpi_complex_derived_datatype_works='no'}

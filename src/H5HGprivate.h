@@ -26,6 +26,12 @@
 /* Private headers needed by this file. */
 #include "H5Fprivate.h"		/* File access				*/
 
+/*
+ * Each collection has a magic number for some redundancy.
+ */
+#define H5HG_MAGIC	"GCOL"
+#define H5HG_SIZEOF_MAGIC 4
+
 /* Information to locate object in global heap */
 typedef struct H5HG_t {
     haddr_t		addr;		/*address of collection		*/
@@ -37,7 +43,7 @@ typedef struct H5HG_heap_t H5HG_heap_t;
 
 H5_DLL herr_t H5HG_insert(H5F_t *f, hid_t dxpl_id, size_t size, void *obj,
 			   H5HG_t *hobj/*out*/);
-H5_DLL void *H5HG_read(H5F_t *f, hid_t dxpl_id, H5HG_t *hobj, void *object, size_t *buf_size/*out*/);
+H5_DLL void *H5HG_read(H5F_t *f, hid_t dxpl_id, H5HG_t *hobj, void *object);
 H5_DLL int H5HG_link(H5F_t *f, hid_t dxpl_id, const H5HG_t *hobj, int adjust);
 H5_DLL herr_t H5HG_remove(H5F_t *f, hid_t dxpl_id, H5HG_t *hobj);
 
