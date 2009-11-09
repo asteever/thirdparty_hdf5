@@ -201,6 +201,7 @@ TOOLTEST() {
     fi
 
     # Run test.
+    #TESTING $H5DIFF $@
     (
 	#echo "#############################"
 	#echo "Expected output for '$H5DIFF $@'" 

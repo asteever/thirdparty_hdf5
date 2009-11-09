@@ -350,8 +350,6 @@ typedef struct H5F_blk_aggr_t H5F_blk_aggr_t;
 #define H5F_CRT_SHMSG_INDEX_MINSIZE_NAME "shmsg_message_minsize" /* Minimum size of messages in each index */
 #define H5F_CRT_SHMSG_LIST_MAX_NAME  "shmsg_list_max"   /* Shared message list maximum size */
 #define H5F_CRT_SHMSG_BTREE_MIN_NAME "shmsg_btree_min"  /* Shared message B-tree minimum size */
-#define H5F_CRT_FILE_SPACE_STRATEGY_NAME "file_space_strategy"  /* File space handling strategy */
-#define H5F_CRT_FREE_SPACE_THRESHOLD_NAME "free_space_threshold"  /* Free space section threshold */
 
 
 
@@ -403,11 +401,6 @@ typedef struct H5F_blk_aggr_t H5F_blk_aggr_t;
                                                     must compensate. -QAK
                                                  */
 
-/* Default file space handling strategy */
-#define H5F_FILE_SPACE_STRATEGY_DEF	        H5F_FILE_SPACE_ALL
-/* Default free space section threshold used by free-space managers */
-#define H5F_FREE_SPACE_THRESHOLD_DEF	        1
-
 /* Macros to define signatures of all objects in the file */
 
 /* Size of signature information (on disk) */
@@ -425,12 +418,7 @@ typedef struct H5F_blk_aggr_t H5F_blk_aggr_t;
 /* Extensible array signatures */
 #define H5EA_HDR_MAGIC                  "EAHD"          /* Header */
 #define H5EA_IBLOCK_MAGIC               "EAIB"          /* Index block */
-#define H5EA_SBLOCK_MAGIC               "EASB"          /* Super block */
 #define H5EA_DBLOCK_MAGIC               "EADB"          /* Data block */
-
-/* Fixed array signatures */
-#define H5FA_HDR_MAGIC                  "FAHD"          /* Header */
-#define H5FA_DBLOCK_MAGIC               "FADB"          /* Data block */
 
 /* Free space signatures */
 #define H5FS_HDR_MAGIC                  "FSHD"          /* Header */

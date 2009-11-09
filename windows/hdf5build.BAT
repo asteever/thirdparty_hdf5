@@ -80,7 +80,7 @@ rem Parse through the parameters sent to file, and set appropriate variables
             set hdf5_vs2005=true
             
         ) else if "%%a"=="/vs9" (
-            rem Use Visual Studio 2008
+            rem Use Visual Studio .NET 2003
             set hdf5_vs2008=true
             
         ) else if "%%a"=="/fort" (

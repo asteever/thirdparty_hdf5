@@ -1883,7 +1883,7 @@ h5tools_dump_region_data_points(hid_t region_space, hid_t region_id,
 
  done:
     free(ptdata);
-    
+
     if(H5Tclose(type_id) < 0)
         HERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Tclose failed");
 
@@ -2706,6 +2706,7 @@ h5tools_dump_mem(FILE *stream, const h5tool_format_t *info, hid_t obj_id, hid_t 
         H5E_THROW(FAIL, H5E_tools_min_id_g, "H5Sis_simple failed")
 
      H5_LEAVE(h5tools_dump_simple_mem(stream, info, obj_id, type, space, mem, indentlevel))
+
 CATCH
     return ret_value;
 }
@@ -2726,7 +2727,7 @@ int
 h5tools_print_datatype(h5tools_str_t *buffer, const h5tool_format_t *info, 
         h5tools_context_t *ctx, hid_t type) 
 {
-    HERR_INIT(int, FAIL)
+    HERR_INIT(int, SUCCEED)
     char        *mname;
     hid_t        mtype, str_type;
     unsigned     nmembers;
@@ -3027,7 +3028,7 @@ h5tools_print_datatype(h5tools_str_t *buffer, const h5tool_format_t *info,
         /* Type doesn't match any of above. */
         h5tools_str_append(buffer, "unknown_one_character_type;\n ");
 
-      done:
+  done:
         if(H5Tclose(str_type) < 0)
             HERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Tclose failed");
         if(H5Tclose(tmp_type) < 0)

@@ -43,9 +43,11 @@ $ copy [-.h5dump]check_h5dump.com     check_h5dump.com
 $ copy [-.h5ls]check_h5ls.com         check_h5ls.com
 $@check_h5dump.com
 $@check_h5ls.com
+$!
 $ set def 'hdf5toolstest_h5diff'
 $ copy [-]check_h5diff.com     check_h5diff.com
 $@check_h5diff.com
+$!
 $ set def 'hdf5toolstest_h5repack'
 $ copy [-]check_h5repack.com check_h5repack.com
 $@check_h5repack.com
@@ -55,7 +57,7 @@ $ copy [-]check_h5copy.com check_h5copy.com
 $@check_h5copy.com
 $!
 $ set def 'hdf5toolstest_h5import'
-$ copy [.-]check_h5import.com check_h5import.com
+$ copy [-]check_h5import.com check_h5import.com
 $@check_h5import.com
 $!
 $ set def 'hdf5toolstest_h5jam'

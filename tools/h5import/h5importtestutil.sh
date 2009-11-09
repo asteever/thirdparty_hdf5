@@ -60,61 +60,49 @@ cp $srcdir/testfiles/*.h5 tmp_testfiles/
 $RUNSERIAL ./h5importtest
 
 TESTING "ASCII I32 rank 3 - Output BE " ;
-TOOLTEST $srcdir/testfiles/txtin16.txt -c $srcdir/testfiles/txtin32.conf -o txtin32.h5
+TOOLTEST $srcdir/testfiles/in32.txt -c $srcdir/testfiles/textin32.conf -o test1.h5
 
 TESTING "ASCII I16 rank 3 - Output LE - CHUNKED - extended" 
-TOOLTEST $srcdir/testfiles/txtin16.txt -c $srcdir/testfiles/txtin16.conf -o txtin16.h5
-
+TOOLTEST $srcdir/testfiles/in16.txt -c $srcdir/testfiles/textin16.conf -o test2.h5
 
 TESTING "ASCII I8 - rank 3 - Output I8 LE-Chunked+Extended+Compressed " 
-TOOLTEST $srcdir/testfiles/txtin16.txt -c $srcdir/testfiles/txtin8.conf  -o txtin8.h5
+TOOLTEST $srcdir/testfiles/in16.txt -c $srcdir/testfiles/textin8.conf  -o test3.h5
 
 TESTING "ASCII UI32 - rank 3 - Output BE" 
-TOOLTEST $srcdir/testfiles/txtuin32.txt -c $srcdir/testfiles/txtuin32.conf -o txtuin32.h5
+TOOLTEST $srcdir/testfiles/in1.txt -c $srcdir/testfiles/textuin32.conf -o test4.h5
 
 TESTING "ASCII UI16 - rank 2 - Output LE+Chunked+Compressed " 
-TOOLTEST $srcdir/testfiles/txtuin32.txt -c $srcdir/testfiles/txtuin16.conf -o txtuin16.h5
+TOOLTEST $srcdir/testfiles/in1.txt -c $srcdir/testfiles/textuin16.conf -o test5.h5
 
 TESTING "ASCII F32 - rank 3 - Output LE " 
-TOOLTEST $srcdir/testfiles/txtfp32.txt -c $srcdir/testfiles/txtfp32.conf -o txtfp32.h5
-
+TOOLTEST $srcdir/testfiles/fp1.txt -c $srcdir/testfiles/textfp32.conf -o test6.h5
 
 TESTING "ASCII F64 - rank 3 - Output BE + CHUNKED+Extended+Compressed " 
-TOOLTEST $srcdir/testfiles/txtfp64.txt -c $srcdir/testfiles/txtfp64.conf -o txtfp64.h5
+TOOLTEST $srcdir/testfiles/fp2.txt -c $srcdir/testfiles/textfp64.conf -o test7.h5
 
 TESTING "BINARY F64 - rank 3 - Output LE+CHUNKED+Extended+Compressed " 
-TOOLTEST binfp64.bin -c $srcdir/testfiles/binfp64.conf -o binfp64.h5
-
+TOOLTEST binfp64.bin -c $srcdir/testfiles/binfp64.conf -o test8.h5
 
 TESTING "BINARY I16 - rank 3 - Output order LE + CHUNKED + extended " 
-TOOLTEST binin16.bin -c $srcdir/testfiles/binin16.conf -o binin16.h5
-
+TOOLTEST binin16.bin -c $srcdir/testfiles/binin16.conf -o test9.h5
 
 TESTING "BINARY I8 - rank 3 - Output I16LE + Chunked+Extended+Compressed " 
-TOOLTEST binin8.bin -c $srcdir/testfiles/binin8.conf  -o binin8.h5
-
+TOOLTEST binin8.bin -c $srcdir/testfiles/binin8.conf  -o test10.h5
 
 TESTING "BINARY I32 - rank 3 - Output BE + CHUNKED " 
-TOOLTEST binin32.bin -c $srcdir/testfiles/binin32.conf -o binin32.h5
-
+TOOLTEST binin32.bin -c $srcdir/testfiles/binin32.conf -o test11.h5
 
 TESTING "BINARY UI16 - rank 3 - Output byte BE + CHUNKED " 
-TOOLTEST binuin16.bin -c $srcdir/testfiles/binuin16.conf -o binuin16.h5
+TOOLTEST binuin16.bin -c $srcdir/testfiles/binuin16.conf -o test12.h5
 
 TESTING "BINARY UI32 - rank 3 - Output LE + CHUNKED " 
-TOOLTEST binuin32.bin -c $srcdir/testfiles/binuin32.conf -o binuin32.h5
-
+TOOLTEST binuin32.bin -c $srcdir/testfiles/binuin32.conf -o test13.h5
 
 TESTING "STR" 
-TOOLTEST $srcdir/testfiles/txtstr.txt -c $srcdir/testfiles/txtstr.conf -o txtstr.h5
-
-TESTING "BINARY I8 CR LF EOF" 
-TOOLTEST binin8w.bin -c $srcdir/testfiles/binin8w.conf -o binin8w.h5
+TOOLTEST $srcdir/testfiles/str.txt -c $srcdir/testfiles/textstr.conf -o test14.h5
 
 TESTING "ASCII F64 - rank 1 - INPUT-CLASS TEXTFPE " 
 TOOLTEST $srcdir/testfiles/in64.txt -c $srcdir/testfiles/textpfe.conf -o test15.h5
-
-
 
 rm -f  *.txt *.bin *.h5
 rm -rf tmp_testfiles

@@ -463,16 +463,11 @@ H5SM_create_index(H5F_t *f, H5SM_index_header_t *header, hid_t dxpl_id)
     } /* end if */
     /* index is a B-tree */
     else {
-        H5B2_create_t bt2_cparam;           /* v2 B-tree creation parameters */
-
         header->index_type = H5SM_BTREE;
 
-        bt2_cparam.cls = H5SM_INDEX;
-        bt2_cparam.node_size = (size_t)H5SM_B2_NODE_SIZE;
-        bt2_cparam.rrec_size = (size_t)H5SM_SOHM_ENTRY_SIZE(f);
-        bt2_cparam.split_percent = H5SM_B2_SPLIT_PERCENT;
-        bt2_cparam.merge_percent = H5SM_B2_MERGE_PERCENT;
-        if(H5B2_create(f, dxpl_id, &bt2_cparam, &tree_addr) < 0)
+        if(H5B2_create(f, dxpl_id, H5SM_INDEX, (size_t)H5SM_B2_NODE_SIZE,
+                  (size_t)H5SM_SOHM_ENTRY_SIZE(f), H5SM_B2_SPLIT_PERCENT,
+                  H5SM_B2_MERGE_PERCENT, &tree_addr) < 0)
             HGOTO_ERROR(H5E_BTREE, H5E_CANTCREATE, FAIL, "B-tree creation failed for SOHM index")
 
         header->index_addr = tree_addr;
@@ -564,7 +559,7 @@ H5SM_delete_index(H5F_t *f, H5SM_index_header_t *header, hid_t dxpl_id,
         HDassert(header->index_type == H5SM_BTREE);
 
         /* Delete from the B-tree. */
-        if(H5B2_delete(f, dxpl_id, header->index_addr, NULL, NULL) < 0)
+        if(H5B2_delete(f, dxpl_id, H5SM_INDEX, header->index_addr, NULL, NULL) < 0)
             HGOTO_ERROR(H5E_BTREE, H5E_CANTDELETE, FAIL, "unable to delete B-tree")
 
         /* Revert to list unless B-trees can have zero records */
@@ -688,7 +683,6 @@ H5SM_convert_list_to_btree(H5F_t *f, H5SM_index_header_t *header,
 {
     H5SM_list_t *list;                  /* Pointer to the existing message list */
     H5SM_mesg_key_t key;                /* Key for inserting records in v2 B-tree */
-    H5B2_create_t bt2_cparam;           /* v2 B-tree creation parameters */
     haddr_t     tree_addr;              /* New v2 B-tree's address */
     size_t      num_messages;		/* Number of messages being tracked */
     size_t      x;
@@ -704,12 +698,9 @@ H5SM_convert_list_to_btree(H5F_t *f, H5SM_index_header_t *header,
     list = *_list;
 
     /* Create the new v2 B-tree for tracking the messages */
-    bt2_cparam.cls = H5SM_INDEX;
-    bt2_cparam.node_size = (size_t)H5SM_B2_NODE_SIZE;
-    bt2_cparam.rrec_size = (size_t)H5SM_SOHM_ENTRY_SIZE(f);
-    bt2_cparam.split_percent = H5SM_B2_SPLIT_PERCENT;
-    bt2_cparam.merge_percent = H5SM_B2_MERGE_PERCENT;
-    if(H5B2_create(f, dxpl_id, &bt2_cparam, &tree_addr) < 0)
+    if(H5B2_create(f, dxpl_id, H5SM_INDEX, (size_t)H5SM_B2_NODE_SIZE,
+            (size_t)H5SM_SOHM_ENTRY_SIZE(f), H5SM_B2_SPLIT_PERCENT,
+            H5SM_B2_MERGE_PERCENT, &tree_addr) < 0)
         HGOTO_ERROR(H5E_BTREE, H5E_CANTCREATE, FAIL, "B-tree creation failed for SOHM index")
 
     /* Set up key values that all messages will use.  Since these messages
@@ -810,7 +801,7 @@ H5SM_convert_btree_to_list(H5F_t * f, H5SM_index_header_t * header, hid_t dxpl_i
     /* Delete the B-tree and have messages copy themselves to the
      * list as they're deleted
      */
-    if(H5B2_delete(f, dxpl_id, btree_addr, H5SM_btree_convert_to_list_op, list) < 0)
+    if(H5B2_delete(f, dxpl_id, H5SM_INDEX, btree_addr, H5SM_btree_convert_to_list_op, list) < 0)
         HGOTO_ERROR(H5E_BTREE, H5E_CANTDELETE, FAIL, "unable to delete B-tree")
 
 done:
@@ -2503,7 +2494,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5SM_ih_size(H5F_t *f, hid_t dxpl_id, hsize_t *hdr_size, H5_ih_info_t *ih_info)
+H5SM_ih_size(H5F_t *f, hid_t dxpl_id, H5F_info_t *finfo)
 {
     H5SM_master_table_t *table = NULL;          /* SOHM master table */
     H5HF_t              *fheap = NULL;          /* Fractal heap handle */
@@ -2515,15 +2506,14 @@ H5SM_ih_size(H5F_t *f, hid_t dxpl_id, hsize_t *hdr_size, H5_ih_info_t *ih_info)
     /* Sanity check */
     HDassert(f);
     HDassert(H5F_addr_defined(f->shared->sohm_addr));
-    HDassert(hdr_size);
-    HDassert(ih_info);
+    HDassert(finfo);
 
     /* Look up the master SOHM table */
     if(NULL == (table = (H5SM_master_table_t *)H5AC_protect(f, dxpl_id, H5AC_SOHM_TABLE, f->shared->sohm_addr, NULL, NULL, H5AC_READ)))
 	HGOTO_ERROR(H5E_CACHE, H5E_CANTPROTECT, FAIL, "unable to load SOHM master table")
 
     /* Get SOHM header size */
-    *hdr_size = (hsize_t) H5SM_TABLE_SIZE(f) +
+    finfo->sohm.hdr_size = (hsize_t) H5SM_TABLE_SIZE(f) +
                            (hsize_t)(table->num_indexes * H5SM_INDEX_HEADER_SIZE(f));
 
     /* Loop over all the indices for shared messages */
@@ -2531,11 +2521,11 @@ H5SM_ih_size(H5F_t *f, hid_t dxpl_id, hsize_t *hdr_size, H5_ih_info_t *ih_info)
         /* Get index storage size (for either B-tree or list) */
 	if(table->indexes[u].index_type == H5SM_BTREE) {
 	    if(H5F_addr_defined(table->indexes[u].index_addr))
-		if(H5B2_iterate_size(f, dxpl_id, H5SM_INDEX, table->indexes[u].index_addr, &(ih_info->index_size)) < 0)
+		if(H5B2_iterate_size(f, dxpl_id, H5SM_INDEX, table->indexes[u].index_addr, &(finfo->sohm.msgs_info.index_size)) < 0)
                     HGOTO_ERROR(H5E_BTREE, H5E_CANTGET, FAIL, "can't retrieve B-tree storage info")
         } /* end if */
         else if(table->indexes[u].index_type == H5SM_LIST)
-	    ih_info->index_size += H5SM_LIST_SIZE(f, table->indexes[u].list_max);
+	    finfo->sohm.msgs_info.index_size += H5SM_LIST_SIZE(f, table->indexes[u].list_max);
 
         /* Check for heap for this index */
 	if(H5F_addr_defined(table->indexes[u].heap_addr)) {
@@ -2544,7 +2534,7 @@ H5SM_ih_size(H5F_t *f, hid_t dxpl_id, hsize_t *hdr_size, H5_ih_info_t *ih_info)
                 HGOTO_ERROR(H5E_HEAP, H5E_CANTOPENOBJ, FAIL, "unable to open fractal heap")
 
             /* Get heap storage size */
-	    if(H5HF_size(fheap, dxpl_id, &(ih_info->heap_size)) < 0)
+	    if(H5HF_size(fheap, dxpl_id, &(finfo->sohm.msgs_info.heap_size)) < 0)
 		HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, FAIL, "can't retrieve fractal heap storage info")
 
             /* Release the fractal heap */

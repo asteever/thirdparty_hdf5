@@ -21,7 +21,7 @@ rem .  /vs9              Build HDF5 using Visual Studio 2008
 rem .                    Note: Default is Visual Studio 2005
 rem .  /fort             Build and test HDF5 with Fortran libraries
 rem .  /useenv           Build HDF5 using compiler settings defined
-rem .                     in the environment, rather than the IDE.
+rem .                    in the environment, rather than the IDE.
 rem .  /ivf101           Build HDF5 Fortran using Intel Visual Fortran 10.1
 rem .  /ivf91            Note: Default is Intel Visual Fortran 9.1
 rem .  /log              Log the build and test results in files defined by
@@ -82,7 +82,7 @@ rem Parse through the parameters sent to file, and set appropriate variables
         if "%%a"=="/vs8" (
             rem Use Visual Studio 2005 to build
             set hdf5_vs2005=true
-            
+    
         ) else if "%%a"=="/vs9" (
             rem Use Visual Studio 2008 to build
             set hdf5_vs2008=true
@@ -94,7 +94,7 @@ rem Parse through the parameters sent to file, and set appropriate variables
         ) else if "%%a"=="/ivf91" (
             rem Enable Fortran
             set hdf5_ivf91=true
-            
+			
         ) else if "%%a"=="/ivf101" (
             rem Enable Fortran
             set hdf5_ivf101=true
@@ -134,7 +134,7 @@ rem Setup our environment
     if defined hdf5_vs2005 (
         set hdf5build_params=%hdf5build_params% /vs8
     )
-    
+
     if defined hdf5_vs2008 (
         set hdf5build_params=%hdf5build_params% /vs9
     )

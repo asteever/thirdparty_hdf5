@@ -100,7 +100,6 @@ const H5AC_class_t H5AC_FSPACE_HDR[1] = {{
     (H5AC_flush_func_t)H5FS_cache_hdr_flush,
     (H5AC_dest_func_t)H5FS_cache_hdr_dest,
     (H5AC_clear_func_t)H5FS_cache_hdr_clear,
-    (H5AC_notify_func_t)NULL,
     (H5AC_size_func_t)H5FS_cache_hdr_size,
 }};
 
@@ -111,7 +110,6 @@ const H5AC_class_t H5AC_FSPACE_SINFO[1] = {{
     (H5AC_flush_func_t)H5FS_cache_sinfo_flush,
     (H5AC_dest_func_t)H5FS_cache_sinfo_dest,
     (H5AC_clear_func_t)H5FS_cache_sinfo_clear,
-    (H5AC_notify_func_t)NULL,
     (H5AC_size_func_t)H5FS_cache_sinfo_size,
 }};
 
@@ -334,7 +332,10 @@ HDfprintf(stderr, "%s: fspace->alloc_sect_size = %Hu, fspace->sect_size = %Hu\n"
                 if(H5FS_cache_sinfo_flush(f, dxpl_id, FALSE, fspace->sect_addr, fspace->sinfo, NULL) < 0)
                     HGOTO_ERROR(H5E_FSPACE, H5E_CANTFLUSH, FAIL, "unable to save free space section info to disk")
             } /* end if */
-
+            else {
+                /* Sanity check that section info doesn't have address */
+                HDassert(!H5F_addr_defined(fspace->sect_addr));
+            } /* end else */
 #ifdef QAK
 HDfprintf(stderr, "%s: Check 2.0\n", FUNC);
 HDfprintf(stderr, "%s: fspace->sect_addr = %a, fspace->sinfo = %p\n", FUNC, fspace->sect_addr, fspace->sinfo);
@@ -345,9 +346,15 @@ HDfprintf(stderr, "%s: fspace->alloc_sect_size = %Hu, fspace->sect_size = %Hu\n"
             fspace->sinfo->dirty = FALSE;
         } /* end if */
     } /* end if */
-    else if(fspace->serial_sect_count > 0)
-	/* Sanity check that section info has address */
-	HDassert(H5F_addr_defined(fspace->sect_addr));
+    else {
+        /* Just sanity checks... */
+        if(fspace->serial_sect_count > 0)
+            /* Sanity check that section info has address */
+            HDassert(H5F_addr_defined(fspace->sect_addr));
+        else
+            /* Sanity check that section info doesn't have address */
+            HDassert(!H5F_addr_defined(fspace->sect_addr));
+    } /* end else */
 
     if(fspace->cache_info.is_dirty) {
         uint8_t	*hdr;                   /* Pointer to header buffer */

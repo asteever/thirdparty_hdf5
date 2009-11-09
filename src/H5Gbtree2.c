@@ -104,9 +104,8 @@ static herr_t H5G_dense_fh_name_cmp(const void *obj, size_t obj_len, void *op_da
 /* Package Variables */
 /*********************/
 /* v2 B-tree class for indexing 'name' field of links */
-const H5B2_class_t H5G_BT2_NAME[1]={{   /* B-tree class information */
+const H5B2_class_t H5G_BT2_NAME[1]={{     /* B-tree class information */
     H5B2_GRP_DENSE_NAME_ID,             /* Type of B-tree */
-    "H5B2_GRP_DENSE_NAME_ID",           /* Name of B-tree class */
     sizeof(H5G_dense_bt2_name_rec_t),   /* Size of native record */
     H5G_dense_btree2_name_store,        /* Record storage callback */
     H5G_dense_btree2_name_compare,      /* Record comparison callback */
@@ -118,7 +117,6 @@ const H5B2_class_t H5G_BT2_NAME[1]={{   /* B-tree class information */
 /* v2 B-tree class for indexing 'creation order' field of links */
 const H5B2_class_t H5G_BT2_CORDER[1]={{ /* B-tree class information */
     H5B2_GRP_DENSE_CORDER_ID,           /* Type of B-tree */
-    "H5B2_GRP_DENSE_CORDER_ID",         /* Name of B-tree class */
     sizeof(H5G_dense_bt2_corder_rec_t), /* Size of native record */
     H5G_dense_btree2_corder_store,      /* Record storage callback */
     H5G_dense_btree2_corder_compare,    /* Record comparison callback */
@@ -363,8 +361,8 @@ H5G_dense_btree2_name_debug(FILE *stream, const H5F_t UNUSED *f, hid_t UNUSED dx
 
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5G_dense_btree2_name_debug)
 
-    HDfprintf(stream, "%*s%-*s {%x, ", indent, "", fwidth, "Record:",
-        (unsigned)nrecord->hash);
+    HDfprintf(stream, "%*s%-*s {%lx, ", indent, "", fwidth, "Record:",
+        nrecord->hash);
     for(u = 0; u < H5G_DENSE_FHEAP_ID_LEN; u++)
         HDfprintf(stderr, "%02x%s", nrecord->id[u], (u < (H5G_DENSE_FHEAP_ID_LEN - 1) ? " " : "}\n"));
 
@@ -529,8 +527,8 @@ H5G_dense_btree2_corder_debug(FILE *stream, const H5F_t UNUSED *f, hid_t UNUSED 
 
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5G_dense_btree2_corder_debug)
 
-    HDfprintf(stream, "%*s%-*s {%llu, ", indent, "", fwidth, "Record:",
-        (unsigned long long)nrecord->corder);
+    HDfprintf(stream, "%*s%-*s {%Hu, ", indent, "", fwidth, "Record:",
+        nrecord->corder);
     for(u = 0; u < H5G_DENSE_FHEAP_ID_LEN; u++)
         HDfprintf(stderr, "%02x%s", nrecord->id[u], (u < (H5G_DENSE_FHEAP_ID_LEN - 1) ? " " : "}\n"));
 

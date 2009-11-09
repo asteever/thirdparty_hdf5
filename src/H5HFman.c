@@ -44,19 +44,6 @@
 /* Local Macros */
 /****************/
 
-/* Macro to check if we can apply all filters in the pipeline.  Use whenever
- * performing a modification operation */
- #define H5HF_MAN_WRITE_CHECK_PLINE(HDR)                                       \
-{                                                                              \
-    if(!((HDR)->checked_filters)) {                                            \
-        if((HDR)->pline.nused)                                                 \
-            if(H5Z_can_apply_direct(&((HDR)->pline)) < 0)                      \
-                HGOTO_ERROR(H5E_ARGS, H5E_CANTINIT, FAIL, "I/O filters can't operate on this heap") \
-                                                                               \
-        (HDR)->checked_filters = TRUE;                                         \
-    } /* end if */                                                             \
-}
-
 
 /******************/
 /* Local Typedefs */
@@ -128,9 +115,6 @@ HDfprintf(stderr, "%s: obj_size = %Zu\n", FUNC, obj_size);
     HDassert(obj_size > 0);
     HDassert(obj);
     HDassert(id);
-
-    /* Check pipeline */
-    H5HF_MAN_WRITE_CHECK_PLINE(hdr)
 
     /* Look for free space */
     if((node_found = H5HF_space_find(hdr, dxpl_id, (hsize_t)obj_size, &sec_node)) < 0)
@@ -288,9 +272,6 @@ H5HF_man_op_real(H5HF_hdr_t *hdr, hid_t dxpl_id, const uint8_t *id,
 
     /* Set the access mode for the direct block */
     if(op_flags & H5HF_OP_MODIFY) {
-        /* Check pipeline */
-        H5HF_MAN_WRITE_CHECK_PLINE(hdr)
-
         dblock_access = H5AC_WRITE;
         dblock_cache_flags = H5AC__DIRTIED_FLAG;
     } /* end if */
@@ -551,9 +532,6 @@ H5HF_man_remove(H5HF_hdr_t *hdr, hid_t dxpl_id, const uint8_t *id)
      */
     HDassert(hdr);
     HDassert(id);
-
-    /* Check pipeline */
-    H5HF_MAN_WRITE_CHECK_PLINE(hdr)
 
     /* Skip over the flag byte */
     id++;

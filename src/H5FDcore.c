@@ -378,9 +378,6 @@ done:
  *              Raymond Lu, 2006-11-30
  *              Enabled the driver to read an existing file depending on
  *              the setting of the backing_store and file open flags.
- *
- *              Allen Byrne, 2008-1-23
- *              changed if of fapl_id to assert
  *-------------------------------------------------------------------------
  */
 static H5FD_t *
@@ -404,10 +401,11 @@ H5FD_core_open(const char *name, unsigned flags, hid_t fapl_id,
         HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, NULL, "bogus maxaddr")
     if(ADDR_OVERFLOW(maxaddr))
         HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, NULL, "maxaddr overflow")
-    assert(H5P_DEFAULT != fapl_id);
-	if(NULL == (plist = (H5P_genplist_t *)H5I_object(fapl_id)))
-		HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a file access property list")
-	fa = (H5FD_core_fapl_t *)H5P_get_driver_info(plist);
+    if(H5P_DEFAULT != fapl_id) {
+        if(NULL == (plist = (H5P_genplist_t *)H5I_object(fapl_id)))
+            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a file access property list")
+        fa = (H5FD_core_fapl_t *)H5P_get_driver_info(plist);
+    } /* end if */
 
     /* Build the open flags */
     o_flags = (H5F_ACC_RDWR & flags) ? O_RDWR : O_RDONLY;
@@ -988,7 +986,7 @@ if(file->eof < new_eof)
         /* Update backing store, if using it */
         if(file->fd >= 0 && file->backing_store) {
 #ifdef H5_VMS
-            /* Reset seek offset to the beginning of the file, so that the file isn't
+            /* Reset seek offset to the beginning of the file, so that the file isn't 
              * re-extended later.  This may happen on Open VMS. */
             if(-1 == HDlseek(file->fd, 0, SEEK_SET))
                 HSYS_GOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to seek to proper position")

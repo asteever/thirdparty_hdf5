@@ -103,7 +103,6 @@ const H5AC_class_t H5AC_FHEAP_HDR[1] = {{
     (H5AC_flush_func_t)H5HF_cache_hdr_flush,
     (H5AC_dest_func_t)H5HF_cache_hdr_dest,
     (H5AC_clear_func_t)H5HF_cache_hdr_clear,
-    (H5AC_notify_func_t)NULL,
     (H5AC_size_func_t)H5HF_cache_hdr_size,
 }};
 
@@ -114,7 +113,6 @@ const H5AC_class_t H5AC_FHEAP_IBLOCK[1] = {{
     (H5AC_flush_func_t)H5HF_cache_iblock_flush,
     (H5AC_dest_func_t)H5HF_cache_iblock_dest,
     (H5AC_clear_func_t)H5HF_cache_iblock_clear,
-    (H5AC_notify_func_t)NULL,
     (H5AC_size_func_t)H5HF_cache_iblock_size,
 }};
 
@@ -125,7 +123,6 @@ const H5AC_class_t H5AC_FHEAP_DBLOCK[1] = {{
     (H5AC_flush_func_t)H5HF_cache_dblock_flush,
     (H5AC_dest_func_t)H5HF_cache_dblock_dest,
     (H5AC_clear_func_t)H5HF_cache_dblock_clear,
-    (H5AC_notify_func_t)NULL,
     (H5AC_size_func_t)H5HF_cache_dblock_size,
 }};
 
@@ -434,8 +431,7 @@ done:
     if(wb && H5WB_unwrap(wb) < 0)
         HDONE_ERROR(H5E_HEAP, H5E_CLOSEERROR, NULL, "can't close wrapped buffer")
     if(!ret_value && hdr)
-        if(H5HF_hdr_free(hdr) < 0)
-            HDONE_ERROR(H5E_HEAP, H5E_CANTRELEASE, NULL, "unable to release fractal heap header")
+        (void)H5HF_cache_hdr_dest(f, hdr);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5HF_cache_hdr_load() */ /*lint !e818 Can't make udata a pointer to const */
@@ -482,6 +478,9 @@ HDfprintf(stderr, "%s: Flushing heap header, addr = %a, destroy = %u\n", FUNC, a
         size_t	size;           /* Header size on disk */
         uint8_t heap_flags;     /* Status flags for heap */
         uint32_t metadata_chksum; /* Computed metadata checksum value */
+
+        /* Sanity check */
+        HDassert(hdr->dirty);
 
         /* Set the shared heap header's file context for this operation */
         hdr->f = f;
@@ -567,6 +566,7 @@ HDfprintf(stderr, "%s: Flushing heap header, addr = %a, destroy = %u\n", FUNC, a
 	if(H5F_block_write(f, H5FD_MEM_FHEAP_HDR, addr, size, dxpl_id, buf) < 0)
 	    HGOTO_ERROR(H5E_HEAP, H5E_CANTFLUSH, FAIL, "unable to save fractal heap header to disk")
 
+	hdr->dirty = FALSE;
 	hdr->cache_info.is_dirty = FALSE;
     } /* end if */
 
@@ -620,9 +620,16 @@ H5HF_cache_hdr_dest(H5F_t *f, H5HF_hdr_t *hdr)
             HGOTO_ERROR(H5E_HEAP, H5E_CANTFREE, FAIL, "unable to free fractal heap header")
     } /* end if */
 
+    /* Free the block size lookup table for the doubling table */
+    H5HF_dtable_dest(&hdr->man_dtable);
+
+    /* Release any I/O pipeline filter information */
+    if(hdr->pline.nused)
+        H5O_msg_reset(H5O_PLINE_ID, &(hdr->pline));
+
     /* Free the shared info itself */
-    if(H5HF_hdr_free(hdr) < 0)
-        HGOTO_ERROR(H5E_HEAP, H5E_CANTRELEASE, FAIL, "unable to release fractal heap header")
+    (void)H5FL_FREE(H5HF_hdr_t, hdr);
+
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5HF_cache_hdr_dest() */
@@ -1309,6 +1316,7 @@ H5HF_cache_dblock_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void *_size,
     /* Set block's internal information */
     dblock->size = *size;
     dblock->file_size = 0;
+    dblock->blk_off_size = H5HF_SIZEOF_OFFSET_LEN(dblock->size);
 
     /* Allocate block buffer */
 /* XXX: Change to using free-list factories */
