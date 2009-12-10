@@ -44,19 +44,6 @@
 /* Local Macros */
 /****************/
 
-/* Macro to check if we can apply all filters in the pipeline.  Use whenever
- * performing a modification operation */
- #define H5HF_MAN_WRITE_CHECK_PLINE(HDR)                                       \
-{                                                                              \
-    if(!((HDR)->checked_filters)) {                                            \
-        if((HDR)->pline.nused)                                                 \
-            if(H5Z_can_apply_direct(&((HDR)->pline)) < 0)                      \
-                HGOTO_ERROR(H5E_ARGS, H5E_CANTINIT, FAIL, "I/O filters can't operate on this heap") \
-                                                                               \
-        (HDR)->checked_filters = TRUE;                                         \
-    } /* end if */                                                             \
-}
-
 
 /******************/
 /* Local Typedefs */
@@ -129,9 +116,6 @@ HDfprintf(stderr, "%s: obj_size = %Zu\n", FUNC, obj_size);
     HDassert(obj);
     HDassert(id);
 
-    /* Check pipeline */
-    H5HF_MAN_WRITE_CHECK_PLINE(hdr)
-
     /* Look for free space */
     if((node_found = H5HF_space_find(hdr, dxpl_id, (hsize_t)obj_size, &sec_node)) < 0)
         HGOTO_ERROR(H5E_HEAP, H5E_CANTALLOC, FAIL, "can't locate free space in fractal heap")
@@ -190,8 +174,7 @@ HDfprintf(stderr, "%s: sec_node->u.single.par_entry = %u\n", FUNC, sec_node->u.s
     /* Insert object into block */
 
     /* Get the offset of the object within the block */
-    H5_CHECK_OVERFLOW((sec_node->sect_info.addr - dblock->block_off), hsize_t, size_t);
-    blk_off = (size_t)(sec_node->sect_info.addr - dblock->block_off);
+    blk_off = sec_node->sect_info.addr - dblock->block_off;
 #ifdef QAK
 HDfprintf(stderr, "%s: blk_off = %Zu\n", FUNC, blk_off);
 HDfprintf(stderr, "%s: dblock->block_off = %Hu\n", FUNC, dblock->block_off);
@@ -263,7 +246,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5HF_man_op_real(H5HF_hdr_t *hdr, hid_t dxpl_id, const uint8_t *id,
+H5HF_man_op_real(H5HF_hdr_t *hdr, hid_t dxpl_id, const uint8_t *id, 
     H5HF_operator_t op, void *op_data, unsigned op_flags)
 {
     H5HF_direct_t *dblock = NULL;       /* Pointer to direct block to query */
@@ -288,9 +271,6 @@ H5HF_man_op_real(H5HF_hdr_t *hdr, hid_t dxpl_id, const uint8_t *id,
 
     /* Set the access mode for the direct block */
     if(op_flags & H5HF_OP_MODIFY) {
-        /* Check pipeline */
-        H5HF_MAN_WRITE_CHECK_PLINE(hdr)
-
         dblock_access = H5AC_WRITE;
         dblock_cache_flags = H5AC__DIRTIED_FLAG;
     } /* end if */
@@ -348,8 +328,7 @@ HDfprintf(stderr, "%s: entry address = %a\n", FUNC, iblock->ents[entry].addr);
 
         /* Set direct block info */
         dblock_addr =  iblock->ents[entry].addr;
-        H5_CHECK_OVERFLOW((hdr->man_dtable.row_block_size[entry / hdr->man_dtable.cparam.width]), hsize_t, size_t);
-        dblock_size =  (size_t)hdr->man_dtable.row_block_size[entry / hdr->man_dtable.cparam.width];
+        dblock_size =  hdr->man_dtable.row_block_size[entry / hdr->man_dtable.cparam.width];
 
         /* Check for offset of invalid direct block */
         if(!H5F_addr_defined(dblock_addr)) {
@@ -552,9 +531,6 @@ H5HF_man_remove(H5HF_hdr_t *hdr, hid_t dxpl_id, const uint8_t *id)
     HDassert(hdr);
     HDassert(id);
 
-    /* Check pipeline */
-    H5HF_MAN_WRITE_CHECK_PLINE(hdr)
-
     /* Skip over the flag byte */
     id++;
 
@@ -606,8 +582,7 @@ HDfprintf(stderr, "%s: entry address = %a\n", FUNC, iblock->ents[dblock_entry].a
             HGOTO_ERROR(H5E_HEAP, H5E_BADRANGE, FAIL, "fractal heap ID not in allocated direct block")
 
         /* Set direct block info */
-        H5_CHECK_OVERFLOW((hdr->man_dtable.row_block_size[dblock_entry / hdr->man_dtable.cparam.width]), hsize_t, size_t);
-        dblock_size =  (size_t)(hdr->man_dtable.row_block_size[dblock_entry / hdr->man_dtable.cparam.width]);
+        dblock_size =  hdr->man_dtable.row_block_size[dblock_entry / hdr->man_dtable.cparam.width];
 
         /* Compute the direct block's offset in the heap's address space */
         /* (based on parent indirect block's block offset) */

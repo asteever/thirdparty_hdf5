@@ -33,9 +33,6 @@ SCRIPT_DEPEND=h5copy$(EXEEXT)
 bin_PROGRAMS=h5copy
 check_PROGRAMS=$(TEST_PROG)
 
-# Add h5copy specific linker flags here
-h5copy_LDFLAGS = $(LT_STATIC_EXEC) $(AM_LDFLAGS)
-
 # source file for the test file generator
 h5copygentest_SOURCES=h5copygentest.c
 

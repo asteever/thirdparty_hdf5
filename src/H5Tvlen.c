@@ -123,7 +123,7 @@ H5Tvlen_create(hid_t base_id)
         HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "invalid VL location")
 
     /* Atomize the type */
-    if((ret_value = H5I_register(H5I_DATATYPE, dt, TRUE)) < 0)
+    if((ret_value = H5I_register(H5I_DATATYPE, dt)) < 0)
         HGOTO_ERROR(H5E_DATATYPE, H5E_CANTREGISTER, FAIL, "unable to register datatype")
 
 done:
@@ -203,63 +203,68 @@ done:
  * Programmer:	Quincey Koziol
  *		Friday, June 4, 1999
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 htri_t
 H5T_vlen_set_loc(const H5T_t *dt, H5F_t *f, H5T_loc_t loc)
 {
-    htri_t ret_value = FALSE;   /* Indicate success, but no location change */
+    htri_t ret_value = 0;       /* Indicate that success, but no location change */
 
     FUNC_ENTER_NOAPI_NOINIT(H5T_vlen_set_loc)
 
     /* check parameters */
-    HDassert(dt);
-    HDassert(loc >= H5T_LOC_BADLOC && loc < H5T_LOC_MAXLOC);
+    assert(dt);
+    assert(loc>H5T_LOC_BADLOC && loc<H5T_LOC_MAXLOC);
 
     /* Only change the location if it's different */
     if(loc != dt->shared->u.vlen.loc || f != dt->shared->u.vlen.f) {
+        /* Indicate that the location changed */
+        ret_value=TRUE;
+
         switch(loc) {
             case H5T_LOC_MEMORY:   /* Memory based VL datatype */
-                HDassert(NULL == f);
+                assert(f==NULL);
 
                 /* Mark this type as being stored in memory */
-                dt->shared->u.vlen.loc = H5T_LOC_MEMORY;
+                dt->shared->u.vlen.loc=H5T_LOC_MEMORY;
 
-                if(dt->shared->u.vlen.type == H5T_VLEN_SEQUENCE) {
+                if(dt->shared->u.vlen.type==H5T_VLEN_SEQUENCE) {
                     /* size in memory, disk size is different */
                     dt->shared->size = sizeof(hvl_t);
 
                     /* Set up the function pointers to access the VL sequence in memory */
-                    dt->shared->u.vlen.getlen = H5T_vlen_seq_mem_getlen;
-                    dt->shared->u.vlen.getptr = H5T_vlen_seq_mem_getptr;
-                    dt->shared->u.vlen.isnull = H5T_vlen_seq_mem_isnull;
-                    dt->shared->u.vlen.read = H5T_vlen_seq_mem_read;
-                    dt->shared->u.vlen.write = H5T_vlen_seq_mem_write;
-                    dt->shared->u.vlen.setnull = H5T_vlen_seq_mem_setnull;
-                } else if(dt->shared->u.vlen.type == H5T_VLEN_STRING) {
+                    dt->shared->u.vlen.getlen=H5T_vlen_seq_mem_getlen;
+                    dt->shared->u.vlen.getptr=H5T_vlen_seq_mem_getptr;
+                    dt->shared->u.vlen.isnull=H5T_vlen_seq_mem_isnull;
+                    dt->shared->u.vlen.read=H5T_vlen_seq_mem_read;
+                    dt->shared->u.vlen.write=H5T_vlen_seq_mem_write;
+                    dt->shared->u.vlen.setnull=H5T_vlen_seq_mem_setnull;
+                } else if(dt->shared->u.vlen.type==H5T_VLEN_STRING) {
                     /* size in memory, disk size is different */
                     dt->shared->size = sizeof(char *);
 
                     /* Set up the function pointers to access the VL string in memory */
-                    dt->shared->u.vlen.getlen = H5T_vlen_str_mem_getlen;
-                    dt->shared->u.vlen.getptr = H5T_vlen_str_mem_getptr;
-                    dt->shared->u.vlen.isnull = H5T_vlen_str_mem_isnull;
-                    dt->shared->u.vlen.read = H5T_vlen_str_mem_read;
-                    dt->shared->u.vlen.write = H5T_vlen_str_mem_write;
-                    dt->shared->u.vlen.setnull = H5T_vlen_str_mem_setnull;
+                    dt->shared->u.vlen.getlen=H5T_vlen_str_mem_getlen;
+                    dt->shared->u.vlen.getptr=H5T_vlen_str_mem_getptr;
+                    dt->shared->u.vlen.isnull=H5T_vlen_str_mem_isnull;
+                    dt->shared->u.vlen.read=H5T_vlen_str_mem_read;
+                    dt->shared->u.vlen.write=H5T_vlen_str_mem_write;
+                    dt->shared->u.vlen.setnull=H5T_vlen_str_mem_setnull;
                 } else {
-                    HDassert(0 && "Invalid VL type");
+                    assert(0 && "Invalid VL type");
                 }
 
                 /* Reset file ID (since this VL is in memory) */
-                dt->shared->u.vlen.f = NULL;
+                dt->shared->u.vlen.f=NULL;
                 break;
 
             case H5T_LOC_DISK:   /* Disk based VL datatype */
-                HDassert(f);
+                assert(f);
 
                 /* Mark this type as being stored on disk */
-                dt->shared->u.vlen.loc = H5T_LOC_DISK;
+                dt->shared->u.vlen.loc=H5T_LOC_DISK;
 
                 /*
                  * Size of element on disk is 4 bytes for the length, plus the size
@@ -270,29 +275,20 @@ H5T_vlen_set_loc(const H5T_t *dt, H5F_t *f, H5T_loc_t loc)
 
                 /* Set up the function pointers to access the VL information on disk */
                 /* VL sequences and VL strings are stored identically on disk, so use the same functions */
-                dt->shared->u.vlen.getlen = H5T_vlen_disk_getlen;
-                dt->shared->u.vlen.getptr = H5T_vlen_disk_getptr;
-                dt->shared->u.vlen.isnull = H5T_vlen_disk_isnull;
-                dt->shared->u.vlen.read = H5T_vlen_disk_read;
-                dt->shared->u.vlen.write = H5T_vlen_disk_write;
-                dt->shared->u.vlen.setnull = H5T_vlen_disk_setnull;
+                dt->shared->u.vlen.getlen=H5T_vlen_disk_getlen;
+                dt->shared->u.vlen.getptr=H5T_vlen_disk_getptr;
+                dt->shared->u.vlen.isnull=H5T_vlen_disk_isnull;
+                dt->shared->u.vlen.read=H5T_vlen_disk_read;
+                dt->shared->u.vlen.write=H5T_vlen_disk_write;
+                dt->shared->u.vlen.setnull=H5T_vlen_disk_setnull;
 
                 /* Set file ID (since this VL is on disk) */
-                dt->shared->u.vlen.f = f;
-                break;
-            
-            case H5T_LOC_BADLOC:
-                /* Allow undefined location. In H5Odtype.c, H5O_dtype_decode sets undefined
-                 * location for VL type and leaves it for the caller to decide.
-                 */  
+                dt->shared->u.vlen.f=f;
                 break;
 
             default:
                 HGOTO_ERROR(H5E_DATATYPE, H5E_BADRANGE, FAIL, "invalid VL datatype location")
         } /* end switch */ /*lint !e788 All appropriate cases are covered */
-
-        /* Indicate that the location changed */
-        ret_value = TRUE;
     } /* end if */
 
 done:
@@ -310,35 +306,21 @@ done:
  * Programmer:	Quincey Koziol
  *		Wednesday, June 2, 1999
  *
- * Modifications:   Neil Fortner
- *      Friday, August 22, 2008
- *      Changed function to be tolerant of an hvl_t that is not aligned
- *      properly in _vl.
+ * Modifications:
  *
  *-------------------------------------------------------------------------
  */
 static ssize_t
 H5T_vlen_seq_mem_getlen(const void *_vl)
 {
-#ifdef H5_NO_ALIGNMENT_RESTRICTIONS
     const hvl_t *vl=(const hvl_t *)_vl;   /* Pointer to the user's hvl_t information */
-#else
-    hvl_t vl;             /* User's hvl_t information */
-#endif
 
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5T_vlen_seq_mem_getlen)
 
-    /* check parameters, return result */
-#ifdef H5_NO_ALIGNMENT_RESTRICTIONS
-    HDassert(vl);
+    /* check parameters */
+    assert(vl);
 
     FUNC_LEAVE_NOAPI((ssize_t)vl->len)
-#else
-    HDassert(_vl);
-    HDmemcpy(&vl, _vl, sizeof(hvl_t));
-
-    FUNC_LEAVE_NOAPI((ssize_t)vl.len)
-#endif
 }   /* end H5T_vlen_seq_mem_getlen() */
 
 
@@ -352,35 +334,21 @@ H5T_vlen_seq_mem_getlen(const void *_vl)
  * Programmer:	Quincey Koziol
  *		Saturday, June 12, 2004
  *
- * Modifications:   Neil Fortner
- *      Friday, August 22, 2008
- *      Changed function to be tolerant of an hvl_t that is not aligned
- *      properly in _vl.
+ * Modifications:
  *
  *-------------------------------------------------------------------------
  */
 static void *
 H5T_vlen_seq_mem_getptr(void *_vl)
 {
-#ifdef H5_NO_ALIGNMENT_RESTRICTIONS
-    const hvl_t *vl=(const hvl_t *)_vl;   /* Pointer to the user's hvl_t information */
-#else
-    hvl_t vl;             /* User's hvl_t information */
-#endif
+    hvl_t *vl=(hvl_t *)_vl;   /* Pointer to the user's hvl_t information */
 
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5T_vlen_seq_mem_getptr)
 
-    /* check parameters, return result */
-#ifdef H5_NO_ALIGNMENT_RESTRICTIONS
-    HDassert(vl);
+    /* check parameters */
+    assert(vl);
 
     FUNC_LEAVE_NOAPI(vl->p)
-#else
-    HDassert(_vl);
-    HDmemcpy(&vl, _vl, sizeof(hvl_t));
-
-    FUNC_LEAVE_NOAPI(vl.p)
-#endif
 }   /* end H5T_vlen_seq_mem_getptr() */
 
 
@@ -394,10 +362,7 @@ H5T_vlen_seq_mem_getptr(void *_vl)
  * Programmer:	Quincey Koziol
  *		Saturday, November 8, 2003
  *
- * Modifications:   Neil Fortner
- *      Friday, August 22, 2008
- *      Changed function to be tolerant of an hvl_t that is not aligned
- *      properly in _vl.
+ * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -405,25 +370,14 @@ H5T_vlen_seq_mem_getptr(void *_vl)
 static htri_t
 H5T_vlen_seq_mem_isnull(const H5F_t UNUSED *f, void *_vl)
 {
-#ifdef H5_NO_ALIGNMENT_RESTRICTIONS
-    const hvl_t *vl=(const hvl_t *)_vl;   /* Pointer to the user's hvl_t information */
-#else
-    hvl_t vl;             /* User's hvl_t information */
-#endif
+    hvl_t *vl=(hvl_t *)_vl;   /* Pointer to the user's hvl_t information */
 
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5T_vlen_seq_mem_isnull)
 
-    /* check parameters, return result */
-#ifdef H5_NO_ALIGNMENT_RESTRICTIONS
-    HDassert(vl);
+    /* check parameters */
+    assert(vl);
 
     FUNC_LEAVE_NOAPI((vl->len==0 || vl->p==NULL) ? TRUE : FALSE)
-#else
-    HDassert(_vl);
-    HDmemcpy(&vl, _vl, sizeof(hvl_t));
-
-    FUNC_LEAVE_NOAPI((vl.len==0 || vl.p==NULL) ? TRUE : FALSE)
-#endif
 }   /* end H5T_vlen_seq_mem_isnull() */
 
 
@@ -437,10 +391,7 @@ H5T_vlen_seq_mem_isnull(const H5F_t UNUSED *f, void *_vl)
  * Programmer:	Quincey Koziol
  *		Wednesday, June 2, 1999
  *
- * Modifications:   Neil Fortner
- *      Friday, August 22, 2008
- *      Changed function to be tolerant of an hvl_t that is not aligned
- *      properly in _vl.
+ * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -448,27 +399,15 @@ H5T_vlen_seq_mem_isnull(const H5F_t UNUSED *f, void *_vl)
 static herr_t
 H5T_vlen_seq_mem_read(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, void *_vl, void *buf, size_t len)
 {
-#ifdef H5_NO_ALIGNMENT_RESTRICTIONS
-    const hvl_t *vl=(const hvl_t *)_vl;   /* Pointer to the user's hvl_t information */
-#else
-    hvl_t vl;             /* User's hvl_t information */
-#endif
+    hvl_t *vl=(hvl_t *)_vl;   /* Pointer to the user's hvl_t information */
 
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5T_vlen_seq_mem_read)
 
-    /* check parameters, copy data */
-    HDassert(buf);
-#ifdef H5_NO_ALIGNMENT_RESTRICTIONS
-    HDassert(vl && vl->p);
+    /* check parameters */
+    assert(vl && vl->p);
+    assert(buf);
 
     HDmemcpy(buf,vl->p,len);
-#else
-    HDassert(_vl);
-    HDmemcpy(&vl, _vl, sizeof(hvl_t));
-    HDassert(vl.p);
-
-    HDmemcpy(buf,vl.p,len);
-#endif
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 }   /* end H5T_vlen_seq_mem_read() */
@@ -499,8 +438,8 @@ H5T_vlen_seq_mem_write(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const H5T_vlen_all
     FUNC_ENTER_NOAPI_NOINIT(H5T_vlen_seq_mem_write)
 
     /* check parameters */
-    HDassert(_vl);
-    HDassert(buf);
+    assert(_vl);
+    assert(buf);
 
     if(seq_len!=0) {
         len=seq_len*base_size;
@@ -556,7 +495,7 @@ H5T_vlen_seq_mem_setnull(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, void *_vl, void 
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5T_vlen_seq_mem_setnull)
 
     /* check parameters */
-    HDassert(_vl);
+    assert(_vl);
 
     /* Set the "nil" hvl_t */
     vl.len=0;
@@ -579,31 +518,19 @@ H5T_vlen_seq_mem_setnull(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, void *_vl, void 
  * Programmer:	Quincey Koziol
  *		Wednesday, June 2, 1999
  *
- * Modifications:   Neil Fortner
- *      Friday, August 22, 2008
- *      Changed function to be tolerant of a char * that is not aligned
- *      properly in _vl.
+ * Modifications:
  *
  *-------------------------------------------------------------------------
  */
 static ssize_t
 H5T_vlen_str_mem_getlen(const void *_vl)
 {
-#ifdef H5_NO_ALIGNMENT_RESTRICTIONS
     const char *s=*(const char * const *)_vl;   /* Pointer to the user's string information */
-#else
-    const char *s;      /* Pointer to the user's string information */
-#endif
 
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5T_vlen_str_mem_getlen)
 
     /* check parameters */
-#ifdef H5_NO_ALIGNMENT_RESTRICTIONS
-    HDassert(s);
-#else
-    HDassert(_vl);
-    HDmemcpy(&s, _vl, sizeof(char *));
-#endif
+    assert(s);
 
     FUNC_LEAVE_NOAPI((ssize_t)HDstrlen(s))
 }   /* end H5T_vlen_str_mem_getlen() */
@@ -619,32 +546,19 @@ H5T_vlen_str_mem_getlen(const void *_vl)
  * Programmer:	Quincey Koziol
  *		Saturday, June 12, 2004
  *
- * Modifications:   Neil Fortner
- *      Friday, August 22, 2008
- *      Changed function to be tolerant of a char * that is not aligned
- *      properly in _vl.
- *      Added assertion on _vl.
+ * Modifications:
  *
  *-------------------------------------------------------------------------
  */
 static void *
 H5T_vlen_str_mem_getptr(void *_vl)
 {
-#ifdef H5_NO_ALIGNMENT_RESTRICTIONS
     char *s=*(char **)_vl;   /* Pointer to the user's string information */
-#else
-    char *s;      /* Pointer to the user's string information */
-#endif
 
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5T_vlen_str_mem_getptr)
 
     /* check parameters */
-#ifdef H5_NO_ALIGNMENT_RESTRICTIONS
-    HDassert(s);
-#else
-    HDassert(_vl);
-    HDmemcpy(&s, _vl, sizeof(char *));
-#endif
+    assert(s);
 
     FUNC_LEAVE_NOAPI(s)
 }   /* end H5T_vlen_str_mem_getptr() */
@@ -660,10 +574,7 @@ H5T_vlen_str_mem_getptr(void *_vl)
  * Programmer:	Quincey Koziol
  *		Saturday, November 8, 2003
  *
- * Modifications:   Neil Fortner
- *      Friday, August 22, 2008
- *      Changed function to be tolerant of a char * that is not aligned
- *      properly in _vl.
+ * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -671,17 +582,9 @@ H5T_vlen_str_mem_getptr(void *_vl)
 static htri_t
 H5T_vlen_str_mem_isnull(const H5F_t UNUSED *f, void *_vl)
 {
-#ifdef H5_NO_ALIGNMENT_RESTRICTIONS
     char *s=*(char **)_vl;   /* Pointer to the user's string information */
-#else
-    char *s;      /* Pointer to the user's string information */
-#endif
 
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5T_vlen_str_mem_isnull)
-
-#ifndef H5_NO_ALIGNMENT_RESTRICTIONS
-    HDmemcpy(&s, _vl, sizeof(char *));
-#endif
 
     FUNC_LEAVE_NOAPI(s==NULL ? TRUE : FALSE)
 }   /* end H5T_vlen_str_mem_isnull() */
@@ -697,10 +600,7 @@ H5T_vlen_str_mem_isnull(const H5F_t UNUSED *f, void *_vl)
  * Programmer:	Quincey Koziol
  *		Wednesday, June 2, 1999
  *
- * Modifications:   Neil Fortner
- *      Friday, August 22, 2008
- *      Changed function to be tolerant of a char * that is not aligned
- *      properly in _vl.
+ * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -708,23 +608,14 @@ H5T_vlen_str_mem_isnull(const H5F_t UNUSED *f, void *_vl)
 static herr_t
 H5T_vlen_str_mem_read(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, void *_vl, void *buf, size_t len)
 {
-#ifdef H5_NO_ALIGNMENT_RESTRICTIONS
-    char *s=*(char **)_vl;   /* Pointer to the user's string information */
-#else
-    char *s;      /* Pointer to the user's string information */
-#endif
+    char *s=*(char **)_vl;   /* Pointer to the user's hvl_t information */
 
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5T_vlen_str_mem_read)
 
     if(len>0) {
         /* check parameters */
-        HDassert(buf);
-#ifdef H5_NO_ALIGNMENT_RESTRICTIONS
-        HDassert(s);
-#else
-        HDassert(_vl);
-        HDmemcpy(&s, _vl, sizeof(char *));
-#endif
+        assert(s);
+        assert(buf);
 
         HDmemcpy(buf,s,len);
     } /* end if */
@@ -758,7 +649,7 @@ H5T_vlen_str_mem_write(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const H5T_vlen_all
     FUNC_ENTER_NOAPI_NOINIT(H5T_vlen_str_mem_write)
 
     /* check parameters */
-    HDassert(buf);
+    assert(buf);
 
     /* Use the user's memory allocation routine if one is defined */
     if(vl_alloc_info->alloc_func!=NULL) {
@@ -834,7 +725,7 @@ H5T_vlen_disk_getlen(const void *_vl)
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5T_vlen_disk_getlen)
 
     /* check parameters */
-    HDassert(vl);
+    assert(vl);
 
     UINT32DECODE(vl, seq_len);
 
@@ -863,7 +754,7 @@ H5T_vlen_disk_getptr(void UNUSED *vl)
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5T_vlen_disk_getptr)
 
     /* check parameters */
-    HDassert(vl);
+    assert(vl);
 
     FUNC_LEAVE_NOAPI(NULL)
 }   /* end H5T_vlen_disk_getptr() */
@@ -892,7 +783,7 @@ H5T_vlen_disk_isnull(const H5F_t *f, void *_vl)
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5T_vlen_disk_isnull)
 
     /* check parameters */
-    HDassert(vl);
+    assert(vl);
 
     /* Skip the sequence's length */
     vl+=4;
@@ -929,9 +820,9 @@ H5T_vlen_disk_read(H5F_t *f, hid_t dxpl_id, void *_vl, void *buf, size_t UNUSED 
     FUNC_ENTER_NOAPI_NOINIT(H5T_vlen_disk_read)
 
     /* check parameters */
-    HDassert(vl);
-    HDassert(buf);
-    HDassert(f);
+    assert(vl);
+    assert(buf);
+    assert(f);
 
     /* Skip the length of the sequence */
     vl += 4;
@@ -983,9 +874,9 @@ H5T_vlen_disk_write(H5F_t *f, hid_t dxpl_id, const H5T_vlen_alloc_info_t UNUSED 
     FUNC_ENTER_NOAPI_NOINIT(H5T_vlen_disk_write)
 
     /* check parameters */
-    HDassert(vl);
-    HDassert(seq_len==0 || buf);
-    HDassert(f);
+    assert(vl);
+    assert(seq_len==0 || buf);
+    assert(f);
 
     /* Free heap object for old data.  */
     if(bg!=NULL) {
@@ -1048,8 +939,8 @@ H5T_vlen_disk_setnull(H5F_t *f, hid_t dxpl_id, void *_vl, void *_bg)
     FUNC_ENTER_NOAPI_NOINIT(H5T_vlen_disk_setnull)
 
     /* check parameters */
-    HDassert(f);
-    HDassert(vl);
+    assert(f);
+    assert(vl);
 
     /* Free heap object for old data.  */
     if(bg!=NULL) {
@@ -1111,8 +1002,8 @@ H5T_vlen_reclaim_recurse(void *elem, const H5T_t *dt, H5MM_free_t free_func, voi
 
     FUNC_ENTER_NOAPI_NOINIT(H5T_vlen_reclaim_recurse)
 
-    HDassert(elem);
-    HDassert(dt);
+    assert(elem);
+    assert(dt);
 
     /* Check the datatype of this element */
     switch(dt->shared->type) {
@@ -1178,7 +1069,7 @@ H5T_vlen_reclaim_recurse(void *elem, const H5T_t *dt, H5MM_free_t free_func, voi
                 else
                     H5MM_xfree(*(char **)elem);
             } else {
-                HDassert(0 && "Invalid VL type");
+                assert(0 && "Invalid VL type");
             } /* end else */
             break;
 
@@ -1225,9 +1116,9 @@ H5T_vlen_reclaim(void *elem, hid_t type_id, unsigned UNUSED ndim, const hsize_t 
 
     FUNC_ENTER_NOAPI(H5T_vlen_reclaim, FAIL)
 
-    HDassert(elem);
-    HDassert(vl_alloc_info);
-    HDassert(H5I_DATATYPE == H5I_get_type(type_id));
+    assert(elem);
+    assert(vl_alloc_info);
+    assert(H5I_DATATYPE == H5I_get_type(type_id));
 
     /* Check args */
     if (NULL==(dt=H5I_object_verify(type_id,H5I_DATATYPE)))
@@ -1272,8 +1163,8 @@ H5T_vlen_get_alloc_info(hid_t dxpl_id, H5T_vlen_alloc_info_t **vl_alloc_info)
 
     FUNC_ENTER_NOAPI(H5T_vlen_get_alloc_info, FAIL)
 
-    HDassert(H5I_GENPROP_LST == H5I_get_type(dxpl_id));
-    HDassert(vl_alloc_info);
+    assert(H5I_GENPROP_LST == H5I_get_type(dxpl_id));
+    assert(vl_alloc_info);
 
     /* Check for the default DXPL */
     if(dxpl_id==H5P_DATASET_XFER_DEFAULT)

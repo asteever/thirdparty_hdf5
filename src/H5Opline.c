@@ -24,7 +24,6 @@
 #define H5Z_PACKAGE		/*suppress error about including H5Zpkg	  */
 
 #include "H5private.h"		/* Generic Functions			*/
-#include "H5Dprivate.h"		/* Datasets				*/
 #include "H5Eprivate.h"		/* Error handling		  	*/
 #include "H5FLprivate.h"	/* Free Lists				*/
 #include "H5MMprivate.h"	/* Memory management			*/
@@ -34,13 +33,12 @@
 
 /* PRIVATE PROTOTYPES */
 static herr_t H5O_pline_encode(H5F_t *f, uint8_t *p, const void *mesg);
-static void *H5O_pline_decode(H5F_t *f, hid_t dxpl_id, H5O_t *open_oh,
-    unsigned mesg_flags, unsigned *ioflags, const uint8_t *p);
+static void *H5O_pline_decode(H5F_t *f, hid_t dxpl_id, unsigned mesg_flags, const uint8_t *p);
 static void *H5O_pline_copy(const void *_mesg, void *_dest);
 static size_t H5O_pline_size(const H5F_t *f, const void *_mesg);
 static herr_t H5O_pline_reset(void *_mesg);
 static herr_t H5O_pline_free(void *_mesg);
-static herr_t H5O_pline_pre_copy_file(H5F_t *file_src,
+static herr_t H5O_pline_pre_copy_file(H5F_t *file_src, 
     const void *mesg_src, hbool_t *deleted, const H5O_copy_t *cpy_info, void *_udata);
 static herr_t H5O_pline_debug(H5F_t *f, hid_t dxpl_id, const void *_mesg,
     FILE * stream, int indent, int fwidth);
@@ -108,8 +106,8 @@ H5FL_DEFINE(H5O_pline_t);
  *-------------------------------------------------------------------------
  */
 static void *
-H5O_pline_decode(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, H5O_t UNUSED *open_oh,
-    unsigned UNUSED mesg_flags, unsigned UNUSED *ioflags, const uint8_t *p)
+H5O_pline_decode(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, unsigned UNUSED mesg_flags,
+    const uint8_t *p)
 {
     H5O_pline_t		*pline = NULL;          /* Pipeline message */
     H5Z_filter_info_t   *filter;                /* Filter to decode */
@@ -274,7 +272,7 @@ H5O_pline_encode(H5F_t UNUSED *f, uint8_t *p/*out*/, const void *mesg)
             name = NULL;
         } /* end if */
         else {
-            H5Z_class2_t	*cls;                   /* Filter class */
+            H5Z_class_t	*cls;                   /* Filter class */
 
             /*
              * Get the filter name.  If the pipeline message has a name in it then
@@ -454,7 +452,7 @@ H5O_pline_size(const H5F_t UNUSED *f, const void *mesg)
         if(pline->version > H5O_PLINE_VERSION_1 && pline->filter[i].id < H5Z_FILTER_RESERVED)
             name_len = 0;
         else {
-            H5Z_class2_t	*cls;                   /* Filter class */
+            H5Z_class_t	*cls;                   /* Filter class */
 
             /* Get the name of the filter, same as done with H5O_pline_encode() */
             if(NULL == (name = pline->filter[i].name) && (cls = H5Z_find(pline->filter[i].id)))
@@ -544,9 +542,9 @@ H5O_pline_free(void *mesg)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_pline_free)
 
-    HDassert(mesg);
+    HDassert (mesg);
 
-    (void)H5FL_FREE(H5O_pline_t, mesg);
+    H5FL_FREE(H5O_pline_t, mesg);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5O_pline_free() */
@@ -572,7 +570,7 @@ H5O_pline_pre_copy_file(H5F_t UNUSED *file_src, const void *mesg_src,
     hbool_t UNUSED *deleted, const H5O_copy_t UNUSED *cpy_info, void *_udata)
 {
     const H5O_pline_t *pline_src = (const H5O_pline_t *)mesg_src;    /* Source datatype */
-    H5O_copy_file_ud_common_t *udata = (H5O_copy_file_ud_common_t *)_udata; /* Object copying user data */
+    H5D_copy_file_ud_t *udata = (H5D_copy_file_ud_t *)_udata;   /* Dataset copying user data */
     herr_t             ret_value = SUCCEED;                     /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5O_pline_pre_copy_file)
@@ -580,7 +578,7 @@ H5O_pline_pre_copy_file(H5F_t UNUSED *file_src, const void *mesg_src,
     /* check args */
     HDassert(pline_src);
 
-    /* If the user data is non-NULL, assume we are copying a dataset or group
+    /* If the user data is non-NULL, assume we are copying a dataset
      * and make a copy of the filter pipeline for later in
      * the object copying process.
      */
@@ -664,31 +662,4 @@ H5O_pline_debug(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const void *mesg, FILE *s
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5O_pline_debug() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5O_pline_set_latest_version
- *
- * Purpose:     Set the encoding for a I/O filter pipeline to the latest version.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:  Quincey Koziol
- *              Tuesday, July 24, 2007
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5O_pline_set_latest_version(H5O_pline_t *pline)
-{
-    FUNC_ENTER_NOAPI_NOFUNC(H5O_pline_set_latest_version)
-
-    /* Sanity check */
-    HDassert(pline);
-
-    /* Set encoding of I/O pipeline to latest version */
-    pline->version = H5O_PLINE_VERSION_LATEST;
-
-    FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5O_pline_set_latest_version() */
 

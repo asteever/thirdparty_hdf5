@@ -340,6 +340,7 @@ static void report_parameters(struct options *opts);
 int
 main(int argc, char **argv)
 {
+    int ret;
     int exit_value = EXIT_SUCCESS;
     struct options *opts = NULL;
 
@@ -353,7 +354,7 @@ main(int argc, char **argv)
     }
 
     if (opts->output_file) {
-        if ((output = HDfopen(opts->output_file, "w")) == NULL) {
+        if ((output = fopen(opts->output_file, "w")) == NULL) {
             fprintf(stderr, "%s: cannot open output file\n", progname);
             perror(opts->output_file);
             goto finish;
@@ -388,14 +389,15 @@ finish:
  * Return:      Nothing
  * Programmer:  Bill Wendling, 30. October 2001
  * Modifications:
- *    Added multidimensional testing (Christian Chilan, April, 2008)
+ *    Added multidimensional testing (Christian Chilan, April, 2008) 
  */
 static void
 run_test_loop(struct options *opts)
 {
     parameters parms;
     int i;
-    size_t      buf_bytes;
+    int doing_sio;      /* if this process is doing SIO */
+    size_t      buf_bytes;     
     /* load options into parameter structure */
     parms.num_files = opts->num_files;
     parms.num_dsets = opts->num_dsets;
@@ -447,6 +449,7 @@ run_test(iotype iot, parameters parms, struct options *opts)
 {
     results         res;
     register int    i, ret_value = SUCCESS;
+    int             comm_size;
     off_t           raw_size;
     minmax         *write_sys_mm_table=NULL;
     minmax         *write_mm_table=NULL;
@@ -817,7 +820,7 @@ print_indent(register int indent)
 }
 
 static void
-recover_size_and_print(long long val, const char *end)
+recover_size_and_print(long_long val, const char *end)
 {
     if (val >= ONE_KB && (val % ONE_KB) == 0) {
         if (val >= ONE_MB && (val % ONE_MB) == 0) {
@@ -856,23 +859,23 @@ report_parameters(struct options *opts)
     print_io_api(opts->io_types);
 
     HDfprintf(output, "Number of iterations=%Hd\n",
-              (long long)opts->num_iters);
+              (long_long)opts->num_iters);
 
     HDfprintf(output, "Dataset size=");
 
     for (i=0; i<rank; i++)
-        recover_size_and_print((long long)opts->dset_size[i], " ");
+        recover_size_and_print((long_long)opts->dset_size[i], " ");
     HDfprintf(output, "\n");
 
 
     HDfprintf(output, "Transfer buffer size=");
     for (i=0; i<rank; i++)
-        recover_size_and_print((long long)opts->buf_size[i], " ");
+        recover_size_and_print((long_long)opts->buf_size[i], " ");
     HDfprintf(output, "\n");
 
     HDfprintf(output, "Dimension access order=");
     for (i=0; i<rank; i++)
-        recover_size_and_print((long long)opts->order[i], " ");
+        recover_size_and_print((long_long)opts->order[i], " ");
     HDfprintf(output, "\n");
 
     if (opts->io_types & SIO_HDF5) {
@@ -884,7 +887,7 @@ report_parameters(struct options *opts)
             HDfprintf(output, "Chunked\n");
             HDfprintf(output, "HDF5 chunk size=");
             for (i=0; i<rank; i++)
-                recover_size_and_print((long long)opts->chk_size[i], " ");
+                recover_size_and_print((long_long)opts->chk_size[i], " ");
             HDfprintf(output, "\n");
 
             HDfprintf(output, "HDF5 dataset dimensions=");
@@ -898,7 +901,7 @@ report_parameters(struct options *opts)
         else {
             HDfprintf(output, "Contiguous\n");
         }
-
+        
         HDfprintf(output, "HDF5 file driver=");
         if (opts->vfd==sec2) {
             HDfprintf(output, "sec2\n");
@@ -916,14 +919,6 @@ report_parameters(struct options *opts)
             HDfprintf(output, "direct\n");
         }
     }
-
-    {
-        char *prefix = HDgetenv("HDF5_PREFIX");
-
-        HDfprintf(output, "Env HDF5_PREFIX=%s\n",
-                  (prefix ? prefix : "not set"));
-    }
-
     HDfprintf(output, "==== End of Parameters ====\n");
     HDfprintf(output, "\n");
 }
@@ -948,7 +943,7 @@ parse_command_line(int argc, char *argv[])
     cl_opts->output_file = NULL;
     cl_opts->io_types =  0;    /* will set default after parsing options */
     cl_opts->num_iters = 1;
-
+ 
     default_rank = 2;
 
     cl_opts->dset_rank = 0;
@@ -964,7 +959,7 @@ parse_command_line(int argc, char *argv[])
     }
 
     cl_opts->vfd = sec2;
-
+   
     cl_opts->print_times = FALSE;   /* Printing times is off by default */
     cl_opts->print_raw = FALSE;     /* Printing raw data throughput is off by default */
     cl_opts->h5_alignment = 1;      /* No alignment for HDF5 objects by default */
@@ -985,6 +980,7 @@ parse_command_line(int argc, char *argv[])
                 const char *end = opt_arg;
                 while (end && *end != '\0') {
                     char buf[10];
+                    int i;
 
                     memset(buf, '\0', sizeof(buf));
 
@@ -992,9 +988,9 @@ parse_command_line(int argc, char *argv[])
                         if (isalnum(*end) && i < 10)
                             buf[i++] = *end;
 
-                    if (!HDstrcasecmp(buf, "hdf5")) {
+                    if (!strcasecmp(buf, "hdf5")) {
                         cl_opts->io_types |= SIO_HDF5;
-                    } else if (!HDstrcasecmp(buf, "posix")) {
+                    } else if (!strcasecmp(buf, "posix")) {
                         cl_opts->io_types |= SIO_POSIX;
                     } else {
                         fprintf(stderr, "sio_perf: invalid --api option %s\n",
@@ -1024,6 +1020,7 @@ parse_command_line(int argc, char *argv[])
 
                 while (end && *end != '\0') {
                     char buf[10];
+                    int i;
 
                     memset(buf, '\0', sizeof(buf));
 
@@ -1052,6 +1049,7 @@ parse_command_line(int argc, char *argv[])
 
                 while (end && *end != '\0') {
                     char buf[10];
+                    int i;
 
                     memset(buf, '\0', sizeof(buf));
 
@@ -1110,6 +1108,7 @@ parse_command_line(int argc, char *argv[])
 
                 while (end && *end != '\0') {
                     char buf[10];
+                    int i;
 
                     memset(buf, '\0', sizeof(buf));
 
@@ -1145,19 +1144,19 @@ parse_command_line(int argc, char *argv[])
             cl_opts->h5_threshold = parse_size_directive(opt_arg);
             break;
         case 'v':
-            if (!HDstrcasecmp(opt_arg, "sec2")) {
+            if (!strcasecmp(opt_arg, "sec2")) {
                 cl_opts->vfd=sec2;
-            } else if (!HDstrcasecmp(opt_arg, "stdio")) {
+            } else if (!strcasecmp(opt_arg, "stdio")) {
                 cl_opts->vfd=stdio;
-            } else if (!HDstrcasecmp(opt_arg, "core")) {
+            } else if (!strcasecmp(opt_arg, "core")) {
                 cl_opts->vfd=core;
-            } else if (!HDstrcasecmp(opt_arg, "split")) {
+            } else if (!strcasecmp(opt_arg, "split")) {
                 cl_opts->vfd=split;
-            } else if (!HDstrcasecmp(opt_arg, "multi")) {
+            } else if (!strcasecmp(opt_arg, "multi")) {
                 cl_opts->vfd=multi;
-            } else if (!HDstrcasecmp(opt_arg, "family")) {
+            } else if (!strcasecmp(opt_arg, "family")) {
                 cl_opts->vfd=family;
-            } else if (!HDstrcasecmp(opt_arg, "direct")) {
+            } else if (!strcasecmp(opt_arg, "direct")) {
                 cl_opts->vfd=direct;
             } else {
                 fprintf(stderr, "sio_perf: invalid --api option %s\n",
@@ -1178,6 +1177,7 @@ parse_command_line(int argc, char *argv[])
 
                 while (end && *end != '\0') {
                     char buf[10];
+                    int i;
 
                     memset(buf, '\0', sizeof(buf));
 
@@ -1206,6 +1206,7 @@ parse_command_line(int argc, char *argv[])
 
                 while (end && *end != '\0') {
                     char buf[10];
+                    int i;
 
                     memset(buf, '\0', sizeof(buf));
 
@@ -1407,7 +1408,6 @@ usage(const char *prog)
         printf("\n");
         printf("  Environment variables:\n");
         printf("      HDF5_NOCLEANUP   Do not remove data files if set [default remove]\n");
-        printf("      HDF5_PREFIX      Data file prefix\n");
         printf("\n");
         fflush(stdout);
 }

@@ -43,12 +43,12 @@
 /* Get needed headers */
 #include "H5SLprivate.h"        /* Skip lists */
 
-/* With the introduction of the fractal heap, it is now possible for
+/* With the introduction of the fractal heap, it is now possible for 
  * entries to be dirtied, resized, and/or renamed in the flush callbacks.
  * As a result, on flushes, it may be necessary to make multiple passes
  * through the slist before it is empty.  The H5C__MAX_PASSES_ON_FLUSH
  * #define is used to set an upper limit on the number of passes.
- * The current value was obtained via personal communication with
+ * The current value was obtained via personal communication with 
  * Quincey.  I have applied a fudge factor of 2.
  */
 
@@ -99,7 +99,7 @@
  * magic:	Unsigned 32 bit integer always set to H5C__H5C_T_MAGIC.  This
  *		field is used to validate pointers to instances of H5C_t.
  *
- * flush_in_progress: Boolean flag indicating whether a flush is in
+ * flush_in_progress: Boolean flag indicating whether a flush is in 
  * 		progress.
  *
  * trace_file_ptr:  File pointer pointing to the trace file, which is used
@@ -108,7 +108,7 @@
  *              no trace file should be recorded.
  *
  *              Since much of the code supporting the parallel metadata
- *              cache is in H5AC, we don't write the trace file from
+ *              cache is in H5AC, we don't write the trace file from 
  *              H5C.  Instead, H5AC reads the trace_file_ptr as needed.
  *
  *              When we get to using H5C in other places, we may add
@@ -181,10 +181,10 @@
  * writes.  The following field is used to implement this.
  *
  * evictions_enabled:  Boolean flag that is initialized to TRUE.  When
- * 		this flag is set to FALSE, the metadata cache will not
+ * 		this flag is set to FALSE, the metadata cache will not 
  * 		attempt to evict entries to make space for newly protected
  * 		entries, and instead the will grow without limit.
- *
+ * 		
  * 		Needless to say, this feature must be used with care.
  *
  *
@@ -202,38 +202,6 @@
  *              the cache has a considerable overhead.  Multiplying the
  *              index_size by two should yield a conservative estimate
  *              of the cache's memory footprint.
- *
- * clean_index_size: Number of bytes of clean entries currently stored in
- * 		the hash table.  Note that the index_size field (above)
- *		is also the sum of the sizes of all entries in the cache.
- *		Thus we should have the invarient that clean_index_size +
- *		dirty_index_size == index_size.  
- *
- *		WARNING:
- *
- *		1) The clean_index_size field is not maintained by the 
- *		   index macros, as the hash table doesn't care whether 
- *		   the entry is clean or dirty.  Instead the field is
- *		   maintained in the H5C__UPDATE_RP macros.
- *
- *		2) The value of the clean_index_size must not be mistaken
- *		   for the current clean size of the cache.  Rather, the 
- *		   clean size of the cache is the current value of 
- *		   clean_index_size plus the amount of empty space (if any)
- *                 in the cache.
- *
- * dirty_index_size: Number of bytes of dirty entries currently stored in
- * 		the hash table.  Note that the index_size field (above)
- *		is also the sum of the sizes of all entries in the cache.
- *		Thus we should have the invarient that clean_index_size +
- *		dirty_index_size == index_size.  
- *
- *		WARNING:
- *
- *		1) The dirty_index_size field is not maintained by the 
- *		   index macros, as the hash table doesn't care whether 
- *		   the entry is clean or dirty.  Instead the field is
- *		   maintained in the H5C__UPDATE_RP macros.
  *
  * index:	Array of pointer to H5C_cache_entry_t of size
  *		H5C__HASH_TABLE_LEN.  At present, this value is a power
@@ -287,7 +255,7 @@
  * following two fields have been added.  They are only compiled in when
  * H5C_DO_SANITY_CHECKS is TRUE.
  *
- * slist_len_increase: Number of entries that have been added to the
+ * slist_len_increase: Number of entries that have been added to the 
  * 		slist since the last time this field was set to zero.
  *
  * slist_size_increase: Total size of all entries that have been added
@@ -500,13 +468,13 @@
  * flash_size_increase_possible: Depending on the configuration data given
  * 		in the resize_ctl field, it may or may not be possible
  * 		for a flash size increase to occur.  We set this flag
- * 		whenever we receive a new configuration so as to avoid
+ * 		whenever we receive a new configuration so as to avoid 
  * 		repeated calculations.
  *
  * flash_size_increase_threshold: If a flash cache size increase is possible,
  * 		this field is used to store the minimum size of a new entry
- * 		or size increase needed to trigger a flash cache size
- * 		increase.  Note that this field must be updated whenever
+ * 		or size increase needed to trigger a flash cache size 
+ * 		increase.  Note that this field must be updated whenever 
  * 		the size of the cache is changed.
  *
  * size_decrease_possible:  Depending on the configuration data given
@@ -624,9 +592,9 @@
  *		equal to the array index has not been in cache when
  *		requested in the current epoch.
  *
- * write_protects:  Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.  The
- *		cells are used to record the number of times an entry with
- *		type id equal to the array index has been write protected
+ * write_protects:  Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.  The 
+ *		cells are used to record the number of times an entry with 
+ *		type id equal to the array index has been write protected 
  *		in the current epoch.
  *
  * 		Observe that (hits + misses) = (write_protects + read_protects).
@@ -638,9 +606,9 @@
  *
  *              Observe that (hits + misses) = (write_protects + read_protects).
  *
- * max_read_protects:  Array of int32 of length H5C__MAX_NUM_TYPE_IDS + 1.
- * 		The cells are used to maximum number of simultaneous read
- * 		protects on any entry with type id equal to the array index
+ * max_read_protects:  Array of int32 of length H5C__MAX_NUM_TYPE_IDS + 1. 
+ * 		The cells are used to maximum number of simultaneous read 
+ * 		protects on any entry with type id equal to the array index 
  * 		in the current epoch.
  *
  * insertions:  Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.  The cells
@@ -648,9 +616,9 @@
  *		id equal to the array index has been inserted into the
  *		cache in the current epoch.
  *
- * pinned_insertions:  Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.
- * 		The cells are used to record the number of times an entry
- * 		with type id equal to the array index has been inserted
+ * pinned_insertions:  Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.  
+ * 		The cells are used to record the number of times an entry 
+ * 		with type id equal to the array index has been inserted 
  * 		pinned into the cache in the current epoch.
  *
  * clears:      Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.  The cells
@@ -673,13 +641,13 @@
  *		id equal to the array index has been renamed in the current
  *		epoch.
  *
- * entry_flush_renames: Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.
- * 		The cells are used to record the number of times an entry
+ * entry_flush_renames: Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.  
+ * 		The cells are used to record the number of times an entry 
  * 		with type id equal to the array index has been renamed
  * 		during its flush callback in the current epoch.
  *
- * cache_flush_renames: Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.
- * 		The cells are used to record the number of times an entry
+ * cache_flush_renames: Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.  
+ * 		The cells are used to record the number of times an entry 
  * 		with type id equal to the array index has been renamed
  * 		during a cache flush in the current epoch.
  *
@@ -718,14 +686,14 @@
  *		with type id equal to the array index has decreased in
  *		size in the current epoch.
  *
- * entry_flush_size_changes:  Array of int64 of length
- * 		H5C__MAX_NUM_TYPE_IDS + 1.  The cells are used to record
- * 		the number of times an entry with type id equal to the
+ * entry_flush_size_changes:  Array of int64 of length 
+ * 		H5C__MAX_NUM_TYPE_IDS + 1.  The cells are used to record 
+ * 		the number of times an entry with type id equal to the 
  * 		array index has changed size while in its flush callback.
  *
- * cache_flush_size_changes:  Array of int64 of length
- * 		H5C__MAX_NUM_TYPE_IDS + 1.  The cells are used to record
- * 		the number of times an entry with type id equal to the
+ * cache_flush_size_changes:  Array of int64 of length 
+ * 		H5C__MAX_NUM_TYPE_IDS + 1.  The cells are used to record 
+ * 		the number of times an entry with type id equal to the 
  * 		array index has changed size during a cache flush
  *
  * total_ht_insertions: Number of times entries have been inserted into the
@@ -754,12 +722,6 @@
  * max_index_size:  Largest value attained by the index_size field in the
  *              current epoch.
  *
- * max_clean_index_size: Largest value attained by the clean_index_size field
- * 		in the current epoch.
- *
- * max_dirty_index_size: Largest value attained by the dirty_index_size field
- * 		in the current epoch.
- *
  * max_slist_len:  Largest value attained by the slist_len field in the
  *              current epoch.
  *
@@ -778,23 +740,6 @@
  * max_pel_size: Largest value attained by the pel_size field in the
  *              current epoch.
  *
- * calls_to_msic: Total number of calls to H5C_make_space_in_cache
- *
- * total_entries_skipped_in_msic: Number of clean entries skipped while
- *              enforcing the min_clean_fraction in H5C_make_space_in_cache().
- *
- * total_entries_scanned_in_msic: Number of clean entries skipped while
- *              enforcing the min_clean_fraction in H5C_make_space_in_cache().
- *
- * max_entries_skipped_in_msic: Maximum number of clean entries skipped
- *              in any one call to H5C_make_space_in_cache().
- *
- * max_entries_scanned_in_msic: Maximum number of entries scanned over
- *              in any one call to H5C_make_space_in_cache().
- *
- * entries_scanned_to_make_space: Number of entries scanned only when looking
- *              for entries to evict in order to make space in cache.
-
  * The remaining stats are collected only when both H5C_COLLECT_CACHE_STATS
  * and H5C_COLLECT_CACHE_ENTRY_STATS are true.
  *
@@ -857,7 +802,7 @@
  ****************************************************************************/
 
 #define H5C__H5C_T_MAGIC	0x005CAC0E
-#define H5C__MAX_NUM_TYPE_IDS	25
+#define H5C__MAX_NUM_TYPE_IDS	16
 #define H5C__PREFIX_LEN		32
 
 struct H5C_t
@@ -885,8 +830,6 @@ struct H5C_t
 
     int32_t                     index_len;
     size_t                      index_size;
-    size_t 			clean_index_size;
-    size_t			dirty_index_size;
     H5C_cache_entry_t *		(index[H5C__HASH_TABLE_LEN]);
 
 
@@ -925,7 +868,7 @@ struct H5C_t
 
     hbool_t			size_increase_possible;
     hbool_t			flash_size_increase_possible;
-    size_t			flash_size_increase_threshold;
+    size_t			flash_size_increase_threshold; 
     hbool_t			size_decrease_possible;
     hbool_t			resize_enabled;
     hbool_t			cache_full;
@@ -980,8 +923,6 @@ struct H5C_t
 
     int32_t                     max_index_len;
     size_t                      max_index_size;
-    size_t                      max_clean_index_size;
-    size_t                      max_dirty_index_size;
 
     int32_t                     max_slist_len;
     size_t                      max_slist_size;
@@ -991,13 +932,6 @@ struct H5C_t
 
     int32_t                     max_pel_len;
     size_t                      max_pel_size;
-
-    int64_t                     calls_to_msic;
-    int64_t                     total_entries_skipped_in_msic;
-    int64_t                     total_entries_scanned_in_msic;
-    int32_t                     max_entries_skipped_in_msic;
-    int32_t                     max_entries_scanned_in_msic;
-    int64_t                     entries_scanned_to_make_space;
 
 #if H5C_COLLECT_CACHE_ENTRY_STATS
 

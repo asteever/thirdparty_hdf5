@@ -23,36 +23,54 @@
        INTERFACE h5pset_fill_value_f
          MODULE PROCEDURE h5pset_fill_value_integer
          MODULE PROCEDURE h5pset_fill_value_real
+! Comment if on Crays
+         MODULE PROCEDURE h5pset_fill_value_double
+! End comment if on Crays
          MODULE PROCEDURE h5pset_fill_value_char
        END INTERFACE
      
        INTERFACE h5pget_fill_value_f
          MODULE PROCEDURE h5pget_fill_value_integer
          MODULE PROCEDURE h5pget_fill_value_real
+! Comment if on Crays
+         MODULE PROCEDURE h5pget_fill_value_double
+! End comment if on Crays
          MODULE PROCEDURE h5pget_fill_value_char
        END INTERFACE
 
        INTERFACE h5pset_f
          MODULE PROCEDURE h5pset_integer
          MODULE PROCEDURE h5pset_real
+! Comment if on Crays
+         MODULE PROCEDURE h5pset_double
+! End comment if on Crays
          MODULE PROCEDURE h5pset_char
        END INTERFACE
      
        INTERFACE h5pget_f
          MODULE PROCEDURE h5pget_integer
          MODULE PROCEDURE h5pget_real
+! Comment if on Crays
+         MODULE PROCEDURE h5pget_double
+! End comment if on Crays
          MODULE PROCEDURE h5pget_char
        END INTERFACE
 
        INTERFACE h5pregister_f
          MODULE PROCEDURE h5pregister_integer
          MODULE PROCEDURE h5pregister_real
+! Comment if on Crays
+         MODULE PROCEDURE h5pregister_double
+! End comment if on Crays
          MODULE PROCEDURE h5pregister_char
        END INTERFACE
      
        INTERFACE h5pinsert_f
          MODULE PROCEDURE h5pinsert_integer
          MODULE PROCEDURE h5pinsert_real
+! Comment if on Crays
+         MODULE PROCEDURE h5pinsert_double
+! End comment if on Crays
          MODULE PROCEDURE h5pinsert_char
        END INTERFACE
        
@@ -95,7 +113,13 @@
 !
 ! Comment:		
 !----------------------------------------------------------------------
-          SUBROUTINE h5pcreate_f(class, prp_id, hdferr)
+          SUBROUTINE h5pcreate_f(class, prp_id, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pcreate_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: class      ! The type of the property list 
                                               ! to be created. Possible values
@@ -114,9 +138,9 @@
             INTERFACE
               INTEGER FUNCTION h5pcreate_c(class, prp_id)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PCREATE_C'::h5pcreate_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PCREATE_C'::h5pcreate_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: class
               INTEGER(HID_T), INTENT(OUT) :: prp_id
               END FUNCTION h5pcreate_c
@@ -156,7 +180,13 @@
 !----------------------------------------------------------------------
 
 
-          SUBROUTINE h5pset_preserve_f(prp_id, flag, hdferr)
+          SUBROUTINE h5pset_preserve_f(prp_id, flag, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_preserve_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             LOGICAL, INTENT(IN) ::  flag ! TRUE/FALSE flag to set the dataset
@@ -171,9 +201,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_preserve_c(prp_id, flag_c)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_PRESERVE_C'::h5pset_preserve_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_PRESERVE_C'::h5pset_preserve_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER ::  flag_c
               END FUNCTION h5pset_preserve_c
@@ -211,7 +241,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pget_preserve_f(prp_id, flag, hdferr)
+          SUBROUTINE h5pget_preserve_f(prp_id, flag, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_preserve_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             LOGICAL, INTENT(OUT) ::  flag ! TRUE/FALSE flag. Shows status of the dataset's
@@ -226,9 +262,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_preserve_c(prp_id, flag_c)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_PRESERVE_C'::h5pget_preserve_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_PRESERVE_C'::h5pget_preserve_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER ::  flag_c
               END FUNCTION h5pget_preserve_c
@@ -271,7 +307,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pget_class_f(prp_id, classtype, hdferr)
+          SUBROUTINE h5pget_class_f(prp_id, classtype, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_class_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER, INTENT(OUT) :: classtype  ! The type of the property list 
@@ -291,9 +333,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_class_c(prp_id, classtype)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_CLASS_C'::h5pget_class_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_CLASS_C'::h5pget_class_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER, INTENT(OUT) :: classtype 
               END FUNCTION h5pget_class_c
@@ -329,7 +371,13 @@
 !----------------------------------------------------------------------
 
 
-          SUBROUTINE h5pcopy_f(prp_id, new_prp_id, hdferr)
+          SUBROUTINE h5pcopy_f(prp_id, new_prp_id, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pcopy_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER(HID_T), INTENT(OUT) :: new_prp_id 
@@ -343,9 +391,9 @@
             INTERFACE
               INTEGER FUNCTION h5pcopy_c(prp_id, new_prp_id)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PCOPY_C'::h5pcopy_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PCOPY_C'::h5pcopy_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER(HID_T), INTENT(OUT) :: new_prp_id
               END FUNCTION h5pcopy_c
@@ -380,7 +428,13 @@
 !----------------------------------------------------------------------
 
 
-          SUBROUTINE h5pclose_f(prp_id, hdferr)
+          SUBROUTINE h5pclose_f(prp_id, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pclose_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id  ! Property list identifier 
             INTEGER, INTENT(OUT) :: hdferr        ! Error code
@@ -391,9 +445,9 @@
             INTERFACE
               INTEGER FUNCTION h5pclose_c(prp_id)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PCLOSE_C'::h5pclose_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PCLOSE_C'::h5pclose_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id 
               END FUNCTION h5pclose_c
             END INTERFACE
@@ -429,7 +483,13 @@
 !----------------------------------------------------------------------
 
 
-          SUBROUTINE h5pset_chunk_f(prp_id, ndims, dims, hdferr)
+          SUBROUTINE h5pset_chunk_f(prp_id, ndims, dims, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_chunk_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER, INTENT(IN) :: ndims    ! Number of chunk dimensions
@@ -444,9 +504,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_chunk_c(prp_id, ndims, dims)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_CHUNK_C'::h5pset_chunk_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_CHUNK_C'::h5pset_chunk_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER, INTENT(IN) :: ndims
               INTEGER(HSIZE_T), DIMENSION(ndims), INTENT(IN) :: dims
@@ -484,7 +544,13 @@
 !----------------------------------------------------------------------
 
 
-          SUBROUTINE h5pget_chunk_f(prp_id, ndims, dims, hdferr)
+          SUBROUTINE h5pget_chunk_f(prp_id, ndims, dims, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_chunk_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER, INTENT(IN) :: ndims    ! Number of chunk dimensions to
@@ -502,9 +568,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_chunk_c(prp_id, ndims, dims)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_CHUNK_C'::h5pget_chunk_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_CHUNK_C'::h5pget_chunk_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER :: ndims
               INTEGER(HSIZE_T), DIMENSION(*), INTENT(OUT) :: dims
@@ -540,7 +606,13 @@
 !----------------------------------------------------------------------
 
 
-          SUBROUTINE h5pset_deflate_f(prp_id, level, hdferr)
+          SUBROUTINE h5pset_deflate_f(prp_id, level, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_deflate_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER, INTENT(IN) :: level        ! Compression level 
@@ -552,9 +624,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_deflate_c(prp_id, level)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_DEFLATE_C'::h5pset_deflate_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_DEFLATE_C'::h5pset_deflate_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER, INTENT(IN) :: level
               END FUNCTION h5pset_deflate_c
@@ -594,7 +666,13 @@
 
 
           SUBROUTINE h5pset_fill_value_integer(prp_id, type_id, fillvalue, &
-                                               hdferr)
+                                               hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_fill_value_integer
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER(HID_T), INTENT(IN) :: type_id ! Datatype identifier of 
@@ -609,9 +687,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_fill_value_integer_c(prp_id, type_id, fillvalue)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_FILL_VALUE_INTEGER_C'::h5pset_fill_value_integer_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_FILL_VALUE_INTEGER_C'::h5pset_fill_value_integer_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER(HID_T), INTENT(IN) :: type_id
               INTEGER, INTENT(IN) :: fillvalue
@@ -623,7 +701,13 @@
 
 
           SUBROUTINE h5pget_fill_value_integer(prp_id, type_id, fillvalue, &
-                                               hdferr)
+                                               hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_fill_value_integer
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER(HID_T), INTENT(IN) :: type_id ! Datatype identifier of 
@@ -638,9 +722,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_fill_value_integer_c(prp_id, type_id, fillvalue)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_FILL_VALUE_INTEGER_C'::h5pget_fill_value_integer_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_FILL_VALUE_INTEGER_C'::h5pget_fill_value_integer_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER(HID_T), INTENT(IN) :: type_id
               INTEGER :: fillvalue
@@ -652,7 +736,13 @@
 
 
           SUBROUTINE h5pset_fill_value_real(prp_id, type_id, fillvalue, &
-                                               hdferr)
+                                               hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_fill_value_real
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER(HID_T), INTENT(IN) :: type_id ! Datatype identifier of 
@@ -667,9 +757,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_fill_value_real_c(prp_id, type_id, fillvalue)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_FILL_VALUE_REAL_C'::h5pset_fill_value_real_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_FILL_VALUE_REAL_C'::h5pset_fill_value_real_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER(HID_T), INTENT(IN) :: type_id
               REAL, INTENT(IN) :: fillvalue
@@ -681,7 +771,13 @@
 
 
           SUBROUTINE h5pget_fill_value_real(prp_id, type_id, fillvalue, &
-                                               hdferr)
+                                               hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_fill_value_real
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER(HID_T), INTENT(IN) :: type_id ! Datatype identifier of 
@@ -696,9 +792,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_fill_value_real_c(prp_id, type_id, fillvalue)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_FILL_VALUE_REAL_C'::h5pget_fill_value_real_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_FILL_VALUE_REAL_C'::h5pget_fill_value_real_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER(HID_T), INTENT(IN) :: type_id
               REAL :: fillvalue
@@ -709,9 +805,83 @@
           END SUBROUTINE h5pget_fill_value_real
 
 
+          SUBROUTINE h5pset_fill_value_double(prp_id, type_id, fillvalue, &
+                                               hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_fill_value_double
+!DEC$endif
+!
+            IMPLICIT NONE
+            INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
+            INTEGER(HID_T), INTENT(IN) :: type_id ! Datatype identifier of 
+                                                  ! of fillvalue datatype 
+                                                  ! (in memory)
+            DOUBLE PRECISION, INTENT(IN) :: fillvalue   ! Fillvalue
+            INTEGER, INTENT(OUT) :: hdferr  ! Error code
+
+!            INTEGER, EXTERNAL :: h5pset_fill_value_double_c
+!  MS FORTRAN needs explicit interface for C functions called here.
+!
+            INTERFACE
+              INTEGER FUNCTION h5pset_fill_value_double_c(prp_id, type_id, fillvalue)
+              USE H5GLOBAL
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_FILL_VALUE_DOUBLE_C'::h5pset_fill_value_double_c
+              !DEC$ ENDIF
+              INTEGER(HID_T), INTENT(IN) :: prp_id
+              INTEGER(HID_T), INTENT(IN) :: type_id
+              DOUBLE PRECISION, INTENT(IN) :: fillvalue
+              END FUNCTION h5pset_fill_value_double_c
+            END INTERFACE
+
+            hdferr = h5pset_fill_value_double_c(prp_id, type_id, fillvalue)
+          END SUBROUTINE h5pset_fill_value_double
+
+
+          SUBROUTINE h5pget_fill_value_double(prp_id, type_id, fillvalue, &
+                                               hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_fill_value_double
+!DEC$endif
+!
+            IMPLICIT NONE
+            INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
+            INTEGER(HID_T), INTENT(IN) :: type_id ! Datatype identifier of 
+                                                  ! of fillvalue datatype
+                                                  ! (in memory) 
+            DOUBLE PRECISION, INTENT(IN) :: fillvalue   ! Fillvalue
+            INTEGER, INTENT(OUT) :: hdferr  ! Error code
+
+!            INTEGER, EXTERNAL :: h5pget_fill_value_double_c
+!  MS FORTRAN needs explicit interface for C functions called here.
+!
+            INTERFACE
+              INTEGER FUNCTION h5pget_fill_value_double_c(prp_id, type_id, fillvalue)
+              USE H5GLOBAL
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_FILL_VALUE_DOUBLE_C'::h5pget_fill_value_double_c
+              !DEC$ ENDIF
+              INTEGER(HID_T), INTENT(IN) :: prp_id
+              INTEGER(HID_T), INTENT(IN) :: type_id
+              DOUBLE PRECISION :: fillvalue
+              END FUNCTION h5pget_fill_value_double_c
+            END INTERFACE
+
+            hdferr = h5pget_fill_value_double_c(prp_id, type_id, fillvalue)
+          END SUBROUTINE h5pget_fill_value_double
 
           SUBROUTINE h5pset_fill_value_char(prp_id, type_id, fillvalue, &
-                                               hdferr)
+                                               hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_fill_value_char
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER(HID_T), INTENT(IN) :: type_id ! Datatype identifier of 
@@ -726,9 +896,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_fill_valuec_c(prp_id, type_id, fillvalue)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_FILL_VALUEC_C'::h5pset_fill_valuec_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_FILL_VALUEC_C'::h5pset_fill_valuec_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: fillvalue 
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER(HID_T), INTENT(IN) :: type_id
@@ -740,7 +910,13 @@
           END SUBROUTINE h5pset_fill_value_char
 
           SUBROUTINE h5pget_fill_value_char(prp_id, type_id, fillvalue, &
-                                               hdferr)
+                                               hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_fill_value_char
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER(HID_T), INTENT(IN) :: type_id ! Datatype identifier of 
@@ -755,9 +931,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_fill_valuec_c(prp_id, type_id, fillvalue)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_FILL_VALUEC_C'::h5pget_fill_valuec_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_FILL_VALUEC_C'::h5pget_fill_valuec_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: fillvalue 
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER(HID_T), INTENT(IN) :: type_id
@@ -799,6 +975,13 @@
 
           SUBROUTINE h5pget_version_f(prp_id, boot, freelist, &
                                     stab, shhdr, hdferr)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_version_f
+!DEC$endif
+!
+
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER, DIMENSION(:), INTENT(OUT) :: boot  !array to put boot
@@ -818,9 +1001,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_version_c(prp_id, boot, freelist, stab, shhdr)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_VERSION_C'::h5pget_version_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_VERSION_C'::h5pget_version_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER, DIMENSION(:), INTENT(OUT) :: boot 
               INTEGER, DIMENSION(:), INTENT(OUT) :: freelist 
@@ -857,7 +1040,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
  
-          SUBROUTINE h5pset_userblock_f (prp_id, size, hdferr)
+          SUBROUTINE h5pset_userblock_f (prp_id, size, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_userblock_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER(HSIZE_T), INTENT(IN) :: size !Size of the user-block in bytes 
@@ -869,9 +1058,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_userblock_c(prp_id, size)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_USERBLOCK_C'::h5pset_userblock_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_USERBLOCK_C'::h5pset_userblock_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER(HSIZE_T), INTENT(IN) :: size
               END FUNCTION h5pset_userblock_c
@@ -906,7 +1095,13 @@
 !----------------------------------------------------------------------
 
 
-          SUBROUTINE h5pget_userblock_f(prp_id, block_size, hdferr)
+          SUBROUTINE h5pget_userblock_f(prp_id, block_size, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_userblock_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER(HSIZE_T), INTENT(OUT) ::  block_size !Size of the 
@@ -919,9 +1114,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_userblock_c(prp_id, block_size)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_USERBLOCK_C'::h5pget_userblock_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_USERBLOCK_C'::h5pget_userblock_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER(HSIZE_T), INTENT(OUT) :: block_size
               END FUNCTION h5pget_userblock_c
@@ -956,7 +1151,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pset_sizes_f (prp_id, sizeof_addr, sizeof_size, hdferr)
+          SUBROUTINE h5pset_sizes_f (prp_id, sizeof_addr, sizeof_size, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_sizes_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER(SIZE_T), INTENT(IN) :: sizeof_addr !Size of an object 
@@ -971,9 +1172,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_sizes_c(prp_id, sizeof_addr, sizeof_size)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_SIZES_C'::h5pset_sizes_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_SIZES_C'::h5pset_sizes_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id 
               INTEGER(SIZE_T), INTENT(IN) :: sizeof_addr
               INTEGER(SIZE_T), INTENT(IN) :: sizeof_size
@@ -1011,7 +1212,13 @@
 !----------------------------------------------------------------------
 
 
-          SUBROUTINE h5pget_sizes_f(prp_id, sizeof_addr, sizeof_size, hdferr)
+          SUBROUTINE h5pget_sizes_f(prp_id, sizeof_addr, sizeof_size, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_sizes_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER(SIZE_T), INTENT(OUT) :: sizeof_addr !Size of an object
@@ -1027,9 +1234,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_sizes_c(prp_id, sizeof_addr, sizeof_size)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_SIZES_C'::h5pget_sizes_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_SIZES_C'::h5pget_sizes_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id 
               INTEGER(SIZE_T), INTENT(OUT) :: sizeof_addr
               INTEGER(SIZE_T), INTENT(OUT) :: sizeof_size
@@ -1066,7 +1273,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pset_sym_k_f (prp_id, ik, lk, hdferr)
+          SUBROUTINE h5pset_sym_k_f (prp_id, ik, lk, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_sym_k_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER, INTENT(IN) :: ik ! Symbol table tree rank 
@@ -1080,9 +1293,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_sym_k_c(prp_id, ik, lk)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_SYM_K_C'::h5pset_sym_k_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_SYM_K_C'::h5pset_sym_k_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id 
               INTEGER, INTENT(IN) :: ik
               INTEGER, INTENT(IN) :: lk
@@ -1120,7 +1333,13 @@
 !----------------------------------------------------------------------
 
 
-          SUBROUTINE h5pget_sym_k_f(prp_id, ik, lk, hdferr)
+          SUBROUTINE h5pget_sym_k_f(prp_id, ik, lk, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_sym_k_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER, INTENT(OUT) :: ik !Symbol table tree rank
@@ -1133,9 +1352,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_sym_k_c(prp_id, ik, lk)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_SYM_K_C'::h5pget_sym_k_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_SYM_K_C'::h5pget_sym_k_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id 
               INTEGER, INTENT(OUT) :: ik
               INTEGER, INTENT(OUT) :: lk
@@ -1171,7 +1390,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pset_istore_k_f (prp_id, ik, hdferr)
+          SUBROUTINE h5pset_istore_k_f (prp_id, ik, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_istore_k_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER, INTENT(IN) :: ik ! 1/2 rank of chunked storage B-tree
@@ -1184,9 +1409,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_istore_k_c(prp_id, ik)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_ISTORE_K_C'::h5pset_istore_k_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_ISTORE_K_C'::h5pset_istore_k_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER, INTENT(IN) :: ik
               END FUNCTION h5pset_istore_k_c
@@ -1221,7 +1446,13 @@
 !----------------------------------------------------------------------
 
 
-          SUBROUTINE h5pget_istore_k_f(prp_id, ik, hdferr)
+          SUBROUTINE h5pget_istore_k_f(prp_id, ik, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_istore_k_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER, INTENT(OUT) :: ik !1/2 rank of chunked storage B-tree
@@ -1233,9 +1464,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_istore_k_c(prp_id, ik)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_ISTORE_K_C'::h5pget_istore_k_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_ISTORE_K_C'::h5pget_istore_k_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER, INTENT(OUT) :: ik
               END FUNCTION h5pget_istore_k_c
@@ -1270,7 +1501,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pget_driver_f(prp_id, driver, hdferr)
+          SUBROUTINE h5pget_driver_f(prp_id, driver, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_driver_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER(HID_T), INTENT(OUT) :: driver !low-level file driver identifier
@@ -1282,9 +1519,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_driver_c(prp_id, driver)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_DRIVER_C'::h5pget_driver_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_DRIVER_C'::h5pget_driver_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER(HID_T), INTENT(OUT) :: driver
               END FUNCTION h5pget_driver_c
@@ -1317,7 +1554,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pset_fapl_stdio_f (prp_id, hdferr)
+          SUBROUTINE h5pset_fapl_stdio_f (prp_id, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_fapl_stdio_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER, INTENT(OUT) :: hdferr  ! Error code
@@ -1328,9 +1571,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_fapl_stdio_c(prp_id)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_FAPL_STDIO_C'::h5pset_fapl_stdio_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_FAPL_STDIO_C'::h5pset_fapl_stdio_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               END FUNCTION h5pset_fapl_stdio_c
             END INTERFACE
@@ -1361,7 +1604,12 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-!          SUBROUTINE h5pget_stdio_f (prp_id, io, hdferr)
+!          SUBROUTINE h5pget_stdio_f (prp_id, io, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_stdio_f
+!DEC$endif
 !
 !            IMPLICIT NONE
 !            INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
@@ -1397,7 +1645,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pset_fapl_sec2_f (prp_id, hdferr)
+          SUBROUTINE h5pset_fapl_sec2_f (prp_id, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_fapl_sec2_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER, INTENT(OUT) :: hdferr  ! Error code
@@ -1408,9 +1662,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_fapl_sec2_c(prp_id)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_FAPL_SEC2_C'::h5pset_fapl_sec2_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_FAPL_SEC2_C'::h5pset_fapl_sec2_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
               END FUNCTION h5pset_fapl_sec2_c
             END INTERFACE
@@ -1478,7 +1732,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pset_alignment_f(prp_id, threshold,  alignment, hdferr)
+          SUBROUTINE h5pset_alignment_f(prp_id, threshold,  alignment, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_alignment_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER(HSIZE_T), INTENT(IN) :: threshold ! Threshold value
@@ -1491,9 +1751,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_alignment_c(prp_id, threshold, alignment)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_ALIGNMENT_C'::h5pset_alignment_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_ALIGNMENT_C'::h5pset_alignment_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER(HSIZE_T), INTENT(IN) :: threshold
               INTEGER(HSIZE_T), INTENT(IN) :: alignment
@@ -1530,7 +1790,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pget_alignment_f(prp_id, threshold,  alignment, hdferr)
+          SUBROUTINE h5pget_alignment_f(prp_id, threshold,  alignment, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_alignment_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER(HSIZE_T), INTENT(OUT) :: threshold ! Threshold value
@@ -1543,9 +1809,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_alignment_c(prp_id, threshold, alignment)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_ALIGNMENT_C'::h5pget_alignment_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_ALIGNMENT_C'::h5pget_alignment_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER(HSIZE_T), INTENT(OUT) :: threshold
               INTEGER(HSIZE_T), INTENT(OUT) :: alignment
@@ -1582,7 +1848,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pset_fapl_core_f(prp_id, increment, backing_store, hdferr)
+          SUBROUTINE h5pset_fapl_core_f(prp_id, increment, backing_store, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_fapl_core_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER(SIZE_T), INTENT(IN) :: increment ! File block size in bytes.
@@ -1598,9 +1870,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_fapl_core_c(prp_id, increment, backing_store_flag)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_FAPL_CORE_C'::h5pset_fapl_core_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_FAPL_CORE_C'::h5pset_fapl_core_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id 
               INTEGER(SIZE_T), INTENT(IN) :: increment 
               INTEGER :: backing_store_flag 
@@ -1638,7 +1910,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pget_fapl_core_f(prp_id, increment, backing_store, hdferr)
+          SUBROUTINE h5pget_fapl_core_f(prp_id, increment, backing_store, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_fapl_core_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER(SIZE_T), INTENT(OUT) :: increment ! File block size in bytes.
@@ -1654,9 +1932,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_fapl_core_c(prp_id, increment, backing_store_flag)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_FAPL_CORE_C'::h5pget_fapl_core_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_FAPL_CORE_C'::h5pget_fapl_core_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id 
               INTEGER(SIZE_T), INTENT(OUT) :: increment 
               INTEGER :: backing_store_flag 
@@ -1695,7 +1973,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pset_fapl_family_f(prp_id, memb_size, memb_plist , hdferr)
+          SUBROUTINE h5pset_fapl_family_f(prp_id, memb_size, memb_plist , hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_fapl_family_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER(HSIZE_T), INTENT(IN) :: memb_size ! Logical size, in bytes,
@@ -1711,9 +1995,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_fapl_family_c(prp_id, memb_size, memb_plist)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_FAPL_FAMILY_C'::h5pset_fapl_family_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_FAPL_FAMILY_C'::h5pset_fapl_family_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER(HSIZE_T), INTENT(IN) :: memb_size
               INTEGER(HID_T), INTENT(IN) :: memb_plist
@@ -1751,7 +2035,13 @@
 !----------------------------------------------------------------------
 
 
-          SUBROUTINE h5pget_fapl_family_f(prp_id, memb_size, memb_plist , hdferr)
+          SUBROUTINE h5pget_fapl_family_f(prp_id, memb_size, memb_plist , hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_fapl_family_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER(HSIZE_T), INTENT(OUT) :: memb_size ! Logical size, in bytes,
@@ -1767,9 +2057,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_fapl_family_c(prp_id, memb_size, memb_plist)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_FAPL_FAMILY_C'::h5pget_fapl_family_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_FAPL_FAMILY_C'::h5pget_fapl_family_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER(HSIZE_T), INTENT(OUT) :: memb_size
               INTEGER(HID_T), INTENT(OUT) :: memb_plist
@@ -1810,7 +2100,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pset_cache_f(prp_id, mdc_nelmts,rdcc_nelmts, rdcc_nbytes, rdcc_w0, hdferr)
+          SUBROUTINE h5pset_cache_f(prp_id, mdc_nelmts,rdcc_nelmts, rdcc_nbytes, rdcc_w0, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_cache_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER, INTENT(IN) :: mdc_nelmts  !Number of elements (objects)
@@ -1828,9 +2124,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_cache_c(prp_id,mdc_nelmts,rdcc_nelmts,rdcc_nbytes,rdcc_w0)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_CACHE_C'::h5pset_cache_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_CACHE_C'::h5pset_cache_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER, INTENT(IN) :: mdc_nelmts 
               INTEGER(SIZE_T), INTENT(IN) :: rdcc_nelmts 
@@ -1876,7 +2172,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pget_cache_f(prp_id, mdc_nelmts, rdcc_nelmts, rdcc_nbytes, rdcc_w0, hdferr)
+          SUBROUTINE h5pget_cache_f(prp_id, mdc_nelmts, rdcc_nelmts, rdcc_nbytes, rdcc_w0, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_cache_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER, INTENT(OUT) :: mdc_nelmts  !Number of elements (objects)
@@ -1895,9 +2197,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_cache_c(prp_id,mdc_nelmts,rdcc_nelmts,rdcc_nbytes,rdcc_w0)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_CACHE_C'::h5pget_cache_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_CACHE_C'::h5pget_cache_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER, INTENT(OUT) :: mdc_nelmts 
               INTEGER(SIZE_T), INTENT(OUT) :: rdcc_nelmts 
@@ -1939,7 +2241,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pset_fapl_split_f(prp_id, meta_ext, meta_plist, raw_ext, raw_plist, hdferr)
+          SUBROUTINE h5pset_fapl_split_f(prp_id, meta_ext, meta_plist, raw_ext, raw_plist, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_fapl_split_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             CHARACTER(LEN=*), INTENT(IN) :: meta_ext  !Name of the extension for
@@ -1958,9 +2266,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_fapl_split_c(prp_id,meta_len,meta_ext,meta_plist,raw_len,raw_ext,raw_plist)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_FAPL_SPLIT_C'::h5pset_fapl_split_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_FAPL_SPLIT_C'::h5pset_fapl_split_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: meta_ext
               !DEC$ATTRIBUTES reference :: raw_ext
               INTEGER(HID_T), INTENT(IN) :: prp_id
@@ -2052,7 +2360,13 @@
 !----------------------------------------------------------------------
 
  
-          SUBROUTINE h5pset_gc_references_f (prp_id, gc_reference, hdferr)
+          SUBROUTINE h5pset_gc_references_f (prp_id, gc_reference, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_gc_references_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER, INTENT(IN) :: gc_reference !the flag for garbage collecting
@@ -2065,9 +2379,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_gc_references_c(prp_id, gc_reference)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_GC_REFERENCES_C'::h5pset_gc_references_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_GC_REFERENCES_C'::h5pset_gc_references_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER, INTENT(IN) :: gc_reference
               END FUNCTION h5pset_gc_references_c
@@ -2102,7 +2416,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pget_gc_references_f (prp_id, gc_reference, hdferr)
+          SUBROUTINE h5pget_gc_references_f (prp_id, gc_reference, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_gc_references_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER, INTENT(OUT) :: gc_reference !the flag for garbage collecting
@@ -2115,9 +2435,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_gc_references_c(prp_id, gc_reference)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_GC_REFERENCES_C'::h5pget_gc_references_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_GC_REFERENCES_C'::h5pget_gc_references_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER, INTENT(OUT) :: gc_reference
               END FUNCTION h5pget_gc_references_c
@@ -2156,7 +2476,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pset_layout_f (prp_id, layout, hdferr)
+          SUBROUTINE h5pset_layout_f (prp_id, layout, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_layout_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER, INTENT(IN) :: layout !Type of storage layout for raw data
@@ -2172,9 +2498,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_layout_c(prp_id, layout)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_LAYOUT_C'::h5pset_layout_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_LAYOUT_C'::h5pset_layout_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER, INTENT(IN) :: layout
               END FUNCTION h5pset_layout_c
@@ -2212,7 +2538,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pget_layout_f (prp_id, layout, hdferr)
+          SUBROUTINE h5pget_layout_f (prp_id, layout, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_layout_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER, INTENT(OUT) :: layout !Type of storage layout for raw data
@@ -2228,9 +2560,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_layout_c(prp_id, layout)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_LAYOUT_C'::h5pget_layout_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_LAYOUT_C'::h5pget_layout_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER, INTENT(OUT) :: layout
               END FUNCTION h5pget_layout_c
@@ -2267,7 +2599,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pset_filter_f(prp_id, filter, flags, cd_nelmts, cd_values,  hdferr)
+          SUBROUTINE h5pset_filter_f(prp_id, filter, flags, cd_nelmts, cd_values,  hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_filter_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER, INTENT(IN) :: filter  !Filter to be added to the pipeline.
@@ -2284,9 +2622,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_filter_c(prp_id, filter, flags, cd_nelmts, cd_values)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_FILTER_C'::h5pset_filter_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_FILTER_C'::h5pset_filter_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id 
               INTEGER, INTENT(IN) :: filter 
               INTEGER, INTENT(IN) :: flags 
@@ -2324,7 +2662,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pget_nfilters_f (prp_id, nfilters, hdferr)
+          SUBROUTINE h5pget_nfilters_f (prp_id, nfilters, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_nfilters_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER, INTENT(OUT) :: nfilters !the number of filters in the pipeline
@@ -2336,9 +2680,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_nfilters_c(prp_id, nfilters)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_NFILTERS_C'::h5pget_nfilters_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_NFILTERS_C'::h5pget_nfilters_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER, INTENT(OUT) :: nfilters
               END FUNCTION h5pget_nfilters_c
@@ -2380,7 +2724,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pget_filter_f(prp_id, filter_number, flags, cd_nelmts, cd_values, namelen, name, filter_id, hdferr)
+          SUBROUTINE h5pget_filter_f(prp_id, filter_number, flags, cd_nelmts, cd_values, namelen, name, filter_id, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_filter_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER, INTENT(IN) :: filter_number  !Sequence number within the filter
@@ -2404,9 +2754,9 @@
               INTEGER FUNCTION h5pget_filter_c(prp_id, filter_number, flags, cd_nelmts,  &
                                               cd_values, namelen, name, filter_id )
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_FILTER_C'::h5pget_filter_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_FILTER_C'::h5pget_filter_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER, INTENT(IN) :: filter_number 
@@ -2452,7 +2802,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pset_external_f(prp_id, name, offset,bytes, hdferr)
+          SUBROUTINE h5pset_external_f(prp_id, name, offset,bytes, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_external_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier
             CHARACTER(LEN=*), INTENT(IN) :: name !Name of an external file
@@ -2471,9 +2827,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_external_c(prp_id, name,namelen, offset, bytes)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_EXTERNAL_C'::h5pset_external_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_EXTERNAL_C'::h5pset_external_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: prp_id
               CHARACTER(LEN=*), INTENT(IN) :: name
@@ -2513,7 +2869,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pget_external_count_f (prp_id, count, hdferr)
+          SUBROUTINE h5pget_external_count_f (prp_id, count, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_external_count_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER, INTENT(OUT) :: count !number of external files for the 
@@ -2525,9 +2887,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_external_count_c(prp_id, count)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_EXTERNAL_COUNT_C'::h5pget_external_count_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_EXTERNAL_COUNT_C'::h5pget_external_count_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id 
               INTEGER, INTENT(OUT) :: count
               END FUNCTION h5pget_external_count_c
@@ -2569,7 +2931,13 @@
 !----------------------------------------------------------------------
 
 
-          SUBROUTINE h5pget_external_f(prp_id, idx, name_size, name, offset,bytes, hdferr)
+          SUBROUTINE h5pget_external_f(prp_id, idx, name_size, name, offset,bytes, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_external_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier
             INTEGER, INTENT(IN) :: idx !External file index.
@@ -2588,9 +2956,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_external_c(prp_id, idx, name_size, name, offset, bytes)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_EXTERNAL_C'::h5pget_external_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_EXTERNAL_C'::h5pget_external_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER, INTENT(IN) :: idx 
@@ -2633,7 +3001,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pset_btree_ratios_f(prp_id, left, middle, right, hdferr)
+          SUBROUTINE h5pset_btree_ratios_f(prp_id, left, middle, right, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_btree_ratios_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier
             REAL, INTENT(IN) :: left !The B-tree split ratio for left-most nodes.
@@ -2649,9 +3023,9 @@
             INTERFACE
               INTEGER FUNCTION  h5pset_btree_ratios_c(prp_id, left, middle, right)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_BTREE_RATIOS_C'::h5pset_btree_ratios_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_BTREE_RATIOS_C'::h5pset_btree_ratios_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               REAL, INTENT(IN) :: left
               REAL, INTENT(IN) :: middle
@@ -2690,7 +3064,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pget_btree_ratios_f(prp_id, left, middle, right, hdferr)
+          SUBROUTINE h5pget_btree_ratios_f(prp_id, left, middle, right, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_btree_ratios_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier
             REAL, INTENT(OUT) :: left !The B-tree split ratio for left-most nodes.
@@ -2707,9 +3087,9 @@
             INTERFACE
               INTEGER FUNCTION  h5pget_btree_ratios_c(prp_id, left, middle, right)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_BTREE_RATIOS_C'::h5pget_btree_ratios_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_BTREE_RATIOS_C'::h5pget_btree_ratios_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               REAL, INTENT(OUT) :: left
               REAL, INTENT(OUT) :: middle
@@ -2748,7 +3128,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pget_fclose_degree_f(fapl_id, degree, hdferr)
+          SUBROUTINE h5pget_fclose_degree_f(fapl_id, degree, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_fclose_degree_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: fapl_id ! File Access Property list identifier 
             INTEGER, INTENT(OUT) :: degree     ! Possible values
@@ -2766,9 +3152,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_fclose_degree_c(fapl_id, degree)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_FCLOSE_DEGREE_C'::h5pget_fclose_degree_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_FCLOSE_DEGREE_C'::h5pget_fclose_degree_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: fapl_id
               INTEGER, INTENT(OUT) :: degree
               END FUNCTION h5pget_fclose_degree_c
@@ -2805,7 +3191,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pset_fclose_degree_f(fapl_id, degree, hdferr)
+          SUBROUTINE h5pset_fclose_degree_f(fapl_id, degree, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_fclose_degree_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: fapl_id ! File Access Property list identifier 
             INTEGER, INTENT(IN) :: degree     ! Possible values
@@ -2820,9 +3212,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_fclose_degree_c(fapl_id, degree)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-        !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_FCLOSE_DEGREE_C'::h5pset_fclose_degree_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+        !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_FCLOSE_DEGREE_C'::h5pset_fclose_degree_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: fapl_id
               INTEGER, INTENT(IN) :: degree
               END FUNCTION h5pset_fclose_degree_c
@@ -2856,7 +3248,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pequal_f(plist1_id, plist2_id, flag, hdferr)
+          SUBROUTINE h5pequal_f(plist1_id, plist2_id, flag, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pequal_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: plist1_id ! Property list identifier 
             INTEGER(HID_T), INTENT(IN) :: plist2_id ! Property list identifier 
@@ -2867,9 +3265,9 @@
             INTERFACE
               INTEGER FUNCTION h5pequal_c(plist1_id, plist2_id, c_flag)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-        !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PEQUAL_C'::h5pequal_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+        !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PEQUAL_C'::h5pequal_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: plist1_id
               INTEGER(HID_T), INTENT(IN) :: plist2_id
               INTEGER, INTENT(OUT) :: c_flag
@@ -2904,7 +3302,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pset_buffer_f(plist_id, size, hdferr)
+          SUBROUTINE h5pset_buffer_f(plist_id, size, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_buffer_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: plist_id ! Data transfer property list identifier 
             INTEGER(HSIZE_T), INTENT(IN) :: size  ! Buffer size in bytes; 
@@ -2915,9 +3319,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_buffer_c(plist_id, size)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-        !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_BUFFER_C'::h5pset_buffer_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+        !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_BUFFER_C'::h5pset_buffer_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: plist_id
               INTEGER(HSIZE_T), INTENT(IN) :: size
               END FUNCTION h5pset_buffer_c
@@ -2949,7 +3353,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pget_buffer_f(plist_id, size, hdferr)
+          SUBROUTINE h5pget_buffer_f(plist_id, size, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_buffer_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: plist_id ! Data transfer property list identifier 
             INTEGER(HSIZE_T), INTENT(OUT) :: size ! Buffer size in bytes; 
@@ -2960,9 +3370,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_buffer_c(plist_id, size)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-        !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_BUFFER_C'::h5pget_buffer_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+        !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_BUFFER_C'::h5pget_buffer_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: plist_id
               INTEGER(HSIZE_T), INTENT(OUT) :: size
               END FUNCTION h5pget_buffer_c
@@ -2999,7 +3409,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pfill_value_defined_f(plist_id, flag, hdferr)
+          SUBROUTINE h5pfill_value_defined_f(plist_id, flag, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pfill_value_defined_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: plist_id 
             INTEGER, INTENT(OUT) :: flag
@@ -3008,9 +3424,9 @@
             INTERFACE
               INTEGER FUNCTION h5pfill_value_defined_c(plist_id, flag)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-        !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PFILL_VALUE_DEFINED_C'::h5pfill_value_defined_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+        !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PFILL_VALUE_DEFINED_C'::h5pfill_value_defined_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: plist_id
               INTEGER, INTENT(OUT) :: flag
               END FUNCTION h5pfill_value_defined_c
@@ -3048,7 +3464,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pset_alloc_time_f(plist_id, flag, hdferr)
+          SUBROUTINE h5pset_alloc_time_f(plist_id, flag, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_alloc_time_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: plist_id 
             INTEGER, INTENT(IN) :: flag
@@ -3057,9 +3479,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_alloc_time_c(plist_id, flag)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-        !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_ALLOC_TIME_C'::h5pset_alloc_time_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+        !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_ALLOC_TIME_C'::h5pset_alloc_time_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: plist_id
               INTEGER, INTENT(IN) :: flag
               END FUNCTION h5pset_alloc_time_c
@@ -3097,7 +3519,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pget_alloc_time_f(plist_id, flag, hdferr)
+          SUBROUTINE h5pget_alloc_time_f(plist_id, flag, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_alloc_time_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: plist_id 
             INTEGER, INTENT(OUT) :: flag
@@ -3106,9 +3534,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_alloc_time_c(plist_id, flag)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-        !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_ALLOC_TIME_C'::h5pget_alloc_time_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+        !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_ALLOC_TIME_C'::h5pget_alloc_time_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: plist_id
               INTEGER, INTENT(OUT) :: flag
               END FUNCTION h5pget_alloc_time_c
@@ -3144,7 +3572,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pset_fill_time_f(plist_id, flag, hdferr)
+          SUBROUTINE h5pset_fill_time_f(plist_id, flag, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_fill_time_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: plist_id 
             INTEGER, INTENT(IN) :: flag
@@ -3153,9 +3587,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_fill_time_c(plist_id, flag)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-        !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_FILL_TIME_C'::h5pset_fill_time_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+        !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_FILL_TIME_C'::h5pset_fill_time_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: plist_id
               INTEGER, INTENT(IN) :: flag
               END FUNCTION h5pset_fill_time_c
@@ -3191,7 +3625,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pget_fill_time_f(plist_id, flag, hdferr)
+          SUBROUTINE h5pget_fill_time_f(plist_id, flag, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_fill_time_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: plist_id 
             INTEGER, INTENT(OUT) :: flag
@@ -3200,9 +3640,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_fill_time_c(plist_id, flag)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-        !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_FILL_TIME_C'::h5pget_fill_time_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+        !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_FILL_TIME_C'::h5pget_fill_time_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: plist_id
               INTEGER, INTENT(OUT) :: flag
               END FUNCTION h5pget_fill_time_c
@@ -3234,7 +3674,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pset_meta_block_size_f(plist_id, size, hdferr)
+          SUBROUTINE h5pset_meta_block_size_f(plist_id, size, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_meta_block_size_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: plist_id ! File access property list identifier 
             INTEGER(HSIZE_T), INTENT(IN) :: size  ! Block size in bytes; 
@@ -3243,9 +3689,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_meta_block_size_c(plist_id, size)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-        !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_META_BLOCK_SIZE_C'::h5pset_meta_block_size_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+        !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_META_BLOCK_SIZE_C'::h5pset_meta_block_size_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: plist_id
               INTEGER(HSIZE_T), INTENT(IN) :: size
               END FUNCTION h5pset_meta_block_size_c
@@ -3277,7 +3723,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pget_meta_block_size_f(plist_id, size, hdferr)
+          SUBROUTINE h5pget_meta_block_size_f(plist_id, size, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_meta_block_size_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: plist_id ! File access property list identifier 
             INTEGER(HSIZE_T), INTENT(OUT) :: size  ! Block size in bytes; 
@@ -3286,9 +3738,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_meta_block_size_c(plist_id, size)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-        !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_META_BLOCK_SIZE_C'::h5pget_meta_block_size_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+        !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_META_BLOCK_SIZE_C'::h5pget_meta_block_size_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: plist_id
               INTEGER(HSIZE_T), INTENT(OUT) :: size
               END FUNCTION h5pget_meta_block_size_c
@@ -3320,7 +3772,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pset_sieve_buf_size_f(plist_id, size, hdferr)
+          SUBROUTINE h5pset_sieve_buf_size_f(plist_id, size, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_sieve_buf_size_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: plist_id ! File access property list identifier 
             INTEGER(SIZE_T), INTENT(IN) :: size  ! Buffer size in bytes; 
@@ -3329,9 +3787,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_sieve_buf_size_c(plist_id, size)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-        !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_SIEVE_BUF_SIZE_C'::h5pset_sieve_buf_size_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+        !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_SIEVE_BUF_SIZE_C'::h5pset_sieve_buf_size_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: plist_id
               INTEGER(SIZE_T), INTENT(IN) :: size
               END FUNCTION h5pset_sieve_buf_size_c
@@ -3363,7 +3821,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pget_sieve_buf_size_f(plist_id, size, hdferr)
+          SUBROUTINE h5pget_sieve_buf_size_f(plist_id, size, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_sieve_buf_size_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: plist_id ! File access property list identifier 
             INTEGER(SIZE_T), INTENT(OUT) :: size   ! Buffer size in bytes 
@@ -3372,9 +3836,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_sieve_buf_size_c(plist_id, size)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-        !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_SIEVE_BUF_SIZE_C'::h5pget_sieve_buf_size_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+        !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_SIEVE_BUF_SIZE_C'::h5pget_sieve_buf_size_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: plist_id
               INTEGER(SIZE_T), INTENT(OUT) :: size
               END FUNCTION h5pget_sieve_buf_size_c
@@ -3406,7 +3870,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pset_small_data_block_size_f(plist_id, size, hdferr)
+          SUBROUTINE h5pset_small_data_block_size_f(plist_id, size, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_small_data_block_size_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: plist_id ! File access property list identifier 
             INTEGER(HSIZE_T), INTENT(IN) :: size    ! Small raw data block size
@@ -3415,9 +3885,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_small_data_block_size_c(plist_id, size)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-        !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_SMALL_DATA_BLOCK_SIZE_C'::h5pset_small_data_block_size_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+        !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_SMALL_DATA_BLOCK_SIZE_C'::h5pset_small_data_block_size_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: plist_id
               INTEGER(HSIZE_T), INTENT(IN) :: size
               END FUNCTION h5pset_small_data_block_size_c
@@ -3449,7 +3919,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pget_small_data_block_size_f(plist_id, size, hdferr)
+          SUBROUTINE h5pget_small_data_block_size_f(plist_id, size, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_small_data_block_size_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: plist_id ! File access property list identifier 
             INTEGER(HSIZE_T), INTENT(OUT) :: size    ! Small raw data block size
@@ -3458,9 +3934,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_small_data_block_size_c(plist_id, size)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-        !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_SMALL_DATA_BLOCK_SIZE_C'::h5pget_small_data_block_size_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+        !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_SMALL_DATA_BLOCK_SIZE_C'::h5pget_small_data_block_size_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: plist_id
               INTEGER(HSIZE_T), INTENT(OUT) :: size
               END FUNCTION h5pget_small_data_block_size_c
@@ -3492,7 +3968,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pset_hyper_vector_size_f(plist_id, size, hdferr)
+          SUBROUTINE h5pset_hyper_vector_size_f(plist_id, size, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_hyper_vector_size_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: plist_id ! Dataset transfer property list identifier 
             INTEGER(SIZE_T), INTENT(IN) :: size     ! Vector size
@@ -3501,9 +3983,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_hyper_vector_size_c(plist_id, size)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-        !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_HYPER_VECTOR_SIZE_C'::h5pset_hyper_vector_size_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+        !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_HYPER_VECTOR_SIZE_C'::h5pset_hyper_vector_size_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: plist_id
               INTEGER(SIZE_T), INTENT(IN) :: size
               END FUNCTION h5pset_hyper_vector_size_c
@@ -3535,7 +4017,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pget_hyper_vector_size_f(plist_id, size, hdferr)
+          SUBROUTINE h5pget_hyper_vector_size_f(plist_id, size, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_hyper_vector_size_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: plist_id ! Dataset transfer property list identifier 
             INTEGER(SIZE_T), INTENT(OUT) :: size     ! Vector size
@@ -3544,9 +4032,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_hyper_vector_size_c(plist_id, size)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-        !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_HYPER_VECTOR_SIZE_C'::h5pget_hyper_vector_size_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+        !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_HYPER_VECTOR_SIZE_C'::h5pget_hyper_vector_size_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: plist_id
               INTEGER(SIZE_T), INTENT(OUT) :: size
               END FUNCTION h5pget_hyper_vector_size_c
@@ -3579,7 +4067,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pset_integer(prp_id, name, value, hdferr)
+          SUBROUTINE h5pset_integer(prp_id, name, value, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_integer
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id  ! Property list identifier 
             CHARACTER(LEN=*), INTENT(IN) :: name  ! Name of property to modify
@@ -3590,9 +4084,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_integer_c(prp_id, name, name_len, value)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_INTEGER_C'::h5pset_integer_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_INTEGER_C'::h5pset_integer_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: prp_id
               CHARACTER(LEN=*), INTENT(IN) :: name
@@ -3629,7 +4123,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pset_real(prp_id, name, value, hdferr)
+          SUBROUTINE h5pset_real(prp_id, name, value, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_real
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id  ! Property list identifier 
             CHARACTER(LEN=*), INTENT(IN) :: name  ! Name of property to modify
@@ -3640,9 +4140,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_real_c(prp_id, name, name_len, value)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_REAL_C'::h5pset_real_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_REAL_C'::h5pset_real_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: prp_id
               CHARACTER(LEN=*), INTENT(IN) :: name
@@ -3655,6 +4155,61 @@
         hdferr = h5pset_real_c(prp_id, name , name_len, value)
           END SUBROUTINE h5pset_real
 
+!----------------------------------------------------------------------
+! Name:		h5pset_double
+!
+! Purpose: 	Sets a property list value
+!
+! Inputs:  
+!		prp_id		- iproperty list identifier to modify
+!		name 		- name of property to modify
+!		value		- value to set property to
+! Outputs:  
+!		hdferr:		- error code		
+!				 	Success:  0
+!				 	Failure: -1   
+! Optional parameters:
+!				NONE
+!
+! Programmer:	Elena Pourmal
+!	        October 9, 2002	
+!
+! Modifications: 	
+!
+! Comment:		
+!----------------------------------------------------------------------
+
+          SUBROUTINE h5pset_double(prp_id, name, value, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_double
+!DEC$endif
+!
+            IMPLICIT NONE
+            INTEGER(HID_T), INTENT(IN) :: prp_id  ! Property list identifier 
+            CHARACTER(LEN=*), INTENT(IN) :: name  ! Name of property to modify
+            DOUBLE PRECISION,   INTENT(IN) :: value ! Property value
+            INTEGER, INTENT(OUT) :: hdferr  ! Error code
+            INTEGER :: name_len
+
+            INTERFACE
+              INTEGER FUNCTION h5pset_double_c(prp_id, name, name_len, value)
+              USE H5GLOBAL
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_DOUBLE_C'::h5pset_double_c
+              !DEC$ ENDIF
+              !DEC$ATTRIBUTES reference :: name
+              INTEGER(HID_T), INTENT(IN) :: prp_id
+              CHARACTER(LEN=*), INTENT(IN) :: name
+              INTEGER, INTENT(IN)         :: name_len
+              DOUBLE PRECISION, INTENT(IN) :: value
+              END FUNCTION h5pset_double_c
+            END INTERFACE
+
+            name_len = LEN(name)
+        hdferr = h5pset_double_c(prp_id, name , name_len, value)
+          END SUBROUTINE h5pset_double
 
 !----------------------------------------------------------------------
 ! Name:		h5pset_char
@@ -3680,7 +4235,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pset_char(prp_id, name, value, hdferr)
+          SUBROUTINE h5pset_char(prp_id, name, value, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_char
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id  ! Property list identifier 
             CHARACTER(LEN=*), INTENT(IN) :: name  ! Name of property to modify
@@ -3692,9 +4253,9 @@
             INTERFACE
               INTEGER FUNCTION h5psetc_c(prp_id, name, name_len, value, value_len)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSETC_C'::h5psetc_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSETC_C'::h5psetc_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               !DEC$ATTRIBUTES reference :: value
               INTEGER(HID_T), INTENT(IN) :: prp_id
@@ -3734,7 +4295,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pget_integer(prp_id, name, value, hdferr)
+          SUBROUTINE h5pget_integer(prp_id, name, value, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_integer
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id  ! Property list identifier 
             CHARACTER(LEN=*), INTENT(IN) :: name  ! Name of property to modify
@@ -3745,9 +4312,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_integer_c(prp_id, name, name_len, value)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_INTEGER_C'::h5pget_integer_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_INTEGER_C'::h5pget_integer_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: prp_id
               CHARACTER(LEN=*), INTENT(IN) :: name
@@ -3784,7 +4351,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pget_real(prp_id, name, value, hdferr)
+          SUBROUTINE h5pget_real(prp_id, name, value, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_real
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id  ! Property list identifier 
             CHARACTER(LEN=*), INTENT(IN) :: name  ! Name of property to modify
@@ -3795,9 +4368,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_real_c(prp_id, name, name_len, value)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_REAL_C'::h5pget_real_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_REAL_C'::h5pget_real_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: prp_id
               CHARACTER(LEN=*), INTENT(IN) :: name
@@ -3810,6 +4383,61 @@
             hdferr = h5pget_real_c(prp_id, name , name_len, value)
           END SUBROUTINE h5pget_real
 
+!----------------------------------------------------------------------
+! Name:		h5pget_double
+!
+! Purpose: 	Gets a property list value
+!
+! Inputs:  
+!		prp_id		- iproperty list identifier to modify
+!		name 		- name of property to modify
+! Outputs:  
+!		value		- value of property
+!		hdferr:		- error code		
+!				 	Success:  0
+!				 	Failure: -1   
+! Optional parameters:
+!				NONE
+!
+! Programmer:	Elena Pourmal
+!	        October 9, 2002	
+!
+! Modifications: 	
+!
+! Comment:		
+!----------------------------------------------------------------------
+
+          SUBROUTINE h5pget_double(prp_id, name, value, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_double
+!DEC$endif
+!
+            IMPLICIT NONE
+            INTEGER(HID_T), INTENT(IN) :: prp_id  ! Property list identifier 
+            CHARACTER(LEN=*), INTENT(IN) :: name  ! Name of property to modify
+            DOUBLE PRECISION,   INTENT(OUT) :: value ! Property value
+            INTEGER, INTENT(OUT) :: hdferr  ! Error code
+            INTEGER :: name_len
+
+            INTERFACE
+              INTEGER FUNCTION h5pget_double_c(prp_id, name, name_len, value)
+              USE H5GLOBAL
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_DOUBLE_C'::h5pget_double_c
+              !DEC$ ENDIF
+              !DEC$ATTRIBUTES reference :: name
+              INTEGER(HID_T), INTENT(IN) :: prp_id
+              CHARACTER(LEN=*), INTENT(IN) :: name
+              INTEGER, INTENT(IN)         :: name_len
+              DOUBLE PRECISION, INTENT(OUT) :: value
+              END FUNCTION h5pget_double_c
+            END INTERFACE
+
+            name_len = LEN(name)
+            hdferr = h5pget_double_c(prp_id, name , name_len, value)
+          END SUBROUTINE h5pget_double
 
 !----------------------------------------------------------------------
 ! Name:		h5pget_char
@@ -3835,7 +4463,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pget_char(prp_id, name, value, hdferr)
+          SUBROUTINE h5pget_char(prp_id, name, value, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_char
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id  ! Property list identifier 
             CHARACTER(LEN=*), INTENT(IN) :: name  ! Name of property to modify
@@ -3847,9 +4481,9 @@
             INTERFACE
               INTEGER FUNCTION h5pgetc_c(prp_id, name, name_len, value, value_len)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGETC_C'::h5pgetc_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGETC_C'::h5pgetc_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               !DEC$ATTRIBUTES reference :: value
               INTEGER(HID_T), INTENT(IN) :: prp_id
@@ -3889,7 +4523,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pexist_f(prp_id, name, flag, hdferr)
+          SUBROUTINE h5pexist_f(prp_id, name, flag, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pexist_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id  ! Property list identifier 
             CHARACTER(LEN=*), INTENT(IN) :: name  ! Name of property to modify
@@ -3901,9 +4541,9 @@
             INTERFACE
               INTEGER FUNCTION h5pexist_c(prp_id, name, name_len)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PEXIST_C'::h5pexist_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PEXIST_C'::h5pexist_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: prp_id
               CHARACTER(LEN=*), INTENT(IN) :: name
@@ -3943,7 +4583,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pget_size_f(prp_id, name, size, hdferr)
+          SUBROUTINE h5pget_size_f(prp_id, name, size, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_size_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id  ! Property list identifier 
             CHARACTER(LEN=*), INTENT(IN) :: name  ! Name of property to query
@@ -3954,9 +4600,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_size_c(prp_id, name, name_len, size)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_SIZE_C'::h5pget_size_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_SIZE_C'::h5pget_size_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: prp_id
               CHARACTER(LEN=*), INTENT(IN) :: name
@@ -3991,7 +4637,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pget_nprops_f(prp_id, nprops, hdferr)
+          SUBROUTINE h5pget_nprops_f(prp_id, nprops, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_nprops_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id    ! Property list identifier 
             INTEGER(SIZE_T), INTENT(OUT) :: nprops  ! iNumber of properties
@@ -4000,9 +4652,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_nprops_c(prp_id, nprops)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_NPROPS_C'::h5pget_nprops_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_NPROPS_C'::h5pget_nprops_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER(SIZE_T), INTENT(OUT) :: nprops
               END FUNCTION h5pget_nprops_c
@@ -4037,7 +4689,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pget_class_name_f(prp_id, name, size, hdferr)
+          SUBROUTINE h5pget_class_name_f(prp_id, name, size, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_class_name_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id  ! Property list identifier 
             CHARACTER(LEN=*), INTENT(OUT) :: name  ! Buffer to retireve class name
@@ -4049,9 +4707,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_class_name_c(prp_id, name, name_len)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_CLASS_NAME_C'::h5pget_class_name_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_CLASS_NAME_C'::h5pget_class_name_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: prp_id
               CHARACTER(LEN=*), INTENT(INOUT) :: name
@@ -4091,7 +4749,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pget_class_parent_f(prp_id, parent_id, hdferr)
+          SUBROUTINE h5pget_class_parent_f(prp_id, parent_id, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_class_parent_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id     ! Property list identifier 
             INTEGER(HID_T), INTENT(OUT) :: parent_id ! Parent class property list 
@@ -4101,9 +4765,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_class_parent_c(prp_id, parent_id)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_CLASS_PARENT_C'::h5pget_class_parent_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_CLASS_PARENT_C'::h5pget_class_parent_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER(HID_T), INTENT(OUT) :: parent_id
               END FUNCTION h5pget_class_parent_c
@@ -4136,7 +4800,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pisa_class_f(plist, pclass, flag, hdferr)
+          SUBROUTINE h5pisa_class_f(plist, pclass, flag, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pisa_class_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: plist     ! Property list identifier 
             INTEGER(HID_T), INTENT(IN) :: pclass    ! Class identifier
@@ -4146,9 +4816,9 @@
             INTERFACE
               INTEGER FUNCTION h5pisa_class_c(plist, pclass)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PISA_CLASS_C'::h5pisa_class_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PISA_CLASS_C'::h5pisa_class_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: plist
               INTEGER(HID_T), INTENT(IN) :: pclass
               END FUNCTION h5pisa_class_c
@@ -4186,7 +4856,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pcopy_prop_f(dst_id, src_id, name, hdferr)
+          SUBROUTINE h5pcopy_prop_f(dst_id, src_id, name, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pcopy_prop_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: dst_id  ! Destination property list 
                                                   ! identifier 
@@ -4198,9 +4874,9 @@
             INTERFACE
               INTEGER FUNCTION h5pcopy_prop_c(dst_id, src_id, name, name_len)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PCOPY_PROP_C'::h5pcopy_prop_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PCOPY_PROP_C'::h5pcopy_prop_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: dst_id
               INTEGER(HID_T), INTENT(IN) :: src_id
@@ -4237,7 +4913,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5premove_f(plid, name, hdferr)
+          SUBROUTINE h5premove_f(plid, name, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5premove_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: plid   ! property list identifier
             CHARACTER(LEN=*), INTENT(IN) :: name ! name of property to remove
@@ -4247,9 +4929,9 @@
             INTERFACE
               INTEGER FUNCTION h5premove_c(plid, name, name_len)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PREMOVE_C'::h5premove_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PREMOVE_C'::h5premove_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: plid 
               CHARACTER(LEN=*), INTENT(IN) :: name
@@ -4285,7 +4967,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5punregister_f(class, name, hdferr)
+          SUBROUTINE h5punregister_f(class, name, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5punregister_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: class  ! property list class identifier
             CHARACTER(LEN=*), INTENT(IN) :: name ! name of property to remove
@@ -4295,9 +4983,9 @@
             INTERFACE
               INTEGER FUNCTION h5punregister_c(class, name, name_len)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PUNREGISTER_C'::h5punregister_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PUNREGISTER_C'::h5punregister_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: class
               CHARACTER(LEN=*), INTENT(IN) :: name
@@ -4332,7 +5020,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pclose_class_f(class, hdferr)
+          SUBROUTINE h5pclose_class_f(class, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pclose_class_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: class  ! property list class identifier
             INTEGER, INTENT(OUT) :: hdferr  ! Error code
@@ -4340,9 +5034,9 @@
             INTERFACE
               INTEGER FUNCTION h5pclose_class_c(class)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PCLOSE_CLASS_C'::h5pclose_class_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PCLOSE_CLASS_C'::h5pclose_class_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: class
               END FUNCTION h5pclose_class_c
             END INTERFACE
@@ -4382,7 +5076,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pcreate_class_f(parent, name, class, hdferr)
+          SUBROUTINE h5pcreate_class_f(parent, name, class, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pcreate_class_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: parent  ! parent property list class 
                                                   ! identifier
@@ -4395,9 +5095,9 @@
               INTEGER FUNCTION h5pcreate_class_c(parent, name, name_len,&
                                                  class) 
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PCREATE_CLASS_C'::h5pcreate_class_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PCREATE_CLASS_C'::h5pcreate_class_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: parent
               CHARACTER(LEN=*), INTENT(IN) :: name
@@ -4437,7 +5137,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pregister_integer(class, name, size, value, hdferr)
+          SUBROUTINE h5pregister_integer(class, name, size, value, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pregister_integer
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: class   ! Property list class identifier 
             CHARACTER(LEN=*), INTENT(IN) :: name  ! Name of property to register
@@ -4449,9 +5155,9 @@
             INTERFACE
               INTEGER FUNCTION h5pregister_integer_c(class, name, name_len, size, value)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PREGISTER_INTEGER_C'::h5pregister_integer_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PREGISTER_INTEGER_C'::h5pregister_integer_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: class
               CHARACTER(LEN=*), INTENT(IN) :: name
@@ -4492,7 +5198,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pregister_real(class, name, size, value, hdferr)
+          SUBROUTINE h5pregister_real(class, name, size, value, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pregister_real
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: class   ! Property list class identifier 
             CHARACTER(LEN=*), INTENT(IN) :: name  ! Name of property to register
@@ -4504,9 +5216,9 @@
             INTERFACE
               INTEGER FUNCTION h5pregister_real_c(class, name, name_len, size, value)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PREGISTER_REAL_C'::h5pregister_real_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PREGISTER_REAL_C'::h5pregister_real_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: class
               CHARACTER(LEN=*), INTENT(IN) :: name
@@ -4519,6 +5231,67 @@
             name_len = LEN(name)
             hdferr = h5pregister_real_c(class, name , name_len, size, value)
           END SUBROUTINE h5pregister_real
+
+!----------------------------------------------------------------------
+! Name:		h5pregister_double
+!
+! Purpose: 	Registers a permanent property with a property list class.
+!
+! Inputs:  
+!		class		- property list class to register 
+!                                 permanent property within
+!		name 		- name of property to register
+!               size            - size of property in bytes
+!		value		- default value for property in newly 
+!                                 created property lists
+! Outputs:  
+!		hdferr:		- error code		
+!				 	Success:  0
+!				 	Failure: -1   
+! Optional parameters:
+!				NONE
+!
+! Programmer:	Elena Pourmal
+!	        October 10, 2002	
+!
+! Modifications: 	
+!
+! Comment:		
+!----------------------------------------------------------------------
+
+          SUBROUTINE h5pregister_double(class, name, size, value, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pregister_double
+!DEC$endif
+!
+            IMPLICIT NONE
+            INTEGER(HID_T), INTENT(IN) :: class   ! Property list class identifier 
+            CHARACTER(LEN=*), INTENT(IN) :: name  ! Name of property to register
+            INTEGER(SIZE_T), INTENT(IN) :: size  ! size of the property value	
+            DOUBLE PRECISION,   INTENT(IN) :: value        ! Property value
+            INTEGER, INTENT(OUT) :: hdferr  ! Error code
+            INTEGER :: name_len
+
+            INTERFACE
+              INTEGER FUNCTION h5pregister_double_c(class, name, name_len, size, value)
+              USE H5GLOBAL
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PREGISTER_DOUBLE_C'::h5pregister_double_c
+              !DEC$ ENDIF
+              !DEC$ATTRIBUTES reference :: name
+              INTEGER(HID_T), INTENT(IN) :: class
+              CHARACTER(LEN=*), INTENT(IN) :: name
+              INTEGER, INTENT(IN)         :: name_len
+              INTEGER(SIZE_T), INTENT(IN) :: size 
+              DOUBLE PRECISION, INTENT(IN) :: value
+              END FUNCTION h5pregister_double_c
+            END INTERFACE
+
+            name_len = LEN(name)
+            hdferr = h5pregister_double_c(class, name , name_len, size, value)
+          END SUBROUTINE h5pregister_double
 
 !----------------------------------------------------------------------
 ! Name:		h5pregister_char
@@ -4547,7 +5320,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pregister_char(class, name, size, value, hdferr)
+          SUBROUTINE h5pregister_char(class, name, size, value, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pregister_char
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: class   ! Property list class identifier 
             CHARACTER(LEN=*), INTENT(IN) :: name  ! Name of property to register
@@ -4561,9 +5340,9 @@
               INTEGER FUNCTION h5pregisterc_c(class, name, name_len, size, value, &
                                               value_len)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PREGISTERC_C'::h5pregisterc_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PREGISTERC_C'::h5pregisterc_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               !DEC$ATTRIBUTES reference :: value
               INTEGER(HID_T), INTENT(IN) :: class
@@ -4605,7 +5384,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pinsert_integer(plist, name, size, value, hdferr)
+          SUBROUTINE h5pinsert_integer(plist, name, size, value, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pinsert_integer
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: plist   ! Property list identifier 
             CHARACTER(LEN=*), INTENT(IN) :: name  ! Name of property to insert 
@@ -4617,9 +5402,9 @@
             INTERFACE
               INTEGER FUNCTION h5pinsert_integer_c(plist, name, name_len, size, value)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PINSERT_INTEGER_C'::h5pinsert_integer_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PINSERT_INTEGER_C'::h5pinsert_integer_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: plist
               CHARACTER(LEN=*), INTENT(IN) :: name
@@ -4659,7 +5444,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pinsert_real(plist, name, size, value, hdferr)
+          SUBROUTINE h5pinsert_real(plist, name, size, value, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pinsert_real
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: plist   ! Property list identifier 
             CHARACTER(LEN=*), INTENT(IN) :: name  ! Name of property to insert 
@@ -4671,9 +5462,9 @@
             INTERFACE
               INTEGER FUNCTION h5pinsert_real_c(plist, name, name_len, size, value)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PINSERT_REAL_C'::h5pinsert_real_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PINSERT_REAL_C'::h5pinsert_real_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: plist
               CHARACTER(LEN=*), INTENT(IN) :: name
@@ -4687,6 +5478,65 @@
             hdferr = h5pinsert_real_c(plist, name , name_len, size, value)
           END SUBROUTINE h5pinsert_real
 
+!----------------------------------------------------------------------
+! Name:		h5pinsert_double
+!
+! Purpose: 	Registers a temporary property with a property list class.
+!
+! Inputs:  
+!		plist		- property list identifier
+!                                 permanent property within
+!		name 		- name of property to insert
+!               size            - size of property in bytes
+!		value		- initial value for the property 
+! Outputs:  
+!		hdferr:		- error code		
+!				 	Success:  0
+!				 	Failure: -1   
+! Optional parameters:
+!				NONE
+!
+! Programmer:	Elena Pourmal
+!	        October 10, 2002	
+!
+! Modifications: 	
+!
+! Comment:		
+!----------------------------------------------------------------------
+
+          SUBROUTINE h5pinsert_double(plist, name, size, value, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pinsert_double
+!DEC$endif
+!
+            IMPLICIT NONE
+            INTEGER(HID_T), INTENT(IN) :: plist   ! Property list identifier 
+            CHARACTER(LEN=*), INTENT(IN) :: name  ! Name of property to insert 
+            INTEGER(SIZE_T), INTENT(IN) :: size   ! Size of the property value	
+            DOUBLE PRECISION, INTENT(IN) :: value ! Property value
+            INTEGER, INTENT(OUT) :: hdferr        ! Error code
+            INTEGER :: name_len
+
+            INTERFACE
+              INTEGER FUNCTION h5pinsert_double_c(plist, name, name_len, size, value)
+              USE H5GLOBAL
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PINSERT_DOUBLE_C'::h5pinsert_double_c
+              !DEC$ ENDIF
+              !DEC$ATTRIBUTES reference :: name
+              INTEGER(HID_T), INTENT(IN) :: plist
+              CHARACTER(LEN=*), INTENT(IN) :: name
+              INTEGER, INTENT(IN)         :: name_len
+              INTEGER(SIZE_T), INTENT(IN) :: size 
+              DOUBLE PRECISION, INTENT(IN) :: value
+              END FUNCTION h5pinsert_double_c
+            END INTERFACE
+
+            name_len = LEN(name)
+            hdferr = h5pinsert_double_c(plist, name , name_len, size, value)
+          END SUBROUTINE h5pinsert_double
 
 !----------------------------------------------------------------------
 ! Name:		h5pinsert_char
@@ -4714,7 +5564,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pinsert_char(plist, name, size, value, hdferr)
+          SUBROUTINE h5pinsert_char(plist, name, size, value, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pinsert_char
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: plist      ! Property list identifier 
             CHARACTER(LEN=*), INTENT(IN) :: name     ! Name of property to insert 
@@ -4727,9 +5583,9 @@
             INTERFACE
               INTEGER FUNCTION h5pinsertc_c(plist, name, name_len, size, value, value_len)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PINSERTC_C'::h5pinsertc_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PINSERTC_C'::h5pinsertc_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               !DEC$ATTRIBUTES reference :: value
               INTEGER(HID_T), INTENT(IN) :: plist
@@ -4769,7 +5625,13 @@
 !----------------------------------------------------------------------
 
 
-          SUBROUTINE h5pset_shuffle_f(prp_id, hdferr)
+          SUBROUTINE h5pset_shuffle_f(prp_id, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_shuffle_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER, INTENT(OUT) :: hdferr       ! Error code
@@ -4780,9 +5642,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_shuffle_c(prp_id)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_SHUFFLE_C'::h5pset_shuffle_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_SHUFFLE_C'::h5pset_shuffle_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               END FUNCTION h5pset_shuffle_c
             END INTERFACE
@@ -4816,7 +5678,13 @@
 !----------------------------------------------------------------------
 
 
-          SUBROUTINE h5pset_edc_check_f(prp_id, flag, hdferr)
+          SUBROUTINE h5pset_edc_check_f(prp_id, flag, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_edc_check_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER, INTENT(IN) :: flag          ! Checksum filter flag
@@ -4828,9 +5696,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_edc_check_c(prp_id, flag)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_EDC_CHECK_C'::h5pset_edc_check_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_EDC_CHECK_C'::h5pset_edc_check_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER, INTENT(IN) :: flag 
               END FUNCTION h5pset_edc_check_c
@@ -4862,7 +5730,13 @@
 !----------------------------------------------------------------------
 
 
-          SUBROUTINE h5pget_edc_check_f(prp_id, flag, hdferr)
+          SUBROUTINE h5pget_edc_check_f(prp_id, flag, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_edc_check_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Dataset transfer property list identifier 
             INTEGER, INTENT(OUT) :: flag        ! Checksum filter flag
@@ -4879,9 +5753,9 @@
             INTERFACE
               INTEGER FUNCTION h5pget_edc_check_c(prp_id, flag)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_EDC_CHECK_C'::h5pget_edc_check_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_EDC_CHECK_C'::h5pget_edc_check_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER, INTENT(OUT) :: flag
               END FUNCTION h5pget_edc_check_c
@@ -4913,7 +5787,13 @@
 !----------------------------------------------------------------------
 
 
-          SUBROUTINE h5pset_fletcher32_f(prp_id, hdferr)
+          SUBROUTINE h5pset_fletcher32_f(prp_id, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_fletcher32_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER, INTENT(OUT) :: hdferr       ! Error code
@@ -4924,9 +5804,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_fletcher32_c(prp_id)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_FLETCHER32_C'::h5pset_fletcher32_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_FLETCHER32_C'::h5pset_fletcher32_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               END FUNCTION h5pset_fletcher32_c
             END INTERFACE
@@ -4958,7 +5838,13 @@
 !----------------------------------------------------------------------
 
 
-          SUBROUTINE h5pset_family_offset_f(prp_id, offset, hdferr)
+          SUBROUTINE h5pset_family_offset_f(prp_id, offset, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_family_offset_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER(HSIZE_T), INTENT(IN) :: offset ! Offset in bytes
@@ -4970,9 +5856,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_family_offset_c(prp_id, offset)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_FAMILY_OFFSET_C'::h5pset_family_offset_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_FAMILY_OFFSET_C'::h5pset_family_offset_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER(HSIZE_T), INTENT(IN) :: offset 
               END FUNCTION h5pset_family_offset_c
@@ -5008,7 +5894,13 @@
 !----------------------------------------------------------------------
 
 
-          SUBROUTINE h5pset_fapl_multi_l(prp_id, memb_map, memb_fapl, memb_name, memb_addr, relax, hdferr)
+          SUBROUTINE h5pset_fapl_multi_l(prp_id, memb_map, memb_fapl, memb_name, memb_addr, relax, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_fapl_multi_l
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! File creation property list identifier 
             INTEGER, DIMENSION(0:H5FD_MEM_NTYPES_F-1), INTENT(IN) :: memb_map
@@ -5030,9 +5922,9 @@
               INTEGER FUNCTION h5pset_fapl_multi_c(prp_id, memb_map, memb_fapl, memb_name, lenm, &
                                                    maxlen, memb_addr, flag)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_FAPL_MULTI_C'::h5pset_fapl_multi_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_FAPL_MULTI_C'::h5pset_fapl_multi_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: memb_name
               INTEGER(HID_T), INTENT(IN) :: prp_id ! File creation property list identifier 
               INTEGER, DIMENSION(0:H5FD_MEM_NTYPES_F-1), INTENT(IN) :: memb_map
@@ -5078,7 +5970,13 @@
 !----------------------------------------------------------------------
 
 
-          SUBROUTINE h5pset_fapl_multi_s(prp_id, relax, hdferr)
+          SUBROUTINE h5pset_fapl_multi_s(prp_id, relax, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_fapl_multi_s
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! File creation property list identifier 
             LOGICAL, INTENT(IN) :: relax
@@ -5091,9 +5989,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_fapl_multi_sc(prp_id,flag) 
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_FAPL_MULTI_SC'::h5pset_fapl_multi_sc
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_FAPL_MULTI_SC'::h5pset_fapl_multi_sc
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id ! File creation property list identifier 
               INTEGER, INTENT(IN) :: flag
               END FUNCTION h5pset_fapl_multi_sc
@@ -5130,7 +6028,13 @@
 !----------------------------------------------------------------------
 
 
-          SUBROUTINE h5pget_fapl_multi_f(prp_id, memb_map, memb_fapl, memb_name, memb_addr, relax, hdferr, maxlen_out)
+          SUBROUTINE h5pget_fapl_multi_f(prp_id, memb_map, memb_fapl, memb_name, memb_addr, relax, hdferr, maxlen_out) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_fapl_multi_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! File creation property list identifier 
             INTEGER, DIMENSION(0:H5FD_MEM_NTYPES_F-1), INTENT(OUT) :: memb_map
@@ -5154,9 +6058,9 @@
               INTEGER FUNCTION h5pget_fapl_multi_c(prp_id, memb_map, memb_fapl, memb_name, lenm, &
                                                    maxlen, memb_addr, flag, c_maxlen_out)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_FAPL_MULTI_C'::h5pget_fapl_multi_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_FAPL_MULTI_C'::h5pget_fapl_multi_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: memb_name
               INTEGER(HID_T), INTENT(IN) :: prp_id ! File creation property list identifier 
               INTEGER, DIMENSION(H5FD_MEM_NTYPES_F), INTENT(OUT) :: memb_map
@@ -5204,6 +6108,12 @@
 
 
           SUBROUTINE h5pset_szip_f(prp_id, options_mask, pixels_per_block, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_szip_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Dataset creation property 
                                                  ! list identifier 
@@ -5217,9 +6127,9 @@
             INTERFACE
               INTEGER FUNCTION h5pset_szip_c(prp_id, options_mask, pixels_per_block) 
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_SZIP_C'::h5pset_szip_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_SZIP_C'::h5pset_szip_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id ! File creation property list identifier 
               INTEGER, INTENT(IN) :: options_mask
               INTEGER, INTENT(IN) :: pixels_per_block
@@ -5255,7 +6165,13 @@
 !----------------------------------------------------------------------
 
 
-          SUBROUTINE h5pall_filters_avail_f(prp_id, flag, hdferr)
+          SUBROUTINE h5pall_filters_avail_f(prp_id, flag, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pall_filters_avail_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Dataset creation property 
                                                  ! list identifier 
@@ -5269,9 +6185,9 @@
             INTERFACE
               INTEGER FUNCTION h5pall_filters_avail_c(prp_id, status) 
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PALL_FILTERS_AVAIL_C'::h5pall_filters_avail_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PALL_FILTERS_AVAIL_C'::h5pall_filters_avail_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id ! File creation property list identifier 
               INTEGER, INTENT(OUT) :: status
               END FUNCTION h5pall_filters_avail_c
@@ -5312,7 +6228,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pget_filter_by_id_f(prp_id, filter_id, flags, cd_nelmts, cd_values, namelen, name, hdferr)
+          SUBROUTINE h5pget_filter_by_id_f(prp_id, filter_id, flags, cd_nelmts, cd_values, namelen, name, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_filter_by_id_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
 
@@ -5334,9 +6256,9 @@
               INTEGER FUNCTION h5pget_filter_by_id_c(prp_id, filter_id, flags, cd_nelmts,  &
                                               cd_values, namelen, name)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_FILTER_BY_ID_C'::h5pget_filter_by_id_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_FILTER_BY_ID_C'::h5pget_filter_by_id_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               INTEGER(HID_T), INTENT(IN) :: prp_id
               INTEGER, INTENT(IN) :: filter_id 
@@ -5380,7 +6302,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-          SUBROUTINE h5pmodify_filter_f(prp_id, filter, flags, cd_nelmts, cd_values,  hdferr)
+          SUBROUTINE h5pmodify_filter_f(prp_id, filter, flags, cd_nelmts, cd_values,  hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pmodify_filter_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Property list identifier 
             INTEGER, INTENT(IN) :: filter  !Filter to be modified
@@ -5397,9 +6325,9 @@
             INTERFACE
               INTEGER FUNCTION h5pmodify_filter_c(prp_id, filter, flags, cd_nelmts, cd_values)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PMODIFY_FILTER_C'::h5pmodify_filter_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PMODIFY_FILTER_C'::h5pmodify_filter_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id 
               INTEGER, INTENT(IN) :: filter 
               INTEGER, INTENT(IN) :: flags 
@@ -5436,6 +6364,12 @@
 !----------------------------------------------------------------------
 
           SUBROUTINE h5premove_filter_f(prp_id, filter, hdferr)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5premove_filter_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: prp_id ! Dataset creation property list
                                                  ! identifier
@@ -5448,9 +6382,9 @@
             INTERFACE
               INTEGER FUNCTION h5premove_filter_c(prp_id, filter)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PREMOVE_FILTER_C'::h5premove_filter_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PREMOVE_FILTER_C'::h5premove_filter_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: prp_id 
               INTEGER, INTENT(IN) :: filter 
               END FUNCTION h5premove_filter_c
@@ -5486,6 +6420,12 @@
 !----------------------------------------------------------------------
 
   SUBROUTINE h5pget_attr_phase_change_f(ocpl_id, max_compact, min_dense, hdferr)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_attr_phase_change_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: ocpl_id ! Object (dataset or group) creation property list identifier
     INTEGER, INTENT(OUT) :: max_compact  ! Maximum number of attributes to be stored in compact storage
@@ -5499,9 +6439,9 @@
     INTERFACE
        INTEGER FUNCTION h5pget_attr_phase_change_c(ocpl_id, max_compact, min_dense)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_ATTR_PHASE_CHANGE_C'::h5pget_attr_phase_change_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_ATTR_PHASE_CHANGE_C'::h5pget_attr_phase_change_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: ocpl_id
          INTEGER, INTENT(OUT) :: max_compact
          INTEGER, INTENT(OUT) :: min_dense
@@ -5536,6 +6476,12 @@
 !----------------------------------------------------------------------
 
   SUBROUTINE h5pset_attr_creation_order_f(ocpl_id, crt_order_flags , hdferr)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_attr_creation_order_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: ocpl_id ! Object (dataset or group) creation property list identifier
     INTEGER, INTENT(IN) :: crt_order_flags  ! Flags specifying whether to track and index attribute creation order
@@ -5547,9 +6493,9 @@
     INTERFACE
        INTEGER FUNCTION H5Pset_attr_creation_order_c(ocpl_id, crt_order_flags)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_ATTR_CREATION_ORDER_C'::h5pset_attr_creation_order_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_ATTR_CREATION_ORDER_C'::h5pset_attr_creation_order_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: ocpl_id
          INTEGER, INTENT(IN) :: crt_order_flags
  
@@ -5584,6 +6530,12 @@
 !----------------------------------------------------------------------
 
   SUBROUTINE h5pset_shared_mesg_nindexes_f( plist_id, nindexes, hdferr)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_shared_mesg_nindexes_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: plist_id ! file creation property list
     INTEGER, INTENT(IN) :: nindexes ! Number of shared object header message indexes 
@@ -5595,9 +6547,9 @@
     INTERFACE
        INTEGER FUNCTION h5pset_shared_mesg_nindexes_c(plist_id, nindexes)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_SHARED_MESG_NINDEXES_C'::h5pset_shared_mesg_nindexes_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_SHARED_MESG_NINDEXES_C'::h5pset_shared_mesg_nindexes_c
+         !DEC$ ENDIF
          
          INTEGER(HID_T), INTENT(IN) :: plist_id
          INTEGER, INTENT(IN) :: nindexes
@@ -5636,6 +6588,12 @@
 !----------------------------------------------------------------------
 
   SUBROUTINE h5pset_shared_mesg_index_f(fcpl_id, index_num, mesg_type_flags, min_mesg_size, hdferr)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_shared_mesg_index_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: fcpl_id ! file creation property list
     INTEGER, INTENT(IN) :: index_num ! Index being configured.
@@ -5649,9 +6607,9 @@
        INTEGER FUNCTION h5pset_shared_mesg_index_c(fcpl_id, index_num, mesg_type_flags, min_mesg_size)
 
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_SHARED_MESG_INDEX_C'::h5pset_shared_mesg_index_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_SHARED_MESG_INDEX_C'::h5pset_shared_mesg_index_c
+         !DEC$ ENDIF
          
          INTEGER(HID_T), INTENT(IN) :: fcpl_id 
          INTEGER, INTENT(IN) :: index_num
@@ -5690,6 +6648,12 @@
 !----------------------------------------------------------------------
 
   SUBROUTINE h5pget_attr_creation_order_f(ocpl_id, crt_order_flags, hdferr)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_attr_creation_order_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: ocpl_id ! Object (group or dataset) creation property list identifier 
     INTEGER, INTENT(OUT) :: crt_order_flags ! Flags specifying whether to track and index attribute creation order 
@@ -5701,9 +6665,9 @@
        INTEGER FUNCTION h5pget_attr_creation_order_c(ocpl_id, crt_order_flags)
 
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_ATTR_CREATION_ORDER_C'::h5pget_attr_creation_order_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_ATTR_CREATION_ORDER_C'::h5pget_attr_creation_order_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: ocpl_id
          INTEGER, INTENT(OUT) :: crt_order_flags
          
@@ -5740,6 +6704,12 @@
 !----------------------------------------------------------------------
 
   SUBROUTINE h5pset_libver_bounds_f(fapl_id, low, high, hdferr)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_libver_bounds_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: fapl_id ! File access property list identifier
     INTEGER, INTENT(IN) :: low ! The earliest version of the library that will be used for writing objects.
@@ -5757,9 +6727,9 @@
        INTEGER FUNCTION h5pset_libver_bounds_c(fapl_id, low, high)
 
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_LIBVER_BOUNDS_C'::h5pset_libver_bounds_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_LIBVER_BOUNDS_C'::h5pset_libver_bounds_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: fapl_id
          INTEGER, INTENT(IN) :: low
          INTEGER, INTENT(IN) :: high
@@ -5796,6 +6766,12 @@
 !----------------------------------------------------------------------
 
   SUBROUTINE h5pset_link_creation_order_f(gcpl_id, crt_order_flags, hdferr)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_link_creation_order_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: gcpl_id ! File access property list identifier
     INTEGER, INTENT(IN) :: crt_order_flags ! Creation order flag(s)
@@ -5807,9 +6783,9 @@
        INTEGER FUNCTION h5pset_link_creation_order_c(gcpl_id, crt_order_flags)
 
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_LINK_CREATION_ORDER_C'::h5pset_link_creation_order_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_LINK_CREATION_ORDER_C'::h5pset_link_creation_order_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: gcpl_id
          INTEGER, INTENT(IN) :: crt_order_flags
          
@@ -5845,6 +6821,12 @@
 !----------------------------------------------------------------------
 
   SUBROUTINE h5pget_link_phase_change_f(gcpl_id, max_compact, min_dense, hdferr)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_link_phase_change_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: gcpl_id ! Group creation property list identifier
     INTEGER, INTENT(OUT) :: max_compact  ! Maximum number of attributes to be stored in compact storage
@@ -5856,9 +6838,9 @@
     INTERFACE
        INTEGER FUNCTION h5pget_link_phase_change_c(gcpl_id, max_compact, min_dense)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_LINK_PHASE_CHANGE_C'::h5pget_link_phase_change_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_LINK_PHASE_CHANGE_C'::h5pget_link_phase_change_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: gcpl_id
          INTEGER, INTENT(OUT) :: max_compact
          INTEGER, INTENT(OUT) :: min_dense
@@ -5893,7 +6875,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-  SUBROUTINE h5pget_obj_track_times_f(plist_id, flag, hdferr)
+  SUBROUTINE h5pget_obj_track_times_f(plist_id, flag, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_obj_track_times_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: plist_id ! Dataset creation property 
                                          ! list identifier 
@@ -5906,9 +6894,9 @@
     INTERFACE
        INTEGER FUNCTION h5pget_obj_track_times_c(plist_id, status) 
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_OBJ_TRACK_TIMES_C'::h5pget_obj_track_times_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_OBJ_TRACK_TIMES_C'::h5pget_obj_track_times_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: plist_id ! File creation property list identifier 
          INTEGER, INTENT(OUT) :: status
        END FUNCTION h5pget_obj_track_times_c
@@ -5957,7 +6945,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-  SUBROUTINE h5pset_obj_track_times_f(plist_id, flag, hdferr)
+  SUBROUTINE h5pset_obj_track_times_f(plist_id, flag, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_obj_track_times_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: plist_id ! Dataset creation property 
                                            ! list identifier 
@@ -5970,9 +6964,9 @@
     INTERFACE
        INTEGER FUNCTION h5pset_obj_track_times_c(plist_id, status) 
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_OBJ_TRACK_TIMES_C'::h5pset_obj_track_times_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_OBJ_TRACK_TIMES_C'::h5pset_obj_track_times_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: plist_id ! File creation property list identifier 
          INTEGER, INTENT(IN) :: status
        END FUNCTION h5pset_obj_track_times_c
@@ -6011,7 +7005,13 @@
 !          so had to shorten the name		
 !--------------------------------------------------------------------------------------
 
-  SUBROUTINE h5pset_create_inter_group_f(lcpl_id, crt_intermed_group, hdferr)
+  SUBROUTINE h5pset_create_inter_group_f(lcpl_id, crt_intermed_group, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_create_inter_group_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: lcpl_id ! Link creation property list identifier
     INTEGER, INTENT(IN) :: crt_intermed_group  ! specifying whether to create intermediate groups 
@@ -6023,9 +7023,9 @@
     INTERFACE
        INTEGER FUNCTION h5pset_create_inter_group_c(lcpl_id, crt_intermed_group) 
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_CREATE_INTER_GROUP_C'::h5pset_create_inter_group_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_CREATE_INTER_GROUP_C'::h5pset_create_inter_group_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: lcpl_id
          INTEGER, INTENT(IN) :: crt_intermed_group
        END FUNCTION h5pset_create_inter_group_c
@@ -6060,6 +7060,12 @@
 !----------------------------------------------------------------------
 
   SUBROUTINE h5pget_link_creation_order_f(gcpl_id, crt_order_flags, hdferr)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_link_creation_order_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: gcpl_id   ! Group creation property list identifier
     INTEGER, INTENT(OUT) :: crt_order_flags ! Creation order flag(s)
@@ -6071,9 +7077,9 @@
        INTEGER FUNCTION h5pget_link_creation_order_c(gcpl_id, crt_order_flags)
 
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_LINK_CREATION_ORDER_C'::h5pget_link_creation_order_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_LINK_CREATION_ORDER_C'::h5pget_link_creation_order_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: gcpl_id
          INTEGER, INTENT(OUT) :: crt_order_flags
          
@@ -6111,6 +7117,12 @@
 !----------------------------------------------------------------------
 
   SUBROUTINE h5pset_char_encoding_f(plist_id, encoding, hdferr)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_char_encoding_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: plist_id ! Property list identifier
     
@@ -6125,9 +7137,9 @@
        INTEGER FUNCTION h5pset_char_encoding_c(plist_id, encoding)
 
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_CHAR_ENCODING_C'::h5pset_char_encoding_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_CHAR_ENCODING_C'::h5pset_char_encoding_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: plist_id
          INTEGER, INTENT(IN) :: encoding
          
@@ -6165,6 +7177,12 @@
 !----------------------------------------------------------------------
 
   SUBROUTINE  h5pget_char_encoding_f(plist_id, encoding, hdferr)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_char_encoding_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: plist_id ! Property list identifier
     
@@ -6179,9 +7197,9 @@
        INTEGER FUNCTION h5pget_char_encoding_c(plist_id, encoding)
 
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_CHAR_ENCODING_C'::h5pget_char_encoding_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_CHAR_ENCODING_C'::h5pget_char_encoding_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: plist_id
          INTEGER, INTENT(OUT) :: encoding
          
@@ -6215,7 +7233,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-  SUBROUTINE h5pset_copy_object_f(ocp_plist_id, copy_options, hdferr)
+  SUBROUTINE h5pset_copy_object_f(ocp_plist_id, copy_options, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_copy_object_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: ocp_plist_id ! Object copy property list identifier
     INTEGER, INTENT(IN) :: copy_options ! Copy option(s) to be set, valid options are:
@@ -6232,9 +7256,9 @@
     INTERFACE
        INTEGER FUNCTION h5pset_copy_object_c(ocp_plist_id, copy_options)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_COPY_OBJECT_C'::h5pset_copy_object_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_COPY_OBJECT_C'::h5pset_copy_object_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: ocp_plist_id
          INTEGER, INTENT(IN) :: copy_options
        END FUNCTION h5pset_copy_object_c
@@ -6265,7 +7289,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
 
-  SUBROUTINE h5pget_copy_object_f(ocp_plist_id, copy_options, hdferr)
+  SUBROUTINE h5pget_copy_object_f(ocp_plist_id, copy_options, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_copy_object_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: ocp_plist_id ! Object copy property list identifier
     INTEGER, INTENT(OUT) :: copy_options ! valid copy options returned are:
@@ -6281,9 +7311,9 @@
     INTERFACE
        INTEGER FUNCTION h5pget_copy_object_c(ocp_plist_id, copy_options)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_COPY_OBJECT_C'::h5pget_copy_object_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_COPY_OBJECT_C'::h5pget_copy_object_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: ocp_plist_id
          INTEGER, INTENT(OUT) :: copy_options
        END FUNCTION h5pget_copy_object_c
@@ -6318,7 +7348,13 @@
 ! Comment: Should hdferr return just 0 or 1 and add another arguement for the size?
 !----------------------------------------------------------------------
 
-  SUBROUTINE h5pget_data_transform_f(plist_id, expression, hdferr, size)
+  SUBROUTINE h5pget_data_transform_f(plist_id, expression, hdferr, size) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_data_transform_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: plist_id ! Identifier of the property list or class
     CHARACTER(LEN=*), INTENT(OUT) :: expression  ! Buffer to hold transform expression
@@ -6335,10 +7371,9 @@
     INTERFACE
        INTEGER FUNCTION h5pget_data_transform_c(plist_id, expression, expression_len, size_default)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_DATA_TRANSFORM_C'::h5pget_data_transform_c
-         !DEC$ENDIF
-         !DEC$ATTRIBUTES reference :: expression
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_DATA_TRANSFORM_C'::h5pget_data_transform_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: plist_id 
          CHARACTER(LEN=*), INTENT(OUT) :: expression 
          INTEGER(SIZE_T) :: size_default
@@ -6378,7 +7413,13 @@
 ! Comment: 
 !----------------------------------------------------------------------
 
-  SUBROUTINE h5pset_data_transform_f(plist_id, expression, hdferr)
+  SUBROUTINE h5pset_data_transform_f(plist_id, expression, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_data_transform_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: plist_id ! Identifier of the property list or class
     CHARACTER(LEN=*), INTENT(IN) :: expression  ! Buffer to hold transform expression
@@ -6390,10 +7431,9 @@
     INTERFACE
        INTEGER FUNCTION h5pset_data_transform_c(plist_id, expression, expression_len)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_DATA_TRANSFORM_C'::h5pset_data_transform_c
-         !DEC$ENDIF
-         !DEC$ATTRIBUTES reference :: expression
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_DATA_TRANSFORM_C'::h5pset_data_transform_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: plist_id 
          CHARACTER(LEN=*), INTENT(IN) :: expression
          INTEGER :: expression_len
@@ -6428,7 +7468,13 @@
 ! Comment: 
 !----------------------------------------------------------------------
 
-  SUBROUTINE h5pget_local_heap_size_hint_f(gcpl_id, size_hint, hdferr)
+  SUBROUTINE h5pget_local_heap_size_hint_f(gcpl_id, size_hint, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_local_heap_size_hint_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: gcpl_id ! Group creation property list identifier
     INTEGER(SIZE_T), INTENT(OUT) :: size_hint ! Hint for size of local heap
@@ -6439,9 +7485,9 @@
     INTERFACE
        INTEGER FUNCTION h5pget_local_heap_size_hint_c(gcpl_id, size_hint)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_LOCAL_HEAP_SIZE_HINT_C'::h5pget_local_heap_size_hint_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_LOCAL_HEAP_SIZE_HINT_C'::h5pget_local_heap_size_hint_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: gcpl_id
          INTEGER(SIZE_T), INTENT(OUT) :: size_hint
        END FUNCTION H5Pget_local_heap_size_hint_c
@@ -6475,7 +7521,13 @@
 ! Comment: 
 !----------------------------------------------------------------------
 
-  SUBROUTINE h5pget_est_link_info_f(gcpl_id, est_num_entries, est_name_len, hdferr)
+  SUBROUTINE h5pget_est_link_info_f(gcpl_id, est_num_entries, est_name_len, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_est_link_info_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: gcpl_id ! Group creation property list identifier  
     INTEGER, INTENT(OUT) :: est_num_entries ! Estimated number of links to be inserted into group
@@ -6487,9 +7539,9 @@
     INTERFACE
        INTEGER FUNCTION h5pget_est_link_info_c(gcpl_id, est_num_entries, est_name_len)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_EST_LINK_INFO_C'::h5pget_est_link_info_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_EST_LINK_INFO_C'::h5pget_est_link_info_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: gcpl_id  
          INTEGER, INTENT(OUT) :: est_num_entries
          INTEGER, INTENT(OUT) :: est_name_len
@@ -6523,7 +7575,13 @@
 ! Comment: 
 !----------------------------------------------------------------------
 
-  SUBROUTINE h5pset_local_heap_size_hint_f(gcpl_id, size_hint, hdferr)
+  SUBROUTINE h5pset_local_heap_size_hint_f(gcpl_id, size_hint, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_local_heap_size_hint_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: gcpl_id ! Group creation property list identifier
     INTEGER(SIZE_T), INTENT(IN) :: size_hint ! Hint for size of local heap
@@ -6534,9 +7592,9 @@
     INTERFACE
        INTEGER FUNCTION h5pset_local_heap_size_hint_c(gcpl_id, size_hint)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_LOCAL_HEAP_SIZE_HINT_C'::h5pset_local_heap_size_hint_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_LOCAL_HEAP_SIZE_HINT_C'::h5pset_local_heap_size_hint_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: gcpl_id
          INTEGER(SIZE_T), INTENT(IN) :: size_hint
        END FUNCTION h5pset_local_heap_size_hint_c
@@ -6570,7 +7628,13 @@
 ! Comment: 
 !----------------------------------------------------------------------
 
-  SUBROUTINE h5pset_est_link_info_f(gcpl_id, est_num_entries, est_name_len, hdferr)
+  SUBROUTINE h5pset_est_link_info_f(gcpl_id, est_num_entries, est_name_len, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_est_link_info_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: gcpl_id ! Group creation property list identifier  
     INTEGER, INTENT(IN) :: est_num_entries ! Estimated number of links to be inserted into group
@@ -6582,9 +7646,9 @@
     INTERFACE
        INTEGER FUNCTION h5pset_est_link_info_c(gcpl_id, est_num_entries, est_name_len)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_EST_LINK_INFO_C'::h5pset_est_link_info_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_EST_LINK_INFO_C'::h5pset_est_link_info_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: gcpl_id  
          INTEGER, INTENT(IN) :: est_num_entries
          INTEGER, INTENT(IN) :: est_name_len
@@ -6620,6 +7684,12 @@
 !----------------------------------------------------------------------
 
   SUBROUTINE h5pset_link_phase_change_f(gcpl_id, max_compact, min_dense, hdferr)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_link_phase_change_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: gcpl_id ! Group creation property list identifier
     INTEGER, INTENT(IN) :: max_compact  ! Maximum number of attributes to be stored in compact storage
@@ -6631,9 +7701,9 @@
     INTERFACE
        INTEGER FUNCTION h5pset_link_phase_change_c(gcpl_id, max_compact, min_dense)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_LINK_PHASE_CHANGE_C'::h5pset_link_phase_change_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_LINK_PHASE_CHANGE_C'::h5pset_link_phase_change_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: gcpl_id
          INTEGER, INTENT(IN) :: max_compact
          INTEGER, INTENT(IN) :: min_dense
@@ -6670,6 +7740,12 @@
 !----------------------------------------------------------------------
 
   SUBROUTINE h5pset_fapl_direct_f(fapl_id, alignment, block_size, cbuf_size, hdferr)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_fapl_direct_f
+!DEC$endif
+!
     IMPLICIT NONE  
     INTEGER(HID_T), INTENT(IN) :: fapl_id ! File access property list identifier
     INTEGER(SIZE_T), INTENT(IN) :: alignment 	  ! Required memory alignment boundary!
@@ -6682,9 +7758,9 @@
     INTERFACE
        INTEGER FUNCTION h5pset_fapl_direct_c(fapl_id, alignment, block_size, cbuf_size)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_FAPL_DIRECT_C'::h5pset_fapl_direct_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_FAPL_DIRECT_C'::h5pset_fapl_direct_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: fapl_id 
          INTEGER(SIZE_T), INTENT(IN) :: alignment
          INTEGER(SIZE_T), INTENT(IN) :: block_size
@@ -6721,6 +7797,12 @@
 !----------------------------------------------------------------------
 
   SUBROUTINE h5pget_fapl_direct_f(fapl_id, alignment, block_size, cbuf_size, hdferr)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_fapl_direct_f
+!DEC$endif
+!
     IMPLICIT NONE  
     INTEGER(HID_T), INTENT(IN) :: fapl_id ! File access property list identifier
     INTEGER(SIZE_T), INTENT(OUT) :: alignment 	  ! Required memory alignment boundary!
@@ -6733,9 +7815,9 @@
     INTERFACE
        INTEGER FUNCTION h5pget_fapl_direct_c(fapl_id, alignment, block_size, cbuf_size)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_FAPL_DIRECT_C'::h5pget_fapl_direct_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_FAPL_DIRECT_C'::h5pget_fapl_direct_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: fapl_id 
          INTEGER(SIZE_T), INTENT(OUT) :: alignment
          INTEGER(SIZE_T), INTENT(OUT) :: block_size
@@ -6773,6 +7855,12 @@
 !----------------------------------------------------------------------
 
   SUBROUTINE h5pset_attr_phase_change_f(ocpl_id, max_compact, min_dense, hdferr)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_attr_phase_change_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: ocpl_id ! Object (dataset or group) creation property list identifier
     INTEGER, INTENT(IN) :: max_compact  ! Maximum number of attributes to be stored in compact storage
@@ -6786,9 +7874,9 @@
     INTERFACE
        INTEGER FUNCTION h5pset_attr_phase_change_c(ocpl_id, max_compact, min_dense)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_ATTR_PHASE_CHANGE_C'::h5pset_attr_phase_change_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_ATTR_PHASE_CHANGE_C'::h5pset_attr_phase_change_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: ocpl_id
          INTEGER, INTENT(IN) :: max_compact
          INTEGER, INTENT(IN) :: min_dense
@@ -6823,7 +7911,13 @@
 ! Comment: 
 !----------------------------------------------------------------------
 
-  SUBROUTINE h5pset_nbit_f(plist_id, hdferr)
+  SUBROUTINE h5pset_nbit_f(plist_id, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_nbit_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: plist_id ! Dataset creation property list identifier
     INTEGER, INTENT(OUT) :: hdferr       ! Error code
@@ -6833,9 +7927,9 @@
     INTERFACE
        INTEGER FUNCTION H5Pset_nbit_c(plist_id)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_NBIT_C'::h5pset_nbit_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_NBIT_C'::h5pset_nbit_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: plist_id
        END FUNCTION H5Pset_nbit_c
     END INTERFACE
@@ -6868,7 +7962,13 @@
 ! Comment: 
 !----------------------------------------------------------------------
 
-  SUBROUTINE h5pset_scaleoffset_f(plist_id, scale_type, scale_factor, hdferr)
+  SUBROUTINE h5pset_scaleoffset_f(plist_id, scale_type, scale_factor, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_scaleoffset_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: plist_id ! Dataset creation property list identifier
     INTEGER, INTENT(IN) :: scale_type                  ! Flag indicating compression method.
@@ -6880,9 +7980,9 @@
     INTERFACE
        INTEGER FUNCTION h5pset_scaleoffset_c(plist_id, scale_type, scale_factor)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_SCALEOFFSET_C'::h5pset_scaleoffset_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_SCALEOFFSET_C'::h5pset_scaleoffset_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: plist_id
          INTEGER, INTENT(IN) :: scale_type
          INTEGER, INTENT(IN) :: scale_factor
@@ -6917,7 +8017,13 @@
 ! Comment: 
 !----------------------------------------------------------------------
 
-  SUBROUTINE h5pset_nlinks_f(lapl_id, nlinks, hdferr)
+  SUBROUTINE h5pset_nlinks_f(lapl_id, nlinks, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pset_nlinks_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: lapl_id ! File access property list identifier
     INTEGER(SIZE_T), INTENT(IN) :: nlinks ! Maximum number of links to traverse
@@ -6928,9 +8034,9 @@
     INTERFACE
        INTEGER FUNCTION h5pset_nlinks_c(lapl_id, nlinks)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_NLINKS_C'::h5pset_nlinks_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PSET_NLINKS_C'::h5pset_nlinks_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: lapl_id
          INTEGER(SIZE_T), INTENT(IN) :: nlinks
        END FUNCTION h5pset_nlinks_c
@@ -6964,7 +8070,13 @@
 ! Comment: 
 !----------------------------------------------------------------------
 
-  SUBROUTINE h5pget_nlinks_f(lapl_id, nlinks, hdferr)
+  SUBROUTINE h5pget_nlinks_f(lapl_id, nlinks, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_nlinks_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: lapl_id ! File access property list identifier
     INTEGER(SIZE_T), INTENT(OUT) :: nlinks ! Maximum number of links to traverse
@@ -6975,9 +8087,9 @@
     INTERFACE
        INTEGER FUNCTION h5pget_nlinks_c(lapl_id, nlinks)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_NLINKS_C'::h5pget_nlinks_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_NLINKS_C'::h5pget_nlinks_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: lapl_id
          INTEGER(SIZE_T), INTENT(OUT) :: nlinks
        END FUNCTION h5pget_nlinks_c
@@ -7012,7 +8124,13 @@
 !          so had to shorten the name		
 !--------------------------------------------------------------------------------------
 
-  SUBROUTINE h5pget_create_inter_group_f(lcpl_id, crt_intermed_group, hdferr)
+  SUBROUTINE h5pget_create_inter_group_f(lcpl_id, crt_intermed_group, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5pget_create_inter_group_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: lcpl_id      ! Link creation property list identifier
     INTEGER, INTENT(IN) :: crt_intermed_group  ! Flag specifying whether to create intermediate groups 
@@ -7022,9 +8140,9 @@
     INTERFACE
        INTEGER FUNCTION h5pget_create_inter_group_c(lcpl_id, crt_intermed_group) 
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_CREATE_INTER_GROUP_C'::h5pget_create_inter_group_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5PGET_CREATE_INTER_GROUP_C'::h5pget_create_inter_group_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: lcpl_id
          INTEGER, INTENT(IN) :: crt_intermed_group
        END FUNCTION h5pget_create_inter_group_c
@@ -7034,127 +8152,6 @@
 
   END SUBROUTINE h5pget_create_inter_group_f
 
-!----------------------------------------------------------------------
-! Name:		H5Pset_chunk_cache_f
-!
-! Purpose: 	Set the number of objects in the meta data cache and the
-!            maximum number of chunks and bytes in the raw data chunk cache.
-!            Once set, these values will override the values in the file access
-!            property list.  Each of these values can be individually unset
-!            (or not set at all) by passing the macros:
-!                H5D_CHUNK_CACHE_NSLOTS_DFLT_F,
-!                H5D_CHUNK_CACHE_NBYTES_DFLT_F, and/or
-!                H5D_CHUNK_CACHE_W0_DFLT_F
-!            as appropriate.
-!
-! 	     The RDCC_W0 value should be between 0 and 1 inclusive and
-!	     indicates how much chunks that have been fully read or fully
-!	     written are favored for preemption.  A value of zero means
-!	     fully read or written chunks are treated no differently than
-!            other chunks (the preemption is strictly LRU) while a value
-!	     of one means fully read chunks are always preempted before
-!	     other chunks.
-!
-! Inputs:  
-!		dapl_id            - Dataset access property list identifier.
-!               rdcc_nslots        - The number of chunk slots in the raw data chunk cache for this dataset.
-!               rdcc_nbytes        - The total size of the raw data chunk cache for this dataset.
-!               rdcc_w0            - The chunk preemption policy for this dataset.
-! Outputs:
-!		hdferr:		   - error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:
-!				NONE
-!
-! Programmer:	M.S. Breitenfeld
-!		April 13, 2009
-!
-! Modifications:	
-!--------------------------------------------------------------------------------------
-
-  SUBROUTINE h5pset_chunk_cache_f(dapl_id, rdcc_nslots, rdcc_nbytes, rdcc_w0, hdferr)
-    IMPLICIT NONE
-    INTEGER(HID_T), INTENT(IN) :: dapl_id      ! Dataset access property list identifier.
-    INTEGER(SIZE_T), INTENT(IN) :: rdcc_nslots ! The number of chunk slots in the raw data 
-                                               ! chunk cache for this dataset.
-    INTEGER(SIZE_T), INTENT(IN) :: rdcc_nbytes ! The total size of the raw data chunk cache 
-                                               ! for this dataset.
-    REAL, INTENT(IN) :: rdcc_w0                ! The chunk preemption policy for this dataset.
-    INTEGER, INTENT(OUT) :: hdferr             ! Error code
-                                               ! 0 on success and -1 on failure
-    
-
-    INTERFACE
-       INTEGER FUNCTION h5pset_chunk_cache_c(dapl_id, rdcc_nslots, rdcc_nbytes, rdcc_w0)
-         USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_CHUNK_CACHE_C'::h5pset_chunk_cache_c
-         !DEC$ENDIF
-         INTEGER(HID_T), INTENT(IN) :: dapl_id
-         INTEGER(SIZE_T), INTENT(IN) :: rdcc_nslots
-         INTEGER(SIZE_T), INTENT(IN) :: rdcc_nbytes
-         REAL, INTENT(IN) :: rdcc_w0
-       END FUNCTION h5pset_chunk_cache_c
-    END INTERFACE
-
-    hdferr = h5pset_chunk_cache_c(dapl_id, rdcc_nslots, rdcc_nbytes, rdcc_w0)
-
-  END SUBROUTINE h5pset_chunk_cache_f
-
-!----------------------------------------------------------------------
-! Name:		H5Pget_chunk_cache_f
-!
-! Purpose: Retrieves the maximum possible number of elements in the meta
-!	   data cache and the maximum possible number of elements and
-!	   bytes and the RDCC_W0 value in the raw data chunk cache.  Any
-!	   (or all) arguments may be null pointers in which case the
-!	   corresponding datum is not returned.  If these properties have
-!          not been set on this property list, the default values for a
-!          file access property list are returned.
-!
-! Inputs:  
-!		dapl_id            - Dataset access property list identifier.
-! Outputs: 
-!               rdcc_nslots        - Number of chunk slots in the raw data chunk cache hash table. 
-!               rdcc_nbytes        - Total size of the raw data chunk cache, in bytes. 
-!               rdcc_w0            - Preemption policy. 
-!		hdferr:		   - error code		
-!				 	Success:  0
-!				 	Failure: -1   
-! Optional parameters:
-!				NONE
-!
-! Programmer:	M.S. Breitenfeld
-!		April 13, 2009
-!
-! Modifications:	
-!--------------------------------------------------------------------------------------
-
-  SUBROUTINE h5pget_chunk_cache_f(dapl_id, rdcc_nslots, rdcc_nbytes, rdcc_w0, hdferr)
-    IMPLICIT NONE
-    INTEGER(HID_T), INTENT(IN) :: dapl_id ! Dataset access property list identifier.
-    INTEGER(SIZE_T), INTENT(OUT) :: rdcc_nslots ! Number of chunk slots in the raw data chunk cache hash table.
-    INTEGER(SIZE_T), INTENT(OUT) :: rdcc_nbytes ! Total size of the raw data chunk cache, in bytes. 
-    REAL, INTENT(OUT) :: rdcc_w0 ! Preemption policy.
-    INTEGER, INTENT(OUT) :: hdferr ! error code
-    
-    INTERFACE
-       INTEGER FUNCTION h5pget_chunk_cache_c(dapl_id, rdcc_nslots, rdcc_nbytes, rdcc_w0)
-         USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_CHUNK_CACHE_C'::h5pget_chunk_cache_c
-         !DEC$ENDIF
-         INTEGER(HID_T), INTENT(IN) :: dapl_id
-         INTEGER(SIZE_T), INTENT(OUT) :: rdcc_nslots
-         INTEGER(SIZE_T), INTENT(OUT) :: rdcc_nbytes
-         REAL, INTENT(OUT) :: rdcc_w0
-       END FUNCTION h5pget_chunk_cache_c
-    END INTERFACE
-
-    hdferr = h5pget_chunk_cache_c(dapl_id, rdcc_nslots, rdcc_nbytes, rdcc_w0)
-
-  END SUBROUTINE h5pget_chunk_cache_f
 
 END MODULE H5P
 

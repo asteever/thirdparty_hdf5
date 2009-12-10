@@ -174,13 +174,6 @@ rem ############################################################################
 
     rem test for displaying external and user-defined links
     call :tooltest textlink-1.ls 0 -w80 -r textlink.h5
-    call :tooltest textlinksrc-1.ls 0 -w80 -Er textlinksrc.h5
-    call :tooltest textlinksrc-2.ls 0 -w80 -Erv textlinksrc.h5/ext_link5
-    call :tooltest textlinksrc-3.ls 0 -w80 -Er textlinksrc.h5/ext_link1
-    call :tooltest textlinksrc-4.ls 0 -w80 -r textlinksrc.h5
-    call :tooltest textlinksrc-5.ls 0 -w80 -r textlinksrc.h5/ext_link1
-    call :tooltest textlinksrc-6.ls 0 -w80 -E textlinksrc.h5
-    call :tooltest textlinksrc-7.ls 0 -w80 -E textlinksrc.h5/ext_link1
     call :tooltest tudlink-1.ls 0 -w80 -r tudlink.h5
 
     rem tests for hard links
@@ -217,12 +210,6 @@ rem ############################################################################
     rem tests for error handling.
     rem test for non-existing file
     call :tooltest nosuchfile.ls 0 nosuchfile.h5
-
-    rem test for variable length data types in verbose mode 
-    call :tooltest tvldtypes2le.ls 0 -v tvldtypes1.h5
-
-    rem test for dataset region references data types in verbose mode 
-    call :tooltest tdataregle.ls 0 -v tdatareg.h5
 
     if %nerrors% equ 0 (
         echo.All h5ls tests passed.

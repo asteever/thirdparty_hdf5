@@ -79,10 +79,8 @@ H5F_close_mounts(H5F_t *f)
 
     HDassert(f);
 
-    /* Unmount all child files.  Loop backwards to avoid having to adjust u when
-     * a file is unmounted.  Note that we rely on unsigned u "wrapping around"
-     * to terminate the loop. */
-    for (u = f->shared->mtab.nmounts - 1; u < f->shared->mtab.nmounts; u--) {
+    /* Unmount all child files */
+    for (u = 0; u < f->shared->mtab.nmounts; u++) {
         /* Only unmount children mounted to this top level file structure */
         if(f->shared->mtab.child[u].file->parent == f) {
             /* Detach the child file from the parent file */
@@ -95,16 +93,10 @@ H5F_close_mounts(H5F_t *f)
             /* Close the child file */
             if(H5F_try_close(f->shared->mtab.child[u].file) < 0)
                 HGOTO_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "can't close child file")
-
-            /* Eliminate the mount point from the table */
-            HDmemmove(f->shared->mtab.child + u, f->shared->mtab.child + u + 1,
-                (f->shared->mtab.nmounts - u - 1) * sizeof(f->shared->mtab.child[0]));
-            f->shared->mtab.nmounts--;
-            f->nmounts--;
         }
     } /* end if */
-
-    HDassert(f->nmounts == 0);
+    f->shared->mtab.nmounts -= f->nmounts;
+    f->nmounts = 0;
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -167,7 +159,7 @@ H5F_mount(H5G_loc_t *loc, const char *name, H5F_t *child,
      * user from doing this.
      */
     if(mp_loc.oloc->holding_file != FALSE)
-        HGOTO_ERROR(H5E_FILE, H5E_MOUNT, FAIL, "mount path cannot contain links to external files")
+        HGOTO_ERROR(H5E_FILE, H5E_MOUNT, FAIL, "mount path cannot contain links to external files")    
 
     /* Open the mount point group */
     if(NULL == (mount_point = H5G_open(&mp_loc, dxpl_id)))
@@ -223,8 +215,8 @@ H5F_mount(H5G_loc_t *loc, const char *name, H5F_t *child,
     /* Make room in the table */
     if(parent->shared->mtab.nmounts >= parent->shared->mtab.nalloc) {
 	unsigned n = MAX(16, 2 * parent->shared->mtab.nalloc);
-	H5F_mount_t *x = (H5F_mount_t *)H5MM_realloc(parent->shared->mtab.child, n * sizeof(parent->shared->mtab.child[0]));
-
+	H5F_mount_t *x = H5MM_realloc(parent->shared->mtab.child,
+				      n * sizeof(parent->shared->mtab.child[0]));
 	if(!x)
 	    HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for mount table")
 	parent->shared->mtab.child = x;
@@ -339,7 +331,7 @@ H5F_unmount(H5G_loc_t *loc, const char *name, hid_t dxpl_id)
 	for(u = 0; u < parent->shared->mtab.nmounts; u++) {
 	    if(parent->shared->mtab.child[u].file->shared == child->shared) {
                 /* Found the correct index */
-                child_idx = (int)u;
+                child_idx = u;
                 break;
 	    } /* end if */
 	} /* end for */
@@ -368,7 +360,7 @@ H5F_unmount(H5G_loc_t *loc, const char *name, hid_t dxpl_id)
 	    HGOTO_ERROR(H5E_FILE, H5E_MOUNT, FAIL, "not a mount point")
 
         /* Found the correct index, set the info about the child */
-        child_idx = (int)md;
+        child_idx = md;
         H5G_loc_free(&mp_loc);
         mp_loc_setup = FALSE;
         mp_loc.oloc = mnt_oloc;
@@ -397,8 +389,8 @@ H5F_unmount(H5G_loc_t *loc, const char *name, hid_t dxpl_id)
         HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, FAIL, "unable to replace name")
 
     /* Eliminate the mount point from the table */
-    HDmemmove(parent->shared->mtab.child + (unsigned)child_idx, (parent->shared->mtab.child + (unsigned)child_idx) + 1,
-            ((parent->shared->mtab.nmounts - (unsigned)child_idx) - 1) * sizeof(parent->shared->mtab.child[0]));
+    HDmemmove(parent->shared->mtab.child + child_idx, parent->shared->mtab.child + child_idx + 1,
+            (parent->shared->mtab.nmounts-child_idx) * sizeof(parent->shared->mtab.child[0]));
     parent->shared->mtab.nmounts -= 1;
     parent->nmounts -= 1;
 
@@ -471,7 +463,7 @@ H5Fmount(hid_t loc_id, const char *name, hid_t child_id, hid_t plist_id)
 {
     H5G_loc_t	loc;
     H5F_t	*child = NULL;
-    herr_t      ret_value = SUCCEED;       /* Return value */
+    herr_t      ret_value=SUCCEED;       /* Return value */
 
     FUNC_ENTER_API(H5Fmount, FAIL)
     H5TRACE4("e", "i*sii", loc_id, name, child_id, plist_id);
@@ -481,7 +473,7 @@ H5Fmount(hid_t loc_id, const char *name, hid_t child_id, hid_t plist_id)
 	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
     if(!name || !*name)
 	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no name")
-    if(NULL == (child = (H5F_t *)H5I_object_verify(child_id, H5I_FILE)))
+    if(NULL == (child = H5I_object_verify(child_id,H5I_FILE)))
 	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file")
     if(H5P_DEFAULT == plist_id)
         plist_id = H5P_FILE_MOUNT_DEFAULT;
@@ -626,81 +618,4 @@ H5F_mount_count_ids(H5F_t *f, unsigned *nopen_files, unsigned *nopen_objs)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5F_mount_count_ids() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5F_flush_mounts_recurse
- *
- * Purpose:	Flush a mount hierarchy, recursively
- *
- * Return:	SUCCEED/FAIL
- *
- * Programmer:	Quincey Koziol
- *              Fri, August 21, 2009
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5F_flush_mounts_recurse(H5F_t *f, hid_t dxpl_id)
-{
-    unsigned	nerrors = 0;            /* Errors from recursive flushes */
-    unsigned    u;                      /* Index variable */
-    herr_t      ret_value = SUCCEED;    /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT(H5F_flush_mounts_recurse)
-
-    /* Sanity check */
-    HDassert(f);
-
-    /* Flush all child files, not stopping for errors */
-    for(u = 0; u < f->shared->mtab.nmounts; u++)
-        if(H5F_flush_mounts_recurse(f->shared->mtab.child[u].file, dxpl_id) < 0)
-            nerrors++;
-
-    /* Call the "real" flush routine, for this file */
-    if(H5F_flush(f, dxpl_id) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_CANTFLUSH, FAIL, "unable to flush file's cached information")
-
-    /* Check flush errors for children - errors are already on the stack */
-    if(nerrors)
-        HGOTO_ERROR(H5E_FILE, H5E_CANTFLUSH, FAIL, "unable to flush file's child mounts")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5F_flush_mounts_recurse() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5F_flush_mounts
- *
- * Purpose:	Flush a mount hierarchy
- *
- * Return:	SUCCEED/FAIL
- *
- * Programmer:	Quincey Koziol
- *              Fri, August 21, 2009
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5F_flush_mounts(H5F_t *f, hid_t dxpl_id)
-{
-    herr_t      ret_value = SUCCEED;       /* Return value */
-
-    FUNC_ENTER_NOAPI(H5F_flush_mounts, FAIL)
-
-    /* Sanity check */
-    HDassert(f);
-
-    /* Find the top file in the mount hierarchy */
-    while(f->parent)
-        f = f->parent;
-
-    /* Flush the mounted file hierarchy */
-    if(H5F_flush_mounts_recurse(f, dxpl_id) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_CANTFLUSH, FAIL, "unable to flush mounted file hierarchy")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5F_flush_mounts() */
 

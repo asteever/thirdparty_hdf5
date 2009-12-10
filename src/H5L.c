@@ -82,7 +82,6 @@ typedef struct {
     const char *dst_name;               /* Destination name for moving object */
     H5T_cset_t cset;                    /* Char set for new name */
     H5G_loc_t  *dst_loc;		/* Destination location for moving object */
-    unsigned dst_target_flags;          /* Target flags for destination object */
     hbool_t copy;                       /* TRUE if this is a copy operation */
     hid_t lapl_id;                      /* LAPL to use in callback */
     hid_t dxpl_id;                      /* DXPL to use in callback */
@@ -152,7 +151,7 @@ static herr_t H5L_link_cb(H5G_loc_t *grp_loc/*in*/, const char *name,
     const H5O_link_t *lnk, H5G_loc_t *obj_loc, void *_udata/*in,out*/,
     H5G_own_loc_t *own_loc/*out*/);
 static herr_t H5L_create_real(const H5G_loc_t *link_loc, const char *link_name,
-    H5G_name_t *obj_path, H5F_t *obj_file, H5O_link_t *lnk, H5O_obj_create_t *ocrt_info,
+    H5G_name_t *obj_path, H5F_t *obj_file, H5O_link_t *lnk, H5O_obj_create_t *ocrt_info, 
     hid_t lcpl_id, hid_t lapl_id, hid_t dxpl_id);
 static herr_t H5L_get_val_real(const H5O_link_t *lnk, void *buf, size_t size);
 static herr_t H5L_get_val_cb(H5G_loc_t *grp_loc/*in*/, const char *name,
@@ -286,9 +285,6 @@ H5L_term_interface(void)
     H5L_table_g = (H5L_class_t *)H5MM_xfree(H5L_table_g);
     H5L_table_used_g = H5L_table_alloc_g = 0;
 
-    /* Mark the interface as uninitialized */
-    H5_interface_initialize_g = 0;
-
     FUNC_LEAVE_NOAPI(n)
 } /* H5L_term_interface() */
 
@@ -349,7 +345,7 @@ H5Lmove(hid_t src_loc_id, const char *src_name, hid_t dst_loc_id,
             lapl_id, H5AC_dxpl_id) < 0)
 	HGOTO_ERROR(H5E_LINK, H5E_CANTMOVE, FAIL, "unable to move link")
 
-done:
+done:    
     FUNC_LEAVE_API(ret_value)
 } /* end H5Lmove() */
 
@@ -407,7 +403,7 @@ H5Lcopy(hid_t src_loc_id, const char *src_name, hid_t dst_loc_id,
                 lapl_id, H5AC_dxpl_id) < 0)
 	HGOTO_ERROR(H5E_LINK, H5E_CANTMOVE, FAIL, "unable to move link")
 
-done:
+done:    
     FUNC_LEAVE_API(ret_value)
 } /* end H5Lcopy() */
 
@@ -561,8 +557,6 @@ H5Lcreate_ud(hid_t link_loc_id, const char *link_name, H5L_type_t link_type,
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
     if(!link_name || !*link_name)
 	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no link name specified")
-    if(link_type < H5L_TYPE_UD_MIN || link_type > H5L_TYPE_MAX)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid link class")
 
     /* Create external link */
     if(H5L_create_ud(&link_loc, link_name, udata, udata_size, link_type, lcpl_id, lapl_id, H5AC_dxpl_id) < 0)
@@ -716,7 +710,7 @@ H5Lget_val(hid_t loc_id, const char *name, void *buf/*out*/, size_t size,
 
     /* Get the link value */
     if(H5L_get_val(&loc, name, buf, size, lapl_id, H5AC_ind_dxpl_id) < 0)
-	HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "unable to get link value for '%s'", name)
+	HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "unable to get link value")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -1592,7 +1586,7 @@ H5L_link(const H5G_loc_t *new_loc, const char *new_name, H5G_loc_t *obj_loc,
     lnk.u.hard.addr = obj_loc->oloc->addr;
 
     /* Create the link */
-    if(H5L_create_real(new_loc, new_name, obj_loc->path, obj_loc->oloc->file, &lnk, NULL, lcpl_id, lapl_id, dxpl_id) < 0)
+    if(H5L_create_real(new_loc, new_name, obj_loc->path, obj_loc->oloc->file, &lnk, NULL, lcpl_id, lapl_id, dxpl_id) < 0) 
         HGOTO_ERROR(H5E_LINK, H5E_CANTINIT, FAIL, "unable to create new link to object")
 
 done:
@@ -1635,7 +1629,7 @@ H5L_link_object(const H5G_loc_t *new_loc, const char *new_name,
     lnk.type = H5L_TYPE_HARD;
 
     /* Create the link */
-    if(H5L_create_real(new_loc, new_name, NULL, NULL, &lnk, ocrt_info, lcpl_id, lapl_id, dxpl_id) < 0)
+    if(H5L_create_real(new_loc, new_name, NULL, NULL, &lnk, ocrt_info, lcpl_id, lapl_id, dxpl_id) < 0) 
         HGOTO_ERROR(H5E_LINK, H5E_CANTINIT, FAIL, "unable to create new link to object")
 
 done:
@@ -1749,7 +1743,7 @@ H5L_link_cb(H5G_loc_t *grp_loc/*in*/, const char *name, const H5O_link_t UNUSED 
             /* Set up location for user-defined callback */
             if((grp = H5G_open(&temp_loc, udata->dxpl_id)) == NULL)
                 HGOTO_ERROR(H5E_SYM, H5E_CANTOPENOBJ, FAIL, "unable to open group")
-            if((grp_id = H5I_register(H5I_GROUP, grp, TRUE)) < 0)
+            if((grp_id = H5I_register(H5I_GROUP, grp)) < 0)
                 HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to register ID for group")
 
             /* Make callback */
@@ -1761,7 +1755,7 @@ H5L_link_cb(H5G_loc_t *grp_loc/*in*/, const char *name, const H5O_link_t UNUSED 
 done:
     /* Close the location given to the user callback if it was created */
     if(grp_id >= 0) {
-        if(H5I_dec_ref(grp_id, TRUE) < 0)
+        if(H5I_dec_ref(grp_id) < 0)
             HDONE_ERROR(H5E_ATOM, H5E_CANTRELEASE, FAIL, "unable to close atom from UD callback")
     } /* end if */
     else if(grp != NULL) {
@@ -2054,7 +2048,7 @@ done:
 /*-------------------------------------------------------------------------
  * Function:	H5L_get_val_real
  *
- * Purpose:	Retrieve link value from a link object
+ * Purpose:	Retrieve link value from a link object 
  *
  * Return:	Non-negative on success/Negative on failure
  *
@@ -2077,7 +2071,7 @@ H5L_get_val_real(const H5O_link_t *lnk, void *buf, size_t size)
     if(H5L_TYPE_SOFT == lnk->type) {
         /* Copy to output buffer */
         if(size > 0 && buf) {
-            HDstrncpy((char *)buf, lnk->u.soft.name, size);
+            HDstrncpy(buf, lnk->u.soft.name, size);
             if(HDstrlen(lnk->u.soft.name) >= size)
                 ((char *)buf)[size - 1] = '\0';
         } /* end if */
@@ -2086,7 +2080,7 @@ H5L_get_val_real(const H5O_link_t *lnk, void *buf, size_t size)
     else if(lnk->type >= H5L_TYPE_UD_MIN) {
         const H5L_class_t *link_class;             /* User-defined link class */
 
-        /* Get the link class for this type of link.  It's okay if the class
+        /* Get the link class for this type of link.  It's okay if the class 
          * isn't registered, though--we just can't give any more information
          * about it
          */
@@ -2120,7 +2114,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5L_get_val_cb(H5G_loc_t UNUSED *grp_loc/*in*/, const char *name, const H5O_link_t *lnk,
+H5L_get_val_cb(H5G_loc_t UNUSED *grp_loc/*in*/, const char UNUSED *name, const H5O_link_t *lnk,
     H5G_loc_t UNUSED *obj_loc, void *_udata/*in,out*/, H5G_own_loc_t *own_loc/*out*/)
 {
     H5L_trav_gv_t *udata = (H5L_trav_gv_t *)_udata;   /* User data passed in */
@@ -2130,7 +2124,7 @@ H5L_get_val_cb(H5G_loc_t UNUSED *grp_loc/*in*/, const char *name, const H5O_link
 
     /* Check if the name in this group resolved to a valid link */
     if(lnk == NULL)
-        HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "'%s' doesn't exist", name)
+        HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "name doesn't exist")
 
     /* Retrieve the value for the link */
     if(H5L_get_val_real(lnk, udata->buf, udata->size) < 0)
@@ -2446,7 +2440,7 @@ H5L_move_dest_cb(H5G_loc_t *grp_loc/*in*/, const char *name,
             /* Set up location for user-defined callback */
             if((grp = H5G_open(&temp_loc, udata->dxpl_id)) == NULL)
                 HGOTO_ERROR(H5E_SYM, H5E_CANTOPENOBJ, FAIL, "unable to open group")
-            if((grp_id = H5I_register(H5I_GROUP, grp, TRUE)) < 0)
+            if((grp_id = H5I_register(H5I_GROUP, grp)) < 0)
                 HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to register group ID")
 
             if(udata->copy) {
@@ -2463,7 +2457,7 @@ H5L_move_dest_cb(H5G_loc_t *grp_loc/*in*/, const char *name,
 done:
     /* Close the location given to the user callback if it was created */
     if(grp_id >= 0) {
-        if(H5I_dec_ref(grp_id, TRUE) < 0)
+        if(H5I_dec_ref(grp_id) < 0)
             HDONE_ERROR(H5E_ATOM, H5E_CANTRELEASE, FAIL, "unable to close atom from UD callback")
     } /* end if */
     else if(grp != NULL) {
@@ -2534,8 +2528,7 @@ H5L_move_cb(H5G_loc_t *grp_loc/*in*/, const char *name, const H5O_link_t *lnk,
     orig_name = H5MM_xstrdup(name);
 
     /* Insert the link into its new location */
-    if(H5G_traverse(udata->dst_loc, udata->dst_name, udata->dst_target_flags,
-            H5L_move_dest_cb, &udata_out, udata->lapl_id, udata->dxpl_id) < 0)
+    if(H5G_traverse(udata->dst_loc, udata->dst_name, H5G_TARGET_NORMAL, H5L_move_dest_cb, &udata_out, udata->lapl_id, udata->dxpl_id) < 0)
 	HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "unable to follow symbolic link")
 
     /* If this is a move and not a copy operation, change the object's name and remove the old link */
@@ -2621,7 +2614,7 @@ H5L_move(H5G_loc_t *src_loc, const char *src_name, H5G_loc_t *dst_loc,
     const char *dst_name, hbool_t copy_flag, hid_t lcpl_id, hid_t lapl_id,
     hid_t dxpl_id)
 {
-    unsigned    dst_target_flags = H5G_TARGET_NORMAL;
+    unsigned    target_flags = H5G_TARGET_MOUNT|H5G_TARGET_SLINK|H5G_TARGET_UDLINK;
     H5T_cset_t char_encoding = H5F_DEFAULT_CSET; /* Character encoding for link */
     H5P_genplist_t* lc_plist;           /* Link creation property list */
     H5P_genplist_t* la_plist;           /* Link access property list */
@@ -2648,9 +2641,8 @@ H5L_move(H5G_loc_t *src_loc, const char *src_name, H5G_loc_t *dst_loc,
         if(H5P_get(lc_plist, H5L_CRT_INTERMEDIATE_GROUP_NAME, &crt_intmd_group) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get property value for creating missing groups")
 
-        /* Set target flags for source and destination */
         if(crt_intmd_group > 0)
-            dst_target_flags |= H5G_CRT_INTMD_GROUP;
+            target_flags |= H5G_CRT_INTMD_GROUP;
 
         /* Get character encoding property */
         if(H5P_get(lc_plist, H5P_STRCRT_CHAR_ENCODING_NAME, &char_encoding) < 0)
@@ -2665,23 +2657,21 @@ H5L_move(H5G_loc_t *src_loc, const char *src_name, H5G_loc_t *dst_loc,
     else {
         if(NULL == (la_plist = (H5P_genplist_t *)H5I_object(lapl_id)))
             HGOTO_ERROR(H5E_PLIST, H5E_BADTYPE, FAIL, "not a valid access PL")
-        if((lapl_copy = H5P_copy_plist(la_plist, FALSE)) < 0)
+        if((lapl_copy = H5P_copy_plist(la_plist)) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTINIT, FAIL, "unable to copy access properties")
     } /* end else */
 
     /* Set up user data */
     udata.dst_loc = dst_loc;
     udata.dst_name= dst_name;
-    udata.dst_target_flags = dst_target_flags;
     udata.cset = char_encoding;
     udata.copy = copy_flag;
     udata.lapl_id = lapl_copy;
     udata.dxpl_id = dxpl_id;
 
     /* Do the move */
-    if(H5G_traverse(src_loc, src_name, H5G_TARGET_MOUNT | H5G_TARGET_SLINK | H5G_TARGET_UDLINK,
-            H5L_move_cb, &udata, lapl_id, dxpl_id) < 0)
-	HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "unable to find link")
+    if(H5G_traverse(src_loc, src_name, target_flags, H5L_move_cb, &udata, lapl_id, dxpl_id) < 0)
+	HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "unable to find link")    
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -2710,7 +2700,7 @@ H5L_exists_cb(H5G_loc_t UNUSED *grp_loc/*in*/, const char UNUSED *name,
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5L_exists_cb)
 
     /* Check if the name in this group resolved to a valid link */
-    *udata = (hbool_t)(lnk != NULL);
+    *udata = (lnk != NULL);
 
     /* Indicate that this callback didn't take ownership of the group *
      * location for the object */
@@ -2735,8 +2725,8 @@ H5L_exists_cb(H5G_loc_t UNUSED *grp_loc/*in*/, const char UNUSED *name,
 static htri_t
 H5L_exists(const H5G_loc_t *loc, const char *name, hid_t lapl_id, hid_t dxpl_id)
 {
-    hbool_t exists = FALSE;     /* Whether the link exists in the group */
-    htri_t ret_value;           /* Return value */
+    hbool_t exists = FALSE;             /* Whether the link exists in the group */
+    herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5L_exists)
 
@@ -2745,7 +2735,7 @@ H5L_exists(const H5G_loc_t *loc, const char *name, hid_t lapl_id, hid_t dxpl_id)
         HGOTO_ERROR(H5E_SYM, H5E_EXISTS, FAIL, "path doesn't exist")
 
     /* Set return value */
-    ret_value = (htri_t)exists;
+    ret_value = exists;
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

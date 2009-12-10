@@ -177,26 +177,22 @@ H5_DLL int HDfprintf (FILE *stream, const char *fmt, ...);
 #ifdef _WIN32
     #ifdef __MWERKS__
     #define HDfstat(F,B)        fstat(F,B)
-    #define HDlstat(S,B)        lstat(S,B)
     #define HDstat(S,B)         stat(S,B)
     typedef struct stat         h5_stat_t;
     typedef off_t               h5_stat_size_t;
     #else /*MSVC*/
     #define HDfstat(F,B)        _fstati64(F,B)
-    #define HDlstat(S,B)        _lstati64(S,B)
     #define HDstat(S,B)         _stati64(S,B)
     typedef struct _stati64     h5_stat_t;
     typedef __int64             h5_stat_size_t;
     #endif
 #elif H5_SIZEOF_OFF_T!=8 && H5_SIZEOF_OFF64_T==8 && defined(H5_HAVE_STAT64)
     #define HDfstat(F,B)        fstat64(F,B)
-    #define HDlstat(S,B)        lstat64(S,B)
     #define HDstat(S,B)         stat64(S,B)
     typedef struct stat64       h5_stat_t;
     typedef off64_t             h5_stat_size_t;
 #else
     #define HDfstat(F,B)        fstat(F,B)
-    #define HDlstat(S,B)        lstat(S,B)
     #define HDstat(S,B)         stat(S,B)
     typedef struct stat         h5_stat_t;
     typedef off_t               h5_stat_size_t;
@@ -353,6 +349,7 @@ int HDremove_all(const char * fname);
 #else
 #define HDsetvbuf(F,S,M,Z)  setvbuf(F,S,M,(Z>1?Z:2))
 #endif
+#define HDsigaction(N,A)        sigaction(N,A)
 #define HDsigaddset(S,N)        sigaddset(S,N)
 #define HDsigdelset(S,N)        sigdelset(S,N)
 #define HDsigemptyset(S)        sigemptyset(S)
@@ -487,6 +484,24 @@ extern char *strdup(const char *s);
 #endif
 #ifndef TRUE
 #   define TRUE 1
+#endif
+
+/*
+ * Although `long long' is part of the revised ANSI-C some compilers don't
+ * support it yet.  We define `long_long' as the longest integral integer type
+ * supported by the compiler, usually 64 bits.	It must be legal to qualify
+ * `long_long' with `unsigned'.
+ */
+#if H5_SIZEOF_LONG_LONG>0
+#   define long_long	long long
+#elif H5_SIZEOF___INT64>0
+#   define long_long	__int64	/*Win32*/
+#   undef H5_SIZEOF_LONG_LONG
+#   define H5_SIZEOF_LONG_LONG H5_SIZEOF___INT64
+#else
+#   define long_long	long int
+#   undef H5_SIZEOF_LONG_LONG
+#   define H5_SIZEOF_LONG_LONG H5_SIZEOF_LONG
 #endif
 
 /** From h5test.h **/

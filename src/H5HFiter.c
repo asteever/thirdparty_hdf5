@@ -183,8 +183,7 @@ HDfprintf(stderr, "%s: offset = %Hu\n", FUNC, offset);
         curr_offset = offset - hdr->man_dtable.row_block_off[row];
 
         /* Compute column */
-        H5_CHECK_OVERFLOW((curr_offset / hdr->man_dtable.row_block_size[row]), hsize_t, unsigned);
-        col = (unsigned)(curr_offset / hdr->man_dtable.row_block_size[row]);
+        col = curr_offset / hdr->man_dtable.row_block_size[row];
 #ifdef QAK
 HDfprintf(stderr, "%s: row = %u, col = %u\n", FUNC, row, col);
 HDfprintf(stderr, "%s: offset = %Hu\n", FUNC, offset);
@@ -408,7 +407,7 @@ H5HF_man_iter_reset(H5HF_block_iter_t *biter)
                     HGOTO_ERROR(H5E_HEAP, H5E_CANTDEC, FAIL, "can't decrement reference count on shared indirect block")
 
             /* Free the current location context */
-            (void)H5FL_FREE(H5HF_block_loc_t, curr_loc);
+            H5FL_FREE(H5HF_block_loc_t, curr_loc);
 
             /* Advance to next location */
             curr_loc = next_loc;
@@ -505,7 +504,7 @@ H5HF_man_iter_up(H5HF_block_iter_t *biter)
     up_loc = biter->curr->up;
 
     /* Release this location */
-    (void)H5FL_FREE(H5HF_block_loc_t, biter->curr);
+    H5FL_FREE(H5HF_block_loc_t, biter->curr);
 
     /* Point location to next location up */
     biter->curr = up_loc;

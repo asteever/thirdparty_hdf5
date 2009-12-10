@@ -16,7 +16,6 @@ Dataset dimension information:
 		Total # of datasets: 1
 Dataset storage information:
 	Total raw data size: 8659
-	Total external raw data size: 400
 Dataset layout information:
 	Dataset layout counts[COMPACT]: 1
 	Dataset layout counts[CONTIG]: 2

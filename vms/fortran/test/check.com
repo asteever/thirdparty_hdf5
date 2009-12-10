@@ -20,7 +20,6 @@ $!
 $ type sys$input
         Running Fortran tests
 $ run fortranlib_test
-$ run fortranlib_test_1_8
 $ run fflush1
 $ run fflush2
 $ exit

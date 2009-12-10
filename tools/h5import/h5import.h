@@ -38,7 +38,6 @@
 #define ERR    20  /* invalid token */
 
 #define MAX_GROUPS_IN_PATH  20
-#define MAX_PATH_NAME_LENGTH 255 
 #define NUM_KEYS 14
 #define MIN_NUM_DIMENSION  1
 #define MAX_NUM_DIMENSION  32
@@ -69,12 +68,12 @@
 #define H5DT_UINT8     unsigned char
 #define H5DT_UINT16    unsigned short
 #define H5DT_UINT32    unsigned int
-#define H5DT_INT64     long long
+#define H5DT_INT64     long_long
 #define H5DT_UINT64    unsigned H5DT_INT64
 
 struct path_info
 {
-  char group[MAX_GROUPS_IN_PATH][MAX_PATH_NAME_LENGTH];
+  char group[MAX_GROUPS_IN_PATH][255];
   int count;
 };
 

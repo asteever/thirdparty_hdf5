@@ -64,15 +64,17 @@
  * is about the best guess.
  */
 #ifndef HDF5_PARAPREFIX
+#ifdef __PUMAGON__
+/* For the PFS of TFLOPS */
+#define HDF5_PARAPREFIX "pfs:/pfs_grande/multi/tmp_1"
+#else
 #define HDF5_PARAPREFIX ""
+#endif
 #endif
 char	*paraprefix = NULL;	/* for command line option para-prefix */
 #ifdef H5_HAVE_PARALLEL
 MPI_Info    h5_io_info_g=MPI_INFO_NULL;/* MPI INFO object for IO */
 #endif
-
-#define FILENAME_BUF_SIZE       1024
-#define READ_BUF_SIZE           4096 
 
 /*
  * These are the letters that are appended to the file name when generating
@@ -539,7 +541,7 @@ h5_fileaccess(void)
 	if (H5Pset_fapl_stdio(fapl)<0) return -1;
     } else if (!HDstrcmp(name, "core")) {
 	/* In-core temporary file with 1MB increment */
-	if (H5Pset_fapl_core(fapl, (size_t)1, TRUE)<0) return -1;
+	if (H5Pset_fapl_core(fapl, (size_t)1024*1024, TRUE)<0) return -1;
     } else if (!HDstrcmp(name, "split")) {
 	/* Split meta data and raw data each using default driver */
 	if (H5Pset_fapl_split(fapl,
@@ -560,13 +562,13 @@ h5_fileaccess(void)
 	HDmemset(memb_name, 0, sizeof memb_name);
 	HDmemset(memb_addr, 0, sizeof memb_addr);
 
-	HDassert(HDstrlen(multi_letters)==H5FD_MEM_NTYPES);
-	for(mt = H5FD_MEM_DEFAULT; mt < H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t, mt)) {
+	assert(HDstrlen(multi_letters)==H5FD_MEM_NTYPES);
+	for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t,mt)) {
 	    memb_fapl[mt] = H5P_DEFAULT;
 	    sprintf(sv[mt], "%%s-%c.h5", multi_letters[mt]);
 	    memb_name[mt] = sv[mt];
-	    memb_addr[mt] = (haddr_t)MAX(mt - 1, 0) * (HADDR_MAX / 10);
-	} /* end for */
+	    memb_addr[mt] = MAX(mt-1,0)*(HADDR_MAX/10);
+	}
 
 	if (H5Pset_fapl_multi(fapl, memb_map, memb_fapl, memb_name,
 			      memb_addr, FALSE)<0) {
@@ -845,93 +847,20 @@ h5_dump_info_object(MPI_Info info)
  * Programmer:	Quincey Koziol
  *              Saturday, March 22, 2003
  *
+ * Modifications:
+ * 	Albert Cheng, Oct 11, 2006
+ *	Changed Failure return value to -1.
+ *
  *-------------------------------------------------------------------------
  */
 h5_stat_size_t
-h5_get_file_size(const char *filename, hid_t fapl)
+h5_get_file_size(const char *filename)
 {
-    char temp[2048];    /* Temporary buffer for file names */
-    h5_stat_t	sb;     /* Structure for querying file info */
-	int j = 0;
+    h5_stat_t	sb;
 
-    if(fapl == H5P_DEFAULT) {
-        /* Get the file's statistics */
-        if(0 == HDstat(filename, &sb))
-            return((h5_stat_size_t)sb.st_size);
-    } /* end if */
-    else {
-        hid_t	driver;         /* VFD used for file */
-
-        /* Get the driver used when creating the file */
-        if((driver = H5Pget_driver(fapl)) < 0)
-            return(-1);
-
-        /* Check for simple cases */
-        if(driver == H5FD_SEC2 || driver == H5FD_STDIO || driver == H5FD_CORE ||
-#ifdef H5_HAVE_PARALLEL
-                driver == H5FD_MPIO || driver == H5FD_MPIPOSIX ||
-#endif /* H5_HAVE_PARALLEL */
-#ifdef H5_HAVE_WINDOWS
-                driver == H5FD_WINDOWS || 
-#endif /* H5_HAVE_WINDOWS */
-#ifdef H5_HAVE_DIRECT
-                driver == H5FD_DIRECT || 
-#endif /* H5_HAVE_DIRECT */
-                driver == H5FD_LOG) {
-            /* Get the file's statistics */
-            if(0 == HDstat(filename, &sb))
-                return((h5_stat_size_t)sb.st_size);
-        } /* end if */
-        else if(driver == H5FD_MULTI) {
-            H5FD_mem_t mt;
-            h5_stat_size_t tot_size = 0;
-
-            HDassert(HDstrlen(multi_letters) == H5FD_MEM_NTYPES);
-            for(mt = H5FD_MEM_DEFAULT; mt < H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t, mt)) {
-                /* Create the filename to query */
-                HDsnprintf(temp, sizeof temp, "%s-%c.h5", filename, multi_letters[mt]);
-
-                /* Check for existence of file */
-                if(0 == HDaccess(temp, F_OK)) {
-                    /* Get the file's statistics */
-                    if(0 != HDstat(temp, &sb))
-                        return(-1);
-
-                    /* Add to total size */
-                    tot_size += (h5_stat_size_t)sb.st_size;
-                } /* end if */
-            } /* end for */
-
-            /* Return total size */
-            return(tot_size);
-        } /* end if */
-        else if(driver == H5FD_FAMILY) {
-            h5_stat_size_t tot_size = 0;
-
-            /* Try all filenames possible, until we find one that's missing */
-            for(j = 0; /*void*/; j++) {
-                /* Create the filename to query */
-                HDsnprintf(temp, sizeof temp, filename, j);
-
-                /* Check for existence of file */
-                if(HDaccess(temp, F_OK) < 0)
-                    break;
-
-                /* Get the file's statistics */
-                if(0 != HDstat(temp, &sb))
-                    return(-1);
-
-                /* Add to total size */
-                tot_size += (h5_stat_size_t)sb.st_size;
-            } /* end for */
-
-            /* Return total size */
-            return(tot_size);
-        } /* end if */
-        else {
-            HDassert(0 && "Unknown VFD!");
-        } /* end else */
-    } /* end else */
+    /* Get the file's statistics */
+    if (HDstat(filename, &sb)==0)
+        return((h5_stat_size_t)sb.st_size);
 
     return(-1);
 } /* end get_file_size() */
@@ -974,28 +903,30 @@ print_func(const char *format, ...)
  */
 int h5_szip_can_encode(void )
 {
-    unsigned int filter_config_flags;
 
-    H5Zget_filter_info(H5Z_FILTER_SZIP, &filter_config_flags);
-    if ((filter_config_flags &
-            (H5Z_FILTER_CONFIG_ENCODE_ENABLED|H5Z_FILTER_CONFIG_DECODE_ENABLED)) == 0) {
-        /* filter present but neither encode nor decode is supported (???) */
-        return -1;
-    } else if ((filter_config_flags &
-            (H5Z_FILTER_CONFIG_ENCODE_ENABLED|H5Z_FILTER_CONFIG_DECODE_ENABLED)) ==
-            H5Z_FILTER_CONFIG_DECODE_ENABLED) {
-        /* decoder only: read but not write */
-        return 0;
-    } else if ((filter_config_flags &
-            (H5Z_FILTER_CONFIG_ENCODE_ENABLED|H5Z_FILTER_CONFIG_DECODE_ENABLED)) ==
-            H5Z_FILTER_CONFIG_ENCODE_ENABLED) {
-        /* encoder only: write but not read (???) */
-        return -1;
-    } else if ((filter_config_flags &
-            (H5Z_FILTER_CONFIG_ENCODE_ENABLED|H5Z_FILTER_CONFIG_DECODE_ENABLED)) ==
-            (H5Z_FILTER_CONFIG_ENCODE_ENABLED|H5Z_FILTER_CONFIG_DECODE_ENABLED)) {
-        return 1;
-    }
+ herr_t       status;
+ unsigned int filter_config_flags;
+
+   status =H5Zget_filter_info(H5Z_FILTER_SZIP, &filter_config_flags);
+   if ((filter_config_flags &
+          (H5Z_FILTER_CONFIG_ENCODE_ENABLED|H5Z_FILTER_CONFIG_DECODE_ENABLED)) == 0) {
+    /* filter present but neither encode nor decode is supported (???) */
+    return -1;
+   } else if ((filter_config_flags &
+          (H5Z_FILTER_CONFIG_ENCODE_ENABLED|H5Z_FILTER_CONFIG_DECODE_ENABLED)) ==
+    H5Z_FILTER_CONFIG_DECODE_ENABLED) {
+     /* decoder only: read but not write */
+    return 0;
+   } else if ((filter_config_flags &
+          (H5Z_FILTER_CONFIG_ENCODE_ENABLED|H5Z_FILTER_CONFIG_DECODE_ENABLED)) ==
+    H5Z_FILTER_CONFIG_ENCODE_ENABLED) {
+     /* encoder only: write but not read (???) */
+     return -1;
+   } else if ((filter_config_flags &
+          (H5Z_FILTER_CONFIG_ENCODE_ENABLED|H5Z_FILTER_CONFIG_DECODE_ENABLED)) ==
+          (H5Z_FILTER_CONFIG_ENCODE_ENABLED|H5Z_FILTER_CONFIG_DECODE_ENABLED)) {
+    return 1;
+   }
    return(-1);
 }
 #endif /* H5_HAVE_FILTER_SZIP */
@@ -1027,45 +958,49 @@ int h5_szip_can_encode(void )
  *
  *-------------------------------------------------------------------------
  */
-char *
-getenv_all(MPI_Comm comm, int root, const char* name)
+
+char* getenv_all(MPI_Comm comm, int root, const char* name)
 {
     int mpi_size, mpi_rank, mpi_initialized;
     int len;
     static char* env = NULL;
+    MPI_Status Status;
 
     assert(name);
 
     MPI_Initialized(&mpi_initialized);
-    if(!mpi_initialized) {
+    if (!mpi_initialized){
 	/* use original getenv */
 	if(env)
 	    HDfree(env);
 	env = HDgetenv(name);
-    } /* end if */
-    else {
+    }else{
 	MPI_Comm_rank(comm, &mpi_rank);
 	MPI_Comm_size(comm, &mpi_size);
 	assert(root < mpi_size);
 
 	/* The root task does the getenv call
 	 * and sends the result to the other tasks */
-	if(mpi_rank == root) {
+	if(mpi_rank == root)
+	{
 	    env = HDgetenv(name);
-	    if(env) {
+	    if(env)
+	    {
 		len = HDstrlen(env);
 		MPI_Bcast(&len, 1, MPI_INT, root, comm);
 		MPI_Bcast(env, len, MPI_CHAR, root, comm);
 	    }
-	    else {
+	    else{
 		/* len -1 indicates that the variable was not in the environment */
 		len = -1;
 		MPI_Bcast(&len, 1, MPI_INT, root, comm);
 	    }
 	}
-	else {
+	else
+	{
 	    MPI_Bcast(&len, 1, MPI_INT, root, comm);
-	    if(len >= 0) {
+	    if(len >= 0)
+	    {
 		if(env == NULL)
 		    env = (char*) HDmalloc(len+1);
 		else if(strlen(env) < len)
@@ -1074,7 +1009,8 @@ getenv_all(MPI_Comm comm, int root, const char* name)
 		MPI_Bcast(env, len, MPI_CHAR, root, comm);
 		env[len] = '\0';
 	    }
-	    else {
+	    else
+	    {
 		if(env)
 		    HDfree(env);
 		env = NULL;
@@ -1090,56 +1026,4 @@ getenv_all(MPI_Comm comm, int root, const char* name)
 }
 
 #endif
-
-/*-------------------------------------------------------------------------
- * Function:    h5_make_local_copy
- *
- * Purpose:     Make copy of file.  Some tests write to data files under that
- *              are under version control.  Those tests should make a copy of
- *              the versioned file and write to the copy.  This function 
- *              prepends srcdir to the name of the file to be copied and uses
- *              the name of the copy as is. 
- *
- * Return:      Success:        0
- *
- *              Failure:        -1
- *
- * Programmer:  Larry Knox
- *              Monday, October 13, 2009
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-hid_t
-h5_make_local_copy(char *origfilename, char *local_copy_name)
-{
-    char  filename[FILENAME_BUF_SIZE] = "";
-    int fd_old = (-1), fd_new = (-1);   /* File descriptors for copying data */
-    ssize_t nread;                      /* Number of bytes read in */
-    char  buf[READ_BUF_SIZE];        /* Buffer for copying data */
-    char * srcdir = HDgetenv("srcdir"); /* The source directory */
-
-    if(srcdir && ((HDstrlen(srcdir) +
-                   HDstrlen(origfilename) + 6) < FILENAME_BUF_SIZE)) {
-        HDstrcpy(filename, srcdir);
-        HDstrcat(filename, "/");
-    }
-    HDstrcat(filename, origfilename);
-
-    /* Copy old file into temporary file */
-    if((fd_old = HDopen(filename, O_RDONLY, 0666)) < 0) return -1;
-    if((fd_new = HDopen(local_copy_name, O_RDWR|O_CREAT|O_TRUNC, 0666)) 
-        < 0) return -1;
-
-    /* Copy data */
-    while((nread = HDread(fd_old, buf, (size_t)READ_BUF_SIZE)) > 0)
-        HDwrite(fd_new, buf, (size_t)nread);
-
-    /* Close files */
-    if(HDclose(fd_old) < 0) return -1;
-    if(HDclose(fd_new) < 0) return -1;
-   
-    return 0; 
-}
 

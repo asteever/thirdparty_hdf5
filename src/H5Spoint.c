@@ -401,7 +401,7 @@ H5S_point_add(H5S_t *space, H5S_seloper_t op, size_t num_elem, const hsize_t *co
         if(NULL == (new_node = H5FL_MALLOC(H5S_pnt_node_t)))
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "can't allocate point node")
 
-        if(NULL == (new_node->pnt = (hsize_t *)H5MM_malloc(space->extent.rank * sizeof(hsize_t))))
+        if(NULL == (new_node->pnt = H5MM_malloc(space->extent.rank * sizeof(hsize_t))))
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "can't allocate coordinate information")
 
         /* Copy over the coordinates */
@@ -481,12 +481,12 @@ H5S_point_release (H5S_t *space)
     while(curr!=NULL) {
         next=curr->next;
         H5MM_xfree(curr->pnt);
-        (void)H5FL_FREE(H5S_pnt_node_t, curr);
+        H5FL_FREE(H5S_pnt_node_t,curr);
         curr=next;
     } /* end while */
 
     /* Free & reset the point list header */
-    (void)H5FL_FREE(H5S_pnt_list_t, space->select.sel_info.pnt_lst);
+    H5FL_FREE(H5S_pnt_list_t,space->select.sel_info.pnt_lst);
     space->select.sel_info.pnt_lst=NULL;
 
     /* Reset the number of elements in the selection */
@@ -600,12 +600,12 @@ H5S_point_copy(H5S_t *dst, const H5S_t *src, hbool_t UNUSED share_selection)
     new_head=NULL;
     while(curr!=NULL) {
         /* Create each point */
-        if(NULL == (new_node = H5FL_MALLOC(H5S_pnt_node_t)))
+        if((new_node=H5FL_MALLOC(H5S_pnt_node_t))==NULL)
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "can't allocate point node");
-        if((new_node->pnt = (hsize_t *)H5MM_malloc(src->extent.rank*sizeof(hsize_t)))==NULL)
+        if((new_node->pnt = H5MM_malloc(src->extent.rank*sizeof(hsize_t)))==NULL)
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "can't allocate coordinate information");
-        HDmemcpy(new_node->pnt, curr->pnt, (src->extent.rank * sizeof(hsize_t)));
-        new_node->next = NULL;
+        HDmemcpy(new_node->pnt,curr->pnt,(src->extent.rank*sizeof(hsize_t)));
+        new_node->next=NULL;
 
         /* Keep the order the same when copying */
         if(new_head==NULL)
@@ -655,18 +655,18 @@ H5S_point_is_valid (const H5S_t *space)
     assert(space);
 
     /* Check each point to determine whether selection+offset is within extent */
-    curr = space->select.sel_info.pnt_lst->head;
-    while(curr != NULL) {
+    curr=space->select.sel_info.pnt_lst->head;
+    while(curr!=NULL) {
         /* Check each dimension */
-        for(u = 0; u < space->extent.rank; u++) {
+        for(u=0; u<space->extent.rank; u++) {
             /* Check if an offset has been defined */
             /* Bounds check the selected point + offset against the extent */
-            if(((curr->pnt[u] + (hsize_t)space->select.offset[u]) > space->extent.size[u])
-                    || (((hssize_t)curr->pnt[u] + space->select.offset[u]) < 0))
+            if(((curr->pnt[u]+space->select.offset[u])>space->extent.size[u])
+                    || (((hssize_t)curr->pnt[u]+space->select.offset[u])<0))
                 HGOTO_DONE(FALSE)
         } /* end for */
 
-        curr = curr->next;
+        curr=curr->next;
     } /* end while */
 
 done:
@@ -694,22 +694,22 @@ done:
 hssize_t
 H5Sget_select_elem_npoints(hid_t spaceid)
 {
-    H5S_t *space;               /* Dataspace to modify selection of */
-    hssize_t ret_value;         /* return value */
+    H5S_t	*space = NULL;      /* Dataspace to modify selection of */
+    hssize_t ret_value;        /* return value */
 
-    FUNC_ENTER_API(H5Sget_select_elem_npoints, FAIL)
+    FUNC_ENTER_API(H5Sget_select_elem_npoints, FAIL);
     H5TRACE1("Hs", "i", spaceid);
 
     /* Check args */
-    if(NULL == (space = (H5S_t *)H5I_object_verify(spaceid, H5I_DATASPACE)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space")
-    if(H5S_GET_SELECT_TYPE(space) != H5S_SEL_POINTS)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not an element selection")
+    if (NULL == (space=H5I_object_verify(spaceid, H5I_DATASPACE)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space");
+    if(H5S_GET_SELECT_TYPE(space)!=H5S_SEL_POINTS)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not an element selection");
 
-    ret_value = (hssize_t)H5S_GET_SELECT_NPOINTS(space);
+    ret_value = H5S_GET_SELECT_NPOINTS(space);
 
 done:
-    FUNC_LEAVE_API(ret_value)
+    FUNC_LEAVE_API(ret_value);
 }   /* H5Sget_select_elem_npoints() */
 
 
@@ -852,41 +852,41 @@ H5S_point_deserialize (H5S_t *space, const uint8_t *buf)
     uint32_t rank;           /* Rank of points */
     size_t num_elem=0;      /* Number of elements in selection */
     hsize_t *coord=NULL, *tcoord;   /* Pointer to array of elements */
-    unsigned i, j;              /* local counting variables */
-    herr_t ret_value = SUCCEED; /* return value */
+    unsigned i,j;              /* local counting variables */
+    herr_t ret_value;          /* return value */
 
-    FUNC_ENTER_NOAPI_NOINIT(H5S_point_deserialize)
+    FUNC_ENTER_NOAPI_NOINIT(H5S_point_deserialize);
 
     /* Check args */
-    HDassert(space);
-    HDassert(buf);
+    assert(space);
+    assert(buf);
 
     /* Deserialize points to select */
-    buf += 16;    /* Skip over selection header */
-    UINT32DECODE(buf, rank);  /* decode the rank of the point selection */
-    if(rank != space->extent.rank)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_BADRANGE, FAIL, "rank of pointer does not match dataspace")
-    UINT32DECODE(buf, num_elem);  /* decode the number of points */
+    buf+=16;    /* Skip over selection header */
+    UINT32DECODE(buf,rank);  /* decode the rank of the point selection */
+    if(rank!=space->extent.rank)
+        HGOTO_ERROR(H5E_DATASPACE, H5E_BADRANGE, FAIL, "rank of pointer does not match dataspace");
+    UINT32DECODE(buf,num_elem);  /* decode the number of points */
 
     /* Allocate space for the coordinates */
-    if(NULL == (coord = (hsize_t *)H5MM_malloc(num_elem * rank * sizeof(hsize_t))))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "can't allocate coordinate information")
+    if((coord = H5MM_malloc(num_elem*rank*sizeof(hsize_t)))==NULL)
+        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "can't allocate coordinate information");
 
     /* Retrieve the coordinates from the buffer */
-    for(tcoord = coord, i = 0; i < num_elem; i++)
-        for(j = 0; j < (unsigned)rank; j++, tcoord++)
+    for(tcoord=coord,i=0; i<num_elem; i++)
+        for(j=0; j<(unsigned)rank; j++,tcoord++)
             UINT32DECODE(buf, *tcoord);
 
     /* Select points */
-    if(H5S_select_elements(space, op, num_elem, (const hsize_t *)coord) < 0)
-        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDELETE, FAIL, "can't change selection")
+    if((ret_value=H5S_select_elements(space,op,num_elem,(const hsize_t **)coord))<0)
+        HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDELETE, FAIL, "can't change selection");
 
 done:
     /* Free the coordinate array if necessary */
-    if(coord != NULL)
+    if(coord!=NULL)
         H5MM_xfree(coord);
 
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 }   /* H5S_point_deserialize() */
 
 
@@ -923,34 +923,34 @@ static herr_t
 H5S_get_select_elem_pointlist(H5S_t *space, hsize_t startpoint, hsize_t numpoints, hsize_t *buf)
 {
     H5S_pnt_node_t *node;       /* Point node */
-    unsigned rank;              /* Dataspace rank */
+    int rank;                  /* Dataspace rank */
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_get_select_elem_pointlist)
+    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_get_select_elem_pointlist);
 
-    HDassert(space);
-    HDassert(buf);
+    assert(space);
+    assert(buf);
 
     /* Get the dataspace extent rank */
-    rank = space->extent.rank;
+    rank=space->extent.rank;
 
     /* Get the head of the point list */
-    node = space->select.sel_info.pnt_lst->head;
+    node=space->select.sel_info.pnt_lst->head;
 
     /* Iterate to the first point to return */
-    while(node != NULL && startpoint > 0) {
+    while(node!=NULL && startpoint>0) {
         startpoint--;
-        node = node->next;
+        node=node->next;
       } /* end while */
 
     /* Iterate through the node, copying each hyperslab's information */
-    while(node != NULL && numpoints > 0) {
-        HDmemcpy(buf, node->pnt, sizeof(hsize_t) * rank);
-        buf += rank;
+    while(node!=NULL && numpoints>0) {
+        HDmemcpy(buf,node->pnt,sizeof(hsize_t)*rank);
+        buf+=rank;
         numpoints--;
-        node = node->next;
+        node=node->next;
       } /* end while */
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
+    FUNC_LEAVE_NOAPI(SUCCEED);
 }   /* H5S_get_select_elem_pointlist() */
 
 
@@ -987,24 +987,24 @@ herr_t
 H5Sget_select_elem_pointlist(hid_t spaceid, hsize_t startpoint,
     hsize_t numpoints, hsize_t buf[/*numpoints*/])
 {
-    H5S_t *space;               /* Dataspace to modify selection of */
-    herr_t ret_value;           /* return value */
+    H5S_t	*space = NULL;      /* Dataspace to modify selection of */
+    herr_t ret_value;        /* return value */
 
-    FUNC_ENTER_API(H5Sget_select_elem_pointlist, FAIL)
+    FUNC_ENTER_API(H5Sget_select_elem_pointlist, FAIL);
     H5TRACE4("e", "ihh*[a2]h", spaceid, startpoint, numpoints, buf);
 
     /* Check args */
-    if(NULL == buf)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid pointer")
-    if(NULL == (space = (H5S_t *)H5I_object_verify(spaceid, H5I_DATASPACE)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space")
-    if(H5S_GET_SELECT_TYPE(space) != H5S_SEL_POINTS)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a point selection")
+    if(buf==NULL)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid pointer");
+    if (NULL == (space=H5I_object_verify(spaceid, H5I_DATASPACE)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space");
+    if(H5S_GET_SELECT_TYPE(space)!=H5S_SEL_POINTS)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a point selection");
 
-    ret_value = H5S_get_select_elem_pointlist(space, startpoint, numpoints, buf);
+    ret_value = H5S_get_select_elem_pointlist(space,startpoint,numpoints,buf);
 
 done:
-    FUNC_LEAVE_API(ret_value)
+    FUNC_LEAVE_API(ret_value);
 }   /* H5Sget_select_elem_pointlist() */
 
 
@@ -1105,6 +1105,7 @@ H5S_point_offset(const H5S_t *space, hsize_t *offset)
     const hssize_t *sel_offset; /* Pointer to the selection's offset */
     const hsize_t *dim_size;    /* Pointer to a dataspace's extent */
     hsize_t accum;              /* Accumulator for dimension sizes */
+    int rank;                   /* Dataspace rank */
     int i;                      /* index variable */
     herr_t ret_value = SUCCEED; /* Return value */
 
@@ -1122,8 +1123,9 @@ H5S_point_offset(const H5S_t *space, hsize_t *offset)
     dim_size = space->extent.size;
 
     /* Loop through coordinates, calculating the linear offset */
+    rank = space->extent.rank;
     accum = 1;
-    for(i = (int)space->extent.rank - 1; i >= 0; i--) {
+    for(i = (rank - 1); i >= 0; i--) {
         hssize_t pnt_offset = (hssize_t)pnt[i] + sel_offset[i]; /* Point's offset in this dimension */
 
         /* Check for offset moving selection out of the dataspace */
@@ -1131,7 +1133,7 @@ H5S_point_offset(const H5S_t *space, hsize_t *offset)
             HGOTO_ERROR(H5E_DATASPACE, H5E_BADRANGE, FAIL, "offset moves selection out of bounds")
 
         /* Add the point's offset in this dimension to the total linear offset */
-        *offset += (hsize_t)pnt_offset * accum;
+        *offset += pnt_offset * accum;
 
         /* Increase the accumulator */
         accum *= dim_size[i];
@@ -1346,14 +1348,14 @@ herr_t
 H5Sselect_elements(hid_t spaceid, H5S_seloper_t op, size_t num_elem,
     const hsize_t *coord)
 {
-    H5S_t *space;               /* Dataspace to modify selection of */
+    H5S_t *space = NULL;        /* Dataspace to modify selection of */
     herr_t ret_value;           /* Return value */
 
     FUNC_ENTER_API(H5Sselect_elements, FAIL)
     H5TRACE4("e", "iSsz*h", spaceid, op, num_elem, coord);
 
     /* Check args */
-    if(NULL == (space = (H5S_t *)H5I_object_verify(spaceid, H5I_DATASPACE)))
+    if(NULL == (space = H5I_object_verify(spaceid, H5I_DATASPACE)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataspace")
     if(H5S_SCALAR == H5S_GET_EXTENT_TYPE(space))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "point doesn't support H5S_SCALAR space")
@@ -1446,9 +1448,9 @@ H5S_point_get_seq_list(const H5S_t *space, unsigned flags, H5S_sel_iter_t *iter,
     curr_seq=0;
     while(node!=NULL) {
         /* Compute the offset of each selected point in the buffer */
-        for(i = ndims - 1, acc = iter->elmt_size, loc = 0; i >= 0; i--) {
-            loc += (node->pnt[i] + space->select.offset[i]) * acc;
-            acc *= dims[i];
+        for(i=ndims-1,acc=iter->elmt_size,loc=0; i>=0; i--) {
+            loc+=(node->pnt[i]+space->select.offset[i])*acc;
+            acc*=dims[i];
         } /* end for */
 
         /* Check if this is a later point in the selection */

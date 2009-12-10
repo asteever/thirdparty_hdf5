@@ -56,7 +56,7 @@ nh5init_types_c( hid_t_f * types, hid_t_f * floatingtypes, hid_t_f * integertype
     if ((types[0] = (hid_t_f)H5Tcopy(H5T_NATIVE_LONG)) < 0) return ret_value;
     } /*end if */
     else
-    if (sizeof(int_f) == sizeof(long long)) {
+    if (sizeof(int_f) == sizeof(long_long)) {
     if ((types[0] = (hid_t_f)H5Tcopy(H5T_NATIVE_LLONG)) < 0) return ret_value;
     } /*end else */
 
@@ -105,94 +105,6 @@ nh5init_types_c( hid_t_f * types, hid_t_f * floatingtypes, hid_t_f * integertype
 */
     if ((types[4] = (hid_t_f)H5Tcopy(H5T_STD_REF_OBJ)) < 0) return ret_value;
     if ((types[5] = (hid_t_f)H5Tcopy(H5T_STD_REF_DSETREG)) < 0) return ret_value;
-
-    if (sizeof(int_1_f) == sizeof(char)) {
-      if ((types[6] = (hid_t_f)H5Tcopy(H5T_NATIVE_CHAR)) < 0) return ret_value;
-    } /*end if */
-    else if (sizeof(int_1_f) == sizeof(short)) {
-      if ((types[6] = (hid_t_f)H5Tcopy(H5T_NATIVE_SHORT)) < 0) return ret_value;
-    } /*end if */
-    else if (sizeof(int_1_f) == sizeof(int)) {
-      if ((types[6] = (hid_t_f)H5Tcopy(H5T_NATIVE_INT)) < 0) return ret_value;
-    } /*end if */
-    else if (sizeof(int_1_f) == sizeof(long long)) {
-	if ((types[6] = (hid_t_f)H5Tcopy(H5T_NATIVE_LLONG)) < 0) return ret_value;
-    } /*end else */
-
-    if (sizeof(int_2_f) == sizeof(char)) {
-      if ((types[7] = (hid_t_f)H5Tcopy(H5T_NATIVE_CHAR)) < 0) return ret_value;
-    } /*end if */
-    else if (sizeof(int_2_f) == sizeof(short)) {
-      if ((types[7] = (hid_t_f)H5Tcopy(H5T_NATIVE_SHORT)) < 0) return ret_value;
-    } /*end if */
-    else if (sizeof(int_2_f) == sizeof(int)) {
-      if ((types[7] = (hid_t_f)H5Tcopy(H5T_NATIVE_INT)) < 0) return ret_value;
-    } /*end if */
-    else if (sizeof(int_2_f) == sizeof(long long)) {
-	if ((types[7] = (hid_t_f)H5Tcopy(H5T_NATIVE_LLONG)) < 0) return ret_value;
-    } /*end else */
-
-    if (sizeof(int_4_f) == sizeof(char)) {
-      if ((types[8] = (hid_t_f)H5Tcopy(H5T_NATIVE_CHAR)) < 0) return ret_value;
-    } /*end if */
-    else if (sizeof(int_4_f) == sizeof(short)) {
-      if ((types[8] = (hid_t_f)H5Tcopy(H5T_NATIVE_SHORT)) < 0) return ret_value;
-    } /*end if */
-    else if (sizeof(int_4_f) == sizeof(int)) {
-      if ((types[8] = (hid_t_f)H5Tcopy(H5T_NATIVE_INT)) < 0) return ret_value;
-    } /*end if */
-    else if (sizeof(int_4_f) == sizeof(long long)) {
-	if ((types[8] = (hid_t_f)H5Tcopy(H5T_NATIVE_LLONG)) < 0) return ret_value;
-    } /*end else */
-
-    if (sizeof(int_8_f) == sizeof(char)) {
-      if ((types[9] = (hid_t_f)H5Tcopy(H5T_NATIVE_CHAR)) < 0) return ret_value;
-    } /*end if */
-    else if (sizeof(int_8_f) == sizeof(short)) {
-      if ((types[9] = (hid_t_f)H5Tcopy(H5T_NATIVE_SHORT)) < 0) return ret_value;
-    } /*end if */
-    else if (sizeof(int_8_f) == sizeof(int)) {
-      if ((types[9] = (hid_t_f)H5Tcopy(H5T_NATIVE_INT)) < 0) return ret_value;
-    } /*end if */
-    else if (sizeof(int_8_f) == sizeof(long long)) {
-	if ((types[9] = (hid_t_f)H5Tcopy(H5T_NATIVE_LLONG)) < 0) return ret_value;
-    } /*end else */
-
-    if (sizeof(real_4_f) == sizeof(float)) {
-      if ((types[10] = (hid_t_f)H5Tcopy(H5T_NATIVE_FLOAT)) < 0) return ret_value;
-    } /*end if */
-    else if (sizeof(real_4_f) == sizeof(double)) {
-      if ((types[10] = (hid_t_f)H5Tcopy(H5T_NATIVE_DOUBLE)) < 0) return ret_value;
-    } /*end if */
-#if H5_SIZEOF_LONG_DOUBLE!=0
-    else if (sizeof(real_4_f) == sizeof(long double)) {
-	if ((types[10] = (hid_t_f)H5Tcopy(H5T_NATIVE_LDOUBLE)) < 0) return ret_value;
-    } /*end else */
-#endif
-
-    if (sizeof(real_8_f) == sizeof(float)) {
-      if ((types[11] = (hid_t_f)H5Tcopy(H5T_NATIVE_FLOAT)) < 0) return ret_value;
-    } /*end if */
-    else if (sizeof(real_8_f) == sizeof(double)) {
-      if ((types[11] = (hid_t_f)H5Tcopy(H5T_NATIVE_DOUBLE)) < 0) return ret_value;
-    } /*end if */
-#if H5_SIZEOF_LONG_DOUBLE!=0
-    else if (sizeof(real_8_f) == sizeof(long double)) {
-	if ((types[11] = (hid_t_f)H5Tcopy(H5T_NATIVE_LDOUBLE)) < 0) return ret_value;
-    } /*end else */
-#endif
-
-    if (sizeof(real_16_f) == sizeof(float)) {
-      if ((types[12] = (hid_t_f)H5Tcopy(H5T_NATIVE_FLOAT)) < 0) return ret_value;
-    } /*end if */
-    else if (sizeof(real_16_f) == sizeof(double)) {
-      if ((types[12] = (hid_t_f)H5Tcopy(H5T_NATIVE_DOUBLE)) < 0) return ret_value;
-    } /*end if */
-#if H5_SIZEOF_LONG_DOUBLE!=0
-    else if (sizeof(real_16_f) == sizeof(long double)) {
-	if ((types[12] = (hid_t_f)H5Tcopy(H5T_NATIVE_LDOUBLE)) < 0) return ret_value;
-    } /*end else */
-#endif
 
     if ((floatingtypes[0] = (hid_t_f)H5Tcopy(H5T_IEEE_F32BE)) < 0) return ret_value;
     if ((floatingtypes[1] = (hid_t_f)H5Tcopy(H5T_IEEE_F32LE)) < 0) return ret_value;
@@ -306,7 +218,7 @@ nh5close_types_c( hid_t_f * types, int_f *lentypes,
  *                                  EIP, April 9, 2005
  *                    Added Generic flags introduced in version 1.8
  *                                  MSB, January, 2008
- *                    Added types in lines h5*_flags = ( )variable to match input
+ *                    Added types in lines h5*_flags = ( )variable to match input 
  *---------------------------------------------------------------------------*/
 int_f
 nh5init_flags_c( int_f *h5d_flags, int_f *h5f_flags,
@@ -338,9 +250,6 @@ nh5init_flags_c( int_f *h5d_flags, int_f *h5f_flags,
     h5d_flags[16] = (int_f)H5D_FILL_VALUE_UNDEFINED;
     h5d_flags[17] = (int_f)H5D_FILL_VALUE_DEFAULT;
     h5d_flags[18] = (int_f)H5D_FILL_VALUE_USER_DEFINED;
-    h5d_flags[19] = (int_f)H5D_CHUNK_CACHE_NSLOTS_DEFAULT;
-    h5d_flags[20] = (int_f)H5D_CHUNK_CACHE_NBYTES_DEFAULT;
-    h5d_flags[21] = (int_f)H5D_CHUNK_CACHE_W0_DEFAULT;
 
 /*
  *  H5F flags
@@ -363,7 +272,7 @@ nh5init_flags_c( int_f *h5d_flags, int_f *h5f_flags,
     h5f_flags[15] = (int_f)H5F_OBJ_ALL;
     h5f_flags[16] = (int_f)H5F_LIBVER_EARLIEST;
     h5f_flags[17] = (int_f)H5F_LIBVER_LATEST;
-
+                           
 /*
  *  H5FD flags
  */
@@ -400,7 +309,7 @@ nh5init_flags_c( int_f *h5d_flags, int_f *h5f_flags,
     h5g_flags[3] = (int_f)H5O_TYPE_NAMED_DATATYPE;
 /* This value can no longer be returned and all these flags should be updated
  *      to reflect the refinements between links and objects. -QAK */
-/*      h5g_flags[4] = H5G_LINK; */
+/*      h5g_flags[4] = H5G_LINK; */    
     h5g_flags[5] = (int_f)H5L_TYPE_ERROR;
     h5g_flags[6] = (int_f)H5L_TYPE_HARD;
     h5g_flags[7] = (int_f)H5L_TYPE_SOFT;
@@ -430,7 +339,7 @@ nh5init_flags_c( int_f *h5d_flags, int_f *h5f_flags,
     h5l_flags[3] = (int_f)H5L_TYPE_EXTERNAL;
     h5l_flags[4] = (int_f)H5L_SAME_LOC; /* Macro to indicate operation occurs on same location */
     h5l_flags[5] = (int_f)H5L_LINK_CLASS_T_VERS; /* Current version of the H5L_class_t struct */
-
+ 
 /*
  *  H5O flags
  */
@@ -465,7 +374,7 @@ nh5init_flags_c( int_f *h5d_flags, int_f *h5f_flags,
       h5o_flags[16] = (int_f)H5O_HDR_ATTR_CRT_ORDER_INDEXED; /* Attribute creation order has index */
       h5o_flags[17] = (int_f)H5O_HDR_ATTR_STORE_PHASE_CHANGE; /* Non-default attribute storage phase change values stored */
       h5o_flags[18] = (int_f)H5O_HDR_STORE_TIMES; /* Store access, modification, change & birth times for object */
-      h5o_flags[19] = (int_f)H5O_HDR_ALL_FLAGS;
+      h5o_flags[19] = (int_f)H5O_HDR_ALL_FLAGS; 
 
 /* Maximum shared message values.  Number of indexes is 8 to allow room to add
  * new types of messages.
@@ -557,28 +466,26 @@ nh5init_flags_c( int_f *h5d_flags, int_f *h5f_flags,
       h5t_flags[10] = (int_f)H5T_ORDER_LE;
       h5t_flags[11] = (int_f)H5T_ORDER_BE;
       h5t_flags[12] = (int_f)H5T_ORDER_VAX;
-      h5t_flags[13] = (int_f)H5T_ORDER_NONE;
-      h5t_flags[14] = (int_f)H5T_PAD_ZERO;
-      h5t_flags[15] = (int_f)H5T_PAD_ONE;
-      h5t_flags[16] = (int_f)H5T_PAD_BACKGROUND;
-      h5t_flags[17] = (int_f)H5T_PAD_ERROR;
-      h5t_flags[18] = (int_f)H5T_SGN_NONE;
-      h5t_flags[19] = (int_f)H5T_SGN_2;
-      h5t_flags[20] = (int_f)H5T_SGN_ERROR;
-      h5t_flags[21] = (int_f)H5T_NORM_IMPLIED;
-      h5t_flags[22] = (int_f)H5T_NORM_MSBSET;
-      h5t_flags[23] = (int_f)H5T_NORM_NONE;
-      h5t_flags[24] = (int_f)H5T_CSET_ASCII;
-      h5t_flags[25] = (int_f)H5T_CSET_UTF8;
-      h5t_flags[26] = (int_f)H5T_STR_NULLTERM;
-      h5t_flags[27] = (int_f)H5T_STR_NULLPAD;
-      h5t_flags[28] = (int_f)H5T_STR_SPACEPAD;
-      h5t_flags[29] = (int_f)H5T_STR_ERROR;
-      h5t_flags[30] = (int_f)H5T_VLEN;
-      h5t_flags[31] = (int_f)H5T_ARRAY;
-      h5t_flags[32] = (int_f)H5T_DIR_ASCEND;
-      h5t_flags[33] = (int_f)H5T_DIR_DESCEND;
-
+      h5t_flags[13] = (int_f)H5T_PAD_ZERO;
+      h5t_flags[14] = (int_f)H5T_PAD_ONE;
+      h5t_flags[15] = (int_f)H5T_PAD_BACKGROUND;
+      h5t_flags[16] = (int_f)H5T_PAD_ERROR;
+      h5t_flags[17] = (int_f)H5T_SGN_NONE;
+      h5t_flags[18] = (int_f)H5T_SGN_2;
+      h5t_flags[19] = (int_f)H5T_SGN_ERROR;
+      h5t_flags[20] = (int_f)H5T_NORM_IMPLIED;
+      h5t_flags[21] = (int_f)H5T_NORM_MSBSET;
+      h5t_flags[22] = (int_f)H5T_NORM_NONE;
+      h5t_flags[23] = (int_f)H5T_CSET_ASCII;
+      h5t_flags[24] = (int_f)H5T_CSET_UTF8;
+      h5t_flags[25] = (int_f)H5T_STR_NULLTERM;
+      h5t_flags[26] = (int_f)H5T_STR_NULLPAD;
+      h5t_flags[27] = (int_f)H5T_STR_SPACEPAD;
+      h5t_flags[28] = (int_f)H5T_STR_ERROR;
+      h5t_flags[29] = (int_f)H5T_VLEN;
+      h5t_flags[30] = (int_f)H5T_ARRAY;
+      h5t_flags[31] = (int_f)H5T_DIR_ASCEND;
+      h5t_flags[32] = (int_f)H5T_DIR_DESCEND;
 /*
  *  H5Z flags
  */
@@ -612,8 +519,8 @@ nh5init_flags_c( int_f *h5d_flags, int_f *h5f_flags,
       h5_generic_flags[1] = (int_f)H5_INDEX_NAME;      /* Index on names 			*/
       h5_generic_flags[2] = (int_f)H5_INDEX_CRT_ORDER; /* Index on creation order 		*/
       h5_generic_flags[3] = (int_f)H5_INDEX_N;         /* Index on creation order 		*/
-
-
+      
+      
       /* H5_iter_order_t enum struct */
 
       h5_generic_flags[4] = (int_f)H5_ITER_UNKNOWN;       /* Unknown order */

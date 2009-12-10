@@ -22,16 +22,16 @@
 enum obj_type { is_group, is_dset };
 
 
-static int get_size(void);
-static void write_dataset(hid_t, hid_t, hid_t);
-static int  read_dataset(hid_t, hid_t, hid_t);
-static void create_group_recursive(hid_t, hid_t, hid_t, int);
-static void recursive_read_group(hid_t, hid_t, hid_t, int);
-static void group_dataset_read(hid_t fid, int mpi_rank, int m);
-static void write_attribute(hid_t, int, int);
-static int  read_attribute(hid_t, int, int);
-static int  check_value(DATATYPE *, DATATYPE *, int);
-static void get_slab(hsize_t[], hsize_t[], hsize_t[], hsize_t[], int);
+int get_size(void);
+void write_dataset(hid_t, hid_t, hid_t);
+int  read_dataset(hid_t, hid_t, hid_t);
+void create_group_recursive(hid_t, hid_t, hid_t, int);
+void recursive_read_group(hid_t, hid_t, hid_t, int);
+void group_dataset_read(hid_t fid, int mpi_rank, int m);
+void write_attribute(hid_t, int, int);
+int  read_attribute(hid_t, int, int);
+int  check_value(DATATYPE *, DATATYPE *, int);
+void get_slab(hsize_t[], hsize_t[], hsize_t[], hsize_t[], int);
 
 
 /*
@@ -44,8 +44,7 @@ static void get_slab(hsize_t[], hsize_t[], hsize_t[], hsize_t[], int);
  *                                       JRM - 8/11/04
  */
 
-static int
-get_size(void)
+int get_size(void)
 {
     int mpi_rank;
     int mpi_size;
@@ -369,7 +368,7 @@ void null_dataset(void)
      VRFY((ret>= 0),"set independent IO collectively succeeded");
     }
 
-
+ 
     dataset = H5Dopen2(iof, dname, H5P_DEFAULT);
     VRFY((dataset >= 0), "H5Dopen2 succeeded");
 
@@ -457,8 +456,8 @@ void big_dataset(void)
     VRFY((ret >= 0), "H5Fclose succeeded");
 
     /* Check that file of the correct size was created */
-    file_size = h5_get_file_size(filename, fapl);
-    VRFY((file_size == 2147485792ULL), "File is correct size(~2GB)");
+    file_size=h5_get_file_size(filename);
+    VRFY((file_size == 2147485696ULL), "File is correct size(~2GB)");
 
     /*
      * Create >4GB HDF5 file
@@ -486,8 +485,8 @@ void big_dataset(void)
     VRFY((ret >= 0), "H5Fclose succeeded");
 
     /* Check that file of the correct size was created */
-    file_size = h5_get_file_size(filename, fapl);
-    VRFY((file_size == 4294969440ULL), "File is correct size(~4GB)");
+    file_size=h5_get_file_size(filename);
+    VRFY((file_size == 4294969344ULL), "File is correct size(~4GB)");
 
     /*
      * Create >8GB HDF5 file
@@ -515,8 +514,8 @@ void big_dataset(void)
     VRFY((ret >= 0), "H5Fclose succeeded");
 
     /* Check that file of the correct size was created */
-    file_size = h5_get_file_size(filename, fapl);
-    VRFY((file_size == 8589936736ULL), "File is correct size(~8GB)");
+    file_size=h5_get_file_size(filename);
+    VRFY((file_size == 8589936640ULL), "File is correct size(~8GB)");
 
     /* Close fapl */
     ret = H5Pclose(fapl);
@@ -868,8 +867,7 @@ void independent_group_read(void)
  *
  *                                              JRM - 8/16/04
  */
-static void
-group_dataset_read(hid_t fid, int mpi_rank, int m)
+void group_dataset_read(hid_t fid, int mpi_rank, int m)
 {
     int      ret, i, j, size;
     char     gname[64], dname[32];
@@ -1037,8 +1035,7 @@ void multiple_group_write(void)
  *
  *                                              JRM - 8/16/04
  */
-static void
-write_dataset(hid_t memspace, hid_t filespace, hid_t gid)
+void write_dataset(hid_t memspace, hid_t filespace, hid_t gid)
 {
     int i, j, n, size;
     int mpi_rank, mpi_size;
@@ -1077,8 +1074,8 @@ write_dataset(hid_t memspace, hid_t filespace, hid_t gid)
  * Creates subgroups of depth GROUP_DEPTH recursively.  Also writes datasets
  * in parallel in each group.
  */
-static void
-create_group_recursive(hid_t memspace, hid_t filespace, hid_t gid, int counter)
+void create_group_recursive(hid_t memspace, hid_t filespace, hid_t gid,
+                            int counter)
 {
    hid_t child_gid;
    int   mpi_rank;
@@ -1199,8 +1196,7 @@ void multiple_group_read(void)
  *
  *                                              JRM - 8/11/04
  */
-static int
-read_dataset(hid_t memspace, hid_t filespace, hid_t gid)
+int read_dataset(hid_t memspace, hid_t filespace, hid_t gid)
 {
     int i, j, n, mpi_rank, mpi_size, size, attr_errors=0, vrfy_errors=0;
     char dname[32];
@@ -1254,8 +1250,8 @@ read_dataset(hid_t memspace, hid_t filespace, hid_t gid)
  * This recursive function opens all the groups in vertical direction and
  * checks the data.
  */
-static void
-recursive_read_group(hid_t memspace, hid_t filespace, hid_t gid, int counter)
+void recursive_read_group(hid_t memspace, hid_t filespace, hid_t gid,
+                          int counter)
 {
     hid_t child_gid;
     int   mpi_rank, err_num=0;
@@ -1282,8 +1278,7 @@ recursive_read_group(hid_t memspace, hid_t filespace, hid_t gid, int counter)
 /* Create and write attribute for a group or a dataset.  For groups, attribute
  * is a scalar datum; for dataset, it is a one-dimensional array.
  */
-static void
-write_attribute(hid_t obj_id, int this_type, int num)
+void write_attribute(hid_t obj_id, int this_type, int num)
 {
     hid_t   sid, aid;
     hsize_t dspace_dims[1]={8};
@@ -1314,8 +1309,7 @@ write_attribute(hid_t obj_id, int this_type, int num)
 }
 
 /* Read and verify attribute for group or dataset. */
-static int
-read_attribute(hid_t obj_id, int this_type, int num)
+int read_attribute(hid_t obj_id, int this_type, int num)
 {
     hid_t aid;
     hsize_t group_block[2]={1,1}, dset_block[2]={1, 8};
@@ -1357,8 +1351,7 @@ read_attribute(hid_t obj_id, int this_type, int num)
  *
  *					JRM - 8/16/04
  */
-static int
-check_value(DATATYPE *indata, DATATYPE *outdata, int size)
+int check_value(DATATYPE *indata, DATATYPE *outdata, int size)
 {
     int mpi_rank, mpi_size, err_num=0;
     hsize_t i, j;
@@ -1394,9 +1387,11 @@ check_value(DATATYPE *indata, DATATYPE *outdata, int size)
  *					JRM - 8/11/04
  */
 
-static void
-get_slab(hsize_t chunk_origin[], hsize_t chunk_dims[], hsize_t count[],
-    hsize_t file_dims[], int size)
+void get_slab(hsize_t chunk_origin[],
+              hsize_t chunk_dims[],
+              hsize_t count[],
+              hsize_t file_dims[],
+              int size)
 {
     int mpi_rank, mpi_size;
 
@@ -1455,6 +1450,10 @@ void io_mode_confusion(void)
     hsize_t     dimsf[1];                 /* dataset dimensions */
     int         data[N] = {1};            /* pointer to data buffer to write */
     hsize_t     coord[N] = {0L,1L,2L,3L};
+    hsize_t     start[1];
+    hsize_t     stride[1];
+    hsize_t     count[1];
+    hsize_t     block[1];
     hid_t       plist_id;                 /* property list identifier */
     herr_t      status;
 
@@ -1580,6 +1579,11 @@ void io_mode_confusion(void)
     VRFY((filespace >= 0 ), "H5Dget_space() failed");
 
 
+    start[0] = 0L;
+    stride[0] = 1;
+    count[0] = 1;
+    block[0] = N;
+
     /* select all */
     if(mpi_rank == 0 ) {
         if(verbose )
@@ -1587,7 +1591,8 @@ void io_mode_confusion(void)
                        "%0d:%s: Calling H5Sselect_elements() -- set up hang?\n",
                        mpi_rank, fcn_name);
 
-        status = H5Sselect_elements(filespace, H5S_SELECT_SET, N, (const hsize_t *)&coord);
+        status = H5Sselect_elements(filespace, H5S_SELECT_SET, N,
+                                   &coord);
         VRFY((status >= 0 ), "H5Sselect_elements() failed");
     } else { /* select nothing */
         if(verbose )

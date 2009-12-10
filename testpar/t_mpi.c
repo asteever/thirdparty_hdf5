@@ -286,9 +286,8 @@ test_mpio_gb_file(char *filename)
 	VRFY((buf!=NULL), "malloc succeed");
 
 	/* open a new file. Remove it first in case it exists. */
-	/* Must delete because MPI_File_open does not have a Truncate mode. */
-	/* Don't care if it has error. */
-	MPI_File_delete(filename, MPI_INFO_NULL);
+	if (MAINPROCESS)
+	    remove(filename);
 	MPI_Barrier(MPI_COMM_WORLD);	/* prevent racing condition */
 
 	mrc = MPI_File_open(MPI_COMM_WORLD, filename, MPI_MODE_CREATE|MPI_MODE_RDWR,
@@ -380,10 +379,10 @@ test_mpio_gb_file(char *filename)
 	mrc = MPI_Barrier(MPI_COMM_WORLD);
 	VRFY((mrc==MPI_SUCCESS), "Sync before leaving test");
 
-        /*
-         * Check if MPI_File_get_size works correctly.  Some systems (only SGI Altix
+        /* 
+         * Check if MPI_File_get_size works correctly.  Some systems (only SGI Altix 
          * Propack 4 so far) return wrong file size.  It can be avoided by reconfiguring
-         * with "--disable-mpi-size".
+         * with "--disable-mpi-size".  
          */
 #ifdef H5_HAVE_MPI_GET_SIZE
 	printf("Test if MPI_File_get_size works correctly with %s\n", filename);
@@ -397,7 +396,7 @@ test_mpio_gb_file(char *filename)
 
             mrc=stat(filename, &stat_buf);
 	    VRFY((mrc==0), "");
-
+           
             /* Hopefully this casting is safe */
             if(size != (MPI_Offset)(stat_buf.st_size)) {
                 printf("Warning: MPI_File_get_size doesn't return correct file size.  To avoid using it in the library, reconfigure and rebuild the library with --disable-mpi-size.\n");
@@ -491,7 +490,6 @@ test_mpio_1wMr(char *filename, int special_request)
     /* Must delete because MPI_File_open does not have a Truncate mode. */
     /* Don't care if it has error. */
     MPI_File_delete(filename, MPI_INFO_NULL);
-    MPI_Barrier(MPI_COMM_WORLD);	/* prevent racing condition */
 
     if ((mpi_err = MPI_File_open(MPI_COMM_WORLD, filename,
 	    MPI_MODE_RDWR | MPI_MODE_CREATE ,
@@ -699,10 +697,10 @@ static int test_mpio_derived_dtype(char *filename) {
     MPI_Datatype  etype,filetype;
     MPI_Datatype  adv_filetype,bas_filetype[2];
     MPI_Datatype  etypenew, filetypenew;
-    MPI_Offset    disp;
+    MPI_Offset    disp,dispnew;
     MPI_Status    Status;
     MPI_Aint      adv_disp[2];
-    MPI_Aint      offsets[1];
+    MPI_Aint      offsets[1],adv_offsets[2];
     int           blocklens[1],adv_blocklens[2];
     int           count,outcount;
     int           retcode;
@@ -849,7 +847,7 @@ static int test_mpio_derived_dtype(char *filename) {
 	    printf("Complicated derived datatype is NOT working at this platform\n");
 	    printf("Go back to hdf5/config and find the corresponding\n");
 	    printf("configure-specific file (for example, powerpc-ibm-aix5.x) and add\n");
-	    printf("hdf5_cv_mpi_complex_derived_datatype_works=${hdf5_cv_mpi_complex_derived_datatype-works='no'}\n");
+	    printf("hdf5_mpi_complex_derived_datatype_works=${hdf5_mpi_complex_derived_datatype-works='no'}\n");
 	    printf(" at the end of the file.\n");
 	    printf(" Please report to hdfhelp@ncsa.uiuc.edu about this problem.\n");
 	}
@@ -862,7 +860,7 @@ static int test_mpio_derived_dtype(char *filename) {
 	    printf("Complicated derived datatype is WORKING at this platform\n");
 	    printf(" Go back to hdf5/config and find the corresponding \n");
 	    printf(" configure-specific file (for example, powerpc-ibm-aix5.x) and delete the line\n");
-	    printf("hdf5_cv_mpi_complex_derived_datatype_works=${hdf5_cv_mpi_complex_derived_datatype-works='no'}\n");
+	    printf("hdf5_mpi_complex_derived_datatype_works=${hdf5_mpi_complex_derived_datatype-works='no'}\n");
 	    printf(" at the end of the file.\n");
 	    printf("Please report to hdfhelp@ncsa.uiuc.edu about this problem.\n");
 	}
@@ -898,9 +896,9 @@ If it turns out that the previous working MPI-IO package no longer works, this t
 we can turn off the support for special collective IO; currently only special collective IO.
 */
 
-static int
-test_mpio_special_collective(char *filename)
-{
+static int test_mpio_special_collective(char *filename) {
+
+    char hostname[128];
     int  mpi_size, mpi_rank;
     MPI_File fh;
     MPI_Datatype etype,buftype,filetype;
@@ -909,10 +907,12 @@ test_mpio_special_collective(char *filename)
     int  mpi_err;
     char writedata[2];
     char *buf;
-    int  i;
+    char expect_val;
+    int  i, irank;
     int  count,bufcount;
     int blocklens[2];
     MPI_Aint offsets[2];
+    int  nerrors = 0;		/* number of errors */
     MPI_Offset  mpi_off;
     MPI_Status  mpi_stat;
     int  retcode;
@@ -1018,7 +1018,7 @@ test_mpio_special_collective(char *filename)
 	    printf("special collective IO is NOT working at this platform\n");
 	    printf("Go back to hdf5/config and find the corresponding\n");
 	    printf("configure-specific file (for example, powerpc-ibm-aix5.x) and add\n");
-	    printf("hdf5_cv_mpi_special_collective_io_works=${hdf5_cv_mpi_special_collective_io_works='no'}\n");
+	    printf("hdf5_mpi_special_collective_io_works=${hdf5_mpi_special_collective_io_works='no'}\n");
 	    printf(" at the end of the file.\n");
 	    printf(" Please report to hdfhelp@ncsa.uiuc.edu about this problem.\n");
 	}
@@ -1031,7 +1031,7 @@ test_mpio_special_collective(char *filename)
 	    printf("special collective IO is WORKING at this platform\n");
 	    printf(" Go back to hdf5/config and find the corresponding \n");
 	    printf(" configure-specific file (for example, powerpc-ibm-aix5.x) and delete the line\n");
-	    printf("hdf5_cv_mpi_special_collective_io_works=${hdf5_cv_mpi_special_collective_io_works='no'}\n");
+	    printf("hdf5_mpi_special_collective_io_works=${hdf5_mpi_special_collective_io_works='no'}\n");
 	    printf(" at the end of the file.\n");
 	    printf("Please report to hdfhelp@ncsa.uiuc.edu about this problem.\n");
 	}

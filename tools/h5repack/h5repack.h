@@ -25,8 +25,6 @@
 #define PFORMAT1 "%-7s %-7s %-7s"     /* chunk info, compression info, name*/
 #define MAX_NC_NAME 256               /* max length of a name */
 #define MAX_VAR_DIMS 32               /* max per variable dimensions */
-#define FORMAT_OBJ      " %-27s %s\n"   /* obj type, name */
-#define FORMAT_OBJ_ATTR "  %-27s %s\n"  /* obj type, name */
 
 /*-------------------------------------------------------------------------
  * data structures for command line options
@@ -101,19 +99,13 @@ typedef struct {
  chunk_info_t    chunk_g;     /*global chunk INFO for the ALL case */
  H5D_layout_t    layout_g;    /*global layout information for the ALL case */
  int             verbose;     /*verbose mode */
- hsize_t         min_comp;    /*minimum size to compress, in bytes */
+ hsize_t         threshold;   /*minimum size to compress, in bytes */
  int             use_native;  /*use a native type in write */  
  int             latest;      /*pack file with the latest file format */
  int             grp_compact; /* Set the maximum number of links to store as header messages in the group */
  int             grp_indexed; /* Set the minimum number of links to store in the indexed format */
- int             msg_size[8]; /* Minimum size of shared messages: dataspace, 
+ int             msg_size[8]; /* Minumum size of shared messages: dataspace, 
                                  datatype, fill value, filter pipleline, attribute */
- const char      *ublock_filename; /* user block file name */
- hsize_t         ublock_size;      /* user block size */
- hsize_t         threshold;        /* alignment threshold for H5Pset_alignment */
- hsize_t         alignment ;       /* alignment for H5Pset_alignment */
- H5F_file_space_type_t fs_strategy;     /* File space handling strategy */
- hsize_t         fs_threshold;      	/* Free space section threshold */
 } pack_opt_t;
 
 
@@ -127,13 +119,14 @@ typedef struct {
 extern "C" {
 #endif
 
-int h5repack(const char* infile, const char* outfile, pack_opt_t *options);
-int h5repack_addfilter(const char* str, pack_opt_t *options);
-int h5repack_addlayout(const char* str, pack_opt_t *options);
-int h5repack_init(pack_opt_t *options, int verbose, H5F_file_space_type_t strategy, hsize_t threshold);
-int h5repack_end(pack_opt_t *options);
-int h5repack_verify(const char *in_fname, const char *out_fname, pack_opt_t *options);
-int h5repack_cmp_pl(const char *fname1, const char *fname2);
+int h5repack           (const char* infile, const char* outfile, pack_opt_t *options);
+int h5repack_addfilter (const char* str, pack_opt_t *options);
+int h5repack_addlayout (const char* str, pack_opt_t *options);
+int h5repack_init      (pack_opt_t *options, int verbose);
+int h5repack_end       (pack_opt_t *options);
+int h5repack_verify    (const char *fname,pack_opt_t *options);
+int h5repack_cmpdcpl   (const char *fname1,
+                        const char *fname2);
 
 
 #ifdef __cplusplus
@@ -177,7 +170,6 @@ void init_packobject(pack_info_t *obj);
 int apply_filters(const char* name,    /* object name from traverse list */
                   int rank,            /* rank of dataset */
                   hsize_t *dims,       /* dimensions of dataset */
-                  size_t msize,        /* size of type */
                   hid_t dcpl_id,       /* dataset creation property list */
                   pack_opt_t *options, /* repack options */
                   int *has_filter);    /* (OUT) object NAME has a filter */

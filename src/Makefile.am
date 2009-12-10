@@ -27,13 +27,13 @@ include $(top_srcdir)/config/lt_vers.am
 # a long time to compile it with any optimization on.  H5detect is used
 # to generate H5Tinit.c once. So, optimization is not critical.
 noinst_PROGRAMS = H5detect
-H5detect_CFLAGS = -g $(AM_CFLAGS)
+H5detect_CFLAGS = -g
 
 # Our main target, the HDF5 library
 lib_LTLIBRARIES=libhdf5.la
 
 # Add libtool numbers to the HDF5 library (from config/lt_vers.am)
-libhdf5_la_LDFLAGS= -version-info $(LT_VERS_INTERFACE):$(LT_VERS_REVISION):$(LT_VERS_AGE) $(AM_LDFLAGS)
+libhdf5_la_LDFLAGS= -version-info $(LT_VERS_INTERFACE):$(LT_VERS_REVISION):$(LT_VERS_AGE)
 
 # H5Tinit.c is a generated file, and should be cleaned.
 MOSTLYCLEANFILES=H5Tinit.c
@@ -43,48 +43,38 @@ DISTCLEANFILES=H5pubconf.h
 # library sources
 libhdf5_la_SOURCES= H5.c H5checksum.c H5dbg.c H5system.c H5timer.c H5trace.c \
         H5A.c H5Abtree2.c H5Adense.c H5Adeprec.c H5Aint.c H5Atest.c \
-        H5AC.c H5B.c H5Bcache.c H5Bdbg.c \
-        H5B2.c H5B2cache.c H5B2dbg.c H5B2hdr.c H5B2int.c H5B2stat.c H5B2test.c \
+        H5AC.c H5B.c H5Bcache.c \
+        H5B2.c H5B2cache.c H5B2dbg.c H5B2int.c H5B2stat.c H5B2test.c \
         H5C.c H5CS.c \
-        H5D.c H5Dbtree.c H5Dchunk.c H5Dcompact.c H5Dcontig.c H5Ddbg.c \
+        H5D.c H5Dchunk.c H5Dcompact.c H5Dcontig.c H5Ddbg.c \
         H5Ddeprec.c H5Defl.c H5Dfill.c H5Dint.c \
-        H5Dio.c H5Dlayout.c \
-        H5Dmpio.c H5Doh.c H5Dscatgath.c H5Dselect.c H5Dtest.c \
+        H5Dio.c \
+        H5Distore.c H5Dmpio.c H5Doh.c H5Dscatgath.c H5Dselect.c H5Dtest.c \
         H5E.c H5Edeprec.c H5Eint.c \
-        H5EA.c H5EAcache.c H5EAdbg.c H5EAdblkpage.c H5EAdblock.c H5EAhdr.c \
-        H5EAiblock.c H5EAint.c H5EAsblock.c H5EAstat.c H5EAtest.c \
-        H5F.c H5Faccum.c H5Fdbg.c H5Fdeprec.c H5Ffake.c H5Fio.c H5Fmount.c \
-        H5Fmpi.c H5Fquery.c \
-        H5Fsfile.c H5Fsuper.c H5Fsuper_cache.c H5Ftest.c \
-        H5FA.c H5FAcache.c H5FAdbg.c H5FAdblock.c H5FAdblkpage.c H5FAhdr.c \
-        H5FAstat.c H5FAtest.c \
+        H5F.c H5Fdbg.c H5Ffake.c H5Fmount.c H5Fsfile.c H5Fsuper.c H5Ftest.c \
         H5FD.c H5FDcore.c  \
-        H5FDdirect.c H5FDfamily.c H5FDint.c H5FDlog.c H5FDmpi.c H5FDmpio.c \
+        H5FDdirect.c H5FDfamily.c H5FDlog.c H5FDmpi.c H5FDmpio.c   \
         H5FDmpiposix.c H5FDmulti.c H5FDsec2.c H5FDspace.c H5FDstdio.c \
-        H5FL.c H5FO.c H5FS.c H5FScache.c H5FSdbg.c H5FSsection.c H5FSstat.c H5FStest.c \
-        H5G.c H5Gbtree2.c H5Gcache.c \
-        H5Gcompact.c H5Gdense.c H5Gdeprec.c H5Gent.c \
+        H5FL.c H5FO.c H5FS.c H5FScache.c H5FSdbg.c H5FSsection.c \
+        H5G.c H5Gbtree2.c H5Gcompact.c H5Gdense.c H5Gdeprec.c H5Gent.c \
         H5Gint.c H5Glink.c \
-        H5Gloc.c H5Gname.c H5Gnode.c H5Gobj.c H5Goh.c H5Groot.c H5Gstab.c H5Gtest.c \
+        H5Gloc.c H5Gname.c H5Gnode.c H5Gobj.c H5Goh.c H5Gstab.c H5Gtest.c \
         H5Gtraverse.c \
         H5HF.c H5HFbtree2.c H5HFcache.c H5HFdbg.c H5HFdblock.c H5HFdtable.c \
         H5HFhdr.c H5HFhuge.c H5HFiblock.c H5HFiter.c H5HFman.c H5HFsection.c \
         H5HFspace.c H5HFstat.c H5HFtest.c H5HFtiny.c \
-        H5HG.c H5HGcache.c H5HGdbg.c \
-        H5HL.c H5HLcache.c H5HLdbg.c \
-        H5HP.c H5I.c H5L.c H5Lexternal.c \
-        H5MF.c H5MFaggr.c H5MFdbg.c H5MFsection.c \
-        H5MM.c H5MP.c H5MPtest.c \
+        H5HG.c H5HGdbg.c H5HL.c H5HLdbg.c H5HP.c H5I.c H5L.c H5Lexternal.c \
+        H5MF.c H5MM.c H5MP.c H5MPtest.c \
         H5O.c H5Oainfo.c H5Oalloc.c H5Oattr.c \
         H5Oattribute.c H5Obogus.c H5Obtreek.c H5Ocache.c \
         H5Ocont.c H5Ocopy.c H5Odbg.c H5Odrvinfo.c H5Odtype.c H5Oefl.c \
-        H5Ofill.c H5Ofsinfo.c H5Oginfo.c \
+        H5Ofill.c H5Oginfo.c \
         H5Olayout.c \
         H5Olinfo.c H5Olink.c H5Omessage.c H5Omtime.c \
         H5Oname.c H5Onull.c H5Opline.c H5Orefcount.c \
         H5Osdspace.c H5Oshared.c H5Ostab.c \
         H5Oshmesg.c H5Otest.c H5Ounknown.c \
-        H5P.c H5Pacpl.c H5Pdapl.c H5Pdcpl.c \
+        H5P.c H5Pacpl.c H5Pdcpl.c \
         H5Pdeprec.c H5Pdxpl.c H5Pfapl.c H5Pfcpl.c H5Pfmpl.c \
         H5Pgcpl.c H5Pint.c \
         H5Plapl.c H5Plcpl.c H5Pocpl.c H5Pocpypl.c H5Pstrcpl.c H5Ptest.c \
@@ -92,10 +82,8 @@ libhdf5_la_SOURCES= H5.c H5checksum.c H5dbg.c H5system.c H5timer.c H5trace.c \
         H5RC.c \
         H5RS.c \
         H5S.c H5Sall.c H5Sdbg.c H5Shyper.c H5Smpio.c H5Snone.c H5Spoint.c \
-        H5Sselect.c H5Stest.c \
-        H5SL.c \
-        H5SM.c H5SMbtree2.c H5SMcache.c H5SMmessage.c H5SMtest.c \
-        H5ST.c \
+        H5Sselect.c H5Stest.c H5SL.c H5SM.c H5SMbtree2.c \
+        H5SMcache.c H5SMtest.c H5ST.c \
         H5T.c H5Tarray.c H5Tbit.c H5Tcommit.c H5Tcompound.c H5Tconv.c \
         H5Tcset.c H5Tdbg.c H5Tdeprec.c H5Tenum.c H5Tfields.c \
         H5Tfixed.c \
@@ -108,7 +96,7 @@ libhdf5_la_SOURCES= H5.c H5checksum.c H5dbg.c H5system.c H5timer.c H5trace.c \
 
 
 # Public headers
-include_HEADERS = hdf5.h H5api_adpt.h H5overflow.h H5pubconf.h H5public.h H5version.h \
+include_HEADERS = hdf5.h H5api_adpt.h H5pubconf.h H5public.h H5version.h \
         H5Apublic.h H5ACpublic.h \
         H5Cpublic.h H5Dpublic.h \
         H5Epubgen.h H5Epublic.h H5Fpublic.h H5FDpublic.h H5FDcore.h H5FDdirect.h \
@@ -130,7 +118,7 @@ settings_DATA=libhdf5.settings
 H5Tinit.c: H5detect$(EXEEXT)
 	LD_LIBRARY_PATH="$$LD_LIBRARY_PATH`echo $(LDFLAGS) |                  \
 		sed -e 's/-L/:/g' -e 's/ //g'`"                               \
-	$(RUNSERIAL) ./H5detect$(EXEEXT) > H5Tinit.c  ||                               \
+	$(RUNSERIAL) ./H5detect > H5Tinit.c  ||                               \
 	    (test $$HDF5_Make_Ignore && echo "*** Error ignored") ||          \
 	    ($(RM) $@ ; exit 1)
 
@@ -145,10 +133,6 @@ $(top_srcdir)/src/H5Edefin.h: $(top_srcdir)/src/H5err.txt
 # API version macro generation
 $(top_srcdir)/src/H5version.h: $(top_srcdir)/src/H5vers.txt
 	perl $(top_srcdir)/bin/make_vers $?
-
-# Assignment overflow macro generation
-$(top_srcdir)/src/H5overflow.h: $(top_srcdir)/src/H5overflow.txt
-	perl $(top_srcdir)/bin/make_overflow $?
 
 # Add TRACE macros to library source files.  This is done via the trace script
 # in the hdf5/bin directory.  If the file contains HDF5 API macros, a "clean"

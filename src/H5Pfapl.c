@@ -57,9 +57,9 @@
 /* Definitions for the initial metadata cache resize configuration */
 #define H5F_ACS_META_CACHE_INIT_CONFIG_SIZE	sizeof(H5AC_cache_config_t)
 #define H5F_ACS_META_CACHE_INIT_CONFIG_DEF	H5AC__DEFAULT_CACHE_CONFIG
-/* Definitions for size of raw data chunk cache(slots) */
-#define H5F_ACS_DATA_CACHE_NUM_SLOTS_SIZE       sizeof(size_t)
-#define H5F_ACS_DATA_CACHE_NUM_SLOTS_DEF        521
+/* Definitions for size of raw data chunk cache(elements) */
+#define H5F_ACS_DATA_CACHE_ELMT_SIZE_SIZE       sizeof(size_t)
+#define H5F_ACS_DATA_CACHE_ELMT_SIZE_DEF        521
 /* Definition for size of raw data chunk cache(bytes) */
 #define H5F_ACS_DATA_CACHE_BYTE_SIZE_SIZE       sizeof(size_t)
 #define H5F_ACS_DATA_CACHE_BYTE_SIZE_DEF        (1024*1024)
@@ -101,23 +101,18 @@
 #define H5F_ACS_FAMILY_OFFSET_DEF               0
 /* Definition for new member size of family driver. It's private
  * property only used by h5repart */
-#define H5F_ACS_FAMILY_NEWSIZE_SIZE             sizeof(hsize_t)
-#define H5F_ACS_FAMILY_NEWSIZE_DEF              0
+#define H5F_ACS_FAMILY_NEWSIZE_SIZE            sizeof(hsize_t)
+#define H5F_ACS_FAMILY_NEWSIZE_DEF             0
 /* Definition for whether to convert family to sec2 driver. It's private
  * property only used by h5repart */
-#define H5F_ACS_FAMILY_TO_SEC2_SIZE             sizeof(hbool_t)
-#define H5F_ACS_FAMILY_TO_SEC2_DEF              FALSE
+#define H5F_ACS_FAMILY_TO_SEC2_SIZE            sizeof(hbool_t)
+#define H5F_ACS_FAMILY_TO_SEC2_DEF             FALSE
 /* Definition for data type in multi file driver */
 #define H5F_ACS_MULTI_TYPE_SIZE                 sizeof(H5FD_mem_t)
 #define H5F_ACS_MULTI_TYPE_DEF                  H5FD_MEM_DEFAULT
 /* Definition for 'use latest format version' flag */
 #define H5F_ACS_LATEST_FORMAT_SIZE              sizeof(hbool_t)
 #define H5F_ACS_LATEST_FORMAT_DEF               FALSE
-/* Definition for whether to query the file descriptor from the core VFD
- * instead of the memory address.  (Private to library)
- */
-#define H5F_ACS_WANT_POSIX_FD_SIZE              sizeof(hbool_t)
-#define H5F_ACS_WANT_POSIX_FD_DEF               FALSE
 
 
 /******************/
@@ -192,7 +187,7 @@ static herr_t
 H5P_facc_reg_prop(H5P_genclass_t *pclass)
 {
     H5AC_cache_config_t mdc_initCacheCfg = H5F_ACS_META_CACHE_INIT_CONFIG_DEF;  /* Default metadata cache settings */
-    size_t rdcc_nslots = H5F_ACS_DATA_CACHE_NUM_SLOTS_DEF;      /* Default raw data chunk cache # of slots */
+    size_t rdcc_nelmts = H5F_ACS_DATA_CACHE_ELMT_SIZE_DEF;      /* Default raw data chunk cache # of elements */
     size_t rdcc_nbytes = H5F_ACS_DATA_CACHE_BYTE_SIZE_DEF;      /* Default raw data chunk cache # of bytes */
     double rdcc_w0 = H5F_ACS_PREEMPT_READ_CHUNKS_DEF;           /* Default raw data chunk cache dirty ratio */
     hsize_t threshold = H5F_ACS_ALIGN_THRHD_DEF;                /* Default allocation alignment threshold */
@@ -209,7 +204,6 @@ H5P_facc_reg_prop(H5P_genclass_t *pclass)
     hbool_t family_to_sec2 = H5F_ACS_FAMILY_TO_SEC2_DEF;        /* Default ?? for family VFD */
     H5FD_mem_t mem_type = H5F_ACS_MULTI_TYPE_DEF;               /* Default file space type for multi VFD */
     hbool_t latest_format = H5F_ACS_LATEST_FORMAT_DEF;          /* Default setting for "use the latest version of the format" flag */
-    hbool_t want_posix_fd = H5F_ACS_WANT_POSIX_FD_DEF;          /* Default setting for retrieving 'handle' from core VFD */
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5P_facc_reg_prop)
@@ -219,7 +213,7 @@ H5P_facc_reg_prop(H5P_genclass_t *pclass)
          HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
 
     /* Register the size of raw data chunk cache (elements) */
-    if(H5P_register(pclass, H5F_ACS_DATA_CACHE_NUM_SLOTS_NAME, H5F_ACS_DATA_CACHE_NUM_SLOTS_SIZE, &rdcc_nslots, NULL, NULL, NULL, NULL, NULL, NULL, NULL) < 0)
+    if(H5P_register(pclass, H5F_ACS_DATA_CACHE_ELMT_SIZE_NAME, H5F_ACS_DATA_CACHE_ELMT_SIZE_SIZE, &rdcc_nelmts, NULL, NULL, NULL, NULL, NULL, NULL, NULL) < 0)
          HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
 
     /* Register the size of raw data chunk cache(bytes) */
@@ -286,11 +280,6 @@ H5P_facc_reg_prop(H5P_genclass_t *pclass)
     if(H5P_register(pclass, H5F_ACS_LATEST_FORMAT_NAME, H5F_ACS_LATEST_FORMAT_SIZE, &latest_format, NULL, NULL, NULL, NULL, NULL, NULL, NULL) < 0)
          HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
 
-    /* Register the private property of whether to retrieve the file descriptor from the core VFD */
-    /* (used internally to the library only) */
-    if(H5P_register(pclass, H5F_ACS_WANT_POSIX_FD_NAME, H5F_ACS_WANT_POSIX_FD_SIZE, &want_posix_fd, NULL, NULL, NULL, NULL, NULL, NULL, NULL) < 0)
-         HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
-
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5P_facc_reg_prop() */
@@ -323,7 +312,7 @@ H5P_facc_create(hid_t fapl_id, void UNUSED *copy_data)
     FUNC_ENTER_NOAPI_NOINIT(H5P_facc_create)
 
     /* Check argument */
-    if(NULL == (plist = (H5P_genplist_t *)H5I_object(fapl_id)))
+    if(NULL == (plist = H5I_object(fapl_id)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list")
 
     /* Retrieve driver ID property */
@@ -373,7 +362,7 @@ H5P_facc_copy(hid_t dst_fapl_id, hid_t src_fapl_id, void UNUSED *copy_data)
     FUNC_ENTER_NOAPI_NOINIT(H5P_facc_copy)
 
     /* Get driver ID from source property list */
-    if(NULL == (src_plist = (H5P_genplist_t *)H5I_object(src_fapl_id)))
+    if(NULL == (src_plist = H5I_object(src_fapl_id)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "can't get property list")
     if(H5P_get(src_plist, H5F_ACS_FILE_DRV_ID_NAME, &driver_id) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get driver ID")
@@ -387,7 +376,7 @@ H5P_facc_copy(hid_t dst_fapl_id, hid_t src_fapl_id, void UNUSED *copy_data)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get driver info")
 
         /* Set the driver for the destination property list */
-        if(NULL == (dst_plist = (H5P_genplist_t *)H5I_object(dst_fapl_id)))
+        if(NULL == (dst_plist = H5I_object(dst_fapl_id)))
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "can't get property list")
         if(H5FD_fapl_open(dst_plist, driver_id, driver_info) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set driver")
@@ -424,7 +413,7 @@ H5P_facc_close(hid_t fapl_id, void UNUSED *close_data)
     FUNC_ENTER_NOAPI(H5P_facc_close, FAIL)
 
     /* Check argument */
-    if(NULL == (plist = (H5P_genplist_t *)H5I_object(fapl_id)))
+    if(NULL == (plist = H5I_object(fapl_id)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list")
 
     /* Get driver ID property */
@@ -588,17 +577,17 @@ H5P_set_driver(H5P_genplist_t *plist, hid_t new_driver_id, const void *new_drive
     void *driver_info;          /* VFL driver info */
     herr_t ret_value=SUCCEED;   /* Return value */
 
-    FUNC_ENTER_NOAPI(H5P_set_driver, FAIL)
+    FUNC_ENTER_NOAPI(H5P_set_driver, FAIL);
 
-    if(NULL == H5I_object_verify(new_driver_id, H5I_VFL))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file driver ID")
+    if (NULL==H5I_object_verify(new_driver_id, H5I_VFL))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file driver ID");
 
-    if(TRUE == H5P_isa_class(plist->plist_id, H5P_FILE_ACCESS)) {
+    if( TRUE == H5P_isa_class(plist->plist_id, H5P_FILE_ACCESS) ) {
         /* Get the current driver information */
         if(H5P_get(plist, H5F_ACS_FILE_DRV_ID_NAME, &driver_id) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get driver ID")
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get driver ID");
         if(H5P_get(plist, H5F_ACS_FILE_DRV_INFO_NAME, &driver_info) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET,FAIL,"can't get driver info")
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET,FAIL,"can't get driver info");
 
         /* Close the driver for the property list */
         if(H5FD_fapl_close(driver_id, driver_info)<0)
@@ -607,26 +596,26 @@ H5P_set_driver(H5P_genplist_t *plist, hid_t new_driver_id, const void *new_drive
         /* Set the driver for the property list */
         if(H5FD_fapl_open(plist, new_driver_id, new_driver_info)<0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set driver")
-    } else if(TRUE == H5P_isa_class(plist->plist_id, H5P_DATASET_XFER)) {
+    } else if( TRUE == H5P_isa_class(plist->plist_id, H5P_DATASET_XFER) ) {
         /* Get the current driver information */
-        if(H5P_get(plist, H5D_XFER_VFL_ID_NAME, &driver_id) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't retrieve VFL driver ID")
-        if(H5P_get(plist, H5D_XFER_VFL_INFO_NAME, &driver_info) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't retrieve VFL driver info")
+        if(H5P_get(plist, H5D_XFER_VFL_ID_NAME, &driver_id)<0)
+            HGOTO_ERROR (H5E_PLIST, H5E_CANTGET, FAIL, "can't retrieve VFL driver ID");
+        if(H5P_get(plist, H5D_XFER_VFL_INFO_NAME, &driver_info)<0)
+            HGOTO_ERROR (H5E_PLIST, H5E_CANTGET, FAIL, "can't retrieve VFL driver info");
 
         /* Close the driver for the property list */
-        if(H5FD_dxpl_close(driver_id, driver_info) < 0)
+        if(H5FD_dxpl_close(driver_id, driver_info)<0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't reset driver")
 
         /* Set the driver for the property list */
-        if(H5FD_dxpl_open(plist, new_driver_id, new_driver_info) < 0)
+        if(H5FD_dxpl_open(plist, new_driver_id, new_driver_info)<0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set driver")
     } else {
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access or data transfer property list")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access or data transfer property list");
     }
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5P_set_driver() */
 
 
@@ -661,23 +650,23 @@ herr_t
 H5Pset_driver(hid_t plist_id, hid_t new_driver_id, const void *new_driver_info)
 {
     H5P_genplist_t *plist;      /* Property list pointer */
-    herr_t ret_value = SUCCEED; /* Return value */
+    herr_t ret_value=SUCCEED;   /* Return value */
 
-    FUNC_ENTER_API(H5Pset_driver, FAIL)
+    FUNC_ENTER_API(H5Pset_driver, FAIL);
     H5TRACE3("e", "ii*x", plist_id, new_driver_id, new_driver_info);
 
     /* Check arguments */
-    if(NULL == (plist = (H5P_genplist_t *)H5I_object_verify(plist_id, H5I_GENPROP_LST)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list")
-    if(NULL == H5I_object_verify(new_driver_id, H5I_VFL))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file driver ID")
+    if(NULL == (plist = H5I_object_verify(plist_id, H5I_GENPROP_LST)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list");
+    if (NULL==H5I_object_verify(new_driver_id, H5I_VFL))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file driver ID");
 
     /* Set the driver */
-    if(H5P_set_driver(plist, new_driver_id, new_driver_info) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set driver info")
+    if(H5P_set_driver(plist,new_driver_id,new_driver_info)<0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set driver info");
 
 done:
-    FUNC_LEAVE_API(ret_value)
+    FUNC_LEAVE_API(ret_value);
 } /* end H5Pset_driver() */
 
 
@@ -774,17 +763,17 @@ H5Pget_driver(hid_t plist_id)
     H5P_genplist_t *plist;      /* Property list pointer */
     hid_t	ret_value;      /* Return value */
 
-    FUNC_ENTER_API(H5Pget_driver, FAIL)
+    FUNC_ENTER_API(H5Pget_driver, FAIL);
     H5TRACE1("i", "i", plist_id);
 
-    if(NULL == (plist = (H5P_genplist_t *)H5I_object_verify(plist_id, H5I_GENPROP_LST)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list")
+    if(NULL == (plist = H5I_object_verify(plist_id, H5I_GENPROP_LST)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list");
 
     ret_value = H5P_get_driver(plist);
 
 done:
-    FUNC_LEAVE_API(ret_value)
-} /* end H5Pget_driver() */
+    FUNC_LEAVE_API(ret_value);
+}
 
 
 /*-------------------------------------------------------------------------
@@ -870,14 +859,14 @@ H5Pget_driver_info(hid_t plist_id)
 
     FUNC_ENTER_API(H5Pget_driver_info, NULL);
 
-    if(NULL == (plist = (H5P_genplist_t *)H5I_object_verify(plist_id, H5I_GENPROP_LST)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a property list")
+    if(NULL == (plist = H5I_object_verify(plist_id, H5I_GENPROP_LST)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a property list");
 
-    if(NULL == (ret_value = H5P_get_driver_info(plist)))
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get driver info")
+    if((ret_value=H5P_get_driver_info(plist))==NULL)
+        HGOTO_ERROR(H5E_PLIST,H5E_CANTGET,NULL,"can't get driver info");
 
 done:
-    FUNC_LEAVE_API(ret_value)
+    FUNC_LEAVE_API(ret_value);
 } /* end H5Pget_driver_info() */
 
 
@@ -1224,13 +1213,13 @@ done:
  */
 herr_t
 H5Pset_cache(hid_t plist_id, int UNUSED mdc_nelmts,
-	     size_t rdcc_nslots, size_t rdcc_nbytes, double rdcc_w0)
+	     size_t rdcc_nelmts, size_t rdcc_nbytes, double rdcc_w0)
 {
     H5P_genplist_t *plist;      /* Property list pointer */
     herr_t ret_value=SUCCEED;   /* return value */
 
     FUNC_ENTER_API(H5Pset_cache, FAIL);
-    H5TRACE5("e", "iIszzd", plist_id, mdc_nelmts, rdcc_nslots, rdcc_nbytes,
+    H5TRACE5("e", "iIszzd", plist_id, mdc_nelmts, rdcc_nelmts, rdcc_nbytes,
              rdcc_w0);
 
     /* Check arguments */
@@ -1242,8 +1231,8 @@ H5Pset_cache(hid_t plist_id, int UNUSED mdc_nelmts,
         HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID");
 
     /* Set sizes */
-    if(H5P_set(plist, H5F_ACS_DATA_CACHE_NUM_SLOTS_NAME, &rdcc_nslots) < 0)
-        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET,FAIL, "can't set data cache number of slots");
+    if(H5P_set(plist, H5F_ACS_DATA_CACHE_ELMT_SIZE_NAME, &rdcc_nelmts) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET,FAIL, "can't set data cache element size");
     if(H5P_set(plist, H5F_ACS_DATA_CACHE_BYTE_SIZE_NAME, &rdcc_nbytes) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET,FAIL, "can't set data cache byte size");
     if(H5P_set(plist, H5F_ACS_PREEMPT_READ_CHUNKS_NAME, &rdcc_w0) < 0)
@@ -1284,13 +1273,13 @@ done:
  */
 herr_t
 H5Pget_cache(hid_t plist_id, int *mdc_nelmts,
-	     size_t *rdcc_nslots, size_t *rdcc_nbytes, double *rdcc_w0)
+	     size_t *rdcc_nelmts, size_t *rdcc_nbytes, double *rdcc_w0)
 {
     H5P_genplist_t *plist;      /* Property list pointer */
     herr_t ret_value=SUCCEED;   /* return value */
 
     FUNC_ENTER_API(H5Pget_cache, FAIL);
-    H5TRACE5("e", "i*Is*z*z*d", plist_id, mdc_nelmts, rdcc_nslots, rdcc_nbytes,
+    H5TRACE5("e", "i*Is*z*z*d", plist_id, mdc_nelmts, rdcc_nelmts, rdcc_nbytes,
              rdcc_w0);
 
     /* Get the plist structure */
@@ -1303,9 +1292,9 @@ H5Pget_cache(hid_t plist_id, int *mdc_nelmts,
     if (mdc_nelmts)
         *mdc_nelmts = 0;
 
-    if (rdcc_nslots)
-        if(H5P_get(plist, H5F_ACS_DATA_CACHE_NUM_SLOTS_NAME, rdcc_nslots) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET,FAIL, "can't get data cache number of slots");
+    if (rdcc_nelmts)
+        if(H5P_get(plist, H5F_ACS_DATA_CACHE_ELMT_SIZE_NAME, rdcc_nelmts) < 0)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET,FAIL, "can't get data cache element size");
     if (rdcc_nbytes)
         if(H5P_get(plist, H5F_ACS_DATA_CACHE_BYTE_SIZE_NAME, rdcc_nbytes) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET,FAIL, "can't get data cache byte size");
@@ -1995,7 +1984,7 @@ H5Pset_libver_bounds(hid_t plist_id, H5F_libver_t low,
         HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
 
     /* Set values */
-    latest = (hbool_t)((low == H5F_LIBVER_LATEST) ? TRUE : FALSE);
+    latest = (low == H5F_LIBVER_LATEST) ? TRUE : FALSE;
     if(H5P_set(plist, H5F_ACS_LATEST_FORMAT_NAME, &latest) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set library version bounds")
 

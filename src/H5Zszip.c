@@ -40,7 +40,7 @@ static size_t H5Z_filter_szip (unsigned flags, size_t cd_nelmts,
     const unsigned cd_values[], size_t nbytes, size_t *buf_size, void **buf);
 
 /* This message derives from H5Z */
-H5Z_class2_t H5Z_SZIP[1] = {{
+H5Z_class_t H5Z_SZIP[1] = {{
     H5Z_CLASS_T_VERS,       /* H5Z_class_t version */
     H5Z_FILTER_SZIP,		/* Filter id number		*/
     1,              /* Assume encoder present: check before registering */
@@ -333,7 +333,7 @@ H5Z_filter_szip (unsigned flags, size_t cd_nelmts, const unsigned cd_values[],
         *buf = outbuf;
         outbuf = NULL;
         *buf_size = nalloc;
-        ret_value = size_out;
+        ret_value = nalloc;
     }
     /* Output; compress */
     else {
@@ -359,7 +359,7 @@ H5Z_filter_szip (unsigned flags, size_t cd_nelmts, const unsigned cd_values[],
         /* Set return values */
         *buf = outbuf;
         outbuf = NULL;
-        *buf_size = nbytes+4;
+        *buf_size = size_out+4;
         ret_value = size_out+4;
     }
 

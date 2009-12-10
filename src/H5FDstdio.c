@@ -147,10 +147,8 @@ typedef struct H5FD_stdio_t {
 #define REGION_OVERFLOW(A,Z)	(ADDR_OVERFLOW(A) || SIZE_OVERFLOW(Z) || \
     HADDR_UNDEF==(A)+(Z) || (file_offset_t)((A)+(Z))<(file_offset_t)(A))
 
-#ifndef H5_HAVE_FSEEKO
 /* Define big file as 2GB */
 #define BIG_FILE 0x80000000UL
-#endif
 
 /* Prototypes */
 static H5FD_t *H5FD_stdio_open(const char *name, unsigned flags,
@@ -168,7 +166,6 @@ static herr_t H5FD_stdio_read(H5FD_t *lf, H5FD_mem_t type, hid_t fapl_id, haddr_
 static herr_t H5FD_stdio_write(H5FD_t *lf, H5FD_mem_t type, hid_t fapl_id, haddr_t addr,
                 size_t size, const void *buf);
 static herr_t H5FD_stdio_flush(H5FD_t *_file, hid_t dxpl_id, unsigned closing);
-static herr_t H5FD_stdio_truncate(H5FD_t *_file, hid_t dxpl_id, hbool_t closing);
 
 static const H5FD_class_t H5FD_stdio_g = {
     "stdio",				        /*name			*/
@@ -188,7 +185,6 @@ static const H5FD_class_t H5FD_stdio_g = {
     H5FD_stdio_close,		                /*close			*/
     H5FD_stdio_cmp,			        /*cmp			*/
     H5FD_stdio_query,		                /*query			*/
-    NULL,					/*get_type_map		*/
     H5FD_stdio_alloc,				/*alloc			*/
     NULL,					/*free			*/
     H5FD_stdio_get_eoa,		                /*get_eoa		*/
@@ -198,7 +194,6 @@ static const H5FD_class_t H5FD_stdio_g = {
     H5FD_stdio_read,		                /*read			*/
     H5FD_stdio_write,		                /*write			*/
     H5FD_stdio_flush,		                /*flush			*/
-    H5FD_stdio_truncate,			/*truncate		*/
     NULL,                                       /*lock                  */
     NULL,                                       /*unlock                */
     H5FD_FLMAP_SINGLE 		                /*fl_map		*/
@@ -375,7 +370,7 @@ H5FD_stdio_open( const char *name, unsigned flags, hid_t fapl_id,
         H5Epush_ret(func, H5E_ERR_CLS, H5E_IO, H5E_CANTOPENFILE, "fopen failed", NULL)
 
     /* Build the return value */
-    if(NULL == (file = (H5FD_stdio_t *)calloc((size_t)1, sizeof(H5FD_stdio_t))))
+    if(NULL==(file = calloc((size_t)1, sizeof(H5FD_stdio_t))))
         H5Epush_ret(func, H5E_ERR_CLS, H5E_RESOURCE, H5E_NOSPACE, "memory allocation failed", NULL)
     file->fp = f;
     file->op = H5FD_STDIO_OP_SEEK;
@@ -544,8 +539,8 @@ H5FD_stdio_query(const H5FD_t *_f, unsigned long *flags /* out */)
 /*-------------------------------------------------------------------------
  * Function:	H5FD_stdio_alloc
  *
- * Purpose:	Allocates file memory. If fseeko isn't available, makes
- *              sure the file size isn't bigger than 2GB because the
+ * Purpose:	Allocates file memory. If fseeko isn't available, makes 
+ *              sure the file size isn't bigger than 2GB because the 
  *              parameter OFFSET of fseek is of the type LONG INT, limiting
  *              the file size to 2GB.
  *
@@ -565,9 +560,7 @@ H5FD_stdio_alloc(H5FD_t *_file, H5FD_mem_t /*UNUSED*/ type, hid_t /*UNUSED*/ dxp
 {
     H5FD_stdio_t	*file = (H5FD_stdio_t*)_file;
     haddr_t		addr;
-#ifndef H5_HAVE_FSEEKO
     static const char   *func = "H5FD_stdio_alloc";  /* Function Name for error reporting */
-#endif
     haddr_t ret_value;          /* Return value */
 
     /* Shut compiler up */
@@ -591,7 +584,7 @@ H5FD_stdio_alloc(H5FD_t *_file, H5FD_mem_t /*UNUSED*/ type, hid_t /*UNUSED*/ dxp
     /* If fseeko isn't available, big files (>2GB) won't be supported. */
     if((addr + size) > BIG_FILE)
         H5Epush_ret(func, H5E_ERR_CLS, H5E_IO, H5E_SEEKERROR, "can't write file bigger than 2GB because fseeko isn't available", HADDR_UNDEF)
-#endif
+#endif 
 
     file->eoa = addr + size;
 
@@ -950,63 +943,19 @@ H5FD_stdio_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr,
  * Programmer:	Robb Matzke
  *		Wednesday, October 22, 1997
  *
+ * Modifications:
+ *      Ported to VFL/H5FD layer - QAK, 10/18/99
+ *
  *-------------------------------------------------------------------------
  */
 static herr_t
 H5FD_stdio_flush(H5FD_t *_file, hid_t dxpl_id, unsigned closing)
 {
     H5FD_stdio_t	*file = (H5FD_stdio_t*)_file;
-    static const char *func = "H5FD_stdio_flush";  /* Function Name for error reporting */
+    static const char *func="H5FD_stdio_flush";  /* Function Name for error reporting */
 
     /* Shut compiler up */
-    dxpl_id = dxpl_id;
-
-    /* Clear the error stack */
-    H5Eclear2(H5E_DEFAULT);
-
-    /* Only try to flush the file if we have write access */
-    if(file->write_access) {
-        /* Flush */
-        if(!closing) {
-            if(fflush(file->fp) < 0)
-                H5Epush_ret(func, H5E_ERR_CLS, H5E_IO, H5E_WRITEERROR, "fflush failed", -1)
-
-            /* Reset last file I/O information */
-            file->pos = HADDR_UNDEF;
-            file->op = H5FD_STDIO_OP_UNKNOWN;
-        } /* end if */
-    } /* end if */
-
-    return(0);
-} /* end H5FD_stdio_flush() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5F_stdio_truncate
- *
- * Purpose:	Makes sure that the true file size is the same (or larger)
- *		than the end-of-address.
- *
- * Errors:
- *		IO	  SEEKERROR     fseek failed.
- *		IO	  WRITEERROR    fflush or fwrite failed.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *		Thursday, January 31, 2008
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5FD_stdio_truncate(H5FD_t *_file, hid_t dxpl_id, hbool_t closing)
-{
-    H5FD_stdio_t	*file = (H5FD_stdio_t*)_file;
-    static const char *func = "H5FD_stdio_truncate";  /* Function Name for error reporting */
-
-    /* Shut compiler up */
-    dxpl_id = dxpl_id;
-    closing = closing;
+    dxpl_id=dxpl_id;
 
     /* Clear the error stack */
     H5Eclear2(H5E_DEFAULT);
@@ -1014,10 +963,9 @@ H5FD_stdio_truncate(H5FD_t *_file, hid_t dxpl_id, hbool_t closing)
     /* Only try to flush the file if we have write access */
     if(file->write_access) {
         /* Makes sure that the true file size is the same as the end-of-address. */
-        if(file->eoa != file->eof) {
-            int fd = fileno(file->fp);     /* File descriptor for HDF5 file */
-
+        if (file->eoa!=file->eof) {
 #ifdef _WIN32
+            int fd=_fileno(file->fp);     /* File descriptor for HDF5 file */
             HFILE filehandle;   /* Windows file handle */
             LARGE_INTEGER li;   /* 64-bit integer for SetFilePointer() call */
 
@@ -1027,16 +975,14 @@ H5FD_stdio_truncate(H5FD_t *_file, hid_t dxpl_id, hbool_t closing)
             /* Translate 64-bit integers into form Windows wants */
             /* [This algorithm is from the Windows documentation for SetFilePointer()] */
             li.QuadPart = (LONGLONG)file->eoa;
-            (void)SetFilePointer((HANDLE)filehandle, li.LowPart, &li.HighPart, FILE_BEGIN);
-            if(SetEndOfFile((HANDLE)filehandle) == 0)
-                H5Epush_ret(func, H5E_ERR_CLS, H5E_IO, H5E_SEEKERROR, "unable to truncate/extend file properly", -1)
+            (void)SetFilePointer((HANDLE)filehandle,li.LowPart,&li.HighPart,FILE_BEGIN);
+            if(SetEndOfFile((HANDLE)filehandle)==0)
+                H5Epush_ret(func, H5E_ERR_CLS, H5E_IO, H5E_SEEKERROR, "unable to extend file properly", -1)
 #else /* _WIN32 */
-            /* Reset seek offset to beginning of file, so that file isn't re-extended later */
-            rewind(file->fp);
+            int fd=fileno(file->fp);     /* File descriptor for HDF5 file */
 
-            /* Truncate file to proper length */
-            if(-1 == file_truncate(fd, (file_offset_t)file->eoa))
-                H5Epush_ret(func, H5E_ERR_CLS, H5E_IO, H5E_SEEKERROR, "unable to truncate/extend file properly", -1)
+            if (-1==file_truncate(fd, (file_offset_t)file->eoa))
+                H5Epush_ret(func, H5E_ERR_CLS, H5E_IO, H5E_SEEKERROR, "unable to extend file properly", -1)
 #endif /* _WIN32 */
 
             /* Update the eof value */
@@ -1046,15 +992,23 @@ H5FD_stdio_truncate(H5FD_t *_file, hid_t dxpl_id, hbool_t closing)
             file->pos = HADDR_UNDEF;
             file->op = H5FD_STDIO_OP_UNKNOWN;
         } /* end if */
+
+        /*
+         * Flush
+         */
+        if(!closing) {
+            if (fflush(file->fp) < 0)
+                H5Epush_ret(func, H5E_ERR_CLS, H5E_IO, H5E_WRITEERROR, "fflush failed", -1)
+        } /* end if */
     } /* end if */
     else {
         /* Double-check for problems */
-        if(file->eoa > file->eof)
+        if (file->eoa>file->eof)
             H5Epush_ret(func, H5E_ERR_CLS, H5E_IO, H5E_TRUNCATED, "eoa>eof!", -1)
       } /* end else */
 
     return(0);
-} /* end H5FD_stdio_truncate() */
+}
 
 
 #ifdef _H5private_H
@@ -1065,4 +1019,3 @@ H5FD_stdio_truncate(H5FD_t *_file, hid_t dxpl_id, hbool_t closing)
  */
 #error "Do not use HDF5 private definitions"
 #endif
-

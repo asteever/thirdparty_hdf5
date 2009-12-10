@@ -193,8 +193,6 @@ static herr_t H5AC_receive_and_apply_clean_list(H5F_t  * f,
 static herr_t H5AC_log_renamed_entry(H5AC_t * cache_ptr,
                                      haddr_t old_addr,
                                      haddr_t new_addr);
-
-static herr_t H5AC_flush_entries(H5F_t *f);
 #endif /* H5_HAVE_PARALLEL */
 
 
@@ -262,7 +260,7 @@ H5AC_init_interface(void)
         HGOTO_ERROR(H5E_CACHE, H5E_BADATOM, FAIL, "can't get property list class")
 
     /* Get an ID for the blocking, collective H5AC dxpl */
-    if ((H5AC_dxpl_id=H5P_create_id(xfer_pclass,FALSE)) < 0)
+    if ((H5AC_dxpl_id=H5P_create_id(xfer_pclass)) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_CANTCREATE, FAIL, "unable to register property list")
 
     /* Get the property list object */
@@ -284,7 +282,7 @@ H5AC_init_interface(void)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "unable to set value")
 
     /* Get an ID for the non-blocking, collective H5AC dxpl */
-    if ((H5AC_noblock_dxpl_id=H5P_create_id(xfer_pclass,FALSE)) < 0)
+    if ((H5AC_noblock_dxpl_id=H5P_create_id(xfer_pclass)) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_CANTCREATE, FAIL, "unable to register property list")
 
     /* Get the property list object */
@@ -306,7 +304,7 @@ H5AC_init_interface(void)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "unable to set value")
 
     /* Get an ID for the non-blocking, independent H5AC dxpl */
-    if ((H5AC_ind_dxpl_id=H5P_create_id(xfer_pclass,FALSE)) < 0)
+    if ((H5AC_ind_dxpl_id=H5P_create_id(xfer_pclass)) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_CANTCREATE, FAIL, "unable to register property list")
 
     /* Get the property list object */
@@ -376,9 +374,9 @@ H5AC_term_interface(void)
             n = 1; /* H5I */
 
             /* Close H5AC dxpl */
-            if (H5I_dec_ref(H5AC_dxpl_id, FALSE) < 0 ||
-                    H5I_dec_ref(H5AC_noblock_dxpl_id, FALSE) < 0 ||
-                    H5I_dec_ref(H5AC_ind_dxpl_id, FALSE) < 0)
+            if (H5I_dec_ref(H5AC_dxpl_id) < 0 ||
+                    H5I_dec_ref(H5AC_noblock_dxpl_id) < 0 ||
+                    H5I_dec_ref(H5AC_ind_dxpl_id) < 0)
                 H5E_clear_stack(NULL); /*ignore error*/
             else {
                 /* Reset static IDs */
@@ -493,15 +491,6 @@ static const char * H5AC_entry_type_names[H5AC_NTYPES] =
     "free space sections",
     "shared OH message master table",
     "shared OH message index",
-    "extensible array headers",
-    "extensible array index blocks",
-    "extensible array super blocks",
-    "extensible array data blocks",
-    "extensible array data block pages",
-    "fixed array headers",
-    "fixed array data block",
-    "fixed array data block pages",
-    "superblock",
     "test entry"	/* for testing only -- not used for actual files */
 };
 
@@ -595,7 +584,7 @@ H5AC_create(const H5F_t *f,
             if ( mpi_rank == 0 ) {
 
                 aux_ptr->d_slist_ptr =
-                    H5SL_create(H5SL_TYPE_HADDR);
+                    H5SL_create(H5SL_TYPE_HADDR,0.5,(size_t)16);
 
                 if ( aux_ptr->d_slist_ptr == NULL ) {
 
@@ -604,7 +593,7 @@ H5AC_create(const H5F_t *f,
                 }
 
                 aux_ptr->c_slist_ptr =
-                    H5SL_create(H5SL_TYPE_HADDR);
+                    H5SL_create(H5SL_TYPE_HADDR,0.5,(size_t)16);
 
                 if ( aux_ptr->c_slist_ptr == NULL ) {
 
@@ -757,9 +746,9 @@ done:
  *		Added code to free the auxiliary structure and its
  *		associated slist if present.
  *						   JRM - 6/28/05
- *
+ *		
  *		Added code to close the trace file if it is present.
- *
+ *		
  *						    JRM - 6/8/06
  *
  *-------------------------------------------------------------------------
@@ -767,52 +756,64 @@ done:
 herr_t
 H5AC_dest(H5F_t *f, hid_t dxpl_id)
 {
+    H5AC_t *cache = NULL;
+    herr_t ret_value=SUCCEED;      /* Return value */
 #ifdef H5_HAVE_PARALLEL
     H5AC_aux_t * aux_ptr = NULL;
 #endif /* H5_HAVE_PARALLEL */
-    herr_t ret_value = SUCCEED;      /* Return value */
 
     FUNC_ENTER_NOAPI(H5AC_dest, FAIL)
 
-    /* Sanity check */
-    HDassert(f);
-    HDassert(f->shared->cache);
-
-#if H5AC__TRACE_FILE_ENABLED
-    if(H5AC_close_trace_file(f->shared->cache) < 0)
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "H5AC_close_trace_file() failed.")
-#endif /* H5AC__TRACE_FILE_ENABLED */
-
+    assert(f);
+    assert(f->shared->cache);
+    cache = f->shared->cache;
 #ifdef H5_HAVE_PARALLEL
-    aux_ptr = f->shared->cache->aux_ptr;
-    if(aux_ptr)
-        /* Sanity check */
-        HDassert(aux_ptr->magic == H5AC__H5AC_AUX_T_MAGIC);
+    aux_ptr = cache->aux_ptr;
 
-    /* Attempt to flush all entries from rank 0 & Bcast clean list to other ranks */
-    if(H5AC_flush_entries(f) < 0)
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Can't flush.")
+    if ( aux_ptr != NULL ) {
+
+        HDassert ( aux_ptr->magic == H5AC__H5AC_AUX_T_MAGIC );
+    }
 #endif /* H5_HAVE_PARALLEL */
 
-    /* Destroy the cache */
-    if(H5C_dest(f, dxpl_id, H5AC_noblock_dxpl_id, f->shared->cache) < 0)
+#if H5AC__TRACE_FILE_ENABLED
+    if ( H5AC_close_trace_file(cache) < 0 ) {
+
+        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
+                    "H5AC_close_trace_file() failed.")
+    }
+#endif /* H5AC__TRACE_FILE_ENABLED */
+
+    if ( H5C_dest(f, dxpl_id, H5AC_noblock_dxpl_id, cache) < 0 ) {
+
         HGOTO_ERROR(H5E_CACHE, H5E_CANTFREE, FAIL, "can't destroy cache")
+    }
+
     f->shared->cache = NULL;
 
 #ifdef H5_HAVE_PARALLEL
-    if(aux_ptr != NULL) {
-        if(aux_ptr->d_slist_ptr != NULL)
+    if ( aux_ptr != NULL ) {
+
+        if ( aux_ptr->d_slist_ptr != NULL ) {
+
             H5SL_close(aux_ptr->d_slist_ptr);
-        if(aux_ptr->c_slist_ptr != NULL)
+        }
+
+        if ( aux_ptr->c_slist_ptr != NULL ) {
+
             H5SL_close(aux_ptr->c_slist_ptr);
+        }
+
         aux_ptr->magic = 0;
         H5FL_FREE(H5AC_aux_t, aux_ptr);
         aux_ptr = NULL;
-    } /* end if */
+    }
 #endif /* H5_HAVE_PARALLEL */
 
 done:
+
     FUNC_LEAVE_NOAPI(ret_value)
+
 } /* H5AC_dest() */
 
 
@@ -829,27 +830,24 @@ done:
  *              6/30/06
  *
  * Modifications:
- *
- *		Added 'flags' paramater, to allow freeing file space
- *
- *						    QAK - 2/5/08
+ *		
+ *		None.
  *
  *-------------------------------------------------------------------------
  */
 herr_t
-H5AC_expunge_entry(H5F_t *f,
-		   hid_t dxpl_id,
-		   const H5AC_class_t *type,
-		   haddr_t addr,
-                   unsigned flags)
+H5AC_expunge_entry(H5F_t *f, 
+		   hid_t dxpl_id, 
+		   const H5AC_class_t *type, 
+		   haddr_t addr)
 {
     herr_t   result;
+    herr_t   ret_value=SUCCEED;      /* Return value */
     H5AC_t * cache_ptr = NULL;
 #if H5AC__TRACE_FILE_ENABLED
     char                trace[128] = "";
     FILE *              trace_file_ptr = NULL;
 #endif /* H5AC__TRACE_FILE_ENABLED */
-    herr_t   ret_value = SUCCEED;      /* Return value */
 
     FUNC_ENTER_NOAPI(H5AC_expunge_entry, FAIL)
 
@@ -864,8 +862,8 @@ H5AC_expunge_entry(H5F_t *f,
     cache_ptr = f->shared->cache;
 
 #if H5AC__TRACE_FILE_ENABLED
-    /* For the expunge entry call, only the addr, and type id are really
-     * necessary in the trace file.  Write the return value to catch occult
+    /* For the expunge entry call, only the addr, and type id are really 
+     * necessary in the trace file.  Write the return value to catch occult 
      * errors.
      */
     if ( ( cache_ptr != NULL ) &&
@@ -883,8 +881,7 @@ H5AC_expunge_entry(H5F_t *f,
                                H5AC_noblock_dxpl_id,
                                cache_ptr,
                                type,
-                               addr,
-                               flags);
+                               addr);
 
     if ( result < 0 ) {
 
@@ -912,10 +909,42 @@ done:
  * Purpose:	Flush (and possibly destroy) the metadata cache associated
  *		with the specified file.
  *
+ *		This is a re-write of an earlier version of the function
+ *		which was reputedly capable of flushing (and destroying
+ *		if requested) individual entries, individual entries if
+ *		they match the supplied type, all entries of a given type,
+ *		as well as all entries in the cache.
+ *
+ *		As only this last capability is actually used at present,
+ *		I have not implemented the other capabilities in this
+ *		version of the function.
+ *
+ *		The type and addr parameters are retained to avoid source
+ *		code changed, but values other than NULL and HADDR_UNDEF
+ *		respectively are errors.  If all goes well, they should
+ *		be removed, and the function renamed to something more
+ *		descriptive -- perhaps H5AC_flush_cache.
+ *
  *		If the cache contains protected entries, the function will
  *		fail, as protected entries cannot be flushed.  However
  *		all unprotected entries should be flushed before the
  *		function returns failure.
+ *
+ *		For historical purposes, the original version of the
+ *		purpose section is reproduced below:
+ *
+ *              ============ Original Version of "Purpose:" ============
+ *
+ *              Flushes (and destroys if DESTROY is non-zero) the specified
+ *              entry from the cache.  If the entry TYPE is CACHE_FREE and
+ *              ADDR is HADDR_UNDEF then all types of entries are
+ *              flushed. If TYPE is CACHE_FREE and ADDR is defined then
+ *              whatever is cached at ADDR is flushed.  Otherwise the thing
+ *              at ADDR is flushed if it is the correct type.
+ *
+ *              If there are protected objects they will not be flushed.
+ *              However, an attempt will be made to flush all non-protected
+ *              items before this function returns failure.
  *
  * Return:      Non-negative on success/Negative on failure if there was a
  *              request to flush all items and something was protected.
@@ -924,16 +953,45 @@ done:
  *              matzke@llnl.gov
  *              Jul  9 1997
  *
+ * Modifications:
+ * 		Robb Matzke, 1999-07-27
+ *		The ADDR argument is passed by value.
+ *
+ *		Complete re-write. See above for details.  -- JRM 5/11/04
+ *
+ *		Abstracted the guts of the function to H5C_flush_cache()
+ *		in H5C.c, and then re-wrote the function as a wrapper for
+ *		H5C_flush_cache().
+ *
+ *                                                 JRM - 6/7/04
+ *
+ *		JRM - 7/5/05
+ *		Modified function as part of a fix for a cache coherency
+ *		bug in PHDF5.  See the header comments on the H5AC_aux_t
+ *		structure for details.
+ *
+ *		JRM -- 5/11/06
+ *		Added call to the write_done callback.
+ *
+ *		JRM -- 6/6/06
+ * 		Added trace file support.
+ *
  *-------------------------------------------------------------------------
  */
 herr_t
-H5AC_flush(H5F_t *f, hid_t dxpl_id)
+H5AC_flush(H5F_t *f, hid_t dxpl_id, unsigned flags)
 {
+    herr_t	  status;
+    herr_t	  ret_value = SUCCEED;      /* Return value */
+#ifdef H5_HAVE_PARALLEL
+    H5AC_aux_t	* aux_ptr = NULL;
+    int		  mpi_code;
+#endif /* H5_HAVE_PARALLEL */
 #if H5AC__TRACE_FILE_ENABLED
     char 	  trace[128] = "";
     FILE *	  trace_file_ptr = NULL;
 #endif /* H5AC__TRACE_FILE_ENABLED */
-    herr_t	  ret_value = SUCCEED;      /* Return value */
+
 
     FUNC_ENTER_NOAPI(H5AC_flush, FAIL)
 
@@ -944,31 +1002,108 @@ H5AC_flush(H5F_t *f, hid_t dxpl_id)
     /* For the flush, only the flags are really necessary in the trace file.
      * Write the result to catch occult errors.
      */
-    if((f != NULL) &&
-            (f->shared != NULL) &&
-            (f->shared->cache != NULL) &&
-            (H5C_get_trace_file_ptr(f->shared->cache, &trace_file_ptr) >= 0) &&
-            (trace_file_ptr != NULL))
-	sprintf(trace, "H5AC_flush");
+    if ( ( f != NULL ) && 
+         ( f->shared != NULL ) && 
+	 ( f->shared->cache != NULL ) &&
+	 ( H5C_get_trace_file_ptr(f->shared->cache, &trace_file_ptr) >= 0 ) &&
+	 ( trace_file_ptr != NULL ) ) {
+
+	sprintf(trace, "H5AC_flush 0x%x", flags);
+    }
 #endif /* H5AC__TRACE_FILE_ENABLED */
 
 #ifdef H5_HAVE_PARALLEL
-    /* Attempt to flush all entries from rank 0 & Bcast clean list to other ranks */
-    if(H5AC_flush_entries(f) < 0)
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Can't flush.")
+    aux_ptr = f->shared->cache->aux_ptr;
+
+    if ( aux_ptr != NULL ) {
+
+#if H5AC_DEBUG_DIRTY_BYTES_CREATION
+        HDfprintf(stdout,
+                  "%d::H5AC_flush: (u/uu/i/iu/r/ru) = %d/%d/%d/%d/%d/%d\n",
+                  (int)(aux_ptr->mpi_rank),
+                  (int)(aux_ptr->unprotect_dirty_bytes),
+                  (int)(aux_ptr->unprotect_dirty_bytes_updates),
+                  (int)(aux_ptr->insert_dirty_bytes),
+                  (int)(aux_ptr->insert_dirty_bytes_updates),
+                  (int)(aux_ptr->rename_dirty_bytes),
+                  (int)(aux_ptr->rename_dirty_bytes_updates));
+#endif /* H5AC_DEBUG_DIRTY_BYTES_CREATION */
+
+        /* to prevent "messages from the future" we must synchronize all
+         * processes before we start the flush.  Hence the following
+         * barrier.
+         */
+        if ( MPI_SUCCESS != (mpi_code = MPI_Barrier(aux_ptr->mpi_comm)) ) {
+
+            HMPI_GOTO_ERROR(FAIL, "MPI_Barrier failed", mpi_code)
+        }
+
+        /* if the clear only flag is set, this flush will not involve any
+         * disk I/O.  In such cases, it is not necessary to let process 0
+         * flush first.
+         */
+        if ( ( aux_ptr->mpi_rank == 0 ) &&
+             ( (flags & H5AC__FLUSH_CLEAR_ONLY_FLAG) == 0 ) ) {
+
+            unsigned init_flush_flags = H5AC__NO_FLAGS_SET;
+
+            if ( ( (flags & H5AC__FLUSH_MARKED_ENTRIES_FLAG) != 0 ) &&
+                 ( (flags & H5AC__FLUSH_INVALIDATE_FLAG) == 0 ) ) {
+
+                init_flush_flags |= H5AC__FLUSH_MARKED_ENTRIES_FLAG;
+            }
+
+	    aux_ptr->write_permitted = TRUE;
+
+            status = H5C_flush_cache(f,
+                                     H5AC_noblock_dxpl_id,
+                                     H5AC_noblock_dxpl_id,
+                                     f->shared->cache,
+                                     init_flush_flags);
+
+	    aux_ptr->write_permitted = FALSE;
+
+            if ( status < 0 ) {
+
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Can't flush.")
+            }
+
+            if ( aux_ptr->write_done != NULL ) {
+
+                (aux_ptr->write_done)();
+	    }
+
+        } /* end if ( aux_ptr->mpi_rank == 0 ) */
+
+        status = H5AC_propagate_flushed_and_still_clean_entries_list(f,
+                                                          H5AC_noblock_dxpl_id,
+                                                          f->shared->cache,
+                                                          FALSE);
+    } /* end if ( aux_ptr != NULL ) */
 #endif /* H5_HAVE_PARALLEL */
 
-    /* Flush the cache */
-    if(H5C_flush_cache(f, dxpl_id, H5AC_noblock_dxpl_id, f->shared->cache, H5AC__NO_FLAGS_SET) < 0)
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Can't flush cache.")
+    status = H5C_flush_cache(f,
+                             dxpl_id,
+                             H5AC_noblock_dxpl_id,
+                             f->shared->cache,
+                             flags);
+
+    if ( status < 0 ) {
+
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Can't flush entry.")
+    }
 
 done:
+
 #if H5AC__TRACE_FILE_ENABLED
-    if(trace_file_ptr != NULL)
+    if ( trace_file_ptr != NULL ) {
+
         HDfprintf(trace_file_ptr, "%s %d\n", trace, (int)ret_value);
+    }
 #endif /* H5AC__TRACE_FILE_ENABLED */
 
     FUNC_LEAVE_NOAPI(ret_value)
+
 } /* H5AC_flush() */
 
 
@@ -1010,8 +1145,6 @@ H5AC_get_entry_status(H5F_t *    f,
     hbool_t	is_dirty;
     hbool_t	is_protected;
     hbool_t	is_pinned;
-    hbool_t	is_flush_dep_child;
-    hbool_t	is_flush_dep_parent;
     size_t	entry_size;
     unsigned	status = 0;
 
@@ -1026,8 +1159,7 @@ H5AC_get_entry_status(H5F_t *    f,
     }
 
     result = H5C_get_entry_status(cache_ptr, addr, &entry_size, &in_cache,
-            &is_dirty, &is_protected, &is_pinned, &is_flush_dep_parent,
-            &is_flush_dep_child);
+		                  &is_dirty, &is_protected, &is_pinned);
 
     if ( result < 0 ) {
 
@@ -1047,12 +1179,6 @@ H5AC_get_entry_status(H5F_t *    f,
 
 	if ( is_pinned )
 	    status |= H5AC_ES__IS_PINNED;
-
-	if ( is_flush_dep_parent )
-	    status |= H5AC_ES__IS_FLUSH_DEP_PARENT;
-
-	if ( is_flush_dep_child )
-	    status |= H5AC_ES__IS_FLUSH_DEP_CHILD;
     }
 
     *status_ptr = status;
@@ -1129,12 +1255,12 @@ done:
  */
 
 herr_t
-H5AC_set(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type, haddr_t addr,
-    void *thing, unsigned int flags)
+H5AC_set(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type, haddr_t addr, void *thing, unsigned int flags)
 {
     herr_t		result;
     H5AC_info_t        *info;
     H5AC_t             *cache;
+    herr_t ret_value=SUCCEED;      /* Return value */
 #ifdef H5_HAVE_PARALLEL
     H5AC_aux_t        * aux_ptr = NULL;
 #endif /* H5_HAVE_PARALLEL */
@@ -1143,7 +1269,6 @@ H5AC_set(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type, haddr_t addr,
     size_t              trace_entry_size = 0;
     FILE *        	trace_file_ptr = NULL;
 #endif /* H5AC__TRACE_FILE_ENABLED */
-    herr_t ret_value = SUCCEED;      /* Return value */
 
     FUNC_ENTER_NOAPI(H5AC_set, FAIL)
 
@@ -1155,13 +1280,9 @@ H5AC_set(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type, haddr_t addr,
     HDassert(H5F_addr_defined(addr));
     HDassert(thing);
 
-    /* Check for invalid access request */
-    if(0 == (f->intent & H5F_ACC_RDWR))
-	HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, FAIL, "no write intent on file")
-
 #if H5AC__TRACE_FILE_ENABLED
-    /* For the insert, only the addr, size, type id and flags are really
-     * necessary in the trace file.  Write the result to catch occult
+    /* For the insert, only the addr, size, type id and flags are really 
+     * necessary in the trace file.  Write the result to catch occult 
      * errors.
      *
      * Note that some data is not available right now -- put what we can
@@ -1248,8 +1369,8 @@ done:
 #if H5AC__TRACE_FILE_ENABLED
     if ( trace_file_ptr != NULL ) {
 
-	HDfprintf(trace_file_ptr, "%s %d %d\n", trace,
-                  (int)trace_entry_size,
+	HDfprintf(trace_file_ptr, "%s %d %d\n", trace, 
+                  (int)trace_entry_size, 
 		  (int)ret_value);
     }
 #endif /* H5AC__TRACE_FILE_ENABLED */
@@ -1296,8 +1417,8 @@ H5AC_mark_pinned_entry_dirty(H5F_t * f,
     FUNC_ENTER_NOAPI(H5AC_mark_pinned_entry_dirty, FAIL)
 
 #if H5AC__TRACE_FILE_ENABLED
-    /* For the mark pinned entry dirty call, only the addr, size_changed,
-     * and new_size are really necessary in the trace file. Write the result
+    /* For the mark pinned entry dirty call, only the addr, size_changed, 
+     * and new_size are really necessary in the trace file. Write the result 
      * to catch occult errors.
      */
     if ( ( f != NULL ) &&
@@ -1418,7 +1539,7 @@ H5AC_mark_pinned_or_protected_entry_dirty(H5F_t * f,
 
 #if H5AC__TRACE_FILE_ENABLED
     /* For the mark pinned or protected entry dirty call, only the addr
-     * is really necessary in the trace file.  Write the result to catch
+     * is really necessary in the trace file.  Write the result to catch 
      * occult errors.
      */
     if ( ( f != NULL ) &&
@@ -1479,7 +1600,7 @@ done:
 
     FUNC_LEAVE_NOAPI(ret_value)
 
-} /* H5AC_mark_pinned_or_protected_entry_dirty() */
+} /* H5AC_mark_pinned_entry_dirty() */
 
 
 /*-------------------------------------------------------------------------
@@ -1550,7 +1671,7 @@ H5AC_rename(H5F_t *f, const H5AC_class_t *type, haddr_t old_addr, haddr_t new_ad
     HDassert(H5F_addr_ne(old_addr, new_addr));
 
 #if H5AC__TRACE_FILE_ENABLED
-    /* For the rename call, only the old addr and new addr are really
+    /* For the rename call, only the old addr and new addr are really 
      * necessary in the trace file.  Include the type id so we don't have to
      * look it up.  Also write the result to catch occult errors.
      */
@@ -1655,7 +1776,7 @@ H5AC_pin_protected_entry(H5F_t * f,
     FUNC_ENTER_NOAPI(H5AC_pin_protected_entry, FAIL)
 
 #if H5AC__TRACE_FILE_ENABLED
-    /* For the pin protected entry call, only the addr is really necessary
+    /* For the pin protected entry call, only the addr is really necessary 
      * in the trace file.  Also write the result to catch occult errors.
      */
     if ( ( f != NULL ) &&
@@ -1689,59 +1810,6 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 
 } /* H5AC_pin_protected_entry() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5AC_create_flush_dependency()
- *
- * Purpose:	Create a flush dependency between two entries in the metadata
- *              cache.
- *
- * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Quincey Koziol
- *              3/24/09
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5AC_create_flush_dependency(H5F_t * f, void * parent_thing, void * child_thing)
-{
-    H5C_t      *cache_ptr = f->shared->cache;
-#if H5AC__TRACE_FILE_ENABLED
-    char        trace[128] = "";
-    FILE *      trace_file_ptr = NULL;
-#endif /* H5AC__TRACE_FILE_ENABLED */
-    herr_t      ret_value = SUCCEED;    /* Return value */
-
-    FUNC_ENTER_NOAPI(H5AC_create_flush_dependency, FAIL)
-
-    /* Sanity check */
-    HDassert(cache_ptr);
-    HDassert(parent_thing);
-    HDassert(child_thing);
-
-#if H5AC__TRACE_FILE_ENABLED
-    if ( ( H5C_get_trace_file_ptr(f->shared->cache, &trace_file_ptr) >= 0 ) &&
-         ( trace_file_ptr != NULL ) ) {
-        sprintf(trace, "%s %lx %lx",
-                FUNC,
-	        (unsigned long)(((H5C_cache_entry_t *)parent_thing)->addr),
-	        (unsigned long)(((H5C_cache_entry_t *)child_thing)->addr));
-    } /* end if */
-#endif /* H5AC__TRACE_FILE_ENABLED */
-
-    if(H5C_create_flush_dependency(cache_ptr, parent_thing, child_thing) < 0)
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTDEPEND, FAIL, "H5C_create_flush_dependency() failed.")
-
-done:
-#if H5AC__TRACE_FILE_ENABLED
-    if(trace_file_ptr != NULL)
-	HDfprintf(trace_file_ptr, "%s %d\n", trace, (int)ret_value);
-#endif /* H5AC__TRACE_FILE_ENABLED */
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5AC_create_flush_dependency() */
 
 
 /*-------------------------------------------------------------------------
@@ -1805,11 +1873,11 @@ done:
  *		Added trace file support.
  *
  *		JRM - 3/18/07
- *		Modified code to support the new flags parameter for
- *		H5C_protect().  For now, that means passing in the
+ *		Modified code to support the new flags parameter for 
+ *		H5C_protect().  For now, that means passing in the 
  *		H5C_READ_ONLY_FLAG if rw == H5AC_READ.
  *
- *		Also updated the trace file output to save the
+ *		Also updated the trace file output to save the 
  *		rw parameter, since we are now doing something with it.
  *
  *-------------------------------------------------------------------------
@@ -1849,9 +1917,9 @@ H5AC_protect(H5F_t *f,
 	HGOTO_ERROR(H5E_CACHE, H5E_BADVALUE, NULL, "no write intent on file")
 
 #if H5AC__TRACE_FILE_ENABLED
-    /* For the protect call, only the addr and type id is really necessary
-     * in the trace file.  Include the size of the entry protected as a
-     * sanity check.  Also indicate whether the call was successful to
+    /* For the protect call, only the addr and type id is really necessary 
+     * in the trace file.  Include the size of the entry protected as a 
+     * sanity check.  Also indicate whether the call was successful to 
      * catch occult errors.
      */
     if ( ( f != NULL ) &&
@@ -1918,7 +1986,7 @@ done:
 #if H5AC__TRACE_FILE_ENABLED
     if ( trace_file_ptr != NULL ) {
 
-	HDfprintf(trace_file_ptr, "%s %d %d\n", trace,
+	HDfprintf(trace_file_ptr, "%s %d %d\n", trace, 
                   (int)trace_entry_size,
                   (int)(ret_value != NULL));
     }
@@ -1962,8 +2030,8 @@ H5AC_resize_pinned_entry(H5F_t * f,
     FUNC_ENTER_NOAPI(H5AC_resize_pinned_entry, FAIL)
 
 #if H5AC__TRACE_FILE_ENABLED
-    /* For the resize pinned entry call, only the addr, and new_size are
-     * really necessary in the trace file. Write the result to catch
+    /* For the resize pinned entry call, only the addr, and new_size are 
+     * really necessary in the trace file. Write the result to catch 
      * occult errors.
      */
     if ( ( f != NULL ) &&
@@ -2073,7 +2141,7 @@ H5AC_unpin_entry(H5F_t * f,
     FUNC_ENTER_NOAPI(H5AC_unpin_entry, FAIL)
 
 #if H5AC__TRACE_FILE_ENABLED
-    /* For the unpin entry call, only the addr is really necessary
+    /* For the unpin entry call, only the addr is really necessary 
      * in the trace file.  Also write the result to catch occult errors.
      */
     if ( ( f != NULL ) &&
@@ -2106,58 +2174,6 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 
 } /* H5AC_unpin_entry() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5AC_destroy_flush_dependency()
- *
- * Purpose:	Destroy a flush dependency between two entries.
- *
- * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Quincey Koziol
- *              3/24/09
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5AC_destroy_flush_dependency(H5F_t * f, void * parent_thing, void * child_thing)
-{
-    H5C_t      *cache_ptr = f->shared->cache;
-#if H5AC__TRACE_FILE_ENABLED
-    char                trace[128] = "";
-    FILE *              trace_file_ptr = NULL;
-#endif /* H5AC__TRACE_FILE_ENABLED */
-    herr_t      ret_value = SUCCEED;    /* Return value */
-
-    FUNC_ENTER_NOAPI(H5AC_destroy_flush_dependency, FAIL)
-
-    /* Sanity check */
-    HDassert(cache_ptr);
-    HDassert(parent_thing);
-    HDassert(child_thing);
-
-#if H5AC__TRACE_FILE_ENABLED
-    if ( ( H5C_get_trace_file_ptr(f->shared->cache, &trace_file_ptr) >= 0 ) &&
-         ( trace_file_ptr != NULL ) ) {
-        sprintf(trace, "%s %lx",
-                FUNC,
-	        (unsigned long)(((H5C_cache_entry_t *)parent_thing)->addr),
-	        (unsigned long)(((H5C_cache_entry_t *)child_thing)->addr));
-    } /* end if */
-#endif /* H5AC__TRACE_FILE_ENABLED */
-
-    if(H5C_destroy_flush_dependency(cache_ptr, parent_thing, child_thing) < 0)
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTUNDEPEND, FAIL, "H5C_destroy_flush_dependency() failed.")
-
-done:
-#if H5AC__TRACE_FILE_ENABLED
-    if( trace_file_ptr != NULL )
-	HDfprintf(trace_file_ptr, "%s %d\n", trace, (int)ret_value);
-#endif /* H5AC__TRACE_FILE_ENABLED */
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5AC_destroy_flush_dependency() */
 
 
 /*-------------------------------------------------------------------------
@@ -2259,10 +2275,10 @@ H5AC_unprotect(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type, haddr_t addr,
 {
     herr_t		result;
     herr_t              ret_value=SUCCEED;      /* Return value */
+    hbool_t		size_changed = FALSE;
     hbool_t		dirtied;
     size_t		new_size = 0;
 #ifdef H5_HAVE_PARALLEL
-    hbool_t		size_changed = FALSE;
     H5AC_aux_t        * aux_ptr = NULL;
 #endif /* H5_HAVE_PARALLEL */
 #if H5AC__TRACE_FILE_ENABLED
@@ -2286,7 +2302,7 @@ H5AC_unprotect(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type, haddr_t addr,
 
 #if H5AC__TRACE_FILE_ENABLED
     /* For the unprotect call, only the addr, type id, flags, and possible
-     * new size are really necessary in the trace file.  Write the return
+     * new size are really necessary in the trace file.  Write the return 
      * value to catch occult errors.
      */
     if ( ( f != NULL ) &&
@@ -2316,9 +2332,7 @@ H5AC_unprotect(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type, haddr_t addr,
 
         if ( ((H5AC_info_t *)thing)->size != new_size ) {
 
-#ifdef H5_HAVE_PARALLEL
             size_changed = TRUE;
-#endif /* H5_HAVE_PARALLEL */
             flags = flags | H5AC__SIZE_CHANGED_FLAG;
 #if H5AC__TRACE_FILE_ENABLED
 	    trace_flags = flags;
@@ -2399,8 +2413,8 @@ done:
 #if H5AC__TRACE_FILE_ENABLED
     if ( trace_file_ptr != NULL ) {
 
-	HDfprintf(trace_file_ptr, "%s %d %x %d\n",
-		  trace,
+	HDfprintf(trace_file_ptr, "%s %d %x %d\n", 
+		  trace, 
 		  (int)trace_new_size,
 		  (unsigned)trace_flags,
 		  (int)ret_value);
@@ -2493,7 +2507,7 @@ H5AC_stats(const H5F_t *f)
     HDassert(f->shared->cache);
 
     /* at present, this can't fail */
-    (void)H5C_stats(f->shared->cache, H5F_OPEN_NAME(f), FALSE);
+    (void)H5C_stats(f->shared->cache, f->name, FALSE);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -2525,11 +2539,11 @@ done:
  *
  *		JRM - 7/28/07
  *		Added support for the new evictions enabled related fields.
- *
- *		Observe that H5AC_get_cache_auto_resize_config() and
+ *		
+ *		Observe that H5AC_get_cache_auto_resize_config() and 
  *		H5AC_set_cache_auto_resize_config() are becoming generic
- *		metadata cache configuration routines as they gain
- *		switches for functions that are only tenuously related
+ *		metadata cache configuration routines as they gain 
+ *		switches for functions that are only tenuously related 
  *		to auto resize configuration.
  *
  *		JRM - 1/2/08
@@ -2794,7 +2808,7 @@ done:
  *              Updated for the addition of H5AC_cache_config_t.
  *
  *		John Mainzer -- 10/25/05
- *		Added support for the new dirty_bytes_threshold field of
+ *		Added support for the new dirty_bytes_threshold field of 
  *		both H5AC_cache_config_t and H5AC_aux_t.
  *
  *		John Mainzer -- 6/7/06
@@ -2802,15 +2816,15 @@ done:
  *
  *		John Mainzer -- 7/28/07
  *		Added support for the new evictions enabled related fields.
- *
- *		Observe that H5AC_get_cache_auto_resize_config() and
+ *		
+ *		Observe that H5AC_get_cache_auto_resize_config() and 
  *		H5AC_set_cache_auto_resize_config() are becoming generic
- *		metadata cache configuration routines as they gain
- *		switches for functions that are only tenuously related
+ *		metadata cache configuration routines as they gain 
+ *		switches for functions that are only tenuously related 
  *		to auto resize configuration.
  *
  *		John Mainzer -- 1/3/07
- *		Updated trace file code to record the new flash cache
+ *		Updated trace file code to record the new flash cache 
  *		size increase related fields.
  *
  *-------------------------------------------------------------------------
@@ -2957,16 +2971,16 @@ H5AC_set_cache_auto_resize_config(H5AC_t * cache_ptr,
 done:
 
 #if H5AC__TRACE_FILE_ENABLED
-    /* For the set cache auto resize config call, only the contents
-     * of the config is necessary in the trace file. Write the return
+    /* For the set cache auto resize config call, only the contents 
+     * of the config is necessary in the trace file. Write the return 
      * value to catch occult errors.
      */
     if ( ( cache_ptr != NULL ) &&
          ( H5C_get_trace_file_ptr(cache_ptr, &trace_file_ptr) >= 0 ) &&
          ( trace_file_ptr != NULL ) ) {
 
-	HDfprintf(trace_file_ptr,
-                  "%s %d %d %d %d \"%s\" %d %d %d %f %d %d %ld %d %f %f %d %f %f %d %d %d %f %f %d %d %d %d %f %d %d\n",
+	HDfprintf(trace_file_ptr, 
+                  "%s %d %d %d %d \"%s\" %d %d %d %f %d %d %ld %d %f %f %d %f %f %d %d %d %f %f %d %d %d %d %f %d %d\n", 
 		  "H5AC_set_cache_auto_resize_config",
 		  trace_config.version,
 		  (int)(trace_config.rpt_fcn_enabled),
@@ -3034,9 +3048,9 @@ done:
  *              are applied.
  *              					JRM - 5/15/06
  *
- *	      - Added code testing the evictions enabled field.  At
- *	        present this consists of verifying that if
- *	        evictions_enabled is FALSE, then automatic cache
+ *	      - Added code testing the evictions enabled field.  At 
+ *	        present this consists of verifying that if 
+ *	        evictions_enabled is FALSE, then automatic cache 
  *		resizing in disabled.
  *
  *	        					JRM - 7/28/07
@@ -3089,7 +3103,7 @@ H5AC_validate_config(H5AC_cache_config_t * config_ptr)
     /* don't bother to test trace_file_name unless open_trace_file is TRUE */
     if ( config_ptr->open_trace_file ) {
 
-	/* Can't really test the trace_file_name field without trying to
+	/* Can't really test the trace_file_name field without trying to 
 	 * open the file, so we will content ourselves with a couple of
 	 * sanity checks on the length of the file name.
 	 */
@@ -3115,9 +3129,8 @@ H5AC_validate_config(H5AC_cache_config_t * config_ptr)
     }
 
     if ( ( config_ptr->evictions_enabled == FALSE ) &&
-	 ( ( config_ptr->incr_mode != H5C_incr__off ) ||
-	   ( config_ptr->flash_incr_mode != H5C_flash_incr__off ) ||
-	   ( config_ptr->decr_mode != H5C_decr__off ) ) ) {
+	 ( ( config_ptr->incr_mode != H5C_incr__off ) || 
+	   ( config_ptr->incr_mode != H5C_decr__off ) ) ) {
 
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, \
                     "Can't disable evictions while auto-resize is enabled.")
@@ -3637,8 +3650,7 @@ H5AC_ext_config_2_int_config(H5AC_cache_config_t * ext_conf_ptr,
     if ( ( ext_conf_ptr == NULL ) ||
          ( ext_conf_ptr->version != H5AC__CURR_CACHE_CONFIG_VERSION ) ||
          ( int_conf_ptr == NULL ) ) {
-        HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, \
-                    "Bad ext_conf_ptr or inf_conf_ptr on entry.")
+
     }
 
     int_conf_ptr->version                = H5C__CURR_AUTO_SIZE_CTL_VER;
@@ -4288,7 +4300,7 @@ H5AC_log_renamed_entry(H5AC_t * cache_ptr,
 
     /* get entry status, size, etc here */
     if ( H5C_get_entry_status(cache_ptr, old_addr, &entry_size, &entry_in_cache,
-                              &entry_dirty, NULL, NULL, NULL, NULL) < 0 ) {
+                              &entry_dirty, NULL, NULL) < 0 ) {
 
         HGOTO_ERROR(H5E_CACHE, H5E_SYSTEM, FAIL, "Can't get entry status.")
 
@@ -4738,89 +4750,5 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 
 } /* H5AC_receive_and_apply_clean_list() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5AC_flush_entries
- *
- * Purpose:	Flush the metadata cache associated with the specified file,
- *		only writing from rank 0, but propagating the cleaned entries
- *		to all ranks.
- *
- * Return:      Non-negative on success/Negative on failure if there was a
- *              request to flush all items and something was protected.
- *
- * Programmer:  Quincey Koziol
- *              koziol@hdfgroup.org
- *              Aug 22 2009
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5AC_flush_entries(H5F_t *f)
-{
-    herr_t	  ret_value = SUCCEED;      /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT(H5AC_flush_entries)
-
-    HDassert(f);
-    HDassert(f->shared->cache);
-
-    /* Check if we have >1 ranks */
-    if(f->shared->cache->aux_ptr) {
-        H5AC_aux_t	* aux_ptr = f->shared->cache->aux_ptr;
-        int		  mpi_code;
-
-#if H5AC_DEBUG_DIRTY_BYTES_CREATION
-        HDfprintf(stdout,
-                  "%d::H5AC_flush: (u/uu/i/iu/r/ru) = %d/%d/%d/%d/%d/%d\n",
-                  (int)(aux_ptr->mpi_rank),
-                  (int)(aux_ptr->unprotect_dirty_bytes),
-                  (int)(aux_ptr->unprotect_dirty_bytes_updates),
-                  (int)(aux_ptr->insert_dirty_bytes),
-                  (int)(aux_ptr->insert_dirty_bytes_updates),
-                  (int)(aux_ptr->rename_dirty_bytes),
-                  (int)(aux_ptr->rename_dirty_bytes_updates));
-#endif /* H5AC_DEBUG_DIRTY_BYTES_CREATION */
-
-        /* to prevent "messages from the future" we must synchronize all
-         * processes before we start the flush.  Hence the following
-         * barrier.
-         */
-        if(MPI_SUCCESS != (mpi_code = MPI_Barrier(aux_ptr->mpi_comm)))
-            HMPI_GOTO_ERROR(FAIL, "MPI_Barrier failed", mpi_code)
-
-        /* Flush data to disk, from rank 0 process */
-        if(aux_ptr->mpi_rank == 0 ) {
-            herr_t	  status;
-
-	    aux_ptr->write_permitted = TRUE;
-
-            status = H5C_flush_cache(f,
-                                     H5AC_noblock_dxpl_id,
-                                     H5AC_noblock_dxpl_id,
-                                     f->shared->cache,
-                                     H5AC__NO_FLAGS_SET);
-
-	    aux_ptr->write_permitted = FALSE;
-
-            if(status < 0)
-                HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Can't flush.")
-
-            if(aux_ptr->write_done != NULL)
-                (aux_ptr->write_done)();
-        } /* end if ( aux_ptr->mpi_rank == 0 ) */
-
-        /* Propagate cleaned entries to other ranks */
-        if(H5AC_propagate_flushed_and_still_clean_entries_list(f,
-                                                          H5AC_noblock_dxpl_id,
-                                                          f->shared->cache,
-                                                          FALSE) < 0 )
-            HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Can't propagate clean entries list.")
-    } /* end if ( aux_ptr != NULL ) */
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5AC_flush_entries() */
 #endif /* H5_HAVE_PARALLEL */
 

@@ -72,7 +72,7 @@ fi
 # 			`-pg').  This may or may not include debugging 
 # 			or production flags.
 #			
-# H5_CFLAGS		Flags can be added to this variable which
+# CFLAGS		Flags can be added to this variable which
 #			might already be partially initialized.  These 
 #			flags will always be passed to the compiler
 #			and should include switches to turn on full
@@ -81,14 +81,16 @@ fi
 #			practices resulting in few if any
 #			warnings.
 #
-#			Warning flags do not have to be added to H5_CFLAGS
+#			Warning flags do not have to be added to CFLAGS
 #			variable if the compiler is the GNU gcc
 #			compiler or a descendent of gcc such as EGCS or PGCC.
 #
-# AM_CFLAGS             Flags added directly into this variable will
-#                       be propogated to the compiler wrapper scripts (h5cc,
-#                       h5c++, et cetera) in addition to being used to compile 
-#                       the library.
+#			The CFLAGS should contains *something* or else 
+#			configure will probably add `-g'.  For most
+#			systems this isn't a problem but some systems
+#			will disable optimizations in favor of the
+#			`-g'.
+#			
 #
 # These flags should be set according to the compiler being used.
 # There are two ways to check the compiler.  You can try using `-v' or 
@@ -99,7 +101,7 @@ fi
 
 case $CC_BASENAME in
     gcc)
-	H5_CFLAGS="$H5_CFLAGS -Wsign-compare" #Only works for some versions
+	CFLAGS="$CFLAGS -Wsign-compare" #Only works for some versions
 	DEBUG_CFLAGS="-g -fverbose-asm"
 	DEBUG_CPPFLAGS=
 	PROD_CFLAGS="-O3 -fomit-frame-pointer"
@@ -109,7 +111,7 @@ case $CC_BASENAME in
 	;;
 
     *)
-	H5_CFLAGS="$H5_CFLAGS -ansi"
+	CFLAGS="$CFLAGS -ansi"
 	DEBUG_CFLAGS="-g"
 	DEBUG_CPPFLAGS=
 	PROD_CFLAGS="-O"

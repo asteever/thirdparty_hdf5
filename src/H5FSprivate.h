@@ -43,14 +43,10 @@
                                          *      serialized to the file.
                                          */
 #define H5FS_CLS_SEPAR_OBJ      0x02    /* Objects in this class shouldn't
-                                         *      participate in merge operations.
+                                         *      participate in merge operations
                                          */
 #define H5FS_CLS_MERGE_SYM      0x04    /* Objects in this class only merge
-                                         *      with other objects in this class.
-                                         */
-#define H5FS_CLS_ADJUST_OK      0x08    /* Objects in this class can be merged
-                                         *      without requiring a can_adjust/adjust
-                                         *      callback pair.
+                                         *      with other objects in this class
                                          */
 
 /* Flags for H5FS_add() */
@@ -107,7 +103,6 @@ typedef struct H5FS_section_class_t {
     herr_t (*shrink)(H5FS_section_info_t **, void *);   /* Routine to shrink container */
     herr_t (*free)(H5FS_section_info_t *);              /* Routine to free node */
     herr_t (*valid)(const struct H5FS_section_class_t *, const H5FS_section_info_t *);   /* Routine to check if a section is valid */
-    H5FS_section_info_t *(*split)(H5FS_section_info_t *, hsize_t);     /* Routine to create the split section */
     herr_t (*debug)(const H5FS_section_info_t *, FILE *, int , int );   /* Routine to dump debugging information about a section */
 } H5FS_section_class_t;
 
@@ -128,7 +123,6 @@ struct H5FS_section_info_t {
 /* Free space client IDs for identifying user of free space */
 typedef enum H5FS_client_t {
     H5FS_CLIENT_FHEAP_ID = 0,	/* Free space is used by fractal heap */
-    H5FS_CLIENT_FILE_ID,	/* Free space is used by file */
     H5FS_NUM_CLIENT_ID          /* Number of free space client IDs (must be last)   */
 } H5FS_client_t;
 
@@ -140,19 +134,6 @@ typedef struct H5FS_create_t {
     unsigned max_sect_addr;             /* Size of address space free sections are within (log2 of actual value) */
     hsize_t max_sect_size;              /* Maximum size of section to track */
 } H5FS_create_t;
-
-/* Free space statistics info */
-typedef struct H5FS_stat_t {
-    hsize_t tot_space;          /* Total amount of space tracked              */
-    hsize_t tot_sect_count;     /* Total # of sections tracked                */
-    hsize_t serial_sect_count;  /* # of serializable sections tracked         */
-    hsize_t ghost_sect_count;   /* # of un-serializable sections tracked      */
-    haddr_t addr;		/* Address of free space header on disk       */
-    hsize_t hdr_size;		/* Size of the free-space header on disk      */
-    haddr_t sect_addr;          /* Address of the section info in the file    */
-    hsize_t alloc_sect_size;    /* Allocated size of the section info in the file */
-    hsize_t sect_size;    	/* Size of the section info in the file       */
-} H5FS_stat_t;
 
 /* Typedef for iteration operations */
 typedef herr_t (*H5FS_operator_t)(const H5FS_section_info_t *sect,
@@ -174,41 +155,26 @@ H5FL_SEQ_EXTERN(H5FS_section_class_t);
 /* Free space manager routines */
 H5_DLL H5FS_t *H5FS_create(H5F_t *f, hid_t dxpl_id, haddr_t *fs_addr,
     const H5FS_create_t *fs_create, size_t nclasses,
-    const H5FS_section_class_t *classes[], void *cls_init_udata, hsize_t alignment, hsize_t threshold);
+    const H5FS_section_class_t *classes[], void *cls_init_udata);
 H5_DLL H5FS_t *H5FS_open(H5F_t *f, hid_t dxpl_id, haddr_t fs_addr,
-    size_t nclasses, const H5FS_section_class_t *classes[], void *cls_init_udata, hsize_t alignment, hsize_t threshold);
+    size_t nclasses, const H5FS_section_class_t *classes[], void *cls_init_udata);
 H5_DLL herr_t H5FS_size(const H5F_t *f, const H5FS_t *fspace, hsize_t *meta_size);
 H5_DLL herr_t H5FS_delete(H5F_t *f, hid_t dxpl_id, haddr_t fs_addr);
 H5_DLL herr_t H5FS_close(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace);
-H5_DLL herr_t H5FS_alloc_hdr(H5F_t *f, H5FS_t *fspace, haddr_t *fs_addr, hid_t dxpl_id);
-H5_DLL herr_t H5FS_alloc_sect(H5F_t *f, H5FS_t *fspace, hid_t dxpl_id);
-H5_DLL herr_t H5FS_free(H5F_t *f, H5FS_t *fspace, hid_t dxpl_id);
 
 /* Free space section routines */
 H5_DLL herr_t H5FS_sect_add(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace,
     H5FS_section_info_t *node, unsigned flags, void *op_data);
-H5_DLL htri_t H5FS_sect_try_merge(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace, 
-    H5FS_section_info_t *sect, unsigned flags, void *op_data);
-H5_DLL htri_t H5FS_sect_try_extend(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace,
-    haddr_t addr, hsize_t size, hsize_t extra_requested);
 H5_DLL herr_t H5FS_sect_remove(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace,
     H5FS_section_info_t *node);
 H5_DLL htri_t H5FS_sect_find(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace,
     hsize_t request, H5FS_section_info_t **node);
 H5_DLL herr_t H5FS_sect_iterate(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace, H5FS_operator_t op, void *op_data);
-H5_DLL herr_t H5FS_sect_stats(const H5FS_t *fspace, hsize_t *tot_space,
-    hsize_t *nsects);
+H5_DLL herr_t H5FS_get_sect_count(const H5FS_t *fspace, hsize_t *nsects);
 H5_DLL herr_t H5FS_sect_change_class(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace,
     H5FS_section_info_t *sect, unsigned new_class);
 
-/* Statistics routine */
-H5_DLL herr_t H5FS_stat_info(const H5F_t *f, const H5FS_t *frsp, H5FS_stat_t *stats);
-
 /* Debugging routines for dumping file structures */
-H5_DLL herr_t H5FS_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr,
-    FILE *stream, int indent, int fwidth);
-H5_DLL herr_t H5FS_sects_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr,
-    FILE *stream, int indent, int fwidth, haddr_t fs_addr, haddr_t client_addr);
 H5_DLL herr_t H5FS_sect_debug(const H5FS_t *fspace, const H5FS_section_info_t *sect,
     FILE *stream, int indent, int fwidth);
 

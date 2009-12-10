@@ -16,11 +16,8 @@ $! Makefile for VMS systems.
 $!
 $! Make h5import tool 
 $!
-$! The next two lines should be uncommented only when building by hand in the
-$! current directory. Use build.com in the vms directory to build
-$! the distribution. Make sure that location of the zlib library is correct.
-$! define zlib_dir sys$sysusers:[pourmal.zlib-1_2_3]
-$! ccopt = "/float=ieee_float/define=H5_VMS/include=zlib_dir"
+$! ccopt = "/float=ieee_float"
+$
 $ ccc := cc 'ccopt /include=([-.-.src], [-.lib])
 $ type sys$input
        Creating  h5import ...
@@ -29,6 +26,7 @@ $ cobj= "h5import, h5importtest "
 
 $!                               
 $ ccc 'cobj 
+$
 $ link     h5import,-
            [-.lib]libh5tools.olb/lib,[-.-.src]hdf5.olb/lib,zlib_dir:libz.olb/lib
 $ type sys$input

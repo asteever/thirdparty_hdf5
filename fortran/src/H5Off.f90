@@ -46,7 +46,11 @@ CONTAINS
 !
 !----------------------------------------------------------------------
 
-  SUBROUTINE h5olink_f(object_id, new_loc_id, new_link_name, hdferr, lcpl_id, lapl_id)
+  SUBROUTINE h5olink_f(object_id, new_loc_id, new_link_name, hdferr, lcpl_id, lapl_id) 
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5olink_f
+!DEC$endif
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: object_id  ! Object to be linked
     INTEGER(HID_T), INTENT(IN) :: new_loc_id ! File or group identifier specifying 
@@ -66,10 +70,9 @@ CONTAINS
        INTEGER FUNCTION h5olink_c(object_id, new_loc_id, new_link_name, new_link_namelen, &
             lcpl_id_default, lapl_id_default)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5OLINK_C'::h5olink_c
-         !DEC$ENDIF
-         !DEC$ATTRIBUTES reference :: new_link_name
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5OLINK_C'::h5olink_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: object_id
          INTEGER(HID_T), INTENT(IN) :: new_loc_id
          CHARACTER(LEN=*), INTENT(IN) :: new_link_name
@@ -114,7 +117,11 @@ CONTAINS
 !
 !----------------------------------------------------------------------
 
-  SUBROUTINE h5oopen_f(loc_id, name, obj_id, hdferr, lapl_id)
+  SUBROUTINE h5oopen_f(loc_id, name, obj_id, hdferr, lapl_id) 
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5oopen_f
+!DEC$endif
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: loc_id  ! File or group identifier
     CHARACTER(LEN=*), INTENT(IN) :: name  ! Path to the object, relative to loc_id
@@ -132,10 +139,9 @@ CONTAINS
     INTERFACE
        INTEGER FUNCTION h5oopen_c(loc_id, name, namelen, lapl_id_default, obj_id)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5OOPEN_C'::h5oopen_c
-         !DEC$ENDIF
-         !DEC$ATTRIBUTES reference :: name
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5OOPEN_C'::h5oopen_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: loc_id
          CHARACTER(LEN=*), INTENT(IN) :: name
          INTEGER(HID_T) :: lapl_id_default
@@ -153,49 +159,5 @@ CONTAINS
 
   END SUBROUTINE h5oopen_f
 
-!----------------------------------------------------------------------
-! Name:		h5oopen_by_addr_f 
-!
-! Purpose:  	Opens an object using its address within an HDF5 file. 
-!
-! Inputs:  
-!           loc_id - File or group identifier
-!             addr - Object’s address in the file
-! Outputs: 
-!           obj_id - Object identifier for the opened object 
-!      hdferr:     - error code		
-!	                Success:  0
-!			Failure: -1
-!
-! Programmer:	M. Scot Breitenfeld
-!		September 14, 2009
-!
-! Modifications: N/A 
-!
-!----------------------------------------------------------------------
-
-  SUBROUTINE h5oopen_by_addr_f(loc_id, addr, obj_id, hdferr)
-    IMPLICIT NONE
-    INTEGER(HID_T), INTENT(IN) :: loc_id  ! File or group identifier
-    INTEGER(HADDR_T), INTENT(IN) :: addr  ! Object’s address in the file
-    INTEGER(HID_T), INTENT(OUT) :: obj_id ! Object identifier for the opened object
-    INTEGER, INTENT(OUT) :: hdferr        ! Error code 		
-                                          !   Success:  0
-                                          !   Failure: -1
-    INTERFACE
-       INTEGER FUNCTION h5oopen_by_addr_c(loc_id, addr, obj_id)
-         USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5OOPEN_BY_ADDR_C'::h5oopen_by_addr_c
-         !DEC$ENDIF
-         INTEGER(HID_T), INTENT(IN) :: loc_id
-         INTEGER(HADDR_T), INTENT(IN) :: addr
-         INTEGER(HID_T), INTENT(OUT) :: obj_id
-       END FUNCTION h5oopen_by_addr_c
-    END INTERFACE
-
-    hdferr = h5oopen_by_addr_c(loc_id, addr, obj_id)
-
-  END SUBROUTINE h5oopen_by_addr_f
 
 END MODULE H5O

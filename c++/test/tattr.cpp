@@ -356,7 +356,7 @@ static void test_attr_basic_read()
 	for(i=0; i<ATTR2_DIM1; i++)
             for(j=0; j<ATTR2_DIM2; j++)
         	if(attr_data2[i][j]!=read_data2[i][j]) {
-		    TestErrPrintf("%d: attribute data different: attr_data2[%d][%d]=%d, read_data2[%d][%d]=%d\n",__LINE__, i,j,attr_data2[i][j],i,j,read_data2[i][j]);
+		    TestErrPrintf("%d: attribute data different: attr_data2[%d][%d]=%d, read_data2[%d][%d]=%d\n",__LINE__, i,j,attr_data2[i][j],i,j,read_data1[i]);
 		}
 	PASSED();
     } // end try block
@@ -1043,15 +1043,15 @@ static void test_attr_dtype_shared()
 
 	// Get size of file
 	h5_stat_size_t empty_filesize;       // Size of empty file
-	empty_filesize = h5_get_file_size(FILENAME.c_str(), H5P_DEFAULT);
+	empty_filesize = h5_get_file_size(FILENAME.c_str());
 	if (empty_filesize < 0)
-            TestErrPrintf("Line %d: file size wrong!\n", __LINE__);
+    	TestErrPrintf("Line %d: file size wrong!\n",__LINE__);
 
 	// Open the file again
 	fid1.openFile(FILENAME, H5F_ACC_RDWR);
 
 	// Enclosing to work around the issue of unused variables and/or
-	// objects created by copy constructors stay around until end of
+	// objects created by copy constructors stay around until end of 
 	// scope, causing incorrect number of ref counts.
 	{ // First enclosed block
 
@@ -1162,7 +1162,7 @@ static void test_attr_dtype_shared()
 	fid1.close();
 
 	// Check size of file
-	filesize = h5_get_file_size(FILENAME.c_str(), H5P_DEFAULT);
+	filesize=h5_get_file_size(FILENAME.c_str());
 	verify_val((long)filesize, (long)empty_filesize, "Checking file size", __LINE__, __FILE__);
 
 	PASSED();
@@ -1180,26 +1180,20 @@ static void test_attr_dtype_shared()
 **
 ****************************************************************/
 /* Info for a string attribute */
-const H5std_string ATTR1_FL_STR_NAME("String_attr 1");
-const H5std_string ATTR2_FL_STR_NAME("String_attr 2");
-const H5std_string ATTR_VL_STR_NAME("String_attr");
+const H5std_string ATTRSTR_NAME("String_attr");
 const H5std_string ATTRSTR_DATA("String Attribute");
-const int ATTR_LEN = 17;
 
 static void test_string_attr()
 {
     // Output message about test being performed
-    SUBTEST("Testing I/O on FL and VL String Attributes");
+    SUBTEST("Testing Basic Attribute Writing Functions");
 
     try {
 	// Create file
 	H5File fid1(FILENAME, H5F_ACC_RDWR);
 
-	//
-	// Fixed-lenth string attributes
-	//
-	// Create a fixed-length string datatype to refer to.
-	StrType fls_type(0, ATTR_LEN);
+	// Create a variable length string datatype to refer to.
+	StrType type(0, H5T_VARIABLE);
 
 	// Open the root group.
 	Group root = fid1.openGroup("/");
@@ -1207,88 +1201,24 @@ static void test_string_attr()
 	// Create dataspace for the attribute.
 	DataSpace att_space (H5S_SCALAR);
 
-	/* Test Attribute::write(...,const void *buf) with Fixed len string */
-
 	// Create an attribute for the root group.
-	Attribute gr_flattr1 = root.createAttribute(ATTR1_FL_STR_NAME, fls_type, att_space);
+	Attribute gr_attr = root.createAttribute(ATTRSTR_NAME, type, att_space);
 
 	// Write data to the attribute.
-	gr_flattr1.write(fls_type, ATTRSTR_DATA.c_str());
+	gr_attr.write(type, ATTRSTR_DATA);
 
-	/* Test Attribute::write(...,const H5std_string& strg) with FL string */
-
-	// Create an attribute for the root group.
-	Attribute gr_flattr2 = root.createAttribute(ATTR2_FL_STR_NAME, fls_type, att_space);
-
-	// Write data to the attribute.
-	gr_flattr2.write(fls_type, ATTRSTR_DATA);
-
-	/* Test Attribute::read(...,void *buf) with FL string */
-
-	// Read and verify the attribute string as a string of chars.
-	char flstring_att_check[ATTR_LEN];
-	gr_flattr1.read(fls_type, flstring_att_check);
-	if(HDstrcmp(flstring_att_check, ATTRSTR_DATA.c_str())!=0)
-	    TestErrPrintf("Line %d: Attribute data different: ATTRSTR_DATA=%s,flstring_att_check=%s\n",__LINE__, ATTRSTR_DATA.c_str(), flstring_att_check);
-
-	// Read and verify the attribute string as a string of chars; buffer
-	// is dynamically allocated.
-	size_t attr_size = gr_flattr1.getInMemDataSize();
-	char *fl_dyn_string_att_check;
-	fl_dyn_string_att_check = new char[attr_size+1];
-	gr_flattr1.read(fls_type, fl_dyn_string_att_check);
-	if(HDstrcmp(fl_dyn_string_att_check, ATTRSTR_DATA.c_str())!=0)
-	    TestErrPrintf("Line %d: Attribute data different: ATTRSTR_DATA=%s,flstring_att_check=%s\n",__LINE__, ATTRSTR_DATA.c_str(), fl_dyn_string_att_check);
-	delete []fl_dyn_string_att_check;
-
-	/* Test Attribute::read(...,H5std_string& strg) with FL string */
-
-	// Read and verify the attribute string as an std::string.
-	H5std_string read_flstr1;
-	gr_flattr1.read(fls_type, read_flstr1);
-	if (read_flstr1 != ATTRSTR_DATA)
-	    TestErrPrintf("Line %d: Attribute data different: ATTRSTR_DATA=%s,read_flstr1=%s\n",__LINE__, ATTRSTR_DATA.c_str(), read_flstr1.c_str());
-
-	// Read and verify the attribute string as a string of chars.
-	HDstrcpy(flstring_att_check, "");
-	gr_flattr2.read(fls_type, flstring_att_check);
-	if(HDstrcmp(flstring_att_check, ATTRSTR_DATA.c_str())!=0)
-	    TestErrPrintf("Line %d: Attribute data different: ATTRSTR_DATA=%s,flstring_att_check=%s\n",__LINE__, ATTRSTR_DATA.c_str(), flstring_att_check);
-
-	/* Test Attribute::read(...,H5std_string& strg) with FL string */
-
-	// Read and verify the attribute string as an std::string.
-	H5std_string read_flstr2;
-	gr_flattr2.read(fls_type, read_flstr2);
-	if (read_flstr2 != ATTRSTR_DATA)
-	    TestErrPrintf("Line %d: Attribute data different: ATTRSTR_DATA=%s,read_flstr2=%s\n",__LINE__, ATTRSTR_DATA.c_str(), read_flstr2.c_str());
-
-	//
-	// Variable-lenth string attributes
-	//
-	// Create a variable length string datatype to refer to.
-	StrType vls_type(0, H5T_VARIABLE);
-
-	// Create an attribute for the root group.
-	Attribute gr_vlattr = root.createAttribute(ATTR_VL_STR_NAME, vls_type, att_space);
-
-	// Write data to the attribute.
-	gr_vlattr.write(vls_type, ATTRSTR_DATA);
-
-	/* Test Attribute::read(...,void *buf) with Variable len string */
 	// Read and verify the attribute string as a string of chars.
 	char *string_att_check;
-	gr_vlattr.read(vls_type, &string_att_check);
+	gr_attr.read(type, &string_att_check);
 	if(HDstrcmp(string_att_check, ATTRSTR_DATA.c_str())!=0)
 	    TestErrPrintf("Line %d: Attribute data different: ATTRSTR_DATA=%s,string_att_check=%s\n",__LINE__, ATTRSTR_DATA.c_str(), string_att_check);
-	HDfree(string_att_check);
 
-	/* Test Attribute::read(...,H5std_string& strg) with VL string */
 	// Read and verify the attribute string as an std::string.
 	H5std_string read_str;
-	gr_vlattr.read(vls_type, read_str);
+	gr_attr.read(type, read_str);
 	if (read_str != ATTRSTR_DATA)
 	    TestErrPrintf("Line %d: Attribute data different: ATTRSTR_DATA=%s,read_str=%s\n",__LINE__, ATTRSTR_DATA.c_str(), read_str.c_str());
+
 	PASSED();
     } // end try block
 

@@ -45,7 +45,13 @@
 !
 ! Comment:		
 !----------------------------------------------------------------------
-          SUBROUTINE h5zunregister_f(filter, hdferr)
+          SUBROUTINE h5zunregister_f(filter, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5zunregister_f
+!DEC$endif
+!
             IMPLICIT NONE
             INTEGER, INTENT(IN)  :: filter
             INTEGER, INTENT(OUT) :: hdferr  ! Error code
@@ -56,9 +62,9 @@
             INTERFACE
               INTEGER FUNCTION h5zunregister_c (filter)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5ZUNREGISTER_C':: h5zunregister_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5ZUNREGISTER_C':: h5zunregister_c
+              !DEC$ ENDIF
               INTEGER, INTENT(IN) :: filter
               END FUNCTION h5zunregister_c
             END INTERFACE
@@ -86,7 +92,14 @@
 ! Modifications: 	
 !
 !----------------------------------------------------------------------
-          SUBROUTINE h5zfilter_avail_f(filter, status, hdferr)
+          SUBROUTINE h5zfilter_avail_f(filter, status, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5zfilter_avail_f
+!DEC$endif
+!
+
             IMPLICIT NONE
             INTEGER, INTENT(IN)  :: filter      ! Filter; may be one of the following:
                                                 ! H5Z_FILTER_DEFLATE_F                  
@@ -104,9 +117,9 @@
             INTERFACE
               INTEGER FUNCTION h5zfilter_avail_c(filter, flag) 
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5ZFILTER_AVAIL_C'::h5zfilter_avail_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5ZFILTER_AVAIL_C'::h5zfilter_avail_c
+              !DEC$ ENDIF
               INTEGER, INTENT(IN) :: filter
               INTEGER :: flag
               END FUNCTION h5zfilter_avail_c
@@ -143,7 +156,14 @@
 ! Modifications: 	
 !
 !----------------------------------------------------------------------
-          SUBROUTINE h5zget_filter_info_f(filter, config_flags, hdferr)
+          SUBROUTINE h5zget_filter_info_f(filter, config_flags, hdferr) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5zget_filter_info_f
+!DEC$endif
+!
+
             IMPLICIT NONE
             INTEGER, INTENT(IN)  :: filter      ! Filter; may be one of the following:
                                                 ! H5Z_FILTER_DEFLATE_F                  
@@ -161,9 +181,9 @@
             INTERFACE
               INTEGER FUNCTION h5zget_filter_info_c(filter, config_flags) 
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5ZGET_FILTER_INFO_C'::h5zget_filter_info_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5ZGET_FILTER_INFO_C'::h5zget_filter_info_c
+              !DEC$ ENDIF
               INTEGER, INTENT(IN) :: filter
               INTEGER, INTENT(OUT) :: config_flags
               END FUNCTION h5zget_filter_info_c

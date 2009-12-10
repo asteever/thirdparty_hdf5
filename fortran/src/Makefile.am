@@ -19,27 +19,23 @@
 #
 
 include $(top_srcdir)/config/commence.am
-include $(top_srcdir)/config/lt_vers.am
 
 # Include src directory in both Fortran and C flags (C compiler is used
 # for linking).
 INCLUDES=-I$(top_srcdir)/src
-AM_FCFLAGS+=-I$(top_srcdir)/src -I$(top_srcdir)/fortran/src
+AM_FCFLAGS=-I$(top_srcdir)/src -I$(top_srcdir)/fortran/src
 
 AM_FCLIBS=$(LIBHDF5)
 
 # This is our main target, the fortran library
 lib_LTLIBRARIES=libhdf5_fortran.la
 
-# Add libtool numbers to the HDF5 Fortran library (from config/lt_vers.am)
-libhdf5_fortran_la_LDFLAGS= -version-info $(LT_VERS_INTERFACE):$(LT_VERS_REVISION):$(LT_VERS_AGE) $(AM_LDFLAGS)
-
 # Some Fortran compilers can't build shared libraries, so sometimes we
 # want to build a shared C library and a static Fortran library.  If so,
 # pass the -static flag to the library linker.
 if FORTRAN_SHARED_CONDITIONAL
 else
-   AM_LDFLAGS+=-static
+   AM_LDFLAGS=-static
 endif
 
 # Include HDF5.f90 if parallel is disabled, HDF5mpiof*  if parallel is enabled
@@ -49,30 +45,18 @@ else
    PARALLEL_COND_SRC = HDF5.f90
 endif
 
-#   Condition for including/excluding the DBLE interfaces for when the 
-#   default REAL is of type DOUBLE PRECISION.
-#   We do not include the double precision interfaces if the defaut REAL is
-#   DOUBLE PRECISION since this would lead to a non-unique conflict with the
-#   generic interfaces declared as REAL.
-if FORTRAN_DEFAULT_REALisDBLE_F
-   F_DBLE = Exclude
-else
-   F_DBLE = Include
-endif
-
 # Source files for the library.
-libhdf5_fortran_la_SOURCES= H5f90global.f90          \
+libhdf5_fortran_la_SOURCES=H5fortran_flags.f90 H5f90global.f90          \
          H5fortran_types.f90 H5_ff.f90 H5Aff.f90 H5Dff.f90 H5Eff.f90    \
          H5Fff.f90 H5Gff.f90 H5Iff.f90 H5Lff.f90 H5Off.f90 H5Pff.f90 H5Rff.f90 H5Sff.f90    \
          H5Tff.f90 H5Zff.f90                                            \
-	 H5_DBLE_Interface$(F_DBLE).f90 \
          H5f90kit.c H5_f.c H5Af.c H5Df.c H5Ef.c H5Ff.c H5Gf.c           \
-         H5If.c H5Lf.c H5Of.c H5Pf.c H5Rf.c H5Sf.c H5Tf.c H5Zf.c        \
+         H5If.c H5Lf.c H5Of.c H5Pf.c H5Rf.c H5Sf.c H5Tf.c H5Zf.c               \
          $(PARALLEL_COND_SRC)
 
-# h5fc is generated during configure.
-# Remove it only when distclean.
-DISTCLEANFILES=h5fc
+# h5fc and libhdf5_fortran.settings are generated during configure.
+# Remove them only when distclean.
+DISTCLEANFILES=h5fc libhdf5_fortran.settings
 
 # H5fortran_types.f90 and H5f90i.h are automatically generaed by
 # H5match_types, and must be cleaned explicitly.  H5fort_type_defines.h
@@ -93,20 +77,24 @@ clean-local:
 
 install-data-local:
 	@if test -n "$(F9XMODEXT)" && test "X$(F9XMODEXT)" != "Xo"; then \
-	  $(CP) $(top_builddir)/$(subdir)/*.$(F9XMODEXT) $(DESTDIR)$(includedir)/. ; \
+	  $(CP) $(top_builddir)/$(subdir)/*.$(F9XMODEXT) $(includedir)/. ; \
 	fi
 
 uninstall-local:
 	@if test -n "$(F9XMODEXT)" -a "X$(F9XMODEXT)" != "Xo"; then      \
 	  if test -f "$(includedir)/hdf5.$(F9XMODEXT)" -o -f "$(includedir)/HDF5.$(F9XMODEXT)"; then \
-	    set -x; $(RM) $(DESTDIR)$(includedir)/*.$(F9XMODEXT);                 \
+	    set -x; $(RM) $(includedir)/*.$(F9XMODEXT);                 \
 	  fi;                                                           \
 	fi;								\
-	$(RM) $(DESTDIR)$(bindir)/$(H5FC_NAME)
+	$(RM) $(bindir)/$(H5FC_NAME)
 
 # Also install and uninstall (uninstall-local above) h5fc script
 install-exec-local:
-	@$(INSTALL) h5fc $(DESTDIR)$(bindir)/$(H5FC_NAME)
+	@$(INSTALL) h5fc $(bindir)/$(H5FC_NAME)
+
+# Install libhdf5_fortran.settings in lib directory
+settingsdir=$(libdir)
+settings_DATA=libhdf5_fortran.settings
 
 # Custom rule for installing h5fc, since it will be named h5pfc if hdf5
 # is configured for parallel mode
@@ -152,20 +140,13 @@ H5match_types.$(OBJEXT): H5fort_type_defines.h
 # files.
 H5fortran_detect_SOURCES = H5fortran_detect.f90
 
-# H5test_kind.f90 generates H5Fortran_detect.f90 depending on if 
-# intrinsic function SIZEOF is available.
-
+# H5test_kind.f90 generates H5fortran_detect.f90.
 H5fortran_detect.f90: H5test_kind$(EXEEXT)
 	$(RUNSERIAL) ./H5test_kind$(EXEEXT) > H5fortran_detect.f90
 
 # H5test_kind.f90 is included in the distribution, and Automake knows
 # how to compile a fortran program given its sources.
-
-if FORTRAN_HAVE_SIZEOF
-  H5test_kind_SOURCES = $(srcdir)/H5test_kind_SIZEOF.f90
-else
-  H5test_kind_SOURCES = $(srcdir)/H5test_kind.f90
-endif
+H5test_kind_SOURCES = $(srcdir)/H5test_kind.f90
 
 # Mark this directory as part of the Fortran API
 FORTRAN_API=yes
@@ -174,11 +155,11 @@ FORTRAN_API=yes
 # determining this automagically (like we do with the C files). So, when
 # doing a parallel make, some modules could be made way before the
 # modules they depend upon are actually made. *sigh*
-H5f90global.lo:      $(srcdir)/H5f90global.f90 H5fortran_types.lo
+H5fortran_flags.lo:  $(srcdir)/H5fortran_flags.f90
+H5f90global.lo:      $(srcdir)/H5f90global.f90 H5fortran_flags.lo H5fortran_types.lo
 H5fortran_types.lo:  H5fortran_types.f90
 H5fortran_detect.lo: H5fortran_detect.f90
 H5test_kind.lo:      $(srcdir)/H5test_kind.f90
-H5test_kind_SIZEOF.lo:      $(srcdir)/H5test_kind_SIZEOF.f90
 H5_ff.lo:            $(srcdir)/H5_ff.f90 H5f90global.lo
 H5Aff.lo:            $(srcdir)/H5Aff.f90 H5f90global.lo
 H5Dff.lo:            $(srcdir)/H5Dff.f90 H5f90global.lo
@@ -193,15 +174,12 @@ H5Rff.lo:            $(srcdir)/H5Rff.f90 H5f90global.lo
 H5Sff.lo:            $(srcdir)/H5Sff.f90 H5f90global.lo
 H5Tff.lo:            $(srcdir)/H5Tff.f90 H5f90global.lo
 H5Zff.lo:            $(srcdir)/H5Zff.f90 H5f90global.lo
-H5_DBLE_Interface$(F_DBLE).lo:  $(srcdir)/H5_DBLE_Interface$(F_DBLE).f90 H5Aff.lo H5Dff.lo H5Pff.lo
-
 HDF5.lo:             $(srcdir)/HDF5.f90 H5f90global.lo H5Aff.lo      \
                      H5Dff.lo H5Eff.lo H5Fff.lo H5Gff.lo H5Iff.lo H5Lff.lo \
-                     H5Pff.lo H5Rff.lo H5Sff.lo H5Tff.lo H5Zff.lo \
-                     H5_DBLE_Interface$(F_DBLE).lo
+                     H5Pff.lo H5Rff.lo H5Sff.lo H5Tff.lo H5Zff.lo
 H5FDmpioff.lo:       $(srcdir)/H5FDmpioff.f90 H5f90global.lo
 HDF5mpio.lo:         $(srcdir)/H5FDmpioff.f90 H5f90global.lo H5Aff.lo  \
                      H5Dff.lo H5Eff.lo H5Fff.lo H5Gff.lo H5Iff.lo H5Lff.lo  \
-                     H5Pff.lo H5Rff.lo H5Sff.lo H5Tff.lo H5Zff.lo H5_DBLE_Interface$(F_DBLE).lo H5FDmpioff.lo
+                     H5Pff.lo H5Rff.lo H5Sff.lo H5Tff.lo H5Zff.lo H5FDmpioff.lo
 
 include $(top_srcdir)/config/conclude.am

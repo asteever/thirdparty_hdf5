@@ -190,9 +190,8 @@ static herr_t H5FD_log_read(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, haddr
 			     size_t size, void *buf);
 static herr_t H5FD_log_write(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, haddr_t addr,
 			      size_t size, const void *buf);
-static herr_t H5FD_log_truncate(H5FD_t *_file, hid_t dxpl_id, hbool_t closing);
+static herr_t H5FD_log_flush(H5FD_t *_file, hid_t dxpl_id, unsigned closing);
 
-#ifdef OLD_WAY
 /*
  * The free list map which causes each request type to use no free lists
  */
@@ -205,7 +204,6 @@ static herr_t H5FD_log_truncate(H5FD_t *_file, hid_t dxpl_id, hbool_t closing);
     H5FD_MEM_NOLIST,			/*lheap*/			      \
     H5FD_MEM_NOLIST			/*ohdr*/			      \
 }
-#endif /* OLD_WAY */
 
 static const H5FD_class_t H5FD_log_g = {
     "log",					/*name			*/
@@ -225,7 +223,6 @@ static const H5FD_class_t H5FD_log_g = {
     H5FD_log_close,				/*close			*/
     H5FD_log_cmp,				/*cmp			*/
     H5FD_log_query,				/*query			*/
-    NULL,					/*get_type_map		*/
     H5FD_log_alloc,				/*alloc			*/
     NULL,					/*free			*/
     H5FD_log_get_eoa,				/*get_eoa		*/
@@ -234,11 +231,14 @@ static const H5FD_class_t H5FD_log_g = {
     H5FD_log_get_handle,                        /*get_handle            */
     H5FD_log_read,				/*read			*/
     H5FD_log_write,				/*write			*/
-    NULL,					/*flush			*/
-    H5FD_log_truncate,				/*truncate		*/
+    H5FD_log_flush,				/*flush			*/
     NULL,                                       /*lock                  */
     NULL,                                       /*unlock                */
+#ifdef OLD_WAY
+    H5FD_FLMAP_NOLIST 				/*fl_map		*/
+#else /* OLD_WAY */
     H5FD_FLMAP_SINGLE 				/*fl_map		*/
+#endif /* OLD_WAY */
 };
 
 
@@ -289,7 +289,7 @@ H5FD_log_init(void)
     FUNC_ENTER_NOAPI(H5FD_log_init, FAIL)
 
     if (H5I_VFL!=H5Iget_type(H5FD_LOG_g))
-        H5FD_LOG_g = H5FD_register(&H5FD_log_g,sizeof(H5FD_class_t),FALSE);
+        H5FD_LOG_g = H5FD_register(&H5FD_log_g,sizeof(H5FD_class_t));
 
     /* Set return value */
     ret_value=H5FD_LOG_g;
@@ -358,14 +358,14 @@ H5Pset_fapl_log(hid_t fapl_id, const char *logfile, unsigned flags, size_t buf_s
     if(NULL == (plist = H5P_object_verify(fapl_id,H5P_FILE_ACCESS)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file access property list")
 
-    fa.logfile = (char *)logfile;
-    fa.flags = flags;
-    fa.buf_size = buf_size;
-    ret_value = H5P_set_driver(plist, H5FD_LOG, &fa);
+    fa.logfile=(char*)logfile;
+    fa.flags=flags;
+    fa.buf_size=buf_size;
+    ret_value= H5P_set_driver(plist, H5FD_LOG, &fa);
 
 done:
     FUNC_LEAVE_API(ret_value)
-} /* end H5Pset_fapl_log() */
+}
 
 
 /*-------------------------------------------------------------------------
@@ -423,12 +423,12 @@ static void *
 H5FD_log_fapl_copy(const void *_old_fa)
 {
     const H5FD_log_fapl_t *old_fa = (const H5FD_log_fapl_t*)_old_fa;
-    H5FD_log_fapl_t *new_fa = (H5FD_log_fapl_t *)H5MM_malloc(sizeof(H5FD_log_fapl_t));
+    H5FD_log_fapl_t *new_fa = H5MM_malloc(sizeof(H5FD_log_fapl_t));
     void *ret_value;    /* Return value */
 
     FUNC_ENTER_NOAPI(H5FD_log_fapl_copy, NULL)
 
-    HDassert(new_fa);
+    assert(new_fa);
 
     /* Copy the general information */
     HDmemcpy(new_fa, old_fa, sizeof(H5FD_log_fapl_t));
@@ -537,17 +537,16 @@ H5FD_log_open(const char *name, unsigned flags, hid_t fapl_id,
         HGOTO_ERROR(H5E_FILE, H5E_BADFILE, NULL, "unable to fstat file")
 
     /* Create the new file struct */
-    if(NULL == (file = (H5FD_log_t *)H5MM_calloc(sizeof(H5FD_log_t))))
+    if (NULL==(file=H5MM_calloc(sizeof(H5FD_log_t))))
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "unable to allocate file struct")
 
     /* Get the driver specific information */
     if(NULL == (plist = H5P_object_verify(fapl_id,H5P_FILE_ACCESS)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a file access property list")
-    fa = (H5FD_log_fapl_t *)H5P_get_driver_info(plist);
-    HDassert(fa);
+    fa = H5P_get_driver_info(plist);
 
     file->fd = fd;
-    H5_ASSIGN_OVERFLOW(file->eof, sb.st_size, h5_stat_size_t, haddr_t);
+    H5_ASSIGN_OVERFLOW(file->eof,sb.st_size,h5_stat_size_t,haddr_t);
     file->pos = HADDR_UNDEF;
     file->op = OP_UNKNOWN;
 #ifdef _WIN32
@@ -564,32 +563,32 @@ H5FD_log_open(const char *name, unsigned flags, hid_t fapl_id,
     file->fa.flags=fa->flags;
 
     /* Check if we are doing any logging at all */
-    if(file->fa.flags != 0) {
-        file->iosize = fa->buf_size;
-        if(file->fa.flags & H5FD_LOG_FILE_READ) {
-            file->nread = (unsigned char *)H5MM_calloc(file->iosize);
-            HDassert(file->nread);
+    if(file->fa.flags!=0) {
+        file->iosize=fa->buf_size;
+        if(file->fa.flags&H5FD_LOG_FILE_READ) {
+            file->nread=H5MM_calloc(file->iosize);
+            assert(file->nread);
         } /* end if */
-        if(file->fa.flags & H5FD_LOG_FILE_WRITE) {
-            file->nwrite = (unsigned char *)H5MM_calloc(file->iosize);
-            HDassert(file->nwrite);
+        if(file->fa.flags&H5FD_LOG_FILE_WRITE) {
+            file->nwrite=H5MM_calloc(file->iosize);
+            assert(file->nwrite);
         } /* end if */
-        if(file->fa.flags & H5FD_LOG_FLAVOR) {
-            file->flavor = (unsigned char *)H5MM_calloc(file->iosize);
-            HDassert(file->flavor);
+        if(file->fa.flags&H5FD_LOG_FLAVOR) {
+            file->flavor=H5MM_calloc(file->iosize);
+            assert(file->flavor);
         } /* end if */
         if(fa->logfile)
-            file->logfp = HDfopen(fa->logfile, "w");
+            file->logfp=HDfopen(fa->logfile,"w");
         else
-            file->logfp = stderr;
+            file->logfp=stderr;
     } /* end if */
 
     /* Set return value */
-    ret_value = (H5FD_t*)file;
+    ret_value=(H5FD_t*)file;
 
 done:
-    if(NULL == ret_value) {
-        if(fd >= 0)
+    if(ret_value==NULL) {
+        if(fd>=0)
             HDclose(fd);
     } /* end if */
 
@@ -707,13 +706,13 @@ H5FD_log_close(H5FD_t *_file)
         } /* end if */
 
         /* Free the logging information */
-        if(file->fa.flags & H5FD_LOG_FILE_WRITE)
-            file->nwrite = (unsigned char *)H5MM_xfree(file->nwrite);
-        if(file->fa.flags & H5FD_LOG_FILE_READ)
-            file->nread = (unsigned char *)H5MM_xfree(file->nread);
-        if(file->fa.flags & H5FD_LOG_FLAVOR)
-            file->flavor = (unsigned char *)H5MM_xfree(file->flavor);
-        if(file->logfp != stderr)
+        if(file->fa.flags&H5FD_LOG_FILE_WRITE)
+            file->nwrite=H5MM_xfree(file->nwrite);
+        if(file->fa.flags&H5FD_LOG_FILE_READ)
+            file->nread=H5MM_xfree(file->nread);
+        if(file->fa.flags&H5FD_LOG_FLAVOR)
+            file->flavor=H5MM_xfree(file->flavor);
+        if(file->logfp!=stderr)
             fclose(file->logfp);
     } /* end if */
 
@@ -801,20 +800,22 @@ done:
 static herr_t
 H5FD_log_query(const H5FD_t UNUSED * _f, unsigned long *flags /* out */)
 {
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5FD_log_query)
+    herr_t ret_value=SUCCEED;
+
+    FUNC_ENTER_NOAPI(H5FD_log_query, FAIL)
 
     /* Set the VFL feature flags that this driver supports */
     if(flags) {
         *flags = 0;
-        *flags |= H5FD_FEAT_AGGREGATE_METADATA; /* OK to aggregate metadata allocations */
-        *flags |= H5FD_FEAT_ACCUMULATE_METADATA; /* OK to accumulate metadata for faster writes */
-        *flags |= H5FD_FEAT_DATA_SIEVE;       /* OK to perform data sieving for faster raw data reads & writes */
-        *flags |= H5FD_FEAT_AGGREGATE_SMALLDATA; /* OK to aggregate "small" raw data allocations */
-        *flags |= H5FD_FEAT_POSIX_COMPAT_HANDLE; /* VFD handle is POSIX I/O call compatible */
-    } /* end if */
+        *flags|=H5FD_FEAT_AGGREGATE_METADATA; /* OK to aggregate metadata allocations */
+        *flags|=H5FD_FEAT_ACCUMULATE_METADATA; /* OK to accumulate metadata for faster writes */
+        *flags|=H5FD_FEAT_DATA_SIEVE;       /* OK to perform data sieving for faster raw data reads & writes */
+        *flags|=H5FD_FEAT_AGGREGATE_SMALLDATA; /* OK to aggregate "small" raw data allocations */
+    }
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5FD_log_query() */
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+}
 
 
 /*-------------------------------------------------------------------------
@@ -1302,27 +1303,30 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5FD_log_truncate
+ * Function:	H5FD_log_flush
  *
  * Purpose:	Makes sure that the true file size is the same (or larger)
  *		than the end-of-address.
  *
  * Return:	Success:	Non-negative
+ *
  *		Failure:	Negative
  *
  * Programmer:	Robb Matzke
  *              Wednesday, August  4, 1999
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 /* ARGSUSED */
 static herr_t
-H5FD_log_truncate(H5FD_t *_file, hid_t UNUSED dxpl_id, unsigned UNUSED closing)
+H5FD_log_flush(H5FD_t *_file, hid_t UNUSED dxpl_id, unsigned UNUSED closing)
 {
     H5FD_log_t	*file = (H5FD_log_t*)_file;
     herr_t      ret_value=SUCCEED;       /* Return value */
 
-    FUNC_ENTER_NOAPI(H5FD_log_truncate, FAIL)
+    FUNC_ENTER_NOAPI(H5FD_log_flush, FAIL)
 
     if(file->eoa>file->eof) {
         if(-1 == file_seek(file->fd, (file_offset_t)(file->eoa - 1), SEEK_SET))
@@ -1336,5 +1340,4 @@ H5FD_log_truncate(H5FD_t *_file, hid_t UNUSED dxpl_id, unsigned UNUSED closing)
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5FD_log_truncate() */
-
+}

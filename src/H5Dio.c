@@ -66,7 +66,8 @@ static herr_t H5D_typeinfo_init(const H5D_t *dset, const H5D_dxpl_cache_t *dxpl_
     H5D_type_info_t *type_info);
 #ifdef H5_HAVE_PARALLEL
 static herr_t H5D_ioinfo_adjust(H5D_io_info_t *io_info, const H5D_t *dset,
-    hid_t dxpl_id, const H5S_t *file_space, const H5S_t *mem_space,
+    const H5D_dxpl_cache_t *dxpl_cache, hid_t dxpl_id,
+    const H5S_t *file_space, const H5S_t *mem_space,
     const H5D_type_info_t *type_info, const H5D_chunk_map_t *fm);
 static herr_t H5D_ioinfo_term(H5D_io_info_t *io_info);
 #endif /* H5_HAVE_PARALLEL */
@@ -159,13 +160,13 @@ H5Dread(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
     else
         if(TRUE != H5P_isa_class(plist_id, H5P_DATASET_XFER))
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not xfer parms")
-    if(!buf && (NULL == file_space || H5S_GET_SELECT_NPOINTS(file_space) != 0))
+    if(!buf && H5S_GET_SELECT_NPOINTS(file_space) != 0)
 	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no output buffer")
 
     /* If the buffer is nil, and 0 element is selected, make a fake buffer.
-     * This is for some MPI package like ChaMPIon on NCSA's tungsten which
-     * doesn't support this feature.
-     */
+     * This is for some MPI package like ChaMPIon on NCSA's tungsten which 
+     * doesn't support this feature. 
+     */ 
     if(!buf)
         buf = &fake_char;
 
@@ -251,13 +252,13 @@ H5Dwrite(hid_t dset_id, hid_t mem_type_id, hid_t mem_space_id,
     else
         if(TRUE != H5P_isa_class(plist_id, H5P_DATASET_XFER))
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not xfer parms")
-    if(!buf && (NULL == file_space || H5S_GET_SELECT_NPOINTS(file_space) != 0))
+    if(!buf && H5S_GET_SELECT_NPOINTS(file_space) != 0)
 	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no output buffer")
-
+    
     /* If the buffer is nil, and 0 element is selected, make a fake buffer.
-     * This is for some MPI package like ChaMPIon on NCSA's tungsten which
-     * doesn't support this feature.
-     */
+     * This is for some MPI package like ChaMPIon on NCSA's tungsten which 
+     * doesn't support this feature. 
+     */ 
     if(!buf)
         buf = &fake_char;
 
@@ -312,7 +313,7 @@ H5D_read(H5D_t *dataset, hid_t mem_type_id, const H5S_t *mem_space,
     if(!mem_space)
         mem_space = file_space;
     if((snelmts = H5S_GET_SELECT_NPOINTS(mem_space)) < 0)
-	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "dst dataspace has invalid selection")
+	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "src dataspace has invalid selection")
     H5_ASSIGN_OVERFLOW(nelmts,snelmts,hssize_t,hsize_t);
 
     /* Fill the DXPL cache values for later use */
@@ -350,7 +351,8 @@ H5D_read(H5D_t *dataset, hid_t mem_type_id, const H5S_t *mem_space,
      * has been overwritten.  So just proceed in reading.
      */
     if(nelmts > 0 && dataset->shared->dcpl_cache.efl.nused == 0 &&
-            !(*dataset->shared->layout.ops->is_space_alloc)(&dataset->shared->layout.storage)) {
+            ((dataset->shared->layout.type == H5D_CONTIGUOUS && !H5F_addr_defined(dataset->shared->layout.u.contig.addr))
+                || (dataset->shared->layout.type == H5D_CHUNKED && !H5F_addr_defined(dataset->shared->layout.u.chunk.addr)))) {
         H5D_fill_value_t fill_status;   /* Whether/How the fill value is defined */
 
         /* Retrieve dataset's fill-value properties */
@@ -384,7 +386,8 @@ H5D_read(H5D_t *dataset, hid_t mem_type_id, const H5S_t *mem_space,
 
     /* Sanity check that space is allocated, if there are elements */
     if(nelmts > 0)
-        HDassert((*dataset->shared->layout.ops->is_space_alloc)(&dataset->shared->layout.storage)
+        HDassert(((dataset->shared->layout.type == H5D_CONTIGUOUS && H5F_addr_defined(dataset->shared->layout.u.contig.addr))
+                || (dataset->shared->layout.type == H5D_CHUNKED && H5F_addr_defined(dataset->shared->layout.u.chunk.addr)))
                 || dataset->shared->dcpl_cache.efl.nused > 0
                 || dataset->shared->layout.type == H5D_COMPACT);
 
@@ -395,7 +398,7 @@ H5D_read(H5D_t *dataset, hid_t mem_type_id, const H5S_t *mem_space,
 
 #ifdef H5_HAVE_PARALLEL
     /* Adjust I/O info for any parallel I/O */
-    if(H5D_ioinfo_adjust(&io_info, dataset, dxpl_id, file_space, mem_space, &type_info, &fm) < 0)
+    if(H5D_ioinfo_adjust(&io_info, dataset, dxpl_cache, dxpl_id, file_space, mem_space, &type_info, &fm) < 0)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to adjust I/O info for parallel I/O")
 #endif /*H5_HAVE_PARALLEL*/
 
@@ -485,7 +488,7 @@ H5D_write(H5D_t *dataset, hid_t mem_type_id, const H5S_t *mem_space,
         /* If MPI based VFD is used, no VL datatype support yet. */
         /* This is because they use the global heap in the file and we don't */
         /* support parallel access of that yet */
-        if(H5T_detect_class(type_info.mem_type, H5T_VLEN, FALSE) > 0)
+        if(H5T_detect_class(type_info.mem_type, H5T_VLEN) > 0)
             HGOTO_ERROR(H5E_DATASET, H5E_UNSUPPORTED, FAIL, "Parallel IO does not support writing VL datatypes yet")
 
         /* If MPI based VFD is used, no VL datatype support yet. */
@@ -534,7 +537,8 @@ H5D_write(H5D_t *dataset, hid_t mem_type_id, const H5S_t *mem_space,
 
     /* Allocate data space and initialize it if it hasn't been. */
     if(nelmts > 0 && dataset->shared->dcpl_cache.efl.nused == 0 &&
-            !(*dataset->shared->layout.ops->is_space_alloc)(&dataset->shared->layout.storage)) {
+            ((dataset->shared->layout.type == H5D_CONTIGUOUS && !H5F_addr_defined(dataset->shared->layout.u.contig.addr))
+                || (dataset->shared->layout.type == H5D_CHUNKED && !H5F_addr_defined(dataset->shared->layout.u.chunk.addr)))) {
         hssize_t file_nelmts;   /* Number of elements in file dataset's dataspace */
         hbool_t full_overwrite; /* Whether we are over-writing all the elements */
 
@@ -543,10 +547,10 @@ H5D_write(H5D_t *dataset, hid_t mem_type_id, const H5S_t *mem_space,
             HGOTO_ERROR(H5E_DATASET, H5E_BADVALUE, FAIL, "can't retrieve number of elements in file dataset")
 
         /* Always allow fill values to be written if the dataset has a VL datatype */
-        if(H5T_detect_class(dataset->shared->type, H5T_VLEN, FALSE))
+        if(H5T_detect_class(dataset->shared->type, H5T_VLEN))
             full_overwrite = FALSE;
         else
-            full_overwrite = (hbool_t)((hsize_t)file_nelmts == nelmts ? TRUE : FALSE);
+            full_overwrite = (hsize_t)file_nelmts == nelmts ? TRUE : FALSE;
 
  	/* Allocate storage */
         if(H5D_alloc_storage(dataset, dxpl_id, H5D_ALLOC_WRITE, full_overwrite) < 0)
@@ -569,7 +573,7 @@ H5D_write(H5D_t *dataset, hid_t mem_type_id, const H5S_t *mem_space,
 
 #ifdef H5_HAVE_PARALLEL
     /* Adjust I/O info for any parallel I/O */
-    if(H5D_ioinfo_adjust(&io_info, dataset, dxpl_id, file_space, mem_space, &type_info, &fm) < 0)
+    if(H5D_ioinfo_adjust(&io_info, dataset, dxpl_cache, dxpl_id, file_space, mem_space, &type_info, &fm) < 0)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to adjust I/O info for parallel I/O")
 #endif /*H5_HAVE_PARALLEL*/
 
@@ -694,7 +698,7 @@ H5D_typeinfo_init(const H5D_t *dset, const H5D_dxpl_cache_t *dxpl_cache,
 {
     const H5T_t	*src_type;              /* Source datatype */
     const H5T_t	*dst_type;              /* Destination datatype */
-    herr_t ret_value = SUCCEED;	        /* Return value	*/
+    herr_t	ret_value = SUCCEED;	/* Return value	*/
 
     FUNC_ENTER_NOAPI_NOINIT(H5D_typeinfo_init)
 
@@ -703,7 +707,7 @@ H5D_typeinfo_init(const H5D_t *dset, const H5D_dxpl_cache_t *dxpl_cache,
     HDassert(dset);
 
     /* Initialize type info safely */
-    HDmemset(type_info, 0, sizeof(*type_info));
+    HDmemset(type_info, 0, sizeof(H5D_type_info_t));
 
     /* Get the memory & dataset datatypes */
     if(NULL == (type_info->mem_type = (const H5T_t *)H5I_object_verify(mem_type_id, H5I_DATATYPE)))
@@ -741,7 +745,7 @@ H5D_typeinfo_init(const H5D_t *dset, const H5D_dxpl_cache_t *dxpl_cache,
     type_info->is_conv_noop = H5T_path_noop(type_info->tpath);
     type_info->is_xform_noop = H5Z_xform_noop(dxpl_cache->data_xform_prop);
     if(type_info->is_xform_noop && type_info->is_conv_noop) {
-        type_info->cmpd_subset = NULL;
+        type_info->cmpd_subset = H5T_SUBSET_FALSE;
         type_info->need_bkg = H5T_BKG_NO;
     } /* end if */
     else {
@@ -751,7 +755,7 @@ H5D_typeinfo_init(const H5D_t *dset, const H5D_dxpl_cache_t *dxpl_cache,
         type_info->cmpd_subset = H5T_path_compound_subset(type_info->tpath);
 
         /* Check if we need a background buffer */
-        if(do_write && H5T_detect_class(dset->shared->type, H5T_VLEN, FALSE))
+        if(do_write && H5T_detect_class(dset->shared->type, H5T_VLEN))
             type_info->need_bkg = H5T_BKG_YES;
         else {
             H5T_bkg_t path_bkg;     /* Type conversion's background info */
@@ -776,8 +780,8 @@ H5D_typeinfo_init(const H5D_t *dset, const H5D_dxpl_cache_t *dxpl_cache,
             hbool_t default_buffer_info;    /* Whether the buffer information are the defaults */
 
             /* Detect if we have all default settings for buffers */
-            default_buffer_info = (hbool_t)((H5D_TEMP_BUF_SIZE == dxpl_cache->max_temp_buf)
-                    && (NULL == dxpl_cache->tconv_buf) && (NULL == dxpl_cache->bkgr_buf));
+            default_buffer_info = (H5D_TEMP_BUF_SIZE == dxpl_cache->max_temp_buf)
+                    && (NULL == dxpl_cache->tconv_buf) && (NULL == dxpl_cache->bkgr_buf);
 
             /* Check if we are using the default buffer info */
             if(default_buffer_info)
@@ -844,7 +848,8 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5D_ioinfo_adjust(H5D_io_info_t *io_info, const H5D_t *dset, hid_t dxpl_id,
+H5D_ioinfo_adjust(H5D_io_info_t *io_info, const H5D_t *dset,
+    const H5D_dxpl_cache_t *dxpl_cache, hid_t dxpl_id,
     const H5S_t *file_space, const H5S_t *mem_space,
     const H5D_type_info_t *type_info, const H5D_chunk_map_t *fm)
 {

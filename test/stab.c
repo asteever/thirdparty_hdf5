@@ -59,7 +59,6 @@ const char *FILENAME[] = {
  * for version 1.6.  To get this data file, simply compile gen_old_group.c with
  * the HDF5 library in that branch and run it. */
 #define FILE_OLD_GROUPS "group_old.h5"
-#define FILE_OLD_GROUPS_COPY "group_old.h5.copy"
 
 /* Definitions for 'no_compact' test */
 #define NO_COMPACT_TOP_GROUP     "top"
@@ -75,12 +74,6 @@ const char *FILENAME[] = {
 
 /* Definitions for 'old_api' test */
 #define OLD_API_GROUP           "/old_api"
-
-/* Definitions for 'corrupt_stab_msg' test */
-#define CORRUPT_STAB_FILE           "corrupt_stab_msg.h5"
-#define CORRUPT_STAB_TMP_FILE       "corrupt_stab_msg_tmp.h5"
-#define CORRUPT_STAB_COPY_BUF_SIZE  4096
-#define CORRUPT_STAB_DSET           "DS1"
 
 
 /*-------------------------------------------------------------------------
@@ -349,7 +342,7 @@ lifecycle(hid_t fapl2)
     if(H5Fclose(fid) < 0) TEST_ERROR
 
     /* Get size of file as empty */
-    if((empty_size = h5_get_file_size(filename, fapl2)) < 0) TEST_ERROR
+    if((empty_size = h5_get_file_size(filename)) < 0) TEST_ERROR
 
     /* Re-open file */
     if((fid = H5Fopen(filename, H5F_ACC_RDWR, fapl2)) < 0) TEST_ERROR
@@ -498,7 +491,7 @@ lifecycle(hid_t fapl2)
     if(H5Fclose(fid) < 0) TEST_ERROR
 
     /* Get size of file as empty */
-    if((file_size = h5_get_file_size(filename, fapl2)) < 0) TEST_ERROR
+    if((file_size = h5_get_file_size(filename)) < 0) TEST_ERROR
 
     /* Verify that file is correct size */
     if(file_size != empty_size) TEST_ERROR
@@ -554,7 +547,7 @@ long_compact(hid_t fapl2)
     if(H5Fclose(fid) < 0) TEST_ERROR
 
     /* Get size of file as empty */
-    if((empty_size = h5_get_file_size(filename, fapl2)) < 0) TEST_ERROR
+    if((empty_size = h5_get_file_size(filename)) < 0) TEST_ERROR
 
     /* Construct very long object name template */
     if((objname = (char *)HDmalloc((size_t)(LONG_COMPACT_LENGTH + 1))) == NULL) TEST_ERROR
@@ -631,7 +624,7 @@ long_compact(hid_t fapl2)
     if(H5Fclose(fid) < 0) TEST_ERROR
 
     /* Get size of file as empty */
-    if((file_size = h5_get_file_size(filename, fapl2)) < 0) TEST_ERROR
+    if((file_size = h5_get_file_size(filename)) < 0) TEST_ERROR
 
     /* Verify that file is correct size */
     if(file_size != empty_size) TEST_ERROR
@@ -664,24 +657,47 @@ error:
  *-------------------------------------------------------------------------
  */
 static int
-read_old(void)
+read_old(hid_t fapl2)
 {
+    int	fd_old = (-1), fd_new = (-1);   /* File descriptors for copying data */
     hid_t fid = (-1);                   /* File ID */
     hid_t gid = (-1);                   /* Group ID */
     hid_t gid2 = (-1);                  /* Group ID */
+    char  buf[READ_OLD_BUFSIZE];        /* Buffer for copying data */
+    ssize_t nread;                      /* Number of bytes read in */
     char  objname[NAME_BUF_SIZE];       /* Object name */
     unsigned    u;                      /* Local index variable */
+    char  *srcdir = HDgetenv("srcdir"); /* where the src code is located */
+    char  filename[512] = "";           /* old test file name */
+    char  filename2[NAME_BUF_SIZE];     /* copy of old test file */
 
     TESTING("reading old groups");
 
-    /* Make a copy of the data file from svn. */
-    if(h5_make_local_copy(FILE_OLD_GROUPS, FILE_OLD_GROUPS_COPY) < 0) TEST_ERROR
+    /* Generate correct name for test file by prepending the source path */
+    if(srcdir && ((HDstrlen(srcdir) + HDstrlen(FILE_OLD_GROUPS) + 1) < sizeof(filename))) {
+        HDstrcpy(filename, srcdir);
+        HDstrcat(filename, "/");
+    }
+    HDstrcat(filename, FILE_OLD_GROUPS);
+
+    /* Create filename */
+    h5_fixname(FILENAME[0], fapl2, filename2, sizeof(filename2));
+
+    /* Copy old file into temporary file */
+    if((fd_old = HDopen(filename, O_RDONLY, 0666)) < 0) TEST_ERROR
+    if((fd_new = HDopen(filename2, O_RDWR|O_CREAT|O_TRUNC, 0666)) < 0) TEST_ERROR
+
+    /* Copy data */
+    while((nread = HDread(fd_old, buf, (size_t)READ_OLD_BUFSIZE)) > 0)
+        HDwrite(fd_new, buf, (size_t)nread);
+
+    /* Close files */
+    if(HDclose(fd_old) < 0) TEST_ERROR
+    if(HDclose(fd_new) < 0) TEST_ERROR
+
 
     /* Open copied file */
-    if((fid = H5Fopen(FILE_OLD_GROUPS_COPY, H5F_ACC_RDWR, H5P_DEFAULT)) < 0) TEST_ERROR
-
-    /* Open copied file */
-    if((fid = H5Fopen(FILE_OLD_GROUPS_COPY, H5F_ACC_RDWR, H5P_DEFAULT)) < 0) TEST_ERROR
+    if((fid = H5Fopen(filename2, H5F_ACC_RDWR, fapl2)) < 0) TEST_ERROR
 
     /* Attempt to open "old" group */
     if((gid = H5Gopen2(fid, "old", H5P_DEFAULT)) < 0) TEST_ERROR
@@ -778,7 +794,7 @@ no_compact(hid_t fapl2)
     if(H5Fclose(fid) < 0) TEST_ERROR
 
     /* Get size of file as empty */
-    if((empty_size = h5_get_file_size(filename, fapl2)) < 0) TEST_ERROR
+    if((empty_size = h5_get_file_size(filename)) < 0) TEST_ERROR
 
     /* Re-open file */
     if((fid = H5Fopen(filename, H5F_ACC_RDWR, fapl2)) < 0) TEST_ERROR
@@ -835,10 +851,11 @@ no_compact(hid_t fapl2)
     if(H5Fclose(fid) < 0) TEST_ERROR
 
     /* Get size of file as empty */
-    if((file_size = h5_get_file_size(filename, fapl2)) < 0) TEST_ERROR
+    if((file_size = h5_get_file_size(filename)) < 0) TEST_ERROR
 
     /* Verify that file is correct size */
     if(file_size != empty_size) TEST_ERROR
+
 
     PASSED();
     return 0;
@@ -989,7 +1006,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static int
-old_api(hid_t fapl)
+old_api(hid_t fapl, const char *driver)
 {
 #ifndef H5_NO_DEPRECATED_SYMBOLS
     hid_t	fid = (-1);             /* File ID */
@@ -1017,8 +1034,11 @@ old_api(hid_t fapl)
     /* Close file */
     if(H5Fclose(fid) < 0) FAIL_STACK_ERROR
 
-    /* Get the size of the file with a "small" heap for group */
-    if((small_file_size = h5_get_file_size(filename, fapl)) < 0) TEST_ERROR
+    /* Avoid size comparisons if we are using the core VFD */
+    if(HDstrcmp(driver, "core")) {
+        /* Get the size of the file with a "small" heap for group */
+        if((small_file_size = h5_get_file_size(filename)) < 0) TEST_ERROR
+    } /* end if */
 
 
     /* Create file */
@@ -1039,16 +1059,20 @@ old_api(hid_t fapl)
     /* Close file */
     if(H5Fclose(fid) < 0) FAIL_STACK_ERROR
 
-    /* Get the size of the file with a "large" heap for group */
-    if((large_file_size = h5_get_file_size(filename, fapl)) < 0) TEST_ERROR
+    /* Avoid size comparisons if we are using the core VFD */
+    if(HDstrcmp(driver, "core")) {
+        /* Get the size of the file with a "large" heap for group */
+        if((large_file_size = h5_get_file_size(filename)) < 0) TEST_ERROR
 
-    /* Check that the file with a "large" group heap is actually bigger */
-    if(large_file_size <= small_file_size) TEST_ERROR
+        /* Check that the file with a "large" group heap is actually bigger */
+        if(large_file_size <= small_file_size) TEST_ERROR
+    } /* end if */
 
     PASSED();
 #else /* H5_NO_DEPRECATED_SYMBOLS */
     /* Shut compiler up */
     fapl = fapl;
+    driver = driver;
 
     SKIPPED();
     puts("    Deprecated API symbols not enabled");
@@ -1064,85 +1088,6 @@ error:
     } H5E_END_TRY;
     return 1;
 #endif /* H5_NO_DEPRECATED_SYMBOLS */
-} /* end old_api() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    corrupt_stab_msg
- *
- * Purpose:     Test that a corrupt symbol table message can be fixed
- *              using the cached symbol table information.
- *
- * Return:      Success:        0
- *              Failure:        -1
- *
- * Programmer:  Neil Fortner
- *              Wednesday, March 18, 2009
- *
- *-------------------------------------------------------------------------
- */
-static int
-corrupt_stab_msg(void)
-{
-    hid_t       fid = (-1);             /* File ID */
-    hid_t       did = (-1);             /* Dataset ID */
-
-    TESTING("corrupt symbol table message");
-
-    /* Make a copy of the data file from svn. */
-    if(h5_make_local_copy(CORRUPT_STAB_FILE, CORRUPT_STAB_TMP_FILE) < 0) TEST_ERROR
-
-#ifndef H5_STRICT_FORMAT_CHECKS
-    /* Open temp file through HDF5 library */
-    if((fid = H5Fopen(CORRUPT_STAB_TMP_FILE, H5F_ACC_RDWR, H5P_DEFAULT)) < 0) TEST_ERROR
-
-    /* Open dataset */
-    if((did = H5Dopen2(fid, CORRUPT_STAB_DSET, H5P_DEFAULT)) < 0) TEST_ERROR
-
-    /* Close dataset and file */
-    if(H5Dclose(did) < 0) TEST_ERROR
-    if(H5Fclose(fid) < 0) TEST_ERROR
-
-    /* Now reopen with read only access.  This verifies that the issue has been
-     * corrected, as the symbol table message is not patched in read only mode.
-     */
-
-    /* Open file */
-    if((fid = H5Fopen(CORRUPT_STAB_TMP_FILE, H5F_ACC_RDONLY, H5P_DEFAULT)) < 0) TEST_ERROR
-
-    /* Open dataset */
-    if((did = H5Dopen2(fid, CORRUPT_STAB_DSET, H5P_DEFAULT)) < 0) TEST_ERROR
-
-    /* Close dataset and file */
-    if(H5Dclose(did) < 0) TEST_ERROR
-    if(H5Fclose(fid) < 0) TEST_ERROR
-
-#else /* H5_STRICT_FORMAT_CHECKS */
-    /* Open file */
-    if((fid = H5Fopen(CORRUPT_STAB_TMP_FILE, H5F_ACC_RDWR, H5P_DEFAULT)) < 0) TEST_ERROR
-
-    /* Verify that an error is thrown when we try to access the dataset */
-    H5E_BEGIN_TRY {
-        did = H5Dopen2(fid, CORRUPT_STAB_DSET, H5P_DEFAULT);
-    } H5E_END_TRY
-    if(did >= 0) TEST_ERROR
-
-    /* Close file */
-    if(H5Fclose(fid) < 0) TEST_ERROR
-
-#endif /* H5_STRICT_FORMAT_CHECKS */
-
-    PASSED();
-
-    return 0;
-
-error:
-    H5E_BEGIN_TRY {
-    	H5Dclose(did);
-    	H5Fclose(fid);
-    } H5E_END_TRY;
-
-    return 1;
 } /* end old_api() */
 
 
@@ -1165,55 +1110,58 @@ error:
 int
 main(void)
 {
-    hid_t	fapl, fapl2;    /* File access property list IDs */
-    hbool_t new_format;     /* Whether to use the new format or not */
-    int	nerrors = 0;
+    const char *envval = NULL;
 
-    /* Reset library */
-    h5_reset();
-    fapl = h5_fileaccess();
+    /* Don't run this test using the split file driver */
+    envval = HDgetenv("HDF5_DRIVER");
+    if(envval == NULL)
+        envval = "nomatch";
+    if(HDstrcmp(envval, "split") && HDstrcmp(envval, "multi") && HDstrcmp(envval, "family")) {
+        hid_t	fapl, fapl2;    /* File access property list IDs */
+        hbool_t new_format;     /* Whether to use the new format or not */
+        int	nerrors = 0;
 
-    /* Copy the file access property list */
-    if((fapl2 = H5Pcopy(fapl)) < 0) TEST_ERROR
+	/* Reset library */
+	h5_reset();
+	fapl = h5_fileaccess();
 
-    /* Set the "use the latest version of the format" bounds for creating objects in the file */
-    if(H5Pset_libver_bounds(fapl2, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0) TEST_ERROR
+        /* Copy the file access property list */
+        if((fapl2 = H5Pcopy(fapl)) < 0) TEST_ERROR
 
-    /* Loop over using new group format */
-    for(new_format = FALSE; new_format <= TRUE; new_format++) {
-        /* Perform basic tests, with old & new style groups */
-        nerrors += test_misc((new_format ? fapl2 : fapl), new_format);
-        nerrors += test_long((new_format ? fapl2 : fapl), new_format);
-        nerrors += test_large((new_format ? fapl2 : fapl), new_format);
-    } /* end for */
+        /* Set the "use the latest version of the format" bounds for creating objects in the file */
+        if(H5Pset_libver_bounds(fapl2, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0) TEST_ERROR
 
-    /* New format group specific tests (require new format features) */
-    nerrors += lifecycle(fapl2);
-    nerrors += long_compact(fapl2);
-    nerrors += read_old();
-    nerrors += no_compact(fapl2);
-    nerrors += gcpl_on_root(fapl2);
+        /* Loop over using new group format */
+        for(new_format = FALSE; new_format <= TRUE; new_format++) {
+            /* Perform basic tests, with old & new style groups */
+            nerrors += test_misc((new_format ? fapl2 : fapl), new_format);
+            nerrors += test_long((new_format ? fapl2 : fapl), new_format);
+            nerrors += test_large((new_format ? fapl2 : fapl), new_format);
+        } /* end for */
 
-    /* Old group API specific tests */
-    nerrors += old_api(fapl);
-    nerrors += corrupt_stab_msg();
+        /* New format group specific tests (require new format features) */
+	nerrors += lifecycle(fapl2);
+	nerrors += long_compact(fapl2);
+	nerrors += read_old(fapl2);
+	nerrors += no_compact(fapl2);
+	nerrors += gcpl_on_root(fapl2);
 
-    /* Close 2nd FAPL */
-    H5Pclose(fapl2);
+        /* Old group API specific tests */
+	nerrors += old_api(fapl, envval);
 
-    /* Check for test errors */
-    if(nerrors)
-        goto error;
+        /* Close 2nd FAPL */
+	H5Pclose(fapl2);
 
-    puts("All symbol table tests passed.");
+        /* Check for test errors */
+	if(nerrors)
+            goto error;
 
-    /* Cleanup */
-    if (GetTestCleanup()) {
-        HDremove(FILE_OLD_GROUPS_COPY);
-        HDremove(CORRUPT_STAB_TMP_FILE);
-    }
-    h5_cleanup(FILENAME, fapl);
-
+	/* Cleanup */
+	puts("All symbol table tests passed.");
+	h5_cleanup(FILENAME, fapl);
+    } /* end if */
+    else
+	puts("All symbol table tests skipped - Incompatible with current Virtual File Driver");
     return 0;
 
 error:

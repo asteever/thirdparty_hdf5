@@ -25,22 +25,20 @@
  */
 
 typedef struct {
-    int      m_quiet;               /* quiet mide: no output at all */
-    int      m_report;              /* report mode: print the data */
-    int      m_verbose;             /* verbose mode: print the data, list of objcets, warnings */
-    int      d;                     /* delta, absolute value to compare */
-    double   delta;                 /* delta value */
-    int      p;                     /* relative error to compare*/
-    int      use_system_epsilon;    /* flag to use system epsilon (1 or 0) */
-    double   percent;               /* relative error value */
-    int      n;                     /* count, compare up to count */
-    hsize_t  count;                 /* count value */
-    int      err_stat;              /* an error ocurred (1, error, 0, no error) */
-    int      cmn_objs;              /* do we have common objects */
-    int      not_cmp;               /* are the objects comparable */
-    int      contents;              /* equal contents */
-    int      do_nans;               /* consider Nans while diffing floats */
-    int      m_list_not_cmp;        /* list not comparable messages */
+    int    m_quiet;   /* quiet mide: no output at all */
+    int    m_report;  /* report mode: print the data */
+    int    m_verbose; /* verbose mode: print the data, list of objcets, warnings */
+    int    d;         /* delta, absolute value to compare */
+    double delta;     /* delta value */
+    int    p;         /* relative error to compare*/
+    double percent;   /* relative error value */
+    int    n;         /* count, compare up to count */
+    hsize_t count;    /* count value */
+    int    err_stat;  /* an error ocurred (1, error, 0, no error) */
+    int    cmn_objs;  /* do we have comparable objects */
+    int    not_cmp;   /* are the objects comparable */
+    int    m_contents;/* contents mode */
+    int    contents;  /* equal contents */
 } diff_opt_t;
 
 
@@ -135,8 +133,7 @@ int diff_can_type( hid_t       f_type1, /* file data type */
                    hsize_t     *maxdim2,
                    const char  *obj1_name,
                    const char  *obj2_name,
-                   diff_opt_t  *options,
-                   int         is_compound);
+                   diff_opt_t  *options );
 
 
 hsize_t diff_attr(hid_t loc1_id,
@@ -195,34 +192,17 @@ hsize_t diff_float(unsigned char *mem1,
                    int           *ph);
 
 hsize_t diff_double(unsigned char *mem1,
-                    unsigned char *mem2,
-                    hsize_t       nelmts,
-                    hsize_t       hyper_start,
-                    int           rank,
-                    hsize_t       *dims,
-                    hsize_t       *acc,
-                    hsize_t       *pos,
-                    diff_opt_t    *options,
-                    const char    *obj1,
-                    const char    *obj2,
-                    int           *ph);
-
-#if H5_SIZEOF_LONG_DOUBLE !=0
-
-hsize_t diff_ldouble(unsigned char *mem1,
-                     unsigned char *mem2,
-                     hsize_t       nelmts,
-                     hsize_t       hyper_start,
-                     int           rank,
-                     hsize_t       *dims,
-                     hsize_t       *acc,
-                     hsize_t       *pos,
-                     diff_opt_t    *options,
-                     const char    *obj1,
-                     const char    *obj2,
-                     int           *ph);
-
-#endif
+                   unsigned char *mem2,
+                   hsize_t       nelmts,
+                   hsize_t       hyper_start,
+                   int           rank,
+                   hsize_t       *dims,
+                   hsize_t       *acc,
+                   hsize_t       *pos,
+                   diff_opt_t    *options,
+                   const char    *obj1,
+                   const char    *obj2,
+                   int           *ph);
 
 hsize_t diff_schar(unsigned char *mem1,
                    unsigned char *mem2,

@@ -20,8 +20,8 @@
 #include "H5Eprivate.h"		/* Error handling		  	*/
 #include "H5Iprivate.h"		/* IDs			  		*/
 #include "H5MMprivate.h"	/* Memory management			*/
-#include "H5Vprivate.h"		/* H5V_array_fill			*/
 #include "H5Zpkg.h"		/* Data filters				*/
+#include "H5Vprivate.h"		/* H5V_array_fill			*/
 
 
 /* Token types */
@@ -193,9 +193,9 @@ static void H5Z_print(H5Z_node *tree, FILE *stream);
     else if((TYPE) == H5T_NATIVE_ULONG)					\
 	H5Z_XFORM_DO_OP1((RESL), (RESR), unsigned long, OP, (SIZE))	\
     else if((TYPE) == H5T_NATIVE_LLONG)					\
-	H5Z_XFORM_LL_DO_OP1((RESL), (RESR), long long, OP, (SIZE))	\
+	H5Z_XFORM_LL_DO_OP1((RESL), (RESR), long_long, OP, (SIZE))	\
     else if((TYPE) == H5T_NATIVE_ULLONG)				\
-	H5Z_XFORM_ULL_DO_OP1((RESL), (RESR), unsigned long long, OP, (SIZE)) \
+	H5Z_XFORM_ULL_DO_OP1((RESL), (RESR), unsigned long_long, OP, (SIZE)) \
     else if((TYPE) == H5T_NATIVE_FLOAT)					\
 	H5Z_XFORM_DO_OP1((RESL), (RESR), float, OP, (SIZE))		\
     else if((TYPE) == H5T_NATIVE_DOUBLE)				\
@@ -225,9 +225,9 @@ static void H5Z_print(H5Z_node *tree, FILE *stream);
     else if((TYPE) == H5T_NATIVE_ULONG)					\
 	H5Z_XFORM_DO_OP1((RESL), (RESR), unsigned long, OP, (SIZE))	\
     else if((TYPE) == H5T_NATIVE_LLONG)					\
-	H5Z_XFORM_LL_DO_OP1((RESL), (RESR), long long, OP, (SIZE))	\
+	H5Z_XFORM_LL_DO_OP1((RESL), (RESR), long_long, OP, (SIZE))	\
     else if((TYPE) == H5T_NATIVE_ULLONG)				\
-	H5Z_XFORM_ULL_DO_OP1((RESL), (RESR), unsigned long long, OP, (SIZE)) \
+	H5Z_XFORM_ULL_DO_OP1((RESL), (RESR), unsigned long_long, OP, (SIZE)) \
     else if((TYPE) == H5T_NATIVE_FLOAT)					\
 	H5Z_XFORM_DO_OP1((RESL), (RESR), float, OP, (SIZE))		\
     else if((TYPE) == H5T_NATIVE_DOUBLE)				\
@@ -335,28 +335,28 @@ H5Z_unget_token(H5Z_token *current)
 
 /*-------------------------------------------------------------------------
  * Function:    H5Z_get_token
- *
  * Purpose:     Determine what the next valid H5Z_token is in the expression
  *              string. The current position within the H5Z_token string is
  *              kept internal to the H5Z_token and handled by this and the
  *              unget_H5Z_token function.
- *
  * Return:      Succeess:       The passed in H5Z_token with a valid tok_type
  *                              field.
  *              Failure:        The passed in H5Z_token but with the tok_type
  *                              field set to ERROR.
- *
  * Programmer:  Bill Wendling
  *              26. August 2003
- *
+ * Modifications:
+ *               Leon Arber:  Added FUNC_ENTER / FUNC_LEAVE pairs
  *-------------------------------------------------------------------------
  */
 static H5Z_token *
 H5Z_get_token(H5Z_token *current)
 {
-    void *ret_value = current;
+
+    void*         ret_value=current;
 
     FUNC_ENTER_NOAPI(H5Z_get_token, NULL)
+
 
     /* check args */
     assert(current);
@@ -463,11 +463,11 @@ H5Z_get_token(H5Z_token *current)
     if (current->tok_begin[0] == '\0')
         current->tok_type = H5Z_XFORM_END;
 
-    /* Set return value */
-    ret_value = (void *)current;
+    HGOTO_DONE(current);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
+
 }
 
 
@@ -498,17 +498,17 @@ H5Z_xform_destroy_parse_tree(H5Z_node *tree)
     FUNC_LEAVE_NOAPI_VOID
 }
 
+
 
 /*-------------------------------------------------------------------------
  * Function:    H5Z_parse
- *
  * Purpose:     Entry function for parsing the expression string.
- *
  * Return:      Success:    Valid H5Z_node ptr to an expression tree.
  *              NULLure:    NULL
- *
  * Programmer:  Bill Wendling
  *              26. August 2003
+ * Modifications:
+ *              Leon Arber:  Added FUNC_ENTER / FUNC_LEAVE pairs
  *
  *-------------------------------------------------------------------------
  */
@@ -518,10 +518,11 @@ H5Z_xform_parse(const char *expression, H5Z_datval_ptrs* dat_val_pointers)
     H5Z_token tok;
     void* ret_value;
 
-    FUNC_ENTER_NOAPI(H5Z_xform_parse, NULL)
+    FUNC_ENTER_NOAPI_NOFUNC(H5Z_xform_parse)
 
-    if(!expression)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "No expression provided?")
+    if (!expression)
+        HGOTO_DONE(NULL)
+
 
     /* Set up the initial H5Z_token for parsing */
     tok.tok_expr = tok.tok_begin = tok.tok_end = expression;
@@ -572,7 +573,7 @@ H5Z_parse_expression(H5Z_token *current, H5Z_datval_ptrs* dat_val_pointers)
 
                 if (!new_node) {
                     H5Z_xform_destroy_parse_tree(expr);
-                    HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "Unable to allocate new node")
+                    HGOTO_DONE(expr)
                 }
 
                 new_node->lchild = expr;
@@ -591,7 +592,7 @@ H5Z_parse_expression(H5Z_token *current, H5Z_datval_ptrs* dat_val_pointers)
 
                 if (!new_node) {
                     H5Z_xform_destroy_parse_tree(expr);
-                    HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "Unable to allocate new node")
+                    HGOTO_DONE(expr)
                 }
 
                 new_node->lchild = expr;
@@ -642,7 +643,7 @@ static H5Z_node *
 H5Z_parse_term(H5Z_token *current, H5Z_datval_ptrs* dat_val_pointers)
 {
     H5Z_node *term = NULL;
-    H5Z_node *ret_value;
+    void*         ret_value;
 
     FUNC_ENTER_NOAPI(H5Z_parse_term, NULL);
     term = H5Z_parse_factor(current, dat_val_pointers);
@@ -658,7 +659,7 @@ H5Z_parse_term(H5Z_token *current, H5Z_datval_ptrs* dat_val_pointers)
 
                 if (!new_node) {
                     H5Z_xform_destroy_parse_tree(term);
-                    HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "Unable to allocate new node")
+                    HGOTO_DONE(term)
                 }
 
                 new_node->lchild = term;
@@ -677,7 +678,7 @@ H5Z_parse_term(H5Z_token *current, H5Z_datval_ptrs* dat_val_pointers)
 
                 if (!new_node) {
                     H5Z_xform_destroy_parse_tree(term);
-                    HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "Unable to allocate new node")
+                    HGOTO_DONE(term)
                 }
 
                 new_node->lchild = term;
@@ -743,7 +744,7 @@ H5Z_parse_factor(H5Z_token *current, H5Z_datval_ptrs* dat_val_pointers)
 	    factor = H5Z_new_node(H5Z_XFORM_INTEGER);
 
 	    if (!factor)
-                HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "Unable to allocate new node")
+		HGOTO_DONE(factor)
             sscanf(current->tok_begin, "%ld", &factor->value.int_val);
 	    break;
 
@@ -751,7 +752,7 @@ H5Z_parse_factor(H5Z_token *current, H5Z_datval_ptrs* dat_val_pointers)
 	    factor = H5Z_new_node(H5Z_XFORM_FLOAT);
 
 	    if (!factor)
-                HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "Unable to allocate new node")
+		HGOTO_DONE(factor)
             sscanf(current->tok_begin, "%lf", &factor->value.float_val);
 	    break;
 
@@ -759,7 +760,7 @@ H5Z_parse_factor(H5Z_token *current, H5Z_datval_ptrs* dat_val_pointers)
 	    factor = H5Z_new_node(H5Z_XFORM_SYMBOL);
 
 	    if (!factor)
-                HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "Unable to allocate new node")
+		HGOTO_DONE(factor)
 
             factor->value.dat_val = &(dat_val_pointers->ptr_dat_val[dat_val_pointers->num_ptrs]);
 	    dat_val_pointers->num_ptrs++;
@@ -769,7 +770,7 @@ H5Z_parse_factor(H5Z_token *current, H5Z_datval_ptrs* dat_val_pointers)
 	    factor = H5Z_parse_expression(current, dat_val_pointers);
 
 	    if (!factor)
-                HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "Unable to allocate new node")
+		HGOTO_DONE(factor)
 
             current = H5Z_get_token(current);
 
@@ -884,7 +885,7 @@ done:
     FUNC_LEAVE_NOAPI(ret_value);
 }
 
-
+
 /*-------------------------------------------------------------------------
  * Function:    H5Z_xform_eval
  * Purpose: 	If the transform is trivial, this function applies it.
@@ -897,31 +898,32 @@ done:
  *
  *-------------------------------------------------------------------------
  */
+
 herr_t
 H5Z_xform_eval(H5Z_data_xform_t *data_xform_prop, void* array, size_t array_size, const H5T_t *buf_type)
 {
     H5Z_node *tree;
     hid_t array_type;
-    H5Z_result res;
     size_t i;
-    herr_t ret_value = SUCCEED;         /* Return value */
+    H5Z_result res;
+    herr_t ret_value = SUCCEED;
 
     FUNC_ENTER_NOAPI(H5Z_xform_eval, FAIL)
 
     HDassert(data_xform_prop);
 
-    tree = data_xform_prop->parse_root;
+    tree=data_xform_prop->parse_root;
 
     /* Get the datatype ID for the buffer's type */
-    if((array_type = H5Z_xform_find_type(buf_type)) < 0)
+    if( (array_type = H5Z_xform_find_type(buf_type)) < 0)
 	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Cannot perform data transform on this type.")
 
-    /* After this point, we're assured that the type of the array is handled by the eval code,
-     *  so we no longer have to check for valid types
-     */
+    /*After this point, we're assured that the type of the array is handled by the eval code, so we no
+     * longer have to check for valid types */
 
     /* If it's a trivial data transform, perform it */
-    if(tree->type == H5Z_XFORM_INTEGER || tree->type == H5Z_XFORM_FLOAT) {
+    if( tree->type == H5Z_XFORM_INTEGER || tree->type == H5Z_XFORM_FLOAT)
+    {
         if(array_type == H5T_NATIVE_CHAR)
             H5Z_XFORM_DO_OP5(char, array_size)
         else if(array_type ==  H5T_NATIVE_UCHAR)
@@ -941,9 +943,9 @@ H5Z_xform_eval(H5Z_data_xform_t *data_xform_prop, void* array, size_t array_size
         else if(array_type == H5T_NATIVE_ULONG)
             H5Z_XFORM_DO_OP5(unsigned long, array_size)
         else if(array_type == H5T_NATIVE_LLONG)
-            H5Z_XFORM_DO_OP5(long long, array_size)
+            H5Z_XFORM_DO_OP5(long_long, array_size)
         else if(array_type == H5T_NATIVE_ULLONG)
-            H5Z_XFORM_DO_OP5(unsigned long long, array_size)
+            H5Z_XFORM_DO_OP5(unsigned long_long, array_size)
         else if(array_type == H5T_NATIVE_FLOAT)
             H5Z_XFORM_DO_OP5(float, array_size)
 	else if(array_type == H5T_NATIVE_DOUBLE)
@@ -953,47 +955,51 @@ H5Z_xform_eval(H5Z_data_xform_t *data_xform_prop, void* array, size_t array_size
             H5Z_XFORM_DO_OP5(long double, array_size)
 #endif
 
-    } /* end if */
+    }
     /* Otherwise, do the full data transform */
-    else {
+    else
+    {
 	/* Optimization for linear transform: */
 	if(data_xform_prop->dat_val_pointers->num_ptrs == 1)
 	    data_xform_prop->dat_val_pointers->ptr_dat_val[0] = array;
-
 	/* If it's a quadratic transform, we have no choice but to store multiple copies of the data */
-	else {
-	    for(i = 0; i < data_xform_prop->dat_val_pointers->num_ptrs; i++) {
-		if(NULL == (data_xform_prop->dat_val_pointers->ptr_dat_val[i] = (void*)H5MM_malloc(array_size * H5Tget_size(array_type))))
+	else
+	{
+	    for(i=0; i<data_xform_prop->dat_val_pointers->num_ptrs; i++)
+	    {
+		if( (data_xform_prop->dat_val_pointers->ptr_dat_val[i] = (void*)H5MM_malloc(array_size*H5Tget_size(array_type))) == NULL)
 		    HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "Ran out of memory trying to allocate space for data in data transform")
 
-                HDmemcpy(data_xform_prop->dat_val_pointers->ptr_dat_val[i], array, array_size * H5Tget_size(array_type));
-	    } /* end for */
-	} /* end else */
+                HDmemcpy(data_xform_prop->dat_val_pointers->ptr_dat_val[i], array, array_size*H5Tget_size(array_type));
+	    }
+	}
 
 	if(H5Z_xform_eval_full(tree, array_size, array_type, &res) < 0)
 	    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "error while performing data transform")
 
-	if(data_xform_prop->dat_val_pointers->num_ptrs > 1)
+	if(data_xform_prop->dat_val_pointers->num_ptrs > 1)	
 	    HDmemcpy(array, res.value.dat_val, array_size * H5Tget_size(array_type));
 
         /* Free the temporary arrays we used */
         if(data_xform_prop->dat_val_pointers->num_ptrs > 1)
             for(i=0; i<data_xform_prop->dat_val_pointers->num_ptrs; i++)
                 HDfree(data_xform_prop->dat_val_pointers->ptr_dat_val[i]);
-    } /* end else */
+    }
 
 done:
-    if(ret_value < 0) {
+    if(ret_value < 0)
+    {
 	/* If we ran out of memory above copying the array for temp storage (which we easily can for
 	 * polynomial transforms of high order) we free those arrays which we already allocated */
 	if(data_xform_prop->dat_val_pointers->num_ptrs > 1)
-	    for(i = 0; i < data_xform_prop->dat_val_pointers->num_ptrs; i++)
-		if(data_xform_prop->dat_val_pointers->ptr_dat_val[i])
+	    for(i=0; i<data_xform_prop->dat_val_pointers->num_ptrs; i++)
+		if(data_xform_prop->dat_val_pointers->ptr_dat_val[i] != NULL)
 		    HDfree(data_xform_prop->dat_val_pointers->ptr_dat_val[i]);
-    } /* end if */
+    }
+    FUNC_LEAVE_NOAPI(ret_value);
+}
 
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5Z_xform_eval() */
+
 
 
 /*-------------------------------------------------------------------------
@@ -1011,34 +1017,38 @@ done:
  * will accumulate changes and, at the end, the new data will be copied from the lhs.
  *-------------------------------------------------------------------------
  */
-static herr_t
-H5Z_xform_eval_full(H5Z_node *tree, const size_t array_size,  const hid_t array_type, H5Z_result *res)
+static    herr_t
+H5Z_xform_eval_full(H5Z_node *tree, const size_t array_size,  const hid_t array_type, H5Z_result* res)
 {
     H5Z_result resl, resr;
-    herr_t ret_value = SUCCEED;         /* Return value */
+    herr_t ret_value = SUCCEED;
 
-    FUNC_ENTER_NOAPI(H5Z_xform_eval_full, FAIL)
+    FUNC_ENTER_NOAPI(H5Z_xform_eval_full, FAIL);
 
     /* check args */
-    HDassert(tree);
+    assert(tree);
 
-    if (tree->type == H5Z_XFORM_INTEGER) {
+    if (tree->type == H5Z_XFORM_INTEGER)
+    {
 	res->type = H5Z_XFORM_INTEGER;
 	res->value.int_val = tree->value.int_val;
-    } /* end if */
-    else if (tree->type == H5Z_XFORM_FLOAT) {
+    }
+    else if (tree->type == H5Z_XFORM_FLOAT)
+    {
 	res->type = H5Z_XFORM_FLOAT;
 	res->value.float_val = tree->value.float_val;
-    } /* end if */
-    else if (tree->type == H5Z_XFORM_SYMBOL) {
+    }
+    else if (tree->type == H5Z_XFORM_SYMBOL)
+    {
 	res->type = H5Z_XFORM_SYMBOL;
 
 	/*since dat_val stores the address of the array which is really stored in the dat_val_pointers,
 	 * here we make dat_val store a pointer to the array itself instead of the address of it so that the
 	 * rest of the code below works normally. */
 	res->value.dat_val = *((void**)(tree->value.dat_val));
-    } /* end if */
-    else {
+    }
+    else
+    {
 	if(H5Z_xform_eval_full(tree->lchild, array_size, array_type, &resl) < 0)
 	    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "error while performing data transform")
 	if(H5Z_xform_eval_full(tree->rchild, array_size, array_type, &resr) < 0)
@@ -1071,8 +1081,7 @@ H5Z_xform_eval_full(H5Z_node *tree, const size_t array_size,  const hid_t array_
 
 	    default:
 		HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Invalid expression tree")
-	} /* end switch */
-
+	}
 	/* The result stores a pointer to the new data */
 	/* So, if the left hand side got its data modified, the result stores a pointers
 	 * to the left hand side's data, ditto for rhs */
@@ -1082,11 +1091,14 @@ H5Z_xform_eval_full(H5Z_node *tree, const size_t array_size,  const hid_t array_
 	    res->value.dat_val = resr.value.dat_val;
 	else
 	    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "error during transform evaluation")
-    } /* end else */
+
+    }
+
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5Z_xform_eval_full() */
+}
+
 
 
 /*-------------------------------------------------------------------------
@@ -1101,76 +1113,77 @@ done:
 static hid_t
 H5Z_xform_find_type(const H5T_t* type)
 {
-    hid_t ret_value = SUCCEED;
+    hid_t          ret_value = SUCCEED;
 
-    FUNC_ENTER_NOAPI_NOINIT(H5Z_xform_find_type)
+    FUNC_ENTER_NOAPI_NOINIT(H5Z_xform_find_type);
 
-    HDassert(type);
+    assert(type);
 
     /* Check for SHORT type */
-    if((H5T_cmp(type, H5I_object_verify(H5T_NATIVE_SHORT,H5I_DATATYPE), FALSE)) == 0)
+    if((H5T_cmp(type, H5I_object_verify(H5T_NATIVE_SHORT,H5I_DATATYPE), FALSE ))==0)
 	HGOTO_DONE(H5T_NATIVE_SHORT)
 
 	    /* Check for INT type */
-    else if((H5T_cmp(type,  H5I_object_verify(H5T_NATIVE_INT,H5I_DATATYPE), FALSE)) == 0)
+    else if((H5T_cmp(type,  H5I_object_verify(H5T_NATIVE_INT,H5I_DATATYPE), FALSE))==0)
 	HGOTO_DONE(H5T_NATIVE_INT)
 
 	    /* Check for LONG type */
-    else if((H5T_cmp(type,  H5I_object_verify(H5T_NATIVE_LONG,H5I_DATATYPE), FALSE)) == 0)
+    else if((H5T_cmp(type,  H5I_object_verify(H5T_NATIVE_LONG,H5I_DATATYPE), FALSE))==0)
 	HGOTO_DONE(H5T_NATIVE_LONG)
 
 	    /* Check for LONGLONG type */
-    else if((H5T_cmp(type,  H5I_object_verify(H5T_NATIVE_LLONG,H5I_DATATYPE), FALSE)) == 0)
+    else if((H5T_cmp(type,  H5I_object_verify(H5T_NATIVE_LLONG,H5I_DATATYPE), FALSE))==0)
 	HGOTO_DONE(H5T_NATIVE_LLONG)
 
 	    /* Check for UCHAR type */
-    else if((H5T_cmp(type,  H5I_object_verify(H5T_NATIVE_UCHAR,H5I_DATATYPE), FALSE)) == 0)
+    else if((H5T_cmp(type,  H5I_object_verify(H5T_NATIVE_UCHAR,H5I_DATATYPE), FALSE))==0)
 	HGOTO_DONE(H5T_NATIVE_UCHAR)
 
 	    /* Check for CHAR type */
-    else if((H5T_cmp(type,  H5I_object_verify(H5T_NATIVE_CHAR,H5I_DATATYPE), FALSE)) == 0)
+    else if((H5T_cmp(type,  H5I_object_verify(H5T_NATIVE_CHAR,H5I_DATATYPE), FALSE))==0)
 	HGOTO_DONE(H5T_NATIVE_CHAR)
 
 	    /* Check for SCHAR type */
-    else if((H5T_cmp(type,  H5I_object_verify(H5T_NATIVE_SCHAR,H5I_DATATYPE), FALSE)) == 0)
+    else if((H5T_cmp(type,  H5I_object_verify(H5T_NATIVE_SCHAR,H5I_DATATYPE), FALSE))==0)
 	HGOTO_DONE(H5T_NATIVE_SCHAR)
 
 	    /* Check for USHORT type */
-    else if((H5T_cmp(type,  H5I_object_verify(H5T_NATIVE_USHORT,H5I_DATATYPE), FALSE)) == 0)
+    else if((H5T_cmp(type,  H5I_object_verify(H5T_NATIVE_USHORT,H5I_DATATYPE), FALSE))==0)
 	HGOTO_DONE(H5T_NATIVE_USHORT)
 
 	    /* Check for UINT type */
-    else if((H5T_cmp(type,  H5I_object_verify(H5T_NATIVE_UINT,H5I_DATATYPE), FALSE)) == 0)
+    else if((H5T_cmp(type,  H5I_object_verify(H5T_NATIVE_UINT,H5I_DATATYPE), FALSE))==0)
 	HGOTO_DONE(H5T_NATIVE_UINT)
 
 	    /* Check for ULONG type */
-    else if((H5T_cmp(type,  H5I_object_verify(H5T_NATIVE_ULONG,H5I_DATATYPE), FALSE)) == 0)
+    else if((H5T_cmp(type,  H5I_object_verify(H5T_NATIVE_ULONG,H5I_DATATYPE), FALSE))==0)
 	HGOTO_DONE(H5T_NATIVE_ULONG)
 
 	    /* Check for ULONGLONG type */
-    else if((H5T_cmp(type,  H5I_object_verify(H5T_NATIVE_ULLONG,H5I_DATATYPE), FALSE)) == 0)
+    else if((H5T_cmp(type,  H5I_object_verify(H5T_NATIVE_ULLONG,H5I_DATATYPE), FALSE))==0)
 	HGOTO_DONE(H5T_NATIVE_ULLONG)
 
 	    /* Check for FLOAT type */
-    else if((H5T_cmp(type,  H5I_object_verify(H5T_NATIVE_FLOAT,H5I_DATATYPE), FALSE)) == 0)
+    else if((H5T_cmp(type,  H5I_object_verify(H5T_NATIVE_FLOAT,H5I_DATATYPE), FALSE))==0)
 	HGOTO_DONE(H5T_NATIVE_FLOAT)
 
 	    /* Check for DOUBLE type */
-    else if((H5T_cmp(type,  H5I_object_verify(H5T_NATIVE_DOUBLE,H5I_DATATYPE), FALSE)) == 0)
+    else if((H5T_cmp(type,  H5I_object_verify(H5T_NATIVE_DOUBLE,H5I_DATATYPE), FALSE))==0)
 	HGOTO_DONE(H5T_NATIVE_DOUBLE)
 
 #if H5_SIZEOF_LONG_DOUBLE !=0
 	    /* Check for LONGDOUBLE type */
-    else if((H5T_cmp(type,  H5I_object_verify(H5T_NATIVE_LDOUBLE,H5I_DATATYPE), FALSE)) == 0)
+    else if((H5T_cmp(type,  H5I_object_verify(H5T_NATIVE_LDOUBLE,H5I_DATATYPE), FALSE))==0)
 	HGOTO_DONE(H5T_NATIVE_LDOUBLE)
 #endif
     else
-	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "could not find matching type")
+	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "could not find matching type");
 
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5Z_xform_find_type() */
+
+}
 
 
 /*-------------------------------------------------------------------------

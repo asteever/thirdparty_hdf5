@@ -43,6 +43,9 @@
 #  undef H5G_DEBUG
 #endif
 
+#define H5G_NODE_MAGIC  "SNOD"          /*symbol table node magic number     */
+#define H5G_NODE_SIZEOF_MAGIC 4         /*sizeof symbol node magic number    */
+
 /*
  * The disk size for a symbol table entry...
  */
@@ -129,8 +132,10 @@ typedef struct {
 } H5G_name_t;
 
 /* Forward declarations (for prototypes & struct definitions) */
+struct H5P_genplist_t;
 struct H5O_loc_t;
 struct H5O_link_t;
+struct H5O_t;
 
 /*
  * The "location" of an object in a group hierarchy.  This points to an object
@@ -141,20 +146,14 @@ typedef struct {
     H5G_name_t *path;                   /* Group hierarchy path              */
 } H5G_loc_t;
 
-/* Callback information for copying groups */
-typedef struct H5G_copy_file_ud_t {
-    H5O_copy_file_ud_common_t common;   /* Shared information (must be first) */
-} H5G_copy_file_ud_t;
-
 typedef struct H5G_t H5G_t;
 typedef struct H5G_shared_t H5G_shared_t;
-typedef struct H5G_entry_t H5G_entry_t;
 
 /*
  * Library prototypes...  These are the ones that other packages routinely
  * call.
  */
-H5_DLL herr_t H5G_mkroot(H5F_t *f, hid_t dxpl_id, hbool_t create_root);
+H5_DLL herr_t H5G_mkroot(H5F_t *f, hid_t dxpl_id, H5G_loc_t *root_loc);
 H5_DLL struct H5O_loc_t *H5G_oloc(H5G_t *grp);
 H5_DLL H5G_t *H5G_rootof(H5F_t *f);
 H5_DLL H5G_name_t * H5G_nameof(H5G_t *grp);
@@ -184,9 +183,10 @@ H5_DLL herr_t H5G_node_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream
 /*
  * These functions operate on group object locations.
  */
-H5_DLL herr_t H5G_ent_encode(const H5F_t *f, uint8_t **pp,
-    const H5G_entry_t *ent);
-H5_DLL herr_t H5G_ent_decode(H5F_t *f, const uint8_t **pp, H5G_entry_t *ent/*out*/);
+H5_DLL herr_t H5G_obj_ent_decode(H5F_t *f, const uint8_t **pp,
+    struct H5O_loc_t *oloc);
+H5_DLL herr_t H5G_obj_ent_encode(const H5F_t *f, uint8_t **pp,
+    const struct H5O_loc_t *oloc);
 
 /*
  * These functions operate on group hierarchy names.

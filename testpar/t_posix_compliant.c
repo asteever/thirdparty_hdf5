@@ -701,8 +701,7 @@ static int find_writesize(int rank, int numprocs, int size)
     return write_size;
 }
 
-static void
-vrfy_elements(int* a, int* b, int size, int rank)
+static void vrfy_elements(int* a, int* b, int size, int rank)
 {
     int i, counter = 0;
 
@@ -726,7 +725,6 @@ vrfy_elements(int* a, int* b, int size, int rank)
 
 /* print an explanation message by MAIN (0) process.
  */
-static void
 header_msg(void)
 {
     printf(
@@ -738,8 +736,7 @@ header_msg(void)
     );
 }
 
-int
-main(int argc, char* argv[])
+int main(int argc, char* argv[])
 {
 
     int numprocs, rank, opt, mpi_tests=1, posix_tests=1;
@@ -819,11 +816,11 @@ main(int argc, char* argv[])
 
     if(write_size == 0)
     {
-	lb = 16*numprocs*sizeof(int);
+	lb = 1024;
 	/* 1MB MPIO-IO overlapping is failing in copper. Lower it now pending
 	   permenant fix for copper.*/
 	/* ub = 1024*1024;*/
-	ub = lb*128;
+	ub = 1024*512;
 	inc = 4;
     }
     else

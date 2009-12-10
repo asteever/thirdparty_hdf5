@@ -51,7 +51,13 @@ CONTAINS
 ! Comment:		
 !----------------------------------------------------------------------
   SUBROUTINE h5lcopy_f(src_loc_id, src_name, dest_loc_id, dest_name, hdferr, &
-       lcpl_id, lapl_id)
+       lcpl_id, lapl_id) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5lcopy_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: src_loc_id  ! Location identifier of the source link
     CHARACTER(LEN=*), INTENT(IN) :: src_name   ! Name of the link to be copied
@@ -76,10 +82,9 @@ CONTAINS
        INTEGER FUNCTION h5lcopy_c(src_loc_id, src_name, src_namelen, dest_loc_id, dest_name, dest_namelen, &
             lcpl_id_default, lapl_id_default)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5LCOPY_C'::h5lcopy_c
-         !DEC$ENDIF
-         !DEC$ATTRIBUTES reference :: src_name, dest_name
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5LCOPY_C'::h5lcopy_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: src_loc_id
          CHARACTER(LEN=*), INTENT(IN) :: src_name
          INTEGER(HID_T), INTENT(IN) :: dest_loc_id
@@ -129,7 +134,13 @@ CONTAINS
 !
 ! Comment:		
 !----------------------------------------------------------------------
-  SUBROUTINE h5ldelete_f(loc_id, name, hdferr, lapl_id)
+  SUBROUTINE h5ldelete_f(loc_id, name, hdferr, lapl_id) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5ldelete_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: loc_id  ! Identifier of the file or group containing the object
     CHARACTER(LEN=*), INTENT(IN) :: name  ! Name of the link to delete
@@ -145,10 +156,9 @@ CONTAINS
     INTERFACE
        INTEGER FUNCTION h5ldelete_c(loc_id, name, namelen, lapl_id_default)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5LDELETE_C'::h5ldelete_c
-         !DEC$ENDIF
-         !DEC$ATTRIBUTES reference :: name
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5LDELETE_C'::h5ldelete_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: loc_id
          CHARACTER(LEN=*), INTENT(IN) :: name
          INTEGER(HID_T) :: lapl_id_default
@@ -190,7 +200,13 @@ CONTAINS
 !
 ! Comment:		
 !----------------------------------------------------------------------
-  SUBROUTINE h5lcreate_soft_f(target_path, link_loc_id, link_name, hdferr, lcpl_id, lapl_id)
+  SUBROUTINE h5lcreate_soft_f(target_path, link_loc_id, link_name, hdferr, lcpl_id, lapl_id) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5lcreate_soft_f
+!DEC$endif
+!
     IMPLICIT NONE
     CHARACTER(LEN=*), INTENT(IN) :: target_path     ! Path to the target object, which is not required to exist.
     INTEGER(HID_T), INTENT(IN) :: link_loc_id     ! The file or group identifier for the new link.
@@ -213,10 +229,9 @@ CONTAINS
             link_name,link_name_len, &
             lcpl_id_default, lapl_id_default )
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5LCREATE_SOFT_C'::h5lcreate_soft_c
-         !DEC$ENDIF
-         !DEC$ATTRIBUTES reference :: target_path, link_name
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5LCREATE_SOFT_C'::h5lcreate_soft_c
+         !DEC$ ENDIF
          CHARACTER(LEN=*), INTENT(IN) :: target_path
          INTEGER(SIZE_T) :: target_path_len
          INTEGER(HID_T), INTENT(IN) ::   link_loc_id
@@ -269,7 +284,13 @@ CONTAINS
 !
 ! Comment:		
 !----------------------------------------------------------------------
-  SUBROUTINE h5lcreate_hard_f(obj_loc_id, obj_name, link_loc_id, link_name, hdferr, lcpl_id, lapl_id)
+  SUBROUTINE h5lcreate_hard_f(obj_loc_id, obj_name, link_loc_id, link_name, hdferr, lcpl_id, lapl_id) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5lcreate_hard_f
+!DEC$endif
+!
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: obj_loc_id  ! The file or group identifier for the target object.
     CHARACTER(LEN=*), INTENT(IN) :: obj_name  ! Name of the target object, which must already exist.
@@ -295,10 +316,9 @@ CONTAINS
             link_loc_id, link_name, link_namelen, lcpl_id_default, lapl_id_default) 
 
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5LCREATE_HARD_C'::h5lcreate_hard_c
-         !DEC$ENDIF
-         !DEC$ATTRIBUTES reference :: obj_name, link_name
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5LCREATE_HARD_C'::h5lcreate_hard_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: obj_loc_id
          CHARACTER(LEN=*), INTENT(IN) :: obj_name
          INTEGER(HID_T), INTENT(IN) :: link_loc_id
@@ -350,7 +370,13 @@ CONTAINS
 !
 ! Comment:		
 !----------------------------------------------------------------------
-  SUBROUTINE h5lcreate_external_f(file_name, obj_name, link_loc_id, link_name, hdferr, lcpl_id, lapl_id)
+  SUBROUTINE h5lcreate_external_f(file_name, obj_name, link_loc_id, link_name, hdferr, lcpl_id, lapl_id) 
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5lcreate_external_f
+!DEC$endif
+!
     IMPLICIT NONE
     CHARACTER(LEN=*), INTENT(IN) :: file_name  ! Name of the file containing the target object. Neither 
                                               ! the file nor the target object is required to exist. 
@@ -379,10 +405,9 @@ CONTAINS
             link_loc_id, link_name, link_namelen, lcpl_id_default, lapl_id_default) 
 
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5LCREATE_EXTERNAL_C'::h5lcreate_external_c
-         !DEC$ENDIF
-         !DEC$ATTRIBUTES reference :: file_name, obj_name, link_name
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5LCREATE_EXTERNAL_C'::h5lcreate_external_c
+         !DEC$ ENDIF
          CHARACTER(LEN=*), INTENT(IN) :: file_name
          CHARACTER(LEN=*), INTENT(IN) :: obj_name
          INTEGER(HID_T), INTENT(IN) :: link_loc_id
@@ -444,7 +469,11 @@ CONTAINS
 ! Modifications: N/A 
 !
 !----------------------------------------------------------------------
-  SUBROUTINE h5ldelete_by_idx_f(loc_id, group_name, index_field, order, n, hdferr, lapl_id)
+  SUBROUTINE h5ldelete_by_idx_f(loc_id, group_name, index_field, order, n, hdferr, lapl_id) 
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5ldelete_by_idx_f
+!DEC$endif
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: loc_id       ! Identifer for object to which attribute is attached
     CHARACTER(LEN=*), INTENT(IN) :: group_name ! Name of object, relative to location, 
@@ -473,9 +502,9 @@ CONTAINS
     INTERFACE
        INTEGER FUNCTION h5ldelete_by_idx_c(loc_id, group_name, group_namelen, index_field, order, n, lapl_id_default)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5LDELETE_BY_IDX_C'::h5ldelete_by_idx_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5LDELETE_BY_IDX_C'::h5ldelete_by_idx_c
+         !DEC$ ENDIF
          !DEC$ATTRIBUTES reference :: group_name
          INTEGER(HID_T), INTENT(IN) :: loc_id
          CHARACTER(LEN=*), INTENT(IN) :: group_name
@@ -519,6 +548,12 @@ CONTAINS
 !
 !----------------------------------------------------------------------
   SUBROUTINE h5lexists_f(loc_id, name, link_exists, hdferr, lapl_id)
+
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5lexists_f
+!DEC$endif
+
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: loc_id  ! Identifier of the file or group to query.
     CHARACTER(LEN=*), INTENT(IN) :: name  ! Link name to check.
@@ -536,10 +571,9 @@ CONTAINS
     INTERFACE
        INTEGER FUNCTION h5lexists_c(loc_id, name, namelen, lapl_id_default, link_exists_c)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5LEXISTS_C'::h5lexists_c
-         !DEC$ENDIF
-         !DEC$ATTRIBUTES reference :: name
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5LEXISTS_C'::h5lexists_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: loc_id
          CHARACTER(LEN=*), INTENT(IN) :: name
          INTEGER(SIZE_T), INTENT(IN) :: namelen
@@ -574,15 +608,14 @@ CONTAINS
 !
 !              cset - indicates the character set used for link’s name. 
 !      corder - specifies the link’s creation order position.
-!f_corder_valid - indicates whether the value in corder is valid.
+!corder_valid - indicates whether the value in corder is valid.
 !         link_type -  specifies the link class:
 !     	                H5L_LINK_HARD_F      - Hard link
 !     	                H5L_LINK_SOFT_F      - Soft link
 !     	                H5L_LINK_EXTERNAL_F  - External link
 !     	                H5L_LINK_ERROR_ F    - Error
 !           address - If the link is a hard link, address specifies the file address that the link points to
-!          val_size - If the link is a symbolic link, val_size will be the length of the link value, e.g., 
-!                     the length of the name of the pointed-to object with a null terminator. 
+!          val_size - If the link is a symbolic link, val_size will be the length of the link value
 !            hdferr - error code		
 !				 Success:  0
 !				 Failure: -1   
@@ -598,7 +631,11 @@ CONTAINS
 
   SUBROUTINE h5lget_info_f(link_loc_id, link_name, &
        cset, corder, f_corder_valid, link_type, address, val_size, &
-       hdferr, lapl_id)
+       hdferr, lapl_id) 
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5lget_info_f
+!DEC$endif
     IMPLICIT NONE
 
     INTEGER(HID_T), INTENT(IN) :: link_loc_id ! File or group identifier.
@@ -613,9 +650,8 @@ CONTAINS
      	                              !  H5L_LINK_SOFT_F      - Soft link
      	                              !  H5L_LINK_EXTERNAL_F  - External link
      	                              !  H5L_LINK_ERROR _F    - Error
-    INTEGER(HADDR_T), INTENT(OUT) :: address  ! If the link is a hard link, address specifies the file address that the link points to
-    INTEGER(SIZE_T), INTENT(OUT) :: val_size ! If the link is a symbolic link, val_size will be the length of the link value, e.g., 
-                                             ! the length of the name of the pointed-to object with a null terminator. 
+    INTEGER, INTENT(OUT) :: address  ! If the link is a hard link, address specifies the file address that the link points to
+    INTEGER(HSIZE_T), INTENT(OUT) :: val_size ! If the link is a symbolic link, val_size will be the length of the link value
     INTEGER, INTENT(OUT) :: hdferr       ! Error code:
                                          ! 0 on success and -1 on failure
     INTEGER(HID_T), OPTIONAL, INTENT(IN) :: lapl_id  ! Link access property list
@@ -631,17 +667,16 @@ CONTAINS
             cset, corder, corder_valid, link_type, address, val_size, &
             lapl_id_default)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5LGET_INFO_C'::h5lget_info_c
-         !DEC$ENDIF
-         !DEC$ATTRIBUTES reference :: link_name
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5LGET_INFO_C'::h5lget_info_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: link_loc_id
          CHARACTER(LEN=*), INTENT(IN) :: link_name
          INTEGER, INTENT(OUT) :: cset 
          INTEGER, INTENT(OUT) :: corder
          INTEGER, INTENT(OUT) :: link_type
-         INTEGER(HADDR_T), INTENT(OUT) :: address
-         INTEGER(SIZE_T), INTENT(OUT) :: val_size
+         INTEGER, INTENT(OUT) :: address
+         INTEGER(HSIZE_T), INTENT(OUT) :: val_size
          INTEGER(HID_T) :: lapl_id_default
          INTEGER(SIZE_T) :: link_namelen
          INTEGER :: corder_valid
@@ -678,10 +713,8 @@ CONTAINS
 ! Outputs:  NOTE: In C these are defined as a structure: H5L_info_t
 !    corder_valid   - indicates whether the creation order data is valid for this attribute
 !    corder         - is a positive integer containing the creation order of the attribute        
-!    cset           - indicates the character set used for the attribute’s name 
-!    address        - If the link is a hard link, address specifies the file address that the link points to
-!    val_size       - If the link is a symbolic link, val_size will be the length of the link value, e.g., 
-!                     the length of the name of the pointed-to object with a null terminator. 
+!    cset           - indicates the character set used for the attribute’s name          
+!    data_size      - indicates the size, in the number of characters, of the attribute	
 !    hdferr         - error code		
 !				 Success:  0
 !				 Failure: -1   
@@ -695,7 +728,11 @@ CONTAINS
 !
 !----------------------------------------------------------------------
   SUBROUTINE h5lget_info_by_idx_f(loc_id, group_name, index_field, order, n, &
-       link_type, f_corder_valid, corder, cset, address, val_size, hdferr, lapl_id)
+       f_corder_valid, corder, cset, data_size, hdferr, lapl_id) 
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5lget_info_by_idx_f
+!DEC$endif
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: loc_id  ! File or group identifier specifying location of subject group  
     CHARACTER(LEN=*), INTENT(IN) :: group_name ! Name of subject group
@@ -710,17 +747,10 @@ CONTAINS
                                         !    H5_ITER_DEC_F      - Decreasing order
                                         !    H5_ITER_NATIVE_F   - No particular order, whatever is fastest
     INTEGER(HSIZE_T), INTENT(IN) :: n   ! Attribute’s position in index
-    INTEGER, INTENT(OUT) :: link_type ! Specifies the link class:
-     	                              !  H5L_LINK_HARD_F      - Hard link
-     	                              !  H5L_LINK_SOFT_F      - Soft link
-     	                              !  H5L_LINK_EXTERNAL_F  - External link
-     	                              !  H5L_LINK_ERROR _F    - Error
     LOGICAL, INTENT(OUT) :: f_corder_valid ! Indicates whether the creation order data is valid for this attribute 
     INTEGER, INTENT(OUT) :: corder ! Is a positive integer containing the creation order of the attribute
     INTEGER, INTENT(OUT) :: cset ! Indicates the character set used for the attribute’s name
-    INTEGER(HADDR_T), INTENT(OUT) :: address  ! If the link is a hard link, address specifies the file address that the link points to
-    INTEGER(SIZE_T), INTENT(OUT) :: val_size  ! If the link is a symbolic link, val_size will be the length of the link value, e.g., 
-                                              ! the length of the name of the pointed-to object with a null terminator. 
+    INTEGER(HSIZE_T), INTENT(OUT) :: data_size   ! Indicates the size, in the number of characters, of the attribute
     INTEGER, INTENT(OUT) :: hdferr       ! Error code:
                                          ! 0 on success and -1 on failure
     INTEGER(HID_T), OPTIONAL, INTENT(IN) :: lapl_id  ! Link access property list
@@ -732,24 +762,21 @@ CONTAINS
 !
     INTERFACE
        INTEGER FUNCTION h5lget_info_by_idx_c(loc_id, group_name, group_namelen, index_field, order, n, &
-            link_type, corder_valid, corder, cset, address, val_size, lapl_id_default)
+            corder_valid, corder, cset, data_size, lapl_id_default)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5LGET_INFO_BY_IDX_C'::h5lget_info_by_idx_c
-         !DEC$ENDIF
-         !DEC$ATTRIBUTES reference :: group_name
-         INTEGER(HID_T), INTENT(IN) :: loc_id
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5LGET_INFO_BY_IDX_C'::h5lget_info_by_idx_c
+         !DEC$ ENDIF
+         INTEGER(HID_T), INTENT(IN) :: loc_id 
          CHARACTER(LEN=*), INTENT(IN) :: group_name
          INTEGER(SIZE_T)  :: group_namelen
          INTEGER, INTENT(IN) :: index_field
          INTEGER, INTENT(IN) :: order
          INTEGER(HSIZE_T), INTENT(IN) :: n
-         INTEGER, INTENT(OUT) :: link_type
-         INTEGER :: corder_valid 
+         INTEGER :: corder_valid
          INTEGER, INTENT(OUT) :: corder
          INTEGER, INTENT(OUT) :: cset
-         INTEGER(HADDR_T), INTENT(OUT) :: address
-         INTEGER(SIZE_T), INTENT(OUT) :: val_size
+         INTEGER(HSIZE_T), INTENT(OUT) :: data_size
          INTEGER(HID_T) :: lapl_id_default
        END FUNCTION h5lget_info_by_idx_c
     END INTERFACE
@@ -760,7 +787,7 @@ CONTAINS
     IF(PRESENT(lapl_id)) lapl_id_default = lapl_id
 
     hdferr = h5lget_info_by_idx_c(loc_id, group_name, group_namelen, index_field, order, n, &
-         link_type, corder_valid, corder, cset, address, val_size, lapl_id_default)
+         corder_valid, corder, cset, data_size, lapl_id_default)
 
     f_corder_valid =.FALSE.
     IF (corder_valid .EQ. 1) f_corder_valid =.TRUE.
@@ -790,7 +817,11 @@ CONTAINS
 ! Modifications:  N/A
 !
 !----------------------------------------------------------------------
-  SUBROUTINE h5lis_registered_f(link_cls_id, registered, hdferr)
+  SUBROUTINE h5lis_registered_f(link_cls_id, registered, hdferr) 
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5lis_registered_f
+!DEC$endif
     IMPLICIT NONE
     INTEGER, INTENT(IN) :: link_cls_id  ! User-defined link class identifier
     LOGICAL, INTENT(OUT) :: registered  ! .TRUE. - if the link class has been registered and
@@ -803,9 +834,9 @@ CONTAINS
     INTERFACE
        INTEGER FUNCTION h5lis_registered_c(link_cls_id)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5LIS_REGISTERED_C'::h5lis_registered_c
-         !DEC$ENDIF
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5LIS_REGISTERED_C'::h5lis_registered_c
+         !DEC$ ENDIF
          INTEGER, INTENT(IN) :: link_cls_id  ! User-defined link class identifier
        END FUNCTION h5lis_registered_c
     END INTERFACE
@@ -845,7 +876,11 @@ CONTAINS
 ! Modifications:  N/A
 !
 !----------------------------------------------------------------------
-  SUBROUTINE h5lmove_f(src_loc_id, src_name, dest_loc_id, dest_name, hdferr, lcpl_id, lapl_id)
+  SUBROUTINE h5lmove_f(src_loc_id, src_name, dest_loc_id, dest_name, hdferr, lcpl_id, lapl_id) 
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5lmove_f
+!DEC$endif
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: src_loc_id  ! Original file or group identifier.
     CHARACTER(LEN=*), INTENT(IN) :: src_name  ! Original link name.
@@ -871,10 +906,10 @@ CONTAINS
        INTEGER FUNCTION h5lmove_c(src_loc_id, src_name, src_namelen, dest_loc_id, &
             dest_name, dest_namelen, lcpl_id_default, lapl_id_default) 
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5LMOVE_C'::h5lmove_c
-         !DEC$ENDIF
-         !DEC$ATTRIBUTES reference :: src_name, dest_name
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5LMOVE_C'::h5lmove_c
+         !DEC$ ENDIF
+
          INTEGER(HID_T), INTENT(IN) :: src_loc_id 
          CHARACTER(LEN=*), INTENT(IN) :: src_name
          INTEGER(SIZE_T) :: src_namelen
@@ -930,7 +965,11 @@ CONTAINS
 !
 !----------------------------------------------------------------------
   SUBROUTINE h5lget_name_by_idx_f(loc_id, group_name, index_field, order, n, &
-        name, hdferr, size, lapl_id)
+        name, hdferr, size, lapl_id) 
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5lget_name_by_idx_f
+!DEC$endif
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN) :: loc_id       ! File or group identifier specifying location of subject group  
     CHARACTER(LEN=*), INTENT(IN) :: group_name ! Name of subject group
@@ -962,10 +1001,9 @@ CONTAINS
        INTEGER FUNCTION h5lget_name_by_idx_c(loc_id, group_name, group_namelen, index_field, order, n, &
              size_default, name, lapl_id_default)
          USE H5GLOBAL
-         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5LGET_NAME_BY_IDX_C'::h5lget_name_by_idx_c
-         !DEC$ENDIF
-         !DEC$ATTRIBUTES reference :: group_name, name
+         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5LGET_NAME_BY_IDX_C'::h5lget_name_by_idx_c
+         !DEC$ ENDIF
          INTEGER(HID_T), INTENT(IN) :: loc_id 
          CHARACTER(LEN=*), INTENT(IN) :: group_name
          INTEGER(SIZE_T)  :: group_namelen
@@ -1029,7 +1067,11 @@ CONTAINS
 !!$!
 !!$!----------------------------------------------------------------------
 !!$  SUBROUTINE h5lget_val_by_idx_f(loc_id, group_name, index_field, order, n, &
-!!$       f_corder_valid, corder, cset, data_size, hdferr, lapl_id)
+!!$       f_corder_valid, corder, cset, data_size, hdferr, lapl_id) 
+!!$!This definition is needed for Windows DLLs
+!!$!DEC$if defined(BUILD_HDF5_DLL)
+!!$!DEC$attributes dllexport :: h5lget_val_by_idx_f
+!!$!DEC$endif
 !!$    IMPLICIT NONE
 !!$    INTEGER(HID_T), INTENT(IN) :: loc_id  ! File or group identifier specifying location of subject group  
 !!$    CHARACTER(LEN=*), INTENT(IN) :: group_name ! Name of subject group
@@ -1061,9 +1103,9 @@ CONTAINS
 !!$       INTEGER FUNCTION h5lget_val_by_idx_c(loc_id, group_name, group_namelen, index_field, order, n, &
 !!$            corder_valid, corder, cset, data_size, lapl_id_default)
 !!$         USE H5GLOBAL
-!!$         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-!!$         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5LGET_VAL_BY_IDX_C'::h5lget_val_by_idx_c
-!!$         !DEC$ENDIF
+!!$         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+!!$         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5LGET_VAL_BY_IDX_C'::h5lget_val_by_idx_c
+!!$         !DEC$ ENDIF
 !!$         INTEGER(HID_T), INTENT(IN) :: loc_id 
 !!$         CHARACTER(LEN=*), INTENT(IN) :: group_name
 !!$         INTEGER(SIZE_T)  :: group_namelen
@@ -1119,7 +1161,11 @@ CONTAINS
 !----------------------------------------------------------------------
 
 !!$  SUBROUTINE h5lget_val_f(link_loc_id, link_name, size, linkval_buff,   &
-!!$       hdferr, lapl_id)
+!!$       hdferr, lapl_id) 
+!!$!This definition is needed for Windows DLLs
+!!$!DEC$if defined(BUILD_HDF5_DLL)
+!!$!DEC$attributes dllexport :: h5lget_val_f
+!!$!DEC$endif
 !!$    IMPLICIT NONE
 !!$    INTEGER(HID_T), INTENT(IN) :: link_loc_id  ! File or group identifier.
 !!$    CHARACTER(LEN=*), INTENT(IN) :: link_name  ! Link whose value is to be returned.
@@ -1143,9 +1189,9 @@ CONTAINS
 !!$       INTEGER FUNCTION h5lget_val_c(link_loc_id, link_name, link_namelen, size, linkval_buff, &
 !!$            lapl_id_default)
 !!$         USE H5GLOBAL
-!!$         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-!!$         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5LGET_VAL_C'::h5lget_val_c
-!!$         !DEC$ENDIF
+!!$         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+!!$         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5LGET_VAL_C'::h5lget_val_c
+!!$         !DEC$ ENDIF
 !!$         INTEGER(HID_T), INTENT(IN) :: link_loc_id  ! File or group identifier.
 !!$         CHARACTER(LEN=*), INTENT(IN) :: link_name  ! Link whose value is to be returned.
 !!$         INTEGER :: link_namelen 
@@ -1201,7 +1247,11 @@ CONTAINS
 !
 !----------------------------------------------------------------------
 !!$  SUBROUTINE H5Lregistered_f(version, class_id, comment, create_func, &
-!!$       move_func, copy_func, trav_func, del_func, query_func, hdferr)
+!!$       move_func, copy_func, trav_func, del_func, query_func, hdferr) 
+!!$!This definition is needed for Windows DLLs
+!!$!DEC$if defined(BUILD_HDF5_DLL)
+!!$!DEC$attributes dllexport :: H5Lregistered_f
+!!$!DEC$endif
 !!$    IMPLICIT NONE
 !!$    INTEGER, INTENT(IN) :: version      ! Version number of this struct 
 !!$    INTEGER, INTENT(IN) :: class_id     ! Link class identifier          
@@ -1234,9 +1284,9 @@ CONTAINS
 !!$            del_func, del_func_len, &
 !!$            query_func,query_func_len)
 !!$         USE H5GLOBAL
-!!$         !DEC$IF DEFINED(HDF5F90_WINDOWS)
-!!$         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5LREGISTERED_C'::H5Lregistered_c
-!!$         !DEC$ENDIF
+!!$         !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+!!$         !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5LREGISTERED_C'::H5Lregistered_c
+!!$         !DEC$ ENDIF
 !!$         INTEGER, INTENT(IN) :: version      ! Version number of this struct 
 !!$         INTEGER, INTENT(IN) :: class_id     ! Link class identifier          
 !!$         CHARACTER(LEN=*), INTENT(IN) :: comment      ! Comment for debugging          

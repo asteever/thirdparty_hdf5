@@ -20,11 +20,11 @@
  *
  * Purpose:	We would like to create a driver specifically for Windows
  *			to utilize the Win32 API, and reduce the maintenence demands
- *			for the other file drivers.  Our other motivation is that
+ *			for the other file drivers.  Our other motivation is that 
  *			the Windows system calls of the existing sec2 driver differ
  *			from those on other platforms, and are not 64-bit compatible.
- *			From the start, this will have the structure very similar
- *			to our sec2 driver, but make system calls more similar to
+ *			From the start, this will have the structure very similar 
+ *			to our sec2 driver, but make system calls more similar to 
  *			our stdio driver.
  */
 
@@ -66,7 +66,7 @@ static hid_t H5FD_WINDOWS_g = 0;
  */
 typedef struct H5FD_windows_t {
     H5FD_t	pub;			/*public stuff, must be first	*/
-	/*
+	/* 
 	 * .NET doesn't support our 64-bit safe stdio functions,
 	 * so we will use io.h functions instead.
      */
@@ -91,16 +91,12 @@ typedef struct H5FD_windows_t {
      */
     DWORD fileindexlo;
     DWORD fileindexhi;
-    DWORD volumeserialnumber;
-
-    /* Information from properties set by 'h5repart' tool */
-    hbool_t     fam_to_sec2;    /* Whether to eliminate the family driver info
-                                 * and convert this file to a single file */
+	DWORD volumeserialnumber;
 } H5FD_windows_t;
 
 
 /* These are used by the macros below */
-#define file_offset_t		__int64
+#define file_offset_t		__int64 
 #define fseek_offset_t		__int64
 
 /*
@@ -132,7 +128,7 @@ static H5FD_t *H5FD_windows_open(const char *name, unsigned flags, hid_t fapl_id
 static herr_t H5FD_windows_close(H5FD_t *_file);
 static int H5FD_windows_cmp(const H5FD_t *_f1, const H5FD_t *_f2);
 static herr_t H5FD_windows_query(const H5FD_t *_f1, unsigned long *flags);
-static haddr_t H5FD_windows_alloc(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id,
+static haddr_t H5FD_windows_alloc(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, 
 			      hsize_t size);
 static haddr_t H5FD_windows_get_eoa(const H5FD_t *_file, H5FD_mem_t type);
 static herr_t H5FD_windows_set_eoa(H5FD_t *_file, H5FD_mem_t type, haddr_t addr);
@@ -143,12 +139,11 @@ static herr_t H5FD_windows_read(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, h
 static herr_t H5FD_windows_write(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, haddr_t addr,
 			      size_t size, const void *buf);
 static herr_t H5FD_windows_flush(H5FD_t *_file, hid_t dxpl_id, unsigned closing);
-static herr_t H5FD_windows_truncate(H5FD_t *_file, hid_t dxpl_id, hbool_t closing);
 
 static const H5FD_class_t H5FD_windows_g = {
-    "windows",					/*name			*/
-    MAXADDR,					/*maxaddr		*/
-    H5F_CLOSE_WEAK,				/* fc_degree	*/
+    "windows",				/*name			*/
+    MAXADDR,				/*maxaddr		*/
+    H5F_CLOSE_WEAK,			/* fc_degree	*/
     NULL,					/*sb_size		*/
     NULL,					/*sb_encode		*/
     NULL,					/*sb_decode		*/
@@ -159,24 +154,22 @@ static const H5FD_class_t H5FD_windows_g = {
     0,						/*dxpl_size		*/
     NULL,					/*dxpl_copy		*/
     NULL,					/*dxpl_free		*/
-    H5FD_windows_open,				/*open			*/
-    H5FD_windows_close,				/*close			*/
-    H5FD_windows_cmp,				/*cmp			*/
-    H5FD_windows_query,				/*query			*/
-    NULL,					/*get_type_map		*/
+    H5FD_windows_open,	    /*open			*/
+    H5FD_windows_close,	    /*close			*/
+    H5FD_windows_cmp,	    /*cmp			*/
+    H5FD_windows_query,	    /*query			*/
     NULL,					/*alloc			*/
     NULL,					/*free			*/
-    H5FD_windows_get_eoa,			/*get_eoa		*/
-    H5FD_windows_set_eoa,			/*set_eoa		*/
-    H5FD_windows_get_eof,			/*get_eof		*/
-    H5FD_windows_get_handle,			/*get_handle    */
-    H5FD_windows_read,				/*read			*/
-    H5FD_windows_write,				/*write			*/
-    H5FD_windows_flush,				/*flush			*/
-    H5FD_windows_truncate,			/*truncate		*/
-    NULL,					/*lock          */
-    NULL,					/*unlock        */
-    H5FD_FLMAP_SINGLE 				/*fl_map		*/
+    H5FD_windows_get_eoa,	/*get_eoa		*/
+    H5FD_windows_set_eoa, 	/*set_eoa		*/
+    H5FD_windows_get_eof,	/*get_eof		*/
+    H5FD_windows_get_handle,/*get_handle    */
+    H5FD_windows_read,		/*read			*/
+    H5FD_windows_write,		/*write			*/
+    H5FD_windows_flush,		/*flush			*/
+    NULL,                   /*lock          */
+    NULL,                   /*unlock        */
+    H5FD_FLMAP_SINGLE 		/*fl_map		*/
 };
 
 /* Declare a free list to manage the H5FD_windows_t struct */
@@ -226,7 +219,7 @@ H5FD_windows_init(void)
     FUNC_ENTER_NOAPI(H5FD_windows_init, FAIL)
 
     if(H5I_VFL != H5I_get_type(H5FD_WINDOWS_g))
-        H5FD_WINDOWS_g = H5FD_register(&H5FD_windows_g, sizeof(H5FD_class_t), FALSE);
+        H5FD_WINDOWS_g = H5FD_register(&H5FD_windows_g, sizeof(H5FD_class_t));
 
     /* Set return value */
     ret_value = H5FD_WINDOWS_g;
@@ -353,7 +346,7 @@ H5FD_windows_open(const char *name, unsigned flags, hid_t UNUSED fapl_id,
     if (H5F_ACC_CREAT & flags) o_flags |= O_CREAT;
     if (H5F_ACC_EXCL & flags) o_flags |= O_EXCL;
 	/* Windows needs O_BINARY to correctly handle eol characters */
-	o_flags |= O_BINARY;
+	o_flags |= O_BINARY; 
 
     /* Open the file */
     if ((fd=_open(name, o_flags, 0666))<0)
@@ -395,7 +388,7 @@ H5FD_windows_open(const char *name, unsigned flags, hid_t UNUSED fapl_id,
     H5_ASSIGN_OVERFLOW(file->eof,sb.st_size,h5_stat_size_t,haddr_t);
     file->pos = HADDR_UNDEF;
     file->op = OP_UNKNOWN;
-
+    
 #ifndef WINDOWS_USE_STDIO
     file->fd = fd;
 #else
@@ -405,31 +398,13 @@ H5FD_windows_open(const char *name, unsigned flags, hid_t UNUSED fapl_id,
     file->write_access=write_access;    /* Note the write_access for later */
 #endif /* WINDOWS_USE_STDIO */
 
-    if( (filehandle = (HANDLE)_get_osfhandle(fd)) == INVALID_HANDLE_VALUE)
-        HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to get file handle for file")
+	if( (filehandle = (HANDLE)_get_osfhandle(fd)) == INVALID_HANDLE_VALUE)
+		HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to get file handle for file")
     if(!GetFileInformationByHandle(filehandle, &fileinfo))
-        HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to get file information")
+		HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to get file information")
     file->fileindexhi = fileinfo.nFileIndexHigh;
     file->fileindexlo = fileinfo.nFileIndexLow;
-    file->volumeserialnumber = fileinfo.dwVolumeSerialNumber;
-
-    /* Check for non-default FAPL */
-    if(H5P_FILE_ACCESS_DEFAULT != fapl_id) {
-        H5P_genplist_t      *plist;      /* Property list pointer */
-
-        /* Get the FAPL */
-        if(NULL == (plist = (H5P_genplist_t *)H5I_object(fapl_id)))
-            HGOTO_ERROR(H5E_VFL, H5E_BADTYPE, NULL, "not a file access property list")
-
-        /* This step is for h5repart tool only. If user wants to change file driver from
-         * family to sec2 while using h5repart, this private property should be set so that
-         * in the later step, the library can ignore the family driver information saved
-         * in the superblock.
-         */
-        if(H5P_exist_plist(plist, H5F_ACS_FAMILY_TO_SEC2_NAME) > 0)
-            if(H5P_get(plist, H5F_ACS_FAMILY_TO_SEC2_NAME, &file->fam_to_sec2) < 0)
-                HGOTO_ERROR(H5E_VFL, H5E_CANTGET, NULL, "can't get property of changing family to sec2")
-    } /* end if */
+	file->volumeserialnumber = fileinfo.dwVolumeSerialNumber;
 
     /* Set return value */
     ret_value=(H5FD_t*)file;
@@ -542,14 +517,17 @@ done:
 				Based on code by Quincey Koziol
  *              Thursday, May 24 2007
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
+/* ARGSUSED */
 static herr_t
-H5FD_windows_query(const H5FD_t *_file, unsigned long *flags /* out */)
+H5FD_windows_query(const H5FD_t UNUSED * _f, unsigned long *flags /* out */)
 {
-    const H5FD_windows_t *file = (const H5FD_windows_t*)_file;    /* windows VFD info */
+    herr_t ret_value=SUCCEED;
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5FD_windows_query)
+    FUNC_ENTER_NOAPI(H5FD_windows_query, FAIL)
 
     /* Set the VFL feature flags that this driver supports */
     if(flags) {
@@ -558,15 +536,11 @@ H5FD_windows_query(const H5FD_t *_file, unsigned long *flags /* out */)
         *flags|=H5FD_FEAT_ACCUMULATE_METADATA;	/* OK to accumulate metadata for faster writes */
         *flags|=H5FD_FEAT_DATA_SIEVE;			/* OK to perform data sieving for faster raw data reads & writes */
         *flags|=H5FD_FEAT_AGGREGATE_SMALLDATA;	/* OK to aggregate "small" raw data allocations */
-
-        /* Check for flags that are set by h5repart */
-        if(file->fam_to_sec2)
-            *flags |= H5FD_FEAT_IGNORE_DRVRINFO; /* Ignore the driver info when file is opened (which eliminates it) */
-    } /* end if */
+    }
 
 done:
-    FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5FD_windows_query() */
+    FUNC_LEAVE_NOAPI(ret_value)
+}
 
 /*-------------------------------------------------------------------------
  * Function:	H5FD_windows_get_eoa
@@ -841,7 +815,7 @@ H5FD_windows_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, h
 				/* end of file but not end of format address space */
 				HDmemset(buf, 0, size);
 				break;
-			}
+			}	
 		}
 #endif /* WINDOWS_USE_STDIO */
         assert(nbytes>=0);
@@ -967,19 +941,21 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 }
 
-
 /*-------------------------------------------------------------------------
  * Function:	H5FD_windows_flush
  *
  * Purpose:	Makes sure that the true file size is the same (or larger)
- *		than the end-of-address.
+ *			than the end-of-address.
  *
  * Return:	Success:	Non-negative
- *		Failure:	Negative
+ *
+ *			Failure:	Negative
  *
  * Programmer:	Scott Wegner
- *		Based on code by Robb Matzke
+ *				Based on code by Robb Matzke
  *              Thursday, May 24 2007
+ *
+ * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -988,96 +964,58 @@ static herr_t
 H5FD_windows_flush(H5FD_t *_file, hid_t UNUSED dxpl_id, unsigned closing)
 {
     H5FD_windows_t	*file = (H5FD_windows_t*)_file;
-    herr_t		ret_value = SUCCEED;       /* Return value */
+    herr_t			ret_value=SUCCEED;       /* Return value */
+#ifndef WINDOWS_USE_STDIO
+	LARGE_INTEGER	li;
+	HANDLE			filehandle;
+#else
+	int				fd;
+#endif /* WINDOWS_USE_STDIO */
 
     FUNC_ENTER_NOAPI(H5FD_windows_flush, FAIL)
 
-    HDassert(file);
+    assert(file);
 
-    /* Only try to flush if we have write access */
-    if(file->write_access) {
-        /* Flush */
-        if(!closing) {
-#ifdef WINDOWS_USE_STDIO
-            if(fflush(file->fp) == EOF)
-                HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "fflush failed")
-#endif /* WINDOWS_USE_STDIO */
-
-            /* Reset last file I/O information */
-            file->pos = HADDR_UNDEF;
-            file->op = OP_UNKNOWN;
-        } /* end if */
-    } /* end if */
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5FD_windows_flush() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5FD_windows_truncate
- *
- * Purpose:	Makes sure that the true file size is the same (or larger)
- *		than the end-of-address.
- *
- * Return:	Success:	Non-negative
- *		Failure:	Negative
- *
- * Programmer:	Scott Wegner
- *		Based on code by Robb Matzke
- *              Thursday, May 24 2007
- *
- *-------------------------------------------------------------------------
- */
-/* ARGSUSED */
-static herr_t
-H5FD_windows_truncate(H5FD_t *_file, hid_t UNUSED dxpl_id, hbool_t UNUSED closing)
-{
-    H5FD_windows_t	*file = (H5FD_windows_t*)_file;
+	if (file->eoa != file->eof) {
 #ifndef WINDOWS_USE_STDIO
-    LARGE_INTEGER	li;
-    HANDLE		filehandle;
-#else
-    int			fd;
-#endif /* WINDOWS_USE_STDIO */
-    herr_t		ret_value = SUCCEED;       /* Return value */
 
-    FUNC_ENTER_NOAPI(H5FD_windows_truncate, FAIL)
+		/* Extend the file to make sure it's large enough */
+		if( (filehandle = (HANDLE)_get_osfhandle(file->fd)) == INVALID_HANDLE_VALUE)
+			HGOTO_ERROR(H5E_FILE, H5E_FILEOPEN, FAIL, "unable to get file handle for file")
+		
+		li.QuadPart = (__int64)file->eoa;
+		(void)SetFilePointer((HANDLE)filehandle,li.LowPart,&li.HighPart,FILE_BEGIN);
+		if(SetEndOfFile(filehandle) == 0)
+			HGOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to extend file properly")
 
-    HDassert(file);
-
-    if(file->eoa != file->eof) {
-#ifndef WINDOWS_USE_STDIO
-        /* Extend the file to make sure it's large enough */
-        if((filehandle = (HANDLE)_get_osfhandle(file->fd)) == INVALID_HANDLE_VALUE)
-            HGOTO_ERROR(H5E_FILE, H5E_FILEOPEN, FAIL, "unable to get file handle for file")
-
-        li.QuadPart = (__int64)file->eoa;
-        (void)SetFilePointer((HANDLE)filehandle, li.LowPart, &li.HighPart, FILE_BEGIN);
-        if(SetEndOfFile(filehandle) == 0)
-            HGOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to extend file properly")
 #else /* WINDOWS_USE_STDIO */
-        /* Only try to flush if we have write access */
-        if(!file->write_access)
-            HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "cannot flush without write access")
+		/* Only try to flush if we have write access */
+		if(!file->write_access)
+			HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "cannot flush without write access")
 
-        if((fd = _fileno(file->fp)) == -1)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, FAIL, "unable to get file descriptor for file")
-        if(_chsize_s(fd, file->eoa))
-            HGOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to extend file properly")
+		if((fd = _fileno(file->fp)) == -1)
+			HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, FAIL, "unable to get file descriptor for file")
+		if(_chsize_s(fd, file->eoa))
+			HGOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to extend file properly")
+
+		/* Flush */
+		if(!closing)
+			if (fflush(file->fp) == EOF)
+				HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "fflush failed")
 #endif /* WINDOWS_USE_STDIO */
 
-        /* Update the eof value */
-        file->eof = file->eoa;
+		/* Update the eof value */
+		file->eof = file->eoa;
 
-        /* Reset last file I/O information */
-        file->pos = HADDR_UNDEF;
-        file->op = OP_UNKNOWN;
-    } /* end if */
+		/* Reset last file I/O information */
+		file->pos = HADDR_UNDEF;
+		file->op = OP_UNKNOWN;
+	
+	}
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5FD_windows_truncate() */
+}
 
 #endif /* H5_HAVE_WINDOWS */
 

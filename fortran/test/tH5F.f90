@@ -578,7 +578,7 @@
           INTEGER(HID_T) :: fapl, fapl1, fapl2, fapl3 ! File access identifiers
           INTEGER(HID_T) :: fid_d_fapl, fid1_fapl     ! File access identifiers
           LOGICAL        :: flag
-          INTEGER(SIZE_T) :: obj_count, obj_countf
+          INTEGER        :: obj_count, obj_countf
           INTEGER(HID_T), ALLOCATABLE, DIMENSION(:) :: obj_ids
           INTEGER        :: i
           
@@ -691,14 +691,15 @@
 !    The following subroutine tests h5fget_freespace_f
 !
 
-        SUBROUTINE file_space(filename, cleanup, total_error)
+        SUBROUTINE file_space(cleanup, total_error)
         USE HDF5  ! This module contains all necessary modules
           IMPLICIT NONE
-          CHARACTER(*), INTENT(IN) :: filename
           LOGICAL, INTENT(IN) :: cleanup
           INTEGER, INTENT(OUT) :: total_error 
           INTEGER              :: error
+     
           !
+          CHARACTER(LEN=10), PARAMETER :: filename = "file_space"
           CHARACTER(LEN=3), PARAMETER :: grpname = "grp"
           CHARACTER(LEN=80)  :: fix_filename 
 

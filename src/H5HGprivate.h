@@ -26,6 +26,12 @@
 /* Private headers needed by this file. */
 #include "H5Fprivate.h"		/* File access				*/
 
+/*
+ * Each collection has a magic number for some redundancy.
+ */
+#define H5HG_MAGIC	"GCOL"
+#define H5HG_SIZEOF_MAGIC 4
+
 /* Information to locate object in global heap */
 typedef struct H5HG_t {
     haddr_t		addr;		/*address of collection		*/

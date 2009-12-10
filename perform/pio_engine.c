@@ -44,14 +44,6 @@
 
 /* Macro definitions */
 
-#if H5_VERS_MAJOR == 1 && H5_VERS_MINOR == 6
-#    define H5DCREATE(fd, name, type, space, dcpl)    H5Dcreate(fd, name, type, space, dcpl)
-#    define H5DOPEN(fd, name)                         H5Dopen(fd, name)
-#else
-#    define H5DCREATE(fd, name, type, space, dcpl)    H5Dcreate2(fd, name, type, space, H5P_DEFAULT, dcpl, H5P_DEFAULT)
-#    define H5DOPEN(fd, name)                         H5Dopen2(fd, name, H5P_DEFAULT)
-#endif
-
 /* sizes of various items. these sizes won't change during program execution */
 /* The following three must have the same type */
 #define ELMT_SIZE           (sizeof(unsigned char))     /* we're doing bytes */
@@ -107,7 +99,12 @@ static int  clean_file_g = -1;  /*whether to cleanup temporary test     */
  * is about the best guess.
  */
 #ifndef HDF5_PARAPREFIX
+#  ifdef __PUMAGON__
+/* For the PFS of TFLOPS */
+#    define HDF5_PARAPREFIX     "pfs:/pfs_grande/multi/tmp_1"
+#  else
 #    define HDF5_PARAPREFIX     ""
+#  endif    /* __PUMAGON__ */
 #endif  /* !HDF5_PARAPREFIX */
 
 #ifndef MIN
@@ -243,26 +240,26 @@ do_pio(parameters param)
     /* Validate transfer buffer size & block size*/
     if(blk_size<=0) {
     HDfprintf(stderr,
-        "Transfer block size (%Hd) must be > 0\n", (long long)blk_size);
+        "Transfer block size (%Hd) must be > 0\n", (long_long)blk_size);
     GOTOERROR(FAIL);
     }
     if(buf_size<=0) {
     HDfprintf(stderr,
-        "Transfer buffer size (%Hd) must be > 0\n", (long long)buf_size);
+        "Transfer buffer size (%Hd) must be > 0\n", (long_long)buf_size);
     GOTOERROR(FAIL);
     }
     if ((buf_size % blk_size) != 0){
     HDfprintf(stderr,
         "Transfer buffer size (%Hd) must be a multiple of the "
         "interleaved I/O block size (%Hd)\n",
-        (long long)buf_size, (long long)blk_size);
+        (long_long)buf_size, (long_long)blk_size);
     GOTOERROR(FAIL);
     }
     if((snbytes%pio_mpi_nprocs_g)!=0) {
     HDfprintf(stderr,
         "Dataset size (%Hd) must be a multiple of the "
         "number of processes (%d)\n",
-        (long long)snbytes, pio_mpi_nprocs_g);
+        (long_long)snbytes, pio_mpi_nprocs_g);
     GOTOERROR(FAIL);
     }
 
@@ -271,7 +268,7 @@ do_pio(parameters param)
         HDfprintf(stderr,
             "Dataset size/process (%Hd) must be a multiple of the "
             "trasfer buffer size (%Hd)\n",
-            (long long)(snbytes/pio_mpi_nprocs_g), (long long)buf_size);
+            (long_long)(snbytes/pio_mpi_nprocs_g), (long_long)buf_size);
         GOTOERROR(FAIL);
         }
     }
@@ -280,7 +277,7 @@ do_pio(parameters param)
         HDfprintf(stderr,
             "Dataset side size (%Hd) must be a multiple of the "
             "trasfer buffer size (%Hd)\n",
-            (long long)snbytes, (long long)buf_size);
+            (long_long)snbytes, (long_long)buf_size);
         GOTOERROR(FAIL);
         }
     }
@@ -288,7 +285,7 @@ do_pio(parameters param)
     /* Allocate transfer buffer */
     if ((buffer = malloc(bsize)) == NULL){
     HDfprintf(stderr, "malloc for transfer buffer size (%Hd) failed\n",
-        (long long)(bsize));
+        (long_long)(bsize));
     GOTOERROR(FAIL);
     }
 
@@ -615,7 +612,7 @@ do_write(results *res, file_descr *fd, parameters *parms, long ndsets,
         else {
             bytes_begin[0] = 0;
 
-            if(!parms->h5_use_chunks || parms->io_type==PHDF5)
+            if(!parms->h5_use_chunks || parms->io_type==PHDF5) 
                 bytes_begin[1] = (off_t)(blk_size*pio_mpi_rank_g);
             else
                 bytes_begin[1] = (off_t)(blk_size*blk_size*pio_mpi_rank_g);
@@ -642,18 +639,11 @@ do_write(results *res, file_descr *fd, parameters *parms, long ndsets,
 
     /* debug */
     if (pio_debug_level >= 4) {
-        HDprint_rank(output);
-        if (!parms->dim2d) {
-        HDfprintf(output, "Debug(do_write): "
-            "buf_size=%Hd, bytes_begin=%Hd, bytes_count=%Hd\n",
-            (long long)buf_size, (long long)bytes_begin[0],
-            (long long)bytes_count);
-        } else {
-        HDfprintf(output, "Debug(do_write): "
-            "linear buf_size=%Hd, bytes_begin=(%Hd,%Hd), bytes_count=%Hd\n",
-            (long long)buf_size*blk_size, (long long)bytes_begin[0],
-            (long long)bytes_begin[1], (long long)bytes_count);
-        }
+    HDprint_rank(output);
+    HDfprintf(output, "Debug(do_write): "
+        "buf_size=%Hd, bytes_begin=%Hd, bytes_count=%Hd\n",
+        (long_long)buf_size, (long_long)bytes_begin,
+        (long_long)bytes_count);
     }
 
     /* I/O Access specific setup */
@@ -694,7 +684,7 @@ do_write(results *res, file_descr *fd, parameters *parms, long ndsets,
             /* Commit partial buffer derived type */
             mrc = MPI_Type_commit(&mpi_partial_buffer_cont);
             VRFY((mrc==MPI_SUCCESS), "MPIO_TYPE_COMMIT");
-
+            
             /* Build contiguous file's derived type */
             mrc = MPI_Type_vector((int)blk_size, (int)1, (int)(snbytes/buf_size),
                 mpi_partial_buffer_cont, &mpi_cont_type);
@@ -731,7 +721,7 @@ do_write(results *res, file_descr *fd, parameters *parms, long ndsets,
             mrc = MPI_Type_commit(&mpi_full_buffer);
             VRFY((mrc==MPI_SUCCESS), "MPIO_TYPE_COMMIT");
 
-            /* Build full chunk derived type */
+            /* Build full chunk derived type */               
             mrc = MPI_Type_contiguous((int)(blk_size*blk_size), MPI_BYTE,
                 &mpi_full_chunk);
             VRFY((mrc==MPI_SUCCESS), "MPIO_TYPE_CREATE");
@@ -740,7 +730,7 @@ do_write(results *res, file_descr *fd, parameters *parms, long ndsets,
             mrc = MPI_Type_commit(&mpi_full_chunk);
             VRFY((mrc==MPI_SUCCESS), "MPIO_TYPE_COMMIT");
 
-            /* Build chunk interleaved file's derived type */
+            /* Build chunk interleaved file's derived type */             
             mrc = MPI_Type_vector((int)(buf_size/blk_size), (int)1, (int)(snbytes/blk_size),
                 mpi_full_chunk, &mpi_chunk_inter_type);
             VRFY((mrc==MPI_SUCCESS), "MPIO_TYPE_CREATE");
@@ -917,8 +907,8 @@ do_write(results *res, file_descr *fd, parameters *parms, long ndsets,
         }/* end else */
 
         sprintf(dname, "Dataset_%ld", ndset);
-        h5ds_id = H5DCREATE(fd->h5fd, dname, ELMT_H5_TYPE,
-            h5dset_space_id, h5dcpl);
+        h5ds_id = H5Dcreate2(fd->h5fd, dname, ELMT_H5_TYPE,
+            h5dset_space_id, H5P_DEFAULT, h5dcpl, H5P_DEFAULT);
 
         if (h5ds_id < 0) {
             fprintf(stderr, "HDF5 Dataset Create failed\n");
@@ -1035,7 +1025,7 @@ do_write(results *res, file_descr *fd, parameters *parms, long ndsets,
                         /* Number of bytes to be transferred per I/O operation */
                         nbytes_xfer_advance = buf_size;
 
-                        /* Global offset advance after each I/O operation */
+                        /* Global offset advance after each I/O operation */                            
                         file_offset_advance = (off_t)snbytes;
                     } /* end if */
                     /* Interleaved access pattern */
@@ -1048,7 +1038,7 @@ do_write(results *res, file_descr *fd, parameters *parms, long ndsets,
                         /* Number of bytes to be transferred per I/O operation */
                         nbytes_xfer_advance = blk_size;
 
-                        /* Global offset advance after each I/O operation */
+                        /* Global offset advance after each I/O operation */                            
                         file_offset_advance = (off_t)snbytes;
                     } /* end else */
                 } /* end if */
@@ -1062,7 +1052,7 @@ do_write(results *res, file_descr *fd, parameters *parms, long ndsets,
                         /* Number of bytes to be transferred per I/O operation */
                         nbytes_xfer_advance = blk_size * buf_size;
 
-                        /* Global offset advance after each I/O operation */
+                        /* Global offset advance after each I/O operation */                            
                         file_offset_advance = 0;
                     } /* end if */
                     /*Interleaved access pattern */
@@ -1081,7 +1071,7 @@ do_write(results *res, file_descr *fd, parameters *parms, long ndsets,
                         /* Number of bytes to be transferred per I/O operation */
                         nbytes_xfer_advance = blk_size * blk_size;
 
-                        /* Global offset advance after each I/O operation */
+                        /* Global offset advance after each I/O operation */                            
                         /* file_offset_advance = (off_t)(snbytes/blk_size*(blk_size*blk_size)); */
                         file_offset_advance = (off_t)(snbytes*blk_size);
                     } /* end else */
@@ -1223,7 +1213,7 @@ do_write(results *res, file_descr *fd, parameters *parms, long ndsets,
                         /* Number of bytes to be transferred per I/O operation */
                         nbytes_xfer_advance = buf_size;
 
-                        /* Global offset advance after each I/O operation */
+                        /* Global offset advance after each I/O operation */                            
                         mpi_offset_advance = snbytes;
 
                         /* MPI type to be used for collective access */
@@ -1238,7 +1228,7 @@ do_write(results *res, file_descr *fd, parameters *parms, long ndsets,
                         /* Number of bytes to be transferred per I/O operation */
                         nbytes_xfer_advance = blk_size;
 
-                        /* Global offset advance after each I/O operation */
+                        /* Global offset advance after each I/O operation */                            
                         mpi_offset_advance = snbytes;
 
                         /* MPI type to be used for collective access */
@@ -1255,7 +1245,7 @@ do_write(results *res, file_descr *fd, parameters *parms, long ndsets,
                         /* Number of bytes to be transferred per I/O operation */
                         nbytes_xfer_advance = blk_size * buf_size;
 
-                        /* Global offset advance after each I/O operation */
+                        /* Global offset advance after each I/O operation */                            
                         mpi_offset_advance = 0;
 
                         /* MPI type to be used for collective access */
@@ -1277,7 +1267,7 @@ do_write(results *res, file_descr *fd, parameters *parms, long ndsets,
                         /* Number of bytes to be transferred per I/O operation */
                         nbytes_xfer_advance = blk_size * blk_size;
 
-                        /* Global offset advance after each I/O operation */
+                        /* Global offset advance after each I/O operation */                            
                         /* mpi_offset_advance = (MPI_Offset)(snbytes/blk_size*(blk_size*blk_size)); */
                         mpi_offset_advance = (MPI_Offset)(snbytes*blk_size);
 
@@ -1448,7 +1438,7 @@ done:
             /* Free full chunk type */
             mrc = MPI_Type_free(&mpi_full_chunk);
             VRFY((mrc==MPI_SUCCESS), "MPIO_TYPE_FREE");
-
+        
             /* Free chunk interleaved file type */
             mrc = MPI_Type_free(&mpi_chunk_inter_type);
             VRFY((mrc==MPI_SUCCESS), "MPIO_TYPE_FREE");
@@ -1594,7 +1584,7 @@ do_read(results *res, file_descr *fd, parameters *parms, long ndsets,
         else {
             bytes_begin[0] = 0;
 
-            if (!parms->h5_use_chunks || parms->io_type==PHDF5)
+            if (!parms->h5_use_chunks || parms->io_type==PHDF5) 
                 bytes_begin[1] = (off_t)(blk_size*pio_mpi_rank_g);
             else
                 bytes_begin[1] = (off_t)(blk_size*blk_size*pio_mpi_rank_g);
@@ -1616,18 +1606,11 @@ do_read(results *res, file_descr *fd, parameters *parms, long ndsets,
 
     /* debug */
     if (pio_debug_level >= 4) {
-        HDprint_rank(output);
-        if (!parms->dim2d) {
-        HDfprintf(output, "Debug(do_write): "
-            "buf_size=%Hd, bytes_begin=%Hd, bytes_count=%Hd\n",
-            (long long)buf_size, (long long)bytes_begin[0],
-            (long long)bytes_count);
-        } else {
-        HDfprintf(output, "Debug(do_write): "
-            "linear buf_size=%Hd, bytes_begin=(%Hd,%Hd), bytes_count=%Hd\n",
-            (long long)buf_size*blk_size, (long long)bytes_begin[0],
-            (long long)bytes_begin[1], (long long)bytes_count);
-        }
+    HDprint_rank(output);
+    HDfprintf(output, "Debug(do_read): "
+        "buf_size=%Hd, bytes_begin=%Hd, bytes_count=%Hd\n",
+        (long_long)buf_size, (long_long)bytes_begin,
+        (long_long)bytes_count);
     }
 
     /* I/O Access specific setup */
@@ -1667,7 +1650,7 @@ do_read(results *res, file_descr *fd, parameters *parms, long ndsets,
             /* Commit partial buffer derived type */
             mrc = MPI_Type_commit(&mpi_partial_buffer_cont);
             VRFY((mrc==MPI_SUCCESS), "MPIO_TYPE_COMMIT");
-
+            
             /* Build contiguous file's derived type */
             mrc = MPI_Type_vector((int)blk_size, (int)1, (int)(snbytes/buf_size),
                 mpi_partial_buffer_cont, &mpi_cont_type);
@@ -1704,7 +1687,7 @@ do_read(results *res, file_descr *fd, parameters *parms, long ndsets,
             mrc = MPI_Type_commit(&mpi_full_buffer);
             VRFY((mrc==MPI_SUCCESS), "MPIO_TYPE_COMMIT");
 
-            /* Build full chunk derived type */
+            /* Build full chunk derived type */               
             mrc = MPI_Type_contiguous((int)(blk_size*blk_size), MPI_BYTE,
                 &mpi_full_chunk);
             VRFY((mrc==MPI_SUCCESS), "MPIO_TYPE_CREATE");
@@ -1713,7 +1696,7 @@ do_read(results *res, file_descr *fd, parameters *parms, long ndsets,
             mrc = MPI_Type_commit(&mpi_full_chunk);
             VRFY((mrc==MPI_SUCCESS), "MPIO_TYPE_COMMIT");
 
-            /* Build chunk interleaved file's derived type */
+            /* Build chunk interleaved file's derived type */             
             mrc = MPI_Type_vector((int)(buf_size/blk_size), (int)1, (int)(snbytes/blk_size),
                 mpi_full_chunk, &mpi_chunk_inter_type);
             VRFY((mrc==MPI_SUCCESS), "MPIO_TYPE_CREATE");
@@ -1857,7 +1840,7 @@ do_read(results *res, file_descr *fd, parameters *parms, long ndsets,
 
         case PHDF5:
         sprintf(dname, "Dataset_%ld", ndset);
-        h5ds_id = H5DOPEN(fd->h5fd, dname);
+        h5ds_id = H5Dopen2(fd->h5fd, dname, H5P_DEFAULT);
         if (h5ds_id < 0) {
             fprintf(stderr, "HDF5 Dataset open failed\n");
             GOTOERROR(FAIL);
@@ -1966,7 +1949,7 @@ do_read(results *res, file_descr *fd, parameters *parms, long ndsets,
                         /* Number of bytes to be transferred per I/O operation */
                         nbytes_xfer_advance = buf_size;
 
-                        /* Global offset advance after each I/O operation */
+                        /* Global offset advance after each I/O operation */                            
                         file_offset_advance = (off_t)snbytes;
                     } /* end if */
                     /* Interleaved access pattern */
@@ -1979,7 +1962,7 @@ do_read(results *res, file_descr *fd, parameters *parms, long ndsets,
                         /* Number of bytes to be transferred per I/O operation */
                         nbytes_xfer_advance = blk_size;
 
-                        /* Global offset advance after each I/O operation */
+                        /* Global offset advance after each I/O operation */                            
                         file_offset_advance = (off_t)snbytes;
                     } /* end else */
                 } /* end if */
@@ -1993,7 +1976,7 @@ do_read(results *res, file_descr *fd, parameters *parms, long ndsets,
                         /* Number of bytes to be transferred per I/O operation */
                         nbytes_xfer_advance = blk_size * buf_size;
 
-                        /* Global offset advance after each I/O operation */
+                        /* Global offset advance after each I/O operation */                            
                         file_offset_advance = 0;
                     } /* end if */
                     /*Interleaved access pattern */
@@ -2012,7 +1995,7 @@ do_read(results *res, file_descr *fd, parameters *parms, long ndsets,
                         /* Number of bytes to be transferred per I/O operation */
                         nbytes_xfer_advance = blk_size * blk_size;
 
-                        /* Global offset advance after each I/O operation */
+                        /* Global offset advance after each I/O operation */                            
                         /* file_offset_advance = (off_t)(snbytes/blk_size*(blk_size*blk_size)); */
                         file_offset_advance = (off_t)(snbytes*blk_size);
                     } /* end else */
@@ -2153,7 +2136,7 @@ do_read(results *res, file_descr *fd, parameters *parms, long ndsets,
                         /* Number of bytes to be transferred per I/O operation */
                         nbytes_xfer_advance = buf_size;
 
-                        /* Global offset advance after each I/O operation */
+                        /* Global offset advance after each I/O operation */                            
                         mpi_offset_advance = snbytes;
 
                         /* MPI type to be used for collective access */
@@ -2168,7 +2151,7 @@ do_read(results *res, file_descr *fd, parameters *parms, long ndsets,
                         /* Number of bytes to be transferred per I/O operation */
                         nbytes_xfer_advance = blk_size;
 
-                        /* Global offset advance after each I/O operation */
+                        /* Global offset advance after each I/O operation */                            
                         mpi_offset_advance = snbytes;
 
                         /* MPI type to be used for collective access */
@@ -2185,7 +2168,7 @@ do_read(results *res, file_descr *fd, parameters *parms, long ndsets,
                         /* Number of bytes to be transferred per I/O operation */
                         nbytes_xfer_advance = blk_size * buf_size;
 
-                        /* Global offset advance after each I/O operation */
+                        /* Global offset advance after each I/O operation */                            
                         mpi_offset_advance = 0;
 
                         /* MPI type to be used for collective access */
@@ -2207,7 +2190,7 @@ do_read(results *res, file_descr *fd, parameters *parms, long ndsets,
                         /* Number of bytes to be transferred per I/O operation */
                         nbytes_xfer_advance = blk_size * blk_size;
 
-                        /* Global offset advance after each I/O operation */
+                        /* Global offset advance after each I/O operation */                            
                         /* mpi_offset_advance = (MPI_Offset)(snbytes/blk_size*(blk_size*blk_size)); */
                         mpi_offset_advance = (MPI_Offset)(snbytes*blk_size);
 
@@ -2332,8 +2315,8 @@ do_read(results *res, file_descr *fd, parameters *parms, long ndsets,
                 HDprint_rank(output);
                 HDfprintf(output, "read data error, expected (%Hd), "
                     "got (%Hd)\n",
-                    (long long)pio_mpi_rank_g+1,
-                    (long long)*(ucharptr-1));
+                    (long_long)pio_mpi_rank_g+1,
+                    (long_long)*(ucharptr-1));
             } /* end if */
             } /* end if */
         } /* end for */
@@ -2403,7 +2386,7 @@ done:
             /* Free full chunk type */
             mrc = MPI_Type_free(&mpi_full_chunk);
             VRFY((mrc==MPI_SUCCESS), "MPIO_TYPE_FREE");
-
+        
             /* Free chunk interleaved file type */
             mrc = MPI_Type_free(&mpi_chunk_inter_type);
             VRFY((mrc==MPI_SUCCESS), "MPIO_TYPE_FREE");
@@ -2568,7 +2551,7 @@ do_fopen(parameters *param, char *fname, file_descr *fd /*out*/, int flags)
         }
 
         break;
-    }
+    } 
 
 done:
     return ret_code;
@@ -3028,7 +3011,7 @@ gpfs_invalidate_file_cache(const char *filename)
         filename);
     fprintf(stderr, " errno=%d errorOffset=%d\n",
         errno, inv_cache_hint.hdr.errorOffset);
-    exit(EXIT_FAILURE);
+    exit(1);
     }
 
     /* Close the file */
@@ -3037,7 +3020,7 @@ gpfs_invalidate_file_cache(const char *filename)
         "could not close file '%s' after flushing file cache, ",
         filename);
     fprintf(stderr, "errno=%d\n", errno);
-    exit(EXIT_FAILURE);
+    exit(1);
     }
 }
 

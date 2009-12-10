@@ -33,13 +33,13 @@ extern char  *progname;
 void init_packobject(pack_info_t *obj)
 {
     int j, k;
-
+    
     strcpy(obj->path,"\0");
     for ( j=0; j<H5_REPACK_MAX_NFILTERS; j++)
     {
         obj->filter[j].filtn        = -1;
         for ( k=0; k<CD_VALUES; k++)
-            obj->filter[j].cd_values[k] = 0;
+            obj->filter[j].cd_values[k] = -1;
     }
     obj->chunk.rank = -1;
     obj->refobj_id = -1;
@@ -87,7 +87,7 @@ static void aux_tblinsert_layout(pack_opttbl_t *table,
                                  pack_info_t *pack)
 {
     int k;
-
+    
     table->objs[I].layout = pack->layout;
     if (H5D_CHUNKED==pack->layout)
     {
@@ -122,7 +122,7 @@ static void aux_tblinsert_layout(pack_opttbl_t *table,
 static int aux_inctable(pack_opttbl_t *table, int n_objs )
 {
     unsigned int i;
-
+    
     table->size += n_objs;
     table->objs = (pack_info_t*)realloc(table->objs, table->size * sizeof(pack_info_t));
     if (table->objs==NULL) {
@@ -136,7 +136,6 @@ static int aux_inctable(pack_opttbl_t *table, int n_objs )
     return 0;
 }
 
-
 /*-------------------------------------------------------------------------
  * Function: options_table_init
  *
@@ -146,34 +145,33 @@ static int aux_inctable(pack_opttbl_t *table, int n_objs )
  *
  *-------------------------------------------------------------------------
  */
+
 int options_table_init( pack_opttbl_t **tbl )
 {
     unsigned int i;
-    pack_opttbl_t *table;
-
-    if(NULL == (table = (pack_opttbl_t *)malloc(sizeof(pack_opttbl_t))))
-    {
+    pack_opttbl_t* table = (pack_opttbl_t*) malloc(sizeof(pack_opttbl_t));
+    if (table==NULL) {
         error_msg(progname, "not enough memory for options table\n");
         return -1;
     }
-
+    
     table->size   = 30;
     table->nelems = 0;
-    if(NULL == (table->objs = (pack_info_t*)malloc(table->size * sizeof(pack_info_t))))
-    {
+    table->objs   = (pack_info_t*) malloc(table->size * sizeof(pack_info_t));
+    if (table->objs==NULL) {
         error_msg(progname, "not enough memory for options table\n");
-        free(table);
         return -1;
     }
-
-    for(i = 0; i < table->size; i++)
+    
+    for ( i=0; i<table->size; i++)
+    {
         init_packobject(&table->objs[i]);
-
+    }
+    
     *tbl = table;
     return 0;
 }
 
-
 /*-------------------------------------------------------------------------
  * Function: options_table_free
  *
@@ -209,14 +207,14 @@ int options_add_layout( obj_list_t *obj_list,
 {
     unsigned int i, I;
     int          j, added=0, found=0;
-
+    
     /* increase the size of the collection by N_OBJS if necessary */
     if (table->nelems+n_objs >= table->size)
     {
         if (aux_inctable(table,n_objs)<0)
             return -1;
     }
-
+    
     /* search if this object is already in the table; "path" is the key */
     if (table->nelems>0)
     {
@@ -233,7 +231,7 @@ int options_add_layout( obj_list_t *obj_list,
                     if (table->objs[i].chunk.rank>0)
                     {
                         error_msg(progname, "chunk information already inserted for <%s>\n",obj_list[j].obj);
-                        exit(EXIT_FAILURE);
+                        exit(1);
                     }
                     /* insert the layout info */
                     else
@@ -244,7 +242,7 @@ int options_add_layout( obj_list_t *obj_list,
                     }
                 } /* if */
             } /* i */
-
+            
             if (found==0)
             {
                 /* keep the grow in a temp var */
@@ -268,7 +266,7 @@ int options_add_layout( obj_list_t *obj_list,
             }
         } /* j */
     }
-
+    
     /* first time insertion */
     else
     {
@@ -279,12 +277,12 @@ int options_add_layout( obj_list_t *obj_list,
             added++;
             strcpy(table->objs[I].path,obj_list[j].obj);
             aux_tblinsert_layout(table,I,pack);
-
+            
         }
     }
-
+    
     table->nelems+= added;
-
+    
     return 0;
 }
 
@@ -305,17 +303,17 @@ int options_add_filter(obj_list_t *obj_list,
                        filter_info_t filt,
                        pack_opttbl_t *table )
 {
-
+    
     unsigned int i, I;
     int          j, added=0, found=0;
-
+    
     /* increase the size of the collection by N_OBJS if necessary */
     if (table->nelems+n_objs >= table->size)
     {
         if (aux_inctable(table,n_objs)<0)
             return -1;
     }
-
+    
     /* search if this object is already in the table; "path" is the key */
     if (table->nelems>0)
     {
@@ -334,7 +332,7 @@ int options_add_filter(obj_list_t *obj_list,
                     break;
                 } /* if */
             } /* i */
-
+            
             if (found==0)
             {
                 /* keep the grow in a temp var */
@@ -358,7 +356,7 @@ int options_add_filter(obj_list_t *obj_list,
             }
         } /* j */
     }
-
+    
     /* first time insertion */
     else
     {
@@ -371,9 +369,9 @@ int options_add_filter(obj_list_t *obj_list,
             aux_tblinsert_filter(table,I,filt);
         }
     }
-
+    
     table->nelems+= added;
-
+    
     return 0;
 }
 
@@ -391,7 +389,7 @@ pack_info_t* options_get_object( const char *path,
                                  pack_opttbl_t *table )
 {
     unsigned int i;
-
+    
     for ( i = 0; i < table->nelems; i++)
     {
         /* found it */
@@ -400,7 +398,7 @@ pack_info_t* options_get_object( const char *path,
             return (&table->objs[i]);
         }
     }
-
+    
     return NULL;
 }
 

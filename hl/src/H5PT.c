@@ -33,10 +33,10 @@ static H5I_type_t H5PT_ptable_id_type = H5I_UNINIT;
 #define H5PT_HASH_TABLE_SIZE 64
 
 /* Packet Table private functions */
-static herr_t H5PT_close( htbl_t* table );
-static herr_t H5PT_create_index(htbl_t *table_id);
-static herr_t H5PT_set_index(htbl_t *table_id, hsize_t pt_index);
-static herr_t H5PT_get_index(htbl_t *table_id, hsize_t *pt_index);
+herr_t H5PT_close( htbl_t* table );
+herr_t H5PT_create_index(htbl_t *table_id);
+herr_t H5PT_set_index(htbl_t *table_id, hsize_t pt_index);
+herr_t H5PT_get_index(htbl_t *table_id, hsize_t *pt_index);
 
 /*-------------------------------------------------------------------------
  *
@@ -258,8 +258,6 @@ hid_t H5PTopen( hid_t loc_id,
     goto out;
   if( H5Sget_simple_extent_dims( space_id, dims, NULL) < 0)
     goto out;
-  if(H5Sclose(space_id) < 0)
-    goto out;
   table->size = dims[0];
 
   /* Get an ID for this table */
@@ -275,7 +273,6 @@ hid_t H5PTopen( hid_t loc_id,
 out:
   H5E_BEGIN_TRY
   H5Tclose(type_id);
-  H5Sclose(space_id);
   if(table)
   {
     H5Dclose(table->dset_id);
@@ -306,8 +303,7 @@ out:
  *
  *-------------------------------------------------------------------------
  */
-static herr_t
-H5PT_close( htbl_t* table)
+herr_t H5PT_close( htbl_t* table)
 {
   if(table == NULL)
     goto out;
@@ -560,8 +556,7 @@ out:
  *
  *-------------------------------------------------------------------------
  */
-static herr_t
-H5PT_create_index(htbl_t *table)
+herr_t H5PT_create_index(htbl_t *table)
 {
   if( table != NULL)
   {
@@ -571,8 +566,7 @@ H5PT_create_index(htbl_t *table)
   return -1;
 }
 
-static herr_t
-H5PT_set_index(htbl_t *table, hsize_t index)
+herr_t H5PT_set_index(htbl_t *table, hsize_t index)
 {
   /* Ensure index is valid */
   if( table != NULL )
@@ -586,8 +580,7 @@ H5PT_set_index(htbl_t *table, hsize_t index)
   return -1;
 }
 
-static herr_t
-H5PT_get_index(htbl_t *table, hsize_t *index)
+herr_t H5PT_get_index(htbl_t *table, hsize_t *index)
 {
   /* Ensure index is valid */
   if( table != NULL )

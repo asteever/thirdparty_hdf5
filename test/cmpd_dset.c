@@ -23,7 +23,6 @@
 
 #define H5T_PACKAGE
 #include "H5Tpkg.h"		/*to turn off hardware conversions*/
-#include "H5Iprivate.h"
 
 #include "h5test.h"
 
@@ -116,12 +115,11 @@ typedef struct {
     float f, g, h[16], i, j;
     double k, l, m, n;
     long o, p, q;
-    long long r, s, t;
+    long_long r, s, t;
 } stype4;
 
 #define NX	100u
 #define NY	2000u
-#define PACK_NMEMBS     100
 
 
 /*-------------------------------------------------------------------------
@@ -199,7 +197,6 @@ test_compound (char *filename, hid_t fapl)
     hsize_t 		f_offset[2];	/*offset of hyperslab in file	*/
     hsize_t 		h_size[2];	/*size of hyperslab		*/
     hsize_t		memb_size[1] = {4};
-    int			ret_code;
 
     /* Create the file */
     if ((file = H5Fcreate (filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) {
@@ -210,19 +207,8 @@ test_compound (char *filename, hid_t fapl)
     if ((space = H5Screate_simple (2, dim, NULL)) < 0) goto error;
 
     /* Create xfer properties to preserve initialized data */
-    /* Also verify H5Pset_preserve is initially 0 and then is set to 1. */
-    if ((PRESERVE = H5Pcreate (H5P_DATASET_XFER))<0) goto error;
-    if ((ret_code=H5Pget_preserve (PRESERVE)) != 0){
-	printf("Preserve status of dataset transfer property list should be"
-	   " 0 (FALSE), got %d\n", ret_code);
-	goto error;
-    }
-    if (H5Pset_preserve (PRESERVE, 1)<0) goto error;
-    if ((ret_code=H5Pget_preserve (PRESERVE)) != 1){
-	printf("Preserve status of dataset transfer property list should be"
-	   " 1 (TRUE), got %d\n", ret_code);
-	goto error;
-    }
+    if ((PRESERVE = H5Pcreate (H5P_DATASET_XFER)) < 0) goto error;
+    if (H5Pset_preserve (PRESERVE, 1) < 0) goto error;
 
     /*
      *######################################################################
@@ -614,7 +600,7 @@ test_compound (char *filename, hid_t fapl)
     if ((s8_m_sid = H5Screate_simple (2, h_size, NULL)) < 0) goto error;
 
     /* Read the dataset */
-    s8 = (s1_t *) calloc ((size_t)(h_size[0]*h_size[1]), sizeof(s1_t));
+    s8 = calloc ((size_t)(h_size[0]*h_size[1]), sizeof(s1_t));
     assert (s8);
     if (H5Dread (dataset, s1_tid, s8_m_sid, s8_f_sid, H5P_DEFAULT, s8) < 0) {
 	goto error;
@@ -781,7 +767,7 @@ test_compound (char *filename, hid_t fapl)
     f_offset[1] = NY/3;
     h_size[0] = 2*NX/3 - f_offset[0];
     h_size[1] = 2*NY/3 - f_offset[1];
-    s11 = (s4_t *) malloc ((size_t)h_size[0]*(size_t)h_size[1]*sizeof(s4_t));
+    s11 = malloc ((size_t)h_size[0]*(size_t)h_size[1]*sizeof(s4_t));
     assert (s11);
 
     /* Initialize */
@@ -949,7 +935,7 @@ initialize_stype2(unsigned char *buf, const size_t num)
  *
  * Purpose:	Initialize data buffer.
  *
- * Return:	Success:
+ * Return:	Success:	
  *
  * Programmer:  Raymond Lu
  *              Friday, 15 June 2007
@@ -1033,7 +1019,7 @@ initialize_stype4(unsigned char *buf, const size_t num)
  *
  * Return:	Success:        datatype ID
  *
- *              Failure:        negative
+ *              Failure:        negative	
  *
  * Programmer:  Raymond Lu
  *              Friday, 15 June 2007
@@ -1067,7 +1053,7 @@ create_stype1(void)
             H5Tinsert(tid, "k", HOFFSET(stype1, k), H5T_NATIVE_DOUBLE) < 0 ||
             H5Tinsert(tid, "l", HOFFSET(stype1, l), H5T_NATIVE_DOUBLE) < 0 ||
             H5Tinsert(tid, "m", HOFFSET(stype1, m), H5T_NATIVE_DOUBLE) < 0 ||
-            H5Tinsert(tid, "n", HOFFSET(stype1, n), H5T_NATIVE_DOUBLE) < 0)
+            H5Tinsert(tid, "n", HOFFSET(stype1, n), H5T_NATIVE_DOUBLE) < 0) 
         goto error;
 
     if(H5Tclose(array_dt1) < 0)
@@ -1089,7 +1075,7 @@ error:
  *
  * Return:	Success:        datatype ID
  *
- *              Failure:        negative
+ *              Failure:        negative	
  *
  * Programmer:  Raymond Lu
  *              Friday, 15 June 2007
@@ -1148,7 +1134,7 @@ error:
  *
  * Return:	Success:        datatype ID
  *
- *              Failure:        negative
+ *              Failure:        negative	
  *
  * Programmer:  Raymond Lu
  *              Friday, 15 June 2007
@@ -1191,7 +1177,7 @@ error:
  *
  * Return:	Success:        datatype ID
  *
- *              Failure:        negative
+ *              Failure:        negative	
  *
  * Programmer:  Raymond Lu
  *              Friday, 15 June 2007
@@ -1253,7 +1239,7 @@ error:
  *
  * Return:	Success:        0
  *
- *              Failure:        negative
+ *              Failure:        negative	
  *
  * Programmer:  Raymond Lu
  *              Friday, 15 June 2007
@@ -1300,14 +1286,14 @@ compare_data(void *src_data, void *dst_data, hbool_t src_subset)
 	    printf("    i=%d\n", i);
 	    printf("    src={a=%d, b=%d, c=[%d,%d,%d,%d,%d,%d,%d,%d], d=%d, e=%d, f=%f, g=%f, h=[%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f], i=%f, j=%f, k=%f, l=%f, m=%f, n=%f}\n",
 		   s_ptr->a, s_ptr->b, s_ptr->c[0], s_ptr->c[1], s_ptr->c[2],
-		   s_ptr->c[3], s_ptr->c[4], s_ptr->c[5], s_ptr->c[6], s_ptr->c[7],
+		   s_ptr->c[3], s_ptr->c[4], s_ptr->c[5], s_ptr->c[6], s_ptr->c[7], 
                    s_ptr->d, s_ptr->e, s_ptr->f, s_ptr->g,s_ptr->h[0],s_ptr->h[1],s_ptr->h[2],
                    s_ptr->h[3],s_ptr->h[4],s_ptr->h[5],s_ptr->h[6],s_ptr->h[7],s_ptr->h[8],
                    s_ptr->h[9],s_ptr->h[10],s_ptr->h[11],s_ptr->h[12],s_ptr->h[13],s_ptr->h[14],
                    s_ptr->h[15], s_ptr->i,s_ptr->j,s_ptr->k,s_ptr->l,s_ptr->m,s_ptr->n);
 	    printf("    dst={a=%d, b=%d, c=[%d,%d,%d,%d,%d,%d,%d,%d], d=%d, e=%d, f=%f, g=%f, h=[%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f], i=%f, j=%f, k=%f, l=%f, m=%f, n=%f}\n",
 		   d_ptr->a, d_ptr->b, d_ptr->c[0], d_ptr->c[1], d_ptr->c[2],
-		   d_ptr->c[3], d_ptr->c[4], d_ptr->c[5], d_ptr->c[6], d_ptr->c[7],
+		   d_ptr->c[3], d_ptr->c[4], d_ptr->c[5], d_ptr->c[6], d_ptr->c[7], 
                    d_ptr->d, d_ptr->e, d_ptr->f, d_ptr->g,d_ptr->h[0],d_ptr->h[1],d_ptr->h[2],
                    d_ptr->h[3],d_ptr->h[4],d_ptr->h[5],d_ptr->h[6],d_ptr->h[7],d_ptr->h[8],
                    d_ptr->h[9],d_ptr->h[10],d_ptr->h[11],d_ptr->h[12],d_ptr->h[13],
@@ -1344,7 +1330,7 @@ error:
  *		Failure:	1
  *
  * Programmer:	Raymond Lu
- *              Friday, 15 June 2007
+ *              Friday, 15 June 2007 
  *
  * Modifications:
  *-------------------------------------------------------------------------
@@ -1352,7 +1338,7 @@ error:
 static int
 test_hdf5_src_subset(char *filename, hid_t fapl)
 {
-    hid_t   file;
+    hid_t   file;     
     hid_t   rew_tid, src_tid, dst_tid;
     hid_t   dataset;
     hid_t   space;
@@ -1429,7 +1415,7 @@ test_hdf5_src_subset(char *filename, hid_t fapl)
 
     /*
      *######################################################################
-     * STEP 2. Rewrite the data with a subset of original data type.
+     * STEP 2. Rewrite the data with a subset of original data type. 
      */
     TESTING("rewriting data with a subset of original data type");
 
@@ -1477,7 +1463,7 @@ test_hdf5_src_subset(char *filename, hid_t fapl)
     if(H5Dread(dataset, dst_tid, H5S_ALL, H5S_ALL, dxpl, rbuf) < 0)
         FAIL_STACK_ERROR
 
-    if(compare_data(orig, rbuf, TRUE) < 0)
+    if(compare_data(orig, rbuf, TRUE) < 0) 
         TEST_ERROR
 
     if(H5Dclose(dataset) < 0)
@@ -1490,7 +1476,7 @@ test_hdf5_src_subset(char *filename, hid_t fapl)
     if(H5Dread(dataset, dst_tid, H5S_ALL, H5S_ALL, dxpl, rbuf) < 0)
         FAIL_STACK_ERROR
 
-    if(compare_data(orig, rbuf, TRUE) < 0)
+    if(compare_data(orig, rbuf, TRUE) < 0) 
         TEST_ERROR
 
     if(H5Dclose(dataset) < 0)
@@ -1541,15 +1527,15 @@ error:
  *                      TYPE4 D;               }
  *                      TYPE5 E;
  *                  };
- *              This optimization is for the Chicago company.  This test
- *              is in opposite of test_hdf5_src_subset.
+ *              This optimization is for the Chicago company.  This test 
+ *              is in opposite of test_hdf5_src_subset. 
  *
  * Return:	Success:	0
  *
  *		Failure:	1
  *
  * Programmer:	Raymond Lu
- *              Friday, 15 June 2007
+ *              Friday, 15 June 2007 
  *
  * Modifications:
  *-------------------------------------------------------------------------
@@ -1557,7 +1543,7 @@ error:
 static int
 test_hdf5_dst_subset(char *filename, hid_t fapl)
 {
-    hid_t   file;
+    hid_t   file;     
     hid_t   rew_tid, src_tid, dst_tid;
     hid_t   dataset;
     hid_t   space;
@@ -1633,7 +1619,7 @@ test_hdf5_dst_subset(char *filename, hid_t fapl)
 
     /*
      *######################################################################
-     * STEP 2. Rewrite the data with a subset of original data type.
+     * STEP 2. Rewrite the data with a subset of original data type. 
      */
     TESTING("rewriting data with a subset of original data type");
 
@@ -1681,7 +1667,7 @@ test_hdf5_dst_subset(char *filename, hid_t fapl)
     if(H5Dread(dataset, dst_tid, H5S_ALL, H5S_ALL, dxpl, rbuf) < 0)
         goto error;
 
-    if(compare_data(orig, rbuf, FALSE) < 0)
+    if(compare_data(orig, rbuf, FALSE) < 0) 
         goto error;
 
     if(H5Dclose(dataset) < 0)
@@ -1694,7 +1680,7 @@ test_hdf5_dst_subset(char *filename, hid_t fapl)
     if(H5Dread(dataset, dst_tid, H5S_ALL, H5S_ALL, dxpl, rbuf) < 0)
         goto error;
 
-    if(compare_data(orig, rbuf, FALSE) < 0)
+    if(compare_data(orig, rbuf, FALSE) < 0) 
         goto error;
 
     if(H5Dclose(dataset) < 0)
@@ -1731,436 +1717,16 @@ error:
     return 1;
 }
 
-/* Error macro that outputs the state of the randomly generated variables so the
- * failure can be reproduced */
-#define PACK_OOO_ERROR                                                         \
-{                                                                              \
-    int _i;                                                                    \
-    H5_FAILED(); AT();                                                         \
-    printf("    Insertion order =");                                           \
-    for(_i=0; _i<PACK_NMEMBS; _i++)                                            \
-        printf(" %d", order[_i]);                                              \
-    printf("\n    Inner compound order = %d, location = %d\n", sub_cmpd_order, order[sub_cmpd_order]); \
-    fflush(stdout);                                                            \
-    goto error;                                                                \
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:	test_pack_ooo
- *
- * Purpose:	Test inserting fields into a compound out of offset order.
- *              Verifies that the compound is correctly marked as packed
- *              or non-packed.
- *
- * Return:	Success:	0
- *
- *		Failure:	1
- *
- * Programmer:	Neil Fortner
- *              Thursday, 22 January 2009
- *
- * Modifications:
- *-------------------------------------------------------------------------
- */
-static int
-test_pack_ooo(void)
-{
-    hid_t       cmpd, sub_cmpd;     /* Datatype IDs */
-    H5T_t       *dt;                /* Datatype pointer */
-    unsigned    order[PACK_NMEMBS]; /* Order of insertion */
-    unsigned    free_order[PACK_NMEMBS]; /* Index of remaining free slots in order */
-    unsigned    num_free;           /* Number of free slots in order */
-    unsigned    sub_cmpd_order;     /* Order to insert the inner compound */
-    char        name[6];            /* Member name */
-    unsigned    extra_space;        /* Whether to add extra space to the end of
-                                     * the compound */
-    unsigned    i, j;               /* Indices */
-
-    HDsrand((unsigned) time(NULL));
-
-    /* Initialize "free_order" array to indicate that all slots in order are
-     * free */
-    for(i=0; i<PACK_NMEMBS; i++)
-        free_order[i] = i;
-
-    /* Create "order" array */
-    for(i=0; i<PACK_NMEMBS; i++) {
-        /* Generate index into free_order array */
-        num_free = PACK_NMEMBS - i;
-        j = HDrand() % num_free;
-
-        /* Update order array at the randomly generated (but guaranteed to be
-         * free) location */
-        order[free_order[j]] = i;
-
-        /* Reshape free_order to remove j (which is no longer free) */
-        if(j < (num_free - 1))
-            HDmemmove(&free_order[j], &free_order[j+1], (num_free - j - 1) * sizeof(free_order[0]));
-    } /* end for */
-
-    /* Generate order to insert inner compound type */
-    sub_cmpd_order = HDrand() % PACK_NMEMBS;
-
-    for(extra_space=0; extra_space<2; extra_space ++) {
-        if(extra_space)
-            puts("With extra space at the end of compound...");
-        else
-            puts("Without extra space at the end of compound...");
-
-        TESTING("random member insertion with empty compound subtype");
-
-        /* Create inner compound type.  It will be empty for the first run */
-        if((sub_cmpd = H5Tcreate(H5T_COMPOUND, 4)) < 0) PACK_OOO_ERROR
-
-        /* Create main compound type, with extra space at the end */
-        if((cmpd = H5Tcreate(H5T_COMPOUND, (4 * PACK_NMEMBS) + extra_space)) < 0) PACK_OOO_ERROR
-
-        /* Insert the compound members in the random order previously generated */
-        for(i=0; i<PACK_NMEMBS; i++) {
-            sprintf(name, "%05d", i);
-            if(i == sub_cmpd_order) {
-                if(H5Tinsert(cmpd, name, 4 * order[i], sub_cmpd) < 0) PACK_OOO_ERROR
-            } else
-                if(H5Tinsert(cmpd, name, 4 * order[i], H5T_STD_I32BE) < 0) PACK_OOO_ERROR
-        } /* end for */
-
-        /* Verify that the compound is not packed */
-        if(NULL == (dt = (H5T_t *) H5I_object_verify(cmpd, H5I_DATATYPE))) PACK_OOO_ERROR
-        if(dt->shared->u.compnd.packed) PACK_OOO_ERROR
-
-        /* Close the main compound */
-        if(H5Tclose(cmpd) < 0) PACK_OOO_ERROR
-
-        PASSED();
-
-        TESTING("random member insertion with full compound subtype");
-
-        /* Complete the inner compound type */
-        if(H5Tinsert(sub_cmpd, "int", 0, H5T_STD_I32LE) < 0) PACK_OOO_ERROR
-
-        /* Recreate main compound type */
-        if((cmpd = H5Tcreate(H5T_COMPOUND, (4 * PACK_NMEMBS) + extra_space)) < 0) PACK_OOO_ERROR
-
-        /* Insert the compound members in the random order previously generated */
-        for(i=0; i<PACK_NMEMBS; i++) {
-            sprintf(name, "%05d", i);
-            if(i == sub_cmpd_order) {
-                if(H5Tinsert(cmpd, name, 4 * order[i], sub_cmpd) < 0) PACK_OOO_ERROR
-            } else
-                if(H5Tinsert(cmpd, name, 4 * order[i], H5T_STD_I32BE) < 0) PACK_OOO_ERROR
-        } /* end for */
-
-        /* Verify that the compound is not packed */
-        if(NULL == (dt = (H5T_t *) H5I_object_verify(cmpd, H5I_DATATYPE))) PACK_OOO_ERROR
-        if(dt->shared->u.compnd.packed != !extra_space) PACK_OOO_ERROR
-
-        /* Close */
-        if(H5Tclose(cmpd) < 0) PACK_OOO_ERROR
-        if(H5Tclose(sub_cmpd) < 0) PACK_OOO_ERROR
-
-        PASSED();
-
-        TESTING("reverse member insertion with empty compound subtype");
-
-        /* Create inner compound type.  It will be empty for the first run */
-        if((sub_cmpd = H5Tcreate(H5T_COMPOUND, 4)) < 0) PACK_OOO_ERROR
-
-        /* Create main compound type, with extra space at the end */
-        if((cmpd = H5Tcreate(H5T_COMPOUND, (4 * PACK_NMEMBS) + extra_space)) < 0) PACK_OOO_ERROR
-
-        /* Insert the compound members in reverse order, with compound last */
-        for(i=0; i<PACK_NMEMBS; i++) {
-            sprintf(name, "%05d", i);
-            if(i == PACK_NMEMBS - 1) {
-                if(H5Tinsert(cmpd, name, 4 * (PACK_NMEMBS - i - 1), sub_cmpd) < 0) PACK_OOO_ERROR
-            } else
-                if(H5Tinsert(cmpd, name, 4 * (PACK_NMEMBS - i - 1), H5T_STD_I32BE) < 0) PACK_OOO_ERROR
-        } /* end for */
-
-        /* Verify that the compound is not packed */
-        if(NULL == (dt = (H5T_t *) H5I_object_verify(cmpd, H5I_DATATYPE))) PACK_OOO_ERROR
-        if(dt->shared->u.compnd.packed) PACK_OOO_ERROR
-
-        /* Close the main compound */
-        if(H5Tclose(cmpd) < 0) PACK_OOO_ERROR
-
-        PASSED();
-
-        TESTING("reverse member insertion with full compound subtype");
-
-        /* Complete the inner compound type */
-        if(H5Tinsert(sub_cmpd, "int", 0, H5T_STD_I32LE) < 0) PACK_OOO_ERROR
-
-        /* Recreate main compound type */
-        if((cmpd = H5Tcreate(H5T_COMPOUND, (4 * PACK_NMEMBS) + extra_space)) < 0) PACK_OOO_ERROR
-
-        /* Insert the compound members in reverse order, with compound last */
-        for(i=0; i<PACK_NMEMBS; i++) {
-            sprintf(name, "%05d", i);
-            if(i == PACK_NMEMBS - 1) {
-                if(H5Tinsert(cmpd, name, 4 * (PACK_NMEMBS - i - 1), sub_cmpd) < 0) PACK_OOO_ERROR
-            } else
-                if(H5Tinsert(cmpd, name, 4 * (PACK_NMEMBS - i - 1), H5T_STD_I32BE) < 0) PACK_OOO_ERROR
-        } /* end for */
-
-        /* Verify that the compound is packed */
-        if(NULL == (dt = (H5T_t *) H5I_object_verify(cmpd, H5I_DATATYPE))) PACK_OOO_ERROR
-        if(dt->shared->u.compnd.packed != !extra_space) PACK_OOO_ERROR
-
-        /* Close */
-        if(H5Tclose(cmpd) < 0) PACK_OOO_ERROR
-        if(H5Tclose(sub_cmpd) < 0) PACK_OOO_ERROR
-
-        PASSED();
-
-        TESTING("forward member insertion with empty compound subtype");
-
-        /* Create inner compound type.  It will be empty for the first run */
-        if((sub_cmpd = H5Tcreate(H5T_COMPOUND, 4)) < 0) PACK_OOO_ERROR
-
-        /* Create main compound type, with extra space at the end */
-        if((cmpd = H5Tcreate(H5T_COMPOUND, (4 * PACK_NMEMBS) + extra_space)) < 0) PACK_OOO_ERROR
-
-        /* Insert the compound members in forward order, with compound first */
-        for(i=0; i<PACK_NMEMBS; i++) {
-            sprintf(name, "%05d", i);
-            if(i == 0) {
-                if(H5Tinsert(cmpd, name, 4 * i, sub_cmpd) < 0) PACK_OOO_ERROR
-            } else
-                if(H5Tinsert(cmpd, name, 4 * i, H5T_STD_I32BE) < 0) PACK_OOO_ERROR
-        } /* end for */
-
-        /* Verify that the compound is not packed */
-        if(NULL == (dt = (H5T_t *) H5I_object_verify(cmpd, H5I_DATATYPE))) PACK_OOO_ERROR
-        if(dt->shared->u.compnd.packed) PACK_OOO_ERROR
-
-        /* Close the main compound */
-        if(H5Tclose(cmpd) < 0) PACK_OOO_ERROR
-
-        PASSED();
-
-        TESTING("forward member insertion with full compound subtype");
-
-        /* Complete the inner compound type */
-        if(H5Tinsert(sub_cmpd, "int", 0, H5T_STD_I32LE) < 0) PACK_OOO_ERROR
-
-        /* Recreate main compound type */
-        if((cmpd = H5Tcreate(H5T_COMPOUND, (4 * PACK_NMEMBS) + extra_space)) < 0) PACK_OOO_ERROR
-
-        /* Insert the compound members in forward order */
-        for(i=0; i<PACK_NMEMBS; i++) {
-            sprintf(name, "%05d", i);
-            if(i == 0) {
-                if(H5Tinsert(cmpd, name, 4 * i, sub_cmpd) < 0) PACK_OOO_ERROR
-            } else
-                if(H5Tinsert(cmpd, name, 4 * i, H5T_STD_I32BE) < 0) PACK_OOO_ERROR
-        } /* end for */
-
-        /* Verify that the compound is packed */
-        if(NULL == (dt = (H5T_t *) H5I_object_verify(cmpd, H5I_DATATYPE))) PACK_OOO_ERROR
-        if(dt->shared->u.compnd.packed != !extra_space) PACK_OOO_ERROR
-
-        /* Close */
-        if(H5Tclose(cmpd) < 0) PACK_OOO_ERROR
-        if(H5Tclose(sub_cmpd) < 0) PACK_OOO_ERROR
-
-        PASSED();
-    } /* end for */
-
-    return 0;
-
-error:
-    puts("*** DATASET TESTS FAILED ***");
-    return 1;
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:	test_ooo_order
- *
- * Purpose:	Test inserting fields into a compound out of offset order.
- *              Verifies that the order of compound members is the same as
- *              the order in which they were inserted.  While this is
- *              explicitly not guaranteed by the documentation, the H5TB
- *              API currently makes this assumption.
- *
- * Return:	Success:	0
- *
- *		Failure:	1
- *
- * Programmer:	Neil Fortner
- *              Monday, 19 October 2009
- *
- * Modifications:
- *-------------------------------------------------------------------------
- */
-static int
-test_ooo_order(char *filename)
-{
-    hid_t       file = -1;          /* File ID */
-    hid_t       dtype = -1;         /* Datatype IDs */
-    hid_t       dtype_tmp = -1;     /* Temp Datatype ID */
-    H5T_t       *dt = NULL;         /* Datatype pointer */
-
-    TESTING("that compound member insertion order is preserved")
-
-    /* Create the file */
-    if ((file = H5Fcreate (filename, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT)) < 0)
-        TEST_ERROR
-
-    /* Create the compound */
-    if((dtype = H5Tcreate(H5T_COMPOUND, 20)) < 0) TEST_ERROR
-    if(H5Tinsert(dtype, "A", 8, H5T_STD_I32LE) < 0) TEST_ERROR
-    if(H5Tinsert(dtype, "B", 12, H5T_STD_I32LE) < 0) TEST_ERROR
-    if(H5Tinsert(dtype, "C", 0, H5T_STD_I32LE) < 0) TEST_ERROR
-    if(H5Tinsert(dtype, "D", 16, H5T_STD_I32LE) < 0) TEST_ERROR
-
-    /* Verify that the compound is not packed */
-    if(NULL == (dt = (H5T_t *) H5I_object_verify(dtype, H5I_DATATYPE)))
-        TEST_ERROR
-    if(dt->shared->u.compnd.packed) TEST_ERROR
-
-    /* Verify that the order is the same as the insertion order */
-    if(H5Tget_member_offset(dtype, 0) != 8) TEST_ERROR
-    if(H5Tget_member_offset(dtype, 1) != 12) TEST_ERROR
-    if(H5Tget_member_offset(dtype, 2) != 0) TEST_ERROR
-    if(H5Tget_member_offset(dtype, 3) != 16) TEST_ERROR
-
-    /* Commit the datatype */
-    if(H5Tcommit2(file, "dtype", dtype, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT) < 0)
-        TEST_ERROR
-
-    /* Close and reopen the file */
-    if(H5Tclose(dtype)) TEST_ERROR
-    if(H5Fclose(file)) TEST_ERROR
-    if((file = H5Fopen(filename, H5F_ACC_RDWR, H5P_DEFAULT)) < 0) TEST_ERROR
-
-    /* Open the type */
-    if((dtype_tmp = H5Topen2(file, "dtype", H5P_DEFAULT)) < 0) TEST_ERROR
-
-    /* Verify that the compound is not packed */
-    if(NULL == (dt = (H5T_t *) H5I_object_verify(dtype_tmp, H5I_DATATYPE)))
-        TEST_ERROR
-    if(dt->shared->u.compnd.packed) TEST_ERROR
-
-    /* Verify that the order is the same as the insertion order */
-    if(H5Tget_member_offset(dtype_tmp, 0) != 8) TEST_ERROR
-    if(H5Tget_member_offset(dtype_tmp, 1) != 12) TEST_ERROR
-    if(H5Tget_member_offset(dtype_tmp, 2) != 0) TEST_ERROR
-    if(H5Tget_member_offset(dtype_tmp, 3) != 16) TEST_ERROR
-
-    /* Copy the datatype */
-    if((dtype = H5Tcopy(dtype_tmp)) < 0) TEST_ERROR
-
-    /* Verify that the compound is not packed */
-    if(NULL == (dt = (H5T_t *) H5I_object_verify(dtype, H5I_DATATYPE)))
-        TEST_ERROR
-    if(dt->shared->u.compnd.packed) TEST_ERROR
-
-    /* Verify that the order is the same as the insertion order */
-    if(H5Tget_member_offset(dtype, 0) != 8) TEST_ERROR
-    if(H5Tget_member_offset(dtype, 1) != 12) TEST_ERROR
-    if(H5Tget_member_offset(dtype, 2) != 0) TEST_ERROR
-    if(H5Tget_member_offset(dtype, 3) != 16) TEST_ERROR
-
-    /* Insert the last member */
-    if(H5Tinsert(dtype, "E", 4, H5T_STD_I32LE) < 0) TEST_ERROR
-
-    /* Verify that the compound is packed */
-    if(NULL == (dt = (H5T_t *) H5I_object_verify(dtype, H5I_DATATYPE)))
-        TEST_ERROR
-    if(!dt->shared->u.compnd.packed) TEST_ERROR
-
-    /* Verify that the order is the same as the insertion order */
-    if(H5Tget_member_offset(dtype, 0) != 8) TEST_ERROR
-    if(H5Tget_member_offset(dtype, 1) != 12) TEST_ERROR
-    if(H5Tget_member_offset(dtype, 2) != 0) TEST_ERROR
-    if(H5Tget_member_offset(dtype, 3) != 16) TEST_ERROR
-    if(H5Tget_member_offset(dtype, 4) != 4) TEST_ERROR
-
-    /* Commit the modified datatype */
-    if(H5Tcommit2(file, "dtype2", dtype, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT) < 0)
-        TEST_ERROR
-
-    /* Close and reopen the file */
-    if(H5Tclose(dtype_tmp)) TEST_ERROR
-    if(H5Tclose(dtype)) TEST_ERROR
-    if(H5Fclose(file)) TEST_ERROR
-    if((file = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT)) < 0) TEST_ERROR
-
-    /* Open the type, and verify status */
-    if((dtype_tmp = H5Topen2(file, "dtype2", H5P_DEFAULT)) < 0) TEST_ERROR
-    if(NULL == (dt = (H5T_t *) H5I_object_verify(dtype_tmp, H5I_DATATYPE)))
-        TEST_ERROR
-    if(!dt->shared->u.compnd.packed) TEST_ERROR
-    if(H5Tget_member_offset(dtype_tmp, 0) != 8) TEST_ERROR
-    if(H5Tget_member_offset(dtype_tmp, 1) != 12) TEST_ERROR
-    if(H5Tget_member_offset(dtype_tmp, 2) != 0) TEST_ERROR
-    if(H5Tget_member_offset(dtype_tmp, 3) != 16) TEST_ERROR
-    if(H5Tget_member_offset(dtype_tmp, 4) != 4) TEST_ERROR
-
-    /* Copy the datatype, and verify status */
-    if((dtype = H5Tcopy(dtype_tmp)) < 0) TEST_ERROR
-    if(NULL == (dt = (H5T_t *) H5I_object_verify(dtype, H5I_DATATYPE)))
-        TEST_ERROR
-    if(!dt->shared->u.compnd.packed) TEST_ERROR
-    if(H5Tget_member_offset(dtype, 0) != 8) TEST_ERROR
-    if(H5Tget_member_offset(dtype, 1) != 12) TEST_ERROR
-    if(H5Tget_member_offset(dtype, 2) != 0) TEST_ERROR
-    if(H5Tget_member_offset(dtype, 3) != 16) TEST_ERROR
-    if(H5Tget_member_offset(dtype, 4) != 4) TEST_ERROR
-
-    /* Expand the type, and verify that it became unpacked */
-    if(H5Tset_size(dtype, 21) < 0) TEST_ERROR
-    if(NULL == (dt = (H5T_t *) H5I_object_verify(dtype, H5I_DATATYPE)))
-        TEST_ERROR
-    if(dt->shared->u.compnd.packed) TEST_ERROR
-    if(H5Tget_member_offset(dtype, 0) != 8) TEST_ERROR
-    if(H5Tget_member_offset(dtype, 1) != 12) TEST_ERROR
-    if(H5Tget_member_offset(dtype, 2) != 0) TEST_ERROR
-    if(H5Tget_member_offset(dtype, 3) != 16) TEST_ERROR
-    if(H5Tget_member_offset(dtype, 4) != 4) TEST_ERROR
-
-    /* Shrink the type, and verify that it became packed */
-    if(H5Tset_size(dtype, 20) < 0) TEST_ERROR
-    if(NULL == (dt = (H5T_t *) H5I_object_verify(dtype, H5I_DATATYPE)))
-        TEST_ERROR
-    if(!dt->shared->u.compnd.packed) TEST_ERROR
-    if(H5Tget_member_offset(dtype, 0) != 8) TEST_ERROR
-    if(H5Tget_member_offset(dtype, 1) != 12) TEST_ERROR
-    if(H5Tget_member_offset(dtype, 2) != 0) TEST_ERROR
-    if(H5Tget_member_offset(dtype, 3) != 16) TEST_ERROR
-    if(H5Tget_member_offset(dtype, 4) != 4) TEST_ERROR
-
-    /* Close */
-    if(H5Tclose(dtype_tmp)) TEST_ERROR
-    if(H5Tclose(dtype)) TEST_ERROR
-    if(H5Fclose(file)) TEST_ERROR
-
-    PASSED();
-    return 0;
-
-error:
-    H5E_BEGIN_TRY {
-        H5Tclose(dtype_tmp);
-        H5Tclose(dtype);
-        H5Fclose(file);
-    } H5E_END_TRY
-    puts("*** DATASET TESTS FAILED ***");
-    return 1;
-} /* test_ooo_order */
-
 
 /*-------------------------------------------------------------------------
  * Function:	main
  *
- * Purpose:	Test different cases of I/O for compound data and the
+ * Purpose:	Test different cases of I/O for compound data and the 
  *              compound optimization for the Chicago company.
  *
  * Return:	Success:         0
  *
- *              Failure:         1
+ *              Failure:         1	
  *
  * Programmer:  Raymond Lu
  *              Friday, 15 June 2007
@@ -2201,12 +1767,6 @@ main (int argc, char *argv[])
     puts("Testing the optimization of when the dest type is a subset of the source:");
     h5_fixname(FILENAME[2], fapl_id, fname, sizeof(fname));
     nerrors += test_hdf5_dst_subset(fname, fapl_id);
-
-    puts("Testing that compound types can be packed out of order:");
-    nerrors += test_pack_ooo();
-
-    puts("Testing compound member ordering:");
-    nerrors += test_ooo_order(fname);
 
     if (nerrors) {
         printf("***** %u FAILURE%s! *****\n",

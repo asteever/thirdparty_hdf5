@@ -1,8 +1,5 @@
 /* src/H5config.h.in.  Generated from configure.in by autoheader.  */
 
-/* Define if building universal (internal helper macro) */
-#undef AC_APPLE_UNIVERSAL_BUILD
-
 /* Define if your system generates wrong code for log2 routine. */
 #undef BAD_LOG2_CODE_GENERATED
 
@@ -61,13 +58,6 @@
 /* Define to 1 if you have the `BSDgettimeofday' function. */
 #undef HAVE_BSDGETTIMEOFDAY
 
-/* Define if the compiler understands C99 designated initialization of structs
-   and unions */
-#undef HAVE_C99_DESIGNATED_INITIALIZER
-
-/* Define if the compiler understands the __func__ keyword */
-#undef HAVE_C99_FUNC
-
 /* Define if the function stack tracing code is to be compiled in */
 #undef HAVE_CODESTACK
 
@@ -86,9 +76,6 @@
 
 /* Define to 1 if you have the <dmalloc.h> header file. */
 #undef HAVE_DMALLOC_H
-
-/* Define if library information should be embedded in the executables */
-#undef HAVE_EMBEDDED_LIBINFO
 
 /* Define to 1 if you have the <features.h> header file. */
 #undef HAVE_FEATURES_H
@@ -132,10 +119,7 @@
 /* Define to 1 if you have the `ftello' function. */
 #undef HAVE_FTELLO
 
-/* Define to 1 if you have the `ftruncate64' function. */
-#undef HAVE_FTRUNCATE64
-
-/* Define if the compiler understands the __FUNCTION__ keyword */
+/* Define if the compiler understand the __FUNCTION__ keyword */
 #undef HAVE_FUNCTION
 
 /* Define to 1 if you have the `GetConsoleScreenBufferInfo' function. */
@@ -220,9 +204,6 @@
 /* Define to 1 if you have the `lseek64' function. */
 #undef HAVE_LSEEK64
 
-/* Define to 1 if you have the `lstat' function. */
-#undef HAVE_LSTAT
-
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
@@ -258,6 +239,9 @@
 
 /* Define to 1 if you have the `setsysinfo' function. */
 #undef HAVE_SETSYSINFO
+
+/* Define to 1 if you have the `sigaction' function. */
+#undef HAVE_SIGACTION
 
 /* Define to 1 if you have the `siglongjmp' function. */
 #undef HAVE_SIGLONGJMP
@@ -301,14 +285,11 @@
 /* Define if `struct timezone' is defined */
 #undef HAVE_STRUCT_TIMEZONE
 
-/* Define to 1 if `struct tm' is a member of `tm_zone'. */
+/* Define to 1 if `tm_zone' is member of `struct tm'. */
 #undef HAVE_STRUCT_TM_TM_ZONE
 
 /* Define if `struct videoconfig' is defined */
 #undef HAVE_STRUCT_VIDEOCONFIG
-
-/* Define to 1 if you have the `symlink' function. */
-#undef HAVE_SYMLINK
 
 /* Define to 1 if you have the `system' function. */
 #undef HAVE_SYSTEM
@@ -452,9 +433,6 @@
 /* Define if your system can handle special collective IO properly. */
 #undef MPI_SPECIAL_COLLECTIVE_IO_WORKS
 
-/* Define if we can violate pointer alignment restrictions */
-#undef NO_ALIGNMENT_RESTRICTIONS
-
 /* Define if deprecated public API symbols are disabled */
 #undef NO_DEPRECATED_SYMBOLS
 
@@ -475,9 +453,6 @@
 
 /* Define to the one symbol short name of this package. */
 #undef PACKAGE_TARNAME
-
-/* Define to the home page for this package. */
-#undef PACKAGE_URL
 
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
@@ -593,9 +568,6 @@
 /* The size of `uint_least8_t', as computed by sizeof. */
 #undef SIZEOF_UINT_LEAST8_T
 
-/* The size of `unsigned', as computed by sizeof. */
-#undef SIZEOF_UNSIGNED
-
 /* The size of `__int64', as computed by sizeof. */
 #undef SIZEOF___INT64
 
@@ -623,16 +595,12 @@
    correct precision. */
 #undef ULLONG_TO_LDOUBLE_PRECISION
 
-/* Define if your system accurately converting unsigned long to float values.
-   */
-#undef ULONG_TO_FLOAT_ACCURATE
-
 /* Define if your system can accurately convert unsigned (long) long values to
    floating-point values. */
 #undef ULONG_TO_FP_BOTTOM_BIT_ACCURATE
 
 /* Define using v1.6 public API symbols by default */
-#undef USE_16_API_DEFAULT
+#undef USE_16_API
 
 /* Define if a memory checking tool will be used on the library, to cause
    library to be very picky about memory operations and also disable the
@@ -652,17 +620,9 @@
 /* Check exception handling functions during data conversions */
 #undef WANT_DCONV_EXCEPTION
 
-/* Define WORDS_BIGENDIAN to 1 if your processor stores words with the most
-   significant byte first (like Motorola and SPARC, unlike Intel). */
-#if defined AC_APPLE_UNIVERSAL_BUILD
-# if defined __BIG_ENDIAN__
-#  define WORDS_BIGENDIAN 1
-# endif
-#else
-# ifndef WORDS_BIGENDIAN
-#  undef WORDS_BIGENDIAN
-# endif
-#endif
+/* Define to 1 if your processor stores words with the most significant byte
+   first (like Motorola and SPARC, unlike Intel and VAX). */
+#undef WORDS_BIGENDIAN
 
 /* Define to empty if `const' does not conform to ANSI C. */
 #undef const

@@ -98,11 +98,11 @@ H5FL_DEFINE(H5O_addr_map_t);
  * Purpose:     Copy an object (group or dataset) to destination location
  *              within a file or cross files. PLIST_ID is a property list
  *              which is used to pass user options and properties to the
- *              copy. The name, dst_name, must not already be taken by some
+ *              copy. The name, dst_name, must not already be taken by some 
  *              other object in the destination group.
  *
  *              H5Ocopy() will fail if the name of the destination object
- *                  exists in the destination group.  For example,
+ *                  exists in the destination group.  For example,  
  *                  H5Ocopy(fid_src, "/dset", fid_dst, "/dset", ...)
  *                  will fail if "/dset" exists in the destination file
  *
@@ -112,21 +112,21 @@ H5FL_DEFINE(H5O_addr_map_t);
  *                      the group are copied. Otherwise (default), it will
  *                      recursively copy all objects below the group
  *                  H5O_COPY_EXPAND_SOFT_LINK_FLAG
- *                      If this flag is specified, it will copy the objects
- *                      pointed by the soft links. Otherwise (default), it
+ *                      If this flag is specified, it will copy the objects 
+ *                      pointed by the soft links. Otherwise (default), it 
  *                      will copy the soft link as they are
  *                  H5O_COPY_WITHOUT_ATTR_FLAG
- *                      If this flag is specified, it will copy object without
+ *                      If this flag is specified, it will copy object without 
  *                      copying attributes. Otherwise (default), it will
  *                      copy object along with all its attributes
  *                  H5O_COPY_EXPAND_REFERENCE_FLAG
  *                      1) Copy object between two different files:
- *                          When this flag is specified, it will copy objects that
+ *                          When this flag is specified, it will copy objects that 
  *                          are pointed by the references and update the values of
  *                          references in the destination file.  Otherwise (default)
  *                          the values of references in the destination will set to
  *                          zero
- *                          The current implementation does not handle references
+ *                          The current implementation does not handle references 
  *                          inside of other datatype structure. For example, if
  *                          a member of compound datatype is reference, H5Ocopy()
  *                          will copy that field as it is. It will not set the
@@ -137,11 +137,11 @@ H5FL_DEFINE(H5O_addr_map_t);
  *                          Datasets or attributes of references are copied as they
  *                          are, i.e. values of references of the destination object
  *                          are the same as the values of the source object
- *
+ *  
  *              OPTIONS THAT MAY APPLY TO COPY IN THE FUTURE.
  *                  H5O_COPY_EXPAND_EXT_LINK_FLAG
  *                      If this flag is specified, it will expand the external links
- *                      into new objects, Otherwise (default), it will keep external
+ *                      into new objects, Otherwise (default), it will keep external 
  *                      links as they are (default)
  *
  *              PROPERTIES THAT MAY APPLY TO COPY IN FUTURE
@@ -396,7 +396,7 @@ H5O_copy_header_real(const H5O_loc_t *oloc_src, H5O_loc_t *oloc_dst /*out */,
 
         if(copy_type->pre_copy_file) {
             /* Decode the message if necessary. */
-            H5O_LOAD_NATIVE(oloc_src->file, dxpl_id, 0, oh_src, mesg_src, FAIL)
+            H5O_LOAD_NATIVE(oloc_src->file, dxpl_id, oh_src, mesg_src, FAIL)
 
             /* Perform "pre copy" operation on message */
             if((copy_type->pre_copy_file)(oloc_src->file, mesg_src->native, &(deleted[mesgno]), cpy_info, udata) < 0)
@@ -467,11 +467,11 @@ H5O_copy_header_real(const H5O_loc_t *oloc_src, H5O_loc_t *oloc_dst /*out */,
             hbool_t recompute_size;     /* Whether copy_file callback created a shared message */
 
             /* Decode the message if necessary. */
-            H5O_LOAD_NATIVE(oloc_src->file, dxpl_id, 0, oh_src, mesg_src, FAIL)
+            H5O_LOAD_NATIVE(oloc_src->file, dxpl_id, oh_src, mesg_src, FAIL)
 
             /* Copy the source message */
             recompute_size = FALSE;
-            if((mesg_dst->native = H5O_msg_copy_file(copy_type,
+            if((mesg_dst->native = H5O_msg_copy_file(copy_type, 
                     oloc_src->file, mesg_src->native, oloc_dst->file,
                     &recompute_size, cpy_info, udata, dxpl_id)) == NULL)
                 HGOTO_ERROR(H5E_OHDR, H5E_CANTCOPY, FAIL, "unable to copy object header message")
@@ -543,7 +543,7 @@ H5O_copy_header_real(const H5O_loc_t *oloc_src, H5O_loc_t *oloc_dst /*out */,
     /* Check if the chunk's data portion is too small */
     dst_oh_gap = dst_oh_null = 0;
     if(dst_oh_size < H5O_MIN_SIZE) {
-        size_t delta = (size_t)(H5O_MIN_SIZE - dst_oh_size);    /* Delta in chunk size needed */
+        size_t delta = (H5O_MIN_SIZE - dst_oh_size);    /* Delta in chunk size needed */
 
         /* Sanity check */
         HDassert((oh_dst->flags & H5O_HDR_CHUNK0_SIZE) == H5O_HDR_CHUNK0_1);
@@ -591,7 +591,7 @@ H5O_copy_header_real(const H5O_loc_t *oloc_src, H5O_loc_t *oloc_dst /*out */,
      * header.  This will be written when the header is flushed to disk.
      */
     if(oh_dst->version > H5O_VERSION_1)
-        HDmemcpy(current_pos, H5O_HDR_MAGIC, (size_t)H5_SIZEOF_MAGIC);
+        HDmemcpy(current_pos, H5O_HDR_MAGIC, (size_t)H5O_SIZEOF_MAGIC); 
     current_pos += H5O_SIZEOF_HDR(oh_dst) - H5O_SIZEOF_CHKSUM_OH(oh_dst);
 
     /* Loop through destination messages, updating their "raw" info */
@@ -719,7 +719,7 @@ H5O_copy_header_real(const H5O_loc_t *oloc_src, H5O_loc_t *oloc_dst /*out */,
     } /* end if */
 
     /* Insert destination object header in cache */
-    if(H5AC_set(oloc_dst->file, dxpl_id, H5AC_OHDR, oloc_dst->addr, oh_dst, H5AC__NO_FLAGS_SET) < 0)
+    if(H5AC_set(oloc_dst->file, dxpl_id, H5AC_OHDR, oloc_dst->addr, oh_dst, H5AC__DIRTIED_FLAG) < 0)
         HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, FAIL, "unable to cache object header")
 
 done:
@@ -860,7 +860,7 @@ H5O_copy_free_addrmap_cb(void *item, void UNUSED *key, void UNUSED *op_data)
     HDassert(item);
 
     /* Release the item */
-    (void)H5FL_FREE(H5O_addr_map_t, item);
+    H5FL_FREE(H5O_addr_map_t, item);
 
     FUNC_LEAVE_NOAPI(0)
 }   /* H5O_copy_free_addrmap_cb() */
@@ -913,7 +913,7 @@ H5O_copy_header(const H5O_loc_t *oloc_src, H5O_loc_t *oloc_dst /*out */,
         cpy_info.preserve_null = TRUE;
 
     /* Create a skip list to keep track of which objects are copied */
-    if((cpy_info.map_list = H5SL_create(H5SL_TYPE_HADDR)) == NULL)
+    if((cpy_info.map_list = H5SL_create(H5SL_TYPE_HADDR, 0.5, (size_t)16)) == NULL)
         HGOTO_ERROR(H5E_SLIST, H5E_CANTCREATE, FAIL, "cannot make skip list")
 
     /* copy the object from the source file to the destination file */
@@ -1000,8 +1000,8 @@ done:
  *
  * Return:      Non-negative on success/Negative on failure
  *
- * Programmer:  Peter Cao
- *              Aug 7 2006
+ * Programmer:  Peter Cao       
+ *              Aug 7 2006 
  *
  *-------------------------------------------------------------------------
  */
@@ -1035,7 +1035,7 @@ H5O_copy_obj_by_ref(H5O_loc_t *src_oloc, hid_t dxpl_id, H5O_loc_t *dst_oloc,
         new_oloc.addr = dst_oloc->addr;
 
         /* Pick a default name for the new object */
-        sprintf(tmp_obj_name, "~obj_pointed_by_%llu", (unsigned long long)dst_oloc->addr);
+        sprintf(tmp_obj_name, "~obj_pointed_by_%llu", (unsigned long_long)dst_oloc->addr);
 
         /* Create a link to the newly copied object */
         if(H5L_link(dst_root_loc, tmp_obj_name, &new_loc, H5P_DEFAULT, H5P_DEFAULT, dxpl_id) < 0)
@@ -1056,8 +1056,8 @@ done:
  *
  * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:  Peter Cao
- *		Aug 7 2006
+ * Programmer:  Peter Cao	
+ *		Aug 7 2006 
  *
  *-------------------------------------------------------------------------
  */
@@ -1123,7 +1123,7 @@ H5O_copy_expand_ref(H5F_t *file_src, void *_src_ref, hid_t dxpl_id,
         uint8_t *buf;           /* Buffer to store serialized selection in */
         H5HG_t hobjid;          /* Heap object ID */
         size_t buf_size;        /* Length of object in heap */
-
+  
         /* Making equivalent references in the destination file */
         for(i = 0; i < ref_count; i++) {
             /* Get the heap ID for the dataset region */

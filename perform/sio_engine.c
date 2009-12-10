@@ -13,7 +13,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
- * Author: Christian Chilan, April 2008
+ * Author: Christian Chilan, April 2008 
  */
 
 #include <sys/types.h>
@@ -21,9 +21,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
-#ifdef H5_HAVE_UNISTD_H
-#	include <unistd.h>
-#endif
+#include <unistd.h>
 #include <errno.h>
 
 #include "hdf5.h"
@@ -81,6 +79,21 @@ static int  clean_file_g = -1;  /*whether to cleanup temporary test     */
 /*files. -1 is not defined;             */
 /*0 is no cleanup; 1 is do cleanup      */
 
+/*
+ * In a parallel machine, the filesystem suitable for compiling is
+ * unlikely a parallel file system that is suitable for parallel I/O.
+ * There is no standard pathname for the parallel file system.  /tmp
+ * is about the best guess.
+ */
+#ifndef HDF5_PARAPREFIX
+#  ifdef __PUMAGON__
+/* For the PFS of TFLOPS */
+#    define HDF5_PARAPREFIX     "pfs:/pfs_grande/multi/tmp_1"
+#  else
+#    define HDF5_PARAPREFIX     ""
+#  endif    /* __PUMAGON__ */
+#endif  /* !HDF5_PARAPREFIX */
+
 #ifndef MIN
 #   define MIN(a,b) ((a) < (b) ? (a) : (b))
 #endif  /* !MIN */
@@ -124,11 +137,12 @@ static off_t offset[MAX_DIMS];       /* dataset size in bytes     */
 static size_t buf_offset[MAX_DIMS];   /* dataset size in bytes     */
 static int order[MAX_DIMS];        /* dimension access order */
 static size_t      linear_buf_size;        /* linear buffer size     */
-static int         cont_dim;       /* lowest dimension for contiguous POSIX
+static int         cont_dim;       /* lowest dimension for contiguous POSIX  
                                       access */
 static size_t      cont_size;      /* size of contiguous POSIX access */
 static hid_t       fapl;           /* file access list */
 static unsigned char *buf_p;       /* buffer pointer */
+static unsigned char *buf2_p;      /* buffer pointer */
 static const char *multi_letters = "msbrglo"; /* string for multi driver */
 static char *buffer2=NULL;         /* buffer for data verification */
 
@@ -145,14 +159,17 @@ static hid_t       h5dxpl = -1;            /* Dataset transfer property list */
  * Function:        do_sio
  * Purpose:         SIO Engine where IO are executed.
  * Return:          results
- * Programmer:      Christian Chilan, April, 2008
+ * Programmer:      Christian Chilan, April, 2008 
  * Modifications:
  */
     results
 do_sio(parameters param)
 {
     char       *buffer = NULL; /*data buffer pointer           */
+    off_t       nbytes;                 /* dataset raw size */
+    off_t       dset_size[MAX_DIMS];    /* dataset size in bytes     */
     size_t      buf_size[MAX_DIMS];     /* general buffer size in bytes     */
+    size_t      chk_size[MAX_DIMS];     /* chunk size in bytes     */
     file_descr  fd;                     /* file handles */
     iotype      iot;                    /* API type */
     char base_name[256];                /* test file base name */
@@ -181,14 +198,17 @@ do_sio(parameters param)
         break;
     default:
         /* unknown request */
-        fprintf(stderr, "Unknown IO type request (%d)\n", (int)iot);
+        fprintf(stderr, "Unknown IO type request (%d)\n", iot);
         GOTOERROR(FAIL);
     }
 
+    nbytes = param.num_bytes;     
     linear_buf_size = 1;
 
     for (i=0; i<param.rank; i++){
+        dset_size[i] = param.dset_size[i];
         buf_size[i] = param.buf_size[i];
+        chk_size[i] = param.chk_size[i];
         order[i] = param.order[i];
         linear_buf_size *= buf_size[i];
         buf_offset[i] = 0;
@@ -197,7 +217,7 @@ do_sio(parameters param)
         /* Validate transfer buffer size */
         if (param.buf_size[i]<=0) {
             HDfprintf(stderr,
-            "Transfer buffer size[%d] (%Hd) must be > 0\n", i,(long long)buf_size[i]);
+            "Transfer buffer size[%d] (%Hd) must be > 0\n", i,(long_long)buf_size[i]);
             GOTOERROR(FAIL);
         }
 
@@ -205,21 +225,21 @@ do_sio(parameters param)
             HDfprintf(stderr,
             "Dataset size[%d] (%Hd) must be a multiple of the "
             "trasfer buffer size[%d] (%Hd)\n",param.rank,
-            (long long)param.dset_size[i], param.rank, (long long)param.buf_size[i]);
+            (long_long)param.dset_size[i], param.rank, (long_long)param.buf_size[i]);
             GOTOERROR(FAIL);
         }
 
     }
 
     /* Allocate transfer buffer */
-    buffer2 = malloc(linear_buf_size);
+    buffer2 = malloc(linear_buf_size); 
     if ((buffer = malloc(linear_buf_size)) == NULL){
         HDfprintf(stderr, "malloc for transfer buffer size (%Hd) failed\n",
-        (long long)(linear_buf_size));
+        (long_long)(linear_buf_size));
         GOTOERROR(FAIL);
     }
 
-    if (sio_debug_level >= 4)
+    if (sio_debug_level >= 4) 
 
     /* output all of the times for all iterations */
         fprintf(output, "Timer details:\n");
@@ -229,7 +249,7 @@ do_sio(parameters param)
      */
     /* Open file for write */
 
-    HDstrcpy(base_name, "#sio_tmp");
+    strcpy(base_name, "#sio_tmp");
     sio_create_filename(iot, base_name, fname, sizeof(fname), &param);
 
     if (sio_debug_level > 0)
@@ -271,7 +291,7 @@ do_sio(parameters param)
         set_time(res.timers, HDF5_GROSS_READ_FIXED_DIMS, STOP);
         VRFY((hrc == SUCCESS), "do_fclose failed");
     }
-
+    
     do_cleanupfile(iot, fname);
 
 done:
@@ -315,8 +335,8 @@ sio_create_filename(iotype iot, const char *base_name, char *fullname, size_t si
     const char *prefix, *suffix="";
     char *ptr, last = '\0';
     size_t i, j;
-    vfdtype vfd;
-    vfd = param->vfd;
+    vfdtype vfd; 
+    vfd = param->vfd; 
 
     if (!base_name || !fullname || size < 1)
     return NULL;
@@ -337,22 +357,22 @@ sio_create_filename(iotype iot, const char *base_name, char *fullname, size_t si
     }
 
     /* First use the environment variable and then try the constant */
-    prefix = HDgetenv("HDF5_PREFIX");
+    prefix = getenv("HDF5_PARAPREFIX");
 
-#ifdef HDF5_PREFIX
+#ifdef HDF5_PARAPREFIX
     if (!prefix)
-    prefix = HDF5_PREFIX;
-#endif  /* HDF5_PREFIX */
+    prefix = HDF5_PARAPREFIX;
+#endif  /* HDF5_PARAPREFIX */
 
     /* Prepend the prefix value to the base name */
     if (prefix && *prefix) {
-    /* If the prefix specifies the HDF5_PREFIX directory, then
+    /* If the prefix specifies the HDF5_PARAPREFIX directory, then
      * default to using the "/tmp/$USER" or "/tmp/$LOGIN"
      * directory instead. */
     register char *user, *login, *subdir;
 
-    user = HDgetenv("USER");
-    login = HDgetenv("LOGIN");
+    user = getenv("USER");
+    login = getenv("LOGIN");
     subdir = (user ? user : login);
 
     if (subdir) {
@@ -365,24 +385,24 @@ sio_create_filename(iotype iot, const char *base_name, char *fullname, size_t si
         fullname[i] = subdir[j];
     } else {
         /* We didn't append the prefix yet */
-        HDstrncpy(fullname, prefix, MIN(HDstrlen(prefix), size));
+        strncpy(fullname, prefix, MIN(strlen(prefix), size));
     }
 
-    if ((HDstrlen(fullname) + HDstrlen(base_name) + 1) < size) {
+    if ((strlen(fullname) + strlen(base_name) + 1) < size) {
         /* Append the base_name with a slash first. Multiple slashes are
          * handled below. */
         h5_stat_t buf;
 
         if (HDstat(fullname, &buf) < 0)
         /* The directory doesn't exist just yet */
-        if (HDmkdir(fullname, 0755) < 0 && errno != EEXIST) {
+        if (mkdir(fullname, (mode_t)0755) < 0 && errno != EEXIST) {
             /* We couldn't make the "/tmp/${USER,LOGIN}" subdirectory.
              * Default to PREFIX's original prefix value. */
-            HDstrcpy(fullname, prefix);
+            strcpy(fullname, prefix);
         }
 
-        HDstrcat(fullname, "/");
-        HDstrcat(fullname, base_name);
+        strcat(fullname, "/");
+        strcat(fullname, base_name);
     } else {
         /* Buffer is too small */
         return NULL;
@@ -391,19 +411,19 @@ sio_create_filename(iotype iot, const char *base_name, char *fullname, size_t si
     /* Buffer is too small */
         return NULL;
     } else {
-        HDstrcpy(fullname, base_name);
+        strcpy(fullname, base_name);
     }
 
     /* Append a suffix */
     if (suffix) {
-        if (HDstrlen(fullname) + HDstrlen(suffix) >= size)
+        if (strlen(fullname) + strlen(suffix) >= size)
             return NULL;
 
-        HDstrcat(fullname, suffix);
+        strcat(fullname, suffix);
     }
 
     /* Remove any double slashes in the filename */
-    for (ptr = fullname, i = j = 0; ptr && (i < size); i++, ptr++) {
+    for (ptr = fullname, i = j = 0; ptr && i < size; i++, ptr++) {
     if (*ptr != '/' || last != '/')
         fullname[j++] = *ptr;
 
@@ -417,7 +437,7 @@ sio_create_filename(iotype iot, const char *base_name, char *fullname, size_t si
  * Function:        do_write
  * Purpose:         Write the required amount of data to the file.
  * Return:          SUCCESS or FAIL
- * Programmer:      Christian Chilan, April, 2008
+ * Programmer:      Christian Chilan, April, 2008 
  * Modifications:
  */
 static herr_t
@@ -456,7 +476,7 @@ do_write(results *res, file_descr *fd, parameters *parms, void *buffer)
 
             /* determine lowest dimension for contiguous POSIX access */
             cont_dim = rank;
-
+            
             for (i=rank-1; i>=0; i--) {
                 if (parms->buf_size[i]==parms->dset_size[i])
                     cont_dim = i;
@@ -464,7 +484,7 @@ do_write(results *res, file_descr *fd, parameters *parms, void *buffer)
                     break;
             }
 
-            /* determine size of the contiguous POSIX access */
+            /* determine size of the contiguous POSIX access */ 
             cont_size = (!cont_dim)? 1 : parms->buf_size[cont_dim-1];
             for (i=cont_dim; i<rank; i++)
                 cont_size *= parms->buf_size[i];
@@ -481,7 +501,7 @@ do_write(results *res, file_descr *fd, parameters *parms, void *buffer)
             h5count[i] = parms->buf_size[i];
             h5chunk[i] = parms->chk_size[i];
             h5maxdims[i] = H5S_UNLIMITED;
-
+            
         }
 
         if (parms->h5_use_chunks && parms->h5_extendable) {
@@ -494,7 +514,7 @@ do_write(results *res, file_descr *fd, parameters *parms, void *buffer)
         }
 
         hrc = H5Sselect_hyperslab(h5dset_space_id, H5S_SELECT_SET,
-                    h5start, h5stride, h5count, h5block);
+                    h5start, h5stride, h5count, h5block); 
         VRFY((hrc >= 0), "H5Sselect_hyperslab");
 
         /* Create the memory dataspace that corresponds to the xfer buffer */
@@ -508,7 +528,7 @@ do_write(results *res, file_descr *fd, parameters *parms, void *buffer)
             GOTOERROR(FAIL);
         }
 
-        break;
+        break;        
     } /* end switch */
 
 
@@ -539,14 +559,14 @@ do_write(results *res, file_descr *fd, parameters *parms, void *buffer)
             h5dset_space_id, H5P_DEFAULT, h5dcpl, H5P_DEFAULT);
 
         if (h5ds_id < 0) {
-            HDfprintf(stderr, "HDF5 Dataset Create failed\n");
+            fprintf(stderr, "HDF5 Dataset Create failed\n");
             GOTOERROR(FAIL);
         }
 
         hrc = H5Pclose(h5dcpl);
         /* verifying the close of the dcpl */
         if (hrc < 0) {
-            HDfprintf(stderr, "HDF5 Property List Close failed\n");
+            fprintf(stderr, "HDF5 Property List Close failed\n");
             GOTOERROR(FAIL);
         }
 
@@ -558,7 +578,7 @@ do_write(results *res, file_descr *fd, parameters *parms, void *buffer)
 
     /* Perform write */
     hrc = dset_write(rank-1, fd, parms, buffer);
-
+    
     if (hrc < 0) {
         fprintf(stderr, "Error in dataset write\n");
         GOTOERROR(FAIL);
@@ -620,7 +640,7 @@ done:
 
 /*
  * Function:        dset_write
- * Purpose:         Write buffer into the dataset.
+ * Purpose:         Write buffer into the dataset. 
  * Return:          SUCCESS or FAIL
  * Programmer:      Christian Chilan, April, 2008
  * Modifications:
@@ -635,11 +655,11 @@ static herr_t dset_write(int local_dim, file_descr *fd, parameters *parms, void 
     long i,j;
     herr_t hrc;
 
-    /* iterates according to the dimensions in order array */
+    /* iterates according to the dimensions in order array */ 
     for (i=0; i < parms->dset_size[cur_dim]; i += parms->buf_size[cur_dim]){
 
         h5offset[cur_dim] = offset[cur_dim] = i;
-
+            
         if (local_dim > 0){
 
             dset_write(local_dim-1, fd, parms, buffer);
@@ -677,7 +697,7 @@ static herr_t dset_write(int local_dim, file_descr *fd, parameters *parms, void 
                         }
                     }
                 }
-                /* applies offset */
+                /* applies offset */               
                 hrc = H5Soffset_simple(h5dset_space_id, h5offset);
                 VRFY((hrc >= 0), "H5Soffset_simple");
 
@@ -696,7 +716,7 @@ done:
 }
 
 /*
- * Function:        posix_buffer_write
+ * Function:        posix_buffer_write 
  * Purpose:         Write buffer into the POSIX file considering contiguity.
  * Return:          SUCCESS or FAIL
  * Programmer:      Christian Chilan, April, 2008
@@ -760,7 +780,7 @@ done:
  * Function:        do_read
  * Purpose:         Read the required amount of data to the file.
  * Return:          SUCCESS or FAIL
- * Programmer:      Christian Chilan, April, 2008
+ * Programmer:      Christian Chilan, April, 2008 
  * Modifications:
  */
 static herr_t
@@ -772,6 +792,7 @@ do_read(results *res, file_descr *fd, parameters *parms, void *buffer)
     /* HDF5 variables */
     herr_t      hrc;                    /*HDF5 return code              */
     hsize_t     h5dims[MAX_DIMS];       /*dataset dim sizes             */
+    hsize_t     h5chunk[MAX_DIMS];      /*dataset dim sizes             */
     hsize_t     h5block[MAX_DIMS];      /*dataspace selection           */
     hsize_t     h5stride[MAX_DIMS];     /*selection stride              */
     hsize_t     h5start[MAX_DIMS];      /*selection start               */
@@ -790,7 +811,7 @@ do_read(results *res, file_descr *fd, parameters *parms, void *buffer)
     switch (parms->io_type) {
     case POSIXIO:
             cont_dim = rank;
-
+            
             for (i=rank-1; i>=0; i--) {
                 if (parms->buf_size[i]==parms->dset_size[i])
                     cont_dim = i;
@@ -810,13 +831,14 @@ do_read(results *res, file_descr *fd, parameters *parms, void *buffer)
             h5stride[i] = 1;
             h5block[i] = 1;
             h5count[i] = parms->buf_size[i];
+            h5chunk[i] = parms->chk_size[i];
         }
 
         h5dset_space_id = H5Screate_simple(rank, h5dims, NULL);
         VRFY((h5dset_space_id >= 0), "H5Screate_simple");
 
         hrc = H5Sselect_hyperslab(h5dset_space_id, H5S_SELECT_SET,
-                    h5start, h5stride, h5count, h5block);
+                    h5start, h5stride, h5count, h5block); 
         VRFY((hrc >= 0), "H5Sselect_hyperslab");
 
         /* Create the memory dataspace that corresponds to the xfer buffer */
@@ -830,7 +852,7 @@ do_read(results *res, file_descr *fd, parameters *parms, void *buffer)
             GOTOERROR(FAIL);
         }
 
-        break;
+        break;        
     } /* end switch */
 
 
@@ -840,10 +862,10 @@ do_read(results *res, file_descr *fd, parameters *parms, void *buffer)
         break;
 
         case HDF5:
-        sprintf(dname, "Dataset_%ld", (long)parms->num_bytes);
+        sprintf(dname, "Dataset_%ld", parms->num_bytes);
         h5ds_id = H5Dopen2(fd->h5fd, dname, H5P_DEFAULT);
         if (h5ds_id < 0) {
-            HDfprintf(stderr, "HDF5 Dataset open failed\n");
+            fprintf(stderr, "HDF5 Dataset open failed\n");
             GOTOERROR(FAIL);
         }
 
@@ -928,12 +950,12 @@ static herr_t dset_read(int local_dim, file_descr *fd, parameters *parms, void *
     long i,j;
     herr_t hrc;
 
-    /* iterate on the current dimension */
+    /* iterate on the current dimension */ 
     for (i=0; i < parms->dset_size[cur_dim]; i += parms->buf_size[cur_dim]){
 
         h5offset[cur_dim] = offset[cur_dim] = i;
-
-        /* if traverse in order array is incomplete, recurse */
+        
+        /* if traverse in order array is incomplete, recurse */     
         if (local_dim > 0){
 
             ret_code = dset_read(local_dim-1, fd, parms, buffer);
@@ -948,6 +970,7 @@ static herr_t dset_read(int local_dim, file_descr *fd, parameters *parms, void *
                    buf_offset[j] = 0;
                 }
                 buf_p = (unsigned char*)buffer;
+                buf2_p = (unsigned char*)buffer2;
                 posix_buffer_read(0, fd, parms, buffer);
                 break;
 
@@ -958,7 +981,7 @@ static herr_t dset_read(int local_dim, file_descr *fd, parameters *parms, void *
                 hrc = H5Dread(h5ds_id, ELMT_H5_TYPE, h5mem_space_id,
                     h5dset_space_id, h5dxpl, buffer);
                 VRFY((hrc >= 0), "H5Dread");
-#if 0
+#if 0 
                 for (j=0; j<linear_buf_size; j++) {
                      buf_p = (unsigned char*)buffer;
                      if (buf_p[j]!=buffer2[j])
@@ -1020,6 +1043,13 @@ static herr_t posix_buffer_read(int local_dim, file_descr *fd, parameters *parms
         rc = ((ssize_t)cont_size ==
              POSIXREAD(fd->posixfd, buf_p, cont_size));
         VRFY((rc != 0), "POSIXREAD");
+#if 0 
+        for (j=0; j<cont_size; j++) {
+            if (buf_p[j]!=buf2_p[j])
+                printf("Inconsistent data in %d\n", j);
+        }
+        buf2_p += cont_size;
+#endif
 
         /* Advance location in buffer */
         buf_p += cont_size;
@@ -1050,7 +1080,7 @@ do_fopen(parameters *param, char *fname, file_descr *fd /*out*/, int flags)
             fd->posixfd = POSIXOPEN(fname, O_RDONLY);
 
         if (fd->posixfd < 0 ) {
-            HDfprintf(stderr, "POSIX File Open failed(%s)\n", fname);
+            fprintf(stderr, "POSIX File Open failed(%s)\n", fname);
             GOTOERROR(FAIL);
         }
 
@@ -1078,18 +1108,18 @@ do_fopen(parameters *param, char *fname, file_descr *fd /*out*/, int flags)
             GOTOERROR(FAIL);
         }
         break;
-    }
+    } 
 
 done:
     return ret_code;
 }
 
 /*
- * Function:    set_vfd
- * Purpose:     Sets file driver.
+ * Function:    set_vfd 
+ * Purpose:     Sets file driver. 
  * Return:      SUCCESS or FAIL
- * Programmer:  Christian Chilan, April, 2008
- * Modifications:
+ * Programmer:  Christian Chilan, April, 2008 
+ * Modifications: 
  */
 
 hid_t
@@ -1131,7 +1161,7 @@ set_vfd(parameters *param)
         HDmemset(memb_name, 0, sizeof memb_name);
         HDmemset(memb_addr, 0, sizeof memb_addr);
 
-        HDassert(HDstrlen(multi_letters)==H5FD_MEM_NTYPES);
+        assert(HDstrlen(multi_letters)==H5FD_MEM_NTYPES);
         for (mt=H5FD_MEM_DEFAULT; mt<H5FD_MEM_NTYPES; H5_INC_ENUM(H5FD_mem_t,mt)) {
             memb_fapl[mt] = H5P_DEFAULT;
             sprintf(sv[mt], "%%s-%c.h5", multi_letters[mt]);
@@ -1222,7 +1252,7 @@ do_cleanupfile(iotype iot, char *filename)
     hid_t       driver;
 
     if (clean_file_g == -1)
-    clean_file_g = (HDgetenv("HDF5_NOCLEANUP")==NULL) ? 1 : 0;
+    clean_file_g = (getenv("HDF5_NOCLEANUP")==NULL) ? 1 : 0;
 
     if (clean_file_g){
 
@@ -1266,7 +1296,7 @@ do_cleanupfile(iotype iot, char *filename)
             }
             H5Pclose(fapl);
             break;
-      }
+      }   
 }
 }
 
@@ -1640,7 +1670,7 @@ gpfs_invalidate_file_cache(const char *filename)
         filename);
     fprintf(stderr, " errno=%d errorOffset=%d\n",
         errno, inv_cache_hint.hdr.errorOffset);
-    exit(EXIT_FAILURE);
+    exit(1);
     }
 
     /* Close the file */
@@ -1649,7 +1679,7 @@ gpfs_invalidate_file_cache(const char *filename)
         "could not close file '%s' after flushing file cache, ",
         filename);
     fprintf(stderr, "errno=%d\n", errno);
-    exit(EXIT_FAILURE);
+    exit(1);
     }
 }
 

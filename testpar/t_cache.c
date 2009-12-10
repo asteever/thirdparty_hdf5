@@ -98,8 +98,8 @@ long local_pins		   = 0;
  *		value must be positive, and may not be larger than len.
  *
  *		The field exists to allow us change the sizes of entries
- *		in the cache without upsetting the server.  This value
- *		is only used locally, and is never sent to the server.
+ *		in the cache without upsetting the server.  This value 
+ *		is only used locally, and is never sent to the server.  
  *
  *	ver:	Version number of the entry.  This number is initialize
  *		to zero, and incremented each time the entry is modified.
@@ -129,12 +129,6 @@ long local_pins		   = 0;
  *		processes, and thus cannot be marked as dirty unless they
  *		happen to overlap some collective operation.
  *
- *	cleared: Boolean flag that is set to true whenever the entry is 
- *		dirty, and is cleared via a call to clear_datum().
- *
- *	flushed: Boolean flag that is set to true whenever the entry is 
- *		dirty, and is flushed via a call to flush_datum().
- *
  *	index:	Index of this instance of datum in the data_index[] array
  *		discussed below.
  *
@@ -152,8 +146,6 @@ struct datum
     hbool_t		locked;
     hbool_t		global_pinned;
     hbool_t		local_pinned;
-    hbool_t		cleared;
-    hbool_t		flushed;
     int			index;
 };
 
@@ -276,51 +268,52 @@ MPI_Datatype mpi_mssg_t;	/* for MPI derived type created from mssg */
 
 /* stats functions */
 
-static void reset_stats(void);
+void print_stats(void);
+void reset_stats(void);
 
 /* MPI setup functions */
 
-static hbool_t set_up_file_communicator(void);
+hbool_t set_up_file_communicator(void);
 
 
 /* data array manipulation functions */
 
-static int addr_to_datum_index(haddr_t base_addr);
-static void init_data(void);
+int addr_to_datum_index(haddr_t base_addr);
+void init_data(void);
 
 
 /* test coodination related functions */
 
-static int do_express_test(void);
-static void do_sync(void);
-static int get_max_nerrors(void);
+int do_express_test(void);
+void do_sync(void);
+int get_max_nerrors(void);
 
 
 /* mssg xfer related functions */
 
-static hbool_t recv_mssg(struct mssg_t *mssg_ptr, int mssg_tag_offset);
-static hbool_t send_mssg(struct mssg_t *mssg_ptr, hbool_t add_req_to_tag);
-static hbool_t setup_derived_types(void);
-static hbool_t takedown_derived_types(void);
+hbool_t recv_mssg(struct mssg_t *mssg_ptr, int mssg_tag_offset);
+hbool_t send_mssg(struct mssg_t *mssg_ptr, hbool_t add_req_to_tag);
+hbool_t setup_derived_types(void);
+hbool_t takedown_derived_types(void);
 
 
 /* server functions */
 
-static hbool_t server_main(void);
-static hbool_t serve_read_request(struct mssg_t * mssg_ptr);
-static hbool_t serve_sync_request(struct mssg_t * mssg_ptr);
-static hbool_t serve_write_request(struct mssg_t * mssg_ptr);
+hbool_t server_main(void);
+hbool_t serve_read_request(struct mssg_t * mssg_ptr);
+hbool_t serve_sync_request(struct mssg_t * mssg_ptr);
+hbool_t serve_write_request(struct mssg_t * mssg_ptr);
 
 
 /* call back functions & related data structures */
 
-static herr_t clear_datum(H5F_t * f, void *  thing, hbool_t dest);
-static herr_t destroy_datum(H5F_t UNUSED * f, void * thing);
-static herr_t flush_datum(H5F_t *f, hid_t UNUSED dxpl_id, hbool_t dest, haddr_t addr,
+herr_t clear_datum(H5F_t * f, void *  thing, hbool_t dest);
+herr_t destroy_datum(H5F_t UNUSED * f, void * thing);
+herr_t flush_datum(H5F_t *f, hid_t UNUSED dxpl_id, hbool_t dest, haddr_t addr,
                    void *thing);
-static void * load_datum(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, haddr_t addr,
+void * load_datum(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, haddr_t addr,
                   const void UNUSED *udata1, void UNUSED *udata2);
-static herr_t size_datum(H5F_t UNUSED * f, void * thing, size_t * size_ptr);
+herr_t size_datum(H5F_t UNUSED * f, void * thing, size_t * size_ptr);
 
 #define DATUM_ENTRY_TYPE	H5AC_TEST_ID
 
@@ -334,7 +327,6 @@ const H5C_class_t types[NUMBER_OF_ENTRY_TYPES] =
     (H5C_flush_func_t)flush_datum,
     (H5C_dest_func_t)destroy_datum,
     (H5C_clear_func_t)clear_datum,
-    (H5C_notify_func_t)NULL,
     (H5C_size_func_t)size_datum
   }
 };
@@ -371,7 +363,7 @@ void pin_protected_entry(H5C_t * cache_ptr, H5F_t * file_ptr,
                          int32_t idx, hbool_t global);
 void rename_entry(H5C_t * cache_ptr, H5F_t * file_ptr,
                   int32_t old_idx, int32_t new_idx);
-void resize_entry(H5C_t * cache_ptr, H5F_t * file_ptr,
+void resize_entry(H5C_t * cache_ptr, H5F_t * file_ptr, 
 		  int32_t idx, size_t  new_size);
 hbool_t setup_cache_for_test(hid_t * fid_ptr, H5F_t ** file_ptr_ptr,
                              H5C_t ** cache_ptr_ptr);
@@ -398,7 +390,6 @@ hbool_t trace_file_check(void);
 /****************************** stats functions ******************************/
 /*****************************************************************************/
 
-#ifdef UNUSED
 /*****************************************************************************
  *
  * Function:	print_stats()
@@ -418,7 +409,7 @@ hbool_t trace_file_check(void);
  *
  *****************************************************************************/
 
-static void
+void
 print_stats(void)
 {
     HDfprintf(stdout,
@@ -437,7 +428,6 @@ print_stats(void)
     return;
 
 } /* print_stats() */
-#endif /* UNUSED */
 
 /*****************************************************************************
  *
@@ -455,7 +445,7 @@ print_stats(void)
  *
  *****************************************************************************/
 
-static void
+void
 reset_stats(void)
 {
     datum_clears          = 0;
@@ -496,7 +486,7 @@ reset_stats(void)
  *
  *****************************************************************************/
 
-static hbool_t
+hbool_t
 set_up_file_communicator(void)
 {
     const char * fcn_name = "set_up_file_communicator()";
@@ -649,7 +639,7 @@ set_up_file_communicator(void)
  *
  *****************************************************************************/
 
-static int
+int
 addr_to_datum_index(haddr_t base_addr)
 {
     /* const char * fcn_name = "addr_to_datum_index()"; */
@@ -701,16 +691,9 @@ addr_to_datum_index(haddr_t base_addr)
  *		JRM -- 7/11/06
  *		Added support for the local_len field.
  *
- *		JRM -- 2/4/09
- *		Added initialization for the cleared and flushed fields.
- *
- *              Mike McGreevy, July 2, 2009
- *              Changed base address from 0 to 512 since the superblock will
- *              always be at address 0.
- *
  *****************************************************************************/
 
-static void
+void
 init_data(void)
 {
     /* const char * fcn_name = "init_data()"; */
@@ -728,7 +711,7 @@ init_data(void)
                                       1974, 3194, 5168, 8362, 13539};
     int i;
     int j = 0;
-    haddr_t addr = 512;
+    haddr_t addr = 0;
 
     /* this must hold so renames don't change entry size. */
     HDassert( (NUM_DATA_ENTRIES / 2) % 20 == 0 );
@@ -745,8 +728,6 @@ init_data(void)
         data[i].locked        = FALSE;
 	data[i].global_pinned = FALSE;
 	data[i].local_pinned  = FALSE;
-	data[i].cleared       = FALSE;
-	data[i].flushed       = FALSE;
 	data[i].index         = i;
 
         data_index[i]         = i;
@@ -791,7 +772,7 @@ init_data(void)
  *
  *****************************************************************************/
 
-static int
+int
 do_express_test(void)
 {
     const char * fcn_name = "do_express_test()";
@@ -845,7 +826,7 @@ do_express_test(void)
  *
  *****************************************************************************/
 
-static void
+void
 do_sync(void)
 {
     const char * fcn_name = "do_sync()";
@@ -921,7 +902,7 @@ do_sync(void)
  *
  *****************************************************************************/
 
-static int
+int
 get_max_nerrors(void)
 {
     const char * fcn_name = "get_max_nerrors()";
@@ -976,7 +957,7 @@ get_max_nerrors(void)
 
 #define CACHE_TEST_TAG	99 /* different from any used by the library */
 
-static hbool_t
+hbool_t
 recv_mssg(struct mssg_t *mssg_ptr,
 	  int mssg_tag_offset)
 {
@@ -1061,7 +1042,7 @@ recv_mssg(struct mssg_t *mssg_ptr,
  *
  *****************************************************************************/
 
-static hbool_t
+hbool_t
 send_mssg(struct mssg_t *mssg_ptr,
 	  hbool_t add_req_to_tag)
 {
@@ -1135,7 +1116,7 @@ send_mssg(struct mssg_t *mssg_ptr,
  *
  *****************************************************************************/
 
-static hbool_t
+hbool_t
 setup_derived_types(void)
 {
     const char * fcn_name = "setup_derived_types()";
@@ -1229,7 +1210,7 @@ setup_derived_types(void)
  *
  *****************************************************************************/
 
-static hbool_t
+hbool_t
 takedown_derived_types(void)
 {
     const char * fcn_name = "takedown_derived_types()";
@@ -1281,7 +1262,7 @@ takedown_derived_types(void)
  *
  *****************************************************************************/
 
-static hbool_t
+hbool_t
 server_main(void)
 {
     const char * fcn_name = "server_main()";
@@ -1388,7 +1369,7 @@ server_main(void)
  *
  *****************************************************************************/
 
-static hbool_t
+hbool_t
 serve_read_request(struct mssg_t * mssg_ptr)
 {
     const char * fcn_name = "serve_read_request()";
@@ -1494,7 +1475,7 @@ serve_read_request(struct mssg_t * mssg_ptr)
  *
  *****************************************************************************/
 
-static hbool_t
+hbool_t
 serve_sync_request(struct mssg_t * mssg_ptr)
 {
     const char * fcn_name = "serve_sync_request()";
@@ -1562,7 +1543,7 @@ serve_sync_request(struct mssg_t * mssg_ptr)
  *
  *****************************************************************************/
 
-static hbool_t
+hbool_t
 serve_write_request(struct mssg_t * mssg_ptr)
 {
     const char * fcn_name = "serve_write_request()";
@@ -1681,17 +1662,13 @@ serve_write_request(struct mssg_t * mssg_ptr)
  * 		length of the entry, while retaining the original
  * 		value for communications with the server.
  *
- *		JRM -- 2/4/09
- *		Added code to set the cleared flag when a dirty entry is
- *		cleared.
- *
  *-------------------------------------------------------------------------
  */
 
-static herr_t
+herr_t
 clear_datum(H5F_t * f,
             void *  thing,
-            hbool_t dest)
+             hbool_t dest)
 {
     int idx;
     struct datum * entry_ptr;
@@ -1710,13 +1687,6 @@ clear_datum(H5F_t * f,
     HDassert( entry_ptr->header.addr == entry_ptr->base_addr );
     HDassert( ( entry_ptr->header.size == entry_ptr->len ) ||
 	      ( entry_ptr->header.size == entry_ptr->local_len ) );
-
-    HDassert( entry_ptr->header.is_dirty == entry_ptr->dirty );
-
-    if ( entry_ptr->header.is_dirty ) {
-
-        entry_ptr->cleared = TRUE;
-    }
 
     entry_ptr->header.is_dirty = FALSE;
     entry_ptr->dirty = FALSE;
@@ -1762,7 +1732,7 @@ clear_datum(H5F_t * f,
  *-------------------------------------------------------------------------
  */
 
-static herr_t
+herr_t
 destroy_datum(H5F_t UNUSED * f,
               void *         thing)
 {
@@ -1821,14 +1791,10 @@ destroy_datum(H5F_t UNUSED * f,
  * 		length of the entry, while retaining the original
  * 		value for communications with the server.
  *
- *		JRM -- 2/4/09
- *		Added code to set the flushed flag when a dirty entry 
- *		is flushed.
- *
  *-------------------------------------------------------------------------
  */
 
-static herr_t
+herr_t
 flush_datum(H5F_t *f,
             hid_t UNUSED dxpl_id,
             hbool_t dest,
@@ -1893,7 +1859,6 @@ flush_datum(H5F_t *f,
             {
                 entry_ptr->header.is_dirty = FALSE;
                 entry_ptr->dirty = FALSE;
-                entry_ptr->flushed = TRUE;
             }
         }
     }
@@ -1965,7 +1930,7 @@ flush_datum(H5F_t *f,
  *-------------------------------------------------------------------------
  */
 
-static void *
+void *
 load_datum(H5F_t UNUSED *f,
            hid_t UNUSED dxpl_id,
            haddr_t addr,
@@ -2127,15 +2092,15 @@ load_datum(H5F_t UNUSED *f,
  * 		JRM -- 7/11/06
  * 		Modified function to return the local_len field instead
  * 		of the len field.  These two fields usually contain the
- * 		same value, but if the size of an entry is changed, we
- * 		store the altered size in local_len without changing
+ * 		same value, but if the size of an entry is changed, we 
+ * 		store the altered size in local_len without changing 
  * 		len.  Note that local_len must be positive, and may
  * 		not exceed len.
  *
  *-------------------------------------------------------------------------
  */
 
-static herr_t
+herr_t
 size_datum(H5F_t UNUSED *  f,
            void *   thing,
            size_t * size_ptr)
@@ -2210,10 +2175,12 @@ expunge_entry(H5C_t * cache_ptr,
     HDassert( !(entry_ptr->global_pinned) );
     HDassert( !(entry_ptr->local_pinned) );
 
+    entry_ptr->dirty = TRUE;
+
     if ( nerrors == 0 ) {
 
-        result = H5AC_expunge_entry(file_ptr, -1, &(types[0]),
-			            entry_ptr->header.addr, H5AC__NO_FLAGS_SET);
+        result = H5AC_expunge_entry(file_ptr, -1, &(types[0]), 
+			            entry_ptr->header.addr);
 
         if ( result < 0 ) {
 
@@ -2228,7 +2195,7 @@ expunge_entry(H5C_t * cache_ptr,
 	HDassert( ! ((entry_ptr->header).is_dirty) );
 
 	result = H5C_get_entry_status(cache_ptr, entry_ptr->base_addr,
-				      NULL, &in_cache, NULL, NULL, NULL, NULL, NULL);
+				      NULL, &in_cache, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -2716,7 +2683,7 @@ lock_and_unlock_random_entry(H5C_t * cache_ptr,
  * Modifications:
  *
  * 		JRM -- 7/11/06
- * 		Modified asserts to handle the new local_len field in
+ * 		Modified asserts to handle the new local_len field in 
  * 		datum.
  *
  *****************************************************************************/
@@ -3022,7 +2989,7 @@ pin_protected_entry(H5C_t * cache_ptr,
 
             nerrors++;
             if ( verbose ) {
-	        HDfprintf(stdout,
+	        HDfprintf(stdout, 
 			  "%d:%s: Error in H5AC_pin_protected entry().\n",
 	                  world_mpi_rank, fcn_name);
             }
@@ -3037,7 +3004,7 @@ pin_protected_entry(H5C_t * cache_ptr,
 	} else {
 
 	    entry_ptr->local_pinned = TRUE;
-
+ 
 	    local_pins++;
 
 	}
@@ -3067,7 +3034,7 @@ pin_protected_entry(H5C_t * cache_ptr,
  *
  * Modifications:
  *
- *              7/11/06 -- JRM
+ *              7/11/06 -- JRM 
  *              Added support for the phony_len field in datum.
  *
  *****************************************************************************/
@@ -3201,14 +3168,14 @@ resize_entry(H5C_t * cache_ptr,
         HDassert( ((entry_ptr->header).type)->id == DATUM_ENTRY_TYPE );
         HDassert( !(entry_ptr->header.is_protected) );
         HDassert( !(entry_ptr->locked) );
-	HDassert( ( entry_ptr->global_pinned ) &&
+	HDassert( ( entry_ptr->global_pinned ) && 
 		  ( ! entry_ptr->local_pinned ) );
 	HDassert( ( entry_ptr->header.size == entry_ptr->len ) ||
 	          ( entry_ptr->header.size == entry_ptr->local_len ) );
 	HDassert( new_size > 0 );
 	HDassert( new_size <= entry_ptr->len );
 
-	result = H5AC_resize_pinned_entry(file_ptr, (void *)entry_ptr,
+	result = H5AC_resize_pinned_entry(file_ptr, (void *)entry_ptr, 
 			                  new_size);
 
         if ( result < 0 ) {
@@ -3525,7 +3492,7 @@ setup_rand(void)
     const char * fcn_name = "setup_rand()";
     hbool_t use_predefined_seeds = FALSE;
     int num_predefined_seeds = 3;
-    unsigned predefined_seeds[3] = {33402, 33505, 33422};
+    unsigned predefined_seeds[3] = {18669, 89925, 12577};
     unsigned seed;
     struct timeval tv;
     struct timezone tz;
@@ -3696,14 +3663,9 @@ unlock_entry(H5C_t * cache_ptr,
 
         HDassert( ((entry_ptr->header).type)->id == DATUM_ENTRY_TYPE );
 
-        if ( ( (flags & H5AC__DIRTIED_FLAG) != 0 ) && 
-             ( (flags & H5C__DELETED_FLAG) == 0 ) &&
-             ( ! ( ( ( world_mpi_rank == 0 ) && ( entry_ptr->flushed ) ) 
-                   ||
-                   ( ( world_mpi_rank != 0 ) && ( entry_ptr->cleared ) ) 
-                 )
-             )
-           ) {
+        if ( ( flags & H5AC__DIRTIED_FLAG ) != 0
+                && ( (flags & H5C__DELETED_FLAG) == 0 ) ) {
+
             HDassert( entry_ptr->header.is_dirty );
             HDassert( entry_ptr->dirty );
         }
@@ -3776,7 +3738,7 @@ unpin_entry(H5C_t * cache_ptr,
 
 	    if ( dirty ) {
 
-		mark_pinned_entry_dirty(cache_ptr, file_ptr, idx, FALSE,
+		mark_pinned_entry_dirty(cache_ptr, file_ptr, idx, FALSE, 
 				        (size_t)0);
 
 	    }
@@ -4450,8 +4412,6 @@ smoke_check_3(void)
 {
     const char * fcn_name = "smoke_check_3()";
     hbool_t success = TRUE;
-    hbool_t verbose = FALSE;
-    int cp = 0;
     int i;
     int max_nerrors;
     int min_count;
@@ -4468,17 +4428,11 @@ smoke_check_3(void)
         TESTING("smoke check #3");
     }
 
-    /* 0 */
-    if ( verbose ) { HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++); }
-
     nerrors = 0;
     init_data();
     reset_stats();
 
     if ( world_mpi_rank == world_server_mpi_rank ) {
-
-        /* 1 */
-        if ( verbose ) {HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++);}
 
 	if ( ! server_main() ) {
 
@@ -4489,15 +4443,9 @@ smoke_check_3(void)
                           world_mpi_rank, fcn_name);
             }
         }
-
-        /* 2 */
-        if ( verbose ) {HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++);}
     }
     else /* run the clients */
     {
-        /* 1 */
-        if ( verbose ) {HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++);}
-
         if ( ! setup_cache_for_test(&fid, &file_ptr, &cache_ptr) ) {
 
             nerrors++;
@@ -4508,9 +4456,6 @@ smoke_check_3(void)
                           world_mpi_rank, fcn_name);
             }
         }
-
-        /* 2 */
-        if ( verbose ) {HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++);}
 
         min_count = 100 / ((file_mpi_rank + 1) * (file_mpi_rank + 1));
         max_count = min_count + 50;
@@ -4526,9 +4471,6 @@ smoke_check_3(void)
                                                min_count, max_count);
             }
         }
-
-        /* 3 */
-        if ( verbose ) {HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++);}
 
 
         min_count = 100 / ((file_mpi_rank + 2) * (file_mpi_rank + 2));
@@ -4570,9 +4512,6 @@ smoke_check_3(void)
 
 	}
 
-        /* 4 */
-        if ( verbose ) {HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++);}
-
 
 	/* flush the file to be sure that we have no problems flushing
 	 * pinned entries
@@ -4584,9 +4523,6 @@ smoke_check_3(void)
                           world_mpi_rank, fcn_name);
             }
         }
-
-        /* 5 */
-        if ( verbose ) {HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++);}
 
 
         min_idx = 0;
@@ -4622,9 +4558,6 @@ smoke_check_3(void)
 	    }
         }
 
-        /* 6 */
-        if ( verbose ) {HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++);}
-
         min_idx = 0;
         max_idx = ((virt_num_data_entries / 10) /
                    ((file_mpi_rank + 3) * (file_mpi_rank + 3))) - 1;
@@ -4640,9 +4573,6 @@ smoke_check_3(void)
 	    lock_and_unlock_random_entries(cache_ptr, file_ptr,
                                            min_idx, max_idx, 0, 100);
         }
-
-        /* 7 */
-        if ( verbose ) {HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++);}
 
         /* we can't rename pinned entries, so release any local pins now. */
         local_unpin_all_entries(cache_ptr, file_ptr, FALSE);
@@ -4662,9 +4592,6 @@ smoke_check_3(void)
                                            min_count, max_count);
         }
 
-        /* 8 */
-        if ( verbose ) {HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++);}
-
         /* ...and then rename them back. */
         for ( i = (virt_num_data_entries / 2) - 1; i >= 0; i-- )
         {
@@ -4676,9 +4603,6 @@ smoke_check_3(void)
 			                   (virt_num_data_entries / 40),
                                            min_count, max_count);
         }
-
-        /* 9 */
-        if ( verbose ) {HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++);}
 
         /* finally, do some dirty lock/unlocks while we give the cache
          * a chance t reduce its size.
@@ -4703,9 +4627,6 @@ smoke_check_3(void)
             }
         }
 
-        /* 10 */
-        if ( verbose ) {HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++);}
-
         /* release any local pins before we take down the cache. */
         local_unpin_all_entries(cache_ptr, file_ptr, FALSE);
 
@@ -4720,9 +4641,6 @@ smoke_check_3(void)
                 }
             }
         }
-
-        /* 11 */
-        if ( verbose ) {HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++);}
 
         /* verify that all instances of datum are back where the started
          * and are clean.
@@ -4758,9 +4676,6 @@ smoke_check_3(void)
                 }
             }
         }
-
-        /* 12 */
-        if ( verbose ) {HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++);}
     }
 
     max_nerrors = get_max_nerrors();
@@ -4896,7 +4811,7 @@ smoke_check_4(void)
 
 		/* Insert some entries pinned, and then unpin them
 		 * immediately.  We have tested pinned entries elsewhere,
-		 * so it should be sufficient to verify that the
+		 * so it should be sufficient to verify that the 
 		 * entries are in fact pinned (which unpin_entry() should do).
 		 */
                 insert_entry(cache_ptr, file_ptr, i, H5C__PIN_ENTRY_FLAG);
@@ -5118,7 +5033,7 @@ smoke_check_4(void)
  * Modifications:
  *
  *		JRM -- 7/12/06
- *		Added test code for H5AC_expunge_entry() and
+ *		Added test code for H5AC_expunge_entry() and 
  *		H5AC_resize_pinned_entry().
  *
  *****************************************************************************/
@@ -5128,8 +5043,6 @@ smoke_check_5(void)
 {
     const char * fcn_name = "smoke_check_5()";
     hbool_t success = TRUE;
-    hbool_t verbose = FALSE;
-    int cp = 0;
     int i;
     int max_nerrors;
     hid_t fid = -1;
@@ -5142,19 +5055,11 @@ smoke_check_5(void)
         TESTING("smoke check #5");
     }
 
-    /* 0 */
-    if ( verbose ) { HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++); }
-
     nerrors = 0;
     init_data();
     reset_stats();
 
     if ( world_mpi_rank == world_server_mpi_rank ) {
-
-        /* 1 */
-        if ( verbose ) { 
-	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++); 
-        }
 
 	if ( ! server_main() ) {
 
@@ -5165,20 +5070,9 @@ smoke_check_5(void)
                           world_mpi_rank, fcn_name);
             }
         }
-
-        /* 2 */
-        if ( verbose ) { 
-	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++); 
-        }
     }
     else /* run the clients */
     {
-
-        /* 1 */
-        if ( verbose ) { 
-	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++); 
-        }
-
         if ( ! setup_cache_for_test(&fid, &file_ptr, &cache_ptr) ) {
 
             nerrors++;
@@ -5190,19 +5084,9 @@ smoke_check_5(void)
             }
         }
 
-        /* 2 */
-        if ( verbose ) { 
-	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++); 
-        }
-
         for ( i = 0; i < (virt_num_data_entries / 2); i++ )
         {
             insert_entry(cache_ptr, file_ptr, i, H5AC__NO_FLAGS_SET);
-        }
-
-        /* 3 */
-        if ( verbose ) { 
-	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++); 
         }
 
 	/* flush the file so we can lock known clean entries. */
@@ -5212,11 +5096,6 @@ smoke_check_5(void)
 	        HDfprintf(stdout, "%d:%s: H5Fflush() failed.\n",
                           world_mpi_rank, fcn_name);
             }
-        }
-
-        /* 4 */
-        if ( verbose ) { 
-	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++); 
         }
 
         for ( i = 0; i < (virt_num_data_entries / 4); i++ )
@@ -5240,11 +5119,6 @@ smoke_check_5(void)
 
 		expunge_entry(cache_ptr, file_ptr, i);
 	    }
-        }
-
-        /* 5 */
-        if ( verbose ) { 
-	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++); 
         }
 
         for ( i = (virt_num_data_entries / 2) - 1;
@@ -5280,11 +5154,6 @@ smoke_check_5(void)
 	    unpin_entry(cache_ptr, file_ptr, i, TRUE, FALSE, FALSE);
         }
 
-        /* 6 */
-        if ( verbose ) { 
-	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++); 
-        }
-
         if ( fid >= 0 ) {
 
             if ( ! take_down_cache(fid) ) {
@@ -5297,11 +5166,6 @@ smoke_check_5(void)
             }
         }
 
-        /* 7 */
-        if ( verbose ) { 
-	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++); 
-        }
-
         /* verify that all instance of datum are back where the started
          * and are clean.
          */
@@ -5310,11 +5174,6 @@ smoke_check_5(void)
         {
             HDassert( data_index[i] == i );
             HDassert( ! (data[i].dirty) );
-        }
-
-        /* 8 */
-        if ( verbose ) { 
-	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++); 
         }
 
         /* compose the done message */
@@ -5339,11 +5198,6 @@ smoke_check_5(void)
                               world_mpi_rank, fcn_name);
                 }
             }
-        }
-
-        /* 9 */
-        if ( verbose ) { 
-	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++); 
         }
     }
 
@@ -5381,7 +5235,7 @@ smoke_check_5(void)
  *              H5AC level, so all calls have to go through H5AC.  Thus it
  *              is more convenient to test trace file capabilities in the
  *              parallel cache test which works at the H5AC level, instead
- *              of in the serial test code which does everything at the
+ *              of in the serial test code which does everything at the 
  *              H5C level.
  *
  *              The function must test trace file output in the following
@@ -5411,9 +5265,9 @@ smoke_check_5(void)
  * Modifications:
  *
  *		JRM -- 7/11/06
- *		Updated fro H5AC_expunge_entry() and
+ *		Updated fro H5AC_expunge_entry() and 
  *		H5AC_resize_pinned_entry().
- *
+ *	
  *****************************************************************************/
 
 hbool_t
@@ -5449,7 +5303,7 @@ trace_file_check(void)
       "H5AC_unpin_entry 4 0\n",
       "H5AC_rename 0 8a65 15 0\n",
       "H5AC_rename 8a65 0 15 0\n",
-      "H5AC_flush 0\n",
+      "H5AC_flush 0x0 0\n",
       NULL
     };
     char buffer[256];
@@ -5509,12 +5363,12 @@ trace_file_check(void)
 
             config.version = H5AC__CURR_CACHE_CONFIG_VERSION;
 
-            if ( H5AC_get_cache_auto_resize_config(cache_ptr, &config)
+            if ( H5AC_get_cache_auto_resize_config(cache_ptr, &config) 
                  != SUCCEED ) {
 
 		nerrors++;
-	        HDfprintf(stdout,
-                        "%d:%s: H5AC_get_cache_auto_resize_config() failed.\n",
+	        HDfprintf(stdout, 
+                        "%d:%s: H5AC_get_cache_auto_resize_config() failed.\n", 
                         world_mpi_rank, fcn_name);
 
             } else {
@@ -5522,11 +5376,11 @@ trace_file_check(void)
                 config.open_trace_file = TRUE;
 		strcpy(config.trace_file_name, "t_cache_trace.txt");
 
-                if ( H5AC_set_cache_auto_resize_config(cache_ptr, &config)
+                if ( H5AC_set_cache_auto_resize_config(cache_ptr, &config) 
                      != SUCCEED ) {
 
 		    nerrors++;
-	            HDfprintf(stdout,
+	            HDfprintf(stdout, 
                          "%d:%s: H5AC_set_cache_auto_resize_config() failed.\n",
                           world_mpi_rank, fcn_name);
                 }
@@ -5563,7 +5417,7 @@ trace_file_check(void)
         if ( H5Fflush(fid, H5F_SCOPE_GLOBAL) < 0 ) {
             nerrors++;
             if ( verbose ) {
-	        HDfprintf(stdout, "%d:%s: H5Fflush() failed.\n",
+	        HDfprintf(stdout, "%d:%s: H5Fflush() failed.\n", 
                           world_mpi_rank, fcn_name);
             }
         }
@@ -5572,12 +5426,12 @@ trace_file_check(void)
 
             config.version = H5AC__CURR_CACHE_CONFIG_VERSION;
 
-            if ( H5AC_get_cache_auto_resize_config(cache_ptr, &config)
+            if ( H5AC_get_cache_auto_resize_config(cache_ptr, &config) 
                  != SUCCEED ) {
 
 		nerrors++;
-	        HDfprintf(stdout,
-                        "%d:%s: H5AC_get_cache_auto_resize_config() failed.\n",
+	        HDfprintf(stdout, 
+                        "%d:%s: H5AC_get_cache_auto_resize_config() failed.\n", 
                         world_mpi_rank, fcn_name);
 
             } else {
@@ -5586,11 +5440,11 @@ trace_file_check(void)
                 config.close_trace_file = TRUE;
 		config.trace_file_name[0] = '\0';
 
-                if ( H5AC_set_cache_auto_resize_config(cache_ptr, &config)
+                if ( H5AC_set_cache_auto_resize_config(cache_ptr, &config) 
                      != SUCCEED ) {
 
 		    nerrors++;
-	            HDfprintf(stdout,
+	            HDfprintf(stdout, 
                          "%d:%s: H5AC_set_cache_auto_resize_config() failed.\n",
                           world_mpi_rank, fcn_name);
                 }
@@ -5609,7 +5463,7 @@ trace_file_check(void)
             }
         }
 
-        /* verify that all instance of datum are back where the started
+        /* verify that all instance of datum are back where the started 
          * and are clean.
          */
 
@@ -5637,22 +5491,22 @@ trace_file_check(void)
 
                 nerrors++;
                 if ( verbose ) {
-                    HDfprintf(stdout, "%d:%s: send_mssg() failed on done.\n",
+                    HDfprintf(stdout, "%d:%s: send_mssg() failed on done.\n", 
                               world_mpi_rank, fcn_name);
                 }
             }
         }
 
         if ( nerrors == 0 ) {
-
-	    sprintf(trace_file_name, "t_cache_trace.txt.%d",
+	
+	    sprintf(trace_file_name, "t_cache_trace.txt.%d", 
 		    (int)file_mpi_rank);
 
 	    if ( (trace_file_ptr = HDfopen(trace_file_name, "r")) == NULL ) {
 
                 nerrors++;
                 if ( verbose ) {
-                    HDfprintf(stdout, "%d:%s: HDfopen failed.\n",
+                    HDfprintf(stdout, "%d:%s: HDfopen failed.\n", 
                               world_mpi_rank, fcn_name);
                 }
             }
@@ -5688,7 +5542,7 @@ trace_file_check(void)
 
 	        nerrors++;
                 if ( verbose ) {
-                    HDfprintf(stdout,
+                    HDfprintf(stdout, 
 			      "%d:%s: Unexpected data in trace file line %d.\n",
                               world_mpi_rank, fcn_name, i);
 		    HDfprintf(stdout, "%d:%s: expected = \"%s\" %d\n",
@@ -5929,10 +5783,10 @@ main(int argc, char **argv)
 #endif
 #if 1
     smoke_check_5();
-#endif
+#endif   
 #if 1
     trace_file_check();
-#endif
+#endif   
 
 finish:
     /* make sure all processes are finished before final report, cleanup

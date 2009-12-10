@@ -51,6 +51,13 @@
 !----------------------------------------------------------------------
           SUBROUTINE h5fcreate_f(name, access_flags, file_id, hdferr, &
                                  creation_prp, access_prp)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5fcreate_f
+!DEC$endif
+!
+           
             IMPLICIT NONE 
             CHARACTER(LEN=*), INTENT(IN) :: name   ! Name of the file
             INTEGER, INTENT(IN) :: access_flags    ! File access flags
@@ -73,9 +80,9 @@
               INTEGER FUNCTION h5fcreate_c(name, namelen, access_flags, &
                                creation_prp_default, access_prp_default, file_id)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5FCREATE_C':: h5fcreate_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FCREATE_C':: h5fcreate_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name 
               CHARACTER(LEN=*), INTENT(IN) :: name
               INTEGER, INTENT(IN) :: access_flags
@@ -91,8 +98,7 @@
 
             if (present(creation_prp)) creation_prp_default = creation_prp 
             if (present(access_prp))   access_prp_default   = access_prp 
-            namelen = LEN_TRIM(name)
-
+            namelen = LEN(name)
             hdferr = h5fcreate_c(name, namelen, access_flags, &
                      creation_prp_default, access_prp_default, file_id) 
 
@@ -128,6 +134,13 @@
 ! Comment:		
 !----------------------------------------------------------------------
           SUBROUTINE h5fflush_f(object_id, scope, hdferr)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5fflush_f
+!DEC$endif
+!
+           
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: object_id !identifier for any object
                                                     !associate with a file, 
@@ -153,9 +166,9 @@
             INTERFACE
               INTEGER FUNCTION h5fflush_c(object_id, scope)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5FFLUSH_C':: h5fflush_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FFLUSH_C':: h5fflush_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: object_id
               INTEGER, INTENT(IN) :: scope
               END FUNCTION h5fflush_c
@@ -194,6 +207,13 @@
 !----------------------------------------------------------------------
  
           SUBROUTINE h5fmount_f(loc_id, name, child_id, hdferr, access_prp)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5fmount_f
+!DEC$endif
+!
+           
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: loc_id   ! Identifier for file or group 
                                                    ! in which dsetname is defined 
@@ -214,9 +234,9 @@
               INTEGER FUNCTION h5fmount_c(loc_id, name, namelen, &
                                           child_id, access_prp_default)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5FMOUNT_C':: h5fmount_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FMOUNT_C':: h5fmount_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name 
               INTEGER(HID_T), INTENT(IN) :: loc_id 
               CHARACTER(LEN=*), INTENT(IN) :: name 
@@ -261,6 +281,13 @@
 !----------------------------------------------------------------------
 
           SUBROUTINE h5funmount_f(loc_id, name, hdferr)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5funmount_f
+!DEC$endif
+!
+           
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: loc_id   ! Identifier for file or group 
                                                    ! at which the specified file 
@@ -275,9 +302,9 @@
             INTERFACE
               INTEGER FUNCTION h5funmount_c(loc_id, name, namelen)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5FUNMOUNT_C':: h5funmount_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FUNMOUNT_C':: h5funmount_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name 
               INTEGER(HID_T), INTENT(IN) :: loc_id 
               CHARACTER(LEN=*), INTENT(IN) :: name 
@@ -319,6 +346,13 @@
 !----------------------------------------------------------------------
           SUBROUTINE h5fopen_f(name, access_flags, file_id, hdferr, &
                                access_prp)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5fopen_f
+!DEC$endif
+!
+           
             IMPLICIT NONE
             CHARACTER(LEN=*), INTENT(IN) :: name   ! Name of the file
             INTEGER, INTENT(IN) :: access_flags    ! File access flags
@@ -337,9 +371,9 @@
               INTEGER FUNCTION h5fopen_c(name, namelen, access_flags, &
                                access_prp_default, file_id)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5FOPEN_C':: h5fopen_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FOPEN_C':: h5fopen_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               CHARACTER(LEN=*), INTENT(IN) :: name
               INTEGER :: namelen
@@ -384,6 +418,13 @@
 !----------------------------------------------------------------------
 
           SUBROUTINE h5freopen_f(file_id, ret_file_id, hdferr)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5freopen_f
+!DEC$endif
+!
+           
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: file_id      ! File identifier 
             INTEGER(HID_T), INTENT(OUT) :: ret_file_id ! New File identifier 
@@ -395,9 +436,9 @@
             INTERFACE
               INTEGER FUNCTION h5freopen_c(file_id, ret_file_id)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5FREOPEN_C':: h5freopen_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FREOPEN_C':: h5freopen_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: file_id
               INTEGER(HID_T), INTENT(OUT) :: ret_file_id
               END FUNCTION h5freopen_c
@@ -434,6 +475,13 @@
 !----------------------------------------------------------------------
           
           SUBROUTINE h5fget_create_plist_f(file_id, prop_id, hdferr)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5fget_create_plist_f
+!DEC$endif
+!
+           
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: file_id    ! File identifier 
             INTEGER(HID_T), INTENT(OUT) :: prop_id   ! File creation property
@@ -446,9 +494,9 @@
             INTERFACE
               INTEGER FUNCTION h5fget_create_plist_c(file_id, prop_id)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-!DEC$ATTRIBUTES C,reference,decorate,alias:'H5FGET_CREATE_PLIST_C':: h5fget_create_plist_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+!DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FGET_CREATE_PLIST_C':: h5fget_create_plist_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: file_id
               INTEGER(HID_T), INTENT(OUT) :: prop_id
               END FUNCTION h5fget_create_plist_c
@@ -485,6 +533,13 @@
 !----------------------------------------------------------------------
 
           SUBROUTINE h5fget_access_plist_f(file_id, access_id, hdferr)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5fget_access_plist_f
+!DEC$endif
+!
+           
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: file_id      ! File identifier 
             INTEGER(HID_T), INTENT(OUT) :: access_id   ! File access property
@@ -497,9 +552,9 @@
             INTERFACE
               INTEGER FUNCTION h5fget_access_plist_c(file_id, access_id)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-!DEC$ATTRIBUTES C,reference,decorate,alias:'H5FGET_CREATE_PLIST_C':: h5fget_access_plist_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+!DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FGET_CREATE_PLIST_C':: h5fget_access_plist_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: file_id
               INTEGER(HID_T), INTENT(OUT) :: access_id
               END FUNCTION h5fget_access_plist_c
@@ -536,6 +591,13 @@
 !----------------------------------------------------------------------
  
           SUBROUTINE h5fis_hdf5_f(name, status, hdferr)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5fis_hdf5_f
+!DEC$endif
+!
+           
             IMPLICIT NONE
             CHARACTER(LEN=*), INTENT(IN) :: name   ! Name of the file
             LOGICAL, INTENT(OUT) :: status         ! Indicates if file
@@ -551,9 +613,9 @@
             INTERFACE
               INTEGER FUNCTION h5fis_hdf5_c(name, namelen, flag)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5FIS_HDF5_C':: h5fis_hdf5_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FIS_HDF5_C':: h5fis_hdf5_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: name
               CHARACTER(LEN=*), INTENT(IN) :: name
               INTEGER :: namelen
@@ -593,6 +655,13 @@
 !----------------------------------------------------------------------
           
           SUBROUTINE h5fclose_f(file_id, hdferr)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5fclose_f
+!DEC$endif
+!
+
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: file_id ! File identifier
             INTEGER, INTENT(OUT) :: hdferr        ! Error code
@@ -603,9 +672,9 @@
             INTERFACE
               INTEGER FUNCTION h5fclose_c(file_id)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5FCLOSE_C':: h5fclose_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FCLOSE_C':: h5fclose_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: file_id
               END FUNCTION h5fclose_c
             END INTERFACE
@@ -639,29 +708,33 @@
 !		September 30, 2002
 !
 ! Modifications: 	
-!               Changed the type of obj_count to INTEGER(SIZE_T)
-!                               September 25, 2008 EIP
+!
 ! Comment:		
 !----------------------------------------------------------------------
           
           SUBROUTINE h5fget_obj_count_f(file_id, obj_type, obj_count, hdferr)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5fget_obj_count_f
+!DEC$endif
+!
+
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: file_id ! File identifier
             INTEGER, INTENT(IN)  :: obj_type      ! Object type
-            INTEGER(SIZE_T), INTENT(OUT) :: obj_count
-                                                  ! Number of open objects
+            INTEGER, INTENT(OUT) :: obj_count     ! Number of open objects
             INTEGER, INTENT(OUT) :: hdferr        ! Error code
 
             INTERFACE
               INTEGER FUNCTION h5fget_obj_count_c(file_id, obj_type, obj_count)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-       !DEC$ATTRIBUTES C,reference,decorate,alias:'H5FGET_OBJ_COUNT_C':: h5fget_obj_count_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+       !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FGET_OBJ_COUNT_C':: h5fget_obj_count_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: file_id
               INTEGER, INTENT(IN)  :: obj_type      ! Object type
-              INTEGER(SIZE_T), INTENT(OUT) :: obj_count
-                                                    ! Number of open objects
+              INTEGER, INTENT(OUT) :: obj_count    ! Number of open objects
               END FUNCTION h5fget_obj_count_c
             END INTERFACE
 
@@ -694,42 +767,40 @@
 !		September 30, 2002
 !
 ! Modifications: 	
-!               Added optional parameter num_objs for number of open objects
-!               of the specified type and changed type of max_obj to 
-!               INTEGER(SIZE_T)
-!                               September 25, 2008 EIP
 !
 ! Comment:		
 !----------------------------------------------------------------------
           
-          SUBROUTINE h5fget_obj_ids_f(file_id, obj_type, max_objs, obj_ids, hdferr, num_objs)
+          SUBROUTINE h5fget_obj_ids_f(file_id, obj_type, max_objs, obj_ids, hdferr)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5fget_obj_ids_f
+!DEC$endif
+!
+
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: file_id ! File identifier
             INTEGER, INTENT(IN)  :: obj_type   ! Object type
-            INTEGER(SIZE_T), INTENT(IN)  :: max_objs   ! Maximum # of objects to retrieve
+            INTEGER, INTENT(IN)  :: max_objs   ! Maximum # of objects to retrieve
             INTEGER(HID_T), DIMENSION(*), INTENT(INOUT) :: obj_ids
                                                ! Array of open objects iidentifiers
-            INTEGER, INTENT(OUT) :: hdferr     ! Error code
-            INTEGER(SIZE_T), INTENT(OUT), OPTIONAL :: num_objs 
-            INTEGER(SIZE_T) :: c_num_objs 
-                              ! Number of open objects of the specified type
+            INTEGER, INTENT(OUT) :: hdferr        ! Error code
 
             INTERFACE
-              INTEGER FUNCTION h5fget_obj_ids_c(file_id, obj_type, max_objs, obj_ids, c_num_objs)
+              INTEGER FUNCTION h5fget_obj_ids_c(file_id, obj_type, max_objs, obj_ids)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-       !DEC$ATTRIBUTES C,reference,decorate,alias:'H5FGET_OBJ_IDS_C':: h5fget_obj_ids_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+       !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FGET_OBJ_IDS_C':: h5fget_obj_ids_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: file_id
               INTEGER, INTENT(IN)  :: obj_type      
-              INTEGER(SIZE_T), INTENT(IN)  :: max_objs
+              INTEGER, INTENT(IN)  :: max_objs
               INTEGER(HID_T), DIMENSION(*), INTENT(INOUT) :: obj_ids  
-              INTEGER(SIZE_T), INTENT(OUT) :: c_num_objs 
               END FUNCTION h5fget_obj_ids_c
             END INTERFACE
 
-            hdferr = h5fget_obj_ids_c(file_id, obj_type, max_objs, obj_ids, c_num_objs)
-            if (present(num_objs)) num_objs= c_num_objs
+            hdferr = h5fget_obj_ids_c(file_id, obj_type, max_objs, obj_ids)
 
           END SUBROUTINE h5fget_obj_ids_f
 
@@ -757,6 +828,13 @@
 !----------------------------------------------------------------------
           
           SUBROUTINE h5fget_freespace_f(file_id, free_space, hdferr)
+!
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5fget_freespace_f
+!DEC$endif
+!
+
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: file_id ! File identifier
             INTEGER(HSSIZE_T), INTENT(OUT) :: free_space 
@@ -766,9 +844,9 @@
             INTERFACE
               INTEGER FUNCTION h5fget_freespace_c(file_id, free_space)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-       !DEC$ATTRIBUTES C,reference,decorate,alias:'H5FGET_FREESPACE_C':: h5fget_freespace_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+       !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FGET_FREESPACE_C':: h5fget_freespace_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: file_id
               INTEGER(HSSIZE_T), INTENT(OUT) :: free_space 
               END FUNCTION h5fget_freespace_c
@@ -800,7 +878,11 @@
 !----------------------------------------------------------------------
 
 
-          SUBROUTINE h5fget_name_f(obj_id, buf, size, hdferr)
+          SUBROUTINE h5fget_name_f(obj_id, buf, size, hdferr) 
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5fget_name_f
+!DEC$endif
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: obj_id   ! Object identifier 
             CHARACTER(LEN=*), INTENT(INOUT) :: buf   
@@ -815,9 +897,9 @@
             INTERFACE
               INTEGER FUNCTION h5fget_name_c(obj_id, size, buf, buflen)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5FGET_NAME_C'::h5fget_name_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FGET_NAME_C'::h5fget_name_c
+              !DEC$ ENDIF
               !DEC$ATTRIBUTES reference :: buf
               INTEGER(HID_T), INTENT(IN) :: obj_id
               INTEGER(SIZE_T), INTENT(OUT) :: size
@@ -849,7 +931,11 @@
 !----------------------------------------------------------------------
 
 
-          SUBROUTINE h5fget_filesize_f(file_id, size, hdferr)
+          SUBROUTINE h5fget_filesize_f(file_id, size, hdferr) 
+!This definition is needed for Windows DLLs
+!DEC$if defined(BUILD_HDF5_DLL)
+!DEC$attributes dllexport :: h5fget_filesize_f
+!DEC$endif
             IMPLICIT NONE
             INTEGER(HID_T), INTENT(IN) :: file_id  ! file identifier
             INTEGER(HSIZE_T), INTENT(OUT) :: size  ! Size of the file 
@@ -861,9 +947,9 @@
             INTERFACE
               INTEGER FUNCTION h5fget_filesize_c(file_id, size)
               USE H5GLOBAL
-              !DEC$IF DEFINED(HDF5F90_WINDOWS)
-              !DEC$ATTRIBUTES C,reference,decorate,alias:'H5FGET_FILESIZE_C'::h5fget_filesize_c
-              !DEC$ENDIF
+              !DEC$ IF DEFINED(HDF5F90_WINDOWS)
+              !DEC$ ATTRIBUTES C,reference,decorate,alias:'H5FGET_FILESIZE_C'::h5fget_filesize_c
+              !DEC$ ENDIF
               INTEGER(HID_T), INTENT(IN) :: file_id
               INTEGER(HSIZE_T), INTENT(OUT) :: size
               END FUNCTION h5fget_filesize_c

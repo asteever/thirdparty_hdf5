@@ -15,7 +15,7 @@ $!#
 $!
 $ !
 $ ! This command file tests h5diff utility. The command file has to
-$ ! run in the [hdf5-top.tools.h5diff.testfiles] directory.
+$ ! run in the [hdf5-top.tools.testfiles] directory.
 $ !
 $ !
 $ type sys$input
@@ -29,8 +29,8 @@ $ !
 $! set message/notext/nofacility/noidentification/noseverity
 $ current_dir = F$DIRECTRY()
 $ len = F$LENGTH(current_dir)
-$ temp = F$EXTRACT(0, len-11, current_dir)
-$ h5diff_dir = temp + "]"
+$ temp = F$EXTRACT(0, len-10, current_dir)
+$ h5diff_dir = temp + "H5DIFF]"
 $ h5diff :== $sys$disk:'h5diff_dir'h5diff.exe
 $ !
 
@@ -152,6 +152,8 @@ $!# ############################################################################
 $!# # -d 
 $!# ##############################################################################
 $!
+$!# 6.2: no value
+$ CALL TOOLTEST h5diff_602.txt "-d h5diff_basic1.h5 h5diff_basic2.h5 g1/dset3 g1/dset4"
 $!
 $!# 6.3: negative value
 $ CALL TOOLTEST h5diff_603.txt "-d -4 h5diff_basic1.h5 h5diff_basic2.h5 g1/dset3 g1/dset4"
@@ -183,6 +185,8 @@ $!# # -p
 $!# ##############################################################################
 $!
 $!
+$!# 6.11: no value
+$ CALL TOOLTEST h5diff_611.txt "-r -p h5diff_basic1.h5 h5diff_basic2.h5 g1/dset3 g1/dset4"
 $!
 $!# 6.12: negative value
 $ CALL TOOLTEST h5diff_612.txt "-p -4 h5diff_basic1.h5 h5diff_basic2.h5 g1/dset3 g1/dset4"
@@ -215,6 +219,8 @@ $!# # -n
 $!# ##############################################################################
 $!
 $!
+$!# 6.20: no value
+$ CALL TOOLTEST h5diff_620.txt "-n h5diff_basic1.h5 h5diff_basic2.h5 g1/dset3 g1/dset4"
 $!
 $!# 6.21: negative value
 $ CALL TOOLTEST h5diff_621.txt "-n -4 h5diff_basic1.h5 h5diff_basic2.h5 g1/dset3 g1/dset4"
@@ -243,8 +249,8 @@ $!
 $!# ##############################################################################
 $!# 6.29  non valid files
 $!# ##############################################################################
-$! This test is disabled in the C test script.
-$! CALL TOOLTEST h5diff_629.txt "file1.h6 file2.h6"
+$!
+$ CALL TOOLTEST h5diff_629.txt "file1.h6 file2.h6"
 $!
 $!# ##############################################################################
 $!# 7.  attributes
@@ -284,6 +290,9 @@ $ ! Run the test and save output in the 'actual' file
 $ !
 $ define/nolog sys$output 'actual'
 $ define/nolog sys$error  'actual_err'
+$ write  sys$output "#############################"
+$ write  sys$output "Expected output for 'h5diff ''P2''"
+$ write  sys$output "#############################"
 $ ON ERROR THEN CONTINUE
 $ h5diff 'P2
 $ deassign sys$output

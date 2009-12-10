@@ -352,7 +352,7 @@ test_tconv( H5File& file)
 }   // test_tconv
 
 /* This message derives from H5Z */
-const H5Z_class2_t H5Z_BOGUS[1] = {{
+const H5Z_class_t H5Z_BOGUS[1] = {{
     H5Z_CLASS_T_VERS,		/* H5Z_class_t version number   */
     H5Z_FILTER_BOGUS,		/* Filter id number		*/
     1, 1,			/* Encode and decode enabled    */
@@ -413,10 +413,8 @@ filter_bogus(unsigned int flags, size_t cd_nelmts,
 static herr_t
 test_compression(H5File& file)
 {
-#ifndef H5_HAVE_FILTER_DEFLATE
     const char		*not_supported;
     not_supported = "    Deflate compression is not enabled.";
-#endif /* H5_HAVE_FILTER_DEFLATE */
     int		points[100][200];
     int		check[100][200];
     hsize_t	i, j, n;
@@ -425,7 +423,7 @@ test_compression(H5File& file)
     for (i = n = 0; i < 100; i++)
     {
 	for (j = 0; j < 200; j++) {
-	    points[i][j] = (int)n++;
+	    points[i][j] = n++;
 	}
     }
     char* tconv_buf = new char [1000];
@@ -489,7 +487,7 @@ test_compression(H5File& file)
 	{
 	    for (j=0; j<size[1]; j++)
 	    {
-		points[i][j] = (int)n++;
+		points[i][j] = n++;
 	    }
 	}
 

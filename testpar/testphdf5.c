@@ -24,8 +24,8 @@
 #endif  /* !PATH_MAX */
 
 /* global variables */
-int dim0;
-int dim1;
+int dim0 = DIM0;
+int dim1 = DIM1;
 int chunkdim0;
 int chunkdim1;
 int nerrors = 0;			/* errors count */
@@ -119,8 +119,8 @@ usage(void)
     printf("\t-f <prefix>\tfilename prefix\n");
     printf("\t-2\t\tuse Split-file together with MPIO\n");
     printf("\t-p\t\tuse combo MPI-POSIX driver\n");
-    printf("\t-d <factor0> <factor1>\tdataset dimensions factors. Defaults (%d,%d)\n",
-	ROW_FACTOR, COL_FACTOR);
+    printf("\t-d <dim0> <dim1>\tdataset dimensions. Defaults (%d,%d)\n",
+	DIM0, DIM1);
     printf("\t-c <dim0> <dim1>\tdataset chunk dimensions. Defaults (dim0/10,dim1/10)\n");
     printf("\n");
 }
@@ -138,7 +138,6 @@ parse_options(int argc, char **argv)
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
 
     /* setup default chunk-size. Make sure sizes are > 0 */
-
     chunkdim0 = (dim0+9)/10;
     chunkdim1 = (dim1+9)/10;
 
@@ -185,9 +184,9 @@ parse_options(int argc, char **argv)
 				nerrors++;
 				return(1);
 			    }
-			    dim0 = atoi(*(++argv))*mpi_size;
+			    dim0 = atoi(*(++argv));
 			    argc--;
-			    dim1 = atoi(*(++argv))*mpi_size;
+			    dim1 = atoi(*(++argv));
 			    /* set default chunkdim sizes too */
 			    chunkdim0 = (dim0+9)/10;
 			    chunkdim1 = (dim1+9)/10;
@@ -326,9 +325,6 @@ int main(int argc, char **argv)
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
 
-    dim0 = ROW_FACTOR*mpi_size;
-    dim1 = COL_FACTOR*mpi_size;
-
     if (MAINPROCESS){
 	printf("===================================\n");
 	printf("PHDF5 TESTS START\n");
@@ -371,6 +367,7 @@ int main(int argc, char **argv)
 	    "extendible dataset independent write #2", PARATESTFILE);
     AddTest("selnone", none_selection_chunk, NULL,
             "chunked dataset with none-selection", PARATESTFILE);
+
     AddTest("calloc", test_chunk_alloc, NULL,
 	    "parallel extend Chunked allocation on serial file", PARATESTFILE);
     AddTest("fltread", test_filter_read, NULL,
@@ -402,7 +399,7 @@ int main(int argc, char **argv)
 	    "collective group and dataset write", &collngroups_params);
     AddTest("ingrpr", independent_group_read, NULL,
 	    "independent group and dataset read", &collngroups_params);
-    AddTest("bigdset", big_dataset, NULL,
+				 AddTest("bigdset", big_dataset, NULL, 
             "big dataset test", PARATESTFILE);
     AddTest("fill", dataset_fillvalue, NULL,
 	    "dataset fill value", PARATESTFILE);
@@ -439,8 +436,8 @@ int main(int argc, char **argv)
     AddTest((mpi_size < 3)? "-cchunk10" : "cchunk10",
 	coll_chunk10,NULL,
 	"multiple chunk collective IO transferring to independent IO",PARATESTFILE);
-
-
+          
+         
 
 /* irregular collective IO tests*/
     AddTest("ccontw",
@@ -461,6 +458,35 @@ int main(int argc, char **argv)
     AddTest("ccchunkr",
 	coll_irregular_complex_chunk_read,NULL,
 	"collective irregular complex chunk read",PARATESTFILE);
+
+
+#if 0
+    if((mpi_size > 3) && MAINPROCESS) {
+	printf("Collective irregular chunk IO tests haven't been tested \n");
+	printf("  for the number of process greater than 3.\n");
+	printf("Please try with the number of process \n");
+	printf("  no greater than 3 for collective irregular chunk IO test.\n");
+	printf("Collective irregular chunk tests will be skipped \n");
+    }
+    AddTest((mpi_size > 3) ? "-ccontw" : "ccontw",
+	coll_irregular_cont_write,NULL,
+	"collective irregular contiguous write",PARATESTFILE);
+    AddTest((mpi_size > 3) ? "-ccontr" : "ccontr",
+	coll_irregular_cont_read,NULL,
+	"collective irregular contiguous read",PARATESTFILE);
+    AddTest((mpi_size > 3) ? "-cschunkw" : "cschunkw",
+	coll_irregular_simple_chunk_write,NULL,
+	"collective irregular simple chunk write",PARATESTFILE);
+    AddTest((mpi_size > 3) ? "-cschunkr" : "cschunkr",
+	coll_irregular_simple_chunk_read,NULL,
+	"collective irregular simple chunk read",PARATESTFILE);
+    AddTest((mpi_size > 3) ? "-ccchunkw" : "ccchunkw",
+	coll_irregular_complex_chunk_write,NULL,
+	"collective irregular complex chunk write",PARATESTFILE);
+    AddTest((mpi_size > 3) ? "-ccchunkr" : "ccchunkr",
+	coll_irregular_complex_chunk_read,NULL,
+	"collective irregular complex chunk read",PARATESTFILE);
+#endif
 
 
     AddTest("null", null_dataset, NULL,

@@ -44,7 +44,6 @@ const char *FILENAME[] = {
     "sec2_file",
     "core_file",
     "family_file",
-    "new_family_v16_",
     "multi_file",
     "direct_file",
     NULL
@@ -157,7 +156,7 @@ test_direct(void)
     size_t	fbsize;
     size_t	cbsize;
     int		*points, *check, *p1, *p2;
-    int		wdata2[DSET2_DIM] = {11,12,13,14};
+    int		wdata2[DSET2_DIM] = {11,12,13,14}; 
     int		rdata2[DSET2_DIM];
     int		i, j, n;
 #endif /*H5_HAVE_DIRECT*/
@@ -174,7 +173,7 @@ test_direct(void)
     fapl = h5_fileaccess();
     if(H5Pset_fapl_direct(fapl, MBOUNDARY, FBSIZE, CBSIZE) < 0)
         TEST_ERROR;
-    h5_fixname(FILENAME[5], fapl, filename, sizeof filename);
+    h5_fixname(FILENAME[4], fapl, filename, sizeof filename);
 
     /* Verify the file access properties */
     if(H5Pget_fapl_direct(fapl, &mbound, &fbsize, &cbsize) < 0)
@@ -184,7 +183,7 @@ test_direct(void)
 
     if(H5Pset_alignment(fapl, (hsize_t)THRESHOLD, (hsize_t)FBSIZE) < 0)
 	TEST_ERROR;
-
+	
     H5E_BEGIN_TRY {
         file=H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
     } H5E_END_TRY;
@@ -213,11 +212,10 @@ test_direct(void)
     if(H5Fget_filesize(file, &file_size) < 0)
         TEST_ERROR;
 
-    /* There is no guarantee of the number of metadata allocations, but it's
-     * 4 currently and the size of the file should be between 3 & 4 file buffer
-     * sizes..
+    /* There is no garantee the size of metadata in file is constant.
+     * Just try to check if it's reasonable.  It's 2KB right now.
      */
-    if(file_size < (FBSIZE * 3) || file_size >= (FBSIZE * 4))
+    if(file_size<1*KB || file_size>4*KB)
         TEST_ERROR;
 
     /* Allocate aligned memory for data set 1. For data set 1, everything is aligned including
@@ -353,7 +351,7 @@ error:
  *              Added test for H5Fget_filesize.
  *
  *              Raymond Lu, 2006-11-30
- *              Enabled the driver to read an existing file depending on
+ *              Enabled the driver to read an existing file depending on 
  *              the setting of the backing_store and file open flags.
  *-------------------------------------------------------------------------
  */
@@ -410,7 +408,7 @@ test_core(void)
         TEST_ERROR;
 
 
-    /* Open the file with backing store off for read and write.
+    /* Open the file with backing store off for read and write.  
      * Changes won't be saved in file. */
     if(H5Pset_fapl_core(fapl, (size_t)CORE_INCREMENT, FALSE) < 0)
         TEST_ERROR;
@@ -470,7 +468,7 @@ test_core(void)
     if(H5Fclose(file) < 0)
         TEST_ERROR;
 
-    /* Open the file with backing store on for read and write.
+    /* Open the file with backing store on for read and write.  
      * Changes will be saved in file. */
     if(H5Pset_fapl_core(fapl, (size_t)CORE_INCREMENT, TRUE) < 0)
         TEST_ERROR;
@@ -803,12 +801,9 @@ static herr_t
 test_family_compat(void)
 {
     hid_t       file = (-1), fapl;
-    hid_t       dset;
-    char        dname[]="dataset";
     char        filename[1024];
-    char        pathname[1024], pathname_individual[1024];
-    char        newname[1024], newname_individual[1024];
-    int         counter = 0;
+    char        pathname[1024];
+    char       *srcdir = getenv("srcdir"); /*where the src code is located*/
 
     TESTING("FAMILY file driver backward compatibility");
 
@@ -819,52 +814,23 @@ test_family_compat(void)
         TEST_ERROR;
 
     h5_fixname(COMPAT_BASENAME, fapl, filename, sizeof filename);
-    h5_fixname(FILENAME[3], fapl, newname, sizeof newname);
 
     pathname[0] = '\0';
+    /* Generate correct name for test file by prepending the source path */
+    if(srcdir && ((HDstrlen(srcdir) + HDstrlen(filename) + 1) < sizeof(pathname))) {
+        HDstrcpy(pathname, srcdir);
+        HDstrcat(pathname, "/");
+    }
     HDstrcat(pathname, filename);
 
-    /* The following code makes the copies of the family files in the source directory.
-     * Since we're going to open the files with write mode, this protects the original
-     * files.
-     */
-    sprintf(newname_individual, newname, counter);
-    sprintf(pathname_individual, pathname, counter);
-
-    while (h5_make_local_copy(pathname_individual, newname_individual) >= 0) {
-        counter++;
-        sprintf(newname_individual, newname, counter);
-        sprintf(pathname_individual, pathname, counter);
-    }
-
-    /* Make sure we can open the file.  Use the read and write mode to flush the
-     * superblock. */
-    if((file = H5Fopen(newname, H5F_ACC_RDWR, fapl)) < 0)
-        TEST_ERROR;
-
-    if((dset = H5Dopen2(file, dname, H5P_DEFAULT)) < 0)
-        TEST_ERROR;
-
-    if(H5Dclose(dset) < 0)
+    if((file = H5Fopen(pathname, H5F_ACC_RDONLY, fapl)) < 0)
         TEST_ERROR;
 
     if(H5Fclose(file) < 0)
         TEST_ERROR;
 
-    /* Open the file again to make sure it isn't corrupted. */
-    if((file = H5Fopen(newname, H5F_ACC_RDWR, fapl)) < 0)
+    if(H5Pclose(fapl) < 0)
         TEST_ERROR;
-
-    if((dset = H5Dopen2(file, dname, H5P_DEFAULT)) < 0)
-        TEST_ERROR;
-
-    if(H5Dclose(dset) < 0)
-        TEST_ERROR;
-
-    if(H5Fclose(file) < 0)
-        TEST_ERROR;
-
-    h5_cleanup(FILENAME, fapl);
 
     PASSED();
 
@@ -873,7 +839,6 @@ test_family_compat(void)
 error:
     H5E_BEGIN_TRY {
         H5Fclose(file);
-        H5Pclose(fapl); 
     } H5E_END_TRY;
 
     return -1;
@@ -978,7 +943,7 @@ test_multi(void)
     sprintf(sv[H5FD_MEM_BTREE],  "%%s-%c.h5", 'b');
     memb_name[H5FD_MEM_BTREE] = sv[H5FD_MEM_BTREE];
     memb_addr[H5FD_MEM_BTREE] = HADDR_MAX/4;
-
+ 
     sprintf(sv[H5FD_MEM_DRAW], "%%s-%c.h5", 'r');
     memb_name[H5FD_MEM_DRAW] = sv[H5FD_MEM_DRAW];
     memb_addr[H5FD_MEM_DRAW] = HADDR_MAX/2;
@@ -990,7 +955,7 @@ test_multi(void)
 
     if(H5Pset_fapl_multi(fapl, memb_map, memb_fapl, memb_name, memb_addr, TRUE) < 0)
         TEST_ERROR;
-    h5_fixname(FILENAME[4], fapl, filename, sizeof filename);
+    h5_fixname(FILENAME[3], fapl, filename, sizeof filename);
 
     if((file=H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
         TEST_ERROR;

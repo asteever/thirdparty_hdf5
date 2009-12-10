@@ -13,12 +13,10 @@
  * access to either file, you may request a copy from help@hdfgroup.org.     *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#include "h5diff.h"
 #include <stdlib.h>
 #include <assert.h>
-#include <memory.h>
-#include "h5diff.h"
 #include "h5diff_common.h"
-#include "h5tools_utils.h"
 
 /*-------------------------------------------------------------------------
  * Function: main
@@ -55,43 +53,36 @@
  *  "Some objects are not comparable"
  *
  * February 2007
- *  Added comparison for dataset regions.
+ *  Added comparison for dataset regions. 
  *  Added support for reading and comparing by hyperslabs for large files.
  *  Inclusion of a relative error formula to compare floating
- *   point numbers in order to deal with floating point uncertainty.
+ *   point numbers in order to deal with floating point uncertainty. 
  *  Printing of dataset dimensions along with dataset name
- *
+ *   
  *  November 19, 2007
  *    adopted the syntax h5diff  [OPTIONS]  file1 file2  [obj1[obj2]]
+ *
+ * Aug 2008 
+ *    Added a "contents" mode check.
+ *    If this mode is present, objects in both files must match (must be exactly the same)
+ *    If this does not happen, the tool returns an error code of 1 
+ *    (instead of the success code of 0)
  *
  *-------------------------------------------------------------------------
  */
 
 
-/* module-scoped variables */
-int d_status = EXIT_SUCCESS;
-
 int main(int argc, const char *argv[])
 {
     int        ret;
-    const char *fname1 = NULL;
-    const char *fname2 = NULL;
-    const char *objname1  = NULL;
-    const char *objname2  = NULL;
+    char       *fname1 = NULL;
+    char       *fname2 = NULL;
+    char       *objname1  = NULL;
+    char       *objname2  = NULL;
     hsize_t    nfound=0;
     diff_opt_t options;
 
-    /*-------------------------------------------------------------------------
-    * process the command-line
-    *-------------------------------------------------------------------------
-    */
-
     parse_command_line(argc, argv, &fname1, &fname2, &objname1, &objname2, &options);
-
-    /*-------------------------------------------------------------------------
-    * do the diff
-    *-------------------------------------------------------------------------
-    */
 
     nfound = h5diff(fname1,fname2,objname1,objname2,&options);
 
@@ -99,20 +90,17 @@ int main(int argc, const char *argv[])
 
    /*-------------------------------------------------------------------------
     * exit code
-    *   1 if differences, 0 if no differences, 2 if error
+    *   1 if differences, 0 if no differences, -1 if error
     *-------------------------------------------------------------------------
     */
 
     ret = (nfound == 0 ? 0 : 1 );
 
-    /* if graph difference return 1 for differences  */
-    if ( options.contents == 0 )
+    if ( options.m_contents && options.contents == 0 )
         ret = 1;
 
-    /* and return 2 for error */
-    if (options.err_stat)
-        ret = 2;
-
+    if(options.err_stat)
+        ret = -1;
     return ret;
 }
 

@@ -38,7 +38,7 @@ const char *FILENAME[] = {
 #define MAX_TRIES	100
 
 #if H5_SIZEOF_LONG_LONG >= 8
-#   define GB8LL	((unsigned long long)8*1024*1024*1024)
+#   define GB8LL	((unsigned long_long)8*1024*1024*1024)
 #else
 #   define GB8LL	0	/*cannot do the test*/
 #endif
@@ -53,7 +53,7 @@ static hsize_t values_used[WRT_N];
 /*-------------------------------------------------------------------------
  * Function:	randll
  *
- * Purpose:	Create a random long long value.
+ * Purpose:	Create a random long_long value.
  * 		Ensures that a write at this value doesn't overlap any
  *		previous write.
  *
@@ -80,8 +80,8 @@ randll(hsize_t limit, int current_index)
     /* does not overlap with any previous writes */
     while(overlap != 0 && tries < MAX_TRIES)
     {
-        acc = HDrandom();
-        acc *= HDrandom();
+        acc = rand ();
+        acc *= rand ();
         acc = acc % limit;
         overlap = 0;
 
@@ -294,6 +294,11 @@ writer (char* filename, hid_t fapl, int wrt_n)
  *  or it will take some time to write a file.
  *  We should create a dataset allocating space late and never writing fill values.
  *  EIP 4/8/03
+
+    if((d1 = H5Dcreate2(file, "d1", H5T_NATIVE_INT, space1, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0 ||
+	(d2 = H5Dcreate2(file, "d2", H5T_NATIVE_INT, space2, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) {
+	goto error;
+    }
 */
     dcpl = H5Pcreate(H5P_DATASET_CREATE);
     H5Pset_alloc_time(dcpl, H5D_ALLOC_TIME_LATE);
@@ -376,14 +381,14 @@ reader(char *filename, hid_t fapl)
     script = fopen(DNAME, "r");
 
     /* Open HDF5 file */
-    if((file = H5Fopen(filename, H5F_ACC_RDONLY, fapl)) < 0) FAIL_STACK_ERROR
+    if((file = H5Fopen(filename, H5F_ACC_RDONLY, fapl)) < 0) goto error;
 
     /* Open the dataset */
-    if((d2 = H5Dopen2(file, "d2", H5P_DEFAULT)) < 0) FAIL_STACK_ERROR
-    if((fspace = H5Dget_space(d2)) < 0) FAIL_STACK_ERROR
+    if((d2 = H5Dopen2(file, "d2", H5P_DEFAULT)) < 0) goto error;
+    if((fspace = H5Dget_space(d2)) < 0) goto error;
 
     /* Describe `buf' */
-    if((mspace = H5Screate_simple(1, hs_size, hs_size)) < 0) FAIL_STACK_ERROR
+    if((mspace = H5Screate_simple(1, hs_size, hs_size)) < 0) goto error;
 
     /* Read each region */
     while(fgets(ln, (int)sizeof(ln), script)) {
@@ -395,9 +400,9 @@ reader(char *filename, hid_t fapl)
 	fflush(stdout);
 
 	if(H5Sselect_hyperslab(fspace, H5S_SELECT_SET, hs_offset, NULL,
-				 hs_size, NULL) < 0) FAIL_STACK_ERROR
+				 hs_size, NULL) < 0) goto error;
 	if(H5Dread(d2, H5T_NATIVE_INT, mspace, fspace, H5P_DEFAULT, buf) < 0)
-	    FAIL_STACK_ERROR
+	    goto error;
 
 	/* Check */
 	for(j = zero = wrong = 0; j < WRT_SIZE; j++) {
@@ -418,10 +423,10 @@ reader(char *filename, hid_t fapl)
 	}
     }
 
-    if(H5Dclose(d2) < 0) FAIL_STACK_ERROR
-    if(H5Sclose(mspace) < 0) FAIL_STACK_ERROR
-    if(H5Sclose(fspace) < 0) FAIL_STACK_ERROR
-    if(H5Fclose(file) < 0) FAIL_STACK_ERROR
+    if(H5Dclose(d2) < 0) goto error;
+    if(H5Sclose(mspace) < 0) goto error;
+    if(H5Sclose(fspace) < 0) goto error;
+    if(H5Fclose(file) < 0) goto error;
     free(buf);
     fclose(script);
 
@@ -505,7 +510,7 @@ main (int ac, char **av)
     hid_t	fapl=-1;
     hsize_t	family_size;
     hsize_t	family_size_def;	/* default family file size */
-    unsigned long seed = 0;             /* Random # seed */
+    double	family_size_def_dbl;	/* default family file size */
     int		cflag=1;		/* check file system before test */
     char	filename[1024];
 
@@ -517,8 +522,11 @@ main (int ac, char **av)
 	if (strcmp("-fsize", *av)==0){
 	    /* specify a different family file size */
 	    ac--; av++;
-	    if (ac > 0) {
-		family_size_def = (hsize_t)HDstrtoull(*av, NULL, 0);
+	    if (ac > 0){
+		family_size_def_dbl = atof(*av);
+                H5_ASSIGN_OVERFLOW(family_size_def,family_size_def_dbl,double,hsize_t);
+		if (family_size_def <= 0)
+		    family_size_def = (hsize_t)FAMILY_SIZE;
 	    }
 	    else{
 		printf("***Missing fsize value***\n");
@@ -538,14 +546,6 @@ main (int ac, char **av)
 	    return 1;
 	}
     }
-
-    /* Choose random # seed */
-    seed = (unsigned long)HDtime(NULL);
-#ifdef QAK
-/* seed = (unsigned long)1155438845; */
-HDfprintf(stderr, "Random # seed was: %lu\n", seed);
-#endif /* QAK */
-    HDsrandom(seed);
 
     /* Reset library */
     h5_reset();
@@ -573,8 +573,8 @@ HDfprintf(stderr, "Random # seed was: %lu\n", seed);
 	 * because we would generate multi-gigabyte files.
 	 */
 	puts("Checking if file system is adequate for this test...");
-	if (sizeof(long long)<8 || 0==GB8LL) {
-	    puts("Test skipped because sizeof(long long) is too small. This");
+	if (sizeof(long_long)<8 || 0==GB8LL) {
+	    puts("Test skipped because sizeof(long_long) is too small. This");
 	    puts("hardware apparently doesn't support 64-bit integer types.");
 	    usage();
 	    goto quit;
@@ -600,7 +600,7 @@ HDfprintf(stderr, "Random # seed was: %lu\n", seed);
     puts("Test passed with the Family Driver.");
 
     /*
-     * We shouldn't run this test if the file system doesn't support big files
+     * We shouldn't run this test if the file system doesn't support big files 
      * because we would generate multi-gigabyte files.
      */
     puts("\nChecking if file system supports big files...");
@@ -657,4 +657,3 @@ error:
     puts("*** TEST FAILED ***");
     return 1;
 }
-

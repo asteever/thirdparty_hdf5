@@ -28,7 +28,6 @@
 #include "H5Lprivate.h"		/* Links		  		*/
 #include "H5Pprivate.h"		/* Property lists			*/
 #include "H5Tprivate.h"		/* Datatypes				*/
-#include "H5SLprivate.h"        /* Skip lists                           */
 
 
 /****************/
@@ -60,10 +59,6 @@ static void H5_debug_mask(const char*);
 /*****************************/
 /* Library Private Variables */
 /*****************************/
-
-/* HDF5 API Entered variable */
-/* (move to H5.c when new FUNC_ENTER macros in actual use -QAK) */
-hbool_t H5_api_entered_g = FALSE;
 
 /* statically initialize block for pthread_once call used in initializing */
 /* the first global mutex                                                 */
@@ -275,9 +270,6 @@ H5_term_library(void)
             /* Don't shut down the ID code until other APIs which use them are shut down */
             if(pending == 0)
                 pending += DOWN(I);
-            /* Don't shut down the skip list code until everything that uses it is down */
-            if(pending == 0)
-                pending += DOWN(SL);
             /* Don't shut down the free list code until _everything_ else is down */
             if(pending == 0)
                 pending += DOWN(FL);
@@ -352,7 +344,7 @@ H5dont_atexit(void)
 {
     herr_t ret_value = SUCCEED;       /* Return value */
 
-    FUNC_ENTER_API_NOINIT_NOERR_NOFS(H5dont_atexit)
+    FUNC_ENTER_API_NOINIT_NOFS(H5dont_atexit)
     H5TRACE0("e","");
 
     if(H5_dont_atexit_g)
@@ -413,9 +405,6 @@ done:
  *      global lists, up to 3 MB of total storage might be allocated (1MB on
  *      each of regular, array and block type lists).
  *
- *      The settings for block free lists are duplicated to factory free lists.
- *      Factory free list limits cannot be set independently currently.
- *
  * Parameters:
  *  int reg_global_lim;  IN: The limit on all "regular" free list memory used
  *  int reg_list_lim;    IN: The limit on memory used in each "regular" free list
@@ -431,9 +420,7 @@ done:
  * Programmer:	Quincey Koziol
  *              Wednesday, August 2, 2000
  *
- * Modifications:   Neil Fortner
- *                  Wednesday, April 8, 2009
- *                  Added support for factory free lists
+ * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -448,8 +435,7 @@ H5set_free_list_limits(int reg_global_lim, int reg_list_lim, int arr_global_lim,
              arr_list_lim, blk_global_lim, blk_list_lim);
 
     /* Call the free list function to actually set the limits */
-    if(H5FL_set_free_list_limits(reg_global_lim, reg_list_lim, arr_global_lim, arr_list_lim,
-            blk_global_lim, blk_list_lim, blk_global_lim, blk_list_lim)<0)
+    if(H5FL_set_free_list_limits(reg_global_lim, reg_list_lim, arr_global_lim, arr_list_lim, blk_global_lim, blk_list_lim)<0)
         HGOTO_ERROR(H5E_RESOURCE, H5E_CANTSET, FAIL, "can't set garbage collection limits")
 
 done:
@@ -614,8 +600,6 @@ done:
     "The HDF5 header files used to compile this application do not match\n" \
     "the version used by the HDF5 library to which this application is linked.\n" \
     "Data corruption or segmentation faults may occur if the application continues.\n" \
-    "This can happen when an application was compiled by one version of HDF5 but\n" \
-    "linked with a different version of static or shared HDF5 library.\n" \
     "You should recompile the application or check your shared library related\n" \
     "settings such as 'LD_LIBRARY_PATH'.\n"
 
@@ -625,11 +609,10 @@ H5check_version(unsigned majnum, unsigned minnum, unsigned relnum)
     char	lib_str[256];
     char	substr[] = H5_VERS_SUBRELEASE;
     static int	checked = 0;            /* If we've already checked the version info */
-    static unsigned int	disable_version_check = 0;      /* Set if the version check should be disabled */
-    static const char *version_mismatch_warning = VERSION_MISMATCH_WARNING;
-    herr_t      ret_value = SUCCEED;    /* Return value */
+    static int	disable_version_check = 0;      /* Set if the version check should be disabled */
+    herr_t      ret_value=SUCCEED;       /* Return value */
 
-    FUNC_ENTER_API_NOINIT_NOERR_NOFS(H5check_version)
+    FUNC_ENTER_API_NOINIT_NOFS(H5check_version)
     H5TRACE3("e", "IuIuIu", majnum, minnum, relnum);
 
     /* Don't check again, if we already have */
@@ -642,44 +625,39 @@ H5check_version(unsigned majnum, unsigned minnum, unsigned relnum)
         s = HDgetenv ("HDF5_DISABLE_VERSION_CHECK");
 
         if (s && HDisdigit(*s))
-            disable_version_check = (unsigned int)HDstrtol (s, NULL, 0);
+            disable_version_check = (int)HDstrtol (s, NULL, 0);
     }
 
     if (H5_VERS_MAJOR!=majnum || H5_VERS_MINOR!=minnum ||
             H5_VERS_RELEASE!=relnum) {
         switch (disable_version_check) {
 	case 0:
-	    HDfprintf(stderr, "%s%s", version_mismatch_warning,
+            HDfputs (VERSION_MISMATCH_WARNING
 		     "You can, at your own risk, disable this warning by setting the environment\n"
 		     "variable 'HDF5_DISABLE_VERSION_CHECK' to a value of '1'.\n"
-		     "Setting it to 2 or higher will suppress the warning messages totally.\n");
+		     "Setting it to 2 will suppress the warning messages totally.\n",
+		     stderr);
 	    /* Mention the versions we are referring to */
 	    HDfprintf (stderr, "Headers are %u.%u.%u, library is %u.%u.%u\n",
 		     majnum, minnum, relnum,
 		     (unsigned)H5_VERS_MAJOR, (unsigned)H5_VERS_MINOR, (unsigned)H5_VERS_RELEASE);
-	    /* Show library settings if available */
-	    HDfprintf (stderr, "%s", H5libhdf5_settings);
 
 	    /* Bail out now. */
 	    HDfputs ("Bye...\n", stderr);
 	    HDabort ();
-	case 1:
+	case 2:
+	    /* continue silently */
+	    break;
+	default:
 	    /* continue with a warning */
-	    /* Note that the warning message is embedded in the format string.*/
-            HDfprintf (stderr,
-                     "%s'HDF5_DISABLE_VERSION_CHECK' "
+            HDfprintf (stderr, VERSION_MISMATCH_WARNING
+                     "'HDF5_DISABLE_VERSION_CHECK' "
                      "environment variable is set to %d, application will\n"
-                     "continue at your own risk.\n",
-		     version_mismatch_warning, disable_version_check);
+                     "continue at your own risk.\n", disable_version_check);
 	    /* Mention the versions we are referring to */
 	    HDfprintf (stderr, "Headers are %u.%u.%u, library is %u.%u.%u\n",
 		     majnum, minnum, relnum,
 		     (unsigned)H5_VERS_MAJOR, (unsigned)H5_VERS_MINOR, (unsigned)H5_VERS_RELEASE);
-	    /* Show library settings if available */
-	    HDfprintf (stderr, "%s", H5libhdf5_settings);
-	    break;
-	default:
-	    /* 2 or higer: continue silently */
 	    break;
         } /* end switch */
 
@@ -696,7 +674,7 @@ H5check_version(unsigned majnum, unsigned minnum, unsigned relnum)
 	 */
 	sprintf(lib_str, "HDF5 library version: %d.%d.%d",
 	    H5_VERS_MAJOR, H5_VERS_MINOR, H5_VERS_RELEASE);
-	if(*substr) {
+	if (*substr){
 	    HDstrcat(lib_str, "-");
 	    HDstrncat(lib_str, substr, (sizeof(lib_str) - HDstrlen(lib_str)) - 1);
 	} /* end if */
@@ -773,7 +751,7 @@ H5close(void)
      * whole library just to release it all right away.  It is safe to call
      * this function for an uninitialized library.
      */
-    FUNC_ENTER_API_NOINIT_NOERR_NOFS(H5close)
+    FUNC_ENTER_API_NOINIT_NOFS(H5close)
     H5TRACE0("e","");
 
     H5_term_library();

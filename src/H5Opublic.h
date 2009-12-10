@@ -87,24 +87,6 @@ typedef enum H5O_type_t {
     H5O_TYPE_NTYPES             /* Number of different object types (must be last!) */
 } H5O_type_t;
 
-/* Information struct for object header metadata (for H5Oget_info/H5Oget_info_by_name/H5Oget_info_by_idx) */
-typedef struct H5O_hdr_info_t {
-    unsigned version;		/* Version number of header format in file */
-    unsigned nmesgs;		/* Number of object header messages */
-    unsigned nchunks;		/* Number of object header chunks */
-    unsigned flags;             /* Object header status flags */
-    struct {
-        hsize_t total;		/* Total space for storing object header in file */
-        hsize_t meta;		/* Space within header for object header metadata information */
-        hsize_t mesg;		/* Space within header for actual message information */
-        hsize_t free;		/* Free space within object header */
-    } space;
-    struct {
-        uint64_t present;	/* Flags to indicate presence of message type in header */
-        uint64_t shared;	/* Flags to indicate message type is shared in header */
-    } mesg;
-} H5O_hdr_info_t;
-
 /* Information struct for object (for H5Oget_info/H5Oget_info_by_name/H5Oget_info_by_idx) */
 typedef struct H5O_info_t {
     unsigned long 	fileno;		/* File number that object is located in */
@@ -116,7 +98,22 @@ typedef struct H5O_info_t {
     time_t		ctime;		/* Change time			*/
     time_t		btime;		/* Birth time			*/
     hsize_t 		num_attrs;	/* # of attributes attached to object */
-    H5O_hdr_info_t      hdr;            /* Object header information */
+    struct {
+        unsigned version;		/* Version number of header format in file */
+        unsigned nmesgs;		/* Number of object header messages */
+        unsigned nchunks;		/* Number of object header chunks */
+        unsigned flags;                 /* Object header status flags */
+        struct {
+            hsize_t total;		/* Total space for storing object header in file */
+            hsize_t meta;		/* Space within header for object header metadata information */
+            hsize_t mesg;		/* Space within header for actual message information */
+            hsize_t free;		/* Free space within object header */
+        } space;
+        struct {
+            uint64_t present;		/* Flags to indicate presence of message type in header */
+            uint64_t shared;		/* Flags to indicate message type is shared in header */
+        } mesg;
+    } hdr;
     /* Extra metadata storage for obj & attributes */
     struct {
         H5_ih_info_t   obj;             /* v1/v2 B-tree & local/fractal heap for groups, B-tree for chunked datasets */
@@ -174,7 +171,7 @@ H5_DLL herr_t H5Ovisit_by_name(hid_t loc_id, const char *obj_name,
 H5_DLL herr_t H5Oclose(hid_t object_id);
 
 /* Symbols defined for compatibility with previous versions of the HDF5 API.
- *
+ * 
  * Use of these symbols is deprecated.
  */
 #ifndef H5_NO_DEPRECATED_SYMBOLS

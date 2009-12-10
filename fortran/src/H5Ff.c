@@ -411,23 +411,21 @@ nh5fclose_c ( hid_t_f *file_id )
  * Programmer:  Elena Pourmal
  *              Monday, September 30, 2002
  * Modifications:
- *              Changed type of obj_count to size_t_f
- *              Thursday, September 25, 2008
  *---------------------------------------------------------------------------*/
 
 int_f
-nh5fget_obj_count_c ( hid_t_f *file_id , int_f *obj_type, size_t_f * obj_count)
+nh5fget_obj_count_c ( hid_t_f *file_id , int_f *obj_type, int_f * obj_count)
 {
   int ret_value = 0;
   hid_t c_file_id;
   unsigned c_obj_type;
-  ssize_t c_obj_count;
+  int c_obj_count;
 
 
   c_file_id = (hid_t)*file_id;
   c_obj_type = (unsigned) *obj_type;
   if ( (c_obj_count=H5Fget_obj_count(c_file_id, c_obj_type)) < 0  ) ret_value = -1;
-  *obj_count = (size_t_f)c_obj_count;
+  *obj_count = (int_f)c_obj_count;
   return ret_value;
 }
 /*----------------------------------------------------------------------------
@@ -440,34 +438,24 @@ nh5fget_obj_count_c ( hid_t_f *file_id , int_f *obj_type, size_t_f * obj_count)
  * Programmer:  Elena Pourmal
  *              Monday, September 30, 2002
  * Modifications:
- *              Changed type of max_obj to size_t_f; added parameter for the 
- *              number of open objects
- *              Thursday, September 25, 2008 EIP
  *---------------------------------------------------------------------------*/
 
 int_f
-nh5fget_obj_ids_c ( hid_t_f *file_id , int_f *obj_type, size_t_f *max_objs, hid_t_f *obj_ids, size_t_f *num_objs)
+nh5fget_obj_ids_c ( hid_t_f *file_id , int_f *obj_type, int_f *max_objs, hid_t_f *obj_ids)
 {
   int ret_value = 0;
   hid_t c_file_id;
   unsigned c_obj_type;
-  int i;
-  size_t c_max_objs;
-  ssize_t c_num_objs;
+  int c_max_objs, i;
   hid_t *c_obj_ids;
 
   c_file_id = (hid_t)*file_id;
   c_obj_type = (unsigned) *obj_type;
-  c_max_objs = (size_t)*max_objs;
+  c_max_objs = (int)*max_objs;
   c_obj_ids = (hid_t *)HDmalloc(sizeof(hid_t)*c_max_objs);
-
-  c_num_objs = H5Fget_obj_ids(c_file_id, c_obj_type, c_max_objs, c_obj_ids);
-  if ( c_num_objs < 0  ) ret_value = -1;
+  if ( H5Fget_obj_ids(c_file_id, c_obj_type, c_max_objs, c_obj_ids) < 0  ) ret_value = -1;
   for (i=0; i< c_max_objs; i++) obj_ids[i] = (hid_t_f)c_obj_ids[i];
-
   HDfree(c_obj_ids);
-  *num_objs = (size_t_f)c_num_objs;
-
   return ret_value;
 }
 /*----------------------------------------------------------------------------

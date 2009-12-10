@@ -210,9 +210,7 @@ nh5sget_select_elem_npoints_c( hid_t_f *space_id , hssize_t_f * num_points)
  * Returns:     0 on success, -1 on failure
  * Programmer:  Xiangyang Su
  *              Monday, November 15, 1999
- * Modifications: 
- *              Transpose dimension arrays because of C-FORTRAN storage order
- *              M.S. Breitenfeld
+ * Modifications:
  *---------------------------------------------------------------------------*/
 
 int_f
@@ -224,7 +222,6 @@ nh5sget_select_hyper_blocklist_c( hid_t_f *space_id ,hsize_t_f * startblock,
   hsize_t c_num_blocks;
 
   hsize_t i;
-  int j,k,m,n;
   int rank;
   hsize_t c_startblock, *c_buf;
 
@@ -240,23 +237,10 @@ nh5sget_select_hyper_blocklist_c( hid_t_f *space_id ,hsize_t_f * startblock,
 
   ret_value = H5Sget_select_hyper_blocklist(c_space_id, c_startblock,
                                             c_num_blocks, c_buf);
-
-  /*
-   * Transpose dimension arrays because of C-FORTRAN storage order and add 1
-   */
-  n = 0;
-  m = 0;
-  for (i=0; i < c_num_blocks; i++) {
-    for (j=0; j < rank; j++) {
-      for (k=0; k < rank; k++) {
-	int t= (m + rank - k - 1);
-	buf[n] = (hsize_t_f)c_buf[t]+1;
-	n = n + 1;
-      }
-      m = m + rank;
-    }
+  for(i = 0; i < c_num_blocks*2*rank; i++)
+  {
+      buf[i] = (hsize_t_f)c_buf[i] +1;
   }
-
   HDfree(c_buf);
   if (ret_value  >= 0  ) ret_value = 0;
   return ret_value;
@@ -274,9 +258,7 @@ nh5sget_select_hyper_blocklist_c( hid_t_f *space_id ,hsize_t_f * startblock,
  * Returns:     0 on success, -1 on failure
  * Programmer:  Xiangyang Su
  *              Wednesday, November 17, 1999
- * Modifications: swapped array bounds to account for C and Fortran reversed
- *                matrix notation.
- *                M.S. Breitenfeld
+ * Modifications:
  *---------------------------------------------------------------------------*/
 
 int_f
@@ -300,8 +282,8 @@ nh5sget_select_bounds_c( hid_t_f *space_id , hsize_t_f * start, hsize_t_f * end)
   ret_value = H5Sget_select_bounds(c_space_id, c_start, c_end);
   for(i = 0; i < rank; i++)
   {
-    start[i] = (hsize_t_f)(c_start[rank-i-1]+1);
-    end[i] = (hsize_t_f)(c_end[rank-i-1]+1);
+    start[i] = (hsize_t_f)(c_start[i]+1);
+    end[i] = (hsize_t_f)(c_end[i]+1);
   }
   if (ret_value  >= 0  ) ret_value = 0;
 
@@ -339,9 +321,8 @@ nh5sget_select_elem_pointlist_c( hid_t_f *space_id ,hsize_t_f * startpoint,
   hid_t c_space_id;
   hsize_t c_num_points;
   hsize_t c_startpoint,* c_buf;
-  hsize_t i, i1;
   int rank;
-  int j,i2;
+  hssize_t i;
 
   c_space_id = *space_id;
   c_num_points = (hsize_t)* numpoints;
@@ -354,22 +335,9 @@ nh5sget_select_elem_pointlist_c( hid_t_f *space_id ,hsize_t_f * startpoint,
   if (!c_buf) return ret_value;
   ret_value = H5Sget_select_elem_pointlist(c_space_id, c_startpoint,
                                             c_num_points, c_buf);
-
-  /* re-arrange the return buffer to account for Fortran ordering of 2D arrays */
-  /* and add 1 to account for array's starting at one in Fortran */
-  i2 = 0;
-  for( i = 0; i < c_num_points; i++) {
-    i1 =  rank*(i+1);
-    for(j = 0; j < rank; j++) {
-      buf[i2] = (hsize_t_f)(c_buf[i1-1]+1);
-      i2 = i2 + 1;
-      i1 = i1 - 1;
-    }
+  for (i = (c_num_points*rank)-1; i >= 0; i--) {
+      buf[i] = (hsize_t_f)(c_buf[i]+1);
   }
-
-/*   for( i = 0; i < c_num_points*rank; i++) { */
-/*     printf("%i \n", (int)c_buf[i]+1); */
-/*   } */
 
   if (ret_value  >= 0  ) ret_value = 0;
 
@@ -496,7 +464,7 @@ nh5sget_select_npoints_c ( hid_t_f *space_id , hssize_t_f *npoints )
 
   c_space_id = *space_id;
   c_npoints = H5Sget_select_npoints(c_space_id);
-  if ( c_npoints < 0  ) ret_value = -1;
+  if ( c_npoints == 0  ) ret_value = -1;
   *npoints = (hssize_t_f)c_npoints;
   return ret_value;
 }
@@ -1035,8 +1003,11 @@ nh5sselect_elements_c ( hid_t_f *space_id , int_f *op, size_t_f *nelements,  hsi
   int i, j;
   hsize_t *c_coord;
   size_t c_nelements;
-
-  c_op = (H5S_seloper_t)*op;
+/*
+  if (*op != H5S_SELECT_SET_F) return ret_value;
+*/
+  if (*op != H5S_SELECT_SET) return ret_value;
+  c_op =  H5S_SELECT_SET;
 
   c_space_id = *space_id;
   rank = H5Sget_simple_extent_ndims(c_space_id);
@@ -1059,7 +1030,7 @@ nh5sselect_elements_c ( hid_t_f *space_id , int_f *op, size_t_f *nelements,  hsi
 /*----------------------------------------------------------------------------
  * Name:        h5sdecode_c
  * Purpose:     Call H5Sdecode
- * Inputs:
+ * Inputs:       
  *		buf     - Buffer for the data space object to be decoded.
  * Outputs:
  *              obj_id  - Object_id (non-negative)
@@ -1081,7 +1052,7 @@ nh5sdecode_c ( _fcd buf, hid_t_f *obj_id )
    * Call H5Sdecode function.
    */
 
-  c_buf = (unsigned char*)buf;
+  c_buf = (unsigned char*)buf; 
 
   c_obj_id = H5Sdecode(c_buf);
   if(c_obj_id < 0)
@@ -1096,7 +1067,7 @@ nh5sdecode_c ( _fcd buf, hid_t_f *obj_id )
 /*----------------------------------------------------------------------------
  * Name:        h5sencode_c
  * Purpose:     Call H5Sencode
- * Inputs:
+ * Inputs:       
  *            obj_id - Identifier of the object to be encoded.
  *		 buf - Buffer for the object to be encoded into.
  *            nalloc - The size of the allocated buffer.
@@ -1141,9 +1112,9 @@ nh5sencode_c (_fcd buf, hid_t_f *obj_id, size_t_f *nalloc )
     return ret_value;
   }
 
-  /* copy the C buffer to the FORTRAN buffer.
+  /* copy the C buffer to the FORTRAN buffer. 
    * Can not use HD5packFstring because we don't want to
-   * eliminate the NUL terminator or pad remaining space
+   * eliminate the NUL terminator or pad remaining space 
    * with blanks.
    */
 
@@ -1157,7 +1128,7 @@ nh5sencode_c (_fcd buf, hid_t_f *obj_id, size_t_f *nalloc )
 /*----------------------------------------------------------------------------
  * Name:        h5sextent_equal_c
  * Purpose:     Call H5Sextent_equal
- * Inputs:
+ * Inputs:        
  *		space1_id - First dataspace identifier.
  *              space2_id - Second dataspace identifier.
  * Outputs:

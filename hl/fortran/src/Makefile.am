@@ -20,24 +20,20 @@
 # HDF5 High-Level Fortran Makefile(.in)
 
 include $(top_srcdir)/config/commence.am
-include $(top_srcdir)/config/lt_vers.am
 
 INCLUDES=-I$(top_srcdir)/src -I$(top_srcdir)/hl/src -I$(top_builddir)/hl/src \
          -I$(top_srcdir)/fortran/src -I$(top_builddir)/fortran/src
-AM_FCFLAGS+=-I$(top_builddir)/fortran/src $(F9XMODFLAG)$(top_builddir)/fortran/src
+AM_FCFLAGS=-I$(top_builddir)/fortran/src $(F9XMODFLAG)$(top_builddir)/fortran/src
 
 # Our main target, the high-level fortran library
 lib_LTLIBRARIES=libhdf5hl_fortran.la
-
-# Add libtool numbers to the HDF5 HL Fortran library (from config/lt_vers.am)
-libhdf5hl_fortran_la_LDFLAGS= -version-info $(LT_VERS_INTERFACE):$(LT_VERS_REVISION):$(LT_VERS_AGE) $(AM_LDFLAGS)
 
 # Some Fortran compilers can't build shared libraries, so sometimes we
 # want to build a shared C library and a static Fortran library.  If so,
 # pass the -static flag to the library linker.
 if FORTRAN_SHARED_CONDITIONAL
 else
-   AM_LDFLAGS+=-static
+   AM_LDFLAGS=-static
 endif
 
 # Source files for the library
@@ -61,12 +57,12 @@ clean-local:
 
 install-data-local:
 	@if test -n "$(F9XMODEXT)" && test "X$(F9XMODEXT)" != "Xo"; then \
-	  $(CP) $(top_builddir)/$(subdir)/*.$(F9XMODEXT) $(DESTDIR)$(includedir)/. ; \
+	  $(CP) $(top_builddir)/$(subdir)/*.$(F9XMODEXT) $(includedir)/. ; \
 	fi
 
 uninstall-local:
 	@if test -n "$(F9XMODEXT)" -a "X$(F9XMODEXT)" != "Xo"; then      \
-	  if test -f "$(includedir)/hdf5.$(F9XMODEXT)" -o -f "$(DESTDIR)$(includedir)/HDF5.$(F9XMODEXT)"; then \
+	  if test -f "$(includedir)/hdf5.$(F9XMODEXT)" -o -f "$(includedir)/HDF5.$(F9XMODEXT)"; then \
 	    set -x; $(RM) $(includedir)/*.$(F9XMODEXT);                 \
 	  fi;                                                           \
 	fi

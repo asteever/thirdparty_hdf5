@@ -82,76 +82,79 @@ char    opt_pvfstab[256] = "notset";
 int     opt_pvfstab_set = 0;
 
 /* function prototypes */
-static int parse_args(int argc, char **argv);
+int parse_args(int argc, char **argv);
+double Wtime(void);
 
 extern int errno;
+extern int debug_on;
 
 /* globals needed for getopt */
 extern char *optarg;
+extern int optind, opterr;
 
 int main(int argc, char **argv)
 {
-    char *buf, *tmp, *buf2, *tmp2, *check;
-    int i, j, mynod=0, nprocs=1, err, my_correct = 1, correct, myerrno;
-    double stim, etim;
-    double write_tim = 0;
-    double read_tim = 0;
-    double read_bw, write_bw;
-    double max_read_tim, max_write_tim;
-    double min_read_tim, min_write_tim;
-    double ave_read_tim, ave_write_tim;
-    int64_t iter_jump = 0;
-    int64_t seek_position = 0;
-    MPI_File fh;
-    MPI_Status status;
-    int nchars;
+	char *buf, *tmp, *buf2, *tmp2, *check;
+	int i, j, mynod=0, nprocs=1, err, my_correct = 1, correct, myerrno;
+	double stim, etim;
+	double write_tim = 0;
+	double read_tim = 0;
+	double read_bw, write_bw;
+	double max_read_tim, max_write_tim;
+	double min_read_tim, min_write_tim;
+	double ave_read_tim, ave_write_tim;
+	int64_t iter_jump = 0;
+	int64_t seek_position = 0;
+	MPI_File fh;
+	MPI_Status status;
+	int nchars;
     herr_t ret;         	/* Generic return value */
 
-    /* startup MPI and determine the rank of this process */
-    MPI_Init(&argc,&argv);
-    MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
-    MPI_Comm_rank(MPI_COMM_WORLD, &mynod);
+	/* startup MPI and determine the rank of this process */
+	MPI_Init(&argc,&argv);
+	MPI_Comm_size(MPI_COMM_WORLD, &nprocs);
+	MPI_Comm_rank(MPI_COMM_WORLD, &mynod);
 
-    /* parse the command line arguments */
-    parse_args(argc, argv);
+	/* parse the command line arguments */
+	parse_args(argc, argv);
 
-    if (mynod == 0) printf("# Using hdf5-io calls.\n");
+	if (mynod == 0) printf("# Using hdf5-io calls.\n");
 
 
-    /* kindof a weird hack- if the location of the pvfstab file was
-     * specified on the command line, then spit out this location into
-     * the appropriate environment variable: */
+	/* kindof a weird hack- if the location of the pvfstab file was
+	 * specified on the command line, then spit out this location into
+	 * the appropriate environment variable: */
 
 #if H5_HAVE_SETENV
 /* no setenv or unsetenv */
-    if (opt_pvfstab_set) {
-            if((setenv("PVFSTAB_FILE", opt_pvfstab, 1)) < 0){
-                    perror("setenv");
-                    goto die_jar_jar_die;
-            }
-    }
+	if (opt_pvfstab_set) {
+		if((setenv("PVFSTAB_FILE", opt_pvfstab, 1)) < 0){
+			perror("setenv");
+			goto die_jar_jar_die;
+		}
+	}
 #endif
 
-    /* this is how much of the file data is covered on each iteration of
-     * the test.  used to help determine the seek offset on each
-     * iteration */
-    iter_jump = nprocs * opt_block;
+	/* this is how much of the file data is covered on each iteration of
+	 * the test.  used to help determine the seek offset on each
+	 * iteration */
+	iter_jump = nprocs * opt_block;
 
-    /* setup a buffer of data to write */
-    if (!(tmp = (char *) malloc(opt_block + 256))) {
-            perror("malloc");
-            goto die_jar_jar_die;
-    }
-    buf = tmp + 128 - (((long)tmp) % 128);  /* align buffer */
+	/* setup a buffer of data to write */
+	if (!(tmp = (char *) malloc(opt_block + 256))) {
+		perror("malloc");
+		goto die_jar_jar_die;
+	}
+	buf = tmp + 128 - (((long)tmp) % 128);  /* align buffer */
 
-    if (opt_correct) {
-            /* do the same buffer setup for verifiable data */
-            if (!(tmp2 = (char *) malloc(opt_block + 256))) {
-                    perror("malloc2");
-                    goto die_jar_jar_die;
-             }
-            buf2 = tmp + 128 - (((long)tmp) % 128);
-    }
+	if (opt_correct) {
+		/* do the same buffer setup for verifiable data */
+		if (!(tmp2 = (char *) malloc(opt_block + 256))) {
+			perror("malloc2");
+			goto die_jar_jar_die;
+		 }
+		buf2 = tmp + 128 - (((long)tmp) % 128);
+	}
 
     /* setup file access template with parallel IO access. */
     if (opt_split_vfd){
@@ -173,8 +176,6 @@ int main(int argc, char **argv)
 	VRFY((acc_tpl >= 0), "", H5FATAL);
 	ret = H5Pset_fapl_split(acc_tpl, meta_ext, mpio_pl, raw_ext, mpio_pl);
 	VRFY((ret >= 0), "H5Pset_fapl_split succeeded", H5FATAL);
-	ret = H5Pclose(mpio_pl);
-	VRFY((ret >= 0), "H5Pclose mpio_pl succeeded", H5FATAL);
     }else{
 	/* setup file access template */
 	acc_tpl = H5Pcreate (H5P_FILE_ACCESS);
@@ -313,134 +314,140 @@ int main(int argc, char **argv)
     VRFY((ret >= 0), "H5Dclose succeeded", H5FATAL);
     ret=H5Fclose(fid);
     VRFY((ret >= 0), "H5Fclose succeeded", H5FATAL);
-    ret=H5Pclose(acc_tpl);
-    VRFY((ret >= 0), "H5Pclose succeeded", H5FATAL);
 
-    /* compute the read and write times */
-    MPI_Allreduce(&read_tim, &max_read_tim, 1, MPI_DOUBLE, MPI_MAX,
-            MPI_COMM_WORLD);
-    MPI_Allreduce(&read_tim, &min_read_tim, 1, MPI_DOUBLE, MPI_MIN,
-            MPI_COMM_WORLD);
-    MPI_Allreduce(&read_tim, &ave_read_tim, 1, MPI_DOUBLE, MPI_SUM,
-            MPI_COMM_WORLD);
+	/* compute the read and write times */
+	MPI_Allreduce(&read_tim, &max_read_tim, 1, MPI_DOUBLE, MPI_MAX,
+		MPI_COMM_WORLD);
+	MPI_Allreduce(&read_tim, &min_read_tim, 1, MPI_DOUBLE, MPI_MIN,
+		MPI_COMM_WORLD);
+	MPI_Allreduce(&read_tim, &ave_read_tim, 1, MPI_DOUBLE, MPI_SUM,
+		MPI_COMM_WORLD);
 
-    /* calculate the average from the sum */
-    ave_read_tim = ave_read_tim / nprocs;
+	/* calculate the average from the sum */
+	ave_read_tim = ave_read_tim / nprocs;
 
-    MPI_Allreduce(&write_tim, &max_write_tim, 1, MPI_DOUBLE, MPI_MAX,
-            MPI_COMM_WORLD);
-    MPI_Allreduce(&write_tim, &min_write_tim, 1, MPI_DOUBLE, MPI_MIN,
-            MPI_COMM_WORLD);
-    MPI_Allreduce(&write_tim, &ave_write_tim, 1, MPI_DOUBLE, MPI_SUM,
-            MPI_COMM_WORLD);
+	MPI_Allreduce(&write_tim, &max_write_tim, 1, MPI_DOUBLE, MPI_MAX,
+		MPI_COMM_WORLD);
+	MPI_Allreduce(&write_tim, &min_write_tim, 1, MPI_DOUBLE, MPI_MIN,
+		MPI_COMM_WORLD);
+	MPI_Allreduce(&write_tim, &ave_write_tim, 1, MPI_DOUBLE, MPI_SUM,
+		MPI_COMM_WORLD);
 
-    /* calculate the average from the sum */
-    ave_write_tim = ave_write_tim / nprocs;
+	/* calculate the average from the sum */
+	ave_write_tim = ave_write_tim / nprocs;
 
-    /* print out the results on one node */
-    if (mynod == 0) {
-       read_bw = ((int64_t)(opt_block*nprocs*opt_iter))/(max_read_tim*1000000.0);
-       write_bw = ((int64_t)(opt_block*nprocs*opt_iter))/(max_write_tim*1000000.0);
+	/* print out the results on one node */
+	if (mynod == 0) {
+	   read_bw = ((int64_t)(opt_block*nprocs*opt_iter))/(max_read_tim*1000000.0);
+	   write_bw = ((int64_t)(opt_block*nprocs*opt_iter))/(max_write_tim*1000000.0);
 
-                    printf("nr_procs = %d, nr_iter = %d, blk_sz = %ld\n", nprocs,
-            opt_iter, (long)opt_block);
+			printf("nr_procs = %d, nr_iter = %d, blk_sz = %ld\n", nprocs,
+		opt_iter, (long)opt_block);
 
-                    printf("# total_size = %ld\n", (long)(opt_block*nprocs*opt_iter));
+			printf("# total_size = %ld\n", (long)(opt_block*nprocs*opt_iter));
 
-                    printf("# Write:  min_time = %f, max_time = %f, mean_time = %f\n",
-                            min_write_tim, max_write_tim, ave_write_tim);
-                    printf("# Read:  min_time = %f, max_time = %f, mean_time = %f\n",
-                            min_read_tim, max_read_tim, ave_read_tim);
+			printf("# Write:  min_time = %f, max_time = %f, mean_time = %f\n",
+				min_write_tim, max_write_tim, ave_write_tim);
+			printf("# Read:  min_time = %f, max_time = %f, mean_time = %f\n",
+				min_read_tim, max_read_tim, ave_read_tim);
 
-       printf("Write bandwidth = %f Mbytes/sec\n", write_bw);
-       printf("Read bandwidth = %f Mbytes/sec\n", read_bw);
+	   printf("Write bandwidth = %f Mbytes/sec\n", write_bw);
+	   printf("Read bandwidth = %f Mbytes/sec\n", read_bw);
 
-            if (opt_correct) {
-                    printf("Correctness test %s.\n", correct ? "passed" : "failed");
-            }
-    }
+		if (opt_correct) {
+			printf("Correctness test %s.\n", correct ? "passed" : "failed");
+		}
+	}
 
 
 die_jar_jar_die:
 
 #if H5_HAVE_SETENV
 /* no setenv or unsetenv */
-    /* clear the environment variable if it was set earlier */
-    if	(opt_pvfstab_set){
-            unsetenv("PVFSTAB_FILE");
-    }
+	/* clear the environment variable if it was set earlier */
+	if	(opt_pvfstab_set){
+		unsetenv("PVFSTAB_FILE");
+	}
 #endif
 
-    free(tmp);
-    if (opt_correct) free(tmp2);
-    MPI_Finalize();
-
-    return(0);
+	free(tmp);
+	if (opt_correct) free(tmp2);
+	/* Close down the HDF5 library before MPI_Finalize. */
+	H5close();
+	MPI_Finalize();
+	return(0);
 }
 
-static int
-parse_args(int argc, char **argv)
+int parse_args(int argc, char **argv)
 {
-    int c;
+	int c;
 
-    while ((c = getopt(argc, argv, "s:b:i:f:p:a:2:c")) != EOF) {
-        switch (c) {
-            case 's': /* stripe */
-                opt_stripe = atoi(optarg);
-                break;
-            case 'b': /* block size */
-                opt_block = atoi(optarg);
-                break;
-            case 'i': /* iterations */
-                opt_iter = atoi(optarg);
-                break;
-            case 'f': /* filename */
-                strncpy(opt_file, optarg, 255);
-                break;
-            case 'p': /* pvfstab file */
-                strncpy(opt_pvfstab, optarg, 255);
-                opt_pvfstab_set = 1;
-                break;
-            case 'a': /* aligned allocation.
-                       * syntax: -a<alignment>/<threshold>
-                       * e.g., -a4096/512  allocate at 4096 bytes
-                       * boundary if request size >= 512.
-                       */
-                {char *p;
-                opt_alignment = atoi(optarg);
-                if (p=(char*)strchr(optarg, '/'))
-                    opt_threshold = atoi(p+1);
-                }
-                HDfprintf(stdout,
-                    "alignment/threshold=%Hu/%Hu\n",
-                     opt_alignment, opt_threshold);
-                break;
-            case '2': /* use 2-files, i.e., split file driver */
-                opt_split_vfd=1;
-                /* get meta and raw file extension. */
-                /* syntax is <raw_ext>,<meta_ext> */
-                meta_ext = raw_ext = optarg;
-                while (*raw_ext != '\0'){
-                    if (*raw_ext == ','){
-                        *raw_ext = '\0';
-                        raw_ext++;
-                        break;
-                    }
-                    raw_ext++;
-                }
-                printf("split-file-vfd used: %s,%s\n",
-                    meta_ext, raw_ext);
-                break;
-            case 'c': /* correctness */
-                opt_correct = 1;
-                break;
-            case '?': /* unknown */
-            default:
-                break;
-        }
-    }
+	while ((c = getopt(argc, argv, "s:b:i:f:p:a:2:c")) != EOF) {
+		switch (c) {
+			case 's': /* stripe */
+				opt_stripe = atoi(optarg);
+				break;
+			case 'b': /* block size */
+				opt_block = atoi(optarg);
+				break;
+			case 'i': /* iterations */
+				opt_iter = atoi(optarg);
+				break;
+			case 'f': /* filename */
+				strncpy(opt_file, optarg, 255);
+				break;
+			case 'p': /* pvfstab file */
+				strncpy(opt_pvfstab, optarg, 255);
+				opt_pvfstab_set = 1;
+				break;
+			case 'a': /* aligned allocation.
+				   * syntax: -a<alignment>/<threshold>
+				   * e.g., -a4096/512  allocate at 4096 bytes
+				   * boundary if request size >= 512.
+				   */
+				{char *p;
+				opt_alignment = atoi(optarg);
+				if (p=(char*)strchr(optarg, '/'))
+				    opt_threshold = atoi(p+1);
+				}
+				HDfprintf(stdout,
+				    "alignment/threshold=%Hu/%Hu\n",
+				     opt_alignment, opt_threshold);
+				break;
+			case '2': /* use 2-files, i.e., split file driver */
+				opt_split_vfd=1;
+				/* get meta and raw file extension. */
+				/* syntax is <raw_ext>,<meta_ext> */
+				meta_ext = raw_ext = optarg;
+				while (*raw_ext != '\0'){
+				    if (*raw_ext == ','){
+					*raw_ext = '\0';
+					raw_ext++;
+					break;
+				    }
+				    raw_ext++;
+				}
+				printf("split-file-vfd used: %s,%s\n",
+				    meta_ext, raw_ext);
+				break;
+			case 'c': /* correctness */
+				opt_correct = 1;
+				break;
+			case '?': /* unknown */
+			default:
+				break;
+		}
+	}
+	return(0);
+}
 
-    return(0);
+/* Wtime() - returns current time in sec., in a double */
+double Wtime()
+{
+	struct timeval t;
+
+	gettimeofday(&t, NULL);
+	return((double)t.tv_sec + (double)t.tv_usec / 1000000);
 }
 
 /*
@@ -452,12 +459,11 @@ parse_args(int argc, char **argv)
  */
 
 #else /* H5_HAVE_PARALLEL */
-/* dummy program since H5_HAVE_PARALLEL is not configured in */
+/* dummy program since H5_HAVE_PARALLE is not configured in */
 int
 main(int UNUSED argc, char UNUSED **argv)
 {
-    printf("No parallel performance because parallel is not configured in\n");
-    return(0);
+printf("No parallel performance because parallel is not configured in\n");
+return(0);
 }
 #endif /* H5_HAVE_PARALLEL */
-

@@ -40,8 +40,6 @@ typedef struct {
     trav_addr_t *seen;              /* List of addresses seen already */
     const trav_visitor_t *visitor;  /* Information for visiting each link/object */
     hbool_t is_absolute;            /* Whether the traversal has absolute paths */
-    const char *base_grp_name;      /* Name of the group that serves as the base
-                                     * for iteration */
 } trav_ud_traverse_t;
 
 typedef struct {
@@ -148,15 +146,9 @@ traverse_cb(hid_t loc_id, const char *path, const H5L_info_t *linfo,
 
     /* Create the full path name for the link */
     if(udata->is_absolute) {
-        size_t base_len = HDstrlen(udata->base_grp_name);
-        size_t add_slash = base_len ? ((udata->base_grp_name)[base_len-1] != '/') : 1;
-            
-        if(NULL == (new_name = HDmalloc(base_len + add_slash + HDstrlen(path) + 1)))
-            return(H5_ITER_ERROR);
-        HDstrcpy(new_name, udata->base_grp_name);
-        if (add_slash)
-            new_name[base_len] = '/';
-        HDstrcpy(new_name + base_len + add_slash, path);
+        new_name = HDmalloc(HDstrlen(path) + 2);
+        *new_name = '/';
+        HDstrcpy(new_name + 1, path);
         full_name = new_name;
     } /* end if */
     else
@@ -167,11 +159,8 @@ traverse_cb(hid_t loc_id, const char *path, const H5L_info_t *linfo,
         H5O_info_t oinfo;
 
         /* Get information about the object */
-        if(H5Oget_info_by_name(loc_id, path, &oinfo, H5P_DEFAULT) < 0) {
-            if(new_name)
-                HDfree(new_name);
+        if(H5Oget_info_by_name(loc_id, path, &oinfo, H5P_DEFAULT) < 0)
             return(H5_ITER_ERROR);
-        }
 
         /* If the object has multiple links, add it to the list of addresses
          *  already visited, if it isn't there already
@@ -182,20 +171,12 @@ traverse_cb(hid_t loc_id, const char *path, const H5L_info_t *linfo,
 
         /* Make 'visit object' callback */
         if(udata->visitor->visit_obj)
-            if((*udata->visitor->visit_obj)(full_name, &oinfo, already_visited, udata->visitor->udata) < 0) {
-                if(new_name)
-                    HDfree(new_name);
-                return(H5_ITER_ERROR);
-            }
+            (*udata->visitor->visit_obj)(full_name, &oinfo, already_visited, udata->visitor->udata);
     } /* end if */
     else {
         /* Make 'visit link' callback */
         if(udata->visitor->visit_lnk)
-            if((*udata->visitor->visit_lnk)(full_name, linfo, udata->visitor->udata) < 0) {
-                if(new_name)
-                    HDfree(new_name);
-                return(H5_ITER_ERROR);
-            }
+            (*udata->visitor->visit_lnk)(full_name, linfo, udata->visitor->udata);
     } /* end else */
 
     if(new_name)
@@ -250,7 +231,6 @@ traverse(hid_t file_id, const char *grp_name, hbool_t visit_start,
         udata.seen = &seen;
         udata.visitor = visitor;
         udata.is_absolute = (*grp_name == '/');
-        udata.base_grp_name = grp_name;
 
         /* Check for iteration of links vs. visiting all links recursively */
         if(recurse) {

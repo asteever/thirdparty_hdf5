@@ -30,7 +30,6 @@
 
 #define H5FS_PACKAGE		/*suppress error about including H5FSpkg  */
 #define H5HF_DEBUGGING          /* Need access to fractal heap debugging routines */
-#define H5MF_DEBUGGING          /* Need access to file space debugging routines */
 
 /***********/
 /* Headers */
@@ -39,7 +38,6 @@
 #include "H5Eprivate.h"		/* Error handling		  	*/
 #include "H5FSpkg.h"		/* File free space			*/
 #include "H5HFprivate.h"	/* Fractal heaps			*/
-#include "H5MFprivate.h"	/* File memory management		*/
 
 /****************/
 /* Local Macros */
@@ -87,10 +85,6 @@
  *		koziol@ncsa.uiuc.edu
  *		May  9 2006
  *
- * Modifications:
- *	Vailin Choi, July 29th, 2008
- *	  Add H5FS_CLIENT_FILE_ID for File Memory Management
- *
  *-------------------------------------------------------------------------
  */
 herr_t
@@ -119,7 +113,7 @@ H5FS_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream, int indent, int 
     /*
      * Load the free space header.
      */
-    if(NULL == (fspace = (H5FS_t *)H5AC_protect(f, dxpl_id, H5AC_FSPACE_HDR, addr, &fs_prot, NULL, H5AC_READ)))
+    if(NULL == (fspace = H5AC_protect(f, dxpl_id, H5AC_FSPACE_HDR, addr, &fs_prot, NULL, H5AC_READ)))
 	HGOTO_ERROR(H5E_FSPACE, H5E_CANTLOAD, FAIL, "unable to load free space header")
 
     /* Print opening message */
@@ -130,8 +124,7 @@ H5FS_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream, int indent, int 
      */
     HDfprintf(stream, "%*s%-*s %s\n", indent, "", fwidth,
 	      "Free space client:",
-	      (fspace->client == H5FS_CLIENT_FHEAP_ID ? "Fractal heap" :
-	      (fspace->client == H5FS_CLIENT_FILE_ID ? "File" : "Unknown")));
+	      (fspace->client == H5FS_CLIENT_FHEAP_ID ? "Fractal heap" : "Unknown"));
     HDfprintf(stream, "%*s%-*s %Hu\n", indent, "", fwidth,
 	      "Total free space tracked:",
 	      fspace->tot_space);
@@ -259,17 +252,14 @@ H5FS_sects_debug(H5F_t *f, hid_t dxpl_id, haddr_t UNUSED addr, FILE *stream, int
     /*
      * Load the free space header.
      */
-    if(NULL == (fspace = (H5FS_t *)H5AC_protect(f, dxpl_id, H5AC_FSPACE_HDR, fs_addr, &fs_prot, NULL, H5AC_READ)))
+    if(NULL == (fspace = H5AC_protect(f, dxpl_id, H5AC_FSPACE_HDR, fs_addr, &fs_prot, NULL, H5AC_READ)))
 	HGOTO_ERROR(H5E_FSPACE, H5E_CANTLOAD, FAIL, "unable to load free space header")
 
     /* Retrieve the client id */
     client = fspace->client;
 
     /* Release the free space header */
-    /* (set the "deleted" flag for the unprotect, so the cache entry is removed
-     *  and reloaded later, with the correct client information -QAK)
-     */
-    if(H5AC_unprotect(f, dxpl_id, H5AC_FSPACE_HDR, fs_addr, fspace, H5AC__DELETED_FLAG) < 0)
+    if(H5AC_unprotect(f, dxpl_id, H5AC_FSPACE_HDR, fs_addr, fspace, H5AC__NO_FLAGS_SET) < 0)
         HDONE_ERROR(H5E_FSPACE, H5E_PROTECT, FAIL, "unable to release free space header")
     fspace = NULL;
 
@@ -283,11 +273,6 @@ H5FS_sects_debug(H5F_t *f, hid_t dxpl_id, haddr_t UNUSED addr, FILE *stream, int
         case H5FS_CLIENT_FHEAP_ID:
             if(H5HF_sects_debug(f, dxpl_id, client_addr, stream, indent + 3, MAX(0, fwidth - 3)) < 0)
                 HGOTO_ERROR(H5E_FSPACE, H5E_SYSTEM, FAIL, "unable to dump fractal heap free space sections")
-            break;
-
-        case H5FS_CLIENT_FILE_ID:
-	    if(H5MF_sects_debug(f, dxpl_id, fs_addr, stream, indent + 3, MAX(0, fwidth - 3)) < 0)
-		HGOTO_ERROR(H5E_FSPACE, H5E_SYSTEM, FAIL, "unable to dump file free space sections")
             break;
 
         default:

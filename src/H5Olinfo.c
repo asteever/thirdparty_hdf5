@@ -35,8 +35,7 @@
 
 
 /* PRIVATE PROTOTYPES */
-static void *H5O_linfo_decode(H5F_t *f, hid_t dxpl_id, H5O_t *open_oh,
-    unsigned mesg_flags, unsigned *ioflags, const uint8_t *p);
+static void *H5O_linfo_decode(H5F_t *f, hid_t dxpl_id, unsigned mesg_flags, const uint8_t *p);
 static herr_t H5O_linfo_encode(H5F_t *f, hbool_t disable_shared, uint8_t *p, const void *_mesg);
 static void *H5O_linfo_copy(const void *_mesg, void *_dest);
 static size_t H5O_linfo_size(const H5F_t *f, hbool_t disable_shared, const void *_mesg);
@@ -111,8 +110,8 @@ H5FL_DEFINE_STATIC(H5O_linfo_t);
  *-------------------------------------------------------------------------
  */
 static void *
-H5O_linfo_decode(H5F_t *f, hid_t UNUSED dxpl_id, H5O_t UNUSED *open_oh,
-    unsigned UNUSED mesg_flags, unsigned UNUSED *ioflags, const uint8_t *p)
+H5O_linfo_decode(H5F_t *f, hid_t UNUSED dxpl_id, unsigned UNUSED mesg_flags,
+    const uint8_t *p)
 {
     H5O_linfo_t	*linfo = NULL;  /* Link info */
     unsigned char index_flags;  /* Flags for encoding link index info */
@@ -166,7 +165,7 @@ H5O_linfo_decode(H5F_t *f, hid_t UNUSED dxpl_id, H5O_t UNUSED *open_oh,
 done:
     if(ret_value == NULL)
         if(linfo != NULL)
-            (void)H5FL_FREE(H5O_linfo_t, linfo);
+            H5FL_FREE(H5O_linfo_t, linfo);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_linfo_decode() */
@@ -321,7 +320,7 @@ H5O_linfo_free(void *mesg)
 
     HDassert(mesg);
 
-    (void)H5FL_FREE(H5O_linfo_t, mesg);
+    H5FL_FREE(H5O_linfo_t, mesg);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5O_linfo_free() */
@@ -377,12 +376,11 @@ done:
  */
 static void *
 H5O_linfo_copy_file(H5F_t UNUSED *file_src, void *native_src, H5F_t *file_dst,
-    hbool_t UNUSED *recompute_size, H5O_copy_t *cpy_info, void *_udata,
+    hbool_t UNUSED *recompute_size, H5O_copy_t *cpy_info, void UNUSED *udata,
     hid_t dxpl_id)
 {
     H5O_linfo_t          *linfo_src = (H5O_linfo_t *) native_src;
     H5O_linfo_t          *linfo_dst = NULL;
-    H5G_copy_file_ud_t *udata = (H5G_copy_file_ud_t *) _udata;
     void                 *ret_value;          /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5O_linfo_copy_file)
@@ -392,7 +390,7 @@ H5O_linfo_copy_file(H5F_t UNUSED *file_src, void *native_src, H5F_t *file_dst,
     HDassert(cpy_info);
 
     /* Copy the source message */
-    if(NULL == (linfo_dst = (H5O_linfo_t *)H5O_linfo_copy(linfo_src, NULL)))
+    if(NULL == (linfo_dst = H5O_linfo_copy(linfo_src, NULL)))
         HGOTO_ERROR(H5E_OHDR, H5E_CANTCOPY, NULL, "memory allocation failed")
 
     /* If we are performing a 'shallow hierarchy' copy, and the links in this
@@ -412,8 +410,7 @@ H5O_linfo_copy_file(H5F_t UNUSED *file_src, void *native_src, H5F_t *file_dst,
          *      dense link storage components and use those - QAK)
          */
         if(H5F_addr_defined(linfo_src->fheap_addr)) {
-            /* Create the dense link storage */
-            if(H5G_dense_create(file_dst, dxpl_id, linfo_dst, udata->common.src_pline) < 0)
+            if(H5G_dense_create(file_dst, dxpl_id, linfo_dst) < 0)
                 HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, NULL, "unable to create 'dense' form of new format group")
         } /* end if */
     } /* end else */
@@ -424,7 +421,7 @@ H5O_linfo_copy_file(H5F_t UNUSED *file_src, void *native_src, H5F_t *file_dst,
 done:
     if(!ret_value)
         if(linfo_dst)
-            (void)H5FL_FREE(H5O_linfo_t, linfo_dst);
+            H5FL_FREE(H5O_linfo_t, linfo_dst);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5O_linfo_copy_file() */

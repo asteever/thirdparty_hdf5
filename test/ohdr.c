@@ -43,103 +43,6 @@ const char *FILENAME[] = {
  */
 #define FILE_BOGUS "tbogus.h5"
 
-/*
- *  Verify that messages are moved forward into a "continuation message":
- *	Create an object header with several continuation chunks
- *	Remove a message in the last chunk
- *	The remaining message(s) in the last chunk should be moved forward into the continuation message
- *	The process will repeat when the continuation message is big enough to hold all the 
- *		messages in the last chunk.
- *	Result: the number of chunks should be reduced
- */
-static herr_t
-test_cont(char *filename, hid_t fapl)
-{
-    hid_t	file=-1;
-    H5F_t	*f = NULL;
-    H5O_hdr_info_t hdr_info;               
-    H5O_loc_t	oh_locA, oh_locB;
-    time_t	time_new;
-    const char	*short_name = "T";
-    const char	*long_name = "This is the message";
-    size_t	nchunks;
-
-    TESTING("object header continuation block");
-
-    /* Create the file to operate on */
-    if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
-    if(NULL == (f = (H5F_t *)H5I_object(file))) FAIL_STACK_ERROR
-
-    HDmemset(&oh_locA, 0, sizeof(oh_locA));
-    HDmemset(&oh_locB, 0, sizeof(oh_locB));
-
-    if(H5O_create(f, H5P_DATASET_XFER_DEFAULT, (size_t)H5O_MIN_SIZE, H5P_GROUP_CREATE_DEFAULT, &oh_locA/*out*/) < 0)
-            FAIL_STACK_ERROR
-
-    if(H5O_create(f, H5P_DATASET_XFER_DEFAULT, (size_t)H5O_MIN_SIZE, H5P_GROUP_CREATE_DEFAULT, &oh_locB/*out*/) < 0)
-            FAIL_STACK_ERROR
-
-    time_new = 11111111;
-
-    if(H5O_msg_create(&oh_locA, H5O_NAME_ID, 0, 0, &long_name, H5P_DATASET_XFER_DEFAULT) < 0)
-	FAIL_STACK_ERROR
-
-    if(H5O_msg_create(&oh_locB, H5O_MTIME_ID, 0, 0, &time_new, H5P_DATASET_XFER_DEFAULT) < 0)
-	FAIL_STACK_ERROR
-    if(H5O_msg_create(&oh_locB, H5O_MTIME_ID, 0, 0, &time_new, H5P_DATASET_XFER_DEFAULT) < 0)
-	FAIL_STACK_ERROR
-    if(H5O_msg_create(&oh_locB, H5O_MTIME_ID, 0, 0, &time_new, H5P_DATASET_XFER_DEFAULT) < 0)
-	FAIL_STACK_ERROR
-
-    if(H5O_msg_create(&oh_locA, H5O_MTIME_NEW_ID, 0, 0, &time_new, H5P_DATASET_XFER_DEFAULT) < 0)
-	FAIL_STACK_ERROR
-
-    if(H5O_msg_create(&oh_locB, H5O_MTIME_ID, 0, 0, &time_new, H5P_DATASET_XFER_DEFAULT) < 0)
-            FAIL_STACK_ERROR
-
-    if(H5O_msg_create(&oh_locA, H5O_NAME_ID, 0, 0, &short_name, H5P_DATASET_XFER_DEFAULT) < 0)
-	FAIL_STACK_ERROR
-
-    if(H5AC_flush(f, H5P_DATASET_XFER_DEFAULT) < 0)
-	FAIL_STACK_ERROR
-    if(H5AC_expunge_entry(f, H5P_DATASET_XFER_DEFAULT, H5AC_OHDR, oh_locA.addr, H5AC__NO_FLAGS_SET) < 0)
-	FAIL_STACK_ERROR
-
-    if(H5O_get_hdr_info(&oh_locA, H5P_DATASET_XFER_DEFAULT, &hdr_info) < 0)
-	FAIL_STACK_ERROR
-    nchunks = hdr_info.nchunks;
-
-    /* remove the 1st H5O_NAME_ID message */
-    if(H5O_msg_remove(&oh_locA, H5O_NAME_ID, 0, FALSE, H5P_DATASET_XFER_DEFAULT) < 0)
-	FAIL_STACK_ERROR
-
-    if(H5O_get_hdr_info(&oh_locA, H5P_DATASET_XFER_DEFAULT, &hdr_info) < 0)
-	FAIL_STACK_ERROR
-
-    if(hdr_info.nchunks >= nchunks)
-	TEST_ERROR
-
-    if(H5O_close(&oh_locA) < 0)
-	FAIL_STACK_ERROR
-    if(H5O_close(&oh_locB) < 0)
-	FAIL_STACK_ERROR
-    if(H5Fclose(file) < 0)
-	FAIL_STACK_ERROR
-
-    PASSED();
-
-
-    return 0;
-
-error:
-    H5E_BEGIN_TRY {
-        H5O_close(&oh_locA);
-        H5O_close(&oh_locB);
-        H5Fclose (file);
-    } H5E_END_TRY;
-    return -1;
-} /* test_cont() */
-
 
 /*-------------------------------------------------------------------------
  * Function:	main
@@ -164,13 +67,14 @@ main(void)
     hid_t	dset=-1;
     H5F_t	*f=NULL;
     char	filename[1024];
-    H5O_hdr_info_t hdr_info;                  /* Object info */
+    H5O_info_t  oinfo;                  /* Object info */
     H5O_loc_t	oh_loc;
     time_t	time_new, ro;
     int		i;
     hbool_t     b;                      /* Index for "new format" loop */
+    const char  *envval = NULL;
     herr_t      ret;                    /* Generic return value */
-
+ 
     /* Reset library */
     h5_reset();
     fapl = h5_fileaccess();
@@ -181,19 +85,15 @@ main(void)
         /* Display info about testing */
         if(b)
             HDputs("Using new file format:");
-        else	
+        else
             HDputs("Using default file format:");
 
         /* Set the format to use for the file */
         if (H5Pset_libver_bounds(fapl, (b ? H5F_LIBVER_LATEST : H5F_LIBVER_EARLIEST), H5F_LIBVER_LATEST) < 0) FAIL_STACK_ERROR
 
-	/* test on object continuation block */
-	if (test_cont(filename, fapl) < 0)
-            FAIL_STACK_ERROR
-
         /* Create the file to operate on */
         if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
-        if(NULL == (f = (H5F_t *)H5I_object(file))) FAIL_STACK_ERROR
+        if(NULL == (f = H5I_object(file))) FAIL_STACK_ERROR
 
 
         /*
@@ -212,9 +112,7 @@ main(void)
         time_new = 11111111;
         if(H5O_msg_create(&oh_loc, H5O_MTIME_NEW_ID, 0, 0, &time_new, H5P_DATASET_XFER_DEFAULT) < 0)
             FAIL_STACK_ERROR
-        if(H5AC_flush(f, H5P_DATASET_XFER_DEFAULT) < 0)
-            FAIL_STACK_ERROR
-        if(H5AC_expunge_entry(f, H5P_DATASET_XFER_DEFAULT, H5AC_OHDR, oh_loc.addr, H5AC__NO_FLAGS_SET) < 0)
+        if(H5AC_flush(f, H5P_DATASET_XFER_DEFAULT, TRUE) < 0)
             FAIL_STACK_ERROR
         if(NULL == H5O_msg_read(&oh_loc, H5O_MTIME_NEW_ID, &ro, H5P_DATASET_XFER_DEFAULT))
             FAIL_STACK_ERROR
@@ -230,9 +128,7 @@ main(void)
         time_new = 33333333;
         if(H5O_msg_write(&oh_loc, H5O_MTIME_NEW_ID, 0, 0, &time_new, H5P_DATASET_XFER_DEFAULT) < 0)
             FAIL_STACK_ERROR
-        if(H5AC_flush(f, H5P_DATASET_XFER_DEFAULT) < 0)
-            FAIL_STACK_ERROR
-        if(H5AC_expunge_entry(f, H5P_DATASET_XFER_DEFAULT, H5AC_OHDR, oh_loc.addr, H5AC__NO_FLAGS_SET) < 0)
+        if(H5AC_flush(f, H5P_DATASET_XFER_DEFAULT, TRUE) < 0)
             FAIL_STACK_ERROR
         if(NULL == H5O_msg_read(&oh_loc, H5O_MTIME_NEW_ID, &ro, H5P_DATASET_XFER_DEFAULT))
             FAIL_STACK_ERROR
@@ -240,9 +136,9 @@ main(void)
             TEST_ERROR
 
         /* Make certain that chunk #0 in the object header can be encoded with a 1-byte size */
-        if(H5O_get_hdr_info(&oh_loc, H5P_DATASET_XFER_DEFAULT, &hdr_info) < 0)
+        if(H5O_get_info(&oh_loc, H5P_DATASET_XFER_DEFAULT, FALSE, &oinfo) < 0)
             FAIL_STACK_ERROR
-        if(hdr_info.space.total >=256)
+        if(oinfo.hdr.space.total >=256)
             TEST_ERROR
 
         PASSED();
@@ -261,15 +157,13 @@ main(void)
             if(H5O_msg_create(&oh_loc, H5O_MTIME_ID, 0, 0, &time_new, H5P_DATASET_XFER_DEFAULT) < 0)
                 FAIL_STACK_ERROR
         } /* end for */
-        if(H5AC_flush(f, H5P_DATASET_XFER_DEFAULT) < 0)
-            FAIL_STACK_ERROR
-        if(H5AC_expunge_entry(f, H5P_DATASET_XFER_DEFAULT, H5AC_OHDR, oh_loc.addr, H5AC__NO_FLAGS_SET) < 0)
+        if(H5AC_flush(f, H5P_DATASET_XFER_DEFAULT, TRUE) < 0)
             FAIL_STACK_ERROR
 
         /* Make certain that chunk #0 in the object header will be encoded with a 2-byte size */
-        if(H5O_get_hdr_info(&oh_loc, H5P_DATASET_XFER_DEFAULT, &hdr_info) < 0)
+        if(H5O_get_info(&oh_loc, H5P_DATASET_XFER_DEFAULT, FALSE, &oinfo) < 0)
             FAIL_STACK_ERROR
-        if(hdr_info.space.total < 256)
+        if(oinfo.hdr.space.total < 256)
             TEST_ERROR
 
         PASSED();
@@ -280,18 +174,27 @@ main(void)
          *  works correctly - QAK)
          */
         TESTING("close & re-open object header");
-        if(H5O_close(&oh_loc) < 0)
-            FAIL_STACK_ERROR
-        if(H5Fclose(file) < 0)
-            FAIL_STACK_ERROR
-        if((file = H5Fopen(filename, H5F_ACC_RDWR, fapl)) < 0)
-            FAIL_STACK_ERROR
-        if(NULL == (f = (H5F_t *)H5I_object(file)))
-            FAIL_STACK_ERROR
-        oh_loc.file = f;
-        if(H5O_open(&oh_loc) < 0)
-            FAIL_STACK_ERROR
-        PASSED();
+        envval = HDgetenv("HDF5_DRIVER");
+        if(envval == NULL) 
+            envval = "nomatch";
+        if(HDstrcmp(envval, "multi") && HDstrcmp(envval, "split") && HDstrcmp(envval, "family")) {
+            if(H5O_close(&oh_loc) < 0)
+                FAIL_STACK_ERROR
+            if(H5Fclose(file) < 0)
+                FAIL_STACK_ERROR
+            if((file = H5Fopen(filename, H5F_ACC_RDWR, fapl)) < 0)
+                FAIL_STACK_ERROR
+            if(NULL == (f = H5I_object(file)))
+                FAIL_STACK_ERROR
+            oh_loc.file = f;
+            if(H5O_open(&oh_loc) < 0)
+                FAIL_STACK_ERROR
+            PASSED();
+        } /* end if */
+        else {
+            SKIPPED();
+            puts("   Test not compatible with current Virtual File Driver");
+        } /* end else */
 
         /*
          * Test creation of a bunch of messages one after another to see
@@ -302,9 +205,7 @@ main(void)
             time_new = (i + 1) * 1000 + 10;
             if(H5O_msg_create(&oh_loc, H5O_MTIME_NEW_ID, 0, 0, &time_new, H5P_DATASET_XFER_DEFAULT) < 0)
                 FAIL_STACK_ERROR
-            if(H5AC_flush(f, H5P_DATASET_XFER_DEFAULT) < 0)
-                FAIL_STACK_ERROR
-            if(H5AC_expunge_entry(f, H5P_DATASET_XFER_DEFAULT, H5AC_OHDR, oh_loc.addr, H5AC__NO_FLAGS_SET) < 0)
+            if(H5AC_flush(f, H5P_DATASET_XFER_DEFAULT, TRUE) < 0)
                 FAIL_STACK_ERROR
         } /* end for */
         PASSED();
@@ -332,9 +233,7 @@ main(void)
         time_new = 22222222;
         if(H5O_msg_create(&oh_loc, H5O_MTIME_NEW_ID, H5O_MSG_FLAG_CONSTANT, 0, &time_new, H5P_DATASET_XFER_DEFAULT) < 0)
             FAIL_STACK_ERROR
-        if(H5AC_flush(f, H5P_DATASET_XFER_DEFAULT) < 0)
-            FAIL_STACK_ERROR
-        if(H5AC_expunge_entry(f, H5P_DATASET_XFER_DEFAULT, H5AC_OHDR, oh_loc.addr, H5AC__NO_FLAGS_SET) < 0)
+        if(H5AC_flush(f, H5P_DATASET_XFER_DEFAULT, TRUE) < 0)
             FAIL_STACK_ERROR
         if(NULL == H5O_msg_read(&oh_loc, H5O_MTIME_NEW_ID, &ro, H5P_DATASET_XFER_DEFAULT))
             FAIL_STACK_ERROR
@@ -360,7 +259,10 @@ main(void)
 
         /* Test reading datasets with undefined object header messages */
         HDputs("Accessing objects with unknown header messages:");
-        {
+        envval = HDgetenv("HDF5_DRIVER");
+        if(envval == NULL) 
+            envval = "nomatch";
+        if(HDstrcmp(envval, "multi") && HDstrcmp(envval, "split") && HDstrcmp(envval, "family")) {
             hid_t file2;                    /* File ID for 'bogus' object file */
             char testpath[512] = "";
             char testfile[512] = "";
@@ -380,7 +282,7 @@ main(void)
             TESTING("object with unknown header message and no flags set");
 
             /* Open the file with objects that have unknown header messages (generated with gen_bogus.c) */
-            if((file2 = H5Fopen(testfile, H5F_ACC_RDONLY, H5P_DEFAULT)) < 0)
+            if((file2 = H5Fopen(testfile, H5F_ACC_RDONLY, fapl)) < 0)
                 TEST_ERROR
 
             /* Open the dataset with the unknown header message, but no extra flags */
@@ -470,7 +372,11 @@ main(void)
                 TEST_ERROR
 
             PASSED();
-        }
+        } /* end if */
+        else {
+            SKIPPED();
+            puts("   Test not compatible with current Virtual File Driver");
+        } /* end else */
 
         /* Close the file we created */
         if(H5Fclose(file) < 0)

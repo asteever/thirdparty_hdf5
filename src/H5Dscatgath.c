@@ -160,9 +160,9 @@ H5D_scatter_file(const H5D_io_info_t *_io_info,
 done:
     /* Release resources, if allocated */
     if(len && len != _len)
-        len = H5FL_SEQ_FREE(size_t, len);
+        H5FL_SEQ_FREE(size_t, len);
     if(off && off != _off)
-        off = H5FL_SEQ_FREE(hsize_t, off);
+        H5FL_SEQ_FREE(hsize_t, off);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5D_scatter_file() */
@@ -261,9 +261,9 @@ H5D_gather_file(const H5D_io_info_t *_io_info,
 done:
     /* Release resources, if allocated */
     if(len && len != _len)
-        len = H5FL_SEQ_FREE(size_t, len);
+        H5FL_SEQ_FREE(size_t, len);
     if(off && off != _off)
-        off = H5FL_SEQ_FREE(hsize_t, off);
+        H5FL_SEQ_FREE(hsize_t, off);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5D_gather_file() */
@@ -346,9 +346,9 @@ H5D_scatter_mem (const void *_tscat_buf, const H5S_t *space,
 done:
     /* Release resources, if allocated */
     if(len && len != _len)
-        len = H5FL_SEQ_FREE(size_t, len);
+        H5FL_SEQ_FREE(size_t, len);
     if(off && off != _off)
-        off = H5FL_SEQ_FREE(hsize_t, off);
+        H5FL_SEQ_FREE(hsize_t, off);
 
     FUNC_LEAVE_NOAPI(ret_value)
 }   /* H5D_scatter_mem() */
@@ -433,9 +433,9 @@ H5D_gather_mem(const void *_buf, const H5S_t *space,
 done:
     /* Release resources, if allocated */
     if(len && len != _len)
-        len = H5FL_SEQ_FREE(size_t, len);
+        H5FL_SEQ_FREE(size_t, len);
     if(off && off != _off)
-        off = H5FL_SEQ_FREE(hsize_t, off);
+        H5FL_SEQ_FREE(hsize_t, off);
 
     FUNC_LEAVE_NOAPI(ret_value)
 }   /* H5D_gather_mem() */
@@ -507,7 +507,7 @@ H5D_scatgath_read(const H5D_io_info_t *io_info, const H5D_type_info_t *type_info
          * if necessary.
          */
 
-	/*
+	/* 
          * Gather data
          */
         n = H5D_gather_file(io_info, file_space, &file_iter, smine_nelmts,
@@ -516,10 +516,10 @@ H5D_scatgath_read(const H5D_io_info_t *io_info, const H5D_type_info_t *type_info
             HGOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, "file gather failed")
 
         /* If the source and destination are compound types and subset of each other
-         * and no conversion is needed, copy the data directly into user's buffer and
+         * and no conversion is needed, copy the data directly into user's buffer and 
          * bypass the rest of steps.
          */
-        if(type_info->cmpd_subset && H5T_SUBSET_FALSE != type_info->cmpd_subset->subset) {
+        if(H5T_SUBSET_FALSE != type_info->cmpd_subset) {
             if(H5D_compound_opt_read(smine_nelmts, mem_space, &mem_iter, dxpl_cache,
                     type_info, buf /*out*/) < 0)
                 HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "datatype conversion failed")
@@ -644,13 +644,12 @@ H5D_scatgath_write(const H5D_io_info_t *io_info, const H5D_type_info_t *type_inf
             HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "mem gather failed")
 
         /* If the source and destination are compound types and the destination is
-         * is a subset of the source and no conversion is needed, copy the data
+         * is a subset of the source and no conversion is needed, copy the data 
          * directly into user's buffer and bypass the rest of steps.  If the source
          * is a subset of the destination, the optimization is done in conversion
          * function H5T_conv_struct_opt to protect the background data.
          */
-        if(type_info->cmpd_subset && H5T_SUBSET_DST == type_info->cmpd_subset->subset
-            && type_info->dst_type_size == type_info->cmpd_subset->copy_size) {
+        if(H5T_SUBSET_DST == type_info->cmpd_subset) {
             if(H5D_compound_opt_write(smine_nelmts, type_info) < 0)
                 HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "datatype conversion failed")
         } /* end if */
@@ -662,12 +661,6 @@ H5D_scatgath_write(const H5D_io_info_t *io_info, const H5D_type_info_t *type_inf
                     HGOTO_ERROR(H5E_IO, H5E_READERROR, FAIL, "file gather failed")
             } /* end if */
 
-            /* Do the data transform before the type conversion (since
-             * transforms must be done in the memory type). */
-            if(!type_info->is_xform_noop)
-	        if(H5Z_xform_eval(dxpl_cache->data_xform_prop, type_info->tconv_buf, smine_nelmts, type_info->mem_type) < 0)
-		    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Error performing data transform")
-
             /*
              * Perform datatype conversion.
              */
@@ -675,6 +668,11 @@ H5D_scatgath_write(const H5D_io_info_t *io_info, const H5D_type_info_t *type_inf
                     smine_nelmts, (size_t)0, (size_t)0, type_info->tconv_buf,
                     type_info->bkg_buf, io_info->dxpl_id) < 0)
                  HGOTO_ERROR(H5E_DATASET, H5E_CANTCONVERT, FAIL, "datatype conversion failed")
+
+	    /* Do the data transform after the type conversion (since we're using dataset->shared->type). */
+	    if(!type_info->is_xform_noop)
+	        if(H5Z_xform_eval(dxpl_cache->data_xform_prop, type_info->tconv_buf, smine_nelmts, type_info->dset_type) < 0)
+		    HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Error performing data transform")
         } /* end else */
 
         /*
@@ -707,9 +705,9 @@ done:
 /*-------------------------------------------------------------------------
  * Function:	H5D_compound_opt_read
  *
- * Purpose:	A special optimization case when the source and
- *              destination members are a subset of each other, and
- *              the order is the same, and no conversion is needed.
+ * Purpose:	A special optimization case when the source and 
+ *              destination members are a subset of each other, and 
+ *              the order is the same, and no conversion is needed.  
  *              For example:
  *                  struct source {            struct destination {
  *                      TYPE1 A;      -->          TYPE1 A;
@@ -726,7 +724,7 @@ done:
  *                  };                             TYPE4 D;
  *                                                 TYPE5 E;
  *                                             };
- *              The optimization is simply moving data to the appropriate
+ *              The optimization is simply moving data to the appropriate 
  *              places in the buffer.
  *
  * Return:	Non-negative on success/Negative on failure
@@ -747,7 +745,7 @@ H5D_compound_opt_read(size_t nelmts, const H5S_t *space,
     hsize_t    *off = NULL;                     /* Pointer to sequence offsets */
     size_t     _len[H5D_IO_VECTOR_SIZE];        /* Array to store sequence lengths */
     size_t     *len = NULL;                     /* Pointer to sequence lengths */
-    size_t     src_stride, dst_stride, copy_size;
+    size_t     src_stride, dst_stride, type_size;
     herr_t     ret_value = SUCCEED;	       /*return value		*/
 
     FUNC_ENTER_NOAPI_NOINIT(H5D_compound_opt_read)
@@ -758,9 +756,6 @@ H5D_compound_opt_read(size_t nelmts, const H5S_t *space,
     HDassert(iter);
     HDassert(dxpl_cache);
     HDassert(type_info);
-    HDassert(type_info->cmpd_subset);
-    HDassert(H5T_SUBSET_SRC == type_info->cmpd_subset->subset ||
-        H5T_SUBSET_DST == type_info->cmpd_subset->subset);
     HDassert(user_buf);
 
     /* Allocate the vector I/O arrays */
@@ -779,8 +774,12 @@ H5D_compound_opt_read(size_t nelmts, const H5S_t *space,
     src_stride = type_info->src_type_size;
     dst_stride = type_info->dst_type_size;
 
-    /* Get the size, in bytes, to copy for each element */
-    copy_size = type_info->cmpd_subset->copy_size;
+    if(H5T_SUBSET_SRC == type_info->cmpd_subset)
+        type_size = src_stride;
+    else {
+        HDassert(H5T_SUBSET_DST == type_info->cmpd_subset);
+        type_size = dst_stride;
+    } /* end else */
 
     /* Loop until all elements are written */
     xdbuf = type_info->tconv_buf;
@@ -803,8 +802,7 @@ H5D_compound_opt_read(size_t nelmts, const H5S_t *space,
 
             /* Get the number of bytes and offset in sequence */
             curr_len = len[curr_seq];
-            H5_CHECK_OVERFLOW(off[curr_seq], hsize_t, size_t);
-            curr_off = (size_t)off[curr_seq];
+            curr_off = off[curr_seq];
 
             /* Decide the number of elements and position in the buffer. */
             curr_nelmts = curr_len / dst_stride;
@@ -812,7 +810,7 @@ H5D_compound_opt_read(size_t nelmts, const H5S_t *space,
 
             /* Copy the data into the right place. */
             for(i = 0; i < curr_nelmts; i++) {
-                HDmemmove(xubuf, xdbuf, copy_size);
+                HDmemmove(xubuf, xdbuf, type_size); 
 
                 /* Update pointers */
                 xdbuf += src_stride;
@@ -827,9 +825,9 @@ H5D_compound_opt_read(size_t nelmts, const H5S_t *space,
 done:
     /* Release resources, if allocated */
     if(len && len != _len)
-        len = H5FL_SEQ_FREE(size_t, len);
+        H5FL_SEQ_FREE(size_t, len);
     if(off && off != _off)
-        off = H5FL_SEQ_FREE(hsize_t, off);
+        H5FL_SEQ_FREE(hsize_t, off);
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D_compound_opt_read() */
@@ -838,9 +836,9 @@ done:
 /*-------------------------------------------------------------------------
  * Function:	H5D_compound_opt_write
  *
- * Purpose:	A special optimization case when the source and
- *              destination members are a subset of each other, and
- *              the order is the same, and no conversion is needed.
+ * Purpose:	A special optimization case when the source and 
+ *              destination members are a subset of each other, and 
+ *              the order is the same, and no conversion is needed.  
  *              For example:
  *                  struct source {            struct destination {
  *                      TYPE1 A;      -->          TYPE1 A;
@@ -857,7 +855,7 @@ done:
  *                  };                             TYPE4 D;
  *                                                 TYPE5 E;
  *                                             };
- *              The optimization is simply moving data to the appropriate
+ *              The optimization is simply moving data to the appropriate 
  *              places in the buffer.
  *
  *
@@ -889,7 +887,7 @@ H5D_compound_opt_write(size_t nelmts, const H5D_type_info_t *type_info)
     xsbuf = (uint8_t *)type_info->tconv_buf;
     xdbuf = (uint8_t *)type_info->tconv_buf;
     for(i = 0; i < nelmts; i++) {
-        HDmemmove(xdbuf, xsbuf, dst_stride);
+        HDmemmove(xdbuf, xsbuf, dst_stride); 
 
         /* Update pointers */
         xsbuf += src_stride;

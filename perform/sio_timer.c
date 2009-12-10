@@ -101,7 +101,7 @@ set_time(sio_time *pt, timer_type t, int start_stop)
 {
     if (pt) {
             if (start_stop == START) {
-                HDgettimeofday(&pt->sys_timer[t], NULL);
+                gettimeofday(&pt->sys_timer[t], NULL);
 
 		/* When we start the timer for HDF5_FINE_WRITE_FIXED_DIMS or HDF5_FINE_READ_FIXED_DIMS
 		 * we compute the time it took to only open the file */
@@ -114,7 +114,7 @@ set_time(sio_time *pt, timer_type t, int start_stop)
             } else {
                 struct timeval sys_t;
 
-                HDgettimeofday(&sys_t, NULL);
+                gettimeofday(&sys_t, NULL);
                 pt->total_time[t] += sub_time(&sys_t, &(pt->sys_timer[t]));
 
 /*                    ((double)sys_t.tv_sec +

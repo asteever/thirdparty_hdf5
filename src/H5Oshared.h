@@ -48,8 +48,7 @@
  *-------------------------------------------------------------------------
  */
 static H5_inline void *
-H5O_SHARED_DECODE(H5F_t *f, hid_t dxpl_id, H5O_t *open_oh, unsigned mesg_flags,
-    unsigned *ioflags, const uint8_t *p)
+H5O_SHARED_DECODE(H5F_t *f, hid_t dxpl_id, unsigned mesg_flags, const uint8_t *p)
 {
     void *ret_value;            /* Return value */
 
@@ -68,20 +67,12 @@ H5O_SHARED_DECODE(H5F_t *f, hid_t dxpl_id, H5O_t *open_oh, unsigned mesg_flags,
     /* Check for shared message */
     if(mesg_flags & H5O_MSG_FLAG_SHARED) {
         /* Retrieve native message info indirectly through shared message */
-        if(NULL == (ret_value = H5O_shared_decode(f, dxpl_id, open_oh, ioflags, p, H5O_SHARED_TYPE)))
+        if(NULL == (ret_value = H5O_shared_decode(f, dxpl_id, p, H5O_SHARED_TYPE)))
 	    HGOTO_ERROR(H5E_OHDR, H5E_CANTDECODE, NULL, "unable to decode shared message")
-
-        /* We currently do not support automatically fixing shared messages */
-#ifdef H5_STRICT_FORMAT_CHECKS
-        if(*ioflags & H5O_DECODEIO_DIRTY)
-            HGOTO_ERROR(H5E_OHDR, H5E_UNSUPPORTED, NULL, "unable to mark shared message dirty")
-#else /* H5_STRICT_FORMAT_CHECKS */
-        *ioflags &= ~H5O_DECODEIO_DIRTY;
-#endif /* H5_STRICT_FORMAT_CHECKS */
     } /* end if */
     else {
         /* Decode native message directly */
-        if(NULL == (ret_value = H5O_SHARED_DECODE_REAL(f, dxpl_id, open_oh, mesg_flags, ioflags, p)))
+        if(NULL == (ret_value = H5O_SHARED_DECODE_REAL(f, dxpl_id, mesg_flags, p)))
 	    HGOTO_ERROR(H5E_OHDR, H5E_CANTDECODE, NULL, "unable to decode native message")
     } /* end else */
 
@@ -359,7 +350,7 @@ done:
     if(!ret_value)
         if(dst_mesg)
             H5O_msg_free(H5O_SHARED_TYPE->id, dst_mesg);
-
+    
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_SHARED_COPY_FILE() */
 
@@ -404,7 +395,7 @@ H5O_SHARED_POST_COPY_FILE(const H5O_loc_t *oloc_src, const void *mesg_src,
 
 #ifdef H5O_SHARED_POST_COPY_FILE_REAL
     /* Call native message's copy file callback to copy the message */
-    if(H5O_SHARED_POST_COPY_FILE_REAL(oloc_src, mesg_src, oloc_dst, mesg_dst, dxpl_id, cpy_info) <0 )
+    if(H5O_SHARED_POST_COPY_FILE_REAL(oloc_src, mesg_src, oloc_dst, mesg_dst, dxpl_id, cpy_info) <0 ) 
         HGOTO_ERROR(H5E_OHDR, H5E_CANTCOPY, FAIL, "unable to copy native message to another file")
 #endif /* H5O_SHARED_POST_COPY_FILE_REAL */
 

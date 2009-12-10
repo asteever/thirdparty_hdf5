@@ -27,7 +27,6 @@
 
 #define H5FS_PACKAGE		/*suppress error about including H5FSpkg  */
 
-
 /***********/
 /* Headers */
 /***********/
@@ -37,10 +36,15 @@
 #include "H5MFprivate.h"	/* File memory management		*/
 #include "H5Vprivate.h"		/* Vectors and arrays 			*/
 
-
 /****************/
 /* Local Macros */
 /****************/
+
+/* Default starting size of section buffer */
+#define H5FS_SINFO_SIZE_DEFAULT  64
+
+/* Max. height of the skip list holding free list nodes */
+#define H5FS_DEFAULT_SKIPLIST_HEIGHT     16
 
 
 /******************/
@@ -63,26 +67,26 @@ typedef struct {
 /********************/
 /* Local Prototypes */
 /********************/
-static herr_t H5FS_sect_increase(H5FS_t *fspace, const H5FS_section_class_t *cls,
-    unsigned flags);
-static herr_t H5FS_sect_decrease(H5FS_t *fspace, const H5FS_section_class_t *cls);
+static herr_t H5FS_sect_increase(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace,
+    const H5FS_section_class_t *cls, unsigned flags);
+static herr_t H5FS_sect_decrease(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace,
+    const H5FS_section_class_t *cls);
 static herr_t H5FS_size_node_decr(H5FS_sinfo_t *sinfo, unsigned bin, H5FS_node_t *fspace_node,
     const H5FS_section_class_t *cls);
 static herr_t H5FS_sect_unlink_size(H5FS_sinfo_t *sinfo, const H5FS_section_class_t *cls,
     H5FS_section_info_t *sect);
-static herr_t H5FS_sect_unlink_rest(H5FS_t *fspace,
+static herr_t H5FS_sect_unlink_rest(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace,
     const H5FS_section_class_t *cls, H5FS_section_info_t *sect);
-static herr_t H5FS_sect_remove_real(H5FS_t *fspace, H5FS_section_info_t *sect);
 static herr_t H5FS_sect_link_size(H5FS_sinfo_t *sinfo, const H5FS_section_class_t *cls,
     H5FS_section_info_t *sect);
-static herr_t H5FS_sect_link_rest(H5FS_t *fspace, const H5FS_section_class_t *cls,
+static herr_t H5FS_sect_link_rest(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace,
+    const H5FS_section_class_t *cls, H5FS_section_info_t *sect, unsigned flags);
+static herr_t H5FS_sect_link(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace,
     H5FS_section_info_t *sect, unsigned flags);
-static herr_t H5FS_sect_link(H5FS_t *fspace, H5FS_section_info_t *sect,
-    unsigned flags);
-static herr_t H5FS_sect_merge(H5FS_t *fspace, H5FS_section_info_t **sect,
-    void *op_data);
+static herr_t H5FS_sect_merge(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace,
+    H5FS_section_info_t **sect, void *op_data);
 static htri_t H5FS_sect_find_node(H5FS_t *fspace, hsize_t request, H5FS_section_info_t **node);
-static herr_t H5FS_sect_serialize_size(H5FS_t *fspace);
+static herr_t H5FS_sect_serialize_size(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace);
 
 
 /*********************/
@@ -134,9 +138,6 @@ H5FS_sinfo_new(H5F_t *f, H5FS_t *fspace)
     /* Check arguments. */
     HDassert(f);
     HDassert(fspace);
-#ifdef H5FS_SINFO_DEBUG
-HDfprintf(stderr, "%s: fspace->addr = %a\n", FUNC, fspace->addr);
-#endif /* H5FS_SINFO_DEBUG */
 
     /* Allocate the free space header */
     if(NULL == (sinfo = H5FL_CALLOC(H5FS_sinfo_t)))
@@ -147,371 +148,113 @@ HDfprintf(stderr, "%s: fspace->addr = %a\n", FUNC, fspace->addr);
     sinfo->sect_prefix_size = H5FS_SINFO_PREFIX_SIZE(f);
     sinfo->sect_off_size = (fspace->max_sect_addr + 7) / 8;
     sinfo->sect_len_size = H5V_limit_enc_size((uint64_t)fspace->max_sect_size);
-#ifdef H5FS_SINFO_DEBUG
-HDfprintf(stderr, "%s: fspace->max_sect_size = %Hu\n", FUNC, fspace->max_sect_size);
-HDfprintf(stderr, "%s: fspace->max_sect_addr = %u\n", FUNC, fspace->max_sect_addr);
+    sinfo->fspace = fspace;
+#ifdef QAK
 HDfprintf(stderr, "%s: sinfo->nbins = %u\n", FUNC, sinfo->nbins);
 HDfprintf(stderr, "%s: sinfo->sect_off_size = %u, sinfo->sect_len_size = %u\n", FUNC, sinfo->sect_off_size, sinfo->sect_len_size);
-#endif /* H5FS_SINFO_DEBUG */
+#endif /* QAK */
 
     /* Allocate space for the section size bins */
     if(NULL == (sinfo->bins = H5FL_SEQ_CALLOC(H5FS_bin_t, (size_t)sinfo->nbins)))
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed for free space section bin array")
 
-    /* Increment the reference count on the free space manager header */
-    if(H5FS_incr(f, fspace) < 0)
-        HGOTO_ERROR(H5E_FSPACE, H5E_CANTINC, NULL, "unable to increment ref. count on free space header")
-    sinfo->fspace = fspace;
-
-    /* Link free space manager to section info */
-    /* (for deserializing sections) */
-    HDassert(fspace->sinfo == NULL);
-    fspace->sinfo = sinfo;
-
     /* Set return value */
     ret_value = sinfo;
 
 done:
-    if(ret_value == NULL && sinfo) {
-        /* Release bins for skip lists */
-        if(sinfo->bins)
-            sinfo->bins = H5FL_SEQ_FREE(H5FS_bin_t, sinfo->bins);
-
-        /* Release free space section info */
-        sinfo = H5FL_FREE(H5FS_sinfo_t, sinfo);
-    } /* end if */
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5FS_sinfo_new() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5FS_sinfo_lock
+ * Function:	H5FS_sinfo_pin
  *
- * Purpose:	Make certain the section info for the free space manager is
- *              in memory.
+ * Purpose:	Pin the section info for the free space manager in memory
+ *              Either loads section info from disk, or creates new section info
  *
- *              Either uses existing section info owned by the free space
- *              header, loads section info from disk, or creates new section
- *              info
- *
- * Return:	Success:	non-negative
- *		Failure:	negative
+ * Return:	Success:	non-NULL, pointer to section info struct
+ *		Failure:	NULL
  *
  * Programmer:	Quincey Koziol
- *              Thursday, February  7, 2008
+ *              Monday, July 31, 2006
  *
  *-------------------------------------------------------------------------
  */
-static herr_t
-H5FS_sinfo_lock(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace, H5AC_protect_t accmode)
+static H5FS_sinfo_t *
+H5FS_sinfo_pin(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace)
 {
-    herr_t ret_value = SUCCEED;    /* Return value */
+    H5FS_sinfo_t *sinfo;        /* Section information struct created */
+    H5FS_sinfo_t *ret_value;    /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT(H5FS_sinfo_lock)
-#ifdef H5FS_SINFO_DEBUG
-HDfprintf(stderr, "%s: Called, fspace->addr = %a, fspace->sinfo = %p, fspace->sect_addr = %a\n", FUNC, fspace->addr, fspace->sinfo, fspace->sect_addr);
-HDfprintf(stderr, "%s: fspace->alloc_sect_size = %Hu, fspace->sect_size = %Hu\n", FUNC, fspace->alloc_sect_size, fspace->sect_size);
-#endif /* H5FS_SINFO_DEBUG */
+    FUNC_ENTER_NOAPI_NOINIT(H5FS_sinfo_pin)
+#ifdef QAK
+HDfprintf(stderr, "%s: Called, fspace->sect_addr = %a\n", FUNC, fspace->sect_addr);
+#endif /* QAK */
 
     /* Check arguments. */
     HDassert(f);
     HDassert(fspace);
 
-    /* If the free space header doesn't already "own" the section info, load
-     *  section info or create it
-     */
-    if(fspace->sinfo) {
-        /* Check if the section info was protected & we want a different access mode */
-        if(fspace->sinfo_protected && accmode != fspace->sinfo_accmode) {
-            /* Check if we need to switch from read-only access to read-write */
-            if(H5AC_WRITE == accmode) {
-                /* Unprotect the read-only section info */
-                if(H5AC_unprotect(f, dxpl_id, H5AC_FSPACE_SINFO, fspace->sect_addr, fspace->sinfo, H5AC__NO_FLAGS_SET) < 0)
-                    HGOTO_ERROR(H5E_FSPACE, H5E_CANTUNPROTECT, FAIL, "unable to release free space section info")
+    /* Create new section info, if it doesn't exist yet */
+    if(!H5F_addr_defined(fspace->sect_addr)) {
+#ifdef QAK
+HDfprintf(stderr, "%s: Allocating new section info\n", FUNC);
+#endif /* QAK */
+        /* Sanity check */
+        HDassert(fspace->tot_sect_count == 0);
+        HDassert(fspace->serial_sect_count == 0);
+        HDassert(fspace->ghost_sect_count == 0);
 
-                /* Re-protect the section info with read-write access */
-                if(NULL == (fspace->sinfo = (H5FS_sinfo_t *)H5AC_protect(f, dxpl_id, H5AC_FSPACE_SINFO, fspace->sect_addr, NULL, fspace, H5AC_WRITE)))
-                    HGOTO_ERROR(H5E_FSPACE, H5E_CANTPROTECT, FAIL, "unable to load free space sections")
+        /* Allocate and initialize free space section info */
+        if(NULL == (sinfo = H5FS_sinfo_new(f, fspace)))
+            HGOTO_ERROR(H5E_FSPACE, H5E_CANTCREATE, NULL, "can't create section info")
 
-                /* Switch the access mode we have */
-                fspace->sinfo_accmode = H5AC_WRITE;
-            } /* end if */
-        } /* end if */
+        /* Allocate space for the section info */
+        fspace->sect_size = H5FS_SINFO_SIZE_DEFAULT;
+        fspace->alloc_sect_size = (size_t)fspace->sect_size;
+        if(HADDR_UNDEF == (fspace->sect_addr = H5MF_alloc(f, H5FD_MEM_FSPACE_SINFO, dxpl_id, fspace->alloc_sect_size)))
+            HGOTO_ERROR(H5E_STORAGE, H5E_NOSPACE, NULL, "file allocation failed for free space sections")
+#ifdef QAK
+HDfprintf(stderr, "%s: New section info, addr = %a, size = %Hu\n", FUNC, fspace->sect_addr, fspace->alloc_sect_size);
+#endif /* QAK */
+
+        /* Cache the new free space section info (pinned) */
+        if(H5AC_set(f, dxpl_id, H5AC_FSPACE_SINFO, fspace->sect_addr, sinfo, H5AC__PIN_ENTRY_FLAG) < 0)
+            HGOTO_ERROR(H5E_FSPACE, H5E_CANTINIT, NULL, "can't add free space sections to cache")
+
+        /* Mark free space header as dirty */
+        if(H5AC_mark_pinned_or_protected_entry_dirty(f, fspace) < 0)
+            HGOTO_ERROR(H5E_FSPACE, H5E_CANTMARKDIRTY, NULL, "unable to mark free space header as dirty")
     } /* end if */
     else {
-        /* If the section address is defined, load it from the file */
-        if(H5F_addr_defined(fspace->sect_addr)) {
-            /* Sanity check */
-            HDassert(fspace->sinfo_protected == FALSE);
-            HDassert(H5F_addr_defined(fspace->addr));
-
-#ifdef H5FS_SINFO_DEBUG
+#ifdef QAK
 HDfprintf(stderr, "%s: Reading in existing sections, fspace->sect_addr = %a\n", FUNC, fspace->sect_addr);
-#endif /* H5FS_SINFO_DEBUG */
-            /* Protect the free space sections */
-            if(NULL == (fspace->sinfo = (H5FS_sinfo_t *)H5AC_protect(f, dxpl_id, H5AC_FSPACE_SINFO, fspace->sect_addr, NULL, fspace, accmode)))
-                HGOTO_ERROR(H5E_FSPACE, H5E_CANTPROTECT, FAIL, "unable to load free space sections")
+#endif /* QAK */
+        /* Protect the free space sections */
+        if(NULL == (sinfo = H5AC_protect(f, dxpl_id, H5AC_FSPACE_SINFO, fspace->sect_addr, NULL, fspace, H5AC_WRITE)))
+            HGOTO_ERROR(H5E_FSPACE, H5E_CANTPROTECT, NULL, "unable to load free space sections")
 
-            /* Remember that we protected the section info & the access mode */
-            fspace->sinfo_protected = TRUE;
-            fspace->sinfo_accmode = accmode;
-        } /* end if */
-        else {
-#ifdef H5FS_SINFO_DEBUG
-HDfprintf(stderr, "%s: Creating new section info\n", FUNC);
-#endif /* H5FS_SINFO_DEBUG */
-            /* Sanity check */
-            HDassert(fspace->tot_sect_count == 0);
-            HDassert(fspace->serial_sect_count == 0);
-            HDassert(fspace->ghost_sect_count == 0);
+        /* Pin them in the cache */
+        if(H5AC_pin_protected_entry(f, sinfo) < 0)
+            HGOTO_ERROR(H5E_FSPACE, H5E_CANTPIN, NULL, "unable to pin free space sections")
 
-            /* Allocate and initialize free space section info */
-            if(NULL == (fspace->sinfo = H5FS_sinfo_new(f, fspace)))
-                HGOTO_ERROR(H5E_FSPACE, H5E_CANTCREATE, FAIL, "can't create section info")
-
-            /* Set initial size of section info to 0 */
-            fspace->sect_size = fspace->alloc_sect_size = 0;
-        } /* end if */
-    } /* end if */
-    HDassert(fspace->rc == 2);
-
-    /* Increment the section info lock count */
-    fspace->sinfo_lock_count++;
-
-done:
-#ifdef H5FS_SINFO_DEBUG
-HDfprintf(stderr, "%s: Leaving, fspace->addr = %a, fspace->sinfo = %p, fspace->sect_addr = %a\n", FUNC, fspace->addr, fspace->sinfo, fspace->sect_addr);
-HDfprintf(stderr, "%s: fspace->alloc_sect_size = %Hu, fspace->sect_size = %Hu\n", FUNC, fspace->alloc_sect_size, fspace->sect_size);
-#endif /* H5FS_SINFO_DEBUG */
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5FS_sinfo_lock() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5FS_sinfo_unlock
- *
- * Purpose:	Release the section info, either giving ownership back to
- *              the cache or letting the free space header keep it.
- *
- * Return:	Success:	non-negative
- *		Failure:	negative
- *
- * Programmer:	Quincey Koziol
- *              Thursday, February  7, 2008
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5FS_sinfo_unlock(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace, hbool_t modified)
-{
-    herr_t ret_value = SUCCEED;         /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT(H5FS_sinfo_unlock)
-#ifdef H5FS_SINFO_DEBUG
-HDfprintf(stderr, "%s: Called, modified = %t, fspace->addr = %a, fspace->sect_addr = %a\n", FUNC, modified, fspace->addr, fspace->sect_addr);
-HDfprintf(stderr, "%s: fspace->sinfo_lock_count = %u, fspace->sinfo_modified = %t, fspace->sinfo_protected = %t\n", FUNC, fspace->sinfo_lock_count, fspace->sinfo_modified, fspace->sinfo_protected);
-HDfprintf(stderr, "%s: fspace->alloc_sect_size = %Hu, fspace->sect_size = %Hu\n", FUNC, fspace->alloc_sect_size, fspace->sect_size);
-#endif /* H5FS_SINFO_DEBUG */
-
-    /* Check arguments. */
-    HDassert(f);
-    HDassert(fspace);
-    HDassert(fspace->rc == 2);
-    HDassert(fspace->sinfo);
-
-    /* Check if we modified any section */
-    if(modified) {
-        /* Check if the section info was protected with a different access mode */
-        if(fspace->sinfo_protected && fspace->sinfo_accmode != H5AC_WRITE)
-            HGOTO_ERROR(H5E_FSPACE, H5E_CANTDIRTY, FAIL, "attempt to modify read-only section info")
-
-        /* If we modified the section info, mark it dirty */
-        fspace->sinfo->dirty = TRUE;
-
-        /* Remember that the section info was modified while locked */
-        fspace->sinfo_modified = TRUE;
-
-        /* Assume that the modification will affect the statistics in the header
-         *  and mark that dirty also
-         */
-        if(H5FS_dirty(f, fspace) < 0)
-            HGOTO_ERROR(H5E_FSPACE, H5E_CANTMARKDIRTY, FAIL, "unable to mark free space header as dirty")
-    } /* end if */
-
-    /* Decrement the lock count on the section info */
-    fspace->sinfo_lock_count--;
-
-    /* Check if section info lock count dropped to zero */
-    if(fspace->sinfo_lock_count == 0) {
-        hbool_t release_sinfo_space = FALSE;    /* Flag to indicate section info space in file should be released */
-
-        /* Check if we actually protected the section info */
-        if(fspace->sinfo_protected) {
-            unsigned    cache_flags = H5AC__NO_FLAGS_SET;       /* Flags for unprotecting heap */
-
-            /* Sanity check */
-            HDassert(H5F_addr_defined(fspace->addr));
-
-            /* Check if we've made new changes to the section info while locked */
-            if(fspace->sinfo_modified) {
-                /* Note that we've modified the section info */
-                cache_flags |= H5AC__DIRTIED_FLAG;
-
-                /* Check if the section info size in the file has changed */
-                if(fspace->sect_size != fspace->alloc_sect_size)
-                    cache_flags |= H5AC__SIZE_CHANGED_FLAG | H5AC__DELETED_FLAG | H5AC__TAKE_OWNERSHIP_FLAG;
-            } /* end if */
-
-            /* Sanity check */
-            HDassert(H5F_addr_defined(fspace->sect_addr));
-
-            /* Unprotect section info in cache */
-            /* (Possibly dirty) */
-            /* (Possibly taking ownership from the cache) */
-#ifdef H5FS_SINFO_DEBUG
-HDfprintf(stderr, "%s: Unprotecting section info, cache_flags = %u\n", FUNC, cache_flags);
-#endif /* H5FS_SINFO_DEBUG */
-            if(H5AC_unprotect(f, dxpl_id, H5AC_FSPACE_SINFO, fspace->sect_addr, fspace->sinfo, cache_flags) < 0)
-                HGOTO_ERROR(H5E_FSPACE, H5E_CANTUNPROTECT, FAIL, "unable to release free space section info")
-
-            /* Reset the protected flag on the section info */
-            fspace->sinfo_protected = FALSE;
-
-            /* Check if header is taking ownership of section info */
-            if((cache_flags & H5AC__TAKE_OWNERSHIP_FLAG)) {
-#ifdef H5FS_SINFO_DEBUG
-HDfprintf(stderr, "%s: Taking ownership of section info\n", FUNC);
-#endif /* H5FS_SINFO_DEBUG */
-                /* Set flag to release section info space in file */
-                release_sinfo_space = TRUE;
-            } /* end if */
-            else {
-#ifdef H5FS_SINFO_DEBUG
-HDfprintf(stderr, "%s: Relinquishing section info ownership\n", FUNC);
-#endif /* H5FS_SINFO_DEBUG */
-                /* Free space header relinquished ownership of section info */
-                fspace->sinfo = NULL;
-            } /* end else */
-        } /* end if */
-        else {
-            /* Check if the section info was modified */
-            if(fspace->sinfo_modified) {
-                /* Check if we need to release section info in the file */
-                if(H5F_addr_defined(fspace->sect_addr))
-                    /* Set flag to release section info space in file */
-                    release_sinfo_space = TRUE;
-                else
-                    HDassert(fspace->alloc_sect_size == 0);
-            } /* end if */
-            else {
-                /* Sanity checks... */
-                if(H5F_addr_defined(fspace->sect_addr))
-                    HDassert(fspace->alloc_sect_size == fspace->sect_size);
-                else
-                    HDassert(fspace->alloc_sect_size == 0);
-            } /* end else */
-        } /* end else */
-
-        /* Reset the "section info modified" flag */
-        fspace->sinfo_modified = FALSE;
-
-        /* Check if header needs to release section info in the file */
-        if(release_sinfo_space) {
-            haddr_t old_sect_addr = fspace->sect_addr;   /* Previous location of section info in file */
-            hsize_t old_alloc_sect_size = fspace->alloc_sect_size;       /* Previous size of section info in file */
-
-            /* Sanity check */
-            HDassert(H5F_addr_defined(fspace->addr));
-
-            /* Reset section info in header */
-            fspace->sect_addr = HADDR_UNDEF;
-            fspace->alloc_sect_size = 0;
-
-            /* If we haven't already marked the header dirty, do so now */
-            if(!modified)
-                if(H5FS_dirty(f, fspace) < 0)
-                    HGOTO_ERROR(H5E_FSPACE, H5E_CANTMARKDIRTY, FAIL, "unable to mark free space header as dirty")
-
-#ifdef H5FS_SINFO_DEBUG
-HDfprintf(stderr, "%s: Freeing section info on disk, old_sect_addr = %a, old_alloc_sect_size = %Hu\n", FUNC, old_sect_addr, old_alloc_sect_size);
-#endif /* H5FS_SINFO_DEBUG */
-            /* Release space for section info in file */
-            if(H5MF_xfree(f, H5FD_MEM_FSPACE_SINFO, dxpl_id, old_sect_addr, old_alloc_sect_size) < 0)
-                HGOTO_ERROR(H5E_FSPACE, H5E_CANTFREE, FAIL, "unable to free free space sections")
-        } /* end if */
-    } /* end if */
-
-done:
-#ifdef H5FS_SINFO_DEBUG
-HDfprintf(stderr, "%s: Leaving, ret_value = %d\n", FUNC, ret_value);
-#endif /* H5FS_SINFO_DEBUG */
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5FS_sinfo_unlock() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5FS_sect_serialize_size
- *
- * Purpose:	Determine serialized size of all sections in free space manager
- *
- * Return:	Success:	non-negative
- *		Failure:	negative
- *
- * Programmer:	Quincey Koziol
- *              Monday, May  8, 2006
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5FS_sect_serialize_size(H5FS_t *fspace)
-{
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5FS_sect_serialize_size)
-
-    /* Check arguments. */
-    HDassert(fspace);
+        /* Unlock free space sections, now pinned */
+        if(H5AC_unprotect(f, dxpl_id, H5AC_FSPACE_SINFO, fspace->sect_addr, sinfo, H5AC__NO_FLAGS_SET) < 0)
+            HGOTO_ERROR(H5E_FSPACE, H5E_CANTUNPROTECT, NULL, "unable to release free space sections")
+    } /* end else */
 #ifdef QAK
-HDfprintf(stderr, "%s: Check 1.0 - fspace->sect_size = %Hu\n", "H5FS_sect_serialize_size", fspace->sect_size);
-HDfprintf(stderr, "%s: fspace->serial_sect_count = %Zu\n", "H5FS_sect_serialize_size", fspace->serial_sect_count);
-HDfprintf(stderr, "%s: fspace->alloc_sect_size = %Hu\n", "H5FS_sect_serialize_size", fspace->alloc_sect_size);
-HDfprintf(stderr, "%s: fspace->sinfo->serial_size_count = %Zu\n", "H5FS_sect_serialize_size", fspace->sinfo->serial_size_count);
+HDfprintf(stderr, "%s: sinfo->serial_size_count = %Zu\n", FUNC, sinfo->serial_size_count);
 #endif /* QAK */
 
-    /* Compute the size of the buffer required to serialize all the sections */
-    if(fspace->serial_sect_count > 0) {
-        size_t sect_buf_size;               /* Section buffer size */
+    /* Update pointer to free space header for section info */
+    sinfo->fspace = fspace;
 
-        /* Serialized sections prefix */
-        sect_buf_size = fspace->sinfo->sect_prefix_size;
+    /* Set return value */
+    ret_value = sinfo;
 
-        /* Count for each differently sized serializable section */
-#ifdef QAK
-HDfprintf(stderr, "%s: fspace->sinfo->serial_size_count = %Zu\n", "H5FS_sect_serialize_size", fspace->sinfo->serial_size_count);
-HDfprintf(stderr, "%s: fspace->serial_sect_count = %Hu\n", "H5FS_sect_serialize_size", fspace->serial_sect_count);
-#endif /* QAK */
-        sect_buf_size += fspace->sinfo->serial_size_count * H5V_limit_enc_size((uint64_t)fspace->serial_sect_count);
-
-        /* Size for each differently sized serializable section */
-        sect_buf_size += fspace->sinfo->serial_size_count * fspace->sinfo->sect_len_size;
-
-        /* Offsets of each section in address space */
-        sect_buf_size += fspace->serial_sect_count * fspace->sinfo->sect_off_size;
-
-        /* Class of each section */
-        sect_buf_size += fspace->serial_sect_count * 1 /* byte */;
-
-        /* Extra space required to serialize each section */
-        sect_buf_size += fspace->sinfo->serial_size;
-
-        /* Update section size in header */
-        fspace->sect_size = sect_buf_size;
-    } /* end if */
-    else
-        /* Reset section size in header */
-        fspace->sect_size = fspace->sinfo->sect_prefix_size;
-
-    FUNC_LEAVE_NOAPI(SUCCEED)
-} /* H5FS_sect_serialize_size() */
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5FS_sinfo_pin() */
 
 
 /*-------------------------------------------------------------------------
@@ -521,6 +264,7 @@ HDfprintf(stderr, "%s: fspace->serial_sect_count = %Hu\n", "H5FS_sect_serialize_
  *              on disk
  *
  * Return:	Success:	non-negative
+ *
  *		Failure:	negative
  *
  * Programmer:	Quincey Koziol
@@ -529,8 +273,8 @@ HDfprintf(stderr, "%s: fspace->serial_sect_count = %Hu\n", "H5FS_sect_serialize_
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FS_sect_increase(H5FS_t *fspace, const H5FS_section_class_t *cls,
-    unsigned flags)
+H5FS_sect_increase(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace,
+    const H5FS_section_class_t *cls, unsigned flags)
 {
     herr_t ret_value = SUCCEED;         /* Return value */
 
@@ -566,10 +310,14 @@ HDfprintf(stderr, "%s: cls->serial_size = %Zu\n", FUNC, cls->serial_size);
         /* Update the free space sections' serialized size */
         /* (if we're not deserializing the sections from disk) */
         if(!(flags & H5FS_ADD_DESERIALIZING)) {
-            if(H5FS_sect_serialize_size(fspace) < 0)
+            if(H5FS_sect_serialize_size(f, dxpl_id, fspace) < 0)
                 HGOTO_ERROR(H5E_FSPACE, H5E_CANTCOMPUTE, FAIL, "can't adjust free space section size on disk")
         } /* end if */
     } /* end else */
+
+    /* Mark free space header as dirty */
+    if(H5AC_mark_pinned_or_protected_entry_dirty(f, fspace) < 0)
+        HGOTO_ERROR(H5E_FSPACE, H5E_CANTMARKDIRTY, FAIL, "unable to mark free space header as dirty")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -592,7 +340,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FS_sect_decrease(H5FS_t *fspace, const H5FS_section_class_t *cls)
+H5FS_sect_decrease(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace, const H5FS_section_class_t *cls)
 {
     herr_t ret_value = SUCCEED;         /* Return value */
 
@@ -626,9 +374,13 @@ HDfprintf(stderr, "%s: cls->serial_size = %Zu\n", FUNC, cls->serial_size);
         fspace->sinfo->serial_size -= cls->serial_size;
 
         /* Update the free space sections' serialized size */
-        if(H5FS_sect_serialize_size(fspace) < 0)
+        if(H5FS_sect_serialize_size(f, dxpl_id, fspace) < 0)
             HGOTO_ERROR(H5E_FSPACE, H5E_CANTCOMPUTE, FAIL, "can't adjust free space section size on disk")
     } /* end else */
+
+    /* Mark free space header as dirty */
+    if(H5AC_mark_pinned_or_protected_entry_dirty(f, fspace) < 0)
+        HGOTO_ERROR(H5E_FSPACE, H5E_CANTMARKDIRTY, FAIL, "unable to mark free space header as dirty")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -703,7 +455,7 @@ HDfprintf(stderr, "%s: sinfo->bins[%u].sect_count = %Zu\n", FUNC, bin, sinfo->bi
         HDassert(fspace_node->serial_count == 0);
 
         /* Remove size tracking list from bin */
-        tmp_fspace_node = (H5FS_node_t *)H5SL_remove(sinfo->bins[bin].bin_list, &fspace_node->sect_size);
+        tmp_fspace_node = H5SL_remove(sinfo->bins[bin].bin_list, &fspace_node->sect_size);
         if(tmp_fspace_node == NULL || tmp_fspace_node != fspace_node)
             HGOTO_ERROR(H5E_FSPACE, H5E_CANTREMOVE, FAIL, "can't remove free space node from skip list")
 
@@ -712,7 +464,7 @@ HDfprintf(stderr, "%s: sinfo->bins[%u].sect_count = %Zu\n", FUNC, bin, sinfo->bi
             HGOTO_ERROR(H5E_FSPACE, H5E_CANTCLOSEOBJ, FAIL, "can't destroy size tracking node's skip list")
 
         /* Release free space list node */
-        (void)H5FL_FREE(H5FS_node_t, fspace_node);
+        H5FL_FREE(H5FS_node_t, fspace_node);
 
         /* Decrement total number of section sizes managed */
         sinfo->tot_size_count--;
@@ -761,11 +513,11 @@ H5FS_sect_unlink_size(H5FS_sinfo_t *sinfo, const H5FS_section_class_t *cls,
         HGOTO_ERROR(H5E_FSPACE, H5E_NOTFOUND, FAIL, "node's bin is empty?")
 
     /* Find space node for section's size */
-    if((fspace_node = (H5FS_node_t *)H5SL_search(sinfo->bins[bin].bin_list, &sect->size)) == NULL)
+    if((fspace_node = H5SL_search(sinfo->bins[bin].bin_list, &sect->size)) == NULL)
         HGOTO_ERROR(H5E_FSPACE, H5E_NOTFOUND, FAIL, "can't find section size node")
 
     /* Remove the section's node from the list */
-    tmp_sect_node = (H5FS_section_info_t *)H5SL_remove(fspace_node->sect_list, &sect->addr);
+    tmp_sect_node = H5SL_remove(fspace_node->sect_list, &sect->addr);
     if(tmp_sect_node == NULL || tmp_sect_node != sect)
         HGOTO_ERROR(H5E_FSPACE, H5E_NOTFOUND, FAIL, "can't find section node on size list")
 
@@ -795,14 +547,15 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FS_sect_unlink_rest(H5FS_t *fspace, const H5FS_section_class_t *cls,
-    H5FS_section_info_t *sect)
+H5FS_sect_unlink_rest(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace,
+    const H5FS_section_class_t *cls, H5FS_section_info_t *sect)
 {
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5FS_sect_unlink_rest)
 
     /* Check arguments. */
+    HDassert(f);
     HDassert(fspace);
     HDassert(fspace->sinfo);
     HDassert(cls);
@@ -815,13 +568,13 @@ H5FS_sect_unlink_rest(H5FS_t *fspace, const H5FS_section_class_t *cls,
 #ifdef QAK
 HDfprintf(stderr, "%s: removing object from merge list, sect->type = %u\n", FUNC, (unsigned)sect->type);
 #endif /* QAK */
-        tmp_sect_node = (H5FS_section_info_t *)H5SL_remove(fspace->sinfo->merge_list, &sect->addr);
+        tmp_sect_node = H5SL_remove(fspace->sinfo->merge_list, &sect->addr);
         if(tmp_sect_node == NULL || tmp_sect_node != sect)
             HGOTO_ERROR(H5E_FSPACE, H5E_NOTFOUND, FAIL, "can't find section node on size list")
     } /* end if */
 
     /* Update section info & check if we need less room for the serialized free space sections */
-    if(H5FS_sect_decrease(fspace, cls) < 0)
+    if(H5FS_sect_decrease(f, dxpl_id, fspace, cls) < 0)
         HGOTO_ERROR(H5E_FSPACE, H5E_CANTINSERT, FAIL, "can't increase free space section size on disk")
 
     /* Decrement amount of free space managed */
@@ -830,51 +583,13 @@ HDfprintf(stderr, "%s: fspace->tot_space = %Hu\n", FUNC, fspace->tot_space);
 #endif /* QAK */
     fspace->tot_space -= sect->size;
 
+    /* Mark free space sections as changed */
+    if(H5AC_mark_pinned_or_protected_entry_dirty(f, fspace->sinfo) < 0)
+        HGOTO_ERROR(H5E_FSPACE, H5E_CANTMARKDIRTY, FAIL, "unable to mark free space sections as dirty")
+
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5FS_sect_unlink_rest() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5FS_sect_remove_real
- *
- * Purpose:	Remove a section from the free space manager
- *
- * Return:	Success:	non-negative
- *		Failure:	negative
- *
- * Programmer:	Quincey Koziol
- *              Wednesday, May 17, 2006
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5FS_sect_remove_real(H5FS_t *fspace, H5FS_section_info_t *sect)
-{
-    const H5FS_section_class_t *cls;    /* Class of section */
-    herr_t ret_value = SUCCEED;         /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT(H5FS_sect_remove_real)
-
-    /* Check arguments. */
-    HDassert(fspace);
-    HDassert(fspace->sinfo);
-    HDassert(sect);
-
-    /* Get section's class */
-    cls = &fspace->sect_cls[sect->type];
-
-    /* Remove node from size tracked data structures */
-    if(H5FS_sect_unlink_size(fspace->sinfo, cls, sect) < 0)
-        HGOTO_ERROR(H5E_FSPACE, H5E_CANTFREE, FAIL, "can't remove section from size tracking data structures")
-
-    /* Update rest of free space manager data structures for node removal */
-    if(H5FS_sect_unlink_rest(fspace, cls, sect) < 0)
-        HGOTO_ERROR(H5E_FSPACE, H5E_CANTFREE, FAIL, "can't remove section from non-size tracking data structures")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5FS_sect_remove_real() */
 
 
 /*-------------------------------------------------------------------------
@@ -894,7 +609,7 @@ herr_t
 H5FS_sect_remove(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace,
     H5FS_section_info_t *sect)
 {
-    hbool_t sinfo_valid = FALSE;        /* Whether the section info is valid */
+    const H5FS_section_class_t *cls;    /* Class of section */
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5FS_sect_remove)
@@ -902,22 +617,21 @@ H5FS_sect_remove(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace,
     /* Check arguments. */
     HDassert(f);
     HDassert(fspace);
+    HDassert(fspace->sinfo);
     HDassert(sect);
 
-    /* Get a pointer to the section info */
-    if(H5FS_sinfo_lock(f, dxpl_id, fspace, H5AC_WRITE) < 0)
-        HGOTO_ERROR(H5E_FSPACE, H5E_CANTGET, FAIL, "can't get section info")
-    sinfo_valid = TRUE;
+    /* Get section's class */
+    cls = &fspace->sect_cls[sect->type];
 
-    /* Perform actual section removal */
-    if(H5FS_sect_remove_real(fspace, sect) < 0)
-        HGOTO_ERROR(H5E_FSPACE, H5E_CANTREMOVE, FAIL, "can't remove section")
+    /* Remove node from size tracked data structures */
+    if(H5FS_sect_unlink_size(fspace->sinfo, cls, sect) < 0)
+        HGOTO_ERROR(H5E_FSPACE, H5E_CANTFREE, FAIL, "can't remove section from size tracking data structures")
+
+    /* Update rest of free space manager data structures for node removal */
+    if(H5FS_sect_unlink_rest(f, dxpl_id, fspace, cls, sect) < 0)
+        HGOTO_ERROR(H5E_FSPACE, H5E_CANTFREE, FAIL, "can't remove section from non-size tracking data structures")
 
 done:
-    /* Release the section info */
-    if(sinfo_valid && H5FS_sinfo_unlock(f, dxpl_id, fspace, TRUE) < 0)
-        HDONE_ERROR(H5E_FSPACE, H5E_CANTRELEASE, FAIL, "can't release section info")
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5FS_sect_remove() */
 
@@ -958,12 +672,12 @@ HDfprintf(stderr, "%s: sect->size = %Hu, sect->addr = %a\n", FUNC, sect->size, s
     bin = H5V_log2_gen(sect->size);
     HDassert(bin < sinfo->nbins);
     if(sinfo->bins[bin].bin_list == NULL) {
-        if(NULL == (sinfo->bins[bin].bin_list = H5SL_create(H5SL_TYPE_HSIZE)))
+        if(NULL == (sinfo->bins[bin].bin_list = H5SL_create(H5SL_TYPE_HSIZE, 0.5, (size_t)H5FS_DEFAULT_SKIPLIST_HEIGHT)))
             HGOTO_ERROR(H5E_FSPACE, H5E_CANTCREATE, FAIL, "can't create skip list for free space nodes")
     } /* end if */
     else {
         /* Check for node list of the correct size already */
-        fspace_node = (H5FS_node_t *)H5SL_search(sinfo->bins[bin].bin_list, &sect->size);
+        fspace_node = H5SL_search(sinfo->bins[bin].bin_list, &sect->size);
     } /* end else */
 
     /* Check if we need to create a new skip list for nodes of this size */
@@ -975,7 +689,7 @@ HDfprintf(stderr, "%s: sect->size = %Hu, sect->addr = %a\n", FUNC, sect->size, s
         /* Initialize the free list size node */
         fspace_node->sect_size = sect->size;
         fspace_node->serial_count = fspace_node->ghost_count = 0;
-        if(NULL == (fspace_node->sect_list = H5SL_create(H5SL_TYPE_HADDR)))
+        if(NULL == (fspace_node->sect_list = H5SL_create(H5SL_TYPE_HADDR, 0.5, (size_t)H5FS_DEFAULT_SKIPLIST_HEIGHT)))
             HGOTO_ERROR(H5E_FSPACE, H5E_CANTCREATE, FAIL, "can't create skip list for free space nodes")
 
         /* Insert new free space size node into bin's list */
@@ -1036,7 +750,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FS_sect_link_rest(H5FS_t *fspace, const H5FS_section_class_t *cls,
+H5FS_sect_link_rest(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace, const H5FS_section_class_t *cls,
     H5FS_section_info_t *sect, unsigned flags)
 {
     herr_t ret_value = SUCCEED;         /* Return value */
@@ -1044,6 +758,7 @@ H5FS_sect_link_rest(H5FS_t *fspace, const H5FS_section_class_t *cls,
     FUNC_ENTER_NOAPI_NOINIT(H5FS_sect_link_rest)
 
     /* Check arguments. */
+    HDassert(f);
     HDassert(fspace);
     HDassert(fspace->sinfo);
     HDassert(sect);
@@ -1054,14 +769,14 @@ H5FS_sect_link_rest(H5FS_t *fspace, const H5FS_section_class_t *cls,
 HDfprintf(stderr, "%s: inserting object into merge list, sect->type = %u\n", FUNC, (unsigned)sect->type);
 #endif /* QAK */
         if(fspace->sinfo->merge_list == NULL)
-            if(NULL == (fspace->sinfo->merge_list = H5SL_create(H5SL_TYPE_HADDR)))
+            if(NULL == (fspace->sinfo->merge_list = H5SL_create(H5SL_TYPE_HADDR, 0.5, (size_t)H5FS_DEFAULT_SKIPLIST_HEIGHT)))
                 HGOTO_ERROR(H5E_FSPACE, H5E_CANTCREATE, FAIL, "can't create skip list for merging free space sections")
         if(H5SL_insert(fspace->sinfo->merge_list, sect, &sect->addr) < 0)
             HGOTO_ERROR(H5E_FSPACE, H5E_CANTINSERT, FAIL, "can't insert free space node into merging skip list")
     } /* end if */
 
     /* Update section info & check if we need more room for the serialized free space sections */
-    if(H5FS_sect_increase(fspace, cls, flags) < 0)
+    if(H5FS_sect_increase(f, dxpl_id, fspace, cls, flags) < 0)
         HGOTO_ERROR(H5E_FSPACE, H5E_CANTINSERT, FAIL, "can't increase free space section size on disk")
 
     /* Increment amount of free space managed */
@@ -1087,7 +802,8 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FS_sect_link(H5FS_t *fspace, H5FS_section_info_t *sect, unsigned flags)
+H5FS_sect_link(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace,
+    H5FS_section_info_t *sect, unsigned flags)
 {
     const H5FS_section_class_t *cls;    /* Class of section */
     herr_t ret_value = SUCCEED;         /* Return value */
@@ -1095,6 +811,7 @@ H5FS_sect_link(H5FS_t *fspace, H5FS_section_info_t *sect, unsigned flags)
     FUNC_ENTER_NOAPI_NOINIT(H5FS_sect_link)
 
     /* Check arguments. */
+    HDassert(f);
     HDassert(fspace);
     HDassert(fspace->sinfo);
     HDassert(sect);
@@ -1113,7 +830,7 @@ HDfprintf(stderr, "%s: Check 1.0 - fspace->tot_space = %Hu\n", FUNC, fspace->tot
 HDfprintf(stderr, "%s: Check 2.0 - fspace->tot_space = %Hu\n", FUNC, fspace->tot_space);
 #endif /* QAK */
     /* Update rest of free space manager data structures for section addition */
-    if(H5FS_sect_link_rest(fspace, cls, sect, flags) < 0)
+    if(H5FS_sect_link_rest(f, dxpl_id, fspace, cls, sect, flags) < 0)
         HGOTO_ERROR(H5E_FSPACE, H5E_CANTINSERT, FAIL, "can't add section to non-size tracking data structures")
 #ifdef QAK
 HDfprintf(stderr, "%s: Check 3.0 - fspace->tot_space = %Hu\n", FUNC, fspace->tot_space);
@@ -1131,26 +848,21 @@ done:
  *              free space.
  *
  * Return:	Success:	non-negative
+ *
  *		Failure:	negative
  *
  * Programmer:	Quincey Koziol
  *              Wednesday, May 17, 2006
  *
- * Modifications: Vailin Choi; Sept 25th 2008
- *	Changes to the "shrinking" part--
- *	1. Get last section node in merge-list instead of "less-than"
- *	   node for further iteration
- *	2. Remove "can-be-shrunk" section from free-space instead of
- *	   "less-than" section
- *
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FS_sect_merge(H5FS_t *fspace, H5FS_section_info_t **sect, void *op_data)
+H5FS_sect_merge(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace,
+    H5FS_section_info_t **sect, void *op_data)
 {
     H5FS_section_class_t *sect_cls;     /* Section's class */
+    H5FS_section_info_t *tmp_sect_node; /* Temporary free space section */
     hbool_t modified;                   /* Flag to indicate merge or shrink occurred */
-    hbool_t remove_sect = FALSE;       /* Whether a section should be removed before shrinking */
     htri_t status;                      /* Status value */
     herr_t ret_value = SUCCEED;         /* Return value */
 
@@ -1165,54 +877,43 @@ H5FS_sect_merge(H5FS_t *fspace, H5FS_section_info_t **sect, void *op_data)
     /* Loop until no more merging */
     if(fspace->sinfo->merge_list) {
         do {
-            H5SL_node_t *less_sect_node;    /* Skip list node for section less than new section */
-            H5SL_node_t *greater_sect_node; /* Skip list node for section greater than new section */
-            H5FS_section_info_t *tmp_sect;  /* Temporary free space section */
             H5FS_section_class_t *tmp_sect_cls;     /* Temporary section's class */
-            hbool_t greater_sect_node_valid = FALSE;    /* Indicate if 'greater than' section node is valid */
 
             /* Reset 'modification occurred' flag */
             modified = FALSE;
 
             /* Look for neighboring section before new section */
-            less_sect_node = H5SL_below(fspace->sinfo->merge_list, &(*sect)->addr);
+            tmp_sect_node = H5SL_less(fspace->sinfo->merge_list, &(*sect)->addr);
 
             /* Check for node before new node able to merge with new node */
-            if(less_sect_node) {
-                /* Check for node greater than section */
-                greater_sect_node = H5SL_next(less_sect_node);
-                greater_sect_node_valid = TRUE;
-
-                /* Get section for 'less than' skip list node */
-                tmp_sect = (H5FS_section_info_t *)H5SL_item(less_sect_node);
-
+            if(tmp_sect_node) {
                 /* Get classes for right & left sections */
-                tmp_sect_cls = &fspace->sect_cls[tmp_sect->type];
+                tmp_sect_cls = &fspace->sect_cls[tmp_sect_node->type];
                 sect_cls = &fspace->sect_cls[(*sect)->type];
 
                 /* Check if sections of the left most class can merge with sections
                  *  of another class & whether the sections are the same type,
                  *  then check for 'can merge' callback
                  */
-                if((!(tmp_sect_cls->flags & H5FS_CLS_MERGE_SYM) || (tmp_sect->type == (*sect)->type))
+                if((!(tmp_sect_cls->flags & H5FS_CLS_MERGE_SYM) || (tmp_sect_node->type == (*sect)->type))
                         && tmp_sect_cls->can_merge) {
                     /* Determine if the sections can merge */
-                    if((status = (*tmp_sect_cls->can_merge)(tmp_sect, *sect, op_data)) < 0)
+                    if((status = (*tmp_sect_cls->can_merge)(tmp_sect_node, *sect, op_data)) < 0)
                         HGOTO_ERROR(H5E_FSPACE, H5E_CANTMERGE, FAIL, "can't check for merging sections")
                     if(status > 0) {
                         /* Sanity check */
                         HDassert(tmp_sect_cls->merge);
 
                         /* Remove 'less than' node from data structures */
-                        if(H5FS_sect_remove_real(fspace, tmp_sect) < 0)
+                        if(H5FS_sect_remove(f, dxpl_id, fspace, tmp_sect_node) < 0)
                             HGOTO_ERROR(H5E_FSPACE, H5E_CANTRELEASE, FAIL, "can't remove section from internal data structures")
 
                         /* Merge the two sections together */
-                        if((*tmp_sect_cls->merge)(tmp_sect, *sect, op_data) < 0)
+                        if((*tmp_sect_cls->merge)(tmp_sect_node, *sect, op_data) < 0)
                             HGOTO_ERROR(H5E_FSPACE, H5E_CANTINSERT, FAIL, "can't merge two sections")
 
                         /* Retarget section pointer to 'less than' node that was merged into */
-                        *sect = tmp_sect;
+                        *sect = tmp_sect_node;
 
                         /* Indicate successful merge occurred */
                         modified = TRUE;
@@ -1220,39 +921,35 @@ H5FS_sect_merge(H5FS_t *fspace, H5FS_section_info_t **sect, void *op_data)
                 } /* end if */
             } /* end if */
 
-            /* Look for section after new (or merged) section, if not already determined */
-            if(!greater_sect_node_valid)
-                greater_sect_node = H5SL_above(fspace->sinfo->merge_list, &(*sect)->addr);
+            /* Look for section after new (or merged) section */
+            tmp_sect_node = H5SL_greater(fspace->sinfo->merge_list, &(*sect)->addr);
 
             /* Check for node after new node able to merge with new node */
-            if(greater_sect_node) {
-                /* Get section for 'greater than' skip list node */
-                tmp_sect = (H5FS_section_info_t *)H5SL_item(greater_sect_node);
-
+            if(tmp_sect_node) {
                 /* Get classes for right & left sections */
                 sect_cls = &fspace->sect_cls[(*sect)->type];
-                tmp_sect_cls = &fspace->sect_cls[tmp_sect->type];
+                tmp_sect_cls = &fspace->sect_cls[tmp_sect_node->type];
 
                 /* Check if sections of the left most class can merge with sections
                  *  of another class & whether the sections are the same type,
                  *  then check for 'can merge' callback
                  */
-                if((!(sect_cls->flags & H5FS_CLS_MERGE_SYM) || ((*sect)->type == tmp_sect->type))
+                if((!(sect_cls->flags & H5FS_CLS_MERGE_SYM) || ((*sect)->type == tmp_sect_node->type))
                         && sect_cls->can_merge) {
 
                     /* Determine if the sections can merge */
-                    if((status = (*sect_cls->can_merge)(*sect, tmp_sect, op_data)) < 0)
+                    if((status = (*sect_cls->can_merge)(*sect, tmp_sect_node, op_data)) < 0)
                         HGOTO_ERROR(H5E_FSPACE, H5E_CANTMERGE, FAIL, "can't check for merging sections")
                     if(status > 0) {
                         /* Sanity check */
                         HDassert(sect_cls->merge);
 
                         /* Remove 'greater than' node from data structures */
-                        if(H5FS_sect_remove_real(fspace, tmp_sect) < 0)
+                        if(H5FS_sect_remove(f, dxpl_id, fspace, tmp_sect_node) < 0)
                             HGOTO_ERROR(H5E_FSPACE, H5E_CANTRELEASE, FAIL, "can't remove section from internal data structures")
 
                         /* Merge the two sections together */
-                        if((*sect_cls->merge)(*sect, tmp_sect, op_data) < 0)
+                        if((*sect_cls->merge)(*sect, tmp_sect_node, op_data) < 0)
                             HGOTO_ERROR(H5E_FSPACE, H5E_CANTINSERT, FAIL, "can't merge two sections")
 
                         /* Indicate successful merge occurred */
@@ -1260,7 +957,7 @@ H5FS_sect_merge(H5FS_t *fspace, H5FS_section_info_t **sect, void *op_data)
                     } /* end if */
                 } /* end if */
             } /* end if */
-	} while(modified);
+        } while(modified);
     } /* end if */
     HDassert(*sect);
 #ifdef QAK
@@ -1281,14 +978,15 @@ HDfprintf(stderr, "%s: Done merging, (*sect) = {%a, %Hu, %u, %s}\n", FUNC, (*sec
 #ifdef QAK
 HDfprintf(stderr, "%s: Can shrink!\n", FUNC);
 #endif /* QAK */
+                /* Look for neighboring section before new section */
+                if(fspace->sinfo->merge_list) {
+                    tmp_sect_node = H5SL_less(fspace->sinfo->merge_list, &(*sect)->addr);
 
-		/* Remove SECT from free-space manager */
-                /* (only possible to happen on second+ pass through loop) */
-		if(remove_sect) {
-		    if(H5FS_sect_remove_real(fspace, *sect) < 0)
-			HGOTO_ERROR(H5E_FSPACE, H5E_CANTRELEASE, FAIL, "can't remove section from internal data structures")
-		    remove_sect = FALSE;
-		} /* end if */
+                    /* Make certain there isn't a section after the new section */
+                    HDassert(H5SL_greater(fspace->sinfo->merge_list, &(*sect)->addr) == NULL);
+                } /* end if */
+                else
+                    tmp_sect_node = NULL;
 
                 /* Shrink the container */
                 /* (callback can indicate that it has discarded the section by setting *sect to NULL) */
@@ -1296,34 +994,20 @@ HDfprintf(stderr, "%s: Can shrink!\n", FUNC);
                 if((*sect_cls->shrink)(sect, op_data) < 0)
                     HGOTO_ERROR(H5E_FSPACE, H5E_CANTINSERT, FAIL, "can't shrink free space container")
 
-                /* If this section was shrunk away, we may need to shrink another section */
-                if(*sect == NULL) {
-                    /* Check for sections on merge list */
-                    if(fspace->sinfo->merge_list)  {
-                        H5SL_node_t *last_node;         /* Last node in merge list */
+                /* Check if the new section was removed */
+                if(*sect == NULL && tmp_sect_node) {
+                    /* Remove 'less than' node from data structures */
+                    if(H5FS_sect_remove(f, dxpl_id, fspace, tmp_sect_node) < 0)
+                        HGOTO_ERROR(H5E_FSPACE, H5E_CANTRELEASE, FAIL, "can't remove section from internal data structures")
 
-                        /* Check for last node in the merge list */
-                        if(NULL != (last_node = H5SL_last(fspace->sinfo->merge_list))) {
-                            /* Get the pointer to the last section, from the last node */
-                            *sect = (H5FS_section_info_t *)H5SL_item(last_node);
-                            HDassert(*sect);
-
-                            /* Indicate that this section needs to be removed if it causes a shrink */
-                            remove_sect = TRUE;
-                        } /* end if */
-                    } /* end if */
-		} /* end if */
+                    *sect = tmp_sect_node;
+                } /* end if */
 
                 /* Indicate successful merge occurred */
                 modified = TRUE;
             } /* end if */
         } /* end if */
     } while(modified && *sect);
-
-    /* Check for section that was shrunk away and next section not shrinking */
-    if(remove_sect && (*sect != NULL))
-	*sect = NULL;
-
 #ifdef QAK
 HDfprintf(stderr, "%s: Done shrinking\n", FUNC);
 if(*sect)
@@ -1359,15 +1043,13 @@ H5FS_sect_add(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace, H5FS_section_info_t *sect
     unsigned flags, void *op_data)
 {
     H5FS_section_class_t *cls;          /* Section's class */
-    hbool_t sinfo_valid = FALSE;        /* Whether the section info is valid */
-    hbool_t sinfo_modified = FALSE;     /* Whether the section info was modified */
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_NOAPI(H5FS_sect_add, FAIL)
 
-#ifdef H5FS_SINFO_DEBUG
+#ifdef QAK
 HDfprintf(stderr, "%s: *sect = {%a, %Hu, %u, %s}\n", FUNC, sect->addr, sect->size, sect->type, (sect->state == H5FS_SECT_LIVE ? "H5FS_SECT_LIVE" : "H5FS_SECT_SERIALIZED"));
-#endif /* H5FS_SINFO_DEBUG */
+#endif /* QAK */
 
     /* Check arguments. */
     HDassert(fspace);
@@ -1375,10 +1057,11 @@ HDfprintf(stderr, "%s: *sect = {%a, %Hu, %u, %s}\n", FUNC, sect->addr, sect->siz
     HDassert(H5F_addr_defined(sect->addr));
     HDassert(sect->size);
 
-    /* Get a pointer to the section info */
-    if(H5FS_sinfo_lock(f, dxpl_id, fspace, H5AC_WRITE) < 0)
-        HGOTO_ERROR(H5E_FSPACE, H5E_CANTGET, FAIL, "can't get section info")
-    sinfo_valid = TRUE;
+    /* Check if we need to go get the sections */
+    if(fspace->sinfo == NULL) {
+        if(NULL == (fspace->sinfo = H5FS_sinfo_pin(f, dxpl_id, fspace)))
+            HGOTO_ERROR(H5E_FSPACE, H5E_CANTDECODE, FAIL, "can't pin sections")
+    } /* end if */
 
     /* Call "add" section class callback, if there is one */
     cls = &fspace->sect_cls[sect->type];
@@ -1389,12 +1072,12 @@ HDfprintf(stderr, "%s: *sect = {%a, %Hu, %u, %s}\n", FUNC, sect->addr, sect->siz
 
     /* Check for merging returned space with existing section node */
     if(flags & H5FS_ADD_RETURNED_SPACE) {
-#ifdef H5FS_SINFO_DEBUG
+#ifdef QAK
 HDfprintf(stderr, "%s: Returning space\n", FUNC);
-#endif /* H5FS_SINFO_DEBUG */
+#endif /* QAK */
 
         /* Attempt to merge returned section with existing sections */
-        if(H5FS_sect_merge(fspace, &sect, op_data) < 0)
+        if(H5FS_sect_merge(f, dxpl_id, fspace, &sect, op_data) < 0)
             HGOTO_ERROR(H5E_FSPACE, H5E_CANTMERGE, FAIL, "can't merge sections")
     } /* end if */
 
@@ -1403,227 +1086,26 @@ HDfprintf(stderr, "%s: Returning space\n", FUNC);
      *  be NULL at this point - QAK)
      */
     if(sect)
-        if(H5FS_sect_link(fspace, sect, flags) < 0)
+        if(H5FS_sect_link(f, dxpl_id, fspace, sect, flags) < 0)
             HGOTO_ERROR(H5E_FSPACE, H5E_CANTINSERT, FAIL, "can't insert free space section into skip list")
 
-#ifdef H5FS_SINFO_DEBUG
-HDfprintf(stderr, "%s: fspace->tot_space = %Hu\n", FUNC, fspace->tot_space);
-#endif /* H5FS_SINFO_DEBUG */
+#ifdef QAK
+HDfprintf(stderr, "%s: fspace->hdr->tot_space = %Hu\n", FUNC, fspace->hdr->tot_space);
+#endif /* QAK */
     /* Mark free space sections as changed */
     /* (if adding sections while deserializing sections, don't set the flag) */
-    if(!(flags & H5FS_ADD_DESERIALIZING))
-        sinfo_modified = TRUE;
+    if(!(flags & H5FS_ADD_DESERIALIZING)) {
+        if(H5AC_mark_pinned_or_protected_entry_dirty(f, fspace->sinfo) < 0)
+            HGOTO_ERROR(H5E_FSPACE, H5E_CANTMARKDIRTY, FAIL, "unable to mark free space sections as dirty")
+    } /* end if */
 
 done:
-    /* Release the section info */
-    if(sinfo_valid && H5FS_sinfo_unlock(f, dxpl_id, fspace, sinfo_modified) < 0)
-        HDONE_ERROR(H5E_FSPACE, H5E_CANTRELEASE, FAIL, "can't release section info")
-
-#ifdef H5FS_DEBUG_ASSERT
+#ifdef H5FS_DEBUG
 if(!(flags & (H5FS_ADD_DESERIALIZING | H5FS_ADD_SKIP_VALID)))
     H5FS_assert(fspace);
-#endif /* H5FS_DEBUG_ASSERT */
-#ifdef H5FS_SINFO_DEBUG
-HDfprintf(stderr, "%s: Leaving, ret_value = %d\n", FUNC, ret_value);
-#endif /* H5FS_SINFO_DEBUG */
+#endif /* H5FS_DEBUG */
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5FS_sect_add() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5FS_sect_try_extend
- *
- * Purpose:	Try to extend a block using space from a section on the free list
- *
- * Return:	Success:	non-negative
- *		Failure:	negative
- *
- * Programmer:	Quincey Koziol
- *              Tuesday, January  8, 2008
- *
- *-------------------------------------------------------------------------
- */
-htri_t
-H5FS_sect_try_extend(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace, haddr_t addr,
-    hsize_t size, hsize_t extra_requested)
-{
-    hbool_t sinfo_valid = FALSE;        /* Whether the section info is valid */
-    hbool_t sinfo_modified = FALSE;     /* Whether the section info was modified */
-    htri_t ret_value = FALSE;           /* Return value */
-
-    FUNC_ENTER_NOAPI(H5FS_sect_try_extend, FAIL)
-
-#ifdef H5FS_SINFO_DEBUG
-HDfprintf(stderr, "%s: addr = %a, size = %Hu, extra_requested = %hu\n", FUNC, addr, size, extra_requested);
-#endif /* H5FS_SINFO_DEBUG */
-
-    /* Check arguments. */
-    HDassert(f);
-    HDassert(fspace);
-    HDassert(H5F_addr_defined(addr));
-    HDassert(size > 0);
-    HDassert(extra_requested > 0);
-
-    /* Check for any sections on free space list */
-#ifdef H5FS_SINFO_DEBUG
-HDfprintf(stderr, "%s: fspace->tot_sect_count = %Hu\n", FUNC, fspace->tot_sect_count);
-HDfprintf(stderr, "%s: fspace->serial_sect_count = %Hu\n", FUNC, fspace->serial_sect_count);
-HDfprintf(stderr, "%s: fspace->ghost_sect_count = %Hu\n", FUNC, fspace->ghost_sect_count);
-#endif /* H5FS_SINFO_DEBUG */
-    if(fspace->tot_sect_count > 0) {
-        H5FS_section_info_t *sect;      /* Temporary free space section */
-
-        /* Get a pointer to the section info */
-        if(H5FS_sinfo_lock(f, dxpl_id, fspace, H5AC_WRITE) < 0)
-            HGOTO_ERROR(H5E_FSPACE, H5E_CANTGET, FAIL, "can't get section info")
-        sinfo_valid = TRUE;
-
-
-/*
-
-Pseudo-code for algorithm:
-
-_section_ = <Get pointer to section with address > _region.addr_>
-if(_section_)
-    if(_section_ adjoins _region_ && _section.size_ >= _extra_requested_)
-        <remove section from data structures>
-        if(_section.size_ > _extra_requested_)
-            if(<can adjust _section_>)
-                <adjust _section_ by _extra_requested_>
-                <add adjusted section back to data structures>
-            else
-                <re-add UNadjusted section back to data structures>
-                <error>
-        <mark free space sections as changed in metadata cache>
-
-*/
-        /* Look for a section after block to extend */
-        if((sect = (H5FS_section_info_t *)H5SL_greater(fspace->sinfo->merge_list, &addr))) {
-            /* Check if this section adjoins the block and is large enough to
-             *  fulfill extension request.
-             *
-             * (Note: we assume that the section is fully merged with any
-             *  possible neighboring nodes and is not at the end of the file
-             *  (or it would have been eliminated), etc)
-             */
-            if(sect->size >= extra_requested && (addr + size) == sect->addr) {
-                H5FS_section_class_t *cls;          /* Section's class */
-
-                /* Remove section from data structures */
-                if(H5FS_sect_remove_real(fspace, sect) < 0)
-                    HGOTO_ERROR(H5E_FSPACE, H5E_CANTRELEASE, FAIL, "can't remove section from internal data structures")
-
-                /* Get class for section */
-                cls = &fspace->sect_cls[sect->type];
-
-                /* Check for the section needing to be adjusted and re-added */
-                /* (Note: we should probably add a can_adjust/adjust callback
-                 *      to the section class structure, but we don't need it
-                 *      for the current usage, so I've deferred messing with
-                 *      it. - QAK - 2008/01/08)
-                 */
-                if(sect->size > extra_requested) {
-                    /* Sanity check (for now) */
-                    HDassert(cls->flags & H5FS_CLS_ADJUST_OK);
-
-                    /* Adjust section by amount requested */
-                    sect->addr += extra_requested;
-                    sect->size -= extra_requested;
-
-                    /* Re-add adjusted section to free sections data structures */
-                    if(H5FS_sect_link(fspace, sect, 0) < 0)
-                        HGOTO_ERROR(H5E_FSPACE, H5E_CANTINSERT, FAIL, "can't insert free space section into skip list")
-                } /* end if */
-                else {
-                    /* Sanity check */
-                    HDassert(sect->size == extra_requested);
-
-                    /* Exact match, so just free section */
-                    if((*cls->free)(sect) < 0)
-                        HGOTO_ERROR(H5E_FSPACE, H5E_CANTFREE, FAIL, "can't free section")
-                } /* end else */
-
-                /* Note that we modified the section info */
-                sinfo_modified = TRUE;
-
-                /* Indicate success */
-                HGOTO_DONE(TRUE);
-            } /* end if */
-        } /* end if */
-    } /* end if */
-
-done:
-    /* Release the section info */
-    if(sinfo_valid && H5FS_sinfo_unlock(f, dxpl_id, fspace, sinfo_modified) < 0)
-        HDONE_ERROR(H5E_FSPACE, H5E_CANTRELEASE, FAIL, "can't release section info")
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5FS_sect_try_extend() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5FS_sect_try_merge
- *
- * Purpose:	Try to merge/shrink a block 
- *
- * Return:	TRUE:		merged/shrunk
- *		FALSE: 	 	not merged/not shrunk
- *		Failure:	negative
- *
- * Programmer:	Vailin Choi; June 10, 2009
- *
- *-------------------------------------------------------------------------
- */
-htri_t
-H5FS_sect_try_merge(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace, H5FS_section_info_t *sect,
-    unsigned flags, void *op_data)
-{
-    hbool_t sinfo_valid = FALSE;        /* Whether the section info is valid */
-    hbool_t sinfo_modified = FALSE;     /* Whether the section info was modified */
-    hsize_t saved_fs_size;		/* copy the free-space section size */
-    htri_t ret_value = FALSE;           /* Return value */
-
-    FUNC_ENTER_NOAPI(H5FS_sect_try_merge, FAIL)
-
-    /* Check arguments. */
-    HDassert(f);
-    HDassert(fspace);
-    HDassert(sect);
-    HDassert(H5F_addr_defined(sect->addr));
-    HDassert(sect->size);
-
-    /* Get a pointer to the section info */
-    if(H5FS_sinfo_lock(f, dxpl_id, fspace, H5AC_WRITE) < 0)
-	HGOTO_ERROR(H5E_FSPACE, H5E_CANTGET, FAIL, "can't get section info")
-    sinfo_valid = TRUE;
-    saved_fs_size = sect->size;
-
-    /* Attempt to merge/shrink section with existing sections */
-    if(H5FS_sect_merge(fspace, &sect, op_data) < 0)
-	HGOTO_ERROR(H5E_FSPACE, H5E_CANTMERGE, FAIL, "can't merge sections")
-
-    /* Check if section is shrunk and/or merged away completely */
-    if(!sect) {
-	sinfo_modified = TRUE;
-	HGOTO_DONE(TRUE)
-    } /* end if */
-    else {
-        /* Check if section is merged */
-        if(sect->size > saved_fs_size) {
-            if(H5FS_sect_link(fspace, sect, flags) < 0)
-                HGOTO_ERROR(H5E_FSPACE, H5E_CANTINSERT, FAIL, "can't insert free space section into skip list")
-            sinfo_modified = TRUE;
-            HGOTO_DONE(TRUE)
-        } /* end if */
-    } /* end else */
-
-done:
-    /* Release the section info */
-    if(sinfo_valid && H5FS_sinfo_unlock(f, dxpl_id, fspace, sinfo_modified) < 0)
-        HDONE_ERROR(H5E_FSPACE, H5E_CANTRELEASE, FAIL, "can't release section info")
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5FS_sect_try_merge() */
 
 
 /*-------------------------------------------------------------------------
@@ -1639,11 +1121,6 @@ done:
  * Programmer:	Quincey Koziol
  *              Monday, March 20, 2006
  *
- * Modifications:
- *	Vailin Choi, July 29th, 2008
- *	  Modified to handle alignment by going through each bin to find
- *	  a section that is big enough to fulfill "request+fragment for alignment"
- *
  *-------------------------------------------------------------------------
  */
 static htri_t
@@ -1652,10 +1129,6 @@ H5FS_sect_find_node(H5FS_t *fspace, hsize_t request, H5FS_section_info_t **node)
     H5FS_node_t *fspace_node;        /* Free list size node */
     unsigned bin;                   /* Bin to put the free space section in */
     htri_t ret_value = FALSE;       /* Return value */
-
-    H5SL_node_t *curr_size_node=NULL;
-    const H5FS_section_class_t *cls;    /* Class of section */
-    hsize_t alignment;
 
     FUNC_ENTER_NOAPI_NOINIT(H5FS_sect_find_node)
 
@@ -1669,113 +1142,43 @@ H5FS_sect_find_node(H5FS_t *fspace, hsize_t request, H5FS_section_info_t **node)
     /* Determine correct bin which holds items of at least the section's size */
     bin = H5V_log2_gen(request);
     HDassert(bin < fspace->sinfo->nbins);
+    while(bin < fspace->sinfo->nbins && fspace->sinfo->bins[bin].bin_list == NULL)
+        bin++;
+
+    /* Find the first free space section that is large enough to fulfill request */
+    /* (Since the bins use skip lists to track the sizes of the address-ordered
+     *  lists, this is actually a "best fit" algorithm)
+     */
 #ifdef QAK
 HDfprintf(stderr, "%s: fspace->sinfo->nbins = %u\n", FUNC, fspace->sinfo->nbins);
 HDfprintf(stderr, "%s: bin = %u\n", FUNC, bin);
 #endif /* QAK */
-    alignment = fspace->alignment;
-    if(!((alignment > 1) && (request >= fspace->threshold)))
-	alignment = 0; /* no alignment */
+    if(bin < fspace->sinfo->nbins)
+        do {
+            /* Look for large enough free space section in this bin */
+            if(fspace->sinfo->bins[bin].bin_list)
+                /* Check for large enough list of sections on list */
+                if((fspace_node = H5SL_greater(fspace->sinfo->bins[bin].bin_list, &request))) {
+                    const H5FS_section_class_t *cls;    /* Class of section */
 
-    do {
-        /* Check if there's any sections in this bin */
-	if(fspace->sinfo->bins[bin].bin_list) {
+                    /* Take first node off of the list (ie. node w/lowest address) */
+                    if(NULL == (*node = H5SL_remove_first(fspace_node->sect_list)))
+                        HGOTO_ERROR(H5E_FSPACE, H5E_CANTREMOVE, FAIL, "can't remove free space node from skip list")
 
-	    if (!alignment) { /* no alignment */
-		/* Find the first free space section that is large enough to fulfill request */
-		/* (Since the bins use skip lists to track the sizes of the address-ordered
-		 *  lists, this is actually a "best fit" algorithm)
-		 */
-		/* Look for large enough free space section in this bin */
-		if((fspace_node = (H5FS_node_t *)H5SL_greater(fspace->sinfo->bins[bin].bin_list, &request))) {
-		    /* Take first node off of the list (ie. node w/lowest address) */
-		    if(NULL == (*node = (H5FS_section_info_t *)H5SL_remove_first(fspace_node->sect_list)))
-			HGOTO_ERROR(H5E_FSPACE, H5E_CANTREMOVE, FAIL, "can't remove free space node from skip list")
+                    /* Get section's class */
+                    cls = &fspace->sect_cls[(*node)->type];
 
-		    /* Get section's class */
-		    cls = &fspace->sect_cls[(*node)->type];
-		    /* Decrement # of sections in section size node */
-		    if(H5FS_size_node_decr(fspace->sinfo, bin, fspace_node, cls) < 0)
-			HGOTO_ERROR(H5E_FSPACE, H5E_CANTREMOVE, FAIL, "can't remove free space size node from skip list")
-		    if(H5FS_sect_unlink_rest(fspace, cls, *node) < 0)
-			HGOTO_ERROR(H5E_FSPACE, H5E_CANTFREE, FAIL, "can't remove section from non-size tracking data structures")
-		    /* Indicate that we found a node for the request */
-		    HGOTO_DONE(TRUE)
-		} /* end if */
-	    }  /* end if */
-            else { /* alignment is set */
-                /* get the first node of a certain size in this bin */
-                curr_size_node = H5SL_first(fspace->sinfo->bins[bin].bin_list);
-                while (curr_size_node != NULL) {
-                    H5FS_node_t *curr_fspace_node=NULL;
-                    H5SL_node_t *curr_sect_node=NULL;
+                    /* Decrement # of sections in section size node */
+                    if(H5FS_size_node_decr(fspace->sinfo, bin, fspace_node, cls) < 0)
+                        HGOTO_ERROR(H5E_FSPACE, H5E_CANTREMOVE, FAIL, "can't remove free space size node from skip list")
 
-                    /* Get the free space node for free space sections of the same size */
-                    curr_fspace_node = (H5FS_node_t *)H5SL_item(curr_size_node);
+                    /* Indicate that we found a node for the request */
+                    HGOTO_DONE(TRUE)
+                } /* end if */
 
-                    /* Get the Skip list which holds  pointers to actual free list sections */
-                    curr_sect_node = (H5SL_node_t *)H5SL_first(curr_fspace_node->sect_list);
-
-                    while(curr_sect_node != NULL) {
-                        H5FS_section_info_t *curr_sect=NULL;
-                        hsize_t mis_align=0, frag_size=0;
-                        H5FS_section_info_t *split_sect=NULL;
-
-                        /* Get section node */
-                        curr_sect = (H5FS_section_info_t *)H5SL_item(curr_sect_node);
-
-                        HDassert(H5F_addr_defined(curr_sect->addr));
-                        HDassert(curr_fspace_node->sect_size == curr_sect->size);
-
-                        cls = &fspace->sect_cls[curr_sect->type];
-
-                        HDassert(alignment);
-                        HDassert(cls);
-
-                        if ((mis_align = curr_sect->addr % alignment))
-                            frag_size = alignment - mis_align;
-
-                        if ((curr_sect->size >= (request + frag_size)) && (cls->split)) {
-                            /* remove the section with aligned address */
-                            if(NULL == (*node = (H5FS_section_info_t *)H5SL_remove(curr_fspace_node->sect_list, &curr_sect->addr)))
-                                HGOTO_ERROR(H5E_FSPACE, H5E_CANTREMOVE, FAIL, "can't remove free space node from skip list")
-                            /* Decrement # of sections in section size node */
-                            if(H5FS_size_node_decr(fspace->sinfo, bin, curr_fspace_node, cls) < 0)
-                                HGOTO_ERROR(H5E_FSPACE, H5E_CANTREMOVE, FAIL, "can't remove free space size node from skip list")
-
-                            if(H5FS_sect_unlink_rest(fspace, cls, *node) < 0)
-                                HGOTO_ERROR(H5E_FSPACE, H5E_CANTFREE, FAIL, "can't remove section from non-size tracking data structures")
-
-                            /*
-                             * The split() callback splits NODE into 2 sections:
-                             *  split_sect is the unused fragment for aligning NODE
-                             *  NODE's addr & size are updated to point to the remaining aligned section
-                             * split_sect is re-added to free-space
-                             */
-                            if (mis_align) {
-                                split_sect = cls->split(*node, frag_size);
-                                if((H5FS_sect_link(fspace, split_sect, 0) < 0))
-                                    HGOTO_ERROR(H5E_FSPACE, H5E_CANTINSERT, FAIL, "can't insert free space section into skip list")
-                                /* sanity check */
-                                HDassert(split_sect->addr < (*node)->addr);
-                                HDassert(request <= (*node)->size);
-                            }
-                            /* Indicate that we found a node for the request */
-                            HGOTO_DONE(TRUE)
-                        }
-
-                        /* Get the next section node in the list */
-                        curr_sect_node = H5SL_next(curr_sect_node);
-                    } /* end while of curr_sect_node */
-
-                    /* Get the next size node in the bin */
-                    curr_size_node = H5SL_next(curr_size_node);
-                } /* end while of curr_size_node */
-	    }  /* else of alignment */
-	} /* if bin_list */
-	/* Advance to next larger bin */
-        bin++;
-    } while(bin < fspace->sinfo->nbins);
+            /* Advance to next larger bin */
+            bin++;
+        } while(bin < fspace->sinfo->nbins);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1795,18 +1198,12 @@ done:
  * Programmer:	Quincey Koziol
  *              Tuesday, March  7, 2006
  *
- * Modifications:
- *	Vailin Choi, July 29th 2008
- *	  Move H5FS_sect_unlink_rest() to H5FS_sect_find_node()
- *
  *-------------------------------------------------------------------------
  */
 htri_t
 H5FS_sect_find(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace, hsize_t request,
     H5FS_section_info_t **node)
 {
-    hbool_t sinfo_valid = FALSE;        /* Whether the section info is valid */
-    hbool_t sinfo_modified = FALSE;     /* Whether the section info was modified */
     htri_t ret_value = FALSE;           /* Return value */
 
     FUNC_ENTER_NOAPI(H5FS_sect_find, FAIL)
@@ -1828,10 +1225,11 @@ HDfprintf(stderr, "%s: fspace->serial_sect_count = %Hu\n", FUNC, fspace->serial_
 HDfprintf(stderr, "%s: fspace->ghost_sect_count = %Hu\n", FUNC, fspace->ghost_sect_count);
 #endif /* QAK */
     if(fspace->tot_sect_count > 0) {
-        /* Get a pointer to the section info */
-        if(H5FS_sinfo_lock(f, dxpl_id, fspace, H5AC_WRITE) < 0)
-            HGOTO_ERROR(H5E_FSPACE, H5E_CANTGET, FAIL, "can't get section info")
-        sinfo_valid = TRUE;
+        /* Check if we need to go get the sections */
+        if(fspace->sinfo == NULL) {
+            if(NULL == (fspace->sinfo = H5FS_sinfo_pin(f, dxpl_id, fspace)))
+                HGOTO_ERROR(H5E_FSPACE, H5E_CANTDECODE, FAIL, "can't pin sections")
+        } /* end if */
 
         /* Look for node in bins */
         if((ret_value = H5FS_sect_find_node(fspace, request, node)) < 0)
@@ -1839,24 +1237,206 @@ HDfprintf(stderr, "%s: fspace->ghost_sect_count = %Hu\n", FUNC, fspace->ghost_se
 
         /* Decrement # of sections on free list, if we found an object */
         if(ret_value > 0) {
-            /* Note that we've modified the section info */
-            sinfo_modified = TRUE;
+            const H5FS_section_class_t *cls;    /* Class of section */
+
+            /* Get section's class */
+            cls = &fspace->sect_cls[(*node)->type];
+
+            /* Update rest of free space manager data structures for node removal */
+            if(H5FS_sect_unlink_rest(f, dxpl_id, fspace, cls, *node) < 0)
+                HGOTO_ERROR(H5E_FSPACE, H5E_CANTFREE, FAIL, "can't remove section from non-size tracking data structures")
 #ifdef QAK
 HDfprintf(stderr, "%s: (*node)->size = %Hu, (*node)->addr = %a, (*node)->type = %u\n", FUNC, (*node)->size, (*node)->addr, (*node)->type);
 #endif /* QAK */
-	}
+        } /* end if */
     } /* end if */
 
 done:
-    /* Release the section info */
-    if(sinfo_valid && H5FS_sinfo_unlock(f, dxpl_id, fspace, sinfo_modified) < 0)
-        HDONE_ERROR(H5E_FSPACE, H5E_CANTRELEASE, FAIL, "can't release section info")
-
-#ifdef H5FS_DEBUG_ASSERT
+#ifdef H5FS_DEBUG
     H5FS_assert(fspace);
-#endif /* H5FS_DEBUG_ASSERT */
+#endif /* H5FS_DEBUG */
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5FS_sect_find() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5FS_sect_serialize_size
+ *
+ * Purpose:	Determine serialized size of all sections in free space manager
+ *              And adjust space on disk for storing serialized sections
+ *
+ * Return:	Success:	non-negative
+ *		Failure:	negative
+ *
+ * Programmer:	Quincey Koziol
+ *              Monday, May  8, 2006
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5FS_sect_serialize_size(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace)
+{
+    herr_t ret_value = SUCCEED;         /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT(H5FS_sect_serialize_size)
+
+    /* Check arguments. */
+    HDassert(fspace);
+#ifdef QAK
+HDfprintf(stderr, "%s: Check 1.0 - fspace->sect_size = %Hu\n", FUNC, fspace->sect_size);
+HDfprintf(stderr, "%s: fspace->alloc_sect_size = %Hu\n", FUNC, fspace->alloc_sect_size);
+HDfprintf(stderr, "%s: fspace->sinfo->serial_size_count = %Zu\n", FUNC, fspace->sinfo->serial_size_count);
+#endif /* QAK */
+
+    /* Compute the size of the buffer required to serialize all the sections */
+    if(fspace->serial_sect_count > 0) {
+        size_t sect_buf_size;               /* Section buffer size */
+
+        /* Serialized sections prefix */
+        sect_buf_size = fspace->sinfo->sect_prefix_size;
+
+        /* Count for each differently sized serializable section */
+#ifdef QAK
+HDfprintf(stderr, "%s: fspace->sinfo->serial_size_count = %Zu\n", FUNC, fspace->sinfo->serial_size_count);
+HDfprintf(stderr, "%s: fspace->serial_sect_count = %Hu\n", FUNC, fspace->serial_sect_count);
+#endif /* QAK */
+        sect_buf_size += fspace->sinfo->serial_size_count * H5V_limit_enc_size((uint64_t)fspace->serial_sect_count);
+
+        /* Size for each differently sized serializable section */
+        sect_buf_size += fspace->sinfo->serial_size_count * fspace->sinfo->sect_len_size;
+
+        /* Offsets of each section in address space */
+        sect_buf_size += fspace->serial_sect_count * fspace->sinfo->sect_off_size;
+
+        /* Class of each section */
+        sect_buf_size += fspace->serial_sect_count * 1;
+
+        /* Extra space required to serialize each section */
+        sect_buf_size += fspace->sinfo->serial_size;
+
+        /* Update section size in header */
+        fspace->sect_size = sect_buf_size;
+    } /* end if */
+    else
+        /* Reset section size in header */
+        fspace->sect_size = H5FS_SINFO_SIZE_DEFAULT;
+
+#ifdef QAK
+HDfprintf(stderr, "%s: Check 2.0 - fspace->sect_size = %Hu\n", FUNC, fspace->sect_size);
+HDfprintf(stderr, "%s: fspace->alloc_sect_size = %Hu\n", FUNC, fspace->alloc_sect_size);
+#endif /* QAK */
+    if(fspace->sect_size > fspace->alloc_sect_size) {
+        size_t new_size;        /* New size of space for serialized sections */
+        haddr_t old_addr;       /* Old address of serialized sections */
+
+/* Currently, the old block data is "thrown away" after the space is reallocated,
+ * so avoid data copy in H5MF_realloc() call by just free'ing the space and
+ * allocating new space.
+ *
+ * This also keeps the file smaller, by freeing the space and then
+ * allocating new space, instead of vice versa (in H5MF_realloc).
+ *
+ * QAK - 5/ 8/2006
+ */
+        /* Free previous serialized sections disk space */
+        old_addr = fspace->sect_addr;
+        if(H5MF_xfree(f, H5FD_MEM_FSPACE_SINFO, dxpl_id, old_addr, fspace->alloc_sect_size) < 0)
+            HGOTO_ERROR(H5E_FSPACE, H5E_CANTFREE, FAIL, "unable to free free space sections")
+
+        /* Compute new size */
+        H5_ASSIGN_OVERFLOW(/* To: */ new_size, /* From: */ fspace->alloc_sect_size, /* From: */ hsize_t, /* To: */ size_t);
+        while(new_size < fspace->sect_size)
+            new_size *= (double)fspace->expand_percent / 100.0;
+        fspace->alloc_sect_size = new_size;
+
+        /* Allocate space for the new serialized sections on disk */
+#ifdef QAK
+HDfprintf(stderr, "%s: Allocating space for larger serialized sections, new_size = %Zu\n", FUNC, new_size);
+HDfprintf(stderr, "%s: fspace->sect_size = %Hu\n", FUNC, fspace->sect_size);
+#endif /* QAK */
+        if(HADDR_UNDEF == (fspace->sect_addr = H5MF_alloc(f, H5FD_MEM_FSPACE_SINFO, dxpl_id, (hsize_t)fspace->alloc_sect_size)))
+            HGOTO_ERROR(H5E_FSPACE, H5E_NOSPACE, FAIL, "file allocation failed for free space sections")
+#ifdef QAK
+HDfprintf(stderr, "%s: old_addr = %a, fspace->sect_addr = %a\n", FUNC, old_addr, fspace->sect_addr);
+#endif /* QAK */
+
+        /* Move object in cache, if it actually was relocated */
+        if(H5F_addr_ne(fspace->sect_addr, old_addr)) {
+            if(H5AC_rename(f, H5AC_FSPACE_SINFO, old_addr, fspace->sect_addr) < 0)
+                HGOTO_ERROR(H5E_FSPACE, H5E_CANTRENAME, FAIL, "unable to move free space section info")
+        } /* end if */
+        else {
+            /* Mark free space section as dirty */
+            if(H5AC_mark_pinned_or_protected_entry_dirty(f, fspace->sinfo) < 0)
+                HGOTO_ERROR(H5E_FSPACE, H5E_CANTMARKDIRTY, FAIL, "unable to mark free space section info as dirty")
+        } /* end else */
+
+        /* Mark free space header as dirty */
+        if(H5AC_mark_pinned_or_protected_entry_dirty(f, fspace) < 0)
+            HGOTO_ERROR(H5E_FSPACE, H5E_CANTMARKDIRTY, FAIL, "unable to mark free space header as dirty")
+    } /* end if */
+    else {
+        size_t decrease_threshold;      /* Size threshold for decreasing serialized section size */
+        haddr_t old_addr;               /* Old address of serialized sections */
+
+        /* Compute the threshold for decreasing the sections' serialized size */
+        decrease_threshold = (size_t)(((size_t)fspace->alloc_sect_size * (double)fspace->shrink_percent) / 100.0);
+
+        if(fspace->alloc_sect_size > H5FS_SINFO_SIZE_DEFAULT &&
+                fspace->sect_size < decrease_threshold) {
+            size_t new_size = 0;        /* New size of space for serialized sections */
+
+/* Currently, the old block data is "thrown away" after the space is reallocated,
+ * so avoid data copy in H5MF_realloc() call by just free'ing the space and
+ * allocating new space.
+ *
+ * This also keeps the file smaller, by freeing the space and then
+ * allocating new space, instead of vice versa (in H5MF_realloc).
+ *
+ * QAK - 5/ 8/2006
+ */
+            /* Free previous serialized sections disk space */
+            old_addr = fspace->sect_addr;
+            if(H5MF_xfree(f, H5FD_MEM_FSPACE_SINFO, dxpl_id, old_addr, fspace->alloc_sect_size) < 0)
+                HGOTO_ERROR(H5E_FSPACE, H5E_CANTFREE, FAIL, "unable to free free space sections")
+
+            /* Compute new size */
+            while(fspace->sect_size < decrease_threshold) {
+                new_size = decrease_threshold;
+
+                decrease_threshold *= (double)fspace->shrink_percent / 100.0;
+            } /* end while */
+            if(new_size < H5FS_SINFO_SIZE_DEFAULT)
+                new_size = H5FS_SINFO_SIZE_DEFAULT;
+            fspace->alloc_sect_size = new_size;
+
+            /* Allocate space for the new serialized sections on disk */
+#ifdef QAK
+HDfprintf(stderr, "%s: Allocating space for smaller serialized sections, new_size = %Zu\n", FUNC, new_size);
+#endif /* QAK */
+            if(HADDR_UNDEF == (fspace->sect_addr = H5MF_alloc(f, H5FD_MEM_FSPACE_SINFO, dxpl_id, (hsize_t)fspace->alloc_sect_size)))
+                HGOTO_ERROR(H5E_FSPACE, H5E_NOSPACE, FAIL, "file allocation failed for free space sections")
+
+            /* Move object in cache, if it actually was relocated */
+            if(H5F_addr_ne(fspace->sect_addr, old_addr)) {
+                if(H5AC_rename(f, H5AC_FSPACE_SINFO, old_addr, fspace->sect_addr) < 0)
+                    HGOTO_ERROR(H5E_FSPACE, H5E_CANTRENAME, FAIL, "unable to move free space section info")
+            } /* end if */
+            else {
+                /* Mark free space section as dirty */
+                if(H5AC_mark_pinned_or_protected_entry_dirty(f, fspace->sinfo) < 0)
+                    HGOTO_ERROR(H5E_FSPACE, H5E_CANTMARKDIRTY, FAIL, "unable to mark free space section info as dirty")
+            } /* end else */
+
+            /* Mark free space header as dirty */
+            if(H5AC_mark_pinned_or_protected_entry_dirty(f, fspace) < 0)
+                HGOTO_ERROR(H5E_FSPACE, H5E_CANTMARKDIRTY, FAIL, "unable to mark free space header as dirty")
+        } /* end if */
+    } /* end else */
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5FS_sect_serialize_size() */
 
 
 /*-------------------------------------------------------------------------
@@ -1953,8 +1533,7 @@ done:
 herr_t
 H5FS_sect_iterate(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace, H5FS_operator_t op, void *op_data)
 {
-    H5FS_iter_ud_t udata;               /* User data for callbacks */
-    hbool_t sinfo_valid = FALSE;        /* Whether the section info is valid */
+    H5FS_iter_ud_t udata;              /* User data for callbacks */
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5FS_sect_iterate)
@@ -1963,8 +1542,14 @@ H5FS_sect_iterate(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace, H5FS_operator_t op, v
     HDassert(fspace);
     HDassert(op);
 
+    /* Check if we need to go get the sections */
+    if(fspace->sinfo == NULL) {
+        if(NULL == (fspace->sinfo = H5FS_sinfo_pin(f, dxpl_id, fspace)))
+            HGOTO_ERROR(H5E_FSPACE, H5E_CANTDECODE, FAIL, "can't pin sections")
+    } /* end if */
+
 #ifdef QAK
-HDfprintf(stderr, "%s: fspace->tot_sect_count = %Hu\n", FUNC, fspace->tot_sect_count);
+HDfprintf(stderr, "%s: fspace->hdr->sect_count = %Hu\n", FUNC, fspace->hdr->sect_count);
 #endif /* QAK */
 
     /* Set up user data for iterator */
@@ -1975,11 +1560,6 @@ HDfprintf(stderr, "%s: fspace->tot_sect_count = %Hu\n", FUNC, fspace->tot_sect_c
     /* Iterate over sections, if there are any */
     if(fspace->tot_sect_count) {
         unsigned bin;           /* Current bin we are on */
-
-        /* Get a pointer to the section info */
-        if(H5FS_sinfo_lock(f, dxpl_id, fspace, H5AC_READ) < 0)
-            HGOTO_ERROR(H5E_FSPACE, H5E_CANTGET, FAIL, "can't get section info")
-        sinfo_valid = TRUE;
 
         /* Iterate over all the bins */
 #ifdef QAK
@@ -1996,20 +1576,17 @@ HDfprintf(stderr, "%s: Iterate over section bins\n", FUNC);
     } /* end if */
 
 done:
-    /* Release the section info */
-    if(sinfo_valid && H5FS_sinfo_unlock(f, dxpl_id, fspace, FALSE) < 0)
-        HDONE_ERROR(H5E_FSPACE, H5E_CANTRELEASE, FAIL, "can't release section info")
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5FS_sect_iterate() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5FS_sect_stats
+ * Function:	H5FS_get_sect_count
  *
- * Purpose:	Retrieve info about the sections managed
+ * Purpose:	Retrieve the number of sections managed
  *
  * Return:	Success:	non-negative
+ *
  *		Failure:	negative
  *
  * Programmer:	Quincey Koziol
@@ -2018,21 +1595,19 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5FS_sect_stats(const H5FS_t *fspace, hsize_t *tot_space, hsize_t *nsects)
+H5FS_get_sect_count(const H5FS_t *fspace, hsize_t *nsects)
 {
-    FUNC_ENTER_NOAPI_NOFUNC(H5FS_sect_stats)
+    FUNC_ENTER_NOAPI_NOFUNC(H5FS_get_sect_count)
 
     /* Check arguments. */
     HDassert(fspace);
+    HDassert(nsects);
 
-    /* Get the stats desired */
-    if(tot_space)
-        *tot_space = fspace->tot_space;
-    if(nsects)
-        *nsects = fspace->tot_sect_count;
+    /* Get the section count */
+    *nsects = fspace->tot_sect_count;
 
     FUNC_LEAVE_NOAPI(SUCCEED)
-} /* H5FS_sect_stats() */
+} /* H5FS_get_sect_count() */
 
 
 /*-------------------------------------------------------------------------
@@ -2057,21 +1632,16 @@ H5FS_sect_change_class(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace,
     const H5FS_section_class_t *old_cls;        /* Old class of section */
     const H5FS_section_class_t *new_cls;        /* New class of section */
     unsigned old_class;                         /* Old class ID of section */
-    hbool_t sinfo_valid = FALSE;                /* Whether the section info is valid */
     herr_t ret_value = SUCCEED;                 /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5FS_sect_change_class)
 
     /* Check arguments. */
     HDassert(fspace);
+    HDassert(fspace->sinfo);
     HDassert(sect);
     HDassert(sect->type < fspace->nclasses);
     HDassert(new_class < fspace->nclasses);
-
-    /* Get a pointer to the section info */
-    if(H5FS_sinfo_lock(f, dxpl_id, fspace, H5AC_WRITE) < 0)
-        HGOTO_ERROR(H5E_FSPACE, H5E_CANTGET, FAIL, "can't get section info")
-    sinfo_valid = TRUE;
 
     /* Get class info */
     old_class = sect->type;
@@ -2106,7 +1676,7 @@ HDfprintf(stderr, "%s: to_ghost = %u\n", FUNC, to_ghost);
         HDassert(fspace->sinfo->bins[bin].bin_list);
 
         /* Get space node for section's size */
-        fspace_node = (H5FS_node_t *)H5SL_search(fspace->sinfo->bins[bin].bin_list, &sect->size);
+        fspace_node = H5SL_search(fspace->sinfo->bins[bin].bin_list, &sect->size);
         HDassert(fspace_node);
 
         /* Adjust serializable/ghost counts */
@@ -2169,7 +1739,7 @@ HDfprintf(stderr, "%s: to_mergable = %u\n", FUNC, to_mergable);
 HDfprintf(stderr, "%s: inserting object into merge list, sect->type = %u\n", FUNC, (unsigned)sect->type);
 #endif /* QAK */
             if(fspace->sinfo->merge_list == NULL)
-                if(NULL == (fspace->sinfo->merge_list = H5SL_create(H5SL_TYPE_HADDR)))
+                if(NULL == (fspace->sinfo->merge_list = H5SL_create(H5SL_TYPE_HADDR, 0.5, (size_t)H5FS_DEFAULT_SKIPLIST_HEIGHT)))
                     HGOTO_ERROR(H5E_FSPACE, H5E_CANTCREATE, FAIL, "can't create skip list for merging free space sections")
             if(H5SL_insert(fspace->sinfo->merge_list, sect, &sect->addr) < 0)
                 HGOTO_ERROR(H5E_FSPACE, H5E_CANTINSERT, FAIL, "can't insert free space node into merging skip list")
@@ -2180,7 +1750,7 @@ HDfprintf(stderr, "%s: inserting object into merge list, sect->type = %u\n", FUN
 #ifdef QAK
 HDfprintf(stderr, "%s: removing object from merge list, sect->type = %u\n", FUNC, (unsigned)sect->type);
 #endif /* QAK */
-            tmp_sect_node = (H5FS_section_info_t *)H5SL_remove(fspace->sinfo->merge_list, &sect->addr);
+            tmp_sect_node = H5SL_remove(fspace->sinfo->merge_list, &sect->addr);
             if(tmp_sect_node == NULL || tmp_sect_node != sect)
                 HGOTO_ERROR(H5E_FSPACE, H5E_NOTFOUND, FAIL, "can't find section node on size list")
         } /* end else */
@@ -2194,18 +1764,18 @@ HDfprintf(stderr, "%s: removing object from merge list, sect->type = %u\n", FUNC
     fspace->sinfo->serial_size += fspace->sect_cls[new_class].serial_size;
 
     /* Update current space used for free space sections */
-    if(H5FS_sect_serialize_size(fspace) < 0)
+    if(H5FS_sect_serialize_size(f, dxpl_id, fspace) < 0)
         HGOTO_ERROR(H5E_FSPACE, H5E_CANTCOMPUTE, FAIL, "can't adjust free space section size on disk")
+    
+    /* Mark free space sections as dirty */
+    if(H5AC_mark_pinned_or_protected_entry_dirty(f, fspace->sinfo) < 0)
+        HGOTO_ERROR(H5E_FSPACE, H5E_CANTMARKDIRTY, FAIL, "unable to mark free space sections as dirty")
 
 done:
-    /* Release the section info */
-    if(sinfo_valid && H5FS_sinfo_unlock(f, dxpl_id, fspace, TRUE) < 0)
-        HDONE_ERROR(H5E_FSPACE, H5E_CANTRELEASE, FAIL, "can't release section info")
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5FS_sect_change_class() */
 
-#ifdef H5FS_DEBUG_ASSERT
+#ifdef H5FS_DEBUG
 
 /*-------------------------------------------------------------------------
  * Function:	H5FS_sect_assert
@@ -2226,8 +1796,8 @@ H5FS_sect_assert(const H5FS_t *fspace)
     hsize_t separate_obj;       /* The number of separate objects managed */
 
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5FS_sect_assert)
-#ifndef QAK
-HDfprintf(stderr, "%s: fspace->tot_sect_count = %Hu\n", "H5FS_sect_assert", fspace->tot_sect_count);
+#ifdef QAK
+HDfprintf(stderr, "%s: fspace->hdr->tot_sect_count = %Hu\n", "H5FS_sect_assert", fspace->hdr->tot_sect_count);
 #endif /* QAK */
 
     /* Initialize state */
@@ -2355,5 +1925,5 @@ HDfprintf(stderr, "%s: sect->size = %Hu, sect->addr = %a, sect->type = %u\n", "H
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5FS_sect_assert() */
-#endif /* H5FS_DEBUG_ASSERT */
+#endif /* H5FS_DEBUG */
 

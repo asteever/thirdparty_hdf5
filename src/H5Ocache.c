@@ -37,7 +37,6 @@
 #include "H5private.h"		/* Generic Functions			*/
 #include "H5Eprivate.h"		/* Error handling		  	*/
 #include "H5FLprivate.h"	/* Free lists                           */
-#include "H5MFprivate.h"	/* File memory management		*/
 #include "H5Opkg.h"             /* Object headers			*/
 
 
@@ -98,7 +97,6 @@ const H5AC_class_t H5AC_OHDR[1] = {{
     (H5AC_flush_func_t)H5O_flush,
     (H5AC_dest_func_t)H5O_dest,
     (H5AC_clear_func_t)H5O_clear,
-    (H5AC_notify_func_t)NULL,
     (H5AC_size_func_t)H5O_size,
 }};
 
@@ -132,7 +130,8 @@ H5O_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void UNUSED * _udata1,
     unsigned    merged_null_msgs = 0;   /* Number of null messages merged together */
     haddr_t	chunk_addr;     /* Address of first chunk */
     size_t	chunk_size;     /* Size of first chunk */
-    haddr_t     eoa;		/* Relative end of file address	*/
+    haddr_t     abs_eoa;	/* Absolute end of file address	*/
+    haddr_t     rel_eoa;	/* Relative end of file address	*/
     H5O_t	*ret_value;     /* Return value */
 
     FUNC_ENTER_NOAPI(H5O_load, NULL)
@@ -144,11 +143,14 @@ H5O_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void UNUSED * _udata1,
     HDassert(!_udata2);
 
     /* Make certain we don't speculatively read off the end of the file */
-    if(HADDR_UNDEF == (eoa = H5F_get_eoa(f, H5FD_MEM_OHDR)))
+    if(HADDR_UNDEF == (abs_eoa = H5F_get_eoa(f)))
         HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, NULL, "unable to determine file size")
 
+    /* Adjust absolute EOA address to relative EOA address */
+    rel_eoa = abs_eoa - H5F_get_base_addr(f);
+
     /* Compute the size of the speculative object header buffer */
-    H5_ASSIGN_OVERFLOW(spec_read_size, MIN(eoa - addr, H5O_SPEC_READ_SIZE), /* From: */ hsize_t, /* To: */ size_t);
+    H5_ASSIGN_OVERFLOW(spec_read_size, MIN(rel_eoa - addr, H5O_SPEC_READ_SIZE), /* From: */ hsize_t, /* To: */ size_t);
 
     /* Attempt to speculatively read both object header prefix and first chunk */
     if(H5F_block_read(f, H5FD_MEM_OHDR, addr, spec_read_size, dxpl_id, read_buf) < 0)
@@ -165,9 +167,9 @@ H5O_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void UNUSED * _udata1,
 
     /* Check for magic number */
     /* (indicates version 2 or later) */
-    if(!HDmemcmp(p, H5O_HDR_MAGIC, (size_t)H5_SIZEOF_MAGIC)) {
+    if(!HDmemcmp(p, H5O_HDR_MAGIC, (size_t)H5O_SIZEOF_MAGIC)) {
         /* Magic number */
-        p += H5_SIZEOF_MAGIC;
+        p += H5O_SIZEOF_MAGIC;
 
         /* Version */
         oh->version = *p++;
@@ -187,16 +189,10 @@ H5O_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void UNUSED * _udata1,
 
         /* Time fields */
         if(oh->flags & H5O_HDR_STORE_TIMES) {
-            uint32_t tmp;       /* Temporary value */
-
-            UINT32DECODE(p, tmp);
-            oh->atime = (time_t)tmp;
-            UINT32DECODE(p, tmp);
-            oh->mtime = (time_t)tmp;
-            UINT32DECODE(p, tmp);
-            oh->ctime = (time_t)tmp;
-            UINT32DECODE(p, tmp);
-            oh->btime = (time_t)tmp;
+            UINT32DECODE(p, oh->atime);
+            UINT32DECODE(p, oh->mtime);
+            UINT32DECODE(p, oh->ctime);
+            UINT32DECODE(p, oh->btime);
         } /* end if */
         else
             oh->atime = oh->mtime = oh->ctime = oh->btime = 0;
@@ -353,9 +349,9 @@ H5O_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void UNUSED * _udata1,
         /* Check for magic # on chunks > 0 in later versions of the format */
         if(chunkno > 0 && oh->version > H5O_VERSION_1) {
             /* Magic number */
-            if(HDmemcmp(p, H5O_CHK_MAGIC, (size_t)H5_SIZEOF_MAGIC))
+            if(HDmemcmp(p, H5O_CHK_MAGIC, (size_t)H5O_SIZEOF_MAGIC))
                 HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "wrong object header chunk signature")
-            p += H5_SIZEOF_MAGIC;
+            p += H5O_SIZEOF_MAGIC;
         } /* end if */
 
 	/* Decode messages from this chunk */
@@ -419,7 +415,7 @@ H5O_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void UNUSED * _udata1,
 #endif /* NDEBUG */
 
             /* Check for combining two adjacent 'null' messages */
-            if((H5F_INTENT(f) & H5F_ACC_RDWR) &&
+            if((H5F_get_intent(f) & H5F_ACC_RDWR) &&
                     H5O_NULL_ID == id && oh->nmesgs > 0 &&
                     H5O_NULL_ID == oh->mesg[oh->nmesgs - 1].type->id &&
                     oh->mesg[oh->nmesgs - 1].chunkno == chunkno) {
@@ -472,7 +468,7 @@ H5O_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void UNUSED * _udata1,
                     /* Check for "mark if unknown" message flag, etc. */
                     else if((flags & H5O_MSG_FLAG_MARK_IF_UNKNOWN) &&
                             !(flags & H5O_MSG_FLAG_WAS_UNKNOWN) &&
-                            (H5F_INTENT(f) & H5F_ACC_RDWR)) {
+                            (H5F_get_intent(f) & H5F_ACC_RDWR)) {
 
                         /* Mark the message as "unknown" */
                         /* This is a bit aggressive, since the application may
@@ -509,7 +505,7 @@ H5O_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void UNUSED * _udata1,
                 HDassert(nullcnt == 0);
 
                 /* Set gap information for chunk */
-                oh->chunk[chunkno].gap = (size_t)(eom_ptr - p);
+                oh->chunk[chunkno].gap = (eom_ptr - p);
 
                 /* Increment location in chunk */
                 p += oh->chunk[chunkno].gap;
@@ -540,10 +536,9 @@ H5O_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void UNUSED * _udata1,
             /* Check if next message to examine is a continuation message */
             if(H5O_CONT_ID == oh->mesg[curmesg].type->id) {
                 H5O_cont_t *cont;
-                unsigned ioflags = 0;   /* Flags for decode routine */
 
                 /* Decode continuation message */
-                cont = (H5O_cont_t *)(H5O_MSG_CONT->decode)(f, dxpl_id, NULL, 0, &ioflags, oh->mesg[curmesg].raw);
+                cont = (H5O_cont_t *)(H5O_MSG_CONT->decode)(f, dxpl_id, 0, oh->mesg[curmesg].raw);
                 cont->chunkno = oh->nchunks;	/*the next chunk to allocate */
 
                 /* Save 'native' form of continuation message */
@@ -552,21 +547,14 @@ H5O_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void UNUSED * _udata1,
                 /* Set up to read in next chunk */
                 chunk_addr = cont->addr;
                 chunk_size = cont->size;
-
-                /* Mark the object header as dirty if the message was changed by decoding */
-                if((ioflags & H5O_DECODEIO_DIRTY) && (H5F_get_intent(f) & H5F_ACC_RDWR)) {
-                    oh->mesg[curmesg].dirty = TRUE;
-                    oh->cache_info.is_dirty = TRUE;
-	            }
             } /* end if */
             /* Check if next message to examine is a ref. count message */
             else if(H5O_REFCOUNT_ID == oh->mesg[curmesg].type->id) {
                 H5O_refcount_t *refcount;
-                unsigned ioflags = 0;   /* Flags for decode routine */
 
                 /* Decode ref. count message */
                 HDassert(oh->version > H5O_VERSION_1);
-                refcount = (H5O_refcount_t *)(H5O_MSG_REFCOUNT->decode)(f, dxpl_id, NULL, 0, &ioflags, oh->mesg[curmesg].raw);
+                refcount = (H5O_refcount_t *)(H5O_MSG_REFCOUNT->decode)(f, dxpl_id, 0, oh->mesg[curmesg].raw);
 
                 /* Save 'native' form of ref. count message */
                 oh->mesg[curmesg].native = refcount;
@@ -574,12 +562,6 @@ H5O_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void UNUSED * _udata1,
                 /* Set object header values */
                 oh->has_refcount_msg = TRUE;
                 oh->nlink = *refcount;
-
-                /* Mark the object header as dirty if the message was changed by decoding */
-                if((ioflags & H5O_DECODEIO_DIRTY) && (H5F_get_intent(f) & H5F_ACC_RDWR)) {
-                    oh->mesg[curmesg].dirty = TRUE;
-                    oh->cache_info.is_dirty = TRUE;
-	            }
             } /* end if */
             /* Check if next message to examine is a link message */
             else if(H5O_LINK_ID == oh->mesg[curmesg].type->id) {
@@ -610,7 +592,7 @@ H5O_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void UNUSED * _udata1,
             HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, NULL, "corrupt object header - too few messages")
 #else /* H5_STRICT_FORMAT_CHECKS */
     /* Check for incorrect # of messages in object header and if we have write
-     * access on the file, flag the object header as dirty, so it gets fixed.
+     * access on the file, flag the object header as dirty, so it gets fixed. 
      */
     if(oh->version == H5O_VERSION_1)
         if((oh->nmesgs + merged_null_msgs) != nmesgs &&
@@ -686,8 +668,8 @@ H5O_assert(oh);
             uint64_t chunk0_size = oh->chunk[0].size - H5O_SIZEOF_HDR(oh);  /* Size of chunk 0's data */
 
             /* Verify magic number */
-            HDassert(!HDmemcmp(p, H5O_HDR_MAGIC, H5_SIZEOF_MAGIC));
-            p += H5_SIZEOF_MAGIC;
+            HDassert(!HDmemcmp(p, H5O_HDR_MAGIC, H5O_SIZEOF_MAGIC));
+            p += H5O_SIZEOF_MAGIC;
 
             /* Version */
             *p++ = oh->version;
@@ -713,7 +695,7 @@ H5O_assert(oh);
             switch(oh->flags & H5O_HDR_CHUNK0_SIZE) {
                 case 0:     /* 1 byte size */
                     HDassert(chunk0_size < 256);
-                    *p++ = (uint8_t)chunk0_size;
+                    *p++ = chunk0_size;
                     break;
 
                 case 1:     /* 2 byte size */
@@ -764,7 +746,7 @@ H5O_assert(oh);
 
         /* Mark chunk 0 as dirty, since the object header prefix has been updated */
         /* (this could be more sophisticated and track whether any prefix fields
-         *      have been changed, which could save I/O accesses if the
+         *      have been changed, which could save I/O accesses if the 
          *      messages in chunk 0 haven't changed - QAK)
          */
         HDassert(H5F_addr_eq(addr, oh->chunk[0].addr));
@@ -779,7 +761,7 @@ H5O_assert(oh);
             /* Sanity checks */
             if(oh->version > H5O_VERSION_1)
                 /* Make certain the magic # is present */
-                HDassert(!HDmemcmp(oh->chunk[u].image, (u == 0 ? H5O_HDR_MAGIC : H5O_CHK_MAGIC), H5_SIZEOF_MAGIC));
+                HDassert(!HDmemcmp(oh->chunk[u].image, (u == 0 ? H5O_HDR_MAGIC : H5O_CHK_MAGIC), H5O_SIZEOF_MAGIC));
             else
                 /* Gaps should never occur in version 1 of the format */
                 HDassert(oh->chunk[u].gap == 0);
@@ -842,37 +824,20 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5O_dest(H5F_t *f, H5O_t *oh)
+H5O_dest(H5F_t UNUSED *f, H5O_t *oh)
 {
     unsigned	u;                      /* Local index variable */
-    herr_t ret_value = SUCCEED;         /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT(H5O_dest)
-#ifdef QAK
-HDfprintf(stderr, "%s: oh->cache_info.addr = %a\n", FUNC, oh->cache_info.addr);
-HDfprintf(stderr, "%s: oh->cache_info.free_file_space_on_destroy = %t\n", FUNC, oh->cache_info.free_file_space_on_destroy);
-#endif /* QAK */
+    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5O_dest)
 
     /* check args */
     HDassert(oh);
 
     /* Verify that node is clean */
-    HDassert(!oh->cache_info.is_dirty);
-
-    /* If we're going to free the space on disk, the address must be valid */
-    HDassert(!oh->cache_info.free_file_space_on_destroy || H5F_addr_defined(oh->cache_info.addr));
+    HDassert(oh->cache_info.is_dirty == FALSE);
 
     /* destroy chunks */
     if(oh->chunk) {
-        /* Check for releasing file space for object header */
-        if(oh->cache_info.free_file_space_on_destroy) {
-            /* Free main (first) object header "chunk" */
-            /* (XXX: Nasty usage of internal DXPL value! -QAK) */
-            if(H5MF_xfree(f, H5FD_MEM_OHDR, H5AC_dxpl_id, oh->chunk[0].addr, (hsize_t)oh->chunk[0].size) < 0)
-                HGOTO_ERROR(H5E_OHDR, H5E_CANTFREE, FAIL, "unable to free object header")
-        } /* end if */
-
-        /* Release buffer for each chunk */
         for(u = 0; u < oh->nchunks; u++) {
             /* Verify that chunk is clean */
             HDassert(oh->chunk[u].dirty == 0);
@@ -880,36 +845,25 @@ HDfprintf(stderr, "%s: oh->cache_info.free_file_space_on_destroy = %t\n", FUNC, 
             oh->chunk[u].image = H5FL_BLK_FREE(chunk_image, oh->chunk[u].image);
         } /* end for */
 
-        /* Release array of chunk info */
         oh->chunk = (H5O_chunk_t *)H5FL_SEQ_FREE(H5O_chunk_t, oh->chunk);
     } /* end if */
 
     /* destroy messages */
     if(oh->mesg) {
         for(u = 0; u < oh->nmesgs; u++) {
-            /* Verify that message is clean, unless it could have been marked
-             * dirty by decoding */
-#ifndef NDEBUG
-            if(oh->ndecode_dirtied && oh->mesg[u].dirty)
-                oh->ndecode_dirtied--;
-            else
-                HDassert(oh->mesg[u].dirty == 0);
-#endif /* NDEBUG */
+            /* Verify that message is clean */
+            HDassert(oh->mesg[u].dirty == 0);
 
             H5O_msg_free_mesg(&oh->mesg[u]);
         } /* end for */
-
-        /* Make sure we accounted for all the messages dirtied by decoding */
-        HDassert(!oh->ndecode_dirtied);
 
         oh->mesg = (H5O_mesg_t *)H5FL_SEQ_FREE(H5O_mesg_t, oh->mesg);
     } /* end if */
 
     /* destroy object header */
-    (void)H5FL_FREE(H5O_t, oh);
+    H5FL_FREE(H5O_t, oh);
 
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5O_dest() */
 
 
@@ -944,11 +898,6 @@ H5O_clear(H5F_t *f, H5O_t *oh, hbool_t destroy)
     /* Mark messages as clean */
     for(u = 0; u < oh->nmesgs; u++)
         oh->mesg[u].dirty = FALSE;
-
-#ifndef NDEBUG
-        /* Reset the number of messages dirtied by decoding */
-        oh->ndecode_dirtied = 0;
-#endif /* NDEBUG */
 
     /* Mark whole header as clean */
     oh->cache_info.is_dirty = FALSE;

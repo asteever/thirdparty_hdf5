@@ -161,7 +161,7 @@ H5G_loc(hid_t loc_id, H5G_loc_t *loc)
                 H5F_t	*f;
 
                 /* Get the file struct */
-                if(NULL == (f = (H5F_t *)H5I_object(loc_id)))
+                if(NULL == (f = H5I_object(loc_id)))
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid file ID")
 
                 /* Construct a group location for root group of the file */
@@ -183,7 +183,7 @@ H5G_loc(hid_t loc_id, H5G_loc_t *loc)
             {
                 H5G_t	*group;
 
-                if(NULL == (group = (H5G_t *)H5I_object(loc_id)))
+                if(NULL == (group = H5I_object(loc_id)))
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid group ID")
                 if(NULL == (loc->oloc = H5G_oloc(group)))
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unable to get object location of group")
@@ -196,7 +196,7 @@ H5G_loc(hid_t loc_id, H5G_loc_t *loc)
             {
                 H5T_t	*dt;
 
-                if(NULL == (dt = (H5T_t *)H5I_object(loc_id)))
+                if(NULL == (dt = H5I_object(loc_id)))
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid type ID")
                 if(NULL == (loc->oloc = H5T_oloc(dt)))
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unable to get object location of datatype")
@@ -212,7 +212,7 @@ H5G_loc(hid_t loc_id, H5G_loc_t *loc)
             {
                 H5D_t	*dset;
 
-                if(NULL == (dset = (H5D_t *)H5I_object(loc_id)))
+                if(NULL == (dset = H5I_object(loc_id)))
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid data ID")
                 if(NULL == (loc->oloc = H5D_oloc(dset)))
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unable to get object location of dataset")
@@ -225,7 +225,7 @@ H5G_loc(hid_t loc_id, H5G_loc_t *loc)
             {
                 H5A_t	*attr;
 
-                if(NULL == (attr = (H5A_t *)H5I_object(loc_id)))
+                if(NULL == (attr = H5I_object(loc_id)))
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid attribute ID")
                 if(NULL == (loc->oloc = H5A_oloc(attr)))
                     HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "unable to get object location of attribute")
@@ -409,7 +409,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5G_loc_find_cb(H5G_loc_t UNUSED *grp_loc/*in*/, const char *name,
+H5G_loc_find_cb(H5G_loc_t UNUSED *grp_loc/*in*/, const char UNUSED *name,
     const H5O_link_t UNUSED *lnk, H5G_loc_t *obj_loc, void *_udata/*in,out*/,
     H5G_own_loc_t *own_loc/*out*/)
 {
@@ -420,7 +420,7 @@ H5G_loc_find_cb(H5G_loc_t UNUSED *grp_loc/*in*/, const char *name,
 
     /* Check if the name in this group resolved to a valid object */
     if(obj_loc == NULL)
-        HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "object '%s' doesn't exist", name)
+        HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "object doesn't exist")
 
     /* Take ownership of the object's group location */
     /* (Group traversal callbacks are responsible for either taking ownership
@@ -727,7 +727,6 @@ H5G_loc_set_comment_cb(H5G_loc_t UNUSED *grp_loc/*in*/, const char UNUSED *name,
 {
     H5G_loc_sc_t *udata = (H5G_loc_sc_t *)_udata;   /* User data passed in */
     H5O_name_t comment;                 /* Object header "comment" message */
-    htri_t exists;                      /* Whether a "comment" message already exists */
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5G_loc_set_comment_cb)
@@ -736,14 +735,9 @@ H5G_loc_set_comment_cb(H5G_loc_t UNUSED *grp_loc/*in*/, const char UNUSED *name,
     if(obj_loc == NULL)
         HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "name doesn't exist")
 
-    /* Check for existing comment message */
-    if((exists = H5O_msg_exists(obj_loc->oloc, H5O_NAME_ID, udata->dxpl_id)) < 0)
-	HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "unable to read object header")
-
     /* Remove the previous comment message if any */
-    if(exists)
-        if(H5O_msg_remove(obj_loc->oloc, H5O_NAME_ID, 0, TRUE, udata->dxpl_id) < 0)
-            HGOTO_ERROR(H5E_SYM, H5E_CANTDELETE, FAIL, "unable to delete existing comment object header message")
+    if(H5O_msg_remove(obj_loc->oloc, H5O_NAME_ID, 0, TRUE, udata->dxpl_id) < 0)
+        H5E_clear_stack(NULL);
 
     /* Add the new message */
     if(udata->comment && *udata->comment) {
@@ -836,7 +830,7 @@ H5G_loc_get_comment_cb(H5G_loc_t UNUSED *grp_loc/*in*/, const char UNUSED *name,
     } else {
         if(udata->comment && udata->bufsize)
 	   HDstrncpy(udata->comment, comment.s, udata->bufsize);
-	udata->comment_size = (ssize_t)HDstrlen(comment.s);
+	udata->comment_size = HDstrlen(comment.s);
 	H5O_msg_reset(H5O_NAME_ID, &comment);
     } /* end else */
 

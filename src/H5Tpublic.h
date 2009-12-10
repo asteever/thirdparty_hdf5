@@ -388,7 +388,7 @@ H5_DLLVAR hid_t H5T_VAX_F64_g;
  * precision and byte order as the last component, they have a C-like type
  * name.  If the type begins with `U' then it is the unsigned version of the
  * integer type; other integer types are signed.  The type LLONG corresponds
- * to C's `long long' and LDOUBLE is `long double' (these types might be the
+ * to C's `long_long' and LDOUBLE is `long double' (these types might be the
  * same as `LONG' and `DOUBLE' respectively).
  */
 #define H5T_NATIVE_CHAR		(CHAR_MIN?H5T_NATIVE_SCHAR:H5T_NATIVE_UCHAR)
@@ -592,7 +592,7 @@ H5_DLL herr_t H5Tconvert(hid_t src_id, hid_t dst_id, size_t nelmts,
 			  void *buf, void *background, hid_t plist_id);
 
 /* Symbols defined for compatibility with previous versions of the HDF5 API.
- *
+ * 
  * Use of these symbols is deprecated.
  */
 #ifndef H5_NO_DEPRECATED_SYMBOLS

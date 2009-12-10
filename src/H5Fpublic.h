@@ -50,10 +50,6 @@
 #define H5F_ACC_DEBUG	(H5CHECK 0x0008u)	/*print debug info	     */
 #define H5F_ACC_CREAT	(H5CHECK 0x0010u)	/*create non-existing files  */
 
-/* Value passed to H5Pset_elink_acc_flags to cause flags to be taken from the
- * parent file. */
-#define H5F_ACC_DEFAULT (H5CHECK 0xffffu)	/*ignore setting on lapl     */
-
 /* Flags for H5Fget_obj_count() & H5Fget_obj_ids() calls */
 #define H5F_OBJ_FILE	(0x0001u)       /* File objects */
 #define H5F_OBJ_DATASET	(0x0002u)       /* Dataset objects */
@@ -79,7 +75,8 @@
 /* The difference between a single file and a set of mounted files */
 typedef enum H5F_scope_t {
     H5F_SCOPE_LOCAL	= 0,	/*specified file handle only		*/
-    H5F_SCOPE_GLOBAL	= 1 	/*entire virtual file			*/
+    H5F_SCOPE_GLOBAL	= 1,	/*entire virtual file			*/
+    H5F_SCOPE_DOWN      = 2	/*for internal use only			*/
 } H5F_scope_t;
 
 /* Unlimited file size for H5Pset_external() */
@@ -101,65 +98,20 @@ typedef enum H5F_close_degree_t {
 } H5F_close_degree_t;
 
 /* Current "global" information about file */
-typedef struct H5F_info2_t {
+/* (just size info currently) */
+typedef struct H5F_info_t {
+    hsize_t		super_ext_size;	/* Superblock extension size */
     struct {
-	unsigned	version;	/* Superblock version # */
-	hsize_t		super_size;	/* Superblock size */
-	hsize_t		super_ext_size;	/* Superblock extension size */
-    } super;
-    struct {
-	unsigned	version;	/* Version # of file free space management */
-	hsize_t		meta_size;	/* Free space manager metadata size */
-	hsize_t		tot_space;	/* Amount of free space in the file */
-    } free;
-    struct {
-	unsigned	version;	/* Version # of shared object header info */
 	hsize_t		hdr_size;       /* Shared object header message header size */
 	H5_ih_info_t	msgs_info;      /* Shared object header message index & heap size */
     } sohm;
-} H5F_info2_t;
-
-/*
- * Types of allocation requests. The values larger than H5FD_MEM_DEFAULT
- * should not change other than adding new types to the end. These numbers
- * might appear in files.
- */
-typedef enum H5F_mem_t {
-    H5FD_MEM_NOLIST	= -1,			/*must be negative*/
-    H5FD_MEM_DEFAULT	= 0,			/*must be zero*/
-    H5FD_MEM_SUPER      = 1,
-    H5FD_MEM_BTREE      = 2,
-    H5FD_MEM_DRAW       = 3,
-    H5FD_MEM_GHEAP      = 4,
-    H5FD_MEM_LHEAP      = 5,
-    H5FD_MEM_OHDR       = 6,
-
-    H5FD_MEM_NTYPES				/*must be last*/
-} H5F_mem_t;
-
-/* Free space section information */
-typedef struct H5F_sect_info_t {
-    haddr_t             addr;   /* Address of free space section */
-    hsize_t             size;   /* Size of free space section */
-} H5F_sect_info_t;
+} H5F_info_t;
 
 /* Library's file format versions */
 typedef enum H5F_libver_t {
     H5F_LIBVER_EARLIEST,        /* Use the earliest possible format for storing objects */
     H5F_LIBVER_LATEST           /* Use the latest possible format available for storing objects*/
 } H5F_libver_t;
-
-/* File space handling strategy */
-typedef enum H5F_file_space_type_t {
-    H5F_FILE_SPACE_DEFAULT = 0,     /* Default (or current) free space strategy setting */
-    H5F_FILE_SPACE_ALL_PERSIST = 1, /* Persistent free space managers, aggregators, virtual file driver */
-    H5F_FILE_SPACE_ALL = 2,	    /* Non-persistent free space managers, aggregators, virtual file driver */
-				    /* This is the library default */
-    H5F_FILE_SPACE_AGGR_VFD = 3,    /* Aggregators, Virtual file driver */
-    H5F_FILE_SPACE_VFD = 4,	    /* Virtual file driver */
-    H5F_FILE_SPACE_NTYPES	    /* must be last */
-} H5F_file_space_type_t;
-
 
 #ifdef __cplusplus
 extern "C" {
@@ -177,8 +129,8 @@ H5_DLL herr_t H5Fclose(hid_t file_id);
 H5_DLL hid_t  H5Fget_create_plist(hid_t file_id);
 H5_DLL hid_t  H5Fget_access_plist(hid_t file_id);
 H5_DLL herr_t H5Fget_intent(hid_t file_id, unsigned * intent);
-H5_DLL ssize_t H5Fget_obj_count(hid_t file_id, unsigned types);
-H5_DLL ssize_t H5Fget_obj_ids(hid_t file_id, unsigned types, size_t max_objs, hid_t *obj_id_list);
+H5_DLL int H5Fget_obj_count(hid_t file_id, unsigned types);
+H5_DLL int H5Fget_obj_ids(hid_t file_id, unsigned types, int max_objs, hid_t *obj_id_list);
 H5_DLL herr_t H5Fget_vfd_handle(hid_t file_id, hid_t fapl, void **file_handle);
 H5_DLL herr_t H5Fmount(hid_t loc, const char *name, hid_t child, hid_t plist);
 H5_DLL herr_t H5Funmount(hid_t loc, const char *name);
@@ -196,35 +148,7 @@ H5_DLL herr_t H5Fget_mdc_size(hid_t file_id,
                               int * cur_num_entries_ptr);
 H5_DLL herr_t H5Freset_mdc_hit_rate_stats(hid_t file_id);
 H5_DLL ssize_t H5Fget_name(hid_t obj_id, char *name, size_t size);
-H5_DLL herr_t H5Fget_info2(hid_t obj_id, H5F_info2_t *finfo);
-H5_DLL ssize_t H5Fget_free_sections(hid_t file_id, H5F_mem_t type,
-    size_t nsects, H5F_sect_info_t *sect_info/*out*/);
-
-/* Symbols defined for compatibility with previous versions of the HDF5 API.
- *
- * Use of these symbols is deprecated.
- */
-#ifndef H5_NO_DEPRECATED_SYMBOLS
-
-/* Macros */
-
-
-/* Typedefs */
-
-/* Current "global" information about file */
-typedef struct H5F_info1_t {
-    hsize_t		super_ext_size;	/* Superblock extension size */
-    struct {
-	hsize_t		hdr_size;       /* Shared object header message header size */
-	H5_ih_info_t	msgs_info;      /* Shared object header message index & heap size */
-    } sohm;
-} H5F_info1_t;
-
-
-/* Function prototypes */
-H5_DLL herr_t H5Fget_info1(hid_t obj_id, H5F_info1_t *finfo);
-
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
+H5_DLL herr_t H5Fget_info(hid_t obj_id, H5F_info_t *bh_info);
 
 #ifdef __cplusplus
 }

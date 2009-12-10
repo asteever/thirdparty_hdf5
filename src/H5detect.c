@@ -108,8 +108,6 @@ static void detect_C99_integers16(void);
 static void detect_C99_integers32(void);
 static void detect_C99_integers64(void);
 static void detect_alignments(void);
-static void insert_libhdf5_settings(FILE *flibinfo);
-static void make_libinfo(void);
 static size_t align_g[] = {1, 2, 4, 8, 16};
 static jmp_buf jbuf_g;
 
@@ -204,36 +202,34 @@ precision (detected_t *d)
    int _i, _j;								      \
    unsigned char *_x;							      \
                                                                               \
-   HDmemset(&INFO, 0, sizeof(INFO));					      \
+   memset (&INFO, 0, sizeof(INFO));					      \
    INFO.varname = #VAR;							      \
    INFO.size = sizeof(TYPE);						      \
                                                                               \
-   if(sizeof(TYPE) != 1) {                                                    \
-       for(_i = sizeof(TYPE), _v = 0; _i > 0; --_i)			      \
-           _v = (_v << 8) + _i;						      \
-       for(_i = 0, _x = (unsigned char *)&_v; _i < (signed)sizeof(TYPE); _i++) { \
-          _j = (*_x++) - 1;						      \
-          assert(_j < (signed)sizeof(TYPE));				      \
+   if(sizeof(TYPE)!=1) {                                                      \
+       for (_i=sizeof(TYPE),_v=0; _i>0; --_i) _v = (_v<<8) + _i;	      \
+       for (_i=0,_x=(unsigned char *)&_v; _i<(signed)sizeof(TYPE); _i++) {    \
+          _j = (*_x++)-1;						      \
+          assert (_j<(signed)sizeof(TYPE));				      \
           INFO.perm[_i] = _j;						      \
-       } /* end for */							      \
+       }								      \
    } else { /*Not able to detect order if type size is 1 byte. Use native int \
              *instead. No effect on data, just make it look correct. */       \
-       for(_i = sizeof(int), _int_v = 0; _i > 0; --_i)			      \
-           _int_v = (_int_v << 8) + _i;					      \
-       for(_i = 0, _x = (unsigned char *)&_int_v; _i < (signed)sizeof(int); _i++) { \
+       for (_i=sizeof(int),_int_v=0; _i>0; --_i) _int_v = (_int_v<<8) + _i;   \
+       for (_i=0,_x=(unsigned char *)&_int_v; _i<(signed)sizeof(int); _i++) { \
           _j = (*_x++)-1;						      \
-          assert(_j < (signed)sizeof(int));				      \
+          assert (_j<(signed)sizeof(int));				      \
           INFO.perm[_i] = _j;						      \
-       } /* end for */							      \
-   } /* end else */                                                           \
+       }								      \
+   }                                                                          \
                                                                               \
-   INFO.sign = ('U' != *(#VAR));					      \
+   INFO.sign = ('U'!=*(#VAR));						      \
    precision (&(INFO));							      \
    ALIGNMENT(TYPE, INFO);						      \
-   if(!HDstrcmp(INFO.varname, "SCHAR")  || !HDstrcmp(INFO.varname, "SHORT") || \
-      !HDstrcmp(INFO.varname, "INT")   || !HDstrcmp(INFO.varname, "LONG")  ||  \
-      !HDstrcmp(INFO.varname, "LLONG")) {                                     \
-      COMP_ALIGNMENT(TYPE, INFO.comp_align);                                  \
+   if(!strcmp(INFO.varname, "SCHAR")  || !strcmp(INFO.varname, "SHORT") ||    \
+      !strcmp(INFO.varname, "INT")   || !strcmp(INFO.varname, "LONG")  ||     \
+      !strcmp(INFO.varname, "LLONG")) {                                       \
+      COMP_ALIGNMENT(TYPE,INFO.comp_align);                                   \
    }                                                                          \
 }
 
@@ -362,16 +358,16 @@ precision (detected_t *d)
 
 #if defined(H5_HAVE_LONGJMP) && defined(H5_HAVE_SIGNAL)
 #define ALIGNMENT(TYPE,INFO) {						      \
-    char		*volatile _buf = NULL;				      \
-    volatile TYPE	_val = 1;						      \
+    char		*volatile _buf=NULL;				      \
+    volatile TYPE	_val=1;						      \
     volatile TYPE	_val2;						      \
-    volatile size_t	_ano = 0;					      \
+    volatile size_t	_ano=0;						      \
     void		(*_handler)(int) = signal(SIGBUS, sigbus_handler);    \
     void		(*_handler2)(int) = signal(SIGSEGV, sigsegv_handler);	\
 									      \
-    _buf = (char*)malloc(sizeof(TYPE) + align_g[NELMTS(align_g) - 1]);	      \
-    if(setjmp(jbuf_g)) _ano++;						      \
-    if(_ano < NELMTS(align_g)) {					      \
+    _buf = (char*)malloc(sizeof(TYPE)+align_g[NELMTS(align_g)-1]);		      \
+    if (setjmp(jbuf_g)) _ano++;						      \
+    if (_ano<NELMTS(align_g)) {						      \
 	*((TYPE*)(_buf+align_g[_ano])) = _val; /*possible SIGBUS or SEGSEGV*/	\
 	_val2 = *((TYPE*)(_buf+align_g[_ano]));	/*possible SIGBUS or SEGSEGV*/	\
 	/* Cray Check: This section helps detect alignment on Cray's */	      \
@@ -504,99 +500,6 @@ sigbus_handler(int UNUSED signo)
 
 
 /*-------------------------------------------------------------------------
- * Function:	insert_libhdf5_settings
- *
- * Purpose:	insert the contents of libhdf5.settings into a file
- *		represented by flibinfo.
- *		Make it an empty string if H5_HAVE_EMBEDDED_LIBINFO is not
- *		defined, i.e., not enabled.
- *
- * Return:	void
- *
- * Programmer:	Albert Cheng
- *		Apr 20, 2009
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-#define LIBSETTINGSFNAME "libhdf5.settings"
-static void
-insert_libhdf5_settings(FILE *flibinfo)
-{
-#ifdef H5_HAVE_EMBEDDED_LIBINFO
-    FILE *fsettings;	/* for files libhdf5.settings */
-    int inchar;
-    int	bol=0;	/* indicates the beginning of a new line */
-
-    if (NULL==(fsettings=HDfopen(LIBSETTINGSFNAME, "r"))){
-        perror(LIBSETTINGSFNAME);
-        exit(1);
-    }
-    /* print variable definition and the string */
-    fprintf(flibinfo, "char H5libhdf5_settings[]=\n");
-    bol++;
-    while (EOF != (inchar = getc(fsettings))){
-	if (bol){
-	    /* Start a new line */
-	    fprintf(flibinfo, "\t\"");
-	    bol = 0;
-	}
-	if (inchar == '\n'){
-	    /* end of a line */
-	    fprintf(flibinfo, "\\n\"\n");
-	    bol++;
-	}else{
-	    putc(inchar, flibinfo);
-	}
-    }
-    if (feof(fsettings)){
-	/* wrap up */
-	if (!bol){
-	    /* EOF found without a new line */
-	    fprintf(flibinfo, "\\n\"\n");
-	};
-	fprintf(flibinfo, ";\n\n");
-    }else{
-	fprintf(stderr, "Read errors encountered with %s\n", LIBSETTINGSFNAME);
-	exit(1);
-    }
-    if (0 != fclose(fsettings)){
-	perror(LIBSETTINGSFNAME);
-	exit(1);
-    }
-#else
-    /* print variable definition and an empty string */
-    fprintf(flibinfo, "char H5libhdf5_settings[]=\"\";\n");
-#endif
-}
-
-
-/*-------------------------------------------------------------------------
- * Function:	make_libinfo
- *
- * Purpose:	Create the embedded library information definition.
- * 		This sets up for a potential extension that the declaration
- *		is printed to a file different from stdout.
- *
- * Return:	void
- *
- * Programmer:	Albert Cheng
- *		Sep 15, 2009
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static void
-make_libinfo(void)
-{
-    /* print variable definition and then the string as a macro. */
-    insert_libhdf5_settings(stdout);
-}
-
-
-/*-------------------------------------------------------------------------
  * Function:	print_results
  *
  * Purpose:	Prints information about the detected data types.
@@ -619,93 +522,27 @@ print_results(int nd, detected_t *d, int na, malign_t *misc_align)
 
     /* Include files */
     printf("\
-/****************/\n\
-/* Module Setup */\n\
-/****************/\n\
-\n\
 #define H5T_PACKAGE /*suppress error about including H5Tpkg.h*/\n\
 \n\
-\n\
-/***********/\n\
-/* Headers */\n\
-/***********/\n\
-#include \"H5private.h\"		/* Generic Functions			*/\n\
-#include \"H5Eprivate.h\"		/* Error handling		  	*/\n\
-#include \"H5FLprivate.h\"	/* Free Lists				*/\n\
-#include \"H5Iprivate.h\"		/* IDs			  		*/\n\
-#include \"H5Tpkg.h\"		/* Datatypes 				*/\n\
-\n\
-\n\
-/****************/\n\
-/* Local Macros */\n\
-/****************/\n\
-\n\
-\n\
-/******************/\n\
-/* Local Typedefs */\n\
-/******************/\n\
-\n\
-\n\
-/********************/\n\
-/* Package Typedefs */\n\
-/********************/\n\
-\n\
-\n\
-/********************/\n\
-/* Local Prototypes */\n\
-/********************/\n\
-\n\
-\n\
-/********************/\n\
-/* Public Variables */\n\
-/********************/\n\
-\n\
-\n\
-/*****************************/\n\
-/* Library Private Variables */\n\
-/*****************************/\n\
-\n\
-\n\
-/*********************/\n\
-/* Package Variables */\n\
-/*********************/\n\
+#include \"H5private.h\"\n\
+#include \"H5Iprivate.h\"\n\
+#include \"H5Eprivate.h\"\n\
+#include \"H5FLprivate.h\"\n\
+#include \"H5Tpkg.h\"\n\
 \n\
 \n");
-    printf("\n\
-/*******************/\n\
-/* Local Variables */\n\
-/*******************/\n\
-\n");
-
-    /* Generate embedded library information variable definition */
-    make_libinfo();
 
     /* The interface initialization function */
     printf("\n\
-\n\
-/*-------------------------------------------------------------------------\n\
- * Function:	H5TN_init_interface\n\
- *\n\
- * Purpose:	Initialize pre-defined native datatypes from code generated\n\
- *              during the library configuration by H5detect.\n\
- *\n\
- * Return:	Success:	non-negative\n\
- *		Failure:	negative\n\
- *\n\
- * Programmer:	Robb Matzke\n\
- *              Wednesday, December 16, 1998\n\
- *\n\
- *-------------------------------------------------------------------------\n\
- */\n\
 herr_t\n\
 H5TN_init_interface(void)\n\
 {\n\
     H5T_t	*dt = NULL;\n\
     herr_t	ret_value = SUCCEED;\n\
 \n\
-    FUNC_ENTER_NOAPI(H5TN_init_interface, FAIL)\n");
+    FUNC_ENTER_NOAPI(H5TN_init_interface, FAIL);\n");
 
-    for(i = 0; i < nd; i++) {
+    for (i = 0; i < nd; i++) {
         /* The native endianess of this machine */
         /* The INFO.perm now contains `-1' for bytes that aren't used and
          * are always zero.  This happens on the Cray for `short' where
@@ -731,7 +568,7 @@ H5TN_init_interface(void)\n\
 	/* The part common to fixed and floating types */
 	printf("\
     if(NULL == (dt = H5T_alloc()))\n\
-        HGOTO_ERROR(H5E_DATATYPE, H5E_NOSPACE, FAIL, \"datatype allocation failed\")\n\
+        HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, FAIL,\"memory allocation failed\")\n\
     dt->shared->state = H5T_STATE_IMMUTABLE;\n\
     dt->shared->type = H5T_%s;\n\
     dt->shared->size = %d;\n",
@@ -784,8 +621,8 @@ H5TN_init_interface(void)\n\
 
 	/* Atomize the type */
 	printf("\
-    if((H5T_NATIVE_%s_g = H5I_register(H5I_DATATYPE, dt, FALSE)) < 0)\n\
-        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, \"can't register ID for built-in datatype\")\n",
+    if ((H5T_NATIVE_%s_g = H5I_register (H5I_DATATYPE, dt))<0)\n\
+        HGOTO_ERROR (H5E_DATATYPE, H5E_CANTINIT, FAIL,\"can't initialize type system (atom registration failure\");\n",
 	       d[i].varname);
 	printf("    H5T_NATIVE_%s_ALIGN_g = %lu;\n",
 	       d[i].varname, (unsigned long)(d[i].align));
@@ -819,16 +656,16 @@ H5TN_init_interface(void)\n\
     printf("\
 \n\
 done:\n\
-    if(ret_value < 0) {\n\
+    if(ret_value<0) {\n\
         if(dt != NULL) {\n\
             if(dt->shared != NULL)\n\
                 H5FL_FREE(H5T_shared_t, dt->shared);\n\
-            dt = H5FL_FREE(H5T_t, dt);\n\
+            H5FL_FREE(H5T_t, dt);\n\
         } /* end if */\n\
-    } /* end if */\n\
+    }\n\
 \n\
-    FUNC_LEAVE_NOAPI(ret_value);\n} /* end H5TN_init_interface() */\n");
-} /* end print_results() */
+    FUNC_LEAVE_NOAPI(ret_value);\n}\n");
+}
 
 
 /*-------------------------------------------------------------------------
@@ -1155,8 +992,8 @@ find_bias(int epos, int esize, int *perm, void *_a)
 
 /*-------------------------------------------------------------------------
  * Function:	print_header
-     *
-     * Purpose:	Prints the C file header for the generated file.
+ *
+ * Purpose:	Prints the C file header for the generated file.
  *
  * Return:	void
  *
@@ -1496,8 +1333,8 @@ detect_C99_integers64(void)
 #endif
 
 #if H5_SIZEOF_LONG_LONG>0
-    DETECT_I(long long,		  LLONG,        d_g[nd_g]); nd_g++;
-    DETECT_I(unsigned long long,  ULLONG,       d_g[nd_g]); nd_g++;
+    DETECT_I(long_long,		  LLONG,        d_g[nd_g]); nd_g++;
+    DETECT_I(unsigned long_long,  ULLONG,       d_g[nd_g]); nd_g++;
 #else
     /*
      * This architecture doesn't support an integer type larger than `long'

@@ -22,8 +22,6 @@ rem
 setlocal enabledelayedexpansion
 pushd %~dp0
 
-set /a nerrors=0
-
 rem Clean any variables starting with "HDF5_LIBTEST_", as we use these for our
 rem tests.  Also clear "HDF5_LIBTEST_TESTS", as we will be addding all of our tests
 rem to this variable.
@@ -63,16 +61,12 @@ rem     %2 - "dll" or nothing
         rem Only add our parameters for batch scripts.
         call !hdf5_libtest_%%a_test:.bat= %1 %2!
         rem Exit early if test fails.
-        if errorlevel 1 (
-            set /a nerrors=!nerrors!+1
-			echo.
-			echo.************************************
-			echo.  Testing %%a ^(%1 %2^)  FAILED
-			exit /b 1
-		)
+        if !errorlevel! neq 0 exit /b
     )
     
     rem If we get here, that means all of our tests passed.
+    echo.All library tests passed.
+
     exit /b
 
 
@@ -109,7 +103,6 @@ rem on it for sending parameters.  --SJW 9/6/07
     call :add_test mount%2 .\mount%2\%1
     call :add_test flush1%2 .\flush1%2\%1
     call :add_test flush2%2 .\flush2%2\%1
-    call :add_test app_ref%2 .\app_ref%2\%1
     call :add_test enum%2 .\enum%2\%1
     call :add_test set_extent%2 .\set_extent%2\%1
     rem Test commented because threadsafe is not built by default on Windows.
@@ -124,25 +117,13 @@ rem on it for sending parameters.  --SJW 9/6/07
     call :add_test dangle%2 .\dangle%2\%1
     call :add_test reserved%2 .\reserved%2\%1
     call :add_test cross_read%2 .\cross_read%2\%1
-    call :add_test freespace%2 .\freespace%2\%1
-	rem Test commented out until fixed - assert hangs daily test
-	rem call :add_test mf%2 .\mf%2\%1
     call :add_test btree2%2 .\btree2%2\%1
     call :add_test fheap%2 .\fheap%2\%1
-    call :add_test earray%2 .\earray%2\%1
-    call :add_test farray%2 .\farray%2\%1
-
-    call :add_test tcheckversion%2 .\tcheckversion%2\%1
     
     
     rem Run the tests, passing in which version to run
     call :run_tests %*
         
-    if "%nerrors%"=="0" (
-		echo.All library tests passed.
-	) else (
-        echo.** FAILED Library tests.
-    )
-        
     popd
-    endlocal & exit /b %nerrors%
+    endlocal & exit /b
+    

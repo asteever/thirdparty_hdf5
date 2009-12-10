@@ -509,7 +509,7 @@ int_f
 nh5pget_version_c (hid_t_f *prp_id, int_f * boot,int_f * freelist, int_f * stab, int_f *shhdr)
 {
      int ret_value = -1;
-#ifndef H5_NO_DEPRECATED_SYMBOLS
+     hid_t c_prp_id;
      herr_t ret;
      unsigned c_boot;
      unsigned c_freelist;
@@ -519,22 +519,14 @@ nh5pget_version_c (hid_t_f *prp_id, int_f * boot,int_f * freelist, int_f * stab,
      /*
       * Call H5Pget_version function.
       */
-     ret = H5Pget_version((hid_t)*prp_id, &c_boot, &c_freelist, &c_stab, &c_shhdr);
+     c_prp_id = *prp_id;
+     ret = H5Pget_version(c_prp_id, &c_boot, &c_freelist, &c_stab, &c_shhdr);
      if (ret < 0) return ret_value;
 
      *boot = (int_f)c_boot;
      *freelist = (int_f)c_freelist;
      *stab = (int_f)c_stab;
      *shhdr = (int_f)c_shhdr;
-#else /* H5_NO_DEPRECATED_SYMBOLS */
-     /*
-      * Fill in fake values [since we need a file ID to call H5Fget_info :-( -QAK ]
-      */
-     *boot = (int_f)0;
-     *freelist = (int_f)0;
-     *stab = (int_f)0;
-     *shhdr = (int_f)0;
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
      ret_value = 0;
 
      return ret_value;
@@ -1545,27 +1537,23 @@ nh5pget_nfilters_c (hid_t_f *prp_id, int_f* nfilters)
  * Programmer:  Xiangyang Su
  *              Friday, February 25, 2000
  * Modifications:
- *              Since cd_nelmts has IN/OUT attributes, fixed the input and
- *              returned value of cd_nelmnts to satisfy this specification.
- *              MSB January 27, 2009
  *---------------------------------------------------------------------------*/
 int_f
 nh5pget_filter_c(hid_t_f *prp_id, int_f* filter_number, int_f* flags, size_t_f* cd_nelmts, int_f* cd_values, size_t_f *namelen, _fcd name, int_f* filter_id)
 {
     unsigned int  c_flags;
     size_t c_cd_nelmts;
+    size_t c_cd_nelmts_in = (size_t)*cd_nelmts;
     H5Z_filter_t c_filter;
     unsigned int *c_cd_values = NULL;
     char *c_name = NULL;
     unsigned i;
     int ret_value = -1;
 
-    c_cd_nelmts = (size_t)*cd_nelmts;
-
     if(NULL == (c_name = (char *)malloc((size_t)*namelen + 1)))
         goto DONE;
 
-    if(NULL == (c_cd_values = (unsigned int *)malloc(sizeof(unsigned int) * c_cd_nelmts)))
+    if(NULL == (c_cd_values = (unsigned int *)malloc(sizeof(unsigned int) * c_cd_nelmts_in)))
         goto DONE;
 
     /*
@@ -1579,7 +1567,7 @@ nh5pget_filter_c(hid_t_f *prp_id, int_f* filter_number, int_f* flags, size_t_f* 
     *flags = (int_f)c_flags;
     HD5packFstring(c_name, _fcdtocp(name), strlen(c_name));
 
-    for(i = 0; i < c_cd_nelmts; i++)
+    for(i = 0; i < c_cd_nelmts_in; i++)
          cd_values[i] = (int_f)c_cd_values[i];
 
     ret_value = 0;
@@ -1706,17 +1694,13 @@ nh5pget_external_c(hid_t_f *prp_id, int_f *idx, size_t_f* name_size, _fcd name, 
       */
      c_prp_id = (hid_t)*prp_id;
      c_idx = (unsigned)*idx;
-     status = H5Pget_external(c_prp_id, c_idx, c_namelen+1, c_name, &c_offset, &size );
+     status = H5Pget_external(c_prp_id, c_idx, c_namelen, c_name, &c_offset, &size );
 
      if (status < 0) goto DONE;
 
      *offset = (int_f)c_offset;
      *bytes = (hsize_t_f)size;
-     /* Note: if the size of the fortran buffer is larger then the returned string
-      *       from the function then we need to give HD5packFstring the fortran buffer size so 
-      *       that it fills the remaining unused characters with blanks. MSB
-      */
-     HD5packFstring(c_name, _fcdtocp(name), c_namelen+1);
+     HD5packFstring(c_name, _fcdtocp(name), strlen(c_name));
      ret_value = 0;
 
 DONE:
@@ -3464,7 +3448,7 @@ nh5pget_attr_phase_change_c(hid_t_f *ocpl_id, int_f *max_compact, int_f *min_den
 }
 
 /*----------------------------------------------------------------------------
- * Name:        h5pset_attr_creation_order_c
+ * Name:        h5pset_attr_creation_order_c 
  * Purpose:     Calls H5Ppset_attr_creation_order
  *
  * Inputs:      ocpl_id		- Object (dataset or group) creation property list identifier
@@ -3498,10 +3482,10 @@ nh5pset_attr_creation_order_c(hid_t_f *ocpl_id, int_f *crt_order_flags )
  *
  * Inputs:
  *       plist_id - file creation property list
- *       nindexes - Number of shared object header message indexes
- *                   available in files created WITH this property list
- *
- * Outputs:
+ *       nindexes - Number of shared object header message indexes 
+ *                   available in files created WITH this property list 
+ * 
+ * Outputs:     
  * Returns:     0 on success, -1 on failure
  * Programmer:  M.S. Breitenfeld
  *              January, 2008
@@ -3535,8 +3519,8 @@ nh5pset_shared_mesg_nindexes_c(hid_t_f *plist_id, int_f *nindexes )
  *          index_num - Index being configured.
  *    mesg_type_flags - Types of messages that should be stored in this index.
  *      min_mesg_size - Minimum message size.
- *
- * Outputs:
+ * 
+ * Outputs:     
  * Returns:     0 on success, -1 on failure
  * Programmer:  M.S. Breitenfeld
  *              January, 2008
@@ -3749,10 +3733,10 @@ nh5pset_obj_track_times_c(hid_t_f *plist_id, int_f *flag)
  * Name:        h5pset_create_inter_group_c
  * Purpose:     Calls H5Pset_create_intermediate_group
  *
- * Inputs:
+ * Inputs:   
  *		lcpl_id - Link creation property list identifier
- *   crt_intermed_group - crt_intermed_group specifying whether
- *                        to create intermediate groups upon the
+ *   crt_intermed_group - crt_intermed_group specifying whether 
+ *                        to create intermediate groups upon the 
  *                        creation of an object
  * Returns:     0 on success, -1 on failure
  * Programmer:  M.S. Breitenfeld
@@ -3870,9 +3854,9 @@ nh5pget_char_encoding_c(hid_t_f *plist_id, int_f *encoding)
    */
   ret = H5Pget_char_encoding((hid_t)*plist_id, &c_encoding);
   if (ret < 0) return ret_value;
-
+  
   *encoding = (int_f)c_encoding;
-
+  
   ret_value = 0;
   return ret_value;
 }
@@ -3903,7 +3887,7 @@ nh5pset_copy_object_c(hid_t_f *ocp_plist_id, int_f *copy_options)
    */
   ret = H5Pset_copy_object((hid_t)*ocp_plist_id, (unsigned)*copy_options);
   if (ret < 0) return ret_value;
-
+  
   ret_value = 0;
   return ret_value;
 }
@@ -3936,7 +3920,7 @@ nh5pget_copy_object_c(hid_t_f *ocp_plist_id, int_f *copy_options)
   if (ret < 0) return ret_value;
 
   *copy_options = (int_f)c_copy_options;
-
+  
   ret_value = 0;
   return ret_value;
 }
@@ -3944,14 +3928,14 @@ nh5pget_copy_object_c(hid_t_f *ocp_plist_id, int_f *copy_options)
 /*----------------------------------------------------------------------------
  * Name:        h5pget_data_transform_c
  * Purpose:     Calls H5Pget_data_transform
- * Inputs:
+ * Inputs:      
  *              prp_id - property list identifier to query
  *      expression_len - buffer size transorm expression
  *
- * Output:
+ * Output:      
  *          expression - buffer to hold transform expression
  *
- * Returns:
+ * Returns:     
  *          Success:  0
  *	    Failure: -1
  *
@@ -3984,7 +3968,7 @@ nh5pget_data_transform_c(hid_t_f *plist_id, _fcd expression, int_f *expression_l
      if(ret < 0) return ret_value;
      /* or strlen ? */
      HD5packFstring(c_expression, _fcdtocp(expression), c_expression_len-1);
-
+     
      *size = (size_t_f)ret;
 
      ret_value = 0;
@@ -3994,14 +3978,14 @@ nh5pget_data_transform_c(hid_t_f *plist_id, _fcd expression, int_f *expression_l
 /*----------------------------------------------------------------------------
  * Name:        h5pset_data_transform_c
  * Purpose:     Calls H5Pset_data_transform
- * Inputs:
- *              prp_id - property list identifier to query
+ * Inputs:      
+ *              prp_id - property list identifier to query      
  *          expression - buffer to hold transform expression
  *      expression_len - buffer size transorm expression
  *
  * Output:
  *
- * Returns:
+ * Returns:     
  *          Success:  0
  *	    Failure: -1
  *
@@ -4036,12 +4020,12 @@ nh5pset_data_transform_c(hid_t_f *plist_id, _fcd expression, int_f *expression_l
 /*----------------------------------------------------------------------------
  * Name:        h5pget_local_heap_size_hint_c
  * Purpose:     Calls H5Pget_local_heap_size_hint
- * Inputs:
+ * Inputs: 
  *         gcpl_id - Group creation property list identifier
  *
  * Output:
  *       size_hint - Hint for size of local heap
- * Returns:
+ * Returns:     
  *          Success:  0
  *	    Failure: -1
  *
@@ -4069,13 +4053,13 @@ nh5pget_local_heap_size_hint_c(hid_t_f *gcpl_id, size_t_f *size_hint)
 /*----------------------------------------------------------------------------
  * Name:        h5pget_est_link_info_c
  * Purpose:     Calls H5Pget_est_link_info
- * Inputs:
+ * Inputs: 
  *              gcpl_id - Group creation property list identifier
  *
- * Output:
+ * Output: 
  *      est_num_entries - Estimated number of links to be inserted into group
  *         est_name_len - Estimated average length of link names
- * Returns:
+ * Returns:     
  *          Success:  0
  *	    Failure: -1
  *
@@ -4106,13 +4090,13 @@ nh5pget_est_link_info_c(hid_t_f *gcpl_id, int_f *est_num_entries, int_f *est_nam
 /*----------------------------------------------------------------------------
  * Name:        h5pset_local_heap_size_hint_c
  * Purpose:     Calls H5Pset_local_heap_size_hint
- * Inputs:
+ * Inputs: 
  *         gcpl_id - Group creation property list identifier
  *       size_hint - Hint for size of local heap
  *
  * Output:
  *
- * Returns:
+ * Returns:     
  *          Success:  0
  *	    Failure: -1
  *
@@ -4138,13 +4122,13 @@ nh5pset_local_heap_size_hint_c(hid_t_f *gcpl_id, size_t_f *size_hint)
 /*----------------------------------------------------------------------------
  * Name:        h5pset_est_link_info_c
  * Purpose:     Calls H5Pset_est_link_info
- * Inputs:
- *              gcpl_id - Group creation property list identifier
+ * Inputs: 
+ *              gcpl_id - Group creation property list identifier 
  *      est_num_entries - Estimated number of links to be inserted into group
  *         est_name_len - Estimated average length of link names
  *
  * Output:
- * Returns:
+ * Returns:     
  *          Success:  0
  *	    Failure: -1
  *
@@ -4171,7 +4155,7 @@ nh5pset_est_link_info_c(hid_t_f *gcpl_id, int_f *est_num_entries, int_f *est_nam
  * Name:        h5pset_link_phase_change_c
  * Purpose:     Calls H5Pset_link_phase_change
  *
- * Inputs:      gcpl_id     - Group creation property list identifier
+ * Inputs:      gcpl_id     - Group creation property list identifier   
  *              max_compact - Maximum number of attributes to be stored in compact storage
  *              min_dense   - Minimum number of attributes to be stored in dense storage
  * Outputs
@@ -4200,7 +4184,7 @@ nh5pset_link_phase_change_c(hid_t_f *gcpl_id, int_f *max_compact, int_f *min_den
  * Name:        h5pset_fapl_direct_c
  * Purpose:     Calls H5Pset_fapl_direct
  *
- * Inputs:
+ * Inputs:   
  *    fapl_id 	 - File access property list identifier
  *    alignment  - Required memory alignment boundary
  *    block_size - File system block size
@@ -4215,12 +4199,12 @@ int_f
 nh5pset_fapl_direct_c(hid_t_f *fapl_id, size_t_f *alignment, size_t_f *block_size, size_t_f *cbuf_size )
 {
   int ret_value = -1;
-#ifdef H5_HAVE_DIRECT
   herr_t ret;
 
   /*
    * Call H5Pset_link_phase_change function.
    */
+#ifdef H5_HAVE_DIRECT
   ret = H5Pset_fapl_direct((hid_t)*fapl_id, (size_t)*alignment, (size_t)*block_size, (size_t)*cbuf_size );
     if (ret < 0) return ret_value;
 
@@ -4234,7 +4218,7 @@ nh5pset_fapl_direct_c(hid_t_f *fapl_id, size_t_f *alignment, size_t_f *block_siz
  * Name:        h5pget_fapl_direct_c
  * Purpose:     Calls H5Pget_fapl_direct
  *
- * Inputs:
+ * Inputs:   
  *    fapl_id 	 - File access property list identifier
  * Outputs:
  *    alignment  - Required memory alignment boundary
@@ -4249,7 +4233,6 @@ int_f
 nh5pget_fapl_direct_c(hid_t_f *fapl_id, size_t_f *alignment, size_t_f *block_size, size_t_f *cbuf_size )
 {
   int ret_value = -1;
-#ifdef H5_HAVE_DIRECT
   herr_t ret;
   size_t c_alignment;
   size_t c_block_size;
@@ -4258,9 +4241,10 @@ nh5pget_fapl_direct_c(hid_t_f *fapl_id, size_t_f *alignment, size_t_f *block_siz
   /*
    * Call H5Pget_link_phase_change function.
    */
+#ifdef H5_HAVE_DIRECT
   ret = H5Pget_fapl_direct((hid_t)*fapl_id, &c_alignment, &c_block_size, &c_cbuf_size );
   if (ret < 0) return ret_value;
-
+  
   *alignment  = (size_t_f)c_alignment;
   *block_size = (size_t_f)c_block_size;
   *cbuf_size  = (size_t_f)c_cbuf_size;
@@ -4274,7 +4258,7 @@ nh5pget_fapl_direct_c(hid_t_f *fapl_id, size_t_f *alignment, size_t_f *block_siz
  * Name:        h5pset_attr_phase_change_c
  * Purpose:     Calls H5Pset_attr_phase_change
  *
- * Inputs:      ocpl_id		- Object (dataset or group) creation property list identifier
+ * Inputs:      ocpl_id		- Object (dataset or group) creation property list identifier  
  *              max_compact     - Maximum number of attributes to be stored in compact storage
  *              min_dense       - Minimum number of attributes to be stored in dense storage
  * Outputs:
@@ -4299,7 +4283,7 @@ nh5pset_attr_phase_change_c(hid_t_f *ocpl_id, int_f *max_compact, int_f *min_den
 }
 
 /*----------------------------------------------------------------------------
- * Name:        h5pset_nbit_c
+ * Name:        h5pset_nbit_c 
  * Purpose:     Calls H5Pset_nbit
  *
  * Inputs:      plist_id - Dataset creation property list identifier
@@ -4324,10 +4308,10 @@ nh5pset_nbit_c(hid_t_f *plist_id )
   return ret_value;
 }
 /*----------------------------------------------------------------------------
- * Name:        h5pset_scaleoffset_c
+ * Name:        h5pset_scaleoffset_c 
  * Purpose:     Calls H5Pset_scaleoffset
  *
- * Inputs:
+ * Inputs:    
  *      plist_id - Dataset creation property list identifier
  *    scale_type - Flag indicating compression method.
  *  scale_factor - Parameter related to scale.
@@ -4357,9 +4341,9 @@ nh5pset_scaleoffset_c(hid_t_f *plist_id, int_f *scale_type, int_f *scale_factor 
 
 /*----------------------------------------------------------------------------
  * Name:        h5pset_nlinks
- * Purpose:     Calls H5Pset_nlinks
+ * Purpose:     Calls H5Pset_nlinks 
  *
- * Inputs:
+ * Inputs:   
  *            lapl_id - File access property list identifier
  *             nlinks - Maximum number of links to traverse
  * Outputs:
@@ -4385,9 +4369,9 @@ nh5pset_nlinks_c(hid_t_f *lapl_id, size_t_f *nlinks)
 
 /*----------------------------------------------------------------------------
  * Name:        h5pget_nlinks
- * Purpose:     Calls H5Pget_nlinks
+ * Purpose:     Calls H5Pget_nlinks 
  *
- * Inputs:
+ * Inputs:   
  *            lapl_id - File access property list identifier
  *
  * Outputs:
@@ -4419,9 +4403,9 @@ nh5pget_nlinks_c(hid_t_f *lapl_id, size_t_f *nlinks)
  * Name:        h5pget_create_inter_group_c
  * Purpose:     Calls H5Pget_create_intermediate_group
  *
- * Inputs:
+ * Inputs:   
  *		lcpl_id - Link creation property list identifier
- *   crt_intermed_group - Specifying whether to create intermediate groups upon
+ *   crt_intermed_group - Specifying whether to create intermediate groups upon 
  *                        the creation of an object
  * Returns:     0 on success, -1 on failure
  * Programmer:  M.S. Breitenfeld
@@ -4444,73 +4428,6 @@ nh5pget_create_inter_group_c(hid_t_f *lcpl_id, int_f *crt_intermed_group)
   if (ret < 0) return ret_value; /* error occurred */
 
   *crt_intermed_group = (int_f)c_crt_intermed_group;
-  ret_value = 0;
-  return ret_value;
-}
-
-/*----------------------------------------------------------------------------
- * Name:        h5pset_chunk_cache_c
- * Purpose:     Calls H5Pset_chunk_cache
- *
- * Inputs:	dapl_id            - Link creation property list identifier
- *              rdcc_nslots        - 
- *              rdcc_nbytes        -
- *              rdcc_w0            -
- *              
- * Returns:     0 on success, -1 on failure
- * Programmer:  M.S. Breitenfeld
- *              April 13, 2009
- * Modifications:
- *---------------------------------------------------------------------------*/
-
-int_f
-nh5pset_chunk_cache_c(hid_t_f *dapl_id, size_t_f *rdcc_nslots, size_t_f *rdcc_nbytes, real_f *rdcc_w0)
-{
-  int ret_value = -1;
-
-  /*
-   * Call H5Pset_chunk_cache function.
-   */
-  if( (H5Pset_chunk_cache((hid_t)*dapl_id, (size_t)*rdcc_nslots, (size_t)*rdcc_nbytes, (double)*rdcc_w0)) <0 )
-    return ret_value; /* error occurred */
-
-  ret_value = 0;
-  return ret_value;
-}
-
-/*----------------------------------------------------------------------------
- * Name:        h5pget_chunk_cache_c
- * Purpose:     Calls H5Pget_chunk_cache
- *
- * Inputs:	dapl_id            - Link creation property list identifier
- * Outputs:
- *              rdcc_nslots        - 
- *              rdcc_nbytes        -
- *              rdcc_w0            -
- *              
- * Returns:     0 on success, -1 on failure
- * Programmer:  M.S. Breitenfeld
- *              April 13, 2009
- * Modifications:
- *---------------------------------------------------------------------------*/
-
-int_f
-nh5pget_chunk_cache_c(hid_t_f *dapl_id, size_t_f *rdcc_nslots, size_t_f *rdcc_nbytes, real_f *rdcc_w0)
-{
-  int ret_value = -1;
-  size_t c_rdcc_nslots;
-  size_t c_rdcc_nbytes;
-  double c_rdcc_w0;
-  /*
-   * Call H5Pget_chunk_cache function.
-   */
-  if( (H5Pget_chunk_cache((hid_t)*dapl_id, &c_rdcc_nslots, &c_rdcc_nbytes, &c_rdcc_w0)) <0 )
-    return ret_value; /* error occurred */
-
-  *rdcc_nslots=(size_t_f)c_rdcc_nslots;
-  *rdcc_nbytes=(size_t_f)c_rdcc_nbytes;
-  *rdcc_w0=(real_f)c_rdcc_w0;
-
   ret_value = 0;
   return ret_value;
 }

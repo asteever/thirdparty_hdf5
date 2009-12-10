@@ -30,10 +30,6 @@ else
   bin_PROGRAMS=h5perf_serial
 endif
 
-# Add h5perf and h5perf_serial specific linker flags here
-h5perf_LDFLAGS = $(LT_STATIC_EXEC) $(AM_LDFLAGS)
-h5perf_serial_LDFLAGS = $(LT_STATIC_EXEC) $(AM_LDFLAGS)
-
 # Some programs are not built or run by default, but can be built by hand or by
 # specifying --enable-build-all at configure time.
 # Also, some of these programs should only be built in parallel.
@@ -54,7 +50,7 @@ h5perf_serial_SOURCES=sio_perf.c sio_engine.c sio_timer.c
 
 # These are the files that `make clean' (and derivatives) will remove from
 # this directory.
-CLEANFILES=*.h5 *.raw *.dat x-gnuplot perftest.out
+CLEANFILES=*.h5 *.raw *.dat x-gnuplot
 
 # All of the programs depend on the main hdf5 library, and some of them
 # depend on test or tools library.

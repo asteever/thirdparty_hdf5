@@ -53,10 +53,10 @@
 #define H5T_NAMELEN		32
 
 /* Macro to ease detecting "complex" datatypes (i.e. those with base types or fields) */
-#define H5T_IS_COMPLEX(t)       ((t) == H5T_COMPOUND || (t) == H5T_ENUM || (t) == H5T_VLEN || (t) == H5T_ARRAY)
+#define H5T_IS_COMPLEX(t)       ((t)==H5T_COMPOUND || (t)==H5T_ENUM || (t)==H5T_VLEN || (t)==H5T_ARRAY)
 
 /* Macro to ease detecting fixed "string" datatypes */
-#define H5T_IS_FIXED_STRING(dt) (H5T_STRING == (dt)->type)
+#define H5T_IS_FIXED_STRING(dt)   (H5T_STRING == (dt)->type)
 
 /* Macro to ease detecting variable-length "string" datatypes */
 #define H5T_IS_VL_STRING(dt)    (H5T_VLEN == (dt)->type && H5T_VLEN_STRING == (dt)->u.vlen.type)
@@ -65,14 +65,7 @@
 #define H5T_IS_STRING(dt)       (H5T_IS_FIXED_STRING(dt) || H5T_IS_VL_STRING(dt))
 
 /* Macro to ease detecting atomic datatypes */
-#define H5T_IS_ATOMIC(dt)       (!(H5T_IS_COMPLEX((dt)->type) || (dt)->type == H5T_OPAQUE))
-
-/* Macro to ease retrieving class of shared datatype */
-/* (Externally, a VL string is a string; internally, a VL string is a VL.  Lie
- *      to the user if they have a VL string and tell them it's in the string
- *      class)
- */
-#define H5T_GET_CLASS(shared, internal) ((internal) ? (shared)->type : (H5T_IS_VL_STRING(shared) ?  H5T_STRING : (shared)->type))
+#define H5T_IS_ATOMIC(dt)       (!(H5T_IS_COMPLEX((dt)->type) || (dt)->type==H5T_OPAQUE))
 
 
 /*
@@ -133,18 +126,10 @@
 #define H5T_CONV_INTERNAL_INTEGER_LDOUBLE         1
 #endif
 
-/* Define an internal macro for converting unsigned long to float.
- * Pathscale compiler on Sandia's Linux machine has some problem.
- * 64-bit Solaris does different rounding. */
-#if (H5_WANT_DATA_ACCURACY && H5_ULONG_TO_FLOAT_ACCURATE && H5_ULONG_TO_FP_BOTTOM_BIT_ACCURATE) || \
-    (!H5_WANT_DATA_ACCURACY)
-#define H5T_CONV_INTERNAL_ULONG_FLT         1
-#endif
-
-/* Define an internal macro for converting unsigned (long) long to double.
+/* Define an internal macro for converting unsigned (long) long to floating numbers.
  * 64-bit Solaris does different rounding. */
 #if (H5_WANT_DATA_ACCURACY && H5_ULONG_TO_FP_BOTTOM_BIT_ACCURATE) || (!H5_WANT_DATA_ACCURACY)
-#define H5T_CONV_INTERNAL_ULONG_DBL         1
+#define H5T_CONV_INTERNAL_ULONG_FP         1
 #endif
 
 /* Define an internal macro for converting unsigned long to long double.  SGI compilers give some
@@ -241,8 +226,8 @@ struct H5T_stats_t {
 /* The datatype conversion database */
 struct H5T_path_t {
     char	name[H5T_NAMELEN];	/*name for debugging only	     */
-    H5T_t	*src;			/*source datatype 		     */
-    H5T_t	*dst;			/*destination datatype		     */
+    H5T_t	*src;			/*source datatype ID		     */
+    H5T_t	*dst;			/*destination datatype ID	     */
     H5T_conv_t	func;			/*data conversion function	     */
     hbool_t	is_hard;		/*is it a hard function?	     */
     hbool_t	is_noop;		/*is it the noop conversion?	     */
@@ -292,22 +277,13 @@ typedef enum H5T_sort_t {
     H5T_SORT_VALUE	= 2 		/*sorted by memb offset or enum value*/
 } H5T_sort_t;
 
-/* A compound datatype member */
-typedef struct H5T_cmemb_t {
-    char		*name;		/*name of this member		     */
-    size_t		offset;		/*offset from beginning of struct    */
-    size_t		size;		/*size of this member		     */
-    struct H5T_t	*type;		/*type of this member		     */
-} H5T_cmemb_t;
-
 /* A compound datatype */
 typedef struct H5T_compnd_t {
     unsigned	nalloc;		/*num entries allocated in MEMB array*/
     unsigned	nmembs;		/*number of members defined in struct*/
     H5T_sort_t	sorted;		/*how are members sorted?	     */
     hbool_t     packed;		/*are members packed together?       */
-    H5T_cmemb_t	*memb;		/*array of struct members	     */
-    size_t      memb_size;	/*total of all member sizes          */
+    struct H5T_cmemb_t	*memb;	/*array of struct members	     */
 } H5T_compnd_t;
 
 /* An enumeration datatype */
@@ -330,7 +306,7 @@ typedef herr_t (*H5T_vlen_setnullfunc_t)(H5F_t *f, hid_t dxpl_id, void *_vl, voi
 /* VL types */
 typedef enum {
     H5T_VLEN_BADTYPE =  -1, /* invalid VL Type */
-    H5T_VLEN_SEQUENCE = 0,  /* VL sequence */
+    H5T_VLEN_SEQUENCE=0,    /* VL sequence */
     H5T_VLEN_STRING,        /* VL string */
     H5T_VLEN_MAXTYPE        /* highest type (Invalid as true type) */
 } H5T_vlen_type_t;
@@ -397,6 +373,14 @@ struct H5T_t {
     H5O_loc_t       oloc;       /* Object location, if the type is a named type */
     H5G_name_t      path;       /* group hier. path if the type is a named type */
 };
+
+/* A compound datatype member */
+typedef struct H5T_cmemb_t {
+    char		*name;		/*name of this member		     */
+    size_t		offset;		/*offset from beginning of struct    */
+    size_t		size;		/*total size: dims * type_size	     */
+    struct H5T_t	*type;		/*type of this member		     */
+} H5T_cmemb_t;
 
 /* The master list of soft conversion functions */
 typedef struct H5T_soft_t {
@@ -1380,7 +1364,8 @@ H5_DLL H5T_t * H5T_vlen_create(const H5T_t *base);
 H5_DLL htri_t H5T_vlen_set_loc(const H5T_t *dt, H5F_t *f, H5T_loc_t loc);
 
 /* Array functions */
-H5_DLL H5T_t *H5T_array_create(H5T_t *base, unsigned ndims, const hsize_t dim[/* ndims */]);
+H5_DLL H5T_t * H5T_array_create(H5T_t *base, unsigned ndims,
+        const hsize_t dim[/* ndims */]);
 H5_DLL int    H5T_get_array_ndims(const H5T_t *dt);
 H5_DLL int    H5T_get_array_dims(const H5T_t *dt, hsize_t dims[]);
 
@@ -1389,8 +1374,7 @@ H5_DLL herr_t H5T_insert(H5T_t *parent, const char *name, size_t offset,
         const H5T_t *member);
 H5_DLL size_t H5T_get_member_size(const H5T_t *dt, unsigned membno);
 H5_DLL htri_t H5T_is_packed(const H5T_t *dt);
-H5_DLL void H5T_update_packed(const H5T_t *dt);
-H5_DLL H5T_subset_info_t *H5T_conv_struct_subset(const H5T_cdata_t *cdata);
+H5_DLL H5T_subset_t H5T_conv_struct_subset(const H5T_cdata_t *cdata);
 
 /* Enumerated type functions */
 H5_DLL H5T_t *H5T_enum_create(const H5T_t *parent);

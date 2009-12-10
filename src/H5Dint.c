@@ -30,6 +30,7 @@
 #include "H5Dpkg.h"		/* Datasets 				*/
 #include "H5Eprivate.h"		/* Error handling		  	*/
 #include "H5FOprivate.h"        /* File objects                         */
+#include "H5HLprivate.h"	/* Local heaps				*/
 #include "H5Iprivate.h"		/* IDs			  		*/
 #include "H5Lprivate.h"		/* Links		  		*/
 #include "H5MMprivate.h"	/* Memory management			*/
@@ -48,6 +49,7 @@
 typedef struct {
     const H5F_t *f;             /* Pointer to file being flushed */
     hid_t dxpl_id;              /* DXPL for I/O operations */
+    unsigned flags;             /* Flags for flush operation */
 } H5D_flush_ud_t;
 
 
@@ -62,10 +64,10 @@ static H5D_shared_t *H5D_new(hid_t dcpl_id, hbool_t creating, hbool_t vl_type);
 static herr_t H5D_init_type(H5F_t *file, const H5D_t *dset, hid_t type_id,
     const H5T_t *type);
 static herr_t H5D_init_space(H5F_t *file, const H5D_t *dset, const H5S_t *space);
-static herr_t H5D_update_oh_info(H5F_t *file, hid_t dxpl_id, H5D_t *dset,
-    hid_t dapl_id);
-static herr_t H5D_open_oid(H5D_t *dataset, hid_t dapl_id, hid_t dxpl_id);
-static herr_t H5D_flush_real(H5D_t *dataset, hid_t dxpl_id);
+static herr_t H5D_set_io_ops(H5D_t *dataset);
+static herr_t H5D_update_oh_info(H5F_t *file, hid_t dxpl_id, H5D_t *dset);
+static herr_t H5D_open_oid(H5D_t *dataset, hid_t dxpl_id);
+static herr_t H5D_flush_real(H5D_t *dataset, hid_t dxpl_id, unsigned flags);
 
 
 /*********************/
@@ -169,8 +171,8 @@ H5D_init_interface(void)
     if(NULL == (def_dcpl = (H5P_genplist_t *)H5I_object(H5P_LST_DATASET_CREATE_g)))
         HGOTO_ERROR(H5E_DATASET, H5E_BADTYPE, FAIL, "can't get default dataset creation property list")
 
-    /* Get the default data storage layout */
-    if(H5P_get(def_dcpl, H5D_CRT_LAYOUT_NAME, &H5D_def_dset.layout) < 0)
+    /* Get the default data storage method */
+    if(H5P_get(def_dcpl, H5D_CRT_LAYOUT_NAME, &H5D_def_dset.layout.type) < 0)
          HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't retrieve layout")
 
     /* Get the default dataset creation properties */
@@ -178,7 +180,7 @@ H5D_init_interface(void)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't retrieve external file list")
     if(H5P_get(def_dcpl, H5D_CRT_FILL_VALUE_NAME, &H5D_def_dset.dcpl_cache.fill) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't retrieve fill value")
-    if(H5P_get(def_dcpl, H5O_CRT_PIPELINE_NAME, &H5D_def_dset.dcpl_cache.pline) < 0)
+    if(H5P_get(def_dcpl, H5D_CRT_DATA_PIPELINE_NAME, &H5D_def_dset.dcpl_cache.pline) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't retrieve pipeline filter")
 
     /* Reset the "default DXPL cache" information */
@@ -239,7 +241,7 @@ H5D_term_interface(void)
              *
              * QAK - 5/13/03
              */
-	    H5I_clear_type(H5I_DATASET, TRUE, FALSE);
+	    H5I_clear_type(H5I_DATASET, TRUE);
 	} else {
 	    H5I_dec_type_ref(H5I_DATASET);
 	    H5_interface_initialize_g = 0;
@@ -416,7 +418,6 @@ H5D_create_named(const H5G_loc_t *loc, const char *name, hid_t type_id,
     dcrt_info.type_id = type_id;
     dcrt_info.space = space;
     dcrt_info.dcpl_id = dcpl_id;
-    dcrt_info.dapl_id = dapl_id;
 
     /* Set up object creation information */
     ocrt_info.obj_type = H5O_TYPE_DATASET;
@@ -455,9 +456,8 @@ H5D_get_space_status(H5D_t *dset, H5D_space_status_t *allocation, hid_t dxpl_id)
 {
     H5S_t      *space;              /* Dataset's dataspace */
     hsize_t     space_allocated;    /* The number of bytes allocated for chunks */
-    hssize_t    snelmts;            /* Temporary holder for number of elements in dataspace */
-    hsize_t     nelmts;             /* Number of elements in dataspace */
-    size_t      dt_size;            /* Size of datatype */
+    hssize_t    total_elem;         /* The total number of elements in dataspace */
+    size_t      type_size;          /* The size of the datatype for the dataset */
     hsize_t     full_size;          /* The number of bytes in the dataset when fully populated */
     herr_t      ret_value = SUCCEED;
 
@@ -470,20 +470,16 @@ H5D_get_space_status(H5D_t *dset, H5D_space_status_t *allocation, hid_t dxpl_id)
     HDassert(space);
 
     /* Get the total number of elements in dataset's dataspace */
-    if((snelmts = H5S_GET_EXTENT_NPOINTS(space)) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "unable to retrieve number of elements in dataspace")
-    nelmts = (hsize_t)snelmts;
+    if((total_elem=H5S_GET_EXTENT_NPOINTS(space)) < 0)
+	HGOTO_ERROR(H5E_DATASET, H5E_CANTCOUNT, FAIL, "unable to get # of dataspace elements")
 
     /* Get the size of the dataset's datatype */
-    if(0 == (dt_size = H5T_GET_SIZE(dset->shared->type)))
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "unable to retrieve size of datatype")
+    if((type_size = H5T_get_size(dset->shared->type)) == 0)
+	HGOTO_ERROR(H5E_DATASET, H5E_CANTCOUNT, FAIL, "unable to get size of datatype")
 
     /* Compute the maximum size of the dataset in bytes */
-    full_size = nelmts * dt_size;
-
-    /* Check for overflow during multiplication */
-    if(nelmts != (full_size / dt_size))
-        HGOTO_ERROR(H5E_DATASET, H5E_OVERFLOW, FAIL, "size of dataset's storage overflowed")
+    H5_CHECK_OVERFLOW(total_elem,hssize_t,hsize_t);
+    full_size=((hsize_t)total_elem)*type_size;
 
     /* Difficult to error check, since the error value is 0 and 0 is a valid value... :-/ */
     space_allocated = H5D_get_storage_size(dset, dxpl_id);
@@ -539,7 +535,7 @@ H5D_new(hid_t dcpl_id, hbool_t creating, hbool_t vl_type)
      * don't bother to copy it, just increment the reference count
      */
     if(!vl_type && creating && dcpl_id == H5P_DATASET_CREATE_DEFAULT) {
-        if(H5I_inc_ref(dcpl_id, FALSE) < 0)
+        if(H5I_inc_ref(dcpl_id) < 0)
             HGOTO_ERROR(H5E_DATASET, H5E_CANTINC, NULL, "Can't increment default DCPL ID")
         new_dset->dcpl_id = dcpl_id;
     } /* end if */
@@ -548,7 +544,7 @@ H5D_new(hid_t dcpl_id, hbool_t creating, hbool_t vl_type)
         if(NULL == (plist = (H5P_genplist_t *)H5I_object(dcpl_id)))
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a property list")
 
-        new_dset->dcpl_id = H5P_copy_plist(plist, FALSE);
+        new_dset->dcpl_id = H5P_copy_plist(plist);
     } /* end else */
 
     /* Set return value */
@@ -558,8 +554,8 @@ done:
     if(ret_value == NULL)
         if(new_dset != NULL) {
             if(new_dset->dcpl_id != 0)
-                (void)H5I_dec_ref(new_dset->dcpl_id, FALSE);
-            (void)H5FL_FREE(H5D_shared_t, new_dset);
+                (void)H5I_dec_ref(new_dset->dcpl_id);
+            H5FL_FREE(H5D_shared_t, new_dset);
         } /* end if */
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -622,12 +618,12 @@ H5D_init_type(H5F_t *file, const H5D_t *dset, hid_t type_id, const H5T_t *type)
                 HGOTO_ERROR(H5E_DATASET, H5E_CANTSET, FAIL, "can't set latest version of datatype")
 
         /* Get a datatype ID for the dataset's datatype */
-	if((dset->shared->type_id = H5I_register(H5I_DATATYPE, dset->shared->type, FALSE)) < 0)
+	if((dset->shared->type_id = H5I_register(H5I_DATATYPE, dset->shared->type)) < 0)
 	    HGOTO_ERROR(H5E_DATASET, H5E_CANTREGISTER, FAIL, "unable to register type")
     } /* end if */
     /* Not a custom datatype, just use it directly */
     else {
-        if(H5I_inc_ref(type_id, FALSE) < 0)
+        if(H5I_inc_ref(type_id) < 0)
             HGOTO_ERROR(H5E_DATASET, H5E_CANTINC, FAIL, "Can't increment datatype ID")
 
         /* Use existing datatype */
@@ -689,6 +685,58 @@ done:
 
 
 /*-------------------------------------------------------------------------
+ * Function:	H5D_set_io_ops
+ *
+ * Purpose:	Set the I/O operation function pointers for a dataset
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Quincey Koziol
+ *		Thursday, March 20, 2008
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5D_set_io_ops(H5D_t *dataset)
+{
+    herr_t ret_value = SUCCEED;		/* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT(H5D_set_io_ops)
+
+    /* check args */
+    HDassert(dataset);
+
+    /* Set the I/O functions for each layout type */
+    switch(dataset->shared->layout.type) {
+        case H5D_CONTIGUOUS:
+            if(dataset->shared->dcpl_cache.efl.nused > 0)
+                dataset->shared->layout.ops = H5D_LOPS_EFL;
+            else
+                dataset->shared->layout.ops = H5D_LOPS_CONTIG;
+            break;
+
+        case H5D_CHUNKED:
+            dataset->shared->layout.ops = H5D_LOPS_CHUNK;
+
+            /* Set the chunk operations */
+            /* (Only "istore" indexing type currently supported */
+            dataset->shared->layout.u.chunk.ops = H5D_COPS_ISTORE;
+            break;
+
+        case H5D_COMPACT:
+            dataset->shared->layout.ops = H5D_LOPS_COMPACT;
+            break;
+
+        default:
+            HGOTO_ERROR(H5E_DATASET, H5E_UNSUPPORTED, FAIL, "unknown storage method")
+    } /* end switch */ /*lint !e788 All appropriate cases are covered */
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5D_set_io_ops() */
+
+
+/*-------------------------------------------------------------------------
  * Function:	H5D_update_oh_info
  *
  * Purpose:	Create and fill object header for dataset
@@ -702,7 +750,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5D_update_oh_info(H5F_t *file, hid_t dxpl_id, H5D_t *dset, hid_t dapl_id)
+H5D_update_oh_info(H5F_t *file, hid_t dxpl_id, H5D_t *dset)
 {
     H5O_t              *oh = NULL;      /* Pointer to dataset's object header */
     size_t              ohdr_size = H5D_MINHDR_SIZE;    /* Size of dataset's object header */
@@ -713,7 +761,6 @@ H5D_update_oh_info(H5F_t *file, hid_t dxpl_id, H5D_t *dset, hid_t dapl_id)
     H5O_fill_t		*fill_prop;     /* Pointer to dataset's fill value information */
     H5D_fill_value_t	fill_status;    /* Fill value status */
     hbool_t             fill_changed = FALSE;      /* Flag indicating the fill value was changed */
-    hbool_t             layout_init = FALSE;    /* Flag to indicate that chunk information was initialized */
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5D_update_oh_info)
@@ -736,7 +783,7 @@ H5D_update_oh_info(H5F_t *file, hid_t dxpl_id, H5D_t *dset, hid_t dapl_id)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't tell if fill value defined")
 
     /* Special case handling for variable-length types */
-    if(H5T_detect_class(type, H5T_VLEN, FALSE)) {
+    if(H5T_detect_class(type, H5T_VLEN)) {
         /* If the default fill value is chosen for variable-length types, always write it */
         if(fill_prop->fill_time == H5D_FILL_TIME_IFSET && fill_status == H5D_FILL_VALUE_DEFAULT) {
             /* Update dataset creation property */
@@ -783,7 +830,7 @@ H5D_update_oh_info(H5F_t *file, hid_t dxpl_id, H5D_t *dset, hid_t dapl_id)
 
     /* Add the dataset's raw data size to the size of the header, if the raw data will be stored as compact */
     if(layout->type == H5D_COMPACT)
-        ohdr_size += layout->storage.u.compact.size;
+        ohdr_size += layout->u.compact.size;
 
     /* Create an object header for the dataset */
     if(H5O_create(file, dxpl_id, ohdr_size, dset->shared->dcpl_id, oloc/*out*/) < 0)
@@ -791,8 +838,8 @@ H5D_update_oh_info(H5F_t *file, hid_t dxpl_id, H5D_t *dset, hid_t dapl_id)
     HDassert(file == dset->oloc.file);
 
     /* Get a pointer to the object header itself */
-    if(NULL == (oh = H5O_pin(oloc, dxpl_id)))
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTPIN, FAIL, "unable to pin dataset object header")
+    if((oh = H5O_protect(oloc, dxpl_id)) == NULL)
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTPROTECT, FAIL, "unable to protect dataset object header")
 
     /* Write new fill value message */
     if(H5O_msg_append_oh(file, dxpl_id, oh, H5O_FILL_NEW_ID, H5O_MSG_FLAG_CONSTANT, 0, fill_prop) < 0)
@@ -821,12 +868,78 @@ H5D_update_oh_info(H5F_t *file, hid_t dxpl_id, H5D_t *dset, hid_t dapl_id)
     if(H5S_append(file, dxpl_id, oh, dset->shared->space) < 0)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to update dataspace header message")
 
-    /* Update/create the layout (and I/O pipeline & EFL) messages */
-    if(H5D_layout_oh_create(file, dxpl_id, oh, dset, dapl_id) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to update layout/pline/efl header message")
+    /* Update the filters message, if this is a chunked dataset */
+    if(layout->type == H5D_CHUNKED) {
+        H5O_pline_t     *pline;         /* Dataset's I/O pipeline information */
 
-    /* Indicate that the layout information was initialized */
-    layout_init = TRUE;
+        pline = &dset->shared->dcpl_cache.pline;
+        if(pline->nused > 0 && H5O_msg_append_oh(file, dxpl_id, oh, H5O_PLINE_ID, H5O_MSG_FLAG_CONSTANT, 0, pline) < 0)
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to update filter header message")
+    } /* end if */
+
+    /*
+     * Allocate storage if space allocate time is early; otherwise delay
+     * allocation until later.
+     */
+    if(fill_prop->alloc_time == H5D_ALLOC_TIME_EARLY)
+        if(H5D_alloc_storage(dset, dxpl_id, H5D_ALLOC_CREATE, FALSE) < 0)
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to initialize storage")
+
+    /* Update external storage message, if it's used */
+    if(dset->shared->dcpl_cache.efl.nused > 0) {
+        H5O_efl_t *efl = &dset->shared->dcpl_cache.efl; /* Dataset's external file list */
+        H5HL_t *heap;                           /* Pointer to local heap for EFL file names */
+        size_t heap_size = H5HL_ALIGN(1);
+        size_t u;
+
+        /* Determine size of heap needed to stored the file names */
+        for(u = 0; u < efl->nused; ++u)
+            heap_size += H5HL_ALIGN(HDstrlen(efl->slot[u].name) + 1);
+
+        /* Create the heap for the EFL file names */
+        if(H5HL_create(file, dxpl_id, heap_size, &efl->heap_addr/*out*/) < 0)
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to create EFL file name heap")
+
+        /* Pin the heap down in memory */
+        if(NULL == (heap = H5HL_protect(file, dxpl_id, efl->heap_addr, H5AC_WRITE)))
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTPROTECT, FAIL, "unable to protect EFL file name heap")
+
+        /* Insert "empty" name first */
+        if((size_t)(-1) == H5HL_insert(file, dxpl_id, heap, (size_t)1, "")) {
+            H5HL_unprotect(file, dxpl_id, heap, efl->heap_addr);
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTINSERT, FAIL, "unable to insert file name into heap")
+        } /* end if */
+
+        for(u = 0; u < efl->nused; ++u) {
+            size_t offset;      /* Offset of file name in heap */
+
+            /* Insert file name into heap */
+            if((size_t)(-1) == (offset = H5HL_insert(file, dxpl_id, heap,
+                        HDstrlen(efl->slot[u].name) + 1, efl->slot[u].name))) {
+                H5HL_unprotect(file, dxpl_id, heap, efl->heap_addr);
+                HGOTO_ERROR(H5E_DATASET, H5E_CANTINSERT, FAIL, "unable to insert file name into heap")
+            } /* end if */
+
+            /* Store EFL file name offset */
+            HDassert(0 == efl->slot[u].name_offset);
+            efl->slot[u].name_offset = offset;
+        } /* end for */
+
+        /* Release the heap */
+        if(H5HL_unprotect(file, dxpl_id, heap, efl->heap_addr) < 0)
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTUNPROTECT, FAIL, "unable to unprotect EFL file name heap")
+        heap = NULL;
+
+        /* Insert EFL message into dataset object header */
+        if(H5O_msg_append_oh(file, dxpl_id, oh, H5O_EFL_ID, H5O_MSG_FLAG_CONSTANT, 0, efl) < 0)
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to update external file list message")
+    } /* end if */
+
+    /* Create layout message */
+    /* (Don't make layout message constant unless allocation time is early, since space may not be allocated) */
+    /* (Note: this is relying on H5D_alloc_storage not calling H5O_msg_write during dataset creation) */
+    if(H5O_msg_append_oh(file, dxpl_id, oh, H5O_LAYOUT_ID, ((fill_prop->alloc_time == H5D_ALLOC_TIME_EARLY && H5D_COMPACT != layout->type) ? H5O_MSG_FLAG_CONSTANT : 0), 0, layout) < 0)
+         HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to update layout")
 
 #ifdef H5O_ENABLE_BOGUS
 {
@@ -852,9 +965,6 @@ H5D_update_oh_info(H5F_t *file, hid_t dxpl_id, H5D_t *dset, hid_t dapl_id)
 #endif /* H5O_ENABLE_BOGUS */
 
     /* Add a modification time message, if using older format. */
-    /* (If using the latest format, the modification time is part of the object
-     *  header and doesn't use a separate message -QAK)
-     */
     if(!use_latest_format)
         if(H5O_touch_oh(file, dxpl_id, oh, TRUE) < 0)
             HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to update modification time message")
@@ -862,16 +972,8 @@ H5D_update_oh_info(H5F_t *file, hid_t dxpl_id, H5D_t *dset, hid_t dapl_id)
 done:
     /* Release pointer to object header itself */
     if(oloc != NULL && oh != NULL)
-        if(H5O_unpin(oloc, oh) < 0)
-            HDONE_ERROR(H5E_DATASET, H5E_CANTUNPIN, FAIL, "unable to unpin dataset object header")
-
-    /* Error cleanup */
-    if(ret_value < 0) {
-        if(dset->shared->layout.type == H5D_CHUNKED && layout_init) {
-            if(H5D_chunk_dest(file, dxpl_id, dset) < 0)
-                HDONE_ERROR(H5E_DATASET, H5E_CANTRELEASE, FAIL, "unable to destroy chunk cache")
-        } /* end if */
-    } /* end if */
+        if(H5O_unprotect(oloc, oh) < 0)
+            HDONE_ERROR(H5E_DATASET, H5E_CANTUNPROTECT, FAIL, "unable to unprotect dataset object header")
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D_update_oh_info() */
@@ -899,7 +1001,7 @@ done:
  */
 H5D_t *
 H5D_create(H5F_t *file, hid_t type_id, const H5S_t *space, hid_t dcpl_id,
-    hid_t dapl_id, hid_t dxpl_id)
+    hid_t dxpl_id)
 {
     const H5T_t         *type;                  /* Datatype for dataset */
     H5D_t		*new_dset = NULL;
@@ -913,10 +1015,10 @@ H5D_create(H5F_t *file, hid_t type_id, const H5S_t *space, hid_t dcpl_id,
 
     /* check args */
     HDassert(file);
-    HDassert(H5I_DATATYPE == H5I_get_type(type_id));
+    HDassert(H5I_DATATYPE==H5I_get_type(type_id));
     HDassert(space);
-    HDassert(H5I_GENPROP_LST == H5I_get_type(dcpl_id));
-    HDassert(H5I_GENPROP_LST == H5I_get_type(dxpl_id));
+    HDassert(H5I_GENPROP_LST==H5I_get_type(dcpl_id));
+    HDassert(H5I_GENPROP_LST==H5I_get_type(dxpl_id));
 
     /* Get the dataset's datatype */
     if(NULL == (type = (const H5T_t *)H5I_object(type_id)))
@@ -927,11 +1029,11 @@ H5D_create(H5F_t *file, hid_t type_id, const H5S_t *space, hid_t dcpl_id,
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "datatype is not sensible")
 
     /* Check if the datatype is/contains a VL-type */
-    if(H5T_detect_class(type, H5T_VLEN, FALSE))
-        has_vl_type = TRUE;
+    if(H5T_detect_class(type, H5T_VLEN))
+        has_vl_type=TRUE;
 
     /* Check if the dataspace has an extent set (or is NULL) */
-    if(!H5S_has_extent(space))
+    if(!(H5S_has_extent(space)) )
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "dataspace extent has not been set.")
 
     /* Initialize the dataset object */
@@ -960,7 +1062,7 @@ H5D_create(H5F_t *file, hid_t type_id, const H5S_t *space, hid_t dcpl_id,
 
     /* Check if the dataset has a non-default DCPL & get important values, if so */
     if(new_dset->shared->dcpl_id != H5P_DATASET_CREATE_DEFAULT) {
-        H5O_layout_t    *layout;        /* Dataset's layout information */
+        H5D_layout_t    *layout;        /* Dataset's layout information */
         H5O_pline_t     *pline;         /* Dataset's I/O pipeline information */
         H5O_fill_t      *fill;          /* Dataset's fill value info */
 
@@ -978,12 +1080,12 @@ H5D_create(H5F_t *file, hid_t type_id, const H5S_t *space, hid_t dcpl_id,
 
         /* Retrieve the properties we need */
         pline = &new_dset->shared->dcpl_cache.pline;
-        if(H5P_get(dc_plist, H5O_CRT_PIPELINE_NAME, pline) < 0)
+        if(H5P_get(dc_plist, H5D_CRT_DATA_PIPELINE_NAME, pline) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't retrieve pipeline filter")
-        layout = &new_dset->shared->layout;
+        layout = &new_dset->shared->layout.type;
         if(H5P_get(dc_plist, H5D_CRT_LAYOUT_NAME, layout) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't retrieve layout")
-        if(pline->nused > 0 && H5D_CHUNKED != layout->type)
+        if(pline->nused > 0 && H5D_CHUNKED != *layout)
             HGOTO_ERROR(H5E_DATASET, H5E_BADVALUE, NULL, "filters can only be used with chunked layout")
         fill = &new_dset->shared->dcpl_cache.fill;
         if(H5P_get(dc_plist, H5D_CRT_FILL_VALUE_NAME, fill) < 0)
@@ -994,7 +1096,7 @@ H5D_create(H5F_t *file, hid_t type_id, const H5S_t *space, hid_t dcpl_id,
             HGOTO_ERROR(H5E_DATASET, H5E_BADVALUE, NULL, "invalid space allocation state")
 
         /* Don't allow compact datasets to allocate space later */
-        if(layout->type == H5D_COMPACT && fill->alloc_time != H5D_ALLOC_TIME_EARLY)
+        if(*layout == H5D_COMPACT && fill->alloc_time != H5D_ALLOC_TIME_EARLY)
             HGOTO_ERROR(H5E_DATASET, H5E_BADVALUE, NULL, "compact dataset must have early space allocation")
 
         /* If MPI VFD is used, no filter support yet. */
@@ -1006,10 +1108,10 @@ H5D_create(H5F_t *file, hid_t type_id, const H5S_t *space, hid_t dcpl_id,
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't retrieve external file list")
     } /* end if */
 
-    /* Set the latest version of the layout, pline & fill messages, if requested */
+    /* Set the latest version of the pline & fill messages, if requested */
     if(H5F_USE_LATEST_FORMAT(file)) {
         /* Set the latest version for the I/O pipeline message */
-        if(H5O_pline_set_latest_version(&new_dset->shared->dcpl_cache.pline) < 0)
+        if(H5Z_set_latest_version(&new_dset->shared->dcpl_cache.pline) < 0)
             HGOTO_ERROR(H5E_DATASET, H5E_CANTSET, NULL, "can't set latest version of I/O filter pipeline")
 
         /* Set the latest version for the fill value message */
@@ -1022,25 +1124,25 @@ H5D_create(H5F_t *file, hid_t type_id, const H5S_t *space, hid_t dcpl_id,
         new_dset->shared->dcpl_cache.fill.alloc_time = H5D_ALLOC_TIME_EARLY;
 
     /* Set the dataset's I/O operations */
-    if(H5D_layout_set_io_ops(new_dset) < 0)
+    if(H5D_set_io_ops(new_dset) < 0)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, NULL, "unable to initialize I/O operations")
 
     /* Create the layout information for the new dataset */
-    if((new_dset->shared->layout.ops->construct)(file, new_dset) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, NULL, "unable to construct layout information")
-
-    /* Update the dataset's object header info. */
-    if(H5D_update_oh_info(file, dxpl_id, new_dset, dapl_id) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, NULL, "can't update the metadata cache")
+    if((new_dset->shared->layout.ops->new)(file, dxpl_id, new_dset, dc_plist) < 0)
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, NULL, "unable to initialize layout information")
 
     /* Indicate that the layout information was initialized */
     layout_init = TRUE;
+
+    /* Update the dataset's object header info. */
+    if(H5D_update_oh_info(file, dxpl_id, new_dset) != SUCCEED)
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, NULL, "can't update the metadata cache")
 
     /* Add the dataset to the list of opened objects in the file */
     if(H5FO_top_incr(new_dset->oloc.file, new_dset->oloc.addr) < 0)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTINC, NULL, "can't incr object ref. count")
     if(H5FO_insert(new_dset->oloc.file, new_dset->oloc.addr, new_dset->shared, TRUE) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTINSERT, NULL, "can't insert dataset into list of open objects")
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTINSERT, NULL, "can't insert dataset into list of open objects")    
 
     new_dset->shared->fo_count = 1;
 
@@ -1054,10 +1156,12 @@ done:
                 if(H5D_chunk_dest(file, dxpl_id, new_dset) < 0)
                     HDONE_ERROR(H5E_DATASET, H5E_CANTRELEASE, NULL, "unable to destroy chunk cache")
             } /* end if */
-            if(new_dset->shared->space && H5S_close(new_dset->shared->space) < 0)
-                HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, NULL, "unable to release dataspace")
+            if(new_dset->shared->space) {
+                if(H5S_close(new_dset->shared->space) < 0)
+                    HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, NULL, "unable to release dataspace")
+            } /* end if */
             if(new_dset->shared->type) {
-                if(H5I_dec_ref(new_dset->shared->type_id, FALSE) < 0)
+                if(H5I_dec_ref(new_dset->shared->type_id) < 0)
                     HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, NULL, "unable to release datatype")
             } /* end if */
             if(H5F_addr_defined(new_dset->oloc.addr)) {
@@ -1068,12 +1172,14 @@ done:
                         HDONE_ERROR(H5E_DATASET, H5E_CANTDELETE, NULL, "unable to delete object header")
                 } /* end if */
             } /* end if */
-            if(new_dset->shared->dcpl_id != 0 && H5I_dec_ref(new_dset->shared->dcpl_id, FALSE) < 0)
-                HDONE_ERROR(H5E_DATASET, H5E_CANTDEC, NULL, "unable to decrement ref count on property list")
-            (void)H5FL_FREE(H5D_shared_t, new_dset->shared);
+            if(new_dset->shared->dcpl_id != 0) {
+                if(H5I_dec_ref(new_dset->shared->dcpl_id) < 0)
+                    HDONE_ERROR(H5E_DATASET, H5E_CANTDEC, NULL, "unable to decrement ref count on property list")
+            } /* end if */
+            H5FL_FREE(H5D_shared_t, new_dset->shared);
         } /* end if */
         new_dset->oloc.file = NULL;
-        (void)H5FL_FREE(H5D_t, new_dset);
+        H5FL_FREE(H5D_t, new_dset);
     } /* end if */
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1096,7 +1202,7 @@ done:
  *-------------------------------------------------------------------------
  */
 H5D_t *
-H5D_open(const H5G_loc_t *loc, hid_t dapl_id, hid_t dxpl_id)
+H5D_open(const H5G_loc_t *loc, hid_t dxpl_id)
 {
     H5D_shared_t    *shared_fo = NULL;
     H5D_t           *dataset = NULL;
@@ -1120,12 +1226,12 @@ H5D_open(const H5G_loc_t *loc, hid_t dapl_id, hid_t dxpl_id)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTCOPY, NULL, "can't copy path")
 
     /* Check if dataset was already open */
-    if(NULL == (shared_fo = (H5D_shared_t *)H5FO_opened(dataset->oloc.file, dataset->oloc.addr))) {
+    if((shared_fo = (H5D_shared_t *)H5FO_opened(dataset->oloc.file, dataset->oloc.addr)) == NULL) {
         /* Clear any errors from H5FO_opened() */
         H5E_clear_stack(NULL);
 
         /* Open the dataset object */
-        if(H5D_open_oid(dataset, dapl_id, dxpl_id) < 0)
+        if(H5D_open_oid(dataset, dxpl_id) < 0)
             HGOTO_ERROR(H5E_DATASET, H5E_NOTFOUND, NULL, "not found")
 
         /* Add the dataset to the list of opened objects in the file */
@@ -1165,13 +1271,13 @@ done:
         /* Free the location--casting away const*/
         if(dataset) {
             if(shared_fo == NULL)   /* Need to free shared fo */
-                (void)H5FL_FREE(H5D_shared_t, dataset->shared);
+                H5FL_FREE(H5D_shared_t, dataset->shared);
 
             H5O_loc_free(&(dataset->oloc));
             H5G_name_free(&(dataset->path));
 
-            (void)H5FL_FREE(H5D_t, dataset);
-        } /* end if */
+            H5FL_FREE(H5D_t, dataset);
+        }
         if(shared_fo)
             shared_fo->fo_count--;
     } /* end if */
@@ -1193,7 +1299,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5D_open_oid(H5D_t *dataset, hid_t dapl_id, hid_t dxpl_id)
+H5D_open_oid(H5D_t *dataset, hid_t dxpl_id)
 {
     H5P_genplist_t *plist;              /* Property list */
     H5O_fill_t *fill_prop;              /* Pointer to dataset's fill value info */
@@ -1217,24 +1323,109 @@ H5D_open_oid(H5D_t *dataset, hid_t dapl_id, hid_t dxpl_id)
     /* Get the type and space */
     if(NULL == (dataset->shared->type = (H5T_t *)H5O_msg_read(&(dataset->oloc), H5O_DTYPE_ID, NULL, dxpl_id)))
         HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to load type info from dataset header")
-
-    if(H5T_set_loc(dataset->shared->type, dataset->oloc.file, H5T_LOC_DISK) < 0)
-        HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "invalid datatype location")
-
     if(NULL == (dataset->shared->space = H5S_read(&(dataset->oloc), dxpl_id)))
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to load dataspace info from dataset header")
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to load space info from dataset header")
 
     /* Get a datatype ID for the dataset's datatype */
-    if((dataset->shared->type_id = H5I_register(H5I_DATATYPE, dataset->shared->type, FALSE)) < 0)
+    if((dataset->shared->type_id = H5I_register(H5I_DATATYPE, dataset->shared->type)) < 0)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTREGISTER, FAIL, "unable to register type")
 
     /* Get dataset creation property list object */
     if(NULL == (plist = (H5P_genplist_t *)H5I_object(dataset->shared->dcpl_id)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "can't get dataset creation property list")
 
-    /* Get the layout/pline/efl message information */
-    if(H5D_layout_oh_read(dataset, dxpl_id, dapl_id, plist) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "can't get layout/pline/efl info")
+    /* Get the optional filters message */
+    if((msg_exists = H5O_msg_exists(&(dataset->oloc), H5O_PLINE_ID, dxpl_id)) < 0)
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "can't check if message exists")
+    if(msg_exists) {
+        /* Retrieve the I/O pipeline message */
+        if(NULL == H5O_msg_read(&(dataset->oloc), H5O_PLINE_ID, &dataset->shared->dcpl_cache.pline, dxpl_id))
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "can't retrieve message")
+
+        /* Set the I/O pipeline info in the property list */
+        if(H5P_set(plist, H5D_CRT_DATA_PIPELINE_NAME, &dataset->shared->dcpl_cache.pline) < 0)
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTSET, FAIL, "can't set pipeline")
+    } /* end if */
+
+    /*
+     * Get the raw data layout info.  It's actually stored in two locations:
+     * the storage message of the dataset (dataset->storage) and certain
+     * values are copied to the dataset create plist so the user can query
+     * them.
+     */
+    if(NULL == H5O_msg_read(&(dataset->oloc), H5O_LAYOUT_ID, &(dataset->shared->layout), dxpl_id))
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to read data layout message")
+    if(H5P_set(plist, H5D_CRT_LAYOUT_NAME, &dataset->shared->layout.type) < 0)
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTSET, FAIL, "can't set layout")
+
+    /* Get the external file list message, which might not exist.  Space is
+     * also undefined when space allocate time is H5D_ALLOC_TIME_LATE. */
+    if((dataset->shared->layout.type == H5D_CONTIGUOUS && !H5F_addr_defined(dataset->shared->layout.u.contig.addr))
+            || (dataset->shared->layout.type == H5D_CHUNKED && !H5F_addr_defined(dataset->shared->layout.u.chunk.addr))) {
+        if((msg_exists = H5O_msg_exists(&(dataset->oloc), H5O_EFL_ID, dxpl_id)) < 0)
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "can't check if message exists")
+        if(msg_exists) {
+            /* Retrieve the EFL  message */
+            if(NULL == H5O_msg_read(&(dataset->oloc), H5O_EFL_ID, &dataset->shared->dcpl_cache.efl, dxpl_id))
+                HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "can't retrieve message")
+
+            /* Set the EFL info in the property list */
+            if(H5P_set(plist, H5D_CRT_EXT_FILE_LIST_NAME, &dataset->shared->dcpl_cache.efl) < 0)
+            	HGOTO_ERROR(H5E_DATASET, H5E_CANTSET, FAIL, "can't set external file list")
+
+            /* Set the dataset's I/O operations */
+            dataset->shared->layout.ops = H5D_LOPS_EFL;
+        } /* end if */
+    } /* end if */
+
+    /* Sanity check that the layout operations are set up */
+    HDassert(dataset->shared->layout.ops);
+
+    switch(dataset->shared->layout.type) {
+        case H5D_CONTIGUOUS:
+            /* Compute the size of the contiguous storage for versions of the
+             * layout message less than version 3 because versions 1 & 2 would
+             * truncate the dimension sizes to 32-bits of information. - QAK 5/26/04
+             */
+            if(dataset->shared->layout.version < 3) {
+                hssize_t tmp_size;                      /* Temporary holder for raw data size */
+
+                tmp_size = H5S_GET_EXTENT_NPOINTS(dataset->shared->space) * H5T_get_size(dataset->shared->type);
+                H5_ASSIGN_OVERFLOW(dataset->shared->layout.u.contig.size, tmp_size, hssize_t, hsize_t);
+            } /* end if */
+
+            /* Get the sieve buffer size for this dataset */
+            dataset->shared->cache.contig.sieve_buf_size = H5F_SIEVE_BUF_SIZE(dataset->oloc.file);
+            break;
+
+        case H5D_CHUNKED:
+            /*
+             * Chunked storage.  The creation plist's dimension is one less than
+             * the chunk dimension because the chunk includes a dimension for the
+             * individual bytes of the datatype.
+             */
+            {
+                unsigned     chunk_ndims;           /* Dimensionality of chunk */
+
+                chunk_ndims  = dataset->shared->layout.u.chunk.ndims - 1;
+
+                if(H5P_set(plist, H5D_CRT_CHUNK_DIM_NAME, &chunk_ndims) < 0)
+                     HGOTO_ERROR(H5E_DATASET, H5E_CANTSET, FAIL, "can't set chunk dimensions")
+                if(H5P_set(plist, H5D_CRT_CHUNK_SIZE_NAME, dataset->shared->layout.u.chunk.dim) < 0)
+                     HGOTO_ERROR(H5E_DATASET, H5E_CANTSET, FAIL, "can't set chunk size")
+
+                /* Initialize the chunk cache for the dataset */
+                if(H5D_chunk_init(dataset->oloc.file, dxpl_id, dataset) < 0)
+                    HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "can't initialize chunk cache")
+            }
+            break;
+
+        case H5D_COMPACT:
+            break;
+
+        default:
+            HGOTO_ERROR(H5E_DATASET, H5E_UNSUPPORTED, FAIL, "unknown storage method")
+    } /* end switch */ /*lint !e788 All appropriate cases are covered */
 
     /* Point at dataset's copy, to cache it for later */
     fill_prop = &dataset->shared->dcpl_cache.fill;
@@ -1276,7 +1467,7 @@ H5D_open_oid(H5D_t *dataset, hid_t dapl_id, hid_t dxpl_id)
 
         /* If "old" fill value size is 0 (undefined), map it to -1 */
         if(fill_prop->size == 0)
-            fill_prop->size = (ssize_t)-1;
+            fill_prop->size = (size_t)-1;
     } /* end if */
     alloc_time_state = 0;
     if((dataset->shared->layout.type == H5D_COMPACT && fill_prop->alloc_time == H5D_ALLOC_TIME_EARLY)
@@ -1297,8 +1488,9 @@ H5D_open_oid(H5D_t *dataset, hid_t dapl_id, hid_t dxpl_id)
      * This is important only for parallel I/O where the space must
      * be fully allocated before I/O can happen.
      */
-    if((H5F_INTENT(dataset->oloc.file) & H5F_ACC_RDWR)
-            && !(*dataset->shared->layout.ops->is_space_alloc)(&dataset->shared->layout.storage)
+    if((H5F_get_intent(dataset->oloc.file) & H5F_ACC_RDWR)
+            && ((dataset->shared->layout.type == H5D_CONTIGUOUS && !H5F_addr_defined(dataset->shared->layout.u.contig.addr))
+                || (dataset->shared->layout.type == H5D_CHUNKED && !H5F_addr_defined(dataset->shared->layout.u.chunk.addr)))
             && IS_H5FD_MPI(dataset->oloc.file)) {
         if(H5D_alloc_storage(dataset, dxpl_id, H5D_ALLOC_OPEN, FALSE) < 0)
             HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to initialize file storage")
@@ -1306,13 +1498,17 @@ H5D_open_oid(H5D_t *dataset, hid_t dapl_id, hid_t dxpl_id)
 
 done:
     if(ret_value < 0) {
-        if(H5F_addr_defined(dataset->oloc.addr) && H5O_close(&(dataset->oloc)) < 0)
-            HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, FAIL, "unable to release object header")
-        if(dataset->shared->space && H5S_close(dataset->shared->space) < 0)
-            HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, FAIL, "unable to release dataspace")
+        if(H5F_addr_defined(dataset->oloc.addr)) {
+            if(H5O_close(&(dataset->oloc)) < 0)
+                HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, FAIL, "unable to release object header")
+        } /* end if */
+        if(dataset->shared->space) {
+            if(H5S_close(dataset->shared->space) < 0)
+                HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, FAIL, "unable to release dataspace")
+        } /* end if */
         if(dataset->shared->type) {
             if(dataset->shared->type_id > 0) {
-                if(H5I_dec_ref(dataset->shared->type_id, FALSE) < 0)
+                if(H5I_dec_ref(dataset->shared->type_id) < 0)
                     HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, FAIL, "unable to release datatype")
             } /* end if */
             else {
@@ -1360,7 +1556,7 @@ H5D_close(H5D_t *dataset)
     dataset->shared->fo_count--;
     if(dataset->shared->fo_count == 0) {
         /* Flush the dataset's information */
-        if(H5D_flush_real(dataset, H5AC_dxpl_id) < 0)
+        if(H5D_flush_real(dataset, H5AC_dxpl_id, H5F_FLUSH_NONE) < 0)
             HGOTO_ERROR(H5E_DATASET, H5E_WRITEERROR, FAIL, "unable to flush cached dataset info")
 
         /* Free the data sieve buffer, if it's been allocated */
@@ -1402,7 +1598,7 @@ H5D_close(H5D_t *dataset)
 
             case H5D_COMPACT:
                 /* Free the buffer for the raw data for compact datasets */
-                dataset->shared->layout.storage.u.compact.buf = H5MM_xfree(dataset->shared->layout.storage.u.compact.buf);
+                dataset->shared->layout.u.compact.buf = H5MM_xfree(dataset->shared->layout.u.compact.buf);
                 break;
 
             default:
@@ -1416,8 +1612,8 @@ H5D_close(H5D_t *dataset)
         * Release datatype, dataspace and creation property list -- there isn't
         * much we can do if one of these fails, so we just continue.
         */
-        free_failed = (unsigned)(H5I_dec_ref(dataset->shared->type_id, FALSE) < 0 || H5S_close(dataset->shared->space) < 0 ||
-                          H5I_dec_ref(dataset->shared->dcpl_id, FALSE) < 0);
+        free_failed = (H5I_dec_ref(dataset->shared->type_id) < 0 || H5S_close(dataset->shared->space) < 0 ||
+                          H5I_dec_ref(dataset->shared->dcpl_id) < 0);
 
         /* Remove the dataset from the list of opened objects in the file */
         if(H5FO_top_decr(dataset->oloc.file, dataset->oloc.addr) < 0)
@@ -1438,7 +1634,7 @@ H5D_close(H5D_t *dataset)
          */
         dataset->oloc.file = NULL;
 
-        (void)H5FL_FREE(H5D_shared_t, dataset->shared);
+        H5FL_FREE(H5D_shared_t, dataset->shared);
     } /* end if */
     else {
         /* Decrement the ref. count for this object in the top file */
@@ -1456,7 +1652,7 @@ H5D_close(H5D_t *dataset)
        free_failed = TRUE;
 
     /* Free the dataset's memory structure */
-    (void)H5FL_FREE(H5D_t, dataset);
+    H5FL_FREE(H5D_t, dataset);
 
     /* Check if anything failed in the middle... */
     if(free_failed)
@@ -1520,6 +1716,7 @@ H5D_nameof(H5D_t *dataset)
  *		is not copied.
  *
  * Return:	Success:	Ptr to the dataset's datatype, uncopied.
+ *
  *		Failure:	NULL
  *
  * Programmer:	Robb Matzke
@@ -1534,11 +1731,37 @@ H5D_typeof(const H5D_t *dset)
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5D_typeof)
 
     HDassert(dset);
-    HDassert(dset->shared);
     HDassert(dset->shared->type);
 
     FUNC_LEAVE_NOAPI(dset->shared->type)
 } /* end H5D_typeof() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:  H5D_get_file
+ *
+ * Purpose:   Returns the dataset's file pointer.
+ *
+ * Return:    Success:        Ptr to the dataset's file pointer.
+ *
+ *            Failure:        NULL
+ *
+ * Programmer:        Quincey Koziol
+ *              Thursday, October 22, 1998
+ *
+ *-------------------------------------------------------------------------
+ */
+static H5F_t *
+H5D_get_file(const H5D_t *dset)
+{
+    /* Use FUNC_ENTER_NOAPI_NOINIT_NOFUNC here to avoid performance issues */
+    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5D_get_file)
+
+    HDassert(dset);
+    HDassert(dset->oloc.file);
+
+    FUNC_LEAVE_NOAPI(dset->oloc.file)
+} /* end H5D_get_file() */
 
 
 /*-------------------------------------------------------------------------
@@ -1579,9 +1802,9 @@ H5D_alloc_storage(H5D_t *dset/*in,out*/, hid_t dxpl_id, H5D_time_alloc_t time_al
 
         switch(layout->type) {
             case H5D_CONTIGUOUS:
-                if(!(*dset->shared->layout.ops->is_space_alloc)(&dset->shared->layout.storage)) {
+                if(!H5F_addr_defined(layout->u.contig.addr)) {
                     /* Reserve space in the file for the entire array */
-                    if(H5D_contig_alloc(f, dxpl_id, &layout->storage.u.contig/*out*/) < 0)
+                    if(H5D_contig_alloc(f, dxpl_id, layout/*out*/) < 0)
                         HGOTO_ERROR(H5E_IO, H5E_CANTINIT, FAIL, "unable to initialize contiguous storage")
 
                     /* Indicate that we set the storage addr */
@@ -1593,7 +1816,7 @@ H5D_alloc_storage(H5D_t *dset/*in,out*/, hid_t dxpl_id, H5D_time_alloc_t time_al
                 break;
 
             case H5D_CHUNKED:
-                if(!(*dset->shared->layout.ops->is_space_alloc)(&dset->shared->layout.storage)) {
+                if(!H5F_addr_defined(layout->u.chunk.addr)) {
                     /* Create the root of the B-tree that describes chunked storage */
                     if(H5D_chunk_create(dset /*in,out*/, dxpl_id) < 0)
                         HGOTO_ERROR(H5E_IO, H5E_CANTINIT, FAIL, "unable to initialize chunked storage")
@@ -1616,14 +1839,17 @@ H5D_alloc_storage(H5D_t *dset/*in,out*/, hid_t dxpl_id, H5D_time_alloc_t time_al
 
             case H5D_COMPACT:
                 /* Check if space is already allocated */
-                if(NULL == layout->storage.u.compact.buf) {
+                if(layout->u.compact.buf==NULL) {
                     /* Reserve space in layout header message for the entire array. */
-                    HDassert(layout->storage.u.compact.size > 0);
-                    if(NULL == (layout->storage.u.compact.buf = H5MM_malloc(layout->storage.u.compact.size)))
+                    HDassert(layout->u.compact.size > 0);
+                    if(NULL == (layout->u.compact.buf = H5MM_malloc(layout->u.compact.size)))
                         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "unable to allocate memory for compact dataset")
                     if(!full_overwrite)
-                        HDmemset(layout->storage.u.compact.buf, 0, layout->storage.u.compact.size);
-                    layout->storage.u.compact.dirty = TRUE;
+                        HDmemset(layout->u.compact.buf, 0, layout->u.compact.size);
+                    layout->u.compact.dirty = TRUE;
+
+                    /* Indicate that we set the storage addr */
+                    addr_set = TRUE;
 
                     /* Indicate that we should initialize storage space */
                     must_init_space = TRUE;
@@ -1772,24 +1998,23 @@ H5D_get_storage_size(H5D_t *dset, hid_t dxpl_id)
 
     switch(dset->shared->layout.type) {
         case H5D_CHUNKED:
-            if((*dset->shared->layout.ops->is_space_alloc)(&dset->shared->layout.storage)) {
+            if(dset->shared->layout.u.chunk.addr == HADDR_UNDEF)
+                ret_value = 0;
+            else
                 if(H5D_chunk_allocated(dset, dxpl_id, &ret_value) < 0)
                     HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, 0, "can't retrieve chunked dataset allocated size")
-            } /* end if */
-            else
-                ret_value = 0;
             break;
 
         case H5D_CONTIGUOUS:
             /* Datasets which are not allocated yet are using no space on disk */
-            if((*dset->shared->layout.ops->is_space_alloc)(&dset->shared->layout.storage))
-                ret_value = dset->shared->layout.storage.u.contig.size;
-            else
+            if(dset->shared->layout.u.contig.addr == HADDR_UNDEF)
                 ret_value = 0;
+            else
+                 ret_value = dset->shared->layout.u.contig.size;
             break;
 
         case H5D_COMPACT:
-            ret_value = dset->shared->layout.storage.u.compact.size;
+            ret_value = dset->shared->layout.u.compact.size;
             break;
 
         default:
@@ -1819,6 +2044,8 @@ done:
 haddr_t
 H5D_get_offset(const H5D_t *dset)
 {
+    haddr_t     base_addr;
+    H5F_t       *f;
     haddr_t	ret_value = HADDR_UNDEF;
 
     FUNC_ENTER_NOAPI_NOINIT(H5D_get_offset)
@@ -1833,9 +2060,15 @@ H5D_get_offset(const H5D_t *dset)
         case H5D_CONTIGUOUS:
             /* If dataspace hasn't been allocated or dataset is stored in
              * an external file, the value will be HADDR_UNDEF. */
-            if(dset->shared->dcpl_cache.efl.nused == 0 || H5F_addr_defined(dset->shared->layout.storage.u.contig.addr))
-                /* Return the absolute dataset offset from the beginning of file. */
-                ret_value = dset->shared->layout.storage.u.contig.addr + H5F_BASE_ADDR(dset->oloc.file);
+            f =  H5D_get_file(dset);
+            base_addr = H5F_get_base_addr(f);
+
+            /* If there's user block in file, returns the absolute dataset offset
+             * from the beginning of file. */
+            if(base_addr != HADDR_UNDEF)
+                ret_value = dset->shared->layout.u.contig.addr + base_addr;
+            else
+                ret_value = dset->shared->layout.u.contig.addr;
             break;
 
         default:
@@ -2088,9 +2321,9 @@ herr_t
 H5D_set_extent(H5D_t *dset, const hsize_t *size, hid_t dxpl_id)
 {
     H5S_t   *space;                     /* Dataset's dataspace */
-    int     rank;                       /* Dataspace # of dimensions */
-    hsize_t curr_dims[H5O_LAYOUT_NDIMS];/* Current dimension sizes */
-    htri_t  changed;                    /* Whether the dataspace changed size */
+    int     rank;	                /* Dataspace # of dimensions */
+    hsize_t curr_dims[H5O_LAYOUT_NDIMS];	/* Current dimension sizes */
+    htri_t changed;                     /* Whether the dataspace changed size */
     herr_t  ret_value = SUCCEED;        /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5D_set_extent)
@@ -2100,15 +2333,9 @@ H5D_set_extent(H5D_t *dset, const hsize_t *size, hid_t dxpl_id)
     HDassert(size);
 
     /* Check if we are allowed to modify this file */
-    if(0 == (H5F_INTENT(dset->oloc.file) & H5F_ACC_RDWR))
-        HGOTO_ERROR(H5E_DATASET, H5E_WRITEERROR, FAIL, "no write intent on file")
+    if(0 == (H5F_get_intent(dset->oloc.file) & H5F_ACC_RDWR))
+	HGOTO_ERROR(H5E_DATASET, H5E_WRITEERROR, FAIL, "no write intent on file")
 
-    /* Check if we are allowed to modify the space; only datasets with chunked and external storage are allowed to be modified */
-    if(H5D_COMPACT == dset->shared->layout.type)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "dataset has compact storage")
-    if(H5D_CONTIGUOUS == dset->shared->layout.type && 0 == dset->shared->dcpl_cache.efl.nused)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, FAIL, "dataset has contiguous storage")
- 
     /* Check if the filters in the DCPL will need to encode, and if so, can they? */
     if(H5D_check_filters(dset) < 0)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "can't apply filters")
@@ -2118,11 +2345,11 @@ H5D_set_extent(H5D_t *dset, const hsize_t *size, hid_t dxpl_id)
 
     /* Check if we are shrinking or expanding any of the dimensions */
     if((rank = H5S_get_simple_extent_dims(space, curr_dims, NULL)) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "can't get dataset dimensions")
+	HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "can't get dataset dimensions")
 
     /* Modify the size of the data space */
     if((changed = H5S_set_extent(space, size)) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to modify size of data space")
+	HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to modify size of data space")
 
     /* Don't bother updating things, unless they've changed */
     if(changed) {
@@ -2143,14 +2370,11 @@ H5D_set_extent(H5D_t *dset, const hsize_t *size, hid_t dxpl_id)
          *-------------------------------------------------------------------------
          */
         /* Update the index values for the cached chunks for this dataset */
-        if(H5D_CHUNKED == dset->shared->layout.type) {
-            if(H5D_chunk_set_info(dset) < 0)
-                HGOTO_ERROR(H5E_DATASET, H5E_CANTSET, FAIL, "unable to update # of chunks")
+        if(H5D_CHUNKED == dset->shared->layout.type)
             if(H5D_chunk_update_cache(dset, dxpl_id) < 0)
                 HGOTO_ERROR(H5E_DATASET, H5E_WRITEERROR, FAIL, "unable to update cached chunk indices")
-        } /* end if */
 
-        /* Allocate space for the new parts of the dataset, if appropriate */
+	/* Allocate space for the new parts of the dataset, if appropriate */
         if(expand && dset->shared->dcpl_cache.fill.alloc_time == H5D_ALLOC_TIME_EARLY)
             if(H5D_alloc_storage(dset, dxpl_id, H5D_ALLOC_EXTEND, FALSE) < 0)
                 HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to initialize dataset storage")
@@ -2159,15 +2383,13 @@ H5D_set_extent(H5D_t *dset, const hsize_t *size, hid_t dxpl_id)
         /*-------------------------------------------------------------------------
          * Remove chunk information in the case of chunked datasets
          * This removal takes place only in case we are shrinking the dateset
-         * and if the chunks are written 
          *-------------------------------------------------------------------------
          */
-        if(shrink && H5D_CHUNKED == dset->shared->layout.type &&
-                (*dset->shared->layout.ops->is_space_alloc)(&dset->shared->layout.storage)) {
-             /* Remove excess chunks */
-             if(H5D_chunk_prune_by_extent(dset, dxpl_id, curr_dims) < 0)
-                 HGOTO_ERROR(H5E_DATASET, H5E_WRITEERROR, FAIL, "unable to remove chunks ")
-         } /* end if */
+        if(shrink && H5D_CHUNKED == dset->shared->layout.type) {
+            /* Remove excess chunks */
+            if(H5D_chunk_prune_by_extent(dset, dxpl_id, curr_dims) < 0)
+                HGOTO_ERROR(H5E_DATASET, H5E_WRITEERROR, FAIL, "unable to remove chunks ")
+        } /* end if */
 
         /* Mark the dataspace as dirty, for later writing to the file */
         dset->shared->space_dirty = TRUE;
@@ -2176,47 +2398,6 @@ H5D_set_extent(H5D_t *dset, const hsize_t *size, hid_t dxpl_id)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D_set_extent() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5D_flush_sieve_buf
- *
- * Purpose:     Flush any dataset sieve buffer info cached in memory
- *
- * Return:	Success:	Non-negative
- *		Failure:	Negative
- *
- * Programmer:  Quincey Koziol
- *              July 27, 2009
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5D_flush_sieve_buf(H5D_t *dataset, hid_t dxpl_id)
-{
-    herr_t ret_value = SUCCEED;         /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT(H5D_flush_sieve_buf)
-
-    /* Check args */
-    HDassert(dataset);
-
-    /* Flush the raw data buffer, if we have a dirty one */
-    if(dataset->shared->cache.contig.sieve_buf && dataset->shared->cache.contig.sieve_dirty) {
-        HDassert(dataset->shared->layout.type != H5D_COMPACT);      /* We should never have a sieve buffer for compact storage */
-
-        /* Write dirty data sieve buffer to file */
-        if(H5F_block_write(dataset->oloc.file, H5FD_MEM_DRAW, dataset->shared->cache.contig.sieve_loc,
-                dataset->shared->cache.contig.sieve_size, dxpl_id, dataset->shared->cache.contig.sieve_buf) < 0)
-            HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "block write failed")
-
-        /* Reset sieve buffer dirty flag */
-        dataset->shared->cache.contig.sieve_dirty = FALSE;
-    } /* end if */
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5D_flush_sieve_buf() */
 
 
 /*-------------------------------------------------------------------------
@@ -2233,7 +2414,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5D_flush_real(H5D_t *dataset, hid_t dxpl_id)
+H5D_flush_real(H5D_t *dataset, hid_t dxpl_id, unsigned flags)
 {
     H5O_t *oh = NULL;                   /* Pointer to dataset's object header */
     herr_t ret_value = SUCCEED;         /* Return value */
@@ -2248,13 +2429,13 @@ H5D_flush_real(H5D_t *dataset, hid_t dxpl_id)
         unsigned update_flags = H5O_UPDATE_TIME;        /* Modification time flag */
 
         /* Get a pointer to the dataset's object header */
-        if(NULL == (oh = H5O_pin(&dataset->oloc, dxpl_id)))
-            HGOTO_ERROR(H5E_DATASET, H5E_CANTPIN, FAIL, "unable to pin dataset object header")
+        if((oh = H5O_protect(&dataset->oloc, dxpl_id)) == NULL)
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTPROTECT, FAIL, "unable to protect dataset object header")
 
         /* Update the layout on disk, if it's been changed */
         if(dataset->shared->layout_dirty) {
-            if(H5D_layout_oh_write(dataset, dxpl_id, oh, update_flags) < 0)
-                HGOTO_ERROR(H5E_DATASET, H5E_WRITEERROR, FAIL, "unable to update layout/pline/efl info")
+            if(H5O_msg_write_oh(dataset->oloc.file, dxpl_id, oh, H5O_LAYOUT_ID, H5O_MSG_FLAG_CONSTANT, update_flags, &dataset->shared->layout) < 0)
+                HGOTO_ERROR(H5E_DATASET, H5E_WRITEERROR, FAIL, "unable to update layout message")
             dataset->shared->layout_dirty = FALSE;
 
             /* Reset the "update the modification time" flag, so we only do it once */
@@ -2275,16 +2456,50 @@ H5D_flush_real(H5D_t *dataset, hid_t dxpl_id)
         HDassert(update_flags == 0);
     } /* end if */
 
-    /* Flush cached raw data for each kind of dataset layout */
-    if(dataset->shared->layout.ops->flush && 
-            (dataset->shared->layout.ops->flush)(dataset, dxpl_id) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTFLUSH, FAIL, "unable to flush raw data")
+    /* Flush the raw data buffer, if we have a dirty one */
+    if(dataset->shared->cache.contig.sieve_buf && dataset->shared->cache.contig.sieve_dirty) {
+        HDassert(dataset->shared->layout.type != H5D_COMPACT);      /* We should never have a sieve buffer for compact storage */
+
+        /* Write dirty data sieve buffer to file */
+        if(H5F_block_write(dataset->oloc.file, H5FD_MEM_DRAW, dataset->shared->cache.contig.sieve_loc,
+                dataset->shared->cache.contig.sieve_size, dxpl_id, dataset->shared->cache.contig.sieve_buf) < 0)
+            HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "block write failed")
+
+        /* Reset sieve buffer dirty flag */
+        dataset->shared->cache.contig.sieve_dirty = FALSE;
+    } /* end if */
+
+    /* Flush cached information for each kind of dataset */
+    switch(dataset->shared->layout.type) {
+        case H5D_CONTIGUOUS:
+            break;
+
+        case H5D_CHUNKED:
+            /* Flush the raw data cache */
+            if(H5D_chunk_flush(dataset, dxpl_id, flags & H5F_FLUSH_INVALIDATE) < 0)
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush raw data cache")
+            break;
+
+        case H5D_COMPACT:
+            if(dataset->shared->layout.u.compact.dirty) {
+                if(H5O_msg_write(&(dataset->oloc), H5O_LAYOUT_ID, 0, H5O_UPDATE_TIME, &(dataset->shared->layout), dxpl_id) < 0)
+                    HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "unable to update layout message")
+                dataset->shared->layout.u.compact.dirty = FALSE;
+            } /* end if */
+            break;
+
+        default:
+            HDassert("not implemented yet" && 0);
+#ifdef NDEBUG
+            HGOTO_ERROR(H5E_IO, H5E_UNSUPPORTED, FAIL, "unsupported storage layout")
+#endif /* NDEBUG */
+    } /* end switch */ /*lint !e788 All appropriate cases are covered */
 
 done:
     /* Release pointer to object header */
     if(oh != NULL)
-        if(H5O_unpin(&(dataset->oloc), oh) < 0)
-            HDONE_ERROR(H5E_DATASET, H5E_CANTUNPIN, FAIL, "unable to unpin dataset object header")
+        if(H5O_unprotect(&(dataset->oloc), oh) < 0)
+            HDONE_ERROR(H5E_DATASET, H5E_CANTUNPROTECT, FAIL, "unable to unprotect dataset object header")
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D_flush_real() */
@@ -2318,7 +2533,7 @@ H5D_flush_cb(void *_dataset, hid_t UNUSED id, void *_udata)
     /* Check for dataset in same file */
     if(udata->f == dataset->oloc.file) {
         /* Flush the dataset's information */
-        if(H5D_flush_real(dataset, udata->dxpl_id) < 0)
+        if(H5D_flush_real(dataset, udata->dxpl_id, udata->flags) < 0)
             HGOTO_ERROR(H5E_DATASET, H5E_WRITEERROR, H5_ITER_ERROR, "unable to flush cached dataset info")
     } /* end if */
 
@@ -2341,7 +2556,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5D_flush(const H5F_t *f, hid_t dxpl_id)
+H5D_flush(const H5F_t *f, hid_t dxpl_id, unsigned flags)
 {
     H5D_flush_ud_t udata;               /* User data for callback */
     herr_t      ret_value = SUCCEED;    /* Return value */
@@ -2354,9 +2569,10 @@ H5D_flush(const H5F_t *f, hid_t dxpl_id)
     /* Set user data for callback */
     udata.f = f;
     udata.dxpl_id = dxpl_id;
+    udata.flags = flags;
 
     /* Iterate over all the open datasets */
-    H5I_search(H5I_DATASET, H5D_flush_cb, &udata, FALSE);
+    H5I_search(H5I_DATASET, H5D_flush_cb, &udata);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

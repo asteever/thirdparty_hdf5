@@ -378,9 +378,9 @@ hssize_t H5File::getFreeSpace() const
 /// Multiple object types can be combined with the logical OR operator (|).
 // Programmer   Binh-Minh Ribler - May 2004
 //--------------------------------------------------------------------------
-ssize_t H5File::getObjCount(unsigned types) const
+int H5File::getObjCount(unsigned types) const
 {
-   ssize_t num_objs = H5Fget_obj_count(id, types);
+   int num_objs = H5Fget_obj_count(id, types);
    if( num_objs < 0 )
    {
       throw FileIException("H5File::getObjCount", "H5Fget_obj_count failed");
@@ -397,9 +397,9 @@ ssize_t H5File::getObjCount(unsigned types) const
 ///\exception	H5::FileIException
 // Programmer   Binh-Minh Ribler - May 2004
 //--------------------------------------------------------------------------
-ssize_t H5File::getObjCount() const
+int H5File::getObjCount() const
 {
-   ssize_t num_objs = H5Fget_obj_count(id, H5F_OBJ_ALL);
+   int num_objs = H5Fget_obj_count(id, H5F_OBJ_ALL);
    if( num_objs < 0 )
    {
       throw FileIException("H5File::getObjCount", "H5Fget_obj_count failed");
@@ -432,9 +432,9 @@ ssize_t H5File::getObjCount() const
 // Notes: will do the overload for this one after hearing from Quincey???
 // Programmer   Binh-Minh Ribler - May 2004
 //--------------------------------------------------------------------------
-void H5File::getObjIDs(unsigned types, size_t max_objs, hid_t *oid_list) const
+void H5File::getObjIDs(unsigned types, int max_objs, hid_t *oid_list) const
 {
-   ssize_t ret_value = H5Fget_obj_ids(id, types, max_objs, oid_list);
+   herr_t ret_value = H5Fget_obj_ids(id, types, max_objs, oid_list);
    if( ret_value < 0 )
    {
       throw FileIException("H5File::getObjIDs", "H5Fget_obj_ids failed");

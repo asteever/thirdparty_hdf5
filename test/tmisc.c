@@ -300,16 +300,6 @@ unsigned m13_rdata[MISC13_DIM1][MISC13_DIM2];          /* Data read from dataset
 #define MISC27_FILE             "tbad_msg_count.h5"
 #define MISC27_GROUP            "Group"
 
-/* Definitions for misc. test #28 */
-#define MISC28_FILE             "tmisc28.h5"
-#define MISC28_SIZE             10
-#define MISC28_NSLOTS           10000
-
-/* Definitions for misc. test #29 */
-#define MISC29_ORIG_FILE        "specmetaread.h5"
-#define MISC29_COPY_FILE        "tmisc29.h5"
-#define MISC29_DSETNAME         "dset2"
-
 /****************************************************************
 **
 **  test_misc1(): test unlinking a dataset from a group and immediately
@@ -1802,10 +1792,11 @@ test_misc11(void)
     unsigned    sym_ik;         /* Symbol table B-tree initial 'K' value */
     unsigned    istore_ik;      /* Indexed storage B-tree initial 'K' value */
     unsigned    sym_lk;         /* Symbol table B-tree leaf 'K' value */
+    unsigned super;             /* Superblock version # */
+    unsigned freelist;          /* Free list version # */
+    unsigned stab;              /* Symbol table entry version # */
+    unsigned shhdr;             /* Shared object header version # */
     unsigned nindexes;          /* Shared message number of indexes */
-    H5F_info2_t	finfo;		/* global information about file */
-    H5F_file_space_type_t       strategy;	/* File/free space strategy */
-    hsize_t	threshold;	/* Free-space section threshold */
     herr_t      ret;            /* Generic return value */
 
     /* Output message about test being performed */
@@ -1819,12 +1810,21 @@ test_misc11(void)
     file= H5Fcreate(MISC11_FILE, H5F_ACC_TRUNC , H5P_DEFAULT, H5P_DEFAULT);
     CHECK(file, FAIL, "H5Fcreate");
 
+    /* Get the file's dataset creation property list */
+    fcpl =  H5Fget_create_plist(file);
+    CHECK(fcpl, FAIL, "H5Fget_create_plist");
+
     /* Get the file's version information */
-    ret = H5Fget_info2(file, &finfo);
-    CHECK(ret, FAIL, "H5Fget_info2");
-    VERIFY(finfo.super.version, 0,"H5Fget_info2");
-    VERIFY(finfo.free.version, 0,"H5Fget_info2");
-    VERIFY(finfo.sohm.version, 0,"H5Fget_info2");
+    ret=H5Pget_version(fcpl, &super, &freelist, &stab, &shhdr);
+    CHECK(ret, FAIL, "H5Pget_version");
+    VERIFY(super,0,"H5Pget_version");
+    VERIFY(freelist,0,"H5Pget_version");
+    VERIFY(stab,0,"H5Pget_version");
+    VERIFY(shhdr,0,"H5Pget_version");
+
+    /* Close FCPL */
+    ret=H5Pclose(fcpl);
+    CHECK(ret, FAIL, "H5Pclose");
 
     /* Close file */
     ret=H5Fclose(file);
@@ -1851,9 +1851,6 @@ test_misc11(void)
     ret=H5Pset_shared_mesg_nindexes(fcpl,MISC11_NINDEXES);
     CHECK(ret, FAIL, "H5Pset_shared_mesg");
 
-    ret = H5Pset_file_space(fcpl, H5F_FILE_SPACE_VFD, 0);
-    CHECK(ret, FAIL, "H5Pset_file_space");
-
     /* Creating a file with the non-default file creation property list should
      * create a version 1 superblock
      */
@@ -1866,12 +1863,21 @@ test_misc11(void)
     ret=H5Pclose(fcpl);
     CHECK(ret, FAIL, "H5Pclose");
 
+    /* Get the file's dataset creation property list */
+    fcpl =  H5Fget_create_plist(file);
+    CHECK(fcpl, FAIL, "H5Fget_create_plist");
+
     /* Get the file's version information */
-    ret = H5Fget_info2(file, &finfo);
-    CHECK(ret, FAIL, "H5Fget_info2");
-    VERIFY(finfo.super.version, 2,"H5Fget_info2");
-    VERIFY(finfo.free.version, 0,"H5Fget_info2");
-    VERIFY(finfo.sohm.version, 0,"H5Fget_info2");
+    ret=H5Pget_version(fcpl, &super, &freelist, &stab, &shhdr);
+    CHECK(ret, FAIL, "H5Pget_version");
+    VERIFY(super,2,"H5Pget_version");
+    VERIFY(freelist,0,"H5Pget_version");
+    VERIFY(stab,0,"H5Pget_version");
+    VERIFY(shhdr,0,"H5Pget_version");
+
+    /* Close FCPL */
+    ret=H5Pclose(fcpl);
+    CHECK(ret, FAIL, "H5Pclose");
 
     /* Close file */
     ret=H5Fclose(file);
@@ -1881,16 +1887,17 @@ test_misc11(void)
     file = H5Fopen(MISC11_FILE, H5F_ACC_RDONLY, H5P_DEFAULT);
     CHECK(file, FAIL, "H5Fcreate");
 
-    /* Get the file's creation property list */
+    /* Get the file's dataset creation property list */
     fcpl =  H5Fget_create_plist(file);
     CHECK(fcpl, FAIL, "H5Fget_create_plist");
 
     /* Get the file's version information */
-    ret = H5Fget_info2(file, &finfo);
-    CHECK(ret, FAIL, "H5Fget_info2");
-    VERIFY(finfo.super.version, 2,"H5Fget_info2");
-    VERIFY(finfo.free.version, 0,"H5Fget_info2");
-    VERIFY(finfo.sohm.version, 0,"H5Fget_info2");
+    ret=H5Pget_version(fcpl, &super, &freelist, &stab, &shhdr);
+    CHECK(ret, FAIL, "H5Pget_version");
+    VERIFY(super,2,"H5Pget_version");
+    VERIFY(freelist,0,"H5Pget_version");
+    VERIFY(stab,0,"H5Pget_version");
+    VERIFY(shhdr,0,"H5Pget_version");
 
     /* Retrieve all the property values & check them */
     ret=H5Pget_userblock(fcpl,&userblock);
@@ -1914,11 +1921,6 @@ test_misc11(void)
     ret=H5Pget_shared_mesg_nindexes(fcpl,&nindexes);
     CHECK(ret, FAIL, "H5Pget_shared_mesg_nindexes");
     VERIFY(nindexes, MISC11_NINDEXES, "H5Pget_shared_mesg_nindexes");
-
-    ret = H5Pget_file_space(fcpl, &strategy, &threshold);
-    CHECK(ret, FAIL, "H5Pget_file_space");
-    VERIFY(strategy, 4, "H5Pget_file_space");
-    VERIFY(threshold, 1, "H5Pget_file_space");
 
     /* Close file */
     ret=H5Fclose(file);
@@ -2266,7 +2268,7 @@ insert_user_block(const char *old_name, const char *new_name,const char *str,siz
     VERIFY(ret, 0, "HDfclose");
 
     /* Close the new file */
-    ret=HDfclose(new_fp);
+    ret=fclose(new_fp);
     VERIFY(ret, 0, "HDfclose");
 
     /* Free the copy buffer */
@@ -3772,7 +3774,6 @@ test_misc23(void)
                 tmp_id=0, create_id=H5P_DEFAULT, access_id=H5P_DEFAULT;
     char        objname[MISC23_NAME_BUF_SIZE];  /* Name of object */
     H5O_info_t  oinfo;
-    htri_t      tri_status;
     herr_t      status;
 
     /* Output message about test being performed */
@@ -3988,7 +3989,7 @@ test_misc23(void)
 
     status = H5Tcommit2(group_id, "B13/C12/dtype", tmp_id, create_id, H5P_DEFAULT, access_id);
     CHECK(status, FAIL, "H5Tcommit2");
-
+ 
     status = H5Tclose(tmp_id);
     CHECK(status, FAIL, "H5Tclose");
 
@@ -4012,87 +4013,6 @@ test_misc23(void)
     status = H5Tclose(tmp_id);
     CHECK(status, FAIL, "H5Tclose");
 
-
-    status = H5Pclose(create_id);
-    CHECK(status, FAIL, "H5Pclose");
-
-    /**********************************************************************
-    * test H5Lcopy()
-    **********************************************************************/
-
-    /* Create link creation property list */
-    create_id = H5Pcreate(H5P_LINK_CREATE);
-    CHECK(create_id, FAIL, "H5Pcreate");
-
-    /* Set flag for intermediate group creation */
-    status = H5Pset_create_intermediate_group(create_id, TRUE);
-    CHECK(status, FAIL, "H5Pset_create_intermediate_group");
-
-    status = H5Lcopy(file_id, "/A/B01/grp", file_id, "/A/B16/grp", create_id, access_id);
-    CHECK(status, FAIL, "H5Lcopy");
-
-    tri_status = H5Lexists(file_id, "/A/B16/grp", access_id);
-    VERIFY(tri_status, TRUE, "H5Lexists");
-
-    tri_status = H5Lexists(file_id, "/A/B01/grp", access_id);
-    VERIFY(tri_status, TRUE, "H5Lexists");
-
-    /**********************************************************************
-    * test H5Lmove()
-    **********************************************************************/
-
-    status = H5Lmove(file_id, "/A/B16/grp", file_id, "/A/B17/grp", create_id, access_id);
-    CHECK(status, FAIL, "H5Lmove");
-
-    tri_status = H5Lexists(file_id, "/A/B17/grp", access_id);
-    VERIFY(tri_status, TRUE, "H5Lexists");
-
-    tri_status = H5Lexists(file_id, "/A/B16/grp", access_id);
-    VERIFY(tri_status, FALSE, "H5Lexists");
-
-    /**********************************************************************
-    * test H5Lcreate_hard()
-    **********************************************************************/
-
-    status = H5Lcreate_hard(file_id, "/A/B01/grp", file_id, "/A/B18/grp", create_id, access_id);
-    CHECK(status, FAIL, "H5Lcreate_hard");
-
-    tri_status = H5Lexists(file_id, "/A/B18/grp", access_id);
-    VERIFY(tri_status, TRUE, "H5Lexists");
-
-    /**********************************************************************
-    * test H5Lcreate_soft()
-    **********************************************************************/
-
-    status = H5Lcreate_soft("/A/B01/grp", file_id, "/A/B19/grp", create_id, access_id);
-    CHECK(status, FAIL, "H5Lcreate_soft");
-
-    tri_status = H5Lexists(file_id, "/A/B19/grp", access_id);
-    VERIFY(tri_status, TRUE, "H5Lexists");
-
-    /**********************************************************************
-    * test H5Lcreate_external()
-    **********************************************************************/
-
-    status = H5Lcreate_external("fake_filename", "fake_path", file_id, "/A/B20/grp", create_id, access_id);
-    CHECK(status, FAIL, "H5Lcreate_external");
-
-    tri_status = H5Lexists(file_id, "/A/B20/grp", access_id);
-    VERIFY(tri_status, TRUE, "H5Lexists");
-
-    /**********************************************************************
-    * test H5Lcreate_ud()
-    **********************************************************************/
-
-    status = H5Lcreate_ud(file_id, "/A/B21/grp", H5L_TYPE_EXTERNAL, "file\0obj", (size_t) 9, create_id, access_id);
-    CHECK(status, FAIL, "H5Lcreate_ud");
-
-    tri_status = H5Lexists(file_id, "/A/B21/grp", access_id);
-    VERIFY(tri_status, TRUE, "H5Lexists");
-
-    /**********************************************************************
-    * close
-    **********************************************************************/
 
     status = H5Pclose(create_id);
     CHECK(status, FAIL, "H5Pclose");
@@ -4934,216 +4854,6 @@ test_misc27(void)
     CHECK(ret, FAIL, "H5Fclose");
 } /* end test_misc27() */
 
-
-/****************************************************************
-**
-**  test_misc28(): Ensure that the dataset chunk cache will hold
-**                 the correct number of chunks in cache without
-**                 evicting them.
-**
-****************************************************************/
-static void
-test_misc28(void)
-{
-    hid_t   fid;            /* File ID */
-    hid_t   sidf;           /* File Dataspace ID */
-    hid_t   sidm;           /* Memory Dataspace ID */
-    hid_t   did;            /* Dataset ID */
-    hid_t   dcpl, fapl;     /* Property List IDs */
-    hsize_t dims[] = {MISC28_SIZE, MISC28_SIZE};
-    hsize_t mdims[] = {MISC28_SIZE};
-    hsize_t cdims[] = {1, 1};
-    hsize_t start[] = {0,0};
-    hsize_t count[] = {MISC28_SIZE, 1};
-    size_t  nbytes_used;
-    int     nused;
-    char    buf[MISC28_SIZE];
-    int     i;
-    herr_t  ret;            /* Generic return value */
-
-    /* Output message about test being performed */
-    MESSAGE(5, ("Dataset chunk cache\n"));
-
-    /* Create the fapl and set the cache size.  Set nelmts to larger than the
-     * file size so we can be guaranteed that no chunks will be evicted due to
-     * a hash collision.  Set nbytes to fit exactly 1 column of chunks (10
-     * bytes). */
-    fapl = H5Pcreate(H5P_FILE_ACCESS);
-    CHECK(fapl, FAIL, "H5Pcreate");
-    ret = H5Pset_cache(fapl, MISC28_NSLOTS, MISC28_NSLOTS, MISC28_SIZE, 0.75);
-    CHECK(ret, FAIL, "H5Pset_cache");
-
-    /* Create the dcpl and set the chunk size */
-    dcpl = H5Pcreate(H5P_DATASET_CREATE);
-    CHECK(dcpl, FAIL, "H5Pcreate");
-    ret = H5Pset_chunk(dcpl, 2, cdims);
-    CHECK(ret, FAIL, "H5Pset_chunk");
-
-
-    /* Create a new file and datasets within that file that use these
-     * property lists
-     */
-    fid = H5Fcreate(MISC28_FILE, H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
-    CHECK(fid, FAIL, "H5Fcreate");
-
-    sidf = H5Screate_simple(2, dims, NULL);
-    CHECK(sidf, FAIL, "H5Screate_simple");
-
-    did = H5Dcreate2(fid, "dataset", H5T_NATIVE_CHAR, sidf, H5P_DEFAULT, dcpl, H5P_DEFAULT);
-    CHECK(did, FAIL, "H5Dcreate2");
-
-    /* Verify that the chunk cache is empty */
-    ret = H5D_current_cache_size_test(did, &nbytes_used, &nused);
-    CHECK(ret, FAIL, "H5D_current_cache_size_test");
-    VERIFY(nbytes_used, (size_t) 0, "H5D_current_cache_size_test");
-    VERIFY(nused, 0, "H5D_current_cache_size_test");
-
-    /* Initialize write buffer */
-    for(i=0; i<MISC28_SIZE; i++)
-        buf[i] = i;
-
-    /* Create memory dataspace and selection in file dataspace */
-    sidm = H5Screate_simple(1, mdims, NULL);
-    CHECK(sidm, FAIL, "H5Screate_simple");
-
-    ret = H5Sselect_hyperslab(sidf, H5S_SELECT_SET, start, NULL, count, NULL);
-    CHECK(ret, FAIL, "H5Sselect_hyperslab");
-
-    /* Write hypserslab */
-    ret = H5Dwrite(did, H5T_NATIVE_CHAR, sidm, sidf, H5P_DEFAULT, buf);
-    CHECK(ret, FAIL, "H5Dwrite");
-
-    /* Verify that all 10 chunks written have been cached */
-    ret = H5D_current_cache_size_test(did, &nbytes_used, &nused);
-    CHECK(ret, FAIL, "H5D_current_cache_size_test");
-    VERIFY(nbytes_used, (size_t) MISC28_SIZE, "H5D_current_cache_size_test");
-    VERIFY(nused, MISC28_SIZE, "H5D_current_cache_size_test");
-
-    /* Initialize write buffer */
-    for(i=0; i<MISC28_SIZE; i++)
-        buf[i] = MISC28_SIZE - 1 - i;
-
-    /* Select new hyperslab */
-    start[1] = 1;
-    ret = H5Sselect_hyperslab(sidf, H5S_SELECT_SET, start, NULL, count, NULL);
-    CHECK(ret, FAIL, "H5Sselect_hyperslab");
-
-    /* Write hyperslab */
-    ret = H5Dwrite(did, H5T_NATIVE_CHAR, sidm, sidf, H5P_DEFAULT, buf);
-    CHECK(ret, FAIL, "H5Dwrite");
-
-    /* Verify that the size of the cache remains at 10 */
-    ret = H5D_current_cache_size_test(did, &nbytes_used, &nused);
-    CHECK(ret, FAIL, "H5D_current_cache_size_test");
-    VERIFY(nbytes_used, (size_t) MISC28_SIZE, "H5D_current_cache_size_test");
-    VERIFY(nused, MISC28_SIZE, "H5D_current_cache_size_test");
-
-    /* Close dataset */
-    ret = H5Dclose(did);
-    CHECK(ret, FAIL, "H5Dclose");
-
-
-    /* Re open dataset */
-    did = H5Dopen2(fid, "dataset", H5P_DEFAULT);
-    CHECK(did, FAIL, "H5Dopen2");
-
-    /* Verify that the chunk cache is empty */
-    ret = H5D_current_cache_size_test(did, &nbytes_used, &nused);
-    CHECK(ret, FAIL, "H5D_current_cache_size_test");
-    VERIFY(nbytes_used, (size_t) 0, "H5D_current_cache_size_test");
-    VERIFY(nused, 0, "H5D_current_cache_size_test");
-
-    /* Select hyperslabe for reading */
-    start[1] = 0;
-    ret = H5Sselect_hyperslab(sidf, H5S_SELECT_SET, start, NULL, count, NULL);
-    CHECK(ret, FAIL, "H5Sselect_hyperslab");
-
-    /* Read hypserslab */
-    ret = H5Dread(did, H5T_NATIVE_CHAR, sidm, sidf, H5P_DEFAULT, buf);
-    CHECK(ret, FAIL, "H5Dread");
-
-    /* Verify the data read */
-    for(i=0; i<MISC28_SIZE; i++)
-        VERIFY(buf[i], i, "H5Dread");
-
-    /* Verify that all 10 chunks read have been cached */
-    ret = H5D_current_cache_size_test(did, &nbytes_used, &nused);
-    CHECK(ret, FAIL, "H5D_current_cache_size_test");
-    VERIFY(nbytes_used, (size_t) MISC28_SIZE, "H5D_current_cache_size_test");
-    VERIFY(nused, MISC28_SIZE, "H5D_current_cache_size_test");
-
-    /* Select new hyperslab */
-    start[1] = 1;
-    ret = H5Sselect_hyperslab(sidf, H5S_SELECT_SET, start, NULL, count, NULL);
-    CHECK(ret, FAIL, "H5Sselect_hyperslab");
-
-    /* Read hyperslab */
-    ret = H5Dread(did, H5T_NATIVE_CHAR, sidm, sidf, H5P_DEFAULT, buf);
-    CHECK(ret, FAIL, "H5Dread");
-
-    /* Verify the data read */
-    for(i=0; i<MISC28_SIZE; i++)
-        VERIFY(buf[i], MISC28_SIZE - 1 - i, "H5Dread");
-
-    /* Verify that the size of the cache remains at 10 */
-    ret = H5D_current_cache_size_test(did, &nbytes_used, &nused);
-    CHECK(ret, FAIL, "H5D_current_cache_size_test");
-    VERIFY(nbytes_used, (size_t) MISC28_SIZE, "H5D_current_cache_size_test");
-    VERIFY(nused, MISC28_SIZE, "H5D_current_cache_size_test");
-
-    /* Close dataset */
-    ret = H5Dclose(did);
-    CHECK(ret, FAIL, "H5Dclose");
-
-
-    /* Close the dataspaces and file */
-    ret = H5Sclose(sidf);
-    CHECK_I(ret, "H5Sclose");
-    ret = H5Sclose(sidm);
-    CHECK_I(ret, "H5Sclose");
-    ret = H5Fclose(fid);
-    CHECK_I(ret, "H5Fclose");
-
-    /* Close the property lists.  */
-    ret = H5Pclose(dcpl);
-    CHECK_I(ret, "H5Pclose");
-    ret = H5Pclose(fapl);
-    CHECK_I(ret, "H5Pclose");
-} /* end test_misc28() */
-
-
-/****************************************************************
-**
-**  test_misc29(): Ensure that speculative metadata reads don't
-**                 get raw data into the metadata accumulator.
-**
-****************************************************************/
-static void
-test_misc29(void)
-{
-    hid_t fid;              /* File ID */
-    herr_t  ret;            /* Generic return value */
-
-    /* Output message about test being performed */
-    MESSAGE(5, ("Speculative metadata reads\n"));
-
-    /* Make a copy of the data file from svn. */
-    ret = h5_make_local_copy(MISC29_ORIG_FILE, MISC29_COPY_FILE);
-    CHECK(ret, -1, "h5_make_local_copy");
-
-    /* Open the copied file */
-    fid = H5Fopen(MISC29_COPY_FILE, H5F_ACC_RDWR, H5P_DEFAULT); 
-    CHECK(fid, FAIL, "H5Fopen");
-
-    /* Delete the last dataset */
-    ret = H5Ldelete(fid, MISC29_DSETNAME, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Ldelete");
-
-    /* Close the file */
-    ret = H5Fclose(fid);
-    CHECK(ret, FAIL, "H5Fclose");
-} /* end test_misc29() */
-
 /****************************************************************
 **
 **  test_misc(): Main misc. test routine.
@@ -5186,8 +4896,7 @@ test_misc(void)
     test_misc25c();     /* Exercise another null object header message merge bug */
     test_misc26();      /* Test closing property lists with long filter pipelines */
     test_misc27();      /* Test opening file with object that has bad # of object header messages */
-    test_misc28();      /* Test that chunks are cached appropriately */
-    test_misc29();      /* Test that speculative metadata reads are handled correctly */
+
 
 } /* test_misc() */
 
@@ -5241,7 +4950,5 @@ cleanup_misc(void)
     HDremove(MISC25A_FILE);
     HDremove(MISC25C_FILE);
     HDremove(MISC26_FILE);
-    HDremove(MISC28_FILE);
-    HDremove(MISC29_COPY_FILE);
 }
 

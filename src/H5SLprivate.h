@@ -53,6 +53,7 @@ typedef enum {
 /**********/
 /* Macros */
 /**********/
+#define H5SL_LEVEL_MAX          32      /* (for now) */
 
 /* Typedef for iteration operations */
 typedef herr_t (*H5SL_operator_t)(void *item, void *key,
@@ -61,7 +62,7 @@ typedef herr_t (*H5SL_operator_t)(void *item, void *key,
 /********************/
 /* Private routines */
 /********************/
-H5_DLL H5SL_t *H5SL_create(H5SL_type_t type);
+H5_DLL H5SL_t *H5SL_create(H5SL_type_t type, double p, size_t max_level);
 H5_DLL size_t H5SL_count(H5SL_t *slist);
 H5_DLL herr_t H5SL_insert(H5SL_t *slist, void *item, const void *key);
 H5_DLL H5SL_node_t *H5SL_add(H5SL_t *slist, void *item, const void *key);
@@ -71,8 +72,6 @@ H5_DLL void *H5SL_search(H5SL_t *slist, const void *key);
 H5_DLL void *H5SL_less(H5SL_t *slist, const void *key);
 H5_DLL void *H5SL_greater(H5SL_t *slist, const void *key);
 H5_DLL H5SL_node_t *H5SL_find(H5SL_t *slist, const void *key);
-H5_DLL H5SL_node_t *H5SL_below(H5SL_t *slist, const void *key);
-H5_DLL H5SL_node_t *H5SL_above(H5SL_t *slist, const void *key);
 H5_DLL H5SL_node_t *H5SL_first(H5SL_t *slist);
 H5_DLL H5SL_node_t *H5SL_next(H5SL_node_t *slist_node);
 H5_DLL H5SL_node_t *H5SL_prev(H5SL_node_t *slist_node);
@@ -83,7 +82,6 @@ H5_DLL herr_t H5SL_release(H5SL_t *slist);
 H5_DLL herr_t H5SL_free(H5SL_t *slist, H5SL_operator_t op, void *op_data);
 H5_DLL herr_t H5SL_close(H5SL_t *slist);
 H5_DLL herr_t H5SL_destroy(H5SL_t *slist, H5SL_operator_t op, void *op_data);
-H5_DLL int H5SL_term_interface(void);
 
 #endif /* _H5SLprivate_H */
 

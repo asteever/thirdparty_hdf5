@@ -24,15 +24,12 @@ include $(top_srcdir)/config/commence.am
 INCLUDES=-I$(top_srcdir)/src -I$(top_srcdir)/tools/lib
 
 # Test programs and scripts
-TEST_SCRIPT=testh5ls.sh
+TEST_SCRIPT=$(srcdir)/testh5ls.sh
 check_SCRIPTS=$(TEST_SCRIPT)
 SCRIPT_DEPEND=h5ls$(EXEEXT)
 
 # This is our main target, the h5ls tool
 bin_PROGRAMS=h5ls
-
-# Add h5ls specific linker flags here
-h5ls_LDFLAGS = $(LT_STATIC_EXEC) $(AM_LDFLAGS)
 
 # All programs depend on the hdf5 and h5tools libraries
 LDADD=$(LIBH5TOOLS) $(LIBHDF5)

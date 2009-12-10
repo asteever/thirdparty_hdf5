@@ -37,8 +37,7 @@
 
 
 /* PRIVATE PROTOTYPES */
-static void *H5O_cont_decode(H5F_t *f, hid_t dxpl_id, H5O_t *open_oh,
-    unsigned mesg_flags, unsigned *ioflags, const uint8_t *p);
+static void *H5O_cont_decode(H5F_t *f, hid_t dxpl_id, unsigned mesg_flags, const uint8_t *p);
 static herr_t H5O_cont_encode(H5F_t *f, hbool_t disable_shared, uint8_t *p, const void *_mesg);
 static size_t H5O_cont_size(const H5F_t *f, hbool_t disable_shared, const void *_mesg);
 static herr_t H5O_cont_free(void *mesg);
@@ -90,8 +89,8 @@ H5FL_DEFINE(H5O_cont_t);
  *-------------------------------------------------------------------------
  */
 static void *
-H5O_cont_decode(H5F_t *f, hid_t UNUSED dxpl_id, H5O_t UNUSED *open_oh,
-    unsigned UNUSED mesg_flags, unsigned UNUSED *ioflags, const uint8_t *p)
+H5O_cont_decode(H5F_t *f, hid_t UNUSED dxpl_id, unsigned UNUSED mesg_flags,
+    const uint8_t *p)
 {
     H5O_cont_t             *cont = NULL;
     void                   *ret_value;
@@ -205,7 +204,7 @@ H5O_cont_free(void *mesg)
 
     HDassert(mesg);
 
-    (void)H5FL_FREE(H5O_cont_t, mesg);
+    H5FL_FREE(H5O_cont_t, mesg);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5O_cont_free() */

@@ -502,7 +502,6 @@ test_assoc(hid_t fapl)
      * of file2.
      */
     if(H5Oget_info_by_name(file1, "/mnt1", &oi2, H5P_DEFAULT) < 0) FAIL_STACK_ERROR
-
     if(oi1.fileno != oi2.fileno || H5F_addr_ne(oi1.addr, oi2.addr)) {
 	H5_FAILED();
 	puts("    Association failed.");
@@ -2559,6 +2558,7 @@ test_acc_perm(hid_t fapl)
     hid_t gidA = -1, gidB = -1, gidC = -1, gidM = -1, gidAM = -1, gidAMZ = -1;    	/* Group IDs */
     hid_t bad_id = -1;                          /* Bad ID from object create */
     char    name[NAME_BUF_SIZE];        /* Buffer for filename retrieved */
+    ssize_t name_len;                   /* Filename length */
     char	filename1[1024],
 		filename2[1024],
 		filename3[1024]; 	/* Name of files to mount */
@@ -2605,7 +2605,7 @@ test_acc_perm(hid_t fapl)
         TEST_ERROR
 
     /* Get and verify file name */
-    if(H5Fget_name(gidA, name, NAME_BUF_SIZE) < 0)
+    if((name_len = H5Fget_name(gidA, name, NAME_BUF_SIZE)) < 0)
         TEST_ERROR
     if(HDstrcmp(name, filename1) != 0)
         TEST_ERROR
@@ -2614,7 +2614,7 @@ test_acc_perm(hid_t fapl)
         TEST_ERROR
 
     /* Get and verify file name */
-    if(H5Fget_name(fid2, name, NAME_BUF_SIZE) < 0)
+    if((name_len = H5Fget_name(fid2, name, NAME_BUF_SIZE)) < 0)
         TEST_ERROR
     if(HDstrcmp(name, filename2) != 0)
         TEST_ERROR
@@ -2624,7 +2624,7 @@ test_acc_perm(hid_t fapl)
         TEST_ERROR
 
     /* Get and verify file name */
-    if(H5Fget_name(fid2, name, NAME_BUF_SIZE) < 0)
+    if((name_len = H5Fget_name(fid2, name, NAME_BUF_SIZE)) < 0)
         TEST_ERROR
     if(HDstrcmp(name, filename2) != 0)
         TEST_ERROR
@@ -2634,7 +2634,7 @@ test_acc_perm(hid_t fapl)
         TEST_ERROR
 
     /* Get and verify file name */
-    if(H5Fget_name(gidAM, name, NAME_BUF_SIZE) < 0)
+    if((name_len = H5Fget_name(gidAM, name, NAME_BUF_SIZE)) < 0)
         TEST_ERROR
     if(HDstrcmp(name, filename2) != 0)
         TEST_ERROR
@@ -2676,7 +2676,7 @@ test_acc_perm(hid_t fapl)
         TEST_ERROR
 
     /* Get and verify file name */
-    if(H5Fget_name(gidAMZ, name, NAME_BUF_SIZE) < 0)
+    if((name_len = H5Fget_name(gidAMZ, name, NAME_BUF_SIZE)) < 0)
         TEST_ERROR
     if(HDstrcmp(name, filename3) != 0)
         TEST_ERROR
@@ -3392,7 +3392,7 @@ test_cut_graph(hid_t fapl)
     hid_t gidQ = -1;                    /* Group IDs in file #7 */
     char    name[NAME_BUF_SIZE];        /* Buffer for filename retrieved */
     ssize_t name_len;                   /* Filename length */
-    ssize_t obj_count;                  /* Number of objects open */
+    int obj_count;                      /* Number of objects open */
     char	filename1[NAME_BUF_SIZE],
 		filename2[NAME_BUF_SIZE],
 		filename3[NAME_BUF_SIZE],
@@ -4202,130 +4202,6 @@ error:
 
 
 /*-------------------------------------------------------------------------
- * Function:	test_multisharedclose
- *
- * Purpose: Test that multiple files mounted to a shared mount structure
- *          can be properly closed by closing the groups holding them open.
- *
- * Return:	Success:	0
- *
- *		Failure:	number of errors
- *
- * Programmer:	Neil Fortner
- *              Friday, November 14, 2008
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
- static int
-test_multisharedclose(hid_t fapl)
-{
-    hid_t fid1 = -1, fid2 = -1; /* File IDs */
-    hid_t gid1 = -1, gid2 = -1, gid3 = -1;
-    char    filename1[NAME_BUF_SIZE],
-            filename2[NAME_BUF_SIZE],
-            filename3[NAME_BUF_SIZE],
-            filename4[NAME_BUF_SIZE]; 	/* Name of files to mount */
-
-    TESTING("closing multiple shared mounts");
-
-    h5_fixname(FILENAME[0], fapl, filename1, sizeof filename1);
-    h5_fixname(FILENAME[1], fapl, filename2, sizeof filename2);
-    h5_fixname(FILENAME[2], fapl, filename3, sizeof filename3);
-    h5_fixname(FILENAME[3], fapl, filename4, sizeof filename4);
-
-    /* Create master file with three groups to serve as mount points */
-    if ((fid1 = H5Fcreate(filename4, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
-    if (H5Gclose(H5Gcreate2(fid1, "mnt1", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
-    if (H5Gclose(H5Gcreate2(fid1, "mnt2", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
-    if (H5Gclose(H5Gcreate2(fid1, "mnt3", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
-    if (H5Fclose(fid1) < 0) TEST_ERROR
-
-    /* Create child file with group */
-    if ((fid1 = H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
-    if (H5Gclose(H5Gcreate2(fid1, "grp", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
-    if (H5Fclose(fid1) < 0) TEST_ERROR
-
-    /* Create child file with group */
-    if ((fid1 = H5Fcreate(filename2, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
-    if (H5Gclose(H5Gcreate2(fid1, "grp", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
-    if (H5Fclose(fid1) < 0) TEST_ERROR
-
-    /* Create child file with group */
-    if ((fid1 = H5Fcreate(filename3, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
-    if (H5Gclose(H5Gcreate2(fid1, "grp", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
-    if (H5Fclose(fid1) < 0) TEST_ERROR
-
-
-    /* Open master and child 1 and mount child 1 to master */
-    if ((fid1 = H5Fopen(filename4, H5F_ACC_RDONLY, H5P_DEFAULT)) < 0) TEST_ERROR
-    if ((fid2 = H5Fopen(filename1, H5F_ACC_RDONLY, H5P_DEFAULT)) < 0) TEST_ERROR
-    if (H5Fmount(fid1, "mnt1", fid2, H5P_DEFAULT) < 0) TEST_ERROR
-
-    /* Open the group in child 1 */
-    if ((gid1 = H5Gopen2(fid1, "mnt1/grp", H5P_DEFAULT)) < 0) TEST_ERROR
-
-    /* Close both files.  They will be held open by gid1 */
-    if (H5Idec_ref(fid2) < 0) TEST_ERROR
-    if (H5Idec_ref(fid1) < 0) TEST_ERROR
-
-
-    /* Open master and child 2 and mount child 2 to master */
-    if ((fid1 = H5Fopen(filename4, H5F_ACC_RDONLY, H5P_DEFAULT)) < 0) TEST_ERROR
-    if ((fid2 = H5Fopen(filename2, H5F_ACC_RDONLY, H5P_DEFAULT)) < 0) TEST_ERROR
-    if (H5Fmount(fid1, "mnt2", fid2, H5P_DEFAULT) < 0) TEST_ERROR
-
-    /* Open the group in child 2 */
-    if ((gid2 = H5Gopen2(fid1, "mnt2/grp", H5P_DEFAULT)) < 0) TEST_ERROR
-
-    /* Close both files.  They will be held open by gid2 */
-    if (H5Idec_ref(fid2) < 0) TEST_ERROR
-    if (H5Idec_ref(fid1) < 0) TEST_ERROR
-
-
-    /* Open master and child 3 and mount child 3 to master */
-    if ((fid1 = H5Fopen(filename4, H5F_ACC_RDONLY, H5P_DEFAULT)) < 0) TEST_ERROR
-    if ((fid2 = H5Fopen(filename3, H5F_ACC_RDONLY, H5P_DEFAULT)) < 0) TEST_ERROR
-    if (H5Fmount(fid1, "mnt3", fid2, H5P_DEFAULT) < 0) TEST_ERROR
-
-    /* Open the group in child 3 */
-    if ((gid3 = H5Gopen2(fid1, "mnt3/grp", H5P_DEFAULT)) < 0) TEST_ERROR
-
-    /* Close both files.  They will be held open by gid3 */
-    if (H5Idec_ref(fid2) < 0) TEST_ERROR
-    if (H5Idec_ref(fid1) < 0) TEST_ERROR
-
-
-    /* Close gid1.  This will close child 1. */
-    if (H5Idec_ref(gid1) < 0) TEST_ERROR
-
-    /* Close gid2.  This will close child 2. */
-    if (H5Idec_ref(gid2) < 0) TEST_ERROR
-
-    /* Close gid3.  This will close child 3 and the master file. */
-    if (H5Idec_ref(gid3) < 0) TEST_ERROR
-
-    /* Check that all file IDs have been closed */
-    if(H5I_nmembers(H5I_FILE) != 0) TEST_ERROR
-    if(H5F_sfile_assert_num(0) < 0) TEST_ERROR
-
-    PASSED();
-    return 0;
-
-error:
-    H5E_BEGIN_TRY {
-    H5Gclose(gid1);
-    H5Gclose(gid2);
-    H5Gclose(gid3);
-    H5Fclose(fid2);
-    H5Fclose(fid2);
-    } H5E_END_TRY;
-    return 1;
-} /* end test_multisharedclose() */
-
-
-/*-------------------------------------------------------------------------
  * Function:	main
  *
  * Purpose:	Test file mounting
@@ -4346,52 +4222,59 @@ main(void)
 {
     int		nerrors = 0;
     hid_t	fapl = -1;
+    const char *envval = NULL;
 
-    h5_reset();
-    fapl = h5_fileaccess();
-    if (setup(fapl) < 0) goto error;
+    envval = HDgetenv("HDF5_DRIVER");
+    if (envval == NULL) 
+        envval = "nomatch";
+    if (HDstrcmp(envval, "split") && HDstrcmp(envval, "multi")) {
+	h5_reset();
+	fapl = h5_fileaccess();
+	if (setup(fapl) < 0) goto error;
 
-    nerrors += test_basic(fapl);
-    nerrors += test_illegal(fapl);
-    nerrors += test_samefile(fapl);
-    nerrors += test_hide(fapl);
-    nerrors += test_assoc(fapl);
-    nerrors += test_mntlnk(fapl);
-    nerrors += test_unlink(fapl);
-    nerrors += test_move(fapl);
-    nerrors += test_mvmpt(fapl);
-    nerrors += test_preopen(fapl);
-    nerrors += test_postopen(fapl);
-    nerrors += test_interlink(fapl);
-    nerrors += test_uniformity(fapl);
-    nerrors += test_close(fapl);
-    nerrors += test_mount_after_close(fapl);
-    nerrors += test_mount_after_unmount(fapl);
-    nerrors += test_missing_unmount(fapl);
-    nerrors += test_hold_open_file(fapl);
-    nerrors += test_hold_open_group(fapl);
-    nerrors += test_fcdegree_same(fapl);
-    nerrors += test_fcdegree_semi(fapl);
-    nerrors += test_fcdegree_strong(fapl);
-    nerrors += test_acc_perm(fapl);
-    nerrors += test_mult_mount(fapl);
-    nerrors += test_nested_survive(fapl);
-    nerrors += test_close_parent(fapl);
-    nerrors += test_cut_graph(fapl);
-    nerrors += test_symlink(fapl);
-    nerrors += test_sharedacc(fapl);
-    nerrors += test_sharedclose(fapl);
-    nerrors += test_multisharedclose(fapl);
+	nerrors += test_basic(fapl);
+	nerrors += test_illegal(fapl);
+	nerrors += test_samefile(fapl);
+	nerrors += test_hide(fapl);
+	nerrors += test_assoc(fapl);
+	nerrors += test_mntlnk(fapl);
+	nerrors += test_unlink(fapl);
+	nerrors += test_move(fapl);
+	nerrors += test_mvmpt(fapl);
+	nerrors += test_preopen(fapl);
+	nerrors += test_postopen(fapl);
+	nerrors += test_interlink(fapl);
+	nerrors += test_uniformity(fapl);
+	nerrors += test_close(fapl);
+	nerrors += test_mount_after_close(fapl);
+	nerrors += test_mount_after_unmount(fapl);
+	nerrors += test_missing_unmount(fapl);
+	nerrors += test_hold_open_file(fapl);
+	nerrors += test_hold_open_group(fapl);
+	nerrors += test_fcdegree_same(fapl);
+	nerrors += test_fcdegree_semi(fapl);
+	nerrors += test_fcdegree_strong(fapl);
+	nerrors += test_acc_perm(fapl);
+	nerrors += test_mult_mount(fapl);
+	nerrors += test_nested_survive(fapl);
+	nerrors += test_close_parent(fapl);
+	nerrors += test_cut_graph(fapl);
+	nerrors += test_symlink(fapl);
+	nerrors += test_sharedacc(fapl);
+	nerrors += test_sharedclose(fapl);
 
-    if (nerrors) goto error;
-
-    puts("All mount tests passed.");
-    h5_cleanup(FILENAME, fapl);
-
+	if (nerrors) goto error;
+	puts("All mount tests passed.");
+	h5_cleanup(FILENAME, fapl);
+    }
+    else
+    {
+        puts("All mount tests skipped - Incompatible with current Virtual File Driver");
+    }
     return 0;
 
-error:
-    puts("***** MOUNT ERRORS *****");
-    return 1;
+    error:
+        puts("***** MOUNT ERRORS *****");
+        return 1;
 }
 

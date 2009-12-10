@@ -10,18 +10,14 @@ usage: h5diff [OPTIONS] file1 file2 [obj1[obj2]]
    -r, --report            Report mode. Print differences
    -v, --verbose           Verbose mode. Print differences, list of objects
    -q, --quiet             Quiet mode. Do not do output
-   -c, --compare           List objects that are not comparable
-   -N, --nan               Avoid NaNs detection
-   -n C, --count=C         Print differences up to C number, C is a positive integer.
-   -d D, --delta=D         Print difference if (|a-b| > D), D is a positive number.
-   -p R, --relative=R      Print difference if (|(a-b)/b| > R), R is a positive number.
-   --use-system-epsilon    Print difference if (|a-b| > EPSILON),
-                           where EPSILON (FLT_EPSILON or FLT_EPSILON) is the system epsilon value. 
-                           If the system epsilon is not defined, use the value below:
-                               FLT_EPSILON = 1.19209E-07 for float
-                               DBL_EPSILON = 2.22045E-16 for double
-                           -d, -p, and --use-system-epsilon options are used for comparing floating point values.
-                           By default, strict equality is used. Use -p or -d to set specific tolerance.
+   -c, --contents          Contents mode. Objects in both files must match
+   -n C, --count=C         Print differences up to C number
+   -d D, --delta=D         Print difference when greater than limit D
+   -p R, --relative=R      Print difference when greater than relative limit R
+
+  C - is a positive integer
+  D - is a positive number. Compare criteria is |a - b| > D
+  R - is a positive number. Compare criteria is |(b-a)/a| > R
 
  Modes of output:
 
@@ -29,20 +25,23 @@ usage: h5diff [OPTIONS] file1 file2 [obj1[obj2]]
   -r Report mode: print the above plus the differences
   -v Verbose mode: print the above plus a list of objects and warnings
   -q Quiet mode: do not print output
+  -c Contents mode: objects in both files must match
 
  Compare criteria
 
  If no objects [obj1[obj2]] are specified, h5diff only compares objects
-   with the same absolute path in both files
+   with the same absolute path in both files. However,
+   when the -c flag is present, (contents mode) the objects in file1
+   must match exactly the objects in file2
 
  The compare criteria is:
    1) datasets: numerical array differences 2) groups: name string difference
-   3) datatypes: the return value of H5Tequal 4) links: name string difference
+   3) datatypes: the return value of H5Tequal 2) links: name string difference
    of the linked value
 
  Return exit code:
 
-  1 if differences found, 0 if no differences, 2 if error
+  1 if differences found, 0 if no differences, -1 if error
 
  Examples of use:
 

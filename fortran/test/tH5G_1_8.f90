@@ -39,6 +39,7 @@ SUBROUTINE group_test(cleanup, total_error)
   ! /* Check for FAPL to USE */
   my_fapl = fapl2
 
+  
   ret_total_error = 0
   CALL mklinks(fapl2, ret_total_error)
   CALL write_test_status(ret_total_error, &
@@ -156,7 +157,7 @@ SUBROUTINE group_info(cleanup, fapl, total_error)
   CHARACTER(LEN=17), PARAMETER :: CORDER_SOFT_GROUP_NAME =  "corder_soft_group"
   INTEGER(HID_T) :: file_id ! /* File ID */
   INTEGER :: error ! /* Generic return value */
-  LOGICAL :: mounted
+
   LOGICAL :: cleanup
 
   ! /* Create group creation property list */
@@ -247,7 +248,7 @@ SUBROUTINE group_info(cleanup, fapl, total_error)
            ! /* Check for out of bound query by index on empty group, should fail */
            CALL H5Gget_info_by_idx_f(group_id, ".", H5_INDEX_NAME_F, order, INT(0,HSIZE_T), &
                 storage_type, nlinks, max_corder, error)
-           CALL VERIFY("H5Gget_info_by_idx_f", error, -1, total_error)
+           CALL VERIFY("H5Gget_info_by_idx", error, -1, total_error)
 
            ! /* Create several links, up to limit of compact form */
            DO u = 0, max_compact-1
@@ -261,33 +262,31 @@ SUBROUTINE group_info(cleanup, fapl, total_error)
               CALL check("H5Gcreate_f", error, total_error)
 
               ! /* Retrieve group's information */
-              CALL H5Gget_info_f(group_id2, storage_type, nlinks, max_corder, error, mounted)
+              CALL H5Gget_info_f(group_id2, storage_type, nlinks, max_corder, error)
               CALL check("H5Gget_info_f", error, total_error)
 
               ! /* Check (new/empty) group's information */
               CALL VERIFY("H5Gget_info_f", storage_type, H5G_STORAGE_TYPE_COMPACT_F, total_error)
               CALL VERIFY("H5Gget_info_f", max_corder, 0, total_error)
               CALL VERIFY("H5Gget_info_f", nlinks, 0, total_error)
-              CALL verifyLogical("H5Gget_info_f.mounted", mounted,.FALSE.,total_error)
 
               ! /* Retrieve group's information */
-              CALL H5Gget_info_by_name_f(group_id, objname, storage_type, nlinks, max_corder, error, mounted=mounted)
-              CALL check("H5Gget_info_by_name_f", error, total_error)
+              CALL H5Gget_info_by_name_f(group_id, objname, storage_type, nlinks, max_corder, error)
+              CALL check("H5Gget_info_by_name", error, total_error)
 
               ! /* Check (new/empty) group's information */
-              CALL VERIFY("H5Gget_info_by_name_f", storage_type, H5G_STORAGE_TYPE_COMPACT_F, total_error)
-              CALL VERIFY("H5Gget_info_by_name_f", max_corder, 0, total_error)
-              CALL VERIFY("H5Gget_info_by_name_f", nlinks, 0, total_error)
-              CALL verifyLogical("H5Gget_info_by_name_f.mounted", mounted,.FALSE.,total_error)
+              CALL VERIFY("H5Gget_info_f", storage_type, H5G_STORAGE_TYPE_COMPACT_F, total_error)
+              CALL VERIFY("H5Gget_info_f", max_corder, 0, total_error)
+              CALL VERIFY("H5Gget_info_f", nlinks, 0, total_error)
 
               ! /* Retrieve group's information */
               CALL H5Gget_info_by_name_f(group_id2, ".", storage_type, nlinks, max_corder, error)
               CALL check("H5Gget_info_by_name", error, total_error)
 
               ! /* Check (new/empty) group's information */
-              CALL VERIFY("H5Gget_info_by_name_f", storage_type, H5G_STORAGE_TYPE_COMPACT_F, total_error)
-              CALL VERIFY("H5Gget_info_by_name_f", max_corder, 0, total_error)
-              CALL VERIFY("H5Gget_info_by_name_f", nlinks, 0, total_error)
+              CALL VERIFY("H5Gget_info_f", storage_type, H5G_STORAGE_TYPE_COMPACT_F, total_error)
+              CALL VERIFY("H5Gget_info_f", max_corder, 0, total_error)
+              CALL VERIFY("H5Gget_info_f", nlinks, 0, total_error)
 
               ! /* Create objects in new group created */
               DO v = 0, u
@@ -328,25 +327,23 @@ SUBROUTINE group_info(cleanup, fapl, total_error)
 
               ! /* Check (new) group's information */
               CALL VERIFY("H5Gget_info_by_name_f", storage_type, H5G_STORAGE_TYPE_COMPACT_F, total_error)
-              CALL VERIFY("H5Gget_info_by_name_f", max_corder, u+1, total_error)
+              CALL VERIFY("H5Gget_info_by_name_f2", max_corder, u+1, total_error)
               CALL VERIFY("H5Gget_info_by_name_f", nlinks, u+1, total_error)
 
               ! /* Retrieve group's information */
               IF(order.NE.H5_ITER_NATIVE_F)THEN
                  IF(order.EQ.H5_ITER_INC_F) THEN
                     CALL H5Gget_info_by_idx_f(group_id, ".", idx_type, order, INT(u,HSIZE_T), &
-                         storage_type, nlinks, max_corder, error,lapl_id=H5P_DEFAULT_F, mounted=mounted)
+                         storage_type, nlinks, max_corder, error,lapl_id=H5P_DEFAULT_F)
                     CALL check("H5Gget_info_by_idx_f", error, total_error)
-                    CALL verifyLogical("H5Gget_info_by_idx_f", mounted,.FALSE.,total_error)
                  ELSE
                     CALL H5Gget_info_by_idx_f(group_id, ".", idx_type, order, INT(0,HSIZE_T), &
-                         storage_type, nlinks, max_corder, error, mounted=mounted)
-                    CALL verifyLogical("H5Gget_info_by_idx_f", mounted,.FALSE.,total_error)
+                         storage_type, nlinks, max_corder, error)
                     CALL check("H5Gget_info_by_idx_f", error, total_error)
                  ENDIF
               ! /* Check (new) group's information */
                  CALL VERIFY("H5Gget_info_by_idx_f", storage_type, H5G_STORAGE_TYPE_COMPACT_F, total_error)
-                 CALL VERIFY("H5Gget_info_by_idx_f", max_corder, u+1, total_error)
+                 CALL VERIFY("H5Gget_info_by_idx_f33", max_corder, u+1, total_error)
                  CALL VERIFY("H5Gget_info_by_idx_f", nlinks, u+1, total_error)
               ENDIF
               ! /* Close group created */
@@ -359,7 +356,7 @@ SUBROUTINE group_info(cleanup, fapl, total_error)
 
               ! /* Check main group's information */
               CALL VERIFY("H5Gget_info_f", storage_type, H5G_STORAGE_TYPE_COMPACT_F, total_error)
-              CALL VERIFY("H5Gget_info_f", max_corder, u+1, total_error)
+              CALL VERIFY("H5Gget_info_f2", max_corder, u+1, total_error)
               CALL VERIFY("H5Gget_info_f", nlinks, u+1, total_error)
               
               ! /* Retrieve main group's information, by name */
@@ -612,6 +609,7 @@ SUBROUTINE group_info(cleanup, fapl, total_error)
      IF(cleanup) CALL h5_cleanup_f(prefix, H5P_DEFAULT_F, error)
      CALL check("h5_cleanup_f", error, total_error)
 
+
    END SUBROUTINE timestamps
 
 !/*-------------------------------------------------------------------------
@@ -642,18 +640,6 @@ SUBROUTINE group_info(cleanup, fapl, total_error)
      INTEGER ::   arank = 1                      ! Attribure rank
      INTEGER :: error
 
-     INTEGER :: cset ! Indicates the character set used for the link’s name. 
-     INTEGER :: corder ! Specifies the link’s creation order position.
-     LOGICAL :: f_corder_valid ! Indicates whether the value in corder is valid.
-     INTEGER :: link_type ! Specifies the link class:
-     	                              !  H5L_LINK_HARD_F      - Hard link
-     	                              !  H5L_LINK_SOFT_F      - Soft link
-     	                              !  H5L_LINK_EXTERNAL_F  - External link
-     	                              !  H5L_LINK_ERROR _F    - Error
-     INTEGER(HADDR_T) :: address  ! If the link is a hard link, address specifies the file address that the link points to
-     INTEGER(SIZE_T) :: val_size ! If the link is a symbolic link, val_size will be the length of the link value
-
-
 !     WRITE(*,*) "link creation (w/new group format)"
 
      ! /* Create a file */
@@ -681,18 +667,6 @@ SUBROUTINE group_info(cleanup, fapl, total_error)
      !/* Create a symbolic link */
      CALL H5Lcreate_soft_f("/d1", file, "grp1/soft",error)
      CALL check("H5Lcreate_soft_f", error, total_error)
-
-     CALL H5Lget_info_f(file, "grp1/soft", &
-          cset, corder, f_corder_valid, link_type, address, val_size, &
-          error, H5P_DEFAULT_F)
-     CALL check("H5Lget_info_f",error,total_error)
-
-!     CALL VerifyLogical("H5Lget_info_by_idx_f11", f_corder_valid, .TRUE., total_error)
-
-     CALL VERIFY("H5Lget_info_by_idx_f", H5L_LINK_SOFT_F, link_type, total_error)
-     CALL VERIFY("H5Lget_info_by_idx_f", cset, H5T_CSET_ASCII_F, total_error)
-     ! should be '/d1' + NULL character = 4
-     CALL VERIFY("H5Lget_info_by_idx_f", INT(val_size), 4, total_error)
 
     !/* Create a symbolic link to something that doesn't exist */
 
@@ -757,8 +731,8 @@ SUBROUTINE group_info(cleanup, fapl, total_error)
      	                              !  H5L_LINK_SOFT_F      - Soft link
      	                              !  H5L_LINK_EXTERNAL_F  - External link
      	                              !  H5L_LINK_ERROR _F    - Error
-    INTEGER(HADDR_T) :: address  ! If the link is a hard link, address specifies the file address that the link points to
-    INTEGER(SIZE_T) :: val_size ! If the link is a symbolic link, val_size will be the length of the link value
+    INTEGER :: address  ! If the link is a hard link, address specifies the file address that the link points to
+    INTEGER(HSIZE_T) :: val_size ! If the link is a symbolic link, val_size will be the length of the link value
 
     INTEGER :: error
 
@@ -1171,18 +1145,15 @@ SUBROUTINE delete_by_idx(cleanup, fapl, total_error)
   LOGICAL :: f_corder_valid ! Indicates whether the creation order data is valid for this attribute 
   INTEGER :: corder ! Is a positive integer containing the creation order of the attribute
   INTEGER :: cset ! Indicates the character set used for the attribute’s name
-  INTEGER(SIZE_T) :: val_size 
-  INTEGER :: link_type
-  INTEGER(HADDR_T) :: address
+  INTEGER(HSIZE_T) :: data_size   ! Indicates the size, in the number of characters, of the attribute
 
   INTEGER :: u ! /* Local index variable */
   INTEGER :: Input1, i
   INTEGER(HID_T) :: group_id2
-  INTEGER(HID_T) :: grp
+
   INTEGER :: iorder ! /* Order within in the index */
   CHARACTER(LEN=2) :: chr2
   INTEGER :: error
-  INTEGER :: id_type
   !
   !
   !
@@ -1290,7 +1261,7 @@ SUBROUTINE delete_by_idx(cleanup, fapl, total_error)
            htmp =9 
 !EP           CALL H5Ldelete_by_idx_f(group_id, ".", idx_type, iorder, INT(u,HSIZE_T), error)
            CALL H5Ldelete_by_idx_f(group_id, ".", idx_type, iorder, htmp, error)
-           CALL VERIFY("H5Ldelete_by_idx_f", error, -1, total_error) ! test should fail (error = -1)
+           CALL VERIFY("delete_by_idx.H5Ldelete_by_idx_f", error, -1, total_error) ! test should fail (error = -1)
 
 
            ! /* Delete links from compact group */
@@ -1298,36 +1269,18 @@ SUBROUTINE delete_by_idx(cleanup, fapl, total_error)
            DO u = 0, (max_compact - 1) -1
               ! /* Delete first link in appropriate order */
               CALL H5Ldelete_by_idx_f(group_id, ".", idx_type, iorder, INT(0,HSIZE_T), error)
-              CALL check("H5Ldelete_by_idx_f", error, total_error)
+              CALL check("delete_by_idx.H5Ldelete_by_idx_f", error, total_error)
               ! /* Verify the link information for first link in appropriate order */
               ! HDmemset(&linfo, 0, sizeof(linfo));
 
               CALL H5Lget_info_by_idx_f(group_id, ".", idx_type, iorder, INT(0,HSIZE_T), &
-                   link_type, f_corder_valid, corder, cset, address, val_size, error)
+                   f_corder_valid, corder, cset, data_size, error)
 
-              CALL H5Oopen_by_addr_f(group_id, address, grp, error)
-              CALL check("H5Oopen_by_addr_f", error, total_error)
-
-              CALL H5Iget_type_f(grp, id_type, error)
-              CALL check("H5Iget_type_f", error, total_error)
-
-              CALL VERIFY("H5Iget_type_f", id_type, H5I_GROUP_F, total_error)
-              
-              CALL H5Gclose_f(grp, error)
-              CALL check("H5Gclose_f", error, total_error)
-
-              CALL VerifyLogical("H5Lget_info_by_idx_f", f_corder_valid, .TRUE., total_error)
-
-              CALL VERIFY("H5Lget_info_by_idx_f", H5L_LINK_HARD_F, link_type, total_error)
               IF(iorder.EQ.H5_ITER_INC_F)THEN
-                 CALL VERIFY("H5Lget_info_by_idx_f", corder, u+1, total_error)
+                 CALL VERIFY("delete_by_idx.H5Lget_info_by_idx_f", corder, u+1, total_error)
               ELSE
-                 CALL VERIFY("H5Lget_info_by_idx_f", corder, (max_compact - (u + 2)), total_error)
+                 CALL VERIFY("delete_by_idx.H5Lget_info_by_idx_f", corder, (max_compact - (u + 2)), total_error)
               ENDIF
-
-              CALL VERIFY("H5Lget_info_by_idx_f",cset, H5T_CSET_ASCII_F, total_error)
-
-
 
               ! /* Verify the name for first link in appropriate order */
               ! HDmemset(tmpname, 0, (size_t)NAME_BUF_SIZE);
@@ -1402,9 +1355,7 @@ SUBROUTINE link_info_by_idx_check(group_id, linkname, n, &
   LOGICAL :: f_corder_valid ! Indicates whether the creation order data is valid for this attribute 
   INTEGER :: corder ! Is a positive integer containing the creation order of the attribute
   INTEGER :: cset ! Indicates the character set used for the attribute’s name
-  INTEGER :: link_type
-  INTEGER(HADDR_T) :: address
-  INTEGER(SIZE_T) :: val_size   ! Indicates the size, in the number of characters, of the attribute
+  INTEGER(HSIZE_T) :: data_size   ! Indicates the size, in the number of characters, of the attribute
 
   CHARACTER(LEN=7) :: tmpname     !/* Temporary link name */
   CHARACTER(LEN=3) :: tmpname_small !/* to small temporary link name */
@@ -1423,14 +1374,14 @@ SUBROUTINE link_info_by_idx_check(group_id, linkname, n, &
   ! /* Verify the link information for first link, in increasing creation order */
   !  HDmemset(&linfo, 0, sizeof(linfo));
   CALL H5Lget_info_by_idx_f(group_id, ".", H5_INDEX_CRT_ORDER_F, H5_ITER_INC_F, INT(0,HSIZE_T), &
-       link_type, f_corder_valid, corder, cset, address, val_size, error)
+       f_corder_valid, corder, cset, data_size, error)
   CALL check("H5Lget_info_by_idx_f", error, total_error)
   CALL VERIFY("H5Lget_info_by_idx_f", corder, 0, total_error)
 
   ! /* Verify the link information for new link, in increasing creation order */
   ! HDmemset(&linfo, 0, sizeof(linfo));
   CALL H5Lget_info_by_idx_f(group_id, ".", H5_INDEX_CRT_ORDER_F, H5_ITER_INC_F, INT(n,HSIZE_T), &
-       link_type, f_corder_valid, corder, cset, address, val_size, error)
+       f_corder_valid, corder, cset, data_size, error)
   CALL check("H5Lget_info_by_idx_f", error, total_error)
   CALL VERIFY("H5Lget_info_by_idx_f", corder, n, total_error)
 
@@ -1515,8 +1466,8 @@ SUBROUTINE link_info_by_idx_check(group_id, linkname, n, &
      	                              !  H5L_LINK_SOFT_F      - Soft link
      	                              !  H5L_LINK_EXTERNAL_F  - External link
      	                              !  H5L_LINK_ERROR _F    - Error
-  INTEGER(HADDR_T) :: address  ! If the link is a hard link, address specifies the file address that the link points to
-  INTEGER(SIZE_T) :: val_size ! If the link is a symbolic link, val_size will be the length of the link value
+  INTEGER :: address  ! If the link is a hard link, address specifies the file address that the link points to
+  INTEGER(HSIZE_T) :: val_size ! If the link is a symbolic link, val_size will be the length of the link value
 
   CHARACTER(LEN=1024) :: filename = 'tempfile.h5'
   INTEGER, PARAMETER :: TEST6_DIM1 = 8, TEST6_DIM2 = 7
@@ -1530,7 +1481,6 @@ SUBROUTINE link_info_by_idx_check(group_id, linkname, n, &
 
   INTEGER :: i
   INTEGER :: tmp1, tmp2
-  INTEGER(HID_T) :: crp_list
 
 !  WRITE(*,*) "link creation property lists (w/new group format)"
 
@@ -1587,11 +1537,9 @@ SUBROUTINE link_info_by_idx_check(group_id, linkname, n, &
   !/* Create a dataspace */
   CALL h5screate_simple_f(2, dims, space_id, error)
   CALL check("test_lcpl.h5screate_simple_f",error,total_error)
-  CALL h5pcreate_f(H5P_DATASET_CREATE_F, crp_list, error)
-  CALL h5pset_chunk_f(crp_list, 2, dims, error)
 
   ! /* Create a dataset using the default LCPL */
-  CALL h5dcreate_f(file_id, "/dataset", H5T_NATIVE_INTEGER, space_id, dset_id, error, crp_list)
+  CALL h5dcreate_f(file_id, "/dataset", H5T_NATIVE_INTEGER, space_id, dset_id, error)
   CALL check("test_lcpl.h5dcreate_f", error, total_error)
   CALL h5dclose_f(dset_id, error)
   CALL check("test_lcpl.h5dclose_f", error, total_error)

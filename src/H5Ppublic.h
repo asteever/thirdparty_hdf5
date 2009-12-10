@@ -29,7 +29,6 @@
 #include "H5Fpublic.h"
 #include "H5FDpublic.h"
 #include "H5Ipublic.h"
-#include "H5Lpublic.h"
 #include "H5MMpublic.h"
 #include "H5Tpublic.h"
 #include "H5Zpublic.h"
@@ -46,6 +45,9 @@
 #else   /* _H5private_H */
 #define H5OPEN
 #endif  /* _H5private_H */
+
+/* Default value for all property list classes */
+#define H5P_DEFAULT     0
 
 /*
  * The library's property list classes
@@ -206,29 +208,11 @@ H5_DLL herr_t H5Pset_attr_creation_order(hid_t plist_id, unsigned crt_order_flag
 H5_DLL herr_t H5Pget_attr_creation_order(hid_t plist_id, unsigned *crt_order_flags);
 H5_DLL herr_t H5Pset_obj_track_times(hid_t plist_id, hbool_t track_times);
 H5_DLL herr_t H5Pget_obj_track_times(hid_t plist_id, hbool_t *track_times);
-H5_DLL herr_t H5Pmodify_filter(hid_t plist_id, H5Z_filter_t filter,
-        unsigned int flags, size_t cd_nelmts,
-        const unsigned int cd_values[/*cd_nelmts*/]);
-H5_DLL herr_t H5Pset_filter(hid_t plist_id, H5Z_filter_t filter,
-        unsigned int flags, size_t cd_nelmts,
-        const unsigned int c_values[]);
-H5_DLL int H5Pget_nfilters(hid_t plist_id);
-H5_DLL H5Z_filter_t H5Pget_filter2(hid_t plist_id, unsigned filter,
-       unsigned int *flags/*out*/,
-       size_t *cd_nelmts/*out*/,
-       unsigned cd_values[]/*out*/,
-       size_t namelen, char name[],
-       unsigned *filter_config /*out*/);
-H5_DLL herr_t H5Pget_filter_by_id2(hid_t plist_id, H5Z_filter_t id,
-       unsigned int *flags/*out*/, size_t *cd_nelmts/*out*/,
-       unsigned cd_values[]/*out*/, size_t namelen, char name[]/*out*/,
-       unsigned *filter_config/*out*/);
-H5_DLL htri_t H5Pall_filters_avail(hid_t plist_id);
-H5_DLL herr_t H5Premove_filter(hid_t plist_id, H5Z_filter_t filter);
-H5_DLL herr_t H5Pset_deflate(hid_t plist_id, unsigned aggression);
-H5_DLL herr_t H5Pset_fletcher32(hid_t plist_id);
 
 /* File creation property list (FCPL) routines */
+H5_DLL herr_t H5Pget_version(hid_t plist_id, unsigned *boot/*out*/,
+         unsigned *freelist/*out*/, unsigned *stab/*out*/,
+         unsigned *shhdr/*out*/);
 H5_DLL herr_t H5Pset_userblock(hid_t plist_id, hsize_t size);
 H5_DLL herr_t H5Pget_userblock(hid_t plist_id, hsize_t *size);
 H5_DLL herr_t H5Pset_sizes(hid_t plist_id, size_t sizeof_addr,
@@ -245,8 +229,6 @@ H5_DLL herr_t H5Pset_shared_mesg_index(hid_t plist_id, unsigned index_num, unsig
 H5_DLL herr_t H5Pget_shared_mesg_index(hid_t plist_id, unsigned index_num, unsigned *mesg_type_flags, unsigned *min_mesg_size);
 H5_DLL herr_t H5Pset_shared_mesg_phase_change(hid_t plist_id, unsigned max_list, unsigned min_btree);
 H5_DLL herr_t H5Pget_shared_mesg_phase_change(hid_t plist_id, unsigned *max_list, unsigned *min_btree);
-H5_DLL herr_t H5Pset_file_space(hid_t plist_id, H5F_file_space_type_t strategy, hsize_t threshold);
-H5_DLL herr_t H5Pget_file_space(hid_t plist_id, H5F_file_space_type_t *strategy, hsize_t *threshold);
 
 
 /* File access property list (FAPL) routines */
@@ -263,11 +245,11 @@ H5_DLL herr_t H5Pget_family_offset(hid_t fapl_id, hsize_t *offset);
 H5_DLL herr_t H5Pset_multi_type(hid_t fapl_id, H5FD_mem_t type);
 H5_DLL herr_t H5Pget_multi_type(hid_t fapl_id, H5FD_mem_t *type);
 H5_DLL herr_t H5Pset_cache(hid_t plist_id, int mdc_nelmts,
-       size_t rdcc_nslots, size_t rdcc_nbytes,
+       size_t rdcc_nelmts, size_t rdcc_nbytes,
        double rdcc_w0);
 H5_DLL herr_t H5Pget_cache(hid_t plist_id,
        int *mdc_nelmts, /* out */
-       size_t *rdcc_nslots/*out*/,
+       size_t *rdcc_nelmts/*out*/,
        size_t *rdcc_nbytes/*out*/, double *rdcc_w0);
 H5_DLL herr_t H5Pset_mdc_config(hid_t    plist_id,
        H5AC_cache_config_t * config_ptr);
@@ -299,10 +281,31 @@ H5_DLL int H5Pget_external_count(hid_t plist_id);
 H5_DLL herr_t H5Pget_external(hid_t plist_id, unsigned idx, size_t name_size,
           char *name/*out*/, off_t *offset/*out*/,
           hsize_t *size/*out*/);
+H5_DLL herr_t H5Pmodify_filter(hid_t plist_id, H5Z_filter_t filter,
+        unsigned int flags, size_t cd_nelmts,
+        const unsigned int cd_values[/*cd_nelmts*/]);
+H5_DLL herr_t H5Pset_filter(hid_t plist_id, H5Z_filter_t filter,
+        unsigned int flags, size_t cd_nelmts,
+        const unsigned int c_values[]);
+H5_DLL int H5Pget_nfilters(hid_t plist_id);
+H5_DLL H5Z_filter_t H5Pget_filter2(hid_t plist_id, unsigned filter,
+       unsigned int *flags/*out*/,
+       size_t *cd_nelmts/*out*/,
+       unsigned cd_values[]/*out*/,
+       size_t namelen, char name[],
+       unsigned *filter_config /*out*/);
+H5_DLL H5Z_filter_t H5Pget_filter_by_id2(hid_t plist_id, H5Z_filter_t id,
+       unsigned int *flags/*out*/, size_t *cd_nelmts/*out*/,
+       unsigned cd_values[]/*out*/, size_t namelen, char name[]/*out*/,
+       unsigned *filter_config/*out*/);
+H5_DLL htri_t H5Pall_filters_avail(hid_t plist_id);
+H5_DLL herr_t H5Premove_filter(hid_t plist_id, H5Z_filter_t filter);
+H5_DLL herr_t H5Pset_deflate(hid_t plist_id, unsigned aggression);
 H5_DLL herr_t H5Pset_szip(hid_t plist_id, unsigned options_mask, unsigned pixels_per_block);
 H5_DLL herr_t H5Pset_shuffle(hid_t plist_id);
 H5_DLL herr_t H5Pset_nbit(hid_t plist_id);
 H5_DLL herr_t H5Pset_scaleoffset(hid_t plist_id, H5Z_SO_scale_type_t scale_type, int scale_factor);
+H5_DLL herr_t H5Pset_fletcher32(hid_t plist_id);
 H5_DLL herr_t H5Pset_fill_value(hid_t plist_id, hid_t type_id,
      const void *value);
 H5_DLL herr_t H5Pget_fill_value(hid_t plist_id, hid_t type_id,
@@ -315,14 +318,6 @@ H5_DLL herr_t H5Pget_alloc_time(hid_t plist_id, H5D_alloc_time_t
 H5_DLL herr_t H5Pset_fill_time(hid_t plist_id, H5D_fill_time_t fill_time);
 H5_DLL herr_t H5Pget_fill_time(hid_t plist_id, H5D_fill_time_t
 	*fill_time/*out*/);
-
-/* Dataset access property list (DAPL) routines */
-H5_DLL herr_t H5Pset_chunk_cache(hid_t dapl_id, size_t rdcc_nslots,
-       size_t rdcc_nbytes, double rdcc_w0);
-H5_DLL herr_t H5Pget_chunk_cache(hid_t dapl_id,
-       size_t *rdcc_nslots/*out*/,
-       size_t *rdcc_nbytes/*out*/,
-       double *rdcc_w0/*out*/);
 
 /* Dataset xfer property list (DXPL) routines */
 H5_DLL herr_t H5Pset_data_transform(hid_t plist_id, const char* expression);
@@ -379,19 +374,13 @@ H5_DLL herr_t H5Pset_nlinks(hid_t plist_id, size_t nlinks);
 H5_DLL herr_t H5Pget_nlinks(hid_t plist_id, size_t *nlinks);
 H5_DLL herr_t H5Pset_elink_prefix(hid_t plist_id, const char *prefix);
 H5_DLL ssize_t H5Pget_elink_prefix(hid_t plist_id, char *prefix, size_t size);
-H5_DLL hid_t H5Pget_elink_fapl(hid_t lapl_id);
-H5_DLL herr_t H5Pset_elink_fapl(hid_t lapl_id, hid_t fapl_id);
-H5_DLL herr_t H5Pset_elink_acc_flags(hid_t lapl_id, unsigned flags);
-H5_DLL herr_t H5Pget_elink_acc_flags(hid_t lapl_id, unsigned *flags);
-H5_DLL herr_t H5Pset_elink_cb(hid_t lapl_id, H5L_elink_traverse_t func, void *op_data);
-H5_DLL herr_t H5Pget_elink_cb(hid_t lapl_id, H5L_elink_traverse_t *func, void **op_data);
 
 /* Object copy property list (OCPYPL) routines */
 H5_DLL herr_t H5Pset_copy_object(hid_t plist_id, unsigned crt_intmd);
 H5_DLL herr_t H5Pget_copy_object(hid_t plist_id, unsigned *crt_intmd /*out*/);
 
 /* Symbols defined for compatibility with previous versions of the HDF5 API.
- *
+ * 
  * Use of these symbols is deprecated.
  */
 #ifndef H5_NO_DEPRECATED_SYMBOLS
@@ -418,12 +407,10 @@ H5_DLL herr_t H5Pinsert1(hid_t plist_id, const char *name, size_t size,
 H5_DLL H5Z_filter_t H5Pget_filter1(hid_t plist_id, unsigned filter,
     unsigned int *flags/*out*/, size_t *cd_nelmts/*out*/,
     unsigned cd_values[]/*out*/, size_t namelen, char name[]);
-H5_DLL herr_t H5Pget_filter_by_id1(hid_t plist_id, H5Z_filter_t id,
+H5_DLL H5Z_filter_t H5Pget_filter_by_id1(hid_t plist_id, H5Z_filter_t id,
     unsigned int *flags/*out*/, size_t *cd_nelmts/*out*/,
     unsigned cd_values[]/*out*/, size_t namelen, char name[]/*out*/);
-H5_DLL herr_t H5Pget_version(hid_t plist_id, unsigned *boot/*out*/,
-         unsigned *freelist/*out*/, unsigned *stab/*out*/,
-         unsigned *shhdr/*out*/);
+
 #endif /* H5_NO_DEPRECATED_SYMBOLS */
 
 #ifdef __cplusplus

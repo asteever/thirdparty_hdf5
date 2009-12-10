@@ -132,13 +132,6 @@ float attr_data5=(float)-5.123;        /* Test data for 5th attribute */
 #define NATTR_MANY_OLD  350
 #define NATTR_MANY_NEW  35000
 
-#define BUG2_NATTR  100
-#define BUG2_NATTR2 16
-
-#define BUG3_DSET_NAME  "dset"
-#define BUG3_DT_NAME    "dt"
-#define BUG3_ATTR_NAME  "attr"
-
 /* Attribute iteration struct */
 typedef struct {
     H5_iter_order_t order;      /* Direction of iteration */
@@ -1005,7 +998,7 @@ test_attr_scalar_read(hid_t fapl)
     if(!FLT_ABS_EQUAL(rdata, attr_data5))
 	printf("*** UNEXPECTED VALUE from %s should be %f, but is %f at line %4d in %s\n",
 	    "H5Aread", attr_data5, rdata, (int)__LINE__, __FILE__);
-
+ 
     /* Get the attribute's dataspace */
     sid = H5Aget_space(attr);
     CHECK(sid, FAIL, "H5Aget_space");
@@ -1638,7 +1631,7 @@ test_attr_dtype_shared(hid_t fapl)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Get size of file */
-    empty_filesize = h5_get_file_size(FILENAME, fapl);
+    empty_filesize = h5_get_file_size(FILENAME);
     if(empty_filesize < 0)
         TestErrPrintf("Line %d: file size wrong!\n", __LINE__);
 
@@ -1777,7 +1770,7 @@ test_attr_dtype_shared(hid_t fapl)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Check size of file */
-    filesize = h5_get_file_size(FILENAME, fapl);
+    filesize = h5_get_file_size(FILENAME);
     VERIFY(filesize, empty_filesize, "h5_get_file_size");
 }   /* test_attr_dtype_shared() */
 
@@ -1788,12 +1781,12 @@ test_attr_dtype_shared(hid_t fapl)
 **      one ID handles.
 **
 ****************************************************************/
-static void
+static int
 test_attr_duplicate_ids(hid_t fapl)
 {
     hid_t		fid1;		/* HDF5 File IDs		*/
     hid_t		dataset;	/* Dataset ID			*/
-    hid_t		gid1, gid2;	/* Group ID			*/
+    hid_t		gid1, gid2;	/* Group ID			*/ 
     hid_t		sid1,sid2;	/* Dataspace ID			*/
     hid_t		attr, attr2;	    /* Attribute ID		*/
     hsize_t		dims1[] = {SPACE1_DIM1, SPACE1_DIM2, SPACE1_DIM3};
@@ -1818,7 +1811,7 @@ test_attr_duplicate_ids(hid_t fapl)
     CHECK(sid1, FAIL, "H5Screate_simple");
 
     /* Create a dataset */
-    dataset = H5Dcreate2(fid1, DSET1_NAME, H5T_NATIVE_UCHAR, sid1, H5P_DEFAULT,
+    dataset = H5Dcreate2(fid1, DSET1_NAME, H5T_NATIVE_UCHAR, sid1, H5P_DEFAULT, 
         H5P_DEFAULT, H5P_DEFAULT);
     CHECK(dataset, FAIL, "H5Dcreate2");
 
@@ -1831,7 +1824,7 @@ test_attr_duplicate_ids(hid_t fapl)
     CHECK(attr, FAIL, "H5Acreate2");
 
     /* Open the attribute just created and get a second ID */
-    attr2 = H5Aopen(dataset, ATTR1_NAME, H5P_DEFAULT);
+    attr2 = H5Aopen(dataset, ATTR1_NAME, H5P_DEFAULT); 
     CHECK(attr2, FAIL, "H5Aopen");
 
     /* Close attribute */
@@ -1851,7 +1844,7 @@ test_attr_duplicate_ids(hid_t fapl)
     CHECK(ret, FAIL, "H5Fclose");
 
     /*-----------------------------------------------------------------------------------
-     *        Reopen the file and verify the fill value for attribute.  Also write
+     *        Reopen the file and verify the fill value for attribute.  Also write 
      *        some real data.
      */
 
@@ -1958,7 +1951,7 @@ test_attr_duplicate_ids(hid_t fapl)
     CHECK(ret, FAIL, "H5Fclose");
 
     /*-----------------------------------------------------------------------------------
-     *        Verify that the attribute being pointed to by different paths shares
+     *        Verify that the attribute being pointed to by different paths shares 
      *        the same data.
      */
     /* Open file */
@@ -1970,7 +1963,7 @@ test_attr_duplicate_ids(hid_t fapl)
     CHECK(gid1, FAIL, "H5Gcreate2");
 
     /* Create hard link to the first group */
-    ret = H5Lcreate_hard(gid1, GROUP1_NAME, H5L_SAME_LOC, GROUP2_NAME, H5P_DEFAULT,
+    ret = H5Lcreate_hard(gid1, GROUP1_NAME, H5L_SAME_LOC, GROUP2_NAME, H5P_DEFAULT, 
         H5P_DEFAULT);
     CHECK(ret, FAIL, "H5Lcreate_hard");
 
@@ -2077,7 +2070,7 @@ test_attr_dense_verify(hid_t loc_id, unsigned max_attr)
         name_len = H5Aget_name(attr, (size_t)ATTR_NAME_LEN, check_name);
         VERIFY(name_len, HDstrlen(attrname), "H5Aget_name");
         if(HDstrcmp(check_name, attrname))
-            TestErrPrintf("attribute name different: attrname = '%s', should be '%s'\n", check_name, attrname);
+            TestErrPrintf("attribute name different: attr_name = '%s', should be '%s'\n", check_name, attrname);
 
         /* Read data from the attribute */
         ret = H5Aread(attr, H5T_NATIVE_UINT, &value);
@@ -2132,7 +2125,7 @@ test_attr_dense_create(hid_t fcpl, hid_t fapl)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Get size of file */
-    empty_filesize = h5_get_file_size(FILENAME, fapl);
+    empty_filesize = h5_get_file_size(FILENAME);
     if(empty_filesize < 0)
         TestErrPrintf("Line %d: file size wrong!\n", __LINE__);
 
@@ -2223,7 +2216,7 @@ test_attr_dense_create(hid_t fcpl, hid_t fapl)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Check size of file */
-    filesize = h5_get_file_size(FILENAME, fapl);
+    filesize = h5_get_file_size(FILENAME);
     VERIFY(filesize, empty_filesize, "h5_get_file_size");
 }   /* test_attr_dense_create() */
 
@@ -2263,7 +2256,7 @@ test_attr_dense_open(hid_t fcpl, hid_t fapl)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Get size of file */
-    empty_filesize = h5_get_file_size(FILENAME, fapl);
+    empty_filesize = h5_get_file_size(FILENAME);
     if(empty_filesize < 0)
         TestErrPrintf("Line %d: file size wrong!\n", __LINE__);
 
@@ -2362,7 +2355,7 @@ test_attr_dense_open(hid_t fcpl, hid_t fapl)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Check size of file */
-    filesize = h5_get_file_size(FILENAME, fapl);
+    filesize = h5_get_file_size(FILENAME);
     VERIFY(filesize, empty_filesize, "h5_get_file_size");
 }   /* test_attr_dense_open() */
 
@@ -2403,7 +2396,7 @@ test_attr_dense_delete(hid_t fcpl, hid_t fapl)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Get size of file */
-    empty_filesize = h5_get_file_size(FILENAME, fapl);
+    empty_filesize = h5_get_file_size(FILENAME);
     if(empty_filesize < 0)
         TestErrPrintf("Line %d: file size wrong!\n", __LINE__);
 
@@ -2540,7 +2533,7 @@ test_attr_dense_delete(hid_t fcpl, hid_t fapl)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Check size of file */
-    filesize = h5_get_file_size(FILENAME, fapl);
+    filesize = h5_get_file_size(FILENAME);
     VERIFY(filesize, empty_filesize, "h5_get_file_size");
 }   /* test_attr_dense_delete() */
 
@@ -2582,7 +2575,7 @@ test_attr_dense_rename(hid_t fcpl, hid_t fapl)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Get size of file */
-    empty_filesize = h5_get_file_size(FILENAME, fapl);
+    empty_filesize = h5_get_file_size(FILENAME);
     if(empty_filesize < 0)
         TestErrPrintf("Line %d: file size wrong!\n", __LINE__);
 
@@ -2699,7 +2692,7 @@ test_attr_dense_rename(hid_t fcpl, hid_t fapl)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Check size of file */
-    filesize = h5_get_file_size(FILENAME, fapl);
+    filesize = h5_get_file_size(FILENAME);
     VERIFY(filesize, empty_filesize, "h5_get_file_size");
 }   /* test_attr_dense_rename() */
 
@@ -2741,7 +2734,7 @@ test_attr_dense_unlink(hid_t fcpl, hid_t fapl)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Get size of file */
-    empty_filesize = h5_get_file_size(FILENAME, fapl);
+    empty_filesize = h5_get_file_size(FILENAME);
     if(empty_filesize < 0)
         TestErrPrintf("Line %d: file size wrong!\n", __LINE__);
 
@@ -2829,7 +2822,7 @@ test_attr_dense_unlink(hid_t fcpl, hid_t fapl)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Check size of file */
-    filesize = h5_get_file_size(FILENAME, fapl);
+    filesize = h5_get_file_size(FILENAME);
     VERIFY(filesize, empty_filesize, "h5_get_file_size");
 }   /* test_attr_dense_unlink() */
 
@@ -2869,7 +2862,7 @@ test_attr_dense_limits(hid_t fcpl, hid_t fapl)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Get size of file */
-    empty_filesize = h5_get_file_size(FILENAME, fapl);
+    empty_filesize = h5_get_file_size(FILENAME);
     if(empty_filesize < 0)
         TestErrPrintf("Line %d: file size wrong!\n", __LINE__);
 
@@ -2994,7 +2987,7 @@ test_attr_dense_limits(hid_t fcpl, hid_t fapl)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Check size of file */
-    filesize = h5_get_file_size(FILENAME, fapl);
+    filesize = h5_get_file_size(FILENAME);
     VERIFY(filesize, empty_filesize, "h5_get_file_size");
 }   /* test_attr_dense_limits() */
 
@@ -3010,7 +3003,7 @@ test_attr_dense_dup_ids(hid_t fcpl, hid_t fapl)
 {
     hid_t	fid;		/* HDF5 File ID			*/
     hid_t	dataset;	/* Dataset ID			*/
-    hid_t	gid1, gid2;	/* Group ID			*/
+    hid_t	gid1, gid2;	/* Group ID			*/ 
     hid_t	sid, sid2;	/* Dataspace ID			*/
     hid_t	attr, attr2, add_attr;	/* Attribute ID			*/
     hid_t	dcpl;	        /* Dataset creation property list ID */
@@ -3103,7 +3096,7 @@ test_attr_dense_dup_ids(hid_t fcpl, hid_t fapl)
     VERIFY(is_dense, TRUE, "H5O_is_attr_dense_test");
 
     /* Open the attribute just created and get a second ID */
-    attr2 = H5Aopen(dataset, attrname, H5P_DEFAULT);
+    attr2 = H5Aopen(dataset, attrname, H5P_DEFAULT); 
     CHECK(attr2, FAIL, "H5Aopen");
 
     /* Close attribute */
@@ -3112,7 +3105,7 @@ test_attr_dense_dup_ids(hid_t fcpl, hid_t fapl)
 
     ret = H5Aclose(attr2);
     CHECK(ret, FAIL, "H5Aclose");
-
+ 
     /* Close Dataset */
     ret = H5Dclose(dataset);
     CHECK(ret, FAIL, "H5Dclose");
@@ -3122,7 +3115,7 @@ test_attr_dense_dup_ids(hid_t fcpl, hid_t fapl)
     CHECK(ret, FAIL, "H5Fclose");
 
     /*-----------------------------------------------------------------------------------
-     *        Reopen the file and verify the fill value for attribute.  Also write
+     *        Reopen the file and verify the fill value for attribute.  Also write 
      *        some real data.
      */
     /* Open file */
@@ -3148,7 +3141,7 @@ test_attr_dense_dup_ids(hid_t fcpl, hid_t fapl)
     /* Verify values read in */
     for(i = 0; i < ATTR1_DIM1; i++)
         if(0 != read_data1[i])
-            TestErrPrintf("%d: attribute data different: read_data1[%d]=%d\n", __LINE__,
+            TestErrPrintf("%d: attribute data different: read_data1[%d]=%d\n", __LINE__, 
                 i, read_data1[i]);
 
     /* Open attribute for the second time */
@@ -3237,7 +3230,7 @@ test_attr_dense_dup_ids(hid_t fcpl, hid_t fapl)
 
     /*-----------------------------------------------------------------------------------
      *        Open the attribute by index.  Verify the data is shared when the attribute
-     *        is opened twice.
+     *        is opened twice. 
      */
     /* Open file */
     fid = H5Fopen(FILENAME, H5F_ACC_RDWR, fapl);
@@ -3252,12 +3245,12 @@ test_attr_dense_dup_ids(hid_t fcpl, hid_t fapl)
     VERIFY(is_dense, TRUE, "H5O_is_attr_dense_test");
 
     /* Open first attribute for the dataset */
-    attr = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, (hsize_t)4,
+    attr = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, (hsize_t)4, 
         H5P_DEFAULT, H5P_DEFAULT);
     CHECK(attr, FAIL, "H5Aopen");
 
     /* Open attribute for the second time */
-    attr2 = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, (hsize_t)4,
+    attr2 = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, (hsize_t)4, 
         H5P_DEFAULT, H5P_DEFAULT);
     CHECK(attr, FAIL, "H5Aopen");
 
@@ -3271,7 +3264,7 @@ test_attr_dense_dup_ids(hid_t fcpl, hid_t fapl)
 
     /* Verify values read in */
     if(read_scalar != scalar_data)
-        TestErrPrintf("%d: attribute data different: read_scalar=%d, scalar_data=%d\n",
+        TestErrPrintf("%d: attribute data different: read_scalar=%d, scalar_data=%d\n", 
             __LINE__, read_scalar, scalar_data);
 
     /* Close attribute */
@@ -3290,7 +3283,7 @@ test_attr_dense_dup_ids(hid_t fcpl, hid_t fapl)
     CHECK(ret, FAIL, "H5Fclose");
 
     /*-----------------------------------------------------------------------------------
-     *        Open one attribute.  As it remains open, delete some attributes.  The
+     *        Open one attribute.  As it remains open, delete some attributes.  The 
      *        attribute storage should switch from dense to compact.  Then open the
      *        same attribute for the second time and verify that the attribute data
      *        is shared.
@@ -3308,13 +3301,13 @@ test_attr_dense_dup_ids(hid_t fcpl, hid_t fapl)
     VERIFY(is_dense, TRUE, "H5O_is_attr_dense_test");
 
     /* Open attribute of the dataset for the first time */
-    attr = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, (hsize_t)2,
+    attr = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, (hsize_t)2, 
         H5P_DEFAULT, H5P_DEFAULT);
     CHECK(attr, FAIL, "H5Aopen");
 
     /* Delete a few attributes until the storage switches to compact */
     for(u = max_compact; u >= min_dense - 1; u--) {
-        ret = H5Adelete_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, (hsize_t)u,
+        ret = H5Adelete_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, (hsize_t)u, 
             H5P_DEFAULT);
         CHECK(ret, FAIL, "H5Adelete_by_idx");
     }
@@ -3324,7 +3317,7 @@ test_attr_dense_dup_ids(hid_t fcpl, hid_t fapl)
     VERIFY(is_dense, FALSE, "H5O_is_attr_dense_test");
 
     /* Open attribute for the second time */
-    attr2 = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, (hsize_t)2,
+    attr2 = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, (hsize_t)2, 
         H5P_DEFAULT, H5P_DEFAULT);
     CHECK(attr, FAIL, "H5Aopen");
 
@@ -3338,7 +3331,7 @@ test_attr_dense_dup_ids(hid_t fcpl, hid_t fapl)
 
     /* Verify values read in */
     if(read_scalar != scalar_data)
-        TestErrPrintf("%d: attribute data different: read_scalar=%d, scalar_data=%d\n",
+        TestErrPrintf("%d: attribute data different: read_scalar=%d, scalar_data=%d\n", 
             __LINE__, read_scalar, scalar_data);
 
     /* Close attribute */
@@ -3357,7 +3350,7 @@ test_attr_dense_dup_ids(hid_t fcpl, hid_t fapl)
     CHECK(ret, FAIL, "H5Fclose");
 
     /*-----------------------------------------------------------------------------------
-     *        Open one attribute.  As it remains open, create some attributes.  The
+     *        Open one attribute.  As it remains open, create some attributes.  The 
      *        attribute storage should switch from compact to dense.  Then open the
      *        same attribute for the second time and verify that the attribute data
      *        is shared.
@@ -3375,7 +3368,7 @@ test_attr_dense_dup_ids(hid_t fcpl, hid_t fapl)
     VERIFY(is_dense, FALSE, "H5O_is_attr_dense_test");
 
     /* Open attribute of the dataset for the first time */
-    attr = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, (hsize_t)3,
+    attr = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, (hsize_t)3, 
         H5P_DEFAULT, H5P_DEFAULT);
     CHECK(attr, FAIL, "H5Aopen");
 
@@ -3400,7 +3393,7 @@ test_attr_dense_dup_ids(hid_t fcpl, hid_t fapl)
     VERIFY(is_dense, TRUE, "H5O_is_attr_dense_test");
 
     /* Open attribute for the second time */
-    attr2 = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, (hsize_t)3,
+    attr2 = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, (hsize_t)3, 
         H5P_DEFAULT, H5P_DEFAULT);
     CHECK(attr, FAIL, "H5Aopen");
 
@@ -3414,7 +3407,7 @@ test_attr_dense_dup_ids(hid_t fcpl, hid_t fapl)
 
     /* Verify values read in */
     if(read_scalar != scalar_data)
-        TestErrPrintf("%d: attribute data different: read_scalar=%d, scalar_data=%d\n",
+        TestErrPrintf("%d: attribute data different: read_scalar=%d, scalar_data=%d\n", 
             __LINE__, read_scalar, scalar_data);
 
     /* Close attribute */
@@ -3433,7 +3426,7 @@ test_attr_dense_dup_ids(hid_t fcpl, hid_t fapl)
     CHECK(ret, FAIL, "H5Fclose");
 
     /*-----------------------------------------------------------------------------------
-     *        Verify that the attribute being pointed to by different paths shares
+     *        Verify that the attribute being pointed to by different paths shares 
      *        the same data.
      */
     /* Open file */
@@ -3445,7 +3438,7 @@ test_attr_dense_dup_ids(hid_t fcpl, hid_t fapl)
     CHECK(gid1, FAIL, "H5Gcreate2");
 
     /* Create hard link to the first group */
-    ret = H5Lcreate_hard(gid1, GROUP1_NAME, H5L_SAME_LOC, GROUP2_NAME, H5P_DEFAULT,
+    ret = H5Lcreate_hard(gid1, GROUP1_NAME, H5L_SAME_LOC, GROUP2_NAME, H5P_DEFAULT, 
         H5P_DEFAULT);
     CHECK(ret, FAIL, "H5Lcreate_hard");
 
@@ -3562,7 +3555,7 @@ test_attr_big(hid_t fcpl, hid_t fapl)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Get size of file */
-    empty_filesize = h5_get_file_size(FILENAME, fapl);
+    empty_filesize = h5_get_file_size(FILENAME);
     if(empty_filesize < 0)
         TestErrPrintf("Line %d: file size wrong!\n", __LINE__);
 
@@ -3787,7 +3780,7 @@ test_attr_big(hid_t fcpl, hid_t fapl)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Check size of file */
-    filesize = h5_get_file_size(FILENAME, fapl);
+    filesize = h5_get_file_size(FILENAME);
     VERIFY(filesize, empty_filesize, "h5_get_file_size");
 }   /* test_attr_big() */
 
@@ -3828,7 +3821,7 @@ test_attr_null_space(hid_t fcpl, hid_t fapl)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Get size of file */
-    empty_filesize = h5_get_file_size(FILENAME, fapl);
+    empty_filesize = h5_get_file_size(FILENAME);
     if(empty_filesize < 0)
         TestErrPrintf("Line %d: file size wrong!\n", __LINE__);
 
@@ -4005,7 +3998,7 @@ test_attr_null_space(hid_t fcpl, hid_t fapl)
 
 
     /* Check size of file */
-    filesize = h5_get_file_size(FILENAME, fapl);
+    filesize = h5_get_file_size(FILENAME);
     VERIFY(filesize, empty_filesize, "h5_get_file_size");
 }   /* test_attr_null_space() */
 
@@ -5293,13 +5286,13 @@ test_attr_corder_transition(hid_t fcpl, hid_t fapl)
     ret = H5Dclose(dset3);
     CHECK(ret, FAIL, "H5Dclose");
 
-    /* Close file */
-    ret = H5Fclose(fid);
-    CHECK(ret, FAIL, "H5Fclose");
-
     /* Close dataspace */
     ret = H5Sclose(sid);
     CHECK(ret, FAIL, "H5Sclose");
+
+    /* Close file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
 }   /* test_attr_corder_transition() */
 
 
@@ -8084,7 +8077,7 @@ test_attr_shared_write(hid_t fcpl, hid_t fapl)
         CHECK(ret, FAIL, "H5Fclose");
 
         /* Get size of file */
-        empty_filesize = h5_get_file_size(FILENAME, fapl);
+        empty_filesize = h5_get_file_size(FILENAME);
         if(empty_filesize < 0)
             TestErrPrintf("Line %d: file size wrong!\n", __LINE__);
 
@@ -8304,7 +8297,7 @@ test_attr_shared_write(hid_t fcpl, hid_t fapl)
         CHECK(ret, FAIL, "H5Fclose");
 
         /* Check size of file */
-        filesize = h5_get_file_size(FILENAME, fapl);
+        filesize = h5_get_file_size(FILENAME);
         VERIFY(filesize, empty_filesize, "h5_get_file_size");
     } /* end for */
 
@@ -8410,7 +8403,7 @@ test_attr_shared_rename(hid_t fcpl, hid_t fapl)
         CHECK(ret, FAIL, "H5Fclose");
 
         /* Get size of file */
-        empty_filesize = h5_get_file_size(FILENAME, fapl);
+        empty_filesize = h5_get_file_size(FILENAME);
         if(empty_filesize < 0)
             TestErrPrintf("Line %d: file size wrong!\n", __LINE__);
 
@@ -8746,7 +8739,7 @@ test_attr_shared_rename(hid_t fcpl, hid_t fapl)
         CHECK(ret, FAIL, "H5Fclose");
 
         /* Check size of file */
-        filesize = h5_get_file_size(FILENAME, fapl);
+        filesize = h5_get_file_size(FILENAME);
         VERIFY(filesize, empty_filesize, "h5_get_file_size");
     } /* end for */
 
@@ -8851,7 +8844,7 @@ test_attr_shared_delete(hid_t fcpl, hid_t fapl)
         CHECK(ret, FAIL, "H5Fclose");
 
         /* Get size of file */
-        empty_filesize = h5_get_file_size(FILENAME, fapl);
+        empty_filesize = h5_get_file_size(FILENAME);
         if(empty_filesize < 0)
             TestErrPrintf("Line %d: file size wrong!\n", __LINE__);
 
@@ -9110,7 +9103,7 @@ test_attr_shared_delete(hid_t fcpl, hid_t fapl)
         CHECK(ret, FAIL, "H5Fclose");
 
         /* Check size of file */
-        filesize = h5_get_file_size(FILENAME, fapl);
+        filesize = h5_get_file_size(FILENAME);
         VERIFY(filesize, empty_filesize, "h5_get_file_size");
     } /* end for */
 
@@ -9215,7 +9208,7 @@ test_attr_shared_unlink(hid_t fcpl, hid_t fapl)
         CHECK(ret, FAIL, "H5Fclose");
 
         /* Get size of file */
-        empty_filesize = h5_get_file_size(FILENAME, fapl);
+        empty_filesize = h5_get_file_size(FILENAME);
         if(empty_filesize < 0)
             TestErrPrintf("Line %d: file size wrong!\n", __LINE__);
 
@@ -9292,7 +9285,7 @@ test_attr_shared_unlink(hid_t fcpl, hid_t fapl)
                 attr = H5Acreate2(dataset, attrname, attr_tid, big_sid, H5P_DEFAULT, H5P_DEFAULT);
                 CHECK(attr, FAIL, "H5Acreate2");
 
-                /* ChecFk that attribute is shared */
+                /* Check that attribute is shared */
                 is_shared = H5A_is_shared_test(attr);
                 VERIFY(is_shared, TRUE, "H5A_is_shared_test");
 
@@ -9460,7 +9453,7 @@ test_attr_shared_unlink(hid_t fcpl, hid_t fapl)
         CHECK(ret, FAIL, "H5Fclose");
 
         /* Check size of file */
-        filesize = h5_get_file_size(FILENAME, fapl);
+        filesize = h5_get_file_size(FILENAME);
         VERIFY(filesize, empty_filesize, "h5_get_file_size");
     } /* end for */
 
@@ -9507,7 +9500,7 @@ test_attr_bug1(hid_t fcpl, hid_t fapl)
 
     ret = H5Gclose(gid);
     CHECK(ret, FAIL, "H5Gclose");
-
+    
     ret = H5Fclose(fid);
     CHECK(ret, FAIL, "H5Fclose");
 
@@ -9530,7 +9523,7 @@ test_attr_bug1(hid_t fcpl, hid_t fapl)
     /* Create attribute on first group */
     aid = H5Acreate2(gid, ATTR7_NAME, H5T_NATIVE_DOUBLE, sid, H5P_DEFAULT, H5P_DEFAULT);
     CHECK(aid, FAIL, "H5Acreate2");
-
+    
     ret = H5Aclose(aid);
     CHECK(ret, FAIL, "H5Aclose");
 
@@ -9563,7 +9556,7 @@ test_attr_bug1(hid_t fcpl, hid_t fapl)
     /* Create another attribute on first group */
     aid = H5Acreate2(gid, ATTR8_NAME, H5T_NATIVE_DOUBLE, sid, H5P_DEFAULT, H5P_DEFAULT);
     CHECK(aid, FAIL, "H5Acreate2");
-
+    
     ret = H5Aclose(aid);
     CHECK(ret, FAIL, "H5Aclose");
 
@@ -9589,7 +9582,7 @@ test_attr_bug1(hid_t fcpl, hid_t fapl)
     /* Re-create first attribute */
     aid = H5Acreate2(gid, ATTR7_NAME, H5T_NATIVE_DOUBLE, sid, H5P_DEFAULT, H5P_DEFAULT);
     CHECK(aid, FAIL, "H5Acreate2");
-
+    
     ret = H5Aclose(aid);
     CHECK(ret, FAIL, "H5Aclose");
 
@@ -9600,7 +9593,7 @@ test_attr_bug1(hid_t fcpl, hid_t fapl)
     /* Re-create second attribute */
     aid = H5Acreate2(gid, ATTR8_NAME, H5T_NATIVE_DOUBLE, sid, H5P_DEFAULT, H5P_DEFAULT);
     CHECK(aid, FAIL, "H5Acreate2");
-
+    
     ret = H5Aclose(aid);
     CHECK(ret, FAIL, "H5Aclose");
 
@@ -9615,593 +9608,6 @@ test_attr_bug1(hid_t fcpl, hid_t fapl)
     ret = H5Sclose(sid);
     CHECK(ret, FAIL, "H5Gclose");
 }   /* test_attr_bug1() */
-
-/****************************************************************
-**
-**  test_attr_bug2(): Test basic H5A (attribute) code.
-**      Tests deleting a large number of attributes with the
-**      intention of creating a null message with a size that
-**      is too large.  This routine deletes every other
-**      attribute, but the original bug could also be
-**      reproduced by deleting every attribute except a few to
-**      keep the chunk open.
-**
-****************************************************************/
-static void
-test_attr_bug2(hid_t fcpl, hid_t fapl)
-{
-    hid_t   fid;            /* File ID */
-    hid_t   gid;            /* Group ID */
-    hid_t   aid;            /* Attribute ID */
-    hid_t   sid;            /* Dataspace ID */
-    hid_t   tid;            /* Datatype ID */
-    hid_t   gcpl;           /* Group creation property list */
-    hsize_t dims[2] = {10, 100}; /* Attribute dimensions */
-    char    aname[4];       /* Attribute name */
-    unsigned i;             /* index */
-    herr_t  ret;            /* Generic return status */
-    htri_t  tri_ret;        /* htri_t return status */
-
-    /* Output message about test being performed */
-    MESSAGE(5, ("Testing Allocating and De-allocating Attributes in Unusual Way\n"));
-
-    /* Create group creation property list */
-    gcpl = H5Pcreate(H5P_GROUP_CREATE);
-    CHECK(gcpl, FAIL, "H5Pcreate");
-
-    /* Prevent the library from switching to dense attribute storage */
-    /* Not doing this with the latest format actually triggers a different bug.
-     * This will be tested here as soon as it is fixed.  -NAF
-     */
-    ret = H5Pset_attr_phase_change (gcpl, BUG2_NATTR+10, BUG2_NATTR+5);
-    CHECK(ret, FAIL, "H5Pset_attr_phase_change");
-
-    /* Create dataspace ID for attributes */
-    sid = H5Screate_simple(2, dims, NULL);
-    CHECK(sid, FAIL, "H5Screate_simple");
-
-    /* Create main group to operate on */
-    fid = H5Fcreate(FILENAME, H5F_ACC_TRUNC, fcpl, fapl);
-    CHECK(fid, FAIL, "H5Fcreate");
-
-    gid = H5Gcreate2(fid, GROUP1_NAME, H5P_DEFAULT, gcpl, H5P_DEFAULT);
-    CHECK(gid, FAIL, "H5Gcreate2");
-
-    /* Create attributes on group */
-    for (i=0; i<BUG2_NATTR; i++) {
-        sprintf(aname, "%03u", i);
-        aid = H5Acreate2(gid, aname, H5T_STD_I32LE, sid, H5P_DEFAULT, H5P_DEFAULT);
-        CHECK(aid, FAIL, "H5Acreate2");
-
-        ret = H5Aclose(aid);
-        CHECK(ret, FAIL, "H5Aclose");
-    }
-
-    /* Delete every other attribute */
-    for (i=1; i<BUG2_NATTR; i+=2) {
-        sprintf(aname, "%03u", i);
-        ret = H5Adelete(gid, aname);
-        CHECK(ret, FAIL, "H5Adelete");
-    }
-
-    /* Close IDs */
-    ret = H5Gclose(gid);
-    CHECK(ret, FAIL, "H5Gclose");
-
-    ret = H5Fclose(fid);
-    CHECK(ret, FAIL, "H5Fclose");
-
-    ret = H5Sclose(sid);
-    CHECK(ret, FAIL, "H5Sclose");
-
-    /* Reopen file and group */
-    fid = H5Fopen(FILENAME, H5F_ACC_RDONLY, fapl);
-    CHECK(fid, FAIL, "H5Fopen");
-
-    gid = H5Gopen2(fid, GROUP1_NAME, H5P_DEFAULT);
-    CHECK(gid, FAIL, "H5Gopen");
-
-    /* Open an attribute in the middle */
-    i = (BUG2_NATTR / 4) * 2;
-    sprintf(aname, "%03u", i);
-    aid = H5Aopen(gid, aname, H5P_DEFAULT);
-    CHECK(aid, FAIL, "H5Aopen");
-
-    /* Verify that the attribute has the correct datatype */
-    tid = H5Aget_type(aid);
-    CHECK(tid, FAIL, "H5Aget_type");
-
-    tri_ret = H5Tequal(tid, H5T_STD_I32LE);
-    VERIFY(tri_ret, TRUE, "H5Tequal");
-
-    /* Close IDs */
-    ret = H5Tclose(tid);
-    CHECK(ret, FAIL, "H5Tclose");
-
-    ret = H5Aclose(aid);
-    CHECK(ret, FAIL, "H5Aclose");
-
-    ret = H5Gclose(gid);
-    CHECK(ret, FAIL, "H5Gclose");
-
-    ret = H5Fclose(fid);
-    CHECK(ret, FAIL, "H5Fclose");
-
-    /* Now test a variation on this bug - where either the size of chunk 0 goes
-     * down a "notch" or two, or chunk 1 becomes completely null at the same
-     * time that a null message that is too large is formed */
-    dims[0] = 25;
-    dims[1] = 41; /* 1025*4 byte attribute size */
-
-    /* Create dataspace ID for attributes */
-    sid = H5Screate_simple(2, dims, NULL);
-    CHECK(sid, FAIL, "H5Screate_simple");
-
-    /* Create main group to operate on */
-    fid = H5Fcreate(FILENAME, H5F_ACC_TRUNC, fcpl, fapl);
-    CHECK(fid, FAIL, "H5Fcreate");
-
-    gid = H5Gcreate2(fid, GROUP1_NAME, H5P_DEFAULT, gcpl, H5P_DEFAULT);
-    CHECK(gid, FAIL, "H5Gcreate2");
-
-    /* Create attributes on group */
-    for (i=0; i<BUG2_NATTR2; i++) {
-        sprintf(aname, "%03u", i);
-        aid = H5Acreate2(gid, aname, H5T_STD_I32LE, sid, H5P_DEFAULT, H5P_DEFAULT);
-        CHECK(aid, FAIL, "H5Acreate2");
-
-        ret = H5Aclose(aid);
-        CHECK(ret, FAIL, "H5Aclose");
-    }
-
-    /* Delete every other attribute */
-    for (i=0; i<BUG2_NATTR2; i++) {
-        sprintf(aname, "%03u", i);
-        ret = H5Adelete(gid, aname);
-        CHECK(ret, FAIL, "H5Adelete");
-    }
-
-    /* Close IDs */
-    ret = H5Gclose(gid);
-    CHECK(ret, FAIL, "H5Gclose");
-
-    ret = H5Fclose(fid);
-    CHECK(ret, FAIL, "H5Fclose");
-
-    ret = H5Sclose(sid);
-    CHECK(ret, FAIL, "H5Sclose");
-
-    ret = H5Pclose(gcpl);
-    CHECK(ret, FAIL, "H5Pclose");
-}   /* test_attr_bug2() */
-
-/****************************************************************
-**
-**  test_attr_bug3(): Test basic H5A (attribute) code.
-**      Tests creating and deleting attributes which use a
-**      datatype and/or dataspace stored in the same object
-**      header.
-**
-****************************************************************/
-static void
-test_attr_bug3(hid_t fcpl, hid_t fapl)
-{
-    hid_t   fid;            /* File ID */
-    hid_t   aid1, aid2;     /* Attribute IDs */
-    hid_t   sid1, sid2;     /* Dataspace ID */
-    hid_t   tid1, tid2;     /* Datatype IDs */
-    hid_t   did;            /* Dataset ID */
-    hsize_t dims1[2] = {2, 2},
-            dims2[2] = {3, 3}; /* Dimensions */
-    int     wdata1[2][2];
-    unsigned wdata2[3][3];  /* Write buffers */
-    herr_t  ret;            /* Generic return status */
-
-    /* Output message about test being performed */
-    MESSAGE(5, ("Testing Attributes in the Same Header as their Datatypes\n"));
-
-    /* Create dataspaces */
-    sid1 = H5Screate_simple(2, dims1, NULL);
-    CHECK(sid1, FAIL, "H5Screate_simple");
-    sid2 = H5Screate_simple(2, dims2, NULL);
-    CHECK(sid2, FAIL, "H5Screate_simple");
-
-    /* Create file to operate on */
-    fid = H5Fcreate(FILENAME, H5F_ACC_TRUNC, fcpl, fapl);
-    CHECK(fid, FAIL, "H5Fcreate");
-
-    /* Create datatypes and commit tid1 */
-    tid1 = H5Tcopy(H5T_STD_I16BE);
-    CHECK(tid1, FAIL, "H5Tcopy");
-    tid2 = H5Tcopy(H5T_STD_U64LE);
-    CHECK(tid1, FAIL, "H5Tcopy");
-    ret = H5Tcommit2(fid, "dtype", tid1, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Tcommit2");
-
-    /* Create dataset */
-    did = H5Dcreate2(fid, "dset", tid2, sid2, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(did, FAIL, "H5Dcreate2");
-
-    /* Create attribute on datatype, using that datatype as its datatype */
-    aid1 = H5Acreate2(tid1, "attr", tid1, sid1, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(aid1, FAIL, "H5Acreate2");
-
-    /* Create attribute on dataset, using its datatype and dataspace */
-    aid2 = H5Acreate2(did, "attr", tid2, sid2, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(aid2, FAIL, "H5Acreate2");
-
-    /* Close attributes */
-    ret = H5Aclose(aid1);
-    CHECK(ret, FAIL, "H5Aclose");
-    ret = H5Aclose(aid2);
-    CHECK(ret, FAIL, "H5Aclose");
-
-    /* Reopen attributes */
-    aid1 = H5Aopen(tid1, "attr", H5P_DEFAULT);
-    CHECK(aid1, FAIL, "H5Aopen");
-    aid2 = H5Aopen(did, "attr", H5P_DEFAULT);
-    CHECK(aid2, FAIL, "H5Aopen");
-
-    /* Write data to the attributes (the data is uninitialized, we only care
-     * that H5Awrite succeeds for now) */
-    ret = H5Awrite(aid1, H5T_NATIVE_INT, wdata1[0]);
-    CHECK(ret, FAIL, "H5Awrite");
-    ret = H5Awrite(aid2, H5T_NATIVE_UINT, wdata2[0]);
-    CHECK(ret, FAIL, "H5Awrite");
-
-    /* Close attributes */
-    ret = H5Aclose(aid1);
-    CHECK(ret, FAIL, "H5Aclose");
-    ret = H5Aclose(aid2);
-    CHECK(ret, FAIL, "H5Aclose");
-
-    /* Delete attributes */
-    ret = H5Adelete(tid1, "attr");
-    CHECK(ret, FAIL, "H5Adelete");
-    ret = H5Adelete(did, "attr");
-    CHECK(ret, FAIL, "H5Adelete");
-
-    /* Recreate attributes */
-    aid1 = H5Acreate2(tid1, "attr", tid1, sid1, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(aid1, FAIL, "H5Acreate2");
-    aid2 = H5Acreate2(did, "attr", tid2, sid2, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(aid2, FAIL, "H5Acreate2");
-
-    /* Delete attributes (note they are still open) */
-    ret = H5Adelete(tid1, "attr");
-    CHECK(ret, FAIL, "H5Adelete");
-    ret = H5Adelete(did, "attr");
-    CHECK(ret, FAIL, "H5Adelete");
-
-    /* Close dataspaces and transient datatype */
-    ret = H5Sclose(sid1);
-    CHECK(ret, FAIL, "H5Sclose");
-    ret = H5Sclose(sid2);
-    CHECK(ret, FAIL, "H5Sclose");
-    ret = H5Tclose(tid2);
-    CHECK(ret, FAIL, "H5Tclose");
-
-    /* Close dataset and committed datatype */
-    ret = H5Tclose(tid1);
-    CHECK(ret, FAIL, "H5Tclose");
-    ret = H5Dclose(did);
-    CHECK(ret, FAIL, "H5Dclose");
-
-    /* Delete dataset and committed datatype */
-    ret = H5Ldelete(fid, "dtype", H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Tclose");
-    ret = H5Ldelete(fid, "dset", H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Dclose");
-
-    /* Close attributes */
-    ret = H5Aclose(aid1);
-    CHECK(ret, FAIL, "H5Aclose");
-    ret = H5Aclose(aid2);
-    CHECK(ret, FAIL, "H5Aclose");
-
-    /* Close file */
-    ret = H5Fclose(fid);
-    CHECK(ret, FAIL, "H5Fclose");
-}   /* test_attr_bug3() */
-
-/****************************************************************
-**
-**  test_attr_bug4(): Test basic H5A (attribute) code.
-**      Attempts to trigger a bug which would result in being
-**      unable to add an attribute to a named datatype.  This
-**      happened when an object header chunk was too small to
-**      hold a continuation message and could not be extended.
-**
-****************************************************************/
-static void
-test_attr_bug4(hid_t fcpl, hid_t fapl)
-{
-    hid_t   fid;            /* File ID */
-    hid_t   gid;            /* Group ID */
-    hid_t   aid1, aid2, aid3; /* Attribute IDs */
-    hid_t   sid;            /* Dataspace ID */
-    hid_t   tid;            /* Datatype ID */
-    hid_t   did;            /* Dataset ID */
-    hsize_t dims[1] = {5};  /* Attribute dimensions */
-    herr_t  ret;            /* Generic return status */
-
-    /* Output message about test being performed */
-    MESSAGE(5, ("Testing that attributes can always be added to named datatypes\n"));
-
-    /* Create dataspace */
-    sid = H5Screate_simple(1, dims, NULL);
-    CHECK(sid, FAIL, "H5Screate_simple");
-
-    /* Create file */
-    fid = H5Fcreate(FILENAME, H5F_ACC_TRUNC, fcpl, fapl);
-    CHECK(fid, FAIL, "H5Fcreate");
-
-    /* Open root group */
-    gid = H5Gopen2(fid, "/", H5P_DEFAULT);
-    CHECK(gid, FAIL, "H5Gcreate2");
-
-    /* Create committed datatype */
-    tid = H5Tcopy(H5T_STD_I32LE);
-    CHECK(tid, FAIL, "H5Tcopy");
-    ret = H5Tcommit2(fid, "dtype", tid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Tcommit2");
-
-    /* Create dataset */
-    did = H5Dcreate2(fid, "dset", tid, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(did, FAIL, "H5Dcreate2");
-
-    /* Create attributes on group and dataset */
-    aid1 = H5Acreate2(gid, "attr", tid, sid, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(aid1, FAIL, "H5Acreate2");
-    aid2 = H5Acreate2(did, "attr", tid, sid, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(aid2, FAIL, "H5Acreate2");
-
-    /* Create attribute on datatype (this is the main test) */
-    aid3 = H5Acreate2(tid, "attr", tid, sid, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(aid3, FAIL, "H5Acreate2");
-
-    /* Close IDs */
-    ret = H5Aclose(aid3);
-    CHECK(ret, FAIL, "H5Aclose");
-
-    ret = H5Aclose(aid2);
-    CHECK(ret, FAIL, "H5Aclose");
-
-    ret = H5Aclose(aid1);
-    CHECK(ret, FAIL, "H5Aclose");
-
-    ret = H5Dclose(did);
-    CHECK(ret, FAIL, "H5Dclose");
-
-    ret = H5Tclose(tid);
-    CHECK(ret, FAIL, "H5Tclose");
-
-    ret = H5Gclose(gid);
-    CHECK(ret, FAIL, "H5Gclose");
-
-    ret = H5Fclose(fid);
-    CHECK(ret, FAIL, "H5Fclose");
-
-    ret = H5Sclose(sid);
-    CHECK(ret, FAIL, "H5Sclose");
-}   /* test_attr_bug4() */
-
-/****************************************************************
-**
-**  test_attr_bug5(): Test basic H5A (attribute) code.
-**      Tests opening an attribute multiple times through
-**      objects opened through different file handles.
-**
-****************************************************************/
-static void
-test_attr_bug5(hid_t fcpl, hid_t fapl)
-{
-    hid_t   fid1, fid2;     /* File IDs */
-    hid_t   gid1, gid2;     /* Group IDs */
-    hid_t   did1, did2;     /* Dataset IDs */
-    hid_t   tid1, tid2;     /* Datatype IDs */
-    hid_t   aidg1, aidg2,
-            aidd1, aidd2,
-            aidt1, aidt2;   /* Attribute IDs */
-    hid_t   sid;            /* Dataspace ID */
-    hsize_t dims[1] = {5};  /* Attribute dimensions */
-    herr_t  ret;            /* Generic return status */
-
-    /* Output message about test being performed */
-    MESSAGE(5, ("Testing Opening an Attribute Through Multiple Files Concurrently\n"));
-
-    /* Create dataspace ID for attributes and datasets */
-    sid = H5Screate_simple(1, dims, NULL);
-    CHECK(sid, FAIL, "H5Screate_simple");
-
-    /* Create file */
-    fid1 = H5Fcreate(FILENAME, H5F_ACC_TRUNC, fcpl, fapl);
-    CHECK(fid1, FAIL, "H5Fcreate");
-
-    /* Open root group */
-    gid1 = H5Gopen2(fid1, "/", H5P_DEFAULT);
-    CHECK(gid1, FAIL, "H5Gopen2");
-
-    /* Create and commit datatype */
-    tid1 = H5Tcopy(H5T_STD_I32LE);
-    CHECK(tid1, FAIL, "H5Tcopy");
-    ret = H5Tcommit2(fid1, BUG3_DT_NAME, tid1, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(ret, FAIL, "H5Tcommit2");
-
-    /* Create dataset */
-    did1 = H5Dcreate2(fid1, BUG3_DSET_NAME, tid1, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(did1, FAIL, "H5Dcreate2");
-
-    /* Create attribute on root group */
-    aidg1 = H5Acreate2(gid1, BUG3_ATTR_NAME, tid1, sid, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(aidg1, FAIL, "H5Acreate2");
-
-    /* Create attribute on dataset */
-    aidd1 = H5Acreate2(did1, BUG3_ATTR_NAME, tid1, sid, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(aidd1, FAIL, "H5Acreate2");
-
-    /* Create attribute on datatype */
-    aidt1 = H5Acreate2(tid1, BUG3_ATTR_NAME, tid1, sid, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(aidt1, FAIL, "H5Acreate2");
-
-    /* Close all IDs */
-    ret = H5Aclose(aidt1);
-    CHECK(ret, FAIL, "H5Aclose");
-    ret = H5Aclose(aidd1);
-    CHECK(ret, FAIL, "H5Aclose");
-    ret = H5Aclose(aidg1);
-    CHECK(ret, FAIL, "H5Aclose");
-    ret = H5Dclose(did1);
-    CHECK(ret, FAIL, "H5Dclose");
-    ret = H5Tclose(tid1);
-    CHECK(ret, FAIL, "H5Tclose");
-    ret = H5Gclose(gid1);
-    CHECK(ret, FAIL, "H5Gclose");
-    ret = H5Fclose(fid1);
-    CHECK(ret, FAIL, "H5Fclose");
-    ret = H5Sclose(sid);
-    CHECK(ret, FAIL, "H5Sclose");
-
-    /* Open file twice */
-    fid1 = H5Fopen(FILENAME, H5F_ACC_RDONLY, fapl);
-    CHECK(fid1, FAIL, "H5Fopen");
-    fid2 = H5Fopen(FILENAME, H5F_ACC_RDONLY, fapl);
-    CHECK(fid2, FAIL, "H5Fopen");
-
-    /* Open the root group twice */
-    gid1 = H5Gopen2(fid1, "/", H5P_DEFAULT);
-    CHECK(gid1, FAIL, "H5Gopen2");
-    gid2 = H5Gopen2(fid2, "/", H5P_DEFAULT);
-    CHECK(gid2, FAIL, "H5Gopen2");
-
-    /* Open the root group attribute twice */
-    aidg1 = H5Aopen(gid1, BUG3_ATTR_NAME, H5P_DEFAULT);
-    CHECK(aidg1, FAIL, "H5Aopen");
-    aidg2 = H5Aopen(gid2, BUG3_ATTR_NAME, H5P_DEFAULT);
-    CHECK(aidg1, FAIL, "H5Aopen");
-
-    /* Open the dataset twice */
-    did1 = H5Dopen2(fid1, BUG3_DSET_NAME, H5P_DEFAULT);
-    CHECK(did1, FAIL, "H5Dopen2");
-    did2 = H5Dopen2(fid2, BUG3_DSET_NAME, H5P_DEFAULT);
-    CHECK(did2, FAIL, "H5Dopen2");
-
-    /* Open the dataset attribute twice */
-    aidd1 = H5Aopen(did1, BUG3_ATTR_NAME, H5P_DEFAULT);
-    CHECK(aidd1, FAIL, "H5Aopen");
-    aidd2 = H5Aopen(did2, BUG3_ATTR_NAME, H5P_DEFAULT);
-    CHECK(aidd1, FAIL, "H5Aopen");
-
-    /* Open the datatype twice */
-    tid1 = H5Topen2(fid1, BUG3_DT_NAME, H5P_DEFAULT);
-    CHECK(tid1, FAIL, "H5Topen2");
-    tid2 = H5Topen2(fid2, BUG3_DT_NAME, H5P_DEFAULT);
-    CHECK(tid2, FAIL, "H5Topen2");
-
-    /* Open the datatype attribute twice */
-    aidt1 = H5Aopen(tid1, BUG3_ATTR_NAME, H5P_DEFAULT);
-    CHECK(aidt1, FAIL, "H5Aopen");
-    aidt2 = H5Aopen(tid2, BUG3_ATTR_NAME, H5P_DEFAULT);
-    CHECK(aidt2, FAIL, "H5Aopen");
-
-    /* Close all attributes */
-    ret = H5Aclose(aidg1);
-    CHECK(ret, FAIL, "H5Aclose");
-    ret = H5Aclose(aidg2);
-    CHECK(ret, FAIL, "H5Aclose");
-    ret = H5Aclose(aidd1);
-    CHECK(ret, FAIL, "H5Aclose");
-    ret = H5Aclose(aidd2);
-    CHECK(ret, FAIL, "H5Aclose");
-    ret = H5Aclose(aidt1);
-    CHECK(ret, FAIL, "H5Aclose");
-    ret = H5Aclose(aidt2);
-    CHECK(ret, FAIL, "H5Aclose");
-
-    /* Close root groups */
-    ret = H5Gclose(gid1);
-    CHECK(ret, FAIL, "H5Gclose");
-    ret = H5Gclose(gid2);
-    CHECK(ret, FAIL, "H5Gclose");
-
-    /* Close datasets */
-    ret = H5Dclose(did1);
-    CHECK(ret, FAIL, "H5Dclose");
-    ret = H5Dclose(did2);
-    CHECK(ret, FAIL, "H5Dclose");
-
-    /* Close datatypes */
-    ret = H5Tclose(tid1);
-    CHECK(ret, FAIL, "H5Tclose");
-    ret = H5Tclose(tid2);
-    CHECK(ret, FAIL, "H5Tclose");
-
-    /* Close files */
-    ret = H5Fclose(fid1);
-    CHECK(ret, FAIL, "H5Fclose");
-    ret = H5Fclose(fid2);
-    CHECK(ret, FAIL, "H5Fclose");
-}   /* test_attr_bug5() */
-
-/****************************************************************
-**
-**  test_attr_bug6(): Test basic H5A (attribute) code.
-**      Tests if reading an empty attribute is OK.
-**
-****************************************************************/
-static void
-test_attr_bug6(hid_t fcpl, hid_t fapl)
-{
-    hid_t   fid;            /* File ID */
-    hid_t   gid;            /* Group ID */
-    hid_t   aid1, aid2;     /* Attribute IDs */
-    hid_t   sid;            /* Dataspace ID */
-    hsize_t dims[ATTR1_RANK] = {ATTR1_DIM1};  /* Attribute dimensions */
-    int     intar[ATTR1_DIM1];       /* Data reading buffer */
-    herr_t  ret;            /* Generic return status */
-
-    /* Output message about test being performed */
-    MESSAGE(5, ("Testing that empty attribute can be read\n"));
-
-    /* Create file */
-    fid = H5Fcreate(FILENAME, H5F_ACC_TRUNC, fcpl, fapl);
-    CHECK(fid, FAIL, "H5Fcreate");
-
-    /* Open root group */
-    gid = H5Gopen2(fid, "/", H5P_DEFAULT);
-    CHECK(gid, FAIL, "H5Gopen2");
-
-    /* Create dataspace */
-    sid = H5Screate_simple(1, dims, NULL);
-    CHECK(sid, FAIL, "H5Screate_simple");
-
-    /* Create attribute on group */
-    aid1 = H5Acreate2(gid, ATTR1_NAME, H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(aid1, FAIL, "H5Acreate2");
-
-    ret = H5Aclose(aid1);
-    CHECK(ret, FAIL, "H5Aclose");
-
-    /* Open the attribute again */
-    aid2 = H5Aopen(gid, ATTR1_NAME, H5P_DEFAULT);
-    CHECK(aid2, FAIL, "H5Aopen");
-
-    ret = H5Aread(aid2, H5T_NATIVE_INT, intar);
-    CHECK(ret, FAIL, "H5Aread");
-
-    /* Close IDs */
-    ret = H5Aclose(aid2);
-    CHECK(ret, FAIL, "H5Aclose");
-
-    ret = H5Gclose(gid);
-    CHECK(ret, FAIL, "H5Gclose");
-
-    ret = H5Fclose(fid);
-    CHECK(ret, FAIL, "H5Fclose");
-
-    ret = H5Sclose(sid);
-    CHECK(ret, FAIL, "H5Sclose");
-}
 
 /****************************************************************
 **
@@ -10344,11 +9750,6 @@ test_attr(void)
 
                 /* Tests that address specific bugs */
                 test_attr_bug1(my_fcpl, my_fapl);               /* Test odd allocation operations */
-                test_attr_bug2(my_fcpl, my_fapl);               /* Test many deleted attributes */
-                test_attr_bug3(my_fcpl, my_fapl);               /* Test "self referential" attributes */
-                test_attr_bug4(my_fcpl, my_fapl);               /* Test attributes on named datatypes */
-                test_attr_bug5(my_fcpl, my_fapl);               /* Test opening/closing attributes through different file handles */
-                test_attr_bug6(my_fcpl, my_fapl);               /* Test reading empty attribute */ 
             } /* end for */
         } /* end if */
         else {
@@ -10368,11 +9769,6 @@ test_attr(void)
 
             /* Tests that address specific bugs */
             test_attr_bug1(fcpl, my_fapl);                      /* Test odd allocation operations */
-            test_attr_bug2(fcpl, my_fapl);                      /* Test many deleted attributes */
-            test_attr_bug3(fcpl, my_fapl);                      /* Test "self referential" attributes */
-            test_attr_bug4(fcpl, my_fapl);                      /* Test attributes on named datatypes */
-            test_attr_bug5(fcpl, my_fapl);                      /* Test opening/closing attributes through different file handles */
-            test_attr_bug6(fcpl, my_fapl);                      /* Test reading empty attribute */ 
         } /* end else */
     } /* end for */
 

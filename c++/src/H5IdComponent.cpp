@@ -199,9 +199,9 @@ IdComponent& IdComponent::operator=( const IdComponent& rhs )
 //		Changed all subclasses' setId to p_setId and put back setId
 //		here.  p_setId is used in the library where the id provided
 //		by a C API passed on to user's application in the form of a
-//		C++ API object, which will be destroyed properly, and so
+//		C++ API object, which will be destroyed properly, and so 
 //		p_setId does not call incRefCount.  On the other hand, the
-//		public version setId is used by other applications, in which
+//		public version setId is used by other applications, in which 
 //		the id passed to setId already has a reference count, so setId
 //		must call incRefCount.
 //--------------------------------------------------------------------------
@@ -297,6 +297,24 @@ H5std_string IdComponent::p_get_file_name() const
    H5std_string file_name(name_C);
    delete []name_C;
    return(file_name);
+}
+
+//--------------------------------------------------------------------------
+// Function:    H5Object::p_dereference (protected)
+// Purpose      Opens the HDF5 object referenced.
+// Parameters
+//              ref - IN: Reference pointer
+// Exception    H5::IdComponentException
+// Programmer   Binh-Minh Ribler - Oct, 2006
+//--------------------------------------------------------------------------
+hid_t IdComponent::p_dereference(void* ref)
+{
+   hid_t temp_id = H5Rdereference(getId(), H5R_OBJECT, ref);
+   if (temp_id < 0)
+   {
+      throw ReferenceException("", "H5Rdereference failed");
+   }
+   return(temp_id);
 }
 
 //

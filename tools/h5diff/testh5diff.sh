@@ -65,7 +65,6 @@ DIFF='diff -c'
 nerrors=0
 verbose=yes
 pmode=			    # default to run h5diff tests
-mydomainname=`domainname 2>/dev/null`
 
 # The build (current) directory might be different than the source directory.
 if test -z "$srcdir"; then
@@ -79,9 +78,8 @@ test -d ./testfiles || mkdir ./testfiles
 #   -h   print help page
 while [ $# -gt 0 ]; do
     case "$1" in
-    -p)	# reset the tool name and bin to run ph5diff tests
-	H5DIFF=ph5diff               # The tool name
-	H5DIFF_BIN=`pwd`/$H5DIFF
+    -p)	# run ph5diff tests
+	H5DIFF_BIN=`pwd`/ph5diff
 	pmode=yes
 	shift
 	;;
@@ -201,12 +199,19 @@ TOOLTEST() {
     fi
 
     # Run test.
+    # Tflops interprets "$@" as "" when no parameter is given (e.g., the
+    # case of missing file name).  Changed it to use $@ till Tflops fixes it.
+    #TESTING $H5DIFF $@
     (
 	#echo "#############################"
 	#echo "Expected output for '$H5DIFF $@'" 
 	#echo "#############################"
 	#cd $srcdir/testfiles
-	eval $RUNCMD $H5DIFF_BIN "$@"
+	if [ "`uname -s`" = "TFLOPS O/S" ]; then
+	    eval $RUNCMD $H5DIFF_BIN $@
+	else
+	    eval $RUNCMD $H5DIFF_BIN "$@"
+	fi
     ) >$actual 2>$actual_err
     # save actual and actual_err in case they are needed later.
     cp $actual $actual_sav
@@ -320,19 +325,13 @@ TOOLTEST h5diff_16_3.txt -v -p 0.02 $FILE1 $FILE1 g1/dset9 g1/dset10
 TESTING $H5DIFF -v $SRCFILE1 $SRCFILE2
 TOOLTEST h5diff_17.txt -v $FILE1 $FILE2   
 
-# 1.8 test 32-bit INFINITY
-TESTING $H5DIFF $SRCFILE1 $SRCFILE1 /g1/fp19
-TOOLTEST h5diff_171.txt -v $SRCFILE1 $SRCFILE1 /g1/fp19
-
-# 1.8 test 64-bit INFINITY
-TESTING $H5DIFF $SRCFILE1 $SRCFILE1 /g1/fp20
-TOOLTEST h5diff_172.txt -v $SRCFILE1 $SRCFILE1 /g1/fp20
-
 # 1.8 quiet mode 
 TESTING $H5DIFF -q $SRCFILE1 $SRCFILE2
 TOOLTEST h5diff_18.txt -q $FILE1 $FILE2 
 
-
+# 1.9 contents mode 
+TESTING $H5DIFF -v -c $SRCFILE1 $SRCFILE11
+TOOLTEST h5diff_19.txt -v -c $FILE1 $FILE11 
 
 # ##############################################################################
 # # not comparable types
@@ -455,9 +454,9 @@ TOOLTEST h5diff_606.txt -d 0x1 $FILE1 $FILE2 g1/dset3 g1/dset4
 TESTING $H5DIFF -d "1" $SRCFILE1 $SRCFILE2  g1/dset3 g1/dset4
 TOOLTEST h5diff_607.txt -d "1" $FILE1 $FILE2 g1/dset3 g1/dset4
 
-# 6.8: use system epsilon 
-TESTING $H5DIFF --use-system-epsilon $SRCFILE1 $SRCFILE2   g1/dset3 g1/dset4
-TOOLTEST h5diff_608.txt --use-system-epsilon $FILE1 $FILE2  g1/dset3 g1/dset4
+# 6.8: repeated option
+TESTING $H5DIFF -d 1 -d 2 $SRCFILE1 $SRCFILE2   g1/dset3 g1/dset4
+TOOLTEST h5diff_608.txt -d 1 -d 2 $FILE1 $FILE2  g1/dset3 g1/dset4
 
 # 6.9: number larger than biggest difference
 TESTING $H5DIFF -d 200 $SRCFILE1 $SRCFILE2  g1/dset3 g1/dset4
@@ -543,10 +542,9 @@ TOOLTEST h5diff_627.txt --count=200 $FILE1 $FILE2 g1/dset3 g1/dset4
 TESTING $H5DIFF -n 1 $SRCFILE1 $SRCFILE2  g1/dset3 g1/dset4
 TOOLTEST h5diff_628.txt -n 1 $FILE1 $FILE2 g1/dset3 g1/dset4
 
-# Disabling this test as it hangs - LRK 20090618
 # 6.29  non valid files
-#TESTING $H5DIFF file1.h6 file2.h6
-#TOOLTEST h5diff_629.txt file1.h6 file2.h6
+TESTING $H5DIFF file1.h6 file2.h6
+TOOLTEST h5diff_629.txt file1.h6 file2.h6
 
 # ##############################################################################
 # 7.  attributes
@@ -565,13 +563,8 @@ TESTING $H5DIFF -v  $SRCFILE2 $SRCFILE2
 TOOLTEST h5diff_90.txt -v $FILE2 $FILE2
 
 # 10. read by hyperslab, print indexes
-if test -n "$pmode" -a "$mydomainname" = hdfgroup.uiuc.edu; then
-    # skip this test which sometimes hangs in some THG machines
-    SKIP -v $SRCFILE9 $SRCFILE10
-else
-    TESTING $H5DIFF -v $SRCFILE9 $SRCFILE10
-    TOOLTEST h5diff_100.txt -v $FILE9 $FILE10 
-fi
+TESTING $H5DIFF -v $SRCFILE9 $SRCFILE10
+TOOLTEST h5diff_100.txt -v $FILE9 $FILE10 
 
 # 11. floating point comparison
 TESTING $H5DIFF -v  $SRCFILE1 $SRCFILE1 g1/d1  g1/d2 
@@ -579,37 +572,6 @@ TOOLTEST h5diff_101.txt -v $FILE1 $FILE1 g1/d1  g1/d2
 
 TESTING $H5DIFF -v  $SRCFILE1 $SRCFILE1  g1/fp1 g1/fp2 
 TOOLTEST h5diff_102.txt -v $FILE1 $FILE1 g1/fp1 g1/fp2 
-
-
-# not comparable -c flag
-TESTING $H5DIFF $SRCFILE2 $SRCFILE2 g2/dset1  g2/dset2
-TOOLTEST h5diff_200.txt $FILE2 $FILE2 g2/dset1  g2/dset2 
-
-TESTING $H5DIFF -c $SRCFILE2 $SRCFILE2 g2/dset1  g2/dset2
-TOOLTEST h5diff_201.txt -c $FILE2 $FILE2 g2/dset1  g2/dset2 
-
-TESTING $H5DIFF -c $SRCFILE2 $SRCFILE2 g2/dset2  g2/dset3
-TOOLTEST h5diff_202.txt -c $FILE2 $FILE2 g2/dset2  g2/dset3
-
-TESTING $H5DIFF -c $SRCFILE2 $SRCFILE2 g2/dset3  g2/dset4
-TOOLTEST h5diff_203.txt -c $FILE2 $FILE2 g2/dset3  g2/dset4
-
-TESTING $H5DIFF -c $SRCFILE2 $SRCFILE2 g2/dset4  g2/dset5
-TOOLTEST h5diff_204.txt -c $FILE2 $FILE2 g2/dset4  g2/dset5
-
-TESTING $H5DIFF -c $SRCFILE2 $SRCFILE2 g2/dset5  g2/dset6
-TOOLTEST h5diff_205.txt -c $FILE2 $FILE2 g2/dset5  g2/dset6
-
-
-# not comparable in compound
-TESTING $H5DIFF -c $SRCFILE2 $SRCFILE2 g2/dset7  g2/dset8
-TOOLTEST h5diff_206.txt -c $FILE2 $FILE2 g2/dset7  g2/dset8
-
-TESTING $H5DIFF -c $SRCFILE2 $SRCFILE2 g2/dset8  g2/dset9
-TOOLTEST h5diff_207.txt -c $FILE2 $FILE2 g2/dset8  g2/dset9
-
-
-
 
 # ##############################################################################
 # # END

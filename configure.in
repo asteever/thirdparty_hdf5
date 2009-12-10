@@ -26,7 +26,7 @@ dnl
 dnl NOTE: Don't forget to change the version number here when we do a
 dnl release!!!
 dnl
-AC_INIT([HDF5], [1.9.54], [help@hdfgroup.org])
+AC_INIT([HDF5], [1.9.14], [help@hdfgroup.org])
 AC_CONFIG_SRCDIR([src/H5.c])
 AM_CONFIG_HEADER([src/H5config.h])
 
@@ -94,34 +94,11 @@ AC_SUBST([H5_CPPFLAGS])
 AC_SUBST([H5_FCFLAGS])
 AC_SUBST([H5_CXXFLAGS])
 
-dnl AM_CFLAGS (and company) are for CFLAGS that should be used on HDF5,
-dnl and WILL be exported to h5cc (or h5fc, etc) if set by configure.
-AC_SUBST([AM_CFLAGS])
-AC_SUBST([AM_FCFLAGS])
-AC_SUBST([AM_CXXFLAGS])
-AC_SUBST([AM_CPPFLAGS])
-AC_SUBST([AM_LDFLAGS])
-
 dnl Make sure flags are set to something (otherwise macros may set them later).
-AM_CFLAGS="${AM_CFLAGS}"
-AM_CXXFLAGS="${AM_CXXFLAGS}"
-AM_FCFLAGS="${AM_FCFLAGS}"
-AM_CPPFLAGS="${AM_CPPFLAGS}"
-AM_LDFLAGS="${AM_LDFLAGS}"
 CFLAGS="${CFLAGS}"
+CPPFLAGS="${CPPFLAGS}"
 CXXFLAGS="${CXXFLAGS}"
 FCFLAGS="${FCFLAGS}"
-CPPFLAGS="${CPPFLAGS}"
-LDFLAGS="${LDFLAGS}"
-
-dnl Configure may need to alter any of the *FLAGS variables in order for
-dnl various checks to work correctly. Save the user's value here so it
-dnl can be restored once all configure checks are complete.
-saved_user_CFLAGS="$CFLAGS"
-saved_user_CXXFLAGS="$CXXFLAGS"
-saved_user_FCFLAGS="$FCFLAGS"
-saved_user_LDFLAGS="$LDFLAGS"
-saved_user_CPPFLAGS="$CPPFLAGS"
 
 dnl Different compilers may need default libraries. They are specified in
 dnl the config/* files, so we put this statement here so that it'll be
@@ -317,16 +294,6 @@ while test -n "$hname"; do
 done
 
 dnl ----------------------------------------------------------------------
-dnl Some built-in configure checks can only see CFLAGS (not AM_CFLAGS), so
-dnl we need to add this in so configure works as intended. We will need to
-dnl reset this value at the end of configure, to preserve the user's settings.
-CFLAGS="${AM_CFLAGS} ${CFLAGS}"
-FCFLAGS="${AM_FCFLAGS} ${FCFLAGS}"
-CXXFLAGS="${AM_CXXFLAGS} ${CXXFLAGS}"
-CPPFLAGS="${AM_CPPFLAGS} ${CPPFLAGS}"
-LDFLAGS="${AM_LDFLAGS} ${LDFLAGS}"
-
-dnl ----------------------------------------------------------------------
 dnl Enable dependency tracking unless the configure options or a
 dnl site-specific file told us not to.  This prevents configure from
 dnl silently disabling dependencies for some compilers.
@@ -351,10 +318,6 @@ AC_ARG_ENABLE([fortran],
                               [Compile the Fortran interface [default=no]])],
               [HDF_FORTRAN=$enableval])
 
-
-HAVE_SIZEOF="no"
-FORTRAN_DEFAULT_REALisDBLE="no"	
-
 if test "X$HDF_FORTRAN" = "Xyes"; then
   echo "yes"
 
@@ -375,7 +338,6 @@ if test "X$HDF_FORTRAN" = "Xyes"; then
   dnl --------------------------------------------------------------------
   dnl General Fortran flags
   dnl
-  AM_FCFLAGS="${AM_FCFLAGS} ${FFLAGS}"
   FCFLAGS="${FCFLAGS} ${FFLAGS}"
 
   dnl --------------------------------------------------------------------
@@ -408,8 +370,8 @@ if test "X$HDF_FORTRAN" = "Xyes"; then
   dnl --------------------------------------------------------------------
   dnl See if the compiler will support the "-I." option
   dnl
-dnl  AM_FCFLAGS_saved=$AM_FCFLAGS
-dnl  AM_FCFLAGS="${AM_FCFLAGS} -I."
+dnl  FCFLAGS_saved=$FCFLAGS
+dnl  FCFLAGS="${FCFLAGS} -I."
 
 dnl  AC_MSG_CHECKING(if compiler supports -I. option)
 dnl  AC_TRY_FCOMPILE([
@@ -417,61 +379,13 @@ dnl      program conftest
 dnl      end
 dnl  ], AC_MSG_RESULT(yes),
 dnl     AC_MSG_RESULT(no)
-dnl     AM_FCFLAGS="$AM_FCFLAGS_saved")
+dnl     FCFLAGS="$FCFLAGS_saved")
 
-dnl --------------------------------------------------------------------
-dnl See if the fortran compiler supports the intrinsic function "SIZEOF"
-
-  AC_MSG_CHECKING([if Fortran compiler supports intrinsic SIZEOF])
-  AC_TRY_RUN([ 
-   PROGRAM main
-     i = sizeof(x)
-   END PROGRAM
-  ], [AC_MSG_RESULT(yes)
-     	HAVE_SIZEOF="yes"],
-       AC_MSG_RESULT(no))
-
-
-dnl Check to see if -r8 was specified to determine if we need to
-dnl compile the DOUBLE PRECISION interfaces.
-
-
-  AC_MSG_CHECKING([if Fortran default REAL is DOUBLE PRECISION])
-  
-  AC_TRY_RUN([
-     MODULE type_mod
-       INTERFACE h5t	
-         MODULE PROCEDURE h5t_real
-         MODULE PROCEDURE h5t_dble
-       END INTERFACE
-     CONTAINS
-       SUBROUTINE h5t_real(r)
-         REAL :: r
-       END SUBROUTINE h5t_real
-       SUBROUTINE h5t_dble(d)
-         DOUBLE PRECISION :: d
-       END SUBROUTINE h5t_dble
-     END MODULE type_mod
-     PROGRAM main
-       USE type_mod
-       REAL :: r
-       DOUBLE PRECISION :: d
-       CALL h5t(r)
-       CALL h5t(d)
-     END PROGRAM main
-                  ],
-   AC_MSG_RESULT(no), 
-   [AC_MSG_RESULT(yes) 
-       FORTRAN_DEFAULT_REALisDBLE="yes"])
   dnl Change back to the C language
   AC_LANG_POP(Fortran)
 else
   echo "no"
-  FC="no"
 fi
-
-AM_CONDITIONAL([FORTRAN_HAVE_SIZEOF], [test "X$HAVE_SIZEOF" = "Xyes"])
-AM_CONDITIONAL([FORTRAN_DEFAULT_REALisDBLE_F], [test "X$FORTRAN_DEFAULT_REALisDBLE" = "Xyes"])
 
 dnl ----------------------------------------------------------------------
 dnl Check if they would like the C++ interface compiled
@@ -506,7 +420,6 @@ int main(void) { return 0; }
   ], [
     echo yes
     CXXFLAGS="${CXXFLAGS} -DOLD_HEADER_FILENAME"
-    AM_CXXFLAGS="${AM_CXXFLAGS} -DOLD_HEADER_FILENAME"
   ])
 
   AC_MSG_CHECKING([if $CXX can handle namespaces])
@@ -525,7 +438,6 @@ int main(void) {
   ], [
      echo no
      CXXFLAGS="${CXXFLAGS} -DH5_NO_NAMESPACE"
-     AM_CXXFLAGS="${AM_CXXFLAGS} -DH5_NO_NAMESPACE"
   ])
 
   AC_MSG_CHECKING([if $CXX supports std])
@@ -543,7 +455,6 @@ int main(void) {
   ], [
      echo no
      CXXFLAGS="${CXXFLAGS} -DH5_NO_STD"
-     AM_CXXFLAGS="${AM_CXXFLAGS} -DH5_NO_STD"
   ])
 
   AC_MSG_CHECKING([if $CXX supports bool types])
@@ -557,7 +468,6 @@ int main(void) {
   ], [
      echo no
      CXXFLAGS="${CXXFLAGS} -DBOOL_NOTDEFINED"
-     AM_CXXFLAGS="${AM_CXXFLAGS} -DBOOL_NOTDEFINED"
   ])
 
   AC_MSG_CHECKING([if $CXX has offsetof extension])
@@ -595,15 +505,32 @@ int main(void) {
   ], [
     echo no
     CXXFLAGS="${CXXFLAGS} -DNO_STATIC_CAST"
-    AM_CXXFLAGS="${AM_CXXFLAGS} -DNO_STATIC_CAST"
   ])
 else
   echo "no"
-  CXX="no"
 fi
 
 dnl Change back to the C language
 AC_LANG_POP(C++)
+
+dnl ----------------------------------------------------------------------
+dnl If we should build only static executables
+dnl
+AC_MSG_CHECKING([if should build only statically linked executables])
+AC_ARG_ENABLE([static_exec],
+              [AC_HELP_STRING([--enable-static-exec],
+                              [Build only statically linked executables
+                               [default=no]])],
+              [STATIC_EXEC=$enableval])
+
+if test "X$STATIC_EXEC" = "Xyes"; then
+  echo "yes"
+  LT_STATIC_EXEC="-all-static"
+else
+  echo "no"
+  LT_STATIC_EXEC=""
+fi
+AC_SUBST([LT_STATIC_EXEC])
 
 dnl ----------------------------------------------------------------------
 dnl Check if they have Perl installed on their system. We only need Perl
@@ -880,6 +807,18 @@ elif test "X${enable_shared}" = "Xyes" -a "X${PARALLEL}" != "X"; then
 fi
 
 dnl ----------------------------------------------------------------------
+dnl As of Libtool 1.5.14, libtool officially doesn't know how to create
+dnl shared libraries with pgcc.  In fact, it is able to do so on some
+dnl platforms, but not all (e.g., pgcc 5.2-4 on mir).
+dnl Disable shared libraries when using pgcc.  -JL 09/2005
+if test "X${enable_shared}" != "Xno" && \
+      (${CC-cc} -V 2>&1 | grep '^pgcc') > /dev/null; then
+  echo '    warning: shared libraries are not supported for pgcc!'
+  echo '    disabling shared libraries'
+  enable_shared="no"
+fi
+
+dnl ----------------------------------------------------------------------
 dnl Many Fortran compilers don't support shared libraries.  Some of these
 dnl compilers include:
 dnl pgf90 version 6.0-4
@@ -896,15 +835,10 @@ if test "X${HDF_FORTRAN}" = "Xyes"; then
     H5_FORTRAN_SHARED="no"
   fi
 
-  if (${FC} -V 2>&1 | grep '^Intel(R) Fortran') > /dev/null; then
-    if (${FC} -v 2>&1 | grep '^Version 8.') > /dev/null; then
-      H5_FORTRAN_SHARED="no"
-    else
-dnl echo 'adding fortran compiler flag needed for building shared libraries'
-      FCFLAGS="${FCFLAGS} -fPIC"
-      AM_FCFLAGS="${AM_FCFLAGS} -fPIC"
-    fi
+  if (${FC} -V 2>&1 | grep '^Intel(R) Fortran Compiler') > /dev/null; then
+    H5_FORTRAN_SHARED="no"
   fi
+
   if (${FC} +version 2>&1 | grep '^HP F90') > /dev/null; then
     H5_FORTRAN_SHARED="no"
   fi
@@ -924,12 +858,23 @@ fi
 
 AM_CONDITIONAL([FORTRAN_SHARED_CONDITIONAL], [test "X$H5_FORTRAN_SHARED" = "Xyes"])
 
-dnl Disable C++ shared libraries if shared libraries are disabled.
-dnl This prevents Automake from trying to link against shared libraries,
+dnl ----------------------------------------------------------------------
+dnl Shared C++ libraries seem not to work on some platforms (modi4, shanti)
+dnl when the -xarch=v9 flag is used to enable 64-bit mode.
+dnl Try to detect the -xarch=v9 flag and disable C++ shared libraries if it's
+dnl being used.
+dnl Also disable C++ shared libraries if shared libraries are disabled.
+dnl this prevents Automake from trying to link against shared libraries,
 dnl which caused problems on tg-login
 H5_CXX_SHARED="no"
 if test "X${HDF_CXX}" = "Xyes" && test "X${enable_shared}" != "Xno"; then
   H5_CXX_SHARED="yes"
+
+  if (echo dummy ${CXX} ${CXXLD} ${CFLAGS} ${CXXFLAGS} ${LDFLAGS} | grep 'xarch') > /dev/null; then
+    echo "    warning: -xarch flag detected"
+    echo "    disabling shared C++ libraries"
+    H5_CXX_SHARED="no"
+  fi
 
 dnl Try to detect the +DD64 flag for HPUX aCC compiler and disable C++ shared libraries if it's
 dnl being used.
@@ -992,32 +937,6 @@ EOF
     fi
     ;;
 esac
-
-dnl ----------------------------------------------------------------------
-dnl Check if we should install only statically linked executables.
-dnl   This check needs to occur after libtool is initialized because
-dnl   we check a libtool cache value and may issue a warning based 
-dnl   on its result.
-AC_MSG_CHECKING([if we should install only statically linked executables])
-AC_ARG_ENABLE([static_exec],
-              [AC_HELP_STRING([--enable-static-exec],
-                              [Install only statically linked executables
-                               [default=no]])],
-              [STATIC_EXEC=$enableval])
-
-if test "X$STATIC_EXEC" = "Xyes"; then
-  echo "yes"
-  dnl Issue a warning if -static flag is not supported.
-  if test "X$lt_cv_prog_compiler_static_works" = "Xno"; then
-      echo "    warning: -static flag not supported on this system; executable won't statically link shared system libraries."
-  fi
-  LT_STATIC_EXEC="-all-static"
-else
-  echo "no"
-  LT_STATIC_EXEC=""
-fi
-
-AC_SUBST([LT_STATIC_EXEC])
 
 dnl Fix up the INSTALL macro if it's a relative path. We want the
 dnl full-path to the binary instead.
@@ -1168,6 +1087,39 @@ case "X-$enable_production" in
   X-yes)
     enable_production="yes"
     AC_MSG_RESULT([production])
+
+    dnl Remove the "-g" flag from CFLAGS if it's in there.
+    dnl
+    CFLAGS_temp=""
+    if test -n "$CFLAGS"; then
+      for d in $CFLAGS ; do
+        if test "X$d" != "X-g"; then
+          CFLAGS_temp="$CFLAGS_temp $d"
+        fi
+      done
+      CFLAGS=$CFLAGS_temp
+    fi
+
+    CXXFLAGS_temp=""
+    if test -n "$CXXFLAGS"; then
+      for d in $CXXFLAGS ; do
+        if test "X$d" != "X-g"; then
+          CXXFLAGS_temp="$CXXFLAGS_temp $d"
+        fi
+      done
+      CXXFLAGS=$CXXFLAGS_temp
+    fi
+
+    FCFLAGS_temp=""
+    if test -n "$FCFLAGS"; then
+      for d in $FCFLAGS ; do
+        if test "X$d" != "X-g"; then
+          FCFLAGS_temp="$FCFLAGS_temp $d"
+        fi
+      done
+      FCFLAGS=$FCFLAGS_temp
+    fi
+
     CONFIG_MODE=production
     H5_CFLAGS="$H5_CFLAGS $PROD_CFLAGS"
     H5_CPPFLAGS="$H5_CPPFLAGS $PROD_CPPFLAGS"
@@ -1293,7 +1245,7 @@ case "$host_cpu-$host_vendor-$host_os" in
     AC_MSG_CHECKING([for large file support mode on Linux])
     if test "X$LINUX_LFS" = "Xyes"; then
       AC_MSG_RESULT([enabled])
-      AM_CPPFLAGS="-D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -D_LARGEFILE_SOURCE $AM_CPPFLAGS"
+      CPPFLAGS="-D_FILE_OFFSET_BITS=64 -D_LARGEFILE64_SOURCE -D_LARGEFILE_SOURCE $CPPFLAGS"
     else
       AC_MSG_RESULT([disabled])
     fi
@@ -1301,25 +1253,20 @@ case "$host_cpu-$host_vendor-$host_os" in
     dnl Add POSIX support on Linux systems, so <features.h> defines
     dnl __USE_POSIX, which is required to get the prototype for fdopen
     dnl defined correctly in <stdio.h>
-    H5_CPPFLAGS="-D_POSIX_SOURCE $H5_CPPFLAGS"
+    CPPFLAGS="-D_POSIX_SOURCE $CPPFLAGS"
 
     dnl Also add BSD support on Linux systems, so <features.h> defines
     dnl __USE_BSD, which is required to get the prototype for strdup
     dnl defined correctly in <string.h> and snprintf & vsnprintf defined
     dnl correctly in <stdio.h>
-    AM_CPPFLAGS="-D_BSD_SOURCE $AM_CPPFLAGS"
+    CPPFLAGS="-D_BSD_SOURCE $CPPFLAGS"
     ;;
 esac
 
-dnl Need to add AM_CPPFLAGS into CPPFLAGS to make them visible for configure checks.
-dnl Note: CPPFLAGS will be restored by the end of configure.
-CPPFLAGS="$AM_CPPFLAGS $CPPFLAGS"
-
 AC_TRY_COMPILE([#include <sys/types.h>],
                [off64_t n = 0;],
-               [AC_CHECK_FUNCS([lseek64 fseek64 ftruncate64])],
-               [AC_MSG_RESULT([skipping test for lseek64(), fseek64(), ftruncate64()])])
-AC_CHECK_FUNCS(fseeko ftello)
+               [AC_CHECK_FUNCS([lseek64 fseek64 fseeko ftello])],
+               [AC_MSG_RESULT([skipping test for lseek64(), fseek64(), fseeko(), and ftello])])
 AC_TRY_COMPILE([
 #include <sys/types.h>
 #include <sys/stat.h>],
@@ -1337,7 +1284,6 @@ AC_C_BIGENDIAN
 AC_CHECK_SIZEOF([char], [1])
 AC_CHECK_SIZEOF([short], [2])
 AC_CHECK_SIZEOF([int], [4])
-AC_CHECK_SIZEOF([unsigned], [4])
 AC_CHECK_SIZEOF([long], [4])
 AC_CHECK_SIZEOF([long long], [8])
 AC_CHECK_SIZEOF([__int64], [8])
@@ -1482,23 +1428,19 @@ case $withval in
     fi
 
     saved_CPPFLAGS="$CPPFLAGS"
-    saved_AM_CPPFLAGS="$AM_CPPFLAGS"
     saved_LDFLAGS="$LDFLAGS"
-    saved_AM_LDFLAGS="$AM_LDFLAGS"
 
     if test -n "$dmalloc_inc"; then
       CPPFLAGS="$CPPFLAGS -I$dmalloc_inc"
-      AM_CPPFLAGS="$AM_CPPFLAGS -I$dmalloc_inc"
     fi
 
-    AC_CHECK_HEADERS(dmalloc.h,,CPPFLAGS="$saved_CPPFLAGS"; AM_CPPFLAGS="$saved_AM_CPPFLAGS")
+    AC_CHECK_HEADERS(dmalloc.h,, CPPFLAGS="$saved_CPPFLAGS")
 
     if test -n "$dmalloc_lib"; then
       LDFLAGS="$LDFLAGS -L$dmalloc_lib"
-      AM_LDFLAGS="$AM_LDFLAGS -L$dmalloc_lib"
     fi
 
-    AC_CHECK_LIB(dmalloc, dmalloc_shutdown,, LDFLAGS="$saved_LDFLAGS"; AM_LDFLAGS="$saved_AM_LDFLAGS"; unset HAVE_DMALLOC)
+    AC_CHECK_LIB(dmalloc, dmalloc_shutdown,, LDFLAGS="$saved_LDFLAGS"; unset HAVE_DMALLOC)
 
     if test -z "$HAVE_DMALLOC" -a -n "$HDF5_CONFIG_ABORT"; then
       AC_MSG_ERROR(couldn't find dmalloc library)
@@ -1560,26 +1502,22 @@ case $withval in
     fi
 
     saved_CPPFLAGS="$CPPFLAGS"
-    saved_AM_CPPFLAGS="$AM_CPPFLAGS"
     saved_LDFLAGS="$LDFLAGS"
-    saved_AM_LDFLAGS="$AM_LDFLAGS"
 
     if test -n "$zlib_inc"; then
       CPPFLAGS="$CPPFLAGS -I$zlib_inc"
-      AM_CPPFLAGS="$AM_CPPFLAGS -I$zlib_inc"
     fi
 
     AC_CHECK_HEADERS([zlib.h],
                      [HAVE_ZLIB_H="yes"],
-                     [CPPFLAGS="$saved_CPPFLAGS"; AM_CPPFLAGS="$saved_AM_CPPFLAGS"])
+                     [CPPFLAGS="$saved_CPPFLAGS"])
 
     if test -n "$zlib_lib"; then
       LDFLAGS="$LDFLAGS -L$zlib_lib"
-      AM_LDFLAGS="$AM_LDFLAGS -L$zlib_lib"
     fi
 
     AC_CHECK_LIB([z], [compress2],,
-                 [LDFLAGS="$saved_LDFLAGS"; AM_LDFLAGS="$saved_AM_LDFLAGS"; unset HAVE_ZLIB])
+                 [LDFLAGS="$saved_LDFLAGS"; unset HAVE_ZLIB])
     AC_CHECK_FUNC([compress2], [HAVE_COMPRESS2="yes"])
 
     if test -z "$HAVE_ZLIB" -a -n "$HDF5_CONFIG_ABORT"; then
@@ -1653,27 +1591,23 @@ case $withval in
     fi
     
     saved_CPPFLAGS="$CPPFLAGS"
-    saved_AM_CPPFLAGS="$AM_CPPFLAGS"
     saved_LDFLAGS="$LDFLAGS"
-    saved_AM_LDFLAGS="$AM_LDFLAGS"
     
     if test -n "$szlib_inc"; then
       CPPFLAGS="$CPPFLAGS -I$szlib_inc"
-      AM_CPPFLAGS="$AM_CPPFLAGS -I$szlib_inc"
     fi
     
     AC_CHECK_HEADERS([szlib.h],
                      [HAVE_SZLIB_H="yes"],
-                     [CPPFLAGS="$saved_CPPFLAGS"; AM_CPPFLAGS="$saved_AM_CPPFLAGS"])
-
+                     [CPPFLAGS="$saved_CPPFLAGS"])
+    
     if test -n "$szlib_lib"; then
       LDFLAGS="$LDFLAGS -L$szlib_lib"
-      AM_LDFLAGS="$AM_LDFLAGS -L$szlib_lib"
     fi
     
     AC_CHECK_LIB([sz], [SZ_BufftoBuffCompress],,
-                 [LDFLAGS="$saved_LDFLAGS"; AM_LDFLAGS="$saved_AM_LDFLAGS"; unset HAVE_SZLIB])
-
+                 [LDFLAGS="$saved_LDFLAGS"; unset HAVE_SZLIB])
+    
     if test -z "$HAVE_SZLIB" -a -n "$HDF5_CONFIG_ABORT"; then
       AC_MSG_ERROR([couldn't find szlib library])
     fi
@@ -1683,17 +1617,17 @@ esac
 if test "x$HAVE_SZLIB" = "xyes" -a "x$HAVE_SZLIB_H" = "xyes"; then
     dnl SZLIB library is available.  Check if it can encode
     AC_MSG_CHECKING([for szlib encoder])
-
-    dnl Set LD_LIBRARY_PATH so encoder test can find the library and run.
-    dnl Also add LL_PATH substitution to Makefiles so they can use the 
-    dnl path as well, for testing examples.
-    if test -z "$LD_LIBRARY_PATH"; then
-    export LD_LIBRARY_PATH="$szlib_lib"
-    else
-    export LD_LIBRARY_PATH="$szlib_lib:$LD_LIBRARY_PATH"
-    fi
-
-    AC_SUBST([LL_PATH]) LL_PATH="$LD_LIBRARY_PATH"
+    
+    AC_CACHE_VAL([hdf5_cv_szlib_functional],
+        [AC_TRY_RUN([
+        #include <szlib.h>
+        
+        int main(void)
+        {   
+            SZ_encoder_enabled();
+            exit(0);
+        }
+        ], [hdf5_cv_szlib_functional=yes], [hdf5_cv_szlib_functional=no],)])
     
     AC_CACHE_VAL([hdf5_cv_szlib_can_encode],
         [AC_TRY_RUN([
@@ -1709,9 +1643,13 @@ if test "x$HAVE_SZLIB" = "xyes" -a "x$HAVE_SZLIB_H" = "xyes"; then
         }
         ], [hdf5_cv_szlib_can_encode=yes], [hdf5_cv_szlib_can_encode=no],)])
     
-    AC_DEFINE(HAVE_FILTER_SZIP, 1, 
-            [Define if support for szip filter is enabled])
-    USE_FILTER_SZIP="yes"
+    if test ${hdf5_cv_szlib_functional} = "no"; then
+        hdf5_cv_szlib_can_encode=broken
+    else
+        AC_DEFINE(HAVE_FILTER_SZIP, 1, 
+                [Define if support for szip filter is enabled])
+        USE_FILTER_SZIP="yes"
+    fi
     
     if test ${hdf5_cv_szlib_can_encode} = "yes"; then
         AC_MSG_RESULT([yes])
@@ -1719,6 +1657,9 @@ if test "x$HAVE_SZLIB" = "xyes" -a "x$HAVE_SZLIB_H" = "xyes"; then
     if test ${hdf5_cv_szlib_can_encode} = "no"; then
         AC_MSG_RESULT([no])
     fi 
+    if test ${hdf5_cv_szlib_can_encode} = "broken"; then
+        AC_MSG_RESULT([shared szlib doesn't work. disabling szip.])
+    fi
     
     dnl Add "szip" to external filter list
     if test ${hdf5_cv_szlib_can_encode} = "yes"; then
@@ -1735,8 +1676,6 @@ if test "x$HAVE_SZLIB" = "xyes" -a "x$HAVE_SZLIB_H" = "xyes"; then
     fi
 
 fi
-
-AM_CONDITIONAL([BUILD_SZIP_CONDITIONAL], [test "X$USE_FILTER_SZIP" = "Xyes"])
 
 dnl Checkpoint the cache
 AC_CACHE_SAVE
@@ -1789,22 +1728,17 @@ case "$withval" in
 
     if test -n "$pthread_inc"; then
       saved_CPPFLAGS="$CPPFLAGS"
-      saved_AM_CPPFLAGS="$AM_CPPFLAGS"
       CPPFLAGS="$CPPFLAGS -I$pthread_inc"
-      AM_CPPFLAGS="$AM_CPPFLAGS -I$pthread_inc"
-      AC_CHECK_HEADERS([pthread.h],, [CPPFLAGS="$saved_CPPFLAGS"; AM_CPPFLAGS="$saved_AM_CPPFLAGS"; unset PTHREAD])
+      AC_CHECK_HEADERS([pthread.h],, [CPPFLAGS="$saved_CPPFLAGS"; unset PTHREAD])
     else
       AC_CHECK_HEADERS([pthread.h],, [unset PTHREAD])
     fi
 
     if test -n "$pthread_lib"; then
       saved_LDFLAGS="$LDFLAGS"
-      saved_AM_LDFLAGS="$AM_LDFLAGS"
       LDFLAGS="$LDFLAGS -L$pthread_lib"
-      AM_LDFLAGS="$AM_LDFLAGS -L$pthread_lib"
       AC_CHECK_LIB([pthread], [pthread_create],,
-                   [LDFLAGS="$saved_LDFLAGS"; AM_LDFLAGS="$saved_AM_LDFLAGS"; unset PTHREAD])
-
+                   [LDFLAGS="$saved_LDFLAGS"; unset PTHREAD])
     else
       AC_CHECK_LIB([pthread], [pthread_create],, [unset PTHREAD])
     fi
@@ -1974,12 +1908,13 @@ AC_MSG_RESULT([no]))
 
 dnl ----------------------------------------------------------------------
 dnl Check for functions.
+dnl tmpfile needed by h5pdiff.
 dnl
-AC_CHECK_FUNCS(alarm BSDgettimeofday fork frexpf frexpl)
-AC_CHECK_FUNCS(gethostname getpwuid getrusage longjmp lstat)
-AC_CHECK_FUNCS(rand_r random setsysinfo siglongjmp signal)
-AC_CHECK_FUNCS(snprintf srandom strdup symlink system)
-AC_CHECK_FUNCS(tmpfile vasprintf waitpid)
+AC_CHECK_FUNCS(alarm fork frexpf frexpl gethostname getpwuid getrusage)
+AC_CHECK_FUNCS(BSDgettimeofday siglongjmp longjmp setsysinfo sigaction)
+AC_CHECK_FUNCS(signal snprintf vasprintf strdup system waitpid)
+AC_CHECK_FUNCS(rand_r random srandom)
+AC_CHECK_FUNCS(tmpfile)
 
 dnl Check for vsnprintf() separately, so we can detect situations where it
 dnl doesn't return the correct size for formatted strings that are too large
@@ -2072,30 +2007,10 @@ AC_TRY_COMPILE(,[int __attribute__((unused)) x],
                AC_MSG_RESULT([yes]),
                AC_MSG_RESULT([no]))
 
-AC_MSG_CHECKING([for __func__ extension])
-AC_TRY_COMPILE(,[ const char *fname = __func__; ],
-               AC_DEFINE([HAVE_C99_FUNC], [1],
-                         [Define if the compiler understands the __func__ keyword])
-               AC_MSG_RESULT([yes]),
-               AC_MSG_RESULT([no]))
 AC_MSG_CHECKING([for __FUNCTION__ extension])
-AC_TRY_COMPILE(,[ const char *fname = __FUNCTION__; ],
+AC_TRY_COMPILE(,[(void)__FUNCTION__],
                AC_DEFINE([HAVE_FUNCTION], [1],
-                         [Define if the compiler understands the __FUNCTION__ keyword])
-               AC_MSG_RESULT([yes]),
-               AC_MSG_RESULT([no]))
-AC_MSG_CHECKING([for C99 designated initialization support])
-AC_TRY_COMPILE(,[
-                typedef struct {
-                    int x;
-                    union {
-                        int i;
-                        double d;
-                    } u;
-                } di_struct_t;
-                di_struct_t x = {0, { .d = 0.0}}; ],
-               AC_DEFINE([HAVE_C99_DESIGNATED_INITIALIZER], [1],
-                         [Define if the compiler understands C99 designated initialization of structs and unions])
+                         [Define if the compiler understand the __FUNCTION__ keyword])
                AC_MSG_RESULT([yes]),
                AC_MSG_RESULT([no]))
 
@@ -2109,7 +2024,7 @@ dnl LD_LIBRARY_PATH along with LDFLAGS or do it with the AC_TRY_RUN macro.
 dnl
 AC_MSG_CHECKING([how to print long long])
 AC_CACHE_VAL([hdf5_cv_printf_ll],
-LD_LIBRARY_PATH="$LD_LIBRARY_PATH`echo $AM_LDFLAGS $LDFLAGS | sed -e 's/-L/:/g' -e 's/ //g'`"
+LD_LIBRARY_PATH="$LD_LIBRARY_PATH`echo $LDFLAGS | sed -e 's/-L/:/g' -e 's/ //g'`"
 export LD_LIBRARY_PATH
 
 for hdf5_cv_printf_ll in l ll L q unknown; do
@@ -2515,19 +2430,6 @@ case "X-$enable_parallel" in
     fi
 
     dnl Set RUNPARALLEL to mpirun if not set yet.
-    dnl Check for building on Cray if RUNPARALLEL is not yet set by checking
-    dnl for 'aprun' command (which is the parallel job launcher, like mpirun).
-    if test "X$PARALLEL" = "Xyes" -a -z "$RUNPARALLEL"; then
-        dnl Find the path where aprun is located.
-  	for path in `echo $PATH | ${TR} ":" " "`; do
-  	  if test -x $path/aprun; then
-            RUNPARALLEL="aprun -q -n \$\${NPROCS:=3}"
-  	    break;
-  	  fi
-	done
-    fi
-
-    dnl Set RUNPARALLEL to mpirun if not set yet.
     if test "X$PARALLEL" = "Xyes" -a -z "$RUNPARALLEL"; then
       RUNPARALLEL="mpirun -np \$\${NPROCS:=3}"
     fi
@@ -2649,24 +2551,19 @@ if test -n "$PARALLEL"; then
   
       if test -n "$mpe_inc"; then
         saved_CPPFLAGS="$CPPFLAGS"
-        saved_AM_CPPFLAGS="$AM_CPPFLAGS"
         CPPFLAGS="$CPPFLAGS -I$mpe_inc"
-        AM_CPPFLAGS="$AM_CPPFLAGS -I$mpe_inc"
-        AC_CHECK_HEADERS([mpe.h],, [CPPFLAGS="$saved_CPPFLAGS"; AM_CPPFLAGS="$saved_AM_CPPFLAGS"; unset MPE])
+        AC_CHECK_HEADERS([mpe.h],, [CPPFLAGS="$saved_CPPFLAGS"; unset MPE])
       else
         AC_CHECK_HEADERS([mpe.h],, [unset MPE])
       fi
   
       if test -n "$mpe_lib"; then
         saved_LDFLAGS="$LDFLAGS"
-        saved_AM_LDFLAGS="$AM_LDFLAGS"
         LDFLAGS="$LDFLAGS -L$mpe_lib"
-        AM_LDFLAGS="$AM_LDFLAGS -L$mpe_lib"
         AC_CHECK_LIB([mpe], [MPE_Init_log],,
-                     [LDFLAGS="$saved_LDFLAGS"; AM_LDFLAGS="$saved_AM_LDFLAGS"; unset MPE])
+                     [LDFLAGS="$saved_LDFLAGS"; unset MPE])
         AC_CHECK_LIB([lmpe], [CLOG_Init],,
-                     [LDFLAGS="$saved_LDFLAGS"; AM_LDFLAGS="$saved_AM_LDFLAGS"; unset MPE])
-
+                     [LDFLAGS="$saved_LDFLAGS"; unset MPE])
       else
         AC_CHECK_LIB([mpe], [MPE_Init_log],, [unset MPE])
         AC_CHECK_LIB([lmpe], [CLOG_Init],, [unset MPE])
@@ -2737,9 +2634,9 @@ dnl bug also occurs at SGI IRIX 6.5 C with compiler version lower than or equal 
 dnl In case people still use the old compiler, we keep this flag.
 AC_MSG_CHECKING([if irregular hyperslab optimization code works inside MPI-IO])
 
-AC_CACHE_VAL([hdf5_cv_mpi_complex_derived_datatype_works],[hdf5_cv_mpi_complex_derived_datatype_works=yes])
+AC_CACHE_VAL([hdf5_mpi_complex_derived_datatype_works],[hdf5_mpi_complex_derived_datatype_works=yes])
 
-if test ${hdf5_cv_mpi_complex_derived_datatype_works} = "yes"; then
+if test ${hdf5_mpi_complex_derived_datatype_works} = "yes"; then
   AC_DEFINE([MPI_COMPLEX_DERIVED_DATATYPE_WORKS], [1],
             [Define if your system can handle complicated MPI derived datatype correctly.])
   AC_MSG_RESULT([yes])
@@ -2756,9 +2653,9 @@ dnl and SGI altix. For those systems, we have to turn off this feature and use i
 dnl
 AC_MSG_CHECKING([if MPI-IO can do collective IO when one or more processes don't do IOs])
 
-AC_CACHE_VAL([hdf5_cv_mpi_special_collective_io_works],[hdf5_cv_mpi_special_collective_io_works=yes])
+AC_CACHE_VAL([hdf5_mpi_special_collective_io_works],[hdf5_mpi_special_collective_io_works=yes])
 
-if test ${hdf5_cv_mpi_special_collective_io_works} = "yes"; then
+if test ${hdf5_mpi_special_collective_io_works} = "yes"; then
   AC_DEFINE([MPI_SPECIAL_COLLECTIVE_IO_WORKS], [1],
             [Define if your system can handle special collective IO properly.])
   AC_MSG_RESULT([yes])
@@ -2885,7 +2782,7 @@ AC_ARG_ENABLE([direct-vfd],
               [DIRECT_VFD=$enableval], [DIRECT_VFD=yes])
 
 if test "$DIRECT_VFD" = "yes"; then
-   AC_CACHE_VAL([hdf5_cv_direct_io],
+   AC_CACHE_VAL([hdf5_direct_io],
        [AC_TRY_RUN([
 	  #include <sys/types.h>
 	  #include <sys/stat.h>
@@ -2898,9 +2795,9 @@ if test "$DIRECT_VFD" = "yes"; then
              close(fid);  
              remove("tst_file"); 
              exit (0);
-          }], AC_TRY_LINK(, [posix_memalign()], [hdf5_cv_direct_io=yes], [hdf5_cv_direct_io=no]), [hdf5_cv_direct_io=no],)])
+          }], AC_TRY_LINK(, [posix_memalign()], [hdf5_direct_io=yes], [hdf5_direct_io=no]), [hdf5_direct_io=no],)])
 
-   if test ${hdf5_cv_direct_io} = "yes"; then
+   if test ${hdf5_direct_io} = "yes"; then
       AC_MSG_RESULT([yes])
       AC_DEFINE([HAVE_DIRECT], [1],
                 [Define if the direct I/O virtual file driver should be compiled])
@@ -3019,7 +2916,7 @@ dnl
 AC_MSG_CHECKING([if converting from long double to integers is accurate])
 
 if test ${ac_cv_sizeof_long_double} = 0; then
-   hdf5_cv_ldouble_to_integer_accurate=${hdf5_cv_ldouble_to_integer_accurate=no}
+   hdf5_ldouble_to_integer_accurate=${hdf5_ldouble_to_integer_accurate=no}
 else
    AC_CACHE_VAL([hdf5_cv_ldouble_to_integer_accurate], [hdf5_cv_ldouble_to_integer_accurate=yes])
 fi
@@ -3043,9 +2940,9 @@ dnl yet. (1/8/05 - SLU)
 AC_MSG_CHECKING([if converting from long double to integers works])
 
 if test ${ac_cv_sizeof_long_double} = 0; then
-   hdf5_cv_ldouble_to_integer_works=${hdf5_cv_ldouble_to_integer_works=no}
+   hdf5_ldouble_to_integer_works=${hdf5_ldouble_to_integer_works=no}
 else
-   AC_CACHE_VAL([hdf5_cv_ldouble_to_integer_works],
+   AC_CACHE_VAL([hdf5_ldouble_to_integer_works],
         [AC_TRY_RUN([
         int main(void)
         {
@@ -3068,10 +2965,10 @@ else
     done:
             exit(ret);
         }
-        ], [hdf5_cv_ldouble_to_integer_works=yes], [hdf5_cv_ldouble_to_integer_works=no],)])
+        ], [hdf5_ldouble_to_integer_works=yes], [hdf5_ldouble_to_integer_works=no],)])
 fi
 
-if test ${hdf5_cv_ldouble_to_integer_works} = "yes"; then
+if test ${hdf5_ldouble_to_integer_works} = "yes"; then
   AC_DEFINE([LDOUBLE_TO_INTEGER_WORKS], [1],
             [Define if your system can convert from long double to integer values.])
   AC_MSG_RESULT([yes])
@@ -3101,56 +2998,6 @@ if test ${hdf5_cv_integer_to_ldouble_accurate} = "yes"; then
 else
   AC_MSG_RESULT([no])
 fi
-
-dnl ----------------------------------------------------------------------
-dnl Set the flag to indicate that the machine can accurately convert
-dnl 'unsigned long' to 'float' values.
-dnl (This flag should be set for all machines, except for Pathscale compiler
-dnl on Sandia's Linux machine where the compiler interprets 'unsigned long'
-dnl values as negative when the first bit of 'unsigned long' is on during 
-dnl the conversion to float.) 
-dnl
-AC_MSG_CHECKING([if accurately converting unsigned long to float values])
-
-AC_CACHE_VAL([hdf5_cv_ulong_to_float_accurate],
-    [AC_TRY_RUN([
-    int main(void)
-    {
-        int           ret = 0;
-        unsigned long l1;
-        unsigned long l2;
-        unsigned long l3;
-        float f1;
-        float f2;
-        float f3;
-
-
-        if(sizeof(unsigned long)==8) {
-            l1 = 0xffffffffffffffffUL;
-            l2 = 0xffffffffffff0000UL;
-            l3 = 0xf000000000000000UL;
-
-            f1 = (float)l1;
-            f2 = (float)l2;
-            f3 = (float)l3;
-
-            if((f1 < 0) || (f2 < 0) || (f3 < 0))
-                ret = 1;
-        }
-
-done:
-        exit(ret);
-    }
-    ], [hdf5_cv_ulong_to_float_accurate=yes], [hdf5_cv_ulong_to_float_accurate=no],)])
-
-if test ${hdf5_cv_ulong_to_float_accurate} = "yes"; then
-  AC_DEFINE([ULONG_TO_FLOAT_ACCURATE], [1],
-            [Define if your system accurately converting unsigned long to float values.])
-  AC_MSG_RESULT([yes])
-else
-  AC_MSG_RESULT([no])
-fi
-
 
 dnl ----------------------------------------------------------------------
 dnl Set the flag to indicate that the machine can accurately convert
@@ -3245,7 +3092,7 @@ dnl than 0.5.
 dnl
 AC_MSG_CHECKING([if accurately roundup converting floating-point to unsigned long long values])
 
-AC_CACHE_VAL([hdf5_cv_fp_to_ullong_accurate],
+AC_CACHE_VAL([hdf5_fp_to_ullong_accurate],
     [AC_TRY_RUN([
     int main(void)
     {
@@ -3263,9 +3110,9 @@ AC_CACHE_VAL([hdf5_cv_fp_to_ullong_accurate],
 done:
         exit(ret);
     }
-    ], [hdf5_cv_fp_to_ullong_accurate=yes], [hdf5_cv_fp_to_ullong_accurate=no],)])
+    ], [hdf5_fp_to_ullong_accurate=yes], [hdf5_fp_to_ullong_accurate=no],)])
 
-if test ${hdf5_cv_fp_to_ullong_accurate} = "yes"; then
+if test ${hdf5_fp_to_ullong_accurate} = "yes"; then
   AC_DEFINE([FP_TO_ULLONG_ACCURATE], [1],
             [Define if your system roundup accurately converting floating-point to unsigned long long values.])
   AC_MSG_RESULT([yes])
@@ -3282,7 +3129,7 @@ dnl during conversion.
 dnl
 AC_MSG_CHECKING([if right maximum converting floating-point to unsigned long long values])
 
-AC_CACHE_VAL([hdf5_cv_fp_to_ullong_right_maximum],
+AC_CACHE_VAL([hdf5_fp_to_ullong_right_maximum],
     [AC_TRY_RUN([
     int main(void)
     {
@@ -3307,9 +3154,9 @@ AC_CACHE_VAL([hdf5_cv_fp_to_ullong_right_maximum],
 done:
         exit(ret);
     }
-    ], [hdf5_cv_fp_to_ullong_right_maximum=yes], [hdf5_cv_fp_to_ullong_right_maximum=no],)])
+    ], [hdf5_fp_to_ullong_right_maximum=yes], [hdf5_fp_to_ullong_right_maximum=no],)])
 
-if test ${hdf5_cv_fp_to_ullong_right_maximum} = "yes"; then
+if test ${hdf5_fp_to_ullong_right_maximum} = "yes"; then
   AC_DEFINE([FP_TO_ULLONG_RIGHT_MAXIMUM], [1],
             [Define if your system has right maximum convert floating-point to unsigned long long values.])
   AC_MSG_RESULT([yes])
@@ -3325,9 +3172,9 @@ dnl
 AC_MSG_CHECKING([if correctly converting long double to unsigned int values])
 
 if test ${ac_cv_sizeof_long_double} = 0; then
-   hdf5_cv_ldouble_to_uint_accurate=${hdf5_cv_ldouble_to_uint_accurate=no}
+   hdf5_ldouble_to_uint_accurate=${hdf5_ldouble_to_uint_accurate=no}
 else
-   AC_CACHE_VAL([hdf5_cv_ldouble_to_uint_accurate],
+   AC_CACHE_VAL([hdf5_ldouble_to_uint_accurate],
         [AC_TRY_RUN([
         int main(void)
         {
@@ -3342,10 +3189,10 @@ else
     done:
             exit(ret);
         }
-        ], [hdf5_cv_ldouble_to_uint_accurate=yes], [hdf5_cv_ldouble_to_uint_accurate=no],)])
+        ], [hdf5_ldouble_to_uint_accurate=yes], [hdf5_ldouble_to_uint_accurate=no],)])
 fi
 
-if test ${hdf5_cv_ldouble_to_uint_accurate} = "yes"; then
+if test ${hdf5_ldouble_to_uint_accurate} = "yes"; then
   AC_DEFINE([LDOUBLE_TO_UINT_ACCURATE], [1],
             [Define if your system can convert long double to unsigned int values correctly.])
   AC_MSG_RESULT([yes])
@@ -3527,9 +3374,9 @@ dnl
 AC_MSG_CHECKING([if correctly converting long double to (unsigned) long long values])
 
 if test ${ac_cv_sizeof_long_double} = 0; then
-   hdf5_cv_ldouble_to_llong_accurate=${hdf5_cv_ldouble_to_llong_accurate=no}
+   hdf5_ldouble_to_llong_accurate=${hdf5_ldouble_to_llong_accurate=no}
 else
-   AC_CACHE_VAL([hdf5_cv_ldouble_to_llong_accurate],
+   AC_CACHE_VAL([hdf5_ldouble_to_llong_accurate],
         [AC_TRY_RUN([
         int main(void)
         {
@@ -3567,10 +3414,10 @@ else
     done:
             exit(ret);
         }
-        ], [hdf5_cv_ldouble_to_llong_accurate=yes], [hdf5_cv_ldouble_to_llong_accurate=no],)])
+        ], [hdf5_ldouble_to_llong_accurate=yes], [hdf5_ldouble_to_llong_accurate=no],)])
 fi
 
-if test ${hdf5_cv_ldouble_to_llong_accurate} = "yes"; then
+if test ${hdf5_ldouble_to_llong_accurate} = "yes"; then
   AC_DEFINE([LDOUBLE_TO_LLONG_ACCURATE], [1],
             [Define if your system can convert long double to (unsigned) long long values correctly.])
   AC_MSG_RESULT([yes])
@@ -3588,9 +3435,9 @@ dnl
 AC_MSG_CHECKING([if correctly converting (unsigned) long long to long double values])
 
 if test ${ac_cv_sizeof_long_double} = 0; then
-   hdf5_cv_llong_to_ldouble_correct=${hdf5_cv_llong_to_ldouble_correct=no}
+   hdf5_llong_to_ldouble_correct=${hdf5_llong_to_ldouble_correct=no}
 else
-   AC_CACHE_VAL([hdf5_cv_llong_to_ldouble_correct],
+   AC_CACHE_VAL([hdf5_llong_to_ldouble_correct],
         [AC_TRY_RUN([
         int main(void)
         {
@@ -3632,10 +3479,10 @@ else
     done:
             exit(ret);
         }
-        ], [hdf5_cv_llong_to_ldouble_correct=yes], [hdf5_cv_llong_to_ldouble_correct=no],)])
+        ], [hdf5_llong_to_ldouble_correct=yes], [hdf5_llong_to_ldouble_correct=no],)])
 fi
 
-if test ${hdf5_cv_llong_to_ldouble_correct} = "yes"; then
+if test ${hdf5_llong_to_ldouble_correct} = "yes"; then
   AC_DEFINE([LLONG_TO_LDOUBLE_CORRECT], [1],
             [Define if your system can convert (unsigned) long long to long double values correctly.])
   AC_MSG_RESULT([yes])
@@ -3689,14 +3536,6 @@ else
   BYTESEX="little-endian"
 fi
 
-
-if test "X$ac_cv_c_bigendian" = "Xyes"; then
-  WORDS_BIGENDIAN="yes"
-else
-  WORDS_BIGENDIAN="no"
-fi
-AC_SUBST([WORDS_BIGENDIAN])
-
 dnl Parallel support? (set above except empty if none)
 PARALLEL=${PARALLEL:-no}
 
@@ -3746,8 +3585,8 @@ dnl libraries.
 dnl 
 AC_SUBST([DYNAMIC_DIRS]) DYNAMIC_DIRS=""
 
-if test -n "$AM_LDFLAGS $LDFLAGS"; then
-  for d in $AM_LDFLAGS $LDFLAGS ; do
+if test -n "$LDFLAGS"; then
+  for d in $LDFLAGS ; do
     case "$d" in
       -L*)
         d="`echo $d | sed -e 's/-L//g'`"
@@ -3764,9 +3603,9 @@ if test -n "$AM_LDFLAGS $LDFLAGS"; then
   done
 fi
 
-if test -n "$AM_CPPFLAGS"; then
+if test -n "$CPPFLAGS"; then
   TEMP_CPPFLAGS=""
-  for d in $AM_CPPFLAGS ; do
+  for d in $CPPFLAGS ; do
     case "$d" in
       -I.*)
         dnl If the path isn't absolute, make it so by prepending
@@ -3777,7 +3616,7 @@ if test -n "$AM_CPPFLAGS"; then
     esac
     TEMP_CPPFLAGS="$d $TEMP_CPPFLAGS"
   done
-  AM_CPPFLAGS=$TEMP_CPPFLAGS
+  CPPFLAGS=$TEMP_CPPFLAGS
 fi
 
 dnl ----------------------------------------------------------------------
@@ -3853,29 +3692,26 @@ dnl
 AC_SUBST([DEFAULT_API_VERSION])
 AC_MSG_CHECKING([which version of public symbols to use by default])
 AC_ARG_WITH([default-api-version],
-            [AC_HELP_STRING([--with-default-api-version=(v16|v18|v110)],
+            [AC_HELP_STRING([--with-default-api-version=(v16|v18)],
                             [Specify default release version of public symbols
-                             [default=v110]])],,
-            withval=v110)
+                             [default=v18]])],,
+            withval=v18)
 
 if test "X$withval" = "Xv16"; then
     AC_MSG_RESULT([v16])
     DEFAULT_API_VERSION=v16
-    AC_DEFINE([USE_16_API_DEFAULT], [1],
+    AC_DEFINE([USE_16_API], [1],
               [Define using v1.6 public API symbols by default])
 elif test "X$withval" = "Xv18"; then
     AC_MSG_RESULT([v18])
     DEFAULT_API_VERSION=v18
-elif test "X$withval" = "Xv110"; then
-    AC_MSG_RESULT([v110])
-    DEFAULT_API_VERSION=v110
 else
     AC_MSG_ERROR([invalid version of public symbols given])
 fi
 
 dnl It's an error to try to disable deprecated public API symbols while
 dnl choosing an older version of the public API as the default.
-if test "X${DEFAULT_API_VERSION}" != "Xv110" -a "X${DEPRECATED_SYMBOLS}" = "Xno" ; then
+if test "X${DEFAULT_API_VERSION}" != "Xv18" -a "X${DEPRECATED_SYMBOLS}" = "Xno" ; then
   AC_MSG_ERROR([Removing old public API symbols not allowed when using them as default public API symbols])
 fi
 
@@ -3915,82 +3751,6 @@ esac
 
 
 dnl ----------------------------------------------------------------------
-dnl Enable embedded library information
-dnl
-AC_MSG_CHECKING([Whether to have library information embedded in the executables])
-AC_ARG_ENABLE([embedded-libinfo],
-    [AC_HELP_STRING([--enable-embedded-libinfo],
-	[Enable embedded library information [default=yes]])],
-	[enable_embedded_libinfo=$enableval],
-	[enable_embedded_libinfo=yes])
-
-   if test "${enable_embedded_libinfo}" = "yes"; then
-      AC_MSG_RESULT([yes])
-      AC_DEFINE([HAVE_EMBEDDED_LIBINFO], [1],
-                [Define if library information should be embedded in the executables])
-   else
-      AC_MSG_RESULT([no])
-    fi
-
-
-dnl ----------------------------------------------------------------------
-dnl Check if pointer alignments are enforced
-dnl
-AC_MSG_CHECKING([if alignment restrictions are strictly enforced])
-AC_RUN_IFELSE([
-    AC_LANG_PROGRAM([
-        #include <stdlib.h>
-        #include <string.h>
-
-        typedef struct {
-            size_t len;
-            void *p;
-        } hvl_t;
-        ], [
-        char *chp = "beefs";
-        char **chpp = malloc (2 * sizeof (char *));
-        char **chpp2;
-        hvl_t vl = { 12345, (void *) chp };
-        hvl_t *vlp;
-        hvl_t *vlp2;
-
-        memcpy ((void *) ((char *) chpp + 1), &chp, sizeof (char *));
-        chpp2 = (char **) ((char *) chpp + 1);
-        if (strcmp (*chpp2, chp)) {
-            free (chpp);
-            return 1;
-        }
-        free (chpp);
-
-        vlp = malloc (2 * sizeof (hvl_t));
-        memcpy ((void *) ((char *) vlp + 1), &vl, sizeof (hvl_t));
-        vlp2 = (hvl_t *) ((char *) vlp + 1);
-        if (vlp2->len != vl.len || vlp2->p != vl.p) {
-            free (vlp);
-            return 1;
-        }
-        free (vlp);
-    ])
-    ], [
-    AC_DEFINE([NO_ALIGNMENT_RESTRICTIONS], [1], [Define if we can violate pointer alignment restrictions])
-    AC_MSG_RESULT([no])
-    ], [
-    AC_MSG_RESULT([yes])
-    ], [
-    AC_MSG_RESULT([unknown, assuming yes])
-    ])
-
-
-dnl ----------------------------------------------------------------------
-dnl Restore user's CFLAGS.
-CFLAGS="$saved_user_CFLAGS"
-FCFLAGS="$saved_user_FCFLAGS"
-CXXFLAGS="$saved_user_CXXFLAGS"
-CPPFLAGS="$saved_user_CPPFLAGS"
-LDFLAGS="$saved_user_LDFLAGS"
-
-
-dnl ----------------------------------------------------------------------
 dnl Create automake conditionals to tell automake makefiles which directories
 dnl need to be compiled
 
@@ -4019,7 +3779,7 @@ else
 fi
 
 dnl Some cleanup stuff
-rm -f conftest conftest.o conftest.c dummy.o *.mod
+rm -f conftest conftest.o conftest.c dummy.o
 
 dnl Build config.status, touch the stamp files, and build all the Makefiles.
 dnl The order is such that the first `make' does not need to update any
@@ -4049,9 +3809,7 @@ AC_CONFIG_FILES([src/libhdf5.settings
                  Makefile
                  src/Makefile
                  test/Makefile
-                 test/testcheck_version.sh
                  test/testerror.sh
-                 test/testlibinfo.sh
                  testpar/Makefile
                  testpar/testph5.sh
                  perform/Makefile
@@ -4059,7 +3817,6 @@ AC_CONFIG_FILES([src/libhdf5.settings
                  tools/h5dump/Makefile
                  tools/h5dump/testh5dump.sh
                  tools/h5dump/testh5dumpxml.sh
-                 tools/h5ls/testh5ls.sh
                  tools/h5import/Makefile
                  tools/h5diff/Makefile
                  tools/h5jam/Makefile
@@ -4084,6 +3841,7 @@ AC_CONFIG_FILES([src/libhdf5.settings
                  c++/examples/testh5c++.sh
                  fortran/Makefile
                  fortran/src/h5fc
+                 fortran/src/libhdf5_fortran.settings
                  fortran/src/Makefile
                  fortran/test/Makefile
                  fortran/testpar/Makefile
@@ -4094,6 +3852,7 @@ AC_CONFIG_FILES([src/libhdf5.settings
                  hl/test/Makefile
                  hl/tools/Makefile
                  hl/tools/gif2h5/Makefile
+                 hl/tools/h52jpeg/Makefile
                  hl/examples/Makefile
                  hl/c++/Makefile
                  hl/c++/src/Makefile
@@ -4163,3 +3922,208 @@ EOF
 
 dnl show the configure settings
 cat src/libhdf5.settings
+
+if false; then
+dnl ============ old code to be removed ================
+dnl ----------------------------------------------------------------------
+dnl Print out a summary of what we are going to build.
+dnl
+if test -z "$ECHO_N" -o -z "$ECHO_C"; then
+  if (echo "testing\c"; echo 1,2,3) | grep c >/dev/null; then
+    if (echo -n testing; echo 1,2,3) | sed s/-n/xn/ | grep xn >/dev/null; then
+      ECHO_N=''
+      ECHO_C='
+'
+    else
+      ECHO_N=-n
+      ECHO_C=''
+    fi
+  else
+    ECHO_N=''
+    ECHO_C='\c'
+  fi
+fi
+
+PRINT_PLAIN() {
+  echo $ECHO_N "$1$ECHO_C"
+  echo $ECHO_N "$1$ECHO_C" 1>>src/libhdf5.settings
+}
+
+PRINT_N() {
+  echo $ECHO_N "$1:  $ECHO_C"
+  echo $ECHO_N "$1:  $ECHO_C" 1>>src/libhdf5.settings
+}
+
+PRINT() {
+  echo "$1"
+  echo "$1" 1>>src/libhdf5.settings
+}
+
+dnl ----------------------------------------------------------------------
+dnl Print "Yes" if all arguments are "yes", otherwise "No"
+dnl
+IF_YES_NO() {
+  if test $# -lt 1; then
+    PRINT "No"
+    return
+  else
+    while test $# -gt 0; do
+      if test "$1" != "yes"; then
+        PRINT "No"
+        return
+      fi
+      shift
+    done
+  fi
+  PRINT "Yes"
+}
+
+IF_ENABLED_DISABLED() {
+  if test "$1" = "yes"; then
+    PRINT "Enabled"
+  else
+    PRINT "Disabled"
+  fi
+}
+
+PRINT ""
+PRINT "                       Configure Summary"
+PRINT "                       ================="
+PRINT ""
+PRINT "Compiling Options:"
+PRINT "------------------"
+
+PRINT_N "               Compilation Mode"
+case "X-$enable_production" in
+  X-yes)        PRINT "Production" ;;
+  X-no)         PRINT "Development" ;;
+  X-profile)    PRINT "Profile" ;;
+  *)            PRINT "$enable_production" ;;
+esac
+
+PRINT_N "                     C Compiler"
+PRINT "$CC"
+
+PRINT_N "                         CFLAGS / H5_CFLAGS"
+PRINT "$CFLAGS"
+PRINT "                         $H5_CFLAGS"
+
+PRINT_N "                       CPPFLAGS / H5_CPPFLAGS"
+PRINT "$CPPFLAGS"
+PRINT "                         $H5_CPPFLAGS"
+
+PRINT_N "                        LDFLAGS"
+PRINT "$LDFLAGS"
+
+PRINT_N "                     Debug Mode"
+
+if test "X$DEBUG_PKG" = "X$all_packages"; then
+  PRINT "All"
+elif test "X$DEBUG_PKG" = "X"; then
+  PRINT "None"
+else
+  PRINT $DEBUG_PKG
+fi
+
+PRINT_N "               Shared Libraries"
+IF_YES_NO "$enable_shared"
+
+PRINT_N "               Static Libraries"
+IF_YES_NO "$enable_static"
+
+PRINT_N "  Statically Linked Executables"
+IF_YES_NO "$STATIC_EXEC"
+
+PRINT_N "Default Version of Public Symbols"
+PRINT $DEFAULT_API_VERSION
+
+PRINT_N " With Deprecated Public Symbols"
+IF_YES_NO "$DEPRECATED_SYMBOLS"
+
+PRINT_N "                        Tracing"
+IF_YES_NO "$TRACE_API"
+
+PRINT_N "Clear file buffers before write"
+IF_YES_NO "$CLEARFILEBUF"
+
+PRINT_N "           Using memory checker"
+IF_YES_NO "$USINGMEMCHECKER"
+
+PRINT_N "   Optimization Instrumentation"
+IF_YES_NO "$INSTRUMENT"
+
+PRINT ""
+PRINT "Languages:"
+PRINT "----------"
+
+PRINT_N "                            C++"
+IF_YES_NO "$HDF_CXX"
+if test X$HDF_CXX = Xyes; then
+    PRINT_N "                   C++ Compiler"
+    PRINT "$CXX"
+
+    PRINT_N "                       CXXFLAGS / H5_CXXFLAGS"
+    PRINT "$CXXFLAGS"
+    PRINT "                       $H5_CXXFLAGS"
+fi
+
+PRINT_N "                        Fortran"
+IF_YES_NO "$HDF_FORTRAN"
+if test X$HDF_FORTRAN = Xyes; then
+    PRINT_N "               Fortran Compiler"
+    PRINT "$FC"
+
+    PRINT_N "                         FCFLAGS / H5_FCFLAGS"
+    PRINT "$FCFLAGS"
+    PRINT "                         $H5_FCFLAGS"
+fi
+
+PRINT ""
+PRINT "Features:"
+PRINT "---------"
+
+PRINT_N "                        dmalloc"
+IF_YES_NO "$HAVE_DMALLOC"
+
+PRINT_N "         Function Stack Tracing"
+IF_ENABLED_DISABLED "$CODESTACK"
+
+PRINT_N "                           GPFS"
+IF_YES_NO "$GPFS"
+
+PRINT_N "      Strict File Format Checks"
+IF_ENABLED_DISABLED "$STRICT_FORMAT_CHECKS"
+
+PRINT_N "            Default API Mapping"
+PRINT "$DEFAULT_API_VERSION"
+
+PRINT_N "         I/O filters (external)"
+PRINT "$EXTERNAL_FILTERS"
+
+PRINT_N "         I/O filters (internal)"
+PRINT "$FILTERS"
+
+PRINT_N " Linux Large File Support (LFS)"
+IF_ENABLED_DISABLED "$LINUX_LFS"
+
+PRINT_N "                            MPE"
+IF_YES_NO "$MPE"
+
+
+PRINT_N "                  Parallel HDF5"
+if test "$PARALLEL" != "no"; then
+  PRINT "Yes"
+else
+  PRINT "No"
+fi
+
+
+PRINT_N "                     Direct VFD"
+IF_ENABLED_DISABLED "$DIRECT_VFD"
+
+PRINT_N "                   Threadsafety"
+IF_ENABLED_DISABLED "$THREADSAFE"
+
+PRINT_N "             High Level library"
+IF_ENABLED_DISABLED "$HDF5_HL"
+fi

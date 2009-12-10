@@ -24,7 +24,6 @@
 
 
 #define TABLE_CLASS         "TABLE"
-#define TABLE_VERSION       "3.0"
 #define HLTB_MAX_FIELD_LEN  255
 
 /*-------------------------------------------------------------------------

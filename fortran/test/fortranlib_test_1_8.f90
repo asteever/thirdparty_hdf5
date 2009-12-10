@@ -26,14 +26,10 @@ PROGRAM fortranlibtest
   INTEGER :: error
   INTEGER :: ret_total_error
   INTEGER :: majnum, minnum, relnum
-  LOGICAL :: cleanup, status
+  LOGICAL :: cleanup = .TRUE.
+!       LOGICAL :: cleanup = .FALSE.
 
   CALL h5open_f(error) 
-
-  cleanup = .TRUE.
-  CALL h5_env_nocleanup_f(status)
-  IF(status) cleanup=.FALSE.
-
   WRITE(*,*) '                       ==========================                            '
   WRITE(*,*) '                              FORTRAN 1.8 tests '
   WRITE(*,*) '                       ==========================                            '
@@ -51,7 +47,7 @@ PROGRAM fortranlibtest
   WRITE(*,*)
 
   ret_total_error = 0
-  CALL file_space("file_space_1_8",cleanup, ret_total_error)
+  CALL file_space(cleanup, ret_total_error)
   CALL write_test_status(ret_total_error, &
        ' Testing file free space', &
        total_error)
@@ -91,8 +87,6 @@ PROGRAM fortranlibtest
   CALL write_test_status(ret_total_error, &
        ' Testing dataspace encoding and decoding', &
        total_error)
-
-  
 
 !  CALL test_hard_query(group_total_error)
 

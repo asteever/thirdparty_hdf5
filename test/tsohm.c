@@ -23,14 +23,6 @@
 
 #include "testhdf5.h"
 
-/*
- * This file needs to access private information from the H5F package.
- * This file also needs to access the file testing code.
- */
-#define H5F_PACKAGE
-#define H5F_TESTING
-#include "H5Fpkg.h"		/* File access	 			*/
-
 /* Default SOHM values */
 #define DEF_NUM_INDEXES 0
 const unsigned def_type_flags[H5O_SHMESG_MAX_NINDEXES] = {0,0,0,0,0,0};
@@ -157,10 +149,6 @@ typedef struct size2_helper_struct {
 
 /* Number of dimensions in extend_dset test */
 #define EXTEND_NDIMS 2
-
-/* Dimensions for external_dtype test */
-#define NX     10
-#define NY     10
 
 /* Helper function prototypes */
 static hid_t make_dtype_1(void);
@@ -544,12 +532,8 @@ error:
 static hid_t
 close_reopen_file(hid_t file, const char* filename, hid_t fapl_id)
 {
-    hid_t fid;
-
-    if(H5Fclose(file) < 0) FAIL_STACK_ERROR
-    if((fid = H5Fopen(filename, H5F_ACC_RDWR, fapl_id)) < 0) FAIL_STACK_ERROR
-
-    return(fid);
+    if(H5Fclose(file) < 0) goto error;
+    return H5Fopen(filename, H5F_ACC_RDWR, fapl_id);
 
 error:
     return -1;
@@ -602,19 +586,19 @@ size1_helper(hid_t file, const char* filename, hid_t fapl_id, int test_file_clos
     dim1[0] = 1;
     if((space_id=H5Screate_simple(1,dim1,NULL)) < 0) TEST_ERROR
 
-    if((dset_id = H5Dcreate2(file,DSETNAME[0],dtype1_id,space_id,H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) FAIL_STACK_ERROR
+    if((dset_id = H5Dcreate2(file,DSETNAME[0],dtype1_id,space_id,H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
 
     /* Test writing and reading */
-    if(H5Dwrite(dset_id,dtype1_id,H5S_ALL,H5S_ALL,H5P_DEFAULT,&wdata) < 0) FAIL_STACK_ERROR
+    if(H5Dwrite(dset_id,dtype1_id,H5S_ALL,H5S_ALL,H5P_DEFAULT,&wdata) < 0) TEST_ERROR
 
-    if(H5Dread(dset_id,dtype1_id,H5S_ALL,H5S_ALL,H5P_DEFAULT,&rdata) < 0) FAIL_STACK_ERROR
+    if(H5Dread(dset_id,dtype1_id,H5S_ALL,H5S_ALL,H5P_DEFAULT,&rdata) < 0) TEST_ERROR
 
     if(rdata.i1!=wdata.i1 || rdata.i2!=wdata.i2 || HDstrcmp(rdata.str, wdata.str)) {
         H5_FAILED(); AT();
         printf("incorrect read data\n");
         goto error;
     } /* end if */
-    if(H5Dclose(dset_id) < 0) FAIL_STACK_ERROR
+    if(H5Dclose(dset_id) < 0) TEST_ERROR
 
     /* Close and re-open the file if requested*/
     if(test_file_closing) {
@@ -622,8 +606,8 @@ size1_helper(hid_t file, const char* filename, hid_t fapl_id, int test_file_clos
     }
 
     /* Create more datasets with the same datatype */
-    if((dset_id = H5Dcreate2(file,DSETNAME[1],dtype1_id,space_id,H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) FAIL_STACK_ERROR
-    if(H5Dclose(dset_id) < 0) FAIL_STACK_ERROR
+    if((dset_id = H5Dcreate2(file,DSETNAME[1],dtype1_id,space_id,H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
+    if(H5Dclose(dset_id) < 0) TEST_ERROR
 
     /* Close and re-open the file if requested*/
     if(test_file_closing) {
@@ -735,6 +719,7 @@ static void test_sohm_size1(void)
     hid_t       file = -1;
     hid_t       fcpl_id = -1;
     hid_t       fapl_id = -1;
+    hsize_t     norm_oh_size;
     hsize_t     sohm_oh_size;
     hsize_t     sohm_btree_oh_size;
     h5_stat_size_t norm_empty_filesize;
@@ -778,18 +763,23 @@ static void test_sohm_size1(void)
     CHECK_I(ret, "H5Fclose");
 
     /* Get the file size */
-    norm_empty_filesize = h5_get_file_size(FILENAME, fapl_id);
+    norm_empty_filesize = h5_get_file_size(FILENAME);
 
     /* Add a bunch of large datatypes to the file */
     file = H5Fopen(FILENAME, H5F_ACC_RDWR, fapl_id);
     CHECK_I(file, "H5Fopen");
     file = size1_helper(file, FILENAME, fapl_id, 0);
     CHECK_I(file, "size1_helper");
+
+    /* Get the size of a dataset object header */
+    ret = H5Oget_info_by_name(file, DSETNAME[0], &oinfo, H5P_DEFAULT);
+    CHECK_I(ret, "H5Oget_info_by_name");
     ret = H5Fclose(file);
     CHECK_I(ret, "H5Fclose");
+    norm_oh_size = oinfo.hdr.space.total;
 
     /* Get the new file size */
-    norm_final_filesize = h5_get_file_size(FILENAME, fapl_id);
+    norm_final_filesize = h5_get_file_size(FILENAME);
 
     /* Use the same property list to create a new file. */
     file = H5Fcreate(FILENAME, H5F_ACC_TRUNC, fcpl_id, fapl_id);
@@ -805,7 +795,7 @@ static void test_sohm_size1(void)
     CHECK_I(ret, "H5Fclose");
 
     /* Get the file size */
-    norm_final_filesize2 = h5_get_file_size(FILENAME, fapl_id);
+    norm_final_filesize2 = h5_get_file_size(FILENAME);
 
 
 
@@ -829,7 +819,7 @@ static void test_sohm_size1(void)
     ret = H5Fclose(file);
     CHECK_I(ret, "H5Fclose");
 
-    sohm_empty_filesize = h5_get_file_size(FILENAME, fapl_id);
+    sohm_empty_filesize = h5_get_file_size(FILENAME);
 
     /* Add a bunch of datatypes to this file */
     file = H5Fopen(FILENAME, H5F_ACC_RDWR, fapl_id);
@@ -845,7 +835,7 @@ static void test_sohm_size1(void)
     sohm_oh_size = oinfo.hdr.space.total;
 
     /* Get the new file size */
-    sohm_final_filesize = h5_get_file_size(FILENAME, fapl_id);
+    sohm_final_filesize = h5_get_file_size(FILENAME);
 
     /* Use the same property list to create a new file. */
     file = H5Fcreate(FILENAME, H5F_ACC_TRUNC, fcpl_id, fapl_id);
@@ -861,7 +851,7 @@ static void test_sohm_size1(void)
     CHECK_I(ret, "H5Fclose");
 
     /* Get the file size */
-    sohm_final_filesize2 = h5_get_file_size(FILENAME, fapl_id);
+    sohm_final_filesize2 = h5_get_file_size(FILENAME);
 
 
 
@@ -884,7 +874,7 @@ static void test_sohm_size1(void)
     ret = H5Fclose(file);
     CHECK_I(ret, "H5Fclose");
 
-    sohm_btree_empty_filesize = h5_get_file_size(FILENAME, fapl_id);
+    sohm_btree_empty_filesize = h5_get_file_size(FILENAME);
 
     /* Add a bunch of datatypes to this file */
     file = H5Fopen(FILENAME, H5F_ACC_RDWR, fapl_id);
@@ -900,7 +890,7 @@ static void test_sohm_size1(void)
     sohm_btree_oh_size = oinfo.hdr.space.total;
 
     /* Get the new file size */
-    sohm_btree_final_filesize = h5_get_file_size(FILENAME, fapl_id);
+    sohm_btree_final_filesize = h5_get_file_size(FILENAME);
 
     /* Use the same property list to create a new file. */
     file = H5Fcreate(FILENAME, H5F_ACC_TRUNC, fcpl_id, fapl_id);
@@ -916,7 +906,7 @@ static void test_sohm_size1(void)
     CHECK_I(ret, "H5Fclose");
 
     /* Get the file size */
-    sohm_btree_final_filesize2 = h5_get_file_size(FILENAME, fapl_id);
+    sohm_btree_final_filesize2 = h5_get_file_size(FILENAME);
 
 
 
@@ -925,6 +915,13 @@ static void test_sohm_size1(void)
      * headers.  How the SOHM messages are stored shouldn't affect the
      * size of the object header.
      */
+    /* JAMES: this fails because while the headers are the same size, the
+     * SOHM header is broken up by the SOHM table, so has to have a
+     * continuation message and a NULL message.
+
+    if(sohm_oh_size >= norm_oh_size)
+        VERIFY(sohm_oh_size, 1, "H5Oget_info_by_name");
+    */
     if(sohm_oh_size != sohm_btree_oh_size)
         VERIFY(sohm_btree_oh_size, 1, "H5Oget_info_by_name");
 
@@ -1075,7 +1072,7 @@ static void sohm_attr_helper(hid_t fcpl_id)
 
     attr_id = H5Acreate2(group_id, "attribute", H5T_NATIVE_INT, space_id, H5P_DEFAULT, H5P_DEFAULT);
     CHECK_I(attr_id, "H5Acreate2");
-
+    
     /* Open the attribute to get another handle */
     attr_id2 = H5Aopen(group_id, "attribute", H5P_DEFAULT);
     CHECK_I(attr_id2, "H5Aopen");
@@ -1180,7 +1177,7 @@ static void test_sohm_attrs(void)
 
     sohm_attr_helper(fcpl_id);
 
-
+    
     /* Run test with all three kinds of message shared */
     ret = H5Pset_shared_mesg_index(fcpl_id, 0, H5O_SHMESG_SDSPACE_FLAG | H5O_SHMESG_DTYPE_FLAG | H5O_SHMESG_ATTR_FLAG, 2);
     CHECK_I(ret, "H5Pset_shared_mesg_nindexes");
@@ -1369,14 +1366,14 @@ static void
 size2_dump_struct(const char *name, size2_helper_struct *sizes)
 {
   puts(name);
-  printf("    empty size: %llu\n", (unsigned long long)sizes->empty_size);
-  printf(" first dataset: %llu \tdelta: %llu\n", (unsigned long long)sizes->first_dset, (unsigned long long)(sizes->first_dset - sizes->empty_size));
-  printf("second dataset: %llu \tdelta: %llu\n", (unsigned long long)sizes->second_dset, (unsigned long long)(sizes->second_dset - sizes->first_dset));
-  printf("       dsets 1: %llu \tdelta: %llu\n", (unsigned long long)sizes->dsets1, (unsigned long long)(sizes->dsets1 - sizes->second_dset));
-  printf("       dsets 2: %llu \tdelta: %llu\n", (unsigned long long)sizes->dsets2, (unsigned long long)(sizes->dsets2 - sizes->dsets1));
-  printf("   interleaved: %llu \tdelta: %llu\n", (unsigned long long)sizes->interleaved, (unsigned long long)(sizes->interleaved - sizes->dsets2));
-  printf("    attributes: %llu \tdelta: %llu\n", (unsigned long long)sizes->attrs1, (unsigned long long)(sizes->attrs1 - sizes->interleaved));
-  printf("  attributes 2: %llu \tdelta: %llu\n", (unsigned long long)sizes->attrs2, (unsigned long long)(sizes->attrs2 - sizes->attrs1));
+  printf("    empty size: %llu\n", sizes->empty_size);
+  printf(" first dataset: %llu \tdelta: %llu\n", sizes->first_dset, sizes->first_dset - sizes->empty_size);
+  printf("second dataset: %llu \tdelta: %llu\n", sizes->second_dset, sizes->second_dset - sizes->first_dset);
+  printf("       dsets 1: %llu \tdelta: %llu\n", sizes->dsets1, sizes->dsets1 - sizes->second_dset);
+  printf("       dsets 2: %llu \tdelta: %llu\n", sizes->dsets2, sizes->dsets2 - sizes->dsets1);
+  printf("   interleaved: %llu \tdelta: %llu\n", sizes->interleaved, sizes->interleaved - sizes->dsets2);
+  printf("    attributes: %llu \tdelta: %llu\n", sizes->attrs1, sizes->attrs1 - sizes->interleaved);
+  printf("  attributes 2: %llu \tdelta: %llu\n", sizes->attrs2, sizes->attrs2 - sizes->attrs1);
 }
 
 
@@ -1444,7 +1441,7 @@ size2_helper(hid_t fcpl_id, int test_file_closing, size2_helper_struct *ret_size
     CHECK_I(ret, "H5Fclose");
 
     /* Get the file size */
-    ret_sizes->empty_size = h5_get_file_size(FILENAME, H5P_DEFAULT);
+    ret_sizes->empty_size = h5_get_file_size(FILENAME);
 
     /* Re-open the file and set up messages to write */
     file_id = H5Fopen(FILENAME, H5F_ACC_RDWR, H5P_DEFAULT);
@@ -1547,9 +1544,9 @@ size2_helper(hid_t fcpl_id, int test_file_closing, size2_helper_struct *ret_size
 
             /* Get the file's size now */
             if(x == 0)
-                ret_sizes->first_dset = h5_get_file_size(FILENAME, H5P_DEFAULT);
-            else
-                ret_sizes->second_dset = h5_get_file_size(FILENAME, H5P_DEFAULT);
+                ret_sizes->first_dset = h5_get_file_size(FILENAME);
+            else 
+                ret_sizes->second_dset = h5_get_file_size(FILENAME);
 
             file_id = H5Fopen(FILENAME, H5F_ACC_RDWR, H5P_DEFAULT);
             CHECK_I(file_id, "H5Fopen");
@@ -1564,7 +1561,7 @@ size2_helper(hid_t fcpl_id, int test_file_closing, size2_helper_struct *ret_size
     /* Close file and get its size now */
     ret = H5Fclose(file_id);
     CHECK_I(ret, "H5Fclose");
-    ret_sizes->dsets1 = h5_get_file_size(FILENAME, H5P_DEFAULT);
+    ret_sizes->dsets1 = h5_get_file_size(FILENAME);
 
 
     /* Now create a new group filled with datasets that use all different messages */
@@ -1605,7 +1602,7 @@ size2_helper(hid_t fcpl_id, int test_file_closing, size2_helper_struct *ret_size
     CHECK_I(ret, "H5Gclose");
     ret = H5Fclose(file_id);
     CHECK_I(ret, "H5Fclose");
-    ret_sizes->dsets2 = h5_get_file_size(FILENAME, H5P_DEFAULT);
+    ret_sizes->dsets2 = h5_get_file_size(FILENAME);
 
 
     /* Create a new group and interleave writes of datasets types 1 and 2. */
@@ -1659,7 +1656,7 @@ size2_helper(hid_t fcpl_id, int test_file_closing, size2_helper_struct *ret_size
     CHECK_I(ret, "H5Gclose");
     ret = H5Fclose(file_id);
     CHECK_I(ret, "H5Fclose");
-    ret_sizes->interleaved = h5_get_file_size(FILENAME, H5P_DEFAULT);
+    ret_sizes->interleaved = h5_get_file_size(FILENAME);
 
     /* Create lots of new attribute messages on the group
      * (using different strings for the attribute)
@@ -1702,7 +1699,7 @@ size2_helper(hid_t fcpl_id, int test_file_closing, size2_helper_struct *ret_size
     CHECK_I(ret, "H5Gclose");
     ret = H5Fclose(file_id);
     CHECK_I(ret, "H5Fclose");
-    ret_sizes->attrs1 = h5_get_file_size(FILENAME, H5P_DEFAULT);
+    ret_sizes->attrs1 = h5_get_file_size(FILENAME);
 
 
     /* Create all of the attributes again on the other group */
@@ -1741,7 +1738,7 @@ size2_helper(hid_t fcpl_id, int test_file_closing, size2_helper_struct *ret_size
     CHECK_I(ret, "H5Gclose");
     ret = H5Fclose(file_id);
     CHECK_I(ret, "H5Fclose");
-    ret_sizes->attrs2 = h5_get_file_size(FILENAME, H5P_DEFAULT);
+    ret_sizes->attrs2 = h5_get_file_size(FILENAME);
 
 
     /* Close everything */
@@ -1981,7 +1978,7 @@ static void size2_verify(void)
  *              function size2_helper.  The test measures the size of the
  *              file at various points.  Once all of the files have been
  *              generated, the test compares the measured sizes of the files.
- *
+ *              
  *
  * Programmer:  James Laird
  *              Friday, November 17, 2006
@@ -2001,7 +1998,7 @@ static void test_sohm_size2(int close_reopen)
     /* Sizes for files that don't share all kinds of messages */
     size2_helper_struct share_some_med, share_some_btree;
     /* Sizes for files that share different sizes of messages */
-    size2_helper_struct share_some_toobig_index, share_tiny_index, type_space_index;
+    size2_helper_struct share_some_toobig_index, share_tiny_index, type_space_index; 
     herr_t      ret;
 
     if(close_reopen == 0)
@@ -2339,10 +2336,8 @@ static void test_sohm_size2(int close_reopen)
     if((list_index_big.attrs1 - list_index_big.interleaved) >=
             (list_index_small.attrs1 - list_index_small.interleaved))
         VERIFY(0, 1, "h5_get_file_size");
-
-    /* Give it some overhead (for checkin to move messages into continuation message) */
     if((list_index_small.attrs1 - list_index_small.interleaved) >
-            ((btree_index.attrs1 - btree_index.interleaved) * OVERHEAD_ALLOWED))
+            (btree_index.attrs1 - btree_index.interleaved))
         VERIFY(0, 1, "h5_get_file_size");
 
 
@@ -2624,7 +2619,7 @@ static void delete_helper_write(hid_t file_id, hid_t *dspace_id, hid_t *dcpl_id,
     CHECK_I(attr_id, "H5Acreate2");
 
     /* Write to attribute */
-    ret = H5Awrite(attr_id, H5T_NATIVE_CHAR, &wdata);
+    ret = H5Awrite(attr_id, H5T_NATIVE_CHAR, &wdata); 
     CHECK_I(ret, "H5Awrite");
 
     ret = H5Aclose(attr_id);
@@ -2728,7 +2723,7 @@ static void delete_helper(hid_t fcpl_id, hid_t *dspace_id, hid_t *dcpl_id)
     /* Close file and get filesize */
     ret = H5Fclose(file_id);
     CHECK_I(ret, "H5Fclose");
-    norm_filesize = h5_get_file_size(FILENAME, H5P_DEFAULT);
+    norm_filesize = h5_get_file_size(FILENAME);
 
     /* Create a new file with messages 0 to (HALF_DELETE_NUM_MESGS - 1) */
     file_id = H5Fcreate(FILENAME, H5F_ACC_TRUNC, fcpl_id, H5P_DEFAULT);
@@ -2760,7 +2755,7 @@ static void delete_helper(hid_t fcpl_id, hid_t *dspace_id, hid_t *dcpl_id)
     /* Close file and get filesize */
     ret = H5Fclose(file_id);
     CHECK_I(ret, "H5Fclose");
-    deleted_filesize = h5_get_file_size(FILENAME, H5P_DEFAULT);
+    deleted_filesize = h5_get_file_size(FILENAME);
 
     /* The two filesizes should be almost the same */
     if(norm_filesize > deleted_filesize * OVERHEAD_ALLOWED)
@@ -2955,7 +2950,7 @@ test_sohm_delete_revert_helper(hid_t fcpl_id)
     /* Close the file and get its size */
     ret = H5Fclose(file_id);
     CHECK_I(ret, "H5Fclose");
-    initial_filesize = h5_get_file_size(FILENAME, H5P_DEFAULT);
+    initial_filesize = h5_get_file_size(FILENAME);
 
 
     /* Re-create the file and create a dataset in it */
@@ -2974,7 +2969,7 @@ test_sohm_delete_revert_helper(hid_t fcpl_id)
     /* Close the file and get its size */
     ret = H5Fclose(file_id);
     CHECK_I(ret, "H5Fclose");
-    deleted_filesize = h5_get_file_size(FILENAME, H5P_DEFAULT);
+    deleted_filesize = h5_get_file_size(FILENAME);
 
     VERIFY(deleted_filesize, initial_filesize, "h5_get_file_size");
 
@@ -3004,7 +2999,7 @@ test_sohm_delete_revert_helper(hid_t fcpl_id)
     /* Close the file and get its size */
     ret = H5Fclose(file_id);
     CHECK_I(ret, "H5Fclose");
-    deleted_filesize = h5_get_file_size(FILENAME, H5P_DEFAULT);
+    deleted_filesize = h5_get_file_size(FILENAME);
 
     VERIFY(deleted_filesize, initial_filesize, "h5_get_file_size");
 
@@ -3139,7 +3134,7 @@ static void test_sohm_extlink_helper(hid_t src_fcpl_id, hid_t dst_fcpl_id)
     dset_id = H5Dcreate2(src_file_id, "ext_link/dataset", H5T_NATIVE_FLOAT, space_id, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     CHECK_I(dset_id, "H5Dcreate2");
 
-    /* Close the dataset and both files to make sure everything gets flushed
+    /* Close the dataset and both files to make sure everything gets flushed 
      * out of memory
      */
     ret = H5Dclose(dset_id);
@@ -3789,176 +3784,8 @@ test_sohm_extend_dset(void)
 }
 
 
-/*-------------------------------------------------------------------------
- * Function:    test_sohm_external_dtype
- *
- * Purpose:     When a datatype is a SOHM type in one file, test that the
- *              second file using the same datatype actually save it in 
- *              the file, too.
- *
- * Programmer:  Raymond Lu
- *              13 October, 2008
- *
- * Modifications:
- *
- *-------------------------------------------------------------------------
- */
-static void
-test_sohm_external_dtype(void)
-{
-    typedef struct s1_t {
-        int a;
-        int b;
-    } s1_t;
-    s1_t  *s_ptr, *orig;
-    hid_t fcpl, file1, file2;
-    hid_t dataset1, dataset2;
-    hid_t s1_tid, dset1_tid, dset2_tid, space;
-    hsize_t dims[2] = {NX, NY};    
-    H5T_class_t dtype_class;
-    size_t dmsg_count; 
-    unsigned x, i;
-    herr_t ret;
-
-    fcpl = H5Pcreate(H5P_FILE_CREATE);
-    CHECK_I(fcpl, "H5Pcreate");
-
-    /* Set up index values for sohm */
-    ret = H5Pset_shared_mesg_nindexes(fcpl, TEST_NUM_INDEXES);
-    CHECK_I(ret, "H5Pset_shared_mesg_nindexes");
-
-    for(x=0; x<TEST_NUM_INDEXES; ++x)
-    {
-        ret = H5Pset_shared_mesg_index(fcpl, x, test_type_flags[x], test_minsizes[x]);
-        CHECK_I(ret, "H5Pset_shared_mesg_index");
-    }
-
-    ret = H5Pset_shared_mesg_phase_change(fcpl, TEST_L2B, TEST_B2L);
-    CHECK_I(ret, "H5Pset_shared_mesg_phase_change");
-
-    /* Create the data space */
-    space = H5Screate_simple(2, dims, NULL);
-    CHECK_I(space, "H5Screate_simple");
-
-    /* Create a data type for s1_t */
-    s1_tid = H5Tcreate(H5T_COMPOUND, sizeof(s1_t));
-    CHECK_I(s1_tid, "H5Tcreate");
-    
-    ret = H5Tinsert(s1_tid, "a", HOFFSET(s1_t,a), H5T_NATIVE_INT);
-    CHECK_I(ret, "H5Tinsert");
-
-    ret = H5Tinsert (s1_tid, "b", HOFFSET(s1_t,b), H5T_NATIVE_INT);
-    CHECK_I(ret, "H5Tinsert");
-
-    /* Create the first file for this test */
-    file1 = H5Fcreate(FILENAME_SRC, H5F_ACC_TRUNC, fcpl, H5P_DEFAULT);
-    CHECK_I(file1, "H5Fcreate");
-
-    /* Check on datatype storage status. It should be zero now. */
-    ret = H5F_get_sohm_mesg_count_test(file1, H5O_DTYPE_ID, &dmsg_count);
-    CHECK(ret, FAIL, "H5F_get_sohm_mesg_count_test");
-    VERIFY(dmsg_count, 0, "H5F_get_sohm_mesg_count_test");
-
-    /* Create data set */
-    dataset1 = H5Dcreate2(file1, "dataset_1", s1_tid, space, H5P_DEFAULT, H5P_DEFAULT, 
-        H5P_DEFAULT);
-    CHECK_I(dataset1, "H5Dcreate2");
-
-    /* Check on datatype storage status.  It should be 1 now. */
-    ret = H5F_get_sohm_mesg_count_test(file1, H5O_DTYPE_ID, &dmsg_count);
-    CHECK(ret, FAIL, "H5F_get_sohm_mesg_count_test");
-    VERIFY(dmsg_count, 1, "H5F_get_sohm_mesg_count_test");
-
-    /* Retieve the dataset's datatype */
-    dset1_tid = H5Dget_type(dataset1);
-    CHECK_I(dset1_tid, "H5Dget_type");
-
-    /* Allocate space and initialize data */
-    orig = (s1_t*)malloc(NX * NY * sizeof(s1_t));
-    for(i=0; i<NX*NY; i++) {
-        s_ptr = (s1_t*)orig + i;
-        s_ptr->a = i*3 + 1;
-        s_ptr->b = i*3 + 2;
-    }
-    
-    /* Write the data to the dataset1 */
-    ret = H5Dwrite(dataset1, s1_tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, orig);
-    CHECK_I(ret, "H5Dwrite");
-
-    ret = H5Dclose(dataset1);
-    CHECK_I(ret, "H5Dclose");
-
-    /* Create the second file for this test */
-    file2 = H5Fcreate(FILENAME_DST, H5F_ACC_TRUNC, fcpl, H5P_DEFAULT);
-    CHECK_I(file2, "H5Fcreate");
-
-    /* Check on datatype storage status. It should be zero now. */
-    ret = H5F_get_sohm_mesg_count_test(file2, H5O_DTYPE_ID, &dmsg_count);
-    CHECK(ret, FAIL, "H5F_get_sohm_mesg_count_test");
-    VERIFY(dmsg_count, 0, "H5F_get_sohm_mesg_count_test");
-
-    /* Create a data set using the datatype of the dataset in the first file. */
-    dataset2 = H5Dcreate2(file2, "dataset_2", dset1_tid, space, H5P_DEFAULT, H5P_DEFAULT, 
-        H5P_DEFAULT);
-    CHECK_I(dataset2, "H5Dcreate2");
-
-    /* Check on datatype storage status.  It should be 1 now. */
-    ret = H5F_get_sohm_mesg_count_test(file2, H5O_DTYPE_ID, &dmsg_count);
-    CHECK(ret, FAIL, "H5F_get_sohm_mesg_count_test");
-    VERIFY(dmsg_count, 1, "H5F_get_sohm_mesg_count_test");
-
-    /* Write the data to the dataset2 */
-    ret = H5Dwrite(dataset2, s1_tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, orig);
-    CHECK_I(ret, "H5Dwrite");
-
-    ret = H5Dclose(dataset2);
-    CHECK_I(ret, "H5Dclose");
-
-    /* Close file 1 and the dataset's datatype in file 1.  Verify that the datatype in 
-     * file 2 is still accessible. */
-    ret = H5Tclose(dset1_tid);
-    CHECK_I(ret, "H5Tclose");
-
-    ret = H5Fclose(file1);
-    CHECK_I(ret, "H5Fclose");
-
-    /* Open the dataset in file 2 */
-    dataset2 = H5Dopen2(file2, "dataset_2", H5P_DEFAULT);
-    CHECK_I(dataset2, "H5Dopen2");
-
-    /* Retieve the dataset's datatype */
-    dset2_tid = H5Dget_type(dataset2);
-    CHECK_I(dset2_tid, "H5Dget_type");
-
-    /* Verify the datatype is compound */
-    dtype_class = H5Tget_class(dset2_tid);
-    VERIFY(dtype_class, H5T_COMPOUND, "H5Tget_class");
-
-    ret = H5Tclose(dset2_tid);
-    CHECK_I(ret, "H5Tclose");
-
-    ret = H5Dclose(dataset2);
-    CHECK_I(ret, "H5Dclose");
-
-    /* Finishing test and release resources */
-    ret = H5Sclose(space);
-    CHECK_I(ret, "H5Sclose");
-
-    ret = H5Tclose(s1_tid);
-    CHECK_I(ret, "H5Tclose");
-
-    ret = H5Pclose(fcpl);
-    CHECK_I(ret, "H5Pclose");
-
-    ret = H5Fclose(file2);
-    CHECK_I(ret, "H5Fclose");
-
-    free(orig);
-}
-
-
 /****************************************************************
-**
+** 
 **  test_sohm(): Main Shared Object Header Message testing routine.
 **
 ****************************************************************/
@@ -3981,10 +3808,11 @@ test_sohm(void)
 #ifndef  H5_CANNOT_OPEN_TWICE   /* On VMS this test fails since it tries to
                                    open target file the second time */
     test_sohm_extlink();        /* Test SOHMs when external links are used */
+
 #endif /* H5_CANNOT_OPEN_TWICE */
 
     test_sohm_extend_dset();    /* Test extending shared datasets */
-    test_sohm_external_dtype(); /* Test using datatype in another file */
+
 } /* test_sohm() */
 
 

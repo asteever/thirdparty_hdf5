@@ -452,17 +452,17 @@ H5G_get_name(hid_t id, char *name/*out*/, size_t size, hid_t lapl_id,
 	    hid_t	  file;
 
             /* Retrieve file ID for name search */
-	    if((file = H5I_get_file_id(id, FALSE)) < 0)
+	    if((file = H5I_get_file_id(id)) < 0)
 		HGOTO_ERROR(H5E_SYM, H5E_CANTGET, FAIL, "can't retrieve file ID")
 
             /* Search for name of object */
 	    if((len = H5G_get_name_by_addr(file, lapl_id, dxpl_id, loc.oloc, name, size)) < 0) {
-                H5I_dec_ref(file, FALSE);
+                H5I_dec_ref(file);
 		HGOTO_ERROR(H5E_SYM, H5E_CANTGET, FAIL, "can't determine name")
             } /* end if */
-
+	
             /* Close file ID used for search */
-	    if(H5I_dec_ref(file, FALSE) < 0)
+	    if(H5I_dec_ref(file) < 0)
 		HGOTO_ERROR(H5E_SYM, H5E_CANTCLOSEFILE, FAIL, "can't determine name")
 	} /* end else */
 
@@ -470,7 +470,7 @@ H5G_get_name(hid_t id, char *name/*out*/, size_t size, hid_t lapl_id,
         ret_value = len;
     } /* end if */
 
-done:
+done: 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5G_get_name() */
 
@@ -578,6 +578,7 @@ H5G_name_move_path(H5RS_str_t **path_r_ptr, const char *full_suffix, const char 
     if(full_suffix_len < path_len) {
         const char *dst_suffix;         /* Destination suffix that changes */
         const char *src_suffix;         /* Source suffix that changes */
+        const char *path_prefix;        /* Prefix for path */
         size_t path_prefix_len;         /* Length of path prefix */
         const char *path_prefix2;       /* 2nd prefix for path */
         size_t path_prefix2_len;        /* Length of 2nd path prefix */
@@ -588,6 +589,7 @@ H5G_name_move_path(H5RS_str_t **path_r_ptr, const char *full_suffix, const char 
 
 
         /* Compute path prefix before full suffix*/
+        path_prefix = path;
         path_prefix_len = path_len - full_suffix_len;
 
         /* Determine the common prefix for src & dst paths */
@@ -912,7 +914,7 @@ done:
  */
 herr_t
 H5G_name_replace(const H5O_link_t *lnk, H5G_names_op_t op, H5F_t *src_file,
-    H5RS_str_t *src_full_path_r, H5F_t *dst_file, H5RS_str_t *dst_full_path_r,
+    H5RS_str_t *src_full_path_r, H5F_t *dst_file, H5RS_str_t *dst_full_path_r, 
     hid_t dxpl_id)
 {
     herr_t ret_value = SUCCEED;
@@ -1007,15 +1009,15 @@ H5G_name_replace(const H5O_link_t *lnk, H5G_names_op_t op, H5F_t *src_file,
 
             /* Search through group IDs */
             if(search_group)
-                H5I_search(H5I_GROUP, H5G_name_replace_cb, &names, FALSE);
+                H5I_search(H5I_GROUP, H5G_name_replace_cb, &names);
 
             /* Search through dataset IDs */
             if(search_dataset)
-                H5I_search(H5I_DATASET, H5G_name_replace_cb, &names, FALSE);
+                H5I_search(H5I_DATASET, H5G_name_replace_cb, &names);
 
             /* Search through datatype IDs */
             if(search_datatype)
-                H5I_search(H5I_DATATYPE, H5G_name_replace_cb, &names, FALSE);
+                H5I_search(H5I_DATATYPE, H5G_name_replace_cb, &names);
         } /* end if */
     } /* end if */
 
@@ -1084,8 +1086,8 @@ H5G_get_name_by_addr_cb(hid_t gid, const char *path, const H5L_info_t *linfo,
             HGOTO_DONE(H5_ITER_STOP)
         } /* end if */
     } /* end if */
-
-done:
+   
+done:    
     if(obj_found && H5G_loc_free(&obj_loc) < 0)
         HDONE_ERROR(H5E_SYM, H5E_CANTRELEASE, H5_ITER_ERROR, "can't free location")
 
@@ -1135,7 +1137,7 @@ H5G_get_name_by_addr(hid_t file, hid_t lapl_id, hid_t dxpl_id, const H5O_loc_t *
         udata.lapl_id = lapl_id;
         udata.dxpl_id = dxpl_id;
         udata.path = NULL;
-
+        
         /* Visit all the links in the file */
         if((status = H5G_visit(file, "/", H5_INDEX_NAME, H5_ITER_NATIVE, H5G_get_name_by_addr_cb, &udata, lapl_id, dxpl_id)) < 0)
             HGOTO_ERROR(H5E_SYM, H5E_BADITER, FAIL, "group traversal failed while looking for object name")
@@ -1145,8 +1147,10 @@ H5G_get_name_by_addr(hid_t file, hid_t lapl_id, hid_t dxpl_id, const H5O_loc_t *
 
     /* Check for finding the object */
     if(found_obj) {
+        size_t full_path_len = HDstrlen(udata.path) + 1;        /* Length of path + 1 (for "/") */
+
         /* Set the length of the full path */
-        ret_value = (ssize_t)(HDstrlen(udata.path) + 1);        /* Length of path + 1 (for "/") */
+        ret_value = full_path_len;
 
         /* If there's a buffer provided, copy into it, up to the limit of its size */
         if(name) {
@@ -1162,8 +1166,8 @@ H5G_get_name_by_addr(hid_t file, hid_t lapl_id, hid_t dxpl_id, const H5O_loc_t *
     } /* end if */
     else
         ret_value = 0;
-
-done:
+   
+done:    
     /* Release resources */
     H5MM_xfree(udata.path);
 

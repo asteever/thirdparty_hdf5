@@ -148,5 +148,4 @@ H5_DLL H5S_sel_type H5Sget_select_type(hid_t spaceid);
 #ifdef __cplusplus
 }
 #endif
-#endif /* _H5Spublic_H */
-
+#endif
