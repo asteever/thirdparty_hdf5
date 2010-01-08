@@ -2431,7 +2431,6 @@ H5D_chunk_flush_entry(const H5D_t *dset, hid_t dxpl_id, const H5D_dxpl_cache_t *
 done:
     /* Free the temp buffer only if it's different than the entry chunk */
     if(buf != ent->chunk)
-        /* coverity["double_free"] */
         H5MM_xfree(buf);
 
     /*
@@ -2920,6 +2919,7 @@ H5D_chunk_unlock(const H5D_io_info_t *io_info, const H5D_chunk_ud_t *udata,
 {
     const H5O_layout_t *layout = &(io_info->dset->shared->layout); /* Dataset layout */
     const H5D_rdcc_t	*rdcc = &(io_info->dset->shared->cache.chunk);
+    H5D_rdcc_ent_t	*ent = NULL;
     herr_t              ret_value = SUCCEED;      /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5D_chunk_unlock)
@@ -2953,8 +2953,6 @@ H5D_chunk_unlock(const H5D_io_info_t *io_info, const H5D_chunk_ud_t *udata,
         } /* end else */
     } /* end if */
     else {
-        H5D_rdcc_ent_t	*ent;   /* Chunk's entry in the cache */
-
         /* Sanity check */
 	HDassert(idx_hint < rdcc->nslots);
 	HDassert(rdcc->slot[idx_hint]);
@@ -4151,7 +4149,7 @@ H5D_chunk_copy_cb(const H5D_chunk_rec_t *chunk_rec, void *_udata)
 
     /* Check parameter for type conversion */
     if(udata->do_convert) {
-        if(H5T_detect_class(udata->dt_src, H5T_VLEN, FALSE) > 0)
+        if(H5T_detect_class(udata->dt_src, H5T_VLEN) > 0)
             is_vlen = TRUE;
         else if((H5T_get_class(udata->dt_src, FALSE) == H5T_REFERENCE) && (udata->file_src != udata->idx_info_dst->f))
             fix_ref = TRUE;
@@ -4385,7 +4383,7 @@ H5D_chunk_copy(H5F_t *f_src, H5O_storage_chunk_t *storage_src,
         HGOTO_ERROR(H5E_DATATYPE, H5E_CANTREGISTER, FAIL, "unable to register source file datatype")
 
     /* If there's a VLEN source datatype, set up type conversion information */
-    if(H5T_detect_class(dt_src, H5T_VLEN, FALSE) > 0) {
+    if(H5T_detect_class(dt_src, H5T_VLEN) > 0) {
         H5T_t *dt_dst;              /* Destination datatype */
         H5T_t *dt_mem;              /* Memory datatype */
         size_t mem_dt_size;         /* Memory datatype size */
@@ -4397,22 +4395,16 @@ H5D_chunk_copy(H5F_t *f_src, H5O_storage_chunk_t *storage_src,
         /* create a memory copy of the variable-length datatype */
         if(NULL == (dt_mem = H5T_copy(dt_src, H5T_COPY_TRANSIENT)))
             HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "unable to copy")
-        if((tid_mem = H5I_register(H5I_DATATYPE, dt_mem, FALSE)) < 0) {
-            (void)H5T_close(dt_mem);
+        if((tid_mem = H5I_register(H5I_DATATYPE, dt_mem, FALSE)) < 0)
             HGOTO_ERROR(H5E_DATATYPE, H5E_CANTREGISTER, FAIL, "unable to register memory datatype")
-        } /* end if */
 
         /* create variable-length datatype at the destinaton file */
         if(NULL == (dt_dst = H5T_copy(dt_src, H5T_COPY_TRANSIENT)))
             HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "unable to copy")
-        if(H5T_set_loc(dt_dst, f_dst, H5T_LOC_DISK) < 0) {
-            (void)H5T_close(dt_dst);
+        if(H5T_set_loc(dt_dst, f_dst, H5T_LOC_DISK) < 0)
             HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "cannot mark datatype on disk")
-        } /* end if */
-        if((tid_dst = H5I_register(H5I_DATATYPE, dt_dst, FALSE)) < 0) {
-            (void)H5T_close(dt_dst);
+        if((tid_dst = H5I_register(H5I_DATATYPE, dt_dst, FALSE)) < 0)
             HGOTO_ERROR(H5E_DATATYPE, H5E_CANTREGISTER, FAIL, "unable to register destination file datatype")
-        } /* end if */
 
         /* Set up the conversion functions */
         if(NULL == (tpath_src_mem = H5T_path_find(dt_src, dt_mem, NULL, NULL, dxpl_id, FALSE)))
@@ -4442,7 +4434,7 @@ H5D_chunk_copy(H5F_t *f_src, H5O_storage_chunk_t *storage_src,
 
         /* Atomize */
         if((sid_buf = H5I_register(H5I_DATASPACE, buf_space, FALSE)) < 0) {
-            (void)H5S_close(buf_space);
+            H5S_close(buf_space);
             HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to register dataspace ID")
         } /* end if */
 

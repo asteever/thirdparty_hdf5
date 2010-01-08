@@ -19,10 +19,6 @@ if test -z "$srcdir"; then
    srcdir=.
 fi
 
-TESTNAME=ph5diff
-EXIT_SUCCESS=0
-EXIT_FAILURE=1
-
 TOOL=${srcdir}/testh5diff.sh
 
 nerrors=0
@@ -57,10 +53,12 @@ TOOLTEST() {
 # testphdf5 test using the MPI-POSIX VFL driver
 TOOLTEST -p
 
-# no need to print any message since this is just a shell to invoke
-# testh5diff.sh which has already printed the result.  Just exit.
+# Emit message about testing status
 if test $nerrors -eq 0 ; then
-    exit $EXIT_SUCCESS
+   echo "All $TEST_APP tests passed."
 else
-    exit $EXIT_FAILURE
+   echo "ERROR! One or more $TOOL tests failed."
 fi
+
+# Propagate a useful exit code
+exit $nerrors

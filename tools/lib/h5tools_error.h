@@ -116,4 +116,3 @@ extern hid_t H5E_tools_min_id_g;
 #define HGOTO_DONE(ret_val) {ret_value = ret_val; goto done;}
 
 #endif /* H5TOOLS_ERROR_H_ */
-

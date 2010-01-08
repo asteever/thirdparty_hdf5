@@ -60,7 +60,7 @@ main(int argv , char *argc[])
         printf("Usage: gif2h5 <GIFFILE> <HDFFILE>\n");
         fprintf(stdout, "       gif2h5 -V \n");
         fprintf(stdout, "        Print HDF5 library version and exit\n");
-        exit(EXIT_FAILURE);
+        return(-1);
     }
 
     GIFFileName = argc[1];
@@ -68,7 +68,7 @@ main(int argv , char *argc[])
 
     if (!(fpGif = fopen(GIFFileName,"rb"))) {
         printf("Unable to open GIF file for reading.\n");
-        exit(EXIT_FAILURE);
+        exit(-1);
     }
 
     /* Get the whole file into memory. Mem's much faster than I/O */
@@ -81,12 +81,12 @@ main(int argv , char *argc[])
 
     if (!(MemGif = StartPos = (BYTE *)malloc((size_t)filesize))) {
         printf("Out of memory");
-        exit(EXIT_FAILURE);
+        exit (-1);
     }
 
     if (fread(MemGif,(size_t)filesize,1,fpGif) != 1) {
         printf("Corrupted Input File");
-        exit(EXIT_FAILURE);
+        exit(-1);
     }
 
     fseek(fpGif,0L,0);
@@ -99,7 +99,7 @@ main(int argv , char *argc[])
 
     if (ferror(fpGif)) {
             printf("File Stream Error\n\n");
-            exit(EXIT_FAILURE);
+            exit(-1);
     }
 
     fclose(fpGif);
@@ -157,5 +157,5 @@ main(int argv , char *argc[])
     }
 
 
-    return EXIT_SUCCESS;
+    return 0;
 }

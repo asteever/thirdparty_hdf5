@@ -314,9 +314,6 @@
 /* (from: http://graphics.stanford.edu/~seander/bithacks.html#DetermineIfPowerOf2) */
 #  define POWER_OF_TWO(n)	(!(n & (n - 1)) && n)
 
-/* Raise an integer to a power of 2 */
-#  define H5_EXP2(n)		(1 << (n))
-
 /*
  * HDF Boolean type.
  */
@@ -459,11 +456,6 @@ typedef enum {
     H5_COPY_SHALLOW,    /* Shallow copy from source to destination, just copy field pointers */
     H5_COPY_DEEP        /* Deep copy from source to destination, including duplicating fields pointed to */
 } H5_copy_depth_t;
-
-/* Common object copying udata (right now only used for groups and datasets) */
-typedef struct H5O_copy_file_ud_common_t {
-    struct H5O_pline_t *src_pline;      /* Copy of filter pipeline for object */
-} H5O_copy_file_ud_common_t;
 
 /* Unique object "position" */
 typedef struct {
@@ -625,9 +617,6 @@ typedef struct {
 #ifndef HDexp
     #define HDexp(X)		exp(X)
 #endif /* HDexp */
-#ifndef HDexp2
-    #define HDexp2(X)		exp2(X)
-#endif /* HDexp2 */
 #ifndef HDfabs
     #define HDfabs(X)		fabs(X)
 #endif /* HDfabs */
@@ -730,14 +719,11 @@ H5_DLL int HDfprintf (FILE *stream, const char *fmt, ...);
  * For Unix, if off_t is not 64bit big, try use the pseudo-standard
  * xxx64 versions if available.
  */
-#if !defined(HDfstat) || !defined(HDstat) || !defined(HDlstat)
+#if !defined(HDfstat) || !defined(HDstat)
     #if H5_SIZEOF_OFF_T!=8 && H5_SIZEOF_OFF64_T==8 && defined(H5_HAVE_STAT64)
         #ifndef HDfstat
             #define HDfstat(F,B)        fstat64(F,B)
         #endif /* HDfstat */
-        #ifndef HDlstat
-            #define HDlstat(S,B)  	lstat64(S,B)
-        #endif /* HDlstat */
         #ifndef HDstat
             #define HDstat(S,B)  	stat64(S,B)
         #endif /* HDstat */
@@ -748,9 +734,6 @@ H5_DLL int HDfprintf (FILE *stream, const char *fmt, ...);
         #ifndef HDfstat
             #define HDfstat(F,B)        fstat(F,B)
         #endif /* HDfstat */
-        #ifndef HDlstat
-            #define HDlstat(S,B)  	lstat(S,B)
-        #endif /* HDlstat */
         #ifndef HDstat
             #define HDstat(S,B)  	stat(S,B)
         #endif /* HDstat */
@@ -1033,9 +1016,6 @@ H5_DLL int HDfprintf (FILE *stream, const char *fmt, ...);
 #ifndef HDrealloc
     #define HDrealloc(M,Z)		realloc(M,Z)
 #endif /* HDrealloc */
-#ifndef HDrealpath
-    #define HDrealpath(F1,F2)		realpath(F1,F2)
-#endif /* HDrealloc */
 #ifdef H5_VMS
     #ifdef __cplusplus
         extern "C" {
@@ -1089,6 +1069,9 @@ H5_DLL int HDfprintf (FILE *stream, const char *fmt, ...);
 #ifndef HDsetvbuf
     #define HDsetvbuf(F,S,M,Z)	setvbuf(F,S,M,Z)
 #endif /* HDsetvbuf */
+#ifndef HDsigaction
+    #define HDsigaction(N,A)	sigaction(N,A)
+#endif /* HDsigaction */
 #ifndef HDsigaddset
     #define HDsigaddset(S,N)	sigaddset(S,N)
 #endif /* HDsigaddset */
@@ -1167,7 +1150,7 @@ H5_DLL int HDfprintf (FILE *stream, const char *fmt, ...);
     #define HDstrchr(S,C)		strchr(S,C)
 #endif /* HDstrchr */
 #ifndef HDstrcmp
-    #define HDstrcmp(X,Y)       strcmp(X,Y)
+    #define HDstrcmp(X,Y)		strcmp(X,Y)
 #endif /* HDstrcmp */
 #ifndef HDstrcasecmp
     #define HDstrcasecmp(X,Y)       strcasecmp(X,Y)
@@ -1230,11 +1213,6 @@ H5_DLL int64_t HDstrtoll (const char *s, const char **rest, int base);
 #ifndef HDstrxfrm
     #define HDstrxfrm(X,Y,Z)	strxfrm(X,Y,Z)
 #endif /* HDstrxfrm */
-#ifdef H5_HAVE_SYMLINK
-    #ifndef HDsymlink
-        #define HDsymlink(F1,F2)	symlink(F1,F2)
-    #endif /* HDsymlink */
-#endif /* H5_HAVE_SYMLINK */
 #ifndef HDsysconf
     #define HDsysconf(N)		sysconf(N)
 #endif /* HDsysconf */
@@ -1489,6 +1467,7 @@ extern char *strdup(const char *s);
 #endif
 
 #define 	COLON_SEPC	':'
+H5_DLL herr_t 	H5_build_extpath(const char *, char ** /*out*/ );
 
 
 /*
@@ -1701,8 +1680,8 @@ extern hbool_t H5_libinit_g;    /* Has the library been initialized? */
 /* Include required function stack header */
 #include "H5CSprivate.h"
 
-#define H5_PUSH_FUNC(func_name) H5CS_push(func_name);
-#define H5_POP_FUNC             H5CS_pop();
+#define H5_PUSH_FUNC(func_name) H5CS_push(#func_name)
+#define H5_POP_FUNC             H5CS_pop()
 #else /* H5_HAVE_CODESTACK */
 #define H5_PUSH_FUNC(func_name) /* void */
 #define H5_POP_FUNC             /* void */
@@ -1758,14 +1737,10 @@ static herr_t		H5_INTERFACE_INIT_FUNC(void);
 #define FUNC_ENTER_COMMON_NOFUNC(func_name,asrt)
 #endif /* NDEBUG */
 
-#define FUNC_ENTER_COMMON(func_name, asrt)                                    \
-    static const char FUNC[] = #func_name;                                    \
+#define FUNC_ENTER_COMMON(func_name,asrt)                                     \
+    static const char FUNC[]=#func_name;                                      \
     hbool_t err_occurred = FALSE;					      \
-    FUNC_ENTER_COMMON_NOFUNC(func_name, asrt);
-
-#define FUNC_ENTER_COMMON_NOERR(func_name, asrt)                              \
-    static const char FUNC[] = #func_name;                                    \
-    FUNC_ENTER_COMMON_NOFUNC(func_name, asrt);
+    FUNC_ENTER_COMMON_NOFUNC(func_name,asrt);
 
 /* Threadsafety initialization code for API routines */
 #define FUNC_ENTER_API_THREADSAFE                                             \
@@ -1776,37 +1751,22 @@ static herr_t		H5_INTERFACE_INIT_FUNC(void);
    H5_API_UNSET_CANCEL                                                        \
    H5_API_LOCK
 
+/* Threadsafety termination code for API routines */
+#define FUNC_LEAVE_API_THREADSAFE                                             \
+    H5_API_UNLOCK                                                             \
+    H5_API_SET_CANCEL
+
 /* Local variables for API routines */
 #define FUNC_ENTER_API_VARS(func_name)                                        \
     MPE_LOG_VARS(func_name)                                                   \
     H5TRACE_DECL
 
-#define FUNC_ENTER_API_COMMON(func_name)				      \
-    FUNC_ENTER_API_VARS(func_name)                                            \
-    FUNC_ENTER_COMMON(func_name, H5_IS_API(#func_name));                      \
-    FUNC_ENTER_API_THREADSAFE;
-
-#define FUNC_ENTER_API_INIT(func_name,err)			       	      \
-   /* Initialize the library */           				      \
-   if(!(H5_INIT_GLOBAL)) {                                                    \
-       H5_INIT_GLOBAL = TRUE;                                                 \
-       if(H5_init_library() < 0)  					      \
-          HGOTO_ERROR(H5E_FUNC, H5E_CANTINIT, err,		              \
-            "library initialization failed")		                      \
-   }								              \
-                                                                              \
-   /* Initialize the interface, if appropriate */		              \
-   H5_INTERFACE_INIT(err)						      \
-                                                                              \
-   /* Push the name of this function on the function stack */                 \
-   H5_PUSH_FUNC(#func_name)                                                   \
-                                                                              \
-   BEGIN_MPE_LOG(func_name)
-
 /* Use this macro for all "normal" API functions */
 #define FUNC_ENTER_API(func_name,err) {{                                      \
-    FUNC_ENTER_API_COMMON(func_name)                                          \
-    FUNC_ENTER_API_INIT(func_name,err);			                      \
+    FUNC_ENTER_API_VARS(func_name)                                            \
+    FUNC_ENTER_COMMON(func_name,H5_IS_API(#func_name));                       \
+    FUNC_ENTER_API_THREADSAFE;                                                \
+    FUNC_ENTER_API_COMMON(func_name,err);		                      \
     /* Clear thread error stack entering public functions */		      \
     H5E_clear_stack(NULL);				                      \
     {
@@ -1816,8 +1776,10 @@ static herr_t		H5_INTERFACE_INIT_FUNC(void);
  *      like H5Eprint and H5Ewalk.
  */
 #define FUNC_ENTER_API_NOCLEAR(func_name,err) {{                              \
-    FUNC_ENTER_API_COMMON(func_name)                                          \
-    FUNC_ENTER_API_INIT(func_name,err);			                      \
+    FUNC_ENTER_API_VARS(func_name)                                            \
+    FUNC_ENTER_COMMON(func_name,H5_IS_API(#func_name));                       \
+    FUNC_ENTER_API_THREADSAFE;                                                \
+    FUNC_ENTER_API_COMMON(func_name,err);		                      \
     {
 
 /*
@@ -1827,8 +1789,10 @@ static herr_t		H5_INTERFACE_INIT_FUNC(void);
  *
  */
 #define FUNC_ENTER_API_NOINIT(func_name) {{                                   \
-    FUNC_ENTER_API_COMMON(func_name)                                          \
-    H5_PUSH_FUNC(#func_name)                                                  \
+    FUNC_ENTER_API_VARS(func_name)                                            \
+    FUNC_ENTER_COMMON(func_name,H5_IS_API(#func_name));                       \
+    FUNC_ENTER_API_THREADSAFE;                                                \
+    H5_PUSH_FUNC(func_name);                                                  \
     BEGIN_MPE_LOG(func_name);                                                 \
     {
 
@@ -1839,30 +1803,16 @@ static herr_t		H5_INTERFACE_INIT_FUNC(void);
  *      are: H5close, H5check_version, etc.
  *
  */
-#define FUNC_ENTER_API_NOINIT_NOERR_NOFS(func_name) {{                       \
+#define FUNC_ENTER_API_NOINIT_NOFS(func_name) {{                              \
     FUNC_ENTER_API_VARS(func_name)                                            \
-    FUNC_ENTER_COMMON_NOERR(func_name, H5_IS_API(#func_name));                      \
-    FUNC_ENTER_API_THREADSAFE;						      \
+    FUNC_ENTER_COMMON(func_name,H5_IS_API(#func_name));                       \
+    FUNC_ENTER_API_THREADSAFE;                                                \
     BEGIN_MPE_LOG(func_name);                                                 \
     {
 
-/* Note: this macro only works when there's _no_ interface initialization routine for the module */
-#define FUNC_ENTER_NOAPI_INIT(func_name,err)			       	      \
-   /* Initialize the interface, if appropriate */		              \
-   H5_INTERFACE_INIT(err)						      \
-                                                                              \
-   /* Push the name of this function on the function stack */                 \
-   H5_PUSH_FUNC(#func_name)
-
 /* Use this macro for all "normal" non-API functions */
 #define FUNC_ENTER_NOAPI(func_name,err) {                                     \
-    FUNC_ENTER_COMMON(func_name, !H5_IS_API(#func_name));                     \
-    FUNC_ENTER_NOAPI_INIT(func_name,err)		                      \
-    {
-
-/* Use this macro for all non-API functions, which propagate errors, but don't issue them */
-#define FUNC_ENTER_NOAPI_NOERR(func_name,err) {                               \
-    FUNC_ENTER_COMMON_NOERR(func_name, !H5_IS_API(#func_name));               \
+    FUNC_ENTER_COMMON(func_name,!H5_IS_API(#func_name));                      \
     FUNC_ENTER_NOAPI_INIT(func_name,err)		                      \
     {
 
@@ -1880,23 +1830,9 @@ static herr_t		H5_INTERFACE_INIT_FUNC(void);
  *      - functions which are called during library shutdown, since we don't
  *              want to re-initialize the library.
  */
-#define FUNC_ENTER_NOAPI_NOINIT(func_name) {                                  \
-    FUNC_ENTER_COMMON(func_name, !H5_IS_API(#func_name));                     \
-    H5_PUSH_FUNC(#func_name)                                                  \
-    {
-
-/*
- * Use this macro for non-API functions which fall into these categories:
- *      - static functions, since they must be called from a function in the
- *              interface, the library and interface must already be
- *              initialized.
- *      - functions which are called during library shutdown, since we don't
- *              want to re-initialize the library.
- *      - functions that propagate, but don't issue errors
- */
-#define FUNC_ENTER_NOAPI_NOINIT_NOERR(func_name) {                            \
-    FUNC_ENTER_COMMON_NOERR(func_name, !H5_IS_API(#func_name));               \
-    H5_PUSH_FUNC(#func_name)                                                  \
+#define FUNC_ENTER_NOAPI_NOINIT(func_name) {                                        \
+    FUNC_ENTER_COMMON(func_name,!H5_IS_API(#func_name));                      \
+    H5_PUSH_FUNC(func_name);                                                  \
     {
 
 /*
@@ -1913,7 +1849,7 @@ static herr_t		H5_INTERFACE_INIT_FUNC(void);
  */
 #define FUNC_ENTER_NOAPI_NOINIT_NOFUNC(func_name) {                           \
     FUNC_ENTER_COMMON_NOFUNC(func_name,!H5_IS_API(#func_name));               \
-    H5_PUSH_FUNC(#func_name)                                                  \
+    H5_PUSH_FUNC(func_name);                                                  \
     {
 
 /*
@@ -1929,19 +1865,47 @@ static herr_t		H5_INTERFACE_INIT_FUNC(void);
     FUNC_ENTER_COMMON_NOFUNC(func_name,!H5_IS_API(#func_name));               \
     {
 
+#define FUNC_ENTER_API_COMMON(func_name,err)			       	      \
+   /* Initialize the library */           				      \
+   if (!(H5_INIT_GLOBAL)) {                                                   \
+       H5_INIT_GLOBAL = TRUE;                                                 \
+       if (H5_init_library()<0)  					      \
+          HGOTO_ERROR (H5E_FUNC, H5E_CANTINIT, err,		              \
+            "library initialization failed")		                      \
+   }								              \
+                                                                              \
+   /* Initialize the interface, if appropriate */		              \
+   H5_INTERFACE_INIT(err)						      \
+                                                                              \
+   /* Push the name of this function on the function stack */                 \
+   H5_PUSH_FUNC(func_name);                                                   \
+                                                                              \
+   BEGIN_MPE_LOG(func_name)
+
+/* Note: this macro only works when there's _no_ interface initialization routine for the module */
+#define FUNC_ENTER_NOAPI_INIT(func_name,err)			       	      \
+   /* Initialize the interface, if appropriate */		              \
+   H5_INTERFACE_INIT(err)						      \
+                                                                              \
+   /* Push the name of this function on the function stack */                 \
+   H5_PUSH_FUNC(func_name);
+
 /*-------------------------------------------------------------------------
  * Purpose:	Register function exit for code profiling.  This should be
  *		the last statement executed by a function.
  *
  * Programmer:	Quincey Koziol
  *
+ * Modifications:
+ *
+ *	Robb Matzke, 4 Aug 1997
+ *	The pablo mask comes from the constant PABLO_MASK defined on a
+ *	per-file basis.	 The pablo_func_id comes from an auto variable
+ *	defined by FUNC_ENTER.
+ *      PABLO was deleted on January 21, 2005 EIP
+ *
  *-------------------------------------------------------------------------
  */
-/* Threadsafety termination code for API routines */
-#define FUNC_LEAVE_API_THREADSAFE                                             \
-    H5_API_UNLOCK                                                             \
-    H5_API_SET_CANCEL
-
 #define FUNC_LEAVE_API(ret_value)                                             \
         FINISH_MPE_LOG;                                                       \
         H5TRACE_RETURN(ret_value);					      \
@@ -1949,27 +1913,28 @@ static herr_t		H5_INTERFACE_INIT_FUNC(void);
         if(err_occurred)						      \
            (void)H5E_dump_api_stack(TRUE);				      \
         FUNC_LEAVE_API_THREADSAFE                                             \
-        return(ret_value);						      \
+        return (ret_value);						      \
     } /*end scope from end of FUNC_ENTER*/                                    \
 }} /*end scope from beginning of FUNC_ENTER*/
 
-/* Use this macro to match the FUNC_ENTER_API_NOFS macro */
 #define FUNC_LEAVE_API_NOFS(ret_value)                                        \
         FINISH_MPE_LOG;                                                       \
         H5TRACE_RETURN(ret_value);					      \
+        if(err_occurred)						      \
+           (void)H5E_dump_api_stack(TRUE);				      \
         FUNC_LEAVE_API_THREADSAFE                                             \
-        return(ret_value);						      \
+        return (ret_value);						      \
     } /*end scope from end of FUNC_ENTER*/                                    \
 }} /*end scope from beginning of FUNC_ENTER*/
 
 #define FUNC_LEAVE_NOAPI(ret_value)                                           \
-        H5_POP_FUNC                                                           \
-        return(ret_value);						      \
+        H5_POP_FUNC;                                                          \
+        return (ret_value);						      \
     } /*end scope from end of FUNC_ENTER*/                                    \
 } /*end scope from beginning of FUNC_ENTER*/
 
 #define FUNC_LEAVE_NOAPI_VOID                                                 \
-        H5_POP_FUNC                                                           \
+        H5_POP_FUNC;                                                          \
         return;						                      \
     } /*end scope from end of FUNC_ENTER*/                                    \
 } /*end scope from beginning of FUNC_ENTER*/
@@ -1980,278 +1945,10 @@ static herr_t		H5_INTERFACE_INIT_FUNC(void);
  *              (so far, just the H5CS routines themselves)
  */
 #define FUNC_LEAVE_NOAPI_NOFS(ret_value)                                      \
-        return(ret_value);						      \
+        return (ret_value);						      \
     } /*end scope from end of FUNC_ENTER*/                                    \
 } /*end scope from beginning of FUNC_ENTER*/
 
-
-/****************************************/
-/* Revisions to FUNC_ENTER/LEAVE Macros */
-/****************************************/
-
-/* `S' is the name of a function which is being tested to check if it's */
-/*      a public API function */
-#define H5_IS_PUB(S) (((HDisdigit(S[1]) || HDisupper(S[1])) && HDislower(S[2])) || \
-    ((HDisdigit(S[2]) || HDisupper(S[2])) && HDislower(S[3])) || \
-    (!S[4] || ((HDisdigit(S[3]) || HDisupper(S[3])) && HDislower(S[4]))))
-
-/* `S' is the name of a function which is being tested to check if it's */
-/*      a private library function */
-#define H5_IS_PRIV(S) (((HDisdigit(S[1]) || HDisupper(S[1])) && '_' == S[2] && HDislower(S[3])) || \
-    ((HDisdigit(S[2]) || HDisupper(S[2])) && '_' == S[3] && HDislower(S[4])) || \
-    ((HDisdigit(S[3]) || HDisupper(S[3])) && '_' == S[4] && HDislower(S[5])))
-
-/* `S' is the name of a function which is being tested to check if it's */
-/*      a package private function */
-#define H5_IS_PKG(S) (((HDisdigit(S[1]) || HDisupper(S[1])) && '_' == S[2] && '_' == S[3] && HDislower(S[4])) || \
-    ((HDisdigit(S[2]) || HDisupper(S[2])) && '_' == S[3] && '_' == S[4] && HDislower(S[5])) || \
-    ((HDisdigit(S[3]) || HDisupper(S[3])) && '_' == S[4] && '_' == S[5] && HDislower(S[6])))
-
-#ifndef NDEBUG
-#define FUNC_ENTER_NAME_CHECK(asrt)					      \
-    {					          			      \
-        static hbool_t func_check = FALSE;          			      \
-                                                                              \
-        if(!func_check) {		   				      \
-            /* Check function naming status */				      \
-            HDassert(asrt);			                              \
-                                                                              \
-            /* Don't check again */                 			      \
-            func_check = TRUE;						      \
-        } /* end if */							      \
-    } /* end scope */
-#else /* NDEBUG */
-#define FUNC_ENTER_NAME_CHECK(asrt)
-#endif /* NDEBUG */
-
-/* Macros for referencing package initialization symbols */
-#define H5_PACKAGE_INIT_VAR(x) H5_GLUE3(H5_, x, _init_g)
-#define H5_PACKAGE_INIT_FUNC(x) H5_GLUE(x, __pkg_init)
-
-/* Macros to check if a package is initialized */
-#define H5_CHECK_PACKAGE_INIT_REG_YES(asrt)       HDassert(H5_PACKAGE_INIT_VAR(pkg));
-#define H5_CHECK_PACKAGE_INIT_REG_NO(asrt)
-#define H5_CHECK_PACKAGE_INIT_INIT_YES(asrt)
-#define H5_CHECK_PACKAGE_INIT_INIT_NO(asrt)
-
-/* Macros to initialize package, if a package initialization routine is defined */
-#define H5_PKG_YES_INIT(pkg)						      \
-    if(!H5_PACKAGE_INIT_VAR(pkg)) {					      \
-        if(H5_GLUE(pkg, _pkg_init)() < 0) {				      \
-            /* (Can't use H5E_THROW here) */				      \
-            H5E_PRINTF(H5E_CANTINIT, "interface initialization failed");      \
-            ret_value = fail_value;					      \
-            goto func_init_failed;					      \
-        } /* end if */						              \
-    } /* end if */
-#define H5_PKG_NO_INIT(pkg)
-
-/* Macros to declare package initialization symbols, if a package initialization routine is defined */
-#define H5_PKG_YES_INIT_VAR(pkg) extern hbool_t H5_PACKAGE_INIT_VAR(H5_MY_PKG);
-#define H5_PKG_NO_INIT_VAR(pkg)
-#define H5_PKG_YES_INIT_FUNC(pkg) extern herr_t H5_PACKAGE_INIT_FUNC(pkg)(void);
-#define H5_PKG_NO_INIT_FUNC(pkg)
-
-/* Declare package initialization symbols (if in a package) */
-#define H5_DECLARE_PKG_VAR(pkg_init, pkg) H5_GLUE3(H5_PKG_, pkg_init, _INIT_VAR)(pkg)
-#define H5_DECLARE_PKG_FUNC(pkg_init, pkg) H5_GLUE3(H5_PKG_, pkg_init, _INIT_FUNC)(pkg)
-#ifdef H5_MY_PKG
-H5_DECLARE_PKG_VAR(H5_MY_PKG_INIT, H5_MY_PKG)
-H5_DECLARE_PKG_FUNC(H5_MY_PKG_INIT, H5_MY_PKG)
-#endif /* H5_MY_PKG */
-
-/* API re-entrance variable */
-extern hbool_t H5_api_entered_g;    /* Has library already been entered through API? */
-
-/* Use FUNCNAME to safely handle variations of C99 __func__ keyword handling */
-#ifdef H5_HAVE_C99_FUNC
-#define FUNCNAME __func__
-#elif defined(H5_HAVE_FUNCTION)
-#define FUNCNAME __FUNCTION__
-#else
-#error "We need __func__ or __FUNCTION__ to test function names!"
-#endif
-
-/* Macros for entering different scopes of routines */
-#define H5_PACKAGE_ENTER(pkg, pkg_init, init)				      \
-    FUNC_ENTER_NAME_CHECK(H5_IS_PKG(FUNCNAME))				      \
-                                                                              \
-    /* The library should be initialized already */			      \
-    HDassert(H5_INIT_GLOBAL);						      \
-                                                                              \
-    /* This interface should be initialized already */			      \
-    /* (except for package initialization routines :-) */		      \
-    H5_GLUE4(H5_CHECK_PACKAGE_INIT_, init, _, pkg_init)(pkg)		      \
-                                                                              \
-    /* Push the name of this function on the function stack */		      \
-    H5_PUSH_FUNC(FUNCNAME)							      \
-                                                                              \
-    /* Enter scope for this type of function */				      \
-    {
-
-#define H5_PRIVATE_ENTER(pkg, pkg_init)					      \
-    FUNC_ENTER_NAME_CHECK(H5_IS_PRIV(FUNCNAME))				      \
-                                                                              \
-    /* The library should be initialized already */			      \
-    HDassert(H5_INIT_GLOBAL);						      \
-                                                                              \
-    /* Initialize this interface if desired */				      \
-    H5_GLUE3(H5_PKG_, pkg_init, _INIT)(pkg)				      \
-                                                                              \
-    /* Push the name of this function on the function stack */		      \
-    H5_PUSH_FUNC(FUNCNAME)							      \
-                                                                              \
-    /* Enter scope for this type of function */				      \
-    {{
-
-#define H5_PUBLIC_ENTER(pkg, pkg_init)					      \
-    FUNC_ENTER_API_VARS(FUNCNAME)                                      	      \
-    FUNC_ENTER_API_THREADSAFE;                                                \
-    FUNC_ENTER_NAME_CHECK(H5_IS_PUB(FUNCNAME))				      \
-                                                                              \
-    /* Clear thread error stack when entering public functions */	      \
-    H5E_clear_stack(NULL);				                      \
-                                                                              \
-    /* Initialize the library or bust */				      \
-    if(!(H5_INIT_GLOBAL)) {						      \
-        H5_INIT_GLOBAL = TRUE;                                                \
-        if(H5_init_library() < 0) {  					      \
-            /* (Can't use H5E_THROW here) */				      \
-            H5E_PRINTF(H5E_CANTINIT, "interface initialization failed");      \
-            ret_value = fail_value;					      \
-            goto func_init_failed;					      \
-        } /* end if */						              \
-    } /* end if */						              \
-                                                                              \
-    /* Initialize this interface if desired */				      \
-    H5_GLUE3(H5_PKG_, pkg_init, _INIT)(pkg)				      \
-                                                                              \
-    /* Check for re-entering API routine */				      \
-    HDassert(!H5_api_entered_g);					      \
-    H5_api_entered_g = TRUE;						      \
-                                                                              \
-    /* Start logging MPI's MPE information */				      \
-    BEGIN_MPE_LOG(FUNCNAME)							      \
-                                                                              \
-    /* Push the name of this function on the function stack */		      \
-    H5_PUSH_FUNC(FUNCNAME)							      \
-                                                                              \
-    /* Enter scope for this type of function */				      \
-    {{{
-
-/* Macros for substituting the package name */
-#define FUNC_ENTER_STATIC	H5_PACKAGE_ENTER(H5_MY_PKG, H5_MY_PKG_INIT, REG)
-#define FUNC_ENTER_PKGINIT	H5_PACKAGE_ENTER(H5_MY_PKG, H5_MY_PKG_INIT, INIT)
-#define FUNC_ENTER_PKG		H5_PACKAGE_ENTER(H5_MY_PKG, H5_MY_PKG_INIT, REG)
-#define FUNC_ENTER_PRIV		H5_PRIVATE_ENTER(H5_MY_PKG, H5_MY_PKG_INIT)
-#define FUNC_ENTER_PUB		H5_PUBLIC_ENTER(H5_MY_PKG, H5_MY_PKG_INIT)
-
-/* Macros for substituting a function prefix */
-#define FUNC_PREFIX_STATIC	static
-#define FUNC_PREFIX_PKGINIT
-#define FUNC_PREFIX_PKG
-#define FUNC_PREFIX_PRIV
-#define FUNC_PREFIX_PUB
-
-/* Macros for declaring error variables */
-#define FUNC_ERR_VAR_ERR(ret_typ, err)					      \
-    hbool_t past_catch = FALSE;						      \
-    ret_typ fail_value = err;
-#define FUNC_ERR_VAR_ERRCATCH(ret_typ, err)					      \
-    hbool_t past_catch = FALSE;
-#define FUNC_ERR_VAR_NOERR(ret_typ, err)
-
-/* Use this macro when entering all functions */
-#define BEGIN_FUNC(scope, use_err, ret_typ, ret_init, err, func)	      \
-H5_GLUE(FUNC_PREFIX_, scope)						      \
-ret_typ									      \
-func									      \
-/* Open function */							      \
-{									      \
-    ret_typ ret_value = ret_init;					      \
-    H5_GLUE(FUNC_ERR_VAR_, use_err)(ret_typ, err)			      \
-    H5_GLUE(FUNC_ENTER_, scope)
-
-/* Macros for label when a function initialization can fail */
-#define H5_PRIV_YES_FUNC_INIT_FAILED func_init_failed:
-#define H5_PRIV_NO_FUNC_INIT_FAILED
-#define H5_PRIV_FUNC_INIT_FAILED(pkg_init) H5_GLUE3(H5_PRIV_, pkg_init, _FUNC_INIT_FAILED)
-
-/* Macros for leaving different scopes of routines */
-#define FUNC_LEAVE_PKGINIT					       	      \
-    /* Leave scope for this type of function */				      \
-    }									      \
-                                                                              \
-    /* Pop the name of this function off the function stack */		      \
-    H5_POP_FUNC
-
-#define FUNC_LEAVE_STATIC					       	      \
-    /* Leave scope for this type of function */				      \
-    }									      \
-                                                                              \
-    /* Pop the name of this function off the function stack */		      \
-    H5_POP_FUNC
-
-#define FUNC_LEAVE_PKG						       	      \
-    /* Leave scope for this type of function */				      \
-    }									      \
-                                                                              \
-    /* Pop the name of this function off the function stack */		      \
-    H5_POP_FUNC
-
-#define FUNC_LEAVE_PRIV						       	      \
-    /* Leave scope for this type of function */				      \
-    }}									      \
-                                                                              \
-    /* Label for errors during FUNC_ENTER */				      \
-    H5_PRIV_FUNC_INIT_FAILED(H5_MY_PKG_INIT)				      \
-                                                                              \
-    /* Pop the name of this function off the function stack */		      \
-    H5_POP_FUNC
-
-#define FUNC_LEAVE_PUB						       	      \
-    /* Leave scope for this type of function */				      \
-    }}}									      \
-                                                                              \
-    /* Label for errors during FUNC_ENTER */				      \
-func_init_failed:							      \
-                                                                              \
-    /* Dump error stack if an error occurred during API routine */	      \
-    if(ret_value == fail_value)						      \
-        (void)H5E_dump_api_stack(TRUE);					      \
-                                                                              \
-    /* Finish the API tracing info */					      \
-    H5TRACE_RETURN(ret_value);						      \
-                                                                              \
-    /* Pop the name of this function off the function stack */		      \
-    H5_POP_FUNC							      \
-                                                                              \
-    /* Finish the MPE tracing info */					      \
-    FINISH_MPE_LOG;							      \
-                                                                              \
-    /* Check for leaving API routine */					      \
-    HDassert(H5_api_entered_g);						      \
-    H5_api_entered_g = FALSE;						      \
-                                                                              \
-    /* Release thread-safety semaphore */				      \
-    FUNC_LEAVE_API_THREADSAFE
-
-/* Use this macro when leaving all functions */
-#define END_FUNC(scope)							      \
-    /* Scope-specific function conclusion */				      \
-    H5_GLUE(FUNC_LEAVE_, scope)						      \
-                                                                              \
-    /* Leave routine */							      \
-    return(ret_value);							      \
-                                                                              \
-    /* Close Function */						      \
-}
-
-
-/* Macro for "stringizing" an integer in the C preprocessor (use H5_TOSTRING) */
-/* (use H5_TOSTRING, H5_STRINGIZE is just part of the implementation) */
-#define H5_STRINGIZE(x) #x
-#define H5_TOSTRING(x) H5_STRINGIZE(x)
 
 /* Macro for "glueing" together items, for re-scanning macros */
 #define H5_GLUE(x,y)       x##y
@@ -2287,9 +1984,6 @@ H5_DLL uint32_t H5_checksum_crc(const void *data, size_t len);
 H5_DLL uint32_t H5_checksum_lookup3(const void *data, size_t len, uint32_t initval);
 H5_DLL uint32_t H5_checksum_metadata(const void *data, size_t len, uint32_t initval);
 H5_DLL uint32_t H5_hash_string(const char *str);
-
-/* Functions for building paths, etc. */
-H5_DLL herr_t   H5_build_extpath(const char *, char ** /*out*/ );
 
 /* Functions for debugging */
 H5_DLL herr_t H5_buffer_dump(FILE *stream, int indent, uint8_t *buf,

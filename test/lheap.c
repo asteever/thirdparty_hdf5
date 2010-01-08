@@ -76,7 +76,7 @@ main(void)
     h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
     if ((file=H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl))<0)
 	goto error;
-    if(NULL == (f = (H5F_t *)H5I_object(file))) {
+    if(NULL == (f = H5I_object(file))) {
 	H5_FAILED();
 	H5Eprint2(H5E_DEFAULT, stdout);
 	goto error;
@@ -93,18 +93,16 @@ main(void)
     }
     for(i = 0; i < NOBJS; i++) {
         sprintf(buf, "%03d-", i);
-        for(j = 4; j < i; j++)
-            buf[j] = '0' + j % 10;
-        if(j > 4)
-            buf[j] = '\0';
+        for (j=4; j<i; j++) buf[j] = '0' + j%10;
+        if (j>4) buf[j] = '\0';
 
-        if((size_t)(-1) == (obj[i] = H5HL_insert(f, H5P_DATASET_XFER_DEFAULT, heap, strlen(buf) + 1, buf))) {
+        if ((size_t)(-1)==(obj[i]=H5HL_insert(f, H5P_DATASET_XFER_DEFAULT, heap, strlen(buf)+1, buf))) {
 	    H5_FAILED();
 	    H5Eprint2(H5E_DEFAULT, stdout);
 	    goto error;
 	}
     }
-    if(H5HL_unprotect(f, heap) < 0) {
+    if (H5HL_unprotect(f, H5P_DATASET_XFER_DEFAULT, heap, heap_addr) < 0) {
         H5_FAILED();
         H5Eprint2(H5E_DEFAULT, stdout);
         goto error;
@@ -118,18 +116,16 @@ main(void)
 
     TESTING("local heap read");
     h5_fixname(FILENAME[0], fapl, filename, sizeof filename);
-    if((file = H5Fopen(filename, H5F_ACC_RDONLY, fapl)) < 0) goto error;
-    if(NULL == (f = (H5F_t *)H5I_object(file))) {
+    if ((file=H5Fopen(filename, H5F_ACC_RDONLY, fapl))<0) goto error;
+    if (NULL==(f=H5I_object(file))) {
         H5_FAILED();
         H5Eprint2(H5E_DEFAULT, stdout);
         goto error;
     }
-    for(i = 0; i < NOBJS; i++) {
+    for (i=0; i<NOBJS; i++) {
         sprintf(buf, "%03d-", i);
-        for(j = 4; j < i; j++)
-            buf[j] = '0' + j % 10;
-        if(j > 4)
-            buf[j] = '\0';
+        for (j=4; j<i; j++) buf[j] = '0' + j%10;
+        if (j>4) buf[j] = '\0';
 
         if (NULL == (heap = H5HL_protect(f, H5P_DATASET_XFER_DEFAULT, heap_addr, H5AC_READ))) {
             H5_FAILED();
@@ -137,7 +133,7 @@ main(void)
             goto error;
         }
 
-        if (NULL == (s = (const char *)H5HL_offset_into(heap, obj[i]))) {
+        if (NULL == (s = H5HL_offset_into(f, heap, obj[i]))) {
             H5_FAILED();
             H5Eprint2(H5E_DEFAULT, stdout);
             goto error;
@@ -151,7 +147,7 @@ main(void)
             goto error;
         }
 
-        if(H5HL_unprotect(f, heap) < 0) {
+        if (H5HL_unprotect(f, H5P_DATASET_XFER_DEFAULT, heap, heap_addr) < 0) {
             H5_FAILED();
             H5Eprint2(H5E_DEFAULT, stdout);
             goto error;
@@ -172,4 +168,3 @@ main(void)
     } H5E_END_TRY;
     return 1;
 }
-

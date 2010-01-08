@@ -75,17 +75,6 @@ static herr_t H5HG_size(const H5F_t *f, const H5HG_heap_t *heap, size_t *size_pt
 /* Package Variables */
 /*********************/
 
-/* H5HG inherits cache-like properties from H5AC */
-const H5AC_class_t H5AC_GHEAP[1] = {{
-    H5AC_GHEAP_ID,
-    (H5AC_load_func_t)H5HG_load,
-    (H5AC_flush_func_t)H5HG_flush,
-    (H5AC_dest_func_t)H5HG_dest,
-    (H5AC_clear_func_t)H5HG_clear,
-    (H5AC_notify_func_t)NULL,
-    (H5AC_size_func_t)H5HG_size,
-}};
-
 
 /*****************************/
 /* Library Private Variables */
@@ -95,6 +84,16 @@ const H5AC_class_t H5AC_GHEAP[1] = {{
 /*******************/
 /* Local Variables */
 /*******************/
+
+/* H5HG inherits cache-like properties from H5AC */
+const H5AC_class_t H5AC_GHEAP[1] = {{
+    H5AC_GHEAP_ID,
+    (H5AC_load_func_t)H5HG_load,
+    (H5AC_flush_func_t)H5HG_flush,
+    (H5AC_dest_func_t)H5HG_dest,
+    (H5AC_clear_func_t)H5HG_clear,
+    (H5AC_size_func_t)H5HG_size,
+}};
 
 
 
@@ -381,7 +380,7 @@ H5HG_dest(H5F_t *f, H5HG_heap_t *heap)
         heap->chunk = H5FL_BLK_FREE(gheap_chunk, heap->chunk);
     if(heap->obj)
         heap->obj = H5FL_SEQ_FREE(H5HG_obj_t, heap->obj);
-    heap = H5FL_FREE(H5HG_heap_t, heap);
+    (void)H5FL_FREE(H5HG_heap_t, heap);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

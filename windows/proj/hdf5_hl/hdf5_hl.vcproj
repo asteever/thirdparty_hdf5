@@ -351,12 +351,7 @@
 			<File
 				RelativePath="..\..\..\hl\src\H5TB.c"
 				>
-		</File>
-		</Filter>
-		<Filter
-			Name="Header Files"
-			Filter="h;hpp;hxx;hm;inl;fi;fd"
-			>
+			</File>
 		</Filter>
 	</Files>
 	<Globals>

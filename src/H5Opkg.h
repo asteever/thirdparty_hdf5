@@ -30,7 +30,7 @@
 #define H5O_NMESGS	8 		/*initial number of messages	     */
 #define H5O_NCHUNKS	2		/*initial number of chunks	     */
 #define H5O_MIN_SIZE	22		/* Min. obj header data size (must be big enough for a message prefix and a continuation message) */
-#define H5O_MSG_TYPES   25              /* # of types of messages            */
+#define H5O_MSG_TYPES   24              /* # of types of messages            */
 #define H5O_MAX_CRT_ORDER_IDX 65535     /* Max. creation order index value   */
 
 /* Versions of object header structure */
@@ -222,8 +222,8 @@ struct H5O_msg_class_t {
     const char	*name;				/*for debugging             */
     size_t	native_size;			/*size of native message    */
     unsigned    share_flags;			/* Message sharing settings */
-    void	*(*decode)(H5F_t *, hid_t, H5O_t *, unsigned, unsigned *, const uint8_t *);
-    herr_t	(*encode)(H5F_t *, hbool_t, uint8_t *, const void *);
+    void	*(*decode)(H5F_t*, hid_t, H5O_t *, unsigned, unsigned *, const uint8_t *);
+    herr_t	(*encode)(H5F_t*, hbool_t, uint8_t*, const void *);
     void	*(*copy)(const void *, void *);	/*copy native value         */
     size_t	(*raw_size)(const H5F_t *, hbool_t, const void *);/*sizeof encoded message	*/
     herr_t	(*reset)(void *);		/*free nested data structs  */
@@ -260,7 +260,7 @@ typedef struct H5O_chunk_t {
 } H5O_chunk_t;
 
 struct H5O_t {
-    H5AC_info_t cache_info; /* Information for metadata cache functions, _must_ be */
+    H5AC_info_t cache_info; /* Information for H5AC cache functions, _must_ be */
                             /* first field in structure */
 
     /* File-specific information (not stored) */
@@ -449,11 +449,9 @@ H5_DLLVAR const H5O_msg_class_t H5O_MSG_AINFO[1];
 /* Reference Count Message. (0x0016) */
 H5_DLLVAR const H5O_msg_class_t H5O_MSG_REFCOUNT[1];
 
-/* Free-space Manager Info message. (0x0017) */
-H5_DLLVAR const H5O_msg_class_t H5O_MSG_FSINFO[1];
-
-/* Placeholder for unknown message. (0x0018) */
+/* Placeholder for unknown message. (0x0017) */
 H5_DLLVAR const H5O_msg_class_t H5O_MSG_UNKNOWN[1];
+
 
 /*
  * Object header "object" types

@@ -19,6 +19,7 @@
 #define H5_INTERFACE_INIT_FUNC	H5S_init_interface
 
 
+#define _H5S_IN_H5S_C
 #include "H5private.h"		/* Generic Functions			*/
 #include "H5Eprivate.h"		/* Error handling		  	*/
 #include "H5Fprivate.h"		/* Files				*/
@@ -564,10 +565,6 @@ H5S_copy(const H5S_t *src, hbool_t share_selection, hbool_t copy_max)
     ret_value = dst;
 
 done:
-    if(NULL == ret_value)
-        if(dst)
-            dst = H5FL_FREE(H5S_t, dst);
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5S_copy() */
 
@@ -1465,7 +1462,7 @@ H5S_encode(H5S_t *obj, unsigned char *buf, size_t *nalloc)
     FUNC_ENTER_NOAPI_NOINIT(H5S_encode)
 
     /* Allocate "fake" file structure */
-    if(NULL == (f = H5F_fake_alloc((uint8_t)0)))
+    if(NULL == (f = H5F_fake_alloc((size_t)0)))
 	HGOTO_ERROR(H5E_DATASPACE, H5E_CANTALLOC, FAIL, "can't allocate fake file struct")
 
     /* Find out the size of buffer needed for extent */
@@ -1576,7 +1573,7 @@ H5S_decode(const unsigned char *buf)
     H5S_extent_t *extent;
     size_t      extent_size;            /* size of the extent message*/
     H5F_t       *f = NULL;              /* Fake file structure*/
-    uint8_t     sizeof_size;            /* 'Size of sizes' for file */
+    size_t      sizeof_size;            /* 'Size of sizes' for file */
     H5S_t       *ret_value;
 
     FUNC_ENTER_NOAPI_NOINIT(H5S_decode)
@@ -1857,9 +1854,9 @@ done:
 hbool_t
 H5S_has_extent(const H5S_t *ds)
 {
-    hbool_t ret_value;
+    htri_t ret_value;
 
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5S_has_extent)
+    FUNC_ENTER_NOAPI(H5S_has_extent, FAIL)
 
     HDassert(ds);
 
@@ -1868,6 +1865,7 @@ H5S_has_extent(const H5S_t *ds)
     else
         ret_value = TRUE;
 
+done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5S_has_extent() */
 

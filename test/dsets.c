@@ -180,6 +180,11 @@ const char *FILENAME[] = {
 #define BYPASS_CHUNK_DIM         500
 #define BYPASS_FILL_VALUE        7
  
+/* Declarations for test_idx_compatible() */
+#define	FIXED_IDX_FILE	"fixed_idx.h5"
+#define DSET            "dset"
+#define DSET_FILTER     "dset_filter"
+
 /* Shared global arrays */
 #define DSET_DIM1       100
 #define DSET_DIM2       200
@@ -710,9 +715,7 @@ test_max_compact(hid_t fapl)
     compact_size = (SIXTY_FOUR_KB-64)/sizeof(int);
 
     wbuf = (int*)HDmalloc(sizeof(int)*(size_t)compact_size);
-    assert(wbuf);
     rbuf = (int*)HDmalloc(sizeof(int)*(size_t)compact_size);
-    assert(rbuf);
 
     n=0;
     for(i=0; i<(int)compact_size; i++)
@@ -769,9 +772,8 @@ test_max_compact(hid_t fapl)
      if(H5Dclose(dataset) < 0) goto error;
      if(H5Fclose(file) < 0) goto error;
      HDfree(wbuf);
-     wbuf = NULL;
      HDfree(rbuf);
-     rbuf = NULL;
+
 
      /* Test compact dataset of size 64KB */
 
@@ -805,19 +807,6 @@ test_max_compact(hid_t fapl)
      return 0;
 
 error:
-    if(wbuf)
-        HDfree(wbuf);
-    if(rbuf)
-        HDfree(rbuf);
-        
-    H5E_BEGIN_TRY {
-        /* Close file */
-        H5Sclose(space);
-        H5Pclose(plist);
-        H5Fclose(file);
-        H5Dclose(dataset);
-    } H5E_END_TRY;
-
      return -1;
 }
 
@@ -989,10 +978,10 @@ error:
 static herr_t
 test_tconv(hid_t file)
 {
-    char	*out = NULL, *in = NULL;
-    hsize_t	dims[1];
-    hid_t	space = -1, dataset = -1;
+    char	*out=NULL, *in=NULL;
     int		i;
+    hsize_t	dims[1];
+    hid_t	space, dataset;
 
     out = (char *)HDmalloc((size_t)(4 * 1000 * 1000));
     HDassert(out);
@@ -1003,11 +992,11 @@ test_tconv(hid_t file)
 
     /* Initialize the dataset */
     for(i = 0; i < 1000000; i++) {
-        out[i * 4 + 0] = 0x11;
-        out[i * 4 + 1] = 0x22;
-        out[i * 4 + 2] = 0x33;
-        out[i * 4 + 3] = 0x44;
-    } /* end for */
+	out[i*4+0] = 0x11;
+	out[i*4+1] = 0x22;
+	out[i*4+2] = 0x33;
+	out[i*4+3] = 0x44;
+    }
 
     /* Create the data space */
     dims[0] = 1000000;
@@ -1024,39 +1013,27 @@ test_tconv(hid_t file)
 
     /* Read data with byte order conversion */
     if(H5Dread(dataset, H5T_STD_I32BE, H5S_ALL, H5S_ALL, H5P_DEFAULT, in) < 0)
-        goto error;
+	goto error;
 
     /* Check */
     for(i = 0; i < 1000000; i++) {
-        if(in[4 * i + 0] != out[4 * i + 3] ||
-                in[4 * i + 1] != out[4 * i + 2] ||
-                in[4 * i + 2] != out[4 * i + 1] ||
-                in[4 * i + 3] != out[4 * i + 0]) {
-            H5_FAILED();
-            puts("    Read with byte order conversion failed.");
-            goto error;
-        }
+	if(in[4*i+0]!=out[4*i+3] ||
+	    in[4*i+1]!=out[4*i+2] ||
+	    in[4*i+2]!=out[4*i+1] ||
+	    in[4*i+3]!=out[4*i+0]) {
+	    H5_FAILED();
+	    puts("    Read with byte order conversion failed.");
+	    goto error;
+	}
     }
 
     if(H5Dclose(dataset) < 0) goto error;
-    if(H5Sclose(space) < 0) goto error;
-    HDfree(out);
-    HDfree(in);
-
+    free (out);
+    free (in);
     puts(" PASSED");
     return 0;
 
-error:
-    if(out) 
-        HDfree(out);
-    if(in) 
-        HDfree(in);
-    
-    H5E_BEGIN_TRY {
-        H5Dclose(dataset);
-        H5Sclose(space);
-    } H5E_END_TRY;
-    
+ error:
     return -1;
 }
 
@@ -1269,19 +1246,19 @@ filter_corrupt(unsigned int flags, size_t cd_nelmts,
       const unsigned int *cd_values, size_t nbytes,
       size_t *buf_size, void **buf)
 {
-    void  *data;
+    size_t         ret_value = 0;
     unsigned char  *dst = (unsigned char*)(*buf);
     unsigned int   offset;
     unsigned int   length;
     unsigned int   value;
-    size_t         ret_value = 0;
+    void  *data;
 
-    if(cd_nelmts != 3 || !cd_values)
+    if(cd_nelmts!=3 || !cd_values)
         return 0;
     offset = cd_values[0];
     length = cd_values[1];
     value  = cd_values[2];
-    if(offset > nbytes || (offset + length) > nbytes || length < sizeof(unsigned int))
+    if(offset>nbytes || (offset+length)>nbytes || length<sizeof(unsigned int))
         return 0;
 
     data = HDmalloc((size_t)length);
@@ -1289,19 +1266,15 @@ filter_corrupt(unsigned int flags, size_t cd_nelmts,
 
     if(flags & H5Z_FLAG_REVERSE) { /* Varify data is actually corrupted during read */
         dst += offset;
-        if(HDmemcmp(data, dst, (size_t)length) != 0)
-            ret_value = 0;
-        else {
-            *buf_size = nbytes;
-            ret_value = nbytes;
-        } /* end else */
-    }  /* end if */
-    else { /* Write corrupted data */
+        if(HDmemcmp(data, dst, (size_t)length)!=0) return 0;
+        *buf_size = nbytes;
+        ret_value = nbytes;
+    } else { /* Write corrupted data */
         dst += offset;
         HDmemcpy(dst, data, (size_t)length);
         *buf_size = nbytes;
-        ret_value = *buf_size;
-    } /* end else */
+	ret_value = *buf_size;
+    }
 
     if(data)
         HDfree(data);
@@ -7273,6 +7246,62 @@ error:
     return -1;
 } /* end test_chunk_expand() */
 
+/*-------------------------------------------------------------------------
+ *
+ *  test_idx_compatible(): 
+ *	Verify that the 1.8 branch cannot read datasets that use
+ *	Fixed Array indexing method.
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t 
+test_idx_compatible(void)
+{
+    hid_t	fid;		/* File id */
+    hid_t       did;		/* Dataset id */
+    char  	*srcdir = HDgetenv("srcdir"); /* where the src code is located */
+    char        filename[FILENAME_BUF_SIZE] = "";  /* old test file name */
+
+    /* Output message about test being performed */
+    TESTING("Compatibility for datasets that use Fixed Array indexing\n");
+
+    /* Generate correct name for test file by prepending the source path */
+    if(srcdir && ((HDstrlen(srcdir) + HDstrlen(FIXED_IDX_FILE) + 1) < sizeof(filename))) {
+	HDstrcpy(filename, srcdir);
+	HDstrcat(filename, "/");
+    }
+    HDstrcat(filename, FIXED_IDX_FILE);
+
+    /* Open the file */
+    if((fid = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT)) < 0)
+	FAIL_STACK_ERROR
+
+    /* Should not able to read the dataset w/o filter that use Fixed Array indexing */
+    H5E_BEGIN_TRY {
+	if((did = H5Dopen2(fid, DSET, H5P_DEFAULT)) != FAIL)
+	    TEST_ERROR
+    } H5E_END_TRY;
+
+    /* Should not able to read the dataset w/ filter that use Fixed Array indexing */
+    H5E_BEGIN_TRY {
+	if((did = H5Dopen2(fid, DSET_FILTER, H5P_DEFAULT)) != FAIL)
+	    TEST_ERROR
+    } H5E_END_TRY;
+
+    if(H5Fclose(fid) < 0) 
+	FAIL_STACK_ERROR
+
+    PASSED();
+    return 0;
+
+error:
+    H5E_BEGIN_TRY {
+        H5Dclose(did);
+	H5Fclose(fid);
+    } H5E_END_TRY;
+    return -1;
+} /* test_idx_compatible */
+
 
 /*-------------------------------------------------------------------------
  * Function:	main
@@ -7309,7 +7338,7 @@ main(void)
         envval = "nomatch";
 
     /* Set the random # seed */
-    HDsrandom((unsigned)HDtime(NULL));
+    HDsrandom((unsigned long)HDtime(NULL));
 
     /* Testing setup */
     h5_reset();
@@ -7397,6 +7426,7 @@ main(void)
         nerrors += (test_chunk_cache(my_fapl) < 0		? 1 : 0);
         nerrors += (test_big_chunks_bypass_cache(my_fapl) < 0   ? 1 : 0);
         nerrors += (test_chunk_expand(my_fapl) < 0		? 1 : 0);
+	nerrors += (test_idx_compatible() < 0  			? 1 : 0);
 
         if(H5Fclose(file) < 0)
             goto error;

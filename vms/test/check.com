@@ -36,7 +36,7 @@ $ run  big
 $ type sys$input
 
 $ type sys$input
--------			Running bittests    	-------
+-------			Running bittest    	-------
 $ run  bittests
 $ type sys$input
 
@@ -53,11 +53,6 @@ $ type sys$input
 $ type sys$input
 -------			Running cache   	-------
 $ run  cache
-$ type sys$input
-
-$ type sys$input
--------			Running chunk_info   	-------
-$ run  chunk_info 
 $ type sys$input
 
 $ type sys$input
@@ -93,11 +88,6 @@ $ type sys$input
 $ type sys$input
 -------			Running dtypes    	-------
 $ run  dtypes
-$ type sys$input
-
-$ type sys$input
--------			Running earray    	-------
-$ run  earray
 $ type sys$input
 
 $ type sys$input

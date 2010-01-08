@@ -58,8 +58,7 @@ typedef struct {
 /* General stuff */
 static herr_t H5D_init_storage(H5D_t *dataset, hbool_t full_overwrite, hid_t dxpl_id);
 static herr_t H5D_get_dxpl_cache_real(hid_t dxpl_id, H5D_dxpl_cache_t *cache);
-static H5D_shared_t *H5D_new(hid_t dcpl_id, hbool_t creating,
-    hbool_t vl_type);
+static H5D_shared_t *H5D_new(hid_t dcpl_id, hbool_t creating, hbool_t vl_type);
 static herr_t H5D_init_type(H5F_t *file, const H5D_t *dset, hid_t type_id,
     const H5T_t *type);
 static herr_t H5D_init_space(H5F_t *file, const H5D_t *dset, const H5S_t *space);
@@ -179,7 +178,7 @@ H5D_init_interface(void)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't retrieve external file list")
     if(H5P_get(def_dcpl, H5D_CRT_FILL_VALUE_NAME, &H5D_def_dset.dcpl_cache.fill) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't retrieve fill value")
-    if(H5P_get(def_dcpl, H5O_CRT_PIPELINE_NAME, &H5D_def_dset.dcpl_cache.pline) < 0)
+    if(H5P_get(def_dcpl, H5D_CRT_DATA_PIPELINE_NAME, &H5D_def_dset.dcpl_cache.pline) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't retrieve pipeline filter")
 
     /* Reset the "default DXPL cache" information */
@@ -523,8 +522,8 @@ done:
 static H5D_shared_t *
 H5D_new(hid_t dcpl_id, hbool_t creating, hbool_t vl_type)
 {
-    H5D_shared_t    *new_dset = NULL;   /* New dataset object */
     H5P_genplist_t  *plist;             /* Property list created */
+    H5D_shared_t    *new_dset = NULL;   /* New dataset object */
     H5D_shared_t    *ret_value;         /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5D_new)
@@ -541,7 +540,7 @@ H5D_new(hid_t dcpl_id, hbool_t creating, hbool_t vl_type)
      */
     if(!vl_type && creating && dcpl_id == H5P_DATASET_CREATE_DEFAULT) {
         if(H5I_inc_ref(dcpl_id, FALSE) < 0)
-            HGOTO_ERROR(H5E_DATASET, H5E_CANTINC, NULL, "can't increment default DCPL ID")
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTINC, NULL, "Can't increment default DCPL ID")
         new_dset->dcpl_id = dcpl_id;
     } /* end if */
     else {
@@ -737,7 +736,7 @@ H5D_update_oh_info(H5F_t *file, hid_t dxpl_id, H5D_t *dset, hid_t dapl_id)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't tell if fill value defined")
 
     /* Special case handling for variable-length types */
-    if(H5T_detect_class(type, H5T_VLEN, FALSE)) {
+    if(H5T_detect_class(type, H5T_VLEN)) {
         /* If the default fill value is chosen for variable-length types, always write it */
         if(fill_prop->fill_time == H5D_FILL_TIME_IFSET && fill_status == H5D_FILL_VALUE_DEFAULT) {
             /* Update dataset creation property */
@@ -928,7 +927,7 @@ H5D_create(H5F_t *file, hid_t type_id, const H5S_t *space, hid_t dcpl_id,
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "datatype is not sensible")
 
     /* Check if the datatype is/contains a VL-type */
-    if(H5T_detect_class(type, H5T_VLEN, FALSE))
+    if(H5T_detect_class(type, H5T_VLEN))
         has_vl_type = TRUE;
 
     /* Check if the dataspace has an extent set (or is NULL) */
@@ -979,7 +978,7 @@ H5D_create(H5F_t *file, hid_t type_id, const H5S_t *space, hid_t dcpl_id,
 
         /* Retrieve the properties we need */
         pline = &new_dset->shared->dcpl_cache.pline;
-        if(H5P_get(dc_plist, H5O_CRT_PIPELINE_NAME, pline) < 0)
+        if(H5P_get(dc_plist, H5D_CRT_DATA_PIPELINE_NAME, pline) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't retrieve pipeline filter")
         layout = &new_dset->shared->layout;
         if(H5P_get(dc_plist, H5D_CRT_LAYOUT_NAME, layout) < 0)
@@ -1010,7 +1009,7 @@ H5D_create(H5F_t *file, hid_t type_id, const H5S_t *space, hid_t dcpl_id,
     /* Set the latest version of the layout, pline & fill messages, if requested */
     if(H5F_USE_LATEST_FORMAT(file)) {
         /* Set the latest version for the I/O pipeline message */
-        if(H5O_pline_set_latest_version(&new_dset->shared->dcpl_cache.pline) < 0)
+        if(H5Z_set_latest_version(&new_dset->shared->dcpl_cache.pline) < 0)
             HGOTO_ERROR(H5E_DATASET, H5E_CANTSET, NULL, "can't set latest version of I/O filter pipeline")
 
         /* Set the latest version for the fill value message */
@@ -2233,7 +2232,7 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-herr_t
+static herr_t
 H5D_flush_real(H5D_t *dataset, hid_t dxpl_id)
 {
     H5O_t *oh = NULL;                   /* Pointer to dataset's object header */

@@ -1295,11 +1295,6 @@ H5Epush2(hid_t err_stack, const char *file, const char *func, unsigned line,
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a error stack ID")
     } /* end else */
 
-/* Note that the variable-argument parsing for the format is identical in
- *      the H5E_printf_stack() routine - correct errors and make changes in both
- *      places. -QAK
- */
-
     /* Format the description */
     va_start(ap, fmt);
 

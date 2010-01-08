@@ -23,10 +23,6 @@ USE_FILTER_FLETCHER32="@USE_FILTER_FLETCHER32@"
 USE_FILTER_NBIT="@USE_FILTER_NBIT@"
 USE_FILTER_SCALEOFFSET="@USE_FILTER_SCALEOFFSET@"
 
-TESTNAME=h5dump
-EXIT_SUCCESS=0
-EXIT_FAILURE=1
-
 DUMPER=h5dump                     # The tool name
 DUMPER_BIN=`pwd`/$DUMPER          # The path of the tool binary
 TESTDIR=`pwd`/../testfiles
@@ -336,7 +332,6 @@ TOOLTEST tnofilename.ddl
 # tests for super block
 TOOLTEST tboot1.ddl -H -B -d dset tfcontents1.h5
 TOOLTEST tboot2.ddl -B tfcontents2.h5
-TOOLTEST file_space.ddl -B file_space.h5
 
 # test -p with a non existing dataset
 TOOLTEST tperror.ddl -p -d bogus tfcontents1.h5
@@ -513,10 +508,11 @@ TOOLTEST textlinksrc.ddl textlinksrc.h5
 TOOLTEST textlinkfar.ddl textlinkfar.h5
 
 
+
+
 if test $nerrors -eq 0 ; then
-    echo "All $TESTNAME tests passed."
-    exit $EXIT_SUCCESS
-else
-    echo "$TESTNAME tests failed with $nerrors errors."
-    exit $EXIT_FAILURE
+   echo "All $DUMPER tests passed."
 fi
+
+exit $nerrors
+

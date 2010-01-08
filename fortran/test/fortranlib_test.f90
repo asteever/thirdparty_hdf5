@@ -30,7 +30,6 @@ PROGRAM fortranlibtest
   LOGICAL :: cleanup, status
 
   CALL h5open_f(error)
-
   cleanup = .TRUE.
   CALL h5_env_nocleanup_f(status)
   IF(status) cleanup=.FALSE.

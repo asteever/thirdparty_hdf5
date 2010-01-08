@@ -90,8 +90,8 @@ int h5repack(const char* infile,
 *-------------------------------------------------------------------------
 */
 
-int 
-h5repack_init(pack_opt_t *options, int verbose, H5F_file_space_type_t strategy, hsize_t threshold)
+int h5repack_init (pack_opt_t *options,
+                   int verbose)
 {
     int k, n;
     memset(options,0,sizeof(pack_opt_t));
@@ -106,13 +106,9 @@ h5repack_init(pack_opt_t *options, int verbose, H5F_file_space_type_t strategy, 
             options->filter_g[n].cd_values[k] = 0;
     }
 
-    options->fs_strategy = strategy;
-    options->fs_threshold = threshold;
-
     return (options_table_init(&(options->op_tbl)));
 }
 
-
 /*-------------------------------------------------------------------------
 * Function: h5repack_end
 *
@@ -126,7 +122,6 @@ int h5repack_end  (pack_opt_t *options)
     return options_table_free(options->op_tbl);
 }
 
-
 /*-------------------------------------------------------------------------
 * Function: h5repack_addfilter
 *
@@ -137,6 +132,7 @@ int h5repack_end  (pack_opt_t *options)
 *
 *-------------------------------------------------------------------------
 */
+
 int h5repack_addfilter(const char* str,
                        pack_opt_t *options)
 {
@@ -148,33 +144,38 @@ int h5repack_addfilter(const char* str,
 
 
     /* parse the -f option */
-    if(NULL == (obj_list = parse_filter(str, &n_objs, &filter, options, &is_glb)))
+    obj_list=parse_filter(str,&n_objs,&filter,options,&is_glb);
+    if (obj_list==NULL)
+    {
         return -1;
+    }
 
     /* if it applies to all objects */
-    if(is_glb)
+    if (is_glb)
     {
+
         int n;
 
         n = options->n_filter_g++; /* increase # of global filters */
 
-        if(options->n_filter_g > H5_REPACK_MAX_NFILTERS)
+        if (options->n_filter_g > H5_REPACK_MAX_NFILTERS)
         {
-            error_msg(progname, "maximum number of filters exceeded for <%s>\n", str);
-            free(obj_list);
+            error_msg(progname, "maximum number of filters exceeded for <%s>\n",str);
             return -1;
+
         }
 
         options->filter_g[n] = filter;
     }
+
     else
-        options_add_filter(obj_list, n_objs, filter, options->op_tbl);
+        options_add_filter(obj_list,n_objs,filter,options->op_tbl);
 
     free(obj_list);
     return 0;
 }
 
-
+
 /*-------------------------------------------------------------------------
 * Function: h5repack_addlayout
 *
