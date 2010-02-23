@@ -123,7 +123,7 @@ rem $* everything else arguments for h5copy.
     if "%3"=="-o" (
         set outputfile=%4
     ) else (
-        set h5diff=no
+        set runh5diff=no
     )
     
     (
@@ -164,7 +164,7 @@ rem $* everything else arguments for h5copy.
     if "%3"=="-o" (
         set outputfile=%4
     ) else (
-        set h5diff=no
+        set runh5diff=no
     )
     
     (

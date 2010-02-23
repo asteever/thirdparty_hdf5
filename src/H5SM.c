@@ -2478,7 +2478,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5SM_ih_size(H5F_t *f, hid_t dxpl_id, hsize_t *hdr_size, H5_ih_info_t *ih_info)
+H5SM_ih_size(H5F_t *f, hid_t dxpl_id, H5F_info_t *finfo)
 {
     H5SM_master_table_t *table = NULL;          /* SOHM master table */
     H5HF_t              *fheap = NULL;          /* Fractal heap handle */
@@ -2491,15 +2491,14 @@ H5SM_ih_size(H5F_t *f, hid_t dxpl_id, hsize_t *hdr_size, H5_ih_info_t *ih_info)
     /* Sanity check */
     HDassert(f);
     HDassert(H5F_addr_defined(f->shared->sohm_addr));
-    HDassert(hdr_size);
-    HDassert(ih_info);
+    HDassert(finfo);
 
     /* Look up the master SOHM table */
     if(NULL == (table = (H5SM_master_table_t *)H5AC_protect(f, dxpl_id, H5AC_SOHM_TABLE, f->shared->sohm_addr, NULL, NULL, H5AC_READ)))
 	HGOTO_ERROR(H5E_SOHM, H5E_CANTPROTECT, FAIL, "unable to load SOHM master table")
 
     /* Get SOHM header size */
-    *hdr_size = H5SM_TABLE_SIZE(f) + (table->num_indexes * H5SM_INDEX_HEADER_SIZE(f));
+    finfo->sohm.hdr_size = H5SM_TABLE_SIZE(f) + (table->num_indexes * H5SM_INDEX_HEADER_SIZE(f));
 
     /* Loop over all the indices for shared messages */
     for(u = 0; u < table->num_indexes; u++) {
@@ -2510,7 +2509,7 @@ H5SM_ih_size(H5F_t *f, hid_t dxpl_id, hsize_t *hdr_size, H5_ih_info_t *ih_info)
                 if(NULL == (bt2 = H5B2_open(f, dxpl_id, table->indexes[u].index_addr, f)))
                     HGOTO_ERROR(H5E_SOHM, H5E_CANTOPENOBJ, FAIL, "unable to open v2 B-tree for SOHM index")
 
-		if(H5B2_size(bt2, dxpl_id, &(ih_info->index_size)) < 0)
+		if(H5B2_size(bt2, dxpl_id, &(finfo->sohm.msgs_info.index_size)) < 0)
                     HGOTO_ERROR(H5E_SOHM, H5E_CANTGET, FAIL, "can't retrieve B-tree storage info")
 
                 /* Close the v2 B-tree */
@@ -2521,7 +2520,7 @@ H5SM_ih_size(H5F_t *f, hid_t dxpl_id, hsize_t *hdr_size, H5_ih_info_t *ih_info)
         } /* end if */
         else {
             HDassert(table->indexes[u].index_type == H5SM_LIST);
-	    ih_info->index_size += H5SM_LIST_SIZE(f, table->indexes[u].list_max);
+	    finfo->sohm.msgs_info.index_size += H5SM_LIST_SIZE(f, table->indexes[u].list_max);
         } /* end else */
 
         /* Check for heap for this index */
@@ -2531,7 +2530,7 @@ H5SM_ih_size(H5F_t *f, hid_t dxpl_id, hsize_t *hdr_size, H5_ih_info_t *ih_info)
                 HGOTO_ERROR(H5E_SOHM, H5E_CANTOPENOBJ, FAIL, "unable to open fractal heap")
 
             /* Get heap storage size */
-	    if(H5HF_size(fheap, dxpl_id, &(ih_info->heap_size)) < 0)
+	    if(H5HF_size(fheap, dxpl_id, &(finfo->sohm.msgs_info.heap_size)) < 0)
 		HGOTO_ERROR(H5E_SOHM, H5E_CANTGET, FAIL, "can't retrieve fractal heap storage info")
 
             /* Close the fractal heap */

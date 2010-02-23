@@ -17,8 +17,8 @@ rem File Name: hdf5build_examples.bat
 rem This batch file is used to build HDF5 C/C++/Fortran examples.
 rem This batch file takes the following options:
 rem .  /fort             Build HDF5 examples, including Fortran
-rem .  /nodebug          Note: Default is to build debug and release versions
 rem .  /useenv           Build HDF5 examples using compiler settings defined
+rem .  /nodebug          Note: Default is to build debug and release versions
 rem .                    in the environment, rather than the IDE.
 rem .  /?                Help information
 rem By Scott Wegner

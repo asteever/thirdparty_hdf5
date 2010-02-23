@@ -96,7 +96,6 @@ const H5AC_class_t H5AC_LHEAP_PRFX[1] = {{
     H5HL_prefix_flush,
     H5HL_prefix_dest,
     H5HL_prefix_clear,
-    NULL,
     H5HL_prefix_size,
 }};
 
@@ -106,7 +105,6 @@ const H5AC_class_t H5AC_LHEAP_DBLK[1] = {{
     H5HL_datablock_flush,
     H5HL_datablock_dest,
     H5HL_datablock_clear,
-    NULL,
     H5HL_datablock_size,
 }};
 

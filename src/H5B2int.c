@@ -534,17 +534,17 @@ H5B2_redistribute2(H5B2_hdr_t *hdr, hid_t dxpl_id, unsigned depth,
 
         /* Handle node pointers, if we have an internal node */
         if(depth > 1) {
-            hsize_t moved_nrec = move_nrec;   /* Total number of records moved, for internal redistrib */
+            hsize_t moved_nrec=move_nrec;   /* Total number of records moved, for internal redistrib */
             unsigned u;             /* Local index variable */
 
             /* Count the number of records being moved */
-            for(u = 0; u < move_nrec; u++)
+            for(u=0; u<move_nrec; u++)
                 moved_nrec += right_node_ptrs[u].all_nrec;
-            H5_ASSIGN_OVERFLOW(/* To: */ left_moved_nrec, /* From: */ moved_nrec, /* From: */ hsize_t, /* To: */ hssize_t)
-            right_moved_nrec -= (hssize_t)moved_nrec;
+            left_moved_nrec = moved_nrec;
+            right_moved_nrec -= moved_nrec;
 
             /* Copy node pointers from right node to left */
-            HDmemcpy(&(left_node_ptrs[*left_nrec + 1]), &(right_node_ptrs[0]), sizeof(H5B2_node_ptr_t) * move_nrec);
+            HDmemcpy(&(left_node_ptrs[*left_nrec+1]),&(right_node_ptrs[0]),sizeof(H5B2_node_ptr_t)*move_nrec);
 
             /* Slide node pointers in right node down */
             HDmemmove(&(right_node_ptrs[0]), &(right_node_ptrs[move_nrec]), sizeof(H5B2_node_ptr_t) * (new_right_nrec + (unsigned)1));
@@ -589,8 +589,8 @@ H5B2_redistribute2(H5B2_hdr_t *hdr, hid_t dxpl_id, unsigned depth,
             /* Count the number of records being moved */
             for(u = 0; u < move_nrec; u++)
                 moved_nrec += right_node_ptrs[u].all_nrec;
-            left_moved_nrec -= (hssize_t)moved_nrec;
-            H5_ASSIGN_OVERFLOW(/* To: */ right_moved_nrec, /* From: */ moved_nrec, /* From: */ hsize_t, /* To: */ hssize_t)
+            left_moved_nrec -= moved_nrec;
+            right_moved_nrec = moved_nrec;
         } /* end if */
 
         /* Update number of records in child nodes */

@@ -1393,7 +1393,8 @@ test_compound_8(void)
         char    c;
         s1      d;
     } s2;
-    hid_t  tid1, tid1_copy, tid2, tid2_copy, tid3, arr_tid;
+
+    hid_t  tid1,  tid1_copy, tid2, tid2_copy, tid3, arr_tid;
     size_t tsize;
     hsize_t dims[1] = {ARRAY_DIM};
     herr_t ret;
@@ -1545,7 +1546,7 @@ test_compound_8(void)
 
     if(tsize != (sizeof(char) + sizeof(char) + sizeof(int))) {
         H5_FAILED(); AT();
-        printf("The size of the packed compound datatype is incorrect\n");
+        printf("The size of the packed compound datatype is incorrect: tsize=%d\n", tsize);
         goto error;
     } /* end if */
 

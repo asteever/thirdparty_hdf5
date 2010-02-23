@@ -432,6 +432,7 @@ rem ############################################################################
     call :tooltest h5diff_619.txt -p 0.005 %file1% %file2% g1/dset3 g1/dset4
 
 
+
     rem ##############################################################################
     rem # -n
     rem ##############################################################################
@@ -468,7 +469,6 @@ rem ############################################################################
     call :testing %h5diff% -n 1 %srcfile1% %srcfile2%  g1/dset3 g1/dset4
     call :tooltest h5diff_628.txt -n 1 %file1% %file2% g1/dset3 g1/dset4
 
-	rem This is disabled on *nix platforms
     rem 6.29  non valid files
     call :testing %h5diff% file1.h6 file2.h6
     call :tooltest h5diff_629.txt file1.h6 file2.h6
@@ -532,7 +532,7 @@ rem ############################################################################
 	call :testing %h5diff% -c %srcfile2% %srcfile2% g2/dset5  g2/dset6
     call :tooltest h5diff_205.txt -c %file2% %file2% g2/dset5  g2/dset6
 	
-    rem   New option added rev #16461  - ADB 2/11/2009
+    rem   New option added rev #16463  - ADB 2/11/2009
 	rem # not comparable in compound
 	call :testing %h5diff% -c %srcfile2% %srcfile2% g2/dset7  g2/dset8
     call :tooltest h5diff_206.txt -c %file2% %file2% g2/dset7  g2/dset8
