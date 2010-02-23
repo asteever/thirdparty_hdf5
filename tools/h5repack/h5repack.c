@@ -90,8 +90,8 @@ int h5repack(const char* infile,
 *-------------------------------------------------------------------------
 */
 
-int
-h5repack_init(pack_opt_t *options, int verbose, H5F_file_space_type_t strategy, hsize_t threshold)
+int h5repack_init (pack_opt_t *options,
+                   int verbose)
 {
     int k, n;
     memset(options,0,sizeof(pack_opt_t));
@@ -106,13 +106,9 @@ h5repack_init(pack_opt_t *options, int verbose, H5F_file_space_type_t strategy, 
             options->filter_g[n].cd_values[k] = 0;
     }
 
-    options->fs_strategy = strategy;
-    options->fs_threshold = threshold;
-
     return (options_table_init(&(options->op_tbl)));
 }
 
-
 /*-------------------------------------------------------------------------
 * Function: h5repack_end
 *
@@ -126,7 +122,6 @@ int h5repack_end  (pack_opt_t *options)
     return options_table_free(options->op_tbl);
 }
 
-
 /*-------------------------------------------------------------------------
 * Function: h5repack_addfilter
 *
@@ -137,6 +132,7 @@ int h5repack_end  (pack_opt_t *options)
 *
 *-------------------------------------------------------------------------
 */
+
 int h5repack_addfilter(const char* str,
                        pack_opt_t *options)
 {
@@ -148,33 +144,38 @@ int h5repack_addfilter(const char* str,
 
 
     /* parse the -f option */
-    if(NULL == (obj_list = parse_filter(str, &n_objs, &filter, options, &is_glb)))
+    obj_list=parse_filter(str,&n_objs,&filter,options,&is_glb);
+    if (obj_list==NULL)
+    {
         return -1;
+    }
 
     /* if it applies to all objects */
-    if(is_glb)
+    if (is_glb)
     {
+
         int n;
 
         n = options->n_filter_g++; /* increase # of global filters */
 
-        if(options->n_filter_g > H5_REPACK_MAX_NFILTERS)
+        if (options->n_filter_g > H5_REPACK_MAX_NFILTERS)
         {
-            error_msg(progname, "maximum number of filters exceeded for <%s>\n", str);
-            free(obj_list);
+            error_msg(progname, "maximum number of filters exceeded for <%s>\n",str);
             return -1;
+
         }
 
         options->filter_g[n] = filter;
     }
+
     else
-        options_add_filter(obj_list, n_objs, filter, options->op_tbl);
+        options_add_filter(obj_list,n_objs,filter,options->op_tbl);
 
     free(obj_list);
     return 0;
 }
 
-
+
 /*-------------------------------------------------------------------------
 * Function: h5repack_addlayout
 *
@@ -271,7 +272,7 @@ static int check_options(pack_opt_t *options)
     if (options->verbose && have_request(options) /* only print if requested */)
     {
         printf("Objects to modify layout are...\n");
-        if (options->all_layout==1)
+        if (options->all_layout==1)  
         {
             switch (options->layout_g)
             {
@@ -293,7 +294,7 @@ static int check_options(pack_opt_t *options)
                 return -1;
             }
             printf(" Apply %s layout to all\n", slayout);
-            if (H5D_CHUNKED==options->layout_g)
+            if (H5D_CHUNKED==options->layout_g) 
             {
                 printf("with dimension [");
                 for ( j = 0; j < options->chunk_g.rank; j++)
@@ -399,24 +400,24 @@ static int check_options(pack_opt_t *options)
     *-------------------------------------------------------------------------
     */
 
-    if (options->grp_compact < 0)
+    if (options->grp_compact < 0) 
     {
         error_msg(progname, "invalid maximum number of links to store as header messages\n");
         return -1;
     }
-    if (options->grp_indexed < 0)
+    if (options->grp_indexed < 0) 
     {
         error_msg(progname, "invalid minimum number of links to store in the indexed format\n");
         return -1;
     }
-    if (options->grp_indexed > options->grp_compact)
+    if (options->grp_indexed > options->grp_compact) 
     {
         error_msg(progname, "minimum indexed size is greater than the maximum compact size\n");
         return -1;
     }
-    for (i=0; i<8; i++)
+    for (i=0; i<8; i++) 
     {
-        if (options->msg_size[i]<0)
+        if (options->msg_size[i]<0) 
         {
             error_msg(progname, "invalid shared message size\n");
             return -1;
@@ -516,14 +517,14 @@ static int check_objects(const char* fname,
     if(options->verbose)
         printf("Opening file <%s>. Searching for objects to modify...\n", fname);
 
-    for(i = 0; i < options->op_tbl->nelems; i++)
+    for(i = 0; i < options->op_tbl->nelems; i++) 
     {
         char* name=options->op_tbl->objs[i].path;
         if(options->verbose)
             printf(" <%s>",name);
 
         /* the input object names are present in the file and are valid */
-        if(h5trav_getindext(name, travt) < 0)
+        if(h5trav_getindext(name, travt) < 0) 
         {
             error_msg(progname, "%s Could not find <%s> in file <%s>. Exiting...\n",
                 (options->verbose?"\n":""),name,fname);
@@ -533,7 +534,7 @@ static int check_objects(const char* fname,
             printf("...Found\n");
 
         /* check for extra filter conditions */
-        switch(options->op_tbl->objs[i].filter->filtn)
+        switch(options->op_tbl->objs[i].filter->filtn) 
         {
             /* chunk size must be smaller than pixels per block */
         case H5Z_FILTER_SZIP:

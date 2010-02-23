@@ -28,11 +28,10 @@
 
 #define TRUE 1
 #define FALSE 0
-#define COPY_BUF_SIZE 1024
 
 hsize_t write_pad( int , hsize_t );
 hsize_t compute_pad( hsize_t );
-herr_t copy_to_file( int , int , ssize_t, ssize_t );
+hsize_t copy_to_file( int , int , ssize_t, ssize_t );
 
 const char  *progname = "h5unjam";
 int          d_status = EXIT_SUCCESS;
@@ -269,19 +268,13 @@ main(int argc, const char *argv[])
 
     /* copy from 0 to 'usize - 1' into ufid */
     if (!do_delete) {
-	if(copy_to_file(ifid, ufid, 0, (ssize_t) usize) < 0) {
-            error_msg(progname, "unable to copy user block to output file \"%s\"\n", ub_file);
-            exit(EXIT_FAILURE);
-        }
+	    copy_to_file( ifid, ufid, 0, (ssize_t) usize);
     }
 
     /* copy from usize to end of file into h5fid,
      * starting at end of user block if present
      */
-    if(copy_to_file(ifid, h5fid, (ssize_t) usize, (ssize_t)(fsize - (ssize_t)usize)) < 0) {
-        error_msg(progname, "unable to copy hdf5 data to output file \"%s\"\n", output_file);
-        exit(EXIT_FAILURE);
-    }
+    copy_to_file( ifid, h5fid, (ssize_t) usize, (ssize_t)(fsize - (ssize_t)usize) );
 
 
     HDclose(ufid);
@@ -295,60 +288,36 @@ main(int argc, const char *argv[])
  *  Copy 'how_much' bytes from the input file to the output file,
  *  starting at byte 'where' in the input file.
  *
- *  Returns 0 on success, -1 on failure.
+ *  Returns the size of the output file.
  */
-herr_t
+hsize_t
 copy_to_file( int infid, int ofid, ssize_t where, ssize_t how_much )
 {
-    static char buf[COPY_BUF_SIZE];
+    char buf[1024];
     off_t to;
     off_t from;
     ssize_t nchars = -1;
-    ssize_t wnchars = -1;
-    herr_t ret_value = 0;
 
     /* nothing to copy */
     if(how_much <= 0)
-        goto done;
+        return(where);
 
     from = where;
     to = 0;
 
-    while(how_much > 0) {
-        /* Seek to correct position in input file */
+    while( how_much > 0) {
         HDlseek(infid,from,SEEK_SET);
-
-        /* Read data to buffer */
-        if (how_much > COPY_BUF_SIZE)
-            nchars = HDread(infid,buf,(unsigned)COPY_BUF_SIZE);
+        if (how_much > 512)
+            nchars = HDread(infid,buf,(unsigned)512);
         else
             nchars = HDread(infid,buf,(unsigned)how_much);
-        if(nchars < 0) {
-            ret_value = -1;
-            goto done;
-        } /* end if */
-
-        /* Seek to correct position in output file */
         HDlseek(ofid,to,SEEK_SET);
-
-        /* Update positions/size */
+        HDwrite(ofid,buf,(unsigned)nchars);
         how_much -= nchars;
         from += nchars;
         to += nchars;
+    }
 
-        /* Write nchars bytes to output file */
-        wnchars = nchars;
-        while(nchars > 0) {
-            wnchars = HDwrite(ofid,buf,(unsigned)nchars);
-            if(wnchars < 0) {
-                ret_value = -1;
-                goto done;
-            } /* end if */
-            nchars -= wnchars;
-        } /* end while */
-    } /* end while */
-
-done:
-    return ret_value;
-}  /* end copy_to_file */
+    return (where + how_much);
+}
 

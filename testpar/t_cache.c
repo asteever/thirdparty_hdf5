@@ -129,10 +129,10 @@ long local_pins		   = 0;
  *		processes, and thus cannot be marked as dirty unless they
  *		happen to overlap some collective operation.
  *
- *	cleared: Boolean flag that is set to true whenever the entry is
+ *	cleared: Boolean flag that is set to true whenever the entry is 
  *		dirty, and is cleared via a call to clear_datum().
  *
- *	flushed: Boolean flag that is set to true whenever the entry is
+ *	flushed: Boolean flag that is set to true whenever the entry is 
  *		dirty, and is flushed via a call to flush_datum().
  *
  *	index:	Index of this instance of datum in the data_index[] array
@@ -334,7 +334,6 @@ const H5C_class_t types[NUMBER_OF_ENTRY_TYPES] =
     (H5C_flush_func_t)flush_datum,
     (H5C_dest_func_t)destroy_datum,
     (H5C_clear_func_t)clear_datum,
-    (H5C_notify_func_t)NULL,
     (H5C_size_func_t)size_datum
   }
 };
@@ -360,14 +359,19 @@ void lock_and_unlock_random_entries(H5C_t * cache_ptr, H5F_t * file_ptr,
 void lock_and_unlock_random_entry(H5C_t * cache_ptr, H5F_t * file_ptr,
                                   int min_idx, int max_idx);
 void lock_entry(H5C_t * cache_ptr, H5F_t * file_ptr, int32_t idx);
-void mark_pinned_entry_dirty(int32_t idx, hbool_t size_changed, size_t new_size);
-void mark_pinned_or_protected_entry_dirty(int32_t idx);
+void mark_pinned_entry_dirty(H5C_t * cache_ptr, H5F_t * file_ptr,
+                int32_t idx, hbool_t size_changed, size_t new_size);
+void mark_pinned_or_protected_entry_dirty(H5C_t * cache_ptr,
+                                          H5F_t * file_ptr,
+                                          int32_t idx);
 void pin_entry(H5C_t * cache_ptr, H5F_t * file_ptr, int32_t idx,
 	       hbool_t global, hbool_t dirty);
-void pin_protected_entry(int32_t idx, hbool_t global);
+void pin_protected_entry(H5C_t * cache_ptr, H5F_t * file_ptr,
+                         int32_t idx, hbool_t global);
 void rename_entry(H5C_t * cache_ptr, H5F_t * file_ptr,
                   int32_t old_idx, int32_t new_idx);
-void resize_entry(int32_t idx, size_t  new_size);
+void resize_entry(H5C_t * cache_ptr, H5F_t * file_ptr,
+		  int32_t idx, size_t  new_size);
 hbool_t setup_cache_for_test(hid_t * fid_ptr, H5F_t ** file_ptr_ptr,
                              H5C_t ** cache_ptr_ptr);
 void setup_rand(void);
@@ -1423,7 +1427,7 @@ serve_read_request(struct mssg_t * mssg_ptr)
             success = FALSE;
             if ( verbose ) {
                 HDfprintf(stdout,
-                          "%d:%s: data[i].len = %Zu != mssg->len = %d.\n",
+                          "%d:%s: data[i].len = %d != mssg->len = %d.\n",
                            world_mpi_rank, fcn_name,
                            data[target_index].len, mssg_ptr->len);
             }
@@ -1435,7 +1439,7 @@ serve_read_request(struct mssg_t * mssg_ptr)
                 HDfprintf(stdout,
                   "%d:%s: proc %d read invalid entry. idx/base_addr = %d/%a.\n",
                          world_mpi_rank, fcn_name,
-                         mssg_ptr->src,
+                         mssg_ptr->src, target_index,
 			target_index,
 			data[target_index].base_addr);
             }
@@ -1600,7 +1604,7 @@ serve_write_request(struct mssg_t * mssg_ptr)
             success = FALSE;
             if ( verbose ) {
                 HDfprintf(stdout,
-                          "%d:%s: data[i].len = %Zu != mssg->len = %d.\n",
+                          "%d:%s: data[i].len = %d != mssg->len = %d.\n",
                           world_mpi_rank, fcn_name,
                           data[target_index].len, mssg_ptr->len);
             }
@@ -1817,7 +1821,7 @@ destroy_datum(H5F_t UNUSED * f,
  * 		value for communications with the server.
  *
  *		JRM -- 2/4/09
- *		Added code to set the flushed flag when a dirty entry
+ *		Added code to set the flushed flag when a dirty entry 
  *		is flushed.
  *
  *-------------------------------------------------------------------------
@@ -2222,8 +2226,8 @@ expunge_entry(H5C_t * cache_ptr,
         HDassert( ((entry_ptr->header).type)->id == DATUM_ENTRY_TYPE );
 	HDassert( ! ((entry_ptr->header).is_dirty) );
 
-	result = H5C_get_entry_status(file_ptr, entry_ptr->base_addr,
-				      NULL, &in_cache, NULL, NULL, NULL, NULL, NULL);
+	result = H5C_get_entry_status(cache_ptr, entry_ptr->base_addr,
+				      NULL, &in_cache, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -2735,7 +2739,7 @@ lock_entry(H5C_t * cache_ptr,
 
 	HDassert( ! (entry_ptr->locked) );
 
-        cache_entry_ptr = (H5C_cache_entry_t *)H5AC_protect(file_ptr, -1, &(types[0]),
+        cache_entry_ptr = H5AC_protect(file_ptr, -1, &(types[0]),
                                        entry_ptr->base_addr,
                                        NULL, NULL, H5AC_WRITE);
 
@@ -2781,7 +2785,9 @@ lock_entry(H5C_t * cache_ptr,
  *****************************************************************************/
 
 void
-mark_pinned_entry_dirty(int32_t idx,
+mark_pinned_entry_dirty(H5C_t * cache_ptr,
+                        H5F_t * file_ptr,
+                        int32_t idx,
 	                hbool_t size_changed,
 	                size_t new_size)
 {
@@ -2791,6 +2797,8 @@ mark_pinned_entry_dirty(int32_t idx,
 
     if ( nerrors == 0 ) {
 
+        HDassert( file_ptr );
+        HDassert( cache_ptr );
         HDassert( ( 0 <= idx ) && ( idx < NUM_DATA_ENTRIES ) );
         HDassert( idx < virt_num_data_entries );
 
@@ -2802,7 +2810,8 @@ mark_pinned_entry_dirty(int32_t idx,
         (entry_ptr->ver)++;
         entry_ptr->dirty = TRUE;
 
-	result = H5AC_mark_pinned_entry_dirty((void *)entry_ptr,
+	result = H5AC_mark_pinned_entry_dirty(file_ptr,
+	                                      (void *)entry_ptr,
                                               size_changed,
                                               new_size);
 
@@ -2844,7 +2853,9 @@ mark_pinned_entry_dirty(int32_t idx,
  *****************************************************************************/
 
 void
-mark_pinned_or_protected_entry_dirty(int32_t idx)
+mark_pinned_or_protected_entry_dirty(H5C_t * cache_ptr,
+                                     H5F_t * file_ptr,
+                                     int32_t idx)
 {
     const char * fcn_name = "mark_pinned_or_protected_entry_dirty()";
     herr_t result;
@@ -2852,6 +2863,8 @@ mark_pinned_or_protected_entry_dirty(int32_t idx)
 
     if ( nerrors == 0 ) {
 
+        HDassert( file_ptr );
+        HDassert( cache_ptr );
         HDassert( ( 0 <= idx ) && ( idx < NUM_DATA_ENTRIES ) );
         HDassert( idx < virt_num_data_entries );
 
@@ -2862,7 +2875,8 @@ mark_pinned_or_protected_entry_dirty(int32_t idx)
         (entry_ptr->ver)++;
         entry_ptr->dirty = TRUE;
 
-	result = H5AC_mark_pinned_or_protected_entry_dirty((void *)entry_ptr);
+	result = H5AC_mark_pinned_or_protected_entry_dirty(file_ptr,
+	                                                   (void *)entry_ptr);
 
         if ( result < 0 ) {
 
@@ -2976,13 +2990,17 @@ pin_entry(H5C_t * cache_ptr,
  *****************************************************************************/
 
 void
-pin_protected_entry(int32_t idx,
+pin_protected_entry(H5C_t * cache_ptr,
+                    H5F_t * file_ptr,
+                    int32_t idx,
 		    hbool_t global)
 {
     const char * fcn_name = "pin_protected_entry()";
     herr_t result;
     struct datum * entry_ptr;
 
+    HDassert( cache_ptr );
+    HDassert( file_ptr );
     HDassert( ( 0 <= idx ) && ( idx < NUM_DATA_ENTRIES ) );
     HDassert( idx < virt_num_data_entries );
 
@@ -2992,7 +3010,7 @@ pin_protected_entry(int32_t idx,
 
     if ( nerrors == 0 ) {
 
-	result = H5AC_pin_protected_entry((void *)entry_ptr);
+	result = H5AC_pin_protected_entry(file_ptr, (void *)entry_ptr);
 
         if ( ( result < 0 ) ||
              ( entry_ptr->header.type != &(types[0]) ) ||
@@ -3161,7 +3179,9 @@ rename_entry(H5C_t * cache_ptr,
  *****************************************************************************/
 
 void
-resize_entry(int32_t idx,
+resize_entry(H5C_t * cache_ptr,
+             H5F_t * file_ptr,
+             int32_t idx,
 	     size_t  new_size)
 {
     const char   * fcn_name = "resize_entry()";
@@ -3170,6 +3190,8 @@ resize_entry(int32_t idx,
 
     if ( nerrors == 0 ) {
 
+        HDassert( cache_ptr );
+        HDassert( file_ptr );
         HDassert( ( 0 <= idx ) && ( idx < NUM_DATA_ENTRIES ) );
         HDassert( idx < virt_num_data_entries );
 
@@ -3185,7 +3207,8 @@ resize_entry(int32_t idx,
 	HDassert( new_size > 0 );
 	HDassert( new_size <= entry_ptr->len );
 
-	result = H5AC_resize_pinned_entry((void *)entry_ptr, new_size);
+	result = H5AC_resize_pinned_entry(file_ptr, (void *)entry_ptr,
+			                  new_size);
 
         if ( result < 0 ) {
 
@@ -3271,7 +3294,7 @@ setup_cache_for_test(hid_t * fid_ptr,
                       world_mpi_rank, fcn_name);
         }
     } else {
-        file_ptr = (H5F_t *)H5I_object_verify(fid, H5I_FILE);
+        file_ptr = H5I_object_verify(fid, H5I_FILE);
     }
 
     if ( file_ptr == NULL ) {
@@ -3529,11 +3552,9 @@ setup_rand(void)
             }
         } else {
             seed = (unsigned)tv.tv_usec;
-            if ( verbose ) {
-                HDfprintf(stdout, "%d:%s: seed = %d.\n",
-                          world_mpi_rank, fcn_name, seed);
-                fflush(stdout);
-            }
+	    HDfprintf(stdout, "%d:%s: seed = %d.\n",
+                      world_mpi_rank, fcn_name, seed);
+	    fflush(stdout);
             HDsrand(seed);
         }
     }
@@ -3674,11 +3695,11 @@ unlock_entry(H5C_t * cache_ptr,
 
         HDassert( ((entry_ptr->header).type)->id == DATUM_ENTRY_TYPE );
 
-        if ( ( (flags & H5AC__DIRTIED_FLAG) != 0 ) &&
+        if ( ( (flags & H5AC__DIRTIED_FLAG) != 0 ) && 
              ( (flags & H5C__DELETED_FLAG) == 0 ) &&
-             ( ! ( ( ( world_mpi_rank == 0 ) && ( entry_ptr->flushed ) )
+             ( ! ( ( ( world_mpi_rank == 0 ) && ( entry_ptr->flushed ) ) 
                    ||
-                   ( ( world_mpi_rank != 0 ) && ( entry_ptr->cleared ) )
+                   ( ( world_mpi_rank != 0 ) && ( entry_ptr->cleared ) ) 
                  )
              )
            ) {
@@ -3754,11 +3775,12 @@ unpin_entry(H5C_t * cache_ptr,
 
 	    if ( dirty ) {
 
-		mark_pinned_entry_dirty(idx, FALSE, (size_t)0);
+		mark_pinned_entry_dirty(cache_ptr, file_ptr, idx, FALSE,
+				        (size_t)0);
 
 	    }
 
-	    result = H5AC_unpin_entry((void *)entry_ptr);
+	    result = H5AC_unpin_entry(file_ptr, (void *)entry_ptr);
 
 	    if ( result < 0 ) {
 
@@ -5129,8 +5151,8 @@ smoke_check_5(void)
     if ( world_mpi_rank == world_server_mpi_rank ) {
 
         /* 1 */
-        if ( verbose ) {
-	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++);
+        if ( verbose ) { 
+	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++); 
         }
 
 	if ( ! server_main() ) {
@@ -5144,16 +5166,16 @@ smoke_check_5(void)
         }
 
         /* 2 */
-        if ( verbose ) {
-	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++);
+        if ( verbose ) { 
+	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++); 
         }
     }
     else /* run the clients */
     {
 
         /* 1 */
-        if ( verbose ) {
-	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++);
+        if ( verbose ) { 
+	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++); 
         }
 
         if ( ! setup_cache_for_test(&fid, &file_ptr, &cache_ptr) ) {
@@ -5168,8 +5190,8 @@ smoke_check_5(void)
         }
 
         /* 2 */
-        if ( verbose ) {
-	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++);
+        if ( verbose ) { 
+	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++); 
         }
 
         for ( i = 0; i < (virt_num_data_entries / 2); i++ )
@@ -5178,8 +5200,8 @@ smoke_check_5(void)
         }
 
         /* 3 */
-        if ( verbose ) {
-	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++);
+        if ( verbose ) { 
+	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++); 
         }
 
 	/* flush the file so we can lock known clean entries. */
@@ -5192,8 +5214,8 @@ smoke_check_5(void)
         }
 
         /* 4 */
-        if ( verbose ) {
-	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++);
+        if ( verbose ) { 
+	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++); 
         }
 
         for ( i = 0; i < (virt_num_data_entries / 4); i++ )
@@ -5202,7 +5224,7 @@ smoke_check_5(void)
 
 	    if ( i % 2 == 0 )
 	    {
-		mark_pinned_or_protected_entry_dirty(i);
+		mark_pinned_or_protected_entry_dirty(cache_ptr, file_ptr, i);
 	    }
 
 	    unlock_entry(cache_ptr, file_ptr, i, H5AC__NO_FLAGS_SET);
@@ -5220,8 +5242,8 @@ smoke_check_5(void)
         }
 
         /* 5 */
-        if ( verbose ) {
-	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++);
+        if ( verbose ) { 
+	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++); 
         }
 
         for ( i = (virt_num_data_entries / 2) - 1;
@@ -5234,21 +5256,23 @@ smoke_check_5(void)
 	    {
 		if ( i % 8 <= 4 ) {
 
-		    resize_entry(i, data[i].len / 2);
+		    resize_entry(cache_ptr, file_ptr, i, data[i].len / 2);
 		}
 
 		if ( i % 4 == 0 )
 		{
-		    mark_pinned_or_protected_entry_dirty(i);
+		    mark_pinned_or_protected_entry_dirty(cache_ptr,
+				                         file_ptr, i);
 		}
 		else
 		{
-		    mark_pinned_entry_dirty(i, FALSE, (size_t)0);
+		    mark_pinned_entry_dirty(cache_ptr, file_ptr, i,
+				            FALSE, (size_t)0);
                 }
 
 		if ( i % 8 <= 4 ) {
 
-		    resize_entry(i, data[i].len);
+		    resize_entry(cache_ptr, file_ptr, i, data[i].len);
 		}
 	    }
 
@@ -5256,8 +5280,8 @@ smoke_check_5(void)
         }
 
         /* 6 */
-        if ( verbose ) {
-	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++);
+        if ( verbose ) { 
+	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++); 
         }
 
         if ( fid >= 0 ) {
@@ -5273,8 +5297,8 @@ smoke_check_5(void)
         }
 
         /* 7 */
-        if ( verbose ) {
-	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++);
+        if ( verbose ) { 
+	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++); 
         }
 
         /* verify that all instance of datum are back where the started
@@ -5288,8 +5312,8 @@ smoke_check_5(void)
         }
 
         /* 8 */
-        if ( verbose ) {
-	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++);
+        if ( verbose ) { 
+	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++); 
         }
 
         /* compose the done message */
@@ -5317,8 +5341,8 @@ smoke_check_5(void)
         }
 
         /* 9 */
-        if ( verbose ) {
-	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++);
+        if ( verbose ) { 
+	    HDfprintf(stderr, "%d: cp = %d\n", world_mpi_rank, cp++); 
         }
     }
 
@@ -5514,22 +5538,22 @@ trace_file_check(void)
 	insert_entry(cache_ptr, file_ptr, 3, H5AC__NO_FLAGS_SET);
 
 	lock_entry(cache_ptr, file_ptr, 0);
-	mark_pinned_or_protected_entry_dirty(0);
+	mark_pinned_or_protected_entry_dirty(cache_ptr, file_ptr, 0);
 	unlock_entry(cache_ptr, file_ptr, 0, H5AC__NO_FLAGS_SET);
 
 	lock_entry(cache_ptr, file_ptr, 1);
-        pin_protected_entry(1, TRUE);
+        pin_protected_entry(cache_ptr, file_ptr, 1, TRUE);
 	unlock_entry(cache_ptr, file_ptr, 1, H5AC__NO_FLAGS_SET);
         unpin_entry(cache_ptr, file_ptr, 1, TRUE, FALSE, FALSE);
 
         expunge_entry(cache_ptr,file_ptr, 1);
 
 	lock_entry(cache_ptr, file_ptr, 2);
-        pin_protected_entry(2, TRUE);
+        pin_protected_entry(cache_ptr, file_ptr, 2, TRUE);
 	unlock_entry(cache_ptr, file_ptr, 2, H5AC__NO_FLAGS_SET);
-	mark_pinned_entry_dirty(2, FALSE, 0);
-        resize_entry(2, data[2].len / 2);
-        resize_entry(2, data[2].len);
+	mark_pinned_entry_dirty(cache_ptr, file_ptr, 2, FALSE, 0);
+        resize_entry(cache_ptr, file_ptr, 2, data[2].len / 2);
+        resize_entry(cache_ptr, file_ptr, 2, data[2].len);
         unpin_entry(cache_ptr, file_ptr, 2, TRUE, FALSE, FALSE);
 
 	rename_entry(cache_ptr, file_ptr, 0, 20);

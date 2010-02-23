@@ -80,7 +80,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\hdf5_cppdll.dll"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ManifestFile="$(TargetPath).intermediate.manifest"
 				ProgramDatabaseFile="$(TargetDir)$(TargetName).pdb"
@@ -175,7 +175,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\hdf5_cppdll.dll"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ManifestFile="$(TargetPath).intermediate.manifest"
 				ProgramDatabaseFile="$(TargetDir)$(TargetName).pdb"
@@ -269,7 +269,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\hdf5_cppddll.dll"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ManifestFile="$(TargetPath).intermediate.manifest"
 				GenerateDebugInformation="true"
@@ -364,7 +364,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\hdf5_cppddll.dll"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ManifestFile="$(TargetPath).intermediate.manifest"
 				GenerateDebugInformation="true"

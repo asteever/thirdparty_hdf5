@@ -44,42 +44,42 @@
 #define H5SM_SIZEOF_CHECKSUM 4
 
 #define H5SM_HEAP_LOC_SIZE (                                                  \
-        (unsigned)4                     /* Reference count */                 \
+        4                               /* Reference count */                 \
         + sizeof(H5O_fheap_id_t)        /* size of heap ID on disk */         \
     )
 
 #define H5SM_OH_LOC_SIZE(f) (                                                 \
-        (unsigned)1             /* reserved (possible flags?) */              \
-        + (unsigned)1           /* message type ID */			      \
-        + (unsigned)2           /* creation index of message in OH */         \
+        1                       /* reserved (possible flags?) */              \
+        + 1                     /* message type ID */			      \
+        + 2                     /* creation index of message in OH */         \
         + H5F_SIZEOF_ADDR(f)    /* address of OH */                           \
     )
 
 #define H5SM_SOHM_ENTRY_SIZE(f) (                                             \
-        (unsigned)1             /* Message location */                        \
-        + (unsigned)4           /* Hash value */                              \
+        1                       /* Message location */                        \
+        + 4                     /* Hash value */                              \
         + MAX(H5SM_HEAP_LOC_SIZE, H5SM_OH_LOC_SIZE(f))  /* Entry */           \
     )
 
 #define H5SM_TABLE_SIZE(f) (                                                  \
-        (unsigned)H5_SIZEOF_MAGIC       /* Signature */                       \
-         + (unsigned)H5SM_SIZEOF_CHECKSUM /* Checksum */                      \
+        H5_SIZEOF_MAGIC                 /* Signature */                       \
+         + H5SM_SIZEOF_CHECKSUM         /* Checksum */                        \
     )
 
 #define H5SM_INDEX_HEADER_SIZE(f) (                                           \
-        (unsigned)1             /* Whether index is a list or B-tree */       \
-        + (unsigned)1           /* Version of index format */                 \
-        + (unsigned)2           /* Type of messages stored in the index */    \
-        + (unsigned)4           /* Minimum size of messages to share */       \
-        + (unsigned)(3 * 2)     /* B-tree cutoff, list cutoff, # of shared messages */ \
+        1                       /* Whether index is a list or B-tree */       \
+        + 1                     /* Version of index format */                 \
+        + 2                     /* Type of messages stored in the index */    \
+        + 4                     /* Minimum size of messages to share */       \
+        + (3 * 2)               /* B-tree cutoff, list cutoff, # of shared messages */ \
         + H5F_SIZEOF_ADDR(f)    /* Location of list or B-tree */              \
         + H5F_SIZEOF_ADDR(f)    /* Address of heap */                         \
     )
 
 #define H5SM_LIST_SIZE(f, num_mesg) (                                         \
-        (unsigned) H5_SIZEOF_MAGIC      /* Signature */                       \
+         H5_SIZEOF_MAGIC                /* Signature */                       \
          + (H5SM_SOHM_ENTRY_SIZE(f) * num_mesg) /* Message entries */         \
-         + (unsigned)H5SM_SIZEOF_CHECKSUM /* Checksum */                      \
+         + H5SM_SIZEOF_CHECKSUM         /* Checksum */                        \
     )
 
 #define H5SM_B2_NODE_SIZE 512
@@ -213,11 +213,6 @@ typedef struct {
     hid_t dxpl_id;
 } H5SM_incr_ref_opdata;
 
-/* v2 B-tree client callback context */
-typedef struct H5SM_bt2_ctx_t {
-    uint8_t     sizeof_addr;    /* Size of file addresses */
-} H5SM_bt2_ctx_t;
-
 
 /****************************/
 /* Package Variables        */
@@ -241,12 +236,20 @@ H5_DLLVAR const H5B2_class_t H5SM_INDEX[1];
 H5_DLL ssize_t H5SM_get_index(const H5SM_master_table_t *table, unsigned type_id);
 
 /* Encode and decode routines, used for B-tree and cache encoding/decoding */
-H5_DLL herr_t H5SM_message_compare(const void *rec1, const void *rec2);
-H5_DLL herr_t H5SM_message_encode(uint8_t *raw, const void *native, void *ctx);
-H5_DLL herr_t H5SM_message_decode(const uint8_t *raw, void *native, void *ctx);
+H5_DLL herr_t H5SM_message_encode(const H5F_t *f, uint8_t *raw,
+    const void *native);
+H5_DLL herr_t H5SM_message_decode(const H5F_t *f, const uint8_t *raw,
+    void *native);
+
+/* Callbacks to give to B-tree traversals */
+/* H5SM_message_compare is in H5SMbtree2.c, but is also used by list code
+ * in H5SM.c.
+ */
+H5_DLL herr_t H5SM_message_compare(const void *rec1,
+                                   const void *rec2);
 
 /* H5B2_remove_t callback to add messages to a list index */
-H5_DLL herr_t H5SM_bt2_convert_to_list_op(const void * record, void *op_data);
+H5_DLL herr_t H5SM_btree_convert_to_list_op(const void * record, void *op_data);
 
 /* Fractal heap 'op' callback to compute hash value for message "in place" */
 H5_DLL herr_t H5SM_get_hash_fh_cb(const void *obj, size_t obj_len, void *_udata);

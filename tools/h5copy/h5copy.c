@@ -428,7 +428,7 @@ main (int argc, const char *argv[])
 
  h5tools_close();
 
- return EXIT_SUCCESS;
+ return 0;
 
 error:
  printf("Error in copy...Exiting\n");
@@ -449,6 +449,6 @@ error:
 
  h5tools_close();
 
- return EXIT_FAILURE;
+ return 1;
 }
 

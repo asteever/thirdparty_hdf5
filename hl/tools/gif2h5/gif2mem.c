@@ -77,7 +77,7 @@ Gif2Mem(BYTE *MemGif)
     /****************************************************/
     if (!(gifHead = (GIFHEAD *)malloc(sizeof(GIFHEAD)))) {
         printf("Could not allocate memory for gifHead\n");
-        exit(EXIT_FAILURE);
+        exit(-1);
     }
 
     /*
@@ -107,7 +107,7 @@ Gif2Mem(BYTE *MemGif)
     if (ferror(fpGif))
     {
         fputs("GIFHEAD: Error reading header information!\n", stderr);
-        exit(EXIT_FAILURE);
+        exit(-3);
     }
 #endif  /* 0 */
 
@@ -161,14 +161,14 @@ Gif2Mem(BYTE *MemGif)
                     if (!(gifImageDesc = (GIFIMAGEDESC **)realloc(gifImageDesc,
                                             sizeof(GIFIMAGEDESC *) * ImageArray))) {
                         printf("Out of memory!");
-                        exit(EXIT_FAILURE);
+                        exit(-1);
                     }
 
                     if (!(gifGraphicControl = (GIFGRAPHICCONTROL **)realloc(
                                         gifGraphicControl,
                                         sizeof(GIFGRAPHICCONTROL *) * ImageArray))) {
                         printf("Out of memory!");
-                        exit(EXIT_FAILURE);
+                        exit(-1);
                     }
 
                     for (j = aTemp ; j < ImageArray ; j++) {
@@ -179,7 +179,7 @@ Gif2Mem(BYTE *MemGif)
 
                 if(!(gifImageDesc[ImageCount-1] = (GIFIMAGEDESC*)malloc(sizeof(GIFIMAGEDESC)))) {
                     printf("Out of memory!");
-                    exit(EXIT_FAILURE);
+                    exit(-1);
                 }
 
 
@@ -228,12 +228,12 @@ Gif2Mem(BYTE *MemGif)
 
                         if (!(gifPlainText = (GIFPLAINTEXT **)realloc(gifPlainText , sizeof(GIFPLAINTEXT *) * PlainTextArray))) {
                             printf("Out of memory!");
-                            exit(EXIT_FAILURE);
+                            exit(-1);
                         }
 
                         if(!(gifPlainText[PlainTextCount - 1] = (GIFPLAINTEXT*)malloc(sizeof(GIFPLAINTEXT)))) {
                             printf("Out of memory!");
-                            exit(EXIT_FAILURE);
+                            exit(-1);
                         }
 
                         if (ReadGifPlainText(gifPlainText[PlainTextCount - 1], &MemGif))
@@ -250,12 +250,12 @@ Gif2Mem(BYTE *MemGif)
 
                         if (!(gifComment = (GIFCOMMENT **)realloc(gifComment , sizeof(GIFCOMMENT *) * CommentArray))) {
                             printf("Out of memory!");
-                            exit(EXIT_FAILURE);
+                            exit(-1);
                         }
 
                         if(!(gifComment[CommentCount - 1] = (GIFCOMMENT *)malloc(sizeof(GIFCOMMENT)))) {
                             printf("Out of memory!");
-                            exit(EXIT_FAILURE);
+                            exit(-1);
                         }
 
 
@@ -277,12 +277,12 @@ Gif2Mem(BYTE *MemGif)
 
                             if (!(gifGraphicControl = (GIFGRAPHICCONTROL **)realloc(gifGraphicControl , sizeof(GIFGRAPHICCONTROL *) * ImageArray))) {
                                 printf("Out of memory!");
-                                exit(EXIT_FAILURE);
+                                exit(-1);
                             }
 
                             if (!(gifImageDesc = (GIFIMAGEDESC **)realloc(gifImageDesc , sizeof(GIFIMAGEDESC *) * ImageArray))) {
                                 printf("Out of memory!");
-                                exit(EXIT_FAILURE);
+                                exit(-1);
                             }
 
                             for (j = aTemp ; j < ImageArray ; j++) {
@@ -293,7 +293,7 @@ Gif2Mem(BYTE *MemGif)
 
                         if(!(gifGraphicControl[ImageCount-1] = (GIFGRAPHICCONTROL*)malloc(sizeof(GIFGRAPHICCONTROL)))) {
                             printf("Out of memory!");
-                            exit(EXIT_FAILURE);
+                            exit(-1);
                         }
 
 
@@ -315,12 +315,12 @@ Gif2Mem(BYTE *MemGif)
 
                         if (!(gifApplication = (GIFAPPLICATION **)realloc(gifApplication , sizeof(GIFAPPLICATION *) * ApplicationArray))) {
                             printf("Out of memory!");
-                            exit(EXIT_FAILURE);
+                            exit(-1);
                         }
 
                         if(!(gifApplication[ApplicationCount - 1] = (GIFAPPLICATION *)malloc(sizeof(GIFAPPLICATION)))) {
                             printf("Out of memory!");
-                            exit(EXIT_FAILURE);
+                            exit(-1);
                         }
 
 

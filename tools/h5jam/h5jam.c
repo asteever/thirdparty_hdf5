@@ -454,7 +454,7 @@ copy_some_to_file (int infid, int outfid, hsize_t startin, hsize_t startout,
       if (nchars <= 0)
 	{
 	  printf ("huh? \n");
-	  exit (EXIT_FAILURE);
+	  exit (1);
 	}
       /*ncw = */ HDwrite (outfid, buf, (unsigned) nchars);
 

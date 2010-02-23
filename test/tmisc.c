@@ -1802,10 +1802,11 @@ test_misc11(void)
     unsigned    sym_ik;         /* Symbol table B-tree initial 'K' value */
     unsigned    istore_ik;      /* Indexed storage B-tree initial 'K' value */
     unsigned    sym_lk;         /* Symbol table B-tree leaf 'K' value */
+    unsigned super;             /* Superblock version # */
+    unsigned freelist;          /* Free list version # */
+    unsigned stab;              /* Symbol table entry version # */
+    unsigned shhdr;             /* Shared object header version # */
     unsigned nindexes;          /* Shared message number of indexes */
-    H5F_info2_t	finfo;		/* global information about file */
-    H5F_file_space_type_t       strategy;	/* File/free space strategy */
-    hsize_t	threshold;	/* Free-space section threshold */
     herr_t      ret;            /* Generic return value */
 
     /* Output message about test being performed */
@@ -1819,12 +1820,21 @@ test_misc11(void)
     file= H5Fcreate(MISC11_FILE, H5F_ACC_TRUNC , H5P_DEFAULT, H5P_DEFAULT);
     CHECK(file, FAIL, "H5Fcreate");
 
+    /* Get the file's dataset creation property list */
+    fcpl =  H5Fget_create_plist(file);
+    CHECK(fcpl, FAIL, "H5Fget_create_plist");
+
     /* Get the file's version information */
-    ret = H5Fget_info2(file, &finfo);
-    CHECK(ret, FAIL, "H5Fget_info2");
-    VERIFY(finfo.super.version, 0,"H5Fget_info2");
-    VERIFY(finfo.free.version, 0,"H5Fget_info2");
-    VERIFY(finfo.sohm.version, 0,"H5Fget_info2");
+    ret=H5Pget_version(fcpl, &super, &freelist, &stab, &shhdr);
+    CHECK(ret, FAIL, "H5Pget_version");
+    VERIFY(super,0,"H5Pget_version");
+    VERIFY(freelist,0,"H5Pget_version");
+    VERIFY(stab,0,"H5Pget_version");
+    VERIFY(shhdr,0,"H5Pget_version");
+
+    /* Close FCPL */
+    ret=H5Pclose(fcpl);
+    CHECK(ret, FAIL, "H5Pclose");
 
     /* Close file */
     ret=H5Fclose(file);
@@ -1851,9 +1861,6 @@ test_misc11(void)
     ret=H5Pset_shared_mesg_nindexes(fcpl,MISC11_NINDEXES);
     CHECK(ret, FAIL, "H5Pset_shared_mesg");
 
-    ret = H5Pset_file_space(fcpl, H5F_FILE_SPACE_VFD, 0);
-    CHECK(ret, FAIL, "H5Pset_file_space");
-
     /* Creating a file with the non-default file creation property list should
      * create a version 1 superblock
      */
@@ -1866,12 +1873,21 @@ test_misc11(void)
     ret=H5Pclose(fcpl);
     CHECK(ret, FAIL, "H5Pclose");
 
+    /* Get the file's dataset creation property list */
+    fcpl =  H5Fget_create_plist(file);
+    CHECK(fcpl, FAIL, "H5Fget_create_plist");
+
     /* Get the file's version information */
-    ret = H5Fget_info2(file, &finfo);
-    CHECK(ret, FAIL, "H5Fget_info2");
-    VERIFY(finfo.super.version, 2,"H5Fget_info2");
-    VERIFY(finfo.free.version, 0,"H5Fget_info2");
-    VERIFY(finfo.sohm.version, 0,"H5Fget_info2");
+    ret=H5Pget_version(fcpl, &super, &freelist, &stab, &shhdr);
+    CHECK(ret, FAIL, "H5Pget_version");
+    VERIFY(super,2,"H5Pget_version");
+    VERIFY(freelist,0,"H5Pget_version");
+    VERIFY(stab,0,"H5Pget_version");
+    VERIFY(shhdr,0,"H5Pget_version");
+
+    /* Close FCPL */
+    ret=H5Pclose(fcpl);
+    CHECK(ret, FAIL, "H5Pclose");
 
     /* Close file */
     ret=H5Fclose(file);
@@ -1881,16 +1897,17 @@ test_misc11(void)
     file = H5Fopen(MISC11_FILE, H5F_ACC_RDONLY, H5P_DEFAULT);
     CHECK(file, FAIL, "H5Fcreate");
 
-    /* Get the file's creation property list */
+    /* Get the file's dataset creation property list */
     fcpl =  H5Fget_create_plist(file);
     CHECK(fcpl, FAIL, "H5Fget_create_plist");
 
     /* Get the file's version information */
-    ret = H5Fget_info2(file, &finfo);
-    CHECK(ret, FAIL, "H5Fget_info2");
-    VERIFY(finfo.super.version, 2,"H5Fget_info2");
-    VERIFY(finfo.free.version, 0,"H5Fget_info2");
-    VERIFY(finfo.sohm.version, 0,"H5Fget_info2");
+    ret=H5Pget_version(fcpl, &super, &freelist, &stab, &shhdr);
+    CHECK(ret, FAIL, "H5Pget_version");
+    VERIFY(super,2,"H5Pget_version");
+    VERIFY(freelist,0,"H5Pget_version");
+    VERIFY(stab,0,"H5Pget_version");
+    VERIFY(shhdr,0,"H5Pget_version");
 
     /* Retrieve all the property values & check them */
     ret=H5Pget_userblock(fcpl,&userblock);
@@ -1914,11 +1931,6 @@ test_misc11(void)
     ret=H5Pget_shared_mesg_nindexes(fcpl,&nindexes);
     CHECK(ret, FAIL, "H5Pget_shared_mesg_nindexes");
     VERIFY(nindexes, MISC11_NINDEXES, "H5Pget_shared_mesg_nindexes");
-
-    ret = H5Pget_file_space(fcpl, &strategy, &threshold);
-    CHECK(ret, FAIL, "H5Pget_file_space");
-    VERIFY(strategy, 4, "H5Pget_file_space");
-    VERIFY(threshold, 1, "H5Pget_file_space");
 
     /* Close file */
     ret=H5Fclose(file);
@@ -5132,7 +5144,7 @@ test_misc29(void)
     CHECK(ret, -1, "h5_make_local_copy");
 
     /* Open the copied file */
-    fid = H5Fopen(MISC29_COPY_FILE, H5F_ACC_RDWR, H5P_DEFAULT);
+    fid = H5Fopen(MISC29_COPY_FILE, H5F_ACC_RDWR, H5P_DEFAULT); 
     CHECK(fid, FAIL, "H5Fopen");
 
     /* Delete the last dataset */
@@ -5188,6 +5200,7 @@ test_misc(void)
     test_misc27();      /* Test opening file with object that has bad # of object header messages */
     test_misc28();      /* Test that chunks are cached appropriately */
     test_misc29();      /* Test that speculative metadata reads are handled correctly */
+
 
 } /* test_misc() */
 

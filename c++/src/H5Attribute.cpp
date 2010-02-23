@@ -166,7 +166,7 @@ void Attribute::read( const DataType& mem_type, void *buf ) const
 //		Used getInMemDataSize to get attribute data size. - BMR
 //	Jul 2009
 //		Divided into specific private functions for fixed- and
-//		variable-len string data: p_read_fixed_len and
+//		variable-len string data: p_read_fixed_len and 
 //		p_read_variable_len.  This should improve readability.
 //--------------------------------------------------------------------------
 void Attribute::read(const DataType& mem_type, H5std_string& strg) const
@@ -179,7 +179,7 @@ void Attribute::read(const DataType& mem_type, H5std_string& strg) const
         throw AttributeIException("Attribute::read", "H5Tis_variable_str failed");
     }
 
-    if (!is_variable_len)       // only allocate for fixed-len string
+    if (!is_variable_len)	// string is fixed length
     {
         p_read_fixed_len(mem_type, strg);
     }
@@ -454,7 +454,6 @@ void Attribute::p_read_fixed_len(const DataType& mem_type, H5std_string& strg) c
 //--------------------------------------------------------------------------
 void Attribute::p_read_variable_len(const DataType& mem_type, H5std_string& strg) const
 {
-
     // Prepare and call C API to read attribute.
     char *strg_C;
 

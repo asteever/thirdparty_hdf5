@@ -38,7 +38,6 @@
 #define ERR    20  /* invalid token */
 
 #define MAX_GROUPS_IN_PATH  20
-#define MAX_PATH_NAME_LENGTH 255
 #define NUM_KEYS 14
 #define MIN_NUM_DIMENSION  1
 #define MAX_NUM_DIMENSION  32
@@ -74,7 +73,7 @@
 
 struct path_info
 {
-  char group[MAX_GROUPS_IN_PATH][MAX_PATH_NAME_LENGTH];
+  char group[MAX_GROUPS_IN_PATH][255];
   int count;
 };
 

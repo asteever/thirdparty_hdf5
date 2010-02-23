@@ -57,6 +57,7 @@
 #define CORDER_ITER_STOP            3
 
 /* 3-D dataset with fixed dimensions */
+#define SPACE1_NAME  "Space1"
 #define SPACE1_RANK	3
 #define SPACE1_DIM1	3
 #define SPACE1_DIM2	15
@@ -274,68 +275,60 @@ test_attr_basic_write(hid_t fapl)
     attr_name_size = H5Aget_name(attr, (size_t)0, NULL);
     CHECK(attr_name_size, FAIL, "H5Aget_name");
 
-    if(attr_name_size > 0) {
+    if(attr_name_size > 0)
         attr_name = (char*)HDcalloc((size_t)(attr_name_size + 1), sizeof(char));
-        CHECK(attr_name, NULL, "HDcalloc");
-        
-        if(attr_name) {
-            ret = (herr_t)H5Aget_name(attr, (size_t)(attr_name_size + 1), attr_name);
-            CHECK(ret, FAIL, "H5Aget_name");
-            ret = HDstrcmp(attr_name, ATTR_TMP_NAME);
-            VERIFY(ret, 0, "HDstrcmp");
 
-            HDfree(attr_name);
-            attr_name = NULL;
-        } /* end if */
-    } /* end if */
+    ret = (herr_t)H5Aget_name(attr, (size_t)(attr_name_size + 1), attr_name);
+    CHECK(ret, FAIL, "H5Aget_name");
+    ret = HDstrcmp(attr_name, ATTR_TMP_NAME);
+    VERIFY(ret, 0, "HDstrcmp");
+
+    if(attr_name)
+        HDfree(attr_name);
 
     /* Read attribute information immediately, without closing attribute */
     ret = H5Aread(attr, H5T_NATIVE_INT, read_data1);
     CHECK(ret, FAIL, "H5Aread");
 
     /* Verify values read in */
-    for(i = 0; i < ATTR1_DIM1; i++)
-        if(attr_data1[i] != read_data1[i])
-            TestErrPrintf("%d: attribute data different: attr_data1[%d]=%d, read_data1[%d]=%d\n", __LINE__, i, attr_data1[i], i, read_data1[i]);
+    for(i=0; i<ATTR1_DIM1; i++)
+        if(attr_data1[i]!=read_data1[i])
+            TestErrPrintf("%d: attribute data different: attr_data1[%d]=%d, read_data1[%d]=%d\n",__LINE__,i,attr_data1[i],i,read_data1[i]);
 
     /* Close attribute */
-    ret = H5Aclose(attr);
+    ret=H5Aclose(attr);
     CHECK(ret, FAIL, "H5Aclose");
 
     /* Open the second attribute again */
-    attr2 = H5Aopen(dataset, ATTR1A_NAME, H5P_DEFAULT);
+    attr2=H5Aopen(dataset, ATTR1A_NAME, H5P_DEFAULT);
     CHECK(attr, FAIL, "H5Aopen");
 
     /* Verify new attribute name */
     attr_name_size = H5Aget_name(attr2, (size_t)0, NULL);
     CHECK(attr_name_size, FAIL, "H5Aget_name");
 
-    if(attr_name_size > 0) {
+    if(attr_name_size>0)
         attr_name = (char*)HDcalloc((size_t)(attr_name_size+1), sizeof(char));
-        CHECK(attr_name, NULL, "HDcalloc");
-                
-        if(attr_name) {
-            ret = (herr_t)H5Aget_name(attr2, (size_t)(attr_name_size + 1), attr_name);
-            CHECK(ret, FAIL, "H5Aget_name");
-            ret = HDstrcmp(attr_name, ATTR1A_NAME);
-            VERIFY(ret, 0, "HDstrcmp");
 
-            HDfree(attr_name);
-            attr_name = NULL;
-        } /* end if */
-    } /* end if */
+    ret=(herr_t)H5Aget_name(attr2, (size_t)(attr_name_size+1), attr_name);
+    CHECK(ret, FAIL, "H5Aget_name");
+    ret=HDstrcmp(attr_name, ATTR1A_NAME);
+    VERIFY(ret, 0, "HDstrcmp");
+
+    if(attr_name)
+        HDfree(attr_name);
 
     /* Read attribute information immediately, without closing attribute */
-    ret = H5Aread(attr2, H5T_NATIVE_INT, read_data1);
+    ret=H5Aread(attr2,H5T_NATIVE_INT,read_data1);
     CHECK(ret, FAIL, "H5Aread");
 
     /* Verify values read in */
-    for(i = 0; i < ATTR1_DIM1; i++)
-        if(attr_data1a[i] != read_data1[i])
-            TestErrPrintf("%d: attribute data different: attr_data1a[%d]=%d, read_data1[%d]=%d\n", __LINE__, i, attr_data1a[i], i, read_data1[i]);
+    for(i=0; i<ATTR1_DIM1; i++)
+        if(attr_data1a[i]!=read_data1[i])
+            TestErrPrintf("%d: attribute data different: attr_data1a[%d]=%d, read_data1[%d]=%d\n",__LINE__,i,attr_data1a[i],i,read_data1[i]);
 
     /* Close attribute */
-    ret = H5Aclose(attr2);
+    ret=H5Aclose(attr2);
     CHECK(ret, FAIL, "H5Aclose");
 
     ret = H5Sclose(sid1);
@@ -1547,7 +1540,7 @@ test_attr_delete(hid_t fapl)
     CHECK(attr, FAIL, "H5Aopen_by_idx");
 
     /* Verify Name */
-    name_len = H5Aget_name(attr, (size_t)ATTR_NAME_LEN, attr_name);
+    name_len = H5Aget_name(attr, (size_t)ATTR_NAME_LEN,attr_name);
     VERIFY(name_len, HDstrlen(ATTR1_NAME), "H5Aget_name");
     if(HDstrcmp(attr_name, ATTR1_NAME))
         TestErrPrintf("attribute name different: attr_name=%s, should be %s\n",attr_name,ATTR1_NAME);
@@ -1563,7 +1556,7 @@ test_attr_delete(hid_t fapl)
     /* Verify Name */
     name_len = H5Aget_name(attr, (size_t)ATTR_NAME_LEN, attr_name);
     VERIFY(name_len, HDstrlen(ATTR3_NAME), "H5Aget_name");
-    if(HDstrcmp(attr_name, ATTR3_NAME))
+    if(HDstrcmp(attr_name,ATTR3_NAME))
         TestErrPrintf("attribute name different: attr_name=%s, should be %s\n",attr_name,ATTR3_NAME);
 
     /* Close attribute */
@@ -3259,12 +3252,12 @@ test_attr_dense_dup_ids(hid_t fcpl, hid_t fapl)
     VERIFY(is_dense, TRUE, "H5O_is_attr_dense_test");
 
     /* Open first attribute for the dataset */
-    attr = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, (hsize_t)4,
+    attr = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, 4,
         H5P_DEFAULT, H5P_DEFAULT);
     CHECK(attr, FAIL, "H5Aopen");
 
     /* Open attribute for the second time */
-    attr2 = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, (hsize_t)4,
+    attr2 = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, 4,
         H5P_DEFAULT, H5P_DEFAULT);
     CHECK(attr, FAIL, "H5Aopen");
 
@@ -3315,13 +3308,13 @@ test_attr_dense_dup_ids(hid_t fcpl, hid_t fapl)
     VERIFY(is_dense, TRUE, "H5O_is_attr_dense_test");
 
     /* Open attribute of the dataset for the first time */
-    attr = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, (hsize_t)2,
+    attr = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, 2,
         H5P_DEFAULT, H5P_DEFAULT);
     CHECK(attr, FAIL, "H5Aopen");
 
     /* Delete a few attributes until the storage switches to compact */
     for(u = max_compact; u >= min_dense - 1; u--) {
-        ret = H5Adelete_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, (hsize_t)u,
+        ret = H5Adelete_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, u,
             H5P_DEFAULT);
         CHECK(ret, FAIL, "H5Adelete_by_idx");
     }
@@ -3331,7 +3324,7 @@ test_attr_dense_dup_ids(hid_t fcpl, hid_t fapl)
     VERIFY(is_dense, FALSE, "H5O_is_attr_dense_test");
 
     /* Open attribute for the second time */
-    attr2 = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, (hsize_t)2,
+    attr2 = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, 2,
         H5P_DEFAULT, H5P_DEFAULT);
     CHECK(attr, FAIL, "H5Aopen");
 
@@ -3382,7 +3375,7 @@ test_attr_dense_dup_ids(hid_t fcpl, hid_t fapl)
     VERIFY(is_dense, FALSE, "H5O_is_attr_dense_test");
 
     /* Open attribute of the dataset for the first time */
-    attr = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, (hsize_t)3,
+    attr = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, 3,
         H5P_DEFAULT, H5P_DEFAULT);
     CHECK(attr, FAIL, "H5Aopen");
 
@@ -3407,7 +3400,7 @@ test_attr_dense_dup_ids(hid_t fcpl, hid_t fapl)
     VERIFY(is_dense, TRUE, "H5O_is_attr_dense_test");
 
     /* Open attribute for the second time */
-    attr2 = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, (hsize_t)3,
+    attr2 = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, 3,
         H5P_DEFAULT, H5P_DEFAULT);
     CHECK(attr, FAIL, "H5Aopen");
 
@@ -6857,7 +6850,7 @@ test_attr_iterate2(hbool_t new_format, hid_t fcpl, hid_t fapl)
 
     /* Allocate the "visited link" array */
     iter_info.max_visit = max_compact * 2;
-    visited = (hbool_t*)HDmalloc(sizeof(hbool_t) * iter_info.max_visit);
+    visited = HDmalloc(sizeof(hbool_t) * iter_info.max_visit);
     CHECK(visited, NULL, "HDmalloc");
     iter_info.visited = visited;
 
@@ -10355,7 +10348,7 @@ test_attr(void)
                 test_attr_bug3(my_fcpl, my_fapl);               /* Test "self referential" attributes */
                 test_attr_bug4(my_fcpl, my_fapl);               /* Test attributes on named datatypes */
                 test_attr_bug5(my_fcpl, my_fapl);               /* Test opening/closing attributes through different file handles */
-                test_attr_bug6(my_fcpl, my_fapl);               /* Test reading empty attribute */
+                test_attr_bug6(my_fcpl, my_fapl);               /* Test reading empty attribute */ 
             } /* end for */
         } /* end if */
         else {
@@ -10379,7 +10372,7 @@ test_attr(void)
             test_attr_bug3(fcpl, my_fapl);                      /* Test "self referential" attributes */
             test_attr_bug4(fcpl, my_fapl);                      /* Test attributes on named datatypes */
             test_attr_bug5(fcpl, my_fapl);                      /* Test opening/closing attributes through different file handles */
-            test_attr_bug6(fcpl, my_fapl);                      /* Test reading empty attribute */
+            test_attr_bug6(fcpl, my_fapl);                      /* Test reading empty attribute */ 
         } /* end else */
     } /* end for */
 

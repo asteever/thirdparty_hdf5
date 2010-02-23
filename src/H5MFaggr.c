@@ -77,8 +77,8 @@
 /*-------------------------------------------------------------------------
  * Function:    H5MF_aggr_vfd_alloc
  *
- * Purpose:     Allocate SIZE bytes of file memory via H5MF_aggr_alloc()
- *		and return the relative address where that contiguous chunk
+ * Purpose:     Allocate SIZE bytes of file memory via H5MF_aggr_alloc() 
+ *		and return the relative address where that contiguous chunk 
  *		of file memory exists.
  *		The TYPE argument describes the purpose for which the storage
  *		is being requested.
@@ -177,11 +177,11 @@ HDfprintf(stderr, "%s: type = %u, size = %Hu\n", FUNC, (unsigned)type, size);
         HGOTO_ERROR(H5E_RESOURCE, H5E_CANTGET, HADDR_UNDEF, "Unable to get eoa")
 
     /*
-     * If the aggregation feature is enabled for this file and strategy is not H5F_FILE_SPACE_VFD,
-     * allocate "generic" space and sub-allocate out of that, if possible.
-     * Otherwise just allocate through H5FD_alloc().
+     * If the aggregation feature is enabled for this file, allocate "generic"
+     * space and sub-allocate out of that, if possible. Otherwise just allocate
+     * through H5FD_alloc()
      */
-    if((f->shared->feature_flags & aggr->feature_flag) && f->shared->fs_strategy != H5F_FILE_SPACE_VFD) {
+    if(f->shared->feature_flags & aggr->feature_flag) {
         haddr_t	aggr_frag_addr = HADDR_UNDEF;   /* Address of aggregrator fragment */
         hsize_t	aggr_frag_size = 0;             /* Size of aggregator fragment */
         hsize_t alignment;                      /* Alignment of this section */
@@ -722,6 +722,6 @@ H5MF_free_aggrs(H5F_t *f, hid_t dxpl_id)
     if(H5MF_aggr_reset(f, dxpl_id, second_aggr) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_CANTFREE, FAIL, "can't reset 'small data' block")
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value) 
 } /* end H5MF_free_aggrs() */
 

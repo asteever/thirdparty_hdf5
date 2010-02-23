@@ -17,7 +17,6 @@
 /* This files contains C stubs for H5P Fortran APIs */
 
 #include "H5f90.h"
-#include "H5Eprivate.h"
 
 /*----------------------------------------------------------------------------
  * Name:        h5pcreate_c
@@ -33,17 +32,16 @@
 int_f
 nh5pcreate_c ( hid_t_f *class, hid_t_f *prp_id )
 {
-    hid_t c_prp_id;
-    int_f ret_value = 0;
+  hid_t c_class;
+  int ret_value = 0;
+  hid_t c_prp_id;
 
-    c_prp_id = H5Pcreate((hid_t)*class);
-    if(c_prp_id  < 0)
-        HGOTO_DONE(FAIL)
+  c_class = (hid_t)*class;
+  c_prp_id = H5Pcreate(c_class);
 
-    *prp_id = (hid_t_f)c_prp_id;
-
-done:
-    return ret_value;
+  if ( c_prp_id  < 0  ) ret_value = -1;
+  *prp_id = (hid_t_f)c_prp_id;
+  return ret_value;
 }
 
 /*----------------------------------------------------------------------------
@@ -59,12 +57,11 @@ done:
 int_f
 nh5pclose_c ( hid_t_f *prp_id )
 {
-    int_f ret_value = 0;
+  int ret_value = 0;
+  hid_t c_prp_id=(*prp_id);
 
-    if(H5Pclose((hid_t)*prp_id) < 0)
-        ret_value = -1;
-
-    return ret_value;
+  if ( H5Pclose(c_prp_id) < 0  ) ret_value = -1;
+  return ret_value;
 }
 
 
@@ -82,17 +79,15 @@ nh5pclose_c ( hid_t_f *prp_id )
 int_f
 nh5pcopy_c ( hid_t_f *prp_id , hid_t_f *new_prp_id)
 {
-    hid_t c_new_prp_id;
-    int_f ret_value = 0;
+  int ret_value = 0;
+  hid_t c_prp_id;
+  hid_t c_new_prp_id;
 
-    c_new_prp_id = H5Pcopy((hid_t)*prp_id);
-    if(c_new_prp_id < 0)
-        HGOTO_DONE(FAIL)
-
-    *new_prp_id = (hid_t_f)c_new_prp_id;
-
-done:
-    return ret_value;
+  c_prp_id = *prp_id;
+  c_new_prp_id = H5Pcopy(c_prp_id);
+  if ( c_new_prp_id < 0  ) ret_value = -1;
+  *new_prp_id = (hid_t_f)c_new_prp_id;
+  return ret_value;
 }
 
 /*----------------------------------------------------------------------------
@@ -110,17 +105,17 @@ done:
 int_f
 nh5pequal_c ( hid_t_f *plist1_id , hid_t_f *plist2_id, int_f * c_flag)
 {
-    htri_t c_c_flag;
-    int_f ret_value = 0;
+  int ret_value = 0;
+  hid_t c_plist1_id;
+  hid_t c_plist2_id;
+  htri_t c_c_flag;
 
-    c_c_flag = H5Pequal((hid_t)*plist1_id, (hid_t)*plist2_id);
-    if(c_c_flag < 0)
-        HGOTO_DONE(FAIL)
-
-    *c_flag = (int_f)c_c_flag;
-
-done:
-    return ret_value;
+  c_plist1_id = (hid_t)*plist1_id;
+  c_plist2_id = (hid_t)*plist2_id;
+  c_c_flag = H5Pequal(c_plist1_id, c_plist2_id);
+  if ( c_c_flag < 0  ) ret_value = -1;
+  *c_flag = (int_f)c_c_flag;
+  return ret_value;
 }
 
 
@@ -144,19 +139,20 @@ done:
 int_f
 nh5pget_class_c ( hid_t_f *prp_id , int_f *classtype)
 {
-    hid_t c_classtype;
-    int_f ret_value = 0;
+  int ret_value = 0;
+  hid_t c_prp_id;
+  hid_t c_classtype;
 
-    c_classtype = H5Pget_class((hid_t)*prp_id);
-    if(c_classtype == H5P_ROOT) {
+  c_prp_id = *prp_id;
+  c_classtype = H5Pget_class(c_prp_id);
+  if (c_classtype == H5P_ROOT ) {
       *classtype = H5P_ROOT;
-       HGOTO_DONE(FAIL)
-    }
+       ret_value = -1;
+       return ret_value;
+  }
+  *classtype = (int_f)c_classtype;
 
-    *classtype = (int_f)c_classtype;
-
-done:
-    return ret_value;
+  return ret_value;
 }
 
 /*----------------------------------------------------------------------------
@@ -1717,7 +1713,7 @@ nh5pget_external_c(hid_t_f *prp_id, int_f *idx, size_t_f* name_size, _fcd name, 
      *offset = (int_f)c_offset;
      *bytes = (hsize_t_f)size;
      /* Note: if the size of the fortran buffer is larger then the returned string
-      *       from the function then we need to give HD5packFstring the fortran buffer size so
+      *       from the function then we need to give HD5packFstring the fortran buffer size so 
       *       that it fills the remaining unused characters with blanks. MSB
       */
      HD5packFstring(c_name, _fcdtocp(name), c_namelen+1);
@@ -3966,39 +3962,33 @@ nh5pget_copy_object_c(hid_t_f *ocp_plist_id, int_f *copy_options)
 int_f
 nh5pget_data_transform_c(hid_t_f *plist_id, _fcd expression, int_f *expression_len, size_t_f *size)
 {
-    char *c_expression = NULL;          /* Buffer to hold C string */
-    size_t c_expression_len;
-    ssize_t ret;
-    int_f ret_value = 0;
+     int_f ret_value = -1;
+     char *c_expression = NULL;          /* Buffer to hold C string */
+     size_t c_expression_len;
+     ssize_t ret;
 
-    c_expression_len = (size_t)*expression_len + 1;
 
-    /*
-     * Allocate memory to store the expression.
-     */
-    if(c_expression_len) {
-        c_expression = (char*)HDmalloc(c_expression_len);
-        if(NULL == c_expression)
-           HGOTO_DONE(FAIL)
-    } /* end if */
+     c_expression_len = (size_t)*expression_len + 1;
 
-    /*
-     * Call H5Pget_data_transform function.
-     */
-    ret = H5Pget_data_transform((hid_t)*plist_id, c_expression, c_expression_len);
-    if(ret < 0)
-       HGOTO_DONE(FAIL)
+     /* should expression_len be size_t_f? */
+     /*
+      * Allocate memory to store the expression.
+      */
+     if( c_expression_len) c_expression = (char*) HDmalloc(c_expression_len);
+     if (c_expression == NULL) return ret_value;
 
-    /* or strlen ? */
-    HD5packFstring(c_expression, _fcdtocp(expression), c_expression_len - 1);
+     /*
+      * Call h5pget_data_transform function.
+      */
+     ret = H5Pget_data_transform((hid_t)*plist_id, c_expression, c_expression_len);
+     if(ret < 0) return ret_value;
+     /* or strlen ? */
+     HD5packFstring(c_expression, _fcdtocp(expression), c_expression_len-1);
 
-    *size = (size_t_f)ret;
+     *size = (size_t_f)ret;
 
-done:
-    if(c_expression)
-        HDfree(c_expression);
-
-    return ret_value;
+     ret_value = 0;
+     return ret_value;
 }
 
 /*----------------------------------------------------------------------------
@@ -4022,24 +4012,23 @@ done:
 int_f
 nh5pset_data_transform_c(hid_t_f *plist_id, _fcd expression, int_f *expression_len)
 {
+     int_f ret_value = -1; /* Return value */
      char* c_expression = NULL; /* Buffer to hold C string */
-     int_f ret_value = 0; /* Return value */
-
+     herr_t ret;
      /*
       * Convert FORTRAN name to C name
       */
      if(NULL == (c_expression = HD5f2cstring(expression, (size_t)*expression_len)))
-        HGOTO_DONE(FAIL)
-
+        return ret_value;
      /*
-      * Call H5Pset_data_transform function.
+      * Call h5pset_data_transform function.
       */
-     if(H5Pset_data_transform((hid_t)*plist_id, c_expression) < 0)
-        HGOTO_DONE(FAIL)
+     ret = H5Pset_data_transform((hid_t)*plist_id, c_expression);
+     if(ret<0) return ret_value;
 
-done:
-    if(c_expression)
-        HDfree(c_expression);
+     ret_value = 0;
+     if(c_expression)
+       HDfree(c_expression);
 
      return ret_value;
 }
@@ -4464,10 +4453,10 @@ nh5pget_create_inter_group_c(hid_t_f *lcpl_id, int_f *crt_intermed_group)
  * Purpose:     Calls H5Pset_chunk_cache
  *
  * Inputs:	dapl_id            - Link creation property list identifier
- *              rdcc_nslots        -
+ *              rdcc_nslots        - 
  *              rdcc_nbytes        -
  *              rdcc_w0            -
- *
+ *              
  * Returns:     0 on success, -1 on failure
  * Programmer:  M.S. Breitenfeld
  *              April 13, 2009
@@ -4495,10 +4484,10 @@ nh5pset_chunk_cache_c(hid_t_f *dapl_id, size_t_f *rdcc_nslots, size_t_f *rdcc_nb
  *
  * Inputs:	dapl_id            - Link creation property list identifier
  * Outputs:
- *              rdcc_nslots        -
+ *              rdcc_nslots        - 
  *              rdcc_nbytes        -
  *              rdcc_w0            -
- *
+ *              
  * Returns:     0 on success, -1 on failure
  * Programmer:  M.S. Breitenfeld
  *              April 13, 2009

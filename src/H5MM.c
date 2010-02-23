@@ -112,11 +112,13 @@ H5MM_calloc(size_t size)
  * Return:	Success:	Ptr to new memory or NULL if the memory
  *				was freed.
  *
- *		Failure:	NULL
+ *		Failure:	abort()
  *
  * Programmer:	Robb Matzke
  *		matzke@llnl.gov
  *		Jul 10 1997
+ *
+ * Modifications:
  *
  *-------------------------------------------------------------------------
  */
@@ -126,24 +128,27 @@ H5MM_realloc(void *mem, size_t size)
     void *ret_value;
 
     /* Use FUNC_ENTER_NOAPI_NOINIT_NOFUNC here to avoid performance issues */
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5MM_realloc)
+    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5MM_realloc);
 
-    if(NULL == mem) {
-	if(0 == size)
-            mem = NULL;
-        else
-            mem = H5MM_malloc(size);
-    } /* end if */
-    else if(0 == size)
+    if (!mem) {
+	if (0 == size)
+            HGOTO_DONE(NULL);
+	mem = H5MM_malloc(size);
+
+    } else if (0 == size) {
 	mem = H5MM_xfree(mem);
-    else
+
+    } else {
 	mem = HDrealloc(mem, size);
+	assert(mem);
+    }
 
     /* Set return value */
-    ret_value = mem;
+    ret_value=mem;
 
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5MM_realloc() */
+done:
+    FUNC_LEAVE_NOAPI(ret_value);
+}
 
 
 /*-------------------------------------------------------------------------

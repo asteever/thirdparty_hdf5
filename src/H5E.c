@@ -361,36 +361,6 @@ H5E_get_stack(void)
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5E_free_class
- *
- * Purpose:	Private function to free an error class.
- *
- * Return:	Non-negative value on success/Negative on failure
- *
- * Programmer:	Quincey Koziol
- *              Friday, January 22, 2009
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5E_free_class(H5E_cls_t *cls)
-{
-    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5E_free_class)
-
-    /* Check arguments */
-    HDassert(cls);
-
-    /* Free error class structure */
-    cls->cls_name = (char *)H5MM_xfree((void*)cls->cls_name);
-    cls->lib_name = (char *)H5MM_xfree((void*)cls->lib_name);
-    cls->lib_vers = (char *)H5MM_xfree((void*)cls->lib_vers);
-    cls = H5FL_FREE(H5E_cls_t, cls);
-
-    FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5E_free_class() */
-
-
-/*-------------------------------------------------------------------------
  * Function:	H5Eregister_class
  *
  * Purpose:	Registers an error class.
@@ -443,7 +413,7 @@ done:
 static H5E_cls_t *
 H5E_register_class(const char *cls_name, const char *lib_name, const char *version)
 {
-    H5E_cls_t   *cls = NULL; /* Pointer to error class */
+    H5E_cls_t   *cls;        /* Pointer to error class */
     H5E_cls_t   *ret_value;  /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5E_register_class)
@@ -454,7 +424,7 @@ H5E_register_class(const char *cls_name, const char *lib_name, const char *versi
     HDassert(version);
 
     /* Allocate space for new error class */
-    if(NULL == (cls = H5FL_CALLOC(H5E_cls_t)))
+    if(NULL == (cls = H5FL_MALLOC(H5E_cls_t)))
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
 
     /* Duplicate string information */
@@ -469,10 +439,6 @@ H5E_register_class(const char *cls_name, const char *lib_name, const char *versi
     ret_value = cls;
 
 done:
-    if(!ret_value)
-        if(cls && H5E_free_class(cls) < 0)
-            HDONE_ERROR(H5E_ERROR, H5E_CANTRELEASE, NULL, "unable to free error class")
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5E_register_class() */
 
@@ -528,9 +494,7 @@ done:
 static herr_t
 H5E_unregister_class(H5E_cls_t *cls)
 {
-    herr_t      ret_value = SUCCEED;       /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT(H5E_unregister_class)
+    FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5E_unregister_class)
 
     /* Check arguments */
     HDassert(cls);
@@ -540,11 +504,15 @@ H5E_unregister_class(H5E_cls_t *cls)
     (void)H5I_search(H5I_ERROR_MSG, H5E_close_msg_cb, cls, FALSE);
 
     /* Free error class structure */
-    if(H5E_free_class(cls) < 0)
-        HGOTO_ERROR(H5E_ERROR, H5E_CANTRELEASE, FAIL, "unable to free error class")
+    if(cls->cls_name)
+        H5MM_xfree((void*)cls->cls_name);
+    if(cls->lib_name)
+        H5MM_xfree((void*)cls->lib_name);
+    if(cls->lib_vers)
+        H5MM_xfree((void*)cls->lib_vers);
+    (void)H5FL_FREE(H5E_cls_t, cls);
 
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5E_unregister_class() */
 
 
@@ -712,10 +680,11 @@ H5E_close_msg(H5E_msg_t *err)
     /* Check arguments */
     HDassert(err);
 
-    /* Release message */
-    err->msg = (char *)H5MM_xfree((void *)err->msg);
+    if(err->msg)
+        H5MM_xfree((void*)err->msg);
     /* Don't free err->cls here */
-    err = H5FL_FREE(H5E_msg_t, err);
+
+    (void)H5FL_FREE(H5E_msg_t, err);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5E_close_msg() */
@@ -780,7 +749,7 @@ done:
 static H5E_msg_t *
 H5E_create_msg(H5E_cls_t *cls, H5E_type_t msg_type, const char *msg_str)
 {
-    H5E_msg_t   *msg = NULL;    /* Pointer to new error message */
+    H5E_msg_t   *msg;           /* Pointer to new error message */
     H5E_msg_t   *ret_value;     /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5E_create_msg)
@@ -804,10 +773,6 @@ H5E_create_msg(H5E_cls_t *cls, H5E_type_t msg_type, const char *msg_str)
     ret_value = msg;
 
 done:
-    if(!ret_value)
-        if(msg && H5E_close_msg(msg) < 0)
-            HDONE_ERROR(H5E_ERROR, H5E_CANTCLOSEOBJ, NULL, "unable to close error message")
-
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5E_create_msg() */
 
@@ -1329,11 +1294,6 @@ H5Epush2(hid_t err_stack, const char *file, const char *func, unsigned line,
         if(NULL == (estack = (H5E_t *)H5I_object_verify(err_stack, H5I_ERROR_STACK)))
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a error stack ID")
     } /* end else */
-
-/* Note that the variable-argument parsing for the format is identical in
- *      the H5E_printf_stack() routine - correct errors and make changes in both
- *      places. -QAK
- */
 
     /* Format the description */
     va_start(ap, fmt);

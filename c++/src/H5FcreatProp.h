@@ -30,10 +30,8 @@ class H5_DLLCPP FileCreatPropList : public PropList {
 	// Creates a file create property list.
 	FileCreatPropList();
 
-#ifndef H5_NO_DEPRECATED_SYMBOLS
 	// Retrieves version information for various parts of a file.
 	void getVersion( unsigned& super, unsigned& freelist, unsigned& stab, unsigned& shhdr ) const;
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
 
 	// Sets the userblock size field of a file creation property list.
 	void setUserblock( hsize_t size ) const;
@@ -62,7 +60,7 @@ class H5_DLLCPP FileCreatPropList : public PropList {
 	// indexing chunked datasets.
 	void setIstorek( unsigned ik ) const;
 
-	// Returns this class name
+	///\brief Returns this class name
 	virtual H5std_string fromClass () const { return("FileCreatPropList"); }
 
 	// Copy constructor: creates a copy of a FileCreatPropList object.

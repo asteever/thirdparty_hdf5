@@ -102,18 +102,16 @@ typedef struct {
  H5D_layout_t    layout_g;    /*global layout information for the ALL case */
  int             verbose;     /*verbose mode */
  hsize_t         min_comp;    /*minimum size to compress, in bytes */
- int             use_native;  /*use a native type in write */
+ int             use_native;  /*use a native type in write */  
  int             latest;      /*pack file with the latest file format */
  int             grp_compact; /* Set the maximum number of links to store as header messages in the group */
  int             grp_indexed; /* Set the minimum number of links to store in the indexed format */
- int             msg_size[8]; /* Minimum size of shared messages: dataspace,
+ int             msg_size[8]; /* Minimum size of shared messages: dataspace, 
                                  datatype, fill value, filter pipleline, attribute */
  const char      *ublock_filename; /* user block file name */
  hsize_t         ublock_size;      /* user block size */
  hsize_t         threshold;        /* alignment threshold for H5Pset_alignment */
  hsize_t         alignment ;       /* alignment for H5Pset_alignment */
- H5F_file_space_type_t fs_strategy;     /* File space handling strategy */
- hsize_t         fs_threshold;      	/* Free space section threshold */
 } pack_opt_t;
 
 
@@ -127,13 +125,14 @@ typedef struct {
 extern "C" {
 #endif
 
-int h5repack(const char* infile, const char* outfile, pack_opt_t *options);
-int h5repack_addfilter(const char* str, pack_opt_t *options);
-int h5repack_addlayout(const char* str, pack_opt_t *options);
-int h5repack_init(pack_opt_t *options, int verbose, H5F_file_space_type_t strategy, hsize_t threshold);
-int h5repack_end(pack_opt_t *options);
-int h5repack_verify(const char *in_fname, const char *out_fname, pack_opt_t *options);
-int h5repack_cmp_pl(const char *fname1, const char *fname2);
+int h5repack           (const char* infile, const char* outfile, pack_opt_t *options);
+int h5repack_addfilter (const char* str, pack_opt_t *options);
+int h5repack_addlayout (const char* str, pack_opt_t *options);
+int h5repack_init      (pack_opt_t *options, int verbose);
+int h5repack_end       (pack_opt_t *options);
+int h5repack_verify    (const char *fname,pack_opt_t *options);
+int h5repack_cmp_pl   (const char *fname1,
+                        const char *fname2);
 
 
 #ifdef __cplusplus
@@ -160,7 +159,7 @@ int copy_objects   (const char* fnamein,
 int do_copy_refobjs(hid_t fidin,
                     hid_t fidout,
                     trav_table_t *travt,
-                    pack_opt_t *options);
+                    pack_opt_t *options); 
 
 /*-------------------------------------------------------------------------
  * filters and verify module

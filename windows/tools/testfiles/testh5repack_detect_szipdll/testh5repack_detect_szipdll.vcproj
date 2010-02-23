@@ -4,7 +4,6 @@
 	Version="8.00"
 	Name="testh5repack_detect_szipdll"
 	ProjectGUID="{E75602FF-F4E6-4F45-AD0D-EA49C0C66DEF}"
-	RootNamespace="testh5repack_detect_szipdll"
 	>
 	<Platforms>
 		<Platform
@@ -76,7 +75,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\../../../../tools/testfiles/testh5repack_detect_szipdll/Release/testh5repack_detect_szipdll.pdb"
 				SubSystem="1"
@@ -167,7 +166,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\../../../../tools/testfiles/testh5repack_detect_szipdll/Release/testh5repack_detect_szipdll.pdb"
 				SubSystem="1"
@@ -256,7 +255,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\../../../../tools/testfiles/testh5repack_detect_szipdll/Debug/testh5repack_detect_szipdll.pdb"
@@ -347,7 +346,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\../../../../tools/testfiles/testh5repack_detect_szipdll/Debug/testh5repack_detect_szipdll.pdb"
@@ -386,6 +385,48 @@
 		<File
 			RelativePath="..\..\..\..\tools\h5repack\testh5repack_detect_szip.c"
 			>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions=""
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Release|x64"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions=""
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions=""
+					BasicRuntimeChecks="3"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|x64"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions=""
+					BasicRuntimeChecks="3"
+				/>
+			</FileConfiguration>
 		</File>
 	</Files>
 	<Globals>

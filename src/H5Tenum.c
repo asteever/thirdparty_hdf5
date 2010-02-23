@@ -466,11 +466,10 @@ H5T_enum_nameof(const H5T_t *dt, const void *value, char *name/*out*/, size_t si
     /* Set return value */
     ret_value=name;
 
-done:
-    if(copied_dt)
-        if(H5T_close(copied_dt) < 0)
-            HDONE_ERROR(H5E_DATATYPE, H5E_CANTCLOSEOBJ, NULL, "unable to close data type");
+    if (H5T_close(copied_dt)<0)
+	HGOTO_ERROR(H5E_DATATYPE, H5E_CANTCLOSEOBJ, NULL, "unable to close data type");
 
+done:
     FUNC_LEAVE_NOAPI(ret_value)
 }
 
@@ -592,11 +591,9 @@ H5T_enum_valueof(const H5T_t *dt, const char *name, void *value/*out*/)
 
     HDmemcpy(value, copied_dt->shared->u.enumer.value+md*copied_dt->shared->size, copied_dt->shared->size);
 
-done:
-    if(copied_dt)
-        if(H5T_close(copied_dt) < 0)
-            HDONE_ERROR(H5E_DATATYPE, H5E_CANTCLOSEOBJ, FAIL, "unable to close data type")
+    if (H5T_close(copied_dt)<0)
+	HGOTO_ERROR(H5E_DATATYPE, H5E_CANTCLOSEOBJ, FAIL, "unable to close data type");
 
+done:
     FUNC_LEAVE_NOAPI(ret_value)
 }
-

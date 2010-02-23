@@ -129,7 +129,7 @@ int IdComponent::getCounter() const
 //--------------------------------------------------------------------------
 // Function:	hdfObjectType
 ///\brief	Given an id, returns the type of the object.
-///return	a valid HDF object type, which may be one of the following:
+///\return	a valid HDF object type, which may be one of the following:
 ///		\li \c H5I_FILE
 ///		\li \c H5I_GROUP
 ///		\li \c H5I_DATATYPE
@@ -176,8 +176,8 @@ IdComponent& IdComponent::operator=( const IdComponent& rhs )
 	}
 
 	// copy the data members from the rhs object
-	p_setId(rhs.getId());
-	incRefCount(getId()); // a = b, so there are two objects with the same
+	setId(rhs.getId());
+//	incRefCount(getId()); // a = b, so there are two objects with the same
 			      // hdf5 id
     }
     return *this;

@@ -66,6 +66,7 @@ GOTO WRONG
         if not !errorlevel!==0 set /A total_error=!total_error!+1
     )
 
+
     if %total_error%==0 (
         echo.
         echo. All of the HL C Examples Passed!

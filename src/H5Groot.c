@@ -99,7 +99,6 @@ H5G_mkroot(H5F_t *f, hid_t dxpl_id, hbool_t create_root)
     H5G_loc_t   root_loc;               /* Root location information */
     htri_t      stab_exists = -1;       /* Whether the symbol table exists */
     hbool_t     sblock_dirty = FALSE;   /* Whether superblock was dirtied */
-    hbool_t     path_init = FALSE;      /* Whether path was initialized */
     herr_t      ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_NOAPI(H5G_mkroot, FAIL)
@@ -138,9 +137,25 @@ H5G_mkroot(H5F_t *f, hid_t dxpl_id, hbool_t create_root)
      * with a hard link count of one since it's pointed to by the superblock.
      */
     if(create_root) {
+        H5P_genplist_t *fc_plist;       /* File creation property list */
+        H5O_ginfo_t     ginfo;          /* Group info parameters */
+        H5O_linfo_t     linfo;          /* Link info parameters */
+
+        /* Get the file creation property list */
+        /* (Which is a sub-class of the group creation property class) */
+        if(NULL == (fc_plist = (H5P_genplist_t *)H5I_object(f->shared->fcpl_id)))
+            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list")
+
+        /* Get the group info property */
+        if(H5P_get(fc_plist, H5G_CRT_GROUP_INFO_NAME, &ginfo) < 0)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get group info")
+
+        /* Get the link info property */
+        if(H5P_get(fc_plist, H5G_CRT_LINK_INFO_NAME, &linfo) < 0)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get link info")
+
         /* Create root group */
-        /* (Pass the FCPL which is a sub-class of the group creation property class) */
-	if(H5G_obj_create(f, dxpl_id, f->shared->fcpl_id, root_loc.oloc/*out*/) < 0)
+	if(H5G_obj_create(f, dxpl_id, &ginfo, &linfo, f->shared->fcpl_id, root_loc.oloc/*out*/) < 0)
 	    HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, FAIL, "unable to create group entry")
 	if(1 != H5O_link(root_loc.oloc, 1, dxpl_id))
 	    HGOTO_ERROR(H5E_SYM, H5E_LINKCOUNT, FAIL, "internal error (wrong link count)")
@@ -236,7 +251,6 @@ H5G_mkroot(H5F_t *f, hid_t dxpl_id, hbool_t create_root)
 
     /* Create the path names for the root group's entry */
     H5G_name_init(root_loc.path, "/");
-    path_init = TRUE;
 
     f->shared->root_grp->shared->fo_count = 1;
     /* The only other open object should be the superblock extension, if it
@@ -252,8 +266,7 @@ done:
      * allocated */
     if(ret_value < 0) {
         if(f->shared->root_grp) {
-            if(path_init)
-                H5G_name_free(root_loc.path);
+            H5G_name_free(root_loc.path);
             if(f->shared->root_grp->shared)
                 f->shared->root_grp->shared = H5FL_FREE(H5G_shared_t, f->shared->root_grp->shared);
             f->shared->root_grp = H5FL_FREE(H5G_t, f->shared->root_grp);
@@ -264,7 +277,7 @@ done:
 
     /* Mark superblock dirty in cache, if necessary */
     if(sblock_dirty)
-        if(H5AC_mark_pinned_or_protected_entry_dirty(f->shared->sblock) < 0)
+        if(H5AC_mark_pinned_or_protected_entry_dirty(f, f->shared->sblock) < 0)
             HDONE_ERROR(H5E_FILE, H5E_CANTMARKDIRTY, FAIL, "unable to mark superblock as dirty")
 
     FUNC_LEAVE_NOAPI(ret_value)

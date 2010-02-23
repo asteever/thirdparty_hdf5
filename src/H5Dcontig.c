@@ -217,8 +217,8 @@ H5D_contig_fill(H5D_t *dset, hid_t dxpl_id)
     store.contig.dset_size = dset->shared->layout.storage.u.contig.size;
 
     /* Get the number of elements in the dataset's dataspace */
-    if((snpoints = H5S_GET_EXTENT_NPOINTS(dset->shared->space)) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "dataset has negative number of elements")
+    snpoints = H5S_GET_EXTENT_NPOINTS(dset->shared->space);
+    HDassert(snpoints >= 0);
     H5_ASSIGN_OVERFLOW(npoints, snpoints, hssize_t, size_t);
 
     /* Initialize the fill value buffer */
@@ -1275,26 +1275,20 @@ H5D_contig_copy(H5F_t *f_src, const H5O_storage_contig_t *storage_src,
         HGOTO_ERROR(H5E_DATATYPE, H5E_CANTREGISTER, FAIL, "unable to register source file datatype")
 
     /* If there's a VLEN source datatype, set up type conversion information */
-    if(H5T_detect_class(dt_src, H5T_VLEN, FALSE) > 0) {
+    if(H5T_detect_class(dt_src, H5T_VLEN) > 0) {
         /* create a memory copy of the variable-length datatype */
         if(NULL == (dt_mem = H5T_copy(dt_src, H5T_COPY_TRANSIENT)))
             HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "unable to copy")
-        if((tid_mem = H5I_register(H5I_DATATYPE, dt_mem, FALSE)) < 0) {
-            H5T_close(dt_mem);
+        if((tid_mem = H5I_register(H5I_DATATYPE, dt_mem, FALSE)) < 0)
             HGOTO_ERROR(H5E_DATASET, H5E_CANTREGISTER, FAIL, "unable to register memory datatype")
-        } /* end if */
 
         /* create variable-length datatype at the destinaton file */
         if(NULL == (dt_dst = H5T_copy(dt_src, H5T_COPY_TRANSIENT)))
             HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to copy")
-        if(H5T_set_loc(dt_dst, f_dst, H5T_LOC_DISK) < 0) {
-            H5T_close(dt_dst);
+        if(H5T_set_loc(dt_dst, f_dst, H5T_LOC_DISK) < 0)
             HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "cannot mark datatype on disk")
-        } /* end if */
-        if((tid_dst = H5I_register(H5I_DATATYPE, dt_dst, FALSE)) < 0) {
-            H5T_close(dt_dst);
+        if((tid_dst = H5I_register(H5I_DATATYPE, dt_dst, FALSE)) < 0)
             HGOTO_ERROR(H5E_DATASET, H5E_CANTREGISTER, FAIL, "unable to register destination file datatype")
-        } /* end if */
 
         /* Set up the conversion functions */
         if(NULL == (tpath_src_mem = H5T_path_find(dt_src, dt_mem, NULL, NULL, dxpl_id, FALSE)))

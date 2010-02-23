@@ -27,7 +27,6 @@
 #include "H5PropList.h"
 #include "H5private.h"		// for HDfree
 
-
 #ifndef H5_NO_NAMESPACE
 namespace H5 {
 #ifndef H5_NO_STD
@@ -566,7 +565,7 @@ void PropList::setProperty(const H5std_string& name, void* value) const
 /// 		It differs from the above function only in what arguments it
 ///		accepts.
 ///\param	name - IN: Name of property to set - \c H5std_string
-///\param	strg - IN: Value for the property is a \c std::string
+///\param	strg - IN: Value for the property is a \c H5std_string
 // Programmer:  Binh-Minh Ribler - April, 2004
 //--------------------------------------------------------------------------
 void PropList::setProperty(const H5std_string& name, H5std_string& strg) const

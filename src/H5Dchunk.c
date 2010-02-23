@@ -1787,8 +1787,8 @@ done:
  *
  * Modification:Raymond Lu
  *              4 Feb 2009
- *              One case that was considered cacheable was when the chunk
- *              was bigger than the cache size but not allocated on disk.
+ *              One case that was considered cacheable was when the chunk 
+ *              was bigger than the cache size but not allocated on disk.  
  *              I moved it to uncacheable branch to bypass the cache to
  *              improve performance.
  *-------------------------------------------------------------------------
@@ -2802,9 +2802,7 @@ H5D_chunk_lock(const H5D_io_info_t *io_info, H5D_chunk_ud_t *udata,
             HGOTO_ERROR(H5E_IO, H5E_CANTINIT, NULL, "unable to preempt chunk(s) from cache")
 
         /* Create a new entry */
-        if(NULL == (ent = H5FL_MALLOC(H5D_rdcc_ent_t)))
-            HGOTO_ERROR(H5E_DATASET, H5E_CANTALLOC, NULL, "can't allocate raw data chunk entry")
-
+        ent = H5FL_MALLOC(H5D_rdcc_ent_t);
         ent->locked = 0;
         ent->dirty = FALSE;
         ent->chunk_addr = chunk_addr;
@@ -2921,6 +2919,7 @@ H5D_chunk_unlock(const H5D_io_info_t *io_info, const H5D_chunk_ud_t *udata,
 {
     const H5O_layout_t *layout = &(io_info->dset->shared->layout); /* Dataset layout */
     const H5D_rdcc_t	*rdcc = &(io_info->dset->shared->cache.chunk);
+    H5D_rdcc_ent_t	*ent = NULL;
     herr_t              ret_value = SUCCEED;      /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5D_chunk_unlock)
@@ -2954,8 +2953,6 @@ H5D_chunk_unlock(const H5D_io_info_t *io_info, const H5D_chunk_ud_t *udata,
         } /* end else */
     } /* end if */
     else {
-        H5D_rdcc_ent_t	*ent;   /* Chunk's entry in the cache */
-
         /* Sanity check */
 	HDassert(idx_hint < rdcc->nslots);
 	HDassert(rdcc->slot[idx_hint]);
@@ -3421,7 +3418,7 @@ H5D_chunk_prune_fill(const H5D_chunk_rec_t *chunk_rec, H5D_chunk_it_ud1_t *udata
 
     /* Calculate the index of this chunk */
     if(H5V_chunk_index(rank, chunk_rec->offset, layout->u.chunk.dim, layout->u.chunk.down_chunks, &io_info->store->chunk.index) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "can't get chunk index")
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, H5_ITER_ERROR, "can't get chunk index")
 
     /* Lock the chunk into the cache, to get a pointer to the chunk buffer */
     /* (Casting away const OK -QAK) */
@@ -3551,7 +3548,7 @@ H5D_chunk_prune_cb(const H5D_chunk_rec_t *chunk_rec, void *_udata)
             HGOTO_ERROR(H5E_DATASET, H5E_WRITEERROR, H5_ITER_ERROR, "unable to write fill value")
 
 done:
-    /* It is currently impossible to fail after the stack node has been
+    /* It is currently impossible to fail after the stack node has been 
      * malloc'ed.  No need to free it here on failure. */
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D_chunk_prune_cb() */
@@ -3780,7 +3777,7 @@ H5D_chunk_prune_by_extent(H5D_t *dset, hid_t dxpl_id, const hsize_t *old_dims)
         if(needs_fill) {
             /* Allocate space for the stack node */
             if(NULL == (tmp_stack = H5FL_MALLOC(H5D_chunk_prune_stack_t)))
-                HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed for stack node")
+                HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, H5_ITER_ERROR, "memory allocation failed for stack node")
 
             /* Set up chunk record for fill routine */
             tmp_stack->rec.nbytes = dset->shared->layout.u.chunk.size;
@@ -3800,7 +3797,7 @@ H5D_chunk_prune_by_extent(H5D_t *dset, hid_t dxpl_id, const hsize_t *old_dims)
     while(tmp_stack) {
         /* Write the fill value */
         if(H5D_chunk_prune_fill(&(tmp_stack->rec), &udata) < 0)
-            HGOTO_ERROR(H5E_DATASET, H5E_WRITEERROR, FAIL, "unable to write fill value")
+            HGOTO_ERROR(H5E_DATASET, H5E_WRITEERROR, H5_ITER_ERROR, "unable to write fill value")
 
         /* Advance the stack pointer */
         tmp_stack = tmp_stack->next;
@@ -3821,7 +3818,7 @@ H5D_chunk_prune_by_extent(H5D_t *dset, hid_t dxpl_id, const hsize_t *old_dims)
 
         /* Remove the chunk from disk */
         if((layout->storage.u.chunk.ops->remove)(&idx_info, &idx_udata) < 0)
-            HGOTO_ERROR(H5E_DATASET, H5E_CANTDELETE, FAIL, "unable to remove chunk entry from index")
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTDELETE, H5_ITER_ERROR, "unable to remove chunk entry from index")
 
         /* Advance the stack pointer */
         tmp_stack = tmp_stack->next;
@@ -4152,12 +4149,12 @@ H5D_chunk_copy_cb(const H5D_chunk_rec_t *chunk_rec, void *_udata)
 
     /* Check parameter for type conversion */
     if(udata->do_convert) {
-        if(H5T_detect_class(udata->dt_src, H5T_VLEN, FALSE) > 0)
+        if(H5T_detect_class(udata->dt_src, H5T_VLEN) > 0)
             is_vlen = TRUE;
         else if((H5T_get_class(udata->dt_src, FALSE) == H5T_REFERENCE) && (udata->file_src != udata->idx_info_dst->f))
             fix_ref = TRUE;
         else
-            HGOTO_ERROR(H5E_DATASET, H5E_CANTCOPY, H5_ITER_ERROR, "unable to copy dataset elements")
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTCOPY, FAIL, "unable to copy dataset elements")
     } /* end if */
 
     /* Check for filtered chunks */
@@ -4241,7 +4238,7 @@ H5D_chunk_copy_cb(const H5D_chunk_rec_t *chunk_rec, void *_udata)
 
             /* Copy the reference elements */
             if(H5O_copy_expand_ref(udata->file_src, buf, udata->idx_info_dst->dxpl_id, udata->idx_info_dst->f, bkg, ref_count, H5T_get_ref_type(udata->dt_src), udata->cpy_info) < 0)
-                HGOTO_ERROR(H5E_DATASET, H5E_CANTCOPY, H5_ITER_ERROR, "unable to copy reference attribute")
+                HGOTO_ERROR(H5E_DATASET, H5E_CANTCOPY, FAIL, "unable to copy reference attribute")
         } /* end if */
 
         /* After fix ref, copy the new reference elements to the buffer to write out */
@@ -4263,7 +4260,7 @@ H5D_chunk_copy_cb(const H5D_chunk_rec_t *chunk_rec, void *_udata)
 #if H5_SIZEOF_SIZE_T > 4
         /* Check for the chunk expanding too much to encode in a 32-bit value */
         if(nbytes > ((size_t)0xffffffff))
-            HGOTO_ERROR(H5E_DATASET, H5E_BADRANGE, H5_ITER_ERROR, "chunk too large for 32-bit length")
+            HGOTO_ERROR(H5E_DATASET, H5E_BADRANGE, FAIL, "chunk too large for 32-bit length")
 #endif /* H5_SIZEOF_SIZE_T > 4 */
         H5_ASSIGN_OVERFLOW(udata_dst.nbytes, nbytes, size_t, uint32_t);
 	udata->buf = buf;
@@ -4272,7 +4269,7 @@ H5D_chunk_copy_cb(const H5D_chunk_rec_t *chunk_rec, void *_udata)
 
     /* Insert chunk into the destination index */
     if((udata->idx_info_dst->storage->ops->insert)(udata->idx_info_dst, &udata_dst) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTINSERT, H5_ITER_ERROR, "unable to insert chunk into index")
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTINSERT, FAIL, "unable to insert chunk into index")
 
     /* Write chunk data to destination file */
     HDassert(H5F_addr_defined(udata_dst.addr));
@@ -4386,7 +4383,7 @@ H5D_chunk_copy(H5F_t *f_src, H5O_storage_chunk_t *storage_src,
         HGOTO_ERROR(H5E_DATATYPE, H5E_CANTREGISTER, FAIL, "unable to register source file datatype")
 
     /* If there's a VLEN source datatype, set up type conversion information */
-    if(H5T_detect_class(dt_src, H5T_VLEN, FALSE) > 0) {
+    if(H5T_detect_class(dt_src, H5T_VLEN) > 0) {
         H5T_t *dt_dst;              /* Destination datatype */
         H5T_t *dt_mem;              /* Memory datatype */
         size_t mem_dt_size;         /* Memory datatype size */
@@ -4398,22 +4395,16 @@ H5D_chunk_copy(H5F_t *f_src, H5O_storage_chunk_t *storage_src,
         /* create a memory copy of the variable-length datatype */
         if(NULL == (dt_mem = H5T_copy(dt_src, H5T_COPY_TRANSIENT)))
             HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "unable to copy")
-        if((tid_mem = H5I_register(H5I_DATATYPE, dt_mem, FALSE)) < 0) {
-            (void)H5T_close(dt_mem);
+        if((tid_mem = H5I_register(H5I_DATATYPE, dt_mem, FALSE)) < 0)
             HGOTO_ERROR(H5E_DATATYPE, H5E_CANTREGISTER, FAIL, "unable to register memory datatype")
-        } /* end if */
 
         /* create variable-length datatype at the destinaton file */
         if(NULL == (dt_dst = H5T_copy(dt_src, H5T_COPY_TRANSIENT)))
             HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "unable to copy")
-        if(H5T_set_loc(dt_dst, f_dst, H5T_LOC_DISK) < 0) {
-            (void)H5T_close(dt_dst);
+        if(H5T_set_loc(dt_dst, f_dst, H5T_LOC_DISK) < 0)
             HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "cannot mark datatype on disk")
-        } /* end if */
-        if((tid_dst = H5I_register(H5I_DATATYPE, dt_dst, FALSE)) < 0) {
-            (void)H5T_close(dt_dst);
+        if((tid_dst = H5I_register(H5I_DATATYPE, dt_dst, FALSE)) < 0)
             HGOTO_ERROR(H5E_DATATYPE, H5E_CANTREGISTER, FAIL, "unable to register destination file datatype")
-        } /* end if */
 
         /* Set up the conversion functions */
         if(NULL == (tpath_src_mem = H5T_path_find(dt_src, dt_mem, NULL, NULL, dxpl_id, FALSE)))
@@ -4443,7 +4434,7 @@ H5D_chunk_copy(H5F_t *f_src, H5O_storage_chunk_t *storage_src,
 
         /* Atomize */
         if((sid_buf = H5I_register(H5I_DATASPACE, buf_space, FALSE)) < 0) {
-            (void)H5S_close(buf_space);
+            H5S_close(buf_space);
             HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to register dataspace ID")
         } /* end if */
 
@@ -4820,9 +4811,9 @@ done:
  * Function:	H5D_nonexistent_readvv
  *
  * Purpose:	When the chunk doesn't exist on disk and the chunk is bigger
- *              than the cache size, performs fill value I/O operation on
- *              memory buffer, advancing through two I/O vectors, until one
- *              runs out.
+ *              than the cache size, performs fill value I/O operation on 
+ *              memory buffer, advancing through two I/O vectors, until one 
+ *              runs out.  
  *
  * Note:	This algorithm is pretty inefficient about initializing and
  *              terminating the fill buffer info structure and it would be
@@ -4878,7 +4869,7 @@ H5D_nonexistent_readvv(const H5D_io_info_t *io_info,
 	    HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "can't initialize fill buffer info")
         fb_info_init = TRUE;
 
-	/* Check for VL datatype & fill the buffer with VL datatype fill values */
+	/* Check for VL datatype & fill the buffer with VL datatype fill values */ 
 	if(fb_info.has_vlen_fill_type && H5D_fill_refill_vl(&fb_info, fb_info.elmts_per_buf, io_info->dxpl_id) < 0)
 	    HGOTO_ERROR(H5E_DATASET, H5E_CANTCONVERT, FAIL, "can't refill fill value buffer")
 

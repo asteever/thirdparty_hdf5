@@ -74,39 +74,6 @@ typedef enum H5F_mem_t	H5FD_mem_t;
 #define H5FD_MEM_SOHM_TABLE     H5FD_MEM_OHDR
 #define H5FD_MEM_SOHM_INDEX     H5FD_MEM_BTREE
 
-/* Map "extensible array" header blocks to 'ohdr' type file memory, since its
- * a fair amount of work to add a new kind of file memory and they are similar
- * enough to object headers and probably too minor to deserve their own type.
- *
- * Map "extensible array" index blocks to 'ohdr' type file memory, since they
- * are similar to extensible array header blocks.
- *
- * Map "extensible array" super blocks to 'btree' type file memory, since they
- * are similar enough to B-tree nodes.
- *
- * Map "extensible array" data blocks & pages to 'lheap' type file memory, since
- * they are similar enough to local heap info.
- *
- *      -QAK
- */
-#define H5FD_MEM_EARRAY_HDR     H5FD_MEM_OHDR
-#define H5FD_MEM_EARRAY_IBLOCK  H5FD_MEM_OHDR
-#define H5FD_MEM_EARRAY_SBLOCK  H5FD_MEM_BTREE
-#define H5FD_MEM_EARRAY_DBLOCK  H5FD_MEM_LHEAP
-#define H5FD_MEM_EARRAY_DBLK_PAGE  H5FD_MEM_LHEAP
-
-/* Map "fixed array" header blocks to 'ohdr' type file memory, since its
- * a fair amount of work to add a new kind of file memory and they are similar
- * enough to object headers and probably too minor to deserve their own type.
- *
- * Map "fixed array" data blocks & pages to 'lheap' type file memory, since
- * they are similar enough to local heap info.
- *
- */
-#define H5FD_MEM_FARRAY_HDR     H5FD_MEM_OHDR
-#define H5FD_MEM_FARRAY_DBLOCK  H5FD_MEM_LHEAP
-#define H5FD_MEM_FARRAY_DBLK_PAGE  H5FD_MEM_LHEAP
-
 /*
  * A free-list map which maps all types of allocation requests to a single
  * free list.  This is useful for drivers that don't really care about
@@ -204,12 +171,6 @@ typedef enum H5F_mem_t	H5FD_mem_t;
      * is flushed/closed.
      */
 #define H5FD_FEAT_DIRTY_SBLK_LOAD       0x00000040
-    /*
-     * Defining the H5FD_FEAT_POSIX_COMPAT_HANDLE for a VFL driver means that
-     * the handle for the VFD (returned with the 'get_handle' callback) is
-     * of type 'int' and is compatible with POSIX I/O calls.
-     */
-#define H5FD_FEAT_POSIX_COMPAT_HANDLE   0x00000080
 
 
 /* Forward declaration */

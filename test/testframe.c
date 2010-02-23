@@ -45,7 +45,7 @@ typedef struct TestStruct {
  * Variables used by testing framework.
  */
 static int num_errs = 0;        /* Total number of errors during testing */
-int TestVerbosity = VERBO_DEF;       /* Default Verbosity is Low */
+static int Verbosity = VERBO_DEF;       /* Default Verbosity is Low */
 static int Summary = 0;		/* Show test summary. Default is no. */
 static int CleanUp = 1;		/* Do cleanup or not. Default is yes. */
 static int TestExpress = -1;	/* Do TestExpress or not. -1 means not set yet. */
@@ -124,7 +124,7 @@ AddTest(const char *TheName, void (*TheCall) (void), void (*Cleanup) (void), con
  */
 void TestInit(const char *ProgName, void (*private_usage)(void), int (*private_parser)(int ac, char *av[]))
 {
-#if !(defined MAC || defined __MWERKS__ || defined SYMANTEC_C)
+#if !(defined MAC || defined SYMANTEC_C)
     /* Un-buffer the stdout and stderr */
     setbuf(stderr, NULL);
     setbuf(stdout, NULL);
@@ -361,7 +361,7 @@ void TestCleanup(void)
  */
 int GetTestVerbosity(void)
 {
-    return(TestVerbosity);
+    return(Verbosity);
 }
 
 /*
@@ -372,8 +372,8 @@ int SetTestVerbosity(int newval)
 {
     int oldval;
 
-    oldval = TestVerbosity;
-    TestVerbosity = newval;
+    oldval = Verbosity;
+    Verbosity = newval;
     return(oldval);
 }
 

@@ -32,7 +32,6 @@
 #include "H5Dpkg.h"		/* Datasets				*/
 #include "H5Eprivate.h"		/* Error handling		  	*/
 #include "H5Fprivate.h"		/* Files				*/
-#include "H5HLprivate.h"	/* Local Heaps				*/
 
 
 /****************/
