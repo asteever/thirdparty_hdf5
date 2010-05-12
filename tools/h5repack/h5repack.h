@@ -17,8 +17,6 @@
 #ifndef H5REPACK_H__
 #define H5REPACK_H__
 
-#include <assert.h>
-#include <string.h>
 #include "hdf5.h"
 #include "h5trav.h"
 
@@ -114,16 +112,9 @@ typedef struct {
  hsize_t         ublock_size;      /* user block size */
  hsize_t         threshold;        /* alignment threshold for H5Pset_alignment */
  hsize_t         alignment ;       /* alignment for H5Pset_alignment */
- H5F_file_space_type_t fs_strategy;     /* File space handling strategy */
- hsize_t         fs_threshold;      	/* Free space section threshold */
 } pack_opt_t;
 
 
-typedef struct named_dt_t {
-    haddr_t             addr_in;    /* Address of the named dtype in the in file */
-    hid_t               id_out;     /* Open identifier for the dtype in the out file */
-    struct named_dt_t   *next;      /* Next dtype */
-} named_dt_t;
 
 /*-------------------------------------------------------------------------
  * public functions
@@ -134,25 +125,15 @@ typedef struct named_dt_t {
 extern "C" {
 #endif
 
-int h5repack(const char* infile, const char* outfile, pack_opt_t *options);
-int h5repack_addfilter(const char* str, pack_opt_t *options);
-int h5repack_addlayout(const char* str, pack_opt_t *options);
-int h5repack_init(pack_opt_t *options, int verbose, H5F_file_space_type_t strategy, hsize_t threshold);
-int h5repack_end(pack_opt_t *options);
-int h5repack_verify(const char *in_fname, const char *out_fname, pack_opt_t *options);
-int h5repack_cmp_pl(const char *fname1, const char *fname2);
+int h5repack           (const char* infile, const char* outfile, pack_opt_t *options);
+int h5repack_addfilter (const char* str, pack_opt_t *options);
+int h5repack_addlayout (const char* str, pack_opt_t *options);
+int h5repack_init      (pack_opt_t *options, int verbose);
+int h5repack_end       (pack_opt_t *options);
+int h5repack_verify    (const char *fname,pack_opt_t *options);
+int h5repack_cmp_pl   (const char *fname1,
+                        const char *fname2);
 
-/* Note: The below copy_named_datatype(), named_datatype_free(), copy_attr() 
- * and struct named_dt_t were located in h5repack_copy.c as static prior to 
- * bugfix1726. 
- * Made shared functions as copy_attr() was needed in h5repack_refs.c. 
- * However copy_attr() may be obsoleted when H5Acopy is available and put back
- * others to static in h5repack_copy.c.
- */
-hid_t copy_named_datatype(hid_t type_in, hid_t fidout, named_dt_t **named_dt_head_p, trav_table_t *travt, pack_opt_t *options);
-int named_datatype_free(named_dt_t **named_dt_head_p, int ignore_err);
-int copy_attr(hid_t loc_in, hid_t loc_out, named_dt_t **named_dt_head_p,
-              trav_table_t *travt, pack_opt_t *options);
 
 #ifdef __cplusplus
 }

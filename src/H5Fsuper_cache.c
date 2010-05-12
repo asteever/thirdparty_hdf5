@@ -59,7 +59,7 @@
 /********************/
 
 /* Metadata cache (H5AC) callbacks */
-static H5F_super_t *H5F_sblock_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata);
+static H5F_super_t *H5F_sblock_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void *udata1, void *udata2);
 static herr_t H5F_sblock_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5F_super_t *sblock);
 static herr_t H5F_sblock_dest(H5F_t *f, H5F_super_t * sblock);
 static herr_t H5F_sblock_clear(H5F_t *f, H5F_super_t *sblock, hbool_t destroy);
@@ -77,7 +77,6 @@ const H5AC_class_t H5AC_SUPERBLOCK[1] = {{
     (H5AC_flush_func_t)H5F_sblock_flush,
     (H5AC_dest_func_t)H5F_sblock_dest,
     (H5AC_clear_func_t)H5F_sblock_clear,
-    (H5AC_notify_func_t)NULL,
     (H5AC_size_func_t)H5F_sblock_size,
 }};
 
@@ -111,7 +110,8 @@ H5FL_EXTERN(H5F_super_t);
  *-------------------------------------------------------------------------
  */
 static H5F_super_t *
-H5F_sblock_load(H5F_t *f, hid_t dxpl_id, haddr_t UNUSED addr, void *_udata)
+H5F_sblock_load(H5F_t *f, hid_t dxpl_id, haddr_t UNUSED addr, const void UNUSED *udata1,
+    void *udata2/*out*/)
 {
     H5F_super_t        *sblock = NULL;      /* File's superblock */
     haddr_t             base_addr = HADDR_UNDEF;        /* Base address of file */
@@ -127,7 +127,7 @@ H5F_sblock_load(H5F_t *f, hid_t dxpl_id, haddr_t UNUSED addr, void *_udata)
     size_t              variable_size;      /*variable sizeof superblock    */
     uint8_t            *p;                  /* Temporary pointer into encoding buffer */
     unsigned            super_vers;         /* Superblock version          */
-    hbool_t            *dirtied = (hbool_t *)_udata;  /* Set up dirtied out value */
+    hbool_t            *dirtied = (hbool_t *)udata2;  /* Set up dirtied out value */
     H5F_super_t        *ret_value;          /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5F_sblock_load)
@@ -135,7 +135,6 @@ H5F_sblock_load(H5F_t *f, hid_t dxpl_id, haddr_t UNUSED addr, void *_udata)
     /* check arguments */
     HDassert(f);
     HDassert(H5F_addr_eq(addr, 0));
-    HDassert(dirtied);
 
     /* Short cuts */
     shared = f->shared;
@@ -482,7 +481,6 @@ H5F_sblock_load(H5F_t *f, hid_t dxpl_id, haddr_t UNUSED addr, void *_udata)
         H5O_loc_t ext_loc;      /* "Object location" for superblock extension */
         H5O_btreek_t btreek;    /* v1 B-tree 'K' value message from superblock extension */
         H5O_drvinfo_t drvinfo;  /* Driver info message from superblock extension */
-	size_t u; 		/* Local index variable */
         htri_t status;          /* Status for message existing */
 
         /* Sanity check - superblock extension should only be defined for
@@ -566,41 +564,6 @@ H5F_sblock_load(H5F_t *f, hid_t dxpl_id, haddr_t UNUSED addr, void *_udata)
             sblock->btree_k[H5B_SNODE_ID] = HDF5_BTREE_SNODE_IK_DEF;
             sblock->sym_leaf_k = H5F_CRT_SYM_LEAF_DEF;
         } /* end if */
-
-        /* Check for the extension having a 'free-space manager info' message */
-        if((status = H5O_msg_exists(&ext_loc, H5O_FSINFO_ID, dxpl_id)) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTGET, NULL, "unable to check object header")
-        if(status) {
-            H5O_fsinfo_t fsinfo;    /* Free-space manager info message from superblock extension */
-
-            /* Retrieve the 'free-space manager info' structure */
-	    if(NULL == H5O_msg_read(&ext_loc, H5O_FSINFO_ID, &fsinfo, dxpl_id))
-                HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, NULL, "unable to get free-space manager info message")
-
-	    if(shared->fs_strategy != fsinfo.strategy) {
-		shared->fs_strategy = fsinfo.strategy;
-
-		/* Set non-default strategy in the property list */
-		if(H5P_set(c_plist, H5F_CRT_FILE_SPACE_STRATEGY_NAME, &fsinfo.strategy) < 0)
-		    HGOTO_ERROR(H5E_FILE, H5E_CANTSET, NULL, "unable to set file space strategy")
-	    } /* end if */
-	    if(shared->fs_threshold != fsinfo.threshold) {
-		shared->fs_threshold = fsinfo.threshold;
-
-		/* Set non-default threshold in the property list */
-		if(H5P_set(c_plist, H5F_CRT_FREE_SPACE_THRESHOLD_NAME, &fsinfo.threshold) < 0)
-		    HGOTO_ERROR(H5E_FILE, H5E_CANTSET, NULL, "unable to set file space strategy")
-	    } /* end if */
-
-	    /* set free-space manager addresses */
-	    shared->fs_addr[0] = HADDR_UNDEF;
-	    for(u = 1; u < NELMTS(f->shared->fs_addr); u++)
-		shared->fs_addr[u] = fsinfo.fs_addr[u-1];
-        } /* end if */
-        else {
-	    for(u = 0; u < NELMTS(f->shared->fs_addr); u++)
-		shared->fs_addr[u] = HADDR_UNDEF;
-        } /* end else */
 
         /* Close superblock extension */
 	if(H5F_super_ext_close(f, &ext_loc) < 0)

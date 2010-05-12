@@ -63,7 +63,8 @@
 /********************/
 
 /* Metadata cache callbacks */
-static H5HG_heap_t *H5HG_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata);
+static H5HG_heap_t *H5HG_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void *udata1,
+			      void *udata2);
 static herr_t H5HG_flush(H5F_t *f, hid_t dxpl_id, hbool_t dest, haddr_t addr,
 			 H5HG_heap_t *heap, unsigned UNUSED * flags_ptr);
 static herr_t H5HG_dest(H5F_t *f, H5HG_heap_t *heap);
@@ -82,7 +83,6 @@ const H5AC_class_t H5AC_GHEAP[1] = {{
     (H5AC_flush_func_t)H5HG_flush,
     (H5AC_dest_func_t)H5HG_dest,
     (H5AC_clear_func_t)H5HG_clear,
-    (H5AC_notify_func_t)NULL,
     (H5AC_size_func_t)H5HG_size,
 }};
 
@@ -113,7 +113,8 @@ const H5AC_class_t H5AC_GHEAP[1] = {{
  *-------------------------------------------------------------------------
  */
 static H5HG_heap_t *
-H5HG_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata)
+H5HG_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void UNUSED * udata1,
+	   void UNUSED * udata2)
 {
     H5HG_heap_t	*heap = NULL;
     uint8_t	*p;
@@ -126,11 +127,13 @@ H5HG_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata)
     /* check arguments */
     HDassert(f);
     HDassert(H5F_addr_defined(addr));
-    HDassert(udata);
+    HDassert(!udata1);
+    HDassert(!udata2);
 
     /* Read the initial 4k page */
     if(NULL == (heap = H5FL_CALLOC(H5HG_heap_t)))
 	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+    heap->addr = addr;
     heap->shared = f->shared;
     if(NULL == (heap->chunk = H5FL_BLK_MALLOC(gheap_chunk, (size_t)H5HG_MINSIZE)))
 	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")

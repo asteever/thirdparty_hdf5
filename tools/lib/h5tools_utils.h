@@ -110,8 +110,8 @@ H5TOOLS_DLLVAR int     nCols;               /*max number of columns for outputti
 /* Definitions of useful routines */
 H5TOOLS_DLL void     indentation(int);
 H5TOOLS_DLL void     print_version(const char *progname);
-H5TOOLS_DLL void     error_msg(const char *fmt, ...);
-H5TOOLS_DLL void     warn_msg(const char *fmt, ...);
+H5TOOLS_DLL void     error_msg(const char *progname, const char *fmt, ...);
+H5TOOLS_DLL void     warn_msg(const char *progname, const char *fmt, ...);
 H5TOOLS_DLL void     free_table(table_t *table);
 #ifdef H5DUMP_DEBUG
 H5TOOLS_DLL void     dump_tables(find_objs_t *info)

@@ -206,7 +206,6 @@ done:
 static herr_t
 H5FS_sinfo_lock(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace, H5AC_protect_t accmode)
 {
-    H5FS_sinfo_cache_ud_t cache_udata; /* User-data for cache callback */
     herr_t ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5FS_sinfo_lock)
@@ -232,10 +231,7 @@ HDfprintf(stderr, "%s: fspace->alloc_sect_size = %Hu, fspace->sect_size = %Hu\n"
                     HGOTO_ERROR(H5E_FSPACE, H5E_CANTUNPROTECT, FAIL, "unable to release free space section info")
 
                 /* Re-protect the section info with read-write access */
-                cache_udata.f = f;
-                cache_udata.dxpl_id = dxpl_id;
-                cache_udata.fspace = fspace;
-                if(NULL == (fspace->sinfo = (H5FS_sinfo_t *)H5AC_protect(f, dxpl_id, H5AC_FSPACE_SINFO, fspace->sect_addr, &cache_udata, H5AC_WRITE)))
+                if(NULL == (fspace->sinfo = (H5FS_sinfo_t *)H5AC_protect(f, dxpl_id, H5AC_FSPACE_SINFO, fspace->sect_addr, NULL, fspace, H5AC_WRITE)))
                     HGOTO_ERROR(H5E_FSPACE, H5E_CANTPROTECT, FAIL, "unable to load free space sections")
 
                 /* Switch the access mode we have */
@@ -254,10 +250,7 @@ HDfprintf(stderr, "%s: fspace->alloc_sect_size = %Hu, fspace->sect_size = %Hu\n"
 HDfprintf(stderr, "%s: Reading in existing sections, fspace->sect_addr = %a\n", FUNC, fspace->sect_addr);
 #endif /* H5FS_SINFO_DEBUG */
             /* Protect the free space sections */
-            cache_udata.f = f;
-            cache_udata.dxpl_id = dxpl_id;
-            cache_udata.fspace = fspace;
-            if(NULL == (fspace->sinfo = (H5FS_sinfo_t *)H5AC_protect(f, dxpl_id, H5AC_FSPACE_SINFO, fspace->sect_addr, &cache_udata, accmode)))
+            if(NULL == (fspace->sinfo = (H5FS_sinfo_t *)H5AC_protect(f, dxpl_id, H5AC_FSPACE_SINFO, fspace->sect_addr, NULL, fspace, accmode)))
                 HGOTO_ERROR(H5E_FSPACE, H5E_CANTPROTECT, FAIL, "unable to load free space sections")
 
             /* Remember that we protected the section info & the access mode */
@@ -565,7 +558,7 @@ H5FS_sect_increase(H5FS_t *fspace, const H5FS_section_class_t *cls,
 
         /* Increment amount of space required to serialize all sections */
 #ifdef QAK
-HDfprintf(stderr, "%s: sinfo->serial_size = %Zu\n", FUNC, fspace->sinfo->serial_size);
+HDfprintf(stderr, "%s: sinfo->serial_size = %Zu\n", FUNC, sinfo->serial_size);
 HDfprintf(stderr, "%s: cls->serial_size = %Zu\n", FUNC, cls->serial_size);
 #endif /* QAK */
         fspace->sinfo->serial_size += cls->serial_size;
@@ -627,7 +620,7 @@ H5FS_sect_decrease(H5FS_t *fspace, const H5FS_section_class_t *cls)
 
         /* Decrement amount of space required to serialize all sections */
 #ifdef QAK
-HDfprintf(stderr, "%s: fspace->serial_size = %Zu\n", FUNC, fspace->sinfo->serial_size);
+HDfprintf(stderr, "%s: fspace->serial_size = %Zu\n", FUNC, fspace->serial_size);
 HDfprintf(stderr, "%s: cls->serial_size = %Zu\n", FUNC, cls->serial_size);
 #endif /* QAK */
         fspace->sinfo->serial_size -= cls->serial_size;
@@ -1576,71 +1569,6 @@ done:
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5FS_sect_try_extend() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5FS_sect_try_merge
- *
- * Purpose:	Try to merge/shrink a block
- *
- * Return:	TRUE:		merged/shrunk
- *		FALSE: 	 	not merged/not shrunk
- *		Failure:	negative
- *
- * Programmer:	Vailin Choi; June 10, 2009
- *
- *-------------------------------------------------------------------------
- */
-htri_t
-H5FS_sect_try_merge(H5F_t *f, hid_t dxpl_id, H5FS_t *fspace, H5FS_section_info_t *sect,
-    unsigned flags, void *op_data)
-{
-    hbool_t sinfo_valid = FALSE;        /* Whether the section info is valid */
-    hbool_t sinfo_modified = FALSE;     /* Whether the section info was modified */
-    hsize_t saved_fs_size;		/* copy the free-space section size */
-    htri_t ret_value = FALSE;           /* Return value */
-
-    FUNC_ENTER_NOAPI(H5FS_sect_try_merge, FAIL)
-
-    /* Check arguments. */
-    HDassert(f);
-    HDassert(fspace);
-    HDassert(sect);
-    HDassert(H5F_addr_defined(sect->addr));
-    HDassert(sect->size);
-
-    /* Get a pointer to the section info */
-    if(H5FS_sinfo_lock(f, dxpl_id, fspace, H5AC_WRITE) < 0)
-	HGOTO_ERROR(H5E_FSPACE, H5E_CANTGET, FAIL, "can't get section info")
-    sinfo_valid = TRUE;
-    saved_fs_size = sect->size;
-
-    /* Attempt to merge/shrink section with existing sections */
-    if(H5FS_sect_merge(fspace, &sect, op_data) < 0)
-	HGOTO_ERROR(H5E_FSPACE, H5E_CANTMERGE, FAIL, "can't merge sections")
-
-    /* Check if section is shrunk and/or merged away completely */
-    if(!sect) {
-	sinfo_modified = TRUE;
-	HGOTO_DONE(TRUE)
-    } /* end if */
-    else {
-        /* Check if section is merged */
-        if(sect->size > saved_fs_size) {
-            if(H5FS_sect_link(fspace, sect, flags) < 0)
-                HGOTO_ERROR(H5E_FSPACE, H5E_CANTINSERT, FAIL, "can't insert free space section into skip list")
-            sinfo_modified = TRUE;
-            HGOTO_DONE(TRUE)
-        } /* end if */
-    } /* end else */
-
-done:
-    /* Release the section info */
-    if(sinfo_valid && H5FS_sinfo_unlock(f, dxpl_id, fspace, sinfo_modified) < 0)
-        HDONE_ERROR(H5E_FSPACE, H5E_CANTRELEASE, FAIL, "can't release section info")
-
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5FS_sect_try_merge() */
 
 
 /*-------------------------------------------------------------------------

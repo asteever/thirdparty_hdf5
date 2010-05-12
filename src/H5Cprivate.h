@@ -32,7 +32,7 @@
 
 #include "H5Cpublic.h"		/* public prototypes		        */
 
-/* Private headers needed by this header */
+/* Pivate headers needed by this header */
 #include "H5private.h"		/* Generic Functions			*/
 #include "H5Fprivate.h"		/* File access				*/
 
@@ -113,16 +113,13 @@ typedef struct H5C_t H5C_t;
  *
  * CLEAR:	Just marks object as non-dirty.
  *
- * NOTIFY:	Notify client that an action on an entry has taken/will take
- *              place
- *
  * SIZE:	Report the size (on disk) of the specified cache object.
  *		Note that the space allocated on disk may not be contiguous.
  */
 
 #define H5C_CALLBACK__NO_FLAGS_SET		0x0
 #define H5C_CALLBACK__SIZE_CHANGED_FLAG		0x1
-#define H5C_CALLBACK__MOVED_FLAG		0x2
+#define H5C_CALLBACK__RENAMED_FLAG		0x2
 
 /* Actions that can be reported to 'notify' client callback */
 typedef enum H5C_notify_action_t {
@@ -137,7 +134,8 @@ typedef enum H5C_notify_action_t {
 typedef void *(*H5C_load_func_t)(H5F_t *f,
                                  hid_t dxpl_id,
                                  haddr_t addr,
-                                 void *udata);
+                                 const void *udata1,
+                                 void *udata2);
 typedef herr_t (*H5C_flush_func_t)(H5F_t *f,
                                    hid_t dxpl_id,
                                    hbool_t dest,
@@ -161,7 +159,6 @@ typedef struct H5C_class_t {
     H5C_flush_func_t	flush;
     H5C_dest_func_t	dest;
     H5C_clear_func_t	clear;
-    H5C_notify_func_t	notify;
     H5C_size_func_t	size;
 } H5C_class_t;
 
@@ -197,16 +194,6 @@ typedef herr_t (*H5C_log_flush_func_t)(H5C_t * cache_ptr,
 
 #define H5C__DEFAULT_MAX_CACHE_SIZE     ((size_t)(4 * 1024 * 1024))
 #define H5C__DEFAULT_MIN_CLEAN_SIZE     ((size_t)(2 * 1024 * 1024))
-
-/* Maximum height of flush dependency relationships between entries.  This is
- * currently tuned to the extensible array (H5EA) data structure, which only
- * requires 6 levels of dependency (i.e. heights 0-6) (actually, the extensible
- * array needs 4 levels, plus another 2 levels are needed: one for the layer
- * under the extensible array and one for the layer above it).
- */
-
-#define H5C__NUM_FLUSH_DEP_HEIGHTS            6
-
 
 
 /****************************************************************************
@@ -292,10 +279,10 @@ typedef herr_t (*H5C_log_flush_func_t)(H5C_t * cache_ptr,
  *
  * 		This field is set to FALSE in the protect call, and may
  * 		be set to TRUE by the
- * 		H5C_mark_entry_dirty()
+ * 		H5C_mark_pinned_or_protected_entry_dirty()
  * 		call at an time prior to the unprotect call.
  *
- * 		The H5C_mark_entry_dirty() call exists
+ * 		The H5C_mark_pinned_or_protected_entry_dirty() call exists
  * 		as a convenience function for the fractal heap code which
  * 		may not know if an entry is protected or pinned, but knows
  * 		that is either protected or pinned.  The dirtied field was
@@ -395,37 +382,6 @@ typedef herr_t (*H5C_log_flush_func_t)(H5C_t * cache_ptr,
  *              'dest' callback routine.
  *
  *
- * Fields supporting the 'flush dependency' feature:
- *
- * Entries in the cache may have a 'flush dependency' on another entry in the
- * cache.  A flush dependency requires that all dirty child entries be flushed
- * to the file before a dirty parent entry (of those child entries) can be
- * flushed to the file.  This can be used by cache clients to create data
- * structures that allow Single-Writer/Multiple-Reader (SWMR) access for the
- * data structure.
- *
- * The leaf child entry will have a "height" of 0, with any parent entries
- * having a height of 1 greater than the maximum height of any of their child
- * entries (flush dependencies are allowed to create asymmetric trees of
- * relationships).
- *
- * flush_dep_parent:	Pointer to the parent entry for an entry in a flush
- *		dependency relationship.
- *
- * child_flush_dep_height_rc:	An array of reference counts for child entries,
- *		where the number of children of each height is tracked.
- *
- * flush_dep_height:	The height of the entry, which is one greater than the
- *		maximum height of any of its child entries..
- *
- * pinned_from_client:	Whether the entry was pinned by an explicit pin request
- *		from a cache client.
- *
- * pinned_from_cache:	Whether the entry was pinned implicitly as a
- *		request of being a parent entry in a flush dependency
- *		relationship.
- *
- *
  * Fields supporting the hash table:
  *
  * Fields in the cache are indexed by a more or less conventional hash table.
@@ -504,37 +460,6 @@ typedef herr_t (*H5C_log_flush_func_t)(H5C_t * cache_ptr,
  *		there is no previous item, it should be NULL.
  *
  *
- * Fields supporting metadata journaling:
- *
- * last_trans:	unit64_t containing the ID of the last transaction in
- * 		which this entry was dirtied.  If journaling is disabled,
- * 		or if the entry has never been dirtied in a transaction,
- * 		this field should be set to zero.  Once we notice that
- * 		the specified transaction has made it to disk, we will
- * 		reset this field to zero as well.
- *
- * 		We must maintain this field, as to avoid messages from
- * 		the future, we must not flush a dirty entry to disk
- * 		until the last transaction in which it was dirtied
- * 		has made it to disk in the journal file.
- *
- * trans_next:  Next pointer in the entries modified in the current
- * 		transaction list.  This field should always be null
- * 		unless journaling is enabled, the entry is dirty,
- * 		and last_trans field contains the current transaction
- * 		number.  Even if all these conditions are fulfilled,
- * 		the field will still be NULL if this is the last
- * 		entry on the list.
- *
- * trans_prev:  Previous pointer in the entries modified in the current
- * 		transaction list.  This field should always be null
- * 		unless journaling is enabled, the entry is dirty,
- * 		and last_trans field contains the current transaction
- * 		number.  Even if all these conditions are fulfilled,
- * 		the field will still be NULL if this is the first
- * 		entry on the list.
- *
- *
  * Cache entry stats collection fields:
  *
  * These fields should only be compiled in when both H5C_COLLECT_CACHE_STATS
@@ -583,14 +508,6 @@ typedef struct H5C_cache_entry_t
     hbool_t			flush_in_progress;
     hbool_t			destroy_in_progress;
     hbool_t		free_file_space_on_destroy;
-
-    /* fields supporting the 'flush dependency' feature: */
-
-    struct H5C_cache_entry_t *	flush_dep_parent;
-    uint64_t            child_flush_dep_height_rc[H5C__NUM_FLUSH_DEP_HEIGHTS];
-    unsigned            flush_dep_height;
-    hbool_t		pinned_from_client;
-    hbool_t		pinned_from_cache;
 
     /* fields supporting the hash table: */
 
@@ -1090,9 +1007,7 @@ H5_DLL herr_t H5C_get_entry_status(const H5F_t *f,
                                    hbool_t * in_cache_ptr,
                                    hbool_t * is_dirty_ptr,
                                    hbool_t * is_protected_ptr,
-				   hbool_t * is_pinned_ptr,
-				   hbool_t * is_flush_dep_parent_ptr,
-				   hbool_t * is_flush_dep_child_ptr);
+				   hbool_t * is_pinned_ptr);
 
 H5_DLL herr_t H5C_get_evictions_enabled(const H5C_t * cache_ptr,
                                         hbool_t * evictions_enabled_ptr);
@@ -1116,28 +1031,31 @@ H5_DLL herr_t H5C_mark_entries_as_clean(H5F_t *  f,
                                         int32_t  ce_array_len,
                                         haddr_t *ce_array_ptr);
 
-H5_DLL herr_t H5C_mark_entry_dirty(void *thing);
+H5_DLL herr_t H5C_mark_pinned_entry_dirty(void *  thing,
+					  hbool_t size_changed,
+					  size_t  new_size);
 
-H5_DLL herr_t H5C_move_entry(H5C_t *             cache_ptr,
+H5_DLL herr_t H5C_mark_pinned_or_protected_entry_dirty(void *thing);
+
+H5_DLL herr_t H5C_rename_entry(H5C_t *             cache_ptr,
                                const H5C_class_t * type,
                                haddr_t             old_addr,
                                haddr_t             new_addr);
 
 H5_DLL herr_t H5C_pin_protected_entry(void *thing);
 
-H5_DLL herr_t H5C_create_flush_dependency(void *parent_thing, void *child_thing);
-
 H5_DLL void * H5C_protect(H5F_t *             f,
                           hid_t               primary_dxpl_id,
                           hid_t               secondary_dxpl_id,
-			  const H5C_class_t * type,
+                          const H5C_class_t * type,
                           haddr_t             addr,
-                          void *              udata,
-                          unsigned            flags);
+                          const void *        udata1,
+                          void *              udata2,
+			  unsigned            flags);
 
 H5_DLL herr_t H5C_reset_cache_hit_rate_stats(H5C_t * cache_ptr);
 
-H5_DLL herr_t H5C_resize_entry(void *thing, size_t new_size);
+H5_DLL herr_t H5C_resize_pinned_entry(void *thing, size_t new_size);
 
 H5_DLL herr_t H5C_set_cache_auto_resize_config(H5C_t *cache_ptr,
                                                H5C_auto_size_ctl_t *config_ptr);
@@ -1161,8 +1079,6 @@ H5_DLL herr_t H5C_stats(H5C_t * cache_ptr,
 H5_DLL void H5C_stats__reset(H5C_t * cache_ptr);
 
 H5_DLL herr_t H5C_unpin_entry(void *thing);
-
-H5_DLL herr_t H5C_destroy_flush_dependency(void *parent_thing, void *child_thing);
 
 H5_DLL herr_t H5C_unprotect(H5F_t *             f,
                             hid_t               primary_dxpl_id,

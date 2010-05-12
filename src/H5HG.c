@@ -227,8 +227,9 @@ HDmemset(heap->chunk, 0, size);
     } /* end else */
 
     /* Add the heap to the cache */
-    if(H5AC_set(f, dxpl_id, H5AC_GHEAP, addr, heap, H5AC__NO_FLAGS_SET) < 0)
-	HGOTO_ERROR(H5E_HEAP, H5E_CANTINIT, HADDR_UNDEF, "unable to cache global heap collection")
+    if (H5AC_set (f, dxpl_id, H5AC_GHEAP, addr, heap, H5AC__NO_FLAGS_SET)<0)
+	HGOTO_ERROR (H5E_HEAP, H5E_CANTINIT, HADDR_UNDEF, \
+                     "unable to cache global heap collection");
 
     ret_value = addr;
 
@@ -250,45 +251,6 @@ done:
 
     FUNC_LEAVE_NOAPI(ret_value);
 } /* H5HG_create() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5HG_protect
- *
- * Purpose:	Convenience wrapper around H5AC_protect on an indirect block
- *
- * Return:	Pointer to indirect block on success, NULL on failure
- *
- * Programmer:	Quincey Koziol
- *              Wednesday, May  5, 2010
- *
- *-------------------------------------------------------------------------
- */
-H5HG_t *
-H5HG_protect(H5F_t *f, hid_t dxpl_id, haddr_t addr, H5AC_protect_t rw)
-{
-    H5HG_heap_t *heap;          /* Global heap */
-    H5HG_heap_t *ret_value;     /* Return value */
-
-    FUNC_ENTER_NOAPI_NOINIT(H5HG_protect)
-
-    /* Check arguments */
-    HDassert(f);
-    HDassert(H5F_addr_defined(addr));
-
-    /* Lock the heap into memory */
-    if(NULL == (heap = (H5HG_heap_t *)H5AC_protect(f, dxpl_id, H5AC_GHEAP, addr, f, rw)))
-        HGOTO_ERROR(H5E_HEAP, H5E_CANTPROTECT, NULL, "unable to protect global heap")
-
-    /* Set the heap's address */
-    heap->addr = addr;
-
-    /* Set the return value */
-    ret_value = heap;
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5HG_protect() */
 
 
 /*-------------------------------------------------------------------------
@@ -629,8 +591,8 @@ H5HG_insert(H5F_t *f, hid_t dxpl_id, size_t size, void *obj, H5HG_t *hobj/*out*/
         } /* end if */
     } /* end else */
     HDassert(H5F_addr_defined(addr));
-    if(NULL == (heap = H5HG_protect(f, dxpl_id, addr, H5AC_WRITE)))
-        HGOTO_ERROR(H5E_HEAP, H5E_CANTPROTECT, FAIL, "unable to protect global heap")
+    if(NULL == (heap = (H5HG_heap_t *)H5AC_protect(f, dxpl_id, H5AC_GHEAP, addr, NULL, NULL, H5AC_WRITE)))
+        HGOTO_ERROR(H5E_HEAP, H5E_CANTLOAD, FAIL, "unable to load heap")
 
     /* Split the free space to make room for the new object */
     idx = H5HG_alloc(f, heap, size, &heap_flags);
@@ -692,8 +654,8 @@ H5HG_read(H5F_t *f, hid_t dxpl_id, H5HG_t *hobj, void *object/*out*/,
     HDassert(hobj);
 
     /* Load the heap */
-    if(NULL == (heap = H5HG_protect(f, dxpl_id, hobj->addr, H5AC_READ)))
-	HGOTO_ERROR(H5E_HEAP, H5E_CANTPROTECT, NULL, "unable to protect global heap")
+    if(NULL == (heap = (H5HG_heap_t *)H5AC_protect(f, dxpl_id, H5AC_GHEAP, hobj->addr, NULL, NULL, H5AC_READ)))
+	HGOTO_ERROR(H5E_HEAP, H5E_CANTLOAD, NULL, "unable to load heap")
 
     HDassert(hobj->idx < heap->nused);
     HDassert(heap->obj[hobj->idx].begin);
@@ -774,8 +736,8 @@ H5HG_link(H5F_t *f, hid_t dxpl_id, const H5HG_t *hobj, int adjust)
 	HGOTO_ERROR(H5E_HEAP, H5E_WRITEERROR, FAIL, "no write intent on file")
 
     /* Load the heap */
-    if(NULL == (heap = H5HG_protect(f, dxpl_id, hobj->addr, H5AC_WRITE)))
-        HGOTO_ERROR(H5E_HEAP, H5E_CANTPROTECT, FAIL, "unable to protect global heap")
+    if(NULL == (heap = (H5HG_heap_t *)H5AC_protect(f, dxpl_id, H5AC_GHEAP, hobj->addr, NULL, NULL, H5AC_WRITE)))
+        HGOTO_ERROR(H5E_HEAP, H5E_CANTLOAD, FAIL, "unable to load heap")
 
     if(adjust != 0) {
         HDassert(hobj->idx < heap->nused);
@@ -837,8 +799,8 @@ H5HG_remove (H5F_t *f, hid_t dxpl_id, H5HG_t *hobj)
         HGOTO_ERROR(H5E_HEAP, H5E_WRITEERROR, FAIL, "no write intent on file")
 
     /* Load the heap */
-    if(NULL == (heap = H5HG_protect(f, dxpl_id, hobj->addr, H5AC_WRITE)))
-        HGOTO_ERROR(H5E_HEAP, H5E_CANTPROTECT, FAIL, "unable to protect global heap")
+    if(NULL == (heap = (H5HG_heap_t *)H5AC_protect(f, dxpl_id, H5AC_GHEAP, hobj->addr, NULL, NULL, H5AC_WRITE)))
+        HGOTO_ERROR(H5E_HEAP, H5E_CANTLOAD, FAIL, "unable to load heap")
 
     HDassert(hobj->idx < heap->nused);
     HDassert(heap->obj[hobj->idx].begin);

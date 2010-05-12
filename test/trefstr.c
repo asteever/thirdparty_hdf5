@@ -301,7 +301,6 @@ test_refstr_own(void)
 
     /* Initialize buffer */
     s = (char *)H5FL_BLK_MALLOC(str_buf,HDstrlen("foo") + 1);
-    CHECK(s, NULL, "H5FL_BLK_MALLOC");    
     HDstrcpy(s, "foo");
 
     /* Transfer ownership of dynamically allocated string to ref-counted string */

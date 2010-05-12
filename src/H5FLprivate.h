@@ -277,7 +277,7 @@ typedef struct H5FL_arr_head_t {
 #define H5FL_ARR_CALLOC(t,elem) H5FL_arr_calloc(&(H5FL_ARR_NAME(t)),elem)
 
 /* Free an array of type 't' */
-#define H5FL_ARR_FREE(t,obj) (t *)H5FL_arr_free(&(H5FL_ARR_NAME(t)),obj)
+#define H5FL_ARR_FREE(t,obj) H5FL_arr_free(&(H5FL_ARR_NAME(t)),obj)
 
 /* Re-allocate an array of type 't' */
 #define H5FL_ARR_REALLOC(t,obj,new_elem) H5FL_arr_realloc(&(H5FL_ARR_NAME(t)),obj,new_elem)
@@ -293,7 +293,7 @@ typedef struct H5FL_arr_head_t {
 #define H5FL_BARR_DEFINE_STATIC(b,t,m)  static H5FL_ARR_DEFINE_COMMON(t,m) = sizeof(b)
 #define H5FL_ARR_MALLOC(t,elem) H5MM_malloc(H5FL_ARR_NAME(t) + ((elem)*sizeof(t)))
 #define H5FL_ARR_CALLOC(t,elem) H5MM_calloc(H5FL_ARR_NAME(t) + ((elem)*sizeof(t)))
-#define H5FL_ARR_FREE(t,obj) (t *)H5MM_xfree(obj)
+#define H5FL_ARR_FREE(t,obj) H5MM_xfree(obj)
 #define H5FL_ARR_REALLOC(t,obj,new_elem) H5MM_realloc(obj,H5FL_ARR_NAME(t) + ((new_elem)*sizeof(t)))
 #endif /* H5_NO_ARR_FREE_LISTS */
 
@@ -330,7 +330,7 @@ typedef struct H5FL_seq_head_t {
 #define H5FL_SEQ_CALLOC(t,elem) (t *)H5FL_seq_calloc(&(H5FL_SEQ_NAME(t)),elem H5FL_TRACK_INFO)
 
 /* Free a sequence of type 't' */
-#define H5FL_SEQ_FREE(t,obj) (t *)H5FL_seq_free(&(H5FL_SEQ_NAME(t)),obj)
+#define H5FL_SEQ_FREE(t,obj) H5FL_seq_free(&(H5FL_SEQ_NAME(t)),obj)
 
 /* Re-allocate a sequence of type 't' */
 #define H5FL_SEQ_REALLOC(t,obj,new_elem) (t *)H5FL_seq_realloc(&(H5FL_SEQ_NAME(t)),obj,new_elem H5FL_TRACK_INFO)

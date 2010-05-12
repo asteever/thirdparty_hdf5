@@ -4,7 +4,6 @@
 	Version="9.00"
 	Name="hdf5_hldll"
 	ProjectGUID="{CFB2CC74-5F03-494A-84E9-6BB8D2FBC43C}"
-	RootNamespace="hdf5_hldll"
 	TargetFrameworkVersion="131072"
 	>
 	<Platforms>
@@ -82,7 +81,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib $(HDF5_EXT_ZLIB) $(HDF5_EXT_SZIP)"
 				OutputFile="$(OutDir)\hdf5_hldll.dll"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ManifestFile="$(TargetPath).intermediate.manifest"
 				ProgramDatabaseFile="$(TargetDir)$(TargetName).pdb"
@@ -177,7 +176,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib $(HDF5_EXT_ZLIB) $(HDF5_EXT_SZIP)"
 				OutputFile="$(OutDir)\hdf5_hldll.dll"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ManifestFile="$(TargetPath).intermediate.manifest"
 				ProgramDatabaseFile="$(TargetDir)$(TargetName).pdb"
@@ -271,7 +270,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib $(HDF5_EXT_ZLIB) $(HDF5_EXT_SZIP)"
 				OutputFile="$(OutDir)\hdf5_hlddll.dll"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ManifestFile="$(TargetPath).intermediate.manifest"
 				GenerateDebugInformation="true"
@@ -366,7 +365,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib $(HDF5_EXT_ZLIB) $(HDF5_EXT_SZIP)"
 				OutputFile="$(OutDir)\hdf5_hlddll.dll"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ManifestFile="$(TargetPath).intermediate.manifest"
 				GenerateDebugInformation="true"
@@ -434,16 +433,6 @@
 				RelativePath="..\..\..\hl\src\H5TB.c"
 				>
 			</File>
-		</Filter>
-		<Filter
-			Name="Header Files"
-			Filter="h;hpp;hxx;hm;inl;fi;fd"
-			>
-		</Filter>
-		<Filter
-			Name="Resource Files"
-			Filter="ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"
-			>
 		</Filter>
 	</Files>
 	<Globals>

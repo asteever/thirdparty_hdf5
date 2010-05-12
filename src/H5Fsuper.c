@@ -320,7 +320,7 @@ H5F_super_read(H5F_t *f, hid_t dxpl_id)
         rw = H5AC_READ;
 
     /* Look up the superblock */
-    if(NULL == (sblock = (H5F_super_t *)H5AC_protect(f, dxpl_id, H5AC_SUPERBLOCK, (haddr_t)0, &dirtied, rw)))
+    if(NULL == (sblock = (H5F_super_t *)H5AC_protect(f, dxpl_id, H5AC_SUPERBLOCK, (haddr_t)0, NULL, &dirtied, rw)))
         HGOTO_ERROR(H5E_CACHE, H5E_CANTPROTECT, FAIL, "unable to load superblock")
 
     /* Mark the superblock dirty if it was modified during loading or VFD indicated to do so */
@@ -401,12 +401,6 @@ H5F_super_init(H5F_t *f, hid_t dxpl_id)
         super_vers = HDF5_SUPERBLOCK_VERSION_LATEST;
     /* Bump superblock version to create superblock extension for SOHM info */
     else if(f->shared->sohm_nindexes > 0)
-        super_vers = HDF5_SUPERBLOCK_VERSION_2;
-    /* Bump superblock version to create superblock extension for
-     * non-default file space strategy or non-default free-space threshold
-     */
-    else if(f->shared->fs_strategy != H5F_FILE_SPACE_STRATEGY_DEF ||
-            f->shared->fs_threshold != H5F_FREE_SPACE_THRESHOLD_DEF)
         super_vers = HDF5_SUPERBLOCK_VERSION_2;
     /* Check for non-default indexed storage B-tree internal 'K' value
      * and set the version # of the superblock to 1 if it is a non-default
@@ -503,12 +497,6 @@ H5F_super_init(H5F_t *f, hid_t dxpl_id)
         HDassert(super_vers >= HDF5_SUPERBLOCK_VERSION_2);
         need_ext = TRUE;
     } /* end if */
-    /* Files with non-default free space settings always need the superblock extension */
-    else if(f->shared->fs_strategy != H5F_FILE_SPACE_STRATEGY_DEF ||
-            f->shared->fs_threshold != H5F_FREE_SPACE_THRESHOLD_DEF) {
-        HDassert(super_vers >= HDF5_SUPERBLOCK_VERSION_2);
-        need_ext = TRUE;
-    } /* end if */
     /* If we're going to use a version of the superblock format which allows
      *  for the superblock extension, check for non-default values to store
      *  in it.
@@ -585,18 +573,6 @@ H5F_super_init(H5F_t *f, hid_t dxpl_id)
                 HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "unable to update driver info header message")
         } /* end if */
 
-        /* Check for non-default free space settings */
-	if(f->shared->fs_strategy != H5F_FILE_SPACE_STRATEGY_DEF ||
-                f->shared->fs_threshold != H5F_FREE_SPACE_THRESHOLD_DEF) {
-            H5O_fsinfo_t fsinfo;		/* Free space manager info message */
-
-	    /* Write free-space manager info message to superblock extension object header if needed */
-	    fsinfo.strategy = f->shared->fs_strategy;
-	    fsinfo.threshold = f->shared->fs_threshold;
-            if(H5O_msg_create(&ext_loc, H5O_FSINFO_ID, H5O_MSG_FLAG_DONTSHARE, H5O_UPDATE_TIME, &fsinfo, dxpl_id) < 0)
-                HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "unable to update free-space info header message")
-	} /* end if */
-
         /* Close superblock extension */
 	if(H5F_super_ext_close(f, &ext_loc) < 0)
 	    HGOTO_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "unable to close file's superblock extension")
@@ -657,7 +633,7 @@ H5F_super_dirty(H5F_t *f)
     HDassert(f->shared->sblock);
 
     /* Mark superblock dirty in cache, so change to EOA will get encoded */
-    if(H5AC_mark_entry_dirty(f->shared->sblock) < 0)
+    if(H5AC_mark_pinned_or_protected_entry_dirty(f->shared->sblock) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_CANTMARKDIRTY, FAIL, "unable to mark superblock as dirty")
 
 done:
@@ -821,72 +797,9 @@ H5F_super_ext_write_msg(H5F_t *f, hid_t dxpl_id, void *mesg, unsigned id, hbool_
 done:
     /* Mark superblock dirty in cache, if necessary */
     if(sblock_dirty)
-        if(H5AC_mark_entry_dirty(f->shared->sblock) < 0)
+        if(H5AC_mark_pinned_or_protected_entry_dirty(f->shared->sblock) < 0)
             HDONE_ERROR(H5E_FILE, H5E_CANTMARKDIRTY, FAIL, "unable to mark superblock as dirty")
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5F_super_ext_write_msg() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5F_super_ext_remove_msg
- *
- * Purpose:     Remove the message with ID from the superblock extension
- *
- * Return:      Non-negative on success/Negative on failure
- *
- * Programmer:  Vailin Choi; Feb 2009
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5F_super_ext_remove_msg(H5F_t *f, hid_t dxpl_id, unsigned id)
-{
-    htri_t 	status;       	/* Indicate whether the message exists or not */
-    H5O_loc_t 	ext_loc; 	/* "Object location" for superblock extension */
-    int		null_count = 0;	/* # of null messages */
-    herr_t 	ret_value = SUCCEED;         /* Return value */
-
-    FUNC_ENTER_NOAPI(H5F_super_ext_remove_msg, FAIL)
-
-    /* Make sure that the superblock extension object header exists */
-    HDassert(H5F_addr_defined(f->shared->sblock->ext_addr));
-
-    /* Open superblock extension object header */
-    if(H5F_super_ext_open(f, f->shared->sblock->ext_addr, &ext_loc) < 0)
-	HGOTO_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "error in starting file's superblock extension")
-
-    /* Check if message with ID exists in the object header */
-    if((status = H5O_msg_exists(&ext_loc, id, dxpl_id)) < 0)
-	HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "unable to check object header for message")
-    else if(status) { /* message exists */
-	H5O_hdr_info_t 	hdr_info;       /* Object header info for superblock extension */
-
-	/* Remove the message */
-	if(H5O_msg_remove(&ext_loc, id, H5O_ALL, TRUE, dxpl_id) < 0)
-	    HGOTO_ERROR(H5E_OHDR, H5E_CANTDELETE, FAIL, "unable to delete free-space manager info message")
-
-	/* Get info for the superblock extension's object header */
-	if(H5O_get_hdr_info(&ext_loc, dxpl_id, &hdr_info) < 0)
-	    HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "unable to retrieve superblock extension info")
-
-	/* If the object header is an empty base chunk, remove superblock extension */
-	if(hdr_info.nchunks == 1) {
-	    if((null_count = H5O_msg_count(&ext_loc, H5O_NULL_ID, dxpl_id)) < 0)
-		HGOTO_ERROR(H5E_SYM, H5E_CANTCOUNT, FAIL, "unable to count messages")
-	    else if((unsigned)null_count == hdr_info.nmesgs) {
-		HDassert(H5F_addr_defined(ext_loc.addr));
-		if(H5O_delete(f, dxpl_id, ext_loc.addr) < 0)
-		    HGOTO_ERROR(H5E_SYM, H5E_CANTCOUNT, FAIL, "unable to count messages")
-		f->shared->sblock->ext_addr = HADDR_UNDEF;
-	    } /* end if */
-	} /* end if */
-    } /* end if */
-
-    /* Close superblock extension object header */
-    if(H5F_super_ext_close(f, &ext_loc) < 0)
-	HGOTO_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "unable to close file's superblock extension")
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5F_super_ext_remove_msg() */
 

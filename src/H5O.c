@@ -125,8 +125,7 @@ const H5O_msg_class_t *const H5O_msg_class_g[] = {
     H5O_MSG_DRVINFO,		/*0x0014 Driver info settings		*/
     H5O_MSG_AINFO,		/*0x0015 Attribute information		*/
     H5O_MSG_REFCOUNT,		/*0x0016 Object's ref. count		*/
-    H5O_MSG_FSINFO,		/*0x0017 Free-space manager info message */
-    H5O_MSG_UNKNOWN,		/*0x0018 Placeholder for unknown message */
+    H5O_MSG_UNKNOWN		/*0x0017 Placeholder for unknown message */
 };
 
 /* Declare a free list to manage the H5O_t struct */
@@ -1482,7 +1481,7 @@ H5O_link_oh(H5F_t *f, int adjust, hid_t dxpl_id, H5O_t *oh, hbool_t *deleted)
             oh->nlink += adjust;
 
             /* Mark object header as dirty in cache */
-            if(H5AC_mark_entry_dirty(oh) < 0)
+            if(H5AC_mark_pinned_or_protected_entry_dirty(oh) < 0)
                 HGOTO_ERROR(H5E_OHDR, H5E_CANTMARKDIRTY, FAIL, "unable to mark object header as dirty")
 
             /* Check if the object should be deleted */
@@ -1514,7 +1513,7 @@ H5O_link_oh(H5F_t *f, int adjust, hid_t dxpl_id, H5O_t *oh, hbool_t *deleted)
             oh->nlink += adjust;
 
             /* Mark object header as dirty in cache */
-            if(H5AC_mark_entry_dirty(oh) < 0)
+            if(H5AC_mark_pinned_or_protected_entry_dirty(oh) < 0)
                 HGOTO_ERROR(H5E_OHDR, H5E_CANTMARKDIRTY, FAIL, "unable to mark object header as dirty")
         } /* end if */
 
@@ -1653,10 +1652,9 @@ H5O_protect(const H5O_loc_t *loc, hid_t dxpl_id, H5AC_protect_t prot)
     udata.common.mesgs_modified = FALSE;
     HDmemset(&cont_msg_info, 0, sizeof(cont_msg_info));
     udata.common.cont_msg_info = &cont_msg_info;
-    udata.common.addr = loc->addr;
 
     /* Lock the object header into the cache */
-    if(NULL == (oh = (H5O_t *)H5AC_protect(loc->file, dxpl_id, H5AC_OHDR, loc->addr, &udata, prot)))
+    if(NULL == (oh = (H5O_t *)H5AC_protect(loc->file, dxpl_id, H5AC_OHDR, loc->addr, NULL, &udata, prot)))
 	HGOTO_ERROR(H5E_OHDR, H5E_CANTPROTECT, NULL, "unable to load object header")
 
     /* Check if there are any continuation messages to process */
@@ -1690,9 +1688,8 @@ H5O_protect(const H5O_loc_t *loc, hid_t dxpl_id, H5AC_protect_t prot)
 
             /* Bring the chunk into the cache */
             /* (which adds to the object header) */
-            chk_udata.common.addr = cont_msg_info.msgs[curr_msg].addr;
             chk_udata.chunk_size = cont_msg_info.msgs[curr_msg].size;
-            if(NULL == (chk_proxy = (H5O_chunk_proxy_t *)H5AC_protect(loc->file, dxpl_id, H5AC_OHDR_CHK, cont_msg_info.msgs[curr_msg].addr, &chk_udata, prot)))
+            if(NULL == (chk_proxy = (H5O_chunk_proxy_t *)H5AC_protect(loc->file, dxpl_id, H5AC_OHDR_CHK, cont_msg_info.msgs[curr_msg].addr, NULL, &chk_udata, prot)))
                 HGOTO_ERROR(H5E_OHDR, H5E_CANTPROTECT, NULL, "unable to load object header chunk")
 
             /* Sanity check */
@@ -1767,7 +1764,7 @@ H5O_protect(const H5O_loc_t *loc, hid_t dxpl_id, H5AC_protect_t prot)
         /* (usually through updating the # of object header messages) */
         if(oh->prefix_modified) {
             /* Mark the header as dirty now */
-            if(H5AC_mark_entry_dirty(oh) < 0)
+            if(H5AC_mark_pinned_or_protected_entry_dirty(oh) < 0)
                 HGOTO_ERROR(H5E_OHDR, H5E_CANTMARKDIRTY, NULL, "unable to mark object header as dirty")
 
             /* Reset flag */
@@ -2019,7 +2016,7 @@ H5O_touch_oh(H5F_t *f, hid_t dxpl_id, H5O_t *oh, hbool_t force)
             oh->atime = oh->ctime = now;
 
             /* Mark object header as dirty in cache */
-            if(H5AC_mark_entry_dirty(oh) < 0)
+            if(H5AC_mark_pinned_or_protected_entry_dirty(oh) < 0)
                 HGOTO_ERROR(H5E_OHDR, H5E_CANTMARKDIRTY, FAIL, "unable to mark object header as dirty")
         } /* end else */
     } /* end if */

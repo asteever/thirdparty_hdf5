@@ -129,7 +129,7 @@ int IdComponent::getCounter() const
 //--------------------------------------------------------------------------
 // Function:	hdfObjectType
 ///\brief	Given an id, returns the type of the object.
-///return	a valid HDF object type, which may be one of the following:
+///\return	a valid HDF object type, which may be one of the following:
 ///		\li \c H5I_FILE
 ///		\li \c H5I_GROUP
 ///		\li \c H5I_DATATYPE
@@ -161,10 +161,6 @@ H5I_type_t IdComponent::getHDFObjType(const hid_t obj_id)
 //		copy the id from rhs to this object, and increment the
 //		reference counter of the id to indicate that another object
 //		is referencing that id.
-// Modification
-//	2010/5/9 - BMR
-//		Removed close() and incRefCount() because setId/p_setId takes
-//		care of close() and setId takes care incRefCount().
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 IdComponent& IdComponent::operator=( const IdComponent& rhs )
@@ -173,13 +169,16 @@ IdComponent& IdComponent::operator=( const IdComponent& rhs )
     {
 	// handling references to this id
   	try {
-	    setId(rhs.getId());
-	    // Note: a = b, so there are two objects with the same hdf5 id
-	    // that's why incRefCount is needed, and it is called by setId
+	    close();
 	}
 	catch (Exception close_error) {
 	    throw FileIException(inMemFunc("operator="), close_error.getDetailMsg());
 	}
+
+	// copy the data members from the rhs object
+	setId(rhs.getId());
+//	incRefCount(getId()); // a = b, so there are two objects with the same
+			      // hdf5 id
     }
     return *this;
 }
@@ -191,8 +190,9 @@ IdComponent& IdComponent::operator=( const IdComponent& rhs )
 ///\exception	H5::IdComponentException when the attempt to close the HDF5
 ///		object fails
 // Description:
-//		p_setId ensures that the current valid id of this object is
-//		properly closed before resetting the object's id to the new id.
+//		The underlaying reference counting in the C library ensures
+//		that the current valid id of this object is properly closed.
+//		Then the object's id is reset to the new id.
 // Programmer	Binh-Minh Ribler - 2000
 // Modification
 //	2008/7/23 - BMR

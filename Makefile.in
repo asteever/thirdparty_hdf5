@@ -68,9 +68,9 @@ build_triplet = @build@
 host_triplet = @host@
 DIST_COMMON = $(am__configure_deps) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(top_srcdir)/config/commence.am \
-	$(top_srcdir)/configure COPYING bin/COPYING bin/README \
-	bin/compile bin/config.guess bin/config.sub bin/depcomp \
-	bin/install-sh bin/ltmain.sh bin/missing bin/mkinstalldirs
+	$(top_srcdir)/configure COPYING bin/COPYING bin/compile \
+	bin/config.guess bin/config.sub bin/depcomp bin/install-sh \
+	bin/ltmain.sh bin/missing bin/mkinstalldirs
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/configure.in
@@ -226,12 +226,12 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 INSTRUMENT = @INSTRUMENT@
 INSTRUMENT_LIBRARY = @INSTRUMENT_LIBRARY@
-LARGEFILE = @LARGEFILE@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
+LINUX_LFS = @LINUX_LFS@
 LIPO = @LIPO@
 LL_PATH = @LL_PATH@
 LN_S = @LN_S@
@@ -256,6 +256,7 @@ PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
+PACKED_BITS = @PACKED_BITS@
 PARALLEL = @PARALLEL@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PERL = @PERL@
@@ -778,10 +779,8 @@ check: check-recursive
 all-am: Makefile all-local
 installdirs: installdirs-recursive
 installdirs-am:
-install: install-recursive
 install-exec: install-exec-recursive
 install-data: install-data-recursive
-uninstall: uninstall-recursive
 
 install-am: all-am
 	@$(MAKE) $(AM_MAKEFLAGS) install-exec-am install-data-am
@@ -950,13 +949,16 @@ mostlyclean-local:
 	  $(RM) -rf ii_files;                                           \
 	fi
 
+# 'make install' will now install examples, the same as 'make install-all'.
+# 'make-install-all' will be redundant but will still work.
+install: install-recursive install-examples
+uninstall: uninstall-recursive uninstall-examples 
+
 # 'make install-all' also installs examples
 install-all:
 	@$(MAKE) $(AM_MAKEFLAGS) install
-	@$(MAKE) $(AM_MAKEFLAGS) install-examples
 uninstall-all:
 	@$(MAKE) $(AM_MAKEFLAGS) uninstall
-	@$(MAKE) $(AM_MAKEFLAGS) uninstall-examples
 
 # Install examples in this directory and recursively
 install-examples uninstall-examples:

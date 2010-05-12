@@ -60,14 +60,6 @@ typedef enum {
     H5AC_FSPACE_SINFO_ID,/*free space sections			     */
     H5AC_SOHM_TABLE_ID, /*shared object header message master table  */
     H5AC_SOHM_LIST_ID,  /*shared message index stored as a list      */
-    H5AC_EARRAY_HDR_ID,	/*extensible array header		     */
-    H5AC_EARRAY_IBLOCK_ID, /*extensible array index block	     */
-    H5AC_EARRAY_SBLOCK_ID, /*extensible array super block	     */
-    H5AC_EARRAY_DBLOCK_ID, /*extensible array data block	     */
-    H5AC_EARRAY_DBLK_PAGE_ID, /*extensible array data block page     */
-    H5AC_FARRAY_HDR_ID,	/*fixed array header		     	     */
-    H5AC_FARRAY_DBLOCK_ID, /*fixed array data block	     	     */
-    H5AC_FARRAY_DBLK_PAGE_ID, /*fixed array data block page          */
     H5AC_SUPERBLOCK_ID, /* file superblock                           */
     H5AC_TEST_ID,	/*test entry -- not used for actual files    */
     H5AC_NTYPES		/* Number of types, must be last             */
@@ -120,27 +112,18 @@ typedef enum {
  *
  * CLEAR:	Just marks object as non-dirty.
  *
- * NOTIFY:	Notify client that an action on an entry has taken/will take
- *              place
- *
  * SIZE:	Report the size (on disk) of the specified cache object.
  *		Note that the space allocated on disk may not be contiguous.
  */
 
 #define H5AC_CALLBACK__NO_FLAGS_SET             H5C_CALLBACK__NO_FLAGS_SET
 #define H5AC_CALLBACK__SIZE_CHANGED_FLAG	H5C_CALLBACK__SIZE_CHANGED_FLAG
-#define H5AC_CALLBACK__MOVED_FLAG             H5C_CALLBACK__MOVED_FLAG
-
-/* Aliases for 'notify action' type & values */
-typedef H5C_notify_action_t     H5AC_notify_action_t;
-#define H5AC_NOTIFY_ACTION_AFTER_INSERT H5C_NOTIFY_ACTION_AFTER_INSERT
-#define H5AC_NOTIFY_ACTION_BEFORE_EVICT H5C_NOTIFY_ACTION_BEFORE_EVICT
+#define H5AC_CALLBACK__RENAMED_FLAG             H5C_CALLBACK__RENAMED_FLAG
 
 typedef H5C_load_func_t		H5AC_load_func_t;
 typedef H5C_flush_func_t	H5AC_flush_func_t;
 typedef H5C_dest_func_t		H5AC_dest_func_t;
 typedef H5C_clear_func_t	H5AC_clear_func_t;
-typedef H5C_notify_func_t	H5AC_notify_func_t;
 typedef H5C_size_func_t		H5AC_size_func_t;
 
 typedef H5C_class_t			H5AC_class_t;
@@ -313,8 +296,6 @@ extern hid_t H5AC_ind_dxpl_id;
 #define H5AC_ES__IS_DIRTY	0x0002
 #define H5AC_ES__IS_PROTECTED	0x0004
 #define H5AC_ES__IS_PINNED	0x0008
-#define H5AC_ES__IS_FLUSH_DEP_PARENT	0x0010
-#define H5AC_ES__IS_FLUSH_DEP_CHILD	0x0020
 
 
 /* external function declarations: */
@@ -324,21 +305,21 @@ H5_DLL herr_t H5AC_create(const H5F_t *f, H5AC_cache_config_t *config_ptr);
 H5_DLL herr_t H5AC_get_entry_status(const H5F_t *f, haddr_t addr,
 				    unsigned * status_ptr);
 H5_DLL herr_t H5AC_set(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type,
-    haddr_t addr, void *thing, unsigned int flags);
+                       haddr_t addr, void *thing, unsigned int flags);
 H5_DLL herr_t H5AC_pin_protected_entry(void *thing);
-H5_DLL herr_t H5AC_create_flush_dependency(void *parent_thing, void *child_thing);
 H5_DLL void * H5AC_protect(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type,
-                           haddr_t addr, void *udata,
+                           haddr_t addr, const void *udata1, void *udata2,
                            H5AC_protect_t rw);
-H5_DLL herr_t H5AC_resize_entry(void *thing, size_t new_size);
+H5_DLL herr_t H5AC_resize_pinned_entry(void *thing, size_t new_size);
 H5_DLL herr_t H5AC_unpin_entry(void *thing);
-H5_DLL herr_t H5AC_destroy_flush_dependency(void *parent_thing, void *child_thing);
 H5_DLL herr_t H5AC_unprotect(H5F_t *f, hid_t dxpl_id,
                              const H5AC_class_t *type, haddr_t addr,
 			     void *thing, unsigned flags);
 H5_DLL herr_t H5AC_flush(H5F_t *f, hid_t dxpl_id);
-H5_DLL herr_t H5AC_mark_entry_dirty(void *thing);
-H5_DLL herr_t H5AC_move_entry(H5F_t *f, const H5AC_class_t *type,
+H5_DLL herr_t H5AC_mark_pinned_entry_dirty(void *thing, hbool_t size_changed,
+    size_t  new_size);
+H5_DLL herr_t H5AC_mark_pinned_or_protected_entry_dirty(void *thing);
+H5_DLL herr_t H5AC_rename(H5F_t *f, const H5AC_class_t *type,
 			   haddr_t old_addr, haddr_t new_addr);
 
 H5_DLL herr_t H5AC_dest(H5F_t *f, hid_t dxpl_id);

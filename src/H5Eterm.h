@@ -22,7 +22,9 @@
 
 /* Reset major error IDs */
     
+H5E_DATASET_g=    
 H5E_FUNC_g=    
+H5E_STORAGE_g=    
 H5E_FILE_g=    
 H5E_SOHM_g=    
 H5E_SYM_g=    
@@ -32,27 +34,23 @@ H5E_BTREE_g=
 H5E_REFERENCE_g=    
 H5E_DATASPACE_g=    
 H5E_RESOURCE_g=    
-H5E_RS_g=    
-H5E_FARRAY_g=    
-H5E_HEAP_g=    
-H5E_ATTR_g=    
-H5E_IO_g=    
-H5E_EFL_g=    
-H5E_TST_g=    
-H5E_FSPACE_g=    
-H5E_DATASET_g=    
-H5E_STORAGE_g=    
-H5E_LINK_g=    
 H5E_PLIST_g=    
+H5E_LINK_g=    
 H5E_DATATYPE_g=    
+H5E_RS_g=    
+H5E_HEAP_g=    
 H5E_OHDR_g=    
 H5E_ATOM_g=    
+H5E_ATTR_g=    
 H5E_NONE_MAJOR_g=    
+H5E_IO_g=    
 H5E_SLIST_g=    
+H5E_EFL_g=    
+H5E_TST_g=    
 H5E_ARGS_g=    
-H5E_EARRAY_g=    
-H5E_PLINE_g=    
 H5E_ERROR_g=    
+H5E_PLINE_g=    
+H5E_FSPACE_g=    
 H5E_CACHE_g= (-1);
 
 /* Reset minor error IDs */
@@ -109,8 +107,7 @@ H5E_BADMESG_g=
 H5E_CANTDELETE_g=    
 H5E_BADITER_g=    
 H5E_CANTPACK_g=    
-H5E_CANTRESET_g=    
-H5E_CANTRENAME_g=
+H5E_CANTRESET_g=
 
 /* System level errors */    
 H5E_SYSERRSTR_g=
@@ -159,6 +156,7 @@ H5E_PROTECT_g=
 H5E_NOTCACHED_g=    
 H5E_SYSTEM_g=    
 H5E_CANTINS_g=    
+H5E_CANTRENAME_g=    
 H5E_CANTPROTECT_g=    
 H5E_CANTUNPROTECT_g=    
 H5E_CANTPIN_g=    
@@ -166,10 +164,7 @@ H5E_CANTUNPIN_g=
 H5E_CANTMARKDIRTY_g=    
 H5E_CANTDIRTY_g=    
 H5E_CANTEXPUNGE_g=    
-H5E_CANTRESIZE_g=    
-H5E_CANTDEPEND_g=    
-H5E_CANTUNDEPEND_g=    
-H5E_CANTNOTIFY_g=
+H5E_CANTRESIZE_g=
 
 /* Link related errors */    
 H5E_TRAVERSE_g=    

@@ -165,12 +165,12 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 INSTRUMENT = @INSTRUMENT@
 INSTRUMENT_LIBRARY = @INSTRUMENT_LIBRARY@
-LARGEFILE = @LARGEFILE@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBTOOL = @LIBTOOL@
+LINUX_LFS = @LINUX_LFS@
 LIPO = @LIPO@
 LL_PATH = @LL_PATH@
 LN_S = @LN_S@
@@ -195,6 +195,7 @@ PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
+PACKED_BITS = @PACKED_BITS@
 PARALLEL = @PARALLEL@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PERL = @PERL@
@@ -342,7 +343,7 @@ INSTALL_FILES = ptExampleFL.cpp ptExampleVL.cpp
 CXX_API = yes
 
 # Where to install examples
-EXAMPLEDIR = $(docdir)/hdf5/examples/hl/c++
+EXAMPLEDIR = $(exec_prefix)/examples/hl/c++
 
 # Assume that all tests in this directory are examples, and tell
 # conclude.am when to build them.
@@ -592,7 +593,7 @@ install-data-local:
 uninstall-local:
 	@$(MAKE) $(AM_MAKEFLAGS) uninstall-examples
 
-install-examples: $(EXAMPLEDIR) $(INSTALL_FILES)
+install-examples: $(EXAMPLEDIR) $(INSTALL_FILES) 
 	@for f in X $(INSTALL_FILES); do                                     \
 	  if test $$f != X; then                                             \
 	    (set -x; $(INSTALL) $(srcdir)/$$f $(EXAMPLEDIR)/. || exit 1);\
