@@ -185,7 +185,13 @@ static void test_h5s_basic()
 	* If this test fails and the H5S_MAX_RANK variable has changed, follow
 	* the instructions in space_overflow.c for regenating the th5s.h5 file.
 	*/
-        const char *testfile = H5_get_srcdir_filename(TESTFILE.c_str());
+	char testfile[512]="";
+	char *srcdir = getenv("srcdir");
+	if (srcdir && ((strlen(srcdir) + strlen(TESTFILE.c_str()) + 1) < sizeof(testfile))){
+	    strcpy(testfile, srcdir);
+	    strcat(testfile, "/");
+	}
+	strcat(testfile, TESTFILE.c_str());
 
 	// Create file
 	H5File fid1(testfile, H5F_ACC_RDONLY);

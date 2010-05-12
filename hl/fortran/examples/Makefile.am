@@ -36,8 +36,7 @@ TEST_PROG=exlite
 # List files to be installed here
 INSTALL_FILES=
 
-# Mark this directory as part of the Fortran API (this affects output
-# from tests in conclude.am)
+# Mark this directory as part of the Fortran API
 FORTRAN_API=yes
 
 # Tell automake how to build examples using h5fc
@@ -50,7 +49,7 @@ $(EXTRA_PROG): $(H5FC)
 endif
 
 # Tell automake how to install examples
-EXAMPLEDIR=$(docdir)/hdf5/examples/hl/fortran
+EXAMPLEDIR=$(exec_prefix)/examples/hl/fortran
 
 # List dependencies for each example.  Normally, automake would take
 # care of this for us, but if we tell automake about the programs it

@@ -195,6 +195,7 @@ PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
+PACKED_BITS = @PACKED_BITS@
 PARALLEL = @PARALLEL@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PERL = @PERL@
@@ -316,11 +317,11 @@ LIBH5CPP_HL = $(top_builddir)/hl/c++/src/libhdf5_hl_cpp.la
 # Scripts used to build examples
 # If only shared libraries have been installed, have h5cc build examples with
 # shared libraries instead of static libraries
-H5CC = $(bindir)/h5cc
-H5CC_PP = $(bindir)/h5pcc
-H5FC = $(bindir)/h5fc
-H5FC_PP = $(bindir)/h5pfc
-H5CPP = $(bindir)/h5c++
+H5CC = ${DESTDIR}/$(bindir)/h5cc
+H5CC_PP = ${DESTDIR}/$(bindir)/h5pcc
+H5FC = ${DESTDIR}/$(bindir)/h5fc
+H5FC_PP = ${DESTDIR}/$(bindir)/h5pfc
+H5CPP = ${DESTDIR}/$(bindir)/h5c++
 
 # The trace script; this is used on source files from the C library to
 # insert tracing macros.
@@ -342,7 +343,7 @@ INSTALL_FILES = ptExampleFL.cpp ptExampleVL.cpp
 CXX_API = yes
 
 # Where to install examples
-EXAMPLEDIR = $(docdir)/hdf5/examples/hl/c++
+EXAMPLEDIR = $(exec_prefix)/examples/hl/c++
 
 # Assume that all tests in this directory are examples, and tell
 # conclude.am when to build them.
@@ -592,7 +593,7 @@ install-data-local:
 uninstall-local:
 	@$(MAKE) $(AM_MAKEFLAGS) uninstall-examples
 
-install-examples: $(EXAMPLEDIR) $(INSTALL_FILES)
+install-examples: $(EXAMPLEDIR) $(INSTALL_FILES) 
 	@for f in X $(INSTALL_FILES); do                                     \
 	  if test $$f != X; then                                             \
 	    (set -x; $(INSTALL) $(srcdir)/$$f $(EXAMPLEDIR)/. || exit 1);\

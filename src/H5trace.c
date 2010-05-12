@@ -689,45 +689,6 @@ H5_trace(const double *returning, const char *func, const char *type, ...)
                         } /* end else */
                         break;
 
-                    case 'f':
-                        if(ptr) {
-                            if(vp)
-                                fprintf(out, "0x%lx", (unsigned long)vp);
-                            else
-                                fprintf(out, "NULL");
-                        } /* end if */
-                        else {
-                            H5F_file_space_type_t fs_type = (H5F_file_space_type_t)va_arg(ap, int);
-
-                            switch(fs_type) {
-                                case H5F_FILE_SPACE_DEFAULT:
-                                    fprintf(out, "H5F_FILE_SPACE_DEFAULT");
-                                    break;
-
-                                case H5F_FILE_SPACE_ALL_PERSIST:
-                                    fprintf(out, "H5F_FILE_SPACE_ALL_PERSIST");
-                                    break;
-
-                                case H5F_FILE_SPACE_ALL:
-                                    fprintf(out, "H5F_FILE_SPACE_ALL");
-                                    break;
-
-                                case H5F_FILE_SPACE_AGGR_VFD:
-                                    fprintf(out, "H5F_FILE_SPACE_AGGR_VFD");
-                                    break;
-
-                                case H5F_FILE_SPACE_VFD:
-                                    fprintf(out, "H5F_FILE_SPACE_VFD");
-                                    break;
-
-                                case H5F_FILE_SPACE_NTYPES:
-                                default:
-                                    fprintf(out, "%ld", (long)fs_type);
-                                    break;
-                            } /* end switch */
-                        } /* end else */
-                        break;
-
                     case 'm':
                         if(ptr) {
                             if(vp)

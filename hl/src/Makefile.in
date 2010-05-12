@@ -241,6 +241,7 @@ PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
+PACKED_BITS = @PACKED_BITS@
 PARALLEL = @PARALLEL@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PERL = @PERL@
@@ -362,11 +363,11 @@ LIBH5CPP_HL = $(top_builddir)/hl/c++/src/libhdf5_hl_cpp.la
 # Scripts used to build examples
 # If only shared libraries have been installed, have h5cc build examples with
 # shared libraries instead of static libraries
-H5CC = $(bindir)/h5cc
-H5CC_PP = $(bindir)/h5pcc
-H5FC = $(bindir)/h5fc
-H5FC_PP = $(bindir)/h5pfc
-H5CPP = $(bindir)/h5c++
+H5CC = ${DESTDIR}/$(bindir)/h5cc
+H5CC_PP = ${DESTDIR}/$(bindir)/h5pcc
+H5FC = ${DESTDIR}/$(bindir)/h5fc
+H5FC_PP = ${DESTDIR}/$(bindir)/h5pfc
+H5CPP = ${DESTDIR}/$(bindir)/h5c++
 
 # The trace script; this is used on source files from the C library to
 # insert tracing macros.
@@ -380,13 +381,13 @@ CHECK_CLEANFILES = *.chkexe *.chklog *.clog
 # Add libtool shared library version numbers to the HDF5 library
 # See libtool versioning documentation online.
 LT_VERS_INTERFACE = 6
-LT_VERS_REVISION = 59
+LT_VERS_REVISION = 3
 LT_VERS_AGE = 0
 
 # This library is our main target.
 lib_LTLIBRARIES = libhdf5_hl.la
 
-# Add libtool numbers to the HDF5 hl library (from config/lt_vers.am)
+# Add libtool numbers to the HDF5 HL library (from config/lt_vers.am)
 libhdf5_hl_la_LDFLAGS = -version-info $(LT_VERS_INTERFACE):$(LT_VERS_REVISION):$(LT_VERS_AGE) $(AM_LDFLAGS)
 libhdf5_hl_la_SOURCES = H5DS.c H5IM.c H5LT.c H5LTanalyze.c H5LTparse.c H5PT.c H5TB.c
 
