@@ -55,6 +55,4 @@ INSTALL (
         h5jam h5unjam
     RUNTIME DESTINATION
         bin/tools
-    COMPONENT
-        toolsapplications
 )

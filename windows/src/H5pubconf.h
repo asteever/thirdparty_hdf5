@@ -78,13 +78,6 @@
 /* Define to 1 if you have the `BSDgettimeofday' function. */
 /* #undef H5_HAVE_BSDGETTIMEOFDAY */
 
-/* Define if the compiler understands C99 designated initialization of structs
-   and unions */
-/* #undef H5_HAVE_C99_DESIGNATED_INITIALIZER */
-
-/* Define if the compiler understand the __func__ keyword */
-/* #undef H5_HAVE_C99_FUNC */
-
 /* Define if the function stack tracing code is to be compiled in */
 /* #undef H5_HAVE_CODESTACK */
 
@@ -175,6 +168,9 @@
 
 /* Define to 1 if you have the <gpfs.h> header file. */
 /* #undef H5_HAVE_GPFS_H */
+
+/* Define if h5dump packed bits feature is enabled */
+#define H5_HAVE_H5DUMP_PACKED_BITS
 
 /* Define if library will contain instrumentation to detect correct
    optimization operation */
@@ -479,13 +475,13 @@
 #define H5_PACKAGE_NAME "HDF5"
 
 /* Define to the full name and version of this package. */
-#define H5_PACKAGE_STRING "HDF5 1.9.70"
+#define H5_PACKAGE_STRING "HDF5 1.8.5"
 
 /* Define to the one symbol short name of this package. */
 #define H5_PACKAGE_TARNAME "hdf5"
 
 /* Define to the version of this package. */
-#define H5_PACKAGE_VERSION "1.9.70"
+#define H5_PACKAGE_VERSION "1.8.5"
 
 /* Width for printf() for type `long long' or `__int64', use `ll' */
 #define H5_PRINTF_LL_WIDTH "I64"
@@ -642,7 +638,7 @@
 /* #undef H5_USING_MEMCHECKER */
 
 /* Version number of package */
-#define H5_VERSION "1.9.70"
+#define H5_VERSION "1.8.5"
 
 /* Define if vsnprintf() returns the correct value for formatted strings that
    don't fit into size allowed */

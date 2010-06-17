@@ -36,6 +36,4 @@ INSTALL (
         h5import
     RUNTIME DESTINATION
         bin/tools
-    COMPONENT
-        toolsapplications
 )

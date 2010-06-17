@@ -1,4 +1,4 @@
-HDF5 version 1.9.70 currently under development
+HDF5 version 1.8.5 released on Fri Jun  4 13:27:31 CDT 2010
 Please refer to the release_docs/INSTALL file for installation instructions.
 ------------------------------------------------------------------------------
 
@@ -29,12 +29,12 @@ where <list> is the name of the list.  For example, send a request
 to subscribe to the 'news' mail list to the following address:
     news-subscribe@hdfgroup.org
 
-Messages to be sent to the list should be sent to "<list>@hdfgroup.org".
+Messages sent to the list should be addressed to "<list>@hdfgroup.org".
 
 Periodic code snapshots are provided at the following URL:
     ftp://ftp.hdfgroup.uiuc.edu/pub/outgoing/hdf5/snapshots
-Please read the README.txt file in that directory before working with a library
-snapshot.
+Please read the README.txt file in that directory before working with a 
+library snapshot.
 
 The HDF5 website is located at http://hdfgroup.org/HDF5/
 

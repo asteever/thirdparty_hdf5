@@ -226,6 +226,4 @@ INSTALL (
         h5copy
     RUNTIME DESTINATION
         bin/tools
-    COMPONENT
-        toolsapplications
 )

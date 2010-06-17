@@ -946,3 +946,4 @@ H5FD_sec2_truncate(H5FD_t *_file, hid_t UNUSED dxpl_id, hbool_t UNUSED closing)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FD_sec2_truncate() */
+

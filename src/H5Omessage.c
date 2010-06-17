@@ -318,7 +318,7 @@ H5O_msg_write_oh(H5F_t *f, hid_t dxpl_id, H5O_t *oh, unsigned type_id,
     const H5O_msg_class_t *type;        /* Actual H5O class type for the ID */
     herr_t ret_value = SUCCEED;         /* Return value */
 
-    FUNC_ENTER_NOAPI_TAG(H5O_msg_write_oh, dxpl_id, oh->cache_info.addr, FAIL)
+    FUNC_ENTER_NOAPI(H5O_msg_write_oh, FAIL)
 
     /* check args */
     HDassert(f);
@@ -335,7 +335,7 @@ H5O_msg_write_oh(H5F_t *f, hid_t dxpl_id, H5O_t *oh, unsigned type_id,
         HGOTO_ERROR(H5E_OHDR, H5E_WRITEERROR, FAIL, "unable to write object header message")
 
 done:
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_msg_write_oh() */
 
 
@@ -467,7 +467,7 @@ H5O_msg_read(const H5O_loc_t *loc, unsigned type_id, void *mesg,
     H5O_t *oh = NULL;                   /* Object header to use */
     void *ret_value;                    /* Return value */
 
-    FUNC_ENTER_NOAPI_TAG(H5O_msg_read, dxpl_id, loc->addr, NULL)
+    FUNC_ENTER_NOAPI(H5O_msg_read, NULL)
 
     /* check args */
     HDassert(loc);
@@ -487,7 +487,7 @@ done:
     if(oh && H5O_unprotect(loc, dxpl_id, oh, H5AC__NO_FLAGS_SET) < 0)
 	HDONE_ERROR(H5E_OHDR, H5E_CANTUNPROTECT, NULL, "unable to release object header")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, NULL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_msg_read() */
 
 
@@ -875,7 +875,7 @@ H5O_msg_exists(const H5O_loc_t *loc, unsigned type_id, hid_t dxpl_id)
     H5O_t	*oh = NULL;             /* Object header for location */
     htri_t      ret_value;              /* Return value */
 
-    FUNC_ENTER_NOAPI_TAG(H5O_msg_exists, dxpl_id, loc->addr, FAIL)
+    FUNC_ENTER_NOAPI(H5O_msg_exists, FAIL)
 
     HDassert(loc);
     HDassert(loc->file);
@@ -893,7 +893,7 @@ done:
     if(oh && H5O_unprotect(loc, dxpl_id, oh, H5AC__NO_FLAGS_SET) < 0)
 	HDONE_ERROR(H5E_OHDR, H5E_CANTUNPROTECT, FAIL, "unable to release object header")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_msg_exists() */
 
 
@@ -1956,7 +1956,7 @@ H5O_copy_mesg(H5F_t *f, hid_t dxpl_id, H5O_t *oh, unsigned idx,
 {
     H5O_chunk_proxy_t *chk_proxy = NULL;        /* Chunk that message is in */
     H5O_mesg_t *idx_msg = &oh->mesg[idx];       /* Pointer to message to modify */
-    hbool_t chk_dirtied = FALSE;                /* Flag for unprotecting chunk */
+    unsigned chk_flags = H5AC__NO_FLAGS_SET;   /* Flags for unprotecting chunk */
     herr_t      ret_value = SUCCEED;            /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT(H5O_copy_mesg)
@@ -1984,10 +1984,10 @@ H5O_copy_mesg(H5F_t *f, hid_t dxpl_id, H5O_t *oh, unsigned idx,
 
     /* Mark the message as modified */
     idx_msg->dirty = TRUE;
-    chk_dirtied = TRUE;
+    chk_flags |= H5AC__DIRTIED_FLAG;
 
     /* Release chunk */
-    if(H5O_chunk_unprotect(f, dxpl_id, chk_proxy, chk_dirtied) < 0)
+    if(H5O_chunk_unprotect(f, dxpl_id, chk_proxy, chk_flags) < 0)
         HDONE_ERROR(H5E_OHDR, H5E_CANTUNPROTECT, FAIL, "unable to release object header chunk")
     chk_proxy = NULL;
 
@@ -1998,7 +1998,7 @@ H5O_copy_mesg(H5F_t *f, hid_t dxpl_id, H5O_t *oh, unsigned idx,
 
 done:
     /* Release chunk, if not already released */
-    if(chk_proxy && H5O_chunk_unprotect(f, dxpl_id, chk_proxy, chk_dirtied) < 0)
+    if(chk_proxy && H5O_chunk_unprotect(f, dxpl_id, chk_proxy, chk_flags) < 0)
         HDONE_ERROR(H5E_OHDR, H5E_CANTUNPROTECT, FAIL, "unable to release object header chunk")
 
     FUNC_LEAVE_NOAPI(ret_value)

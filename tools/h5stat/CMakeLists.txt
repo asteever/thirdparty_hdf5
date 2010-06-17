@@ -119,6 +119,4 @@ INSTALL (
         h5stat
     RUNTIME DESTINATION
         bin/tools
-    COMPONENT
-        toolsapplications
 )

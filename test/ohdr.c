@@ -71,11 +71,6 @@ test_cont(char *filename, hid_t fapl)
     /* Create the file to operate on */
     if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
     if(NULL == (f = (H5F_t *)H5I_object(file))) FAIL_STACK_ERROR
-    if (H5AC_ignore_tags(f) < 0) {
-	H5_FAILED();
-	H5Eprint2(H5E_DEFAULT, stdout);
-	goto error;
-    }
 
     HDmemset(&oh_locA, 0, sizeof(oh_locA));
     HDmemset(&oh_locB, 0, sizeof(oh_locB));
@@ -203,11 +198,6 @@ main(void)
             TEST_ERROR
         if(NULL == (f = (H5F_t *)H5I_object(file)))
             FAIL_STACK_ERROR
-        if (H5AC_ignore_tags(f) < 0) {
-	    H5_FAILED();
-	    H5Eprint2(H5E_DEFAULT, stdout);
-	    goto error;
-        }
 
 
         /*
@@ -301,8 +291,6 @@ main(void)
         if((file = H5Fopen(filename, H5F_ACC_RDWR, fapl)) < 0)
             FAIL_STACK_ERROR
         if(NULL == (f = (H5F_t *)H5I_object(file)))
-            FAIL_STACK_ERROR
-        if (H5AC_ignore_tags(f) < 0)
             FAIL_STACK_ERROR
         oh_loc.file = f;
         if(H5O_open(&oh_loc) < 0)
@@ -512,9 +500,20 @@ main(void)
         HDputs("Accessing objects with unknown header messages:");
         {
             hid_t file2;                    /* File ID for 'bogus' object file */
-            hid_t sid;                      /* Dataspace ID */
-            hid_t aid;                      /* Attribute ID */
-            const char *testfile = H5_get_srcdir_filename(FILE_BOGUS);
+            char testpath[512] = "";
+            char testfile[512] = "";
+            char *srcdir = HDgetenv("srcdir");
+
+            /* Build path to all test files */
+            if(srcdir && ((HDstrlen(srcdir) + 2) < sizeof(testpath))) {
+                HDstrcpy(testpath, srcdir);
+                HDstrcat(testpath, "/");
+            } /* end if */
+
+            /* Build path to test file */
+            if(srcdir && ((HDstrlen(testpath) + HDstrlen(FILE_BOGUS) + 1) < sizeof(testfile)))
+                HDstrcpy(testfile, testpath);
+            HDstrcat(testfile, FILE_BOGUS);
 
             TESTING("object with unknown header message and no flags set");
 
@@ -580,22 +579,6 @@ main(void)
             /* Open the dataset with the "mark if unknown" message */
             if((dset = H5Dopen2(file, "/Dataset3", H5P_DEFAULT)) < 0)
                 TEST_ERROR
-
-            /* Create data space */
-            if((sid = H5Screate(H5S_SCALAR)) < 0)
-                FAIL_STACK_ERROR
-
-            /* Create an attribute, to get the object header into write access */
-            if((aid = H5Acreate2(dset, "Attr", H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT)) < 0)
-                FAIL_STACK_ERROR
-
-            /* Close dataspace */
-            if(H5Sclose(sid) < 0)
-                FAIL_STACK_ERROR
-
-            /* Close attribute */
-            if(H5Aclose(aid) < 0)
-                FAIL_STACK_ERROR
 
             /* Close the dataset */
             if(H5Dclose(dset) < 0)

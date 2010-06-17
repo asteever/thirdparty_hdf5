@@ -40,10 +40,8 @@ SET (testhdf5_SRCS
     ${HDF5_TEST_SOURCE_DIR}/tcoords.c
     ${HDF5_TEST_SOURCE_DIR}/tfile.c
     ${HDF5_TEST_SOURCE_DIR}/tgenprop.c
-    ${HDF5_TEST_SOURCE_DIR}/th5o.c
     ${HDF5_TEST_SOURCE_DIR}/th5s.c
     ${HDF5_TEST_SOURCE_DIR}/theap.c
-    ${HDF5_TEST_SOURCE_DIR}/tid.c
     ${HDF5_TEST_SOURCE_DIR}/titerate.c
     ${HDF5_TEST_SOURCE_DIR}/tmeta.c
     ${HDF5_TEST_SOURCE_DIR}/tmisc.c
@@ -51,12 +49,14 @@ SET (testhdf5_SRCS
     ${HDF5_TEST_SOURCE_DIR}/trefstr.c
     ${HDF5_TEST_SOURCE_DIR}/tselect.c
     ${HDF5_TEST_SOURCE_DIR}/tskiplist.c
-    ${HDF5_TEST_SOURCE_DIR}/tsohm.c
     ${HDF5_TEST_SOURCE_DIR}/ttime.c
     ${HDF5_TEST_SOURCE_DIR}/ttst.c
     ${HDF5_TEST_SOURCE_DIR}/tunicode.c
     ${HDF5_TEST_SOURCE_DIR}/tvltypes.c
     ${HDF5_TEST_SOURCE_DIR}/tvlstr.c
+    ${HDF5_TEST_SOURCE_DIR}/th5o.c
+    ${HDF5_TEST_SOURCE_DIR}/tsohm.c
+    ${HDF5_TEST_SOURCE_DIR}/tid.c
 )
 
 #-- Adding test for testhdf5
@@ -75,65 +75,61 @@ MACRO (ADD_H5_TEST file)
 ENDMACRO (ADD_H5_TEST file)
 
 SET (H5_TESTS
-    lheap
-    ohdr
-    stab
-    gheap
-    #cache
-    #cache_api
-    #cache_tagging
-    pool
-    hyperslab
-    istore
+    app_ref
+    big
     bittests
-    dt_arith
-    dtypes
+    btree2
+#    cache
+#    cache_api
     cmpd_dset
+    cross_read
+    dangle
+    dsets
+    dt_arith
+    dtransform
+    dtypes
+    enum
+    err_compat
+    error_test
     extend
     external
-    objcopy
-    links
-    unlink
-    big
-    mtime
+    fheap
     fillval
-    mount
     flush1
     flush2
-    app_ref
-    enum
-    set_extent
-    #ttsafe
-    getname
-    vfd
-    ntypes
-    dangle
-    dtransform
-    reserved
-    cross_read
     freespace
+    getname
+    gheap
+    hyperslab
+    istore
+    lheap
+    links
     mf
-    farray
-    earray
-    btree2
-    fheap
+    mount
+    mtime
+    ntypes
+    objcopy
+    ohdr
+    pool
+    reserved
+    set_extent
+    stab
+    tcheck_version
+    testmeta
+    ttsafe
+    unlink
+    vfd
 )
 
 FOREACH (test ${H5_TESTS})
     ADD_H5_TEST(${test})
 ENDFOREACH (test ${H5_TESTS})
 
-SET (H5_CHECK_TESTS
-)
-
-FOREACH (chktest ${H5_CHECK_TESTS})
-    ADD_H5_TEST(${chktest})
-ENDFOREACH (chktest ${H5_CHECK_TESTS})
-
 #-- Allow extra time for fheap to complete 30min
 IF (WIN32)
   SET_TESTS_PROPERTIES (fheap PROPERTIES TIMEOUT 1800)
 ENDIF (WIN32)
+
 
 #-- Adding test for cache
 ADD_EXECUTABLE (cache ${HDF5_TEST_SOURCE_DIR}/cache.c ${HDF5_TEST_SOURCE_DIR}/cache_common.c)
@@ -142,34 +138,11 @@ TARGET_LINK_LIBRARIES (cache ${HDF5_LIB_TARGET} ${HDF5_TEST_LIB_TARGET})
 
 ADD_TEST (NAME cache COMMAND $<TARGET_FILE:cache>)
 
-#-- Adding test for cache_api
 ADD_EXECUTABLE (cache_api ${HDF5_TEST_SOURCE_DIR}/cache_api.c ${HDF5_TEST_SOURCE_DIR}/cache_common.c)
 H5_NAMING (cache_api)
 TARGET_LINK_LIBRARIES (cache_api ${HDF5_LIB_TARGET} ${HDF5_TEST_LIB_TARGET})
 
 ADD_TEST (NAME cache_api COMMAND $<TARGET_FILE:cache_api>)
-
-#-- Adding test for cache_tagging
-ADD_EXECUTABLE (cache_tagging ${HDF5_TEST_SOURCE_DIR}/cache_tagging.c ${HDF5_TEST_SOURCE_DIR}/cache_common.c)
-H5_NAMING (cache_tagging)
-TARGET_LINK_LIBRARIES (cache_tagging ${HDF5_LIB_TARGET} ${HDF5_TEST_LIB_TARGET})
-
-ADD_TEST (NAME cache_tagging COMMAND $<TARGET_FILE:cache_tagging>)
-
-#-- Adding test for ttsafe
-SET (ttsafe_SRCS
-    ttsafe.c
-    ttsafe_dcreate.c
-    ttsafe_error.c
-    ttsafe_cancel.c
-    ttsafe_acreate.c
-)
-
-ADD_EXECUTABLE (ttsafe ${ttsafe_SRCS})
-H5_NAMING (ttsafe)
-TARGET_LINK_LIBRARIES (ttsafe ${HDF5_LIB_TARGET} ${HDF5_TEST_LIB_TARGET})
-
-ADD_TEST (NAME ttsafe COMMAND $<TARGET_FILE:ttsafe>)
 
 #-- Copy all the HDF5 files from the test directory into the source directory
 SET (HDF5_REFERENCE_TEST_FILES
@@ -199,9 +172,8 @@ SET (HDF5_REFERENCE_TEST_FILES
     family_v16_00001.h5
     family_v16_00002.h5
     family_v16_00003.h5
-    filespace_1_6.h5
-    filespace_1_8.h5
     fill_old.h5
+    fixed_idx.h5
     group_old.h5
     le_data.h5
     le_extlink1.h5
@@ -232,31 +204,3 @@ FOREACH (h5_file ${HDF5_REFERENCE_TEST_FILES})
   )
 ENDFOREACH (h5_file ${HDF5_REFERENCE_TEST_FILES})
 
-# generator executables
-IF (CREATE_GENERATORS)
-  SET (H5_GENERATORS
-      gen_bad_ohdr
-      gen_bogus
-      gen_cross
-      gen_deflate
-      gen_filters
-      gen_new_array
-      gen_new_fill
-      gen_new_group
-      gen_new_mtime
-      gen_new_super
-      gen_noencoder
-      gen_nullspace
-      gen_udlinks
-      space_overflow
-      gen_filespace
-      gen_specmetaread
-  )
-
-  FOREACH (gen ${H5_GENERATORS})
-    ADD_EXECUTABLE (${gen} ${HDF5_TEST_SOURCE_DIR}/${gen}.c)
-    H5_NAMING (${gen})
-    TARGET_LINK_LIBRARIES (${gen} ${HDF5_TEST_LIB_TARGET} ${HDF5_LIB_TARGET})
-  ENDFOREACH (gen ${H5_GENERATORS})
-
-ENDIF (CREATE_GENERATORS)

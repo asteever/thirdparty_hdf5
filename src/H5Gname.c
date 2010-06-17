@@ -1188,3 +1188,4 @@ done:
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5G_get_name_by_addr() */
+

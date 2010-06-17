@@ -50,8 +50,6 @@ INSTALL (
         ${H5_TOOLS_LIB_HDRS}
     DESTINATION
         include/tools
-    COMPONENT
-        toolsheaders
 )
 
 #-----------------------------------------------------------------------------
@@ -63,8 +61,8 @@ IF (HDF5_EXPORTED_TARGETS)
           ${HDF5_TOOLS_LIB_TARGET}
       EXPORT
           ${HDF5_EXPORTED_TARGETS}
-      LIBRARY DESTINATION lib/tools COMPONENT toolslibraries
-      ARCHIVE DESTINATION lib/tools COMPONENT toolslibraries
-      RUNTIME DESTINATION bin/tools COMPONENT toolslibraries
+      LIBRARY DESTINATION lib/tools
+      ARCHIVE DESTINATION lib/tools
+      RUNTIME DESTINATION bin/tools
   )
 ENDIF (HDF5_EXPORTED_TARGETS)

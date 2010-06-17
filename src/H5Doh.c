@@ -358,6 +358,10 @@ done:
  * Programmer:  Vailin Choi
  *              July 11, 2007
  *
+ * Modification:Raymond Lu
+ *              5 February, 2010
+ *              I added the call to H5O_msg_reset after H5D_chunk_bh_info 
+ *              to free the PLINE. 
  *-------------------------------------------------------------------------
  */
 static herr_t

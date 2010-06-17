@@ -97,6 +97,4 @@ INSTALL (
         h5debug h5repart
     RUNTIME DESTINATION
         bin/tools
-    COMPONENT
-        toolsapplications
 )

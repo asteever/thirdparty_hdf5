@@ -651,6 +651,4 @@ INSTALL (
         h5diff
     RUNTIME DESTINATION
         bin/tools
-    COMPONENT
-        toolsapplications
 )
