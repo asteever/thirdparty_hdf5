@@ -62,6 +62,10 @@
 
 /* Local Macros */
 
+/* Define the maximum number of returned ID structures to keep around
+   for re-use. */
+#define MAX_FREE_ID_STRUCTS 1000
+
 /*
  * Define the following macro for fast hash calculations (but limited
  * hash sizes)
@@ -99,12 +103,15 @@ typedef struct H5I_id_info_t {
 /* ID type structure used */
 typedef struct {
     unsigned	count;		/*# of times this type has been initialized*/
+    unsigned    free_count; /* # of available ID structures awaiting recycling */
     unsigned	reserved;	/*# of IDs to reserve for constant IDs	    */
     unsigned	wrapped;	/*whether the id count has wrapped around   */
     size_t	hash_size;	/*sizeof the hash table to store the IDs in */
     unsigned	ids;		/*current number of IDs held		    */
     unsigned	nextid;		/*ID to use for the next atom		    */
     H5I_free_t	free_func;	/*release object method	    		    */
+    unsigned    reuse_ids;  /* whether to reuse returned IDs for this type */
+    H5I_id_info_t * next_id_ptr; /* pointer to head of available ID list */
     H5I_id_info_t **id_list;	/*pointer to an array of ptrs to IDs	    */
 } H5I_id_type_t;
 
@@ -349,9 +356,20 @@ H5I_register_type(H5I_type_t type_id, size_t hash_size, unsigned reserved,
         type_ptr->ids = 0;
         type_ptr->nextid = reserved;
         type_ptr->free_func = free_func;
+        type_ptr->next_id_ptr = NULL;
         type_ptr->id_list = (H5I_id_info_t **)H5MM_calloc(hash_size * sizeof(H5I_id_info_t *));
         if(NULL == type_ptr->id_list)
             HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, H5I_BADID, "memory allocation failed")
+
+        /* Don't re-use IDs for property lists, as this causes problems
+         * with some virtual file drivers. Also, open datatypes are not 
+         * getting reduced to zero before file close in some situations,
+         * resulting in memory leak, so skip them for now as well. */
+        if (type_id == H5I_GENPROP_LST || type_id == H5I_DATATYPE)
+            type_ptr->reuse_ids = FALSE;
+        else
+            type_ptr->reuse_ids = TRUE;
+
     } /* end if */
 
     /* Increment the count of the times this type has been initialized */
@@ -680,6 +698,16 @@ H5I_clear_type(H5I_type_t type, hbool_t force, hbool_t app_ref)
         } /* end for */
     } /* end for */
 
+    /* Also free any ID structures being retained for potential re-use */
+    while(type_ptr->next_id_ptr) {
+        H5I_id_info_t *tmp_id_ptr;          /* temp ptr to next atom */
+
+        tmp_id_ptr = type_ptr->next_id_ptr->next;
+        (void)H5FL_FREE(H5I_id_info_t, type_ptr->next_id_ptr);
+        type_ptr->next_id_ptr = tmp_id_ptr;
+    } /* end while */
+    type_ptr->free_count = 0;
+
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5I_clear_type() */
@@ -832,7 +860,6 @@ H5I_register(H5I_type_t type, const void *object, hbool_t app_ref)
 {
     H5I_id_type_t	*type_ptr;	/*ptr to the type		*/
     H5I_id_info_t	*id_ptr;	/*ptr to the new ID information */
-    hid_t		new_id;		/*new ID			*/
     unsigned		hash_loc;	/*new item's hash table location*/
     hid_t		next_id;	/*next ID to check		*/
     H5I_id_info_t	*curr_id;	/*ptr to the current atom	*/
@@ -847,26 +874,49 @@ H5I_register(H5I_type_t type, const void *object, hbool_t app_ref)
     type_ptr = H5I_id_type_list_g[type];
     if(NULL == type_ptr || type_ptr->count <= 0)
 	HGOTO_ERROR(H5E_ATOM, H5E_BADGROUP, FAIL, "invalid type")
-    if(NULL == (id_ptr = H5FL_MALLOC(H5I_id_info_t)))
-        HGOTO_ERROR(H5E_ATOM, H5E_NOSPACE, FAIL, "memory allocation failed")
 
-    /* Create the struct & it's ID */
-    new_id = H5I_MAKE(type, type_ptr->nextid);
-    id_ptr->id = new_id;
+    /* If there is an available ID structure, use it. */
+    if (type_ptr->next_id_ptr) {
+    
+        /* Use existing available ID struct */
+        id_ptr = type_ptr->next_id_ptr;
+    
+        /* Remove struct from list of available ones */
+        type_ptr->next_id_ptr = type_ptr->next_id_ptr->next;
+
+        /* Decrease count of available ID structures */
+        type_ptr->free_count--;
+
+    /* If no available ID structure, then create a new id for use, and
+     * allocate a new struct to house it. */
+    } else {
+
+        /* Allocate new ID struct */
+        if(NULL == (id_ptr = H5FL_MALLOC(H5I_id_info_t)))
+            HGOTO_ERROR(H5E_ATOM, H5E_NOSPACE, FAIL, "memory allocation failed")
+
+        /* Make a new ID */
+        id_ptr->id = H5I_MAKE(type, type_ptr->nextid);
+
+        /* Increment nextid value */
+        type_ptr->nextid++;
+
+    } /* end if */
+
+    /* Fill in remaining fields of ID struct */
     id_ptr->count = 1; /*initial reference count*/
     id_ptr->app_count = !!app_ref;
     id_ptr->obj_ptr = object;
     id_ptr->next = NULL;
 
     /* hash bucket already full, prepend to front of chain */
-    hash_loc = type_ptr->nextid % (unsigned)type_ptr->hash_size;
+    hash_loc = id_ptr->id % (unsigned)type_ptr->hash_size;
     if(type_ptr->id_list[hash_loc] != NULL)
 	id_ptr->next = type_ptr->id_list[hash_loc];
 
     /* Insert into the type */
     type_ptr->id_list[hash_loc] = id_ptr;
     type_ptr->ids++;
-    type_ptr->nextid++;
 
     /*
      * This next section of code checks for the 'nextid' getting too large and
@@ -896,7 +946,7 @@ H5I_register(H5I_type_t type, const void *object, hbool_t app_ref)
 
 	    /* new ID to check for */
 	    next_id = H5I_MAKE(type, type_ptr->nextid);
-	    hash_loc = (unsigned)H5I_LOC(type_ptr->nextid, type_ptr->hash_size);
+	    hash_loc = H5I_LOC(type_ptr->nextid, type_ptr->hash_size);
 	    curr_id = type_ptr->id_list[hash_loc];
 	    if(curr_id == NULL)
                 break; /* Ha! this is not likely... */
@@ -917,7 +967,7 @@ H5I_register(H5I_type_t type, const void *object, hbool_t app_ref)
     } /* end if */
 
     /* Set return value */
-    ret_value = new_id;
+    ret_value = id_ptr->id;
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1251,6 +1301,7 @@ H5I_remove(hid_t id)
     H5I_id_type_t	*type_ptr;	/*ptr to the atomic type	*/
     H5I_id_info_t	*curr_id;	/*ptr to the current atom	*/
     H5I_id_info_t	*last_id;	/*ptr to the last atom		*/
+    H5I_id_info_t   *tmp_id_ptr; /*temp ptr to next atom     */
     H5I_type_t		type;		/*atom's atomic type		*/
     unsigned		hash_loc;	/*atom's hash table location	*/
     void *	      ret_value = NULL;	/*return value			*/
@@ -1288,7 +1339,17 @@ H5I_remove(hid_t id)
         }
         /* (Casting away const OK -QAK) */
         ret_value = (void *)curr_id->obj_ptr;
-        curr_id = H5FL_FREE(H5I_id_info_t, curr_id);
+        
+        /* If there's room, and we can save IDs of this type, then 
+           save the struct (and its ID) for future re-use */
+        if((type_ptr->reuse_ids)&&(type_ptr->free_count < MAX_FREE_ID_STRUCTS)) {
+            curr_id->next = type_ptr->next_id_ptr;
+            type_ptr->next_id_ptr = curr_id;
+            type_ptr->free_count++;
+        } /* end if */
+        /* Otherwise, just toss it. */
+        else
+            curr_id = H5FL_FREE(H5I_id_info_t, curr_id);
     } else {
         /* couldn't find the ID in the proper place */
 	HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, NULL, "invalid ID")
@@ -1296,6 +1357,24 @@ H5I_remove(hid_t id)
 
     /* Decrement the number of IDs in the type */
     (type_ptr->ids)--;
+
+    /* If there are no more IDs of this type, then we can free all available
+       ID strutures, and reset starting typeid and wrapped status. */
+    if (type_ptr->ids == 0) {
+
+        while (type_ptr->next_id_ptr) {
+
+            tmp_id_ptr = type_ptr->next_id_ptr->next;
+            (void)H5FL_FREE(H5I_id_info_t, type_ptr->next_id_ptr);
+            type_ptr->next_id_ptr = tmp_id_ptr;
+            type_ptr->free_count--;
+
+        } /* end while */
+
+        type_ptr->nextid = type_ptr->reserved;
+        type_ptr->wrapped = FALSE;
+
+    } /* end if */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1421,16 +1500,15 @@ H5I_dec_ref(hid_t id, hbool_t app_ref)
         if(!type_ptr->free_func || (type_ptr->free_func)((void *)id_ptr->obj_ptr) >= 0) {
             H5I_remove(id);
             ret_value = 0;
-        } /* end if */
-        else
+        } else {
             ret_value = FAIL;
-    } /* end if */
-    else {
+        }
+    } else {
         --(id_ptr->count);
-        if(app_ref)
+        if (app_ref)
             --(id_ptr->app_count);
         HDassert(id_ptr->count >= id_ptr->app_count);
-        ret_value = (int)(app_ref ? id_ptr->app_count : id_ptr->count);
+        ret_value = app_ref ? id_ptr->app_count : id_ptr->count;
     }
 
 done:
@@ -1526,7 +1604,7 @@ H5I_inc_ref(hid_t id, hbool_t app_ref)
         ++(id_ptr->app_count);
 
     /* Set return value */
-    ret_value = (int)(app_ref ? id_ptr->app_count : id_ptr->count);
+    ret_value = app_ref ? id_ptr->app_count : id_ptr->count;
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1616,7 +1694,7 @@ H5I_get_ref(hid_t id, hbool_t app_ref)
 	HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't locate ID")
 
     /* Set return value */
-    ret_value = (int)(app_ref ? id_ptr->app_count : id_ptr->count);
+    ret_value = app_ref ? id_ptr->app_count : id_ptr->count;
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1697,7 +1775,7 @@ H5I_inc_type_ref(H5I_type_t type)
 	HGOTO_ERROR(H5E_ATOM, H5E_BADGROUP, FAIL, "invalid type")
 
     /* Set return value */
-    ret_value = (int)(++(type_ptr->count));
+    ret_value = ++(type_ptr->count);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1798,7 +1876,7 @@ H5I_dec_type_ref(H5I_type_t type)
     } /* end if */
     else {
         --(type_ptr->count);
-        ret_value = (herr_t)type_ptr->count;
+        ret_value = type_ptr->count;
     } /* end else */
 
 done:
@@ -1880,7 +1958,7 @@ H5I_get_type_ref(H5I_type_t type)
         HGOTO_ERROR(H5E_ATOM, H5E_BADGROUP, FAIL, "invalid type")
 
     /* Set return value */
-    ret_value = (int)type_ptr->count;
+    ret_value = type_ptr->count;
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -2134,18 +2212,13 @@ done:
 ssize_t
 H5Iget_name(hid_t id, char *name/*out*/, size_t size)
 {
-    H5G_loc_t     loc;          /* Object location */
     ssize_t       ret_value;    /* Return value */
 
     FUNC_ENTER_API(H5Iget_name, FAIL)
     H5TRACE3("Zs", "ixz", id, name, size);
 
-    /* Get object location */
-    if(H5G_loc(id, &loc) < 0)
-	HGOTO_ERROR(H5E_ATOM, H5E_CANTGET, FAIL, "can't retrieve object location")
-
     /* Call internal group routine to retrieve object's name */
-    if((ret_value = H5G_get_name(&loc, name, size, NULL, H5P_DEFAULT, H5AC_ind_dxpl_id)) < 0)
+    if((ret_value = H5G_get_name(id, name, size, H5P_DEFAULT, H5AC_ind_dxpl_id)) < 0)
 	HGOTO_ERROR(H5E_ATOM, H5E_CANTGET, FAIL, "can't retrieve object name")
 
 done:
@@ -2193,6 +2266,7 @@ done:
  *              ID given an object ID.
  *
  * Return:	Success:	file ID
+ *
  *		Failure:	a negative value
  *
  * Programmer:  Raymond Lu
@@ -2203,6 +2277,7 @@ done:
 hid_t
 H5I_get_file_id(hid_t obj_id, hbool_t app_ref)
 {
+    H5G_loc_t loc;              /* Location of object */
     H5I_type_t type;            /* ID type */
     hid_t ret_value;            /* Return value */
 
@@ -2211,24 +2286,18 @@ H5I_get_file_id(hid_t obj_id, hbool_t app_ref)
     /* Get object type */
     type = H5I_TYPE(obj_id);
     if(type == H5I_FILE) {
-        /* Increment reference count on file ID */
-        if(H5I_inc_ref(obj_id, app_ref) < 0)
-            HGOTO_ERROR(H5E_ATOM, H5E_CANTSET, FAIL, "incrementing file ID failed")
-
-        /* Set return value */
         ret_value = obj_id;
-    } /* end if */
-    else if(type == H5I_DATATYPE || type == H5I_GROUP || type == H5I_DATASET || type == H5I_ATTR) {
-        H5G_loc_t loc;              /* Location of object */
 
-        /* Get the object location information */
+        /* Increment reference count on atom. */
+        if(H5I_inc_ref(ret_value, app_ref) < 0)
+            HGOTO_ERROR(H5E_ATOM, H5E_CANTSET, FAIL, "incrementing file ID failed")
+    }
+    else if(type == H5I_DATATYPE || type == H5I_GROUP || type == H5I_DATASET || type == H5I_ATTR) {
         if(H5G_loc(obj_id, &loc) < 0)
             HGOTO_ERROR(H5E_ATOM, H5E_CANTGET, FAIL, "can't get object location")
-
-        /* Get the file ID for the object */
         if((ret_value = H5F_get_id(loc.oloc->file, app_ref)) < 0)
             HGOTO_ERROR(H5E_ATOM, H5E_CANTGET, FAIL, "can't get file ID")
-    } /* end if */
+    }
     else
         HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, FAIL, "invalid object ID")
 

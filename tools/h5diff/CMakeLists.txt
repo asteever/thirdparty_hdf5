@@ -4,60 +4,35 @@ PROJECT (HDF5_TOOLS_H5DIFF)
 #-----------------------------------------------------------------------------
 # Setup include Directories
 #-----------------------------------------------------------------------------
-INCLUDE_DIRECTORIES (${HDF5_TOOLS_SRC_DIR}/lib)
+INCLUDE_DIRECTORIES (${HDF5_TOOLS_SOURCE_DIR}/lib)
 INCLUDE_DIRECTORIES (${HDF5_PROJECT_DIR}/test)
 
 # --------------------------------------------------------------------
-# Add the h5diff executables
+# Add the h5diff and test executables
 # --------------------------------------------------------------------
 ADD_EXECUTABLE (h5diff
     ${HDF5_TOOLS_H5DIFF_SOURCE_DIR}/h5diff_common.c
     ${HDF5_TOOLS_H5DIFF_SOURCE_DIR}/h5diff_main.c
 )
 H5_NAMING (h5diff)
-IF (WIN32)
-  IF (MSVC)
-    IF (NOT BUILD_SHARED_LIBS)
-      SET_TARGET_PROPERTIES (h5diff
-          PROPERTIES
-              LINK_FLAGS "/NODEFAULTLIB:MSVCRT"
-      ) 
-    ENDIF (NOT BUILD_SHARED_LIBS)
-  ENDIF (MSVC)
-ENDIF (WIN32)
 TARGET_LINK_LIBRARIES (h5diff  ${HDF5_TOOLS_LIB_TARGET} ${HDF5_LIB_TARGET})
 
 SET (H5_DEP_EXECUTABLES h5diff)
 
-##############################################################################
-##############################################################################
-###           T E S T I N G                                                ###
-##############################################################################
-##############################################################################
-
 IF (BUILD_TESTING)
-  # --------------------------------------------------------------------
-  # Add the h5diff and test executables
-  # --------------------------------------------------------------------
-  IF (HDF5_BUILD_GENERATORS AND NOT BUILD_SHARED_LIBS)
+  IF (NOT BUILD_SHARED_LIBS)
     ADD_EXECUTABLE (h5diffgentest ${HDF5_TOOLS_H5DIFF_SOURCE_DIR}/h5diffgentest.c)
     H5_NAMING (h5diffgentest)
-    IF (WIN32)
-      IF (MSVC)
-        SET_TARGET_PROPERTIES (h5diffgentest
-            PROPERTIES
-                LINK_FLAGS "/NODEFAULTLIB:MSVCRT"
-        ) 
-      ENDIF (MSVC)
-    ENDIF (WIN32)
     TARGET_LINK_LIBRARIES (h5diffgentest ${HDF5_LIB_TARGET} ${HDF5_TOOLS_LIB_TARGET})
     
     #ADD_TEST (NAME h5diffgentest COMMAND $<TARGET_FILE:h5diffgentest>)
-  ENDIF (HDF5_BUILD_GENERATORS AND NOT BUILD_SHARED_LIBS)
+
+    SET (H5_DEP_EXECUTABLES ${H5_DEP_EXECUTABLES}
+    #    h5diffgentest
+    )
+  ENDIF (NOT BUILD_SHARED_LIBS)
   
-  # --------------------------------------------------------------------
-  # Copy all the HDF5 files from the test directory into the source directory
-  # --------------------------------------------------------------------
+  #-- Copy all the HDF5 files from the test directory into the source directory
   SET (HDF5_REFERENCE_FILES
       h5diff_10.txt
       h5diff_100.txt
@@ -243,12 +218,6 @@ IF (BUILD_TESTING)
         ARGS       -E copy_if_different ${HDF5_TOOLS_H5DIFF_SOURCE_DIR}/testfiles/h5diff_102.txt ${PROJECT_BINARY_DIR}/h5diff_102.txt
     )
   ENDIF (WIN32)
-  
-##############################################################################
-##############################################################################
-###           T H E   T E S T S  M A C R O S                               ###
-##############################################################################
-##############################################################################
 
   MACRO (ADD_H5_TEST resultfile resultcode)
     ADD_TEST (
@@ -265,15 +234,11 @@ IF (BUILD_TESTING)
     )
   ENDMACRO (ADD_H5_TEST file)
 
-##############################################################################
-##############################################################################
-###           T H E   T E S T S                                            ###
-##############################################################################
-##############################################################################
 
-  # --------------------------------------------------------------------
-  # test file names 
-  # --------------------------------------------------------------------
+###############################################################################
+## test file names 
+###############################################################################
+
 SET (FILE1 h5diff_basic1.h5)
 SET (FILE2 h5diff_basic2.h5)
 SET (FILE3 h5diff_types.h5)
@@ -678,12 +643,6 @@ ADD_H5_TEST (h5diff_459 2  --follow-symlinks -v --no-dangling-links  ${FILE15} $
   
 ENDIF (BUILD_TESTING)
 
-##############################################################################
-##############################################################################
-###           I N S T A L L A T I O N                                      ###
-##############################################################################
-##############################################################################
-
 #-----------------------------------------------------------------------------
 # Rules for Installation of tools using make Install target
 #-----------------------------------------------------------------------------
@@ -692,6 +651,4 @@ INSTALL (
         h5diff
     RUNTIME DESTINATION
         bin/tools
-    COMPONENT
-        toolsapplications
 )

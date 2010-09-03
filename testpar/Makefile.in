@@ -90,8 +90,7 @@ t_posix_compliant_DEPENDENCIES = $(LIBH5TEST) $(LIBHDF5)
 am_testphdf5_OBJECTS = testphdf5.$(OBJEXT) t_dset.$(OBJEXT) \
 	t_file.$(OBJEXT) t_mdset.$(OBJEXT) t_ph5basic.$(OBJEXT) \
 	t_coll_chunk.$(OBJEXT) t_span_tree.$(OBJEXT) \
-	t_chunk_alloc.$(OBJEXT) t_filter_read.$(OBJEXT) \
-	t_rank_projection.$(OBJEXT)
+	t_chunk_alloc.$(OBJEXT) t_filter_read.$(OBJEXT)
 testphdf5_OBJECTS = $(am_testphdf5_OBJECTS)
 testphdf5_LDADD = $(LDADD)
 testphdf5_DEPENDENCIES = $(LIBH5TEST) $(LIBHDF5)
@@ -242,6 +241,7 @@ PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
+PACKED_BITS = @PACKED_BITS@
 PARALLEL = @PARALLEL@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PERL = @PERL@
@@ -363,11 +363,11 @@ LIBH5CPP_HL = $(top_builddir)/hl/c++/src/libhdf5_hl_cpp.la
 # Scripts used to build examples
 # If only shared libraries have been installed, have h5cc build examples with
 # shared libraries instead of static libraries
-H5CC = $(bindir)/h5cc
-H5CC_PP = $(bindir)/h5pcc
-H5FC = $(bindir)/h5fc
-H5FC_PP = $(bindir)/h5pfc
-H5CPP = $(bindir)/h5c++
+H5CC = ${DESTDIR}$(bindir)/h5cc
+H5CC_PP = ${DESTDIR}$(bindir)/h5pcc
+H5FC = ${DESTDIR}$(bindir)/h5fc
+H5FC_PP = ${DESTDIR}$(bindir)/h5pfc
+H5CPP = ${DESTDIR}$(bindir)/h5c++
 
 # The trace script; this is used on source files from the C library to
 # insert tracing macros.
@@ -381,8 +381,8 @@ TRACE = perl $(top_srcdir)/bin/trace
 # MPItest.h5 is from t_mpi
 # Para*.h5 are from testphdf
 # go is used for debugging. See testphdf5.c.
-CHECK_CLEANFILES = *.chkexe *.chklog *.clog MPItest.h5 Para*.h5 \
-	CacheTestDummy.h5 go
+CHECK_CLEANFILES = *.chkexe *.chklog *.clog $(TEST_PROG) *.o *.exe \
+	MPItest.h5 Para*.h5 CacheTestDummy.h5 go
 INCLUDES = -I$(top_srcdir)/src -I$(top_srcdir)/test
 
 # Test programs and scripts.  These are our main targets.
@@ -391,8 +391,7 @@ TEST_PROG_PARA = t_mpi t_posix_compliant testphdf5 t_cache t_pflush1 t_pflush2
 TEST_SCRIPT_PARA = testph5.sh
 check_SCRIPTS = $(TEST_SCRIPT)
 testphdf5_SOURCES = testphdf5.c t_dset.c t_file.c t_mdset.c t_ph5basic.c \
-        t_coll_chunk.c t_span_tree.c t_chunk_alloc.c t_filter_read.c \
-	t_rank_projection.c
+        t_coll_chunk.c t_span_tree.c t_chunk_alloc.c t_filter_read.c 
 
 
 # The tests all depend on the hdf5 library and the test library
@@ -496,7 +495,6 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t_pflush2.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t_ph5basic.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t_posix_compliant.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t_rank_projection.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/t_span_tree.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testphdf5.Po@am__quote@
 

@@ -3259,12 +3259,12 @@ test_attr_dense_dup_ids(hid_t fcpl, hid_t fapl)
     VERIFY(is_dense, TRUE, "H5O_is_attr_dense_test");
 
     /* Open first attribute for the dataset */
-    attr = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, (hsize_t)4,
+    attr = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, 4,
         H5P_DEFAULT, H5P_DEFAULT);
     CHECK(attr, FAIL, "H5Aopen");
 
     /* Open attribute for the second time */
-    attr2 = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, (hsize_t)4,
+    attr2 = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, 4,
         H5P_DEFAULT, H5P_DEFAULT);
     CHECK(attr, FAIL, "H5Aopen");
 
@@ -3315,13 +3315,13 @@ test_attr_dense_dup_ids(hid_t fcpl, hid_t fapl)
     VERIFY(is_dense, TRUE, "H5O_is_attr_dense_test");
 
     /* Open attribute of the dataset for the first time */
-    attr = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, (hsize_t)2,
+    attr = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, 2,
         H5P_DEFAULT, H5P_DEFAULT);
     CHECK(attr, FAIL, "H5Aopen");
 
     /* Delete a few attributes until the storage switches to compact */
     for(u = max_compact; u >= min_dense - 1; u--) {
-        ret = H5Adelete_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, (hsize_t)u,
+        ret = H5Adelete_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, u,
             H5P_DEFAULT);
         CHECK(ret, FAIL, "H5Adelete_by_idx");
     }
@@ -3331,7 +3331,7 @@ test_attr_dense_dup_ids(hid_t fcpl, hid_t fapl)
     VERIFY(is_dense, FALSE, "H5O_is_attr_dense_test");
 
     /* Open attribute for the second time */
-    attr2 = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, (hsize_t)2,
+    attr2 = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, 2,
         H5P_DEFAULT, H5P_DEFAULT);
     CHECK(attr, FAIL, "H5Aopen");
 
@@ -3382,7 +3382,7 @@ test_attr_dense_dup_ids(hid_t fcpl, hid_t fapl)
     VERIFY(is_dense, FALSE, "H5O_is_attr_dense_test");
 
     /* Open attribute of the dataset for the first time */
-    attr = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, (hsize_t)3,
+    attr = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, 3,
         H5P_DEFAULT, H5P_DEFAULT);
     CHECK(attr, FAIL, "H5Aopen");
 
@@ -3407,7 +3407,7 @@ test_attr_dense_dup_ids(hid_t fcpl, hid_t fapl)
     VERIFY(is_dense, TRUE, "H5O_is_attr_dense_test");
 
     /* Open attribute for the second time */
-    attr2 = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, (hsize_t)3,
+    attr2 = H5Aopen_by_idx(dataset, ".", H5_INDEX_NAME, H5_ITER_INC, 3,
         H5P_DEFAULT, H5P_DEFAULT);
     CHECK(attr, FAIL, "H5Aopen");
 
@@ -6857,7 +6857,7 @@ test_attr_iterate2(hbool_t new_format, hid_t fcpl, hid_t fapl)
 
     /* Allocate the "visited link" array */
     iter_info.max_visit = max_compact * 2;
-    visited = (hbool_t*)HDmalloc(sizeof(hbool_t) * iter_info.max_visit);
+    visited = HDmalloc(sizeof(hbool_t) * iter_info.max_visit);
     CHECK(visited, NULL, "HDmalloc");
     iter_info.visited = visited;
 

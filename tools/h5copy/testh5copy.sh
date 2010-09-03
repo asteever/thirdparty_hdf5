@@ -41,7 +41,6 @@ DIFF='diff -c'
 
 nerrors=0
 verbose=yes
-h5haveexitcode=yes	    # default is yes
 
 # The build (current) directory might be different than the source directory.
 if test -z "$srcdir"; then
@@ -51,13 +50,6 @@ INDIR=$srcdir/testfiles
 OUTDIR=./testfiles
 
 test -d $OUTDIR || mkdir $OUTDIR
-
-# RUNSERIAL is used. Check if it can return exit code from executalbe correctly.
-if [ -n "$RUNSERIAL_NOEXITCODE" ]; then
-    echo "***Warning*** Serial Exit Code is not passed back to shell corretly."
-    echo "***Warning*** Exit code checking is skipped."
-    h5haveexitcode=no
-fi
 
 # Print a "SKIP" message
 SKIP() {
@@ -208,7 +200,7 @@ H5DIFFTEST_FAIL()
     $RUNSERIAL $H5DIFF_BIN -q "$@" 
     RET=$?
 
-    if [ $h5haveexitcode = 'yes' -a $RET != 1 ] ; then
+    if [ $RET != 1 ] ; then
          echo "*FAILED*"
          nerrors="`expr $nerrors + 1`"
     else

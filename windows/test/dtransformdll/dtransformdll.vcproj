@@ -4,7 +4,6 @@
 	Version="9.00"
 	Name="dtransformdll"
 	ProjectGUID="{0E0F449A-7998-4113-BDD2-A74E0B6D3466}"
-	RootNamespace="dtransformdll"
 	TargetFrameworkVersion="131072"
 	>
 	<Platforms>
@@ -76,7 +75,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\../../../test/dtransformdll/Debug/dtransformdll.pdb"
@@ -166,7 +165,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
 				ProgramDatabaseFile=".\../../../test/dtransformdll/Debug/dtransformdll.pdb"
@@ -256,7 +255,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\../../../test/dtransformdll/Release/dtransformdll.pdb"
 				SubSystem="1"
@@ -346,7 +345,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\$(ProjectName).exe"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\../../../test/dtransformdll/Release/dtransformdll.pdb"
 				SubSystem="1"
@@ -383,6 +382,48 @@
 		<File
 			RelativePath="..\..\..\test\dtransform.c"
 			>
+			<FileConfiguration
+				Name="Debug|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="BIND_TO_CURRENT_VCLIBS_VERSION=1;"
+					BasicRuntimeChecks="3"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Debug|x64"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="0"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="BIND_TO_CURRENT_VCLIBS_VERSION=1;"
+					BasicRuntimeChecks="3"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Release|Win32"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="BIND_TO_CURRENT_VCLIBS_VERSION=1;"
+				/>
+			</FileConfiguration>
+			<FileConfiguration
+				Name="Release|x64"
+				>
+				<Tool
+					Name="VCCLCompilerTool"
+					Optimization="2"
+					AdditionalIncludeDirectories=""
+					PreprocessorDefinitions="BIND_TO_CURRENT_VCLIBS_VERSION=1;"
+				/>
+			</FileConfiguration>
 		</File>
 	</Files>
 	<Globals>

@@ -67,7 +67,6 @@ TIMESTAMP()
 
 QUIT()
 {
-    # print the closing time
     TIMESTAMP
 }
 
@@ -235,7 +234,7 @@ trap QUIT 0
 #
 MAKE=${MAKE:-'gmake'}
 export MAKE
-CONFIG_CMD="CONFIG"
+CONFIGURE="CONFIG"
 CONFIG_OP=		# configure options
 CONFIG_ONLY=no		# default is configure and build
 NOEXEC=			# default to execute commands
@@ -251,7 +250,6 @@ while [ $# -gt 0 ]; do
 	    ;;
 	-szlib)
 	    LOCATE_SZLIB
-	    CONFIG_OP="$CONFIG_OP $WITH_SZLIB"
 	    ;;
 	-help)
 	    USAGE
@@ -265,16 +263,16 @@ while [ $# -gt 0 ]; do
 	    SRCDIRLIST="$1"
 	    ;;
 	-cxx)
-	    CONFIG_OP="$CONFIG_OP --enable-cxx"
+	    CONFIG_CXX="--enable-cxx"
 	    ;;
 	-fortran)
-	    CONFIG_OP="$CONFIG_OP --enable-fortran"
+	    CONFIG_FORTRAN="--enable-fortran"
 	    ;;
 	-pp)
-	    CONFIG_OP="$CONFIG_OP --enable-parallel"
+	    CONFIG_PARALLEL="--enable-parallel"
 	    ;;
-	*)	# pass it as a configure option
-	    CONFIG_OP="$CONFIG_OP $1"
+	*)	# Quit parsing
+	    break
 	    ;;
     esac
     shift
@@ -298,10 +296,14 @@ if [ x-$SRCDIR = x-dummy ]; then
     exit 1
 fi
 
+# Setup Configure options
+CONFIG_OP="$WITH_SZLIB $CONFIG_FORTRAN $CONFIG_CXX $CONFIG_PARALLEL"
+
 # Configure
 # no configure if already done.
 if [ ! -f config.status ]; then
-    STEP "Configure HDF5..." "$CONFIG_CMD $CONFIG_OP" "#config"
+    CONFIGURE="$CONFIGURE $CONFIG_OP $*"
+    STEP "Configure HDF5..." "$CONFIGURE" "#config"
 else
     STEP "Configure Skipped" "echo Configure Skipped" "#config"
 fi
@@ -322,3 +324,4 @@ STEP "Testing HDF5 parallel parts..." "$MAKE check-p" "#test-p"
 
 # all done
 echo "No Errors encountered"
+TIMESTAMP

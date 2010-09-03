@@ -4,7 +4,6 @@
 	Version="9.00"
 	Name="hdf5_hl_cppdll"
 	ProjectGUID="{3EDEB434-F59E-4C50-8884-F0BB29845619}"
-	RootNamespace="hdf5_hl_cppdll"
 	TargetFrameworkVersion="131072"
 	>
 	<Platforms>
@@ -82,7 +81,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib $(HDF5_EXT_ZLIB) $(HDF5_EXT_SZIP)"
 				OutputFile="$(OutDir)\hdf5_hl_cppdll.dll"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ManifestFile="$(TargetPath).intermediate.manifest"
 				ProgramDatabaseFile="$(TargetDir)$(TargetName).pdb"
@@ -177,7 +176,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="odbc32.lib odbccp32.lib $(HDF5_EXT_ZLIB) $(HDF5_EXT_SZIP)"
 				OutputFile="$(OutDir)\hdf5_hl_cppdll.dll"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ManifestFile="$(TargetPath).intermediate.manifest"
 				ProgramDatabaseFile="$(TargetDir)$(TargetName).pdb"
@@ -270,7 +269,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\hdf5_hl_cppddll.dll"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ManifestFile="$(TargetPath).intermediate.manifest"
 				GenerateDebugInformation="true"
@@ -364,7 +363,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				OutputFile="$(OutDir)\hdf5_hl_cppddll.dll"
-				LinkIncremental="0"
+				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ManifestFile="$(TargetPath).intermediate.manifest"
 				GenerateDebugInformation="true"
@@ -400,25 +399,10 @@
 	<References>
 	</References>
 	<Files>
-		<Filter
-			Name="Source Files"
-			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat;f90;for;f;fpp"
+		<File
+			RelativePath="..\..\..\hl\c++\src\H5PacketTable.cpp"
 			>
-			<File
-				RelativePath="..\..\..\hl\c++\src\H5PacketTable.cpp"
-				>
-			</File>
-		</Filter>
-		<Filter
-			Name="Header Files"
-			Filter="h;hpp;hxx;hm;inl;fi;fd"
-			>
-		</Filter>
-		<Filter
-			Name="Resource Files"
-			Filter="ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"
-			>
-		</Filter>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>

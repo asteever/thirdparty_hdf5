@@ -11,7 +11,7 @@ ENDIF (BUILD_SHARED_LIBS)
 #-----------------------------------------------------------------------------
 # List Source files
 #-----------------------------------------------------------------------------
-INCLUDE_DIRECTORIES (${HDF5_HL_SRC_DIR}/src)
+INCLUDE_DIRECTORIES (${HDF5_HL_SOURCE_DIR}/src)
 
 SET (HL_SRCS
     ${HDF5_HL_SRC_SOURCE_DIR}/H5DS.c
@@ -47,8 +47,6 @@ INSTALL (
         ${HL_HEADERS}
     DESTINATION
         include
-    COMPONENT
-        hlheaders
 )
 
 #-----------------------------------------------------------------------------
@@ -60,8 +58,8 @@ IF (HDF5_EXPORTED_TARGETS)
           ${HDF5_HL_LIB_TARGET}
       EXPORT
           ${HDF5_EXPORTED_TARGETS}
-      LIBRARY DESTINATION lib COMPONENT hllibraries
-      ARCHIVE DESTINATION lib COMPONENT hllibraries
-      RUNTIME DESTINATION bin COMPONENT hllibraries
+      LIBRARY DESTINATION lib
+      ARCHIVE DESTINATION lib
+      RUNTIME DESTINATION bin
   )
 ENDIF (HDF5_EXPORTED_TARGETS)

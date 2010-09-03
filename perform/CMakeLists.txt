@@ -4,8 +4,8 @@ PROJECT (HDF5_PERFORM )
 #-----------------------------------------------------------------------------
 # Setup include Directories
 #-----------------------------------------------------------------------------
-INCLUDE_DIRECTORIES (${HDF5_TEST_SRC_DIR})
-INCLUDE_DIRECTORIES (${HDF5_TOOLS_SRC_DIR}/lib )
+INCLUDE_DIRECTORIES (${HDF5_TEST_SOURCE_DIR})
+INCLUDE_DIRECTORIES (${HDF5_TOOLS_SOURCE_DIR}/lib )
 
 #-----------------------------------------------------------------------------
 # Add Tests
@@ -19,16 +19,6 @@ SET (h5perf_serial_SRCS
 )
 ADD_EXECUTABLE (h5perf_serial ${h5perf_serial_SRCS})
 H5_NAMING (h5perf_serial)
-IF (WIN32)
-  IF (MSVC)
-    IF (NOT BUILD_SHARED_LIBS)
-      SET_TARGET_PROPERTIES (h5perf_serial
-          PROPERTIES
-              LINK_FLAGS "/NODEFAULTLIB:MSVCRT"
-      ) 
-    ENDIF (NOT BUILD_SHARED_LIBS)
-  ENDIF (MSVC)
-ENDIF (WIN32)
 TARGET_LINK_LIBRARIES (h5perf_serial ${HDF5_LIB_TARGET} ${HDF5_TOOLS_LIB_TARGET})
 
 ADD_TEST (NAME h5perf_serial COMMAND $<TARGET_FILE:h5perf_serial>)
@@ -39,16 +29,6 @@ SET (chunk_SRCS
 )
 ADD_EXECUTABLE(chunk ${chunk_SRCS})
 H5_NAMING (chunk)
-IF (WIN32)
-  IF (MSVC)
-    IF (NOT BUILD_SHARED_LIBS)
-      SET_TARGET_PROPERTIES (chunk
-          PROPERTIES
-              LINK_FLAGS "/NODEFAULTLIB:MSVCRT"
-      ) 
-    ENDIF (NOT BUILD_SHARED_LIBS)
-  ENDIF (MSVC)
-ENDIF (WIN32)
 TARGET_LINK_LIBRARIES(chunk ${HDF5_LIB_TARGET} ${HDF5_TOOLS_LIB_TARGET})
 
 ADD_TEST (NAME chunk COMMAND $<TARGET_FILE:chunk>)
@@ -59,16 +39,6 @@ SET (iopipe_SRCS
 )
 ADD_EXECUTABLE (iopipe ${iopipe_SRCS})
 H5_NAMING (iopipe)
-IF (WIN32)
-  IF (MSVC)
-    IF (NOT BUILD_SHARED_LIBS)
-      SET_TARGET_PROPERTIES (iopipe
-          PROPERTIES
-              LINK_FLAGS "/NODEFAULTLIB:MSVCRT"
-      ) 
-    ENDIF (NOT BUILD_SHARED_LIBS)
-  ENDIF (MSVC)
-ENDIF (WIN32)
 TARGET_LINK_LIBRARIES (iopipe ${HDF5_LIB_TARGET} ${HDF5_TOOLS_LIB_TARGET})
 
 ADD_TEST (NAME iopipe COMMAND $<TARGET_FILE:iopipe>)
@@ -79,16 +49,6 @@ SET (overhead_SRCS
 )
 ADD_EXECUTABLE (overhead ${overhead_SRCS})
 H5_NAMING (overhead)
-IF (WIN32)
-  IF (MSVC)
-    IF (NOT BUILD_SHARED_LIBS)
-      SET_TARGET_PROPERTIES (overhead
-          PROPERTIES
-              LINK_FLAGS "/NODEFAULTLIB:MSVCRT"
-      ) 
-    ENDIF (NOT BUILD_SHARED_LIBS)
-  ENDIF (MSVC)
-ENDIF (WIN32)
 TARGET_LINK_LIBRARIES (overhead ${HDF5_LIB_TARGET} ${HDF5_TOOLS_LIB_TARGET})
 
 ADD_TEST (NAME overhead COMMAND $<TARGET_FILE:overhead>)
@@ -99,16 +59,6 @@ SET (perf_meta_SRCS
 )
 ADD_EXECUTABLE (perf_meta ${perf_meta_SRCS})
 H5_NAMING (perf_meta)
-IF (WIN32)
-  IF (MSVC)
-    IF (NOT BUILD_SHARED_LIBS)
-      SET_TARGET_PROPERTIES (perf_meta
-          PROPERTIES
-              LINK_FLAGS "/NODEFAULTLIB:MSVCRT"
-      ) 
-    ENDIF (NOT BUILD_SHARED_LIBS)
-  ENDIF (MSVC)
-ENDIF (WIN32)
 TARGET_LINK_LIBRARIES (perf_meta ${HDF5_LIB_TARGET} ${HDF5_TOOLS_LIB_TARGET} ${HDF5_TEST_LIB_TARGET})
 
 ADD_TEST (NAME perf_meta COMMAND $<TARGET_FILE:perf_meta>)
@@ -119,80 +69,6 @@ SET (zip_perf_SRCS
 )
 ADD_EXECUTABLE (zip_perf ${zip_perf_SRCS})
 H5_NAMING (zip_perf)
-IF (WIN32)
-  IF (MSVC)
-    IF (NOT BUILD_SHARED_LIBS)
-      SET_TARGET_PROPERTIES (zip_perf
-          PROPERTIES
-              LINK_FLAGS "/NODEFAULTLIB:MSVCRT"
-      ) 
-    ENDIF (NOT BUILD_SHARED_LIBS)
-  ENDIF (MSVC)
-ENDIF (WIN32)
 TARGET_LINK_LIBRARIES (zip_perf ${HDF5_TOOLS_LIB_TARGET} ${HDF5_LIB_TARGET})
 
 ADD_TEST (NAME zip_perf COMMAND $<TARGET_FILE:zip_perf> "-h")
-
-IF (H5_HAVE_PARALLEL)
-  #-- Adding test for h5perf
-  SET (h5perf_SRCS
-      ${HDF5_PERFORM_SOURCE_DIR}/pio_timer.c
-      ${HDF5_PERFORM_SOURCE_DIR}/pio_perf.c
-      ${HDF5_PERFORM_SOURCE_DIR}/pio_engine.c
-  )
-  ADD_EXECUTABLE (h5perf ${h5perf_SRCS})
-  H5_NAMING (h5perf)
-  IF (WIN32)
-    IF (MSVC)
-      IF (NOT BUILD_SHARED_LIBS)
-        SET_TARGET_PROPERTIES (h5perf
-            PROPERTIES
-                LINK_FLAGS "/NODEFAULTLIB:MSVCRT"
-        ) 
-      ENDIF (NOT BUILD_SHARED_LIBS)
-    ENDIF (MSVC)
-  ENDIF (WIN32)
-  TARGET_LINK_LIBRARIES (h5perf ${HDF5_LIB_TARGET} ${HDF5_TOOLS_LIB_TARGET} ${HDF5_TEST_LIB_TARGET})
-
-  ADD_TEST (NAME h5perf COMMAND ${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_MAX_NUMPROCS} ${MPIEXEC_POSTFLAGS} $<TARGET_FILE:h5perf>)
-
-  #-- Adding test for benchpar
-  SET (benchpar_SRCS
-      ${HDF5_PERFORM_SOURCE_DIR}/benchpar.c
-  )
-  ADD_EXECUTABLE (benchpar ${benchpar_SRCS})
-  H5_NAMING (benchpar)
-  IF (WIN32)
-    IF (MSVC)
-      IF (NOT BUILD_SHARED_LIBS)
-        SET_TARGET_PROPERTIES (benchpar
-            PROPERTIES
-                LINK_FLAGS "/NODEFAULTLIB:MSVCRT"
-        ) 
-      ENDIF (NOT BUILD_SHARED_LIBS)
-    ENDIF (MSVC)
-  ENDIF (WIN32)
-  TARGET_LINK_LIBRARIES (benchpar ${HDF5_LIB_TARGET} ${HDF5_TOOLS_LIB_TARGET} ${HDF5_TEST_LIB_TARGET})
-
-  ADD_TEST (NAME benchpar COMMAND ${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_MAX_NUMPROCS} ${MPIEXEC_POSTFLAGS} $<TARGET_FILE:benchpar>)
-
-  #-- Adding test for mpi-perf
-  SET (mpi-perf_SRCS
-      ${HDF5_PERFORM_SOURCE_DIR}/mpi-perf.c
-  )
-  ADD_EXECUTABLE (mpi-perf ${mpi-perf_SRCS})
-  H5_NAMING (mpi-perf)
-  IF (WIN32)
-    IF (MSVC)
-      IF (NOT BUILD_SHARED_LIBS)
-        SET_TARGET_PROPERTIES (mpi-perf
-            PROPERTIES
-                LINK_FLAGS "/NODEFAULTLIB:MSVCRT"
-        ) 
-      ENDIF (NOT BUILD_SHARED_LIBS)
-    ENDIF (MSVC)
-  ENDIF (WIN32)
-  TARGET_LINK_LIBRARIES (mpi-perf ${HDF5_LIB_TARGET} ${HDF5_TOOLS_LIB_TARGET} ${HDF5_TEST_LIB_TARGET})
-
-  ADD_TEST (NAME mpi-perf COMMAND ${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_MAX_NUMPROCS} ${MPIEXEC_POSTFLAGS} $<TARGET_FILE:mpi-perf>)
-ENDIF (H5_HAVE_PARALLEL)

@@ -67,7 +67,6 @@ DIFF='diff -c'
 
 nerrors=0
 verbose=yes
-h5haveexitcode=yes	    # default is yes
 pmode=			    # default to run h5diff tests
 mydomainname=`domainname 2>/dev/null`
 
@@ -103,13 +102,6 @@ while [ $# -gt 0 ]; do
 	;;
     esac
 done
-
-# RUNSERIAL is used. Check if it can return exit code from executalbe correctly.
-if [ -n "$RUNSERIAL_NOEXITCODE" ]; then
-    echo "***Warning*** Serial Exit Code is not passed back to shell corretly."
-    echo "***Warning*** Exit code checking is skipped."
-    h5haveexitcode=no
-fi
 
 # Print a line-line message left justified in a field of 70 characters
 # beginning with the word "Testing".
@@ -232,7 +224,7 @@ TOOLTEST() {
     # is from mpirun not tool)
     # if any problem occurs relate to an exit code, it will be caught in 
     # serial mode, so the test is fullfilled.
-    if test $h5haveexitcode = 'yes' -a -z "$pmode"; then
+    if test -z "$pmode"; then
       echo "EXIT CODE: $EXIT_CODE" >> $actual
     fi
 
@@ -242,7 +234,7 @@ TOOLTEST() {
         cp $actual $expect
     elif $CMP $expect $actual; then
         echo " PASSED"
-    elif test $h5haveexitcode = 'yes' -a -z "$pmode"; then
+    elif test -z "$pmode"; then
         echo "*FAILED*"
         echo "    Expected result ($expect) differs from actual result ($actual)"
         nerrors="`expr $nerrors + 1`"

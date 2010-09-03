@@ -5596,7 +5596,7 @@ hbool_t equal_ldouble(long double value, long double expected, diff_opt_t *optio
         return TRUE;
 
     if (options->use_system_epsilon) {
-        if ( ABS( (value-expected) ) < DBL_EPSILON)
+        if ( ABS( (value-expected) / expected) < DBL_EPSILON)
             return TRUE;
     }
 
@@ -5653,7 +5653,7 @@ hbool_t equal_float(float value, float expected, diff_opt_t *options)
         return TRUE;
 
     if (options->use_system_epsilon) {
-        if ( ABS( (value-expected) ) < FLT_EPSILON)
+        if ( ABS( (value-expected) / expected) < FLT_EPSILON)
             return TRUE;
     }
 
@@ -5825,6 +5825,8 @@ void print_header(int        pp,        /* print percentage */
                 const char *obj1,
                 const char *obj2 )
 {
+    int i;
+
     /* print header */
     parallel_print("%-16s","size:");
     print_dimensions (rank,dims);
@@ -5832,7 +5834,8 @@ void print_header(int        pp,        /* print percentage */
     print_dimensions (rank,dims);
     parallel_print("\n");
 
-    if(pp) {
+    if (pp)
+    {
         parallel_print("%-15s %-15s %-15s %-15s %-15s\n",
             "position",
             (obj1!=NULL) ? obj1 : " ",
@@ -5841,7 +5844,8 @@ void print_header(int        pp,        /* print percentage */
             "relative");
         parallel_print("------------------------------------------------------------------------\n");
     }
-    else {
+    else
+    {
         parallel_print("%-15s %-15s %-15s %-20s\n",
             "position",
             (obj1!=NULL) ? obj1 : " ",

@@ -4,53 +4,23 @@ PROJECT (HDF5_TOOLS_MISC)
 #-----------------------------------------------------------------------------
 # Setup include Directories
 #-----------------------------------------------------------------------------
-INCLUDE_DIRECTORIES (${HDF5_TOOLS_SRC_DIR}/lib)
+INCLUDE_DIRECTORIES (${HDF5_TOOLS_SOURCE_DIR}/lib)
 INCLUDE_DIRECTORIES (${HDF5_PROJECT_DIR}/test)
 
 # --------------------------------------------------------------------
-# Add the misc executables
+# Add the misc and test executables
 # --------------------------------------------------------------------
 #-- Misc Executables
 ADD_EXECUTABLE (h5debug ${HDF5_TOOLS_MISC_SOURCE_DIR}/h5debug.c)
 H5_NAMING (h5debug)
-IF (WIN32)
-  IF (MSVC)
-    IF (NOT BUILD_SHARED_LIBS)
-      SET_TARGET_PROPERTIES (h5debug
-          PROPERTIES
-              LINK_FLAGS "/NODEFAULTLIB:MSVCRT"
-      ) 
-    ENDIF (NOT BUILD_SHARED_LIBS)
-  ENDIF (MSVC)
-ENDIF (WIN32)
 TARGET_LINK_LIBRARIES (h5debug ${HDF5_LIB_TARGET} ${HDF5_TOOLS_LIB_TARGET})
 
 ADD_EXECUTABLE (h5repart ${HDF5_TOOLS_MISC_SOURCE_DIR}/h5repart.c)
 H5_NAMING (h5repart)
-IF (WIN32)
-  IF (MSVC)
-    IF (NOT BUILD_SHARED_LIBS)
-      SET_TARGET_PROPERTIES (h5repart
-          PROPERTIES
-              LINK_FLAGS "/NODEFAULTLIB:MSVCRT"
-      ) 
-    ENDIF (NOT BUILD_SHARED_LIBS)
-  ENDIF (MSVC)
-ENDIF (WIN32)
 TARGET_LINK_LIBRARIES (h5repart ${HDF5_LIB_TARGET} ${HDF5_TOOLS_LIB_TARGET})
 
 ADD_EXECUTABLE (h5mkgrp ${HDF5_TOOLS_MISC_SOURCE_DIR}/h5mkgrp.c)
 H5_NAMING (h5mkgrp)
-IF (WIN32)
-  IF (MSVC)
-    IF (NOT BUILD_SHARED_LIBS)
-      SET_TARGET_PROPERTIES (h5mkgrp
-          PROPERTIES
-              LINK_FLAGS "/NODEFAULTLIB:MSVCRT"
-      ) 
-    ENDIF (NOT BUILD_SHARED_LIBS)
-  ENDIF (MSVC)
-ENDIF (WIN32)
 TARGET_LINK_LIBRARIES (h5mkgrp  ${HDF5_TOOLS_LIB_TARGET} ${HDF5_LIB_TARGET})
 
 SET (H5_DEP_EXECUTABLES
@@ -59,48 +29,7 @@ SET (H5_DEP_EXECUTABLES
     h5mkgrp
 )
 
-##############################################################################
-##############################################################################
-###           T E S T I N G                                                ###
-##############################################################################
-##############################################################################
-
 IF (BUILD_TESTING)
-  # --------------------------------------------------------------------
-  # Add the misc test executables
-  # --------------------------------------------------------------------
-  IF (HDF5_BUILD_GENERATORS AND NOT BUILD_SHARED_LIBS)
-    ADD_EXECUTABLE (h5repart_gentest ${HDF5_TOOLS_MISC_SOURCE_DIR}/h5repart_gentest.c)
-    H5_NAMING (h5repart_gentest)
-    IF (WIN32)
-      IF (MSVC)
-        SET_TARGET_PROPERTIES (h5repart_gentest
-            PROPERTIES
-                LINK_FLAGS "/NODEFAULTLIB:MSVCRT"
-        ) 
-      ENDIF (MSVC)
-    ENDIF (WIN32)
-    TARGET_LINK_LIBRARIES (h5repart_gentest ${HDF5_LIB_TARGET} ${HDF5_TOOLS_LIB_TARGET})
-    #ADD_TEST (NAME h5repart_gentest COMMAND $<TARGET_FILE:h5repart_gentest>)
-  ENDIF (HDF5_BUILD_GENERATORS AND NOT BUILD_SHARED_LIBS)
-
-  ADD_EXECUTABLE (h5repart_test ${HDF5_TOOLS_MISC_SOURCE_DIR}/repart_test.c)
-  H5_NAMING (h5repart_test)
-  IF (WIN32)
-    IF (MSVC)
-      IF (NOT BUILD_SHARED_LIBS)
-        SET_TARGET_PROPERTIES (h5repart_test
-            PROPERTIES
-                LINK_FLAGS "/NODEFAULTLIB:MSVCRT"
-        ) 
-      ENDIF (NOT BUILD_SHARED_LIBS)
-    ENDIF (MSVC)
-  ENDIF (WIN32)
-  TARGET_LINK_LIBRARIES (h5repart_test ${HDF5_LIB_TARGET} ${HDF5_TOOLS_LIB_TARGET})
-  
-  # --------------------------------------------------------------------
-  # Copy all the HDF5 files from the test directory into the source directory
-  # --------------------------------------------------------------------
   SET (HDF5_REFERENCE_TEST_FILES
       family_file00000.h5
       family_file00001.h5
@@ -129,21 +58,20 @@ IF (BUILD_TESTING)
         TARGET     h5repart
         POST_BUILD
         COMMAND    ${CMAKE_COMMAND}
-        ARGS       -E copy_if_different ${HDF5_TOOLS_SRC_DIR}/testfiles/${h5_file} ${dest}
+        ARGS       -E copy_if_different ${HDF5_TOOLS_SOURCE_DIR}/testfiles/${h5_file} ${dest}
     )
   ENDFOREACH (h5_file ${HDF5_REFERENCE_TEST_FILES})
 
-##############################################################################
-##############################################################################
-###           T H E   T E S T S  M A C R O S                               ###
-##############################################################################
-##############################################################################
+  IF (NOT BUILD_SHARED_LIBS)
+    ADD_EXECUTABLE (h5repart_gentest ${HDF5_TOOLS_MISC_SOURCE_DIR}/h5repart_gentest.c)
+    H5_NAMING (h5repart_gentest)
+    TARGET_LINK_LIBRARIES (h5repart_gentest ${HDF5_LIB_TARGET} ${HDF5_TOOLS_LIB_TARGET})
+    #ADD_TEST (NAME h5repart_gentest COMMAND $<TARGET_FILE:h5repart_gentest>)
+  ENDIF (NOT BUILD_SHARED_LIBS)
 
-##############################################################################
-##############################################################################
-###           T H E   T E S T S                                            ###
-##############################################################################
-##############################################################################
+  ADD_EXECUTABLE (h5repart_test ${HDF5_TOOLS_MISC_SOURCE_DIR}/repart_test.c)
+  H5_NAMING (h5repart_test)
+  TARGET_LINK_LIBRARIES (h5repart_test ${HDF5_LIB_TARGET} ${HDF5_TOOLS_LIB_TARGET})
 
   # repartition family member size to 20,000 bytes.
   ADD_TEST (NAME h5repart_20K COMMAND $<TARGET_FILE:h5repart> -m 20000 family_file%05d.h5 fst_family%05d.h5)
@@ -156,15 +84,10 @@ IF (BUILD_TESTING)
   ADD_TEST (NAME h5repart_test COMMAND $<TARGET_FILE:h5repart_test>)
 
   SET (H5_DEP_EXECUTABLES ${H5_DEP_EXECUTABLES}
+     #   h5repart_gentest
         h5repart_test
   )
 ENDIF (BUILD_TESTING)
-
-##############################################################################
-##############################################################################
-###           I N S T A L L A T I O N                                      ###
-##############################################################################
-##############################################################################
 
 #-----------------------------------------------------------------------------
 # Rules for Installation of tools using make Install target
@@ -174,6 +97,4 @@ INSTALL (
         h5debug h5repart
     RUNTIME DESTINATION
         bin/tools
-    COMPONENT
-        toolsapplications
 )

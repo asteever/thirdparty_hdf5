@@ -37,7 +37,7 @@
  */
 
 int
-WriteHDF(GIFTOMEM GifMemoryStruct, char *HDFName)
+WriteHDF(GIFTOMEM GifMemoryStruct, char *HDFName , char *GIFFileName)
 {
     GIFHEAD          gifHead;           /* GIF Header structure            */
     GIFIMAGEDESC    *gifImageDesc;      /* Logical Image Descriptor struct */

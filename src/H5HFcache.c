@@ -107,7 +107,6 @@ const H5AC_class_t H5AC_FHEAP_HDR[1] = {{
     (H5AC_flush_func_t)H5HF_cache_hdr_flush,
     (H5AC_dest_func_t)H5HF_cache_hdr_dest,
     (H5AC_clear_func_t)H5HF_cache_hdr_clear,
-    (H5AC_notify_func_t)NULL,
     (H5AC_size_func_t)H5HF_cache_hdr_size,
 }};
 
@@ -118,7 +117,6 @@ const H5AC_class_t H5AC_FHEAP_IBLOCK[1] = {{
     (H5AC_flush_func_t)H5HF_cache_iblock_flush,
     (H5AC_dest_func_t)H5HF_cache_iblock_dest,
     (H5AC_clear_func_t)H5HF_cache_iblock_clear,
-    (H5AC_notify_func_t)NULL,
     (H5AC_size_func_t)H5HF_cache_iblock_size,
 }};
 
@@ -129,7 +127,6 @@ const H5AC_class_t H5AC_FHEAP_DBLOCK[1] = {{
     (H5AC_flush_func_t)H5HF_cache_dblock_flush,
     (H5AC_dest_func_t)H5HF_cache_dblock_dest,
     (H5AC_clear_func_t)H5HF_cache_dblock_clear,
-    (H5AC_notify_func_t)NULL,
     (H5AC_size_func_t)H5HF_cache_dblock_size,
 }};
 
@@ -749,7 +746,7 @@ H5HF_cache_iblock_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
         HGOTO_ERROR(H5E_HEAP, H5E_CANTINIT, NULL, "can't wrap buffer")
 
     /* Compute size of indirect block */
-    iblock->size = H5HF_MAN_INDIRECT_SIZE(hdr, iblock->nrows);
+    iblock->size = H5HF_MAN_INDIRECT_SIZE(hdr, iblock);
 
     /* Get a pointer to a buffer that's large enough for serialized indirect block */
     if(NULL == (buf = (uint8_t *)H5WB_actual(wb, iblock->size)))
@@ -1250,6 +1247,7 @@ H5HF_cache_dblock_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
     /* Set block's internal information */
     dblock->size = udata->dblock_size;
     dblock->file_size = 0;
+    dblock->blk_off_size = H5HF_SIZEOF_OFFSET_LEN(dblock->size);
 
     /* Allocate block buffer */
 /* XXX: Change to using free-list factories */

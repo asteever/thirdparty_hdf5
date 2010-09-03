@@ -19,7 +19,6 @@
 #include <string.h>
 #include <assert.h>
 #include "h5diff_common.h"
-#include "h5tools_utils.h"
 
 /* Name of tool */
 #define PROGRAMNAME "h5diff"

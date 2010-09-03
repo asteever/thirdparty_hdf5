@@ -102,7 +102,6 @@ const H5AC_class_t H5AC_FSPACE_HDR[1] = {{
     (H5AC_flush_func_t)H5FS_cache_hdr_flush,
     (H5AC_dest_func_t)H5FS_cache_hdr_dest,
     (H5AC_clear_func_t)H5FS_cache_hdr_clear,
-    (H5AC_notify_func_t)NULL,
     (H5AC_size_func_t)H5FS_cache_hdr_size,
 }};
 
@@ -113,7 +112,6 @@ const H5AC_class_t H5AC_FSPACE_SINFO[1] = {{
     (H5AC_flush_func_t)H5FS_cache_sinfo_flush,
     (H5AC_dest_func_t)H5FS_cache_sinfo_dest,
     (H5AC_clear_func_t)H5FS_cache_sinfo_clear,
-    (H5AC_notify_func_t)NULL,
     (H5AC_size_func_t)H5FS_cache_sinfo_size,
 }};
 
@@ -151,6 +149,7 @@ H5FS_cache_hdr_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
 {
     H5FS_t		*fspace = NULL; /* Free space header info */
     H5FS_hdr_cache_ud_t *udata = (H5FS_hdr_cache_ud_t *)_udata; /* user data for callback */
+    size_t		size;           /* Header size */
     H5WB_t              *wb = NULL;     /* Wrapped buffer for header data */
     uint8_t             hdr_buf[H5FS_HDR_BUF_SIZE]; /* Buffer for header */
     uint8_t		*hdr;           /* Pointer to header buffer */
@@ -167,7 +166,7 @@ H5FS_cache_hdr_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
     HDassert(udata);
 
     /* Allocate a new free space manager */
-    if(NULL == (fspace = H5FS_new(udata->f, udata->nclasses, udata->classes, udata->cls_init_udata)))
+    if(NULL == (fspace = H5FS_new(udata->nclasses, udata->classes, udata->cls_init_udata)))
 	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
 
     /* Set free space manager's internal information */
@@ -177,12 +176,15 @@ H5FS_cache_hdr_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
     if(NULL == (wb = H5WB_wrap(hdr_buf, sizeof(hdr_buf))))
         HGOTO_ERROR(H5E_FSPACE, H5E_CANTINIT, NULL, "can't wrap buffer")
 
+    /* Compute the size of the free space header on disk */
+    size = (size_t)H5FS_HEADER_SIZE(udata->f);
+
     /* Get a pointer to a buffer that's large enough for header */
-    if(NULL == (hdr = (uint8_t *)H5WB_actual(wb, fspace->hdr_size)))
+    if(NULL == (hdr = (uint8_t *)H5WB_actual(wb, size)))
         HGOTO_ERROR(H5E_FSPACE, H5E_NOSPACE, NULL, "can't get actual buffer")
 
     /* Read header from disk */
-    if(H5F_block_read(f, H5FD_MEM_FSPACE_HDR, addr, fspace->hdr_size, dxpl_id, hdr) < 0)
+    if(H5F_block_read(f, H5FD_MEM_FSPACE_HDR, addr, size, dxpl_id, hdr) < 0)
 	HGOTO_ERROR(H5E_FSPACE, H5E_READERROR, NULL, "can't read free space header")
 
     p = hdr;
@@ -246,7 +248,7 @@ H5FS_cache_hdr_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
     /* Metadata checksum */
     UINT32DECODE(p, stored_chksum);
 
-    HDassert((size_t)(p - (const uint8_t *)hdr) == fspace->hdr_size);
+    HDassert((size_t)(p - (const uint8_t *)hdr) == size);
 
     /* Verify checksum */
     if(stored_chksum != computed_chksum)
@@ -324,26 +326,39 @@ H5FS_cache_hdr_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5F
                 if(H5FS_cache_sinfo_flush(f, dxpl_id, FALSE, fspace->sect_addr, fspace->sinfo, NULL) < 0)
                     HGOTO_ERROR(H5E_FSPACE, H5E_CANTFLUSH, FAIL, "unable to save free space section info to disk")
             } /* end if */
-
+            else {
+                /* Sanity check that section info doesn't have address */
+                HDassert(!H5F_addr_defined(fspace->sect_addr));
+            } /* end else */
             /* Mark section info clean */
             fspace->sinfo->dirty = FALSE;
         } /* end if */
     } /* end if */
-    else if(fspace->serial_sect_count > 0)
-	/* Sanity check that section info has address */
-	HDassert(H5F_addr_defined(fspace->sect_addr));
+    else {
+        /* Just sanity checks... */
+        if(fspace->serial_sect_count > 0)
+            /* Sanity check that section info has address */
+            HDassert(H5F_addr_defined(fspace->sect_addr));
+        else
+            /* Sanity check that section info doesn't have address */
+            HDassert(!H5F_addr_defined(fspace->sect_addr));
+    } /* end else */
 
     if(fspace->cache_info.is_dirty) {
         uint8_t	*hdr;                   /* Pointer to header buffer */
         uint8_t *p;                     /* Pointer into raw data buffer */
         uint32_t metadata_chksum;       /* Computed metadata checksum value */
+        size_t	size;                   /* Header size on disk */
 
         /* Wrap the local buffer for serialized header info */
         if(NULL == (wb = H5WB_wrap(hdr_buf, sizeof(hdr_buf))))
             HGOTO_ERROR(H5E_FSPACE, H5E_CANTINIT, FAIL, "can't wrap buffer")
 
+        /* Compute the size of the free space header on disk */
+        size = (size_t)H5FS_HEADER_SIZE(f);
+
         /* Get a pointer to a buffer that's large enough for header */
-        if(NULL == (hdr = (uint8_t *)H5WB_actual(wb, fspace->hdr_size)))
+        if(NULL == (hdr = (uint8_t *)H5WB_actual(wb, size)))
             HGOTO_ERROR(H5E_FSPACE, H5E_NOSPACE, FAIL, "can't get actual buffer")
 
         /* Get temporary pointer to header */
@@ -402,8 +417,8 @@ H5FS_cache_hdr_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5F
         UINT32ENCODE(p, metadata_chksum);
 
 	/* Write the free space header. */
-        HDassert((size_t)(p - hdr) == fspace->hdr_size);
-	if(H5F_block_write(f, H5FD_MEM_FSPACE_HDR, addr, fspace->hdr_size, dxpl_id, hdr) < 0)
+        HDassert((size_t)(p - hdr) == size);
+	if(H5F_block_write(f, H5FD_MEM_FSPACE_HDR, addr, size, dxpl_id, hdr) < 0)
 	    HGOTO_ERROR(H5E_FSPACE, H5E_CANTFLUSH, FAIL, "unable to save free space header to disk")
 
 	fspace->cache_info.is_dirty = FALSE;
@@ -458,7 +473,7 @@ H5FS_cache_hdr_dest(H5F_t *f, H5FS_t *fspace)
 
         /* Release the space on disk */
         /* (XXX: Nasty usage of internal DXPL value! -QAK) */
-        if(H5MF_xfree(f, H5FD_MEM_FSPACE_HDR, H5AC_dxpl_id, fspace->cache_info.addr, (hsize_t)fspace->hdr_size) < 0)
+        if(H5MF_xfree(f, H5FD_MEM_FSPACE_HDR, H5AC_dxpl_id, fspace->cache_info.addr, (hsize_t)H5FS_HEADER_SIZE(f)) < 0)
             HGOTO_ERROR(H5E_FSPACE, H5E_CANTFREE, FAIL, "unable to free free space header")
     } /* end if */
 
@@ -524,7 +539,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FS_cache_hdr_size(const H5F_t UNUSED *f, const H5FS_t *fspace, size_t *size_ptr)
+H5FS_cache_hdr_size(const H5F_t *f, const H5FS_t UNUSED *fspace, size_t *size_ptr)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5FS_cache_hdr_size)
 
@@ -534,7 +549,7 @@ H5FS_cache_hdr_size(const H5F_t UNUSED *f, const H5FS_t *fspace, size_t *size_pt
     HDassert(size_ptr);
 
     /* Set size value */
-    *size_ptr = fspace->hdr_size;
+    *size_ptr = (size_t)H5FS_HEADER_SIZE(f);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* H5FS_cache_hdr_size() */

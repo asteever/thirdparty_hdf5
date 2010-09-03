@@ -31,7 +31,7 @@
 #define H5O_NMESGS	8 		/*initial number of messages	     */
 #define H5O_NCHUNKS	2		/*initial number of chunks	     */
 #define H5O_MIN_SIZE	22		/* Min. obj header data size (must be big enough for a message prefix and a continuation message) */
-#define H5O_MSG_TYPES   25              /* # of types of messages            */
+#define H5O_MSG_TYPES   24              /* # of types of messages            */
 #define H5O_MAX_CRT_ORDER_IDX 65535     /* Max. creation order index value   */
 
 /* Versions of object header structure */
@@ -374,7 +374,7 @@ typedef struct H5O_chk_cache_ud_t {
     hbool_t decoding;                   /* Whether the object header is being decoded */
     H5O_t *oh;                          /* Object header for this chunk */
     unsigned chunkno;                   /* Index of chunk being brought in (for re-loads) */
-    size_t size;                        /* Size of chunk in the file */
+    size_t chunk_size;			/* Chunk size */
     H5O_common_cache_ud_t common;       /* Common object header cache callback info */
 } H5O_chk_cache_ud_t;
 
@@ -499,10 +499,7 @@ H5_DLLVAR const H5O_msg_class_t H5O_MSG_AINFO[1];
 /* Reference Count Message. (0x0016) */
 H5_DLLVAR const H5O_msg_class_t H5O_MSG_REFCOUNT[1];
 
-/* Free-space Manager Info message. (0x0017) */
-H5_DLLVAR const H5O_msg_class_t H5O_MSG_FSINFO[1];
-
-/* Placeholder for unknown message. (0x0018) */
+/* Placeholder for unknown message. (0x0017) */
 H5_DLLVAR const H5O_msg_class_t H5O_MSG_UNKNOWN[1];
 
 
@@ -556,9 +553,8 @@ H5_DLL herr_t H5O_chunk_add(H5F_t *f, hid_t dxpl_id, H5O_t *oh, unsigned idx);
 H5_DLL H5O_chunk_proxy_t *H5O_chunk_protect(H5F_t *f, hid_t dxpl_id, H5O_t *oh,
     unsigned idx);
 H5_DLL herr_t H5O_chunk_unprotect(H5F_t *f, hid_t dxpl_id,
-    H5O_chunk_proxy_t *chk_proxy, hbool_t chk_dirtied);
+    H5O_chunk_proxy_t *chk_proxy, unsigned chk_flags);
 H5_DLL herr_t H5O_chunk_update_idx(H5F_t *f, hid_t dxpl_id, H5O_t *oh, unsigned idx);
-H5_DLL herr_t H5O_chunk_resize(H5O_t *oh, H5O_chunk_proxy_t *chk_proxy);
 H5_DLL herr_t H5O_chunk_delete(H5F_t *f, hid_t dxpl_id, H5O_t *oh, unsigned idx);
 
 /* Collect storage info for btree and heap */

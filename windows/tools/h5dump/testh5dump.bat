@@ -33,6 +33,8 @@ call :detect_filter fletcher32
 call :detect_filter nbit
 call :detect_filter scaleoffset
 
+call :detect_packedbits
+
 rem The tool name
 set dumper=h5dump%2
 rem The path of the tool library
@@ -291,6 +293,16 @@ rem --SJW 9/4/07
     
     exit /b
 
+:detect_packedbits
+    findstr /b /i /c:"#define H5_HAVE_H5DUMP_PACKED_BITS" %h5pubconf% > nul
+    if %errorlevel% equ 0 (
+        set Have_Packed_Bits=yes
+    ) else (
+        set Have_Packed_Bits=no
+    )
+    
+    exit /b
+
 
 rem ############################################################################
 rem ############################################################################
@@ -406,14 +418,19 @@ rem ############################################################################
     call :tooltest tall-4s.ddl --dataset=/g1/g1.1/dset1.1.1 --start=1,1 --stride=2,3 --count=3,2 --block=1,1 tall.h5
     call :tooltest tall-5s.ddl -d "/g1/g1.1/dset1.1.2[0;2;10;]" tall.h5
     call :tooltest tdset-3s.ddl -d "/dset1[1,1;;;]" tdset.h5
-
+    rem block
+    rem call :tooltest tdset2-1s.ddl -d "/dset1[;3,2;4,4;1,4]" tdset2.h5
 
     rem test printing characters in ASCII instead of decimal
     call :tooltest tchar1.ddl -r tchar.h5
 
     rem test failure handling
     rem Missing file name
-    call :tooltest tnofilename.ddl 
+	if "%Have_Packed_Bits%"=="yes" (
+		call :tooltest tnofilename-with-packed-bits.ddl 
+	) else (
+		call :tooltest tnofilename.ddl 
+	)
 
     rem rev. 2004
 
@@ -560,25 +577,25 @@ rem ############################################################################
     call :tooltest1   tbin1.ddl -d integer -o out1.bin -b LE tbinary.h5
 
     rem NATIVE default. the NATIVE test can be validated with h5import/h5diff
-    call :tooltest1   tbin1.ddl -d integer -o out1.bin -b MEMORY tbinary.h5
+    call :tooltest1   tbin1.ddl -d integer -o out1.bin  -b     tbinary.h5
     call :importtest out1.bin -c out3.h5import -o out1.h5
     call :difftest tbinary.h5 out1.h5 /integer /integer
-    
-    call :tooltest1 tbin2.ddl -b BE -d float -o out2.bin tbinary.h5
-    
+
+    call :tooltest1   tbin2.ddl -b BE -d float  -o out2.bin      tbinary.h5
+
     rem the NATIVE test can be validated with h5import/h5diff
-    call :tooltest1 tbin3.ddl -d integer -o out3.bin -b NATIVE tbinary.h5
+    call :tooltest1   tbin3.ddl -d integer -o out3.bin -b NATIVE tbinary.h5
     call :importtest out3.bin -c out3.h5import -o out3.h5
     call :difftest tbinary.h5 out3.h5 /integer /integer
 
-    call :tooltest1   tbin4.ddl -d double  -b FILE -o out4.bin    tbinary.h5
+    call :tooltest1   tbin4.ddl -d double  -o out4.bin -b FILE   tbinary.h5
        
     rem Clean up binary output files
     if not defined hdf5_nocleanup (
         for /l %%a in (1,1,4) do del /f %testdir%\out%%a.bin
         del /f %testdir%\out3.h5
     )
-
+    
     rem test for dataset region references 
     call :tooltest tdatareg.ddl tdatareg.h5
     call :tooltest tdataregR.ddl -R tdatareg.h5
@@ -603,12 +620,50 @@ rem ############################################################################
     rem Note: Make sure to use PERCENT rather than "%", because Windows needs
     rem to handle it specially.  --SJW 5/12/08
     call :tooltest tfpformat.ddl -m PERCENT.7f tfpformat.h5
-
+    
     rem tests for traversal of external links
     call :tooltest textlinksrc.ddl textlinksrc.h5
     call :tooltest textlinkfar.ddl textlinkfar.h5
     
-    
+    rem tests for traversal of external links
+    call :tooltest textlinksrc.ddl textlinksrc.h5
+    call :tooltest textlinkfar.ddl textlinkfar.h5
+
+	if "%Have_Packed_Bits%"=="yes" (
+		rem test for dataset packed bits 
+		rem Set up xCMD to test or skip.
+		rem Limits:
+		rem Maximum number of packed bits is 8 (for now).
+		rem Maximum integer size is 8 (for now).
+		rem Maximun Offset is 7 (Maximum size - 1).
+		rem Maximum Offset+Length is 8 (Maximum size).
+		rem Tests:
+		rem Normal operation on both signed and unsigned int datasets.
+		rem Their rawdata output should be the same.
+		call :tooltest tpbitsSigned.ddl -d /DS08BITS -M 0,2,2,6 packedbits.h5
+		call :tooltest tpbitsUnsigned.ddl -d /DU08BITS -M 0,2,2,6 packedbits.h5
+		rem Overlapped packed bits.
+		call :tooltest tpbitsOverlapped.ddl -d /DS08BITS -M 0,1,1,1,2,1,0,3 packedbits.h5
+		rem Maximum number of packed bits.
+		call :tooltest tpbitsMax.ddl -d /DS08BITS -M 0,1,1,1,2,1,3,1,4,1,5,1,6,1,7,1 packedbits.h5
+		rem Compound type.
+		call :tooltest tpbitsCompound.ddl -d /dset1 -M 0,1,1,1 tcompound.h5
+		rem Array type.
+		call :tooltest tpbitsArray.ddl -d /Dataset1 -M 0,1,1,1 tarray1.h5
+		rem Test Error handling.
+		rem Too many packed bits requested. Max is 8 for now.
+		call :tooltest tpbitsMaxExceeded.ddl -d /DS08BITS -M 0,1,0,1,1,1,2,1,3,1,4,1,5,1,6,1,7,1 packedbits.h5
+		rem Offset too large. Max is 7 (8-1) for now.
+		call :tooltest tpbitsOffsetExceeded.ddl -d /DS08BITS -M 8,1 packedbits.h5
+		rem Bad offset, must not be negative.
+		call :tooltest tpbitsOffsetNegative.ddl -d /DS08BITS -M -1,1 packedbits.h5
+		rem Bad length, must not be positive.
+		call :tooltest tpbitsLengthPositive.ddl -d /DS08BITS -M 4,0 packedbits.h5
+		rem Offset+Length is too large. Max is 8 for now.
+		call :tooltest tpbitsLengthExceeded.ddl -d /DS08BITS -M 2,7 packedbits.h5
+		rem Incomplete pair of packed bits request.
+		call :tooltest tpbitsIncomplete.ddl -d /DS08BITS -M 0,2,2,1,0,2,2, packedbits.h5
+	)
     
     if %nerrors% equ 0 (
         echo.All %dumper% tests passed.

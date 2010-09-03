@@ -707,29 +707,34 @@ error:
  *
  *-------------------------------------------------------------------------
  */
-static const char*
-MapIdToName(hid_t refobj_id, trav_table_t *travt)
+
+static const char* MapIdToName(hid_t refobj_id,
+                               trav_table_t *travt)
 {
-    unsigned int u;
+    unsigned int i;
     const char* ret = NULL;
+    H5O_info_t   ref_oinfo;     /* Stat for the refobj id */
 
     /* linear search */
-    for(u = 0; u < travt->nobjs; u++) {
-        if(travt->objs[u].type == H5O_TYPE_DATASET || 
-                travt->objs[u].type == H5O_TYPE_GROUP ||
-                travt->objs[u].type == H5O_TYPE_NAMED_DATATYPE) {
+    for(i = 0; i < travt->nobjs; i++)
+    {
+        if(travt->objs[i].type == H5O_TYPE_DATASET || 
+           travt->objs[i].type == H5O_TYPE_GROUP ||
+           travt->objs[i].type == H5O_TYPE_NAMED_DATATYPE)
+        {
             H5O_info_t   ref_oinfo;     /* Stat for the refobj id */
 
             /* obtain information to identify the referenced object uniquely */
             if(H5Oget_info(refobj_id, &ref_oinfo) < 0)
                 goto out;
 
-            if(ref_oinfo.addr == travt->objs[u].objno) {
-                ret = travt->objs[u].name;
+            if(ref_oinfo.addr == travt->objs[i].objno)
+            {
+                ret = travt->objs[i].name;
                 goto out;
-            } /* end if */
+            }
         }  /* end if */
-    } /* u */
+    } /* i */
 
 out:
     return ret;

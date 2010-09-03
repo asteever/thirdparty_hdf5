@@ -92,10 +92,24 @@ static int          display_fi        = FALSE; /*file index */
 static int          display_ai        = TRUE;  /*array index */
 static int          display_escape    = FALSE; /*escape non printable characters */
 static int          display_region    = FALSE; /*print region reference data */
+#ifdef H5_HAVE_H5DUMP_PACKED_BITS
+static int          display_packed_bits = FALSE; /*print 1-byte numbers as packed bits*/
+#endif
 
 /* sort parameters */
 static H5_index_t   sort_by           = H5_INDEX_NAME; /*sort_by [creation_order | name]  */
 static H5_iter_order_t sort_order     = H5_ITER_INC; /*sort_order [ascending | descending]   */
+
+#ifdef H5_HAVE_H5DUMP_PACKED_BITS
+#define PACKED_BITS_MAX         8	/* Maximum number of packed-bits to display */
+#define PACKED_BITS_SIZE_MAX    8	/* Maximum bits size of integer types of packed-bits */
+/* mask list for packed bits */
+static unsigned int packed_mask[PACKED_BITS_MAX];  /* packed bits are restricted to 1 byte */
+
+/* packed bits display parameters */
+static int packed_offset[PACKED_BITS_MAX];
+static int packed_length[PACKED_BITS_MAX];
+#endif
 
 /**
  **  Added for XML  **
@@ -116,6 +130,9 @@ static int              indent;              /*how far in to indent the line    
 /* internal functions */
 static hid_t    h5_fileaccess(void);
 static void     dump_oid(hid_t oid);
+#ifdef H5_HAVE_H5DUMP_PACKED_BITS
+static void     dump_packed_bits(unsigned int packed_index);
+#endif
 static void     print_enum(hid_t type);
 static int      xml_name_to_XID(const char *, char *, int , int );
 static void     init_prefix(char **prfx, size_t prfx_len);
@@ -386,7 +403,14 @@ struct handler_t {
  * parameters. The long-named ones can be partially spelled. When
  * adding more, make sure that they don't clash with each other.
  */
-static const char *s_opts = "hnpeyBHirVa:c:d:f:g:k:l:t:w:xD:uX:o:b*F:s:S:Aq:z:m:R";
+/* The following initialization makes use of C language cancatenating */
+/* "xxx" "yyy" into "xxxyyy". */
+static const char *s_opts = "hnpeyBHirVa:c:d:f:g:k:l:t:w:xD:uX:o:b*F:s:S:Aq:z:m:R"
+#ifdef H5_HAVE_H5DUMP_PACKED_BITS
+"M:"
+#endif
+;	/* end of *s_opt initialization */
+
 static struct long_options l_opts[] = {
     { "help", no_arg, 'h' },
     { "hel", no_arg, 'h' },
@@ -499,6 +523,9 @@ static struct long_options l_opts[] = {
     { "sort_order", require_arg, 'z' },
     { "format", require_arg, 'm' },
     { "region", no_arg, 'R' },
+#ifdef H5_HAVE_H5DUMP_PACKED_BITS
+    { "packed-bits", require_arg, 'M' },
+#endif
     { NULL, 0, '\0' }
 };
 
@@ -654,6 +681,16 @@ usage(const char *prog)
     fprintf(stdout, "     -m T, --format=T     Set the floating point output format\n");
     fprintf(stdout, "     -q Q, --sort_by=Q    Sort groups and attributes by index Q\n");
     fprintf(stdout, "     -z Z, --sort_order=Z Sort groups and attributes by order Z\n");
+#ifdef H5_HAVE_H5DUMP_PACKED_BITS
+    fprintf(stdout,
+	"     -M L, --packedbits=L Print packed bits as unsigned integers, using mask\n"
+	"                          format L for an integer dataset specified with\n"
+	"                          option -d. L is a list of offset,length values,\n"
+	"                          separated by commas. Offset is the beginning bit in\n"
+	"                          the data value and length is the number of bits of\n"
+	"                          the mask.\n"
+	);
+#endif
     fprintf(stdout, "     -R, --region         Print dataset pointed by region references\n");
     fprintf(stdout, "     -x, --xml            Output in XML using Schema\n");
     fprintf(stdout, "     -u, --use-dtd        Output in XML using DTD\n");
@@ -708,6 +745,12 @@ usage(const char *prog)
     fprintf(stdout, "        using a little-endian type\n");
     fprintf(stdout, "\n");
     fprintf(stdout, "      h5dump -d /dset -b LE -o out.bin quux.h5\n");
+#ifdef H5_HAVE_H5DUMP_PACKED_BITS
+    fprintf(stdout, "\n");
+    fprintf(stdout, "  4) Display two packed bits (bits 0-1 and bits 4-6) in the dataset /dset\n");
+    fprintf(stdout, "\n");
+    fprintf(stdout, "      h5dump -d /dset -M 0,1,4,3 quux.h5\n");
+#endif
     fprintf(stdout, "\n");
 }
 
@@ -879,7 +922,7 @@ print_datatype(hid_t type,unsigned in_group)
             else
                 printf("\"%s\"", obj->objname);
         } else {
-            error_msg("unknown committed type.\n");
+            error_msg(h5tools_getprogname(), "unknown committed type.\n");
             h5tools_setstatus(EXIT_FAILURE);
         }
     } else {
@@ -1399,7 +1442,7 @@ dump_attr_cb(hid_t oid, const char *attr_name, const H5A_info_t UNUSED *info, vo
 
     if((attr_id = H5Aopen(oid, attr_name, H5P_DEFAULT)) < 0) {
         indentation(indent + COL);
-        error_msg("unable to open attribute \"%s\"\n", attr_name);
+        error_msg(h5tools_getprogname(), "unable to open attribute \"%s\"\n", attr_name);
         indentation(indent);
         end_obj(dump_header_format->attributeend,
                 dump_header_format->attributeblockend);
@@ -1475,7 +1518,7 @@ dump_selected_attr(hid_t loc_id, const char *name)
     /* Open the object with the attribute */
     if((oid = H5Oopen(loc_id, obj_name, H5P_DEFAULT)) < 0) {
         indentation(COL);
-        error_msg("unable to open object \"%s\"\n", obj_name);
+        error_msg(h5tools_getprogname(), "unable to open object \"%s\"\n", obj_name);
         end_obj(dump_header_format->attributeend, dump_header_format->attributeblockend);
         h5tools_setstatus(EXIT_FAILURE);
         return FAIL;
@@ -1502,7 +1545,7 @@ dump_selected_attr(hid_t loc_id, const char *name)
         dump_header_format->attributeblockend);
     } else {
         indentation(COL);
-        error_msg("unable to open attribute \"%s\"\n", obj_name);
+        error_msg(h5tools_getprogname(), "unable to open attribute \"%s\"\n", obj_name);
         end_obj(dump_header_format->attributeend, dump_header_format->attributeblockend);
         h5tools_setstatus(EXIT_FAILURE);
     }
@@ -1557,7 +1600,7 @@ dump_all_cb(hid_t group, const char *name, const H5L_info_t *linfo, void UNUSED 
 
         /* Stat the object */
         if(H5Oget_info_by_name(group, name, &oinfo, H5P_DEFAULT) < 0) {
-            error_msg("unable to get object information for \"%s\"\n", name);
+            error_msg(h5tools_getprogname(), "unable to get object information for \"%s\"\n", name);
             h5tools_setstatus(EXIT_FAILURE);
             ret = FAIL;
             goto done;
@@ -1568,7 +1611,7 @@ dump_all_cb(hid_t group, const char *name, const H5L_info_t *linfo, void UNUSED 
         case H5O_TYPE_GROUP:
             if((obj = H5Gopen2(group, name, H5P_DEFAULT)) < 0)
             {
-                error_msg("unable to dump group \"%s\"\n", name);
+                error_msg(h5tools_getprogname(), "unable to dump group \"%s\"\n", name);
                 h5tools_setstatus(EXIT_FAILURE);
                 ret = FAIL;
             }
@@ -1607,7 +1650,8 @@ dump_all_cb(hid_t group, const char *name, const H5L_info_t *linfo, void UNUSED 
                             begin_obj(dump_header_format->datasetbegin, name,
                                       dump_header_format->datasetblockbegin);
                             indentation(indent + COL);
-                            error_msg("internal error (file %s:line %d)\n",
+                            error_msg(h5tools_getprogname(),
+                                      "internal error (file %s:line %d)\n",
                                       __FILE__, __LINE__);
                             indentation(indent);
                             end_obj(dump_header_format->datasetend,
@@ -1675,7 +1719,7 @@ dump_all_cb(hid_t group, const char *name, const H5L_info_t *linfo, void UNUSED 
                     dump_function_table->dump_dataset_function(obj, name, NULL);
                     H5Dclose(obj);
                 } else {
-                    error_msg("unable to dump dataset \"%s\"\n", name);
+                    error_msg(h5tools_getprogname(), "unable to dump dataset \"%s\"\n", name);
                     h5tools_setstatus(EXIT_FAILURE);
                     ret = FAIL;
                 }
@@ -1683,7 +1727,7 @@ dump_all_cb(hid_t group, const char *name, const H5L_info_t *linfo, void UNUSED 
 
             case H5O_TYPE_NAMED_DATATYPE:
                 if((obj = H5Topen2(group, name, H5P_DEFAULT)) < 0) {
-                    error_msg("unable to dump datatype \"%s\"\n", name);
+                    error_msg(h5tools_getprogname(), "unable to dump datatype \"%s\"\n", name);
                     h5tools_setstatus(EXIT_FAILURE);
                     ret = FAIL;
                 } else {
@@ -1693,7 +1737,7 @@ dump_all_cb(hid_t group, const char *name, const H5L_info_t *linfo, void UNUSED 
                 break;
 
             default:
-                error_msg("unknown object \"%s\"\n", name);
+                error_msg(h5tools_getprogname(), "unknown object \"%s\"\n", name);
                 h5tools_setstatus(EXIT_FAILURE);
                 ret = FAIL;
         }
@@ -1714,7 +1758,7 @@ dump_all_cb(hid_t group, const char *name, const H5L_info_t *linfo, void UNUSED 
                 }
 
                 if(H5Lget_val(group, name, targbuf, linfo->u.val_size, H5P_DEFAULT) < 0) {
-                    error_msg("unable to get link value\n");
+                    error_msg(h5tools_getprogname(), "unable to get link value\n");
                     h5tools_setstatus(EXIT_FAILURE);
                     ret = FAIL;
                 } else {
@@ -1805,7 +1849,7 @@ dump_all_cb(hid_t group, const char *name, const H5L_info_t *linfo, void UNUSED 
                     begin_obj(dump_header_format->extlinkbegin, name, dump_header_format->extlinkblockbegin);
 
                 if(H5Lget_val(group, name, targbuf, linfo->u.val_size, H5P_DEFAULT) < 0) {
-                    error_msg("unable to get external link value\n");
+                    error_msg(h5tools_getprogname(), "unable to get external link value\n");
                     h5tools_setstatus(EXIT_FAILURE);
                     ret = FAIL;
                 } /* end if */
@@ -1814,7 +1858,7 @@ dump_all_cb(hid_t group, const char *name, const H5L_info_t *linfo, void UNUSED 
                     const char *targname;
 
                     if(H5Lunpack_elink_val(targbuf, linfo->u.val_size, NULL, &filename, &targname) < 0) {
-                        error_msg("unable to unpack external link value\n");
+                        error_msg(h5tools_getprogname(), "unable to unpack external link value\n");
                         h5tools_setstatus(EXIT_FAILURE);
                         ret = FAIL;
                     } /* end if */
@@ -1947,19 +1991,19 @@ dump_named_datatype(hid_t tid, const char *name)
 
     if ((tcpl_id = H5Tget_create_plist(tid)) < 0)
     {
-        error_msg("error in getting creation property list ID\n");
+        error_msg(h5tools_getprogname(), "error in getting creation property list ID\n");
         h5tools_setstatus(EXIT_FAILURE);
     }
 
     /* query the creation properties for attributes */
     if (H5Pget_attr_creation_order(tcpl_id, &attr_crt_order_flags) < 0)
     {
-        error_msg("error in getting creation properties\n");
+        error_msg(h5tools_getprogname(), "error in getting creation properties\n");
         h5tools_setstatus(EXIT_FAILURE);
     }
 
     if(H5Pclose(tcpl_id) < 0) {
-        error_msg("error in closing creation property list ID\n");
+        error_msg(h5tools_getprogname(), "error in closing creation property list ID\n");
         h5tools_setstatus(EXIT_FAILURE);
     }
 
@@ -1979,7 +2023,7 @@ dump_named_datatype(hid_t tid, const char *name)
         found_obj = search_obj(type_table, oinfo.addr);
 
         if (found_obj == NULL) {
-            error_msg("internal error (file %s:line %d)\n",
+            error_msg(h5tools_getprogname(), "internal error (file %s:line %d)\n",
                 __FILE__, __LINE__);
             h5tools_setstatus(EXIT_FAILURE);
             goto done;
@@ -2004,13 +2048,13 @@ dump_named_datatype(hid_t tid, const char *name)
 
     if( (sort_by == H5_INDEX_CRT_ORDER) && (attr_crt_order_flags & H5P_CRT_ORDER_TRACKED)) {
         if(H5Aiterate2(tid, sort_by, sort_order, NULL, dump_attr_cb, NULL) < 0) {
-            error_msg("error getting attribute information\n");
+            error_msg(h5tools_getprogname(), "error getting attribute information\n");
             h5tools_setstatus(EXIT_FAILURE);
         } /* end if */
     } /* end if */
     else {
         if(H5Aiterate2(tid, H5_INDEX_NAME, sort_order, NULL, dump_attr_cb, NULL) < 0) {
-            error_msg("error getting attribute information\n");
+            error_msg(h5tools_getprogname(), "error getting attribute information\n");
             h5tools_setstatus(EXIT_FAILURE);
         } /* end if */
     } /* end else */
@@ -2053,26 +2097,26 @@ dump_group(hid_t gid, const char *name)
 
     if ((gcpl_id = H5Gget_create_plist(gid)) < 0)
     {
-        error_msg("error in getting group creation property list ID\n");
+        error_msg(h5tools_getprogname(), "error in getting group creation property list ID\n");
         h5tools_setstatus(EXIT_FAILURE);
     }
 
     /* query the group creation properties for attributes */
     if (H5Pget_attr_creation_order(gcpl_id, &attr_crt_order_flags) < 0)
     {
-        error_msg("error in getting group creation properties\n");
+        error_msg(h5tools_getprogname(), "error in getting group creation properties\n");
         h5tools_setstatus(EXIT_FAILURE);
     }
 
     /* query the group creation properties */
     if(H5Pget_link_creation_order(gcpl_id, &crt_order_flags) < 0)
     {
-        error_msg("error in getting group creation properties\n");
+        error_msg(h5tools_getprogname(), "error in getting group creation properties\n");
         h5tools_setstatus(EXIT_FAILURE);
     }
 
     if(H5Pclose(gcpl_id) < 0) {
-        error_msg("error in closing group creation property list ID\n");
+        error_msg(h5tools_getprogname(), "error in closing group creation property list ID\n");
         h5tools_setstatus(EXIT_FAILURE);
     }
 
@@ -2115,7 +2159,8 @@ dump_group(hid_t gid, const char *name)
 
         if (found_obj == NULL) {
             indentation(indent);
-            error_msg("internal error (file %s:line %d)\n", __FILE__, __LINE__);
+            error_msg(h5tools_getprogname(), "internal error (file %s:line %d)\n",
+                __FILE__, __LINE__);
             h5tools_setstatus(EXIT_FAILURE);
         }
         else if (found_obj->displayed) {
@@ -2129,13 +2174,13 @@ dump_group(hid_t gid, const char *name)
 
             if((sort_by == H5_INDEX_CRT_ORDER) && (attr_crt_order_flags & H5P_CRT_ORDER_TRACKED)) {
                 if(H5Aiterate2(gid, sort_by, sort_order, NULL, dump_attr_cb, NULL) < 0) {
-                    error_msg("error getting attribute information\n");
+                    error_msg(h5tools_getprogname(), "error getting attribute information\n");
                     h5tools_setstatus(EXIT_FAILURE);
                 } /* end if */
             } /* end if */
             else {
                 if(H5Aiterate2(gid, H5_INDEX_NAME, sort_order, NULL, dump_attr_cb, NULL) < 0) {
-                    error_msg("error getting attribute information\n");
+                    error_msg(h5tools_getprogname(), "error getting attribute information\n");
                     h5tools_setstatus(EXIT_FAILURE);
                 } /* end if */
             } /* end else */
@@ -2160,13 +2205,13 @@ dump_group(hid_t gid, const char *name)
 
         if((sort_by == H5_INDEX_CRT_ORDER) && (attr_crt_order_flags & H5P_CRT_ORDER_TRACKED)) {
             if(H5Aiterate2(gid, sort_by, sort_order, NULL, dump_attr_cb, NULL) < 0) {
-                error_msg("error getting attribute information\n");
+                error_msg(h5tools_getprogname(), "error getting attribute information\n");
                 h5tools_setstatus(EXIT_FAILURE);
             } /* end if */
         } /* end if */
         else {
             if(H5Aiterate2(gid, H5_INDEX_NAME, sort_order, NULL, dump_attr_cb, NULL) < 0) {
-                error_msg("error getting attribute information\n");
+                error_msg(h5tools_getprogname(), "error getting attribute information\n");
                 h5tools_setstatus(EXIT_FAILURE);
             } /* end if */
         } /* end else */
@@ -2211,17 +2256,16 @@ dump_dataset(hid_t did, const char *name, struct subset_t *sset)
     unsigned    attr_crt_order_flags;
     hid_t       dcpl_id;  /* dataset creation property list ID */
 
-
     if ((dcpl_id = H5Dget_create_plist(did)) < 0)
     {
-        error_msg("error in getting creation property list ID\n");
+        error_msg(h5tools_getprogname(), "error in getting creation property list ID\n");
         h5tools_setstatus(EXIT_FAILURE);
     }
 
     /* query the creation properties for attributes */
     if (H5Pget_attr_creation_order(dcpl_id, &attr_crt_order_flags) < 0)
     {
-        error_msg("error in getting creation properties\n");
+        error_msg(h5tools_getprogname(), "error in getting creation properties\n");
         h5tools_setstatus(EXIT_FAILURE);
     }
 
@@ -2242,7 +2286,20 @@ dump_dataset(hid_t did, const char *name, struct subset_t *sset)
     if(display_dcpl)
         dump_dcpl(dcpl_id, type, did);
 
-    if(display_data)
+    if(display_data) {
+#ifdef H5_HAVE_H5DUMP_PACKED_BITS
+	int	data_loop = 1;
+	int	i;
+        if(display_packed_bits)
+            data_loop = packed_bits_num;
+        for(i=0;i<data_loop;i++) {
+        if(display_packed_bits) {
+            dump_packed_bits(i);
+            packed_data_mask = packed_mask[i];
+            packed_data_offset = packed_offset[i];
+        }
+#endif
+
         switch(H5Tget_class(type)) {
             case H5T_TIME:
                 indentation(indent + COL);
@@ -2265,6 +2322,10 @@ dump_dataset(hid_t did, const char *name, struct subset_t *sset)
             default:
                 break;
         } /* end switch */
+#ifdef H5_HAVE_H5DUMP_PACKED_BITS
+        }
+#endif
+    }
 
     indent += COL;
 
@@ -2276,13 +2337,13 @@ dump_dataset(hid_t did, const char *name, struct subset_t *sset)
 
         if( (sort_by == H5_INDEX_CRT_ORDER) && (attr_crt_order_flags & H5P_CRT_ORDER_TRACKED)) {
             if(H5Aiterate2(did, sort_by, sort_order, NULL, dump_attr_cb, NULL) < 0) {
-                error_msg("error getting attribute information\n");
+                error_msg(h5tools_getprogname(), "error getting attribute information\n");
                 h5tools_setstatus(EXIT_FAILURE);
             } /* end if */
         } /* end if */
         else {
             if(H5Aiterate2(did, H5_INDEX_NAME, sort_order, NULL, dump_attr_cb, NULL) < 0) {
-                error_msg("error getting attribute information\n");
+                error_msg(h5tools_getprogname(), "error getting attribute information\n");
                 h5tools_setstatus(EXIT_FAILURE);
             } /* end if */
         } /* end else */
@@ -2352,14 +2413,14 @@ dump_subsetting_header(struct subset_t *sset, int dims)
     indentation(indent);
     printf("%s %s ", dump_header_format->startbegin,
            dump_header_format->startblockbegin);
-    dump_dims(sset->start.data, dims);
+    dump_dims((hsize_t *)sset->start, dims);
     printf("%s %s\n", dump_header_format->startend,
            dump_header_format->startblockend);
 
     indentation(indent);
     printf("%s %s ", dump_header_format->stridebegin,
            dump_header_format->strideblockbegin);
-    dump_dims(sset->stride.data, dims);
+    dump_dims(sset->stride, dims);
     printf("%s %s\n", dump_header_format->strideend,
            dump_header_format->strideblockend);
 
@@ -2367,8 +2428,8 @@ dump_subsetting_header(struct subset_t *sset, int dims)
     printf("%s %s ", dump_header_format->countbegin,
            dump_header_format->countblockbegin);
 
-    if(sset->count.data)
-        dump_dims(sset->count.data, dims);
+    if (sset->count)
+        dump_dims(sset->count, dims);
     else
         printf("DEFAULT");
 
@@ -2379,8 +2440,8 @@ dump_subsetting_header(struct subset_t *sset, int dims)
     printf("%s %s ", dump_header_format->blockbegin,
            dump_header_format->blockblockbegin);
 
-    if(sset->block.data)
-        dump_dims(sset->block.data, dims);
+    if (sset->block)
+        dump_dims(sset->block, dims);
     else
         printf("DEFAULT");
 
@@ -2594,7 +2655,7 @@ dump_data(hid_t obj_id, int obj_data, struct subset_t *sset, int display_index)
 
     if (status == FAIL) {
         indentation(indent + COL);
-        error_msg("unable to print data\n");
+        error_msg(h5tools_getprogname(), "unable to print data\n");
         h5tools_setstatus(EXIT_FAILURE);
     }
 
@@ -2629,6 +2690,24 @@ dump_oid(hid_t oid)
     indentation(indent + COL);
     printf("%s %s %d %s\n", OBJID, BEGIN, oid, END);
 }
+
+#ifdef H5_HAVE_H5DUMP_PACKED_BITS
+/*-------------------------------------------------------------------------
+ * Function:    dump_packed_bits
+ *
+ * Purpose:     Prints the packed bits offset and length
+ *
+ * Return:      void
+ *
+ *-------------------------------------------------------------------------
+ */
+static void
+dump_packed_bits(unsigned int packed_index)
+{
+    indentation(indent + COL);
+    printf("%s %s=%d %s=%d\n", PACKED_BITS, PACKED_OFFSET, packed_offset[packed_index], PACKED_LENGTH, packed_length[packed_index]);
+}
+#endif
 
 /*-------------------------------------------------------------------------
  * Function:    dump_comment
@@ -3098,22 +3177,22 @@ dump_fcpl(hid_t fid)
     hsize_t  userblock; /* userblock size retrieved from FCPL */
     size_t   off_size;  /* size of offsets in the file */
     size_t   len_size;  /* size of lengths in the file */
+    unsigned super;     /* superblock version # */
+    unsigned freelist;  /* free list version # */
+    unsigned stab;      /* symbol table entry version # */
+    unsigned shhdr;     /* shared object header version # */
     hid_t    fdriver;   /* file driver */
     char     dname[32]; /* buffer to store driver name */
     unsigned sym_lk;    /* symbol table B-tree leaf 'K' value */
     unsigned sym_ik;    /* symbol table B-tree internal 'K' value */
     unsigned istore_ik; /* indexed storage B-tree internal 'K' value */
-    H5F_file_space_type_t  fs_strategy;	/* file space strategy */
-    hsize_t  fs_threshold;		/* free-space section threshold */
-    H5F_info2_t finfo;	/* file information */
 
     fcpl=H5Fget_create_plist(fid);
-    H5Fget_info2(fid, &finfo);
+    H5Pget_version(fcpl, &super, &freelist, &stab, &shhdr);
     H5Pget_userblock(fcpl,&userblock);
     H5Pget_sizes(fcpl,&off_size,&len_size);
     H5Pget_sym_k(fcpl,&sym_ik,&sym_lk);
     H5Pget_istore_k(fcpl,&istore_ik);
-    H5Pget_file_space(fcpl, &fs_strategy, &fs_threshold);
     H5Pclose(fcpl);
     fapl=h5_fileaccess();
     fdriver=H5Pget_driver(fapl);
@@ -3125,13 +3204,13 @@ dump_fcpl(hid_t fid)
     */
     printf("%s %s\n",SUPER_BLOCK, BEGIN);
     indentation(indent + COL);
-    printf("%s %u\n","SUPERBLOCK_VERSION", finfo.super.version);
+    printf("%s %u\n","SUPERBLOCK_VERSION", super);
     indentation(indent + COL);
-    printf("%s %u\n","FREELIST_VERSION", finfo.free.version);
+    printf("%s %u\n","FREELIST_VERSION", freelist);
     indentation(indent + COL);
-    printf("%s %u\n","SYMBOLTABLE_VERSION", 0);  /* Retain this for backward compatibility, for now (QAK) */
+    printf("%s %u\n","SYMBOLTABLE_VERSION", stab);
     indentation(indent + COL);
-    printf("%s %u\n","OBJECTHEADER_VERSION", finfo.sohm.version);
+    printf("%s %u\n","OBJECTHEADER_VERSION", shhdr);
     indentation(indent + COL);
     HDfprintf(stdout,"%s %Hd\n","OFFSET_SIZE", (long long)off_size);
     indentation(indent + COL);
@@ -3172,21 +3251,6 @@ dump_fcpl(hid_t fid)
     printf("%s %s\n","FILE_DRIVER", dname);*/
     indentation(indent + COL);
     printf("%s %u\n","ISTORE_K", istore_ik);
-
-    indentation(indent + COL);
-    if(fs_strategy == H5F_FILE_SPACE_ALL_PERSIST)
-        printf("%s %s\n", "FILE_SPACE_STRATEGY", "H5F_FILE_SPACE_ALL_PERSIST");
-    else if(fs_strategy == H5F_FILE_SPACE_ALL)
-        printf("%s %s\n", "FILE_SPACE_STRATEGY", "H5F_FILE_SPACE_ALL");
-    else if(fs_strategy == H5F_FILE_SPACE_AGGR_VFD)
-        printf("%s %s\n", "FILE_SPACE_STRATEGY", "H5F_FILE_SPACE_AGGR_VFD");
-    else if(fs_strategy == H5F_FILE_SPACE_VFD)
-        printf("%s %s\n", "FILE_SPACE_STRATEGY", "H5F_FILE_SPACE_VFD");
-    else
-        printf("%s %s\n", "FILE_SPACE_STRATEGY", "Unknown strategy");
-    indentation(indent + COL);
-    HDfprintf(stdout, "%s %Hu\n","FREE_SPACE_THRESHOLD", fs_threshold);
-
     printf("%s\n",END);
 
     /*-------------------------------------------------------------------------
@@ -3416,22 +3480,25 @@ handle_attributes(hid_t fid, const char *attr, void UNUSED * data, int UNUSED pe
  *              semicolons (;). The lists themselves can be separated by
  *              either commas (,) or white spaces.
  *
- * Return:      <none>
+ * Return:      Success:    hsize_t array. NULL is a valid return type if
+ *                          there aren't any elements in the array.
  *
  * Programmer:  Bill Wendling
  *              Tuesday, 6. February 2001
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
-static void
-parse_hsize_list(const char *h_list, subset_d *d)
+static hsize_t *
+parse_hsize_list(const char *h_list)
 {
     hsize_t        *p_list;
     const char     *ptr;
     unsigned int    size_count = 0, i = 0, last_digit = 0;
 
     if (!h_list || !*h_list || *h_list == ';')
-        return;
+        return NULL;
 
     /* count how many integers do we have */
     for (ptr = h_list; ptr && *ptr && *ptr != ';' && *ptr != ']'; ptr++)
@@ -3447,10 +3514,10 @@ parse_hsize_list(const char *h_list, subset_d *d)
 
     if (size_count == 0)
         /* there aren't any integers to read */
-        return;
+        return NULL;
 
     /* allocate an array for the integers in the list */
-    p_list = (hsize_t *)calloc(size_count, sizeof(hsize_t));
+    p_list = calloc(size_count, sizeof(hsize_t));
 
     for (ptr = h_list; i < size_count && ptr && *ptr && *ptr != ';' && *ptr != ']'; ptr++)
         if(isdigit(*ptr)) {
@@ -3461,10 +3528,8 @@ parse_hsize_list(const char *h_list, subset_d *d)
                 /* scroll to end of integer */
                 ptr++;
         }
-    d->data = p_list;
-    d->len = size_count;
-    
-    return;
+
+    return p_list;
 }
 
 /*-------------------------------------------------------------------------
@@ -3496,8 +3561,8 @@ parse_subset_params(char *dset)
         if (brace > slash) {
             *brace++ = '\0';
 
-            s = (struct subset_t *)calloc(1, sizeof(struct subset_t));
-            parse_hsize_list(brace, &s->start);
+            s = calloc(1, sizeof(struct subset_t));
+            s->start = parse_hsize_list(brace);
 
             while (*brace && *brace != ';')
                 brace++;
@@ -3505,7 +3570,7 @@ parse_subset_params(char *dset)
             if (*brace)
                 brace++;
 
-            parse_hsize_list(brace, &s->stride);
+            s->stride = parse_hsize_list(brace);
 
             while (*brace && *brace != ';')
                 brace++;
@@ -3513,7 +3578,7 @@ parse_subset_params(char *dset)
             if (*brace)
                 brace++;
 
-            parse_hsize_list(brace, &s->count);
+            s->count = parse_hsize_list(brace);
 
             while (*brace && *brace != ';')
                 brace++;
@@ -3521,12 +3586,119 @@ parse_subset_params(char *dset)
             if (*brace)
                 brace++;
 
-            parse_hsize_list(brace, &s->block);
+            s->block = parse_hsize_list(brace);
         }
     }
 
     return s;
 }
+
+#ifdef H5_HAVE_H5DUMP_PACKED_BITS
+/*-------------------------------------------------------------------------
+ * Function:    parse_mask_list
+ *
+ * Purpose:     Parse a list of comma or space separated integers and fill
+ *              the packed_bits list and counter. The string being passed into this function
+ *              should be at the start of the list you want to parse. 
+ *
+ * Return:      Success:        SUCCEED
+ *
+ *              Failure:        FAIL
+ *
+ *
+ *-------------------------------------------------------------------------
+ */
+static int
+parse_mask_list(const char *h_list)
+{
+    const char     *ptr;
+    int             offset_value, length_value;
+
+    /* sanity check */
+    HDassert(h_list);
+
+    HDmemset(packed_mask,0,sizeof(packed_mask));
+    
+    packed_bits_num = 0;
+    /* scan in pair of offset,length separated by commas. */
+    ptr = h_list;
+    while (*ptr) {
+	/* scan for an offset which is an unsigned int */
+	if (!HDisdigit(*ptr)){
+	    error_msg(h5tools_getprogname(), "Bad mask list(%s)\n", h_list);
+	    return FAIL;
+	}
+	offset_value = HDatoi(ptr);
+	if (offset_value < 0 || offset_value >= PACKED_BITS_SIZE_MAX){
+	    error_msg(h5tools_getprogname(), "Packed Bit offset value(%d) must be between 0 and %d\n",
+		offset_value, PACKED_BITS_SIZE_MAX - 1);
+	    return FAIL;
+	}
+
+	/* skip to end of integer */
+	while (HDisdigit(*++ptr))
+	    ;
+	/* Look for the common separator */
+	if (*ptr++ != ',') {
+	    error_msg(h5tools_getprogname(), "Bad mask list(%s), missing expected comma separator.\n", h_list);
+	    return FAIL;
+	}
+
+	/* scan for a length which is a positive int */
+	if (!HDisdigit(*ptr)){
+	    error_msg(h5tools_getprogname(), "Bad mask list(%s)\n", h_list);
+	    return FAIL;
+	}
+	length_value = HDatoi(ptr);
+	if (length_value <= 0){
+	    error_msg(h5tools_getprogname(), "Packed Bit length value(%d) must be positive.\n",
+		length_value);
+	    return FAIL;
+	};
+	if ((offset_value + length_value) > PACKED_BITS_SIZE_MAX){
+	    error_msg(h5tools_getprogname(), "Packed Bit offset+length value(%d) too large. Max is %d\n",
+		offset_value+length_value, PACKED_BITS_SIZE_MAX);
+	    return FAIL;
+	};
+
+	/* skip to end of int */
+	while (HDisdigit(*++ptr))
+	    ;
+
+	/* store the offset,length pair */
+	if (packed_bits_num >= PACKED_BITS_MAX){
+	    /* too many requests */
+	    error_msg(h5tools_getprogname(), "Too many masks requested (max. %d). Mask list(%s)\n",
+		PACKED_BITS_MAX, h_list);
+	    return FAIL;
+	}
+	packed_offset[packed_bits_num] = offset_value;
+	packed_length[packed_bits_num] = length_value;
+	/* create the bit mask by left shift 1's by length, then negate it. */
+	/* After packed_mask is calculated, packed_length is not needed but  */
+	/* keep it for debug purpose. */
+	packed_mask[packed_bits_num] = ~(~0<<length_value);
+	packed_bits_num++;
+
+	/* skip a possible comma separator */
+	if (*ptr == ','){
+	    if (!(*++ptr)){
+		/* unexpected end of string */
+		error_msg(h5tools_getprogname(), "Bad mask list(%s), unexpected end of string.\n", h_list);
+		return FAIL;
+	    }
+	}
+    }
+    HDassert(packed_bits_num <= PACKED_BITS_MAX);
+    if (packed_bits_num == 0){
+	/* got no masks! */
+        error_msg(h5tools_getprogname(), "Bad mask list(%s)\n", h_list);
+        return FAIL;
+    }
+    return SUCCEED;
+}
+
+#endif
 
 /*-------------------------------------------------------------------------
  * Function:    handle_datasets
@@ -3564,7 +3736,7 @@ handle_datasets(hid_t fid, const char *dset, void *data, int pe, const char *dis
             begin_obj(dump_header_format->datasetbegin, real_name,
                 dump_header_format->datasetblockbegin);
             indentation(COL);
-            error_msg("unable to open dataset \"%s\"\n", real_name);
+            error_msg(h5tools_getprogname(), "unable to open dataset \"%s\"\n", real_name);
             end_obj(dump_header_format->datasetend,
                 dump_header_format->datasetblockend);
             h5tools_setstatus(EXIT_FAILURE);
@@ -3573,83 +3745,79 @@ handle_datasets(hid_t fid, const char *dset, void *data, int pe, const char *dis
     } /* end if */
 
     if(sset) {
-        unsigned int i;
-        hid_t sid = H5Dget_space(dsetid);
-        unsigned int ndims = H5Sget_simple_extent_ndims(sid);
-
-        H5Sclose(sid);
-
-        if(!sset->start.data || !sset->stride.data || !sset->count.data || !sset->block.data) {
+        if(!sset->start || !sset->stride || !sset->count || !sset->block) {
             /* they didn't specify a ``stride'' or ``block''. default to 1 in all
              * dimensions */
-            if(!sset->start.data) {
+            hid_t sid = H5Dget_space(dsetid);
+            unsigned int ndims = H5Sget_simple_extent_ndims(sid);
+
+            if(!sset->start)
                 /* default to (0, 0, ...) for the start coord */
-                sset->start.data = (hsize_t *)calloc(ndims, sizeof(hsize_t));
-                sset->start.len = ndims;
-            }
+                sset->start = calloc(ndims, sizeof(hsize_t));
 
-            if(!sset->stride.data) {
-                sset->stride.data = (hsize_t *)calloc(ndims, sizeof(hsize_t));
-                sset->stride.len = ndims;
+            if(!sset->stride) {
+                unsigned int i;
+
+                sset->stride = calloc(ndims, sizeof(hsize_t));
+
                 for (i = 0; i < ndims; i++)
-                    sset->stride.data[i] = 1;
+                    sset->stride[i] = 1;
             }
 
-            if(!sset->count.data) {
-                sset->count.data = (hsize_t *)calloc(ndims, sizeof(hsize_t));
-                sset->count.len = ndims;
+            if (!sset->count) {
+                unsigned int i;
+
+
+                sset->count = calloc(ndims, sizeof(hsize_t));
+
                 for (i = 0; i < ndims; i++)
-                    sset->count.data[i] = 1;
+                    sset->count[i] = 1;
             }
 
-            if(!sset->block.data) {
-                sset->block.data = (hsize_t *)calloc(ndims, sizeof(hsize_t));
-                sset->block.len = ndims;
+            if (!sset->block) {
+                unsigned int i;
+
+                sset->block = calloc(ndims, sizeof(hsize_t));
+
                 for (i = 0; i < ndims; i++)
-                    sset->block.data[i] = 1;
+                    sset->block[i] = 1;
             }
-        }
 
-        /*-------------------------------------------------------------------------
-         * check for dimension overflow
-         *-------------------------------------------------------------------------
-         */
-        if(sset->start.len > ndims) {
-            error_msg("number of start dims (%u) exceed dataset dims (%u)\n", sset->start.len, ndims);
-            h5tools_setstatus(EXIT_FAILURE);
-            return;
+            H5Sclose(sid);
         }
-        if(sset->stride.len > ndims) {
-            error_msg("number of stride dims (%u) exceed dataset dims (%u)\n", sset->stride.len, ndims);
-            h5tools_setstatus(EXIT_FAILURE);
-            return;
-        }
-        if(sset->count.len > ndims) {
-            error_msg("number of count dims (%u) exceed dataset dims (%u)\n", sset->count.len, ndims);
-            h5tools_setstatus(EXIT_FAILURE);
-            return;
-        }
-        if(sset->block.len > ndims) {
-            error_msg("number of block dims (%u) exceed dataset dims (%u)\n", sset->block.len, ndims);
-            h5tools_setstatus(EXIT_FAILURE);
-            return;
-        }
-        
-        /*-------------------------------------------------------------------------
-         * check for block overlap
-         *-------------------------------------------------------------------------
-         */
-        for(i = 0; i < ndims; i++) {
-            if(sset->count.data[i] > 1) {
-                if(sset->stride.data[i] < sset->block.data[i]) {
-                    error_msg("wrong subset selection; blocks overlap\n");
+    }
+
+
+   /*-------------------------------------------------------------------------
+    * check for block overlap
+    *-------------------------------------------------------------------------
+    */
+
+    if(sset)
+    {
+        hid_t sid = H5Dget_space(dsetid);
+        unsigned int ndims = H5Sget_simple_extent_ndims(sid);
+        unsigned int i;
+
+        for ( i = 0; i < ndims; i++)
+        {
+            if ( sset->count[i] > 1 )
+            {
+
+                if ( sset->stride[i] < sset->block[i] )
+                {
+                    error_msg(h5tools_getprogname(), "wrong subset selection; blocks overlap\n");
                     h5tools_setstatus(EXIT_FAILURE);
                     return;
-                } /* end if */
-            } /* end if */
-        } /* end for */
-    } /* end if */
 
+                }
+
+            }
+
+        }
+        H5Sclose(sid);
+
+    }
 
     H5Oget_info(dsetid, &oinfo);
     if(oinfo.rc > 1 || hit_elink) {
@@ -3715,7 +3883,7 @@ handle_groups(hid_t fid, const char *group, void UNUSED * data, int pe, const ch
         {
             begin_obj(dump_header_format->groupbegin, real_name, dump_header_format->groupblockbegin);
             indentation(COL);
-            error_msg("unable to open group \"%s\"\n", real_name);
+            error_msg(h5tools_getprogname(), "unable to open group \"%s\"\n", real_name);
             end_obj(dump_header_format->groupend, dump_header_format->groupblockend);
             h5tools_setstatus(EXIT_FAILURE);
         }
@@ -3727,7 +3895,7 @@ handle_groups(hid_t fid, const char *group, void UNUSED * data, int pe, const ch
         if(prefix_len <= new_len)
         {
             prefix_len = new_len;
-            prefix = (char *)HDrealloc(prefix, prefix_len);
+            prefix = HDrealloc(prefix, prefix_len);
         } /* end if */
 
         HDstrcpy(prefix, group);
@@ -3759,13 +3927,13 @@ handle_links(hid_t fid, const char *links, void UNUSED * data, int UNUSED pe, co
     H5L_info_t linfo;
 
     if(H5Lget_info(fid, links, &linfo, H5P_DEFAULT) < 0) {
-        error_msg("unable to get link info from \"%s\"\n", links);
+        error_msg(h5tools_getprogname(), "unable to get link info from \"%s\"\n", links);
         h5tools_setstatus(EXIT_FAILURE);
     } else if(linfo.type == H5L_TYPE_HARD) {
-        error_msg("\"%s\" is a hard link\n", links);
+        error_msg(h5tools_getprogname(), "\"%s\" is a hard link\n", links);
         h5tools_setstatus(EXIT_FAILURE);
     } else {
-        char *buf = (char *)HDmalloc(linfo.u.val_size);
+        char *buf = HDmalloc(linfo.u.val_size);
 
         switch(linfo.type) {
             case H5L_TYPE_SOFT:    /* Soft link */
@@ -3775,7 +3943,7 @@ handle_links(hid_t fid, const char *links, void UNUSED * data, int UNUSED pe, co
                 if(H5Lget_val(fid, links, buf, linfo.u.val_size, H5P_DEFAULT) >= 0)
                     printf("LINKTARGET \"%s\"\n", buf);
                 else {
-                    error_msg("h5dump error: unable to get link value for \"%s\"\n",
+                    error_msg(h5tools_getprogname(), "h5dump error: unable to get link value for \"%s\"\n",
                               links);
                     h5tools_setstatus(EXIT_FAILURE);
                 }
@@ -3801,11 +3969,11 @@ handle_links(hid_t fid, const char *links, void UNUSED * data, int UNUSED pe, co
                         indentation(COL);
                         printf("TARGETPATH \"%s\"\n", elink_path);
                     } else {
-                        error_msg("h5dump error: unable to unpack external link value for \"%s\"\n", links);
+                        error_msg(h5tools_getprogname(), "h5dump error: unable to unpack external link value for \"%s\"\n", links);
                         h5tools_setstatus(EXIT_FAILURE);
                     }
                 } else {
-                    error_msg("h5dump error: unable to get external link value for \"%s\"\n", links);
+                    error_msg(h5tools_getprogname(), "h5dump error: unable to get external link value for \"%s\"\n", links);
                     h5tools_setstatus(EXIT_FAILURE);
                 }
                 end_obj(dump_header_format->extlinkend,
@@ -3882,7 +4050,7 @@ handle_datatypes(hid_t fid, const char *type, void UNUSED * data, int pe, const 
                 begin_obj(dump_header_format->datatypebegin, real_name,
                     dump_header_format->datatypeblockbegin);
                 indentation(COL);
-                error_msg("unable to open datatype \"%s\"\n", real_name);
+                error_msg(h5tools_getprogname(), "unable to open datatype \"%s\"\n", real_name);
                 end_obj(dump_header_format->datatypeend,
                     dump_header_format->datatypeblockend);
                 h5tools_setstatus(EXIT_FAILURE);
@@ -3939,7 +4107,7 @@ parse_command_line(int argc, const char *argv[])
     }
 
     /* this will be plenty big enough to hold the info */
-    hand = (struct handler_t *)calloc((size_t)argc, sizeof(struct handler_t));
+    hand = calloc((size_t)argc, sizeof(struct handler_t));
 
     /* parse command line options */
     while ((opt = get_option(argc, argv, s_opts, l_opts)) != EOF) {
@@ -3988,7 +4156,7 @@ parse_start:
             leave(EXIT_SUCCESS);
             break;
         case 'w':
-            nCols = atoi(opt_arg);
+            nCols = HDatoi(opt_arg);
             last_was_dset = FALSE;
             break;
         case 'a':
@@ -4011,7 +4179,7 @@ parse_start:
                     hand[i].func = handle_datasets;
                     hand[i].obj = HDstrdup(opt_arg);
                     hand[i].subset_info = parse_subset_params(hand[i].obj);
-                    last_dset = &hand[i];
+                    last_dset = hand;
                     break;
                 }
 
@@ -4112,6 +4280,22 @@ parse_start:
             }
             break;
 
+#ifdef H5_HAVE_H5DUMP_PACKED_BITS
+        case 'M':
+            if (!last_was_dset) {
+                error_msg(h5tools_getprogname(),
+                          "option `-%c' can only be used after --dataset option\n",
+                          opt);
+                leave(EXIT_FAILURE);
+            }
+            if (parse_mask_list(opt_arg) != SUCCEED){
+		usage(h5tools_getprogname());
+                leave(EXIT_FAILURE);
+            }
+            display_packed_bits = TRUE;
+            break;
+#endif
+
         /** begin XML parameters **/
         case 'x':
             /* select XML output */
@@ -4164,7 +4348,8 @@ parse_start:
             struct subset_t *s;
 
             if (!last_was_dset) {
-                error_msg("option `-%c' can only be used after --dataset option\n",
+                error_msg(h5tools_getprogname(),
+                          "option `-%c' can only be used after --dataset option\n",
                           opt);
                 leave(EXIT_FAILURE);
             }
@@ -4176,7 +4361,7 @@ parse_start:
                  */
                 s = last_dset->subset_info;
             } else {
-                last_dset->subset_info = s = (struct subset_t *)calloc(1, sizeof(struct subset_t));
+                last_dset->subset_info = s = calloc(1, sizeof(struct subset_t));
             }
 
             /*
@@ -4192,10 +4377,10 @@ parse_start:
              */
             do {
                 switch ((char)opt) {
-                case 's': free(s->start.data); parse_hsize_list(opt_arg, &s->start); break;
-                case 'S': free(s->stride.data); parse_hsize_list(opt_arg, &s->stride); break;
-                case 'c': free(s->count.data); parse_hsize_list(opt_arg, &s->count); break;
-                case 'k': free(s->block.data); parse_hsize_list(opt_arg, &s->block); break;
+                case 's': free(s->start); s->start = parse_hsize_list(opt_arg); break;
+                case 'S': free(s->stride); s->stride = parse_hsize_list(opt_arg); break;
+                case 'c': free(s->count); s->count = parse_hsize_list(opt_arg); break;
+                case 'k': free(s->block); s->block = parse_hsize_list(opt_arg); break;
                 default: goto end_collect;
                 }
             } while ((opt = get_option(argc, argv, s_opts, l_opts)) != EOF);
@@ -4223,7 +4408,7 @@ end_collect:
 parse_end:
     /* check for file name to be processed */
     if (argc <= opt_ind) {
-        error_msg("missing file name\n");
+        error_msg(h5tools_getprogname(), "missing file name\n");
         usage(h5tools_getprogname());
         leave(EXIT_FAILURE);
     }
@@ -4256,10 +4441,10 @@ free_handler(struct handler_t *hand, int len)
         free(hand[i].obj);
 
         if (hand[i].subset_info) {
-            free(hand[i].subset_info->start.data);
-            free(hand[i].subset_info->stride.data);
-            free(hand[i].subset_info->count.data);
-            free(hand[i].subset_info->block.data);
+            free(hand[i].subset_info->start);
+            free(hand[i].subset_info->stride);
+            free(hand[i].subset_info->count);
+            free(hand[i].subset_info->block);
             free(hand[i].subset_info);
         }
     }
@@ -4333,42 +4518,42 @@ main(int argc, const char *argv[])
 
     if ( bin_output && outfname == NULL )
     {
-        error_msg("binary output requires a file name, use -o <filename>\n");
+        error_msg(h5tools_getprogname(), "binary output requires a file name, use -o <filename>\n");
         leave(EXIT_FAILURE);
     }
 
     /* Check for conflicting options */
     if (doxml) {
         if (!display_all) {
-            error_msg("option \"%s\" not available for XML\n",
+            error_msg(h5tools_getprogname(), "option \"%s\" not available for XML\n",
                     "to display selected objects");
             leave(EXIT_FAILURE);
         } else if (display_bb) {
-            error_msg("option \"%s\" not available for XML\n",
+            error_msg(h5tools_getprogname(), "option \"%s\" not available for XML\n",
                     "--boot-block");
             leave(EXIT_FAILURE);
         } else if (display_oid == 1) {
-            error_msg("option \"%s\" not available for XML\n",
+            error_msg(h5tools_getprogname(), "option \"%s\" not available for XML\n",
                     "--object-ids");
             leave(EXIT_FAILURE);
         } else if (display_char == TRUE) {
-            error_msg("option \"%s\" not available for XML\n",
+            error_msg(h5tools_getprogname(), "option \"%s\" not available for XML\n",
                     "--string");
             leave(EXIT_FAILURE);
         } else if (usingdasho) {
-            error_msg("option \"%s\" not available for XML\n",
+            error_msg(h5tools_getprogname(), "option \"%s\" not available for XML\n",
                     "--output");
             leave(EXIT_FAILURE);
         }
     } else {
         if (xml_dtd_uri) {
-            warn_msg("option \"%s\" only applies with XML: %s\n",
+            warn_msg(h5tools_getprogname(), "option \"%s\" only applies with XML: %s\n",
                      "--xml-dtd", xml_dtd_uri);
         }
     }
 
     if (argc <= opt_ind) {
-        error_msg("missing file name\n");
+        error_msg(h5tools_getprogname(), "missing file name\n");
         usage(h5tools_getprogname());
         leave(EXIT_FAILURE);
     }
@@ -4377,7 +4562,7 @@ main(int argc, const char *argv[])
     fid = h5tools_fopen(fname, H5F_ACC_RDONLY, H5P_DEFAULT, driver, NULL, 0);
 
     if (fid < 0) {
-        error_msg("unable to open file \"%s\"\n", fname);
+        error_msg(h5tools_getprogname(), "unable to open file \"%s\"\n", fname);
         leave(EXIT_FAILURE);
     }
 
@@ -4403,7 +4588,7 @@ main(int argc, const char *argv[])
             }
         } else {
             if (useschema && strcmp(xmlnsprefix,"")) {
-                error_msg("Cannot set Schema URL for a qualified namespace--use -X or -U option with -D \n");
+                error_msg(h5tools_getprogname(), "Cannot set Schema URL for a qualified namespace--use -X or -U option with -D \n");
                 leave(EXIT_FAILURE);
             }
         }
@@ -4412,14 +4597,14 @@ main(int argc, const char *argv[])
 
     /* Get object info for root group */
     if(H5Oget_info_by_name(fid, "/", &oi, H5P_DEFAULT) < 0) {
-        error_msg("internal error (file %s:line %d)\n", __FILE__, __LINE__);
+        error_msg(h5tools_getprogname(), "internal error (file %s:line %d)\n", __FILE__, __LINE__);
         h5tools_setstatus(EXIT_FAILURE);
         goto done;
     }
 
     /* Initialize object tables */
     if(table_list_add(fid, oi.fileno) < 0) {
-        error_msg("internal error (file %s:line %d)\n", __FILE__, __LINE__);
+        error_msg(h5tools_getprogname(), "internal error (file %s:line %d)\n", __FILE__, __LINE__);
         h5tools_setstatus(EXIT_FAILURE);
         goto done;
     }
@@ -4482,7 +4667,7 @@ main(int argc, const char *argv[])
     {
         if((gid = H5Gopen2(fid, "/", H5P_DEFAULT)) < 0)
         {
-            error_msg("unable to open root group\n");
+            error_msg(h5tools_getprogname(), "unable to open root group\n");
             h5tools_setstatus(EXIT_FAILURE);
         }
         else
@@ -4494,7 +4679,7 @@ main(int argc, const char *argv[])
 
         if(H5Gclose(gid) < 0)
         {
-            error_msg("unable to close root group\n");
+            error_msg(h5tools_getprogname(), "unable to close root group\n");
             h5tools_setstatus(EXIT_FAILURE);
         }
 
@@ -4504,7 +4689,7 @@ main(int argc, const char *argv[])
     {
         /* Note: this option is not supported for XML */
         if(doxml) {
-            error_msg("internal error (file %s:line %d)\n", __FILE__, __LINE__);
+            error_msg(h5tools_getprogname(), "internal error (file %s:line %d)\n", __FILE__, __LINE__);
             h5tools_setstatus(EXIT_FAILURE);
             goto done;
         } /* end if */
@@ -4588,8 +4773,8 @@ print_enum(hid_t type)
         dst_size = H5Tget_size(type);
 
     /* Get the names and raw values of all members */
-    name = (char **)calloc(nmembs, sizeof(char *));
-    value = (unsigned char *)calloc(nmembs, MAX(H5Tget_size(type), dst_size));
+    name = calloc(nmembs, sizeof(char *));
+    value = calloc(nmembs, MAX(H5Tget_size(type), dst_size));
 
     for (i = 0; i < nmembs; i++) {
     name[i] = H5Tget_member_name(type, i);
@@ -4749,7 +4934,7 @@ xml_escape_the_name(const char *str)
     return HDstrdup(str);
 
     cp = str;
-    rcp = ncp = (char *)HDmalloc(len + extra + 1);
+    rcp = ncp = HDmalloc(len + extra + 1);
 
     if (!ncp)
         return NULL;    /* ?? */
@@ -4838,7 +5023,7 @@ xml_escape_the_string(const char *str, int slen)
     }
 
     cp = str;
-    rcp = ncp = (char *)calloc((len + extra + 1), sizeof(char));
+    rcp = ncp = calloc((len + extra + 1), sizeof(char));
 
     if (ncp == NULL)
     return NULL;        /* ?? */
@@ -4930,7 +5115,7 @@ xml_print_datatype(hid_t type, unsigned in_group)
             /* This should be defined somewhere else */
             /* These 2 cases are handled the same right now, but
                probably will have something different eventually */
-            char * dtxid = (char *)malloc(100);
+            char * dtxid = malloc(100);
 
             xml_name_to_XID(found_obj->objname, dtxid, 100, 1);
             if (!found_obj->recorded) {
@@ -5290,7 +5475,7 @@ xml_dump_datatype(hid_t type)
         if(found_obj) {
             /* Shared datatype, must be entered as an object  */
             /* These 2 cases are the same now, but may change */
-            char * dtxid = (char *)malloc(100);
+            char * dtxid = malloc(100);
 
             xml_name_to_XID(found_obj->objname, dtxid, 100, 1);
             if (!found_obj->recorded) {
@@ -5428,12 +5613,6 @@ xml_dump_data(hid_t obj_id, int obj_data, struct subset_t UNUSED * sset, int UNU
     hsize_t                 size[64], nelmts = 1;
     int                     depth;
     int                     stdindent = COL;    /* should be 3 */
-
-    if (fp_format)
-    {
-        outputformat->fmt_double = fp_format;
-        outputformat->fmt_float = fp_format;
-    }
 
     if (nCols==0) {
         outputformat->line_ncols = 65535;
@@ -5669,14 +5848,14 @@ xml_dump_named_datatype(hid_t type, const char *name)
     char *t_prefix;
     char   *t_name;
 
-    tmp = (char *)HDmalloc(HDstrlen(prefix) + HDstrlen(name) + 2);
+    tmp = HDmalloc(HDstrlen(prefix) + HDstrlen(name) + 2);
     HDstrcpy(tmp, prefix);
     HDstrcat(tmp, "/");
     HDstrcat(tmp, name);
 
     indentation(indent);
-    dtxid = (char *)HDmalloc(100);
-    parentxid = (char *)HDmalloc(100);
+    dtxid = HDmalloc(100);
+    parentxid = HDmalloc(100);
     t_tmp = xml_escape_the_name(tmp);
     t_prefix = xml_escape_the_name(prefix);
     t_name = xml_escape_the_name(name);
@@ -5716,7 +5895,7 @@ xml_dump_named_datatype(hid_t type, const char *name)
 
             if (found_obj == NULL) {
                 indentation(indent);
-                    error_msg("internal error (file %s:line %d)\n",
+                    error_msg(h5tools_getprogname(), "internal error (file %s:line %d)\n",
                               __FILE__, __LINE__);
                 h5tools_setstatus(EXIT_FAILURE);
                 goto done;
@@ -5797,26 +5976,26 @@ xml_dump_group(hid_t gid, const char *name)
 
     if ((gcpl_id = H5Gget_create_plist(gid)) < 0)
     {
-        error_msg("error in getting group creation property list ID\n");
+        error_msg(h5tools_getprogname(), "error in getting group creation property list ID\n");
         h5tools_setstatus(EXIT_FAILURE);
     }
 
     /* query the group creation properties for attributes */
     if (H5Pget_attr_creation_order(gcpl_id, &attr_crt_order_flags) < 0)
     {
-        error_msg("error in getting group creation properties\n");
+        error_msg(h5tools_getprogname(), "error in getting group creation properties\n");
         h5tools_setstatus(EXIT_FAILURE);
     }
 
     /* query the group creation properties */
     if(H5Pget_link_creation_order(gcpl_id, &crt_order_flags) < 0)
     {
-        error_msg("error in getting group creation properties\n");
+        error_msg(h5tools_getprogname(), "error in getting group creation properties\n");
         h5tools_setstatus(EXIT_FAILURE);
     }
 
     if(H5Pclose(gcpl_id) < 0) {
-        error_msg("error in closing group creation property list ID\n");
+        error_msg(h5tools_getprogname(), "error in closing group creation property list ID\n");
         h5tools_setstatus(EXIT_FAILURE);
     }
 
@@ -5824,7 +6003,7 @@ xml_dump_group(hid_t gid, const char *name)
         isRoot = 1;
         tmp = HDstrdup("/");
     } else {
-        tmp = (char *)HDmalloc(HDstrlen(prefix) + HDstrlen(name) + 2);
+        tmp = HDmalloc(HDstrlen(prefix) + HDstrlen(name) + 2);
         HDstrcpy(tmp, prefix);
         par = HDstrdup(tmp);
         cp = HDstrrchr(par, '/');
@@ -5849,16 +6028,16 @@ xml_dump_group(hid_t gid, const char *name)
 
         if (found_obj == NULL) {
             indentation(indent);
-                error_msg("internal error (file %s:line %d)\n",
+                error_msg(h5tools_getprogname(), "internal error (file %s:line %d)\n",
                           __FILE__, __LINE__);
             h5tools_setstatus(EXIT_FAILURE);
         } else {
             char *t_name = xml_escape_the_name(name);
-            char *grpxid = (char *)malloc(100);
-            char *parentxid = (char *)malloc(100);
+            char *grpxid = malloc(100);
+            char *parentxid = malloc(100);
 
             if(found_obj->displayed) {
-                char *ptrstr = (char *)malloc(100);
+                char *ptrstr = malloc(100);
 
                 /* already seen: enter a groupptr */
                 if(isRoot) {
@@ -5916,13 +6095,13 @@ xml_dump_group(hid_t gid, const char *name)
 
                 if((sort_by == H5_INDEX_CRT_ORDER) && (attr_crt_order_flags & H5P_CRT_ORDER_TRACKED)) {
                     if(H5Aiterate2(gid, sort_by, sort_order, NULL, dump_function_table->dump_attribute_function, NULL) < 0) {
-                        error_msg("error getting attribute information\n");
+                        error_msg(h5tools_getprogname(), "error getting attribute information\n");
                         h5tools_setstatus(EXIT_FAILURE);
                     } /* end if */
                 } /* end if */
                 else {
                     if(H5Aiterate2(gid, H5_INDEX_NAME, sort_order, NULL, dump_function_table->dump_attribute_function, NULL) < 0) {
-                        error_msg("error getting attribute information\n");
+                        error_msg(h5tools_getprogname(), "error getting attribute information\n");
                         h5tools_setstatus(EXIT_FAILURE);
                     } /* end if */
                 } /* end else */
@@ -5960,8 +6139,8 @@ xml_dump_group(hid_t gid, const char *name)
 
         /* only link -- must be first time! */
         char *t_name = xml_escape_the_name(name);
-        char *grpxid = (char *)malloc(100);
-        char *parentxid = (char *)malloc(100);
+        char *grpxid = malloc(100);
+        char *parentxid = malloc(100);
 
         if(isRoot) {
             xml_name_to_XID("/", grpxid, 100, 1);
@@ -5988,13 +6167,13 @@ xml_dump_group(hid_t gid, const char *name)
 
         if((sort_by == H5_INDEX_CRT_ORDER) && (attr_crt_order_flags & H5P_CRT_ORDER_TRACKED)) {
             if(H5Aiterate2(gid, sort_by, sort_order, NULL, dump_function_table->dump_attribute_function, NULL) < 0) {
-                error_msg("error getting attribute information\n");
+                error_msg(h5tools_getprogname(), "error getting attribute information\n");
                 h5tools_setstatus(EXIT_FAILURE);
             } /* end if */
         } /* end if */
         else {
             if(H5Aiterate2(gid, H5_INDEX_NAME, sort_order, NULL, dump_function_table->dump_attribute_function, NULL) < 0) {
-                error_msg("error getting attribute information\n");
+                error_msg(h5tools_getprogname(), "error getting attribute information\n");
                 h5tools_setstatus(EXIT_FAILURE);
             } /* end if */
         } /* end else */
@@ -6078,7 +6257,7 @@ xml_print_refs(hid_t did, int source)
         ssiz = H5Sget_simple_extent_npoints(space);
         ssiz *= H5Tget_size(type);
 
-        buf = (char *)calloc((size_t)ssiz, sizeof(char));
+        buf = calloc((size_t)ssiz, sizeof(char));
         if(buf == NULL)
             return FAIL;
         e = H5Dread(did, H5T_STD_REF_OBJ, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf);
@@ -6092,7 +6271,7 @@ xml_print_refs(hid_t did, int source)
         ssiz = H5Sget_simple_extent_npoints(space);
         ssiz *= H5Tget_size(type);
 
-        buf = (char *)calloc((size_t)ssiz, sizeof(char));
+        buf = calloc((size_t)ssiz, sizeof(char));
         if (buf == NULL) {
             free(buf);
             return FAIL;
@@ -6213,7 +6392,7 @@ xml_print_strs(hid_t did, int source)
     tsiz = H5Tget_size(type);
     bp = (char*)buf;
     if(!is_vlstr)
-        onestring = (char *)calloc(tsiz, sizeof(char));
+        onestring = (char *) calloc(tsiz, sizeof(char));
 
     for (i = 0; i < ssiz; i++) {
         if(is_vlstr) {
@@ -6486,10 +6665,10 @@ xml_dump_dataset(hid_t did, const char *name, struct subset_t UNUSED * sset)
     char                   *tmp;
     char                   *t_name, *t_tmp, *t_prefix;
     unsigned                attr_crt_order_flags;
-    char *rstr = (char *)HDmalloc(100);
-    char *pstr = (char *)HDmalloc(100);
+    char *rstr = HDmalloc(100);
+    char *pstr = HDmalloc(100);
 
-    tmp = (char *)HDmalloc(HDstrlen(prefix) + HDstrlen(name) + 2);
+    tmp = HDmalloc(HDstrlen(prefix) + HDstrlen(name) + 2);
     HDstrcpy(tmp, prefix);
     HDstrcat(tmp, "/");
     HDstrcat(tmp, name);
@@ -6521,7 +6700,7 @@ xml_dump_dataset(hid_t did, const char *name, struct subset_t UNUSED * sset)
     /* Print information about storage layout */
     if(H5D_CHUNKED == H5Pget_layout(dcpl)) {
         maxdims = H5Sget_simple_extent_ndims(space);
-        chsize = (hsize_t *)malloc(maxdims * sizeof(hsize_t));
+        chsize = (hsize_t *) malloc(maxdims * sizeof(hsize_t));
         indent += COL;
         indentation(indent);
         printf("<%sStorageLayout>\n",xmlnsprefix);
@@ -6654,13 +6833,13 @@ xml_dump_dataset(hid_t did, const char *name, struct subset_t UNUSED * sset)
 
     if((sort_by == H5_INDEX_CRT_ORDER) && (attr_crt_order_flags & H5P_CRT_ORDER_TRACKED)) {
         if(H5Aiterate2(did, sort_by, sort_order, NULL, dump_function_table->dump_attribute_function, NULL) < 0) {
-            error_msg("error getting attribute information\n");
+            error_msg(h5tools_getprogname(), "error getting attribute information\n");
             h5tools_setstatus(EXIT_FAILURE);
         } /* end if */
     } /* end if */
     else {
         if(H5Aiterate2(did, H5_INDEX_NAME, sort_order, NULL, dump_function_table->dump_attribute_function, NULL) < 0) {
-            error_msg("error getting attribute information\n");
+            error_msg(h5tools_getprogname(), "error getting attribute information\n");
             h5tools_setstatus(EXIT_FAILURE);
         } /* end if */
     } /* end else */
@@ -6804,8 +6983,8 @@ xml_print_enum(hid_t type)
     }
 
     /* Get the names and raw values of all members */
-    name = (char **)calloc(nmembs, sizeof(char *));
-    value = (unsigned char *)calloc(nmembs, MAX(H5Tget_size(type), dst_size));
+    name = calloc(nmembs, sizeof(char *));
+    value = calloc(nmembs, MAX(H5Tget_size(type), dst_size));
 
     for (i = 0; i < nmembs; i++) {
         name[i] = H5Tget_member_name(type, i);
@@ -6989,7 +7168,7 @@ static void
 init_prefix(char **prfx, size_t prfx_len)
 {
     HDassert(prfx_len > 0);
-    *prfx = (char *)HDcalloc(prfx_len, 1);
+    *prfx = HDcalloc(prfx_len, 1);
 }
 
 
@@ -7010,7 +7189,7 @@ add_prefix(char **prfx, size_t *prfx_len, const char *name)
     /* Check if we need more space */
     if(*prfx_len <= new_len) {
         *prfx_len = new_len + 1;
-        *prfx = (char *)HDrealloc(*prfx, *prfx_len);
+        *prfx = HDrealloc(*prfx, *prfx_len);
     }
 
     /* Append object name to prefix */
