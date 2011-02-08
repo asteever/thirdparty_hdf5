@@ -289,6 +289,7 @@ PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
+PACKED_BITS = @PACKED_BITS@
 PARALLEL = @PARALLEL@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PERL = @PERL@
@@ -439,7 +440,7 @@ CHECK_CLEANFILES = *.chkexe *.chklog *.clog
 # Add libtool shared library version numbers to the HDF5 library
 # See libtool versioning documentation online.
 LT_VERS_INTERFACE = 6
-LT_VERS_REVISION = 70
+LT_VERS_REVISION = 5
 LT_VERS_AGE = 0
 
 # Include src directory in both Fortran and C flags (C compiler is used
@@ -931,7 +932,6 @@ clean-local:
 	@if test -n "$(F9XMODEXT)" && test "X$(F9XMODEXT)" != "Xo"; then \
 	  $(RM) *.$(F9XMODEXT);                                         \
 	fi
-	$(RM) $(DESTDIR)$(includedir)/H5f90i*.h
 
 install-data-local:
 	@if test -n "$(F9XMODEXT)" && test "X$(F9XMODEXT)" != "Xo"; then \
@@ -941,8 +941,8 @@ install-data-local:
 	$(CP) $(top_srcdir)/fortran/src/H5f90i.h $(DESTDIR)$(includedir)/.
 
 uninstall-local:
-	@if test -n "$(F9XMODEXT)" -a "X$(F9XMODEXT)" != "Xo"; then      \
-	  if test -f "$(includedir)/hdf5.$(F9XMODEXT)" -o -f "$(includedir)/HDF5.$(F9XMODEXT)"; then \
+	@if test -n "$(DESTDIR)$(F9XMODEXT)" -a "X$(DESTDIR)$(F9XMODEXT)" != "Xo"; then      \
+	  if test -f "$(DESTDIR)$(includedir)/hdf5.$(F9XMODEXT)" -o -f "$(DESTDIR)$(includedir)/HDF5.$(F9XMODEXT)"; then \
 	    set -x; $(RM) $(DESTDIR)$(includedir)/*.$(F9XMODEXT);                 \
 	  fi;                                                           \
 	fi;								\

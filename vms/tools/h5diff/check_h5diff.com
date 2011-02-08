@@ -243,7 +243,7 @@ $!
 $!# ##############################################################################
 $!# 6.29  non valid files
 $!# ##############################################################################
-$! This test is disabled in the C test script.
+$! Disable this test as C script does
 $! CALL TOOLTEST h5diff_629.txt "file1.h6 file2.h6"
 $!
 $!# ##############################################################################
@@ -297,7 +297,7 @@ $ endif
 $ !
 $ ! Compare the results
 $ !
-$ diff/output=h5diff_temp/ignore=(spacing,trailing_spaces,blank_lines) 'actual' 'P1'
+$ diff/output=h5diff_temp/ignore=(spacing,trailing_spaces,blank_lines)/comment_delim=(%) 'actual' 'P1'
 $ open/read temp_out h5diff_temp.dif
 $ read temp_out record1
 $ close temp_out

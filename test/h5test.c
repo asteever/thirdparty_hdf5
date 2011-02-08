@@ -27,11 +27,11 @@
 #include "h5test.h"
 #include "H5srcdir.h"
 
-#ifdef H5_HAVE_WINSOCK_H
+#ifdef _WIN32
 #include <process.h>
 #include <direct.h>
 #include <winsock2.h>
-#endif  /* H5_HAVE_WINSOCK_H */
+#endif  /* _WIN32 */
 
 /*
  * Define these environment variables or constants to influence functions in
@@ -648,7 +648,7 @@ void
 h5_show_hostname(void)
 {
     char	hostname[80];
-#ifdef H5_HAVE_WINSOCK_H
+#ifdef _WIN32
      WSADATA wsaData;
      int err;
 #endif
@@ -670,7 +670,7 @@ h5_show_hostname(void)
 #else
     printf("thread 0.");
 #endif
-#ifdef H5_HAVE_WINSOCK_H
+#ifdef _WIN32
 
    err = WSAStartup( MAKEWORD(2,2), &wsaData );
    if ( err != 0 ) {
@@ -700,7 +700,7 @@ h5_show_hostname(void)
 #else
     printf(" gethostname not supported\n");
 #endif
-#ifdef H5_HAVE_WINSOCK_H
+#ifdef _WIN32
     WSACleanup();
 #endif
 }
@@ -1115,10 +1115,18 @@ getenv_all(MPI_Comm comm, int root, const char* name)
 hid_t
 h5_make_local_copy(char *origfilename, char *local_copy_name)
 {
-    const char *filename = H5_get_srcdir_filename(origfilename); /* Corrected test file name */
+    char  filename[FILENAME_BUF_SIZE] = "";
     int fd_old = (-1), fd_new = (-1);   /* File descriptors for copying data */
     ssize_t nread;                      /* Number of bytes read in */
     char  buf[READ_BUF_SIZE];        /* Buffer for copying data */
+    char * srcdir = HDgetenv("srcdir"); /* The source directory */
+
+    if(srcdir && ((HDstrlen(srcdir) +
+                   HDstrlen(origfilename) + 6) < FILENAME_BUF_SIZE)) {
+        HDstrcpy(filename, srcdir);
+        HDstrcat(filename, "/");
+    }
+    HDstrcat(filename, origfilename);
 
     /* Copy old file into temporary file */
     if((fd_old = HDopen(filename, O_RDONLY, 0666)) < 0) return -1;

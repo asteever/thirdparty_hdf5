@@ -529,6 +529,12 @@ struct subset_t {
 #ifdef __cplusplus
 extern "C" {
 #endif
+    
+#ifdef H5_HAVE_H5DUMP_PACKED_BITS
+H5TOOLS_DLLVAR int     packed_bits_num;       /* number of packed bits to display */
+H5TOOLS_DLLVAR int     packed_data_offset;    /* offset of packed bits to display */
+H5TOOLS_DLLVAR unsigned long long packed_data_mask;  /* mask in which packed bits to display */
+#endif
 
 H5TOOLS_DLLVAR FILE   *rawdatastream;       /* output stream for raw data */
 H5TOOLS_DLLVAR int     bin_output;          /* binary output */
@@ -573,7 +579,6 @@ int             h5tools_print_datatype(h5tools_str_t *buffer/*in,out*/,
                          const h5tool_format_t *info, h5tools_context_t *ctx/*in,out*/,
                          hid_t type);
 int             h5tools_print_enum(h5tools_str_t *buffer/*in,out*/, hid_t type);
-
 #ifdef __cplusplus
 }
 #endif

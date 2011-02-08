@@ -228,6 +228,7 @@ PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
+PACKED_BITS = @PACKED_BITS@
 PARALLEL = @PARALLEL@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PERL = @PERL@
@@ -387,8 +388,7 @@ tstlite_SOURCES = tstlite.f90
 tstimage_SOURCES = tstimage.f90
 tsttable_SOURCES = tsttable.f90
 
-# Mark this directory as part of the Fortran API (this affects output
-# from tests in conclude.am)
+# Mark this directory as part of the Fortran API
 FORTRAN_API = yes
 
 # Automake needs to be taught how to build lib, progs, and tests targets.

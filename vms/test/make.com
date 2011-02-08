@@ -20,13 +20,13 @@ $! The next two lines should be uncommented only when building by hand in the
 $! current directory. Use build.com in the vms directory to build
 $! the distribution. Make sure that location of the zlib library is correct.
 $! define zlib_dir sys$sysusers:[pourmal.zlib-1_2_3]
-$! ccopt = "/float=ieee_float/define=(_LARGEFILE,H5_VMS)/include=zlib_dir"
+$! ccopt = "/float=ieee_float/define=H5_VMS/include=zlib_dir"
 $!
 $ ccc := cc 'ccopt /include=([-.src])
 $ type sys$input
  	Creating  testhdf5
 $!
-$ cobj= "h5test.c, testframe.c, testhdf5.c, tarray.c, tattr.c, tcheck_version., tchecksum.c,"+-
+$ cobj= "h5test.c, testframe.c, testhdf5.c, tarray.c, tattr.c, tcheck_version.c, tchecksum.c,"+-
         "tconfig.c, tcoords.c, tfile.c, tgenprop.c, th5o.c, th5s.c, theap.c, tid.c,"+- 
         "titerate.c, tmeta.c, tmisc.c, trefer.c, trefstr.c, tselect.c, tskiplist.c,"+- 
         "tsohm.c, ttime.c, ttst.c, tunicode.c, tvlstr.c, tvltypes.c, cache_common.c"
@@ -85,25 +85,6 @@ $ link cache, -
        libh5test.olb/lib,[-.src]hdf5.olb/lib,zlib_dir:libz.olb/lib
 $!
 $ type sys$input
-       Creating cache_common test
-$ ccc  cache_common
-$ link cache_common, -
-       libh5test.olb/lib,[-.src]hdf5.olb/lib,zlib_dir:libz.olb/lib
-$!
-$! a new test
-$ type sys$input
-       Creating cache_tagging tests
-$ ccc  cache_tagging 
-$ link cache_tagging, -
-       libh5test.olb/lib,[-.src]hdf5.olb/lib,zlib_dir:libz.olb/lib
-$!
-$ type sys$input
-       Creating chunk_info test
-$ ccc  chunk_info
-$ link chunk_info, -
-       libh5test.olb/lib,[-.src]hdf5.olb/lib,zlib_dir:libz.olb/lib
-$!
-$ type sys$input
        Creating cmpd_dset test
 $ ccc  cmpd_dset
 $ link cmpd_dset, -
@@ -143,12 +124,6 @@ $ type sys$input
        Creating dtypes test
 $ ccc  dtypes 
 $ link dtypes, -
-       libh5test.olb/lib,[-.src]hdf5.olb/lib,zlib_dir:libz.olb/lib
-$!
-$ type sys$input
-       Creating earray test
-$ ccc  earray 
-$ link earray, -
        libh5test.olb/lib,[-.src]hdf5.olb/lib,zlib_dir:libz.olb/lib
 $!
 $ type sys$input

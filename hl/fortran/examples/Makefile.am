@@ -37,8 +37,7 @@ TEST_PROG=exlite
 INSTALL_FILES= exlite.f90
 INSTALL_SCRIPT_FILES = run-hlfortran-ex.sh
 
-# Mark this directory as part of the Fortran API (this affects output
-# from tests in conclude.am)
+# Mark this directory as part of the Fortran API
 FORTRAN_API=yes
 
 # Tell automake how to build examples using h5fc

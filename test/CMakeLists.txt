@@ -82,9 +82,8 @@ SET (HDF5_REFERENCE_TEST_FILES
     family_v16_00001.h5
     family_v16_00002.h5
     family_v16_00003.h5
-    filespace_1_6.h5
-    filespace_1_8.h5
     fill_old.h5
+    fixed_idx.h5
     group_old.h5
     le_data.h5
     le_extlink1.h5
@@ -101,7 +100,6 @@ SET (HDF5_REFERENCE_TEST_FILES
     tlayouto.h5
     tmtimen.h5
     tmtimeo.h5
-    tsizeslheap.h5
     vms_data.h5
 )
 
@@ -245,13 +243,13 @@ SET (H5_TESTS
     gheap
     #cache
     #cache_api
-    #cache_tagging
     pool
     hyperslab
     istore
     bittests
     dt_arith
     dtypes
+    dsets
     cmpd_dset
     filter_fail
     extend
@@ -278,8 +276,6 @@ SET (H5_TESTS
     cross_read
     freespace
     mf
-    farray
-    earray
     btree2
     fheap
     #error_test
@@ -314,12 +310,6 @@ TARGET_LINK_LIBRARIES (cache_api ${HDF5_LIB_TARGET} ${HDF5_TEST_LIB_TARGET})
 
 ADD_TEST (NAME cache_api COMMAND $<TARGET_FILE:cache_api>)
 
-#-- Adding test for cache_tagging
-ADD_EXECUTABLE (cache_tagging ${HDF5_TEST_SOURCE_DIR}/cache_tagging.c ${HDF5_TEST_SOURCE_DIR}/cache_common.c)
-H5_NAMING (cache_tagging ${LIB_TYPE})
-TARGET_LINK_LIBRARIES (cache_tagging ${HDF5_LIB_TARGET} ${HDF5_TEST_LIB_TARGET})
-
-ADD_TEST (NAME cache_tagging COMMAND $<TARGET_FILE:cache_tagging>)
 #-- Adding test for ttsafe
 ADD_EXECUTABLE (ttsafe
     ${HDF5_TEST_SOURCE_DIR}/ttsafe.c
@@ -404,13 +394,13 @@ IF (HDF5_TEST_VFD)
       gheap
       cache
       cache_api
-      cache_tagging
       pool
       hyperslab
       istore
       bittests
       dt_arith
       dtypes
+      dsets
       cmpd_dset
       filter_fail
       extend
@@ -437,8 +427,6 @@ IF (HDF5_TEST_VFD)
       cross_read
       freespace
       mf
-      farray
-      earray
       btree2
       #fheap
       error_test
@@ -508,6 +496,7 @@ IF (HDF5_BUILD_GENERATORS AND NOT BUILD_SHARED_LIBS)
       gen_cross
       gen_deflate
       gen_filters
+      gen_idx
       gen_new_array
       gen_new_fill
       gen_new_group
@@ -517,8 +506,6 @@ IF (HDF5_BUILD_GENERATORS AND NOT BUILD_SHARED_LIBS)
       gen_nullspace
       gen_udlinks
       space_overflow
-      gen_filespace
-      gen_specmetaread
       gen_sizes_lheap
   )
 

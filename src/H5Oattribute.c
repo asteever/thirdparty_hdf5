@@ -40,8 +40,8 @@
 #include "H5MMprivate.h"	/* Memory management			*/
 #include "H5Opkg.h"             /* Object headers			*/
 #include "H5SMprivate.h"	/* Shared Object Header Messages	*/
-#include "H5Iprivate.h"         /* IDs                                  */
-#include "H5Fprivate.h"         /* File                                 */
+#include "H5Iprivate.h"		/* IDs			  		*/
+#include "H5Fprivate.h"		/* File 			        */
 
 
 /****************/
@@ -477,7 +477,7 @@ H5O_attr_open_by_name(const H5O_loc_t *loc, const char *name, hid_t dxpl_id)
     htri_t found_open_attr = FALSE;     /* Whether opened object is found */
     H5A_t *ret_value;                   /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_TAG(H5O_attr_open_by_name, dxpl_id, loc->addr, NULL)
+    FUNC_ENTER_NOAPI_NOINIT(H5O_attr_open_by_name)
 
     /* Check arguments */
     HDassert(loc);
@@ -551,7 +551,7 @@ done:
         if(H5A_close(opened_attr) < 0)
             HDONE_ERROR(H5E_ATTR, H5E_CANTCLOSEOBJ, NULL, "can't close attribute")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, NULL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_attr_open_by_name() */
 
 
@@ -1177,7 +1177,7 @@ H5O_attr_rename(const H5O_loc_t *loc, hid_t dxpl_id, const char *old_name,
     H5O_ainfo_t ainfo;                  /* Attribute information for object */
     herr_t ret_value = SUCCEED;         /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_TAG(H5O_attr_rename, dxpl_id, loc->addr, FAIL)
+    FUNC_ENTER_NOAPI_NOINIT(H5O_attr_rename)
 
     /* Check arguments */
     HDassert(loc);
@@ -1242,7 +1242,7 @@ done:
     if(oh && H5O_unpin(oh) < 0)
         HDONE_ERROR(H5E_ATTR, H5E_CANTUNPIN, FAIL, "unable to unpin object header")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_attr_rename */
 
 
@@ -1268,7 +1268,7 @@ H5O_attr_iterate_real(hid_t loc_id, const H5O_loc_t *loc, hid_t dxpl_id,
     H5A_attr_table_t atable = {0, NULL};        /* Table of attributes */
     herr_t ret_value;                   /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_TAG(H5O_attr_iterate_real, dxpl_id, loc->addr, FAIL)
+    FUNC_ENTER_NOAPI_NOINIT(H5O_attr_iterate_real)
 
     /* Check arguments */
     HDassert(loc);
@@ -1329,7 +1329,7 @@ done:
     if(atable.attrs && H5A_attr_release_table(&atable) < 0)
         HDONE_ERROR(H5E_ATTR, H5E_CANTFREE, FAIL, "unable to release attribute table")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_attr_iterate_real() */
 
 
@@ -1564,7 +1564,7 @@ H5O_attr_remove(const H5O_loc_t *loc, const char *name, hid_t dxpl_id)
     htri_t ainfo_exists = FALSE;        /* Whether the attribute info exists in the file */
     herr_t ret_value = SUCCEED;         /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_TAG(H5O_attr_remove, dxpl_id, loc->addr, FAIL)
+    FUNC_ENTER_NOAPI_NOINIT(H5O_attr_remove)
 
     /* Check arguments */
     HDassert(loc);
@@ -1622,7 +1622,7 @@ done:
     if(oh && H5O_unpin(oh) < 0)
         HDONE_ERROR(H5E_ATTR, H5E_CANTUNPIN, FAIL, "unable to unpin object header")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_attr_remove() */
 
 
@@ -1649,7 +1649,7 @@ H5O_attr_remove_by_idx(const H5O_loc_t *loc, H5_index_t idx_type,
     H5A_attr_table_t atable = {0, NULL};        /* Table of attributes */
     herr_t ret_value = SUCCEED;         /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_TAG(H5O_attr_remove_by_idx, dxpl_id, loc->addr, FAIL)
+    FUNC_ENTER_NOAPI_NOINIT(H5O_attr_remove_by_idx)
 
     /* Check arguments */
     HDassert(loc);
@@ -1716,7 +1716,7 @@ done:
     if(atable.attrs && H5A_attr_release_table(&atable) < 0)
         HDONE_ERROR(H5E_ATTR, H5E_CANTFREE, FAIL, "unable to release attribute table")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_attr_remove_by_idx() */
 
 
@@ -1737,7 +1737,7 @@ H5O_attr_count_real(H5F_t *f, hid_t dxpl_id, H5O_t *oh, hsize_t *nattrs)
 {
     herr_t ret_value = SUCCEED;         /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_TAG(H5O_attr_count_real, dxpl_id, oh->cache_info.addr, FAIL)
+    FUNC_ENTER_NOAPI_NOINIT(H5O_attr_count_real)
 
     /* Check arguments */
     HDassert(f);
@@ -1770,7 +1770,7 @@ H5O_attr_count_real(H5F_t *f, hid_t dxpl_id, H5O_t *oh, hsize_t *nattrs)
     } /* end else */
 
 done:
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_attr_count_real */
 
 
@@ -1833,7 +1833,7 @@ H5O_attr_exists(const H5O_loc_t *loc, const char *name, hid_t dxpl_id)
     H5O_ainfo_t ainfo;          /* Attribute information for object */
     htri_t ret_value;           /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_TAG(H5O_attr_exists, dxpl_id, loc->addr, FAIL)
+    FUNC_ENTER_NOAPI_NOINIT(H5O_attr_exists)
 
     /* Check arguments */
     HDassert(loc);
@@ -1881,7 +1881,7 @@ done:
     if(oh && H5O_unprotect(loc, dxpl_id, oh, H5AC__NO_FLAGS_SET) < 0)
         HDONE_ERROR(H5E_ATTR, H5E_CANTUNPROTECT, FAIL, "unable to release object header")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_attr_exists */
 
 

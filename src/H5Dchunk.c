@@ -2329,7 +2329,7 @@ H5D_chunk_flush_entry(const H5D_t *dset, hid_t dxpl_id, const H5D_dxpl_cache_t *
     hbool_t	point_of_no_return = FALSE;
     herr_t	ret_value = SUCCEED;	/* Return value			*/
 
-    FUNC_ENTER_NOAPI_NOINIT_TAG(H5D_chunk_flush_entry, dxpl_id, dset->oloc.addr, FAIL)
+    FUNC_ENTER_NOAPI_NOINIT(H5D_chunk_flush_entry)
 
     HDassert(dset);
     HDassert(dset->shared);
@@ -2459,7 +2459,7 @@ done:
             ent->chunk = (uint8_t *)H5D_chunk_xfree(ent->chunk, &(dset->shared->dcpl_cache.pline));
     } /* end if */
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D_chunk_flush_entry() */
 
 
@@ -3136,7 +3136,7 @@ H5D_chunk_allocate(H5D_t *dset, hid_t dxpl_id, hbool_t full_overwrite,
     hid_t       data_dxpl_id;           /* DXPL ID to use for raw data I/O operations */
     herr_t	ret_value = SUCCEED;	/* Return value */
 
-    FUNC_ENTER_NOAPI_TAG(H5D_chunk_allocate, dxpl_id, dset->oloc.addr, FAIL)
+    FUNC_ENTER_NOAPI(H5D_chunk_allocate, FAIL)
 
     /* Check args */
     HDassert(dset && H5D_CHUNKED == layout->type);
@@ -3446,7 +3446,7 @@ done:
     if(fb_info_init && H5D_fill_term(&fb_info) < 0)
         HDONE_ERROR(H5E_DATASET, H5E_CANTFREE, FAIL, "Can't release fill buffer info")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D_chunk_allocate() */
 
 
@@ -4390,15 +4390,9 @@ H5D_chunk_copy_cb(const H5D_chunk_rec_t *chunk_rec, void *_udata)
 	udata->buf_size = buf_size;
     } /* end if */
 
-    /* Set metadata tag in dxpl_id */
-    H5_BEGIN_TAG(udata->idx_info_dst->dxpl_id, H5AC__COPIED_TAG, H5_ITER_ERROR);
-
     /* Insert chunk into the destination index */
     if((udata->idx_info_dst->storage->ops->insert)(udata->idx_info_dst, &udata_dst) < 0)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTINSERT, H5_ITER_ERROR, "unable to insert chunk into index")
-
-    /* Reset metadata tag in dxpl_id */
-    H5_END_TAG(H5_ITER_ERROR);
 
     /* Write chunk data to destination file */
     HDassert(H5F_addr_defined(udata_dst.addr));
@@ -4837,7 +4831,7 @@ H5D_chunk_dest(H5F_t *f, hid_t dxpl_id, H5D_t *dset)
     int		nerrors = 0;            /* Accumulated count of errors */
     herr_t      ret_value = SUCCEED;       /* Return value */
 
-    FUNC_ENTER_NOAPI_TAG(H5D_chunk_dest, dxpl_id, dset->oloc.addr, FAIL)
+    FUNC_ENTER_NOAPI(H5D_chunk_dest, FAIL)
 
     HDassert(f);
     HDassert(dset);
@@ -4874,7 +4868,7 @@ H5D_chunk_dest(H5F_t *f, hid_t dxpl_id, H5D_t *dset)
 	HGOTO_ERROR(H5E_DATASET, H5E_CANTFREE, FAIL, "unable to release chunk index info")
 
 done:
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D_chunk_dest() */
 
 #ifdef H5D_CHUNK_DEBUG

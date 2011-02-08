@@ -93,7 +93,7 @@ int copy_objects(const char* fnamein,
         goto out;
     }
 
-    /* get user block size and file space strategy/threshold */
+    /* get user block size */
     {
         hid_t fcpl_in; /* file creation property list ID for input file */
 
@@ -108,24 +108,6 @@ int copy_objects(const char* fnamein,
             error_msg("failed to retrieve userblock size\n");
             goto out;
         }
-
-	if(!options->fs_strategy)
-	{
-	   if(H5Pget_file_space(fcpl_in, &options->fs_strategy, NULL) < 0)
-	   {
-		error_msg("failed to retrieve file space strategy\n");
-		goto out;
-	   }
-	}
-
-	if(!options->fs_threshold)
-	{
-	   if(H5Pget_file_space(fcpl_in, NULL, &options->fs_threshold) < 0)
-	   {
-		error_msg("failed to retrieve file space threshold\n");
-		goto out;
-	   }
-	}
 
         if(H5Pclose(fcpl_in) < 0)
         {
@@ -323,32 +305,6 @@ int copy_objects(const char* fnamein,
 
     }
 
-    /* either use the FCPL already created or create a new one */
-    if(fcpl != H5P_DEFAULT)
-    {
-	/* set file space strategy and free space threshold */
-	if(H5Pset_file_space(fcpl, options->fs_strategy, options->fs_threshold) < 0)
-	{
-	    error_msg("failed to set file space strategy & threshold\n");
-	    goto out;
-	}
-    }
-    else
-    {
-	/* create a file creation property list */
-	if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
-	{
-	    error_msg("fail to create a file creation property list\n");
-	    goto out;
-	}
-
-	/* set file space strategy and free space threshold */
-	if(H5Pset_file_space(fcpl, options->fs_strategy, options->fs_threshold) < 0)
-	{
-	    error_msg("failed to set file space strategy & threshold \n");
-	    goto out;
-	}
-    }
 
     /*-------------------------------------------------------------------------
     * create the output file

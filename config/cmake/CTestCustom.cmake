@@ -245,6 +245,47 @@ SET (CTEST_CUSTOM_MEMCHECK_IGNORE
     H5DUMP-tchunked        #uses runTest.cmake
     H5DUMP-texternal       #uses runTest.cmake
     H5DUMP-tfill           #uses runTest.cmake
+    H5DUMP-packedbits      #uses runTest.cmake
+    H5DUMP-tpbitsSignedWhole              #uses runTest.cmake
+    H5DUMP-tpbitsSignedIntWhole           #uses runTest.cmake
+    H5DUMP-tpbitsSignedLongWhole          #uses runTest.cmake
+    H5DUMP-tpbitsSignedLongLongWhole      #uses runTest.cmake
+    H5DUMP-tpbitsSignedLongLongWhole63    #uses runTest.cmake
+    H5DUMP-tpbitsSignedLongLongWhole1     #uses runTest.cmake
+    H5DUMP-tpbitsUnsignedWhole            #uses runTest.cmake
+    H5DUMP-tpbitsUnsignedIntWhole         #uses runTest.cmake
+    H5DUMP-tpbitsUnsignedLongWhole        #uses runTest.cmake
+    H5DUMP-tpbitsUnsignedLongLongWhole    #uses runTest.cmake
+    H5DUMP-tpbitsUnsignedLongLongWhole63  #uses runTest.cmake
+    H5DUMP-tpbitsUnsignedLongLongWhole1   #uses runTest.cmake
+    H5DUMP-tpbitsSigned2                  #uses runTest.cmake
+    H5DUMP-tpbitsSigned4                  #uses runTest.cmake
+    H5DUMP-tpbitsSignedInt                #uses runTest.cmake
+    H5DUMP-tpbitsSignedInt4               #uses runTest.cmake
+    H5DUMP-tpbitsSignedInt8               #uses runTest.cmake
+    H5DUMP-tpbitsSignedLong               #uses runTest.cmake
+    H5DUMP-tpbitsSignedLong8              #uses runTest.cmake
+    H5DUMP-tpbitsSignedLong16             #uses runTest.cmake
+    H5DUMP-tpbitsSignedLongLong           #uses runTest.cmake
+    H5DUMP-tpbitsSignedLongLong16         #uses runTest.cmake
+    H5DUMP-tpbitsSignedLongLong32         #uses runTest.cmake
+    H5DUMP-tpbitsUnsigned2                #uses runTest.cmake
+    H5DUMP-tpbitsUnsigned4                #uses runTest.cmake
+    H5DUMP-tpbitsUnsignedInt              #uses runTest.cmake
+    H5DUMP-tpbitsUnsignedInt4             #uses runTest.cmake
+    H5DUMP-tpbitsUnsignedInt8             #uses runTest.cmake
+    H5DUMP-tpbitsUnsignedLong             #uses runTest.cmake
+    H5DUMP-tpbitsUnsignedLong8            #uses runTest.cmake
+    H5DUMP-tpbitsUnsignedLong16           #uses runTest.cmake
+    H5DUMP-tpbitsUnsignedLongLong         #uses runTest.cmake
+    H5DUMP-tpbitsUnsignedLongLong16       #uses runTest.cmake
+    H5DUMP-tpbitsUnsignedLongLong32       #uses runTest.cmake
+    H5DUMP-tpbitsCharOffsetExceeded       #uses runTest.cmake
+    H5DUMP-tpbitsIntOffsetExceeded        #uses runTest.cmake
+    H5DUMP-tpbitsLongOffsetExceeded       #uses runTest.cmake
+    H5DUMP-tpbitsCharLengthExceeded       #uses runTest.cmake
+    H5DUMP-tpbitsIntLengthExceeded        #uses runTest.cmake
+    H5DUMP-tpbitsLongLengthExceeded       #uses runTest.cmake
     H5DUMP-treference      #uses runTest.cmake
     H5DUMP-tstringe        #uses runTest.cmake
     H5DUMP-tstring         #uses runTest.cmake

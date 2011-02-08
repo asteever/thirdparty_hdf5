@@ -188,8 +188,8 @@ done:
  *		Otherwise, the file access property retrieved from H5Pget_elink_fapl()
  *		is used to H5F_open() the target file.
  *
- *		Vailin Choi; Nov 2010
- *		Free memory pointed to by tmp_env_prefix for HDF5_EXT_PREFIX case.
+ *              Vailin Choi; Nov 2010
+ *              Free memory pointed to by tmp_env_prefix for HDF5_EXT_PREFIX case.
  *
  *-------------------------------------------------------------------------
  */

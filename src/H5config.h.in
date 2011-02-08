@@ -17,6 +17,10 @@
 /* Define if C++ compiler recognizes offsetof */
 #undef CXX_HAVE_OFFSETOF
 
+/* Define a macro for Cygwin (on XP only) where the compiler has rounding
+   problem converting from unsigned long long to long double */
+#undef CYGWIN_ULLONG_TO_LDOUBLE_ROUND_PROBLEM
+
 /* Define the default virtual file driver to compile */
 #undef DEFAULT_VFD
 
@@ -167,6 +171,9 @@
 
 /* Define to 1 if you have the <gpfs.h> header file. */
 #undef HAVE_GPFS_H
+
+/* Define if h5dump packed bits feature is enabled */
+#undef HAVE_H5DUMP_PACKED_BITS
 
 /* Define if library will contain instrumentation to detect correct
    optimization operation */

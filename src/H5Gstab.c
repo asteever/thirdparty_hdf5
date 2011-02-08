@@ -171,7 +171,7 @@ H5G_stab_create(H5O_loc_t *grp_oloc, hid_t dxpl_id, const H5O_ginfo_t *ginfo,
     size_t      size_hint;              /* Local heap size hint */
     herr_t      ret_value = SUCCEED;    /* Return value */
 
-    FUNC_ENTER_NOAPI_TAG(H5G_stab_create, dxpl_id, grp_oloc->addr, FAIL)
+    FUNC_ENTER_NOAPI(H5G_stab_create, FAIL)
 
     /*
      * Check arguments.
@@ -200,7 +200,7 @@ H5G_stab_create(H5O_loc_t *grp_oloc, hid_t dxpl_id, const H5O_ginfo_t *ginfo,
 	HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, FAIL, "can't create message")
 
 done:
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5G_stab_create() */
 
 
@@ -283,7 +283,7 @@ H5G_stab_insert(const H5O_loc_t *grp_oloc, const char *name,
     H5O_stab_t		stab;		/* Symbol table message		*/
     herr_t              ret_value = SUCCEED;       /* Return value */
 
-    FUNC_ENTER_NOAPI_TAG(H5G_stab_insert, dxpl_id, grp_oloc->addr, FAIL)
+    FUNC_ENTER_NOAPI(H5G_stab_insert, FAIL)
 
     /* check arguments */
     HDassert(grp_oloc && grp_oloc->file);
@@ -299,7 +299,7 @@ H5G_stab_insert(const H5O_loc_t *grp_oloc, const char *name,
         HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, H5_ITER_ERROR, "unable to insert the name")
 
 done:
-    FUNC_LEAVE_NOAPI_TAG(ret_value, H5_ITER_ERROR)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5G_stab_insert() */
 
 
@@ -496,7 +496,7 @@ H5G_stab_iterate(const H5O_loc_t *oloc, hid_t dxpl_id, H5_iter_order_t order,
     H5G_link_table_t ltable = {0, NULL};        /* Link table */
     herr_t ret_value;                           /* Return value */
 
-    FUNC_ENTER_NOAPI_TAG(H5G_stab_iterate, dxpl_id, oloc->addr, FAIL)
+    FUNC_ENTER_NOAPI(H5G_stab_iterate, FAIL)
 
     /* Sanity check */
     HDassert(oloc);
@@ -563,7 +563,7 @@ done:
     if(ltable.lnks && H5G_link_release_table(&ltable) < 0)
         HDONE_ERROR(H5E_SYM, H5E_CANTFREE, FAIL, "unable to release link table")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5G_stab_iterate() */
 
 
@@ -585,7 +585,7 @@ H5G_stab_count(H5O_loc_t *oloc, hsize_t *num_objs, hid_t dxpl_id)
     H5O_stab_t		stab;		        /* Info about symbol table */
     herr_t		ret_value = SUCCEED;
 
-    FUNC_ENTER_NOAPI_TAG(H5G_stab_count, dxpl_id, oloc->addr, FAIL)
+    FUNC_ENTER_NOAPI(H5G_stab_count, FAIL)
 
     /* Sanity check */
     HDassert(oloc);
@@ -603,7 +603,7 @@ H5G_stab_count(H5O_loc_t *oloc, hsize_t *num_objs, hid_t dxpl_id)
         HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, FAIL, "iteration operator failed")
 
 done:
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5G_stab_count() */
 
 
@@ -1010,7 +1010,7 @@ H5G_stab_valid(H5O_loc_t *grp_oloc, hid_t dxpl_id, H5O_stab_t *alt_stab)
     hbool_t     changed = FALSE;        /* Whether stab has been modified */
     herr_t      ret_value = SUCCEED;    /* Return value */
 
-    FUNC_ENTER_NOAPI_TAG(H5G_stab_valid, dxpl_id, grp_oloc->addr, FAIL)
+    FUNC_ENTER_NOAPI(H5G_stab_valid, FAIL)
 
     /* Read the symbol table message */
     if(NULL == H5O_msg_read(grp_oloc, H5O_STAB_ID, &stab, dxpl_id))
@@ -1056,7 +1056,7 @@ done:
     if(heap && H5HL_unprotect(heap) < 0)
         HDONE_ERROR(H5E_SYM, H5E_PROTECT, FAIL, "unable to unprotect symbol table heap")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5G_stab_valid */
 #endif /* H5_STRICT_FORMAT_CHECKS */
 
@@ -1143,7 +1143,7 @@ H5G_stab_get_type_by_idx(H5O_loc_t *oloc, hsize_t idx, hid_t dxpl_id)
     H5G_bt_it_gtbi_t	udata;          /* User data for B-tree callback */
     H5G_obj_t		ret_value;      /* Return value */
 
-    FUNC_ENTER_NOAPI_TAG(H5G_stab_get_type_by_idx, dxpl_id, oloc->addr, H5G_UNKNOWN)
+    FUNC_ENTER_NOAPI(H5G_stab_get_type_by_idx, H5G_UNKNOWN)
 
     /* Sanity check */
     HDassert(oloc);
@@ -1172,7 +1172,7 @@ H5G_stab_get_type_by_idx(H5O_loc_t *oloc, hsize_t idx, hid_t dxpl_id)
     ret_value = udata.type;
 
 done:
-    FUNC_LEAVE_NOAPI_TAG(ret_value, H5G_UNKNOWN)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5G_stab_get_type_by_idx() */
 #endif /* H5_NO_DEPRECATED_SYMBOLS */
 

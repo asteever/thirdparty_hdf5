@@ -1205,7 +1205,7 @@ H5D_open_oid(H5D_t *dataset, hid_t dapl_id, hid_t dxpl_id)
     htri_t msg_exists;                  /* Whether a particular type of message exists */
     herr_t ret_value = SUCCEED;		/* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_TAG(H5D_open_oid, dxpl_id, dataset->oloc.addr, FAIL)
+    FUNC_ENTER_NOAPI_NOINIT(H5D_open_oid)
 
     /* check args */
     HDassert(dataset);
@@ -1330,7 +1330,7 @@ done:
         } /* end if */
     } /* end if */
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D_open_oid() */
 
 
@@ -1792,7 +1792,7 @@ H5D_get_storage_size(H5D_t *dset, hid_t dxpl_id)
 {
     hsize_t	ret_value;
 
-    FUNC_ENTER_NOAPI_NOINIT_TAG(H5D_get_storage_size, dxpl_id, dset->oloc.addr, 0)
+    FUNC_ENTER_NOAPI_NOINIT(H5D_get_storage_size)
 
     switch(dset->shared->layout.type) {
         case H5D_CHUNKED:
@@ -1823,7 +1823,7 @@ H5D_get_storage_size(H5D_t *dset, hid_t dxpl_id)
     } /*lint !e788 All appropriate cases are covered */
 
 done:
-    FUNC_LEAVE_NOAPI_TAG(ret_value, 0)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D_get_storage_size() */
 
 
@@ -2121,7 +2121,7 @@ H5D_set_extent(H5D_t *dset, const hsize_t *size, hid_t dxpl_id)
     htri_t  changed;                    /* Whether the dataspace changed size */
     herr_t  ret_value = SUCCEED;        /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_TAG(H5D_set_extent, dxpl_id, dset->oloc.addr, FAIL)
+    FUNC_ENTER_NOAPI_NOINIT(H5D_set_extent)
 
     /* Check args */
     HDassert(dset);
@@ -2201,7 +2201,7 @@ H5D_set_extent(H5D_t *dset, const hsize_t *size, hid_t dxpl_id)
     } /* end if */
 
 done:
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D_set_extent() */
 
 
@@ -2265,7 +2265,7 @@ H5D_flush_real(H5D_t *dataset, hid_t dxpl_id)
     H5O_t *oh = NULL;                   /* Pointer to dataset's object header */
     herr_t ret_value = SUCCEED;         /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_TAG(H5D_flush_real, dxpl_id, dataset->oloc.addr, FAIL)
+    FUNC_ENTER_NOAPI_NOINIT(H5D_flush_real)
 
     /* Check args */
     HDassert(dataset);
@@ -2313,7 +2313,7 @@ done:
         if(H5O_unpin(oh) < 0)
             HDONE_ERROR(H5E_DATASET, H5E_CANTUNPIN, FAIL, "unable to unpin dataset object header")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D_flush_real() */
 
 
