@@ -841,7 +841,7 @@
 #define H5C__HASH_TABLE_LEN     (64 * 1024) /* must be a power of 2 */
 
 #define H5C__H5C_T_MAGIC	0x005CAC0E
-#define H5C__MAX_NUM_TYPE_IDS	27
+#define H5C__MAX_NUM_TYPE_IDS	19
 #define H5C__PREFIX_LEN		32
 
 struct H5C_t
@@ -873,7 +873,6 @@ struct H5C_t
     size_t			dirty_index_size;
     H5C_cache_entry_t *		(index[H5C__HASH_TABLE_LEN]);
 
-    hbool_t                     ignore_tags;
 
     int32_t                     slist_len;
     size_t                      slist_size;

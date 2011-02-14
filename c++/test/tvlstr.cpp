@@ -129,6 +129,7 @@ void test_vlstr_free_custom(void *_mem, void *info)
  *-------------------------------------------------------------------------
  */
 // String for testing datasets
+static char *dynstring_ds_write=NULL;
 static char stastring_ds_write[1]={'A'};
 
 // Info for a string dataset
@@ -137,9 +138,6 @@ const H5std_string DSET1_DATA("String Dataset");
 
 static void test_vlstring_dataset()
 {
-    char *dynstring_ds_write = NULL;
-    char *string_ds_check = NULL;
-
     // Output message about test being performed
     SUBTEST("VL String on Datasets");
 
@@ -163,12 +161,12 @@ static void test_vlstring_dataset()
 	dset1.write(DSET1_DATA, vlst);
 
 	// Read and verify the dataset string as a string of chars.
+	char *string_ds_check;
 	dset1.read(&string_ds_check, vlst);
 	if(HDstrcmp(string_ds_check, DSET1_DATA.c_str())!=0)
 	    TestErrPrintf("Line %d: Attribute data different: DSET1_DATA=%s,string_ds_check=%s\n",__LINE__, DSET1_DATA.c_str(), string_ds_check);
 
 	HDfree(string_ds_check);  // note: no need for std::string test
-        string_ds_check = NULL;
 
 	// Read and verify the dataset string as an std::string.
 	H5std_string read_str;
@@ -193,7 +191,6 @@ static void test_vlstring_dataset()
 	if(HDstrcmp(string_ds_check,dynstring_ds_write)!=0)
 	    TestErrPrintf("VL string datasets don't match!, dynstring_ds_write=%s, string_ds_check=%s\n",dynstring_ds_write,string_ds_check);
 	HDfree(string_ds_check);
-        string_ds_check = NULL;
 	dset1.close();
 
 	// Open dataset DSET1_NAME again.
@@ -210,11 +207,6 @@ static void test_vlstring_dataset()
     catch (Exception E) {
 	issue_fail_msg("test_vlstring_dataset()", __LINE__, __FILE__, E.getCDetailMsg());
     }
-
-    if(dynstring_ds_write)
-        HDfree(dynstring_ds_write);
-    if(string_ds_check)
-	HDfree(string_ds_check);
 }   // test_vlstring_dataset()
 
 /*-------------------------------------------------------------------------
@@ -239,10 +231,10 @@ static void test_vlstring_array_dataset()
     // Output message about test being performed
     SUBTEST("VL String Array on Datasets");
 
-    H5File* file1 = NULL;
+    H5File* file1;
     try {
         // Create file.
-	file1 = new H5File(FILENAME, H5F_ACC_RDWR);
+	file1 = new H5File (FILENAME, H5F_ACC_RDWR);
 
         // Create dataspace for datasets.
         hsize_t dims1[] = {SPACE1_DIM1};
@@ -286,7 +278,8 @@ static void test_vlstring_array_dataset()
 	HDmemset(wdata2, 'A', 65533);
 	dataset2.write(&wdata2, vlst);
 
-	char *rdata2;
+	char *rdata2 = (char*)HDcalloc(65534, sizeof(char));
+	HDmemset(rdata2, 0, 65533);
 	dataset2.read(&rdata2, vlst);
 	if (HDstrcmp(wdata2, rdata2)!=0)
 	    TestErrPrintf("Line %d: Dataset data different: written=%s,read=%s\n",__LINE__, wdata2, rdata2);
@@ -309,10 +302,8 @@ static void test_vlstring_array_dataset()
     catch (Exception E)
     {
 	issue_fail_msg("test_vlstring_array_dataset()", __LINE__, __FILE__, E.getCDetailMsg());
-    }
-
-    if(file1)
 	delete file1;
+    }
 } // end test_vlstring_array_dataset()
 
 /*-------------------------------------------------------------------------
@@ -491,7 +482,6 @@ static void test_vlstring_type()
 	// Close datatype and file.
 	vlst.close();
 	file1->close();
-        delete file1;
 
 	// Open file.
 	file1 = new H5File(FILENAME, H5F_ACC_RDWR);
@@ -516,10 +506,8 @@ static void test_vlstring_type()
     catch (Exception E)
     {
         issue_fail_msg("test_vlstring_type()", __LINE__, __FILE__, E.getCDetailMsg());
-    }
-
-    if(file1)
 	delete file1;
+    }
 } // end test_vlstring_type()
 
 /*-------------------------------------------------------------------------

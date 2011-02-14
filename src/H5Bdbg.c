@@ -177,7 +177,7 @@ H5B_assert(H5F_t *f, hid_t dxpl_id, haddr_t addr, const H5B_class_t *type, void 
     H5RC_t	*rc_shared;             /* Ref-counted shared info */
     H5B_shared_t *shared;               /* Pointer to shared B-tree info */
     H5B_cache_ud_t cache_udata;         /* User-data for metadata cache callback */
-    int	        ncell, cmp;
+    int	i, ncell, cmp;
     static int	ncalls = 0;
     herr_t	status;
     herr_t      ret_value = SUCCEED;    /* Return value */
@@ -210,7 +210,7 @@ H5B_assert(H5F_t *f, hid_t dxpl_id, haddr_t addr, const H5B_class_t *type, void 
     HDassert(bt);
     shared = (H5B_shared_t *)H5RC_GET_OBJ(bt->rc_shared);
     HDassert(shared);
-    cur = (struct child_t *)H5MM_calloc(sizeof(struct child_t));
+    cur = H5MM_calloc(sizeof(struct child_t));
     HDassert(cur);
     cur->addr = addr;
     cur->level = bt->level;
@@ -242,26 +242,24 @@ H5B_assert(H5F_t *f, hid_t dxpl_id, haddr_t addr, const H5B_class_t *type, void 
 	    HDassert(!H5F_addr_defined(bt->left));
 
 	if(cur->level > 0) {
-            unsigned u;
-
-	    for(u = 0; u < bt->nchildren; u++) {
+	    for(i = 0; i < bt->nchildren; i++) {
 		/*
 		 * Check that child nodes haven't already been seen.  If they
 		 * have then the tree has a cycle.
 		 */
 		for(tmp = head; tmp; tmp = tmp->next)
-		    HDassert(H5F_addr_ne(tmp->addr, bt->child[u]));
+		    HDassert(H5F_addr_ne(tmp->addr, bt->child[i]));
 
 		/* Add the child node to the end of the queue */
-		tmp = (struct child_t *)H5MM_calloc(sizeof(struct child_t));
+		tmp = H5MM_calloc(sizeof(struct child_t));
 		HDassert(tmp);
-		tmp->addr = bt->child[u];
+		tmp->addr = bt->child[i];
 		tmp->level = bt->level - 1;
 		tail->next = tmp;
 		tail = tmp;
 
 		/* Check that the keys are monotonically increasing */
-		cmp = (type->cmp2)(H5B_NKEY(bt, shared, u), udata, H5B_NKEY(bt, shared, u + 1));
+		cmp = (type->cmp2)(H5B_NKEY(bt, shared, i), udata, H5B_NKEY(bt, shared, i + 1));
 		HDassert(cmp < 0);
 	    } /* end for */
 	} /* end if */

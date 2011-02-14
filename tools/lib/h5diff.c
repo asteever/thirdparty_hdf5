@@ -14,12 +14,11 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <stdlib.h>
-
 #include "H5private.h"
-#include "h5tools.h"
-#include "h5tools_utils.h"
 #include "h5diff.h"
 #include "ph5diff.h"
+#include "h5tools.h"
+#include "h5tools_utils.h"
 
 /*
  * Debug printf macros. The prefix allows output filtering by test scripts.

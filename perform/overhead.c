@@ -220,8 +220,15 @@ test(fill_t fill_style, const double splits[],
     if((fspace = H5Screate_simple(1, cur_size, max_size)) < 0) goto error;
     if((mspace = H5Screate_simple(1, ch_size, ch_size)) < 0) goto error;
     if((dset = H5Dcreate2(file, "chunked", H5T_NATIVE_INT,
-		    fspace, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0) goto error;
+			fspace, H5P_DEFAULT, dcpl, H5P_DEFAULT)) < 0) goto error;
+
+#if !defined( __MWERKS__)
+
+ /*
+  workaround for a bug in the Metrowerks version 6.0 open function
+  */
     if ((fd=HDopen(FILE_NAME_1, O_RDONLY, 0666)) < 0) goto error;
+#endif
 
     for (i=1; i<=cur_size[0]; i++) {
 
@@ -257,6 +264,8 @@ test(fill_t fill_style, const double splits[],
 	}
 
 
+#if !defined( __MWERKS__)
+
 	/* Determine overhead */
 	if (verbose) {
 	    if (H5Fflush(file, H5F_SCOPE_LOCAL) < 0) goto error;
@@ -270,6 +279,7 @@ test(fill_t fill_style, const double splits[],
 		   (unsigned long)i,
 		   (double)(hssize_t)(sb.st_size-i*sizeof(int))/(hssize_t)i);
 	}
+#endif
 
 
     }
@@ -302,14 +312,20 @@ test(fill_t fill_style, const double splits[],
 	    abort();
 	}
 
+#if !defined( __MWERKS__)
+
 	if (HDfstat(fd, &sb) < 0) goto error;
 		printf("%-7s %8.3f\n", sname,
 	       (double)(hssize_t)(sb.st_size-cur_size[0]*sizeof(int))/
 	           (hssize_t)cur_size[0]);
+#endif
+
     }
 
 
+#if !defined( __MWERKS__)
     HDclose(fd);
+#endif
 
     return 0;
 

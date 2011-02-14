@@ -21,6 +21,15 @@
 /* See H5private.h for how to include headers */
 #include "hdf5.h"
 
+#if defined (__MWERKS__)
+#ifdef H5_HAVE_SYS_TIMEB
+#undef H5_HAVE_SYS_TIMEB
+#endif
+#ifdef H5_HAVE_SYSTEM
+#undef H5_HAVE_SYSTEM
+#endif
+#endif /* __MWERKS__*/
+
 #include "H5private.h"
 
 #ifdef H5_HAVE_SYS_TIMEB
@@ -133,10 +142,18 @@ synchronize (void)
 {
 #ifdef H5_HAVE_SYSTEM
 #if defined(_WIN32) && ! defined(__CYGWIN__)
-    _flushall();
+	_flushall();
 #else
-    HDsystem("sync");
-    HDsystem("df >/dev/null");
+    HDsystem ("sync");
+    HDsystem ("df >/dev/null");
+#endif
+#if 0
+    /*
+     * This works well on Linux to get rid of all cached disk buffers. The
+     * number should be approximately the amount of RAM in MB.  Do not
+     * include swap space in that amount or the command will fail.
+     */
+    system ("/sbin/swapout 128");
 #endif
 #endif
 }
@@ -162,10 +179,10 @@ int
 main (void)
 {
     static hsize_t	size[2] = {REQUEST_SIZE_X, REQUEST_SIZE_Y};
-    static unsigned	nread = NREAD_REQUESTS, nwrite = NWRITE_REQUESTS;
+    static int		nread=NREAD_REQUESTS, nwrite=NWRITE_REQUESTS;
 
     unsigned char	*the_data = NULL;
-    hid_t		file, dset, file_space = -1;
+    hid_t		file, dset, file_space=-1;
     herr_t		status;
 #ifdef H5_HAVE_GETRUSAGE
     struct rusage	r_start, r_stop;
@@ -173,8 +190,7 @@ main (void)
     struct timeval r_start, r_stop;
 #endif
     struct timeval	t_start, t_stop;
-    int			fd;
-    unsigned		u;
+    int			i, fd;
     hssize_t		n;
     off_t		offset;
     hsize_t		start[2];
@@ -204,34 +220,35 @@ main (void)
     assert(file_space >= 0);
     dset = H5Dcreate2(file, "dset", H5T_NATIVE_UCHAR, file_space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     assert(dset >= 0);
-    the_data = (unsigned char *)malloc((size_t)(size[0] * size[1]));
+    the_data = malloc((size_t)(size[0] * size[1]));
 
     /* initial fill for lazy malloc */
-    HDmemset(the_data, 0xAA, (size_t)(size[0] * size[1]));
+    memset(the_data, 0xAA, (size_t)(size[0] * size[1]));
 
     /* Fill raw */
     synchronize ();
 #ifdef H5_HAVE_GETRUSAGE
-    HDgetrusage(RUSAGE_SELF, &r_start);
+printf("Before getrusage() call\n");
+    getrusage (RUSAGE_SELF, &r_start);
 #endif
 #ifdef H5_HAVE_GETTIMEOFDAY
-    HDgettimeofday(&t_start, NULL);
+    gettimeofday (&t_start, NULL);
 #else
 #ifdef H5_HAVE_SYS_TIMEB
 	_ftime(tbstart);
 #endif
 #endif
     fprintf (stderr, HEADING, "fill raw");
-    for(u = 0; u < nwrite; u++) {
+    for (i=0; i<nwrite; i++) {
 	putc (PROGRESS, stderr);
-	HDfflush(stderr);
-	HDmemset(the_data, 0xAA, (size_t)(size[0]*size[1]));
+	fflush (stderr);
+	memset (the_data, 0xAA, (size_t)(size[0]*size[1]));
     }
 #ifdef H5_HAVE_GETRUSAGE
-    HDgetrusage(RUSAGE_SELF, &r_stop);
+    getrusage (RUSAGE_SELF, &r_stop);
 #endif
 #ifdef H5_HAVE_GETTIMEOFDAY
-    HDgettimeofday(&t_stop, NULL);
+    gettimeofday (&t_stop, NULL);
 #else
 #ifdef H5_HAVE_SYS_TIMEB
 	_ftime(tbstop);
@@ -250,28 +267,28 @@ main (void)
     /* Fill hdf5 */
     synchronize ();
 #ifdef H5_HAVE_GETRUSAGE
-    HDgetrusage(RUSAGE_SELF, &r_start);
+    getrusage (RUSAGE_SELF, &r_start);
 #endif
 #ifdef H5_HAVE_GETTIMEOFDAY
-    HDgettimeofday(&t_start, NULL);
+    gettimeofday (&t_start, NULL);
 #else
 #ifdef H5_HAVE_SYS_TIMEB
 	_ftime(tbstart);
 #endif
 #endif
     fprintf (stderr, HEADING, "fill hdf5");
-    for(u = 0; u < nread; u++) {
+    for (i=0; i<nread; i++) {
 	putc (PROGRESS, stderr);
-	HDfflush(stderr);
+	fflush (stderr);
 	status = H5Dread (dset, H5T_NATIVE_UCHAR, file_space, file_space,
 			  H5P_DEFAULT, the_data);
 	assert (status>=0);
     }
 #ifdef H5_HAVE_GETRUSAGE
-    HDgetrusage(RUSAGE_SELF, &r_stop);
+    getrusage (RUSAGE_SELF, &r_stop);
 #endif
 #ifdef H5_HAVE_GETTIMEOFDAY
-    HDgettimeofday(&t_stop, NULL);
+    gettimeofday (&t_stop, NULL);
 #else
 #ifdef H5_HAVE_SYS_TIMEB
 	_ftime(tbstop);
@@ -289,29 +306,29 @@ main (void)
     /* Write the raw dataset */
     synchronize ();
 #ifdef H5_HAVE_GETRUSAGE
-    HDgetrusage(RUSAGE_SELF, &r_start);
+    getrusage (RUSAGE_SELF, &r_start);
 #endif
 #ifdef H5_HAVE_GETTIMEOFDAY
-    HDgettimeofday(&t_start, NULL);
+    gettimeofday (&t_start, NULL);
 #else
 #ifdef H5_HAVE_SYS_TIMEB
 	_ftime(tbstart);
 #endif
 #endif
     fprintf (stderr, HEADING, "out raw");
-    for(u = 0; u < nwrite; u++) {
+    for (i=0; i<nwrite; i++) {
 	putc (PROGRESS, stderr);
-	HDfflush(stderr);
+	fflush (stderr);
 	offset = HDlseek (fd, (off_t)0, SEEK_SET);
 	assert (0==offset);
 	n = HDwrite (fd, the_data, (size_t)(size[0]*size[1]));
 	assert (n>=0 && (size_t)n==size[0]*size[1]);
     }
 #ifdef H5_HAVE_GETRUSAGE
-    HDgetrusage(RUSAGE_SELF, &r_stop);
+    getrusage (RUSAGE_SELF, &r_stop);
 #endif
 #ifdef H5_HAVE_GETTIMEOFDAY
-    HDgettimeofday(&t_stop, NULL);
+    gettimeofday (&t_stop, NULL);
 #else
 #ifdef H5_HAVE_SYS_TIMEB
 	_ftime(tbstop);
@@ -329,28 +346,28 @@ main (void)
     /* Write the hdf5 dataset */
     synchronize ();
 #ifdef H5_HAVE_GETRUSAGE
-    HDgetrusage(RUSAGE_SELF, &r_start);
+    getrusage (RUSAGE_SELF, &r_start);
 #endif
 #ifdef H5_HAVE_GETTIMEOFDAY
-    HDgettimeofday(&t_start, NULL);
+    gettimeofday (&t_start, NULL);
 #else
 #ifdef H5_HAVE_SYS_TIMEB
 	_ftime(tbstart);
 #endif
 #endif
     fprintf (stderr, HEADING, "out hdf5");
-    for(u = 0; u < nwrite; u++) {
+    for (i=0; i<nwrite; i++) {
 	putc (PROGRESS, stderr);
-	HDfflush(stderr);
+	fflush (stderr);
 	status = H5Dwrite (dset, H5T_NATIVE_UCHAR, H5S_ALL, H5S_ALL,
 			   H5P_DEFAULT, the_data);
 	assert (status>=0);
     }
 #ifdef H5_HAVE_GETRUSAGE
-    HDgetrusage(RUSAGE_SELF, &r_stop);
+    getrusage (RUSAGE_SELF, &r_stop);
 #endif
 #ifdef H5_HAVE_GETTIMEOFDAY
-    HDgettimeofday(&t_stop, NULL);
+    gettimeofday (&t_stop, NULL);
 #else
 #ifdef H5_HAVE_SYS_TIMEB
 	_ftime(tbstop);
@@ -368,29 +385,29 @@ main (void)
     /* Read the raw dataset */
     synchronize ();
 #ifdef H5_HAVE_GETRUSAGE
-    HDgetrusage(RUSAGE_SELF, &r_start);
+    getrusage (RUSAGE_SELF, &r_start);
 #endif
 #ifdef H5_HAVE_GETTIMEOFDAY
-    HDgettimeofday(&t_start, NULL);
+    gettimeofday (&t_start, NULL);
 #else
 #ifdef H5_HAVE_SYS_TIMEB
 	_ftime(tbstart);
 #endif
 #endif
     fprintf (stderr, HEADING, "in raw");
-    for(u = 0; u < nread; u++) {
+    for (i=0; i<nread; i++) {
 	putc (PROGRESS, stderr);
-	HDfflush(stderr);
+	fflush (stderr);
 	offset = HDlseek (fd, (off_t)0, SEEK_SET);
 	assert (0==offset);
 	n = HDread (fd, the_data, (size_t)(size[0]*size[1]));
 	assert (n>=0 && (size_t)n==size[0]*size[1]);
     }
 #ifdef H5_HAVE_GETRUSAGE
-    HDgetrusage(RUSAGE_SELF, &r_stop);
+    getrusage (RUSAGE_SELF, &r_stop);
 #endif
 #ifdef H5_HAVE_GETTIMEOFDAY
-    HDgettimeofday(&t_stop, NULL);
+    gettimeofday (&t_stop, NULL);
 #else
 #ifdef H5_HAVE_SYS_TIMEB
 	_ftime(tbstop);
@@ -409,28 +426,28 @@ main (void)
     /* Read the hdf5 dataset */
     synchronize ();
 #ifdef H5_HAVE_GETRUSAGE
-    HDgetrusage(RUSAGE_SELF, &r_start);
+    getrusage (RUSAGE_SELF, &r_start);
 #endif
 #ifdef H5_HAVE_GETTIMEOFDAY
-    HDgettimeofday(&t_start, NULL);
+    gettimeofday (&t_start, NULL);
 #else
 #ifdef H5_HAVE_SYS_TIMEB
 	_ftime(tbstart);
 #endif
 #endif
     fprintf (stderr, HEADING, "in hdf5");
-    for(u = 0; u < nread; u++) {
+    for (i=0; i<nread; i++) {
 	putc (PROGRESS, stderr);
-	HDfflush(stderr);
+	fflush (stderr);
 	status = H5Dread (dset, H5T_NATIVE_UCHAR, file_space, file_space,
 			  H5P_DEFAULT, the_data);
 	assert (status>=0);
     }
 #ifdef H5_HAVE_GETRUSAGE
-    HDgetrusage(RUSAGE_SELF, &r_stop);
+    getrusage (RUSAGE_SELF, &r_stop);
 #endif
 #ifdef H5_HAVE_GETTIMEOFDAY
-    HDgettimeofday(&t_stop, NULL);
+    gettimeofday (&t_stop, NULL);
 #else
 #ifdef H5_HAVE_SYS_TIMEB
 	_ftime(tbstop);
@@ -453,28 +470,28 @@ main (void)
     assert (status>=0);
     synchronize ();
 #ifdef H5_HAVE_GETRUSAGE
-    HDgetrusage(RUSAGE_SELF, &r_start);
+    getrusage (RUSAGE_SELF, &r_start);
 #endif
 #ifdef H5_HAVE_GETTIMEOFDAY
-    HDgettimeofday(&t_start, NULL);
+    gettimeofday (&t_start, NULL);
 #else
 #ifdef H5_HAVE_SYS_TIMEB
 	_ftime(tbstart);
 #endif
 #endif
     fprintf (stderr, HEADING, "in hdf5 partial");
-    for(u = 0; u < nread; u++) {
+    for (i=0; i<nread; i++) {
 	putc (PROGRESS, stderr);
-	HDfflush(stderr);
+	fflush (stderr);
 	status = H5Dread (dset, H5T_NATIVE_UCHAR, file_space, file_space,
 			  H5P_DEFAULT, the_data);
 	assert (status>=0);
     }
 #ifdef H5_HAVE_GETRUSAGE
-    HDgetrusage(RUSAGE_SELF, &r_stop);
+    getrusage (RUSAGE_SELF, &r_stop);
 #endif
 #ifdef H5_HAVE_GETTIMEOFDAY
-    HDgettimeofday(&t_stop, NULL);
+    gettimeofday (&t_stop, NULL);
 #else
 #ifdef H5_HAVE_SYS_TIMEB
 	_ftime(tbstop);
@@ -484,20 +501,18 @@ main (void)
 	t_stop.tv_usec = tbstop->millitm;
 #endif
 #endif
-    putc('\n', stderr);
-    print_stats("in hdf5 partial",
+    putc ('\n', stderr);
+    print_stats ("in hdf5 partial",
 		 &r_start, &r_stop, &t_start, &t_stop,
 		 (size_t)(nread*count[0]*count[1]));
 
 
 
     /* Close everything */
-    HDclose(fd);
-    H5Dclose(dset);
-    H5Sclose(file_space);
-    H5Fclose(file);
-    free(the_data);
+    HDclose (fd);
+    H5Dclose (dset);
+    H5Sclose (file_space);
+    H5Fclose (file);
 
     return 0;
 }
-

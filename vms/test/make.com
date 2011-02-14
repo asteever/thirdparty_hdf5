@@ -20,14 +20,14 @@ $! The next two lines should be uncommented only when building by hand in the
 $! current directory. Use build.com in the vms directory to build
 $! the distribution. Make sure that location of the zlib library is correct.
 $! define zlib_dir sys$sysusers:[pourmal.zlib-1_2_3]
-$! ccopt = "/float=ieee_float/define=(_LARGEFILE,H5_VMS)/include=zlib_dir"
+$! ccopt = "/float=ieee_float/define=H5_VMS/include=zlib_dir"
 $!
 $ ccc := cc 'ccopt /include=([-.src])
 $ type sys$input
  	Creating  testhdf5
 $!
-$ cobj= "h5test.c, testframe.c, testhdf5.c, tarray.c, tattr.c, tcheck_version., tchecksum.c,"+-
-        "tconfig.c, tcoords.c, tfile.c, tgenprop.c, th5o.c, th5s.c, theap.c, tid.c,"+- 
+$ cobj= "h5test.c, testframe.c, testhdf5.c, tarray.c, tattr.c, tchecksum.c, tconfig.c,"+-
+        "tcoords.c, tfile.c, tgenprop.c, th5o.c, th5s.c, theap.c, tid.c,"+- 
         "titerate.c, tmeta.c, tmisc.c, trefer.c, trefstr.c, tselect.c, tskiplist.c,"+- 
         "tsohm.c, ttime.c, ttst.c, tunicode.c, tvlstr.c, tvltypes.c, cache_common.c"
 $!                              
@@ -35,19 +35,12 @@ $ ccc 'cobj
 $ library/create/replace []libh5test h5test, testframe, cache_common
 $ type sys$input
        Creating libh5test
-$ link     testhdf5,tarray,tattr,tcheck_version,tchecksum,tconfig, -
+$ link     testhdf5,tarray,tattr,tchecksum,tconfig, -
            tcoords,tfile,tgenprop,th5o,th5s,theap,tid,titerate, -
            tmeta,tmisc,trefer,trefstr, -
            tselect,tskiplist,tsohm,ttime,ttst,tunicode,tvlstr,tvltypes, -
            libh5test.olb/lib,[-.src]hdf5.olb/lib,zlib_dir:libz.olb/lib
 $
-$! a new test
-$ type sys$input
-       Creating accum test
-$ ccc  accum
-$ link accum, -
-       libh5test.olb/lib,[-.src]hdf5.olb/lib,zlib_dir:libz.olb/lib
-$!
 $ type sys$input
        Creating app_ref test
 $ ccc  app_ref
@@ -82,25 +75,6 @@ $ type sys$input
        Creating cache test
 $ ccc  cache
 $ link cache, -
-       libh5test.olb/lib,[-.src]hdf5.olb/lib,zlib_dir:libz.olb/lib
-$!
-$ type sys$input
-       Creating cache_common test
-$ ccc  cache_common
-$ link cache_common, -
-       libh5test.olb/lib,[-.src]hdf5.olb/lib,zlib_dir:libz.olb/lib
-$!
-$! a new test
-$ type sys$input
-       Creating cache_tagging tests
-$ ccc  cache_tagging 
-$ link cache_tagging, -
-       libh5test.olb/lib,[-.src]hdf5.olb/lib,zlib_dir:libz.olb/lib
-$!
-$ type sys$input
-       Creating chunk_info test
-$ ccc  chunk_info
-$ link chunk_info, -
        libh5test.olb/lib,[-.src]hdf5.olb/lib,zlib_dir:libz.olb/lib
 $!
 $ type sys$input
@@ -146,12 +120,6 @@ $ link dtypes, -
        libh5test.olb/lib,[-.src]hdf5.olb/lib,zlib_dir:libz.olb/lib
 $!
 $ type sys$input
-       Creating earray test
-$ ccc  earray 
-$ link earray, -
-       libh5test.olb/lib,[-.src]hdf5.olb/lib,zlib_dir:libz.olb/lib
-$!
-$ type sys$input
        Creating enum test
 $ ccc  enum
 $ link enum, -
@@ -191,13 +159,6 @@ $ type sys$input
        Creating fillval test
 $ ccc  fillval
 $ link fillval, -
-       libh5test.olb/lib,[-.src]hdf5.olb/lib,zlib_dir:libz.olb/lib
-$!
-$! a new test
-$ type sys$input
-       Creating filter_fail test
-$ ccc  filter_fail
-$ link filter_fail, -
        libh5test.olb/lib,[-.src]hdf5.olb/lib,zlib_dir:libz.olb/lib
 $!
 $ type sys$input
@@ -254,13 +215,6 @@ $ ccc  links
 $ link links, -
        libh5test.olb/lib,[-.src]hdf5.olb/lib,zlib_dir:libz.olb/lib
 $!
-$! a new test
-$ type sys$input
-       Creating links_env test
-$ ccc  links_env
-$ link links_env, -
-       libh5test.olb/lib,[-.src]hdf5.olb/lib,zlib_dir:libz.olb/lib
-$!
 $ type sys$input
        Creating mf test
 $ ccc  mf 
@@ -315,24 +269,10 @@ $ ccc  set_extent
 $ link set_extent, -
        libh5test.olb/lib,[-.src]hdf5.olb/lib,zlib_dir:libz.olb/lib
 $!
-$! a new test
-$ type sys$input
-       Creating space_overflow test
-$ ccc  space_overflow
-$ link space_overflow, -
-       libh5test.olb/lib,[-.src]hdf5.olb/lib,zlib_dir:libz.olb/lib
-$!
 $ type sys$input
        Creating stab test
 $ ccc  stab
 $ link stab, -
-       libh5test.olb/lib,[-.src]hdf5.olb/lib,zlib_dir:libz.olb/lib
-$!
-$! a new test
-$ type sys$input
-       Creating testmeta test
-$ ccc  testmeta
-$ link testmeta, -
        libh5test.olb/lib,[-.src]hdf5.olb/lib,zlib_dir:libz.olb/lib
 $!
 $ type sys$input

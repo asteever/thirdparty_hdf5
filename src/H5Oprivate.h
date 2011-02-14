@@ -169,8 +169,7 @@ typedef struct H5O_copy_t {
 #define H5O_DRVINFO_ID  0x0014          /* Driver info message.  */
 #define H5O_AINFO_ID    0x0015          /* Attribute info message.  */
 #define H5O_REFCOUNT_ID 0x0016          /* Reference count message.  */
-#define H5O_FSINFO_ID   0x0017          /* Free-space manager info message.  */
-#define H5O_UNKNOWN_ID  0x0018          /* Placeholder message ID for unknown message.  */
+#define H5O_UNKNOWN_ID  0x0017          /* Placeholder message ID for unknown message.  */
                                         /* (this should never exist in a file) */
 
 
@@ -346,18 +345,6 @@ typedef struct H5O_efl_t {
  */
 #define H5O_LAYOUT_VERSION_3	3
 
-/* This version adds different types of indices to chunked datasets, allows
- *      for larger chunk dimensions, stores chunk indices into their own
- *      message (the "layout index" message), adds features for compact/dense
- *      storage of elements and/or chunk records, adds features for abbreviating
- *      the storage used for partial chunks on boundaries, etc.
- */
-#define H5O_LAYOUT_VERSION_4	4
-
-/* The latest version of the format.  Look through the 'encode'
- *      and 'size' callbacks for places to change when updating this. */
-#define H5O_LAYOUT_VERSION_LATEST H5O_LAYOUT_VERSION_4
-
 
 /* Forward declaration of structs used below */
 struct H5D_layout_ops_t;                /* Defined in H5Dpkg.h               */
@@ -369,7 +356,6 @@ typedef struct H5O_storage_contig_t {
 } H5O_storage_contig_t;
 
 typedef struct H5O_storage_chunk_btree_t {
-    haddr_t     dset_ohdr_addr;         /* File address dataset's object header */
     H5RC_t     *shared;			/* Ref-counted shared info for B-tree nodes */
 } H5O_storage_chunk_btree_t;
 
@@ -576,17 +562,6 @@ typedef uint32_t H5O_refcount_t;        /* Contains # of links to object, if >1 
  */
 typedef unsigned H5O_unknown_t;         /* Original message type ID */
 
-/*
- * Free space manager info Message.
- * Contains file space management info and
- * addresses of free space managers for file memory
- * (Data structure in memory)
- */
-typedef struct H5O_fsinfo_t {
-    H5F_file_space_type_t strategy;	/* File space strategy */
-    hsize_t		  threshold;	/* Free space section threshold */
-    haddr_t     	  fs_addr[H5FD_MEM_NTYPES-1]; /* Addresses of free space managers */
-} H5O_fsinfo_t;
 
 /* Typedef for "application" iteration operations */
 typedef herr_t (*H5O_operator_t)(const void *mesg/*in*/, unsigned idx,
@@ -624,14 +599,13 @@ struct H5P_genplist_t;
 /* Object header routines */
 H5_DLL herr_t H5O_init(void);
 H5_DLL herr_t H5O_create(H5F_t *f, hid_t dxpl_id, size_t size_hint,
-    size_t initial_rc, hid_t ocpl_id, H5O_loc_t *loc/*out*/);
+    hid_t ocpl_id, H5O_loc_t *loc/*out*/);
 H5_DLL herr_t H5O_open(H5O_loc_t *loc);
 H5_DLL herr_t H5O_close(H5O_loc_t *loc);
 H5_DLL int H5O_link(const H5O_loc_t *loc, int adjust, hid_t dxpl_id);
 H5_DLL H5O_t *H5O_protect(const H5O_loc_t *loc, hid_t dxpl_id, H5AC_protect_t prot);
 H5_DLL H5O_t *H5O_pin(const H5O_loc_t *loc, hid_t dxpl_id);
 H5_DLL herr_t H5O_unpin(H5O_t *oh);
-H5_DLL herr_t H5O_dec_rc_by_loc(const H5O_loc_t *loc, hid_t dxpl_id);
 H5_DLL herr_t H5O_unprotect(const H5O_loc_t *loc, hid_t dxpl_id, H5O_t *oh,
     unsigned oh_flags);
 H5_DLL herr_t H5O_touch(const H5O_loc_t *loc, hbool_t force, hid_t dxpl_id);

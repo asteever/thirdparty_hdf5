@@ -120,7 +120,6 @@ DEFS = @DEFS@
 DEPDIR = @DEPDIR@
 DEPRECATED_SYMBOLS = @DEPRECATED_SYMBOLS@
 DIRECT_VFD = @DIRECT_VFD@
-DLLTOOL = @DLLTOOL@
 DSYMUTIL = @DSYMUTIL@
 DUMPBIN = @DUMPBIN@
 DYNAMIC_DIRS = @DYNAMIC_DIRS@
@@ -182,7 +181,6 @@ LTLIBOBJS = @LTLIBOBJS@
 LT_STATIC_EXEC = @LT_STATIC_EXEC@
 MAINT = @MAINT@
 MAKEINFO = @MAKEINFO@
-MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
 MPE = @MPE@
 MPI_GET_SIZE = @MPI_GET_SIZE@
@@ -200,6 +198,7 @@ PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
+PACKED_BITS = @PACKED_BITS@
 PARALLEL = @PARALLEL@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PERL = @PERL@
@@ -239,7 +238,6 @@ abs_builddir = @abs_builddir@
 abs_srcdir = @abs_srcdir@
 abs_top_builddir = @abs_top_builddir@
 abs_top_srcdir = @abs_top_srcdir@
-ac_ct_AR = @ac_ct_AR@
 ac_ct_CC = @ac_ct_CC@
 ac_ct_CXX = @ac_ct_CXX@
 ac_ct_DUMPBIN = @ac_ct_DUMPBIN@
@@ -656,44 +654,53 @@ install-data-local:
 uninstall-local:
 	@$(MAKE) $(AM_MAKEFLAGS) uninstall-examples
 
-install-examples: $(EXAMPLEDIR) $(INSTALL_FILES)
-	@for f in X $(INSTALL_FILES); do                                     \
-	  if test $$f != X; then                                             \
-	    (set -x; $(INSTALL) $(srcdir)/$$f $(EXAMPLEDIR)/. || exit 1);    \
-            chmod a-x $(EXAMPLEDIR)/$$f;                                     \
-	  fi;                                                                \
+install-examples: $(EXAMPLEDIR) $(INSTALL_FILES) 
+	@for f in X $(INSTALL_FILES); do                                       \
+	  if test $$f != X; then                                               \
+	    (set -x; $(INSTALL) $(srcdir)/$$f $(EXAMPLEDIR)/. || exit 1);      \
+            chmod a-x $(EXAMPLEDIR)/$$f;                                       \
+	  fi;                                                                  \
 	done
-	@for f in X $(INSTALL_SCRIPT_FILES); do                                   \
-	  if test $$f != X; then                                             \
-	    (set -x; $(INSTALL) $$f $(EXAMPLEDIR)/. || exit 1);\
-	  fi;                                                                \
+	@for f in X $(INSTALL_SCRIPT_FILES); do                                \
+	  if test $$f != X; then                                               \
+	    (set -x; $(INSTALL) $$f $(EXAMPLEDIR)/. || exit 1);                \
+	  fi;                                                                  \
 	done
-	@for f in X $(INSTALL_TOP_SCRIPT_FILES); do                       \
-	  if test $$f != X; then                                             \
-	    (set -x; $(INSTALL) $(srcdir)/$$f $(EXAMPLETOPDIR)/. || exit 1); \
-	  fi;                                                                \
+	@for f in X $(INSTALL_TOP_FILES); do                                   \
+	  if test $$f != X; then                                               \
+	    (set -x; $(INSTALL) $(srcdir)/$$f $(EXAMPLETOPDIR)/. || exit 1);   \
+            chmod a-x $(EXAMPLETOPDIR)/$$f;\
+	  fi;                                                                  \
+	done
+	@for f in X $(INSTALL_TOP_SCRIPT_FILES); do                            \
+	  if test $$f != X; then                                               \
+	    (set -x; $(INSTALL) $(srcdir)/$$f $(EXAMPLETOPDIR)/. || exit 1);   \
+	  fi;                                                                  \
 	done
 
 uninstall-examples:
-	@if test -n "$(INSTALL_FILES)" -a -d $(EXAMPLEDIR); then             \
-	  set -x; cd $(EXAMPLEDIR) && $(RM) $(INSTALL_FILES);                \
+	@if test -n "$(INSTALL_FILES)" -a -d $(EXAMPLEDIR); then               \
+	  set -x; cd $(EXAMPLEDIR) && $(RM) $(INSTALL_FILES);                  \
         fi
-	@if test -n "$(INSTALL_SCRIPT_FILES)" -a -d $(EXAMPLEDIR); then           \
-	  set -x; cd $(EXAMPLEDIR) && $(RM) $(INSTALL_SCRIPT_FILES);              \
+	@if test -n "$(INSTALL_SCRIPT_FILES)" -a -d $(EXAMPLEDIR); then        \
+	  set -x; cd $(EXAMPLEDIR) && $(RM) $(INSTALL_SCRIPT_FILES);           \
         fi
-	@if test -n "$(INSTALL_TOP_SCRIPT_FILES)" -a -d $(EXAMPLETOPDIR); then    \
-	  set -x; cd $(EXAMPLETOPDIR) && $(RM) $(INSTALL_TOP_SCRIPT_FILES);       \
+	@if test -n "$(INSTALL_TOP_FILES)" -a -d $(EXAMPLETOPDIR); then        \
+	  set -x; cd $(EXAMPLETOPDIR) && $(RM) $(INSTALL_TOP_FILES);           \
+        fi
+	@if test -n "$(INSTALL_TOP_SCRIPT_FILES)" -a -d $(EXAMPLETOPDIR); then \
+	  set -x; cd $(EXAMPLETOPDIR) && $(RM) $(INSTALL_TOP_SCRIPT_FILES);    \
         fi
 
 installcheck-local:
-	@if test "$(STATIC_SHARED)" = "static, shared"; then               \
-	  H5CCFLAGS="-shlib" $(MAKE) $(AM_MAKEFLAGS) check;                \
-	  $(MAKE) $(AM_MAKEFLAGS) clean;                                   \
-	  H5CCFLAGS="" $(MAKE) $(AM_MAKEFLAGS) check;                      \
-	 elif test "$(STATIC_SHARED)" = "shared"; then                     \
-	  H5CCFLAGS="-shlib" $(MAKE) $(AM_MAKEFLAGS) check;                \
-	 else                                                              \
-	  $(MAKE) $(AM_MAKEFLAGS) check;                                   \
+	@if test "$(STATIC_SHARED)" = "static, shared"; then                   \
+	  H5CCFLAGS="-shlib" $(MAKE) $(AM_MAKEFLAGS) check;                    \
+	  $(MAKE) $(AM_MAKEFLAGS) clean;                                       \
+	  H5CCFLAGS="" $(MAKE) $(AM_MAKEFLAGS) check;                          \
+	 elif test "$(STATIC_SHARED)" = "shared"; then                         \
+	  H5CCFLAGS="-shlib" $(MAKE) $(AM_MAKEFLAGS) check;                    \
+	 else                                                                  \
+	  $(MAKE) $(AM_MAKEFLAGS) check;                                       \
 	 fi
 
 # lib/progs/tests targets recurse into subdirectories. build-* targets

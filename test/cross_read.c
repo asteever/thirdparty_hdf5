@@ -63,9 +63,10 @@ const char *FILENAME[] = {
  *
  *-------------------------------------------------------------------------
  */
-static int read_data(char *fname)
+static unsigned read_data(char *fname)
 {
-    const char *pathname = H5_get_srcdir_filename(fname); /* Corrected test file name */
+    char        pathname[1024];
+    char       *srcdir = getenv("srcdir"); /*where the src code is located*/
     hid_t       file, dataset;         /* handles */
     double      data_in[NX+1][NY]; /* input buffer */
     double      data_out[NX+1][NY]; /* output buffer */
@@ -74,6 +75,14 @@ static int read_data(char *fname)
     int         i, j;
     unsigned 	nerrors = 0;
     const char  *not_supported= "    Scaleoffset filter is not enabled.";
+
+    pathname[0] = '\0';
+    /* Generate correct name for test file by prepending the source path */
+    if(srcdir && ((strlen(srcdir) + strlen(fname) + 1) < sizeof(pathname))) {
+        strcpy(pathname, srcdir);
+        strcat(pathname, "/");
+    }
+    strcat(pathname, fname);
 
     /*
      * Open the file.
@@ -94,7 +103,7 @@ static int read_data(char *fname)
      */
     for (j = 0; j < NX; j++) {
 	for (i = 0; i < NY; i++) {
-	    data_in[j][i] = i + j;
+	    data_in[j][i] = (float)(i + j);
 	    data_out[j][i] = 0;
         }
     }

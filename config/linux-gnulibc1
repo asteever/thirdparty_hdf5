@@ -22,14 +22,8 @@
 
 # The default compiler is `gcc'.
 if test -z "$CC"; then
-    if test "X-$enable_parallel" = "X-yes"; then
-	# default to use mpicc which is the defacto MPI compiler name
-	CC=mpicc
-	CC_BASENAME=mpicc
-    else
-	CC=gcc
-	CC_BASENAME=gcc
-    fi
+   CC=gcc
+   CC_BASENAME=gcc
 fi
 
 # Figure out GNU C compiler flags

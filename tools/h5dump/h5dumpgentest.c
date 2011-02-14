@@ -92,10 +92,9 @@
 #define FILE61  "textlinksrc.h5"
 #define FILE62  "textlinktar.h5"
 #define FILE63  "textlinkfar.h5"
-/*#define FILE64  "tarray8.h5"*/
+#define FILE64  "tarray8.h5"
 #define FILE65  "tattrreg.h5"
-#define FILE66  "file_space.h5"
-#define FILE67  "packedbits.h5"
+#define FILE66  "packedbits.h5"
 
 
 
@@ -211,10 +210,6 @@ typedef struct s1_t {
 #define ARRAY3_DIM1 6
 #define ARRAY3_DIM2 3
 
-/* VL string datatype name */
-/* TODO remove complier error not used, remove the link when everything is OK */
-/* #define VLSTR_TYPE      "vl_string_type" */
-
 /* "File 41" macros */
 /* Name of dataset to create in datafile                              */
 #define F41_DATASETNAME   "CompoundComplex"
@@ -244,31 +239,23 @@ typedef struct s1_t {
 #define F51_MAX_NAME_LEN    ((64*1024)+1024)
 
 /* "File 64" macros */
-#define F64_FILE            "tarray8.h5"
 #define F64_DATASET         "DS1"
 #define F64_DIM0            1
 #define F64_ARRAY_BUF_LEN   (4*1024)
 #define F64_DIM1            (F64_ARRAY_BUF_LEN / sizeof(int) + 1)
 
-/* File 65 macros */
-#define STRATEGY	H5F_FILE_SPACE_AGGR_VFD	/* File space handling strategy */
-#define THRESHOLD10 	10    			/* Free space section threshold */
-
-/* "FILE67" macros */
-#define F67_XDIM	    8
-#define F67_DATASETU08        "DU08BITS"
-#define F67_DATASETS08        "DS08BITS"
-#define F67_YDIM8	    8
-#define F67_DATASETU16       "DU16BITS"
-#define F67_DATASETS16       "DS16BITS"
-#define F67_YDIM16	    16
-#define F67_DATASETU32       "DU32BITS"
-#define F67_DATASETS32       "DS32BITS"
-#define F67_YDIM32	    32
-#define F67_DATASETU64       "DU64BITS"
-#define F67_DATASETS64       "DS64BITS"
-#define F67_YDIM64      64
-#define F67_DUMMYDBL	    "DummyDBL"
+/* "FILE66" macros */
+#define F66_XDIM	    8
+#define F66_DATASETU08        "DU08BITS"
+#define F66_DATASETS08        "DS08BITS"
+#define F66_YDIM8	    8
+#define F66_DATASETU16       "DU16BITS"
+#define F66_DATASETS16       "DS16BITS"
+#define F66_YDIM16	    16
+#define F66_DATASETU32       "DU32BITS"
+#define F66_DATASETS32       "DS32BITS"
+#define F66_YDIM32	    32
+#define F66_DUMMYDBL	    "DummyDBL"
 
 static void
 gent_group(void)
@@ -3237,7 +3224,7 @@ static void gent_array8(void)
     hsize_t sdims[] = {F64_DIM0};
     hsize_t tdims[] = {F64_DIM1};
     int         wdata[(F64_DIM1) * sizeof(int)];      /* Write buffer */
-    unsigned int     i;
+    unsigned int i;
 
     /*
      * Initialize data.  i is the element in the dataspace, j and k the
@@ -3249,7 +3236,7 @@ static void gent_array8(void)
     /*
      * Create a new file using the default properties.
      */
-    file = H5Fcreate (F64_FILE, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    file = H5Fcreate (FILE64, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
     /*
      * Create array datatypes for file and memory.
@@ -3398,11 +3385,6 @@ gent_group_comments(void)
     H5Gclose(group);
     group = H5Gcreate2(fid, "/g2/g2.1/g2.1.3", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     H5Oset_comment_by_name(group, "/g2/g2.1/g2.1.3", "Comment for group /g2/g2.1/g2.1.3", H5P_DEFAULT);
-    H5Gclose(group);
-
-    /* /glongcomment */
-    group = H5Gcreate2(fid, "/glongcomment", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    H5Oset_comment_by_name(group, "/glongcomment", "Comment for group /glongcomment with a really, really, really long, long, long comment", H5P_DEFAULT);
     H5Gclose(group);
 
     H5Fclose(fid);
@@ -6770,33 +6752,6 @@ gent_extlinks(void)
 }
 
 /*-------------------------------------------------------------------------
- * Function:    gent_fs_strategy_threshold
- *
- * Purpose:     Generate a file with non-default file space strategy and
- *		non-default free-space section threshold.
- *-------------------------------------------------------------------------
- */
-static void
-gent_fs_strategy_threshold(void)
-{
- hid_t    fid;	/* File id */
- hid_t	  fcpl;	/* File creation property */
-
- /* Create file-creation template */
- fcpl = H5Pcreate(H5P_FILE_CREATE);
-
- /* Set file space information */
- H5Pset_file_space(fcpl, STRATEGY, (hsize_t)THRESHOLD10);
-
- /* Create the file with the specified strategy and threshold */
- fid = H5Fcreate(FILE66, H5F_ACC_TRUNC, fcpl, H5P_DEFAULT);
-
- /* close */
- H5Fclose(fid);
- H5Pclose(fcpl);
-}
-
-/*-------------------------------------------------------------------------
  * Function:    gent_packedbits
  *
  * Purpose:     Generate a file to be used in the h5dump packed bits tests.
@@ -6805,7 +6760,7 @@ gent_fs_strategy_threshold(void)
  *   Fill them with raw data such that no bit will be all zero in a dataset.
  *   A dummy dataset of double type is created for failure test.
  * Created:	Albert Cheng, 2010/5/10.
- * Modified: Allen Byrne, 2011/1/5 Use file to test Signed/Unsigned datatypes
+ * Modified:
  *-------------------------------------------------------------------------
  */
 static void
@@ -6813,23 +6768,21 @@ gent_packedbits(void)
 {
     hid_t fid, dataset, space;
     hsize_t dims[2];
-    uint8_t  dsetu8[F67_XDIM][F67_YDIM8],   valu8bits;
-    uint16_t dsetu16[F67_XDIM][F67_YDIM16], valu16bits;
-    uint32_t dsetu32[F67_XDIM][F67_YDIM32], valu32bits;
-    uint64_t dsetu64[F67_XDIM][F67_YDIM64], valu64bits;
-    int8_t  dset8[F67_XDIM][F67_YDIM8],   val8bits;
-    int16_t dset16[F67_XDIM][F67_YDIM16], val16bits;
-    int32_t dset32[F67_XDIM][F67_YDIM32], val32bits;
-    int64_t dset64[F67_XDIM][F67_YDIM64], val64bits;
-    double  dsetdbl[F67_XDIM][F67_YDIM8];
+    uint8_t  dsetu8[F66_XDIM][F66_YDIM8],   valu8bits;
+    uint16_t dsetu16[F66_XDIM][F66_YDIM16], valu16bits;
+    uint32_t dsetu32[F66_XDIM][F66_YDIM32], valu32bits;
+    int8_t  dset8[F66_XDIM][F66_YDIM8],   val8bits;
+    int16_t dset16[F66_XDIM][F66_YDIM16], val16bits;
+    int32_t dset32[F66_XDIM][F66_YDIM32], val32bits;
+    double  dsetdbl[F66_XDIM][F66_YDIM8];
     unsigned int i, j;
 
     fid = H5Fcreate(FILE66, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
     /* Dataset of 8 bits unsigned int */
-    dims[0] = F67_XDIM; dims[1] = F67_YDIM8;
+    dims[0] = F66_XDIM; dims[1] = F66_YDIM8;
     space = H5Screate_simple(2, dims, NULL);
-    dataset = H5Dcreate2(fid, F67_DATASETU08, H5T_STD_U8LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    dataset = H5Dcreate2(fid, F66_DATASETU08, H5T_STD_U8LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
     valu8bits = (uint8_t) ~0u;	/* all 1s */
     for(i = 0; i < dims[0]; i++){
@@ -6845,9 +6798,9 @@ gent_packedbits(void)
     H5Dclose(dataset);
 
     /* Dataset of 16 bits unsigned int */
-    dims[0] = F67_XDIM; dims[1] = F67_YDIM16;
+    dims[0] = F66_XDIM; dims[1] = F66_YDIM16;
     space = H5Screate_simple(2, dims, NULL);
-    dataset = H5Dcreate2(fid, F67_DATASETU16, H5T_STD_U16LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    dataset = H5Dcreate2(fid, F66_DATASETU16, H5T_STD_U16LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
     valu16bits = (uint16_t) ~0u;	/* all 1s */
     for(i = 0; i < dims[0]; i++){
@@ -6863,9 +6816,9 @@ gent_packedbits(void)
     H5Dclose(dataset);
 
     /* Dataset of 32 bits unsigned int */
-    dims[0] = F67_XDIM; dims[1] = F67_YDIM32;
+    dims[0] = F66_XDIM; dims[1] = F66_YDIM32;
     space = H5Screate_simple(2, dims, NULL);
-    dataset = H5Dcreate2(fid, F67_DATASETU32, H5T_STD_U32LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    dataset = H5Dcreate2(fid, F66_DATASETU32, H5T_STD_U32LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
     valu32bits = (uint32_t) ~0u;	/* all 1s */
     for(i = 0; i < dims[0]; i++){
@@ -6880,28 +6833,10 @@ gent_packedbits(void)
     H5Sclose(space);
     H5Dclose(dataset);
 
-    /* Dataset of 64 bits unsigned int */
-    dims[0] = F67_XDIM; dims[1] = F67_YDIM64;
-    space = H5Screate_simple(2, dims, NULL);
-    dataset = H5Dcreate2(fid, F67_DATASETU64, H5T_STD_U64LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
-    valu64bits = (uint64_t) ~0Lu;    /* all 1s */
-    for(i = 0; i < dims[0]; i++){
-    dsetu64[i][0] = valu64bits;
-    for(j = 1; j < dims[1]; j++) {
-              dsetu64[i][j] = dsetu64[i][j-1] << 1;
-    }
-    valu64bits <<= 1;
-    }
-
-    H5Dwrite(dataset, H5T_NATIVE_UINT64, H5S_ALL, H5S_ALL, H5P_DEFAULT, dsetu64);
-    H5Sclose(space);
-    H5Dclose(dataset);
-
     /* Dataset of 8 bits signed int */
-    dims[0] = F67_XDIM; dims[1] = F67_YDIM8;
+    dims[0] = F66_XDIM; dims[1] = F66_YDIM8;
     space = H5Screate_simple(2, dims, NULL);
-    dataset = H5Dcreate2(fid, F67_DATASETS08, H5T_STD_I8LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    dataset = H5Dcreate2(fid, F66_DATASETS08, H5T_STD_I8LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
     val8bits = (int8_t) ~0;	/* all 1s */
     for(i = 0; i < dims[0]; i++){
@@ -6917,9 +6852,9 @@ gent_packedbits(void)
     H5Dclose(dataset);
 
     /* Dataset of 16 bits signed int */
-    dims[0] = F67_XDIM; dims[1] = F67_YDIM16;
+    dims[0] = F66_XDIM; dims[1] = F66_YDIM16;
     space = H5Screate_simple(2, dims, NULL);
-    dataset = H5Dcreate2(fid, F67_DATASETS16, H5T_STD_I16LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    dataset = H5Dcreate2(fid, F66_DATASETS16, H5T_STD_I16LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
     val16bits = (int16_t) ~0;	/* all 1s */
     for(i = 0; i < dims[0]; i++){
@@ -6935,9 +6870,9 @@ gent_packedbits(void)
     H5Dclose(dataset);
 
     /* Dataset of 32 bits signed int */
-    dims[0] = F67_XDIM; dims[1] = F67_YDIM32;
+    dims[0] = F66_XDIM; dims[1] = F66_YDIM32;
     space = H5Screate_simple(2, dims, NULL);
-    dataset = H5Dcreate2(fid, F67_DATASETS32, H5T_STD_I32LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    dataset = H5Dcreate2(fid, F66_DATASETS32, H5T_STD_I32LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
     val32bits = (int32_t) ~0;	/* all 1s */
     for(i = 0; i < dims[0]; i++){
@@ -6952,28 +6887,10 @@ gent_packedbits(void)
     H5Sclose(space);
     H5Dclose(dataset);
 
-    /* Dataset of 64 bits signed int */
-    dims[0] = F67_XDIM; dims[1] = F67_YDIM64;
-    space = H5Screate_simple(2, dims, NULL);
-    dataset = H5Dcreate2(fid, F67_DATASETS64, H5T_STD_I64LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
-    val64bits = (int64_t) ~0L;   /* all 1s */
-    for(i = 0; i < dims[0]; i++){
-    dset64[i][0] = val64bits;
-    for(j = 1; j < dims[1]; j++) {
-              dset64[i][j] = dset64[i][j-1] << 1;
-    }
-    val64bits <<= 1;
-    }
-
-    H5Dwrite(dataset, H5T_NATIVE_INT64, H5S_ALL, H5S_ALL, H5P_DEFAULT, dset64);
-    H5Sclose(space);
-    H5Dclose(dataset);
-
     /* Double Dummy set for failure tests */
-    dims[0] = F67_XDIM; dims[1] = F67_YDIM8;
+    dims[0] = F66_XDIM; dims[1] = F66_YDIM8;
     space = H5Screate_simple(2, dims, NULL);
-    dataset = H5Dcreate2(fid, F67_DUMMYDBL, H5T_IEEE_F64BE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    dataset = H5Dcreate2(fid, F66_DUMMYDBL, H5T_IEEE_F64BE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
     for(i = 0; i < dims[0]; i++)
          for(j = 0; j < dims[1]; j++)
@@ -6985,6 +6902,7 @@ gent_packedbits(void)
     H5Dclose(dataset);
     H5Fclose(fid);
 }
+
 
 /*-------------------------------------------------------------------------
  * Function: main
@@ -7058,7 +6976,6 @@ int main(void)
     gent_attr_creation_order();
     gent_fpformat();
     gent_extlinks();
-    gent_fs_strategy_threshold();
     gent_packedbits();
 
     return 0;

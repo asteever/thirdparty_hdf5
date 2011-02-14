@@ -93,7 +93,7 @@ int copy_objects(const char* fnamein,
         goto out;
     }
 
-    /* get user block size and file space strategy/threshold */
+    /* get user block size */
     {
         hid_t fcpl_in; /* file creation property list ID for input file */
 
@@ -108,24 +108,6 @@ int copy_objects(const char* fnamein,
             error_msg("failed to retrieve userblock size\n");
             goto out;
         }
-
-	if(!options->fs_strategy)
-	{
-	   if(H5Pget_file_space(fcpl_in, &options->fs_strategy, NULL) < 0)
-	   {
-		error_msg("failed to retrieve file space strategy\n");
-		goto out;
-	   }
-	}
-
-	if(!options->fs_threshold)
-	{
-	   if(H5Pget_file_space(fcpl_in, NULL, &options->fs_threshold) < 0)
-	   {
-		error_msg("failed to retrieve file space threshold\n");
-		goto out;
-	   }
-	}
 
         if(H5Pclose(fcpl_in) < 0)
         {
@@ -323,32 +305,6 @@ int copy_objects(const char* fnamein,
 
     }
 
-    /* either use the FCPL already created or create a new one */
-    if(fcpl != H5P_DEFAULT)
-    {
-	/* set file space strategy and free space threshold */
-	if(H5Pset_file_space(fcpl, options->fs_strategy, options->fs_threshold) < 0)
-	{
-	    error_msg("failed to set file space strategy & threshold\n");
-	    goto out;
-	}
-    }
-    else
-    {
-	/* create a file creation property list */
-	if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
-	{
-	    error_msg("fail to create a file creation property list\n");
-	    goto out;
-	}
-
-	/* set file space strategy and free space threshold */
-	if(H5Pset_file_space(fcpl, options->fs_strategy, options->fs_threshold) < 0)
-	{
-	    error_msg("failed to set file space strategy & threshold \n");
-	    goto out;
-	}
-    }
 
     /*-------------------------------------------------------------------------
     * create the output file
@@ -543,23 +499,22 @@ int do_copy_objects(hid_t fidin,
                     trav_table_t *travt,
                     pack_opt_t *options) /* repack options */
 {
-    hid_t    grp_in = -1;       /* group ID */
-    hid_t    grp_out = -1;      /* group ID */
-    hid_t    dset_in = -1;      /* read dataset ID */
-    hid_t    dset_out = -1;     /* write dataset ID */
-    hid_t    gcpl_in = -1;      /* group creation property list */
-    hid_t    gcpl_out = -1;     /* group creation property list */
-    hid_t    type_in = -1;      /* named type ID */
-    hid_t    type_out = -1;     /* named type ID */
-    hid_t    dcpl_id = -1;      /* dataset creation property list ID */
-    hid_t    dcpl_out = -1;     /* dataset creation property list ID */
-    hid_t    f_space_id = -1;   /* file space ID */
-    hid_t    ftype_id = -1;     /* file type ID */
-    hid_t    wtype_id = -1;     /* read/write type ID */
-    named_dt_t *named_dt_head = NULL; /* Pointer to the stack of named datatypes copied */
+    hid_t    grp_in=-1;         /* group ID */
+    hid_t    grp_out=-1;        /* group ID */
+    hid_t    dset_in=-1;        /* read dataset ID */
+    hid_t    dset_out=-1;       /* write dataset ID */
+    hid_t    gcpl_in=-1;        /* group creation property list */
+    hid_t    gcpl_out=-1;       /* group creation property list */
+    hid_t    type_in=-1;        /* named type ID */
+    hid_t    type_out=-1;       /* named type ID */
+    hid_t    dcpl_id=-1;        /* dataset creation property list ID */
+    hid_t    dcpl_out=-1;       /* dataset creation property list ID */
+    hid_t    f_space_id=-1;     /* file space ID */
+    hid_t    ftype_id=-1;       /* file type ID */
+    hid_t    wtype_id=-1;       /* read/write type ID */
+    named_dt_t *named_dt_head=NULL; /* Pointer to the stack of named datatypes copied */
     size_t   msize;             /* size of type */
     hsize_t  nelmts;            /* number of elements in dataset */
-    H5D_space_status_t space_status; /* determines whether space has been allocated for the dataset  */
     int      rank;              /* rank of dataset */
     hsize_t  dims[H5S_MAX_RANK];/* dimensions of dataset */
     hsize_t  dsize_in;          /* input dataset size before filter */
@@ -747,13 +702,11 @@ int do_copy_objects(hid_t fidin,
                 HDmemset(dims, 0, sizeof dims);
                 if(H5Sget_simple_extent_dims(f_space_id, dims, NULL) < 0)
                     goto error;
-
-                if(H5Dget_space_status(dset_in, &space_status) < 0)
-                    goto error;
-
                 nelmts = 1;
-                for(j = 0; j < rank; j++)
+                for ( j = 0; j < rank; j++)
+                {
                     nelmts *= dims[j];
+                }
 
                 /* wtype_id will have already been set if using a named dtype */
                 if(!is_named) {
@@ -837,26 +790,20 @@ int do_copy_objects(hid_t fidin,
                         * read/write
                         *-------------------------------------------------------------------------
                         */
-                        if(nelmts > 0 && space_status != H5D_SPACE_STATUS_NOT_ALLOCATED)
+                        if (nelmts)
                         {
-                            size_t need = (size_t)(nelmts * msize);  /* bytes needed */
-
-                            /* have to read the whole dataset if there is only one element in the dataset */
-                            if(need < H5TOOLS_MALLOCSIZE)
+                            size_t need = (size_t)(nelmts*msize);  /* bytes needed */
+                            if ( need < H5TOOLS_MALLOCSIZE )
                                 buf = HDmalloc(need);
 
-                            if(buf != NULL) {
-                                if(H5Dread(dset_in, wtype_id, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf) < 0)
+                            if (buf != NULL )
+                            {
+                                if (H5Dread(dset_in,wtype_id,H5S_ALL,H5S_ALL,H5P_DEFAULT,buf) < 0)
                                     goto error;
-                                if(H5Dwrite(dset_out, wtype_id, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf) < 0)
+                                if (H5Dwrite(dset_out,wtype_id,H5S_ALL,H5S_ALL,H5P_DEFAULT,buf) < 0)
                                     goto error;
-
-                                /* Check if we have VL data in the dataset's
-                                 * datatype that must be reclaimed */
-                                if(TRUE == H5Tdetect_class(wtype_id, H5T_VLEN))
-                                    if(H5Dvlen_reclaim(wtype_id, f_space_id, H5P_DEFAULT, buf) < 0)
-                                        goto error;
                             }
+
                             else /* possibly not enough memory, read/write by hyperslabs */
                             {
                                 size_t        p_type_nbytes = msize; /*size of memory type */
@@ -958,7 +905,7 @@ int do_copy_objects(hid_t fidin,
                                     sm_buf=NULL;
                                 }
                             } /* hyperslab read */
-                        } /* if (nelmts>0 && space_status==H5D_SPACE_STATUS_NOT_ALLOCATED) */
+                        }/*nelmts*/
 
                         /*-------------------------------------------------------------------------
                         * amount of compression used
@@ -1373,7 +1320,7 @@ copy_user_block(const char *infile, const char *outfile, hsize_t size)
         } /* end while */
 
         /* Update size of userblock left to transfer */
-        size = size - (hsize_t)nread;
+        size -= nread;
     } /* end while */
 
 done:

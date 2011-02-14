@@ -26,11 +26,6 @@ $ run  testhdf5
 $ type sys$input
 
 $ type sys$input
--------			Running accum     	-------
-$ run  accum
-$ type sys$input
-
-$ type sys$input
 -------			Running app_ref    	-------
 $ run  app_ref 
 $ type sys$input
@@ -41,7 +36,7 @@ $ run  big
 $ type sys$input
 
 $ type sys$input
--------			Running bittests    	-------
+-------			Running bittest    	-------
 $ run  bittests
 $ type sys$input
 
@@ -58,16 +53,6 @@ $ type sys$input
 $ type sys$input
 -------			Running cache   	-------
 $ run  cache
-$ type sys$input
-
-$ type sys$input
--------			Running cache_tagging  	-------
-$ run  cache_tagging
-$ type sys$input
-
-$ type sys$input
--------			Running chunk_info   	-------
-$ run  chunk_info 
 $ type sys$input
 
 $ type sys$input
@@ -106,11 +91,6 @@ $ run  dtypes
 $ type sys$input
 
 $ type sys$input
--------			Running earray    	-------
-$ run  earray
-$ type sys$input
-
-$ type sys$input
 -------			Running enum     	-------
 $ run  enum
 $ type sys$input
@@ -133,11 +113,6 @@ $ type sys$input
 $ type sys$input
 -------			Running fillval     	-------
 $ run  fillval
-$ type sys$input
-
-$ type sys$input
--------			Running filter_fail    	-------
-$ run  filter_fail
 $ type sys$input
 
 $ type sys$input
@@ -186,11 +161,6 @@ $ run  links
 $ type sys$input
 
 $ type sys$input
--------			Running links_env    	-------
-$ run  links_env
-$ type sys$input
-
-$ type sys$input
 -------			Running mf    	-------
 $ run  mf
 $ type sys$input
@@ -236,18 +206,8 @@ $ run  set_extent
 $ type sys$input
 
 $ type sys$input
--------			Running space_overflow 	-------
-$ run  space_overflow
-$ type sys$input
-
-$ type sys$input
 -------			Running stab    	-------
 $ run  stab
-$ type sys$input
-
-$ type sys$input
--------			Running testmeta    	-------
-$ run  testmeta
 $ type sys$input
 
 $ type sys$input

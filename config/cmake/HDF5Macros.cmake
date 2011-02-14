@@ -34,16 +34,16 @@ MACRO (IDE_SOURCE_PROPERTIES SOURCE_PATH HEADERS SOURCES)
 ENDMACRO (IDE_SOURCE_PROPERTIES)
 
 #-------------------------------------------------------------------------------
-MACRO (H5_NAMING target libtype)
+MACRO (H5_NAMING target)
   IF (WIN32 AND NOT MINGW)
-    IF (${libtype} MATCHES "SHARED")
+    IF (BUILD_SHARED_LIBS)
       IF (H5_LEGACY_NAMING)
         SET_TARGET_PROPERTIES (${target} PROPERTIES OUTPUT_NAME "dll")
         SET_TARGET_PROPERTIES (${target} PROPERTIES PREFIX "${target}")
       ELSE (H5_LEGACY_NAMING)
         SET_TARGET_PROPERTIES (${target} PROPERTIES OUTPUT_NAME "${target}dll")
       ENDIF (H5_LEGACY_NAMING)
-    ENDIF (${libtype} MATCHES "SHARED")
+    ENDIF (BUILD_SHARED_LIBS)
   ENDIF (WIN32 AND NOT MINGW)
 ENDMACRO (H5_NAMING)
 
@@ -93,16 +93,16 @@ MACRO (H5_SET_LIB_OPTIONS libtarget libname libtype)
   )
   
   #----- Use MSVC Naming conventions for Shared Libraries
-  IF (MINGW AND ${libtype} MATCHES "SHARED")
+  IF (MINGW AND BUILD_SHARED_LIBS)
     SET_TARGET_PROPERTIES (${libtarget}
         PROPERTIES
         IMPORT_SUFFIX ".lib"
         IMPORT_PREFIX ""
         PREFIX ""
     )
-  ENDIF (MINGW AND ${libtype} MATCHES "SHARED")
+  ENDIF (MINGW AND BUILD_SHARED_LIBS)
 
-  IF (${libtype} MATCHES "SHARED")
+  IF (BUILD_SHARED_LIBS)
     IF (WIN32)
       SET (LIBHDF_VERSION ${HDF5_PACKAGE_VERSION_MAJOR})
     ELSE (WIN32)
@@ -110,7 +110,7 @@ MACRO (H5_SET_LIB_OPTIONS libtarget libname libtype)
     ENDIF (WIN32)
     SET_TARGET_PROPERTIES (${libtarget} PROPERTIES VERSION ${LIBHDF_VERSION})
     SET_TARGET_PROPERTIES (${libtarget} PROPERTIES SOVERSION ${LIBHDF_VERSION})
-  ENDIF (${libtype} MATCHES "SHARED")
+  ENDIF (BUILD_SHARED_LIBS)
 
   #-- Apple Specific install_name for libraries
   IF (APPLE)
@@ -127,15 +127,38 @@ MACRO (H5_SET_LIB_OPTIONS libtarget libname libtype)
 ENDMACRO (H5_SET_LIB_OPTIONS)
 
 #-------------------------------------------------------------------------------
-MACRO (TARGET_FORTRAN_WIN_PROPERTIES target addlinkflags)
+MACRO (TARGET_WIN_PROPERTIES target)
   IF (WIN32)
     IF (MSVC)
-      SET_TARGET_PROPERTIES (${target}
-          PROPERTIES
-              COMPILE_FLAGS "/dll"
-              LINK_FLAGS "/SUBSYSTEM:CONSOLE ${addlinkflags}"
-      ) 
+      IF (NOT BUILD_SHARED_LIBS)
+        SET_TARGET_PROPERTIES (${target}
+            PROPERTIES
+                LINK_FLAGS "/NODEFAULTLIB:MSVCRT"
+        ) 
+      ENDIF (NOT BUILD_SHARED_LIBS)
     ENDIF (MSVC)
+  ENDIF (WIN32)
+ENDMACRO (TARGET_WIN_PROPERTIES)
+
+#-------------------------------------------------------------------------------
+MACRO (TARGET_FORTRAN_WIN_PROPERTIES target)
+  IF (WIN32)
+    IF (BUILD_SHARED_LIBS)
+      IF (MSVC)
+        SET_TARGET_PROPERTIES (${target}
+            PROPERTIES
+                COMPILE_FLAGS "/dll"
+                LINK_FLAGS "/SUBSYSTEM:CONSOLE"
+        ) 
+      ENDIF (MSVC)
+    ELSE (BUILD_SHARED_LIBS)
+      IF (MSVC)
+        SET_TARGET_PROPERTIES (${target}
+            PROPERTIES
+                LINK_FLAGS "/NODEFAULTLIB:MSVCRT"
+        ) 
+      ENDIF (MSVC)
+    ENDIF (BUILD_SHARED_LIBS)
   ENDIF (WIN32)
 ENDMACRO (TARGET_FORTRAN_WIN_PROPERTIES)
 

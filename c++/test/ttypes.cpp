@@ -143,6 +143,8 @@ static void test_classes()
  */
 static void test_copy()
 {
+    hid_t               a_copy;
+    herr_t		status;
 
     SUBTEST("DataType::copy() and DataType::operator=");
     try {
@@ -210,6 +212,7 @@ static void test_query()
 	long   c;
 	double d;
     } s_type_t;
+    char	filename[1024];
     short	enum_val;
 
     // Output message about test being performed
@@ -384,10 +387,11 @@ static void test_transient ()
 const H5std_string filename2("dtypes2.h5");
 static void test_named ()
 {
+    herr_t		status;
     static hsize_t	ds_size[2] = {10, 20};
     hsize_t		i;
     unsigned 		attr_data[10][20];
-    DataType           *ds_type = NULL;
+    char		filename[1024];
 
     SUBTEST("Named datatypes");
     try {
@@ -463,13 +467,12 @@ now.
 	// Create a dataset that uses the named type, then get the dataset's
 	// datatype and make sure it's a named type.
 	DataSet dset = file.createDataSet("dset1", another_type, space);
-	ds_type = new DataType(dset.getDataType());
+	DataType *ds_type = new DataType(dset.getDataType());
 	iscommitted = ds_type->committed();
 	if (!iscommitted)
 	    throw InvalidActionException("IntType::committed()", "1 Dataset type should be named type!");
 	dset.close();
 	ds_type->close();
-        delete ds_type;
 
 	// Reopen the dataset and its type, then make sure the type is
 	// a named type.
@@ -485,7 +488,6 @@ now.
 	dset = file.createDataSet("dset2", *ds_type, space);
 	ds_type->close();
 	dset.close();
-        delete ds_type;
 
 	// Reopen the second dataset and make sure the type is shared
 	dset = file.openDataSet("dset2");
@@ -512,9 +514,6 @@ now.
     catch (Exception E) {
         issue_fail_msg("test_named", __LINE__, __FILE__, E.getCDetailMsg());
     }
-
-    if(ds_type)
-        delete ds_type;
 }   // test_named
 
 

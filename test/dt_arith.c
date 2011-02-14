@@ -5140,9 +5140,9 @@ run_int_fp_conv(const char *name)
         HDputs("    Test skipped due to compiler error in handling conversion.");
     }
 #endif /* H5_LLONG_TO_LDOUBLE_CORRECT */
-#if H5_ULLONG_TO_FP_CAST_WORKS && H5_ULLONG_TO_LDOUBLE_PRECISION && H5_LLONG_TO_LDOUBLE_CORRECT
+#if !H5_CYGWIN_ULLONG_TO_LDOUBLE_ROUND_PROBLEM && H5_ULLONG_TO_FP_CAST_WORKS && H5_ULLONG_TO_LDOUBLE_PRECISION && H5_LLONG_TO_LDOUBLE_CORRECT
     nerrors += test_conv_int_fp(name, TEST_NORMAL, H5T_NATIVE_ULLONG, H5T_NATIVE_LDOUBLE);
-#else /* H5_ULLONG_TO_FP_CAST_WORKS && H5_ULLONG_TO_LDOUBLE_PRECISION && H5_LLONG_TO_LDOUBLE_CORRECT */
+#else /* !H5_CYGWIN_ULLONG_TO_LDOUBLE_ROUND_PROBLEM && H5_ULLONG_TO_FP_CAST_WORKS && H5_ULLONG_TO_LDOUBLE_PRECISION && H5_LLONG_TO_LDOUBLE_CORRECT */
     {
         char		str[256];		/*hello string		*/
 
@@ -5152,7 +5152,7 @@ run_int_fp_conv(const char *name)
         SKIPPED();
         HDputs("    Test skipped due to compiler not handling conversion.");
     }
-#endif /* H5_ULLONG_TO_FP_CAST_WORKS && H5_ULLONG_TO_LDOUBLE_PRECISION && H5_LLONG_TO_LDOUBLE_CORRECT */
+#endif /* !H5_CYGWIN_ULLONG_TO_LDOUBLE_ROUND_PROBLEM && H5_ULLONG_TO_FP_CAST_WORKS && H5_ULLONG_TO_LDOUBLE_PRECISION && H5_LLONG_TO_LDOUBLE_CORRECT */
 #endif
 #endif
 #else /*H5_INTEGER_TO_LDOUBLE_ACCURATE*/
@@ -5193,8 +5193,8 @@ run_int_fp_conv(const char *name)
 static int
 run_fp_int_conv(const char *name)
 {
-    int		nerrors = 0;
 #ifdef H5_FP_TO_INTEGER_OVERFLOW_WORKS
+    int		nerrors = 0;
     int         test_values;
 
 #ifdef H5_VMS

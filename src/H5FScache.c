@@ -102,7 +102,6 @@ const H5AC_class_t H5AC_FSPACE_HDR[1] = {{
     (H5AC_flush_func_t)H5FS_cache_hdr_flush,
     (H5AC_dest_func_t)H5FS_cache_hdr_dest,
     (H5AC_clear_func_t)H5FS_cache_hdr_clear,
-    (H5AC_notify_func_t)NULL,
     (H5AC_size_func_t)H5FS_cache_hdr_size,
 }};
 
@@ -113,7 +112,6 @@ const H5AC_class_t H5AC_FSPACE_SINFO[1] = {{
     (H5AC_flush_func_t)H5FS_cache_sinfo_flush,
     (H5AC_dest_func_t)H5FS_cache_sinfo_dest,
     (H5AC_clear_func_t)H5FS_cache_sinfo_clear,
-    (H5AC_notify_func_t)NULL,
     (H5AC_size_func_t)H5FS_cache_sinfo_size,
 }};
 
@@ -324,14 +322,23 @@ H5FS_cache_hdr_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5F
                 if(H5FS_cache_sinfo_flush(f, dxpl_id, FALSE, fspace->sect_addr, fspace->sinfo, NULL) < 0)
                     HGOTO_ERROR(H5E_FSPACE, H5E_CANTFLUSH, FAIL, "unable to save free space section info to disk")
             } /* end if */
-
+            else {
+                /* Sanity check that section info doesn't have address */
+                HDassert(!H5F_addr_defined(fspace->sect_addr));
+            } /* end else */
             /* Mark section info clean */
             fspace->sinfo->dirty = FALSE;
         } /* end if */
     } /* end if */
-    else if(fspace->serial_sect_count > 0)
-	/* Sanity check that section info has address */
-	HDassert(H5F_addr_defined(fspace->sect_addr));
+    else {
+        /* Just sanity checks... */
+        if(fspace->serial_sect_count > 0)
+            /* Sanity check that section info has address */
+            HDassert(H5F_addr_defined(fspace->sect_addr));
+        else
+            /* Sanity check that section info doesn't have address */
+            HDassert(!H5F_addr_defined(fspace->sect_addr));
+    } /* end else */
 
     if(fspace->cache_info.is_dirty) {
         uint8_t	*hdr;                   /* Pointer to header buffer */
@@ -555,7 +562,7 @@ H5FS_cache_hdr_size(const H5F_t UNUSED *f, const H5FS_t *fspace, size_t *size_pt
  *-------------------------------------------------------------------------
  */
 static H5FS_sinfo_t *
-H5FS_cache_sinfo_load(H5F_t *f, hid_t dxpl_id, haddr_t UNUSED addr, void *_udata)
+H5FS_cache_sinfo_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
 {
     H5FS_sinfo_t	*sinfo = NULL;  /* Free space section info */
     H5FS_sinfo_cache_ud_t *udata = (H5FS_sinfo_cache_ud_t *)_udata; /* user data for callback */

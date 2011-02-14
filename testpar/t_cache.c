@@ -398,7 +398,6 @@ const H5C_class_t types[NUMBER_OF_ENTRY_TYPES] =
     (H5C_flush_func_t)flush_datum,
     (H5C_dest_func_t)destroy_datum,
     (H5C_clear_func_t)clear_datum,
-    (H5C_notify_func_t)NULL,
     (H5C_size_func_t)size_datum
   }
 };
@@ -2861,7 +2860,7 @@ expunge_entry(H5F_t * file_ptr,
 	HDassert( ! ((entry_ptr->header).is_dirty) );
 
 	result = H5C_get_entry_status(file_ptr, entry_ptr->base_addr,
-				      NULL, &in_cache, NULL, NULL, NULL, NULL, NULL);
+				      NULL, &in_cache, NULL, NULL, NULL);
 
 	if ( result < 0 ) {
 
@@ -3355,9 +3354,8 @@ lock_entry(H5F_t * file_ptr,
 
 	HDassert( ! (entry_ptr->locked) );
 
-        cache_entry_ptr = (H5C_cache_entry_t *)H5AC_protect(file_ptr, 
-                H5P_DATASET_XFER_DEFAULT, &(types[0]), entry_ptr->base_addr, 
-                NULL, H5AC_WRITE);
+        cache_entry_ptr = (H5C_cache_entry_t *)H5AC_protect(file_ptr, -1, &(types[0]),
+                entry_ptr->base_addr, NULL, H5AC_WRITE);
 
         if ( ( cache_entry_ptr != (void *)(&(entry_ptr->header)) ) ||
              ( entry_ptr->header.type != &(types[0]) ) ||
@@ -3944,7 +3942,6 @@ setup_cache_for_test(hid_t * fid_ptr,
                       world_mpi_rank, fcn_name);
         }
     } else {
-        cache_ptr->ignore_tags = TRUE;
         *fid_ptr = fid;
         *file_ptr_ptr = file_ptr;
         *cache_ptr_ptr = cache_ptr;

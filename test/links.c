@@ -2724,9 +2724,110 @@ external_link_dangling(hid_t fapl, hbool_t new_format)
     return -1;
 } /* end external_link_dangling() */
 
+
 
 /*-------------------------------------------------------------------------
- * Function:    external_link_prefix
+ * Function:    external_link_env: test 1
+ *
+ * Purpose:
+ *		1. target link: "extlinks1"
+ *		2. main file: "extlinks0"
+ *		3. target file: "tmp/extlinks1"
+ * 		4. The environment variable "HDF5_EXT_PREFIX" should be set to ".:tmp"
+ *		Should be able to access the target file in tmp directory through searching
+ *			the pathnames set in HDF5_EXT_PREFIX.
+ *		This test will be skipped if HDF5_EXT_PREFIX is not set as expected.
+ *
+ *
+ * Return:      Success:        0
+ *              Failure:        -1
+ *
+ * Programmer:  Vailin Choi
+ *              Feb. 20, 2008
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+static int
+external_link_env(hid_t fapl, hbool_t new_format)
+{
+    hid_t	fid = (-1);     		/* File ID */
+    hid_t	gid = (-1);	                /* Group IDs */
+    const char  *envval = NULL;
+
+    char	filename1[NAME_BUF_SIZE],
+    		filename2[NAME_BUF_SIZE],
+    		filename3[NAME_BUF_SIZE];
+
+    if(new_format)
+        TESTING("external links via environment variable (w/new group format)")
+    else
+        TESTING("external links via environment variable")
+
+    if ((envval = HDgetenv("HDF5_EXT_PREFIX")) == NULL)
+        envval = "nomatch";
+    if (HDstrcmp(envval, ".:tmp")) {
+	SKIPPED();
+	return(0);
+    }
+
+    /* set up name for main file:"extlinks0" */
+    h5_fixname(FILENAME[12], fapl, filename1, sizeof filename1);
+    /* set up name for external linked target file: "extlinks1" */
+    h5_fixname(FILENAME[14], fapl, filename2, sizeof filename2);
+
+    if(HDmkdir(TMPDIR, (mode_t)0755) < 0 && errno != EEXIST)
+	TEST_ERROR
+
+    /* set up name for target file: "tmp/extlinks1" */
+    h5_fixname(FILENAME[15], fapl, filename3, sizeof filename3);
+
+    /* Create the target file */
+    if((fid=H5Fcreate(filename3, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
+    if((gid=H5Gcreate2(fid, "A", H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT)) < 0) TEST_ERROR
+
+    /* closing for target file */
+    if(H5Gclose(gid) < 0) TEST_ERROR
+    if(H5Fclose(fid) < 0) TEST_ERROR
+
+
+    /* Create the main file */
+    if((fid=H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
+
+    /* Create external link to target file */
+    if(H5Lcreate_external(filename2, "/A", fid, "ext_link", H5P_DEFAULT, H5P_DEFAULT) < 0) TEST_ERROR
+
+    /* Open object through external link */
+    H5E_BEGIN_TRY {
+        gid = H5Gopen2(fid, "ext_link", H5P_DEFAULT);
+    } H5E_END_TRY;
+
+    /* should be able to find the target file from pathnames set via environment variable */
+    if (gid < 0) {
+	H5_FAILED();
+	puts("    Should have found the file in tmp directory.");
+	goto error;
+    }
+
+    /* closing for main file */
+    if(H5Gclose(gid) < 0) TEST_ERROR
+    if(H5Fclose(fid) < 0) TEST_ERROR
+
+    PASSED();
+    return 0;
+
+ error:
+    H5E_BEGIN_TRY {
+	H5Gclose (gid);
+	H5Fclose (fid);
+    } H5E_END_TRY;
+    return -1;
+} /* end external_link_env() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    external_link_prefix: test 2
  *
  * Purpose:     1. target link: "extlinks2"
  *		2. main file: "extlinks0"
@@ -3949,7 +4050,6 @@ external_set_elink_acc_flags(hid_t fapl, hbool_t new_format)
     hid_t       file1 = -1, file2 = -1, group = -1, subgroup = -1, gapl = -1;
     char        filename1[NAME_BUF_SIZE],
                 filename2[NAME_BUF_SIZE];
-    herr_t      ret;
     unsigned    flags;
 
     if(new_format)
@@ -3999,24 +4099,6 @@ external_set_elink_acc_flags(hid_t fapl, hbool_t new_format)
         subgroup = H5Gcreate2(file1, "/ext_link/group/subgroup", H5P_DEFAULT, H5P_DEFAULT, gapl);
     } H5E_END_TRY;
     if(subgroup != FAIL) TEST_ERROR
-
-    /* Attempt to set invalid flags on gapl */
-    H5E_BEGIN_TRY {
-        ret = H5Pset_elink_acc_flags(gapl, H5F_ACC_TRUNC);
-    } H5E_END_TRY;
-    if(ret != FAIL) TEST_ERROR
-    H5E_BEGIN_TRY {
-        ret = H5Pset_elink_acc_flags(gapl, H5F_ACC_EXCL);
-    } H5E_END_TRY;
-    if(ret != FAIL) TEST_ERROR
-    H5E_BEGIN_TRY {
-        ret = H5Pset_elink_acc_flags(gapl, H5F_ACC_DEBUG);
-    } H5E_END_TRY;
-    if(ret != FAIL) TEST_ERROR
-    H5E_BEGIN_TRY {
-        ret = H5Pset_elink_acc_flags(gapl, H5F_ACC_CREAT);
-    } H5E_END_TRY;
-    if(ret != FAIL) TEST_ERROR
 
     /* Close file1 and group */
     if(H5Gclose(group) < 0) TEST_ERROR
@@ -6176,19 +6258,34 @@ external_link_endian(hbool_t new_format)
     hid_t	fid = (-1);     		/* File ID */
     hid_t	gid = (-1), gid2 = (-1);	/* Group IDs */
     hid_t       lapl_id = (-1);                 /* Prop List ID */
-    const char  *pathbuf = H5_get_srcdir();     /* Path to the files */
-    const char  *namebuf;
+    char      * srcdir = getenv("srcdir");      /* The source directory */
+    char        pathbuf[NAME_BUF_SIZE];         /* Path to the files */
+    char        namebuf[NAME_BUF_SIZE];
 
     if(new_format)
         TESTING("endianness of external links (w/new group format)")
     else
         TESTING("endianness of external links")
 
+    /*
+     * Create the name of the file to open (in case we are using the --srcdir
+     * option and the file is in a different directory from this test).
+     */
+    if (srcdir && ((HDstrlen(srcdir) + 2) < sizeof(pathbuf)) )
+    {
+        HDstrcpy(pathbuf, srcdir);
+        HDstrcat(pathbuf, "/");
+    }
+    else
+        HDstrcpy(pathbuf, "");
+
     /* Create a link access property list with the path to the srcdir */
     if((lapl_id = H5Pcreate(H5P_LINK_ACCESS)) < 0) TEST_ERROR
     if(H5Pset_elink_prefix(lapl_id, pathbuf) < 0) TEST_ERROR
 
-    namebuf = H5_get_srcdir_filename(LE_FILENAME); /* Corrected test file name */
+    if(HDstrlen(pathbuf) + HDstrlen(LE_FILENAME) >= sizeof(namebuf)) TEST_ERROR
+    HDstrcpy(namebuf, pathbuf);
+    HDstrcat(namebuf, LE_FILENAME);
 
     /* Test LE file; try to open a group through the external link */
     if((fid = H5Fopen(namebuf, H5F_ACC_RDONLY, H5P_DEFAULT)) < 0) TEST_ERROR
@@ -6202,7 +6299,9 @@ external_link_endian(hbool_t new_format)
     if(H5Gclose(gid) < 0) TEST_ERROR
     if(H5Fclose(fid) < 0) TEST_ERROR
 
-    namebuf = H5_get_srcdir_filename(BE_FILENAME); /* Corrected test file name */
+    if(HDstrlen(pathbuf) + HDstrlen(BE_FILENAME) >= sizeof(namebuf)) TEST_ERROR
+    HDstrcpy(namebuf, pathbuf);
+    HDstrcat(namebuf, BE_FILENAME);
 
     /* Test BE file; try to open a group through the external link */
     if((fid = H5Fopen(namebuf, H5F_ACC_RDONLY, H5P_DEFAULT)) < 0) TEST_ERROR
@@ -8277,7 +8376,8 @@ build_visit_file(hid_t fapl)
     hid_t did = (-1);                   /* Dataset ID */
     hid_t tid = (-1);                   /* Datatype ID */
     char filename[NAME_BUF_SIZE];
-    const char *pathname = H5_get_srcdir_filename(LINKED_FILE); /* Corrected test file name */
+    char pathname[1024];                /* Path of external link file */
+    char *srcdir = getenv("srcdir");    /* where the src code is located */
 
     h5_fixname(FILENAME[9], fapl, filename, sizeof filename);
 
@@ -8313,6 +8413,14 @@ build_visit_file(hid_t fapl)
     if(H5Lcreate_hard(fid, "/", fid, "/Group1/Group2/hard_zero", H5P_DEFAULT, H5P_DEFAULT) < 0) TEST_ERROR
 
     /* Create external link to existing file */
+    pathname[0] = '\0';
+    /* Generate correct name for test file by prepending the source path */
+    if(srcdir && ((HDstrlen(srcdir) + HDstrlen(LINKED_FILE) + 1) < sizeof(pathname))) {
+        HDstrcpy(pathname, srcdir);
+        HDstrcat(pathname, "/");
+    }
+    HDstrcat(pathname, LINKED_FILE);
+
     if(H5Lcreate_external(pathname, "/group", fid, "/ext_one", H5P_DEFAULT, H5P_DEFAULT) < 0) TEST_ERROR
 
     /* Create dangling external link to non-existent file */
@@ -13931,6 +14039,7 @@ main(void)
         nerrors += external_link_strong(my_fapl, new_format) < 0 ? 1 : 0;
 
         /* tests for external link */
+        nerrors += external_link_env(my_fapl, new_format) < 0 ? 1 : 0;
         nerrors += external_link_prefix(my_fapl, new_format) < 0 ? 1 : 0;
         nerrors += external_link_abs_mainpath(my_fapl, new_format) < 0 ? 1 : 0;
         nerrors += external_link_rel_mainpath(my_fapl, new_format) < 0 ? 1 : 0;

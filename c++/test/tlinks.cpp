@@ -403,6 +403,7 @@ static void test_basic_links(hid_t fapl_id, hbool_t new_format)
 {
     hsize_t	        size[1] = {1};
     char		filename[NAME_BUF_SIZE];
+    char* tconv_buf = new char [1000];
 
     // Use the file access template id to create a file access prop. list.
     FileAccPropList fapl(fapl_id);
