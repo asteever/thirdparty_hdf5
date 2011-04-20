@@ -131,7 +131,7 @@ H5SM_init(H5F_t *f, H5P_genplist_t * fc_plist, const H5O_loc_t *ext_loc, hid_t d
     unsigned x;                         /* Local index variable */
     herr_t ret_value = SUCCEED;         /* Return value */
 
-    FUNC_ENTER_NOAPI_TAG(H5SM_init, dxpl_id, H5AC__SOHM_TAG, FAIL)
+    FUNC_ENTER_NOAPI(H5SM_init, NULL)
 
     HDassert(f);
     /* File should not already have a SOHM table */
@@ -236,7 +236,7 @@ done:
             table = H5FL_FREE(H5SM_master_table_t, table);
     } /* end if */
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5SM_init() */
 
 
@@ -346,7 +346,7 @@ H5SM_type_shared(H5F_t *f, unsigned type_id, hid_t dxpl_id)
     size_t u;                           /* Local index variable */
     htri_t ret_value = FALSE;           /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_TAG(H5SM_type_shared, dxpl_id, H5AC__SOHM_TAG, FAIL)
+    FUNC_ENTER_NOAPI_NOINIT(H5SM_type_shared)
 
     /* Translate the H5O type_id into an H5SM type flag */
     if(H5SM_type_to_flag(type_id, &type_flag) < 0)
@@ -378,7 +378,7 @@ done:
     if(table && H5AC_unprotect(f, dxpl_id, H5AC_SOHM_TABLE, f->shared->sohm_addr, table, H5AC__NO_FLAGS_SET) < 0)
 	HDONE_ERROR(H5E_SOHM, H5E_CANTUNPROTECT, FAIL, "unable to close SOHM master table")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5SM_type_shared() */
 
 
@@ -403,7 +403,7 @@ H5SM_get_fheap_addr(H5F_t *f, hid_t dxpl_id, unsigned type_id, haddr_t *fheap_ad
     ssize_t index_num;                  /* Which index */
     herr_t ret_value = SUCCEED;         /* Return value */
 
-    FUNC_ENTER_NOAPI_TAG(H5SM_get_fheap_addr, dxpl_id, H5AC__SOHM_TAG, FAIL)
+    FUNC_ENTER_NOAPI(H5SM_get_fheap_addr, FAIL)
 
     /* Sanity checks */
     HDassert(f);
@@ -428,7 +428,7 @@ done:
     if(table && H5AC_unprotect(f, dxpl_id, H5AC_SOHM_TABLE, f->shared->sohm_addr, table, H5AC__NO_FLAGS_SET) < 0)
 	HDONE_ERROR(H5E_SOHM, H5E_CANTUNPROTECT, FAIL, "unable to close SOHM master table")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5SM_get_fheap_addr() */
 
 
@@ -630,7 +630,7 @@ H5SM_create_list(H5F_t *f, H5SM_index_header_t *header, hid_t dxpl_id)
     haddr_t addr = HADDR_UNDEF; /* Address of the list on disk */
     haddr_t ret_value;
 
-    FUNC_ENTER_NOAPI_NOINIT_TAG(H5SM_create_list, dxpl_id, H5AC__SOHM_TAG, HADDR_UNDEF)
+    FUNC_ENTER_NOAPI_NOINIT(H5SM_create_list)
 
     HDassert(f);
     HDassert(header);
@@ -672,7 +672,7 @@ done:
             H5MF_xfree(f, H5FD_MEM_SOHM_INDEX, dxpl_id, addr, (hsize_t)header->list_size);
     } /* end if */
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, HADDR_UNDEF)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5SM_create_list */
 
 
@@ -813,7 +813,7 @@ H5SM_convert_btree_to_list(H5F_t * f, H5SM_index_header_t * header, hid_t dxpl_i
     haddr_t          btree_addr;
     herr_t           ret_value = SUCCEED;
 
-    FUNC_ENTER_NOAPI_NOINIT_TAG(H5SM_convert_btree_to_list, dxpl_id, H5AC__SOHM_TAG, FAIL)
+    FUNC_ENTER_NOAPI_NOINIT(H5SM_convert_btree_to_list)
 
     /* Remember the address of the old B-tree, but change the header over to be
      * a list..
@@ -846,7 +846,7 @@ done:
     if(list && H5AC_unprotect(f, dxpl_id, H5AC_SOHM_LIST, header->index_addr, list, H5AC__DIRTIED_FLAG) < 0)
         HDONE_ERROR(H5E_SOHM, H5E_CANTUNPROTECT, FAIL, "unable to unprotect SOHM index")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5SM_convert_btree_to_list() */
 
 
@@ -922,7 +922,7 @@ H5SM_can_share(H5F_t *f, hid_t dxpl_id, H5SM_master_table_t *table,
     htri_t              tri_ret;
     htri_t              ret_value = TRUE;
 
-    FUNC_ENTER_NOAPI_TAG(H5SM_can_share, dxpl_id, H5AC__SOHM_TAG, FAIL)
+    FUNC_ENTER_NOAPI(H5SM_can_share, FAIL)
 
     /* "trivial" sharing checks */
     if((tri_ret = H5SM_can_share_common(f, type_id, mesg)) < 0)
@@ -967,7 +967,7 @@ done:
     if(my_table && my_table != table && H5AC_unprotect(f, dxpl_id, H5AC_SOHM_TABLE, f->shared->sohm_addr, my_table, H5AC__NO_FLAGS_SET) < 0)
 	HDONE_ERROR(H5E_SOHM, H5E_CANTUNPROTECT, FAIL, "unable to close SOHM master table")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5SM_can_share() */
 
 
@@ -1036,7 +1036,7 @@ H5SM_try_share(H5F_t *f, hid_t dxpl_id, H5O_t *open_oh, unsigned type_id,
     htri_t              tri_ret;
     htri_t              ret_value = TRUE;
 
-    FUNC_ENTER_NOAPI_TAG(H5SM_try_share, dxpl_id, H5AC__SOHM_TAG, FAIL)
+    FUNC_ENTER_NOAPI(H5SM_try_share, FAIL)
 
     /* "trivial" sharing checks */
     if(mesg_flags && (*mesg_flags & H5O_MSG_FLAG_DONTSHARE))
@@ -1090,7 +1090,7 @@ done:
     if(table && H5AC_unprotect(f, dxpl_id, H5AC_SOHM_TABLE, f->shared->sohm_addr, table, cache_flags) < 0)
 	HDONE_ERROR(H5E_SOHM, H5E_CANTUNPROTECT, FAIL, "unable to close SOHM master table")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5SM_try_share() */
 
 
@@ -1195,7 +1195,7 @@ H5SM_write_mesg(H5F_t *f, hid_t dxpl_id, H5O_t *open_oh,
     size_t                empty_pos = UFAIL; /* Empty entry in list */
     herr_t                ret_value = SUCCEED;
 
-    FUNC_ENTER_NOAPI_NOINIT_TAG(H5SM_write_mesg, dxpl_id, H5AC__SOHM_TAG, FAIL)
+    FUNC_ENTER_NOAPI_NOINIT(H5SM_write_mesg)
 
     /* Sanity check */
     HDassert(header);
@@ -1402,7 +1402,7 @@ done:
     if(encoding_buf)
         encoding_buf = H5MM_xfree(encoding_buf);
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5SM_write_mesg() */
 
 
@@ -1436,7 +1436,7 @@ H5SM_delete(H5F_t *f, hid_t dxpl_id, H5O_t *open_oh, H5O_shared_t *sh_mesg)
     unsigned              type_id;              /* Message type ID to operate on */
     herr_t                ret_value = SUCCEED;
 
-    FUNC_ENTER_NOAPI_TAG(H5SM_delete, dxpl_id, H5AC__SOHM_TAG, FAIL)
+    FUNC_ENTER_NOAPI(H5SM_delete, FAIL)
 
     HDassert(f);
     HDassert(f->shared->sohm_addr != HADDR_UNDEF);
@@ -1493,7 +1493,7 @@ done:
     if(mesg_buf)
         mesg_buf = H5MM_xfree(mesg_buf);
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5SM_delete() */
 
 
@@ -1665,7 +1665,7 @@ H5SM_delete_from_index(H5F_t *f, hid_t dxpl_id, H5O_t *open_oh,
     unsigned        type_id;            /* Message type to operate on */
     herr_t          ret_value = SUCCEED;
 
-    FUNC_ENTER_NOAPI_NOINIT_TAG(H5SM_delete_from_index, dxpl_id, H5AC__SOHM_TAG, FAIL)
+    FUNC_ENTER_NOAPI_NOINIT(H5SM_delete_from_index)
 
     /* Sanity check */
     HDassert(f);
@@ -1826,7 +1826,7 @@ done:
     if(encoding_buf && (NULL == *encoded_mesg || ret_value < 0))
         encoding_buf = H5MM_xfree(encoding_buf);
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5SM_delete_from_index() */
 
 
@@ -1852,7 +1852,7 @@ H5SM_get_info(const H5O_loc_t *ext_loc, H5P_genplist_t *fc_plist, hid_t dxpl_id)
     htri_t status;                      /* Status for message existing */
     herr_t ret_value = SUCCEED;         /* Return value */
 
-    FUNC_ENTER_NOAPI_TAG(H5SM_get_info, dxpl_id, H5AC__SOHM_TAG, FAIL)
+    FUNC_ENTER_NOAPI(H5SM_get_info, FAIL)
 
     /* Sanity check */
     HDassert(ext_loc);
@@ -1941,7 +1941,7 @@ done:
     if(table && H5AC_unprotect(f, dxpl_id, H5AC_SOHM_TABLE, shared->sohm_addr, table, H5AC__NO_FLAGS_SET) < 0)
 	HDONE_ERROR(H5E_SOHM, H5E_CANTUNPROTECT, FAIL, "unable to close SOHM master table")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5SM_get_info() */
 
 
@@ -2039,7 +2039,7 @@ H5SM_get_refcount(H5F_t *f, hid_t dxpl_id, unsigned type_id,
     void * encoding_buf = NULL;         /* Buffer for encoded message */
     herr_t ret_value = SUCCEED;         /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_TAG(H5SM_get_refcount, dxpl_id, H5AC__SOHM_TAG, FAIL)
+    FUNC_ENTER_NOAPI_NOINIT(H5SM_get_refcount)
 
     /* Sanity check */
     HDassert(f);
@@ -2133,7 +2133,7 @@ done:
     if(encoding_buf)
         encoding_buf = H5MM_xfree(encoding_buf);
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5SM_get_refcount() */
 
 
@@ -2257,7 +2257,7 @@ H5SM_read_mesg(H5F_t *f, const H5SM_sohm_t *mesg, H5HF_t *fheap,
     H5O_t *oh = NULL;           /* Object header for message in object header */
     herr_t ret_value = SUCCEED;
 
-    FUNC_ENTER_NOAPI_NOINIT_TAG(H5SM_read_mesg, dxpl_id, H5AC__SOHM_TAG, FAIL)
+    FUNC_ENTER_NOAPI_NOINIT(H5SM_read_mesg)
 
     HDassert(f);
     HDassert(mesg);
@@ -2331,7 +2331,7 @@ done:
     if(ret_value < 0 && udata.encoding_buf)
         udata.encoding_buf = H5MM_xfree(udata.encoding_buf);
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5SM_read_mesg */
 
 
@@ -2417,7 +2417,7 @@ H5SM_table_debug(H5F_t *f, hid_t dxpl_id, haddr_t table_addr,
     unsigned x;                         /* Counter variable */
     herr_t ret_value = SUCCEED;         /* Return value */
 
-    FUNC_ENTER_NOAPI_TAG(H5SM_table_debug, dxpl_id, H5AC__SOHM_TAG, FAIL)
+    FUNC_ENTER_NOAPI(H5SM_table_debug, FAIL)
 
     HDassert(f);
     HDassert(table_addr != HADDR_UNDEF);
@@ -2478,7 +2478,7 @@ done:
     if(table && H5AC_unprotect(f, dxpl_id, H5AC_SOHM_TABLE, table_addr, table, H5AC__NO_FLAGS_SET) < 0)
 	HDONE_ERROR(H5E_SOHM, H5E_CANTUNPROTECT, FAIL, "unable to close SOHM master table")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5SM_table_debug() */
 
 
@@ -2508,7 +2508,7 @@ H5SM_list_debug(H5F_t *f, hid_t dxpl_id, haddr_t list_addr,
     unsigned x;                         /* Counter variable */
     herr_t ret_value = SUCCEED;         /* Return value */
 
-    FUNC_ENTER_NOAPI_TAG(H5SM_list_debug, dxpl_id, H5AC__SOHM_TAG, FAIL)
+    FUNC_ENTER_NOAPI(H5SM_list_debug, FAIL)
 
     HDassert(f);
     HDassert(list_addr != HADDR_UNDEF);
@@ -2568,7 +2568,7 @@ done:
     if(list && H5AC_unprotect(f, dxpl_id, H5AC_SOHM_LIST, list_addr, list, H5AC__NO_FLAGS_SET) < 0)
 	HDONE_ERROR(H5E_SOHM, H5E_CANTUNPROTECT, FAIL, "unable to close SOHM index")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5SM_list_debug() */
 
 
@@ -2589,22 +2589,21 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5SM_ih_size(H5F_t *f, hid_t dxpl_id, hsize_t *hdr_size, H5_ih_info_t *ih_info)
+H5SM_ih_size(H5F_t *f, hid_t dxpl_id, H5F_info_t *finfo)
 {
     H5SM_master_table_t *table = NULL;          /* SOHM master table */
     H5SM_table_cache_ud_t cache_udata;          /* User-data for callback */
     H5HF_t              *fheap = NULL;          /* Fractal heap handle */
     H5B2_t              *bt2 = NULL;            /* v2 B-tree handle for index */
-    unsigned             u;                     /* Local index variable */
-    herr_t               ret_value = SUCCEED;   /* Return value */
+    unsigned    	u;                      /* Local index variable */
+    herr_t              ret_value = SUCCEED;    /* Return value */
 
-    FUNC_ENTER_NOAPI_TAG(H5SM_ih_size, dxpl_id, H5AC__SOHM_TAG, FAIL)
+    FUNC_ENTER_NOAPI(H5SM_ih_size, FAIL)
 
     /* Sanity check */
     HDassert(f);
     HDassert(H5F_addr_defined(f->shared->sohm_addr));
-    HDassert(hdr_size);
-    HDassert(ih_info);
+    HDassert(finfo);
 
     /* Set up user data for callback */
     cache_udata.f = f;
@@ -2614,7 +2613,7 @@ H5SM_ih_size(H5F_t *f, hid_t dxpl_id, hsize_t *hdr_size, H5_ih_info_t *ih_info)
 	HGOTO_ERROR(H5E_SOHM, H5E_CANTPROTECT, FAIL, "unable to load SOHM master table")
 
     /* Get SOHM header size */
-    *hdr_size = table->table_size;
+    finfo->sohm.hdr_size = table->table_size;
 
     /* Loop over all the indices for shared messages */
     for(u = 0; u < table->num_indexes; u++) {
@@ -2625,7 +2624,7 @@ H5SM_ih_size(H5F_t *f, hid_t dxpl_id, hsize_t *hdr_size, H5_ih_info_t *ih_info)
                 if(NULL == (bt2 = H5B2_open(f, dxpl_id, table->indexes[u].index_addr, f)))
                     HGOTO_ERROR(H5E_SOHM, H5E_CANTOPENOBJ, FAIL, "unable to open v2 B-tree for SOHM index")
 
-		if(H5B2_size(bt2, dxpl_id, &(ih_info->index_size)) < 0)
+		if(H5B2_size(bt2, dxpl_id, &(finfo->sohm.msgs_info.index_size)) < 0)
                     HGOTO_ERROR(H5E_SOHM, H5E_CANTGET, FAIL, "can't retrieve B-tree storage info")
 
                 /* Close the v2 B-tree */
@@ -2636,7 +2635,7 @@ H5SM_ih_size(H5F_t *f, hid_t dxpl_id, hsize_t *hdr_size, H5_ih_info_t *ih_info)
         } /* end if */
         else {
             HDassert(table->indexes[u].index_type == H5SM_LIST);
-	    ih_info->index_size += table->indexes[u].list_size;
+	    finfo->sohm.msgs_info.index_size += table->indexes[u].list_size;
         } /* end else */
 
         /* Check for heap for this index */
@@ -2646,7 +2645,7 @@ H5SM_ih_size(H5F_t *f, hid_t dxpl_id, hsize_t *hdr_size, H5_ih_info_t *ih_info)
                 HGOTO_ERROR(H5E_SOHM, H5E_CANTOPENOBJ, FAIL, "unable to open fractal heap")
 
             /* Get heap storage size */
-	    if(H5HF_size(fheap, dxpl_id, &(ih_info->heap_size)) < 0)
+	    if(H5HF_size(fheap, dxpl_id, &(finfo->sohm.msgs_info.heap_size)) < 0)
 		HGOTO_ERROR(H5E_SOHM, H5E_CANTGET, FAIL, "can't retrieve fractal heap storage info")
 
             /* Close the fractal heap */
@@ -2665,6 +2664,6 @@ done:
     if(table && H5AC_unprotect(f, dxpl_id, H5AC_SOHM_TABLE, f->shared->sohm_addr, table, H5AC__NO_FLAGS_SET) < 0)
         HDONE_ERROR(H5E_SOHM, H5E_CANTUNPROTECT, FAIL, "unable to close SOHM master table")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5SM_ih_size() */
 

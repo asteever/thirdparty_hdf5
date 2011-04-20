@@ -211,6 +211,7 @@ PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
+PACKED_BITS = @PACKED_BITS@
 PARALLEL = @PARALLEL@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PERL = @PERL@
@@ -387,6 +388,7 @@ INSTALL_FILES = ex_lite1.c ex_lite2.c ex_lite3.c ptExampleFL.c ptExampleVL.c \
 
 INSTALL_SCRIPT_FILES = run-hlc-ex.sh
 INSTALL_TOP_SCRIPT_FILES = run-hl-ex.sh
+@BUILD_SHARED_SZIP_CONDITIONAL_TRUE@LD_LIBRARY_PATH = $(LL_PATH)
 
 # Assume that all tests in this directory are examples, and tell
 # conclude.am when to build them.
@@ -651,8 +653,6 @@ ex_table10: $(srcdir)/ex_table10.c
 ex_table11: $(srcdir)/ex_table11.c
 ex_table12: $(srcdir)/ex_table12.c
 
-@BUILD_SZIP_CONDITIONAL_TRUE@export LD_LIBRARY_PATH=$(LL_PATH)
-
 # How to create EXAMPLEDIR if it doesn't already exist
 $(EXAMPLEDIR):
 	-$(top_srcdir)/bin/mkdirs $@
@@ -666,11 +666,11 @@ install-data-local:
 uninstall-local:
 	@$(MAKE) $(AM_MAKEFLAGS) uninstall-examples
 
-install-examples: $(EXAMPLEDIR) $(INSTALL_FILES)
+install-examples: $(EXAMPLEDIR) $(INSTALL_FILES) 
 	@for f in X $(INSTALL_FILES); do                                     \
 	  if test $$f != X; then                                             \
-	    (set -x; $(INSTALL) $(srcdir)/$$f $(EXAMPLEDIR)/. || exit 1);    \
-            chmod a-x $(EXAMPLEDIR)/$$f;                                     \
+	    (set -x; $(INSTALL) $(srcdir)/$$f $(EXAMPLEDIR)/. || exit 1);\
+            chmod a-x $(EXAMPLEDIR)/$$f;\
 	  fi;                                                                \
 	done
 	@for f in X $(INSTALL_SCRIPT_FILES); do                                   \

@@ -32,13 +32,12 @@
 
 #include "H5Cpublic.h"		/* public prototypes		        */
 
-/* Private headers needed by this header */
+/* Pivate headers needed by this header */
 #include "H5private.h"		/* Generic Functions			*/
 #include "H5Fprivate.h"		/* File access				*/
 
 
 #define H5C_DO_SANITY_CHECKS		0
-#define H5C_DO_TAGGING_SANITY_CHECKS	1
 #define H5C_DO_EXTREME_SANITY_CHECKS	0
 
 /* This sanity checking constant was picked out of the air.  Increase
@@ -114,9 +113,6 @@ typedef struct H5C_t H5C_t;
  *
  * CLEAR:	Just marks object as non-dirty.
  *
- * NOTIFY:	Notify client that an action on an entry has taken/will take
- *              place
- *
  * SIZE:	Report the size (on disk) of the specified cache object.
  *		Note that the space allocated on disk may not be contiguous.
  */
@@ -162,7 +158,6 @@ typedef struct H5C_class_t {
     H5C_flush_func_t	flush;
     H5C_dest_func_t	dest;
     H5C_clear_func_t	clear;
-    H5C_notify_func_t	notify;
     H5C_size_func_t	size;
 } H5C_class_t;
 
@@ -198,16 +193,6 @@ typedef herr_t (*H5C_log_flush_func_t)(H5C_t * cache_ptr,
 
 #define H5C__DEFAULT_MAX_CACHE_SIZE     ((size_t)(4 * 1024 * 1024))
 #define H5C__DEFAULT_MIN_CLEAN_SIZE     ((size_t)(2 * 1024 * 1024))
-
-/* Maximum height of flush dependency relationships between entries.  This is
- * currently tuned to the extensible array (H5EA) data structure, which only
- * requires 6 levels of dependency (i.e. heights 0-6) (actually, the extensible
- * array needs 4 levels, plus another 2 levels are needed: one for the layer
- * under the extensible array and one for the layer above it).
- */
-
-#define H5C__NUM_FLUSH_DEP_HEIGHTS            6
-
 
 
 /****************************************************************************
@@ -404,37 +389,6 @@ typedef herr_t (*H5C_log_flush_func_t)(H5C_t * cache_ptr,
  *              'dest' callback routine.
  *
  *
- * Fields supporting the 'flush dependency' feature:
- *
- * Entries in the cache may have a 'flush dependency' on another entry in the
- * cache.  A flush dependency requires that all dirty child entries be flushed
- * to the file before a dirty parent entry (of those child entries) can be
- * flushed to the file.  This can be used by cache clients to create data
- * structures that allow Single-Writer/Multiple-Reader (SWMR) access for the
- * data structure.
- *
- * The leaf child entry will have a "height" of 0, with any parent entries
- * having a height of 1 greater than the maximum height of any of their child
- * entries (flush dependencies are allowed to create asymmetric trees of
- * relationships).
- *
- * flush_dep_parent:	Pointer to the parent entry for an entry in a flush
- *		dependency relationship.
- *
- * child_flush_dep_height_rc:	An array of reference counts for child entries,
- *		where the number of children of each height is tracked.
- *
- * flush_dep_height:	The height of the entry, which is one greater than the
- *		maximum height of any of its child entries..
- *
- * pinned_from_client:	Whether the entry was pinned by an explicit pin request
- *		from a cache client.
- *
- * pinned_from_cache:	Whether the entry was pinned implicitly as a
- *		request of being a parent entry in a flush dependency
- *		relationship.
- *
- *
  * Fields supporting the hash table:
  *
  * Fields in the cache are indexed by a more or less conventional hash table.
@@ -578,7 +532,6 @@ typedef struct H5C_cache_entry_t
     haddr_t			addr;
     size_t			size;
     const H5C_class_t *		type;
-    haddr_t		    tag;
     hbool_t			is_dirty;
     hbool_t			dirtied;
     hbool_t			is_protected;
@@ -594,14 +547,6 @@ typedef struct H5C_cache_entry_t
     hbool_t			flush_in_progress;
     hbool_t			destroy_in_progress;
     hbool_t		free_file_space_on_destroy;
-
-    /* fields supporting the 'flush dependency' feature: */
-
-    struct H5C_cache_entry_t *	flush_dep_parent;
-    uint64_t            child_flush_dep_height_rc[H5C__NUM_FLUSH_DEP_HEIGHTS];
-    unsigned            flush_dep_height;
-    hbool_t		pinned_from_client;
-    hbool_t		pinned_from_cache;
 
     /* fields supporting the hash table: */
 
@@ -1114,9 +1059,7 @@ H5_DLL herr_t H5C_get_entry_status(const H5F_t *f,
                                    hbool_t * in_cache_ptr,
                                    hbool_t * is_dirty_ptr,
                                    hbool_t * is_protected_ptr,
-				   hbool_t * is_pinned_ptr,
-				   hbool_t * is_flush_dep_parent_ptr,
-				   hbool_t * is_flush_dep_child_ptr);
+				   hbool_t * is_pinned_ptr);
 
 H5_DLL herr_t H5C_get_evictions_enabled(const H5C_t * cache_ptr,
                                         hbool_t * evictions_enabled_ptr);
@@ -1148,8 +1091,6 @@ H5_DLL herr_t H5C_move_entry(H5C_t *             cache_ptr,
                                haddr_t             new_addr);
 
 H5_DLL herr_t H5C_pin_protected_entry(void *thing);
-
-H5_DLL herr_t H5C_create_flush_dependency(void *parent_thing, void *child_thing);
 
 H5_DLL void * H5C_protect(H5F_t *             f,
                           hid_t               primary_dxpl_id,
@@ -1185,8 +1126,6 @@ H5_DLL herr_t H5C_dump_cache(H5C_t * cache_ptr,
 
 H5_DLL herr_t H5C_unpin_entry(void *thing);
 
-H5_DLL herr_t H5C_destroy_flush_dependency(void *parent_thing, void *child_thing);
-
 H5_DLL herr_t H5C_unprotect(H5F_t *             f,
                             hid_t               primary_dxpl_id,
                             hid_t               secondary_dxpl_id,
@@ -1197,10 +1136,6 @@ H5_DLL herr_t H5C_unprotect(H5F_t *             f,
 
 H5_DLL herr_t H5C_validate_resize_config(H5C_auto_size_ctl_t * config_ptr,
                                          unsigned int tests);
-
-H5_DLL herr_t H5C_ignore_tags(H5C_t * cache_ptr);
-
-H5_DLL void H5C_retag_copied_metadata(H5C_t * cache_ptr, haddr_t metadata_tag);
 
 #endif /* !_H5Cprivate_H */
 

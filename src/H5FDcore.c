@@ -403,9 +403,6 @@ done:
  *              Raymond Lu, 2006-11-30
  *              Enabled the driver to read an existing file depending on
  *              the setting of the backing_store and file open flags.
- *
- *              Allen Byrne, 2008-1-23
- *              changed if of fapl_id to assert
  *-------------------------------------------------------------------------
  */
 static H5FD_t *
