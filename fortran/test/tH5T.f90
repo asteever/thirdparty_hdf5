@@ -919,6 +919,7 @@
     RETURN
   END SUBROUTINE enumtest
 
+
 !/*-------------------------------------------------------------------------
 ! * Function:    test_derived_flt
 ! *

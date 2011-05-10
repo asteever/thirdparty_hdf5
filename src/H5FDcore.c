@@ -111,7 +111,6 @@ typedef struct H5FD_core_fapl_t {
 				 (size_t)((A)+(Z))<(size_t)(A))
 
 /* Prototypes */
-static herr_t H5FD_core_term(void);
 static void *H5FD_core_fapl_get(H5FD_t *_file);
 static H5FD_t *H5FD_core_open(const char *name, unsigned flags, hid_t fapl_id,
 			      haddr_t maxaddr);
@@ -133,7 +132,6 @@ static const H5FD_class_t H5FD_core_g = {
     "core",					/*name			*/
     MAXADDR,					/*maxaddr		*/
     H5F_CLOSE_WEAK,				/*fc_degree		*/
-    H5FD_core_term,                             /*terminate             */
     NULL,					/*sb_size		*/
     NULL,					/*sb_encode		*/
     NULL,					/*sb_decode		*/
@@ -227,14 +225,16 @@ done:
  *
  * Purpose:	Shut down the VFD
  *
- * Returns:     Non-negative on success or negative on failure
+ * Return:	<none>
  *
  * Programmer:  Quincey Koziol
  *              Friday, Jan 30, 2004
  *
+ * Modification:
+ *
  *---------------------------------------------------------------------------
  */
-static herr_t
+void
 H5FD_core_term(void)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOFUNC(H5FD_core_term)
@@ -242,7 +242,7 @@ H5FD_core_term(void)
     /* Reset VFL ID */
     H5FD_CORE_g=0;
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
+    FUNC_LEAVE_NOAPI_VOID
 } /* end H5FD_core_term() */
 
 
@@ -403,9 +403,6 @@ done:
  *              Raymond Lu, 2006-11-30
  *              Enabled the driver to read an existing file depending on
  *              the setting of the backing_store and file open flags.
- *
- *              Allen Byrne, 2008-1-23
- *              changed if of fapl_id to assert
  *-------------------------------------------------------------------------
  */
 static H5FD_t *
@@ -985,7 +982,7 @@ H5FD_core_write(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, had
 
         /* (Re)allocate memory for the file buffer */
         if(NULL == (x = (unsigned char *)H5MM_realloc(file->mem, new_eof)))
-            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "unable to allocate memory block of %llu bytes", (unsigned long long)new_eof)
+            HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "unable to allocate memory block")
 #ifdef H5_CLEAR_MEMORY
 HDmemset(x + file->eof, 0, (size_t)(new_eof - file->eof));
 #endif /* H5_CLEAR_MEMORY */

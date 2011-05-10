@@ -74,11 +74,6 @@ test_cont(char *filename, hid_t fapl)
     /* Create the file to operate on */
     if((file = H5Fcreate(filename, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0) TEST_ERROR
     if(NULL == (f = (H5F_t *)H5I_object(file))) FAIL_STACK_ERROR
-    if (H5AC_ignore_tags(f) < 0) {
-	H5_FAILED();
-	H5Eprint2(H5E_DEFAULT, stdout);
-	goto error;
-    }
 
     if(H5O_create(f, H5P_DATASET_XFER_DEFAULT, (size_t)H5O_MIN_SIZE, (size_t)0, H5P_GROUP_CREATE_DEFAULT, &oh_locA/*out*/) < 0)
             FAIL_STACK_ERROR
@@ -201,8 +196,6 @@ test_ohdr_cache(char *filename, hid_t fapl)
     if(H5Pclose(my_fapl) < 0)
 	FAIL_STACK_ERROR
     if(NULL == (f = (H5F_t *)H5I_object(file)))
-        FAIL_STACK_ERROR
-    if(H5AC_ignore_tags(f) < 0)
         FAIL_STACK_ERROR
 
     /* Create object (local heap) that occupies most of cache */
@@ -350,11 +343,6 @@ main(void)
             TEST_ERROR
         if(NULL == (f = (H5F_t *)H5I_object(file)))
             FAIL_STACK_ERROR
-        if (H5AC_ignore_tags(f) < 0) {
-	    H5_FAILED();
-	    H5Eprint2(H5E_DEFAULT, stdout);
-	    goto error;
-        }
 
 
         /*
@@ -450,8 +438,6 @@ main(void)
         if((file = H5Fopen(filename, H5F_ACC_RDWR, fapl)) < 0)
             FAIL_STACK_ERROR
         if(NULL == (f = (H5F_t *)H5I_object(file)))
-            FAIL_STACK_ERROR
-        if (H5AC_ignore_tags(f) < 0)
             FAIL_STACK_ERROR
         oh_loc.file = f;
         if(H5O_open(&oh_loc) < 0)
@@ -671,7 +657,20 @@ main(void)
             hid_t file2;                    /* File ID for 'bogus' object file */
             hid_t sid;                      /* Dataspace ID */
             hid_t aid;                      /* Attribute ID */
-            const char *testfile = H5_get_srcdir_filename(FILE_BOGUS);
+            char testpath[512] = "";
+            char testfile[512] = "";
+            char *srcdir = HDgetenv("srcdir");
+
+            /* Build path to all test files */
+            if(srcdir && ((HDstrlen(srcdir) + 2) < sizeof(testpath))) {
+                HDstrcpy(testpath, srcdir);
+                HDstrcat(testpath, "/");
+            } /* end if */
+
+            /* Build path to test file */
+            if(srcdir && ((HDstrlen(testpath) + HDstrlen(FILE_BOGUS) + 1) < sizeof(testfile)))
+                HDstrcpy(testfile, testpath);
+            HDstrcat(testfile, FILE_BOGUS);
 
             TESTING("object with unknown header message and no flags set");
 

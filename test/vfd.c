@@ -1226,7 +1226,6 @@ test_stdio(void)
     FILE         *fhandle        = NULL;
     hsize_t      file_size       = 0;
 
-
     TESTING("STDIO file driver");
 
     /* Set property list and file name for STDIO driver. */

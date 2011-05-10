@@ -66,7 +66,6 @@ FILE15=h5repack_named_dtypes.h5
 FILE16=tfamily%05d.h5           # located in common testfiles folder
 FILE18=h5repack_layout2.h5
 FILE_REF=h5repack_refs.h5
-FILE_ATTR_REF=h5repack_attr_refs.h5
 
 
 nerrors=0
@@ -597,7 +596,7 @@ else
 fi
 
 #file
-arg="$FILE4 -e $srcdir/$INFO_FILE"
+arg="$FILE4 -e $INFO_FILE"
 if test $USE_FILTER_DEFLATE != "yes" ; then
  SKIP $arg 
 else
@@ -729,12 +728,6 @@ TOOLTEST1 $FILE16
 
 # test various references (bug 1814 and 1726)
 TOOLTEST $FILE_REF
-
-# test attribute with various references (bug 1797)
-# the references in attribute of compund or vlen datatype 
-# TODO: include this test when code portion is completed.
-SKIP $FILE_ATTR_REF
-#TOOLTEST $FILE_ATTR_REF 
 
 if test $nerrors -eq 0 ; then
     echo "All $TESTNAME tests passed."

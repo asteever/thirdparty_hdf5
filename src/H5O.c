@@ -125,8 +125,7 @@ const H5O_msg_class_t *const H5O_msg_class_g[] = {
     H5O_MSG_DRVINFO,		/*0x0014 Driver info settings		*/
     H5O_MSG_AINFO,		/*0x0015 Attribute information		*/
     H5O_MSG_REFCOUNT,		/*0x0016 Object's ref. count		*/
-    H5O_MSG_FSINFO,		/*0x0017 Free-space manager info message */
-    H5O_MSG_UNKNOWN,		/*0x0018 Placeholder for unknown message */
+    H5O_MSG_UNKNOWN		/*0x0017 Placeholder for unknown message */
 };
 
 /* Declare a free list to manage the H5O_t struct */
@@ -1251,16 +1250,10 @@ H5O_create(H5F_t *f, hid_t dxpl_id, size_t size_hint, size_t initial_rc,
         insert_flags |= H5AC__PIN_ENTRY_FLAG;
     } /* end if */
 
-    /* Set metadata tag in dxpl_id */
-    H5_BEGIN_TAG(dxpl_id, oh_addr, FAIL);
-
     /* Cache object header */
     if(H5AC_insert_entry(f, dxpl_id, H5AC_OHDR, oh_addr, oh, insert_flags) < 0)
         HGOTO_ERROR(H5E_OHDR, H5E_CANTINSERT, FAIL, "unable to cache object header")
     oh = NULL;
-
-    /* Reset metadata tag in dxpl_id */
-    H5_END_TAG(FAIL);
 
     /* Set up object location */
     loc->file = f;
@@ -1606,7 +1599,7 @@ H5O_link(const H5O_loc_t *loc, int adjust, hid_t dxpl_id)
     hbool_t deleted = FALSE;            /* Whether the object was deleted */
     int	ret_value;                      /* Return value */
 
-    FUNC_ENTER_NOAPI_TAG(H5O_link, dxpl_id, loc->addr, FAIL)
+    FUNC_ENTER_NOAPI(H5O_link, FAIL)
 
     /* check args */
     HDassert(loc);
@@ -1627,7 +1620,7 @@ done:
     if(ret_value >= 0 && deleted && H5O_delete(loc->file, dxpl_id, loc->addr) < 0)
         HDONE_ERROR(H5E_OHDR, H5E_CANTDELETE, FAIL, "can't delete object from file")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_link() */
 
 
@@ -1657,7 +1650,7 @@ H5O_protect(const H5O_loc_t *loc, hid_t dxpl_id, H5AC_protect_t prot)
     unsigned file_intent;       /* R/W intent on file */
     H5O_t *ret_value;           /* Return value */
 
-    FUNC_ENTER_NOAPI_TAG(H5O_protect, dxpl_id, loc->addr, NULL)
+    FUNC_ENTER_NOAPI(H5O_protect, NULL)
 
     /* check args */
     HDassert(loc);
@@ -1847,7 +1840,7 @@ done:
         if(H5AC_unprotect(loc->file, dxpl_id, H5AC_OHDR, loc->addr, oh, H5AC__NO_FLAGS_SET) < 0)
             HDONE_ERROR(H5E_OHDR, H5E_CANTUNPROTECT, NULL, "unable to release object header")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, NULL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_protect() */
 
 
@@ -2197,7 +2190,7 @@ H5O_delete(H5F_t *f, hid_t dxpl_id, haddr_t addr)
     unsigned oh_flags = H5AC__NO_FLAGS_SET; /* Flags for unprotecting object header */
     herr_t ret_value = SUCCEED; /* Return value */
 
-    FUNC_ENTER_NOAPI_TAG(H5O_delete, dxpl_id, addr, FAIL)
+    FUNC_ENTER_NOAPI(H5O_delete, FAIL)
 
     /* Check args */
     HDassert(f);
@@ -2223,7 +2216,7 @@ done:
     if(oh && H5O_unprotect(&loc, dxpl_id, oh, oh_flags) < 0)
 	HDONE_ERROR(H5E_OHDR, H5E_PROTECT, FAIL, "unable to release object header")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_delete() */
 
 
@@ -2290,7 +2283,7 @@ H5O_obj_type(const H5O_loc_t *loc, H5O_type_t *obj_type, hid_t dxpl_id)
     H5O_t	*oh = NULL;             /* Object header for location */
     herr_t      ret_value = SUCCEED;    /* Return value */
 
-    FUNC_ENTER_NOAPI_TAG(H5O_obj_type, dxpl_id, loc->addr, FAIL)
+    FUNC_ENTER_NOAPI(H5O_obj_type, FAIL)
 
     /* Load the object header */
     if(NULL == (oh = H5O_protect(loc, dxpl_id, H5AC_READ)))
@@ -2304,7 +2297,7 @@ done:
     if(oh && H5O_unprotect(loc, dxpl_id, oh, H5AC__NO_FLAGS_SET) < 0)
 	HDONE_ERROR(H5E_OHDR, H5E_CANTUNPROTECT, FAIL, "unable to release object header")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_obj_type() */
 
 
@@ -2368,7 +2361,7 @@ H5O_obj_class(const H5O_loc_t *loc, hid_t dxpl_id)
     H5O_t	*oh = NULL;                     /* Object header for location */
     const H5O_obj_class_t *ret_value;           /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_TAG(H5O_obj_class, dxpl_id, loc->addr, NULL)
+    FUNC_ENTER_NOAPI_NOINIT(H5O_obj_class)
 
     /* Load the object header */
     if(NULL == (oh = H5O_protect(loc, dxpl_id, H5AC_READ)))
@@ -2382,7 +2375,7 @@ done:
     if(oh && H5O_unprotect(loc, dxpl_id, oh, H5AC__NO_FLAGS_SET) < 0)
 	HDONE_ERROR(H5E_OHDR, H5E_CANTUNPROTECT, NULL, "unable to release object header")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, NULL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_obj_class() */
 
 
@@ -2785,7 +2778,7 @@ H5O_get_info(const H5O_loc_t *loc, hid_t dxpl_id, hbool_t want_ih_info,
     H5O_t *oh = NULL;                   /* Object header */
     herr_t ret_value = SUCCEED;         /* Return value */
 
-    FUNC_ENTER_NOAPI_TAG(H5O_get_info, dxpl_id, loc->addr, FAIL)
+    FUNC_ENTER_NOAPI(H5O_get_info, FAIL)
 
     /* Check args */
     HDassert(loc);
@@ -2883,7 +2876,7 @@ done:
     if(oh && H5O_unprotect(loc, dxpl_id, oh, H5AC__NO_FLAGS_SET) < 0)
 	HDONE_ERROR(H5E_OHDR, H5E_CANTUNPROTECT, FAIL, "unable to release object header")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_get_info() */
 
 

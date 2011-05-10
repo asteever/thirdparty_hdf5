@@ -22,16 +22,6 @@
 #define MAX_FILENAME 1024
 
 /*-------------------------------------------------------------------------
- * This is used to pass multiple args into diff().
- * Passing this instead of several each arg provides smoother extensibility 
- * through its members along with MPI code for ph5diff
- * as it doesn't require interface change.
- *------------------------------------------------------------------------*/
-typedef struct {
-    h5trav_type_t   type;
-    hbool_t is_same_trgobj;
-} diff_args_t;
-/*-------------------------------------------------------------------------
  * command line options
  *-------------------------------------------------------------------------
  */
@@ -116,7 +106,7 @@ hsize_t diff( hid_t      file1_id,
               hid_t      file2_id,
               const char *path2,
               diff_opt_t *options,
-              diff_args_t *argdata);
+              h5trav_type_t  type );
 
 hsize_t diff_compare( hid_t file1_id,
                       const char *file1_name,

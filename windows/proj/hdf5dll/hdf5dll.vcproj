@@ -553,50 +553,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\src\H5EA.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAcache.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAdbg.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAdblkpage.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAdblock.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAhdr.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAiblock.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAint.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAsblock.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAstat.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAtest.c"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\src\H5Edeprec.c"
 				>
 			</File>
@@ -609,39 +565,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\src\H5FA.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5FAcache.c"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\src\H5Faccum.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5FAdbg.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5FAdblkpage.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5FAdblock.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5FAhdr.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5FAstat.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5FAtest.c"
 				>
 			</File>
 			<File
@@ -654,10 +578,6 @@
 			</File>
 			<File
 				RelativePath="..\..\..\src\H5FDcore.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5Fdeprec.c"
 				>
 			</File>
 			<File
@@ -1054,10 +974,6 @@
 			</File>
 			<File
 				RelativePath="..\..\..\src\H5Ofill.c"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5Ofsinfo.c"
 				>
 			</File>
 			<File
@@ -1478,14 +1394,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\src\H5EApkg.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5EAprivate.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\src\H5Epkg.h"
 				>
 			</File>
@@ -1495,14 +1403,6 @@
 			</File>
 			<File
 				RelativePath="..\..\..\src\H5Epublic.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5FApkg.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\..\src\H5FAprivate.h"
 				>
 			</File>
 			<File
@@ -1654,10 +1554,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\..\src\H5win32defs.h"
-				>
-			</File>
-			<File
 				RelativePath="..\..\..\src\H5Zprivate.h"
 				>
 			</File>
@@ -1670,6 +1566,58 @@
 				>
 			</File>
 		</Filter>
+		<File
+			RelativePath="..\..\..\src\H5Faccum.c"
+			>
+		</File>
+		<File
+			RelativePath="..\..\..\src\H5FDint.c"
+			>
+		</File>
+		<File
+			RelativePath="..\..\..\src\H5Fio.c"
+			>
+		</File>
+		<File
+			RelativePath="..\..\..\src\H5Fmpi.c"
+			>
+		</File>
+		<File
+			RelativePath="..\..\..\src\H5Fquery.c"
+			>
+		</File>
+		<File
+			RelativePath="..\..\..\src\H5FSstat.c"
+			>
+		</File>
+		<File
+			RelativePath="..\..\..\src\H5FStest.c"
+			>
+		</File>
+		<File
+			RelativePath="..\..\..\src\H5Gcache.c"
+			>
+		</File>
+		<File
+			RelativePath="..\..\..\src\H5HGcache.c"
+			>
+		</File>
+		<File
+			RelativePath="..\..\..\src\H5HLcache.c"
+			>
+		</File>
+		<File
+			RelativePath="..\..\..\src\H5MFaggr.c"
+			>
+		</File>
+		<File
+			RelativePath="..\..\..\src\H5MFdbg.c"
+			>
+		</File>
+		<File
+			RelativePath="..\..\..\src\H5MFsection.c"
+			>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>

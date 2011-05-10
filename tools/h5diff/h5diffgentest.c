@@ -53,8 +53,6 @@
 #define FILE16   "h5diff_extlink_trg.h5"
 #define FILE17   "h5diff_ext2softlink_src.h5"
 #define FILE18   "h5diff_ext2softlink_trg.h5"
-#define FILE19   "h5diff_dset_zero_dim_size1.h5"
-#define FILE20   "h5diff_dset_zero_dim_size2.h5"
 #define DANGLE_LINK_FILE1   "h5diff_danglelinks1.h5"
 #define DANGLE_LINK_FILE2   "h5diff_danglelinks2.h5"
 #define GRP_RECURSE_FILE1   "h5diff_grp_recurse1.h5"
@@ -75,20 +73,13 @@
 /* attribute compre with verbose level */
 #define ATTR_VERBOSE_LEVEL_FILE1 "h5diff_attr_v_level1.h5"
 #define ATTR_VERBOSE_LEVEL_FILE2 "h5diff_attr_v_level2.h5"
-/* file containing valid/invalid enum value mix */
-#define ENUM_INVALID_VALUES "h5diff_enum_invalid_values.h5"
 
 #define UIMAX    4294967295u /*Maximum value for a variable of type unsigned int */
 #define STR_SIZE 3
 #define GBLL    ((unsigned long long) 1024 * 1024 *1024 )
 
+
 #define MY_LINKCLASS 187
-
-/* Dataspace of 0 dimension size */
-#define SPACE1_RANK 2
-#define SPACE1_DIM1 0
-#define SPACE1_DIM2 0
-
 /* A UD link traversal function.  Shouldn't actually be called. */
 static hid_t UD_traverse(UNUSED const char * link_name, UNUSED hid_t cur_group,
                          UNUSED const void * udata, UNUSED size_t udata_size, UNUSED hid_t lapl_id)
@@ -119,7 +110,6 @@ static int test_types(const char *fname);
 static int test_datatypes(const char *fname);
 static int test_attributes(const char *fname,int make_diffs);
 static int test_datasets(const char *fname,int make_diffs);
-static int test_special_datasets(const char *fname,int make_diffs);
 static int test_hyperslab(const char *fname,int make_diffs);
 static int test_link_name(const char *fname1);
 static int test_soft_links(const char *fname1);
@@ -131,9 +121,8 @@ static int test_group_recurse(const char *fname1, const char *fname2);
 static int test_group_recurse2(void);
 static int test_exclude_obj1(const char *fname1, const char *fname2);
 static int test_exclude_obj2(const char *fname1, const char *fname2);
-static int test_comp_vlen_strings(const char *fname1, const char *grp_name, int is_file_new);
+static int test_comp_vlen_strings(const char *fname1);
 static int test_attributes_verbose_level(const char *fname1, const char *fname2);
-static int test_enums(const char *fname);
 
 /* called by test_attributes() and test_datasets() */
 static void write_attr_in(hid_t loc_id,const char* dset_name,hid_t fid,int make_diffs);
@@ -184,10 +173,6 @@ int main(void)
 
     test_ext2soft_links(FILE17, FILE18);
 
-    /* generate 2 files, the second call creates a similar file with differences */
-    test_special_datasets(FILE19,0);
-    test_special_datasets(FILE20,1);
-
     test_dangle_links(DANGLE_LINK_FILE1, DANGLE_LINK_FILE2);
 
     test_group_recurse(GRP_RECURSE_FILE1, GRP_RECURSE_FILE2);
@@ -197,15 +182,7 @@ int main(void)
     test_exclude_obj2(EXCLUDE_FILE2_1, EXCLUDE_FILE2_2);
 
     /* diff various multiple vlen and fixlen string types in a compound dataset */
-    test_comp_vlen_strings(COMP_VL_STRS_FILE, "group", 1);
-    test_comp_vlen_strings(COMP_VL_STRS_FILE, "group_copy", 0);
-
-    /* diff when invalid enum values are present.
-     * This will probably grow to involve more extensive testing of
-     * enums so it has been given its own test file and test (apart
-     * from the basic type testing).
-     */
-    test_enums(ENUM_INVALID_VALUES);
+    test_comp_vlen_strings(COMP_VL_STRS_FILE );
 
     return 0;
 }
@@ -441,9 +418,7 @@ int test_basic(const char *fname1, const char *fname2, const char *fname3)
         data20[3] = data20[4] = data20[5] = -log(0);
 
         write_dset(gid1,1,dims1,"fp19",H5T_NATIVE_FLOAT,data19);
-        write_dset(gid1,1,dims1,"fp19_COPY",H5T_NATIVE_FLOAT,data19);
         write_dset(gid1,1,dims1,"fp20",H5T_NATIVE_DOUBLE,data20);
-        write_dset(gid1,1,dims1,"fp20_COPY",H5T_NATIVE_DOUBLE,data20);
     }
 
     /*-------------------------------------------------------------------------
@@ -1266,62 +1241,6 @@ int test_datasets(const char *file,
     status = H5Dclose(did);
     assert(status >= 0);
     status = H5Gclose(gid);
-    assert(status >= 0);
-
-    /* close file */
-    status = H5Fclose(fid);
-    assert(status >= 0);
-    return status;
-}
-
-/*-------------------------------------------------------------------------
-* Function: test_special_datasets
-*
-* Purpose: Check datasets with datasapce of zero dimension size.
-*-------------------------------------------------------------------------
-*/
-static
-int test_special_datasets(const char *file,
-                  int make_diffs /* flag to modify data buffers */)
-{
-    hid_t   fid;
-    hid_t   did;
-    hid_t   sid0, sid;
-    hsize_t dims0[SPACE1_RANK]={SPACE1_DIM1, SPACE1_DIM2};
-    hsize_t dims[SPACE1_RANK]={SPACE1_DIM1, SPACE1_DIM2};
-    herr_t  status;
-
-    /* Create a file  */
-    if((fid = H5Fcreate(file, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT)) < 0)
-        return -1;
-
-    /* Create a dataset with zero dimension size */
-    sid0 = H5Screate_simple(SPACE1_RANK, dims0, NULL);
-    did  = H5Dcreate2(fid, "dset1", H5T_NATIVE_INT, sid0, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
-    /* close dataset */
-    status = H5Dclose(did);
-    assert(status >= 0);
-
-    /* close dataspace */
-    status = H5Sclose(sid0);
-    assert(status >= 0);
-
-    /* Create a dataset with zero dimension size in one file but the other one 
-     * has a dataset with a non-zero dimension size */
-    if(make_diffs) {
-        dims[1] = SPACE1_DIM2 + 4;        
-    }
-
-    sid = H5Screate_simple(SPACE1_RANK, dims, NULL);
-    did  = H5Dcreate2(fid, "dset2", H5T_NATIVE_INT, sid, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
-    /* close dataspace */
-    status = H5Sclose(sid);
-    assert(status >= 0);
-
-    /* close dataset */
-    status = H5Dclose(did);
     assert(status >= 0);
 
     /* close file */
@@ -3322,12 +3241,11 @@ out:
 #define FIXLEN_STR_ARRY_SIZE 30
 #define COMP_RANK 1
 #define COMP_DIM 1
-static int test_comp_vlen_strings(const char *fname1, const char *grp_name, int is_file_new)
+static int test_comp_vlen_strings(const char *fname1)
 {
     int i;
 
     hid_t    fid1;      /* file id */
-    hid_t    gid;
 
     /* compound1 datatype */
     typedef struct comp1_t
@@ -3618,34 +3536,10 @@ static int test_comp_vlen_strings(const char *fname1, const char *grp_name, int 
     /*-----------------------------------------------------------------------
     * Create file(s)
     *------------------------------------------------------------------------*/
-    if (is_file_new == 1)
+    fid1 = H5Fcreate (fname1, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    if (fid1 < 0)
     {
-        fid1 = H5Fcreate (fname1, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-        if (fid1 < 0)
-        {
-            fprintf(stderr, "Error: %s> H5Fcreate failed.\n", fname1);
-            status = FAIL;
-            goto out;
-        }
-    }
-    else
-    {
-        fid1 = H5Fopen (fname1, H5F_ACC_RDWR, H5P_DEFAULT);
-        if (fid1 < 0)
-        {
-            fprintf(stderr, "Error: %s> H5Fopen failed.\n", fname1);
-            status = FAIL;
-            goto out;
-        }
-    }
-
-    /*-----------------------------------------------------------------------
-    * Create group 
-    *------------------------------------------------------------------------*/
-    gid = H5Gcreate2(fid1, grp_name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-    if (gid < 0)
-    {
-        fprintf(stderr, "Error: %s> H5Gcreate2 failed.\n", fname1);
+        fprintf(stderr, "Error: %s> H5Fcreate failed.\n", fname1);
         status = FAIL;
         goto out;
     }
@@ -3865,7 +3759,7 @@ static int test_comp_vlen_strings(const char *fname1, const char *grp_name, int 
 
 
     /* Write data to compound 1 dataset buffer */
-    did_comp = H5Dcreate2(gid, "Compound_dset1", tid1_comp, sid_comp, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    did_comp = H5Dcreate2(fid1, "Compound_dset1", tid1_comp, sid_comp, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     status = H5Dwrite(did_comp, tid1_comp, H5S_ALL, H5S_ALL, H5P_DEFAULT, &comp1_buf);
     if (status < 0)
     {
@@ -3876,7 +3770,7 @@ static int test_comp_vlen_strings(const char *fname1, const char *grp_name, int 
     H5Dclose(did_comp);
 
     /* Write data to compound 2 dataset buffer */
-    did_comp = H5Dcreate2(gid, "Compound_dset2", tid2_comp, sid_comp, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    did_comp = H5Dcreate2(fid1, "Compound_dset2", tid2_comp, sid_comp, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     status = H5Dwrite(did_comp, tid2_comp, H5S_ALL, H5S_ALL, H5P_DEFAULT, &comp2_buf);
     if (status < 0)
     {
@@ -3887,7 +3781,7 @@ static int test_comp_vlen_strings(const char *fname1, const char *grp_name, int 
     H5Dclose(did_comp);
 
     /* Write data to compound 3 dataset buffer */
-    did_comp = H5Dcreate2(gid, "Compound_dset3", tid3_comp, sid_comp, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    did_comp = H5Dcreate2(fid1, "Compound_dset3", tid3_comp, sid_comp, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     status = H5Dwrite(did_comp, tid3_comp, H5S_ALL, H5S_ALL, H5P_DEFAULT, &comp3_buf);
     if (status < 0)
     {
@@ -3898,7 +3792,7 @@ static int test_comp_vlen_strings(const char *fname1, const char *grp_name, int 
     H5Dclose(did_comp);
 
     /* Write data to compound 4 dataset buffer */
-    did_comp = H5Dcreate2(gid, "Compound_dset4", tid4_comp, sid_comp, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    did_comp = H5Dcreate2(fid1, "Compound_dset4", tid4_comp, sid_comp, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     status = H5Dwrite(did_comp, tid4_comp, H5S_ALL, H5S_ALL, H5P_DEFAULT, &comp4_buf);
     if (status < 0)
     {
@@ -3909,7 +3803,7 @@ static int test_comp_vlen_strings(const char *fname1, const char *grp_name, int 
     H5Dclose(did_comp);
 
     /* Write data to compound 5 dataset buffer */
-    did_comp = H5Dcreate2(gid, "Compound_dset5", tid5_comp, sid_comp, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    did_comp = H5Dcreate2(fid1, "Compound_dset5", tid5_comp, sid_comp, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     status = H5Dwrite(did_comp, tid5_comp, H5S_ALL, H5S_ALL, H5P_DEFAULT, &comp5_buf);
     if (status < 0)
     {
@@ -3920,7 +3814,7 @@ static int test_comp_vlen_strings(const char *fname1, const char *grp_name, int 
     H5Dclose(did_comp);
 
     /* Write data to compound 6 dataset buffer */
-    did_comp = H5Dcreate2(gid, "Compound_dset6", tid6_comp, sid_comp, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    did_comp = H5Dcreate2(fid1, "Compound_dset6", tid6_comp, sid_comp, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     status = H5Dwrite(did_comp, tid6_comp, H5S_ALL, H5S_ALL, H5P_DEFAULT, &comp6_buf);
     if (status < 0)
     {
@@ -3931,7 +3825,7 @@ static int test_comp_vlen_strings(const char *fname1, const char *grp_name, int 
     H5Dclose(did_comp);
 
     /* Write data to compound 7 dataset buffer */
-    did_comp = H5Dcreate2(gid, "Compound_dset7", tid7_comp, sid_comp, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    did_comp = H5Dcreate2(fid1, "Compound_dset7", tid7_comp, sid_comp, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     status = H5Dwrite(did_comp, tid7_comp, H5S_ALL, H5S_ALL, H5P_DEFAULT, &comp7_buf);
     if (status < 0)
     {
@@ -3942,7 +3836,7 @@ static int test_comp_vlen_strings(const char *fname1, const char *grp_name, int 
     H5Dclose(did_comp);
 
     /* Write data to compound 8 dataset buffer */
-    did_comp = H5Dcreate2(gid, "Compound_dset8", tid8_comp, sid_comp, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    did_comp = H5Dcreate2(fid1, "Compound_dset8", tid8_comp, sid_comp, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
     status = H5Dwrite(did_comp, tid8_comp, H5S_ALL, H5S_ALL, H5P_DEFAULT, &comp8_buf);
     if (status < 0)
     {
@@ -3953,12 +3847,12 @@ static int test_comp_vlen_strings(const char *fname1, const char *grp_name, int 
     H5Dclose(did_comp);
 
     /* Write data to compound 9 dataset buffer */
-    did_comp = H5Dcreate2(gid, "Compound_dset9", tid9_comp, sid_comp, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
+    did_comp = H5Dcreate2(fid1, "Compound_dset9", tid9_comp, sid_comp, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
 
     /* obj references */
-    status=H5Rcreate(&(comp9_buf.objref1),gid,"Compound_dset2",H5R_OBJECT,-1);
-    status=H5Rcreate(&(comp9_buf.objref2),gid,"Compound_dset3",H5R_OBJECT,-1);
-    status=H5Rcreate(&(comp9_buf.objref3),gid,"Compound_dset4",H5R_OBJECT,-1);
+    status=H5Rcreate(&(comp9_buf.objref1),fid1,"/Compound_dset2",H5R_OBJECT,-1);
+    status=H5Rcreate(&(comp9_buf.objref2),fid1,"/Compound_dset3",H5R_OBJECT,-1);
+    status=H5Rcreate(&(comp9_buf.objref3),fid1,"/Compound_dset4",H5R_OBJECT,-1);
 
     status = H5Dwrite(did_comp, tid9_comp, H5S_ALL, H5S_ALL, H5P_DEFAULT, &comp9_buf);
     if (status < 0)
@@ -3978,8 +3872,6 @@ out:
     *-----------------------------------------------------------------------*/
     if(fid1)
         H5Fclose(fid1);
-    if(gid)
-        H5Gclose(gid);
     /* vlen string */
     if(tid_vlen_str)
         H5Tclose(tid_vlen_str);
@@ -4030,85 +3922,6 @@ out:
 
     return status;
 }
-
-
-/*-------------------------------------------------------------------------
-*
-* Purpose: Test diffs of enum values which may include invalid values.
-*
-* Programmer: Dana Robinson
-*
-*-------------------------------------------------------------------------*/
-
-static int
-test_enums(const char *fname)
-{
-    hid_t       fid  = -1;
-
-    hid_t       tid       = -1;
-    int         enum_val  = -1;
-
-    /* The data in the two arrays cover the following cases:
-     *   
-     *   V = valid enum value, I = invalid enum value
-     *
-     *   0:  I-I (same value)
-     *   1:  V-I
-     *   2:  I-V
-     *   3:  V-V (same value)
-     *   4:  I-I (different values) SKIPPED FOR NOW
-     *   5:  V-V (different values)
-     */
-    /* *** NOTE ***
-     *
-     * There is a bug in H5Dread() where invalid enum values are always
-     * returned as -1 so two different invalid enum values cannot be
-     * properly compared.  Test 4 has been adjusted to pass here
-     * while we fix the issue.
-     */
-    int         data1[6] = {9, 0, 9, 0, 9, 0};
-    /*int         data1[6] = {9, 0, 9, 0, 8, 0};  */
-    int         data2[6] = {9, 9, 0, 0, 9, 1};
-
-    hsize_t     dims = 6;
-
-    herr_t      status = SUCCEED;
-
-    /*-----------------------------------------------------------------------
-     * Create the file
-     *---------------------------------------------------------------------*/
-
-    fid = H5Fcreate(fname, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-
-    /*-----------------------------------------------------------------------
-     * Create enum types
-     *---------------------------------------------------------------------*/
- 
-    tid = H5Tenum_create(H5T_NATIVE_INT);
-    enum_val = 0;
-    status = H5Tenum_insert(tid, "YIN", &enum_val);
-    enum_val = 1;
-    status = H5Tenum_insert(tid, "YANG", &enum_val);
-
-    /*-----------------------------------------------------------------------
-     * Create datasets containing enum data.
-     *---------------------------------------------------------------------*/
- 
-    status = write_dset(fid, 1, &dims, "dset1", tid, data1);
-    status = write_dset(fid, 1, &dims, "dset2", tid, data2);
-
-out:
-    /*-----------------------------------------------------------------------
-     * Close
-     *---------------------------------------------------------------------*/
-    if(fid)
-        H5Fclose(fid);
-    if(tid)
-        H5Tclose(tid);
-    
-    return status;
-}
-
 
 /*-------------------------------------------------------------------------
 * Function: write_attr_in

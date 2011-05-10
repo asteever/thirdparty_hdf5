@@ -69,7 +69,6 @@ IF (BUILD_TESTING)
       h5diff_205.txt
       h5diff_206.txt
       h5diff_207.txt
-      h5diff_208.txt
       h5diff_21.txt
       h5diff_22.txt
       h5diff_23.txt
@@ -210,8 +209,6 @@ IF (BUILD_TESTING)
       h5diff_extlink_trg.h5
       h5diff_ext2softlink_src.h5
       h5diff_ext2softlink_trg.h5
-      h5diff_dset_zero_dim_size1.h5
-      h5diff_dset_zero_dim_size2.h5
       h5diff_danglelinks1.h5
       h5diff_danglelinks2.h5
       h5diff_grp_recurse1.h5
@@ -367,8 +364,6 @@ IF (BUILD_TESTING)
   SET (FILE16 h5diff_extlink_trg.h5)
   SET (FILE17 h5diff_ext2softlink_src.h5)
   SET (FILE18 h5diff_ext2softlink_trg.h5)
-  SET (FILE19 h5diff_dset_zero_dim_size1.h5)
-  SET (FILE20 h5diff_dset_zero_dim_size2.h5)
   SET (DANGLE_LINK_FILE1 h5diff_danglelinks1.h5)
   SET (DANGLE_LINK_FILE2 h5diff_danglelinks2.h5)
   SET (GRP_RECURSE_FILE1 h5diff_grp_recurse1.h5)
@@ -452,8 +447,6 @@ IF (BUILD_TESTING)
           h5diff_206.out.err
           h5diff_207.out
           h5diff_207.out.err
-          h5diff_208.out
-          h5diff_208.out.err
           h5diff_21.out
           h5diff_21.out.err
           h5diff_22.out
@@ -735,10 +728,10 @@ ADD_H5_TEST (h5diff_16_3 1 -v -p 0.02 ${FILE1} ${FILE1} g1/dset9 g1/dset10)
 ADD_H5_TEST (h5diff_17 1 -v ${FILE1} ${FILE2})   
 
 # 1.7 test 32-bit INFINITY
-ADD_H5_TEST (h5diff_171 0 -v ${FILE1} ${FILE1} /g1/fp19 /g1/fp19_COPY)
+ADD_H5_TEST (h5diff_171 0 -v ${FILE1} ${FILE1} /g1/fp19)
 
 # 1.7 test 64-bit INFINITY
-ADD_H5_TEST (h5diff_172 0 -v ${FILE1} ${FILE1} /g1/fp20 /g1/fp20_COPY)
+ADD_H5_TEST (h5diff_172 0 -v ${FILE1} ${FILE1} /g1/fp20)
 
 # 1.8 quiet mode 
 ADD_H5_TEST (h5diff_18 1 -q ${FILE1} ${FILE2}) 
@@ -1001,9 +994,6 @@ ADD_H5_TEST (h5diff_206 0 -c ${FILE2} ${FILE2} g2/dset7  g2/dset8)
 
 ADD_H5_TEST (h5diff_207 0 -c ${FILE2} ${FILE2} g2/dset8  g2/dset9)
 
-# not comparable in dataspace of zero dimension size
-ADD_H5_TEST (h5diff_208 0 -c ${FILE19} ${FILE20}) 
-
 # ##############################################################################
 # # Links compare without --follow-symlinks nor --no-dangling-links
 # ##############################################################################
@@ -1199,7 +1189,7 @@ ADD_H5_TEST (h5diff_484 0 -v --exclude-path "/dset3" ${EXCLUDE_FILE1_1} ${EXCLUD
 # ##############################################################################
 # # diff various multiple vlen and fixed strings in a compound type dataset
 # ##############################################################################
-ADD_H5_TEST (h5diff_530 0 -v  ${COMP_VL_STRS_FILE} ${COMP_VL_STRS_FILE} /group /group_copy)
+ADD_H5_TEST (h5diff_530 0 -v  ${COMP_VL_STRS_FILE} ${COMP_VL_STRS_FILE})
 
   
 ENDIF (BUILD_TESTING)

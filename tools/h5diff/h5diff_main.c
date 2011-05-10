@@ -15,6 +15,7 @@
 
 #include <stdlib.h>
 #include <assert.h>
+#include <memory.h>
 #include "h5diff.h"
 #include "h5diff_common.h"
 #include "h5tools_utils.h"

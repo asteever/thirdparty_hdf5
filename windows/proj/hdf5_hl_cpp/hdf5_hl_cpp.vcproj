@@ -324,7 +324,7 @@
 		<File
 			RelativePath="..\..\..\hl\c++\src\H5PacketTable.cpp"
 			>
-		</Filter>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>

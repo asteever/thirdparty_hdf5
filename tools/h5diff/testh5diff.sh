@@ -52,8 +52,6 @@ FILE15=h5diff_extlink_src.h5
 FILE16=h5diff_extlink_trg.h5
 FILE17=h5diff_ext2softlink_src.h5
 FILE18=h5diff_ext2softlink_trg.h5
-FILE19=h5diff_dset_zero_dim_size1.h5
-FILE20=h5diff_dset_zero_dim_size2.h5
 DANGLE_LINK_FILE1=h5diff_danglelinks1.h5
 DANGLE_LINK_FILE2=h5diff_danglelinks2.h5
 # group recursive
@@ -75,9 +73,6 @@ COMP_VL_STRS_FILE=h5diff_comp_vl_strs.h5
 
 ATTR_VERBOSE_LEVEL_FILE1=h5diff_attr_v_level1.h5
 ATTR_VERBOSE_LEVEL_FILE2=h5diff_attr_v_level2.h5
-
-# test enum types which may have invalid values
-ENUM_INVALID_VALUES=h5diff_enum_invalid_values.h5
 
 TESTNAME=h5diff
 EXIT_SUCCESS=0
@@ -143,8 +138,89 @@ TESTING() {
    echo "Testing $* $SPACES" | cut -c1-70 | tr -d '\012'
 }
 
-# Source in the output filter function definitions.
-. $srcdir/../../bin/output_filter.sh
+# Some systems will dump some messages to stdout for various reasons.
+# Remove them from the stdout result file.
+# $1 is the file name of the file to be filtered.
+# Cases of filter needed:
+# 1. Sandia Red-Storm
+#    yod always prints these two lines at the beginning.
+#    LibLustre: NAL NID: 0004a605 (5)
+#    Lustre: OBD class driver Build Version: 1, info@clusterfs.com
+# 2. LANL Lambda
+#    mpijob mirun -np always add an extra line at the end like:
+#    P4 procgroup file is /users/acheng/.lsbatch/host10524.l82
+STDOUT_FILTER() {
+    result_file=$1
+    tmp_file=/tmp/h5test_tmp_$$
+    # Filter Sandia Red-Storm yod messages.
+    cp $result_file $tmp_file
+    sed -e '/^LibLustre:/d' -e '/^Lustre:/d' \
+	< $tmp_file > $result_file
+    # Filter LANL Lambda mpirun message.
+    cp $result_file $tmp_file
+    sed -e '/^P4 procgroup file is/d' \
+	< $tmp_file > $result_file
+    # cleanup
+    rm -f $tmp_file
+}
+
+# Some systems will dump some messages to stderr for various reasons.
+# Remove them from the stderr result file.
+# $1 is the file name of the file to be filtered.
+# Cases of filter needed:
+# 1. MPE:
+# In parallel mode and if MPE library is used, it prints the following
+# two message lines whether the MPE tracing is used or not.
+#    Writing logfile.
+#    Finished writing logfile.
+# 2. LANL MPI:
+# The LANL MPI will print some messages like the following,
+#    LA-MPI: *** mpirun (1.5.10)
+#    LA-MPI: *** 3 process(es) on 2 host(s): 2*fln21 1*fln22
+#    LA-MPI: *** libmpi (1.5.10)
+#    LA-MPI: *** Copyright 2001-2004, ACL, Los Alamos National Laboratory
+# 3. h5diff debug output:
+#    Debug output all have prefix "h5diff debug: ".
+# 4. AIX system prints messages like these when it is aborting:
+#    ERROR: 0031-300  Forcing all remote tasks to exit due to exit code 1 in task 0
+#    ERROR: 0031-250  task 4: Terminated
+#    ERROR: 0031-250  task 3: Terminated
+#    ERROR: 0031-250  task 2: Terminated
+#    ERROR: 0031-250  task 1: Terminated
+# 5. LLNL Blue-Gene mpirun prints messages like there when it exit non-zero:
+#    <Apr 12 15:01:49.075658> BE_MPI (ERROR): The error message in the job record is as follows:
+#    <Apr 12 15:01:49.075736> BE_MPI (ERROR):   "killed by exit(1) on node 0"
+
+
+STDERR_FILTER() {
+    result_file=$1
+    tmp_file=/tmp/h5test_tmp_$$
+    # Filter LLNL Blue-Gene error messages in both serial and parallel modes
+    # since mpirun is used in both modes.
+    cp $result_file $tmp_file
+    sed -e '/ BE_MPI (ERROR): /d' \
+	< $tmp_file > $result_file
+    # Filter MPE messages
+    if test -n "$pmode"; then
+	cp $result_file $tmp_file
+	sed -e '/^Writing logfile./d' -e '/^Finished writing logfile./d' \
+	    < $tmp_file > $result_file
+    fi
+    # Filter LANL MPI messages
+    # and LLNL srun messages
+    # and AIX error messages
+    if test -n "$pmode"; then
+	cp $result_file $tmp_file
+	sed -e '/^LA-MPI:/d' -e '/^srun:/d' -e '/^ERROR:/d' \
+	    < $tmp_file > $result_file
+    fi
+    # Filter h5diff debug output
+	cp $result_file $tmp_file
+	sed -e '/^h5diff debug: /d' \
+	    < $tmp_file > $result_file
+    # clean up temporary files.
+    rm -f $tmp_file
+}
 
 # Run a test and print PASS or *FAIL*.  If a test fails then increment
 # the `nerrors' global variable and (if $verbose is set) display the
@@ -296,10 +372,10 @@ TOOLTEST h5diff_16_3.txt -v -p 0.02 $FILE1 $FILE1 g1/dset9 g1/dset10
 TOOLTEST h5diff_17.txt -v $FILE1 $FILE2   
 
 # 1.7 test 32-bit INFINITY
-TOOLTEST h5diff_171.txt -v $FILE1 $FILE1 /g1/fp19 /g1/fp19_COPY
+TOOLTEST h5diff_171.txt -v $FILE1 $FILE1 /g1/fp19
 
 # 1.7 test 64-bit INFINITY
-TOOLTEST h5diff_172.txt -v $FILE1 $FILE1 /g1/fp20 /g1/fp20_COPY
+TOOLTEST h5diff_172.txt -v $FILE1 $FILE1 /g1/fp20
 
 # 1.8 quiet mode 
 TOOLTEST h5diff_18.txt -q $FILE1 $FILE2 
@@ -342,15 +418,6 @@ TOOLTEST h5diff_27.txt -v $FILE3 $FILE3 t1 t2
 
 # 2.8
 TOOLTEST h5diff_28.txt -v $FILE3 $FILE3 l1 l2
-
-
-# ##############################################################################
-# # Enum value tests (may become more comprehensive in the future)
-# ##############################################################################
-
-# 3.0
-TOOLTEST h5diff_30.txt -v $ENUM_INVALID_VALUES $ENUM_INVALID_VALUES dset1 dset2
-
 
 
 
@@ -569,13 +636,11 @@ TOOLTEST h5diff_204.txt -c $FILE2 $FILE2 g2/dset4  g2/dset5
 
 TOOLTEST h5diff_205.txt -c $FILE2 $FILE2 g2/dset5  g2/dset6
 
+
 # not comparable in compound
 TOOLTEST h5diff_206.txt -c $FILE2 $FILE2 g2/dset7  g2/dset8
 
 TOOLTEST h5diff_207.txt -c $FILE2 $FILE2 g2/dset8  g2/dset9
-
-# not comparable in dataspace of zero dimension size
-TOOLTEST h5diff_208.txt -c $FILE19 $FILE20 
 
 # ##############################################################################
 # # Links compare without --follow-symlinks nor --no-dangling-links
@@ -772,7 +837,7 @@ TOOLTEST h5diff_484.txt -v --exclude-path "/dset3" $EXCLUDE_FILE1_1 $EXCLUDE_FIL
 # ##############################################################################
 # # diff various multiple vlen and fixed strings in a compound type dataset
 # ##############################################################################
-TOOLTEST h5diff_530.txt -v  $COMP_VL_STRS_FILE $COMP_VL_STRS_FILE /group /group_copy
+TOOLTEST h5diff_530.txt -v  $COMP_VL_STRS_FILE $COMP_VL_STRS_FILE
 
 # ##############################################################################
 # # END

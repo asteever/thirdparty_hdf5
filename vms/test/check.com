@@ -61,16 +61,6 @@ $ run  cache
 $ type sys$input
 
 $ type sys$input
--------			Running cache_tagging  	-------
-$ run  cache_tagging
-$ type sys$input
-
-$ type sys$input
--------			Running chunk_info   	-------
-$ run  chunk_info 
-$ type sys$input
-
-$ type sys$input
 -------			Running cmpd_dset    	-------
 $ run  cmpd_dset
 $ type sys$input
@@ -106,12 +96,7 @@ $ run  dtypes
 $ type sys$input
 
 $ type sys$input
--------			Running earray    	-------
-$ run  earray
-$ type sys$input
-
-$ type sys$input
--------                 Running efc             -------
+-------			Running efc    		-------
 $ run  efc
 $ type sys$input
 
@@ -190,10 +175,11 @@ $ type sys$input
 $ run  links
 $ type sys$input
 
-$ type sys$input
--------			Running links_env    	-------
-$ run  links_env
-$ type sys$input
+$! Skip it because it needs a script file to run
+$! type sys$input
+$!-------			Running links_env    	-------
+$! run  links_env
+$! type sys$input
 
 $ type sys$input
 -------			Running mf    	-------

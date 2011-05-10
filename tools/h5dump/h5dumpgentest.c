@@ -93,10 +93,9 @@
 #define FILE61  "textlinksrc.h5"
 #define FILE62  "textlinktar.h5"
 #define FILE63  "textlinkfar.h5"
-#define FILE64  "tattrreg.h5"
-#define FILE65  "file_space.h5"
+#define FILE64  "tarray8.h5"
+#define FILE65  "tattrreg.h5"
 #define FILE66  "packedbits.h5"
-#define FILE67  "zerodim.h5"
 
 
 
@@ -178,11 +177,6 @@ const H5L_class_t UD_link_class[1] = {{
 #define CDIM2 DIM2/2
 #define RANK  2
 
-/* Dataspace of 0 dimension size */
-#define SPACE3_RANK 2
-#define SPACE3_DIM1 0
-#define SPACE3_DIM2 0
-
 /* Element selection information */
 #define POINT1_NPOINTS 10
 
@@ -217,10 +211,6 @@ typedef struct s1_t {
 #define ARRAY3_DIM1 6
 #define ARRAY3_DIM2 3
 
-/* VL string datatype name */
-/* TODO remove complier error not used, remove the link when everything is OK */
-/* #define VLSTR_TYPE      "vl_string_type" */
-
 /* "File 41" macros */
 /* Name of dataset to create in datafile                              */
 #define F41_DATASETNAME   "CompoundComplex"
@@ -250,15 +240,10 @@ typedef struct s1_t {
 #define F51_MAX_NAME_LEN    ((64*1024)+1024)
 
 /* "File 64" macros */
-#define F64_FILE            "tarray8.h5"
 #define F64_DATASET         "DS1"
 #define F64_DIM0            1
 #define F64_ARRAY_BUF_LEN   (4*1024)
 #define F64_DIM1            (F64_ARRAY_BUF_LEN / sizeof(int) + 1)
-
-/* File 65 macros */
-#define STRATEGY	H5F_FILE_SPACE_AGGR_VFD	/* File space handling strategy */
-#define THRESHOLD10 	10    			/* Free space section threshold */
 
 /* "FILE66" macros */
 #define F66_XDIM	    8
@@ -2175,7 +2160,7 @@ static void gent_attrreg(void)
     drbuf = (uint8_t*) calloc(sizeof(uint8_t),SPACE2_DIM1*SPACE2_DIM2);
 
     /* Create file */
-    fid1 = H5Fcreate(FILE64, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    fid1 = H5Fcreate(FILE65, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
     /* Create dataspace for datasets */
     sid2 = H5Screate_simple(SPACE2_RANK, dims2, NULL);
@@ -3343,7 +3328,7 @@ static void gent_array8(void)
     hsize_t sdims[] = {F64_DIM0};
     hsize_t tdims[] = {F64_DIM1};
     int         wdata[(F64_DIM1) * sizeof(int)];      /* Write buffer */
-    unsigned int     i;
+    unsigned int i;
 
     /*
      * Initialize data.  i is the element in the dataspace, j and k the
@@ -3355,7 +3340,7 @@ static void gent_array8(void)
     /*
      * Create a new file using the default properties.
      */
-    file = H5Fcreate (F64_FILE, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    file = H5Fcreate (FILE64, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
 
     /*
      * Create array datatypes for file and memory.
@@ -5109,41 +5094,7 @@ static void gent_null_space(void)
     H5Fclose(fid);
 }
 
-/*-------------------------------------------------------------------------
- * Function: gent_zero_dim_size
- *
- * Purpose: generates dataset and attribute with dataspace of 0 dimension size
- *-------------------------------------------------------------------------
- */
-static void gent_zero_dim_size(void)
-{
-    hid_t fid, root, dataset, space, attr;
-    hsize_t	dims1[] = {SPACE3_DIM1, SPACE3_DIM2};
-    int dset_buf = 10;
-    int point = 4;
 
-    fid = H5Fcreate(FILE67, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-    root = H5Gopen2(fid, "/", H5P_DEFAULT);
-
-    /* dataspace of 0 dimension size */
-    space = H5Screate_simple(SPACE3_RANK, dims1, NULL);
-
-    /* dataset */
-    dataset = H5Dcreate2(fid, "dset of 0 dimension size", H5T_STD_I32BE, space, H5P_DEFAULT, 
-                         H5P_DEFAULT, H5P_DEFAULT);
-    /* nothing should be written */
-    H5Dwrite(dataset, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, &dset_buf);
-
-    /* attribute */
-    attr = H5Acreate2(root, "attr of 0 dimension size", H5T_NATIVE_UINT, space, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(attr, H5T_NATIVE_INT, &point); /* Nothing can be written */
-
-    H5Dclose(dataset);
-    H5Aclose(attr);
-    H5Gclose(root);
-    H5Sclose(space);
-    H5Fclose(fid);
-}
 
 /*-------------------------------------------------------------------------
  * Function: make_dset
@@ -6896,11 +6847,6 @@ gent_extlinks(void)
  H5Lcreate_external(FILE62, "type", source_fid, "ext_link3", H5P_DEFAULT, H5P_DEFAULT);
  H5Lcreate_external(FILE62, "group/elink_t2", source_fid, "ext_link4", H5P_DEFAULT, H5P_DEFAULT);
  H5Lcreate_external(FILE62, "empty_group", source_fid, "ext_link5", H5P_DEFAULT, H5P_DEFAULT);
-/* external link to soft link which linked to a dataset */
- H5Lcreate_external(FILE4_1, "/soft_dset1", source_fid, "ext2soft_link1", H5P_DEFAULT, H5P_DEFAULT);
-
-/* external link to dangle soft link  */
- H5Lcreate_external(FILE4_1, "/soft_dangle", source_fid, "ext2softdangle_link1", H5P_DEFAULT, H5P_DEFAULT);
 
 /*-------------------------------------------------------------------------
  * create external link in the "far" file pointing to the source file
@@ -6915,33 +6861,6 @@ gent_extlinks(void)
 }
 
 /*-------------------------------------------------------------------------
- * Function:    gent_fs_strategy_threshold
- *
- * Purpose:     Generate a file with non-default file space strategy and
- *		non-default free-space section threshold.
- *-------------------------------------------------------------------------
- */
-static void
-gent_fs_strategy_threshold(void)
-{
- hid_t    fid;	/* File id */
- hid_t	  fcpl;	/* File creation property */
-
- /* Create file-creation template */
- fcpl = H5Pcreate(H5P_FILE_CREATE);
-
- /* Set file space information */
- H5Pset_file_space(fcpl, STRATEGY, (hsize_t)THRESHOLD10);
-
- /* Create the file with the specified strategy and threshold */
- fid = H5Fcreate(FILE65, H5F_ACC_TRUNC, fcpl, H5P_DEFAULT);
-
- /* close */
- H5Fclose(fid);
- H5Pclose(fcpl);
-}
-
-/*-------------------------------------------------------------------------
  * Function:    gent_packedbits
  *
  * Purpose:     Generate a file to be used in the h5dump packed bits tests.
@@ -6950,7 +6869,7 @@ gent_fs_strategy_threshold(void)
  *   Fill them with raw data such that no bit will be all zero in a dataset.
  *   A dummy dataset of double type is created for failure test.
  * Created:	Albert Cheng, 2010/5/10.
- * Modified: Allen Byrne, 2011/1/5 Use file to test Signed/Unsigned datatypes
+ * Modified:
  *-------------------------------------------------------------------------
  */
 static void
@@ -7131,6 +7050,7 @@ gent_packedbits(void)
     H5Fclose(fid);
 }
 
+
 /*-------------------------------------------------------------------------
  * Function: main
  *
@@ -7189,7 +7109,6 @@ int main(void)
     gent_compound_complex();
     gent_named_dtype_attr();
     gent_null_space();
-    gent_zero_dim_size();
 
     gent_filters();
     gent_fvalues();
@@ -7205,7 +7124,6 @@ int main(void)
     gent_attr_creation_order();
     gent_fpformat();
     gent_extlinks();
-    gent_fs_strategy_threshold();
     gent_packedbits();
 
     return 0;
