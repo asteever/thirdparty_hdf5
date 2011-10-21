@@ -31,7 +31,7 @@
 #define H5O_NMESGS	8 		/*initial number of messages	     */
 #define H5O_NCHUNKS	2		/*initial number of chunks	     */
 #define H5O_MIN_SIZE	22		/* Min. obj header data size (must be big enough for a message prefix and a continuation message) */
-#define H5O_MSG_TYPES   25              /* # of types of messages            */
+#define H5O_MSG_TYPES   24              /* # of types of messages            */
 #define H5O_MAX_CRT_ORDER_IDX 65535     /* Max. creation order index value   */
 
 /* Versions of object header structure */
@@ -333,7 +333,7 @@ typedef struct H5O_addr_map_t {
     haddr_t     dst_addr;               /* Address of object in destination file */
     hbool_t     is_locked;              /* Indicate that the destination object is locked currently */
     hsize_t     inc_ref_count;          /* Number of deferred increments to reference count */
-    const H5O_obj_class_t *obj_class;   /* Object class */
+    H5O_obj_class_t *obj_class;         /* Object class */
     void        *udata;                 /* Object class copy file udata */
 } H5O_addr_map_t;
 
@@ -501,10 +501,7 @@ H5_DLLVAR const H5O_msg_class_t H5O_MSG_AINFO[1];
 /* Reference Count Message. (0x0016) */
 H5_DLLVAR const H5O_msg_class_t H5O_MSG_REFCOUNT[1];
 
-/* Free-space Manager Info message. (0x0017) */
-H5_DLLVAR const H5O_msg_class_t H5O_MSG_FSINFO[1];
-
-/* Placeholder for unknown message. (0x0018) */
+/* Placeholder for unknown message. (0x0017) */
 H5_DLLVAR const H5O_msg_class_t H5O_MSG_UNKNOWN[1];
 
 

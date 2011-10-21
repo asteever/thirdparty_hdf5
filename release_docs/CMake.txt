@@ -239,7 +239,7 @@ Notes: This short instruction is written for users who want to quickly build
       "output directory", which is where the program will be installed. These 
       options are case-sensitive, so be sure to type them in upper case. 
 
-                                                                         
+
 ========================================================================
           All options for HDF5 C/C++ Libraries with CMake
 ========================================================================

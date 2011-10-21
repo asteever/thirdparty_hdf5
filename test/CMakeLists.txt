@@ -84,9 +84,8 @@ SET (HDF5_REFERENCE_TEST_FILES
     family_v16_00001.h5
     family_v16_00002.h5
     family_v16_00003.h5
-    filespace_1_6.h5
-    filespace_1_8.h5
     fill_old.h5
+    fixed_idx.h5
     filter_error.h5
     group_old.h5
     le_data.h5
@@ -106,7 +105,6 @@ SET (HDF5_REFERENCE_TEST_FILES
     tlayouto.h5
     tmtimen.h5
     tmtimeo.h5
-    tsizeslheap.h5
 )
 
 FOREACH (h5_file ${HDF5_REFERENCE_TEST_FILES})
@@ -166,7 +164,6 @@ ADD_TEST (
         tfile3.h5
         tfile4.h5
         tfile5.h5
-        tfile6.h5
         th5o_file
         th5s1.h5
         tselect.h5
@@ -261,13 +258,13 @@ SET (H5_TESTS
     gheap
     #cache
     #cache_api
-    #cache_tagging
     pool
     hyperslab
     istore
     bittests
     dt_arith
     dtypes
+    dsets
     cmpd_dset
     filter_fail
     extend
@@ -295,8 +292,6 @@ SET (H5_TESTS
     cross_read
     freespace
     mf
-    farray
-    earray
     btree2
     fheap
     #error_test
@@ -345,21 +340,6 @@ ADD_TEST (
 )
 ADD_TEST (NAME cache_api COMMAND $<TARGET_FILE:cache_api>)
 SET_TESTS_PROPERTIES(cache_api PROPERTIES DEPENDS h5test-clear-cache_api-objects)
-
-#-- Adding test for cache_tagging
-ADD_EXECUTABLE (cache_tagging ${HDF5_TEST_SOURCE_DIR}/cache_tagging.c ${HDF5_TEST_SOURCE_DIR}/cache_common.c)
-TARGET_NAMING (cache_tagging ${LIB_TYPE})
-TARGET_LINK_LIBRARIES (cache_tagging ${HDF5_LIB_TARGET} ${HDF5_TEST_LIB_TARGET})
-
-ADD_TEST (
-    NAME h5test-clear-cache_tagging-objects
-    COMMAND    ${CMAKE_COMMAND}
-        -E remove 
-        tagging_test.h5
-        tagging_ext_test.h5
-)
-ADD_TEST (NAME cache_tagging COMMAND $<TARGET_FILE:cache_tagging>)
-SET_TESTS_PROPERTIES(cache_tagging PROPERTIES DEPENDS h5test-clear-cache_tagging-objects)
 
 #-- Adding test for ttsafe
 ADD_EXECUTABLE (ttsafe
@@ -442,9 +422,7 @@ TARGET_LINK_LIBRARIES (links_env ${HDF5_LIB_TARGET} ${HDF5_TEST_LIB_TARGET})
 ADD_TEST (
     NAME h5test-clear-links_env-objects
     COMMAND    ${CMAKE_COMMAND}
-        -E remove
-        links_env.txt
-        links_env.txt.err 
+        -E remove 
         extlinks_env0.h5
         extlinks_env1.h5
         tmp/extlinks_env1.h5
@@ -502,13 +480,13 @@ IF (HDF5_TEST_VFD)
       gheap
       cache
       cache_api
-      cache_tagging
       pool
       hyperslab
       istore
       bittests
       dt_arith
       dtypes
+      dsets
       cmpd_dset
       filter_fail
       extend
@@ -536,8 +514,6 @@ IF (HDF5_TEST_VFD)
       cross_read
       freespace
       mf
-      farray
-      earray
       btree2
       #fheap
       error_test
@@ -607,6 +583,7 @@ IF (HDF5_BUILD_GENERATORS AND NOT BUILD_SHARED_LIBS)
       gen_cross
       gen_deflate
       gen_filters
+      gen_idx
       gen_new_array
       gen_new_fill
       gen_new_group
@@ -616,8 +593,6 @@ IF (HDF5_BUILD_GENERATORS AND NOT BUILD_SHARED_LIBS)
       gen_nullspace
       gen_udlinks
       space_overflow
-      gen_filespace
-      gen_specmetaread
       gen_sizes_lheap
   )
 

@@ -401,8 +401,6 @@ IF (BUILD_TESTING)
               -D "TEST_OUTPUT=P_${resultfile}.out"
               -D "TEST_EXPECT=${resultcode}"
               -D "TEST_REFERENCE=${resultfile}.txt"
-#              -D "TEST_APPEND=EXIT CODE: [0-9]"
-#              -D "TEST_REF_FILTER=EXIT CODE: 0"
               -D "TEST_SKIP_COMPARE=TRUE"
               -P "${HDF5_RESOURCES_DIR}/prunTest.cmake"
       )

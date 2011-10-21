@@ -1389,7 +1389,8 @@ test_compound_8(void)
         char    c;
         s1      d;
     } s2;
-    hid_t  tid1, tid1_copy, tid2, tid2_copy, tid3, arr_tid;
+
+    hid_t  tid1,  tid1_copy, tid2, tid2_copy, tid3, arr_tid;
     size_t tsize;
     hsize_t dims[1] = {ARRAY_DIM};
     herr_t ret;
@@ -1541,7 +1542,7 @@ test_compound_8(void)
 
     if(tsize != (sizeof(char) + sizeof(char) + sizeof(int))) {
         H5_FAILED(); AT();
-        printf("The size of the packed compound datatype is incorrect\n");
+        printf("The size of the packed compound datatype is incorrect: tsize=%d\n", tsize);
         goto error;
     } /* end if */
 
@@ -7052,8 +7053,10 @@ main(void)
     nerrors += test_latest();
     nerrors += test_int_float_except();
     nerrors += test_named_indirect_reopen(fapl);
+#ifndef H5_CANNOT_OPEN_TWICE
     nerrors += test_delete_obj_named(fapl);
     nerrors += test_delete_obj_named_fileid(fapl);
+#endif /*H5_CANNOT_OPEN_TWICE*/
     nerrors += test_set_order_compound(fapl);
     nerrors += test_str_create();
 #ifndef H5_NO_DEPRECATED_SYMBOLS

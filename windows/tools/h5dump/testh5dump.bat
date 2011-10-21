@@ -109,10 +109,6 @@ rem
         rem We need to replace PERCENT here with "%" for tests that use percents
         rem Also remove quotes here, because Linux 'echo' command strips them.
         rem --SJW 8/24/07
-        set params_echo=!params:PERCENT=%%!
-        echo.#############################
-        echo.Expected output for 'h5dump !params_echo:"=!'
-        echo.#############################
         pushd %CD%\..\testfiles
         %dumper_bin% !params:PERCENT=%%!
         popd
@@ -565,7 +561,7 @@ rem ############################################################################
     call :tooltest1   tbin1.ddl -d integer -o out1.bin -b LE tbinary.h5
 
     rem NATIVE default. the NATIVE test can be validated with h5import/h5diff
-    call :tooltest1   tbin1.ddl -d integer -o out1.bin -b MEMORY tbinary.h5
+    call :tooltest1   tbin1.ddl -d integer -o out1.bin  -b     tbinary.h5
     call :importtest out1.bin -c out3.h5import -o out1.h5
     call :difftest tbinary.h5 out1.h5 /integer /integer
     
@@ -576,7 +572,7 @@ rem ############################################################################
     call :importtest out3.bin -c out3.h5import -o out3.h5
     call :difftest tbinary.h5 out3.h5 /integer /integer
 
-    call :tooltest1   tbin4.ddl -d double  -b FILE -o out4.bin    tbinary.h5
+    call :tooltest1   tbin4.ddl -d double  -o out4.bin -b FILE   tbinary.h5
        
     rem Clean up binary output files
     if not defined hdf5_nocleanup (
@@ -616,8 +612,8 @@ rem ############################################################################
     rem test for dangling external links
     call :tooltest textlink.ddl textlink.h5
 
-	rem test for dataset packed bits 
-	rem Set up xCMD to test or skip.
+  rem test for dataset packed bits 
+  rem Set up xCMD to test or skip.
     rem Limits:
     rem Maximum number of packed bits is 8 (for now).
     rem Maximum integer size is 64 (for now).
