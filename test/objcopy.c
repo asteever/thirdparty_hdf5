@@ -972,8 +972,8 @@ compare_data(hid_t parent1, hid_t parent2, hid_t pid, hid_t tid, size_t nelmts,
                 if(obj1_type != obj2_type) TEST_ERROR
 
                 /* Open referenced objects */
-                if((obj1_id = H5Rdereference2(parent1, H5P_DEFAULT, H5R_OBJECT, ref_buf1)) < 0) TEST_ERROR
-                if((obj2_id = H5Rdereference2(parent2, H5P_DEFAULT, H5R_OBJECT, ref_buf2)) < 0) TEST_ERROR
+                if((obj1_id = H5Rdereference(parent1, H5R_OBJECT, ref_buf1)) < 0) TEST_ERROR
+                if((obj2_id = H5Rdereference(parent2, H5R_OBJECT, ref_buf2)) < 0) TEST_ERROR
 
                 /* break the infinite loop when the ref_object points to itself */
                 if(obj_owner > 0) {
@@ -1030,8 +1030,8 @@ compare_data(hid_t parent1, hid_t parent2, hid_t pid, hid_t tid, size_t nelmts,
                 if(obj1_type != obj2_type) TEST_ERROR
 
                 /* Open referenced objects */
-                if((obj1_id = H5Rdereference2(parent1, H5P_DEFAULT, H5R_DATASET_REGION, ref_buf1)) < 0) TEST_ERROR
-                if((obj2_id = H5Rdereference2(parent2, H5P_DEFAULT, H5R_DATASET_REGION, ref_buf2)) < 0) TEST_ERROR
+                if((obj1_id = H5Rdereference(parent1, H5R_DATASET_REGION, ref_buf1)) < 0) TEST_ERROR
+                if((obj2_id = H5Rdereference(parent2, H5R_DATASET_REGION, ref_buf2)) < 0) TEST_ERROR
 
                 /* break the infinite loop when the ref_object points to itself */
                 if(obj_owner > 0) {
@@ -6229,10 +6229,18 @@ test_copy_old_layout(hid_t fcpl_dst, hid_t fapl)
 {
     hid_t fid_src = -1, fid_dst = -1;           /* File IDs */
     hid_t did = -1, did2 = -1;                  /* Dataset IDs */
-    const char *src_filename = H5_get_srcdir_filename(FILE_OLD_LAYOUT); /* Corrected test file name */
+    char *srcdir = HDgetenv("srcdir");  /* Where the src code is located */
+    char src_filename[NAME_BUF_SIZE] = "";
     char dst_filename[NAME_BUF_SIZE];
 
     TESTING("H5Ocopy(): dataset with old layout format");
+
+    /* Generate correct name for source file by prepending the source path */
+    if(srcdir && ((HDstrlen(srcdir) + HDstrlen(FILE_OLD_LAYOUT) + 1) < sizeof(src_filename))) {
+        HDstrcpy(src_filename, srcdir);
+        HDstrcat(src_filename, "/");
+    } /* end if */
+    HDstrcat(src_filename, FILE_OLD_LAYOUT);
 
     /* Initialize the destination filename */
     h5_fixname(FILENAME[1], fapl, dst_filename, sizeof dst_filename);

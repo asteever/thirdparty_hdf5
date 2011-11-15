@@ -1213,7 +1213,7 @@ H5D_btree_idx_copy_setup(const H5D_chk_idx_info_t *idx_info_src,
 {
     herr_t      ret_value = SUCCEED;        /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_TAG(H5D_btree_idx_copy_setup, idx_info_dst->dxpl_id, H5AC__COPIED_TAG, FAIL)
+    FUNC_ENTER_NOAPI_NOINIT(H5D_btree_idx_copy_setup)
 
     HDassert(idx_info_src);
     HDassert(idx_info_src->f);
@@ -1239,7 +1239,7 @@ H5D_btree_idx_copy_setup(const H5D_chk_idx_info_t *idx_info_src,
     HDassert(H5F_addr_defined(idx_info_dst->storage->idx_addr));
 
 done:
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D_btree_idx_copy_setup() */
 
 

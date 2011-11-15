@@ -413,7 +413,7 @@ done:
     static char *
 pio_create_filename(iotype iot, const char *base_name, char *fullname, size_t size)
 {
-    const char *prefix, *suffix="";
+    const char *prefix, *suffix = "";
     char *ptr, last = '\0';
     size_t i, j;
 

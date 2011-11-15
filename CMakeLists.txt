@@ -69,27 +69,11 @@ PROJECT (HDF5 C CXX)
 #   # Add the sub project
 #   ADD_SUBDIRECTORY(Utilities/hdf5-1.8)
 #-----------------------------------------------------------------------------
-
 IF (BUILD_SHARED_LIBS)
   SET (BUILD_NAME_EXT "SHARED")
 ELSE (BUILD_SHARED_LIBS)
   SET (BUILD_NAME_EXT "STATIC")
 ENDIF (BUILD_SHARED_LIBS)
-
-#-----------------------------------------------------------------------------
-# Allow Visual Studio solution directories
-#-----------------------------------------------------------------------------
-# Provide a way for Visual Studio Express users to turn OFF the new FOLDER
-# organization feature. Default to ON for non-Express users. Express users must
-# explicitly turn off this option to build HDF5 in the Express IDE...
-#
-OPTION (HDF5_USE_FOLDERS "Enable folder grouping of projects in IDEs." ON)
-MARK_AS_ADVANCED (HDF5_USE_FOLDERS)
-IF (HDF5_USE_FOLDERS)
-  SET_PROPERTY (GLOBAL PROPERTY USE_FOLDERS ON)
-ENDIF (HDF5_USE_FOLDERS)
-OPTION (HDF5_NO_PACKAGES "CPACK - Disable packaging" OFF)
-MARK_AS_ADVANCED (HDF5_NO_PACKAGES)
 
 #-----------------------------------------------------------------------------
 # Set the core names of all the libraries
@@ -176,6 +160,8 @@ STRING (REGEX REPLACE ".*#define[ \t]+H5_VERS_MINOR[ \t]+([0-9]*).*$"
     "\\1" H5_VERS_MINOR ${_h5public_h_contents})
 STRING (REGEX REPLACE ".*#define[ \t]+H5_VERS_RELEASE[ \t]+([0-9]*).*$"
     "\\1" H5_VERS_RELEASE ${_h5public_h_contents})
+STRING (REGEX REPLACE ".*#define[ \t]+H5_VERS_SUBRELEASE[ \t]+\"([0-9A-Za-z.]*)\".*$"
+    "\\1" H5_VERS_SUBRELEASE ${_h5public_h_contents})
 #MESSAGE (STATUS "VERSION: ${H5_VERS_MAJOR}.${H5_VERS_MINOR}.${H5_VERS_RELEASE}-${H5_VERS_SUBRELEASE}")
 
 #-----------------------------------------------------------------------------
@@ -198,7 +184,11 @@ SET (HDF5_PACKAGE_NAME "HDF5")
 SET (HDF5_PACKAGE_VERSION "${H5_VERS_MAJOR}.${H5_VERS_MINOR}.${H5_VERS_RELEASE}")
 SET (HDF5_PACKAGE_VERSION_MAJOR "${H5_VERS_MAJOR}.${H5_VERS_MINOR}")
 SET (HDF5_PACKAGE_VERSION_MINOR "${H5_VERS_RELEASE}")
-SET (HDF5_PACKAGE_VERSION_STRING "${HDF5_PACKAGE_VERSION}")
+IF (NOT "${H5_VERS_SUBRELEASE}" STREQUAL "")
+  SET (HDF5_PACKAGE_VERSION_STRING "${HDF5_PACKAGE_VERSION}-${H5_VERS_SUBRELEASE}")
+ELSE (NOT "${H5_VERS_SUBRELEASE}" STREQUAL "")
+  SET (HDF5_PACKAGE_VERSION_STRING "${HDF5_PACKAGE_VERSION}")
+ENDIF (NOT "${H5_VERS_SUBRELEASE}" STREQUAL "")
 SET (HDF5_PACKAGE_SOVERSION "${H5_SOVERS_MAJOR}.${H5_SOVERS_MINOR}.${H5_SOVERS_RELEASE}")
 SET (HDF5_PACKAGE_STRING "${HDF5_PACKAGE_NAME} ${HDF5_PACKAGE_VERSION_STRING}")
 SET (HDF5_PACKAGE_TARNAME "hdf5")
@@ -262,7 +252,7 @@ INCLUDE (${HDF5_RESOURCES_DIR}/ConfigureChecks.cmake)
 # Option to use legacy naming for windows libs/programs, default is legacy
 #-----------------------------------------------------------------------------
 IF (WIN32 AND NOT CYGWIN)
-  OPTION (HDF_LEGACY_NAMING "Use Legacy Names for Libraries and Programs" OFF)
+  OPTION (HDF_LEGACY_NAMING "Use Legacy Names for Libraries and Programs" ON)
 ENDIF (WIN32 AND NOT CYGWIN)
 
 #-----------------------------------------------------------------------------
@@ -399,7 +389,7 @@ IF (CMAKE_COMPILER_IS_GNUCC)
   IF (CMAKE_BUILD_TYPE MATCHES Debug)
     SET (CMAKE_C_FLAGS "${CMAKE_ANSI_CFLAGS} ${CMAKE_C_FLAGS} -std=c99 -finline-functions -fno-common")
   ELSE (CMAKE_BUILD_TYPE MATCHES Debug)
-    SET (CMAKE_C_FLAGS "${CMAKE_ANSI_CFLAGS} ${CMAKE_C_FLAGS} -std=c99 -fomit-frame-pointer -finline-functions -fno-common")
+  SET (CMAKE_C_FLAGS "${CMAKE_ANSI_CFLAGS} ${CMAKE_C_FLAGS} -std=c99 -fomit-frame-pointer -finline-functions -fno-common")
   ENDIF (CMAKE_BUILD_TYPE MATCHES Debug)
 ENDIF (CMAKE_COMPILER_IS_GNUCC)
 
@@ -462,25 +452,28 @@ SET (CMAKE_MODULE_PATH ${HDF5_RESOURCES_DIR} ${CMAKE_MODULE_PATH})
 OPTION (HDF5_ENABLE_PARALLEL "Enable parallel build (requires MPI)" OFF)
 IF (HDF5_ENABLE_PARALLEL)
   INCLUDE (FindMPI)
-  INCLUDE_DIRECTORIES (${MPI_C_INCLUDE_PATH})
-  IF (MPI_C_FOUND)
+  INCLUDE_DIRECTORIES (${MPI_INCLUDE_PATH})
+  IF (MPI_FOUND)
     SET (H5_HAVE_PARALLEL 1)
-    # MPI checks, only do these if MPI_C_FOUND is true, otherwise they always fail
+    # MPI checks, only do these if MPI_FOUND is true, otherwise they always fail
     # and once set, they are cached as false and not regenerated
-    SET (CMAKE_REQUIRED_LIBRARIES "${MPI_C_LIBRARIES}" )
+    SET (CMAKE_REQUIRED_LIBRARIES "${MPI_LIBRARY};${MPI_EXTRA_LIBRARY}" )
     CHECK_FUNCTION_EXISTS (MPI_File_get_size H5_HAVE_MPI_GET_SIZE) 
     # Used by Fortran + MPI
-    CHECK_SYMBOL_EXISTS (MPI_Comm_c2f "${MPI_C_INCLUDE_PATH}/mpi.h"  H5_HAVE_MPI_MULTI_LANG_Comm)
-    CHECK_SYMBOL_EXISTS (MPI_Info_c2f "${MPI_C_INCLUDE_PATH}/mpi.h"  H5_HAVE_MPI_MULTI_LANG_Info)
-  ENDIF (MPI_C_FOUND)
+    CHECK_SYMBOL_EXISTS (MPI_Comm_c2f "${MPI_INCLUDE_PATH}/mpi.h"  H5_HAVE_MPI_MULTI_LANG_Comm)
+    CHECK_SYMBOL_EXISTS (MPI_Info_c2f "${MPI_INCLUDE_PATH}/mpi.h"  H5_HAVE_MPI_MULTI_LANG_Info)
+  ENDIF (MPI_FOUND)
 ENDIF (HDF5_ENABLE_PARALLEL)
 
 # Parallel IO usage requires MPI to be Linked and Included
 IF (H5_HAVE_PARALLEL)
-  SET (LINK_LIBS ${LINK_LIBS} ${MPI_C_LIBRARIES})
-  IF (MPI_C_LINK_FLAGS)
-    SET (CMAKE_EXE_LINKER_FLAGS ${MPI_C_LINK_FLAGS} ${CMAKE_EXE_LINKER_FLAGS})
-  ENDIF (MPI_C_LINK_FLAGS)
+  SET (LINK_LIBS ${LINK_LIBS} ${MPI_LIBRARY})
+  IF (MPI_LINK_FLAGS)
+    SET (CMAKE_EXE_LINKER_FLAGS ${MPI_LINK_FLAGS} ${CMAKE_EXE_LINKER_FLAGS})
+  ENDIF (MPI_LINK_FLAGS)
+  IF (MPI_EXTRA_LIBRARY)
+    SET (LINK_LIBS ${LINK_LIBS} ${MPI_EXTRA_LIBRARY})
+  ENDIF (MPI_EXTRA_LIBRARY)
 ENDIF (H5_HAVE_PARALLEL)
 
 #-----------------------------------------------------------------------------
@@ -491,15 +484,6 @@ SET (H5_USE_16_API_DEFAULT 0)
 IF (HDF5_USE_16_API_DEFAULT)
   SET (H5_USE_16_API_DEFAULT 1)
 ENDIF (HDF5_USE_16_API_DEFAULT)
-
-#-----------------------------------------------------------------------------
-# Option to use 1.8.x API
-#-----------------------------------------------------------------------------
-OPTION (HDF5_USE_18_API_DEFAULT "Use the HDF5 1.8.x API by default" OFF)
-SET (H5_USE_18_API_DEFAULT 0)
-IF (HDF5_USE_18_API_DEFAULT)
-  SET (H5_USE_18_API_DEFAULT 1)
-ENDIF (HDF5_USE_18_API_DEFAULT)
 
 #-----------------------------------------------------------------------------
 # Options for HDF5 Filters
@@ -630,7 +614,6 @@ IF (NOT HDF5_EXTERNALLY_CONFIGURED)
     ENDIF (HDF5_ENABLE_SZIP_SUPPORT AND SZIP_FOUND)
   ENDIF (HDF5_PACKAGE_EXTLIBS)
 ENDIF (NOT HDF5_EXTERNALLY_CONFIGURED)
-
 #-----------------------------------------------------------------------------
 # Option to use threadsafe
 # Note: Currently CMake only allows configuring of threadsafe on WINDOWS.
@@ -644,7 +627,7 @@ IF (WIN32 AND NOT CYGWIN)
     ENDIF (HDF5_ENABLE_PARALLEL)
     SET (H5_HAVE_THREADSAFE 1)
     IF (H5_HAVE_IOEO)
-      MESSAGE (STATUS " **** Windows Threads only available in WINVER>=0x600 (Vista or Windows 7) **** ")
+      MESSAGE (STATUS " **** Windows Threads only available in WINVER>=0x600 (Vista or Windows 7)**** ")
       SET (H5_HAVE_WIN_THREADS 1)
     ELSE (H5_HAVE_IOEO)
       IF (NOT H5_HAVE_PTHREAD_H)
@@ -896,7 +879,7 @@ IF (NOT HDF5_EXTERNALLY_CONFIGURED)
         ${HDF5_SOURCE_DIR}/release_docs/CMake.txt
         ${HDF5_SOURCE_DIR}/release_docs/Using_CMake.txt
         ${HDF5_SOURCE_DIR}/release_docs/COPYING
-        ${HDF5_SOURCE_DIR}/release_docs/HISTORY-1_9.txt
+        ${HDF5_SOURCE_DIR}/release_docs/HISTORY-1_8.txt
         ${HDF5_SOURCE_DIR}/release_docs/INSTALL
         ${HDF5_SOURCE_DIR}/release_docs/RELEASE.txt
     )
@@ -909,6 +892,7 @@ IF (NOT HDF5_EXTERNALLY_CONFIGURED)
       SET (release_files
           ${release_files}
           ${HDF5_SOURCE_DIR}/release_docs/INSTALL_Cygwin.txt
+          ${HDF5_SOURCE_DIR}/release_docs/INSTALL_MinGW.txt
           ${HDF5_SOURCE_DIR}/release_docs/INSTALL_VMS.txt
       )
     ENDIF (WIN32 AND NOT CYGWIN)

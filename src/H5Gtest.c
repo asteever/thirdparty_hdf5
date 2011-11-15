@@ -394,9 +394,6 @@ H5G_new_dense_info_test(hid_t gid, hsize_t *name_count, hsize_t *corder_count)
     if(NULL == (grp = (H5G_t *)H5I_object_verify(gid, H5I_GROUP)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a group")
 
-    /* Set metadata tag in dxpl_id */
-    H5_BEGIN_TAG(H5AC_dxpl_id, grp->oloc.addr, FAIL);
-
     /* Get the link info */
     if(H5G_obj_get_linfo(&(grp->oloc), &linfo, H5AC_dxpl_id) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_BADMESG, FAIL, "can't get link info")
@@ -427,9 +424,6 @@ H5G_new_dense_info_test(hid_t gid, hsize_t *name_count, hsize_t *corder_count)
     } /* end if */
     else
         *corder_count = 0;
-
-    /* Reset metadata tag in dxpl_id */
-    H5_END_TAG(FAIL);
 
 done:
     /* Release resources */
@@ -609,7 +603,7 @@ H5G_verify_cached_stab_test(H5O_loc_t *grp_oloc, H5G_entry_t *ent)
     H5HL_t      *heap = NULL;           /* Pointer to local heap */
     herr_t	ret_value = SUCCEED;    /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_TAG(H5G_verify_cached_stab_test, H5AC_ind_dxpl_id, grp_oloc->addr, FAIL)
+    FUNC_ENTER_NOAPI_NOINIT(H5G_verify_cached_stab_test)
 
     /* Verify that stab info is cached in ent */
     if(ent->type != H5G_CACHED_STAB)
@@ -638,7 +632,7 @@ done:
     if(heap && H5HL_unprotect(heap) < 0)
         HDONE_ERROR(H5E_SYM, H5E_PROTECT, FAIL, "unable to unprotect symbol table heap")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5G_verify_cached_stab_test() */
 
 
@@ -762,7 +756,6 @@ H5G_verify_cached_stabs_test(hid_t gid)
     htri_t              stab_exists;
     H5O_stab_t          stab;                   /* Symbol table message */
     H5G_bt_common_t     udata = {NULL, NULL};   /* Dummy udata so H5B_iterate doesn't freak out */
-    haddr_t             prev_tag = HADDR_UNDEF; /* Previous metadata tag */
     herr_t              ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_NOAPI(H5G_verify_cached_stabs_test, FAIL)
@@ -773,10 +766,6 @@ H5G_verify_cached_stabs_test(hid_t gid)
     /* Check args */
     if(NULL == (grp = (H5G_t *)H5I_object_verify(gid, H5I_GROUP)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a group")
-
-    /* Set up metadata tagging */
-    if(H5AC_tag(H5AC_ind_dxpl_id, grp->oloc.addr, &prev_tag) < 0)
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "unable to apply metadata tag")
 
     /* Check for group having a symbol table message */
     /* Check for the group having a group info message */
@@ -796,10 +785,6 @@ H5G_verify_cached_stabs_test(hid_t gid)
     if((ret_value = H5B_iterate(grp->oloc.file, H5AC_ind_dxpl_id, H5B_SNODE,
             stab.btree_addr, H5G_verify_cached_stabs_test_cb, &udata)) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_CANTNEXT, FAIL, "iteration operator failed");
-
-    /* Reset metadata tagging */
-    if(H5AC_tag(H5AC_ind_dxpl_id, prev_tag, NULL) < 0)
-        HDONE_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "unable to apply metadata tag")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

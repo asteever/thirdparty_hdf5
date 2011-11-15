@@ -13,7 +13,6 @@ INCLUDE_DIRECTORIES (${HDF5_PROJECT_DIR}/test)
 ADD_EXECUTABLE (h5dump ${HDF5_TOOLS_H5DUMP_SOURCE_DIR}/h5dump.c)
 TARGET_NAMING (h5dump ${LIB_TYPE})
 TARGET_LINK_LIBRARIES (h5dump  ${HDF5_TOOLS_LIB_TARGET} ${HDF5_LIB_TARGET})
-SET_TARGET_PROPERTIES (h5dump PROPERTIES FOLDER tools)
 
 SET (H5_DEP_EXECUTABLES h5dump)
 
@@ -31,7 +30,6 @@ IF (BUILD_TESTING)
     ADD_EXECUTABLE (h5dumpgentest ${HDF5_TOOLS_H5DUMP_SOURCE_DIR}/h5dumpgentest.c)
     TARGET_NAMING (h5dumpgentest ${LIB_TYPE})
     TARGET_LINK_LIBRARIES (h5dumpgentest ${HDF5_LIB_TARGET} ${HDF5_TOOLS_LIB_TARGET})
-    SET_TARGET_PROPERTIES (h5dumpgentest PROPERTIES FOLDER generator/tools)
     
     #ADD_TEST (NAME h5dumpgentest COMMAND $<TARGET_FILE:h5dumpgentest>)
   ENDIF (HDF5_BUILD_GENERATORS AND NOT BUILD_SHARED_LIBS)
@@ -406,7 +404,6 @@ IF (BUILD_TESTING)
   # --------------------------------------------------------------------
   #-- Copy all the HDF5 files from the test directory into the source directory
   SET (HDF5_REFERENCE_PBITS
-      tnofilename-with-packed-bits.ddl
       tpbitsArray.ddl
       tpbitsCompound.ddl
       tpbitsIncomplete.ddl
@@ -1268,8 +1265,6 @@ IF (BUILD_TESTING)
       NAME H5DUMP_PACKED_BITS-clearall-objects
       COMMAND    ${CMAKE_COMMAND}
           -E remove 
-          tnofilename-with-packed-bits.out
-          tnofilename-with-packed-bits.out.err
           tpbitsArray.out
           tpbitsArray.out.err
           tpbitsCompound.out
@@ -1383,7 +1378,7 @@ IF (BUILD_TESTING)
 
   # test failure handling
   # Missing file name
-  ADD_H5_TEST (tnofilename-with-packed-bits 1)
+  ADD_H5_TEST (tnofilename 1)
   # Limits:
   # Maximum number of packed bits is 8 (for now).
   # Maximum integer size is 8*sizeof(long long).

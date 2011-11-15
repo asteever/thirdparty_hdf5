@@ -171,8 +171,7 @@ typedef struct H5O_copy_t {
 #define H5O_DRVINFO_ID  0x0014          /* Driver info message.  */
 #define H5O_AINFO_ID    0x0015          /* Attribute info message.  */
 #define H5O_REFCOUNT_ID 0x0016          /* Reference count message.  */
-#define H5O_FSINFO_ID   0x0017          /* Free-space manager info message.  */
-#define H5O_UNKNOWN_ID  0x0018          /* Placeholder message ID for unknown message.  */
+#define H5O_UNKNOWN_ID  0x0017          /* Placeholder message ID for unknown message.  */
                                         /* (this should never exist in a file) */
 
 
@@ -347,18 +346,6 @@ typedef struct H5O_efl_t {
  *      values (where n usually is 8)).
  */
 #define H5O_LAYOUT_VERSION_3	3
-
-/* This version adds different types of indices to chunked datasets, allows
- *      for larger chunk dimensions, stores chunk indices into their own
- *      message (the "layout index" message), adds features for compact/dense
- *      storage of elements and/or chunk records, adds features for abbreviating
- *      the storage used for partial chunks on boundaries, etc.
- */
-#define H5O_LAYOUT_VERSION_4	4
-
-/* The latest version of the format.  Look through the 'encode'
- *      and 'size' callbacks for places to change when updating this. */
-#define H5O_LAYOUT_VERSION_LATEST H5O_LAYOUT_VERSION_4
 
 
 /* Forward declaration of structs used below */
@@ -578,27 +565,11 @@ typedef uint32_t H5O_refcount_t;        /* Contains # of links to object, if >1 
  */
 typedef unsigned H5O_unknown_t;         /* Original message type ID */
 
-/*
- * Free space manager info Message.
- * Contains file space management info and
- * addresses of free space managers for file memory
- * (Data structure in memory)
- */
-typedef struct H5O_fsinfo_t {
-    H5F_file_space_type_t strategy;	/* File space strategy */
-    hsize_t		  threshold;	/* Free space section threshold */
-    haddr_t     	  fs_addr[H5FD_MEM_NTYPES-1]; /* Addresses of free space managers */
-} H5O_fsinfo_t;
 
 /* Typedef for "application" iteration operations */
 typedef herr_t (*H5O_operator_t)(const void *mesg/*in*/, unsigned idx,
     void *operator_data/*in,out*/);
 
-#ifdef OUT
-/* Typedef for "internal library" iteration operations */
-typedef herr_t (*H5O_lib_operator_t)(H5O_t *oh, H5O_mesg_t *mesg/*in,out*/,
-    unsigned sequence, hbool_t *oh_modified/*out*/, void *operator_data/*in,out*/);
-#endif
 /* Typedef for "internal library" iteration operations */
 typedef herr_t (*H5O_lib_operator_t)(H5O_t *oh, H5O_mesg_t *mesg/*in,out*/,
     unsigned sequence, unsigned *oh_modified/*out*/, void *operator_data/*in,out*/);
@@ -609,8 +580,10 @@ typedef enum H5O_mesg_operator_type_t {
     H5O_MESG_OP_LIB             /* Library internal callback */
 } H5O_mesg_operator_type_t;
 
-#define H5O_MODIFY_CONDENSE	0x01
-#define H5O_MODIFY		0x02
+/* To indicate that the object header is just modified */
+#define H5O_MODIFY		0x01
+/* To indicate that the object header is modified and might possibly need to condense messages */
+#define H5O_MODIFY_CONDENSE	0x02
 
 typedef struct {
     H5O_mesg_operator_type_t op_type;

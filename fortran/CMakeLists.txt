@@ -1,10 +1,6 @@
 cmake_minimum_required (VERSION 2.8)
 PROJECT (HDF5_F90 C CXX Fortran)
 
-IF (H5_HAVE_PARALLEL)
-  FIND_PACKAGE (MPI)
-ENDIF (H5_HAVE_PARALLEL)
-
 #-----------------------------------------------------------------------------
 # Traverse source subdirectory
 #-----------------------------------------------------------------------------
@@ -22,7 +18,7 @@ ENDIF (HDF5_BUILD_EXAMPLES)
 #-----------------------------------------------------------------------------
 IF (BUILD_TESTING)
   ADD_SUBDIRECTORY (${HDF5_F90_SOURCE_DIR}/test ${HDF5_F90_BINARY_DIR}/test)
-  IF (MPI_Fortran_FOUND)
+  IF (H5_HAVE_PARALLEL)
     ADD_SUBDIRECTORY (${HDF5_F90_SOURCE_DIR}/testpar ${HDF5_F90_BINARY_DIR}/testpar)
-  ENDIF (MPI_Fortran_FOUND)
+  ENDIF (H5_HAVE_PARALLEL)
 ENDIF (BUILD_TESTING)

@@ -23,7 +23,6 @@ SET (REPACK_COMMON_SRCS
 ADD_EXECUTABLE (h5repack ${REPACK_COMMON_SRCS} ${HDF5_TOOLS_H5REPACK_SOURCE_DIR}/h5repack_main.c)
 TARGET_NAMING (h5repack ${LIB_TYPE})
 TARGET_LINK_LIBRARIES (h5repack  ${HDF5_TOOLS_LIB_TARGET} ${HDF5_LIB_TARGET})
-SET_TARGET_PROPERTIES (h5repack PROPERTIES FOLDER tools)
 
 SET (H5_DEP_EXECUTABLES h5repack)
 
@@ -40,12 +39,10 @@ IF (BUILD_TESTING)
   ADD_EXECUTABLE (testh5repack_detect_szip ${HDF5_TOOLS_H5REPACK_SOURCE_DIR}/testh5repack_detect_szip.c)
   TARGET_NAMING (testh5repack_detect_szip ${LIB_TYPE})
   TARGET_LINK_LIBRARIES (testh5repack_detect_szip ${HDF5_LIB_TARGET} ${HDF5_TOOLS_LIB_TARGET} ${HDF5_TEST_LIB_TARGET})
-  SET_TARGET_PROPERTIES (testh5repack_detect_szip PROPERTIES FOLDER tools)
 
   ADD_EXECUTABLE (h5repacktest ${REPACK_COMMON_SRCS} ${HDF5_TOOLS_H5REPACK_SOURCE_DIR}/h5repacktst.c)
   TARGET_NAMING (h5repacktest ${LIB_TYPE})
   TARGET_LINK_LIBRARIES (h5repacktest  ${HDF5_TOOLS_LIB_TARGET} ${HDF5_TEST_LIB_TARGET})
-  SET_TARGET_PROPERTIES (h5repacktest PROPERTIES FOLDER tools)
 
   IF (HDF5_TEST_VFD)
     SET (VFD_LIST
@@ -88,7 +85,6 @@ IF (BUILD_TESTING)
       ublock.bin
       h5repack.info
       h5repack_attr.h5
-      h5repack_attr_refs.h5
       h5repack_deflate.h5
       h5repack_early.h5
       h5repack_ext.h5
@@ -335,7 +331,6 @@ IF (BUILD_TESTING)
           h5repack_szip_out.h5
           h5repack_ub.h5
           h5repack_ub_out.h5
-          h5repack_attr_refs_out.h5
   )
   IF (NOT "${last_test}" STREQUAL "")
     SET_TESTS_PROPERTIES (H5REPACK-clearall-objects PROPERTIES DEPENDS ${last_test})
@@ -365,7 +360,6 @@ IF (BUILD_TESTING)
   SET (FILE16 tfamily%05d.h5)           # located in common testfiles folder
   SET (FILE18 h5repack_layout2.h5)
   SET (FILE_REF h5repack_refs.h5)
-  SET (FILE_ATTR_REF h5repack_attr_refs.h5)
 
   ADD_TEST (NAME H5REPACK-testh5repack_detect_szip COMMAND $<TARGET_FILE:testh5repack_detect_szip>)
   IF (HDF5_ENABLE_SZIP_SUPPORT)
@@ -786,13 +780,8 @@ IF (BUILD_TESTING)
 # tests family driver (file is located in common testfiles folder, uses TOOLTEST1
 #  ADD_H5_TEST ( family "FAMILY" ${FILE16})
 
-# test various references (bug 1814 and 1726)
+# test various references (bug 1814)
   ADD_H5_TEST (bug1814 "TEST" ${FILE_REF})
-
-# test attribute with various references (bug 1797)
-# the references in attribute of compund or vlen datatype 
-# TODO: include this test when code portion is completed.
-  ADD_H5_TEST (bug1797 "SKIP" ${FILE_ATTR_REF})
 
   IF (HDF5_TEST_VFD)
     # Run test with different Virtual File Driver

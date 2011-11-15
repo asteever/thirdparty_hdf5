@@ -86,8 +86,8 @@ int h5repack(const char* infile,
 *-------------------------------------------------------------------------
 */
 
-int
-h5repack_init(pack_opt_t *options, int verbose, H5F_file_space_type_t strategy, hsize_t threshold)
+int h5repack_init (pack_opt_t *options,
+                   int verbose)
 {
     int k, n;
     memset(options,0,sizeof(pack_opt_t));
@@ -101,9 +101,6 @@ h5repack_init(pack_opt_t *options, int verbose, H5F_file_space_type_t strategy, 
         for ( k = 0; k < CD_VALUES; k++)
             options->filter_g[n].cd_values[k] = 0;
     }
-
-    options->fs_strategy = strategy;
-    options->fs_threshold = threshold;
 
     return (options_table_init(&(options->op_tbl)));
 }
@@ -630,20 +627,20 @@ static int check_options(pack_opt_t *options)
             switch (options->layout_g)
             {
             case H5D_COMPACT:
-                strcpy(slayout,"compact");
+                HDstrcpy(slayout,"compact");
                 break;
             case H5D_CONTIGUOUS:
-                strcpy(slayout,"contiguous");
+                HDstrcpy(slayout,"contiguous");
                 break;
             case H5D_CHUNKED:
-                strcpy(slayout,"chunked");
+                HDstrcpy(slayout,"chunked");
                 break;
             case H5D_LAYOUT_ERROR:
             case H5D_NLAYOUTS:
                 error_msg("invalid layout\n");
                 return -1;
             default:
-                strcpy(slayout,"invalid layout\n");
+                HDstrcpy(slayout,"invalid layout\n");
                 return -1;
             }
             printf(" Apply %s layout to all\n", slayout);

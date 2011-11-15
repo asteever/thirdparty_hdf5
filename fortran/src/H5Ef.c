@@ -289,17 +289,6 @@ done:
  *   July 22, 2009
  * SOURCE
 */
-/* int_f */
-/* nh5eset_auto2_c(hid_t_f *estack_id, H5E_auto2_t *func, void *client_data) */
-/* /\******\/ */
-/* { */
-/*   int ret_val = -1; */
-/*   herr_t status = -1; */
-
-/*   status = H5Eset_auto2((hid_t)*estack_id, *func, client_data); */
-/*   if (status >= 0) ret_val = 0; */
-/*   return ret_val; */
-/* } */
 
 int_f
 nh5eset_auto2_c(int_f *printflag, hid_t_f *estack_id, H5E_auto2_t func, void *client_data)
@@ -309,7 +298,7 @@ nh5eset_auto2_c(int_f *printflag, hid_t_f *estack_id, H5E_auto2_t func, void *cl
   herr_t status = -1;
 
   if (*printflag == 1 && *estack_id == -1)
-    status = H5Eset_auto2(H5E_DEFAULT, (H5E_auto2_t)H5Eprint2, stderr);
+    status = H5Eset_auto2(H5E_DEFAULT, H5Eprint2, stderr);
   else if (*printflag == 1)
     status = H5Eset_auto2((hid_t)*estack_id, func, client_data);
   else if (*printflag == 0)
@@ -318,4 +307,3 @@ nh5eset_auto2_c(int_f *printflag, hid_t_f *estack_id, H5E_auto2_t func, void *cl
 
   return ret_val;
 }
-
