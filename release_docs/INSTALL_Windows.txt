@@ -62,37 +62,41 @@ Preconditions:
                 Click the "Miscellaneous" tab and uncheck "TAR file smart CR/LF 
                 conversion" option, then click OK.
 
-   4. CMake is available for this release. CMake 2.8.2 can be downloaded from
-      the KitWare website at http://www.kitware.com.
+   4. CMake is available for this release. CMake 2.8.4 can be downloaded from
+      the KitWare website at http://www.kitware.com. See CMake.txt file for
+      more information.
       
       Note: We have attempted to mirror our Autoconf configuration files for
-            maintainence reasons. We are still working to synchronize the
-            configuration files.
+            maintainence reasons. We will maintain the current VS2008 project
+            files for the 1.8 product.
             Also, if you are using a VS Express version or do not want to enable
             the packaging components, set HDF5_NO_PACKAGES to ON (on the command
             line add -DHDF5_NO_PACKAGES:BOOL=ON)
+      Warning: The instructions in this file are not compatible with CMake.
+            Follow the instructions in CMake.txt, dot not use any files from
+            the WINDOWS subfolder.
             
    5. Set up a directory structure to unpack the library.  For example:
 
             c:\                              (any drive)
             MyHDFstuff\                      (any folder name)
 
-   6. Download the hdf5-1.9.x source code package and use 7zip or WinZip to
+   6. Download the hdf5-1.8.x source code package and use 7zip or WinZip to
       extract the HDF5 package into c:\MyHDFstuff.  This creates a directory 
-      called 'hdf5-1.9.x' under MyHDFstuff which contains several files and 
-      directories.  Rename "hdf5-1.9.x" to "hdf5".
+      called 'hdf5-1.8.x' under MyHDFstuff which contains several files and 
+      directories.  Rename "hdf5-1.8.x" to "hdf5".
 
    7. HDF5 provide options to do in-memory compression  within HDF5 library.  
       Currently, two external compression libraries Zlib and Szip can be used 
       with HDF5.
 
       7.1 HDF5 uses Zlib version 1.2.5 for compression and Zlib is NOT
-          distributed with HDF5 library in 1.9.x release. To use Zlib library, 
+          distributed with HDF5 library in 1.8.x release. To use Zlib library, 
           you have to install your own Zlib DLL library or go to 
           http://www.zlib.net/ to download the Zlib library.
 
       7.2 HDF5 uses Szip version 2.1 for compression and Szip compression 
-          software is provided with HDF5 products in 1.9.x release.  To use 
+          software is provided with HDF5 products in 1.8.x release.  To use 
           Szip 2.1 library, you can download Szip source codes and binaries from
           ftp://ftp.hdfgroup.org/lib-external/szip/2.1/bin/windows
 
@@ -133,7 +137,7 @@ Preconditions:
          a. You will have to close and reopen running programs for the new 
             environment variable settings to take effect.
 
-         b. c:\zlib\zlib1.dll and c:\szip\szip.dll should be copied 
+         b. c:\zlib\zlib1.dll and c:\szip\dll\szip.dll should be copied 
             into a location that the application can find.
 
    9. Set up path for external libraries and headers
@@ -163,11 +167,22 @@ Preconditions:
           
       9.4 If building Fortran libraries, you will also need to setup the path
           for the Intel Fortran compiler.  Please see Section VI.
+          
+      NOTE:
+          If you are using VS2010, the path settings will need to be in project
+          property sheets per project. Go to "Project" and select "Properties", find 
+          "Configuration Properties", and then "VC++ Directories".
+          
+          9.1 If you are building on 64-bit Windows, find the "Platform" dropdown
+              and select "x64".
+          9.2 Add the header path to the "Include Directories" setting.
+          9.3 Add the library path to the "Library Directories" setting.
 
 Notes:
 
-   1. Users should go to hdf5/windows directory, run copy_hdf.bat first and then 
-      open all.sln under hdf5/windows/proj/all to start building process.
+   1. As of 1.8.0, all.zip is deprecated. Users should go to hdf5/windows 
+      directory, run copy_hdf.bat first and then open all.sln under 
+      hdf5/windows/proj/all to start building process.
 
    2. Visual Studio 6.0 is no longer supported in HDF5 1.8 or later releases.
       Visual Studio .NET is no longer support in HDF5 1.8.4 or later releases.
@@ -264,7 +279,7 @@ STEP 1: Building HDF5 Libraries and Tools
 
    3. (Optional) Disable HDF5 C++ and High level C++
    
-      In HDF5 1.9, C++ and HL C++ libraries are built by default.  To opt-out,
+      In HDF5 1.8, C++ and HL C++ libraries are built by default.  To opt-out,
       you must explicitly disable them.
 
       3.1 Skip this step if you do want to build HDF5 High-Level C++ libraries
@@ -1155,7 +1170,7 @@ Notes:  1. For Intel Compiler users, Intel fortran Compiler10.1 is
       You have to read this part even if you want to use only Zlib
       or Szip.  You also need to read Section V.
 
-        1) Invoke Microsoft Visual Studio.
+        1) Invoke Microsoft Visual Studio 2008.
         
         2) From the main menu, Go to Tools > Options > Intel(R) Fortran. In the 
            right panel, make sure your "Selected Compiler" is Intel Fortran.
@@ -1169,11 +1184,11 @@ Notes:  1. For Intel Compiler users, Intel fortran Compiler10.1 is
         5) Then click "OK".
 
       
-1. Build with Intel Fortran Compiler 11.1 under Visual Studio 2008
+1. Build with Intel Fortran Compiler 10.1 under Visual Studio 2008
 
   Note: This step will build HDF5 Static and DLL C and C++ Library using
         Visual Studio compiler as well as HDF5 Static and High Level 
-        Fortran Library using Intel Fortran 11.1 Compiler.
+        Fortran Library using Intel Fortran 10.1 Compiler.
 
   1.1 Open all_fortran.sln
 
@@ -1655,7 +1670,12 @@ following considerations:
 
 
 ========================================================================
-            Section XI: How to build HDF5 using Visual Studio 2010
+            Section XI: How to build HDF5 using Visual Studio 2008
+========================================================================
+Building with Visual Studio 2008 is the default with HDF5 1.8.x.
+
+========================================================================
+            Section XII: How to build HDF5 using Visual Studio 2010
 ========================================================================
 Building with Visual Studio 2010 is very similar to building with Visual Studio
 2008, with some minor changes.  Therefore, follow the build instructions above, 
@@ -1666,7 +1686,9 @@ with the following considerations:
        will need to be converted on first use.  To do so:
        
        1.1. Open the HDF5 Visual Studio 2008 solution file as in Section II
-            (either all.sln or all_fortran.sln if building Fortran.)
+            (all.sln)
+       
+       NOTE. Intel Fortran 11.1 currently does not integrate with Visual Studio 2010.
             
        1.2. You will be prompted with an automatic conversion wizard.  Click
             through, accepting the default values.  You may choose to create
@@ -1681,7 +1703,7 @@ with the following considerations:
 
 
 ========================================================================
-        Section XII: Backwards Compatibility with HDF5 1.6
+        Section XIII: Backwards Compatibility with HDF5 1.6
 ========================================================================
 
 Several basic HDF5 functions have changed over the years as requirements on 

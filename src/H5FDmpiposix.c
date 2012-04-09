@@ -174,7 +174,6 @@ typedef struct H5FD_mpiposix_t {
          (file_offset_t)((A)+(Z))<(file_offset_t)(A))
 
 /* Callbacks */
-static herr_t H5FD_mpiposix_term(void);
 static void *H5FD_mpiposix_fapl_get(H5FD_t *_file);
 static void *H5FD_mpiposix_fapl_copy(const void *_old_fa);
 static herr_t H5FD_mpiposix_fapl_free(void *_fa);
@@ -208,7 +207,6 @@ static const H5FD_class_mpi_t H5FD_mpiposix_g = {
     "mpiposix",          /*name      */
     MAXADDR,          /*maxaddr    */
     H5F_CLOSE_SEMI,        /* fc_degree    */
-    H5FD_mpiposix_term,                         /*terminate             */
     NULL,          /*sb_size    */
     NULL,          /*sb_encode    */
     NULL,          /*sb_decode    */
@@ -306,14 +304,16 @@ done:
  *
  * Purpose:  Shut down the VFD
  *
- * Returns:     Non-negative on success or negative on failure
+ * Return:  <none>
  *
  * Programmer:  Quincey Koziol
  *              Friday, Jan 30, 2004
  *
+ * Modification:
+ *
  *---------------------------------------------------------------------------
  */
-static herr_t
+void
 H5FD_mpiposix_term(void)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
@@ -321,7 +321,7 @@ H5FD_mpiposix_term(void)
     /* Reset VFL ID */
     H5FD_MPIPOSIX_g=0;
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
+    FUNC_LEAVE_NOAPI_VOID
 } /* end H5FD_mpiposix_term() */
 
 
@@ -928,10 +928,8 @@ H5FD_mpiposix_query(const H5FD_t UNUSED *_file, unsigned long *flags /* out */)
     /* Set the VFL feature flags that this driver supports */
     if(flags) {
         *flags=0;
-        *flags|=H5FD_FEAT_AGGREGATE_METADATA;  /* OK to aggregate metadata allocations */
+        *flags|=H5FD_FEAT_AGGREGATE_METADATA; /* OK to aggregate metadata allocations */
         *flags|=H5FD_FEAT_AGGREGATE_SMALLDATA; /* OK to aggregate "small" raw data allocations */
-        *flags|=H5FD_FEAT_HAS_MPI;             /* This driver uses MPI */
-        *flags|=H5FD_FEAT_ALLOCATE_EARLY;      /* Allocate space early instead of late */
     } /* end if */
 
     FUNC_LEAVE_NOAPI(SUCCEED)
