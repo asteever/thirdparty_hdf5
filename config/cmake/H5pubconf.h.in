@@ -105,9 +105,6 @@
 /* Define if the compiler understands the __func__ keyword */
 #cmakedefine H5_HAVE_C99_FUNC @H5_HAVE_C99_FUNC@
 
-/* Define to 1 if you have the `clock_gettime' function. */
-#cmakedefine H5_HAVE_CLOCK_GETTIME @H5_HAVE_CLOCK_GETTIME@
-
 /* Define if the function stack tracing code is to be compiled in */
 #cmakedefine H5_HAVE_CODESTACK @H5_HAVE_CODESTACK@
 
@@ -729,9 +726,6 @@
 
 /* Define using v1.6 public API symbols by default */
 #cmakedefine H5_USE_16_API_DEFAULT @H5_USE_16_API_DEFAULT@
-
-/* Define using v1.8 public API symbols by default */
-#cmakedefine H5_USE_18_API_DEFAULT @H5_USE_18_API_DEFAULT@
 
 /* Define if a memory checking tool will be used on the library, to cause
    library to be very picky about memory operations and also disable the

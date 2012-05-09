@@ -111,7 +111,6 @@ test_1a(hid_t file)
     char	name[256];		/*external file name		*/
     off_t	file_offset;		/*external file offset		*/
     hsize_t	file_size;		/*sizeof external file segment	*/
-    haddr_t     dset_addr;              /*address of dataset            */
 
     TESTING("fixed-size data space, exact storage");
 
@@ -131,10 +130,7 @@ test_1a(hid_t file)
     if((dset = H5Dopen2(file, "dset1", H5P_DEFAULT)) < 0) goto error;
 
     /* Test dataset address.  Should be undefined. */
-    H5E_BEGIN_TRY {
-        dset_addr = H5Dget_offset(dset);
-    } H5E_END_TRY;
-    if(dset_addr != HADDR_UNDEF) goto error;
+    if(H5Dget_offset(dset) != HADDR_UNDEF) goto error;
 
     if((dcpl = H5Dget_create_plist(dset)) < 0) goto error;
     if((n = H5Pget_external_count(dcpl)) < 0) goto error;
@@ -791,7 +787,7 @@ test_3 (hid_t fapl)
 	} /* end if */
     } /* end for */
 
-      /* Extend the dataset by another 100 elements */
+    /* Extend the dataset by another 100 elements */
     if(H5Dset_extent(dset, &max_size) < 0) goto error;
     if(H5Sclose(file_space) < 0) goto error;
     if((file_space = H5Dget_space(dset)) < 0) goto error;
@@ -850,7 +846,8 @@ test_4 (hid_t fapl)
     hid_t xid = -1;
     hid_t xid2 = -1;
     char  filename[1024];		/*file name			*/
-    const char *pathname = H5_get_srcdir_filename(LINKED_FILE); /* Corrected test file name */
+    char  pathname[1024];
+    char *srcdir = getenv("srcdir"); /*where the src code is located*/
 
     TESTING("opening external link twice");
 
@@ -868,6 +865,14 @@ test_4 (hid_t fapl)
 
     if((gid = H5Gopen2(fid, "/", H5P_DEFAULT)) < 0)
         goto error;
+
+    pathname[0] = '\0';
+    /* Generate correct name for test file by prepending the source path */
+    if(srcdir && ((HDstrlen(srcdir) + HDstrlen(LINKED_FILE) + 1) < sizeof(pathname))) {
+        HDstrcpy(pathname, srcdir);
+        HDstrcat(pathname, "/");
+    }
+    HDstrcat(pathname, LINKED_FILE);
 
     /* Create an external link to an existing file*/
     if(H5Lcreate_external(pathname, "/group", gid, " link", H5P_DEFAULT, H5P_DEFAULT) < 0)

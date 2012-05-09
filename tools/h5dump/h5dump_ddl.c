@@ -1155,6 +1155,10 @@ dump_fcpl(hid_t fid)
     hsize_t  userblock; /* userblock size retrieved from FCPL */
     size_t   off_size;  /* size of offsets in the file */
     size_t   len_size;  /* size of lengths in the file */
+    unsigned super;     /* superblock version # */
+    unsigned freelist;  /* free list version # */
+    unsigned stab;      /* symbol table entry version # */
+    unsigned shhdr;     /* shared object header version # */
 #ifdef SHOW_FILE_DRIVER
     hid_t    fapl;      /* file access property list ID */
     hid_t    fdriver;   /* file driver */
@@ -1163,17 +1167,13 @@ dump_fcpl(hid_t fid)
     unsigned sym_lk;    /* symbol table B-tree leaf 'K' value */
     unsigned sym_ik;    /* symbol table B-tree internal 'K' value */
     unsigned istore_ik; /* indexed storage B-tree internal 'K' value */
-    H5F_file_space_type_t  fs_strategy;  /* file space strategy */
-    hsize_t  fs_threshold;    /* free-space section threshold */
-    H5F_info2_t finfo;  /* file information */
 
     fcpl=H5Fget_create_plist(fid);
-    H5Fget_info2(fid, &finfo);
+    H5Pget_version(fcpl, &super, &freelist, &stab, &shhdr);
     H5Pget_userblock(fcpl,&userblock);
     H5Pget_sizes(fcpl,&off_size,&len_size);
     H5Pget_sym_k(fcpl,&sym_ik,&sym_lk);
     H5Pget_istore_k(fcpl,&istore_ik);
-    H5Pget_file_space(fcpl, &fs_strategy, &fs_threshold);
     H5Pclose(fcpl);
 #ifdef SHOW_FILE_DRIVER
     fapl=h5_fileaccess();
@@ -1187,13 +1187,13 @@ dump_fcpl(hid_t fid)
     */
     HDfprintf(rawoutstream, "\n%s %s\n",SUPER_BLOCK, BEGIN);
     indentation(dump_indent + COL);
-    HDfprintf(rawoutstream, "%s %u\n","SUPERBLOCK_VERSION", finfo.super.version);
+    HDfprintf(rawoutstream, "%s %u\n","SUPERBLOCK_VERSION", super);
     indentation(dump_indent + COL);
-    HDfprintf(rawoutstream, "%s %u\n","FREELIST_VERSION", finfo.free.version);
+    HDfprintf(rawoutstream, "%s %u\n","FREELIST_VERSION", freelist);
     indentation(dump_indent + COL);
-    HDfprintf(rawoutstream, "%s %u\n","SYMBOLTABLE_VERSION", 0);  /* Retain this for backward compatibility, for now (QAK) */
+    HDfprintf(rawoutstream, "%s %u\n","SYMBOLTABLE_VERSION", stab);
     indentation(dump_indent + COL);
-    HDfprintf(rawoutstream, "%s %u\n","OBJECTHEADER_VERSION", finfo.sohm.version);
+    HDfprintf(rawoutstream, "%s %u\n","OBJECTHEADER_VERSION", shhdr);
     indentation(dump_indent + COL);
     HDfprintf(rawoutstream,"%s %Hd\n","OFFSET_SIZE", (long long)off_size);
     indentation(dump_indent + COL);
@@ -1236,20 +1236,6 @@ dump_fcpl(hid_t fid)
 #endif
     indentation(dump_indent + COL);
     HDfprintf(rawoutstream, "%s %u\n","ISTORE_K", istore_ik);
-
-    indentation(dump_indent + COL);
-    if(fs_strategy == H5F_FILE_SPACE_ALL_PERSIST)
-        HDfprintf(rawoutstream, "%s %s\n", "FILE_SPACE_STRATEGY", "H5F_FILE_SPACE_ALL_PERSIST");
-    else if(fs_strategy == H5F_FILE_SPACE_ALL)
-        HDfprintf(rawoutstream, "%s %s\n", "FILE_SPACE_STRATEGY", "H5F_FILE_SPACE_ALL");
-    else if(fs_strategy == H5F_FILE_SPACE_AGGR_VFD)
-        HDfprintf(rawoutstream, "%s %s\n", "FILE_SPACE_STRATEGY", "H5F_FILE_SPACE_AGGR_VFD");
-    else if(fs_strategy == H5F_FILE_SPACE_VFD)
-        HDfprintf(rawoutstream, "%s %s\n", "FILE_SPACE_STRATEGY", "H5F_FILE_SPACE_VFD");
-    else
-        HDfprintf(rawoutstream, "%s %s\n", "FILE_SPACE_STRATEGY", "Unknown strategy");
-    indentation(dump_indent + COL);
-    HDfprintf(rawoutstream, "%s %Hu\n","FREE_SPACE_THRESHOLD", fs_threshold);
 
     /*-------------------------------------------------------------------------
     * USER_BLOCK
@@ -1322,7 +1308,7 @@ handle_attributes(hid_t fid, const char *attr, void UNUSED * data, int UNUSED pe
     hid_t  oid = -1;
     hid_t  attr_id = -1;
     char *obj_name;
-    char *attr_name;
+    const char *attr_name;
     int j;
     h5tools_str_t buffer;          /* string into which to render   */
     h5tools_context_t ctx;            /* print context  */
@@ -1337,7 +1323,7 @@ handle_attributes(hid_t fid, const char *attr, void UNUSED * data, int UNUSED pe
 
     /* find the last / */
     while(j >= 0) {
-        if (attr[j] == '/' && (j==0 || (j>0 && attr[j-1]!='\\'))) 
+        if (attr[j] == '/')
             break;
         j--;
     }
@@ -1372,12 +1358,9 @@ handle_attributes(hid_t fid, const char *attr, void UNUSED * data, int UNUSED pe
     string_dataformat.do_escape = display_escape;
     outputformat = &string_dataformat;
 
-    //attr_name = attr + j + 1;
-	// need to replace escape characters
-	attr_name = h5tools_str_replace(attr + j + 1, "\\/", "/");
+    attr_name = attr + j + 1;
 
-
-    /* handle error case: cannot open the object with the attribute */
+    /* Open the object with the attribute */
     if((oid = H5Oopen(fid, obj_name, H5P_DEFAULT)) < 0) {
         /* setup */
         HDmemset(&buffer, 0, sizeof(h5tools_str_t));
@@ -1418,7 +1401,7 @@ handle_attributes(hid_t fid, const char *attr, void UNUSED * data, int UNUSED pe
     attr_data_output = display_attr_data;
 
     h5dump_type_table = type_table;
-    h5tools_dump_attribute(rawoutstream, outputformat, &ctx, oid, attr_name, attr_id, display_ai, display_char);
+    h5tools_dump_attribute(rawoutstream, outputformat, &ctx, oid, attr, attr_id, display_ai, display_char);
     h5dump_type_table = NULL;
 
     if(attr_id < 0) {
@@ -1431,7 +1414,6 @@ handle_attributes(hid_t fid, const char *attr, void UNUSED * data, int UNUSED pe
     } /* end if */
 
     HDfree(obj_name);
-	HDfree(attr_name);
     dump_indent -= COL;
     return;
 
@@ -1439,9 +1421,6 @@ error:
     h5tools_setstatus(EXIT_FAILURE);
     if(obj_name)
         HDfree(obj_name);
-		
-	if (attr_name)
-		HDfree(attr_name);
 
     H5E_BEGIN_TRY {
         H5Oclose(oid);

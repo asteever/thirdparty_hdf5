@@ -14,5 +14,4 @@ Usage: h5stat [OPTIONS] file
      -D, --dsetmetadata    Print file space information for datasets' metadata
      -T, --dtypemetadata   Print datasets' datatype information
      -A, --attribute       Print attribute information
-     -s, --freespace       Print free space information
      -S, --summary         Print summary of file space information

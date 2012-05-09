@@ -61,7 +61,7 @@ const int H5Z_FILTER_BOGUS = 305;
 static size_t filter_bogus(unsigned int flags, size_t cd_nelmts,
     const unsigned int *cd_values, size_t nbytes, size_t *buf_size, void **buf);
 
-
+
 /*-------------------------------------------------------------------------
  * Function:	test_create
  *
@@ -179,7 +179,7 @@ test_create( H5File& file)
 	return -1;
     }
 }   // test_create
-
+
 /*-------------------------------------------------------------------------
  * Function:	test_simple_io
  *
@@ -266,7 +266,7 @@ test_simple_io( H5File& file)
 	return -1;
     }
 }   // test_simple_io
-
+
 /*-------------------------------------------------------------------------
  * Function:	test_datasize
  *
@@ -337,7 +337,8 @@ test_datasize()
 	return -1;
     }
 }   // test_datasize
-
+
+
 /*-------------------------------------------------------------------------
  * Function:	test_tconv
  *
@@ -460,7 +461,7 @@ filter_bogus(unsigned int flags, size_t cd_nelmts,
     return nbytes;
 }
 
-
+
 /*-------------------------------------------------------------------------
  * Function:	test_compression
  *
@@ -830,7 +831,7 @@ test_multiopen (H5File& file)
     }
 }   // test_multiopen
 
-
+
 /*-------------------------------------------------------------------------
  * Function:	test_types
  *
@@ -1019,7 +1020,7 @@ test_types(H5File& file)
 	return -1;
     }
 }   // test_types
-
+
 /*-------------------------------------------------------------------------
  * Function:	test_dset
  *

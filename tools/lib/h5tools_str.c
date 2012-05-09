@@ -1047,7 +1047,7 @@ h5tools_str_sprint(h5tools_str_t *str, const h5tool_format_t *info, hid_t contai
             H5O_info_t oi;
             const char *path;
 
-            obj = H5Rdereference2(container, H5P_DEFAULT, H5R_OBJECT, vp);
+            obj = H5Rdereference(container, H5R_OBJECT, vp);
             H5Oget_info(obj, &oi);
 
             /* Print object type and close object */
@@ -1223,7 +1223,7 @@ h5tools_str_sprint_region(h5tools_str_t *str, const h5tool_format_t *info,
     char    ref_name[1024];
     H5S_sel_type region_type;
 
-    obj = H5Rdereference2(container, H5P_DEFAULT, H5R_DATASET_REGION, vp);
+    obj = H5Rdereference(container, H5R_DATASET_REGION, vp);
     if (obj >= 0) {
         region = H5Rget_region(container, H5R_DATASET_REGION, vp);
         if (region >= 0) {
@@ -1362,53 +1362,4 @@ h5tools_str_is_zero(const void *_mem, size_t size)
             return FALSE;
 
     return TRUE;
-}
-
-/*-------------------------------------------------------------------------
- * Function:    h5tools_str_replace
- *
- * Purpose:     replace all occurrences of substring.
- *
- * Return:      char * 
- *
- * Programmer:  Peter Cao
- *              March 8, 2012
- *
- * Notes:
- *   Applications need to call free() to free the memoery allocated for 
- *   the return string 
- *
- *-------------------------------------------------------------------------
- */
-char *
-h5tools_str_replace ( const char *string, const char *substr, const char *replacement )
-{
-	char *tok = NULL;
-	char *newstr = NULL;
-	char *oldstr = NULL;
-	char *head = NULL;
-     
-	if ( substr == NULL || replacement == NULL ) 
-		return strdup (string);
-		
-	newstr = strdup (string);
-	head = newstr;
-	while ( (tok = strstr ( head, substr ))){
-		oldstr = newstr;
-		newstr = HDmalloc ( strlen ( oldstr ) - strlen ( substr ) + strlen ( replacement ) + 1 );
-
-        if ( newstr == NULL ){
-			HDfree (oldstr);
-			return NULL;
-        }
-        memcpy ( newstr, oldstr, tok - oldstr );
-        memcpy ( newstr + (tok - oldstr), replacement, strlen ( replacement ) );
-        memcpy ( newstr + (tok - oldstr) + strlen( replacement ), tok + strlen ( substr ), strlen ( oldstr ) - strlen ( substr ) - ( tok - oldstr ) );
-        memset ( newstr + strlen ( oldstr ) - strlen ( substr ) + strlen ( replacement ) , 0, 1 );
-        /* move back head right after the last replacement */
-        head = newstr + (tok - oldstr) + strlen( replacement );
-        HDfree (oldstr);
-    }
-	
-    return newstr;
 }

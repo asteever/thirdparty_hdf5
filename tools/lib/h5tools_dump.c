@@ -304,7 +304,7 @@ h5tools_dump_simple_data(FILE *stream, const h5tool_format_t *info, hid_t contai
                 char ref_name[1024];
 
                 /* region data */
-                region_id = H5Rdereference2(container, H5P_DEFAULT, H5R_DATASET_REGION, memref);
+                region_id = H5Rdereference(container, H5R_DATASET_REGION, memref);
                 if (region_id >= 0) {
                     region_space = H5Rget_region(container, H5R_DATASET_REGION, memref);
                     if (region_space >= 0) {
@@ -1143,7 +1143,9 @@ h5tools_print_simple_subset(FILE *stream, const h5tool_format_t *info, h5tools_c
     size_row_block = sset->block.data[row_dim];
 
     /* Check if we have VL data in the dataset's datatype */
-    if (h5tools_detect_vlen(p_type) == TRUE)
+    if (h5tools_detect_vlen_str(p_type) == TRUE)
+        vl_data = TRUE;
+    if (H5Tdetect_class(p_type, H5T_VLEN) == TRUE)
         vl_data = TRUE;
 
     /* display loop */
@@ -1551,7 +1553,9 @@ h5tools_dump_simple_dset(FILE *stream, const h5tool_format_t *info, h5tools_cont
     }
 
     /* Check if we have VL data in the dataset's datatype */
-    if (h5tools_detect_vlen(p_type) == TRUE)
+    if (h5tools_detect_vlen_str(p_type) == TRUE)
+        vl_data = TRUE;
+    if (H5Tdetect_class(p_type, H5T_VLEN) == TRUE)
         vl_data = TRUE;
 
     /*
@@ -2845,6 +2849,8 @@ h5tools_dump_dcpl(FILE *stream, const h5tool_format_t *info,
     hsize_t          size;           /* size of external file   */
     hsize_t          storage_size;
     hsize_t       curr_pos = 0;        /* total data element position   */
+    hsize_t       elmt_counter = 0;/* counts the # elements printed.*/
+    haddr_t          ioffset;
     h5tools_str_t buffer;          /* string into which to render   */
 
     /* setup */
@@ -2854,6 +2860,7 @@ h5tools_dump_dcpl(FILE *stream, const h5tool_format_t *info,
 
     storage_size = H5Dget_storage_size(obj_id);
     nfilters = H5Pget_nfilters(dcpl_id);
+    ioffset = H5Dget_offset(obj_id);
     HDstrcpy(f_name,"\0");
 
     /*-------------------------------------------------------------------------
@@ -3036,8 +3043,6 @@ h5tools_dump_dcpl(FILE *stream, const h5tool_format_t *info,
             h5tools_render_element(stream, info, ctx, &buffer, &curr_pos, ncols, 0, 0);
         }
         else {
-            haddr_t          ioffset;
-
             ctx->indent_level++;
 
             ctx->need_prefix = TRUE;
@@ -3058,7 +3063,6 @@ h5tools_dump_dcpl(FILE *stream, const h5tool_format_t *info,
             h5tools_simple_prefix(stream, info, ctx, curr_pos, 0);
             
             h5tools_str_reset(&buffer);
-            ioffset = H5Dget_offset(obj_id);
             h5tools_str_append(&buffer,"OFFSET "H5_PRINTF_HADDR_FMT, ioffset);
             h5tools_render_element(stream, info, ctx, &buffer, &curr_pos, ncols, 0, 0);
 
@@ -3371,6 +3375,7 @@ h5tools_dump_comment(FILE *stream, const h5tool_format_t *info,
     size_t        buf_size = 0;
     size_t        ncols = 80;      /* available output width        */
     h5tools_str_t buffer;          /* string into which to render   */
+    hsize_t       elmt_counter = 0;/* counts the # elements printed.*/
     hsize_t       curr_pos = ctx->sm_pos;   /* total data element position   */
                                             /* pass to the prefix in h5tools_simple_prefix the total position
                                              * instead of the current stripmine position i; this is necessary
@@ -3424,6 +3429,7 @@ h5tools_dump_attribute(FILE *stream, const h5tool_format_t *info,
 {
     h5tools_str_t buffer;          /* string into which to render   */
     size_t        ncols = 80;      /* available output width        */
+    hsize_t       elmt_counter = 0;/* counts the # elements printed.*/
     hsize_t       curr_pos = ctx->sm_pos;   /* total data element position   */
                                             /* pass to the prefix in h5tools_simple_prefix the total position
                                              * instead of the current stripmine position i; this is necessary
@@ -3802,7 +3808,9 @@ h5tools_dump_data(FILE *stream, const h5tool_format_t *info,
             ndims = H5Sget_simple_extent_dims(space, size, NULL);
 
             /* Check if we have VL data in the dataset's datatype */
-            if (h5tools_detect_vlen(p_type) == TRUE)
+            if (h5tools_detect_vlen_str(p_type) == TRUE)
+                vl_data = TRUE;
+            if (H5Tdetect_class(p_type, H5T_VLEN) == TRUE)
                 vl_data = TRUE;
 
             for (i = 0; i < ndims; i++)

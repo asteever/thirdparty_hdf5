@@ -63,10 +63,6 @@ static void H5_debug_mask(const char*);
 /* Library Private Variables */
 /*****************************/
 
-/* HDF5 API Entered variable */
-/* (move to H5.c when new FUNC_ENTER macros in actual use -QAK) */
-hbool_t H5_api_entered_g = FALSE;
-
 /* statically initialize block for pthread_once call used in initializing */
 /* the first global mutex                                                 */
 #ifdef H5_HAVE_THREADSAFE
@@ -189,7 +185,7 @@ H5_init_library(void)
     H5_debug_mask(HDgetenv("HDF5_DEBUG"));
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5_init_library() */
 
 
@@ -307,7 +303,7 @@ H5_term_library(void)
 
 	MPI_Initialized(&mpi_initialized);
 	if(mpi_initialized) {
-	    mpe_code = MPE_Finish_log("h5log");
+	    mpe_code = MPE_Finish_log("cpilog");
 	    assert(mpe_code >=0);
 	} /* end if */
 	H5_MPEinit_g = FALSE;	/* turn it off no matter what */

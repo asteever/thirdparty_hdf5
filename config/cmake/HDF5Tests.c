@@ -354,7 +354,7 @@ int main(int argc, char **argv)
   if (OFF_T_64 % 2147483647 != 1)
     return 1;
 
-  /* stat breaks on SCO OpenServer */
+  // stat breaks on SCO OpenServer
   struct stat buf;
   stat( argv[0], &buf );
   if (!S_ISREG(buf.st_mode))
@@ -411,14 +411,14 @@ int main ()
 typedef void (WINAPI *PGNSI)(LPSYSTEM_INFO);
 int main ()
 {
-	PGNSI pGNSI;
-	pGNSI = (PGNSI) GetProcAddress(
+  PGNSI pGNSI;
+  pGNSI = (PGNSI) GetProcAddress(
       GetModuleHandle(TEXT("kernel32.dll")), 
       "InitOnceExecuteOnce");
-	if(NULL == pGNSI)
-		return 1;
-	else
-		return 0;
+  if(NULL == pGNSI)
+    return 1;
+  else
+    return 0;
 }
 
 #endif /* HAVE_IOEO */

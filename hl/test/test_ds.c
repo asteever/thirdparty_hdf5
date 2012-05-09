@@ -2288,7 +2288,15 @@ static int test_foreign_scaleattached(const char *fileforeign)
     hid_t   fid = -1;
     hid_t   did = -1;
     hid_t   dsid = -1;
-    const char *filename = H5_get_srcdir_filename(fileforeign);
+    char  *srcdir = getenv("srcdir"); /* the source directory */
+    char  filename[512]="";          /* buffer to hold name of existing file */
+
+    /* compose the name of the file to open, using the srcdir, if appropriate */
+    if (srcdir) {
+        HDstrcpy(filename,srcdir);
+        HDstrcat(filename,"/");
+    }
+    HDstrcat(filename, fileforeign);
 
     TESTING2("test_foreign_scaleattached");
 
@@ -4974,9 +4982,19 @@ static int read_data( const char* fname,
     size_t   nelms;
     FILE     *f;
     float    val;
-    const char *data_file = H5_get_srcdir_filename(fname);
+    char     *srcdir = getenv("srcdir");  /* the source directory */
+    char     data_file[512];              /* buffer to hold name of existing data file */
 
+    HDstrcpy(data_file, "");
+    /* compose the name of the file to open, using the srcdir, if appropriate */
+    if(srcdir)
+    {
+        HDstrcpy(data_file, srcdir);
+        HDstrcat(data_file, "/");
+    }
     /* read first data file */
+    HDstrcat(data_file,fname);
+
     f = HDfopen(data_file, "r");
     if( f == NULL ) {
         printf( "Could not open file %s\n", data_file );

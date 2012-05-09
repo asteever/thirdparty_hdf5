@@ -816,9 +816,6 @@ H5HF_close(H5HF_t *fh, hid_t dxpl_id)
     } /* end if */
 
     /* Decrement the reference count on the heap header */
-    /* (don't put in H5HF_hdr_fuse_decr() as the heap header may be evicted
-     *  immediately -QAK)
-     */
     if(H5HF_hdr_decr(fh->hdr) < 0)
         HGOTO_ERROR(H5E_HEAP, H5E_CANTDEC, FAIL, "can't decrement reference count on shared heap header")
 

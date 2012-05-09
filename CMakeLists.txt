@@ -170,6 +170,8 @@ STRING (REGEX REPLACE ".*#define[ \t]+H5_VERS_MINOR[ \t]+([0-9]*).*$"
     "\\1" H5_VERS_MINOR ${_h5public_h_contents})
 STRING (REGEX REPLACE ".*#define[ \t]+H5_VERS_RELEASE[ \t]+([0-9]*).*$"
     "\\1" H5_VERS_RELEASE ${_h5public_h_contents})
+STRING (REGEX REPLACE ".*#define[ \t]+H5_VERS_SUBRELEASE[ \t]+\"([0-9A-Za-z.]*)\".*$"
+    "\\1" H5_VERS_SUBRELEASE ${_h5public_h_contents})
 #MESSAGE (STATUS "VERSION: ${H5_VERS_MAJOR}.${H5_VERS_MINOR}.${H5_VERS_RELEASE}-${H5_VERS_SUBRELEASE}")
 
 #-----------------------------------------------------------------------------
@@ -192,7 +194,11 @@ SET (HDF5_PACKAGE_NAME "HDF5")
 SET (HDF5_PACKAGE_VERSION "${H5_VERS_MAJOR}.${H5_VERS_MINOR}.${H5_VERS_RELEASE}")
 SET (HDF5_PACKAGE_VERSION_MAJOR "${H5_VERS_MAJOR}.${H5_VERS_MINOR}")
 SET (HDF5_PACKAGE_VERSION_MINOR "${H5_VERS_RELEASE}")
-SET (HDF5_PACKAGE_VERSION_STRING "${HDF5_PACKAGE_VERSION}")
+IF (NOT "${H5_VERS_SUBRELEASE}" STREQUAL "")
+  SET (HDF5_PACKAGE_VERSION_STRING "${HDF5_PACKAGE_VERSION}-${H5_VERS_SUBRELEASE}")
+ELSE (NOT "${H5_VERS_SUBRELEASE}" STREQUAL "")
+  SET (HDF5_PACKAGE_VERSION_STRING "${HDF5_PACKAGE_VERSION}")
+ENDIF (NOT "${H5_VERS_SUBRELEASE}" STREQUAL "")
 SET (HDF5_PACKAGE_SOVERSION "${H5_SOVERS_MAJOR}.${H5_SOVERS_MINOR}.${H5_SOVERS_RELEASE}")
 SET (HDF5_PACKAGE_STRING "${HDF5_PACKAGE_NAME} ${HDF5_PACKAGE_VERSION_STRING}")
 SET (HDF5_PACKAGE_TARNAME "hdf5")
@@ -252,6 +258,13 @@ SET (EXTERNAL_LIBRARYDLL_LIST "")
 # Run all the CMake configuration tests for our build environment
 #-----------------------------------------------------------------------------
 INCLUDE (${HDF5_RESOURCES_DIR}/ConfigureChecks.cmake)
+
+#-----------------------------------------------------------------------------
+# Option to use legacy naming for windows libs/programs, default is legacy
+#-----------------------------------------------------------------------------
+IF (WIN32 AND NOT CYGWIN)
+  OPTION (HDF_LEGACY_NAMING "Use Legacy Names for Libraries and Programs" ON)
+ENDIF (WIN32 AND NOT CYGWIN)
 
 #-----------------------------------------------------------------------------
 # Option to Build Shared/Static libs, default is static
@@ -479,15 +492,6 @@ IF (HDF5_USE_16_API_DEFAULT)
 ENDIF (HDF5_USE_16_API_DEFAULT)
 
 #-----------------------------------------------------------------------------
-# Option to use 1.8.x API
-#-----------------------------------------------------------------------------
-OPTION (HDF5_USE_18_API_DEFAULT "Use the HDF5 1.8.x API by default" OFF)
-SET (H5_USE_18_API_DEFAULT 0)
-IF (HDF5_USE_18_API_DEFAULT)
-  SET (H5_USE_18_API_DEFAULT 1)
-ENDIF (HDF5_USE_18_API_DEFAULT)
-
-#-----------------------------------------------------------------------------
 # Options for HDF5 Filters
 #-----------------------------------------------------------------------------
 MACRO (HDF5_SETUP_FILTERS FILTER)
@@ -546,7 +550,7 @@ IF (HDF5_ENABLE_Z_LIB_SUPPORT)
         SET (H5_HAVE_LIBZ 1)
         MESSAGE (STATUS "Filter ZLIB is built")
       ELSE (HDF5_ALLOW_EXTERNAL_SUPPORT MATCHES "SVN" OR HDF5_ALLOW_EXTERNAL_SUPPORT MATCHES "TGZ")
-        MESSAGE (FATAL " ZLib is Required for ZLib support in HDF5")
+        MESSAGE (FATAL_ERROR " ZLib is Required for ZLib support in HDF5")
       ENDIF (HDF5_ALLOW_EXTERNAL_SUPPORT MATCHES "SVN" OR HDF5_ALLOW_EXTERNAL_SUPPORT MATCHES "TGZ")
     ENDIF (ZLIB_FOUND)
   ELSE (NOT H5_ZLIB_HEADER)
@@ -882,7 +886,7 @@ IF (NOT HDF5_EXTERNALLY_CONFIGURED)
         ${HDF5_SOURCE_DIR}/release_docs/CMake.txt
         ${HDF5_SOURCE_DIR}/release_docs/Using_CMake.txt
         ${HDF5_SOURCE_DIR}/release_docs/COPYING
-        ${HDF5_SOURCE_DIR}/release_docs/HISTORY-1_9.txt
+        ${HDF5_SOURCE_DIR}/release_docs/HISTORY-1_8.txt
         ${HDF5_SOURCE_DIR}/release_docs/INSTALL
         ${HDF5_SOURCE_DIR}/release_docs/RELEASE.txt
     )
@@ -895,6 +899,7 @@ IF (NOT HDF5_EXTERNALLY_CONFIGURED)
       SET (release_files
           ${release_files}
           ${HDF5_SOURCE_DIR}/release_docs/INSTALL_Cygwin.txt
+          ${HDF5_SOURCE_DIR}/release_docs/INSTALL_MinGW.txt
           ${HDF5_SOURCE_DIR}/release_docs/INSTALL_VMS.txt
       )
     ENDIF (WIN32 AND NOT CYGWIN)
@@ -919,7 +924,6 @@ IF (NOT HDF5_EXTERNALLY_CONFIGURED AND NOT HDF5_NO_PACKAGES)
   SET (CPACK_PACKAGE_VENDOR "HDF Group")
   SET (CPACK_PACKAGE_NAME "${HDF5_PACKAGE_NAME}")
   SET (CPACK_PACKAGE_INSTALL_DIRECTORY "${HDF5_PACKAGE_NAME}")
-  SET (CPACK_PACKAGE_INSTALL_REGISTRY_KEY "${HDF5_PACKAGE_NAME}-${HDF5_PACKAGE_VERSION}-${LIB_TYPE}")
   SET (CPACK_PACKAGE_VERSION "${HDF5_PACKAGE_VERSION}")
   SET (CPACK_PACKAGE_VERSION_MAJOR "${HDF5_PACKAGE_VERSION_MAJOR}")
   SET (CPACK_PACKAGE_VERSION_MINOR "${HDF5_PACKAGE_VERSION_MINOR}")
@@ -936,9 +940,8 @@ IF (NOT HDF5_EXTERNALLY_CONFIGURED AND NOT HDF5_NO_PACKAGES)
     SET (CPACK_NSIS_PACKAGE_NAME "HDF5 ${HDF5_PACKAGE_VERSION}")
   ELSE (WIN32)
     SET (CPACK_RPM_COMPONENT_INSTALL ON)
-    SET (CPACK_ARCHIVE_COMPONENT_INSTALL ON)
-    SET (CPACK_COMPONENTS_ALL_IN_ONE_PACKAGE ON)
   ENDIF (WIN32)
+  SET (CPACK_MONOLITHIC_INSTALL ON)
   
   INCLUDE(InstallRequiredSystemLibraries)
 

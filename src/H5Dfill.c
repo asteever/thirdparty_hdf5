@@ -61,8 +61,6 @@
 /* Local Prototypes */
 /********************/
 
-static herr_t H5D__fill_release(H5D_fill_buf_info_t *fb_info);
-
 
 /*********************/
 /* Package Variables */
@@ -133,7 +131,7 @@ H5Dfill(const void *fill, hid_t fill_type_id, void *buf, hid_t buf_type_id, hid_
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, 0, "not a datatype")
 
     /* Fill the selection in the memory buffer */
-    if(H5D__fill(fill, fill_type, buf, buf_type, space, H5AC_dxpl_id) < 0)
+    if(H5D_fill(fill, fill_type, buf, buf_type, space, H5AC_dxpl_id) < 0)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTENCODE, FAIL, "filling selection failed")
 
 done:
@@ -143,11 +141,11 @@ done:
 
 /*--------------------------------------------------------------------------
  NAME
-    H5D__fill
+    H5D_fill
  PURPOSE
     Fill a selection in memory with a value (internal version)
  USAGE
-    herr_t H5D__fill(fill, fill_type, buf, buf_type, space)
+    herr_t H5D_fill(fill, fill_type, buf, buf_type, space)
         const void *fill;       IN: Pointer to fill value to use
         H5T_t *fill_type;       IN: Datatype of the fill value
         void *buf;              IN/OUT: Memory buffer to fill selection within
@@ -170,7 +168,7 @@ done:
     on each element so that each of them has a copy of the VL data.
 --------------------------------------------------------------------------*/
 herr_t
-H5D__fill(const void *fill, const H5T_t *fill_type, void *buf,
+H5D_fill(const void *fill, const H5T_t *fill_type, void *buf,
     const H5T_t *buf_type, const H5S_t *space, hid_t dxpl_id)
 {
     H5WB_t  *elem_wb = NULL;    /* Wrapped buffer for element data */
@@ -183,7 +181,7 @@ H5D__fill(const void *fill, const H5T_t *fill_type, void *buf,
     size_t dst_type_size;       /* Size of destination type*/
     herr_t ret_value = SUCCEED; /* Return value */
 
-    FUNC_ENTER_PACKAGE
+    FUNC_ENTER_NOAPI_NOINIT
 
     /* Check args */
     HDassert(fill_type);
@@ -269,7 +267,7 @@ H5D__fill(const void *fill, const H5T_t *fill_type, void *buf,
                 HGOTO_ERROR(H5E_DATASET, H5E_CANTCONVERT, FAIL, "data type conversion failed")
 
             /* Fill the DXPL cache values for later use */
-            if(H5D__get_dxpl_cache(dxpl_id, &dxpl_cache) < 0)
+            if(H5D_get_dxpl_cache(dxpl_id, &dxpl_cache) < 0)
                 HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "can't fill dxpl cache")
 
             /* Create a selection iterator for scattering the elements to memory buffer */
@@ -277,7 +275,7 @@ H5D__fill(const void *fill, const H5T_t *fill_type, void *buf,
                 HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to initialize memory selection information")
 
             /* Scatter the data into memory */
-            if(H5D__scatter_mem(tmp_buf, space, &mem_iter, (size_t)nelmts, dxpl_cache, buf/*out*/) < 0) {
+            if(H5D_scatter_mem(tmp_buf, space, &mem_iter, (size_t)nelmts, dxpl_cache, buf/*out*/) < 0) {
                 H5S_SELECT_ITER_RELEASE(&mem_iter);
                 HGOTO_ERROR(H5E_DATASET, H5E_READERROR, FAIL, "scatter failed")
             } /* end if */
@@ -348,11 +346,11 @@ done:
         bkg_buf = H5FL_BLK_FREE(type_conv, bkg_buf);
 
     FUNC_LEAVE_NOAPI(ret_value)
-} /* H5D__fill() */
+} /* H5D_fill() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5D__fill_init
+ * Function:	H5D_fill_init
  *
  * Purpose:	Initialize buffer filling operation
  *
@@ -364,7 +362,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5D__fill_init(H5D_fill_buf_info_t *fb_info, void *caller_fill_buf,
+H5D_fill_init(H5D_fill_buf_info_t *fb_info, void *caller_fill_buf,
     H5MM_allocate_t alloc_func, void *alloc_info,
     H5MM_free_t free_func, void *free_info,
     const H5O_fill_t *fill, const H5T_t *dset_type, hid_t dset_type_id,
@@ -372,7 +370,7 @@ H5D__fill_init(H5D_fill_buf_info_t *fb_info, void *caller_fill_buf,
 {
     herr_t	ret_value = SUCCEED;	/* Return value */
 
-    FUNC_ENTER_PACKAGE
+    FUNC_ENTER_NOAPI(FAIL)
 
     /* Check args */
     HDassert(fb_info);
@@ -543,15 +541,15 @@ H5D__fill_init(H5D_fill_buf_info_t *fb_info, void *caller_fill_buf,
 done:
     /* Cleanup on error */
     if(ret_value < 0)
-        if(H5D__fill_term(fb_info) < 0)
+        if(H5D_fill_term(fb_info) < 0)
             HDONE_ERROR(H5E_DATASET, H5E_CANTFREE, FAIL, "Can't release fill buffer info")
 
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5D__fill_init() */
+} /* end H5D_fill_init() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5D__fill_refill_vl
+ * Function:	H5D_fill_refill_vl
  *
  * Purpose:	Refill fill value buffer that contains VL-datatype fill values
  *
@@ -563,12 +561,12 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5D__fill_refill_vl(H5D_fill_buf_info_t *fb_info, size_t nelmts, hid_t dxpl_id)
+H5D_fill_refill_vl(H5D_fill_buf_info_t *fb_info, size_t nelmts, hid_t dxpl_id)
 {
     herr_t	ret_value = SUCCEED;	/* Return value */
     void * buf = NULL;              /* Temporary fill buffer */
 
-    FUNC_ENTER_PACKAGE
+    FUNC_ENTER_NOAPI(FAIL)
 
     /* Check args */
     HDassert(fb_info);
@@ -628,11 +626,11 @@ done:
     } /* end if */
 
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5D__fill_refill_vl() */
+} /* end H5D_fill_refill_vl() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5D__fill_release
+ * Function:	H5D_fill_release
  *
  * Purpose:	Release fill value buffer
  *
@@ -643,10 +641,10 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-static herr_t
-H5D__fill_release(H5D_fill_buf_info_t *fb_info)
+herr_t
+H5D_fill_release(H5D_fill_buf_info_t *fb_info)
 {
-    FUNC_ENTER_PACKAGE
+    FUNC_ENTER_NOAPI_NOERR
 
     /* Check args */
     HDassert(fb_info);
@@ -666,11 +664,11 @@ H5D__fill_release(H5D_fill_buf_info_t *fb_info)
     } /* end if */
 
     FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5D__fill_release() */
+} /* end H5D_fill_release() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5D__fill_term
+ * Function:	H5D_fill_term
  *
  * Purpose:	Release fill value buffer info
  *
@@ -682,15 +680,15 @@ H5D__fill_release(H5D_fill_buf_info_t *fb_info)
  *-------------------------------------------------------------------------
  */
 herr_t
-H5D__fill_term(H5D_fill_buf_info_t *fb_info)
+H5D_fill_term(H5D_fill_buf_info_t *fb_info)
 {
-    FUNC_ENTER_PACKAGE
+    FUNC_ENTER_NOAPI_NOERR
 
     /* Check args */
     HDassert(fb_info);
 
     /* Free the buffer for fill values */
-    H5D__fill_release(fb_info);
+    H5D_fill_release(fb_info);
 
     /* Free other resources for vlen fill values */
     if(fb_info->has_vlen_fill_type) {
@@ -703,5 +701,5 @@ H5D__fill_term(H5D_fill_buf_info_t *fb_info)
     } /* end if */
 
     FUNC_LEAVE_NOAPI(SUCCEED)
-} /* end H5D__fill_term() */
+} /* end H5D_fill_term() */
 

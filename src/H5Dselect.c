@@ -49,9 +49,6 @@
 /* Local Prototypes */
 /********************/
 
-static herr_t H5D__select_io(const H5D_io_info_t *io_info, size_t elmt_size,
-    size_t nelmts, const H5S_t *file_space, const H5S_t *mem_space);
-
 
 /*********************/
 /* Package Variables */
@@ -71,7 +68,7 @@ H5FL_SEQ_DEFINE(hsize_t);
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5D__select_io
+ * Function:	H5D_select_io
  *
  * Purpose:	Perform I/O directly from application memory and a file
  *
@@ -83,7 +80,7 @@ H5FL_SEQ_DEFINE(hsize_t);
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5D__select_io(const H5D_io_info_t *io_info, size_t elmt_size,
+H5D_select_io(const H5D_io_info_t *io_info, size_t elmt_size,
     size_t nelmts, const H5S_t *file_space, const H5S_t *mem_space)
 {
     H5S_sel_iter_t mem_iter;    /* Memory selection iteration info */
@@ -105,7 +102,7 @@ H5D__select_io(const H5D_io_info_t *io_info, size_t elmt_size,
     ssize_t tmp_file_len;       /* Temporary number of bytes in file sequence */
     herr_t ret_value = SUCCEED; /* Return value */
 
-    FUNC_ENTER_STATIC
+    FUNC_ENTER_NOAPI(FAIL)
 
     /* Check args */
     HDassert(io_info);
@@ -248,11 +245,11 @@ done:
         mem_off = H5FL_SEQ_FREE(hsize_t, mem_off);
 
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5D__select_io() */
+} /* end H5D_select_io() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5D__select_read
+ * Function:	H5D_select_read
  *
  * Purpose:	Reads directly from file into application memory.
  *
@@ -264,26 +261,26 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5D__select_read(const H5D_io_info_t *io_info, const H5D_type_info_t *type_info,
+H5D_select_read(const H5D_io_info_t *io_info, const H5D_type_info_t *type_info,
     hsize_t nelmts, const H5S_t *file_space, const H5S_t *mem_space)
 {
     herr_t ret_value = SUCCEED; /* Return value */
 
-    FUNC_ENTER_PACKAGE
+    FUNC_ENTER_NOAPI(FAIL)
 
     /* Call generic selection operation */
     H5_CHECK_OVERFLOW(nelmts, hsize_t, size_t);
-    if(H5D__select_io(io_info, type_info->src_type_size, (size_t)nelmts,
+    if(H5D_select_io(io_info, type_info->src_type_size, (size_t)nelmts,
             file_space, mem_space) < 0)
         HGOTO_ERROR(H5E_DATASPACE, H5E_READERROR, FAIL, "read error")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5D__select_read() */
+} /* end H5D_select_read() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5D__select_write
+ * Function:	H5D_select_write
  *
  * Purpose:	Writes directly from application memory into a file
  *
@@ -295,20 +292,20 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5D__select_write(const H5D_io_info_t *io_info, const H5D_type_info_t *type_info,
+H5D_select_write(const H5D_io_info_t *io_info, const H5D_type_info_t *type_info,
     hsize_t nelmts, const H5S_t *file_space, const H5S_t *mem_space)
 {
     herr_t ret_value = SUCCEED; /* Return value */
 
-    FUNC_ENTER_PACKAGE
+    FUNC_ENTER_NOAPI(FAIL)
 
     /* Call generic selection operation */
     H5_CHECK_OVERFLOW(nelmts, hsize_t, size_t);
-    if(H5D__select_io(io_info, type_info->dst_type_size, (size_t)nelmts,
+    if(H5D_select_io(io_info, type_info->dst_type_size, (size_t)nelmts,
             file_space, mem_space) < 0)
         HGOTO_ERROR(H5E_DATASPACE, H5E_WRITEERROR, FAIL, "write error")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5D__select_write() */
+} /* end H5D_select_write() */
 
