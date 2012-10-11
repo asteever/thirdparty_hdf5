@@ -341,7 +341,7 @@ H5O_group_bh_info(H5F_t *f, hid_t dxpl_id, H5O_t *oh, H5_ih_info_t *bh_info)
     H5B2_t      *bt2_corder = NULL;     /* v2 B-tree handle for creation order index */
     herr_t      ret_value = SUCCEED;  	/* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_TAG(dxpl_id, oh->cache_info.addr, FAIL)
+    FUNC_ENTER_NOAPI_NOINIT
 
     /* Sanity check */
     HDassert(f);
@@ -412,6 +412,6 @@ done:
     if(bt2_corder && H5B2_close(bt2_corder, dxpl_id) < 0)
         HDONE_ERROR(H5E_SYM, H5E_CANTCLOSEOBJ, FAIL, "can't close v2 B-tree for creation order index")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_group_bh_info() */
 

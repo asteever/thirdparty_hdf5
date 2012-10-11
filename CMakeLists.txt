@@ -176,7 +176,7 @@ STRING (REGEX REPLACE ".*#define[ \t]+H5_VERS_MINOR[ \t]+([0-9]*).*$"
     "\\1" H5_VERS_MINOR ${_h5public_h_contents})
 STRING (REGEX REPLACE ".*#define[ \t]+H5_VERS_RELEASE[ \t]+([0-9]*).*$"
     "\\1" H5_VERS_RELEASE ${_h5public_h_contents})
-STRING (REGEX REPLACE ".*#define[ \t]+H5_VERS_SUBRELEASE[ \t]+\"([0-9A-Za-z._]*)\".*$"
+STRING (REGEX REPLACE ".*#define[ \t]+H5_VERS_SUBRELEASE[ \t]+\"([0-9A-Za-z.]*)\".*$"
     "\\1" H5_VERS_SUBRELEASE ${_h5public_h_contents})
 #MESSAGE (STATUS "VERSION: ${H5_VERS_MAJOR}.${H5_VERS_MINOR}.${H5_VERS_RELEASE}-${H5_VERS_SUBRELEASE}")
 
@@ -264,6 +264,13 @@ SET (EXTERNAL_LIBRARYDLL_LIST "")
 # Run all the CMake configuration tests for our build environment
 #-----------------------------------------------------------------------------
 INCLUDE (${HDF5_RESOURCES_DIR}/ConfigureChecks.cmake)
+
+#-----------------------------------------------------------------------------
+# Option to use legacy naming for windows libs/programs, default is legacy
+#-----------------------------------------------------------------------------
+IF (WIN32 AND NOT CYGWIN)
+  OPTION (HDF_LEGACY_NAMING "Use Legacy Names for Libraries and Programs" ON)
+ENDIF (WIN32 AND NOT CYGWIN)
 
 #-----------------------------------------------------------------------------
 # Option to Build Shared/Static libs, default is static
@@ -498,7 +505,7 @@ IF (H5_HAVE_PARALLEL)
   ENDIF (MPI_C_LINK_FLAGS)
 ENDIF (H5_HAVE_PARALLEL)
 
-SET (DEFAULT_API_VERSION "v110")
+SET (DEFAULT_API_VERSION "v18")
 #-----------------------------------------------------------------------------
 # Option to use 1.6.x API
 #-----------------------------------------------------------------------------
@@ -508,16 +515,6 @@ IF (HDF5_USE_16_API_DEFAULT)
   SET (H5_USE_16_API_DEFAULT 1)
   SET (DEFAULT_API_VERSION "v16")
 ENDIF (HDF5_USE_16_API_DEFAULT)
-
-#-----------------------------------------------------------------------------
-# Option to use 1.8.x API
-#-----------------------------------------------------------------------------
-OPTION (HDF5_USE_18_API_DEFAULT "Use the HDF5 1.8.x API by default" OFF)
-SET (H5_USE_18_API_DEFAULT 0)
-IF (HDF5_USE_18_API_DEFAULT)
-  SET (H5_USE_18_API_DEFAULT 1)
-  SET (DEFAULT_API_VERSION "v18")
-ENDIF (HDF5_USE_18_API_DEFAULT)
 
 #-----------------------------------------------------------------------------
 # Options for HDF5 Filters
@@ -681,12 +678,6 @@ IF (WIN32 AND NOT CYGWIN)
   ENDIF (HDF5_ENABLE_THREADSAFE)
 ENDIF (WIN32 AND NOT CYGWIN)
 
-# -----------------------------------------------------------------------
-# wrapper script variables
-# 
-#SET (CFLAGS "${C_DEFINES}")
-#SET (CXXFLAGS "${CXX_DEFINES}")
-
 #-----------------------------------------------------------------------------
 # Add the HDF5 Library Target to the build
 #-----------------------------------------------------------------------------
@@ -759,12 +750,6 @@ IF (EXISTS "${HDF5_SOURCE_DIR}/fortran" AND IS_DIRECTORY "${HDF5_SOURCE_DIR}/for
   IF (HDF5_BUILD_FORTRAN)
     OPTION (HDF5_ENABLE_F2003 "Enable FORTRAN 2003 Standard" OFF)
     INCLUDE (${HDF5_RESOURCES_DIR}/HDF5UseFortran.cmake)
-
-    # -----------------------------------------------------------------------
-    # wrapper script variables
-    # 
-#    SET (FCFLAGS "${Fortran_DEFINES}")
-
     ADD_SUBDIRECTORY (${HDF5_SOURCE_DIR}/fortran ${PROJECT_BINARY_DIR}/fortran)
     IF (HDF5_BUILD_HL_LIB)
       IF (EXISTS "${HDF5_SOURCE_DIR}/hl/fortran" AND IS_DIRECTORY "${HDF5_SOURCE_DIR}/hl/fortran")
@@ -957,7 +942,7 @@ IF (NOT HDF5_EXTERNALLY_CONFIGURED)
         ${HDF5_SOURCE_DIR}/release_docs/CMake.txt
         ${HDF5_SOURCE_DIR}/release_docs/USING_CMake.txt
         ${HDF5_SOURCE_DIR}/release_docs/COPYING
-        ${HDF5_SOURCE_DIR}/release_docs/HISTORY-1_9.txt
+        ${HDF5_SOURCE_DIR}/release_docs/HISTORY-1_8.txt
         ${HDF5_SOURCE_DIR}/release_docs/INSTALL
         ${HDF5_SOURCE_DIR}/release_docs/RELEASE.txt
     )
@@ -970,6 +955,7 @@ IF (NOT HDF5_EXTERNALLY_CONFIGURED)
       SET (release_files
           ${release_files}
           ${HDF5_SOURCE_DIR}/release_docs/INSTALL_Cygwin.txt
+          ${HDF5_SOURCE_DIR}/release_docs/INSTALL_MinGW.txt
           ${HDF5_SOURCE_DIR}/release_docs/INSTALL_VMS.txt
       )
     ENDIF (WIN32 AND NOT CYGWIN)

@@ -574,7 +574,7 @@ main(int argc, char **argv)
     int opt;
 
     prog = argv[0];
-    
+
     /* Initialize h5tools lib */
     h5tools_init();
 
