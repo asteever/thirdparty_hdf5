@@ -61,6 +61,7 @@ const int H5Z_FILTER_BOGUS = 305;
 static size_t filter_bogus(unsigned int flags, size_t cd_nelmts,
     const unsigned int *cd_values, size_t nbytes, size_t *buf_size, void **buf);
 
+
 /*-------------------------------------------------------------------------
  * Function:	test_create
  *
@@ -337,6 +338,7 @@ test_datasize()
     }
 }   // test_datasize
 
+
 /*-------------------------------------------------------------------------
  * Function:	test_tconv
  *
@@ -458,6 +460,7 @@ filter_bogus(unsigned int flags, size_t cd_nelmts,
 {
     return nbytes;
 }
+
 
 /*-------------------------------------------------------------------------
  * Function:	test_compression
@@ -827,6 +830,7 @@ test_multiopen (H5File& file)
 	return -1;
     }
 }   // test_multiopen
+
 
 /*-------------------------------------------------------------------------
  * Function:	test_types

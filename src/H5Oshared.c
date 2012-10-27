@@ -618,14 +618,8 @@ H5O_shared_copy_file(H5F_t *file_src, H5F_t *file_dst,
      */
     if(shared_src->type != H5O_SHARE_TYPE_COMMITTED) {
         /* Simulate trying to share new message in the destination file. */
-        /* Set copied metadata tag */
-        H5_BEGIN_TAG(dxpl_id, H5AC__COPIED_TAG, FAIL);
-
         if(H5SM_try_share(file_dst, dxpl_id, NULL, H5SM_DEFER, mesg_type->id, _native_dst, mesg_flags) < 0)
-            HGOTO_ERROR_TAG(H5E_OHDR, H5E_WRITEERROR, FAIL, "unable to determine if message should be shared")
-
-        /* Reset metadata tag */
-        H5_END_TAG(FAIL);
+            HGOTO_ERROR(H5E_OHDR, H5E_WRITEERROR, FAIL, "unable to determine if message should be shared")
     } /* end if */
     else {
         /* Mark the message as committed - as it will be committed in post copy

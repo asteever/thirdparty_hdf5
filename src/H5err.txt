@@ -48,7 +48,7 @@
 MAJOR, H5E_ARGS, Invalid arguments to routine
 MAJOR, H5E_RESOURCE, Resource unavailable
 MAJOR, H5E_INTERNAL, Internal error (too specific to document in detail)
-MAJOR, H5E_FILE, File accessibilty
+MAJOR, H5E_FILE, File accessability
 MAJOR, H5E_IO, Low-level I/O
 MAJOR, H5E_FUNC, Function entry/exit
 MAJOR, H5E_ATOM, Object atom
@@ -74,14 +74,12 @@ MAJOR, H5E_ERROR, Error API
 MAJOR, H5E_SLIST, Skip Lists
 MAJOR, H5E_FSPACE, Free Space Manager
 MAJOR, H5E_SOHM, Shared Object Header Messages
-MAJOR, H5E_EARRAY, Extensible Array
-MAJOR, H5E_FARRAY, Fixed Array
 MAJOR, H5E_NONE_MAJOR, No error
 
 # Sections (for grouping minor errors)
 SECTION, ARGS, Argument errors
 SECTION, RESOURCE, Resource errors
-SECTION, FILEACC, File accessibilty errors
+SECTION, FILEACC, File accessability errors
 SECTION, FILE, Generic low-level file I/O errors
 SECTION, FUNC, Function entry/exit interface errors
 SECTION, ATOM, Object atom related errors
@@ -121,7 +119,7 @@ MINOR, RESOURCE, H5E_CANTGC, Unable to garbage collect
 MINOR, RESOURCE, H5E_CANTGETSIZE, Unable to compute size
 MINOR, RESOURCE, H5E_OBJOPEN, Object is already open
 
-# File accessibilty errors
+# File accessability errors
 MINOR, FILEACC, H5E_FILEEXISTS, File already exists
 MINOR, FILEACC, H5E_FILEOPEN, File already open
 MINOR, FILEACC, H5E_CANTCREATE, Unable to create file
@@ -156,7 +154,6 @@ MINOR, ATOM, H5E_NOIDS, Out of IDs for group
 # Cache related errors
 MINOR, CACHE, H5E_CANTFLUSH, Unable to flush data from cache
 MINOR, CACHE, H5E_CANTSERIALIZE, Unable to serialize data from cache
-MINOR, CACHE, H5E_CANTTAG, Unable to tag metadata in the cache
 MINOR, CACHE, H5E_CANTLOAD, Unable to load metadata into cache
 MINOR, CACHE, H5E_PROTECT, Protected metadata error
 MINOR, CACHE, H5E_NOTCACHED, Metadata not currently cached
@@ -170,9 +167,6 @@ MINOR, CACHE, H5E_CANTMARKDIRTY, Unable to mark a pinned entry as dirty
 MINOR, CACHE, H5E_CANTDIRTY, Unable to mark metadata as dirty
 MINOR, CACHE, H5E_CANTEXPUNGE, Unable to expunge a metadata cache entry
 MINOR, CACHE, H5E_CANTRESIZE, Unable to resize a metadata cache entry
-MINOR, CACHE, H5E_CANTDEPEND, Unable to create a flush dependency
-MINOR, CACHE, H5E_CANTUNDEPEND, Unable to destroy a flush dependency
-MINOR, CACHE, H5E_CANTNOTIFY, Unable to notify object about action
 
 # B-tree related errors
 MINOR, BTREE, H5E_NOTFOUND, Object not found
