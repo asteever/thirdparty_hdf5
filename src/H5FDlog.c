@@ -165,7 +165,6 @@ typedef struct H5FD_log_t {
                                 (HDoff_t)((A)+(Z))<(HDoff_t)(A))
 
 /* Prototypes */
-static herr_t H5FD_log_term(void);
 static void *H5FD_log_fapl_get(H5FD_t *file);
 static void *H5FD_log_fapl_copy(const void *_old_fa);
 static herr_t H5FD_log_fapl_free(void *_fa);
@@ -189,7 +188,6 @@ static const H5FD_class_t H5FD_log_g = {
     "log",					/*name			*/
     MAXADDR,					/*maxaddr		*/
     H5F_CLOSE_WEAK,				/* fc_degree		*/
-    H5FD_log_term,                              /*terminate             */
     NULL,					/*sb_size		*/
     NULL,					/*sb_encode		*/
     NULL,					/*sb_decode		*/
@@ -280,14 +278,14 @@ done:
  *
  * Purpose:     Shut down the VFD
  *
- * Returns:     SUCCEED (Can't fail)
+ * Returns:     <none>
  *
  * Programmer:  Quincey Koziol
  *              Friday, Jan 30, 2004
  *
  *---------------------------------------------------------------------------
  */
-static herr_t
+void
 H5FD_log_term(void)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
@@ -295,7 +293,7 @@ H5FD_log_term(void)
     /* Reset VFL ID */
     H5FD_LOG_g = 0;
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
+    FUNC_LEAVE_NOAPI_VOID
 } /* end H5FD_log_term() */
 
 
@@ -509,8 +507,8 @@ H5FD_log_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr)
     /* Get the driver specific information */
     if(NULL == (plist = H5P_object_verify(fapl_id, H5P_FILE_ACCESS)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a file access property list")
-    if(NULL == (fa = (H5FD_log_fapl_t *)H5P_get_driver_info(plist)))
-        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, NULL, "bad VFL driver info")
+    fa = (H5FD_log_fapl_t *)H5P_get_driver_info(plist);
+    HDassert(fa);
 
 #ifdef H5_HAVE_GETTIMEOFDAY
     if(fa->flags & H5FD_LOG_TIME_OPEN)
@@ -624,9 +622,9 @@ H5FD_log_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr)
 
 #ifdef H5_HAVE_GETTIMEOFDAY
         if(file->fa.flags & H5FD_LOG_TIME_OPEN)
-            HDfprintf(file->logfp, "Open took: (%f s)\n", (double)open_timeval_diff.tv_sec + ((double)open_timeval_diff.tv_usec / (double)1000000.0f));
+            HDfprintf(file->logfp, "Open took: (%f s)\n", (double)open_timeval_diff.tv_sec + ((double)open_timeval_diff.tv_usec / (double)1000000.0));
         if(file->fa.flags & H5FD_LOG_TIME_STAT)
-            HDfprintf(file->logfp, "Stat took: (%f s)\n", (double)stat_timeval_diff.tv_sec + ((double)stat_timeval_diff.tv_usec / (double)1000000.0f));
+            HDfprintf(file->logfp, "Stat took: (%f s)\n", (double)stat_timeval_diff.tv_sec + ((double)stat_timeval_diff.tv_usec / (double)1000000.0));
 #endif /* H5_HAVE_GETTIMEOFDAY */
 
     } /* end if */
@@ -714,7 +712,7 @@ H5FD_log_close(H5FD_t *_file)
                  timeval_diff.tv_usec += 1000000;
                  timeval_diff.tv_sec--;
              } /* end if */
-            HDfprintf(file->logfp, "Close took: (%f s)\n", (double)timeval_diff.tv_sec + ((double)timeval_diff.tv_usec / (double)1000000.0f));
+            HDfprintf(file->logfp, "Close took: (%f s)\n", (double)timeval_diff.tv_sec + ((double)timeval_diff.tv_usec / (double)1000000.0));
         } /* end if */
 #endif /* H5_HAVE_GETTIMEOFDAY */
 
@@ -1170,7 +1168,7 @@ H5FD_log_read(H5FD_t *_file, H5FD_mem_t type, hid_t UNUSED dxpl_id, haddr_t addr
                     timeval_diff.tv_usec += 1000000;
                     timeval_diff.tv_sec--;
                 } /* end if */
-                time_diff = (double)timeval_diff.tv_sec + ((double)timeval_diff.tv_usec / (double)1000000.0f);
+                time_diff = (double)timeval_diff.tv_sec + ((double)timeval_diff.tv_usec / (double)1000000.0);
                 HDfprintf(file->logfp, " (%f s)\n", time_diff);
 
                 /* Add to total seek time */
@@ -1259,7 +1257,7 @@ H5FD_log_read(H5FD_t *_file, H5FD_mem_t type, hid_t UNUSED dxpl_id, haddr_t addr
                 timeval_diff.tv_usec += 1000000;
                 timeval_diff.tv_sec--;
             } /* end if */
-            time_diff = (double)timeval_diff.tv_sec + ((double)timeval_diff.tv_usec / (double)1000000.0f);
+            time_diff = (double)timeval_diff.tv_sec + ((double)timeval_diff.tv_usec / (double)1000000.0);
             HDfprintf(file->logfp, " (%f s)\n", time_diff);
 
             /* Add to total read time */
@@ -1374,7 +1372,7 @@ H5FD_log_write(H5FD_t *_file, H5FD_mem_t type, hid_t UNUSED dxpl_id, haddr_t add
                     timeval_diff.tv_usec += 1000000;
                     timeval_diff.tv_sec--;
                 } /* end if */
-                time_diff = (double)timeval_diff.tv_sec + ((double)timeval_diff.tv_usec / (double)1000000.0f);
+                time_diff = (double)timeval_diff.tv_sec + ((double)timeval_diff.tv_usec / (double)1000000.0);
                 HDfprintf(file->logfp, " (%f s)\n", time_diff);
 
                 /* Add to total seek time */
@@ -1460,7 +1458,7 @@ H5FD_log_write(H5FD_t *_file, H5FD_mem_t type, hid_t UNUSED dxpl_id, haddr_t add
                 timeval_diff.tv_usec += 1000000;
                 timeval_diff.tv_sec--;
             } /* end if */
-            time_diff = (double)timeval_diff.tv_sec + ((double)timeval_diff.tv_usec / (double)1000000.0f);
+            time_diff = (double)timeval_diff.tv_sec + ((double)timeval_diff.tv_usec / (double)1000000.0);
             HDfprintf(file->logfp, " (%f s)\n", time_diff);
 
             /* Add to total write time */

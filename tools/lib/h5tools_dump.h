@@ -67,7 +67,8 @@ H5TOOLS_DLL void    h5tools_dump_data(FILE *stream, const h5tool_format_t *info,
 H5TOOLS_DLL int     h5tools_print_datatype(FILE *stream, h5tools_str_t *buffer/*in,out*/,
                             const h5tool_format_t *info, h5tools_context_t *ctx/*in,out*/,
                             hid_t type, int object_search);
-H5TOOLS_DLL int     h5tools_print_dataspace(h5tools_str_t *buffer/*in,out*/,
+H5TOOLS_DLL int     h5tools_print_dataspace(FILE *stream, h5tools_str_t *buffer/*in,out*/,
+                            const h5tool_format_t *info, h5tools_context_t *ctx/*in,out*/,
                             hid_t space);
 H5TOOLS_DLL int     h5tools_print_enum(FILE *stream, h5tools_str_t *buffer/*in,out*/,
                             const h5tool_format_t *info, h5tools_context_t *ctx/*in,out*/,

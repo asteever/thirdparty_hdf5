@@ -1173,18 +1173,3 @@ H5ConversionTests (H5_NO_ALIGNMENT_RESTRICTIONS "Checking IF alignment restricti
 IF (CYGWIN)
   SET (H5_CYGWIN_ULLONG_TO_LDOUBLE_ROUND_PROBLEM 1)
 ENDIF (CYGWIN)
-
-# -----------------------------------------------------------------------
-# wrapper script variables
-# 
-SET (prefix ${CMAKE_INSTALL_PREFIX})
-SET (exec_prefix "\${prefix}")
-SET (libdir "${exec_prefix}/lib")
-SET (includedir "\${prefix}/include")
-SET (host_os ${CMAKE_HOST_SYSTEM_NAME})
-SET (CC ${CMAKE_C_COMPILER})
-SET (CXX ${CMAKE_CXX_COMPILER})
-SET (FC ${CMAKE_Fortran_COMPILER})
-FOREACH (LINK_LIB ${LINK_LIBS})
-  SET (LIBS "${LIBS} -l${LINK_LIB}")
-ENDFOREACH (LINK_LIB ${LINK_LIBS})

@@ -51,6 +51,7 @@
 static herr_t make_attributes( hid_t loc_id, const char* obj_name );
 
 
+
 /*-------------------------------------------------------------------------
 * test dataset functions
 *-------------------------------------------------------------------------
@@ -1696,9 +1697,17 @@ static int test_complicated_compound(void)
     char   *line = NULL;
     FILE   *fp = NULL;
     size_t  size = 1024;
-    const char *filename = H5_get_srcdir_filename(INPUT_FILE);
+    char   *srcdir = getenv("srcdir"); /* the source directory */
+    char    filename[1024]="";
 
     TESTING3("        text for complicated compound types");
+
+    /* compose the name of the file to open, using the srcdir, if appropriate */
+    if(srcdir) {
+        HDstrcpy(filename, srcdir);
+        HDstrcat(filename, "/");
+    }
+    HDstrcat(filename, INPUT_FILE);
 
     /* Open input file */
     fp = HDfopen(filename, "r");
@@ -2136,6 +2145,7 @@ static int test_valid_path(void)
   return -1;
 }
 
+
 /*-------------------------------------------------------------------------
 * the main program
 *-------------------------------------------------------------------------
@@ -2164,4 +2174,6 @@ int main( void )
 
 error:
     return 1;
+
+
 }

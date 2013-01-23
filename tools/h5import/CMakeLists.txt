@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.8.10)
+cmake_minimum_required (VERSION 2.8.6)
 PROJECT (HDF5_TOOLS_H5IMPORT)
 
 #-----------------------------------------------------------------------------
@@ -12,7 +12,6 @@ INCLUDE_DIRECTORIES (${HDF5_TOOLS_SRC_DIR}/lib)
 ADD_EXECUTABLE (h5import ${HDF5_TOOLS_H5IMPORT_SOURCE_DIR}/h5import.c)
 TARGET_NAMING (h5import ${LIB_TYPE})
 TARGET_LINK_LIBRARIES (h5import  ${HDF5_TOOLS_LIB_TARGET} ${HDF5_LIB_TARGET})
-#SET_TARGET_PROPERTIES (h5import PROPERTIES COMPILE_DEFINITIONS H5DEBUGIMPORT)
 SET_TARGET_PROPERTIES (h5import PROPERTIES FOLDER tools)
 
 SET (H5_DEP_EXECUTABLES h5import)

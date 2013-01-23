@@ -127,7 +127,6 @@ typedef struct H5FD_sec2_t {
                                 (HDoff_t)((A)+(Z))<(HDoff_t)(A))
 
 /* Prototypes */
-static herr_t H5FD_sec2_term(void);
 static H5FD_t *H5FD_sec2_open(const char *name, unsigned flags, hid_t fapl_id,
             haddr_t maxaddr);
 static herr_t H5FD_sec2_close(H5FD_t *_file);
@@ -147,7 +146,6 @@ static const H5FD_class_t H5FD_sec2_g = {
     "sec2",                     /* name                 */
     MAXADDR,                    /* maxaddr              */
     H5F_CLOSE_WEAK,             /* fc_degree            */
-    H5FD_sec2_term,             /* terminate            */
     NULL,                       /* sb_size              */
     NULL,                       /* sb_encode            */
     NULL,                       /* sb_decode            */
@@ -238,14 +236,14 @@ done:
  *
  * Purpose:     Shut down the VFD
  *
- * Returns:     SUCCEED (Can't fail)
+ * Returns:     <none>
  *
  * Programmer:  Quincey Koziol
  *              Friday, Jan 30, 2004
  *
  *---------------------------------------------------------------------------
  */
-static herr_t
+void
 H5FD_sec2_term(void)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
@@ -253,7 +251,7 @@ H5FD_sec2_term(void)
     /* Reset VFL ID */
     H5FD_SEC2_g = 0;
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
+    FUNC_LEAVE_NOAPI_VOID
 } /* end H5FD_sec2_term() */
 
 

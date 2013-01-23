@@ -26,20 +26,20 @@
 #define begin_obj(obj,name,begin)                               \
     do {              \
         if (name)                                               \
-            PRINTSTREAM(rawoutstream, "%s \"%s\" %s", (obj), (name), (begin));   \
+            HDfprintf(rawoutstream, "%s \"%s\" %s", (obj), (name), (begin));   \
         else                                                    \
-            PRINTSTREAM(rawoutstream, "%s %s", (obj), (begin));      \
+            HDfprintf(rawoutstream, "%s %s", (obj), (begin));      \
     } while(0);
 
 #define end_obj(obj,end)                                        \
     do {              \
         if(HDstrlen(end)) {                                     \
-            PRINTSTREAM(rawoutstream, "%s", end);                                  \
+            HDfprintf(rawoutstream, "%s", end);                                  \
             if(HDstrlen(obj))                                   \
-                PRINTVALSTREAM(rawoutstream, " ");                                    \
+                HDfprintf(rawoutstream, " ");                                    \
         }                                                       \
         if(HDstrlen(obj))                                       \
-            PRINTSTREAM(rawoutstream, "%s", obj);                                  \
+            HDfprintf(rawoutstream, "%s", obj);                                  \
     } while(0);
 
 

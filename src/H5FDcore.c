@@ -23,7 +23,7 @@
  */
 
 /* Interface initialization */
-#define H5_INTERFACE_INIT_FUNC	H5FD_core_init_interface
+#define H5_INTERFACE_INIT_FUNC  H5FD_core_init_interface
 
 
 #include "H5private.h"      /* Generic Functions            */
@@ -117,7 +117,6 @@ typedef struct H5FD_core_fapl_t {
                                 (size_t)((A)+(Z))<(size_t)(A))
 
 /* Prototypes */
-static herr_t H5FD_core_term(void);
 static void *H5FD_core_fapl_get(H5FD_t *_file);
 static H5FD_t *H5FD_core_open(const char *name, unsigned flags, hid_t fapl_id,
             haddr_t maxaddr);
@@ -139,7 +138,6 @@ static const H5FD_class_t H5FD_core_g = {
     "core",                     /* name                 */
     MAXADDR,                    /* maxaddr              */
     H5F_CLOSE_WEAK,             /* fc_degree            */
-    H5FD_core_term,             /* terminate            */
     NULL,                       /* sb_size              */
     NULL,                       /* sb_encode            */
     NULL,                       /* sb_decode            */
@@ -227,14 +225,14 @@ done:
  *
  * Purpose:     Shut down the VFD
  *
- * Returns:     SUCCEED (Can't fail)
+ * Returns:     <none>
  *
  * Programmer:  Quincey Koziol
  *              Friday, Jan 30, 2004
  *
  *---------------------------------------------------------------------------
  */
-static herr_t
+void
 H5FD_core_term(void)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
@@ -242,7 +240,7 @@ H5FD_core_term(void)
     /* Reset VFL ID */
     H5FD_CORE_g = 0;
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
+    FUNC_LEAVE_NOAPI_VOID
 } /* end H5FD_core_term() */
 
 
@@ -456,7 +454,7 @@ H5FD_core_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr)
      * default value. But if the file access property list was zero then use
      * the default value instead.
      */
-    file->increment = (fa->increment > 0) ? fa->increment : H5FD_CORE_INCREMENT;
+    file->increment = (fa->increment>0) ?  fa->increment : H5FD_CORE_INCREMENT;
 
     /* If save data in backing store. */
     file->backing_store = fa->backing_store;
@@ -908,7 +906,7 @@ static herr_t
 H5FD_core_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, haddr_t addr,
         size_t size, void *buf/*out*/)
 {
-    H5FD_core_t	*file = (H5FD_core_t*)_file;
+    H5FD_core_t  *file = (H5FD_core_t*)_file;
     herr_t      ret_value=SUCCEED;       /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
@@ -1209,7 +1207,7 @@ H5FD_core_truncate(H5FD_t *_file, hid_t UNUSED dxpl_id, hbool_t closing)
                  * re-extended later.  This may happen on Open VMS. */
                 if(-1 == HDlseek(file->fd, (HDoff_t)0, SEEK_SET))
                     HSYS_GOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to seek to proper position")
-#endif /* H5_VMS */
+#endif
                 if(-1 == HDftruncate(file->fd, (HDoff_t)new_eof))
                     HSYS_GOTO_ERROR(H5E_IO, H5E_SEEKERROR, FAIL, "unable to extend file properly")
 #endif /* H5_HAVE_WIN32_API */

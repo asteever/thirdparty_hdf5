@@ -1181,7 +1181,7 @@ test_close(hid_t fapl)
 
     /* Check that all file IDs have been closed */
     if(H5I_nmembers(H5I_FILE) != 0) TEST_ERROR
-    H5F_sfile_assert_num(0);
+    if(H5F_sfile_assert_num(0) != 0) TEST_ERROR
 
     /* Build the virtual file again */
     if((file1 = H5Fopen(filename1, H5F_ACC_RDWR, fapl)) < 0 ||
@@ -1198,7 +1198,7 @@ test_close(hid_t fapl)
 
     /* Check that all file IDs have been closed */
     if(H5I_nmembers(H5I_FILE) != 0) TEST_ERROR
-    H5F_sfile_assert_num(0);
+    if(H5F_sfile_assert_num(0) != 0) TEST_ERROR
 
     /* Shut down */
     PASSED();
@@ -1810,7 +1810,8 @@ test_missing_unmount(hid_t fapl)
     /* Check that all file IDs have been closed */
     if(H5I_nmembers(H5I_FILE) != 0)
         TEST_ERROR
-    H5F_sfile_assert_num(0);
+    if(H5F_sfile_assert_num(0) != 0)
+        TEST_ERROR
 
     PASSED();
     return 0;
@@ -1945,7 +1946,8 @@ test_hold_open_file(hid_t fapl)
     /* Check that all file IDs have been closed */
     if(H5I_nmembers(H5I_FILE) != 0)
         TEST_ERROR
-    H5F_sfile_assert_num(0);
+    if(H5F_sfile_assert_num(0) != 0)
+        TEST_ERROR
 
     PASSED();
     return 0;
@@ -2101,7 +2103,8 @@ test_hold_open_group(hid_t fapl)
     /* Check that all file IDs have been closed */
     if(H5I_nmembers(H5I_FILE) != 0)
         TEST_ERROR
-    H5F_sfile_assert_num(0);
+    if(H5F_sfile_assert_num(0) != 0)
+        TEST_ERROR
 
     PASSED();
     return 0;
@@ -2246,7 +2249,8 @@ test_fcdegree_same(hid_t fapl)
     /* Check that all file IDs have been closed */
     if(H5I_nmembers(H5I_FILE) != 0)
         TEST_ERROR
-    H5F_sfile_assert_num(0);
+    if(H5F_sfile_assert_num(0) != 0)
+        TEST_ERROR
 
     PASSED();
     return 0;
@@ -2387,7 +2391,8 @@ test_fcdegree_semi(hid_t fapl)
     /* Check that all file IDs have been closed */
     if(H5I_nmembers(H5I_FILE) != 0)
         TEST_ERROR
-    H5F_sfile_assert_num(0);
+    if(H5F_sfile_assert_num(0) != 0)
+        TEST_ERROR
 
     PASSED();
     return 0;
@@ -2525,7 +2530,8 @@ test_fcdegree_strong(hid_t fapl)
     /* Check that all file IDs have been closed */
     if(H5I_nmembers(H5I_FILE) != 0)
         TEST_ERROR
-    H5F_sfile_assert_num(0);
+    if(H5F_sfile_assert_num(0) != 0)
+        TEST_ERROR
 
     PASSED();
     return 0;
@@ -2727,7 +2733,8 @@ test_acc_perm(hid_t fapl)
     /* Check that all file IDs have been closed */
     if(H5I_nmembers(H5I_FILE) != 0)
         TEST_ERROR
-    H5F_sfile_assert_num(0);
+    if(H5F_sfile_assert_num(0) != 0)
+        TEST_ERROR
 
     PASSED();
     return 0;
@@ -2950,7 +2957,8 @@ test_mult_mount(hid_t fapl)
     /* Check that all file IDs have been closed */
     if(H5I_nmembers(H5I_FILE) != 0)
         TEST_ERROR
-    H5F_sfile_assert_num(0);
+    if(H5F_sfile_assert_num(0) != 0)
+        TEST_ERROR
 
     PASSED();
     return 0;
@@ -3171,7 +3179,8 @@ test_nested_survive(hid_t fapl)
     /* Check that all file IDs have been closed */
     if(H5I_nmembers(H5I_FILE) != 0)
         TEST_ERROR
-    H5F_sfile_assert_num(0);
+    if(H5F_sfile_assert_num(0) != 0)
+        TEST_ERROR
 
     PASSED();
     return 0;
@@ -3286,7 +3295,8 @@ test_close_parent(hid_t fapl)
         TEST_ERROR
 
     /* Both underlying shared files should be open still */
-    H5F_sfile_assert_num(2);
+    if(H5F_sfile_assert_num(2) != 0)
+        TEST_ERROR
 
     /* Check the name of "M" is still defined */
     *name = '\0';
@@ -3307,14 +3317,16 @@ test_close_parent(hid_t fapl)
         TEST_ERROR
 
     /* Just file #2's underlying shared file should be open still */
-    H5F_sfile_assert_num(1);
+    if(H5F_sfile_assert_num(1) != 0)
+        TEST_ERROR
 
     /* Close group in file #2, letting file #2 close */
     if(H5Gclose(gidM) < 0)
         TEST_ERROR
 
     /* All underlying shared file structs should be closed */
-    H5F_sfile_assert_num(0);
+    if(H5F_sfile_assert_num(0) != 0)
+        TEST_ERROR
 
     PASSED();
     return 0;
@@ -3691,14 +3703,16 @@ test_cut_graph(hid_t fapl)
         TEST_ERROR
 
     /* Check that all seven underlying files are still opened */
-    H5F_sfile_assert_num(7);
+    if(H5F_sfile_assert_num(7) != 0)
+        TEST_ERROR
 
     /* Close "M" in file #5, which should close files 2, 4 & 5 */
     if(H5Gclose(gidM) < 0)
         TEST_ERROR
 
     /* Check that only four underlying files are still opened */
-    H5F_sfile_assert_num(4);
+    if(H5F_sfile_assert_num(4) != 0)
+        TEST_ERROR
 
     /* Unmount file #3 from file #1, cutting the graph */
     if(H5Funmount(gidQ, "/B") < 0)
@@ -3706,7 +3720,8 @@ test_cut_graph(hid_t fapl)
 
     /* Check that only three underlying files are still opened */
     /* (File #1 should close after being cut off from the graph) */
-    H5F_sfile_assert_num(3);
+    if(H5F_sfile_assert_num(3) != 0)
+        TEST_ERROR
 
     /* Check the name of "Q" is defined in its file */
     *name = '\0';
@@ -3734,7 +3749,8 @@ test_cut_graph(hid_t fapl)
         TEST_ERROR
 
     /* Verify that all underlying shared files have been closed now */
-    H5F_sfile_assert_num(0);
+    if(H5F_sfile_assert_num(0) != 0)
+        TEST_ERROR
 
     PASSED();
     return 0;
@@ -3901,14 +3917,16 @@ test_symlink(hid_t fapl)
         TEST_ERROR
 
     /* Verify that all 3 underlying shared files are still open */
-    H5F_sfile_assert_num(3);
+    if(H5F_sfile_assert_num(3) != 0)
+        TEST_ERROR
 
     /* Close object opened through soft link */
     if(H5Gclose(gidL) < 0)
         TEST_ERROR
 
     /* Verify that all underlying shared files have been closed now */
-    H5F_sfile_assert_num(0);
+    if(H5F_sfile_assert_num(0) != 0)
+        TEST_ERROR
 
     PASSED();
     return 0;
@@ -4018,7 +4036,8 @@ test_sharedacc(hid_t fapl)
     /* Check that all file IDs have been closed */
     if(H5I_nmembers(H5I_FILE) != 0)
         TEST_ERROR
-    H5F_sfile_assert_num(0);
+    if(H5F_sfile_assert_num(0) != 0)
+        TEST_ERROR
 
     PASSED();
     return 0;
@@ -4110,14 +4129,16 @@ test_sharedclose(hid_t fapl)
         TEST_ERROR
 
     /* Check that file #3 is still open */
-    H5F_sfile_assert_num(3);
+    if(H5F_sfile_assert_num(3) != 0)
+        TEST_ERROR
 
     /* Close group B/C in file #1b.  This should close file #1b and #3. */
     if(H5Gclose(gid3) < 0)
         TEST_ERROR
 
     /* Check that file #3 has been closed */
-    H5F_sfile_assert_num(2);
+    if(H5F_sfile_assert_num(2) != 0)
+        TEST_ERROR
 
     /* Unmount file 2 and close the rest of the handles */
     if(H5Funmount(fid1a, "A") < 0)
@@ -4132,7 +4153,8 @@ test_sharedclose(hid_t fapl)
     /* Check that all file IDs have been closed */
     if(H5I_nmembers(H5I_FILE) != 0)
         TEST_ERROR
-    H5F_sfile_assert_num(0);
+    if(H5F_sfile_assert_num(0) != 0)
+        TEST_ERROR
 
     /* Create file #1 & its group */
     if((fid1a = H5Fcreate(filename1, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT)) < 0)
@@ -4175,7 +4197,8 @@ test_sharedclose(hid_t fapl)
     /* Check that all file IDs have been closed */
     if(H5I_nmembers(H5I_FILE) != 0)
         TEST_ERROR
-    H5F_sfile_assert_num(0);
+    if(H5F_sfile_assert_num(0) != 0)
+        TEST_ERROR
 
     PASSED();
     return 0;
@@ -4301,7 +4324,7 @@ test_multisharedclose(hid_t fapl)
 
     /* Check that all file IDs have been closed */
     if(H5I_nmembers(H5I_FILE) != 0) TEST_ERROR
-    H5F_sfile_assert_num(0);
+    if(H5F_sfile_assert_num(0) < 0) TEST_ERROR
 
     PASSED();
     return 0;

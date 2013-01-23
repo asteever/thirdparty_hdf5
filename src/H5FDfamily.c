@@ -83,7 +83,6 @@ typedef struct H5FD_family_fapl_t {
 } H5FD_family_fapl_t;
 
 /* Callback prototypes */
-static herr_t H5FD_family_term(void);
 static void *H5FD_family_fapl_get(H5FD_t *_file);
 static void *H5FD_family_fapl_copy(const void *_old_fa);
 static herr_t H5FD_family_fapl_free(void *_fa);
@@ -113,7 +112,6 @@ static const H5FD_class_t H5FD_family_g = {
     "family",					/*name			*/
     HADDR_MAX,					/*maxaddr		*/
     H5F_CLOSE_WEAK,				/*fc_degree		*/
-    H5FD_family_term,                           /*terminate             */
     H5FD_family_sb_size,			/*sb_size		*/
     H5FD_family_sb_encode,			/*sb_encode		*/
     H5FD_family_sb_decode,			/*sb_decode		*/
@@ -207,14 +205,16 @@ done:
  *
  * Purpose:	Shut down the VFD
  *
- * Returns:     Non-negative on success or negative on failure
+ * Return:	<none>
  *
  * Programmer:  Quincey Koziol
  *              Friday, Jan 30, 2004
  *
+ * Modification:
+ *
  *---------------------------------------------------------------------------
  */
-static herr_t
+void
 H5FD_family_term(void)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
@@ -222,7 +222,7 @@ H5FD_family_term(void)
     /* Reset VFL ID */
     H5FD_FAMILY_g=0;
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
+    FUNC_LEAVE_NOAPI_VOID
 } /* end H5FD_family_term() */
 
 
@@ -675,8 +675,8 @@ H5FD_family_open(const char *name, unsigned flags, hid_t fapl_id,
 
         if(NULL == (plist = (H5P_genplist_t *)H5I_object(fapl_id)))
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a file access property list")
-        if(NULL == (fa = (H5FD_family_fapl_t *)H5P_get_driver_info(plist)))
-            HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, NULL, "bad VFL driver info")
+        fa = (H5FD_family_fapl_t *)H5P_get_driver_info(plist);
+        HDassert(fa);
 
         /* Check for new family file size. It's used by h5repart only. */
         if(H5P_exist_plist(plist, H5F_ACS_FAMILY_NEWSIZE_NAME) > 0) {
@@ -858,17 +858,18 @@ H5FD_family_cmp(const H5FD_t *_f1, const H5FD_t *_f2)
 {
     const H5FD_family_t	*f1 = (const H5FD_family_t*)_f1;
     const H5FD_family_t	*f2 = (const H5FD_family_t*)_f2;
-    int ret_value = 0;
+    int ret_value=(H5FD_VFD_DEFAULT);
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-    HDassert(f1->nmembs >= 1 && f1->memb[0]);
-    HDassert(f2->nmembs >= 1 && f2->memb[0]);
+    assert(f1->nmembs>=1 && f1->memb[0]);
+    assert(f2->nmembs>=1 && f2->memb[0]);
 
-    ret_value = H5FDcmp(f1->memb[0], f2->memb[0]);
+    ret_value= H5FDcmp(f1->memb[0], f2->memb[0]);
 
+done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5FD_family_cmp() */
+}
 
 
 /*-------------------------------------------------------------------------

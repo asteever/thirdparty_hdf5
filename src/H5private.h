@@ -160,7 +160,7 @@
 #endif
 
 #ifdef H5_HAVE_THREADSAFE
-#include <process.h>        /* For _beginthread() */
+#include <process.h>            /* For _beginthread() */
 #endif
 
 #include <windows.h>
@@ -323,9 +323,6 @@
 /* test for number that is a power of 2 */
 /* (from: http://graphics.stanford.edu/~seander/bithacks.html#DetermineIfPowerOf2) */
 #  define POWER_OF_TWO(n)  (!(n & (n - 1)) && n)
-
-/* Raise an integer to a power of 2 */
-#  define H5_EXP2(n)    (1 << (n))
 
 /*
  * HDF Boolean type.
@@ -649,9 +646,6 @@ typedef struct {
 #ifndef HDexp
     #define HDexp(X)    exp(X)
 #endif /* HDexp */
-#ifndef HDexp2
-    #define HDexp2(X)    exp2(X)
-#endif /* HDexp2 */
 #ifndef HDfabs
     #define HDfabs(X)    fabs(X)
 #endif /* HDfabs */
@@ -1194,7 +1188,7 @@ H5_DLL int HDfprintf (FILE *stream, const char *fmt, ...);
     #define HDstrchr(S,C)    strchr(S,C)
 #endif /* HDstrchr */
 #ifndef HDstrcmp
-    #define HDstrcmp(X,Y)       strcmp(X,Y)
+    #define HDstrcmp(X,Y)    strcmp(X,Y)
 #endif /* HDstrcmp */
 #ifndef HDstrcasecmp
     #define HDstrcasecmp(X,Y)       strcasecmp(X,Y)
@@ -1495,12 +1489,12 @@ extern char *strdup(const char *s);
 
 /* OpenVMS pathname: <disk name>$<partition>:[path]<file name>
  *     i.g. SYS$SYSUSERS:[LU.HDF5.SRC]H5system.c */
-#define         DIR_SEPC        ']'
-#define         DIR_SEPS        "]"
+#define    DIR_SEPC  ']'
+#define    DIR_SEPS  "]"
 #define         CHECK_DELIMITER(SS)             (SS == DIR_SEPC)
 #define         CHECK_ABSOLUTE(NAME)            (strrchr(NAME, ':') && strrchr(NAME, '['))
-#define         CHECK_ABS_DRIVE(NAME)           (0)
-#define         CHECK_ABS_PATH(NAME)            (0)
+#define   CHECK_ABS_DRIVE(NAME)           (0)
+#define   CHECK_ABS_PATH(NAME)      (0)
 #define         GET_LAST_DELIMITER(NAME, ptr)   ptr = strrchr(NAME, DIR_SEPC);
 
 #else
@@ -1923,18 +1917,6 @@ static herr_t    H5_INTERFACE_INIT_FUNC(void);
     H5_PUSH_FUNC                                                              \
     {
 
-/* Use the following macro as replacement for the FUNC_ENTER_PACKAGE
- * macro when the function needs to set up a metadata tag. */
-#define FUNC_ENTER_PACKAGE_TAG(dxpl_id, tag, err) {                           \
-    haddr_t prev_tag = HADDR_UNDEF;                                           \
-    hid_t tag_dxpl_id = dxpl_id;                                              \
-                                                                              \
-    FUNC_ENTER_COMMON(H5_IS_PKG(FUNC));                                       \
-    if(H5AC_tag(tag_dxpl_id, tag, &prev_tag) < 0)                             \
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, err, "unable to apply metadata tag") \
-    H5_PUSH_FUNC                                                              \
-    {
-
 /* Use this macro for all "normal" staticly-scoped functions */
 #define FUNC_ENTER_STATIC {                                                   \
     FUNC_ENTER_COMMON(H5_IS_PKG(FUNC));                                       \
@@ -1944,18 +1926,6 @@ static herr_t    H5_INTERFACE_INIT_FUNC(void);
 /* Use this macro for staticly-scoped functions which propgate errors, but don't issue them */
 #define FUNC_ENTER_STATIC_NOERR {                                             \
     FUNC_ENTER_COMMON_NOERR(H5_IS_PKG(FUNC));                                 \
-    H5_PUSH_FUNC                                                              \
-    {
-
-/* Use the following macro as replacement for the FUNC_ENTER_STATIC
- * macro when the function needs to set up a metadata tag. */
-#define FUNC_ENTER_STATIC_TAG(dxpl_id, tag, err) {                            \
-    haddr_t prev_tag = HADDR_UNDEF;                                           \
-    hid_t tag_dxpl_id = dxpl_id;                                              \
-                                                                              \
-    FUNC_ENTER_COMMON(H5_IS_PKG(FUNC));                                       \
-    if(H5AC_tag(tag_dxpl_id, tag, &prev_tag) < 0)                             \
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, err, "unable to apply metadata tag") \
     H5_PUSH_FUNC                                                              \
     {
 
@@ -2004,28 +1974,6 @@ static herr_t    H5_INTERFACE_INIT_FUNC(void);
 #define FUNC_ENTER_NOAPI_NOERR_NOFS {                             \
     FUNC_ENTER_COMMON_NOERR(!H5_IS_API(FUNC));               \
     {
-
-/* Use the following two macros as replacements for the FUNC_ENTER_NOAPI 
- * and FUNC_ENTER_NOAPI_NOINIT macros when the function needs to set
- * up a metadata tag. */
-#define FUNC_ENTER_NOAPI_TAG(dxpl_id, tag, err) {                     \
-    haddr_t prev_tag = HADDR_UNDEF;                                              \
-    hid_t tag_dxpl_id = dxpl_id;                                                 \
-    FUNC_ENTER_COMMON(!H5_IS_API(FUNC));                        \
-    if(H5AC_tag(tag_dxpl_id, tag, &prev_tag)<0)                                  \
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, err, "unable to apply metadata tag") \
-    FUNC_ENTER_NOAPI_INIT(err)                                     \
-    {
-
-#define FUNC_ENTER_NOAPI_NOINIT_TAG(dxpl_id, tag, err) {              \
-    haddr_t prev_tag = HADDR_UNDEF;                                              \
-    hid_t tag_dxpl_id = dxpl_id;                                                 \
-    FUNC_ENTER_COMMON(!H5_IS_API(FUNC));                        \
-    if(H5AC_tag(tag_dxpl_id, tag, &prev_tag)<0)                                  \
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, err, "unable to apply metadata tag") \
-    H5_PUSH_FUNC                                                                 \
-    {
-
 
 /*-------------------------------------------------------------------------
  * Purpose:  Register function exit for code profiling.  This should be
@@ -2082,250 +2030,6 @@ static herr_t    H5_INTERFACE_INIT_FUNC(void);
     } /*end scope from end of FUNC_ENTER*/                                    \
 } /*end scope from beginning of FUNC_ENTER*/
 
-/* Use this macro when exiting a function that set up a metadata tag */
-#define FUNC_LEAVE_NOAPI_TAG(ret_value, err)                                         \
-        if(H5AC_tag(tag_dxpl_id, prev_tag, NULL)<0)                                  \
-            HDONE_ERROR(H5E_CACHE, H5E_CANTTAG, err, "unable to apply metadata tag") \
-        H5_POP_FUNC                                                                  \
-        return(ret_value);                                                 \
-    } /*end scope from end of FUNC_ENTER*/                                           \
-} /*end scope from beginning of FUNC_ENTER*/
-
-/****************************************/
-/* Revisions to FUNC_ENTER/LEAVE Macros */
-/****************************************/
-
-/* Macros for referencing package initialization symbols */
-#define H5_PACKAGE_INIT_VAR(x) H5_GLUE3(H5_, x, _init_g)
-#define H5_PACKAGE_INIT_FUNC(x) H5_GLUE(x, __pkg_init)
-
-/* Macros to check if a package is initialized */
-#define H5_CHECK_PACKAGE_INIT_REG_YES(asrt)       HDassert(H5_PACKAGE_INIT_VAR(pkg));
-#define H5_CHECK_PACKAGE_INIT_REG_NO(asrt)
-#define H5_CHECK_PACKAGE_INIT_INIT_YES(asrt)
-#define H5_CHECK_PACKAGE_INIT_INIT_NO(asrt)
-
-/* Macros to initialize package, if a package initialization routine is defined */
-#define H5_PKG_YES_INIT(pkg)                  \
-    if(!H5_PACKAGE_INIT_VAR(pkg)) {                \
-        if(H5_GLUE(pkg, _pkg_init)() < 0) {              \
-            /* (Can't use H5E_THROW here) */              \
-            H5E_PRINTF(H5E_CANTINIT, "interface initialization failed");      \
-            ret_value = fail_value;                \
-            goto func_init_failed;                \
-        } /* end if */                          \
-    } /* end if */
-#define H5_PKG_NO_INIT(pkg)
-
-/* Macros to declare package initialization symbols, if a package initialization routine is defined */
-#define H5_PKG_YES_INIT_VAR(pkg) extern hbool_t H5_PACKAGE_INIT_VAR(H5_MY_PKG);
-#define H5_PKG_NO_INIT_VAR(pkg)
-#define H5_PKG_YES_INIT_FUNC(pkg) extern herr_t H5_PACKAGE_INIT_FUNC(pkg)(void);
-#define H5_PKG_NO_INIT_FUNC(pkg)
-
-/* Declare package initialization symbols (if in a package) */
-#define H5_DECLARE_PKG_VAR(pkg_init, pkg) H5_GLUE3(H5_PKG_, pkg_init, _INIT_VAR)(pkg)
-#define H5_DECLARE_PKG_FUNC(pkg_init, pkg) H5_GLUE3(H5_PKG_, pkg_init, _INIT_FUNC)(pkg)
-#ifdef H5_MY_PKG
-H5_DECLARE_PKG_VAR(H5_MY_PKG_INIT, H5_MY_PKG)
-H5_DECLARE_PKG_FUNC(H5_MY_PKG_INIT, H5_MY_PKG)
-#endif /* H5_MY_PKG */
-
-/* API re-entrance variable */
-extern hbool_t H5_api_entered_g;    /* Has library already been entered through API? */
-
-/* Macros for entering different scopes of routines */
-#define H5_PACKAGE_ENTER(pkg, pkg_init, init)              \
-    FUNC_ENTER_CHECK_NAME(H5_IS_PKG(FUNC))              \
-                                                                              \
-    /* The library should be initialized already */            \
-    HDassert(H5_INIT_GLOBAL);                  \
-                                                                              \
-    /* This interface should be initialized already */            \
-    /* (except for package initialization routines :-) */          \
-    H5_GLUE4(H5_CHECK_PACKAGE_INIT_, init, _, pkg_init)(pkg)          \
-                                                                              \
-    /* Push the name of this function on the function stack */          \
-    H5_PUSH_FUNC                          \
-                                                                              \
-    /* Enter scope for this type of function */              \
-    {
-
-#define H5_PRIVATE_ENTER(pkg, pkg_init)                \
-    FUNC_ENTER_CHECK_NAME(H5_IS_PRIV(FUNC))              \
-                                                                              \
-    /* The library should be initialized already */            \
-    HDassert(H5_INIT_GLOBAL);                  \
-                                                                              \
-    /* Initialize this interface if desired */              \
-    H5_GLUE3(H5_PKG_, pkg_init, _INIT)(pkg)              \
-                                                                              \
-    /* Push the name of this function on the function stack */          \
-    H5_PUSH_FUNC                          \
-                                                                              \
-    /* Enter scope for this type of function */              \
-    {{
-
-#define H5_PUBLIC_ENTER(pkg, pkg_init)                \
-    FUNC_ENTER_API_VARS                                                    \
-    FUNC_ENTER_API_THREADSAFE;                                                \
-    FUNC_ENTER_CHECK_NAME(H5_IS_PUB(FUNC))              \
-                                                                              \
-    /* Clear thread error stack when entering public functions */        \
-    H5E_clear_stack(NULL);                              \
-                                                                              \
-    /* Initialize the library or bust */              \
-    if(!(H5_INIT_GLOBAL)) {                  \
-        H5_INIT_GLOBAL = TRUE;                                                \
-        if(H5_init_library() < 0) {                  \
-            /* (Can't use H5E_THROW here) */              \
-            H5E_PRINTF(H5E_CANTINIT, "interface initialization failed");      \
-            ret_value = fail_value;                \
-            goto func_init_failed;                \
-        } /* end if */                          \
-    } /* end if */                          \
-                                                                              \
-    /* Initialize this interface if desired */              \
-    H5_GLUE3(H5_PKG_, pkg_init, _INIT)(pkg)              \
-                                                                              \
-    /* Check for re-entering API routine */              \
-    HDassert(!H5_api_entered_g);                \
-    H5_api_entered_g = TRUE;                  \
-                                                                              \
-    /* Start logging MPI's MPE information */              \
-    BEGIN_MPE_LOG                    \
-                                                                              \
-    /* Push the name of this function on the function stack */          \
-    H5_PUSH_FUNC                          \
-                                                                              \
-    /* Enter scope for this type of function */              \
-    {{{
-
-/* Macros for substituting the package name */
-#define FUNC_ENT_STATIC  H5_PACKAGE_ENTER(H5_MY_PKG, H5_MY_PKG_INIT, REG)
-#define FUNC_ENT_PKGINIT  H5_PACKAGE_ENTER(H5_MY_PKG, H5_MY_PKG_INIT, INIT)
-#define FUNC_ENT_PKG    H5_PACKAGE_ENTER(H5_MY_PKG, H5_MY_PKG_INIT, REG)
-#define FUNC_ENT_PRIV    H5_PRIVATE_ENTER(H5_MY_PKG, H5_MY_PKG_INIT)
-#define FUNC_ENT_PUB    H5_PUBLIC_ENTER(H5_MY_PKG, H5_MY_PKG_INIT)
-
-/* Macros for substituting a function prefix */
-#define FUNC_PREFIX_STATIC  static
-#define FUNC_PREFIX_PKGINIT
-#define FUNC_PREFIX_PKG
-#define FUNC_PREFIX_PRIV
-#define FUNC_PREFIX_PUB
-
-/* Macros for declaring error variables */
-#define FUNC_ERR_VAR_ERR(ret_typ, err)                \
-    hbool_t past_catch = FALSE;                  \
-    ret_typ fail_value = err;
-#define FUNC_ERR_VAR_ERRCATCH(ret_typ, err)                \
-    hbool_t past_catch = FALSE;
-#define FUNC_ERR_VAR_NOERR(ret_typ, err)
-
-/* Use this macro when entering all functions */
-#define BEGIN_FUNC(scope, use_err, ret_typ, ret_init, err, func)        \
-H5_GLUE(FUNC_PREFIX_, scope)                  \
-ret_typ                        \
-func                        \
-/* Open function */                    \
-{                        \
-    ret_typ ret_value = ret_init;                \
-    H5_GLUE(FUNC_ERR_VAR_, use_err)(ret_typ, err)            \
-    H5_GLUE(FUNC_ENT_, scope)
-
-/* Macros for label when a function initialization can fail */
-#define H5_PRIV_YES_FUNC_INIT_FAILED func_init_failed:
-#define H5_PRIV_NO_FUNC_INIT_FAILED
-#define H5_PRIV_FUNC_INIT_FAILED(pkg_init) H5_GLUE3(H5_PRIV_, pkg_init, _FUNC_INIT_FAILED)
-
-/* Macros for leaving different scopes of routines */
-#define FUNC_LEAVE_PKGINIT                         \
-    /* Leave scope for this type of function */              \
-    }                        \
-                                                                              \
-    /* Pop the name of this function off the function stack */          \
-    H5_POP_FUNC
-
-#define FUNC_LEAVE_STATIC                         \
-    /* Leave scope for this type of function */              \
-    }                        \
-                                                                              \
-    /* Pop the name of this function off the function stack */          \
-    H5_POP_FUNC
-
-#define FUNC_LEAVE_PKG                           \
-    /* Leave scope for this type of function */              \
-    }                        \
-                                                                              \
-    /* Pop the name of this function off the function stack */          \
-    H5_POP_FUNC
-
-#define FUNC_LEAVE_PRIV                           \
-    /* Leave scope for this type of function */              \
-    }}                        \
-                                                                              \
-    /* Label for errors during FUNC_ENTER */              \
-    H5_PRIV_FUNC_INIT_FAILED(H5_MY_PKG_INIT)              \
-                                                                              \
-    /* Pop the name of this function off the function stack */          \
-    H5_POP_FUNC
-
-#define FUNC_LEAVE_PUB                           \
-    /* Leave scope for this type of function */              \
-    }}}                        \
-                                                                              \
-    /* Label for errors during FUNC_ENTER */              \
-func_init_failed:                    \
-                                                                              \
-    /* Dump error stack if an error occurred during API routine */        \
-    if(ret_value == fail_value)                  \
-        (void)H5E_dump_api_stack(TRUE);                \
-                                                                              \
-    /* Finish the API tracing info */                \
-    H5TRACE_RETURN(ret_value);                  \
-                                                                              \
-    /* Pop the name of this function off the function stack */          \
-    H5_POP_FUNC                    \
-                                                                              \
-    /* Finish the MPE tracing info */                \
-    FINISH_MPE_LOG                    \
-                                                                              \
-    /* Check for leaving API routine */                \
-    HDassert(H5_api_entered_g);                  \
-    H5_api_entered_g = FALSE;                  \
-                                                                              \
-    /* Release thread-safety semaphore */              \
-    FUNC_LEAVE_API_THREADSAFE
-
-/* Use this macro when leaving all functions */
-#define END_FUNC(scope)                    \
-    /* Scope-specific function conclusion */              \
-    H5_GLUE(FUNC_LEAVE_, scope)                  \
-                                                                              \
-    /* Leave routine */                    \
-    return(ret_value);                    \
-                                                                              \
-    /* Close Function */                  \
-}
-
-/* Macro to begin/end tagging (when FUNC_ENTER_*TAG macros are insufficient).
- * Make sure to use HGOTO_ERROR_TAG and HGOTO_DONE_TAG between these macros! */
-#define H5_BEGIN_TAG(dxpl, tag, err) {                                           \
-    haddr_t prv_tag = HADDR_UNDEF;                                               \
-    hid_t my_dxpl_id = dxpl;                                                     \
-    if(H5AC_tag(my_dxpl_id, tag, &prv_tag) < 0)                                  \
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, err, "unable to apply metadata tag")
-
-#define H5_END_TAG(err)                                                          \
-    if(H5AC_tag(my_dxpl_id, prv_tag, NULL) <0)                                   \
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, err, "unable to apply metadata tag") \
-}
-
-/* Macro for "stringizing" an integer in the C preprocessor (use H5_TOSTRING) */
-/* (use H5_TOSTRING, H5_STRINGIZE is just part of the implementation) */
-#define H5_STRINGIZE(x) #x
-#define H5_TOSTRING(x) H5_STRINGIZE(x)
 
 /* Macro for "glueing" together items, for re-scanning macros */
 #define H5_GLUE(x,y)       x##y

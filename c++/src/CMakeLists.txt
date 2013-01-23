@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.8.10)
+cmake_minimum_required (VERSION 2.8.6)
 PROJECT (HDF5_CPP_SRC)
 
 #-----------------------------------------------------------------------------
@@ -40,7 +40,6 @@ SET (CPP_SRCS
     ${HDF5_CPP_SRC_SOURCE_DIR}/H5IdComponent.cpp
     ${HDF5_CPP_SRC_SOURCE_DIR}/H5IntType.cpp
     ${HDF5_CPP_SRC_SOURCE_DIR}/H5Library.cpp
-    ${HDF5_CPP_SRC_SOURCE_DIR}/H5Location.cpp
     ${HDF5_CPP_SRC_SOURCE_DIR}/H5Object.cpp
     ${HDF5_CPP_SRC_SOURCE_DIR}/H5PredType.cpp
     ${HDF5_CPP_SRC_SOURCE_DIR}/H5PropList.cpp
@@ -75,7 +74,6 @@ SET (CPP_HDRS
     ${HDF5_CPP_SRC_SOURCE_DIR}/H5Include.h
     ${HDF5_CPP_SRC_SOURCE_DIR}/H5IntType.h
     ${HDF5_CPP_SRC_SOURCE_DIR}/H5Library.h
-    ${HDF5_CPP_SRC_SOURCE_DIR}/H5Location.h
     ${HDF5_CPP_SRC_SOURCE_DIR}/H5Object.h
     ${HDF5_CPP_SRC_SOURCE_DIR}/H5PredType.h
     ${HDF5_CPP_SRC_SOURCE_DIR}/H5PropList.h

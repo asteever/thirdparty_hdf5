@@ -155,7 +155,6 @@ typedef struct H5FD_direct_t {
          (file_offset_t)((A)+(Z))<(file_offset_t)(A))
 
 /* Prototypes */
-static herr_t H5FD_direct_term(void);
 static void *H5FD_direct_fapl_get(H5FD_t *file);
 static void *H5FD_direct_fapl_copy(const void *_old_fa);
 static H5FD_t *H5FD_direct_open(const char *name, unsigned flags, hid_t fapl_id,
@@ -177,7 +176,6 @@ static const H5FD_class_t H5FD_direct_g = {
     "direct",          /*name      */
     MAXADDR,          /*maxaddr    */
     H5F_CLOSE_WEAK,        /* fc_degree    */
-    H5FD_direct_term,                           /*terminate             */
     NULL,          /*sb_size    */
     NULL,          /*sb_encode    */
     NULL,          /*sb_decode    */
@@ -274,14 +272,16 @@ done:
  *
  * Purpose:  Shut down the VFD
  *
- * Returns:     Non-negative on success or negative on failure
+ * Return:  <none>
  *
  * Programmer:  Raymond Lu
  *              Wednesday, 20 September 2006
  *
+ * Modification:
+ *
  *---------------------------------------------------------------------------
  */
-static herr_t
+void
 H5FD_direct_term(void)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
@@ -289,7 +289,7 @@ H5FD_direct_term(void)
     /* Reset VFL ID */
     H5FD_DIRECT_g=0;
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
+    FUNC_LEAVE_NOAPI_VOID
 } /* end H5FD_direct_term() */
 
 
@@ -533,8 +533,7 @@ H5FD_direct_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxadd
     /* Get the driver specific information */
     if(NULL == (plist = H5P_object_verify(fapl_id,H5P_FILE_ACCESS)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a file access property list")
-    if(NULL == (fa = (H5FD_direct_fapl_t *)H5P_get_driver_info(plist)))
-        HGOTO_ERROR(H5E_PLIST, H5E_BADVALUE, NULL, "bad VFL driver info")
+    fa = H5P_get_driver_info(plist);
 
     file->fd = fd;
     H5_ASSIGN_OVERFLOW(file->eof,sb.st_size,h5_stat_size_t,haddr_t);
@@ -563,9 +562,9 @@ H5FD_direct_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxadd
      * is to handle correctly the case that the file is in a different file system
      * than the one where the program is running.
      */
-    buf1 = (int *)HDmalloc(sizeof(int));
-    if(HDposix_memalign(&buf2, file->fa.mboundary, file->fa.fbsize) != 0)
-        HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, NULL, "HDposix_memalign failed")
+    buf1 = (int*)HDmalloc(sizeof(int));
+    if (HDposix_memalign(&buf2, file->fa.mboundary, file->fa.fbsize) != 0)
+  HGOTO_ERROR(H5E_RESOURCE, H5E_CANTALLOC, NULL, "HDposix_memalign failed")
 
     if(o_flags & O_CREAT) {
         if(write(file->fd, (void*)buf1, sizeof(int))<0) {

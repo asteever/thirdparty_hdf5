@@ -1,21 +1,5 @@
-cmake_minimum_required (VERSION 2.8.10)
+cmake_minimum_required (VERSION 2.8.6)
 PROJECT (HDF5_F90_SRC C CXX Fortran)
-
-#-----------------------------------------------------------------------------
-# configure def file for shared libs on windows
-IF (WIN32 AND NOT CYGWIN)
-  IF (BUILD_SHARED_LIBS)
-    IF (MSVC)
-      IF (NOT H5_HAVE_PARALLEL)
-        SET (H5_NOPAREXP ";")
-      ENDIF (NOT H5_HAVE_PARALLEL)
-      IF (NOT HDF5_ENABLE_F2003)
-        SET (H5_NOF03EXP ";")
-      ENDIF (NOT HDF5_ENABLE_F2003)
-      CONFIGURE_FILE (${HDF5_F90_SRC_SOURCE_DIR}/hdf5_fortrandll.def.in ${HDF5_F90_SRC_BINARY_DIR}/hdf5_fortrandll.def @ONLY)
-    ENDIF (MSVC)
-  ENDIF (BUILD_SHARED_LIBS)
-ENDIF (WIN32 AND NOT CYGWIN)
 
 #-----------------------------------------------------------------------------
 # Setup the Fortran auto-detection utilities
@@ -142,13 +126,13 @@ SET_TARGET_PROPERTIES (${HDF5_F90_C_LIB_TARGET} PROPERTIES LINKER_LANGUAGE C)
 #-----------------------------------------------------------------------------
 # Fortran 2003 standard
 #-----------------------------------------------------------------------------
-IF (HDF5_ENABLE_F2003)
+IF (FORTRAN_HAVE_ISO_C_BINDING AND HDF5_ENABLE_F2003)
   # default real is 4 bytes, so include double signatures
   SET (F_STATUS "_F03")
-ELSE (HDF5_ENABLE_F2003)
+ELSE (FORTRAN_HAVE_ISO_C_BINDING AND HDF5_ENABLE_F2003)
   # default real is 8 bytes, so exclude double signatures
   SET (F_STATUS "_F90")
-ENDIF (HDF5_ENABLE_F2003)
+ENDIF (FORTRAN_HAVE_ISO_C_BINDING AND HDF5_ENABLE_F2003)
 
 #-----------------------------------------------------------------------------
 # Fortran Real Size
@@ -224,7 +208,11 @@ IF (WIN32 AND NOT CYGWIN)
         BUILD_HDF5_DLL
     )
     IF (MSVC)
-      SET (SHARED_LINK_FLAGS "/DLL /DEF:${HDF5_F90_SRC_BINARY_DIR}/hdf5_fortrandll.def")
+      IF (H5_HAVE_PARALLEL)
+        SET (SHARED_LINK_FLAGS "/DLL /DEF:${HDF5_F90_SRC_SOURCE_DIR}/phdf5_fortrandll.def")
+      ELSE (H5_HAVE_PARALLEL)
+        SET (SHARED_LINK_FLAGS "/DLL /DEF:${HDF5_F90_SRC_SOURCE_DIR}/hdf5_fortrandll.def")
+      ENDIF (H5_HAVE_PARALLEL)
     ENDIF (MSVC)
   ENDIF (BUILD_SHARED_LIBS)
   SET_PROPERTY (TARGET ${HDF5_F90_LIB_TARGET}

@@ -46,8 +46,6 @@ usage: h5dump [OPTIONS] files
                           occur.
      --no-compact-subset  Disable compact form of subsetting and allow the use
                           of "[" in dataset names.
-     -O F, --ddl=F        Output ddl text into file F
-                          Use NULL as filename to suppress ddl display
 
  Subsetting is available by using the following options with a dataset
  attribute. Subsetting is done by selecting a hyperslab from the data.
