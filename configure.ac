@@ -16,7 +16,7 @@
 ## ----------------------------------------------------------------------
 ## Initialize configure.
 ##
-AC_REVISION($Id: configure.ac 22697 2012-08-19 14:35:47Z hdftest $)
+AC_REVISION($Id$)
 AC_PREREQ([2.69])
 
 ## AC_INIT takes the name of the package, the version number, and an
@@ -26,7 +26,7 @@ AC_PREREQ([2.69])
 ## NOTE: Do not forget to change the version number here when we do a
 ## release!!!
 ##
-AC_INIT([HDF5], [1.9.149], [help@hdfgroup.org])
+AC_INIT([HDF5], [1.8.11-snap16], [help@hdfgroup.org])
 AC_CONFIG_SRCDIR([src/H5.c])
 AC_CONFIG_HEADER([src/H5config.h])
 
@@ -1027,6 +1027,18 @@ if test "X${ALLOW_UNSUPPORTED}" != "Xyes"; then
 fi
 
 ## ----------------------------------------------------------------------
+## The GCC compiler on Cygwin running on Windows XP has rounding problem
+## in the data conversion dt_arith.c from unsigned long long to long 
+## double (see bug HDFFV-1264).  I define a macro here to skip the test for
+## Cygwin.  I'll come back and figure out the problem once I'm available.
+## 2010/5/5 - SLU
+case "`uname`" in
+  CYGWIN*)
+    AC_DEFINE([CYGWIN_ULLONG_TO_LDOUBLE_ROUND_PROBLEM], [1], [Define a macro for Cygwin (on XP only) where the compiler has rounding problem converting from unsigned long long to long double])
+    ;;
+esac
+
+## ----------------------------------------------------------------------
 ## Windows won't create DLLs without the following macro.
 ##
 AC_LIBTOOL_WIN32_DLL
@@ -1244,10 +1256,9 @@ case "X-$enable_production" in
 esac
 
 ## ----------------------------------------------------------------------
-## Check for system libraries. "dl" stands for dynamically loaded library
+## Check for system libraries.
 ##
 AC_CHECK_LIB([m], [ceil])
-AC_CHECK_LIB([dl], [dlopen])
 
 if test "`uname`" = "SunOS" -o "`uname -sr`" = "HP-UX B.11.00"; then
   ## ...for Solaris
@@ -1277,7 +1288,6 @@ AC_CHECK_FUNCS([clock_gettime],[have_clock_gettime="yes"],[have_clock_gettime="n
 AC_CHECK_HEADERS([sys/resource.h sys/time.h unistd.h sys/ioctl.h sys/stat.h])
 AC_CHECK_HEADERS([sys/socket.h sys/types.h])
 AC_CHECK_HEADERS([stddef.h setjmp.h features.h])
-AC_CHECK_HEADERS([dirent.h])
 AC_CHECK_HEADERS([stdint.h], [C9x=yes])
 
 ## Darwin
@@ -1350,6 +1360,26 @@ AC_MSG_CHECKING([if configure should try to set up large file support])
 AC_ARG_ENABLE([largefile],
            [AS_HELP_STRING([--disable-largefile],
                            [omit support for large files])])
+
+## The linux-lfs option is deprecated, but if it is used to disable
+## largefile support on linux and the largefile option is not specified,
+## then go ahead and disable large-file support.
+case "$host_cpu-$host_vendor-$host_os" in
+  *linux*)
+    AC_ARG_ENABLE([linux-lfs],
+                  [AS_HELP_STRING([--disable-linux-lfs],
+                                  [Disable support for large (64-bit)
+                                   files on Linux. This option is 
+                                   deprecated in favor of
+                                   --disable-largefile.])])
+
+    if test "$enable_linux_lfs" = no; then
+      if test "$enable_largefile" != yes; then
+        enable_largefile=no
+      fi
+    fi
+    ;;
+esac
 
 ## If largefile support is enabled, then set up appropriate compiler options.
 if test "$enable_largefile" != no; then
@@ -2848,7 +2878,7 @@ if test -n "$PARALLEL"; then
     X-yes)
       AC_CHECK_HEADERS([mpe.h],, [unset MPE])
       AC_CHECK_LIB([mpe], [MPE_Init_log],, [unset MPE])
-      AC_CHECK_LIB([lmpe], [MPE_Init_mpi_io],, [unset MPE])
+      AC_CHECK_LIB([lmpe], [CLOG_Init],, [unset MPE])
       ;;
     *)
       case "$withval" in
@@ -2890,12 +2920,12 @@ if test -n "$PARALLEL"; then
         AM_LDFLAGS="$AM_LDFLAGS -L$mpe_lib"
         AC_CHECK_LIB([mpe], [MPE_Init_log],,
                      [LDFLAGS="$saved_LDFLAGS"; AM_LDFLAGS="$saved_AM_LDFLAGS"; unset MPE])
-        AC_CHECK_LIB([lmpe], [MPE_Init_mpi_io],,
+        AC_CHECK_LIB([lmpe], [CLOG_Init],,
                      [LDFLAGS="$saved_LDFLAGS"; AM_LDFLAGS="$saved_AM_LDFLAGS"; unset MPE])
 
       else
         AC_CHECK_LIB([mpe], [MPE_Init_log],, [unset MPE])
-        AC_CHECK_LIB([lmpe], [MPE_Init_mpi_io],, [unset MPE])
+        AC_CHECK_LIB([lmpe], [CLOG_Init],, [unset MPE])
       fi
       ;;
   esac
@@ -4244,8 +4274,8 @@ AC_MSG_CHECKING([which version of public symbols to use by default])
 AC_ARG_WITH([default-api-version],
             [AS_HELP_STRING([--with-default-api-version=(v16|v18|v110)],
                             [Specify default release version of public symbols
-                             [default=v110]])],,
-            [withval=v110])
+                             [default=v18]])],,
+            withval=v18)
 
 if test "X$withval" = "Xv16"; then
     AC_MSG_RESULT([v16])
@@ -4255,9 +4285,6 @@ if test "X$withval" = "Xv16"; then
 elif test "X$withval" = "Xv18"; then
     AC_MSG_RESULT([v18])
     DEFAULT_API_VERSION=v18
-elif test "X$withval" = "Xv110"; then
-    AC_MSG_RESULT([v110])
-    DEFAULT_API_VERSION=v110
 else
     AC_MSG_ERROR([invalid version of public symbols given])
 fi
@@ -4267,7 +4294,7 @@ fi
 ## if the user insists on doing this via the --enable-unsupported configure
 ## flag, we'll let them.
 if test "X${ALLOW_UNSUPPORTED}" != "Xyes"; then
-  if test "X${DEFAULT_API_VERSION}" != "Xv110" -a "X${DEPRECATED_SYMBOLS}" = "Xno" ; then
+  if test "X${DEFAULT_API_VERSION}" != "Xv18" -a "X${DEPRECATED_SYMBOLS}" = "Xno" ; then
     AC_MSG_ERROR([Removing old public API symbols not allowed when using them as default public API symbols. Use --enable-unsupported to override this error.])
   fi
 fi
@@ -4436,64 +4463,6 @@ if test -n "$TESTPARALLEL"; then
     FORTRAN_PARALLEL_MAKE=fortran/$TESTPARALLEL/Makefile
   fi
 fi
-LT_OUTPUT
-no_create=$saved_no_create
-
-## Then the stamp2 file for H5config.h
-touch ./config/stamp2
-
-## Finally the makefiles
-test "$no_create" = yes || ${CONFIG_SHELL-/bin/sh} $CONFIG_STATUS || exit 1
-
-## Post processing to patch up some deficiencies in libtool
-case $host_os in
-  linux* | freebsd* )
-    ## If gcc is not used, need to set $wl to use "-Wl,"
-    if $CC -v 2>&1 | grep '^gcc' > /dev/null ; then
-      : using gcc
-    else
-      echo 'fixing $wl in' $ofile
-ed - $ofile <<EOF 2> /dev/null
-g/^wl=""/s//wl="-Wl,"/
-w
-q
-EOF
-    fi
-    ;;
-esac
-
-## Are we compiling static libraries, shared libraries, or both?  This
-## is only used for the libhdf5.settings file. We can't just look at
-## $enable_static and $enable_shared because if they're yes the ltconfig
-## might have decided that one or the other is simply not possible.
-## Therefore we have to ask the generated `libtool' shell script
-## which 'features' it has enabled.
-if (./libtool --features | grep '^enable shared libraries' > /dev/null); then
-  enable_shared=yes
-else
-  enable_shared=no
-fi
-
-if (./libtool --features | grep '^enable static libraries' > /dev/null); then
-  enable_static=yes
-else
-  enable_static=no
-fi
-
-if test "X$enable_static" = "Xyes" && test "X$enable_shared" = "Xyes"; then
-  STATIC_SHARED="static, shared"
-elif test "X$enable_static" = "Xyes"; then
-  STATIC_SHARED="static"
-elif test "X$enable_shared" = "Xyes"; then
-  STATIC_SHARED="shared"
-else
-  STATIC_SHARED="none"
-fi
-
-## ----------------------------------------------------------------------
-## Set a macro if shared library is enabled.
-##
-AM_CONDITIONAL([HAVE_SHARED_CONDITIONAL], [test "X$enable_shared" = "Xyes"])
 
 AC_CONFIG_FILES([src/libhdf5.settings
                  Makefile
@@ -4504,7 +4473,6 @@ AC_CONFIG_FILES([src/libhdf5.settings
                  test/H5srcdir_str.h
                  test/testlibinfo.sh
                  test/testlinks_env.sh
-                 test/test_plugin.sh
                  testpar/Makefile
                  testpar/testph5.sh
                  perform/Makefile
@@ -4573,6 +4541,59 @@ AC_CONFIG_FILES([src/libhdf5.settings
                  hl/fortran/examples/run-hlfortran-ex.sh])
 
 AC_OUTPUT
+LT_OUTPUT
+no_create=$saved_no_create
+
+## Then the stamp2 file for H5config.h
+touch ./config/stamp2
+
+## Finally the makefiles
+test "$no_create" = yes || ${CONFIG_SHELL-/bin/sh} $CONFIG_STATUS || exit 1
+
+## Post processing to patch up some deficiencies in libtool
+case $host_os in
+  linux* | freebsd* )
+    ## If gcc is not used, need to set $wl to use "-Wl,"
+    if $CC -v 2>&1 | grep '^gcc' > /dev/null ; then
+      : using gcc
+    else
+      echo 'fixing $wl in' $ofile
+ed - $ofile <<EOF 2> /dev/null
+g/^wl=""/s//wl="-Wl,"/
+w
+q
+EOF
+    fi
+    ;;
+esac
+
+## Are we compiling static libraries, shared libraries, or both?  This
+## is only used for the libhdf5.settings file. We can't just look at
+## $enable_static and $enable_shared because if they're yes the ltconfig
+## might have decided that one or the other is simply not possible.
+## Therefore we have to ask the generated `libtool' shell script
+## which 'features' it has enabled.
+if (./libtool --features | grep '^enable shared libraries' > /dev/null); then
+  enable_shared=yes
+else
+  enable_shared=no
+fi
+
+if (./libtool --features | grep '^enable static libraries' > /dev/null); then
+  enable_static=yes
+else
+  enable_static=no
+fi
+
+if test "X$enable_static" = "Xyes" && test "X$enable_shared" = "Xyes"; then
+  STATIC_SHARED="static, shared"
+elif test "X$enable_static" = "Xyes"; then
+  STATIC_SHARED="static"
+elif test "X$enable_shared" = "Xyes"; then
+  STATIC_SHARED="shared"
+else
+  STATIC_SHARED="none"
+fi
 
 chmod 755 tools/misc/h5cc
 

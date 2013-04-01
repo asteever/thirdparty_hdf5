@@ -205,7 +205,6 @@ ENDIF (CYGWIN)
 #-----------------------------------------------------------------------------
 IF (NOT WINDOWS)
   CHECK_LIBRARY_EXISTS_CONCAT ("m" ceil     H5_HAVE_LIBM)
-  CHECK_LIBRARY_EXISTS_CONCAT ("dl" dlopen     H5_HAVE_LIBDL)
   CHECK_LIBRARY_EXISTS_CONCAT ("ws2_32" WSAStartup  H5_HAVE_LIBWS2_32)
   CHECK_LIBRARY_EXISTS_CONCAT ("wsock32" gethostbyname H5_HAVE_LIBWSOCK32)
 ENDIF (NOT WINDOWS)
@@ -368,7 +367,6 @@ CHECK_INCLUDE_FILE_CONCAT ("sys/types.h"     H5_HAVE_SYS_TYPES_H)
 CHECK_INCLUDE_FILE_CONCAT ("stddef.h"        H5_HAVE_STDDEF_H)
 CHECK_INCLUDE_FILE_CONCAT ("setjmp.h"        H5_HAVE_SETJMP_H)
 CHECK_INCLUDE_FILE_CONCAT ("features.h"      H5_HAVE_FEATURES_H)
-CHECK_INCLUDE_FILE_CONCAT ("dirent.h"        H5_HAVE_DIRENT_H)
 CHECK_INCLUDE_FILE_CONCAT ("stdint.h"        H5_HAVE_STDINT_H)
 
 # IF the c compiler found stdint, check the C++ as well. On some systems this
@@ -1175,18 +1173,3 @@ H5ConversionTests (H5_NO_ALIGNMENT_RESTRICTIONS "Checking IF alignment restricti
 IF (CYGWIN)
   SET (H5_CYGWIN_ULLONG_TO_LDOUBLE_ROUND_PROBLEM 1)
 ENDIF (CYGWIN)
-
-# -----------------------------------------------------------------------
-# wrapper script variables
-# 
-SET (prefix ${CMAKE_INSTALL_PREFIX})
-SET (exec_prefix "\${prefix}")
-SET (libdir "${exec_prefix}/lib")
-SET (includedir "\${prefix}/include")
-SET (host_os ${CMAKE_HOST_SYSTEM_NAME})
-SET (CC ${CMAKE_C_COMPILER})
-SET (CXX ${CMAKE_CXX_COMPILER})
-SET (FC ${CMAKE_Fortran_COMPILER})
-FOREACH (LINK_LIB ${LINK_LIBS})
-  SET (LIBS "${LIBS} -l${LINK_LIB}")
-ENDFOREACH (LINK_LIB ${LINK_LIBS})

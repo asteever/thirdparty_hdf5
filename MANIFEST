@@ -72,7 +72,6 @@
 ./bin/newer
 ./bin/reconfigure      _DO_NOT_DISTRIBUTE_
 ./bin/output_filter.sh
-./bin/README        _DO_NOT_DISTRIBUTE_
 ./bin/release
 ./bin/runtest        _DO_NOT_DISTRIBUTE_
 ./bin/snapshot
@@ -162,89 +161,6 @@
 ./fortran/Makefile.in
 
 ./fortran/robodoc.rc
-./fortran/doc/DevelGuide/toc_index.html
-./fortran/doc/DevelGuide/masterindex.html
-./fortran/doc/DevelGuide/robo_subroutines.html
-./fortran/doc/DevelGuide/robo_sourcefiles.html
-./fortran/doc/DevelGuide/robo_functions.html
-./fortran/doc/DevelGuide/robo_modules.html
-./fortran/doc/DevelGuide/robo_programs.html
-./fortran/doc/DevelGuide/robodoc.css
-./fortran/doc/DevelGuide/test/fortranlib_test_f90.html
-./fortran/doc/DevelGuide/test/tH5A_f90.html
-./fortran/doc/DevelGuide/test/tH5VL_f90.html
-./fortran/doc/DevelGuide/test/tH5D_f90.html
-./fortran/doc/DevelGuide/test/tH5E_f90.html
-./fortran/doc/DevelGuide/test/tH5F_f90.html
-./fortran/doc/DevelGuide/test/tH5G_f90.html
-./fortran/doc/DevelGuide/test/fflush1_f90.html
-./fortran/doc/DevelGuide/test/fortranlib_test_1_8_f90.html
-./fortran/doc/DevelGuide/test/tH5A_1_8_f90.html
-./fortran/doc/DevelGuide/test/tf_f90.html
-./fortran/doc/DevelGuide/test/fflush2_f90.html
-./fortran/doc/DevelGuide/test/fortranlib_test_F03_f90.html
-./fortran/doc/DevelGuide/test/tH5I_f90.html
-./fortran/doc/DevelGuide/test/tH5G_1_8_f90.html
-./fortran/doc/DevelGuide/test/tF2003_f90.html
-./fortran/doc/DevelGuide/test/tH5O_f90.html
-./fortran/doc/DevelGuide/test/tH5P_f90.html
-./fortran/doc/DevelGuide/test/tH5R_f90.html
-./fortran/doc/DevelGuide/test/tH5S_f90.html
-./fortran/doc/DevelGuide/test/tH5Sselect_f90.html
-./fortran/doc/DevelGuide/test/tH5T_f90.html
-./fortran/doc/DevelGuide/test/t_c.html
-./fortran/doc/DevelGuide/test/tH5Z_f90.html
-./fortran/doc/DevelGuide/src/H5Fff_f90.html
-./fortran/doc/DevelGuide/src/H5Zf_c.html
-./fortran/doc/DevelGuide/src/H5Pff_F90_f90.html
-./fortran/doc/DevelGuide/src/H5Aff_F03_f90.html
-./fortran/doc/DevelGuide/src/H5match_types_c.html
-./fortran/doc/DevelGuide/src/H5Rff_F90_f90.html
-./fortran/doc/DevelGuide/src/H5Lff_f90.html
-./fortran/doc/DevelGuide/src/H5FDmpiof_c.html
-./fortran/doc/DevelGuide/src/H5_f_c.html
-./fortran/doc/DevelGuide/src/H5Pff_f90.html
-./fortran/doc/DevelGuide/src/H5Rff_f90.html
-./fortran/doc/DevelGuide/src/H5Tff_f90.html
-./fortran/doc/DevelGuide/src/H5test_kind_f90.html
-./fortran/doc/DevelGuide/src/H5Aff_F90_f90.html
-./fortran/doc/DevelGuide/src/H5Zff_f90.html
-./fortran/doc/DevelGuide/src/HDF5_f90.html
-./fortran/doc/DevelGuide/src/H5_DBLE_InterfaceInclude_f90.html
-./fortran/doc/DevelGuide/src/H5f90kit_c.html
-./fortran/doc/DevelGuide/src/H5Aff_f90.html
-./fortran/doc/DevelGuide/src/H5_DBLE_InterfaceExclude_f90.html
-./fortran/doc/DevelGuide/src/H5Eff_f90.html
-./fortran/doc/DevelGuide/src/H5_ff_F03_f90.html
-./fortran/doc/DevelGuide/src/H5Gff_f90.html
-./fortran/doc/DevelGuide/src/H5test_kind_SIZEOF_f90.html
-./fortran/doc/DevelGuide/src/H5Iff_f90.html
-./fortran/doc/DevelGuide/src/H5Dff_F03_f90.html
-./fortran/doc/DevelGuide/src/H5Af_c.html
-./fortran/doc/DevelGuide/src/H5Off_f90.html
-./fortran/doc/DevelGuide/src/H5Df_c.html
-./fortran/doc/DevelGuide/src/H5Sff_f90.html
-./fortran/doc/DevelGuide/src/H5Ef_c.html
-./fortran/doc/DevelGuide/src/HDF5mpio_f90.html
-./fortran/doc/DevelGuide/src/H5Lff_F03_f90.html
-./fortran/doc/DevelGuide/src/H5Ff_c.html
-./fortran/doc/DevelGuide/src/H5f90global_f90.html
-./fortran/doc/DevelGuide/src/H5Gf_c.html
-./fortran/doc/DevelGuide/src/H5If_c.html
-./fortran/doc/DevelGuide/src/H5Pff_F03_f90.html
-./fortran/doc/DevelGuide/src/H5_ff_F90_f90.html
-./fortran/doc/DevelGuide/src/H5Rff_F03_f90.html
-./fortran/doc/DevelGuide/src/H5Lf_c.html
-./fortran/doc/DevelGuide/src/H5Of_c.html
-./fortran/doc/DevelGuide/src/H5Dff_F90_f90.html
-./fortran/doc/DevelGuide/src/H5Pf_c.html
-./fortran/doc/DevelGuide/src/H5FDmpioff_f90.html
-./fortran/doc/DevelGuide/src/H5_ff_f90.html
-./fortran/doc/DevelGuide/src/H5Rf_c.html
-./fortran/doc/DevelGuide/src/H5Sf_c.html
-./fortran/doc/DevelGuide/src/H5Tf_c.html
-./fortran/doc/DevelGuide/src/H5Dff_f90.html
-./fortran/doc/DevelGuide/src/H5Lff_F90_f90.html
 
 ./fortran/examples/Makefile.am
 ./fortran/examples/Makefile.in
@@ -455,8 +371,6 @@
 ./c++/src/H5IntType.h
 ./c++/src/H5Library.cpp
 ./c++/src/H5Library.h
-./c++/src/H5Location.cpp
-./c++/src/H5Location.h
 ./c++/src/H5Object.cpp
 ./c++/src/H5Object.h
 ./c++/src/H5PredType.cpp
@@ -532,7 +446,7 @@
 ./release_docs/CMake.txt
 ./release_docs/COPYING
 ./release_docs/HISTORY-1_0-1_8_0_rc3.txt
-./release_docs/HISTORY-1_9.txt
+./release_docs/HISTORY-1_8.txt
 ./release_docs/INSTALL
 ./release_docs/INSTALL_Cygwin.txt
 ./release_docs/INSTALL_MinGW.txt
@@ -630,24 +544,10 @@
 ./src/H5Epubgen.h
 ./src/H5Epublic.h
 ./src/H5Eterm.h
-./src/H5EA.c
-./src/H5EAcache.c
-./src/H5EAdbg.c
-./src/H5EAdblkpage.c
-./src/H5EAdblock.c
-./src/H5EAhdr.c
-./src/H5EAiblock.c
-./src/H5EAint.c
-./src/H5EApkg.h
-./src/H5EAprivate.h
-./src/H5EAsblock.c
-./src/H5EAstat.c
-./src/H5EAtest.c
 ./src/H5F.c
 ./src/H5Faccum.c
 ./src/H5Fcwfs.c
 ./src/H5Fdbg.c
-./src/H5Fdeprec.c
 ./src/H5Fefc.c
 ./src/H5Ffake.c
 ./src/H5Fio.c
@@ -661,16 +561,6 @@
 ./src/H5Fprivate.h
 ./src/H5Fpublic.h
 ./src/H5Ftest.c
-./src/H5FA.c
-./src/H5FAcache.c
-./src/H5FAdbg.c
-./src/H5FAdblkpage.c
-./src/H5FAdblock.c
-./src/H5FAhdr.c
-./src/H5FApkg.h
-./src/H5FAprivate.h
-./src/H5FAstat.c
-./src/H5FAtest.c
 ./src/H5FD.c
 ./src/H5FDcore.c
 ./src/H5FDcore.h
@@ -807,7 +697,6 @@
 ./src/H5Odtype.c
 ./src/H5Oefl.c
 ./src/H5Ofill.c
-./src/H5Ofsinfo.c
 ./src/H5Oginfo.c
 ./src/H5Olayout.c
 ./src/H5Olinfo.c
@@ -834,7 +723,6 @@
 ./src/H5Pdcpl.c
 ./src/H5Pdeprec.c
 ./src/H5Pdxpl.c
-./src/H5Pencdec.c
 ./src/H5Pfapl.c
 ./src/H5Pfcpl.c
 ./src/H5Pfmpl.c
@@ -849,9 +737,6 @@
 ./src/H5Ppublic.h
 ./src/H5Pstrcpl.c
 ./src/H5Ptest.c
-./src/H5PL.c
-./src/H5PLprivate.h
-./src/H5PLpublic.h
 ./src/H5R.c
 ./src/H5Rdeprec.c
 ./src/H5Rpkg.h
@@ -951,7 +836,6 @@
 ./test/cache_api.c
 ./test/cache_common.c
 ./test/cache_common.h
-./test/cache_tagging.c
 ./test/cmpd_dset.c
 ./test/corrupt_stab_msg.h5
 ./test/cross_read.c
@@ -961,12 +845,7 @@
 ./test/dt_arith.c
 ./test/dtypes.c
 ./test/dtransform.c
-./test/dynlib1.c
-./test/dynlib2.c
-./test/earray.c
 ./test/efc.c
-./test/enc_dec_plist.c
-./test/enc_dec_plist_with_endianess.c
 ./test/enum.c
 ./test/extend.c
 ./test/external.c
@@ -978,16 +857,14 @@
 ./test/family_v16_00001.h5
 ./test/family_v16_00002.h5
 ./test/family_v16_00003.h5
-./test/farray.c
 ./test/fheap.c
-./test/filespace_1_8.h5
-./test/filespace_1_6.h5
 ./test/freespace.c
 ./test/file_image.c
 ./test/file_image_core_test.h5
 ./test/fill_old.h5
 ./test/fillval.c
 ./test/filter_fail.c
+./test/fixed_idx.h5
 ./test/flush1.c
 ./test/flush2.c
 ./test/gen_bad_ohdr.c           _DO_NOT_DISTRIBUTE_
@@ -996,7 +873,7 @@
 ./test/gen_cross.c              _DO_NOT_DISTRIBUTE_
 ./test/gen_deflate.c            _DO_NOT_DISTRIBUTE_
 ./test/gen_file_image.c         _DO_NOT_DISTRIBUTE_
-./test/gen_filespace.c          _DO_NOT_DISTRIBUTE_
+./test/gen_idx.c                _DO_NOT_DISTRIBUTE_
 ./test/gen_mergemsg.c           _DO_NOT_DISTRIBUTE_
 ./test/gen_new_array.c          _DO_NOT_DISTRIBUTE_
 ./test/gen_new_fill.c           _DO_NOT_DISTRIBUTE_
@@ -1009,9 +886,7 @@
 ./test/gen_old_group.c          _DO_NOT_DISTRIBUTE_
 ./test/gen_old_layout.c         _DO_NOT_DISTRIBUTE_
 ./test/gen_old_mtime.c          _DO_NOT_DISTRIBUTE_
-./test/gen_plist.c              _DO_NOT_DISTRIBUTE_
 ./test/gen_sizes_lheap.c        _DO_NOT_DISTRIBUTE_
-./test/gen_specmetaread.c       _DO_NOT_DISTRIBUTE_
 ./test/gen_udlinks.c            _DO_NOT_DISTRIBUTE_
 ./test/getname.c
 ./test/gheap.c
@@ -1035,7 +910,6 @@
 ./test/ntypes.c
 ./test/ohdr.c
 ./test/objcopy.c
-./test/plugin.c
 ./test/reserved.c
 ./test/pool.c
 ./test/set_extent.c
@@ -1058,7 +932,6 @@
 ./test/testhdf5.c
 ./test/testhdf5.h
 ./test/testlibinfo.sh.in
-./test/test_plugin.sh.in
 ./test/testmeta.c
 ./test/tfile.c
 ./test/tgenprop.c
@@ -1095,55 +968,29 @@
 ./test/test_filters_le.h5
 ./test/test_filters_be.h5
 ./test/gen_filters.c
-./test/chunk_info.c
 
 ./test/testfiles/err_compat_1
 ./test/testfiles/err_compat_2
 ./test/testfiles/error_test_1
 ./test/testfiles/error_test_2
 ./test/testfiles/links_env.out
-./test/testfiles/plist_files/acpl_be
-./test/testfiles/plist_files/acpl_le
-./test/testfiles/plist_files/dapl_be
-./test/testfiles/plist_files/dapl_le
-./test/testfiles/plist_files/dcpl_be
-./test/testfiles/plist_files/dcpl_le
-./test/testfiles/plist_files/dxpl_be
-./test/testfiles/plist_files/dxpl_le
-./test/testfiles/plist_files/fapl_be
-./test/testfiles/plist_files/fapl_le
-./test/testfiles/plist_files/fcpl_be
-./test/testfiles/plist_files/fcpl_le
-./test/testfiles/plist_files/gcpl_be
-./test/testfiles/plist_files/gcpl_le
-./test/testfiles/plist_files/lapl_be
-./test/testfiles/plist_files/lapl_le
-./test/testfiles/plist_files/lcpl_be
-./test/testfiles/plist_files/lcpl_le
-./test/testfiles/plist_files/ocpl_be
-./test/testfiles/plist_files/ocpl_le
-./test/testfiles/plist_files/ocpypl_be
-./test/testfiles/plist_files/ocpypl_le
-./test/testfiles/plist_files/strcpl_be
-./test/testfiles/plist_files/strcpl_le
 
 ./testpar/COPYING
 ./testpar/Makefile.am
 ./testpar/Makefile.in
 ./testpar/t_cache.c
-./testpar/t_chunk_alloc.c
-./testpar/t_coll_chunk.c
 ./testpar/t_dset.c
 ./testpar/t_file.c
 ./testpar/t_file_image.c
-./testpar/t_filter_read.c
 ./testpar/t_mdset.c
 ./testpar/t_mpi.c
 ./testpar/t_ph5basic.c
 ./testpar/t_pflush1.c
 ./testpar/t_pflush2.c
+./testpar/t_chunk_alloc.c
+./testpar/t_coll_chunk.c
+./testpar/t_filter_read.c
 ./testpar/t_posix_compliant.c
-./testpar/t_prop.c
 ./testpar/t_shapesame.c
 ./testpar/t_span_tree.c
 ./testpar/testpar.h
@@ -1310,8 +1157,6 @@
 ./tools/misc/talign.c
 ./tools/misc/testfiles/h5mkgrp_help.txt
 ./tools/misc/testfiles/h5mkgrp_version.txt.in
-./tools/misc/h5perf_gentest.c
-
 
 # h5stat sources
 ./tools/h5stat/Makefile.am
@@ -1364,8 +1209,6 @@
 ./tools/testfiles/filter_fail.h5
 ./tools/testfiles/filter_fail.ddl
 ./tools/testfiles/packedbits.ddl
-./tools/testfiles/file_space.h5
-./tools/testfiles/file_space.ddl
 ./tools/testfiles/h5dump-help.txt
 ./tools/testfiles/tall-1.ddl
 ./tools/testfiles/tall-2.ddl
@@ -1865,7 +1708,6 @@
 ./tools/h5diff/testfiles/h5diff_172.txt
 ./tools/h5diff/testfiles/h5diff_18.txt
 ./tools/h5diff/testfiles/h5diff_18_1.txt
-./tools/h5diff/testfiles/h5diff_19.txt
 ./tools/h5diff/testfiles/h5diff_20.txt
 ./tools/h5diff/testfiles/h5diff_21.txt
 ./tools/h5diff/testfiles/h5diff_22.txt
@@ -2315,6 +2157,7 @@
 ./vms/c++/src/make.com
 ./vms/c++/test/check.com
 ./vms/c++/test/make.com
+./vms/c++/test/H5srcdir_str.h
 
 ./vms/fortran/examples/check.com
 ./vms/fortran/examples/make.com
@@ -2337,7 +2180,6 @@
 ./vms/tools/h5copy/check_h5copy.com
 ./vms/tools/h5dump/make.com
 ./vms/tools/h5dump/check_h5dump.com
-./vms/tools/h5ls/check.com
 ./vms/tools/h5ls/check_h5ls.com
 ./vms/tools/h5ls/make.com
 ./vms/tools/h5diff/check_h5diff.com

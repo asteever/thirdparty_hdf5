@@ -38,9 +38,6 @@ DIRNAME='dirname'
 LS='ls'
 AWK='awk'
 
-# Skip plugin module to test missing filter
-ENVCMD="env HDF5_PLUGIN_PRELOAD=::"
-
 nerrors=0
 verbose=yes
 
@@ -73,7 +70,6 @@ test -d $TESTDIR || mkdir -p $TESTDIR
 # --------------------------------------------------------------------
 LIST_HDF5_TEST_FILES="
 $SRC_H5DUMP_TESTFILES/charsets.h5
-$SRC_H5DUMP_TESTFILES/file_space.h5
 $SRC_H5DUMP_TESTFILES/filter_fail.h5
 $SRC_H5DUMP_TESTFILES/packedbits.h5
 $SRC_H5DUMP_TESTFILES/taindices.h5
@@ -167,7 +163,6 @@ $SRC_H5DUMP_TESTFILES/tvms.h5
 
 LIST_OTHER_TEST_FILES="
 $SRC_H5DUMP_TESTFILES/charsets.ddl
-$SRC_H5DUMP_TESTFILES/file_space.ddl
 $SRC_H5DUMP_TESTFILES/filter_fail.ddl
 $SRC_H5DUMP_TESTFILES/packedbits.ddl
 $SRC_H5DUMP_TESTFILES/tall-1.ddl
@@ -724,70 +719,6 @@ TOOLTEST4() {
 
 }
 
-# same as TOOLTEST4 but disables plugin filter loading
-# silences extra error output on some platforms
-# ADD_H5ERR_MASK_TEST
-TOOLTEST5() {
-
-    expect="$TESTDIR/$1"
-    expect_err="$TESTDIR/`basename $1 .ddl`.err"
-    actual="$TESTDIR/`basename $1 .ddl`.out"
-    actual_err="$TESTDIR/`basename $1 .ddl`.oerr"
-    actual_ext="$TESTDIR/`basename $1 .ddl`.ext"
-    actual_sav=${actual}-sav
-    actual_err_sav=${actual_err}-sav
-    shift
-
-    # Run test.
-    TESTING $DUMPER $@
-    (
-      cd $TESTDIR
-      $ENVCMD $RUNSERIAL $DUMPER_BIN "$@"
-    ) >$actual 2>$actual_err
-
-    # save actual and actual_err in case they are needed later.
-    cp $actual $actual_sav
-    STDOUT_FILTER $actual
-    cp $actual_err $actual_err_sav
-    STDERR_FILTER $actual_err
-
-    # Extract file name, line number, version and thread IDs because they may be different
-    sed -e 's/thread [0-9]*/thread (IDs)/' -e 's/: .*\.c /: (file name) /' \
-        -e 's/line [0-9]*/line (number)/' \
-        -e 's/v[1-9]*\.[0-9]*\./version (number)\./' \
-        -e 's/[1-9]*\.[0-9]*\.[0-9]*[^)]*/version (number)/' \
-        -e 's/H5Eget_auto[1-2]*/H5Eget_auto(1 or 2)/' \
-        -e 's/H5Eset_auto[1-2]*/H5Eset_auto(1 or 2)/' \
-     $actual_err > $actual_ext
-    #cat $actual_ext >> $actual
-
-    if [ ! -f $expect ]; then
-    # Create the expect file if it doesn't yet exist.
-     echo " CREATED"
-     cp $actual $expect
-    elif $CMP $expect $actual; then
-     if $CMP $expect_err $actual_ext; then
-      echo " PASSED"
-    else
-     echo "*FAILED*"
-     echo "    Expected result (*.err) differs from actual result (*.oerr)"
-     nerrors="`expr $nerrors + 1`"
-     test yes = "$verbose" && $DIFF $expect_err $actual_ext |sed 's/^/    /'
-    fi
-    else
-     echo "*FAILED*"
-     echo "    Expected result (*.ddl) differs from actual result (*.out)"
-     nerrors="`expr $nerrors + 1`"
-     test yes = "$verbose" && $DIFF $expect $actual |sed 's/^/    /'
-    fi
-
-    # Clean up output file
-    if test -z "$HDF5_NOCLEANUP"; then
-   rm -f $actual $actual_err $actual_sav $actual_err_sav
-    fi
-
-}
-
 # Print a "SKIP" message
 SKIP() {
    TESTING $DUMPER $@
@@ -1020,7 +951,6 @@ TOOLTEST charsets.ddl --enable-error-stack charsets.h5
 # tests for super block
 TOOLTEST tboot1.ddl --enable-error-stack -H -B -d dset tfcontents1.h5
 TOOLTEST tboot2.ddl --enable-error-stack -B tfcontents2.h5
-TOOLTEST file_space.ddl --enable-error-stack -B file_space.h5
 
 # test -p with a non existing dataset
 TOOLTEST4 tperror.ddl --enable-error-stack -p -d bogus tfcontents1.h5
@@ -1195,7 +1125,7 @@ TOOLTEST4 textlinkfar.ddl --enable-error-stack textlinkfar.h5
 TOOLTEST4 textlink.ddl --enable-error-stack textlink.h5
 
 # test for error stack display (BZ2048)
-TOOLTEST5 filter_fail.ddl --enable-error-stack filter_fail.h5
+TOOLTEST4 filter_fail.ddl --enable-error-stack filter_fail.h5
 
 # test for -o -y for dataset with attributes
 TOOLTEST2 tall-6.exp --enable-error-stack -y -o tall-6.txt -d /g1/g1.1/dset1.1.1 tall.h5

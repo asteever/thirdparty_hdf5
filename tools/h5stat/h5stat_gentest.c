@@ -40,7 +40,6 @@
  */
 static void gen_file(void)
 {
-    hid_t	fcpl; 	/* File creation property */
     hid_t	fapl; 	/* File access property */
     hid_t   file;	/* File id */
     hid_t	gid;	/* Group id */
@@ -57,13 +56,8 @@ static void gen_file(void)
     ret = H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST);
     assert(ret >= 0);
 
-    /* Set file space handling strategy */
-    fcpl = H5Pcreate(H5P_FILE_CREATE);
-    ret = H5Pset_file_space(fcpl, H5F_FILE_SPACE_ALL_PERSIST, (hsize_t)0);
-    assert(ret >= 0);
-
      /* Create dataset */
-    file = H5Fcreate(FILE, H5F_ACC_TRUNC, fcpl, fapl);
+    file = H5Fcreate(FILE, H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
     for(i = 1; i <= NUM_GRPS; i++) {
         sprintf(name, "%s%d", GROUP_NAME,i);
         gid = H5Gcreate2(file, name, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);

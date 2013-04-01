@@ -41,14 +41,6 @@
 #define H5AC__TRACE_FILE_ENABLED	0
 #endif /* H5_METADATA_TRACE_FILE */
 
-#define H5AC__INVALID_TAG      (haddr_t)0
-#define H5AC__IGNORE_TAG       (haddr_t)1
-#define H5AC__SUPERBLOCK_TAG   (haddr_t)2
-#define H5AC__FREESPACE_TAG    (haddr_t)3
-#define H5AC__SOHM_TAG         (haddr_t)4
-#define H5AC__GLOBALHEAP_TAG   (haddr_t)5
-#define H5AC__COPIED_TAG       (haddr_t)6
-
 /* Types of metadata objects cached */
 typedef enum {
     H5AC_BT_ID = 0, 	/*B-tree nodes				     */
@@ -68,14 +60,6 @@ typedef enum {
     H5AC_FSPACE_SINFO_ID,/*free space sections			     */
     H5AC_SOHM_TABLE_ID, /*shared object header message master table  */
     H5AC_SOHM_LIST_ID,  /*shared message index stored as a list      */
-    H5AC_EARRAY_HDR_ID,	/*extensible array header		     */
-    H5AC_EARRAY_IBLOCK_ID, /*extensible array index block	     */
-    H5AC_EARRAY_SBLOCK_ID, /*extensible array super block	     */
-    H5AC_EARRAY_DBLOCK_ID, /*extensible array data block	     */
-    H5AC_EARRAY_DBLK_PAGE_ID, /*extensible array data block page     */
-    H5AC_FARRAY_HDR_ID,	/*fixed array header		     	     */
-    H5AC_FARRAY_DBLOCK_ID, /*fixed array data block	     	     */
-    H5AC_FARRAY_DBLK_PAGE_ID, /*fixed array data block page          */
     H5AC_SUPERBLOCK_ID, /* file superblock                           */
     H5AC_TEST_ID,	/*test entry -- not used for actual files    */
     H5AC_NTYPES		/* Number of types, must be last             */
@@ -128,9 +112,6 @@ typedef enum {
  *
  * CLEAR:	Just marks object as non-dirty.
  *
- * NOTIFY:	Notify client that an action on an entry has taken/will take
- *              place
- *
  * SIZE:	Report the size (on disk) of the specified cache object.
  *		Note that the space allocated on disk may not be contiguous.
  */
@@ -139,16 +120,10 @@ typedef enum {
 #define H5AC_CALLBACK__SIZE_CHANGED_FLAG	H5C_CALLBACK__SIZE_CHANGED_FLAG
 #define H5AC_CALLBACK__MOVED_FLAG             H5C_CALLBACK__MOVED_FLAG
 
-/* Aliases for 'notify action' type & values */
-typedef H5C_notify_action_t     H5AC_notify_action_t;
-#define H5AC_NOTIFY_ACTION_AFTER_INSERT H5C_NOTIFY_ACTION_AFTER_INSERT
-#define H5AC_NOTIFY_ACTION_BEFORE_EVICT H5C_NOTIFY_ACTION_BEFORE_EVICT
-
 typedef H5C_load_func_t		H5AC_load_func_t;
 typedef H5C_flush_func_t	H5AC_flush_func_t;
 typedef H5C_dest_func_t		H5AC_dest_func_t;
 typedef H5C_clear_func_t	H5AC_clear_func_t;
-typedef H5C_notify_func_t	H5AC_notify_func_t;
 typedef H5C_size_func_t		H5AC_size_func_t;
 
 typedef H5C_class_t			H5AC_class_t;
@@ -205,10 +180,6 @@ typedef H5C_t	H5AC_t;
 #define H5AC_LIBRARY_INTERNAL_DEF        0
 #endif /* H5_HAVE_PARALLEL */
 
-#define H5AC_METADATA_TAG_NAME           "H5AC_metadata_tag"
-#define H5AC_METADATA_TAG_SIZE           sizeof(haddr_t)
-#define H5AC_METADATA_TAG_DEF            H5AC__INVALID_TAG
-
 /* Dataset transfer property list for flush calls */
 /* (Collective set, "block before metadata write" set and "library internal" set) */
 /* (Global variable declaration, definition is in H5AC.c) */
@@ -217,7 +188,7 @@ extern hid_t H5AC_dxpl_id;
 /* Dataset transfer property list for independent metadata I/O calls */
 /* (just "library internal" set - i.e. independent transfer mode) */
 /* (Global variable declaration, definition is in H5AC.c) */
-H5_DLLVAR hid_t H5AC_ind_dxpl_id;
+extern hid_t H5AC_ind_dxpl_id;
 
 
 /* Default cache configuration. */
@@ -236,27 +207,27 @@ H5_DLLVAR hid_t H5AC_ind_dxpl_id;
   /* hbool_t     evictions_enabled      = */ TRUE,                            \
   /* hbool_t     set_initial_size       = */ TRUE,                            \
   /* size_t      initial_size           = */ ( 2 * 1024 * 1024),              \
-  /* double      min_clean_fraction     = */ 0.3f,                            \
+  /* double      min_clean_fraction     = */ 0.3,                             \
   /* size_t      max_size               = */ (32 * 1024 * 1024),              \
   /* size_t      min_size               = */ (1 * 1024 * 1024),               \
   /* long int    epoch_length           = */ 50000,                           \
   /* enum H5C_cache_incr_mode incr_mode = */ H5C_incr__threshold,             \
-  /* double      lower_hr_threshold     = */ 0.9f,                            \
-  /* double      increment              = */ 2.0f,                            \
+  /* double      lower_hr_threshold     = */ 0.9,                             \
+  /* double      increment              = */ 2.0,                             \
   /* hbool_t     apply_max_increment    = */ TRUE,                            \
   /* size_t      max_increment          = */ (4 * 1024 * 1024),               \
   /* enum H5C_cache_flash_incr_mode       */                                  \
   /*                    flash_incr_mode = */ H5C_flash_incr__add_space,       \
-  /* double      flash_multiple         = */ 1.0f,                            \
-  /* double      flash_threshold        = */ 0.25f,                           \
+  /* double      flash_multiple         = */ 1.0,                             \
+  /* double      flash_threshold        = */ 0.25,                            \
   /* enum H5C_cache_decr_mode decr_mode = */ H5C_decr__age_out_with_threshold, \
-  /* double      upper_hr_threshold     = */ 0.999f,                          \
-  /* double      decrement              = */ 0.9f,                            \
+  /* double      upper_hr_threshold     = */ 0.999,                           \
+  /* double      decrement              = */ 0.9,                             \
   /* hbool_t     apply_max_decrement    = */ TRUE,                            \
   /* size_t      max_decrement          = */ (1 * 1024 * 1024),               \
   /* int         epochs_before_eviction = */ 3,                               \
   /* hbool_t     apply_empty_reserve    = */ TRUE,                            \
-  /* double      empty_reserve          = */ 0.1f,                            \
+  /* double      empty_reserve          = */ 0.1,                             \
   /* int	 dirty_bytes_threshold  = */ (256 * 1024),                    \
   /* int	metadata_write_strategy = */                                  \
 				       H5AC__DEFAULT_METADATA_WRITE_STRATEGY  \
@@ -272,27 +243,27 @@ H5_DLLVAR hid_t H5AC_ind_dxpl_id;
   /* hbool_t     evictions_enabled      = */ TRUE,                            \
   /* hbool_t     set_initial_size       = */ TRUE,                            \
   /* size_t      initial_size           = */ ( 2 * 1024 * 1024),              \
-  /* double      min_clean_fraction     = */ 0.01f,                           \
+  /* double      min_clean_fraction     = */ 0.01,                            \
   /* size_t      max_size               = */ (32 * 1024 * 1024),              \
   /* size_t      min_size               = */ ( 1 * 1024 * 1024),              \
   /* long int    epoch_length           = */ 50000,                           \
   /* enum H5C_cache_incr_mode incr_mode = */ H5C_incr__threshold,             \
-  /* double      lower_hr_threshold     = */ 0.9f,                            \
-  /* double      increment              = */ 2.0f,                            \
+  /* double      lower_hr_threshold     = */ 0.9,                             \
+  /* double      increment              = */ 2.0,                             \
   /* hbool_t     apply_max_increment    = */ TRUE,                            \
   /* size_t      max_increment          = */ (4 * 1024 * 1024),               \
   /* enum H5C_cache_flash_incr_mode       */                                  \
   /*                    flash_incr_mode = */ H5C_flash_incr__add_space,       \
-  /* double      flash_multiple         = */ 1.4f,                            \
-  /* double      flash_threshold        = */ 0.25f,                           \
+  /* double      flash_multiple         = */ 1.4,                             \
+  /* double      flash_threshold        = */ 0.25,                            \
   /* enum H5C_cache_decr_mode decr_mode = */ H5C_decr__age_out_with_threshold,\
-  /* double      upper_hr_threshold     = */ 0.999f,                          \
-  /* double      decrement              = */ 0.9f,                            \
+  /* double      upper_hr_threshold     = */ 0.999,                           \
+  /* double      decrement              = */ 0.9,                             \
   /* hbool_t     apply_max_decrement    = */ TRUE,                            \
   /* size_t      max_decrement          = */ (1 * 1024 * 1024),               \
   /* int         epochs_before_eviction = */ 3,                               \
   /* hbool_t     apply_empty_reserve    = */ TRUE,                            \
-  /* double      empty_reserve          = */ 0.1f,                            \
+  /* double      empty_reserve          = */ 0.1,                             \
   /* int	 dirty_bytes_threshold  = */ (256 * 1024),                    \
   /* int	metadata_write_strategy = */                                  \
 				       H5AC__DEFAULT_METADATA_WRITE_STRATEGY  \
@@ -321,8 +292,6 @@ H5_DLLVAR hid_t H5AC_ind_dxpl_id;
 #define H5AC__FLUSH_IGNORE_PROTECTED_FLAG H5C__FLUSH_IGNORE_PROTECTED_FLAG
 #define H5AC__FREE_FILE_SPACE_FLAG	  H5C__FREE_FILE_SPACE_FLAG
 #define H5AC__TAKE_OWNERSHIP_FLAG         H5C__TAKE_OWNERSHIP_FLAG
-#define H5AC__FLUSH_LAST_FLAG		  H5C__FLUSH_LAST_FLAG
-#define H5AC__FLUSH_COLLECTIVELY_FLAG	  H5C__FLUSH_COLLECTIVELY_FLAG
 
 
 /* #defines of flags used to report entry status in the
@@ -333,8 +302,6 @@ H5_DLLVAR hid_t H5AC_ind_dxpl_id;
 #define H5AC_ES__IS_DIRTY	0x0002
 #define H5AC_ES__IS_PROTECTED	0x0004
 #define H5AC_ES__IS_PINNED	0x0008
-#define H5AC_ES__IS_FLUSH_DEP_PARENT	0x0010
-#define H5AC_ES__IS_FLUSH_DEP_CHILD	0x0020
 
 
 /* external function declarations: */
@@ -344,15 +311,13 @@ H5_DLL herr_t H5AC_create(const H5F_t *f, H5AC_cache_config_t *config_ptr);
 H5_DLL herr_t H5AC_get_entry_status(const H5F_t *f, haddr_t addr,
 				    unsigned * status_ptr);
 H5_DLL herr_t H5AC_insert_entry(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type,
-    haddr_t addr, void *thing, unsigned int flags);
+                       haddr_t addr, void *thing, unsigned int flags);
 H5_DLL herr_t H5AC_pin_protected_entry(void *thing);
-H5_DLL herr_t H5AC_create_flush_dependency(void *parent_thing, void *child_thing);
 H5_DLL void * H5AC_protect(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type,
                            haddr_t addr, void *udata,
                            H5AC_protect_t rw);
 H5_DLL herr_t H5AC_resize_entry(void *thing, size_t new_size);
 H5_DLL herr_t H5AC_unpin_entry(void *thing);
-H5_DLL herr_t H5AC_destroy_flush_dependency(void *parent_thing, void *child_thing);
 H5_DLL herr_t H5AC_unprotect(H5F_t *f, hid_t dxpl_id,
                              const H5AC_class_t *type, haddr_t addr,
 			     void *thing, unsigned flags);
@@ -399,12 +364,6 @@ H5_DLL herr_t H5AC_close_trace_file( H5AC_t * cache_ptr);
 
 H5_DLL herr_t H5AC_open_trace_file(H5AC_t * cache_ptr,
 		                   const char * trace_file_name);
-
-H5_DLL herr_t H5AC_tag(hid_t dxpl_id, haddr_t metadata_tag, haddr_t * prev_tag);
-
-H5_DLL herr_t H5AC_retag_copied_metadata(H5F_t * f, haddr_t metadata_tag);
-
-H5_DLL herr_t H5AC_ignore_tags(H5F_t * f);
 
 #ifdef H5_HAVE_PARALLEL
 H5_DLL herr_t H5AC_add_candidate(H5AC_t * cache_ptr, haddr_t addr);
