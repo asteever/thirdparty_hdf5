@@ -46,7 +46,7 @@ $ ! Run h5importtest to create input files
 $ !
 $ run [.-]h5importtest
 $ !
-$ type sys$input 
+$ type sys$input
                  Testing ASCII I32 rank 3 - Output BE 
 $ CALL TOOLTEST "txtin16.txt -c txtin32.conf -o" txtin32.h5
 $ !
@@ -55,7 +55,7 @@ $ type sys$input
 $ CALL TOOLTEST  "txtin16.txt -c txtin16.conf -o" txtin16.h5
 $ !
 $ type sys$input 
-                Testing ASCII I8 - rank 3 - Output I8 LE-Chunked+Extended+Compressed 
+                Testing ASCII I8 - rank 3 - Output I16 LE-Chunked+Extended+Compressed 
 $ CALL TOOLTEST  "txtin16.txt -c txtin8.conf  -o" txtin8.h5
 $ !
 $ type sys$input 
@@ -84,11 +84,10 @@ $ CALL TOOLTEST  "binin16.bin -c binin16.conf -o" binin16.h5
 $ !
 $ type sys$input 
                Testing BINARY I8 - rank 3 - Output I16LE + Chunked+Extended+Compressed 
-$ CALL TOOLTEST  "binin8.bin -c binin8.conf  -o" binin8.h5
+$ CALL TOOLTEST  "binin8.bin -c binin8.conf -o" binin8.h5
 $ !
 $ type sys$input 
-           
-   Testing BINARY I32 - rank 3 - Output BE + CHUNKED 
+               Testing BINARY I32 - rank 3 - Output BE + CHUNKED 
 $ CALL TOOLTEST  "binin32.bin -c binin32.conf -o" binin32.h5
 $ !
 $ type sys$input 
@@ -100,23 +99,19 @@ $ type sys$input
 $ CALL TOOLTEST  "binuin32.bin -c binuin32.conf -o" binuin32.h5
 $ !
 $ type sys$input 
-               Testing STR 
-$ CALL TOOLTEST  "txtstr.txt -c txtstr.conf -o" txtstr.h5
-$ !
-$ type sys$input 
-               Testing BINARY I8 CR LF EOF
-$ CALL TOOLTEST  "binin8w.bin -c binin8w.conf -o" binin8w.h5
+               Testing STR
+$ CALL TOOLTEST "txtstr.txt -c txtstr.conf -o" txtstr.h5
 $ !
 $ type sys$input 
                Testing ASCII F64 - rank 1 - INPUT-CLASS TEXTFPE
-$ CALL TOOLTEST  "in64.txt -c textpfe.conf -o" test15.h5
-$
+$ CALL TOOLTEST  "textpfe64.txt -c textpfe.conf -o" textpfe.h5
+
 $
 $ ! Delete temporary files
-$ del *_out.h5;*
+$ del *.h5;*
 $ del *.h5importtxt;*
-$ del b*.h5;*
-$ del txti*.h5;*
+$ del *.bin;*
+$ del *.txt;*
 $ del *.dif;*
 $ !
 $ 

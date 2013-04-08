@@ -387,7 +387,6 @@ int main(void)
     if(H5Pset_cache(fapl, mdc_nelmts, rdcc_nelmts, rdcc_nbytes, rdcc_w0) < 0)
         TEST_ERROR
 
-    /* Run the test again. */
     nerrors += (test_filter_write(filename, fapl, FALSE) < 0	? 1 : 0);
     nerrors += (test_filter_read(filename, fapl) < 0		? 1 : 0);
 

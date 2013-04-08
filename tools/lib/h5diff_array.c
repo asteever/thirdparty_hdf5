@@ -403,7 +403,6 @@ hsize_t diff_array( void *_mem1,
     mcomp_t       members;
     H5T_class_t   type_class;
 
-    h5difftrace("diff_array start\n");
     /* get the size. */
     size = H5Tget_size( m_type );
     type_class = H5Tget_class(m_type);
@@ -521,7 +520,6 @@ hsize_t diff_array( void *_mem1,
         } /* i */
         close_member_types(&members);
     } /* switch */
-    h5difftrace("diff_array finish\n");
 
     return nfound;
 }
@@ -601,7 +599,6 @@ static hsize_t diff_datum(void       *_mem1,
     double        per;
     hbool_t       both_zero;
 
-    h5difftrace("diff_datum start\n");
     type_size = H5Tget_size( m_type );
     type_class = H5Tget_class(m_type);
 
@@ -940,9 +937,9 @@ static hsize_t diff_datum(void       *_mem1,
                 hid_t  region1_id;
                 hid_t  region2_id;
 
-                if ((obj1_id = H5Rdereference2(container1_id, H5P_DEFAULT, H5R_DATASET_REGION, _mem1))<0)
+                if ((obj1_id = H5Rdereference(container1_id, H5R_DATASET_REGION, _mem1))<0)
                     ret= -1;
-                if ((obj2_id = H5Rdereference2(container2_id, H5P_DEFAULT, H5R_DATASET_REGION, _mem2))<0)
+                if ((obj2_id = H5Rdereference(container2_id, H5R_DATASET_REGION, _mem2))<0)
                     ret= -1;
                 if ((region1_id = H5Rget_region(container1_id, H5R_DATASET_REGION, _mem1))<0)
                     ret= -1;
@@ -991,9 +988,9 @@ static hsize_t diff_datum(void       *_mem1,
                     return 0;
                 }
 
-                if((obj1_id = H5Rdereference2(container1_id, H5P_DEFAULT, H5R_OBJECT, _mem1)) < 0)
+                if((obj1_id = H5Rdereference(container1_id, H5R_OBJECT, _mem1)) < 0)
                     ret = -1;
-                if((obj2_id = H5Rdereference2(container2_id, H5P_DEFAULT, H5R_OBJECT, _mem2)) < 0)
+                if((obj2_id = H5Rdereference(container2_id, H5R_OBJECT, _mem2)) < 0)
                     ret = -1;
                 if(ret == -1) {
                     options->err_stat = 1;
@@ -2717,7 +2714,6 @@ static hsize_t diff_datum(void       *_mem1,
     break; /* H5T_FLOAT class */
 
  } /* switch */
-    h5difftrace("diff_datum finish\n");
 
  return nfound;
 }
@@ -3004,7 +3000,6 @@ hsize_t character_compare(char *mem1,
 
     HDmemcpy(&temp1_uchar, mem1, sizeof(unsigned char));
     HDmemcpy(&temp2_uchar, mem2, sizeof(unsigned char));
-    h5difftrace("character_compare start\n");
 
     if (temp1_uchar != temp2_uchar)
     {
@@ -3019,7 +3014,6 @@ hsize_t character_compare(char *mem1,
         }
         nfound++;
     }
-    h5difftrace("character_compare finish\n");
 
     return nfound;
 }
@@ -3056,7 +3050,6 @@ static hsize_t character_compare_opt(unsigned char *mem1,
     HDmemcpy(&temp1_uchar, mem1, sizeof(unsigned char));
     HDmemcpy(&temp2_uchar, mem2, sizeof(unsigned char));
 
-    h5difftrace("character_compare_opt start\n");
     /* -d and !-p */
 
     if (options->d && !options->p)
@@ -3112,7 +3105,6 @@ static hsize_t character_compare_opt(unsigned char *mem1,
         }
         nfound++;
     }
-    h5difftrace("character_compare_opt finish\n");
 
     return nfound;
 
@@ -3151,7 +3143,6 @@ static hsize_t diff_float(unsigned char *mem1,
     hbool_t     isnan1 = FALSE;
     hbool_t     isnan2 = FALSE;
 
-    h5difftrace("diff_float start\n");
 
  /*-------------------------------------------------------------------------
   * -d and !-p
@@ -3389,7 +3380,6 @@ static hsize_t diff_float(unsigned char *mem1,
 
 
     }
-    h5difftrace("diff_float finish\n");
 
     return nfound;
 }
@@ -3427,7 +3417,6 @@ static hsize_t diff_double(unsigned char *mem1,
     hbool_t     isnan1 = FALSE;
     hbool_t     isnan2 = FALSE;
 
-    h5difftrace("diff_double start\n");
  /*-------------------------------------------------------------------------
   * -d and !-p
   *-------------------------------------------------------------------------
@@ -3668,7 +3657,6 @@ static hsize_t diff_double(unsigned char *mem1,
 
 
     }
-    h5difftrace("diff_double finish\n");
 
     return nfound;
 }
@@ -3711,7 +3699,6 @@ static hsize_t diff_ldouble(unsigned char *mem1,
     hbool_t     isnan1 = FALSE;
     hbool_t     isnan2 = FALSE;
 
-    h5difftrace("diff_ldouble start\n");
 
  /*-------------------------------------------------------------------------
   * -d and !-p
@@ -3953,7 +3940,6 @@ static hsize_t diff_ldouble(unsigned char *mem1,
 
 
     }
-    h5difftrace("diff_ldouble finish\n");
 
     return nfound;
 }
@@ -3994,7 +3980,6 @@ static hsize_t diff_schar(unsigned char *mem1,
  double      per;
  hbool_t     both_zero;
 
- h5difftrace("diff_schar start\n");
 
  /* -d and !-p */
  if (options->d && !options->p)
@@ -4136,7 +4121,6 @@ static hsize_t diff_schar(unsigned char *mem1,
      } /* nelmts */
 
  }
- h5difftrace("diff_schar finish\n");
 
  return nfound;
 }
@@ -4173,7 +4157,6 @@ static hsize_t diff_uchar(unsigned char *mem1,
  double        per;
  hbool_t       both_zero;
 
- h5difftrace("diff_uchar start\n");
 
  /* -d and !-p */
  if (options->d && !options->p)
@@ -4316,7 +4299,6 @@ static hsize_t diff_uchar(unsigned char *mem1,
      } /* nelmts */
 
  }
- h5difftrace("diff_uchar finish\n");
 
  return nfound;
 }
@@ -4351,7 +4333,6 @@ static hsize_t diff_short(unsigned char *mem1,
  double        per;
  hbool_t       both_zero;
 
- h5difftrace("diff_short start\n");
  /* -d and !-p */
  if (options->d && !options->p)
  {
@@ -4495,7 +4476,6 @@ static hsize_t diff_short(unsigned char *mem1,
      } /* nelmts */
 
  }
- h5difftrace("diff_short finish\n");
 
  return nfound;
 }
@@ -4531,7 +4511,6 @@ static hsize_t diff_ushort(unsigned char *mem1,
  double         per;
  hbool_t        both_zero;
 
- h5difftrace("diff_ushort start\n");
  /* -d and !-p */
  if (options->d && !options->p)
  {
@@ -4675,7 +4654,6 @@ static hsize_t diff_ushort(unsigned char *mem1,
      } /* nelmts */
 
  }
- h5difftrace("diff_ushort finish\n");
 
  return nfound;
 }
@@ -4712,7 +4690,6 @@ static hsize_t diff_int(unsigned char *mem1,
  double        per;
  hbool_t       both_zero;
 
- h5difftrace("diff_int start\n");
  /* -d and !-p */
  if (options->d && !options->p)
  {
@@ -4856,7 +4833,6 @@ static hsize_t diff_int(unsigned char *mem1,
      } /* nelmts */
 
  }
- h5difftrace("diff_int finish\n");
 
  return nfound;
 }
@@ -4893,7 +4869,6 @@ static hsize_t diff_uint(unsigned char *mem1,
  double         per;
  hbool_t        both_zero;
 
- h5difftrace("diff_uint start\n");
  /* -d and !-p */
  if (options->d && !options->p)
  {
@@ -5035,7 +5010,6 @@ static hsize_t diff_uint(unsigned char *mem1,
      } /* nelmts */
 
  }
- h5difftrace("diff_uint finish\n");
 
  return nfound;
 }
@@ -5072,7 +5046,6 @@ static hsize_t diff_long(unsigned char *mem1,
  double        per;
  hbool_t       both_zero;
 
- h5difftrace("diff_long start\n");
  /* -d and !-p */
  if (options->d && !options->p)
  {
@@ -5219,7 +5192,6 @@ static hsize_t diff_long(unsigned char *mem1,
      } /* nelmts */
 
  }
- h5difftrace("diff_long finish\n");
 
  return nfound;
 }
@@ -5257,7 +5229,6 @@ static hsize_t diff_ulong(unsigned char *mem1,
  double         per;
  hbool_t        both_zero;
 
- h5difftrace("diff_ulong start\n");
 
  /* -d and !-p */
  if (options->d && !options->p)
@@ -5405,7 +5376,6 @@ static hsize_t diff_ulong(unsigned char *mem1,
      } /* nelmts */
 
  }
- h5difftrace("diff_ulong finish\n");
 
  return nfound;
 }
@@ -5442,7 +5412,6 @@ static hsize_t diff_llong(unsigned char *mem1,
  double        per;
  hbool_t       both_zero;
 
- h5difftrace("diff_llong start\n");
  /* -d and !-p */
  if (options->d && !options->p)
  {
@@ -5580,7 +5549,6 @@ static hsize_t diff_llong(unsigned char *mem1,
      } /* nelmts */
 
  }
- h5difftrace("diff_llong finish\n");
 
  return nfound;
 }
@@ -5618,7 +5586,6 @@ static hsize_t diff_ullong(unsigned char *mem1,
  double              per;
  hbool_t             both_zero;
 
- h5difftrace("diff_ullong start\n");
  /* -d and !-p */
  if (options->d && !options->p)
  {
@@ -5760,7 +5727,6 @@ static hsize_t diff_ullong(unsigned char *mem1,
      } /* nelmts */
 
  }
- h5difftrace("diff_ullong finish\n");
 
  return nfound;
 }
@@ -5787,7 +5753,6 @@ int ull2float(unsigned long long ull_value, float *f_value)
  size_t         src_size;
  size_t         dst_size;
 
- h5difftrace("ull2float start\n");
  if((dxpl_id = H5Pcreate(H5P_DATASET_XFER))<0)
   return -1;
 
@@ -5805,7 +5770,6 @@ int ull2float(unsigned long long ull_value, float *f_value)
 
  if(buf)
      HDfree(buf);
- h5difftrace("ull2float finish\n");
 
  return 0;
 
@@ -5815,7 +5779,6 @@ error:
  } H5E_END_TRY;
  if(buf)
      HDfree(buf);
- h5difftrace("ull2float errored\n");
 
  return -1;
 }
@@ -5835,7 +5798,6 @@ error:
 static
 hbool_t equal_double(double value, double expected, diff_opt_t *options)
 {
-    h5difftrace("equal_double start\n");
     if ( options->do_nans )
     {
 
@@ -5872,7 +5834,6 @@ hbool_t equal_double(double value, double expected, diff_opt_t *options)
         if ( ABS( (value-expected) ) < DBL_EPSILON)
             return TRUE;
     }
-    h5difftrace("equal_double finish\n");
 
     return FALSE;
 }
@@ -5890,7 +5851,6 @@ hbool_t equal_double(double value, double expected, diff_opt_t *options)
 static
 hbool_t equal_ldouble(long double value, long double expected, diff_opt_t *options)
 {
-    h5difftrace("equal_ldouble start\n");
     if ( options->do_nans )
     {
 
@@ -5927,7 +5887,6 @@ hbool_t equal_ldouble(long double value, long double expected, diff_opt_t *optio
         if ( ABS( (value-expected) ) < DBL_EPSILON)
             return TRUE;
     }
-    h5difftrace("equal_ldouble finish\n");
 
     return FALSE;
 }
@@ -5949,7 +5908,6 @@ hbool_t equal_ldouble(long double value, long double expected, diff_opt_t *optio
 static
 hbool_t equal_float(float value, float expected, diff_opt_t *options)
 {
-    h5difftrace("equal_float start\n");
     if ( options->do_nans )
     {
 
@@ -5986,7 +5944,6 @@ hbool_t equal_float(float value, float expected, diff_opt_t *options)
         if ( ABS( (value-expected) ) < FLT_EPSILON)
             return TRUE;
     }
-    h5difftrace("equal_float finish\n");
 
     return FALSE;
 
@@ -6016,7 +5973,6 @@ my_isnan(dtype_t type, void *val)
     hbool_t retval = FALSE;
     char s[256];
 
-    h5difftrace("my_isnan start\n");
     if (FLT_FLOAT==type)
     {
         float x;
@@ -6111,7 +6067,6 @@ my_isnan(dtype_t type, void *val)
         }
     }
 #endif /*H5_VMS*/
-    h5difftrace("my_isnan finish\n");
 
     return retval;
 }

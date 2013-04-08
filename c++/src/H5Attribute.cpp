@@ -395,9 +395,9 @@ hsize_t Attribute::getStorageSize() const
 ///\exception	H5::AttributeIException
 ///\par Description
 ///		This attribute is used to identify the file to be flushed.
-// Programmer	Binh-Minh Ribler - 2012
+// Programmer	Binh-Minh Ribler - 2013
 // Modification
-//	Sep 2012 - BMR
+//	Mar 2013 - BMR
 //		Duplicated from H5Location
 //--------------------------------------------------------------------------
 void Attribute::flush(H5F_scope_t scope) const

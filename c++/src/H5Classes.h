@@ -22,7 +22,6 @@ namespace H5 {
 #endif
 	class Exception;
 	class IdComponent;
-	class H5Location;
 	class H5Object;
 	class PropList;
 	class FileCreatPropList;

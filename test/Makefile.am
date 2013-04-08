@@ -40,13 +40,13 @@ check_SCRIPTS = $(TEST_SCRIPT)
 # These tests (fheap, btree2) are under development and are not used by
 # the library yet. Move them to the end so that their failure do not block
 # other current library code tests.
-TEST_PROG= testhdf5 lheap ohdr stab gheap cache cache_api cache_tagging \
+TEST_PROG=testhdf5 lheap ohdr stab gheap cache cache_api \
            pool accum hyperslab istore bittests dt_arith \
            dtypes dsets cmpd_dset filter_fail extend external efc objcopy links unlink \
            big mtime fillval mount flush1 flush2 app_ref enum \
-           set_extent ttsafe enc_dec_plist enc_dec_plist_with_endianess\
+           set_extent ttsafe \
            getname vfd ntypes dangle dtransform reserved cross_read \
-           freespace mf farray earray btree2 fheap file_image
+           freespace mf btree2 fheap file_image
 
 # List programs to be built when testing here. error_test and err_compat are
 # built at the same time as the other tests, but executed by testerror.sh.
@@ -66,10 +66,10 @@ endif
 # --enable-build-all at configure time.
 # The gen_old_* files can only be compiled with older versions of the library
 # so do not appear in this list.
-BUILD_ALL_PROGS=gen_bad_ohdr gen_bogus gen_cross gen_deflate gen_filters gen_new_array \
-    gen_new_fill gen_new_group gen_new_mtime gen_new_super gen_noencoder \
-    gen_nullspace gen_udlinks space_overflow gen_filespace gen_specmetaread \
-    gen_sizes_lheap gen_file_image gen_plist
+BUILD_ALL_PROGS=gen_bad_ohdr gen_bogus gen_cross gen_deflate gen_filters gen_idx \
+    gen_new_array gen_new_fill gen_new_group gen_new_mtime gen_new_super \
+    gen_noencoder gen_nullspace gen_udlinks space_overflow gen_sizes_lheap \
+    gen_file_image
 
 if BUILD_ALL_CONDITIONAL
   noinst_PROGRAMS=$(BUILD_ALL_PROGS)
@@ -79,7 +79,7 @@ if HAVE_SHARED_CONDITIONAL
   # The libh5test library provides common support code for the tests.
   noinst_LTLIBRARIES=libh5test.la
 
-  # The libdynlib1 and libdynlib2 library for testing plugin module plugin.c.
+  # The libdynlib1, libdynlib2, and libdynlib3 library for testing plugin module plugin.c.
   # Build it as shared library if configure is enabled for shared library.
   lib_LTLIBRARIES=libdynlib1.la libdynlib2.la libdynlib3.la
   libdynlib1_la_SOURCES=dynlib1.c
@@ -146,9 +146,9 @@ CHECK_CLEANFILES+=accum.h5 cmpd_dset.h5 compact_dataset.h5 dataset.h5 dset_offse
     new_move_[ab].h5 ntypes.h5 dangle.h5 error_test.h5 err_compat.h5 \
     dtransform.h5 test_filters.h5 get_file_name.h5 tstint[1-2].h5    \
     unlink_chunked.h5 btree2.h5 objcopy_src.h5 objcopy_dst.h5        \
-    objcopy_ext.dat trefer1.h5 trefer2.h5 app_ref.h5 farray.h5       \
-    earray.h5 efc[0-5].h5 log_vfd_out.log                            \
-    new_multi_file_v16-r.h5 new_multi_file_v16-s.h5                  \
+    objcopy_ext.dat trefer1.h5 trefer2.h5 app_ref.h5 tcheck_version_*.out \
+    tcheck_version_*.err efc[0-5].h5 log_vfd_out.log \
+    new_multi_file_v16-r.h5 new_multi_file_v16-s.h5 \
     split_get_file_image_test-m.h5 split_get_file_image_test-r.h5    \
     file_image_core_test.h5.copy
 
