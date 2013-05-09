@@ -44,7 +44,6 @@ IF (BUILD_TESTING)
   # --------------------------------------------------------------------
   SET (HDF5_REFERENCE_FILES
       ${HDF5_TOOLS_SRC_DIR}/testfiles/charsets.ddl
-      ${HDF5_TOOLS_SRC_DIR}/testfiles/file_space.ddl
       ${HDF5_TOOLS_SRC_DIR}/testfiles/filter_fail.ddl
       ${HDF5_TOOLS_SRC_DIR}/testfiles/packedbits.ddl
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tall-1.ddl
@@ -206,7 +205,6 @@ IF (BUILD_TESTING)
   )
   SET (HDF5_REFERENCE_TEST_FILES
       ${HDF5_TOOLS_SRC_DIR}/testfiles/charsets.h5
-      ${HDF5_TOOLS_SRC_DIR}/testfiles/file_space.h5
       ${HDF5_TOOLS_SRC_DIR}/testfiles/filter_fail.h5
       ${HDF5_TOOLS_SRC_DIR}/testfiles/packedbits.h5
       ${HDF5_TOOLS_SRC_DIR}/testfiles/taindices.h5
@@ -1056,8 +1054,6 @@ IF (BUILD_TESTING)
           h5dump-help.out
           charsets.out
           charsets.out.err
-          file_space.out
-          file_space.out.err
           filter_fail.out
           filter_fail.out.err
           packedbits.out
@@ -1517,7 +1513,6 @@ IF (BUILD_TESTING)
   # tests for super block
   ADD_H5_TEST (tboot1 0 --enable-error-stack -H -B -d dset tfcontents1.h5)
   ADD_H5_TEST (tboot2 0 --enable-error-stack -B tfcontents2.h5)
-  ADD_H5_TEST (file_space 0 --enable-error-stack -B file_space.h5)
 
   # test -p with a non existing dataset
   ADD_H5ERR_MASK_TEST (tperror 1 --enable-error-stack -p -d bogus tfcontents1.h5)

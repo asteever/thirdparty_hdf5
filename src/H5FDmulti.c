@@ -73,6 +73,10 @@
 
 #define END_MEMBERS	}}
 
+
+#define H5FD_MULTI_DXPL_PROP_NAME       "H5FD_MULTI_DXPL"
+#define H5FD_MULTI_DXPL_PROP_SIZE       sizeof(H5FD_multi_dxpl_t)
+
 #define H5FD_MULT_MAX_FILE_NAME_LEN     1024
 
 /* The driver identification number, initialized at runtime */
@@ -118,7 +122,6 @@ static int compute_next(H5FD_multi_t *file);
 static int open_members(H5FD_multi_t *file);
 
 /* Callback prototypes */
-static herr_t H5FD_multi_term(void);
 static hsize_t H5FD_multi_sb_size(H5FD_t *file);
 static herr_t H5FD_multi_sb_encode(H5FD_t *file, char *name/*out*/,
 				   unsigned char *buf/*out*/);
@@ -152,7 +155,6 @@ static const H5FD_class_t H5FD_multi_g = {
     "multi",					/*name			*/
     HADDR_MAX,					/*maxaddr		*/
     H5F_CLOSE_WEAK,				/* fc_degree		*/
-    H5FD_multi_term,                            /*terminate             */
     H5FD_multi_sb_size,				/*sb_size		*/
     H5FD_multi_sb_encode,			/*sb_encode		*/
     H5FD_multi_sb_decode,			/*sb_decode		*/
@@ -252,20 +254,21 @@ H5FD_multi_init(void)
  *
  * Purpose:	Shut down the VFD
  *
- * Returns:     Non-negative on success or negative on failure
+ * Return:	<none>
  *
  * Programmer:  Quincey Koziol
  *              Friday, Jan 30, 2004
  *
+ * Modification:
+ *
  *---------------------------------------------------------------------------
  */
-static herr_t
+void
 H5FD_multi_term(void)
 {
     /* Reset VFL ID */
     H5FD_MULTI_g=0;
 
-    return 0;
 } /* end H5FD_multi_term() */
 
 
@@ -1788,6 +1791,18 @@ H5FD_multi_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr,
     /* Clear the error stack */
     H5Eclear2(H5E_DEFAULT);
 
+    /* Get the data transfer properties */
+    if(H5P_FILE_ACCESS_DEFAULT != dxpl_id) {
+        /* Check for existence of multi VFD DXPL property in DXPL */
+        if((prop_exists = H5Pexist(dxpl_id, H5FD_MULTI_DXPL_PROP_NAME)) < 0)
+            H5Epush_ret(func, H5E_ERR_CLS, H5E_PLIST, H5E_CANTGET, "can't check for multi VFD property", -1)
+
+        /* Get the DXPL value, if it exists */
+        if(prop_exists)
+            if(H5Pget(dxpl_id, H5FD_MULTI_DXPL_PROP_NAME, &dx) < 0)
+                H5Epush_ret(func, H5E_ERR_CLS, H5E_PLIST, H5E_CANTGET, "can't get property value", -1)
+    } /* end if */
+
     /* Find the file to which this address belongs */
     for(mt = H5FD_MEM_SUPER; mt < H5FD_MEM_NTYPES; mt = (H5FD_mem_t)(mt + 1)) {
 	mmt = file->fa.memb_map[mt];
@@ -1839,6 +1854,18 @@ H5FD_multi_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr,
 
     /* Clear the error stack */
     H5Eclear2(H5E_DEFAULT);
+
+    /* Get the data transfer properties */
+    if(H5P_FILE_ACCESS_DEFAULT != dxpl_id) {
+        /* Check for existence of multi VFD DXPL property in DXPL */
+        if((prop_exists = H5Pexist(dxpl_id, H5FD_MULTI_DXPL_PROP_NAME)) < 0)
+            H5Epush_ret(func, H5E_ERR_CLS, H5E_PLIST, H5E_CANTGET, "can't check for multi VFD property", -1)
+
+        /* Get the DXPL value, if it exists */
+        if(prop_exists)
+            if(H5Pget(dxpl_id, H5FD_MULTI_DXPL_PROP_NAME, &dx) < 0)
+                H5Epush_ret(func, H5E_ERR_CLS, H5E_PLIST, H5E_CANTGET, "can't get property value", -1)
+    } /* end if */
 
     /* Find the file to which this address belongs */
     for(mt = H5FD_MEM_SUPER; mt < H5FD_MEM_NTYPES; mt = (H5FD_mem_t)(mt + 1)) {
