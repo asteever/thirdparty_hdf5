@@ -214,7 +214,7 @@ int main (void)
     TESTING("    copy of datasets (fill values)");
 
     /* fs_type = 0; fs_size = 0 */
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack(FNAME0,FNAME0OUT,&pack_options) < 0)
         GOERROR;
@@ -234,7 +234,7 @@ int main (void)
     *-------------------------------------------------------------------------
     */
     TESTING("    copy of datasets (all datatypes)");
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack(FNAME1,FNAME1OUT,&pack_options) < 0)
         GOERROR;
@@ -254,7 +254,7 @@ int main (void)
     *-------------------------------------------------------------------------
     */
     TESTING("    copy of datasets (attributes)");
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack(FNAME2,FNAME2OUT,&pack_options) < 0)
         GOERROR;
@@ -273,7 +273,7 @@ int main (void)
     *-------------------------------------------------------------------------
     */
     TESTING("    copy of datasets (hardlinks)");
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack(FNAME3,FNAME3OUT,&pack_options) < 0)
         GOERROR;
@@ -293,7 +293,7 @@ int main (void)
     *-------------------------------------------------------------------------
     */
     TESTING("    copy of allocation early file");
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack(FNAME5,FNAME5OUT,&pack_options) < 0)
         GOERROR;
@@ -314,7 +314,7 @@ int main (void)
     * deflate
     *-------------------------------------------------------------------------
     */
-    TESTING("    adding deflate filter");
+    TESTING("    adding deflate filter (old_format)");
 
 #ifdef H5_HAVE_FILTER_DEFLATE
 
@@ -323,7 +323,34 @@ int main (void)
     *-------------------------------------------------------------------------
     */
 
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
+        GOERROR;
+    if (h5repack_addfilter("dset1:GZIP=9",&pack_options) < 0)
+        GOERROR;
+    if (h5repack_addlayout("dset1:CHUNK=20x10",&pack_options) < 0)
+        GOERROR;
+    if (h5repack(FNAME4,FNAME4OUT,&pack_options) < 0)
+        GOERROR;
+    if (h5diff(FNAME4,FNAME4OUT,NULL,NULL,&diff_options) >0)
+        GOERROR;
+    if (h5repack_verify(FNAME4, FNAME4OUT, &pack_options) <= 0)
+        GOERROR;
+    if (h5repack_end (&pack_options) < 0)
+        GOERROR;
+    PASSED();
+#else
+    SKIPPED();
+#endif
+
+    TESTING("    adding deflate filter (new format)");
+#ifdef H5_HAVE_FILTER_DEFLATE
+    /*-------------------------------------------------------------------------
+    * test an individual object option
+    * 	For new format, "dset1" should be using Fixed Array indexing
+    *-------------------------------------------------------------------------
+    */
+
+    if (h5repack_init (&pack_options, 0, TRUE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack_addfilter("dset1:GZIP=9",&pack_options) < 0)
         GOERROR;
@@ -351,7 +378,7 @@ int main (void)
 
 #ifdef H5_HAVE_FILTER_DEFLATE
 
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack_addfilter("GZIP=1",&pack_options) < 0)
         GOERROR;
@@ -389,7 +416,7 @@ int main (void)
     */
 
     if (szip_can_encode) {
-        if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+        if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
             GOERROR;
         if (h5repack_addfilter("dset2:SZIP=8,EC",&pack_options) < 0)
             GOERROR;
@@ -421,7 +448,7 @@ int main (void)
 
 #if defined (H5_HAVE_FILTER_SZIP)
     if (szip_can_encode) {
-        if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+        if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
             GOERROR;
         if (h5repack_addfilter("SZIP=8,NN",&pack_options) < 0)
             GOERROR;
@@ -452,7 +479,7 @@ int main (void)
     *-------------------------------------------------------------------------
     */
 
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack_addfilter("dset1:SHUF",&pack_options) < 0)
         GOERROR;
@@ -482,7 +509,7 @@ int main (void)
 #ifdef H5_HAVE_FILTER_SHUFFLE
 
     /* fs_type = H5F_FILE_SPACE_ALL_PERSIST; fs_size = 1 */
-    if (h5repack_init (&pack_options, 0, H5_INC_ENUM(H5F_file_space_type_t, fs_type), ++fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, H5_INC_ENUM(H5F_file_space_type_t, fs_type), ++fs_size) < 0)
         GOERROR;
     if (h5repack_addfilter("SHUF",&pack_options) < 0)
         GOERROR;
@@ -511,7 +538,7 @@ int main (void)
     *-------------------------------------------------------------------------
     */
 
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack_addfilter("dset1:FLET",&pack_options) < 0)
         GOERROR;
@@ -541,7 +568,7 @@ int main (void)
 
 #ifdef H5_HAVE_FILTER_FLETCHER32
 
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack_addfilter("FLET",&pack_options) < 0)
         GOERROR;
@@ -569,7 +596,7 @@ int main (void)
     *-------------------------------------------------------------------------
     */
 
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack_addlayout("dset1:CHUNK 20x10",&pack_options) < 0)
         GOERROR;
@@ -608,14 +635,36 @@ int main (void)
     PASSED();
 
 
-    TESTING("    adding layout chunked");
+    TESTING("    adding layout chunked (old format)");
 
     /*-------------------------------------------------------------------------
     * test an individual object option
     *-------------------------------------------------------------------------
     */
 
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
+        GOERROR;
+    if (h5repack_addlayout("dset1:CHUNK=20x10",&pack_options) < 0)
+        GOERROR;
+    if (h5repack(FNAME4,FNAME4OUT,&pack_options) < 0)
+        GOERROR;
+    if (h5diff(FNAME4,FNAME4OUT,NULL,NULL,&diff_options) >0)
+        GOERROR;
+    if (h5repack_verify(FNAME4, FNAME4OUT, &pack_options )<= 0)
+        GOERROR;
+    if (h5repack_end (&pack_options) < 0)
+        GOERROR;
+    PASSED();
+
+    TESTING("    adding layout chunked (new format)");
+
+    /*-------------------------------------------------------------------------
+    * test an individual object option
+    * 	For new format, "dset1" should be using Fixed Array indexing
+    *-------------------------------------------------------------------------
+    */
+
+    if (h5repack_init (&pack_options, 0, TRUE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack_addlayout("dset1:CHUNK=20x10",&pack_options) < 0)
         GOERROR;
@@ -635,7 +684,7 @@ int main (void)
     */
     TESTING("    adding layout chunked to all");
 
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack_addlayout("CHUNK=20x10",&pack_options) < 0)
         GOERROR;
@@ -656,7 +705,7 @@ int main (void)
     * test an individual object option
     *-------------------------------------------------------------------------
     */
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack_addlayout("dset1:CONTI",&pack_options) < 0)
         GOERROR;
@@ -677,7 +726,7 @@ int main (void)
     * test all objects option
     *-------------------------------------------------------------------------
     */
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack_addlayout("CONTI",&pack_options) < 0)
         GOERROR;
@@ -694,7 +743,7 @@ int main (void)
     * do the same test for a file with filters (chunked)
     *-------------------------------------------------------------------------
     */
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack_addlayout("CONTI",&pack_options) < 0)
         GOERROR;
@@ -716,7 +765,7 @@ int main (void)
     *-------------------------------------------------------------------------
     */
 
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack_addlayout("dset1:COMPA",&pack_options) < 0)
         GOERROR;
@@ -738,7 +787,7 @@ int main (void)
     */
 
     /* fs_type = H5F_FILE_SPACE_ALL; fs_size = 2 */
-    if (h5repack_init (&pack_options, 0, H5_INC_ENUM(H5F_file_space_type_t, fs_type), ++fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, H5_INC_ENUM(H5F_file_space_type_t, fs_type), ++fs_size) < 0)
         GOERROR;
     if (h5repack_addlayout("COMPA",&pack_options) < 0)
         GOERROR;
@@ -760,7 +809,7 @@ int main (void)
     * layout compact to contiguous conversion
     *-------------------------------------------------------------------------
     */
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack_addlayout("dset_compact:CONTI",&pack_options) < 0)
         GOERROR;
@@ -780,7 +829,7 @@ int main (void)
     * layout compact to chunk conversion
     *-------------------------------------------------------------------------
     */
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack_addlayout("dset_compact:CHUNK=2x5",&pack_options) < 0)
         GOERROR;
@@ -800,7 +849,7 @@ int main (void)
     * layout compact to compact conversion
     *-------------------------------------------------------------------------
     */
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack_addlayout("dset_compact:COMPA",&pack_options) < 0)
         GOERROR;
@@ -819,7 +868,7 @@ int main (void)
     * layout contiguous to compact conversion
     *-------------------------------------------------------------------------
     */
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack_addlayout("dset_contiguous:COMPA",&pack_options) < 0)
         GOERROR;
@@ -838,7 +887,7 @@ int main (void)
     * layout contiguous to chunk conversion
     *-------------------------------------------------------------------------
     */
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack_addlayout("dset_contiguous:CHUNK=3x6",&pack_options) < 0)
         GOERROR;
@@ -858,7 +907,7 @@ int main (void)
     * layout contiguous to contiguous conversion
     *-------------------------------------------------------------------------
     */
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack_addlayout("dset_contiguous:CONTI",&pack_options) < 0)
         GOERROR;
@@ -877,7 +926,7 @@ int main (void)
     * layout chunked to compact conversion
     *-------------------------------------------------------------------------
     */
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack_addlayout("dset_chunk:COMPA",&pack_options) < 0)
         GOERROR;
@@ -897,7 +946,7 @@ int main (void)
     * layout chunked to contiguous conversion
     *-------------------------------------------------------------------------
     */
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack_addlayout("dset_chunk:CONTI",&pack_options) < 0)
         GOERROR;
@@ -916,7 +965,7 @@ int main (void)
     * layout chunked to chunked conversion
     *-------------------------------------------------------------------------
     */
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack_addlayout("dset_chunk:CHUNK=18x13",&pack_options) < 0)
         GOERROR;
@@ -947,7 +996,7 @@ int main (void)
 #if defined (H5_HAVE_FILTER_SZIP)
     if (szip_can_encode) {
   /* fs_type = H5F_FILE_SPACE_AGGR_VFD; fs_size = 3 */
-        if (h5repack_init (&pack_options, 0, H5_INC_ENUM(H5F_file_space_type_t, fs_type), ++fs_size) < 0)
+        if (h5repack_init (&pack_options, 0, FALSE, H5_INC_ENUM(H5F_file_space_type_t, fs_type), ++fs_size) < 0)
             GOERROR;
         if (h5repack(FNAME7,FNAME7OUT,&pack_options) < 0)
             GOERROR;
@@ -972,7 +1021,7 @@ int main (void)
 
 #if defined (H5_HAVE_FILTER_SZIP)
     if (szip_can_encode) {
-        if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+        if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
             GOERROR;
         if (h5repack_addfilter("dset_szip:NONE",&pack_options) < 0)
             GOERROR;
@@ -997,7 +1046,7 @@ int main (void)
     TESTING("    copy of deflate filter");
 
 #ifdef H5_HAVE_FILTER_DEFLATE
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack(FNAME8,FNAME8OUT,&pack_options) < 0)
         GOERROR;
@@ -1017,7 +1066,7 @@ int main (void)
     TESTING("    removing deflate filter");
 
 #ifdef H5_HAVE_FILTER_DEFLATE
-    if (h5repack_init (&pack_options, 0, fs_type, ++fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, ++fs_size) < 0)
         GOERROR;
     if (h5repack_addfilter("dset_deflate:NONE",&pack_options) < 0)
         GOERROR;
@@ -1040,7 +1089,7 @@ int main (void)
     TESTING("    copy of shuffle filter");
 
 #ifdef H5_HAVE_FILTER_SHUFFLE
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack(FNAME9,FNAME9OUT,&pack_options) < 0)
         GOERROR;
@@ -1059,7 +1108,7 @@ int main (void)
     TESTING("    removing shuffle filter");
 
 #ifdef H5_HAVE_FILTER_SHUFFLE
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack_addfilter("dset_shuffle:NONE",&pack_options) < 0)
         GOERROR;
@@ -1080,7 +1129,7 @@ int main (void)
     TESTING("    copy of fletcher filter");
 
 #ifdef H5_HAVE_FILTER_FLETCHER32
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack(FNAME10,FNAME10OUT,&pack_options) < 0)
         GOERROR;
@@ -1099,7 +1148,7 @@ int main (void)
     TESTING("    removing fletcher filter");
 
 #ifdef H5_HAVE_FILTER_FLETCHER32
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack_addfilter("dset_fletcher32:NONE",&pack_options) < 0)
         GOERROR;
@@ -1121,7 +1170,7 @@ int main (void)
     TESTING("    copy of nbit filter");
 
 #ifdef H5_HAVE_FILTER_NBIT
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack(FNAME12,FNAME12OUT,&pack_options) < 0)
         GOERROR;
@@ -1140,7 +1189,7 @@ int main (void)
     TESTING("    removing nbit filter");
 
 #ifdef H5_HAVE_FILTER_NBIT
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack_addfilter("dset_nbit:NONE",&pack_options) < 0)
         GOERROR;
@@ -1162,7 +1211,7 @@ int main (void)
     TESTING("    adding nbit filter");
 
 #ifdef H5_HAVE_FILTER_NBIT
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack_addfilter("dset_int31:NBIT",&pack_options) < 0)
         GOERROR;
@@ -1184,7 +1233,7 @@ int main (void)
     TESTING("    copy of scaleoffset filter");
 
 #ifdef H5_HAVE_FILTER_SCALEOFFSET
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack(FNAME13,FNAME13OUT,&pack_options) < 0)
         GOERROR;
@@ -1203,7 +1252,7 @@ int main (void)
     TESTING("    removing scaleoffset filter");
 
 #ifdef H5_HAVE_FILTER_SCALEOFFSET
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack_addfilter("dset_scaleoffset:NONE",&pack_options) < 0)
         GOERROR;
@@ -1225,7 +1274,7 @@ int main (void)
     TESTING("    adding scaleoffset filter");
 
 #ifdef H5_HAVE_FILTER_SCALEOFFSET
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack_addfilter("dset_none:SOFF=31,IN",&pack_options) < 0)
         GOERROR;
@@ -1264,7 +1313,7 @@ int main (void)
 
     if (szip_can_encode) {
   /* fs_type = H5F_FILE_SPACE_VFD; fs_size = 4 */
-        if (h5repack_init (&pack_options, 0, H5_INC_ENUM(H5F_file_space_type_t, fs_type), ++fs_size) < 0)
+        if (h5repack_init (&pack_options, 0, FALSE, H5_INC_ENUM(H5F_file_space_type_t, fs_type), ++fs_size) < 0)
             GOERROR;
         if (h5repack_addfilter("dset_deflate:SZIP=8,NN",&pack_options) < 0)
             GOERROR;
@@ -1292,7 +1341,7 @@ int main (void)
     && defined (H5_HAVE_FILTER_FLETCHER32) && defined (H5_HAVE_FILTER_SHUFFLE)
 
     if (szip_can_encode) {
-        if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+        if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
             GOERROR;
         if (h5repack_addfilter("dset_szip:GZIP=1",&pack_options) < 0)
             GOERROR;
@@ -1324,7 +1373,7 @@ int main (void)
 #if defined (H5_HAVE_FILTER_SZIP) && defined (H5_HAVE_FILTER_DEFLATE) \
     && defined (H5_HAVE_FILTER_FLETCHER32) && defined (H5_HAVE_FILTER_SHUFFLE)
 
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack_addfilter("NONE",&pack_options) < 0)
         GOERROR;
@@ -1348,7 +1397,7 @@ int main (void)
     */
     TESTING("    big file");
 
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack(FNAME14,FNAME14OUT,&pack_options) < 0)
         GOERROR;
@@ -1365,7 +1414,7 @@ int main (void)
     *-------------------------------------------------------------------------
     */
     TESTING("    external datasets");
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack(FNAME15,FNAME15OUT,&pack_options) < 0)
         GOERROR;
@@ -1382,7 +1431,7 @@ int main (void)
     *-------------------------------------------------------------------------
     */
     TESTING("    file with userblock");
-    if(h5repack_init(&pack_options, 0, fs_type, fs_size) < 0)
+    if(h5repack_init(&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if(h5repack(FNAME16, FNAME16OUT, &pack_options) < 0)
         GOERROR;
@@ -1401,7 +1450,7 @@ int main (void)
     *-------------------------------------------------------------------------
     */
     TESTING("    latest file format options");
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     pack_options.latest=1;
     pack_options.grp_compact=10;
@@ -1431,7 +1480,7 @@ int main (void)
 
 #if defined (H5_HAVE_FILTER_DEFLATE) && defined (H5_HAVE_FILTER_SHUFFLE)
 
-    if (h5repack_init (&pack_options, 0, fs_type, fs_size) < 0)
+    if (h5repack_init (&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
     if (h5repack_addfilter("GZIP=1",&pack_options) < 0)
         GOERROR;
@@ -1460,7 +1509,7 @@ int main (void)
 
 #ifdef H5_HAVE_FILTER_DEFLATE
 
-    if(h5repack_init(&pack_options, 0, fs_type, fs_size) < 0)
+    if(h5repack_init(&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
 
     /* add the options for a user block size and user block filename */
@@ -1493,7 +1542,7 @@ int main (void)
 
 #ifdef H5_HAVE_FILTER_DEFLATE
 
-    if(h5repack_init(&pack_options, 0, fs_type, fs_size) < 0)
+    if(h5repack_init(&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
 
     /* add the options for aligment */
@@ -1547,7 +1596,7 @@ int main (void)
     */
     TESTING("    file with committed datatypes");
 
-    if(h5repack_init(&pack_options, 0, fs_type, fs_size) < 0)
+    if(h5repack_init(&pack_options, 0, FALSE, fs_type, fs_size) < 0)
         GOERROR;
 
     if(h5repack(FNAME17, FNAME17OUT, &pack_options) < 0)
@@ -1574,7 +1623,7 @@ int main (void)
     /* First run without metadata option. No need to verify the correctness */
     /* since this has been verified by earlier tests. Just record the file */
     /* size of the output file. */
-    if(h5repack_init(&pack_options, 0, H5F_FILE_SPACE_DEFAULT, (hsize_t)0) < 0)
+    if(h5repack_init(&pack_options, 0, FALSE, H5F_FILE_SPACE_DEFAULT, (hsize_t)0) < 0)
         GOERROR;
     if(h5repack(FNAME4, FNAME4OUT, &pack_options) < 0)
         GOERROR;
@@ -1585,7 +1634,7 @@ int main (void)
         GOERROR;
 
     /* run it again with metadata option */
-    if(h5repack_init(&pack_options, 0, H5F_FILE_SPACE_DEFAULT, (hsize_t)0) < 0)
+    if(h5repack_init(&pack_options, 0, FALSE, H5F_FILE_SPACE_DEFAULT, (hsize_t)0) < 0)
         GOERROR;
     pack_options.meta_block_size = 8192;
     if(h5repack(FNAME4, FNAME4OUT, &pack_options) < 0)

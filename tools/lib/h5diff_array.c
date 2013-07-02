@@ -5783,19 +5783,17 @@ static
 int ull2float(unsigned long long ull_value, float *f_value)
 {
  hid_t          dxpl_id;
- unsigned char  *buf = NULL;
+ unsigned char  *buf;
  size_t         src_size;
  size_t         dst_size;
 
  h5difftrace("ull2float start\n");
  if((dxpl_id = H5Pcreate(H5P_DATASET_XFER))<0)
-  goto error;
+  return -1;
 
  src_size = H5Tget_size(H5T_NATIVE_ULLONG);
  dst_size = H5Tget_size(H5T_NATIVE_FLOAT);
  buf = (unsigned char*)HDcalloc(1, MAX(src_size, dst_size));
- if(!buf)
-  goto error;
 
  HDmemcpy(buf, &ull_value, src_size);
 

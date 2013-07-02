@@ -243,7 +243,6 @@ H5_DLL herr_t H5G_obj_remove_by_idx(const struct H5O_loc_t *grp_oloc, H5RS_str_t
     H5_index_t idx_type, H5_iter_order_t order, hsize_t n, hid_t dxpl_id);
 H5_DLL herr_t H5G_obj_lookup_by_idx(const struct H5O_loc_t *grp_oloc, H5_index_t idx_type,
     H5_iter_order_t order, hsize_t n, struct H5O_link_t *lnk, hid_t dxpl_id);
-H5_DLL hid_t H5G_get_create_plist(H5G_t *grp);
 
 /*
  * These functions operate on symbol table nodes.
@@ -278,6 +277,7 @@ H5_DLL H5RS_str_t *H5G_build_fullpath_refstr_str(H5RS_str_t *path_r, const char 
  * These functions operate on group "locations"
  */
 H5_DLL herr_t H5G_loc(hid_t loc_id, H5G_loc_t *loc);
+H5_DLL herr_t H5G_loc_copy(H5G_loc_t *dst, const H5G_loc_t *src, H5_copy_depth_t depth);
 H5_DLL herr_t H5G_loc_find(const H5G_loc_t *loc, const char *name,
     H5G_loc_t *obj_loc/*out*/, hid_t lapl_id, hid_t dxpl_id);
 H5_DLL herr_t H5G_loc_find_by_idx(H5G_loc_t *loc, const char *group_name,

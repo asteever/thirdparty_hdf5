@@ -156,7 +156,7 @@ H5_trace(const double *returning, const char *func, const char *type, ...)
     } /* end if */
 
     /* Get tim for event */
-    if(HDfabs(first_time.etime) < 0.0000000001)
+    if(fabs(first_time.etime) < 0.0000000001)
         /* That is == 0.0, but direct comparison between floats is bad */
         H5_timer_begin(&first_time);
     if(H5_debug_g.ttimes)
@@ -179,10 +179,10 @@ H5_trace(const double *returning, const char *func, const char *type, ...)
                 char tmp[128];
 
                 sprintf(tmp, "%.6f", event_time.etime-first_time.etime);
-                fprintf(out, " %*s ", (int)HDstrlen(tmp), "");
+                fprintf(out, " %*s ", (int)strlen(tmp), "");
             } /* end if */
             for(i = 0; i < current_depth; i++)
-                HDfputc('+', out);
+                fputc('+', out);
             fprintf(out, "%*s%s = ", 2*current_depth, "", func);
         } /* end if */
         else {
@@ -192,11 +192,11 @@ H5_trace(const double *returning, const char *func, const char *type, ...)
     } /* end if */
     else {
         if(current_depth>last_call_depth)
-            HDfputs(" = <delayed>\n", out);
+            fputs(" = <delayed>\n", out);
         if(H5_debug_g.ttimes)
             fprintf(out, "@%.6f ", event_time.etime - first_time.etime);
         for(i = 0; i < current_depth; i++)
-            HDfputc('+', out);
+            fputc('+', out);
         fprintf(out, "%*s%s(", 2*current_depth, "", func);
     } /* end else */
 

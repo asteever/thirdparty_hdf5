@@ -41,6 +41,7 @@
 #define H5AC__TRACE_FILE_ENABLED	0
 #endif /* H5_METADATA_TRACE_FILE */
 
+/* Define global metadata tag values */
 #define H5AC__INVALID_TAG      (haddr_t)0
 #define H5AC__IGNORE_TAG       (haddr_t)1
 #define H5AC__SUPERBLOCK_TAG   (haddr_t)2
@@ -58,6 +59,7 @@ typedef enum {
     H5AC_GHEAP_ID,	/*global heap				     */
     H5AC_OHDR_ID,	/*object header				     */
     H5AC_OHDR_CHK_ID,	/*object header chunk			     */
+    H5AC_OHDR_PROXY_ID, /*object header proxy                        */
     H5AC_BT2_HDR_ID,	/*v2 B-tree header			     */
     H5AC_BT2_INT_ID,	/*v2 B-tree internal node		     */
     H5AC_BT2_LEAF_ID,	/*v2 B-tree leaf node			     */
@@ -73,6 +75,7 @@ typedef enum {
     H5AC_EARRAY_SBLOCK_ID, /*extensible array super block	     */
     H5AC_EARRAY_DBLOCK_ID, /*extensible array data block	     */
     H5AC_EARRAY_DBLK_PAGE_ID, /*extensible array data block page     */
+    H5AC_CHUNK_PROXY_ID, /*chunk proxy				     */
     H5AC_FARRAY_HDR_ID,	/*fixed array header		     	     */
     H5AC_FARRAY_DBLOCK_ID, /*fixed array data block	     	     */
     H5AC_FARRAY_DBLK_PAGE_ID, /*fixed array data block page          */
@@ -107,6 +110,12 @@ typedef enum {
 #define H5AC__DEFAULT_MAX_CACHE_SIZE	H5C__DEFAULT_MAX_CACHE_SIZE
 #define H5AC__DEFAULT_MIN_CLEAN_SIZE	H5C__DEFAULT_MIN_CLEAN_SIZE
 
+/* Check if we are sanity checking tagging */
+#if H5C_DO_TAGGING_SANITY_CHECKS
+#define H5AC_DO_TAGGING_SANITY_CHECKS 1
+#else
+#define H5AC_DO_TAGGING_SANITY_CHECKS 0
+#endif
 
 /*
  * Class methods pertaining to caching.	 Each type of cached object will
@@ -209,10 +218,6 @@ typedef H5C_t	H5AC_t;
 #define H5AC_LIBRARY_INTERNAL_SIZE       sizeof(unsigned)
 #define H5AC_LIBRARY_INTERNAL_DEF        0
 #endif /* H5_HAVE_PARALLEL */
-
-#define H5AC_METADATA_TAG_NAME           "H5AC_metadata_tag"
-#define H5AC_METADATA_TAG_SIZE           sizeof(haddr_t)
-#define H5AC_METADATA_TAG_DEF            H5AC__INVALID_TAG
 
 /* Dataset transfer property list for flush calls */
 /* (Collective set, "block before metadata write" set and "library internal" set) */
@@ -410,6 +415,10 @@ H5_DLL herr_t H5AC_tag(hid_t dxpl_id, haddr_t metadata_tag, haddr_t * prev_tag);
 H5_DLL herr_t H5AC_retag_copied_metadata(H5F_t * f, haddr_t metadata_tag);
 
 H5_DLL herr_t H5AC_ignore_tags(H5F_t * f);
+
+H5_DLL herr_t H5AC_flush_tagged_metadata(H5F_t * f, haddr_t metadata_tag, hid_t dxpl_id);
+
+H5_DLL herr_t H5AC_evict_tagged_metadata(H5F_t * f, haddr_t metadata_tag, hid_t dxpl_id);
 
 #ifdef H5_HAVE_PARALLEL
 H5_DLL herr_t H5AC_add_candidate(H5AC_t * cache_ptr, haddr_t addr);

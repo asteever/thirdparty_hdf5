@@ -100,34 +100,24 @@ static int test_simple(void)
     hssize_t      npals;
 
     /* 8-bit image */
-    unsigned char *buf1 = NULL;
+    unsigned char buf1 [ WIDTH*HEIGHT ];
     unsigned char pal[ PAL_ENTRIES * 3 ];        /* palette array */
     hsize_t       pal_dims[2] = {PAL_ENTRIES,3}; /* palette dimensions */
 
     /* 24-bit image */
-    unsigned char *buf2 = NULL;
+    unsigned char buf2 [ WIDTH*HEIGHT*3 ];
 
     /* read data */
-    unsigned char *buf1_out = NULL;
-    unsigned char *buf2_out = NULL;
+    unsigned char buf1_out [ WIDTH*HEIGHT ];
+    unsigned char buf2_out [ WIDTH*HEIGHT*3 ];
     unsigned char pal_out[ PAL_ENTRIES * 3 ];    /* palette array */
     hsize_t       pal_dims_out[2];               /* palette dimensions */
-
-    /* Allocate image buffers */
-    buf1 = (unsigned char *)HDmalloc(WIDTH * HEIGHT);
-    HDassert(buf1);
-    buf2  = (unsigned char *)HDmalloc(WIDTH * HEIGHT * 3);
-    HDassert(buf2);
-    buf1_out = (unsigned char *)HDmalloc(WIDTH * HEIGHT);
-    HDassert(buf1_out);
-    buf2_out  = (unsigned char *)HDmalloc(WIDTH * HEIGHT * 3);
-    HDassert(buf2_out);
 
     /* create an image */
     space = WIDTH*HEIGHT / PAL_ENTRIES;
     for (i=0, j=0, n=0; i < WIDTH*HEIGHT; i++, j++ )
     {
-        buf1[i] = (unsigned char)n;
+        buf1[i] = n;
         if ( j > space )
         {
             n++;
@@ -136,13 +126,17 @@ static int test_simple(void)
 
     }
 
+
     /* create an image */
     space = WIDTH*HEIGHT / 256;
     for (i=0, j=0, n=0; i < WIDTH*HEIGHT*3; i+=3, j++ )
     {
-        buf2[i]   = (unsigned char)n;
-        buf2[i+1] = 0;
-        buf2[i+2] = (unsigned char)(255 - n);
+        unsigned char r, g, b;
+
+        r = n; g = 0; b = 255-n;
+        buf2[i]   = r;
+        buf2[i+1] = g;
+        buf2[i+2] = b;
         if ( j > space )
         {
             n++;
@@ -156,9 +150,9 @@ static int test_simple(void)
     */
     for ( i=0, n=0; i<PAL_ENTRIES*3; i+=3, n++)
     {
-        pal[i]  =(unsigned char)n;      /* red */
+        pal[i]  =n;      /* red */
         pal[i+1]=0;      /* green */
-        pal[i+2]=(unsigned char)(255 - n);  /* blue */
+        pal[i+2]=255-n;  /* blue */
     }
 
     /* Create a new HDF5 file using default properties. */
@@ -289,15 +283,6 @@ static int test_simple(void)
     *-------------------------------------------------------------------------
     */
 
-    if(buf1)
-        HDfree(buf1);
-    if(buf2)
-        HDfree(buf2);
-    if(buf1_out)
-        HDfree(buf1_out);
-    if(buf2_out)
-        HDfree(buf2_out);
-
     /* Close the file. */
     if(H5Fclose( fid ) < 0)
         goto out;
@@ -309,14 +294,6 @@ static int test_simple(void)
 
     /* error zone, gracefully close */
 out:
-    if(buf1)
-        HDfree(buf1);
-    if(buf2)
-        HDfree(buf2);
-    if(buf1_out)
-        HDfree(buf1_out);
-    if(buf2_out)
-        HDfree(buf2_out);
     H5E_BEGIN_TRY {
         H5Fclose(fid);
     } H5E_END_TRY;
@@ -390,7 +367,7 @@ static int test_data(void)
     */
 
     /* read a PAL file */
-    if (read_palette(PAL2_FILE, rgb, (sizeof(rgb) / sizeof(rgb[0]))) < 0)
+    if (read_palette(PAL2_FILE, rgb, sizeof(rgb))<0)
         goto out;
 
     /* transfer to the HDF5 buffer */
@@ -416,7 +393,7 @@ static int test_data(void)
     */
 
     /* read a PAL file */
-    if (read_palette(PAL3_FILE, rgb, (sizeof(rgb) / sizeof(rgb[0]))) < 0)
+    if (read_palette(PAL3_FILE, rgb, sizeof(rgb))<0)
         goto out;
 
     /* transfer to the HDF5 buffer */
@@ -445,9 +422,9 @@ static int test_data(void)
     */
     for ( i=0, n=0; i<256*3; i+=3, n++)
     {
-        pal[i]  =(unsigned char)n;
+        pal[i]  =n;
         pal[i+1]=0;
-        pal[i+2]=(unsigned char)(255 - n);
+        pal[i+2]=255-n;
     }
 
     /* make a palette */
@@ -501,21 +478,13 @@ static int test_data(void)
     if (H5Fclose(fid)<0)
         goto out;
 
-    /* Release memory buffer */
-    HDfree(image_data);
-
     return 0;
 
     /* error zone, gracefully close */
 out:
-    /* Release memory buffer */
-    if(image_data)
-        HDfree(image_data);
-
     H5E_BEGIN_TRY {
         H5Fclose(fid);
     } H5E_END_TRY;
-
     H5_FAILED();
     return FAIL;
 }
@@ -540,7 +509,6 @@ static int test_generate(void)
     hsize_t  pal_dims[2] = { 256, 3 };
     float    *data;
     int      imax, jmax, kmax;
-    int      n_elements;
     float    valex, xmin, xmax, value;
     FILE     *f;
     const char *data_file = H5_get_srcdir_filename(DATA_FILE4);
@@ -562,7 +530,8 @@ static int test_generate(void)
     if ( f == NULL )
     {
         printf( "Could not find file %s. Try set $srcdir \n", data_file );
-        goto out;
+        H5Fclose(fid);
+        return -1;
     }
 
     /*
@@ -604,30 +573,10 @@ static int test_generate(void)
     fscanf( f, "%d %d %d", &imax, &jmax, &kmax );
     fscanf( f, "%f %f %f", &valex, &xmin, &xmax );
 
-    /* Sanity check on scanned-in values */
-    if(imax < 1 || jmax < 1 || kmax < 1)
-        goto out;
+    data = (float*) HDmalloc ( imax * jmax * kmax * sizeof( float ));
+    image_data = (unsigned char*) HDmalloc ( imax * jmax * kmax * sizeof( unsigned char ));
 
-    /* Test product for integer overflow */
-    if(imax > INT_MAX / jmax)
-        goto out;
-    if(imax * jmax > INT_MAX / kmax)
-        goto out;
-
-    n_elements = imax * jmax * kmax;
-
-    /* Test buffer sizes for overflow */
-    if(n_elements > INT_MAX / (int)sizeof(unsigned char))
-        goto out;
-    if(n_elements > INT_MAX / (int)sizeof(float))
-        goto out;
-    
-    data = (float *)HDmalloc((size_t)n_elements * sizeof( float ));
-    HDassert(data);
-    image_data = (unsigned char *)HDmalloc((size_t)n_elements * sizeof( unsigned char ));
-    HDassert(image_data);
-
-    for ( i = 0; i < n_elements; i++ )
+    for ( i = 0; i < imax * jmax * kmax; i++ )
     {
         fscanf( f, "%f ", &value );
         data[i] = value;
@@ -642,8 +591,10 @@ static int test_generate(void)
 
     TESTING2("make indexed image from all the data");
 
-    for ( i = 0; i < n_elements; i++ )
+    for ( i = 0; i < imax * jmax * kmax; i++ )
+    {
         image_data[i] = (unsigned char)(( 255 * (data[i] - xmin ) ) / (xmax - xmin ));
+    }
 
     /* Make the image */
     if ((H5IMmake_image_8bit(fid,"All data",(hsize_t)imax,(hsize_t)jmax,image_data))<0)
@@ -659,7 +610,7 @@ static int test_generate(void)
 
     TESTING2("make indexed image from land data");
 
-    for ( i = 0; i < n_elements; i++ )
+    for ( i = 0; i < imax * jmax * kmax; i++ )
     {
         if ( data[i] < 0 )
             image_data[i] = 0;
@@ -681,7 +632,7 @@ static int test_generate(void)
 
     TESTING2("make indexed image from sea data");
 
-    for ( i = 0; i < n_elements; i++ )
+    for ( i = 0; i < imax * jmax * kmax; i++ )
     {
         if ( data[i] > 0 )
             image_data[i] = 0;
@@ -724,21 +675,12 @@ static int test_generate(void)
     if (H5Fclose(fid)<0)
         goto out;
 
-    /* Release memory buffers */
-    HDfree(data);
-    HDfree(image_data);
-
     /* Indicate success */
     return 0;
 
     /* error zone, gracefully close */
 out:
-    /* Release memory buffers */
-    if(data)
-        HDfree(data);
-    if(image_data)
-        HDfree(image_data);
-
+    HDfree(data);
     H5E_BEGIN_TRY {
         H5Fclose(fid);
     } H5E_END_TRY;
@@ -771,71 +713,51 @@ static int read_data( const char* fname, /*IN*/
     int    i, n;
     int    color_planes;
     char   str[20];
-    FILE   *f = NULL;
+    FILE   *f;
     int    w, h;
-    int    n_elements;
     const char *data_file = H5_get_srcdir_filename(fname);
-    int    ret_val = -1;
 
     /*-------------------------------------------------------------------------
     * read
     *-------------------------------------------------------------------------
     */
 
-    if(NULL == (f = HDfopen(data_file, "r"))) {
+    f = HDfopen(data_file, "r");
+    if ( f == NULL )
+    {
         printf( "Could not open file %s. Try set $srcdir \n", data_file );
-        goto out;
+        return -1;
     }
 
-    fscanf(f, "%s", str);
-    fscanf(f, "%d", &color_planes);
-    fscanf(f, "%s", str);
-    fscanf(f, "%d", &h);
-    fscanf(f, "%s", str);
-    fscanf(f, "%d", &w);
+    fscanf( f, "%s", str );
+    fscanf( f, "%d", &color_planes );
+    fscanf( f, "%s", str );
+    fscanf( f, "%d", &h);
+    fscanf( f, "%s", str );
+    fscanf( f, "%d", &w);
 
     *width = (hsize_t)w;
     *height = (hsize_t)h;
 
-    /* Check product for overflow */
-    if(w < 1 || h < 1 || color_planes < 1)
-        goto out;
-    if(w > INT_MAX / h)
-        goto out;
-    if(w * h > INT_MAX / color_planes)
-        goto out;
+    if ( image_data )
+    {
+        HDfree( image_data );
+        image_data=NULL;
+    }
 
-    /* Compute buffer size */
-    n_elements = w * h * color_planes;
+    image_data = (unsigned char*) HDmalloc (w * h * color_planes * sizeof( unsigned char ));
 
-    /* Check buffer size for overflow */
-    if(n_elements > INT_MAX / (int)sizeof(unsigned char))
-        goto out;
-
-    /* Release the buffer, if it was previously allocated */
-    if(image_data) {
-        HDfree(image_data);
-        image_data = NULL;
-    } /* end if */
-
-    /* Allocate the image data buffer */
-    image_data = (unsigned char *)HDmalloc((size_t)n_elements * sizeof(unsigned char));
-
-    /* Read data elements */
-    for(i = 0; i < n_elements; i++) {
-        fscanf(f, "%d",&n);
+    for (i = 0; i < h * w * color_planes ; i++)
+    {
+        fscanf( f, "%d",&n );
         image_data[i] = (unsigned char)n;
-    } /* end for */
+    }
+    HDfclose(f);
 
-    /* Indicate success */
-    ret_val = 1;
+    return 1;
 
-out:    
-    if(f)
-        HDfclose(f);
+}
 
-    return ret_val;
-} /* end read_data() */
 
 
 /*-------------------------------------------------------------------------
@@ -960,6 +882,6 @@ static int read_palette(const char* fname,
     /* close file */
     HDfclose(file);
 
-    return (int)nentries;
+    return nentries;
 }
 

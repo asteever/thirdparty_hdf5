@@ -172,7 +172,7 @@ H5T_get_native_type(H5T_t *dtype, H5T_direction_t direction, size_t *struct_alig
 
     FUNC_ENTER_NOAPI(NULL)
 
-    HDassert(dtype);
+    assert(dtype);
 
     if(H5T_NO_CLASS == (h5_class = H5T_get_class(dtype, FALSE)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a valid class")
@@ -355,7 +355,6 @@ H5T_get_native_type(H5T_t *dtype, H5T_direction_t direction, size_t *struct_alig
 
         case H5T_ENUM:
             {
-                H5T_path_t *tpath;	/* Type conversion info	*/
                 hid_t       super_type_id, nat_super_type_id;
 
                 /* Don't need to do anything special for alignment, offset since the ENUM type usually is integer. */
@@ -381,10 +380,6 @@ H5T_get_native_type(H5T_t *dtype, H5T_direction_t direction, size_t *struct_alig
                 if(NULL == (new_type = H5T__enum_create(nat_super_type)))
                     HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "unable to create enum type")
 
-                /* Find the conversion function */
-                if(NULL == (tpath = H5T_path_find(super_type, nat_super_type, NULL, NULL, H5P_DEFAULT, FALSE)))
-                    HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, NULL, "unable to convert between src and dst data types")
-
                 /* Retrieve member info and insert members into new enum type */
                 if((snmemb = H5T_get_nmembers(dtype)) <= 0)
                     HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "enumerate data type doesn't have any member")
@@ -396,7 +391,7 @@ H5T_get_native_type(H5T_t *dtype, H5T_direction_t direction, size_t *struct_alig
                         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "cannot get member value")
                     HDmemcpy(memb_value, tmp_memb_value, H5T_get_size(super_type));
 
-                    if(H5T_convert(tpath, super_type_id, nat_super_type_id, (size_t)1, (size_t)0, (size_t)0, memb_value, NULL, H5P_DEFAULT) < 0)
+                    if(H5Tconvert(super_type_id, nat_super_type_id, (size_t)1, memb_value, NULL, H5P_DEFAULT) < 0)
                         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "cannot get member value")
 
                     if(H5T__enum_insert(new_type, memb_name, memb_value) < 0)
@@ -407,10 +402,10 @@ H5T_get_native_type(H5T_t *dtype, H5T_direction_t direction, size_t *struct_alig
                 tmp_memb_value = H5MM_xfree(tmp_memb_value);
 
                 /* Close base type */
-                if(H5I_dec_app_ref(nat_super_type_id) < 0)
+                if(H5Tclose(nat_super_type_id) < 0)
                     HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "cannot close datatype")
-                /* Close super type */
-                if(H5I_dec_app_ref(super_type_id) < 0)
+                 /* Close super type */
+                if(H5Tclose(super_type_id) < 0)
                     HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "cannot close datatype")
 
                 ret_value = new_type;
@@ -576,19 +571,19 @@ H5T_get_native_integer(size_t prec, H5T_sign_t sign, H5T_direction_t direction,
     FUNC_ENTER_NOAPI(NULL)
 
     if(direction == H5T_DIR_DEFAULT || direction == H5T_DIR_ASCEND) {
-        if(prec <= H5T_get_precision((H5T_t *)H5I_object(H5T_NATIVE_SCHAR_g))) {
+        if(prec <= H5Tget_precision(H5T_NATIVE_SCHAR)) {
             match = H5T_NATIVE_INT_MATCH_CHAR;
             native_size = sizeof(char);
-        } else if(prec<=H5T_get_precision((H5T_t *)H5I_object(H5T_NATIVE_SHORT_g))) {
+        } else if(prec<=H5Tget_precision(H5T_NATIVE_SHORT)) {
             match = H5T_NATIVE_INT_MATCH_SHORT;
             native_size = sizeof(short);
-        } else if(prec<=H5T_get_precision((H5T_t *)H5I_object(H5T_NATIVE_INT_g))) {
+        } else if(prec<=H5Tget_precision(H5T_NATIVE_INT)) {
             match = H5T_NATIVE_INT_MATCH_INT;
             native_size = sizeof(int);
-        } else if(prec <= H5T_get_precision((H5T_t *)H5I_object(H5T_NATIVE_LONG_g))) {
+        } else if(prec <= H5Tget_precision(H5T_NATIVE_LONG)) {
             match = H5T_NATIVE_INT_MATCH_LONG;
             native_size = sizeof(long);
-        } else if(prec <= H5T_get_precision((H5T_t *)H5I_object(H5T_NATIVE_LLONG_g))) {
+        } else if(prec <= H5Tget_precision(H5T_NATIVE_LLONG)) {
             match = H5T_NATIVE_INT_MATCH_LLONG;
             native_size = sizeof(long long);
         } else {  /* If no native type matches the querried datatype, simply choose the type of biggest size. */
@@ -596,16 +591,16 @@ H5T_get_native_integer(size_t prec, H5T_sign_t sign, H5T_direction_t direction,
             native_size = sizeof(long long);
         }
     } else if(direction == H5T_DIR_DESCEND) {
-        if(prec > H5T_get_precision((H5T_t *)H5I_object(H5T_NATIVE_LONG_g))) {
+        if(prec > H5Tget_precision(H5T_NATIVE_LONG)) {
             match = H5T_NATIVE_INT_MATCH_LLONG;
             native_size = sizeof(long long);
-        } else if(prec > H5T_get_precision((H5T_t *)H5I_object(H5T_NATIVE_INT_g))) {
+        } else if(prec > H5Tget_precision(H5T_NATIVE_INT)) {
             match = H5T_NATIVE_INT_MATCH_LONG;
             native_size = sizeof(long);
-        } else if(prec > H5T_get_precision((H5T_t *)H5I_object(H5T_NATIVE_SHORT_g))) {
+        } else if(prec > H5Tget_precision(H5T_NATIVE_SHORT)) {
             match = H5T_NATIVE_INT_MATCH_INT;
             native_size = sizeof(int);
-        } else if(prec > H5T_get_precision((H5T_t *)H5I_object(H5T_NATIVE_SCHAR_g))) {
+        } else if(prec > H5Tget_precision(H5T_NATIVE_SCHAR)) {
             match = H5T_NATIVE_INT_MATCH_SHORT;
             native_size = sizeof(short);
         } else {
@@ -715,7 +710,7 @@ H5T_get_native_float(size_t size, H5T_direction_t direction, size_t *struct_alig
 
     FUNC_ENTER_NOAPI(NULL)
 
-    HDassert(size>0);
+    assert(size>0);
 
     if(direction == H5T_DIR_DEFAULT || direction == H5T_DIR_ASCEND) {
         if(size<=sizeof(float)) {
@@ -791,7 +786,7 @@ H5T_get_native_float(size_t size, H5T_direction_t direction, size_t *struct_alig
     } /* end switch */
 
     /* Create new native type */
-    HDassert(tid>=0);
+    assert(tid>=0);
     if(NULL==(dt=(H5T_t *)H5I_object(tid)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a data type")
     if((ret_value=H5T_copy(dt, H5T_COPY_TRANSIENT))==NULL)
@@ -834,19 +829,19 @@ H5T_get_native_bitfield(size_t prec, H5T_direction_t direction, size_t *struct_a
     FUNC_ENTER_NOAPI(NULL)
 
     if(direction == H5T_DIR_DEFAULT || direction == H5T_DIR_ASCEND) {
-        if(prec<=H5T_get_precision((H5T_t *)H5I_object(H5T_NATIVE_B8_g))) {
+        if(prec<=H5Tget_precision(H5T_NATIVE_B8)) {
             tid = H5T_NATIVE_B8;
             native_size = 1;
             align = H5T_NATIVE_UINT8_ALIGN_g;
-        } else if(prec<=H5T_get_precision((H5T_t *)H5I_object(H5T_NATIVE_B16_g))) {
+        } else if(prec<=H5Tget_precision(H5T_NATIVE_B16)) {
             tid = H5T_NATIVE_B16;
             native_size = 2;
             align = H5T_NATIVE_UINT16_ALIGN_g;
-        } else if(prec<=H5T_get_precision((H5T_t *)H5I_object(H5T_NATIVE_B32_g))) {
+        } else if(prec<=H5Tget_precision(H5T_NATIVE_B32)) {
             tid = H5T_NATIVE_B32;
             native_size = 4;
             align = H5T_NATIVE_UINT32_ALIGN_g;
-        } else if(prec<=H5T_get_precision((H5T_t *)H5I_object(H5T_NATIVE_B64_g))) {
+        } else if(prec<=H5Tget_precision(H5T_NATIVE_B64)) {
             tid = H5T_NATIVE_B64;
             native_size = 8;
             align = H5T_NATIVE_UINT64_ALIGN_g;
@@ -856,15 +851,15 @@ H5T_get_native_bitfield(size_t prec, H5T_direction_t direction, size_t *struct_a
             align = H5T_NATIVE_UINT64_ALIGN_g;
         }
     } else if(direction == H5T_DIR_DESCEND) {
-        if(prec>H5T_get_precision((H5T_t *)H5I_object(H5T_NATIVE_B32_g))) {
+        if(prec>H5Tget_precision(H5T_NATIVE_B32)) {
             tid = H5T_NATIVE_B64;
             native_size = 8;
             align = H5T_NATIVE_UINT64_ALIGN_g;
-        } else if(prec>H5T_get_precision((H5T_t *)H5I_object(H5T_NATIVE_B16_g))) {
+        } else if(prec>H5Tget_precision(H5T_NATIVE_B16)) {
             tid = H5T_NATIVE_B32;
             native_size = 4;
             align = H5T_NATIVE_UINT32_ALIGN_g;
-        } else if(prec>H5T_get_precision((H5T_t *)H5I_object(H5T_NATIVE_B8_g))) {
+        } else if(prec>H5Tget_precision(H5T_NATIVE_B8)) {
             tid = H5T_NATIVE_B16;
             native_size = 2;
             align = H5T_NATIVE_UINT16_ALIGN_g;
@@ -876,7 +871,7 @@ H5T_get_native_bitfield(size_t prec, H5T_direction_t direction, size_t *struct_a
     }
 
     /* Create new native type */
-    HDassert(tid>=0);
+    assert(tid>=0);
     if(NULL==(dt=(H5T_t *)H5I_object(tid)))
          HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, NULL, "not a data type")
 

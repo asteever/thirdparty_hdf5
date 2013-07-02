@@ -3370,7 +3370,203 @@ test_libver_macros2(void)
 
 /****************************************************************
 **
-**  test_deprec():
+**  test_swmr_write(): low-level file test routine.
+**      This test checks that the H5F_ACC_SWMR_WRITE access flag is
+**      working properly.
+**
+*****************************************************************/
+static void
+test_swmr_write(void)
+{
+    hid_t fid, fid2;    /* File IDs */
+    unsigned intent;    /* File access flags */
+    herr_t ret;         /* Generic return value */
+
+    /* Output message about test being performed */
+    MESSAGE(5, ("Testing H5F_ACC_SWMR_WRITE access flag\n"));
+
+
+    /* Create file, without SWMR_WRITE flag */
+    fid = H5Fcreate(FILE1, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    CHECK(fid, FAIL, "H5Fcreate");
+
+    /* Get the intent & check that the SWMR_WRITE flag is not set */
+    ret = H5Fget_intent(fid, &intent);
+    CHECK(ret, FAIL, "H5Fget_intent");
+    VERIFY(intent, H5F_ACC_RDWR, "H5Fget_intent");
+
+    /* Try to reopen file w/SWMR_WRITE flag */
+    H5E_BEGIN_TRY {
+        fid2 = H5Fopen(FILE1, (H5F_ACC_RDWR | H5F_ACC_SWMR_WRITE), H5P_DEFAULT);
+    } H5E_END_TRY;
+    VERIFY(fid2, FAIL, "H5Fopen");
+
+    /* Close file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+
+    /* Create file, with  SWMR_WRITE flag */
+    fid = H5Fcreate(FILE1, (H5F_ACC_TRUNC | H5F_ACC_SWMR_WRITE), H5P_DEFAULT, H5P_DEFAULT);
+    CHECK(fid, FAIL, "H5Fcreate");
+
+    /* Get the intent & check that the SWMR_WRITE flag is set */
+    ret = H5Fget_intent(fid, &intent);
+    CHECK(ret, FAIL, "H5Fget_intent");
+    VERIFY(intent, (H5F_ACC_RDWR | H5F_ACC_SWMR_WRITE), "H5Fget_intent");
+
+    /* Try to reopen file w/o SWMR_WRITE flag */
+    H5E_BEGIN_TRY {
+        fid2 = H5Fopen(FILE1, H5F_ACC_RDWR, H5P_DEFAULT);
+    } H5E_END_TRY;
+    VERIFY(fid2, FAIL, "H5Fopen");
+
+    /* Reopen file, with read-write and SWMR_WRITE access */
+    fid2 = H5Fopen(FILE1, (H5F_ACC_RDWR | H5F_ACC_SWMR_WRITE), H5P_DEFAULT);
+    CHECK(fid2, FAIL, "H5Fopen");
+
+    /* Get the intent & check that the SWMR_WRITE flag is set */
+    ret = H5Fget_intent(fid2, &intent);
+    CHECK(ret, FAIL, "H5Fget_intent");
+    VERIFY(intent, (H5F_ACC_RDWR | H5F_ACC_SWMR_WRITE), "H5Fget_intent");
+
+    /* Close file */
+    ret = H5Fclose(fid2);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Close file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+
+    /* Try to reopen file read-only w/SWMR_WRITE flag */
+    H5E_BEGIN_TRY {
+        fid = H5Fopen(FILE1, (H5F_ACC_RDONLY | H5F_ACC_SWMR_WRITE), H5P_DEFAULT);
+    } H5E_END_TRY;
+    VERIFY(fid, FAIL, "H5Fopen");
+
+
+    /* Reopen file, with read-write and SWMR_WRITE access */
+    fid = H5Fopen(FILE1, (H5F_ACC_RDWR | H5F_ACC_SWMR_WRITE), H5P_DEFAULT);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Get the intent & check that the SWMR_WRITE flag is set */
+    ret = H5Fget_intent(fid, &intent);
+    CHECK(ret, FAIL, "H5Fget_intent");
+    VERIFY(intent, (H5F_ACC_RDWR | H5F_ACC_SWMR_WRITE), "H5Fget_intent");
+
+    /* Try to reopen file w/o SWMR_WRITE flag */
+    H5E_BEGIN_TRY {
+        fid2 = H5Fopen(FILE1, H5F_ACC_RDWR, H5P_DEFAULT);
+    } H5E_END_TRY;
+    VERIFY(fid2, FAIL, "H5Fopen");
+
+    /* Reopen file, with read-write and SWMR_WRITE access */
+    fid2 = H5Fopen(FILE1, (H5F_ACC_RDWR | H5F_ACC_SWMR_WRITE), H5P_DEFAULT);
+    CHECK(fid2, FAIL, "H5Fopen");
+
+    /* Get the intent & check that the SWMR_WRITE flag is set */
+    ret = H5Fget_intent(fid2, &intent);
+    CHECK(ret, FAIL, "H5Fget_intent");
+    VERIFY(intent, (H5F_ACC_RDWR | H5F_ACC_SWMR_WRITE), "H5Fget_intent");
+
+    /* Close file */
+    ret = H5Fclose(fid2);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Close file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+} /* end test_swmr_write() */
+
+/****************************************************************
+**
+**  test_swmr_read(): low-level file test routine.
+**      This test checks that the H5F_ACC_SWMR_READ access flag is
+**      working properly.
+**
+*****************************************************************/
+static void
+test_swmr_read(void)
+{
+    hid_t fid, fid2;    /* File IDs */
+    unsigned intent;    /* File access flags */
+    herr_t ret;         /* Generic return value */
+
+    /* Output message about test being performed */
+    MESSAGE(5, ("Testing H5F_ACC_SWMR_READ access flag\n"));
+
+
+    /* Try to create file w/SWMR_READ flag */
+    H5E_BEGIN_TRY {
+        fid = H5Fcreate(FILE1, (H5F_ACC_TRUNC | H5F_ACC_SWMR_READ), H5P_DEFAULT, H5P_DEFAULT);
+    } H5E_END_TRY;
+    VERIFY(fid, FAIL, "H5Fcreate");
+
+
+    /* Create file, without SWMR_READ flag */
+    fid = H5Fcreate(FILE1, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    CHECK(fid, FAIL, "H5Fcreate");
+
+    /* Get the intent & check that the SWMR_READ flag is not set */
+    ret = H5Fget_intent(fid, &intent);
+    CHECK(ret, FAIL, "H5Fget_intent");
+    VERIFY(intent, H5F_ACC_RDWR, "H5Fget_intent");
+
+    /* Try to reopen file w/SWMR_READ flag */
+    H5E_BEGIN_TRY {
+        fid2 = H5Fopen(FILE1, (H5F_ACC_RDWR | H5F_ACC_SWMR_READ), H5P_DEFAULT);
+    } H5E_END_TRY;
+    VERIFY(fid2, FAIL, "H5Fopen");
+
+    /* Close file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+
+    /* Try to open file, with read-write access & SWMR_READ flag */
+    H5E_BEGIN_TRY {
+        fid = H5Fopen(FILE1, (H5F_ACC_RDWR | H5F_ACC_SWMR_READ), H5P_DEFAULT);
+    } H5E_END_TRY;
+    VERIFY(fid, FAIL, "H5Fopen");
+
+
+    /* Open file, with SWMR_READ flag */
+    fid = H5Fopen(FILE1, (H5F_ACC_RDONLY | H5F_ACC_SWMR_READ), H5P_DEFAULT);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Get the intent & check that the SWMR_READ flag is set */
+    ret = H5Fget_intent(fid, &intent);
+    CHECK(ret, FAIL, "H5Fget_intent");
+    VERIFY(intent, (H5F_ACC_RDONLY | H5F_ACC_SWMR_READ), "H5Fget_intent");
+
+    /* Try to reopen file w/o SWMR_READ flag */
+    H5E_BEGIN_TRY {
+        fid2 = H5Fopen(FILE1, H5F_ACC_RDONLY, H5P_DEFAULT);
+    } H5E_END_TRY;
+    VERIFY(fid2, FAIL, "H5Fopen");
+
+    /* Reopen file, with read-only and SWMR_READ access */
+    fid2 = H5Fopen(FILE1, (H5F_ACC_RDONLY | H5F_ACC_SWMR_READ), H5P_DEFAULT);
+    CHECK(fid2, FAIL, "H5Fopen");
+
+    /* Get the intent & check that the SWMR_READ flag is set */
+    ret = H5Fget_intent(fid2, &intent);
+    CHECK(ret, FAIL, "H5Fget_intent");
+    VERIFY(intent, (H5F_ACC_RDONLY | H5F_ACC_SWMR_READ), "H5Fget_intent");
+
+    /* Close file */
+    ret = H5Fclose(fid2);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Close file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+} /* end test_swmr_read() */
+
+/****************************************************************
+**
+**  test_deprec(): 
 **	Test deprecated functionality.
 **
 ****************************************************************/
@@ -3551,6 +3747,8 @@ test_file(void)
     test_libver_bounds();       /* Test compatibility for file space management */
     test_libver_macros();       /* Test the macros for library version comparison */
     test_libver_macros2();      /* Test the macros for library version comparison */
+    test_swmr_write();          /* Tests for SWMR write access flag */
+    test_swmr_read();           /* Tests for SWMR read access flag */
 #ifndef H5_NO_DEPRECATED_SYMBOLS
     test_deprec();              /* Test deprecated routines */
 #endif /* H5_NO_DEPRECATED_SYMBOLS */

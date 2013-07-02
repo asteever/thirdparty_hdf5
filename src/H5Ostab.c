@@ -149,9 +149,9 @@ H5O_stab_encode(H5F_t *f, hbool_t UNUSED disable_shared, uint8_t *p, const void 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     /* check args */
-    HDassert(f);
-    HDassert(p);
-    HDassert(stab);
+    assert(f);
+    assert(p);
+    assert(stab);
 
     /* encode */
     H5F_addr_encode(f, &p, stab->btree_addr);
@@ -401,7 +401,7 @@ H5O_stab_post_copy_file(const H5O_loc_t *src_oloc, const void *mesg_src,
     udata.cpy_info = cpy_info;
 
     /* Iterate over objects in group, copying them */
-    if((H5B_iterate(src_oloc->file, dxpl_id, H5B_SNODE, stab_src->btree_addr, H5G__node_copy, &udata)) < 0)
+    if((H5B_iterate(src_oloc->file, dxpl_id, H5B_SNODE, stab_src->btree_addr, H5G__node_copy, &udata, NULL)) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, FAIL, "iteration operator failed")
 
 done:
@@ -433,11 +433,11 @@ H5O_stab_debug(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const void *_mesg, FILE * 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     /* check args */
-    HDassert(f);
-    HDassert(stab);
-    HDassert(stream);
-    HDassert(indent >= 0);
-    HDassert(fwidth >= 0);
+    assert(f);
+    assert(stab);
+    assert(stream);
+    assert(indent >= 0);
+    assert(fwidth >= 0);
 
     HDfprintf(stream, "%*s%-*s %a\n", indent, "", fwidth,
 	      "B-tree address:", stab->btree_addr);

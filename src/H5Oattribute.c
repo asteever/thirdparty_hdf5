@@ -219,6 +219,7 @@ herr_t
 H5O_attr_create(const H5O_loc_t *loc, hid_t dxpl_id, H5A_t *attr)
 {
     H5O_t *oh = NULL;                   /* Pointer to actual object header */
+    H5O_proxy_t *oh_proxy = NULL;       /* Object header proxy */
     H5O_ainfo_t ainfo;                  /* Attribute information for object */
     htri_t shared_mesg;                 /* Should this message be stored in the Shared Message table? */
     herr_t ret_value = SUCCEED;         /* Return value */
@@ -279,8 +280,14 @@ H5O_attr_create(const H5O_loc_t *loc, hid_t dxpl_id, H5A_t *attr)
                 H5O_iter_cvt_t udata;           /* User data for callback */
                 H5O_mesg_operator_t op;         /* Wrapper for operator */
 
+                /* Check for SWMR writes to the file */
+                if(H5F_INTENT(loc->file) & H5F_ACC_SWMR_WRITE)
+                    /* Pin the attribute's object header proxy */
+                    if(NULL == (oh_proxy = H5O_pin_flush_dep_proxy_oh(loc->file, dxpl_id, oh)))
+                        HGOTO_ERROR(H5E_ATTR, H5E_CANTPIN, FAIL, "unable to pin object header proxy")
+
                 /* Create dense storage for attributes */
-                if(H5A_dense_create(loc->file, dxpl_id, &ainfo) < 0)
+                if(H5A_dense_create(loc->file, dxpl_id, &ainfo, oh_proxy) < 0)
                     HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, FAIL, "unable to create dense storage for attributes")
 
                 /* Set up user data for callback */
@@ -393,6 +400,8 @@ H5O_attr_create(const H5O_loc_t *loc, hid_t dxpl_id, H5A_t *attr)
         HGOTO_ERROR(H5E_ATTR, H5E_CANTUPDATE, FAIL, "unable to update time on object")
 
 done:
+    if(oh_proxy && H5O_unpin_flush_dep_proxy(oh_proxy) < 0)
+        HDONE_ERROR(H5E_ATTR, H5E_CANTUNPIN, FAIL, "unable to unpin attribute object header proxy")
     if(oh && H5O_unpin(oh) < 0)
         HDONE_ERROR(H5E_ATTR, H5E_CANTUNPIN, FAIL, "unable to unpin object header")
 
@@ -470,6 +479,7 @@ H5A_t *
 H5O_attr_open_by_name(const H5O_loc_t *loc, const char *name, hid_t dxpl_id)
 {
     H5O_t *oh = NULL;                   /* Pointer to actual object header */
+    H5O_proxy_t *oh_proxy = NULL;       /* Object header proxy */
     H5O_ainfo_t ainfo;                  /* Attribute information for object */
     H5A_t *exist_attr = NULL;           /* Existing opened attribute object */
     H5A_t *opened_attr = NULL;          /* Newly opened attribute object */
@@ -506,8 +516,14 @@ H5O_attr_open_by_name(const H5O_loc_t *loc, const char *name, hid_t dxpl_id)
     else {
         /* Check for attributes in dense storage */
         if(H5F_addr_defined(ainfo.fheap_addr)) {
+            /* Check for SWMR writes to the file */
+            if(H5F_INTENT(loc->file) & H5F_ACC_SWMR_WRITE)
+                /* Pin the attribute's object header proxy */
+                if(NULL == (oh_proxy = H5O_pin_flush_dep_proxy_oh(loc->file, dxpl_id, oh)))
+                    HGOTO_ERROR(H5E_ATTR, H5E_CANTPIN, NULL, "unable to pin object header proxy")
+
             /* Open attribute with dense storage */
-            if(NULL == (opened_attr = H5A_dense_open(loc->file, dxpl_id, &ainfo, name)))
+            if(NULL == (opened_attr = H5A_dense_open(loc->file, dxpl_id, &ainfo, name, oh_proxy)))
                 HGOTO_ERROR(H5E_ATTR, H5E_CANTOPENOBJ, NULL, "can't open attribute")
         } /* end if */
         else {
@@ -542,6 +558,8 @@ H5O_attr_open_by_name(const H5O_loc_t *loc, const char *name, hid_t dxpl_id)
     ret_value = opened_attr;
 
 done:
+    if(oh_proxy && H5O_unpin_flush_dep_proxy(oh_proxy) < 0)
+        HDONE_ERROR(H5E_ATTR, H5E_CANTUNPIN, NULL, "unable to unpin attribute object header proxy")
     if(oh && H5O_unprotect(loc, dxpl_id, oh, H5AC__NO_FLAGS_SET) < 0)
         HDONE_ERROR(H5E_ATTR, H5E_CANTUNPROTECT, NULL, "unable to release object header")
 
@@ -1180,6 +1198,7 @@ H5O_attr_rename(const H5O_loc_t *loc, hid_t dxpl_id, const char *old_name,
     const char *new_name)
 {
     H5O_t *oh = NULL;                   /* Pointer to actual object header */
+    H5O_proxy_t *oh_proxy = NULL;       /* Attribute's object header proxy */
     H5O_ainfo_t ainfo;                  /* Attribute information for object */
     herr_t ret_value = SUCCEED;         /* Return value */
 
@@ -1204,8 +1223,14 @@ H5O_attr_rename(const H5O_loc_t *loc, hid_t dxpl_id, const char *old_name,
 
     /* Check for attributes stored densely */
     if(H5F_addr_defined(ainfo.fheap_addr)) {
+        /* Check for SWMR writes to the file */
+        if(H5F_INTENT(loc->file) & H5F_ACC_SWMR_WRITE)
+            /* Pin the attribute's object header proxy */
+            if(NULL == (oh_proxy = H5O_pin_flush_dep_proxy_oh(loc->file, dxpl_id, oh)))
+                HGOTO_ERROR(H5E_ATTR, H5E_CANTPIN, FAIL, "unable to pin attribute object header proxy")
+
         /* Rename the attribute data in dense storage */
-        if(H5A_dense_rename(loc->file, dxpl_id, &ainfo, old_name, new_name) < 0)
+        if(H5A_dense_rename(loc->file, dxpl_id, &ainfo, old_name, new_name, oh_proxy) < 0)
             HGOTO_ERROR(H5E_ATTR, H5E_CANTUPDATE, FAIL, "error updating attribute")
     } /* end if */
     else {
@@ -1245,6 +1270,8 @@ H5O_attr_rename(const H5O_loc_t *loc, hid_t dxpl_id, const char *old_name,
         HGOTO_ERROR(H5E_ATTR, H5E_CANTUPDATE, FAIL, "unable to update time on object")
 
 done:
+    if(oh_proxy && H5O_unpin_flush_dep_proxy(oh_proxy) < 0)
+        HDONE_ERROR(H5E_ATTR, H5E_CANTUNPIN, FAIL, "unable to unpin attribute object header proxy")
     if(oh && H5O_unpin(oh) < 0)
         HDONE_ERROR(H5E_ATTR, H5E_CANTUNPIN, FAIL, "unable to unpin object header")
 
@@ -1270,6 +1297,7 @@ H5O_attr_iterate_real(hid_t loc_id, const H5O_loc_t *loc, hid_t dxpl_id,
     hsize_t *last_attr, const H5A_attr_iter_op_t *attr_op, void *op_data)
 {
     H5O_t *oh = NULL;                   /* Pointer to actual object header */
+    H5O_proxy_t *oh_proxy = NULL;       /* Object header proxy */
     H5O_ainfo_t ainfo;                  /* Attribute information for object */
     H5A_attr_table_t atable = {0, NULL};        /* Table of attributes */
     herr_t ret_value;                   /* Return value */
@@ -1300,13 +1328,19 @@ H5O_attr_iterate_real(hid_t loc_id, const H5O_loc_t *loc, hid_t dxpl_id,
         if(skip > 0 && skip >= ainfo.nattrs)
             HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid index specified")
 
+        /* Check for SWMR writes to the file */
+        if(H5F_INTENT(loc->file) & H5F_ACC_SWMR_WRITE)
+            /* Pin the attribute's object header proxy */
+            if(NULL == (oh_proxy = H5O_pin_flush_dep_proxy_oh(loc->file, dxpl_id, oh)))
+                HGOTO_ERROR(H5E_ATTR, H5E_CANTPIN, FAIL, "unable to pin object header proxy")
+
         /* Release the object header */
         if(H5O_unprotect(loc, dxpl_id, oh, H5AC__NO_FLAGS_SET) < 0)
             HGOTO_ERROR(H5E_ATTR, H5E_CANTUNPROTECT, FAIL, "unable to release object header")
         oh = NULL;
 
         /* Iterate over attributes in dense storage */
-        if((ret_value = H5A_dense_iterate(loc->file, dxpl_id, loc_id, &ainfo, idx_type, order, skip, last_attr, attr_op, op_data)) < 0)
+        if((ret_value = H5A_dense_iterate(loc->file, dxpl_id, loc_id, &ainfo, idx_type, order, skip, oh_proxy, last_attr, attr_op, op_data)) < 0)
             HERROR(H5E_ATTR, H5E_BADITER, "error iterating over attributes");
     } /* end if */
     else {
@@ -1330,6 +1364,8 @@ H5O_attr_iterate_real(hid_t loc_id, const H5O_loc_t *loc, hid_t dxpl_id,
 
 done:
     /* Release resources */
+    if(oh_proxy && H5O_unpin_flush_dep_proxy(oh_proxy) < 0)
+        HDONE_ERROR(H5E_ATTR, H5E_CANTUNPIN, FAIL, "unable to unpin attribute object header proxy")
     if(oh && H5O_unprotect(loc, dxpl_id, oh, H5AC__NO_FLAGS_SET) < 0)
         HDONE_ERROR(H5E_ATTR, H5E_CANTUNPROTECT, FAIL, "unable to release object header")
     if(atable.attrs && H5A_attr_release_table(&atable) < 0)
@@ -1402,6 +1438,7 @@ H5O_attr_remove_update(const H5O_loc_t *loc, H5O_t *oh, H5O_ainfo_t *ainfo,
     hid_t dxpl_id)
 {
     H5A_attr_table_t atable = {0, NULL};        /* Table of attributes */
+    H5O_proxy_t *oh_proxy = NULL;               /* Object header proxy */
     herr_t ret_value = SUCCEED;                 /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
@@ -1419,8 +1456,14 @@ H5O_attr_remove_update(const H5O_loc_t *loc, H5O_t *oh, H5O_ainfo_t *ainfo,
         hbool_t can_convert = TRUE;     /* Whether converting to attribute messages is possible */
         size_t u;                       /* Local index */
 
+        /* Check for SWMR writes to the file */
+        if(H5F_INTENT(loc->file) & H5F_ACC_SWMR_WRITE)
+            /* Pin the attribute's object header proxy */
+            if(NULL == (oh_proxy = H5O_pin_flush_dep_proxy_oh(loc->file, dxpl_id, oh)))
+                HGOTO_ERROR(H5E_ATTR, H5E_CANTPIN, FAIL, "unable to pin object header proxy")
+
         /* Build the table of attributes for this object */
-        if(H5A_dense_build_table(loc->file, dxpl_id, ainfo, H5_INDEX_NAME, H5_ITER_NATIVE, &atable) < 0)
+        if(H5A_dense_build_table(loc->file, dxpl_id, ainfo, H5_INDEX_NAME, H5_ITER_NATIVE, oh_proxy, &atable) < 0)
             HGOTO_ERROR(H5E_ATTR, H5E_CANTINIT, FAIL, "error building attribute table")
 
         /* Inspect attributes in table for ones that can't be converted back
@@ -1475,7 +1518,7 @@ H5O_attr_remove_update(const H5O_loc_t *loc, H5O_t *oh, H5O_ainfo_t *ainfo,
             } /* end for */
 
             /* Remove the dense storage */
-            if(H5A_dense_delete(loc->file, dxpl_id, ainfo) < 0)
+            if(H5A_dense_delete(loc->file, dxpl_id, ainfo, oh_proxy) < 0)
                 HGOTO_ERROR(H5E_ATTR, H5E_CANTDELETE, FAIL, "unable to delete dense attribute storage")
         } /* end if */
     } /* end if */
@@ -1494,6 +1537,8 @@ H5O_attr_remove_update(const H5O_loc_t *loc, H5O_t *oh, H5O_ainfo_t *ainfo,
 
 done:
     /* Release resources */
+    if(oh_proxy && H5O_unpin_flush_dep_proxy(oh_proxy) < 0)
+        HDONE_ERROR(H5E_ATTR, H5E_CANTUNPIN, FAIL, "unable to unpin attribute object header proxy")
     if(atable.attrs && H5A_attr_release_table(&atable) < 0)
         HDONE_ERROR(H5E_ATTR, H5E_CANTFREE, FAIL, "unable to release attribute table")
 
@@ -1566,6 +1611,7 @@ herr_t
 H5O_attr_remove(const H5O_loc_t *loc, const char *name, hid_t dxpl_id)
 {
     H5O_t *oh = NULL;                   /* Pointer to actual object header */
+    H5O_proxy_t *oh_proxy = NULL;       /* Object header proxy */
     H5O_ainfo_t ainfo;                  /* Attribute information for object */
     htri_t ainfo_exists = FALSE;        /* Whether the attribute info exists in the file */
     herr_t ret_value = SUCCEED;         /* Return value */
@@ -1590,8 +1636,14 @@ H5O_attr_remove(const H5O_loc_t *loc, const char *name, hid_t dxpl_id)
 
     /* Check for attributes stored densely */
     if(H5F_addr_defined(ainfo.fheap_addr)) {
+        /* Check for SWMR writes to the file */
+        if(H5F_INTENT(loc->file) & H5F_ACC_SWMR_WRITE)
+            /* Pin the attribute's object header proxy */
+            if(NULL == (oh_proxy = H5O_pin_flush_dep_proxy_oh(loc->file, dxpl_id, oh)))
+                HGOTO_ERROR(H5E_ATTR, H5E_CANTPIN, FAIL, "unable to pin object header proxy")
+
         /* Delete attribute from dense storage */
-        if(H5A_dense_remove(loc->file, dxpl_id, &ainfo, name) < 0)
+        if(H5A_dense_remove(loc->file, dxpl_id, &ainfo, name, oh_proxy) < 0)
             HGOTO_ERROR(H5E_ATTR, H5E_CANTDELETE, FAIL, "unable to delete attribute in dense storage")
     } /* end if */
     else {
@@ -1625,6 +1677,8 @@ H5O_attr_remove(const H5O_loc_t *loc, const char *name, hid_t dxpl_id)
         HGOTO_ERROR(H5E_ATTR, H5E_CANTUPDATE, FAIL, "unable to update time on object")
 
 done:
+    if(oh_proxy && H5O_unpin_flush_dep_proxy(oh_proxy) < 0)
+        HDONE_ERROR(H5E_ATTR, H5E_CANTUNPIN, FAIL, "unable to unpin attribute object header proxy")
     if(oh && H5O_unpin(oh) < 0)
         HDONE_ERROR(H5E_ATTR, H5E_CANTUNPIN, FAIL, "unable to unpin object header")
 
@@ -1650,6 +1704,7 @@ H5O_attr_remove_by_idx(const H5O_loc_t *loc, H5_index_t idx_type,
     H5_iter_order_t order, hsize_t n, hid_t dxpl_id)
 {
     H5O_t *oh = NULL;                   /* Pointer to actual object header */
+    H5O_proxy_t *oh_proxy = NULL;       /* Object header proxy */
     H5O_ainfo_t ainfo;                  /* Attribute information for object */
     htri_t ainfo_exists = FALSE;        /* Whether the attribute info exists in the file */
     H5A_attr_table_t atable = {0, NULL};        /* Table of attributes */
@@ -1674,8 +1729,14 @@ H5O_attr_remove_by_idx(const H5O_loc_t *loc, H5_index_t idx_type,
 
     /* Check for attributes stored densely */
     if(H5F_addr_defined(ainfo.fheap_addr)) {
+        /* Check for SWMR writes to the file */
+        if(H5F_INTENT(loc->file) & H5F_ACC_SWMR_WRITE)
+            /* Pin the attribute's object header proxy */
+            if(NULL == (oh_proxy = H5O_pin_flush_dep_proxy_oh(loc->file, dxpl_id, oh)))
+                HGOTO_ERROR(H5E_ATTR, H5E_CANTPIN, FAIL, "unable to pin object header proxy")
+
         /* Delete attribute from dense storage */
-        if(H5A_dense_remove_by_idx(loc->file, dxpl_id, &ainfo, idx_type, order, n) < 0)
+        if(H5A_dense_remove_by_idx(loc->file, dxpl_id, &ainfo, idx_type, order, n, oh_proxy) < 0)
             HGOTO_ERROR(H5E_ATTR, H5E_CANTDELETE, FAIL, "unable to delete attribute in dense storage")
     } /* end if */
     else {
@@ -1717,6 +1778,8 @@ H5O_attr_remove_by_idx(const H5O_loc_t *loc, H5_index_t idx_type,
         HGOTO_ERROR(H5E_ATTR, H5E_CANTUPDATE, FAIL, "unable to update time on object")
 
 done:
+    if(oh_proxy && H5O_unpin_flush_dep_proxy(oh_proxy) < 0)
+        HDONE_ERROR(H5E_ATTR, H5E_CANTUNPIN, FAIL, "unable to unpin attribute object header proxy")
     if(oh && H5O_unpin(oh) < 0)
         HDONE_ERROR(H5E_ATTR, H5E_CANTUNPIN, FAIL, "unable to unpin object header")
     if(atable.attrs && H5A_attr_release_table(&atable) < 0)
@@ -1836,6 +1899,7 @@ htri_t
 H5O_attr_exists(const H5O_loc_t *loc, const char *name, hid_t dxpl_id)
 {
     H5O_t *oh = NULL;           /* Pointer to actual object header */
+    H5O_proxy_t *oh_proxy = NULL; /* Object header proxy */
     H5O_ainfo_t ainfo;          /* Attribute information for object */
     htri_t ret_value;           /* Return value */
 
@@ -1859,8 +1923,14 @@ H5O_attr_exists(const H5O_loc_t *loc, const char *name, hid_t dxpl_id)
 
     /* Check for attributes stored densely */
     if(H5F_addr_defined(ainfo.fheap_addr)) {
+        /* Check for SWMR writes to the file */
+        if(H5F_INTENT(loc->file) & H5F_ACC_SWMR_WRITE)
+            /* Pin the attribute's object header proxy */
+            if(NULL == (oh_proxy = H5O_pin_flush_dep_proxy_oh(loc->file, dxpl_id, oh)))
+                HGOTO_ERROR(H5E_ATTR, H5E_CANTPIN, FAIL, "unable to pin object header proxy")
+
         /* Check if attribute exists in dense storage */
-        if((ret_value = H5A_dense_exists(loc->file, dxpl_id, &ainfo, name)) < 0)
+        if((ret_value = H5A_dense_exists(loc->file, dxpl_id, &ainfo, name, oh_proxy)) < 0)
             HGOTO_ERROR(H5E_ATTR, H5E_BADITER, FAIL, "error checking for existence of attribute")
     } /* end if */
     else {
@@ -1884,6 +1954,8 @@ H5O_attr_exists(const H5O_loc_t *loc, const char *name, hid_t dxpl_id)
     } /* end else */
 
 done:
+    if(oh_proxy && H5O_unpin_flush_dep_proxy(oh_proxy) < 0)
+        HDONE_ERROR(H5E_ATTR, H5E_CANTUNPIN, FAIL, "unable to unpin attribute object header proxy")
     if(oh && H5O_unprotect(loc, dxpl_id, oh, H5AC__NO_FLAGS_SET) < 0)
         HDONE_ERROR(H5E_ATTR, H5E_CANTUNPROTECT, FAIL, "unable to release object header")
 
@@ -1909,6 +1981,7 @@ H5O_attr_bh_info(H5F_t *f, hid_t dxpl_id, H5O_t *oh, H5_ih_info_t *bh_info)
     H5HF_t      *fheap = NULL;              /* Fractal heap handle */
     H5B2_t      *bt2_name = NULL;           /* v2 B-tree handle for name index */
     H5B2_t      *bt2_corder = NULL;         /* v2 B-tree handle for creation order index */
+    H5O_proxy_t *oh_proxy = NULL;           /* Object header proxy */
     herr_t      ret_value = SUCCEED;        /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
@@ -1926,10 +1999,16 @@ H5O_attr_bh_info(H5F_t *f, hid_t dxpl_id, H5O_t *oh, H5_ih_info_t *bh_info)
         if((ainfo_exists = H5A_get_ainfo(f, dxpl_id, oh, &ainfo)) < 0)
             HGOTO_ERROR(H5E_ATTR, H5E_CANTGET, FAIL, "can't check for attribute info message")
         else if(ainfo_exists > 0) {
+            /* Check for SWMR writes to the file */
+            if(H5F_INTENT(f) & H5F_ACC_SWMR_WRITE)
+                /* Pin the attribute's object header proxy */
+                if(NULL == (oh_proxy = H5O_pin_flush_dep_proxy_oh(f, dxpl_id, oh)))
+                    HGOTO_ERROR(H5E_ATTR, H5E_CANTPIN, FAIL, "unable to pin object header proxy")
+
             /* Check if name index available */
             if(H5F_addr_defined(ainfo.name_bt2_addr)) {
                 /* Open the name index v2 B-tree */
-                if(NULL == (bt2_name = H5B2_open(f, dxpl_id, ainfo.name_bt2_addr, NULL)))
+                if(NULL == (bt2_name = H5B2_open(f, dxpl_id, ainfo.name_bt2_addr, NULL, oh_proxy)))
                     HGOTO_ERROR(H5E_ATTR, H5E_CANTOPENOBJ, FAIL, "unable to open v2 B-tree for name index")
 
                 /* Get name index B-tree size */
@@ -1940,7 +2019,7 @@ H5O_attr_bh_info(H5F_t *f, hid_t dxpl_id, H5O_t *oh, H5_ih_info_t *bh_info)
             /* Check if creation order index available */
             if(H5F_addr_defined(ainfo.corder_bt2_addr)) {
                 /* Open the creation order index v2 B-tree */
-                if(NULL == (bt2_corder = H5B2_open(f, dxpl_id, ainfo.corder_bt2_addr, NULL)))
+                if(NULL == (bt2_corder = H5B2_open(f, dxpl_id, ainfo.corder_bt2_addr, NULL, oh_proxy)))
                     HGOTO_ERROR(H5E_ATTR, H5E_CANTOPENOBJ, FAIL, "unable to open v2 B-tree for creation order index")
 
                 /* Get creation order index B-tree size */
@@ -1963,6 +2042,8 @@ H5O_attr_bh_info(H5F_t *f, hid_t dxpl_id, H5O_t *oh, H5_ih_info_t *bh_info)
 
 done:
     /* Release resources */
+    if(oh_proxy && H5O_unpin_flush_dep_proxy(oh_proxy) < 0)
+        HDONE_ERROR(H5E_ATTR, H5E_CANTUNPIN, FAIL, "unable to unpin attribute object header proxy")
     if(fheap && H5HF_close(fheap, dxpl_id) < 0)
         HDONE_ERROR(H5E_ATTR, H5E_CANTCLOSEOBJ, FAIL, "can't close fractal heap")
     if(bt2_name && H5B2_close(bt2_name, dxpl_id) < 0)

@@ -15,7 +15,6 @@ ADD_EXECUTABLE (h5dump
     ${HDF5_TOOLS_H5DUMP_SOURCE_DIR}/h5dump_xml.c
 )
 TARGET_NAMING (h5dump ${LIB_TYPE})
-TARGET_C_PROPERTIES (h5dump " " " ")
 TARGET_LINK_LIBRARIES (h5dump  ${HDF5_TOOLS_LIB_TARGET} ${HDF5_LIB_TARGET})
 SET_TARGET_PROPERTIES (h5dump PROPERTIES FOLDER tools)
 
@@ -34,7 +33,6 @@ IF (BUILD_TESTING)
   IF (HDF5_BUILD_GENERATORS AND NOT BUILD_SHARED_LIBS)
     ADD_EXECUTABLE (h5dumpgentest ${HDF5_TOOLS_H5DUMP_SOURCE_DIR}/h5dumpgentest.c)
     TARGET_NAMING (h5dumpgentest ${LIB_TYPE})
-    TARGET_C_PROPERTIES (h5dumpgentest " " " ")
     TARGET_LINK_LIBRARIES (h5dumpgentest ${HDF5_LIB_TARGET} ${HDF5_TOOLS_LIB_TARGET})
     SET_TARGET_PROPERTIES (h5dumpgentest PROPERTIES FOLDER generator/tools)
     
@@ -52,7 +50,6 @@ IF (BUILD_TESTING)
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tall-1.ddl
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tall-2.ddl
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tall-2A.ddl
-      ${HDF5_TOOLS_SRC_DIR}/testfiles/tall-2A0.ddl
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tall-2B.ddl
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tall-3.ddl
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tall-4s.ddl
@@ -77,7 +74,6 @@ IF (BUILD_TESTING)
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tattrintsize.ddl
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tattrreg.ddl
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tattrregR.ddl
-      ${HDF5_TOOLS_SRC_DIR}/testfiles/tbin1.ddl
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tbin1.ddl
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tbin2.ddl
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tbin3.ddl
@@ -151,7 +147,6 @@ IF (BUILD_TESTING)
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tno-subset.ddl
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tnullspace.ddl
       ${HDF5_TOOLS_SRC_DIR}/testfiles/trawdatafile.ddl
-      ${HDF5_TOOLS_SRC_DIR}/testfiles/trawssetfile.ddl
       ${HDF5_TOOLS_SRC_DIR}/testfiles/zerodim.ddl
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tordergr1.ddl
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tordergr2.ddl
@@ -203,7 +198,6 @@ IF (BUILD_TESTING)
       tall-6.exp
       tnoddlfile.exp
       trawdatafile.exp
-      trawssetfile.exp
       tstr2bin2.exp
       tstr2bin6.exp
       twithddl.exp
@@ -306,7 +300,6 @@ IF (BUILD_TESTING)
       ${PROJECT_SOURCE_DIR}/errfiles/filter_fail.err
       ${PROJECT_SOURCE_DIR}/errfiles/tall-1.err
       ${PROJECT_SOURCE_DIR}/errfiles/tall-2A.err
-      ${PROJECT_SOURCE_DIR}/errfiles/tall-2A0.err
       ${PROJECT_SOURCE_DIR}/errfiles/tall-2B.err
       ${PROJECT_SOURCE_DIR}/errfiles/tarray1_big.err
       ${PROJECT_SOURCE_DIR}/errfiles/tattrregR.err
@@ -1074,8 +1067,6 @@ IF (BUILD_TESTING)
           tall-2.out.err
           tall-2A.out
           tall-2A.out.err
-          tall-2A0.out
-          tall-2A0.out.err
           tall-2B.out
           tall-2B.out.err
           tall-3.out
@@ -1262,9 +1253,6 @@ IF (BUILD_TESTING)
           trawdatafile.out
           trawdatafile.out.err
           trawdatafile.txt
-          trawssetfile.out
-          trawssetfile.out.err
-          trawssetfile.txt
           tno-subset.out
           tno-subset.out.err
           tnullspace.out
@@ -1380,8 +1368,7 @@ IF (BUILD_TESTING)
   ADD_H5_TEST (tnoattrdata 0 --enable-error-stack -A -o tattr.h5)
   ADD_H5_TEST_EXPORT (trawdatafile packedbits.h5 0 --enable-error-stack -y -o)
   ADD_H5_TEST_EXPORT (tnoddlfile packedbits.h5 0 --enable-error-stack -O -y -o)
-  ADD_H5_TEST_EXPORT (trawssetfile tdset.h5 0 --enable-error-stack -d "/dset1[1,1;;;]" -y -o)
-  
+
   ADD_H5_TEST_EXPORT_DDL (twithddlfile packedbits.h5 0 twithddl --enable-error-stack --ddl=twithddl.txt -y -o)
   
   # test for maximum display datasets
@@ -1509,9 +1496,6 @@ IF (BUILD_TESTING)
 
   # test '-A' to suppress data but print attr's
   ADD_H5ERR_MASK_TEST (tall-2A 0 --enable-error-stack -A tall.h5)
-
-  # test '-A' to suppress attr's but print data
-  ADD_H5ERR_MASK_TEST (tall-2A0 0 --enable-error-stack -A 0 tall.h5)
 
   # test '-r' to print attributes in ASCII instead of decimal
   ADD_H5ERR_MASK_TEST (tall-2B 0 --enable-error-stack -A -r tall.h5)
@@ -1646,14 +1630,20 @@ IF (BUILD_TESTING)
   ADD_H5_TEST_IMPORT (tbin1 out1D tbinary.h5 0 --enable-error-stack -d integer -b)
 
   IF (NOT HDF5_ENABLE_USING_MEMCHECKER)
-    ADD_H5_TEST (tbin2 0 --enable-error-stack -b BE -d float -o tbin2.bin tbinary.h5)
+    ADD_TEST (NAME H5DUMP-tbin2-bin-clear-objects COMMAND ${CMAKE_COMMAND} -E remove out2.bin)
+    SET_TESTS_PROPERTIES (H5DUMP-tbin2-bin-clear-objects PROPERTIES WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/testfiles/std")
+    ADD_H5_TEST (tbin2 0 --enable-error-stack -b BE -d float -o out2.bin tbinary.h5)
+    SET_TESTS_PROPERTIES (H5DUMP-tbin2 PROPERTIES DEPENDS H5DUMP-tbin2-bin-clear-objects)
   ENDIF (NOT HDF5_ENABLE_USING_MEMCHECKER)
 
   # the NATIVE test can be validated with h5import/h5diff
   ADD_H5_TEST_IMPORT (tbin3 out3D tbinary.h5 0 --enable-error-stack -d integer -b NATIVE)
 
   IF (NOT HDF5_ENABLE_USING_MEMCHECKER)
-    ADD_H5_TEST (tbin4 0 --enable-error-stack -d double -b FILE -o tbin4.bin tbinary.h5)
+    ADD_TEST (NAME H5DUMP-tbin4-bin-clear-objects COMMAND ${CMAKE_COMMAND} -E remove out4.bin)
+    SET_TESTS_PROPERTIES (H5DUMP-tbin4-bin-clear-objects PROPERTIES WORKING_DIRECTORY "${PROJECT_BINARY_DIR}/testfiles/std")
+    ADD_H5_TEST (tbin4 0 --enable-error-stack -d double -b FILE -o out4.bin tbinary.h5)
+    SET_TESTS_PROPERTIES (H5DUMP-tbin4 PROPERTIES DEPENDS H5DUMP-tbin4-bin-clear-objects)
   ENDIF (NOT HDF5_ENABLE_USING_MEMCHECKER)
 
   # test for dataset region references 

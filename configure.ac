@@ -26,7 +26,7 @@ AC_PREREQ([2.69])
 ## NOTE: Do not forget to change the version number here when we do a
 ## release!!!
 ##
-AC_INIT([HDF5], [1.9.157], [help@hdfgroup.org])
+AC_INIT([HDF5], [1.9.149-FA_a5], [help@hdfgroup.org])
 AC_CONFIG_SRCDIR([src/H5.c])
 AC_CONFIG_HEADER([src/H5config.h])
 
@@ -1945,7 +1945,7 @@ AC_ARG_WITH([pthread],
 case "$withval" in
   yes)
     AC_CHECK_HEADERS([pthread.h],, [unset HAVE_PTHREAD])
-    if test "x$HAVE_PTHREAD" = "xyes"; then
+    if test "x$HAVE_DMALLOC" = "xyes"; then
       AC_CHECK_LIB([pthread], [pthread_self],, [unset HAVE_PTHREAD])
     fi
     ;;
@@ -1987,7 +1987,7 @@ case "$withval" in
       AC_CHECK_HEADERS([pthread.h],, [unset HAVE_PTHREAD])
     fi
 
-    if test "x$HAVE_PTHREAD" = "xyes"; then
+    if test "x$HAVE_DMALLOC" = "xyes"; then
       if test -n "$pthread_lib"; then
         saved_LDFLAGS="$LDFLAGS"
         saved_AM_LDFLAGS="$AM_LDFLAGS"
@@ -4276,7 +4276,7 @@ fi
 ## Enable strict file format checks
 ##
 AC_SUBST([STRICT_FORMAT_CHECKS])
-AC_MSG_CHECKING([whether to perform strict file format checks]);
+AC_MSG_CHECKING([Whether to perform strict file format checks]);
 AC_ARG_ENABLE([strict-format-checks],
               [AS_HELP_STRING([--enable-strict-format-checks],
                      [Enable strict file format checks, default=yes if
@@ -4309,7 +4309,7 @@ esac
 ## ----------------------------------------------------------------------
 ## Enable embedded library information
 ##
-AC_MSG_CHECKING([whether to have library information embedded in the executables])
+AC_MSG_CHECKING([Whether to have library information embedded in the executables])
 AC_ARG_ENABLE([embedded-libinfo],
     [AS_HELP_STRING([--enable-embedded-libinfo],
 	[Enable embedded library information [default=yes]])],
@@ -4501,10 +4501,12 @@ AC_CONFIG_FILES([src/libhdf5.settings
                  test/Makefile
                  test/testcheck_version.sh
                  test/testerror.sh
+		 test/testflushrefresh.sh
                  test/H5srcdir_str.h
                  test/testlibinfo.sh
                  test/testlinks_env.sh
                  test/test_plugin.sh
+                 test/test_usecases.sh
                  testpar/Makefile
                  testpar/testph5.sh
                  perform/Makefile
@@ -4556,9 +4558,12 @@ AC_CONFIG_FILES([src/libhdf5.settings
                  hl/src/Makefile
                  hl/test/Makefile
                  hl/test/H5srcdir_str.h
+		 hl/test/test_ld.sh
                  hl/tools/Makefile
                  hl/tools/gif2h5/Makefile
                  hl/tools/gif2h5/h52giftest.sh
+		 hl/tools/h5watch/Makefile
+                 hl/tools/h5watch/testh5watch.sh
                  hl/examples/Makefile
                  hl/examples/run-hlc-ex.sh
                  hl/c++/Makefile

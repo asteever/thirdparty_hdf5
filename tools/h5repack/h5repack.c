@@ -87,14 +87,15 @@ int h5repack(const char* infile,
 */
 
 int
-h5repack_init(pack_opt_t *options, int verbose, H5F_file_space_type_t strategy,
-    hsize_t threshold)
+h5repack_init(pack_opt_t *options, int verbose, hbool_t latest,
+    H5F_file_space_type_t strategy, hsize_t threshold)
 {
     int k, n;
 
     HDmemset(options, 0, sizeof(pack_opt_t));
     options->min_comp = 1024;
     options->verbose  = verbose;
+    options->latest = latest;
     options->layout_g = H5D_LAYOUT_ERROR;
 
     for ( n = 0; n < H5_REPACK_MAX_NFILTERS; n++)

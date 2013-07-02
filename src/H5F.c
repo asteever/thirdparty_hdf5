@@ -1297,7 +1297,8 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
 	 * file (since we can't do that while the file is open), or if the
 	 * request was to create a non-existent file (since the file already
 	 * exists), or if the new request adds write access (since the
-	 * readers don't expect the file to change under them).
+	 * readers don't expect the file to change under them), or if the
+         * SWMR write/read access flags don't agree.
 	 */
 	if(H5FD_close(lf) < 0)
 	    HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to close low-level file info")
@@ -1307,6 +1308,12 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
 	    HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "file exists")
 	if((flags & H5F_ACC_RDWR) && 0 == (shared->flags & H5F_ACC_RDWR))
 	    HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "file is already open for read-only")
+	if(((flags & H5F_ACC_SWMR_WRITE) && 0 == (shared->flags & H5F_ACC_SWMR_WRITE))
+                || (0 == (flags & H5F_ACC_SWMR_WRITE) && (shared->flags & H5F_ACC_SWMR_WRITE)))
+	    HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "SWMR write access flag not the same for file that is already open")
+	if(((flags & H5F_ACC_SWMR_READ) && 0 == (shared->flags & H5F_ACC_SWMR_READ))
+                || (0 == (flags & H5F_ACC_SWMR_READ) && (shared->flags & H5F_ACC_SWMR_READ)))
+	    HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "SWMR read access flag not the same for file that is already open")
 
         /* Allocate new "high-level" file struct */
         if((file = H5F_new(shared, fcpl_id, fapl_id, NULL)) == NULL)
@@ -1464,9 +1471,9 @@ H5Fcreate(const char *filename, unsigned flags, hid_t fcpl_id, hid_t fapl_id)
     if(!filename || !*filename)
 	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid file name")
     /* In this routine, we only accept the following flags:
-     *          H5F_ACC_EXCL, H5F_ACC_TRUNC and H5F_ACC_DEBUG
+     *          H5F_ACC_EXCL, H5F_ACC_TRUNC, H5F_ACC_DEBUG and H5F_ACC_SWMR_WRITE
      */
-    if(flags & ~(H5F_ACC_EXCL | H5F_ACC_TRUNC | H5F_ACC_DEBUG))
+    if(flags & ~(H5F_ACC_EXCL | H5F_ACC_TRUNC | H5F_ACC_DEBUG | H5F_ACC_SWMR_WRITE))
 	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid flags")
     /* The H5F_ACC_EXCL and H5F_ACC_TRUNC flags are mutually exclusive */
     if((flags & H5F_ACC_EXCL) && (flags & H5F_ACC_TRUNC))
@@ -1573,6 +1580,12 @@ H5Fopen(const char *filename, unsigned flags, hid_t fapl_id)
     if((flags & ~H5F_ACC_PUBLIC_FLAGS) ||
             (flags & H5F_ACC_TRUNC) || (flags & H5F_ACC_EXCL))
 	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid file open flags")
+    /* Asking for SWMR write access on a read-only file is invalid */
+    if((flags & H5F_ACC_SWMR_WRITE) && 0 == (flags & H5F_ACC_RDWR))
+        HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, FAIL, "SWMR write access on a file open for read-only access is not allowed")
+    /* Asking for SWMR read access on a non-read-only file is invalid */
+    if((flags & H5F_ACC_SWMR_READ) && (flags & H5F_ACC_RDWR))
+        HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, FAIL, "SWMR read access on a file open for read-write access is not allowed")
     if(H5P_DEFAULT == fapl_id)
         fapl_id = H5P_FILE_ACCESS_DEFAULT;
     else
@@ -2159,10 +2172,20 @@ H5Fget_intent(hid_t file_id, unsigned *intent_flags)
          * Simplify things for them so that they only get either H5F_ACC_RDWR
          * or H5F_ACC_RDONLY.
          */
-        if(H5F_INTENT(file) & H5F_ACC_RDWR)
+        if(H5F_INTENT(file) & H5F_ACC_RDWR) {
             *intent_flags = H5F_ACC_RDWR;
-        else
+
+            /* Check for SWMR write access on the file */
+            if(H5F_INTENT(file) & H5F_ACC_SWMR_WRITE)
+                *intent_flags |= H5F_ACC_SWMR_WRITE;
+        } /* end if */
+        else {
             *intent_flags = H5F_ACC_RDONLY;
+
+            /* Check for SWMR read access on the file */
+            if(H5F_INTENT(file) & H5F_ACC_SWMR_READ)
+                *intent_flags |= H5F_ACC_SWMR_READ;
+        } /* end else */
     } /* end if */
 
 done:
@@ -2369,10 +2392,8 @@ H5F_build_actual_name(const H5F_t *f, const H5P_genplist_t *fapl, const char *na
     } /* end else */
 
 done:
-    /* Close the property list */
-    if(new_fapl_id > 0)
-        if(H5I_dec_app_ref(new_fapl_id) < 0)
-            HDONE_ERROR(H5E_FILE, H5E_CANTCLOSEOBJ, FAIL, "can't close duplicated FAPL")
+    if(new_fapl_id > 0 && H5Pclose(new_fapl_id) < 0)
+        HGOTO_ERROR(H5E_FILE, H5E_CANTCLOSEOBJ, FAIL, "can't close duplicated FAPL")
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5F_build_actual_name() */
@@ -2599,15 +2620,16 @@ done:
  *              david.pitt@bigpond.com
  *              Apr 27, 2004
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 herr_t
 H5Fget_filesize(hid_t file_id, hsize_t *size)
 {
-    H5F_t       *file;                  /* File object for file ID */
-    haddr_t     eof;                    /* End of file address */
-    haddr_t     base_addr;              /* Base address for the file */
-    herr_t      ret_value = SUCCEED;    /* Return value */
+    H5F_t      *file;                   /* File object for file ID */
+    haddr_t    eof;                     /* End of file address */
+    herr_t     ret_value = SUCCEED;     /* Return value */
 
     FUNC_ENTER_API(FAIL)
     H5TRACE2("e", "i*h", file_id, size);
@@ -2617,12 +2639,10 @@ H5Fget_filesize(hid_t file_id, hsize_t *size)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "not a file ID")
 
     /* Go get the actual file size */
-    if(HADDR_UNDEF == (eof = H5FD_get_eof(file->shared->lf)))
+    if(HADDR_UNDEF == (eof = H5FDget_eof(file->shared->lf)))
         HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "unable to get file size")
-    base_addr = H5FD_get_base_addr(file->shared->lf);
 
-    if(size)
-        *size = (hsize_t)(eof + base_addr);     /* Convert relative base address for file to absolute address */
+    *size = (hsize_t)eof;
 
 done:
     FUNC_LEAVE_API(ret_value)

@@ -70,16 +70,25 @@ build_triplet = @build@
 host_triplet = @host@
 DIST_COMMON = $(srcdir)/H5srcdir_str.h.in $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(srcdir)/test_plugin.sh.in \
+	$(srcdir)/test_usecases.sh.in \
 	$(srcdir)/testcheck_version.sh.in $(srcdir)/testerror.sh.in \
-	$(srcdir)/testlibinfo.sh.in $(srcdir)/testlinks_env.sh.in \
-	$(top_srcdir)/bin/depcomp $(top_srcdir)/bin/mkinstalldirs \
+	$(srcdir)/testflushrefresh.sh.in $(srcdir)/testlibinfo.sh.in \
+	$(srcdir)/testlinks_env.sh.in $(top_srcdir)/bin/depcomp \
+	$(top_srcdir)/bin/mkinstalldirs \
 	$(top_srcdir)/config/commence.am \
 	$(top_srcdir)/config/conclude.am COPYING
 @HAVE_SHARED_CONDITIONAL_TRUE@am__append_1 = test_plugin.sh
 @HAVE_SHARED_CONDITIONAL_TRUE@am__append_2 = plugin$(EXEEXT)
+bin_PROGRAMS = swmr_generator$(EXEEXT) swmr_reader$(EXEEXT) \
+	swmr_writer$(EXEEXT) swmr_remove_reader$(EXEEXT) \
+	swmr_remove_writer$(EXEEXT) swmr_addrem_writer$(EXEEXT) \
+	swmr_sparse_reader$(EXEEXT) swmr_sparse_writer$(EXEEXT) \
+	use_append_chunk$(EXEEXT) use_append_mchunks$(EXEEXT) \
+	atomic_writer$(EXEEXT) atomic_reader$(EXEEXT) \
+	accum_swmr_reader$(EXEEXT)
 check_PROGRAMS = $(am__EXEEXT_1) error_test$(EXEEXT) \
 	err_compat$(EXEEXT) tcheck_version$(EXEEXT) testmeta$(EXEEXT) \
-	links_env$(EXEEXT) $(am__EXEEXT_2)
+	links_env$(EXEEXT) flushrefresh$(EXEEXT) $(am__EXEEXT_2)
 @HAVE_SHARED_CONDITIONAL_TRUE@am__append_3 = plugin
 @BUILD_ALL_CONDITIONAL_TRUE@noinst_PROGRAMS = $(am__EXEEXT_3)
 @DIRECT_VFD_CONDITIONAL_TRUE@am__append_4 = direct
@@ -91,8 +100,9 @@ am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(SHELL) $(top_srcdir)/bin/mkinstalldirs
 CONFIG_HEADER = $(top_builddir)/src/H5config.h
-CONFIG_CLEAN_FILES = testcheck_version.sh testerror.sh H5srcdir_str.h \
-	testlibinfo.sh testlinks_env.sh test_plugin.sh
+CONFIG_CLEAN_FILES = testcheck_version.sh testerror.sh \
+	testflushrefresh.sh H5srcdir_str.h testlibinfo.sh \
+	testlinks_env.sh test_plugin.sh test_usecases.sh
 CONFIG_CLEAN_VPATH_FILES =
 am__vpath_adj_setup = srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`;
 am__vpath_adj = case $$p in \
@@ -121,7 +131,7 @@ am__uninstall_files_from_dir = { \
     || { echo " ( cd '$$dir' && rm -f" $$files ")"; \
          $(am__cd) "$$dir" && rm -f $$files; }; \
   }
-am__installdirs = "$(DESTDIR)$(libdir)"
+am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(bindir)"
 LTLIBRARIES = $(lib_LTLIBRARIES) $(noinst_LTLIBRARIES)
 libdynlib1_la_LIBADD =
 am__libdynlib1_la_SOURCES_DIST = dynlib1.c
@@ -146,7 +156,8 @@ libdynlib3_la_OBJECTS = $(am_libdynlib3_la_OBJECTS)
 @HAVE_SHARED_CONDITIONAL_TRUE@am_libdynlib3_la_rpath = -rpath \
 @HAVE_SHARED_CONDITIONAL_TRUE@	$(libdir)
 libh5test_la_LIBADD =
-am_libh5test_la_OBJECTS = h5test.lo testframe.lo cache_common.lo
+am_libh5test_la_OBJECTS = h5test.lo testframe.lo cache_common.lo \
+	swmr_common.lo
 libh5test_la_OBJECTS = $(am_libh5test_la_OBJECTS)
 @HAVE_SHARED_CONDITIONAL_FALSE@am_libh5test_la_rpath =
 @HAVE_SHARED_CONDITIONAL_TRUE@am_libh5test_la_rpath =
@@ -165,27 +176,38 @@ am__EXEEXT_1 = testhdf5$(EXEEXT) lheap$(EXEEXT) ohdr$(EXEEXT) \
 	vfd$(EXEEXT) ntypes$(EXEEXT) dangle$(EXEEXT) \
 	dtransform$(EXEEXT) reserved$(EXEEXT) cross_read$(EXEEXT) \
 	freespace$(EXEEXT) mf$(EXEEXT) farray$(EXEEXT) earray$(EXEEXT) \
-	btree2$(EXEEXT) fheap$(EXEEXT) file_image$(EXEEXT) \
-	unregister$(EXEEXT)
+	btree2$(EXEEXT) fheap$(EXEEXT) file_image$(EXEEXT)
 @HAVE_SHARED_CONDITIONAL_TRUE@am__EXEEXT_2 = plugin$(EXEEXT)
 am__EXEEXT_3 = gen_bad_ohdr$(EXEEXT) gen_bogus$(EXEEXT) \
 	gen_cross$(EXEEXT) gen_deflate$(EXEEXT) gen_filters$(EXEEXT) \
-	gen_new_array$(EXEEXT) gen_new_fill$(EXEEXT) \
+	gen_idx$(EXEEXT) gen_new_array$(EXEEXT) gen_new_fill$(EXEEXT) \
 	gen_new_group$(EXEEXT) gen_new_mtime$(EXEEXT) \
 	gen_new_super$(EXEEXT) gen_noencoder$(EXEEXT) \
 	gen_nullspace$(EXEEXT) gen_udlinks$(EXEEXT) \
 	space_overflow$(EXEEXT) gen_filespace$(EXEEXT) \
 	gen_specmetaread$(EXEEXT) gen_sizes_lheap$(EXEEXT) \
 	gen_file_image$(EXEEXT) gen_plist$(EXEEXT)
-PROGRAMS = $(noinst_PROGRAMS)
+PROGRAMS = $(bin_PROGRAMS) $(noinst_PROGRAMS)
 accum_SOURCES = accum.c
 accum_OBJECTS = accum.$(OBJEXT)
 accum_LDADD = $(LDADD)
 accum_DEPENDENCIES = libh5test.la $(LIBHDF5)
+accum_swmr_reader_SOURCES = accum_swmr_reader.c
+accum_swmr_reader_OBJECTS = accum_swmr_reader.$(OBJEXT)
+accum_swmr_reader_LDADD = $(LDADD)
+accum_swmr_reader_DEPENDENCIES = libh5test.la $(LIBHDF5)
 app_ref_SOURCES = app_ref.c
 app_ref_OBJECTS = app_ref.$(OBJEXT)
 app_ref_LDADD = $(LDADD)
 app_ref_DEPENDENCIES = libh5test.la $(LIBHDF5)
+atomic_reader_SOURCES = atomic_reader.c
+atomic_reader_OBJECTS = atomic_reader.$(OBJEXT)
+atomic_reader_LDADD = $(LDADD)
+atomic_reader_DEPENDENCIES = libh5test.la $(LIBHDF5)
+atomic_writer_SOURCES = atomic_writer.c
+atomic_writer_OBJECTS = atomic_writer.$(OBJEXT)
+atomic_writer_LDADD = $(LDADD)
+atomic_writer_DEPENDENCIES = libh5test.la $(LIBHDF5)
 big_SOURCES = big.c
 big_OBJECTS = big.$(OBJEXT)
 big_LDADD = $(LDADD)
@@ -303,6 +325,10 @@ flush2_SOURCES = flush2.c
 flush2_OBJECTS = flush2.$(OBJEXT)
 flush2_LDADD = $(LDADD)
 flush2_DEPENDENCIES = libh5test.la $(LIBHDF5)
+flushrefresh_SOURCES = flushrefresh.c
+flushrefresh_OBJECTS = flushrefresh.$(OBJEXT)
+flushrefresh_LDADD = $(LDADD)
+flushrefresh_DEPENDENCIES = libh5test.la $(LIBHDF5)
 freespace_SOURCES = freespace.c
 freespace_OBJECTS = freespace.$(OBJEXT)
 freespace_LDADD = $(LDADD)
@@ -335,6 +361,10 @@ gen_filters_SOURCES = gen_filters.c
 gen_filters_OBJECTS = gen_filters.$(OBJEXT)
 gen_filters_LDADD = $(LDADD)
 gen_filters_DEPENDENCIES = libh5test.la $(LIBHDF5)
+gen_idx_SOURCES = gen_idx.c
+gen_idx_OBJECTS = gen_idx.$(OBJEXT)
+gen_idx_LDADD = $(LDADD)
+gen_idx_DEPENDENCIES = libh5test.la $(LIBHDF5)
 gen_new_array_SOURCES = gen_new_array.c
 gen_new_array_OBJECTS = gen_new_array.$(OBJEXT)
 gen_new_array_LDADD = $(LDADD)
@@ -455,6 +485,38 @@ stab_SOURCES = stab.c
 stab_OBJECTS = stab.$(OBJEXT)
 stab_LDADD = $(LDADD)
 stab_DEPENDENCIES = libh5test.la $(LIBHDF5)
+swmr_addrem_writer_SOURCES = swmr_addrem_writer.c
+swmr_addrem_writer_OBJECTS = swmr_addrem_writer.$(OBJEXT)
+swmr_addrem_writer_LDADD = $(LDADD)
+swmr_addrem_writer_DEPENDENCIES = libh5test.la $(LIBHDF5)
+swmr_generator_SOURCES = swmr_generator.c
+swmr_generator_OBJECTS = swmr_generator.$(OBJEXT)
+swmr_generator_LDADD = $(LDADD)
+swmr_generator_DEPENDENCIES = libh5test.la $(LIBHDF5)
+swmr_reader_SOURCES = swmr_reader.c
+swmr_reader_OBJECTS = swmr_reader.$(OBJEXT)
+swmr_reader_LDADD = $(LDADD)
+swmr_reader_DEPENDENCIES = libh5test.la $(LIBHDF5)
+swmr_remove_reader_SOURCES = swmr_remove_reader.c
+swmr_remove_reader_OBJECTS = swmr_remove_reader.$(OBJEXT)
+swmr_remove_reader_LDADD = $(LDADD)
+swmr_remove_reader_DEPENDENCIES = libh5test.la $(LIBHDF5)
+swmr_remove_writer_SOURCES = swmr_remove_writer.c
+swmr_remove_writer_OBJECTS = swmr_remove_writer.$(OBJEXT)
+swmr_remove_writer_LDADD = $(LDADD)
+swmr_remove_writer_DEPENDENCIES = libh5test.la $(LIBHDF5)
+swmr_sparse_reader_SOURCES = swmr_sparse_reader.c
+swmr_sparse_reader_OBJECTS = swmr_sparse_reader.$(OBJEXT)
+swmr_sparse_reader_LDADD = $(LDADD)
+swmr_sparse_reader_DEPENDENCIES = libh5test.la $(LIBHDF5)
+swmr_sparse_writer_SOURCES = swmr_sparse_writer.c
+swmr_sparse_writer_OBJECTS = swmr_sparse_writer.$(OBJEXT)
+swmr_sparse_writer_LDADD = $(LDADD)
+swmr_sparse_writer_DEPENDENCIES = libh5test.la $(LIBHDF5)
+swmr_writer_SOURCES = swmr_writer.c
+swmr_writer_OBJECTS = swmr_writer.$(OBJEXT)
+swmr_writer_LDADD = $(LDADD)
+swmr_writer_DEPENDENCIES = libh5test.la $(LIBHDF5)
 tcheck_version_SOURCES = tcheck_version.c
 tcheck_version_OBJECTS = tcheck_version.$(OBJEXT)
 tcheck_version_LDADD = $(LDADD)
@@ -485,10 +547,16 @@ unlink_SOURCES = unlink.c
 unlink_OBJECTS = unlink.$(OBJEXT)
 unlink_LDADD = $(LDADD)
 unlink_DEPENDENCIES = libh5test.la $(LIBHDF5)
-unregister_SOURCES = unregister.c
-unregister_OBJECTS = unregister.$(OBJEXT)
-unregister_LDADD = $(LDADD)
-unregister_DEPENDENCIES = libh5test.la $(LIBHDF5)
+am_use_append_chunk_OBJECTS = use_append_chunk.$(OBJEXT) \
+	use_common.$(OBJEXT)
+use_append_chunk_OBJECTS = $(am_use_append_chunk_OBJECTS)
+use_append_chunk_LDADD = $(LDADD)
+use_append_chunk_DEPENDENCIES = libh5test.la $(LIBHDF5)
+am_use_append_mchunks_OBJECTS = use_append_mchunks.$(OBJEXT) \
+	use_common.$(OBJEXT)
+use_append_mchunks_OBJECTS = $(am_use_append_mchunks_OBJECTS)
+use_append_mchunks_LDADD = $(LDADD)
+use_append_mchunks_DEPENDENCIES = libh5test.la $(LIBHDF5)
 vfd_SOURCES = vfd.c
 vfd_OBJECTS = vfd.$(OBJEXT)
 vfd_LDADD = $(LDADD)
@@ -529,41 +597,51 @@ am__v_CCLD_0 = @echo "  CCLD    " $@;
 am__v_CCLD_1 = 
 SOURCES = $(libdynlib1_la_SOURCES) $(libdynlib2_la_SOURCES) \
 	$(libdynlib3_la_SOURCES) $(libh5test_la_SOURCES) accum.c \
-	app_ref.c big.c bittests.c btree2.c cache.c cache_api.c \
+	accum_swmr_reader.c app_ref.c atomic_reader.c atomic_writer.c \
+	big.c bittests.c btree2.c cache.c cache_api.c cache_tagging.c \
+	cmpd_dset.c cross_read.c dangle.c dsets.c dt_arith.c \
+	dtransform.c dtypes.c earray.c efc.c enc_dec_plist.c \
+	enc_dec_plist_with_endianess.c enum.c err_compat.c \
+	error_test.c extend.c external.c farray.c fheap.c file_image.c \
+	fillval.c filter_fail.c flush1.c flush2.c flushrefresh.c \
+	freespace.c gen_bad_ohdr.c gen_bogus.c gen_cross.c \
+	gen_deflate.c gen_file_image.c gen_filespace.c gen_filters.c \
+	gen_idx.c gen_new_array.c gen_new_fill.c gen_new_group.c \
+	gen_new_mtime.c gen_new_super.c gen_noencoder.c \
+	gen_nullspace.c gen_plist.c gen_sizes_lheap.c \
+	gen_specmetaread.c gen_udlinks.c getname.c gheap.c hyperslab.c \
+	istore.c lheap.c links.c links_env.c mf.c mount.c mtime.c \
+	ntypes.c objcopy.c ohdr.c plugin.c pool.c reserved.c \
+	set_extent.c space_overflow.c stab.c swmr_addrem_writer.c \
+	swmr_generator.c swmr_reader.c swmr_remove_reader.c \
+	swmr_remove_writer.c swmr_sparse_reader.c swmr_sparse_writer.c \
+	swmr_writer.c tcheck_version.c $(testhdf5_SOURCES) testmeta.c \
+	$(ttsafe_SOURCES) unlink.c $(use_append_chunk_SOURCES) \
+	$(use_append_mchunks_SOURCES) vfd.c
+DIST_SOURCES = $(am__libdynlib1_la_SOURCES_DIST) \
+	$(am__libdynlib2_la_SOURCES_DIST) \
+	$(am__libdynlib3_la_SOURCES_DIST) $(libh5test_la_SOURCES) \
+	accum.c accum_swmr_reader.c app_ref.c atomic_reader.c \
+	atomic_writer.c big.c bittests.c btree2.c cache.c cache_api.c \
 	cache_tagging.c cmpd_dset.c cross_read.c dangle.c dsets.c \
 	dt_arith.c dtransform.c dtypes.c earray.c efc.c \
 	enc_dec_plist.c enc_dec_plist_with_endianess.c enum.c \
 	err_compat.c error_test.c extend.c external.c farray.c fheap.c \
 	file_image.c fillval.c filter_fail.c flush1.c flush2.c \
-	freespace.c gen_bad_ohdr.c gen_bogus.c gen_cross.c \
-	gen_deflate.c gen_file_image.c gen_filespace.c gen_filters.c \
-	gen_new_array.c gen_new_fill.c gen_new_group.c gen_new_mtime.c \
-	gen_new_super.c gen_noencoder.c gen_nullspace.c gen_plist.c \
-	gen_sizes_lheap.c gen_specmetaread.c gen_udlinks.c getname.c \
-	gheap.c hyperslab.c istore.c lheap.c links.c links_env.c mf.c \
-	mount.c mtime.c ntypes.c objcopy.c ohdr.c plugin.c pool.c \
-	reserved.c set_extent.c space_overflow.c stab.c \
-	tcheck_version.c $(testhdf5_SOURCES) testmeta.c \
-	$(ttsafe_SOURCES) unlink.c unregister.c vfd.c
-DIST_SOURCES = $(am__libdynlib1_la_SOURCES_DIST) \
-	$(am__libdynlib2_la_SOURCES_DIST) \
-	$(am__libdynlib3_la_SOURCES_DIST) $(libh5test_la_SOURCES) \
-	accum.c app_ref.c big.c bittests.c btree2.c cache.c \
-	cache_api.c cache_tagging.c cmpd_dset.c cross_read.c dangle.c \
-	dsets.c dt_arith.c dtransform.c dtypes.c earray.c efc.c \
-	enc_dec_plist.c enc_dec_plist_with_endianess.c enum.c \
-	err_compat.c error_test.c extend.c external.c farray.c fheap.c \
-	file_image.c fillval.c filter_fail.c flush1.c flush2.c \
-	freespace.c gen_bad_ohdr.c gen_bogus.c gen_cross.c \
-	gen_deflate.c gen_file_image.c gen_filespace.c gen_filters.c \
-	gen_new_array.c gen_new_fill.c gen_new_group.c gen_new_mtime.c \
-	gen_new_super.c gen_noencoder.c gen_nullspace.c gen_plist.c \
-	gen_sizes_lheap.c gen_specmetaread.c gen_udlinks.c getname.c \
-	gheap.c hyperslab.c istore.c lheap.c links.c links_env.c mf.c \
-	mount.c mtime.c ntypes.c objcopy.c ohdr.c plugin.c pool.c \
-	reserved.c set_extent.c space_overflow.c stab.c \
-	tcheck_version.c $(testhdf5_SOURCES) testmeta.c \
-	$(ttsafe_SOURCES) unlink.c unregister.c vfd.c
+	flushrefresh.c freespace.c gen_bad_ohdr.c gen_bogus.c \
+	gen_cross.c gen_deflate.c gen_file_image.c gen_filespace.c \
+	gen_filters.c gen_idx.c gen_new_array.c gen_new_fill.c \
+	gen_new_group.c gen_new_mtime.c gen_new_super.c \
+	gen_noencoder.c gen_nullspace.c gen_plist.c gen_sizes_lheap.c \
+	gen_specmetaread.c gen_udlinks.c getname.c gheap.c hyperslab.c \
+	istore.c lheap.c links.c links_env.c mf.c mount.c mtime.c \
+	ntypes.c objcopy.c ohdr.c plugin.c pool.c reserved.c \
+	set_extent.c space_overflow.c stab.c swmr_addrem_writer.c \
+	swmr_generator.c swmr_reader.c swmr_remove_reader.c \
+	swmr_remove_writer.c swmr_sparse_reader.c swmr_sparse_writer.c \
+	swmr_writer.c tcheck_version.c $(testhdf5_SOURCES) testmeta.c \
+	$(ttsafe_SOURCES) unlink.c $(use_append_chunk_SOURCES) \
+	$(use_append_mchunks_SOURCES) vfd.c
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -862,10 +940,10 @@ TRACE = perl $(top_srcdir)/bin/trace
 CHECK_CLEANFILES = *.chkexe *.chklog *.clog accum.h5 cmpd_dset.h5 \
 	compact_dataset.h5 dataset.h5 dset_offset.h5 \
 	max_compact_dataset.h5 simple.h5 set_local.h5 random_chunks.h5 \
-	huge_chunks.h5 chunk_cache.h5 big_chunk.h5 chunk_expand.h5 \
-	copy_dcpl_newfile.h5 extend.h5 istore.h5 extlinks*.h5 \
-	frspace.h5 links*.h5 sys_file1 tfile[1-6].h5 th5s[1-4].h5 \
-	lheap.h5 fheap.h5 ohdr.h5 stab.h5 extern_[1-3].h5 \
+	huge_chunks.h5 chunk_cache.h5 big_chunk.h5 chunk_fast.h5 \
+	chunk_expand.h5 copy_dcpl_newfile.h5 extend.h5 istore.h5 \
+	extlinks*.h5 frspace.h5 links*.h5 sys_file1 tfile[1-6].h5 \
+	th5s[1-4].h5 lheap.h5 fheap.h5 ohdr.h5 stab.h5 extern_[1-3].h5 \
 	extern_[1-4][ab].raw gheap[0-4].h5 dt_arith[1-2] links.h5 \
 	links[0-6]*.h5 extlinks[0-15].h5 tmp big.data \
 	big[0-9][0-9][0-9][0-9][0-9].h5 stdio.h5 sec2.h5 \
@@ -885,12 +963,18 @@ CHECK_CLEANFILES = *.chkexe *.chklog *.clog accum.h5 cmpd_dset.h5 \
 	earray.h5 efc[0-5].h5 log_vfd_out.log new_multi_file_v16-r.h5 \
 	new_multi_file_v16-s.h5 split_get_file_image_test-m.h5 \
 	split_get_file_image_test-r.h5 file_image_core_test.h5.copy \
-	unregister_filter_1.h5 unregister_filter_2.h5
+	swmr_data.h5 use_append_chunk.h5 use_append_mchunks.h5 \
+	flushrefresh.h5 flushrefresh_VERIFICATION_START \
+	flushrefresh_VERIFICATION_CHECKPOINT1 \
+	flushrefresh_VERIFICATION_CHECKPOINT2 \
+	flushrefresh_VERIFICATION_DONE atomic_data accum_swmr_big.h5 \
+	ohdr_swmr.h5
 INCLUDES = -I$(top_srcdir)/src -I$(top_builddir)/src
 
 # Test script for error_test and err_compat
 TEST_SCRIPT = testerror.sh testlibinfo.sh testcheck_version.sh \
-	testlinks_env.sh $(am__append_1)
+	testlinks_env.sh $(srcdir)/testswmr.sh testflushrefresh.sh \
+	test_usecases.sh $(am__append_1)
 SCRIPT_DEPEND = error_test$(EXEEXT) err_compat$(EXEEXT) \
 	links_env$(EXEEXT) $(am__append_2)
 check_SCRIPTS = $(TEST_SCRIPT)
@@ -908,7 +992,7 @@ TEST_PROG = testhdf5 lheap ohdr stab gheap cache cache_api cache_tagging \
            big mtime fillval mount flush1 flush2 app_ref enum \
            set_extent ttsafe enc_dec_plist enc_dec_plist_with_endianess\
            getname vfd ntypes dangle dtransform reserved cross_read \
-           freespace mf farray earray btree2 fheap file_image unregister
+           freespace mf farray earray btree2 fheap file_image
 
 
 # These programs generate test files for the tests.  They don't need to be
@@ -918,7 +1002,7 @@ TEST_PROG = testhdf5 lheap ohdr stab gheap cache cache_api cache_tagging \
 # --enable-build-all at configure time.
 # The gen_old_* files can only be compiled with older versions of the library
 # so do not appear in this list.
-BUILD_ALL_PROGS = gen_bad_ohdr gen_bogus gen_cross gen_deflate gen_filters gen_new_array \
+BUILD_ALL_PROGS = gen_bad_ohdr gen_bogus gen_cross gen_deflate gen_filters gen_idx gen_new_array \
     gen_new_fill gen_new_group gen_new_mtime gen_new_super gen_noencoder \
     gen_nullspace gen_udlinks space_overflow gen_filespace gen_specmetaread \
     gen_sizes_lheap gen_file_image gen_plist
@@ -929,7 +1013,7 @@ BUILD_ALL_PROGS = gen_bad_ohdr gen_bogus gen_cross gen_deflate gen_filters gen_n
 @HAVE_SHARED_CONDITIONAL_TRUE@libdynlib1_la_SOURCES = dynlib1.c
 @HAVE_SHARED_CONDITIONAL_TRUE@libdynlib2_la_SOURCES = dynlib2.c
 @HAVE_SHARED_CONDITIONAL_TRUE@libdynlib3_la_SOURCES = dynlib3.c
-libh5test_la_SOURCES = h5test.c testframe.c cache_common.c
+libh5test_la_SOURCES = h5test.c testframe.c cache_common.c swmr_common.c
 
 # Use libhd5test.la to compile all of the tests
 LDADD = libh5test.la $(LIBHDF5)
@@ -947,8 +1031,14 @@ testhdf5_SOURCES = testhdf5.c tarray.c tattr.c tchecksum.c tconfig.c tfile.c \
     tvlstr.c tvltypes.c
 
 
+# Sources for Use Cases
+use_append_chunk_SOURCES = use_append_chunk.c use_common.c
+use_append_mchunks_SOURCES = use_append_mchunks.c use_common.c
+
 # Temporary files.
-DISTCLEANFILES = testerror.sh testlibinfo.sh testcheck_version.sh testlinks_env.sh test_plugin.sh
+DISTCLEANFILES = testerror.sh testlibinfo.sh testcheck_version.sh testlinks_env.sh test_plugin.sh \
+    testflushrefresh.sh
+
 
 # Automake needs to be taught how to build lib, progs, and tests targets.
 # These will be filled in automatically for the most part (e.g.,
@@ -1008,6 +1098,8 @@ testcheck_version.sh: $(top_builddir)/config.status $(srcdir)/testcheck_version.
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 testerror.sh: $(top_builddir)/config.status $(srcdir)/testerror.sh.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+testflushrefresh.sh: $(top_builddir)/config.status $(srcdir)/testflushrefresh.sh.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 H5srcdir_str.h: $(top_builddir)/config.status $(srcdir)/H5srcdir_str.h.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 testlibinfo.sh: $(top_builddir)/config.status $(srcdir)/testlibinfo.sh.in
@@ -1015,6 +1107,8 @@ testlibinfo.sh: $(top_builddir)/config.status $(srcdir)/testlibinfo.sh.in
 testlinks_env.sh: $(top_builddir)/config.status $(srcdir)/testlinks_env.sh.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 test_plugin.sh: $(top_builddir)/config.status $(srcdir)/test_plugin.sh.in
+	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
+test_usecases.sh: $(top_builddir)/config.status $(srcdir)/test_usecases.sh.in
 	cd $(top_builddir) && $(SHELL) ./config.status $(subdir)/$@
 install-libLTLIBRARIES: $(lib_LTLIBRARIES)
 	@$(NORMAL_INSTALL)
@@ -1069,6 +1163,52 @@ libdynlib3.la: $(libdynlib3_la_OBJECTS) $(libdynlib3_la_DEPENDENCIES) $(EXTRA_li
 	$(AM_V_CCLD)$(LINK) $(am_libdynlib3_la_rpath) $(libdynlib3_la_OBJECTS) $(libdynlib3_la_LIBADD) $(LIBS)
 libh5test.la: $(libh5test_la_OBJECTS) $(libh5test_la_DEPENDENCIES) $(EXTRA_libh5test_la_DEPENDENCIES) 
 	$(AM_V_CCLD)$(LINK) $(am_libh5test_la_rpath) $(libh5test_la_OBJECTS) $(libh5test_la_LIBADD) $(LIBS)
+install-binPROGRAMS: $(bin_PROGRAMS)
+	@$(NORMAL_INSTALL)
+	@list='$(bin_PROGRAMS)'; test -n "$(bindir)" || list=; \
+	if test -n "$$list"; then \
+	  echo " $(MKDIR_P) '$(DESTDIR)$(bindir)'"; \
+	  $(MKDIR_P) "$(DESTDIR)$(bindir)" || exit 1; \
+	fi; \
+	for p in $$list; do echo "$$p $$p"; done | \
+	sed 's/$(EXEEXT)$$//' | \
+	while read p p1; do if test -f $$p || test -f $$p1; \
+	  then echo "$$p"; echo "$$p"; else :; fi; \
+	done | \
+	sed -e 'p;s,.*/,,;n;h' -e 's|.*|.|' \
+	    -e 'p;x;s,.*/,,;s/$(EXEEXT)$$//;$(transform);s/$$/$(EXEEXT)/' | \
+	sed 'N;N;N;s,\n, ,g' | \
+	$(AWK) 'BEGIN { files["."] = ""; dirs["."] = 1 } \
+	  { d=$$3; if (dirs[d] != 1) { print "d", d; dirs[d] = 1 } \
+	    if ($$2 == $$4) files[d] = files[d] " " $$1; \
+	    else { print "f", $$3 "/" $$4, $$1; } } \
+	  END { for (d in files) print "f", d, files[d] }' | \
+	while read type dir files; do \
+	    if test "$$dir" = .; then dir=; else dir=/$$dir; fi; \
+	    test -z "$$files" || { \
+	    echo " $(INSTALL_PROGRAM_ENV) $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(INSTALL_PROGRAM) $$files '$(DESTDIR)$(bindir)$$dir'"; \
+	    $(INSTALL_PROGRAM_ENV) $(LIBTOOL) $(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=install $(INSTALL_PROGRAM) $$files "$(DESTDIR)$(bindir)$$dir" || exit $$?; \
+	    } \
+	; done
+
+uninstall-binPROGRAMS:
+	@$(NORMAL_UNINSTALL)
+	@list='$(bin_PROGRAMS)'; test -n "$(bindir)" || list=; \
+	files=`for p in $$list; do echo "$$p"; done | \
+	  sed -e 'h;s,^.*/,,;s/$(EXEEXT)$$//;$(transform)' \
+	      -e 's/$$/$(EXEEXT)/' `; \
+	test -n "$$list" || exit 0; \
+	echo " ( cd '$(DESTDIR)$(bindir)' && rm -f" $$files ")"; \
+	cd "$(DESTDIR)$(bindir)" && rm -f $$files
+
+clean-binPROGRAMS:
+	@list='$(bin_PROGRAMS)'; test -n "$$list" || exit 0; \
+	echo " rm -f" $$list; \
+	rm -f $$list || exit $$?; \
+	test -n "$(EXEEXT)" || exit 0; \
+	list=`for p in $$list; do echo "$$p"; done | sed 's/$(EXEEXT)$$//'`; \
+	echo " rm -f" $$list; \
+	rm -f $$list
 
 clean-checkPROGRAMS:
 	@list='$(check_PROGRAMS)'; test -n "$$list" || exit 0; \
@@ -1090,9 +1230,18 @@ clean-noinstPROGRAMS:
 accum$(EXEEXT): $(accum_OBJECTS) $(accum_DEPENDENCIES) $(EXTRA_accum_DEPENDENCIES) 
 	@rm -f accum$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(accum_OBJECTS) $(accum_LDADD) $(LIBS)
+accum_swmr_reader$(EXEEXT): $(accum_swmr_reader_OBJECTS) $(accum_swmr_reader_DEPENDENCIES) $(EXTRA_accum_swmr_reader_DEPENDENCIES) 
+	@rm -f accum_swmr_reader$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(accum_swmr_reader_OBJECTS) $(accum_swmr_reader_LDADD) $(LIBS)
 app_ref$(EXEEXT): $(app_ref_OBJECTS) $(app_ref_DEPENDENCIES) $(EXTRA_app_ref_DEPENDENCIES) 
 	@rm -f app_ref$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(app_ref_OBJECTS) $(app_ref_LDADD) $(LIBS)
+atomic_reader$(EXEEXT): $(atomic_reader_OBJECTS) $(atomic_reader_DEPENDENCIES) $(EXTRA_atomic_reader_DEPENDENCIES) 
+	@rm -f atomic_reader$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(atomic_reader_OBJECTS) $(atomic_reader_LDADD) $(LIBS)
+atomic_writer$(EXEEXT): $(atomic_writer_OBJECTS) $(atomic_writer_DEPENDENCIES) $(EXTRA_atomic_writer_DEPENDENCIES) 
+	@rm -f atomic_writer$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(atomic_writer_OBJECTS) $(atomic_writer_LDADD) $(LIBS)
 big$(EXEEXT): $(big_OBJECTS) $(big_DEPENDENCIES) $(EXTRA_big_DEPENDENCIES) 
 	@rm -f big$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(big_OBJECTS) $(big_LDADD) $(LIBS)
@@ -1180,6 +1329,9 @@ flush1$(EXEEXT): $(flush1_OBJECTS) $(flush1_DEPENDENCIES) $(EXTRA_flush1_DEPENDE
 flush2$(EXEEXT): $(flush2_OBJECTS) $(flush2_DEPENDENCIES) $(EXTRA_flush2_DEPENDENCIES) 
 	@rm -f flush2$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(flush2_OBJECTS) $(flush2_LDADD) $(LIBS)
+flushrefresh$(EXEEXT): $(flushrefresh_OBJECTS) $(flushrefresh_DEPENDENCIES) $(EXTRA_flushrefresh_DEPENDENCIES) 
+	@rm -f flushrefresh$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(flushrefresh_OBJECTS) $(flushrefresh_LDADD) $(LIBS)
 freespace$(EXEEXT): $(freespace_OBJECTS) $(freespace_DEPENDENCIES) $(EXTRA_freespace_DEPENDENCIES) 
 	@rm -f freespace$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(freespace_OBJECTS) $(freespace_LDADD) $(LIBS)
@@ -1204,6 +1356,9 @@ gen_filespace$(EXEEXT): $(gen_filespace_OBJECTS) $(gen_filespace_DEPENDENCIES) $
 gen_filters$(EXEEXT): $(gen_filters_OBJECTS) $(gen_filters_DEPENDENCIES) $(EXTRA_gen_filters_DEPENDENCIES) 
 	@rm -f gen_filters$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(gen_filters_OBJECTS) $(gen_filters_LDADD) $(LIBS)
+gen_idx$(EXEEXT): $(gen_idx_OBJECTS) $(gen_idx_DEPENDENCIES) $(EXTRA_gen_idx_DEPENDENCIES) 
+	@rm -f gen_idx$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(gen_idx_OBJECTS) $(gen_idx_LDADD) $(LIBS)
 gen_new_array$(EXEEXT): $(gen_new_array_OBJECTS) $(gen_new_array_DEPENDENCIES) $(EXTRA_gen_new_array_DEPENDENCIES) 
 	@rm -f gen_new_array$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(gen_new_array_OBJECTS) $(gen_new_array_LDADD) $(LIBS)
@@ -1294,6 +1449,30 @@ space_overflow$(EXEEXT): $(space_overflow_OBJECTS) $(space_overflow_DEPENDENCIES
 stab$(EXEEXT): $(stab_OBJECTS) $(stab_DEPENDENCIES) $(EXTRA_stab_DEPENDENCIES) 
 	@rm -f stab$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(stab_OBJECTS) $(stab_LDADD) $(LIBS)
+swmr_addrem_writer$(EXEEXT): $(swmr_addrem_writer_OBJECTS) $(swmr_addrem_writer_DEPENDENCIES) $(EXTRA_swmr_addrem_writer_DEPENDENCIES) 
+	@rm -f swmr_addrem_writer$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(swmr_addrem_writer_OBJECTS) $(swmr_addrem_writer_LDADD) $(LIBS)
+swmr_generator$(EXEEXT): $(swmr_generator_OBJECTS) $(swmr_generator_DEPENDENCIES) $(EXTRA_swmr_generator_DEPENDENCIES) 
+	@rm -f swmr_generator$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(swmr_generator_OBJECTS) $(swmr_generator_LDADD) $(LIBS)
+swmr_reader$(EXEEXT): $(swmr_reader_OBJECTS) $(swmr_reader_DEPENDENCIES) $(EXTRA_swmr_reader_DEPENDENCIES) 
+	@rm -f swmr_reader$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(swmr_reader_OBJECTS) $(swmr_reader_LDADD) $(LIBS)
+swmr_remove_reader$(EXEEXT): $(swmr_remove_reader_OBJECTS) $(swmr_remove_reader_DEPENDENCIES) $(EXTRA_swmr_remove_reader_DEPENDENCIES) 
+	@rm -f swmr_remove_reader$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(swmr_remove_reader_OBJECTS) $(swmr_remove_reader_LDADD) $(LIBS)
+swmr_remove_writer$(EXEEXT): $(swmr_remove_writer_OBJECTS) $(swmr_remove_writer_DEPENDENCIES) $(EXTRA_swmr_remove_writer_DEPENDENCIES) 
+	@rm -f swmr_remove_writer$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(swmr_remove_writer_OBJECTS) $(swmr_remove_writer_LDADD) $(LIBS)
+swmr_sparse_reader$(EXEEXT): $(swmr_sparse_reader_OBJECTS) $(swmr_sparse_reader_DEPENDENCIES) $(EXTRA_swmr_sparse_reader_DEPENDENCIES) 
+	@rm -f swmr_sparse_reader$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(swmr_sparse_reader_OBJECTS) $(swmr_sparse_reader_LDADD) $(LIBS)
+swmr_sparse_writer$(EXEEXT): $(swmr_sparse_writer_OBJECTS) $(swmr_sparse_writer_DEPENDENCIES) $(EXTRA_swmr_sparse_writer_DEPENDENCIES) 
+	@rm -f swmr_sparse_writer$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(swmr_sparse_writer_OBJECTS) $(swmr_sparse_writer_LDADD) $(LIBS)
+swmr_writer$(EXEEXT): $(swmr_writer_OBJECTS) $(swmr_writer_DEPENDENCIES) $(EXTRA_swmr_writer_DEPENDENCIES) 
+	@rm -f swmr_writer$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(swmr_writer_OBJECTS) $(swmr_writer_LDADD) $(LIBS)
 tcheck_version$(EXEEXT): $(tcheck_version_OBJECTS) $(tcheck_version_DEPENDENCIES) $(EXTRA_tcheck_version_DEPENDENCIES) 
 	@rm -f tcheck_version$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(tcheck_version_OBJECTS) $(tcheck_version_LDADD) $(LIBS)
@@ -1309,9 +1488,12 @@ ttsafe$(EXEEXT): $(ttsafe_OBJECTS) $(ttsafe_DEPENDENCIES) $(EXTRA_ttsafe_DEPENDE
 unlink$(EXEEXT): $(unlink_OBJECTS) $(unlink_DEPENDENCIES) $(EXTRA_unlink_DEPENDENCIES) 
 	@rm -f unlink$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(unlink_OBJECTS) $(unlink_LDADD) $(LIBS)
-unregister$(EXEEXT): $(unregister_OBJECTS) $(unregister_DEPENDENCIES) $(EXTRA_unregister_DEPENDENCIES) 
-	@rm -f unregister$(EXEEXT)
-	$(AM_V_CCLD)$(LINK) $(unregister_OBJECTS) $(unregister_LDADD) $(LIBS)
+use_append_chunk$(EXEEXT): $(use_append_chunk_OBJECTS) $(use_append_chunk_DEPENDENCIES) $(EXTRA_use_append_chunk_DEPENDENCIES) 
+	@rm -f use_append_chunk$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(use_append_chunk_OBJECTS) $(use_append_chunk_LDADD) $(LIBS)
+use_append_mchunks$(EXEEXT): $(use_append_mchunks_OBJECTS) $(use_append_mchunks_DEPENDENCIES) $(EXTRA_use_append_mchunks_DEPENDENCIES) 
+	@rm -f use_append_mchunks$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(use_append_mchunks_OBJECTS) $(use_append_mchunks_LDADD) $(LIBS)
 vfd$(EXEEXT): $(vfd_OBJECTS) $(vfd_DEPENDENCIES) $(EXTRA_vfd_DEPENDENCIES) 
 	@rm -f vfd$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(vfd_OBJECTS) $(vfd_LDADD) $(LIBS)
@@ -1323,7 +1505,10 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/accum.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/accum_swmr_reader.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/app_ref.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/atomic_reader.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/atomic_writer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/big.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bittests.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/btree2.Po@am__quote@
@@ -1357,6 +1542,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/filter_fail.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/flush1.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/flush2.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/flushrefresh.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/freespace.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_bad_ohdr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_bogus.Po@am__quote@
@@ -1365,6 +1551,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_file_image.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_filespace.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_filters.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_idx.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_new_array.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_new_fill.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gen_new_group.Po@am__quote@
@@ -1396,6 +1583,15 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/set_extent.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/space_overflow.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stab.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/swmr_addrem_writer.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/swmr_common.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/swmr_generator.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/swmr_reader.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/swmr_remove_reader.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/swmr_remove_writer.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/swmr_sparse_reader.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/swmr_sparse_writer.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/swmr_writer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tarray.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tattr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tcheck_version.Po@am__quote@
@@ -1430,7 +1626,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tvlstr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tvltypes.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/unlink.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/unregister.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/use_append_chunk.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/use_append_mchunks.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/use_common.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/vfd.Po@am__quote@
 
 .c.o:
@@ -1561,8 +1759,10 @@ check-am: all-am
 	$(MAKE) $(AM_MAKEFLAGS) check-TESTS
 check: check-am
 all-am: Makefile $(LTLIBRARIES) $(PROGRAMS) all-local
+install-binPROGRAMS: install-libLTLIBRARIES
+
 installdirs:
-	for dir in "$(DESTDIR)$(libdir)"; do \
+	for dir in "$(DESTDIR)$(libdir)" "$(DESTDIR)$(bindir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -1599,9 +1799,9 @@ maintainer-clean-generic:
 @HAVE_SHARED_CONDITIONAL_FALSE@install-exec-hook:
 clean: clean-am
 
-clean-am: clean-checkPROGRAMS clean-generic clean-libLTLIBRARIES \
-	clean-libtool clean-noinstLTLIBRARIES clean-noinstPROGRAMS \
-	mostlyclean-am
+clean-am: clean-binPROGRAMS clean-checkPROGRAMS clean-generic \
+	clean-libLTLIBRARIES clean-libtool clean-noinstLTLIBRARIES \
+	clean-noinstPROGRAMS mostlyclean-am
 
 distclean: distclean-am
 	-rm -rf ./$(DEPDIR)
@@ -1627,7 +1827,7 @@ install-dvi: install-dvi-am
 
 install-dvi-am:
 
-install-exec-am: install-libLTLIBRARIES
+install-exec-am: install-binPROGRAMS install-libLTLIBRARIES
 	@$(NORMAL_INSTALL)
 	$(MAKE) $(AM_MAKEFLAGS) install-exec-hook
 install-html: install-html-am
@@ -1668,16 +1868,17 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-libLTLIBRARIES
+uninstall-am: uninstall-binPROGRAMS uninstall-libLTLIBRARIES
 
 .MAKE: check-am install-am install-exec-am install-strip
 
 .PHONY: CTAGS GTAGS all all-am all-local check check-TESTS check-am \
-	clean clean-checkPROGRAMS clean-generic clean-libLTLIBRARIES \
-	clean-libtool clean-noinstLTLIBRARIES clean-noinstPROGRAMS \
-	cscopelist ctags distclean distclean-compile distclean-generic \
-	distclean-libtool distclean-tags distdir dvi dvi-am html \
-	html-am info info-am install install-am install-data \
+	clean clean-binPROGRAMS clean-checkPROGRAMS clean-generic \
+	clean-libLTLIBRARIES clean-libtool clean-noinstLTLIBRARIES \
+	clean-noinstPROGRAMS cscopelist ctags distclean \
+	distclean-compile distclean-generic distclean-libtool \
+	distclean-tags distdir dvi dvi-am html html-am info info-am \
+	install install-am install-binPROGRAMS install-data \
 	install-data-am install-dvi install-dvi-am install-exec \
 	install-exec-am install-exec-hook install-html install-html-am \
 	install-info install-info-am install-libLTLIBRARIES \
@@ -1686,7 +1887,8 @@ uninstall-am: uninstall-libLTLIBRARIES
 	installdirs maintainer-clean maintainer-clean-generic \
 	mostlyclean mostlyclean-compile mostlyclean-generic \
 	mostlyclean-libtool mostlyclean-local pdf pdf-am ps ps-am tags \
-	uninstall uninstall-am uninstall-libLTLIBRARIES
+	uninstall uninstall-am uninstall-binPROGRAMS \
+	uninstall-libLTLIBRARIES
 
 
 # List all build rules defined by HDF5 Makefiles as "PHONY" targets here.

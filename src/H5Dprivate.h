@@ -143,6 +143,7 @@ typedef struct H5D_copy_file_ud_t {
     H5O_copy_file_ud_common_t common;   /* Shared information (must be first) */
     struct H5S_extent_t *src_space_extent;     /* Copy of dataspace extent for dataset */
     H5T_t *src_dtype;                   /* Copy of datatype for dataset */
+    H5O_layout_t *src_layout;           /* Copy of layout for dataset */
 } H5D_copy_file_ud_t;
 
 
@@ -162,7 +163,6 @@ H5_DLL H5O_loc_t *H5D_oloc(H5D_t *dataset);
 H5_DLL H5G_name_t *H5D_nameof(H5D_t *dataset);
 H5_DLL H5T_t *H5D_typeof(const H5D_t *dset);
 H5_DLL herr_t H5D_flush(const H5F_t *f, hid_t dxpl_id);
-H5_DLL hid_t H5D_get_create_plist(H5D_t *dset);
 
 /* Functions that operate on vlen data */
 H5_DLL herr_t H5D_vlen_reclaim(hid_t type_id, H5S_t *space, hid_t plist_id,

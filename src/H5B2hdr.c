@@ -108,7 +108,7 @@ H5FL_SEQ_DEFINE(H5B2_node_info_t);
  */
 herr_t
 H5B2_hdr_init(H5B2_hdr_t *hdr, const H5B2_create_t *cparam, void *ctx_udata,
-    uint16_t depth)
+    void *parent, unsigned depth)
 {
     size_t sz_max_nrec;                 /* Temporary variable for range checking */
     unsigned u_max_nrec_size;           /* Temporary variable for range checking */
@@ -132,11 +132,12 @@ H5B2_hdr_init(H5B2_hdr_t *hdr, const H5B2_create_t *cparam, void *ctx_udata,
     HDassert(cparam->merge_percent < (cparam->split_percent / 2));
 
     /* Initialize basic information */
+    hdr->parent = parent;
     hdr->rc = 0;
     hdr->pending_delete = FALSE;
 
     /* Assign dynamic information */
-    hdr->depth = depth;
+    hdr->depth = (uint16_t)depth;
 
     /* Assign user's information */
     hdr->split_percent = cparam->split_percent;
@@ -166,7 +167,7 @@ HDmemset(hdr->page, 0, hdr->node_size);
     hdr->node_info[0].cum_max_nrec = hdr->node_info[0].max_nrec;
     hdr->node_info[0].cum_max_nrec_size = 0;
     if(NULL == (hdr->node_info[0].nat_rec_fac = H5FL_fac_init(hdr->cls->nrec_size * hdr->node_info[0].max_nrec)))
-	HGOTO_ERROR(H5E_BTREE, H5E_CANTINIT, FAIL, "can't create node native key block factory")
+        HGOTO_ERROR(H5E_BTREE, H5E_CANTINIT, FAIL, "can't create node native key block factory")
     hdr->node_info[0].node_ptr_fac = NULL;
 
     /* Allocate array of pointers to internal node native keys */
@@ -206,6 +207,16 @@ HDmemset(hdr->page, 0, hdr->node_size);
                 HGOTO_ERROR(H5E_BTREE, H5E_CANTINIT, FAIL, "can't create internal 'branch' node node pointer block factory")
         } /* end for */
     } /* end if */
+
+    /* Determine if we are doing SWMR writes.  Only enable for data chunks for
+     * now. */
+    hdr->swmr_write = (H5F_INTENT(hdr->f) & H5F_ACC_SWMR_WRITE) > 0
+            && (hdr->cls->id == H5B2_CDSET_ID
+            || hdr->cls->id == H5B2_CDSET_FILT_ID);
+
+    /* Clear the shadowed list pointers */
+    hdr->shadowed_leaf = NULL;
+    hdr->shadowed_internal = NULL;
 
     /* Create the callback context, if the callback exists */
     if(hdr->cls->crt_context) {
@@ -250,7 +261,7 @@ H5B2_hdr_alloc(H5F_t *f)
 
     /* Allocate space for the shared information */
     if(NULL == (hdr = H5FL_CALLOC(H5B2_hdr_t)))
-	HGOTO_ERROR(H5E_BTREE, H5E_CANTALLOC, NULL, "memory allocation failed for B-tree header")
+        HGOTO_ERROR(H5E_BTREE, H5E_CANTALLOC, NULL, "memory allocation failed for B-tree header")
 
     /* Assign non-zero information */
     hdr->f = f;
@@ -283,7 +294,7 @@ done:
  */
 haddr_t
 H5B2_hdr_create(H5F_t *f, hid_t dxpl_id, const H5B2_create_t *cparam,
-    void *ctx_udata)
+    void *ctx_udata, void *parent)
 {
     H5B2_hdr_t *hdr = NULL;     /* The new v2 B-tree header information */
     haddr_t ret_value;          /* Return value */
@@ -298,19 +309,19 @@ H5B2_hdr_create(H5F_t *f, hid_t dxpl_id, const H5B2_create_t *cparam,
 
     /* Allocate v2 B-tree header */
     if(NULL == (hdr = H5B2_hdr_alloc(f)))
-	HGOTO_ERROR(H5E_BTREE, H5E_CANTALLOC, HADDR_UNDEF, "allocation failed for B-tree header")
+        HGOTO_ERROR(H5E_BTREE, H5E_CANTALLOC, HADDR_UNDEF, "allocation failed for B-tree header")
 
     /* Initialize shared B-tree info */
-    if(H5B2_hdr_init(hdr, cparam, ctx_udata, (uint16_t)0) < 0)
-	HGOTO_ERROR(H5E_BTREE, H5E_CANTINIT, HADDR_UNDEF, "can't create shared B-tree info")
+    if(H5B2_hdr_init(hdr, cparam, ctx_udata, parent, (unsigned)0) < 0)
+        HGOTO_ERROR(H5E_BTREE, H5E_CANTINIT, HADDR_UNDEF, "can't create shared B-tree info")
 
     /* Allocate space for the header on disk */
     if(HADDR_UNDEF == (hdr->addr = H5MF_alloc(f, H5FD_MEM_BTREE, dxpl_id, (hsize_t)hdr->hdr_size)))
-	HGOTO_ERROR(H5E_BTREE, H5E_CANTALLOC, HADDR_UNDEF, "file allocation failed for B-tree header")
+        HGOTO_ERROR(H5E_BTREE, H5E_CANTALLOC, HADDR_UNDEF, "file allocation failed for B-tree header")
 
     /* Cache the new B-tree node */
     if(H5AC_insert_entry(f, dxpl_id, H5AC_BT2_HDR, hdr->addr, hdr, H5AC__NO_FLAGS_SET) < 0)
-	HGOTO_ERROR(H5E_BTREE, H5E_CANTINSERT, HADDR_UNDEF, "can't add B-tree header to cache")
+        HGOTO_ERROR(H5E_BTREE, H5E_CANTINSERT, HADDR_UNDEF, "can't add B-tree header to cache")
 
     /* Set address of v2 B-tree header to return */
     ret_value = hdr->addr;
@@ -398,22 +409,22 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5B2_hdr_fuse_incr
+ * Function:    H5B2_hdr_fuse_incr
  *
- * Purpose:	Increment file reference count on shared v2 B-tree header
+ * Purpose:     Increment file reference count on shared v2 B-tree header
  *
- * Return:	Non-negative on success/Negative on failure
+ * Return:      SUCCEED (Can't fail)
  *
- * Programmer:	Quincey Koziol
- *		koziol@hdfgroup.org
- *		Oct 27 2009
+ * Programmer:  Quincey Koziol
+ *              koziol@hdfgroup.org
+ *              Oct 27 2009
  *
  *-------------------------------------------------------------------------
  */
 herr_t
 H5B2_hdr_fuse_incr(H5B2_hdr_t *hdr)
 {
-    FUNC_ENTER_NOAPI_NOINIT
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     /* Sanity check */
     HDassert(hdr);
@@ -426,22 +437,22 @@ H5B2_hdr_fuse_incr(H5B2_hdr_t *hdr)
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5B2_hdr_fuse_decr
+ * Function:    H5B2_hdr_fuse_decr
  *
- * Purpose:	Decrement file reference count on shared v2 B-tree header
+ * Purpose:     Decrement file reference count on shared v2 B-tree header
  *
- * Return:	Non-negative on success/Negative on failure
+ * Return:      The file's reference count after the decrement. (Can't fail)
  *
- * Programmer:	Quincey Koziol
- *		koziol@hdfgroup.org
- *		Oct 27 2009
+ * Programmer:  Quincey Koziol
+ *              koziol@hdfgroup.org
+ *              Oct 27 2009
  *
  *-------------------------------------------------------------------------
  */
 size_t
 H5B2_hdr_fuse_decr(H5B2_hdr_t *hdr)
 {
-    FUNC_ENTER_NOAPI_NOINIT
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     /* Sanity check */
     HDassert(hdr);
@@ -590,7 +601,7 @@ H5B2_hdr_delete(H5B2_hdr_t *hdr, hid_t dxpl_id)
 
     /* Delete all nodes in B-tree */
     if(H5F_addr_defined(hdr->root.addr))
-        if(H5B2_delete_node(hdr, dxpl_id, hdr->depth, &hdr->root, hdr->remove_op, hdr->remove_op_data) < 0)
+        if(H5B2_delete_node(hdr, dxpl_id, hdr->depth, &hdr->root, hdr, hdr->remove_op, hdr->remove_op_data) < 0)
             HGOTO_ERROR(H5E_BTREE, H5E_CANTDELETE, FAIL, "unable to delete B-tree nodes")
 
     /* Indicate that the heap header should be deleted & file space freed */
@@ -601,6 +612,6 @@ done:
     if(H5AC_unprotect(hdr->f, dxpl_id, H5AC_BT2_HDR, hdr->addr, hdr, cache_flags) < 0)
         HDONE_ERROR(H5E_BTREE, H5E_CANTUNPROTECT, FAIL, "unable to release B-tree header")
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5B2_hdr_delete() */
 

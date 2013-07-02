@@ -529,18 +529,19 @@
 ./perform/sio_timer.h
 ./perform/zip_perf.c
 
-./release_docs/INSTALL_CMake.txt
+./release_docs/CMake.txt
 ./release_docs/COPYING
 ./release_docs/HISTORY-1_0-1_8_0_rc3.txt
 ./release_docs/HISTORY-1_9.txt
 ./release_docs/INSTALL
 ./release_docs/INSTALL_Cygwin.txt
+./release_docs/INSTALL_MinGW.txt
 ./release_docs/INSTALL_parallel
 ./release_docs/INSTALL_VMS.txt
 ./release_docs/INSTALL_Windows.txt
 ./release_docs/RELEASE.txt
-./release_docs/USING_HDF5_CMake.txt
-./release_docs/USING_HDF5_VS.txt
+./release_docs/USING_CMake.txt
+./release_docs/USING_Windows.txt
 
 ./src/.indent.pro      _DO_NOT_DISTRIBUTE_
 ./src/hdf5.lnt        _DO_NOT_DISTRIBUTE_
@@ -601,20 +602,25 @@
 ./src/H5CSprivate.h
 ./src/H5D.c
 ./src/H5Dbtree.c
+./src/H5Dbtree2.c
 ./src/H5Dchunk.c
 ./src/H5Dcompact.c
 ./src/H5Dcontig.c
 ./src/H5Ddbg.c
 ./src/H5Ddeprec.c
+./src/H5Dearray.c
 ./src/H5Defl.c
+./src/H5Dfarray.c
 ./src/H5Dfill.c
 ./src/H5Dint.c
 ./src/H5Dio.c
 ./src/H5Dlayout.c
 ./src/H5Dmpio.c
+./src/H5Dnone.c
 ./src/H5Doh.c
 ./src/H5Dpkg.h
 ./src/H5Dprivate.h
+./src/H5Dproxy.c
 ./src/H5Dpublic.h
 ./src/H5Dscatgath.c
 ./src/H5Dselect.c
@@ -666,6 +672,7 @@
 ./src/H5FAdblkpage.c
 ./src/H5FAdblock.c
 ./src/H5FAhdr.c
+./src/H5FAint.c
 ./src/H5FApkg.h
 ./src/H5FAprivate.h
 ./src/H5FAstat.c
@@ -705,12 +712,13 @@
 ./src/H5FS.c
 ./src/H5FScache.c
 ./src/H5FSdbg.c
-./src/H5FStest.c
-./src/H5FSstat.c
+./src/H5FSint.c
 ./src/H5FSpkg.h
 ./src/H5FSprivate.h
 ./src/H5FSpublic.h
 ./src/H5FSsection.c
+./src/H5FSstat.c
+./src/H5FStest.c
 ./src/H5G.c
 ./src/H5Gbtree2.c
 ./src/H5Gcache.c
@@ -741,6 +749,7 @@
 ./src/H5HFhdr.c
 ./src/H5HFhuge.c
 ./src/H5HFiblock.c
+./src/H5HFint.c
 ./src/H5HFiter.c
 ./src/H5HFman.c
 ./src/H5HFpkg.h
@@ -761,8 +770,10 @@
 ./src/H5HL.c
 ./src/H5HLcache.c
 ./src/H5HLdbg.c
+./src/H5HLdblk.c
 ./src/H5HLint.c
 ./src/H5HLpkg.h
+./src/H5HLprfx.c
 ./src/H5HLprivate.h
 ./src/H5HLpublic.h
 ./src/H5HP.c
@@ -806,6 +817,7 @@
 ./src/H5Odtype.c
 ./src/H5Oefl.c
 ./src/H5Ofill.c
+./src/H5Oflush.c
 ./src/H5Ofsinfo.c
 ./src/H5Oginfo.c
 ./src/H5Olayout.c
@@ -818,6 +830,7 @@
 ./src/H5Opkg.h
 ./src/H5Opline.c
 ./src/H5Oprivate.h
+./src/H5Oproxy.c
 ./src/H5Opublic.h
 ./src/H5Orefcount.c
 ./src/H5Osdspace.c
@@ -825,6 +838,7 @@
 ./src/H5Oshared.h
 ./src/H5Oshmesg.c
 ./src/H5Ostab.c
+./src/H5Ostorage.c
 ./src/H5Otest.c
 ./src/H5Ounknown.c
 ./src/H5P.c
@@ -937,14 +951,20 @@
 ./test/H5srcdir_str.h.in
 ./test/Makefile.am
 ./test/Makefile.in
+./test/SWMR_UseCase_UG.txt
 ./test/accum.c
+./test/accum_swmr_reader.c
 ./test/app_ref.c
+./test/atomic_reader.c
+./test/atomic_writer.c
 ./test/bad_compound.h5
 ./test/be_data.h5
 ./test/be_extlink1.h5
 ./test/be_extlink2.h5
 ./test/big.c
 ./test/bittests.c
+./test/btree_idx_1_6.h5
+./test/btree_idx_1_8.h5
 ./test/btree2.c
 ./test/cache.c
 ./test/cache_api.c
@@ -990,31 +1010,31 @@
 ./test/filter_fail.c
 ./test/flush1.c
 ./test/flush2.c
-# ====distribute this for now. See HDFFV-8236====
-./test/gen_bad_ohdr.c
-./test/gen_bad_compound.c
-./test/gen_bogus.c
-./test/gen_cross.c
-./test/gen_deflate.c
-./test/gen_file_image.c
-./test/gen_filespace.c
-./test/gen_mergemsg.c
-./test/gen_new_array.c
-./test/gen_new_fill.c
-./test/gen_new_group.c
-./test/gen_new_mtime.c
-./test/gen_new_super.c
-./test/gen_noencoder.c
-./test/gen_nullspace.c
-./test/gen_old_array.c
-./test/gen_old_group.c
-./test/gen_old_layout.c
-./test/gen_old_mtime.c
-./test/gen_plist.c
-./test/gen_sizes_lheap.c
-./test/gen_specmetaread.c
-./test/gen_udlinks.c
-# ====end distribute this for now. See HDFFV-8236====
+./test/flushrefresh.c
+./test/gen_bad_ohdr.c           _DO_NOT_DISTRIBUTE_
+./test/gen_bad_compound.c       _DO_NOT_DISTRIBUTE_
+./test/gen_bogus.c              _DO_NOT_DISTRIBUTE_
+./test/gen_cross.c              _DO_NOT_DISTRIBUTE_
+./test/gen_deflate.c            _DO_NOT_DISTRIBUTE_
+./test/gen_file_image.c         _DO_NOT_DISTRIBUTE_
+./test/gen_filespace.c          _DO_NOT_DISTRIBUTE_
+./test/gen_idx.c		_DO_NOT_DISTRIBUTE_
+./test/gen_mergemsg.c           _DO_NOT_DISTRIBUTE_
+./test/gen_new_array.c          _DO_NOT_DISTRIBUTE_
+./test/gen_new_fill.c           _DO_NOT_DISTRIBUTE_
+./test/gen_new_group.c          _DO_NOT_DISTRIBUTE_
+./test/gen_new_mtime.c          _DO_NOT_DISTRIBUTE_
+./test/gen_new_super.c          _DO_NOT_DISTRIBUTE_
+./test/gen_noencoder.c          _DO_NOT_DISTRIBUTE_
+./test/gen_nullspace.c          _DO_NOT_DISTRIBUTE_
+./test/gen_old_array.c          _DO_NOT_DISTRIBUTE_
+./test/gen_old_group.c          _DO_NOT_DISTRIBUTE_
+./test/gen_old_layout.c         _DO_NOT_DISTRIBUTE_
+./test/gen_old_mtime.c          _DO_NOT_DISTRIBUTE_
+./test/gen_plist.c              _DO_NOT_DISTRIBUTE_
+./test/gen_sizes_lheap.c        _DO_NOT_DISTRIBUTE_
+./test/gen_specmetaread.c       _DO_NOT_DISTRIBUTE_
+./test/gen_udlinks.c            _DO_NOT_DISTRIBUTE_
 ./test/getname.c
 ./test/gheap.c
 ./test/group_old.h5
@@ -1041,11 +1061,19 @@
 ./test/reserved.c
 ./test/pool.c
 ./test/set_extent.c
-# ====distribute this for now. See HDFFV-8236====
-./test/space_overflow.c
-# ====end distribute this for now. See HDFFV-8236====
+./test/space_overflow.c      _DO_NOT_DISTRIBUTE_
 ./test/specmetaread.h5
 ./test/stab.c
+./test/swmr_addrem_writer.c
+./test/swmr_common.c
+./test/swmr_common.h
+./test/swmr_generator.c
+./test/swmr_reader.c
+./test/swmr_remove_reader.c
+./test/swmr_remove_writer.c
+./test/swmr_sparse_reader.c
+./test/swmr_sparse_writer.c
+./test/swmr_writer.c
 ./test/tarray.c
 ./test/tarrold.h5
 ./test/tattr.c
@@ -1058,12 +1086,15 @@
 ./test/testcheck_version.sh.in
 ./test/testerror.sh.in
 ./test/testlinks_env.sh.in
+./test/testflushrefresh.sh.in
 ./test/testframe.c
 ./test/testhdf5.c
 ./test/testhdf5.h
 ./test/testlibinfo.sh.in
 ./test/test_plugin.sh.in
+./test/test_usecases.sh.in
 ./test/testmeta.c
+./test/testswmr.sh
 ./test/tfile.c
 ./test/tgenprop.c
 ./test/th5o.c
@@ -1095,7 +1126,10 @@
 ./test/tvlstr.c
 ./test/tvltypes.c
 ./test/unlink.c
-./test/unregister.c
+./test/use_append_chunk.c
+./test/use_append_mchunks.c
+./test/use_common.c
+./test/use.h
 ./test/vfd.c
 ./test/test_filters_le.h5
 ./test/test_filters_be.h5
@@ -1337,6 +1371,8 @@
 ./tools/h5stat/testfiles/h5stat_filters.h5
 ./tools/h5stat/testfiles/h5stat_help1.ddl
 ./tools/h5stat/testfiles/h5stat_help2.ddl
+./tools/h5stat/testfiles/h5stat_idx.h5
+./tools/h5stat/testfiles/h5stat_idx.ddl
 ./tools/h5stat/testfiles/h5stat_newgrat.ddl
 ./tools/h5stat/testfiles/h5stat_newgrat-UA.ddl
 ./tools/h5stat/testfiles/h5stat_newgrat-UG.ddl
@@ -1433,6 +1469,9 @@
 ./tools/testfiles/tdset-3s.ddl
 ./tools/testfiles/tdset.h5
 ./tools/testfiles/tdset2.h5
+./tools/testfiles/tdset_idx.ls
+./tools/testfiles/tdset_idx.ddl
+./tools/testfiles/tdset_idx.h5
 ./tools/testfiles/tempty.ddl
 ./tools/testfiles/tempty.h5
 ./tools/testfiles/tenum.h5
@@ -1511,8 +1550,6 @@
 ./tools/testfiles/topaque.h5
 ./tools/testfiles/trawdatafile.ddl
 ./tools/testfiles/trawdatafile.exp
-./tools/testfiles/trawssetfile.ddl
-./tools/testfiles/trawssetfile.exp
 ./tools/testfiles/tsaf.ddl
 ./tools/testfiles/tsaf.h5
 ./tools/testfiles/tscalarattrintsize.ddl
@@ -1553,7 +1590,6 @@
 ./tools/testfiles/tudlink-2.ddl
 ./tools/testfiles/tattr2.h5
 ./tools/testfiles/tall-2A.ddl
-./tools/testfiles/tall-2A0.ddl
 ./tools/testfiles/tall-2B.ddl
 ./tools/testfiles/tattrcontents1.ddl
 ./tools/testfiles/tattrcontents2.ddl
@@ -1613,7 +1649,6 @@
 ./tools/h5dump/errfiles/filter_fail.err
 ./tools/h5dump/errfiles/tall-1.err
 ./tools/h5dump/errfiles/tall-2A.err
-./tools/h5dump/errfiles/tall-2A0.err
 ./tools/h5dump/errfiles/tall-2B.err
 ./tools/h5dump/errfiles/tarray1_big.err
 ./tools/h5dump/errfiles/tattr-3.err
@@ -2006,6 +2041,7 @@
 ./tools/h5diff/testfiles/h5diff_457.txt
 ./tools/h5diff/testfiles/h5diff_458.txt
 ./tools/h5diff/testfiles/h5diff_459.txt
+./tools/h5diff/testfiles/h5diff_idx.txt
 ./tools/h5diff/testfiles/h5diff_465.txt
 ./tools/h5diff/testfiles/h5diff_466.txt
 ./tools/h5diff/testfiles/h5diff_467.txt
@@ -2054,6 +2090,8 @@
 ./tools/h5diff/testfiles/h5diff_basic2.h5
 ./tools/h5diff/testfiles/h5diff_dset1.h5
 ./tools/h5diff/testfiles/h5diff_dset2.h5
+./tools/h5diff/testfiles/h5diff_dset_idx1.h5
+./tools/h5diff/testfiles/h5diff_dset_idx2.h5
 ./tools/h5diff/testfiles/h5diff_dtypes.h5
 ./tools/h5diff/testfiles/h5diff_empty.h5
 ./tools/h5diff/testfiles/h5diff_hyper1.h5
@@ -2145,6 +2183,8 @@
 ./tools/h5copy/testfiles/h5copy_extlinks_trg.h5
 ./tools/h5copy/testfiles/h5copy_extlinks_src.out.ls
 ./tools/h5copy/testfiles/h5copy_misc1.out
+./tools/h5copy/testfiles/h5copytst_new.h5
+./tools/h5copy/testfiles/h5copytst_new.out.ls
 
 # test files for h5mkgrp
 ./tools/testfiles/h5mkgrp_nested_p.ls
@@ -2204,6 +2244,9 @@
 ./hl/src/H5IM.c
 ./hl/src/H5IMprivate.h
 ./hl/src/H5IMpublic.h
+./hl/src/H5LD.c
+./hl/src/H5LDprivate.h
+./hl/src/H5LDpublic.h
 ./hl/src/H5LT.c
 ./hl/src/H5LTanalyze.l
 ./hl/src/H5LTanalyze.c
@@ -2220,35 +2263,43 @@
 ./hl/src/H5TBpublic.h
 ./hl/src/hdf5_hl.h
 ./hl/test/COPYING
-./hl/test/H5srcdir_str.h.in
-./hl/test/Makefile.am
-./hl/test/Makefile.in
+./hl/test/dectris_hl_perf.c
 ./hl/test/dsdata.txt
 ./hl/test/dslat.txt
 ./hl/test/dslon.txt
-./hl/test/dtype_file.txt
 ./hl/test/dtype_file_readable.txt
+./hl/test/dtype_file.txt
 ./hl/test/earth.pal
+./hl/test/gen_test_ds.c
+./hl/test/gen_test_ld.c
 ./hl/test/h5hltest.h
-./hl/test/image8.txt
+./hl/test/H5srcdir_str.h.in
 ./hl/test/image24pixel.txt
 ./hl/test/image24plane.txt
+./hl/test/image8.txt
+./hl/test/ld_extend.c
+./hl/test/ld_monitor.c
+./hl/test/Makefile.am
+./hl/test/Makefile.in
 ./hl/test/pal_rgb.h
 ./hl/test/sepia.pal
-./hl/test/dectris_hl_perf.c
-./hl/test/gen_test_ds.c
+./hl/test/test_ds_be.h5
 ./hl/test/test_ds.c
 ./hl/test/test_dset_opt.c
+./hl/test/test_ds_le.h5
 ./hl/test/test_file_image.c
+./hl/test/testfiles/test_ld_out1
+./hl/test/testfiles/test_ld_out2
 ./hl/test/test_image.c
+./hl/test/test_ld.c
+./hl/test/test_ld.h5
+./hl/test/test_ld.sh.in
 ./hl/test/test_lite.c
 ./hl/test/test_packet.c
-./hl/test/test_table.c
-./hl/test/test_ds_le.h5
-./hl/test/test_ds_be.h5
-./hl/test/test_table_le.h5
 ./hl/test/test_table_be.h5
+./hl/test/test_table.c
 ./hl/test/test_table_cray.h5
+./hl/test/test_table_le.h5
 ./hl/test/usa.wri
 
 # tools
@@ -2269,7 +2320,64 @@
 ./hl/tools/gif2h5/h52giftest.sh.in
 ./hl/tools/gif2h5/testfiles/image1.gif
 ./hl/tools/gif2h5/testfiles/h52giftst.h5
+#
+./hl/tools/h5watch/Makefile.am
+./hl/tools/h5watch/Makefile.in
+./hl/tools/h5watch/extend_dset.c
+./hl/tools/h5watch/h5watch.c
+./hl/tools/h5watch/h5watchgentest.c
+./hl/tools/h5watch/testh5watch.sh.in
+./hl/tools/h5watch/WATCH.h5
 
+# expected test output from testing h5watch
+#
+./hl/tools/testfiles/w-err-cmpd1.ddl
+./hl/tools/testfiles/w-err-cmpd2.ddl
+./hl/tools/testfiles/w-err-cmpd3.ddl
+./hl/tools/testfiles/w-err-cmpd4.ddl
+./hl/tools/testfiles/w-err-cmpd5.ddl
+./hl/tools/testfiles/w-err-dset1.ddl
+./hl/tools/testfiles/w-err-dset2.ddl
+./hl/tools/testfiles/w-err-dset-nomax.ddl
+./hl/tools/testfiles/w-err-dset-none.ddl
+./hl/tools/testfiles/w-err-file.ddl
+./hl/tools/testfiles/w-err-poll0.ddl
+./hl/tools/testfiles/w-err-poll.ddl
+./hl/tools/testfiles/w-err-width.ddl
+./hl/tools/testfiles/w-ext-cmpd.ddl
+./hl/tools/testfiles/w-ext-cmpd-esc.ddl
+./hl/tools/testfiles/w-ext-cmpd-esc-f1.ddl
+./hl/tools/testfiles/w-ext-cmpd-esc-f2.ddl
+./hl/tools/testfiles/w-ext-cmpd-esc-f3.ddl
+./hl/tools/testfiles/w-ext-cmpd-esc-ff1.ddl
+./hl/tools/testfiles/w-ext-cmpd-esc-ff2.ddl
+./hl/tools/testfiles/w-ext-cmpd-esc-ff3.ddl
+./hl/tools/testfiles/w-ext-cmpd-f1.ddl
+./hl/tools/testfiles/w-ext-cmpd-f2.ddl
+./hl/tools/testfiles/w-ext-cmpd-f3.ddl
+./hl/tools/testfiles/w-ext-cmpd-ff1.ddl
+./hl/tools/testfiles/w-ext-cmpd-ff2.ddl
+./hl/tools/testfiles/w-ext-cmpd-ff3.ddl
+./hl/tools/testfiles/w-ext-cmpd-label.ddl
+./hl/tools/testfiles/w-ext-cmpd-two.ddl
+./hl/tools/testfiles/w-ext-cmpd-two-f1.ddl
+./hl/tools/testfiles/w-ext-cmpd-two-f2.ddl
+./hl/tools/testfiles/w-ext-cmpd-two-f3.ddl
+./hl/tools/testfiles/w-ext-cmpd-two-ff1.ddl
+./hl/tools/testfiles/w-ext-cmpd-two-ff2.ddl
+./hl/tools/testfiles/w-ext-cmpd-two-ff3.ddl
+./hl/tools/testfiles/w-ext-early.ddl
+./hl/tools/testfiles/w-ext-late.ddl
+./hl/tools/testfiles/w-ext-one-d.ddl
+./hl/tools/testfiles/w-ext-one.ddl
+./hl/tools/testfiles/w-ext-one-simple.ddl
+./hl/tools/testfiles/w-ext-two-d.ddl
+./hl/tools/testfiles/w-ext-two.ddl
+./hl/tools/testfiles/w-ext-two-width.ddl
+./hl/tools/testfiles/w-help1.ddl
+./hl/tools/testfiles/w-help2.ddl
+
+#
 # hl fortran
 ./hl/fortran/COPYING
 ./hl/fortran/Makefile.am
@@ -2398,16 +2506,8 @@
 ./config/cmake/NSIS.template.in
 ./config/cmake/NSIS.InstallOptions.ini.in
 
-# CMake-specific User Files
-./config/cmake/UserMacros/Windows_MT.cmake
-
-# CMake-specific Examples Files
-./config/cmake/HDF518_Examples.cmake.in
-./release_docs/USING_CMake_Examples.txt
-
 ./CMakeLists.txt
 ./CTestConfig.cmake
-./UserMacros.cmake
 ./c++/CMakeLists.txt
 ./c++/examples/CMakeLists.txt
 ./c++/src/CMakeLists.txt

@@ -128,6 +128,9 @@ typedef struct H5FD_mpiposix_t {
     
     HANDLE          hFile;      /* Native windows file handle */
 #endif  /* H5_HAVE_WIN32_API */
+
+    /* Information from file open flags, for SWMR access */
+    hbool_t     swmr_read;      /* Whether the file is open for SWMR read access */
 } H5FD_mpiposix_t;
 
 /*
@@ -263,8 +266,8 @@ H5FD_mpiposix_init(void)
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    if(H5I_VFL != H5I_get_type(H5FD_MPIPOSIX_g))
-        H5FD_MPIPOSIX_g = H5FD_register((const H5FD_class_t *)&H5FD_mpiposix_g, sizeof(H5FD_class_mpi_t), FALSE);
+    if (H5I_VFL != H5Iget_type(H5FD_MPIPOSIX_g))
+        H5FD_MPIPOSIX_g = H5FD_register((const H5FD_class_t *)&H5FD_mpiposix_g,sizeof(H5FD_class_mpi_t),FALSE);
 
     /* Set return value */
     ret_value = H5FD_MPIPOSIX_g;
@@ -734,6 +737,10 @@ H5FD_mpiposix_open(const char *name, unsigned flags, hid_t fapl_id,
 #endif /* H5_VMS */
 #endif /* H5_HAVE_WIN32_API */
 
+    /* Check for SWMR reader access */
+    if(flags & H5F_ACC_SWMR_READ)
+        file->swmr_read = TRUE;
+
     /* Indicate success */
     ret_value = (H5FD_t *)file;
 
@@ -1040,7 +1047,13 @@ H5FD_mpiposix_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id,
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "addr undefined")
     if (REGION_OVERFLOW(addr, size))
         HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, FAIL, "addr overflow")
-    if((addr + size) > file->eoa)
+    /* If the file is open for SWMR read access, allow access to data past
+     * the end of the allocated space (the 'eoa').  This is done because the
+     * eoa stored in the file's superblock might be out of sync with the
+     * objects being written within the file by the application performing
+     * SWMR write operations.
+     */
+    if(!file->swmr_read && (addr + size) > file->eoa)
         HGOTO_ERROR(H5E_ARGS, H5E_OVERFLOW, FAIL, "addr overflow")
 
 #ifdef REPORT_IO

@@ -101,7 +101,7 @@ H5F_mpi_get_rank(const H5F_t *f)
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert(f && f->shared);
+    assert(f && f->shared);
 
     /* Dispatch to driver */
     if ((ret_value=H5FD_mpi_get_rank(f->shared->lf)) < 0)
@@ -135,7 +135,7 @@ H5F_mpi_get_comm(const H5F_t *f)
 
     FUNC_ENTER_NOAPI(MPI_COMM_NULL)
 
-    HDassert(f && f->shared);
+    assert(f && f->shared);
 
     /* Dispatch to driver */
     if ((ret_value=H5FD_mpi_get_comm(f->shared->lf))==MPI_COMM_NULL)
@@ -169,7 +169,7 @@ H5F_mpi_get_size(const H5F_t *f)
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert(f && f->shared);
+    assert(f && f->shared);
 
     /* Dispatch to driver */
     if ((ret_value=H5FD_mpi_get_size(f->shared->lf)) < 0)
