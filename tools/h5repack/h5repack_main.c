@@ -98,7 +98,7 @@ int main(int argc, const char **argv)
         HDexit(EXIT_FAILURE);
 
     /* initialize options  */
-    h5repack_init(&options, 0, H5F_FILE_SPACE_DEFAULT, (hsize_t)0);
+    h5repack_init(&options, 0, FALSE, H5F_FILE_SPACE_DEFAULT, (hsize_t)0);
 
     parse_command_line(argc, argv, &options);
 
@@ -354,36 +354,32 @@ void parse_command_line(int argc, const char **argv, pack_opt_t* options)
             break;
 
         case 'L':
-            options->latest = 1;
+            options->latest = TRUE;
             break;
 
         case 'c':
-
             options->grp_compact = HDatoi( opt_arg );
-            if (options->grp_compact>0)
-                options->latest = 1; /* must use latest format */
+            if (options->grp_compact > 0)
+                options->latest = TRUE; /* must use latest format */
             break;
 
 
         case 'd':
-
             options->grp_indexed = HDatoi( opt_arg );
-            if (options->grp_indexed>0)
-                options->latest = 1; /* must use latest format */
+            if (options->grp_indexed > 0)
+                options->latest = TRUE; /* must use latest format */
             break;
 
         case 's':
-
             {
-
                 int idx = 0;
                 int ssize = 0;
-                char *msgPtr = HDstrchr( opt_arg, ':');
-                options->latest = 1; /* must use latest format */
+                char *msgPtr = HDstrchr(opt_arg, ':');
+                options->latest = TRUE; /* must use latest format */
                 if (msgPtr == NULL)
                 {
                     ssize = HDatoi( opt_arg );
-                    for (idx=0; idx<5; idx++)
+                    for(idx = 0; idx < 5; idx++)
                         options->msg_size[idx] = ssize;
                 }
                 else
@@ -392,24 +388,18 @@ void parse_command_line(int argc, const char **argv, pack_opt_t* options)
                     HDstrcpy(msgType, msgPtr+1);
                     msgPtr[0] = '\0';
                     ssize = HDatoi( opt_arg );
-                    if (HDstrncmp(msgType, "dspace",6) == 0) {
+                    if(HDstrncmp(msgType, "dspace",6) == 0)
                         options->msg_size[0] = ssize;
-                    }
-                    else if (HDstrncmp(msgType, "dtype", 5) == 0) {
+                    else if (HDstrncmp(msgType, "dtype", 5) == 0)
                         options->msg_size[1] = ssize;
-                    }
-                    else if (HDstrncmp(msgType, "fill", 4) == 0) {
+                    else if (HDstrncmp(msgType, "fill", 4) == 0)
                         options->msg_size[2] = ssize;
-                    }
-                    else if (HDstrncmp(msgType, "pline", 5) == 0) {
+                    else if (HDstrncmp(msgType, "pline", 5) == 0)
                         options->msg_size[3] = ssize;
-                    }
-                    else if (HDstrncmp(msgType, "attr", 4) == 0) {
+                    else if (HDstrncmp(msgType, "attr", 4) == 0)
                         options->msg_size[4] = ssize;
-                    }
                 }
             }
-
             break;
 
         case 'u':

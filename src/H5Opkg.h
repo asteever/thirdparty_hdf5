@@ -31,7 +31,7 @@
 #define H5O_NMESGS	8 		/*initial number of messages	     */
 #define H5O_NCHUNKS	2		/*initial number of chunks	     */
 #define H5O_MIN_SIZE	22		/* Min. obj header data size (must be big enough for a message prefix and a continuation message) */
-#define H5O_MSG_TYPES   25              /* # of types of messages            */
+#define H5O_MSG_TYPES   26              /* # of types of messages            */
 #define H5O_MAX_CRT_ORDER_IDX 65535     /* Max. creation order index value   */
 
 /* Versions of object header structure */
@@ -267,6 +267,7 @@ struct H5O_t {
     /* File-specific information (not stored) */
     size_t      sizeof_size;            /* Size of file sizes 		     */
     size_t      sizeof_addr;            /* Size of file addresses	     */
+    hbool_t     swmr_write;             /* Whether we are doing SWMR writes  */
 
     /* Debugging information (not stored) */
 #ifdef H5O_ENABLE_BAD_MESG_COUNT
@@ -312,6 +313,10 @@ struct H5O_t {
     size_t	nchunks;		/*number of chunks		     */
     size_t	alloc_nchunks;		/*chunks allocated		     */
     H5O_chunk_t *chunk;			/*array of chunks		     */
+
+    /* Object header proxy information (not stored) */
+    haddr_t     proxy_addr;             /* Temporary address of object header proxy */
+    hbool_t     proxy_present;          /* Whether the proxy is present in cache (and we have to track dependencies) */
 };
 
 /* Class for types of objects in file */
@@ -368,8 +373,10 @@ typedef struct H5O_chunk_proxy_t {
     H5AC_info_t cache_info;    /* Information for metadata cache functions, _must_ be */
                                 /* first field in structure */
 
+    H5F_t *f;                           /* Pointer to file for object header/chunk */
     H5O_t       *oh;                    /* Object header for this chunk */
     unsigned    chunkno;                /* Chunk number for this chunk */
+    unsigned    cont_chunkno;           /* Chunk number for the chunk containing the continuation message that points to this chunk */
 } H5O_chunk_proxy_t;
 
 /* Callback information for loading object header chunk from disk */
@@ -380,6 +387,14 @@ typedef struct H5O_chk_cache_ud_t {
     size_t size;                        /* Size of chunk in the file */
     H5O_common_cache_ud_t common;       /* Common object header cache callback info */
 } H5O_chk_cache_ud_t;
+
+/* Metadata cache object header proxy type */
+struct H5O_proxy_t {
+    H5AC_info_t cache_info;             /* Information for H5AC cache functions, _must_ be */
+                                        /* first field in structure */
+    H5F_t *f;                           /* Pointer to file for object header/chunk */
+    H5O_t *oh;                          /* Object header */
+};
 
 
 /* H5O object header inherits cache-like properties from H5AC */
@@ -505,7 +520,10 @@ H5_DLLVAR const H5O_msg_class_t H5O_MSG_REFCOUNT[1];
 /* Free-space Manager Info message. (0x0017) */
 H5_DLLVAR const H5O_msg_class_t H5O_MSG_FSINFO[1];
 
-/* Placeholder for unknown message. (0x0018) */
+/* Data Storage Message. (0x0018) */
+H5_DLLVAR const H5O_msg_class_t H5O_MSG_STORAGE[1];
+
+/* Placeholder for unknown message. (0x0019) */
 H5_DLLVAR const H5O_msg_class_t H5O_MSG_UNKNOWN[1];
 
 
@@ -556,7 +574,8 @@ H5_DLL herr_t H5O_msg_iterate_real(H5F_t *f, H5O_t *oh, const H5O_msg_class_t *t
     const H5O_mesg_operator_t *op, void *op_data, hid_t dxpl_id);
 
 /* Object header chunk routines */
-H5_DLL herr_t H5O_chunk_add(H5F_t *f, hid_t dxpl_id, H5O_t *oh, unsigned idx);
+H5_DLL herr_t H5O_chunk_add(H5F_t *f, hid_t dxpl_id, H5O_t *oh, unsigned idx,
+    unsigned cont_chunkno);
 H5_DLL H5O_chunk_proxy_t *H5O_chunk_protect(H5F_t *f, hid_t dxpl_id, H5O_t *oh,
     unsigned idx);
 H5_DLL herr_t H5O_chunk_unprotect(H5F_t *f, hid_t dxpl_id,
@@ -603,6 +622,16 @@ H5_DLL herr_t H5O_attr_delete(H5F_t *f, hid_t dxpl_id, H5O_t *open_oh, void *_me
 H5_DLL herr_t H5O_attr_link(H5F_t *f, hid_t dxpl_id, H5O_t *open_oh, void *_mesg);
 H5_DLL herr_t H5O_attr_count_real(H5F_t *f, hid_t dxpl_id, H5O_t *oh,
     hsize_t *nattrs);
+
+/* Object header proxy operators */
+H5_DLL herr_t H5O_proxy_create(H5F_t *f, hid_t dxpl_id, H5O_t *oh);
+H5_DLL H5O_proxy_t *H5O_proxy_pin(H5F_t *f, hid_t dxpl_id,
+    H5O_t *oh);
+H5_DLL herr_t H5O_proxy_unpin(H5O_proxy_t *proxy);
+H5_DLL herr_t H5O_proxy_depend(H5F_t *f, hid_t dxpl_id, H5O_t *oh,
+    void *parent);
+H5_DLL herr_t H5O_proxy_undepend(H5F_t *f, hid_t dxpl_id, H5O_t *oh,
+    void *parent);
 
 
 /* These functions operate on object locations */

@@ -38,18 +38,18 @@
 #include <mpi.h>
 #endif /* H5_HAVE_PARALLEL */
 
-#include "H5private.h"		/* Generic Functions			*/
-#include "H5ACpkg.h"		/* Metadata cache			*/
+#include "H5private.h"          /* Generic Functions                    */
+#include "H5ACpkg.h"            /* Metadata cache                       */
 #include "H5Cpkg.h"             /* Cache                                */
-#include "H5Dprivate.h"		/* Dataset functions			*/
-#include "H5Eprivate.h"		/* Error handling		  	*/
-#include "H5Fpkg.h"		/* Files				*/
-#include "H5FDprivate.h"	/* File drivers				*/
+#include "H5Dprivate.h"         /* Dataset functions                    */
+#include "H5Eprivate.h"         /* Error handling                       */
+#include "H5Fpkg.h"             /* Files                                */
+#include "H5FDprivate.h"        /* File drivers                         */
 #include "H5FLprivate.h"        /* Free Lists                           */
-#include "H5Iprivate.h"		/* IDs			  		*/
+#include "H5Iprivate.h"         /* IDs                                  */
 #include "H5MMprivate.h"        /* Memory management                    */
 #include "H5Pprivate.h"         /* Property lists                       */
-
+#include "H5SLprivate.h"        /* Skip Lists                           */
 
 #ifdef H5_HAVE_PARALLEL
 
@@ -127,6 +127,10 @@ static herr_t H5AC_check_if_write_permitted(const H5F_t *f,
 
 static herr_t H5AC_ext_config_2_int_config(H5AC_cache_config_t * ext_conf_ptr,
                                            H5C_auto_size_ctl_t * int_conf_ptr);
+                                           
+#if H5AC_DO_TAGGING_SANITY_CHECKS
+static herr_t H5AC_verify_tag(hid_t dxpl_id, const H5AC_class_t * type);
+#endif /* H5AC_DO_TAGGING_SANITY_CHECKS */
 
 #ifdef H5_HAVE_PARALLEL
 static herr_t H5AC_broadcast_candidate_list(H5AC_t * cache_ptr,
@@ -435,6 +439,7 @@ static const char * H5AC_entry_type_names[H5AC_NTYPES] =
     "global heaps",
     "object headers",
     "object header chunks",
+    "object header proxies",
     "v2 B-tree headers",
     "v2 B-tree internal nodes",
     "v2 B-tree leaf nodes",
@@ -450,6 +455,7 @@ static const char * H5AC_entry_type_names[H5AC_NTYPES] =
     "extensible array super blocks",
     "extensible array data blocks",
     "extensible array data block pages",
+    "chunk proxy",
     "fixed array headers",
     "fixed array data block",
     "fixed array data block pages",
@@ -1002,6 +1008,11 @@ H5AC_insert_entry(H5F_t *f, hid_t dxpl_id, const H5AC_class_t *type, haddr_t add
     }
 #endif /* H5AC__TRACE_FILE_ENABLED */
 
+#if H5AC_DO_TAGGING_SANITY_CHECKS
+    if (!f->shared->cache->ignore_tags && (H5AC_verify_tag(dxpl_id, type) < 0))
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "Bad tag value")
+#endif /* H5AC_DO_TAGGING_SANITY_CHECKS */
+
     /* Insert entry into metadata cache */
     if(H5C_insert_entry(f, dxpl_id, H5AC_noblock_dxpl_id, type, addr, thing, flags) < 0)
         HGOTO_ERROR(H5E_CACHE, H5E_CANTINS, FAIL, "H5C_insert_entry() failed")
@@ -1386,6 +1397,11 @@ H5AC_protect(H5F_t *f,
 
 	protect_flags |= H5C__READ_ONLY_FLAG;
     }
+
+#if H5AC_DO_TAGGING_SANITY_CHECKS
+    if (!f->shared->cache->ignore_tags && (H5AC_verify_tag(dxpl_id, type) < 0))
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, NULL, "Bad tag value")
+#endif /* H5AC_DO_TAGGING_SANITY_CHECKS */
 
     thing = H5C_protect(f,
 		        dxpl_id,
@@ -5238,8 +5254,9 @@ herr_t
 H5AC_tag(hid_t dxpl_id, haddr_t metadata_tag, haddr_t * prev_tag)
 {
     /* Variable Declarations */
-    H5P_genplist_t *dxpl;    /* dataset transfer property list */
-    herr_t ret_value = SUCCEED;
+    H5C_tag_t tag;                  /* tag structure */
+    H5P_genplist_t *dxpl = NULL;    /* dataset transfer property list */
+    herr_t ret_value = SUCCEED;     /* return value */
 
     /* Function Enter Macro */
     FUNC_ENTER_NOAPI(FAIL)
@@ -5250,12 +5267,31 @@ H5AC_tag(hid_t dxpl_id, haddr_t metadata_tag, haddr_t * prev_tag)
 
     /* Get the current tag value and return that (if prev_tag is NOT null)*/
     if(prev_tag) {
-        if((H5P_get(dxpl, "H5AC_metadata_tag", prev_tag)) < 0)
+        if((H5P_get(dxpl, "H5C_tag", &tag)) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "unable to query dxpl")
+        *prev_tag = tag.value;
     } /* end if */
 
-    /* Set the provided tag value in the dxpl_id. */
-    if(H5P_set(dxpl, "H5AC_metadata_tag", &metadata_tag) < 0)
+    /* Add metadata_tag to tag structure */
+    tag.value = metadata_tag;
+
+    /* Determine globality of tag */
+    switch(metadata_tag) {
+        case H5AC__SUPERBLOCK_TAG:
+        case H5AC__SOHM_TAG:
+        case H5AC__GLOBALHEAP_TAG:
+            tag.globality = H5C_GLOBALITY_MAJOR;
+            break;
+        case H5AC__FREESPACE_TAG:
+            tag.globality = H5C_GLOBALITY_MINOR;
+            break;
+        default:
+            tag.globality = H5C_GLOBALITY_NONE;
+            break;
+    } /* end switch */
+
+    /* Set the provided tag in the dxpl_id. */
+    if(H5P_set(dxpl, "H5C_tag", &tag) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set property in dxpl")
 
 done:
@@ -5289,10 +5325,177 @@ H5AC_retag_copied_metadata(H5F_t * f, haddr_t metadata_tag)
     HDassert(f);
     HDassert(f->shared);
      
-    /* Call cache-level function to retag entries */
-    H5C_retag_copied_metadata(f->shared->cache, metadata_tag);
+    /* Call cache-level function to re-tag entries with the COPIED tag */
+    H5C_retag_entries(f->shared->cache, H5AC__COPIED_TAG, metadata_tag);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* H5AC_retag_copied_metadata */
 
+
+/*------------------------------------------------------------------------------
+ * Function:    H5AC_flush_tagged_metadata()
+ *
+ * Purpose:     Wrapper for cache level function which flushes all metadata
+ *              that contains the specific tag. 
+ * 
+ * Return:      SUCCEED on success, FAIL otherwise.
+ *
+ * Programmer:  Mike McGreevy
+ *              May 19, 2010
+ *
+ *------------------------------------------------------------------------------
+ */
+herr_t
+H5AC_flush_tagged_metadata(H5F_t * f, haddr_t metadata_tag, hid_t dxpl_id)
+{
+    /* Variable Declarations */
+    herr_t ret_value = SUCCEED;
+ 
+    /* Function Enter Macro */   
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* Assertions */
+    HDassert(f);
+    HDassert(f->shared);
+
+    /* Call cache level function to flush metadata entries with specified tag */
+    if(H5C_flush_tagged_entries(f, dxpl_id, H5AC_dxpl_id, metadata_tag)<0)
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Cannot flush metadata")
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+
+} /* H5AC_flush_tagged_metadata */
+
+
+/*------------------------------------------------------------------------------
+ * Function:    H5AC_evict_tagged_metadata()
+ *
+ * Purpose:     Wrapper for cache level function which flushes all metadata
+ *              that contains the specific tag. 
+ * 
+ * Return:      SUCCEED on success, FAIL otherwise.
+ *
+ * Programmer:  Mike McGreevy
+ *              May 19, 2010
+ *
+ *------------------------------------------------------------------------------
+ */
+herr_t
+H5AC_evict_tagged_metadata(H5F_t * f, haddr_t metadata_tag, hid_t dxpl_id)
+{
+    /* Variable Declarations */
+    herr_t ret_value = SUCCEED;
+ 
+    /* Function Enter Macro */   
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* Assertions */
+    HDassert(f);
+    HDassert(f->shared);
+
+    /* Call cache level function to evict metadata entries with specified tag */
+    if(H5C_evict_tagged_entries(f, dxpl_id, H5AC_dxpl_id, metadata_tag)<0)
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "Cannot evict metadata")
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+
+} /* H5AC_evict_tagged_metadata */
+
+#if H5AC_DO_TAGGING_SANITY_CHECKS
+
+/*-------------------------------------------------------------------------
+ *
+ * Function:    H5AC_verify_tag
+ *
+ * Purpose:     Performs sanity checking on an entry type and tag value
+ *              stored in a supplied dxpl_id.
+ *
+ * Return:      SUCCEED or FAIL.
+ *
+ * Programmer:  Mike McGreevy
+ *              October 20, 2010
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5AC_verify_tag(hid_t dxpl_id, const H5AC_class_t * type)
+{
+    H5C_tag_t tag;
+    H5P_genplist_t * dxpl;
+    herr_t ret_value = SUCCEED;
+
+    FUNC_ENTER_NOAPI_NOINIT
+
+    /* Get the dataset transfer property list */
+    if(NULL == (dxpl = (H5P_genplist_t *)H5I_object_verify(dxpl_id, H5I_GENPROP_LST)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list")
+
+    /* Get the tag from the DXPL */
+    if( (H5P_get(dxpl, "H5C_tag", &tag)) < 0 )
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "unable to query property value");
+
+    /* Perform some sanity checks on tag value. Certain entry
+     * types require certain tag values, so check that these
+     * constraints are met. */
+    if(tag.value == H5AC__IGNORE_TAG)
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "cannot ignore a tag while doing verification.")
+    else if(tag.value == H5AC__INVALID_TAG)
+        HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "no metadata tag provided")
+    else {
+
+        /* Perform some sanity checks on tag value. Certain entry
+         * types require certain tag values, so check that these
+         * constraints are met. */
+
+        /* Superblock */
+        if(type->id == H5AC_SUPERBLOCK_ID) {
+            if(tag.value != H5AC__SUPERBLOCK_TAG)
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "superblock not tagged with H5AC__SUPERBLOCK_TAG")
+            if(tag.globality != H5C_GLOBALITY_MAJOR)
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "superblock globality not marked with H5C_GLOBALITY_MAJOR")
+        }
+        else {
+            if(tag.value == H5AC__SUPERBLOCK_TAG)
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "H5AC__SUPERBLOCK_TAG applied to non-superblock entry")
+        }
+    
+        /* Free Space Manager */
+        if((type->id == H5AC_FSPACE_HDR_ID) || (type->id == H5AC_FSPACE_SINFO_ID)) {
+            if(tag.value != H5AC__FREESPACE_TAG)
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "freespace entry not tagged with H5AC__FREESPACE_TAG")
+            if(tag.globality != H5C_GLOBALITY_MINOR)
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "freespace entry globality not marked with H5C_GLOBALITY_MINOR")
+        }
+        else {
+            if(tag.value == H5AC__FREESPACE_TAG)
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "H5AC__FREESPACE_TAG applied to non-freespace entry")
+        }
+    
+        /* SOHM */
+        if((type->id == H5AC_SOHM_TABLE_ID) || (type->id == H5AC_SOHM_LIST_ID)) { 
+            if(tag.value != H5AC__SOHM_TAG)
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "sohm entry not tagged with H5AC__SOHM_TAG")
+            if(tag.globality != H5C_GLOBALITY_MAJOR)
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "sohm entry globality not marked with H5C_GLOBALITY_MAJOR")
+        }
+    
+        /* Global Heap */
+        if(type->id == H5AC_GHEAP_ID) {
+            if(tag.value != H5AC__GLOBALHEAP_TAG)
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "global heap not tagged with H5AC__GLOBALHEAP_TAG")
+            if(tag.globality != H5C_GLOBALITY_MAJOR)
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "global heap entry globality not marked with H5C_GLOBALITY_MAJOR")
+        }
+        else {
+            if(tag.value == H5AC__GLOBALHEAP_TAG)
+                HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "H5AC__GLOBALHEAP_TAG applied to non-globalheap entry")
+        }
+    } /* end else */
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5AC_verify_tag */
+#endif /* H5AC_DO_TAGGING_SANITY_CHECKS */
