@@ -99,11 +99,9 @@ Group::Group(const hid_t existing_id) : H5Object()
 ///		is a datatype that has been named by DataType::commit.
 // Programmer	Binh-Minh Ribler - Oct, 2006
 //--------------------------------------------------------------------------
-Group::Group(const H5Location& loc, const void* ref, H5R_type_t ref_type, const PropList& plist) : H5Object(), id(0)
+Group::Group(const H5Location& loc, const void* ref, H5R_type_t ref_type) : H5Object(), id(0)
 {
-     /* H5Location::dereference(loc, ref, ref_type, plist);
- */ 
-    id = H5Location::p_dereference(loc.getId(), ref, ref_type, plist, "constructor - by dereference");
+    id = H5Location::p_dereference(loc.getId(), ref, ref_type, "constructor - by dereference");
 }
 
 //--------------------------------------------------------------------------
@@ -115,17 +113,9 @@ Group::Group(const H5Location& loc, const void* ref, H5R_type_t ref_type, const 
 ///\exception	H5::ReferenceException
 // Programmer	Binh-Minh Ribler - Oct, 2006
 //--------------------------------------------------------------------------
-Group::Group(const Attribute& attr, const void* ref, H5R_type_t ref_type, const PropList& plist) : H5Object(), id(0)
+Group::Group(const Attribute& attr, const void* ref, H5R_type_t ref_type) : H5Object(), id(0)
 {
-    id = H5Location::p_dereference(attr.getId(), ref, ref_type, plist, "constructor - by dereference");
-/*
-    try {
-	id = p_dereference(attr.getId(), ref, ref_type, plist);
-    } catch (ReferenceException deref_error) {
-	throw ReferenceException("Group constructor - located by an Attribute",
-		deref_error.getDetailMsg());
-    }
-*/
+    id = H5Location::p_dereference(attr.getId(), ref, ref_type, "constructor - by dereference");
 }
 
 //--------------------------------------------------------------------------

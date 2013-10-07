@@ -123,6 +123,7 @@ H5FL_DEFINE_STATIC(H5E_msg_t);
 static const H5I_class_t H5I_ERRCLS_CLS[1] = {{
     H5I_ERROR_CLASS,		/* ID class value */
     0,				/* Class flags */
+    64,				/* Minimum hash size for class */
     0,				/* # of reserved IDs for class */
     (H5I_free_t)H5E_unregister_class /* Callback routine for closing objects of this class */
 }};
@@ -131,6 +132,7 @@ static const H5I_class_t H5I_ERRCLS_CLS[1] = {{
 static const H5I_class_t H5I_ERRMSG_CLS[1] = {{
     H5I_ERROR_MSG,		/* ID class value */
     0,				/* Class flags */
+    64,				/* Minimum hash size for class */
     0,				/* # of reserved IDs for class */
     (H5I_free_t)H5E_close_msg   /* Callback routine for closing objects of this class */
 }};
@@ -139,6 +141,7 @@ static const H5I_class_t H5I_ERRMSG_CLS[1] = {{
 static const H5I_class_t H5I_ERRSTK_CLS[1] = {{
     H5I_ERROR_STACK,		/* ID class value */
     0,				/* Class flags */
+    64,				/* Minimum hash size for class */
     0,				/* # of reserved IDs for class */
     (H5I_free_t)H5E_close_stack /* Callback routine for closing objects of this class */
 }};
@@ -1368,11 +1371,6 @@ H5Epush2(hid_t err_stack, const char *file, const char *func, unsigned line,
         if(NULL == (estack = (H5E_t *)H5I_object_verify(err_stack, H5I_ERROR_STACK)))
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a error stack ID")
     } /* end else */
-
-/* Note that the variable-argument parsing for the format is identical in
- *      the H5E_printf_stack() routine - correct errors and make changes in both
- *      places. -QAK
- */
 
     /* Format the description */
     va_start(ap, fmt);

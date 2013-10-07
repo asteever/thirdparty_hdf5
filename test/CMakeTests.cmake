@@ -46,47 +46,6 @@ FOREACH (ref_file ${HDF5_REFERENCE_FILES})
 ENDFOREACH (ref_file ${HDF5_REFERENCE_FILES})
 
 # --------------------------------------------------------------------
-# Copy test files from test/testfiles/plist_files dir to test dir
-# --------------------------------------------------------------------
-SET (HDF5_REFERENCE_PLIST_FILES
-    acpl_be
-    acpl_le
-    dapl_be
-    dapl_le
-    dcpl_be
-    dcpl_le
-    dxpl_be
-    dxpl_le
-    fapl_be
-    fapl_le
-    fcpl_be
-    fcpl_le
-    gcpl_be
-    gcpl_le
-    lapl_be
-    lapl_le
-    lcpl_be
-    lcpl_le
-    ocpl_be
-    ocpl_le
-    ocpypl_be
-    ocpypl_le
-    strcpl_be
-    strcpl_le
-)
-
-FOREACH (plistfile ${HDF5_REFERENCE_PLIST_FILES})
-  SET (dest "${PROJECT_BINARY_DIR}/${plistfile}")
-  #MESSAGE (STATUS " Copying ${plistfile} to ${dset}")
-  ADD_CUSTOM_COMMAND (
-      TARGET     ${HDF5_TEST_LIB_TARGET}
-      POST_BUILD
-      COMMAND    ${CMAKE_COMMAND}
-      ARGS       -E copy_if_different ${HDF5_TEST_SOURCE_DIR}/testfiles/plist_files/${plistfile} ${dest}
-  )
-ENDFOREACH (plistfile ${HDF5_REFERENCE_PLIST_FILES})
-
-# --------------------------------------------------------------------
 #-- Copy all the HDF5 files from the test directory into the source directory
 # --------------------------------------------------------------------
 SET (HDF5_REFERENCE_TEST_FILES
@@ -99,10 +58,9 @@ SET (HDF5_REFERENCE_TEST_FILES
     family_v16_00001.h5
     family_v16_00002.h5
     family_v16_00003.h5
-    filespace_1_6.h5
-    filespace_1_8.h5
     file_image_core_test.h5
     fill_old.h5
+    fixed_idx.h5
     filter_error.h5
     group_old.h5
     le_data.h5
@@ -149,7 +107,6 @@ ADD_TEST (
         tfile3.h5
         tfile4.h5
         tfile5.h5
-        tfile6.h5
         th5o_file
         th5s1.h5
         tselect.h5
@@ -278,17 +235,6 @@ ADD_TEST (
 )
 ADD_TEST (NAME cache_api COMMAND $<TARGET_FILE:cache_api>)
 SET_TESTS_PROPERTIES(cache_api PROPERTIES DEPENDS h5test-clear-cache_api-objects)
-
-#-- Adding test for cache_tagging
-ADD_TEST (
-    NAME h5test-clear-cache_tagging-objects
-    COMMAND    ${CMAKE_COMMAND}
-        -E remove 
-        tagging_test.h5
-        tagging_ext_test.h5
-)
-ADD_TEST (NAME cache_tagging COMMAND $<TARGET_FILE:cache_tagging>)
-SET_TESTS_PROPERTIES(cache_tagging PROPERTIES DEPENDS h5test-clear-cache_tagging-objects)
 
 #-- Adding test for ttsafe
 ADD_TEST (
@@ -420,13 +366,13 @@ IF (HDF5_TEST_VFD)
       gheap
       cache
       cache_api
-      cache_tagging
       pool
       hyperslab
       istore
       bittests
       dt_arith
       dtypes
+      dsets
       cmpd_dset
       filter_fail
       extend
@@ -454,8 +400,6 @@ IF (HDF5_TEST_VFD)
       cross_read
       freespace
       mf
-      farray
-      earray
       btree2
       #fheap
       error_test
@@ -528,6 +472,7 @@ IF (HDF5_BUILD_GENERATORS AND NOT BUILD_SHARED_LIBS)
       gen_cross
       gen_deflate
       gen_filters
+      gen_idx
       gen_new_array
       gen_new_fill
       gen_new_group
@@ -537,11 +482,8 @@ IF (HDF5_BUILD_GENERATORS AND NOT BUILD_SHARED_LIBS)
       gen_nullspace
       gen_udlinks
       space_overflow
-      gen_filespace
-      gen_specmetaread
       gen_sizes_lheap
       gen_file_image
-      gen_plist
   )
 
   FOREACH (gen ${H5_GENERATORS})

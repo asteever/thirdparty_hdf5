@@ -94,9 +94,9 @@ DataSet::DataSet(const DataSet& original) : AbstractDs(original), H5Object(origi
 //	Jul, 2008
 //		Added for application convenience.
 //--------------------------------------------------------------------------
-DataSet::DataSet(const H5Location& loc, const void* ref, H5R_type_t ref_type, const PropList& plist) : AbstractDs(), H5Object(), id(0)
+DataSet::DataSet(const H5Location& loc, const void* ref, H5R_type_t ref_type) : AbstractDs(), H5Object(), id(0)
 {
-    id = H5Location::p_dereference(loc.getId(), ref, ref_type, plist, "constructor - by dereferenced");
+    id = H5Location::p_dereference(loc.getId(), ref, ref_type, "constructor - by dereferenced");
 }
 
 //--------------------------------------------------------------------------
@@ -112,9 +112,9 @@ DataSet::DataSet(const H5Location& loc, const void* ref, H5R_type_t ref_type, co
 //	Jul, 2008
 //		Added for application convenience.
 //--------------------------------------------------------------------------
-DataSet::DataSet(const Attribute& attr, const void* ref, H5R_type_t ref_type, const PropList& plist) : AbstractDs(), H5Object(), id(0)
+DataSet::DataSet(const Attribute& attr, const void* ref, H5R_type_t ref_type) : AbstractDs(), H5Object(), id(0)
 {
-    id = H5Location::p_dereference(attr.getId(), ref, ref_type, plist, "constructor - by dereference");
+    id = H5Location::p_dereference(attr.getId(), ref, ref_type, "constructor - by dereference");
 }
 
 //--------------------------------------------------------------------------

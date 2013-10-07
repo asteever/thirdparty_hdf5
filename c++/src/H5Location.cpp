@@ -565,7 +565,7 @@ void H5Location::p_reference(void* ref, const char* name, hid_t space_id, H5R_ty
 ///\param	ref_type - IN: Type of reference to query, valid values are:
 ///		\li \c H5R_OBJECT         - Reference is an object reference.
 ///		\li \c H5R_DATASET_REGION - Reference is a dataset region
-///			reference. - this is the default
+///			reference. (default)
 ///\exception	H5::ReferenceException
 ///\notes	This method is more suitable for a dataset region reference.
 // Programmer	Binh-Minh Ribler - May, 2004
@@ -591,7 +591,7 @@ void H5Location::reference(void* ref, const char* name, const DataSpace& dataspa
 ///\param	ref_type - IN: Type of reference to query, valid values are:
 ///		\li \c H5R_OBJECT         - Reference is an object reference.
 ///		\li \c H5R_DATASET_REGION - Reference is a dataset region
-///			reference. - this is the default
+///			reference. (default)
 ///\exception	H5::ReferenceException
 ///\notes	This method is more suitable for a dataset region reference.
 // Programmer	Binh-Minh Ribler - May, 2004
@@ -614,7 +614,7 @@ void H5Location::reference(void* ref, const H5std_string& name, const DataSpace&
 ///\param	ref - IN: Reference pointer
 ///\param	name - IN: Name of the object to be referenced
 ///\param	ref_type - IN: Type of reference to query, valid values are:
-///		\li \c H5R_OBJECT         - Reference is an object reference.
+///		\li \c H5R_OBJECT         - Reference is an object reference (default)
 ///		\li \c H5R_DATASET_REGION - Reference is a dataset region
 ///\exception	H5::ReferenceException
 ///\notes	This method is more suitable for an object reference.
@@ -638,7 +638,7 @@ void H5Location::reference(void* ref, const char* name, H5R_type_t ref_type) con
 ///\param	ref - IN: Reference pointer
 ///\param	name - IN: Name of the object to be referenced - \c H5std_string
 ///\param	ref_type - IN: Type of reference to query, valid values are:
-///		\li \c H5R_OBJECT         - Reference is an object reference.
+///		\li \c H5R_OBJECT         - Reference is an object reference (default)
 ///		\li \c H5R_DATASET_REGION - Reference is a dataset region
 ///\notes	This method is more suitable for an object reference.
 // Programmer	Binh-Minh Ribler - May, 2004
@@ -663,15 +663,9 @@ void H5Location::reference(void* ref, const H5std_string& name, H5R_type_t ref_t
 //	May 2008 - BMR
 //		Moved from IdComponent.
 //--------------------------------------------------------------------------
-hid_t H5Location::p_dereference(hid_t loc_id, const void* ref, H5R_type_t ref_type, const PropList& plist, const char* from_func)
+hid_t H5Location::p_dereference(hid_t loc_id, const void* ref, H5R_type_t ref_type, const char* from_func)
 {
-   hid_t plist_id;
-   if (p_valid_id(plist.getId()))
-	plist_id = plist.getId();
-   else
-	plist_id = H5P_DEFAULT;
-
-   hid_t temp_id = H5Rdereference2(loc_id, plist_id, ref_type, ref);
+   hid_t temp_id = H5Rdereference(loc_id, ref_type, ref);
    if (temp_id < 0)
    {
       throw ReferenceException(inMemFunc(from_func), "H5Rdereference failed");
@@ -693,9 +687,9 @@ hid_t H5Location::p_dereference(hid_t loc_id, const void* ref, H5R_type_t ref_ty
 //	May, 2008
 //		Corrected missing parameters. - BMR
 //--------------------------------------------------------------------------
-void H5Location::dereference(const H5Location& loc, const void* ref, H5R_type_t ref_type, const PropList& plist)
+void H5Location::dereference(const H5Location& loc, const void* ref, H5R_type_t ref_type)
 {
-   p_setId(p_dereference(loc.getId(), ref, ref_type, plist, "dereference"));
+   p_setId(p_dereference(loc.getId(), ref, ref_type, "dereference"));
 }
 
 //--------------------------------------------------------------------------
@@ -710,9 +704,9 @@ void H5Location::dereference(const H5Location& loc, const void* ref, H5R_type_t 
 //	May, 2008
 //		Corrected missing parameters. - BMR
 //--------------------------------------------------------------------------
-void H5Location::dereference(const Attribute& attr, const void* ref, H5R_type_t ref_type, const PropList& plist)
+void H5Location::dereference(const Attribute& attr, const void* ref, H5R_type_t ref_type)
 {
-   p_setId(p_dereference(attr.getId(), ref, ref_type, plist, "dereference"));
+   p_setId(p_dereference(attr.getId(), ref, ref_type, "dereference"));
 }
 
 #ifndef H5_NO_DEPRECATED_SYMBOLS

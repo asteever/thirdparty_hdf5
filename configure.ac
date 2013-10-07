@@ -16,7 +16,7 @@
 ## ----------------------------------------------------------------------
 ## Initialize configure.
 ##
-AC_REVISION($Id: configure.ac 22697 2012-08-19 14:35:47Z hdftest $)
+AC_REVISION($Id$)
 AC_PREREQ([2.69])
 
 ## AC_INIT takes the name of the package, the version number, and an
@@ -26,7 +26,7 @@ AC_PREREQ([2.69])
 ## NOTE: Do not forget to change the version number here when we do a
 ## release!!!
 ##
-AC_INIT([HDF5], [1.9.166], [help@hdfgroup.org])
+AC_INIT([HDF5], [1.8.12-snap20], [help@hdfgroup.org])
 AC_CONFIG_SRCDIR([src/H5.c])
 AC_CONFIG_HEADER([src/H5config.h])
 
@@ -1092,13 +1092,6 @@ case "X-$RPATH" in
     AC_MSG_ERROR([\'$enableval\' is not a valid rpath type])
     ;;
 esac
-## ----------------------------------------------------------------------
-## When sharedlib-rpath is disabled, setting runpath_var to "" above, don't
-## add libhdf5 as a dependency for the other hdf5 libs, either.  This keeps 
-## the rpath to libhdf5 out of the lib files as well as the executables.
-AM_CONDITIONAL([LT_ADD_LIBHDF5_DEPENDENCY], [test "X$runpath_var" != X])
-
-AC_SUBST([LT_ADD_LIBHDF5_DEPENDENCY])
 
 AC_MSG_CHECKING([make])
 
@@ -1352,6 +1345,26 @@ AC_MSG_CHECKING([if configure should try to set up large file support])
 AC_ARG_ENABLE([largefile],
            [AS_HELP_STRING([--disable-largefile],
                            [omit support for large files])])
+
+## The linux-lfs option is deprecated, but if it is used to disable
+## largefile support on linux and the largefile option is not specified,
+## then go ahead and disable large-file support.
+case "$host_cpu-$host_vendor-$host_os" in
+  *linux*)
+    AC_ARG_ENABLE([linux-lfs],
+                  [AS_HELP_STRING([--disable-linux-lfs],
+                                  [Disable support for large (64-bit)
+                                   files on Linux. This option is 
+                                   deprecated in favor of
+                                   --disable-largefile.])])
+
+    if test "$enable_linux_lfs" = no; then
+      if test "$enable_largefile" != yes; then
+        enable_largefile=no
+      fi
+    fi
+    ;;
+esac
 
 ## If largefile support is enabled, then set up appropriate compiler options.
 if test "$enable_largefile" != no; then
@@ -2851,7 +2864,7 @@ if test -n "$PARALLEL"; then
     X-yes)
       AC_CHECK_HEADERS([mpe.h],, [unset MPE])
       AC_CHECK_LIB([mpe], [MPE_Init_log],, [unset MPE])
-      AC_CHECK_LIB([lmpe], [MPE_Init_mpi_io],, [unset MPE])
+      AC_CHECK_LIB([lmpe], [CLOG_Init],, [unset MPE])
       ;;
     *)
       case "$withval" in
@@ -2893,12 +2906,12 @@ if test -n "$PARALLEL"; then
         AM_LDFLAGS="$AM_LDFLAGS -L$mpe_lib"
         AC_CHECK_LIB([mpe], [MPE_Init_log],,
                      [LDFLAGS="$saved_LDFLAGS"; AM_LDFLAGS="$saved_AM_LDFLAGS"; unset MPE])
-        AC_CHECK_LIB([lmpe], [MPE_Init_mpi_io],,
+        AC_CHECK_LIB([lmpe], [CLOG_Init],,
                      [LDFLAGS="$saved_LDFLAGS"; AM_LDFLAGS="$saved_AM_LDFLAGS"; unset MPE])
 
       else
         AC_CHECK_LIB([mpe], [MPE_Init_log],, [unset MPE])
-        AC_CHECK_LIB([lmpe], [MPE_Init_mpi_io],, [unset MPE])
+        AC_CHECK_LIB([lmpe], [CLOG_Init],, [unset MPE])
       fi
       ;;
   esac
@@ -4268,8 +4281,8 @@ AC_MSG_CHECKING([which version of public symbols to use by default])
 AC_ARG_WITH([default-api-version],
             [AS_HELP_STRING([--with-default-api-version=(v16|v18|v110)],
                             [Specify default release version of public symbols
-                             [default=v110]])],,
-            [withval=v110])
+                             [default=v18]])],,
+            withval=v18)
 
 if test "X$withval" = "Xv16"; then
     AC_MSG_RESULT([v16])
@@ -4279,9 +4292,6 @@ if test "X$withval" = "Xv16"; then
 elif test "X$withval" = "Xv18"; then
     AC_MSG_RESULT([v18])
     DEFAULT_API_VERSION=v18
-elif test "X$withval" = "Xv110"; then
-    AC_MSG_RESULT([v110])
-    DEFAULT_API_VERSION=v110
 else
     AC_MSG_ERROR([invalid version of public symbols given])
 fi
@@ -4291,7 +4301,7 @@ fi
 ## if the user insists on doing this via the --enable-unsupported configure
 ## flag, we'll let them.
 if test "X${ALLOW_UNSUPPORTED}" != "Xyes"; then
-  if test "X${DEFAULT_API_VERSION}" != "Xv110" -a "X${DEPRECATED_SYMBOLS}" = "Xno" ; then
+  if test "X${DEFAULT_API_VERSION}" != "Xv18" -a "X${DEPRECATED_SYMBOLS}" = "Xno" ; then
     AC_MSG_ERROR([Removing old public API symbols not allowed when using them as default public API symbols. Use --enable-unsupported to override this error.])
   fi
 fi

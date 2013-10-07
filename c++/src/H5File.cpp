@@ -163,7 +163,7 @@ H5File::H5File(const H5File& original) : H5Location(original)
 }
 
 //--------------------------------------------------------------------------
-// Function:	H5File::isHdf5
+// Function:	H5File::isHdf5 (static)
 ///\brief	Determines whether a file in HDF5 format. (Static)
 ///\param	name - IN: Name of the file
 ///\return	true if the file is in HDF5 format, and false, otherwise
@@ -186,7 +186,7 @@ bool H5File::isHdf5(const char* name)
 }
 
 //--------------------------------------------------------------------------
-// Function:	H5File::isHdf5
+// Function:	H5File::isHdf5 (static)
 ///\brief	This is an overloaded member function, provided for convenience.
 ///		It takes an \c H5std_string for \a name. (Static)
 ///\param	name - IN: Name of the file - \c H5std_string
@@ -203,7 +203,7 @@ bool H5File::isHdf5(const H5std_string& name )
 ///\param	name         - IN: Name of the file
 ///\param	flags        - IN: File access flags
 ///\param	access_plist - IN: File access property list.  Default to
-///		FileAccPropList::DEFAULT
+///		FileCreatPropList::DEFAULT
 ///\par Description
 ///		Valid values of \a flags include:
 ///		H5F_ACC_RDWR:   Open with read/write access. If the file is
