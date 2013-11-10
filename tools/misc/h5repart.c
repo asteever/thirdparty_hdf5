@@ -290,7 +290,7 @@ main (int argc, char *argv[])
     if (argno<argc) usage (prog_name);
 
     /* Now the real work, split the file */
-    buf = HDmalloc (blk_size);
+    buf = malloc (blk_size);
     while (src_offset<src_size) {
 
 	/* Read a block.  The amount to read is the minimum of:
@@ -498,6 +498,6 @@ main (int argc, char *argv[])
     }
 
     /* Free resources and return */
-    HDfree (buf);
+    free (buf);
     return EXIT_SUCCESS;
 }

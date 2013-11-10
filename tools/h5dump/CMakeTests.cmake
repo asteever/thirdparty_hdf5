@@ -10,7 +10,6 @@
   # --------------------------------------------------------------------
   SET (HDF5_REFERENCE_FILES
       ${HDF5_TOOLS_SRC_DIR}/testfiles/charsets.ddl
-      ${HDF5_TOOLS_SRC_DIR}/testfiles/file_space.ddl
       ${HDF5_TOOLS_SRC_DIR}/testfiles/filter_fail.ddl
       ${HDF5_TOOLS_SRC_DIR}/testfiles/packedbits.ddl
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tall-1.ddl
@@ -57,8 +56,6 @@
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tchar1.ddl
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tchunked.ddl
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tcmpdattrintsize.ddl
-      ${HDF5_TOOLS_SRC_DIR}/testfiles/tcmpdintarray.ddl
-      ${HDF5_TOOLS_SRC_DIR}/testfiles/tcmpdints.ddl
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tcmpdintsize.ddl
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tcomp-1.ddl
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tcomp-2.ddl
@@ -181,7 +178,6 @@
   )
   SET (HDF5_REFERENCE_TEST_FILES
       ${HDF5_TOOLS_SRC_DIR}/testfiles/charsets.h5
-      ${HDF5_TOOLS_SRC_DIR}/testfiles/file_space.h5
       ${HDF5_TOOLS_SRC_DIR}/testfiles/filter_fail.h5
       ${HDF5_TOOLS_SRC_DIR}/testfiles/packedbits.h5
       ${HDF5_TOOLS_SRC_DIR}/testfiles/taindices.h5
@@ -204,8 +200,6 @@
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tbinary.h5
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tchar.h5
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tcmpdattrintsize.h5
-      ${HDF5_TOOLS_SRC_DIR}/testfiles/tcmpdintarray.h5
-      ${HDF5_TOOLS_SRC_DIR}/testfiles/tcmpdints.h5
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tcmpdintsize.h5
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tcompound.h5
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tcompound_complex.h5
@@ -726,8 +720,6 @@
           h5dump-help.out
           charsets.out
           charsets.out.err
-          file_space.out
-          file_space.out.err
           filter_fail.out
           filter_fail.out.err
           packedbits.out
@@ -813,10 +805,6 @@
           tchunked.out.err
           tcmpdattrintsize.out
           tcmpdattrintsize.out.err
-          tcmpdintarray.out
-          tcmpdintarray.out.err
-          tcmpdints.out
-          tcmpdints.out.err
           tcmpdintsize.out
           tcmpdintsize.out.err
           tcomp-1.out
@@ -1066,8 +1054,6 @@
   # test for signed/unsigned datasets
   ADD_H5_TEST (packedbits 0 --enable-error-stack packedbits.h5)
   # test for compound signed/unsigned datasets
-  ADD_H5_TEST (tcmpdintarray 0 --enable-error-stack tcmpdintarray.h5)
-  ADD_H5_TEST (tcmpdints 0 --enable-error-stack tcmpdints.h5)
   ADD_H5_TEST (tcmpdintsize 0 --enable-error-stack tcmpdintsize.h5)
   # test for signed/unsigned scalar datasets
   ADD_H5_TEST (tscalarintsize 0 --enable-error-stack tscalarintsize.h5)
@@ -1220,7 +1206,6 @@
   ADD_H5_TEST (tboot2 0 --enable-error-stack -B tfcontents2.h5)
   ADD_H5_TEST (tboot2A 0 --enable-error-stack --boot-block tfcontents2.h5)
   ADD_H5_TEST (tboot2B 0 --enable-error-stack --superblock tfcontents2.h5)
-  ADD_H5_TEST (file_space 0 --enable-error-stack -B file_space.h5)
 
   # test -p with a non existing dataset
   ADD_H5ERR_MASK_TEST (tperror 1 --enable-error-stack -p -d bogus tfcontents1.h5)

@@ -81,13 +81,13 @@ static int basic_id_test(void)
 	/* Register an ID and retrieve the object it points to.
 	 * Once the ID has been registered, testObj will be freed when
          * its ID type is destroyed. */
-	testObj = HDmalloc(7 * sizeof(int));
+	testObj = malloc(7 * sizeof(int));
 	arrayID = H5Iregister(myType, testObj);
 
 	CHECK(arrayID, H5I_INVALID_HID, "H5Iregister");
 	if(arrayID == H5I_INVALID_HID)
         {
-		HDfree(testObj);
+		free(testObj);
 		goto out;
         }
 
@@ -175,13 +175,13 @@ static int basic_id_test(void)
 	 * freed when the previous type was destroyed.  Allocate new
 	 * memory for it.
          */
-	testObj = HDmalloc(7 * sizeof(int));
+	testObj = malloc(7 * sizeof(int));
 	arrayID = H5Iregister(myType, testObj);
 
 	CHECK(arrayID, H5I_INVALID_HID, "H5Iregister");
 	if(arrayID == H5I_INVALID_HID)
 	{
-		HDfree(testObj);
+		free(testObj);
 		goto out;
 	}
 
@@ -250,7 +250,7 @@ static int id_predefined_test(void )
 	void * testPtr;
 	herr_t testErr;
 
-	testObj = HDmalloc(sizeof(int));
+	testObj = malloc(sizeof(int));
 
 	/* Try to perform illegal functions on various predefined types */
 	H5E_BEGIN_TRY
@@ -319,14 +319,14 @@ static int id_predefined_test(void )
 
 	/* testObj was never registered as an atom, so it will not be
          * automatically freed. */
-	HDfree(testObj);
+	free(testObj);
 	return 0;
 
 out:
 	if(typeID != H5I_INVALID_HID)
 		H5Tclose(typeID);
         if(testObj != NULL)
-		HDfree(testObj);
+		free(testObj);
 
 	return -1;
 }

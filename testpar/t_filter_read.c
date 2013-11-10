@@ -186,8 +186,8 @@ filter_read_internal(const char *filename, hid_t dcpl,
     hrc = H5Fclose (file);
     VRFY(hrc>=0, "H5Fclose");
 
-    HDfree(points);
-    HDfree(check);
+    free(points);
+    free(check);
 
     MPI_Barrier(MPI_COMM_WORLD);
 }

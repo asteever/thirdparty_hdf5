@@ -408,27 +408,27 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Z_unregister(H5Z_filter_t filter_id)
+H5Z_unregister(H5Z_filter_t id)
 {
-    size_t       filter_index;        /* Local index variable for filter */
+    size_t i;                   /* Local index variable */
     H5Z_object_t object;
-    herr_t       ret_value=SUCCEED;   /* Return value */
+    herr_t ret_value=SUCCEED;   /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    HDassert(filter_id>=0 && filter_id<=H5Z_FILTER_MAX);
+    HDassert(id >= 0 && id <= H5Z_FILTER_MAX);
 
     /* Is the filter already registered? */
-    for (filter_index=0; filter_index<H5Z_table_used_g; filter_index++)
-	if (H5Z_table_g[filter_index].id==filter_id)
+    for (i=0; i<H5Z_table_used_g; i++)
+	if (H5Z_table_g[i].id==id)
             break;
 
     /* Fail if filter not found */
-    if (filter_index>=H5Z_table_used_g)
+    if (i>=H5Z_table_used_g)
         HGOTO_ERROR(H5E_PLINE, H5E_NOTFOUND, FAIL, "filter is not registered")
 
     /* Initialize the structure object for iteration */
-    object.filter_id = filter_id;
+    object.filter_id = id;
     object.found = FALSE;
 
     /* Iterate through all opened datasets, returns a failure if any of them uses the filter */
@@ -451,9 +451,9 @@ H5Z_unregister(H5Z_filter_t filter_id)
 
     /* Remove filter from table */
     /* Don't worry about shrinking table size (for now) */
-    HDmemmove(&H5Z_table_g[filter_index],&H5Z_table_g[filter_index+1],sizeof(H5Z_class2_t)*((H5Z_table_used_g-1)-filter_index));
+    HDmemmove(&H5Z_table_g[i],&H5Z_table_g[i+1],sizeof(H5Z_class2_t)*((H5Z_table_used_g-1)-i));
 #ifdef H5Z_DEBUG
-    HDmemmove(&H5Z_stat_table_g[filter_index],&H5Z_stat_table_g[filter_index+1],sizeof(H5Z_stats_t)*((H5Z_table_used_g-1)-filter_index));
+    HDmemmove(&H5Z_stat_table_g[i],&H5Z_stat_table_g[i+1],sizeof(H5Z_stats_t)*((H5Z_table_used_g-1)-i));
 #endif /* H5Z_DEBUG */
     H5Z_table_used_g--;
 
@@ -508,7 +508,7 @@ done:
  *              FALSE otherwise.
  *
  * Programmer:  Raymond Lu
- *              6 May 2013
+ *              13 May 2013
  *
  *-------------------------------------------------------------------------
  */
@@ -612,7 +612,7 @@ done:
  *              FAIL if there is an error
  *
  * Programmer:  Raymond Lu
- *              6 May 2013
+ *              13 May 2013
  *
  *-------------------------------------------------------------------------
  */
@@ -635,6 +635,7 @@ H5Z__flush_file_cb(void *obj_ptr, hid_t UNUSED obj_id, void UNUSED *key)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5Z__flush_file_cb() */
+
 
 
 /*-------------------------------------------------------------------------
@@ -1324,8 +1325,8 @@ H5Z_pipeline(const H5O_pline_t *pline, unsigned flags,
              */
 	    if((fclass_idx = H5Z_find_idx(pline->filter[idx].id)) < 0) {
                 hbool_t issue_error = FALSE;
+#ifndef H5_VMS
 
-                /* Check for "no plugins" indicated" */
                     const H5Z_class2_t    *filter_info;
 
                     /* Try loading the filter */
@@ -1340,7 +1341,9 @@ H5Z_pipeline(const H5O_pline_t *pline, unsigned flags,
                     } /* end if */
                     else
                         issue_error = TRUE;
-
+#else /*H5_VMS*/
+                issue_error = TRUE;
+#endif /*H5_VMS*/
                 /* Check for error */
                 if(issue_error) {
                     /* Print out the filter name to give more info.  But the name is optional for 
@@ -1484,7 +1487,7 @@ done:
  *              FAIL   - error
  *
  * Programmer:	Raymond Lu
- *              26 April 2013
+ *              14 May 2013
  *
  * Modifications:
  *
@@ -1513,7 +1516,6 @@ H5Z_filter_in_pline(const H5O_pline_t *pline, H5Z_filter_t filter)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5Z_filter_in_pline() */
-
 
 
 /*-------------------------------------------------------------------------
