@@ -230,21 +230,27 @@ class H5_DLLCPP PredType : public AtomType {
 	static const PredType NATIVE_UINT_FAST64;
 #endif /* H5_SIZEOF_UINT_FAST64_T */
 
-        /*! \brief This dummy function do not inherit from DataType - it will
-            throw a DataTypeIException if invoked.
-        */
-        void commit(H5Location& loc, const H5std_string& name );
-        /*! \brief This dummy function do not inherit from DataType - it will
-            throw a DataTypeIException if invoked.
-        */
-        void commit(H5Location& loc, const char* name );
-        /*! \brief This dummy function do not inherit from DataType - it will
-            throw a DataTypeIException if invoked.
-        */
-        bool committed();
+	/*! \brief This dummy function do not inherit from DataType - it will
+	    throw a DataTypeIException if invoked.
+	*/
+	void commit(H5Location& loc, const H5std_string& name );
+	/*! \brief This dummy function do not inherit from DataType - it will
+	    throw a DataTypeIException if invoked.
+	*/
+	void commit(H5Location& loc, const char* name );
+	/*! \brief This dummy function do not inherit from DataType - it will
+	    throw a DataTypeIException if invoked.
+	*/
+	bool committed();
+
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+   private:
+	// Added this to work around the atexit/global destructor problem.
+	// It'll help to terminate the library after other PredType instances
+	// are closed.  -BMR, Mar 30, 2012
+	static const PredType AtExit;
 
    protected:
-#ifndef DOXYGEN_SHOULD_SKIP_THIS
 	// Default constructor
 	PredType();
 
@@ -252,12 +258,6 @@ class H5_DLLCPP PredType : public AtomType {
 	PredType( const hid_t predtype_id );  // used by the library only
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
-
-   private:
-	// Added this to work around the atexit/global destructor problem.
-	// It'll help to terminate the library after other PredType instances
-	// are closed.  -BMR, Mar 30, 2012
-	static const PredType AtExit;
 
 };
 #ifndef H5_NO_NAMESPACE

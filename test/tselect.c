@@ -354,8 +354,8 @@ test_select_hyper(hid_t xfer_plist)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Free memory buffers */
-    HDfree(wbuf);
-    HDfree(rbuf);
+    free(wbuf);
+    free(rbuf);
 }   /* test_select_hyper() */
 
 struct pnt_iter {
@@ -637,8 +637,8 @@ test_select_point(hid_t xfer_plist)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Free memory buffers */
-    HDfree(wbuf);
-    HDfree(rbuf);
+    free(wbuf);
+    free(rbuf);
 }   /* test_select_point() */
 
 /****************************************************************
@@ -750,8 +750,8 @@ test_select_all(hid_t xfer_plist)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Free memory buffers */
-    HDfree(wbuf);
-    HDfree(rbuf);
+    free(wbuf);
+    free(rbuf);
 }   /* test_select_all() */
 
 /****************************************************************
@@ -890,8 +890,8 @@ test_select_all_hyper(hid_t xfer_plist)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Free memory buffers */
-    HDfree(wbuf);
-    HDfree(rbuf);
+    free(wbuf);
+    free(rbuf);
 }   /* test_select_all_hyper() */
 
 /****************************************************************
@@ -5406,8 +5406,8 @@ test_select_hyper_and_2d(void)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Free memory buffers */
-    HDfree(wbuf);
-    HDfree(rbuf);
+    free(wbuf);
+    free(rbuf);
 }   /* test_select_hyper_and_2d() */
 
 /****************************************************************
@@ -5537,8 +5537,8 @@ test_select_hyper_xor_2d(void)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Free memory buffers */
-    HDfree(wbuf);
-    HDfree(rbuf);
+    free(wbuf);
+    free(rbuf);
 }   /* test_select_hyper_xor_2d() */
 
 /****************************************************************
@@ -5667,8 +5667,8 @@ test_select_hyper_notb_2d(void)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Free memory buffers */
-    HDfree(wbuf);
-    HDfree(rbuf);
+    free(wbuf);
+    free(rbuf);
 }   /* test_select_hyper_notb_2d() */
 
 /****************************************************************
@@ -6440,8 +6440,8 @@ test_select_point_chunk(void)
     ret = H5Fclose(file);
     CHECK(ret, FAIL, "H5Fclose");
 
-    HDfree(data);
-    HDfree (data_out);
+    free(data);
+    free (data_out);
 }   /* test_select_point_chunk() */
 
 /****************************************************************
@@ -6668,7 +6668,7 @@ test_select_combine(void)
     none_id=H5Scopy(base_id);
     CHECK(none_id, FAIL, "H5Scopy");
     error=H5Sselect_none(none_id);
-    CHECK(error, FAIL, "H5Sselect_none");
+    CHECK(error, FAIL, "H5Sselect_all");
     sel_type=H5Sget_select_type(none_id);
     VERIFY(sel_type, H5S_SEL_NONE, "H5Sget_select_type");
 
@@ -7620,8 +7620,8 @@ test_select_none(void)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Free memory buffers */
-    HDfree(wbuf);
-    HDfree(rbuf);
+    free(wbuf);
+    free(rbuf);
 }   /* test_select_none() */
 
 /****************************************************************

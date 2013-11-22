@@ -75,7 +75,6 @@ test -d $TESTDIR || mkdir -p $TESTDIR
 # --------------------------------------------------------------------
 LIST_HDF5_TEST_FILES="
 $SRC_H5DUMP_TESTFILES/charsets.h5
-$SRC_H5DUMP_TESTFILES/file_space.h5
 $SRC_H5DUMP_TESTFILES/filter_fail.h5
 $SRC_H5DUMP_TESTFILES/packedbits.h5
 $SRC_H5DUMP_TESTFILES/taindices.h5
@@ -169,7 +168,6 @@ $SRC_H5DUMP_TESTFILES/tvms.h5
 
 LIST_OTHER_TEST_FILES="
 $SRC_H5DUMP_TESTFILES/charsets.ddl
-$SRC_H5DUMP_TESTFILES/file_space.ddl
 $SRC_H5DUMP_TESTFILES/filter_fail.ddl
 $SRC_H5DUMP_TESTFILES/packedbits.ddl
 $SRC_H5DUMP_TESTFILES/tall-1.ddl
@@ -1091,7 +1089,6 @@ TOOLTEST tboot1.ddl --enable-error-stack -H -B -d dset tfcontents1.h5
 TOOLTEST tboot2.ddl --enable-error-stack -B tfcontents2.h5
 TOOLTEST tboot2A.ddl --enable-error-stack --boot-block tfcontents2.h5
 TOOLTEST tboot2B.ddl --enable-error-stack --superblock tfcontents2.h5
-TOOLTEST file_space.ddl --enable-error-stack -B file_space.h5
 
 # test -p with a non existing dataset
 TOOLTEST4 tperror.ddl --enable-error-stack -p -d bogus tfcontents1.h5

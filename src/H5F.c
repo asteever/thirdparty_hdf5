@@ -41,10 +41,24 @@
 #include "H5SMprivate.h"	/* Shared Object Header Messages	*/
 #include "H5Tprivate.h"		/* Datatypes				*/
 
+/* Predefined file drivers */
+#include "H5FDcore.h"		/*temporary in-memory files		*/
+#include "H5FDfamily.h"		/*family of files			*/
+#include "H5FDlog.h"            /* sec2 driver with logging, for debugging */
+#include "H5FDmpi.h"            /* MPI-based file drivers		*/
+#include "H5FDmulti.h"		/*multiple files partitioned by mem usage */
+#include "H5FDsec2.h"		/*Posix unbuffered I/O			*/
+#include "H5FDstdio.h"		/* Standard C buffered I/O		*/
+#ifdef H5_HAVE_WINDOWS
+#include "H5FDwindows.h"        /* Windows buffered I/O     */
+#endif
+#include "H5FDdirect.h"         /*Linux direct I/O			*/
+
 
 /****************/
 /* Local Macros */
 /****************/
+
 
 /******************/
 /* Local Typedefs */
@@ -63,7 +77,7 @@ typedef struct H5F_olist_t {
         } ptr;
     } file_info;
     size_t     list_index;      /* Current index in open ID array */
-    size_t     max_nobjs;       /* Maximum # of IDs to put into array */
+    size_t     max_index;            /* Maximum # of IDs to put into array */
 } H5F_olist_t;
 
 
@@ -109,6 +123,7 @@ H5FL_DEFINE(H5F_file_t);
 static const H5I_class_t H5I_FILE_CLS[1] = {{
     H5I_FILE,			/* ID class value */
     0,				/* Class flags */
+    64,				/* Minimum hash size for class */
     0,				/* # of reserved IDs for class */
     (H5I_free_t)H5F_close	/* Callback routine for closing objects of this class */
 }};
@@ -506,8 +521,7 @@ H5Fget_obj_ids(hid_t file_id, unsigned types, size_t max_objs, hid_t *oid_list)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "not a file id")
     if(0 == (types & H5F_OBJ_ALL))
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "not an object type")
-    if(!oid_list)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "object ID list is NULL")
+    HDassert(oid_list);
 
     /* Perform the query */
     if(H5F_get_obj_ids(f, types, max_objs, oid_list, TRUE, &obj_id_count) < 0)
@@ -566,7 +580,7 @@ done:
  *---------------------------------------------------------------------------
  */
 static herr_t
-H5F_get_objects(const H5F_t *f, unsigned types, size_t max_nobjs, hid_t *obj_id_list, hbool_t app_ref, size_t *obj_id_count_ptr)
+H5F_get_objects(const H5F_t *f, unsigned types, size_t max_index, hid_t *obj_id_list, hbool_t app_ref, size_t *obj_id_count_ptr)
 {
     size_t obj_id_count=0;      /* Number of open IDs */
     H5F_olist_t olist;          /* Structure to hold search results */
@@ -578,10 +592,10 @@ H5F_get_objects(const H5F_t *f, unsigned types, size_t max_nobjs, hid_t *obj_id_
     HDassert(obj_id_count_ptr);
 
     /* Set up search information */
-    olist.obj_id_list  = (max_nobjs==0 ? NULL : obj_id_list);
+    olist.obj_id_list  = (max_index==0 ? NULL : obj_id_list);
     olist.obj_id_count = &obj_id_count;
     olist.list_index   = 0;
-    olist.max_nobjs   = max_nobjs;
+    olist.max_index   = max_index;
 
     /* Determine if we are searching for local or global objects */
     if(types & H5F_OBJ_LOCAL) {
@@ -601,54 +615,38 @@ H5F_get_objects(const H5F_t *f, unsigned types, size_t max_nobjs, hid_t *obj_id_
             HGOTO_ERROR(H5E_FILE, H5E_BADITER, FAIL, "iteration failed(1)")
     } /* end if */
 
-    /* If the caller just wants to count the number of objects (OLIST.MAX_NOBJS is zero),
-     * or the caller wants to get the list of IDs and the list isn't full,
-     * search through dataset IDs to count number of datasets, and put their
+    /* Search through dataset IDs to count number of datasets, and put their
      * IDs on the object list */
-    if(!olist.max_nobjs || (olist.max_nobjs && olist.list_index<olist.max_nobjs)) { 
-        if (types & H5F_OBJ_DATASET) {
-            olist.obj_type = H5I_DATASET;
-            if(H5I_iterate(H5I_DATASET, H5F_get_objects_cb, &olist, app_ref) < 0)
-                HGOTO_ERROR(H5E_FILE, H5E_BADITER, FAIL, "iteration failed(2)")
-        } /* end if */
-    } 
+    if(types & H5F_OBJ_DATASET) {
+        olist.obj_type = H5I_DATASET;
+        if(H5I_iterate(H5I_DATASET, H5F_get_objects_cb, &olist, app_ref) < 0)
+            HGOTO_ERROR(H5E_FILE, H5E_BADITER, FAIL, "iteration failed(2)")
+    } /* end if */
 
-    /* If the caller just wants to count the number of objects (OLIST.MAX_NOBJS is zero),
-     * or the caller wants to get the list of IDs and the list isn't full,
-     * search through group IDs to count number of groups, and put their
+    /* Search through group IDs to count number of groups, and put their
      * IDs on the object list */
-    if(!olist.max_nobjs || (olist.max_nobjs && olist.list_index<olist.max_nobjs)) { 
-        if(types & H5F_OBJ_GROUP) {
-            olist.obj_type = H5I_GROUP;
-            if(H5I_iterate(H5I_GROUP, H5F_get_objects_cb, &olist, app_ref) < 0)
-                HGOTO_ERROR(H5E_FILE, H5E_BADITER, FAIL, "iteration failed(3)")
-        } /* end if */
-    } 
+    if(types & H5F_OBJ_GROUP) {
+        olist.obj_type = H5I_GROUP;
+        if(H5I_iterate(H5I_GROUP, H5F_get_objects_cb, &olist, app_ref) < 0)
+            HGOTO_ERROR(H5E_FILE, H5E_BADITER, FAIL, "iteration failed(3)")
+    } /* end if */
 
-    /* If the caller just wants to count the number of objects (OLIST.MAX_NOBJS is zero),
-     * or the caller wants to get the list of IDs and the list isn't full,
-     * search through datatype IDs to count number of named datatypes, and put their
+    /* Search through datatype IDs to count number of named datatypes, and put their
      * IDs on the object list */
-    if(!olist.max_nobjs || (olist.max_nobjs && olist.list_index<olist.max_nobjs)) { 
-        if(types & H5F_OBJ_DATATYPE) {
-            olist.obj_type = H5I_DATATYPE;
-            if(H5I_iterate(H5I_DATATYPE, H5F_get_objects_cb, &olist, app_ref) < 0)
-                HGOTO_ERROR(H5E_FILE, H5E_BADITER, FAIL, "iteration failed(4)")
-        } /* end if */
-    } 
+    if(types & H5F_OBJ_DATATYPE) {
+        olist.obj_type = H5I_DATATYPE;
+        if(H5I_iterate(H5I_DATATYPE, H5F_get_objects_cb, &olist, app_ref) < 0)
+            HGOTO_ERROR(H5E_FILE, H5E_BADITER, FAIL, "iteration failed(4)")
+    } /* end if */
 
-    /* If the caller just wants to count the number of objects (OLIST.MAX_NOBJS is zero),
-     * or the caller wants to get the list of IDs and the list isn't full,
-     * search through attribute IDs to count number of attributes, and put their
+    /* Search through attribute IDs to count number of attributes, and put their
      * IDs on the object list */
-    if(!olist.max_nobjs || (olist.max_nobjs && olist.list_index<olist.max_nobjs)) {
-        if(types & H5F_OBJ_ATTR) {
-            olist.obj_type = H5I_ATTR;
-            if(H5I_iterate(H5I_ATTR, H5F_get_objects_cb, &olist, app_ref) < 0)
-                HGOTO_ERROR(H5E_FILE, H5E_BADITER, FAIL, "iteration failed(5)")
-        } /* end if */
-    }
- 
+    if(types & H5F_OBJ_ATTR) {
+        olist.obj_type = H5I_ATTR;
+        if(H5I_iterate(H5I_ATTR, H5F_get_objects_cb, &olist, app_ref) < 0)
+            HGOTO_ERROR(H5E_FILE, H5E_BADITER, FAIL, "iteration failed(5)")
+    } /* end if */
+
     /* Set the number of objects currently open */
     *obj_id_count_ptr = obj_id_count;
 
@@ -664,8 +662,8 @@ done:
  * 		object is in the file, and either count it or put its ID
  *		on the list.
  *
- * Return:      H5_ITER_STOP if the array of object IDs is filled up.
- *              H5_ITER_CONT otherwise.
+ * Return:      TRUE if the array of object IDs is filled up.
+ *              FALSE otherwise.
  *
  * Programmer:  Raymond Lu
  *              Wednesday, Dec 5, 2001
@@ -676,8 +674,7 @@ static int
 H5F_get_objects_cb(void *obj_ptr, hid_t obj_id, void *key)
 {
     H5F_olist_t *olist = (H5F_olist_t *)key;    /* Alias for search info */
-    int         ret_value = H5_ITER_CONT;    /* Return value */
-    hbool_t     add_obj = FALSE;
+    int      ret_value = FALSE;    /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
 
@@ -690,7 +687,22 @@ H5F_get_objects_cb(void *obj_ptr, hid_t obj_id, void *key)
                         (!olist->file_info.ptr.file || (olist->file_info.ptr.file && (H5F_t*)obj_ptr == olist->file_info.ptr.file) ))
                 ||  (!olist->file_info.local &&
                         ( !olist->file_info.ptr.shared || (olist->file_info.ptr.shared && ((H5F_t*)obj_ptr)->shared == olist->file_info.ptr.shared) ))) {
-            add_obj = TRUE;
+            /* Add the object's ID to the ID list, if appropriate */
+            if(olist->obj_id_list) {
+                olist->obj_id_list[olist->list_index] = obj_id;
+		olist->list_index++;
+	    }
+
+            /* Increment the number of open objects */
+	    if(olist->obj_id_count)
+	    	(*olist->obj_id_count)++;
+
+            /* Check if we've filled up the array.  Return TRUE only if
+             * we have filled up the array. Otherwise return FALSE(RET_VALUE is
+             * preset to FALSE) because H5I_iterate needs the return value of 
+ 	     * FALSE to continue the iteration. */
+            if(olist->max_index>0 && olist->list_index>=olist->max_index)
+                HGOTO_DONE(TRUE)  /* Indicate that the iterator should stop */
 	}
     } /* end if */
     else { /* either count opened object IDs or put the IDs on the list */
@@ -729,7 +741,7 @@ H5F_get_objects_cb(void *obj_ptr, hid_t obj_id, void *key)
 	    case H5I_ERROR_STACK:
 	    case H5I_NTYPES:
             default:
-                HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, H5_ITER_ERROR, "unknown data object")
+                HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "unknown data object")
 	} /* end switch */
 
         if((olist->file_info.local &&
@@ -740,28 +752,24 @@ H5F_get_objects_cb(void *obj_ptr, hid_t obj_id, void *key)
                     ((!olist->file_info.ptr.shared && olist->obj_type == H5I_DATATYPE && H5T_is_immutable((H5T_t *)obj_ptr) == FALSE)
                             || (!olist->file_info.ptr.shared && olist->obj_type != H5I_DATATYPE)
                             || (oloc && oloc->file && oloc->file->shared == olist->file_info.ptr.shared)))) {
-            add_obj = TRUE;
+            /* Add the object's ID to the ID list, if appropriate */
+            if(olist->obj_id_list) {
+            	olist->obj_id_list[olist->list_index] = obj_id;
+		olist->list_index++;
+	    } /* end if */
+
+            /* Increment the number of open objects */
+	    if(olist->obj_id_count)
+            	(*olist->obj_id_count)++;
+
+            /* Check if we've filled up the array.  Return TRUE only if
+             * we have filled up the array. Otherwise return FALSE(RET_VALUE is
+             * preset to FALSE) because H5I_iterate needs the return value of 
+	     * FALSE to continue iterating. */
+            if(olist->max_index>0 && olist->list_index>=olist->max_index)
+                HGOTO_DONE(TRUE)  /* Indicate that the iterator should stop */
     	} /* end if */
     } /* end else */
-
-    if(TRUE==add_obj) {
-        /* Add the object's ID to the ID list, if appropriate */
-        if(olist->obj_id_list) {
-            olist->obj_id_list[olist->list_index] = obj_id;
-	    olist->list_index++;
-	} /* end if */
-
-        /* Increment the number of open objects */
-	if(olist->obj_id_count)
-            (*olist->obj_id_count)++;
-
-        /* Check if we've filled up the array.  Return H5_ITER_STOP only if
-         * we have filled up the array. Otherwise return H5_ITER_CONT(RET_VALUE is
-         * preset to H5_ITER_CONT) because H5I_iterate needs the return value of 
-         * H5_ITER_CONT to continue the iteration. */
-        if(olist->max_nobjs>0 && olist->list_index>=olist->max_nobjs)
-            HGOTO_DONE(H5_ITER_STOP)  /* Indicate that the iterator should stop */
-    }
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -931,10 +939,6 @@ H5F_new(H5F_file_t *shared, hid_t fcpl_id, hid_t fapl_id, H5FD_t *lf)
         if(H5P_get(plist, H5F_CRT_SHMSG_NINDEXES_NAME, &f->shared->sohm_nindexes) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get number of SOHM indexes")
         HDassert(f->shared->sohm_nindexes < 255);
-        if(H5P_get(plist, H5F_CRT_FILE_SPACE_STRATEGY_NAME, &f->shared->fs_strategy) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get file space strategy")
-        if(H5P_get(plist, H5F_CRT_FREE_SPACE_THRESHOLD_NAME, &f->shared->fs_threshold) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get free-space section threshold")
 
         /* Get the FAPL values to cache */
         if(NULL == (plist = (H5P_genplist_t *)H5I_object(fapl_id)))
@@ -989,7 +993,7 @@ H5F_new(H5F_file_t *shared, hid_t fcpl_id, hid_t fapl_id, H5FD_t *lf)
          *      merged into the trunk and journaling is enabled, at least until
          *      we make it work. - QAK)
          */
-        f->shared->use_tmp_space = !H5F_HAS_FEATURE(f, H5FD_FEAT_HAS_MPI);
+        f->shared->use_tmp_space = !(IS_H5FD_MPI(f));
 
 	/*
 	 * Create a metadata cache with the specified number of elements.
@@ -1060,15 +1064,13 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
          * Only try to flush the file if it was opened with write access, and if
          * the caller requested a flush.
          */
-        if((H5F_ACC_RDWR & H5F_INTENT(f)) && flush)
+        if((f->shared->flags & H5F_ACC_RDWR) && flush)
             if(H5F_flush(f, dxpl_id, TRUE) < 0)
-                /* Push error, but keep going*/
                 HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush cache")
 
         /* Release the external file cache */
         if(f->shared->efc) {
             if(H5F_efc_destroy(f->shared->efc) < 0)
-                /* Push error, but keep going*/
                 HDONE_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "can't destroy external file cache")
             f->shared->efc = NULL;
         } /* end if */
@@ -1082,19 +1084,9 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
              *      and also because releasing free space can shrink the file's
              *      'eoa' value)
              */
-            if(H5F_ACC_RDWR & H5F_INTENT(f)) {
-                if(H5MF_close(f, dxpl_id) < 0)
-                    /* Push error, but keep going*/
-                    HDONE_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "can't release file free space info")
-
-                /* Flush the file again (if requested), as shutting down the
-                 * free space manager may dirty some data structures again.
-                 */
-                if(flush)
-                    if(H5F_flush(f, dxpl_id, TRUE) < 0)
-                        /* Push error, but keep going*/
-                        HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush cache")
-            } /* end if */
+            if(H5MF_close(f, dxpl_id) < 0)
+                /* Push error, but keep going*/
+                HDONE_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "can't release file free space info")
 
             /* Unpin the superblock, since we're about to destroy the cache */
             if(H5AC_unpin_entry(f->shared->sblock) < 0)
@@ -3045,13 +3037,11 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5Fget_info2
- *
- * Purpose:     Gets general information about the file, including:
- *		1. Get storage size for superblock extension if there is one.
+ * Function:    H5Fget_info
+ *		1. Get storage size for superblock extension if there is one
  *              2. Get the amount of btree and heap storage for entries
  *                 in the SOHM table if there is one.
- *		3. The amount of free space tracked in the file.
+ *		Consider success when there is no superblock extension and/or SOHM table
  *
  * Return:      Success:        non-negative on success
  *              Failure:        Negative
@@ -3062,7 +3052,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5Fget_info2(hid_t obj_id, H5F_info2_t *finfo)
+H5Fget_info(hid_t obj_id, H5F_info_t *finfo)
 {
     H5F_t *f;                           /* Top file in mount hierarchy */
     herr_t ret_value = SUCCEED;         /* Return value */
@@ -3093,69 +3083,20 @@ H5Fget_info2(hid_t obj_id, H5F_info2_t *finfo)
     HDassert(f->shared);
 
     /* Reset file info struct */
-    HDmemset(finfo, 0, sizeof(*finfo));
+    HDmemset(finfo, 0, sizeof(H5F_info_t));
 
-    /* Get the size of the superblock and any superblock extensions */
-    if(H5F_super_size(f, H5AC_ind_dxpl_id, &finfo->super.super_size, &finfo->super.super_ext_size) < 0)
-	HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "Unable to retrieve superblock sizes")
-
-    /* Get the size of any persistent free space */
-    if(H5MF_get_freespace(f, H5AC_ind_dxpl_id, &finfo->free.tot_space, &finfo->free.meta_size) < 0)
-	HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "Unable to retrieve free space information")
+    /* Check for superblock extension info */
+    if(H5F_super_size(f, H5AC_ind_dxpl_id, NULL, &finfo->super_ext_size) < 0)
+        HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "Unable to retrieve superblock extension size")
 
     /* Check for SOHM info */
     if(H5F_addr_defined(f->shared->sohm_addr))
-        if(H5SM_ih_size(f, H5AC_ind_dxpl_id, &finfo->sohm.hdr_size, &finfo->sohm.msgs_info) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "Unable to retrieve SOHM index & heap storage info")
-
-    /* Set version # fields */
-    finfo->super.version = f->shared->sblock->super_vers;
-    finfo->sohm.version = f->shared->sohm_vers;
-    finfo->free.version = HDF5_FREESPACE_VERSION;
+        if(H5SM_ih_size(f, H5AC_ind_dxpl_id, finfo) < 0)
+            HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "Unable to retrieve SOHM btree & heap storage info")
 
 done:
     FUNC_LEAVE_API(ret_value)
-} /* end H5Fget_info2() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    H5Fget_free_sections
- *
- * Purpose:     To get free-space section information for free-space manager with
- *		TYPE that is associated with file FILE_ID.
- *		If SECT_INFO is null, this routine returns the total # of free-space
- *		sections.
- *
- * Return:      Success:        non-negative, the total # of free space sections
- *              Failure:        negative
- *
- * Programmer:  Vailin Choi; July 1st, 2009
- *
- *-------------------------------------------------------------------------
- */
-ssize_t
-H5Fget_free_sections(hid_t file_id, H5F_mem_t type, size_t nsects,
-    H5F_sect_info_t *sect_info/*out*/)
-{
-    H5F_t         *file;        /* Top file in mount hierarchy */
-    ssize_t       ret_value;    /* Return value */
-
-    FUNC_ENTER_API(FAIL)
-    H5TRACE4("Zs", "iFmzx", file_id, type, nsects, sect_info);
-
-    /* Check args */
-    if(NULL == (file = (H5F_t *)H5I_object_verify(file_id, H5I_FILE)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "not a file ID")
-    if(sect_info && nsects == 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "nsects must be > 0")
-
-    /* Go get the free-space section information in the file */
-    if((ret_value = H5MF_get_free_sections(file, H5AC_ind_dxpl_id, type, nsects, sect_info)) < 0)
-        HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "unable to check free space for file")
-
-done:
-    FUNC_LEAVE_API(ret_value)
-} /* end H5Fget_free_sections() */
+} /* end H5Fget_info() */
 
 
 /*-------------------------------------------------------------------------
@@ -3209,7 +3150,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5F_set_grp_btree_shared(H5F_t *f, H5UC_t *rc)
+H5F_set_grp_btree_shared(H5F_t *f, H5RC_t *rc)
 {
     /* Use FUNC_ENTER_NOAPI_NOINIT_NOERR here to avoid performance issues */
     FUNC_ENTER_NOAPI_NOINIT_NOERR

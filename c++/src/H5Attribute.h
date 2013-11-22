@@ -60,7 +60,7 @@ class H5_DLLCPP Attribute : public AbstractDs, public IdComponent {
 	void write(const DataType& mem_type, const H5std_string& strg ) const;
 
 	// Flushes all buffers associated with the file specified by this
-	// attribute to disk
+	// attribute to disk.
 	void flush( H5F_scope_t scope ) const;
 
 	///\brief Returns this class name.
@@ -82,10 +82,8 @@ class H5_DLLCPP Attribute : public AbstractDs, public IdComponent {
 	virtual ~Attribute();
 
    protected:
-#ifndef DOXYGEN_SHOULD_SKIP_THIS
 	// Sets the attribute id.
 	virtual void p_setId(const hid_t new_id);
-#endif // DOXYGEN_SHOULD_SKIP_THIS
 
    private:
 	hid_t id;	// HDF5 attribute id

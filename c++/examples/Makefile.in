@@ -222,7 +222,6 @@ LIPO = @LIPO@
 LL_PATH = @LL_PATH@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
-LT_ADD_LIBHDF5_DEPENDENCY = @LT_ADD_LIBHDF5_DEPENDENCY@
 LT_STATIC_EXEC = @LT_STATIC_EXEC@
 MAINT = @MAINT@
 MAKEINFO = @MAKEINFO@
@@ -659,8 +658,8 @@ help:
 # Some of the examples depend on files created by running other examples
 readdata.chkexe_: create.chkexe_
 chunks.chkexe_: extend_ds.chkexe_
-h5tutr_rdwt.chkexe_: h5tutrcrtdat.chkexe
-h5tutrcrtatt.chkexe_: h5tutrcrtdat.chkexe
+h5tutr_rdwt.chkexe_: h5tutr_crtdat.chkexe
+h5tutrcrtatt.chkexe_: h5tutr_crtdat.chkexe
 h5tutr_crtgrpd.chkexe_: h5tutr_crtgrpar.chkexe
 
 # How to build programs using h5c++

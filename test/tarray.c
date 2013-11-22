@@ -637,7 +637,7 @@ test_array_compound_atomic(void)
     CHECK(mname, NULL, "H5Tget_member_name");
     if(HDstrcmp(mname, "i") != 0)
         TestErrPrintf("Compound field name doesn't match!, mname=%s\n", mname);
-    HDfree(mname);
+    free(mname);
 
     /* Check the 1st field's offset */
     off = H5Tget_member_offset(tid2, 0);
@@ -656,7 +656,7 @@ test_array_compound_atomic(void)
     CHECK(mname, NULL, "H5Tget_member_name");
     if(HDstrcmp(mname, "f") != 0)
         TestErrPrintf("Compound field name doesn't match!, mname=%s\n", mname);
-    HDfree(mname);
+    free(mname);
 
     /* Check the 2nd field's offset */
     off = H5Tget_member_offset(tid2, 1);
@@ -849,7 +849,7 @@ test_array_compound_array(void)
     CHECK(mname, NULL, "H5Tget_member_name");
     if(HDstrcmp(mname,"i")!=0)
         TestErrPrintf("Compound field name doesn't match!, mname=%s\n",mname);
-    HDfree(mname);
+    free(mname);
 
     /* Check the 1st field's offset */
     off=H5Tget_member_offset(tid2,0);
@@ -868,7 +868,7 @@ test_array_compound_array(void)
     CHECK(mname, NULL, "H5Tget_member_name");
     if(HDstrcmp(mname,"f")!=0)
         TestErrPrintf("Compound field name doesn't match!, mname=%s\n",mname);
-    HDfree(mname);
+    free(mname);
 
     /* Check the 2nd field's offset */
     off=H5Tget_member_offset(tid2,1);
@@ -1041,7 +1041,7 @@ test_array_vlen_atomic(void)
     /* Initialize array data to write */
     for(i=0; i<SPACE1_DIM1; i++)
         for(j=0; j<ARRAY1_DIM1; j++) {
-            wdata[i][j].p=HDmalloc((i+j+1)*sizeof(unsigned int));
+            wdata[i][j].p=malloc((i+j+1)*sizeof(unsigned int));
             wdata[i][j].len=i+j+1;
             for(k=0; k<(i+j+1); k++)
                 ((unsigned int *)wdata[i][j].p)[k]=i*100+j*10+k;
@@ -1252,7 +1252,7 @@ test_array_vlen_array(void)
     /* Initialize array data to write */
     for(i=0; i<SPACE1_DIM1; i++)
         for(j=0; j<ARRAY1_DIM1; j++) {
-            wdata[i][j].p=HDmalloc((i+j+1)*(sizeof(unsigned int)*ARRAY1_DIM1));
+            wdata[i][j].p=malloc((i+j+1)*(sizeof(unsigned int)*ARRAY1_DIM1));
             wdata[i][j].len=i+j+1;
             for(k=0; k<(i+j+1); k++)
                 for(l=0; l<ARRAY1_DIM1; l++)
@@ -1633,7 +1633,7 @@ test_array_bkg(void)
     /* Release memory resources */
     /* ------------------------ */
     for (i = 0; i < dtsinfo.nsubfields; i++)
-        HDfree(dtsinfo.name[i]);
+        free(dtsinfo.name[i]);
 
 
     /* Release IDs */
@@ -1792,7 +1792,8 @@ test_array_bkg(void)
 static void
 test_compat(void)
 {
-    const char *testfile = H5_get_srcdir_filename(TESTFILE); /* Corrected test file name */
+    char testfile[512]="";          /* Character buffer for corrected test file name */
+    char *srcdir = getenv("srcdir");    /* Pointer to the directory the source code is located within */
     hid_t		fid1;		/* HDF5 File IDs		*/
     hid_t		dataset;	/* Dataset ID			*/
     hid_t		tid1;       /* Array Datatype ID			*/
@@ -1820,6 +1821,12 @@ test_compat(void)
      *  changed, follow the instructions in gen_old_array.c for regenerating
      *  the tarrold.h5 file.
      */
+    /* Generate the correct name for the test file, by prepending the source path */
+    if (srcdir && ((strlen(srcdir) + strlen(TESTFILE) + 1) < sizeof(testfile))) {
+        strcpy(testfile, srcdir);
+        strcat(testfile, "/");
+    }
+    strcat(testfile, TESTFILE);
 
     /* Open the testfile */
     fid1 = H5Fopen(testfile, H5F_ACC_RDONLY, H5P_DEFAULT);
@@ -1848,7 +1855,7 @@ test_compat(void)
         CHECK(mname, NULL, "H5Tget_member_name");
         if(HDstrcmp(mname,"i")!=0)
             TestErrPrintf("Compound field name doesn't match!, mname=%s\n",mname);
-        HDfree(mname);
+        free(mname);
 
         /* Check the 1st field's offset */
         off=H5Tget_member_offset(tid1,0);
@@ -1867,7 +1874,7 @@ test_compat(void)
         CHECK(mname, NULL, "H5Tget_member_name");
         if(HDstrcmp(mname,"f")!=0)
             TestErrPrintf("Compound field name doesn't match!, mname=%s\n",mname);
-        HDfree(mname);
+        free(mname);
 
         /* Check the 2nd field's offset */
         off=H5Tget_member_offset(tid1,1);
@@ -1886,7 +1893,7 @@ test_compat(void)
         CHECK(mname, NULL, "H5Tget_member_name");
         if(HDstrcmp(mname,"l")!=0)
             TestErrPrintf("Compound field name doesn't match!, mname=%s\n",mname);
-        HDfree(mname);
+        free(mname);
 
         /* Check the 3rd field's offset */
         off=H5Tget_member_offset(tid1,2);
@@ -1930,7 +1937,7 @@ test_compat(void)
         CHECK(mname, NULL, "H5Tget_member_name");
         if(mname && HDstrcmp(mname,"i")!=0)
             TestErrPrintf("Compound field name doesn't match!, mname=%s\n",mname);
-        if(mname) HDfree(mname);
+        if(mname) free(mname);
 
         /* Check the 1st field's offset */
         off=H5Tget_member_offset(tid1,0);
@@ -1949,7 +1956,7 @@ test_compat(void)
         CHECK(mname, NULL, "H5Tget_member_name");
         if(mname && HDstrcmp(mname,"f")!=0)
             TestErrPrintf("Compound field name doesn't match!, mname=%s\n",mname);
-        if(mname) HDfree(mname);
+        if(mname) free(mname);
 
         /* Check the 2nd field's offset */
         off=H5Tget_member_offset(tid1,1);
@@ -1994,7 +2001,7 @@ test_compat(void)
         CHECK(mname, NULL, "H5Tget_member_name");
         if(mname && HDstrcmp(mname,"l")!=0)
             TestErrPrintf("Compound field name doesn't match!, mname=%s\n",mname);
-        if(mname) HDfree(mname);
+        if(mname) free(mname);
 
         /* Check the 3rd field's offset */
         off=H5Tget_member_offset(tid1,2);
@@ -2039,7 +2046,7 @@ test_compat(void)
         CHECK(mname, NULL, "H5Tget_member_name");
         if(mname && HDstrcmp(mname,"d")!=0)
             TestErrPrintf("Compound field name doesn't match!, mname=%s\n",mname);
-        if(mname) HDfree(mname);
+        if(mname) free(mname);
 
         /* Check the 4th field's offset */
         off=H5Tget_member_offset(tid1,3);

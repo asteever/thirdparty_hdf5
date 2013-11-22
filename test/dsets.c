@@ -197,6 +197,11 @@ const char *FILENAME[] = {
 #define BYPASS_CHUNK_DIM         500
 #define BYPASS_FILL_VALUE        7
 
+/* Declarations for test_idx_compatible() */
+#define	FIXED_IDX_FILE	"fixed_idx.h5"
+#define DSET            "dset"
+#define DSET_FILTER     "dset_filter"
+
 /* Shared global arrays */
 #define DSET_DIM1       100
 #define DSET_DIM2       200
@@ -477,7 +482,7 @@ test_simple_io(const char *env_h5_drvr, hid_t fapl)
 
         HDclose(f);
 
-        HDfree (tconv_buf);
+        free (tconv_buf);
         PASSED();
     } /* end if */
     else {
@@ -1848,13 +1853,13 @@ test_filter_internal(hid_t fid, const char *name, hid_t dcpl, int if_fletcher32,
     if(H5Dclose (dataset) < 0) goto error;
     if(H5Sclose (sid) < 0) goto error;
     if(H5Pclose (dxpl) < 0) goto error;
-    HDfree (tconv_buf);
+    free (tconv_buf);
 
     return(0);
 
 error:
     if(tconv_buf)
-        HDfree (tconv_buf);
+        free (tconv_buf);
     return -1;
 }
 
@@ -2375,7 +2380,8 @@ test_missing_filter(hid_t file)
     hsize_t     dset_size;      /* Dataset size */
     size_t      i,j;            /* Local index variables */
     herr_t      ret;            /* Generic return value */
-    const char *testfile = H5_get_srcdir_filename(FILE_DEFLATE_NAME); /* Corrected test file name */
+    char testfile[512]="";      /* Buffer to hold name of existing test file */
+    char *srcdir = HDgetenv("srcdir");    /* The source directory, if we are using the --srcdir configure option */
 
     TESTING("dataset access with missing filter");
 
@@ -2520,6 +2526,13 @@ test_missing_filter(hid_t file)
 
 
     /* Try reading existing dataset with deflate filter */
+
+    /* Compose the name of the file to open, using the srcdir, if appropriate */
+    if(srcdir && ((HDstrlen(srcdir) + HDstrlen(FILE_DEFLATE_NAME) + 1) < sizeof(testfile))){
+	HDstrcpy(testfile, srcdir);
+	HDstrcat(testfile, "/");
+    }
+    HDstrcat(testfile, FILE_DEFLATE_NAME);
 
     /* Open existing file */
     if((fid = H5Fopen(testfile, H5F_ACC_RDONLY, H5P_DEFAULT)) < 0) {
@@ -4021,7 +4034,7 @@ test_nbit_int_size(hid_t file)
    */
    for (i=0; i < DSET_DIM1; i++)
        for (j=0; j < DSET_DIM2; j++)
-           orig_data[i][j] = rand() % (int)pow((double)2, (double)(precision-1)) << offset;
+           orig_data[i][j] = rand() % (int)pow(2, precision-1) <<offset;
 
 
    /* Describe the dataspace. */
@@ -6533,7 +6546,7 @@ auxread_fdata(hid_t fid, const char *name)
     if(H5Dclose(dset_id) < 0)
         goto error;
     if(buf)
-        HDfree(buf);
+        free(buf);
 
     return 0;
 
@@ -6545,7 +6558,7 @@ error:
         H5Tclose(ftype_id);
         H5Tclose(mtype_id);
         if(buf)
-            HDfree(buf);
+            free(buf);
     } H5E_END_TRY;
     return -1;
 }
@@ -7811,15 +7824,13 @@ test_chunk_expand(hid_t fapl)
     H5D_alloc_time_t alloc_time;        /* Storage allocation time */
     unsigned    write_elem, read_elem;  /* Element written/read */
     unsigned    u;              /* Local index variable */
-    size_t      size;           /* Size of type */
     herr_t      status;         /* Generic return value */
 
     TESTING("filter expanding chunks too much");
 
     h5_fixname(FILENAME[10], fapl, filename, sizeof filename);
 
-    size = sizeof(size_t);
-    if(size <= 4) {
+    if(sizeof(size_t) <= 4) {
 	SKIPPED();
 	puts("    Current machine can't test for error");
     } /* end if */
@@ -8183,6 +8194,63 @@ error:
 
 
 /*-------------------------------------------------------------------------
+ *
+ *  test_idx_compatible():
+ *	Verify that the 1.8 branch cannot read datasets that use
+ *	Fixed Array indexing method.
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+test_idx_compatible(void)
+{
+    hid_t	fid = -1;	/* File id */
+    hid_t       did = -1;	/* Dataset id */
+    char  	*srcdir = HDgetenv("srcdir"); /* where the src code is located */
+    char        filename[FILENAME_BUF_SIZE] = "";  /* old test file name */
+
+    /* Output message about test being performed */
+    TESTING("Compatibility for datasets that use Fixed Array indexing\n");
+
+    /* Generate correct name for test file by prepending the source path */
+    if(srcdir && ((HDstrlen(srcdir) + HDstrlen(FIXED_IDX_FILE) + 1) < sizeof(filename))) {
+	HDstrcpy(filename, srcdir);
+	HDstrcat(filename, "/");
+    }
+    HDstrcat(filename, FIXED_IDX_FILE);
+
+    /* Open the file */
+    if((fid = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT)) < 0)
+	FAIL_STACK_ERROR
+
+    /* Should not able to read the dataset w/o filter that use Fixed Array indexing */
+    H5E_BEGIN_TRY {
+	if((did = H5Dopen2(fid, DSET, H5P_DEFAULT)) != FAIL)
+	    TEST_ERROR
+    } H5E_END_TRY;
+
+    /* Should not able to read the dataset w/ filter that use Fixed Array indexing */
+    H5E_BEGIN_TRY {
+	if((did = H5Dopen2(fid, DSET_FILTER, H5P_DEFAULT)) != FAIL)
+	    TEST_ERROR
+    } H5E_END_TRY;
+
+    if(H5Fclose(fid) < 0)
+	FAIL_STACK_ERROR
+
+    PASSED();
+    return 0;
+
+error:
+    H5E_BEGIN_TRY {
+        H5Dclose(did);
+	H5Fclose(fid);
+    } H5E_END_TRY;
+    return -1;
+} /* test_idx_compatible */
+
+
+/*-------------------------------------------------------------------------
  * Function:    test_scatter
  *
  * Purpose:     Tests H5Dscatter with a variety of different selections
@@ -8289,7 +8357,7 @@ test_scatter(void)
         scatter_info.size = 8;
 
         /* Scatter data */
-        if(H5Dscatter((H5D_scatter_func_t)scatter_cb, &scatter_info, H5T_NATIVE_INT, sid, dst_buf) < 0)
+        if(H5Dscatter(scatter_cb, &scatter_info, H5T_NATIVE_INT, sid, dst_buf) < 0)
             TEST_ERROR
 
         /* Verify data */
@@ -8329,7 +8397,7 @@ test_scatter(void)
         scatter_info.size = 12;
 
         /* Scatter data */
-        if(H5Dscatter((H5D_scatter_func_t)scatter_cb, &scatter_info, H5T_NATIVE_INT, sid, dst_buf) < 0)
+        if(H5Dscatter(scatter_cb, &scatter_info, H5T_NATIVE_INT, sid, dst_buf) < 0)
             TEST_ERROR
 
         /* Verify data */
@@ -8387,7 +8455,7 @@ test_scatter(void)
         scatter_info.size = 36;
 
         /* Scatter data */
-        if(H5Dscatter((H5D_scatter_func_t)scatter_cb, &scatter_info, H5T_NATIVE_INT, sid, dst_buf) < 0)
+        if(H5Dscatter(scatter_cb, &scatter_info, H5T_NATIVE_INT, sid, dst_buf) < 0)
             TEST_ERROR
 
         /* Verify data */
@@ -8443,7 +8511,7 @@ test_scatter(void)
         scatter_info.size = 16;
 
         /* Scatter data */
-        if(H5Dscatter((H5D_scatter_func_t)scatter_cb, &scatter_info, H5T_NATIVE_INT, sid, dst_buf) < 0)
+        if(H5Dscatter(scatter_cb, &scatter_info, H5T_NATIVE_INT, sid, dst_buf) < 0)
             TEST_ERROR
 
         /* Verify data */
@@ -8477,7 +8545,7 @@ test_scatter(void)
         scatter_info.size = 4;
 
         /* Scatter data */
-        if(H5Dscatter((H5D_scatter_func_t)scatter_cb, &scatter_info, H5T_NATIVE_INT, sid, dst_buf) < 0)
+        if(H5Dscatter(scatter_cb, &scatter_info, H5T_NATIVE_INT, sid, dst_buf) < 0)
             TEST_ERROR
 
         /* Verify data */
@@ -8954,7 +9022,7 @@ test_scatter_error(void)
     scatter_info.src_buf = src_buf;
     scatter_info.block = sizeof(src_buf)/sizeof(src_buf[0]);
     scatter_info.size = 6;
-    if(H5Dscatter((H5D_scatter_func_t)scatter_cb, &scatter_info, H5T_NATIVE_INT, sid, dst_buf) < 0)
+    if(H5Dscatter(scatter_cb, &scatter_info, H5T_NATIVE_INT, sid, dst_buf) < 0)
         TEST_ERROR
 
 
@@ -8971,21 +9039,21 @@ test_scatter_error(void)
     scatter_info.src_buf = src_buf;
     scatter_info.size = 6;
     H5E_BEGIN_TRY {
-        ret = H5Dscatter((H5D_scatter_func_t)scatter_cb, &scatter_info, sid, sid, dst_buf);
+        ret = H5Dscatter(scatter_cb, &scatter_info, sid, sid, dst_buf);
     } H5E_END_TRY
     if(ret >= 0) TEST_ERROR
 
     scatter_info.src_buf = src_buf;
     scatter_info.size = 6;
     H5E_BEGIN_TRY {
-        ret = H5Dscatter((H5D_scatter_func_t)scatter_cb, &scatter_info, H5T_NATIVE_INT, H5T_NATIVE_INT, dst_buf);
+        ret = H5Dscatter(scatter_cb, &scatter_info, H5T_NATIVE_INT, H5T_NATIVE_INT, dst_buf);
     } H5E_END_TRY
     if(ret >= 0) TEST_ERROR
 
     scatter_info.src_buf = src_buf;
     scatter_info.size = 6;
     H5E_BEGIN_TRY {
-        ret = H5Dscatter((H5D_scatter_func_t)scatter_cb, &scatter_info, H5T_NATIVE_INT, sid, NULL);
+        ret = H5Dscatter(scatter_cb, &scatter_info, H5T_NATIVE_INT, sid, NULL);
     } H5E_END_TRY
     if(ret >= 0) TEST_ERROR
 
@@ -8996,7 +9064,7 @@ test_scatter_error(void)
     scatter_info.src_buf = src_buf;
     scatter_info.size = 7;
     H5E_BEGIN_TRY {
-        ret = H5Dscatter((H5D_scatter_func_t)scatter_cb, &scatter_info, H5T_NATIVE_INT, sid, dst_buf);
+        ret = H5Dscatter(scatter_cb, &scatter_info, H5T_NATIVE_INT, sid, dst_buf);
     } H5E_END_TRY
     if(ret >= 0) TEST_ERROR
 
@@ -9007,7 +9075,7 @@ test_scatter_error(void)
     scatter_info.src_buf = src_buf;
     scatter_info.size = 6;
     H5E_BEGIN_TRY {
-        ret = H5Dscatter((H5D_scatter_func_t)scatter_error_cb_fail, &scatter_info, H5T_NATIVE_INT, sid, dst_buf);
+        ret = H5Dscatter(scatter_error_cb_fail, &scatter_info, H5T_NATIVE_INT, sid, dst_buf);
     } H5E_END_TRY
     if(ret >= 0) TEST_ERROR
 
@@ -9018,7 +9086,7 @@ test_scatter_error(void)
     scatter_info.src_buf = src_buf;
     scatter_info.size = 6;
     H5E_BEGIN_TRY {
-        ret = H5Dscatter((H5D_scatter_func_t)scatter_error_cb_null, &scatter_info, H5T_NATIVE_INT, sid, dst_buf);
+        ret = H5Dscatter(scatter_error_cb_null, &scatter_info, H5T_NATIVE_INT, sid, dst_buf);
     } H5E_END_TRY
     if(ret >= 0) TEST_ERROR
 
@@ -9028,7 +9096,7 @@ test_scatter_error(void)
      */
     cb_unalign_nbytes = 0;
     H5E_BEGIN_TRY {
-        ret = H5Dscatter((H5D_scatter_func_t)scatter_error_cb_unalign, &cb_unalign_nbytes, H5T_NATIVE_INT, sid, dst_buf);
+        ret = H5Dscatter(scatter_error_cb_unalign, &cb_unalign_nbytes, H5T_NATIVE_INT, sid, dst_buf);
     } H5E_END_TRY
     if(ret >= 0) TEST_ERROR
 
@@ -9039,13 +9107,13 @@ test_scatter_error(void)
      */
     cb_unalign_nbytes = sizeof(src_buf[0]) - 1;
     H5E_BEGIN_TRY {
-        ret = H5Dscatter((H5D_scatter_func_t)scatter_error_cb_unalign, &cb_unalign_nbytes, H5T_NATIVE_INT, sid, dst_buf);
+        ret = H5Dscatter(scatter_error_cb_unalign, &cb_unalign_nbytes, H5T_NATIVE_INT, sid, dst_buf);
     } H5E_END_TRY
     if(ret >= 0) TEST_ERROR
 
     cb_unalign_nbytes = sizeof(src_buf[0]) + 1;
     H5E_BEGIN_TRY {
-        ret = H5Dscatter((H5D_scatter_func_t)scatter_error_cb_unalign, &cb_unalign_nbytes, H5T_NATIVE_INT, sid, dst_buf);
+        ret = H5Dscatter(scatter_error_cb_unalign, &cb_unalign_nbytes, H5T_NATIVE_INT, sid, dst_buf);
     } H5E_END_TRY
     if(ret >= 0) TEST_ERROR
 
@@ -9329,6 +9397,7 @@ main(void)
         nerrors += (test_chunk_cache(my_fapl) < 0		? 1 : 0);
         nerrors += (test_big_chunks_bypass_cache(my_fapl) < 0   ? 1 : 0);
         nerrors += (test_chunk_expand(my_fapl) < 0		? 1 : 0);
+	nerrors += (test_idx_compatible() < 0  			? 1 : 0);
 	nerrors += (test_layout_extend(my_fapl) < 0		? 1 : 0);
 	nerrors += (test_large_chunk_shrink(my_fapl) < 0        ? 1 : 0);
 

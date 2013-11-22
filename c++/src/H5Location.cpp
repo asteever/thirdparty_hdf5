@@ -663,15 +663,9 @@ void H5Location::reference(void* ref, const H5std_string& name, H5R_type_t ref_t
 //	May 2008 - BMR
 //		Moved from IdComponent.
 //--------------------------------------------------------------------------
-hid_t H5Location::p_dereference(hid_t loc_id, const void* ref, H5R_type_t ref_type, const PropList& plist, const char* from_func)
+hid_t H5Location::p_dereference(hid_t loc_id, const void* ref, H5R_type_t ref_type, const char* from_func)
 {
-   hid_t plist_id;
-   if (p_valid_id(plist.getId()))
-	plist_id = plist.getId();
-   else
-	plist_id = H5P_DEFAULT;
-
-   hid_t temp_id = H5Rdereference2(loc_id, plist_id, ref_type, ref);
+   hid_t temp_id = H5Rdereference(loc_id, ref_type, ref);
    if (temp_id < 0)
    {
       throw ReferenceException(inMemFunc(from_func), "H5Rdereference failed");
@@ -693,9 +687,9 @@ hid_t H5Location::p_dereference(hid_t loc_id, const void* ref, H5R_type_t ref_ty
 //	May, 2008
 //		Corrected missing parameters. - BMR
 //--------------------------------------------------------------------------
-void H5Location::dereference(const H5Location& loc, const void* ref, H5R_type_t ref_type, const PropList& plist)
+void H5Location::dereference(const H5Location& loc, const void* ref, H5R_type_t ref_type)
 {
-   p_setId(p_dereference(loc.getId(), ref, ref_type, plist, "dereference"));
+   p_setId(p_dereference(loc.getId(), ref, ref_type, "dereference"));
 }
 
 //--------------------------------------------------------------------------
@@ -710,9 +704,9 @@ void H5Location::dereference(const H5Location& loc, const void* ref, H5R_type_t 
 //	May, 2008
 //		Corrected missing parameters. - BMR
 //--------------------------------------------------------------------------
-void H5Location::dereference(const Attribute& attr, const void* ref, H5R_type_t ref_type, const PropList& plist)
+void H5Location::dereference(const Attribute& attr, const void* ref, H5R_type_t ref_type)
 {
-   p_setId(p_dereference(attr.getId(), ref, ref_type, plist, "dereference"));
+   p_setId(p_dereference(attr.getId(), ref, ref_type, "dereference"));
 }
 
 #ifndef H5_NO_DEPRECATED_SYMBOLS
@@ -829,6 +823,7 @@ H5O_type_t H5Location::p_get_ref_obj_type(void *ref, H5R_type_t ref_type) const
    return(obj_type);
 }
 
+#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 //--------------------------------------------------------------------------
 // Function:	H5Location::getRegion
@@ -863,8 +858,6 @@ DataSpace H5Location::getRegion(void *ref, H5R_type_t ref_type) const
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 H5Location::~H5Location() {}
-
-#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 #ifndef H5_NO_NAMESPACE
 } // end namespace

@@ -17,7 +17,7 @@ $!
 $! This file builds C, Fortran, C++ HDF5 libraries and runs the tests
 $! Specify location of the top HDF5 source directory
 $
-$ hdf5top == "disk$user:[hdfgroup.hdf5]"
+$ hdf5top == "SYS$SYSUSERS:[LU.hdf5_5_31]"
 $ len = F$LENGTH(hdf5top)
 $ tmp = F$EXTRACT(0, len-1, hdf5top)
 $ hdf5vms     = tmp + ".VMS]"
@@ -43,9 +43,11 @@ $ copy [-.h5dump]check_h5dump.com     check_h5dump.com
 $ copy [-.h5ls]check_h5ls.com         check_h5ls.com
 $@check_h5dump.com
 $@check_h5ls.com
+$!
 $ set def 'hdf5toolstest_h5diff'
 $ copy [-]check_h5diff.com     check_h5diff.com
 $@check_h5diff.com
+$!
 $ set def 'hdf5toolstest_h5repack'
 $ copy [-]check_h5repack.com check_h5repack.com
 $@check_h5repack.com
@@ -55,7 +57,7 @@ $ copy [-]check_h5copy.com check_h5copy.com
 $@check_h5copy.com
 $!
 $ set def 'hdf5toolstest_h5import'
-$ copy [.-]check_h5import.com check_h5import.com
+$ copy [-]check_h5import.com check_h5import.com
 $@check_h5import.com
 $!
 $ set def 'hdf5toolstest_h5jam'

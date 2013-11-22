@@ -185,12 +185,11 @@ STRING (REGEX REPLACE ".*#define[ \t]+H5_VERS_SUBRELEASE[ \t]+\"([0-9A-Za-z._]*)
 #-----------------------------------------------------------------------------
 FILE (READ ${HDF5_SOURCE_DIR}/config/lt_vers.am _lt_vers_am_contents)
 STRING (REGEX REPLACE ".*LT_VERS_INTERFACE[ \t]+=[ \t]+([0-9]*).*$"
-    "\\1" H5_SOVERS_INTERFACE ${_lt_vers_am_contents})
+    "\\1" H5_SOVERS_MAJOR ${_lt_vers_am_contents})
 STRING (REGEX REPLACE ".*LT_VERS_REVISION[ \t]+=[ \t]+([0-9]*).*$"
     "\\1" H5_SOVERS_MINOR ${_lt_vers_am_contents})
 STRING (REGEX REPLACE ".*LT_VERS_AGE[ \t]+=[ \t]+([0-9]*).*$"
     "\\1" H5_SOVERS_RELEASE ${_lt_vers_am_contents})
-MATH(EXPR H5_SOVERS_MAJOR ${H5_SOVERS_INTERFACE}-${H5_SOVERS_RELEASE})
 MESSAGE (STATUS "SOVERSION: ${H5_SOVERS_MAJOR}.${H5_SOVERS_RELEASE}.${H5_SOVERS_MINOR}")
 
 #-----------------------------------------------------------------------------
@@ -265,6 +264,13 @@ SET (EXTERNAL_LIBRARYDLL_LIST "")
 # Run all the CMake configuration tests for our build environment
 #-----------------------------------------------------------------------------
 INCLUDE (${HDF5_RESOURCES_DIR}/ConfigureChecks.cmake)
+
+#-----------------------------------------------------------------------------
+# Option to use legacy naming for windows libs/programs, default is legacy
+#-----------------------------------------------------------------------------
+IF (WIN32 AND NOT CYGWIN)
+  OPTION (HDF_LEGACY_NAMING "Use Legacy Names for Libraries and Programs" OFF)
+ENDIF (WIN32 AND NOT CYGWIN)
 
 #-----------------------------------------------------------------------------
 # Option to Build Shared/Static libs, default is static
@@ -663,7 +669,7 @@ IF (H5_HAVE_PARALLEL)
   ENDIF (MPI_C_LINK_FLAGS)
 ENDIF (H5_HAVE_PARALLEL)
 
-SET (DEFAULT_API_VERSION "v110")
+SET (DEFAULT_API_VERSION "v18")
 #-----------------------------------------------------------------------------
 # Option to use 1.6.x API
 #-----------------------------------------------------------------------------
@@ -673,16 +679,6 @@ IF (HDF5_USE_16_API_DEFAULT)
   SET (H5_USE_16_API_DEFAULT 1)
   SET (DEFAULT_API_VERSION "v16")
 ENDIF (HDF5_USE_16_API_DEFAULT)
-
-#-----------------------------------------------------------------------------
-# Option to use 1.8.x API
-#-----------------------------------------------------------------------------
-OPTION (HDF5_USE_18_API_DEFAULT "Use the HDF5 1.8.x API by default" OFF)
-SET (H5_USE_18_API_DEFAULT 0)
-IF (HDF5_USE_18_API_DEFAULT)
-  SET (H5_USE_18_API_DEFAULT 1)
-  SET (DEFAULT_API_VERSION "v18")
-ENDIF (HDF5_USE_18_API_DEFAULT)
 
 #-----------------------------------------------------------------------------
 # Include user macros
@@ -731,12 +727,6 @@ IF (WIN32 AND NOT CYGWIN)
     ENDIF (H5_HAVE_IOEO)
   ENDIF (HDF5_ENABLE_THREADSAFE)
 ENDIF (WIN32 AND NOT CYGWIN)
-
-# -----------------------------------------------------------------------
-# wrapper script variables
-# 
-#SET (CFLAGS "${C_DEFINES}")
-#SET (CXXFLAGS "${CXX_DEFINES}")
 
 #-----------------------------------------------------------------------------
 # Add the HDF5 Library Target to the build

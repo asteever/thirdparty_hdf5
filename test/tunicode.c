@@ -466,8 +466,8 @@ void test_objnames(hid_t fid, const char* string)
   CHECK(ret, FAIL, "H5Dread");
 
   /* Ensure that we can open named datatype using object reference */
-  type_id = H5Rdereference2(dset_id, H5P_DEFAULT, H5R_OBJECT, &obj_ref);
-  CHECK(type_id, FAIL, "H5Rdereference2");
+  type_id = H5Rdereference(dset_id, H5R_OBJECT, &obj_ref);
+  CHECK(type_id, FAIL, "H5Rdereference");
   ret = H5Tcommitted(type_id);
   VERIFY(ret, 1, "H5Tcommitted");
 
@@ -605,7 +605,7 @@ void test_compound(hid_t fid, const char * string)
   readbuf = H5Tget_member_name(s1_tid, 0);
   ret = HDstrcmp(readbuf, string);
   VERIFY(ret, 0, "strcmp");
-  HDfree(readbuf);
+  free(readbuf);
 
   /* Add the other fields to the datatype */
   ret = H5Tinsert(s1_tid, "c_name", HOFFSET(s1_t, c), H5T_NATIVE_DOUBLE);
@@ -718,7 +718,7 @@ void test_opaque(hid_t UNUSED fid, const char * string)
   read_buf = H5Tget_tag(type_id);
   ret = strcmp(read_buf, string);
   VERIFY(ret, 0, "H5Tget_tag");
-  HDfree(read_buf);
+  free(read_buf);
 
   ret = H5Tclose(type_id);
   CHECK(ret, FAIL, "H5Tclose");

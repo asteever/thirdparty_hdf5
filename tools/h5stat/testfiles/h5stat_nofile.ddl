@@ -23,6 +23,5 @@ Usage: h5stat [OPTIONS] file
      -a N, --numattrs=N    Set the threshold for the # of attributes when printing
                            information for small # of attributes.  N is an integer greater
                            than 0.  The default threshold is 10.
-     -s, --freespace       Print free space information
      -S, --summary         Print summary of file space information
 h5stat error: missing file name
