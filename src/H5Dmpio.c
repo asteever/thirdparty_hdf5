@@ -1279,8 +1279,6 @@ done:
 } /* end H5D__multi_chunk_collective_io */
 
 
-
-
 /*-------------------------------------------------------------------------
  * Function:    H5D__inter_collective_io
  *

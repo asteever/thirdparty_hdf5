@@ -14,10 +14,10 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
- * Programmer:	Quincey Koziol <koziol@ncsa.uiuc.edu>
+ * Programmer:  Quincey Koziol <koziol@hdfgroup.org>
  *              Monday, May  1, 2006
  *
- * Purpose:	Free space section routines for fractal heaps.
+ * Purpose:     Free space section routines for fractal heaps
  *
  */
 
@@ -586,15 +586,15 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5HF_sect_single_revive
+ * Function:    H5HF_sect_single_revive
  *
- * Purpose:	Update the memory information for a 'single' free section
+ * Purpose:     Update the memory information for a 'single' free section
  *
- * Return:	Non-negative on success/Negative on failure
+ * Return:      SUCCEED/FAIL
  *
- * Programmer:	Quincey Koziol
- *		koziol@ncsa.uiuc.edu
- *		May  8 2006
+ * Programmer:  Quincey Koziol
+ *              koziol@hdfgroup.org
+ *              May  8 2006
  *
  *-------------------------------------------------------------------------
  */
@@ -635,15 +635,15 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5HF_sect_single_dblock_info
+ * Function:    H5HF_sect_single_dblock_info
  *
- * Purpose:	Retrieve the direct block information for a single section
+ * Purpose:     Retrieve the direct block information for a single section
  *
- * Return:	Non-negative on success/Negative on failure
+ * Return:      SUCCEED/FAIL
  *
- * Programmer:	Quincey Koziol
- *		koziol@hdfgroup.org
- *		October 24 2006
+ * Programmer:  Quincey Koziol
+ *              koziol@hdfgroup.org
+ *              October 24 2006
  *
  *-------------------------------------------------------------------------
  */

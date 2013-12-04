@@ -41,6 +41,7 @@
 #define H5AC__TRACE_FILE_ENABLED	0
 #endif /* H5_METADATA_TRACE_FILE */
 
+/* Define global metadata tag values */
 #define H5AC__INVALID_TAG      (haddr_t)0
 #define H5AC__IGNORE_TAG       (haddr_t)1
 #define H5AC__SUPERBLOCK_TAG   (haddr_t)2
@@ -51,34 +52,36 @@
 
 /* Types of metadata objects cached */
 typedef enum {
-    H5AC_BT_ID = 0, 	/*B-tree nodes				     */
-    H5AC_SNODE_ID,	/*symbol table nodes			     */
-    H5AC_LHEAP_PRFX_ID, /*local heap prefix			     */
-    H5AC_LHEAP_DBLK_ID, /*local heap data block			     */
-    H5AC_GHEAP_ID,	/*global heap				     */
-    H5AC_OHDR_ID,	/*object header				     */
-    H5AC_OHDR_CHK_ID,	/*object header chunk			     */
-    H5AC_BT2_HDR_ID,	/*v2 B-tree header			     */
-    H5AC_BT2_INT_ID,	/*v2 B-tree internal node		     */
-    H5AC_BT2_LEAF_ID,	/*v2 B-tree leaf node			     */
-    H5AC_FHEAP_HDR_ID,	/*fractal heap header			     */
-    H5AC_FHEAP_DBLOCK_ID, /*fractal heap direct block		     */
-    H5AC_FHEAP_IBLOCK_ID, /*fractal heap indirect block		     */
-    H5AC_FSPACE_HDR_ID,	/*free space header			     */
-    H5AC_FSPACE_SINFO_ID,/*free space sections			     */
-    H5AC_SOHM_TABLE_ID, /*shared object header message master table  */
-    H5AC_SOHM_LIST_ID,  /*shared message index stored as a list      */
-    H5AC_EARRAY_HDR_ID,	/*extensible array header		     */
-    H5AC_EARRAY_IBLOCK_ID, /*extensible array index block	     */
-    H5AC_EARRAY_SBLOCK_ID, /*extensible array super block	     */
-    H5AC_EARRAY_DBLOCK_ID, /*extensible array data block	     */
-    H5AC_EARRAY_DBLK_PAGE_ID, /*extensible array data block page     */
-    H5AC_FARRAY_HDR_ID,	/*fixed array header		     	     */
-    H5AC_FARRAY_DBLOCK_ID, /*fixed array data block	     	     */
-    H5AC_FARRAY_DBLK_PAGE_ID, /*fixed array data block page          */
-    H5AC_SUPERBLOCK_ID, /* file superblock                           */
-    H5AC_TEST_ID,	/*test entry -- not used for actual files    */
-    H5AC_NTYPES		/* Number of types, must be last             */
+    H5AC_BT_ID = 0, 			/* ( 0) B-tree nodes				     */
+    H5AC_SNODE_ID,			/* ( 1) symbol table nodes			     */
+    H5AC_LHEAP_PRFX_ID, 		/* ( 2) local heap prefix			     */
+    H5AC_LHEAP_DBLK_ID, 		/* ( 3) local heap data block			     */
+    H5AC_GHEAP_ID,			/* ( 4) global heap				     */
+    H5AC_OHDR_ID,			/* ( 5) object header				     */
+    H5AC_OHDR_CHK_ID,			/* ( 6) object header chunk			     */
+    H5AC_OHDR_PROXY_ID, 		/* ( 7) object header proxy                        */
+    H5AC_BT2_HDR_ID,			/* ( 8) v2 B-tree header			     */
+    H5AC_BT2_INT_ID,			/* ( 9) v2 B-tree internal node		     */
+    H5AC_BT2_LEAF_ID,			/* (10) v2 B-tree leaf node			     */
+    H5AC_FHEAP_HDR_ID,			/* (11) fractal heap header			     */
+    H5AC_FHEAP_DBLOCK_ID, 		/* (12) fractal heap direct block		     */
+    H5AC_FHEAP_IBLOCK_ID, 		/* (13) fractal heap indirect block		     */
+    H5AC_FSPACE_HDR_ID,			/* (14) free space header			     */
+    H5AC_FSPACE_SINFO_ID,		/* (15) free space sections			     */
+    H5AC_SOHM_TABLE_ID, 		/* (16) shared object header message master table  */
+    H5AC_SOHM_LIST_ID,  		/* (17) shared message index stored as a list      */
+    H5AC_EARRAY_HDR_ID,			/* (18) extensible array header		     */
+    H5AC_EARRAY_IBLOCK_ID, 		/* (19) extensible array index block	             */
+    H5AC_EARRAY_SBLOCK_ID, 		/* (20) extensible array super block	             */
+    H5AC_EARRAY_DBLOCK_ID, 		/* (21) extensible array data block	             */
+    H5AC_EARRAY_DBLK_PAGE_ID, 		/* (22) extensible array data block page           */
+    H5AC_CHUNK_PROXY_ID, 		/* (23) chunk proxy				     */
+    H5AC_FARRAY_HDR_ID,			/* (24) fixed array header		     	     */
+    H5AC_FARRAY_DBLOCK_ID, 		/* (25) fixed array data block	     	     */
+    H5AC_FARRAY_DBLK_PAGE_ID,		/* (26) fixed array data block page          	     */
+    H5AC_SUPERBLOCK_ID, 		/* (27) file superblock                            */
+    H5AC_TEST_ID,			/* (28) test entry -- not used for actual files    */
+    H5AC_NTYPES				/* Number of types, must be last              */
 } H5AC_type_t;
 
 /* H5AC_DUMP_STATS_ON_CLOSE should always be FALSE when
@@ -107,6 +110,12 @@ typedef enum {
 #define H5AC__DEFAULT_MAX_CACHE_SIZE	H5C__DEFAULT_MAX_CACHE_SIZE
 #define H5AC__DEFAULT_MIN_CLEAN_SIZE	H5C__DEFAULT_MIN_CLEAN_SIZE
 
+/* Check if we are sanity checking tagging */
+#if H5C_DO_TAGGING_SANITY_CHECKS
+#define H5AC_DO_TAGGING_SANITY_CHECKS 1
+#else
+#define H5AC_DO_TAGGING_SANITY_CHECKS 0
+#endif
 
 /*
  * Class methods pertaining to caching.	 Each type of cached object will
@@ -209,10 +218,6 @@ typedef H5C_t	H5AC_t;
 #define H5AC_LIBRARY_INTERNAL_SIZE       sizeof(unsigned)
 #define H5AC_LIBRARY_INTERNAL_DEF        0
 #endif /* H5_HAVE_PARALLEL */
-
-#define H5AC_METADATA_TAG_NAME           "H5AC_metadata_tag"
-#define H5AC_METADATA_TAG_SIZE           sizeof(haddr_t)
-#define H5AC_METADATA_TAG_DEF            H5AC__INVALID_TAG
 
 /* Dataset transfer property list for flush calls */
 /* (Collective set, "block before metadata write" set and "library internal" set) */
@@ -409,6 +414,10 @@ H5_DLL herr_t H5AC_tag(hid_t dxpl_id, haddr_t metadata_tag, haddr_t * prev_tag);
 H5_DLL herr_t H5AC_retag_copied_metadata(H5F_t * f, haddr_t metadata_tag);
 
 H5_DLL herr_t H5AC_ignore_tags(H5F_t * f);
+
+H5_DLL herr_t H5AC_flush_tagged_metadata(H5F_t * f, haddr_t metadata_tag, hid_t dxpl_id);
+
+H5_DLL herr_t H5AC_evict_tagged_metadata(H5F_t * f, haddr_t metadata_tag, hid_t dxpl_id);
 
 #ifdef H5_HAVE_PARALLEL
 H5_DLL herr_t H5AC_add_candidate(H5AC_t * cache_ptr, haddr_t addr);

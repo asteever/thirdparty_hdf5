@@ -208,8 +208,6 @@ H5EA__cache_hdr_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata))
     uint8_t             hdr_buf[H5EA_HDR_BUF_SIZE]; /* Buffer for header */
     uint8_t		*buf;           /* Pointer to header buffer */
     const uint8_t	*p;             /* Pointer into raw data buffer */
-    uint32_t            stored_chksum;  /* Stored metadata checksum value */
-    uint32_t            computed_chksum; /* Computed metadata checksum value */
 
     /* Check arguments */
     HDassert(f);
@@ -233,9 +231,9 @@ H5EA__cache_hdr_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata))
     if(NULL == (buf = (uint8_t *)H5WB_actual(wb, size)))
 	H5E_THROW(H5E_CANTGET, "can't get actual buffer")
 
-    /* Read header from disk */
-    if(H5F_block_read(f, H5FD_MEM_EARRAY_HDR, addr, size, dxpl_id, buf) < 0)
-	H5E_THROW(H5E_READERROR, "can't read extensible array header")
+    /* Read and validate header from disk */
+    if(H5F_read_check_metadata(f, dxpl_id, H5FD_MEM_EARRAY_HDR, H5AC_EARRAY_HDR_ID, addr, size, size, buf) < 0)
+        H5E_THROW(H5E_BADVALUE, "incorrect metadata checksum for extensible array header")
 
     /* Get temporary pointer to serialized header */
     p = buf;
@@ -300,19 +298,10 @@ H5EA__cache_hdr_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata))
     /* (allow for checksum not decoded yet) */
     HDassert((size_t)(p - buf) == (size - H5EA_SIZEOF_CHKSUM));
 
-    /* Compute checksum on entire header */
-    /* (including the filter information, if present) */
-    computed_chksum = H5_checksum_metadata(buf, (size_t)(p - buf), 0);
-
-    /* Metadata checksum */
-    UINT32DECODE(p, stored_chksum);
+    /* Already decoded and compared stored checksum earlier, when reading */
 
     /* Sanity check */
-    HDassert((size_t)(p - buf) == size);
-
-    /* Verify checksum */
-    if(stored_chksum != computed_chksum)
-	H5E_THROW(H5E_BADVALUE, "incorrect metadata checksum for extensible array header")
+    HDassert((size_t)(p - buf) == (size - H5_SIZEOF_CHKSUM));
 
     /* Finish initializing extensible array header */
     if(H5EA__hdr_init(hdr, udata) < 0)
@@ -574,8 +563,6 @@ H5EA__cache_iblock_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata))
     uint8_t             iblock_buf[H5EA_IBLOCK_BUF_SIZE]; /* Buffer for index block */
     uint8_t		*buf;           /* Pointer to index block buffer */
     const uint8_t	*p;             /* Pointer into raw data buffer */
-    uint32_t            stored_chksum;  /* Stored metadata checksum value */
-    uint32_t            computed_chksum; /* Computed metadata checksum value */
     haddr_t             arr_addr;       /* Address of array header in the file */
 
     /* Sanity check */
@@ -601,9 +588,9 @@ H5EA__cache_iblock_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata))
     if(NULL == (buf = (uint8_t *)H5WB_actual(wb, size)))
 	H5E_THROW(H5E_CANTGET, "can't get actual buffer")
 
-    /* Read index block from disk */
-    if(H5F_block_read(f, H5FD_MEM_EARRAY_IBLOCK, addr, size, dxpl_id, buf) < 0)
-	H5E_THROW(H5E_READERROR, "can't read extensible array index block")
+    /* Read and validate index block from disk */
+    if(H5F_read_check_metadata(f, dxpl_id, H5FD_MEM_EARRAY_IBLOCK, H5AC_EARRAY_IBLOCK_ID, addr, size, size, buf) < 0)
+        H5E_THROW(H5E_BADVALUE, "incorrect metadata checksum for extensible array index block")
 
     /* Get temporary pointer to serialized header */
     p = buf;
@@ -661,18 +648,10 @@ H5EA__cache_iblock_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata))
     /* Save the index block's size */
     iblock->size = size;
 
-    /* Compute checksum on index block */
-    computed_chksum = H5_checksum_metadata(buf, (size_t)(p - buf), 0);
-
-    /* Metadata checksum */
-    UINT32DECODE(p, stored_chksum);
+    /* Already decoded and compared stored checksum earlier, when reading */
 
     /* Sanity check */
-    HDassert((size_t)(p - buf) == iblock->size);
-
-    /* Verify checksum */
-    if(stored_chksum != computed_chksum)
-	H5E_THROW(H5E_BADVALUE, "incorrect metadata checksum for extensible array index block")
+    HDassert((size_t)(p - buf) == (iblock->size - H5_SIZEOF_CHKSUM));
 
     /* Set return value */
     ret_value = iblock;
@@ -857,27 +836,28 @@ H5EA__cache_iblock_notify(H5AC_notify_action_t action, H5EA_iblock_t *iblock))
     /* Sanity check */
     HDassert(iblock);
 
-    /* Determine which action to take */
-    switch(action) {
-        case H5AC_NOTIFY_ACTION_AFTER_INSERT:
-            /* Create flush dependency on extensible array header */
-            if(H5EA__create_flush_depend((H5AC_info_t *)iblock->hdr, (H5AC_info_t *)iblock) < 0)
-                H5E_THROW(H5E_CANTDEPEND, "unable to create flush dependency between index block and header, address = %llu", (unsigned long long)iblock->addr)
-            break;
+    /* Check if the file was opened with SWMR-write access */
+    if(iblock->hdr->swmr_write) {
+        /* Determine which action to take */
+        switch(action) {
+            case H5AC_NOTIFY_ACTION_AFTER_INSERT:
+                /* Create flush dependency on extensible array header */
+                if(H5EA__create_flush_depend((H5AC_info_t *)iblock->hdr, (H5AC_info_t *)iblock) < 0)
+                    H5E_THROW(H5E_CANTDEPEND, "unable to create flush dependency between index block and header, address = %llu", (unsigned long long)iblock->addr)
+                break;
 
-        case H5AC_NOTIFY_ACTION_BEFORE_EVICT:
-            /* Destroy flush dependency on extensible array header */
-            if(H5EA__destroy_flush_depend((H5AC_info_t *)iblock->hdr, (H5AC_info_t *)iblock) < 0)
-                H5E_THROW(H5E_CANTUNDEPEND, "unable to destroy flush dependency between index block and header, address = %llu", (unsigned long long)iblock->addr)
-            break;
+            case H5AC_NOTIFY_ACTION_BEFORE_EVICT:
+                /* Nothing to do */
+                break;
 
-        default:
+            default:
 #ifdef NDEBUG
-            H5E_THROW(H5E_BADVALUE, "unknown action from metadata cache")
+                H5E_THROW(H5E_BADVALUE, "unknown action from metadata cache")
 #else /* NDEBUG */
-            HDassert(0 && "Unknown action?!?");
+                HDassert(0 && "Unknown action?!?");
 #endif /* NDEBUG */
-    } /* end switch */
+        } /* end switch */
+    } /* end if */
 
 CATCH
 
@@ -989,8 +969,6 @@ H5EA__cache_sblock_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata))
     uint8_t             sblock_buf[H5EA_IBLOCK_BUF_SIZE]; /* Buffer for super block */
     uint8_t		*buf;           /* Pointer to super block buffer */
     const uint8_t	*p;             /* Pointer into raw data buffer */
-    uint32_t            stored_chksum;  /* Stored metadata checksum value */
-    uint32_t            computed_chksum; /* Computed metadata checksum value */
     haddr_t             arr_addr;       /* Address of array header in the file */
     size_t              u;              /* Local index variable */
 
@@ -1017,9 +995,9 @@ H5EA__cache_sblock_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata))
     if(NULL == (buf = (uint8_t *)H5WB_actual(wb, size)))
 	H5E_THROW(H5E_CANTGET, "can't get actual buffer")
 
-    /* Read super block from disk */
-    if(H5F_block_read(f, H5FD_MEM_EARRAY_SBLOCK, addr, size, dxpl_id, buf) < 0)
-	H5E_THROW(H5E_READERROR, "can't read extensible array super block")
+    /* Read and validate super block from disk */
+    if(H5F_read_check_metadata(f, dxpl_id, H5FD_MEM_EARRAY_SBLOCK, H5AC_EARRAY_SBLOCK_ID, addr, size, size, buf) < 0)
+        H5E_THROW(H5E_BADVALUE, "incorrect metadata checksum for extensible array super block")
 
     /* Get temporary pointer to serialized header */
     p = buf;
@@ -1067,18 +1045,10 @@ H5EA__cache_sblock_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata))
     /* Save the super block's size */
     sblock->size = size;
 
-    /* Compute checksum on super block */
-    computed_chksum = H5_checksum_metadata(buf, (size_t)(p - buf), 0);
-
-    /* Metadata checksum */
-    UINT32DECODE(p, stored_chksum);
+    /* Already decoded and compared stored checksum earlier, when reading */
 
     /* Sanity check */
-    HDassert((size_t)(p - buf) == sblock->size);
-
-    /* Verify checksum */
-    if(stored_chksum != computed_chksum)
-	H5E_THROW(H5E_BADVALUE, "incorrect metadata checksum for extensible array super block")
+    HDassert((size_t)(p - buf) == (sblock->size - H5_SIZEOF_CHKSUM));
 
     /* Set return value */
     ret_value = sblock;
@@ -1285,27 +1255,28 @@ H5EA__cache_sblock_notify(H5AC_notify_action_t action, H5EA_sblock_t *sblock))
     /* Sanity check */
     HDassert(sblock);
 
-    /* Determine which action to take */
-    switch(action) {
-        case H5AC_NOTIFY_ACTION_AFTER_INSERT:
-            /* Create flush dependency on index block */
-            if(H5EA__create_flush_depend((H5AC_info_t *)sblock->parent, (H5AC_info_t *)sblock) < 0)
-                H5E_THROW(H5E_CANTDEPEND, "unable to create flush dependency between super block and index block, address = %llu", (unsigned long long)sblock->addr)
-            break;
+    /* Check if the file was opened with SWMR-write access */
+    if(sblock->hdr->swmr_write) {
+        /* Determine which action to take */
+        switch(action) {
+            case H5AC_NOTIFY_ACTION_AFTER_INSERT:
+                /* Create flush dependency on index block */
+                if(H5EA__create_flush_depend((H5AC_info_t *)sblock->parent, (H5AC_info_t *)sblock) < 0)
+                    H5E_THROW(H5E_CANTDEPEND, "unable to create flush dependency between super block and index block, address = %llu", (unsigned long long)sblock->addr)
+                break;
 
-        case H5AC_NOTIFY_ACTION_BEFORE_EVICT:
-            /* Destroy flush dependency on index block */
-            if(H5EA__destroy_flush_depend((H5AC_info_t *)sblock->parent, (H5AC_info_t *)sblock) < 0)
-                H5E_THROW(H5E_CANTUNDEPEND, "unable to destroy flush dependency between super block and index block, address = %llu", (unsigned long long)sblock->addr)
-            break;
+            case H5AC_NOTIFY_ACTION_BEFORE_EVICT:
+                /* Nothing to do */
+                break;
 
-        default:
+            default:
 #ifdef NDEBUG
-            H5E_THROW(H5E_BADVALUE, "unknown action from metadata cache")
+                H5E_THROW(H5E_BADVALUE, "unknown action from metadata cache")
 #else /* NDEBUG */
-            HDassert(0 && "Unknown action?!?");
+                HDassert(0 && "Unknown action?!?");
 #endif /* NDEBUG */
-    } /* end switch */
+        } /* end switch */
+    } /* end if */
 
 CATCH
 
@@ -1385,8 +1356,6 @@ H5EA__cache_dblock_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata))
     uint8_t             dblock_buf[H5EA_DBLOCK_BUF_SIZE]; /* Buffer for data block */
     uint8_t		*buf;           /* Pointer to data block buffer */
     const uint8_t	*p;             /* Pointer into raw data buffer */
-    uint32_t            stored_chksum;  /* Stored metadata checksum value */
-    uint32_t            computed_chksum; /* Computed metadata checksum value */
     haddr_t             arr_addr;       /* Address of array header in the file */
 
     /* Sanity check */
@@ -1415,9 +1384,9 @@ H5EA__cache_dblock_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata))
     if(NULL == (buf = (uint8_t *)H5WB_actual(wb, size)))
 	H5E_THROW(H5E_CANTGET, "can't get actual buffer")
 
-    /* Read data block from disk */
-    if(H5F_block_read(f, H5FD_MEM_EARRAY_DBLOCK, addr, size, dxpl_id, buf) < 0)
-	H5E_THROW(H5E_READERROR, "can't read extensible array data block")
+    /* Read and validate data block from disk */
+    if(H5F_read_check_metadata(f, dxpl_id, H5FD_MEM_EARRAY_DBLOCK, H5AC_EARRAY_DBLOCK_ID, addr, size, size, buf) < 0)
+        H5E_THROW(H5E_BADVALUE, "incorrect metadata checksum for extensible data block")
 
     /* Get temporary pointer to serialized header */
     p = buf;
@@ -1461,18 +1430,10 @@ H5EA__cache_dblock_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata))
     /* Set the data block's size */
     dblock->size = H5EA_DBLOCK_SIZE(dblock);
 
-    /* Compute checksum on data block */
-    computed_chksum = H5_checksum_metadata(buf, (size_t)(p - buf), 0);
-
-    /* Metadata checksum */
-    UINT32DECODE(p, stored_chksum);
+    /* Already decoded and compared stored checksum earlier, when reading */
 
     /* Sanity check */
-    HDassert((size_t)(p - buf) == size);
-
-    /* Verify checksum */
-    if(stored_chksum != computed_chksum)
-	H5E_THROW(H5E_BADVALUE, "incorrect metadata checksum for extensible array data block")
+    HDassert((size_t)(p - buf) == (size - H5_SIZEOF_CHKSUM));
 
     /* Set return value */
     ret_value = dblock;
@@ -1647,27 +1608,28 @@ H5EA__cache_dblock_notify(H5AC_notify_action_t action, H5EA_dblock_t *dblock))
     /* Sanity check */
     HDassert(dblock);
 
-    /* Determine which action to take */
-    switch(action) {
-        case H5AC_NOTIFY_ACTION_AFTER_INSERT:
-            /* Create flush dependency on parent */
-            if(H5EA__create_flush_depend((H5AC_info_t *)dblock->parent, (H5AC_info_t *)dblock) < 0)
-                H5E_THROW(H5E_CANTDEPEND, "unable to create flush dependency between data block and parent, address = %llu", (unsigned long long)dblock->addr)
-            break;
+    /* Check if the file was opened with SWMR-write access */
+    if(dblock->hdr->swmr_write) {
+        /* Determine which action to take */
+        switch(action) {
+            case H5AC_NOTIFY_ACTION_AFTER_INSERT:
+                /* Create flush dependency on parent */
+                if(H5EA__create_flush_depend((H5AC_info_t *)dblock->parent, (H5AC_info_t *)dblock) < 0)
+                    H5E_THROW(H5E_CANTDEPEND, "unable to create flush dependency between data block and parent, address = %llu", (unsigned long long)dblock->addr)
+                break;
 
-        case H5AC_NOTIFY_ACTION_BEFORE_EVICT:
-            /* Destroy flush dependency on parent */
-            if(H5EA__destroy_flush_depend((H5AC_info_t *)dblock->parent, (H5AC_info_t *)dblock) < 0)
-                H5E_THROW(H5E_CANTUNDEPEND, "unable to destroy flush dependency between data block and parent, address = %llu", (unsigned long long)dblock->addr)
-            break;
+            case H5AC_NOTIFY_ACTION_BEFORE_EVICT:
+                /* Nothing to do */
+                break;
 
-        default:
+            default:
 #ifdef NDEBUG
-            H5E_THROW(H5E_BADVALUE, "unknown action from metadata cache")
+                H5E_THROW(H5E_BADVALUE, "unknown action from metadata cache")
 #else /* NDEBUG */
-            HDassert(0 && "Unknown action?!?");
+                HDassert(0 && "Unknown action?!?");
 #endif /* NDEBUG */
-    } /* end switch */
+        } /* end switch */
+    } /* end if */
 
 CATCH
 
@@ -1784,8 +1746,6 @@ H5EA__cache_dblk_page_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata))
     uint8_t             dblk_page_buf[H5EA_DBLK_PAGE_BUF_SIZE]; /* Buffer for data block page */
     uint8_t		*buf;           /* Pointer to data block page buffer */
     const uint8_t	*p;             /* Pointer into raw data buffer */
-    uint32_t            stored_chksum;  /* Stored metadata checksum value */
-    uint32_t            computed_chksum; /* Computed metadata checksum value */
 
     /* Sanity check */
     HDassert(f);
@@ -1813,9 +1773,9 @@ HDfprintf(stderr, "%s: addr = %a\n", FUNC, addr);
     if(NULL == (buf = (uint8_t *)H5WB_actual(wb, size)))
 	H5E_THROW(H5E_CANTGET, "can't get actual buffer")
 
-    /* Read data block page from disk */
-    if(H5F_block_read(f, H5FD_MEM_EARRAY_DBLK_PAGE, addr, size, dxpl_id, buf) < 0)
-	H5E_THROW(H5E_READERROR, "can't read extensible array data block page")
+    /* Read and validate data block page from disk */
+    if(H5F_read_check_metadata(f, dxpl_id, H5FD_MEM_EARRAY_DBLK_PAGE, H5AC_EARRAY_DBLK_PAGE_ID, addr, size, size, buf) < 0)
+        H5E_THROW(H5E_BADVALUE, "incorrect metadata checksum for extensible array data block page")
 
     /* Get temporary pointer to serialized header */
     p = buf;
@@ -1835,18 +1795,10 @@ HDfprintf(stderr, "%s: addr = %a\n", FUNC, addr);
     /* Set the data block page's size */
     dblk_page->size = size;
 
-    /* Compute checksum on data block */
-    computed_chksum = H5_checksum_metadata(buf, (size_t)(p - buf), 0);
-
-    /* Metadata checksum */
-    UINT32DECODE(p, stored_chksum);
+    /* Already decoded and compared stored checksum earlier, when reading */
 
     /* Sanity check */
-    HDassert((size_t)(p - buf) == dblk_page->size);
-
-    /* Verify checksum */
-    if(stored_chksum != computed_chksum)
-	H5E_THROW(H5E_BADVALUE, "incorrect metadata checksum for extensible array data block page")
+    HDassert((size_t)(p - buf) == (dblk_page->size - H5_SIZEOF_CHKSUM));
 
     /* Set return value */
     ret_value = dblk_page;
@@ -1999,27 +1951,28 @@ H5EA__cache_dblk_page_notify(H5AC_notify_action_t action, H5EA_dblk_page_t *dblk
     /* Sanity check */
     HDassert(dblk_page);
 
-    /* Determine which action to take */
-    switch(action) {
-        case H5AC_NOTIFY_ACTION_AFTER_INSERT:
-            /* Create flush dependency on parent */
-            if(H5EA__create_flush_depend((H5AC_info_t *)dblk_page->parent, (H5AC_info_t *)dblk_page) < 0)
-                H5E_THROW(H5E_CANTDEPEND, "unable to create flush dependency between data block page and parent, address = %llu", (unsigned long long)dblk_page->addr)
-            break;
+    /* Check if the file was opened with SWMR-write access */
+    if(dblk_page->hdr->swmr_write) {
+        /* Determine which action to take */
+        switch(action) {
+            case H5AC_NOTIFY_ACTION_AFTER_INSERT:
+                /* Create flush dependency on parent */
+                if(H5EA__create_flush_depend((H5AC_info_t *)dblk_page->parent, (H5AC_info_t *)dblk_page) < 0)
+                    H5E_THROW(H5E_CANTDEPEND, "unable to create flush dependency between data block page and parent, address = %llu", (unsigned long long)dblk_page->addr)
+                break;
 
-        case H5AC_NOTIFY_ACTION_BEFORE_EVICT:
-            /* Destroy flush dependency on parent */
-            if(H5EA__destroy_flush_depend((H5AC_info_t *)dblk_page->parent, (H5AC_info_t *)dblk_page) < 0)
-                H5E_THROW(H5E_CANTUNDEPEND, "unable to destroy flush dependency between data block page and parent, address = %llu", (unsigned long long)dblk_page->addr)
-            break;
+            case H5AC_NOTIFY_ACTION_BEFORE_EVICT:
+                /* Nothing to do */
+                break;
 
-        default:
+            default:
 #ifdef NDEBUG
-            H5E_THROW(H5E_BADVALUE, "unknown action from metadata cache")
+                H5E_THROW(H5E_BADVALUE, "unknown action from metadata cache")
 #else /* NDEBUG */
-            HDassert(0 && "Unknown action?!?");
+                HDassert(0 && "Unknown action?!?");
 #endif /* NDEBUG */
-    } /* end switch */
+        } /* end switch */
+    } /* end if */
 
 CATCH
 

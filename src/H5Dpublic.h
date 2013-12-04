@@ -34,6 +34,9 @@
 #define H5D_CHUNK_CACHE_NBYTES_DEFAULT      ((size_t) -1)
 #define H5D_CHUNK_CACHE_W0_DEFAULT          -1.
 
+/* Bit flags for the H5Pset_chunk_opts() and H5Pget_chunk_opts() */
+#define H5D_CHUNK_DONT_FILTER_PARTIAL_CHUNKS      (0x0002u)
+
 /* Property names for H5LTDdirect_chunk_write */   
 #define H5D_XFER_DIRECT_CHUNK_WRITE_FLAG_NAME	        "direct_chunk_flag"
 #define H5D_XFER_DIRECT_CHUNK_WRITE_FILTERS_NAME	"direct_chunk_filters"
@@ -56,7 +59,12 @@ typedef enum H5D_layout_t {
 
 /* Types of chunk index data structures */
 typedef enum H5D_chunk_index_t {
-    H5D_CHUNK_BTREE	= 0	/* v1 B-tree index			     */
+    H5D_CHUNK_IDX_BTREE	= 0,	/* v1 B-tree index (default)                 */
+    H5D_CHUNK_IDX_NONE = 1,     /* No Index (H5D_ALLOC_TIME_EARLY, non-filtered, fixed dims) */
+    H5D_CHUNK_IDX_FARRAY = 2,	/* Fixed array (for 0 unlimited dims)	     */
+    H5D_CHUNK_IDX_EARRAY = 3,	/* Extensible array (for 1 unlimited dim)    */
+    H5D_CHUNK_IDX_BT2 = 4,   	/* v2 B-tree index (for >1 unlimited dims)   */
+    H5D_CHUNK_IDX_NTYPES	/*this one must be last!		     */
 } H5D_chunk_index_t;
 
 /* Values for the space allocation time property */
@@ -140,6 +148,8 @@ H5_DLL herr_t H5Dvlen_get_buf_size(hid_t dataset_id, hid_t type_id, hid_t space_
 H5_DLL herr_t H5Dfill(const void *fill, hid_t fill_type, void *buf,
         hid_t buf_type, hid_t space);
 H5_DLL herr_t H5Dset_extent(hid_t dset_id, const hsize_t size[]);
+H5_DLL herr_t H5Dflush(hid_t dset_id);
+H5_DLL herr_t H5Drefresh(hid_t dset_id);
 H5_DLL herr_t H5Dscatter(H5D_scatter_func_t op, void *op_data, hid_t type_id,
     hid_t dst_space_id, void *dst_buf);
 H5_DLL herr_t H5Dgather(hid_t src_space_id, const void *src_buf, hid_t type_id,
@@ -153,6 +163,7 @@ H5_DLL herr_t H5Ddebug(hid_t dset_id);
 #ifndef H5_NO_DEPRECATED_SYMBOLS
 
 /* Macros */
+#define H5D_CHUNK_BTREE H5D_CHUNK_IDX_BTREE
 
 
 /* Typedefs */

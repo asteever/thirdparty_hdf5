@@ -365,6 +365,8 @@ H5F_get_access_plist(H5F_t *f, hbool_t app_ref)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set 'small data' cache size")
     if(H5P_set(new_plist, H5F_ACS_LATEST_FORMAT_NAME, &(f->shared->latest_format)) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set 'latest format' flag")
+    if(H5P_set(new_plist, H5F_ACS_METADATA_READ_ATTEMPTS_NAME, &(f->shared->read_attempts)) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set 'latest format' flag")
     if(f->shared->efc)
         efc_size = H5F_efc_max_nfiles(f->shared->efc);
     if(H5P_set(new_plist, H5F_ACS_EFC_SIZE_NAME, &efc_size) < 0)
@@ -958,6 +960,12 @@ H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get sieve buffer size")
         if(H5P_get(plist, H5F_ACS_LATEST_FORMAT_NAME, &(f->shared->latest_format)) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get 'latest format' flag")
+        /* Require the latest format to use SWMR */
+        /* (Need to revisit this when the 1.10 release is made, and require
+         *      1.10 or later -QAK)
+         */
+        if(!H5F_USE_LATEST_FORMAT(f) && (H5F_INTENT(f) & H5F_ACC_SWMR_WRITE))
+            HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, NULL, "must use 'latest format' flag with SWMR write access")
         if(H5P_get(plist, H5F_ACS_META_BLOCK_SIZE_NAME, &(f->shared->meta_aggr.alloc_size)) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get metadata cache size")
         f->shared->meta_aggr.feature_flag = H5FD_FEAT_AGGREGATE_METADATA;
@@ -976,6 +984,10 @@ H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t
             HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, NULL, "bad maximum address from VFD")
         if(H5FD_get_feature_flags(lf, &f->shared->feature_flags) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTGET, NULL, "can't get feature flags from VFD")
+        /* Require a POSIX compatible VFD to use SWMR feature */
+        /* (It's reasonable to try to expand this to other VFDs eventually -QAK) */
+        if(!H5F_HAS_FEATURE(f, H5FD_FEAT_POSIX_COMPAT_HANDLE) && (H5F_INTENT(f) & (H5F_ACC_SWMR_WRITE | H5F_ACC_SWMR_READ)))
+            HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, NULL, "must use POSIX compatible VFD with SWMR write access")
         if(H5FD_get_fs_type_map(lf, f->shared->fs_type_map) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTGET, NULL, "can't get free space type mapping from VFD")
         if(H5MF_init_merge_flags(f) < 0)
@@ -991,6 +1003,37 @@ H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t
          *      we make it work. - QAK)
          */
         f->shared->use_tmp_space = !H5F_HAS_FEATURE(f, H5FD_FEAT_HAS_MPI);
+
+        /* Retrieve the # of read attempts here so that sohm in superblock will get the correct # of attempts */
+        if(H5P_get(plist, H5F_ACS_METADATA_READ_ATTEMPTS_NAME, &f->shared->read_attempts) < 0)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get the # of read attempts")
+
+        /* When opening file with SWMR access, the # of read attempts is H5F_SWMR_METADATA_READ_ATTEMPTS if not set */
+        /* When opening file without SWMR access, the # of read attempts is always H5F_METADATA_READ_ATTEMPTS (set or not set) */
+        if(H5F_INTENT(f) & (H5F_ACC_SWMR_READ | H5F_ACC_SWMR_WRITE)) {
+            /* If no value for read attempts has been set, use the default */
+            if(!f->shared->read_attempts)
+                f->shared->read_attempts = H5F_SWMR_METADATA_READ_ATTEMPTS;
+
+            /* Turn off accumulator with SWMR */
+            f->shared->feature_flags = lf->feature_flags & ~(unsigned)H5FD_FEAT_ACCUMULATE_METADATA;
+            if(H5FD_set_feature_flags(lf, f->shared->feature_flags) < 0)
+                 HGOTO_ERROR(H5E_FILE, H5E_CANTSET, NULL, "can't set feature_flags in VFD")
+        } /* end if */
+        else
+            f->shared->read_attempts = H5F_METADATA_READ_ATTEMPTS;
+
+        /* Determine the # of bins for metdata read retries */
+        f->shared->retries_nbins = 0;
+        if(f->shared->read_attempts > 1) {
+            double tmp;
+
+            tmp = HDlog10((double)(f->shared->read_attempts - 1));
+            f->shared->retries_nbins = (unsigned)tmp + 1;
+        } /* end if */
+
+        /* Initialize the tracking for metadata read retries */
+        HDmemset(f->shared->retries, 0, sizeof(f->shared->retries));
 
 	/*
 	 * Create a metadata cache with the specified number of elements.
@@ -1316,7 +1359,8 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
 	 * file (since we can't do that while the file is open), or if the
 	 * request was to create a non-existent file (since the file already
 	 * exists), or if the new request adds write access (since the
-	 * readers don't expect the file to change under them).
+	 * readers don't expect the file to change under them), or if the
+         * SWMR write/read access flags don't agree.
 	 */
 	if(H5FD_close(lf) < 0)
 	    HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to close low-level file info")
@@ -1326,6 +1370,12 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
 	    HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "file exists")
 	if((flags & H5F_ACC_RDWR) && 0 == (shared->flags & H5F_ACC_RDWR))
 	    HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "file is already open for read-only")
+	if(((flags & H5F_ACC_SWMR_WRITE) && 0 == (shared->flags & H5F_ACC_SWMR_WRITE))
+                || (0 == (flags & H5F_ACC_SWMR_WRITE) && (shared->flags & H5F_ACC_SWMR_WRITE)))
+	    HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "SWMR write access flag not the same for file that is already open")
+	if(((flags & H5F_ACC_SWMR_READ) && 0 == (shared->flags & H5F_ACC_SWMR_READ))
+                || (0 == (flags & H5F_ACC_SWMR_READ) && (shared->flags & H5F_ACC_SWMR_READ)))
+	    HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "SWMR read access flag not the same for file that is already open")
 
         /* Allocate new "high-level" file struct */
         if((file = H5F_new(shared, flags, fcpl_id, fapl_id, NULL)) == NULL)
@@ -1390,6 +1440,7 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
 	if(H5G_mkroot(file, dxpl_id, FALSE) < 0)
 	    HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, NULL, "unable to read root group")
     } /* end if */
+
 
     /* Get the file access property list, for future queries */
     if(NULL == (a_plist = (H5P_genplist_t *)H5I_object(fapl_id)))
@@ -1476,9 +1527,9 @@ H5Fcreate(const char *filename, unsigned flags, hid_t fcpl_id, hid_t fapl_id)
     if(!filename || !*filename)
 	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid file name")
     /* In this routine, we only accept the following flags:
-     *          H5F_ACC_EXCL, H5F_ACC_TRUNC and H5F_ACC_DEBUG
+     *          H5F_ACC_EXCL, H5F_ACC_TRUNC, H5F_ACC_DEBUG and H5F_ACC_SWMR_WRITE
      */
-    if(flags & ~(H5F_ACC_EXCL | H5F_ACC_TRUNC | H5F_ACC_DEBUG))
+    if(flags & ~(H5F_ACC_EXCL | H5F_ACC_TRUNC | H5F_ACC_DEBUG | H5F_ACC_SWMR_WRITE))
 	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid flags")
     /* The H5F_ACC_EXCL and H5F_ACC_TRUNC flags are mutually exclusive */
     if((flags & H5F_ACC_EXCL) && (flags & H5F_ACC_TRUNC))
@@ -1585,6 +1636,12 @@ H5Fopen(const char *filename, unsigned flags, hid_t fapl_id)
     if((flags & ~H5F_ACC_PUBLIC_FLAGS) ||
             (flags & H5F_ACC_TRUNC) || (flags & H5F_ACC_EXCL))
 	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid file open flags")
+    /* Asking for SWMR write access on a read-only file is invalid */
+    if((flags & H5F_ACC_SWMR_WRITE) && 0 == (flags & H5F_ACC_RDWR))
+        HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, FAIL, "SWMR write access on a file open for read-only access is not allowed")
+    /* Asking for SWMR read access on a non-read-only file is invalid */
+    if((flags & H5F_ACC_SWMR_READ) && (flags & H5F_ACC_RDWR))
+        HGOTO_ERROR(H5E_FILE, H5E_CANTOPENFILE, FAIL, "SWMR read access on a file open for read-write access is not allowed")
     if(H5P_DEFAULT == fapl_id)
         fapl_id = H5P_FILE_ACCESS_DEFAULT;
     else
@@ -2168,10 +2225,20 @@ H5Fget_intent(hid_t file_id, unsigned *intent_flags)
          * Simplify things for them so that they only get either H5F_ACC_RDWR
          * or H5F_ACC_RDONLY.
          */
-        if(H5F_INTENT(file) & H5F_ACC_RDWR)
+        if(H5F_INTENT(file) & H5F_ACC_RDWR) {
             *intent_flags = H5F_ACC_RDWR;
-        else
+
+            /* Check for SWMR write access on the file */
+            if(H5F_INTENT(file) & H5F_ACC_SWMR_WRITE)
+                *intent_flags |= H5F_ACC_SWMR_WRITE;
+        } /* end if */
+        else {
             *intent_flags = H5F_ACC_RDONLY;
+
+            /* Check for SWMR read access on the file */
+            if(H5F_INTENT(file) & H5F_ACC_SWMR_READ)
+                *intent_flags |= H5F_ACC_SWMR_READ;
+        } /* end else */
     } /* end if */
 
 done:
@@ -3119,6 +3186,99 @@ done:
 
 
 /*-------------------------------------------------------------------------
+ * Function:    H5Fget_metadata_read_retry_info
+ *
+ * Purpose:     To retrieve the collection of read retries for metadata items with checksum.
+ *
+ * Return:      Success:        non-negative on success
+ *              Failure:        Negative
+ *
+ * Programmer:  Vailin Choi; October 2013
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Fget_metadata_read_retry_info(hid_t file_id, H5F_retry_info_t *info)
+{
+    H5F_t    	*file;           	/* File object for file ID */
+    unsigned 	i, j;			/* Local index variable */
+    size_t	tot_size;		/* Size of each retries[i] */
+    herr_t   	ret_value = SUCCEED;   	/* Return value */
+
+    FUNC_ENTER_API(FAIL)
+    H5TRACE2("e", "i*x", file_id, info);
+
+    /* Check args */
+    if(!info)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no info struct")
+
+    /* Get the file pointer */
+    if(NULL == (file = (H5F_t *)H5I_object_verify(file_id, H5I_FILE)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "not a file ID")
+
+    /* Copy the # of bins for "retries" array */
+    info->nbins = file->shared->retries_nbins;
+
+    /* Initialize the array of "retries" */
+    HDmemset(info->retries, 0, sizeof(info->retries));
+
+    /* Return if there are no bins -- no retries */
+    if(!info->nbins) 
+	HGOTO_DONE(SUCCEED);
+
+    /* Calculate size for each retries[i] */
+    tot_size = info->nbins * sizeof(uint32_t);
+
+    /* Map and copy information to info's retries for metadata items with tracking for read retries */
+    j = 0;
+    for(i = 0; i < H5AC_NTYPES; i++) {
+        switch(i) {
+            case H5AC_OHDR_ID:
+            case H5AC_OHDR_CHK_ID:
+            case H5AC_BT2_HDR_ID:
+            case H5AC_BT2_INT_ID:
+            case H5AC_BT2_LEAF_ID:
+            case H5AC_FHEAP_HDR_ID:
+            case H5AC_FHEAP_DBLOCK_ID:
+            case H5AC_FHEAP_IBLOCK_ID:
+	    case H5AC_FSPACE_HDR_ID:
+	    case H5AC_FSPACE_SINFO_ID:
+	    case H5AC_SOHM_TABLE_ID:
+	    case H5AC_SOHM_LIST_ID:
+            case H5AC_EARRAY_HDR_ID:
+            case H5AC_EARRAY_IBLOCK_ID:
+            case H5AC_EARRAY_SBLOCK_ID:
+            case H5AC_EARRAY_DBLOCK_ID:
+            case H5AC_EARRAY_DBLK_PAGE_ID:
+	    case H5AC_FARRAY_HDR_ID:
+	    case H5AC_FARRAY_DBLOCK_ID:
+	    case H5AC_FARRAY_DBLK_PAGE_ID:
+            case H5AC_SUPERBLOCK_ID:
+                HDassert(j < H5F_NUM_METADATA_READ_RETRY_TYPES);
+                if(file->shared->retries[i] != NULL) {
+		    /* Allocate memory for retries[i] */
+                    if(NULL == (info->retries[j] = (uint32_t *)HDmalloc(tot_size)))
+			HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
+
+		    /* Copy the information */
+                    HDmemcpy(info->retries[j], file->shared->retries[i], tot_size);
+                } /* end if */
+
+                /* Increment location in info->retries[] array */
+                j++;
+                break;
+
+            default:
+                break;
+        } /* end switch */
+    } /* end for */
+
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* end H5Fget_metadata_read_retry_info() */
+
+
+/*-------------------------------------------------------------------------
  * Function:    H5Fget_free_sections
  *
  * Purpose:     To get free-space section information for free-space manager with
@@ -3339,4 +3499,55 @@ H5F_set_store_msg_crt_idx(H5F_t *f, hbool_t flag)
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* H5F_set_store_msg_crt_idx() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5F_track_metadata_read_retries
+ *
+ * Purpose:     To track the # of a "retries" (log10) for a metadata item.
+ *		This routine should be used only when:
+ *		  "retries" > 0
+ *		  f->shared->read_attempts > 1 (does not have retry when 1)
+ *		  f->shared->retries_nbins > 0 (calculated based on f->shared->read_attempts)
+ *
+ * Return:      Success:        SUCCEED
+ *              Failure:        FAIL
+ *
+ * Programmer:  Vailin Choi; October 2013
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5F_track_metadata_read_retries(H5F_t *f, unsigned actype, unsigned retries)
+{
+    unsigned log_ind;			/* Index to the array of retries based on log10 of retries */
+    double tmp;                         /* Temporary value, to keep compiler quiet */
+    herr_t ret_value = SUCCEED; 	/* Return value */
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* Sanity check */
+    HDassert(f);
+    HDassert(f->shared->read_attempts > 1);
+    HDassert(f->shared->retries_nbins > 0);
+    HDassert(retries > 0);
+    HDassert(retries < f->shared->read_attempts);
+    HDassert(actype < H5AC_NTYPES);
+
+    /* Allocate memory for retries */
+    if(NULL == f->shared->retries[actype])
+        if(NULL == (f->shared->retries[actype] = (uint32_t *)HDcalloc((size_t)f->shared->retries_nbins, sizeof(uint32_t))))
+	    HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "memory allocation failed")
+
+    /* Index to retries based on log10 */
+    tmp = HDlog10((double)retries);
+    log_ind = (unsigned)tmp;
+    HDassert(log_ind < f->shared->retries_nbins);
+
+    /* Increment the # of the "retries" */
+    f->shared->retries[actype][log_ind]++;
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5F_track_metadata_read_retries() */
 

@@ -55,7 +55,6 @@
       ${HDF5_TOOLS_H5REPACK_SOURCE_DIR}/testfiles/h5repack_layouto.h5
       ${HDF5_TOOLS_H5REPACK_SOURCE_DIR}/testfiles/h5repack_layout2.h5
       ${HDF5_TOOLS_H5REPACK_SOURCE_DIR}/testfiles/h5repack_layout3.h5
-      ${HDF5_TOOLS_H5REPACK_SOURCE_DIR}/testfiles/h5repack_layout.UD.h5
       ${HDF5_TOOLS_H5REPACK_SOURCE_DIR}/testfiles/h5repack_named_dtypes.h5
       ${HDF5_TOOLS_H5REPACK_SOURCE_DIR}/testfiles/h5repack_nbit.h5
       ${HDF5_TOOLS_H5REPACK_SOURCE_DIR}/testfiles/h5repack_objs.h5
@@ -89,8 +88,6 @@
       ${HDF5_TOOLS_H5REPACK_SOURCE_DIR}/testfiles/h5repack_filters.h5.tst
       ${HDF5_TOOLS_H5REPACK_SOURCE_DIR}/testfiles/h5repack_layout.h5-plugin_test.ddl
       ${HDF5_TOOLS_H5REPACK_SOURCE_DIR}/testfiles/plugin_test.h5repack_layout.h5.tst
-      ${HDF5_TOOLS_H5REPACK_SOURCE_DIR}/testfiles/h5repack_layout.UD.h5-plugin_none.ddl
-      ${HDF5_TOOLS_H5REPACK_SOURCE_DIR}/testfiles/plugin_none.h5repack_layout.UD.h5.tst
   )
 
   FOREACH (h5_file ${LIST_HDF5_TEST_FILES} ${LIST_OTHER_TEST_FILES})
@@ -344,7 +341,7 @@
     IF (HDF5_BUILD_TOOLS AND NOT HDF5_ENABLE_USING_MEMCHECKER)
       # Remove any output file left over from previous test run
       ADD_TEST (
-          NAME H5REPACK_UD-${testname}-clearall-objects
+          NAME H5REPACK_UD-clearall-objects
           COMMAND    ${CMAKE_COMMAND}
               -E remove 
               testfiles/out-${testname}.${resultfile}
@@ -367,7 +364,7 @@
               -D "TEST_ENV_VALUE=${CMAKE_BINARY_DIR}/plugins"
               -P "${HDF5_RESOURCES_DIR}/runTest.cmake"
       )
-      SET_TESTS_PROPERTIES (H5REPACK_UD-${testname} PROPERTIES DEPENDS H5REPACK_UD-${testname}-clearall-objects)
+      SET_TESTS_PROPERTIES (H5REPACK_UD-${testname} PROPERTIES DEPENDS H5REPACK_UD-clearall-objects)
       ADD_TEST (
           NAME H5REPACK_UD-h5dump-${testname}
           COMMAND "${CMAKE_COMMAND}"
@@ -1066,7 +1063,6 @@ ADD_H5_VERIFY_TEST (ckdim_smaller "TEST" 0 h5repack_layout3.h5 chunk_unlimit3 CO
 ##############################################################################
 IF (BUILD_SHARED_LIBS)
   ADD_H5_UD_TEST (plugin_test 0 h5repack_layout.h5 -v -f UD=257,1,9)
-  ADD_H5_UD_TEST (plugin_none 0 h5repack_layout.UD.h5 -v -f NONE)
 ELSE (BUILD_SHARED_LIBS)
   MESSAGE (STATUS " **** Plugins libraries must be built as shared libraries **** ")
   ADD_TEST (

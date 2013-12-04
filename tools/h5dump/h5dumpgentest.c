@@ -98,6 +98,7 @@
 #define FILE66  "packedbits.h5"
 #define FILE67  "zerodim.h5"
 #define FILE68  "charsets.h5"
+#define FILE68a "tdset_idx.h5"
 #define FILE69  "tattrintsize.h5"
 #define FILE70  "tcmpdintsize.h5"
 #define FILE71  "tcmpdattrintsize.h5"
@@ -107,8 +108,6 @@
 #define FILE75  "tscalarstring.h5"
 #define FILE76  "tcmpdintarray.h5"
 #define FILE77  "tcmpdints.h5"
-#define FILE78  "tscalarintattrsize.h5"
-#define FILE79  "tintsattrs.h5"
 
 /*-------------------------------------------------------------------------
  * prototypes
@@ -285,6 +284,16 @@ typedef struct s1_t {
 #define F66_YDIM64      64
 #define F66_DUMMYDBL	    "DummyDBL"
 
+/* Declarations for gent_dataset_idx() for "FILE68a" */
+#define F68a_DSET_FIXED		"dset_fixed"
+#define F68a_DSET_FIXED_FILTER	"dset_filter"
+#define F68a_DSET_BTREE		"dset_btree"
+#define F68a_DIM200		200
+#define F68a_DIM100		100
+#define F68a_DIM20		20
+#define F68a_DIM10		10
+#define F68a_CHUNK		5
+
 /* "FILE70" macros and for FILE71 */
 /* Name of dataset to create in datafile   */
 #define F70_DATASETNAME   "CompoundIntSize"
@@ -308,7 +317,7 @@ typedef struct s1_t {
 /* Name of dataset to create in datafile   */
 #define F71_DATASETNAME   "CompoundAttrIntSize"
 
-/* "FILE73" macros and for FILE69 and FILE78 */
+/* "FILE73" macros and for FILE69 */
 #define F73_ARRAY_RANK  2
 #define F73_XDIM        8
 #define F73_DATASETU08        "DU08BITS"
@@ -7019,6 +7028,90 @@ gent_fs_strategy_threshold(void)
     H5Pclose(fcpl);
 }
 
+/*
+ * Create a file with new format:
+ * Create one dataset with (set_chunk, fixed dims, null max. dims) 
+ *	so that Fixed Array indexing will be used.
+ * Create one dataset with (set_chunk, fixed dims, null max. dims, filter) 
+ *	so that Fixed Array indexing will be used.
+ * Create one dataset with (set_chunk, fixed dims, fixed max. dims)
+ *	so that Fixed Array indexing will be used.
+ * 
+ * Modifications:
+ *	Fixed Array indexing will be used for chunked dataset
+ *	with fixed max. dims setting.
+ *
+ */
+static void
+gent_dataset_idx(void)
+{
+    hid_t fid, space, dcpl, fapl;
+    hsize_t dims[2];
+    hsize_t maxdims[2];
+    int buf[20][10];
+    int i, j, ret;
+
+    /* Get a copy of the file aaccess property */
+    fapl = H5Pcreate(H5P_FILE_ACCESS);
+
+    /* Set the "use the latest version of the format" bounds for creating objects in the file */
+    ret = H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST);
+    assert(ret >= 0);
+
+    fid = H5Fcreate(FILE68a, H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
+    dcpl = H5Pcreate(H5P_DATASET_CREATE);
+
+    dims[0] = F68a_CHUNK;
+    dims[1] = F68a_CHUNK;
+
+    /* set chunk */
+    ret = H5Pset_chunk(dcpl, RANK, dims);
+    assert(ret >= 0);
+
+    /* dataset with fixed dimensions */
+    dims[0] = F68a_DIM20; 
+    dims[1] = F68a_DIM10;
+    space = H5Screate_simple(RANK, dims, NULL);
+
+    for(i = 0; i < F68a_DIM20; i++)
+         for(j = 0; j < F68a_DIM10; j++)
+              buf[i][j] = j;
+
+    ret = make_dset(fid, F68a_DSET_FIXED, space, H5T_NATIVE_INT, dcpl, buf);
+    assert(ret >= 0);
+    H5Sclose(space);
+
+    /* dataset with non-fixed dimensions */
+    maxdims[0] = F68a_DIM200; 
+    maxdims[1] = F68a_DIM100;
+    space = H5Screate_simple(RANK, dims, maxdims);
+
+    ret = make_dset(fid, F68a_DSET_BTREE, space, H5T_NATIVE_INT, dcpl, buf);
+    assert(ret >= 0);
+    H5Sclose(space);
+
+#if defined (H5_HAVE_FILTER_DEFLATE)
+
+    /* dataset with fixed dimensions and filters */
+    /* remove the filters from the dcpl */
+    ret = H5Premove_filter(dcpl, H5Z_FILTER_ALL);
+    assert(ret >= 0);
+
+    /* set deflate data */
+    ret = H5Pset_deflate(dcpl, 9);
+    assert(ret >= 0);
+
+    space = H5Screate_simple(RANK, dims, NULL);
+    ret = make_dset(fid, F68a_DSET_FIXED_FILTER, space, H5T_NATIVE_INT, dcpl, buf);
+    assert(ret >= 0);
+
+    H5Sclose(space);
+#endif
+
+    H5Pclose(dcpl);
+    H5Fclose(fid);
+}
+
 /*-------------------------------------------------------------------------
  * Function:    gent_packedbits
  *
@@ -7057,9 +7150,8 @@ gent_packedbits(void)
     valu8bits = (uint8_t) ~0u;  /* all 1s */
     for(i = 0; i < dims[0]; i++){
         dsetu8[i][0] = valu8bits;
-        for(j = 1; j < dims[1]; j++) {
+        for(j = 1; j < dims[1]; j++)
             dsetu8[i][j] = dsetu8[i][j-1] << 1;
-        }
         valu8bits <<= 1;
     }
 
@@ -7075,9 +7167,8 @@ gent_packedbits(void)
     valu16bits = (uint16_t) ~0u;	/* all 1s */
     for(i = 0; i < dims[0]; i++){
         dsetu16[i][0] = valu16bits;
-        for(j = 1; j < dims[1]; j++) {
+        for(j = 1; j < dims[1]; j++)
             dsetu16[i][j] = dsetu16[i][j-1] << 1;
-        }
         valu16bits <<= 1;
     }
 
@@ -7093,9 +7184,8 @@ gent_packedbits(void)
     valu32bits = (uint32_t) ~0u;	/* all 1s */
     for(i = 0; i < dims[0]; i++){
         dsetu32[i][0] = valu32bits;
-        for(j = 1; j < dims[1]; j++) {
+        for(j = 1; j < dims[1]; j++)
             dsetu32[i][j] = dsetu32[i][j-1] << 1;
-        }
         valu32bits <<= 1;
     }
 
@@ -7111,9 +7201,8 @@ gent_packedbits(void)
     valu64bits = (uint64_t) ~0Lu;    /* all 1s */
     for(i = 0; i < dims[0]; i++){
         dsetu64[i][0] = valu64bits;
-        for(j = 1; j < dims[1]; j++) {
+        for(j = 1; j < dims[1]; j++)
             dsetu64[i][j] = dsetu64[i][j-1] << 1;
-        }
         valu64bits <<= 1;
     }
 
@@ -7129,9 +7218,8 @@ gent_packedbits(void)
     val8bits = (int8_t) ~0;	/* all 1s */
     for(i = 0; i < dims[0]; i++){
         dset8[i][0] = val8bits;
-        for(j = 1; j < dims[1]; j++) {
+        for(j = 1; j < dims[1]; j++)
             dset8[i][j] = dset8[i][j-1] << 1;
-        }
         val8bits <<= 1;
     }
 
@@ -7147,9 +7235,8 @@ gent_packedbits(void)
     val16bits = (int16_t) ~0;	/* all 1s */
     for(i = 0; i < dims[0]; i++){
         dset16[i][0] = val16bits;
-        for(j = 1; j < dims[1]; j++) {
+        for(j = 1; j < dims[1]; j++)
             dset16[i][j] = dset16[i][j-1] << 1;
-        }
         val16bits <<= 1;
     }
 
@@ -7165,9 +7252,8 @@ gent_packedbits(void)
     val32bits = (int32_t) ~0;	/* all 1s */
     for(i = 0; i < dims[0]; i++){
         dset32[i][0] = val32bits;
-        for(j = 1; j < dims[1]; j++) {
+        for(j = 1; j < dims[1]; j++)
             dset32[i][j] = dset32[i][j-1] << 1;
-        }
         val32bits <<= 1;
     }
 
@@ -7183,9 +7269,8 @@ gent_packedbits(void)
     val64bits = (int64_t) ~0L;   /* all 1s */
     for(i = 0; i < dims[0]; i++){
         dset64[i][0] = val64bits;
-        for(j = 1; j < dims[1]; j++) {
+        for(j = 1; j < dims[1]; j++)
             dset64[i][j] = dset64[i][j-1] << 1;
-        }
         val64bits <<= 1;
     }
 
@@ -7422,17 +7507,22 @@ gent_charsets(void)
             const char *utf8_p_;
     } CharSetInfo;
 
-    hid_t charset_dtid = H5Tcreate( H5T_COMPOUND, sizeof( CharSetInfo ) );
-    hid_t ascii_dtid = H5Tcreate( H5T_STRING, H5T_VARIABLE );
+    hid_t charset_dtid;
+    hid_t ascii_dtid;
     hid_t utf8_dtid = H5Tcreate( H5T_STRING, H5T_VARIABLE );
     const char * writeData[] = { "ascii", "utf8", };
 
     sid = H5Screate_simple( 1, dim, NULL );
     fid = H5Fcreate( FILE68, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT );
+
+    charset_dtid = H5Tcreate( H5T_COMPOUND, sizeof( CharSetInfo ) );
+
+    ascii_dtid = H5Tcreate( H5T_STRING, H5T_VARIABLE );
     status = H5Tset_cset( ascii_dtid, H5T_CSET_ASCII );
     HDassert(status >= 0);
     H5Tinsert( charset_dtid, "ascii", HOFFSET(CharSetInfo, ascii_p_ ), ascii_dtid );
 
+    utf8_dtid = H5Tcreate( H5T_STRING, H5T_VARIABLE );
     status = H5Tset_cset( utf8_dtid, H5T_CSET_UTF8 );
     HDassert(status >= 0);
     H5Tinsert( charset_dtid, "utf8", HOFFSET( CharSetInfo, utf8_p_ ), utf8_dtid );
@@ -9075,509 +9165,6 @@ static void gent_compound_ints(void) {
 }
 
 /*-------------------------------------------------------------------------
- * Function:    gent_intscalars
- *
- * Purpose:     Generate a file to be used in the h5dump scalar with attribute tests.
- *   Four datasets of 1, 2, 4 and 8 bytes of unsigned int types are created.
- *   Four more datasets of 1, 2, 4 and 8 bytes of signed int types are created.
- *   Fill them with raw data such that no bit will be all zero in a dataset.
- *   A dummy dataset of double type is created for failure test.
- *-------------------------------------------------------------------------
- */
-static void
-gent_intattrscalars(void)
-{
-    hid_t fid, attr, dataset, space, tid;
-    hsize_t dims[2];
-    uint8_t  dsetu8[F73_XDIM][F73_YDIM8],   valu8bits;
-    uint16_t dsetu16[F73_XDIM][F73_YDIM16], valu16bits;
-    uint32_t dsetu32[F73_XDIM][F73_YDIM32], valu32bits;
-    uint64_t dsetu64[F73_XDIM][F73_YDIM64], valu64bits;
-    int8_t  dset8[F73_XDIM][F73_YDIM8],   val8bits;
-    int16_t dset16[F73_XDIM][F73_YDIM16], val16bits;
-    int32_t dset32[F73_XDIM][F73_YDIM32], val32bits;
-    int64_t dset64[F73_XDIM][F73_YDIM64], val64bits;
-    double  dsetdbl[F73_XDIM][F73_YDIM8];
-    unsigned int i, j;
-
-    fid = H5Fcreate(FILE78, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-
-    /* Dataset of 8 bits unsigned int */
-    dims[0] = F73_XDIM; dims[1] = F73_YDIM8;
-    space = H5Screate(H5S_SCALAR);
-    tid = H5Tarray_create2(H5T_STD_U8LE, F73_ARRAY_RANK, dims);
-    dataset = H5Dcreate2(fid, F73_DATASETU08, tid, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
-    valu8bits = (uint8_t) ~0u;  /* all 1s */
-    for(i = 0; i < dims[0]; i++){
-        dsetu8[i][0] = valu8bits;
-        for(j = 1; j < dims[1]; j++) {
-            dsetu8[i][j] = dsetu8[i][j-1] << 1;
-        }
-        valu8bits <<= 1;
-    }
-
-    H5Dwrite(dataset, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, dsetu8);
-    /* Attribute of 8 bits unsigned int */
-    attr = H5Acreate2(dataset, F73_DATASETU08, tid, space, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(attr, tid, dsetu8);
-    H5Aclose(attr);
-    H5Sclose(space);
-    H5Dclose(dataset);
-
-    /* Dataset of 16 bits unsigned int */
-    dims[0] = F73_XDIM; dims[1] = F73_YDIM16;
-    space = H5Screate(H5S_SCALAR);
-    tid = H5Tarray_create2(H5T_STD_U16LE, F73_ARRAY_RANK, dims);
-    dataset = H5Dcreate2(fid, F73_DATASETU16, tid, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
-    valu16bits = (uint16_t) ~0u;    /* all 1s */
-    for(i = 0; i < dims[0]; i++){
-        dsetu16[i][0] = valu16bits;
-        for(j = 1; j < dims[1]; j++) {
-            dsetu16[i][j] = dsetu16[i][j-1] << 1;
-        }
-        valu16bits <<= 1;
-    }
-
-    H5Dwrite(dataset, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, dsetu16);
-    /* Attribute of 16 bits unsigned int */
-    attr = H5Acreate2(dataset, F73_DATASETU16, tid, space, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(attr, tid, dsetu16);
-    H5Aclose(attr);
-    H5Sclose(space);
-    H5Dclose(dataset);
-
-    /* Dataset of 32 bits unsigned int */
-    dims[0] = F73_XDIM; dims[1] = F73_YDIM32;
-    space = H5Screate(H5S_SCALAR);
-    tid = H5Tarray_create2(H5T_STD_U32LE, F73_ARRAY_RANK, dims);
-    dataset = H5Dcreate2(fid, F73_DATASETU32, tid, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
-    valu32bits = (uint32_t) ~0u;    /* all 1s */
-    for(i = 0; i < dims[0]; i++){
-        dsetu32[i][0] = valu32bits;
-        for(j = 1; j < dims[1]; j++) {
-            dsetu32[i][j] = dsetu32[i][j-1] << 1;
-        }
-        valu32bits <<= 1;
-    }
-
-    H5Dwrite(dataset, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, dsetu32);
-    /* Attribute of 32 bits unsigned int */
-    attr = H5Acreate2(dataset, F73_DATASETU32, tid, space, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(attr, tid, dsetu32);
-    H5Aclose(attr);
-    H5Sclose(space);
-    H5Dclose(dataset);
-
-    /* Dataset of 64 bits unsigned int */
-    dims[0] = F73_XDIM; dims[1] = F73_YDIM64;
-    space = H5Screate(H5S_SCALAR);
-    tid = H5Tarray_create2(H5T_STD_U64LE, F73_ARRAY_RANK, dims);
-    dataset = H5Dcreate2(fid, F73_DATASETU64, tid, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
-    valu64bits = (uint64_t) ~0Lu;    /* all 1s */
-    for(i = 0; i < dims[0]; i++){
-        dsetu64[i][0] = valu64bits;
-        for(j = 1; j < dims[1]; j++) {
-            dsetu64[i][j] = dsetu64[i][j-1] << 1;
-        }
-        valu64bits <<= 1;
-    }
-
-    H5Dwrite(dataset, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, dsetu64);
-    /* Attribute of 64 bits unsigned int */
-    attr = H5Acreate2(dataset, F73_DATASETU64, tid, space, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(attr, tid, dsetu64);
-    H5Aclose(attr);
-    H5Sclose(space);
-    H5Dclose(dataset);
-
-    /* Dataset of 8 bits signed int */
-    dims[0] = F73_XDIM; dims[1] = F73_YDIM8;
-    space = H5Screate(H5S_SCALAR);
-    tid = H5Tarray_create2(H5T_STD_I8LE, F73_ARRAY_RANK, dims);
-    dataset = H5Dcreate2(fid, F73_DATASETS08, tid, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
-    val8bits = (int8_t) ~0; /* all 1s */
-    for(i = 0; i < dims[0]; i++){
-        dset8[i][0] = val8bits;
-        for(j = 1; j < dims[1]; j++) {
-            dset8[i][j] = dset8[i][j-1] << 1;
-        }
-        val8bits <<= 1;
-    }
-
-    H5Dwrite(dataset, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, dset8);
-    /* Attribute of 8 bits signed int */
-    attr = H5Acreate2(dataset, F73_DATASETS08, tid, space, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(attr, tid, dset8);
-    H5Aclose(attr);
-    H5Sclose(space);
-    H5Dclose(dataset);
-
-    /* Dataset of 16 bits signed int */
-    dims[0] = F73_XDIM; dims[1] = F73_YDIM16;
-    space = H5Screate(H5S_SCALAR);
-    tid = H5Tarray_create2(H5T_STD_I16LE, F73_ARRAY_RANK, dims);
-    dataset = H5Dcreate2(fid, F73_DATASETS16, tid, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
-    val16bits = (int16_t) ~0;   /* all 1s */
-    for(i = 0; i < dims[0]; i++){
-        dset16[i][0] = val16bits;
-        for(j = 1; j < dims[1]; j++) {
-            dset16[i][j] = dset16[i][j-1] << 1;
-        }
-        val16bits <<= 1;
-    }
-
-    H5Dwrite(dataset, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, dset16);
-    /* Attribute of 16 bits signed int */
-    attr = H5Acreate2(dataset, F73_DATASETS16, tid, space, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(attr, tid, dset16);
-    H5Aclose(attr);
-    H5Sclose(space);
-    H5Dclose(dataset);
-
-    /* Dataset of 32 bits signed int */
-    dims[0] = F73_XDIM; dims[1] = F73_YDIM32;
-    space = H5Screate(H5S_SCALAR);
-    tid = H5Tarray_create2(H5T_STD_I32LE, F73_ARRAY_RANK, dims);
-    dataset = H5Dcreate2(fid, F73_DATASETS32, tid, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
-    val32bits = (int32_t) ~0;   /* all 1s */
-    for(i = 0; i < dims[0]; i++){
-        dset32[i][0] = val32bits;
-        for(j = 1; j < dims[1]; j++) {
-            dset32[i][j] = dset32[i][j-1] << 1;
-        }
-        val32bits <<= 1;
-    }
-
-    H5Dwrite(dataset, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, dset32);
-    /* Attribute of 32 bits signed int */
-    attr = H5Acreate2(dataset, F73_DATASETS32, tid, space, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(attr, tid, dset32);
-    H5Aclose(attr);
-    H5Sclose(space);
-    H5Dclose(dataset);
-
-    /* Dataset of 64 bits signed int */
-    dims[0] = F73_XDIM; dims[1] = F73_YDIM64;
-    space = H5Screate(H5S_SCALAR);
-    tid = H5Tarray_create2(H5T_STD_I64LE, F73_ARRAY_RANK, dims);
-    dataset = H5Dcreate2(fid, F73_DATASETS64, tid, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
-    val64bits = (int64_t) ~0L;   /* all 1s */
-    for(i = 0; i < dims[0]; i++){
-        dset64[i][0] = val64bits;
-        for(j = 1; j < dims[1]; j++) {
-            dset64[i][j] = dset64[i][j-1] << 1;
-        }
-        val64bits <<= 1;
-    }
-
-    H5Dwrite(dataset, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, dset64);
-    /* Attribute of 64 bits signed int */
-    attr = H5Acreate2(dataset, F73_DATASETS64, tid, space, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(attr, tid, dset64);
-    H5Aclose(attr);
-    H5Sclose(space);
-    H5Dclose(dataset);
-
-    /* Double Dummy set for failure tests */
-    dims[0] = F73_XDIM; dims[1] = F73_YDIM8;
-    space = H5Screate(H5S_SCALAR);
-    tid = H5Tarray_create2(H5T_NATIVE_DOUBLE, F73_ARRAY_RANK, dims);
-    dataset = H5Dcreate2(fid, F73_DUMMYDBL, tid, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
-    for(i = 0; i < dims[0]; i++)
-        for(j = 0; j < dims[1]; j++)
-            dsetdbl[i][j] = 0.0001 * j + i;
-
-    H5Dwrite(dataset, tid, H5S_ALL, H5S_ALL, H5P_DEFAULT, dsetdbl);
-    /* Attribute of double */
-    attr = H5Acreate2(dataset, F73_DUMMYDBL, tid, space, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(attr, tid, dsetdbl);
-    H5Aclose(attr);
-    H5Sclose(space);
-    H5Dclose(dataset);
-    H5Fclose(fid);
-}
-
-/*-------------------------------------------------------------------------
- * Function:    gent_packedbits
- *
- * Purpose:     Generate a file to be used in the h5dump packed bits tests.
- *   Four datasets of 1, 2, 4 and 8 bytes of unsigned int types are created.
- *   Four more datasets of 1, 2, 4 and 8 bytes of signed int types are created.
- *   Fill them with raw data such that no bit will be all zero in a dataset.
- *   A dummy dataset of double type is created for failure test.
- * Created:  Albert Cheng, 2010/5/10.
- * Modified: Allen Byrne, 2011/1/5 Use file to test Signed/Unsigned datatypes
- *-------------------------------------------------------------------------
- */
-static void
-gent_intsattrs(void)
-{
-    hid_t fid, attr, dataset, space, aspace;
-    hsize_t dims[2], adims[1];
-    uint8_t  dsetu8[F66_XDIM][F66_YDIM8],   asetu8[F66_XDIM*F66_YDIM8],   valu8bits;
-    uint16_t dsetu16[F66_XDIM][F66_YDIM16], asetu16[F66_XDIM*F66_YDIM16], valu16bits;
-    uint32_t dsetu32[F66_XDIM][F66_YDIM32], asetu32[F66_XDIM*F66_YDIM32], valu32bits;
-    uint64_t dsetu64[F66_XDIM][F66_YDIM64], asetu64[F66_XDIM*F66_YDIM64], valu64bits;
-    int8_t  dset8[F66_XDIM][F66_YDIM8],   aset8[F66_XDIM*F66_YDIM8],   val8bits;
-    int16_t dset16[F66_XDIM][F66_YDIM16], aset16[F66_XDIM*F66_YDIM16], val16bits;
-    int32_t dset32[F66_XDIM][F66_YDIM32], aset32[F66_XDIM*F66_YDIM32], val32bits;
-    int64_t dset64[F66_XDIM][F66_YDIM64], aset64[F66_XDIM*F66_YDIM64], val64bits;
-    double  dsetdbl[F66_XDIM][F66_YDIM8], asetdbl[F66_XDIM*F66_YDIM8];
-    unsigned int i, j;
-
-    fid = H5Fcreate(FILE79, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-
-    /* Dataset of 8 bits unsigned int */
-    dims[0] = F66_XDIM; dims[1] = F66_YDIM8;
-    space = H5Screate_simple(2, dims, NULL);
-    dataset = H5Dcreate2(fid, F66_DATASETU08, H5T_STD_U8LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
-    valu8bits = (uint8_t) ~0u;  /* all 1s */
-    for(i = 0; i < dims[0]; i++){
-        dsetu8[i][0] = valu8bits;
-        asetu8[i*dims[1]] = dsetu8[i][0];
-        for(j = 1; j < dims[1]; j++) {
-            dsetu8[i][j] = dsetu8[i][j-1] << 1;
-            asetu8[i*dims[1]+j] = dsetu8[i][j];
-        }
-        valu8bits <<= 1;
-    }
-
-    H5Dwrite(dataset, H5T_NATIVE_UINT8, H5S_ALL, H5S_ALL, H5P_DEFAULT, dsetu8);
-    /* Attribute of 8 bits unsigned int */
-    adims[0] = F66_XDIM * F66_YDIM8;
-    aspace = H5Screate_simple(1, adims, NULL);
-    attr = H5Acreate2(dataset, F66_DATASETU08, H5T_STD_U8LE, aspace, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(attr, H5T_NATIVE_UINT8, asetu8);
-    H5Aclose(attr);
-    H5Sclose(aspace);
-    H5Sclose(space);
-    H5Dclose(dataset);
-
-    /* Dataset of 16 bits unsigned int */
-    dims[0] = F66_XDIM; dims[1] = F66_YDIM16;
-    space = H5Screate_simple(2, dims, NULL);
-    dataset = H5Dcreate2(fid, F66_DATASETU16, H5T_STD_U16LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
-    valu16bits = (uint16_t) ~0u;	/* all 1s */
-    for(i = 0; i < dims[0]; i++){
-        dsetu16[i][0] = valu16bits;
-        asetu16[i*dims[1]] = dsetu16[i][0];
-        for(j = 1; j < dims[1]; j++) {
-            dsetu16[i][j] = dsetu16[i][j-1] << 1;
-            asetu16[i*dims[1]+j] = dsetu16[i][j];
-        }
-        valu16bits <<= 1;
-    }
-
-    H5Dwrite(dataset, H5T_NATIVE_UINT16, H5S_ALL, H5S_ALL, H5P_DEFAULT, dsetu16);
-    /* Attribute of 16 bits unsigned int */
-    adims[0] = F66_XDIM * F66_YDIM16;
-    aspace = H5Screate_simple(1, adims, NULL);
-    attr = H5Acreate2(dataset, F66_DATASETU16, H5T_STD_U16LE, aspace, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(attr, H5T_NATIVE_UINT16, asetu16);
-    H5Aclose(attr);
-    H5Sclose(aspace);
-    H5Sclose(space);
-    H5Dclose(dataset);
-
-    /* Dataset of 32 bits unsigned int */
-    dims[0] = F66_XDIM; dims[1] = F66_YDIM32;
-    space = H5Screate_simple(2, dims, NULL);
-    dataset = H5Dcreate2(fid, F66_DATASETU32, H5T_STD_U32LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
-    valu32bits = (uint32_t) ~0u;	/* all 1s */
-    for(i = 0; i < dims[0]; i++){
-        dsetu32[i][0] = valu32bits;
-        asetu32[i*dims[1]] = dsetu32[i][0];
-        for(j = 1; j < dims[1]; j++) {
-            dsetu32[i][j] = dsetu32[i][j-1] << 1;
-            asetu32[i*dims[1]+j] = dsetu32[i][j];
-        }
-        valu32bits <<= 1;
-    }
-
-    H5Dwrite(dataset, H5T_NATIVE_UINT32, H5S_ALL, H5S_ALL, H5P_DEFAULT, dsetu32);
-    /* Attribute of 32 bits unsigned int */
-    adims[0] = F66_XDIM * F66_YDIM32;
-    aspace = H5Screate_simple(1, adims, NULL);
-    attr = H5Acreate2(dataset, F66_DATASETU32, H5T_STD_U32LE, aspace, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(attr, H5T_NATIVE_UINT32, asetu32);
-    H5Aclose(attr);
-    H5Sclose(aspace);
-    H5Sclose(space);
-    H5Dclose(dataset);
-
-    /* Dataset of 64 bits unsigned int */
-    dims[0] = F66_XDIM; dims[1] = F66_YDIM64;
-    space = H5Screate_simple(2, dims, NULL);
-    dataset = H5Dcreate2(fid, F66_DATASETU64, H5T_STD_U64LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
-    valu64bits = (uint64_t) ~0Lu;    /* all 1s */
-    for(i = 0; i < dims[0]; i++){
-        dsetu64[i][0] = valu64bits;
-        asetu64[i*dims[1]] = dsetu64[i][0];
-        for(j = 1; j < dims[1]; j++) {
-            dsetu64[i][j] = dsetu64[i][j-1] << 1;
-            asetu64[i*dims[1]+j] = dsetu64[i][j];
-        }
-        valu64bits <<= 1;
-    }
-
-    H5Dwrite(dataset, H5T_NATIVE_UINT64, H5S_ALL, H5S_ALL, H5P_DEFAULT, dsetu64);
-    /* Attribute of 64 bits unsigned int */
-    adims[0] = F66_XDIM * F66_YDIM64;
-    aspace = H5Screate_simple(1, adims, NULL);
-    attr = H5Acreate2(dataset, F66_DATASETU64, H5T_STD_U64LE, aspace, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(attr, H5T_NATIVE_UINT64, asetu64);
-    H5Aclose(attr);
-    H5Sclose(aspace);
-    H5Sclose(space);
-    H5Dclose(dataset);
-
-    /* Dataset of 8 bits signed int */
-    dims[0] = F66_XDIM; dims[1] = F66_YDIM8;
-    space = H5Screate_simple(2, dims, NULL);
-    dataset = H5Dcreate2(fid, F66_DATASETS08, H5T_STD_I8LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
-    val8bits = (int8_t) ~0;	/* all 1s */
-    for(i = 0; i < dims[0]; i++){
-        dset8[i][0] = val8bits;
-        aset8[i*dims[1]] = dset8[i][0];
-        for(j = 1; j < dims[1]; j++) {
-            dset8[i][j] = dset8[i][j-1] << 1;
-            aset8[i*dims[1]+j] = dset8[i][j];
-        }
-        val8bits <<= 1;
-    }
-
-    H5Dwrite(dataset, H5T_NATIVE_INT8, H5S_ALL, H5S_ALL, H5P_DEFAULT, dset8);
-    /* Attribute of 8 bits signed int */
-    adims[0] = F66_XDIM * F66_YDIM8;
-    aspace = H5Screate_simple(1, adims, NULL);
-    attr = H5Acreate2(dataset, F66_DATASETS08, H5T_STD_I8LE, aspace, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(attr, H5T_NATIVE_INT8, aset8);
-    H5Aclose(attr);
-    H5Sclose(aspace);
-    H5Sclose(space);
-    H5Dclose(dataset);
-
-    /* Dataset of 16 bits signed int */
-    dims[0] = F66_XDIM; dims[1] = F66_YDIM16;
-    space = H5Screate_simple(2, dims, NULL);
-    dataset = H5Dcreate2(fid, F66_DATASETS16, H5T_STD_I16LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
-    val16bits = (int16_t) ~0;	/* all 1s */
-    for(i = 0; i < dims[0]; i++){
-        dset16[i][0] = val16bits;
-        aset16[i*dims[1]] = dset16[i][0];
-        for(j = 1; j < dims[1]; j++) {
-            dset16[i][j] = dset16[i][j-1] << 1;
-            aset16[i*dims[1]+j] = dset16[i][j];
-        }
-        val16bits <<= 1;
-    }
-
-    H5Dwrite(dataset, H5T_NATIVE_INT16, H5S_ALL, H5S_ALL, H5P_DEFAULT, dset16);
-    /* Attribute of 16 bits signed int */
-    adims[0] = F66_XDIM * F66_YDIM16;
-    aspace = H5Screate_simple(1, adims, NULL);
-    attr = H5Acreate2(dataset, F66_DATASETS16, H5T_STD_I16LE, aspace, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(attr, H5T_NATIVE_INT16, aset16);
-    H5Aclose(attr);
-    H5Sclose(aspace);
-    H5Sclose(space);
-    H5Dclose(dataset);
-
-    /* Dataset of 32 bits signed int */
-    dims[0] = F66_XDIM; dims[1] = F66_YDIM32;
-    space = H5Screate_simple(2, dims, NULL);
-    dataset = H5Dcreate2(fid, F66_DATASETS32, H5T_STD_I32LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
-    val32bits = (int32_t) ~0;	/* all 1s */
-    for(i = 0; i < dims[0]; i++){
-        dset32[i][0] = val32bits;
-        aset32[i*dims[1]] = dset32[i][0];
-        for(j = 1; j < dims[1]; j++) {
-            dset32[i][j] = dset32[i][j-1] << 1;
-            aset32[i*dims[1]+j] = dset32[i][j];
-        }
-        val32bits <<= 1;
-    }
-
-    H5Dwrite(dataset, H5T_NATIVE_INT32, H5S_ALL, H5S_ALL, H5P_DEFAULT, dset32);
-    /* Attribute of 32 bits signed int */
-    adims[0] = F66_XDIM * F66_YDIM32;
-    aspace = H5Screate_simple(1, adims, NULL);
-    attr = H5Acreate2(dataset, F66_DATASETS32, H5T_STD_I32LE, aspace, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(attr, H5T_NATIVE_INT32, aset32);
-    H5Aclose(attr);
-    H5Sclose(aspace);
-    H5Sclose(space);
-    H5Dclose(dataset);
-
-    /* Dataset of 64 bits signed int */
-    dims[0] = F66_XDIM; dims[1] = F66_YDIM64;
-    space = H5Screate_simple(2, dims, NULL);
-    dataset = H5Dcreate2(fid, F66_DATASETS64, H5T_STD_I64LE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
-    val64bits = (int64_t) ~0L;   /* all 1s */
-    for(i = 0; i < dims[0]; i++){
-        dset64[i][0] = val64bits;
-        aset64[i*dims[1]] = dset64[i][0];
-        for(j = 1; j < dims[1]; j++) {
-            dset64[i][j] = dset64[i][j-1] << 1;
-            aset64[i*dims[1]+j] = dset64[i][j];
-        }
-        val64bits <<= 1;
-    }
-
-    H5Dwrite(dataset, H5T_NATIVE_INT64, H5S_ALL, H5S_ALL, H5P_DEFAULT, dset64);
-    /* Attribute of 64 bits signed int */
-    adims[0] = F66_XDIM * F66_YDIM64;
-    aspace = H5Screate_simple(1, adims, NULL);
-    attr = H5Acreate2(dataset, F66_DATASETS64, H5T_STD_I64LE, aspace, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(attr, H5T_NATIVE_INT64, aset64);
-    H5Aclose(attr);
-    H5Sclose(aspace);
-    H5Sclose(space);
-    H5Dclose(dataset);
-
-    /* Double Dummy set for failure tests */
-    dims[0] = F66_XDIM; dims[1] = F66_YDIM8;
-    space = H5Screate_simple(2, dims, NULL);
-    dataset = H5Dcreate2(fid, F66_DUMMYDBL, H5T_IEEE_F64BE, space, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
-
-    for(i = 0; i < dims[0]; i++)
-        for(j = 0; j < dims[1]; j++) {
-            dsetdbl[i][j] = 0.0001 * j + i;
-            asetdbl[i*dims[1]+j] = dsetdbl[i][j];
-        }
-
-    H5Dwrite(dataset, H5T_NATIVE_DOUBLE, H5S_ALL, H5S_ALL, H5P_DEFAULT, dsetdbl);
-    /* Attribute of double */
-    adims[0] = F66_XDIM * F66_YDIM8;
-    aspace = H5Screate_simple(1, adims, NULL);
-    attr = H5Acreate2(dataset, F66_DUMMYDBL, H5T_IEEE_F64BE, aspace, H5P_DEFAULT, H5P_DEFAULT);
-    H5Awrite(attr, H5T_NATIVE_DOUBLE, asetdbl);
-    H5Aclose(attr);
-    H5Sclose(aspace);
-    H5Sclose(space);
-    H5Dclose(dataset);
-    H5Fclose(fid);
-}
-
-
-/*-------------------------------------------------------------------------
  * Function: main
  *
  *-------------------------------------------------------------------------
@@ -9653,6 +9240,7 @@ int main(void)
     gent_extlinks();
     gent_fs_strategy_threshold();
     gent_packedbits();
+    gent_dataset_idx();
     gent_attr_intsize();
     gent_charsets();
     gent_compound_intsizes();
@@ -9664,8 +9252,6 @@ int main(void)
     gent_string_scalars();
     gent_compound_int_array();
     gent_compound_ints();
-    gent_intattrscalars();
-    gent_intsattrs();
 
     return 0;
 }

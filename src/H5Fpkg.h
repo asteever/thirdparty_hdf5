@@ -63,7 +63,7 @@
 #define H5F_SUPER_ALL_FLAGS             (H5F_SUPER_WRITE_ACCESS | H5F_SUPER_FILE_OK)
 
 /* Mask for removing private file access flags */
-#define H5F_ACC_PUBLIC_FLAGS 	        0x001fu
+#define H5F_ACC_PUBLIC_FLAGS 	        0x007fu
 
 /* Free space section+aggregator merge flags */
 #define H5F_FS_MERGE_METADATA           0x01    /* Section can merge with metadata aggregator */
@@ -255,6 +255,11 @@ struct H5F_file_t {
 
     /* Metadata accumulator information */
     H5F_meta_accum_t accum;     /* Metadata accumulator info           	*/
+
+    /* Metadata retry info */
+    unsigned 		read_attempts;	/* The # of reads to try when reading metadata with checksum */
+    unsigned		retries_nbins;		/* # of bins for each retries[] */
+    uint32_t		*retries[H5AC_NTYPES];  /* Track # of read retries for metdata items with checksum */
 };
 
 /*
