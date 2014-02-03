@@ -26,6 +26,7 @@
 #include "H5srcdir.h"
 
 #include "H5Bprivate.h"
+#include "H5Iprivate.h"
 #include "H5Pprivate.h"
 
 /*
@@ -117,6 +118,9 @@
 #define NGROUPS			2
 #define NDSETS			4
 
+/* Name of message file that is used by test_file_lock_concur() and test_file_lock_swmr_concur() */
+#define DONE_MESSAGE            "DONE_MESSAGE"  /* The message file to create */
+
 const char *OLD_FILENAME[] = {  /* Files created under 1.6 branch and 1.8 branch */
     "filespace_1_6.h5",	/* 1.6 HDF5 file */
     "filespace_1_8.h5"	/* 1.8 HDF5 file */
@@ -142,6 +146,16 @@ static void
 test_obj_count_and_id(hid_t, hid_t, hid_t, hid_t, hid_t, hid_t);
 static void
 check_file_id(hid_t, hid_t);
+
+/* Helper routine used by test_rw_noupdate() */
+static int cal_chksum(const char *file, uint32_t *chksum);
+
+static void test_rw_noupdate(void);
+
+static void test_file_lock_same(void);
+static void test_file_lock_swmr_same(void);
+static void test_file_lock_concur(void);
+static void test_file_lock_swmr_concur(void);
 
 /****************************************************************
 **
@@ -2311,6 +2325,104 @@ test_cached_stab_info(void)
     CHECK(ret, FAIL, "H5Fclose");
 } /* end test_cached_stab_info() */
 
+/*
+ * To calculate the checksum for a file.
+ * This is a helper routine for test_rw_noupdate().
+ */
+static int
+cal_chksum(const char *file, uint32_t *chksum)
+{
+    int curr_num_errs = GetTestNumErrs();       /* Retrieve the current # of errors */
+    int fdes = -1;                              /* File descriptor */
+    void *file_data = NULL;                     /* Copy of file data */
+    ssize_t bytes_read;                         /* # of bytes read */
+    h5_stat_t sb;                               /* Stat buffer for file */
+    herr_t ret;                                 /* Generic return value */
+
+    /* Open the file */
+    fdes = HDopen(file, O_RDONLY, 0);
+    CHECK(fdes, FAIL, "HDopen");
+
+    /* Retrieve the file's size */
+    ret = HDfstat(fdes, &sb);
+    CHECK(fdes, FAIL, "HDfstat");
+
+    /* Allocate space for the file data */
+    file_data = HDmalloc((size_t)sb.st_size);
+    CHECK(file_data, NULL, "HDmalloc");
+
+    if(file_data) {
+        /* Read file's data into memory */
+        bytes_read = HDread(fdes, file_data, (size_t)sb.st_size);
+        CHECK(bytes_read == sb.st_size, FALSE, "HDmalloc");
+
+        /* Calculate checksum */
+        *chksum = H5_checksum_lookup3(file_data, sizeof(file_data), 0);
+
+        /* Free memory */
+        HDfree(file_data);
+    }
+
+    /* Close the file */
+    ret = HDclose(fdes);
+    CHECK(ret, FAIL, "HDclose");
+
+    return((GetTestNumErrs() == curr_num_errs) ? 0 : -1);
+} /* cal_chksum() */
+
+/****************************************************************
+**
+**  test_rw_noupdate(): low-level file test routine.
+**      This test checks to ensure that opening and closing a file
+**      with read/write permissions does not write anything to the
+**      file if the file does not change.
+**	Due to the implementation of file locking (status_flags in 
+**	the superblock is used), this test is changed to use checksum 
+**	instead of timestamp to verify the file is not changed.
+**
+**  Programmer: Vailin Choi; July 2013
+**
+*****************************************************************/
+static void
+test_rw_noupdate(void)
+{
+    herr_t ret;         /* Generic return value */
+    hid_t fid;			/* File ID */
+    uint32_t chksum1, chksum2; 	/* Checksum value */
+
+    /* Output message about test being performed */
+    MESSAGE(5, ("Testing to verify that nothing is written if nothing is changed.\n"));
+
+    /* Create and Close a HDF5 File */
+    fid = H5Fcreate(FILE1, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    CHECK(fid, FAIL, "H5Fcreate");
+
+    /* Close the file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Calculate checksum for the file */
+    ret = cal_chksum(FILE1, &chksum1);
+    CHECK(ret, FAIL, "HDopen");
+
+    /* Open and close File With Read/Write Permission */
+    fid = H5Fopen(FILE1, H5F_ACC_RDWR, H5P_DEFAULT);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Close the file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Calculate checksum for the file */
+    ret = cal_chksum(FILE1, &chksum2);
+    CHECK(ret, FAIL, "HDopen");
+
+    /* The two checksums are the same, i.e. the file is not changed */
+    VERIFY(chksum1, chksum2, "Checksum");
+
+} /* end test_rw_noupdate() */
+
+#ifdef OUT
 /****************************************************************
 **
 **  test_rw_noupdate(): low-level file test routine.
@@ -2399,6 +2511,7 @@ test_rw_noupdate(void)
         VERIFY(ret, 0, "Timestamp");
     } /* end else */
 } /* end test_rw_noupdate() */
+#endif
 
 /****************************************************************
 **
@@ -3500,7 +3613,2584 @@ test_libver_macros2(void)
 
 /****************************************************************
 **
-**  test_deprec():
+**  test_metadata_read_attempts(): 
+**  This test checks whether the following two public routines work as
+**  specified in the reference manuals:
+**	H5Pset_metadata_read_attempts() 
+**  	H5Pget_metadata_read_attempts() 
+**
+*****************************************************************/
+static void
+test_metadata_read_attempts(void)
+{
+    hid_t fapl;    		/* File access property list */
+    hid_t file_fapl;    	/* The file's access property list */
+    hid_t fid, fid1, fid2;    	/* File IDs */
+    unsigned attempts;		/* The # of read attempts */
+    herr_t ret;         	/* Generic return value */
+
+    /* Output message about test being performed */
+    MESSAGE(5, ("Testing H5Pget/set_metadata_read_attempts()\n"));
+
+    /* 
+     * Set A:
+     *	Tests on verifying the # of read attempts when:
+     *    --setting/getting read attempts from a 
+     *	    file access property list.
+     */
+    /* Create a file access property list */
+    fapl = H5Pcreate(H5P_FILE_ACCESS);
+    CHECK(fapl, FAIL, "H5Pcreate");
+
+    /* Get # of read attempts -- should be the default: 1 */
+    ret = H5Pget_metadata_read_attempts(fapl, &attempts);
+    CHECK(ret, FAIL, "H5Pget_metadata_read_attempts");
+    VERIFY(attempts, 1, "H5Pget_metadata_read_attempts");
+
+    /* Set the # of read attempts to 0--should fail */
+    ret = H5Pset_metadata_read_attempts(fapl, 0);
+    VERIFY(ret, FAIL, "H5Pset_metadata_read_attempts");
+
+    /* Set the # of read attempts to a # > 0--should succeed */
+    ret = H5Pset_metadata_read_attempts(fapl, 9);
+    VERIFY(ret, 0, "H5Pset_metadata_read_attempts");
+
+    /* Retrieve the # of read attempts -- should be 9 */
+    ret = H5Pget_metadata_read_attempts(fapl, &attempts);
+    CHECK(ret, FAIL, "H5Pget_metadata_read_attempts");
+    VERIFY(attempts, 9, "H5Pget_metadata_read_attempts");
+
+    /* Set the # of read attempts to the default for non-SWMR access: H5F_METADATA_READ_ATTEMPTS --should succeed */
+    ret = H5Pset_metadata_read_attempts(fapl, H5F_METADATA_READ_ATTEMPTS);
+    CHECK(ret, FAIL, "H5Pget_metadata_read_attempts");
+
+    /* Retrieve the # of read attempts -- should be H5F_METADATA_READ_ATTEMPTS */
+    ret = H5Pget_metadata_read_attempts(fapl, &attempts);
+    CHECK(ret, FAIL, "H5Pget_metadata_read_attempts");
+    VERIFY(attempts, H5F_METADATA_READ_ATTEMPTS, "H5Pget_metadata_read_attempts");
+
+    /* Set the # of read attempts to the default for SWMR access: H5F_SWMR_METADATA_READ_ATEMPTS --should succeed */
+    ret = H5Pset_metadata_read_attempts(fapl, H5F_SWMR_METADATA_READ_ATTEMPTS);
+    VERIFY(ret, 0, "H5Pset_metadata_read_attempts");
+
+    /* Retrieve the # of read attempts -- should be H5F_SWMR_METADATA_READ_ATTEMPTS */
+    ret = H5Pget_metadata_read_attempts(fapl, &attempts);
+    CHECK(ret, FAIL, "H5Pget_metadata_read_attempts");
+    VERIFY(attempts, H5F_SWMR_METADATA_READ_ATTEMPTS, "H5Pget_metadata_read_attempts");
+
+    ret = H5Pclose(fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+    /* 
+     * Set B:
+     *	Tests on verifying read attempts when:
+     *	  --create a file with non-SWMR access
+     *	  --opening files with SWMR access 
+     *	  --using default or non-default file access property list
+     */
+    /* Test 1 */
+    /* Create a file with non-SWMR access and default fapl */
+    fid = H5Fcreate(FILE1, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    CHECK(fid, FAIL, "H5Fcreate");
+
+    /* Get file's fapl */
+    file_fapl = H5Fget_access_plist(fid);
+    CHECK(file_fapl, FAIL, "H5Fget_access_plist");
+
+    /* Retrieve the # of read attempts from file's fapl -- should be H5F_METADATA_READ_ATTEMPTS */
+    ret = H5Pget_metadata_read_attempts(file_fapl, &attempts);
+    CHECK(ret, FAIL, "H5Pget_metadata_read_attempts");
+    VERIFY(attempts, H5F_METADATA_READ_ATTEMPTS, "H5Pget_metadata_read_attempts");
+
+    /* Close the file */
+    ret=H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Close file's fapl */
+    ret = H5Pclose(file_fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+    /* Test 2 */
+    /* Create a file access property list */
+    fapl = H5Pcreate(H5P_FILE_ACCESS);
+    CHECK(fapl, FAIL, "H5Pcreate");
+
+    /* Set to use latest library format */
+    ret = H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST);
+    CHECK(ret, FAIL, "H5Pset_libver_bounds");
+
+    /* Open the file with SWMR access and default read attempts */
+    fid = H5Fopen(FILE1, (H5F_ACC_RDONLY | H5F_ACC_SWMR_READ), fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Close fapl */
+    ret = H5Pclose(fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+    /* Get file's fapl */
+    file_fapl = H5Fget_access_plist(fid);
+    CHECK(file_fapl, FAIL, "H5Fget_access_plist");
+
+    /* Retrieve the # of read attempts from file's fapl -- should be H5F_SWMR_METADATA_READ_ATTEMPTS */
+    ret = H5Pget_metadata_read_attempts(file_fapl, &attempts);
+    CHECK(ret, FAIL, "H5Pget_metadata_read_attempts");
+    VERIFY(attempts, H5F_SWMR_METADATA_READ_ATTEMPTS, "H5Fget_metadata_read_attempts");
+
+    /* Close the file */
+    ret=H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Close file's fapl */
+    ret = H5Pclose(file_fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+    /* Test 3 */
+    /* Create a file access property list */
+    fapl = H5Pcreate(H5P_FILE_ACCESS);
+    CHECK(fapl, FAIL, "H5Pcreate");
+
+    /* Set to use latest library format */
+    ret = H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST);
+    CHECK(ret, FAIL, "H5Pset_libver_bounds");
+
+    /* Set the # of read attempts */
+    ret = H5Pset_metadata_read_attempts(fapl, 9);
+    CHECK(ret, FAIL, "H5Pset_metadata_read_attempts");
+
+    /* Open the file with SWMR access and fapl (non-default & set to 9) */
+    fid = H5Fopen(FILE1, (H5F_ACC_RDONLY | H5F_ACC_SWMR_READ), fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Close fapl */
+    ret = H5Pclose(fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+    /* Get file's fapl */
+    file_fapl = H5Fget_access_plist(fid);
+    CHECK(file_fapl, FAIL, "H5Fget_access_plist");
+
+    /* Retrieve the # of read attempts from file's fapl -- should be 9 */
+    ret = H5Pget_metadata_read_attempts(file_fapl, &attempts);
+    CHECK(ret, FAIL, "H5Pget_metadata_read_attempts");
+    VERIFY(attempts, 9, "H5Pget_metadata_read_attempts");
+
+    /* Close the file */
+    ret=H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Close file's fapl */
+    ret = H5Pclose(file_fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+    /* Test 4 */
+    /* Create a file access property list */
+    fapl = H5Pcreate(H5P_FILE_ACCESS);
+    CHECK(fapl, FAIL, "H5Pcreate");
+
+    /* Set to use latest library format */
+    ret = H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST);
+    CHECK(ret, FAIL, "H5Pset_libver_bounds");
+
+    /* Set the # of read attempts */
+    ret = H5Pset_metadata_read_attempts(fapl, 1);
+    CHECK(ret, FAIL, "H5Pset_metadata_read_attempts");
+
+    /* Open the file with SWMR access and fapl (non-default & set to 1) */
+    fid = H5Fopen(FILE1, (H5F_ACC_RDONLY | H5F_ACC_SWMR_READ), fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Close fapl */
+    ret = H5Pclose(fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+    /* Get file's fapl */
+    file_fapl = H5Fget_access_plist(fid);
+    CHECK(file_fapl, FAIL, "H5Fget_access_plist");
+
+    /* Retrieve the # of read attempts from file fapl -- should be 1 */
+    ret = H5Pget_metadata_read_attempts(file_fapl, &attempts);
+    CHECK(ret, FAIL, "H5Pget_metadata_read_attempts");
+    VERIFY(attempts, 1, "H5Pget_metadata_read_attempts");
+
+    /* Close the file */
+    ret=H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Close file's fapl */
+    ret = H5Pclose(file_fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+    /* Test 5 */
+    /* Create a file access property list */
+    fapl = H5Pcreate(H5P_FILE_ACCESS);
+    CHECK(fapl, FAIL, "H5Pcreate");
+
+    /* Set to use latest library format */
+    ret = H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST);
+    CHECK(ret, FAIL, "H5Pset_libver_bounds");
+
+    /* Open the file with SWMR_READ and fapl (non-default read attempts but unset) */
+    fid = H5Fopen(FILE1, (H5F_ACC_RDONLY | H5F_ACC_SWMR_READ), fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Close fapl */
+    ret = H5Pclose(fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+    /* Get file's fapl */
+    file_fapl = H5Fget_access_plist(fid);
+    CHECK(file_fapl, FAIL, "H5Fget_access_plist");
+
+    /* Retrieve the # of read attempts from file's fapl -- should be H5F_SWMR_METADATA_READ_ATTEMPTS */
+    ret = H5Pget_metadata_read_attempts(file_fapl, &attempts);
+    CHECK(ret, FAIL, "H5Pget_metadata_read_attempts");
+    VERIFY(attempts, H5F_SWMR_METADATA_READ_ATTEMPTS, "H5Pget_metadata_read_attempts");
+
+    /* Close the file */
+    ret=H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Close file's fapl */
+    ret = H5Pclose(file_fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+    /* 
+     * Set C:
+     *	Tests on verifying read attempts when:
+     *	  --create a file with SWMR access
+     *	  --opening files with non-SWMR access 
+     *	  --using default or non-default file access property list
+     */
+    /* Test 1 */
+    /* Create a file access property list */
+    fapl = H5Pcreate(H5P_FILE_ACCESS);
+    CHECK(fapl, FAIL, "H5Pcreate");
+
+    /* Set to use latest library format */
+    ret = H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST);
+    CHECK(ret, FAIL, "H5Pset_libver_bounds");
+
+    /* Create a file with non-SWMR access and default read attempts */
+    fid = H5Fcreate(FILE1, H5F_ACC_TRUNC|H5F_ACC_SWMR_WRITE, H5P_DEFAULT, fapl);
+    CHECK(fid, FAIL, "H5Fcreate");
+
+    /* Close fapl */
+    ret = H5Pclose(fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+    /* Get file's fapl */
+    file_fapl = H5Fget_access_plist(fid);
+    CHECK(file_fapl, FAIL, "H5Fget_access_plist");
+
+    /* Retrieve the # of read attempts from file's fapl -- should be H5F_SWMR_METADATA_READ_ATTEMPTS */
+    ret = H5Pget_metadata_read_attempts(file_fapl, &attempts);
+    CHECK(ret, FAIL, "H5Pget_metadata_read_attempts");
+    VERIFY(attempts, H5F_SWMR_METADATA_READ_ATTEMPTS, "H5Pget_metadata_read_attempts");
+
+    /* Close the file */
+    ret=H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Close file's fapl */
+    ret = H5Pclose(file_fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+    /* Test 2 */
+    /* Open the file with non-SWMR access and default fapl */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY, H5P_DEFAULT);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Get file's fapl */
+    file_fapl = H5Fget_access_plist(fid);
+    CHECK(file_fapl, FAIL, "H5Fget_access_plist");
+
+    /* Retrieve the # of read attempts from file's fapl -- should be H5F_METADATA_READ_ATTEMPTS */
+    ret = H5Pget_metadata_read_attempts(file_fapl, &attempts);
+    CHECK(ret, FAIL, "H5Pget_metadata_read_attempts");
+    VERIFY(attempts, H5F_METADATA_READ_ATTEMPTS, "H5Pget_metadata_read_attempts");
+
+    /* Close the file */
+    ret=H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Close file's fapl */
+    ret = H5Pclose(file_fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+    /* Test 3 */
+    /* Create a file access property list */
+    fapl = H5Pcreate(H5P_FILE_ACCESS);
+    CHECK(fapl, FAIL, "H5Pcreate");
+
+    /* Set the # of read attempts */
+    ret = H5Pset_metadata_read_attempts(fapl, 9);
+    CHECK(ret, FAIL, "H5Pset_metadata_read_attempts");
+
+    /* Open the file with non-SWMR access and fapl (non-default & set to 9) */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY, fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Close fapl */
+    ret = H5Pclose(fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+    /* Get file's fapl */
+    file_fapl = H5Fget_access_plist(fid);
+    CHECK(file_fapl, FAIL, "H5Fget_access_plist");
+
+    /* Retrieve the # of read attempts from file's fapl -- should be H5F_METADATA_READ_ATTEMPTS */
+    ret = H5Pget_metadata_read_attempts(file_fapl, &attempts);
+    CHECK(ret, FAIL, "H5Pget_metadata_read_attempts");
+    VERIFY(attempts, H5F_METADATA_READ_ATTEMPTS, "H5Pget_metadata_read_attempts");
+
+    /* Close the file */
+    ret=H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Close file's fapl */
+    ret = H5Pclose(file_fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+    /* Test 4 */
+    /* Create a file access property list */
+    fapl = H5Pcreate(H5P_FILE_ACCESS);
+    CHECK(fapl, FAIL, "H5Pcreate");
+
+    /* Set the # of read attempts */
+    ret = H5Pset_metadata_read_attempts(fapl, 1);
+    CHECK(ret, FAIL, "H5Pset_metadata_read_attempts");
+
+    /* Open the file with non-SWMR access and fapl (non-default & set to 1) */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY, fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Close fapl */
+    ret = H5Pclose(fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+    /* Get file's fapl */
+    file_fapl = H5Fget_access_plist(fid);
+    CHECK(file_fapl, FAIL, "H5Fget_access_plist");
+
+    /* Retrieve the # of read attempts from file fapl -- should be 1 */
+    ret = H5Pget_metadata_read_attempts(file_fapl, &attempts);
+    CHECK(ret, FAIL, "H5Pget_metadata_read_attempts");
+    VERIFY(attempts, 1, "H5Fget_metadata_read_attempts");
+
+    /* Close the file */
+    ret=H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Close file's fapl */
+    ret = H5Pclose(file_fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+    /* Test 5 */
+    /* Create a file access property list */
+    fapl = H5Pcreate(H5P_FILE_ACCESS);
+    CHECK(fapl, FAIL, "H5Pcreate");
+
+    /* Open the file with non-SWMR_READ and fapl (non-default but unset) */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY, fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Close fapl */
+    ret = H5Pclose(fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+    /* Get file's fapl */
+    file_fapl = H5Fget_access_plist(fid);
+    CHECK(file_fapl, FAIL, "H5Pget_access_plist");
+
+    /* Retrieve the # of read attempts from file's fapl -- should be H5F_METADATA_READ_ATTEMPTS */
+    ret = H5Pget_metadata_read_attempts(file_fapl, &attempts);
+    CHECK(ret, FAIL, "H5Pget_metadata_read_attempts");
+    VERIFY(attempts, H5F_METADATA_READ_ATTEMPTS, "H5Fget_metadata_read_attempts");
+
+    /* Close the file */
+    ret=H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Close file's fapl */
+    ret = H5Pclose(file_fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+
+    /* Create a file access property list */
+    fapl = H5Pcreate(H5P_FILE_ACCESS);
+    CHECK(fapl, FAIL, "H5Pcreate");
+
+    /* Set to use latest library format */
+    ret = H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST);
+    CHECK(ret, FAIL, "H5Pset_libver_bounds");
+
+    /* Set the # of read attempts */
+    ret = H5Pset_metadata_read_attempts(fapl, 9);
+    CHECK(ret, FAIL, "H5Pset_metadata_read_attempts");
+
+    /* Create a file */
+    fid = H5Fcreate(FILE1, H5F_ACC_TRUNC|H5F_ACC_SWMR_WRITE, H5P_DEFAULT, fapl);
+    CHECK(fid, FAIL, "H5Fcreate");
+
+    /* Close fapl */
+    ret = H5Pclose(fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+    /* Close the file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Open file again with non-SWMR access and default fapl */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY, H5P_DEFAULT);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Get file's fapl */
+    file_fapl = H5Fget_access_plist(fid);
+    CHECK(file_fapl, FAIL, "H5Fget_access_plist");
+
+    /* Retrieve the # of read attempts from file fapl -- should be H5F_METADATA_READ_ATTEMPTS */
+    ret = H5Pget_metadata_read_attempts(file_fapl, &attempts);
+    CHECK(ret, FAIL, "H5Pget_metadata_read_attempts");
+    VERIFY(attempts, H5F_METADATA_READ_ATTEMPTS, "H5Pget_metadata_read_attempts");
+
+    /* Close the file's fapl */
+    ret = H5Pclose(file_fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+    /* Close the file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Create a file access property list */
+    fapl = H5Pcreate(H5P_FILE_ACCESS);
+    CHECK(fapl, FAIL, "H5Pcreate");
+
+    /* Set to use latest library format */
+    ret = H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST);
+    CHECK(ret, FAIL, "H5Pset_libver_bounds");
+
+    /* Open file again with SWMR access and default read attempts */
+    fid = H5Fopen(FILE1, H5F_ACC_SWMR_READ, fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Close fapl */
+    ret = H5Pclose(fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+    /* Get file's fapl */
+    file_fapl = H5Fget_access_plist(fid);
+    CHECK(file_fapl, FAIL, "H5Fget_access_plist");
+
+    /* Retrieve the # of read attempts from file fapl -- should be H5F_SWMR_METADATA_READ_ATTEMPTS */
+    ret = H5Pget_metadata_read_attempts(file_fapl, &attempts);
+    CHECK(ret, FAIL, "H5Pget_metadata_read_attempts");
+    VERIFY(attempts, H5F_SWMR_METADATA_READ_ATTEMPTS, "H5Pget_metadata_read_attempts");
+
+    /* Close the file's fapl */
+    ret = H5Pclose(file_fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+    /* Close the file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Set D:
+     *	Tests on verifying read attempts when:
+     *    --create with non-SWMR access
+     *	  --opening files with SWMR access 
+     *    --H5reopen the files
+     */
+
+    /* Create a file */
+    fid = H5Fcreate(FILE1, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    CHECK(fid, FAIL, "H5Fcreate");
+
+    /* Close the file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Create a file access property list */
+    fapl = H5Pcreate(H5P_FILE_ACCESS);
+    CHECK(fapl, FAIL, "H5Pcreate");
+
+    /* Set to use latest library format */
+    ret = H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST);
+    CHECK(ret, FAIL, "H5Pset_libver_bounds");
+
+    /* Open file again with SWMR access and default read attempts */
+    fid1 = H5Fopen(FILE1, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, fapl);
+    CHECK(fid1, FAIL, "H5Fopen");
+
+    /* Set the # of read attempts */
+    ret = H5Pset_metadata_read_attempts(fapl, 9);
+    CHECK(ret, FAIL, "H5Pset_metadata_read_attempts");
+
+    /* Open file again with SWMR access and fapl (non-default & set to 9) */
+    fid2 = H5Fopen(FILE1, (H5F_ACC_RDONLY | H5F_ACC_SWMR_READ), fapl);
+    CHECK(fid2, FAIL, "H5Fopen");
+
+    /* Close fapl */
+    ret = H5Pclose(fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+    /* Re-open fid1 */
+    fid = H5Freopen(fid1);
+    CHECK(fid, FAIL, "H5Freopen");
+
+    /* Get file's fapl */
+    file_fapl = H5Fget_access_plist(fid);
+    CHECK(file_fapl, FAIL, "H5Fget_access_plist");
+
+    /* Retrieve the # of read attempts from file fapl -- should be H5F_SWMR_METADATA_READ_ATTEMPTS */
+    ret = H5Pget_metadata_read_attempts(file_fapl, &attempts);
+    CHECK(ret, FAIL, "H5Pget_metadata_read_attempts");
+    VERIFY(attempts, H5F_SWMR_METADATA_READ_ATTEMPTS, "H5Pget_metadata_read_attempts");
+
+    /* Close the file's fapl */
+    ret = H5Pclose(file_fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+    /* Close the file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Re-open fid2 */
+    fid = H5Freopen(fid2);
+    CHECK(fid, FAIL, "H5Pclose");
+
+    /* Get file's fapl */
+    file_fapl = H5Fget_access_plist(fid);
+    CHECK(file_fapl, FAIL, "H5Fget_access_plist");
+
+    /* Retrieve the # of read attempts from file fapl -- should be H5F_SWMR_METADATA_READ_ATTEMPTS, not 9 */
+    ret = H5Pget_metadata_read_attempts(file_fapl, &attempts);
+    CHECK(ret, FAIL, "H5Pget_metadata_read_attempts");
+    VERIFY(attempts, H5F_SWMR_METADATA_READ_ATTEMPTS, "H5Pget_metadata_read_attempts");
+
+    /* Close the file's fapl */
+    ret = H5Pclose(file_fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+    /* Close the file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Close all the files */
+    ret=H5Fclose(fid1);
+    CHECK(ret, FAIL, "H5Fclose");
+    ret=H5Fclose(fid2);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Set E:
+     *	Tests on verifying read attempts when:
+     *    --create with SWMR access
+     *	  --opening files with non-SWMR access 
+     *    --H5reopen the files
+     */
+
+    /* Create a file access property list */
+    fapl = H5Pcreate(H5P_FILE_ACCESS);
+    CHECK(fapl, FAIL, "H5Pcreate");
+
+    /* Set to use latest library format */
+    ret = H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST);
+    CHECK(ret, FAIL, "H5Pset_libver_bounds");
+
+    /* Create a file */
+    fid = H5Fcreate(FILE1, H5F_ACC_TRUNC|H5F_ACC_SWMR_WRITE, H5P_DEFAULT, fapl);
+    CHECK(fid1, FAIL, "H5Fcreate");
+
+    /* Close fapl */
+    ret = H5Pclose(fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+    /* Close the file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Open file again with non-SWMR access and default fapl */
+    fid1 = H5Fopen(FILE1, H5F_ACC_RDONLY, H5P_DEFAULT);
+    CHECK(fid2, FAIL, "H5Fopen");
+
+    /* Create a file access property list */
+    fapl = H5Pcreate(H5P_FILE_ACCESS);
+    CHECK(fapl, FAIL, "H5Pcreate");
+
+    /* Set the # of read attempts */
+    ret = H5Pset_metadata_read_attempts(fapl, 9);
+    CHECK(ret, FAIL, "H5Pset_metadata_read_attempts");
+
+    /* Open file again with non-SWMR access and fapl (non-default & set to 9) */
+    fid2 = H5Fopen(FILE1, H5F_ACC_RDONLY, fapl);
+    CHECK(fid2, FAIL, "H5Fopen");
+
+    /* Close fapl */
+    ret = H5Pclose(fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+    /* Re-open fid1 */
+    fid = H5Freopen(fid1);
+    CHECK(fid, FAIL, "H5Freopen");
+
+    /* Get file's fapl */
+    file_fapl = H5Fget_access_plist(fid);
+    CHECK(file_fapl, FAIL, "H5Fget_access_plist"); 
+    /* Retrieve the # of read attempts from file fapl -- should be H5F_METADATA_READ_ATTEMPTS */
+    ret = H5Pget_metadata_read_attempts(file_fapl, &attempts);
+    CHECK(ret, FAIL, "H5Pget_metadata_read_attempts");
+    VERIFY(attempts, H5F_METADATA_READ_ATTEMPTS, "H5Fget_metadata_read_attempts");
+
+    /* Close the file's fapl */
+    ret = H5Pclose(file_fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+    /* Close the file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Re-open fid2 */
+    fid = H5Freopen(fid2);
+    CHECK(fid, FAIL, "H5Freopen");
+
+    /* Get file's fapl */
+    file_fapl = H5Fget_access_plist(fid);
+    CHECK(file_fapl, FAIL, "H5Fget_access_plist");
+
+    /* Retrieve the # of read attempts from file fapl -- should be H5F_METADATA_READ_ATTEMPTS */
+    ret = H5Pget_metadata_read_attempts(file_fapl, &attempts);
+    CHECK(ret, FAIL, "H5Pget_metadata_read_attempts");
+    VERIFY(attempts, H5F_METADATA_READ_ATTEMPTS, "H5Pget_metadata_read_attempts");
+
+    /* Close the file's fapl */
+    ret = H5Pclose(file_fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+    /* Close the file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Close all the files */
+    ret=H5Fclose(fid1);
+    CHECK(ret, FAIL, "H5Fclose");
+    ret=H5Fclose(fid2);
+    CHECK(ret, FAIL, "H5Fclose");
+
+} /* end test_metadata_read_attempts() */
+
+/****************************************************************
+**
+**  test_metadata_read_retry_info(): 
+**  This test checks whether the public routine H5Fget_metadata_read_retry_info 
+**  works as specified in the reference manual.
+**
+*****************************************************************/
+static void
+test_metadata_read_retry_info(void)
+{
+    hid_t fapl, new_fapl; 		/* File access property list */
+    hid_t fid, fid1;   			/* File IDs */
+    H5F_retry_info_t info, info1;	/* The collection of metadata retries */
+    H5F_t *f = NULL, *f1 = NULL; 	/* Internal file object pointers */
+    unsigned i, j, n;			/* Local index variables */
+    herr_t ret;         		/* Generic return value */
+    hid_t did1, did2;			/* Dataset IDs */
+    hid_t sid; 				/* Dataspace ID */
+    hid_t dcpl;				/* Dataset creation property list */
+    hsize_t dims[2] = {6, 10}; 		/* Dataset dimensions */
+    int buf[6][10], chkbuf1[6][10], chkbuf2[6][10];		/* Buffers for data */
+    hsize_t max_dims_1un[2] = {H5S_UNLIMITED, H5S_UNLIMITED}; 	/* Dataset maximum dimensions */
+    hsize_t max_dims_2un[2] = {500, H5S_UNLIMITED}; 		/* Dataset maximum dimensions */
+    hsize_t chunk_dims[2] = {2, 2}; 				/* Chunk dimensions */
+
+
+    /* Output message about test being performed */
+    MESSAGE(5, ("Testing H5Fget_metadata_read_retry_info()\n"));
+
+    /*
+     * Set up file for testing 
+     */
+    /* Create a file access property list */
+    fapl = H5Pcreate(H5P_FILE_ACCESS);
+    CHECK(fapl, FAIL, "H5Pcreate");
+
+    /* Set to use latest library format */
+    ret = H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST);
+    CHECK(ret, FAIL, "H5Pset_libver_bounds");
+
+    /* Create a file without SWMR access */
+    fid = H5Fcreate(FILE1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
+    CHECK(fid, FAIL, "H5Fcreate");
+
+    /* Create a chunked dataset with 1 unlimited dimension: extensible array indexing will be used */
+    sid = H5Screate_simple(2, dims, max_dims_1un);
+    dcpl = H5Pcreate(H5P_DATASET_CREATE);
+    ret = H5Pset_chunk(dcpl, 2, chunk_dims);
+    did1 = H5Dcreate2(fid, "DSET_1UNLIM", H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT);
+
+    /* Create a chunked dataset with 2 unlimited dimension: v2 Btree indexing will be used */
+    sid = H5Screate_simple(2, dims, max_dims_2un);
+    dcpl = H5Pcreate(H5P_DATASET_CREATE);
+    ret = H5Pset_chunk(dcpl, 2, chunk_dims);
+    did2 = H5Dcreate2(fid, "DSET_2UNLIM", H5T_NATIVE_INT, sid, H5P_DEFAULT, dcpl, H5P_DEFAULT);
+
+    /* Initialize buffer data */
+    for(i = n = 0; i < 6; i++)
+	for(j = 0; j < 10; j++)
+              buf[i][j] = (int)n++;
+
+    /* Write to the 2 datasets */
+    ret = H5Dwrite(did1, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf);
+    ret = H5Dwrite(did2, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, buf);
+
+    /* Closing */
+    ret = H5Dclose(did1);
+    CHECK(ret, FAIL, "H5Dclose");
+    ret = H5Dclose(did2);
+    CHECK(ret, FAIL, "H5Dclose");
+    ret = H5Sclose(sid);
+    CHECK(ret, FAIL, "H5Sclose");
+    ret = H5Pclose(dcpl);
+    CHECK(ret, FAIL, "H5Pclose");
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /*
+     *	Case 1: tests on nbins
+     */
+    /*
+     * Open a file without SWMR access, default # of read attempts--
+     * 	 info.nbins should be 0
+     * 	 info.retries should all be NULL
+     */
+    /* Open the file without SWMR access */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY, fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Open the dataset */
+    did1 = H5Dopen2(fid, "DSET_1UNLIM", H5P_DEFAULT);
+    CHECK(did1, FAIL, "H5Dopen");
+    ret = H5Dread(did1, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, chkbuf1);
+    CHECK(ret, FAIL, "H5Dopen");
+
+    /* Open the dataset */
+    did2 = H5Dopen2(fid, "DSET_2UNLIM", H5P_DEFAULT);
+    CHECK(did2, FAIL, "H5Dopen");
+    ret = H5Dread(did2, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, chkbuf2);
+    CHECK(ret, FAIL, "H5Dopen");
+
+    /* Retrieve retries information */
+    ret = H5Fget_metadata_read_retry_info(fid, &info);
+    CHECK(ret, FAIL, "H5Fget_metadata_read_retry_info");
+
+    /* Should be 0 */
+    VERIFY(info.nbins, 0, "H5Fget_metadata_read_retry_info");
+
+    /* Should be all NULL */
+    for(i = 0; i < H5F_NUM_METADATA_READ_RETRY_TYPES; i++)
+	VERIFY(info.retries[i], NULL, "H5Fget_metadata_read_retry_info");
+
+    /* Closing */
+    ret=H5Dclose(did1);
+    CHECK(ret, FAIL, "H5Dclose");
+    ret=H5Dclose(did2);
+    CHECK(ret, FAIL, "H5Dclose");
+    ret=H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /*
+     * Open a file with SWMR access, default # of read attempts--
+     * 	 info.nbins should be 2
+     * 	 info.retries should all be NULL
+     */
+    /* Open the file with SWMR access */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Retrieve retries information */
+    ret = H5Fget_metadata_read_retry_info(fid, &info);
+    CHECK(ret, FAIL, "H5Fget_metadata_read_retry_info");
+
+    /* Should be 2 */
+    VERIFY(info.nbins, 2, "H5Fget_metadata_read_retry_info");
+
+    /* Should be all NULL */
+    for(i = 0; i < H5F_NUM_METADATA_READ_RETRY_TYPES; i++)
+	VERIFY(info.retries[i], NULL, "H5Fget_metadata_read_retry_info");
+
+    /* Closing */
+    ret=H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+
+    /*
+     * Open a file with SWMR access, # of read_attempts is 10:
+     * 	 info.nbins should be 1
+     * 	 info.retries should all be NULL
+     */
+    new_fapl = H5Pcopy(fapl);
+    ret = H5Pset_metadata_read_attempts(new_fapl, 10);
+    CHECK(ret, FAIL, "H5Pset_metadatda_read_attempts");
+
+    /* Open the file with SWMR access */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, new_fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Retrieve retry information */
+    ret = H5Fget_metadata_read_retry_info(fid, &info);
+    CHECK(ret, FAIL, "H5Fget_metadata_read_retry_info");
+
+    /* Should be 1 */
+    VERIFY(info.nbins, 1, "H5Fget_metadata_read_retry_info");
+
+    /* Should be all NULL */
+    for(i = 0; i < H5F_NUM_METADATA_READ_RETRY_TYPES; i++)
+	VERIFY(info.retries[i], NULL, "H5Fget_metadata_read_retry_info");
+
+    /* Closing */
+    ret=H5Pclose(new_fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+    ret=H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /*
+     * Open a file with SWMR access, # of read attempts is 101:
+     * 	 info.nbins should be 3
+     * 	 info.retries should all be NULL
+     */
+    new_fapl = H5Pcopy(fapl);
+    ret = H5Pset_metadata_read_attempts(new_fapl, 101);
+    CHECK(ret, FAIL, "H5Pset_metadata_read_attempts");
+
+    /* Open the file with SWMR access */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, new_fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Retrieve retry information */
+    ret = H5Fget_metadata_read_retry_info(fid, &info);
+    CHECK(ret, FAIL, "H5Fget_metadata_read_retry_info");
+
+    /* Should be 3 */
+    VERIFY(info.nbins, 3, "H5Fget_metadata_read_retry_info");
+
+    /* Should be all NULL */
+    for(i = 0; i < H5F_NUM_METADATA_READ_RETRY_TYPES; i++)
+	VERIFY(info.retries[i], NULL, "H5Fget_metadata_read_retry_info");
+
+    /* Closing */
+    ret=H5Pclose(new_fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+    ret=H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /*
+     * Open a file with SWMR access, # of read_attempts is 10000:
+     * 	 info.nbins should be 4
+     * 	 info.retries should all be NULL
+     */
+    new_fapl = H5Pcopy(fapl);
+    CHECK(new_fapl, FAIL, "H5Pcopy");
+
+    ret = H5Pset_metadata_read_attempts(new_fapl, 10000);
+    CHECK(ret, FAIL, "H5Pset_metadata_read_attempts");
+
+    /* Open the file with SWMR access */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, new_fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Retrieve retry information */
+    ret = H5Fget_metadata_read_retry_info(fid, &info);
+    CHECK(ret, FAIL, "H5Fget_metadata_read_retry_info");
+
+    /* Should be 4 */
+    VERIFY(info.nbins, 4, "H5Fget_metadata_read_retry_info");
+
+    /* Should be all NULL */
+    for(i = 0; i < H5F_NUM_METADATA_READ_RETRY_TYPES; i++)
+	VERIFY(info.retries[i], NULL, "H5Fget_metadata_read_retry_info");
+
+    /* Closing */
+    ret=H5Pclose(new_fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+    ret=H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /*
+     * Open a file with SWMR access, # of read_attempts is 1:
+     * 	 info.nbins should be 0
+     * 	 info.retries should all be NULL
+     */
+    new_fapl = H5Pcopy(fapl);
+    CHECK(new_fapl, FAIL, "H5Pcopy");
+
+    ret = H5Pset_metadata_read_attempts(new_fapl, 1);
+    CHECK(ret, FAIL, "H5Pset_metadata_read_attempts");
+
+    /* Open the file with SWMR access */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, new_fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Retrieve retry information */
+    ret = H5Fget_metadata_read_retry_info(fid, &info);
+    CHECK(ret, FAIL, "H5Fget_metadata_read_retry_info");
+
+    /* Should be 0 */
+    VERIFY(info.nbins, 0, "H5Fget_metadata_read_retry_info");
+
+    /* Should be all NULL */
+    for(i = 0; i < H5F_NUM_METADATA_READ_RETRY_TYPES; i++)
+	VERIFY(info.retries[i], NULL, "H5Fget_metadata_read_retry_info");
+
+    /* Closing */
+    ret=H5Pclose(new_fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+    ret=H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+
+    /* 
+     * Case 2: tests on retries info
+     */
+
+    /* Open the file with SWMR access */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Open the dataset */
+    did1 = H5Dopen2(fid, "DSET_1UNLIM", H5P_DEFAULT);
+    CHECK(did1, FAIL, "H5Dopen");
+
+    /* Read data from the dataset */
+    ret = H5Dread(did1, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, chkbuf1);
+    CHECK(ret, FAIL, "H5Dread");
+
+    /* Open the dataset */
+    did2 = H5Dopen2(fid, "DSET_2UNLIM", H5P_DEFAULT);
+    CHECK(did2, FAIL, "H5Dopen");
+
+    /* Read data from the dataset */
+    ret = H5Dread(did2, H5T_NATIVE_INT, H5S_ALL, H5S_ALL, H5P_DEFAULT, chkbuf2);
+    CHECK(ret, FAIL, "H5Dread");
+
+    /* Retrieve retry information */
+    ret = H5Fget_metadata_read_retry_info(fid, &info);
+    CHECK(ret, FAIL, "H5Fget_metadata_read_retry_info");
+
+    /* Should be 2 */
+    VERIFY(info.nbins, 2, "H5Fget_metadata_read_retry_info");
+
+    /* Should be all NULL */
+    for(i = 0; i < H5F_NUM_METADATA_READ_RETRY_TYPES; i++)
+	VERIFY(info.retries[i], NULL, "H5Fget_metadata_read_retry_info");
+
+    /* Get a pointer to the internal file object */
+    f = (H5F_t *)H5I_object(fid);
+    CHECK(f, NULL, "H5I_object");
+
+    /* 
+     * Increment 1st set of retries for metadata items:
+     *	 a) v2 B-tree leaf node--retries[4][1]
+     *   b) Extensive array data block--retries[15][1]
+     *   c) File's superblock--retries[20][0]
+     */
+
+    /* v2 B-tree leaf node: log retry 99 for 500 times */
+    for(i = 0; i < 500; i++) {
+	ret = H5F_track_metadata_read_retries(f, H5AC_BT2_LEAF_ID, 99);
+	CHECK(ret, FAIL, "H5F_track_metadata_read_retries");
+    }
+
+    /* Extensive array data block: log retry 10 for 1000 times */
+    for(i = 0; i < 1000; i++) {
+	ret = H5F_track_metadata_read_retries(f, H5AC_EARRAY_DBLOCK_ID, 10);
+	CHECK(ret, FAIL, "H5F_track_metadata_read_retries");
+    }
+
+    /* File's superblock: log retry 1 for 1 time */
+    ret = H5F_track_metadata_read_retries(f, H5AC_SUPERBLOCK_ID, 1);
+    CHECK(ret, FAIL, "H5F_track_metadata_read_retries");
+
+    /* Retrieve the collection of metadata read retries */
+    ret = H5Fget_metadata_read_retry_info(fid, &info);
+    CHECK(ret, FAIL, "H5Fget_metadata_read_retry_info");
+
+    /* Verify retries for v2 B-tree leaf node */
+    VERIFY(info.retries[4][0], 0, "H5Fget_metadata_read_retry_info");
+    VERIFY(info.retries[4][1], 500, "H5Fget_metadata_read_retry_info");
+
+    /* Verify retries for extensive array data block */
+    VERIFY(info.retries[15][0], 0, "H5Fget_metadata_read_retry_info");
+    VERIFY(info.retries[15][1], 1000, "H5Fget_metadata_read_retry_info");
+
+    /* Verify retries for file's superblock */
+    VERIFY(info.retries[20][0], 1, "H5Fget_metadata_read_retry_info");
+    VERIFY(info.retries[20][1], 0, "H5Fget_metadata_read_retry_info");
+
+    /* Free memory for info.retries */
+    for(i = 0; i < H5F_NUM_METADATA_READ_RETRY_TYPES; i++) {
+	if(info.retries[i] != NULL)
+	    HDfree(info.retries[i]);
+    }
+
+    /* 
+     * Increment 2nd set of retries for metadata items:
+     *	 a) Object header--retries[0][0]
+     *   b) Extensive array datablock--retries[15][0]
+     *   c) Fixed array header--retries[17][1]
+     *   d) File's superblock--retries[20][0]
+     */
+
+    /* Object header: log retry 5 for 5 times */
+    for(i = 0; i < 5; i++) {
+	ret = H5F_track_metadata_read_retries(f, H5AC_OHDR_ID, 5);
+	CHECK(ret, FAIL, "H5F_track_metadata_read_retries");
+    }
+
+    /* Extensive array data block: log retry 4 for 1 time */
+    ret = H5F_track_metadata_read_retries(f, H5AC_EARRAY_DBLOCK_ID, 4);
+
+    /* Fixed array header : log retry 50 for 10000 times */
+    for(i = 0; i < 10000; i++) {
+	ret = H5F_track_metadata_read_retries(f, H5AC_FARRAY_HDR_ID, 50);
+	CHECK(ret, FAIL, "H5F_track_metadata_read_retries");
+    }
+
+    /* File's superblock: log retry 1 for 1 more time */
+    ret = H5F_track_metadata_read_retries(f, H5AC_SUPERBLOCK_ID, 1);
+    CHECK(ret, FAIL, "H5F_track_metadata_read_retries");
+
+    /* Retrieve the collection of metadata read retries */
+    ret = H5Fget_metadata_read_retry_info(fid, &info);
+    CHECK(ret, FAIL, "H5Fget_metadata_read_retry_info");
+
+    /* 
+     * Verify info has both previous + current retries information:
+     */
+    for(i = 0; i < H5F_NUM_METADATA_READ_RETRY_TYPES; i++) {
+	switch(i) {
+	    case 0: /* Object header */
+		VERIFY(info.retries[i][0], 5, "H5Fget_metadata_read_retry_info");
+		VERIFY(info.retries[i][1], 0, "H5Fget_metadata_read_retry_info");
+		break;
+
+	    case 4: /* v2 B-tree leaf node */
+		VERIFY(info.retries[i][0], 0, "H5Fget_metadata_read_retry_info");
+		VERIFY(info.retries[i][1], 500, "H5Fget_metadata_read_retry_info");
+		break;
+    
+	    case 15: /* Extensive array data block */
+		VERIFY(info.retries[i][0], 1, "H5Fget_metadata_read_retry_info");
+		VERIFY(info.retries[i][1], 1000, "H5Fget_metadata_read_retry_info");
+		break;
+
+	    case 17: /* Fixed array header */
+		VERIFY(info.retries[i][0], 0, "H5Fget_metadata_read_retry_info");
+		VERIFY(info.retries[i][1], 10000, "H5Fget_metadata_read_retry_info");
+		break;
+
+	    case 20: /* File's superblock */
+		VERIFY(info.retries[i][0], 2, "H5Fget_metadata_read_retry_info");
+		VERIFY(info.retries[i][1], 0, "H5Fget_metadata_read_retry_info");
+		break;
+
+	    default:
+		VERIFY(info.retries[i], NULL, "H5Fget_metadata_read_retry_info");
+		break;
+	}
+    }
+
+    /* Free memory for info.retries */
+    for(i = 0; i < H5F_NUM_METADATA_READ_RETRY_TYPES; i++)
+	if(info.retries[i] != NULL)
+	    HDfree(info.retries[i]);
+
+    /* Closing */
+    ret=H5Dclose(did1);
+    CHECK(ret, FAIL, "H5Dclose");
+    ret=H5Dclose(did2);
+    CHECK(ret, FAIL, "H5Dclose");
+    ret=H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Get a copy of the file access property list */
+    new_fapl = H5Pcopy(fapl);
+
+    /* Set the number of metadata read attempts to 101 */
+    ret = H5Pset_metadata_read_attempts(new_fapl, 101);
+
+    /* Open the file with SWMR access */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, new_fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Get a pointer to the internal file object */
+    f = (H5F_t *)H5I_object(fid);
+    CHECK(f, NULL, "H5I_object");
+
+    /* File's superblock: log retry 1 for 1 time */
+    H5F_track_metadata_read_retries(f, H5AC_SUPERBLOCK_ID, 1);
+
+    /* Retrieve the collection of metadata read retries */
+    ret = H5Fget_metadata_read_retry_info(fid, &info);
+    CHECK(ret, FAIL, "H5Fget_metadata_read_retry_info");
+
+    /* Should be 3 */
+    VERIFY(info.nbins, 3, "H5Fget_metadata_read_retry_info");
+
+    /* Verify retries info */
+    for(i = 0; i < H5F_NUM_METADATA_READ_RETRY_TYPES; i++) {
+	switch(i) {
+	    case 20: /* File's superblock */
+		VERIFY(info.retries[i][0], 1, "H5Fget_metadata_read_retry_info");
+		VERIFY(info.retries[i][1], 0, "H5Fget_metadata_read_retry_info");
+		VERIFY(info.retries[i][2], 0, "H5Fget_metadata_read_retry_info");
+		break;
+
+	    default:
+		VERIFY(info.retries[i], NULL, "H5Fget_metadata_read_retry_info");
+		break;
+	}
+    }
+
+    /* Free memory */
+    for(i = 0; i < H5F_NUM_METADATA_READ_RETRY_TYPES; i++)
+	if(info.retries[i] != NULL)
+	    HDfree(info.retries[i]);
+
+    /* Closing */
+    ret=H5Pclose(new_fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+    ret=H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /*
+     * Case 3: Tests on retrieving the collection of retries
+     * 	       when H5Fopen and H5Freopen the same file.
+     */
+
+    /*
+     * Open a file without SWMR access, default # of read attempts--
+     * H5Freopen the same file--
+     * Both files should:
+     * 	 nbins should be 0
+     * 	 retries should all be NULL
+     */
+    /* Open the file without SWMR access */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY, fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Re-open fid */
+    fid1 = H5Freopen(fid);
+    CHECK(fid, FAIL, "H5Freopen");
+
+    /* Retrieve retries information for fid */
+    ret = H5Fget_metadata_read_retry_info(fid, &info);
+    CHECK(ret, FAIL, "H5Fget_metadata_read_retry_info");
+
+    /* Retrieve retries information for fid1*/
+    ret = H5Fget_metadata_read_retry_info(fid1, &info1);
+    CHECK(ret, FAIL, "H5Fget_metadata_read_retry_info");
+
+    /* Should be 0 */
+    VERIFY(info.nbins, 0, "H5Fget_metadata_read_retry_info");
+    VERIFY(info1.nbins, 0, "H5Fget_metadata_read_retry_info");
+
+    /* Should be all NULL */
+    for(i = 0; i < H5F_NUM_METADATA_READ_RETRY_TYPES; i++) {
+	VERIFY(info.retries[i], NULL, "H5Fget_metadata_read_retry_info");
+	VERIFY(info1.retries[i], NULL, "H5Fget_metadata_read_retry_info");
+    }
+
+    /* Closing */
+    ret=H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+    ret=H5Fclose(fid1);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /*
+     * Open a file with SWMR access, default # of read attempts:
+     * 	 --increment retries for metadata item: fixed array data block page (retries[19][0]) 
+     * H5Freopen the same file:
+     * 	 --increment retries for metadata item: free-space sections (retries[9][1])--
+     */
+    /* Open the file with SWMR access */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Get a pointer to the internal file object for fid */
+    f = (H5F_t *)H5I_object(fid);
+    CHECK(f, NULL, "H5I_object");
+
+    /* Re-open fid */
+    fid1 = H5Freopen(fid);
+    CHECK(fid, FAIL, "H5Freopen");
+
+    /* Get a pointer to the internal file object for fid1 */
+    f1 = (H5F_t *)H5I_object(fid1);
+    CHECK(f, NULL, "H5I_object");
+
+    /* For fid: fixed array data block page--log retry 9 for 500 times */
+    for(i = 0; i < 500; i++) {
+	ret = H5F_track_metadata_read_retries(f, H5AC_FARRAY_DBLK_PAGE_ID, 9);
+	CHECK(ret, FAIL, "H5F_track_metadata_read_retries");
+    }
+
+    /* For fid1: free-space sections--log retry 99 for 1000 times */
+    for(i = 0; i < 1000; i++) {
+	ret = H5F_track_metadata_read_retries(f1, H5AC_FSPACE_SINFO_ID, 99);
+	CHECK(ret, FAIL, "H5F_track_metadata_read_retries");
+    }
+
+    /* Retrieve the collection of metadata read retries for fid */
+    ret = H5Fget_metadata_read_retry_info(fid, &info);
+    CHECK(ret, FAIL, "H5Fget_metadata_read_retry_info");
+
+    /* Retrieve the collection of metadata read retries for fid1 */
+    ret = H5Fget_metadata_read_retry_info(fid1, &info1);
+    CHECK(ret, FAIL, "H5Fget_metadata_read_retry_info");
+
+    /* Verify nbins for fid & fid1: should be 2 */
+    VERIFY(info.nbins, 2, "H5Fget_metadata_read_retry_info");
+    VERIFY(info1.nbins, 2, "H5Fget_metadata_read_retry_info");
+
+    /* Verify retries for fid: fixed array data block page */
+    VERIFY(info.retries[19][0], 500, "H5Fget_metadata_read_retry_info");
+    VERIFY(info.retries[19][1], 0, "H5Fget_metadata_read_retry_info");
+
+    /* Verify retries for fid: free-space sections */
+    /* (Since file was re-opened) */
+    VERIFY(info.retries[9][0], 0, "H5Fget_metadata_read_retry_info");
+    VERIFY(info.retries[9][1], 1000, "H5Fget_metadata_read_retry_info");
+
+    /* Verify retries for fid1: free-space sections */
+    VERIFY(info1.retries[9][0], 0, "H5Fget_metadata_read_retry_info");
+    VERIFY(info1.retries[9][1], 1000, "H5Fget_metadata_read_retry_info");
+
+    /* Verify retries for fid1: fixed array data block page */
+    /* (Since file was re-opened) */
+    VERIFY(info1.retries[19][0], 500, "H5Fget_metadata_read_retry_info");
+    VERIFY(info1.retries[19][1], 0, "H5Fget_metadata_read_retry_info");
+
+    /* Free memory for info.retries and info1.retries */
+    for(i = 0; i < H5F_NUM_METADATA_READ_RETRY_TYPES; i++) {
+	if(info.retries[i] != NULL)
+	    HDfree(info.retries[i]);
+	if(info1.retries[i] != NULL)
+	    HDfree(info1.retries[i]);
+    } /* end for */
+
+    /* Closing */
+    ret=H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+    ret=H5Fclose(fid1);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    ret=H5Pclose(fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+} /* end test_metadata_read_retry_info() */
+
+/****************************************************************
+**
+**  test_file_lock_same():
+**    With the implementation of file locking, this test checks file
+**    open with different combinations of flags.
+**    This is for single process access.
+**
+*****************************************************************/
+static void
+test_file_lock_same(void)
+{
+    hid_t fid, fid2;    /* File IDs */
+    unsigned intent;    /* File access flags */
+    herr_t ret;         /* Generic return value */
+
+    /* Output message about test being performed */
+    MESSAGE(5, ("Testing file open with different combinations of flags--single process access\n"));
+
+    /* 
+     * Case 1: 1) RDWR 2) RDWR : should succeed 
+     */
+    /* Create file */
+    fid = H5Fcreate(FILE1, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    CHECK(fid, FAIL, "H5Fcreate");
+
+    /* Get and check file intent */
+    ret = H5Fget_intent(fid, &intent);
+    CHECK(ret, FAIL, "H5Fget_intent");
+    VERIFY(intent, H5F_ACC_RDWR, "H5Fget_intent");
+
+    /* Open the same file with RDWR */
+    fid2 = H5Fopen(FILE1, H5F_ACC_RDWR, H5P_DEFAULT);
+
+    /* Get and check the intent */
+    ret = H5Fget_intent(fid2, &intent);
+    CHECK(ret, FAIL, "H5Fget_intent");
+    VERIFY(intent, H5F_ACC_RDWR, "H5Fget_intent");
+
+    /* Close file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Close file */
+    ret = H5Fclose(fid2);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Case 2: 1) RDWR 2) RDONLY : should succeed 
+     */
+    /* Open file with RDWR */
+    fid = H5Fopen(FILE1, H5F_ACC_RDWR, H5P_DEFAULT);
+    CHECK(fid, FAIL, "H5Fcreate");
+
+    /* Get and check the intent */
+    ret = H5Fget_intent(fid, &intent);
+    CHECK(ret, FAIL, "H5Fget_intent");
+    VERIFY(intent, H5F_ACC_RDWR, "H5Fget_intent");
+
+    /* Open file with RDONLY */
+    fid2 = H5Fopen(FILE1, H5F_ACC_RDONLY, H5P_DEFAULT);
+
+    /* Get and check the intent: should get intent from 1st open */
+    ret = H5Fget_intent(fid2, &intent);
+    CHECK(ret, FAIL, "H5Fget_intent");
+    VERIFY(intent, H5F_ACC_RDWR, "H5Fget_intent");
+
+    /* Close file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Close file */
+    ret = H5Fclose(fid2);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Case 3: 1) RDONLY 2) RDWR : should fail 
+     */
+    /* Open file with RDONLY */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY, H5P_DEFAULT);
+    CHECK(fid, FAIL, "H5Fcreate");
+
+    /* Get and check the intent */
+    ret = H5Fget_intent(fid, &intent);
+    CHECK(ret, FAIL, "H5Fget_intent");
+    VERIFY(intent, H5F_ACC_RDONLY, "H5Fget_intent");
+
+    /* Open file with RDWR should fail */
+    H5E_BEGIN_TRY {
+        fid2 = H5Fopen(FILE1, H5F_ACC_RDWR, H5P_DEFAULT);
+    } H5E_END_TRY;
+    VERIFY(fid2, FAIL, "H5Fopen");
+
+    /* Close first file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Case 4: 1) RDONLY 2) RDONLY : should succeed 
+     */
+    /* Open file with RDONLY */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY, H5P_DEFAULT);
+    CHECK(fid, FAIL, "H5Fcreate");
+
+    /* Get and check the intent */
+    ret = H5Fget_intent(fid, &intent);
+    CHECK(ret, FAIL, "H5Fget_intent");
+    VERIFY(intent, H5F_ACC_RDONLY, "H5Fget_intent");
+
+    /* Open file with RDONLY */
+    fid2 = H5Fopen(FILE1, H5F_ACC_RDONLY, H5P_DEFAULT);
+
+    /* Get and check the intent */
+    ret = H5Fget_intent(fid2, &intent);
+    CHECK(ret, FAIL, "H5Fget_intent");
+    VERIFY(intent, H5F_ACC_RDONLY, "H5Fget_intent");
+
+    /* Close file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Close file */
+    ret = H5Fclose(fid2);
+    CHECK(ret, FAIL, "H5Fclose");
+
+} /* end test_file_lock_same() */
+
+/****************************************************************
+**
+**  test_file_lock_swmr_same():
+**    With the implementation of file locking, this test checks file
+**    open with different combinations of flags + SWMR flags.
+**    This is for single process access.
+**
+*****************************************************************/
+static void
+test_file_lock_swmr_same(void)
+{
+    hid_t fid, fid2;    /* File IDs */
+    hid_t fapl;		/* File access property list */
+    herr_t ret;         /* Generic return value */
+
+    /* Output message about test being performed */
+    MESSAGE(5, ("Testing file open with different combinations of flags + SWMR flags--single process access\n"));
+
+    /* Create a file access property list */
+    fapl = H5Pcreate(H5P_FILE_ACCESS);
+    CHECK(fapl, FAIL, "H5Pcreate");
+
+    /* Set to use latest library format */
+    ret = H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST);
+    CHECK(ret, FAIL, "H5Pset_libver_bounds");
+
+    /* Create a file */
+    fid = H5Fcreate(FILE1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
+    CHECK(fid, FAIL, "H5Fcreate");
+    
+    /* Close file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Cases a, b, c, d: H5Fopen failure cases 
+     */
+
+    /* 
+     * Case a: RDWR|SWRM_READ : should fail  
+     */
+    H5E_BEGIN_TRY {
+    fid = H5Fopen(FILE1, H5F_ACC_RDWR|H5F_ACC_SWMR_READ, fapl);
+    } H5E_END_TRY;
+    VERIFY(fid, FAIL, "H5Fopen");
+
+    /* 
+     * Case b: RDWR|SWMM_WRTE|SWMR_READ : should fail 
+     */
+    H5E_BEGIN_TRY {
+    fid = H5Fopen(FILE1, H5F_ACC_RDWR|H5F_ACC_SWMR_WRITE|H5F_ACC_SWMR_READ, fapl);
+    } H5E_END_TRY;
+    VERIFY(fid, FAIL, "H5Fopen");
+
+    /* 
+     * Case c: RDONLY|SWMM_WRITE : should fail 
+     */
+    H5E_BEGIN_TRY {
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY|H5F_ACC_SWMR_WRITE, fapl);
+    } H5E_END_TRY;
+    VERIFY(fid, FAIL, "H5Fopen");
+
+    /* 
+     * Case d: RDONLY|SWMM_WRITE|SWMR_READ : should fail 
+     */
+    H5E_BEGIN_TRY {
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY|H5F_ACC_SWMR_WRITE|H5F_ACC_SWMR_READ, fapl);
+    } H5E_END_TRY;
+    VERIFY(fid, FAIL, "H5Fopen");
+
+    /* 
+     * Cases 1 - 12: combinations of different flags for 1st and 2nd opens 
+     */
+
+    /* 
+     * Case 1: 1) RDWR 2) RDWR|SWMR_WRITE : should fail 
+     */
+    fid = H5Fopen(FILE1, H5F_ACC_RDWR, H5P_DEFAULT);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    H5E_BEGIN_TRY {
+    fid2 = H5Fopen(FILE1, H5F_ACC_RDWR|H5F_ACC_SWMR_WRITE, fapl);
+    } H5E_END_TRY;
+    VERIFY(fid2, FAIL, "H5Fopen");
+
+    /* Close file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Case 2: 1) RDWR 2) RDONLY|SWMR_READ : should succeed 
+     */
+    fid = H5Fopen(FILE1, H5F_ACC_RDWR, H5P_DEFAULT);
+    CHECK(fid, FAIL, "H5Fopen");
+    fid2 = H5Fopen(FILE1, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, fapl);
+    CHECK(fid2, FAIL, "H5Fopen");
+
+    /* Close file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+    ret = H5Fclose(fid2);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Case 3: 1) RDWR|SWMR_WRITE 2)RDWR : should succeed 
+     */
+    fid = H5Fopen(FILE1, H5F_ACC_RDWR|H5F_ACC_SWMR_WRITE, fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+    fid2 = H5Fopen(FILE1, H5F_ACC_RDWR, H5P_DEFAULT);
+    CHECK(fid2, FAIL, "H5Fopen");
+
+    /* Close file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Close file */
+    ret = H5Fclose(fid2);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Case 4: 1) RDWR|SWMR_WRITE 2) RDWR|SWMR_WRITE : should succeed 
+     */
+    fid = H5Fopen(FILE1, H5F_ACC_RDWR|H5F_ACC_SWMR_WRITE, fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+    fid2 = H5Fopen(FILE1, H5F_ACC_RDWR|H5F_ACC_SWMR_WRITE, fapl);
+    CHECK(fid2, FAIL, "H5Fopen");
+
+    /* Close file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Close file */
+    ret = H5Fclose(fid2);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Case 5: 1) RDWR|SWMR_WRITE 2) RDONLY|SWMR_READ : should succeed 
+     */
+    fid = H5Fopen(FILE1, H5F_ACC_RDWR|H5F_ACC_SWMR_WRITE, fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+    fid2 = H5Fopen(FILE1, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, fapl);
+    CHECK(fid2, FAIL, "H5Fopen");
+
+    /* Close file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Close file */
+    ret = H5Fclose(fid2);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Case 6: 1) RDWR|SWMR_WRITE 2) RDONLY : should succeed 
+     */
+    fid = H5Fopen(FILE1, H5F_ACC_RDWR|H5F_ACC_SWMR_WRITE, fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+    fid2 = H5Fopen(FILE1, H5F_ACC_RDONLY, H5P_DEFAULT);
+    CHECK(fid2, FAIL, "H5Fopen");
+
+    /* Close file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Close file */
+    ret = H5Fclose(fid2);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Case 7: 1) RDONLY|SWMR_READ 2)RDWR : should fail 
+     */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    H5E_BEGIN_TRY {
+    fid2 = H5Fopen(FILE1, H5F_ACC_RDWR, H5P_DEFAULT);
+    } H5E_END_TRY;
+    VERIFY(fid2, FAIL, "H5Fopen");
+
+    /* Close file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Case 8: 1) RDONLY|SWMR_READ 2) RDWR|SWMR_WRITE : should fail 
+     */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    H5E_BEGIN_TRY {
+    fid2 = H5Fopen(FILE1, H5F_ACC_RDWR|H5F_ACC_SWMR_WRITE, fapl);
+    } H5E_END_TRY;
+    VERIFY(fid2, FAIL, "H5Fopen");
+
+    /* Close file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Case 9: 1) RDONLY|SWMR_READ 2) RDONLY|SWMR_READ : should succeed 
+     */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+    fid2 = H5Fopen(FILE1, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, fapl);
+    CHECK(fid2, FAIL, "H5Fopen");
+
+    /* Close file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Close file */
+    ret = H5Fclose(fid2);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Case 10: 1) RDONLY|SWMR_READ 2) RDONLY : should succeed 
+     */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+    fid2 = H5Fopen(FILE1, H5F_ACC_RDONLY, H5P_DEFAULT);
+    CHECK(fid2, FAIL, "H5Fopen");
+
+    /* Close file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Close file */
+    ret = H5Fclose(fid2);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Case 11: 1) RDONLY 2) RDWR|SWMR_WRITE: should fail 
+     */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY, H5P_DEFAULT);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    H5E_BEGIN_TRY {
+    fid2 = H5Fopen(FILE1, H5F_ACC_RDWR|H5F_ACC_SWMR_WRITE, fapl);
+    } H5E_END_TRY;
+    VERIFY(fid2, FAIL, "H5Fopen");
+
+    /* Close file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Case 12: 1) RDONLY 2) RDONLY|SWMR_READ : should fail 
+     */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY, H5P_DEFAULT);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    H5E_BEGIN_TRY {
+    fid2 = H5Fopen(FILE1, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, fapl);
+    } H5E_END_TRY;
+    VERIFY(fid2, FAIL, "H5Fopen");
+
+    /* Close file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Close the property list */
+    ret=H5Pclose(fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+
+} /* end test_file_lock_swmr_same() */
+
+
+/****************************************************************
+**
+**  test_file_lock_concur():
+**    With the implementation of file locking, this test checks file
+**    open with different combinations of flags.
+**    This is for concurrent access.
+**
+*****************************************************************/
+static void
+test_file_lock_concur(void)
+{
+    hid_t fid;    		/* File ID */
+    herr_t ret;         	/* Generic return value */
+    pid_t childpid=0;		/* Child process ID */
+    pid_t tmppid;		/* Child process ID returned by waitpid */
+    int child_status;		/* Status passed to waitpid */
+    int child_wait_option=0;	/* Options passed to waitpid */
+    int child_ret_value;	/* Exit status of the child */
+
+    /* Output message about test being performed */
+    MESSAGE(5, ("Testing file open with different combinations of flags--concurrent access\n"));
+
+#if !(defined(H5_HAVE_FORK) && defined(H5_HAVE_WAITPID))
+
+    SKIPPED();
+    HDputs("    Test skipped due to fork or waitpid not defined.");
+
+#else /* defined(H5_HAVE_FORK && defined(H5_HAVE_WAITPID) */
+  
+    /* Create the test file */
+    fid = H5Fcreate(FILE1, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Close the file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Case 1: 1) RDWR 2) RDWR : should fail
+     */
+
+    /* Remove the message file to be sure */
+    HDremove(DONE_MESSAGE);
+
+    /* Fork child process */
+    childpid = HDfork();
+    CHECK(childpid, FAIL, "fork");
+
+    if(childpid == 0) { /* Child process */
+	hid_t child_fid;	/* File ID */
+
+	/* Wait till parent process completes the open */
+	if(h5_wait_message(DONE_MESSAGE) < 0)
+	    exit(1);
+
+	/* Open the test file */
+	child_fid = H5Fopen(FILE1, H5F_ACC_RDWR, H5P_DEFAULT);
+
+	/* Should fail */
+	if(child_fid == FAIL) 
+	    exit(0);
+	exit(1);
+    }
+
+    /* Open the test file */
+    fid = H5Fopen(FILE1, H5F_ACC_RDWR, H5P_DEFAULT);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Send the message that the open completes */
+    h5_send_message(DONE_MESSAGE);
+
+    /* Wait for child process to complete */
+    tmppid = HDwaitpid(childpid, &child_status, child_wait_option);
+    CHECK(tmppid, FAIL, "waitpid");
+
+    /* Check if child terminated normally */
+    ret = WIFEXITED(child_status);
+    CHECK(ret, FAIL, "child process terminated abnormally");
+
+    /* Check exit status of the child */
+    child_ret_value = WEXITSTATUS(child_status);
+    VERIFY(child_ret_value, 0, "child process exited with non-zero code");
+
+    /* Close the file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Case 2: 1) RDWR 2) RDONLY : should fail
+     */
+    /* Remove the message file just to be sure */
+    HDremove(DONE_MESSAGE);
+
+    /* Fork child process */
+    childpid = HDfork();
+    CHECK(childpid, FAIL, "fork");
+
+    if(childpid == 0) { /* Child process */
+	hid_t child_fid; 	/* File ID */
+
+	/* Wait till parent process completes the open */
+	if(h5_wait_message(DONE_MESSAGE) < 0)
+	    exit(1);
+
+	/* Opens the test file */
+	child_fid = H5Fopen(FILE1, H5F_ACC_RDONLY, H5P_DEFAULT);
+
+	/* Should fail */
+	if(child_fid == FAIL) 
+	    exit(0);
+	exit(1);
+    }
+
+    /* Opens the test file */
+    fid = H5Fopen(FILE1, H5F_ACC_RDWR, H5P_DEFAULT);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Send the message that the open completes */
+    h5_send_message(DONE_MESSAGE);
+
+    /* Wait for child process to complete */
+    tmppid = HDwaitpid(childpid, &child_status, child_wait_option);
+    CHECK(tmppid, FAIL, "waitpid");
+
+    /* Check if child terminated normally */
+    ret = WIFEXITED(child_status);
+    CHECK(ret, FAIL, "child process terminated abnormally");
+
+    /* Check exit status of the child */
+    child_ret_value = WEXITSTATUS(child_status);
+    VERIFY(child_ret_value, 0, "child process exited with non-zero code");
+
+    /* Close the file */
+    H5Fclose(fid);
+
+    /* 
+     * Case 3: 1) RDONLY 2) RDWR : should fail
+     */
+
+    /* Remove the message file just to be sure */
+    HDremove(DONE_MESSAGE);
+
+    /* Fork child process */
+    childpid = HDfork();
+    CHECK(childpid, FAIL, "fork");
+
+    if(childpid == 0) { /* Child process */
+	hid_t child_fid;	/* File ID */
+
+	/* Wait till parent process completes the open */
+	if(h5_wait_message(DONE_MESSAGE) < 0)
+	    exit(1);
+
+	/* Opens the test file */
+	child_fid = H5Fopen(FILE1, H5F_ACC_RDWR, H5P_DEFAULT);
+
+	/* Should fail */
+	if(child_fid == FAIL)
+	    exit(0);
+	exit(1);
+    }
+
+    /* Opens the test file */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY, H5P_DEFAULT);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Send the message that the open completes */
+    h5_send_message(DONE_MESSAGE);
+
+    /* Wait for child process to complete */
+    tmppid = HDwaitpid(childpid, &child_status, child_wait_option);
+    CHECK(tmppid, FAIL, "waitpid");
+
+    /* Check if child terminated normally */
+    ret = WIFEXITED(child_status);
+    CHECK(ret, FAIL, "child process terminated abnormally");
+
+    /* Check exit status of child process */
+    child_ret_value = WEXITSTATUS(child_status);
+    VERIFY(child_ret_value, 0, "child process exited with non-zero code");
+
+    /* Close the file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Case 4: 1) RDONLY 2) RDONLY : should succeed
+     */
+
+    HDremove(DONE_MESSAGE);
+
+    /* Fork child process */
+    childpid = HDfork();
+    CHECK(childpid, FAIL, "fork");
+
+    if(childpid == 0) { /* Child process */
+	hid_t child_fid;	/* File ID */
+	herr_t child_ret;      	/* Return value */
+
+	/* Wait till parent process completes the open */
+	if(h5_wait_message(DONE_MESSAGE) < 0)
+	    exit(1);
+
+	/* Opens the test file */
+	child_fid = H5Fopen(FILE1, H5F_ACC_RDONLY, H5P_DEFAULT);
+
+	/* Should succeed */
+	if(child_fid >= 0) {
+	    /* Close the file */
+	    child_ret = H5Fclose(child_fid);
+	    CHECK(child_ret, FAIL, "H5Fclose");
+	    exit(0);
+	}
+	exit(1);
+    }
+    /* Create file */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY, H5P_DEFAULT);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Send the message that the open completes */
+    h5_send_message(DONE_MESSAGE);
+
+    /* Wait for child process to complete */
+    tmppid = HDwaitpid(childpid, &child_status, child_wait_option);
+    CHECK(tmppid, FAIL, "waitpid");
+
+    /* Check if child terminated normally */
+    ret = WIFEXITED(child_status);
+    CHECK(ret, FAIL, "child process terminated abnormally");
+
+    /* Check exit status of child process */
+    child_ret_value = WEXITSTATUS(child_status);
+    VERIFY(child_ret_value, 0, "child process exited with non-zero code");
+
+    /* Close the file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+#endif
+
+} /* end test_file_lock_concur() */
+
+/****************************************************************
+**
+**  test_file_lock_swmr_concur(): low-level file test routine.
+**    With the implementation of file locking, this test checks file
+**    open with different combinations of flags + SWMR flags.
+**    This is for concurrent access.
+**
+*****************************************************************/
+static void
+test_file_lock_swmr_concur(void)
+{
+    hid_t fid;    		/* File ID */
+    hid_t fapl;    		/* File access property list */
+    herr_t ret;         	/* Generic return value */
+    pid_t childpid=0;		/* Child process ID */
+    pid_t tmppid;		/* Child process ID returned by waitpid */
+    int child_status;		/* Status passed to waitpid */
+    int child_wait_option=0;	/* Options passed to waitpid */
+    int child_ret_value;	/* Exit status of the child */
+
+    /* Output message about test being performed */
+    MESSAGE(5, ("Testing file open with different combintations of flags + SWMR flags--concurrent access\n"));
+
+#if !(defined(H5_HAVE_FORK) && defined(H5_HAVE_WAITPID))
+
+    SKIPPED();
+    HDputs("    Test skipped due to fork or waitpid not defined.");
+
+#else /* defined(H5_HAVE_FORK && defined(H5_HAVE_WAITPID) */
+
+    /* Create a file access property list */
+    fapl = H5Pcreate(H5P_FILE_ACCESS);
+    CHECK(fapl, FAIL, "H5Pcreate");
+
+    /* Set to use latest library format */
+    ret = H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST);
+    CHECK(ret, FAIL, "H5Pset_libver_bounds");
+
+    /* Create the test file */
+    fid = H5Fcreate(FILE1, H5F_ACC_TRUNC, H5P_DEFAULT, fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Close the file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Case 1: 1) RDWR 2) RDWR|SWMR_WRITE : should fail
+     */
+
+    /* Remove the message file to be sure */
+    HDremove(DONE_MESSAGE);
+
+    /* Fork child process */
+    childpid = HDfork();
+    CHECK(childpid, FAIL, "fork");
+
+    if(childpid == 0) { /* Child process */
+	hid_t child_fid;	/* File ID */
+
+	/* Wait till parent process completes the open */
+	if(h5_wait_message(DONE_MESSAGE) < 0)
+	    exit(1);
+
+	/* Open the test file */
+	child_fid = H5Fopen(FILE1, H5F_ACC_RDWR|H5F_ACC_SWMR_WRITE, fapl);
+
+	/* Should fail */
+	if(child_fid == FAIL) 
+	    exit(0);
+	exit(1);
+    }
+
+    /* Open the test file */
+    fid = H5Fopen(FILE1, H5F_ACC_RDWR, H5P_DEFAULT);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Send the message that the open completes */
+    h5_send_message(DONE_MESSAGE);
+
+    /* Wait for child process to complete */
+    tmppid = HDwaitpid(childpid, &child_status, child_wait_option);
+    CHECK(tmppid, FAIL, "waitpid");
+
+    /* Check if child terminated normally */
+    ret = WIFEXITED(child_status);
+    CHECK(ret, FAIL, "child process terminated abnormally");
+
+    /* Check exit status of child process */
+    child_ret_value = WEXITSTATUS(child_status);
+    VERIFY(child_ret_value, 0, "child process exited with non-zero code");
+
+    /* Close the file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Case 2: 1) RDWR 2) RDONLY|SWMR_READ: should fail
+     */
+
+    /* Remove the message file to be sure */
+    HDremove(DONE_MESSAGE);
+
+    /* Fork child process */
+    childpid = HDfork();
+    CHECK(childpid, FAIL, "fork");
+
+    if(childpid == 0) { /* Child process */
+	hid_t child_fid;	/* File ID */
+
+	/* Wait till parent process completes the open */
+	if(h5_wait_message(DONE_MESSAGE) < 0)
+	    exit(1);
+
+	/* Open the test file */
+	child_fid = H5Fopen(FILE1, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, fapl);
+
+	/* Should fail */
+	if(child_fid == FAIL) 
+	    exit(0);
+	exit(1);
+    }
+
+    /* Open the test file */
+    fid = H5Fopen(FILE1, H5F_ACC_RDWR, H5P_DEFAULT);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Send the message that the open completes */
+    h5_send_message(DONE_MESSAGE);
+
+    /* Wait for child process to complete */
+    tmppid = HDwaitpid(childpid, &child_status, child_wait_option);
+    CHECK(tmppid, FAIL, "waitpid");
+
+    /* Check if child terminated normally */
+    ret = WIFEXITED(child_status);
+    CHECK(ret, FAIL, "child process terminated abnormally");
+
+    /* Check exit status of child process */
+    child_ret_value = WEXITSTATUS(child_status);
+    VERIFY(child_ret_value, 0, "child process exited with non-zero code");
+
+    /* Close the file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Case 3: 1) RDWR|SWMR_WRITE 2) RDWR : should fail
+     */
+
+    /* Remove the message file to be sure */
+    HDremove(DONE_MESSAGE);
+
+    /* Fork child process */
+    childpid = HDfork();
+    CHECK(childpid, FAIL, "fork");
+
+    if(childpid == 0) { /* Child process */
+	hid_t child_fid;	/* File ID */
+
+	/* Wait till parent process completes the open */
+	if(h5_wait_message(DONE_MESSAGE) < 0)
+	    exit(1);
+
+	/* Open the test file */
+	child_fid = H5Fopen(FILE1, H5F_ACC_RDWR, H5P_DEFAULT);
+
+	/* Should fail */
+	if(child_fid == FAIL) 
+	    exit(0);
+	exit(1);
+    }
+
+    /* Open the test file */
+    fid = H5Fopen(FILE1, H5F_ACC_RDWR|H5F_ACC_SWMR_WRITE, fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Send the message that the open completes */
+    h5_send_message(DONE_MESSAGE);
+
+    /* Wait for child process to complete */
+    tmppid = HDwaitpid(childpid, &child_status, child_wait_option);
+    CHECK(tmppid, FAIL, "waitpid");
+
+    /* Check if child terminated normally */
+    ret = WIFEXITED(child_status);
+    CHECK(ret, FAIL, "child process terminated abnormally");
+
+    /* Check exit status of child process */
+    child_ret_value = WEXITSTATUS(child_status);
+    VERIFY(child_ret_value, 0, "child process exited with non-zero code");
+
+    /* Close the file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Case 4: 1) RDWR|SWMR_WRITE 2) RDWR|SWMR_WRITE : should fail
+     */
+
+    /* Remove the message file just to be sure */
+    HDremove(DONE_MESSAGE);
+
+    /* Fork child process */
+    childpid = HDfork();
+    CHECK(childpid, FAIL, "fork");
+
+    if(childpid == 0) { /* Child process */
+	hid_t child_fid;	/* File ID */
+
+	/* Wait till parent process completes the open */
+	if(h5_wait_message(DONE_MESSAGE) < 0)
+	    exit(1);
+
+	/* Open the test file */
+	child_fid = H5Fopen(FILE1, H5F_ACC_RDWR|H5F_ACC_SWMR_WRITE, fapl);
+
+	/* Should fail */
+	if(child_fid == FAIL) 
+	    exit(0);
+	exit(1);
+    }
+
+    /* Open the test file */
+    fid = H5Fopen(FILE1, H5F_ACC_RDWR|H5F_ACC_SWMR_WRITE, fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Send the message that the open completes */
+    h5_send_message(DONE_MESSAGE);
+
+    /* Wait for child process to complete */
+    tmppid = HDwaitpid(childpid, &child_status, child_wait_option);
+    CHECK(tmppid, FAIL, "waitpid");
+
+    /* Check if child terminated normally */
+    ret = WIFEXITED(child_status);
+    CHECK(ret, FAIL, "child process terminated abnormally");
+
+    /* Check exit status of child process */
+    child_ret_value = WEXITSTATUS(child_status);
+    VERIFY(child_ret_value, 0, "child process exited with non-zero code");
+
+    /* Close the file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Case 5: 1) RDWR|SWMR_WRITE 2) RDONLY|SWMR_READ : should succeed
+     */
+
+    /* Remove the message file just to be sure */
+    HDremove(DONE_MESSAGE);
+
+    /* Fork child process */
+    childpid = HDfork();
+    CHECK(childpid, FAIL, "fork");
+
+    if(childpid == 0) { /* Child process */
+	hid_t child_fid;	/* File ID */
+	herr_t child_ret;	/* Return value */
+
+	/* Wait till parent process completes the open */
+	if(h5_wait_message(DONE_MESSAGE) < 0)
+	    exit(1);
+
+	/* Open the test file */
+	child_fid = H5Fopen(FILE1, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, fapl);
+
+	/* Should succeed */
+	if(child_fid >= 0) {
+	    child_ret = H5Fclose(child_fid);
+	    CHECK(child_ret, FAIL, "H5Fclose");
+	    exit(0);
+	}
+	exit(1);
+    }
+
+    /* Open the test file */
+    fid = H5Fopen(FILE1, H5F_ACC_RDWR|H5F_ACC_SWMR_WRITE, fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Send the message that the open completes */
+    h5_send_message(DONE_MESSAGE);
+
+    /* Wait for child process to complete */
+    tmppid = HDwaitpid(childpid, &child_status, child_wait_option);
+    CHECK(tmppid, FAIL, "waitpid");
+
+    /* Check if child terminated normally */
+    ret = WIFEXITED(child_status);
+    CHECK(ret, FAIL, "child process terminated abnormally");
+
+    /* Check exit status of child process */
+    child_ret_value = WEXITSTATUS(child_status);
+    VERIFY(child_ret_value, 0, "child process exited with non-zero code");
+
+    /* Close the file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Case 6: 1) RDWR|SWMR_WRITE 2) RDONLY : should fail
+     */
+
+    /* Remove the message file just to be sure */
+    HDremove(DONE_MESSAGE);
+
+    /* Fork child process */
+    childpid = HDfork();
+    CHECK(childpid, FAIL, "fork");
+
+    if(childpid == 0) { /* Child process */
+	hid_t child_fid;	/* File ID */
+
+	/* Wait till parent process completes the open */
+	if(h5_wait_message(DONE_MESSAGE) < 0)
+	    exit(1);
+
+	/* Open the test file */
+	child_fid = H5Fopen(FILE1, H5F_ACC_RDONLY, H5P_DEFAULT);
+	/* Should fail */
+	if(child_fid == FAIL) 
+	    exit(0);
+	exit(1);
+    }
+
+    /* Open the test file */
+    fid = H5Fopen(FILE1, H5F_ACC_RDWR|H5F_ACC_SWMR_WRITE, fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Send the message that the open completes */
+    h5_send_message(DONE_MESSAGE);
+
+    /* Wait for child process to complete */
+    tmppid = HDwaitpid(childpid, &child_status, child_wait_option);
+    CHECK(tmppid, FAIL, "waitpid");
+
+    /* Check if child terminated normally */
+    ret = WIFEXITED(child_status);
+    CHECK(ret, FAIL, "child process terminated abnormally");
+
+    /* Check exit status of child process */
+    child_ret_value = WEXITSTATUS(child_status);
+    VERIFY(child_ret_value, 0, "child process exited with non-zero code");
+
+    /* Close the file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Case 7: 1) RDONLY|SWMR_READ 2) RDWR : should fail
+     */
+
+    /* Remove the message file just to be sure */
+    HDremove(DONE_MESSAGE);
+
+    /* Fork child process */
+    childpid = HDfork();
+    CHECK(childpid, FAIL, "fork");
+
+    if(childpid == 0) { /* Child process */
+	hid_t child_fid;	/* File ID */
+
+	/* Wait till parent process completes the open */
+	if(h5_wait_message(DONE_MESSAGE) < 0)
+	    exit(1);
+
+	/* Open the test file */
+	child_fid = H5Fopen(FILE1, H5F_ACC_RDWR, H5P_DEFAULT);
+	/* Should fail */
+	if(child_fid == FAIL) 
+	    exit(0);
+	exit(1);
+    }
+
+    /* Open the test file */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Send the message that the open completes */
+    h5_send_message(DONE_MESSAGE);
+
+    /* Wait for child process to complete */
+    tmppid = HDwaitpid(childpid, &child_status, child_wait_option);
+    CHECK(tmppid, FAIL, "waitpid");
+
+    /* Check if child terminated normally */
+    ret = WIFEXITED(child_status);
+    CHECK(ret, FAIL, "child process terminated abnormally");
+
+    /* Check exit status of child process */
+    child_ret_value = WEXITSTATUS(child_status);
+    VERIFY(child_ret_value, 0, "child process exited with non-zero code");
+
+    /* Close the file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Case 8: 1) RDONLY|SWMR_READ 2) RDWR|SWMR_WRITE : should fail
+     */
+
+    /* Remove the message file just to be sure */
+    HDremove(DONE_MESSAGE);
+
+    /* Fork child process */
+    childpid = HDfork();
+    CHECK(childpid, FAIL, "fork");
+
+    if(childpid == 0) { /* Child process */
+	hid_t child_fid;	/* File ID */
+
+	/* Wait till parent process completes the open */
+	if(h5_wait_message(DONE_MESSAGE) < 0)
+	    exit(1);
+
+	/* Open the test file */
+	child_fid = H5Fopen(FILE1, H5F_ACC_RDWR|H5F_ACC_SWMR_WRITE, fapl);
+	/* Should fail */
+	if(child_fid == FAIL) 
+	    exit(0);
+	exit(1);
+    }
+
+    /* Open the test file */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Send the message that the open completes */
+    h5_send_message(DONE_MESSAGE);
+
+    /* Wait for child process to complete */
+    tmppid = HDwaitpid(childpid, &child_status, child_wait_option);
+    CHECK(tmppid, FAIL, "waitpid");
+
+    /* Check if child terminated normally */
+    ret = WIFEXITED(child_status);
+    CHECK(ret, FAIL, "child process terminated abnormally");
+
+    /* Check exit status of child process */
+    child_ret_value = WEXITSTATUS(child_status);
+    VERIFY(child_ret_value, 0, "child process exited with non-zero code");
+
+    /* Close the file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+
+    /* 
+     * Case 9: 1) RDONLY|SWMR_READ 2) RDONLY|SWMR_READ : should succeed
+     */
+
+    /* Remove the message file just to be sure */
+    HDremove(DONE_MESSAGE);
+
+    /* Fork child process */
+    childpid = HDfork();
+    CHECK(childpid, FAIL, "fork");
+
+    if(childpid == 0) { /* Child process */
+	hid_t child_fid;	/* File ID */
+	herr_t child_ret;	/* Return value */
+
+	/* Wait till parent process completes the open */
+	if(h5_wait_message(DONE_MESSAGE) < 0)
+	    exit(1);
+
+	/* Open the test file */
+	child_fid = H5Fopen(FILE1, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, fapl);
+
+	/* Should succeed */
+	if(child_fid >= 0) {
+	    child_ret = H5Fclose(child_fid);
+	    CHECK(child_ret, FAIL, "H5Fclose");
+	    exit(0);
+	}
+	exit(1);
+    }
+
+    /* Open the test file */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Send the message that the open completes */
+    h5_send_message(DONE_MESSAGE);
+
+    /* Wait for child process to complete */
+    tmppid = HDwaitpid(childpid, &child_status, child_wait_option);
+    CHECK(tmppid, FAIL, "waitpid");
+
+    /* Check if child terminated normally */
+    ret = WIFEXITED(child_status);
+    CHECK(ret, FAIL, "child process terminated abnormally");
+
+    /* Check exit status of child process */
+    child_ret_value = WEXITSTATUS(child_status);
+    VERIFY(child_ret_value, 0, "child process exited with non-zero code");
+
+    /* Close the file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Case 10: 1) RDONLY|SWMR_READ 2) RDONLY : should succeed
+     */
+
+    /* Remove the message file just to be sure */
+    HDremove(DONE_MESSAGE);
+
+    /* Fork child process */
+    childpid = HDfork();
+    CHECK(childpid, FAIL, "fork");
+
+    if(childpid == 0) { /* Child process */
+	hid_t child_fid;	/* File ID */
+	herr_t child_ret;	/* Return value */
+
+	/* Wait till parent process completes the open */
+	if(h5_wait_message(DONE_MESSAGE) < 0)
+	    exit(1);
+
+	/* Open the test file */
+	child_fid = H5Fopen(FILE1, H5F_ACC_RDONLY, H5P_DEFAULT);
+
+	/* Should succeed */
+	if(child_fid >= 0) {
+	    child_ret = H5Fclose(child_fid);
+	    CHECK(child_ret, FAIL, "H5Fclose");
+	    exit(0);
+	}
+	exit(1);
+    }
+
+    /* Open the test file */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, fapl);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Send the message that the open completes */
+    h5_send_message(DONE_MESSAGE);
+
+    /* Wait for child process to complete */
+    tmppid = HDwaitpid(childpid, &child_status, child_wait_option);
+    CHECK(tmppid, FAIL, "waitpid");
+
+    /* Check if child terminated normally */
+    ret = WIFEXITED(child_status);
+    CHECK(ret, FAIL, "child process terminated abnormally");
+
+    /* Check exit status of child process */
+    child_ret_value = WEXITSTATUS(child_status);
+    VERIFY(child_ret_value, 0, "child process exited with non-zero code");
+
+    /* Close the file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+
+    /* 
+     * Case 11: 1) RDONLY 2) RDWR|SWMR_WRITE : should fail
+     */
+
+    /* Remove the message file just to be sure */
+    HDremove(DONE_MESSAGE);
+
+    /* Fork child process */
+    childpid = HDfork();
+    CHECK(childpid, FAIL, "fork");
+
+    if(childpid == 0) { /* Child process */
+	hid_t child_fid;	/* File ID */
+
+	/* Wait till parent process completes the open */
+	if(h5_wait_message(DONE_MESSAGE) < 0)
+	    exit(1);
+
+	/* Open the test file */
+	child_fid = H5Fopen(FILE1, H5F_ACC_RDWR|H5F_ACC_SWMR_WRITE, fapl);
+	/* Should fail */
+	if(child_fid == FAIL) 
+	    exit(0);
+	exit(1);
+    }
+    /* Open the test file */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY, H5P_DEFAULT);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Send the message that the open completes */
+    h5_send_message(DONE_MESSAGE);
+
+    /* Wait for child process to complete */
+    tmppid = HDwaitpid(childpid, &child_status, child_wait_option);
+    CHECK(tmppid, FAIL, "waitpid");
+
+    /* Check if child terminated normally */
+    ret = WIFEXITED(child_status);
+    CHECK(ret, FAIL, "child process terminated abnormally");
+
+    /* Check exit status of child process */
+    child_ret_value = WEXITSTATUS(child_status);
+    VERIFY(child_ret_value, 0, "child process exited with non-zero code");
+
+    /* Close the file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* 
+     * Case 12: 1) RDONLY 2) RDONLY|SWMR_READ : should succeed
+     */
+
+    /* Remove the message file just to be sure */
+    HDremove(DONE_MESSAGE);
+
+    /* Fork child process */
+    childpid = HDfork();
+    CHECK(childpid, FAIL, "fork");
+
+    if(childpid == 0) { /* Child process */
+	hid_t child_fid;	/* File ID */
+	herr_t child_ret;	/* Return value */
+
+	/* Wait till parent process completes the open */
+	if(h5_wait_message(DONE_MESSAGE) < 0)
+	    exit(1);
+
+	/* Open the test file */
+	child_fid = H5Fopen(FILE1, H5F_ACC_RDONLY|H5F_ACC_SWMR_READ, fapl);
+
+	/* Should succeed */
+	if(child_fid >= 0) {
+	    child_ret = H5Fclose(child_fid);
+	    CHECK(child_ret, FAIL, "H5Fclose");
+	    exit(0);
+	}
+	exit(1);
+    }
+
+    /* Open the test file */
+    fid = H5Fopen(FILE1, H5F_ACC_RDONLY, H5P_DEFAULT);
+    CHECK(fid, FAIL, "H5Fopen");
+
+    /* Send the message that the open completes */
+    h5_send_message(DONE_MESSAGE);
+
+    /* Wait for child process to complete */
+    tmppid = HDwaitpid(childpid, &child_status, child_wait_option);
+    CHECK(tmppid, FAIL, "waitpid");
+
+    /* Check if child terminated normally */
+    ret = WIFEXITED(child_status);
+    CHECK(ret, FAIL, "child process terminated abnormally");
+
+    /* Check exit status of child process */
+    child_ret_value = WEXITSTATUS(child_status);
+    VERIFY(child_ret_value, 0, "child process exited with non-zero code");
+
+    /* Close the file */
+    ret = H5Fclose(fid);
+    CHECK(ret, FAIL, "H5Fclose");
+
+    /* Close the property list */
+    ret=H5Pclose(fapl);
+    CHECK(ret, FAIL, "H5Pclose");
+#endif
+
+} /* end test_file_lock_swmr_concur() */
+/****************************************************************
+**
+**  test_deprec(): 
 **	Test deprecated functionality.
 **
 ****************************************************************/
@@ -3682,6 +6372,16 @@ test_file(void)
     test_libver_bounds();       /* Test compatibility for file space management */
     test_libver_macros();       /* Test the macros for library version comparison */
     test_libver_macros2();      /* Test the macros for library version comparison */
+    test_metadata_read_attempts();    	/* Tests for public routines H5Fget/set_metadata_read_attempts() */
+    test_metadata_read_retry_info();    /* Tests for public routine H5Fget_metadata_read_retry_info() */
+    /*
+     * The two tests: test_swmr_write() and test_swmr_read() are removed.
+     * They are covered by the following new tests.
+     */
+    test_file_lock_same();              /* Tests for file open flags--single process access */
+    test_file_lock_swmr_same();         /* Tests for file open flags+SWMR flags--single process access */
+    test_file_lock_concur();            /* Tests for file open flags--concurrent access */
+    test_file_lock_swmr_concur();       /* Tests for file open flags+SWMR flags--concurrent access */
 #ifndef H5_NO_DEPRECATED_SYMBOLS
     test_deprec();              /* Test deprecated routines */
 #endif /* H5_NO_DEPRECATED_SYMBOLS */

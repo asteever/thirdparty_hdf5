@@ -85,6 +85,8 @@ typedef herr_t (*H5EA__unprotect_func_t)(void *thing, hid_t dxpl_id,
  * client class..
  */
 const H5EA_class_t *const H5EA_client_class_g[] = {
+    H5EA_CLS_CHUNK,		/* 0 - H5EA_CLS_CHUNK_ID 		*/
+    H5EA_CLS_FILT_CHUNK,	/* 1 - H5EA_CLS_FILT_CHUNK_ID 		*/
     H5EA_CLS_TEST,		/* ? - H5EA_CLS_TEST_ID			*/
 };
 

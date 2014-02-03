@@ -838,7 +838,6 @@ H5I_register(H5I_type_t type, const void *object, hbool_t app_ref)
      */
     if(type_ptr->wrapped) {
         H5I_wrap_ud_t udata;    /* User data for iteration */
-        hid_t previd;           /* Previous ID value */
         herr_t iter_status;     /* Iteration status */
 
         /* Set up user data for iteration */
@@ -865,6 +864,75 @@ H5I_register(H5I_type_t type, const void *object, hbool_t app_ref)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5I_register() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5I_register_with_id
+ *
+ * Purpose:	Registers an OBJECT in a TYPE with the supplied ID for it.
+ *          This routine will check to ensure the supplied ID is not already
+ *          in use, and ensure that it is a valid ID for the given type, 
+ *          but will NOT check to ensure the OBJECT is not already
+ *          registered (thus, it is possible to register one object under
+ *          multiple IDs).
+ *
+ * Return:  Success:    0
+ *          Failure:    -1
+ *
+ * Programmer: Mike McGreevy
+ *             Wednesday, July 21, 2010
+ *
+ * Modifications:
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5I_register_with_id(H5I_type_t type, const void *object, hbool_t app_ref, hid_t id)
+{
+    H5I_id_type_t	*type_ptr;	/*ptr to the type		*/
+    H5I_id_info_t	*id_ptr;	/*ptr to the new ID information */
+    hid_t		ret_value = SUCCEED; /*return value		*/
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* Check arguments */
+
+    /* Make sure ID is not already in use */
+    if(NULL != (id_ptr = H5I__find_id(id)))
+        HGOTO_ERROR(H5E_ATOM, H5E_BADRANGE, FAIL, "ID already in use?!")
+
+    /* Make sure type number is valid */
+    if(type <= H5I_BADID || type >= H5I_next_type)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, FAIL, "invalid type number")
+
+    /* Get type pointer from list of types */
+    type_ptr = H5I_id_type_list_g[type];
+
+    if(NULL == type_ptr || type_ptr->init_count <= 0)
+        HGOTO_ERROR(H5E_ATOM, H5E_BADGROUP, FAIL, "invalid type")
+
+    /* Make sure requested ID belongs to object's type */
+    if(H5I_TYPE(id) != type)
+        HGOTO_ERROR(H5E_ATOM, H5E_BADRANGE, FAIL, "invalid type for provided ID")
+
+    /* Allocate new structure to house this ID */
+    if(NULL == (id_ptr = H5FL_MALLOC(H5I_id_info_t)))
+        HGOTO_ERROR(H5E_ATOM, H5E_NOSPACE, FAIL, "memory allocation failed")
+
+    /* Create the struct & insert requested ID */
+    id_ptr->id = id;
+    id_ptr->count = 1; /*initial reference count*/
+    id_ptr->app_count = !!app_ref;
+    id_ptr->obj_ptr = object;
+
+    /* Insert into the type */
+    if(H5SL_insert(type_ptr->ids, id_ptr, &id_ptr->id) < 0)
+        HGOTO_ERROR(H5E_ATOM, H5E_CANTINSERT, FAIL, "can't insert ID node into skip list")
+    type_ptr->id_count++;
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5I_register_with_id() */
 
 
 /*-------------------------------------------------------------------------
@@ -1173,7 +1241,7 @@ H5I__remove_common(H5I_id_type_t *type_ptr, hid_t id)
     HDassert(type_ptr);
 
     /* Get the ID node for the ID */
-    if(NULL == (curr_id = H5SL_remove(type_ptr->ids, &id)))
+    if(NULL == (curr_id = (H5I_id_info_t *)H5SL_remove(type_ptr->ids, &id)))
         HGOTO_ERROR(H5E_ATOM, H5E_CANTDELETE, NULL, "can't remove ID node from skip list")
 
     /* (Casting away const OK -QAK) */
@@ -1206,7 +1274,6 @@ void *
 H5I_remove(hid_t id)
 {
     H5I_id_type_t	*type_ptr;	/*ptr to the atomic type	*/
-    H5I_id_info_t	*curr_id;	/*ptr to the current atom	*/
     H5I_type_t		type;		/*atom's atomic type		*/
     void *	        ret_value;	/*return value			*/
 
@@ -1304,7 +1371,7 @@ H5I_dec_ref(hid_t id)
 	HGOTO_ERROR(H5E_ARGS, H5E_BADRANGE, FAIL, "invalid type number")
 
     /* General lookup of the ID */
-    if(NULL == (id_ptr = H5SL_search(type_ptr->ids, &id)))
+    if(NULL == (id_ptr = (H5I_id_info_t *)H5SL_search(type_ptr->ids, &id)))
 	HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't locate ID")
 
     /*
@@ -1505,7 +1572,7 @@ H5I_inc_ref(hid_t id, hbool_t app_ref)
 	HGOTO_ERROR(H5E_ATOM, H5E_BADGROUP, FAIL, "invalid type")
 
     /* General lookup of the ID */
-    if(NULL == (id_ptr = H5SL_search(type_ptr->ids, &id)))
+    if(NULL == (id_ptr = (H5I_id_info_t *)H5SL_search(type_ptr->ids, &id)))
 	HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't locate ID")
 
     /* Adjust reference counts */
@@ -1590,7 +1657,7 @@ H5I_get_ref(hid_t id, hbool_t app_ref)
 	HGOTO_ERROR(H5E_ATOM, H5E_BADGROUP, FAIL, "invalid type")
 
     /* General lookup of the ID */
-    if(NULL == (id_ptr = H5SL_search(type_ptr->ids, &id)))
+    if(NULL == (id_ptr = (H5I_id_info_t *)H5SL_search(type_ptr->ids, &id)))
 	HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't locate ID")
 
     /* Set return value */
@@ -2108,7 +2175,7 @@ H5I__find_id(hid_t id)
         HGOTO_DONE(NULL);
 
     /* Locate the ID node for the ID */
-    ret_value = H5SL_search(type_ptr->ids, &id);
+    ret_value = (H5I_id_info_t *)H5SL_search(type_ptr->ids, &id);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

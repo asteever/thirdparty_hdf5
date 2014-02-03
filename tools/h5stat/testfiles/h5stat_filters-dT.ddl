@@ -1,3 +1,6 @@
+#############################
+Expected output for 'h5stat -dT h5stat_filters.h5'
+#############################
 Filename: h5stat_filters.h5
 Dataset dimension information:
 	Max. rank of datasets: 2

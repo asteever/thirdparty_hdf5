@@ -160,6 +160,17 @@
 #define H5F_ACS_FILE_IMAGE_INFO_DEL             H5P_file_image_info_del
 #define H5F_ACS_FILE_IMAGE_INFO_COPY            H5P_file_image_info_copy
 #define H5F_ACS_FILE_IMAGE_INFO_CLOSE           H5P_file_image_info_close
+/* Definition for # of metadata read attempts */
+#define H5F_ACS_METADATA_READ_ATTEMPTS_SIZE	sizeof(unsigned)
+#define H5F_ACS_METADATA_READ_ATTEMPTS_DEF     	0
+#define H5F_ACS_METADATA_READ_ATTEMPTS_ENC     	H5P__encode_unsigned
+#define H5F_ACS_METADATA_READ_ATTEMPTS_DEC     	H5P__decode_unsigned
+/* Definition for object flush callback */
+#define H5F_ACS_OBJECT_FLUSH_CB_SIZE		sizeof(H5F_object_flush_t)
+#define H5F_ACS_OBJECT_FLUSH_CB_DEF             {NULL, NULL}
+/* Definition for status_flags in the superblock */
+#define H5F_ACS_CLEAR_STATUS_FLAGS_SIZE         sizeof(hbool_t)
+#define H5F_ACS_CLEAR_STATUS_FLAGS_DEF          FALSE
 
 
 /******************/
@@ -247,7 +258,9 @@ static const hbool_t H5F_def_latest_format_g = H5F_ACS_LATEST_FORMAT_DEF;       
 static const hbool_t H5F_def_want_posix_fd_g = H5F_ACS_WANT_POSIX_FD_DEF;          /* Default setting for retrieving 'handle' from core VFD */
 static const unsigned H5F_def_efc_size_g = H5F_ACS_EFC_SIZE_DEF;                   /* Default external file cache size */
 static const H5FD_file_image_info_t H5F_def_file_image_info_g = H5F_ACS_FILE_IMAGE_INFO_DEF;  /* Default file image info and callbacks */
-
+static const unsigned H5F_def_metadata_read_attempts_g = H5F_ACS_METADATA_READ_ATTEMPTS_DEF;  /* Default setting for the # of metadata read attempts */
+static const H5F_object_flush_t H5F_def_object_flush_cb_g = H5F_ACS_OBJECT_FLUSH_CB_DEF;  	   /* Default setting for object flush callback */
+static const hbool_t H5F_def_clear_status_flags_g = H5F_ACS_CLEAR_STATUS_FLAGS_DEF;             /* Default to clear the superblock status_flags */
 
 
 /*-------------------------------------------------------------------------
@@ -396,6 +409,23 @@ H5P_facc_reg_prop(H5P_genclass_t *pclass)
             NULL, NULL, NULL, NULL, NULL, 
             H5F_ACS_FILE_IMAGE_INFO_DEL, H5F_ACS_FILE_IMAGE_INFO_COPY, NULL, H5F_ACS_FILE_IMAGE_INFO_CLOSE) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
+
+    /* Register the # of read attempts */
+    if(H5P_register_real(pclass, H5F_ACS_METADATA_READ_ATTEMPTS_NAME, H5F_ACS_METADATA_READ_ATTEMPTS_SIZE, &H5F_def_metadata_read_attempts_g, 
+            NULL, NULL, NULL, H5F_ACS_METADATA_READ_ATTEMPTS_ENC, H5F_ACS_METADATA_READ_ATTEMPTS_DEC, 
+            NULL, NULL, NULL, NULL) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
+
+    /* Register object flush callback */
+    if(H5P_register_real(pclass, H5F_ACS_OBJECT_FLUSH_CB_NAME, H5F_ACS_OBJECT_FLUSH_CB_SIZE, &H5F_def_object_flush_cb_g, 
+            NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
+
+    /* Register the private property of whether to clear the superblock status_flags. It's used by h5clear only. */
+    if(H5P_register_real(pclass, H5F_ACS_CLEAR_STATUS_FLAGS_NAME, H5F_ACS_CLEAR_STATUS_FLAGS_SIZE, &H5F_def_clear_status_flags_g,
+            NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
+
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -2598,7 +2628,7 @@ H5P__facc_cache_config_enc(const void *value, void **_pp, size_t *size)
 
         H5_ENCODE_UNSIGNED(*pp, config->close_trace_file);
 
-        HDmemcpy(*pp, (const uint8_t *)(config->trace_file_name), H5AC__MAX_TRACE_FILE_NAME_LEN + 1);
+        HDmemcpy(*pp, (const uint8_t *)(config->trace_file_name), (size_t)(H5AC__MAX_TRACE_FILE_NAME_LEN + 1));
         *pp += H5AC__MAX_TRACE_FILE_NAME_LEN + 1;
 
         H5_ENCODE_UNSIGNED(*pp, config->evictions_enabled);
@@ -2980,3 +3010,170 @@ H5P__facc_multi_type_dec(const void **_pp, void *_value)
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5P__facc_multi_type_dec() */
 
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_metadata_read_attempts
+ *
+ * Purpose:	Sets the # of read attempts in the file access property list
+ *		when reading metadata with checksum.
+ *		The # of read attempts set via this routine will only apply
+ *		when opening a file with SWMR access. 
+ *		The # of read attempts set via this routine does not have 
+ *		any effect when opening a file with non-SWMR access; for this
+ *		case, the # of read attempts will be always be 1.
+ *	
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Vailin Choi; Sept 2013
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_metadata_read_attempts(hid_t plist_id, unsigned attempts)
+{
+    H5P_genplist_t *plist;      /* Property list pointer */
+    herr_t ret_value = SUCCEED;   /* return value */
+
+    FUNC_ENTER_API(FAIL)
+    H5TRACE2("e", "iIu", plist_id, attempts);
+
+    /* Cannot set the # of attempts to 0 */
+    if(attempts == 0)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "number of metadatata read attempts must be greater than 0");
+
+    /* Get the plist structure */
+    if(NULL == (plist = H5P_object_verify(plist_id, H5P_FILE_ACCESS)))
+        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
+
+    /* Set values */
+    if(H5P_set(plist, H5F_ACS_METADATA_READ_ATTEMPTS_NAME, &attempts) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set # of metadata read attempts")
+
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* H5Pset_metadata_read_attempts() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_metadata_read_attempts
+ *
+ * Purpose:	Returns the # of metadata read attempts set in the file access property list. 
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Vailin Choi; Sept 2013
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_metadata_read_attempts(hid_t plist_id, unsigned *attempts/*out*/)
+{
+    herr_t      ret_value = SUCCEED;    /* Return value */
+
+    FUNC_ENTER_API(FAIL)
+    H5TRACE2("e", "ix", plist_id, attempts);
+
+    /* Get values */
+    if(attempts) {
+        H5P_genplist_t *plist;              /* Property list pointer */
+
+        /* Get the plist structure */
+        if(NULL == (plist = H5P_object_verify(plist_id, H5P_FILE_ACCESS)))
+            HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
+
+	/* Get the # of read attempts set */
+        if(H5P_get(plist, H5F_ACS_METADATA_READ_ATTEMPTS_NAME, attempts) < 0)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get the number of metadata read attempts")
+
+	/* If not set, return the default value */
+	if(*attempts == H5F_ACS_METADATA_READ_ATTEMPTS_DEF)	/* 0 */
+	    *attempts = H5F_METADATA_READ_ATTEMPTS;
+    } /* end if */
+
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* end H5Pget_metadata_read_attempts() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pset_obj_flush_cb
+ *
+ * Purpose:	Sets the callback function to invoke and the user data when an
+ *		object flush occurs in the file.
+ *	
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Vailin Choi; Dec 2013
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pset_object_flush_cb(hid_t plist_id, H5F_flush_cb_t func, void *udata)
+{
+    H5P_genplist_t *plist;      /* Property list pointer */
+    H5F_object_flush_t flush_info;
+    herr_t ret_value = SUCCEED;   /* return value */
+
+    FUNC_ENTER_API(FAIL)
+    H5TRACE3("e", "ix*x", plist_id, func, udata);
+
+    /* Check if the callback function is NULL and the user data is non-NULL.
+     * This is almost certainly an error as the user data will not be used. */
+    if(!func && udata)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "callback is NULL while user data is not")
+
+    /* Get the plist structure */
+    if(NULL == (plist = H5P_object_verify(plist_id, H5P_FILE_ACCESS)))
+        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
+
+    /* Update property list */
+    flush_info.func = func;
+    flush_info.udata = udata;
+
+    /* Set values */
+    if(H5P_set(plist, H5F_ACS_OBJECT_FLUSH_CB_NAME, &flush_info) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set object flush callback")
+
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* H5Pset_obj_flush_cb() */
+
+/*-------------------------------------------------------------------------
+ * Function:	H5Pget_obj_flush_cb
+ *
+ * Purpose:	Retrieves the callback function and user data set in the
+ *		property list for an object flush.
+ *	
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Vailin Choi; Dec 2013
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Pget_object_flush_cb(hid_t plist_id, H5F_flush_cb_t *func, void **udata)
+{
+    H5P_genplist_t *plist;      /* Property list pointer */
+    H5F_object_flush_t flush_info;
+    herr_t ret_value = SUCCEED;   /* return value */
+
+    FUNC_ENTER_API(FAIL)
+    H5TRACE3("e", "i*x**x", plist_id, func, udata);
+
+    /* Get the plist structure */
+    if(NULL == (plist = H5P_object_verify(plist_id, H5P_FILE_ACCESS)))
+        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
+
+    /* Retrieve the callback function and user data */
+    if(H5P_get(plist, H5F_ACS_OBJECT_FLUSH_CB_NAME, &flush_info) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get object flush callback")
+
+    /* Assign return value */
+    if(func)
+	*func = flush_info.func;
+    if(udata)
+	*udata = flush_info.udata;
+
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* H5Pget_obj_flush_cb() */

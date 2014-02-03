@@ -1,3 +1,6 @@
+#############################
+Expected output for 'h5stat h5stat_newgrat.h5'
+#############################
 Filename: h5stat_newgrat.h5
 File information
 	# of unique groups: 35001

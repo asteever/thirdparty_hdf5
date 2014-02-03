@@ -1779,9 +1779,12 @@ void rr_obj_hdr_flush_confusion(void)
      */
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
-
-    HDassert(mpi_size > 2);
-
+    if (mpi_size < 3){
+	HDfprintf(stdout, "%s needs at least 3 processes to run. Terminated.\n",
+	    fcn_name);
+	nerrors++;
+	return;
+    }
     is_reader = mpi_rank % 2;
     mrc = MPI_Comm_split(MPI_COMM_WORLD, is_reader, mpi_rank, &comm);
     VRFY((mrc==MPI_SUCCESS), "MPI_Comm_split");

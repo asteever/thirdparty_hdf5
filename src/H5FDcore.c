@@ -85,6 +85,9 @@ typedef struct H5FD_core_t {
 #endif /* H5_HAVE_WIN32_API */
     hbool_t dirty;                              /* changes not saved?       */
     H5FD_file_image_callbacks_t fi_callbacks;   /* file image callbacks     */
+
+    /* Information from file open flags, for SWMR access */
+    hbool_t     swmr_read;      /* Whether the file is open for SWMR read access */
 } H5FD_core_t;
 
 /* Driver-specific file access properties */
@@ -134,6 +137,8 @@ static herr_t H5FD_core_write(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, had
             size_t size, const void *buf);
 static herr_t H5FD_core_flush(H5FD_t *_file, hid_t dxpl_id, unsigned closing);
 static herr_t H5FD_core_truncate(H5FD_t *_file, hid_t dxpl_id, hbool_t closing);
+static herr_t H5FD_core_lock(H5FD_t *_file, hbool_t rw);
+static herr_t H5FD_core_unlock(H5FD_t *_file);
 
 static const H5FD_class_t H5FD_core_g = {
     "core",                     /* name                 */
@@ -165,8 +170,8 @@ static const H5FD_class_t H5FD_core_g = {
     H5FD_core_write,            /* write                */
     H5FD_core_flush,            /* flush                */
     H5FD_core_truncate,         /* truncate             */
-    NULL,                       /* lock                 */
-    NULL,                       /* unlock               */
+    H5FD_core_lock,             /* lock                 */
+    H5FD_core_unlock,           /* unlock               */
     H5FD_FLMAP_DICHOTOMY        /* fl_map               */
 };
 
@@ -566,6 +571,10 @@ H5FD_core_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr)
         } /* end if */
     } /* end if */
 
+    /* Check for SWMR reader access */
+    if(flags & H5F_ACC_SWMR_READ)
+        file->swmr_read = TRUE;
+
     /* Set return value */
     ret_value = (H5FD_t *)file;
 
@@ -929,7 +938,13 @@ H5FD_core_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, hadd
         HGOTO_ERROR(H5E_IO, H5E_OVERFLOW, FAIL, "file address overflowed")
     if (REGION_OVERFLOW(addr, size))
         HGOTO_ERROR(H5E_IO, H5E_OVERFLOW, FAIL, "file address overflowed")
-    if((addr + size) > file->eoa)
+    /* If the file is open for SWMR read access, allow access to data past
+     * the end of the allocated space (the 'eoa').  This is done because the
+     * eoa stored in the file's superblock might be out of sync with the
+     * objects being written within the file by the application performing
+     * SWMR write operations.
+     */
+    if(!file->swmr_read && (addr + size) > file->eoa)
         HGOTO_ERROR(H5E_IO, H5E_OVERFLOW, FAIL, "file address overflowed")
 
     /* Read the part which is before the EOF marker */
@@ -1231,3 +1246,76 @@ H5FD_core_truncate(H5FD_t *_file, hid_t UNUSED dxpl_id, hbool_t closing)
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5FD_core_truncate() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5FD_core_lock
+ *
+ * Purpose:     To place an advisory lock on a file.
+ *		The lock type to apply depends on the parameter "rw":
+ *			TRUE--opens for write: an exclusive lock
+ *			FALSE--opens for read: a shared lock
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ * Programmer:  Vailin Choi; May 2013
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5FD_core_lock(H5FD_t *_file, hbool_t rw)
+{
+    H5FD_core_t *file = (H5FD_core_t*)_file;	/* VFD file struct */
+    int lock;					/* The type of lock */
+    herr_t ret_value = SUCCEED;                 /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT
+
+    HDassert(file);
+    if(file->fd >= 0) {
+
+	/* Determine the type of lock */
+	lock = rw ? LOCK_EX : LOCK_SH;
+    
+	/* Place the lock with non-blocking */
+	if(HDflock(file->fd, lock | LOCK_NB) < 0)
+	    HSYS_GOTO_ERROR(H5E_FILE, H5E_BADFILE, FAIL, "unable to flock file")
+    }
+    /* Otherwise a noop */
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5FD_core_lock() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5FD_core_unlock
+ *
+ * Purpose:     To remove the existing lock on the file
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ * Programmer:  Vailin Choi; May 2013
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5FD_core_unlock(H5FD_t *_file)
+{
+    H5FD_core_t *file = (H5FD_core_t*)_file;	/* VFD file struct */
+    herr_t ret_value = SUCCEED;                 /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT
+
+    HDassert(file);
+
+    if(file->fd >= 0) {
+
+	if(HDflock(file->fd, LOCK_UN) < 0)
+	    HSYS_GOTO_ERROR(H5E_FILE, H5E_BADFILE, FAIL, "unable to flock (unlock) file")
+    }
+    /* Otherwise a noop */
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5FD_core_unlock() */

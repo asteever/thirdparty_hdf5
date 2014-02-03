@@ -1,3 +1,6 @@
+#############################
+Expected output for 'h5stat -d --di=15 h5stat_threshold.h5'
+#############################
 Filename: h5stat_threshold.h5
 Dataset dimension information:
 	Max. rank of datasets: 2
