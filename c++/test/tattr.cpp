@@ -1106,6 +1106,7 @@ static void test_attr_mult_read()
 static void test_attr_delete()
 {
     H5std_string  attr_name; // Buffer for attribute names
+    int ii;
 
     // Output message about test being performed
     SUBTEST("Removing Attribute Function");
@@ -1552,6 +1553,7 @@ extern "C"
 void test_attr()
 {
     // Output message about test being performed
+    //MESSAGE("Testing Attributes\n");
     MESSAGE(5, ("Testing Attributes\n"));
 
     test_attr_basic_write();	// Test basic H5A writing code

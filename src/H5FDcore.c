@@ -23,7 +23,7 @@
  */
 
 /* Interface initialization */
-#define H5_INTERFACE_INIT_FUNC	H5FD_core_init_interface
+#define H5_INTERFACE_INIT_FUNC  H5FD_core_init_interface
 
 #include "H5private.h"      /* Generic Functions            */
 #include "H5Eprivate.h"     /* Error handling               */
@@ -105,9 +105,6 @@ typedef struct H5FD_core_fapl_t {
 /* Allocate memory in multiples of this size by default */
 #define H5FD_CORE_INCREMENT 8192
 
-/* Define the block size for aggregation */
-//#define H5FD_CORE_BLOCK_SIZE 524288 /* 512 K */
-
 /* These macros check for overflow of various quantities.  These macros
  * assume that file_offset_t is signed and haddr_t and size_t are unsigned.
  *
@@ -132,7 +129,6 @@ typedef struct H5FD_core_fapl_t {
 static herr_t H5FD_core_add_dirty_region(H5FD_core_t *file, haddr_t start, haddr_t end);
 static herr_t H5FD_core_destroy_dirty_list(H5FD_core_t *file);
 static herr_t H5FD_core_write_to_bstore(H5FD_core_t *file, haddr_t addr, size_t size);
-static herr_t H5FD_core_term(void);
 static void *H5FD_core_fapl_get(H5FD_t *_file);
 static H5FD_t *H5FD_core_open(const char *name, unsigned flags, hid_t fapl_id,
             haddr_t maxaddr);
@@ -154,7 +150,6 @@ static const H5FD_class_t H5FD_core_g = {
     "core",                     /* name                 */
     MAXADDR,                    /* maxaddr              */
     H5F_CLOSE_WEAK,             /* fc_degree            */
-    H5FD_core_term,             /* terminate            */
     NULL,                       /* sb_size              */
     NULL,                       /* sb_encode            */
     NULL,                       /* sb_decode            */
@@ -223,9 +218,6 @@ H5FD_core_add_dirty_region(H5FD_core_t *file, haddr_t start, haddr_t end)
 fprintf(stderr, "Add region: (%llu, %llu)\n", start, end);
 #endif
 
-//    /* Adjust the dirty region to the nearest block boundaries */
-//    if(start % H5FD_CORE_BLOCK_SIZE != 0) {
-//        start = (start / H5FD_CORE_BLOCK_SIZE) * H5FD_CORE_BLOCK_SIZE;
     /* Adjust the dirty region to the nearest block boundaries */
     if(start % file->bstore_page_size != 0) {
         start = (start / file->bstore_page_size) * file->bstore_page_size;
@@ -233,8 +225,6 @@ fprintf(stderr, "Add region: (%llu, %llu)\n", start, end);
         was_adjusted = TRUE;
 #endif
     }
-//    if(end % H5FD_CORE_BLOCK_SIZE != (H5FD_CORE_BLOCK_SIZE - 1)) {
-//        end = (((end / H5FD_CORE_BLOCK_SIZE) + 1) * H5FD_CORE_BLOCK_SIZE) - 1;
     if(end % file->bstore_page_size != (file->bstore_page_size - 1)) {
         end = (((end / file->bstore_page_size) + 1) * file->bstore_page_size) - 1;
         if(end > file->eof){
@@ -492,14 +482,14 @@ done:
  *
  * Purpose:     Shut down the VFD
  *
- * Returns:     SUCCEED (Can't fail)
+ * Returns:     <none>
  *
  * Programmer:  Quincey Koziol
  *              Friday, Jan 30, 2004
  *
  *---------------------------------------------------------------------------
  */
-static herr_t
+void
 H5FD_core_term(void)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
@@ -507,7 +497,7 @@ H5FD_core_term(void)
     /* Reset VFL ID */
     H5FD_CORE_g = 0;
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
+    FUNC_LEAVE_NOAPI_VOID
 } /* end H5FD_core_term() */
 
 
@@ -1220,7 +1210,7 @@ static herr_t
 H5FD_core_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, haddr_t addr,
         size_t size, void *buf/*out*/)
 {
-    H5FD_core_t	*file = (H5FD_core_t*)_file;
+    H5FD_core_t  *file = (H5FD_core_t*)_file;
     herr_t      ret_value=SUCCEED;       /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
@@ -1381,14 +1371,23 @@ H5FD_core_flush(H5FD_t *_file, hid_t UNUSED dxpl_id, unsigned UNUSED closing)
     fprintf(stderr, "FLUSHING. DIRTY LIST:\n");
 #endif
             while(NULL != (item = (H5FD_core_region_t *)H5SL_remove_first(file->dirty_list))) {
-                size = (size_t)((item->end - item->start) + 1);
+
+                /* The file may have been truncated, so check for that
+                 * and skip or adjust as necessary.
+                 */
+                if(item->start < file->eof) {
+                    if(item->end >= file->eof)
+                        item->end = file->eof - 1;
+                    size = (size_t)((item->end - item->start) + 1);
 #ifdef DER
 fprintf(stderr, "(%llu, %llu : %lu)\n", item->start, item->end, size);
 #endif
-                if(H5FD_core_write_to_bstore(file, item->start, size) != SUCCEED)
-                    HGOTO_ERROR(H5E_VFL, H5E_WRITEERROR, FAIL, "unable to write to backing store")
+                    if(H5FD_core_write_to_bstore(file, item->start, size) != SUCCEED)
+                        HGOTO_ERROR(H5E_VFL, H5E_WRITEERROR, FAIL, "unable to write to backing store")
+                } /* end if */
+                
                 item = H5FL_FREE(H5FD_core_region_t, item);
-            }
+            } /* end while */
 
  
 #ifdef DER

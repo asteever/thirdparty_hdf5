@@ -63,6 +63,10 @@
 
 /* Local Macros */
 
+/* Define the maximum number of returned ID structures to keep around
+   for re-use. */
+#define MAX_FREE_ID_STRUCTS 1000
+
 /* Combine a Type number and an atom index into an atom */
 #define H5I_MAKE(g,i)	((((hid_t)(g)&TYPE_MASK)<<ID_BITS)|	  \
 			     ((hid_t)(i)&ID_MASK))
@@ -83,8 +87,12 @@ typedef struct {
     unsigned	init_count;	/* # of times this type has been initialized*/
     hbool_t	wrapped;	/* Whether the id count has wrapped around  */
     unsigned	id_count;	/* Current number of IDs held		    */
-    unsigned	nextid;		/* ID to use for the next atom		    */
+    hid_t	nextid;		/* ID to use for the next atom		    */
     H5SL_t      *ids;           /* Pointer to skip list that stores IDs     */
+
+    /* Fields for holding available IDs */
+    unsigned    avail_count;    /* # of available ID structures awaiting recycling */
+    H5SL_t      *avail_ids;     /* pointer to skip list of available IDs */
 } H5I_id_type_t;
 
 typedef struct {
@@ -95,7 +103,7 @@ typedef struct {
 
 /* User data for iterator callback when IDs have wrapped */
 typedef struct {
-    unsigned nextid;            /* Next ID to expect */
+    hid_t nextid;               /* Next ID to expect */
 } H5I_wrap_ud_t;
 
 /* User data for iterator callback for ID iteration */
@@ -128,6 +136,7 @@ H5FL_DEFINE_STATIC(H5I_id_type_t);
 H5FL_DEFINE_STATIC(H5I_class_t);
 
 /*--------------------- Local function prototypes ---------------------------*/
+static herr_t H5I__free_cb(void *_item, void *_key, void *_udata);
 static int H5I__destroy_type(H5I_type_t type);
 static void *H5I__remove_verify(hid_t id, H5I_type_t id_type);
 static void *H5I__remove_common(H5I_id_type_t *type_ptr, hid_t id);
@@ -342,8 +351,11 @@ H5I_register_type(const H5I_class_t *cls)
         type_ptr->cls = cls;
         type_ptr->wrapped = FALSE;
         type_ptr->id_count = 0;
-        type_ptr->nextid = cls->reserved;
+        type_ptr->nextid = (hid_t)cls->reserved;
         if(NULL == (type_ptr->ids = H5SL_create(H5SL_TYPE_HID, NULL)))
+            HGOTO_ERROR(H5E_ATOM, H5E_CANTCREATE, FAIL, "skip list creation failed")
+        type_ptr->avail_count = 0;
+        if(NULL == (type_ptr->avail_ids = H5SL_create(H5SL_TYPE_HID, NULL)))
             HGOTO_ERROR(H5E_ATOM, H5E_CANTCREATE, FAIL, "skip list creation failed")
     } /* end if */
 
@@ -355,6 +367,8 @@ done:
         if(type_ptr) {
             if(type_ptr->ids)
                 H5SL_close(type_ptr->ids);
+            if(type_ptr->avail_ids)
+                H5SL_close(type_ptr->avail_ids);
             (void)H5FL_FREE(H5I_id_type_t, type_ptr);
         } /* end if */
     } /* end if */
@@ -519,6 +533,35 @@ done:
 
 
 /*-------------------------------------------------------------------------
+ * Function:	H5I__free_cb
+ *
+ * Purpose:	Callback for freeing ID nodes in H5I__remove_common
+ *
+ * Return:	Success:	Non-negative
+ *		Failure:	Negative
+ *
+ * Programmer:	Quincey Koziol
+ *              Friday, October 4, 2013
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+H5I__free_cb(void *_item, void UNUSED *_key, void UNUSED *_udata)
+{
+    H5I_id_info_t *item = (H5I_id_info_t *)_item;       /* Pointer to the ID node */
+
+    FUNC_ENTER_STATIC_NOERR
+
+    /* Sanity check */
+    HDassert(item);
+
+    item = H5FL_FREE(H5I_id_info_t, item);
+
+    FUNC_LEAVE_NOAPI(H5_ITER_CONT)
+} /* end H5I__free_cb() */
+
+
+/*-------------------------------------------------------------------------
  * Function:	H5I_clear_type
  *
  * Purpose:	Removes all objects from the type, calling the free
@@ -612,6 +655,13 @@ H5I_clear_type(H5I_type_t type, hbool_t force, hbool_t app_ref)
         } /* end if */
     } /* end for */
 
+    /* Also free any ID structures being retained for potential re-use */
+    if(type_ptr->avail_count > 0) {
+        if(H5SL_free(type_ptr->avail_ids, H5I__free_cb, NULL) < 0)
+            HGOTO_ERROR(H5E_ATOM, H5E_CANTREMOVE, FAIL, "can't release available ID nodes")
+        type_ptr->avail_count = 0;
+    } /* end if */
+
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5I_clear_type() */
@@ -689,6 +739,10 @@ H5I__destroy_type(H5I_type_t type)
     /* Check if we should release the ID class */
     if(type_ptr->cls->flags & H5I_CLASS_IS_APPLICATION)
         type_ptr->cls = H5FL_FREE(H5I_class_t, (void *)type_ptr->cls);
+
+    if(H5SL_close(type_ptr->avail_ids) < 0)
+        HGOTO_ERROR(H5E_ATOM, H5E_CANTCLOSEOBJ, FAIL, "can't close skip list")
+    type_ptr->avail_ids = NULL;
 
     if(H5SL_close(type_ptr->ids) < 0)
         HGOTO_ERROR(H5E_ATOM, H5E_CANTCLOSEOBJ, FAIL, "can't close skip list")
@@ -797,7 +851,6 @@ H5I_register(H5I_type_t type, const void *object, hbool_t app_ref)
 {
     H5I_id_type_t	*type_ptr;	/*ptr to the type		*/
     H5I_id_info_t	*id_ptr;	/*ptr to the new ID information */
-    hid_t		new_id;		/*new ID			*/
     hid_t		ret_value = SUCCEED; /*return value		*/
 
     FUNC_ENTER_NOAPI(FAIL)
@@ -808,12 +861,31 @@ H5I_register(H5I_type_t type, const void *object, hbool_t app_ref)
     type_ptr = H5I_id_type_list_g[type];
     if(NULL == type_ptr || type_ptr->init_count <= 0)
 	HGOTO_ERROR(H5E_ATOM, H5E_BADGROUP, FAIL, "invalid type")
-    if(NULL == (id_ptr = H5FL_MALLOC(H5I_id_info_t)))
-        HGOTO_ERROR(H5E_ATOM, H5E_NOSPACE, FAIL, "memory allocation failed")
 
-    /* Create the struct & it's ID */
-    new_id = H5I_MAKE(type, type_ptr->nextid);
-    id_ptr->id = new_id;
+    /* If there is an available ID structure, use it. */
+    if(type_ptr->avail_count > 0) {
+        /* Use existing available ID struct */
+        if(NULL == (id_ptr = (H5I_id_info_t *)H5SL_remove_first(type_ptr->avail_ids)))
+            HGOTO_ERROR(H5E_ATOM, H5E_CANTREMOVE, FAIL, "can't remove ID from available ID list")
+    
+        /* Decrease count of available ID structures */
+        type_ptr->avail_count--;
+    } /* end if */
+    /* If no available ID structure, then create a new id for use, and
+     * allocate a new struct to house it. */
+    else {
+        /* Allocate new ID struct */
+        if(NULL == (id_ptr = H5FL_MALLOC(H5I_id_info_t)))
+            HGOTO_ERROR(H5E_ATOM, H5E_NOSPACE, FAIL, "memory allocation failed")
+
+        /* Make a new ID */
+        id_ptr->id = H5I_MAKE(type, type_ptr->nextid);
+
+        /* Increment nextid value */
+        type_ptr->nextid++;
+    } /* end if */
+
+    /* Fill in remaining fields of ID struct */
     id_ptr->count = 1; /*initial reference count*/
     id_ptr->app_count = !!app_ref;
     id_ptr->obj_ptr = object;
@@ -822,14 +894,13 @@ H5I_register(H5I_type_t type, const void *object, hbool_t app_ref)
     if(H5SL_insert(type_ptr->ids, id_ptr, &id_ptr->id) < 0)
         HGOTO_ERROR(H5E_ATOM, H5E_CANTINSERT, FAIL, "can't insert ID node into skip list")
     type_ptr->id_count++;
-    type_ptr->nextid++;
 
     /*
      * This next section of code checks for the 'nextid' getting too large and
      * wrapping around, thus necessitating checking for duplicate IDs being
      * handed out.
      */
-    if(type_ptr->nextid > (unsigned)ID_MASK)
+    if(type_ptr->nextid > (hid_t)ID_MASK)
 	type_ptr->wrapped = TRUE;
 
     /*
@@ -841,7 +912,7 @@ H5I_register(H5I_type_t type, const void *object, hbool_t app_ref)
         herr_t iter_status;     /* Iteration status */
 
         /* Set up user data for iteration */
-        udata.nextid = type_ptr->cls->reserved;
+        udata.nextid = (hid_t)type_ptr->cls->reserved;
 
         /* Iterate over all the ID nodes, looking for a gap in the ID sequence */
         if((iter_status = H5SL_iterate(type_ptr->ids, H5I__wrapped_cb, &udata)) < 0)
@@ -859,7 +930,7 @@ H5I_register(H5I_type_t type, const void *object, hbool_t app_ref)
     } /* end if */
 
     /* Set return value */
-    ret_value = new_id;
+    ret_value = id_ptr->id;
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -1177,10 +1248,32 @@ H5I__remove_common(H5I_id_type_t *type_ptr, hid_t id)
 
     /* (Casting away const OK -QAK) */
     ret_value = (void *)curr_id->obj_ptr;
-    curr_id = H5FL_FREE(H5I_id_info_t, curr_id);
+
+    /* If there's room, and we can save IDs of this type, then 
+       save the struct (and its ID) for future re-use */
+    if((type_ptr->cls->flags & H5I_CLASS_REUSE_IDS)
+            && (type_ptr->avail_count < MAX_FREE_ID_STRUCTS)) {
+        if(H5SL_insert(type_ptr->avail_ids, curr_id, &curr_id->id) < 0)
+            HGOTO_ERROR(H5E_ATOM, H5E_CANTINSERT, NULL, "can't insert available ID node into skip list")
+        type_ptr->avail_count++;
+    } /* end if */
+    /* Otherwise, just toss it. */
+    else
+        curr_id = H5FL_FREE(H5I_id_info_t, curr_id);
 
     /* Decrement the number of IDs in the type */
     (type_ptr->id_count)--;
+
+    /* If there are no more IDs of this type, then we can free all available
+       ID strutures, and reset starting typeid and wrapped status. */
+    if(0 == type_ptr->id_count) {
+        if(H5SL_free(type_ptr->avail_ids, H5I__free_cb, NULL) < 0)
+            HGOTO_ERROR(H5E_ATOM, H5E_CANTREMOVE, NULL, "can't release available ID nodes")
+        type_ptr->avail_count = 0;
+
+        type_ptr->nextid = (hid_t)type_ptr->cls->reserved;
+        type_ptr->wrapped = FALSE;
+    } /* end if */
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

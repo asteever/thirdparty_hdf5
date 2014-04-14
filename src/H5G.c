@@ -133,7 +133,7 @@
 /* Group ID class */
 static const H5I_class_t H5I_GROUP_CLS[1] = {{
     H5I_GROUP,			/* ID class value */
-    0,				/* Class flags */
+    H5I_CLASS_REUSE_IDS,	/* Class flags */
     0,				/* # of reserved IDs for class */
     (H5I_free_t)H5G_close	/* Callback routine for closing objects of this class */
 }};
@@ -224,19 +224,16 @@ H5G_term_interface(void)
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     if(H5_interface_initialize_g) {
-        if((n = H5I_nmembers(H5I_GROUP)))
-            H5I_clear_type(H5I_GROUP, FALSE, FALSE);
-        else {
-            /* Close deprecated interface */
-            n += H5G__term_deprec_interface();
+	if((n = H5I_nmembers(H5I_GROUP)))
+	    H5I_clear_type(H5I_GROUP, FALSE, FALSE);
+	else {
+	    /* Destroy the group object id group */
+	    H5I_dec_type_ref(H5I_GROUP);
 
-            /* Destroy the group object id group */
-            H5I_dec_type_ref(H5I_GROUP);
-
-            /* Mark closed */
-            H5_interface_initialize_g = 0;
-            n = 1; /*H5I*/
-        } /* end else */
+	    /* Mark closed */
+	    H5_interface_initialize_g = 0;
+	    n = 1; /*H5I*/
+	} /* end else */
     } /* end if */
 
     FUNC_LEAVE_NOAPI(n)
@@ -513,6 +510,7 @@ H5Gget_create_plist(hid_t group_id)
 done:
     FUNC_LEAVE_API(ret_value)
 } /* end H5Gget_create_plist() */
+
 
 
 /*-------------------------------------------------------------------------

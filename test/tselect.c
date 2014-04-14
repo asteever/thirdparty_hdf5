@@ -292,13 +292,9 @@ test_select_hyper(hid_t xfer_plist)
     ret=H5Dwrite(dataset,H5T_NATIVE_UCHAR,sid2,sid1,xfer_plist,wbuf);
     CHECK(ret, FAIL, "H5Dwrite");
 
-    /* Exercise checks for NULL buffer and valid selection */
+    /* Exercise check for NULL buffer and valid selection */
     H5E_BEGIN_TRY {
         ret=H5Dwrite(dataset,H5T_NATIVE_UCHAR,sid2,sid1,xfer_plist,NULL);
-    } H5E_END_TRY;
-    VERIFY(ret, FAIL, "H5Dwrite");
-    H5E_BEGIN_TRY {
-        ret=H5Dwrite(dataset,H5T_NATIVE_UCHAR,H5S_ALL,H5S_ALL,xfer_plist,NULL);
     } H5E_END_TRY;
     VERIFY(ret, FAIL, "H5Dwrite");
 
@@ -330,13 +326,9 @@ test_select_hyper(hid_t xfer_plist)
     ret=H5Dread(dataset,H5T_NATIVE_UCHAR,sid2,sid1,xfer_plist,rbuf);
     CHECK(ret, FAIL, "H5Dread");
 
-    /* Exercise checks for NULL buffer and valid selection */
+    /* Exercise check for NULL buffer and valid selection */
     H5E_BEGIN_TRY {
         ret=H5Dread(dataset,H5T_NATIVE_UCHAR,sid2,sid1,xfer_plist,NULL);
-    } H5E_END_TRY;
-    VERIFY(ret, FAIL, "H5Dread");
-    H5E_BEGIN_TRY {
-        ret=H5Dread(dataset,H5T_NATIVE_UCHAR,H5S_ALL,H5S_ALL,xfer_plist,NULL);
     } H5E_END_TRY;
     VERIFY(ret, FAIL, "H5Dread");
 
@@ -362,8 +354,8 @@ test_select_hyper(hid_t xfer_plist)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Free memory buffers */
-    HDfree(wbuf);
-    HDfree(rbuf);
+    free(wbuf);
+    free(rbuf);
 }   /* test_select_hyper() */
 
 struct pnt_iter {
@@ -645,8 +637,8 @@ test_select_point(hid_t xfer_plist)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Free memory buffers */
-    HDfree(wbuf);
-    HDfree(rbuf);
+    free(wbuf);
+    free(rbuf);
 }   /* test_select_point() */
 
 /****************************************************************
@@ -758,8 +750,8 @@ test_select_all(hid_t xfer_plist)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Free memory buffers */
-    HDfree(wbuf);
-    HDfree(rbuf);
+    free(wbuf);
+    free(rbuf);
 }   /* test_select_all() */
 
 /****************************************************************
@@ -898,8 +890,8 @@ test_select_all_hyper(hid_t xfer_plist)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Free memory buffers */
-    HDfree(wbuf);
-    HDfree(rbuf);
+    free(wbuf);
+    free(rbuf);
 }   /* test_select_all_hyper() */
 
 /****************************************************************
@@ -5409,8 +5401,8 @@ test_select_hyper_and_2d(void)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Free memory buffers */
-    HDfree(wbuf);
-    HDfree(rbuf);
+    free(wbuf);
+    free(rbuf);
 }   /* test_select_hyper_and_2d() */
 
 /****************************************************************
@@ -5540,8 +5532,8 @@ test_select_hyper_xor_2d(void)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Free memory buffers */
-    HDfree(wbuf);
-    HDfree(rbuf);
+    free(wbuf);
+    free(rbuf);
 }   /* test_select_hyper_xor_2d() */
 
 /****************************************************************
@@ -5670,8 +5662,8 @@ test_select_hyper_notb_2d(void)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Free memory buffers */
-    HDfree(wbuf);
-    HDfree(rbuf);
+    free(wbuf);
+    free(rbuf);
 }   /* test_select_hyper_notb_2d() */
 
 /****************************************************************
@@ -6443,8 +6435,8 @@ test_select_point_chunk(void)
     ret = H5Fclose(file);
     CHECK(ret, FAIL, "H5Fclose");
 
-    HDfree(data);
-    HDfree (data_out);
+    free(data);
+    free (data_out);
 }   /* test_select_point_chunk() */
 
 /****************************************************************
@@ -6671,7 +6663,7 @@ test_select_combine(void)
     none_id=H5Scopy(base_id);
     CHECK(none_id, FAIL, "H5Scopy");
     error=H5Sselect_none(none_id);
-    CHECK(error, FAIL, "H5Sselect_none");
+    CHECK(error, FAIL, "H5Sselect_all");
     sel_type=H5Sget_select_type(none_id);
     VERIFY(sel_type, H5S_SEL_NONE, "H5Sget_select_type");
 
@@ -7623,8 +7615,8 @@ test_select_none(void)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Free memory buffers */
-    HDfree(wbuf);
-    HDfree(rbuf);
+    free(wbuf);
+    free(rbuf);
 }   /* test_select_none() */
 
 /****************************************************************

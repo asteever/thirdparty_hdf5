@@ -94,30 +94,6 @@ H5D__init_pub_interface(void)
 } /* H5D__init_pub_interface() */
 
 
-/*--------------------------------------------------------------------------
-NAME
-   H5D__term_pub_interface -- Terminate interface
-USAGE
-    herr_t H5D__term_pub_interface()
-RETURNS
-    Non-negative on success/Negative on failure
-DESCRIPTION
-    Terminates interface.  (Just resets H5_interface_initialize_g
-    currently).
-
---------------------------------------------------------------------------*/
-herr_t
-H5D__term_pub_interface(void)
-{
-    FUNC_ENTER_PACKAGE_NOERR
-
-    /* Mark closed */
-    H5_interface_initialize_g = 0;
-
-    FUNC_LEAVE_NOAPI(0)
-} /* H5D__term_pub_interface() */
-
-
 /*-------------------------------------------------------------------------
  * Function:	H5Dcreate2
  *
@@ -1158,15 +1134,15 @@ H5Dset_extent(hid_t dset_id, const hsize_t size[])
 
     /* Check args */
     if(NULL == (dset = (H5D_t *)H5I_object_verify(dset_id, H5I_DATASET)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataset")
+	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataset")
     if(!size)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no size specified")
+	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no size specified")
 
     /* Private function */
     if(H5D__set_extent(dset, size, H5AC_dxpl_id) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to set extend dataset")
+	HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to set extend dataset")
 
 done:
-        FUNC_LEAVE_API(ret_value)
+    FUNC_LEAVE_API(ret_value)
 } /* end H5Dset_extent() */
 

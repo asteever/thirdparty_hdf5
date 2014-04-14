@@ -37,6 +37,7 @@
 
 /* Flags for ID class */
 #define H5I_CLASS_IS_APPLICATION        0x01
+#define H5I_CLASS_REUSE_IDS             0x02
 
 
 /****************************/

@@ -1818,7 +1818,7 @@ test_genprop_path(void)
     VERIFY(ret, 1, "H5Pequal");
 
     /* Release the path string */
-    HDfree(path);
+    free(path);
 
     /* Close class */
     ret = H5Pclose_class(cid3);

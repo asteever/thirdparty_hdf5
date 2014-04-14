@@ -317,7 +317,7 @@ H5D__chunk_direct_write(const H5D_t *dset, hid_t dxpl_id, uint32_t filters, hsiz
     hsize_t     space_dim[H5O_LAYOUT_NDIMS];    /* Dataset's dataspace dimensions */
     herr_t ret_value = SUCCEED; /* Return value */
 
-    FUNC_ENTER_STATIC_TAG(dxpl_id, dset->oloc.addr, FAIL)
+    FUNC_ENTER_STATIC
 
     /* Allocate data space and initialize it if it hasn't been. */
     if(!(*dset->shared->layout.ops->is_space_alloc)(&dset->shared->layout.storage)) {
@@ -387,7 +387,7 @@ H5D__chunk_direct_write(const H5D_t *dset, hid_t dxpl_id, uint32_t filters, hsiz
 
 
 done:
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 }
 
 
@@ -1731,9 +1731,8 @@ H5D__chunk_cacheable(const H5D_io_info_t *io_info, haddr_t caddr, hbool_t write_
                     /* If the fill value needs to be written then we will need
                      * to use the cache to write the fill value */
                     if(fill->fill_time == H5D_FILL_TIME_ALLOC ||
-                            (fill->fill_time == H5D_FILL_TIME_IFSET &&
-                            (fill_status == H5D_FILL_VALUE_USER_DEFINED ||
-                             fill_status == H5D_FILL_VALUE_DEFAULT)))
+                            (fill->fill_time == H5D_FILL_TIME_IFSET
+                            && fill_status == H5D_FILL_VALUE_USER_DEFINED))
                         ret_value = TRUE;
                     else
                         ret_value = FALSE;
@@ -1819,9 +1818,7 @@ H5D__chunk_read(H5D_io_info_t *io_info, const H5D_type_info_t *type_info,
          * but they aren't set, set the flag to skip missing chunks.
          */
         if(fill->fill_time == H5D_FILL_TIME_NEVER ||
-                (fill->fill_time == H5D_FILL_TIME_IFSET &&
-                 fill_status != H5D_FILL_VALUE_USER_DEFINED &&
-                 fill_status != H5D_FILL_VALUE_DEFAULT))
+                (fill->fill_time == H5D_FILL_TIME_IFSET && fill_status != H5D_FILL_VALUE_USER_DEFINED))
             skip_missing_chunks = TRUE;
     }
 
@@ -2197,7 +2194,7 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-static herr_t
+herr_t
 H5D__chunk_cinfo_cache_reset(H5D_chunk_cached_t *last)
 {
     FUNC_ENTER_PACKAGE_NOERR
@@ -2462,7 +2459,7 @@ H5D__chunk_flush_entry(const H5D_t *dset, hid_t dxpl_id, const H5D_dxpl_cache_t 
     hbool_t	point_of_no_return = FALSE;
     herr_t	ret_value = SUCCEED;	/* Return value			*/
 
-    FUNC_ENTER_STATIC_TAG(dxpl_id, dset->oloc.addr, FAIL)
+    FUNC_ENTER_STATIC
 
     HDassert(dset);
     HDassert(dset->shared);
@@ -2592,7 +2589,7 @@ done:
             ent->chunk = (uint8_t *)H5D__chunk_xfree(ent->chunk, &(dset->shared->dcpl_cache.pline));
     } /* end if */
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D__chunk_flush_entry() */
 
 
@@ -2910,9 +2907,7 @@ H5D__chunk_lock(const H5D_io_info_t *io_info, H5D_chunk_ud_t *udata,
                 HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't tell if fill value defined")
 
             if(fill->fill_time == H5D_FILL_TIME_ALLOC ||
-                    (fill->fill_time == H5D_FILL_TIME_IFSET &&
-                     (fill_status == H5D_FILL_VALUE_USER_DEFINED ||
-                      fill_status == H5D_FILL_VALUE_DEFAULT))) {
+                    (fill->fill_time == H5D_FILL_TIME_IFSET && fill_status == H5D_FILL_VALUE_USER_DEFINED)) {
                 /*
                  * The chunk doesn't exist in the file.  Replicate the fill
                  * value throughout the chunk, if the fill value is defined.
@@ -3271,7 +3266,7 @@ H5D__chunk_allocate(const H5D_t *dset, hid_t dxpl_id, hbool_t full_overwrite,
     hid_t       data_dxpl_id;           /* DXPL ID to use for raw data I/O operations */
     herr_t	ret_value = SUCCEED;	/* Return value */
 
-    FUNC_ENTER_PACKAGE_TAG(dxpl_id, dset->oloc.addr, FAIL)
+    FUNC_ENTER_PACKAGE
 
     /* Check args */
     HDassert(dset && H5D_CHUNKED == layout->type);
@@ -3297,7 +3292,7 @@ H5D__chunk_allocate(const H5D_t *dset, hid_t dxpl_id, hbool_t full_overwrite,
 
 #ifdef H5_HAVE_PARALLEL
     /* Retrieve MPI parameters */
-    if(H5F_HAS_FEATURE(dset->oloc.file, H5FD_FEAT_HAS_MPI)) {
+    if(IS_H5FD_MPI(dset->oloc.file)) {
         /* Get the MPI communicator */
         if(MPI_COMM_NULL == (mpi_comm = H5F_mpi_get_comm(dset->oloc.file)))
             HGOTO_ERROR(H5E_INTERNAL, H5E_MPI, FAIL, "Can't retrieve MPI communicator")
@@ -3337,9 +3332,7 @@ H5D__chunk_allocate(const H5D_t *dset, hid_t dxpl_id, hbool_t full_overwrite,
      * set the "should fill" flag
      */
     if((!full_overwrite && (fill->fill_time == H5D_FILL_TIME_ALLOC ||
-            (fill->fill_time == H5D_FILL_TIME_IFSET &&
-             (fill_status == H5D_FILL_VALUE_USER_DEFINED ||
-              fill_status == H5D_FILL_VALUE_DEFAULT))))
+            (fill->fill_time == H5D_FILL_TIME_IFSET && fill_status == H5D_FILL_VALUE_USER_DEFINED)))
             || pline->nused > 0)
         should_fill = TRUE;
 
@@ -3582,7 +3575,7 @@ done:
     if(fb_info_init && H5D__fill_term(&fb_info) < 0)
         HDONE_ERROR(H5E_DATASET, H5E_CANTFREE, FAIL, "Can't release fill buffer info")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D__chunk_allocate() */
 
 
@@ -4531,15 +4524,9 @@ H5D__chunk_copy_cb(const H5D_chunk_rec_t *chunk_rec, void *_udata)
 	udata->buf_size = buf_size;
     } /* end if */
 
-    /* Set metadata tag in dxpl_id */
-    H5_BEGIN_TAG(udata->idx_info_dst->dxpl_id, H5AC__COPIED_TAG, H5_ITER_ERROR);
-
     /* Insert chunk into the destination index */
     if((udata->idx_info_dst->storage->ops->insert)(udata->idx_info_dst, &udata_dst) < 0)
-        HGOTO_ERROR_TAG(H5E_DATASET, H5E_CANTINSERT, H5_ITER_ERROR, "unable to insert chunk into index")
-
-    /* Reset metadata tag in dxpl_id */
-    H5_END_TAG(H5_ITER_ERROR);
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTINSERT, H5_ITER_ERROR, "unable to insert chunk into index")
 
     /* Write chunk data to destination file */
     HDassert(H5F_addr_defined(udata_dst.addr));
@@ -4978,7 +4965,7 @@ H5D__chunk_dest(H5F_t *f, hid_t dxpl_id, H5D_t *dset)
     int		nerrors = 0;            /* Accumulated count of errors */
     herr_t      ret_value = SUCCEED;       /* Return value */
 
-    FUNC_ENTER_PACKAGE_TAG(dxpl_id, dset->oloc.addr, FAIL)
+    FUNC_ENTER_PACKAGE
 
     HDassert(f);
     HDassert(dset);
@@ -5015,7 +5002,7 @@ H5D__chunk_dest(H5F_t *f, hid_t dxpl_id, H5D_t *dset)
 	HGOTO_ERROR(H5E_DATASET, H5E_CANTFREE, FAIL, "unable to release chunk index info")
 
 done:
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D__chunk_dest() */
 
 #ifdef H5D_CHUNK_DEBUG

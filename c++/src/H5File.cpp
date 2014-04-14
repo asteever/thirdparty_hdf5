@@ -203,7 +203,7 @@ bool H5File::isHdf5(const H5std_string& name )
 ///\param	name         - IN: Name of the file
 ///\param	flags        - IN: File access flags
 ///\param	access_plist - IN: File access property list.  Default to
-///		FileAccPropList::DEFAULT
+///		FileCreatPropList::DEFAULT
 ///\par Description
 ///		Valid values of \a flags include:
 ///		H5F_ACC_RDWR:   Open with read/write access. If the file is
@@ -492,6 +492,34 @@ hsize_t H5File::getFileSize() const
    return (file_size);
 }
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+//--------------------------------------------------------------------------
+// Function:	H5File::reopen
+// Purpose:	Reopens this file.
+// Exception	H5::FileIException
+// Description
+//		This function is replaced by the above function reOpen.
+// Programmer	Binh-Minh Ribler - 2000
+//--------------------------------------------------------------------------
+void H5File::reopen()
+{
+   H5File::reOpen();
+}
+
+//--------------------------------------------------------------------------
+// Function:	H5File::getLocId
+// Purpose:	Get the id of this file
+// Description
+//		This function is a redefinition of CommonFG::getLocId.  It
+//		is used by CommonFG member functions to get the file id.
+// Programmer	Binh-Minh Ribler - 2000
+//--------------------------------------------------------------------------
+hid_t H5File::getLocId() const
+{
+   return( getId() );
+}
+#endif // DOXYGEN_SHOULD_SKIP_THIS
+
 //--------------------------------------------------------------------------
 // Function:    H5File::getId
 ///\brief	Get the id of this file
@@ -510,32 +538,6 @@ hid_t H5File::getId() const
 }
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-//--------------------------------------------------------------------------
-// Function:	H5File::getLocId
-// Purpose:	Get the id of this file
-// Description
-//		This function is a redefinition of CommonFG::getLocId.  It
-//		is used by CommonFG member functions to get the file id.
-// Programmer	Binh-Minh Ribler - 2000
-//--------------------------------------------------------------------------
-hid_t H5File::getLocId() const
-{
-   return( getId() );
-}
-
-//--------------------------------------------------------------------------
-// Function:	H5File::reopen
-// Purpose:	Reopens this file.
-// Exception	H5::FileIException
-// Description
-//		This function is replaced by the above function reOpen.
-// Programmer	Binh-Minh Ribler - 2000
-//--------------------------------------------------------------------------
-void H5File::reopen()
-{
-   H5File::reOpen();
-}
-
 //--------------------------------------------------------------------------
 // Function:    H5File::p_setId (protected)
 ///\brief       Sets the identifier of this object to a new value.

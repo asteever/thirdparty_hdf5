@@ -316,15 +316,6 @@ unsigned m13_rdata[MISC13_DIM1][MISC13_DIM2];          /* Data read from dataset
 /* Definitions for misc. test #30 */
 #define MISC30_FILE             "tmisc30.h5"
 
-/* Definitions for misc. test #31 */
-#define MISC31_FILE             "tmisc31.h5"
-#define MISC31_DSETNAME         "dset"
-#define MISC31_ATTRNAME1        "attr1"
-#define MISC31_ATTRNAME2        "attr2"
-#define MISC31_GROUPNAME        "group"
-#define MISC31_PROPNAME         "misc31_prop"
-#define MISC31_DTYPENAME        "dtype"
-
 /****************************************************************
 **
 **  test_misc1(): test unlinking a dataset from a group and immediately
@@ -1686,7 +1677,7 @@ test_misc8(void)
     /* Free the read & write buffers */
     HDfree(wdata);
 #ifdef VERIFY_DATA
-    HDfree(rdata);
+    free(rdata);
 #endif /* VERIFY_DATA */
 } /* end test_misc8() */
 
@@ -1736,11 +1727,19 @@ test_misc10(void)
     hid_t       dataset, dataset_new;   /* Dataset IDs for old & new datasets */
     hid_t       dcpl;           /* Dataset creation property list */
     hid_t       space, type;    /* Old dataset's dataspace & datatype */
-    const char *testfile = H5_get_srcdir_filename(MISC10_FILE_OLD); /* Corrected test file name */
+    char testfile[512]="";          /* Character buffer for corrected test file name */
+    char *srcdir = HDgetenv("srcdir");    /* Pointer to the directory the source code is located within */
     herr_t      ret;
 
     /* Output message about test being performed */
     MESSAGE(5, ("Testing using old dataset creation property list\n"));
+
+    /* Generate the correct name for the test file, by prepending the source path */
+    if(srcdir && ((HDstrlen(srcdir) + HDstrlen(MISC10_FILE_OLD) + 1) < sizeof(testfile))) {
+        HDstrcpy(testfile, srcdir);
+        HDstrcat(testfile, "/");
+    }
+    HDstrcat(testfile, MISC10_FILE_OLD);
 
     /*
      * Open the old file and the dataset and get old settings.
@@ -1807,10 +1806,11 @@ test_misc11(void)
     unsigned    sym_ik;         /* Symbol table B-tree initial 'K' value */
     unsigned    istore_ik;      /* Indexed storage B-tree initial 'K' value */
     unsigned    sym_lk;         /* Symbol table B-tree leaf 'K' value */
+    unsigned 	super;          /* Superblock version # */
+    unsigned 	freelist;       /* Free list version # */
+    unsigned 	stab;           /* Symbol table entry version # */
+    unsigned 	shhdr;          /* Shared object header version # */
     unsigned 	nindexes;       /* Shared message number of indexes */
-    H5F_info2_t finfo;          /* global information about file */
-    H5F_file_space_type_t strategy;  /* File/free space strategy */
-    hsize_t  	threshold;      /* Free-space section threshold */
     herr_t      ret;            /* Generic return value */
 
     /* Output message about test being performed */
@@ -1824,12 +1824,21 @@ test_misc11(void)
     file= H5Fcreate(MISC11_FILE, H5F_ACC_TRUNC , H5P_DEFAULT, H5P_DEFAULT);
     CHECK(file, FAIL, "H5Fcreate");
 
+    /* Get the file's dataset creation property list */
+    fcpl =  H5Fget_create_plist(file);
+    CHECK(fcpl, FAIL, "H5Fget_create_plist");
+
     /* Get the file's version information */
-    ret = H5Fget_info2(file, &finfo);
-    CHECK(ret, FAIL, "H5Fget_info2");
-    VERIFY(finfo.super.version, 0,"H5Fget_info2");
-    VERIFY(finfo.free.version, 0,"H5Fget_info2");
-    VERIFY(finfo.sohm.version, 0,"H5Fget_info2");
+    ret=H5Pget_version(fcpl, &super, &freelist, &stab, &shhdr);
+    CHECK(ret, FAIL, "H5Pget_version");
+    VERIFY(super,0,"H5Pget_version");
+    VERIFY(freelist,0,"H5Pget_version");
+    VERIFY(stab,0,"H5Pget_version");
+    VERIFY(shhdr,0,"H5Pget_version");
+
+    /* Close FCPL */
+    ret=H5Pclose(fcpl);
+    CHECK(ret, FAIL, "H5Pclose");
 
     /* Close file */
     ret=H5Fclose(file);
@@ -1856,9 +1865,6 @@ test_misc11(void)
     ret=H5Pset_shared_mesg_nindexes(fcpl,MISC11_NINDEXES);
     CHECK(ret, FAIL, "H5Pset_shared_mesg");
 
-    ret = H5Pset_file_space(fcpl, H5F_FILE_SPACE_VFD, (hsize_t)0);
-    CHECK(ret, FAIL, "H5Pset_file_space");
-
     /* Creating a file with the non-default file creation property list should
      * create a version 1 superblock
      */
@@ -1871,12 +1877,21 @@ test_misc11(void)
     ret=H5Pclose(fcpl);
     CHECK(ret, FAIL, "H5Pclose");
 
+    /* Get the file's dataset creation property list */
+    fcpl =  H5Fget_create_plist(file);
+    CHECK(fcpl, FAIL, "H5Fget_create_plist");
+
     /* Get the file's version information */
-    ret = H5Fget_info2(file, &finfo);
-    CHECK(ret, FAIL, "H5Fget_info2");
-    VERIFY(finfo.super.version, 2,"H5Fget_info2");
-    VERIFY(finfo.free.version, 0,"H5Fget_info2");
-    VERIFY(finfo.sohm.version, 0,"H5Fget_info2");
+    ret=H5Pget_version(fcpl, &super, &freelist, &stab, &shhdr);
+    CHECK(ret, FAIL, "H5Pget_version");
+    VERIFY(super,2,"H5Pget_version");
+    VERIFY(freelist,0,"H5Pget_version");
+    VERIFY(stab,0,"H5Pget_version");
+    VERIFY(shhdr,0,"H5Pget_version");
+
+    /* Close FCPL */
+    ret=H5Pclose(fcpl);
+    CHECK(ret, FAIL, "H5Pclose");
 
     /* Close file */
     ret=H5Fclose(file);
@@ -1886,16 +1901,17 @@ test_misc11(void)
     file = H5Fopen(MISC11_FILE, H5F_ACC_RDONLY, H5P_DEFAULT);
     CHECK(file, FAIL, "H5Fcreate");
 
-    /* Get the file's creation property list */
+    /* Get the file's dataset creation property list */
     fcpl =  H5Fget_create_plist(file);
     CHECK(fcpl, FAIL, "H5Fget_create_plist");
 
     /* Get the file's version information */
-    ret = H5Fget_info2(file, &finfo);
-    CHECK(ret, FAIL, "H5Fget_info2");
-    VERIFY(finfo.super.version, 2,"H5Fget_info2");
-    VERIFY(finfo.free.version, 0,"H5Fget_info2");
-    VERIFY(finfo.sohm.version, 0,"H5Fget_info2");
+    ret=H5Pget_version(fcpl, &super, &freelist, &stab, &shhdr);
+    CHECK(ret, FAIL, "H5Pget_version");
+    VERIFY(super,2,"H5Pget_version");
+    VERIFY(freelist,0,"H5Pget_version");
+    VERIFY(stab,0,"H5Pget_version");
+    VERIFY(shhdr,0,"H5Pget_version");
 
     /* Retrieve all the property values & check them */
     ret=H5Pget_userblock(fcpl,&userblock);
@@ -1919,11 +1935,6 @@ test_misc11(void)
     ret=H5Pget_shared_mesg_nindexes(fcpl,&nindexes);
     CHECK(ret, FAIL, "H5Pget_shared_mesg_nindexes");
     VERIFY(nindexes, MISC11_NINDEXES, "H5Pget_shared_mesg_nindexes");
-
-    ret = H5Pget_file_space(fcpl, &strategy, &threshold);
-    CHECK(ret, FAIL, "H5Pget_file_space");
-    VERIFY(strategy, 4, "H5Pget_file_space");
-    VERIFY(threshold, 1, "H5Pget_file_space");
 
     /* Close file */
     ret=H5Fclose(file);
@@ -3392,7 +3403,8 @@ test_misc20(void)
     hsize_t small_dims[MISC20_SPACE_RANK]={MISC20_SPACE2_DIM0,MISC20_SPACE2_DIM1};      /* Small dimensions */
     unsigned version;   /* Version of storage layout info */
     hsize_t contig_size;        /* Size of contiguous storage size from layout into */
-    const char *testfile = H5_get_srcdir_filename(MISC20_FILE_OLD); /* Corrected test file name */
+    char testfile[512]="";          /* Character buffer for corrected test file name */
+    char *srcdir = HDgetenv("srcdir");    /* Pointer to the directory the source code is located within */
     herr_t ret;         /* Generic return value */
 
     /* Output message about test being performed */
@@ -3505,6 +3517,13 @@ test_misc20(void)
     CHECK(ret, FAIL, "H5Fclose");
 
     /* Verify that the storage size is computed correctly for older versions of layout info */
+
+    /* Generate the correct name for the test file, by prepending the source path */
+    if(srcdir && ((HDstrlen(srcdir) + HDstrlen(MISC20_FILE_OLD) + 1) < sizeof(testfile))) {
+        HDstrcpy(testfile, srcdir);
+        HDstrcat(testfile, "/");
+    }
+    HDstrcat(testfile, MISC20_FILE_OLD);
 
     /*
      * Open the old file and the dataset and get old settings.
@@ -4625,11 +4644,19 @@ test_misc25b(void)
 {
     hid_t fid;          /* File ID */
     hid_t gid;          /* Group ID */
-    const char *testfile = H5_get_srcdir_filename(MISC25B_FILE); /* Corrected test file name */
+    char testfile[512]="";
+    char *srcdir = HDgetenv("srcdir");
     herr_t      ret;            /* Generic return value */
 
     /* Output message about test being performed */
     MESSAGE(5, ("Exercise null object header message bug\n"));
+
+    /* Build the name of the file, with the source directory */
+    if (srcdir && ((HDstrlen(srcdir) + HDstrlen(MISC25B_FILE) + 1) < sizeof(testfile))){
+		HDstrcpy(testfile, srcdir);
+		HDstrcat(testfile, "/");
+    }
+    HDstrcat(testfile, MISC25B_FILE);
 
     /* Open file */
     fid = H5Fopen(testfile, H5F_ACC_RDONLY, H5P_DEFAULT);
@@ -4882,11 +4909,19 @@ test_misc27(void)
 {
     hid_t fid;          /* File ID */
     hid_t gid;          /* Group ID */
-    const char *testfile = H5_get_srcdir_filename(MISC27_FILE); /* Corrected test file name */
+    char testfile[512]="";          /* Character buffer for corrected test file name */
+    char *srcdir = HDgetenv("srcdir");    /* Pointer to the directory the source code is located within */
     herr_t ret;         /* Generic return value */
 
     /* Output message about test being performed */
     MESSAGE(5, ("Corrupt object header handling\n"));
+
+    /* Generate the correct name for the test file, by prepending the source path */
+    if(srcdir && ((HDstrlen(srcdir) + HDstrlen(MISC27_FILE) + 1) < sizeof(testfile))) {
+        HDstrcpy(testfile, srcdir);
+        HDstrcat(testfile, "/");
+    }
+    HDstrcat(testfile, MISC27_FILE);
 
     /* Open the file */
     fid = H5Fopen(testfile, H5F_ACC_RDONLY, H5P_DEFAULT);
@@ -5204,105 +5239,6 @@ test_misc30(void)
     VERIFY(file_size[0], file_size[1], "test_misc30");
 } /* end test_misc30() */
 
-
-/****************************************************************
-**
-**  test_misc31(): Test reentering library through deprecated
-*                  routines that register an id after calling
-*                  H5close().
-**
-****************************************************************/
-static void
-test_misc31(void)
-{
-    hid_t file_id;              /* File id */
-    hid_t space_id;             /* Dataspace id */
-    hid_t dset_id;              /* Dataset id */
-    hid_t attr_id;              /* Attribute id */
-    hid_t group_id;             /* Group id */
-    hid_t dtype_id;             /* Datatype id */
-    herr_t ret;                 /* Generic return value */
-
-    /* Output message about test being performed */
-    MESSAGE(5, ("Deprecated routines initialize after H5close()\n"));
-
-#ifndef H5_NO_DEPRECATED_SYMBOLS
-    file_id = H5Fcreate(MISC31_FILE, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT);
-    CHECK(file_id, FAIL, "H5Fcreate");
-
-    /* Test dataset package */
-    space_id = H5Screate(H5S_SCALAR);
-    CHECK(space_id, FAIL, "H5Screate");
-    dset_id = H5Dcreate1(file_id, MISC31_DSETNAME, H5T_NATIVE_INT, space_id, H5P_DEFAULT);
-    CHECK(dset_id, FAIL, "H5Dcreate1");
-    ret = H5close();
-    CHECK(ret, FAIL, "H5close");
-    file_id = H5Fopen(MISC31_FILE, H5F_ACC_RDWR, H5P_DEFAULT);
-    CHECK(file_id, FAIL, "H5Fopen");
-    dset_id = H5Dopen1(file_id, MISC31_DSETNAME);
-    CHECK(dset_id, FAIL, "H5Dopen1");
-
-    /* Test attribute package */
-    space_id = H5Screate(H5S_SCALAR);
-    CHECK(space_id, FAIL, "H5Screate");
-    attr_id = H5Acreate1(dset_id, MISC31_ATTRNAME1, H5T_NATIVE_INT, space_id, H5P_DEFAULT);
-    CHECK(attr_id, FAIL, "H5Acreate1");
-    ret = H5close();
-    CHECK(ret, FAIL, "H5close");
-    file_id = H5Fopen(MISC31_FILE, H5F_ACC_RDWR, H5P_DEFAULT);
-    CHECK(file_id, FAIL, "H5Fopen");
-    dset_id = H5Dopen1(file_id, MISC31_DSETNAME);
-    CHECK(dset_id, FAIL, "H5Dopen1");
-    space_id = H5Screate(H5S_SCALAR);
-    CHECK(space_id, FAIL, "H5Screate");
-    attr_id = H5Acreate1(dset_id, MISC31_ATTRNAME2, H5T_NATIVE_INT, space_id, H5P_DEFAULT);
-    CHECK(attr_id, FAIL, "H5Acreate1");
-
-    /* Test group package */
-    group_id = H5Gcreate1(file_id, MISC31_GROUPNAME, 0);
-    CHECK(group_id, FAIL, "H5Gcreate1");
-    ret = H5close();
-    CHECK(ret, FAIL, "H5close");
-    file_id = H5Fopen(MISC31_FILE, H5F_ACC_RDWR, H5P_DEFAULT);
-    CHECK(file_id, FAIL, "H5Fopen");
-    group_id = H5Gopen1(file_id, MISC31_GROUPNAME);
-    CHECK(group_id, FAIL, "H5Gopen1");
-
-    /* Test property list package */
-    ret = H5Pregister1(H5P_OBJECT_CREATE, MISC31_PROPNAME, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-    CHECK(ret, FAIL, "H5Pregister1");
-    ret = H5close();
-    CHECK(ret, FAIL, "H5close");
-    ret = H5Pregister1(H5P_OBJECT_CREATE, MISC31_PROPNAME, 0, NULL, NULL, NULL, NULL, NULL, NULL, NULL);
-    CHECK(ret, FAIL, "H5Pregister1");
-    ret = H5close();
-    CHECK(ret, FAIL, "H5close");
-
-    /* Test datatype package */
-    file_id = H5Fopen(MISC31_FILE, H5F_ACC_RDWR, H5P_DEFAULT);
-    CHECK(file_id, FAIL, "H5Fopen");
-    dtype_id = H5Tcopy(H5T_NATIVE_INT);
-    CHECK(dtype_id, FAIL, "H5Tcopy");
-    ret = H5Tcommit1(file_id, MISC31_DTYPENAME, dtype_id);
-    CHECK(ret, FAIL, "H5Tcommit1");
-    ret = H5close();
-    CHECK(ret, FAIL, "H5close");
-    file_id = H5Fopen(MISC31_FILE, H5F_ACC_RDWR, H5P_DEFAULT);
-    CHECK(file_id, FAIL, "H5Fopen");
-    dtype_id = H5Topen1(file_id, MISC31_DTYPENAME);
-    CHECK(ret, FAIL, "H5Topen1");
-    ret = H5Fclose(file_id);
-    CHECK(ret, FAIL, "H5Fclose");
-    ret = H5Tclose(dtype_id);
-    CHECK(ret, FAIL, "H5Tclose");
-    
-#else /* H5_NO_DEPRECATED_SYMBOLS */
-    /* Output message about test being skipped */
-    MESSAGE(5, (" ...Skipped"));
-#endif /* H5_NO_DEPRECATED_SYMBOLS */
-} /* end test_misc31() */
-
-
 /****************************************************************
 **
 **  test_misc(): Main misc. test routine.
@@ -5348,7 +5284,6 @@ test_misc(void)
     test_misc28();      /* Test that chunks are cached appropriately */
     test_misc29();      /* Test that speculative metadata reads are handled correctly */
     test_misc30();      /* Exercise local heap loading bug where free lists were getting dropped */
-    test_misc31();      /* Test Reentering library through deprecated routines after H5close() */
 
 } /* test_misc() */
 
@@ -5405,6 +5340,5 @@ cleanup_misc(void)
     HDremove(MISC28_FILE);
     HDremove(MISC29_COPY_FILE);
     HDremove(MISC30_FILE);
-    HDremove(MISC31_FILE);
 }
 

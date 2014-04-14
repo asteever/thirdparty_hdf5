@@ -61,16 +61,6 @@ $ run  cache
 $ type sys$input
 
 $ type sys$input
--------			Running cache_tagging  	-------
-$ run  cache_tagging
-$ type sys$input
-
-$ type sys$input
--------			Running chunk_info   	-------
-$ run  chunk_info 
-$ type sys$input
-
-$ type sys$input
 -------			Running cmpd_dset    	-------
 $ run  cmpd_dset
 $ type sys$input
@@ -103,11 +93,6 @@ $ type sys$input
 $ type sys$input
 -------			Running dtypes    	-------
 $ run  dtypes
-$ type sys$input
-
-$ type sys$input
--------			Running earray    	-------
-$ run  earray
 $ type sys$input
 
 $! Skip this test for now because it opens the same file many times.
@@ -192,10 +177,12 @@ $ type sys$input
 $ run  links
 $ type sys$input
 
-$ type sys$input
--------			Running links_env    	-------
-$ run  links_env
-$ type sys$input
+$! Skip this test for now because it needs a script file to run the test
+$! Please see Issue VMS-2 in Jira about it.
+$! type sys$input
+$! -------			Running links_env    	-------
+$! run  links_env
+$! type sys$input
 
 $ type sys$input
 -------			Running mf    	-------
@@ -240,11 +227,6 @@ $ type sys$input
 $ type sys$input
 -------			Running set_extent     	-------
 $ run  set_extent
-$ type sys$input
-
-$ type sys$input
--------			Running space_overflow 	-------
-$ run  space_overflow
 $ type sys$input
 
 $ type sys$input

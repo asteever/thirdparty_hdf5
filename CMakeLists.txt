@@ -676,7 +676,7 @@ if (H5_HAVE_PARALLEL)
   endif (MPI_C_LINK_FLAGS)
 endif (H5_HAVE_PARALLEL)
 
-set (DEFAULT_API_VERSION "v110")
+set (DEFAULT_API_VERSION "v18")
 #-----------------------------------------------------------------------------
 # Option to use 1.6.x API
 #-----------------------------------------------------------------------------
@@ -686,16 +686,6 @@ if (HDF5_USE_16_API_DEFAULT)
   set (H5_USE_16_API_DEFAULT 1)
   set (DEFAULT_API_VERSION "v16")
 endif (HDF5_USE_16_API_DEFAULT)
-
-#-----------------------------------------------------------------------------
-# Option to use 1.8.x API
-#-----------------------------------------------------------------------------
-option (HDF5_USE_18_API_DEFAULT "Use the HDF5 1.8.x API by default" OFF)
-set (H5_USE_18_API_DEFAULT 0)
-if (HDF5_USE_18_API_DEFAULT)
-  set (H5_USE_18_API_DEFAULT 1)
-  set (DEFAULT_API_VERSION "v18")
-endif (HDF5_USE_18_API_DEFAULT)
 
 #-----------------------------------------------------------------------------
 # Include user macros
@@ -726,7 +716,7 @@ endif (NOT HDF5_EXTERNALLY_CONFIGURED)
 # Note: Currently CMake only allows configuring of threadsafe on 
 # non-Cygwin WINDOWS.
 #-----------------------------------------------------------------------------
-if (WIN32)
+if (WIN32 AND NOT CYGWIN)
   option (HDF5_ENABLE_THREADSAFE "Enable thread-safety" OFF)
   if (HDF5_ENABLE_THREADSAFE)
     # check for unsupported options
@@ -753,13 +743,7 @@ if (WIN32)
       endif (NOT H5_HAVE_PTHREAD_H)
     endif (H5_HAVE_IOEO)
   endif (HDF5_ENABLE_THREADSAFE)
-endif (WIN32)
-
-# -----------------------------------------------------------------------
-# wrapper script variables
-# 
-#set (CFLAGS "${C_DEFINES}")
-#set (CXXFLAGS "${CXX_DEFINES}")
+endif (WIN32 AND NOT CYGWIN)
 
 #-----------------------------------------------------------------------------
 # Add the HDF5 Library Target to the build
@@ -833,11 +817,6 @@ if (EXISTS "${HDF5_SOURCE_DIR}/fortran" AND IS_DIRECTORY "${HDF5_SOURCE_DIR}/for
         set (HDF5_ENABLE_F2003 OFF)
       endif (NOT FORTRAN_HAVE_ISO_C_BINDING)
     endif (HDF5_ENABLE_F2003)
-
-    # -----------------------------------------------------------------------
-    # wrapper script variables
-    # 
-#    set (FCFLAGS "${Fortran_DEFINES}")
 
     add_subdirectory (${HDF5_SOURCE_DIR}/fortran ${PROJECT_BINARY_DIR}/fortran)
     if (HDF5_BUILD_HL_LIB)

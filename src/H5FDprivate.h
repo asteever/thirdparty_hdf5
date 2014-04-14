@@ -43,6 +43,10 @@
 #define IS_H5FD_MPIO(f)	/* (H5F_t *f) */				    \
     (H5FD_MPIO==H5F_DRIVER_ID(f))
 
+/* Single macro to check for all file drivers that use MPI */
+#define IS_H5FD_MPI(file)  \
+        (IS_H5FD_MPIO(file))
+
 #ifdef H5_HAVE_PARALLEL
 /* ======== Temporary data transfer properties ======== */
 /* Definitions for memory MPI type property */

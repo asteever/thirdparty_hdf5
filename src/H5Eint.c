@@ -1011,7 +1011,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5E_dump_api_stack(hbool_t is_api)
+H5E_dump_api_stack(int is_api)
 {
     herr_t ret_value = SUCCEED;   /* Return value */
 

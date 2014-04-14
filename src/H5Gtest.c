@@ -394,42 +394,36 @@ H5G__new_dense_info_test(hid_t gid, hsize_t *name_count, hsize_t *corder_count)
     if(NULL == (grp = (H5G_t *)H5I_object_verify(gid, H5I_GROUP)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a group")
 
-    /* Set metadata tag in dxpl_id */
-    H5_BEGIN_TAG(H5AC_dxpl_id, grp->oloc.addr, FAIL);
-
     /* Get the link info */
     if(H5G__obj_get_linfo(&(grp->oloc), &linfo, H5AC_dxpl_id) < 0)
-        HGOTO_ERROR_TAG(H5E_SYM, H5E_BADMESG, FAIL, "can't get link info")
+        HGOTO_ERROR(H5E_SYM, H5E_BADMESG, FAIL, "can't get link info")
 
     /* Check for 'dense' link storage file addresses being defined */
     if(!H5F_addr_defined(linfo.fheap_addr))
-        HGOTO_DONE_TAG(FAIL, FAIL)
+        HGOTO_DONE(FAIL)
     if(!H5F_addr_defined(linfo.name_bt2_addr))
-        HGOTO_DONE_TAG(FAIL, FAIL)
+        HGOTO_DONE(FAIL)
 
     /* Open the name index v2 B-tree */
     if(NULL == (bt2_name = H5B2_open(grp->oloc.file, H5AC_dxpl_id, linfo.name_bt2_addr, NULL)))
-        HGOTO_ERROR_TAG(H5E_SYM, H5E_CANTOPENOBJ, FAIL, "unable to open v2 B-tree for name index")
+        HGOTO_ERROR(H5E_SYM, H5E_CANTOPENOBJ, FAIL, "unable to open v2 B-tree for name index")
 
     /* Retrieve # of records in name index */
     if(H5B2_get_nrec(bt2_name, name_count) < 0)
-        HGOTO_ERROR_TAG(H5E_SYM, H5E_CANTCOUNT, FAIL, "unable to retrieve # of records from name index")
+        HGOTO_ERROR(H5E_SYM, H5E_CANTCOUNT, FAIL, "unable to retrieve # of records from name index")
 
     /* Check if there is a creation order index */
     if(H5F_addr_defined(linfo.corder_bt2_addr)) {
         /* Open the creation order index v2 B-tree */
         if(NULL == (bt2_corder = H5B2_open(grp->oloc.file, H5AC_dxpl_id, linfo.corder_bt2_addr, NULL)))
-            HGOTO_ERROR_TAG(H5E_SYM, H5E_CANTOPENOBJ, FAIL, "unable to open v2 B-tree for creation order index")
+            HGOTO_ERROR(H5E_SYM, H5E_CANTOPENOBJ, FAIL, "unable to open v2 B-tree for creation order index")
 
         /* Retrieve # of records in creation order index */
         if(H5B2_get_nrec(bt2_corder, corder_count) < 0)
-            HGOTO_ERROR_TAG(H5E_SYM, H5E_CANTCOUNT, FAIL, "unable to retrieve # of records from creation order index")
+            HGOTO_ERROR(H5E_SYM, H5E_CANTCOUNT, FAIL, "unable to retrieve # of records from creation order index")
     } /* end if */
     else
         *corder_count = 0;
-
-    /* Reset metadata tag in dxpl_id */
-    H5_END_TAG(FAIL);
 
 done:
     /* Release resources */
@@ -609,7 +603,7 @@ H5G__verify_cached_stab_test(H5O_loc_t *grp_oloc, H5G_entry_t *ent)
     H5HL_t      *heap = NULL;           /* Pointer to local heap */
     herr_t	ret_value = SUCCEED;    /* Return value */
 
-    FUNC_ENTER_PACKAGE_TAG(H5AC_ind_dxpl_id, grp_oloc->addr, FAIL)
+    FUNC_ENTER_PACKAGE
 
     /* Verify that stab info is cached in ent */
     if(ent->type != H5G_CACHED_STAB)
@@ -638,7 +632,7 @@ done:
     if(heap && H5HL_unprotect(heap) < 0)
         HDONE_ERROR(H5E_SYM, H5E_PROTECT, FAIL, "unable to unprotect symbol table heap")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5G__verify_cached_stab_test() */
 
 
@@ -762,7 +756,6 @@ H5G__verify_cached_stabs_test(hid_t gid)
     htri_t              stab_exists;
     H5O_stab_t          stab;                   /* Symbol table message */
     H5G_bt_common_t     udata = {NULL, NULL};   /* Dummy udata so H5B_iterate doesn't freak out */
-    haddr_t             prev_tag = HADDR_UNDEF; /* Previous metadata tag */
     herr_t              ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_PACKAGE
@@ -773,10 +766,6 @@ H5G__verify_cached_stabs_test(hid_t gid)
     /* Check args */
     if(NULL == (grp = (H5G_t *)H5I_object_verify(gid, H5I_GROUP)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a group")
-
-    /* Set up metadata tagging */
-    if(H5AC_tag(H5AC_ind_dxpl_id, grp->oloc.addr, &prev_tag) < 0)
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "unable to apply metadata tag")
 
     /* Check for group having a symbol table message */
     /* Check for the group having a group info message */
@@ -796,10 +785,6 @@ H5G__verify_cached_stabs_test(hid_t gid)
     if((ret_value = H5B_iterate(grp->oloc.file, H5AC_ind_dxpl_id, H5B_SNODE,
             stab.btree_addr, H5G_verify_cached_stabs_test_cb, &udata)) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_CANTNEXT, FAIL, "iteration operator failed");
-
-    /* Reset metadata tagging */
-    if(H5AC_tag(H5AC_ind_dxpl_id, prev_tag, NULL) < 0)
-        HDONE_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "unable to apply metadata tag")
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

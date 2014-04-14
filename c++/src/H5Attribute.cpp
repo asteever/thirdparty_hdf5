@@ -450,9 +450,9 @@ hsize_t Attribute::getStorageSize() const
 ///\exception	H5::AttributeIException
 ///\par Description
 ///		This attribute is used to identify the file to be flushed.
-// Programmer	Binh-Minh Ribler - 2012
+// Programmer	Binh-Minh Ribler - 2013
 // Modification
-//	Sep 2012 - BMR
+//	Mar 2013 - BMR
 //		Duplicated from H5Location
 //--------------------------------------------------------------------------
 void Attribute::flush(H5F_scope_t scope) const
@@ -566,7 +566,6 @@ void Attribute::p_read_variable_len(const DataType& mem_type, H5std_string& strg
     HDfree(strg_C);
 }
 
-#ifndef DOXYGEN_SHOULD_SKIP_THIS
 //--------------------------------------------------------------------------
 // Function:    Attribute::p_setId
 ///\brief       Sets the identifier of this object to a new value.
@@ -591,7 +590,6 @@ void Attribute::p_setId(const hid_t new_id)
    // reset object's id to the given id
    id = new_id;
 }
-#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 //--------------------------------------------------------------------------
 // Function:	Attribute::close
