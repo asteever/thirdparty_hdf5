@@ -40,7 +40,7 @@
 #include "H5HFpkg.h"		/* Fractal heaps			*/
 #include "H5MFprivate.h"	/* File memory management		*/
 #include "H5MMprivate.h"	/* Memory management			*/
-#include "H5VMprivate.h"		/* Vectors and arrays 			*/
+#include "H5Vprivate.h"		/* Vectors and arrays 			*/
 #include "H5WBprivate.h"        /* Wrapped Buffers                      */
 
 
@@ -58,6 +58,14 @@
 
 /* Size of stack buffer for serialized indirect blocks */
 #define H5HF_IBLOCK_BUF_SIZE    4096
+
+/* Size of minimum header to decode for determining the full header size */
+#define H5HF_MIN_HEADER_SIZE   (                       	\
+    H5_SIZEOF_MAGIC +   /* Signature */                 \
+    1 +                 /* Version */                   \
+    2 +                 /* Heap ID len */               \
+    2                   /* I/O filters' encoded len */  \
+    )
 
 
 /******************/
@@ -267,13 +275,16 @@ H5HF_cache_hdr_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
 {
     H5HF_hdr_t		*hdr = NULL;     /* Fractal heap info */
     H5HF_hdr_cache_ud_t *udata = (H5HF_hdr_cache_ud_t *)_udata;
-    size_t		size;           /* Header size */
+    size_t		min_size;       /* Header size */
     H5WB_t              *wb = NULL;     /* Wrapped buffer for header data */
     uint8_t             hdr_buf[H5HF_HDR_BUF_SIZE]; /* Buffer for header */
     uint8_t		*buf;           /* Pointer to header buffer */
+    size_t              buf_size;       /* Current size of temporary buffer */
     const uint8_t	*p;             /* Pointer into raw data buffer */
     uint32_t            stored_chksum;  /* Stored metadata checksum value */
     uint32_t            computed_chksum; /* Computed metadata checksum value */
+    unsigned		tries, max_tries; /* The # of read attempts */
+    unsigned		retries;	/* The # of retries */
     uint8_t             heap_flags;     /* Status flags for heap */
     H5HF_hdr_t		*ret_value;     /* Return value */
 
@@ -292,32 +303,83 @@ H5HF_cache_hdr_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
     if(NULL == (wb = H5WB_wrap(hdr_buf, sizeof(hdr_buf))))
         HGOTO_ERROR(H5E_HEAP, H5E_CANTINIT, NULL, "can't wrap buffer")
 
-    /* Compute the 'base' size of the fractal heap header on disk */
-    size = (size_t)H5HF_HEADER_SIZE(hdr);
+    /* Compute the minimum size of the fractal heap header to determine filter info */
+    min_size = (size_t)H5HF_MIN_HEADER_SIZE;
 
     /* Get a pointer to a buffer that's large enough for serialized header */
-    if(NULL == (buf = (uint8_t *)H5WB_actual(wb, size)))
+    if(NULL == (buf = (uint8_t *)H5WB_actual(wb, min_size)))
         HGOTO_ERROR(H5E_HEAP, H5E_NOSPACE, NULL, "can't get actual buffer")
+    buf_size = min_size;
 
-    /* Read header from disk */
-    if(H5F_block_read(f, H5FD_MEM_FHEAP_HDR, addr, size, dxpl_id, buf) < 0)
-	HGOTO_ERROR(H5E_HEAP, H5E_READERROR, NULL, "can't read fractal heap header")
+    /* Get the # of read attempts */
+    tries = max_tries = H5F_GET_READ_ATTEMPTS(udata->f);
+    retries = 0;
+    do {
+        /* Read minimum header from disk */
+        if(H5F_block_read(udata->f, H5FD_MEM_FHEAP_HDR, addr, min_size, dxpl_id, buf) < 0)
+            HGOTO_ERROR(H5E_HEAP, H5E_READERROR, NULL, "can't read fractal heap header")
 
-    /* Get temporary pointer to serialized header */
-    p = buf;
+        /* Get temporary pointer to serialized header */
+        p = buf;
 
-    /* Magic number */
-    if(HDmemcmp(p, H5HF_HDR_MAGIC, (size_t)H5_SIZEOF_MAGIC))
-	HGOTO_ERROR(H5E_HEAP, H5E_CANTLOAD, NULL, "wrong fractal heap header signature")
-    p += H5_SIZEOF_MAGIC;
+        /* Magic number */
+        if(HDmemcmp(p, H5HF_HDR_MAGIC, (size_t)H5_SIZEOF_MAGIC))
+            continue;   /* Transfer control to while() and count this as a bad read, not an error */
+        p += H5_SIZEOF_MAGIC;
 
-    /* Version */
-    if(*p++ != H5HF_HDR_VERSION)
-	HGOTO_ERROR(H5E_HEAP, H5E_VERSION, NULL, "wrong fractal heap header version")
+        /* Version */
+        if(*p++ != H5HF_HDR_VERSION)
+            continue;   /* Transfer control to while() and count this as a bad read, not an error */
 
-    /* General heap information */
-    UINT16DECODE(p, hdr->id_len);               /* Heap ID length */
-    UINT16DECODE(p, hdr->filter_len);           /* I/O filters' encoded length */
+        /* General heap information */
+        UINT16DECODE(p, hdr->id_len);               /* Heap ID length */
+        UINT16DECODE(p, hdr->filter_len);           /* I/O filters' encoded length */
+
+	/* Fixed-size header length */
+	hdr->heap_size = (size_t)H5HF_HEADER_SIZE(hdr);
+
+	/* Check for I/O filter information to decode */
+	if(hdr->filter_len > 0)
+	    /* Add the variable-len I/O filter information */
+	    hdr->heap_size += (size_t)(hdr->sizeof_size         /* Size of size for filtered root direct block */
+				+ (unsigned)4                	/* Size of filter mask for filtered root direct block */
+				+ hdr->filter_len);  		/* Size of encoded I/O filter info */
+
+        /* Check if we need to resize the buffer */
+        if(hdr->heap_size > buf_size) {
+            /* Re-size current buffer */
+            if(NULL == (buf = (uint8_t *)H5WB_actual(wb, hdr->heap_size)))
+                HGOTO_ERROR(H5E_HEAP, H5E_NOSPACE, NULL, "can't get actual buffer")
+            buf_size = hdr->heap_size;
+        } /* end if */
+	
+	/* Read the whole header, possibly with filter info */
+        /* (Can't use H5F_read_check_metadata() since the length from the
+         *      minimum-sized header info might be incorrect. -QAK)
+         */
+        if(H5F_block_read(udata->f, H5FD_MEM_FHEAP_HDR, addr, hdr->heap_size, dxpl_id, buf) < 0)
+	    HGOTO_ERROR(H5E_HEAP, H5E_READERROR, NULL, "can't read remainder of fractal heap header")
+
+	/* Retrieve stored and computed checksums */
+	H5F_get_checksums(buf, hdr->heap_size, &stored_chksum, &computed_chksum);
+
+	/* Verify checksum */
+	if(stored_chksum == computed_chksum)
+	    break;
+    } while (--tries);
+
+    if(tries == 0)
+	HGOTO_ERROR(H5E_HEAP, H5E_BADVALUE, NULL, "incorrect metadata checksum after all tries (%u) for fractal heap header", max_tries)
+
+    /* Calculate and track the # of retry */
+    retries += (max_tries - tries);
+    if(retries)  /* Does not track 0 retry */
+	if(H5F_track_metadata_read_retries(udata->f, H5AC_FHEAP_HDR_ID, retries) < 0)
+            HGOTO_ERROR(H5E_OHDR, H5E_BADVALUE, NULL, "cannot track read tries = %u ", retries)
+
+    /* Reset pointer into [possibly] re-sized buffer */
+    /* (Skip over information decoded earlier) */
+    p = buf + min_size;
 
     /* Heap status flags */
     /* (bit 0: "huge" object IDs have wrapped) */
@@ -346,41 +408,12 @@ H5HF_cache_hdr_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
     H5F_DECODE_LENGTH(udata->f, p, hdr->tiny_nobjs);
 
     /* Managed objects' doubling-table info */
-    if(H5HF_dtable_decode(hdr->f, &p, &(hdr->man_dtable)) < 0)
+    if(H5HF_dtable_decode(udata->f, &p, &(hdr->man_dtable)) < 0)
         HGOTO_ERROR(H5E_HEAP, H5E_CANTENCODE, NULL, "unable to encode managed obj. doubling table info")
-
-    /* Sanity check */
-    /* (allow for checksum not decoded yet) */
-    HDassert((size_t)(p - (const uint8_t *)buf) == (size - H5HF_SIZEOF_CHKSUM));
 
     /* Check for I/O filter information to decode */
     if(hdr->filter_len > 0) {
-        size_t filter_info_off;     /* Offset in header of filter information */
-        size_t filter_info_size;    /* Size of filter information */
         H5O_pline_t *pline;         /* Pipeline information from the header on disk */
-
-        /* Compute the offset of the filter info in the header */
-        filter_info_off = (size_t)(p - (const uint8_t *)buf);
-
-        /* Compute the size of the extra filter information */
-        filter_info_size = (size_t)(hdr->sizeof_size     /* Size of size for filtered root direct block */
-            + (unsigned)4                       /* Size of filter mask for filtered root direct block */
-            + hdr->filter_len);                 /* Size of encoded I/O filter info */
-
-        /* Compute the heap header's size */
-        hdr->heap_size = size + filter_info_size;
-
-        /* Re-size current buffer */
-        if(NULL == (buf = (uint8_t *)H5WB_actual(wb, hdr->heap_size)))
-            HGOTO_ERROR(H5E_HEAP, H5E_NOSPACE, NULL, "can't get actual buffer")
-
-        /* Read in I/O filter information */
-        /* (and the checksum) */
-        if(H5F_block_read(f, H5FD_MEM_FHEAP_HDR, (addr + filter_info_off), (filter_info_size + H5HF_SIZEOF_CHKSUM), dxpl_id, (buf + filter_info_off)) < 0)
-            HGOTO_ERROR(H5E_HEAP, H5E_READERROR, NULL, "can't read fractal heap header's I/O pipeline filter info")
-
-        /* Point at correct offset in header for the filter information */
-        p = buf + filter_info_off;
 
         /* Decode the size of a filtered root direct block */
         H5F_DECODE_LENGTH(udata->f, p, hdr->pline_root_direct_size);
@@ -389,7 +422,7 @@ H5HF_cache_hdr_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
         UINT32DECODE(p, hdr->pline_root_direct_filter_mask);
 
         /* Decode I/O filter information */
-        if(NULL == (pline = (H5O_pline_t *)H5O_msg_decode(hdr->f, udata->dxpl_id, NULL, H5O_PLINE_ID, p)))
+        if(NULL == (pline = (H5O_pline_t *)H5O_msg_decode(udata->f, udata->dxpl_id, NULL, H5O_PLINE_ID, p)))
             HGOTO_ERROR(H5E_HEAP, H5E_CANTDECODE, NULL, "can't decode I/O pipeline filters")
         p += hdr->filter_len;
 
@@ -400,23 +433,11 @@ H5HF_cache_hdr_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
         /* Release the space allocated for the I/O pipeline filters */
         H5O_msg_free(H5O_PLINE_ID, pline);
     } /* end if */
-    else
-        /* Set the heap header's size */
-        hdr->heap_size = size;
 
-    /* Compute checksum on entire header */
-    /* (including the filter information, if present) */
-    computed_chksum = H5_checksum_metadata(buf, (size_t)(p - (const uint8_t *)buf), 0);
-
-    /* Metadata checksum */
-    UINT32DECODE(p, stored_chksum);
+    /* Already decoded and compared stored checksum earlier, when reading */
 
     /* Sanity check */
-    HDassert((size_t)(p - (const uint8_t *)buf) == hdr->heap_size);
-
-    /* Verify checksum */
-    if(stored_chksum != computed_chksum)
-	HGOTO_ERROR(H5E_HEAP, H5E_BADVALUE, NULL, "incorrect metadata checksum for fractal heap header")
+    HDassert((size_t)(p - (const uint8_t *)buf) == (hdr->heap_size - H5_SIZEOF_CHKSUM));
 
     /* Finish initialization of heap header */
     if(H5HF_hdr_finish_init(hdr) < 0)
@@ -712,8 +733,6 @@ H5HF_cache_iblock_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
     uint8_t		*buf;           /* Temporary buffer */
     const uint8_t	*p;             /* Pointer into raw data buffer */
     haddr_t             heap_addr;      /* Address of heap header in the file */
-    uint32_t            stored_chksum;  /* Stored metadata checksum value */
-    uint32_t            computed_chksum; /* Computed metadata checksum value */
     unsigned            u;              /* Local index variable */
     H5HF_indirect_t	*ret_value;     /* Return value */
 
@@ -755,9 +774,9 @@ H5HF_cache_iblock_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
     if(NULL == (buf = (uint8_t *)H5WB_actual(wb, iblock->size)))
         HGOTO_ERROR(H5E_HEAP, H5E_NOSPACE, NULL, "can't get actual buffer")
 
-    /* Read indirect block from disk */
-    if(H5F_block_read(f, H5FD_MEM_FHEAP_IBLOCK, addr, iblock->size, dxpl_id, buf) < 0)
-	HGOTO_ERROR(H5E_HEAP, H5E_READERROR, NULL, "can't read fractal heap indirect block")
+    /* Read and validate indirect block from disk */
+    if(H5F_read_check_metadata(f, dxpl_id, H5FD_MEM_FHEAP_IBLOCK, H5AC_FHEAP_IBLOCK_ID, addr, iblock->size, iblock->size, buf) < 0)
+        HGOTO_ERROR(H5E_HEAP, H5E_BADVALUE, NULL, "incorrect metadata checksum for fractal heap indirect block")
 
     /* Get temporary pointer to serialized indirect block */
     p = buf;
@@ -847,18 +866,10 @@ H5HF_cache_iblock_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
     /* Sanity check */
     HDassert(iblock->nchildren);        /* indirect blocks w/no children should have been deleted */
 
-    /* Compute checksum on indirect block */
-    computed_chksum = H5_checksum_metadata(buf, (size_t)(p - (const uint8_t *)buf), 0);
-
-    /* Metadata checksum */
-    UINT32DECODE(p, stored_chksum);
+    /* Already decoded and compared stored checksum earlier, when reading */
 
     /* Sanity check */
-    HDassert((size_t)(p - (const uint8_t *)buf) == iblock->size);
-
-    /* Verify checksum */
-    if(stored_chksum != computed_chksum)
-	HGOTO_ERROR(H5E_HEAP, H5E_BADVALUE, NULL, "incorrect metadata checksum for fractal heap indirect block")
+    HDassert((size_t)(p - (const uint8_t *)buf) == (iblock->size - H5_SIZEOF_CHKSUM));
 
     /* Check if we have any indirect block children */
     if(iblock->nrows > hdr->man_dtable.max_direct_rows) {
@@ -1219,6 +1230,13 @@ H5HF_cache_dblock_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
     H5HF_direct_t	*dblock = NULL; /* Direct block info */
     const uint8_t	*p;             /* Pointer into raw data buffer */
     haddr_t             heap_addr;      /* Address of heap header in the file */
+    uint32_t 		computed_chksum;    /* Computed metadata checksum value */
+    uint32_t 		stored_chksum;      /* Metadata checksum value */
+    unsigned 		tries, max_tries;   /* The # of read attempts */
+    unsigned		retries;	/* The # of retries */
+    size_t		chk_size;	/* The size for validating checksum */
+    uint8_t 		*chk_p;		/* Pointer to the area for validating checksum */
+    size_t 		read_size;      /* Size of filtered direct block to read */
     H5HF_direct_t	*ret_value;     /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
@@ -1256,58 +1274,97 @@ H5HF_cache_dblock_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
     if(NULL == (dblock->blk = H5FL_BLK_MALLOC(direct_block, (size_t)dblock->size)))
         HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
 
-    /* Check for I/O filters on this heap */
+    /* Determine read_size for filter buffer */
     if(hdr->filter_len > 0) {
-        H5Z_cb_t filter_cb = {NULL, NULL};  /* Filter callback structure */
-        size_t nbytes;          /* Number of bytes used in buffer, after applying reverse filters */
-        void *read_buf;         /* Pointer to buffer to read in */
-        size_t read_size;       /* Size of filtered direct block to read */
-        unsigned filter_mask;	/* Excluded filters for direct block */
+	/* Check for root direct block */
+	if(par_info->iblock == NULL) {
+	    /* Sanity check */
+	    HDassert(H5F_addr_eq(hdr->man_dtable.table_addr, addr));
 
-        /* Check for root direct block */
-        if(par_info->iblock == NULL) {
-            /* Sanity check */
-            HDassert(H5F_addr_eq(hdr->man_dtable.table_addr, addr));
+	    /* Set up parameters to read filtered direct block */
+	    read_size = hdr->pline_root_direct_size;
+	} /* end if */
+	else {
+	    /* Sanity check */
+	    HDassert(H5F_addr_eq(par_info->iblock->ents[par_info->entry].addr, addr));
 
-            /* Set up parameters to read filtered direct block */
-            read_size = hdr->pline_root_direct_size;
-        } /* end if */
-        else {
-            /* Sanity check */
-            HDassert(H5F_addr_eq(par_info->iblock->ents[par_info->entry].addr, addr));
-
-            /* Set up parameters to read filtered direct block */
-            read_size = par_info->iblock->filt_ents[par_info->entry].size;
-        } /* end else */
-
-        /* Allocate buffer to perform I/O filtering on */
-        if(NULL == (read_buf = H5MM_malloc(read_size)))
-            HGOTO_ERROR(H5E_HEAP, H5E_NOSPACE, NULL, "memory allocation failed for pipeline buffer")
-
-        /* Read filtered direct block from disk */
-        if(H5F_block_read(f, H5FD_MEM_FHEAP_DBLOCK, addr, read_size, dxpl_id, read_buf) < 0)
-            HGOTO_ERROR(H5E_HEAP, H5E_READERROR, NULL, "can't read fractal heap direct block")
-
-        /* Push direct block data through I/O filter pipeline */
-        nbytes = read_size;
-        filter_mask = udata->filter_mask;
-        if(H5Z_pipeline(&(hdr->pline), H5Z_FLAG_REVERSE, &filter_mask, H5Z_ENABLE_EDC, filter_cb, &nbytes, &read_size, &read_buf) < 0)
-            HGOTO_ERROR(H5E_HEAP, H5E_CANTFILTER, NULL, "output pipeline failed")
-
-        /* Sanity check */
-        HDassert(nbytes == dblock->size);
-
-        /* Copy un-filtered data into block's buffer */
-        HDmemcpy(dblock->blk, read_buf, dblock->size);
-
-        /* Release the read buffer */
-        H5MM_xfree(read_buf);
+	    /* Set up parameters to read filtered direct block */
+	    read_size = par_info->iblock->filt_ents[par_info->entry].size;
+	} /* end else */
     } /* end if */
-    else {
-        /* Read direct block from disk */
-        if(H5F_block_read(f, H5FD_MEM_FHEAP_DBLOCK, addr, dblock->size, dxpl_id, dblock->blk) < 0)
-            HGOTO_ERROR(H5E_HEAP, H5E_READERROR, NULL, "can't read fractal heap direct block")
-    } /* end else */
+
+    tries = max_tries = H5F_GET_READ_ATTEMPTS(f);
+    do {
+	/* Check for I/O filters on this heap */
+	if(hdr->filter_len > 0) {
+	    H5Z_cb_t filter_cb = {NULL, NULL};  /* Filter callback structure */
+	    size_t nbytes;          /* Number of bytes used in buffer, after applying reverse filters */
+	    void *read_buf;         /* Pointer to buffer to read in */
+	    unsigned filter_mask;	/* Excluded filters for direct block */
+
+	    /* Allocate buffer to perform I/O filtering on */
+	    if(NULL == (read_buf = H5MM_malloc(read_size)))
+		HGOTO_ERROR(H5E_HEAP, H5E_NOSPACE, NULL, "memory allocation failed for pipeline buffer")
+
+	    /* Read filtered direct block from disk */
+	    if(H5F_block_read(f, H5FD_MEM_FHEAP_DBLOCK, addr, read_size, dxpl_id, read_buf) < 0)
+		HGOTO_ERROR(H5E_HEAP, H5E_READERROR, NULL, "can't read fractal heap direct block")
+
+	    /* Push direct block data through I/O filter pipeline */
+	    nbytes = read_size;
+	    filter_mask = udata->filter_mask;
+	    if(H5Z_pipeline(&(hdr->pline), H5Z_FLAG_REVERSE, &filter_mask, H5Z_ENABLE_EDC, filter_cb, &nbytes, &read_size, &read_buf) < 0)
+		HGOTO_ERROR(H5E_HEAP, H5E_CANTFILTER, NULL, "output pipeline failed")
+
+	    /* Sanity check */
+	    HDassert(nbytes == dblock->size);
+
+	    /* Copy un-filtered data into block's buffer */
+	    HDmemcpy(dblock->blk, read_buf, dblock->size);
+
+	    /* Release the read buffer */
+	    H5MM_xfree(read_buf);
+	} /* end if */
+	else {
+	    /* Read direct block from disk */
+	    if(H5F_block_read(f, H5FD_MEM_FHEAP_DBLOCK, addr, dblock->size, dxpl_id, dblock->blk) < 0)
+		HGOTO_ERROR(H5E_HEAP, H5E_READERROR, NULL, "can't read fractal heap direct block")
+	} /* end else */
+
+	/* Get out if data block is not checksummed */
+	if(!(hdr->checksum_dblocks))
+	    break;
+
+	/* Decode checksum on direct block, if requested */
+	chk_size = (size_t)(H5HF_MAN_ABS_DIRECT_OVERHEAD(hdr) - H5HF_SIZEOF_CHKSUM);
+	chk_p = dblock->blk + chk_size;
+
+        /* Metadata checksum */
+        UINT32DECODE(chk_p, stored_chksum);
+
+	chk_p -= H5HF_SIZEOF_CHKSUM;
+
+        /* Reset checksum field, for computing the checksum */
+        /* (Casting away const OK - QAK) */
+        HDmemset(chk_p, 0, (size_t)H5HF_SIZEOF_CHKSUM);
+
+        /* Compute checksum on entire direct block */
+        computed_chksum = H5_checksum_metadata(dblock->blk, dblock->size, 0);
+
+        /* Verify checksum */
+        if(stored_chksum == computed_chksum)
+	    break;
+
+    } while (--tries);
+
+    if(tries == 0)
+	HGOTO_ERROR(H5E_HEAP, H5E_BADVALUE, NULL, "incorrect metadata checksum after all tries (%u) for fractal heap direct block", max_tries)
+
+    /* Calculate and track the # of retries */
+    retries = max_tries - tries;
+    if(retries)   /* Does not track 0 retry */
+	if(H5F_track_metadata_read_retries(f, H5AC_FHEAP_DBLOCK_ID, retries) < 0)
+            HGOTO_ERROR(H5E_HEAP, H5E_BADVALUE, NULL, "cannot track read retries = %u ", retries)
 
     /* Start decoding direct block */
     p = dblock->blk;
@@ -1338,25 +1395,9 @@ H5HF_cache_dblock_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
     /* Offset of heap within the heap's address space */
     UINT64DECODE_VAR(p, dblock->block_off, hdr->heap_off_size);
 
-    /* Decode checksum on direct block, if requested */
-    if(hdr->checksum_dblocks) {
-        uint32_t stored_chksum;         /* Metadata checksum value */
-        uint32_t computed_chksum;       /* Computed metadata checksum value */
-
-        /* Metadata checksum */
-        UINT32DECODE(p, stored_chksum);
-
-        /* Reset checksum field, for computing the checksum */
-        /* (Casting away const OK - QAK) */
-        HDmemset((uint8_t *)p - H5HF_SIZEOF_CHKSUM, 0, (size_t)H5HF_SIZEOF_CHKSUM);
-
-        /* Compute checksum on entire direct block */
-        computed_chksum = H5_checksum_metadata(dblock->blk, dblock->size, 0);
-
-        /* Verify checksum */
-        if(stored_chksum != computed_chksum)
-            HGOTO_ERROR(H5E_HEAP, H5E_BADVALUE, NULL, "incorrect metadata checksum for fractal heap direct block")
-    } /* end if */
+    /* Advance past optional checksum on direct block, it was verified earlier */
+    if(hdr->checksum_dblocks)
+	p += H5HF_SIZEOF_CHKSUM;
 
     /* Sanity check */
     HDassert((size_t)(p - dblock->blk) == (size_t)H5HF_MAN_ABS_DIRECT_OVERHEAD(hdr));

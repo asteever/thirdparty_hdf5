@@ -654,5 +654,4 @@ void cleanup_file()
     HDremove(FILE2.c_str());
     HDremove(FILE3.c_str());
     HDremove(FILE4.c_str());
-    HDremove(FILE5.c_str());
 }   // cleanup_file

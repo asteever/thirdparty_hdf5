@@ -144,16 +144,16 @@ custom_print_cb1(int n, H5E_error1_t *err_desc, void* client_data)
     fprintf(stream, "%*smajor: %s\n", indent * 2, "", maj);
     fprintf(stream, "%*sminor: %s\n", indent * 2, "", min);
 
-    H5free_memory(maj);
-    H5free_memory(min);
+    HDfree(maj);
+    HDfree(min);
 
     return 0;
 
 error:
     if(maj)
-        H5free_memory(maj);
+        HDfree(maj);
     if(min)
-        H5free_memory(min);
+        HDfree(min);
     
     return -1;
 }
@@ -197,16 +197,16 @@ custom_print_cb2(int n, H5E_error2_t *err_desc, void* client_data)
     fprintf(stream, "%*smajor: %s\n", indent * 2, "", maj);
     fprintf(stream, "%*sminor: %s\n", indent * 2, "", min);
 
-    H5free_memory(maj);
-    H5free_memory(min);
+    HDfree(maj);
+    HDfree(min);
 
     return 0;
 
 error:
     if(maj)
-        H5free_memory(maj);
+        HDfree(maj);
     if(min)
-        H5free_memory(min);
+        HDfree(min);
     
     return -1;
 }

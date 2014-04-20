@@ -27,9 +27,7 @@
 !
 !
 !*****
-MODULE TH5A
 
-CONTAINS
     SUBROUTINE attribute_test(cleanup, total_error)
 
 !   This subroutine tests following functionalities:
@@ -38,10 +36,10 @@ CONTAINS
 !
 
      USE HDF5 ! This module contains all necessary modules
-     USE TH5_MISC
+
      IMPLICIT NONE
      LOGICAL, INTENT(IN)  :: cleanup
-     INTEGER, INTENT(INOUT) :: total_error
+     INTEGER, INTENT(OUT) :: total_error
 
      CHARACTER(LEN=5), PARAMETER :: filename = "atest"    !File name
      CHARACTER(LEN=80) :: fix_filename
@@ -102,7 +100,7 @@ CONTAINS
      CHARACTER(LEN=35), DIMENSION(2) ::  aread_data ! Buffer to put read back
                                                ! string attr data
      CHARACTER ::  attr_character_data = 'A'
-     REAL(KIND=Fortran_DOUBLE),  DIMENSION(1) ::  attr_double_data = 3.459D0
+     REAL(KIND=Fortran_DOUBLE),  DIMENSION(1) ::  attr_double_data = 3.459
      REAL,         DIMENSION(1) ::  attr_real_data = 4.0
      INTEGER,      DIMENSION(1) ::  attr_integer_data = 5
      INTEGER(HSIZE_T), DIMENSION(7) :: data_dims
@@ -129,7 +127,6 @@ CONTAINS
      !data buffers
      !
      INTEGER, DIMENSION(NX,NY) :: data_in
-     LOGICAL :: differ
 
 
      !
@@ -519,21 +516,20 @@ CONTAINS
      data_dims(1) = 1
      CALL h5aread_f(attr3_id, H5T_NATIVE_DOUBLE, aread_double_data, data_dims, error)
      CALL check("h5aread_f",error,total_error)
-
-     IF( .NOT.dreal_eq( REAL(aread_double_data(1),dp), 3.459_dp) )THEN
-        WRITE(*,*) "Read back double attrbute is wrong", aread_double_data(1)
-        total_error = total_error + 1
-     ENDIF
+     IF (aread_double_data(1) .NE. 3.459 ) THEN
+         WRITE(*,*) "Read back double attrbute is wrong", aread_double_data(1)
+         total_error = total_error + 1
+     END IF
      !
      !read the real attribute data back to memory
      !
      data_dims(1) = 1
      CALL h5aread_f(attr4_id, H5T_NATIVE_REAL, aread_real_data, data_dims, error)
      CALL check("h5aread_f",error,total_error)
-     IF( .NOT.dreal_eq( REAL(aread_real_data(1),dp), 4.0_dp) )THEN
-        WRITE(*,*) "Read back real attrbute is wrong", aread_real_data(1)
-        total_error = total_error + 1
-     ENDIF
+     IF (aread_real_data(1) .NE. 4.0 ) THEN
+         WRITE(*,*) "Read back real attrbute is wrong ", aread_real_data
+         total_error = total_error + 1
+     END IF
      !
      !read the Integer attribute data back to memory
      !
@@ -628,4 +624,3 @@ CONTAINS
 
      RETURN
      END SUBROUTINE attribute_test
-END MODULE TH5A

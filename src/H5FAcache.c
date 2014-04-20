@@ -15,9 +15,9 @@
 
 /*-------------------------------------------------------------------------
  *
- * Created:		H5FAcache.c
+ * Created:     H5FAcache.c
  *
- * Purpose:		Implement fixed array metadata cache methods.
+ * Purpose:     Implement fixed array metadata cache methods.
  *
  *-------------------------------------------------------------------------
  */
@@ -37,12 +37,12 @@
 /***********/
 /* Headers */
 /***********/
-#include "H5private.h"		/* Generic Functions			*/
-#include "H5Eprivate.h"		/* Error handling		  	*/
-#include "H5FApkg.h"		/* Fixed Arrays				*/
-#include "H5MFprivate.h"	/* File memory management		*/
-#include "H5VMprivate.h"		/* Vectors and arrays 			*/
-#include "H5WBprivate.h"        /* Wrapped Buffers                      */
+#include "H5private.h"      /* Generic Functions                            */
+#include "H5Eprivate.h"     /* Error handling                               */
+#include "H5FApkg.h"        /* Fixed Arrays                                 */
+#include "H5MFprivate.h"    /* File memory management                       */
+#include "H5Vprivate.h"     /* Vectors and arrays                           */
+#include "H5WBprivate.h"    /* Wrapped Buffers                              */
 
 
 /****************/
@@ -76,21 +76,22 @@
 /* Metadata cache (H5AC) callbacks */
 static H5FA_hdr_t *H5FA__cache_hdr_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata);
 static herr_t H5FA__cache_hdr_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5FA_hdr_t *hdr, unsigned * flags_ptr);
+static herr_t H5FA__cache_hdr_dest(H5F_t *f, H5FA_hdr_t *hdr);
 static herr_t H5FA__cache_hdr_clear(H5F_t *f, H5FA_hdr_t *hdr, hbool_t destroy);
 static herr_t H5FA__cache_hdr_size(const H5F_t *f, const H5FA_hdr_t *hdr, size_t *size_ptr);
-static herr_t H5FA__cache_hdr_dest(H5F_t *f, H5FA_hdr_t *hdr);
 
 static H5FA_dblock_t *H5FA__cache_dblock_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata);
 static herr_t H5FA__cache_dblock_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5FA_dblock_t *dblock, unsigned * flags_ptr);
-static herr_t H5FA__cache_dblock_clear(H5F_t *f, H5FA_dblock_t *dblock, hbool_t destroy);
-static herr_t H5FA__cache_dblock_size(const H5F_t *f, const H5FA_dblock_t *dblock, size_t *size_ptr);
 static herr_t H5FA__cache_dblock_dest(H5F_t *f, H5FA_dblock_t *dblock);
+static herr_t H5FA__cache_dblock_clear(H5F_t *f, H5FA_dblock_t *dblock, hbool_t destroy);
+static herr_t H5FA__cache_dblock_notify(H5AC_notify_action_t action, H5FA_dblock_t *dblock);
+static herr_t H5FA__cache_dblock_size(const H5F_t *f, const H5FA_dblock_t *dblock, size_t *size_ptr);
 
 static H5FA_dblk_page_t *H5FA__cache_dblk_page_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata);
 static herr_t H5FA__cache_dblk_page_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5FA_dblk_page_t *dblk_page, unsigned * flags_ptr);
+static herr_t H5FA__cache_dblk_page_dest(H5F_t *f, H5FA_dblk_page_t *dblk_page);
 static herr_t H5FA__cache_dblk_page_clear(H5F_t *f, H5FA_dblk_page_t *dblk_page, hbool_t destroy);
 static herr_t H5FA__cache_dblk_page_size(const H5F_t *f, const H5FA_dblk_page_t *dblk_page, size_t *size_ptr);
-static herr_t H5FA__cache_dblk_page_dest(H5F_t *f, H5FA_dblk_page_t *dblk_page);
 
 
 /*********************/
@@ -116,7 +117,7 @@ const H5AC_class_t H5AC_FARRAY_DBLOCK[1] = {{
     (H5AC_flush_func_t)H5FA__cache_dblock_flush,
     (H5AC_dest_func_t)H5FA__cache_dblock_dest,
     (H5AC_clear_func_t)H5FA__cache_dblock_clear,
-    (H5AC_notify_func_t)NULL,
+    (H5AC_notify_func_t)H5FA__cache_dblock_notify,
     (H5AC_size_func_t)H5FA__cache_dblock_size,
 }};
 
@@ -144,14 +145,14 @@ const H5AC_class_t H5AC_FARRAY_DBLK_PAGE[1] = {{
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5FA__cache_hdr_load
+ * Function:    H5FA__cache_hdr_load
  *
- * Purpose:	Loads a fixed array header from the disk.
+ * Purpose:     Loads a fixed array header from the disk.
  *
- * Return:	Success:	Pointer to a new fixed array
- *		Failure:	NULL
+ * Return:      Success:    Pointer to a new fixed array
+ *              Failure:    NULL
  *
- * Programmer:	Vailin Choi
+ * Programmer:  Vailin Choi
  *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
@@ -161,15 +162,13 @@ H5FA_hdr_t *, NULL, NULL,
 H5FA__cache_hdr_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata))
 
     /* Local variables */
-    H5FA_cls_id_t       id;		/* ID of fixed array class, as found in file */
-    H5FA_hdr_t		*hdr = NULL;    /* Fixed array info */
-    size_t		size;           /* Header size */
+    H5FA_cls_id_t       id;             /* ID of fixed array class, as found in file */
+    H5FA_hdr_t          *hdr = NULL;    /* Fixed array info */
+    size_t              size;           /* Header size */
     H5WB_t              *wb = NULL;     /* Wrapped buffer for header data */
     uint8_t             hdr_buf[H5FA_HDR_BUF_SIZE]; /* Buffer for header */
-    uint8_t		*buf;           /* Pointer to header buffer */
-    const uint8_t	*p;             /* Pointer into raw data buffer */
-    uint32_t            stored_chksum;  /* Stored metadata checksum value */
-    uint32_t            computed_chksum; /* Computed metadata checksum value */
+    uint8_t             *buf;           /* Pointer to header buffer */
+    const uint8_t       *p;             /* Pointer into raw data buffer */
 
     /* Check arguments */
     HDassert(f);
@@ -177,96 +176,88 @@ H5FA__cache_hdr_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata))
 
     /* Allocate space for the fixed array data structure */
     if(NULL == (hdr = H5FA__hdr_alloc(f)))
-	H5E_THROW(H5E_CANTALLOC, "memory allocation failed for fixed array shared header")
+        H5E_THROW(H5E_CANTALLOC, "memory allocation failed for fixed array shared header")
 
     /* Set the fixed array header's address */
     hdr->addr = addr;
 
     /* Wrap the local buffer for serialized info */
     if(NULL == (wb = H5WB_wrap(hdr_buf, sizeof(hdr_buf))))
-	H5E_THROW(H5E_CANTINIT, "can't wrap buffer")
+        H5E_THROW(H5E_CANTINIT, "can't wrap buffer")
 
     /* Compute the 'base' size of the fixed array header on disk */
     size = H5FA_HEADER_SIZE(hdr);
 
     /* Get a pointer to a buffer that's large enough for serialized header */
     if(NULL == (buf = (uint8_t *)H5WB_actual(wb, size)))
-	H5E_THROW(H5E_CANTGET, "can't get actual buffer")
+        H5E_THROW(H5E_CANTGET, "can't get actual buffer")
 
-    /* Read header from disk */
-    if(H5F_block_read(f, H5FD_MEM_FARRAY_HDR, addr, size, dxpl_id, buf) < 0)
-	H5E_THROW(H5E_READERROR, "can't read fixed array header")
+    /* Read and vaildate header from disk */
+    if(H5F_read_check_metadata(f, dxpl_id, H5FD_MEM_FARRAY_HDR, H5AC_FARRAY_HDR_ID, addr, size, size, buf) < 0)
+        H5E_THROW(H5E_BADVALUE, "incorrect metadata checksum for fixed array header")
 
     /* Get temporary pointer to serialized header */
     p = buf;
 
     /* Magic number */
     if(HDmemcmp(p, H5FA_HDR_MAGIC, (size_t)H5_SIZEOF_MAGIC))
-	H5E_THROW(H5E_BADVALUE, "wrong fixed array header signature")
+        H5E_THROW(H5E_BADVALUE, "wrong fixed array header signature")
     p += H5_SIZEOF_MAGIC;
 
     /* Version */
     if(*p++ != H5FA_HDR_VERSION)
-	H5E_THROW(H5E_VERSION, "wrong fixed array header version")
+        H5E_THROW(H5E_VERSION, "wrong fixed array header version")
 
     /* Fixed array class */
     id = (H5FA_cls_id_t)*p++;
     if(id >= H5FA_NUM_CLS_ID)
-	H5E_THROW(H5E_BADTYPE, "incorrect fixed array class")
+        H5E_THROW(H5E_BADTYPE, "incorrect fixed array class")
     hdr->cparam.cls = H5FA_client_class_g[id];
 
     /* General array creation/configuration information */
-    hdr->cparam.raw_elmt_size = *p++;         	   /* Element size in file (in bytes) */
-    hdr->cparam.max_dblk_page_nelmts_bits = *p++;  /* Log2(Max. # of elements in data block page) -
-						      i.e. # of bits needed to store max. # of
-						      elements in data block page. */
+    hdr->cparam.raw_elmt_size = *p++;               /* Element size in file (in bytes) */
+    hdr->cparam.max_dblk_page_nelmts_bits = *p++;   /* Log2(Max. # of elements in data block page) -
+                                                     * i.e. # of bits needed to store max. # of
+                                                     * elements in data block page.
+                                                     */
 
     /* Array statistics */
-    H5F_DECODE_LENGTH(f, p, hdr->cparam.nelmts);	/* Number of elements */
+    H5F_DECODE_LENGTH(f, p, hdr->cparam.nelmts);    /* Number of elements */
 
     /* Internal information */
-    H5F_addr_decode(f, &p, &hdr->dblk_addr); 		/* Address of index block */
+    H5F_addr_decode(f, &p, &hdr->dblk_addr);        /* Address of index block */
 
     /* Check for data block */
     if(H5F_addr_defined(hdr->dblk_addr)) {
-	H5FA_dblock_t  dblock;  	/* Fake data block for computing size */
-	size_t	dblk_page_nelmts;	/* # of elements per data block page */
+        H5FA_dblock_t  dblock;  	/* Fake data block for computing size */
+        size_t	dblk_page_nelmts;	/* # of elements per data block page */
 
-	/* Set up fake data block for computing size on disk */
-	dblock.hdr = hdr;
-	dblock.dblk_page_init_size = 0;
-	dblock.npages = 0;
-	dblk_page_nelmts = (size_t)1 << hdr->cparam.max_dblk_page_nelmts_bits;
-	if(hdr->cparam.nelmts > dblk_page_nelmts) {
-	    dblock.npages = (size_t)(((hdr->cparam.nelmts + dblk_page_nelmts) - 1) / dblk_page_nelmts);
-	    dblock.dblk_page_init_size = (dblock.npages + 7) / 8;
-	} /* end if */
+        /* Set up fake data block for computing size on disk */
+        dblock.hdr = hdr;
+        dblock.dblk_page_init_size = 0;
+        dblock.npages = 0;
+        dblk_page_nelmts = (size_t)1 << hdr->cparam.max_dblk_page_nelmts_bits;
+        if(hdr->cparam.nelmts > dblk_page_nelmts) {
+            dblock.npages = (size_t)(((hdr->cparam.nelmts + dblk_page_nelmts) - 1) / dblk_page_nelmts);
+            dblock.dblk_page_init_size = (dblock.npages + 7) / 8;
+        } /* end if */
 
         /* Compute Fixed Array data block size for hdr statistics */
-	hdr->stats.dblk_size = (size_t)H5FA_DBLOCK_SIZE(&dblock);
+        hdr->stats.dblk_size = (size_t)H5FA_DBLOCK_SIZE(&dblock);
     } /* end if */
 
     /* Sanity check */
     /* (allow for checksum not decoded yet) */
     HDassert((size_t)(p - buf) == (size - H5FA_SIZEOF_CHKSUM));
 
-    /* Compute checksum on entire header */
-    /* (including the filter information, if present) */
-    computed_chksum = H5_checksum_metadata(buf, (size_t)(p - buf), 0);
-
-    /* Metadata checksum */
-    UINT32DECODE(p, stored_chksum);
+    /* Already decoded and compared stored checksum earlier, when reading */
 
     /* Sanity check */
-    HDassert((size_t)(p - buf) == size);
-
-    /* Verify checksum */
-    if(stored_chksum != computed_chksum)
-	H5E_THROW(H5E_BADVALUE, "incorrect metadata checksum for fixed array header")
+    HDassert((size_t)(p - buf) == (size - H5_SIZEOF_CHKSUM));
 
     /* Finish initializing fixed array header */
     if(H5FA__hdr_init(hdr, udata) < 0)
-	H5E_THROW(H5E_CANTINIT, "initialization failed for fixed array header")
+        H5E_THROW(H5E_CANTINIT, "initialization failed for fixed array header")
     HDassert(hdr->size == size);
 
     /* Set return value */
@@ -276,7 +267,7 @@ CATCH
 
     /* Release resources */
     if(wb && H5WB_unwrap(wb) < 0)
-	H5E_THROW(H5E_CLOSEERROR, "can't close wrapped buffer")
+        H5E_THROW(H5E_CLOSEERROR, "can't close wrapped buffer")
     if(!ret_value)
         if(hdr && H5FA__hdr_dest(hdr) < 0)
             H5E_THROW(H5E_CANTFREE, "unable to destroy fixed array header")
@@ -285,13 +276,13 @@ END_FUNC(STATIC)   /* end H5FA__cache_hdr_load() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5FA__cache_hdr_flush
+ * Function:    H5FA__cache_hdr_flush
  *
- * Purpose:	Flushes a dirty fixed array header to disk.
+ * Purpose:     Flushes a dirty fixed array header to disk.
  *
- * Return:	Non-negative on success/Negative on failure
+ * Return:      SUCCEED/FAIL
  *
- * Programmer:	Vailin Choi
+ * Programmer:  Vailin Choi
  *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
@@ -355,12 +346,12 @@ H5FA__cache_hdr_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr,
         /* Metadata checksum */
         UINT32ENCODE(p, metadata_chksum);
 
-	/* Write the array header. */
+        /* Write the array header. */
         HDassert((size_t)(p - buf) == size);
-	if(H5F_block_write(f, H5FD_MEM_FARRAY_HDR, addr, size, dxpl_id, buf) < 0)
+        if(H5F_block_write(f, H5FD_MEM_FARRAY_HDR, addr, size, dxpl_id, buf) < 0)
             H5E_THROW(H5E_WRITEERROR, "unable to save fixed array header to disk")
 
-	hdr->cache_info.is_dirty = FALSE;
+        hdr->cache_info.is_dirty = FALSE;
     } /* end if */
 
     if(destroy)
@@ -371,81 +362,19 @@ CATCH
 
     /* Release resources */
     if(wb && H5WB_unwrap(wb) < 0)
-	H5E_THROW(H5E_CLOSEERROR, "can't close wrapped buffer")
+        H5E_THROW(H5E_CLOSEERROR, "can't close wrapped buffer")
 
 END_FUNC(STATIC)   /* end H5FA__cache_hdr_flush() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5FA__cache_hdr_clear
+ * Function:    H5FA__cache_hdr_dest
  *
- * Purpose:	Mark a fixed array header in memory as non-dirty.
+ * Purpose:     Destroys a fixed array header in memory.
  *
- * Return:	Non-negative on success/Negative on failure
+ * Return:      SUCCEED/FAIL
  *
- * Programmer:	Vailin Choi
- *              Thursday, April 30, 2009
- *
- *-------------------------------------------------------------------------
- */
-BEGIN_FUNC(STATIC, ERR,
-herr_t, SUCCEED, FAIL,
-H5FA__cache_hdr_clear(H5F_t *f, H5FA_hdr_t *hdr, hbool_t destroy))
-
-    /* Sanity check */
-    HDassert(hdr);
-
-    /* Reset the dirty flag.  */
-    hdr->cache_info.is_dirty = FALSE;
-
-    if(destroy)
-        if(H5FA__cache_hdr_dest(f, hdr) < 0)
-            H5E_THROW(H5E_CANTFREE, "unable to destroy fixed array header")
-
-CATCH
-
-END_FUNC(STATIC)   /* end H5FA__cache_hdr_clear() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5FA__cache_hdr_size
- *
- * Purpose:	Compute the size in bytes of a fixed array header
- *		on disk, and return it in *size_ptr.  On failure,
- *		the value of *size_ptr is undefined.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Vailin Choi
- *              Thursday, April 30, 2009
- *
- *-------------------------------------------------------------------------
- */
-/* ARGSUSED */
-BEGIN_FUNC(STATIC, NOERR,
-herr_t, SUCCEED, -,
-H5FA__cache_hdr_size(const H5F_t UNUSED *f, const H5FA_hdr_t *hdr,
-    size_t *size_ptr))
-
-    /* Sanity check */
-    HDassert(f);
-    HDassert(hdr);
-    HDassert(size_ptr);
-
-    /* Set size value */
-    *size_ptr = hdr->size;
-
-END_FUNC(STATIC)   /* end H5FA__cache_hdr_size() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5FA__cache_hdr_dest
- *
- * Purpose:	Destroys a fixed array header in memory.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Vailin Choi
+ * Programmer:  Vailin Choi
  *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
@@ -486,14 +415,76 @@ END_FUNC(STATIC)   /* end H5FA__cache_hdr_dest() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5FA__cache_dblock_load
+ * Function:    H5FA__cache_hdr_clear
  *
- * Purpose:	Loads a fixed array data block from the disk.
+ * Purpose:     Mark a fixed array header in memory as non-dirty.
  *
- * Return:	Success:	Pointer to a new fixed array data block
- *		Failure:	NULL
+ * Return:      SUCCEED/FAIL
  *
- * Programmer:	Vailin Choi
+ * Programmer:  Vailin Choi
+ *              Thursday, April 30, 2009
+ *
+ *-------------------------------------------------------------------------
+ */
+BEGIN_FUNC(STATIC, ERR,
+herr_t, SUCCEED, FAIL,
+H5FA__cache_hdr_clear(H5F_t *f, H5FA_hdr_t *hdr, hbool_t destroy))
+
+    /* Sanity check */
+    HDassert(hdr);
+
+    /* Reset the dirty flag.  */
+    hdr->cache_info.is_dirty = FALSE;
+
+    if(destroy)
+        if(H5FA__cache_hdr_dest(f, hdr) < 0)
+            H5E_THROW(H5E_CANTFREE, "unable to destroy fixed array header")
+
+CATCH
+
+END_FUNC(STATIC)   /* end H5FA__cache_hdr_clear() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5FA__cache_hdr_size
+ *
+ * Purpose:     Compute the size in bytes of a fixed array header
+ *              on disk, and return it in *size_ptr.  On failure,
+ *              the value of *size_ptr is undefined.
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ * Programmer:  Vailin Choi
+ *              Thursday, April 30, 2009
+ *
+ *-------------------------------------------------------------------------
+ */
+/* ARGSUSED */
+BEGIN_FUNC(STATIC, NOERR,
+herr_t, SUCCEED, -,
+H5FA__cache_hdr_size(const H5F_t UNUSED *f, const H5FA_hdr_t *hdr,
+    size_t *size_ptr))
+
+    /* Sanity check */
+    HDassert(f);
+    HDassert(hdr);
+    HDassert(size_ptr);
+
+    /* Set size value */
+    *size_ptr = hdr->size;
+
+END_FUNC(STATIC)   /* end H5FA__cache_hdr_size() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5FA__cache_dblock_load
+ *
+ * Purpose:     Loads a fixed array data block from the disk.
+ *
+ * Return:      Success:    Pointer to a new fixed array data block
+ *              Failure:    NULL
+ *
+ * Programmer:  Vailin Choi
  *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
@@ -510,8 +501,6 @@ H5FA__cache_dblock_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata))
     uint8_t        dblock_buf[H5FA_DBLOCK_BUF_SIZE]; /* Buffer for data block */
     uint8_t	   *buf;             /* Pointer to data block buffer */
     const uint8_t  *p;              /* Pointer into raw data buffer */
-    uint32_t       stored_chksum;   /* Stored metadata checksum value */
-    uint32_t       computed_chksum; /* Computed metadata checksum value */
     haddr_t        arr_addr;        /* Address of array header in the file */
 
     /* Sanity check */
@@ -521,14 +510,14 @@ H5FA__cache_dblock_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata))
 
     /* Allocate the fixed array data block */
     if(NULL == (dblock = H5FA__dblock_alloc(udata->hdr, udata->nelmts)))
-	H5E_THROW(H5E_CANTALLOC, "memory allocation failed for fixed array data block")
+        H5E_THROW(H5E_CANTALLOC, "memory allocation failed for fixed array data block")
 
     /* Set the fixed array data block's information */
     dblock->addr = addr;
 
     /* Wrap the local buffer for serialized info */
     if(NULL == (wb = H5WB_wrap(dblock_buf, sizeof(dblock_buf))))
-	H5E_THROW(H5E_CANTINIT, "can't wrap buffer")
+        H5E_THROW(H5E_CANTINIT, "can't wrap buffer")
 
     /* Compute the size of the fixed array data block on disk */
     if(!dblock->npages)
@@ -538,36 +527,36 @@ H5FA__cache_dblock_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata))
 
     /* Get a pointer to a buffer that's large enough for serialized info */
     if(NULL == (buf = (uint8_t *)H5WB_actual(wb, size)))
-	H5E_THROW(H5E_CANTGET, "can't get actual buffer")
+        H5E_THROW(H5E_CANTGET, "can't get actual buffer")
 
-    /* Read data block from disk */
-    if(H5F_block_read(f, H5FD_MEM_FARRAY_DBLOCK, addr, size, dxpl_id, buf) < 0)
-	H5E_THROW(H5E_READERROR, "can't read fixed array data block")
+    /* Read and validate data block from disk */
+    if(H5F_read_check_metadata(f, dxpl_id, H5FD_MEM_FARRAY_DBLOCK, H5AC_FARRAY_DBLOCK_ID, addr, size, size, buf) < 0)
+        H5E_THROW(H5E_BADVALUE, "incorrect metadata checksum for fixed array data block")
 
     /* Get temporary pointer to serialized header */
     p = buf;
 
     /* Magic number */
     if(HDmemcmp(p, H5FA_DBLOCK_MAGIC, (size_t)H5_SIZEOF_MAGIC))
-	H5E_THROW(H5E_BADVALUE, "wrong fixed array data block signature")
+        H5E_THROW(H5E_BADVALUE, "wrong fixed array data block signature")
     p += H5_SIZEOF_MAGIC;
 
     /* Version */
     if(*p++ != H5FA_DBLOCK_VERSION)
-	H5E_THROW(H5E_VERSION, "wrong fixed array data block version")
+        H5E_THROW(H5E_VERSION, "wrong fixed array data block version")
 
     /* Fixed array type */
     if(*p++ != (uint8_t)udata->hdr->cparam.cls->id)
-	H5E_THROW(H5E_BADTYPE, "incorrect fixed array class")
+        H5E_THROW(H5E_BADTYPE, "incorrect fixed array class")
 
     /* Address of header for array that owns this block (just for file integrity checks) */
     H5F_addr_decode(f, &p, &arr_addr);
     if(H5F_addr_ne(arr_addr, udata->hdr->addr))
-	H5E_THROW(H5E_BADVALUE, "wrong fixed array header address")
+        H5E_THROW(H5E_BADVALUE, "wrong fixed array header address")
 
     /* Page initialization flags */
     if(dblock->npages > 0) {
-	HDmemcpy(dblock->dblk_page_init, p, dblock->dblk_page_init_size);
+        HDmemcpy(dblock->dblk_page_init, p, dblock->dblk_page_init_size);
         p += dblock->dblk_page_init_size;
     } /* end if */
 
@@ -587,18 +576,10 @@ H5FA__cache_dblock_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata))
     /* Set the data block's size */
     dblock->size = H5FA_DBLOCK_SIZE(dblock);
 
-    /* Compute checksum on data block */
-    computed_chksum = H5_checksum_metadata(buf, (size_t)(p - buf), 0);
-
-    /* Metadata checksum */
-    UINT32DECODE(p, stored_chksum);
+    /* Already decoded and compared stored checksum earlier, when reading */
 
     /* Sanity check */
-    HDassert((size_t)(p - buf) == size);
-
-    /* Verify checksum */
-    if(stored_chksum != computed_chksum)
-	H5E_THROW(H5E_BADVALUE, "incorrect metadata checksum for fixed array data block")
+    HDassert((size_t)(p - buf) == (size - H5_SIZEOF_CHKSUM));
 
     /* Set return value */
     ret_value = dblock;
@@ -607,7 +588,7 @@ CATCH
 
     /* Release resources */
     if(wb && H5WB_unwrap(wb) < 0)
-	H5E_THROW(H5E_CLOSEERROR, "can't close wrapped buffer")
+        H5E_THROW(H5E_CLOSEERROR, "can't close wrapped buffer")
     if(!ret_value)
         if(dblock && H5FA__dblock_dest(dblock) < 0)
             H5E_THROW(H5E_CANTFREE, "unable to destroy fixed array data block")
@@ -616,13 +597,13 @@ END_FUNC(STATIC)   /* end H5FA__cache_dblock_load() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5FA__cache_dblock_flush
+ * Function:    H5FA__cache_dblock_flush
  *
- * Purpose:	Flushes a dirty fixed array data block to disk.
+ * Purpose:     Flushes a dirty fixed array data block to disk.
  *
- * Return:	Non-negative on success/Negative on failure
+ * Return:      SUCCEED/FAIL
  *
- * Programmer:	Vailin Choi
+ * Programmer:  Vailin Choi
  *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
@@ -679,11 +660,11 @@ H5FA__cache_dblock_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr,
         H5F_addr_encode(f, &p, dblock->hdr->addr);
 
         /* Page init flags */
-	if(dblock->npages > 0) {
-	    /* Store the 'page init' bitmasks */
+        if(dblock->npages > 0) {
+            /* Store the 'page init' bitmasks */
             HDmemcpy(p, dblock->dblk_page_init, dblock->dblk_page_init_size);
             p += dblock->dblk_page_init_size;
-	} /* end if */
+        } /* end if */
 
         /* Only encode elements if the data block is not paged */
         if(!dblock->npages) {
@@ -702,12 +683,12 @@ H5FA__cache_dblock_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr,
         /* Metadata checksum */
         UINT32ENCODE(p, metadata_chksum);
 
-	/* Write the data block */
+        /* Write the data block */
         HDassert((size_t)(p - buf) == size);
-	if(H5F_block_write(f, H5FD_MEM_FARRAY_DBLOCK, addr, size, dxpl_id, buf) < 0)
+        if(H5F_block_write(f, H5FD_MEM_FARRAY_DBLOCK, addr, size, dxpl_id, buf) < 0)
             H5E_THROW(H5E_WRITEERROR, "unable to save fixed array data block to disk")
 
-	dblock->cache_info.is_dirty = FALSE;
+        dblock->cache_info.is_dirty = FALSE;
     } /* end if */
 
     if(destroy)
@@ -718,84 +699,19 @@ CATCH
 
     /* Release resources */
     if(wb && H5WB_unwrap(wb) < 0)
-	H5E_THROW(H5E_CLOSEERROR, "can't close wrapped buffer")
+        H5E_THROW(H5E_CLOSEERROR, "can't close wrapped buffer")
 
 END_FUNC(STATIC)   /* end H5FA__cache_dblock_flush() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5FA__cache_dblock_clear
+ * Function:    H5FA__cache_dblock_dest
  *
- * Purpose:	Mark a fixed array data block in memory as non-dirty.
+ * Purpose:     Destroys a fixed array data block in memory.
  *
- * Return:	Non-negative on success/Negative on failure
+ * Return:      SUCCEED/FAIL
  *
- * Programmer:	Vailin Choi
- *              Thursday, April 30, 2009
- *
- *-------------------------------------------------------------------------
- */
-BEGIN_FUNC(STATIC, ERR,
-herr_t, SUCCEED, FAIL,
-H5FA__cache_dblock_clear(H5F_t *f, H5FA_dblock_t *dblock, hbool_t destroy))
-
-    /* Sanity check */
-    HDassert(dblock);
-
-    /* Reset the dirty flag */
-    dblock->cache_info.is_dirty = FALSE;
-
-    if(destroy)
-        if(H5FA__cache_dblock_dest(f, dblock) < 0)
-            H5E_THROW(H5E_CANTFREE, "unable to destroy fixed array data block")
-
-CATCH
-
-END_FUNC(STATIC)   /* end H5FA__cache_dblock_clear() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5FA__cache_dblock_size
- *
- * Purpose:	Compute the size in bytes of a fixed array data block
- *		on disk, and return it in *size_ptr.  On failure,
- *		the value of *size_ptr is undefined.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Vailin Choi
- *              Thursday, April 30, 2009
- *
- *-------------------------------------------------------------------------
- */
-/* ARGSUSED */
-BEGIN_FUNC(STATIC, NOERR,
-herr_t, SUCCEED, -,
-H5FA__cache_dblock_size(const H5F_t UNUSED *f, const H5FA_dblock_t *dblock,
-    size_t *size_ptr))
-
-    /* Sanity check */
-    HDassert(f);
-    HDassert(dblock);
-    HDassert(size_ptr);
-
-    /* Set size value */
-    if(!dblock->npages)
-        *size_ptr = (size_t)dblock->size;
-    else
-        *size_ptr = H5FA_DBLOCK_PREFIX_SIZE(dblock);
-
-END_FUNC(STATIC)   /* end H5FA__cache_dblock_size() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5FA__cache_dblock_dest
- *
- * Purpose:	Destroys a fixed array data block in memory.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Vailin Choi
+ * Programmer:  Vailin Choi
  *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
@@ -837,14 +753,125 @@ END_FUNC(STATIC)   /* end H5FA__cache_dblock_dest() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5FA__cache_dblk_page_load
+ * Function:    H5FA__cache_dblock_clear
  *
- * Purpose:	Loads a fixed array data block page from the disk.
+ * Purpose:     Mark a fixed array data block in memory as non-dirty.
  *
- * Return:	Success:	Pointer to a new fixed array data block page
- *		Failure:	NULL
+ * Return:      SUCCEED/FAIL
  *
- * Programmer:	Vailin Choi
+ * Programmer:  Vailin Choi
+ *              Thursday, April 30, 2009
+ *
+ *-------------------------------------------------------------------------
+ */
+BEGIN_FUNC(STATIC, ERR,
+herr_t, SUCCEED, FAIL,
+H5FA__cache_dblock_clear(H5F_t *f, H5FA_dblock_t *dblock, hbool_t destroy))
+
+    /* Sanity check */
+    HDassert(dblock);
+
+    /* Reset the dirty flag */
+    dblock->cache_info.is_dirty = FALSE;
+
+    if(destroy)
+        if(H5FA__cache_dblock_dest(f, dblock) < 0)
+            H5E_THROW(H5E_CANTFREE, "unable to destroy fixed array data block")
+
+CATCH
+
+END_FUNC(STATIC)   /* end H5FA__cache_dblock_clear() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5FA__cache_dblock_notify
+ *
+ * Purpose:     Handle cache action notifications
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ * Programmer:  Dana Robinson
+ *              Fall 2012
+ *
+ *-------------------------------------------------------------------------
+ */
+BEGIN_FUNC(STATIC, ERR,
+herr_t, SUCCEED, FAIL,
+H5FA__cache_dblock_notify(H5AC_notify_action_t action, H5FA_dblock_t *dblock))
+
+    /* Sanity check */
+    HDassert(dblock);
+
+    /* Check if the file was opened with SWMR-write access */
+    if(dblock->hdr->swmr_write) {
+        /* Determine which action to take */
+        switch(action) {
+            case H5AC_NOTIFY_ACTION_AFTER_INSERT:
+                /* Create flush dependency on extensible array header */
+                if(H5FA__create_flush_depend((H5AC_info_t *)dblock->hdr, (H5AC_info_t *)dblock) < 0)
+                    H5E_THROW(H5E_CANTDEPEND, "unable to create flush dependency between data block and header, address = %llu", (unsigned long long)dblock->addr)
+                break;
+
+            case H5AC_NOTIFY_ACTION_BEFORE_EVICT:
+                /* Nothing to do */
+                break;
+
+            default:
+#ifdef NDEBUG
+                H5E_THROW(H5E_BADVALUE, "unknown action from metadata cache")
+#else /* NDEBUG */
+                HDassert(0 && "Unknown action?!?");
+#endif /* NDEBUG */
+        } /* end switch */
+    } /* end if */
+
+CATCH
+
+END_FUNC(STATIC)   /* end H5FA__cache_dblock_notify() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5FA__cache_dblock_size
+ *
+ * Purpose:     Compute the size in bytes of a fixed array data block
+ *              on disk, and return it in *size_ptr.
+ *
+ * Return:      SUCCEED (Can't fail)
+ *
+ * Programmer:  Vailin Choi
+ *              Thursday, April 30, 2009
+ *
+ *-------------------------------------------------------------------------
+ */
+/* ARGSUSED */
+BEGIN_FUNC(STATIC, NOERR,
+herr_t, SUCCEED, -,
+H5FA__cache_dblock_size(const H5F_t UNUSED *f, const H5FA_dblock_t *dblock,
+    size_t *size_ptr))
+
+    /* Sanity check */
+    HDassert(f);
+    HDassert(dblock);
+    HDassert(size_ptr);
+
+    /* Set size value */
+    if(!dblock->npages)
+        *size_ptr = (size_t)dblock->size;
+    else
+        *size_ptr = H5FA_DBLOCK_PREFIX_SIZE(dblock);
+
+END_FUNC(STATIC)   /* end H5FA__cache_dblock_size() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5FA__cache_dblk_page_load
+ *
+ * Purpose:     Loads a fixed array data block page from the disk.
+ *
+ * Return:      Success:    Pointer to a new fixed array data block page
+ *              Failure:    NULL
+ *
+ * Programmer:  Vailin Choi
  *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
@@ -854,15 +881,13 @@ H5FA_dblk_page_t *, NULL, NULL,
 H5FA__cache_dblk_page_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata))
 
     /* Local variables */
-    H5FA_dblk_page_t	*dblk_page = NULL; /* Data block page info */
+    H5FA_dblk_page_t    *dblk_page = NULL; /* Data block page info */
     H5FA_dblk_page_cache_ud_t *udata = (H5FA_dblk_page_cache_ud_t *)_udata; /* User data for loading data block page */
-    size_t		size;           /* Data block page size */
+    size_t              size;           /* Data block page size */
     H5WB_t              *wb = NULL;     /* Wrapped buffer for data block page data */
     uint8_t             dblk_page_buf[H5FA_DBLK_PAGE_BUF_SIZE]; /* Buffer for data block page */
-    uint8_t		*buf;           /* Pointer to data block page buffer */
-    const uint8_t	*p;             /* Pointer into raw data buffer */
-    uint32_t            stored_chksum;  /* Stored metadata checksum value */
-    uint32_t            computed_chksum; /* Computed metadata checksum value */
+    uint8_t             *buf;           /* Pointer to data block page buffer */
+    const uint8_t       *p;             /* Pointer into raw data buffer */
 
     /* Sanity check */
     HDassert(f);
@@ -874,25 +899,25 @@ HDfprintf(stderr, "%s: addr = %a\n", FUNC, addr);
 
     /* Allocate the fixed array data block page */
     if(NULL == (dblk_page = H5FA__dblk_page_alloc(udata->hdr, udata->nelmts)))
-	H5E_THROW(H5E_CANTALLOC, "memory allocation failed for fixed array data block page")
+        H5E_THROW(H5E_CANTALLOC, "memory allocation failed for fixed array data block page")
 
     /* Set the fixed array data block's information */
     dblk_page->addr = addr;
 
     /* Wrap the local buffer for serialized info */
     if(NULL == (wb = H5WB_wrap(dblk_page_buf, sizeof(dblk_page_buf))))
-	H5E_THROW(H5E_CANTINIT, "can't wrap buffer")
+        H5E_THROW(H5E_CANTINIT, "can't wrap buffer")
 
     /* Compute the size of the fixed array data block page on disk */
     size = H5FA_DBLK_PAGE_SIZE(dblk_page, udata->nelmts);
 
     /* Get a pointer to a buffer that's large enough for serialized info */
     if(NULL == (buf = (uint8_t *)H5WB_actual(wb, size)))
-	H5E_THROW(H5E_CANTGET, "can't get actual buffer")
+        H5E_THROW(H5E_CANTGET, "can't get actual buffer")
 
-    /* Read data block page from disk */
-    if(H5F_block_read(f, H5FD_MEM_FARRAY_DBLK_PAGE, addr, size, dxpl_id, buf) < 0)
-	H5E_THROW(H5E_READERROR, "can't read fixed array data block page")
+    /* Read and validate data block page from disk */
+    if(H5F_read_check_metadata(f, dxpl_id, H5FD_MEM_FARRAY_DBLK_PAGE, H5AC_FARRAY_DBLK_PAGE_ID, addr, size, size, buf) < 0)
+        H5E_THROW(H5E_BADVALUE, "incorrect metadata checksum for fixed array data block page")
 
     /* Get temporary pointer to serialized header */
     p = buf;
@@ -912,18 +937,10 @@ HDfprintf(stderr, "%s: addr = %a\n", FUNC, addr);
     /* Set the data block page's size */
     dblk_page->size = size;
 
-    /* Compute checksum on data block */
-    computed_chksum = H5_checksum_metadata(buf, (size_t)(p - buf), 0);
-
-    /* Metadata checksum */
-    UINT32DECODE(p, stored_chksum);
+    /* Already decoded and compared stored checksum earlier, when reading */
 
     /* Sanity check */
-    HDassert((size_t)(p - buf) == dblk_page->size);
-
-    /* Verify checksum */
-    if(stored_chksum != computed_chksum)
-	H5E_THROW(H5E_BADVALUE, "incorrect metadata checksum for fixed array data block page")
+    HDassert((size_t)(p - buf) == (dblk_page->size - H5_SIZEOF_CHKSUM));
 
     /* Set return value */
     ret_value = dblk_page;
@@ -932,7 +949,7 @@ CATCH
 
     /* Release resources */
     if(wb && H5WB_unwrap(wb) < 0)
-	H5E_THROW(H5E_CLOSEERROR, "can't close wrapped buffer")
+        H5E_THROW(H5E_CLOSEERROR, "can't close wrapped buffer")
     if(!ret_value)
         if(dblk_page && H5FA__dblk_page_dest(dblk_page) < 0)
             H5E_THROW(H5E_CANTFREE, "unable to destroy fixed array data block page")
@@ -941,13 +958,13 @@ END_FUNC(STATIC)   /* end H5FA__cache_dblk_page_load() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5FA__cache_dblk_page_flush
+ * Function:    H5FA__cache_dblk_page_flush
  *
- * Purpose:	Flushes a dirty fixed array data block page to disk.
+ * Purpose:     Flushes a dirty fixed array data block page to disk.
  *
- * Return:	Non-negative on success/Negative on failure
+ * Return:      SUCCEED/FAIL
  *
- * Programmer:	Vailin Choi
+ * Programmer:  Vailin Choi
  *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
@@ -1002,12 +1019,12 @@ H5FA__cache_dblk_page_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t ad
         /* Metadata checksum */
         UINT32ENCODE(p, metadata_chksum);
 
-	/* Write the data block */
+        /* Write the data block */
         HDassert((size_t)(p - buf) == size);
-	if(H5F_block_write(f, H5FD_MEM_FARRAY_DBLK_PAGE, addr, size, dxpl_id, buf) < 0)
+        if(H5F_block_write(f, H5FD_MEM_FARRAY_DBLK_PAGE, addr, size, dxpl_id, buf) < 0)
             H5E_THROW(H5E_WRITEERROR, "unable to save fixed array data block page to disk")
 
-	dblk_page->cache_info.is_dirty = FALSE;
+        dblk_page->cache_info.is_dirty = FALSE;
     } /* end if */
 
     if(destroy)
@@ -1018,84 +1035,22 @@ CATCH
 
     /* Release resources */
     if(wb && H5WB_unwrap(wb) < 0)
-	H5E_THROW(H5E_CLOSEERROR, "can't close wrapped buffer")
+        H5E_THROW(H5E_CLOSEERROR, "can't close wrapped buffer")
 
 END_FUNC(STATIC)   /* end H5FA__cache_dblk_page_flush() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5FA__cache_dblk_page_clear
+ * Function:    H5FA__cache_dblk_page_dest
  *
- * Purpose:	Mark a fixed array data block page in memory as non-dirty.
+ * Purpose:     Destroys a fixed array data block page in memory.
  *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Vailin Choi
- *              Thursday, April 30, 2009
- *
- *-------------------------------------------------------------------------
- */
-BEGIN_FUNC(STATIC, ERR,
-herr_t, SUCCEED, FAIL,
-H5FA__cache_dblk_page_clear(H5F_t *f, H5FA_dblk_page_t *dblk_page, hbool_t destroy))
-
-    /* Sanity check */
-    HDassert(dblk_page);
-
-    /* Reset the dirty flag */
-    dblk_page->cache_info.is_dirty = FALSE;
-
-    if(destroy)
-        if(H5FA__cache_dblk_page_dest(f, dblk_page) < 0)
-            H5E_THROW(H5E_CANTFREE, "unable to destroy fixed array data block page")
-
-CATCH
-
-END_FUNC(STATIC)   /* end H5FA__cache_dblk_page_clear() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5FA__cache_dblk_page_size
- *
- * Purpose:	Compute the size in bytes of a fixed array data block page
- *		on disk, and return it in *size_ptr.  On failure,
- *		the value of *size_ptr is undefined.
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Vailin Choi
- *              Thursday, April 30, 2009
- *
- *-------------------------------------------------------------------------
- */
-/* ARGSUSED */
-BEGIN_FUNC(STATIC, NOERR,
-herr_t, SUCCEED, -,
-H5FA__cache_dblk_page_size(const H5F_t UNUSED *f, const H5FA_dblk_page_t *dblk_page,
-    size_t *size_ptr))
-
-    /* Sanity check */
-    HDassert(f);
-    HDassert(dblk_page);
-    HDassert(size_ptr);
-
-    /* Set size value */
-    *size_ptr = dblk_page->size;
-
-END_FUNC(STATIC)   /* end H5FA__cache_dblk_page_size() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5FA__cache_dblk_page_dest
- *
- * Purpose:	Destroys a fixed array data block page in memory.
- *
- * Note:	Does _not_ free the space for the page on disk, that is
+ * Note:        Does _not_ free the space for the page on disk, that is
  *              handled through the data block that "owns" the page.
  *
- * Return:	Non-negative on success/Negative on failure
+ * Return:      SUCCEED/FAIL
  *
- * Programmer:	Vailin Choi
+ * Programmer:  Vailin Choi
  *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
@@ -1120,3 +1075,64 @@ CATCH
 
 END_FUNC(STATIC)   /* end H5FA__cache_dblk_page_dest() */
 
+
+/*-------------------------------------------------------------------------
+ * Function:    H5FA__cache_dblk_page_clear
+ *
+ * Purpose:     Mark a fixed array data block page in memory as non-dirty.
+ *
+ * Return:      SUCCEED/FAIL
+ *
+ * Programmer:  Vailin Choi
+ *              Thursday, April 30, 2009
+ *
+ *-------------------------------------------------------------------------
+ */
+BEGIN_FUNC(STATIC, ERR,
+herr_t, SUCCEED, FAIL,
+H5FA__cache_dblk_page_clear(H5F_t *f, H5FA_dblk_page_t *dblk_page, hbool_t destroy))
+
+    /* Sanity check */
+    HDassert(dblk_page);
+
+    /* Reset the dirty flag */
+    dblk_page->cache_info.is_dirty = FALSE;
+
+    if(destroy)
+        if(H5FA__cache_dblk_page_dest(f, dblk_page) < 0)
+            H5E_THROW(H5E_CANTFREE, "unable to destroy fixed array data block page")
+
+CATCH
+
+END_FUNC(STATIC)   /* end H5FA__cache_dblk_page_clear() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5FA__cache_dblk_page_size
+ *
+ * Purpose:     Compute the size in bytes of a fixed array data block page
+ *              on disk, and return it in *size_ptr.  On failure,
+ *              the value of *size_ptr is undefined.
+ *
+ * Return:      SUCCEED (Can't fail)
+ *
+ * Programmer:  Vailin Choi
+ *              Thursday, April 30, 2009
+ *
+ *-------------------------------------------------------------------------
+ */
+/* ARGSUSED */
+BEGIN_FUNC(STATIC, NOERR,
+herr_t, SUCCEED, -,
+H5FA__cache_dblk_page_size(const H5F_t UNUSED *f, const H5FA_dblk_page_t *dblk_page,
+    size_t *size_ptr))
+
+    /* Sanity check */
+    HDassert(f);
+    HDassert(dblk_page);
+    HDassert(size_ptr);
+
+    /* Set size value */
+    *size_ptr = dblk_page->size;
+
+END_FUNC(STATIC)   /* end H5FA__cache_dblk_page_size() */

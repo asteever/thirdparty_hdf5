@@ -43,6 +43,9 @@
 #define IS_H5FD_MPIO(f)	/* (H5F_t *f) */				    \
     (H5FD_MPIO==H5F_DRIVER_ID(f))
 
+#define IS_H5FD_MPIPOSIX(f) /* (H5F_t *f) */                                \
+    (H5FD_MPIPOSIX==H5F_DRIVER_ID(f))
+
 #ifdef H5_HAVE_PARALLEL
 /* ======== Temporary data transfer properties ======== */
 /* Definitions for memory MPI type property */
@@ -131,6 +134,7 @@ H5_DLL herr_t H5FD_set_eoa(H5FD_t *file, H5FD_mem_t type, haddr_t addr);
 H5_DLL haddr_t H5FD_get_eof(const H5FD_t *file);
 H5_DLL haddr_t H5FD_get_maxaddr(const H5FD_t *file);
 H5_DLL herr_t H5FD_get_feature_flags(const H5FD_t *file, unsigned long *feature_flags);
+H5_DLL herr_t H5FD_set_feature_flags(H5FD_t *file, unsigned long feature_flags);
 H5_DLL herr_t H5FD_get_fs_type_map(const H5FD_t *file, H5FD_mem_t *type_map);
 H5_DLL herr_t H5FD_read(H5FD_t *file, hid_t dxpl_id, H5FD_mem_t type,
     haddr_t addr, size_t size, void *buf/*out*/);
@@ -138,6 +142,8 @@ H5_DLL herr_t H5FD_write(H5FD_t *file, hid_t dxpl_id, H5FD_mem_t type,
     haddr_t addr, size_t size, const void *buf);
 H5_DLL herr_t H5FD_flush(H5FD_t *file, hid_t dxpl_id, hbool_t closing);
 H5_DLL herr_t H5FD_truncate(H5FD_t *file, hid_t dxpl_id, hbool_t closing);
+H5_DLL herr_t H5FD_lock(H5FD_t *file, hbool_t rw);
+H5_DLL herr_t H5FD_unlock(H5FD_t *file);
 H5_DLL herr_t H5FD_get_fileno(const H5FD_t *file, unsigned long *filenum);
 H5_DLL herr_t H5FD_get_vfd_handle(H5FD_t *file, hid_t fapl, void** file_handle);
 H5_DLL herr_t H5FD_set_base_addr(H5FD_t *file, haddr_t base_addr);

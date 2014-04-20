@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.8.11)
+cmake_minimum_required (VERSION 2.8.10)
 PROJECT (HDF5_TOOLS_H5LS)
 
 #-----------------------------------------------------------------------------
@@ -9,21 +9,21 @@ INCLUDE_DIRECTORIES (${HDF5_TOOLS_SRC_DIR}/lib)
 #-----------------------------------------------------------------------------
 # Add the h5ls executable
 #-----------------------------------------------------------------------------
-add_executable (h5ls ${HDF5_TOOLS_H5LS_SOURCE_DIR}/h5ls.c)
+ADD_EXECUTABLE (h5ls ${HDF5_TOOLS_H5LS_SOURCE_DIR}/h5ls.c)
 TARGET_NAMING (h5ls ${LIB_TYPE})
 TARGET_C_PROPERTIES (h5ls " " " ")
-target_link_libraries (h5ls  ${HDF5_TOOLS_LIB_TARGET} ${HDF5_LIB_TARGET})
-set_target_properties (h5ls PROPERTIES FOLDER tools)
+TARGET_LINK_LIBRARIES (h5ls  ${HDF5_TOOLS_LIB_TARGET} ${HDF5_LIB_TARGET})
+SET_TARGET_PROPERTIES (h5ls PROPERTIES FOLDER tools)
 
-set (H5_DEP_EXECUTABLES
+SET (H5_DEP_EXECUTABLES
     h5ls
 )
 
-if (BUILD_TESTING)
+IF (BUILD_TESTING)
 
-  include (CMakeTests.cmake)
+  INCLUDE (CMakeTests.cmake)
 
-endif (BUILD_TESTING)
+ENDIF (BUILD_TESTING)
 
 ##############################################################################
 ##############################################################################
@@ -37,7 +37,7 @@ endif (BUILD_TESTING)
 
 #INSTALL_PROGRAM_PDB (h5ls ${HDF5_INSTALL_BIN_DIR} toolsapplications)
 
-install (
+INSTALL (
     TARGETS
         h5ls
     RUNTIME DESTINATION

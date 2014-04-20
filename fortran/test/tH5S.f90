@@ -33,18 +33,14 @@
 !  dataspace_basic_test
 !
 !*****
-MODULE TH5S
-
-CONTAINS
 
         SUBROUTINE dataspace_basic_test(cleanup, total_error)
 
         USE HDF5 ! This module contains all necessary modules
-        USE TH5_MISC
 
           IMPLICIT NONE
           LOGICAL, INTENT(IN)  :: cleanup
-          INTEGER, INTENT(INOUT) :: total_error
+          INTEGER, INTENT(OUT) :: total_error
 
           CHARACTER(LEN=10), PARAMETER :: filename1 = "basicspace" ! File1 name
           CHARACTER(LEN=9), PARAMETER :: filename2 = "copyspace"  ! File2 name
@@ -293,4 +289,3 @@ CONTAINS
           RETURN
         END SUBROUTINE dataspace_basic_test
 
-END MODULE TH5S

@@ -5,25 +5,25 @@
 ##############################################################################
 ##############################################################################
 
-set (HDF5_TEST_FILES
+SET (HDF5_TEST_FILES
     image24pixel.txt
     image8.txt
 )
 
-foreach (h5_file ${HDF5_TEST_FILES})
-  set (dest "${PROJECT_BINARY_DIR}/${h5_file}")
-  #message (STATUS " Copying ${h5_file}")
-  add_custom_command (
+FOREACH (h5_file ${HDF5_TEST_FILES})
+  SET (dest "${PROJECT_BINARY_DIR}/${h5_file}")
+  #MESSAGE (STATUS " Copying ${h5_file}")
+  ADD_CUSTOM_COMMAND (
       TARGET     hl_ex_ex_ds1
       POST_BUILD
       COMMAND    ${CMAKE_COMMAND}
       ARGS       -E copy_if_different ${PROJECT_SOURCE_DIR}/${h5_file} ${dest}
   )
-endforeach (h5_file ${HDF5_TEST_FILES})
+ENDFOREACH (h5_file ${HDF5_TEST_FILES})
 
   # Remove any output file left over from previous test run
-  add_test (
-      NAME HL_ex-clear-objects
+  ADD_TEST (
+      NAME hl_ex-clear-objects
       COMMAND    ${CMAKE_COMMAND}
           -E remove 
     ex_lite1.h5
@@ -46,15 +46,15 @@ endforeach (h5_file ${HDF5_TEST_FILES})
     ex_table_12.h5
     ex_ds1.h5
   )
-  if (NOT "${last_test}" STREQUAL "")
-    set_tests_properties (HL_ex-clear-objects PROPERTIES DEPENDS ${last_test})
-  endif (NOT "${last_test}" STREQUAL "")
-  set (last_test "HL_ex-clear-objects")
+  IF (NOT "${last_test}" STREQUAL "")
+    SET_TESTS_PROPERTIES (hl_ex-clear-objects PROPERTIES DEPENDS ${last_test})
+  ENDIF (NOT "${last_test}" STREQUAL "")
+  SET (last_test "hl_ex-clear-objects")
 
-foreach (example ${examples})
-  add_test (NAME HL_ex_${example} COMMAND $<TARGET_FILE:hl_ex_${example}>)
-    if (NOT "${last_test}" STREQUAL "")
-      set_tests_properties (HL_ex_${example} PROPERTIES DEPENDS ${last_test})
-    endif (NOT "${last_test}" STREQUAL "")
-    set (last_test "HL_ex_${example}")
-endforeach (example ${examples})
+FOREACH (example ${examples})
+  ADD_TEST (NAME hl_ex_${example} COMMAND $<TARGET_FILE:hl_ex_${example}>)
+    IF (NOT "${last_test}" STREQUAL "")
+      SET_TESTS_PROPERTIES (hl_ex_${example} PROPERTIES DEPENDS ${last_test})
+    ENDIF (NOT "${last_test}" STREQUAL "")
+    SET (last_test "hl_ex_${example}")
+ENDFOREACH (example ${examples})

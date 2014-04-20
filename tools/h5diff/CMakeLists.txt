@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.8.11)
+cmake_minimum_required (VERSION 2.8.10)
 PROJECT (HDF5_TOOLS_H5DIFF)
 
 #-----------------------------------------------------------------------------
@@ -9,45 +9,45 @@ INCLUDE_DIRECTORIES (${HDF5_TOOLS_SRC_DIR}/lib)
 # --------------------------------------------------------------------
 # Add the h5diff executables
 # --------------------------------------------------------------------
-add_executable (h5diff
+ADD_EXECUTABLE (h5diff
     ${HDF5_TOOLS_H5DIFF_SOURCE_DIR}/h5diff_common.c
     ${HDF5_TOOLS_H5DIFF_SOURCE_DIR}/h5diff_main.c
 )
 TARGET_NAMING (h5diff ${LIB_TYPE})
 TARGET_C_PROPERTIES (h5diff " " " ")
-target_link_libraries (h5diff  ${HDF5_TOOLS_LIB_TARGET} ${HDF5_LIB_TARGET})
-set_target_properties (h5diff PROPERTIES FOLDER tools)
+TARGET_LINK_LIBRARIES (h5diff  ${HDF5_TOOLS_LIB_TARGET} ${HDF5_LIB_TARGET})
+SET_TARGET_PROPERTIES (h5diff PROPERTIES FOLDER tools)
 
-set (H5_DEP_EXECUTABLES h5diff)
+SET (H5_DEP_EXECUTABLES h5diff)
 
-if (H5_HAVE_PARALLEL)
-  add_executable (ph5diff
+IF (H5_HAVE_PARALLEL)
+  ADD_EXECUTABLE (ph5diff
       ${HDF5_TOOLS_H5DIFF_SOURCE_DIR}/h5diff_common.c
       ${HDF5_TOOLS_H5DIFF_SOURCE_DIR}/ph5diff_main.c
   )
   TARGET_NAMING (ph5diff ${LIB_TYPE})
   TARGET_C_PROPERTIES (ph5diff " " " ")
-  target_link_libraries (ph5diff  ${HDF5_TOOLS_LIB_TARGET} ${HDF5_LIB_TARGET})
-  set_target_properties (ph5diff PROPERTIES FOLDER tools)
-endif (H5_HAVE_PARALLEL)
+  TARGET_LINK_LIBRARIES (ph5diff  ${HDF5_TOOLS_LIB_TARGET} ${HDF5_LIB_TARGET})
+  SET_TARGET_PROPERTIES (ph5diff PROPERTIES FOLDER tools)
+ENDIF (H5_HAVE_PARALLEL)
 
-if (BUILD_TESTING)
+IF (BUILD_TESTING)
   # --------------------------------------------------------------------
   # Add the h5diff and test executables
   # --------------------------------------------------------------------
-  if (HDF5_BUILD_GENERATORS AND NOT BUILD_SHARED_LIBS)
-    add_executable (h5diffgentest ${HDF5_TOOLS_H5DIFF_SOURCE_DIR}/h5diffgentest.c)
+  IF (HDF5_BUILD_GENERATORS AND NOT BUILD_SHARED_LIBS)
+    ADD_EXECUTABLE (h5diffgentest ${HDF5_TOOLS_H5DIFF_SOURCE_DIR}/h5diffgentest.c)
     TARGET_NAMING (h5diffgentest ${LIB_TYPE})
     TARGET_C_PROPERTIES (h5diffgentest " " " ")
-    target_link_libraries (h5diffgentest ${HDF5_LIB_TARGET})
-    set_target_properties (h5diffgentest PROPERTIES FOLDER generator/tools)
+    TARGET_LINK_LIBRARIES (h5diffgentest ${HDF5_LIB_TARGET})
+    SET_TARGET_PROPERTIES (h5diffgentest PROPERTIES FOLDER generator/tools)
     
-    #add_test (NAME h5diffgentest COMMAND $<TARGET_FILE:h5diffgentest>)
-  endif (HDF5_BUILD_GENERATORS AND NOT BUILD_SHARED_LIBS)
+    #ADD_TEST (NAME h5diffgentest COMMAND $<TARGET_FILE:h5diffgentest>)
+  ENDIF (HDF5_BUILD_GENERATORS AND NOT BUILD_SHARED_LIBS)
 
-  include (CMakeTests.cmake)
+  INCLUDE (CMakeTests.cmake)
  
-endif (BUILD_TESTING)
+ENDIF (BUILD_TESTING)
 
 ##############################################################################
 ##############################################################################
@@ -61,7 +61,7 @@ endif (BUILD_TESTING)
 
 #INSTALL_PROGRAM_PDB (h5diff ${HDF5_INSTALL_BIN_DIR} toolsapplications)
 
-install (
+INSTALL (
     TARGETS
         h5diff
     RUNTIME DESTINATION
@@ -70,11 +70,11 @@ install (
         toolsapplications
 )
 
-if (H5_HAVE_PARALLEL)
+IF (H5_HAVE_PARALLEL)
 
   #INSTALL_PROGRAM_PDB (ph5diff ${HDF5_INSTALL_BIN_DIR} toolsapplications)
 
-  install (
+  INSTALL (
       TARGETS
           ph5diff
       RUNTIME DESTINATION
@@ -82,4 +82,4 @@ if (H5_HAVE_PARALLEL)
       COMPONENT
           toolsapplications
   )
-endif (H5_HAVE_PARALLEL)
+ENDIF (H5_HAVE_PARALLEL)

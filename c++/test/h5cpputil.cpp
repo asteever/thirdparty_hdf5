@@ -220,7 +220,7 @@ InvalidActionException::InvalidActionException(const H5std_string func_name, con
 //--------------------------------------------------------------------------
 // Function:    InvalidActionException destructor
 //--------------------------------------------------------------------------
-InvalidActionException::~InvalidActionException() throw() {}
+InvalidActionException::~InvalidActionException() {}
 
 //--------------------------------------------------------------------------
 // Function:    TestFailedException default constructor
@@ -242,5 +242,5 @@ TestFailedException::TestFailedException(const H5std_string func_name, const H5s
 //--------------------------------------------------------------------------
 // Function:    TestFailedException destructor
 //--------------------------------------------------------------------------
-TestFailedException::~TestFailedException() throw() {}
+TestFailedException::~TestFailedException() {}
 

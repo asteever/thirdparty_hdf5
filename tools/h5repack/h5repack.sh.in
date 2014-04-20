@@ -70,7 +70,7 @@ SRC_H5JAM_TESTFILES="$SRC_TOOLS/h5jam/testfiles"
 SRC_H5STAT_TESTFILES="$SRC_TOOLS/h5stat/testfiles"
 SRC_H5IMPORT_TESTFILES="$SRC_TOOLS/h5import/testfiles"
 
-TESTDIR=./testpack
+TESTDIR=./testfiles
 test -d $TESTDIR || mkdir $TESTDIR
 
 ######################################################################
@@ -209,7 +209,6 @@ DIFFTEST()
 {
     VERIFY h5diff output $@
     (
-        cd $TESTDIR
         $RUNSERIAL $H5DIFF_BIN -q  "$@" 
     )
     RET=$?
@@ -230,15 +229,14 @@ DIFFTEST()
 TOOLTEST() 
 {
     echo $@
-    infile=$2
-    outfile=out-$1.$2
+    infile=$TESTDIR/$2
+    outfile=$TESTDIR/out-$1.$2
     shift
     shift
 
     # Run test.
     TESTING $H5REPACK $@
     (
-        cd $TESTDIR
         $RUNSERIAL $H5REPACK_BIN "$@" $infile $outfile
     )
     RET=$?
@@ -256,11 +254,11 @@ TOOLTEST()
 # Verifying layouts of a dataset 
 VERIFY_LAYOUT_DSET()
 {
-    layoutfile=layout-$1.$2
+    layoutfile=$TESTDIR/layout-$1.$2
     dset=$3
     expectlayout=$4
-    infile=$2
-    outfile=out-$1.$2
+    infile=$TESTDIR/$2
+    outfile=$TESTDIR/out-$1.$2
     shift
     shift
     shift
@@ -268,7 +266,6 @@ VERIFY_LAYOUT_DSET()
    
     TESTING  $H5REPACK $@
     ( 
-        cd $TESTDIR
         $RUNSERIAL $H5REPACK_BIN "$@" $infile $outfile
     )
     RET=$?
@@ -284,10 +281,9 @@ VERIFY_LAYOUT_DSET()
     # check the layout from a dataset
     VERIFY  "a dataset layout"
     (
-        cd $TESTDIR
         $RUNSERIAL $H5DUMP_BIN -d $dset -pH $outfile > $layoutfile
     )
-    $GREP $expectlayout $TESTDIR/$layoutfile > /dev/null
+    $GREP $expectlayout $layoutfile > /dev/null
     if [ $? -eq 0 ]; then
         echo " PASSED"
     else
@@ -305,8 +301,8 @@ VERIFY_LAYOUT_DSET()
 VERIFY_LAYOUT_ALL()
 {
     infile=$2
-    outfile=out-$1.$2
-    layoutfile=layout-$1.$2
+    outfile=$TESTDIR/out-$1.$2
+    layoutfile=$TESTDIR/layout-$1.$2
     expectlayout=$3
     shift
     shift
@@ -314,7 +310,6 @@ VERIFY_LAYOUT_ALL()
     
     TESTING  $H5REPACK $@
     ( 
-        cd $TESTDIR
         $RUNSERIAL $H5REPACK_BIN "$@" $infile $outfile
     )
     RET=$?
@@ -332,7 +327,6 @@ VERIFY_LAYOUT_ALL()
     # check if the other layouts still exsit
     VERIFY  "layouts"
     (
-        cd $TESTDIR
         echo
         # if CONTIGUOUS
         if [ $expectlayout = "CONTIGUOUS" ]; then
@@ -407,15 +401,14 @@ VERIFY_LAYOUT_ALL()
 #
 TOOLTEST0() 
 {
-    infile=$2
-    outfile=out-$1.$2
+    infile=$TESTDIR/$2
+    outfile=$TESTDIR/out-$1.$2
     shift
     shift
 
     # Run test.
     TESTING $H5REPACK $@
     (
-        cd $TESTDIR
         $RUNSERIAL $H5REPACK_BIN -i $infile -o $outfile "$@"
     )
     RET=$?
@@ -435,15 +428,14 @@ TOOLTEST0()
 #
 TOOLTEST1() 
 {
-    infile=$2
-    outfile=out-$1.$2
+    infile=$TESTDIR/$2
+    outfile=$TESTDIR/out-$1.$2
     shift
     shift
 
     # Run test.
     TESTING $H5REPACK $@
     (
-        cd $TESTDIR
         $RUNSERIAL $H5REPACK_BIN "$@" $infile $outfile
     )
     RET=$?
@@ -466,15 +458,14 @@ TOOLTESTV()
     actual="$TESTDIR/`basename $2 .ddl`.out"
     actual_err="$TESTDIR/`basename $2 .ddl`.err"
 
-    infile=$2
-    outfile=out-$1.$2
+    infile=$TESTDIR/$2
+    outfile=$TESTDIR/out-$1.$2
     shift
     shift
     
     # Run test.
     TESTING $H5REPACK $@
     (
-        cd $TESTDIR
         $RUNSERIAL $H5REPACK_BIN "$@" $infile $outfile
     ) >$actual 2>$actual_err
     RET=$?
@@ -509,8 +500,8 @@ TOOLTESTV()
 #
 TOOLTEST_DUMP() 
 {
-    infile=$2
-    outfile=out-$1.$2
+    infile=$TESTDIR/$2
+    outfile=$TESTDIR/out-$1.$2
     expect="$TESTDIR/$1.$2.ddl"
     actual="$TESTDIR/out-$1.$2.out"
     actual_err="$TESTDIR/out-$1.$2.err"
@@ -521,7 +512,6 @@ TOOLTEST_DUMP()
     # Run test.
     TESTING $H5REPACK $@
     (
-        cd $TESTDIR
         $RUNSERIAL $H5REPACK_BIN "$@" $infile $outfile
     ) >$actual 2>$actual_err
     RET=$?
@@ -532,7 +522,6 @@ TOOLTEST_DUMP()
      echo " PASSED"
      VERIFY h5dump output $@
      (
-        cd $TESTDIR
         $RUNSERIAL $H5DUMP_BIN -pH $outfile 
      ) >$actual 2>$actual_err
      cat $actual_err >> $actual
@@ -570,15 +559,14 @@ TOOLTEST_DUMP()
 # Verify the output file of second run is larger than the one of 1st run.
 TOOLTEST_META()
 {
-    infile=$2
-    outfile=out-$1.$2
+    infile=$TESTDIR/$2
+    outfile=$TESTDIR/out-$1.$2
     shift
     shift
 
     # Run test.
     TESTING $H5REPACK $@
     (
-        cd $TESTDIR
         $RUNSERIAL $H5REPACK_BIN $infile $outfile
     )
     RET=$?
@@ -590,13 +578,12 @@ TOOLTEST_META()
         DIFFTEST $infile $outfile
     fi
     # get the size of the first output file
-    size1=`wc -c $TESTDIR/$outfile | cut -d' ' -f1`
+    size1=`wc -c $outfile | cut -d' ' -f1`
 
     # 2nd run with metadata option
     # Run test.
     TESTING $H5REPACK $@
     (
-        cd $TESTDIR
         $RUNSERIAL $H5REPACK_BIN "$@" $infile $outfile
     )
     RET=$?
@@ -608,7 +595,7 @@ TOOLTEST_META()
         DIFFTEST $infile $outfile
     fi
     # get the size of the second output file
-    size2=`wc -c $TESTDIR/$outfile | cut -d' ' -f1`
+    size2=`wc -c $outfile | cut -d' ' -f1`
 
     # verify sizes.
     MESSAGE "Verify the sizes of both output files ($size1 vs $size2)"
@@ -940,7 +927,7 @@ else
 fi
 
 #file
-arg="h5repack_layout.h5 -e h5repack.info"
+arg="h5repack_layout.h5 -e $TESTDIR/h5repack.info"
 if test $USE_FILTER_DEFLATE != "yes" ; then
  SKIP $arg 
 else
@@ -1077,7 +1064,7 @@ else
 fi 
 
 # add a userblock to file
-arg="h5repack_objs.h5 -u ublock.bin -b 2048"
+arg="h5repack_objs.h5 -u $TESTDIR/ublock.bin -b 2048"
 TOOLTEST add_userblock $arg
 
 # add alignment

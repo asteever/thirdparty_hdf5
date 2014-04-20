@@ -295,12 +295,12 @@ const char* Exception::getCFuncName() const
 }
 
 //--------------------------------------------------------------------------
-// Function:	Exception::printError (static)
+// Function:	Exception::printError
 ///\brief	Prints the error stack in a default manner.
 ///\param	stream - IN: File pointer
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-void Exception::printError( FILE* stream )
+void Exception::printError( FILE* stream ) const
 {
    herr_t ret_value = H5Eprint2( H5E_DEFAULT, stream ); // print to stderr
    if( ret_value < 0 )
@@ -312,7 +312,7 @@ void Exception::printError( FILE* stream )
 ///\brief	Noop destructor
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-Exception::~Exception() throw() {}
+Exception::~Exception() {}
 
 //--------------------------------------------------------------------------
 // Subclass:	FileIException
@@ -335,7 +335,7 @@ FileIException::FileIException(const H5std_string& func_name, const H5std_string
 // Function:	FileIException destructor
 ///\brief	Noop destructor.
 //--------------------------------------------------------------------------
-FileIException::~FileIException() throw() {}
+FileIException::~FileIException() {}
 
 //--------------------------------------------------------------------------
 // Subclass:	GroupIException
@@ -358,7 +358,7 @@ GroupIException::GroupIException(const H5std_string& func_name, const H5std_stri
 // Function:	GroupIException destructor
 ///\brief	Noop destructor.
 //--------------------------------------------------------------------------
-GroupIException::~GroupIException() throw() {}
+GroupIException::~GroupIException() {}
 
 //--------------------------------------------------------------------------
 // Subclass:	DataSpaceIException
@@ -381,7 +381,7 @@ DataSpaceIException::DataSpaceIException(const H5std_string& func_name, const H5
 // Function:	DataSpaceIException destructor
 ///\brief	Noop destructor.
 //--------------------------------------------------------------------------
-DataSpaceIException::~DataSpaceIException() throw() {}
+DataSpaceIException::~DataSpaceIException() {}
 
 //--------------------------------------------------------------------------
 // Subclass:	DataTypeIException
@@ -404,7 +404,7 @@ DataTypeIException::DataTypeIException(const H5std_string& func_name, const H5st
 // Function:	DataTypeIException destructor
 ///\brief	Noop destructor.
 //--------------------------------------------------------------------------
-DataTypeIException::~DataTypeIException() throw() {}
+DataTypeIException::~DataTypeIException() {}
 
 //--------------------------------------------------------------------------
 // Subclass:	PropListIException
@@ -427,7 +427,7 @@ PropListIException::PropListIException(const H5std_string& func_name, const H5st
 // Function:	PropListIException destructor
 ///\brief	Noop destructor.
 //--------------------------------------------------------------------------
-PropListIException::~PropListIException() throw() {}
+PropListIException::~PropListIException() {}
 
 //--------------------------------------------------------------------------
 // Subclass:	DataSetIException
@@ -450,7 +450,7 @@ DataSetIException::DataSetIException(const H5std_string& func_name, const H5std_
 // Function:	DataSetIException destructor
 ///\brief	Noop destructor.
 //--------------------------------------------------------------------------
-DataSetIException::~DataSetIException() throw() {}
+DataSetIException::~DataSetIException() {}
 
 //--------------------------------------------------------------------------
 // Subclass:	AttributeIException
@@ -473,7 +473,7 @@ AttributeIException::AttributeIException(const H5std_string& func_name, const H5
 // Function:	AttributeIException destructor
 ///\brief	Noop destructor.
 //--------------------------------------------------------------------------
-AttributeIException::~AttributeIException() throw() {}
+AttributeIException::~AttributeIException() {}
 
 //--------------------------------------------------------------------------
 // Subclass:	ReferenceException
@@ -496,7 +496,7 @@ ReferenceException::ReferenceException(const H5std_string& func_name, const H5st
 // Function:	ReferenceException destructor
 ///\brief	Noop destructor.
 //--------------------------------------------------------------------------
-ReferenceException::~ReferenceException() throw() {}
+ReferenceException::~ReferenceException() {}
 
 //--------------------------------------------------------------------------
 // Subclass:	LibraryIException
@@ -519,30 +519,7 @@ LibraryIException::LibraryIException(const H5std_string& func_name, const H5std_
 // Function:	LibraryIException destructor
 ///\brief	Noop destructor.
 //--------------------------------------------------------------------------
-LibraryIException::~LibraryIException() throw() {}
-
-//--------------------------------------------------------------------------
-// Subclass:	LocationException
-// Programmer	Binh-Minh Ribler - 2014
-//--------------------------------------------------------------------------
-//--------------------------------------------------------------------------
-// Function:	LocationException default constructor
-///\brief	Default constructor.
-//--------------------------------------------------------------------------
-LocationException::LocationException():Exception(){}
-//--------------------------------------------------------------------------
-// Function:	LocationException overloaded constructor
-///\brief	Creates a LocationException with the name of the function,
-///		in which the failure occurs, and an optional detailed message.
-///\param	func_name - IN: Name of the function where failure occurs
-///\param	message   - IN: Message on the failure
-//--------------------------------------------------------------------------
-LocationException::LocationException(const H5std_string& func_name, const H5std_string& message) : Exception(func_name, message) {}
-//--------------------------------------------------------------------------
-// Function:	LocationException destructor
-///\brief	Noop destructor.
-//--------------------------------------------------------------------------
-LocationException::~LocationException() throw() {}
+LibraryIException::~LibraryIException() {}
 
 //--------------------------------------------------------------------------
 // Subclass:	IdComponentException
@@ -565,7 +542,7 @@ IdComponentException::IdComponentException(const H5std_string& func_name, const 
 // Function:	IdComponentException destructor
 ///\brief	Noop destructor.
 //--------------------------------------------------------------------------
-IdComponentException::~IdComponentException() throw() {}
+IdComponentException::~IdComponentException() {}
 #ifndef H5_NO_NAMESPACE
 } // end namespace
 #endif

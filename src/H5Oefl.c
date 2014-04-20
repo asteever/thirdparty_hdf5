@@ -491,7 +491,7 @@ H5O_efl_copy_file(H5F_t UNUSED *file_src, void *mesg_src, H5F_t *file_dst,
         HGOTO_ERROR(H5E_EFL, H5E_PROTECT, NULL, "unable to protect EFL file name heap")
 
     /* Insert "empty" name first */
-    if((size_t)(-1) == (name_offset = H5HL_insert(file_dst, dxpl_id, heap, (size_t)1, "")))
+    if(UFAIL == (name_offset = H5HL_insert(file_dst, dxpl_id, heap, (size_t)1, "")))
         HGOTO_ERROR(H5E_EFL, H5E_CANTINSERT, NULL, "can't insert file name into heap")
     HDassert(0 == name_offset);
 
@@ -508,7 +508,7 @@ H5O_efl_copy_file(H5F_t UNUSED *file_src, void *mesg_src, H5F_t *file_dst,
     /* copy the name from the source */
     for(idx = 0; idx < efl_src->nused; idx++) {
         efl_dst->slot[idx].name = H5MM_xstrdup(efl_src->slot[idx].name);
-        if((size_t)(-1) == (efl_dst->slot[idx].name_offset = H5HL_insert(file_dst, dxpl_id, heap,
+        if(UFAIL == (efl_dst->slot[idx].name_offset = H5HL_insert(file_dst, dxpl_id, heap,
                 HDstrlen(efl_dst->slot[idx].name) + 1, efl_dst->slot[idx].name)))
             HGOTO_ERROR(H5E_EFL, H5E_CANTINSERT, NULL, "can't insert file name into heap")
     } /* end for */
@@ -545,6 +545,7 @@ H5O_efl_debug(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const void *_mesg, FILE * s
 	      int indent, int fwidth)
 {
     const H5O_efl_t	   *mesg = (const H5O_efl_t *) _mesg;
+    char		    buf[64];
     size_t		    u;
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
@@ -564,10 +565,8 @@ H5O_efl_debug(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const void *_mesg, FILE * s
 	      mesg->nused, mesg->nalloc);
 
     for(u = 0; u < mesg->nused; u++) {
-        char		    buf[64];
-
-	HDsnprintf(buf, sizeof(buf), "File %u", (unsigned)u);
-	HDfprintf(stream, "%*s%s:\n", indent, "", buf);
+	sprintf (buf, "File %u", (unsigned)u);
+	HDfprintf (stream, "%*s%s:\n", indent, "", buf);
 
 	HDfprintf(stream, "%*s%-*s \"%s\"\n", indent+3, "", MAX (fwidth-3, 0),
 		  "Name:",
@@ -577,11 +576,11 @@ H5O_efl_debug(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const void *_mesg, FILE * s
 		  "Name offset:",
 		  (unsigned long)(mesg->slot[u].name_offset));
 
-	HDfprintf(stream, "%*s%-*s %lu\n", indent+3, "", MAX (fwidth-3, 0),
+	HDfprintf (stream, "%*s%-*s %lu\n", indent+3, "", MAX (fwidth-3, 0),
 		   "Offset of data in file:",
 		   (unsigned long)(mesg->slot[u].offset));
 
-	HDfprintf(stream, "%*s%-*s %lu\n", indent+3, "", MAX (fwidth-3, 0),
+	HDfprintf (stream, "%*s%-*s %lu\n", indent+3, "", MAX (fwidth-3, 0),
 		   "Bytes reserved for data:",
 		   (unsigned long)(mesg->slot[u].size));
     } /* end for */

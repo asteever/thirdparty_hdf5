@@ -61,6 +61,7 @@ NULL, /*fmt_ullong */
 "{", /*cmpd_pre */
 "}", /*cmpd_suf */
 "\n", /*cmpd_end */
+NULL, /* cmpd_listv */
 
 ", ", /*vlen_sep */
 "(", /*vlen_pre */
@@ -1471,6 +1472,9 @@ h5tools_dump_simple_subset(FILE *stream, const h5tool_format_t *info, h5tools_co
         H5E_THROW(FAIL, H5E_tools_min_id_g, "H5Sget_simple_extent_dims failed");
     ctx->size_last_dim = total_size[ctx->ndims - 1];
 
+    /* Set the compound datatype field list for display */
+    ctx->cmpd_listv = info->cmpd_listv;
+
     h5tools_display_simple_subset(stream, info, ctx, dset, p_type, sset, f_space, total_size);
 
 CATCH
@@ -2336,7 +2340,7 @@ h5tools_print_datatype(FILE *stream, h5tools_str_t *buffer, const h5tool_format_
            h5tools_str_append(buffer, "OPAQUE_TAG \"%s\";", ttag);
            h5tools_render_element(stream, info, ctx, buffer, &curr_pos, (size_t)ncols, (hsize_t)0, (hsize_t)0);
            
-           H5free_memory(ttag);
+           HDfree(ttag);
         } 
         ctx->indent_level--;
 
@@ -2372,7 +2376,7 @@ h5tools_print_datatype(FILE *stream, h5tools_str_t *buffer, const h5tool_format_
             }
             else
                 HERROR(H5E_tools_g, H5E_tools_min_id_g, "H5Tget_member_type failed");
-            H5free_memory(mname);
+            HDfree(mname);
         }
         ctx->indent_level--;
 
@@ -2688,7 +2692,7 @@ CATCH
         /* Release resources */
         for(i = 0; i < nmembs; i++)
             if(name[i])
-                H5free_memory(name[i]);
+                HDfree(name[i]);
         HDfree(name);
     } /* end if */
 

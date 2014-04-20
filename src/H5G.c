@@ -224,19 +224,16 @@ H5G_term_interface(void)
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     if(H5_interface_initialize_g) {
-        if((n = H5I_nmembers(H5I_GROUP)))
-            H5I_clear_type(H5I_GROUP, FALSE, FALSE);
-        else {
-            /* Close deprecated interface */
-            n += H5G__term_deprec_interface();
+	if((n = H5I_nmembers(H5I_GROUP)))
+	    H5I_clear_type(H5I_GROUP, FALSE, FALSE);
+	else {
+	    /* Destroy the group object id group */
+	    H5I_dec_type_ref(H5I_GROUP);
 
-            /* Destroy the group object id group */
-            H5I_dec_type_ref(H5I_GROUP);
-
-            /* Mark closed */
-            H5_interface_initialize_g = 0;
-            n = 1; /*H5I*/
-        } /* end else */
+	    /* Mark closed */
+	    H5_interface_initialize_g = 0;
+	    n = 1; /*H5I*/
+	} /* end else */
     } /* end if */
 
     FUNC_LEAVE_NOAPI(n)
@@ -819,4 +816,71 @@ H5Gclose(hid_t group_id)
 done:
     FUNC_LEAVE_API(ret_value)
 } /* end H5Gclose() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Gflush
+ *
+ * Purpose:     Flushes all buffers associated with a group to disk.
+ *
+ * Return:      Non-negative on success, negative on failure
+ *
+ * Programmer:  Mike McGreevy
+ *              May 19, 2010
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Gflush(hid_t group_id)
+{
+    H5G_t *grp;        /* Dataset for this operation */
+    herr_t ret_value = SUCCEED; /* return value */
+
+    FUNC_ENTER_API(FAIL)
+    H5TRACE1("e", "i", group_id);
+    
+    /* Check args */
+    if(NULL == (grp = (H5G_t *)H5I_object_verify(group_id, H5I_GROUP)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a group")
+
+    if(H5O_flush_common(&grp->oloc, group_id) < 0)
+        HGOTO_ERROR(H5E_SYM, H5E_CANTFLUSH, FAIL, "unable to flush group and object flush callback")
+
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* H5Gflush */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Grefresh
+ *
+ * Purpose:     Refreshes all buffers associated with a dataset.
+ *
+ * Return:      Non-negative on success, negative on failure
+ *
+ * Programmer:  Mike McGreevy
+ *              July 21, 2010
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Grefresh(hid_t group_id)
+{
+    H5G_t * grp = NULL;
+    hid_t ret_value = SUCCEED; /* return value */
+    
+    FUNC_ENTER_API(FAIL)
+    H5TRACE1("e", "i", group_id);
+
+    /* Check args */
+    if(NULL == (grp = (H5G_t *)H5I_object_verify(group_id, H5I_GROUP)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a group")
+
+    /* Call private function to refresh group object */
+    if ((H5O_refresh_metadata(group_id, grp->oloc, H5AC_dxpl_id)) < 0)
+        HGOTO_ERROR(H5E_SYM, H5E_CANTLOAD, FAIL, "unable to refresh group")
+
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* H5Grefresh */
 

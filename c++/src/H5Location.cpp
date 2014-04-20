@@ -32,7 +32,6 @@
 #include "H5File.h"
 #include "H5DataSet.h"
 #include "H5Attribute.h"
-#include "H5private.h"		// for HDmemset
 
 #ifndef H5_NO_NAMESPACE
 namespace H5 {
@@ -356,7 +355,7 @@ void H5Location::flush(H5F_scope_t scope) const
    herr_t ret_value = H5Fflush(getId(), scope);
    if( ret_value < 0 )
    {
-      throw LocationException(inMemFunc("flush"), "H5Fflush failed");
+      throw Exception(inMemFunc("flush"), "H5Fflush failed");
    }
 }
 
@@ -364,7 +363,7 @@ void H5Location::flush(H5F_scope_t scope) const
 // Function:	H5Location::getFileName
 ///\brief	Gets the name of the file, in which this HDF5 object belongs.
 ///\return	File name
-///\exception	H5::LocationException
+///\exception	H5::IdComponentException
 // Programmer	Binh-Minh Ribler - Jul, 2004
 //--------------------------------------------------------------------------
 H5std_string H5Location::getFileName() const
@@ -372,7 +371,7 @@ H5std_string H5Location::getFileName() const
    try {
       return(p_get_file_name());
    }
-   catch (LocationException E) {
+   catch (IdComponentException E) {
       throw FileIException(inMemFunc("getFileName"), E.getDetailMsg());
    }
 }
@@ -382,7 +381,7 @@ H5std_string H5Location::getFileName() const
 ///\brief	Sets or resets the comment for an object specified by its name.
 ///\param	name  - IN: Name of the object
 ///\param	comment - IN: New comment
-///\exception	H5::LocationException
+///\exception	H5::Exception
 ///\par	Description
 ///		If \a comment is an empty string or a null pointer, the comment
 ///		message is removed from the object.
@@ -401,7 +400,7 @@ void H5Location::setComment(const char* name, const char* comment) const
 {
    herr_t ret_value = H5Oset_comment_by_name(getId(), name, comment, H5P_DEFAULT);
    if( ret_value < 0 )
-      throw LocationException(inMemFunc("setComment"), "H5Oset_comment_by_name failed");
+      throw Exception(inMemFunc("setComment"), "H5Oset_comment_by_name failed");
 }
 
 //--------------------------------------------------------------------------
@@ -428,7 +427,7 @@ void H5Location::setComment(const char* comment) const
 {
    herr_t ret_value = H5Oset_comment_by_name(getId(), ".", comment, H5P_DEFAULT);
    if( ret_value < 0 )
-      throw LocationException(inMemFunc("setComment"), "H5Oset_comment_by_name failed");
+      throw Exception(inMemFunc("setComment"), "H5Oset_comment_by_name failed");
 }
 
 //--------------------------------------------------------------------------
@@ -447,7 +446,7 @@ void H5Location::setComment(const H5std_string& comment) const
 // Function:	H5Location::removeComment
 ///\brief	Removes the comment from an object specified by its name.
 ///\param	name  - IN: Name of the object
-///\exception	H5::LocationException
+///\exception	H5::Exception
 // Programmer	Binh-Minh Ribler - May 2005 (moved from CommonFG, Sep 2013)
 //	2007: QAK modified to use H5O APIs; however the first parameter is
 //		no longer just file or group, this function should be moved
@@ -458,7 +457,7 @@ void H5Location::removeComment(const char* name) const
 {
    herr_t ret_value = H5Oset_comment_by_name(getId(), name, NULL, H5P_DEFAULT);
    if( ret_value < 0 )
-      throw LocationException(inMemFunc("removeComment"), "H5Oset_comment_by_name failed");
+      throw Exception(inMemFunc("removeComment"), "H5Oset_comment_by_name failed");
 }
 
 //--------------------------------------------------------------------------
@@ -475,94 +474,52 @@ void H5Location::removeComment(const H5std_string& name) const
 
 //--------------------------------------------------------------------------
 // Function:	H5Location::getComment
-///\brief	Retrieves the comment for this location, returning its length.
-///\param	name     - IN: Name of the object
-///\param	buf_size - IN: Length of the comment to retrieve
-///\param	comment  - OUT: Retrieved comment
-///\return	Actual length of the comment
-///\exception	H5::LocationException
-///\par Description
-///		This function retrieves \a buf_size characters of the comment
-///		including the null terminator.  Thus, if the actual length
-///		of the comment is more than buf_size-1, the retrieved comment
-///		will be truncated to accommodate the null terminator.
-// Programmer	Binh-Minh Ribler - Mar 2014
-//--------------------------------------------------------------------------
-ssize_t H5Location::getComment(const char* name, size_t buf_size, char* comment) const
-{
-    // H5Oget_comment_by_name will get buf_size chars of the comment including
-    // the null terminator
-    ssize_t comment_len;
-    comment_len = H5Oget_comment_by_name(getId(), name, comment, buf_size, H5P_DEFAULT);
-
-    // If H5Oget_comment_by_name returns a negative value, raise an exception
-    if (comment_len < 0)
-    {
-        throw LocationException("H5Location::getComment", "H5Oget_comment_by_name failed");
-    }
-    // If the comment is longer than the provided buffer size, the C library
-    // will not null terminate it
-    if ((size_t)comment_len >= buf_size)
-	comment[buf_size-1] = '\0';
-
-    // Return the actual comment length, which might be different from buf_size
-    return(comment_len);
-}
-
-//--------------------------------------------------------------------------
-// Function:	H5Location::getComment
-///\brief	Returns the comment as \a string for this location,
-///		returning its length.
-///\param	name     - IN: Name of the object
-///\param	buf_size - IN: Length of the comment to retrieve, default to 0
+///\brief	Retrieves comment for the specified object and its comment's
+///		length.
+///\param	name  - IN: Name of the object
+///\param	bufsize - IN: Length of the comment to retrieve
 ///\return	Comment string
-///\exception	H5::LocationException
+///\exception	H5::Exception
 // Programmer	Binh-Minh Ribler - 2000 (moved from CommonFG, Sep 2013)
+//	2007: QAK modified to use H5O APIs; however the first parameter is
+//		no longer just file or group, this function should be moved
+//		to another class to accommodate attribute, dataset, and named
+//		datatype. - BMR
 //--------------------------------------------------------------------------
-H5std_string H5Location::getComment(const char* name, size_t buf_size) const
+H5std_string H5Location::getComment(const char* name, size_t bufsize) const
 {
-    // Initialize string to "", so that if there is no comment, the returned
-    // string will be empty
-    H5std_string comment("");
+   // bufsize is default to 256
+   // temporary variable
+   hid_t loc_id = getId();   // temporary variable
 
-    // Preliminary call to get the comment's length
-    ssize_t comment_len = H5Oget_comment_by_name(getId(), name, NULL, (size_t)0, H5P_DEFAULT);
+   // temporary C-string for the object's comment; bufsize already including
+   // null character
+   char* comment_C = new char[bufsize];
+   ssize_t ret_value = H5Oget_comment_by_name(loc_id, name, comment_C, bufsize, H5P_DEFAULT);
 
-    // If H5Oget_comment_by_name returns a negative value, raise an exception
-    if (comment_len < 0)
-    {
-        throw LocationException("H5Location::getComment", "H5Oget_comment_by_name failed");
-    }
-
-    // If comment exists, calls C routine again to get it
-    else if (comment_len > 0)
-    {
-	size_t tmp_len = buf_size;
-
-	// If buffer size is not provided, use comment length
-	if (tmp_len == 0)
-	    tmp_len = comment_len;
-
-	// Temporary buffer for char* comment
-	char* comment_C = new char[tmp_len+1];
-	HDmemset(comment_C, 0, tmp_len+1); // clear buffer
-
-	// Used overloaded function
-	ssize_t comment_len = getComment(name, tmp_len+1, comment_C);
-	if (comment_len < 0)
-	{
-	    throw LocationException("H5Location::getComment", "H5Oget_comment_by_name failed");
-	}
-
-	// Convert the C comment to return
-	comment = comment_C;
-
-	// Clean up resource
+   // if the actual length of the comment is longer than bufsize and bufsize
+   // was the default value, i.e., not given by the user, then call
+   // H5Oget_comment_by_name again with the correct value.
+   // If the call to H5Oget_comment_by_name returned an error, skip this block
+   // and throw an exception below.
+   if (ret_value >= 0 && (size_t)ret_value > bufsize && bufsize == 256)
+   {
+	size_t new_size = ret_value;
 	delete []comment_C;
-    }
+	comment_C = new char[new_size];	// new_size including null terminator
+	ret_value = H5Oget_comment_by_name(loc_id, name, comment_C, new_size, H5P_DEFAULT);
+   }
 
-    // Return the string comment
-    return(comment);
+   // if H5Oget_comment_by_name returns SUCCEED, return the string comment,
+   // otherwise, throw an exception
+   if (ret_value < 0) {
+       delete []comment_C;
+       throw Exception(inMemFunc("getComment"), "H5Oget_comment_by_name failed");
+   }
+
+   H5std_string comment = H5std_string(comment_C);
+   delete []comment_C;
+   return (comment);
 }
 
 //--------------------------------------------------------------------------
@@ -572,9 +529,9 @@ H5std_string H5Location::getComment(const char* name, size_t buf_size) const
 ///		\c H5std_string for \a name.
 // Programmer	Binh-Minh Ribler - 2000 (moved from CommonFG, Sep 2013)
 //--------------------------------------------------------------------------
-H5std_string H5Location::getComment(const H5std_string& name, size_t buf_size) const
+H5std_string H5Location::getComment(const H5std_string& name, size_t bufsize) const
 {
-    return(getComment(name.c_str(), buf_size));
+   return(getComment(name.c_str(), bufsize));
 }
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 
@@ -585,7 +542,7 @@ H5std_string H5Location::getComment(const H5std_string& name, size_t buf_size) c
 //		name - IN: Name of the object to be referenced
 //		dataspace - IN: Dataspace with selection
 //		ref_type - IN: Type of reference; default to \c H5R_DATASET_REGION
-// Exception	H5::ReferenceException
+// Exception	H5::IdComponentException
 // Programmer	Binh-Minh Ribler - May, 2004
 //--------------------------------------------------------------------------
 void H5Location::p_reference(void* ref, const char* name, hid_t space_id, H5R_type_t ref_type) const
@@ -700,8 +657,6 @@ void H5Location::reference(void* ref, const H5std_string& name, H5R_type_t ref_t
 //			 referenced object
 //		ref - IN: Reference pointer
 //		ref_type - IN: Reference type
-//		plist - IN: Property list - default to PropList::DEFAULT
-//		from_func - IN: Name of the calling function
 // Exception	H5::ReferenceException
 // Programmer	Binh-Minh Ribler - Oct, 2006
 // Modification
@@ -732,7 +687,6 @@ hid_t H5Location::p_dereference(hid_t loc_id, const void* ref, H5R_type_t ref_ty
 ///\param	loc - IN: Location of the referenced object
 ///\param	ref - IN: Reference pointer
 ///\param	ref_type - IN: Reference type
-///\param	plist - IN: Property list - default to PropList::DEFAULT
 ///\exception	H5::ReferenceException
 // Programmer	Binh-Minh Ribler - Oct, 2006
 // Modification
@@ -750,7 +704,6 @@ void H5Location::dereference(const H5Location& loc, const void* ref, H5R_type_t 
 ///\param	attr - IN: Attribute specifying the location of the referenced object
 ///\param	ref - IN: Reference pointer
 ///\param	ref_type - IN: Reference type
-///\param	plist - IN: Property list - default to PropList::DEFAULT
 ///\exception	H5::ReferenceException
 // Programmer	Binh-Minh Ribler - Oct, 2006
 // Modification
@@ -868,13 +821,10 @@ H5O_type_t H5Location::p_get_ref_obj_type(void *ref, H5R_type_t ref_type) const
 {
    H5O_type_t obj_type = H5O_TYPE_UNKNOWN;
    herr_t ret_value = H5Rget_obj_type2(getId(), ref_type, ref, &obj_type);
-   if (ret_value < 0)
-   {
-      throw ReferenceException(inMemFunc("getRefObjType"), "H5Rget_obj_type2 failed");
-   }
+
    if (obj_type == H5O_TYPE_UNKNOWN || obj_type >= H5O_TYPE_NTYPES)
    {
-      throw ReferenceException(inMemFunc("getRefObjType"), "H5Rget_obj_type2 returned invalid type");
+      throw ReferenceException(inMemFunc("getRefObjType"), "H5Rget_obj_type2 failed");
    }
    return(obj_type);
 }

@@ -1,3 +1,6 @@
+#############################
+Expected output for 'h5stat -g h5stat_filters.h5'
+#############################
 Filename: h5stat_filters.h5
 Small groups (with 0 to 9 links):
 	Total # of small groups: 0

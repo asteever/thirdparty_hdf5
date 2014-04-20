@@ -181,7 +181,7 @@ CONTAINS
     INTEGER(HID_T)  :: mem_space_id_default
     INTEGER(HID_T) :: file_space_id_default
     INTEGER(HADDR_T), ALLOCATABLE, DIMENSION(:) :: ref_buf
-    INTEGER(HSIZE_T) :: j
+    INTEGER :: j
 
     INTERFACE
        INTEGER FUNCTION h5dread_ref_obj_c(dset_id, mem_type_id,&
@@ -240,8 +240,7 @@ CONTAINS
     INTEGER(HID_T)  :: mem_space_id_default
     INTEGER(HID_T) :: file_space_id_default
     INTEGER, ALLOCATABLE, DIMENSION(:) :: ref_buf
-    INTEGER :: i
-    INTEGER(HSIZE_T) :: j
+    INTEGER :: i,j
 
     INTERFACE
        INTEGER FUNCTION h5dread_ref_reg_c(dset_id, mem_type_id,&
@@ -1509,7 +1508,7 @@ CONTAINS
     INTEGER(HID_T)  :: mem_space_id_default
     INTEGER(HID_T) :: file_space_id_default
     INTEGER(HADDR_T), ALLOCATABLE, DIMENSION(:) :: ref_buf
-    INTEGER(HSIZE_T) :: j
+    INTEGER :: j
 
     INTERFACE
        INTEGER FUNCTION h5dwrite_ref_obj_c(dset_id, mem_type_id,&
@@ -1568,8 +1567,7 @@ CONTAINS
     INTEGER(HID_T)  :: mem_space_id_default
     INTEGER(HID_T) :: file_space_id_default
     INTEGER, ALLOCATABLE, DIMENSION(:) :: ref_buf
-    INTEGER :: i
-    INTEGER(HSIZE_T) :: j
+    INTEGER :: i,j
 
     INTERFACE
        INTEGER FUNCTION h5dwrite_ref_reg_c(dset_id, mem_type_id,&

@@ -1,10 +1,10 @@
-cmake_minimum_required (VERSION 2.8.11)
+cmake_minimum_required (VERSION 2.8.10)
 PROJECT (HDF5_HL_EXAMPLES )
 
 #-----------------------------------------------------------------------------
 # Define Sources
 #-----------------------------------------------------------------------------
-set (examples
+SET (examples
     ex_lite1
     ex_lite2    #ex_lite2 PROPERTIES DEPENDS ex_lite1)
     ex_lite3
@@ -26,16 +26,16 @@ set (examples
     ex_ds1
 )
 
-foreach (example ${examples})
-  add_executable (hl_ex_${example} ${HDF5_HL_EXAMPLES_SOURCE_DIR}/${example}.c)
+FOREACH (example ${examples})
+  ADD_EXECUTABLE (hl_ex_${example} ${HDF5_HL_EXAMPLES_SOURCE_DIR}/${example}.c)
   TARGET_NAMING (hl_ex_${example} ${LIB_TYPE})
   TARGET_C_PROPERTIES (hl_ex_${example} " " " ")
-  target_link_libraries (hl_ex_${example} ${HDF5_HL_LIB_TARGET} ${HDF5_LIB_TARGET})
-  set_target_properties (hl_ex_${example} PROPERTIES FOLDER examples/hl)
-endforeach (example ${examples})
+  TARGET_LINK_LIBRARIES (hl_ex_${example} ${HDF5_HL_LIB_TARGET} ${HDF5_LIB_TARGET})
+  SET_TARGET_PROPERTIES (hl_ex_${example} PROPERTIES FOLDER examples/hl)
+ENDFOREACH (example ${examples})
 
-if (BUILD_TESTING)
+IF (BUILD_TESTING)
 
-  include (CMakeTests.cmake)
+  INCLUDE (CMakeTests.cmake)
 
-endif (BUILD_TESTING)
+ENDIF (BUILD_TESTING)

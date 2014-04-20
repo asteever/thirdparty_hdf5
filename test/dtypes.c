@@ -651,7 +651,7 @@ test_compound_1(void)
 
 error:
     if(tag)
-        H5free_memory(tag);
+        HDfree(tag);
     return retval;
 }
 
@@ -4422,7 +4422,7 @@ error:
     if(buf) 
         HDfree(buf);
     if(tag)
-        H5free_memory(tag); /* Technically allocated by API call */
+        HDfree(tag);
 
     reset_hdf5();
     return ret_value;  /* Number of errors */
@@ -4790,7 +4790,8 @@ test_bitfield_funcs(void)
  error:
 
     if (retval == -1) retval = 1;
-    H5free_memory(tag);
+
+    HDfree(tag);
     H5Tclose(ntype);
     H5Tclose(type);
     if (retval == 0) PASSED();
@@ -6472,7 +6473,7 @@ test_named_indirect_reopen(hid_t fapl)
     if(dt_size != H5Tget_size(type)) TEST_ERROR
     if(NULL == (tag_ret = H5Tget_tag(type))) TEST_ERROR
     if(HDstrcmp(tag, tag_ret)) TEST_ERROR
-    H5free_memory(tag_ret);
+    HDfree(tag_ret);
     tag_ret = NULL;
 
     /* Create dataset with opaque type */
@@ -6483,7 +6484,7 @@ test_named_indirect_reopen(hid_t fapl)
     if(dt_size != H5Tget_size(reopened_type)) TEST_ERROR
     if(NULL == (tag_ret = H5Tget_tag(type))) TEST_ERROR
     if(HDstrcmp(tag, tag_ret)) TEST_ERROR
-    H5free_memory(tag_ret);
+    HDfree(tag_ret);
     tag_ret = NULL;
 
     /* Close types and dataset */
@@ -6533,7 +6534,7 @@ error:
 	H5Fclose(file);
     } H5E_END_TRY;
     if(tag_ret)
-        H5free_memory(tag_ret);
+        HDfree(tag_ret);
     return 1;
 } /* end test_named_indirect_reopen() */
 

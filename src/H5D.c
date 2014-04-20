@@ -94,30 +94,6 @@ H5D__init_pub_interface(void)
 } /* H5D__init_pub_interface() */
 
 
-/*--------------------------------------------------------------------------
-NAME
-   H5D__term_pub_interface -- Terminate interface
-USAGE
-    herr_t H5D__term_pub_interface()
-RETURNS
-    Non-negative on success/Negative on failure
-DESCRIPTION
-    Terminates interface.  (Just resets H5_interface_initialize_g
-    currently).
-
---------------------------------------------------------------------------*/
-herr_t
-H5D__term_pub_interface(void)
-{
-    FUNC_ENTER_PACKAGE_NOERR
-
-    /* Mark closed */
-    H5_interface_initialize_g = 0;
-
-    FUNC_LEAVE_NOAPI(0)
-} /* H5D__term_pub_interface() */
-
-
 /*-------------------------------------------------------------------------
  * Function:	H5Dcreate2
  *
@@ -790,12 +766,21 @@ H5Dget_access_plist(hid_t dset_id)
 
     /* If the dataset is chunked then copy the rdcc parameters */
     if (dset->shared->layout.type == H5D_CHUNKED) {
+	H5D_append_flush_t info;
+
         if (H5P_set(new_plist, H5D_ACS_DATA_CACHE_NUM_SLOTS_NAME, &(dset->shared->cache.chunk.nslots)) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set data cache number of slots")
         if (H5P_set(new_plist, H5D_ACS_DATA_CACHE_BYTE_SIZE_NAME, &(dset->shared->cache.chunk.nbytes_max)) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set data cache byte size")
         if (H5P_set(new_plist, H5D_ACS_PREEMPT_READ_CHUNKS_NAME, &(dset->shared->cache.chunk.w0)) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set preempt read chunks")
+
+	info.ndims = dset->shared->append_flush.ndims;
+	info.func = dset->shared->append_flush.func;
+	info.udata = dset->shared->append_flush.udata;
+	HDmemcpy(info.boundary, dset->shared->append_flush.boundary, sizeof(dset->shared->append_flush.boundary));
+        if(H5P_set(new_plist, H5D_ACS_APPEND_FLUSH_NAME, &info) < 0)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set append flush property")
     } /* end if */
 
     /* Set the return value */
@@ -1169,4 +1154,75 @@ H5Dset_extent(hid_t dset_id, const hsize_t size[])
 done:
         FUNC_LEAVE_API(ret_value)
 } /* end H5Dset_extent() */
+ 
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Dflush
+ *
+ * Purpose:     Flushes all buffers associated with a dataset.
+ *
+ * Return:      Non-negative on success, negative on failure
+ *
+ * Programmer:  Mike McGreevy
+ *              May 19, 2010
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Dflush(hid_t dset_id)
+{
+    H5D_t *dset; /* Dataset for this operation */
+    herr_t ret_value = SUCCEED; /* return value */
+
+    FUNC_ENTER_API(FAIL)
+    H5TRACE1("e", "i", dset_id);
+    
+    /* Check args */
+    if(NULL == (dset = (H5D_t *)H5I_object_verify(dset_id, H5I_DATASET)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataset")
+
+    /* Flush any dataset information still cached in memory */
+    if(H5D__flush_real(dset, H5AC_dxpl_id) < 0)
+	HDONE_ERROR(H5E_DATASET, H5E_WRITEERROR, FAIL, "unable to flush cached dataset info")
+
+    if(H5O_flush_common(&dset->oloc, dset_id) < 0)
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTFLUSH, FAIL, "unable to flush dataset and object flush callback")
+
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* H5Dflush */
+
+
+/*-------------------------------------------------------------------------
+ * Function:    H5Drefresh
+ *
+ * Purpose:     Refreshes all buffers associated with a dataset.
+ *
+ * Return:      Non-negative on success, negative on failure
+ *
+ * Programmer:  Mike McGreevy
+ *              July 21, 2010
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5Drefresh(hid_t dset_id)
+{
+    H5D_t * dset = NULL;
+    hid_t ret_value = SUCCEED; /* return value */
+    
+    FUNC_ENTER_API(FAIL)
+    H5TRACE1("e", "i", dset_id);
+
+    /* Check args */
+    if(NULL == (dset = (H5D_t *)H5I_object_verify(dset_id, H5I_DATASET)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataset")
+
+    /* Call private function to refresh dataset object */
+    if ((H5O_refresh_metadata(dset_id, dset->oloc, H5AC_dxpl_id)) < 0)
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTLOAD, FAIL, "unable to refresh dataset")
+
+done:
+    FUNC_LEAVE_API(ret_value)
+} /* H5Drefresh */
 

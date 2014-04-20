@@ -53,11 +53,13 @@ PROGRAM RWDSET_FORTRAN2003
   INTEGER(HID_T) :: dset_idr8      ! Dataset identifier 
 
   INTEGER :: error ! Error flag
-  INTEGER :: i
+  INTEGER :: i, j
 
 ! Data buffers:
 
-  INTEGER(int_kind_1), DIMENSION(1:4), TARGET :: dset_data_i1
+  INTEGER, DIMENSION(1:4) :: dset_data
+
+  INTEGER(int_kind_1), DIMENSION(1:4), TARGET :: dset_data_i1, data_out_i1
   INTEGER(int_kind_4), DIMENSION(1:4), TARGET :: dset_data_i4, data_out_i4
   INTEGER(int_kind_8), DIMENSION(1:4), TARGET :: dset_data_i8, data_out_i8
   INTEGER(int_kind_16), DIMENSION(1:4), TARGET :: dset_data_i16, data_out_i16
@@ -71,6 +73,7 @@ PROGRAM RWDSET_FORTRAN2003
   INTEGER(HID_T) :: dspace_id     ! Dataspace identifier
   
   TYPE(C_PTR) :: f_ptr
+  INTEGER(hid_t) :: datatype         !/* Common datatype ID */
 
   !
   ! Initialize FORTRAN interface.

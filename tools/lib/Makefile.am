@@ -21,7 +21,7 @@
 include $(top_srcdir)/config/commence.am
 
 # Include files in /src directory
-AM_CPPFLAGS+=-I$(top_srcdir)/src
+INCLUDES=-I$(top_srcdir)/src
 
 # This is our main target, the h5tools library.
 noinst_LTLIBRARIES=libh5tools.la

@@ -21,8 +21,7 @@
 include $(top_srcdir)/config/commence.am
 
 # Include files
-AM_FCFLAGS+=-I$(top_srcdir)/fortran/src -I$(top_srcdir)/fortran/test $(F9XMODFLAG)$(top_builddir)/fortran/src \
-            $(F9XMODFLAG)$(top_builddir)/fortran/test
+AM_FCFLAGS+=-I$(top_srcdir)/fortran/src -I$(top_srcdir)/fortran/test $(F9XMODFLAG)$(top_builddir)/fortran/src
 
 # Some Fortran compilers can't build shared libraries, so sometimes we
 # want to build a shared C library and a static Fortran library.  If so,

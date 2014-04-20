@@ -863,11 +863,11 @@ static int processStrData(FILE *strm, struct Input *in, hid_t file_id)
     hid_t   handle;
     hsize_t dims[1];
     char    str[1024];
-    int     c;
+    char    c;
     int     i = 0;
     int     j;
-    hsize_t nlines = 0;
-    hsize_t line;
+    int     nlines = 0;
+    int     line;
 
     /*-------------------------------------------------------------------------
      * get number of lines in the input file
@@ -877,8 +877,9 @@ static int processStrData(FILE *strm, struct Input *in, hid_t file_id)
     while (!HDfeof(strm)) {
         c = HDfgetc(strm);
 
-        if (c == 10)    /* eol */
+        if (c == 10) { /* eol */
             nlines++;
+        }
     }
 
     if (!nlines)
@@ -943,7 +944,7 @@ static int processStrData(FILE *strm, struct Input *in, hid_t file_id)
     while (!HDfeof(strm)) {
         c = HDfgetc(strm);
 
-        str[i] = (char)c;
+        str[i] = c;
 
         i++;
 
@@ -1011,7 +1012,7 @@ static int processStrHDFData(FILE *strm, struct Input *in, hid_t file_id)
     char   *str3 = NULL;
     char    str[1024] = "";
     int     j;
-    hsize_t     line;
+    int     line;
 
     /*-------------------------------------------------------------------------
      * read file and generate an HDF5 dataset
@@ -1078,7 +1079,7 @@ static int processStrHDFData(FILE *strm, struct Input *in, hid_t file_id)
         str2 = NULL;
         str3 = NULL;
 #ifdef H5DEBUGIMPORT
-            printf("processStrHDFData DATATYPE STRING[%llu]={%s}\n", (unsigned long long)line, str1);
+            printf("processStrHDFData DATATYPE STRING[%d]={%s}\n", line, str1);
 #endif
             /* process string to remove the first and last quote char */
             str2 = strchr(str1, '"');
@@ -1107,7 +1108,7 @@ static int processStrHDFData(FILE *strm, struct Input *in, hid_t file_id)
                         hsize_t count[1] = { 1 };
 
 #ifdef H5DEBUGIMPORT
-                        printf("processStrHDFData DATATYPE STRING[%llu] store %s\n", (unsigned long long)line, str2);
+                        printf("processStrHDFData DATATYPE STRING[%d] store %s\n", line, str2);
 #endif
                         if ((fspace_id = H5Dget_space(dset_id)) < 0)
                             goto out;

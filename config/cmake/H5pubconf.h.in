@@ -217,6 +217,12 @@
 /* Define to 1 if you have the `get_fpc_csr' function. */
 #cmakedefine H5_HAVE_GET_FPC_CSR @H5_HAVE_GET_FPC_CSR@
 
+/* Define if we have GPFS support */
+#cmakedefine H5_HAVE_GPFS @H5_HAVE_GPFS@
+
+/* Define to 1 if you have the <gpfs.h> header file. */
+#cmakedefine H5_HAVE_GPFS_H @H5_HAVE_GPFS_H@
+
 /* Define if library will contain instrumentation to detect correct
    optimization operation */
 #cmakedefine H5_HAVE_INSTRUMENTED_LIBRARY @H5_HAVE_INSTRUMENTED_LIBRARY@
@@ -563,7 +569,7 @@
 #define H5_PACKAGE_URL "@HDF5_PACKAGE_URL@"
 
 /* Define to the version of this package. */
-#define H5_PACKAGE_VERSION "@HDF5_PACKAGE_VERSION_STRING@"
+#define H5_PACKAGE_VERSION "@HDF5_PACKAGE_VERSION@"
 
 /* Width for printf() for type `long long' or `__int64', use `ll' */
 #cmakedefine H5_PRINTF_LL_WIDTH @H5_PRINTF_LL_WIDTH@
@@ -748,7 +754,7 @@
 #cmakedefine H5_USING_MEMCHECKER @H5_USING_MEMCHECKER@
 
 /* Version number of package */
-#define H5_VERSION "@HDF5_PACKAGE_VERSION_STRING@"
+#define H5_VERSION "@HDF5_PACKAGE_VERSION@"
 
 /* Define if vsnprintf() returns the correct value for formatted strings that
    don't fit into size allowed */

@@ -37,6 +37,8 @@
 
 #include "gif.h"
 
+#define GIF2VERSION                     "1.00"
+
 GIFTOMEM
 Gif2Mem(BYTE *MemGif)
 {

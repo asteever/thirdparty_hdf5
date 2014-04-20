@@ -60,10 +60,12 @@
 /* Superblock status flags */
 #define H5F_SUPER_WRITE_ACCESS          0x01
 #define H5F_SUPER_FILE_OK               0x02
-#define H5F_SUPER_ALL_FLAGS             (H5F_SUPER_WRITE_ACCESS | H5F_SUPER_FILE_OK)
+#define H5F_SUPER_SWMR_WRITE_ACCESS     0x04
+#define H5F_SUPER_ALL_FLAGS             (H5F_SUPER_WRITE_ACCESS | H5F_SUPER_FILE_OK | H5F_SUPER_SWMR_WRITE_ACCESS)
+
 
 /* Mask for removing private file access flags */
-#define H5F_ACC_PUBLIC_FLAGS 	        0x001fu
+#define H5F_ACC_PUBLIC_FLAGS 	        0x007fu
 
 /* Free space section+aggregator merge flags */
 #define H5F_FS_MERGE_METADATA           0x01    /* Section can merge with metadata aggregator */
@@ -126,6 +128,33 @@
 #define H5F_SUPERBLOCK_SIZE(v, f) ( H5F_SUPERBLOCK_FIXED_SIZE           \
         + H5F_SUPERBLOCK_VARLEN_SIZE(v, f))
 
+/* For superblock version 0 & 1:
+   Offset to the file consistency flags (status_flags) in the superblock (excluding H5F_SUPERBLOCK_FIXED_SIZE) */
+#define H5F_SUPER_STATUS_OFF_V01                                                \
+        (2  /* freespace, and root group versions */                    \
+        + 1 /* reserved */                                              \
+        + 3 /* shared header vers, size of address, size of lengths */  \
+        + 1 /* reserved */                                              \
+        + 4) /* group leaf k, group internal k */
+
+#define H5F_SUPER_STATUS_OFF(v)   (v >= 2 ? 2 : H5F_SUPER_STATUS_OFF_V01)
+
+/* Offset to the file consistency flags (status_flags) in the superblock */
+#define H5F_SUPER_STATUS_FLAGS_OFF(v) (H5F_SUPERBLOCK_FIXED_SIZE + H5F_SUPER_STATUS_OFF(v))
+
+/* Size of file consistency flags (status_flags) in the superblock */
+#define H5F_SUPER_STATUS_FLAGS_SIZE(v)        (v >= 2 ? 1 : 4)
+
+/* 
+ * User data for superblock protect in H5F_super_read: 
+ *   dirtied: the superblock is modifed or not
+ *   initial read: superlock read upon the file's initial open--
+ *		   whether to skip the check for truncated file in H5F_sblock_load()
+ */
+typedef struct H5F_super_ud_t {
+    hbool_t dirtied;
+    hbool_t initial_read;
+} H5F_super_ud_t;
 
 /* Forward declaration external file cache struct used below (defined in
  * H5Fefc.c) */
@@ -221,6 +250,10 @@ struct H5F_file_t {
                                 /* metadata cache.  This structure is   */
                                 /* fixed at creation time and should    */
                                 /* not change thereafter.               */
+    hbool_t     use_mdc_logging; /* Set when metadata logging is desired */
+    hbool_t     start_mdc_log_on_access; /* set when mdc logging should  */
+                                /* begin on file access/create          */
+    char        *mdc_log_location; /* location of mdc log               */
     hid_t       fcpl_id;	/* File creation property list ID 	*/
     H5F_close_degree_t fc_degree;   /* File close behavior degree	*/
     size_t	rdcc_nslots;	/* Size of raw data chunk cache (slots)	*/
@@ -255,6 +288,12 @@ struct H5F_file_t {
 
     /* Metadata accumulator information */
     H5F_meta_accum_t accum;     /* Metadata accumulator info           	*/
+
+    /* Metadata retry info */
+    unsigned 		read_attempts;	/* The # of reads to try when reading metadata with checksum */
+    unsigned		retries_nbins;		/* # of bins for each retries[] */
+    uint32_t		*retries[H5AC_NTYPES];  /* Track # of read retries for metdata items with checksum */
+    H5F_object_flush_t 	object_flush;		/* Information for object flush callback */
 };
 
 /*
@@ -295,7 +334,6 @@ H5_DLLVAR const H5AC_class_t H5AC_SUPERBLOCK[1];
 
 /* General routines */
 H5_DLL herr_t H5F_init(void);
-H5_DLL herr_t H5F__term_deprec_interface(void);
 H5_DLL herr_t H5F_locate_signature(H5FD_t *file, hid_t dxpl_id, haddr_t *sig_addr);
 H5_DLL herr_t H5F_flush(H5F_t *f, hid_t dxpl_id, hbool_t closing);
 
@@ -306,7 +344,7 @@ H5_DLL herr_t H5F_mount_count_ids(H5F_t *f, unsigned *nopen_files, unsigned *nop
 
 /* Superblock related routines */
 H5_DLL herr_t H5F_super_init(H5F_t *f, hid_t dxpl_id);
-H5_DLL herr_t H5F_super_read(H5F_t *f, hid_t dxpl_id);
+H5_DLL herr_t H5F_super_read(H5F_t *f, hid_t dxpl_id, hbool_t initial_read);
 H5_DLL herr_t H5F_super_size(H5F_t *f, hid_t dxpl_id, hsize_t *super_size, hsize_t *super_ext_size);
 H5_DLL herr_t H5F_super_free(H5F_super_t *sblock);
 

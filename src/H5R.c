@@ -165,9 +165,6 @@ H5R_term_interface(void)
 	if ((n=H5I_nmembers(H5I_REFERENCE))) {
 	    H5I_clear_type(H5I_REFERENCE, FALSE, FALSE);
 	} else {
-            /* Close deprecated interface */
-            n += H5R__term_deprec_interface();
-
 	    H5I_dec_type_ref(H5I_REFERENCE);
 	    H5_interface_initialize_g = 0;
 	    n = 1; /*H5I*/
@@ -897,6 +894,7 @@ H5R_get_name(H5F_t *f, hid_t lapl_id, hid_t dxpl_id, hid_t id, H5R_type_t ref_ty
     /* Check args */
     HDassert(f);
     HDassert(_ref);
+    HDassert(name);
 
     /* Initialize the object location */
     H5O_loc_reset(&oloc);
@@ -967,10 +965,8 @@ done:
                             object that the dataset is located within.
         H5R_type_t ref_type;    IN: Type of reference
         void *ref;      IN: Reference to query.
-        char *name;     OUT: Buffer to place name of object referenced. If NULL
-	                     then this call will return the size in bytes of name.
-        size_t size;    IN: Size of name buffer (user needs to include NULL terminator
-                            when passing in the size)
+        char *name;     OUT: Buffer to place name of object referenced
+        size_t size;    IN: Size of name buffer
 
  RETURNS
     Non-negative length of the path on success, Negative on failure
@@ -982,12 +978,6 @@ done:
     This may not be the only path to that object.
  EXAMPLES
  REVISION LOG
-    M. Scot Breitenfeld
-    22 January 2014
-    Changed the behavior for the returned value of the function when name is NULL.
-    If name is NULL then size is ignored and the function returns the size 
-    of the name buffer (not including the NULL terminator), it still returns
-    negative on failure.
 --------------------------------------------------------------------------*/
 ssize_t
 H5Rget_name(hid_t id, H5R_type_t ref_type, const void *_ref, char *name,

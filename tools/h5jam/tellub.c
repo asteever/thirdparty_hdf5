@@ -24,6 +24,9 @@
 #include "h5tools.h"
 #include "h5tools_utils.h"
 
+#define TRUE 1
+#define FALSE 0
+
 /* Name of tool */
 #define PROGRAMNAME "tellub"
 
@@ -82,21 +85,21 @@ usage (const char *prog)
 static void
 parse_command_line (int argc, const char *argv[])
 {
-  int opt;
+  int opt = FALSE;
 
   /* parse command line options */
   while ((opt = get_option (argc, argv, s_opts, l_opts)) != EOF)
     {
       switch ((char) opt)
-      {
-      case 'h':
-        usage (h5tools_getprogname());
-        exit (EXIT_SUCCESS);
-      case '?':
-      default:
-        usage (h5tools_getprogname());
-        exit (EXIT_FAILURE);
-      }
+  {
+  case 'h':
+    usage (h5tools_getprogname());
+    exit (EXIT_SUCCESS);
+  case '?':
+  default:
+    usage (h5tools_getprogname());
+    exit (EXIT_FAILURE);
+  }
     }
 
   /* check for file name to be processed */

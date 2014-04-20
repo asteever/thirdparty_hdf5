@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.8.11)
+cmake_minimum_required (VERSION 2.8.10)
 PROJECT (HDF5_TOOLS_H5IMPORT)
 
 #-----------------------------------------------------------------------------
@@ -9,28 +9,28 @@ INCLUDE_DIRECTORIES (${HDF5_TOOLS_SRC_DIR}/lib)
 # --------------------------------------------------------------------
 # Add the h5import executables
 # --------------------------------------------------------------------
-add_executable (h5import ${HDF5_TOOLS_H5IMPORT_SOURCE_DIR}/h5import.c)
+ADD_EXECUTABLE (h5import ${HDF5_TOOLS_H5IMPORT_SOURCE_DIR}/h5import.c)
 TARGET_NAMING (h5import ${LIB_TYPE})
 TARGET_C_PROPERTIES (h5import " " " ")
-target_link_libraries (h5import  ${HDF5_TOOLS_LIB_TARGET} ${HDF5_LIB_TARGET})
-#set_target_properties (h5import PROPERTIES COMPILE_DEFINITIONS H5DEBUGIMPORT)
-set_target_properties (h5import PROPERTIES FOLDER tools)
+TARGET_LINK_LIBRARIES (h5import  ${HDF5_TOOLS_LIB_TARGET} ${HDF5_LIB_TARGET})
+#SET_TARGET_PROPERTIES (h5import PROPERTIES COMPILE_DEFINITIONS H5DEBUGIMPORT)
+SET_TARGET_PROPERTIES (h5import PROPERTIES FOLDER tools)
 
-set (H5_DEP_EXECUTABLES h5import)
+SET (H5_DEP_EXECUTABLES h5import)
 
-if (BUILD_TESTING)
+IF (BUILD_TESTING)
   # --------------------------------------------------------------------
   # Add the h5import executables
   # --------------------------------------------------------------------
-  add_executable (h5importtest ${HDF5_TOOLS_H5IMPORT_SOURCE_DIR}/h5importtest.c)
+  ADD_EXECUTABLE (h5importtest ${HDF5_TOOLS_H5IMPORT_SOURCE_DIR}/h5importtest.c)
   TARGET_NAMING (h5importtest ${LIB_TYPE})
   TARGET_C_PROPERTIES (h5importtest " " " ")
-  target_link_libraries (h5importtest ${HDF5_LIB_TARGET} ${HDF5_TOOLS_LIB_TARGET})
-  set_target_properties (h5importtest PROPERTIES FOLDER tools)
+  TARGET_LINK_LIBRARIES (h5importtest ${HDF5_LIB_TARGET} ${HDF5_TOOLS_LIB_TARGET})
+  SET_TARGET_PROPERTIES (h5importtest PROPERTIES FOLDER tools)
 
-  include (CMakeTests.cmake)
+  INCLUDE (CMakeTests.cmake)
 
-endif (BUILD_TESTING)
+ENDIF (BUILD_TESTING)
 
 ##############################################################################
 ##############################################################################
@@ -44,7 +44,7 @@ endif (BUILD_TESTING)
 
 #INSTALL_PROGRAM_PDB (h5import ${HDF5_INSTALL_BIN_DIR} toolsapplications)
 
-install (
+INSTALL (
     TARGETS
         h5import
     RUNTIME DESTINATION

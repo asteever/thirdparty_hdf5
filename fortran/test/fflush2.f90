@@ -30,7 +30,6 @@
      PROGRAM FFLUSH2EXAMPLE
 
      USE HDF5 ! This module contains all necessary modules
-     USE TH5_MISC
 
      IMPLICIT NONE
 
@@ -40,6 +39,7 @@
      !
      !data space rank and dimensions
      !
+     INTEGER, PARAMETER :: RANK = 2
      INTEGER, PARAMETER :: NX = 4
      INTEGER, PARAMETER :: NY = 5
 

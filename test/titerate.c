@@ -40,6 +40,7 @@
 #define NAMELEN     80
 
 /* 1-D dataset with fixed dimensions */
+#define SPACE1_NAME  "Space1"
 #define SPACE1_RANK	1
 #define SPACE1_DIM1	4
 

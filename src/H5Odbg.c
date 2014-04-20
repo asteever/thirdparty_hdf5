@@ -455,32 +455,30 @@ H5O_debug_real(H5F_t *f, hid_t dxpl_id, H5O_t *oh, haddr_t addr, FILE *stream, i
             hbool_t flag_printed = FALSE;
 
             if(oh->mesg[i].flags & H5O_MSG_FLAG_SHARED) {
-                HDfprintf(stream, "<S");
+                HDfprintf(stream, "%s%s", (flag_printed ? ", " : "<"), "S");
                 flag_printed = TRUE;
             } /* end if */
             if(oh->mesg[i].flags & H5O_MSG_FLAG_CONSTANT) {
-                HDfprintf(stream, "%sC", (flag_printed ? ", " : "<"));
+                HDfprintf(stream, "%s%s", (flag_printed ? ", " : "<"), "C");
                 flag_printed = TRUE;
             } /* end if */
             if(oh->mesg[i].flags & H5O_MSG_FLAG_DONTSHARE) {
-                HDfprintf(stream, "%sDS", (flag_printed ? ", " : "<"));
+                HDfprintf(stream, "%s%s", (flag_printed ? ", " : "<"), "DS");
                 flag_printed = TRUE;
             } /* end if */
             if(oh->mesg[i].flags & H5O_MSG_FLAG_FAIL_IF_UNKNOWN) {
-                HDfprintf(stream, "%sFIU", (flag_printed ? ", " : "<"));
+                HDfprintf(stream, "%s%s", (flag_printed ? ", " : "<"), "FIU");
                 flag_printed = TRUE;
             } /* end if */
             if(oh->mesg[i].flags & H5O_MSG_FLAG_MARK_IF_UNKNOWN) {
-                HDfprintf(stream, "%sMIU", (flag_printed ? ", " : "<"));
+                HDfprintf(stream, "%s%s", (flag_printed ? ", " : "<"), "MIU");
                 flag_printed = TRUE;
             } /* end if */
             if(oh->mesg[i].flags & H5O_MSG_FLAG_WAS_UNKNOWN) {
                 HDassert(oh->mesg[i].flags & H5O_MSG_FLAG_MARK_IF_UNKNOWN);
-                HDfprintf(stream, "%sWU", (flag_printed ? ", " : "<"));
+                HDfprintf(stream, "%s%s", (flag_printed ? ", " : "<"), "WU");
                 flag_printed = TRUE;
             } /* end if */
-            if(!flag_printed)
-                HDfprintf(stream, "-");
             HDfprintf(stream, ">\n");
             if(oh->mesg[i].flags & ~H5O_MSG_FLAG_BITS)
                 HDfprintf(stream, "%*s%-*s 0x%02x\n", indent + 3,"", MAX(0, fwidth - 3),

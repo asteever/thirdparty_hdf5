@@ -73,7 +73,7 @@ PROGRAM H5_EXTEND
   !
   !general purpose integer 
   !
-  INTEGER(HSIZE_T) :: i, j
+  INTEGER :: i, j
 
   !
   !flag to check operation success 

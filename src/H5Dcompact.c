@@ -40,7 +40,7 @@
 #include "H5Iprivate.h"		/* IDs			  		*/
 #include "H5MMprivate.h"	/* Memory management			*/
 #include "H5Oprivate.h"		/* Object headers		  	*/
-#include "H5VMprivate.h"		/* Vector and array functions		*/
+#include "H5Vprivate.h"		/* Vector and array functions		*/
 
 
 /****************/
@@ -117,7 +117,7 @@ H5FL_BLK_EXTERN(type_conv);
  *-------------------------------------------------------------------------
  */
 herr_t
-H5D__compact_fill(const H5D_t *dset, hid_t dxpl_id)
+H5D__compact_fill(H5D_t *dset, hid_t dxpl_id)
 {
     H5D_fill_buf_info_t fb_info;        /* Dataset's fill buffer info */
     hbool_t     fb_info_init = FALSE;   /* Whether the fill value buffer has been initialized */
@@ -207,7 +207,10 @@ H5D__compact_construct(H5F_t *f, H5D_t *dset)
     /* Verify data size is smaller than maximum header message size
      * (64KB) minus other layout message fields.
      */
-    max_comp_data_size = H5O_MESG_MAX_SIZE - H5D__layout_meta_size(f, &(dset->shared->layout), FALSE);
+    if(dset->shared->layout.version < H5O_LAYOUT_VERSION_4)
+        max_comp_data_size = H5O_MESG_MAX_SIZE - H5D__layout_meta_size(f, &(dset->shared->layout), FALSE);
+    else
+        max_comp_data_size = H5O_MESG_MAX_SIZE - H5O_storage_meta_size(f, &(dset->shared->layout.storage), FALSE);
     if(dset->shared->layout.storage.u.compact.size > max_comp_data_size)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "compact dataset size is bigger than header message maximum size")
 
@@ -297,7 +300,7 @@ H5D__compact_readvv(const H5D_io_info_t *io_info,
     HDassert(io_info);
 
     /* Use the vectorized memory copy routine to do actual work */
-    if((ret_value = H5VM_memcpyvv(io_info->u.rbuf, mem_max_nseq, mem_curr_seq, mem_size_arr, mem_offset_arr, io_info->store->compact.buf, dset_max_nseq, dset_curr_seq, dset_size_arr, dset_offset_arr)) < 0)
+    if((ret_value = H5V_memcpyvv(io_info->u.rbuf, mem_max_nseq, mem_curr_seq, mem_size_arr, mem_offset_arr, io_info->store->compact.buf, dset_max_nseq, dset_curr_seq, dset_size_arr, dset_offset_arr)) < 0)
         HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "vectorized memcpy failed")
 
 done:
@@ -338,7 +341,7 @@ H5D__compact_writevv(const H5D_io_info_t *io_info,
     HDassert(io_info);
 
     /* Use the vectorized memory copy routine to do actual work */
-    if((ret_value = H5VM_memcpyvv(io_info->store->compact.buf, dset_max_nseq, dset_curr_seq, dset_size_arr, dset_offset_arr, io_info->u.wbuf, mem_max_nseq, mem_curr_seq, mem_size_arr, mem_offset_arr)) < 0)
+    if((ret_value = H5V_memcpyvv(io_info->store->compact.buf, dset_max_nseq, dset_curr_seq, dset_size_arr, dset_offset_arr, io_info->u.wbuf, mem_max_nseq, mem_curr_seq, mem_size_arr, mem_offset_arr)) < 0)
         HGOTO_ERROR(H5E_IO, H5E_WRITEERROR, FAIL, "vectorized memcpy failed")
 
     /* Mark the compact dataset's buffer as dirty */
@@ -373,8 +376,15 @@ H5D__compact_flush(H5D_t *dset, hid_t dxpl_id)
 
     /* Check if the buffered compact information is dirty */
     if(dset->shared->layout.storage.u.compact.dirty) {
-        if(H5O_msg_write(&(dset->oloc), H5O_LAYOUT_ID, 0, H5O_UPDATE_TIME, &(dset->shared->layout), dxpl_id) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "unable to update layout message")
+        /* Check whether compact data is storage in layout or storage message */
+        if(dset->shared->layout.version < H5O_LAYOUT_VERSION_4) {
+            if(H5O_msg_write(&(dset->oloc), H5O_LAYOUT_ID, 0, H5O_UPDATE_TIME, &(dset->shared->layout), dxpl_id) < 0)
+                HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "unable to update layout message")
+        } /* end if */
+        else {
+            if(H5O_msg_write(&(dset->oloc), H5O_STORAGE_ID, 0, H5O_UPDATE_TIME, &(dset->shared->layout.storage), dxpl_id) < 0)
+                HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, FAIL, "unable to update layout message")
+        } /* end else */
         dset->shared->layout.storage.u.compact.dirty = FALSE;
     } /* end if */
 

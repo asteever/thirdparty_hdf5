@@ -86,11 +86,6 @@ main(int argc, char *argv[])
     if (GetTestCleanup() && !getenv("HDF5_NOCLEANUP"))
         TestCleanup();
 
-    /* Exit failure if errors encountered; else exit success. */
-    /* No need to print anything since PerformTests() already does. */
-    if (GetTestNumErrs() > 0)
-	exit(EXIT_FAILURE);
-    else
-	exit(EXIT_SUCCESS);
+    return (GetTestNumErrs());
 }   /* end main() */
 

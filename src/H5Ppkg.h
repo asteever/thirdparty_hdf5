@@ -154,8 +154,6 @@ typedef int (*H5P_iterate_int_t)(H5P_genprop_t *prop, void *udata);
 /******************************/
 
 /* Private functions, not part of the publicly documented API */
-H5_DLL herr_t H5P__term_pub_interface(void);
-H5_DLL herr_t H5P__term_deprec_interface(void);
 H5_DLL H5P_genclass_t *H5P_create_class(H5P_genclass_t *par_class,
     const char *name, H5P_plist_type_t type,
     H5P_cls_create_func_t cls_create, void *create_data,
@@ -227,6 +225,7 @@ H5_DLL herr_t H5P__decode_double(const void **_pp, void *value);
 H5_DLL char *H5P_get_class_path_test(hid_t pclass_id);
 H5_DLL hid_t H5P_open_class_path_test(const char *path);
 H5_DLL herr_t H5P_reset_external_file_test(hid_t dcpl_id);
+H5_DLL herr_t H5P_reset_layout_test(hid_t dcpl_id);
 #endif /* H5P_TESTING */
 
 #endif /* _H5Ppkg_H */

@@ -26,7 +26,7 @@
 #define PAL_ENTRIES  256
 
 static int    read_data(const char* file_name, hsize_t *width, hsize_t *height );
-unsigned char *gbuf = NULL;  /* global buffer for image data */
+unsigned char *gbuf = 0;  /* global buffer for image data */
 
 int main( void )
 {
@@ -79,25 +79,18 @@ int main( void )
 
  /* make dataset */
  status=H5IMmake_image_24bit( file_id, IMAGE2_NAME, width, height, "INTERLACE_PIXEL", gbuf );
-
- /* close the file. */
- H5Fclose( file_id );
-
- if(gbuf) {
+ if (gbuf) {
     free(gbuf);
     gbuf = NULL;
  }
+
+ /* close the file. */
+ H5Fclose( file_id );
 
  return 0;
 
 out:
  printf("Error on return function...Exiting\n");
-
- if(gbuf) {
-    free(gbuf);
-    gbuf = NULL;
- }
-
  return 1;
 }
 
