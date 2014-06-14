@@ -11,10 +11,7 @@ foreach (testp ${H5P_TESTS})
   add_test (NAME TEST_PAR_${testp} COMMAND ${MPIEXEC} ${MPIEXEC_PREFLAGS} ${MPIEXEC_NUMPROC_FLAG} ${MPIEXEC_MAX_NUMPROCS} ${MPIEXEC_POSTFLAGS} $<TARGET_FILE:${testp}>)
 endforeach (testp ${H5P_TESTS})
 
-# The following will only be correct on windows shared
-#set_tests_properties (TEST_PAR_t_pflush1 PROPERTIES WILL_FAIL "true")
-set_property (TEST TEST_PAR_t_pflush1 PROPERTY PASS_REGULAR_EXPRESSION "PASSED")
-set_tests_properties (TEST_PAR_t_pflush2 PROPERTIES DEPENDS TEST_PAR_t_pflush1)
+SET_TESTS_PROPERTIES(TEST_PAR_t_pflush2 PROPERTIES DEPENDS TEST_PAR_t_pflush1)
 
 if (HDF5_TEST_VFD)
 
@@ -48,7 +45,7 @@ if (HDF5_TEST_VFD)
               -D "TEST_EXPECT=${resultcode}"
               -D "TEST_OUTPUT=${test}"
               -D "TEST_FOLDER=${PROJECT_BINARY_DIR}"
-              -P "${HDF_RESOURCES_DIR}/vfdTest.cmake"
+              -P "${HDF5_RESOURCES_DIR}/vfdTest.cmake"
         )
       endforeach (test ${H5P_VFD_TESTS})
     endif (NOT HDF5_ENABLE_USING_MEMCHECKER)

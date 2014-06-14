@@ -49,18 +49,13 @@
 /* Definitions for size of raw data chunk cache(slots) */
 #define H5D_ACS_DATA_CACHE_NUM_SLOTS_SIZE       sizeof(size_t)
 #define H5D_ACS_DATA_CACHE_NUM_SLOTS_DEF        H5D_CHUNK_CACHE_NSLOTS_DEFAULT
-#define H5D_ACS_DATA_CACHE_NUM_SLOTS_ENC        H5P__encode_size_t
-#define H5D_ACS_DATA_CACHE_NUM_SLOTS_DEC        H5P__decode_size_t
 /* Definition for size of raw data chunk cache(bytes) */
 #define H5D_ACS_DATA_CACHE_BYTE_SIZE_SIZE       sizeof(size_t)
 #define H5D_ACS_DATA_CACHE_BYTE_SIZE_DEF        H5D_CHUNK_CACHE_NBYTES_DEFAULT
-#define H5D_ACS_DATA_CACHE_BYTE_SIZE_ENC        H5P__encode_size_t
-#define H5D_ACS_DATA_CACHE_BYTE_SIZE_DEC        H5P__decode_size_t
 /* Definition for preemption read chunks first */
 #define H5D_ACS_PREEMPT_READ_CHUNKS_SIZE        sizeof(double)
 #define H5D_ACS_PREEMPT_READ_CHUNKS_DEF         H5D_CHUNK_CACHE_W0_DEFAULT
-#define H5D_ACS_PREEMPT_READ_CHUNKS_ENC         H5P__encode_double
-#define H5D_ACS_PREEMPT_READ_CHUNKS_DEC         H5P__decode_double
+
 
 /******************/
 /* Local Typedefs */
@@ -88,13 +83,10 @@ static herr_t H5P__dacc_reg_prop(H5P_genclass_t *pclass);
 const H5P_libclass_t H5P_CLS_DACC[1] = {{
     "dataset access",		/* Class name for debugging     */
     H5P_TYPE_DATASET_ACCESS,    /* Class type                   */
-
-    &H5P_CLS_LINK_ACCESS_g,	/* Parent class                 */
-    &H5P_CLS_DATASET_ACCESS_g,	/* Pointer to class             */
-    &H5P_CLS_DATASET_ACCESS_ID_g,	/* Pointer to class ID          */
-    &H5P_LST_DATASET_ACCESS_ID_g,	/* Pointer to default property list ID */
+    &H5P_CLS_LINK_ACCESS_g,	/* Parent class ID              */
+    &H5P_CLS_DATASET_ACCESS_g,	/* Pointer to class ID          */
+    &H5P_LST_DATASET_ACCESS_g,	/* Pointer to default property list ID */
     H5P__dacc_reg_prop,		/* Default property registration routine */
-
     NULL,		        /* Class creation callback      */
     NULL,		        /* Class creation callback info */
     NULL,		        /* Class copy callback          */
@@ -138,18 +130,15 @@ H5P__dacc_reg_prop(H5P_genclass_t *pclass)
     FUNC_ENTER_STATIC
 
     /* Register the size of raw data chunk cache (elements) */
-    if(H5P_register_real(pclass, H5D_ACS_DATA_CACHE_NUM_SLOTS_NAME, H5D_ACS_DATA_CACHE_NUM_SLOTS_SIZE, &rdcc_nslots, 
-             NULL, NULL, NULL, H5D_ACS_DATA_CACHE_NUM_SLOTS_ENC, H5D_ACS_DATA_CACHE_NUM_SLOTS_DEC, NULL, NULL, NULL, NULL) < 0)
+    if(H5P_register_real(pclass, H5D_ACS_DATA_CACHE_NUM_SLOTS_NAME, H5D_ACS_DATA_CACHE_NUM_SLOTS_SIZE, &rdcc_nslots, NULL, NULL, NULL, NULL, NULL, NULL, NULL) < 0)
          HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
 
     /* Register the size of raw data chunk cache(bytes) */
-    if(H5P_register_real(pclass, H5D_ACS_DATA_CACHE_BYTE_SIZE_NAME, H5D_ACS_DATA_CACHE_BYTE_SIZE_SIZE, &rdcc_nbytes, 
-             NULL, NULL, NULL, H5D_ACS_DATA_CACHE_BYTE_SIZE_ENC, H5D_ACS_DATA_CACHE_BYTE_SIZE_DEC, NULL, NULL, NULL, NULL) < 0)
+    if(H5P_register_real(pclass, H5D_ACS_DATA_CACHE_BYTE_SIZE_NAME, H5D_ACS_DATA_CACHE_BYTE_SIZE_SIZE, &rdcc_nbytes, NULL, NULL, NULL, NULL, NULL, NULL, NULL) < 0)
          HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
 
     /* Register the preemption for reading chunks */
-    if(H5P_register_real(pclass, H5D_ACS_PREEMPT_READ_CHUNKS_NAME, H5D_ACS_PREEMPT_READ_CHUNKS_SIZE, &rdcc_w0, 
-             NULL, NULL, NULL, H5D_ACS_PREEMPT_READ_CHUNKS_ENC, H5D_ACS_PREEMPT_READ_CHUNKS_DEC, NULL, NULL, NULL, NULL) < 0)
+    if(H5P_register_real(pclass, H5D_ACS_PREEMPT_READ_CHUNKS_NAME, H5D_ACS_PREEMPT_READ_CHUNKS_SIZE, &rdcc_w0, NULL, NULL, NULL, NULL, NULL, NULL, NULL) < 0)
          HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
 
 done:
@@ -198,7 +187,7 @@ H5Pset_chunk_cache(hid_t dapl_id, size_t rdcc_nslots, size_t rdcc_nbytes, double
 
     /* Check arguments.  Note that we allow negative values - they are
      * considered to "unset" the property. */
-    if(rdcc_w0 > (double)1.0f)
+    if(rdcc_w0 > 1.0)
         HGOTO_ERROR (H5E_ARGS, H5E_BADVALUE, FAIL, "raw data cache w0 value must be between 0.0 and 1.0 inclusive, or H5D_CHUNK_CACHE_W0_DEFAULT");
 
     /* Get the plist structure */

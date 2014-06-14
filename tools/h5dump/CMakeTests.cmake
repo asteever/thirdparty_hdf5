@@ -10,7 +10,6 @@
   # --------------------------------------------------------------------
   set (HDF5_REFERENCE_FILES
       ${HDF5_TOOLS_SRC_DIR}/testfiles/charsets.ddl
-      ${HDF5_TOOLS_SRC_DIR}/testfiles/file_space.ddl
       ${HDF5_TOOLS_SRC_DIR}/testfiles/filter_fail.ddl
       ${HDF5_TOOLS_SRC_DIR}/testfiles/packedbits.ddl
       ${HDF5_TOOLS_SRC_DIR}/testfiles/tall-1.ddl
@@ -185,7 +184,6 @@
   )
   set (HDF5_REFERENCE_TEST_FILES
       ${HDF5_TOOLS_SRC_DIR}/testfiles/charsets.h5
-      ${HDF5_TOOLS_SRC_DIR}/testfiles/file_space.h5
       ${HDF5_TOOLS_SRC_DIR}/testfiles/filter_fail.h5
       ${HDF5_TOOLS_SRC_DIR}/testfiles/packedbits.h5
       ${HDF5_TOOLS_SRC_DIR}/testfiles/taindices.h5
@@ -313,7 +311,7 @@
   # copy test files from source dir to test dir
   #
   foreach (tst_h5_file ${HDF5_REFERENCE_TEST_FILES})
-    get_filename_component (fname "${tst_h5_file}" NAME)
+    GET_FILENAME_COMPONENT(fname "${tst_h5_file}" NAME)
     set (dest "${PROJECT_BINARY_DIR}/testfiles/std/${fname}")
     #message (STATUS " Copying ${tst_h5_file}")
     add_custom_command (
@@ -339,7 +337,7 @@
   endforeach (tst_exp_file ${HDF5_REFERENCE_EXP_FILES})
 
   foreach (tst_other_file ${HDF5_REFERENCE_FILES})
-    get_filename_component (fname "${tst_other_file}" NAME)
+    GET_FILENAME_COMPONENT(fname "${tst_other_file}" NAME)
     set (dest "${PROJECT_BINARY_DIR}/testfiles/std/${fname}")
     #message (STATUS " Copying ${tst_other_file}")
     add_custom_command (
@@ -351,7 +349,7 @@
   endforeach (tst_other_file ${HDF5_REFERENCE_FILES})
 
   foreach (tst_error_file ${HDF5_ERROR_REFERENCE_TEST_FILES})
-    get_filename_component (fname "${tst_error_file}" NAME)
+    GET_FILENAME_COMPONENT(fname "${tst_error_file}" NAME)
     set (dest "${PROJECT_BINARY_DIR}/testfiles/std/${fname}")
     #message (STATUS " Copying ${tst_error_file}")
     add_custom_command (
@@ -415,7 +413,7 @@
               -D "TEST_OUTPUT=h5dump-${testname}.out"
               -D "TEST_EXPECT=${resultcode}"
               -D "TEST_REFERENCE=h5dump-${testname}.txt"
-              -P "${HDF_RESOURCES_EXT_DIR}/runTest.cmake"
+              -P "${HDF5_RESOURCES_DIR}/runTest.cmake"
       )
       set_tests_properties (H5DUMP-h5dump-${testname} PROPERTIES DEPENDS "H5DUMP-h5dump-${testname}-clear-objects")
     endif (HDF5_ENABLE_USING_MEMCHECKER)
@@ -461,7 +459,7 @@
               -D "TEST_OUTPUT=${resultfile}.out"
               -D "TEST_EXPECT=${resultcode}"
               -D "TEST_REFERENCE=${resultfile}.ddl"
-              -P "${HDF_RESOURCES_EXT_DIR}/runTest.cmake"
+              -P "${HDF5_RESOURCES_DIR}/runTest.cmake"
       )
       set_tests_properties (H5DUMP-${resultfile} PROPERTIES DEPENDS "H5DUMP-${resultfile}-clear-objects")
     endif (HDF5_ENABLE_USING_MEMCHECKER)
@@ -494,7 +492,7 @@
               -D "TEST_OUTPUT=${resultfile}-N.out"
               -D "TEST_EXPECT=${resultcode}"
               -D "TEST_REFERENCE=${resultfile}.ddl"
-              -P "${HDF_RESOURCES_EXT_DIR}/runTest.cmake"
+              -P "${HDF5_RESOURCES_DIR}/runTest.cmake"
       )
       set_tests_properties (H5DUMP-N-${resultfile} PROPERTIES DEPENDS "H5DUMP-N-${resultfile}-clear-objects")
     endif (HDF5_ENABLE_USING_MEMCHECKER)
@@ -527,7 +525,7 @@
               -D "TEST_OUTPUT=${resultfile}.out"
               -D "TEST_EXPECT=${resultcode}"
               -D "TEST_REFERENCE=${resultfile}.ddl"
-              -P "${HDF_RESOURCES_EXT_DIR}/runTest.cmake"
+              -P "${HDF5_RESOURCES_DIR}/runTest.cmake"
       )
       set_tests_properties (H5DUMP-${resultfile} PROPERTIES DEPENDS "H5DUMP-${resultfile}-clear-objects")
       add_test (
@@ -567,7 +565,7 @@
               -D "TEST_OUTPUT=${resultfile}.out"
               -D "TEST_EXPECT=${resultcode}"
               -D "TEST_REFERENCE=${resultfile}.ddl"
-              -P "${HDF_RESOURCES_EXT_DIR}/runTest.cmake"
+              -P "${HDF5_RESOURCES_DIR}/runTest.cmake"
       )
       set_tests_properties (H5DUMP-${resultfile} PROPERTIES DEPENDS "H5DUMP-${resultfile}-clear-objects")
       add_test (
@@ -629,7 +627,7 @@
               -D "TEST_EXPECT=${resultcode}"
               -D "TEST_REFERENCE=${resultfile}.ddl"
               -D "TEST_MASK_ERROR=true"
-              -P "${HDF_RESOURCES_EXT_DIR}/runTest.cmake"
+              -P "${HDF5_RESOURCES_DIR}/runTest.cmake"
       )
       set_tests_properties (H5DUMP-${resultfile} PROPERTIES DEPENDS "H5DUMP-${resultfile}-clear-objects")
     endif (NOT HDF5_ENABLE_USING_MEMCHECKER)
@@ -654,7 +652,7 @@
               -D "TEST_REFERENCE=${resultfile}.ddl"
               -D "TEST_ERRREF=${resultfile}.err"
               -D "TEST_MASK_ERROR=true"
-              -P "${HDF_RESOURCES_EXT_DIR}/runTest.cmake"
+              -P "${HDF5_RESOURCES_DIR}/runTest.cmake"
       )
       set_tests_properties (H5DUMP-${resultfile} PROPERTIES DEPENDS "H5DUMP-${resultfile}-clear-objects")
     endif (NOT HDF5_ENABLE_USING_MEMCHECKER)
@@ -681,7 +679,7 @@
               -D "TEST_MASK_ERROR=true"
               -D "TEST_ENV_VAR:STRING=${envvar}"
               -D "TEST_ENV_VALUE:STRING=${envval}"
-              -P "${HDF_RESOURCES_EXT_DIR}/runTest.cmake"
+              -P "${HDF5_RESOURCES_DIR}/runTest.cmake"
       )
       set_tests_properties (H5DUMP-${resultfile} PROPERTIES DEPENDS "H5DUMP-${resultfile}-clear-objects")
     endif (NOT HDF5_ENABLE_USING_MEMCHECKER)
@@ -705,7 +703,7 @@
               -D "TEST_OUTPUT=${conffile}.out"
               -D "TEST_EXPECT=${resultcode}"
               -D "TEST_REFERENCE=${conffile}.ddl"
-              -P "${HDF_RESOURCES_EXT_DIR}/runTest.cmake"
+              -P "${HDF5_RESOURCES_DIR}/runTest.cmake"
       )
       set_tests_properties (H5DUMP-IMPORT-${resultfile} PROPERTIES DEPENDS "H5DUMP-IMPORT-${resultfile}-clear-objects")
       add_test (NAME H5DUMP-IMPORT-h5import-${resultfile} COMMAND h5import ${resultfile}.bin -c ${conffile}.out -o ${resultfile}.h5)
@@ -732,8 +730,6 @@
           h5dump-help.out
           charsets.out
           charsets.out.err
-          file_space.out
-          file_space.out.err
           filter_fail.out
           filter_fail.out.err
           packedbits.out
@@ -1238,7 +1234,6 @@
   ADD_H5_TEST (tboot2 0 --enable-error-stack -B tfcontents2.h5)
   ADD_H5_TEST (tboot2A 0 --enable-error-stack --boot-block tfcontents2.h5)
   ADD_H5_TEST (tboot2B 0 --enable-error-stack --superblock tfcontents2.h5)
-  ADD_H5_TEST (file_space 0 --enable-error-stack -B file_space.h5)
 
   # test -p with a non existing dataset
   ADD_H5ERR_MASK_TEST (tperror 1 --enable-error-stack -p -d bogus tfcontents1.h5)

@@ -16,7 +16,7 @@
 ## ----------------------------------------------------------------------
 ## Initialize configure.
 ##
-AC_REVISION($Id: configure.ac 22697 2012-08-19 14:35:47Z hdftest $)
+AC_REVISION($Id$)
 AC_PREREQ([2.69])
 
 ## AC_INIT takes the name of the package, the version number, and an
@@ -26,7 +26,7 @@ AC_PREREQ([2.69])
 ## NOTE: Do not forget to change the version number here when we do a
 ## release!!!
 ##
-AC_INIT([HDF5], [1.9.184], [help@hdfgroup.org])
+AC_INIT([HDF5], [1.8.13], [help@hdfgroup.org])
 AC_CONFIG_SRCDIR([src/H5.c])
 AC_CONFIG_HEADER([src/H5config.h])
 
@@ -1201,7 +1201,7 @@ AC_ARG_ENABLE([production],
                               [Determines how to run the compiler.])])
 
 case "X-$enable_production" in
-  X-yes)
+  X-|X-yes)
     enable_production="yes"
     AC_MSG_RESULT([production])
     CONFIG_MODE=production
@@ -1210,7 +1210,7 @@ case "X-$enable_production" in
     H5_CXXFLAGS="$H5_CXXFLAGS $PROD_CXXFLAGS"
     H5_FCFLAGS="$H5_FCFLAGS $PROD_FCFLAGS"
     ;;
-  X-|X-no)
+  X-no)
     enable_production="no"
     AC_MSG_RESULT([development])
     CONFIG_MODE=development
@@ -1342,6 +1342,26 @@ AC_MSG_CHECKING([if configure should try to set up large file support])
 AC_ARG_ENABLE([largefile],
            [AS_HELP_STRING([--disable-largefile],
                            [omit support for large files])])
+
+## The linux-lfs option is deprecated, but if it is used to disable
+## largefile support on linux and the largefile option is not specified,
+## then go ahead and disable large-file support.
+case "$host_cpu-$host_vendor-$host_os" in
+  *linux*)
+    AC_ARG_ENABLE([linux-lfs],
+                  [AS_HELP_STRING([--disable-linux-lfs],
+                                  [Disable support for large (64-bit)
+                                   files on Linux. This option is 
+                                   deprecated in favor of
+                                   --disable-largefile.])])
+
+    if test "$enable_linux_lfs" = no; then
+      if test "$enable_largefile" != yes; then
+        enable_largefile=no
+      fi
+    fi
+    ;;
+esac
 
 ## If largefile support is enabled, then set up appropriate compiler options.
 if test "$enable_largefile" != no; then
@@ -2197,7 +2217,7 @@ AC_CHECK_FUNCS([gethostname getpwuid getrusage lstat])
 AC_CHECK_FUNCS([rand_r random setsysinfo])
 AC_CHECK_FUNCS([signal longjmp setjmp siglongjmp sigsetjmp sigprocmask])
 AC_CHECK_FUNCS([snprintf srandom strdup symlink system])
-AC_CHECK_FUNCS([tmpfile asprintf vasprintf waitpid])
+AC_CHECK_FUNCS([tmpfile vasprintf waitpid])
 
 ## Check for vsnprintf() separately, so we can detect situations where it
 ## doesn't return the correct size for formatted strings that are too large
@@ -4226,8 +4246,8 @@ AC_MSG_CHECKING([which version of public symbols to use by default])
 AC_ARG_WITH([default-api-version],
             [AS_HELP_STRING([--with-default-api-version=(v16|v18|v110)],
                             [Specify default release version of public symbols
-                             [default=v110]])],,
-            [withval=v110])
+                             [default=v18]])],,
+            withval=v18)
 
 if test "X$withval" = "Xv16"; then
     AC_MSG_RESULT([v16])
@@ -4237,9 +4257,6 @@ if test "X$withval" = "Xv16"; then
 elif test "X$withval" = "Xv18"; then
     AC_MSG_RESULT([v18])
     DEFAULT_API_VERSION=v18
-elif test "X$withval" = "Xv110"; then
-    AC_MSG_RESULT([v110])
-    DEFAULT_API_VERSION=v110
 else
     AC_MSG_ERROR([invalid version of public symbols given])
 fi
@@ -4249,7 +4266,7 @@ fi
 ## if the user insists on doing this via the --enable-unsupported configure
 ## flag, we'll let them.
 if test "X${ALLOW_UNSUPPORTED}" != "Xyes"; then
-  if test "X${DEFAULT_API_VERSION}" != "Xv110" -a "X${DEPRECATED_SYMBOLS}" = "Xno" ; then
+  if test "X${DEFAULT_API_VERSION}" != "Xv18" -a "X${DEPRECATED_SYMBOLS}" = "Xno" ; then
     AC_MSG_ERROR([Removing old public API symbols not allowed when using them as default public API symbols. Use --enable-unsupported to override this error.])
   fi
 fi

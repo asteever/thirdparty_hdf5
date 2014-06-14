@@ -545,7 +545,8 @@ static int test_generate(void)
     int      n_elements;
     float    valex, xmin, xmax, value;
     FILE     *f = NULL;
-    const char *data_file = H5_get_srcdir_filename(DATA_FILE4);
+    char     *srcdir = getenv("srcdir"); /* the source directory */
+    char     data_file[512]="";          /* buffer to hold name of existing data file */
     int      i;
     int      retval = FAIL;
 
@@ -554,6 +555,17 @@ static int test_generate(void)
         goto out;
 
     printf("Testing read and process data and make indexed images\n");
+
+    /*-------------------------------------------------------------------------
+    * compose the name of the file to open, using the srcdir, if appropriate
+    *-------------------------------------------------------------------------
+    */
+    if ( srcdir )
+    {
+        HDstrcpy(data_file, srcdir);
+        HDstrcat(data_file, "/");
+    }
+    HDstrcat(data_file,DATA_FILE4);
 
     /*-------------------------------------------------------------------------
     * read data; the file data format is described below
@@ -771,9 +783,9 @@ out:
 *-------------------------------------------------------------------------
 */
 
-static int read_data(const char* fname, /*IN*/
+static int read_data( const char* fname, /*IN*/
                      hsize_t *width, /*OUT*/
-                     hsize_t *height /*OUT*/)
+                     hsize_t *height /*OUT*/ )
 {
     int    i, n;
     int    color_planes;
@@ -875,7 +887,20 @@ static int read_palette(const char* fname,
     unsigned int  green;
     unsigned int  blue;
     unsigned      nentries;
-    const char *data_file = H5_get_srcdir_filename(fname);
+    char          *srcdir = getenv("srcdir"); /* the source directory */
+    char          data_file[512];             /* buffer to hold name of existing data file */
+
+    /*-------------------------------------------------------------------------
+    * compose the name of the file to open, using "srcdir", if appropriate
+    *-------------------------------------------------------------------------
+    */
+    HDstrcpy(data_file, "");
+    if (srcdir)
+    {
+        HDstrcpy(data_file, srcdir);
+        HDstrcat(data_file, "/");
+    }
+    HDstrcat(data_file,fname);
 
     /* ensure the given palette is valid */
     if (!palette)

@@ -19,11 +19,13 @@ $! source directories and builds libraries, tests, and utilties
 $!
 $ copy [.c__.src]make.com       [-.c__.src]
 $ copy [.c__.test]*.com         [-.c__.test]
+$ copy [.c__.test]H5srcdir_str.h    [-.c__.test]
 $ copy [.fortran.src]make.com   [-.fortran.src]
 $ copy [.fortran.test]*.com     [-.fortran.test]
 $ copy [.src]make.com           [-.src]
 $ copy [.src]h5pubconf.h        [-.src]
 $ copy [.test]*.com             [-.test]
+$ copy [.test]H5srcdir_str.h    [-.test]
 $ copy [.tools.h5copy]*.com     [-.tools.h5copy]
 $ copy [.tools.h5dump]*.com     [-.tools.h5dump]
 $ copy [.tools.h5ls]*.com       [-.tools.h5ls]
@@ -38,15 +40,15 @@ $ copy [.tools.misc]make.com    [-.tools.misc]
 $!
 $! Define location of ZLIB library. If you do not have it on your system, download
 $! source code from http://www.zlib.net/, build and install on your system
-$ define zlib_dir disk$user:[hdfgroup.zlib-1_2_5_ieee]
+$ define zlib_dir SYS$SYSUSERS:[LU.ZLIB-1_2_8]
 $! define zlib_dir sys$sysusers:[pourmal.zlib-1_2_3-ieee]
 $!
 $! Set up compilation flags here
 $! Do not remove define=H5_VMS and standard=strict_ansi qualifiers.
 $!
-$ ccopt == "/float=ieee_float/define=(_LARGEFILE,H5_VMS)/debug/nooptimize/include=zlib_dir"
-$ fcopt == "/float=ieee_float/define=(_LARGEFILE,H5_VMS)/debug/nooptimize/include=zlib_dir"
-$ cxxopt == "/float=ieee_float/define=(_LARGEFILE,H5_VMS)/debug/nooptimize/"+-
+$ ccopt == "/float=ieee_float/define=(_LARGEFILE,H5_VMS)/include=zlib_dir"
+$ fcopt == "/float=ieee_float/define=(_LARGEFILE,H5_VMS)/include=zlib_dir"
+$ cxxopt == "/float=ieee_float/define=(_LARGEFILE,H5_VMS)/"+-
             "standard=strict_ansi/include=zlib_dir"
 $!
 $!

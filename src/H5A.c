@@ -94,7 +94,7 @@ H5FL_BLK_DEFINE(attr_buf);
 /* Attribute ID class */
 static const H5I_class_t H5I_ATTR_CLS[1] = {{
     H5I_ATTR,                   /* ID class value */
-    0,                          /* Class flags */
+    H5I_CLASS_REUSE_IDS,	/* Class flags */
     0,                          /* # of reserved IDs for class */
     (H5I_free_t)H5A_close       /* Callback routine for closing objects of this class */
 }};
@@ -249,7 +249,7 @@ H5Acreate2(hid_t loc_id, const char *attr_name, hid_t type_id, hid_t space_id,
     if(NULL == (type = (H5T_t *)H5I_object_verify(type_id, H5I_DATATYPE)))
 	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a type")
     if(NULL == (space = (H5S_t *)H5I_object_verify(space_id, H5I_DATASPACE)))
-	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataspace")
+	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space")
 
     /* Go do the real work for attaching the attribute to the dataset */
     if((ret_value = H5A_create(&loc, attr_name, type, space, acpl_id, H5AC_dxpl_id)) < 0)
@@ -323,7 +323,7 @@ H5Acreate_by_name(hid_t loc_id, const char *obj_name, const char *attr_name,
     if(NULL == (type = (H5T_t *)H5I_object_verify(type_id, H5I_DATATYPE)))
 	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a type")
     if(NULL == (space = (H5S_t *)H5I_object_verify(space_id, H5I_DATASPACE)))
-	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataspace")
+	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space")
 
     /* Set up opened group location to fill in */
     obj_loc.oloc = &obj_oloc;
@@ -378,7 +378,7 @@ H5A_create(const H5G_loc_t *loc, const char *name, const H5T_t *type,
     htri_t      tri_ret;        /* htri_t return value */
     hid_t	ret_value;      /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_TAG(dxpl_id, loc->oloc->addr, FAIL)
+    FUNC_ENTER_NOAPI_NOINIT
 
     /* check args */
     HDassert(loc);
@@ -513,7 +513,7 @@ done:
     if(ret_value < 0 && attr && H5A_close(attr) < 0)
             HDONE_ERROR(H5E_ATTR, H5E_CANTFREE, FAIL, "can't close attribute")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* H5A_create() */
 
 
@@ -972,7 +972,7 @@ H5A_write(H5A_t *attr, const H5T_t *mem_type, const void *buf, hid_t dxpl_id)
     size_t		buf_size;		/* desired buffer size	*/
     herr_t		ret_value = SUCCEED;
 
-    FUNC_ENTER_NOAPI_NOINIT_TAG(dxpl_id, attr->oloc.addr, FAIL)
+    FUNC_ENTER_NOAPI_NOINIT
 
     HDassert(attr);
     HDassert(mem_type);
@@ -1051,7 +1051,7 @@ done:
     if(bkg_buf)
         bkg_buf = H5FL_BLK_FREE(attr_buf, bkg_buf);
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* H5A_write() */
 
 
@@ -1342,12 +1342,12 @@ H5Aget_create_plist(hid_t attr_id)
     FUNC_ENTER_API(FAIL)
     H5TRACE1("i", "i", attr_id);
 
-    HDassert(H5P_LST_ATTRIBUTE_CREATE_ID_g != -1);
+    HDassert(H5P_LST_ATTRIBUTE_CREATE_g != -1);
 
     /* Get attribute and default attribute creation property list*/
     if(NULL == (attr = (H5A_t *)H5I_object_verify(attr_id, H5I_ATTR)))
 	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not an attribute")
-    if(NULL == (plist = (H5P_genplist_t *)H5I_object(H5P_LST_ATTRIBUTE_CREATE_ID_g)))
+    if(NULL == (plist = (H5P_genplist_t *)H5I_object(H5P_LST_ATTRIBUTE_CREATE_g)))
         HGOTO_ERROR(H5E_PLIST, H5E_BADTYPE, FAIL, "can't get default ACPL")
 
     /* Create the property list object to return */

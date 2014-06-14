@@ -292,6 +292,8 @@ static herr_t H5T_unregister(H5T_pers_t pers, const char *name, H5T_t *src,
 static herr_t H5T_register(H5T_pers_t pers, const char *name, H5T_t *src,
         H5T_t *dst, H5T_conv_t func, hid_t dxpl_id, hbool_t api_call);
 static htri_t H5T_compiler_conv(H5T_t *src, H5T_t *dst);
+static herr_t H5T_encode(H5T_t *obj, unsigned char *buf, size_t *nalloc);
+static H5T_t *H5T_decode(const unsigned char *buf);
 static herr_t H5T_set_size(H5T_t *dt, size_t size);
 
 
@@ -770,6 +772,7 @@ H5T_init_interface(void)
     hsize_t     dim[1]={1};             /* Dimension info for array datatype */
     herr_t	status;
     unsigned    copied_dtype=1;         /* Flag to indicate whether datatype was copied or allocated (for error cleanup) */
+    H5P_genclass_t  *crt_pclass;        /* Property list class for datatype creation properties */
     herr_t	ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
@@ -1046,9 +1049,11 @@ H5T_init_interface(void)
     status = 0;
 
     status |= H5T_register(H5T_PERS_SOFT, "i_i", fixedpt, fixedpt, H5T__conv_i_i, H5AC_dxpl_id, FALSE);
-    status |= H5T_register(H5T_PERS_SOFT, "i_f", fixedpt, floatpt, H5T__conv_i_f, H5AC_dxpl_id, FALSE);
     status |= H5T_register(H5T_PERS_SOFT, "f_f", floatpt, floatpt, H5T__conv_f_f, H5AC_dxpl_id, FALSE);
+
+    status |= H5T_register(H5T_PERS_SOFT, "i_f", fixedpt, floatpt, H5T__conv_i_f, H5AC_dxpl_id, FALSE);
     status |= H5T_register(H5T_PERS_SOFT, "f_i", floatpt, fixedpt, H5T__conv_f_i, H5AC_dxpl_id, FALSE);
+
     status |= H5T_register(H5T_PERS_SOFT, "s_s", string, string, H5T__conv_s_s, H5AC_dxpl_id, FALSE);
     status |= H5T_register(H5T_PERS_SOFT, "b_b", bitfield, bitfield, H5T__conv_b_b, H5AC_dxpl_id, FALSE);
     status |= H5T_register(H5T_PERS_SOFT, "ibo", fixedpt, fixedpt, H5T__conv_order, H5AC_dxpl_id, FALSE);
@@ -1346,17 +1351,21 @@ H5T_init_interface(void)
     if (status<0)
 	HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, FAIL, "unable to register conversion function(s)")
 
+    /* ========== Datatype Creation Property Class Initialization ============*/
+    HDassert(H5P_CLS_DATATYPE_CREATE_g!=-1);
+
+    /* Get the pointer to group creation class */
+    if(NULL == (crt_pclass = (H5P_genclass_t *)H5I_object(H5P_CLS_DATATYPE_CREATE_g)))
+         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list class")
+
     /* Register datatype creation property class properties here.  See similar
      * code in H5D_init_interface(), etc. for example.
      */
 
     /* Only register the default property list if it hasn't been created yet */
-    if(H5P_LST_DATATYPE_CREATE_ID_g == (-1)) {
-        /* ========== Datatype Creation Property Class Initialization ============*/
-        HDassert(H5P_CLS_DATATYPE_CREATE_g != NULL);
-
+    if(H5P_LST_DATATYPE_CREATE_g == (-1)) {
         /* Register the default datatype creation property list */
-        if((H5P_LST_DATATYPE_CREATE_ID_g = H5P_create_id(H5P_CLS_DATATYPE_CREATE_g, FALSE)) < 0)
+        if((H5P_LST_DATATYPE_CREATE_g = H5P_create_id(crt_pclass, FALSE)) < 0)
              HGOTO_ERROR(H5E_PLIST, H5E_CANTREGISTER, FAIL, "can't insert property into class")
     } /* end if */
 
@@ -2895,7 +2904,7 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-herr_t
+static herr_t
 H5T_encode(H5T_t *obj, unsigned char *buf, size_t *nalloc)
 {
     size_t      buf_size;               /* Encoded size of datatype */
@@ -2952,7 +2961,7 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-H5T_t *
+static H5T_t *
 H5T_decode(const unsigned char *buf)
 {
     H5F_t       *f = NULL;      /* Fake file structure*/

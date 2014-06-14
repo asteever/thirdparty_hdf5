@@ -81,7 +81,6 @@ const H5AC_class_t H5AC_GHEAP[1] = {{
     (H5AC_flush_func_t)H5HG_flush,
     (H5AC_dest_func_t)H5HG_dest,
     (H5AC_clear_func_t)H5HG_clear,
-    (H5AC_notify_func_t)NULL,
     (H5AC_size_func_t)H5HG_size,
 }};
 
@@ -184,7 +183,7 @@ H5HG_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata)
 	     * assume that it's free space.
 	     */
 	    HDassert(NULL == heap->obj[0].begin);
-	    heap->obj[0].size = (size_t)(((const uint8_t *)heap->chunk + heap->size) - p);
+	    heap->obj[0].size = ((const uint8_t *)heap->chunk + heap->size) - p;
 	    heap->obj[0].begin = p;
 	    p += heap->obj[0].size;
 	} /* end if */

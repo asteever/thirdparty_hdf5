@@ -133,7 +133,7 @@
 /* Group ID class */
 static const H5I_class_t H5I_GROUP_CLS[1] = {{
     H5I_GROUP,			/* ID class value */
-    0,				/* Class flags */
+    H5I_CLASS_REUSE_IDS,	/* Class flags */
     0,				/* # of reserved IDs for class */
     (H5I_free_t)H5G_close	/* Callback routine for closing objects of this class */
 }};
@@ -514,6 +514,7 @@ done:
     FUNC_LEAVE_API(ret_value)
 } /* end H5Gget_create_plist() */
 
+
 
 /*-------------------------------------------------------------------------
  * Function:	H5G_get_create_plist
@@ -546,7 +547,7 @@ H5G_get_create_plist(H5G_t *grp)
     FUNC_ENTER_NOAPI(FAIL)
 
     /* Copy the default group creation property list */
-    if(NULL == (gcpl_plist = (H5P_genplist_t *)H5I_object(H5P_LST_GROUP_CREATE_ID_g)))
+    if(NULL == (gcpl_plist = (H5P_genplist_t *)H5I_object(H5P_LST_GROUP_CREATE_g)))
          HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "can't get default group creation property list")
     if((new_gcpl_id = H5P_copy_plist(gcpl_plist, TRUE)) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_CANTGET, FAIL, "unable to copy the creation property list")

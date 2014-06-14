@@ -4,7 +4,7 @@ PROJECT (HDF5_TEST_PAR)
 #-----------------------------------------------------------------------------
 # Apply Definitions to compiler in this directory and below
 #-----------------------------------------------------------------------------
-add_definitions (${HDF_EXTRA_C_FLAGS})
+add_definitions (${HDF5_EXTRA_C_FLAGS})
 
 INCLUDE_DIRECTORIES (${HDF5_TEST_SRC_DIR})
 INCLUDE_DIRECTORIES (${HDF5_TOOLS_SRC_DIR}/lib )
@@ -23,7 +23,6 @@ set (testphdf5_SRCS
     ${HDF5_TEST_PAR_SOURCE_DIR}/t_span_tree.c
     ${HDF5_TEST_PAR_SOURCE_DIR}/t_chunk_alloc.c
     ${HDF5_TEST_PAR_SOURCE_DIR}/t_filter_read.c
-    ${HDF5_TEST_PAR_SOURCE_DIR}/t_prop.c
 )
 
 #-- Adding test for testhdf5
@@ -43,6 +42,7 @@ ENDMACRO (ADD_H5P_EXE file)
 
 set (H5P_TESTS
     t_mpi
+#    t_posix_compliant
     t_cache
     t_pflush1
     t_pflush2
@@ -52,5 +52,9 @@ set (H5P_TESTS
 foreach (testp ${H5P_TESTS})
   ADD_H5P_EXE(${testp})
 endforeach (testp ${H5P_TESTS})
+
+if (NOT WIN32)
+  ADD_H5P_EXE(t_posix_compliant)
+endif (NOT WIN32)
 
 include (CMakeTests.cmake)

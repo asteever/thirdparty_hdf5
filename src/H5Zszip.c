@@ -190,7 +190,7 @@ H5Z_set_local_szip(hid_t dcpl_id, hid_t type_id, hid_t space_id)
 
     /* Get dataspace */
     if(NULL == (ds = (H5S_t *)H5I_object_verify(space_id, H5I_DATASPACE)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataspace")
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space")
 
     /* Get dimensions for dataspace */
     if((ndims = H5S_get_simple_extent_dims(ds, dims, NULL)) < 0)
@@ -333,7 +333,7 @@ H5Z_filter_szip (unsigned flags, size_t cd_nelmts, const unsigned cd_values[],
         *buf = outbuf;
         outbuf = NULL;
         *buf_size = nalloc;
-        ret_value = size_out;
+        ret_value = nalloc;
     }
     /* Output; compress */
     else {
@@ -359,7 +359,7 @@ H5Z_filter_szip (unsigned flags, size_t cd_nelmts, const unsigned cd_values[],
         /* Set return values */
         *buf = outbuf;
         outbuf = NULL;
-        *buf_size = nbytes+4;
+        *buf_size = size_out+4;
         ret_value = size_out+4;
     }
 

@@ -85,7 +85,7 @@ H5FL_ARR_DEFINE(hsize_t,H5S_MAX_RANK);
 /* Dataspace ID class */
 static const H5I_class_t H5I_DATASPACE_CLS[1] = {{
     H5I_DATASPACE,		/* ID class value */
-    0,				/* Class flags */
+    H5I_CLASS_REUSE_IDS,	/* Class flags */
     2,				/* # of reserved IDs for class */
     (H5I_free_t)H5S_close	/* Callback routine for closing objects of this class */
 }};
@@ -1303,7 +1303,8 @@ H5S_set_extent_simple(H5S_t *space, unsigned rank, const hsize_t *dims,
     /* Selection related cleanup */
 
     /* Set offset to zeros */
-    HDmemset(space->select.offset, 0, sizeof(hsize_t) * space->extent.rank);
+    for(u = 0; u < space->extent.rank; u++)
+        space->select.offset[u] = 0;
     space->select.offset_changed = FALSE;
 
     /* If the selection is 'all', update the number of elements selected */

@@ -526,7 +526,7 @@ H5B2_get_node_depth_test(H5B2_t *bt2, hid_t dxpl_id, void *udata)
         HGOTO_ERROR(H5E_BTREE, H5E_NOTFOUND, FAIL, "error looking up node info")
 
     /* Set return value */
-    ret_value = (int)ninfo.depth;
+    ret_value = ninfo.depth;
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)

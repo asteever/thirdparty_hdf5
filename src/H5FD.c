@@ -43,6 +43,17 @@
 #include "H5Eprivate.h"		/* Error handling		  	*/
 #include "H5Fpkg.h"             /* File access				*/
 #include "H5FDpkg.h"		/* File Drivers				*/
+#include "H5FDcore.h"		/* Files stored entirely in memory	*/
+#include "H5FDfamily.h"		/* File families 			*/
+#include "H5FDlog.h"        	/* sec2 driver with I/O logging (for debugging) */
+#include "H5FDmpi.h"            /* MPI-based file drivers		*/
+#include "H5FDmulti.h"		/* Usage-partitioned file family	*/
+#include "H5FDsec2.h"		/* POSIX unbuffered file I/O		*/
+#include "H5FDstdio.h"		/* Standard C buffered I/O		*/
+#ifdef H5_HAVE_WINDOWS
+#include "H5FDwindows.h"        /* Windows buffered I/O     */
+#endif
+#include "H5FDdirect.h"		/* Direct file I/O			*/
 #include "H5Iprivate.h"		/* IDs			  		*/
 #include "H5MMprivate.h"	/* Memory management			*/
 #include "H5Pprivate.h"		/* Property lists			*/
@@ -100,12 +111,12 @@ static int H5FD_driver_query(const H5FD_class_t *driver, unsigned long *flags/*o
  * object and the file is closed and re-opened, the 'fileno' value will
  * be different.
  */
-static unsigned long H5FD_file_serial_no_g;
+static unsigned long file_serial_no;
 
 /* File driver ID class */
 static const H5I_class_t H5I_VFL_CLS[1] = {{
     H5I_VFL,			/* ID class value */
-    0,				/* Class flags */
+    H5I_CLASS_REUSE_IDS,	/* Class flags */
     0,				/* # of reserved IDs for class */
     (H5I_free_t)H5FD_free_cls	/* Callback routine for closing objects of this class */
 }};
@@ -165,7 +176,7 @@ H5FD_init_interface(void)
 	HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, FAIL, "unable to initialize interface")
 
     /* Reset the file serial numbers */
-    H5FD_file_serial_no_g = 0;
+    file_serial_no = 0;
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -202,6 +213,25 @@ H5FD_term_interface(void)
     if(H5_interface_initialize_g) {
 	if((n=H5I_nmembers(H5I_VFL))!=0) {
 	    H5I_clear_type(H5I_VFL, FALSE, FALSE);
+
+            /* Reset the VFL drivers, if they've been closed */
+            if(H5I_nmembers(H5I_VFL)==0) {
+                H5FD_sec2_term();
+#ifdef H5_HAVE_DIRECT
+                H5FD_direct_term();
+#endif
+                H5FD_log_term();
+                H5FD_stdio_term();
+#ifdef H5_HAVE_WINDOWS
+                H5FD_windows_term();
+#endif
+                H5FD_family_term();
+                H5FD_core_term();
+                H5FD_multi_term();
+#ifdef H5_HAVE_PARALLEL
+                H5FD_mpio_term();
+#endif /* H5_HAVE_PARALLEL */
+            } /* end if */
 	} else {
 	    H5I_dec_type_ref(H5I_VFL);
 	    H5_interface_initialize_g = 0;
@@ -233,24 +263,11 @@ H5FD_term_interface(void)
 static herr_t
 H5FD_free_cls(H5FD_class_t *cls)
 {
-    herr_t ret_value = SUCCEED;
-
-    FUNC_ENTER_NOAPI_NOINIT
-
-    /* Sanity check */
-    HDassert(cls);
-
-    /* If the file driver has a terminate callback, call it to give the file
-     * driver a chance to free singletons or other resources which will become
-     * invalid once the class structure is freed.
-     */
-    if(cls->terminate && cls->terminate() < 0)
-        HGOTO_ERROR(H5E_VFL, H5E_CANTCLOSEOBJ, FAIL, "virtual file driver '%s' did not terminate cleanly", cls->name)
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     H5MM_xfree(cls);
 
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5FD_free_cls() */
 
 
@@ -986,11 +1003,11 @@ H5FD_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr)
         HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, NULL, "unable to query file driver")
 
     /* Increment the global serial number & assign it to this H5FD_t object */
-    if(++H5FD_file_serial_no_g == 0) {
+    if(++file_serial_no == 0) {
         /* (Just error out if we wrap around for now...) */
         HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, NULL, "unable to get file serial number")
     } /* end if */
-    file->fileno = H5FD_file_serial_no_g;
+    file->fileno = file_serial_no;
 
     /* Start with base address set to 0 */
     /* (This will be changed later, when the superblock is located) */
@@ -1652,14 +1669,15 @@ done:
  * Programmer:	Robb Matzke
  *              Thursday, July 29, 1999
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 herr_t
 H5FDread(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t size,
 	 void *buf/*out*/)
 {
-    H5P_genplist_t *dxpl;               /* DXPL object */
-    herr_t      ret_value = SUCCEED;    /* Return value */
+    herr_t      ret_value = SUCCEED;       /* Return value */
 
     FUNC_ENTER_API(FAIL)
     H5TRACE6("e", "*xMtiazx", file, type, dxpl_id, addr, size, buf);
@@ -1677,13 +1695,9 @@ H5FDread(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t size
     if(!buf)
 	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "null result buffer")
 
-    /* Get the DXPL plist object for DXPL ID */
-    if(NULL == (dxpl = (H5P_genplist_t *)H5I_object(dxpl_id)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "can't get property list")
-
     /* Do the real work */
     /* (Note compensating for base address addition in internal routine) */
-    if(H5FD_read(file, dxpl, type, addr - file->base_addr, size, buf) < 0)
+    if(H5FD_read(file, dxpl_id, type, addr - file->base_addr, size, buf) < 0)
 	HGOTO_ERROR(H5E_VFL, H5E_READERROR, FAIL, "file read request failed")
 
 done:
@@ -1706,14 +1720,15 @@ done:
  * Programmer:	Robb Matzke
  *              Thursday, July 29, 1999
  *
+ * Modifications:
+ *
  *-------------------------------------------------------------------------
  */
 herr_t
 H5FDwrite(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t size,
 	  const void *buf)
 {
-    H5P_genplist_t *dxpl;               /* DXPL object */
-    herr_t      ret_value = SUCCEED;    /* Return value */
+    herr_t      ret_value = SUCCEED;       /* Return value */
 
     FUNC_ENTER_API(FAIL)
     H5TRACE6("e", "*xMtiaz*x", file, type, dxpl_id, addr, size, buf);
@@ -1730,13 +1745,9 @@ H5FDwrite(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, size_t siz
     if(!buf)
 	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "null buffer")
 
-    /* Get the DXPL plist object for DXPL ID */
-    if(NULL == (dxpl = (H5P_genplist_t *)H5I_object(dxpl_id)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "can't get property list")
-
     /* The real work */
     /* (Note compensating for base address addition in internal routine) */
-    if(H5FD_write(file, dxpl, type, addr - file->base_addr, size, buf) < 0)
+    if(H5FD_write(file, dxpl_id, type, addr - file->base_addr, size, buf) < 0)
 	HGOTO_ERROR(H5E_VFL, H5E_WRITEERROR, FAIL, "file write request failed")
 
 done:

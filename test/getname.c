@@ -2518,27 +2518,19 @@ test_obj_ref(hid_t fapl)
         FAIL_STACK_ERROR
 
     TESTING("getting path to normal dataset in root group");
-    if((dataset2 = H5Rdereference2(dataset, H5P_DEFAULT, H5R_OBJECT, &wbuf[0])) < 0) FAIL_STACK_ERROR
+    if((dataset2 = H5Rdereference(dataset, H5R_OBJECT, &wbuf[0])) < 0) FAIL_STACK_ERROR
     *buf = '\0';
     i = H5Iget_name(dataset2, (char*)buf, sizeof(buf));
     if(H5Dclose(dataset2) < 0) FAIL_STACK_ERROR
     if(!((HDstrcmp(buf, "/Dataset3") == 0) &&(i == 9))) TEST_ERROR
     *buf = '\0';
-
-    /* Check H5Rget_name returns the correct length of the name when name is NULL */
-    i = H5Rget_name(dataset, H5R_OBJECT, &wbuf[0], NULL, 0);
-    if(i != 9) TEST_ERROR
-    /* Make sure size parameter is ignored */
-    i = H5Rget_name(dataset, H5R_OBJECT, &wbuf[0], NULL, 200);
-    if(i != 9) TEST_ERROR
-    
     i = H5Rget_name(dataset, H5R_OBJECT, &wbuf[0], (char*)buf, sizeof(buf));
     if(!((HDstrcmp(buf, "/Dataset3") == 0) &&(i == 9))) TEST_ERROR
     PASSED()
 
     HDmemset(buf, 0, sizeof(buf));
     TESTING("getting path to dataset in /Group1");
-    if((dataset2 = H5Rdereference2(dataset, H5P_DEFAULT, H5R_OBJECT, &wbuf[1])) < 0) FAIL_STACK_ERROR
+    if((dataset2 = H5Rdereference(dataset, H5R_OBJECT, &wbuf[1])) < 0) FAIL_STACK_ERROR
     *buf = '\0';
     i = H5Iget_name(dataset2, (char*)buf, sizeof(buf));
     if(H5Dclose(dataset2) < 0) FAIL_STACK_ERROR
@@ -2550,7 +2542,7 @@ test_obj_ref(hid_t fapl)
 
     HDmemset(buf, 0, sizeof(buf));
     TESTING("getting path to /Group1");
-    if((group = H5Rdereference2(dataset, H5P_DEFAULT, H5R_OBJECT, &wbuf[2])) < 0) FAIL_STACK_ERROR
+    if((group = H5Rdereference(dataset, H5R_OBJECT, &wbuf[2])) < 0) FAIL_STACK_ERROR
     *buf = '\0';
     i = H5Iget_name(group, (char*)buf, sizeof(buf));
     if(H5Gclose(group) < 0) FAIL_STACK_ERROR
@@ -2562,7 +2554,7 @@ test_obj_ref(hid_t fapl)
 
     HDmemset(buf, 0, sizeof(buf));
     TESTING("getting path to datatype in /Group1");
-    if((tid1 = H5Rdereference2(dataset, H5P_DEFAULT, H5R_OBJECT, &wbuf[3])) < 0) FAIL_STACK_ERROR
+    if((tid1 = H5Rdereference(dataset, H5R_OBJECT, &wbuf[3])) < 0) FAIL_STACK_ERROR
     *buf = '\0';
     i = H5Iget_name(tid1, (char*)buf, sizeof(buf));
     if(H5Tclose(tid1) < 0) FAIL_STACK_ERROR
@@ -2574,7 +2566,7 @@ test_obj_ref(hid_t fapl)
 
     HDmemset(buf, 0, sizeof(buf));
     TESTING("getting path to dataset in nested group");
-    if((dataset2 = H5Rdereference2(dataset, H5P_DEFAULT, H5R_OBJECT, &wbuf[4])) < 0) FAIL_STACK_ERROR
+    if((dataset2 = H5Rdereference(dataset, H5R_OBJECT, &wbuf[4])) < 0) FAIL_STACK_ERROR
     *buf = '\0';
     i = H5Iget_name(dataset2, (char*)buf, sizeof(buf));
     if(H5Dclose(dataset2) < 0) FAIL_STACK_ERROR
@@ -2586,7 +2578,7 @@ test_obj_ref(hid_t fapl)
 
     HDmemset(buf, 0, sizeof(buf));
     TESTING("getting path to nested group");
-    if((group = H5Rdereference2(dataset, H5P_DEFAULT, H5R_OBJECT, &wbuf[5])) < 0) FAIL_STACK_ERROR
+    if((group = H5Rdereference(dataset, H5R_OBJECT, &wbuf[5])) < 0) FAIL_STACK_ERROR
     *buf = '\0';
     i = H5Iget_name(group, (char*)buf, sizeof(buf));
     if(H5Gclose(group) < 0) FAIL_STACK_ERROR
@@ -2598,7 +2590,7 @@ test_obj_ref(hid_t fapl)
 
     HDmemset(buf, 0, sizeof(buf));
     TESTING("getting path to dataset created via hard link");
-    if((dataset2 = H5Rdereference2(dataset, H5P_DEFAULT, H5R_OBJECT, &wbuf[6])) < 0) FAIL_STACK_ERROR
+    if((dataset2 = H5Rdereference(dataset, H5R_OBJECT, &wbuf[6])) < 0) FAIL_STACK_ERROR
     *buf = '\0';
     i = H5Iget_name(dataset2, (char*)buf, sizeof(buf));
     if(H5Dclose(dataset2) < 0) FAIL_STACK_ERROR
@@ -2610,7 +2602,7 @@ test_obj_ref(hid_t fapl)
 
     HDmemset(buf, 0, sizeof(buf));
     TESTING("getting path to root group");
-    if((group = H5Rdereference2(dataset, H5P_DEFAULT, H5R_OBJECT, &wbuf[7])) < 0) FAIL_STACK_ERROR
+    if((group = H5Rdereference(dataset, H5R_OBJECT, &wbuf[7])) < 0) FAIL_STACK_ERROR
     *buf = '\0';
     i = H5Iget_name(group, (char*)buf, sizeof(buf));
     if(H5Gclose(group) < 0) FAIL_STACK_ERROR
@@ -2625,7 +2617,7 @@ test_obj_ref(hid_t fapl)
         FAIL_STACK_ERROR
 
     TESTING("getting path to dataset hidden by a mounted file");
-    if((dataset2 = H5Rdereference2(dataset, H5P_DEFAULT, H5R_OBJECT, &wbuf[4])) < 0) FAIL_STACK_ERROR
+    if((dataset2 = H5Rdereference(dataset, H5R_OBJECT, &wbuf[4])) < 0) FAIL_STACK_ERROR
     *buf = '\0';
     i = H5Iget_name(dataset2, (char*)buf, sizeof(buf));
     if(H5Dclose(dataset2) < 0) FAIL_STACK_ERROR
@@ -2636,7 +2628,7 @@ test_obj_ref(hid_t fapl)
     PASSED()
 
     /* Now we try unlinking dataset2 from the file and searching for it.  It shouldn't be found */
-    if((dataset2 = H5Rdereference2(dataset, H5P_DEFAULT, H5R_OBJECT, &wbuf[1])) < 0)
+    if((dataset2 = H5Rdereference(dataset, H5R_OBJECT, &wbuf[1])) < 0)
         FAIL_STACK_ERROR
     if(H5Ldelete(fid1, "/Group1/Dataset2", H5P_DEFAULT) < 0)
         FAIL_STACK_ERROR
@@ -2769,19 +2761,14 @@ test_reg_ref(hid_t fapl)
     /* Get name of the dataset the first region reference points to using H5Rget_name */
     TESTING("H5Rget_name to get name from region reference(hyperslab)");
     *buf1 = '\0';
-
-    /* Check H5Rget_name returns the correct length of the name when name is NULL */
-    name_size1 = H5Rget_name(dsetr_id, H5R_DATASET_REGION, &ref_out[0], NULL, 0);
-    if(name_size1 != 7) TEST_ERROR
-
-    name_size1 = H5Rget_name(dsetr_id, H5R_DATASET_REGION, &ref_out[0], (char*)buf1, NAME_BUF_SIZE );
+    name_size1 = H5Rget_name(dsetr_id, H5R_DATASET_REGION, &ref_out[0], (char*)buf1, NAME_BUF_SIZE);
     if(!((HDstrcmp(buf1, "/MATRIX") == 0) &&(name_size1 == 7))) TEST_ERROR
     PASSED()
 
     TESTING("H5Iget_name to get name from region reference(hyperslab)");
 
     /* Dereference the first reference */
-    dsetv_id = H5Rdereference2(dsetr_id, H5P_DEFAULT, H5R_DATASET_REGION, &ref_out[0]);
+    dsetv_id = H5Rdereference(dsetr_id, H5R_DATASET_REGION, &ref_out[0]);
 
     /* Get name of the dataset the first region reference points using H5Iget_name */
     *buf2 = '\0';
@@ -2802,7 +2789,7 @@ test_reg_ref(hid_t fapl)
     TESTING("H5Iget_name to get name from region reference(pnt selec)");
 
     /* Dereference the second reference */
-    if((dsetv_id = H5Rdereference2(dsetr_id, H5P_DEFAULT, H5R_DATASET_REGION, &ref_out[1])) < 0) TEST_ERROR
+    if((dsetv_id = H5Rdereference(dsetr_id, H5R_DATASET_REGION, &ref_out[1])) < 0) TEST_ERROR
 
     /* Get name of the dataset the first region reference points using H5Iget_name */
     *buf2 = '\0';
