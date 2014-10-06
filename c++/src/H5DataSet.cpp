@@ -85,7 +85,6 @@ DataSet::DataSet(const DataSet& original) : AbstractDs(original), H5Object(origi
 ///			  object that the dataset is located within.
 ///\param	ref - IN: Reference pointer
 ///\param	ref_type - IN: Reference type - default to H5R_OBJECT
-///\param	plist - IN: Property list - default to PropList::DEFAULT
 ///\exception	H5::DataSetIException
 ///\par Description
 ///		\c loc can be DataSet, Group, H5File, or named DataType, that
@@ -95,9 +94,9 @@ DataSet::DataSet(const DataSet& original) : AbstractDs(original), H5Object(origi
 //	Jul, 2008
 //		Added for application convenience.
 //--------------------------------------------------------------------------
-DataSet::DataSet(const H5Location& loc, const void* ref, H5R_type_t ref_type, const PropList& plist) : AbstractDs(), H5Object(), id(H5I_INVALID_HID)
+DataSet::DataSet(const H5Location& loc, const void* ref, H5R_type_t ref_type) : AbstractDs(), H5Object(), id(H5I_INVALID_HID)
 {
-    id = H5Location::p_dereference(loc.getId(), ref, ref_type, plist, "constructor - by dereferenced");
+    id = H5Location::p_dereference(loc.getId(), ref, ref_type, "constructor - by dereferenced");
 }
 
 //--------------------------------------------------------------------------
@@ -107,16 +106,15 @@ DataSet::DataSet(const H5Location& loc, const void* ref, H5R_type_t ref_type, co
 ///\param	attr - IN: Specifying location where the referenced object is in
 ///\param	ref - IN: Reference pointer
 ///\param	ref_type - IN: Reference type - default to H5R_OBJECT
-///\param	plist - IN: Property list - default to PropList::DEFAULT
 ///\exception	H5::ReferenceException
 // Programmer	Binh-Minh Ribler - Oct, 2006
 // Modification
 //	Jul, 2008
 //		Added for application convenience.
 //--------------------------------------------------------------------------
-DataSet::DataSet(const Attribute& attr, const void* ref, H5R_type_t ref_type, const PropList& plist) : AbstractDs(), H5Object(), id(H5I_INVALID_HID)
+DataSet::DataSet(const Attribute& attr, const void* ref, H5R_type_t ref_type) : AbstractDs(), H5Object(), id(H5I_INVALID_HID)
 {
-    id = H5Location::p_dereference(attr.getId(), ref, ref_type, plist, "constructor - by dereference");
+    id = H5Location::p_dereference(attr.getId(), ref, ref_type, "constructor - by dereference");
 }
 
 //--------------------------------------------------------------------------

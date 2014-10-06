@@ -225,7 +225,7 @@ H5D__contig_fill(const H5D_t *dset, hid_t dxpl_id)
 
 #ifdef H5_HAVE_PARALLEL
     /* Retrieve MPI parameters */
-    if(H5F_HAS_FEATURE(dset->oloc.file, H5FD_FEAT_HAS_MPI)) {
+    if(IS_H5FD_MPI(dset->oloc.file)) {
         /* Get the MPI communicator */
         if(MPI_COMM_NULL == (mpi_comm = H5F_mpi_get_comm(dset->oloc.file)))
             HGOTO_ERROR(H5E_INTERNAL, H5E_MPI, FAIL, "Can't retrieve MPI communicator")
@@ -410,7 +410,7 @@ H5D__contig_construct(H5F_t *f, H5D_t *dset)
 
     /*
      * The maximum size of the dataset cannot exceed the storage size.
-     * Also, only the slowest varying dimension of a simple dataspace
+     * Also, only the slowest varying dimension of a simple data space
      * can be extendible (currently only for external data storage).
      */
 

@@ -305,13 +305,13 @@ const char* Exception::getCFuncName() const
 ///\brief	Prints the error stack in a default manner.
 ///\param	stream    - IN: File pointer, default to stderr
 ///\param	err_stack - IN: Error stack ID, default to H5E_DEFAULT(0)
-// Programmer	Binh-Minh Ribler - 2000
+// Programmer	Binh-Minh Ribler - Apr, 2014 (1.8.13)
 //--------------------------------------------------------------------------
 void Exception::printErrorStack(FILE* stream, hid_t err_stack)
 {
-   herr_t ret_value = H5Eprint2(err_stack, stream);
-   if( ret_value < 0 )
-      throw Exception( "Printing error stack", "H5Eprint2 failed" );
+    herr_t ret_value = H5Eprint2(err_stack, stream);
+    if( ret_value < 0 )
+	throw Exception( "Printing error stack", "H5Eprint2 failed" );
 }
 
 //--------------------------------------------------------------------------

@@ -98,16 +98,15 @@ DataType::DataType( const H5T_class_t type_class, size_t size ) : H5Object()
 ///\param       loc - IN: Location referenced object is in
 ///\param	ref - IN: Reference pointer
 ///\param	ref_type - IN: Reference type - default to H5R_OBJECT
-///\param	plist - IN: Property list - default to PropList::DEFAULT
 ///\exception	H5::ReferenceException
 // Programmer	Binh-Minh Ribler - Oct, 2006
 // Modification
 //	Jul, 2008
 //		Added for application convenience.
 //--------------------------------------------------------------------------
-DataType::DataType(const H5Location& loc, const void* ref, H5R_type_t ref_type, const PropList& plist) : H5Object(), id(H5I_INVALID_HID)
+DataType::DataType(const H5Location& loc, const void* ref, H5R_type_t ref_type) : H5Object(), id(H5I_INVALID_HID)
 {
-    id = H5Location::p_dereference(loc.getId(), ref, ref_type, plist, "constructor - by dereference");
+    id = H5Location::p_dereference(loc.getId(), ref, ref_type, "constructor - by dereference");
 }
 
 //--------------------------------------------------------------------------
@@ -117,16 +116,15 @@ DataType::DataType(const H5Location& loc, const void* ref, H5R_type_t ref_type, 
 ///\param       attr - IN: Specifying location where the referenced object is in
 ///\param	ref - IN: Reference pointer
 ///\param	ref_type - IN: Reference type - default to H5R_OBJECT
-///\param	plist - IN: Property list - default to PropList::DEFAULT
 ///\exception	H5::ReferenceException
 // Programmer	Binh-Minh Ribler - Oct, 2006
 // Modification
 //	Jul, 2008
 //		Added for application convenience.
 //--------------------------------------------------------------------------
-DataType::DataType(const Attribute& attr, const void* ref, H5R_type_t ref_type, const PropList& plist) : H5Object(), id(H5I_INVALID_HID)
+DataType::DataType(const Attribute& attr, const void* ref, H5R_type_t ref_type) : H5Object(), id(H5I_INVALID_HID)
 {
-    id = H5Location::p_dereference(attr.getId(), ref, ref_type, plist, "constructor - by dereference");
+    id = H5Location::p_dereference(attr.getId(), ref, ref_type, "constructor - by dereference");
 }
 
 //--------------------------------------------------------------------------
@@ -264,7 +262,7 @@ void DataType::p_commit(hid_t loc_id, const char* name)
 ///\param	loc - IN: A location (file, dataset, datatype, or group)
 ///\param	name - IN: Name of the datatype
 ///\exception	H5::DataTypeIException
-// Programmer	Binh-Minh Ribler - Jan, 2007
+// Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
 void DataType::commit(const H5Location& loc, const char* name)
 {

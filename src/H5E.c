@@ -288,7 +288,7 @@ H5E_term_interface(void)
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     if(H5_interface_initialize_g) {
-        int64_t ncls, nmsg, nstk;
+        int ncls, nmsg, nstk;
 
         /* Check if there are any open error stacks, classes or messages */
         ncls = H5I_nmembers(H5I_ERROR_CLASS);

@@ -48,7 +48,6 @@
 static void 
 gen_newgrat_file(const char *fname)
 {
-    hid_t fcpl; 	/* File creation property */
     hid_t fapl; 	/* File access property */
     hid_t fid;		/* File id */
     hid_t gid;		/* Group id */
@@ -68,16 +67,8 @@ gen_newgrat_file(const char *fname)
     if(H5Pset_libver_bounds(fapl, H5F_LIBVER_LATEST, H5F_LIBVER_LATEST) < 0)
 	goto error;
 
-    /* Get a copy of file creation property list */
-    if((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0)
-	goto error;
-
-    /* Set file space handling strategy */
-    if(H5Pset_file_space(fcpl, H5F_FILE_SPACE_ALL_PERSIST, (hsize_t)0) < 0)
-	goto error;
-
-     /* Create file */
-    if((fid = H5Fcreate(fname, H5F_ACC_TRUNC, fcpl, fapl)) < 0)
+     /* Create dataset */
+    if((fid = H5Fcreate(NEWGRAT_FILE, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
 	goto error;
 
     /* Create NUM_GRPS groups in the root group */

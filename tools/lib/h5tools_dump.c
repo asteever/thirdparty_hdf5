@@ -36,7 +36,11 @@ h5tool_format_t h5tools_dataformat = {
 "", /*fmt_raw */
 "%d", /*fmt_int */
 "%u", /*fmt_uint */
+#ifdef H5_VMS
+"%hd", /*fmt_schar */
+#else
 "%hhd", /*fmt_schar */
+#endif
 "%u", /*fmt_uchar */
 "%d", /*fmt_short */
 "%u", /*fmt_ushort */
@@ -308,7 +312,7 @@ h5tools_dump_simple_data(FILE *stream, const h5tool_format_t *info, hid_t contai
                 char ref_name[1024];
 
                 /* region data */
-                region_id = H5Rdereference2(container, H5P_DEFAULT, H5R_DATASET_REGION, memref);
+                region_id = H5Rdereference(container, H5R_DATASET_REGION, memref);
                 if (region_id >= 0) {
                     region_space = H5Rget_region(container, H5R_DATASET_REGION, memref);
                     if (region_space >= 0) {
@@ -1248,7 +1252,7 @@ h5tools_print_simple_subset(FILE *stream, const h5tool_format_t *info, h5tools_c
                 H5Dvlen_reclaim(p_type, sm_space, H5P_DEFAULT, sm_buf);
 
             if(H5Sclose(sm_space) < 0)
-                H5E_THROW(FAIL, H5E_tools_min_id_g, "H5Sclose failed");
+                H5E_THROW(H5E_tools_g, H5E_tools_min_id_g, "H5Sclose failed");
             if(sm_buf)
                 HDfree(sm_buf);
             sm_buf = NULL;
@@ -1475,7 +1479,7 @@ h5tools_dump_simple_subset(FILE *stream, const h5tool_format_t *info, h5tools_co
 
 CATCH
     if(f_space >= 0 && H5Sclose(f_space) < 0)
-        H5E_THROW(FAIL, H5E_tools_min_id_g, "H5Sclose failed");
+        H5E_THROW(H5E_tools_g, H5E_tools_min_id_g, "H5Sclose failed");
 
     return ret_value;
 }
@@ -1655,9 +1659,9 @@ CATCH
 
 done:
     if(sm_space >= 0 && H5Sclose(sm_space) < 0)
-        H5E_THROW(FAIL, H5E_tools_min_id_g, "H5Sclose failed");
+        H5E_THROW(H5E_tools_g, H5E_tools_min_id_g, "H5Sclose failed");
     if(f_space >= 0 && H5Sclose(f_space) < 0)
-        H5E_THROW(FAIL, H5E_tools_min_id_g, "H5Sclose failed");
+        H5E_THROW(H5E_tools_g, H5E_tools_min_id_g, "H5Sclose failed");
 
     return ret_value;
 }

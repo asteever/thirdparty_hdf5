@@ -29,6 +29,7 @@
 #include "H5PLprivate.h"	/* Plugin       			*/
 #include "H5Zprivate.h"		/* Filter pipeline			*/
 
+#ifndef H5_VMS
 
 /****************/
 /* Local Macros */
@@ -662,4 +663,4 @@ H5PL__close(H5PL_HANDLE handle)
    
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5PL__close() */
-
+#endif /*H5_VMS*/

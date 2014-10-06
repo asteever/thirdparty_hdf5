@@ -112,7 +112,7 @@ static H5D_shared_t H5D_def_dset;
 /* Dataset ID class */
 static const H5I_class_t H5I_DATASET_CLS[1] = {{
     H5I_DATASET,		/* ID class value */
-    0,				/* Class flags */
+    H5I_CLASS_REUSE_IDS,	/* Class flags */
     0,				/* # of reserved IDs for class */
     (H5I_free_t)H5D_close       /* Callback routine for closing objects of this class */
 }};
@@ -1026,7 +1026,7 @@ H5D__create(H5F_t *file, hid_t type_id, const H5S_t *space, hid_t dcpl_id,
             HGOTO_ERROR(H5E_DATASET, H5E_BADVALUE, NULL, "compact dataset must have early space allocation")
 
         /* If MPI VFD is used, no filter support yet. */
-        if(H5F_HAS_FEATURE(file, H5FD_FEAT_HAS_MPI) && pline->nused > 0)
+        if(IS_H5FD_MPI(file) && pline->nused > 0)
             HGOTO_ERROR(H5E_DATASET, H5E_UNSUPPORTED, NULL, "Parallel I/O does not support filters yet")
 
         /* Get the dataset's external file list information */
@@ -1046,7 +1046,7 @@ H5D__create(H5F_t *file, hid_t type_id, const H5S_t *space, hid_t dcpl_id,
     } /* end if */
 
     /* Check if this dataset is going into a parallel file and set space allocation time */
-    if(H5F_HAS_FEATURE(file, H5FD_FEAT_ALLOCATE_EARLY))
+    if(IS_H5FD_MPI(file))
         new_dset->shared->dcpl_cache.fill.alloc_time = H5D_ALLOC_TIME_EARLY;
 
     /* Set the dataset's I/O operations */
@@ -1228,7 +1228,7 @@ H5D__open_oid(H5D_t *dataset, hid_t dapl_id, hid_t dxpl_id)
     htri_t msg_exists;                  /* Whether a particular type of message exists */
     herr_t ret_value = SUCCEED;		/* Return value */
 
-    FUNC_ENTER_STATIC_TAG(dxpl_id, dataset->oloc.addr, FAIL)
+    FUNC_ENTER_STATIC
 
     /* check args */
     HDassert(dataset);
@@ -1328,7 +1328,7 @@ H5D__open_oid(H5D_t *dataset, hid_t dapl_id, hid_t dxpl_id)
      */
     if((H5F_INTENT(dataset->oloc.file) & H5F_ACC_RDWR)
             && !(*dataset->shared->layout.ops->is_space_alloc)(&dataset->shared->layout.storage)
-            && H5F_HAS_FEATURE(dataset->oloc.file, H5FD_FEAT_ALLOCATE_EARLY)) {
+            && IS_H5FD_MPI(dataset->oloc.file)) {
         if(H5D__alloc_storage(dataset, dxpl_id, H5D_ALLOC_OPEN, FALSE, NULL) < 0)
             HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to initialize file storage")
     } /* end if */
@@ -1353,7 +1353,7 @@ done:
         } /* end if */
     } /* end if */
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D__open_oid() */
 
 
@@ -1832,7 +1832,7 @@ H5D__get_storage_size(H5D_t *dset, hid_t dxpl_id, hsize_t *storage_size)
 {
     herr_t	ret_value = SUCCEED;    /* Return value */
 
-    FUNC_ENTER_PACKAGE_TAG(dxpl_id, dset->oloc.addr, FAIL)
+    FUNC_ENTER_PACKAGE
 
     switch(dset->shared->layout.type) {
         case H5D_CHUNKED:
@@ -1863,7 +1863,7 @@ H5D__get_storage_size(H5D_t *dset, hid_t dxpl_id, hsize_t *storage_size)
     } /*lint !e788 All appropriate cases are covered */
 
 done:
-    FUNC_LEAVE_NOAPI_TAG(ret_value, 0)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D__get_storage_size() */
 
 
@@ -2161,7 +2161,7 @@ H5D__set_extent(H5D_t *dset, const hsize_t *size, hid_t dxpl_id)
     htri_t  changed;                    /* Whether the dataspace changed size */
     herr_t  ret_value = SUCCEED;        /* Return value */
 
-    FUNC_ENTER_PACKAGE_TAG(dxpl_id, dset->oloc.addr, FAIL)
+    FUNC_ENTER_PACKAGE
 
     /* Check args */
     HDassert(dset);
@@ -2242,7 +2242,7 @@ H5D__set_extent(H5D_t *dset, const hsize_t *size, hid_t dxpl_id)
     } /* end if */
 
 done:
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D__set_extent() */
 
 
@@ -2306,7 +2306,7 @@ H5D__flush_real(H5D_t *dataset, hid_t dxpl_id)
     H5O_t *oh = NULL;                   /* Pointer to dataset's object header */
     herr_t ret_value = SUCCEED;         /* Return value */
 
-    FUNC_ENTER_PACKAGE_TAG(dxpl_id, dataset->oloc.addr, FAIL)
+    FUNC_ENTER_PACKAGE
 
     /* Check args */
     HDassert(dataset);
@@ -2354,7 +2354,7 @@ done:
         if(H5O_unpin(oh) < 0)
             HDONE_ERROR(H5E_DATASET, H5E_CANTUNPIN, FAIL, "unable to unpin dataset object header")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D__flush_real() */
 
 

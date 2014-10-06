@@ -85,7 +85,7 @@ H5FL_ARR_DEFINE(hsize_t,H5S_MAX_RANK);
 /* Dataspace ID class */
 static const H5I_class_t H5I_DATASPACE_CLS[1] = {{
     H5I_DATASPACE,		/* ID class value */
-    0,				/* Class flags */
+    H5I_CLASS_REUSE_IDS,	/* Class flags */
     2,				/* # of reserved IDs for class */
     (H5I_free_t)H5S_close	/* Callback routine for closing objects of this class */
 }};
@@ -467,7 +467,7 @@ H5Sextent_copy(hid_t dst_id,hid_t src_id)
 {
     H5S_t	*src;
     H5S_t	*dst;
-    herr_t	ret_value = SUCCEED;
+    hid_t	ret_value = SUCCEED;
 
     FUNC_ENTER_API(FAIL)
     H5TRACE2("e", "ii", dst_id, src_id);

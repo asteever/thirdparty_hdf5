@@ -113,9 +113,9 @@ host_triplet = @host@
 DIST_COMMON = $(top_srcdir)/config/commence.am $(srcdir)/Makefile.in \
 	$(srcdir)/Makefile.am $(top_srcdir)/configure \
 	$(am__configure_deps) $(top_srcdir)/bin/mkinstalldirs COPYING \
-	bin/COPYING bin/README bin/compile bin/config.guess \
-	bin/config.sub bin/depcomp bin/install-sh bin/missing \
-	bin/mkinstalldirs bin/ltmain.sh $(top_srcdir)/bin/compile \
+	bin/COPYING bin/compile bin/config.guess bin/config.sub \
+	bin/depcomp bin/install-sh bin/missing bin/mkinstalldirs \
+	bin/ltmain.sh $(top_srcdir)/bin/compile \
 	$(top_srcdir)/bin/config.guess $(top_srcdir)/bin/config.sub \
 	$(top_srcdir)/bin/install-sh $(top_srcdir)/bin/ltmain.sh \
 	$(top_srcdir)/bin/missing
