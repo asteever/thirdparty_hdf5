@@ -54,6 +54,8 @@
 
 static herr_t H5R_create(void *ref, H5G_loc_t *loc, const char *name,
         H5R_type_t ref_type, H5S_t *space, hid_t dxpl_id);
+static hid_t H5R_dereference(H5F_t *file, hid_t dxpl_id, H5R_type_t ref_type,
+    const void *_ref, hbool_t app_ref);
 static H5S_t * H5R_get_region(H5F_t *file, hid_t dxpl_id, const void *_ref);
 static ssize_t H5R_get_name(H5F_t *file, hid_t lapl_id, hid_t dxpl_id, hid_t id,
     H5R_type_t ref_type, const void *_ref, char *name, size_t size);
@@ -76,7 +78,7 @@ static ssize_t H5R_get_name(H5F_t *file, hid_t lapl_id, hid_t dxpl_id, hid_t id,
 /* Reference ID class */
 static const H5I_class_t H5I_REFERENCE_CLS[1] = {{
     H5I_REFERENCE,		/* ID class value */
-    0,				/* Class flags */
+    H5I_CLASS_REUSE_IDS,	/* Class flags */
     0,				/* # of reserved IDs for class */
     NULL			/* Callback routine for closing objects of this class */
 }};
@@ -407,13 +409,9 @@ done:
     Currently only set up to work with references to datasets
  EXAMPLES
  REVISION LOG
-    Raymond Lu
-    13 July 2011
-    I added the OAPL_ID parameter for the object being referenced.  It only
-    supports dataset access property list currently.
 --------------------------------------------------------------------------*/
-hid_t
-H5R_dereference(H5F_t *file, hid_t oapl_id, hid_t dxpl_id, H5R_type_t ref_type, const void *_ref, hbool_t app_ref)
+static hid_t
+H5R_dereference(H5F_t *file, hid_t dxpl_id, H5R_type_t ref_type, const void *_ref, hbool_t app_ref)
 {
     H5O_loc_t oloc;             /* Object location */
     H5G_name_t path;            /* Path of object */
@@ -512,16 +510,11 @@ H5R_dereference(H5F_t *file, hid_t oapl_id, hid_t dxpl_id, H5R_type_t ref_type, 
 
         case H5O_TYPE_DATASET:
             {
+                hid_t dapl_id = H5P_DATASET_ACCESS_DEFAULT; /* dapl to use to open dataset */
                 H5D_t *dset;                /* Pointer to dataset to open */
 
-                /* Get correct property list */
-                if(H5P_DEFAULT == oapl_id)
-                    oapl_id = H5P_DATASET_ACCESS_DEFAULT;
-                else if(TRUE != H5P_isa_class(oapl_id, H5P_DATASET_ACCESS))
-                    HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not dataset access property list")
-
                 /* Open the dataset */
-                if(NULL == (dset = H5D_open(&loc, oapl_id, dxpl_id)))
+                if(NULL == (dset = H5D_open(&loc, dapl_id, dxpl_id)))
                     HGOTO_ERROR(H5E_DATASET, H5E_NOTFOUND, FAIL, "not found")
 
                 /* Create an atom for the dataset */
@@ -545,14 +538,13 @@ done:
 
 /*--------------------------------------------------------------------------
  NAME
-    H5Rdereference2
+    H5Rdereference
  PURPOSE
     Opens the HDF5 object referenced.
  USAGE
-    hid_t H5Rdereference2(ref)
+    hid_t H5Rdereference(ref)
         hid_t id;       IN: Dataset reference object is in or location ID of
                             object that the dataset is located within.
-        hid_t oapl_id;  IN: Property list of the object being referenced.
         H5R_type_t ref_type;    IN: Type of reference to create
         void *ref;      IN: Reference to open.
 
@@ -565,26 +557,20 @@ done:
  COMMENTS, BUGS, ASSUMPTIONS
  EXAMPLES
  REVISION LOG
-    Raymond Lu
-    13 July 2011
-    I added the OAPL_ID parameter for the object being referenced.  It only
-    supports dataset access property list currently.
 --------------------------------------------------------------------------*/
 hid_t
-H5Rdereference2(hid_t obj_id, hid_t oapl_id, H5R_type_t ref_type, const void *_ref)
+H5Rdereference(hid_t id, H5R_type_t ref_type, const void *_ref)
 {
     H5G_loc_t loc;      /* Group location */
     H5F_t *file = NULL; /* File object */
     hid_t ret_value;
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE4("i", "iiRt*x", obj_id, oapl_id, ref_type, _ref);
+    H5TRACE3("i", "iRt*x", id, ref_type, _ref);
 
     /* Check args */
-    if(H5G_loc(obj_id, &loc) < 0)
+    if(H5G_loc(id, &loc) < 0)
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
-    if(oapl_id < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a property list")
     if(ref_type <= H5R_BADTYPE || ref_type >= H5R_MAXTYPE)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "invalid reference type")
     if(_ref == NULL)
@@ -594,12 +580,12 @@ H5Rdereference2(hid_t obj_id, hid_t oapl_id, H5R_type_t ref_type, const void *_r
     file = loc.oloc->file;
 
     /* Create reference */
-    if((ret_value = H5R_dereference(file, oapl_id, H5AC_dxpl_id, ref_type, _ref, TRUE)) < 0)
+    if((ret_value = H5R_dereference(file, H5AC_dxpl_id, ref_type, _ref, TRUE)) < 0)
         HGOTO_ERROR(H5E_REFERENCE, H5E_CANTINIT, FAIL, "unable to dereference object")
 
 done:
     FUNC_LEAVE_API(ret_value)
-}   /* end H5Rdereference2() */
+}   /* end H5Rdereference() */
 
 
 /*--------------------------------------------------------------------------
@@ -902,6 +888,7 @@ H5R_get_name(H5F_t *f, hid_t lapl_id, hid_t dxpl_id, hid_t id, H5R_type_t ref_ty
     /* Check args */
     HDassert(f);
     HDassert(_ref);
+    HDassert(name);
 
     /* Initialize the object location */
     H5O_loc_reset(&oloc);
@@ -972,10 +959,8 @@ done:
                             object that the dataset is located within.
         H5R_type_t ref_type;    IN: Type of reference
         void *ref;      IN: Reference to query.
-        char *name;     OUT: Buffer to place name of object referenced. If NULL
-	                     then this call will return the size in bytes of name.
-        size_t size;    IN: Size of name buffer (user needs to include NULL terminator
-                            when passing in the size)
+        char *name;     OUT: Buffer to place name of object referenced
+        size_t size;    IN: Size of name buffer
 
  RETURNS
     Non-negative length of the path on success, Negative on failure
@@ -987,12 +972,6 @@ done:
     This may not be the only path to that object.
  EXAMPLES
  REVISION LOG
-    M. Scot Breitenfeld
-    22 January 2014
-    Changed the behavior for the returned value of the function when name is NULL.
-    If name is NULL then size is ignored and the function returns the size 
-    of the name buffer (not including the NULL terminator), it still returns
-    negative on failure.
 --------------------------------------------------------------------------*/
 ssize_t
 H5Rget_name(hid_t id, H5R_type_t ref_type, const void *_ref, char *name,

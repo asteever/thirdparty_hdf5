@@ -165,7 +165,6 @@ typedef struct H5FD_log_t {
                                 (HDoff_t)((A)+(Z))<(HDoff_t)(A))
 
 /* Prototypes */
-static herr_t H5FD_log_term(void);
 static void *H5FD_log_fapl_get(H5FD_t *file);
 static void *H5FD_log_fapl_copy(const void *_old_fa);
 static herr_t H5FD_log_fapl_free(void *_fa);
@@ -189,7 +188,6 @@ static const H5FD_class_t H5FD_log_g = {
     "log",					/*name			*/
     MAXADDR,					/*maxaddr		*/
     H5F_CLOSE_WEAK,				/* fc_degree		*/
-    H5FD_log_term,                              /*terminate             */
     NULL,					/*sb_size		*/
     NULL,					/*sb_encode		*/
     NULL,					/*sb_decode		*/
@@ -229,22 +227,17 @@ H5FL_DEFINE_STATIC(H5FD_log_t);
  *
  * Purpose:     Initializes any interface-specific data or routines.
  *
- * Return:      Non-negative on success/Negative on failure
+ * Return:      Success:    The driver ID for the log driver.
+ *              Failure:    Negative.
  *
  *-------------------------------------------------------------------------
  */
 static herr_t
 H5FD_log_init_interface(void)
 {
-    herr_t ret_value = SUCCEED;
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-    FUNC_ENTER_NOAPI_NOINIT
-
-    if(H5FD_log_init() < 0)
-        HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, FAIL, "unable to initialize log VFD")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(H5FD_log_init())
 } /* H5FD_log_init_interface() */
 
 
@@ -285,14 +278,14 @@ done:
  *
  * Purpose:     Shut down the VFD
  *
- * Returns:     SUCCEED (Can't fail)
+ * Returns:     <none>
  *
  * Programmer:  Quincey Koziol
  *              Friday, Jan 30, 2004
  *
  *---------------------------------------------------------------------------
  */
-static herr_t
+void
 H5FD_log_term(void)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
@@ -300,7 +293,7 @@ H5FD_log_term(void)
     /* Reset VFL ID */
     H5FD_LOG_g = 0;
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
+    FUNC_LEAVE_NOAPI_VOID
 } /* end H5FD_log_term() */
 
 
@@ -603,11 +596,6 @@ H5FD_log_open(const char *name, unsigned flags, hid_t fapl_id, haddr_t maxaddr)
 
     /* Get the flags for logging */
     file->fa.flags = fa->flags;
-    if(fa->logfile)
-        file->fa.logfile = HDstrdup(fa->logfile);
-    else
-        file->fa.logfile = NULL;
-    file->fa.buf_size = fa->buf_size;
 
     /* Check if we are doing any logging at all */
     if(file->fa.flags != 0) {
@@ -807,11 +795,6 @@ H5FD_log_close(H5FD_t *_file)
         if(file->logfp != stderr)
             HDfclose(file->logfp);
     } /* end if */
-
-    if(file->fa.logfile) {
-        HDfree(file->fa.logfile);
-        file->fa.logfile = NULL;
-    }
 
     /* Release the file info */
     file = H5FL_FREE(H5FD_log_t, file);

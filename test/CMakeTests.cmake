@@ -46,47 +46,6 @@ foreach (ref_file ${HDF5_REFERENCE_FILES})
 endforeach (ref_file ${HDF5_REFERENCE_FILES})
 
 # --------------------------------------------------------------------
-# Copy test files from test/testfiles/plist_files dir to test dir
-# --------------------------------------------------------------------
-set (HDF5_REFERENCE_PLIST_FILES
-    acpl_be
-    acpl_le
-    dapl_be
-    dapl_le
-    dcpl_be
-    dcpl_le
-    dxpl_be
-    dxpl_le
-    fapl_be
-    fapl_le
-    fcpl_be
-    fcpl_le
-    gcpl_be
-    gcpl_le
-    lapl_be
-    lapl_le
-    lcpl_be
-    lcpl_le
-    ocpl_be
-    ocpl_le
-    ocpypl_be
-    ocpypl_le
-    strcpl_be
-    strcpl_le
-)
-
-foreach (plistfile ${HDF5_REFERENCE_PLIST_FILES})
-  set (dest "${PROJECT_BINARY_DIR}/${plistfile}")
-  #message (STATUS " Copying ${plistfile} to ${dset}")
-  add_custom_command (
-      TARGET     ${HDF5_TEST_LIB_TARGET}
-      POST_BUILD
-      COMMAND    ${CMAKE_COMMAND}
-      ARGS       -E copy_if_different ${HDF5_TEST_SOURCE_DIR}/testfiles/plist_files/${plistfile} ${dest}
-  )
-endforeach (plistfile ${HDF5_REFERENCE_PLIST_FILES})
-
-# --------------------------------------------------------------------
 #-- Copy all the HDF5 files from the test directory into the source directory
 # --------------------------------------------------------------------
 set (HDF5_REFERENCE_TEST_FILES
@@ -99,10 +58,9 @@ set (HDF5_REFERENCE_TEST_FILES
     family_v16_00001.h5
     family_v16_00002.h5
     family_v16_00003.h5
-    filespace_1_6.h5
-    filespace_1_8.h5
     file_image_core_test.h5
     fill_old.h5
+    fixed_idx.h5
     filter_error.h5
     group_old.h5
     le_data.h5
@@ -254,9 +212,6 @@ foreach (test ${H5_TESTS})
 endforeach (test ${H5_TESTS})
 
 set_tests_properties (H5TEST-flush2 PROPERTIES DEPENDS H5TEST-flush1)
-set_tests_properties (H5TEST-fheap PROPERTIES TIMEOUT 1800)
-set_tests_properties (H5TEST-testmeta PROPERTIES TIMEOUT 1800)
-set_tests_properties (H5TEST-big PROPERTIES TIMEOUT 1800)
 
 ##############################################################################
 ##############################################################################
@@ -283,17 +238,6 @@ add_test (
 )
 add_test (NAME H5TEST-cache_api COMMAND $<TARGET_FILE:cache_api>)
 set_tests_properties (H5TEST-cache_api PROPERTIES DEPENDS H5TEST-clear-cache_api-objects)
-
-#-- Adding test for cache_tagging
-add_test (
-    NAME H5TEST-clear-cache_tagging-objects
-    COMMAND    ${CMAKE_COMMAND}
-        -E remove 
-        tagging_test.h5
-        tagging_ext_test.h5
-)
-add_test (NAME H5TEST-cache_tagging COMMAND $<TARGET_FILE:cache_tagging>)
-set_tests_properties (H5TEST-cache_tagging PROPERTIES DEPENDS H5TEST-clear-cache_tagging-objects)
 
 #-- Adding test for ttsafe
 add_test (
@@ -425,7 +369,6 @@ if (HDF5_TEST_VFD)
       gheap
       cache
       cache_api
-      cache_tagging
       pool
       hyperslab
       istore
@@ -460,8 +403,6 @@ if (HDF5_TEST_VFD)
       cross_read
       freespace
       mf
-      farray
-      earray
       btree2
       #fheap
       error_test
@@ -479,22 +420,79 @@ if (HDF5_TEST_VFD)
     set (VFD_LIST ${VFD_LIST} direct)
   endif (DIRECT_VFD)
 
+  MACRO (CHECK_VFD_TEST vfdtest vfdname resultcode)
+    if (${vfdtest} STREQUAL "flush1" OR ${vfdtest} STREQUAL "flush2")
+      if (${vfdname} STREQUAL "multi" OR ${vfdname} STREQUAL "split")
+        if (NOT BUILD_SHARED_LIBS AND NOT CMAKE_BUILD_TYPE MATCHES Debug)
+          add_test (
+              NAME VFD-${vfdname}-${vfdtest} 
+              COMMAND "${CMAKE_COMMAND}"
+                  -D "TEST_PROGRAM=$<TARGET_FILE:${vfdtest}>"
+                  -D "TEST_ARGS:STRING="
+                  -D "TEST_VFD:STRING=${vfdname}"
+                  -D "TEST_EXPECT=${resultcode}"
+                  -D "TEST_OUTPUT=${vfdtest}"
+                  -D "TEST_FOLDER=${PROJECT_BINARY_DIR}"
+                  -P "${HDF_RESOURCES_DIR}/vfdTest.cmake"
+          )
+        else (NOT BUILD_SHARED_LIBS AND NOT CMAKE_BUILD_TYPE MATCHES Debug)
+          add_test (
+              NAME VFD-${vfdname}-${vfdtest}
+              COMMAND ${CMAKE_COMMAND} -E echo "SKIP VFD-${vfdname}-${vfdtest}"
+          )
+        endif(NOT BUILD_SHARED_LIBS AND NOT CMAKE_BUILD_TYPE MATCHES Debug)
+      else (${vfdname} STREQUAL "multi" OR ${vfdname} STREQUAL "split")
+        add_test (
+            NAME VFD-${vfdname}-${vfdtest} 
+            COMMAND "${CMAKE_COMMAND}"
+                -D "TEST_PROGRAM=$<TARGET_FILE:${vfdtest}>"
+                -D "TEST_ARGS:STRING="
+                -D "TEST_VFD:STRING=${vfdname}"
+                -D "TEST_EXPECT=${resultcode}"
+                -D "TEST_OUTPUT=${vfdtest}"
+                -D "TEST_FOLDER=${PROJECT_BINARY_DIR}"
+                -P "${HDF_RESOURCES_DIR}/vfdTest.cmake"
+        )
+      endif (${vfdname} STREQUAL "multi" OR ${vfdname} STREQUAL "split")
+    else (${vfdtest} STREQUAL "flush1" OR ${vfdtest} STREQUAL "flush2")
+      add_test (
+          NAME VFD-${vfdname}-${vfdtest} 
+          COMMAND "${CMAKE_COMMAND}"
+              -D "TEST_PROGRAM=$<TARGET_FILE:${vfdtest}>"
+              -D "TEST_ARGS:STRING="
+              -D "TEST_VFD:STRING=${vfdname}"
+              -D "TEST_EXPECT=${resultcode}"
+              -D "TEST_OUTPUT=${vfdtest}"
+              -D "TEST_FOLDER=${PROJECT_BINARY_DIR}"
+              -P "${HDF_RESOURCES_DIR}/vfdTest.cmake"
+      )
+    endif (${vfdtest} STREQUAL "flush1" OR ${vfdtest} STREQUAL "flush2")
+  ENDMACRO (CHECK_VFD_TEST vfdtest vfdname resultcode)
+
   MACRO (ADD_VFD_TEST vfdname resultcode)
     foreach (test ${H5_VFD_TESTS})
-      add_test (
-        NAME VFD-${vfdname}-${test} 
-        COMMAND "${CMAKE_COMMAND}"
-            -D "TEST_PROGRAM=$<TARGET_FILE:${test}>"
-            -D "TEST_ARGS:STRING="
-            -D "TEST_VFD:STRING=${vfdname}"
-            -D "TEST_EXPECT=${resultcode}"
-            -D "TEST_OUTPUT=${test}"
-            -D "TEST_FOLDER=${PROJECT_BINARY_DIR}"
-            -P "${HDF_RESOURCES_DIR}/vfdTest.cmake"
-      )
+      if (WIN32)
+        CHECK_VFD_TEST (${test} ${vfdname} ${resultcode})
+      else (WIN32)
+        add_test (
+            NAME VFD-${vfdname}-${test} 
+            COMMAND "${CMAKE_COMMAND}"
+                -D "TEST_PROGRAM=$<TARGET_FILE:${test}>"
+                -D "TEST_ARGS:STRING="
+                -D "TEST_VFD:STRING=${vfdname}"
+                -D "TEST_EXPECT=${resultcode}"
+                -D "TEST_OUTPUT=${test}"
+                -D "TEST_FOLDER=${PROJECT_BINARY_DIR}"
+                -P "${HDF_RESOURCES_DIR}/vfdTest.cmake"
+        )
+      endif (WIN32)
     endforeach (test ${H5_VFD_TESTS})
+    set_tests_properties (VFD-${vfdname}-flush2 PROPERTIES DEPENDS VFD-${vfdname}-flush1)
     set_tests_properties (VFD-${vfdname}-flush1 PROPERTIES TIMEOUT 10)
-    set_tests_properties (VFD-${vfdname}-flush2 PROPERTIES TIMEOUT 10)
+    set_tests_properties (VFD-${vfdname}-objcopy PROPERTIES TIMEOUT 1000)
+    set_tests_properties (VFD-${vfdname}-testhdf5 PROPERTIES TIMEOUT 1200)
+    set_tests_properties (VFD-${vfdname}-gheap PROPERTIES TIMEOUT 1200)
+    set_tests_properties (VFD-${vfdname}-istore PROPERTIES TIMEOUT 1200)
     if (HDF5_TEST_FHEAP_VFD)
       add_test (
         NAME VFD-${vfdname}-fheap 
@@ -507,7 +505,6 @@ if (HDF5_TEST_VFD)
             -D "TEST_FOLDER=${PROJECT_BINARY_DIR}"
             -P "${HDF_RESOURCES_DIR}/vfdTest.cmake"
       )
-      set_tests_properties (VFD-${vfdname}-fheap PROPERTIES TIMEOUT 1800)
     endif (HDF5_TEST_FHEAP_VFD)
   ENDMACRO (ADD_VFD_TEST)
   

@@ -108,9 +108,9 @@ static void test_file_create()
 	// Create file FILE1
 	file1 = new H5File (FILE1, H5F_ACC_EXCL);
 
-	// Try to create the same file with H5F_ACC_TRUNC. This should fail
+	// try to create the same file with H5F_ACC_TRUNC. This should fail
 	// because file1 is the same file and is currently open. Skip it on
-	// OpenVMS because it creates another version of the file.
+        // OpenVMS because it creates another version of the file.
 #ifndef H5_HAVE_FILE_VERSIONS
 	try {
 	    H5File file2 (FILE1, H5F_ACC_TRUNC);  // should throw E
@@ -120,7 +120,7 @@ static void test_file_create()
 	}
 	catch( FileIException E ) // catch truncating existing file
 	{} // do nothing, FAIL expected
-#endif // H5_HAVE_FILE_VERSIONS
+#endif /*H5_HAVE_FILE_VERSIONS*/
 
 	// Close file1
 	delete file1;
@@ -142,7 +142,7 @@ static void test_file_create()
 
 	// Try to create first file again. This should fail because file1
 	// is the same file and is currently open. Skip it on OpenVMS because
-	// it creates another version of the file.
+        // it creates another version of the file.
 #ifndef H5_HAVE_FILE_VERSIONS
     	try {
 	    H5File file2 (FILE1, H5F_ACC_TRUNC);   // should throw E

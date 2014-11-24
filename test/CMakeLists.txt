@@ -174,7 +174,6 @@ set (H5_TESTS
     gheap
     #cache
     #cache_api
-    #cache_tagging
     pool
     hyperslab
     istore
@@ -190,7 +189,7 @@ set (H5_TESTS
     objcopy
     links
     unlink
-    big
+#    big
     mtime
     fillval
     mount
@@ -209,8 +208,6 @@ set (H5_TESTS
     cross_read
     freespace
     mf
-    farray
-    earray
     btree2
     fheap
     #error_test
@@ -219,10 +216,11 @@ set (H5_TESTS
     testmeta
     #links_env
     file_image
-    enc_dec_plist
-    enc_dec_plist_with_endianess
     unregister
 )
+if (NOT CYGWIN)
+  set (H5_TESTS ${H5_TESTS} big)
+endif (NOT CYGWIN)
 
 foreach (test ${H5_TESTS})
   ADD_H5_EXE(${test})
@@ -247,13 +245,6 @@ TARGET_NAMING (cache_api ${LIB_TYPE})
 TARGET_C_PROPERTIES (cache_api " " " ")
 target_link_libraries (cache_api ${HDF5_LIB_TARGET} ${HDF5_TEST_LIB_TARGET})
 set_target_properties (cache_api PROPERTIES FOLDER test)
-
-#-- Adding test for cache_tagging
-add_executable (cache_tagging ${HDF5_TEST_SOURCE_DIR}/cache_tagging.c ${HDF5_TEST_SOURCE_DIR}/cache_common.c)
-TARGET_NAMING (cache_tagging ${LIB_TYPE})
-TARGET_C_PROPERTIES (cache_tagging " " " ")
-target_link_libraries (cache_tagging ${HDF5_LIB_TARGET} ${HDF5_TEST_LIB_TARGET})
-set_target_properties (cache_tagging PROPERTIES FOLDER test)
 
 #-- Adding test for ttsafe
 add_executable (ttsafe

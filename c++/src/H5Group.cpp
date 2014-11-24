@@ -93,16 +93,15 @@ Group::Group(const hid_t existing_id) : H5Object()
 ///\param	loc - IN: Specifying location referenced object is in
 ///\param	ref - IN: Reference pointer
 ///\param	ref_type - IN: Reference type - default to H5R_OBJECT
-///\param	plist - IN: Property list - default to PropList::DEFAULT
 ///\exception	H5::ReferenceException
 ///\par Description
 ///		\c obj can be DataSet, Group, or named DataType, that
 ///		is a datatype that has been named by DataType::commit.
 // Programmer	Binh-Minh Ribler - Oct, 2006
 //--------------------------------------------------------------------------
-Group::Group(const H5Location& loc, const void* ref, H5R_type_t ref_type, const PropList& plist) : H5Object(), id(H5I_INVALID_HID)
+Group::Group(const H5Location& loc, const void* ref, H5R_type_t ref_type) : H5Object(), id(H5I_INVALID_HID)
 {
-    id = H5Location::p_dereference(loc.getId(), ref, ref_type, plist, "constructor - by dereference");
+    id = H5Location::p_dereference(loc.getId(), ref, ref_type, "constructor - by dereference");
 }
 
 //--------------------------------------------------------------------------
@@ -111,13 +110,12 @@ Group::Group(const H5Location& loc, const void* ref, H5R_type_t ref_type, const 
 ///\param	attr - IN: Specifying location where the referenced object is in
 ///\param	ref - IN: Reference pointer
 ///\param	ref_type - IN: Reference type - default to H5R_OBJECT
-///\param	plist - IN: Property list - default to PropList::DEFAULT
 ///\exception	H5::ReferenceException
 // Programmer	Binh-Minh Ribler - Oct, 2006
 //--------------------------------------------------------------------------
-Group::Group(const Attribute& attr, const void* ref, H5R_type_t ref_type, const PropList& plist) : H5Object(), id(H5I_INVALID_HID)
+Group::Group(const Attribute& attr, const void* ref, H5R_type_t ref_type) : H5Object(), id(H5I_INVALID_HID)
 {
-    id = H5Location::p_dereference(attr.getId(), ref, ref_type, plist, "constructor - by dereference");
+    id = H5Location::p_dereference(attr.getId(), ref, ref_type, "constructor - by dereference");
 }
 
 //--------------------------------------------------------------------------

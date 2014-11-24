@@ -118,7 +118,6 @@ static int compute_next(H5FD_multi_t *file);
 static int open_members(H5FD_multi_t *file);
 
 /* Callback prototypes */
-static herr_t H5FD_multi_term(void);
 static hsize_t H5FD_multi_sb_size(H5FD_t *file);
 static herr_t H5FD_multi_sb_encode(H5FD_t *file, char *name/*out*/,
 				   unsigned char *buf/*out*/);
@@ -152,7 +151,6 @@ static const H5FD_class_t H5FD_multi_g = {
     "multi",					/*name			*/
     HADDR_MAX,					/*maxaddr		*/
     H5F_CLOSE_WEAK,				/* fc_degree		*/
-    H5FD_multi_term,                            /*terminate             */
     H5FD_multi_sb_size,				/*sb_size		*/
     H5FD_multi_sb_encode,			/*sb_encode		*/
     H5FD_multi_sb_decode,			/*sb_decode		*/
@@ -252,20 +250,21 @@ H5FD_multi_init(void)
  *
  * Purpose:	Shut down the VFD
  *
- * Returns:     Non-negative on success or negative on failure
+ * Return:	<none>
  *
  * Programmer:  Quincey Koziol
  *              Friday, Jan 30, 2004
  *
+ * Modification:
+ *
  *---------------------------------------------------------------------------
  */
-static herr_t
+void
 H5FD_multi_term(void)
 {
     /* Reset VFL ID */
     H5FD_MULTI_g=0;
 
-    return 0;
 } /* end H5FD_multi_term() */
 
 
@@ -1663,7 +1662,6 @@ H5FD_multi_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr,
     htri_t              prop_exists = FALSE;    /* Whether the multi VFD DXPL property already exists */
     H5FD_mem_t		mt, mmt, hi = H5FD_MEM_DEFAULT;
     haddr_t		start_addr = 0;
-    dxpl_id = dxpl_id; /* Suppress compiler warning */
 
     /* Clear the error stack */
     H5Eclear2(H5E_DEFAULT);
@@ -1715,7 +1713,6 @@ H5FD_multi_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr,
     htri_t              prop_exists = FALSE;    /* Whether the multi VFD DXPL property already exists */
     H5FD_mem_t		mt, mmt, hi = H5FD_MEM_DEFAULT;
     haddr_t		start_addr = 0;
-    dxpl_id = dxpl_id; /* Suppress compiler warning */
 
     /* Clear the error stack */
     H5Eclear2(H5E_DEFAULT);

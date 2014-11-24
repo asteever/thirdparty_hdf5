@@ -68,7 +68,7 @@ static herr_t walk_error_callback(unsigned n, const H5E_error2_t *err_desc, void
 /* get the major number from the error stack. */
 static herr_t walk_error_callback(UNUSED unsigned n, const H5E_error2_t *err_desc, void *udata) {
 	if (err_desc)
-		*((hid_t *) udata) = err_desc->maj_num;
+		*((int *) udata) = err_desc->maj_num;
 
 	return 0;
 }
@@ -127,20 +127,6 @@ int copy_objects(const char* fnamein, const char* fnameout, pack_opt_t *options)
 		if (H5Pget_userblock(fcpl_in, &ub_size) < 0) {
 			error_msg("failed to retrieve userblock size\n");
 			goto out;
-		}
-
-		if (!options->fs_strategy) {
-			if (H5Pget_file_space(fcpl_in, &options->fs_strategy, NULL) < 0) {
-				error_msg("failed to retrieve file space strategy\n");
-				goto out;
-			}
-		}
-
-		if (!options->fs_threshold) {
-			if (H5Pget_file_space(fcpl_in, NULL, &options->fs_threshold) < 0) {
-				error_msg("failed to retrieve file space threshold\n");
-				goto out;
-			}
 		}
 
 		if (H5Pclose(fcpl_in) < 0) {
@@ -303,25 +289,6 @@ int copy_objects(const char* fnamein, const char* fnameout, pack_opt_t *options)
 		}
 	}
 
-	/*-------------------------------------------------------------------------
-	 * set free-space strategy options
-	 *-------------------------------------------------------------------------
-	 */
-
-	/* either use the FCPL already created or create a new one */
-	if (fcpl == H5P_DEFAULT) {
-		/* create a file creation property list */
-		if ((fcpl = H5Pcreate(H5P_FILE_CREATE)) < 0) {
-			error_msg("fail to create a file creation property list\n");
-			goto out;
-		}
-	}
-
-	/* set file space strategy and free space threshold */
-	if (H5Pset_file_space(fcpl, options->fs_strategy, options->fs_threshold) < 0) {
-		error_msg("failed to set file space strategy & threshold \n");
-		goto out;
-	}
 
 	/*-------------------------------------------------------------------------
 	 * create the output file

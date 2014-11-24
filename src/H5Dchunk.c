@@ -327,7 +327,7 @@ H5D__chunk_direct_write(const H5D_t *dset, hid_t dxpl_id, uint32_t filters, hsiz
     hsize_t     space_dim[H5O_LAYOUT_NDIMS];    /* Dataset's dataspace dimensions */
     herr_t ret_value = SUCCEED; /* Return value */
 
-    FUNC_ENTER_STATIC_TAG(dxpl_id, dset->oloc.addr, FAIL)
+    FUNC_ENTER_STATIC
 
     /* Allocate data space and initialize it if it hasn't been. */
     if(!(*dset->shared->layout.ops->is_space_alloc)(&dset->shared->layout.storage)) {
@@ -396,7 +396,7 @@ H5D__chunk_direct_write(const H5D_t *dset, hid_t dxpl_id, uint32_t filters, hsiz
         HGOTO_ERROR(H5E_DATASET, H5E_WRITEERROR, FAIL, "unable to write raw data to file")
 
 done:
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D__chunk_direct_write() */
 
 
@@ -2208,7 +2208,7 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-static herr_t
+herr_t
 H5D__chunk_cinfo_cache_reset(H5D_chunk_cached_t *last)
 {
     FUNC_ENTER_PACKAGE_NOERR
@@ -2473,7 +2473,7 @@ H5D__chunk_flush_entry(const H5D_t *dset, hid_t dxpl_id, const H5D_dxpl_cache_t 
     hbool_t	point_of_no_return = FALSE;
     herr_t	ret_value = SUCCEED;	/* Return value			*/
 
-    FUNC_ENTER_STATIC_TAG(dxpl_id, dset->oloc.addr, FAIL)
+    FUNC_ENTER_STATIC
 
     HDassert(dset);
     HDassert(dset->shared);
@@ -2603,7 +2603,7 @@ done:
             ent->chunk = (uint8_t *)H5D__chunk_xfree(ent->chunk, &(dset->shared->dcpl_cache.pline));
     } /* end if */
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D__chunk_flush_entry() */
 
 
@@ -3280,7 +3280,7 @@ H5D__chunk_allocate(const H5D_t *dset, hid_t dxpl_id, hbool_t full_overwrite,
     hbool_t     fb_info_init = FALSE;   /* Whether the fill value buffer has been initialized */
     herr_t	ret_value = SUCCEED;	/* Return value */
 
-    FUNC_ENTER_PACKAGE_TAG(dxpl_id, dset->oloc.addr, FAIL)
+    FUNC_ENTER_PACKAGE
 
     /* Check args */
     HDassert(dset && H5D_CHUNKED == layout->type);
@@ -3306,7 +3306,7 @@ H5D__chunk_allocate(const H5D_t *dset, hid_t dxpl_id, hbool_t full_overwrite,
 
 #ifdef H5_HAVE_PARALLEL
     /* Retrieve MPI parameters */
-    if(H5F_HAS_FEATURE(dset->oloc.file, H5FD_FEAT_HAS_MPI)) {
+    if(IS_H5FD_MPI(dset->oloc.file)) {
         /* Set the MPI-capable file driver flag */
         using_mpi = TRUE;
 
@@ -3592,7 +3592,7 @@ done:
     } /* end if */
 #endif
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D__chunk_allocate() */
 
 #ifdef H5_HAVE_PARALLEL
@@ -3689,20 +3689,33 @@ H5D__chunk_collective_fill(const H5D_t *dset, hid_t dxpl_id,
         blocks++;
     }
 
-    /* MSC 
-     * should use this if MPI_type_create_hindexed block is working 
-     * mpi_code = MPI_Type_create_hindexed_block(blocks, block_len, chunk_disp_array, MPI_BYTE, &file_type);
+    /* MSC
+     * should not have a special case for blocks == 0, but ompi (as of 1.8.1) has a bug 
+     * in file_set_view when a zero size datatype is create with hindexed or hvector.
      */
-    mpi_code = MPI_Type_create_hindexed(blocks, block_lens, chunk_disp_array, 
-                                        MPI_BYTE, &file_type);
-    if(mpi_code != MPI_SUCCESS)
-        HMPI_GOTO_ERROR(FAIL, "MPI_Type_create_hindexed failed", mpi_code)
+    if(0 == blocks) {
+        mpi_code = MPI_Type_contiguous(0, MPI_BYTE, &file_type);
+        if(mpi_code != MPI_SUCCESS)
+            HMPI_GOTO_ERROR(FAIL, "MPI_Type_contiguous failed", mpi_code)
+        mpi_code = MPI_Type_contiguous(0, MPI_BYTE, &mem_type);
+        if(mpi_code != MPI_SUCCESS)
+            HMPI_GOTO_ERROR(FAIL, "MPI_Type_contiguous failed", mpi_code)
+    }
+    else {
+        /* MSC 
+         * should use this if MPI_type_create_hindexed block is working 
+         * mpi_code = MPI_Type_create_hindexed_block(blocks, block_len, chunk_disp_array, MPI_BYTE, &file_type);
+         */
+        mpi_code = MPI_Type_create_hindexed(blocks, block_lens, chunk_disp_array, 
+                                            MPI_BYTE, &file_type);
+        if(mpi_code != MPI_SUCCESS)
+            HMPI_GOTO_ERROR(FAIL, "MPI_Type_create_hindexed failed", mpi_code)
+        mpi_code = MPI_Type_create_hvector(blocks, block_len, 0, MPI_BYTE, &mem_type);
+        if(mpi_code != MPI_SUCCESS)
+            HMPI_GOTO_ERROR(FAIL, "MPI_Type_create_hvector failed", mpi_code)
+    }
     if(MPI_SUCCESS != (mpi_code = MPI_Type_commit(&file_type)))
         HMPI_GOTO_ERROR(FAIL, "MPI_Type_commit failed", mpi_code)
-
-    mpi_code = MPI_Type_create_hvector(blocks, block_len, 0, MPI_BYTE, &mem_type);
-    if(mpi_code != MPI_SUCCESS)
-        HMPI_GOTO_ERROR(FAIL, "MPI_Type_create_hvector failed", mpi_code)
     if(MPI_SUCCESS != (mpi_code = MPI_Type_commit(&mem_type)))
         HMPI_GOTO_ERROR(FAIL, "MPI_Type_commit failed", mpi_code)
 
@@ -4698,15 +4711,9 @@ H5D__chunk_copy_cb(const H5D_chunk_rec_t *chunk_rec, void *_udata)
 	udata->buf_size = buf_size;
     } /* end if */
 
-    /* Set metadata tag in dxpl_id */
-    H5_BEGIN_TAG(udata->idx_info_dst->dxpl_id, H5AC__COPIED_TAG, H5_ITER_ERROR);
-
     /* Insert chunk into the destination index */
     if((udata->idx_info_dst->storage->ops->insert)(udata->idx_info_dst, &udata_dst) < 0)
-        HGOTO_ERROR_TAG(H5E_DATASET, H5E_CANTINSERT, H5_ITER_ERROR, "unable to insert chunk into index")
-
-    /* Reset metadata tag in dxpl_id */
-    H5_END_TAG(H5_ITER_ERROR);
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTINSERT, H5_ITER_ERROR, "unable to insert chunk into index")
 
     /* Write chunk data to destination file */
     HDassert(H5F_addr_defined(udata_dst.addr));
@@ -5145,7 +5152,7 @@ H5D__chunk_dest(H5F_t *f, hid_t dxpl_id, H5D_t *dset)
     int		nerrors = 0;            /* Accumulated count of errors */
     herr_t      ret_value = SUCCEED;       /* Return value */
 
-    FUNC_ENTER_PACKAGE_TAG(dxpl_id, dset->oloc.addr, FAIL)
+    FUNC_ENTER_PACKAGE
 
     HDassert(f);
     HDassert(dset);
@@ -5182,7 +5189,7 @@ H5D__chunk_dest(H5F_t *f, hid_t dxpl_id, H5D_t *dset)
 	HGOTO_ERROR(H5E_DATASET, H5E_CANTFREE, FAIL, "unable to release chunk index info")
 
 done:
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D__chunk_dest() */
 
 #ifdef H5D_CHUNK_DEBUG
