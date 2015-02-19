@@ -99,7 +99,7 @@ tests:
 	  if test $$d != .; then                                        \
 	   (cd $$d && $(MAKE) $(AM_MAKEFLAGS) $@) || exit 1;            \
 	  fi;                                                           \
-	  done
+	done
 
 # Check-clean also recurses into examples directory
 check-clean:

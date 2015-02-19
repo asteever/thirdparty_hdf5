@@ -108,8 +108,7 @@ DIST_COMMON = $(top_srcdir)/config/commence.am \
 TESTS =
 subdir = hl/fortran/src
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/m4/aclocal_cxx.m4 \
-	$(top_srcdir)/m4/aclocal_fc.m4 $(top_srcdir)/configure.ac
+am__aclocal_m4_deps = $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(SHELL) $(top_srcdir)/bin/mkinstalldirs
@@ -689,8 +688,8 @@ CHECK_CLEANFILES = *.chkexe *.chklog *.clog
 # See libtool versioning documentation online.
 # After making changes, run bin/reconfigure to update other configure related
 # files like Makefile.in.
-LT_VERS_INTERFACE = 6
-LT_VERS_REVISION = 205
+LT_VERS_INTERFACE = 9
+LT_VERS_REVISION = 1
 LT_VERS_AGE = 0
 
 # Our main target, the high-level fortran library
@@ -709,7 +708,7 @@ libhdf5hl_fortran_la_SOURCES = H5DSfc.c H5LTfc.c  H5IMfc.c H5IMcc.c H5TBfc.c \
 	H5DSff.f90 H5LTff.f90 H5IMff.f90 H5TBff.f90
 
 
-# HDF5 HL Fortran library depends on HDF5 Library.
+# HDF5 HL Fortran library depends on HDF5 Library. 
 libhdf5hl_fortran_la_LIBADD = $(LIBH5_HL) $(LIBH5F)
 
 # Automake needs to be taught how to build lib, progs, and tests targets.

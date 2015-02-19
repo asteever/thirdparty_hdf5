@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.1.0)
+cmake_minimum_required (VERSION 2.8.11)
 PROJECT (HDF5 C CXX)
 
 #-----------------------------------------------------------------------------
@@ -659,7 +659,7 @@ if (H5_HAVE_PARALLEL)
   endif (MPI_C_LINK_FLAGS)
 endif (H5_HAVE_PARALLEL)
 
-set (DEFAULT_API_VERSION "v110")
+set (DEFAULT_API_VERSION "v18")
 #-----------------------------------------------------------------------------
 # Option to use 1.6.x API
 #-----------------------------------------------------------------------------
@@ -671,20 +671,13 @@ if (HDF5_USE_16_API_DEFAULT)
 endif (HDF5_USE_16_API_DEFAULT)
 
 #-----------------------------------------------------------------------------
-# Option to use 1.8.x API
-#-----------------------------------------------------------------------------
-option (HDF5_USE_18_API_DEFAULT "Use the HDF5 1.8.x API by default" OFF)
-set (H5_USE_18_API_DEFAULT 0)
-if (HDF5_USE_18_API_DEFAULT)
-  set (H5_USE_18_API_DEFAULT 1)
-  set (DEFAULT_API_VERSION "v18")
-endif (HDF5_USE_18_API_DEFAULT)
-
-#-----------------------------------------------------------------------------
 # Include user macros
 #-----------------------------------------------------------------------------
 include (UserMacros.cmake)
 
+#-----------------------------------------------------------------------------
+# Include filter (zlib, szip, etc.) macros
+#-----------------------------------------------------------------------------
 include (CMakeFilters.cmake)
 
 #-----------------------------------------------------------------------------
@@ -736,12 +729,6 @@ if (WIN32)
     endif (H5_HAVE_IOEO)
   endif (HDF5_ENABLE_THREADSAFE)
 endif (WIN32)
-
-# -----------------------------------------------------------------------
-# wrapper script variables
-# 
-#set (CFLAGS "${C_DEFINES}")
-#set (CXXFLAGS "${CXX_DEFINES}")
 
 #-----------------------------------------------------------------------------
 # Add the HDF5 Library Target to the build
@@ -805,18 +792,13 @@ if (EXISTS "${HDF5_SOURCE_DIR}/fortran" AND IS_DIRECTORY "${HDF5_SOURCE_DIR}/for
     if (BUILD_SHARED_LIBS AND APPLE)
       message (FATAL_ERROR " **** Shared FORTRAN libraries are unsupported **** ")
     endif (BUILD_SHARED_LIBS AND APPLE)
-    option (HDF5_ENABLE_F2003 "Enable FORTRAN 2003 Standard" ON)
+    option (HDF5_ENABLE_F2003 "Enable FORTRAN 2003 Standard" OFF)
     include (${HDF_RESOURCES_EXT_DIR}/HDFUseFortran.cmake)
     if (HDF5_ENABLE_F2003)
       if (NOT FORTRAN_HAVE_ISO_C_BINDING)
         set (HDF5_ENABLE_F2003 OFF)
       endif (NOT FORTRAN_HAVE_ISO_C_BINDING)
     endif (HDF5_ENABLE_F2003)
-
-    # -----------------------------------------------------------------------
-    # wrapper script variables
-    # 
-#    set (FCFLAGS "${Fortran_DEFINES}")
 
     add_subdirectory (${HDF5_SOURCE_DIR}/fortran ${PROJECT_BINARY_DIR}/fortran)
     if (HDF5_BUILD_HL_LIB)

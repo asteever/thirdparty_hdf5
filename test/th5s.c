@@ -177,18 +177,24 @@ test_h5s_basic(void)
      * the instructions in space_overflow.c for regenerating the th5s.h5 file.
      */
     {
-    const char *testfile = H5_get_srcdir_filename(TESTFILE); /* Corrected test file name */
-
+    char testfile[512]="";
+    char *srcdir = HDgetenv("srcdir");
+    if (srcdir && ((HDstrlen(srcdir) + HDstrlen(TESTFILE) + 1) < sizeof(testfile))){
+	HDstrcpy(testfile, srcdir);
+	HDstrcat(testfile, "/");
+    }
+    HDstrcat(testfile, TESTFILE);
     fid1 = H5Fopen(testfile, H5F_ACC_RDONLY, H5P_DEFAULT);
     CHECK_I(fid1, "H5Fopen");
     if (fid1 >= 0){
-        dset1 = H5Dopen2(fid1, "dset", H5P_DEFAULT);
-        VERIFY(dset1, FAIL, "H5Dopen2");
-        ret = H5Fclose(fid1);
-        CHECK_I(ret, "H5Fclose");
+	dset1 = H5Dopen2(fid1, "dset", H5P_DEFAULT);
+	VERIFY(dset1, FAIL, "H5Dopen2");
+	ret = H5Fclose(fid1);
+	CHECK_I(ret, "H5Fclose");
     }
     else
-        printf("***cannot open the pre-created H5S_MAX_RANK test file (%s)\n", testfile);
+	printf("***cannot open the pre-created H5S_MAX_RANK test file (%s)\n",
+	    testfile);
     }
 
     /* Verify that incorrect dimensions don't work */
@@ -1171,7 +1177,6 @@ test_h5s_encode(void)
     H5S_sel_type        sel_type;
     H5S_class_t         space_type;
     hssize_t            nblocks;
-    hid_t		ret_id;		/* Generic hid_t return value	*/
     herr_t		ret;		/* Generic return value		*/
 
     /* Output message about test being performed */
@@ -1196,9 +1201,9 @@ test_h5s_encode(void)
 
     /* Try decoding bogus buffer */
     H5E_BEGIN_TRY {
-	ret_id = H5Sdecode(sbuf);
+	ret = H5Sdecode(sbuf);
     } H5E_END_TRY;
-    VERIFY(ret_id, FAIL, "H5Sdecode");
+    VERIFY(ret, FAIL, "H5Sdecode");
 
     ret = H5Sencode(sid1, sbuf, &sbuf_size);
     CHECK(ret, FAIL, "H5Sencode");

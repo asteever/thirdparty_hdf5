@@ -105,8 +105,7 @@ DIST_COMMON = $(top_srcdir)/config/commence.am \
 TESTS =
 subdir = hl/src
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/m4/aclocal_cxx.m4 \
-	$(top_srcdir)/m4/aclocal_fc.m4 $(top_srcdir)/configure.ac
+am__aclocal_m4_deps = $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(SHELL) $(top_srcdir)/bin/mkinstalldirs
@@ -670,8 +669,8 @@ CHECK_CLEANFILES = *.chkexe *.chklog *.clog
 # See libtool versioning documentation online.
 # After making changes, run bin/reconfigure to update other configure related
 # files like Makefile.in.
-LT_VERS_INTERFACE = 6
-LT_VERS_REVISION = 205
+LT_VERS_INTERFACE = 9
+LT_VERS_REVISION = 1
 LT_VERS_AGE = 0
 
 # This library is our main target.
@@ -683,7 +682,7 @@ libhdf5_hl_la_LDFLAGS = -version-info $(LT_VERS_INTERFACE):$(LT_VERS_REVISION):$
 # List sources to include in the HDF5 HL Library.
 libhdf5_hl_la_SOURCES = H5DO.c H5DS.c H5IM.c H5LT.c H5LTanalyze.c H5LTparse.c H5PT.c H5TB.c
 
-# HDF5 HL library depends on HDF5 Library.
+# HDF5 HL library depends on HDF5 Library. 
 libhdf5_hl_la_LIBADD = $(LIBHDF5)
 
 # Public header files (to be installed)

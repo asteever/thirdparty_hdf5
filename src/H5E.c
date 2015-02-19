@@ -122,7 +122,7 @@ H5FL_DEFINE_STATIC(H5E_msg_t);
 /* Error class ID class */
 static const H5I_class_t H5I_ERRCLS_CLS[1] = {{
     H5I_ERROR_CLASS,		/* ID class value */
-    0,				/* Class flags */
+    H5I_CLASS_REUSE_IDS,	/* Class flags */
     0,				/* # of reserved IDs for class */
     (H5I_free_t)H5E_unregister_class /* Callback routine for closing objects of this class */
 }};
@@ -130,7 +130,7 @@ static const H5I_class_t H5I_ERRCLS_CLS[1] = {{
 /* Error message ID class */
 static const H5I_class_t H5I_ERRMSG_CLS[1] = {{
     H5I_ERROR_MSG,		/* ID class value */
-    0,				/* Class flags */
+    H5I_CLASS_REUSE_IDS,	/* Class flags */
     0,				/* # of reserved IDs for class */
     (H5I_free_t)H5E_close_msg   /* Callback routine for closing objects of this class */
 }};
@@ -138,7 +138,7 @@ static const H5I_class_t H5I_ERRMSG_CLS[1] = {{
 /* Error stack ID class */
 static const H5I_class_t H5I_ERRSTK_CLS[1] = {{
     H5I_ERROR_STACK,		/* ID class value */
-    0,				/* Class flags */
+    H5I_CLASS_REUSE_IDS,	/* Class flags */
     0,				/* # of reserved IDs for class */
     (H5I_free_t)H5E_close_stack /* Callback routine for closing objects of this class */
 }};
@@ -288,7 +288,7 @@ H5E_term_interface(void)
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     if(H5_interface_initialize_g) {
-        int64_t ncls, nmsg, nstk;
+        int ncls, nmsg, nstk;
 
         /* Check if there are any open error stacks, classes or messages */
         ncls = H5I_nmembers(H5I_ERROR_CLASS);

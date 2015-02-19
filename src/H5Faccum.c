@@ -373,9 +373,9 @@ H5F__accum_adjust(H5F_meta_accum_t *accum, const H5F_io_info_t *fio_info,
 
             /* Trim the accumulator's use of its buffer */
             accum->size = remnant_size;
-
+            
             /* When appending, need to adjust location of accumulator */
-            if(H5F_ACCUM_APPEND == adjust) {
+            if (H5F_ACCUM_APPEND == adjust) {
                 /* Move remnant of accumulator down */
                 HDmemmove(accum->buf, (accum->buf + shrink_size), remnant_size);
 

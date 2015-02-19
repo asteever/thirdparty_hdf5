@@ -107,8 +107,7 @@ DIST_COMMON = $(top_srcdir)/config/commence.am \
 TESTS = $(TEST_SCRIPT)
 subdir = c++/examples
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/m4/aclocal_cxx.m4 \
-	$(top_srcdir)/m4/aclocal_fc.m4 $(top_srcdir)/configure.ac
+am__aclocal_m4_deps = $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 mkinstalldirs = $(SHELL) $(top_srcdir)/bin/mkinstalldirs
@@ -1030,8 +1029,8 @@ help:
 # Some of the examples depend on files created by running other examples
 readdata.chkexe_: create.chkexe_
 chunks.chkexe_: extend_ds.chkexe_
-h5tutr_rdwt.chkexe_: h5tutrcrtdat.chkexe
-h5tutrcrtatt.chkexe_: h5tutrcrtdat.chkexe
+h5tutr_rdwt.chkexe_: h5tutr_crtdat.chkexe
+h5tutrcrtatt.chkexe_: h5tutr_crtdat.chkexe
 h5tutr_crtgrpd.chkexe_: h5tutr_crtgrpar.chkexe
 
 # How to build programs using h5c++

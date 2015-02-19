@@ -850,7 +850,7 @@ H5Z_prepare_prelude_callback_dcpl(hid_t dcpl_id, hid_t type_id, H5Z_prelude_type
                 H5S_t *space;           /* Dataspace describing chunk */
                 size_t u;               /* Local index variable */
 
-                /* Create a data space for a chunk & set the extent */
+                /* Create a dataspace for a chunk & set the extent */
                 for(u = 0; u < dcpl_layout.u.chunk.ndims; u++)
                     chunk_dims[u] = dcpl_layout.u.chunk.dim[u];
                 if(NULL == (space = H5S_create_simple(dcpl_layout.u.chunk.ndims, chunk_dims, NULL)))
@@ -1330,21 +1330,25 @@ H5Z_pipeline(const H5O_pline_t *pline, unsigned flags,
              */
 	    if((fclass_idx = H5Z_find_idx(pline->filter[idx].id)) < 0) {
                 hbool_t issue_error = FALSE;
-				const H5Z_class2_t    *filter_info;
+#ifndef H5_VMS
 
-				/* Try loading the filter */
-				if(NULL != (filter_info = (const H5Z_class2_t *)H5PL_load(H5PL_TYPE_FILTER, (int)(pline->filter[idx].id)))) {
-					/* Register the filter we loaded */
-					if(H5Z_register(filter_info) < 0)
-						HGOTO_ERROR(H5E_PLINE, H5E_CANTINIT, FAIL, "unable to register filter")
+                    const H5Z_class2_t    *filter_info;
 
-					/* Search in the table of registered filters again to find the dynamic filter just loaded and registered */
-					if((fclass_idx = H5Z_find_idx(pline->filter[idx].id)) < 0)
-						issue_error = TRUE;
-				} /* end if */
-				else
-					issue_error = TRUE;
+                    /* Try loading the filter */
+                    if(NULL != (filter_info = (const H5Z_class2_t *)H5PL_load(H5PL_TYPE_FILTER, (int)(pline->filter[idx].id)))) {
+                        /* Register the filter we loaded */
+                        if(H5Z_register(filter_info) < 0)
+                            HGOTO_ERROR(H5E_PLINE, H5E_CANTINIT, FAIL, "unable to register filter")
 
+                        /* Search in the table of registered filters again to find the dynamic filter just loaded and registered */ 
+                        if((fclass_idx = H5Z_find_idx(pline->filter[idx].id)) < 0)
+                            issue_error = TRUE;
+                    } /* end if */
+                    else
+                        issue_error = TRUE;
+#else /*H5_VMS*/
+                issue_error = TRUE;
+#endif /*H5_VMS*/
                 /* Check for error */
                 if(issue_error) {
                     /* Print out the filter name to give more info.  But the name is optional for 

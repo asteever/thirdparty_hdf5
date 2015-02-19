@@ -230,7 +230,7 @@
 /* #undef H5_HAVE_LIBSZ */
 
 /* Define to 1 if you have the `z' library (-lz). */
-/* #undef H5_HAVE_LIBZ */
+#define H5_HAVE_LIBZ 1
 
 /* Define to 1 if you have the `longjmp' function. */
 #define H5_HAVE_LONGJMP 1
@@ -488,6 +488,9 @@
 /* Define if deprecated public API symbols are disabled */
 /* #undef H5_NO_DEPRECATED_SYMBOLS */
 
+/* Define if shared writing must be disabled (CodeWarrior only) */
+#define H5_NO_SHARED_WRITING 1
+
 /* Name of package */
 #define H5_PACKAGE "hdf5"
 
@@ -498,7 +501,7 @@
 #define H5_PACKAGE_NAME "HDF5"
 
 /* Define to the full name and version of this package. */
-#define H5_PACKAGE_STRING "HDF5 1.9.215"
+#define H5_PACKAGE_STRING "HDF5 1.8.15-snap11"
 
 /* Define to the one symbol short name of this package. */
 #define H5_PACKAGE_TARNAME "hdf5"
@@ -507,7 +510,7 @@
 #define H5_PACKAGE_URL ""
 
 /* Define to the version of this package. */
-#define H5_PACKAGE_VERSION "1.9.215"
+#define H5_PACKAGE_VERSION "1.8.15-snap11"
 
 /* Width for printf() for type `long long' or `__int64', use `ll' */
 #define H5_PRINTF_LL_WIDTH "ll"
@@ -670,7 +673,7 @@
 /* #undef H5_USING_MEMCHECKER */
 
 /* Version number of package */
-#define H5_VERSION "1.9.215"
+#define H5_VERSION "1.8.15-snap11"
 
 /* Define if vsnprintf() returns the correct value for formatted strings that
    don't fit into size allowed */

@@ -113,16 +113,15 @@ host_triplet = @host@
 DIST_COMMON = $(top_srcdir)/config/commence.am $(srcdir)/Makefile.in \
 	$(srcdir)/Makefile.am $(top_srcdir)/configure \
 	$(am__configure_deps) $(top_srcdir)/bin/mkinstalldirs COPYING \
-	bin/COPYING bin/README bin/compile bin/config.guess \
-	bin/config.sub bin/depcomp bin/install-sh bin/missing \
-	bin/mkinstalldirs bin/ltmain.sh $(top_srcdir)/bin/compile \
+	bin/COPYING bin/compile bin/config.guess bin/config.sub \
+	bin/depcomp bin/install-sh bin/missing bin/mkinstalldirs \
+	bin/ltmain.sh $(top_srcdir)/bin/compile \
 	$(top_srcdir)/bin/config.guess $(top_srcdir)/bin/config.sub \
 	$(top_srcdir)/bin/install-sh $(top_srcdir)/bin/ltmain.sh \
 	$(top_srcdir)/bin/missing
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/m4/aclocal_cxx.m4 \
-	$(top_srcdir)/m4/aclocal_fc.m4 $(top_srcdir)/configure.ac
+am__aclocal_m4_deps = $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
@@ -1023,7 +1022,7 @@ tests:
 	  if test $$d != .; then                                        \
 	   (cd $$d && $(MAKE) $(AM_MAKEFLAGS) $@) || exit 1;            \
 	  fi;                                                           \
-	  done
+	done
 
 # Check-clean also recurses into examples directory
 check-clean:
