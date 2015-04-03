@@ -370,7 +370,7 @@ int main(int argc, char **argv)
     AddTest("selnone", none_selection_chunk, NULL,
             "chunked dataset with none-selection", PARATESTFILE);
     AddTest("calloc", test_chunk_alloc, NULL,
-            "parallel extend Chunked allocation on serial file", PARATESTFILE);
+	    "parallel extend Chunked allocation on serial file", PARATESTFILE);
     AddTest("fltread", test_filter_read, NULL,
 	    "parallel read of dataset written serially with filters", PARATESTFILE);
 
@@ -506,9 +506,6 @@ int main(int argc, char **argv)
     AddTest("nocolcause", no_collective_cause_tests, NULL,
             "test cause for broken collective io",
             PARATESTFILE);
-
-    AddTest("edpl", test_plist_ed, NULL,
-	    "encode/decode Property Lists", NULL);
 
     if((mpi_size < 2) && MAINPROCESS) {
         printf("File Image Ops daisy chain test needs at least 2 processes.\n");

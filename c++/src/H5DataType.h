@@ -14,6 +14,9 @@
  * access to either file, you may request a copy from help@hdfgroup.org.     *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+// Class DataType inherits from H5Object and has several subclasses for
+// specific HDF5 data types.
+
 #ifndef __H5DataType_H
 #define __H5DataType_H
 
@@ -36,12 +39,9 @@ class H5_DLLCPP DataType : public H5Object {
 	// Copy constructor: makes a copy of the original object
 	DataType( const DataType& original );
 
-	// Creates a copy of a predefined type
-	DataType(const PredType& pred_type);
-
 	// Creates a datatype by way of dereference.
-	DataType(const H5Location& loc, const void* ref, H5R_type_t ref_type = H5R_OBJECT, const PropList& plist = PropList::DEFAULT);
-	DataType(const Attribute& attr, const void* ref, H5R_type_t ref_type = H5R_OBJECT, const PropList& plist = PropList::DEFAULT);
+	DataType(const H5Location& loc, const void* ref, H5R_type_t ref_type = H5R_OBJECT);
+	DataType(const Attribute& attr, const void* ref, H5R_type_t ref_type = H5R_OBJECT);
 
 	// Closes this datatype.
 	virtual void close();
@@ -136,9 +136,6 @@ class H5_DLLCPP DataType : public H5Object {
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 
    private:
-	// Friend function to set DataType id.  For library use only.
-	friend void f_DataType_setId(DataType* dtype, hid_t new_id);
-
 	void p_commit(hid_t loc_id, const char* name);
 };
 #ifndef H5_NO_NAMESPACE

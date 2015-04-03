@@ -74,8 +74,7 @@ Attribute::Attribute(const Attribute& original) : AbstractDs(), IdComponent()
 //--------------------------------------------------------------------------
 Attribute::Attribute(const hid_t existing_id) : AbstractDs(), IdComponent()
 {
-    id = existing_id;
-    incRefCount(); // increment number of references to this id
+   id = existing_id;
 }
 
 //--------------------------------------------------------------------------
@@ -271,9 +270,8 @@ DataSpace Attribute::getSpace() const
    // If the dataspace id is valid, create and return the DataSpace object
    if( dataspace_id > 0 )
    {
-	DataSpace dataspace;
-	f_DataSpace_setId(&dataspace, dataspace_id);
-	return(dataspace);
+      DataSpace dataspace( dataspace_id );
+      return( dataspace );
    }
    else
    {
@@ -394,12 +392,10 @@ H5std_string Attribute::getName() const
 //--------------------------------------------------------------------------
 H5std_string Attribute::getName(size_t len) const
 {
-    H5std_string attr_name;
-    ssize_t name_size = getName(attr_name, len);
-    if (name_size < 0)
-	return("");
-    else
-	return(attr_name);
+   H5std_string attr_name;
+   ssize_t name_size = getName(attr_name, len);
+   return(attr_name);
+   // let caller catch exception if any
 }
 
 //--------------------------------------------------------------------------
@@ -494,9 +490,9 @@ hsize_t Attribute::getStorageSize() const
 ///\exception	H5::AttributeIException
 ///\par Description
 ///		This attribute is used to identify the file to be flushed.
-// Programmer	Binh-Minh Ribler - 2012
+// Programmer	Binh-Minh Ribler - 2013
 // Modification
-//	Sep 2012 - BMR
+//	Mar 2013 - BMR
 //		Duplicated from H5Location
 //--------------------------------------------------------------------------
 void Attribute::flush(H5F_scope_t scope) const
@@ -610,7 +606,6 @@ void Attribute::p_read_variable_len(const DataType& mem_type, H5std_string& strg
     HDfree(strg_C);
 }
 
-#ifndef DOXYGEN_SHOULD_SKIP_THIS
 //--------------------------------------------------------------------------
 // Function:    Attribute::p_setId
 ///\brief       Sets the identifier of this object to a new value.
@@ -635,7 +630,6 @@ void Attribute::p_setId(const hid_t new_id)
    // reset object's id to the given id
    id = new_id;
 }
-#endif // DOXYGEN_SHOULD_SKIP_THIS
 
 //--------------------------------------------------------------------------
 // Function:	Attribute::close

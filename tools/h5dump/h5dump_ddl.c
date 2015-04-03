@@ -1154,9 +1154,10 @@ dump_fcpl(hid_t fid)
     hsize_t  userblock; /* userblock size retrieved from FCPL */
     size_t   off_size;  /* size of offsets in the file */
     size_t   len_size;  /* size of lengths in the file */
-    H5F_file_space_type_t  fs_strategy;  /* file space strategy */
-    hsize_t  fs_threshold;    /* free-space section threshold */
-    H5F_info2_t finfo;  /* file information */
+    unsigned super;     /* superblock version # */
+    unsigned freelist;  /* free list version # */
+    unsigned stab;      /* symbol table entry version # */
+    unsigned shhdr;     /* shared object header version # */
 #ifdef SHOW_FILE_DRIVER
     hid_t    fapl;      /* file access property list ID */
     hid_t    fdriver;   /* file driver */
@@ -1167,12 +1168,11 @@ dump_fcpl(hid_t fid)
     unsigned istore_ik; /* indexed storage B-tree internal 'K' value */
 
     fcpl=H5Fget_create_plist(fid);
-    H5Fget_info2(fid, &finfo);
+    H5Pget_version(fcpl, &super, &freelist, &stab, &shhdr);
     H5Pget_userblock(fcpl,&userblock);
     H5Pget_sizes(fcpl,&off_size,&len_size);
     H5Pget_sym_k(fcpl,&sym_ik,&sym_lk);
     H5Pget_istore_k(fcpl,&istore_ik);
-    H5Pget_file_space(fcpl, &fs_strategy, &fs_threshold);
     H5Pclose(fcpl);
 #ifdef SHOW_FILE_DRIVER
     fapl=h5_fileaccess();
@@ -1186,13 +1186,13 @@ dump_fcpl(hid_t fid)
     */
     PRINTSTREAM(rawoutstream, "\n%s %s\n",SUPER_BLOCK, BEGIN);
     indentation(dump_indent + COL);
-    PRINTSTREAM(rawoutstream, "%s %u\n","SUPERBLOCK_VERSION", finfo.super.version);
+    PRINTSTREAM(rawoutstream, "%s %u\n","SUPERBLOCK_VERSION", super);
     indentation(dump_indent + COL);
-    PRINTSTREAM(rawoutstream, "%s %u\n","FREELIST_VERSION", finfo.free.version);
+    PRINTSTREAM(rawoutstream, "%s %u\n","FREELIST_VERSION", freelist);
     indentation(dump_indent + COL);
-    PRINTSTREAM(rawoutstream, "%s %u\n","SYMBOLTABLE_VERSION", 0);  /* Retain this for backward compatibility, for now (QAK) */
+    PRINTSTREAM(rawoutstream, "%s %u\n","SYMBOLTABLE_VERSION", stab);
     indentation(dump_indent + COL);
-    PRINTSTREAM(rawoutstream, "%s %u\n","OBJECTHEADER_VERSION", finfo.sohm.version);
+    PRINTSTREAM(rawoutstream, "%s %u\n","OBJECTHEADER_VERSION", shhdr);
     indentation(dump_indent + COL);
     PRINTSTREAM(rawoutstream,"%s %zu\n","OFFSET_SIZE", off_size);
     indentation(dump_indent + COL);
@@ -1231,20 +1231,6 @@ dump_fcpl(hid_t fid)
 #endif
     indentation(dump_indent + COL);
     PRINTSTREAM(rawoutstream, "%s %u\n","ISTORE_K", istore_ik);
-
-    indentation(dump_indent + COL);
-    if(fs_strategy == H5F_FILE_SPACE_ALL_PERSIST) {
-        PRINTSTREAM(rawoutstream, "%s %s\n", "FILE_SPACE_STRATEGY", "H5F_FILE_SPACE_ALL_PERSIST");
-    } else if(fs_strategy == H5F_FILE_SPACE_ALL) {
-        PRINTSTREAM(rawoutstream, "%s %s\n", "FILE_SPACE_STRATEGY", "H5F_FILE_SPACE_ALL");
-    } else if(fs_strategy == H5F_FILE_SPACE_AGGR_VFD) {
-        PRINTSTREAM(rawoutstream, "%s %s\n", "FILE_SPACE_STRATEGY", "H5F_FILE_SPACE_AGGR_VFD");
-    } else if(fs_strategy == H5F_FILE_SPACE_VFD) {
-        PRINTSTREAM(rawoutstream, "%s %s\n", "FILE_SPACE_STRATEGY", "H5F_FILE_SPACE_VFD");
-    } else
-        PRINTSTREAM(rawoutstream, "%s %s\n", "FILE_SPACE_STRATEGY", "Unknown strategy");
-    indentation(dump_indent + COL);
-    PRINTSTREAM(rawoutstream, "%s %Hu\n","FREE_SPACE_THRESHOLD", fs_threshold);
 
     /*-------------------------------------------------------------------------
     * USER_BLOCK

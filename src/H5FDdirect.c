@@ -127,7 +127,6 @@ typedef struct H5FD_direct_t {
          (HDoff_t)((A)+(Z))<(HDoff_t)(A))
 
 /* Prototypes */
-static herr_t H5FD_direct_term(void);
 static void *H5FD_direct_fapl_get(H5FD_t *file);
 static void *H5FD_direct_fapl_copy(const void *_old_fa);
 static H5FD_t *H5FD_direct_open(const char *name, unsigned flags, hid_t fapl_id,
@@ -137,7 +136,7 @@ static int H5FD_direct_cmp(const H5FD_t *_f1, const H5FD_t *_f2);
 static herr_t H5FD_direct_query(const H5FD_t *_f1, unsigned long *flags);
 static haddr_t H5FD_direct_get_eoa(const H5FD_t *_file, H5FD_mem_t type);
 static herr_t H5FD_direct_set_eoa(H5FD_t *_file, H5FD_mem_t type, haddr_t addr);
-static haddr_t H5FD_direct_get_eof(const H5FD_t *_file, H5FD_mem_t type);
+static haddr_t H5FD_direct_get_eof(const H5FD_t *_file);
 static herr_t  H5FD_direct_get_handle(H5FD_t *_file, hid_t fapl, void** file_handle);
 static herr_t H5FD_direct_read(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, haddr_t addr,
            size_t size, void *buf);
@@ -149,7 +148,6 @@ static const H5FD_class_t H5FD_direct_g = {
     "direct",          /*name      */
     MAXADDR,          /*maxaddr    */
     H5F_CLOSE_WEAK,        /* fc_degree    */
-    H5FD_direct_term,                           /*terminate             */
     NULL,          /*sb_size    */
     NULL,          /*sb_encode    */
     NULL,          /*sb_decode    */
@@ -200,15 +198,9 @@ DESCRIPTION
 static herr_t
 H5FD_direct_init_interface(void)
 {
-    herr_t ret_value = SUCCEED;
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-    FUNC_ENTER_NOAPI_NOINIT
-
-    if(H5FD_direct_init() < 0)
-        HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, FAIL, "unable to initialize direct VFD")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(H5FD_direct_init())
 } /* H5FD_direct_init_interface() */
 
 
@@ -252,14 +244,16 @@ done:
  *
  * Purpose:  Shut down the VFD
  *
- * Returns:     Non-negative on success or negative on failure
+ * Return:  <none>
  *
  * Programmer:  Raymond Lu
  *              Wednesday, 20 September 2006
  *
+ * Modification:
+ *
  *---------------------------------------------------------------------------
  */
-static herr_t
+void
 H5FD_direct_term(void)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
@@ -267,7 +261,7 @@ H5FD_direct_term(void)
     /* Reset VFL ID */
     H5FD_DIRECT_g=0;
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
+    FUNC_LEAVE_NOAPI_VOID
 } /* end H5FD_direct_term() */
 
 
@@ -810,13 +804,13 @@ H5FD_direct_set_eoa(H5FD_t *_file, H5FD_mem_t UNUSED type, haddr_t addr)
  *-------------------------------------------------------------------------
  */
 static haddr_t
-H5FD_direct_get_eof(const H5FD_t *_file, H5FD_mem_t UNUSED type)
+H5FD_direct_get_eof(const H5FD_t *_file)
 {
     const H5FD_direct_t  *file = (const H5FD_direct_t*)_file;
 
     FUNC_ENTER_NOAPI_NOINIT
 
-    FUNC_LEAVE_NOAPI(file->eof)
+    FUNC_LEAVE_NOAPI(MAX(file->eof, file->eoa))
 }
 
 

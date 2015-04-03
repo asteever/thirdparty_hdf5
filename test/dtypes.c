@@ -65,8 +65,8 @@
         FAIL_STACK_ERROR                                                       \
     if((NMEMBS) != H5I_nmembers(H5I_DATATYPE)) {                               \
         H5_FAILED();                                                           \
-        printf("    #dtype ids expected: %lld; found: %lld\n",                 \
-               (long long)NMEMBS, (long long)H5I_nmembers(H5I_DATATYPE));      \
+        printf("    #dtype ids expected: %d; found: %d\n", NMEMBS,             \
+            H5I_nmembers(H5I_DATATYPE));                                       \
         goto error;                                                            \
     }
 
@@ -688,9 +688,8 @@ test_compound_2(void)
     const hsize_t	four = 4;
     unsigned char	*buf=NULL, *orig=NULL, *bkg=NULL;
     hid_t		st=-1, dt=-1;
-    hid_t               array_dt;
-    int64_t		nmembs;
-    int			i;
+    hid_t       array_dt;
+    int			i, nmembs;
 
     TESTING("compound element reordering");
 
@@ -810,9 +809,8 @@ test_compound_3(void)
     const hsize_t	four = 4;
     unsigned char	*buf=NULL, *orig=NULL, *bkg=NULL;
     hid_t		st=-1, dt=-1;
-    hid_t               array_dt;
-    int64_t		nmembs;
-    int			i;
+    hid_t       array_dt;
+    int			i, nmembs;
 
     TESTING("compound subset conversions");
 
@@ -933,9 +931,8 @@ test_compound_4(void)
     const hsize_t	four = 4;
     unsigned char	*buf=NULL, *orig=NULL, *bkg=NULL;
     hid_t		st=-1, dt=-1;
-    hid_t               array_dt;
-    int64_t		nmembs;
-    int			i;
+    hid_t       array_dt;
+    int			i, nmembs;
 
     TESTING("compound element shrinking & reordering");
 
@@ -1163,8 +1160,7 @@ test_compound_6(void)
     const size_t	nelmts = NTESTELEM;
     unsigned char	*buf=NULL, *orig=NULL, *bkg=NULL;
     hid_t		st=-1, dt=-1;
-    int64_t		nmembs;
-    int			i;
+    int			i, nmembs;
 
     TESTING("compound element growing");
 
@@ -3008,7 +3004,7 @@ test_compound_16(void)
     if(H5Fget_obj_ids(file, H5F_OBJ_DATATYPE, (size_t)2, open_dtypes) < 0) TEST_ERROR
     if(open_dtypes[1]) {
         H5_FAILED(); AT();
-        printf("    H5Fget_obj_ids returned as second id: %lld; expected: 0\n", (long long)open_dtypes[1]);
+        printf("    H5Fget_obj_ids returned as second id: %d; expected: 0\n", open_dtypes[1]);
         goto error;
     }
 
@@ -3549,7 +3545,6 @@ test_transient (hid_t fapl)
     static hsize_t	ds_size[2] = {10, 20};
     hid_t		file=-1, type=-1, space=-1, dset=-1, t2=-1;
     char		filename[1024];
-    hid_t		ret_id;		/* Generic hid_t return value	*/
     herr_t		status;
 
     TESTING("transient datatypes");
@@ -3584,9 +3579,9 @@ test_transient (hid_t fapl)
 
     /* It should not be possible to create an attribute for a transient type */
     H5E_BEGIN_TRY {
-	ret_id = H5Acreate2(type, "attr1", H5T_NATIVE_INT, space, H5P_DEFAULT, H5P_DEFAULT);
+	status = H5Acreate2(type, "attr1", H5T_NATIVE_INT, space, H5P_DEFAULT, H5P_DEFAULT);
     } H5E_END_TRY;
-    if (ret_id>=0) {
+    if (status>=0) {
 	H5_FAILED();
 	HDputs ("    Attributes should not be allowed for transient types!");
 	goto error;
@@ -5148,7 +5143,6 @@ test_encode(void)
     size_t      enum_buf_size = 0;
     size_t      vlstr_buf_size = 0;
     unsigned char       *cmpd_buf=NULL, *enum_buf=NULL, *vlstr_buf=NULL;
-    hid_t	ret_id;
     herr_t      ret;
 
     TESTING("functions of encoding and decoding datatypes");
@@ -5249,9 +5243,9 @@ test_encode(void)
 
     /* Try decoding bogus buffer */
     H5E_BEGIN_TRY {
-	ret_id = H5Tdecode(cmpd_buf);
+	ret = H5Tdecode(cmpd_buf);
     } H5E_END_TRY;
-    if(ret_id!=FAIL) {
+    if(ret!=FAIL) {
         H5_FAILED();
         printf("Decoded bogus buffer!\n");
         goto error;
@@ -7290,8 +7284,10 @@ main(void)
     nerrors += test_latest();
     nerrors += test_int_float_except();
     nerrors += test_named_indirect_reopen(fapl);
+#ifndef H5_CANNOT_OPEN_TWICE
     nerrors += test_delete_obj_named(fapl);
     nerrors += test_delete_obj_named_fileid(fapl);
+#endif /*H5_CANNOT_OPEN_TWICE*/
     nerrors += test_set_order_compound(fapl);
     nerrors += test_str_create();
 #ifndef H5_NO_DEPRECATED_SYMBOLS

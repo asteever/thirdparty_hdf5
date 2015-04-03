@@ -139,6 +139,7 @@ H5HF_man_dblock_create(hid_t dxpl_id, H5HF_hdr_t *hdr, H5HF_indirect_t *par_iblo
         dblock->size = hdr->man_dtable.cparam.start_block_size;
     } /* end else */
     dblock->file_size = 0;
+    dblock->blk_off_size = H5HF_SIZEOF_OFFSET_LEN(dblock->size);
     free_space = dblock->size - H5HF_MAN_ABS_DIRECT_OVERHEAD(hdr);
 
     /* Allocate buffer for block */
@@ -161,7 +162,6 @@ HDmemset(dblock->blk, 0, dblock->size);
 
     /* Attach to parent indirect block, if there is one */
     dblock->parent = par_iblock;
-    dblock->fd_parent = par_iblock;
     if(dblock->parent)
         if(H5HF_man_iblock_attach(dblock->parent, par_entry, dblock_addr) < 0)
             HGOTO_ERROR(H5E_HEAP, H5E_CANTATTACH, FAIL, "can't attach direct block to parent indirect block")

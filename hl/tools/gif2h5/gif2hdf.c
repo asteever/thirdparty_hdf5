@@ -99,7 +99,7 @@ main(int argv , char *argc[])
      * Call Gif2Mem and break the whole file into parts.  Gif2Mem also calls
      * decompresses the images so we don't have to worry about that
      */
-    Gif2Mem(MemGif, &GifMemoryStruct);
+    GifMemoryStruct = Gif2Mem(MemGif);
 
     if (ferror(fpGif)) {
             printf("File Stream Error\n\n");

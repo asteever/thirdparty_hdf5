@@ -236,7 +236,6 @@ extern int facc_type;				/*Test file access type */
 extern int dxfer_coll_type;
 
 /* Test program prototypes */
-void test_plist_ed(void);
 void zero_dim_dset(void);
 void multiple_dset_write(void);
 void multiple_group_write(void);

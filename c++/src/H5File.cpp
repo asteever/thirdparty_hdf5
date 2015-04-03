@@ -50,7 +50,7 @@ namespace H5 {
 ///\brief	Default constructor: creates a stub H5File object.
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-H5File::H5File() : H5Location(), CommonFG(), id(H5I_INVALID_HID) {}
+H5File::H5File() : H5Location(), id(H5I_INVALID_HID) {}
 
 //--------------------------------------------------------------------------
 // Function:	H5File overloaded constructor
@@ -86,7 +86,7 @@ H5File::H5File() : H5Location(), CommonFG(), id(H5I_INVALID_HID) {}
 //		to catch then re-throw it. -BMR 2013/03/21
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-H5File::H5File( const char* name, unsigned int flags, const FileCreatPropList& create_plist, const FileAccPropList& access_plist ) : H5Location(), CommonFG(), id(H5I_INVALID_HID)
+H5File::H5File( const char* name, unsigned int flags, const FileCreatPropList& create_plist, const FileAccPropList& access_plist ) : H5Location(), id(H5I_INVALID_HID)
 {
     try {
 	p_get_file(name, flags, create_plist, access_plist);
@@ -111,7 +111,7 @@ H5File::H5File( const char* name, unsigned int flags, const FileCreatPropList& c
 //		to catch then re-throw it. -BMR 2013/03/21
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-H5File::H5File( const H5std_string& name, unsigned int flags, const FileCreatPropList& create_plist, const FileAccPropList& access_plist ) : H5Location(), CommonFG(), id(H5I_INVALID_HID)
+H5File::H5File( const H5std_string& name, unsigned int flags, const FileCreatPropList& create_plist, const FileAccPropList& access_plist ) : H5Location(), id(H5I_INVALID_HID)
 {
     try {
 	p_get_file(name.c_str(), flags, create_plist, access_plist);
@@ -158,32 +158,13 @@ void H5File::p_get_file(const char* name, unsigned int flags, const FileCreatPro
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 
 //--------------------------------------------------------------------------
-// Function:	H5File overloaded constructor
-///\brief	Creates an H5File object using an existing file id.
-///\param	existing_id - IN: Id of an existing file
-// Programmer	Binh-Minh Ribler - 2015
-// Description
-//	Mar 29, 2015
-//		Added in responding to a request from user Jason Newton.
-//		However, it is not recommended to use the private member "id"
-//		in applications.  Unlike other situations, where similar
-//		constructor is needed by the library in order to return
-//		an object, H5File doesn't need it. -BMR (HDFFV-8766 partially)
-//--------------------------------------------------------------------------
-H5File::H5File(hid_t existing_id) : H5Location(), CommonFG()
-{
-    id = existing_id;
-    incRefCount(); // increment number of references to this id
-}
-
-//--------------------------------------------------------------------------
 // Function:	H5File copy constructor
 ///\brief	Copy constructor: makes a copy of the original
 ///		H5File object.
 ///\param	original - IN: H5File instance to copy
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-H5File::H5File(const H5File& original) : H5Location(), CommonFG()
+H5File::H5File(const H5File& original) : H5Location(original)
 {
     id = original.getId();
     incRefCount(); // increment number of references to this id
@@ -230,7 +211,7 @@ bool H5File::isHdf5(const H5std_string& name )
 ///\param	name         - IN: Name of the file
 ///\param	flags        - IN: File access flags
 ///\param	access_plist - IN: File access property list.  Default to
-///		FileAccPropList::DEFAULT
+///		FileCreatPropList::DEFAULT
 ///\par Description
 ///		Valid values of \a flags include:
 ///		H5F_ACC_RDWR:   Open with read/write access. If the file is
@@ -244,13 +225,6 @@ bool H5File::isHdf5(const H5std_string& name )
 //--------------------------------------------------------------------------
 void H5File::openFile(const char* name, unsigned int flags, const FileAccPropList& access_plist)
 {
-    try {
-        close();
-    }
-    catch (Exception close_error) {
-        throw FileIException("H5File::openFile", close_error.getDetailMsg());
-    }
-
     hid_t access_plist_id = access_plist.getId();
     id = H5Fopen (name, flags, access_plist_id);
     if (id < 0)  // throw an exception when open fails
@@ -405,6 +379,25 @@ ssize_t H5File::getObjCount(unsigned types) const
 }
 
 //--------------------------------------------------------------------------
+// Function:	H5File::getObjCount
+///\brief	This is an overloaded member function, provided for convenience.
+///		It takes no parameter and returns the object count of all
+///		object types.
+///\return	Number of opened object IDs
+///\exception	H5::FileIException
+// Programmer   Binh-Minh Ribler - May 2004
+//--------------------------------------------------------------------------
+ssize_t H5File::getObjCount() const
+{
+   ssize_t num_objs = H5Fget_obj_count(id, H5F_OBJ_ALL);
+   if( num_objs < 0 )
+   {
+      throw FileIException("H5File::getObjCount", "H5Fget_obj_count failed");
+   }
+   return (num_objs);
+}
+
+//--------------------------------------------------------------------------
 // Function:	H5File::getObjIDs
 ///\brief	Retrieves a list of opened object IDs (files, datasets,
 ///		groups and datatypes) in the same file.
@@ -524,6 +517,34 @@ hsize_t H5File::getFileSize() const
    return (file_size);
 }
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+//--------------------------------------------------------------------------
+// Function:	H5File::reopen
+// Purpose:	Reopens this file.
+// Exception	H5::FileIException
+// Description
+//		This function is replaced by the above function reOpen.
+// Programmer	Binh-Minh Ribler - 2000
+//--------------------------------------------------------------------------
+void H5File::reopen()
+{
+   H5File::reOpen();
+}
+
+//--------------------------------------------------------------------------
+// Function:	H5File::getLocId
+// Purpose:	Get the id of this file
+// Description
+//		This function is a redefinition of CommonFG::getLocId.  It
+//		is used by CommonFG member functions to get the file id.
+// Programmer	Binh-Minh Ribler - 2000
+//--------------------------------------------------------------------------
+hid_t H5File::getLocId() const
+{
+   return( getId() );
+}
+#endif // DOXYGEN_SHOULD_SKIP_THIS
+
 //--------------------------------------------------------------------------
 // Function:    H5File::getId
 ///\brief	Get the id of this file
@@ -542,32 +563,6 @@ hid_t H5File::getId() const
 }
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-//--------------------------------------------------------------------------
-// Function:	H5File::getLocId
-// Purpose:	Get the id of this file
-// Description
-//		This function is a redefinition of CommonFG::getLocId.  It
-//		is used by CommonFG member functions to get the file id.
-// Programmer	Binh-Minh Ribler - 2000
-//--------------------------------------------------------------------------
-hid_t H5File::getLocId() const
-{
-   return( getId() );
-}
-
-//--------------------------------------------------------------------------
-// Function:	H5File::reopen
-// Purpose:	Reopens this file.
-// Exception	H5::FileIException
-// Description
-//		This function is replaced by the above function reOpen.
-// Programmer	Binh-Minh Ribler - 2000
-//--------------------------------------------------------------------------
-void H5File::reopen()
-{
-   H5File::reOpen();
-}
-
 //--------------------------------------------------------------------------
 // Function:    H5File::p_setId (protected)
 ///\brief       Sets the identifier of this object to a new value.

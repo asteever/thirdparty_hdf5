@@ -736,7 +736,7 @@ h5tools_str_sprint(h5tools_str_t *str, const h5tool_format_t *info, hid_t contai
                     float tempfloat;
 
                     HDmemcpy(&tempfloat, vp, sizeof(float));
-                    h5tools_str_append(str, OPT(info->fmt_float, "%g"), (double)tempfloat);
+                    h5tools_str_append(str, OPT(info->fmt_float, "%g"), tempfloat);
                 }
                 else if (sizeof(double) == nsize) {
                     /* if (H5Tequal(type, H5T_NATIVE_DOUBLE)) */
@@ -1044,7 +1044,7 @@ h5tools_str_sprint(h5tools_str_t *str, const h5tool_format_t *info, hid_t contai
                             H5O_info_t oi;
                             const char *path;
 
-                            obj = H5Rdereference2(container, H5P_DEFAULT, H5R_OBJECT, vp);
+                        obj = H5Rdereference(container, H5R_OBJECT, vp);
                             H5Oget_info(obj, &oi);
 
                             /* Print object type and close object */
@@ -1225,7 +1225,7 @@ h5tools_str_sprint_region(h5tools_str_t *str, const h5tool_format_t *info,
     char    ref_name[1024];
     H5S_sel_type region_type;
 
-    obj = H5Rdereference2(container, H5P_DEFAULT, H5R_DATASET_REGION, vp);
+    obj = H5Rdereference(container, H5R_DATASET_REGION, vp);
     if (obj >= 0) {
         region = H5Rget_region(container, H5R_DATASET_REGION, vp);
         if (region >= 0) {

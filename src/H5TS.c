@@ -92,7 +92,7 @@ void
 H5TS_pthread_first_thread_init(void)
 {
     H5_g.H5_libinit_g = FALSE;
-
+    
 #ifdef H5_HAVE_WIN32_API
 # ifdef PTW32_STATIC_LIB
     pthread_win32_process_attach_np();
@@ -489,7 +489,7 @@ H5TS_win32_thread_exit(void)
  *--------------------------------------------------------------------------
  */
 H5TS_thread_t
-H5TS_create_thread(void *(*func)(void *), H5TS_attr_t *attr, void *udata)
+H5TS_create_thread(void *func, H5TS_attr_t *attr, void *udata)
 {
     H5TS_thread_t ret_value;
 

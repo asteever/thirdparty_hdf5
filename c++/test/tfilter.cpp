@@ -57,13 +57,9 @@ static herr_t test_filter_internal(hid_t fid, const char *name, hid_t dcpl,
 #endif
 
 /* Temporary filter IDs used for testing */
-const int H5Z_FILTER_BOGUS = 305;
-
-#if 0 // UNUSED variables caused warning, so duplicated below with NULL instead
+#define H5Z_FILTER_BOGUS        305
 static size_t filter_bogus(unsigned int flags, size_t cd_nelmts,
     const unsigned int *cd_values, size_t nbytes, size_t *buf_size, void **buf);
-#endif
-static size_t filter_bogus(size_t nbytes);
 /* This message derives from H5Z */
 const H5Z_class2_t H5Z_BOGUS[1] = {{
     H5Z_CLASS_T_VERS,       /* H5Z_class_t version */
@@ -92,12 +88,9 @@ const H5Z_class2_t H5Z_BOGUS[1] = {{
  *-------------------------------------------------------------------------
  */
 static size_t
-#if 0 // UNUSED variables caused warning, so duplicated below with NULL instead
 filter_bogus(unsigned int UNUSED flags, size_t UNUSED cd_nelmts,
       const unsigned int UNUSED *cd_values, size_t nbytes,
       size_t UNUSED *buf_size, void UNUSED **buf)
-#endif
-filter_bogus(size_t nbytes)
 {
     return nbytes;
 }
@@ -246,8 +239,7 @@ static void test_szip_filter(H5File& file1)
 #else /* H5_HAVE_FILTER_SZIP */
     SUBTEST("szip filter");
     SKIPPED();
-    H5std_string fname = file1.getFileName();
-    cerr << "    Szip filter not enabled for file '" << fname << "'" << endl;
+    puts("    Szip filter not enabled");
 #endif /* H5_HAVE_FILTER_SZIP */
 }  // test_szip_filter
 

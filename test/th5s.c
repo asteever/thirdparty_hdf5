@@ -177,18 +177,24 @@ test_h5s_basic(void)
      * the instructions in space_overflow.c for regenerating the th5s.h5 file.
      */
     {
-    const char *testfile = H5_get_srcdir_filename(TESTFILE); /* Corrected test file name */
-
+    char testfile[512]="";
+    char *srcdir = HDgetenv("srcdir");
+    if (srcdir && ((HDstrlen(srcdir) + HDstrlen(TESTFILE) + 1) < sizeof(testfile))){
+	HDstrcpy(testfile, srcdir);
+	HDstrcat(testfile, "/");
+    }
+    HDstrcat(testfile, TESTFILE);
     fid1 = H5Fopen(testfile, H5F_ACC_RDONLY, H5P_DEFAULT);
     CHECK_I(fid1, "H5Fopen");
     if (fid1 >= 0){
-        dset1 = H5Dopen2(fid1, "dset", H5P_DEFAULT);
-        VERIFY(dset1, FAIL, "H5Dopen2");
-        ret = H5Fclose(fid1);
-        CHECK_I(ret, "H5Fclose");
+	dset1 = H5Dopen2(fid1, "dset", H5P_DEFAULT);
+	VERIFY(dset1, FAIL, "H5Dopen2");
+	ret = H5Fclose(fid1);
+	CHECK_I(ret, "H5Fclose");
     }
     else
-        printf("***cannot open the pre-created H5S_MAX_RANK test file (%s)\n", testfile);
+	printf("***cannot open the pre-created H5S_MAX_RANK test file (%s)\n",
+	    testfile);
     }
 
     /* Verify that incorrect dimensions don't work */
@@ -1171,7 +1177,6 @@ test_h5s_encode(void)
     H5S_sel_type        sel_type;
     H5S_class_t         space_type;
     hssize_t            nblocks;
-    hid_t		ret_id;		/* Generic hid_t return value	*/
     herr_t		ret;		/* Generic return value		*/
 
     /* Output message about test being performed */
@@ -1196,9 +1201,9 @@ test_h5s_encode(void)
 
     /* Try decoding bogus buffer */
     H5E_BEGIN_TRY {
-	ret_id = H5Sdecode(sbuf);
+	ret = H5Sdecode(sbuf);
     } H5E_END_TRY;
-    VERIFY(ret_id, FAIL, "H5Sdecode");
+    VERIFY(ret, FAIL, "H5Sdecode");
 
     ret = H5Sencode(sid1, sbuf, &sbuf_size);
     CHECK(ret, FAIL, "H5Sencode");
@@ -1581,7 +1586,7 @@ test_h5s_compound_scalar_read(void)
     if(HDmemcmp(&space4_data,&rdata,sizeof(struct space4_struct))) {
         printf("scalar data different: space4_data.c1=%c, read_data4.c1=%c\n",space4_data.c1,rdata.c1);
         printf("scalar data different: space4_data.u=%u, read_data4.u=%u\n",space4_data.u,rdata.u);
-        printf("scalar data different: space4_data.f=%f, read_data4.f=%f\n",(double)space4_data.f,(double)rdata.f);
+        printf("scalar data different: space4_data.f=%f, read_data4.f=%f\n",space4_data.f,rdata.f);
         TestErrPrintf("scalar data different: space4_data.c1=%c, read_data4.c1=%c\n",space4_data.c1,rdata.c2);
      } /* end if */
 
@@ -1684,7 +1689,7 @@ test_h5s_chunk(void)
         for(j=0; j<3; j++) {
             /* Check if the two values are within 0.001% range. */
             if(!DBL_REL_EQUAL(chunk_data_dbl[i][j], chunk_data_flt[i][j], 0.00001F))
-                TestErrPrintf("%u: chunk_data_dbl[%d][%d]=%e, chunk_data_flt[%d][%d]=%e\n", (unsigned)__LINE__, i, j, chunk_data_dbl[i][j], i, j, (double)chunk_data_flt[i][j]);
+                TestErrPrintf("%u: chunk_data_dbl[%d][%d]=%e, chunk_data_flt[%d][%d]=%e\n", (unsigned)__LINE__, i, j, chunk_data_dbl[i][j], i, j, chunk_data_flt[i][j]);
         } /* end for */
     } /* end for */
 } /* test_h5s_chunk() */

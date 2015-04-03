@@ -143,7 +143,7 @@ typedef struct _GifToMem {
 */
 
 /* GIF2MEM.C */
-int Gif2Mem(BYTE *, GIFTOMEM *);
+GIFTOMEM Gif2Mem(BYTE *);
 
 /* GIFREAD.C */
 int ReadGifHeader(GIFHEAD *, BYTE **);

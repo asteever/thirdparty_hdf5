@@ -464,6 +464,7 @@ H5_CXXFLAGS = @H5_CXXFLAGS@
 H5_FCFLAGS = @H5_FCFLAGS@
 H5_FORTRAN_SHARED = @H5_FORTRAN_SHARED@
 H5_LDFLAGS = @H5_LDFLAGS@
+H5_LONE_COLON = @H5_LONE_COLON@
 H5_VERSION = @H5_VERSION@
 HADDR_T = @HADDR_T@
 HAVE_DMALLOC = @HAVE_DMALLOC@
@@ -660,8 +661,8 @@ CHECK_CLEANFILES = *.chkexe *.chklog *.clog *.clog2
 # See libtool versioning documentation online.
 # After making changes, run bin/reconfigure to update other configure related
 # files like Makefile.in.
-LT_VERS_INTERFACE = 6
-LT_VERS_REVISION = 206
+LT_VERS_INTERFACE = 9
+LT_VERS_REVISION = 1
 LT_VERS_AGE = 0
 
 # This library is our main target.
@@ -673,7 +674,7 @@ libhdf5_hl_la_LDFLAGS = -version-info $(LT_VERS_INTERFACE):$(LT_VERS_REVISION):$
 # List sources to include in the HDF5 HL Library.
 libhdf5_hl_la_SOURCES = H5DO.c H5DS.c H5IM.c H5LT.c H5LTanalyze.c H5LTparse.c H5PT.c H5TB.c
 
-# HDF5 HL library depends on HDF5 Library.
+# HDF5 HL library depends on HDF5 Library. 
 libhdf5_hl_la_LIBADD = $(LIBHDF5)
 
 # Public header files (to be installed)

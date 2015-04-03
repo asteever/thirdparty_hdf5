@@ -37,8 +37,8 @@
 
 #include "gif.h"
 
-int
-Gif2Mem(BYTE *MemGif, GIFTOMEM *GifMemoryStruct)
+GIFTOMEM
+Gif2Mem(BYTE *MemGif)
 {
     /*
      * The gif structure outline for passing data to memory is given in gif.h.
@@ -50,6 +50,8 @@ Gif2Mem(BYTE *MemGif, GIFTOMEM *GifMemoryStruct)
     GIFAPPLICATION    **gifApplication;    /* Application Extension structure */
     GIFCOMMENT        **gifComment;        /* Comment Extension structure     */
     GIFGRAPHICCONTROL **gifGraphicControl; /* Graphic Control Extension strct */
+
+    GIFTOMEM GifMemoryStruct;
 
     register WORD i;        /* Loop counter                                 */
     BYTE Identifier;        /* Extension block identifier holder            */
@@ -131,15 +133,15 @@ Gif2Mem(BYTE *MemGif, GIFTOMEM *GifMemoryStruct)
                 gifHead->PlainTextCount   = PlainTextCount;
 
                 /* putting stuff into the gif2mem structure */
-                GifMemoryStruct->GifHeader = gifHead;
-                GifMemoryStruct->GifImageDesc = gifImageDesc;
-                GifMemoryStruct->GifPlainTextExtension = gifPlainText;
-                GifMemoryStruct->GifApplicationExtension = gifApplication;
-                GifMemoryStruct->GifCommentExtension = gifComment;
-                GifMemoryStruct->GifGraphicControlExtension = gifGraphicControl;
+                GifMemoryStruct.GifHeader = gifHead;
+                GifMemoryStruct.GifImageDesc = gifImageDesc;
+                GifMemoryStruct.GifPlainTextExtension = gifPlainText;
+                GifMemoryStruct.GifApplicationExtension = gifApplication;
+                GifMemoryStruct.GifCommentExtension = gifComment;
+                GifMemoryStruct.GifGraphicControlExtension = gifGraphicControl;
 
                 /* return the struct */
-                return 0;
+                return GifMemoryStruct;
 
             case 0x2C:  /* Image Descriptor */
                 /*

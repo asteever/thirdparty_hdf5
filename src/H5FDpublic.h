@@ -74,39 +74,6 @@ typedef enum H5F_mem_t	H5FD_mem_t;
 #define H5FD_MEM_SOHM_TABLE     H5FD_MEM_OHDR
 #define H5FD_MEM_SOHM_INDEX     H5FD_MEM_BTREE
 
-/* Map "extensible array" header blocks to 'ohdr' type file memory, since its
- * a fair amount of work to add a new kind of file memory and they are similar
- * enough to object headers and probably too minor to deserve their own type.
- *
- * Map "extensible array" index blocks to 'ohdr' type file memory, since they
- * are similar to extensible array header blocks.
- *
- * Map "extensible array" super blocks to 'btree' type file memory, since they
- * are similar enough to B-tree nodes.
- *
- * Map "extensible array" data blocks & pages to 'lheap' type file memory, since
- * they are similar enough to local heap info.
- *
- *      -QAK
- */
-#define H5FD_MEM_EARRAY_HDR     H5FD_MEM_OHDR
-#define H5FD_MEM_EARRAY_IBLOCK  H5FD_MEM_OHDR
-#define H5FD_MEM_EARRAY_SBLOCK  H5FD_MEM_BTREE
-#define H5FD_MEM_EARRAY_DBLOCK  H5FD_MEM_LHEAP
-#define H5FD_MEM_EARRAY_DBLK_PAGE  H5FD_MEM_LHEAP
-
-/* Map "fixed array" header blocks to 'ohdr' type file memory, since its
- * a fair amount of work to add a new kind of file memory and they are similar
- * enough to object headers and probably too minor to deserve their own type.
- *
- * Map "fixed array" data blocks & pages to 'lheap' type file memory, since
- * they are similar enough to local heap info.
- *
- */
-#define H5FD_MEM_FARRAY_HDR     H5FD_MEM_OHDR
-#define H5FD_MEM_FARRAY_DBLOCK  H5FD_MEM_LHEAP
-#define H5FD_MEM_FARRAY_DBLK_PAGE  H5FD_MEM_LHEAP
-
 /*
  * A free-list map which maps all types of allocation requests to a single
  * free list.  This is useful for drivers that don't really care about
@@ -209,7 +176,7 @@ typedef enum H5F_mem_t	H5FD_mem_t;
      * the handle for the VFD (returned with the 'get_handle' callback) is
      * of type 'int' and is compatible with POSIX I/O calls.
      */
-#define H5FD_FEAT_POSIX_COMPAT_HANDLE   0x00000080    
+#define H5FD_FEAT_POSIX_COMPAT_HANDLE   0x00000080
     /*
      * Defining the H5FD_FEAT_HAS_MPI for a VFL driver means that
      * the driver makes use of MPI communication and code may retrieve
@@ -243,7 +210,6 @@ typedef struct H5FD_class_t {
     const char *name;
     haddr_t maxaddr;
     H5F_close_degree_t fc_degree;
-    herr_t  (*terminate)(void);
     hsize_t (*sb_size)(H5FD_t *file);
     herr_t  (*sb_encode)(H5FD_t *file, char *name/*out*/,
                          unsigned char *p/*out*/);
@@ -266,7 +232,7 @@ typedef struct H5FD_class_t {
                     haddr_t addr, hsize_t size);
     haddr_t (*get_eoa)(const H5FD_t *file, H5FD_mem_t type);
     herr_t  (*set_eoa)(H5FD_t *file, H5FD_mem_t type, haddr_t addr);
-    haddr_t (*get_eof)(const H5FD_t *file, H5FD_mem_t type);
+    haddr_t (*get_eof)(const H5FD_t *file);
     herr_t  (*get_handle)(H5FD_t *file, hid_t fapl, void**file_handle);
     herr_t  (*read)(H5FD_t *file, H5FD_mem_t type, hid_t dxpl,
                     haddr_t addr, size_t size, void *buffer);
@@ -347,7 +313,7 @@ H5_DLL herr_t H5FDfree(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id,
                        haddr_t addr, hsize_t size);
 H5_DLL haddr_t H5FDget_eoa(H5FD_t *file, H5FD_mem_t type);
 H5_DLL herr_t H5FDset_eoa(H5FD_t *file, H5FD_mem_t type, haddr_t eoa);
-H5_DLL haddr_t H5FDget_eof(H5FD_t *file, H5FD_mem_t type);
+H5_DLL haddr_t H5FDget_eof(H5FD_t *file);
 H5_DLL herr_t H5FDget_vfd_handle(H5FD_t *file, hid_t fapl, void**file_handle);
 H5_DLL herr_t H5FDread(H5FD_t *file, H5FD_mem_t type, hid_t dxpl_id,
                        haddr_t addr, size_t size, void *buf/*out*/);
