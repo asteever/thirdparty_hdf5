@@ -120,7 +120,7 @@ H5FD_int_init_interface(void)
 herr_t
 H5FD_locate_signature(H5FD_t *file, const H5P_genplist_t *dxpl, haddr_t *sig_addr)
 {
-    haddr_t         addr, eoa, eof;
+    haddr_t         addr, eoa;
     uint8_t         buf[H5F_SIGNATURE_LEN];
     unsigned        n, maxpow;
     herr_t          ret_value = SUCCEED; /* Return value */
@@ -128,10 +128,7 @@ H5FD_locate_signature(H5FD_t *file, const H5P_genplist_t *dxpl, haddr_t *sig_add
     FUNC_ENTER_NOAPI_NOINIT
 
     /* Find the least N such that 2^N is larger than the file size */
-    eof = H5FD_get_eof(file, H5FD_MEM_SUPER);
-    eoa = H5FD_get_eoa(file, H5FD_MEM_SUPER);
-    addr = MAX(eof, eoa);
-    if(HADDR_UNDEF == addr)
+    if(HADDR_UNDEF == (addr = H5FD_get_eof(file)) || HADDR_UNDEF == (eoa = H5FD_get_eoa(file, H5FD_MEM_SUPER)))
         HGOTO_ERROR(H5E_IO, H5E_CANTINIT, FAIL, "unable to obtain EOF/EOA value")
     for(maxpow = 0; addr; maxpow++)
         addr >>= 1;
@@ -365,7 +362,7 @@ done:
  *-------------------------------------------------------------------------
  */
 haddr_t
-H5FD_get_eof(const H5FD_t *file, H5FD_mem_t type)
+H5FD_get_eof(const H5FD_t *file)
 {
     haddr_t	ret_value;
 
@@ -375,7 +372,7 @@ H5FD_get_eof(const H5FD_t *file, H5FD_mem_t type)
 
     /* Dispatch to driver */
     if(file->cls->get_eof) {
-	if(HADDR_UNDEF == (ret_value = (file->cls->get_eof)(file, type)))
+	if(HADDR_UNDEF == (ret_value = (file->cls->get_eof)(file)))
 	    HGOTO_ERROR(H5E_VFL, H5E_CANTGET, HADDR_UNDEF, "driver get_eof request failed")
     } /* end if */
     else

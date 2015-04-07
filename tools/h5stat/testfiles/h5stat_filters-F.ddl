@@ -1,6 +1,5 @@
 Filename: h5stat_filters.h5
 File space information for file metadata (in bytes):
-	Superblock: 96
 	Superblock extension: 0
 	User block: 0
 	Object headers: (total/unused)
@@ -21,6 +20,3 @@ File space information for file metadata (in bytes):
 		Header: 0
 		B-tree/List: 0
 		Heap: 0
-	Free-space managers:
-		Header: 0
-		Amount of free space: 0

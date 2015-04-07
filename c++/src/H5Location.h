@@ -30,8 +30,7 @@ typedef void (*attr_operator_t)( H5Location& loc/*in*/,
                                  const H5std_string attr_name/*in*/,
                                  void *operator_data/*in,out*/);
 
-//! User data for attribute iteration
-class UserData4Aiterate {
+class UserData4Aiterate { // user data for attribute iteration
    public:
 	attr_operator_t op;
 	void* opData;
@@ -116,7 +115,7 @@ class H5_DLLCPP H5Location : public IdComponent {
 	// in this object.
 	void reference(void* ref, const char* name, 
 			H5R_type_t ref_type = H5R_OBJECT) const;
-	void reference(void* ref, const H5std_string& name,
+	void reference(void* ref, const H5std_string& name, 
 			H5R_type_t ref_type = H5R_OBJECT) const;
 	void reference(void* ref, const char* name, const DataSpace& dataspace,
 			H5R_type_t ref_type = H5R_DATASET_REGION) const;
@@ -125,8 +124,8 @@ class H5_DLLCPP H5Location : public IdComponent {
 
 	// Open a referenced object whose location is specified by either
 	// a file, an HDF5 object, or an attribute.
-	void dereference(const H5Location& loc, const void* ref, H5R_type_t ref_type = H5R_OBJECT, const PropList& plist = PropList::DEFAULT);
-	void dereference(const Attribute& attr, const void* ref, H5R_type_t ref_type = H5R_OBJECT, const PropList& plist = PropList::DEFAULT);
+	void dereference(const H5Location& loc, const void* ref, H5R_type_t ref_type = H5R_OBJECT);
+	void dereference(const Attribute& attr, const void* ref, H5R_type_t ref_type = H5R_OBJECT);
 
 	// Retrieves a dataspace with the region pointed to selected.
 	DataSpace getRegion(void *ref, H5R_type_t ref_type = H5R_DATASET_REGION) const;
@@ -135,10 +134,9 @@ class H5_DLLCPP H5Location : public IdComponent {
 	virtual hid_t getId() const = 0;
 
    protected:
-	// Default constructor
-	H5Location();
-
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
+	// Default constructor,
+	H5Location();
 
 	// *** Deprecation warning ***
 	// The following two constructors are no longer appropriate after the
@@ -157,7 +155,7 @@ class H5_DLLCPP H5Location : public IdComponent {
 	void p_reference(void* ref, const char* name, hid_t space_id, H5R_type_t ref_type) const;
 
 	// Dereferences a ref into an HDF5 id.
-	hid_t p_dereference(hid_t loc_id, const void* ref, H5R_type_t ref_type, const PropList& plist, const char* from_func);
+	hid_t p_dereference(hid_t loc_id, const void* ref, H5R_type_t ref_type, const char* from_func);
 
 #ifndef H5_NO_DEPRECATED_SYMBOLS
 	// Retrieves the type of object that an object reference points to.

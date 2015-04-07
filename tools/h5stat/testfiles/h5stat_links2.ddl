@@ -8,7 +8,6 @@ File information
 	Max. # of links to object: 1
 	Max. # of objects in group: 10
 File space information for file metadata (in bytes):
-	Superblock: 96
 	Superblock extension: 0
 	User block: 0
 	Object headers: (total/unused)
@@ -29,9 +28,6 @@ File space information for file metadata (in bytes):
 		Header: 0
 		B-tree/List: 0
 		Heap: 0
-	Free-space managers:
-		Header: 0
-		Amount of free space: 0
 Small groups (with 0 to 7 links):
 	# of groups with 0 link(s): 1
 	# of groups with 7 link(s): 1
@@ -90,15 +86,8 @@ Attribute bins:
 	# of objects with 10 - 99 attributes: 3
 	Total # of objects with attributes: 5
 	Max. # of attributes to objects: 25
-Free-space section threshold: 1 bytes
-Small size free-space sections (< 10 bytes):
-	Total # of small size sections: 0
-Free-space section bins:
-	Total # of sections: 0
-File space management strategy: H5F_FILE_SPACE_ALL
 Summary of file space information:
-  File metadata: 16128 bytes
+  File metadata: 16032 bytes
   Raw data: 0 bytes
-  Amount/Percent of tracked free space: 0 bytes/0.0%
-  Unaccounted space: 184 bytes
+  Unaccounted space: 280 bytes
 Total space: 16312 bytes

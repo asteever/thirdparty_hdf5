@@ -590,7 +590,7 @@ h5_fileaccess(void)
     } else if (!HDstrcmp(name, "core_paged")) {
         /* In-memory driver with write tracking and paging on */
         if (H5Pset_fapl_core(fapl, (size_t)1, TRUE)<0) return -1;
-        if (H5Pset_core_write_tracking(fapl, TRUE, (size_t)4096)<0) return -1;
+        if (H5Pset_core_write_tracking(fapl, TRUE, (size_t)524288)<0) return -1;
      } else if (!HDstrcmp(name, "split")) {
         /* Split meta data and raw data each using default driver */
         if (H5Pset_fapl_split(fapl,

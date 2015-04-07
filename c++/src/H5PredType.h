@@ -243,8 +243,14 @@ class H5_DLLCPP PredType : public AtomType {
 	*/
 	bool committed();
 
-   protected:
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
+   private:
+	// Added this to work around the atexit/global destructor problem.
+	// It'll help to terminate the library after other PredType instances
+	// are closed.  -BMR, Mar 30, 2012
+	static const PredType AtExit;
+
+   protected:
 	// Default constructor
 	PredType();
 
@@ -252,12 +258,6 @@ class H5_DLLCPP PredType : public AtomType {
 	PredType( const hid_t predtype_id );  // used by the library only
 
 #endif // DOXYGEN_SHOULD_SKIP_THIS
-
-   private:
-	// Added this to work around the atexit/global destructor problem.
-	// It'll help to terminate the library after other PredType instances
-	// are closed.  -BMR, Mar 30, 2012
-	static const PredType AtExit;
 
 };
 #ifndef H5_NO_NAMESPACE

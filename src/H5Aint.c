@@ -146,9 +146,9 @@ H5A_create(const H5G_loc_t *loc, const char *name, const H5T_t *type,
     hssize_t	snelmts;	/* elements in attribute */
     size_t	nelmts;		/* elements in attribute */
     htri_t      tri_ret;        /* htri_t return value */
-    H5A_t	*ret_value;     /* Return value */
+    H5A_t	*ret_value = NULL; /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_TAG(dxpl_id, loc->oloc->addr, NULL)
+    FUNC_ENTER_NOAPI_NOINIT
 
     /* check args */
     HDassert(loc);
@@ -275,10 +275,13 @@ H5A_create(const H5G_loc_t *loc, const char *name, const H5T_t *type,
         HGOTO_ERROR(H5E_ATTR, H5E_CANTINSERT, NULL, "unable to create attribute in object header")
 
     ret_value = attr;
+
 done:
     if(NULL == ret_value && attr && H5A_close(attr))
         HDONE_ERROR(H5E_ATTR, H5E_CANTFREE, NULL, "can't close attribute")
-    FUNC_LEAVE_NOAPI_TAG(ret_value, NULL)
+
+    FUNC_LEAVE_NOAPI(ret_value)
+
 } /* H5A_create() */
 
 
@@ -499,7 +502,7 @@ H5A_write(H5A_t *attr, const H5T_t *mem_type, const void *buf, hid_t dxpl_id)
     size_t		buf_size;		/* desired buffer size	*/
     herr_t		ret_value = SUCCEED;
 
-    FUNC_ENTER_NOAPI_NOINIT_TAG(dxpl_id, attr->oloc.addr, FAIL)
+    FUNC_ENTER_NOAPI_NOINIT
 
     HDassert(attr);
     HDassert(mem_type);
@@ -578,7 +581,7 @@ done:
     if(bkg_buf)
         bkg_buf = H5FL_BLK_FREE(attr_buf, bkg_buf);
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* H5A_write() */
 
 
@@ -1236,6 +1239,10 @@ done:
  *              24 June 2008
  *              Changed the table of attribute objects to be the table of
  *              pointers to attribute objects for the ease of operation.
+ *
+ *	Vailin Choi; September 2011
+ *	Change "oh_modified" from boolean to unsigned
+ *	(See H5Oprivate.h for possible flags)
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1793,7 +1800,7 @@ H5A_get_ainfo(H5F_t *f, hid_t dxpl_id, H5O_t *oh, H5O_ainfo_t *ainfo)
     H5B2_t *bt2_name = NULL;            /* v2 B-tree handle for name index */
     htri_t ret_value;   /* Return value */
 
-    FUNC_ENTER_NOAPI_TAG(dxpl_id, oh->cache_info.addr, FAIL)
+    FUNC_ENTER_NOAPI(FAIL)
 
     /* check arguments */
     HDassert(f);
@@ -1832,7 +1839,7 @@ done:
     if(bt2_name && H5B2_close(bt2_name, dxpl_id) < 0)
         HDONE_ERROR(H5E_ATTR, H5E_CLOSEERROR, FAIL, "can't close v2 B-tree for name index")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5A_get_ainfo() */
 
 
@@ -2294,15 +2301,9 @@ H5A_dense_post_copy_file_cb(const H5A_t *attr_src, void *_udata)
     if(H5O_msg_reset_share(H5O_ATTR_ID, attr_dst) < 0)
         HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, FAIL, "unable to reset attribute sharing")
 
-    /* Set COPIED tag for destination object's metadata */
-    H5_BEGIN_TAG(udata->dxpl_id, H5AC__COPIED_TAG, H5_ITER_ERROR);
-
     /* Insert attribute into dense storage */
     if(H5A_dense_insert(udata->file, udata->dxpl_id, udata->ainfo, attr_dst) < 0)
-        HGOTO_ERROR_TAG(H5E_OHDR, H5E_CANTINSERT, H5_ITER_ERROR, "unable to add to dense storage")
-
-    /* Reset metadata tag */
-    H5_END_TAG(H5_ITER_ERROR);
+        HGOTO_ERROR(H5E_OHDR, H5E_CANTINSERT, H5_ITER_ERROR, "unable to add to dense storage")
 
 done:
     if(attr_dst && H5A_close(attr_dst) < 0)

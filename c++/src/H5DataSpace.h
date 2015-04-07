@@ -121,14 +121,15 @@ class H5_DLLCPP DataSpace : public IdComponent {
 	// Destructor: properly terminates access to this dataspace.
 	virtual ~DataSpace();
 
+   private:
+	hid_t id;       // HDF5 dataspace id
+
    protected:
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 	// Sets the dataspace id.
 	virtual void p_setId(const hid_t new_id);
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 
-   private:
-	hid_t id;       // HDF5 dataspace id
 
 	// Friend function to set DataSpace id.  For library use only.
 	friend void f_DataSpace_setId(DataSpace *dspace, hid_t new_id);

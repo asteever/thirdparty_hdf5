@@ -148,7 +148,7 @@ H5FS_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream, int indent, int 
 	      fspace->ghost_sect_count);
     HDfprintf(stream, "%*s%-*s %u\n", indent, "", fwidth,
 	      "Number of free space section classes:",
-	      (unsigned)fspace->nclasses);
+	      fspace->nclasses);
     HDfprintf(stream, "%*s%-*s %u%%\n", indent, "", fwidth,
 	      "Shrink percent:",
 	      fspace->shrink_percent);
@@ -290,8 +290,10 @@ H5FS_sects_debug(H5F_t *f, hid_t dxpl_id, haddr_t UNUSED addr, FILE *stream, int
             break;
 
         case H5FS_CLIENT_FILE_ID:
-	    if(H5MF_sects_debug(f, dxpl_id, fs_addr, stream, indent + 3, MAX(0, fwidth - 3)) < 0)
-		HGOTO_ERROR(H5E_FSPACE, H5E_SYSTEM, FAIL, "unable to dump file free space sections")
+#ifdef NOT_YET
+            if(H5MF_sects_debug(f, dxpl_id, fs_addr, stream, indent + 3, MAX(0, fwidth - 3)) < 0)
+                HGOTO_ERROR(H5E_FSPACE, H5E_SYSTEM, FAIL, "unable to dump file free space sections")
+#endif /* NOT_YET */
             break;
 
         case H5FS_NUM_CLIENT_ID:
