@@ -65,10 +65,6 @@ static int H5_mpi_delete_cb(MPI_Comm comm, int keyval, void *attr_val, int *flag
 /* Library Private Variables */
 /*****************************/
 
-/* HDF5 API Entered variable */
-/* (move to H5.c when new FUNC_ENTER macros in actual use -QAK) */
-hbool_t H5_api_entered_g = FALSE;
-
 /* statically initialize block for pthread_once call used in initializing */
 /* the first global mutex                                                 */
 #ifdef H5_HAVE_THREADSAFE
@@ -220,7 +216,7 @@ H5_init_library(void)
     H5_debug_mask(HDgetenv("HDF5_DEBUG"));
 
 done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5_init_library() */
 
 
@@ -302,7 +298,9 @@ H5_term_library(void)
             pending += DOWN(Z);
             pending += DOWN(FD);
             pending += DOWN(P);
+#ifndef H5_VMS
             pending += DOWN(PL);
+#endif /*H5_VMS*/
             /* Don't shut down the error code until other APIs which use it are shut down */
             if(pending == 0)
                 pending += DOWN(E);
@@ -774,7 +772,7 @@ H5check_version(unsigned majnum, unsigned minnum, unsigned relnum)
 	HDsnprintf(lib_str, sizeof(lib_str), "HDF5 library version: %d.%d.%d",
 	    H5_VERS_MAJOR, H5_VERS_MINOR, H5_VERS_RELEASE);
 	if(*substr) {
-	    HDstrncat(lib_str, "-", (size_t)1);
+	    HDstrncat(lib_str, "-", 1);
 	    HDstrncat(lib_str, substr, (sizeof(lib_str) - HDstrlen(lib_str)) - 1);
 	} /* end if */
 	if (HDstrcmp(lib_str, H5_lib_vers_info_g)){
@@ -975,9 +973,6 @@ H5free_memory(void *mem)
  *
  *    NOTE:     The main purpose of this is for handling Win32 thread cleanup
  *              on thread/process detach.
- *
- *              Only enabled when the shared Windows library is built with
- *              thread safety enabled.
  *
  * Return:      TRUE on success, FALSE on failure
  *

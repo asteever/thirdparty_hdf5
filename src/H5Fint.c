@@ -41,6 +41,18 @@
 #include "H5SMprivate.h"	/* Shared Object Header Messages	*/
 #include "H5Tprivate.h"		/* Datatypes				*/
 
+/* Predefined file drivers */
+#include "H5FDcore.h"		/*temporary in-memory files		*/
+#include "H5FDfamily.h"		/*family of files			*/
+#include "H5FDlog.h"            /* sec2 driver with logging, for debugging */
+#include "H5FDmpi.h"            /* MPI-based file drivers		*/
+#include "H5FDmulti.h"		/*multiple files partitioned by mem usage */
+#include "H5FDsec2.h"		/*Posix unbuffered I/O			*/
+#include "H5FDstdio.h"		/* Standard C buffered I/O		*/
+#ifdef H5_HAVE_WINDOWS
+#include "H5FDwindows.h"        /* Windows buffered I/O     */
+#endif
+#include "H5FDdirect.h"         /*Linux direct I/O			*/
 
 /****************/
 /* Local Macros */
@@ -627,10 +639,6 @@ H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t
         if(H5P_get(plist, H5F_CRT_SHMSG_NINDEXES_NAME, &f->shared->sohm_nindexes) < 0)
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get number of SOHM indexes")
         HDassert(f->shared->sohm_nindexes < 255);
-        if(H5P_get(plist, H5F_CRT_FILE_SPACE_STRATEGY_NAME, &f->shared->fs_strategy) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get file space strategy")
-        if(H5P_get(plist, H5F_CRT_FREE_SPACE_THRESHOLD_NAME, &f->shared->fs_threshold) < 0)
-            HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get free-space section threshold")
 
         /* Get the FAPL values to cache */
         if(NULL == (plist = (H5P_genplist_t *)H5I_object(fapl_id)))
@@ -767,15 +775,13 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
          * Only try to flush the file if it was opened with write access, and if
          * the caller requested a flush.
          */
-        if((H5F_ACC_RDWR & H5F_INTENT(f)) && flush)
+        if((f->shared->flags & H5F_ACC_RDWR) && flush)
             if(H5F_flush(f, dxpl_id, TRUE) < 0)
-                /* Push error, but keep going*/
                 HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush cache")
 
         /* Release the external file cache */
         if(f->shared->efc) {
             if(H5F_efc_destroy(f->shared->efc) < 0)
-                /* Push error, but keep going*/
                 HDONE_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "can't destroy external file cache")
             f->shared->efc = NULL;
         } /* end if */
@@ -789,19 +795,9 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
              *      and also because releasing free space can shrink the file's
              *      'eoa' value)
              */
-            if(H5F_ACC_RDWR & H5F_INTENT(f)) {
-                if(H5MF_close(f, dxpl_id) < 0)
-                    /* Push error, but keep going*/
-                    HDONE_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "can't release file free space info")
-
-                /* Flush the file again (if requested), as shutting down the
-                 * free space manager may dirty some data structures again.
-                 */
-                if(flush)
-                    if(H5F_flush(f, dxpl_id, TRUE) < 0)
-                        /* Push error, but keep going*/
-                        HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush cache")
-            } /* end if */
+            if(H5MF_close(f, dxpl_id) < 0)
+                /* Push error, but keep going*/
+                HDONE_ERROR(H5E_FILE, H5E_CANTRELEASE, FAIL, "can't release file free space info")
 
             /* Unpin the superblock, since we're about to destroy the cache */
             if(H5AC_unpin_entry(f->shared->sblock) < 0)
@@ -1066,7 +1062,7 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
      * Read or write the file superblock, depending on whether the file is
      * empty or not.
      */
-    if(0 == (MAX(H5FD_get_eof(lf, H5FD_MEM_SUPER), H5FD_get_eoa(lf, H5FD_MEM_SUPER))) && (flags & H5F_ACC_RDWR)) {
+    if(0 == H5FD_get_eof(lf) && (flags & H5F_ACC_RDWR)) {
         /*
          * We've just opened a fresh new file (or truncated one). We need
          * to create & write the superblock.
@@ -1819,7 +1815,7 @@ H5F_addr_decode(const H5F_t *f, const uint8_t **pp/*in,out*/, haddr_t *addr_p/*o
  *-------------------------------------------------------------------------
  */
 herr_t
-H5F_set_grp_btree_shared(H5F_t *f, H5UC_t *rc)
+H5F_set_grp_btree_shared(H5F_t *f, H5RC_t *rc)
 {
     /* Use FUNC_ENTER_NOAPI_NOINIT_NOERR here to avoid performance issues */
     FUNC_ENTER_NOAPI_NOINIT_NOERR

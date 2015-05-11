@@ -890,7 +890,7 @@ H5O_fill_debug(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const void *_fill, FILE *s
     else
 	fprintf(stream, "<dataset type>\n");
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
+    FUNC_LEAVE_NOAPI(SUCCEED);
 } /* end H5O_fill_debug() */
 
 
@@ -977,7 +977,7 @@ H5O_fill_convert(H5O_fill_t *fill, H5T_t *dset_type, hbool_t *fill_changed, hid_
         } /* end if */
         H5T_close(fill->type);
         fill->type = NULL;
-        H5_CHECKED_ASSIGN(fill->size, ssize_t, H5T_get_size(dset_type), size_t);
+        H5_ASSIGN_OVERFLOW(fill->size, H5T_get_size(dset_type), size_t, ssize_t);
 
         /* Note that the fill value info has changed */
         *fill_changed = TRUE;
@@ -993,7 +993,7 @@ done:
     if(bkg)
         H5MM_xfree(bkg);
 
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(ret_value);
 } /* end H5O_fill_convert() */
 
 

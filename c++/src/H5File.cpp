@@ -73,6 +73,9 @@ H5File::H5File() : H5Location(), CommonFG(), id(H5I_INVALID_HID) {}
 ///					exists, and fail, otherwise
 ///		\li \c H5F_ACC_RDWR - Open file for read/write, if it already
 ///					exists, and fail, otherwise
+///		\li \c H5F_ACC_DEBUG - print debug information. This flag is
+///			used only by HDF5 library developers; it is neither
+///			tested nor supported for use in applications.
 ///\par
 ///		For info on file creation in the case of an already-open file,
 ///		please refer to the \b Special \b case section in the C layer
@@ -130,25 +133,25 @@ void H5File::p_get_file(const char* name, unsigned int flags, const FileCreatPro
 {
     // These bits only set for creation, so if any of them are set,
     // create the file.
-    if( flags & (H5F_ACC_EXCL|H5F_ACC_TRUNC))
+    if( flags & (H5F_ACC_EXCL|H5F_ACC_TRUNC|H5F_ACC_DEBUG))
     {
-        hid_t create_plist_id = create_plist.getId();
-        hid_t access_plist_id = access_plist.getId();
-        id = H5Fcreate( name, flags, create_plist_id, access_plist_id );
-        if( id < 0 )  // throw an exception when open/create fail
-        {
-            throw FileIException("H5File constructor", "H5Fcreate failed");
-        }
+	hid_t create_plist_id = create_plist.getId();
+	hid_t access_plist_id = access_plist.getId();
+	id = H5Fcreate( name, flags, create_plist_id, access_plist_id );
+	if( id < 0 )  // throw an exception when open/create fail
+	{
+	    throw FileIException("H5File constructor", "H5Fcreate failed");
+	}
     }
     // Open the file if none of the bits above are set.
     else
     {
-        hid_t access_plist_id = access_plist.getId();
-        id = H5Fopen( name, flags, access_plist_id );
-        if( id < 0 )  // throw an exception when open/create fail
-        {
-            throw FileIException("H5File constructor", "H5Fopen failed");
-        }
+	hid_t access_plist_id = access_plist.getId();
+	id = H5Fopen( name, flags, access_plist_id );
+	if( id < 0 )  // throw an exception when open/create fail
+	{
+	    throw FileIException("H5File constructor", "H5Fopen failed");
+	}
     }
 }
 
@@ -227,7 +230,7 @@ bool H5File::isHdf5(const H5std_string& name )
 ///\param	name         - IN: Name of the file
 ///\param	flags        - IN: File access flags
 ///\param	access_plist - IN: File access property list.  Default to
-///		FileAccPropList::DEFAULT
+///		FileCreatPropList::DEFAULT
 ///\par Description
 ///		Valid values of \a flags include:
 ///		H5F_ACC_RDWR:   Open with read/write access. If the file is
@@ -521,6 +524,34 @@ hsize_t H5File::getFileSize() const
    return (file_size);
 }
 
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
+//--------------------------------------------------------------------------
+// Function:	H5File::reopen
+// Purpose:	Reopens this file.
+// Exception	H5::FileIException
+// Description
+//		This function is replaced by the above function reOpen.
+// Programmer	Binh-Minh Ribler - 2000
+//--------------------------------------------------------------------------
+void H5File::reopen()
+{
+   H5File::reOpen();
+}
+
+//--------------------------------------------------------------------------
+// Function:	H5File::getLocId
+// Purpose:	Get the id of this file
+// Description
+//		This function is a redefinition of CommonFG::getLocId.  It
+//		is used by CommonFG member functions to get the file id.
+// Programmer	Binh-Minh Ribler - 2000
+//--------------------------------------------------------------------------
+hid_t H5File::getLocId() const
+{
+   return( getId() );
+}
+#endif // DOXYGEN_SHOULD_SKIP_THIS
+
 //--------------------------------------------------------------------------
 // Function:    H5File::getId
 ///\brief	Get the id of this file
@@ -539,32 +570,6 @@ hid_t H5File::getId() const
 }
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-//--------------------------------------------------------------------------
-// Function:	H5File::getLocId
-// Purpose:	Get the id of this file
-// Description
-//		This function is a redefinition of CommonFG::getLocId.  It
-//		is used by CommonFG member functions to get the file id.
-// Programmer	Binh-Minh Ribler - 2000
-//--------------------------------------------------------------------------
-hid_t H5File::getLocId() const
-{
-   return( getId() );
-}
-
-//--------------------------------------------------------------------------
-// Function:	H5File::reopen
-// Purpose:	Reopens this file.
-// Exception	H5::FileIException
-// Description
-//		This function is replaced by the above function reOpen.
-// Programmer	Binh-Minh Ribler - 2000
-//--------------------------------------------------------------------------
-void H5File::reopen()
-{
-   H5File::reOpen();
-}
-
 //--------------------------------------------------------------------------
 // Function:    H5File::p_setId (protected)
 ///\brief       Sets the identifier of this object to a new value.

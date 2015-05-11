@@ -77,7 +77,7 @@ typedef struct H5G_node_key_t {
 /********************/
 
 /* B-tree callbacks */
-static H5UC_t *H5G_node_get_shared(const H5F_t *f, const void *_udata);
+static H5RC_t *H5G_node_get_shared(const H5F_t *f, const void *_udata);
 static herr_t H5G_node_create(H5F_t *f, hid_t dxpl_id, H5B_ins_t op, void *_lt_key,
 			      void *_udata, void *_rt_key,
 			      haddr_t *addr_p/*out*/);
@@ -156,7 +156,7 @@ H5FL_SEQ_DEFINE(H5G_entry_t);
  *
  *-------------------------------------------------------------------------
  */
-static H5UC_t *
+static H5RC_t *
 H5G_node_get_shared(const H5F_t *f, const void UNUSED *_udata)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
@@ -1189,7 +1189,7 @@ H5G__node_init(H5F_t *f)
         /* <none> */
 
     /* Make shared B-tree info reference counted */
-    if(H5F_SET_GRP_BTREE_SHARED(f, H5UC_create(shared, H5B_shared_free)) < 0)
+    if(H5F_SET_GRP_BTREE_SHARED(f, H5RC_create(shared, H5B_shared_free)) < 0)
 	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "can't create ref-count wrapper for shared B-tree info")
 
 done:
@@ -1222,7 +1222,7 @@ H5G_node_close(const H5F_t *f)
 
     /* Free the raw B-tree node buffer */
     if(H5F_GRP_BTREE_SHARED(f))
-        H5UC_DEC(H5F_GRP_BTREE_SHARED(f));
+        H5RC_DEC(H5F_GRP_BTREE_SHARED(f));
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5G_node_close */
@@ -1359,19 +1359,12 @@ H5G__node_copy(H5F_t *f, hid_t dxpl_id, const void UNUSED *_lt_key, haddr_t addr
         name = (const char *)H5HL_offset_into(heap, src_ent->name_off);
 	HDassert(name);
 
-        /* Set copied metadata tag */
-        H5_BEGIN_TAG(dxpl_id, H5AC__COPIED_TAG, H5_ITER_ERROR);
-
         /* Insert the new object in the destination file's group */
         /* (Don't increment the link count - that's already done above for hard links) */
         if(H5G__stab_insert_real(udata->dst_file, udata->dst_stab, name, &lnk,
                 obj_type, (obj_type == H5O_TYPE_GROUP ? &gcrt_info : NULL),
                 dxpl_id) < 0)
-            HGOTO_ERROR_TAG(H5E_DATATYPE, H5E_CANTINIT, H5_ITER_ERROR, "unable to insert the name")
-
-        /* Reset metadata tag */
-        H5_END_TAG(H5_ITER_ERROR);
-
+            HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, H5_ITER_ERROR, "unable to insert the name")
     } /* end of for (i=0; i<sn->nsyms; i++) */
 
 done:

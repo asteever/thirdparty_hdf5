@@ -90,7 +90,7 @@ H5FL_BLK_DEFINE(attr_buf);
 /* Attribute ID class */
 static const H5I_class_t H5I_ATTR_CLS[1] = {{
     H5I_ATTR,                   /* ID class value */
-    0,                          /* Class flags */
+    H5I_CLASS_REUSE_IDS,	/* Class flags */
     0,                          /* # of reserved IDs for class */
     (H5I_free_t)H5A_close       /* Callback routine for closing objects of this class */
 }};
@@ -252,7 +252,7 @@ H5Acreate2(hid_t loc_id, const char *attr_name, hid_t type_id, hid_t space_id,
     if(NULL == (type = (H5T_t *)H5I_object_verify(type_id, H5I_DATATYPE)))
 	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a type")
     if(NULL == (space = (H5S_t *)H5I_object_verify(space_id, H5I_DATASPACE)))
-	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space")
+	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataspace")
 
     /* Go do the real work for attaching the attribute to the dataset */
     if(NULL == (attr = H5A_create(&loc, attr_name, type, space, acpl_id, H5AC_dxpl_id)))
@@ -335,7 +335,7 @@ H5Acreate_by_name(hid_t loc_id, const char *obj_name, const char *attr_name,
     if(NULL == (type = (H5T_t *)H5I_object_verify(type_id, H5I_DATATYPE)))
 	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a type")
     if(NULL == (space = (H5S_t *)H5I_object_verify(space_id, H5I_DATASPACE)))
-	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a data space")
+	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataspace")
 
     /* Set up opened group location to fill in */
     obj_loc.oloc = &obj_oloc;
@@ -638,7 +638,7 @@ H5Aread(hid_t attr_id, hid_t dtype_id, void *buf)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "null attribute buffer")
 
     /* Go write the actual data to the attribute */
-    if((ret_value = H5A_read(attr, mem_type, buf, H5AC_ind_dxpl_id)) < 0)
+    if((ret_value = H5A_read(attr, mem_type, buf, H5AC_dxpl_id)) < 0)
         HGOTO_ERROR(H5E_ATTR, H5E_READERROR, FAIL, "unable to read attribute")
 
 done:
@@ -1160,7 +1160,7 @@ H5Arename_by_name(hid_t loc_id, const char *obj_name, const char *old_attr_name,
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
 
         /* Call private attribute rename routine */
-        if(H5A_rename_by_name(loc, obj_name, old_attr_name, new_attr_name, lapl_id, H5AC_dxpl_id) < 0)
+        if(H5A_rename_by_name(loc, obj_name, old_attr_name, new_attr_name, lapl_id) < 0)
             HGOTO_ERROR(H5E_ATTR, H5E_CANTRENAME, FAIL, "can't rename attribute")
     } /* end if */
 
@@ -1537,7 +1537,7 @@ H5Adelete_by_idx(hid_t loc_id, const char *obj_name, H5_index_t idx_type,
     H5G_loc_reset(&obj_loc);
 
     /* Find the object's location */
-    if(H5G_loc_find(&loc, obj_name, &obj_loc/*out*/, lapl_id, H5AC_ind_dxpl_id) < 0)
+    if(H5G_loc_find(&loc, obj_name, &obj_loc/*out*/, lapl_id, H5AC_dxpl_id) < 0)
         HGOTO_ERROR(H5E_ATTR, H5E_NOTFOUND, FAIL, "object not found")
     loc_found = TRUE;
 
@@ -1668,7 +1668,7 @@ H5Aexists_by_name(hid_t loc_id, const char *obj_name, const char *attr_name,
         if(TRUE != H5P_isa_class(lapl_id, H5P_LINK_ACCESS))
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not link access property list ID")
 
-    if((ret_value = H5A_exists_by_name(loc, obj_name, attr_name, lapl_id, H5AC_ind_dxpl_id)) < 0)
+    if((ret_value = H5A_exists_by_name(loc, obj_name, attr_name, lapl_id)) < 0)
         HGOTO_ERROR(H5E_ATTR, H5E_CANTGET, FAIL, "unable to determine if attribute exists")
 
 done:

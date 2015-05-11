@@ -62,7 +62,6 @@ static H5D_shared_t *H5D__new(hid_t dcpl_id, hbool_t creating,
     hbool_t vl_type);
 static herr_t H5D__init_type(H5F_t *file, const H5D_t *dset, hid_t type_id,
     const H5T_t *type);
-static herr_t H5D__cache_dataspace_info(const H5D_t *dset);
 static herr_t H5D__init_space(H5F_t *file, const H5D_t *dset, const H5S_t *space);
 static herr_t H5D__update_oh_info(H5F_t *file, hid_t dxpl_id, H5D_t *dset,
     hid_t dapl_id);
@@ -113,7 +112,7 @@ static H5D_shared_t H5D_def_dset;
 /* Dataset ID class */
 static const H5I_class_t H5I_DATASET_CLS[1] = {{
     H5I_DATASET,		/* ID class value */
-    0,				/* Class flags */
+    H5I_CLASS_REUSE_IDS,	/* Class flags */
     0,				/* # of reserved IDs for class */
     (H5I_free_t)H5D_close       /* Callback routine for closing objects of this class */
 }};
@@ -465,7 +464,7 @@ done:
 /*-------------------------------------------------------------------------
  * Function:    H5D__get_space_status
  *
- * Purpose:     Returns the status of data space allocation.
+ * Purpose:     Returns the status of dataspace allocation.
  *
  * Return:
  *              Success:        Non-negative
@@ -479,6 +478,7 @@ done:
 herr_t
 H5D__get_space_status(H5D_t *dset, H5D_space_status_t *allocation, hid_t dxpl_id)
 {
+    H5S_t      *space;              /* Dataset's dataspace */
     hsize_t     space_allocated;    /* The number of bytes allocated for chunks */
     hssize_t    snelmts;            /* Temporary holder for number of elements in dataspace */
     hsize_t     nelmts;             /* Number of elements in dataspace */
@@ -491,10 +491,11 @@ H5D__get_space_status(H5D_t *dset, H5D_space_status_t *allocation, hid_t dxpl_id
     HDassert(dset);
 
     /* Get the dataset's dataspace */
-    HDassert(dset->shared->space);
+    space = dset->shared->space;
+    HDassert(space);
 
     /* Get the total number of elements in dataset's dataspace */
-    if((snelmts = H5S_GET_EXTENT_NPOINTS(dset->shared->space)) < 0)
+    if((snelmts = H5S_GET_EXTENT_NPOINTS(space)) < 0)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "unable to retrieve number of elements in dataspace")
     nelmts = (hsize_t)snelmts;
 
@@ -666,40 +667,6 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5D__cache_dataspace_info
- *
- * Purpose:	Cache dataspace info for a dataset
- *
- * Return:	Success:    SUCCEED
- *		Failure:    FAIL
- *
- * Programmer:	Quincey Koziol
- *		Wednesday, November 19, 2014
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-H5D__cache_dataspace_info(const H5D_t *dset)
-{
-    int sndims;                         /* Signed number of dimensions of dataspace rank */
-    herr_t ret_value = SUCCEED;         /* Return value */
-
-    FUNC_ENTER_STATIC
-
-    /* Sanity checking */
-    HDassert(dset);
-
-    /* Cache info for dataset's dataspace */
-    if((sndims = H5S_get_simple_extent_dims(dset->shared->space, dset->shared->curr_dims, dset->shared->max_dims)) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "can't cache dataspace dimensions")
-    dset->shared->ndims = (unsigned)sndims;
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5D__cache_dataspace_info() */
-
-
-/*-------------------------------------------------------------------------
  * Function:	H5D__init_space
  *
  * Purpose:	Copy a dataspace for a dataset's use, performing all the
@@ -732,10 +699,6 @@ H5D__init_space(H5F_t *file, const H5D_t *dset, const H5S_t *space)
     /* Copy dataspace for dataset */
     if(NULL == (dset->shared->space = H5S_copy(space, FALSE, TRUE)))
         HGOTO_ERROR(H5E_DATASET, H5E_CANTCOPY, FAIL, "can't copy dataspace")
-
-    /* Cache the dataset's dataspace info */
-    if(H5D__cache_dataspace_info(dset) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTCOPY, FAIL, "can't cache dataspace info")
 
     /* Set the latest format, if requested */
     if(use_latest_format)
@@ -1222,7 +1185,6 @@ H5D_open(const H5G_loc_t *loc, hid_t dapl_id, hid_t dxpl_id)
             HGOTO_ERROR(H5E_DATASET, H5E_CANTINC, NULL, "can't increment object count")
     } /* end else */
 
-    /* Set the dataset to return */
     ret_value = dataset;
 
 done:
@@ -1264,10 +1226,9 @@ H5D__open_oid(H5D_t *dataset, hid_t dapl_id, hid_t dxpl_id)
     H5O_fill_t *fill_prop;              /* Pointer to dataset's fill value info */
     unsigned alloc_time_state;          /* Allocation time state */
     htri_t msg_exists;                  /* Whether a particular type of message exists */
-    hbool_t layout_init = FALSE;    	/* Flag to indicate that chunk information was initialized */
     herr_t ret_value = SUCCEED;		/* Return value */
 
-    FUNC_ENTER_STATIC_TAG(dxpl_id, dataset->oloc.addr, FAIL)
+    FUNC_ENTER_STATIC
 
     /* check args */
     HDassert(dataset);
@@ -1290,10 +1251,6 @@ H5D__open_oid(H5D_t *dataset, hid_t dapl_id, hid_t dxpl_id)
     if(NULL == (dataset->shared->space = H5S_read(&(dataset->oloc), dxpl_id)))
         HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to load dataspace info from dataset header")
 
-    /* Cache the dataset's dataspace info */
-    if(H5D__cache_dataspace_info(dataset) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTCOPY, FAIL, "can't cache dataspace info")
-
     /* Get a datatype ID for the dataset's datatype */
     if((dataset->shared->type_id = H5I_register(H5I_DATATYPE, dataset->shared->type, FALSE)) < 0)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTREGISTER, FAIL, "unable to register type")
@@ -1305,9 +1262,6 @@ H5D__open_oid(H5D_t *dataset, hid_t dapl_id, hid_t dxpl_id)
     /* Get the layout/pline/efl message information */
     if(H5D__layout_oh_read(dataset, dxpl_id, dapl_id, plist) < 0)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "can't get layout/pline/efl info")
-
-    /* Indicate that the layout information was initialized */
-    layout_init = TRUE;
 
     /* Point at dataset's copy, to cache it for later */
     fill_prop = &dataset->shared->dcpl_cache.fill;
@@ -1384,9 +1338,6 @@ done:
         if(H5F_addr_defined(dataset->oloc.addr) && H5O_close(&(dataset->oloc)) < 0)
             HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, FAIL, "unable to release object header")
         if(dataset->shared) {
-	    if(dataset->shared->layout.type == H5D_CHUNKED && layout_init)
-                if(H5D__chunk_dest(dataset->oloc.file, dxpl_id, dataset) < 0)
-                    HDONE_ERROR(H5E_DATASET, H5E_CANTRELEASE, FAIL, "unable to destroy chunk cache")
             if(dataset->shared->space && H5S_close(dataset->shared->space) < 0)
                 HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, FAIL, "unable to release dataspace")
             if(dataset->shared->type) {
@@ -1402,7 +1353,7 @@ done:
         } /* end if */
     } /* end if */
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D__open_oid() */
 
 
@@ -1881,7 +1832,7 @@ H5D__get_storage_size(H5D_t *dset, hid_t dxpl_id, hsize_t *storage_size)
 {
     herr_t	ret_value = SUCCEED;    /* Return value */
 
-    FUNC_ENTER_PACKAGE_TAG(dxpl_id, dset->oloc.addr, FAIL)
+    FUNC_ENTER_PACKAGE
 
     switch(dset->shared->layout.type) {
         case H5D_CHUNKED:
@@ -1912,7 +1863,7 @@ H5D__get_storage_size(H5D_t *dset, hid_t dxpl_id, hsize_t *storage_size)
     } /*lint !e788 All appropriate cases are covered */
 
 done:
-    FUNC_LEAVE_NOAPI_TAG(ret_value, 0)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D__get_storage_size() */
 
 
@@ -2204,11 +2155,13 @@ done:
 herr_t
 H5D__set_extent(H5D_t *dset, const hsize_t *size, hid_t dxpl_id)
 {
-    hsize_t curr_dims[H5S_MAX_RANK];    /* Current dimension sizes */
+    H5S_t   *space;                     /* Dataset's dataspace */
+    int     rank;                       /* Dataspace # of dimensions */
+    hsize_t curr_dims[H5O_LAYOUT_NDIMS];/* Current dimension sizes */
     htri_t  changed;                    /* Whether the dataspace changed size */
     herr_t  ret_value = SUCCEED;        /* Return value */
 
-    FUNC_ENTER_PACKAGE_TAG(dxpl_id, dset->oloc.addr, FAIL)
+    FUNC_ENTER_PACKAGE
 
     /* Check args */
     HDassert(dset);
@@ -2228,30 +2181,29 @@ H5D__set_extent(H5D_t *dset, const hsize_t *size, hid_t dxpl_id)
     if(H5D__check_filters(dset) < 0)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "can't apply filters")
 
-    /* Keep the current dataspace dimensions for later */
-    HDcompile_assert(sizeof(curr_dims) == sizeof(dset->shared->curr_dims));
-    HDmemcpy(curr_dims, dset->shared->curr_dims, H5S_MAX_RANK * sizeof(curr_dims[0]));
+    /* Get the dataspace */
+    space = dset->shared->space;
+
+    /* Check if we are shrinking or expanding any of the dimensions */
+    if((rank = H5S_get_simple_extent_dims(space, curr_dims, NULL)) < 0)
+        HGOTO_ERROR(H5E_DATASET, H5E_CANTGET, FAIL, "can't get dataset dimensions")
 
     /* Modify the size of the dataspace */
-    if((changed = H5S_set_extent(dset->shared->space, size)) < 0)
+    if((changed = H5S_set_extent(space, size)) < 0)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to modify size of dataspace")
 
     /* Don't bother updating things, unless they've changed */
     if(changed) {
-        hbool_t shrink = FALSE;         /* Flag to indicate a dimension has shrank */
-        hbool_t expand = FALSE;         /* Flag to indicate a dimension has grown */
-        unsigned u;                     /* Local index variable */
+        hbool_t shrink = FALSE;             /* Flag to indicate a dimension has shrank */
+        hbool_t expand = FALSE;             /* Flag to indicate a dimension has grown */
+        unsigned u;                         /* Local index variable */
 
         /* Determine if we are shrinking and/or expanding any dimensions */
-        for(u = 0; u < dset->shared->ndims; u++) {
-            /* Check for various status changes */
+        for(u = 0; u < (unsigned)rank; u++) {
             if(size[u] < curr_dims[u])
                 shrink = TRUE;
             if(size[u] > curr_dims[u])
                 expand = TRUE;
-
-            /* Update the cached copy of the dataset's dimensions */
-            dset->shared->curr_dims[u] = size[u];
         } /* end for */
 
         /*-------------------------------------------------------------------------
@@ -2260,7 +2212,6 @@ H5D__set_extent(H5D_t *dset, const hsize_t *size, hid_t dxpl_id)
          */
         /* Update the index values for the cached chunks for this dataset */
         if(H5D_CHUNKED == dset->shared->layout.type) {
-            /* Set the cached chunk info */
             if(H5D__chunk_set_info(dset) < 0)
                 HGOTO_ERROR(H5E_DATASET, H5E_CANTSET, FAIL, "unable to update # of chunks")
             if(H5D__chunk_update_cache(dset, dxpl_id) < 0)
@@ -2279,10 +2230,11 @@ H5D__set_extent(H5D_t *dset, const hsize_t *size, hid_t dxpl_id)
          *-------------------------------------------------------------------------
          */
         if(shrink && H5D_CHUNKED == dset->shared->layout.type &&
-                (*dset->shared->layout.ops->is_space_alloc)(&dset->shared->layout.storage))
+                (*dset->shared->layout.ops->is_space_alloc)(&dset->shared->layout.storage)) {
             /* Remove excess chunks */
             if(H5D__chunk_prune_by_extent(dset, dxpl_id, curr_dims) < 0)
                 HGOTO_ERROR(H5E_DATASET, H5E_WRITEERROR, FAIL, "unable to remove chunks")
+        } /* end if */
 
         /* Mark the dataspace as dirty, for later writing to the file */
         if(H5D__mark(dset, dxpl_id, H5D_MARK_SPACE) < 0)
@@ -2290,7 +2242,7 @@ H5D__set_extent(H5D_t *dset, const hsize_t *size, hid_t dxpl_id)
     } /* end if */
 
 done:
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D__set_extent() */
 
 
@@ -2354,7 +2306,7 @@ H5D__flush_real(H5D_t *dataset, hid_t dxpl_id)
     H5O_t *oh = NULL;                   /* Pointer to dataset's object header */
     herr_t ret_value = SUCCEED;         /* Return value */
 
-    FUNC_ENTER_PACKAGE_TAG(dxpl_id, dataset->oloc.addr, FAIL)
+    FUNC_ENTER_PACKAGE
 
     /* Check args */
     HDassert(dataset);
@@ -2402,7 +2354,7 @@ done:
         if(H5O_unpin(oh) < 0)
             HDONE_ERROR(H5E_DATASET, H5E_CANTUNPIN, FAIL, "unable to unpin dataset object header")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D__flush_real() */
 
 
@@ -2715,14 +2667,16 @@ H5D_get_space(H5D_t *dset)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to get data space")
 
     /* Create an atom */
-    if((ret_value = H5I_register(H5I_DATASPACE, space, TRUE)) < 0)
-        HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to register dataspace")
+    if((ret_value = H5I_register (H5I_DATASPACE, space, TRUE)) < 0)
+        HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to register data space")
 
 done:
-    if(ret_value < 0)
-        if(space != NULL)
+    if(ret_value < 0) {
+        if(space!=NULL) {
             if(H5S_close(space) < 0)
                 HDONE_ERROR(H5E_DATASET, H5E_CLOSEERROR, FAIL, "unable to release dataspace")
+        } /* end if */
+    } /* end if */
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D_get_space() */

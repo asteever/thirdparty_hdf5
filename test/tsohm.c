@@ -2469,11 +2469,11 @@ static void test_sohm_size2(int close_reopen)
      * this happens because it's hard to predict exactly how much space this
      * will take.
      */
-     if((mult_index_med.attrs2 - mult_index_med.attrs1) >
-            (list_index_med.attrs2 - list_index_med.attrs1) * OVERHEAD_ALLOWED)
+     if((mult_index_med.attrs2 - mult_index_med.attrs1) !=
+            (list_index_med.attrs2 - list_index_med.attrs1))
         VERIFY(0, 1, "h5_get_file_size");
-     if((mult_index_btree.attrs2 - mult_index_btree.attrs1) >
-            (btree_index.attrs2 - btree_index.attrs1) * OVERHEAD_ALLOWED)
+     if((mult_index_btree.attrs2 - mult_index_btree.attrs1) !=
+            (btree_index.attrs2 - btree_index.attrs1))
         VERIFY(0, 1, "h5_get_file_size");
 
     /* The final file size for both of the multiple index files should be
@@ -3884,7 +3884,7 @@ test_sohm_external_dtype(void)
     CHECK_I(dset1_tid, "H5Dget_type");
 
     /* Allocate space and initialize data */
-    orig = (s1_t*)HDmalloc(NX * NY * sizeof(s1_t));
+    orig = (s1_t*)malloc(NX * NY * sizeof(s1_t));
     for(i=0; i<NX*NY; i++) {
         s_ptr = (s1_t*)orig + i;
         s_ptr->a = i*3 + 1;
@@ -3963,7 +3963,7 @@ test_sohm_external_dtype(void)
     ret = H5Fclose(file2);
     CHECK_I(ret, "H5Fclose");
 
-    HDfree(orig);
+    free(orig);
 }
 
 

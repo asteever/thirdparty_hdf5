@@ -94,7 +94,6 @@ const H5AC_class_t H5AC_LHEAP_PRFX[1] = {{
     H5HL_prefix_flush,
     H5HL_prefix_dest,
     H5HL_prefix_clear,
-    NULL,
     H5HL_prefix_size,
 }};
 
@@ -104,7 +103,6 @@ const H5AC_class_t H5AC_LHEAP_DBLK[1] = {{
     H5HL_datablock_flush,
     H5HL_datablock_dest,
     H5HL_datablock_clear,
-    NULL,
     H5HL_datablock_size,
 }};
 
@@ -258,7 +256,6 @@ H5HL_prefix_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
     size_t	        spec_read_size; /* Size of buffer to speculatively read in */
     const uint8_t	*p;         /* Pointer into decoding buffer */
     haddr_t             eoa;        /* Relative end of file address */
-    hsize_t min;                    /* temp min value to avoid macro nesting */
     H5HL_prfx_t *ret_value;         /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
@@ -277,8 +274,7 @@ H5HL_prefix_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
         HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, NULL, "unable to determine file size")
 
     /* Compute the size of the speculative local heap prefix buffer */
-    min = MIN(eoa - addr, H5HL_SPEC_READ_SIZE);
-    H5_CHECKED_ASSIGN(spec_read_size, size_t, min, hsize_t);
+    H5_ASSIGN_OVERFLOW(spec_read_size, MIN(eoa - addr, H5HL_SPEC_READ_SIZE), /* From: */ hsize_t, /* To: */ size_t);
     HDassert(spec_read_size >= udata->sizeof_prfx);
 
     /* Attempt to speculatively read both local heap prefix and heap data */

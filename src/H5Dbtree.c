@@ -74,8 +74,8 @@
  * The chunk's file address is part of the B-tree and not part of the key.
  */
 typedef struct H5D_btree_key_t {
-    hsize_t	offset[H5O_LAYOUT_NDIMS];	/*logical offset to start*/
     uint32_t	nbytes;				/*size of stored data	*/
+    hsize_t	offset[H5O_LAYOUT_NDIMS];	/*logical offset to start*/
     unsigned	filter_mask;			/*excluded filters	*/
 } H5D_btree_key_t;
 
@@ -105,7 +105,7 @@ static int H5D__btree_idx_iterate_cb(H5F_t *f, hid_t dxpl_id, const void *left_k
     haddr_t addr, const void *right_key, void *_udata);
 
 /* B-tree callbacks */
-static H5UC_t *H5D__btree_get_shared(const H5F_t *f, const void *_udata);
+static H5RC_t *H5D__btree_get_shared(const H5F_t *f, const void *_udata);
 static herr_t H5D__btree_new_node(H5F_t *f, hid_t dxpl_id, H5B_ins_t, void *_lt_key,
     void *_udata, void *_rt_key, haddr_t *addr_p /*out*/);
 static int H5D__btree_cmp2(void *_lt_key, void *_udata, void *_rt_key);
@@ -195,7 +195,7 @@ H5B_class_t H5B_BTREE[1] = {{
     H5D__btree_remove,		/*remove		*/
     H5D__btree_decode_key,	/*decode		*/
     H5D__btree_encode_key,	/*encode		*/
-    H5D__btree_debug_key	/*debug			*/
+    H5D__btree_debug_key,	/*debug			*/
 }};
 
 
@@ -219,7 +219,7 @@ H5B_class_t H5B_BTREE[1] = {{
  *-------------------------------------------------------------------------
  */
 /* ARGSUSED */
-static H5UC_t *
+static H5RC_t *
 H5D__btree_get_shared(const H5F_t UNUSED *f, const void *_udata)
 {
     const H5D_chunk_common_ud_t *udata = (const H5D_chunk_common_ud_t *) _udata;
@@ -228,7 +228,7 @@ H5D__btree_get_shared(const H5F_t UNUSED *f, const void *_udata)
 
     HDassert(udata);
     HDassert(udata->storage);
-    HDassert(udata->storage->idx_type == H5D_CHUNK_IDX_BTREE);
+    HDassert(udata->storage->idx_type == H5D_CHUNK_BTREE);
     HDassert(udata->storage->u.btree.shared);
 
     /* Return the pointer to the ref-count object */
@@ -255,7 +255,7 @@ H5D__btree_get_shared(const H5F_t UNUSED *f, const void *_udata)
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5D__btree_new_node(H5F_t *f, hid_t UNUSED dxpl_id, H5B_ins_t op,
+H5D__btree_new_node(H5F_t *f, hid_t dxpl_id, H5B_ins_t op,
 		    void *_lt_key, void *_udata, void *_rt_key,
 		    haddr_t *addr_p/*out*/)
 {
@@ -265,7 +265,7 @@ H5D__btree_new_node(H5F_t *f, hid_t UNUSED dxpl_id, H5B_ins_t op,
     unsigned		u;
     herr_t      ret_value = SUCCEED;       /* Return value */
 
-    FUNC_ENTER_STATIC_NOERR
+    FUNC_ENTER_STATIC
 
     /* check args */
     HDassert(f);
@@ -275,16 +275,18 @@ H5D__btree_new_node(H5F_t *f, hid_t UNUSED dxpl_id, H5B_ins_t op,
     HDassert(udata->common.layout->ndims > 0 && udata->common.layout->ndims < H5O_LAYOUT_NDIMS);
     HDassert(addr_p);
 
-    /* Set address */
-    HDassert(H5F_addr_defined(udata->chunk_block.offset));
-    HDassert(udata->chunk_block.length > 0);
-    *addr_p = udata->chunk_block.offset;
+    /* Allocate new storage */
+    HDassert(udata->nbytes > 0);
+    H5_CHECK_OVERFLOW(udata->nbytes, uint32_t, hsize_t);
+    if(HADDR_UNDEF == (*addr_p = H5MF_alloc(f, H5FD_MEM_DRAW, dxpl_id, (hsize_t)udata->nbytes)))
+        HGOTO_ERROR(H5E_IO, H5E_CANTINIT, FAIL, "couldn't allocate new file storage")
+    udata->addr = *addr_p;
 
     /*
      * The left key describes the storage of the UDATA chunk being
      * inserted into the tree.
      */
-    H5_CHECKED_ASSIGN(lt_key->nbytes, uint32_t, udata->chunk_block.length, hsize_t);
+    lt_key->nbytes = udata->nbytes;
     lt_key->filter_mask = udata->filter_mask;
     for(u = 0; u < udata->common.layout->ndims; u++)
         lt_key->offset[u] = udata->common.offset[u];
@@ -303,6 +305,7 @@ H5D__btree_new_node(H5F_t *f, hid_t UNUSED dxpl_id, H5B_ins_t op,
         } /* end if */
     } /* end if */
 
+done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D__btree_new_node() */
 
@@ -465,8 +468,8 @@ H5D__btree_found(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, haddr_t addr, const void
 
     /* Initialize return values */
     HDassert(lt_key->nbytes > 0);
-    udata->chunk_block.offset = addr;
-    udata->chunk_block.length = lt_key->nbytes;
+    udata->addr = addr;
+    udata->nbytes = lt_key->nbytes;
     udata->filter_mask = lt_key->filter_mask;
 
 done:
@@ -504,7 +507,7 @@ done:
  */
 /* ARGSUSED */
 static H5B_ins_t
-H5D__btree_insert(H5F_t *f, hid_t UNUSED dxpl_id, haddr_t addr, void *_lt_key,
+H5D__btree_insert(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_lt_key,
 		  hbool_t *lt_key_changed,
 		  void *_md_key, void *_udata, void *_rt_key,
 		  hbool_t UNUSED *rt_key_changed,
@@ -544,17 +547,35 @@ H5D__btree_insert(H5F_t *f, hid_t UNUSED dxpl_id, haddr_t addr, void *_lt_key,
          * Already exists.  If the new size is not the same as the old size
          * then we should reallocate storage.
          */
-        if(lt_key->nbytes != udata->chunk_block.length) {
-	    /* Set node's address (already re-allocated by main chunk routines) */
-	    HDassert(H5F_addr_defined(udata->chunk_block.offset));
-            *new_node_p = udata->chunk_block.offset;
-            H5_CHECKED_ASSIGN(lt_key->nbytes, uint32_t, udata->chunk_block.length, hsize_t);
+        if(lt_key->nbytes != udata->nbytes) {
+/* Currently, the old chunk data is "thrown away" after the space is reallocated,
+ * so avoid data copy in H5MF_realloc() call by just free'ing the space and
+ * allocating new space.
+ *
+ * This should keep the file smaller also, by freeing the space and then
+ * allocating new space, instead of vice versa (in H5MF_realloc).
+ *
+ * QAK - 11/19/2002
+ */
+#ifdef OLD_WAY
+            if(HADDR_UNDEF == (*new_node_p = H5MF_realloc(f, H5FD_MEM_DRAW, addr,
+                      (hsize_t)lt_key->nbytes, (hsize_t)udata->nbytes)))
+                HGOTO_ERROR(H5E_STORAGE, H5E_NOSPACE, H5B_INS_ERROR, "unable to reallocate chunk storage")
+#else /* OLD_WAY */
+            H5_CHECK_OVERFLOW(lt_key->nbytes, uint32_t, hsize_t);
+            if(H5MF_xfree(f, H5FD_MEM_DRAW, dxpl_id, addr, (hsize_t)lt_key->nbytes) < 0)
+                HGOTO_ERROR(H5E_STORAGE, H5E_CANTFREE, H5B_INS_ERROR, "unable to free chunk")
+            H5_CHECK_OVERFLOW(udata->nbytes, uint32_t, hsize_t);
+            if(HADDR_UNDEF == (*new_node_p = H5MF_alloc(f, H5FD_MEM_DRAW, dxpl_id, (hsize_t)udata->nbytes)))
+                HGOTO_ERROR(H5E_STORAGE, H5E_NOSPACE, H5B_INS_ERROR, "unable to reallocate chunk")
+#endif /* OLD_WAY */
+            lt_key->nbytes = udata->nbytes;
             lt_key->filter_mask = udata->filter_mask;
             *lt_key_changed = TRUE;
+            udata->addr = *new_node_p;
             ret_value = H5B_INS_CHANGE;
         } else {
-	    /* Already have address in udata, from main chunk routines */
-	    HDassert(H5F_addr_defined(udata->chunk_block.offset));
+            udata->addr = addr;
             ret_value = H5B_INS_NOOP;
         }
 
@@ -568,15 +589,20 @@ H5D__btree_insert(H5F_t *f, hid_t UNUSED dxpl_id, haddr_t addr, void *_lt_key,
          * Split this node, inserting the new new node to the right of the
          * current node.  The MD_KEY is where the split occurs.
          */
-        H5_CHECKED_ASSIGN(md_key->nbytes, uint32_t, udata->chunk_block.length, hsize_t);
+        md_key->nbytes = udata->nbytes;
         md_key->filter_mask = udata->filter_mask;
         for(u = 0; u < udata->common.layout->ndims; u++) {
             HDassert(0 == udata->common.offset[u] % udata->common.layout->dim[u]);
             md_key->offset[u] = udata->common.offset[u];
         } /* end for */
 
-	HDassert(H5F_addr_defined(udata->chunk_block.offset));
-        *new_node_p = udata->chunk_block.offset;
+        /*
+         * Allocate storage for the new chunk
+         */
+        H5_CHECK_OVERFLOW(udata->nbytes, uint32_t, hsize_t);
+        if(HADDR_UNDEF == (*new_node_p = H5MF_alloc(f, H5FD_MEM_DRAW, dxpl_id, (hsize_t)udata->nbytes)))
+            HGOTO_ERROR(H5E_STORAGE, H5E_NOSPACE, H5B_INS_ERROR, "file allocation failed")
+        udata->addr = *new_node_p;
         ret_value = H5B_INS_RIGHT;
 
     } else {
@@ -774,7 +800,7 @@ H5D__btree_shared_create(const H5F_t *f, H5O_storage_chunk_t *store, unsigned nd
         /* <none> */
 
     /* Make shared B-tree info reference counted */
-    if(NULL == (store->u.btree.shared = H5UC_create(shared, H5B_shared_free)))
+    if(NULL == (store->u.btree.shared = H5RC_create(shared, H5B_shared_free)))
 	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "can't create ref-count wrapper for shared B-tree info")
 
 done:
@@ -842,7 +868,7 @@ done:
 static herr_t
 H5D__btree_idx_create(const H5D_chk_idx_info_t *idx_info)
 {
-    H5D_chunk_common_ud_t udata;        /* User data for B-tree callback */
+    H5D_chunk_common_ud_t udata;             /* User data for B-tree callback */
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_STATIC
@@ -900,7 +926,8 @@ H5D__btree_idx_is_space_alloc(const H5O_storage_chunk_t *storage)
 /*-------------------------------------------------------------------------
  * Function:	H5D__btree_idx_insert
  *
- * Purpose:	Insert chunk entry into the indexing structure.
+ * Purpose:	Create the chunk it if it doesn't exist, or reallocate the
+ *              chunk if its size changed.
  *
  * Return:	Non-negative on success/Negative on failure
  *
@@ -912,7 +939,7 @@ H5D__btree_idx_is_space_alloc(const H5O_storage_chunk_t *storage)
 static herr_t
 H5D__btree_idx_insert(const H5D_chk_idx_info_t *idx_info, H5D_chunk_ud_t *udata)
 {
-    herr_t	ret_value = SUCCEED;    /* Return value */
+    herr_t	ret_value = SUCCEED;		/* Return value */
 
     FUNC_ENTER_STATIC
 
@@ -1084,7 +1111,7 @@ H5D__btree_idx_iterate(const H5D_chk_idx_info_t *idx_info,
 static herr_t
 H5D__btree_idx_remove(const H5D_chk_idx_info_t *idx_info, H5D_chunk_common_ud_t *udata)
 {
-    herr_t	ret_value = SUCCEED;	/* Return value */
+    herr_t	ret_value = SUCCEED;		/* Return value */
 
     FUNC_ENTER_STATIC
 
@@ -1159,7 +1186,7 @@ H5D__btree_idx_delete(const H5D_chk_idx_info_t *idx_info)
         /* Release the shared B-tree page */
         if(NULL == tmp_storage.u.btree.shared)
             HGOTO_ERROR(H5E_DATASET, H5E_CANTFREE, FAIL, "ref-counted page nil")
-        if(H5UC_DEC(tmp_storage.u.btree.shared) < 0)
+        if(H5RC_DEC(tmp_storage.u.btree.shared) < 0)
             HGOTO_ERROR(H5E_DATASET, H5E_CANTFREE, FAIL, "unable to decrement ref-counted page")
     } /* end if */
 
@@ -1186,7 +1213,7 @@ H5D__btree_idx_copy_setup(const H5D_chk_idx_info_t *idx_info_src,
 {
     herr_t      ret_value = SUCCEED;        /* Return value */
 
-    FUNC_ENTER_STATIC_TAG(idx_info_dst->dxpl_id, H5AC__COPIED_TAG, FAIL)
+    FUNC_ENTER_STATIC
 
     HDassert(idx_info_src);
     HDassert(idx_info_src->f);
@@ -1212,7 +1239,7 @@ H5D__btree_idx_copy_setup(const H5D_chk_idx_info_t *idx_info_src,
     HDassert(H5F_addr_defined(idx_info_dst->storage->idx_addr));
 
 done:
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D__btree_idx_copy_setup() */
 
 
@@ -1241,9 +1268,9 @@ H5D__btree_idx_copy_shutdown(H5O_storage_chunk_t *storage_src,
     HDassert(storage_dst);
 
     /* Decrement refcount on shared B-tree info */
-    if(H5UC_DEC(storage_src->u.btree.shared) < 0)
+    if(H5RC_DEC(storage_src->u.btree.shared) < 0)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTDEC, FAIL, "unable to decrement ref-counted page")
-    if(H5UC_DEC(storage_dst->u.btree.shared) < 0)
+    if(H5RC_DEC(storage_dst->u.btree.shared) < 0)
         HGOTO_ERROR(H5E_DATASET, H5E_CANTDEC, FAIL, "unable to decrement ref-counted page")
 
 done:
@@ -1303,7 +1330,7 @@ done:
     if(shared_init) {
         if(NULL == idx_info->storage->u.btree.shared)
             HDONE_ERROR(H5E_IO, H5E_CANTFREE, FAIL, "ref-counted page nil")
-        if(H5UC_DEC(idx_info->storage->u.btree.shared) < 0)
+        if(H5RC_DEC(idx_info->storage->u.btree.shared) < 0)
             HDONE_ERROR(H5E_IO, H5E_CANTFREE, FAIL, "unable to decrement ref-counted page")
     } /* end if */
 
@@ -1393,7 +1420,7 @@ H5D__btree_idx_dest(const H5D_chk_idx_info_t *idx_info)
     /* Free the raw B-tree node buffer */
     if(NULL == idx_info->storage->u.btree.shared)
         HGOTO_ERROR(H5E_IO, H5E_CANTFREE, FAIL, "ref-counted page nil")
-    if(H5UC_DEC(idx_info->storage->u.btree.shared) < 0)
+    if(H5RC_DEC(idx_info->storage->u.btree.shared) < 0)
 	HGOTO_ERROR(H5E_IO, H5E_CANTFREE, FAIL, "unable to decrement ref-counted page")
 
 done:
@@ -1426,7 +1453,7 @@ H5D_btree_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE * stream, int indent
 
     /* Reset "fake" storage info */
     HDmemset(&storage, 0, sizeof(storage));
-    storage.idx_type = H5D_CHUNK_IDX_BTREE;
+    storage.idx_type = H5D_CHUNK_BTREE;
 
     /* Allocate the shared structure */
     if(H5D__btree_shared_create(f, &storage, ndims) < 0)
@@ -1448,7 +1475,7 @@ done:
         if(NULL == storage.u.btree.shared)
             HDONE_ERROR(H5E_IO, H5E_CANTFREE, FAIL, "ref-counted page nil")
         else
-            if(H5UC_DEC(storage.u.btree.shared) < 0)
+            if(H5RC_DEC(storage.u.btree.shared) < 0)
                 HDONE_ERROR(H5E_IO, H5E_CANTFREE, FAIL, "unable to decrement ref-counted page")
     } /* end if */
 

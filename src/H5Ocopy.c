@@ -86,7 +86,7 @@ static herr_t H5O_copy_header_real(const H5O_loc_t *oloc_src, H5O_loc_t *oloc_ds
 static herr_t H5O_copy_header(const H5O_loc_t *oloc_src, H5O_loc_t *oloc_dst /*out*/,
     hid_t dxpl_id, hid_t ocpypl_id);
 static herr_t H5O_copy_obj(H5G_loc_t *src_loc, H5G_loc_t *dst_loc,
-    const char *dst_name, hid_t ocpypl_id, hid_t lcpl_id, hid_t dxpl_id);
+    const char *dst_name, hid_t ocpypl_id, hid_t lcpl_id);
 static herr_t H5O_copy_obj_by_ref(H5O_loc_t *src_oloc, hid_t dxpl_id,
     H5O_loc_t *dst_oloc, H5G_loc_t *dst_root_loc, H5O_copy_t *cpy_info);
 static herr_t H5O_copy_free_comm_dt_cb(void *item, void *key, void *op_data);
@@ -243,7 +243,7 @@ H5Ocopy(hid_t src_loc_id, const char *src_name, hid_t dst_loc_id,
         H5G_loc_reset(&tmp_loc);
 
         /* Check if object already exists in destination */
-        if(H5G_loc_find(&dst_loc, dst_name, &tmp_loc, H5P_DEFAULT, H5AC_ind_dxpl_id) >= 0) {
+        if(H5G_loc_find(&dst_loc, dst_name, &tmp_loc, H5P_DEFAULT, H5AC_dxpl_id) >= 0) {
             H5G_name_free(&tmp_path);
             HGOTO_ERROR(H5E_SYM, H5E_EXISTS, FAIL, "destination object already exists")
         } /* end if */
@@ -255,7 +255,7 @@ H5Ocopy(hid_t src_loc_id, const char *src_name, hid_t dst_loc_id,
     H5G_loc_reset(&src_loc);
 
     /* Find the source object to copy */
-    if(H5G_loc_find(&loc, src_name, &src_loc/*out*/, H5P_DEFAULT, H5AC_ind_dxpl_id) < 0)
+    if(H5G_loc_find(&loc, src_name, &src_loc/*out*/, H5P_DEFAULT, H5AC_dxpl_id) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "source object not found")
     loc_found = TRUE;
 
@@ -281,7 +281,7 @@ H5Ocopy(hid_t src_loc_id, const char *src_name, hid_t dst_loc_id,
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not object copy property list")
 
     /* Do the actual copying of the object */
-    if(H5O_copy_obj(&src_loc, &dst_loc, dst_name, ocpypl_id, lcpl_id, H5AC_dxpl_id) < 0)
+    if(H5O_copy_obj(&src_loc, &dst_loc, dst_name, ocpypl_id, lcpl_id) < 0)
         HGOTO_ERROR(H5E_OHDR, H5E_CANTCOPY, FAIL, "unable to copy object")
 
 done:
@@ -347,7 +347,7 @@ H5O_copy_header_real(const H5O_loc_t *oloc_src, H5O_loc_t *oloc_dst /*out*/,
     size_t                 msghdr_size;
     herr_t                 ret_value = SUCCEED;
 
-    FUNC_ENTER_NOAPI_NOINIT_TAG(dxpl_id, oloc_src->addr, FAIL)
+    FUNC_ENTER_NOAPI_NOINIT
 
     HDassert(oloc_src);
     HDassert(oloc_src->file);
@@ -857,21 +857,11 @@ H5O_copy_header_real(const H5O_loc_t *oloc_src, H5O_loc_t *oloc_dst /*out*/,
         oh_dst->nlink += (unsigned)addr_map->inc_ref_count;
     } /* end if */
 
-    /* Set metadata tag for destination object's object header */
-    H5_BEGIN_TAG(dxpl_id, oloc_dst->addr, FAIL);
-
     /* Insert destination object header in cache */
     if(H5AC_insert_entry(oloc_dst->file, dxpl_id, H5AC_OHDR, oloc_dst->addr, oh_dst, H5AC__NO_FLAGS_SET) < 0)
-        HGOTO_ERROR_TAG(H5E_OHDR, H5E_CANTINSERT, FAIL, "unable to cache object header")
+        HGOTO_ERROR(H5E_OHDR, H5E_CANTINSERT, FAIL, "unable to cache object header")
     oh_dst = NULL;
     inserted = TRUE;
-
-    /* Reset metadat tag */
-    H5_END_TAG(FAIL);
-
-    /* Retag all copied metadata to apply the destination object's tag */
-    if(H5AC_retag_copied_metadata(oloc_dst->file, oloc_dst->addr) < 0)
-        HGOTO_ERROR(H5E_CACHE, H5E_CANTTAG, FAIL, "unable to re-tag metadata entries")
 
     /* Set obj_type and udata, if requested */
     if(obj_type) {
@@ -897,7 +887,7 @@ done:
             HDONE_ERROR(H5E_OHDR, H5E_CANTFREE, FAIL, "unable to destroy object header data")
     } /* end if */
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_copy_header_real() */
 
 
@@ -1151,13 +1141,14 @@ done:
  */
 static herr_t
 H5O_copy_obj(H5G_loc_t *src_loc, H5G_loc_t *dst_loc, const char *dst_name,
-    hid_t ocpypl_id, hid_t lcpl_id, hid_t dxpl_id)
+    hid_t ocpypl_id, hid_t lcpl_id)
 {
     H5G_name_t      new_path;                   /* Copied object group hier. path */
     H5O_loc_t       new_oloc;                   /* Copied object object location */
     H5G_loc_t       new_loc;                    /* Group location of object copied */
     H5F_t           *cached_dst_file;           /* Cached destination file */
     hbool_t         entry_inserted = FALSE;     /* Flag to indicate that the new entry was inserted into a group */
+    hid_t           dxpl_id = H5AC_dxpl_id;     /* DXPL for operation */
     herr_t          ret_value = SUCCEED;        /* Return value */
 
     FUNC_ENTER_NOAPI(FAIL)
@@ -1566,9 +1557,9 @@ done:
  *              Nov 3 2011
  *
  * Modifications:
- *      Vailin Choi; August 2012
- *      Use H5O_obj_class to get object type instead of
- *      H5O_get_info(...TRUE....) saving time in traversing metadata.
+ *	Vailin Choi; August 2012
+ *	Use H5O_obj_class to get object type instead of
+ *	H5O_get_info(...TRUE....) saving time in traversing metadata.
  *-------------------------------------------------------------------------
  */
 static herr_t
@@ -1655,8 +1646,7 @@ H5O_copy_search_comm_dt_check(H5O_loc_t *obj_oloc,
     attr_op.u.lib_op = H5O_copy_search_comm_dt_attr_cb;
     udata->obj_oloc.file = obj_oloc->file;
     udata->obj_oloc.addr = obj_oloc->addr;
-    if(H5O_attr_iterate_real((hid_t)-1, obj_oloc, udata->dxpl_id, H5_INDEX_NAME, 
-                             H5_ITER_NATIVE, (hsize_t)0, NULL, &attr_op, udata) < 0)
+    if(H5O_attr_iterate_real((hid_t)-1, obj_oloc, udata->dxpl_id, H5_INDEX_NAME, H5_ITER_NATIVE, 0, NULL, &attr_op, udata) < 0)
         HGOTO_ERROR(H5E_OHDR, H5E_BADITER, FAIL, "error iterating over attributes");
 
 done:

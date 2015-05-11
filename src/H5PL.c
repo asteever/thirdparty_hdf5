@@ -249,7 +249,6 @@ H5PLget_loading_state(unsigned int *plugin_type)
     FUNC_LEAVE_API(ret_value)
 } /* end H5PLget_loading_state() */
 
-
 
 /*-------------------------------------------------------------------------
  * Function:    H5PL_term_interface

@@ -85,7 +85,7 @@ H5FL_ARR_DEFINE(hsize_t,H5S_MAX_RANK);
 /* Dataspace ID class */
 static const H5I_class_t H5I_DATASPACE_CLS[1] = {{
     H5I_DATASPACE,		/* ID class value */
-    0,				/* Class flags */
+    H5I_CLASS_REUSE_IDS,	/* Class flags */
     2,				/* # of reserved IDs for class */
     (H5I_free_t)H5S_close	/* Callback routine for closing objects of this class */
 }};
@@ -467,7 +467,7 @@ H5Sextent_copy(hid_t dst_id,hid_t src_id)
 {
     H5S_t	*src;
     H5S_t	*dst;
-    herr_t	ret_value = SUCCEED;
+    hid_t	ret_value = SUCCEED;
 
     FUNC_ENTER_API(FAIL)
     H5TRACE2("e", "ii", dst_id, src_id);
@@ -1314,8 +1314,7 @@ H5S_set_extent_simple(H5S_t *space, unsigned rank, const hsize_t *dims,
     /* Selection related cleanup */
 
     /* Set offset to zeros */
-    for(u = 0; u < space->extent.rank; u++)
-        space->select.offset[u] = 0;
+    HDmemset(space->select.offset, 0, sizeof(hsize_t) * space->extent.rank);
     space->select.offset_changed = FALSE;
 
     /* If the selection is 'all', update the number of elements selected */
@@ -1521,7 +1520,7 @@ H5S_encode(H5S_t *obj, unsigned char *buf, size_t *nalloc)
     /* Find out the size of buffer needed for selection */
     if((sselect_size = H5S_SELECT_SERIAL_SIZE(obj)) < 0)
 	HGOTO_ERROR(H5E_DATASPACE, H5E_BADSIZE, FAIL, "can't find dataspace selection size")
-    H5_CHECKED_ASSIGN(select_size, size_t, sselect_size, hssize_t);
+    H5_ASSIGN_OVERFLOW(select_size, sselect_size, hssize_t, size_t);
 
     /* Verify the size of buffer.  If it's not big enough, simply return the
      * right size without filling the buffer. */
@@ -1546,7 +1545,7 @@ H5S_encode(H5S_t *obj, unsigned char *buf, size_t *nalloc)
         buf += extent_size;
 
         /* Encode the selection part of dataspace.  */
-        if(H5S_SELECT_SERIALIZE(obj, &buf) < 0)
+        if(H5S_SELECT_SERIALIZE(obj, buf) < 0)
             HGOTO_ERROR(H5E_DATASPACE, H5E_CANTENCODE, FAIL, "can't encode select space")
     } /* end else */
 
@@ -1665,7 +1664,7 @@ H5S_decode(const unsigned char *buf)
         HGOTO_ERROR(H5E_DATASPACE, H5E_CANTSET, NULL, "unable to set all selection")
 
     /* Decode the select part of dataspace.  I believe this part always exists. */
-    if(H5S_SELECT_DESERIALIZE(&ds, &buf) < 0)
+    if(H5S_SELECT_DESERIALIZE(ds, buf) < 0)
         HGOTO_ERROR(H5E_DATASPACE, H5E_CANTDECODE, NULL, "can't decode space selection")
 
     /* Set return value */
@@ -2144,13 +2143,14 @@ H5S_extend(H5S_t *space, const hsize_t *size)
     HDassert(size);
 
     /* Check through all the dimensions to see if modifying the dataspace is allowed */
-    for(u = 0; u < space->extent.rank; u++)
-        if(space->extent.size[u] < size[u]) {
-            if(space->extent.max && H5S_UNLIMITED != space->extent.max[u] &&
-                    space->extent.max[u] < size[u])
+    for(u = 0; u < space->extent.rank; u++) {
+        if(space->extent.size[u]<size[u]) {
+            if(space->extent.max && H5S_UNLIMITED!=space->extent.max[u] &&
+                    space->extent.max[u]<size[u])
                 HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "dimension cannot be increased")
             ret_value++;
         } /* end if */
+    } /* end for */
 
     /* Update */
     if(ret_value) {

@@ -387,11 +387,11 @@ H5HF_dblock_debug_cb(H5FS_section_info_t *_sect, void *_udata)
         if(sect_start < dblock_start)
             start = 0;
         else
-            H5_CHECKED_ASSIGN(start, size_t, (sect_start - dblock_start), hsize_t)
+            H5_ASSIGN_OVERFLOW(/* To: */ start, /* From: */ (sect_start - dblock_start), /* From: */ hsize_t, /* To: */ size_t)
         if(sect_end > dblock_end)
-            H5_CHECKED_ASSIGN(end, size_t, udata->dblock_size, hsize_t)
+            H5_ASSIGN_OVERFLOW(/* To: */ end, /* From: */ udata->dblock_size, /* From: */ hsize_t, /* To: */ size_t)
         else
-            H5_CHECKED_ASSIGN(end, size_t, ((sect_end - dblock_start) + 1), hsize_t)
+            H5_ASSIGN_OVERFLOW(/* To: */ end, /* From: */ ((sect_end - dblock_start) + 1), /* From: */ hsize_t, /* To: */ size_t)
 
         /* Calculate the length */
         len = end - start;
@@ -484,6 +484,9 @@ H5HF_dblock_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream,
     HDfprintf(stream, "%*s%-*s %Zu\n", indent, "", fwidth,
 	      "Size of block header:",
               blk_prefix_size);
+    HDfprintf(stream, "%*s%-*s %Zu\n", indent, "", fwidth,
+	      "Size of block offsets:",
+	      dblock->blk_off_size);
 
     /* Allocate space for the free space markers */
     if(NULL == (marker = (uint8_t *)H5MM_calloc(dblock->size)))

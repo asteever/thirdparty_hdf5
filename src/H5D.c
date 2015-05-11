@@ -329,7 +329,7 @@ H5Dopen2(hid_t loc_id, const char *name, hid_t dapl_id)
     H5O_loc_t    oloc;            	/* Dataset object location */
     H5O_type_t   obj_type;              /* Type of object at location */
     hbool_t      loc_found = FALSE;     /* Location at 'name' found */
-    hid_t        dxpl_id = H5AC_ind_dxpl_id;    /* dxpl to use to open datset */
+    hid_t        dxpl_id = H5AC_dxpl_id;    /* dxpl to use to open datset */
     hid_t        ret_value;
 
     FUNC_ENTER_API(FAIL)
@@ -974,15 +974,15 @@ H5Dset_extent(hid_t dset_id, const hsize_t size[])
 
     /* Check args */
     if(NULL == (dset = (H5D_t *)H5I_object_verify(dset_id, H5I_DATASET)))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataset")
+	HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a dataset")
     if(!size)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no size specified")
+	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no size specified")
 
     /* Private function */
     if(H5D__set_extent(dset, size, H5AC_dxpl_id) < 0)
-        HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to set extend dataset")
+	HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to set extend dataset")
 
 done:
-        FUNC_LEAVE_API(ret_value)
+    FUNC_LEAVE_API(ret_value)
 } /* end H5Dset_extent() */
 
