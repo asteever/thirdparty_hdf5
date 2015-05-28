@@ -21,6 +21,7 @@
 #define PROGRAMNAME "h5repack"
 
 static int parse_command_line(int argc, const char **argv, pack_opt_t* options);
+static void dump_options(const pack_opt_t* options);
 static void leave(int ret) NORETURN;
 
 
@@ -33,7 +34,7 @@ const char *outfile = NULL;
  * Command-line options: The user can specify short or long-named
  * parameters.
  */
-static const char *s_opts = "hVvf:l:m:e:nLc:d:s:u:b:M:t:a:i:o:S:T:";
+static const char *s_opts = "hVvf:l:m:e:nLc:d:s:u:b:M:t:a:i:o:B:C:ORS:T:W";
 static struct long_options l_opts[] = {
 	{ "help", no_arg, 'h' },
 	{ "version", no_arg, 'V' },
@@ -54,8 +55,13 @@ static struct long_options l_opts[] = {
 	{ "alignment", require_arg, 'a' },
 	{ "infile", require_arg, 'i' }, /* -i for backward compability */
 	{ "outfile", require_arg, 'o' }, /* -o for backward compability */
+	{ "buf_size", require_arg, 'B' },/* memory buffer size */
+	{ "cache_size", require_arg, 'C' },
+	{ "no-h5ocopy", no_arg, 'O' },
+	{ "readonly", no_arg, 'R' },
 	{ "fs_strategy", require_arg, 'S' },
 	{ "fs_threshold", require_arg, 'T' },
+	{ "showtime", no_arg, 'W' },	/* show wall clock time */
 	{ NULL, 0, '\0' }
 };
 
@@ -90,8 +96,13 @@ static void usage(const char *prog) {
 	printf("   -a A, --alignment=A     Alignment value for H5Pset_alignment\n");
 	printf("   -f FILT, --filter=FILT  Filter type\n");
 	printf("   -l LAYT, --layout=LAYT  Layout type\n");
+	printf("   -B S, --buf_size=S      memory buffer size[%llu]\n", H5TOOLS_MALLOCSIZE);
+	printf("   -C S, --cache_size=S    Raw data chunk cache size in bytes\n");
+	printf("   -O, --no-h5ocopy        Do not use H5Ocopy at all [use]\n");
+	printf("   -R, --readonly          Read only, no create or write output [off]\n");
 	printf("   -S FS_STRGY, --fs_strategy=FS_STRGY  File space management strategy\n");
 	printf("   -T FS_THRD, --fs_threshold=FS_THRD   Free-space section threshold\n");
+	printf("   -W, --showtime          Show wall clock time [off]\n");
 	printf("\n");
 	printf("    M - is an integer greater than 1, size of dataset in bytes (default is 0) \n");
 	printf("    E - is a filename.\n");
@@ -191,7 +202,7 @@ static void usage(const char *prog) {
 	printf("\n");
 	printf("   Add bzip2 filter to all datasets\n");
 	printf("\n");
-}
+} /* usage */
 
 /*-------------------------------------------------------------------------
  * Function:    leave
@@ -211,7 +222,7 @@ static void leave(int ret) {
 	h5tools_close();
 
 	HDexit(ret);
-}
+} /* leave */
 
 /*-------------------------------------------------------------------------
  * Function: read_info
@@ -334,7 +345,7 @@ done:
 		HDfclose(fp);
 
 	return ret_value;
-}
+} /* read_info */
 
 /*-------------------------------------------------------------------------
  * Function: parse_command_line
@@ -477,6 +488,21 @@ int parse_command_line(int argc, const char **argv, pack_opt_t* options) {
 			options->ublock_filename = opt_arg;
 			break;
 
+		case 'B':
+			options->buf_size = (size_t) HDatol( opt_arg );
+			if (options->buf_size == 0) {
+				error_msg("invalid memory buffer size(%s)\n", opt_arg);
+				h5tools_setstatus(EXIT_FAILURE);
+				ret_value = -1;
+				goto done;
+			}
+			H5TOOLS_BUFSIZE = H5TOOLS_MALLOCSIZE = options->buf_size;
+			break;
+
+		case 'C':
+			options->cache_size = (size_t) HDatol( opt_arg );
+			break;
+
 		case 'b':
 			options->ublock_size = (hsize_t) HDatol( opt_arg );
 			break;
@@ -497,6 +523,14 @@ int parse_command_line(int argc, const char **argv, pack_opt_t* options) {
 				ret_value = -1;
 				goto done;
 			}
+			break;
+
+		case 'O':
+			options->no_h5ocopy++;
+			break;
+
+		case 'R':
+			options->readonly++;
 			break;
 
 		case 'S':
@@ -525,6 +559,10 @@ int parse_command_line(int argc, const char **argv, pack_opt_t* options) {
 			options->fs_threshold = (hsize_t) HDatol( opt_arg );
 			break;
 
+		case 'W':
+			options->showtime++;
+			break;
+
 		default:
 			break;
 		} /* switch */
@@ -542,7 +580,40 @@ int parse_command_line(int argc, const char **argv, pack_opt_t* options) {
 	}
 
 done:
-	return ret_value;
+    /* clean up */
+    /* nothing to clean yet */
+
+    return ret_value;
+} /* parse_command_line */
+
+/*-------------------------------------------------------------------------
+ * Function: dump_options
+ *
+ * Purpose: display some (all?) option values
+ *
+ * Return: void
+ *
+ * Failure: not expected
+ *
+ * Programmer: Albert Cheng
+ *
+ * Date: Jan 10, 2015
+ *
+ * Comments:
+ *-----------------------------------------------------------------------*/
+static void
+dump_options(const pack_opt_t* options){
+    /* for now only display options related to performance */
+    printf("showtime=%d\n", options->showtime);
+    printf("input file=%s\n", infile);
+    printf("output file=%s\n", outfile);
+    printf("no-h5ocopy=%d\n", options->no_h5ocopy);
+    printf("readonly=%d\n", options->readonly);
+    printf("cache_size=%lu\n", (unsigned long)options->cache_size);
+    printf("buf_size=%lu (H5TOOLS_BUFSIZE=%llu, H5TOOLS_MALLOCSIZE=%llu) \n",
+	(unsigned long)options->buf_size, H5TOOLS_BUFSIZE, H5TOOLS_MALLOCSIZE);
+    /* flush output so that interactive user may see the output at once. */
+    fflush(stdout);
 }
 
 /*-------------------------------------------------------------------------
@@ -605,6 +676,10 @@ int main(int argc, const char **argv) {
 			goto done;
 		}
 	}
+
+	/* show all option values when time statistics is requested */
+	if (options.showtime)
+	    dump_options(&options);
 
 	/* pack it */
 	h5tools_setstatus(h5repack(infile, outfile, &options));

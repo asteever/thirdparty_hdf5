@@ -177,8 +177,8 @@
  *		entry is flushed to disk.
  *
  *
- * In cases where memory is plentiful, and performance is an issue, it may
- * be useful to disable all cache evictions, and thereby postpone metadata
+ * In cases where memory is plentiful, and performance is an issue, it
+ * is useful to disable all cache evictions, and thereby postpone metadata
  * writes.  The following field is used to implement this.
  *
  * evictions_enabled:  Boolean flag that is initialized to TRUE.  When
@@ -283,14 +283,14 @@
  *                 some optimizations when I get to it.
  *
  * num_last_entries: The number of entries in the cache that can only be
- *		flushed after all other entries in the cache have
- *              been flushed. At this time, this will only ever be
- *              one entry (the superblock), and the code has been
- *              protected with HDasserts to enforce this. This restraint
- *              can certainly be relaxed in the future if the need for
- *              multiple entries being flushed last arises, though
- *              explicit tests for that case should be added when said
- *              HDasserts are removed.
+ *                   flushed after all other entries in the cache have
+ *                   been flushed. At this time, this will only ever be
+ *                   one entry (the superblock), and the code has been
+ *                   protected with HDasserts to enforce this. This restraint
+ *                   can certainly be relaxed in the future if the need for
+ *                   multiple entries being flushed last arises, though
+ *                   explicit tests for that case should be added when said
+ *                   HDasserts are removed.
  *
  * With the addition of the fractal heap, the cache must now deal with
  * the case in which entries may be dirtied, moved, or have their sizes
@@ -354,8 +354,7 @@
  *         flush.
  *
  * Since pinned entries cannot be evicted, they must be kept on a pinned
- * entry list (pel), instead of being entrusted to the replacement policy 
- * code.
+ * entry list, instead of being entrusted to the replacement policy code.
  *
  * Maintaining the pinned entry list requires the following fields:
  *
@@ -383,8 +382,7 @@
  *
  * While there has been interest in several replacement policies for
  * this cache, the initial development schedule is tight.  Thus I have
- * elected to support only a modified LRU (least recently used) policy 
- * for the first cut.
+ * elected to support only a modified LRU policy for the first cut.
  *
  * To further simplify matters, I have simply included the fields needed
  * by the modified LRU in this structure.  When and if we add support for
@@ -681,7 +679,7 @@
  *		equal to the array index has been evicted from the cache in
  *		the current epoch.
  *
- * moves:       Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.  The cells
+ * moves:     Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.  The cells
  *		are used to record the number of times an entry with type
  *		id equal to the array index has been moved in the current
  *		epoch.
@@ -716,7 +714,7 @@
  * 		with type id equal to the array index has been flushed while
  * 		pinned in the current epoch.
  *
- * pinned_clears:  Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.  The
+ * pinned_cleared:  Array of int64 of length H5C__MAX_NUM_TYPE_IDS + 1.  The
  * 		cells are used to record the number of times an  entry
  * 		with type id equal to the array index has been cleared while
  * 		pinned in the current epoch.
@@ -2352,7 +2350,7 @@ if ( (cache_ptr)->index_size !=                                             \
     HDassert( (new_size) <= (cache_ptr)->slist_size );                   \
     HDassert( ( (cache_ptr)->slist_len > 1 ) ||                          \
               ( (cache_ptr)->slist_size == (new_size) ) );               \
-} /* H5C__UPDATE_SLIST_FOR_SIZE_CHANGE */
+} /* H5C__REMOVE_ENTRY_FROM_SLIST */
 
 #else /* H5C_DO_SANITY_CHECKS */
 
@@ -2373,7 +2371,7 @@ if ( (cache_ptr)->index_size !=                                             \
     HDassert( (new_size) <= (cache_ptr)->slist_size );                   \
     HDassert( ( (cache_ptr)->slist_len > 1 ) ||                          \
               ( (cache_ptr)->slist_size == (new_size) ) );               \
-} /* H5C__UPDATE_SLIST_FOR_SIZE_CHANGE */
+} /* H5C__REMOVE_ENTRY_FROM_SLIST */
 
 #endif /* H5C_DO_SANITY_CHECKS */
 

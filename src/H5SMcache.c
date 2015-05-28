@@ -13,17 +13,6 @@
  * access to either file, you may request a copy from help@hdfgroup.org.     *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/*-------------------------------------------------------------------------
- *
- * Created:		H5SMcache.c
- *			Nov 13 2006
- *			James Laird <jlaird@hdfgroup.org>
- *
- * Purpose:		Implement shared message metadata cache methods.
- *
- *-------------------------------------------------------------------------
- */
-
 /****************/
 /* Module Setup */
 /****************/
@@ -79,7 +68,6 @@ static herr_t H5SM_list_size(const H5F_t *f, const H5SM_list_t UNUSED *list, siz
 /*********************/
 /* Package Variables */
 /*********************/
-
 /* H5SM inherits cache-like properties from H5AC */
 const H5AC_class_t H5AC_SOHM_TABLE[1] = {{
     H5AC_SOHM_TABLE_ID,
@@ -148,7 +136,7 @@ H5SM_table_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void UNUSED *udata)
 
     /* Allocate space for the master table in memory */
     if(NULL == (table = H5FL_CALLOC(H5SM_master_table_t)))
-        HGOTO_ERROR(H5E_SOHM, H5E_NOSPACE, NULL, "memory allocation failed")
+	HGOTO_ERROR(H5E_SOHM, H5E_NOSPACE, NULL, "memory allocation failed")
 
     /* Read number of indexes and version from file superblock */
     table->num_indexes = H5F_SOHM_NINDEXES(f);
@@ -184,7 +172,7 @@ H5SM_table_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void UNUSED *udata)
 
     /* Allocate space for the index headers in memory*/
     if(NULL == (table->indexes = (H5SM_index_header_t *)H5FL_ARR_MALLOC(H5SM_index_header_t, (size_t)table->num_indexes)))
-        HGOTO_ERROR(H5E_SOHM, H5E_NOSPACE, NULL, "memory allocation failed for SOHM indexes")
+	HGOTO_ERROR(H5E_SOHM, H5E_NOSPACE, NULL, "memory allocation failed for SOHM indexes")
 
     /* Read in the index headers */
     for(x = 0; x < table->num_indexes; ++x) {
@@ -242,7 +230,7 @@ done:
         HDONE_ERROR(H5E_SOHM, H5E_CLOSEERROR, NULL, "can't close wrapped buffer")
     if(!ret_value && table)
         if(H5SM_table_free(table) < 0)
-            HDONE_ERROR(H5E_SOHM, H5E_CANTFREE, NULL, "unable to destroy sohm table")
+	    HDONE_ERROR(H5E_SOHM, H5E_CANTFREE, NULL, "unable to destroy sohm table")
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5SM_table_load() */
@@ -375,7 +363,7 @@ H5SM_table_dest(H5F_t UNUSED *f, H5SM_master_table_t* table)
 
     FUNC_ENTER_NOAPI_NOINIT
 
-    /* Check arguments */
+    /* Sanity check */
     HDassert(table);
     HDassert(table->indexes);
 
@@ -441,7 +429,7 @@ H5SM_table_size(const H5F_t UNUSED *f, const H5SM_master_table_t *table, size_t 
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-    /* Check arguments */
+    /* check arguments */
     HDassert(f);
     HDassert(table);
     HDassert(size_ptr);
@@ -482,17 +470,18 @@ H5SM_list_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
 
     FUNC_ENTER_NOAPI_NOINIT
 
-    /* Check arguments */
+    /* Sanity check */
     HDassert(udata->header);
 
     /* Allocate space for the SOHM list data structure */
     if(NULL == (list = H5FL_MALLOC(H5SM_list_t)))
-        HGOTO_ERROR(H5E_SOHM, H5E_NOSPACE, NULL, "memory allocation failed")
+	HGOTO_ERROR(H5E_SOHM, H5E_NOSPACE, NULL, "memory allocation failed")
     HDmemset(&list->cache_info, 0, sizeof(H5AC_info_t));
 
     /* Allocate list in memory as an array*/
-    if(NULL == (list->messages = (H5SM_sohm_t *)H5FL_ARR_MALLOC(H5SM_sohm_t, udata->header->list_max)))
-        HGOTO_ERROR(H5E_SOHM, H5E_NOSPACE, NULL, "file allocation failed for SOHM list")
+    if((list->messages = (H5SM_sohm_t *)H5FL_ARR_MALLOC(H5SM_sohm_t, udata->header->list_max)) == NULL)
+	HGOTO_ERROR(H5E_SOHM, H5E_NOSPACE, NULL, "file allocation failed for SOHM list")
+
     list->header = udata->header;
 
     /* Wrap the local buffer for serialized list index info */
@@ -712,7 +701,9 @@ H5SM_list_clear(H5F_t *f, H5SM_list_t *list, hbool_t destroy)
 
     FUNC_ENTER_NOAPI_NOINIT
 
-    /* Check arguments */
+    /*
+     * Check arguments.
+     */
     HDassert(list);
 
     /* Reset the dirty flag.  */
