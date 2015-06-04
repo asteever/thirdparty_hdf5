@@ -385,7 +385,7 @@ test_genprop_cls_crt_cb1(hid_t list_id, void *create_data)
 }
 
 static herr_t
-test_genprop_cls_cpy_cb1(hid_t new_list_id, hid_t H5_ATTR_UNUSED old_list_id, void *copy_data)
+test_genprop_cls_cpy_cb1(hid_t new_list_id, hid_t UNUSED old_list_id, void *copy_data)
 {
     struct {                /* Struct for iterations */
         int count;
@@ -683,7 +683,7 @@ test_genprop_basic_list(void)
     /* Verify the floating-poing value in this way to avoid compiler warning. */
     if(!FLT_ABS_EQUAL(prop2_value,*PROP2_DEF_VALUE))
 	printf("*** UNEXPECTED VALUE from %s should be %f, but is %f at line %4d in %s\n",
-	    "H5Pget", (double)*PROP2_DEF_VALUE, (double)prop2_value, (int)__LINE__, __FILE__);
+	    "H5Pget", *PROP2_DEF_VALUE, prop2_value, (int)__LINE__, __FILE__);
 
 
     /* Close list */
@@ -775,7 +775,7 @@ test_genprop_basic_list_prop(void)
     /* Verify the floating-poing value in this way to avoid compiler warning. */
     if(!FLT_ABS_EQUAL(prop2_value,*PROP2_DEF_VALUE))
 	printf("*** UNEXPECTED VALUE from %s should be %f, but is %f at line %4d in %s\n",
-	    "H5Pget", (double)*PROP2_DEF_VALUE, (double)prop2_value, (int)__LINE__, __FILE__);
+	    "H5Pget", *PROP2_DEF_VALUE, prop2_value, (int)__LINE__, __FILE__);
 
 
     /* Check values of temporary properties (set with regular values) */
@@ -993,7 +993,7 @@ prop_cb_info prop3_cb_info;     /* Callback statistics for property #3 */
 **
 ****************************************************************/
 static herr_t
-test_genprop_cls_cpy_cb2(hid_t new_list_id, hid_t H5_ATTR_UNUSED old_list_id, void *create_data)
+test_genprop_cls_cpy_cb2(hid_t new_list_id, hid_t UNUSED old_list_id, void *create_data)
 {
     struct {                /* Struct for iterations */
         int count;
@@ -1239,7 +1239,7 @@ test_genprop_list_callback(void)
     /* Verify the floating-poing value in this way to avoid compiler warning. */
     if(!FLT_ABS_EQUAL(prop2_value,*PROP2_DEF_VALUE))
 	printf("*** UNEXPECTED VALUE from %s should be %f, but is %f at line %4d in %s\n",
-	    "H5Pget", (double)*PROP2_DEF_VALUE, (double)prop2_value, (int)__LINE__, __FILE__);
+	    "H5Pget", *PROP2_DEF_VALUE, prop2_value, (int)__LINE__, __FILE__);
 
     /* Check values of temporary properties (set with regular values) */
     ret = H5Pget(lid1, PROP3_NAME,&prop3_value);

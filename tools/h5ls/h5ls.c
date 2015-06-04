@@ -45,7 +45,11 @@ static h5tool_format_t         ls_dataformat = {
         "", /*fmt_raw */
         "%d", /*fmt_int */
         "%u", /*fmt_uint */
+#ifdef H5_VMS
+        "%hd", /*fmt_schar */
+#else
         "%hhd", /*fmt_schar */
+#endif
         "%u", /*fmt_uchar */
         "%d", /*fmt_short */
         "%u", /*fmt_ushort */
@@ -385,7 +389,7 @@ print_obj_name(h5tools_str_t *buffer, const iter_t *iter, const char *oname,
  *-------------------------------------------------------------------------
  */
 static hbool_t
-print_native_type(h5tools_str_t *buffer, hid_t type, int H5_ATTR_UNUSED ind)
+print_native_type(h5tools_str_t *buffer, hid_t type, int UNUSED ind)
 {
     if (H5Tequal(type, H5T_NATIVE_SCHAR)==TRUE) {
         h5tools_str_append(buffer, "native signed char");
@@ -503,7 +507,7 @@ print_native_type(h5tools_str_t *buffer, hid_t type, int H5_ATTR_UNUSED ind)
  *-------------------------------------------------------------------------
  */
 static hbool_t
-print_ieee_type(h5tools_str_t *buffer, hid_t type, int H5_ATTR_UNUSED ind)
+print_ieee_type(h5tools_str_t *buffer, hid_t type, int UNUSED ind)
 {
     if (H5Tequal(type, H5T_IEEE_F32BE)==TRUE) {
         h5tools_str_append(buffer, "IEEE 32-bit big-endian float");
@@ -999,7 +1003,7 @@ print_enum_type(h5tools_str_t *buffer, hid_t type, int ind)
  *-------------------------------------------------------------------------
  */
 static hbool_t
-print_string_type(h5tools_str_t *buffer, hid_t type, int H5_ATTR_UNUSED ind)
+print_string_type(h5tools_str_t *buffer, hid_t type, int UNUSED ind)
 {
     H5T_str_t  pad;
     const char  *pad_s=NULL;
@@ -1102,7 +1106,7 @@ print_string_type(h5tools_str_t *buffer, hid_t type, int H5_ATTR_UNUSED ind)
  *-------------------------------------------------------------------------
  */
 static hbool_t
-print_reference_type(h5tools_str_t *buffer, hid_t type, int H5_ATTR_UNUSED ind)
+print_reference_type(h5tools_str_t *buffer, hid_t type, int UNUSED ind)
 {
     if (H5T_REFERENCE!=H5Tget_class(type)) return FALSE;
 
@@ -1491,8 +1495,8 @@ dump_dataset_values(hid_t dset)
  *-------------------------------------------------------------------------
  */
 static herr_t
-list_attr(hid_t obj, const char *attr_name, const H5A_info_t H5_ATTR_UNUSED *ainfo,
-    void H5_ATTR_UNUSED *op_data)
+list_attr(hid_t obj, const char *attr_name, const H5A_info_t UNUSED *ainfo,
+    void UNUSED *op_data)
 {
     hid_t               attr = -1;
     hid_t               space = -1;
@@ -1743,7 +1747,7 @@ dataset_list1(hid_t dset)
  *-------------------------------------------------------------------------
  */
 static herr_t
-dataset_list2(hid_t dset, const char H5_ATTR_UNUSED *name)
+dataset_list2(hid_t dset, const char UNUSED *name)
 {
     hid_t       dcpl;           /* dataset creation property list */
     hid_t       type;           /* data type of dataset */
@@ -1855,17 +1859,17 @@ dataset_list2(hid_t dset, const char H5_ATTR_UNUSED *name)
             for (i=0, total=0; i<nf; i++) {
                 if (H5Pget_external(dcpl, (unsigned)i, sizeof(f_name), f_name, &f_offset, &f_size)<0) {
                     h5tools_str_append(&buffer, 
-                            "        #%03d %10"H5_PRINTF_LL_WIDTH"u %10s %10s ***ERROR*** %s\n",
+                            "        #%03d %10"HSIZE_T_FORMAT"u %10s %10s ***ERROR*** %s\n",
                             i, total, "", "",
                             i+1<nf?"Following addresses are incorrect":"");
                 } 
                 else if (H5S_UNLIMITED==f_size) {
-                    h5tools_str_append(&buffer, "        #%03d %10"H5_PRINTF_LL_WIDTH"u %10"H5_PRINTF_LL_WIDTH"u %10s ",
+                    h5tools_str_append(&buffer, "        #%03d %10"HSIZE_T_FORMAT"u %10"HSIZE_T_FORMAT"u %10s ",
                             i, total, (hsize_t)f_offset, "INF");
                     print_string(&buffer, f_name, TRUE);
                 } 
                 else {
-                    h5tools_str_append(&buffer, "        #%03d %10"H5_PRINTF_LL_WIDTH"u %10"H5_PRINTF_LL_WIDTH"u %10"H5_PRINTF_LL_WIDTH"u ",
+                    h5tools_str_append(&buffer, "        #%03d %10"HSIZE_T_FORMAT"u %10"HSIZE_T_FORMAT"u %10"HSIZE_T_FORMAT"u ",
                             i, total, (hsize_t)f_offset, f_size);
                     print_string(&buffer, f_name, TRUE);
                 }
@@ -1940,7 +1944,7 @@ dataset_list2(hid_t dset, const char H5_ATTR_UNUSED *name)
  *-------------------------------------------------------------------------
  */
 static herr_t
-datatype_list2(hid_t type, const char H5_ATTR_UNUSED *name)
+datatype_list2(hid_t type, const char UNUSED *name)
 {
     if (verbose_g>0) {
         hsize_t             curr_pos = 0;        /* total data element position   */

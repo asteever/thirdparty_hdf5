@@ -302,8 +302,10 @@ H5D__pre_write(H5D_t *dset, hbool_t direct_write, hid_t mem_type_id,
         uint32_t direct_filters;
         hsize_t *direct_offset;
         uint32_t direct_datasize;
+	int      ndims = 0;
+	hsize_t  dims[H5O_LAYOUT_NDIMS];
 	hsize_t  internal_offset[H5O_LAYOUT_NDIMS];
-	unsigned u;                 /* Local index variable */
+	int      i;
 
         /* Get the dataset transfer property list */
         if(NULL == (plist = (H5P_genplist_t *)H5I_object(dxpl_id)))
@@ -322,20 +324,23 @@ H5D__pre_write(H5D_t *dset, hbool_t direct_write, hid_t mem_type_id,
 
 	/* The library's chunking code requires the offset terminates with a zero. So transfer the 
          * offset array to an internal offset array */ 
-	for(u = 0; u < dset->shared->ndims; u++) {
+	if((ndims = H5S_get_simple_extent_dims(dset->shared->space, dims, NULL)) < 0)
+	    HGOTO_ERROR(H5E_DATASPACE, H5E_CANTGET, FAIL, "can't retrieve dataspace extent dims")
+
+	for(i = 0; i < ndims; i++) {
 	    /* Make sure the offset doesn't exceed the dataset's dimensions */
-            if(direct_offset[u] > dset->shared->curr_dims[u])
+            if(direct_offset[i] > dims[i])
 		HGOTO_ERROR(H5E_DATASPACE, H5E_BADTYPE, FAIL, "offset exceeds dimensions of dataset")
 
             /* Make sure the offset fall right on a chunk's boundary */
-	    if(direct_offset[u] % dset->shared->layout.u.chunk.dim[u])
+	    if(direct_offset[i] % dset->shared->layout.u.chunk.dim[i])
 		HGOTO_ERROR(H5E_DATASPACE, H5E_BADTYPE, FAIL, "offset doesn't fall on chunks's boundary")
 
-	    internal_offset[u] = direct_offset[u]; 
+	    internal_offset[i] = direct_offset[i]; 
 	} /* end for */
 	   
 	/* Terminate the offset with a zero */ 
-	internal_offset[dset->shared->ndims] = 0;
+	internal_offset[ndims] = 0;
 
 	/* write raw data */
 	if(H5D__chunk_direct_write(dset, dxpl_id, direct_filters, internal_offset, direct_datasize, buf) < 0)
@@ -398,7 +403,7 @@ H5D__read(H5D_t *dataset, hid_t mem_type_id, const H5S_t *mem_space,
     char        fake_char;              /* Temporary variable for NULL buffer pointers */
     herr_t	ret_value = SUCCEED;	/* Return value	*/
 
-    FUNC_ENTER_PACKAGE_TAG(dxpl_id, dataset->oloc.addr, FAIL)
+    FUNC_ENTER_PACKAGE
 
     /* check args */
     HDassert(dataset && dataset->oloc.file);
@@ -409,7 +414,7 @@ H5D__read(H5D_t *dataset, hid_t mem_type_id, const H5S_t *mem_space,
         mem_space = file_space;
     if((snelmts = H5S_GET_SELECT_NPOINTS(mem_space)) < 0)
 	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "dst dataspace has invalid selection")
-    H5_CHECKED_ASSIGN(nelmts, hsize_t, snelmts, hssize_t);
+    H5_ASSIGN_OVERFLOW(nelmts,snelmts,hssize_t,hsize_t);
 
     /* Fill the DXPL cache values for later use */
     if(H5D__get_dxpl_cache(dxpl_id, &dxpl_cache) < 0)
@@ -423,7 +428,7 @@ H5D__read(H5D_t *dataset, hid_t mem_type_id, const H5S_t *mem_space,
 #ifdef H5_HAVE_PARALLEL
     /* Collective access is not permissible without a MPI based VFD */
     if(dxpl_cache->xfer_mode == H5FD_MPIO_COLLECTIVE && 
-            !(H5F_HAS_FEATURE(dataset->oloc.file, H5FD_FEAT_HAS_MPI)))
+       !(H5F_HAS_FEATURE(dataset->oloc.file, H5FD_FEAT_HAS_MPI)))
         HGOTO_ERROR(H5E_DATASET, H5E_UNSUPPORTED, FAIL, "collective access for MPI-based drivers only")
 #endif /*H5_HAVE_PARALLEL*/
 
@@ -564,7 +569,7 @@ done:
         if(H5S_close(projected_mem_space) < 0)
             HDONE_ERROR(H5E_DATASET, H5E_CANTCLOSEOBJ, FAIL, "unable to shut down projected memory dataspace")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D__read() */
 
 
@@ -614,7 +619,7 @@ H5D__write(H5D_t *dataset, hid_t mem_type_id, const H5S_t *mem_space,
     char        fake_char;              /* Temporary variable for NULL buffer pointers */
     herr_t	ret_value = SUCCEED;	/* Return value	*/
 
-    FUNC_ENTER_STATIC_TAG(dxpl_id, dataset->oloc.addr, FAIL)
+    FUNC_ENTER_STATIC
 
     /* check args */
     HDassert(dataset && dataset->oloc.file);
@@ -642,7 +647,7 @@ H5D__write(H5D_t *dataset, hid_t mem_type_id, const H5S_t *mem_space,
 
     /* Various MPI based checks */
 #ifdef H5_HAVE_PARALLEL
-    if H5F_HAS_FEATURE(dataset->oloc.file, H5FD_FEAT_HAS_MPI) {
+    if(H5F_HAS_FEATURE(dataset->oloc.file, H5FD_FEAT_HAS_MPI)) {
         /* If MPI based VFD is used, no VL datatype support yet. */
         /* This is because they use the global heap in the file and we don't */
         /* support parallel access of that yet */
@@ -679,7 +684,7 @@ H5D__write(H5D_t *dataset, hid_t mem_type_id, const H5S_t *mem_space,
 
     if((snelmts = H5S_GET_SELECT_NPOINTS(mem_space)) < 0)
 	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "src dataspace has invalid selection")
-    H5_CHECKED_ASSIGN(nelmts, hsize_t, snelmts, hssize_t);
+    H5_ASSIGN_OVERFLOW(nelmts, snelmts, hssize_t, hsize_t);
 
     /* Make certain that the number of elements in each selection is the same */
     if(nelmts != (hsize_t)H5S_GET_SELECT_NPOINTS(file_space))
@@ -819,7 +824,7 @@ done:
         if(H5S_close(projected_mem_space) < 0)
             HDONE_ERROR(H5E_DATASET, H5E_CANTCLOSEOBJ, FAIL, "unable to shut down projected memory dataspace")
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, FAIL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5D__write() */
 
 

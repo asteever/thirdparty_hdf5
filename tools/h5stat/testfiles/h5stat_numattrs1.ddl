@@ -8,10 +8,8 @@ Attribute bins:
 	# of objects with 10 - 99 attributes: 3
 	Total # of objects with attributes: 5
 	Max. # of attributes to objects: 25
-File space management strategy: H5F_FILE_SPACE_ALL
 Summary of file space information:
-  File metadata: 16128 bytes
+  File metadata: 16032 bytes
   Raw data: 0 bytes
-  Amount/Percent of tracked free space: 0 bytes/0.0%
-  Unaccounted space: 184 bytes
+  Unaccounted space: 280 bytes
 Total space: 16312 bytes

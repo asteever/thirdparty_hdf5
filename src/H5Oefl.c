@@ -89,8 +89,8 @@ const H5O_msg_class_t H5O_MSG_EFL[1] = {{
  *-------------------------------------------------------------------------
  */
 static void *
-H5O_efl_decode(H5F_t *f, hid_t dxpl_id, H5O_t H5_ATTR_UNUSED *open_oh,
-    unsigned H5_ATTR_UNUSED mesg_flags, unsigned H5_ATTR_UNUSED *ioflags, const uint8_t *p)
+H5O_efl_decode(H5F_t *f, hid_t dxpl_id, H5O_t UNUSED *open_oh,
+    unsigned UNUSED mesg_flags, unsigned UNUSED *ioflags, const uint8_t *p)
 {
     H5O_efl_t		*mesg = NULL;
     int			version;
@@ -192,7 +192,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_efl_encode(H5F_t *f, hbool_t H5_ATTR_UNUSED disable_shared, uint8_t *p, const void *_mesg)
+H5O_efl_encode(H5F_t *f, hbool_t UNUSED disable_shared, uint8_t *p, const void *_mesg)
 {
     const H5O_efl_t	*mesg = (const H5O_efl_t *)_mesg;
     size_t		u;      /* Local index variable */
@@ -340,7 +340,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static size_t
-H5O_efl_size(const H5F_t *f, hbool_t H5_ATTR_UNUSED disable_shared, const void *_mesg)
+H5O_efl_size(const H5F_t *f, hbool_t UNUSED disable_shared, const void *_mesg)
 {
     const H5O_efl_t	*mesg = (const H5O_efl_t *) _mesg;
     size_t		ret_value = 0;
@@ -454,9 +454,9 @@ done:
  *-------------------------------------------------------------------------
  */
 static void *
-H5O_efl_copy_file(H5F_t H5_ATTR_UNUSED *file_src, void *mesg_src, H5F_t *file_dst,
-    hbool_t H5_ATTR_UNUSED *recompute_size, unsigned H5_ATTR_UNUSED *mesg_flags,
-    H5O_copy_t H5_ATTR_UNUSED *cpy_info, void H5_ATTR_UNUSED *_udata, hid_t dxpl_id)
+H5O_efl_copy_file(H5F_t UNUSED *file_src, void *mesg_src, H5F_t *file_dst,
+    hbool_t UNUSED *recompute_size, unsigned UNUSED *mesg_flags,
+    H5O_copy_t UNUSED *cpy_info, void UNUSED *_udata, hid_t dxpl_id)
 {
     H5O_efl_t   *efl_src = (H5O_efl_t *) mesg_src;
     H5O_efl_t   *efl_dst = NULL;
@@ -464,7 +464,7 @@ H5O_efl_copy_file(H5F_t H5_ATTR_UNUSED *file_src, void *mesg_src, H5F_t *file_ds
     size_t      idx, size, name_offset, heap_size;
     void        *ret_value;          /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_TAG(dxpl_id, H5AC__COPIED_TAG, NULL)
+    FUNC_ENTER_NOAPI_NOINIT
 
     /* check args */
     HDassert(efl_src);
@@ -524,7 +524,7 @@ done:
         if(efl_dst)
             H5MM_xfree(efl_dst);
 
-    FUNC_LEAVE_NOAPI_TAG(ret_value, NULL)
+    FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_efl_copy_file() */
 
 
@@ -541,7 +541,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_efl_debug(H5F_t H5_ATTR_UNUSED *f, hid_t H5_ATTR_UNUSED dxpl_id, const void *_mesg, FILE * stream,
+H5O_efl_debug(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const void *_mesg, FILE * stream,
 	      int indent, int fwidth)
 {
     const H5O_efl_t	   *mesg = (const H5O_efl_t *) _mesg;

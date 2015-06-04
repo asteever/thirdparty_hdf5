@@ -121,11 +121,15 @@ H5SM_compare_cb(const void *obj, size_t obj_len, void *_udata)
  * Programmer:	James Laird
  *              Wednesday, February 7, 2007
  *
+ * Modifications:
+ *      Vailin Choi; September 2011
+ *      Change "oh_modified" from boolean to unsigned
+ *      (See H5Oprivate.h for possible flags)
  *-------------------------------------------------------------------------
  */
 static herr_t
 H5SM_compare_iter_op(H5O_t *oh, H5O_mesg_t *mesg/*in,out*/, unsigned sequence,
-    unsigned H5_ATTR_UNUSED *oh_modified, void *_udata/*in,out*/)
+    unsigned UNUSED *oh_modified, void *_udata/*in,out*/)
 {
     H5SM_compare_udata_t *udata = (H5SM_compare_udata_t *) _udata;
     herr_t ret_value = H5_ITER_CONT;

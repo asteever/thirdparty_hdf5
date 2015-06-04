@@ -627,7 +627,7 @@ test_create(hid_t fapl, const char *base_name, H5D_layout_t layout)
            H5_FAILED();
            puts("    Got wrong fill value");
            printf("    Got rd_c.a=%f, rd_c.y=%f and rd_c.x=%d, rd_c.z=%c\n",
-                  (double)rd_c.a, rd_c.y, rd_c.x, rd_c.z);
+                  rd_c.a, rd_c.y, rd_c.x, rd_c.z);
         }
         if(H5Dclose(dset9) < 0) goto error;
         if(H5Pclose(dcpl) < 0) goto error;
@@ -700,7 +700,7 @@ test_create(hid_t fapl, const char *base_name, H5D_layout_t layout)
         H5_FAILED();
         puts("    Got wrong fill value");
         printf("    Got rd_c.a=%f, rd_c.y=%f and rd_c.x=%d, rd_c.z=%c\n",
-		(double)rd_c.a, rd_c.y, rd_c.x, rd_c.z);
+		rd_c.a, rd_c.y, rd_c.x, rd_c.z);
     }
     if(H5Dclose(dset8) < 0) goto error;
     if(H5Pclose(dcpl) < 0) goto error;
@@ -820,8 +820,8 @@ test_rdwr_cases(hid_t file, hid_t dcpl, const char *dname, void *_fillval,
                        "Fill value: %f, %d, %f, %c\n",
                        hs_offset[0], hs_offset[1],
                        hs_offset[2], hs_offset[3],
-                       hs_offset[4], (double)rd_c.a, rd_c.x, rd_c.y, rd_c.z,
-			(double)fill_c.a, fill_c.x, fill_c.y, fill_c.z);
+                       hs_offset[4], rd_c.a, rd_c.x, rd_c.y, rd_c.z,
+			fill_c.a, fill_c.x, fill_c.y, fill_c.z);
                 goto error;
             }
         }
@@ -888,8 +888,8 @@ test_rdwr_cases(hid_t file, hid_t dcpl, const char *dname, void *_fillval,
                             hs_offset[0], hs_offset[1],
                             hs_offset[2], hs_offset[3],
                             hs_offset[4],
-                            (double)buf_c[u].a, buf_c[u].x, buf_c[u].y, buf_c[u].z,
-                            (double)fill_c.a, fill_c.x, fill_c.y, fill_c.z);
+                            buf_c[u].a, buf_c[u].x, buf_c[u].y, buf_c[u].z,
+                            fill_c.a, fill_c.x, fill_c.y, fill_c.z);
                     goto error;
                 } /* end if */
             } /* end for */
@@ -1002,7 +1002,7 @@ test_rdwr_cases(hid_t file, hid_t dcpl, const char *dname, void *_fillval,
                            (long)hs_offset[0], (long)hs_offset[1],
                            (long)hs_offset[2], (long)hs_offset[3],
                            (long)hs_offset[4],
-			   (double)rd_c.a, rd_c.x, rd_c.y, rd_c.z, (double)should_be_c.a,
+			   rd_c.a, rd_c.x, rd_c.y, rd_c.z, should_be_c.a,
 		           should_be_c.x,should_be_c.y,should_be_c.z);
                     goto error;
  		}
@@ -1021,7 +1021,7 @@ test_rdwr_cases(hid_t file, hid_t dcpl, const char *dname, void *_fillval,
                            (long)hs_offset[0], (long)hs_offset[1],
                            (long)hs_offset[2], (long)hs_offset[3],
                            (long)hs_offset[4],
-                           (double)rd_c.a, rd_c.x, rd_c.y, rd_c.z, (double)should_be_c.a,
+                           rd_c.a, rd_c.x, rd_c.y, rd_c.z, should_be_c.a,
                            should_be_c.x,should_be_c.y,should_be_c.z);
                     goto error;
                 }
@@ -1301,7 +1301,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static int
-test_extend_release_integer(void H5_ATTR_UNUSED *_elmt)
+test_extend_release_integer(void UNUSED *_elmt)
 {
     return 0;
 } /* end test_extend_release_integer() */
@@ -1978,9 +1978,18 @@ test_compatible(void)
     hsize_t    dims[2], one[2]={1,1};
     hsize_t   hs_offset[2]={3,4};
     H5D_fill_value_t status;
-    const char *testfile = H5_get_srcdir_filename(FILE_COMPATIBLE); /* Corrected test file name */
+    char       *srcdir = getenv("srcdir"); /*where the src code is located*/
+    char       testfile[512]="";  /* test file name */
 
     TESTING("contiguous dataset compatibility with v. 1.4");
+
+  /* Generate correct name for test file by prepending the source path */
+  if(srcdir && ((strlen(srcdir) + strlen(FILE_COMPATIBLE) + 1) <
+     sizeof(testfile))) {
+     HDstrcpy(testfile, srcdir);
+     HDstrcat(testfile, "/");
+  }
+  HDstrcat(testfile, FILE_COMPATIBLE);
 
   if((file = H5Fopen(testfile, H5F_ACC_RDONLY, H5P_DEFAULT)) < 0) {
       printf("    Could not open file %s. Try set $srcdir to point at the "

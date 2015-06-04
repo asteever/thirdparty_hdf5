@@ -83,7 +83,6 @@ typedef struct H5FD_family_fapl_t {
 } H5FD_family_fapl_t;
 
 /* Callback prototypes */
-static herr_t H5FD_family_term(void);
 static void *H5FD_family_fapl_get(H5FD_t *_file);
 static void *H5FD_family_fapl_copy(const void *_old_fa);
 static herr_t H5FD_family_fapl_free(void *_fa);
@@ -99,7 +98,7 @@ static int H5FD_family_cmp(const H5FD_t *_f1, const H5FD_t *_f2);
 static herr_t H5FD_family_query(const H5FD_t *_f1, unsigned long *flags);
 static haddr_t H5FD_family_get_eoa(const H5FD_t *_file, H5FD_mem_t type);
 static herr_t H5FD_family_set_eoa(H5FD_t *_file, H5FD_mem_t type, haddr_t eoa);
-static haddr_t H5FD_family_get_eof(const H5FD_t *_file, H5FD_mem_t type);
+static haddr_t H5FD_family_get_eof(const H5FD_t *_file);
 static herr_t  H5FD_family_get_handle(H5FD_t *_file, hid_t fapl, void** file_handle);
 static herr_t H5FD_family_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr,
 			       size_t size, void *_buf/*out*/);
@@ -113,7 +112,6 @@ static const H5FD_class_t H5FD_family_g = {
     "family",					/*name			*/
     HADDR_MAX,					/*maxaddr		*/
     H5F_CLOSE_WEAK,				/*fc_degree		*/
-    H5FD_family_term,                           /*terminate             */
     H5FD_family_sb_size,			/*sb_size		*/
     H5FD_family_sb_encode,			/*sb_encode		*/
     H5FD_family_sb_decode,			/*sb_decode		*/
@@ -161,15 +159,9 @@ DESCRIPTION
 static herr_t
 H5FD_family_init_interface(void)
 {
-    herr_t ret_value = SUCCEED;
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-    FUNC_ENTER_NOAPI_NOINIT
-
-    if(H5FD_family_init() < 0)
-        HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, FAIL, "unable to initialize family VFD")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(H5FD_family_init())
 } /* H5FD_family_init_interface() */
 
 
@@ -213,14 +205,16 @@ done:
  *
  * Purpose:	Shut down the VFD
  *
- * Returns:     Non-negative on success or negative on failure
+ * Return:	<none>
  *
  * Programmer:  Quincey Koziol
  *              Friday, Jan 30, 2004
  *
+ * Modification:
+ *
  *---------------------------------------------------------------------------
  */
-static herr_t
+void
 H5FD_family_term(void)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
@@ -228,7 +222,7 @@ H5FD_family_term(void)
     /* Reset VFL ID */
     H5FD_FAMILY_g=0;
 
-    FUNC_LEAVE_NOAPI(SUCCEED)
+    FUNC_LEAVE_NOAPI_VOID
 } /* end H5FD_family_term() */
 
 
@@ -498,7 +492,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static hsize_t
-H5FD_family_sb_size(H5FD_t H5_ATTR_UNUSED *_file)
+H5FD_family_sb_size(H5FD_t UNUSED *_file)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
@@ -572,7 +566,7 @@ H5FD_family_sb_encode(H5FD_t *_file, char *name/*out*/, unsigned char *buf/*out*
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FD_family_sb_decode(H5FD_t *_file, const char H5_ATTR_UNUSED *name, const unsigned char *buf)
+H5FD_family_sb_decode(H5FD_t *_file, const char UNUSED *name, const unsigned char *buf)
 {
     H5FD_family_t	*file = (H5FD_family_t*)_file;
     uint64_t            msize;
@@ -587,25 +581,26 @@ H5FD_family_sb_decode(H5FD_t *_file, const char H5_ATTR_UNUSED *name, const unsi
      * h5repart is being used to change member file size.  h5repart will open
      * files for read and write.  When the files are closed, metadata will be
      * flushed to the files and updated to this new size */
-    if(file->mem_newsize)
+    if(file->mem_newsize) {
         file->memb_size = file->pmem_size = file->mem_newsize;
-    else {
-        /* Default - use the saved member size */
-        if(file->pmem_size == H5F_FAMILY_DEFAULT)
-           file->pmem_size = msize;
+        HGOTO_DONE(ret_value)
+    } /* end if */
 
-        /* Check if member size from file access property is correct */
-        if(msize != file->pmem_size) {
-            char err_msg[128];
+    /* Default - use the saved member size */
+    if(file->pmem_size == H5F_FAMILY_DEFAULT)
+       file->pmem_size = msize;
 
-            HDsnprintf(err_msg, sizeof(err_msg), "Family member size should be %lu.  But the size from file access property is %lu", (unsigned long)msize, (unsigned long)file->pmem_size);
-            HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, err_msg)
-        } /* end if */
+    /* Check if member size from file access property is correct */
+    if(msize != file->pmem_size) {
+        char err_msg[128];
 
-        /* Update member file size to the size saved in the superblock.
-         * That's the size intended to be. */
-        file->memb_size = msize;
-    } /* end else */
+        HDsnprintf(err_msg, sizeof(err_msg), "Family member size should be %lu.  But the size from file access property is %lu", (unsigned long)msize, (unsigned long)file->pmem_size);
+        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, err_msg)
+    } /* end if */
+
+    /* Update member file size to the size saved in the superblock.
+     * That's the size intended to be. */
+    file->memb_size = msize;
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
@@ -685,11 +680,14 @@ H5FD_family_open(const char *name, unsigned flags, hid_t fapl_id,
 
         /* Check for new family file size. It's used by h5repart only. */
         if(H5P_exist_plist(plist, H5F_ACS_FAMILY_NEWSIZE_NAME) > 0) {
+            hsize_t fam_newsize = 0;        /* New member size, when repartitioning */
+
             /* Get the new family file size */
-            if(H5P_get(plist, H5F_ACS_FAMILY_NEWSIZE_NAME, &file->mem_newsize) < 0)
+            if(H5P_get(plist, H5F_ACS_FAMILY_NEWSIZE_NAME, &fam_newsize) < 0)
                 HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, NULL, "can't get new family member size")
 
-            /* Set flag for later */
+            /* Store information for later */
+            file->mem_newsize = fam_newsize; /* New member size passed in through property */
             file->repart_members = TRUE;
         } /* end if */
 
@@ -753,7 +751,7 @@ H5FD_family_open(const char *name, unsigned flags, hid_t fapl_id,
      * smaller than the size specified through H5Pset_fapl_family().  Update the actual
      * member size.
      */
-    if ((eof=H5FDget_eof(file->memb[0], H5FD_MEM_DEFAULT))) file->memb_size = eof;
+    if ((eof=H5FDget_eof(file->memb[0]))) file->memb_size = eof;
 
     ret_value=(H5FD_t *)file;
 
@@ -860,17 +858,18 @@ H5FD_family_cmp(const H5FD_t *_f1, const H5FD_t *_f2)
 {
     const H5FD_family_t	*f1 = (const H5FD_family_t*)_f1;
     const H5FD_family_t	*f2 = (const H5FD_family_t*)_f2;
-    int ret_value = 0;
+    int ret_value=(H5FD_VFD_DEFAULT);
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-    HDassert(f1->nmembs >= 1 && f1->memb[0]);
-    HDassert(f2->nmembs >= 1 && f2->memb[0]);
+    assert(f1->nmembs>=1 && f1->memb[0]);
+    assert(f2->nmembs>=1 && f2->memb[0]);
 
-    ret_value = H5FDcmp(f1->memb[0], f2->memb[0]);
+    ret_value= H5FDcmp(f1->memb[0], f2->memb[0]);
 
+done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5FD_family_cmp() */
+}
 
 
 /*-------------------------------------------------------------------------
@@ -934,7 +933,7 @@ H5FD_family_query(const H5FD_t * _file, unsigned long *flags /* out */)
  *-------------------------------------------------------------------------
  */
 static haddr_t
-H5FD_family_get_eoa(const H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type)
+H5FD_family_get_eoa(const H5FD_t *_file, H5FD_mem_t UNUSED type)
 {
     const H5FD_family_t	*file = (const H5FD_family_t*)_file;
 
@@ -1043,7 +1042,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static haddr_t
-H5FD_family_get_eof(const H5FD_t *_file, H5FD_mem_t type)
+H5FD_family_get_eof(const H5FD_t *_file)
 {
     const H5FD_family_t	*file = (const H5FD_family_t*)_file;
     haddr_t		eof=0;
@@ -1059,7 +1058,7 @@ H5FD_family_get_eof(const H5FD_t *_file, H5FD_mem_t type)
      */
     HDassert(file->nmembs > 0);
     for(i = (int)file->nmembs - 1; i >= 0; --i) {
-        if((eof = H5FD_get_eof(file->memb[i], type)) != 0)
+        if((eof = H5FD_get_eof(file->memb[i])) != 0)
             break;
         if(0 == i)
             break;
@@ -1075,7 +1074,7 @@ H5FD_family_get_eof(const H5FD_t *_file, H5FD_mem_t type)
     eof += ((unsigned)i)*file->memb_size;
 
     /* Set return value */
-    ret_value = eof;
+    ret_value = MAX(eof, file->eoa);
 
     FUNC_LEAVE_NOAPI(ret_value)
 }
@@ -1166,7 +1165,7 @@ H5FD_family_read(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, si
 
     /* Read from each member */
     while(size > 0) {
-        H5_CHECKED_ASSIGN(u, unsigned, addr / file->memb_size, hsize_t);
+        H5_ASSIGN_OVERFLOW(u,addr /file->memb_size,hsize_t,unsigned);
 
         sub = addr % file->memb_size;
 
@@ -1235,7 +1234,7 @@ H5FD_family_write(H5FD_t *_file, H5FD_mem_t type, hid_t dxpl_id, haddr_t addr, s
 
     /* Write to each member */
     while (size>0) {
-        H5_CHECKED_ASSIGN(u, unsigned, addr / file->memb_size, hsize_t);
+        H5_ASSIGN_OVERFLOW(u,addr /file->memb_size,hsize_t,unsigned);
 
         sub = addr % file->memb_size;
 

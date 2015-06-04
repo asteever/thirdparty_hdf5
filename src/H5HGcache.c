@@ -64,7 +64,7 @@
 /* Metadata cache callbacks */
 static H5HG_heap_t *H5HG_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata);
 static herr_t H5HG_flush(H5F_t *f, hid_t dxpl_id, hbool_t dest, haddr_t addr,
-			 H5HG_heap_t *heap, unsigned H5_ATTR_UNUSED * flags_ptr);
+			 H5HG_heap_t *heap, unsigned UNUSED * flags_ptr);
 static herr_t H5HG_dest(H5F_t *f, H5HG_heap_t *heap);
 static herr_t H5HG_clear(H5F_t *f, H5HG_heap_t *heap, hbool_t destroy);
 static herr_t H5HG_size(const H5F_t *f, const H5HG_heap_t *heap, size_t *size_ptr);
@@ -81,7 +81,6 @@ const H5AC_class_t H5AC_GHEAP[1] = {{
     (H5AC_flush_func_t)H5HG_flush,
     (H5AC_dest_func_t)H5HG_dest,
     (H5AC_clear_func_t)H5HG_clear,
-    (H5AC_notify_func_t)NULL,
     (H5AC_size_func_t)H5HG_size,
 }};
 
@@ -129,10 +128,10 @@ H5HG_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata)
 
     /* Read the initial 4k page */
     if(NULL == (heap = H5FL_CALLOC(H5HG_heap_t)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
     heap->shared = H5F_SHARED(f);
     if(NULL == (heap->chunk = H5FL_BLK_MALLOC(gheap_chunk, (size_t)H5HG_MINSIZE)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
     if(H5F_block_read(f, H5FD_MEM_GHEAP, addr, (size_t)H5HG_MINSIZE, dxpl_id, heap->chunk) < 0)
 	HGOTO_ERROR(H5E_HEAP, H5E_READERROR, NULL, "unable to read global heap collection")
     p = heap->chunk;
@@ -184,7 +183,7 @@ H5HG_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata)
 	     * assume that it's free space.
 	     */
 	    HDassert(NULL == heap->obj[0].begin);
-	    heap->obj[0].size = (size_t)(((const uint8_t *)heap->chunk + heap->size) - p);
+	    heap->obj[0].size = ((const uint8_t *)heap->chunk + heap->size) - p;
 	    heap->obj[0].begin = p;
 	    p += heap->obj[0].size;
 	} /* end if */
@@ -260,7 +259,7 @@ H5HG_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata)
 done:
     if(!ret_value && heap)
         if(H5HG_free(heap) < 0)
-            HDONE_ERROR(H5E_HEAP, H5E_CANTFREE, NULL, "unable to destroy global heap collection")
+	    HDONE_ERROR(H5E_HEAP, H5E_CANTFREE, NULL, "unable to destroy global heap collection")
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5HG_load() */
@@ -280,7 +279,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5HG_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5HG_heap_t *heap, unsigned H5_ATTR_UNUSED * flags_ptr)
+H5HG_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5HG_heap_t *heap, unsigned UNUSED * flags_ptr)
 {
     herr_t ret_value = SUCCEED;       /* Return value */
 
@@ -367,11 +366,11 @@ done:
 static herr_t
 H5HG_clear(H5F_t *f, H5HG_heap_t *heap, hbool_t destroy)
 {
-    herr_t      ret_value = SUCCEED;    /* Return value */
+    herr_t ret_value = SUCCEED;
 
     FUNC_ENTER_NOAPI_NOINIT
 
-    /* Sanity checks */
+    /* Check arguments */
     HDassert(heap);
 
     /* Mark heap as clean */
@@ -401,7 +400,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5HG_size(const H5F_t H5_ATTR_UNUSED *f, const H5HG_heap_t *heap, size_t *size_ptr)
+H5HG_size(const H5F_t UNUSED *f, const H5HG_heap_t *heap, size_t *size_ptr)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 

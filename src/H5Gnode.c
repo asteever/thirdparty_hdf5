@@ -77,7 +77,7 @@ typedef struct H5G_node_key_t {
 /********************/
 
 /* B-tree callbacks */
-static H5UC_t *H5G_node_get_shared(const H5F_t *f, const void *_udata);
+static H5RC_t *H5G_node_get_shared(const H5F_t *f, const void *_udata);
 static herr_t H5G_node_create(H5F_t *f, hid_t dxpl_id, H5B_ins_t op, void *_lt_key,
 			      void *_udata, void *_rt_key,
 			      haddr_t *addr_p/*out*/);
@@ -156,8 +156,8 @@ H5FL_SEQ_DEFINE(H5G_entry_t);
  *
  *-------------------------------------------------------------------------
  */
-static H5UC_t *
-H5G_node_get_shared(const H5F_t *f, const void H5_ATTR_UNUSED *_udata)
+static H5RC_t *
+H5G_node_get_shared(const H5F_t *f, const void UNUSED *_udata)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
@@ -323,8 +323,8 @@ H5G__node_free(H5G_node_t *sym)
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5G_node_create(H5F_t *f, hid_t dxpl_id, H5B_ins_t H5_ATTR_UNUSED op, void *_lt_key,
-		void H5_ATTR_UNUSED *_udata, void *_rt_key, haddr_t *addr_p/*out*/)
+H5G_node_create(H5F_t *f, hid_t dxpl_id, H5B_ins_t UNUSED op, void *_lt_key,
+		void UNUSED *_udata, void *_rt_key, haddr_t *addr_p/*out*/)
 {
     H5G_node_key_t	*lt_key = (H5G_node_key_t *)_lt_key;
     H5G_node_key_t	*rt_key = (H5G_node_key_t *)_rt_key;
@@ -518,7 +518,7 @@ H5G_node_cmp3(void *_lt_key, void *_udata, void *_rt_key)
  *-------------------------------------------------------------------------
  */
 static htri_t
-H5G_node_found(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void H5_ATTR_UNUSED *_lt_key,
+H5G_node_found(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void UNUSED *_lt_key,
     void *_udata)
 {
     H5G_bt_lkp_t	*udata = (H5G_bt_lkp_t *)_udata;
@@ -614,7 +614,7 @@ done:
  */
 static H5B_ins_t
 H5G_node_insert(H5F_t *f, hid_t dxpl_id, haddr_t addr,
-    void H5_ATTR_UNUSED *_lt_key, hbool_t H5_ATTR_UNUSED *lt_key_changed,
+    void UNUSED *_lt_key, hbool_t UNUSED *lt_key_changed,
     void *_md_key, void *_udata,
     void *_rt_key, hbool_t *rt_key_changed,
     haddr_t *new_node_p)
@@ -785,7 +785,7 @@ done:
  */
 static H5B_ins_t
 H5G_node_remove(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_lt_key/*in,out*/,
-		hbool_t H5_ATTR_UNUSED *lt_key_changed/*out*/,
+		hbool_t UNUSED *lt_key_changed/*out*/,
 		void *_udata/*in,out*/, void *_rt_key/*in,out*/,
 		hbool_t *rt_key_changed/*out*/)
 {
@@ -982,8 +982,8 @@ done:
  *-------------------------------------------------------------------------
  */
 int
-H5G__node_iterate(H5F_t *f, hid_t dxpl_id, const void H5_ATTR_UNUSED *_lt_key, haddr_t addr,
-    const void H5_ATTR_UNUSED *_rt_key, void *_udata)
+H5G__node_iterate(H5F_t *f, hid_t dxpl_id, const void UNUSED *_lt_key, haddr_t addr,
+    const void UNUSED *_rt_key, void *_udata)
 {
     H5G_bt_it_it_t	*udata = (H5G_bt_it_it_t *)_udata;
     H5G_node_t		*sn = NULL;
@@ -1061,8 +1061,8 @@ done:
  *-------------------------------------------------------------------------
  */
 int
-H5G__node_sumup(H5F_t *f, hid_t dxpl_id, const void H5_ATTR_UNUSED *_lt_key, haddr_t addr,
-		  const void H5_ATTR_UNUSED *_rt_key, void *_udata)
+H5G__node_sumup(H5F_t *f, hid_t dxpl_id, const void UNUSED *_lt_key, haddr_t addr,
+		  const void UNUSED *_rt_key, void *_udata)
 {
     hsize_t	        *num_objs = (hsize_t *)_udata;
     H5G_node_t		*sn = NULL;
@@ -1106,8 +1106,8 @@ done:
  *-------------------------------------------------------------------------
  */
 int
-H5G__node_by_idx(H5F_t *f, hid_t dxpl_id, const void H5_ATTR_UNUSED *_lt_key, haddr_t addr,
-		  const void H5_ATTR_UNUSED *_rt_key, void *_udata)
+H5G__node_by_idx(H5F_t *f, hid_t dxpl_id, const void UNUSED *_lt_key, haddr_t addr,
+		  const void UNUSED *_rt_key, void *_udata)
 {
     H5G_bt_it_idx_common_t	*udata = (H5G_bt_it_idx_common_t *)_udata;
     H5G_node_t		*sn = NULL;
@@ -1189,7 +1189,7 @@ H5G__node_init(H5F_t *f)
         /* <none> */
 
     /* Make shared B-tree info reference counted */
-    if(H5F_SET_GRP_BTREE_SHARED(f, H5UC_create(shared, H5B_shared_free)) < 0)
+    if(H5F_SET_GRP_BTREE_SHARED(f, H5RC_create(shared, H5B_shared_free)) < 0)
 	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, FAIL, "can't create ref-count wrapper for shared B-tree info")
 
 done:
@@ -1222,7 +1222,7 @@ H5G_node_close(const H5F_t *f)
 
     /* Free the raw B-tree node buffer */
     if(H5F_GRP_BTREE_SHARED(f))
-        H5UC_DEC(H5F_GRP_BTREE_SHARED(f));
+        H5RC_DEC(H5F_GRP_BTREE_SHARED(f));
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5G_node_close */
@@ -1242,8 +1242,8 @@ H5G_node_close(const H5F_t *f)
  *-------------------------------------------------------------------------
  */
 int
-H5G__node_copy(H5F_t *f, hid_t dxpl_id, const void H5_ATTR_UNUSED *_lt_key, haddr_t addr,
-		  const void H5_ATTR_UNUSED *_rt_key, void *_udata)
+H5G__node_copy(H5F_t *f, hid_t dxpl_id, const void UNUSED *_lt_key, haddr_t addr,
+		  const void UNUSED *_rt_key, void *_udata)
 {
     H5G_bt_it_cpy_t     *udata = (H5G_bt_it_cpy_t *)_udata;
     const H5O_loc_t     *src_oloc = udata->src_oloc;
@@ -1359,19 +1359,12 @@ H5G__node_copy(H5F_t *f, hid_t dxpl_id, const void H5_ATTR_UNUSED *_lt_key, hadd
         name = (const char *)H5HL_offset_into(heap, src_ent->name_off);
 	HDassert(name);
 
-        /* Set copied metadata tag */
-        H5_BEGIN_TAG(dxpl_id, H5AC__COPIED_TAG, H5_ITER_ERROR);
-
         /* Insert the new object in the destination file's group */
         /* (Don't increment the link count - that's already done above for hard links) */
         if(H5G__stab_insert_real(udata->dst_file, udata->dst_stab, name, &lnk,
                 obj_type, (obj_type == H5O_TYPE_GROUP ? &gcrt_info : NULL),
                 dxpl_id) < 0)
-            HGOTO_ERROR_TAG(H5E_DATATYPE, H5E_CANTINIT, H5_ITER_ERROR, "unable to insert the name")
-
-        /* Reset metadata tag */
-        H5_END_TAG(H5_ITER_ERROR);
-
+            HGOTO_ERROR(H5E_DATATYPE, H5E_CANTINIT, H5_ITER_ERROR, "unable to insert the name")
     } /* end of for (i=0; i<sn->nsyms; i++) */
 
 done:
@@ -1399,8 +1392,8 @@ done:
  *-------------------------------------------------------------------------
  */
 int
-H5G__node_build_table(H5F_t *f, hid_t dxpl_id, const void H5_ATTR_UNUSED *_lt_key, haddr_t addr,
-    const void H5_ATTR_UNUSED *_rt_key, void *_udata)
+H5G__node_build_table(H5F_t *f, hid_t dxpl_id, const void UNUSED *_lt_key, haddr_t addr,
+    const void UNUSED *_rt_key, void *_udata)
 {
     H5G_bt_it_bt_t	*udata = (H5G_bt_it_bt_t *)_udata;
     H5G_node_t		*sn = NULL;             /* Symbol table node */
@@ -1474,8 +1467,8 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5G__node_iterate_size(H5F_t *f, hid_t H5_ATTR_UNUSED dxpl_id, const void H5_ATTR_UNUSED *_lt_key, haddr_t H5_ATTR_UNUSED addr,
-    const void H5_ATTR_UNUSED *_rt_key, void *_udata)
+H5G__node_iterate_size(H5F_t *f, hid_t UNUSED dxpl_id, const void UNUSED *_lt_key, haddr_t UNUSED addr,
+    const void UNUSED *_rt_key, void *_udata)
 {
     hsize_t     *stab_size = (hsize_t *)_udata;         /* User data */
 

@@ -23,18 +23,18 @@
 #include <stdlib.h>
 #include <time.h>
 
-/*
- * This file needs to access private information from the H5Z package.
- */
-#define H5Z_PACKAGE
-
-
 #include "h5test.h"
 #include "H5srcdir.h"
-#include "H5Zpkg.h"
 #ifdef H5_HAVE_SZLIB_H
 #   include "szlib.h"
 #endif
+
+/*
+ * This file needs to access private datatypes from the H5Z package.
+ */
+#define H5Z_PACKAGE
+#include "H5Zpkg.h"
+
 
 const char *FILENAME[] = {
     "dataset",
@@ -195,6 +195,11 @@ const char *FILENAME[] = {
 #define BYPASS_DIM               1000
 #define BYPASS_CHUNK_DIM         500
 #define BYPASS_FILL_VALUE        7
+
+/* Declarations for test_idx_compatible() */
+#define	FIXED_IDX_FILE	"fixed_idx.h5"
+#define DSET            "dset"
+#define DSET_FILTER     "dset_filter"
 
 /* Shared global arrays */
 #define DSET_DIM1       100
@@ -1224,7 +1229,7 @@ const H5Z_class2_t H5Z_BOGUS[1] = {{
  *-------------------------------------------------------------------------
  */
 static htri_t
-can_apply_bogus(hid_t H5_ATTR_UNUSED dcpl_id, hid_t type_id, hid_t H5_ATTR_UNUSED space_id)
+can_apply_bogus(hid_t UNUSED dcpl_id, hid_t type_id, hid_t UNUSED space_id)
 {
     if(H5Tequal(type_id,H5T_NATIVE_DOUBLE))
         return 0;
@@ -1250,9 +1255,9 @@ can_apply_bogus(hid_t H5_ATTR_UNUSED dcpl_id, hid_t type_id, hid_t H5_ATTR_UNUSE
  *-------------------------------------------------------------------------
  */
 static size_t
-filter_bogus(unsigned int H5_ATTR_UNUSED flags, size_t H5_ATTR_UNUSED cd_nelmts,
-      const unsigned int H5_ATTR_UNUSED *cd_values, size_t nbytes,
-      size_t H5_ATTR_UNUSED *buf_size, void H5_ATTR_UNUSED **buf)
+filter_bogus(unsigned int UNUSED flags, size_t UNUSED cd_nelmts,
+      const unsigned int UNUSED *cd_values, size_t nbytes,
+      size_t UNUSED *buf_size, void UNUSED **buf)
 {
     return nbytes;
 }
@@ -1274,7 +1279,7 @@ filter_bogus(unsigned int H5_ATTR_UNUSED flags, size_t H5_ATTR_UNUSED cd_nelmts,
  *-------------------------------------------------------------------------
  */
 static herr_t
-set_local_bogus2(hid_t dcpl_id, hid_t type_id, hid_t H5_ATTR_UNUSED space_id)
+set_local_bogus2(hid_t dcpl_id, hid_t type_id, hid_t UNUSED space_id)
 {
     unsigned add_on=0;      /* Value to add to data going through */
     unsigned flags;         /* Filter flags */
@@ -1381,9 +1386,9 @@ filter_bogus2(unsigned int flags, size_t cd_nelmts,
  *-------------------------------------------------------------------------
  */
 static size_t
-filter_bogus3(unsigned int H5_ATTR_UNUSED flags, size_t H5_ATTR_UNUSED cd_nelmts,
-      const unsigned int H5_ATTR_UNUSED *cd_values, size_t H5_ATTR_UNUSED nbytes,
-      size_t H5_ATTR_UNUSED *buf_size, void H5_ATTR_UNUSED **buf)
+filter_bogus3(unsigned int UNUSED flags, size_t UNUSED cd_nelmts,
+      const unsigned int UNUSED *cd_values, size_t UNUSED nbytes,
+      size_t UNUSED *buf_size, void UNUSED **buf)
 {
     return 0;
 }
@@ -1477,8 +1482,8 @@ error:
  *-------------------------------------------------------------------------
  */
 static H5Z_cb_return_t
-filter_cb_cont(H5Z_filter_t filter, void H5_ATTR_UNUSED *buf, size_t H5_ATTR_UNUSED buf_size,
-           void H5_ATTR_UNUSED *op_data)
+filter_cb_cont(H5Z_filter_t filter, void UNUSED *buf, size_t UNUSED buf_size,
+           void UNUSED *op_data)
 {
     if(H5Z_FILTER_FLETCHER32==filter)
        return H5Z_CB_CONT;
@@ -1500,8 +1505,8 @@ filter_cb_cont(H5Z_filter_t filter, void H5_ATTR_UNUSED *buf, size_t H5_ATTR_UNU
  *-------------------------------------------------------------------------
  */
 static H5Z_cb_return_t
-filter_cb_fail(H5Z_filter_t filter, void H5_ATTR_UNUSED *buf, size_t H5_ATTR_UNUSED buf_size,
-           void H5_ATTR_UNUSED *op_data)
+filter_cb_fail(H5Z_filter_t filter, void UNUSED *buf, size_t UNUSED buf_size,
+           void UNUSED *op_data)
 {
     if(H5Z_FILTER_FLETCHER32==filter)
        return H5Z_CB_FAIL;
@@ -2069,7 +2074,7 @@ error:
 static herr_t
 test_filters(hid_t file, hid_t
 #ifndef H5_HAVE_FILTER_SZIP
-H5_ATTR_UNUSED
+UNUSED
 #endif /* H5_HAVE_FILTER_SZIP */
     fapl)
 {
@@ -2354,7 +2359,8 @@ test_missing_filter(hid_t file)
     hsize_t     dset_size;      /* Dataset size */
     size_t      i,j;            /* Local index variables */
     herr_t      ret;            /* Generic return value */
-    const char *testfile = H5_get_srcdir_filename(FILE_DEFLATE_NAME); /* Corrected test file name */
+    char testfile[512]="";      /* Buffer to hold name of existing test file */
+    char *srcdir = HDgetenv("srcdir");    /* The source directory, if we are using the --srcdir configure option */
 
     TESTING("dataset access with missing filter");
 
@@ -2499,6 +2505,13 @@ test_missing_filter(hid_t file)
 
 
     /* Try reading existing dataset with deflate filter */
+
+    /* Compose the name of the file to open, using the srcdir, if appropriate */
+    if(srcdir && ((HDstrlen(srcdir) + HDstrlen(FILE_DEFLATE_NAME) + 1) < sizeof(testfile))){
+	HDstrcpy(testfile, srcdir);
+	HDstrcat(testfile, "/");
+    }
+    HDstrcat(testfile, FILE_DEFLATE_NAME);
 
     /* Open existing file */
     if((fid = H5Fopen(testfile, H5F_ACC_RDONLY, H5P_DEFAULT)) < 0) {
@@ -5400,7 +5413,7 @@ error:
 static herr_t
 test_can_apply_szip(hid_t
 #ifndef H5_HAVE_FILTER_SZIP
-H5_ATTR_UNUSED
+UNUSED
 #endif /* H5_HAVE_FILTER_SZIP */
 file)
 {
@@ -6760,13 +6773,13 @@ error:
 #ifndef H5_NO_DEPRECATED_SYMBOLS
 /* Empty can_apply and set_local callbacks */
 static htri_t
-can_apply_deprec(hid_t H5_ATTR_UNUSED dcpl_id, hid_t H5_ATTR_UNUSED type_id, hid_t H5_ATTR_UNUSED space_id)
+can_apply_deprec(hid_t UNUSED dcpl_id, hid_t UNUSED type_id, hid_t UNUSED space_id)
 {
     return 1;
 }
 
 static herr_t
-set_local_deprec(hid_t H5_ATTR_UNUSED dcpl_id, hid_t H5_ATTR_UNUSED type_id, hid_t H5_ATTR_UNUSED space_id)
+set_local_deprec(hid_t UNUSED dcpl_id, hid_t UNUSED type_id, hid_t UNUSED space_id)
 {
     return(SUCCEED);
 }
@@ -7489,9 +7502,9 @@ static size_t filter_expand_factor_g = 0;
  *-------------------------------------------------------------------------
  */
 static size_t
-filter_expand(unsigned int flags, size_t H5_ATTR_UNUSED cd_nelmts,
-      const unsigned int H5_ATTR_UNUSED *cd_values, size_t nbytes,
-      size_t *buf_size, void H5_ATTR_UNUSED **buf)
+filter_expand(unsigned int flags, size_t UNUSED cd_nelmts,
+      const unsigned int UNUSED *cd_values, size_t nbytes,
+      size_t *buf_size, void UNUSED **buf)
 {
     size_t         ret_value = 0;
 
@@ -7916,6 +7929,63 @@ error:
     } H5E_END_TRY;
     return -1;
 } /* end test_large_chunk_shrink() */
+
+
+/*-------------------------------------------------------------------------
+ *
+ *  test_idx_compatible():
+ *	Verify that the 1.8 branch cannot read datasets that use
+ *	Fixed Array indexing method.
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+test_idx_compatible(void)
+{
+    hid_t	fid = -1;	/* File id */
+    hid_t       did = -1;	/* Dataset id */
+    char  	*srcdir = HDgetenv("srcdir"); /* where the src code is located */
+    char        filename[FILENAME_BUF_SIZE] = "";  /* old test file name */
+
+    /* Output message about test being performed */
+    TESTING("Compatibility for datasets that use Fixed Array indexing\n");
+
+    /* Generate correct name for test file by prepending the source path */
+    if(srcdir && ((HDstrlen(srcdir) + HDstrlen(FIXED_IDX_FILE) + 1) < sizeof(filename))) {
+	HDstrcpy(filename, srcdir);
+	HDstrcat(filename, "/");
+    }
+    HDstrcat(filename, FIXED_IDX_FILE);
+
+    /* Open the file */
+    if((fid = H5Fopen(filename, H5F_ACC_RDONLY, H5P_DEFAULT)) < 0)
+	FAIL_STACK_ERROR
+
+    /* Should not able to read the dataset w/o filter that use Fixed Array indexing */
+    H5E_BEGIN_TRY {
+	if((did = H5Dopen2(fid, DSET, H5P_DEFAULT)) != FAIL)
+	    TEST_ERROR
+    } H5E_END_TRY;
+
+    /* Should not able to read the dataset w/ filter that use Fixed Array indexing */
+    H5E_BEGIN_TRY {
+	if((did = H5Dopen2(fid, DSET_FILTER, H5P_DEFAULT)) != FAIL)
+	    TEST_ERROR
+    } H5E_END_TRY;
+
+    if(H5Fclose(fid) < 0)
+	FAIL_STACK_ERROR
+
+    PASSED();
+    return 0;
+
+error:
+    H5E_BEGIN_TRY {
+        H5Dclose(did);
+	H5Fclose(fid);
+    } H5E_END_TRY;
+    return -1;
+} /* test_idx_compatible */
 
 
 /*-------------------------------------------------------------------------
@@ -8890,8 +8960,8 @@ error:
  *-------------------------------------------------------------------------
  */
 static herr_t
-gather_error_cb_fail(const void H5_ATTR_UNUSED *dst_buf,
-    size_t H5_ATTR_UNUSED dst_buf_bytes_used, void H5_ATTR_UNUSED *op_data)
+gather_error_cb_fail(const void UNUSED *dst_buf,
+    size_t UNUSED dst_buf_bytes_used, void UNUSED *op_data)
 {
     return FAIL;
 }
@@ -9139,6 +9209,7 @@ main(void)
         nerrors += (test_chunk_cache(my_fapl) < 0		? 1 : 0);
         nerrors += (test_big_chunks_bypass_cache(my_fapl) < 0   ? 1 : 0);
         nerrors += (test_chunk_expand(my_fapl) < 0		? 1 : 0);
+	nerrors += (test_idx_compatible() < 0  			? 1 : 0);
 	nerrors += (test_layout_extend(my_fapl) < 0		? 1 : 0);
 	nerrors += (test_large_chunk_shrink(my_fapl) < 0        ? 1 : 0);
 	nerrors += (test_zero_dim_dset(my_fapl) < 0             ? 1 : 0);

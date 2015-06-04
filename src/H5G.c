@@ -133,7 +133,7 @@
 /* Group ID class */
 static const H5I_class_t H5I_GROUP_CLS[1] = {{
     H5I_GROUP,			/* ID class value */
-    0,				/* Class flags */
+    H5I_CLASS_REUSE_IDS,	/* Class flags */
     0,				/* # of reserved IDs for class */
     (H5I_free_t)H5G_close	/* Callback routine for closing objects of this class */
 }};
@@ -463,7 +463,7 @@ H5Gopen2(hid_t loc_id, const char *name, hid_t gapl_id)
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not group access property list")
 
     /* Open the group */
-    if((grp = H5G__open_name(&loc, name, gapl_id, H5AC_ind_dxpl_id)) == NULL)
+    if((grp = H5G__open_name(&loc, name, gapl_id, H5AC_dxpl_id)) == NULL)
         HGOTO_ERROR(H5E_SYM, H5E_CANTOPENOBJ, FAIL, "unable to open group")
 
     /* Register an ID for the group */

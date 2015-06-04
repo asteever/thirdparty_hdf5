@@ -14,7 +14,6 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 #include <string>
-#include <iostream>
 
 #include "H5Include.h"
 #include "H5Exception.h"
@@ -49,7 +48,6 @@
 
 #ifndef H5_NO_NAMESPACE
 namespace H5 {
-using namespace std;
 #endif
 
 //--------------------------------------------------------------------------
@@ -1130,7 +1128,7 @@ H5O_type_t CommonFG::childObjType(hsize_t index, H5_index_t index_type, H5_iter_
 unsigned CommonFG::childObjVersion(const char* objname) const
 {
     H5O_info_t objinfo;
-    unsigned version = 0;
+    unsigned version = -1;
 
     // Use C API to get information of the object
     herr_t ret_value = H5Oget_info_by_name(getLocId(), objname, &objinfo, H5P_DEFAULT);

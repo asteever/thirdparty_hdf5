@@ -63,8 +63,6 @@
 #define SET_ALIGNMENT(TYPE,VAL) \
     H5T_NATIVE_##TYPE##_ALIGN_g=MAX(H5T_NATIVE_##TYPE##_ALIGN_g, VAL)
 #endif
- /* #include "H5Tpkg.h"
- */ 
 
 const char *FILENAME[] = {
     "dtypes1.h5",
@@ -147,7 +145,6 @@ static void test_classes()
  */
 static void test_copy()
 {
-
     SUBTEST("DataType::copy() and DataType::operator=");
     try {
 	// Test copying from a predefined datatype using DataType::operator=

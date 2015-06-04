@@ -59,7 +59,7 @@ H5B_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream, int indent, int f
 	  const H5B_class_t *type, void *udata)
 {
     H5B_t	*bt = NULL;
-    H5UC_t	*rc_shared;             /* Ref-counted shared info */
+    H5RC_t	*rc_shared;             /* Ref-counted shared info */
     H5B_shared_t *shared;               /* Pointer to shared B-tree info */
     H5B_cache_ud_t cache_udata;         /* User-data for metadata cache callback */
     unsigned	u;                      /* Local index variable */
@@ -80,7 +80,7 @@ H5B_debug(H5F_t *f, hid_t dxpl_id, haddr_t addr, FILE *stream, int indent, int f
     /* Get shared info for B-tree */
     if(NULL == (rc_shared = (type->get_shared)(f, udata)))
 	HGOTO_ERROR(H5E_BTREE, H5E_CANTGET, FAIL, "can't retrieve B-tree's shared ref. count object")
-    shared = (H5B_shared_t *)H5UC_GET_OBJ(rc_shared);
+    shared = (H5B_shared_t *)H5RC_GET_OBJ(rc_shared);
     HDassert(shared);
 
     /*
@@ -156,7 +156,7 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5B__assert
+ * Function:	H5B_assert
  *
  * Purpose:	Verifies that the tree is structured correctly.
  *
@@ -171,10 +171,10 @@ done:
  */
 #ifdef H5B_DEBUG
 herr_t
-H5B__assert(H5F_t *f, hid_t dxpl_id, haddr_t addr, const H5B_class_t *type, void *udata)
+H5B_assert(H5F_t *f, hid_t dxpl_id, haddr_t addr, const H5B_class_t *type, void *udata)
 {
     H5B_t	*bt = NULL;
-    H5UC_t	*rc_shared;             /* Ref-counted shared info */
+    H5RC_t	*rc_shared;             /* Ref-counted shared info */
     H5B_shared_t *shared;               /* Pointer to shared B-tree info */
     H5B_cache_ud_t cache_udata;         /* User-data for metadata cache callback */
     int	        ncell, cmp;
@@ -189,7 +189,7 @@ H5B__assert(H5F_t *f, hid_t dxpl_id, haddr_t addr, const H5B_class_t *type, void
 	struct child_t	       *next;
     } *head = NULL, *tail = NULL, *prev = NULL, *cur = NULL, *tmp = NULL;
 
-    FUNC_ENTER_PACKAGE
+    FUNC_ENTER_NOAPI_NOINIT
 
     if(0 == ncalls++) {
 	if(H5DEBUG(B))
@@ -199,7 +199,7 @@ H5B__assert(H5F_t *f, hid_t dxpl_id, haddr_t addr, const H5B_class_t *type, void
     /* Get shared info for B-tree */
     if(NULL == (rc_shared = (type->get_shared)(f, udata)))
 	HGOTO_ERROR(H5E_BTREE, H5E_CANTGET, FAIL, "can't retrieve B-tree's shared ref. count object")
-    shared = (H5B_shared_t *)H5UC_GET_OBJ(rc_shared);
+    shared = (H5B_shared_t *)H5RC_GET_OBJ(rc_shared);
     HDassert(shared);
 
     /* Initialize the queue */
@@ -208,7 +208,7 @@ H5B__assert(H5F_t *f, hid_t dxpl_id, haddr_t addr, const H5B_class_t *type, void
     cache_udata.rc_shared = rc_shared;
     bt = (H5B_t *)H5AC_protect(f, dxpl_id, H5AC_BT, addr, &cache_udata, H5AC_READ);
     HDassert(bt);
-    shared = (H5B_shared_t *)H5UC_GET_OBJ(bt->rc_shared);
+    shared = (H5B_shared_t *)H5RC_GET_OBJ(bt->rc_shared);
     HDassert(shared);
     cur = (struct child_t *)H5MM_calloc(sizeof(struct child_t));
     HDassert(cur);
@@ -285,6 +285,6 @@ H5B__assert(H5F_t *f, hid_t dxpl_id, haddr_t addr, const H5B_class_t *type, void
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5B__assert() */
+} /* end H5B_assert() */
 #endif /* H5B_DEBUG */
 

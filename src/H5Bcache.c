@@ -56,7 +56,7 @@
 
 /* Metadata cache callbacks */
 static H5B_t *H5B__load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata);
-static herr_t H5B__flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5B_t *b, unsigned H5_ATTR_UNUSED * flags_ptr);
+static herr_t H5B__flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5B_t *b, unsigned UNUSED * flags_ptr);
 static herr_t H5B__dest(H5F_t *f, H5B_t *bt);
 static herr_t H5B__clear(H5F_t *f, H5B_t *b, hbool_t destroy);
 static herr_t H5B__compute_size(const H5F_t *f, const H5B_t *bt, size_t *size_ptr);
@@ -73,7 +73,6 @@ const H5AC_class_t H5AC_BT[1] = {{
     (H5AC_flush_func_t)H5B__flush,
     (H5AC_dest_func_t)H5B__dest,
     (H5AC_clear_func_t)H5B__clear,
-    (H5AC_notify_func_t)NULL,
     (H5AC_size_func_t)H5B__compute_size,
 }};
 
@@ -115,17 +114,16 @@ H5B__load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
     HDassert(H5F_addr_defined(addr));
     HDassert(udata);
 
-    /* Allocate the B-tree node in memory */
     if(NULL == (bt = H5FL_MALLOC(H5B_t)))
 	HGOTO_ERROR(H5E_BTREE, H5E_CANTALLOC, NULL, "can't allocate B-tree struct")
     HDmemset(&bt->cache_info, 0, sizeof(H5AC_info_t));
 
     /* Set & increment the ref-counted "shared" B-tree information for the node */
     bt->rc_shared = udata->rc_shared;
-    H5UC_INC(bt->rc_shared);
+    H5RC_INC(bt->rc_shared);
 
     /* Get a pointer to the shared info, for convenience */
-    shared = (H5B_shared_t *)H5UC_GET_OBJ(bt->rc_shared);
+    shared = (H5B_shared_t *)H5RC_GET_OBJ(bt->rc_shared);
     HDassert(shared);
 
     /* Allocate space for the native keys and child addresses */
@@ -142,7 +140,7 @@ H5B__load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
 
     /* magic number */
     if(HDmemcmp(p, H5B_MAGIC, (size_t)H5_SIZEOF_MAGIC))
-	HGOTO_ERROR(H5E_BTREE, H5E_BADVALUE, NULL, "wrong B-tree signature")
+	HGOTO_ERROR(H5E_BTREE, H5E_CANTLOAD, NULL, "wrong B-tree signature")
     p += 4;
 
     /* node type and level */
@@ -186,7 +184,7 @@ H5B__load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
 
 done:
     if(!ret_value && bt)
-        if(H5B__node_dest(bt) < 0)
+        if(H5B_node_dest(bt) < 0)
             HDONE_ERROR(H5E_BTREE, H5E_CANTFREE, NULL, "unable to destroy B-tree node")
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -207,7 +205,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5B__flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5B_t *bt, unsigned H5_ATTR_UNUSED * flags_ptr)
+H5B__flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5B_t *bt, unsigned UNUSED * flags_ptr)
 {
     H5B_shared_t *shared;       /* Pointer to shared B-tree info */
     herr_t      ret_value = SUCCEED;    /* Return value */
@@ -218,7 +216,7 @@ H5B__flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5B_t *bt, un
     HDassert(f);
     HDassert(H5F_addr_defined(addr));
     HDassert(bt);
-    shared = (H5B_shared_t *)H5UC_GET_OBJ(bt->rc_shared);
+    shared = (H5B_shared_t *)H5RC_GET_OBJ(bt->rc_shared);
     HDassert(shared);
     HDassert(shared->type);
     HDassert(shared->type->encode);
@@ -319,7 +317,7 @@ H5B__dest(H5F_t *f, H5B_t *bt)
         H5B_shared_t *shared;               /* Pointer to shared B-tree info */
 
         /* Get the pointer to the shared B-tree info */
-        shared = (H5B_shared_t *)H5UC_GET_OBJ(bt->rc_shared);
+        shared = (H5B_shared_t *)H5RC_GET_OBJ(bt->rc_shared);
         HDassert(shared);
 
         /* Release the space on disk */
@@ -329,7 +327,7 @@ H5B__dest(H5F_t *f, H5B_t *bt)
     } /* end if */
 
     /* Destroy B-tree node */
-    if(H5B__node_dest(bt) < 0)
+    if(H5B_node_dest(bt) < 0)
         HGOTO_ERROR(H5E_BTREE, H5E_CANTFREE, FAIL, "unable to destroy B-tree node")
 
 done:
@@ -389,7 +387,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5B__compute_size(const H5F_t H5_ATTR_UNUSED *f, const H5B_t *bt, size_t *size_ptr)
+H5B__compute_size(const H5F_t UNUSED *f, const H5B_t *bt, size_t *size_ptr)
 {
     H5B_shared_t        *shared;        /* Pointer to shared B-tree info */
 
@@ -399,7 +397,7 @@ H5B__compute_size(const H5F_t H5_ATTR_UNUSED *f, const H5B_t *bt, size_t *size_p
     HDassert(f);
     HDassert(bt);
     HDassert(bt->rc_shared);
-    shared = (H5B_shared_t *)H5UC_GET_OBJ(bt->rc_shared);
+    shared = (H5B_shared_t *)H5RC_GET_OBJ(bt->rc_shared);
     HDassert(shared);
     HDassert(shared->type);
     HDassert(size_ptr);

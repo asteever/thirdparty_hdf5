@@ -589,8 +589,8 @@ done:
 herr_t
 H5O_shared_copy_file(H5F_t *file_src, H5F_t *file_dst,
     const H5O_msg_class_t *mesg_type, const void *_native_src, void *_native_dst,
-    hbool_t H5_ATTR_UNUSED *recompute_size, unsigned *mesg_flags, H5O_copy_t *cpy_info,
-    void H5_ATTR_UNUSED *udata, hid_t dxpl_id)
+    hbool_t UNUSED *recompute_size, unsigned *mesg_flags, H5O_copy_t *cpy_info,
+    void UNUSED *udata, hid_t dxpl_id)
 {
     const H5O_shared_t  *shared_src = (const H5O_shared_t *)_native_src; /* Alias to shared info in native source */
     H5O_shared_t        *shared_dst = (H5O_shared_t *)_native_dst; /* Alias to shared info in native destination message */
@@ -618,14 +618,8 @@ H5O_shared_copy_file(H5F_t *file_src, H5F_t *file_dst,
      */
     if(shared_src->type != H5O_SHARE_TYPE_COMMITTED) {
         /* Simulate trying to share new message in the destination file. */
-        /* Set copied metadata tag */
-        H5_BEGIN_TAG(dxpl_id, H5AC__COPIED_TAG, FAIL);
-
         if(H5SM_try_share(file_dst, dxpl_id, NULL, H5SM_DEFER, mesg_type->id, _native_dst, mesg_flags) < 0)
-            HGOTO_ERROR_TAG(H5E_OHDR, H5E_WRITEERROR, FAIL, "unable to determine if message should be shared")
-
-        /* Reset metadata tag */
-        H5_END_TAG(FAIL);
+            HGOTO_ERROR(H5E_OHDR, H5E_WRITEERROR, FAIL, "unable to determine if message should be shared")
     } /* end if */
     else {
         /* Mark the message as committed - as it will be committed in post copy

@@ -415,7 +415,7 @@ static int my_isinf(int endian, unsigned char *val, size_t size,
  *-------------------------------------------------------------------------
  */
 static void
-fpe_handler(int H5_ATTR_UNUSED signo)
+fpe_handler(int UNUSED signo)
 {
     SKIPPED();
     HDputs("    Test skipped due to SIGFPE.");
@@ -488,7 +488,7 @@ reset_hdf5(void)
  *-------------------------------------------------------------------------
  */
 static H5T_conv_ret_t
-except_func(H5T_conv_except_t except_type, hid_t H5_ATTR_UNUSED src_id, hid_t H5_ATTR_UNUSED dst_id, void H5_ATTR_UNUSED *src_buf,
+except_func(H5T_conv_except_t except_type, hid_t UNUSED src_id, hid_t UNUSED dst_id, void UNUSED *src_buf,
 		 void *dst_buf, void *user_data)
 {
     H5T_conv_ret_t      ret = H5T_CONV_HANDLED;
@@ -538,7 +538,7 @@ some_dummy_func(float x)
 {
     char	s[128];
 
-    HDsnprintf(s, sizeof(s), "%g", (double)x);
+    HDsnprintf(s, sizeof(s), "%g", x);
 }
 
 
@@ -632,6 +632,11 @@ test_hard_query(void)
         goto error;
     }
 
+
+#ifndef H5_VMS
+    /* Disable this test because the soft conversion functions (H5T__conv_i_f and H5T__conv_f_i) on
+       OpenVMS and are disabled - SLU 2013/8/26 */
+
     /* Unregister the hard conversion from int to float.  Verify the conversion
      * is a soft conversion. */
     H5Tunregister(H5T_PERS_HARD, NULL, H5T_NATIVE_INT, H5T_NATIVE_FLOAT, H5T__conv_int_float);
@@ -640,6 +645,7 @@ test_hard_query(void)
         printf("Can't query conversion function\n");
         goto error;
     }
+#endif
 
     /* Register the hard conversion from int to float.  Verify the conversion
      * is a hard conversion. */
@@ -677,7 +683,7 @@ test_hard_query(void)
  *-------------------------------------------------------------------------
  */
 static H5T_conv_ret_t
-expt_handle(H5T_conv_except_t except_type, hid_t H5_ATTR_UNUSED src_id, hid_t H5_ATTR_UNUSED dst_id, void H5_ATTR_UNUSED *src_buf,
+expt_handle(H5T_conv_except_t except_type, hid_t UNUSED src_id, hid_t UNUSED dst_id, void UNUSED *src_buf,
 		 void *dst_buf, void *user_data)
 {
     signed char         fill_value1 = 7;
@@ -832,7 +838,7 @@ static int test_particular_fp_integer(void)
             printf(" %02x", saved_buf2[ENDIAN(src_size2, j, endian)]);
 
         HDmemcpy(&x, saved_buf2, src_size2);
-        printf(" %29.20e\n", (double)x);
+        printf(" %29.20e\n", x);
 
         printf("        dst = ");
         for (j=0; j<dst_size2; j++)
@@ -2720,7 +2726,7 @@ my_isnan(dtype_t type, void *val)
 	    float x;
 
 	    HDmemcpy(&x, val, sizeof(float));
-	    HDsnprintf(s, sizeof(s), "%g", (double)x);
+	    HDsnprintf(s, sizeof(s), "%g", x);
 	} else if (FLT_DOUBLE==type) {
 	    double x;
 
@@ -3294,6 +3300,7 @@ test_conv_flt_1 (const char *name, int run_test, hid_t src, hid_t dst)
                 check_mant[1] = HDfrexpl(hw_ld, check_expo+1);
 #endif
             }
+#ifdef H5_CONVERT_DENORMAL_FLOAT
             /* Special check for denormalized values */
             if(check_expo[0]<(-(int)dst_ebias) || check_expo[1]<(-(int)dst_ebias)) {
                 int expo_diff=check_expo[0]-check_expo[1];
@@ -3316,6 +3323,58 @@ test_conv_flt_1 (const char *name, int run_test, hid_t src, hid_t dst)
                         HDfabs(check_mant[0]-check_mant[1])<FP_EPSILON)
                     continue;
             } /* end else */
+#else /* H5_CONVERT_DENORMAL_FLOAT */
+            {
+            hssize_t	expo;			/*exponent			*/
+            uint8_t tmp[32];
+
+            assert(src_size<=sizeof(tmp));
+            if(sendian==H5T_ORDER_LE)
+                HDmemcpy(tmp,&saved[j*src_size],src_size);
+            else if(sendian==H5T_ORDER_BE)
+                for (k=0; k<src_size; k++)
+                    tmp[k]=saved[j*src_size+(src_size-(k+1))];
+            else {
+                for (k = 0; k < src_size; k += 4) {
+                    tmp[k] = saved[j*src_size+(src_size-2)-k];
+                    tmp[k+1] = saved[j*src_size+(src_size-1)-k];
+
+                    tmp[(src_size-2)-k] = saved[j*src_size+k];
+                    tmp[(src_size-1)-k] = saved[j*src_size+k+1];
+                }
+            }
+
+            expo = H5T__bit_get_d(tmp, src_epos, src_esize);
+            if(expo==0)
+                continue;   /* Denormalized floating-point value detected */
+            else {
+                assert(dst_size<=sizeof(tmp));
+                if(sendian==H5T_ORDER_LE)
+                    HDmemcpy(tmp,&buf[j*dst_size],dst_size);
+                else if(sendian==H5T_ORDER_BE)
+                    for (k=0; k<dst_size; k++)
+                        tmp[k]=buf[j*dst_size+(dst_size-(k+1))];
+                else {
+                    for (k = 0; k < src_size; k += 4) {
+                        tmp[k] = buf[j*dst_size+(dst_size-2)-k];
+                        tmp[k+1] = buf[j*dst_size+(dst_size-1)-k];
+
+                        tmp[(dst_size-2)-k] = buf[j*dst_size+k];
+                        tmp[(dst_size-1)-k] = buf[j*dst_size+k+1];
+                    }
+                }
+
+                expo = H5T__bit_get_d(tmp, dst_epos, dst_esize);
+                if(expo==0)
+                    continue;   /* Denormalized floating-point value detected */
+                else {
+                    if (check_expo[0]==check_expo[1] &&
+                            HDfabs(check_mant[0]-check_mant[1])<FP_EPSILON)
+                        continue;
+                } /* end else */
+            } /* end else */
+            }
+#endif /* H5_CONVERT_DENORMAL_FLOAT */
         }
 
         if (0==fails_this_test++) {
@@ -3334,7 +3393,7 @@ test_conv_flt_1 (const char *name, int run_test, hid_t src, hid_t dst)
         if (FLT_FLOAT==src_type) {
             float x;
             HDmemcpy(&x, &saved[j*src_size], sizeof(float));
-            printf(" %29.20e\n", (double)x);
+            printf(" %29.20e\n", x);
         } else if (FLT_DOUBLE==src_type) {
             double x;
             HDmemcpy(&x, &saved[j*src_size], sizeof(double));
@@ -3354,7 +3413,7 @@ test_conv_flt_1 (const char *name, int run_test, hid_t src, hid_t dst)
         if (FLT_FLOAT==dst_type) {
             float x;
             HDmemcpy(&x, &buf[j*dst_size], sizeof(float));
-            printf(" %29.20e\n", (double)x);
+            printf(" %29.20e\n", x);
         } else if (FLT_DOUBLE==dst_type) {
             double x;
             HDmemcpy(&x, &buf[j*dst_size], sizeof(double));
@@ -3372,7 +3431,7 @@ test_conv_flt_1 (const char *name, int run_test, hid_t src, hid_t dst)
             printf(" %02x", hw[ENDIAN(dst_size,k,dendian)]);
         printf("%*s", (int)(3*MAX(0, (ssize_t)src_size-(ssize_t)dst_size)), "");
         if (FLT_FLOAT==dst_type)
-            printf(" %29.20e\n", (double)hw_f);
+            printf(" %29.20e\n", hw_f);
         else if (FLT_DOUBLE==dst_type)
             printf(" %29.20e\n", hw_d);
 #if H5_SIZEOF_LONG_DOUBLE!=H5_SIZEOF_DOUBLE
@@ -4392,6 +4451,70 @@ test_conv_int_fp(const char *name, int run_test, hid_t src, hid_t dst)
                 }
             }
         }
+/* On some machines (notably the SGI and Solaris 64-bit machines) unsigned long
+* values are not converted to float or double values correctly, they are
+* consistently off by the lowest bit being rounded oppositely to our
+* software conversion routines output.  So, on those machines, we allow
+* the converted value to be +/- 1 from the machine's value.  -QAK
+*/
+#ifndef H5_SW_ULONG_TO_FP_BOTTOM_BIT_WORKS
+        if(dst_size==sizeof(unsigned)) {
+            unsigned tmp_s, tmp_h;
+            HDmemcpy(&tmp_s,&buf[j*dst_size],sizeof(unsigned));
+            HDmemcpy(&tmp_h,&hw[0],sizeof(unsigned));
+            if((tmp_s+1)==tmp_h || (tmp_s-1)==tmp_h)
+                continue; /*no error*/
+        } /* end if */
+        else if (dst_size==sizeof(unsigned long)) {
+            unsigned long tmp_s, tmp_h;
+            HDmemcpy(&tmp_s,&buf[j*dst_size],sizeof(unsigned long));
+            HDmemcpy(&tmp_h,&hw[0],sizeof(unsigned long));
+            if((tmp_s+1)==tmp_h || (tmp_s-1)==tmp_h)
+                continue; /*no error*/
+        } /* end if */
+        else if (dst_size==sizeof(unsigned long long)) {
+            unsigned long long tmp_s, tmp_h;
+            HDmemcpy(&tmp_s,&buf[j*dst_size],sizeof(unsigned long long));
+            HDmemcpy(&tmp_h,&hw[0],sizeof(unsigned long long));
+            if((tmp_s+1)==tmp_h || (tmp_s-1)==tmp_h)
+                continue; /*no error*/
+        } /* end if */
+#endif /* end H5_ULONG_FP_BOTTOM_BIT_WORKS */
+
+/* For PGI compiler on Linux, during conversion from 'float' or 'double' to
+* 'unsigned long long', round-up happens when the fraction of float-point
+* value is greater than 0.5. So we allow the converted value to be off by 1.
+*/
+#ifndef H5_FP_TO_ULLONG_BOTTOM_BIT_WORKS
+        if((src_type==FLT_FLOAT || src_type==FLT_DOUBLE) && dst_type==INT_ULLONG) {
+            unsigned long long tmp_s, tmp_h;
+            HDmemcpy(&tmp_s,&buf[j*dst_size],sizeof(unsigned long long));
+            HDmemcpy(&tmp_h,&hw[0],sizeof(unsigned long long));
+            if((tmp_s+1)==tmp_h)
+                continue; /*no error*/
+        }
+#endif /*end H5_FP_TO_ULLONG_BOTTOM_BIT_WORKS*/
+
+
+#ifdef H5_VMS
+        /* OpenVMS converts the value of zero in char or short to negative zero in 
+         * long double.  Make it warning instead of failure. SLU - 2013/9/10
+         */
+	if(dst_type == FLT_LDOUBLE) {
+            long double *ld= buf + j*dst_size;
+	    if(src_type == INT_SCHAR) {
+                char *c = saved + j*src_size;
+                if(*c == 0 && *ld == -0)
+		    H5_WARNING();
+                    goto printing;
+            } else if(src_type == INT_SHORT) {
+                short *s = saved + j*src_size;
+                if(*s == 0 && *ld == -0)
+		    H5_WARNING();
+                    goto printing;
+            }
+        }
+#endif /*H5_VMS*/
 
         /* Print errors */
         if (0==fails_this_test++) {
@@ -4401,6 +4524,8 @@ test_conv_int_fp(const char *name, int run_test, hid_t src, hid_t dst)
                 H5_WARNING();
             }
         }
+
+ printing:
         printf("    elmt %u: \n", (unsigned)j);
 
         printf("        src = ");
@@ -4450,7 +4575,7 @@ test_conv_int_fp(const char *name, int run_test, hid_t src, hid_t dst)
                 break;
             case FLT_FLOAT:
                 HDmemcpy(aligned, saved+j*sizeof(float), sizeof(float));
-                printf(" %29f\n", (double)*((float*)aligned));
+                printf(" %29f\n", *((float*)aligned));
                 break;
             case FLT_DOUBLE:
                 HDmemcpy(aligned, saved+j*sizeof(double), sizeof(double));
@@ -4515,7 +4640,7 @@ test_conv_int_fp(const char *name, int run_test, hid_t src, hid_t dst)
                 break;
             case FLT_FLOAT:
                 HDmemcpy(aligned, buf+j*sizeof(float), sizeof(float));
-                printf(" %29f\n", (double)*((float*)aligned));
+                printf(" %29f\n", *((float*)aligned));
                 break;
             case FLT_DOUBLE:
                 HDmemcpy(aligned, buf+j*sizeof(double), sizeof(double));
@@ -4569,7 +4694,7 @@ test_conv_int_fp(const char *name, int run_test, hid_t src, hid_t dst)
                 printf(" %29"H5_PRINTF_LL_WIDTH"u\n", *((unsigned long long*)hw));
                 break;
             case FLT_FLOAT:
-                printf(" %29f\n", (double)*((float*)hw));
+                printf(" %29f\n", *((float*)hw));
                 break;
             case FLT_DOUBLE:
                 printf(" %29f\n", *((double*)hw));
@@ -5032,8 +5157,32 @@ run_int_fp_conv(const char *name)
 #endif
 #endif /* H5_SIZEOF_LONG!=H5_SIZEOF_INT */
 #if H5_SIZEOF_LONG_LONG!=H5_SIZEOF_LONG
+#if H5_LLONG_TO_LDOUBLE_CORRECT
     nerrors += test_conv_int_fp(name, TEST_NORMAL, H5T_NATIVE_LLONG, H5T_NATIVE_LDOUBLE);
+#else /* H5_LLONG_TO_LDOUBLE_CORRECT */
+    {
+        char		str[256];		/*hello string		*/
+
+        HDsnprintf(str, sizeof(str), "Testing %s %s -> %s conversions",
+                name, "long long", "long double");
+        printf("%-70s", str);
+        SKIPPED();
+        HDputs("    Test skipped due to compiler error in handling conversion.");
+    }
+#endif /* H5_LLONG_TO_LDOUBLE_CORRECT */
+#if H5_LLONG_TO_LDOUBLE_CORRECT
     nerrors += test_conv_int_fp(name, TEST_NORMAL, H5T_NATIVE_ULLONG, H5T_NATIVE_LDOUBLE);
+#else /* H5_LLONG_TO_LDOUBLE_CORRECT */
+    {
+        char		str[256];		/*hello string		*/
+
+        HDsnprintf(str, sizeof(str), "Testing %s %s -> %s conversions",
+                name, "unsigned long long", "long double");
+        printf("%-70s", str);
+        SKIPPED();
+        HDputs("    Test skipped due to compiler not handling conversion.");
+    }
+#endif /* H5_LLONG_TO_LDOUBLE_CORRECT */
 #endif
 #endif
 
@@ -5059,6 +5208,7 @@ static int
 run_fp_int_conv(const char *name)
 {
     int		nerrors = 0;
+#ifdef H5_FP_TO_INTEGER_OVERFLOW_WORKS
     int         test_values;
 
 #ifdef H5_VMS
@@ -5095,8 +5245,12 @@ run_fp_int_conv(const char *name)
 
 #if H5_SIZEOF_LONG_LONG!=H5_SIZEOF_LONG
         if(!strcmp(name, "hw")) { /* Hardware conversion */
+            /* Windows .NET 2003 doesn't work for hardware conversion of this case.
+             * .NET should define this macro H5_HW_FP_TO_LLONG_NOT_WORKS. */
+#ifndef H5_HW_FP_TO_LLONG_NOT_WORKS
             nerrors += test_conv_int_fp(name, test_values, H5T_NATIVE_FLOAT, H5T_NATIVE_LLONG);
             nerrors += test_conv_int_fp(name, test_values, H5T_NATIVE_DOUBLE, H5T_NATIVE_LLONG);
+#endif /*H5_HW_FP_TO_LLONG_NOT_WORKS*/
         } else {  /* Software conversion */
             nerrors += test_conv_int_fp(name, test_values, H5T_NATIVE_FLOAT, H5T_NATIVE_LLONG);
             nerrors += test_conv_int_fp(name, test_values, H5T_NATIVE_DOUBLE, H5T_NATIVE_LLONG);
@@ -5134,13 +5288,62 @@ run_fp_int_conv(const char *name)
 #endif /*H5_SIZEOF_LONG!=H5_SIZEOF_INT && H5_SIZEOF_LONG_DOUBLE!=0 */
 
 #if H5_SIZEOF_LONG_LONG!=H5_SIZEOF_LONG && H5_SIZEOF_LONG_DOUBLE!=0
+#ifdef H5_LDOUBLE_TO_LLONG_ACCURATE
         nerrors += test_conv_int_fp(name, test_values, H5T_NATIVE_LDOUBLE, H5T_NATIVE_LLONG);
+#else /*H5_LDOUBLE_TO_LLONG_ACCURATE*/
+        {
+            char		str[256];		/*string		*/
+
+            HDsnprintf(str, sizeof(str), "Testing %s %s -> %s conversions",
+                    name, "long double", "long long");
+            printf("%-70s", str);
+            SKIPPED();
+#if H5_SIZEOF_LONG_DOUBLE!=0
+            HDputs("    Test skipped due to hardware conversion error.");
+#else
+            HDputs("    Test skipped due to disabled long double.");
+#endif
+        }
+#endif /*H5_LDOUBLE_TO_LLONG_ACCURATE*/
+#if defined(H5_LDOUBLE_TO_LLONG_ACCURATE)
         nerrors += test_conv_int_fp(name, test_values, H5T_NATIVE_LDOUBLE, H5T_NATIVE_ULLONG);
+#else /*H5_LDOUBLE_TO_LLONG_ACCURATE*/
+        {
+            char		str[256];		/*string		*/
+
+            HDsnprintf(str, sizeof(str), "Testing %s %s -> %s conversions",
+                    name, "long double", "unsigned long long");
+            printf("%-70s", str);
+            SKIPPED();
+#if H5_SIZEOF_LONG_DOUBLE!=0
+            HDputs("    Test skipped due to hardware conversion error.");
+#else
+            HDputs("    Test skipped due to disabled long double.");
+#endif
+        }
+#endif /*H5_LDOUBLE_TO_LLONG_ACCURATE*/
 #endif
 #endif
 #ifndef H5_VMS
     } /* end for */
 #endif /* H5_VMS */
+#else /* H5_FP_TO_INTEGER_OVERFLOW_WORKS */
+/* For Cray X1, the compiler generates floating exception when the
+ * conversion overflows.  So disable all of the conversions from
+ * floating-point numbers to integers.
+ */
+    char		str[256];		/*string		*/
+
+    HDsnprintf(str, sizeof(str), "Testing %s %s -> %s conversions",
+            name, "all floating-point numbers", "all integers");
+    printf("%-70s", str);
+    SKIPPED();
+#if H5_SIZEOF_LONG_DOUBLE!=0
+    HDputs("    Test skipped due to hardware conversion error.");
+#else
+    HDputs("    Test skipped due to disbaled long double.");
+#endif
+#endif /* H5_FP_TO_INTEGER_OVERFLOW_WORKS */
 
     return nerrors;
 }
@@ -5184,9 +5387,14 @@ main(void)
     /* Test H5Tcompiler_conv() for querying hard conversion. */
     nerrors += test_hard_query();
 
+#ifndef H5_VMS
+    /* Disable this test because the soft conversion functions (H5T__conv_i_f and H5T__conv_f_i) on
+       OpenVMS and are disabled - SLU 2013/8/26 */
+
     /* Test user-define, query functions and software conversion
      * for user-defined floating-point types */
     nerrors += test_derived_flt();
+#endif
 
     /* Test user-define, query functions and software conversion
      * for user-defined integer types */
@@ -5229,11 +5437,16 @@ main(void)
     nerrors += test_conv_int_2();
     nerrors += run_integer_tests("soft");
 
+#ifndef H5_VMS
+    /* Disable these tests because the soft conversion functions (H5T__conv_i_f and H5T__conv_f_i) on
+       OpenVMS and are disabled - SLU 2013/8/26 */
+
     /* Test software float-integer conversion functions */
     nerrors += run_fp_int_conv("soft");
 
     /* Test software integer-float conversion functions */
     nerrors += run_int_fp_conv("soft");
+#endif
 
     reset_hdf5();
 

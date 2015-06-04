@@ -119,8 +119,8 @@ static herr_t H5G_traverse_real(const H5G_loc_t *loc, const char *name,
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5G_traverse_slink_cb(H5G_loc_t H5_ATTR_UNUSED *grp_loc, const char H5_ATTR_UNUSED *name,
-    const H5O_link_t H5_ATTR_UNUSED *lnk, H5G_loc_t *obj_loc, void *_udata/*in,out*/,
+H5G_traverse_slink_cb(H5G_loc_t UNUSED *grp_loc, const char UNUSED *name,
+    const H5O_link_t UNUSED *lnk, H5G_loc_t *obj_loc, void *_udata/*in,out*/,
     H5G_own_loc_t *own_loc/*out*/)
 {
     H5G_trav_slink_t *udata = (H5G_trav_slink_t *)_udata;   /* User data passed in */
@@ -856,20 +856,9 @@ H5G_traverse(const H5G_loc_t *loc, const char *name, unsigned target, H5G_traver
             HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get number of links")
     } /* end else */
 
-    /* Set up invalid tag. This is a precautionary step only. Setting an invalid
-       tag here will ensure that no metadata accessed while doing the traversal
-       is given an improper tag, unless another one is specifically set up 
-       first. This will ensure we're not accidentally tagging something we 
-       shouldn't be during the traversal. Note that for best tagging assertion 
-       coverage, setting H5C_DO_TAGGING_SANITY_CHECKS is advised. */
-    H5_BEGIN_TAG(dxpl_id, H5AC__INVALID_TAG, FAIL);
-
     /* Go perform "real" traversal */
     if(H5G_traverse_real(loc, name, target, &nlinks, op, op_data, lapl_id, dxpl_id) < 0)
-        HGOTO_ERROR_TAG(H5E_SYM, H5E_NOTFOUND, FAIL, "internal path traversal failed")
-
-    /* Reset tag after traversal */
-    H5_END_TAG(FAIL);
+        HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "internal path traversal failed")
 
 done:
    FUNC_LEAVE_NOAPI(ret_value)

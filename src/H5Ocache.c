@@ -69,27 +69,27 @@
 
 /* Metadata cache callbacks */
 static H5O_t *H5O_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata);
-static herr_t H5O_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5O_t *oh, unsigned H5_ATTR_UNUSED * flags_ptr);
+static herr_t H5O_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5O_t *oh, unsigned UNUSED * flags_ptr);
 static herr_t H5O_dest(H5F_t *f, H5O_t *oh);
 static herr_t H5O_clear(H5F_t *f, H5O_t *oh, hbool_t destroy);
 static herr_t H5O_size(const H5F_t *f, const H5O_t *oh, size_t *size_ptr);
 
 static H5O_chunk_proxy_t *H5O_cache_chk_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *udata);
-static herr_t H5O_cache_chk_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5O_chunk_proxy_t *chk_proxy, unsigned H5_ATTR_UNUSED * flags_ptr);
+static herr_t H5O_cache_chk_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5O_chunk_proxy_t *chk_proxy, unsigned UNUSED * flags_ptr);
 static herr_t H5O_cache_chk_dest(H5F_t *f, H5O_chunk_proxy_t *chk_proxy);
 static herr_t H5O_cache_chk_clear(H5F_t *f, H5O_chunk_proxy_t *chk_proxy, hbool_t destroy);
 static herr_t H5O_cache_chk_size(const H5F_t *f, const H5O_chunk_proxy_t *chk_proxy, size_t *size_ptr);
 
 /* Chunk proxy routines */
-static herr_t H5O__chunk_proxy_dest(H5O_chunk_proxy_t *chunk_proxy);
+static herr_t H5O_chunk_proxy_dest(H5O_chunk_proxy_t *chunk_proxy);
 
 /* Chunk routines */
-static herr_t H5O__chunk_deserialize(H5O_t *oh, haddr_t addr, size_t len,
+static herr_t H5O_chunk_deserialize(H5O_t *oh, haddr_t addr, size_t len,
     const uint8_t *image, H5O_common_cache_ud_t *udata, hbool_t *dirty);
-static herr_t H5O__chunk_serialize(const H5F_t *f, H5O_t *oh, unsigned chunkno);
+static herr_t H5O_chunk_serialize(const H5F_t *f, H5O_t *oh, unsigned chunkno);
 
 /* Misc. routines */
-static herr_t H5O__add_cont_msg(H5O_cont_msgs_t *cont_msg_info,
+static herr_t H5O_add_cont_msg(H5O_cont_msgs_t *cont_msg_info,
     const H5O_cont_t *cont);
 
 
@@ -104,7 +104,6 @@ const H5AC_class_t H5AC_OHDR[1] = {{
     (H5AC_flush_func_t)H5O_flush,
     (H5AC_dest_func_t)H5O_dest,
     (H5AC_clear_func_t)H5O_clear,
-    (H5AC_notify_func_t)NULL,
     (H5AC_size_func_t)H5O_size,
 }};
 
@@ -115,7 +114,6 @@ const H5AC_class_t H5AC_OHDR_CHK[1] = {{
     (H5AC_flush_func_t)H5O_cache_chk_flush,
     (H5AC_dest_func_t)H5O_cache_chk_dest,
     (H5AC_clear_func_t)H5O_cache_chk_clear,
-    (H5AC_notify_func_t)NULL,
     (H5AC_size_func_t)H5O_cache_chk_size,
 }};
 
@@ -184,7 +182,7 @@ H5O_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
         HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, NULL, "unable to determine file size")
 
     /* Compute the size of the speculative object header buffer */
-    H5_CHECKED_ASSIGN(spec_read_size, size_t, MIN(eoa - addr, H5O_SPEC_READ_SIZE), hsize_t);
+    H5_ASSIGN_OVERFLOW(spec_read_size, MIN(eoa - addr, H5O_SPEC_READ_SIZE), /* From: */ hsize_t, /* To: */ size_t);
 
     /* Attempt to speculatively read both object header prefix and first chunk */
     if(H5F_block_read(f, H5FD_MEM_OHDR, addr, spec_read_size, dxpl_id, read_buf) < 0)
@@ -193,7 +191,7 @@ H5O_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
 
     /* Allocate space for the object header data structure */
     if(NULL == (oh = H5FL_CALLOC(H5O_t)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
 
     /* File-specific, non-stored information */
     oh->sizeof_size = H5F_SIZEOF_SIZE(udata->common.f);
@@ -333,7 +331,7 @@ H5O_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
         buf = read_buf;
 
     /* Parse the first chunk */
-    if(H5O__chunk_deserialize(oh, udata->common.addr, oh->chunk0_size, buf, &(udata->common), &oh->cache_info.is_dirty) < 0)
+    if(H5O_chunk_deserialize(oh, udata->common.addr, oh->chunk0_size, buf, &(udata->common), &oh->cache_info.is_dirty) < 0)
         HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, NULL, "can't deserialize first object header chunk")
 
     /* Note that we've loaded the object header from the file */
@@ -350,7 +348,7 @@ done:
     /* Release the [possibly partially initialized] object header on errors */
     if(!ret_value && oh)
         if(H5O_free(oh) < 0)
-            HDONE_ERROR(H5E_OHDR, H5E_CANTRELEASE, NULL, "unable to destroy object header data")
+	    HDONE_ERROR(H5E_OHDR, H5E_CANTRELEASE, NULL, "unable to destroy object header data")
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5O_load() */
@@ -370,7 +368,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t H5_ATTR_UNUSED addr, H5O_t *oh, unsigned H5_ATTR_UNUSED * flags_ptr)
+H5O_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t UNUSED addr, H5O_t *oh, unsigned UNUSED * flags_ptr)
 {
     herr_t ret_value = SUCCEED; /* Return value */
 
@@ -480,7 +478,7 @@ H5O_assert(oh);
         HDassert((size_t)(p - oh->chunk[0].image) == (size_t)(H5O_SIZEOF_HDR(oh) - H5O_SIZEOF_CHKSUM_OH(oh)));
 
         /* Serialize messages for this chunk */
-        if(H5O__chunk_serialize(f, oh, (unsigned)0) < 0)
+        if(H5O_chunk_serialize(f, oh, (unsigned)0) < 0)
             HGOTO_ERROR(H5E_OHDR, H5E_CANTSERIALIZE, FAIL, "unable to serialize first object header chunk")
 
         /* Write the chunk out */
@@ -522,7 +520,7 @@ H5O_dest(H5F_t *f, H5O_t *oh)
 
     FUNC_ENTER_NOAPI_NOINIT
 
-    /* Check arguments */
+    /* check args */
     HDassert(oh);
     HDassert(oh->rc == 0);
 
@@ -560,20 +558,20 @@ done:
  *		koziol@ncsa.uiuc.edu
  *		Mar 20 2003
  *
- * Changes:     In the parallel case, there is the possibility that the
- *              the object header may be flushed by different processes
- *              over the life of the computation.  Thus we must ensure
- *              that the chunk images are up to date before we mark the
- *              messages clean -- as otherwise we may overwrite valid
- *              data with a blank section of a chunk image.
+ * Changes:	In the parallel case, there is the possibility that the 
+ *		the object header may be flushed by different processes
+ *		over the life of the computation.  Thus we must ensure
+ *		that the chunk images are up to date before we mark the
+ *		messages clean -- as otherwise we may overwrite valid
+ *		data with a blank section of a chunk image.
  *
- *              To deal with this, I have added code to call
- *              H5O_chunk_serialize() for all chunks before we
- *              mark all messages as clean if we are not destroying the
- *              object.  Do this in the parallel case only, as the problem
- *              can only occur in this context.
+ *		To deal with this, I have added code to call 
+ *		H5O_chunk_serialize() for all chunks before we 
+ *		mark all messages as clean if we are not destroying the 
+ *		object.  Do this in the parallel case only, as the problem 
+ *		can only occur in this context.
  *
- *                                              JRM -- 10/12/10
+ *						JRM -- 10/12/10
  *
  *-------------------------------------------------------------------------
  */
@@ -585,31 +583,34 @@ H5O_clear(H5F_t *f, H5O_t *oh, hbool_t destroy)
 
     FUNC_ENTER_NOAPI_NOINIT
 
-    /* Check arguments */
+    /* check args */
     HDassert(oh);
 
 #ifdef H5_HAVE_PARALLEL
     if ( ( oh->cache_info.is_dirty ) && ( ! destroy ) ) {
 
-        size_t i;
+	size_t i;
 
         /* scan through all chunks associated with the object header,
-         * and cause them to update their images for all entries currently
-         * marked dirty.  Must do this in the parallel case, as it is possible
-         * that this processor may clear this object header several times
-         * before flushing it -- thus causing undefined sections of the image
-         * to be written to disk overwriting valid data.
+	 * and cause them to update their images for all entries currently
+ 	 * marked dirty.  Must do this in the parallel case, as it is possible
+	 * that this processor may clear this object header several times
+	 * before flushing it -- thus causing undefined sections of the image
+	 * to be written to disk overwriting valid data.
          */
 
-        for ( i = 0; i < oh->nchunks; i++ ) {
+	for ( i = 0; i < oh->nchunks; i++ ) {
 
-            if(H5O__chunk_serialize(f, oh, i) < 0)
-                HGOTO_ERROR(H5E_OHDR, H5E_CANTSERIALIZE, FAIL, "unable to serialize object header chunk")
+            if ( H5O_chunk_serialize(f, oh, i) < 0 ) {
+
+                HGOTO_ERROR(H5E_OHDR, H5E_CANTSERIALIZE, FAIL, 
+			    "unable to serialize object header chunk")
+	    }
         }
     }
 #endif /* H5_HAVE_PARALLEL */
 
-    /* Mark messages stored with the object header (i.e. messages in chunk 0) as clean */
+    /* Mark messages as clean */
     for(u = 0; u < oh->nmesgs; u++)
         oh->mesg[u].dirty = FALSE;
 
@@ -645,7 +646,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_size(const H5F_t H5_ATTR_UNUSED *f, const H5O_t *oh, size_t *size_ptr)
+H5O_size(const H5F_t UNUSED *f, const H5O_t *oh, size_t *size_ptr)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
@@ -719,7 +720,7 @@ H5O_cache_chk_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
         HDassert(udata->common.cont_msg_info);
 
         /* Parse the chunk */
-        if(H5O__chunk_deserialize(udata->oh, udata->common.addr, udata->size, buf, &(udata->common), &chk_proxy->cache_info.is_dirty) < 0)
+        if(H5O_chunk_deserialize(udata->oh, udata->common.addr, udata->size, buf, &(udata->common), &chk_proxy->cache_info.is_dirty) < 0)
             HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, NULL, "can't deserialize object header chunk")
 
         /* Set the fields for the chunk proxy */
@@ -734,8 +735,8 @@ H5O_cache_chk_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
         chk_proxy->oh = udata->oh;
         chk_proxy->chunkno = udata->chunkno;
 
-        /* Sanity check that the chunk representation we have in memory is 
-         * the same as the one being brought in from disk.
+        /* Sanity check that the chunk representation we have in memory is the same
+         *      as the one being brought in from disk.
          */
         HDassert(0 == HDmemcmp(buf, chk_proxy->oh->chunk[chk_proxy->chunkno].image, chk_proxy->oh->chunk[chk_proxy->chunkno].size));
     } /* end else */
@@ -754,7 +755,7 @@ done:
 
     /* Release the [possibly partially initialized] object header on errors */
     if(!ret_value && chk_proxy)
-        if(H5O__chunk_proxy_dest(chk_proxy) < 0)
+        if(H5O_chunk_proxy_dest(chk_proxy) < 0)
 	    HDONE_ERROR(H5E_OHDR, H5E_CANTRELEASE, NULL, "unable to destroy object header chunk proxy")
 
     FUNC_LEAVE_NOAPI(ret_value)
@@ -776,7 +777,7 @@ done:
  */
 static herr_t
 H5O_cache_chk_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr,
-    H5O_chunk_proxy_t *chk_proxy, unsigned H5_ATTR_UNUSED * flags_ptr)
+    H5O_chunk_proxy_t *chk_proxy, unsigned UNUSED * flags_ptr)
 {
     herr_t ret_value = SUCCEED; /* Return value */
 
@@ -785,7 +786,7 @@ H5O_cache_chk_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr,
     /* flush */
     if(chk_proxy->cache_info.is_dirty) {
         /* Serialize messages for this chunk */
-        if(H5O__chunk_serialize(f, chk_proxy->oh, chk_proxy->chunkno) < 0)
+        if(H5O_chunk_serialize(f, chk_proxy->oh, chk_proxy->chunkno) < 0)
             HGOTO_ERROR(H5E_OHDR, H5E_CANTSERIALIZE, FAIL, "unable to serialize object header continuation chunk")
 
         /* Write the chunk out */
@@ -847,7 +848,7 @@ H5O_cache_chk_dest(H5F_t *f, H5O_chunk_proxy_t *chk_proxy)
     } /* end if */
 
     /* Destroy object header chunk proxy */
-    if(H5O__chunk_proxy_dest(chk_proxy) < 0)
+    if(H5O_chunk_proxy_dest(chk_proxy) < 0)
         HGOTO_ERROR(H5E_OHDR, H5E_CANTRELEASE, FAIL, "unable to destroy object header chunk proxy")
 
 done:
@@ -866,29 +867,29 @@ done:
  *              koziol@hdfgroup.org
  *              July 12, 2008
  *
- * Changes:     In the parallel case, there is the possibility that the
- *              the object header chunk may be flushed by different
- *              processes over the life of the computation.  Thus we must
- *              ensure that the chunk image is up to date before we mark its
- *              messages clean -- as otherwise we may overwrite valid
- *              data with a blank section of a chunk image.
+ * Changes:	In the parallel case, there is the possibility that the 
+ *		the object header chunk may be flushed by different 
+ *		processes over the life of the computation.  Thus we must 
+ *		ensure that the chunk image is up to date before we mark its
+ *		messages clean -- as otherwise we may overwrite valid
+ *		data with a blank section of a chunk image.
  *
- *              To deal with this, I have added code to call
- *              H5O_chunk_serialize() for this chunk before we
- *              mark all messages as clean if we are not destroying the
- *              chunk.
+ *		To deal with this, I have added code to call 
+ *		H5O_chunk_serialize() for this chunk before we 
+ *		mark all messages as clean if we are not destroying the 
+ *		chunk.
  *
- *              Do this in the parallel case only, as the problem
- *              can only occur in this context.
+ *		Do this in the parallel case only, as the problem 
+ *		can only occur in this context.
  *
- *              Note that at present at least, it seems that this fix
- *              is not necessary, as we don't seem to be able to
- *              generate a dirty chunk without creating a dirty object
- *              header.  However, the object header code will be changing
- *              a lot in the near future, so I'll leave this fix in
- *              for now, unless Quincey requests otherwise.
+ *		Note that at present at least, it seems that this fix
+ *		is not necessary, as we don't seem to be able to 
+ *		generate a dirty chunk without creating a dirty object
+ *		header.  However, the object header code will be changing
+ *		a lot in the near future, so I'll leave this fix in 
+ *		for now, unless Quincey requests otherwise.
  *
- *                                              JRM -- 10/12/10
+ *						JRM -- 10/12/10
  *
  *-------------------------------------------------------------------------
  */
@@ -900,13 +901,18 @@ H5O_cache_chk_clear(H5F_t *f, H5O_chunk_proxy_t *chk_proxy, hbool_t destroy)
 
     FUNC_ENTER_NOAPI_NOINIT
 
-    /* Check arguments */
+    /* check args */
     HDassert(chk_proxy);
 
 #ifdef H5_HAVE_PARALLEL
-    if((chk_proxy->oh->cache_info.is_dirty) && (!destroy))
-        if(H5O__chunk_serialize(f, chk_proxy->oh, chk_proxy->chunkno) < 0)
-            HGOTO_ERROR(H5E_OHDR, H5E_CANTSERIALIZE, FAIL, "unable to serialize object header chunk")
+    if ( ( chk_proxy->oh->cache_info.is_dirty ) && ( ! destroy ) ) {
+
+        if ( H5O_chunk_serialize(f, chk_proxy->oh, chk_proxy->chunkno) < 0 ) {
+
+            HGOTO_ERROR(H5E_OHDR, H5E_CANTSERIALIZE, FAIL, 
+                       "unable to serialize object header chunk")
+        }
+    }
 #endif /* H5_HAVE_PARALLEL */
 
     /* Mark messages in chunk as clean */
@@ -942,7 +948,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_cache_chk_size(const H5F_t H5_ATTR_UNUSED *f, const H5O_chunk_proxy_t *chk_proxy, size_t *size_ptr)
+H5O_cache_chk_size(const H5F_t UNUSED *f, const H5O_chunk_proxy_t *chk_proxy, size_t *size_ptr)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
@@ -958,7 +964,7 @@ H5O_cache_chk_size(const H5F_t H5_ATTR_UNUSED *f, const H5O_chunk_proxy_t *chk_p
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5O__add_cont_msg
+ * Function:	H5O_add_cont_msg
  *
  * Purpose:	Add information from a continuation message to the list of
  *              continuation messages in the object header
@@ -973,12 +979,12 @@ H5O_cache_chk_size(const H5F_t H5_ATTR_UNUSED *f, const H5O_chunk_proxy_t *chk_p
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O__add_cont_msg(H5O_cont_msgs_t *cont_msg_info, const H5O_cont_t *cont)
+H5O_add_cont_msg(H5O_cont_msgs_t *cont_msg_info, const H5O_cont_t *cont)
 {
     size_t contno;              /* Continuation message index */
     herr_t ret_value = SUCCEED; /* Return value */
 
-    FUNC_ENTER_STATIC
+    FUNC_ENTER_NOAPI_NOINIT
 
     /* Check arguments */
     HDassert(cont_msg_info);
@@ -1003,11 +1009,11 @@ H5O__add_cont_msg(H5O_cont_msgs_t *cont_msg_info, const H5O_cont_t *cont)
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* H5O__add_cont_msg() */
+} /* H5O_add_cont_msg() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5O__chunk_deserialize
+ * Function:	H5O_chunk_deserialize
  *
  * Purpose:	Deserialize a chunk for an object header
  *
@@ -1021,7 +1027,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O__chunk_deserialize(H5O_t *oh, haddr_t addr, size_t len, const uint8_t *image,
+H5O_chunk_deserialize(H5O_t *oh, haddr_t addr, size_t len, const uint8_t *image,
     H5O_common_cache_ud_t *udata, hbool_t *dirty)
 {
     const uint8_t *p;           /* Pointer into buffer to decode */
@@ -1034,7 +1040,7 @@ H5O__chunk_deserialize(H5O_t *oh, haddr_t addr, size_t len, const uint8_t *image
 #endif /* NDEBUG */
     herr_t ret_value = SUCCEED; /* Return value */
 
-    FUNC_ENTER_STATIC
+    FUNC_ENTER_NOAPI_NOINIT
 
     /* Check arguments */
     HDassert(oh);
@@ -1055,7 +1061,7 @@ H5O__chunk_deserialize(H5O_t *oh, haddr_t addr, size_t len, const uint8_t *image
     } /* end if */
 
     /* Init the chunk data info */
-    chunkno = (unsigned)oh->nchunks++;
+    chunkno = oh->nchunks++;
     oh->chunk[chunkno].gap = 0;
     if(chunkno == 0) {
         /* First chunk's 'image' includes room for the object header prefix */
@@ -1286,7 +1292,7 @@ H5O__chunk_deserialize(H5O_t *oh, haddr_t addr, size_t len, const uint8_t *image
             oh->mesg[curmesg].native = cont;
 
             /* Add to continuation messages left to interpret */
-            if(H5O__add_cont_msg(udata->cont_msg_info, cont) < 0)
+            if(H5O_add_cont_msg(udata->cont_msg_info, cont) < 0)
                 HGOTO_ERROR(H5E_OHDR, H5E_CANTSET, FAIL, "can't add continuation message")
 
             /* Mark the message & chunk as dirty if the message was changed by decoding */
@@ -1342,11 +1348,11 @@ H5O__chunk_deserialize(H5O_t *oh, haddr_t addr, size_t len, const uint8_t *image
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* H5O__chunk_deserialize() */
+} /* H5O_chunk_deserialize() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5O__chunk_serialize
+ * Function:	H5O_chunk_serialize
  *
  * Purpose:	Serialize a chunk for an object header
  *
@@ -1360,13 +1366,13 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O__chunk_serialize(const H5F_t *f, H5O_t *oh, unsigned chunkno)
+H5O_chunk_serialize(const H5F_t *f, H5O_t *oh, unsigned chunkno)
 {
     H5O_mesg_t *curr_msg;       /* Pointer to current message being operated on */
     unsigned	u;              /* Local index variable */
     herr_t ret_value = SUCCEED; /* Return value */
 
-    FUNC_ENTER_STATIC
+    FUNC_ENTER_NOAPI_NOINIT
 
     /* Check arguments */
     HDassert(f);
@@ -1407,11 +1413,11 @@ H5O__chunk_serialize(const H5F_t *f, H5O_t *oh, unsigned chunkno)
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* H5O__chunk_serialize() */
+} /* H5O_chunk_serialize() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5O__chunk_proxy_dest
+ * Function:	H5O_chunk_proxy_dest
  *
  * Purpose:	Destroy a chunk proxy object
  *
@@ -1425,11 +1431,11 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O__chunk_proxy_dest(H5O_chunk_proxy_t *chk_proxy)
+H5O_chunk_proxy_dest(H5O_chunk_proxy_t *chk_proxy)
 {
     herr_t ret_value = SUCCEED; /* Return value */
 
-    FUNC_ENTER_STATIC
+    FUNC_ENTER_NOAPI_NOINIT
 
     /* Check arguments */
     HDassert(chk_proxy);

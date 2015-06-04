@@ -13,17 +13,6 @@
  * access to either file, you may request a copy from help@hdfgroup.org.     *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/*-------------------------------------------------------------------------
- *
- * Created:		H5SMcache.c
- *			Nov 13 2006
- *			James Laird <jlaird@hdfgroup.org>
- *
- * Purpose:		Implement shared message metadata cache methods.
- *
- *-------------------------------------------------------------------------
- */
-
 /****************/
 /* Module Setup */
 /****************/
@@ -73,13 +62,12 @@ static H5SM_list_t *H5SM_list_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *
 static herr_t H5SM_list_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5SM_list_t *list);
 static herr_t H5SM_list_dest(H5F_t *f, H5SM_list_t* list);
 static herr_t H5SM_list_clear(H5F_t *f, H5SM_list_t *list, hbool_t destroy);
-static herr_t H5SM_list_size(const H5F_t *f, const H5SM_list_t H5_ATTR_UNUSED *list, size_t *size_ptr);
+static herr_t H5SM_list_size(const H5F_t *f, const H5SM_list_t UNUSED *list, size_t *size_ptr);
 
 
 /*********************/
 /* Package Variables */
 /*********************/
-
 /* H5SM inherits cache-like properties from H5AC */
 const H5AC_class_t H5AC_SOHM_TABLE[1] = {{
     H5AC_SOHM_TABLE_ID,
@@ -87,7 +75,6 @@ const H5AC_class_t H5AC_SOHM_TABLE[1] = {{
     (H5AC_flush_func_t)H5SM_table_flush,
     (H5AC_dest_func_t)H5SM_table_dest,
     (H5AC_clear_func_t)H5SM_table_clear,
-    (H5AC_notify_func_t)NULL,
     (H5AC_size_func_t)H5SM_table_size,
 }};
 
@@ -97,7 +84,6 @@ const H5AC_class_t H5AC_SOHM_LIST[1] = {{
     (H5AC_flush_func_t)H5SM_list_flush,
     (H5AC_dest_func_t)H5SM_list_dest,
     (H5AC_clear_func_t)H5SM_list_clear,
-    (H5AC_notify_func_t)NULL,
     (H5AC_size_func_t)H5SM_list_size,
 }};
 
@@ -127,16 +113,16 @@ const H5AC_class_t H5AC_SOHM_LIST[1] = {{
  *-------------------------------------------------------------------------
  */
 static H5SM_master_table_t *
-H5SM_table_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void H5_ATTR_UNUSED *udata)
+H5SM_table_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void UNUSED *udata)
 {
     H5SM_master_table_t *table = NULL;
-    H5WB_t        *wb = NULL;         /* Wrapped buffer for table data */
+    H5WB_t        *wb = NULL;           /* Wrapped buffer for table data */
     uint8_t       tbl_buf[H5SM_TBL_BUF_SIZE]; /* Buffer for table */
-    uint8_t       *buf;               /* Reading buffer */
-    const uint8_t *p;                 /* Pointer into input buffer */
-    uint32_t      stored_chksum;      /* Stored metadata checksum value */
-    uint32_t      computed_chksum;    /* Computed metadata checksum value */
-    size_t        u;                  /* Counter variable for index headers */
+    uint8_t       *buf;                 /* Reading buffer */
+    const uint8_t *p;                   /* Pointer into input buffer */
+    uint32_t      stored_chksum;        /* Stored metadata checksum value */
+    uint32_t      computed_chksum;      /* Computed metadata checksum value */
+    size_t        x;                    /* Counter variable for index headers */
     H5SM_master_table_t *ret_value;
 
     FUNC_ENTER_NOAPI_NOINIT
@@ -148,7 +134,7 @@ H5SM_table_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void H5_ATTR_UNUSED *udat
 
     /* Allocate space for the master table in memory */
     if(NULL == (table = H5FL_CALLOC(H5SM_master_table_t)))
-        HGOTO_ERROR(H5E_SOHM, H5E_NOSPACE, NULL, "memory allocation failed")
+	HGOTO_ERROR(H5E_SOHM, H5E_NOSPACE, NULL, "memory allocation failed")
 
     /* Read number of indexes and version from file superblock */
     table->num_indexes = H5F_SOHM_NINDEXES(f);
@@ -184,40 +170,40 @@ H5SM_table_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void H5_ATTR_UNUSED *udat
 
     /* Allocate space for the index headers in memory*/
     if(NULL == (table->indexes = (H5SM_index_header_t *)H5FL_ARR_MALLOC(H5SM_index_header_t, (size_t)table->num_indexes)))
-        HGOTO_ERROR(H5E_SOHM, H5E_NOSPACE, NULL, "memory allocation failed for SOHM indexes")
+	HGOTO_ERROR(H5E_SOHM, H5E_NOSPACE, NULL, "memory allocation failed for SOHM indexes")
 
     /* Read in the index headers */
-    for(u = 0; u < table->num_indexes; ++u) {
+    for(x = 0; x < table->num_indexes; ++x) {
         /* Verify correct version of index list */
         if(H5SM_LIST_VERSION != *p++)
             HGOTO_ERROR(H5E_SOHM, H5E_VERSION, NULL, "bad shared message list version number")
 
         /* Type of the index (list or B-tree) */
-        table->indexes[u].index_type= (H5SM_index_type_t)*p++;
+        table->indexes[x].index_type= (H5SM_index_type_t)*p++;
 
         /* Type of messages in the index */
-        UINT16DECODE(p, table->indexes[u].mesg_types);
+        UINT16DECODE(p, table->indexes[x].mesg_types);
 
         /* Minimum size of message to share */
-        UINT32DECODE(p, table->indexes[u].min_mesg_size);
+        UINT32DECODE(p, table->indexes[x].min_mesg_size);
 
         /* List cutoff; fewer than this number and index becomes a list */
-        UINT16DECODE(p, table->indexes[u].list_max);
+        UINT16DECODE(p, table->indexes[x].list_max);
 
         /* B-tree cutoff; more than this number and index becomes a B-tree */
-        UINT16DECODE(p, table->indexes[u].btree_min);
+        UINT16DECODE(p, table->indexes[x].btree_min);
 
         /* Number of messages shared */
-        UINT16DECODE(p, table->indexes[u].num_messages);
+        UINT16DECODE(p, table->indexes[x].num_messages);
 
         /* Address of the actual index */
-        H5F_addr_decode(f, &p, &(table->indexes[u].index_addr));
+        H5F_addr_decode(f, &p, &(table->indexes[x].index_addr));
 
         /* Address of the index's heap */
-        H5F_addr_decode(f, &p, &(table->indexes[u].heap_addr));
+        H5F_addr_decode(f, &p, &(table->indexes[x].heap_addr));
 
         /* Compute the size of a list index for this SOHM index */
-        table->indexes[u].list_size = H5SM_LIST_SIZE(f, table->indexes[u].list_max);
+        table->indexes[x].list_size = H5SM_LIST_SIZE(f, table->indexes[x].list_max);
     } /* end for */
 
     /* Read in checksum */
@@ -242,7 +228,7 @@ done:
         HDONE_ERROR(H5E_SOHM, H5E_CLOSEERROR, NULL, "can't close wrapped buffer")
     if(!ret_value && table)
         if(H5SM_table_free(table) < 0)
-            HDONE_ERROR(H5E_SOHM, H5E_CANTFREE, NULL, "unable to destroy sohm table")
+	    HDONE_ERROR(H5E_SOHM, H5E_CANTFREE, NULL, "unable to destroy sohm table")
 
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5SM_table_load() */
@@ -279,7 +265,7 @@ H5SM_table_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5SM_ma
         uint8_t  *buf;               /* Temporary buffer */
         uint8_t  *p;                 /* Pointer into raw data buffer */
         uint32_t computed_chksum;    /* Computed metadata checksum value */
-        size_t   u;                  /* Counter variable */
+        size_t   x;                  /* Counter variable */
 
         /* Verify that we're writing version 0 of the table; this is the only
          * version defined so far.
@@ -302,33 +288,33 @@ H5SM_table_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5SM_ma
         p += H5_SIZEOF_MAGIC;
 
         /* Encode each index header */
-        for(u = 0; u < table->num_indexes; ++u) {
-            /* Version for this list */
+        for(x = 0; x < table->num_indexes; ++x) {
+            /* Version for this list. */
             *p++ = H5SM_LIST_VERSION;
 
             /* Is message index a list or a B-tree? */
-            *p++ = table->indexes[u].index_type;
+            *p++ = table->indexes[x].index_type;
 
             /* Type of messages in the index */
-            UINT16ENCODE(p, table->indexes[u].mesg_types);
+            UINT16ENCODE(p, table->indexes[x].mesg_types);
 
             /* Minimum size of message to share */
-            UINT32ENCODE(p, table->indexes[u].min_mesg_size);
+            UINT32ENCODE(p, table->indexes[x].min_mesg_size);
 
             /* List cutoff; fewer than this number and index becomes a list */
-            UINT16ENCODE(p, table->indexes[u].list_max);
+            UINT16ENCODE(p, table->indexes[x].list_max);
 
             /* B-tree cutoff; more than this number and index becomes a B-tree */
-            UINT16ENCODE(p, table->indexes[u].btree_min);
+            UINT16ENCODE(p, table->indexes[x].btree_min);
 
             /* Number of messages shared */
-            UINT16ENCODE(p, table->indexes[u].num_messages);
+            UINT16ENCODE(p, table->indexes[x].num_messages);
 
             /* Address of the actual index */
-            H5F_addr_encode(f, &p, table->indexes[u].index_addr);
+            H5F_addr_encode(f, &p, table->indexes[x].index_addr);
 
             /* Address of the index's heap */
-            H5F_addr_encode(f, &p, table->indexes[u].heap_addr);
+            H5F_addr_encode(f, &p, table->indexes[x].heap_addr);
         } /* end for */
 
         /* Compute checksum on buffer */
@@ -369,13 +355,13 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5SM_table_dest(H5F_t H5_ATTR_UNUSED *f, H5SM_master_table_t* table)
+H5SM_table_dest(H5F_t UNUSED *f, H5SM_master_table_t* table)
 {
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
 
-    /* Check arguments */
+    /* Sanity check */
     HDassert(table);
     HDassert(table->indexes);
 
@@ -437,11 +423,11 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5SM_table_size(const H5F_t H5_ATTR_UNUSED *f, const H5SM_master_table_t *table, size_t *size_ptr)
+H5SM_table_size(const H5F_t UNUSED *f, const H5SM_master_table_t *table, size_t *size_ptr)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-    /* Check arguments */
+    /* check arguments */
     HDassert(f);
     HDassert(table);
     HDassert(size_ptr);
@@ -477,22 +463,23 @@ H5SM_list_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
     uint8_t *p;                 /* Pointer into input buffer */
     uint32_t stored_chksum;     /* Stored metadata checksum value */
     uint32_t computed_chksum;   /* Computed metadata checksum value */
-    size_t u;                   /* Counter variable for messages in list */
+    size_t x;                   /* Counter variable for messages in list */
     H5SM_list_t *ret_value;     /* Return value */
 
     FUNC_ENTER_NOAPI_NOINIT
 
-    /* Check arguments */
+    /* Sanity check */
     HDassert(udata->header);
 
     /* Allocate space for the SOHM list data structure */
     if(NULL == (list = H5FL_MALLOC(H5SM_list_t)))
-        HGOTO_ERROR(H5E_SOHM, H5E_NOSPACE, NULL, "memory allocation failed")
+	HGOTO_ERROR(H5E_SOHM, H5E_NOSPACE, NULL, "memory allocation failed")
     HDmemset(&list->cache_info, 0, sizeof(H5AC_info_t));
 
     /* Allocate list in memory as an array*/
-    if(NULL == (list->messages = (H5SM_sohm_t *)H5FL_ARR_MALLOC(H5SM_sohm_t, udata->header->list_max)))
-        HGOTO_ERROR(H5E_SOHM, H5E_NOSPACE, NULL, "file allocation failed for SOHM list")
+    if((list->messages = (H5SM_sohm_t *)H5FL_ARR_MALLOC(H5SM_sohm_t, udata->header->list_max)) == NULL)
+	HGOTO_ERROR(H5E_SOHM, H5E_NOSPACE, NULL, "file allocation failed for SOHM list")
+
     list->header = udata->header;
 
     /* Wrap the local buffer for serialized list index info */
@@ -517,8 +504,8 @@ H5SM_list_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
 
     /* Read messages into the list array */
     ctx.sizeof_addr = H5F_SIZEOF_ADDR(udata->f);
-    for(u = 0; u < udata->header->num_messages; u++) {
-        if(H5SM_message_decode(p, &(list->messages[u]), &ctx) < 0)
+    for(x = 0; x < udata->header->num_messages; x++) {
+        if(H5SM_message_decode(p, &(list->messages[x]), &ctx) < 0)
             HGOTO_ERROR(H5E_SOHM, H5E_CANTLOAD, NULL, "can't decode shared message")
         p += H5SM_SOHM_ENTRY_SIZE(udata->f);
     } /* end for */
@@ -537,8 +524,8 @@ H5SM_list_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, void *_udata)
         HGOTO_ERROR(H5E_SOHM, H5E_BADVALUE, NULL, "incorrect metadata checksum for shared message list")
 
     /* Initialize the rest of the array */
-    for(u = udata->header->num_messages; u < udata->header->list_max; u++)
-        list->messages[u].location = H5SM_NO_LOC;
+    for(x = udata->header->num_messages; x < udata->header->list_max; x++)
+        list->messages[x].location = H5SM_NO_LOC;
 
     /* Set return value */
     ret_value = list;
@@ -590,7 +577,7 @@ H5SM_list_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5SM_lis
         uint8_t *p;                 /* Pointer into raw data buffer */
         uint32_t computed_chksum;   /* Computed metadata checksum value */
         size_t mesgs_written;       /* Number of messages written to list */
-        size_t u;                   /* Local index variable */
+        size_t x;                   /* Local index variable */
 
         /* Wrap the local buffer for serialized list index info */
         if(NULL == (wb = H5WB_wrap(lst_buf, sizeof(lst_buf))))
@@ -610,9 +597,9 @@ H5SM_list_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, H5SM_lis
         /* Write messages from the messages array to disk */
         mesgs_written = 0;
         ctx.sizeof_addr = H5F_SIZEOF_ADDR(f);
-        for(u = 0; u < list->header->list_max && mesgs_written < list->header->num_messages; u++) {
-            if(list->messages[u].location != H5SM_NO_LOC) {
-                if(H5SM_message_encode(p, &(list->messages[u]), &ctx) < 0)
+        for(x = 0; x < list->header->list_max && mesgs_written < list->header->num_messages; x++) {
+            if(list->messages[x].location != H5SM_NO_LOC) {
+                if(H5SM_message_encode(p, &(list->messages[x]), &ctx) < 0)
                     HGOTO_ERROR(H5E_SOHM, H5E_CANTFLUSH, FAIL, "unable to write shared message to disk")
 
                 p += H5SM_SOHM_ENTRY_SIZE(f);
@@ -712,7 +699,9 @@ H5SM_list_clear(H5F_t *f, H5SM_list_t *list, hbool_t destroy)
 
     FUNC_ENTER_NOAPI_NOINIT
 
-    /* Check arguments */
+    /*
+     * Check arguments.
+     */
     HDassert(list);
 
     /* Reset the dirty flag.  */
@@ -740,7 +729,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5SM_list_size(const H5F_t H5_ATTR_UNUSED *f, const H5SM_list_t *list, size_t *size_ptr)
+H5SM_list_size(const H5F_t UNUSED *f, const H5SM_list_t *list, size_t *size_ptr)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 

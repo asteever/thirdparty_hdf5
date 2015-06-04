@@ -449,7 +449,7 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-static herr_t
+herr_t
 H5HF_sect_node_free(H5HF_free_section_t *sect, H5HF_indirect_t *iblock)
 {
     herr_t ret_value = SUCCEED;               /* Return value */
@@ -648,7 +648,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5HF_sect_single_dblock_info(H5HF_hdr_t *hdr,
+H5HF_sect_single_dblock_info(H5HF_hdr_t *hdr, hid_t dxpl_id,
     H5HF_free_section_t *sect, haddr_t *dblock_addr, size_t *dblock_size)
 {
     FUNC_ENTER_NOAPI_NOERR
@@ -766,7 +766,7 @@ H5HF_sect_single_full_dblock(H5HF_hdr_t *hdr, hid_t dxpl_id,
     HDassert(hdr);
 
     /* Retrieve direct block address from section */
-    if(H5HF_sect_single_dblock_info(hdr, sect, &dblock_addr, &dblock_size) < 0)
+    if(H5HF_sect_single_dblock_info(hdr, dxpl_id, sect, &dblock_addr, &dblock_size) < 0)
         HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, FAIL, "can't retrieve direct block information")
 
     /* Check for section occupying entire direct block */
@@ -861,9 +861,9 @@ done:
  *-------------------------------------------------------------------------
  */
 static H5FS_section_info_t *
-H5HF_sect_single_deserialize(const H5FS_section_class_t H5_ATTR_UNUSED *cls,
-    hid_t H5_ATTR_UNUSED dxpl_id, const uint8_t H5_ATTR_UNUSED *buf, haddr_t sect_addr,
-    hsize_t sect_size, unsigned H5_ATTR_UNUSED *des_flags)
+H5HF_sect_single_deserialize(const H5FS_section_class_t UNUSED *cls,
+    hid_t UNUSED dxpl_id, const uint8_t UNUSED *buf, haddr_t sect_addr,
+    hsize_t sect_size, unsigned UNUSED *des_flags)
 {
     H5HF_free_section_t *new_sect;      /* New section */
     H5FS_section_info_t *ret_value;     /* Return value */
@@ -904,7 +904,7 @@ done:
  */
 static htri_t
 H5HF_sect_single_can_merge(const H5FS_section_info_t *_sect1,
-    const H5FS_section_info_t *_sect2, void H5_ATTR_UNUSED *_udata)
+    const H5FS_section_info_t *_sect2, void UNUSED *_udata)
 {
     const H5HF_free_section_t *sect1 = (const H5HF_free_section_t *)_sect1;   /* Fractal heap free section */
     const H5HF_free_section_t *sect2 = (const H5HF_free_section_t *)_sect2;   /* Fractal heap free section */
@@ -1063,7 +1063,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5HF_sect_single_shrink(H5FS_section_info_t **_sect, void H5_ATTR_UNUSED *_udata)
+H5HF_sect_single_shrink(H5FS_section_info_t **_sect, void UNUSED *_udata)
 {
     H5HF_free_section_t **sect = (H5HF_free_section_t **)_sect;   /* Fractal heap free section */
     H5HF_sect_add_ud_t *udata = (H5HF_sect_add_ud_t *)_udata;   /* User callback data */
@@ -1087,7 +1087,7 @@ H5HF_sect_single_shrink(H5FS_section_info_t **_sect, void H5_ATTR_UNUSED *_udata
             HGOTO_ERROR(H5E_HEAP, H5E_CANTINIT, FAIL, "can't revive single free section")
 
     /* Retrieve direct block address from section */
-    if(H5HF_sect_single_dblock_info(hdr, (*sect), &dblock_addr, &dblock_size) < 0)
+    if(H5HF_sect_single_dblock_info(hdr, dxpl_id, (*sect), &dblock_addr, &dblock_size) < 0)
         HGOTO_ERROR(H5E_HEAP, H5E_CANTGET, FAIL, "can't retrieve direct block information")
 
     /* Protect the direct block for the section */
@@ -1171,7 +1171,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5HF_sect_single_valid(const H5FS_section_class_t H5_ATTR_UNUSED *cls, const H5FS_section_info_t *_sect)
+H5HF_sect_single_valid(const H5FS_section_class_t UNUSED *cls, const H5FS_section_info_t *_sect)
 {
     const H5HF_free_section_t *sect = (const H5HF_free_section_t *)_sect;   /* Pointer to section to check */
 
@@ -1197,7 +1197,7 @@ H5HF_sect_single_valid(const H5FS_section_class_t H5_ATTR_UNUSED *cls, const H5F
 
             /* Retrieve direct block address from section */
             /* (Casting away const OK - QAK) */
-            status = H5HF_sect_single_dblock_info(iblock->hdr, (H5HF_free_section_t *)sect, &dblock_addr, &dblock_size);
+            status = H5HF_sect_single_dblock_info(iblock->hdr, H5AC_dxpl_id, (H5HF_free_section_t *)sect, &dblock_addr, &dblock_size);
             HDassert(status >= 0);
             HDassert(H5F_addr_eq(iblock->ents[sect->u.single.par_entry].addr, dblock_addr));
             HDassert(dblock_size > 0);
@@ -1714,7 +1714,7 @@ done:
  */
 static htri_t
 H5HF_sect_row_can_merge(const H5FS_section_info_t *_sect1,
-    const H5FS_section_info_t *_sect2, void H5_ATTR_UNUSED *_udata)
+    const H5FS_section_info_t *_sect2, void UNUSED *_udata)
 {
     const H5HF_free_section_t *sect1 = (const H5HF_free_section_t *)_sect1;   /* Fractal heap free section */
     const H5HF_free_section_t *sect2 = (const H5HF_free_section_t *)_sect2;   /* Fractal heap free section */
@@ -1839,7 +1839,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static htri_t
-H5HF_sect_row_can_shrink(const H5FS_section_info_t *_sect, void H5_ATTR_UNUSED *_udata)
+H5HF_sect_row_can_shrink(const H5FS_section_info_t *_sect, void UNUSED *_udata)
 {
     const H5HF_free_section_t *sect = (const H5HF_free_section_t *)_sect;   /* Fractal heap free section */
     H5HF_sect_add_ud_t *udata = (H5HF_sect_add_ud_t *)_udata;   /* User callback data */

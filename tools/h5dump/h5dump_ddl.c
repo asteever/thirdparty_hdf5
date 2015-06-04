@@ -112,7 +112,7 @@ dump_dataspace(hid_t space)
  *-------------------------------------------------------------------------
  */
 herr_t
-dump_attr_cb(hid_t oid, const char *attr_name, const H5A_info_t H5_ATTR_UNUSED *info, void H5_ATTR_UNUSED *_op_data)
+dump_attr_cb(hid_t oid, const char *attr_name, const H5A_info_t UNUSED *info, void UNUSED *_op_data)
 {
     h5tools_context_t ctx;            /* print context  */
     h5tool_format_t  *outputformat = &h5tools_dataformat;
@@ -182,7 +182,7 @@ dump_attr_cb(hid_t oid, const char *attr_name, const H5A_info_t H5_ATTR_UNUSED *
  *-------------------------------------------------------------------------
  */
 static herr_t
-dump_all_cb(hid_t group, const char *name, const H5L_info_t *linfo, void H5_ATTR_UNUSED *op_data)
+dump_all_cb(hid_t group, const char *name, const H5L_info_t *linfo, void UNUSED *op_data)
 {
     hid_t       obj;
     herr_t      ret = SUCCEED;
@@ -1154,9 +1154,10 @@ dump_fcpl(hid_t fid)
     hsize_t  userblock; /* userblock size retrieved from FCPL */
     size_t   off_size;  /* size of offsets in the file */
     size_t   len_size;  /* size of lengths in the file */
-    H5F_file_space_type_t  fs_strategy;  /* file space strategy */
-    hsize_t  fs_threshold;    /* free-space section threshold */
-    H5F_info2_t finfo;  /* file information */
+    unsigned super;     /* superblock version # */
+    unsigned freelist;  /* free list version # */
+    unsigned stab;      /* symbol table entry version # */
+    unsigned shhdr;     /* shared object header version # */
 #ifdef SHOW_FILE_DRIVER
     hid_t    fapl;      /* file access property list ID */
     hid_t    fdriver;   /* file driver */
@@ -1167,12 +1168,11 @@ dump_fcpl(hid_t fid)
     unsigned istore_ik; /* indexed storage B-tree internal 'K' value */
 
     fcpl=H5Fget_create_plist(fid);
-    H5Fget_info2(fid, &finfo);
+    H5Pget_version(fcpl, &super, &freelist, &stab, &shhdr);
     H5Pget_userblock(fcpl,&userblock);
     H5Pget_sizes(fcpl,&off_size,&len_size);
     H5Pget_sym_k(fcpl,&sym_ik,&sym_lk);
     H5Pget_istore_k(fcpl,&istore_ik);
-    H5Pget_file_space(fcpl, &fs_strategy, &fs_threshold);
     H5Pclose(fcpl);
 #ifdef SHOW_FILE_DRIVER
     fapl=h5_fileaccess();
@@ -1186,13 +1186,13 @@ dump_fcpl(hid_t fid)
     */
     PRINTSTREAM(rawoutstream, "\n%s %s\n",SUPER_BLOCK, BEGIN);
     indentation(dump_indent + COL);
-    PRINTSTREAM(rawoutstream, "%s %u\n","SUPERBLOCK_VERSION", finfo.super.version);
+    PRINTSTREAM(rawoutstream, "%s %u\n","SUPERBLOCK_VERSION", super);
     indentation(dump_indent + COL);
-    PRINTSTREAM(rawoutstream, "%s %u\n","FREELIST_VERSION", finfo.free.version);
+    PRINTSTREAM(rawoutstream, "%s %u\n","FREELIST_VERSION", freelist);
     indentation(dump_indent + COL);
-    PRINTSTREAM(rawoutstream, "%s %u\n","SYMBOLTABLE_VERSION", 0);  /* Retain this for backward compatibility, for now (QAK) */
+    PRINTSTREAM(rawoutstream, "%s %u\n","SYMBOLTABLE_VERSION", stab);
     indentation(dump_indent + COL);
-    PRINTSTREAM(rawoutstream, "%s %u\n","OBJECTHEADER_VERSION", finfo.sohm.version);
+    PRINTSTREAM(rawoutstream, "%s %u\n","OBJECTHEADER_VERSION", shhdr);
     indentation(dump_indent + COL);
     PRINTSTREAM(rawoutstream,"%s %zu\n","OFFSET_SIZE", off_size);
     indentation(dump_indent + COL);
@@ -1231,20 +1231,6 @@ dump_fcpl(hid_t fid)
 #endif
     indentation(dump_indent + COL);
     PRINTSTREAM(rawoutstream, "%s %u\n","ISTORE_K", istore_ik);
-
-    indentation(dump_indent + COL);
-    if(fs_strategy == H5F_FILE_SPACE_ALL_PERSIST) {
-        PRINTSTREAM(rawoutstream, "%s %s\n", "FILE_SPACE_STRATEGY", "H5F_FILE_SPACE_ALL_PERSIST");
-    } else if(fs_strategy == H5F_FILE_SPACE_ALL) {
-        PRINTSTREAM(rawoutstream, "%s %s\n", "FILE_SPACE_STRATEGY", "H5F_FILE_SPACE_ALL");
-    } else if(fs_strategy == H5F_FILE_SPACE_AGGR_VFD) {
-        PRINTSTREAM(rawoutstream, "%s %s\n", "FILE_SPACE_STRATEGY", "H5F_FILE_SPACE_AGGR_VFD");
-    } else if(fs_strategy == H5F_FILE_SPACE_VFD) {
-        PRINTSTREAM(rawoutstream, "%s %s\n", "FILE_SPACE_STRATEGY", "H5F_FILE_SPACE_VFD");
-    } else
-        PRINTSTREAM(rawoutstream, "%s %s\n", "FILE_SPACE_STRATEGY", "Unknown strategy");
-    indentation(dump_indent + COL);
-    PRINTSTREAM(rawoutstream, "%s %Hu\n","FREE_SPACE_THRESHOLD", fs_threshold);
 
     /*-------------------------------------------------------------------------
     * USER_BLOCK
@@ -1295,7 +1281,7 @@ dump_fcontents(hid_t fid)
 }
 
 static herr_t
-attr_search(hid_t oid, const char *attr_name, const H5A_info_t H5_ATTR_UNUSED *ainfo, void *_op_data)
+attr_search(hid_t oid, const char *attr_name, const H5A_info_t UNUSED *ainfo, void *_op_data)
 {
     herr_t              ret = SUCCEED;
     int 				i;
@@ -1351,7 +1337,7 @@ attr_search(hid_t oid, const char *attr_name, const H5A_info_t H5_ATTR_UNUSED *a
 } /* end attr_search() */
 
 static herr_t
-obj_search(const char *path, const H5O_info_t *oi, const char H5_ATTR_UNUSED *already_visited, void *_op_data)
+obj_search(const char *path, const H5O_info_t *oi, const char UNUSED *already_visited, void *_op_data)
 {
 	trav_handle_udata_t  *handle_data = (trav_handle_udata_t*)_op_data;
     char *op_name = (char*)handle_data->op_name;
@@ -1443,7 +1429,7 @@ lnk_search(const char *path, const H5L_info_t *li, void *_op_data)
  *-------------------------------------------------------------------------
  */
 void
-handle_paths(hid_t fid, const char *path_name, void H5_ATTR_UNUSED * data, int H5_ATTR_UNUSED pe, const char H5_ATTR_UNUSED *display_name)
+handle_paths(hid_t fid, const char *path_name, void UNUSED * data, int UNUSED pe, const char UNUSED *display_name)
 {
     hid_t  gid = -1;
 
@@ -1506,7 +1492,7 @@ handle_paths(hid_t fid, const char *path_name, void H5_ATTR_UNUSED * data, int H
  *-------------------------------------------------------------------------
  */
 void
-handle_attributes(hid_t fid, const char *attr, void H5_ATTR_UNUSED * data, int H5_ATTR_UNUSED pe, const char H5_ATTR_UNUSED *display_name)
+handle_attributes(hid_t fid, const char *attr, void UNUSED * data, int UNUSED pe, const char UNUSED *display_name)
 {
     hid_t  oid = -1;
     hid_t  attr_id = -1;
@@ -1817,7 +1803,7 @@ handle_datasets(hid_t fid, const char *dset, void *data, int pe, const char *dis
  *-------------------------------------------------------------------------
  */
 void
-handle_groups(hid_t fid, const char *group, void H5_ATTR_UNUSED *data, int pe, const char *display_name)
+handle_groups(hid_t fid, const char *group, void UNUSED *data, int pe, const char *display_name)
 {
     hid_t       gid;
     const char  *real_name = display_name ? display_name : group;
@@ -1867,7 +1853,7 @@ handle_groups(hid_t fid, const char *group, void H5_ATTR_UNUSED *data, int pe, c
  *-------------------------------------------------------------------------
  */
 void
-handle_links(hid_t fid, const char *links, void H5_ATTR_UNUSED * data, int H5_ATTR_UNUSED pe, const char H5_ATTR_UNUSED *display_name)
+handle_links(hid_t fid, const char *links, void UNUSED * data, int UNUSED pe, const char UNUSED *display_name)
 {
     H5L_info_t linfo;
 
@@ -1962,7 +1948,7 @@ handle_links(hid_t fid, const char *links, void H5_ATTR_UNUSED * data, int H5_AT
  *-------------------------------------------------------------------------
  */
 void
-handle_datatypes(hid_t fid, const char *type, void H5_ATTR_UNUSED * data, int pe, const char *display_name)
+handle_datatypes(hid_t fid, const char *type, void UNUSED * data, int pe, const char *display_name)
 {
     hid_t       type_id;
     const char  *real_name = display_name ? display_name : type;

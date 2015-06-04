@@ -105,11 +105,8 @@ H5FL_DEFINE(time_t);
 /*-------------------------------------------------------------------------
  * Function:	H5O_mtime_new_decode
  *
- * Purpose:     Decode a new modification time message and return a pointer to
- *              a new time_t value.
- *
- *              The new modification time message format was added due to the
- *              performance overhead of the old format.
+ * Purpose:	Decode a new modification time message and return a pointer to a
+ *		new time_t value.
  *
  * Return:	Success:	Ptr to new message in native struct.
  *
@@ -122,8 +119,8 @@ H5FL_DEFINE(time_t);
  *-------------------------------------------------------------------------
  */
 static void *
-H5O_mtime_new_decode(H5F_t H5_ATTR_UNUSED *f, hid_t H5_ATTR_UNUSED dxpl_id, H5O_t H5_ATTR_UNUSED *open_oh,
-    unsigned H5_ATTR_UNUSED mesg_flags, unsigned H5_ATTR_UNUSED *ioflags, const uint8_t *p)
+H5O_mtime_new_decode(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, H5O_t UNUSED *open_oh,
+    unsigned UNUSED mesg_flags, unsigned UNUSED *ioflags, const uint8_t *p)
 {
     time_t	*mesg;
     uint32_t    tmp_time;       /* Temporary copy of the time */
@@ -132,8 +129,8 @@ H5O_mtime_new_decode(H5F_t H5_ATTR_UNUSED *f, hid_t H5_ATTR_UNUSED dxpl_id, H5O_
     FUNC_ENTER_NOAPI_NOINIT
 
     /* check args */
-    HDassert(f);
-    HDassert(p);
+    assert(f);
+    assert(p);
 
     /* decode */
     if(*p++ != H5O_MTIME_VERSION)
@@ -161,11 +158,8 @@ done:
 /*-------------------------------------------------------------------------
  * Function:	H5O_mtime_decode
  *
- * Purpose:     Decode a modification time message and return a pointer to a
- *              new time_t value.
- *
- *              The new modification time message format was added due to the
- *              performance overhead of the old format.
+ * Purpose:	Decode a modification time message and return a pointer to a
+ *		new time_t value.
  *
  * Return:	Success:	Ptr to new message in native struct.
  *
@@ -178,8 +172,8 @@ done:
  *-------------------------------------------------------------------------
  */
 static void *
-H5O_mtime_decode(H5F_t H5_ATTR_UNUSED *f, hid_t H5_ATTR_UNUSED dxpl_id, H5O_t H5_ATTR_UNUSED *open_oh,
-    unsigned H5_ATTR_UNUSED mesg_flags, unsigned H5_ATTR_UNUSED *ioflags, const uint8_t *p)
+H5O_mtime_decode(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, H5O_t UNUSED *open_oh,
+    unsigned UNUSED mesg_flags, unsigned UNUSED *ioflags, const uint8_t *p)
 {
     time_t	*mesg, the_time;
     int	i;
@@ -265,16 +259,16 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_mtime_new_encode(H5F_t H5_ATTR_UNUSED *f, hbool_t H5_ATTR_UNUSED disable_shared, uint8_t *p, const void *_mesg)
+H5O_mtime_new_encode(H5F_t UNUSED *f, hbool_t UNUSED disable_shared, uint8_t *p, const void *_mesg)
 {
     const time_t	*mesg = (const time_t *) _mesg;
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     /* check args */
-    HDassert(f);
-    HDassert(p);
-    HDassert(mesg);
+    assert(f);
+    assert(p);
+    assert(mesg);
 
     /* Version */
     *p++ = H5O_MTIME_VERSION;
@@ -307,7 +301,7 @@ H5O_mtime_new_encode(H5F_t H5_ATTR_UNUSED *f, hbool_t H5_ATTR_UNUSED disable_sha
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_mtime_encode(H5F_t H5_ATTR_UNUSED *f, hbool_t H5_ATTR_UNUSED disable_shared, uint8_t *p, const void *_mesg)
+H5O_mtime_encode(H5F_t UNUSED *f, hbool_t UNUSED disable_shared, uint8_t *p, const void *_mesg)
 {
     const time_t	*mesg = (const time_t *) _mesg;
     struct tm		*tm;
@@ -315,9 +309,9 @@ H5O_mtime_encode(H5F_t H5_ATTR_UNUSED *f, hbool_t H5_ATTR_UNUSED disable_shared,
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     /* check args */
-    HDassert(f);
-    HDassert(p);
-    HDassert(mesg);
+    assert(f);
+    assert(p);
+    assert(mesg);
 
     /* encode */
     tm = HDgmtime(mesg);
@@ -357,7 +351,7 @@ H5O_mtime_copy(const void *_mesg, void *_dest)
     FUNC_ENTER_NOAPI_NOINIT
 
     /* check args */
-    HDassert(mesg);
+    assert(mesg);
     if (!dest && NULL==(dest = H5FL_MALLOC(time_t)))
         HGOTO_ERROR (H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed");
 
@@ -393,13 +387,13 @@ done:
  *-------------------------------------------------------------------------
  */
 static size_t
-H5O_mtime_new_size(const H5F_t H5_ATTR_UNUSED * f, hbool_t H5_ATTR_UNUSED disable_shared, const void H5_ATTR_UNUSED * mesg)
+H5O_mtime_new_size(const H5F_t UNUSED * f, hbool_t UNUSED disable_shared, const void UNUSED * mesg)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     /* check args */
-    HDassert(f);
-    HDassert(mesg);
+    assert(f);
+    assert(mesg);
 
     FUNC_LEAVE_NOAPI(8)
 } /* end H5O_mtime_new_size() */
@@ -426,13 +420,13 @@ H5O_mtime_new_size(const H5F_t H5_ATTR_UNUSED * f, hbool_t H5_ATTR_UNUSED disabl
  *-------------------------------------------------------------------------
  */
 static size_t
-H5O_mtime_size(const H5F_t H5_ATTR_UNUSED * f, hbool_t H5_ATTR_UNUSED disable_shared, const void H5_ATTR_UNUSED * mesg)
+H5O_mtime_size(const H5F_t UNUSED * f, hbool_t UNUSED disable_shared, const void UNUSED * mesg)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     /* check args */
-    HDassert(f);
-    HDassert(mesg);
+    assert(f);
+    assert(mesg);
 
     FUNC_LEAVE_NOAPI(16)
 }
@@ -454,7 +448,7 @@ H5O_mtime_size(const H5F_t H5_ATTR_UNUSED * f, hbool_t H5_ATTR_UNUSED disable_sh
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_mtime_reset(void H5_ATTR_UNUSED *_mesg)
+H5O_mtime_reset(void UNUSED *_mesg)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
@@ -505,7 +499,7 @@ H5O_mtime_free(void *mesg)
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_mtime_debug(H5F_t H5_ATTR_UNUSED *f, hid_t H5_ATTR_UNUSED dxpl_id, const void *_mesg, FILE *stream,
+H5O_mtime_debug(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const void *_mesg, FILE *stream,
 		int indent, int fwidth)
 {
     const time_t	*mesg = (const time_t *)_mesg;
@@ -515,17 +509,17 @@ H5O_mtime_debug(H5F_t H5_ATTR_UNUSED *f, hid_t H5_ATTR_UNUSED dxpl_id, const voi
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     /* check args */
-    HDassert(f);
-    HDassert(mesg);
-    HDassert(stream);
-    HDassert(indent >= 0);
-    HDassert(fwidth >= 0);
+    assert(f);
+    assert(mesg);
+    assert(stream);
+    assert(indent >= 0);
+    assert(fwidth >= 0);
 
     /* debug */
     tm = HDlocaltime(mesg);
 
     HDstrftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S %Z", tm);
-    HDfprintf(stream, "%*s%-*s %s\n", indent, "", fwidth,
+    fprintf(stream, "%*s%-*s %s\n", indent, "", fwidth,
 	    "Time:", buf);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
