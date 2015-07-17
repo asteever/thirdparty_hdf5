@@ -15,9 +15,9 @@
 
 /*-------------------------------------------------------------------------
  *
- * Created:		H5FAdblkpage.c
+ * Created:     H5FAdblkpage.c
  *
- * Purpose:		Data block page routines for fixed array.
+ * Purpose:     Data block page routines for fixed array.
  *
  *-------------------------------------------------------------------------
  */
@@ -37,10 +37,10 @@
 /***********/
 /* Headers */
 /***********/
-#include "H5private.h"		/* Generic Functions			*/
-#include "H5Eprivate.h"		/* Error handling		  	*/
-#include "H5FApkg.h"		/* Fixed Arrays				*/
-#include "H5FLprivate.h"	/* Free Lists                           */
+#include "H5private.h"      /* Generic Functions                        */
+#include "H5Eprivate.h"     /* Error handling                           */
+#include "H5FApkg.h"        /* Fixed Arrays                             */
+#include "H5FLprivate.h"    /* Free Lists                               */
 
 
 /****************/
@@ -86,13 +86,13 @@ H5FL_BLK_DEFINE(page_elmts);
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5FA__dblk_page_alloc
+ * Function:    H5FA__dblk_page_alloc
  *
- * Purpose:	Allocate fixed array data block page
+ * Purpose:     Allocate fixed array data block page
  *
- * Return:	Non-NULL pointer to data block on success/NULL on failure
+ * Return:      Non-NULL pointer to data block on success/NULL on failure
  *
- * Programmer:	Vailin Choi
+ * Programmer:  Vailin Choi
  *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
@@ -109,11 +109,11 @@ H5FA__dblk_page_alloc(H5FA_hdr_t *hdr, size_t nelmts))
 
     /* Allocate memory for the data block */
     if(NULL == (dblk_page = H5FL_CALLOC(H5FA_dblk_page_t)))
-	H5E_THROW(H5E_CANTALLOC, "memory allocation failed for fixed array data block page")
+        H5E_THROW(H5E_CANTALLOC, "memory allocation failed for fixed array data block page")
 
     /* Share common array information */
     if(H5FA__hdr_incr(hdr) < 0)
-	H5E_THROW(H5E_CANTINC, "can't increment reference count on shared array header")
+        H5E_THROW(H5E_CANTINC, "can't increment reference count on shared array header")
     dblk_page->hdr = hdr;
 
     /* Set non-zero internal fields */
@@ -136,13 +136,13 @@ END_FUNC(PKG)   /* end H5FA__dblk_page_alloc() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5FA__dblk_page_create
+ * Function:    H5FA__dblk_page_create
  *
- * Purpose:	Creates a new fixed array data block page in the file
+ * Purpose:     Creates a new fixed array data block page in the file
  *
- * Return:	Valid file address on success/HADDR_UNDEF on failure
+ * Return:      Valid file address on success/HADDR_UNDEF on failure
  *
- * Programmer:	Vailin Choi
+ * Programmer:  Vailin Choi
  *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
@@ -163,7 +163,7 @@ HDfprintf(stderr, "%s: Called, addr = %a\n", FUNC, addr);
 
     /* Allocate the data block page */
     if(NULL == (dblk_page = H5FA__dblk_page_alloc(hdr, nelmts)))
-	H5E_THROW(H5E_CANTALLOC, "memory allocation failed for fixed array data block page")
+        H5E_THROW(H5E_CANTALLOC, "memory allocation failed for fixed array data block page")
 
     /* Set info about data block page on disk */
     dblk_page->addr = addr;
@@ -178,7 +178,7 @@ HDfprintf(stderr, "%s: dblk_page->size = %Zu\n", FUNC, dblk_page->size);
 
     /* Cache the new fixed array data block page */
     if(H5AC_insert_entry(hdr->f, dxpl_id, H5AC_FARRAY_DBLK_PAGE, dblk_page->addr, dblk_page, H5AC__NO_FLAGS_SET) < 0)
-	H5E_THROW(H5E_CANTINSERT, "can't add fixed array data block page to cache")
+        H5E_THROW(H5E_CANTINSERT, "can't add fixed array data block page to cache")
 
 CATCH
     if(ret_value < 0)
@@ -192,14 +192,14 @@ END_FUNC(PKG)   /* end H5FA__dblk_page_create() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5FA__dblk_page_protect
+ * Function:    H5FA__dblk_page_protect
  *
- * Purpose:	Convenience wrapper around protecting fixed array data
+ * Purpose:     Convenience wrapper around protecting fixed array data
  *              block page
  *
- * Return:	Non-NULL pointer to data block page on success/NULL on failure
+ * Return:      Non-NULL pointer to data block page on success/NULL on failure
  *
- * Programmer:	Vailin Choi
+ * Programmer:  Vailin Choi
  *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
@@ -207,7 +207,7 @@ END_FUNC(PKG)   /* end H5FA__dblk_page_create() */
 BEGIN_FUNC(PKG, ERR,
 H5FA_dblk_page_t *, NULL, NULL,
 H5FA__dblk_page_protect(H5FA_hdr_t *hdr, hid_t dxpl_id, haddr_t dblk_page_addr,
-    size_t dblk_page_nelmts, unsigned flags))
+    size_t dblk_page_nelmts, H5AC_protect_t rw))
 
     /* Local variables */
     H5FA_dblk_page_cache_ud_t udata;      /* Information needed for loading data block page */
@@ -220,16 +220,12 @@ HDfprintf(stderr, "%s: Called\n", FUNC);
     HDassert(hdr);
     HDassert(H5F_addr_defined(dblk_page_addr));
 
-    /* only the H5AC__READ_ONLY_FLAG is permitted */
-    HDassert((flags & (unsigned)(~H5AC__READ_ONLY_FLAG)) == 0);
-
     /* Set up user data */
     udata.hdr = hdr;
     udata.nelmts = dblk_page_nelmts;
-    udata.dblk_page_addr = dblk_page_addr;
 
     /* Protect the data block page */
-    if(NULL == (ret_value = (H5FA_dblk_page_t *)H5AC_protect(hdr->f, dxpl_id, H5AC_FARRAY_DBLK_PAGE, dblk_page_addr, &udata, flags)))
+    if(NULL == (ret_value = (H5FA_dblk_page_t *)H5AC_protect(hdr->f, dxpl_id, H5AC_FARRAY_DBLK_PAGE, dblk_page_addr, &udata, rw)))
         H5E_THROW(H5E_CANTPROTECT, "unable to protect fixed array data block page, address = %llu", (unsigned long long)dblk_page_addr)
 
 CATCH
@@ -238,14 +234,14 @@ END_FUNC(PKG)   /* end H5FA__dblk_page_protect() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5FA__dblk_page_unprotect
+ * Function:    H5FA__dblk_page_unprotect
  *
- * Purpose:	Convenience wrapper around unprotecting fixed array
+ * Purpose:     Convenience wrapper around unprotecting fixed array
  *              data block page
  *
- * Return:	Non-negative on success/Negative on failure
+ * Return:      SUCCEED/FAIL
  *
- * Programmer:	Vailin Choi
+ * Programmer:  Vailin Choi
  *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
@@ -274,13 +270,13 @@ END_FUNC(PKG)   /* end H5FA__dblk_page_unprotect() */
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5FA__dblk_page_dest
+ * Function:    H5FA__dblk_page_dest
  *
- * Purpose:	Destroys a fixed array data block page in memory.
+ * Purpose:     Destroys a fixed array data block page in memory.
  *
- * Return:	Non-negative on success/Negative on failure
+ * Return:      SUCCEED/FAIL
  *
- * Programmer:	Vailin Choi
+ * Programmer:  Vailin Choi
  *              Thursday, April 30, 2009
  *
  *-------------------------------------------------------------------------
@@ -297,7 +293,7 @@ H5FA__dblk_page_dest(H5FA_dblk_page_t *dblk_page))
         /* Check if buffer for data block page elements has been initialized */
         if(dblk_page->elmts) {
             /* Free buffer for data block page elements */
-	    dblk_page->elmts = H5FL_BLK_FREE(page_elmts, dblk_page->elmts);
+            dblk_page->elmts = H5FL_BLK_FREE(page_elmts, dblk_page->elmts);
         } /* end if */
 
         /* Decrement reference count on shared info */

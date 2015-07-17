@@ -413,7 +413,7 @@ H5G__new_dense_info_test(hid_t gid, hsize_t *name_count, hsize_t *corder_count)
         HGOTO_DONE_TAG(FAIL, FAIL)
 
     /* Open the name index v2 B-tree */
-    if(NULL == (bt2_name = H5B2_open(grp->oloc.file, dxpl_id, linfo.name_bt2_addr, NULL)))
+    if(NULL == (bt2_name = H5B2_open(grp->oloc.file, dxpl_id, linfo.name_bt2_addr, NULL, NULL)))
         HGOTO_ERROR_TAG(H5E_SYM, H5E_CANTOPENOBJ, FAIL, "unable to open v2 B-tree for name index")
 
     /* Retrieve # of records in name index */
@@ -423,7 +423,7 @@ H5G__new_dense_info_test(hid_t gid, hsize_t *name_count, hsize_t *corder_count)
     /* Check if there is a creation order index */
     if(H5F_addr_defined(linfo.corder_bt2_addr)) {
         /* Open the creation order index v2 B-tree */
-        if(NULL == (bt2_corder = H5B2_open(grp->oloc.file, dxpl_id, linfo.corder_bt2_addr, NULL)))
+        if(NULL == (bt2_corder = H5B2_open(grp->oloc.file, dxpl_id, linfo.corder_bt2_addr, NULL, NULL)))
             HGOTO_ERROR_TAG(H5E_SYM, H5E_CANTOPENOBJ, FAIL, "unable to open v2 B-tree for creation order index")
 
         /* Retrieve # of records in creation order index */
@@ -633,11 +633,11 @@ H5G__verify_cached_stab_test(H5O_loc_t *grp_oloc, H5G_entry_t *ent)
         HGOTO_ERROR(H5E_SYM, H5E_BADVALUE, FAIL, "cached stab info does not match object header")
 
     /* Verify that the btree address is valid */
-    if(H5B_valid(grp_oloc->file, dxpl_id, H5B_SNODE, stab.btree_addr) < 0)
+    if(H5B_valid(grp_oloc->file, H5AC_ind_dxpl_id, H5B_SNODE, stab.btree_addr, NULL) < 0)
         HGOTO_ERROR(H5E_BTREE, H5E_NOTFOUND, FAIL, "b-tree address is invalid")
 
     /* Verify that the heap address is valid */
-    if(NULL == (heap = H5HL_protect(grp_oloc->file, dxpl_id, stab.heap_addr, H5AC__READ_ONLY_FLAG)))
+    if(NULL == (heap = H5HL_protect(grp_oloc->file, dxpl_id, stab.heap_addr, H5AC_READ)))
         HGOTO_ERROR(H5E_HEAP, H5E_NOTFOUND, FAIL, "heap address is invalid")
 
 done:
@@ -686,7 +686,7 @@ H5G_verify_cached_stabs_test_cb(H5F_t *f, hid_t dxpl_id,
     HDassert(H5F_addr_defined(addr));
 
     /* Load the node */
-    if(NULL == (sn = (H5G_node_t *)H5AC_protect(f, dxpl_id, H5AC_SNODE, addr, f, H5AC__READ_ONLY_FLAG)))
+    if(NULL == (sn = (H5G_node_t *)H5AC_protect(f, dxpl_id, H5AC_SNODE, addr, f, H5AC_READ)))
         HGOTO_ERROR(H5E_SYM, H5E_CANTLOAD, H5_ITER_ERROR, "unable to load symbol table node")
 
     /* Check each target object to see if its stab message (if present) matches
@@ -701,7 +701,7 @@ H5G_verify_cached_stabs_test_cb(H5F_t *f, hid_t dxpl_id,
         targ_oloc.addr = sn->entry[i].header;
 
         /* Load target object header */
-        if(NULL == (targ_oh = H5O_protect(&targ_oloc, dxpl_id, H5AC__READ_ONLY_FLAG)))
+        if(NULL == (targ_oh = H5O_protect(&targ_oloc, dxpl_id, H5AC_READ)))
             HGOTO_ERROR(H5E_SYM, H5E_CANTPROTECT, H5_ITER_ERROR, "unable to protect target object header")
 
         /* Check if a symbol table message exists */
@@ -802,7 +802,8 @@ H5G__verify_cached_stabs_test(hid_t gid)
 
     /* Iterate over the b-tree, checking validity of cached information */
     if((ret_value = H5B_iterate(grp->oloc.file, dxpl_id, H5B_SNODE,
-            stab.btree_addr, H5G_verify_cached_stabs_test_cb, &udata)) < 0)
+            stab.btree_addr, H5G_verify_cached_stabs_test_cb, &udata))
+            < 0)
         HGOTO_ERROR(H5E_SYM, H5E_CANTNEXT, FAIL, "iteration operator failed");
 
     /* Reset metadata tagging */

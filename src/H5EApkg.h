@@ -14,12 +14,12 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /*
- * Programmer:	Quincey Koziol <koziol@hdfgroup.org>
- *		Tuesday, June 17, 2008
+ * Programmer:    Quincey Koziol <koziol@hdfgroup.org>
+ *        Tuesday, June 17, 2008
  *
- * Purpose:	This file contains declarations which are visible only within
- *		the H5EA package.  Source files outside the H5EA package should
- *		include H5EAprivate.h instead.
+ * Purpose:    This file contains declarations which are visible only within
+ *        the H5EA package.  Source files outside the H5EA package should
+ *        include H5EAprivate.h instead.
  */
 #if !(defined(H5EA_PACKAGE) | defined(H5EA_MODULE))
 #error "Do not include this file outside the H5EA package!"
@@ -32,7 +32,7 @@
 #include "H5EAprivate.h"
 
 /* Other private headers needed by this file */
-#include "H5FLprivate.h"	/* Free Lists                           */
+#include "H5FLprivate.h"    /* Free Lists                           */
 
 
 /**************************/
@@ -105,10 +105,10 @@
     /* General metadata fields */                                             \
     H5EA_METADATA_PREFIX_SIZE(TRUE)                                           \
                                                                               \
-    /* Sanity-checking fields */					      \
+    /* Sanity-checking fields */                          \
     + (i)->hdr->sizeof_addr          /* File address of array owning the block */ \
                                                                               \
-    /* Extensible Array Index Block specific fields */			      \
+    /* Extensible Array Index Block specific fields */                  \
     + ((size_t)(i)->hdr->cparam.idx_blk_elmts * (size_t)(i)->hdr->cparam.raw_elmt_size) /* Elements in index block  */ \
     + ((i)->ndblk_addrs * (i)->hdr->sizeof_addr) /* Data block addresses in index block  */ \
     + ((i)->nsblk_addrs * (i)->hdr->sizeof_addr) /* Super block addresses in index block  */ \
@@ -119,31 +119,31 @@
     /* General metadata fields */                                             \
     H5EA_METADATA_PREFIX_SIZE(TRUE)                                           \
                                                                               \
-    /* Sanity-checking fields */					      \
+    /* Sanity-checking fields */                          \
     + (s)->hdr->sizeof_addr          /* File address of array owning the block */ \
     + (s)->hdr->arr_off_size         /* Offset of the block in the array */   \
                                                                               \
-    /* Extensible Array Super Block specific fields */			      \
+    /* Extensible Array Super Block specific fields */                  \
     + ((s)->ndblks * (s)->dblk_page_init_size) /* Data block 'page init' bitmasks in super block (can be 0 if no pages) */ \
     + ((s)->ndblks * (s)->hdr->sizeof_addr) /* Data block addresses in super block  */ \
     )
 
 /* Size of the extensible array data block prefix on disk */
-#define H5EA_DBLOCK_PREFIX_SIZE(d)  (					      \
+#define H5EA_DBLOCK_PREFIX_SIZE(d)  (                          \
     /* General metadata fields */                                             \
     H5EA_METADATA_PREFIX_SIZE(TRUE)                                           \
                                                                               \
-    /* Sanity-checking fields */					      \
+    /* Sanity-checking fields */                          \
     + (d)->hdr->sizeof_addr          /* File address of array owning the block */ \
     + (d)->hdr->arr_off_size         /* Offset of the block in the array */   \
     )
 
 /* Size of the extensible array data block on disk */
-#define H5EA_DBLOCK_SIZE(d)     (					      \
+#define H5EA_DBLOCK_SIZE(d)     (                          \
     /* Data block prefix size  */                                             \
     H5EA_DBLOCK_PREFIX_SIZE(d)                                                \
                                                                               \
-    /* Extensible Array Data Block specific fields */			      \
+    /* Extensible Array Data Block specific fields */                  \
     + ((d)->nelmts * (size_t)(d)->hdr->cparam.raw_elmt_size) /* Elements in data block  */  \
     + ((d)->npages * H5EA_SIZEOF_CHKSUM)        /* Checksum for each page */  \
     )
@@ -201,6 +201,7 @@ typedef struct H5EA_hdr_t {
     haddr_t addr;                       /* Address of header in file */
     size_t size;                        /* Size of header in file */
     H5F_t *f;                           /* Pointer to file for extensible array */
+    hbool_t swmr_write;                 /* Flag indicating the file is opened with SWMR-write access */
     size_t file_rc;                     /* Reference count of files using array header */
     hbool_t pending_delete;             /* Array is pending deletion */
     size_t sizeof_addr;                 /* Size of file addresses */
@@ -229,9 +230,10 @@ typedef struct H5EA_iblock_t {
     haddr_t     *sblk_addrs;    /* Buffer for addresses of super blocks in index block */
 
     /* Internal array information (not stored) */
-    H5EA_hdr_t	*hdr;	        /* Shared array header info	              */
-    haddr_t     addr;           /* Address of this index block on disk	      */
-    size_t      size;           /* Size of index block on disk		      */
+    size_t      rc;             /* Reference count of objects using this block */
+    H5EA_hdr_t    *hdr;            /* Shared array header info                  */
+    haddr_t     addr;           /* Address of this index block on disk          */
+    size_t      size;           /* Size of index block on disk              */
 
     /* Computed/cached values (not stored) */
     size_t      nsblks;         /* # of super blocks whose data block addresses are in index block */
@@ -250,10 +252,11 @@ typedef struct H5EA_sblock_t {
     uint8_t     *page_init;     /* Bitmap of whether a data block page is initialized */
 
     /* Internal array information (not stored) */
-    H5EA_hdr_t	*hdr;	        /* Shared array header info	              */
-    H5EA_iblock_t *parent;	/* Parent object for super block (index block) */
-    haddr_t     addr;           /* Address of this index block on disk	      */
-    size_t      size;           /* Size of index block on disk		      */
+    size_t      rc;             /* Reference count of objects using this block */
+    H5EA_hdr_t    *hdr;            /* Shared array header info                  */
+    H5EA_iblock_t *parent;    /* Parent object for super block (index block) */
+    haddr_t     addr;           /* Address of this index block on disk          */
+    size_t      size;           /* Size of index block on disk              */
 
     /* Computed/cached values (not stored) */
     unsigned    idx;            /* Super block index within the extensible array */
@@ -274,10 +277,10 @@ typedef struct H5EA_dblock_t {
     void        *elmts;         /* Buffer for elements stored in data block  */
 
     /* Internal array information (not stored) */
-    H5EA_hdr_t	*hdr;	        /* Shared array header info	              */
+    H5EA_hdr_t    *hdr;            /* Shared array header info                  */
     void        *parent;        /* Parent object for data block (index or super block) */
-    haddr_t     addr;           /* Address of this data block on disk	      */
-    size_t      size;           /* Size of data block on disk		      */
+    haddr_t     addr;           /* Address of this data block on disk          */
+    size_t      size;           /* Size of data block on disk              */
 
     /* Computed/cached values (not stored) */
     size_t      nelmts;         /* Number of elements in block                */
@@ -293,10 +296,10 @@ typedef struct H5EA_dbk_page_t {
     void        *elmts;         /* Buffer for elements stored in data block page */
 
     /* Internal array information (not stored) */
-    H5EA_hdr_t	*hdr;	        /* Shared array header info	              */
+    H5EA_hdr_t    *hdr;            /* Shared array header info                  */
     H5EA_sblock_t *parent;      /* Parent object for data block page (super block) */
     haddr_t     addr;           /* Address of this data block page on disk    */
-    size_t      size;           /* Size of data block page on disk	      */
+    size_t      size;           /* Size of data block page on disk          */
 
     /* Computed/cached values (not stored) */
     /* <none> */
@@ -310,19 +313,11 @@ struct H5EA_t {
 
 /* Metadata cache callback user data types */
 
-/* Info needed for loading header */
-typedef struct H5EA_hdr_cache_ud_t {
-    H5F_t      *f;              /* Pointer to file for extensible array */
-    haddr_t    addr;            /* Address of header on disk */
-    void       *ctx_udata;      /* User context for class */
-} H5EA_hdr_cache_ud_t;
-
 /* Info needed for loading super block */
 typedef struct H5EA_sblock_cache_ud_t {
     H5EA_hdr_t    *hdr;         /* Shared extensible array information */
     H5EA_iblock_t *parent;      /* Pointer to parent object for super block (index block) */
     unsigned sblk_idx;          /* Index of super block */
-    haddr_t sblk_addr;          /* Address of super block */
 } H5EA_sblock_cache_ud_t;
 
 /* Info needed for loading data block */
@@ -330,14 +325,12 @@ typedef struct H5EA_dblock_cache_ud_t {
     H5EA_hdr_t    *hdr;         /* Shared extensible array information */
     void *parent;               /* Pointer to parent object for data block (index or super block) */
     size_t nelmts;              /* Number of elements in data block */
-    haddr_t dblk_addr;          /* Address of data block */
 } H5EA_dblock_cache_ud_t;
 
 /* Info needed for loading data block page */
 typedef struct H5EA_dblk_page_cache_ud_t {
     H5EA_hdr_t    *hdr;         /* Shared extensible array information */
     H5EA_sblock_t *parent;      /* Pointer to parent object for data block page (super block) */
-    haddr_t dblk_page_addr;     /* Address of data block page */
 } H5EA_dblk_page_cache_ud_t;
 
 #ifdef H5EA_TESTING
@@ -370,7 +363,7 @@ H5_DLLVAR const H5AC_class_t H5AC_EARRAY_DBLK_PAGE[1];
 H5_DLLVAR const H5EA_class_t H5EA_CLS_TEST[1];
 
 /* Array of extensible array client ID -> client class mappings */
-extern const H5EA_class_t *const H5EA_client_class_g[H5EA_NUM_CLS_ID];
+H5_DLLVAR const H5EA_class_t *const H5EA_client_class_g[H5EA_NUM_CLS_ID];
 
 
 /******************************/
@@ -396,7 +389,7 @@ H5_DLL herr_t H5EA__hdr_fuse_incr(H5EA_hdr_t *hdr);
 H5_DLL size_t H5EA__hdr_fuse_decr(H5EA_hdr_t *hdr);
 H5_DLL herr_t H5EA__hdr_modified(H5EA_hdr_t *hdr);
 H5_DLL H5EA_hdr_t *H5EA__hdr_protect(H5F_t *f, hid_t dxpl_id, haddr_t ea_addr,
-    void *ctx_udata, unsigned flags);
+    void *ctx_udata, H5AC_protect_t rw);
 H5_DLL herr_t H5EA__hdr_unprotect(H5EA_hdr_t *hdr, hid_t dxpl_id, unsigned cache_flags);
 H5_DLL herr_t H5EA__hdr_delete(H5EA_hdr_t *hdr, hid_t dxpl_id);
 H5_DLL herr_t H5EA__hdr_dest(H5EA_hdr_t *hdr);
@@ -406,7 +399,7 @@ H5_DLL H5EA_iblock_t *H5EA__iblock_alloc(H5EA_hdr_t *hdr);
 H5_DLL haddr_t H5EA__iblock_create(H5EA_hdr_t *hdr, hid_t dxpl_id,
     hbool_t *stats_changed);
 H5_DLL H5EA_iblock_t *H5EA__iblock_protect(H5EA_hdr_t *hdr, hid_t dxpl_id,
-    unsigned flags);
+    H5AC_protect_t rw);
 H5_DLL herr_t H5EA__iblock_unprotect(H5EA_iblock_t *iblock, hid_t dxpl_id,
     unsigned cache_flags);
 H5_DLL herr_t H5EA__iblock_delete(H5EA_hdr_t *hdr, hid_t dxpl_id);
@@ -418,8 +411,7 @@ H5_DLL H5EA_sblock_t *H5EA__sblock_alloc(H5EA_hdr_t *hdr, H5EA_iblock_t *parent,
 H5_DLL haddr_t H5EA__sblock_create(H5EA_hdr_t *hdr, hid_t dxpl_id,
     H5EA_iblock_t *parent, hbool_t *stats_changed, unsigned sblk_idx);
 H5_DLL H5EA_sblock_t *H5EA__sblock_protect(H5EA_hdr_t *hdr, hid_t dxpl_id,
-    H5EA_iblock_t *parent, haddr_t sblk_addr, unsigned sblk_idx, 
-    unsigned flags);
+    H5EA_iblock_t *parent, haddr_t sblk_addr, unsigned sblk_idx, H5AC_protect_t rw);
 H5_DLL herr_t H5EA__sblock_unprotect(H5EA_sblock_t *sblock, hid_t dxpl_id,
     unsigned cache_flags);
 H5_DLL herr_t H5EA__sblock_delete(H5EA_hdr_t *hdr, hid_t dxpl_id,
@@ -433,7 +425,7 @@ H5_DLL haddr_t H5EA__dblock_create(H5EA_hdr_t *hdr, hid_t dxpl_id, void *parent,
     hbool_t *stats_changed, hsize_t dblk_off, size_t nelmts);
 H5_DLL unsigned H5EA__dblock_sblk_idx(const H5EA_hdr_t *hdr, hsize_t idx);
 H5_DLL H5EA_dblock_t *H5EA__dblock_protect(H5EA_hdr_t *hdr, hid_t dxpl_id,
-    void *parent, haddr_t dblk_addr, size_t dblk_nelmts, unsigned flags);
+    void *parent, haddr_t dblk_addr, size_t dblk_nelmts, H5AC_protect_t rw);
 H5_DLL herr_t H5EA__dblock_unprotect(H5EA_dblock_t *dblock, hid_t dxpl_id,
     unsigned cache_flags);
 H5_DLL herr_t H5EA__dblock_delete(H5EA_hdr_t *hdr, hid_t dxpl_id, void *parent,
@@ -445,7 +437,7 @@ H5_DLL H5EA_dblk_page_t *H5EA__dblk_page_alloc(H5EA_hdr_t *hdr, H5EA_sblock_t *p
 H5_DLL herr_t H5EA__dblk_page_create(H5EA_hdr_t *hdr, hid_t dxpl_id,
     H5EA_sblock_t *parent, haddr_t addr);
 H5_DLL H5EA_dblk_page_t *H5EA__dblk_page_protect(H5EA_hdr_t *hdr, hid_t dxpl_id,
-    H5EA_sblock_t *parent, haddr_t dblk_page_addr, unsigned flags);
+    H5EA_sblock_t *parent, haddr_t dblk_page_addr, H5AC_protect_t rw);
 H5_DLL herr_t H5EA__dblk_page_unprotect(H5EA_dblk_page_t *dblk_page,
     hid_t dxpl_id, unsigned cache_flags);
 H5_DLL herr_t H5EA__dblk_page_dest(H5EA_dblk_page_t *dblk_page);

@@ -26,7 +26,7 @@ AC_PREREQ([2.69])
 ## NOTE: Do not forget to change the version number here when we do a
 ## release!!!
 ##
-AC_INIT([HDF5], [1.9.225], [help@hdfgroup.org])
+AC_INIT([HDF5], [1.9.222-swmr0], [help@hdfgroup.org])
 AC_CONFIG_SRCDIR([src/H5.c])
 AC_CONFIG_HEADER([src/H5config.h])
 
@@ -857,7 +857,7 @@ AC_HEADER_TIME
 
 ## Unix
 AC_CHECK_HEADERS([sys/resource.h sys/time.h unistd.h sys/ioctl.h sys/stat.h])
-AC_CHECK_HEADERS([sys/socket.h sys/types.h])
+AC_CHECK_HEADERS([sys/socket.h sys/types.h sys/file.h])
 AC_CHECK_HEADERS([stddef.h setjmp.h features.h])
 AC_CHECK_HEADERS([dirent.h])
 AC_CHECK_HEADERS([stdint.h], [C9x=yes])
@@ -1691,27 +1691,7 @@ AC_CHECK_FUNCS([tmpfile asprintf vasprintf vsnprintf waitpid])
 ## Check compiler characteristics
 ##
 AC_C_CONST
-
-AC_MSG_CHECKING([if the compiler understands  __inline__])
-AC_COMPILE_IFELSE(
-    [AC_LANG_SOURCE([[static __inline__ void f(void){return;};]])],
-    [AC_DEFINE([HAVE___INLINE__], [1], [Define if the compiler understands __inline__]) AC_MSG_RESULT([yes])],
-    [AC_MSG_RESULT([no])]
-)
-
-AC_MSG_CHECKING([if the compiler understands __inline])
-AC_COMPILE_IFELSE(
-    [AC_LANG_SOURCE([[static __inline void f(void){return;};]])],
-    [AC_DEFINE([HAVE___INLINE], [1], [Define if the compiler understands __inline]) AC_MSG_RESULT([yes])],
-    [AC_MSG_RESULT([no])]
-)
-
-AC_MSG_CHECKING([if the compiler understands inline])
-AC_COMPILE_IFELSE(
-    [AC_LANG_SOURCE([[static inline void f(void){return;};]])],
-    [AC_DEFINE([HAVE_INLINE], [1], [Define if the compiler understands inline]) AC_MSG_RESULT([yes])],
-    [AC_MSG_RESULT([no])]
-)
+AC_C_INLINE
 
 AC_MSG_CHECKING([for __attribute__ extension])
 AC_TRY_COMPILE(,[int __attribute__((unused)) x],
@@ -2841,10 +2821,13 @@ AC_CONFIG_FILES([src/libhdf5.settings
                  test/Makefile
                  test/testcheck_version.sh
                  test/testerror.sh
+		 test/testflushrefresh.sh
                  test/H5srcdir_str.h
                  test/testlibinfo.sh
                  test/testlinks_env.sh
+                 test/testswmr.sh
                  test/test_plugin.sh
+                 test/test_usecases.sh
                  testpar/Makefile
                  tools/Makefile
                  tools/h5dump/Makefile
@@ -2868,6 +2851,7 @@ AC_CONFIG_FILES([src/libhdf5.settings
                  tools/lib/Makefile
                  tools/misc/Makefile
                  tools/misc/h5cc
+		 tools/misc/testh5clear.sh
                  tools/misc/testh5mkgrp.sh
                  tools/misc/testh5repart.sh
                  tools/h5stat/testh5stat.sh
@@ -2899,6 +2883,8 @@ AC_CONFIG_FILES([src/libhdf5.settings
                  hl/tools/Makefile
                  hl/tools/gif2h5/Makefile
                  hl/tools/gif2h5/h52giftest.sh
+		 hl/tools/h5watch/Makefile
+                 hl/tools/h5watch/testh5watch.sh
                  hl/examples/Makefile
                  hl/examples/run-hlc-ex.sh
                  hl/c++/Makefile
@@ -2923,6 +2909,16 @@ fi
 if test "X$HDF_CXX" = "Xyes"; then
   chmod 755 c++/src/h5c++
 fi
+
+## We don't want inline defined for C++ compilers
+## Don't worry about the C++ ifdef wrappers in the H5pubconf file, since
+## 'H5_inline' isn't a C++ keyword.
+cat >> src/H5config.h <<EOF
+
+#if defined(__cplusplus) && defined(inline)
+#undef inline
+#endif
+EOF
 
 ## HDF5 configure code created by autotools with gcc 4.9.2 is adding problematic
 ## linker flags:  -l with no library name; -l <libname>, specifically gfortran or m.

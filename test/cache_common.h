@@ -138,19 +138,20 @@
 				 * directly pinned by a single entry.
 				 */
 
-#define FLUSH_OP__NO_OP			0
-#define FLUSH_OP__DIRTY			1
-#define FLUSH_OP__RESIZE		2
-#define FLUSH_OP__MOVE			3
-#define FLUSH_OP__ORDER			4
-#define FLUSH_OP__EXPUNGE		5
-#define FLUSH_OP__DEST_FLUSH_DEP	6
-#define FLUSH_OP__MAX_OP		6
+#define FLUSH_OP__NO_OP		0
+#define FLUSH_OP__DIRTY		1
+#define FLUSH_OP__RESIZE	2
+#define FLUSH_OP__MOVE		3
+#define FLUSH_OP__ORDER		4
+#define FLUSH_OP__MAX_OP	4
 
 #define MAX_FLUSH_OPS		10	/* Maximum number of flush operations
 					 * that can be associated with a
 					 * cache entry.
 					 */
+
+#define MAX_FLUSH_DEP_PARS      8       /* Maximum number of flush dependency
+                                         * parents in the test */
 
 typedef struct flush_op
 {
@@ -216,31 +217,9 @@ typedef struct test_entry_t
     struct test_entry_t * self; 	/* pointer to this entry -- used for
 					 * sanity checking.
                                          */
-    H5F_t               * file_ptr;     /* pointer to the file in which the
-                                         * entry resides, or NULL if the entry
-                                         * is not in a file.
-                                         */
     H5C_t               * cache_ptr;	/* pointer to the cache in which
 					 * the entry resides, or NULL if the
 					 * entry is not in cache.
-					 */
-    hbool_t		  written_to_main_addr;
-    					/* Flag indicating whether an image
-					 * of the entry has been written to
-					 * its main address.  Since we no
-					 * longer have a flush callback, we
-					 * set this field to true whenever the
-					 * entry is serialized while at its
-					 * main address.
-					 */
-    hbool_t		  written_to_alt_addr;
-                                        /* Flag indicating whether an image
-					 * of the entry has been written to
-					 * its alternate address.  Since we no
-					 * longer have a flush callback, we
-					 * set this field to true whenever the
-					 * entry is serialized while at its
-					 * alternate address.
 					 */
     haddr_t		  addr;         /* where the cache thinks this entry
                                          * is located
@@ -263,11 +242,11 @@ typedef struct test_entry_t
                                          */
     int32_t		  index;	/* index in its entry array
                                          */
-    int32_t		  serializes;	/* number of times this entry has
-					 * been serialized.
+    int32_t		  reads;	/* number of times this entry has
+					 * been loaded.
                                          */
-    int32_t		  deserializes;	/* number of times this entry has
-                                         * been deserialized
+    int32_t		  writes;	/* number of times this entry has
+                                         * been written
                                          */
     hbool_t		  is_dirty;	/* entry has been modified since
                                          * last write
@@ -284,6 +263,8 @@ typedef struct test_entry_t
     hbool_t		  is_pinned;	/* entry is currently pinned in
 					 * the cache.
                                          */
+    haddr_t		  tag;          /* the base_addr as tag for corking entries */
+    hbool_t		  is_corked;	/* entry is currently corked or not */
     int			  pinning_ref_count; /* Number of entries that
 					 * pin this entry in the cache.
 					 * When this count drops to zero,
@@ -326,28 +307,26 @@ typedef struct test_entry_t
 					 * checking code that would otherwise
 					 * cause a false test failure.
 					 */
-    hbool_t		  deserialized; /* entry has been deserialized since
-					 * the last time it was reset.
+    hbool_t		  loaded;       /* entry has been loaded since the
+                                         * last time it was reset.
                                          */
-    hbool_t		  serialized;   /* entry has been serialized since the
+    hbool_t		  cleared;      /* entry has been cleared since the
+                                         * last time it was reset.
+                                         */
+    hbool_t		  flushed;      /* entry has been flushed since the
                                          * last time it was reset.
                                          */
     hbool_t               destroyed;    /* entry has been destroyed since the
                                          * last time it was reset.
                                          */
-    hbool_t 		  expunged;     /* entry has been expunged since the 
-                                         * last time it was reset.
-                                         */
-    int                   flush_dep_par_type; /* Entry type of flush dependency parent */
-    int                   flush_dep_par_idx; /* Index of flush dependency parent */
-    uint64_t              child_flush_dep_height_rc[H5C__NUM_FLUSH_DEP_HEIGHTS];
-                                        /* flush dependency heights of flush
-                                         * dependency children
-                                         */
-    unsigned              flush_dep_height; /* flush dependency height of entry */
-    hbool_t		  pinned_from_client;	/* entry was pinned by client call */
-    hbool_t		  pinned_from_cache;	/* entry was pinned by cache internally */
-    unsigned              flush_order;    /* Order that entry was flushed in */
+    int                 flush_dep_par_type[MAX_FLUSH_DEP_PARS]; /* Entry types of flush dependency parents */
+    int                 flush_dep_par_idx[MAX_FLUSH_DEP_PARS]; /* Indices of flush dependency parents */
+    unsigned            flush_dep_npar; /* Number of flush dependency parents */
+    unsigned            flush_dep_nchd; /* Number of flush dependency children */
+    unsigned            flush_dep_ndirty_chd; /* Number of dirty flush dependency children (including granchildren, etc.) */
+    hbool_t		pinned_from_client;	/* entry was pinned by client call */
+    hbool_t		pinned_from_cache;	/* entry was pinned by cache internally */
+    unsigned            flush_order;    /* Order that entry was flushed in */
 
     unsigned              notify_after_insert_count;    /* Count of times that entry was inserted in cache */
     unsigned              notify_before_evict_count;    /* Count of times that entry was removed in cache */
@@ -495,6 +474,9 @@ if ( ( (cache_ptr) == NULL ) ||                                        \
     (i).flash_threshold        = (e).flash_threshold;               \
     (i).decr_mode              = (e).decr_mode;                     \
     (i).upper_hr_threshold     = (e).upper_hr_threshold;            \
+    (i).flash_incr_mode        = (e).flash_incr_mode;               \
+    (i).flash_multiple         = (e).flash_multiple;                \
+    (i).flash_threshold        = (e).flash_threshold;               \
     (i).decrement              = (e).decrement;                     \
     (i).apply_max_decrement    = (e).apply_max_decrement;           \
     (i).max_decrement          = (e).max_decrement;                 \
@@ -511,22 +493,22 @@ struct expected_entry_status
     int			entry_type;
     int                 entry_index;
     size_t              size;
-    hbool_t		in_cache;
-    hbool_t             at_main_addr;
-    hbool_t		is_dirty;
-    hbool_t		is_protected;
-    hbool_t		is_pinned;
-    hbool_t		deserialized;
-    hbool_t		serialized;
-    hbool_t		destroyed;
-    int                 flush_dep_par_type; /* Entry type of flush dependency parent */
-    int                 flush_dep_par_idx; /* Index of flush dependency parent */
-    uint64_t            child_flush_dep_height_rc[H5C__NUM_FLUSH_DEP_HEIGHTS];
-                                        /* flush dependency heights of flush
-                                         * dependency children
-                                         */
-    unsigned            flush_dep_height; /* flush dependency height of entry */
+    unsigned char	in_cache;
+    unsigned char       at_main_addr;
+    unsigned char	is_dirty;
+    unsigned char	is_protected;
+    unsigned char	is_pinned;
+    unsigned char	loaded;
+    unsigned char	cleared;
+    unsigned char	flushed;
+    unsigned char	destroyed;
+    int                 flush_dep_par_type[MAX_FLUSH_DEP_PARS]; /* Entry types of flush dependency parents */
+    int                 flush_dep_par_idx[MAX_FLUSH_DEP_PARS]; /* Indices of flush dependency parents */
+    unsigned            flush_dep_npar; /* Number of flush dependency parents */
+    unsigned            flush_dep_nchd; /* Number of flush dependency children */
+    unsigned            flush_dep_ndirty_chd; /* Number of dirty flush dependency children */
     int                 flush_order;    /* flush order of entry */
+    unsigned char	is_corked;	/* cork status of entry */
 };
 
 
@@ -534,9 +516,12 @@ struct expected_entry_status
 
 /* global variable externs: */
 
-extern haddr_t saved_actual_base_addr;
+extern const char *FILENAME[3];
+
 extern hbool_t write_permitted;
 extern hbool_t pass; /* set to false on error */
+extern hbool_t skip_long_tests;
+extern hbool_t run_full_test;
 extern const char *failure_mssg;
 
 extern test_entry_t * entries[NUMBER_OF_ENTRY_TYPES];
@@ -617,6 +602,11 @@ void create_pinned_entry_dependency(H5F_t * file_ptr,
 
 void reset_entries(void);
 
+void cork_entry_type(H5F_t * file_ptr, int32_t type);
+void uncork_entry_type(H5F_t * file_ptr, int32_t type);
+
+
+
 void resize_entry(H5F_t * file_ptr,
                   int32_t type,
                   int32_t idx,
@@ -626,7 +616,6 @@ void resize_entry(H5F_t * file_ptr,
 H5F_t *setup_cache(size_t max_cache_size, size_t min_clean_size);
 
 void row_major_scan_forward(H5F_t * file_ptr,
-                            int32_t max_index,
                             int32_t lag,
                             hbool_t verbose,
                             hbool_t reset_stats,
@@ -649,7 +638,6 @@ void hl_row_major_scan_forward(H5F_t * file_ptr,
                                hbool_t do_inserts);
 
 void row_major_scan_backward(H5F_t * file_ptr,
-                             int32_t max_index,
                              int32_t lag,
                              hbool_t verbose,
                              hbool_t reset_stats,
@@ -672,7 +660,6 @@ void hl_row_major_scan_backward(H5F_t * file_ptr,
                                 hbool_t do_inserts);
 
 void col_major_scan_forward(H5F_t * file_ptr,
-                            int32_t max_index,
                             int32_t lag,
                             hbool_t verbose,
                             hbool_t reset_stats,
@@ -691,7 +678,6 @@ void hl_col_major_scan_forward(H5F_t * file_ptr,
                                int dirty_unprotects);
 
 void col_major_scan_backward(H5F_t * file_ptr,
-                             int32_t max_index,
                              int32_t lag,
                              hbool_t verbose,
                              hbool_t reset_stats,
@@ -767,11 +753,6 @@ void validate_mdc_config(hid_t file_id,
                          H5AC_cache_config_t * ext_config_ptr,
                          hbool_t compare_init,
                          int test_num);
-
-/** Debugging functions -- normally commented out ***/
-#if 0
-void dump_LRU(H5F_t * file_ptr);
-#endif 
 
 #endif /* _CACHE_COMMON_H */
 

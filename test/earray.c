@@ -160,26 +160,11 @@ typedef struct earray_test_t {
 /* Local prototypes */
 
 /* Metadata cache (H5AC) callbacks */
-
-static herr_t earray_cache_test_get_load_size(const void *udata_ptr,
-                                              size_t *image_len_ptr);
-
-static void *earray_cache_test_deserialize(const void *image_ptr,
-                                           size_t len,
-                                           void *udata_ptr,
-                                           hbool_t *dirty_ptr);
-
-static herr_t earray_cache_test_image_len(const void *thing,
-                                          size_t *image_len_ptr,
-                                          hbool_t *compressed_ptr,
-                                          size_t * compressed_len_ptr);
-
-static herr_t earray_cache_test_serialize(const H5F_t *f,
-                                          void *image_ptr,
-                                          size_t len,
-                                          void *thing);
-
-static herr_t earray_cache_test_free_icr(void *thing);
+static earray_test_t *earray_cache_test_load(H5F_t *f, hid_t dxpl_id, haddr_t addr, const void *udata, void *udata2);
+static herr_t earray_cache_test_flush(H5F_t *f, hid_t dxpl_id, hbool_t destroy, haddr_t addr, earray_test_t *test, unsigned * flags_ptr);
+static herr_t earray_cache_test_clear(H5F_t *f, earray_test_t *test, hbool_t destroy);
+static herr_t earray_cache_test_size(const H5F_t *f, const earray_test_t *test, size_t *size_ptr);
+static herr_t earray_cache_test_dest(H5F_t *f, earray_test_t *test);
 
 
 /* Local variables */
@@ -196,19 +181,13 @@ h5_stat_size_t empty_size_g;
 
 /* H5EA test object inherits cache-like properties from H5AC */
 const H5AC_class_t H5AC_EARRAY_TEST[1] = {{
-    /* id            */ H5AC_TEST_ID,
-    /* name          */ "earray test",
-    /* mem_type      */ H5FD_MEM_DEFAULT,
-    /* flags         */ H5AC__CLASS_NO_IO_FLAG,
-    /* get_load_size */ (H5AC_get_load_size_func_t)earray_cache_test_get_load_size,
-    /* deserialize   */ (H5AC_deserialize_func_t)earray_cache_test_deserialize,
-    /* image_len     */ (H5AC_image_len_func_t)earray_cache_test_image_len,
-    /* pre_serialize */ (H5AC_pre_serialize_func_t)NULL,
-    /* serialize     */ (H5AC_serialize_func_t)earray_cache_test_serialize,
-    /* notify        */ (H5AC_notify_func_t)NULL,
-    /* free_icr      */ (H5AC_free_icr_func_t)earray_cache_test_free_icr,
-    /* clear         */ NULL,
-    /* fsf_size      */ NULL,
+    H5AC_TEST_ID,
+    (H5AC_load_func_t)earray_cache_test_load,
+    (H5AC_flush_func_t)earray_cache_test_flush,
+    (H5AC_dest_func_t)earray_cache_test_dest,
+    (H5AC_clear_func_t)earray_cache_test_clear,
+    (H5AC_notify_func_t)NULL,
+    (H5AC_size_func_t)earray_cache_test_size,
 }};
 
 
@@ -332,10 +311,10 @@ finish_tparam(earray_test_param_t *tparam)
  *-------------------------------------------------------------------------
  */
 static int
-create_file(hid_t fapl, hid_t *file, H5F_t **f)
+create_file(unsigned flags, hid_t fapl, hid_t *file, H5F_t **f)
 {
     /* Create the file to work on */
-    if((*file = H5Fcreate(filename_g, H5F_ACC_TRUNC, H5P_DEFAULT, fapl)) < 0)
+    if((*file = H5Fcreate(filename_g, flags, H5P_DEFAULT, fapl)) < 0)
         FAIL_STACK_ERROR
 
     /* Get a pointer to the internal file object */
@@ -631,244 +610,196 @@ error:
 
 
 /*-------------------------------------------------------------------------
- * Function:    earray_cache_test_get_load_size()
+ * Function:	earray_cache_test_load
  *
- * Purpose: place holder function -- should never be called
+ * Purpose:	Loads an extensible array test object from the disk.
  *
+ * Return:	Success:	Pointer to a new extensible array test object
+ *		Failure:	NULL
  *
- *      A generic discussion of metadata cache callbacks of this type
- *      may be found in H5Cprivate.h:
- *
- * Return:      Success:        SUCCEED
- *              Failure:        FAIL
- *
- * Programmer:  John Mainzer
- *              8/2/14
+ * Programmer:	Quincey Koziol
+ *		koziol@hdfgroup.org
+ *		May 26 2009
  *
  *-------------------------------------------------------------------------
  */
-static herr_t
-earray_cache_test_get_load_size(const void *udata_ptr, size_t *image_len_ptr)
+static earray_test_t *
+earray_cache_test_load(H5F_t H5_ATTR_UNUSED *f, hid_t H5_ATTR_UNUSED dxpl_id, haddr_t H5_ATTR_UNUSED addr, const void H5_ATTR_UNUSED *udata1, void H5_ATTR_UNUSED *udata2)
 {
-    HDassert(udata_ptr);
-    HDassert(image_len_ptr);
-
-    /* Should never be called */
-    HDassert(0 && "Can't be called!");
-
-    *image_len_ptr = 0;
-
-    return(SUCCEED);
-
-} /* end earray_cache_test_get_load_size() */
-
-
-/*-------------------------------------------------------------------------
- * Function:    earray_cache_test_deserialize
- *
- * Purpose: place holder function -- should never be called.
- *
- *
- *      A generic discussion of metadata cache callbacks of this type
- *      may be found in H5Cprivate.h:
- *
- * Return:      Success:        Pointer to in core representation
- *              Failure:        NULL
- *
- * Programmer:  John Mainzer
- *              8/2/14
- *
- *-------------------------------------------------------------------------
- */
-static void *
-earray_cache_test_deserialize(const void *image_ptr,
-                              size_t len,
-                              void *udata_ptr,
-                              hbool_t *dirty_ptr)
-{
-    HDassert(image_ptr);
-    HDassert(len > 0 );
-    HDassert(udata_ptr);
-    HDassert(dirty_ptr);
-
+    /* Check arguments */
+    HDassert(f);
+    HDassert(H5F_addr_defined(addr));
 
     /* Should never be called */
     HDassert(0 && "Can't be called!");
 
     return(NULL);
-
-} /* end earray_cache_test_deserialize() */
+} /* end earray_cache_test_load() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    earray_cache_test_image_len
+ * Function:	earray_cache_test_flush
  *
- * Purpose: test code place holder function -- just set *image_len_ptr to 
- *	one.
+ * Purpose:	Flushes a dirty extensible array test object to disk.
  *
+ * Return:	Non-negative on success/Negative on failure
  *
- *      A generic discussion of metadata cache callbacks of this type
- *      may be found in H5Cprivate.h:
- *
- * Return:      Success:        SUCCEED
- *              Failure:        FAIL
- *
- * Programmer:  John Mainzer
- *              8/2/14
+ * Programmer:	Quincey Koziol
+ *		koziol@hdfgroup.org
+ *		May 26 2009
  *
  *-------------------------------------------------------------------------
  */
 static herr_t
-earray_cache_test_image_len(const void *thing, size_t *image_len_ptr,
-    hbool_t H5_ATTR_UNUSED * compressed_ptr, size_t H5_ATTR_UNUSED * compressed_len_ptr)
+earray_cache_test_flush(H5F_t H5_ATTR_UNUSED *f, hid_t H5_ATTR_UNUSED dxpl_id, hbool_t destroy, haddr_t H5_ATTR_UNUSED addr, earray_test_t *test, unsigned H5_ATTR_UNUSED * flags_ptr)
 {
-
-    HDassert(thing);
-    HDassert(image_len_ptr);
-
-    /* Set size value */
-    /* (hard-code to 1) */
-    *image_len_ptr = 1;
-
-    return(SUCCEED);
-
-} /* end earray_cache_test_image_len() */
-
-
-/********************************/
-/* no H5O_cache_pre_serialize() */
-/********************************/
-
-
-/*-------------------------------------------------------------------------
- * Function:    earray_cache_test_serialize
- *
- * Purpose: Validate the contents of the instance of earray_test_t.
- *
- *
- *      A generic discussion of metadata cache callbacks of this type
- *      may be found in H5Cprivate.h:
- *
- *
- * Return:      Success:        SUCCEED
- *              Failure:        FAIL
- *
- * Programmer:  John Mainzer
- *              8/2/14
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-earray_cache_test_serialize(const H5F_t *f,
-                            void *image_ptr,
-                            H5_ATTR_UNUSED size_t len,
-                            void *thing)
-{
-    earray_test_t *test = NULL;
-
+    /* check arguments */
     HDassert(f);
-    HDassert(image_ptr);
-    HDassert(thing);
-
-    test = (earray_test_t *)thing;
-
+    HDassert(H5F_addr_defined(addr));
     HDassert(test);
-    HDassert(test->cache_info.magic == H5C__H5C_CACHE_ENTRY_T_MAGIC);
-    HDassert((const H5AC_class_t *)(test->cache_info.type) == 
-             &(H5AC_EARRAY_TEST[0]));
 
-    /* Check for out of order flush */
-    if(test->fd_info->base_obj)
-        TEST_ERROR
-
-    /* Check which index this entry corresponds to */
-    if((uint64_t)0 == test->idx) {
+    if(test->cache_info.is_dirty) {
         /* Check for out of order flush */
-        if(test->fd_info->idx0_obj || test->fd_info->idx0_elem)
+        if(test->fd_info->base_obj)
             TEST_ERROR
 
-        /* Set flag for object flush */
-        test->fd_info->idx0_obj = TRUE;
-    } /* end if */
-    else if((uint64_t)1 == test->idx) {
-        /* Check for out of order flush */
-        if(test->fd_info->idx1_obj || test->fd_info->idx1_elem)
-            TEST_ERROR
+        /* Check which index this entry corresponds to */
+        if((uint64_t)0 == test->idx) {
+            /* Check for out of order flush */
+            if(test->fd_info->idx0_obj || test->fd_info->idx0_elem)
+                TEST_ERROR
 
-        /* Set flag for object flush */
-        test->fd_info->idx1_obj = TRUE;
-    } /* end if */
-    else if((uint64_t)10000 == test->idx) {
-        /* Check for out of order flush */
-        if(test->fd_info->idx10000_obj || test->fd_info->idx10000_elem)
-            TEST_ERROR
+            /* Set flag for object flush */
+            test->fd_info->idx0_obj = TRUE;
+        } /* end if */
+        else if((uint64_t)1 == test->idx) {
+            /* Check for out of order flush */
+            if(test->fd_info->idx1_obj || test->fd_info->idx1_elem)
+                TEST_ERROR
 
-        /* Set flag for object flush */
-        test->fd_info->idx10000_obj = TRUE;
+            /* Set flag for object flush */
+            test->fd_info->idx1_obj = TRUE;
+        } /* end if */
+        else if((uint64_t)10000 == test->idx) {
+            /* Check for out of order flush */
+            if(test->fd_info->idx10000_obj || test->fd_info->idx10000_elem)
+                TEST_ERROR
+
+            /* Set flag for object flush */
+            test->fd_info->idx10000_obj = TRUE;
+        } /* end if */
+        else if((uint64_t)-1 == test->idx) {
+            /* Set flag for object flush */
+            test->fd_info->base_obj = TRUE;
+        } /* end if */
+
+        /* Mark the entry as clean */
+	test->cache_info.is_dirty = FALSE;
     } /* end if */
-    else if((uint64_t)-1 == test->idx) {
-        /* Set flag for object flush */
-        test->fd_info->base_obj = TRUE;
-    } /* end if */
+
+    if(destroy)
+        if(earray_cache_test_dest(f, test) < 0)
+            TEST_ERROR
 
     return(SUCCEED);
 
 error:
-
     return(FAIL);
-
-} /* end earray_cache_test_serialize() */
-
-
-/******************************************/
-/* no earray_cache_test_notify() function */
-/******************************************/
+} /* earray_cache_test_flush() */
 
 
 /*-------------------------------------------------------------------------
- * Function:    earray_cache_test_free_icr
+ * Function:	earray_cache_test_dest
  *
- * Purpose: Destroy an extensible array test object in memory.
+ * Purpose:	Destroys an extensible array test object in memory.
  *
+ * Return:	Non-negative on success/Negative on failure
  *
- *      A generic discussion of metadata cache callbacks of this type
- *      may be found in H5Cprivate.h:
- *
- *
- * Return:      Success:        SUCCEED
- *              Failure:        FAIL
- *
- * Programmer:  John Mainzer
- *              8/2/14
+ * Programmer:	Quincey Koziol
+ *		koziol@hdfgroup.org
+ *		May 26 2009
  *
  *-------------------------------------------------------------------------
  */
-static herr_t
-earray_cache_test_free_icr(void *thing)
+herr_t
+earray_cache_test_dest(H5F_t H5_ATTR_UNUSED *f, earray_test_t *test)
 {
-    earray_test_t *test = NULL;
-
-    HDassert(thing);
-
-    test = (earray_test_t *)thing;
-
-    HDassert(test);
-
-    /* the metadata cache sets cache_info.magic to
-     * H5C__H5C_CACHE_ENTRY_T_BAD_MAGIC before calling the
-     * free_icr routine.  Hence the following assert:
+    /*
+     * Check arguments.
      */
-
-    HDassert(test->cache_info.magic == H5C__H5C_CACHE_ENTRY_T_BAD_MAGIC);
-    HDassert((const H5AC_class_t *)(test->cache_info.type) == 
-             &(H5AC_EARRAY_TEST[0]));
+    HDassert(test);
 
     /* Free the shared info itself */
     HDfree(test);
 
     return(SUCCEED);
+} /* end earray_cache_test_dest() */
 
-} /* end earray_cache_test_free_icr() */
+
+/*-------------------------------------------------------------------------
+ * Function:	earray_cache_test_clear
+ *
+ * Purpose:	Mark an extensible array test object in memory as non-dirty.
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Quincey Koziol
+ *		koziol@hdfgroup.org
+ *		May 26 2009
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+earray_cache_test_clear(H5F_t *f, earray_test_t *test, hbool_t destroy)
+{
+    /*
+     * Check arguments.
+     */
+    HDassert(test);
+
+    /* Reset the dirty flag.  */
+    test->cache_info.is_dirty = FALSE;
+
+    if(destroy)
+        if(earray_cache_test_dest(f, test) < 0)
+            TEST_ERROR
+
+    return(SUCCEED);
+
+error:
+    return(FAIL);
+} /* end earray_cache_test_clear() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	earray_cache_test_size
+ *
+ * Purpose:	Compute the size in bytes of an extensible array test object
+ *		on disk, and return it in *size_ptr.  On failure,
+ *		the value of *size_ptr is undefined.
+ *
+ * Return:	Non-negative on success/Negative on failure
+ *
+ * Programmer:	Quincey Koziol
+ *		koziol@hdfgroup.org
+ *		May 26 2009
+ *
+ *-------------------------------------------------------------------------
+ */
+static herr_t
+earray_cache_test_size(const H5F_t H5_ATTR_UNUSED *f, const earray_test_t H5_ATTR_UNUSED *test, size_t *size_ptr)
+{
+    /* check arguments */
+    HDassert(f);
+    HDassert(test);
+    HDassert(size_ptr);
+
+    /* Set size value */
+    /* (hard-code to 1) */
+    *size_ptr = 1;
+
+    return(SUCCEED);
+} /* earray_cache_test_size() */
 
 
 /*-------------------------------------------------------------------------
@@ -893,7 +824,7 @@ test_create(hid_t fapl, H5EA_create_t *cparam, earray_test_param_t H5_ATTR_UNUSE
     haddr_t     ea_addr = HADDR_UNDEF;  /* Array address in file */
 
     /* Create file & retrieve pointer to internal file object */
-    if(create_file(fapl, &file, &f) < 0)
+    if(create_file(H5F_ACC_TRUNC, fapl, &file, &f) < 0)
         TEST_ERROR
 
     /*
@@ -1115,7 +1046,7 @@ test_reopen(hid_t fapl, H5EA_create_t *cparam, earray_test_param_t *tparam)
     haddr_t     ea_addr = HADDR_UNDEF;  /* Array address in file */
 
     /* Create file & retrieve pointer to internal file object */
-    if(create_file(fapl, &file, &f) < 0)
+    if(create_file(H5F_ACC_TRUNC, fapl, &file, &f) < 0)
         TEST_ERROR
 
     /*
@@ -1188,7 +1119,7 @@ test_open_twice(hid_t fapl, H5EA_create_t *cparam, earray_test_param_t *tparam)
     haddr_t     ea_addr = HADDR_UNDEF;  /* Array address in file */
 
     /* Create file & retrieve pointer to internal file object */
-    if(create_file(fapl, &file, &f) < 0)
+    if(create_file(H5F_ACC_TRUNC, fapl, &file, &f) < 0)
         TEST_ERROR
 
     /*
@@ -1294,7 +1225,7 @@ test_delete_open(hid_t fapl, H5EA_create_t *cparam, earray_test_param_t *tparam)
     h5_stat_size_t file_size;           /* File size, after deleting array */
 
     /* Create file & retrieve pointer to internal file object */
-    if(create_file(fapl, &file, &f) < 0)
+    if(create_file(H5F_ACC_TRUNC, fapl, &file, &f) < 0)
         TEST_ERROR
 
     /*
@@ -1386,296 +1317,6 @@ error:
 
     return 1;
 } /* test_delete_open() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	test_flush_depend_cb
- *
- * Purpose:	Callback for flush dependency 'depend'/'undepend' and
- *		'support'/'unsupport' routines
- *
- * Return:	Success:	0
- *		Failure:	1
- *
- * Programmer:	Quincey Koziol
- *              Tuesday, May 26, 2009
- *
- *-------------------------------------------------------------------------
- */
-static herr_t
-test_flush_depend_cb(const void *_elmt, size_t nelmts, void *udata)
-{
-    earray_flush_depend_ctx_t *ctx = (earray_flush_depend_ctx_t *)udata;
-    const uint64_t *elmt = (const uint64_t *)_elmt;     /* Convenience pointer to native elements */
-
-    /* Check for out of order flush */
-    if(ctx->base_obj)
-        return(FAIL);
-
-    /* Look for magic values */
-    while(nelmts > 0) {
-        /* Check for elements of interest */
-        if((uint64_t)0 == *elmt) {
-            /* Check for out-of-order flush */
-            if(!ctx->idx0_obj)
-                return(FAIL);
-
-            /* Indicate that the element was flushed */
-            ctx->idx0_elem = TRUE;
-        } /* end if */
-        else if((uint64_t)1 == *elmt) {
-            /* Check for out-of-order flush */
-            if(!ctx->idx1_obj)
-                return(FAIL);
-
-            /* Indicate that the element was flushed */
-            ctx->idx1_elem = TRUE;
-        } /* end if */
-        else if((uint64_t)10000 == *elmt) {
-            /* Check for out-of-order flush */
-            if(!ctx->idx10000_obj)
-                return(FAIL);
-
-            /* Indicate that the element was flushed */
-            ctx->idx10000_elem = TRUE;
-        } /* end if */
-
-        /* Decrement elements left to inspect */
-        nelmts--;
-        elmt++;
-    } /* end while */
-
-    return(SUCCEED);
-} /* end test_flush_depend_cb() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	test_flush_depend
- *
- * Purpose:	Exercise flush dependency 'depend'/'undepend' routines
- *
- * Return:	Success:	0
- *		Failure:	1
- *
- * Programmer:	Quincey Koziol
- *              Thursday, May 21, 2009
- *
- *-------------------------------------------------------------------------
- */
-static unsigned
-test_flush_depend(hid_t fapl, H5EA_create_t *cparam, earray_test_param_t H5_ATTR_UNUSED *tparam)
-{
-    hid_t	file = -1;              /* File ID */
-    H5F_t	*f = NULL;              /* Internal file object pointer */
-    H5EA_t      *ea = NULL;             /* Extensible array wrapper */
-    haddr_t     ea_addr = HADDR_UNDEF;  /* Array address in file */
-    H5EA__ctx_cb_t cb;                  /* Extensible array context action info */
-    earray_flush_depend_ctx_t fd_info;  /* Context information for flush depend test */
-    haddr_t     base_addr;              /* Base test entry address */
-    earray_test_t *base_entry;          /* Pointer to base test entry */
-    haddr_t     addr1;                  /* Test entry #1 address */
-    earray_test_t *entry1;              /* Pointer to test entry #1 */
-    haddr_t     addr2;                  /* Test entry #2 address */
-    earray_test_t *entry2;              /* Pointer to test entry #2 */
-    haddr_t     addr3;                  /* Test entry #3 address */
-    earray_test_t *entry3;              /* Pointer to test entry #3 */
-    uint64_t    welmt;                  /* Element to write */
-    hsize_t     idx;                    /* Index value of element */
-
-    /* Create file & retrieve pointer to internal file object */
-    if(create_file(fapl, &file, &f) < 0)
-        TEST_ERROR
-
-    /*
-     * Display testing message
-     */
-    TESTING("flush dependencies on array metadata");
-
-    /* Create array */
-    cb.encode = test_flush_depend_cb;
-    HDmemset(&fd_info, 0, sizeof(earray_flush_depend_ctx_t));
-    cb.udata = &fd_info;
-    if(create_array(f, H5P_DATASET_XFER_DEFAULT, cparam, &ea, &ea_addr, &cb) < 0)
-        TEST_ERROR
-
-    /* Verify the creation parameters */
-    if(verify_cparam(ea, cparam) < 0)
-        TEST_ERROR
-
-    /* Create base entry to insert */
-    if(NULL == (base_entry = (earray_test_t *)HDmalloc(sizeof(earray_test_t))))
-        TEST_ERROR
-    HDmemset(base_entry, 0, sizeof(earray_test_t));
-    base_entry->idx = (uint64_t)-1;
-    base_entry->fd_info = &fd_info;
-
-    /* Insert test entry into cache */
-    base_addr = HADDR_MAX;
-    if(H5AC_insert_entry(f, H5P_DATASET_XFER_DEFAULT, H5AC_EARRAY_TEST, base_addr, base_entry, H5AC__PIN_ENTRY_FLAG) < 0)
-        TEST_ERROR
-
-    /* Set the base entry as a flush dependency for the array */
-    if(H5EA_depend((H5AC_info_t *)base_entry, ea) < 0)
-        TEST_ERROR
-
-    /* Create entry #1 to insert */
-    if(NULL == (entry1 = (earray_test_t *)HDmalloc(sizeof(earray_test_t))))
-        TEST_ERROR
-    HDmemset(entry1, 0, sizeof(earray_test_t));
-    entry1->fd_info = &fd_info;
-
-    /* Insert test entry into cache */
-    addr1 = HADDR_MAX - 1;
-    if(H5AC_insert_entry(f, H5P_DATASET_XFER_DEFAULT, H5AC_EARRAY_TEST, addr1, entry1, H5AC__PIN_ENTRY_FLAG) < 0)
-        TEST_ERROR
-
-    /* Set the test entry as a flush dependency for 0th index in the array */
-    if(H5EA_support(ea, H5P_DATASET_XFER_DEFAULT, (hsize_t)0, (H5AC_info_t *)entry1) < 0)
-        TEST_ERROR
-
-    /* Set element of array */
-    welmt = (uint64_t)0;
-    idx = 0;
-    if(H5EA_set(ea, H5P_DATASET_XFER_DEFAULT, idx, &welmt) < 0)
-        FAIL_STACK_ERROR
-
-    /* Create entry #2 to insert */
-    if(NULL == (entry2 = (earray_test_t *)HDmalloc(sizeof(earray_test_t))))
-        TEST_ERROR
-    HDmemset(entry2, 0, sizeof(earray_test_t));
-    entry2->idx = (uint64_t)1;
-    entry2->fd_info = &fd_info;
-
-    /* Insert test entry into cache */
-    addr2 = HADDR_MAX - 2;
-    if(H5AC_insert_entry(f, H5P_DATASET_XFER_DEFAULT, H5AC_EARRAY_TEST, addr2, entry2, H5AC__PIN_ENTRY_FLAG) < 0)
-        TEST_ERROR
-
-    /* Set the test entry as a flush dependency for 1st index in the array */
-    if(H5EA_support(ea, H5P_DATASET_XFER_DEFAULT, (hsize_t)1, (H5AC_info_t *)entry2) < 0)
-        TEST_ERROR
-
-    /* Set element of array */
-    welmt = (uint64_t)1;
-    idx = 1;
-    if(H5EA_set(ea, H5P_DATASET_XFER_DEFAULT, idx, &welmt) < 0)
-        FAIL_STACK_ERROR
-
-    /* Create entry #3 to insert */
-    if(NULL == (entry3 = (earray_test_t *)HDmalloc(sizeof(earray_test_t))))
-        TEST_ERROR
-    HDmemset(entry3, 0, sizeof(earray_test_t));
-    entry3->idx = (uint64_t)10000;
-    entry3->fd_info = &fd_info;
-
-    /* Insert test entry into cache */
-    addr3 = HADDR_MAX - 3;
-    if(H5AC_insert_entry(f, H5P_DATASET_XFER_DEFAULT, H5AC_EARRAY_TEST, addr3, entry3, H5AC__PIN_ENTRY_FLAG) < 0)
-        TEST_ERROR
-
-    /* Set the test entry as a flush dependency for 10,000th index in the array */
-    if(H5EA_support(ea, H5P_DATASET_XFER_DEFAULT, (hsize_t)10000, (H5AC_info_t *)entry3) < 0)
-        TEST_ERROR
-
-    /* Set element of array */
-    welmt = (uint64_t)10000;
-    idx = 10000;
-    if(H5EA_set(ea, H5P_DATASET_XFER_DEFAULT, idx, &welmt) < 0)
-        FAIL_STACK_ERROR
-
-
-    /* Flush the cache */
-    if(H5Fflush(file, H5F_SCOPE_GLOBAL) < 0)
-        TEST_ERROR
-
-    /* Check that all callback flags have been set */
-    if(!fd_info.base_obj)
-        TEST_ERROR
-    if(!fd_info.idx0_obj)
-        TEST_ERROR
-    if(!fd_info.idx0_elem)
-        TEST_ERROR
-    if(!fd_info.idx1_obj)
-        TEST_ERROR
-    if(!fd_info.idx1_elem)
-        TEST_ERROR
-    if(!fd_info.idx10000_obj)
-        TEST_ERROR
-    if(!fd_info.idx10000_elem)
-        TEST_ERROR
-
-
-    /* Remove the base entry as a flush dependency for the array */
-    if(H5EA_undepend((H5AC_info_t *)base_entry, ea) < 0)
-        TEST_ERROR
-
-    /* Protect the base entry */
-    if(NULL == (base_entry = (earray_test_t *)H5AC_protect(f, H5P_DATASET_XFER_DEFAULT, H5AC_EARRAY_TEST, base_addr, NULL, H5AC__NO_FLAGS_SET)))
-        TEST_ERROR
-
-    /* Unprotect & unpin the base entry */
-    if(H5AC_unprotect(f, H5P_DATASET_XFER_DEFAULT, H5AC_EARRAY_TEST, base_addr, base_entry, (H5AC__UNPIN_ENTRY_FLAG | H5AC__DELETED_FLAG)) < 0)
-        TEST_ERROR
-
-    /* Remove the test entry as a flush dependency for 0th index in the array */
-    if(H5EA_unsupport(ea, H5P_DATASET_XFER_DEFAULT, (hsize_t)0, (H5AC_info_t *)entry1) < 0)
-        TEST_ERROR
-
-    /* Protect the test entry */
-    if(NULL == (entry1 = (earray_test_t *)H5AC_protect(f, H5P_DATASET_XFER_DEFAULT, H5AC_EARRAY_TEST, addr1, NULL, H5AC__NO_FLAGS_SET)))
-        TEST_ERROR
-
-    /* Unprotect & unpin the test entry */
-    if(H5AC_unprotect(f, H5P_DATASET_XFER_DEFAULT, H5AC_EARRAY_TEST, addr1, entry1, (H5AC__UNPIN_ENTRY_FLAG | H5AC__DELETED_FLAG)) < 0)
-        TEST_ERROR
-
-    /* Remove the test entry as a flush dependency for 1st index in the array */
-    if(H5EA_unsupport(ea, H5P_DATASET_XFER_DEFAULT, (hsize_t)1, (H5AC_info_t *)entry2) < 0)
-        TEST_ERROR
-
-    /* Protect the test entry */
-    if(NULL == (entry2 = (earray_test_t *)H5AC_protect(f, H5P_DATASET_XFER_DEFAULT, H5AC_EARRAY_TEST, addr2, NULL, H5AC__NO_FLAGS_SET)))
-        TEST_ERROR
-
-    /* Unprotect & unpin the test entry */
-    if(H5AC_unprotect(f, H5P_DATASET_XFER_DEFAULT, H5AC_EARRAY_TEST, addr2, entry2, (H5AC__UNPIN_ENTRY_FLAG | H5AC__DELETED_FLAG)) < 0)
-        TEST_ERROR
-
-    /* Remove the test entry as a flush dependency for 10,000th index in the array */
-    if(H5EA_unsupport(ea, H5P_DATASET_XFER_DEFAULT, (hsize_t)10000, (H5AC_info_t *)entry3) < 0)
-        TEST_ERROR
-
-    /* Protect the test entry */
-    if(NULL == (entry3 = (earray_test_t *)H5AC_protect(f, H5P_DATASET_XFER_DEFAULT, H5AC_EARRAY_TEST, addr3, NULL, H5AC__NO_FLAGS_SET)))
-        TEST_ERROR
-
-    /* Unprotect & unpin the test entry */
-    if(H5AC_unprotect(f, H5P_DATASET_XFER_DEFAULT, H5AC_EARRAY_TEST, addr3, entry3, (H5AC__UNPIN_ENTRY_FLAG | H5AC__DELETED_FLAG)) < 0)
-        TEST_ERROR
-
-    /* Close the extensible array */
-    if(H5EA_close(ea, H5P_DATASET_XFER_DEFAULT) < 0)
-        FAIL_STACK_ERROR
-    ea = NULL;
-
-    /* Close the file */
-    if(H5Fclose(file) < 0)
-        FAIL_STACK_ERROR
-
-    /* All tests passed */
-    PASSED()
-
-    return 0;
-
-error:
-    H5E_BEGIN_TRY {
-        if(ea)
-            H5EA_close(ea, H5P_DATASET_XFER_DEFAULT);
-	H5Fclose(file);
-    } H5E_END_TRY;
-
-    return 1;
-} /* test_flush_depend() */
 
 /* Extensible array iterator info for forward iteration */
 typedef struct eiter_fw_t {
@@ -2537,7 +2178,7 @@ test_set_elmts(hid_t fapl, H5EA_create_t *cparam, earray_test_param_t *tparam,
     TESTING(test_str);
 
     /* Create file & retrieve pointer to internal file object */
-    if(create_file(fapl, &file, &f) < 0)
+    if(create_file(H5F_ACC_TRUNC, fapl, &file, &f) < 0)
         TEST_ERROR
 
     /* Create array */
@@ -2711,7 +2352,7 @@ test_skip_elmts(hid_t fapl, H5EA_create_t *cparam, earray_test_param_t *tparam,
     TESTING(test_str);
 
     /* Create file & retrieve pointer to internal file object */
-    if(create_file(fapl, &file, &f) < 0)
+    if(create_file(H5F_ACC_TRUNC, fapl, &file, &f) < 0)
         TEST_ERROR
 
     /* Create array */
@@ -2858,6 +2499,11 @@ main(void)
     unsigned	nerrors = 0;            /* Cumulative error count */
     time_t      curr_time;              /* Current time, for seeding random number generator */
     int		ExpressMode;            /* Test express value */
+    const char  *env_h5_drvr;      /* File Driver value from environment */
+
+    env_h5_drvr = HDgetenv("HDF5_DRIVER");
+    if(env_h5_drvr == NULL)
+        env_h5_drvr = "nomatch";
 
     /* Reset library */
     h5_reset();
@@ -2923,7 +2569,14 @@ main(void)
         nerrors += test_reopen(fapl, &cparam, &tparam);
         nerrors += test_open_twice(fapl, &cparam, &tparam);
         nerrors += test_delete_open(fapl, &cparam, &tparam);
-        nerrors += test_flush_depend(fapl, &cparam, &tparam);
+	/* 
+         *	nerrors += test_flush_depend(env_h5_drvr, fapl, &cparam, &tparam);
+	 * The test test_flush_depend() was removed with this checkin because chunk proxy for SWMR handling is
+	 * no longer used: chunk allocation is moved up to the chunk layer, data is written to the chunk before
+	 * inserting the chunk address into the index structure.
+	 * New tests will be written in the future to verify dependency within the index data structures and 
+	 * with the object header.
+	 */
 
         /* Iterate over the type of capacity tests */
         for(curr_iter = EARRAY_ITER_FW; curr_iter < EARRAY_ITER_NITERS; curr_iter++) {

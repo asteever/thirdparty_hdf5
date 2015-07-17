@@ -25,9 +25,6 @@
 #include "H5ACprivate.h"
 #include "cache_common.h"
 
-/* extern declarations */
-
-extern const char *FILENAME[];
 
 /* global variable declarations: */
 

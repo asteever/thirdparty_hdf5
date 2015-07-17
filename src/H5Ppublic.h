@@ -345,9 +345,14 @@ H5_DLL herr_t H5Pset_file_image_callbacks(hid_t fapl_id,
        H5FD_file_image_callbacks_t *callbacks_ptr);
 H5_DLL herr_t H5Pget_file_image_callbacks(hid_t fapl_id,
        H5FD_file_image_callbacks_t *callbacks_ptr);
-
 H5_DLL herr_t H5Pset_core_write_tracking(hid_t fapl_id, hbool_t is_enabled, size_t page_size);
 H5_DLL herr_t H5Pget_core_write_tracking(hid_t fapl_id, hbool_t *is_enabled, size_t *page_size);
+H5_DLL herr_t H5Pset_metadata_read_attempts(hid_t plist_id, unsigned attempts);
+H5_DLL herr_t H5Pget_metadata_read_attempts(hid_t plist_id, unsigned *attempts);
+H5_DLL herr_t H5Pset_object_flush_cb(hid_t plist_id, H5F_flush_cb_t func, void *udata);
+H5_DLL herr_t H5Pget_object_flush_cb(hid_t plist_id, H5F_flush_cb_t *func, void **udata);
+H5_DLL herr_t H5Pset_mdc_log_options(hid_t plist_id, hbool_t is_enabled, const char *location, hbool_t start_on_access);
+H5_DLL herr_t H5Pget_mdc_log_options(hid_t plist_id, hbool_t *is_enabled, char *location, size_t *location_size, hbool_t *start_on_access);
 
 /* Dataset creation property list (DCPL) routines */
 H5_DLL herr_t H5Pset_layout(hid_t plist_id, H5D_layout_t layout);
@@ -356,6 +361,8 @@ H5_DLL herr_t H5Pset_chunk(hid_t plist_id, int ndims, const hsize_t dim[/*ndims*
 H5_DLL int H5Pget_chunk(hid_t plist_id, int max_ndims, hsize_t dim[]/*out*/);
 H5_DLL herr_t H5Pset_external(hid_t plist_id, const char *name, off_t offset,
           hsize_t size);
+H5_DLL herr_t H5Pset_chunk_opts(hid_t plist_id, unsigned opts);
+H5_DLL herr_t H5Pget_chunk_opts(hid_t plist_id, unsigned *opts);
 H5_DLL int H5Pget_external_count(hid_t plist_id);
 H5_DLL herr_t H5Pget_external(hid_t plist_id, unsigned idx, size_t name_size,
           char *name/*out*/, off_t *offset/*out*/,
@@ -384,6 +391,10 @@ H5_DLL herr_t H5Pget_chunk_cache(hid_t dapl_id,
        size_t *rdcc_nslots/*out*/,
        size_t *rdcc_nbytes/*out*/,
        double *rdcc_w0/*out*/);
+H5_DLL herr_t H5Pset_append_flush(hid_t plist_id, 
+    int ndims, const hsize_t boundary[], H5D_append_cb_t func, void *udata);
+H5_DLL herr_t H5Pget_append_flush(hid_t plist_id, 
+    int dims, hsize_t boundary[], H5D_append_cb_t *func, void **udata);
 
 /* Dataset xfer property list (DXPL) routines */
 H5_DLL herr_t H5Pset_data_transform(hid_t plist_id, const char* expression);

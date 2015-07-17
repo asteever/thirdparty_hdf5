@@ -49,6 +49,39 @@ typedef herr_t (*H5VM_opvv_func_t)(hsize_t dst_off, hsize_t src_off,
 
 #define H5VM_vector_zero(N,DST) HDmemset(DST,0,(N)*sizeof(*(DST)))
 
+/* Given a coordinate offset array (COORDS) of type TYPE, move the unlimited
+ * dimension (UNLIM_DIM) value to offset 0, sliding any intermediate values down
+ * one position. */
+#define H5VM_swizzle_coords(TYPE,COORDS,UNLIM_DIM) {                            \
+    /* COORDS must be an array of type TYPE */                                 \
+    HDassert(sizeof(COORDS[0]) == sizeof(TYPE));                               \
+                                                                               \
+    /* Nothing to do when unlimited dimension is at position 0 */              \
+    if(0 != (UNLIM_DIM)) {                                                     \
+        TYPE _tmp = (COORDS)[UNLIM_DIM];                                       \
+                                                                               \
+        HDmemmove(&(COORDS)[1], &(COORDS)[0], sizeof(TYPE) * (UNLIM_DIM));     \
+        (COORDS)[0] = _tmp;                                                    \
+    } /* end if */                                                             \
+}
+
+/* Given a coordinate offset array (COORDS) of type TYPE, move the value at
+ * offset 0 to offset of the unlimied dimension (UNLIM_DIM), sliding any
+ * intermediate values up one position.  Undoes the "swizzle_coords" operation.
+ */
+#define H5VM_unswizzle_coords(TYPE,COORDS,UNLIM_DIM) {                          \
+    /* COORDS must be an array of type TYPE */                                 \
+    HDassert(sizeof(COORDS[0]) == sizeof(TYPE));                               \
+                                                                               \
+    /* Nothing to do when unlimited dimension is at position 0 */              \
+    if(0 != (UNLIM_DIM)) {                                                     \
+        TYPE _tmp = (COORDS)[0];                                               \
+                                                                               \
+        HDmemmove(&(COORDS)[0], &(COORDS)[1], sizeof(TYPE) * (UNLIM_DIM));     \
+        (COORDS)[UNLIM_DIM] = _tmp;                                            \
+    } /* end if */                                                             \
+}
+
 /* A null pointer is equivalent to a zero vector */
 #define H5VM_ZERO        NULL
 
@@ -125,7 +158,7 @@ H5_DLL ssize_t H5VM_memcpyvv(void *_dst,
  *
  *-------------------------------------------------------------------------
  */
-static H5_INLINE hsize_t H5_ATTR_UNUSED
+static H5_inline hsize_t H5_ATTR_UNUSED
 H5VM_vector_reduce_product(unsigned n, const hsize_t *v)
 {
     hsize_t                  ret_value = 1;
@@ -157,7 +190,7 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-static H5_INLINE htri_t H5_ATTR_UNUSED
+static H5_inline htri_t H5_ATTR_UNUSED
 H5VM_vector_zerop_u(int n, const hsize_t *v)
 {
     htri_t      ret_value=TRUE;       /* Return value */
@@ -192,7 +225,7 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-static H5_INLINE htri_t H5_ATTR_UNUSED
+static H5_inline htri_t H5_ATTR_UNUSED
 H5VM_vector_zerop_s(int n, const hssize_t *v)
 {
     htri_t      ret_value=TRUE;       /* Return value */
@@ -229,7 +262,7 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-static H5_INLINE int H5_ATTR_UNUSED
+static H5_inline int H5_ATTR_UNUSED
 H5VM_vector_cmp_u (unsigned n, const hsize_t *v1, const hsize_t *v2)
 {
     int ret_value=0;    /* Return value */
@@ -271,7 +304,7 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-static H5_INLINE int H5_ATTR_UNUSED
+static H5_inline int H5_ATTR_UNUSED
 H5VM_vector_cmp_s (unsigned n, const hssize_t *v1, const hssize_t *v2)
 {
     int ret_value=0;    /* Return value */
@@ -308,7 +341,7 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-static H5_INLINE void H5_ATTR_UNUSED
+static H5_inline void H5_ATTR_UNUSED
 H5VM_vector_inc(int n, hsize_t *v1, const hsize_t *v2)
 {
     while (n--) *v1++ += *v2++;
@@ -355,7 +388,7 @@ static const unsigned char LogTable256[] =
  *
  *-------------------------------------------------------------------------
  */
-static H5_INLINE unsigned H5_ATTR_UNUSED
+static H5_inline unsigned H5_ATTR_UNUSED
 H5VM_log2_gen(uint64_t n)
 {
     unsigned r;                         /* r will be log2(n) */
@@ -403,7 +436,7 @@ static const unsigned MultiplyDeBruijnBitPosition[32] =
  *
  *-------------------------------------------------------------------------
  */
-static H5_INLINE unsigned H5_ATTR_UNUSED
+static H5_inline unsigned H5_ATTR_UNUSED
 H5VM_log2_of2(uint32_t n)
 {
 #ifndef NDEBUG
@@ -424,7 +457,7 @@ H5VM_log2_of2(uint32_t n)
  *
  *-------------------------------------------------------------------------
  */
-static H5_INLINE hsize_t H5_ATTR_UNUSED
+static H5_inline hsize_t H5_ATTR_UNUSED
 H5VM_power2up(hsize_t n)
 {
     hsize_t     ret_value = 1;  /* Return value */
@@ -449,7 +482,7 @@ H5VM_power2up(hsize_t n)
  *
  *-------------------------------------------------------------------------
  */
-static H5_INLINE unsigned H5_ATTR_UNUSED
+static H5_inline unsigned H5_ATTR_UNUSED
 H5VM_limit_enc_size(uint64_t limit)
 {
     return (H5VM_log2_gen(limit) / 8) + 1;
@@ -478,7 +511,7 @@ static const unsigned char H5VM_bit_clear_g[8] = {0x7F, 0xBF, 0xDF, 0xEF, 0xF7, 
  *
  *-------------------------------------------------------------------------
  */
-static H5_INLINE hbool_t H5_ATTR_UNUSED
+static H5_inline hbool_t H5_ATTR_UNUSED
 H5VM_bit_get(const unsigned char *buf, size_t offset)
 {
     /* Test the appropriate bit in the buffer */
@@ -505,7 +538,7 @@ H5VM_bit_get(const unsigned char *buf, size_t offset)
  *
  *-------------------------------------------------------------------------
  */
-static H5_INLINE void H5_ATTR_UNUSED
+static H5_inline void H5_ATTR_UNUSED
 H5VM_bit_set(unsigned char *buf, size_t offset, hbool_t val)
 {
     /* Set/reset the appropriate bit in the buffer */
