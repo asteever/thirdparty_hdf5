@@ -28,7 +28,7 @@
 /* attribute type of a DS dataset */
 typedef struct ds_list_t {
  hobj_ref_t ref;     /* object reference  */
- unsigned int dim_idx; /* dimension index of the dataset */
+ int        dim_idx; /* dimension index of the dataset */
 } ds_list_t;
 
 
@@ -37,6 +37,8 @@ typedef struct ds_list_t {
  *-------------------------------------------------------------------------
  */
 
+H5_HLDLL herr_t  H5DS_is_reserved( hid_t did);
+H5_HLDLL hid_t H5DS_get_REFLIST_type(void);
 
 #endif
 

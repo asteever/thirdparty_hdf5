@@ -125,10 +125,12 @@ CONTAINS
     INTEGER         , INTENT(OUT)   :: hdferr
 !*****
     INTERFACE
-       INTEGER FUNCTION h5literate_c(group_id, index_type, order, idx, op, op_data) &
-            BIND(C, NAME='h5literate_c')
-         USE, INTRINSIC :: ISO_C_BINDING, ONLY : c_ptr, c_funptr
+       INTEGER FUNCTION h5literate_c(group_id, index_type, order, idx, op, op_data)
+         USE, INTRINSIC :: ISO_C_BINDING
          USE H5GLOBAL
+         !DEC$IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5LITERATE_C'::h5literate_c
+         !DEC$ENDIF
          INTEGER(HID_T), INTENT(IN) :: group_id
          INTEGER, INTENT(IN) :: index_type
          INTEGER, INTENT(IN) :: order
@@ -190,8 +192,7 @@ CONTAINS
 !  Augest 18, 2008
 !
 ! Fortran2003 Interface:
-  SUBROUTINE h5literate_by_name_f(loc_id, group_name, index_type, order, &
-       idx, op, op_data, return_value, hdferr, lapl_id)
+  SUBROUTINE h5literate_by_name_f(loc_id, group_name, index_type, order, idx, op, op_data, return_value, hdferr, lapl_id)
     USE, INTRINSIC :: ISO_C_BINDING
     IMPLICIT NONE
     INTEGER(HID_T)  , INTENT(IN)           :: loc_id
@@ -209,12 +210,14 @@ CONTAINS
     INTEGER(SIZE_T) :: namelen
 
     INTERFACE
-       INTEGER FUNCTION h5literate_by_name_c(loc_id, name, namelen, index_type, order,&
-            idx, op, op_data, lapl_id_default) BIND(C, NAME='h5literate_by_name_c')
-         USE, INTRINSIC :: ISO_C_BINDING, ONLY : c_char, c_ptr, c_funptr
+       INTEGER FUNCTION  h5literate_by_name_c(loc_id, name, namelen, index_type, order, idx, op, op_data, lapl_id_default)
+         USE, INTRINSIC :: ISO_C_BINDING
          USE H5GLOBAL
+         !DEC$IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5LITERATE_BY_NAME_C'::h5literate_by_name_c
+         !DEC$ENDIF
          INTEGER(HID_T)  , INTENT(IN) :: loc_id
-         CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN) :: name
+         CHARACTER(LEN=*), INTENT(IN) :: name
          INTEGER(SIZE_T) , INTENT(IN) :: namelen
          INTEGER         , INTENT(IN) :: index_type
          INTEGER         , INTENT(IN) :: order

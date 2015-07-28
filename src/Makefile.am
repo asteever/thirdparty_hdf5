@@ -42,11 +42,9 @@ DISTCLEANFILES=H5pubconf.h
 # library sources
 libhdf5_la_SOURCES= H5.c H5checksum.c H5dbg.c H5system.c H5timer.c H5trace.c \
         H5A.c H5Abtree2.c H5Adense.c H5Adeprec.c H5Aint.c H5Atest.c \
-        H5AC.c H5ACmpio.c \
-        H5B.c H5Bcache.c H5Bdbg.c \
+        H5AC.c H5B.c H5Bcache.c H5Bdbg.c \
         H5B2.c H5B2cache.c H5B2dbg.c H5B2hdr.c H5B2int.c H5B2stat.c H5B2test.c \
-        H5C.c H5Cmpio.c \
-        H5CS.c \
+        H5C.c H5CS.c \
         H5D.c H5Dbtree.c H5Dchunk.c H5Dcompact.c H5Dcontig.c H5Ddbg.c \
         H5Ddeprec.c H5Defl.c H5Dfill.c H5Dint.c \
         H5Dio.c H5Dlayout.c \
@@ -60,9 +58,14 @@ libhdf5_la_SOURCES= H5.c H5checksum.c H5dbg.c H5system.c H5timer.c H5trace.c \
         H5Fsfile.c H5Fsuper.c H5Fsuper_cache.c H5Ftest.c \
         H5FA.c H5FAcache.c H5FAdbg.c H5FAdblock.c H5FAdblkpage.c H5FAhdr.c \
         H5FAstat.c H5FAtest.c \
+        H5VL.c H5VLint.c H5VLnative.c \
+        H5VLiod.c H5VLiod_props.c H5VLiod_common.c H5VLiod_client.c H5VLiod_server.c H5VLiod_encdec.c H5VLiod_util.c \
+        H5VLiod_file.c H5VLiod_group.c H5VLiod_map.c H5VLiod_dset.c H5VLiod_dtype.c H5VLiod_index.c \
+        H5VLiod_attr.c H5VLiod_link.c H5VLiod_obj.c H5VLiod_trans.c H5VLiod_view.c H5VLiod_analysis.c \
         H5FD.c H5FDcore.c  \
         H5FDdirect.c H5FDfamily.c H5FDint.c H5FDlog.c H5FDmpi.c H5FDmpio.c \
         H5FDmulti.c H5FDsec2.c H5FDspace.c H5FDstdio.c \
+        H5FF.c H5ES.c H5RC.c H5TR.c H5M.c H5AS.c H5V.c\
         H5FL.c H5FO.c H5FS.c H5FScache.c H5FSdbg.c H5FSsection.c H5FSstat.c H5FStest.c \
         H5G.c H5Gbtree2.c H5Gcache.c \
         H5Gcompact.c H5Gdense.c H5Gdeprec.c H5Gent.c \
@@ -87,11 +90,13 @@ libhdf5_la_SOURCES= H5.c H5checksum.c H5dbg.c H5system.c H5timer.c H5trace.c \
         H5Osdspace.c H5Oshared.c H5Ostab.c \
         H5Oshmesg.c H5Otest.c H5Ounknown.c \
         H5P.c H5Pacpl.c H5Pdapl.c H5Pdcpl.c \
+        H5Pxapl.c H5Pxcpl.c H5Pxxpl.c H5X.c H5Xdummy.c H5Xalacrity.c H5Xfastbit.c \
         H5Pdeprec.c H5Pdxpl.c H5Pencdec.c \
         H5Pfapl.c H5Pfcpl.c H5Pfmpl.c \
-        H5Pgcpl.c H5Pint.c \
+        H5Pgcpl.c H5Pvcpl.c H5Pmcpl.c H5Pmapl.c H5Pint.c H5Prcapl.c H5Ptrspl.c H5Ptrfpl.c \
         H5Plapl.c H5Plcpl.c H5Pocpl.c H5Pocpypl.c H5Pstrcpl.c H5Ptest.c \
         H5PL.c \
+        H5Q.c \
         H5R.c H5Rdeprec.c \
         H5UC.c \
         H5RS.c \
@@ -119,9 +124,13 @@ include_HEADERS = hdf5.h H5api_adpt.h H5overflow.h H5pubconf.h H5public.h H5vers
         H5FDpublic.h H5FDcore.h H5FDdirect.h \
 	H5FDfamily.h H5FDlog.h H5FDmpi.h H5FDmpio.h \
         H5FDmulti.h H5FDsec2.h  H5FDstdio.h \
+        H5VLpublic.h H5VLnative.h H5VLiod.h \
+        H5FFpublic.h H5ESpublic.h H5RCpublic.h H5TRpublic.h \
+        H5Mpublic.h H5ASpublic.h H5Vpublic.h H5Xpublic.h\
         H5Gpublic.h  H5Ipublic.h H5Lpublic.h \
         H5MMpublic.h H5Opublic.h H5Ppublic.h \
-        H5PLextern.h H5PLpublic.h \
+        H5PLextern.h \
+        H5Qpublic.h \
         H5Rpublic.h H5Spublic.h \
         H5Tpublic.h H5Zpublic.h
 

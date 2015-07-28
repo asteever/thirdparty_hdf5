@@ -40,7 +40,7 @@ static const char *FileHeader = "\n\
  *		Livermore National Laboratory.
  *
  *		Detects machine byte order and floating point
- *		format and generates a C source file (H5Tinit.c)
+ *		format and generates a C source file (native.c)
  *		to describe those paramters.
  *
  * Assumptions: We have an ANSI compiler.  We're on a Unix like
@@ -73,7 +73,7 @@ static const char *FileHeader = "\n\
 #define H5JMP_BUF	sigjmp_buf
 #define H5SETJMP(buf)	HDsigsetjmp(buf, 1)
 #define H5LONGJMP(buf, val)	HDsiglongjmp(buf, val)
-#define H5HAVE_SIGJMP		/* sigsetjmp/siglongjmp are supported. */
+#define H5HAVE_SIGJMP		# sigsetjmp/siglongjmp are supported.
 #elif defined(H5_HAVE_LONGJMP)
 #define H5JMP_BUF	jmp_buf
 #define H5SETJMP(buf)	HDsetjmp(buf)
@@ -90,41 +90,41 @@ static const char *FileHeader = "\n\
  * was detected.
  */
 typedef struct detected_t {
-    const char *varname;
-    unsigned int size;                  /* total byte size                  */
-    unsigned int precision;             /* meaningful bits                  */
-    unsigned int offset;                /* bit offset to meaningful bits    */
-    int perm[32];                       /* for detection of byte order      */
-    hbool_t is_vax;                     /* for vax (float & double) only    */
-    unsigned int sign;                  /* location of sign bit             */
-    unsigned int mpos, msize, imp;      /* information about mantissa       */
-    unsigned int epos, esize;           /* information about exponent       */
-    unsigned long bias;                 /* exponent bias for floating pt    */
-    unsigned int align;                 /* required byte alignment          */
-    unsigned int comp_align;            /* alignment for structure          */
+    const char		*varname;
+    int			size;		/*total byte size		*/
+    int			precision;	/*meaningful bits		*/
+    int			offset;		/*bit offset to meaningful bits	*/
+    int			perm[32];	/*for detection of byte order	*/
+    int                 is_vax;         /*for vax (float & double) only */
+    int			sign;		/*location of sign bit		*/
+    int			mpos, msize, imp;/*information about mantissa	*/
+    int			epos, esize;	/*information about exponent	*/
+    unsigned long	bias;		/*exponent bias for floating pt.*/
+    size_t		align;		/*required byte alignment	*/
+    size_t		comp_align;	/*alignment for structure       */
 } detected_t;
 
 /* This structure holds structure alignment for pointers, hvl_t, hobj_ref_t,
  * hdset_reg_ref_t */
 typedef struct malign_t {
     const char          *name;
-    unsigned int         comp_align;    /* alignment for structure          */
+    size_t              comp_align;         /*alignment for structure   */
 } malign_t;
 
 /* global variables types detection code */
-H5_GCC_DIAG_OFF(larger-than=)
-static detected_t d_g[MAXDETECT];
-H5_GCC_DIAG_ON(larger-than=)
-static malign_t m_g[MAXDETECT];
-static volatile int nd_g = 0, na_g = 0;
+static detected_t	d_g[MAXDETECT];
+static malign_t        m_g[MAXDETECT];
+static volatile int	nd_g = 0, na_g = 0;
 
 static void print_results(int nd, detected_t *d, int na, malign_t *m);
 static void iprint(detected_t *);
 static int byte_cmp(int, const void *, const void *, const unsigned char *);
-static unsigned int bit_cmp(unsigned int, int *, void *, void *, const unsigned char *);
+static int bit_cmp(int, int *, volatile void *, volatile void *,
+    const unsigned char *);
 static void fix_order(int, int, int *, const char **);
-static unsigned int imp_bit(unsigned int, int *, void *, void *, const unsigned char *);
-static unsigned int find_bias(unsigned int, unsigned int, int *, void *);
+static int imp_bit(int, int *, volatile void *, volatile void *,
+    const unsigned char *);
+static unsigned long find_bias(int, int, int *, volatile void *);
 static void precision (detected_t*);
 static void print_header(void);
 static void detect_C89_integers(void);
@@ -136,7 +136,7 @@ static void detect_C99_integers16(void);
 static void detect_C99_integers32(void);
 static void detect_C99_integers64(void);
 static void detect_alignments(void);
-static unsigned int align_g[] = {1, 2, 4, 8, 16};
+static size_t align_g[] = {1, 2, 4, 8, 16};
 static int align_status_g = 0;		/* ALIGNMENT Signal Status */
 static int sigbus_handler_called_g = 0;	/* how many times called */
 static int sigsegv_handler_called_g = 0;/* how many times called */
@@ -167,41 +167,39 @@ static H5JMP_BUF jbuf_g;
 static void
 precision (detected_t *d)
 {
-    unsigned int n;
+    int		n;
 
-    if (0 == d->msize) {
-        /*
-         * An integer.	The permutation can have negative values at the
-         * beginning or end which represent padding of bytes.  We must adjust
-         * the precision and offset accordingly.
-         */
-        if (d->perm[0] < 0) {
-            /*
-             * Lower addresses are padded.
-             */
-            for (n = 0; n < d->size && d->perm[n] < 0; n++)
-                /*void*/;
-            d->precision = 8 * (d->size - n);
-            d->offset = 0;
-        } else if (d->perm[d->size - 1] < 0) {
-            /*
-             * Higher addresses are padded.
-             */
-            for (n = 0; n < d->size && d->perm[d->size - (n + 1)]; n++)
-                /*void*/;
-            d->precision = 8 * (d->size - n);
-            d->offset = 8 * n;
-        } else {
-            /*
-             * No padding.
-             */
-            d->precision = 8 * d->size;
-            d->offset = 0;
-        }
+    if (0==d->msize) {
+	/*
+	 * An integer.	The permutation can have negative values at the
+	 * beginning or end which represent padding of bytes.  We must adjust
+	 * the precision and offset accordingly.
+	 */
+	if (d->perm[0] < 0) {
+	    /*
+	     * Lower addresses are padded.
+	     */
+	    for (n=0; n<d->size && d->perm[n]<0; n++) /*void*/;
+	    d->precision = 8*(d->size-n);
+	    d->offset = 0;
+	} else if (d->perm[d->size - 1] < 0) {
+	    /*
+	     * Higher addresses are padded.
+	     */
+	    for (n=0; n<d->size && d->perm[d->size-(n+1)]; n++) /*void*/;
+	    d->precision = 8*(d->size-n);
+	    d->offset = 8*n;
+	} else {
+	    /*
+	     * No padding.
+	     */
+	    d->precision = 8*d->size;
+	    d->offset = 0;
+	}
     } else {
-        /* A floating point */
-        d->offset = MIN3(d->mpos, d->epos, d->sign);
-        d->precision = d->msize + d->esize + 1;
+	/* A floating point */
+	d->offset = MIN3 (d->mpos, d->epos, d->sign);
+	d->precision = d->msize + d->esize + 1;
     }
 }
 
@@ -253,8 +251,7 @@ precision (detected_t *d)
     INFO.size = sizeof(TYPE);                                                 \
                                                                               \
     for(_i = sizeof(DETECT_TYPE), _v = 0; _i > 0; --_i)                       \
-        _v = (DETECT_TYPE) ((DETECT_TYPE) (_v << 8) + (DETECT_TYPE) _i);      \
-                                                                              \
+        _v = (_v << 8) + _i;                                                  \
     for(_i = 0, _x = (unsigned char *)&_v; _i < (signed)sizeof(DETECT_TYPE); _i++) { \
         _j = (*_x++) - 1;                                                     \
         HDassert(_j < (signed)sizeof(DETECT_TYPE));                           \
@@ -293,6 +290,9 @@ precision (detected_t *d)
  *		absence of implicit mantissa bit, and exponent bias and
  *		initializes a detected_t structure with those properties.
  *
+ * Note:	'volatile' is used for the variables below to prevent the
+ *		compiler from optimizing them away.
+ *
  * Return:	void
  *
  * Programmer:	Robb Matzke
@@ -302,12 +302,12 @@ precision (detected_t *d)
  *-------------------------------------------------------------------------
  */
 #define DETECT_F(TYPE,VAR,INFO) {                                             \
-    TYPE _v1, _v2, _v3;                                                       \
+    volatile TYPE _v1, _v2, _v3;                                              \
     unsigned char _buf1[sizeof(TYPE)], _buf3[sizeof(TYPE)];                   \
     unsigned char _pad_mask[sizeof(TYPE)];                                    \
     unsigned char _byte_mask;                                                 \
     int _i, _j, _last = (-1);                                                 \
-    const char *_mesg;                                                        \
+    char *_mesg;                                                              \
                                                                               \
     HDmemset(&INFO, 0, sizeof(INFO));                                         \
     INFO.varname = #VAR;                                                      \
@@ -323,24 +323,22 @@ precision (detected_t *d)
      * steps).  This is necessary because padding bits can change arbitrarily \
      * and interfere with detection of the various properties below unless we \
      * know to ignore them. */                                                \
-    _v1 = (TYPE)4.0L;                                                         \
+    _v1 = 4.0;                                                                \
     HDmemcpy(_buf1, (const void *)&_v1, sizeof(TYPE));                        \
     for(_i = 0; _i < (int)sizeof(TYPE); _i++)                                 \
-        for(_byte_mask = (unsigned char)1; _byte_mask; _byte_mask = (unsigned char) (_byte_mask << 1)) {    \
+        for(_byte_mask = (unsigned char)1; _byte_mask; _byte_mask <<= 1) {    \
             _buf1[_i] ^= _byte_mask;                                          \
             HDmemcpy((void *)&_v2, (const void *)_buf1, sizeof(TYPE));        \
-            H5_GCC_DIAG_OFF(float-equal)                                      \
             if(_v1 != _v2)                                                    \
                 _pad_mask[_i] |= _byte_mask;                                  \
-            H5_GCC_DIAG_ON(float-equal)                                       \
             _buf1[_i] ^= _byte_mask;                                          \
         } /* end for */                                                       \
                                                                               \
     /* Byte Order */                                                          \
-    for(_i = 0, _v1 = (TYPE)0.0L, _v2 = (TYPE)1.0L; _i < (int)sizeof(TYPE); _i++) {         \
+    for(_i = 0, _v1 = 0.0, _v2 = 1.0; _i < (int)sizeof(TYPE); _i++) {         \
         _v3 = _v1;                                                            \
         _v1 += _v2;                                                           \
-        _v2 /= (TYPE)256.0L;                                                  \
+        _v2 /= 256.0;                                                         \
         HDmemcpy(_buf1, (const void *)&_v1, sizeof(TYPE));                    \
         HDmemcpy(_buf3, (const void *)&_v3, sizeof(TYPE));                    \
         _j = byte_cmp(sizeof(TYPE), _buf3, _buf1, _pad_mask);                 \
@@ -355,29 +353,29 @@ precision (detected_t *d)
         INFO.is_vax = TRUE;                                                   \
                                                                               \
     /* Implicit mantissa bit */                                               \
-    _v1 = (TYPE)0.5L;                                                         \
-    _v2 = (TYPE)1.0L;                                                         \
+    _v1 = 0.5;                                                                \
+    _v2 = 1.0;                                                                \
     INFO.imp = imp_bit (sizeof(TYPE), INFO.perm, &_v1, &_v2, _pad_mask);      \
                                                                               \
     /* Sign bit */                                                            \
-    _v1 = (TYPE)1.0L;                                                         \
-    _v2 = (TYPE)-1.0L;                                                        \
+    _v1 = 1.0;                                                                \
+    _v2 = -1.0;                                                               \
     INFO.sign = bit_cmp (sizeof(TYPE), INFO.perm, &_v1, &_v2, _pad_mask);     \
                                                                               \
     /* Mantissa */                                                            \
     INFO.mpos = 0;                                                            \
                                                                               \
-    _v1 = (TYPE)1.0L;                                                         \
-    _v2 = (TYPE)1.5L;                                                         \
+    _v1 = 1.0;                                                                \
+    _v2 = 1.5;                                                                \
     INFO.msize = bit_cmp (sizeof(TYPE), INFO.perm, &_v1, &_v2, _pad_mask);    \
-    INFO.msize += 1 + (unsigned int) (INFO.imp ? 0 : 1) - INFO.mpos;          \
+    INFO.msize += 1 + (INFO.imp?0:1) - INFO.mpos;                             \
                                                                               \
     /* Exponent */                                                            \
     INFO.epos = INFO.mpos + INFO.msize;                                       \
                                                                               \
     INFO.esize = INFO.sign - INFO.epos;                                       \
                                                                               \
-    _v1 = (TYPE)1.0L;                                                         \
+    _v1 = 1.0;                                                                \
     INFO.bias = find_bias (INFO.epos, INFO.esize, INFO.perm, &_v1);           \
     precision (&(INFO));                                                      \
     ALIGNMENT(TYPE, INFO);                                                    \
@@ -417,13 +415,14 @@ precision (detected_t *d)
         TYPE    x;                                                            \
     } s;                                                                      \
                                                                               \
-    COMP_ALIGN = (unsigned int)((char*)(&(s.x)) - (char*)(&s));               \
+    COMP_ALIGN = (size_t)((char*)(&(s.x)) - (char*)(&s));                     \
 }
 
 #if defined(H5SETJMP) && defined(H5_HAVE_SIGNAL)
 #define ALIGNMENT(TYPE,INFO) {						      \
-    char *volatile _buf = NULL;   					      \
-    TYPE _val = 1, _val2;						      \
+    char		*volatile _buf = NULL;				      \
+    volatile TYPE	_val = 1;						      \
+    volatile TYPE	_val2;						      \
     volatile size_t	_ano = 0;					      \
     void		(*_handler)(int) = HDsignal(SIGBUS, sigbus_handler);  \
     void		(*_handler2)(int) = HDsignal(SIGSEGV, sigsegv_handler);\
@@ -446,10 +445,8 @@ precision (detected_t *d)
 	else /* Little-Endian */					      \
 	    HDmemcpy(_buf+align_g[_ano]+(INFO.offset/8),((char *)&_val)+(INFO.offset/8),(size_t)(INFO.precision/8)); \
 	_val2 = *((TYPE*)(_buf+align_g[_ano]));				      \
-    H5_GCC_DIAG_OFF(float-equal)					      \
 	if(_val!=_val2)							      \
 	    H5LONGJMP(jbuf_g, 1);		        		      \
-    H5_GCC_DIAG_ON(float-equal) 					      \
 	/* End Cray Check */						      \
 	(INFO.align)=align_g[_ano];					      \
     } else {								      \
@@ -488,7 +485,7 @@ precision (detected_t *d)
  *-------------------------------------------------------------------------
  */
 static void
-sigsegv_handler(int H5_ATTR_UNUSED signo)
+sigsegv_handler(int UNUSED signo)
 {
 #if !defined(H5HAVE_SIGJMP) && defined(H5_HAVE_SIGPROCMASK)
     /* Use sigprocmask to unblock the signal if sigsetjmp/siglongjmp are not */
@@ -526,7 +523,7 @@ sigsegv_handler(int H5_ATTR_UNUSED signo)
  *-------------------------------------------------------------------------
  */
 static void
-sigbus_handler(int H5_ATTR_UNUSED signo)
+sigbus_handler(int UNUSED signo)
 {
 #if !defined(H5HAVE_SIGJMP) && defined(H5_HAVE_SIGPROCMASK)
     /* Use sigprocmask to unblock the signal if sigsetjmp/siglongjmp are not */
@@ -562,7 +559,7 @@ sigbus_handler(int H5_ATTR_UNUSED signo)
  *-------------------------------------------------------------------------
  */
 static void
-sigill_handler(int H5_ATTR_UNUSED signo)
+sigill_handler(int UNUSED signo)
 {
 #if !defined(H5HAVE_SIGJMP) && defined(H5_HAVE_SIGPROCMASK)
     /* Use sigprocmask to unblock the signal if sigsetjmp/siglongjmp are not */
@@ -861,7 +858,6 @@ done:\n\
     printf("/* signal_handlers tested: %d times */\n", signal_handler_tested_g);
     printf("/* sigbus_handler called: %d times */\n", sigbus_handler_called_g);
     printf("/* sigsegv_handler called: %d times */\n", sigsegv_handler_called_g);
-    printf("/* sigill_handler called: %d times */\n", sigill_handler_called_g);
 } /* end print_results() */
 
 
@@ -884,69 +880,63 @@ done:\n\
 static void
 iprint(detected_t *d)
 {
-    unsigned int pass;
+    int		i, j, k, pass;
 
-    for (pass = (d->size - 1) / 4; ; --pass) {
-        unsigned int i, k;
-        /*
-         * Print the byte ordering above the bit fields.
-         */
-        printf("    * ");
-        for (i = MIN(pass * 4 + 3, d->size - 1); i >= pass * 4; --i) {
-            printf("%4d", d->perm[i]);
-            if (i > pass * 4) HDfputs("     ", stdout);
-            if (!i) break;
-        }
+    for (pass=(d->size-1)/4; pass>=0; --pass) {
+	/*
+	 * Print the byte ordering above the bit fields.
+	 */
+	printf("    * ");
+	for (i=MIN(pass*4+3,d->size-1); i>=pass*4; --i) {
+	    printf ("%4d", d->perm[i]);
+	    if (i>pass*4) HDfputs ("     ", stdout);
+	}
 
-        /*
-         * Print the bit fields
-         */
-        printf("\n    * ");
-        for (i = MIN(pass * 4 + 3, d->size - 1), k = MIN(pass * 32 + 31,
-                8 * d->size - 1); i >= pass * 4; --i) {
-            unsigned int j;
-
-            for (j = 8; j > 0; --j) {
-                if (k == d->sign && d->msize) {
-                    HDputchar('S');
-                } else if (k >= d->epos && k < d->epos + d->esize) {
-                    HDputchar('E');
-                } else if (k >= d->mpos && k < d->mpos + d->msize) {
-                    HDputchar('M');
-                } else if (d->msize) {
-                    HDputchar('?'); /*unknown floating point bit */
-                } else if (d->sign) {
-                    HDputchar('I');
-                } else {
-                    HDputchar('U');
-                }
-                --k;
-            }
-            if (i > pass * 4) HDputchar(' ');
-            if (!i) break;
-        }
-        HDputchar('\n');
-        if (!pass) break;
+	/*
+	 * Print the bit fields
+	 */
+	printf("\n    * ");
+	for (i=MIN(pass*4+3,d->size-1),
+	     k=MIN(pass*32+31,8*d->size-1);
+	     i>=pass*4; --i) {
+	    for (j=7; j>=0; --j) {
+		if (k==d->sign && d->msize) {
+		    HDputchar('S');
+		} else if (k>=d->epos && k<d->epos+d->esize) {
+		    HDputchar('E');
+		} else if (k>=d->mpos && k<d->mpos+d->msize) {
+		    HDputchar('M');
+		} else if (d->msize) {
+		    HDputchar('?');   /*unknown floating point bit */
+		} else if (d->sign) {
+		    HDputchar('I');
+		} else {
+		    HDputchar('U');
+		}
+		--k;
+	    }
+	    if (i>pass*4) HDputchar(' ');
+	}
+	HDputchar('\n');
     }
 
     /*
      * Is there an implicit bit in the mantissa.
      */
     if (d->msize) {
-        printf("    * Implicit bit? %s\n", d->imp ? "yes" : "no");
+	printf("    * Implicit bit? %s\n", d->imp ? "yes" : "no");
     }
 
     /*
      * Alignment
      */
-    if (0 == d->align) {
-        printf("    * Alignment: NOT CALCULATED\n");
-    } else if (1 == d->align) {
-        printf("    * Alignment: none\n");
+    if (0==d->align) {
+	printf("    * Alignment: NOT CALCULATED\n");
+    } else if (1==d->align) {
+	printf("    * Alignment: none\n");
     } else {
-        printf("    * Alignment: %lu\n", (unsigned long) (d->align));
+	printf("    * Alignment: %lu\n", (unsigned long)(d->align));
     }
-
 }
 
 
@@ -994,25 +984,31 @@ byte_cmp(int n, const void *_a, const void *_b, const unsigned char *pad_mask)
  *		actual order to little endian.  Ignores differences where
  *              the corresponding bit in pad_mask is set to 0.
  *
- * Return:	Index of first differing bit.
+ * Return:	Success:	Index of first differing bit.
+ *
+ *		Failure:	-1
+ *
+ * Programmer:	Robb Matzke
+ *		matzke@llnl.gov
+ *		Jun 13, 1996
+ *
+ * Modifications:
  *
  *-------------------------------------------------------------------------
  */
-static unsigned int
-bit_cmp(unsigned int nbytes, int *perm, void *_a, void *_b,
-        const unsigned char *pad_mask)
+static int
+bit_cmp(int nbytes, int *perm, volatile void *_a, volatile void *_b,
+    const unsigned char *pad_mask)
 {
-    unsigned int i;
-    unsigned char *a = (unsigned char *) _a;
-    unsigned char *b = (unsigned char *) _b;
-    unsigned char aa, bb;
+    int                 i, j;
+    volatile unsigned char      *a = (volatile unsigned char *) _a;
+    volatile unsigned char      *b = (volatile unsigned char *) _b;
+    unsigned char       aa, bb;
 
     for (i = 0; i < nbytes; i++) {
-        HDassert(perm[i] < (int) nbytes);
-        if ((aa = (unsigned char) (a[perm[i]] & pad_mask[perm[i]]))
-                != (bb = (unsigned char) (b[perm[i]] & pad_mask[perm[i]]))) {
-            unsigned int j;
-
+        HDassert(perm[i] < nbytes);
+        if ((aa = a[perm[i]] & pad_mask[perm[i]])
+                != (bb = b[perm[i]] & pad_mask[perm[i]])) {
             for (j = 0; j < 8; j++, aa >>= 1, bb >>= 1) {
                 if ((aa & 1) != (bb & 1)) return i * 8 + j;
             }
@@ -1020,9 +1016,7 @@ bit_cmp(unsigned int nbytes, int *perm, void *_a, void *_b,
             HDabort();
         }
     }
-    fprintf(stderr, "INTERNAL ERROR");
-    HDabort();
-    return 0;
+    return -1;
 }
 
 
@@ -1128,19 +1122,21 @@ fix_order(int n, int last, int *perm, const char **mesg)
  *
  *-------------------------------------------------------------------------
  */
-static unsigned int
-imp_bit(unsigned int n, int *perm, void *_a, void *_b, const unsigned char *pad_mask)
+static int
+imp_bit(int n, int *perm, volatile void *_a, volatile void *_b,
+    const unsigned char *pad_mask)
 {
-    unsigned char *a = (unsigned char *) _a;
-    unsigned char *b = (unsigned char *) _b;
-    unsigned int changed, major, minor;
-    unsigned int msmb; /* most significant mantissa bit */
+    volatile unsigned char      *a = (volatile unsigned char *) _a;
+    volatile unsigned char      *b = (volatile unsigned char *) _b;
+    int                 changed, major, minor;
+    int                 msmb;   /*most significant mantissa bit */
 
     /*
      * Look for the least significant bit that has changed between
      * A and B.  This is the least significant bit of the exponent.
      */
     changed = bit_cmp(n, perm, a, b, pad_mask);
+    HDassert(changed >= 0);
 
     /*
      * The bit to the right (less significant) of the changed bit should
@@ -1177,22 +1173,22 @@ imp_bit(unsigned int n, int *perm, void *_a, void *_b, const unsigned char *pad_
  *
  *-------------------------------------------------------------------------
  */
-static unsigned int
-find_bias(unsigned int epos, unsigned int esize, int *perm, void *_a)
+static unsigned long
+find_bias(int epos, int esize, int *perm, volatile void *_a)
 {
-    unsigned char *a = (unsigned char *) _a;
-    unsigned char mask;
-    unsigned int b, shift = 0, nbits, bias = 0;
+    unsigned char	*a = (unsigned char *) _a;
+    unsigned char	mask;
+    unsigned long	b, shift = 0, nbits, bias = 0;
 
     while (esize > 0) {
-        nbits = MIN(esize, (8 - epos % 8));
-        mask = (unsigned char) ((1 << nbits) - 1);
-        b = (unsigned int) (a[perm[epos / 8]] >> (epos % 8)) & mask;
-        bias |= b << shift;
+	nbits = MIN(esize, (8 - epos % 8));
+	mask = (1 << nbits) - 1;
+	b = (a[perm[epos / 8]] >> (epos % 8)) & mask;
+	bias |= b << shift;
 
-        shift += nbits;
-        esize -= nbits;
-        epos += nbits;
+	shift += nbits;
+	esize -= nbits;
+	epos += nbits;
     }
     return bias;
 }
@@ -1385,8 +1381,8 @@ detect_C89_integers(void)
 static void
 detect_C89_floats(void)
 {
-    DETECT_F(float,     FLOAT,      d_g[nd_g]); nd_g++;
-    DETECT_F(double,    DOUBLE,     d_g[nd_g]); nd_g++;
+    DETECT_F(float,		  FLOAT,        d_g[nd_g]); nd_g++;
+    DETECT_F(double,		  DOUBLE,       d_g[nd_g]); nd_g++;
 }
 
 
@@ -1670,7 +1666,7 @@ detect_alignments(void)
 static int verify_signal_handlers(int signum, void (*handler)(int))
 {						      
     void	(*save_handler)(int) = HDsignal(signum, handler);    
-    volatile int i, val;
+    int i, val;
     int ntries=5;
     volatile int nfailures=0;
     volatile int nsuccesses=0;
@@ -1754,17 +1750,13 @@ main(void)
 
 #if defined(H5SETJMP) && defined(H5_HAVE_SIGNAL)
     /* verify the SIGBUS and SIGSEGV handlers work properly */
-    if (verify_signal_handlers(SIGBUS, sigbus_handler) != 0) {
-        fprintf(stderr, "Signal handler %s for signal %d failed\n",
-                "sigbus_handler", SIGBUS);
+    if (verify_signal_handlers (SIGBUS, sigbus_handler) != 0){
+	fprintf(stderr, "Signal handler %s for signal %d failed\n",
+	    "sigbus_handler", SIGBUS);
     }
-    if (verify_signal_handlers(SIGSEGV, sigsegv_handler) != 0) {
-        fprintf(stderr, "Signal handler %s for signal %d failed\n",
-                "sigsegv_handler", SIGSEGV);
-    }
-    if (verify_signal_handlers(SIGILL, sigill_handler) != 0) {
-        fprintf(stderr, "Signal handler %s for signal %d failed\n",
-                "sigill_handler", SIGILL);
+    if (verify_signal_handlers (SIGSEGV, sigsegv_handler) != 0){
+	fprintf(stderr, "Signal handler %s for signal %d failed\n",
+	    "sigsegv_handler", SIGSEGV);
     }
 #else
     align_status_g |= STA_NoHandlerVerify;

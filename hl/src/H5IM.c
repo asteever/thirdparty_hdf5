@@ -46,10 +46,6 @@ herr_t H5IMmake_image_8bit( hid_t loc_id,
 {
     hsize_t  dims[IMAGE8_RANK];
 
-    /* check the arguments */
-    if (dset_name == NULL) 
-        return -1;
-
     /* Initialize the image dimensions */
     dims[0] = height;
     dims[1] = width;
@@ -107,16 +103,9 @@ herr_t H5IMmake_image_24bit( hid_t loc_id,
 {
     hsize_t  dims[IMAGE24_RANK];
 
-    /* check the arguments */
-    if (interlace == NULL) 
-        return -1;
-    if (dset_name == NULL) 
-        return -1;
-
-
     /* Initialize the image dimensions */
 
-    if ( HDstrncmp( interlace, "INTERLACE_PIXEL",15 ) == 0 )
+    if ( strcmp( interlace, "INTERLACE_PIXEL" ) == 0 )
     {
         /* Number of color planes is defined as the third dimension */
         dims[0] = height;
@@ -124,7 +113,7 @@ herr_t H5IMmake_image_24bit( hid_t loc_id,
         dims[2] = IMAGE24_RANK;
     }
     else
-      if ( HDstrncmp( interlace, "INTERLACE_PLANE",15 ) == 0 )
+        if ( strcmp( interlace, "INTERLACE_PLANE" ) == 0 )
         {
             /* Number of color planes is defined as the first dimension */
             dims[0] = IMAGE24_RANK;
@@ -183,10 +172,6 @@ static herr_t find_palette(hid_t loc_id,
 {
     int ret = H5_ITER_CONT;
 
-    /* check the arguments */
-    if (name == NULL) 
-        return -1;
-
     /* Shut compiler up */
     loc_id = loc_id; ainfo = ainfo; op_data = op_data;
 
@@ -194,7 +179,7 @@ static herr_t find_palette(hid_t loc_id,
     * cause the iterator to immediately return that positive value,
     * indicating short-circuit success
     */
-    if(HDstrncmp(name, "PALETTE",7) == 0)
+    if(strcmp(name, "PALETTE") == 0)
         ret = H5_ITER_STOP;
 
     return ret;
@@ -265,12 +250,6 @@ herr_t H5IMget_image_info( hid_t loc_id,
     int         has_pal;
     int         has_attr;
 
-    /* check the arguments */
-    if (dset_name == NULL) 
-      return -1;
-    if (interlace == NULL) 
-      return -1;
-
     /*assume initially we have no palettes attached*/
     *npals = 0;
 
@@ -315,7 +294,7 @@ herr_t H5IMget_image_info( hid_t loc_id,
         /* This is a 24 bit image */
     {
 
-      if ( HDstrncmp( interlace, "INTERLACE_PIXEL", 15 ) == 0 )
+        if ( strcmp( interlace, "INTERLACE_PIXEL" ) == 0 )
         {
             /* Number of color planes is defined as the third dimension */
             *height = dims[0];
@@ -323,14 +302,14 @@ herr_t H5IMget_image_info( hid_t loc_id,
             *planes = dims[2];
         }
         else
-	  if ( HDstrncmp( interlace, "INTERLACE_PLANE", 15 ) == 0 )
+            if ( strcmp( interlace, "INTERLACE_PLANE" ) == 0 )
             {
                 /* Number of color planes is defined as the first dimension */
                 *planes = dims[0];
                 *height = dims[1];
                 *width  = dims[2];
             }
-	  else return -1;
+            else return -1;
     }
     else
         /* This is a 8 bit image */
@@ -431,10 +410,6 @@ herr_t H5IMread_image( hid_t loc_id,
 {
     hid_t   did;
 
-    /* check the arguments */
-    if (dset_name == NULL) 
-      return -1;
-
     /* Open the dataset. */
     if((did = H5Dopen2(loc_id, dset_name, H5P_DEFAULT)) < 0)
         return -1;
@@ -484,10 +459,6 @@ herr_t H5IMmake_palette( hid_t loc_id,
 {
 
     int has_pal;
-
-    /* check the arguments */
-    if (pal_name == NULL) 
-      return -1;
 
     /* Check if the dataset already exists */
     has_pal = H5LTfind_dataset( loc_id, pal_name );
@@ -552,13 +523,6 @@ herr_t H5IMlink_palette( hid_t loc_id,
     hsize_t     dim_ref;
     int         ok_pal;
 
-    
-    /* check the arguments */
-    if (image_name == NULL) 
-      return -1;
-    if (pal_name == NULL) 
-      return -1;
-
     /* The image dataset may or may not have the attribute "PALETTE"
     * First we try to open to see if it is already there; if not, it is created.
     * If it exists, the array of references is extended to hold the reference
@@ -590,7 +554,7 @@ herr_t H5IMlink_palette( hid_t loc_id,
             goto out;
 
         /* Create a reference. The reference is created on the local id.  */
-        if(H5Rcreate(&ref, loc_id, pal_name, H5R_OBJECT, (hid_t)-1) < 0)
+        if(H5Rcreate(&ref, loc_id, pal_name, H5R_OBJECT, -1) < 0)
             goto out;
 
         /* Write the attribute with the reference */
@@ -628,9 +592,9 @@ herr_t H5IMlink_palette( hid_t loc_id,
 
         n_refs = H5Sget_simple_extent_npoints(asid);
 
-        dim_ref = (hsize_t)n_refs + 1;
+        dim_ref = n_refs + 1;
 
-        refbuf = (hobj_ref_t*)HDmalloc( sizeof(hobj_ref_t) * (size_t)dim_ref );
+        refbuf = (hobj_ref_t*)HDmalloc( sizeof(hobj_ref_t) * (int)dim_ref );
 
         if ( H5Aread( aid, atid, refbuf ) < 0)
             goto out;
@@ -640,7 +604,7 @@ herr_t H5IMlink_palette( hid_t loc_id,
             goto out;
 
         /* Create a new reference for this palette. */
-        if ( H5Rcreate( &ref, loc_id, pal_name, H5R_OBJECT, (hid_t)-1 ) < 0)
+        if ( H5Rcreate( &ref, loc_id, pal_name, H5R_OBJECT, -1 ) < 0)
             goto out;
 
         refbuf[n_refs] = ref;
@@ -720,12 +684,6 @@ herr_t H5IMunlink_palette( hid_t loc_id,
     hid_t       aid;
     H5T_class_t aclass;
     int         ok_pal, has_pal;
-
-    /* check the arguments */
-    if(image_name == NULL) 
-      return -1;
-    if(pal_name == NULL) 
-      return -1;
 
     /* Try to find the palette dataset */
     has_pal = H5LTfind_dataset( loc_id, pal_name );
@@ -822,10 +780,6 @@ herr_t H5IMget_npalettes( hid_t loc_id,
     H5T_class_t aclass;
     int         has_pal;
 
-    /* check the arguments */
-    if(image_name == NULL) 
-      return -1;
-
     /*assume initially we have no palettes attached*/
     *npals = 0;
 
@@ -921,10 +875,6 @@ herr_t H5IMget_palette_info( hid_t loc_id,
     hid_t      pal_space_id;
     hsize_t    pal_maxdims[2];
 
-    /* check the arguments */
-    if (image_name == NULL) 
-      return -1;
-
     /* Open the dataset. */
     if((did = H5Dopen2(loc_id, image_name, H5P_DEFAULT)) < 0)
         return -1;
@@ -949,9 +899,9 @@ herr_t H5IMget_palette_info( hid_t loc_id,
 
         n_refs = H5Sget_simple_extent_npoints(asid);
 
-        dim_ref = (hsize_t)n_refs;
+        dim_ref = n_refs;
 
-        refbuf = (hobj_ref_t*)HDmalloc( sizeof(hobj_ref_t) * (size_t)dim_ref );
+        refbuf = (hobj_ref_t*)HDmalloc( sizeof(hobj_ref_t) * (int)dim_ref );
 
         if ( H5Aread( aid, atid, refbuf ) < 0)
             goto out;
@@ -1036,13 +986,6 @@ herr_t H5IMget_palette( hid_t loc_id,
     hobj_ref_t *refbuf;     /* buffer to read references */
     hid_t      pal_id;
 
-    /* check the arguments */
-    if (image_name == NULL) 
-      return -1;
-    if (pal_data == NULL) 
-      return -1;
-
-
     /* Open the dataset. */
     if((did = H5Dopen2(loc_id, image_name, H5P_DEFAULT)) < 0)
         return -1;
@@ -1067,9 +1010,9 @@ herr_t H5IMget_palette( hid_t loc_id,
 
         n_refs = H5Sget_simple_extent_npoints(asid);
 
-        dim_ref = (hsize_t)n_refs;
+        dim_ref = n_refs;
 
-        refbuf = (hobj_ref_t*)HDmalloc( sizeof(hobj_ref_t) * (size_t)dim_ref );
+        refbuf = (hobj_ref_t*)HDmalloc( sizeof(hobj_ref_t) * (int)dim_ref );
 
         if ( H5Aread( aid, atid, refbuf ) < 0)
             goto out;
@@ -1135,14 +1078,9 @@ herr_t H5IMis_image( hid_t loc_id,
     hid_t      did;
     int        has_class;
     hid_t      atid;
-    hid_t      aid = -1;
-    char*      attr_data;    /* Name of attribute */
-    hsize_t    storage_size; /* Size of storage for attribute */
+    hid_t      aid;
+    char       attr_data[20];
     herr_t     ret;
-
-    /* check the arguments */
-    if (dset_name == NULL) 
-      return -1;
 
     /* Assume initially fail condition */
     ret = -1;
@@ -1168,31 +1106,16 @@ herr_t H5IMis_image( hid_t loc_id,
         if((atid = H5Aget_type(aid)) < 0)
             goto out;
 
-	/* check to make sure attribute is a string */
-	if(H5T_STRING != H5Tget_class(atid))
-	    goto out;
-
-	/* check to make sure string is null-terminated */
-	if(H5T_STR_NULLTERM != H5Tget_strpad(atid))
-	    goto out;
-
-	/* allocate buffer large enough to hold string */
-	if((storage_size = H5Aget_storage_size(aid)) == 0)
-	    goto out;
-
-	attr_data = (char*)HDmalloc( (size_t)storage_size * sizeof(char) + 1);
-	if(attr_data == NULL)
-	    goto out;
+        if(H5Tget_class(atid) < 0)
+            goto out;
 
         if(H5Aread(aid, atid, attr_data) < 0)
             goto out;
 
-        if(HDstrncmp(attr_data, IMAGE_CLASS, MIN(HDstrlen(IMAGE_CLASS),HDstrlen(attr_data))) == 0)
+        if(strcmp(attr_data, IMAGE_CLASS) == 0)
             ret = 1;
         else
             ret = 0;
-
-	HDfree(attr_data);
 
         if ( H5Tclose( atid ) < 0)
             goto out;
@@ -1240,14 +1163,9 @@ herr_t H5IMis_palette( hid_t loc_id,
     hid_t      did;
     int        has_class;
     hid_t      atid;
-    hid_t      aid = -1;
-    char*      attr_data;    /* Name of attribute */
-    hsize_t    storage_size; /* Size of storage for attribute */
+    hid_t      aid;
+    char       attr_data[20];
     herr_t     ret;
-
-    /* check the arguments */
-    if (dset_name == NULL) 
-      return -1;
 
     /* Assume initially fail condition */
     ret = -1;
@@ -1273,31 +1191,16 @@ herr_t H5IMis_palette( hid_t loc_id,
         if((atid = H5Aget_type(aid)) < 0)
             goto out;
 
-	/* check to make sure attribute is a string */
-	if(H5T_STRING != H5Tget_class(atid))
-	    goto out;
-
-	/* check to make sure string is null-terminated */
-	if(H5T_STR_NULLTERM != H5Tget_strpad(atid))
-	    goto out;
-
-	/* allocate buffer large enough to hold string */
-	if((storage_size = H5Aget_storage_size(aid)) == 0)
-	    goto out;
-
-	attr_data = (char*)HDmalloc( (size_t)storage_size * sizeof(char) + 1);
-	if(attr_data == NULL)
-	    goto out;
+        if(H5Tget_class(atid) < 0)
+            goto out;
 
         if(H5Aread(aid, atid, attr_data) < 0)
             goto out;
 
-        if(HDstrncmp(attr_data, PALETTE_CLASS, MIN(HDstrlen(PALETTE_CLASS),HDstrlen(attr_data))) == 0)
+        if(strcmp(attr_data, PALETTE_CLASS) == 0)
             ret = 1;
         else
             ret = 0;
-
-	HDfree(attr_data);
 
         if ( H5Tclose( atid ) < 0)
             goto out;

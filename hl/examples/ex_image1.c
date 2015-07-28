@@ -24,6 +24,7 @@ unsigned char buf [ WIDTH*HEIGHT ];
 int main( void )
 {
  hid_t         file_id;
+ herr_t        status;
  hsize_t       pal_dims[] = {PAL_ENTRIES,3};
  size_t        i, j;
  int           n, space;
@@ -55,16 +56,16 @@ int main( void )
  file_id = H5Fcreate( "ex_image1.h5", H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT );
 
  /* make the image */
- H5IMmake_image_8bit( file_id, "image1", (hsize_t)WIDTH, (hsize_t)HEIGHT, buf );
+ status = H5IMmake_image_8bit( file_id, "image1", (hsize_t)WIDTH, (hsize_t)HEIGHT, buf );
 
  /* make a palette */
- H5IMmake_palette( file_id, "pallete", pal_dims, pal );
+ status = H5IMmake_palette( file_id, "pallete", pal_dims, pal );
 
  /* attach the palette to the image */
- H5IMlink_palette( file_id, "image1", "pallete" );
+ status = H5IMlink_palette( file_id, "image1", "pallete" );
 
  /* close the file. */
- H5Fclose( file_id );
+ status = H5Fclose( file_id );
 
  return 0;
 

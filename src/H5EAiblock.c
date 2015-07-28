@@ -279,7 +279,7 @@ END_FUNC(PKG)   /* end H5EA__iblock_create() */
  */
 BEGIN_FUNC(PKG, ERR,
 H5EA_iblock_t *, NULL, NULL,
-H5EA__iblock_protect(H5EA_hdr_t *hdr, hid_t dxpl_id, unsigned flags))
+H5EA__iblock_protect(H5EA_hdr_t *hdr, hid_t dxpl_id, H5AC_protect_t rw))
 
 #ifdef QAK
 HDfprintf(stderr, "%s: Called\n", FUNC);
@@ -288,11 +288,8 @@ HDfprintf(stderr, "%s: Called\n", FUNC);
     /* Sanity check */
     HDassert(hdr);
 
-    /* only the H5AC__READ_ONLY_FLAG may be set */
-    HDassert((flags & (unsigned)(~H5AC__READ_ONLY_FLAG)) == 0);
-
     /* Protect the index block */
-    if(NULL == (ret_value = (H5EA_iblock_t *)H5AC_protect(hdr->f, dxpl_id, H5AC_EARRAY_IBLOCK, hdr->idx_blk_addr, hdr, flags)))
+    if(NULL == (ret_value = (H5EA_iblock_t *)H5AC_protect(hdr->f, dxpl_id, H5AC_EARRAY_IBLOCK, hdr->idx_blk_addr, hdr, rw)))
         H5E_THROW(H5E_CANTPROTECT, "unable to protect extensible array index block, address = %llu", (unsigned long long)hdr->idx_blk_addr)
 
 CATCH
@@ -364,7 +361,7 @@ HDfprintf(stderr, "%s: Called\n", FUNC);
     HDassert(H5F_addr_defined(hdr->idx_blk_addr));
 
     /* Protect index block */
-    if(NULL == (iblock = H5EA__iblock_protect(hdr, dxpl_id, H5AC__NO_FLAGS_SET)))
+    if(NULL == (iblock = H5EA__iblock_protect(hdr, dxpl_id, H5AC_WRITE)))
         H5E_THROW(H5E_CANTPROTECT, "unable to protect extensible array index block, address = %llu", (unsigned long long)hdr->idx_blk_addr)
 
     /* Check for index block having data block pointers */
@@ -439,6 +436,7 @@ H5EA__iblock_dest(H5EA_iblock_t *iblock))
 
     /* Sanity check */
     HDassert(iblock);
+    HDassert(iblock->rc == 0);
 
     /* Check if shared header field has been initialized */
     if(iblock->hdr) {

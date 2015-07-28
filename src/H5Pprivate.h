@@ -22,6 +22,8 @@
 /* Include package's public header */
 #include "H5Ppublic.h"
 
+#include "H5VLpublic.h"
+
 /* Private headers needed by this file */
 #include "H5private.h"		/* Generic Functions			*/
 
@@ -31,6 +33,11 @@
 
 /* ========  String creation property names ======== */
 #define H5P_STRCRT_CHAR_ENCODING_NAME  "character_encoding"     /* Character set encoding for string */
+
+/* ========  Root property names ======== */
+#define H5P_ASYNC_FLAG_NAME		"async flag"	/* Async flag */
+#define H5P_ASYNC_FLAG_DEF		FALSE
+#define H5P_ASYNC_REQ_NAME		"async request"	/* Async request */
 
 /* If the module using this macro is allowed access to the private variables, access them directly */
 #ifdef H5P_PACKAGE
@@ -73,6 +80,15 @@ typedef enum H5P_plist_type_t {
     H5P_TYPE_OBJECT_COPY       = 15,
     H5P_TYPE_LINK_CREATE       = 16,
     H5P_TYPE_LINK_ACCESS       = 17,
+    H5P_TYPE_MAP_CREATE        = 18,
+    H5P_TYPE_MAP_ACCESS        = 19,
+    H5P_TYPE_READ_CONTEXT_ACQUIRE = 20,
+    H5P_TYPE_TRANSACTION_START = 21,
+    H5P_TYPE_TRANSACTION_FINISH = 22,
+    H5P_TYPE_VIEW_CREATE       = 23,
+    H5P_TYPE_INDEX_CREATE       = 24,
+    H5P_TYPE_INDEX_ACCESS       = 25,
+    H5P_TYPE_INDEX_XFER         = 26,
     H5P_TYPE_MAX_TYPE
 } H5P_plist_type_t;
 
@@ -98,7 +114,15 @@ H5_DLLVAR H5P_genclass_t *H5P_CLS_OBJECT_COPY_g;
 H5_DLLVAR H5P_genclass_t *H5P_CLS_LINK_CREATE_g;
 H5_DLLVAR H5P_genclass_t *H5P_CLS_LINK_ACCESS_g;
 H5_DLLVAR H5P_genclass_t *H5P_CLS_STRING_CREATE_g;
-
+H5_DLLVAR H5P_genclass_t *H5P_CLS_MAP_CREATE_g;
+H5_DLLVAR H5P_genclass_t *H5P_CLS_MAP_ACCESS_g;
+H5_DLLVAR H5P_genclass_t *H5P_CLS_READ_CONTEXT_ACQUIRE_g;
+H5_DLLVAR H5P_genclass_t *H5P_CLS_TRANSACTION_START_g;
+H5_DLLVAR H5P_genclass_t *H5P_CLS_TRANSACTION_FINISH_g;
+H5_DLLVAR H5P_genclass_t *H5P_CLS_VIEW_CREATE_g;
+H5_DLLVAR H5P_genclass_t *H5P_CLS_INDEX_CREATE_g;
+H5_DLLVAR H5P_genclass_t *H5P_CLS_INDEX_ACCESS_g;
+H5_DLLVAR H5P_genclass_t *H5P_CLS_INDEX_XFER_g;
 
 /******************************/
 /* Library Private Prototypes */
@@ -128,6 +152,8 @@ H5_DLL hid_t H5P_get_driver(H5P_genplist_t *plist);
 H5_DLL void * H5P_get_driver_info(H5P_genplist_t *plist);
 H5_DLL herr_t H5P_set_driver(H5P_genplist_t *plist, hid_t new_driver_id,
             const void *new_driver_info);
+H5_DLL herr_t H5P_set_vol(H5P_genplist_t *plist, H5VL_class_t *vol_cls, const void *vol_info);
+H5_DLL void * H5P_get_vol_info(H5P_genplist_t *plist);
 H5_DLL herr_t H5P_set_vlen_mem_manager(H5P_genplist_t *plist,
         H5MM_allocate_t alloc_func, void *alloc_info, H5MM_free_t free_func,
         void *free_info);

@@ -42,8 +42,7 @@ static void gen_file(void)
     hid_t       dataset, space;
     hsize_t     dim[1];
     int         data[NUM_ELMTS];
-    size_t      j;			/* Local index variable */
-    int         i;			/* Local index variable */
+    unsigned    i, j;			/* Local index variable */
     H5F_file_space_type_t fs_type;	/* File space handling strategy */
 
     for(j = 0, fs_type = H5F_FILE_SPACE_ALL_PERSIST; j < NELMTS(FILENAMES); j++, fs_type = (H5F_file_space_type_t)(fs_type + 1)) {

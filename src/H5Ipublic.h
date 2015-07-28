@@ -38,12 +38,19 @@ typedef enum H5I_type_t {
     H5I_BADID		= (-1),	/*invalid Type				    */
     H5I_FILE            = 1,  	/*type ID for File objects      	    */
     H5I_GROUP,	                /*type ID for Group objects     	    */
+    H5I_MAP,	                /*type ID for MAP objects             	    */
     H5I_DATATYPE,	        /*type ID for Datatype objects		    */
     H5I_DATASPACE,	        /*type ID for Dataspace objects		    */
     H5I_DATASET,	        /*type ID for Dataset objects		    */
     H5I_ATTR,		        /*type ID for Attribute objects		    */
     H5I_REFERENCE,	        /*type ID for Reference objects		    */
     H5I_VFL,			/*type ID for virtual file layer	    */
+    H5I_VOL,			/*type ID for virtual object layer	    */
+    H5I_ES,		        /*type ID for Event Queue objects           */
+    H5I_RC,		        /*type ID for Read Context objects          */
+    H5I_TR,		        /*type ID for Transaction objects           */
+    H5I_QUERY,			/*type ID for Query objects                 */
+    H5I_VIEW,			/*type ID for view objects       	    */
     H5I_GENPROP_CLS,            /*type ID for generic property list classes */
     H5I_GENPROP_LST,            /*type ID for generic property lists        */
     H5I_ERROR_CLASS,            /*type ID for error classes		    */
@@ -53,8 +60,8 @@ typedef enum H5I_type_t {
 } H5I_type_t;
 
 /* Type of atoms to return to users */
-typedef int64_t hid_t;
-#define H5_SIZEOF_HID_T         H5_SIZEOF_INT64_T
+typedef int hid_t;
+#define H5_SIZEOF_HID_T         H5_SIZEOF_INT
 
 /* An invalid object ID. This is also negative for error return. */
 #define H5I_INVALID_HID         (-1)
@@ -67,9 +74,13 @@ typedef int64_t hid_t;
  * (failure) then the object will remain in the ID type.
  */
 typedef herr_t (*H5I_free_t)(void*);
+typedef herr_t (*H5I_free2_t)(void*,void*);
 
 /* Type of the function to compare objects & keys */
 typedef int (*H5I_search_func_t)(void *obj, hid_t id, void *key);
+
+/* Type of the H5Iiterate callback function */
+typedef herr_t (*H5I_iterate_func_t)(hid_t id, void *udata);
 
 #ifdef __cplusplus
 extern "C" {
@@ -93,6 +104,7 @@ H5_DLL int H5Iinc_type_ref(H5I_type_t type);
 H5_DLL int H5Idec_type_ref(H5I_type_t type);
 H5_DLL int H5Iget_type_ref(H5I_type_t type);
 H5_DLL void *H5Isearch(H5I_type_t type, H5I_search_func_t func, void *key);
+H5_DLL herr_t H5Iiterate(H5I_type_t type, H5I_iterate_func_t op, void *op_data);
 H5_DLL herr_t H5Inmembers(H5I_type_t type, hsize_t *num_members);
 H5_DLL htri_t H5Itype_exists(H5I_type_t type);
 H5_DLL htri_t H5Iis_valid(hid_t id);

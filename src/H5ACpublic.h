@@ -496,7 +496,7 @@ typedef struct H5AC_cache_config_t
 
 
     /* parallel configuration fields: */
-    size_t                   dirty_bytes_threshold;
+    int                      dirty_bytes_threshold;
     int                      metadata_write_strategy;
 
 } H5AC_cache_config_t;

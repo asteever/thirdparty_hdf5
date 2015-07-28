@@ -155,7 +155,7 @@ create_file(hid_t fapl, hid_t *file, H5F_t **f)
         FAIL_STACK_ERROR
 
     /* Get a pointer to the internal file object */
-    if(NULL == (*f = (H5F_t *)H5I_object(*file)))
+    if(NULL == (*f = (H5F_t *)H5I_object_verify(*file, H5I_FILE)))
         FAIL_STACK_ERROR
 
     /* Ignore metadata tags in the file's cache */
@@ -291,7 +291,7 @@ reopen_file(hid_t *file, H5F_t **f, hid_t fapl, hid_t dxpl,
             FAIL_STACK_ERROR
 
         /* Get a pointer to the internal file object */
-        if(NULL == (*f = (H5F_t *)H5I_object(*file)))
+        if(NULL == (*f = (H5F_t *)H5I_object_verify(*file, H5I_FILE)))
             FAIL_STACK_ERROR
 
         /* Ignore metadata tags in the file's cache */
@@ -440,7 +440,7 @@ error:
  *-------------------------------------------------------------------------
  */
 static unsigned
-test_create(hid_t fapl, H5FA_create_t *cparam, farray_test_param_t H5_ATTR_UNUSED *tparam)
+test_create(hid_t fapl, H5FA_create_t *cparam, farray_test_param_t UNUSED *tparam)
 {
     hid_t	file = -1;              /* File ID */
     H5F_t	*f = NULL;              /* Internal file object pointer */
@@ -675,7 +675,7 @@ test_open_twice(hid_t fapl, H5FA_create_t *cparam, farray_test_param_t *tparam)
         FAIL_STACK_ERROR
 
     /* Get a pointer to the internal file object */
-    if(NULL == (f2 = (H5F_t *)H5I_object(file2)))
+            if(NULL == (f2 = (H5F_t *)H5I_object_verify(file2, H5I_FILE)))
         FAIL_STACK_ERROR
 
     /* Open the fixed array through the second file handle */
@@ -852,8 +852,8 @@ typedef struct fiter_fw_t {
  *-------------------------------------------------------------------------
  */
 static void *
-fiter_fw_init(const H5FA_create_t H5_ATTR_UNUSED *cparam, const farray_test_param_t H5_ATTR_UNUSED *tparam,
-    hsize_t H5_ATTR_UNUSED cnt)
+fiter_fw_init(const H5FA_create_t UNUSED *cparam, const farray_test_param_t UNUSED *tparam,
+    hsize_t UNUSED cnt)
 {
     fiter_fw_t *fiter;          /* Forward element iteration object */
 
@@ -941,8 +941,8 @@ typedef struct fiter_rv_t {
  *-------------------------------------------------------------------------
  */
 static void *
-fiter_rv_init(const H5FA_create_t *cparam, const farray_test_param_t H5_ATTR_UNUSED *tparam,
-    hsize_t H5_ATTR_UNUSED cnt)
+fiter_rv_init(const H5FA_create_t *cparam, const farray_test_param_t UNUSED *tparam,
+    hsize_t UNUSED cnt)
 {
     fiter_rv_t *fiter;          /* Reverse element iteration object */
 
@@ -1008,7 +1008,7 @@ typedef struct fiter_rnd_t {
  *-------------------------------------------------------------------------
  */
 static void *
-fiter_rnd_init(const H5FA_create_t H5_ATTR_UNUSED *cparam, const farray_test_param_t H5_ATTR_UNUSED *tparam,
+fiter_rnd_init(const H5FA_create_t UNUSED *cparam, const farray_test_param_t UNUSED *tparam,
     hsize_t cnt)
 {
     fiter_rnd_t *fiter;         /* Random element iteration object */
@@ -1126,7 +1126,7 @@ typedef struct fiter_cyc_t {
  *-------------------------------------------------------------------------
  */
 static void *
-fiter_cyc_init(const H5FA_create_t H5_ATTR_UNUSED *cparam, const farray_test_param_t H5_ATTR_UNUSED *tparam,
+fiter_cyc_init(const H5FA_create_t UNUSED *cparam, const farray_test_param_t UNUSED *tparam,
     hsize_t cnt)
 {
     fiter_cyc_t *fiter;         /* Cyclic element iteration object */

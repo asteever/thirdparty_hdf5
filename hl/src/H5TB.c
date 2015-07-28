@@ -94,17 +94,6 @@ herr_t H5TBmake_table(const char *table_title,
     hsize_t i;
     herr_t  ret_val = -1;
 
-    /* check the arguments */
-    if (table_title == NULL) {
-      goto out;
-    }
-    if (dset_name == NULL) {
-      goto out;
-    }
-    if (field_names == NULL) {
-      goto out;
-    }
-    
     dims[0]       = nrecords;
     dims_chunk[0] = chunk_size;
 
@@ -301,10 +290,6 @@ herr_t H5TBappend_records(hid_t loc_id,
     hsize_t  nfields;
     herr_t   ret_val = -1;
 
-    /* check the arguments */
-    if (dset_name == NULL) 
-        goto out;
-
     /* get the original number of records and fields  */
     if(H5TBget_table_info(loc_id, dset_name, &nfields, &nrecords_orig) < 0)
         goto out;
@@ -374,10 +359,6 @@ herr_t H5TBwrite_records(hid_t loc_id,
     hsize_t  mem_size[1];
     hsize_t  dims[1];
     herr_t   ret_val = -1;
-
-    /* check the arguments */
-    if (dset_name == NULL) 
-        goto out;
 
     /* open the dataset. */
     if((did = H5Dopen2(loc_id, dset_name, H5P_DEFAULT)) < 0)
@@ -477,12 +458,6 @@ herr_t H5TBwrite_fields_name(hid_t loc_id,
     char     *member_name = NULL;
     size_t   size_native;
     herr_t   ret_val = -1;
-
-    /* check the arguments */
-    if (dset_name == NULL) 
-        goto out;
-    if (field_names == NULL) 
-        goto out;
 
     /* create xfer properties to preserve initialized data */
     if((preserve_id = H5Pcreate(H5P_DATASET_XFER)) < 0)
@@ -641,10 +616,6 @@ herr_t H5TBwrite_fields_index(hid_t loc_id,
     char    *member_name = NULL;
     herr_t   ret_val = -1;
 
-    /* check the arguments */
-    if (dset_name == NULL) 
-        goto out;
-
     /* create xfer properties to preserve initialized data */
     if((preserve_id = H5Pcreate(H5P_DATASET_XFER)) < 0)
         goto out;
@@ -802,10 +773,6 @@ herr_t H5TBread_table(hid_t loc_id,
     hsize_t  dims[1];
     herr_t   ret_val = -1;
 
-    /* check the arguments */
-    if (dset_name == NULL) 
-        goto out;
-
     /* open the dataset. */
     if((did = H5Dopen2(loc_id, dset_name, H5P_DEFAULT)) < 0)
         goto out;
@@ -878,10 +845,6 @@ herr_t H5TBread_records(hid_t loc_id,
     hsize_t  nrecords_orig;
     hsize_t  nfields;
     herr_t   ret_val = -1;
-
-    /* check the arguments */
-    if (dset_name == NULL) 
-        goto out;
 
     /* get the number of records and fields  */
     if(H5TBget_table_info(loc_id, dset_name, &nfields, &nrecords_orig) < 0)
@@ -959,13 +922,6 @@ herr_t H5TBread_fields_name(hid_t loc_id,
     hssize_t i, j;
     herr_t   ret_val = -1;
 
-
-    /* check the arguments */
-    if (dset_name == NULL) 
-        goto out;
-    if (field_names == NULL) 
-        goto out;
-
     /* open the dataset */
     if((did = H5Dopen2(loc_id, dset_name, H5P_DEFAULT)) < 0)
         goto out;
@@ -982,7 +938,7 @@ herr_t H5TBread_fields_name(hid_t loc_id,
     if((mem_type_id = H5Tcreate(H5T_COMPOUND, type_size)) < 0)
         goto out;
 
-    /* iterate through the members */
+    /* iterate tru the members */
     for(i = 0, j = 0; i < nfields; i++) {
         /* get the member name */
         if(NULL == (member_name = H5Tget_member_name(ftype_id, (unsigned)i)))
@@ -1028,10 +984,6 @@ herr_t H5TBread_fields_name(hid_t loc_id,
         member_name = NULL;
     } /* end for */
 
-    /* check to make sure field was found, no reason to continue if it does not exist */
-    if(j == 0)
-      goto out;
-    
     /* get the dataspace handle */
     if((sid = H5Dget_space(did)) < 0)
         goto out;
@@ -1121,10 +1073,6 @@ herr_t H5TBread_fields_index(hid_t loc_id,
     size_t   size_native;
     char    *member_name = NULL;
     herr_t   ret_val = -1;
-
-    /* check the arguments */
-    if (dset_name == NULL) 
-        goto out;
 
     /* open the dataset. */
     if((did = H5Dopen2(loc_id, dset_name, H5P_DEFAULT)) < 0)
@@ -1282,11 +1230,6 @@ herr_t H5TBdelete_record(hid_t loc_id,
     size_t  *src_sizes = NULL;
     unsigned char *tmp_buf = NULL;
     herr_t   ret_val = -1;
-
-    
-    /* check the arguments */
-    if (dset_name == NULL) 
-        goto out;
 
     /*-------------------------------------------------------------------------
     * first we get information about type size and offsets on disk
@@ -1447,10 +1390,6 @@ herr_t H5TBinsert_record(hid_t loc_id,
     unsigned char *tmp_buf = NULL;
     herr_t   ret_val = -1;
 
-    /* check the arguments */
-    if (dset_name == NULL) 
-        goto out;
-
     /*-------------------------------------------------------------------------
     * read the records after the inserted one(s)
     *-------------------------------------------------------------------------
@@ -1602,12 +1541,6 @@ herr_t H5TBadd_records_from(hid_t loc_id,
     unsigned char *tmp_buf = NULL;
     herr_t   ret_val = -1;
 
-    /* check the arguments */
-    if (dset_name1 == NULL) 
-      goto out;
-    if (dset_name2 == NULL) 
-      goto out;
-
     /*-------------------------------------------------------------------------
     * first we get information about type size and offsets on disk
     *-------------------------------------------------------------------------
@@ -1754,14 +1687,6 @@ herr_t H5TBcombine_tables(hid_t loc_id1,
     unsigned char *tmp_fill_buf = NULL;
     htri_t   has_fill;
     herr_t   ret_val = -1;
-
-    /* check the arguments */
-    if (dset_name1 == NULL) 
-      goto out;
-    if (dset_name2 == NULL) 
-      goto out;
-    if (dset_name3 == NULL) 
-      goto out;
 
     /*-------------------------------------------------------------------------
     * first we get information about type size and offsets on disk
@@ -2117,12 +2042,6 @@ herr_t H5TBinsert_field(hid_t loc_id,
     unsigned char *tmp_fill_buf = NULL;
     hbool_t  inserted;
     herr_t   ret_val = -1;
-
-    /* check the arguments */
-    if (dset_name == NULL) 
-        goto out;
-    if (field_name == NULL) 
-        goto out;
 
     /* get the number of records and fields  */
     if(H5TBget_table_info(loc_id, dset_name, &nfields, &nrecords) < 0)
@@ -2532,13 +2451,6 @@ herr_t H5TBdelete_field(hid_t loc_id,
     htri_t   has_fill = FALSE;
     herr_t   ret_val = -1;
 
-
-    /* check the arguments */
-    if (dset_name == NULL) 
-        goto out;
-    if (field_name == NULL) 
-        goto out;
-
     /* get the number of records and fields  */
     if(H5TBget_table_info(loc_id, dset_name, &nfields, &nrecords) < 0)
         goto out;
@@ -2947,7 +2859,6 @@ out:
 herr_t H5TBAget_title(hid_t loc_id,
                       char *table_title)
 {
-
     /* Get the TITLE attribute */
     if(H5LT_get_attribute_disk(loc_id, "TITLE", table_title) < 0)
         return -1;
@@ -2982,10 +2893,6 @@ htri_t H5TBAget_fill(hid_t loc_id,
     char     attr_name[255];
     htri_t   has_fill = FALSE;
     htri_t   ret_val = -1;
-
-    /* check the arguments */
-    if (dset_name == NULL) 
-        goto out;
 
     /* get the number of records and fields  */
     if(H5TBget_table_info(loc_id, dset_name, &nfields, &nrecords) < 0)
@@ -3054,10 +2961,6 @@ herr_t H5TBget_table_info(hid_t loc_id,
     hsize_t    dims[1];
     int        num_members;
     herr_t     ret_val = -1;
-
-    /* check the arguments */
-    if (dset_name == NULL) 
-        goto out;
 
     /* open the dataset. */
     if((did = H5Dopen2(loc_id, dset_name, H5P_DEFAULT)) < 0)
@@ -3145,10 +3048,6 @@ herr_t H5TBget_field_info(hid_t loc_id,
     hssize_t    nfields;
     hssize_t    i;
     herr_t      ret_val = -1;
-
-    /* check the arguments */
-    if (dset_name == NULL) 
-        goto out;
 
     /* open the dataset. */
     if((did = H5Dopen2(loc_id, dset_name, H5P_DEFAULT)) < 0)
@@ -3254,12 +3153,6 @@ hbool_t H5TB_find_field(const char *field, const char *field_list)
     const char *start = field_list;
     const char *end;
 
-    /* check the arguments */
-    if (field == NULL) 
-      return FALSE;
-    if (field_list == NULL) 
-      return FALSE;
-
     while((end = HDstrstr(start, ",")) != 0) {
         ptrdiff_t count = end - start;
 
@@ -3268,7 +3161,7 @@ hbool_t H5TB_find_field(const char *field, const char *field_list)
         start = end + 1;
     } /* end while */
 
-    if(HDstrncmp(start, field, HDstrlen(field)) == 0)
+    if(HDstrcmp(start, field) == 0)
         return TRUE;
 
     return FALSE;
@@ -3370,7 +3263,7 @@ hid_t H5TB_create_type(hid_t loc_id,
     hsize_t  nfields = 0;
     char   **fnames = NULL;
     unsigned i;
-    hid_t   ret_val = -1;
+    herr_t   ret_val = -1;
 
     /* get the number of fields  */
     if(H5TBget_table_info(loc_id, dset_name, &nfields, NULL) < 0)

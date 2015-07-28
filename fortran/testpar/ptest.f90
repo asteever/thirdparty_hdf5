@@ -19,7 +19,6 @@
 
 PROGRAM parallel_test
   USE hdf5
-  
   IMPLICIT NONE
   INCLUDE 'mpif.h'
 

@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.1.0)
+cmake_minimum_required (VERSION 2.8.11)
 PROJECT (HDF5_SRC C CXX)
 
 #-----------------------------------------------------------------------------
@@ -44,7 +44,6 @@ IDE_GENERATED_PROPERTIES ("H5A" "${H5A_HDRS}" "${H5A_SRCS}" )
 
 set (H5AC_SRCS
     ${HDF5_SRC_DIR}/H5AC.c
-    ${HDF5_SRC_DIR}/H5ACmpio.c
 )
 
 set (H5AC_HDRS
@@ -83,7 +82,6 @@ IDE_GENERATED_PROPERTIES ("H5B2" "${H5B2_HDRS}" "${H5B2_SRCS}" )
 
 set (H5C_SRCS
     ${HDF5_SRC_DIR}/H5C.c
-    ${HDF5_SRC_DIR}/H5Cmpio.c
 )
 set (H5C_HDRS
     ${HDF5_SRC_DIR}/H5Cpkg.h
@@ -463,12 +461,18 @@ set (H5P_SRCS
     ${HDF5_SRC_DIR}/H5Pfcpl.c
     ${HDF5_SRC_DIR}/H5Pfmpl.c
     ${HDF5_SRC_DIR}/H5Pgcpl.c
+    ${HDF5_SRC_DIR}/H5Pvcpl.c
+    ${HDF5_SRC_DIR}/H5Pmcpl.c
+    ${HDF5_SRC_DIR}/H5Pmapl.c
     ${HDF5_SRC_DIR}/H5Pint.c
     ${HDF5_SRC_DIR}/H5Plapl.c
     ${HDF5_SRC_DIR}/H5Plcpl.c
     ${HDF5_SRC_DIR}/H5Pocpl.c
     ${HDF5_SRC_DIR}/H5Pocpypl.c
     ${HDF5_SRC_DIR}/H5Pstrcpl.c
+    ${HDF5_SRC_DIR}/H5Prcapl.c
+    ${HDF5_SRC_DIR}/H5Ptrspl.c
+    ${HDF5_SRC_DIR}/H5Ptrfpl.c
     ${HDF5_SRC_DIR}/H5Ptest.c
 )
 
@@ -484,10 +488,17 @@ set (H5PL_SRCS
 
 set (H5PL_HDRS
     ${HDF5_SRC_DIR}/H5PLextern.h
-    ${HDF5_SRC_DIR}/H5PLpublic.h
 )
 IDE_GENERATED_PROPERTIES ("H5PL" "${H5PL_HDRS}" "${H5PL_SRCS}" )
 
+set (H5Q_SRCS
+    ${HDF5_SRC_DIR}/H5Q.c
+)
+
+set (H5Q_HDRS
+    ${HDF5_SRC_DIR}/H5Qpublic.h
+)
+IDE_GENERATED_PROPERTIES ("H5Q" "${H5Q_HDRS}" "${H5Q_SRCS}" )
 
 set (H5R_SRCS
     ${HDF5_SRC_DIR}/H5R.c
@@ -613,6 +624,95 @@ set (H5VM_HDRS
 )
 IDE_GENERATED_PROPERTIES ("H5VM" "${H5VM_HDRS}" "${H5VM_SRCS}" )
 
+set (H5VL_SRCS
+    ${HDF5_SRC_DIR}/H5VL.c
+    ${HDF5_SRC_DIR}/H5VLint.c
+    ${HDF5_SRC_DIR}/H5VLnative.c
+)
+
+set (H5VL_HDRS
+    ${HDF5_SRC_DIR}/H5VLpublic.h
+    ${HDF5_SRC_DIR}/H5VLpkg.h
+    ${HDF5_SRC_DIR}/H5VLnative.h
+)
+
+IF (HDF5_ENABLE_EFF)
+    set (H5FF_SRCS
+        ${HDF5_SRC_DIR}/H5AS.c
+        ${HDF5_SRC_DIR}/H5FF.c
+        ${HDF5_SRC_DIR}/H5M.c
+        ${HDF5_SRC_DIR}/H5ES.c
+        ${HDF5_SRC_DIR}/H5RC.c
+        ${HDF5_SRC_DIR}/H5TR.c
+        ${HDF5_SRC_DIR}/H5V.c
+    )
+    IF (HDF5_ENABLE_INDEXING)
+      set (H5FF_SRCS
+        ${H5FF_SRCS}
+        ${HDF5_SRC_DIR}/H5X.c
+        ${HDF5_SRC_DIR}/H5Xdummy.c
+        ${HDF5_SRC_DIR}/H5Pxapl.c
+        ${HDF5_SRC_DIR}/H5Pxcpl.c
+        ${HDF5_SRC_DIR}/H5Pxxpl.c
+        ${HDF5_SRC_DIR}/H5VLiod_index.c
+      )
+      IF (ALACRITY_FOUND)
+        set (H5FF_SRCS
+          ${H5FF_SRCS}
+          ${HDF5_SRC_DIR}/H5Xalacrity.c
+        )
+      ENDIF (ALACRITY_FOUND)
+      IF (FASTBIT_FOUND)
+        set (H5FF_SRCS
+          ${H5FF_SRCS}
+          ${HDF5_SRC_DIR}/H5Xfastbit.c
+        )
+      ENDIF (FASTBIT_FOUND)      
+    ENDIF (HDF5_ENABLE_INDEXING)
+    set (H5FF_HDRS
+        ${HDF5_SRC_DIR}/H5ASpublic.h
+        ${HDF5_SRC_DIR}/H5FFpublic.h
+        ${HDF5_SRC_DIR}/H5Mpublic.h
+        ${HDF5_SRC_DIR}/H5ESpublic.h
+        ${HDF5_SRC_DIR}/H5RCpublic.h
+        ${HDF5_SRC_DIR}/H5TRpublic.h
+        ${HDF5_SRC_DIR}/H5Vpublic.h
+    )
+    IF (HDF5_ENABLE_INDEXING)
+      set (H5FF_HDRS
+        ${H5FF_HDRS}
+        ${HDF5_SRC_DIR}/H5Xpublic.h
+      )
+    ENDIF (HDF5_ENABLE_INDEXING)
+    IDE_GENERATED_PROPERTIES ("H5FF" "${H5FF_HDRS}" "${H5FF_SRCS}" )
+    set (H5VL_SRCS
+        ${H5VL_SRCS}
+        ${HDF5_SRC_DIR}/H5VLiod.c
+        ${HDF5_SRC_DIR}/H5VLiod_common.c
+        ${HDF5_SRC_DIR}/H5VLiod_client.c
+        ${HDF5_SRC_DIR}/H5VLiod_server.c
+        ${HDF5_SRC_DIR}/H5VLiod_util.c
+        ${HDF5_SRC_DIR}/H5VLiod_file.c
+        ${HDF5_SRC_DIR}/H5VLiod_group.c
+        ${HDF5_SRC_DIR}/H5VLiod_dset.c
+        ${HDF5_SRC_DIR}/H5VLiod_dtype.c
+        ${HDF5_SRC_DIR}/H5VLiod_attr.c
+        ${HDF5_SRC_DIR}/H5VLiod_link.c
+        ${HDF5_SRC_DIR}/H5VLiod_obj.c
+        ${HDF5_SRC_DIR}/H5VLiod_map.c
+        ${HDF5_SRC_DIR}/H5VLiod_props.c
+        ${HDF5_SRC_DIR}/H5VLiod_trans.c
+        ${HDF5_SRC_DIR}/H5VLiod_encdec.c
+        ${HDF5_SRC_DIR}/H5VLiod_view.c
+        ${HDF5_SRC_DIR}/H5VLiod_analysis.c
+    )
+    set (H5VL_HDRS
+        ${H5VL_HDRS}
+        ${HDF5_SRC_DIR}/H5VLiod.h
+    )
+ENDIF (HDF5_ENABLE_EFF)
+
+IDE_GENERATED_PROPERTIES ("H5VL" "${H5VL_HDRS}" "${H5VL_SRCS}" )
 
 set (H5WB_SRCS
     ${HDF5_SRC_DIR}/H5WB.c
@@ -674,6 +774,7 @@ set (common_SRCS
     ${H5O_SRCS}
     ${H5P_SRCS}
     ${H5PL_SRCS}
+    ${H5Q_SRCS}
     ${H5R_SRCS}
     ${H5UC_SRCS}
     ${H5RS_SRCS}
@@ -684,9 +785,16 @@ set (common_SRCS
     ${H5T_SRCS}
     ${H5TS_SRCS}
     ${H5VM_SRCS}
+    ${H5VL_SRCS}
     ${H5WB_SRCS}
     ${H5Z_SRCS}
 )
+IF (HDF5_ENABLE_EFF)
+  set (common_SRCS
+    ${common_SRCS}
+    ${H5FF_SRCS}
+  )
+ENDIF (HDF5_ENABLE_EFF)
 
 set (H5_PUBLIC_HEADERS
     ${H5_HDRS}
@@ -714,12 +822,20 @@ set (H5_PUBLIC_HEADERS
     ${H5O_HDRS}
     ${H5P_HDRS}
     ${H5PL_HDRS}
+    ${H5Q_HDRS}
     ${H5R_HDRS}
     ${H5S_HDRS}
     ${H5SM_HDRS}
     ${H5T_HDRS}
+    ${H5VL_HDRS}
     ${H5Z_HDRS}
 )
+IF (HDF5_ENABLE_EFF)
+  set (H5_PUBLIC_HEADERS
+    ${H5_PUBLIC_HEADERS}
+    ${H5FF_HDRS}
+  )
+ENDIF (HDF5_ENABLE_EFF)
 
 
 set (H5_PRIVATE_HEADERS
@@ -753,6 +869,7 @@ set (H5_PRIVATE_HEADERS
     ${HDF5_SRC_DIR}/H5Oprivate.h
     ${HDF5_SRC_DIR}/H5Pprivate.h
     ${HDF5_SRC_DIR}/H5PLprivate.h
+    ${HDF5_SRC_DIR}/H5Qprivate.h
     ${HDF5_SRC_DIR}/H5UCprivate.h
     ${HDF5_SRC_DIR}/H5Rprivate.h
     ${HDF5_SRC_DIR}/H5RSprivate.h
@@ -763,17 +880,39 @@ set (H5_PRIVATE_HEADERS
     ${HDF5_SRC_DIR}/H5Tprivate.h
     ${HDF5_SRC_DIR}/H5TSprivate.h
     ${HDF5_SRC_DIR}/H5VMprivate.h
+    ${HDF5_SRC_DIR}/H5VLprivate.h
     ${HDF5_SRC_DIR}/H5WBprivate.h
     ${HDF5_SRC_DIR}/H5Zprivate.h
     ${HDF5_SRC_DIR}/H5win32defs.h
 )
+IF (HDF5_ENABLE_EFF)
+  set (H5_PRIVATE_HEADERS
+    ${H5_PRIVATE_HEADERS}
+    ${HDF5_SRC_DIR}/H5ASprivate.h
+    ${HDF5_SRC_DIR}/H5FFprivate.h
+  )
+  IF (HDF5_ENABLE_INDEXING)
+    set (H5_PRIVATE_HEADERS
+      ${H5_PRIVATE_HEADERS}
+      ${HDF5_SRC_DIR}/H5Xprivate.h
+    )
+  ENDIF (HDF5_ENABLE_INDEXING)  
+ENDIF (HDF5_ENABLE_EFF)
 
 #-----------------------------------------------------------------------------
 # Setup the H5Detect utility which generates H5Tinit with platform
 # specific type checks inside
 #-----------------------------------------------------------------------------
-add_executable (H5detect ${HDF5_SRC_DIR}/H5detect.c)
-TARGET_C_PROPERTIES (H5detect STATIC " " " ")
+#add_executable (H5detect ${HDF5_SRC_DIR}/H5detect.c)
+#TARGET_C_PROPERTIES (H5detect " " " ")
+IF (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+  SET (LOCAL_OPT_FLAG "-O0")
+ELSE (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+  SET (LOCAL_OPT_FLAG " ")
+ENDIF (CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+ADD_EXECUTABLE (H5detect ${HDF5_SRC_DIR}/H5detect.c)
+TARGET_C_PROPERTIES (H5detect ${LOCAL_OPT_FLAG} " ")
+
 if (MSVC OR MINGW)
   target_link_libraries (H5detect "ws2_32.lib")
 endif (MSVC OR MINGW)
@@ -787,7 +926,7 @@ add_custom_command (
 )
 
 add_executable (H5make_libsettings ${HDF5_SRC_DIR}/H5make_libsettings.c)
-TARGET_C_PROPERTIES (H5make_libsettings STATIC " " " ")
+TARGET_C_PROPERTIES (H5make_libsettings " " " ")
 if (MSVC OR MINGW)
   target_link_libraries (H5make_libsettings "ws2_32.lib")
 endif (MSVC OR MINGW)
@@ -854,7 +993,7 @@ set (common_SRCS ${common_SRCS} ${HDF5_BINARY_DIR}/H5overflow.h)
 set_source_files_properties (${HDF5_BINARY_DIR}/H5overflow.h GENERATED)
 
 add_library (${HDF5_LIB_TARGET} ${LIB_TYPE} ${common_SRCS} ${H5_PUBLIC_HEADERS} ${H5_PRIVATE_HEADERS})
-TARGET_C_PROPERTIES (${HDF5_LIB_TARGET} ${LIB_TYPE} " " " ")
+TARGET_C_PROPERTIES (${HDF5_LIB_TARGET} " " " ")
 target_link_libraries (${HDF5_LIB_TARGET} ${LINK_LIBS})
 if (NOT WIN32)
   target_link_libraries (${HDF5_LIB_TARGET} dl)
@@ -872,8 +1011,11 @@ set_target_properties (${HDF5_LIB_TARGET} PROPERTIES
 option (HDF5_ENABLE_DEBUG_APIS "Turn on debugging in all packages" OFF)
 if (HDF5_ENABLE_DEBUG_APIS)
   set_target_properties (${HDF5_LIB_TARGET} PROPERTIES
-      COMPILE_DEFINITIONS
-          "H5Z_DEBUG;H5VM_DEBUG;H5T_DEBUG;H5S_DEBUG;H5P_DEBUG;H5O_DEBUG;H5MM_DEBUG;H5MF_DEBUG;H5I_DEBUG;H5HL_DEBUG;H5HG_DEBUG;H5G_DEBUG;H5F_DEBUG;H5E_DEBUG;H5D_DEBUG;H5B_DEBUG;H5AC_DEBUG"
+    COMPILE_DEFINITIONS
+      "-DH5Z_DEBUG -DH5VM_DEBUG -DH5T_DEBUG
+      -DH5S_DEBUG -DH5P_DEBUG -DH5O_DEBUG -DH5MM_DEBUG -DH5MF_DEBUG
+      -DH5I_DEBUG -DH5HL_DEBUG -DH5HG_DEBUG -DH5G_DEBUG -DH5F_DEBUG
+      -DH5E_DEBUG -DH5D_DEBUG -DH5B_DEBUG -DH5AC_DEBUG -UNDEBUG"
   )
 endif (HDF5_ENABLE_DEBUG_APIS)
 
@@ -896,9 +1038,9 @@ endif (NOT HDF5_INSTALL_NO_DEVELOPMENT)
 #-----------------------------------------------------------------------------
 if (HDF5_EXPORTED_TARGETS)
   if (BUILD_SHARED_LIBS)
-    INSTALL_TARGET_PDB (${HDF5_LIB_TARGET} ${HDF5_INSTALL_BIN_DIR} libraries)
+    INSTALL_TARGET_PDB (${HDF5_LIB_TARGET} ${HDF5_INSTALL_LIB_DIR} libraries)
   endif (BUILD_SHARED_LIBS)
-
+  
   install (
       TARGETS
           ${HDF5_LIB_TARGET}
@@ -907,6 +1049,5 @@ if (HDF5_EXPORTED_TARGETS)
       LIBRARY DESTINATION ${HDF5_INSTALL_LIB_DIR} COMPONENT libraries
       ARCHIVE DESTINATION ${HDF5_INSTALL_LIB_DIR} COMPONENT libraries
       RUNTIME DESTINATION ${HDF5_INSTALL_BIN_DIR} COMPONENT libraries
-      FRAMEWORK DESTINATION ${HDF5_INSTALL_FWRK_DIR} COMPONENT libraries
   )
 endif (HDF5_EXPORTED_TARGETS)

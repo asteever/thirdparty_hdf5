@@ -59,7 +59,7 @@ nh5rcreate_object_c(haddr_t_f *ref, hid_t_f *loc_id, _fcd name, int_f *namelen)
      /*
       * Call H5Rcreate function.
       */
-     if(H5Rcreate(&ref_c, *loc_id, c_name, H5R_OBJECT, (hid_t)-1) < 0)
+     if(H5Rcreate(&ref_c, *loc_id, c_name, H5R_OBJECT, -1) < 0)
          HGOTO_DONE(FAIL)
 
      /* Copy the reference created */
@@ -143,16 +143,18 @@ done:
  * SOURCE
 */
 int_f
-h5rcreate_ptr_c (void *ref, hid_t_f *loc_id, _fcd name, int_f *namelen, int_f *ref_type, hid_t_f *space_id)
+nh5rcreate_ptr_c (void *ref, hid_t_f *loc_id, _fcd name, int_f *namelen, int_f *ref_type, hid_t_f *space_id)
 /******/
 {
      int ret_value = -1;
      char *c_name;
+     size_t c_namelen;
 
      /*
       * Convert FORTRAN name to C name
       */
-     c_name = (char *)HD5f2cstring(name, (size_t)*namelen);
+     c_namelen = *namelen;
+     c_name = (char *)HD5f2cstring(name, c_namelen);
      if (c_name == NULL) return ret_value;
 
      /*
@@ -250,18 +252,18 @@ done:
 
 /****if* H5Rf/h5rdereference_ptr_c
  * NAME
- *  h5rdereference_ptr_c
+ *        h5rdereference_ptr_c
  * PURPOSE
- *  Call H5Rdereference
+ *     Call H5Rdereference
  * INPUTS
- *  obj_id  - Valid identifier for the file containing the
- *            referenced object or any object in that file.
- *  ref_typ - The reference type of ref.
- *  ref     - Object reference
+ *      obj_id - Valid identifier for the file containing the
+ *                       referenced object or any object in that file.
+ *             ref_typ - The reference type of ref.
+ *                 ref - Object reference
  * OUTPUTS
- *  ref_obj_id - Identifier of referenced object
+ *     ref_obj_id - Identifier of referenced object
  * RETURNS
- *  0 on success, -1 on failure
+ *     0 on success, -1 on failure
  * AUTHOR
  *  M. Scot Breitenfeld
  *  June 20, 2008
@@ -270,7 +272,7 @@ done:
  * SOURCE
 */
 int_f
-h5rdereference_ptr_c (hid_t_f *obj_id, int_f *ref_type, void *ref, hid_t_f *ref_obj_id)
+nh5rdereference_ptr_c (hid_t_f *obj_id, int_f *ref_type, void *ref, hid_t_f *ref_obj_id)
 /******/
 {
   int ret_value = -1;
@@ -349,7 +351,7 @@ done:
  * SOURCE
 */
 int_f
-h5rget_region_ptr_c(hid_t_f *dset_id, void *ref, hid_t_f *space_id)
+nh5rget_region_ptr_c(hid_t_f *dset_id, void *ref, hid_t_f *space_id)
 /******/
 {
      hid_t c_space_id;
@@ -530,9 +532,9 @@ done:
 
 /****if* H5Rf/h5rget_name_ptr_c
  * NAME
- *  h5rget_name_ptr_c
+ *        h5rget_name_ptr_c
  * PURPOSE
- *  Call H5Rget_name
+ *     Call H5Rget_name
  * INPUTS
  *
  *       loc_id - Identifier for the dataset containing the reference or for the group that dataset is in.
@@ -544,7 +546,7 @@ done:
  *     size - The size of the name buffer.
  *
  * RETURNS
- *  0 on success, -1 on failure
+ *     0 on success, -1 on failure
  * AUTHOR
  *  M. Scot Breitenfeld
  *  June 20, 2008
@@ -553,7 +555,7 @@ done:
  * SOURCE
 */
 int_f
-h5rget_name_ptr_c (hid_t_f *loc_id, int_f *ref_type, void *ref, _fcd name, size_t_f *name_len, size_t_f *size_default)
+nh5rget_name_ptr_c (hid_t_f *loc_id, int_f *ref_type, void *ref, _fcd name, size_t_f *name_len, size_t_f *size_default)
 /******/
 {
      int_f ret_value = -1;
@@ -565,7 +567,7 @@ h5rget_name_ptr_c (hid_t_f *loc_id, int_f *ref_type, void *ref, _fcd name, size_
      /*
       * Allocate buffer to hold name of an attribute
       */
-     if ((c_buf = (char *)HDmalloc(c_bufsize)) == NULL)
+     if ((c_buf = HDmalloc(c_bufsize)) == NULL)
        return ret_value;
 
      /*
@@ -599,9 +601,12 @@ h5rget_name_ptr_c (hid_t_f *loc_id, int_f *ref_type, void *ref, _fcd name, size_
  *   ref      - Reference to query.
  *
  * OUTPUTS
- *   obj_type - Type of referenced object. These are defined in H5Opublic.h,
- *              enum H5O_type_t
- *              
+ *   obj_type - Type of referenced object. 
+ *                H5G_UNKNOWN_F (-1)
+ *                H5G_LINK_F      0
+ *                H5G_GROUP_F     1
+ *                H5G_DATASET_F   2
+ *                H5G_TYPE_F      3
  * RETURNS
  *   0 on success, -1 on failure
  * AUTHOR
@@ -611,7 +616,7 @@ h5rget_name_ptr_c (hid_t_f *loc_id, int_f *ref_type, void *ref, _fcd name, size_
  * SOURCE
 */
 int_f
-h5rget_obj_type_c (hid_t_f *loc_id, int_f *ref_type, void *ref, int_f *obj_type)
+nh5rget_obj_type_c (hid_t_f *loc_id, int_f *ref_type, void *ref, int_f *obj_type)
 /******/
 {
   int_f ret_value = -1;

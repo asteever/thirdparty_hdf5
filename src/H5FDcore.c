@@ -138,7 +138,7 @@ static int H5FD_core_cmp(const H5FD_t *_f1, const H5FD_t *_f2);
 static herr_t H5FD_core_query(const H5FD_t *_f1, unsigned long *flags);
 static haddr_t H5FD_core_get_eoa(const H5FD_t *_file, H5FD_mem_t type);
 static herr_t H5FD_core_set_eoa(H5FD_t *_file, H5FD_mem_t type, haddr_t addr);
-static haddr_t H5FD_core_get_eof(const H5FD_t *_file, H5FD_mem_t type);
+static haddr_t H5FD_core_get_eof(const H5FD_t *_file);
 static herr_t  H5FD_core_get_handle(H5FD_t *_file, hid_t fapl, void** file_handle);
 static herr_t H5FD_core_read(H5FD_t *_file, H5FD_mem_t type, hid_t fapl_id, haddr_t addr,
             size_t size, void *buf);
@@ -433,22 +433,17 @@ done:
  *
  * Purpose:     Initializes any interface-specific data or routines.
  *
- * Return:      Non-negative on success/Negative on failure 
+ * Return:      Success:    The driver ID for the core driver.
+ *              Failure:    Negative.
  *
  *-------------------------------------------------------------------------
  */
 static herr_t
 H5FD_core_init_interface(void)
 {
-    herr_t ret_value = SUCCEED;
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-    FUNC_ENTER_NOAPI_NOINIT
-
-    if(H5FD_core_init() < 0)
-        HGOTO_ERROR(H5E_VFL, H5E_CANTINIT, FAIL, "unable to initialize core VFD")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(H5FD_core_init())
 } /* H5FD_core_init_interface() */
 
 
@@ -1067,7 +1062,7 @@ H5FD_core_query(const H5FD_t * _file, unsigned long *flags /* out */)
  *-------------------------------------------------------------------------
  */
 static haddr_t
-H5FD_core_get_eoa(const H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type)
+H5FD_core_get_eoa(const H5FD_t *_file, H5FD_mem_t UNUSED type)
 {
     const H5FD_core_t   *file = (const H5FD_core_t*)_file;
 
@@ -1092,7 +1087,7 @@ H5FD_core_get_eoa(const H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type)
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FD_core_set_eoa(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type, haddr_t addr)
+H5FD_core_set_eoa(H5FD_t *_file, H5FD_mem_t UNUSED type, haddr_t addr)
 {
     H5FD_core_t *file = (H5FD_core_t*)_file;
     herr_t      ret_value = SUCCEED;            /* Return value */
@@ -1126,13 +1121,13 @@ done:
  *-------------------------------------------------------------------------
  */
 static haddr_t
-H5FD_core_get_eof(const H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type)
+H5FD_core_get_eof(const H5FD_t *_file)
 {
     const H5FD_core_t   *file = (const H5FD_core_t*)_file;
 
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
-    FUNC_LEAVE_NOAPI(file->eof)
+    FUNC_LEAVE_NOAPI(MAX(file->eof, file->eoa))
 }
 
 
@@ -1214,7 +1209,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FD_core_read(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type, hid_t H5_ATTR_UNUSED dxpl_id, haddr_t addr,
+H5FD_core_read(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, haddr_t addr,
         size_t size, void *buf/*out*/)
 {
     H5FD_core_t	*file = (H5FD_core_t*)_file;
@@ -1229,6 +1224,8 @@ H5FD_core_read(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type, hid_t H5_ATTR_UNUS
     if (HADDR_UNDEF == addr)
         HGOTO_ERROR(H5E_IO, H5E_OVERFLOW, FAIL, "file address overflowed")
     if (REGION_OVERFLOW(addr, size))
+        HGOTO_ERROR(H5E_IO, H5E_OVERFLOW, FAIL, "file address overflowed")
+    if((addr + size) > file->eoa)
         HGOTO_ERROR(H5E_IO, H5E_OVERFLOW, FAIL, "file address overflowed")
 
     /* Read the part which is before the EOF marker */
@@ -1274,7 +1271,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FD_core_write(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type, hid_t H5_ATTR_UNUSED dxpl_id, haddr_t addr,
+H5FD_core_write(H5FD_t *_file, H5FD_mem_t UNUSED type, hid_t UNUSED dxpl_id, haddr_t addr,
         size_t size, const void *buf)
 {
     H5FD_core_t *file = (H5FD_core_t*)_file;
@@ -1288,6 +1285,8 @@ H5FD_core_write(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type, hid_t H5_ATTR_UNU
     /* Check for overflow conditions */
     if(REGION_OVERFLOW(addr, size))
         HGOTO_ERROR(H5E_IO, H5E_OVERFLOW, FAIL, "file address overflowed")
+    if(addr + size > file->eoa)
+        HGOTO_ERROR(H5E_IO, H5E_OVERFLOW, FAIL, "file address overflowed")
 
     /*
      * Allocate more memory if necessary, careful of overflow. Also, if the
@@ -1300,7 +1299,7 @@ H5FD_core_write(H5FD_t *_file, H5FD_mem_t H5_ATTR_UNUSED type, hid_t H5_ATTR_UNU
         size_t new_eof;
 
         /* Determine new size of memory buffer */
-        H5_CHECKED_ASSIGN(new_eof, size_t, file->increment * ((addr + size) / file->increment), hsize_t);
+        H5_ASSIGN_OVERFLOW(new_eof, file->increment * ((addr + size) / file->increment), hsize_t, size_t);
         if((addr + size) % file->increment)
             new_eof += file->increment;
 
@@ -1355,7 +1354,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FD_core_flush(H5FD_t *_file, hid_t H5_ATTR_UNUSED dxpl_id, unsigned H5_ATTR_UNUSED closing)
+H5FD_core_flush(H5FD_t *_file, hid_t UNUSED dxpl_id, unsigned UNUSED closing)
 {
     H5FD_core_t *file = (H5FD_core_t*)_file;
     herr_t      ret_value = SUCCEED;            /* Return value */
@@ -1453,7 +1452,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5FD_core_truncate(H5FD_t *_file, hid_t H5_ATTR_UNUSED dxpl_id, hbool_t closing)
+H5FD_core_truncate(H5FD_t *_file, hid_t UNUSED dxpl_id, hbool_t closing)
 {
     H5FD_core_t *file = (H5FD_core_t*)_file;
     size_t new_eof;                             /* New size of memory buffer */
@@ -1469,7 +1468,7 @@ H5FD_core_truncate(H5FD_t *_file, hid_t H5_ATTR_UNUSED dxpl_id, hbool_t closing)
             new_eof = file->eoa;
         else { /* set eof to smallest multiple of increment that exceeds eoa */
             /* Determine new size of memory buffer */
-            H5_CHECKED_ASSIGN(new_eof, size_t, file->increment * (file->eoa / file->increment), hsize_t);
+            H5_ASSIGN_OVERFLOW(new_eof, file->increment * (file->eoa / file->increment), hsize_t, size_t);
             if(file->eoa % file->increment)
                 new_eof += file->increment;
         } /* end else */

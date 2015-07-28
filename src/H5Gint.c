@@ -44,7 +44,9 @@
 #include "H5Iprivate.h"		/* IDs			  		*/
 #include "H5Lprivate.h"         /* Links                                */
 #include "H5MMprivate.h"	/* Memory management			*/
-
+#include "H5Pprivate.h"		/* Property lists			*/
+#include "H5VLnative.h" 	/* Native Plugin                        */
+#include "H5VLprivate.h"	/* VOL          		  	*/
 
 /****************/
 /* Local Macros */
@@ -106,7 +108,6 @@ H5FL_DEFINE(H5G_shared_t);
 
 /* Declare the free list to manage H5_obj_t's */
 H5FL_DEFINE(H5_obj_t);
-
 
 /*****************************/
 /* Library Private Variables */
@@ -806,11 +807,10 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5G_iterate(hid_t loc_id, const char *group_name,
+H5G_iterate(H5G_loc_t *loc, const char *group_name,
     H5_index_t idx_type, H5_iter_order_t order, hsize_t skip, hsize_t *last_lnk,
     const H5G_link_iterate_t *lnk_op, void *op_data, hid_t lapl_id, hid_t dxpl_id)
 {
-    H5G_loc_t	loc;            /* Location of parent for group */
     hid_t gid = -1;             /* ID of group to iterate over */
     H5G_t *grp = NULL;          /* Pointer to group data structure to iterate over */
     H5G_iter_appcall_ud_t udata; /* User data for callback */
@@ -827,11 +827,9 @@ H5G_iterate(hid_t loc_id, const char *group_name,
      * Open the group on which to operate.  We also create a group ID which
      * we can pass to the application-defined operator.
      */
-    if(H5G_loc(loc_id, &loc) < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
-    if(NULL == (grp = H5G__open_name(&loc, group_name, lapl_id, dxpl_id)))
+    if(NULL == (grp = H5G__open_name(loc, group_name, lapl_id, dxpl_id)))
         HGOTO_ERROR(H5E_SYM, H5E_CANTOPENOBJ, FAIL, "unable to open group")
-    if((gid = H5I_register(H5I_GROUP, grp, TRUE)) < 0)
+    if((gid = H5VL_native_register(H5I_GROUP, grp, TRUE)) < 0)
         HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to register group")
 
     /* Set up user data for callback */
@@ -869,7 +867,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5G_free_visit_visited(void *item, void H5_ATTR_UNUSED *key, void H5_ATTR_UNUSED *operator_data/*in,out*/)
+H5G_free_visit_visited(void *item, void UNUSED *key, void UNUSED *operator_data/*in,out*/)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
@@ -1072,7 +1070,7 @@ done:
  *-------------------------------------------------------------------------
  */
 herr_t
-H5G_visit(hid_t loc_id, const char *group_name, H5_index_t idx_type,
+H5G_visit(H5G_loc_t *loc, const char *group_name, H5_index_t idx_type,
     H5_iter_order_t order, H5L_iterate_t op, void *op_data, hid_t lapl_id,
     hid_t dxpl_id)
 {
@@ -1081,7 +1079,6 @@ H5G_visit(hid_t loc_id, const char *group_name, H5_index_t idx_type,
     htri_t linfo_exists;            /* Whether the link info message exists */
     hid_t       gid = (-1);         /* Group ID */
     H5G_t      *grp = NULL;         /* Group opened */
-    H5G_loc_t	loc;                /* Location of group passed in */
     H5G_loc_t	start_loc;          /* Location of starting group */
     unsigned    rc;		    /* Reference count of object    */
     herr_t      ret_value;          /* Return value */
@@ -1091,16 +1088,12 @@ H5G_visit(hid_t loc_id, const char *group_name, H5_index_t idx_type,
 
     FUNC_ENTER_NOAPI(FAIL)
 
-    /* Check args */
-    if(H5G_loc(loc_id, &loc) < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
-
     /* Open the group to begin visiting within */
-    if((grp = H5G__open_name(&loc, group_name, lapl_id, dxpl_id)) == NULL)
+    if((grp = H5G__open_name(loc, group_name, lapl_id, dxpl_id)) == NULL)
         HGOTO_ERROR(H5E_SYM, H5E_CANTOPENOBJ, FAIL, "unable to open group")
 
     /* Register an ID for the starting group */
-    if((gid = H5I_register(H5I_GROUP, grp, TRUE)) < 0)
+    if((gid = H5VL_native_register(H5I_GROUP, grp, TRUE)) < 0)
         HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to register group")
 
     /* Get the location of the starting group */
@@ -1191,3 +1184,97 @@ done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5G_visit() */
 
+
+/*-------------------------------------------------------------------------
+ * Function:	H5G_get_create_plist
+ *
+ * Purpose:	Private function for H5Gget_create_plist
+ *
+ * Return:	Success:	ID for a copy of the group creation
+ *				property list.  The property list ID should be
+ *				released by calling H5Pclose().
+ *
+ *		Failure:	FAIL
+ *
+ * Programmer:	Quincey Koziol
+ *		Tuesday, October 25, 2005
+ *
+ *-------------------------------------------------------------------------
+ */
+hid_t
+H5G_get_create_plist(H5G_t *grp)
+{
+    H5O_linfo_t         linfo;		        /* Link info message            */
+    htri_t	        ginfo_exists;
+    htri_t	        linfo_exists;
+    htri_t              pline_exists;
+    H5P_genplist_t      *gcpl_plist;
+    H5P_genplist_t      *new_plist;
+    hid_t		new_gcpl_id = FAIL;
+    hid_t		ret_value = FAIL;
+
+    FUNC_ENTER_NOAPI(FAIL)
+
+    /* Copy the default group creation property list */
+    if(NULL == (gcpl_plist = (H5P_genplist_t *)H5I_object(H5P_LST_GROUP_CREATE_ID_g)))
+         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "can't get default group creation property list")
+    if((new_gcpl_id = H5P_copy_plist(gcpl_plist, TRUE)) < 0)
+        HGOTO_ERROR(H5E_SYM, H5E_CANTGET, FAIL, "unable to copy the creation property list")
+    if(NULL == (new_plist = (H5P_genplist_t *)H5I_object(new_gcpl_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "can't get property list")
+
+    /* Retrieve any object creation properties */
+    if(H5O_get_create_plist(&grp->oloc, H5AC_ind_dxpl_id, new_plist) < 0)
+        HGOTO_ERROR(H5E_SYM, H5E_CANTGET, FAIL, "can't get object creation info")
+
+    /* Check for the group having a group info message */
+    if((ginfo_exists = H5O_msg_exists(&(grp->oloc), H5O_GINFO_ID, H5AC_ind_dxpl_id)) < 0)
+	HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, FAIL, "unable to read object header")
+    if(ginfo_exists) {
+        H5O_ginfo_t ginfo;		/* Group info message            */
+
+        /* Read the group info */
+        if(NULL == H5O_msg_read(&(grp->oloc), H5O_GINFO_ID, &ginfo, H5AC_ind_dxpl_id))
+            HGOTO_ERROR(H5E_SYM, H5E_BADMESG, FAIL, "can't get group info")
+
+        /* Set the group info for the property list */
+        if(H5P_set(new_plist, H5G_CRT_GROUP_INFO_NAME, &ginfo) < 0)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set group info")
+    } /* end if */
+
+    /* Check for the group having a link info message */
+    if((linfo_exists = H5G__obj_get_linfo(&(grp->oloc), &linfo, H5AC_ind_dxpl_id)) < 0)
+	HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, FAIL, "unable to read object header")
+    if(linfo_exists) {
+        /* Set the link info for the property list */
+        if(H5P_set(new_plist, H5G_CRT_LINK_INFO_NAME, &linfo) < 0)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set link info")
+    } /* end if */
+
+    /* Check for the group having a pipeline message */
+    if((pline_exists = H5O_msg_exists(&(grp->oloc), H5O_PLINE_ID, H5AC_ind_dxpl_id)) < 0)
+        HGOTO_ERROR(H5E_SYM, H5E_CANTGET, FAIL, "unable to read object header")
+    if(pline_exists) {
+        H5O_pline_t pline;      /* Pipeline message */
+
+        /* Read the pipeline */
+        if(NULL == H5O_msg_read(&(grp->oloc), H5O_PLINE_ID, &pline, H5AC_ind_dxpl_id))
+            HGOTO_ERROR(H5E_SYM, H5E_BADMESG, FAIL, "can't get link pipeline")
+
+        /* Set the pipeline for the property list */
+        if(H5P_set(new_plist, H5O_CRT_PIPELINE_NAME, &pline) < 0)
+            HGOTO_ERROR(H5E_PLIST, H5E_CANTSET, FAIL, "can't set link pipeline")
+    } /* end if */
+
+    /* Set the return value */
+    ret_value = new_gcpl_id;
+
+done:
+    if(ret_value < 0) {
+        if(new_gcpl_id > 0)
+            if(H5I_dec_app_ref(new_gcpl_id) < 0)
+                HDONE_ERROR(H5E_SYM, H5E_CANTDEC, FAIL, "can't free")
+    } /* end if */
+
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5G_get_create_plist() */

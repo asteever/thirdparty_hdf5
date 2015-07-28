@@ -824,12 +824,21 @@ H5G_name_replace_cb(void *obj_ptr, hid_t obj_id, void *key)
             break;
 
         case H5I_DATATYPE:
-            /* Avoid non-named datatypes */
-            if(!H5T_is_named((H5T_t *)obj_ptr))
-                HGOTO_DONE(SUCCEED)     /* Do not exit search over IDs */
+                {
+                    H5T_t *type = NULL;
 
-            oloc = H5T_oloc((H5T_t *)obj_ptr);
-            obj_path = H5T_nameof((H5T_t *)obj_ptr);
+                    /* Get the actual datatype object that should be the vol_obj */
+                    if(NULL == (type = (H5T_t *)H5T_get_named_type((H5T_t*)obj_ptr)))
+                        HGOTO_DONE(SUCCEED)     /* Do not exit search over IDs */
+
+                    /* Avoid non-named datatypes */
+                    if(!H5T_is_named(type))
+                        HGOTO_DONE(SUCCEED)     /* Do not exit search over IDs */
+
+                    oloc = H5T_oloc(type);
+                    obj_path = H5T_nameof(type);
+                    break;
+                }
             break;
 
         case H5I_UNINIT:
@@ -1317,7 +1326,7 @@ H5G_get_name_by_addr(hid_t file, hid_t lapl_id, hid_t dxpl_id, const H5O_loc_t *
         udata.path = NULL;
 
         /* Visit all the links in the file */
-        if((status = H5G_visit(file, "/", H5_INDEX_NAME, H5_ITER_NATIVE, H5G_get_name_by_addr_cb, &udata, lapl_id, dxpl_id)) < 0)
+        if((status = H5G_visit(&root_loc, "/", H5_INDEX_NAME, H5_ITER_NATIVE, H5G_get_name_by_addr_cb, &udata, lapl_id, dxpl_id)) < 0)
             HGOTO_ERROR(H5E_SYM, H5E_BADITER, FAIL, "group traversal failed while looking for object name")
         else if(status > 0)
             found_obj = TRUE;

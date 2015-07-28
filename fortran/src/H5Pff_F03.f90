@@ -89,10 +89,12 @@ MODULE H5P_PROVISIONAL
   END INTERFACE
 
   INTERFACE
-     INTEGER FUNCTION h5pget_fill_value_c(prp_id, type_id, fillvalue) &
-          BIND(C, NAME='h5pget_fill_value_c')
+     INTEGER FUNCTION h5pget_fill_value_c(prp_id, type_id, fillvalue)
        USE H5GLOBAL
-       USE, INTRINSIC :: ISO_C_BINDING, ONLY : c_ptr
+       USE, INTRINSIC :: ISO_C_BINDING
+       !DEC$IF DEFINED(HDF5F90_WINDOWS)
+       !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_FILL_VALUE_C'::h5pget_fill_value_c
+       !DEC$ENDIF
        INTEGER(HID_T), INTENT(IN) :: prp_id  ! Property list identifier
        INTEGER(HID_T), INTENT(IN) :: type_id ! Datatype identifier of
                                              ! of fillvalue datatype
@@ -102,10 +104,12 @@ MODULE H5P_PROVISIONAL
   END INTERFACE
 
   INTERFACE
-     INTEGER FUNCTION h5pset_fill_value_c(prp_id, type_id, fillvalue) &
-          BIND(C, NAME='h5pset_fill_value_c')
+     INTEGER FUNCTION h5pset_fill_value_c(prp_id, type_id, fillvalue)
        USE H5GLOBAL
-       USE, INTRINSIC :: ISO_C_BINDING, ONLY : c_ptr
+       USE, INTRINSIC :: ISO_C_BINDING
+       !DEC$IF DEFINED(HDF5F90_WINDOWS)
+       !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_FILL_VALUE_C'::h5pset_fill_value_c
+       !DEC$ENDIF
        INTEGER(HID_T), INTENT(IN) :: prp_id  ! Property list identifier
        INTEGER(HID_T), INTENT(IN) :: type_id ! Datatype identifier of
                                              ! of fillvalue datatype
@@ -115,36 +119,43 @@ MODULE H5P_PROVISIONAL
   END INTERFACE
 
   INTERFACE
-     INTEGER FUNCTION h5pset_c(prp_id, name, name_len, value) &
-          BIND(C, NAME='h5pset_c')
-       USE, INTRINSIC :: ISO_C_BINDING, ONLY : c_char, c_ptr
+     INTEGER FUNCTION h5pset_c(prp_id, name, name_len, value)
        USE H5GLOBAL
+       USE, INTRINSIC :: ISO_C_BINDING
+       !DEC$IF DEFINED(HDF5F90_WINDOWS)
+       !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_C'::h5pset_c
+       !DEC$ENDIF
        INTEGER(HID_T), INTENT(IN) :: prp_id  ! Property list identifier
-       CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN) :: name  ! Name of property to modify
+       CHARACTER(LEN=*), INTENT(IN) :: name  ! Name of property to modify
        INTEGER :: name_len
        TYPE(C_PTR), VALUE :: value ! Property value
      END FUNCTION h5pset_c
   END INTERFACE
 
   INTERFACE
-     INTEGER FUNCTION h5pget_c(prp_id, name, name_len, value) &
-          BIND(C, NAME='h5pget_c')
-       USE, INTRINSIC :: ISO_C_BINDING, ONLY : c_char, c_ptr
+     INTEGER FUNCTION h5pget_c(prp_id, name, name_len, value)
+       USE, INTRINSIC :: ISO_C_BINDING
        USE H5GLOBAL
+       !DEC$IF DEFINED(HDF5F90_WINDOWS)
+       !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_C'::h5pget_c
+       !DEC$ENDIF
        INTEGER(HID_T), INTENT(IN) :: prp_id  ! Property list identifier
-       CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN) :: name  ! Name of property to modify
+       CHARACTER(LEN=*), INTENT(IN) :: name  ! Name of property to modify
        INTEGER :: name_len
        TYPE(C_PTR), VALUE :: value ! Property value
      END FUNCTION h5pget_c
   END INTERFACE
 
   INTERFACE
-     INTEGER FUNCTION h5pregister_c(class, name, name_len, size, value) &
-          BIND(C, NAME='h5pregister_c')
-       USE, INTRINSIC :: ISO_C_BINDING, ONLY : c_char, c_ptr
+     INTEGER FUNCTION h5pregister_c(class, name, name_len, size, value)
+       USE iso_c_binding
        USE H5GLOBAL
+       !DEC$IF DEFINED(HDF5F90_WINDOWS)
+       !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PREGISTER_C'::h5pregister_c
+       !DEC$ENDIF
+       !DEC$ATTRIBUTES reference :: name
        INTEGER(HID_T), INTENT(IN) :: class
-       CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN) :: name
+       CHARACTER(LEN=*), INTENT(IN) :: name
        INTEGER, INTENT(IN)         :: name_len
        INTEGER(SIZE_T), INTENT(IN) :: size
        TYPE(C_PTR), INTENT(IN), VALUE :: value
@@ -152,15 +163,18 @@ MODULE H5P_PROVISIONAL
   END INTERFACE
 
   INTERFACE
-     INTEGER FUNCTION h5pinsert_c(plist, name, name_len, size, value) &
-          BIND(C, NAME='h5pinsert_c')
-       USE, INTRINSIC :: ISO_C_BINDING, ONLY : c_char, c_ptr
+     INTEGER FUNCTION h5pinsert_c(plist, name, name_len, size, value)
+       USE iso_c_binding
        USE H5GLOBAL
+       !DEC$IF DEFINED(HDF5F90_WINDOWS)
+       !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PINSERT_C'::h5pinsert_c
+       !DEC$ENDIF
+       !DEC$ATTRIBUTES reference :: name
        INTEGER(HID_T), INTENT(IN) :: plist
-       CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN) :: name
+       CHARACTER(LEN=*), INTENT(IN) :: name
        INTEGER, INTENT(IN)         :: name_len
        INTEGER(SIZE_T), INTENT(IN) :: size
-       TYPE(C_PTR), INTENT(IN), VALUE :: value
+       TYPE(c_ptr), INTENT(IN), value :: value
      END FUNCTION h5pinsert_c
   END INTERFACE
 
@@ -1126,12 +1140,18 @@ CONTAINS
     TYPE(C_FUNPTR) :: create_default, copy_default, close_default
     INTERFACE
        INTEGER FUNCTION h5pcreate_class_c(parent, name, name_len, class, &
-            create, create_data, copy, copy_data, close, close_data) &
-          BIND(C, NAME='h5pcreate_class_c')
-         USE, INTRINSIC :: ISO_C_BINDING, ONLY : c_char, c_ptr, c_funptr
+            create, create_data, &
+            copy, copy_data, &
+            close, close_data)
+
+         USE iso_c_binding
          USE H5GLOBAL
+         !DEC$IF DEFINED(HDCLOSEF90_WINDOWS)
+         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PCREATE_CLASS_C'::h5pcreate_class_c
+         !DEC$ENDIF
+         !DEC$ATTRIBUTES reference :: name
          INTEGER(HID_T), INTENT(IN) :: parent
-         CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN) :: name
+         CHARACTER(LEN=*), INTENT(IN) :: name
          INTEGER, INTENT(IN)         :: name_len
          INTEGER(HID_T), INTENT(OUT) :: class
          TYPE(C_PTR), VALUE :: create_data, copy_data, close_data
@@ -1193,10 +1213,12 @@ CONTAINS
     INTEGER        , INTENT(OUT) :: hdferr
 !*****
     INTERFACE
-       INTEGER FUNCTION h5pset_file_image_c(fapl_id, buf_ptr, buf_len) &
-            BIND(C, NAME='h5pset_file_image_c')
-         USE, INTRINSIC :: ISO_C_BINDING, ONLY : c_ptr
+       INTEGER FUNCTION h5pset_file_image_c(fapl_id, buf_ptr, buf_len)
+         USE iso_c_binding
          USE H5GLOBAL
+         !DEC$IF DEFINED(HDCLOSEF90_WINDOWS)
+         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PSET_FILE_IMAGE_C'::h5pset_file_image_c
+         !DEC$ENDIF
          INTEGER(HID_T), INTENT(IN) :: fapl_id
          TYPE(C_PTR), VALUE :: buf_ptr
          INTEGER(SIZE_T), INTENT(IN)  :: buf_len
@@ -1249,10 +1271,12 @@ CONTAINS
     
 !*****
     INTERFACE
-       INTEGER FUNCTION h5pget_file_image_c(fapl_id, buf_ptr, buf_len_ptr) &
-            BIND(C, NAME='h5pget_file_image_c')
-         USE, INTRINSIC :: ISO_C_BINDING, ONLY : c_ptr
+       INTEGER FUNCTION h5pget_file_image_c(fapl_id, buf_ptr, buf_len_ptr)
+         USE iso_c_binding
          USE H5GLOBAL
+         !DEC$IF DEFINED(HDCLOSEF90_WINDOWS)
+         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5PGET_FILE_IMAGE_C'::h5pget_file_image_c
+         !DEC$ENDIF
          INTEGER(HID_T), INTENT(IN) :: fapl_id
          TYPE(C_PTR), DIMENSION(*), INTENT(OUT)  :: buf_ptr
          INTEGER(SIZE_T), INTENT(OUT)  :: buf_len_ptr

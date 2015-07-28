@@ -15,7 +15,7 @@
 /*****************************************************************************
    FILE
    tlinks.cpp - HDF5 C++ testing functionalities associated with the
-        C link interface (H5L)
+        C attribute interface (H5L)
 
  ***************************************************************************/
 

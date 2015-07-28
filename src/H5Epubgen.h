@@ -26,6 +26,7 @@
 
 #define H5E_FUNC             (H5OPEN H5E_FUNC_g)
 #define H5E_FILE             (H5OPEN H5E_FILE_g)
+#define H5E_VOL              (H5OPEN H5E_VOL_g)
 #define H5E_SOHM             (H5OPEN H5E_SOHM_g)
 #define H5E_SYM              (H5OPEN H5E_SYM_g)
 #define H5E_PLUGIN           (H5OPEN H5E_PLUGIN_g)
@@ -42,6 +43,7 @@
 #define H5E_IO               (H5OPEN H5E_IO_g)
 #define H5E_EFL              (H5OPEN H5E_EFL_g)
 #define H5E_TST              (H5OPEN H5E_TST_g)
+#define H5E_QUERY            (H5OPEN H5E_QUERY_g)
 #define H5E_FSPACE           (H5OPEN H5E_FSPACE_g)
 #define H5E_DATASET          (H5OPEN H5E_DATASET_g)
 #define H5E_STORAGE          (H5OPEN H5E_STORAGE_g)
@@ -51,6 +53,7 @@
 #define H5E_OHDR             (H5OPEN H5E_OHDR_g)
 #define H5E_ATOM             (H5OPEN H5E_ATOM_g)
 #define H5E_NONE_MAJOR       (H5OPEN H5E_NONE_MAJOR_g)
+#define H5E_INDEX            (H5OPEN H5E_INDEX_g)
 #define H5E_SLIST            (H5OPEN H5E_SLIST_g)
 #define H5E_ARGS             (H5OPEN H5E_ARGS_g)
 #define H5E_EARRAY           (H5OPEN H5E_EARRAY_g)
@@ -59,6 +62,7 @@
 #define H5E_CACHE            (H5OPEN H5E_CACHE_g)
 H5_DLLVAR hid_t H5E_FUNC_g;          /* Function entry/exit */
 H5_DLLVAR hid_t H5E_FILE_g;          /* File accessibilty */
+H5_DLLVAR hid_t H5E_VOL_g;           /* Virtual Object Layer */
 H5_DLLVAR hid_t H5E_SOHM_g;          /* Shared Object Header Messages */
 H5_DLLVAR hid_t H5E_SYM_g;           /* Symbol table */
 H5_DLLVAR hid_t H5E_PLUGIN_g;        /* Plugin for dynamically loaded library */
@@ -75,6 +79,7 @@ H5_DLLVAR hid_t H5E_ATTR_g;          /* Attribute */
 H5_DLLVAR hid_t H5E_IO_g;            /* Low-level I/O */
 H5_DLLVAR hid_t H5E_EFL_g;           /* External file list */
 H5_DLLVAR hid_t H5E_TST_g;           /* Ternary Search Trees */
+H5_DLLVAR hid_t H5E_QUERY_g;         /* Query */
 H5_DLLVAR hid_t H5E_FSPACE_g;        /* Free Space Manager */
 H5_DLLVAR hid_t H5E_DATASET_g;       /* Dataset */
 H5_DLLVAR hid_t H5E_STORAGE_g;       /* Data storage */
@@ -84,6 +89,7 @@ H5_DLLVAR hid_t H5E_DATATYPE_g;      /* Datatype */
 H5_DLLVAR hid_t H5E_OHDR_g;          /* Object header */
 H5_DLLVAR hid_t H5E_ATOM_g;          /* Object atom */
 H5_DLLVAR hid_t H5E_NONE_MAJOR_g;    /* No error */
+H5_DLLVAR hid_t H5E_INDEX_g;         /* Index */
 H5_DLLVAR hid_t H5E_SLIST_g;         /* Skip Lists */
 H5_DLLVAR hid_t H5E_ARGS_g;          /* Invalid arguments to routine */
 H5_DLLVAR hid_t H5E_EARRAY_g;        /* Extensible Array */
@@ -328,12 +334,14 @@ H5_DLLVAR hid_t H5E_CANTRECV_g;      /* Can't receive data */
 #define H5E_CANTNEXT         (H5OPEN H5E_CANTNEXT_g)
 #define H5E_BADSELECT        (H5OPEN H5E_BADSELECT_g)
 #define H5E_CANTCOMPARE      (H5OPEN H5E_CANTCOMPARE_g)
+#define H5E_INCONSISTENTSTATE (H5OPEN H5E_INCONSISTENTSTATE_g)
 H5_DLLVAR hid_t H5E_CANTCLIP_g;      /* Can't clip hyperslab region */
 H5_DLLVAR hid_t H5E_CANTCOUNT_g;     /* Can't count elements */
 H5_DLLVAR hid_t H5E_CANTSELECT_g;    /* Can't select hyperslab */
 H5_DLLVAR hid_t H5E_CANTNEXT_g;      /* Can't move to next iterator location */
 H5_DLLVAR hid_t H5E_BADSELECT_g;     /* Invalid selection */
 H5_DLLVAR hid_t H5E_CANTCOMPARE_g;   /* Can't compare objects */
+H5_DLLVAR hid_t H5E_INCONSISTENTSTATE_g; /* Internal states are inconsistent */
 
 /* Argument errors */
 #define H5E_UNINITIALIZED    (H5OPEN H5E_UNINITIALIZED_g)

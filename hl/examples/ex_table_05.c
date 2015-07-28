@@ -51,6 +51,13 @@ int main( void )
   int    longi;
  } Position;
 
+ /* Define a subset of Particle, with name and pressure fields */
+ typedef struct NamePressure
+ {
+  char   name[16];
+  float  pressure;
+ } NamePressure;
+
  /* Calculate the type_size and the offsets of our struct members */
  Particle  dst_buf[NRECORDS];
  size_t dst_size =  sizeof( Particle );
@@ -84,6 +91,7 @@ int main( void )
  hsize_t    nfields;
  hsize_t    start;                       /* Record to start reading/writing */
  hsize_t    nrecords;                    /* Number of records to read/write */
+ herr_t     status;
  int        i;
 
  /* Define new values for the field "Pressure"  */
@@ -121,7 +129,7 @@ int main( void )
  file_id = H5Fcreate( "ex_table_05.h5", H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT );
 
  /* Make the table */
- H5TBmake_table( "Table Title", file_id, TABLE_NAME,NFIELDS,NRECORDS,
+ status=H5TBmake_table( "Table Title", file_id, TABLE_NAME,NFIELDS,NRECORDS,
                          dst_size,field_names, dst_offset, field_type,
                          chunk_size, fill_data, compress, p_data  );
 
@@ -129,7 +137,7 @@ int main( void )
  nfields  = 1;
  start    = 2;
  nrecords = NRECORDS_ADD;
- H5TBwrite_fields_index( file_id, TABLE_NAME, nfields, field_index_pre, start, nrecords,
+ status=H5TBwrite_fields_index( file_id, TABLE_NAME, nfields, field_index_pre, start, nrecords,
    sizeof( float ), 0, field_sizes_pre, pressure_in  );
 
 
@@ -137,12 +145,12 @@ int main( void )
  nfields  = 2;
  start    = 2;
  nrecords = NRECORDS_ADD;
- H5TBwrite_fields_index( file_id, TABLE_NAME, nfields, field_index_pos, start, nrecords,
+ status=H5TBwrite_fields_index( file_id, TABLE_NAME, nfields, field_index_pos, start, nrecords,
    sizeof( Position ), field_offset_pos, field_sizes_pos, position_in  );
 
 
  /* read the table */
- H5TBread_table( file_id, TABLE_NAME, dst_size, dst_offset, dst_sizes, dst_buf );
+ status=H5TBread_table( file_id, TABLE_NAME, dst_size, dst_offset, dst_sizes, dst_buf );
 
  /* print it by rows */
  for (i=0; i<NRECORDS; i++) {
@@ -155,7 +163,8 @@ int main( void )
   printf ("\n");
  }
 
- /* close type */
+
+  /* close type */
  H5Tclose( string_type );
 
  /* close the file */

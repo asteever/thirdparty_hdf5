@@ -128,6 +128,7 @@ static const H5O_linfo_t H5G_def_linfo_g = H5G_CRT_LINK_INFO_DEF;      /* Defaul
 static herr_t
 H5P__gcrt_reg_prop(H5P_genclass_t *pclass)
 {
+    hid_t lcpl_id     = H5P_LINK_CREATE_DEFAULT;
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_STATIC
@@ -142,6 +143,11 @@ H5P__gcrt_reg_prop(H5P_genclass_t *pclass)
     if(H5P_register_real(pclass, H5G_CRT_LINK_INFO_NAME, H5G_CRT_LINK_INFO_SIZE, &H5G_def_linfo_g, 
             NULL, NULL, NULL, H5G_CRT_LINK_INFO_ENC, H5G_CRT_LINK_INFO_DEC,
             NULL, NULL, NULL, NULL) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
+
+    /* Register the lcpl ID property */
+    if(H5P_register_real(pclass, H5VL_GRP_LCPL_ID, sizeof(hid_t), &lcpl_id, 
+                         NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL) < 0)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
 
 done:
@@ -179,7 +185,7 @@ H5Pset_local_heap_size_hint(hid_t plist_id, size_t size_hint)
         HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get group info")
 
     /* Update field */
-    H5_CHECKED_ASSIGN(ginfo.lheap_size_hint, uint32_t, size_hint, size_t);
+    H5_ASSIGN_OVERFLOW(ginfo.lheap_size_hint, size_hint, size_t, uint32_t);
 
     /* Set value */
     if(H5P_set(plist, H5G_CRT_GROUP_INFO_NAME, &ginfo) < 0)

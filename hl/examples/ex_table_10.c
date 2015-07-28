@@ -13,6 +13,7 @@
  * access to either file, you may request a copy from help@hdfgroup.org.     *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#include "hdf5.h"
 #include "hdf5_hl.h"
 #include <stdlib.h>
 
@@ -77,6 +78,7 @@ int main( void )
  hsize_t    chunk_size = 10;
  int        compress  = 0;
  int        *fill_data = NULL;
+ herr_t     status;
  hsize_t    nfields_out;
  hsize_t    nrecords_out;
  int        i;
@@ -94,22 +96,22 @@ int main( void )
  file_id = H5Fcreate( "ex_table_10.h5", H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT );
 
  /* Make two tables */
- H5TBmake_table( "Table Title",file_id,TABLE1_NAME,NFIELDS,NRECORDS,
+ status=H5TBmake_table( "Table Title",file_id,TABLE1_NAME,NFIELDS,NRECORDS,
                          dst_size,field_names, dst_offset, field_type,
                          chunk_size, fill_data, compress, p_data  );
 
- H5TBmake_table( "Table Title",file_id,TABLE2_NAME,NFIELDS,NRECORDS,
+ status=H5TBmake_table( "Table Title",file_id,TABLE2_NAME,NFIELDS,NRECORDS,
                          dst_size,field_names, dst_offset, field_type,
                          chunk_size, fill_data, compress, p_data  );
 
  /* Combine the two tables into a third in the same file  */
- H5TBcombine_tables( file_id, TABLE1_NAME, file_id, TABLE2_NAME, TABLE3_NAME );
+ status=H5TBcombine_tables( file_id, TABLE1_NAME, file_id, TABLE2_NAME, TABLE3_NAME );
 
  /* read the combined table */
- H5TBread_table( file_id, TABLE3_NAME, dst_size, dst_offset, dst_sizes, dst_buf );
+ status=H5TBread_table( file_id, TABLE3_NAME, dst_size, dst_offset, dst_sizes, dst_buf );
 
  /* Get table info  */
- H5TBget_table_info (file_id,TABLE3_NAME, &nfields_out, &nrecords_out );
+ status=H5TBget_table_info (file_id,TABLE3_NAME, &nfields_out, &nrecords_out );
 
  /* print */
  printf ("Table has %d fields and %d records\n",(int)nfields_out,(int)nrecords_out);

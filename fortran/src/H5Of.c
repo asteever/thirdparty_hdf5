@@ -23,8 +23,6 @@
 
 #include "H5f90.h"
 #include "H5Eprivate.h"
-int_f
-fill_h5o_info_t_f(H5O_info_t Oinfo, H5O_info_t_f *object_info);
 
 int_f
 fill_h5o_info_t_f(H5O_info_t Oinfo, H5O_info_t_f *object_info) {
@@ -243,7 +241,7 @@ nh5oclose_c ( hid_t_f *object_id )
  * SOURCE
 */
 int_f
-h5ovisit_c(hid_t_f *group_id, int_f *index_type, int_f *order, H5O_iterate_t op, void *op_data )
+nh5ovisit_c(hid_t_f *group_id, int_f *index_type, int_f *order, H5O_iterate_t op, void *op_data )
 /******/
 {
   int_f ret_value = -1;       /* Return value */
@@ -315,7 +313,7 @@ nh5oopen_by_addr_c (hid_t_f *loc_id, haddr_t_f *addr, hid_t_f *obj_id)
  * SOURCE
 */
 int_f
-h5oget_info_by_name_c (hid_t_f *loc_id, _fcd name, size_t_f *namelen, hid_t_f *lapl_id,
+nh5oget_info_by_name_c (hid_t_f *loc_id, _fcd name, size_t_f *namelen, hid_t_f *lapl_id,
 			H5O_info_t_f *object_info)
 /******/
 {
@@ -365,7 +363,7 @@ h5oget_info_by_name_c (hid_t_f *loc_id, _fcd name, size_t_f *namelen, hid_t_f *l
  * SOURCE
 */
 int_f
-h5oget_info_by_idx_c (hid_t_f *loc_id, _fcd  group_name, size_t_f *namelen, 
+nh5oget_info_by_idx_c (hid_t_f *loc_id, _fcd  group_name, size_t_f *namelen, 
 		       int_f *index_field, int_f *order, hsize_t_f *n, hid_t_f *lapl_id, H5O_info_t_f *object_info)
 /******/
 {
@@ -417,7 +415,7 @@ h5oget_info_by_idx_c (hid_t_f *loc_id, _fcd  group_name, size_t_f *namelen,
  * SOURCE
 */
 int_f
-h5oget_info_c (hid_t_f *object_id, H5O_info_t_f *object_info)
+nh5oget_info_c (hid_t_f *object_id, H5O_info_t_f *object_info)
 /******/
 {
   int_f ret_value = 0;          /* Return value */
@@ -510,20 +508,21 @@ nh5ocopy_c (hid_t_f *src_loc_id, _fcd src_name, size_t_f *src_name_len,
  *          idx - Position at which an interrupted iteration may be restarted
  *
  * RETURNS
- *  >0 on success, 0< on failure
+ *     >0 on success, 0< on failure
  * AUTHOR
  *  M. Scot Breitenfeld
  *  May 16, 2012
  * SOURCE
 */
 int_f
-h5ovisit_by_name_c(hid_t_f *loc_id,  _fcd object_name, size_t_f *namelen, int_f *index_type, int_f *order,
+nh5ovisit_by_name_c(hid_t_f *loc_id,  _fcd object_name, size_t_f *namelen, int_f *index_type, int_f *order,
 		    H5O_iterate_t op, void *op_data, hid_t_f *lapl_id )
 /******/
 {
   int_f ret_value = -1;       /* Return value */
   herr_t func_ret_value;      /* H5Linterate return value */
   char *c_object_name = NULL; /* Buffer to hold C string */
+
 
   /*
    * Convert FORTRAN name to C name
@@ -876,7 +875,6 @@ nh5oget_comment_by_name_c (hid_t_f *loc_id, _fcd name, size_t_f *name_size,
   char *c_comment = NULL;  /* Buffer to hold C string */
   char *c_name = NULL;     /* Buffer to hold C string */
   int_f ret_value = 0;     /* Return value */
-  ssize_t c_bufsize;
   size_t c_commentsize;
 
   /*
@@ -898,10 +896,8 @@ nh5oget_comment_by_name_c (hid_t_f *loc_id, _fcd name, size_t_f *name_size,
    * Call H5Oget_comment_by_name function.
    */ 
 
-  if((c_bufsize = H5Oget_comment_by_name((hid_t)*loc_id, c_name, c_comment, (size_t)*commentsize,(hid_t)*lapl_id )) < 0)
+  if((*bufsize = (size_t_f)H5Oget_comment_by_name((hid_t)*loc_id, c_name, c_comment, (size_t)*commentsize,(hid_t)*lapl_id )) < 0)
     HGOTO_DONE(FAIL);
-
-  *bufsize = (size_t_f)c_bufsize;
 
   /*
    * Convert C name to FORTRAN and place it in the given buffer

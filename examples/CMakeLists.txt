@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.1.0)
+cmake_minimum_required (VERSION 2.8.11)
 PROJECT (HDF5_EXAMPLES)
 
 #-----------------------------------------------------------------------------
@@ -34,12 +34,13 @@ set (examples
     h5_extlink
     h5_elink_unix2win
     h5_shared_mesg
+    h5_external_log_native_vol
 )
 
 foreach (example ${examples})
   add_executable (${example} ${HDF5_EXAMPLES_SOURCE_DIR}/${example}.c)
   TARGET_NAMING (${example} ${LIB_TYPE})
-  TARGET_C_PROPERTIES (${example} ${LIB_TYPE} " " " ")
+  TARGET_C_PROPERTIES (${example} " " " ")
   target_link_libraries (${example} ${HDF5_LIB_TARGET})
   set_target_properties (${example} PROPERTIES FOLDER examples)
 endforeach (example ${examples})
@@ -47,10 +48,28 @@ endforeach (example ${examples})
 if (H5_HAVE_PARALLEL)
   add_executable (ph5example ${HDF5_EXAMPLES_SOURCE_DIR}/ph5example.c)
   TARGET_NAMING (ph5example ${LIB_TYPE})
-  TARGET_C_PROPERTIES (ph5example ${LIB_TYPE} " " " ")
+  TARGET_C_PROPERTIES (ph5example " " " ")
   target_link_libraries (ph5example ${HDF5_LIB_TARGET})
   set_target_properties (ph5example PROPERTIES FOLDER examples)
 endif (H5_HAVE_PARALLEL)
+
+#if (H5_HAVE_EFF)
+#  add_executable (h5ff_server ${HDF5_EXAMPLES_SOURCE_DIR}/h5ff_server.c)
+#  target_link_libraries (h5ff_server ${HDF5_LIB_TARGET})
+#  set_target_properties (h5ff_server PROPERTIES FOLDER examples)
+#  add_executable (h5ff_client ${HDF5_EXAMPLES_SOURCE_DIR}/h5ff_client.c)
+#  target_link_libraries (h5ff_client ${HDF5_LIB_TARGET})
+#  set_target_properties (h5ff_client PROPERTIES FOLDER examples)
+#  add_executable (h5ff_client_do ${HDF5_EXAMPLES_SOURCE_DIR}/h5ff_client_do.c)
+#  target_link_libraries (h5ff_client_do ${HDF5_LIB_TARGET})
+#  set_target_properties (h5ff_client_do PROPERTIES FOLDER examples)
+#  add_executable (h5ff_client_map ${HDF5_EXAMPLES_SOURCE_DIR}/h5ff_client_map.c)
+#  target_link_libraries (h5ff_client_map ${HDF5_LIB_TARGET})
+#  set_target_properties (h5ff_client_map PROPERTIES FOLDER examples)
+#  add_executable (h5ff_client_old_api ${HDF5_EXAMPLES_SOURCE_DIR}/h5ff_client_old_api.c)
+#  target_link_libraries (h5ff_client_old_api ${HDF5_LIB_TARGET})
+#  set_target_properties (h5ff_client_old_api PROPERTIES FOLDER examples)
+#endif (H5_HAVE_EFF)
 
 if (BUILD_TESTING)
   include (CMakeTests.cmake)

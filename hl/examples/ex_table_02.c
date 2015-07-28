@@ -78,6 +78,7 @@ int main( void )
  hsize_t    chunk_size = 10;
  int        *fill_data = NULL;
  int        compress  = 0;
+ herr_t     status;
  int        i;
 
   /* Append particles */
@@ -98,16 +99,16 @@ int main( void )
  file_id = H5Fcreate( "ex_table_02.h5", H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT );
 
  /* make a table */
- H5TBmake_table( "Table Title",file_id,TABLE_NAME,NFIELDS,NRECORDS,
+ status=H5TBmake_table( "Table Title",file_id,TABLE_NAME,NFIELDS,NRECORDS,
                         dst_size, field_names, dst_offset, field_type,
                         chunk_size, fill_data, compress, p_data  );
 
  /* append two records */
- H5TBappend_records(file_id, TABLE_NAME,NRECORDS_ADD, dst_size, dst_offset, dst_sizes,
+ status=H5TBappend_records(file_id, TABLE_NAME,NRECORDS_ADD, dst_size, dst_offset, dst_sizes,
   &particle_in );
 
  /* read the table */
- H5TBread_table( file_id, TABLE_NAME, dst_size, dst_offset, dst_sizes, dst_buf );
+ status=H5TBread_table( file_id, TABLE_NAME, dst_size, dst_offset, dst_sizes, dst_buf );
 
  /* print it by rows */
  for (i=0; i<NRECORDS+NRECORDS_ADD; i++) {

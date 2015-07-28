@@ -640,6 +640,7 @@ test_h5o_plist(void)
     /* Commit the type inside the group anonymously and link it in */
     dtype = H5Tcopy(H5T_NATIVE_INT);
     CHECK(dtype, FAIL, "H5Tcopy");
+
     ret = H5Tcommit_anon(fid, dtype, tcpl, H5P_DEFAULT);
     CHECK(ret, FAIL, "H5Tcommit_anon");
     ret = H5Olink(dtype, fid, "datatype", H5P_DEFAULT, H5P_DEFAULT);
@@ -669,7 +670,7 @@ test_h5o_plist(void)
     gcpl = H5Gget_create_plist(grp);
     CHECK(gcpl, FAIL, "H5Gget_create_plist");
     tcpl = H5Tget_create_plist(dtype);
-    CHECK(tcpl, FAIL, "H5Tget_create_plist");
+    CHECK(dcpl, FAIL, "H5Tget_create_plist");
     dcpl = H5Dget_create_plist(dset);
     CHECK(dcpl, FAIL, "H5Dget_create_plist");
 
@@ -719,7 +720,7 @@ test_h5o_plist(void)
     gcpl = H5Gget_create_plist(grp);
     CHECK(gcpl, FAIL, "H5Gget_create_plist");
     tcpl = H5Tget_create_plist(dtype);
-    CHECK(tcpl, FAIL, "H5Tget_create_plist");
+    CHECK(dcpl, FAIL, "H5Tget_create_plist");
     dcpl = H5Dget_create_plist(dset);
     CHECK(dcpl, FAIL, "H5Dget_create_plist");
 

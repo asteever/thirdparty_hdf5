@@ -93,28 +93,35 @@ H5Z_init_interface (void)
 
     FUNC_ENTER_NOAPI_NOINIT
 
-    /* Internal filters */
-    if (H5Z_register (H5Z_SHUFFLE)<0)
-        HGOTO_ERROR (H5E_PLINE, H5E_CANTINIT, FAIL, "unable to register shuffle filter")
-    if (H5Z_register (H5Z_FLETCHER32)<0)
-        HGOTO_ERROR (H5E_PLINE, H5E_CANTINIT, FAIL, "unable to register fletcher32 filter")
-    if (H5Z_register (H5Z_NBIT)<0)
-        HGOTO_ERROR (H5E_PLINE, H5E_CANTINIT, FAIL, "unable to register nbit filter")
-    if (H5Z_register (H5Z_SCALEOFFSET)<0)
-        HGOTO_ERROR (H5E_PLINE, H5E_CANTINIT, FAIL, "unable to register scaleoffset filter")
-
-    /* External filters */
 #ifdef H5_HAVE_FILTER_DEFLATE
     if (H5Z_register (H5Z_DEFLATE)<0)
-        HGOTO_ERROR (H5E_PLINE, H5E_CANTINIT, FAIL, "unable to register deflate filter")
+	HGOTO_ERROR (H5E_PLINE, H5E_CANTINIT, FAIL, "unable to register deflate filter")
 #endif /* H5_HAVE_FILTER_DEFLATE */
+#ifdef H5_HAVE_FILTER_SHUFFLE
+    if (H5Z_register (H5Z_SHUFFLE)<0)
+	HGOTO_ERROR (H5E_PLINE, H5E_CANTINIT, FAIL, "unable to register shuffle filter")
+#endif /* H5_HAVE_FILTER_SHUFFLE */
+#ifdef H5_HAVE_FILTER_FLETCHER32
+    if (H5Z_register (H5Z_FLETCHER32)<0)
+	HGOTO_ERROR (H5E_PLINE, H5E_CANTINIT, FAIL, "unable to register fletcher32 filter")
+#endif /* H5_HAVE_FILTER_FLETCHER32 */
 #ifdef H5_HAVE_FILTER_SZIP
     H5Z_SZIP->encoder_present = SZ_encoder_enabled();
     if (H5Z_register (H5Z_SZIP)<0)
-        HGOTO_ERROR (H5E_PLINE, H5E_CANTINIT, FAIL, "unable to register szip filter")
+	HGOTO_ERROR (H5E_PLINE, H5E_CANTINIT, FAIL, "unable to register szip filter")
 #endif /* H5_HAVE_FILTER_SZIP */
+#ifdef H5_HAVE_FILTER_NBIT
+    if (H5Z_register (H5Z_NBIT)<0)
+        HGOTO_ERROR (H5E_PLINE, H5E_CANTINIT, FAIL, "unable to register nbit filter")
+#endif /* H5_HAVE_FILTER_NBIT */
+#ifdef H5_HAVE_FILTER_SCALEOFFSET
+    if (H5Z_register (H5Z_SCALEOFFSET)<0)
+        HGOTO_ERROR (H5E_PLINE, H5E_CANTINIT, FAIL, "unable to register scaleoffset filter")
+#endif /* H5_HAVE_FILTER_SCALEOFFSET */
 
+#if (defined H5_HAVE_FILTER_DEFLATE | defined H5_HAVE_FILTER_FLETCHER32 | defined H5_HAVE_FILTER_SHUFFLE | defined H5_HAVE_FILTER_SZIP | defined H5_HAVE_FILTER_NBIT | defined H5_HAVE_FILTER_SCALEOFFSET)
 done:
+#endif /* (defined H5_HAVE_FILTER_DEFLATE | defined H5_HAVE_FILTER_FLETCHER32 | defined H5_HAVE_FILTER_SHUFFLE | defined H5_HAVE_FILTER_SZIP | defined H5_HAVE_FILTER_NBIT | defined H5_HAVE_FILTER_SCALEOFFSET) */
     FUNC_LEAVE_NOAPI(ret_value)
 }
 
@@ -506,7 +513,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static int
-H5Z__check_unregister_group_cb(void *obj_ptr, hid_t H5_ATTR_UNUSED obj_id, void *key)
+H5Z__check_unregister_group_cb(void *obj_ptr, hid_t UNUSED obj_id, void *key)
 {
     hid_t           ocpl_id = -1;
     H5Z_object_t    *object = (H5Z_object_t *)key;
@@ -559,7 +566,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static int
-H5Z__check_unregister_dset_cb(void *obj_ptr, hid_t H5_ATTR_UNUSED obj_id, void *key)
+H5Z__check_unregister_dset_cb(void *obj_ptr, hid_t UNUSED obj_id, void *key)
 {
     hid_t           ocpl_id = -1;
     H5Z_object_t    *object = (H5Z_object_t *)key;
@@ -610,7 +617,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static int
-H5Z__flush_file_cb(void *obj_ptr, hid_t H5_ATTR_UNUSED obj_id, void H5_ATTR_UNUSED *key)
+H5Z__flush_file_cb(void *obj_ptr, hid_t UNUSED obj_id, void UNUSED *key)
 {
     int             ret_value = FALSE;    /* Return value */
 
@@ -843,7 +850,7 @@ H5Z_prepare_prelude_callback_dcpl(hid_t dcpl_id, hid_t type_id, H5Z_prelude_type
                 H5S_t *space;           /* Dataspace describing chunk */
                 size_t u;               /* Local index variable */
 
-                /* Create a data space for a chunk & set the extent */
+                /* Create a dataspace for a chunk & set the extent */
                 for(u = 0; u < dcpl_layout.u.chunk.ndims; u++)
                     chunk_dims[u] = dcpl_layout.u.chunk.dim[u];
                 if(NULL == (space = H5S_create_simple(dcpl_layout.u.chunk.ndims, chunk_dims, NULL)))
@@ -964,7 +971,7 @@ H5Z_can_apply_direct(const H5O_pline_t *pline)
     HDassert(pline->nused > 0);
 
     /* Make "can apply" callbacks for filters in pipeline */
-    if(H5Z_prelude_callback(pline, (hid_t)-1, (hid_t)-1, (hid_t)-1, H5Z_PRELUDE_CAN_APPLY) < 0)
+    if(H5Z_prelude_callback(pline, -1, -1, -1, H5Z_PRELUDE_CAN_APPLY) < 0)
         HGOTO_ERROR(H5E_PLINE, H5E_CANAPPLY, FAIL, "unable to apply filter")
 
 done:
@@ -1001,7 +1008,7 @@ H5Z_set_local_direct(const H5O_pline_t *pline)
     HDassert(pline->nused > 0);
 
     /* Make "set local" callbacks for filters in pipeline */
-    if(H5Z_prelude_callback(pline, (hid_t)-1, (hid_t)-1, (hid_t)-1, H5Z_PRELUDE_SET_LOCAL) < 0)
+    if(H5Z_prelude_callback(pline, -1, -1, -1, H5Z_PRELUDE_SET_LOCAL) < 0)
         HGOTO_ERROR(H5E_PLINE, H5E_SETLOCAL, FAIL, "local filter parameters not set")
 
 done:

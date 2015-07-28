@@ -31,7 +31,7 @@
 #include "H5Pprivate.h"		/* Property lists			*/
 #include "H5Tprivate.h"		/* Datatypes				*/
 #include "H5SLprivate.h"        /* Skip lists                           */
-
+#include "H5VLprivate.h"	/* Virtual Object Layer                 */
 
 /****************/
 /* Local Macros */
@@ -52,9 +52,7 @@
 /* Local Prototypes */
 /********************/
 static void H5_debug_mask(const char*);
-#ifdef H5_HAVE_PARALLEL
-static int H5_mpi_delete_cb(MPI_Comm comm, int keyval, void *attr_val, int *flag);
-#endif /*H5_HAVE_PARALLEL*/
+
 
 /*********************/
 /* Package Variables */
@@ -111,47 +109,6 @@ H5_init_library(void)
     herr_t ret_value = SUCCEED;
 
     FUNC_ENTER_NOAPI(FAIL)
-
-#ifdef H5_HAVE_PARALLEL
-    {
-	int mpi_initialized;
-	int mpi_finalized;
-        int mpi_code;
-
-	MPI_Initialized(&mpi_initialized);
-	MPI_Finalized(&mpi_finalized);
-
-#ifdef H5_HAVE_MPE
-        /* Initialize MPE instrumentation library. */
-        if (!H5_MPEinit_g) {
-            int mpe_code;
-            if (mpi_initialized && !mpi_finalized) {
-                mpe_code = MPE_Init_log();
-                HDassert(mpe_code >=0);
-                H5_MPEinit_g = TRUE;
-            }
-        }
-#endif /*H5_HAVE_MPE*/
-
-        /* add an attribute on MPI_COMM_SELF to call H5_term_library
-           when it is destroyed, i.e. on MPI_Finalize */
-        if (mpi_initialized && !mpi_finalized) {
-            int key_val;
-
-            if(MPI_SUCCESS != (mpi_code = MPI_Comm_create_keyval(MPI_NULL_COPY_FN, 
-                                                                 (MPI_Comm_delete_attr_function *)H5_mpi_delete_cb, 
-                                                                 &key_val, NULL)))
-                HMPI_GOTO_ERROR(FAIL, "MPI_Comm_create_keyval failed", mpi_code)
-
-            if(MPI_SUCCESS != (mpi_code = MPI_Comm_set_attr(MPI_COMM_SELF, key_val, NULL)))
-                HMPI_GOTO_ERROR(FAIL, "MPI_Comm_set_attr failed", mpi_code)
-
-            if(MPI_SUCCESS != (mpi_code = MPI_Comm_free_keyval(&key_val)))
-                HMPI_GOTO_ERROR(FAIL, "MPI_Comm_free_keyval failed", mpi_code)
-        }
-    }
-#endif /*H5_HAVE_PARALLEL*/
-
     /*
      * Make sure the package information is updated.
      */
@@ -173,7 +130,26 @@ H5_init_library(void)
     H5_debug_g.pkg[H5_PKG_S].name = "s";
     H5_debug_g.pkg[H5_PKG_T].name = "t";
     H5_debug_g.pkg[H5_PKG_V].name = "v";
+    H5_debug_g.pkg[H5_PKG_VL].name = "vl";
     H5_debug_g.pkg[H5_PKG_Z].name = "z";
+
+#ifdef H5_HAVE_MPE
+    /* Initialize MPE instrumentation library.  May need to move this
+     * up earlier if any of the above initialization involves using
+     * the instrumentation code.
+     */
+    if (!H5_MPEinit_g)
+    {
+	int mpe_code;
+	int mpi_initialized;
+	MPI_Initialized(&mpi_initialized);
+	if (mpi_initialized){
+	    mpe_code = MPE_Init_log();
+	    HDassert(mpe_code >=0);
+	    H5_MPEinit_g = TRUE;
+	}
+    }
+#endif
 
     /*
      * Install atexit() library cleanup routines unless the H5dont_atexit()
@@ -289,9 +265,22 @@ H5_term_library(void)
 	pending += DOWN(D);
 	pending += DOWN(L);
 	pending += DOWN(G);
+#ifdef H5_HAVE_EFF
+	pending += DOWN(M);
+#endif /* H5_HAVE_EFF */
 	pending += DOWN(A);
 	pending += DOWN(S);
 	pending += DOWN(T);
+#ifdef H5_HAVE_EFF
+	pending += DOWN(TR);
+	pending += DOWN(RC);
+#ifdef H5_HAVE_INDEXING
+        pending += DOWN(X);
+#endif
+#endif /* H5_HAVE_EFF */
+	pending += DOWN(ES);
+	pending += DOWN(Q);
+
         /* Don't shut down the file code until objects in files are shut down */
         if(pending == 0)
             pending += DOWN(F);
@@ -302,6 +291,7 @@ H5_term_library(void)
          * that depend on them. -QAK
          */
         if(pending == 0) {
+            pending += DOWN(VL);
             pending += DOWN(AC);
             pending += DOWN(Z);
             pending += DOWN(FD);
@@ -317,8 +307,9 @@ H5_term_library(void)
             if(pending == 0)
                 pending += DOWN(SL);
             /* Don't shut down the free list code until _everything_ else is down */
-            if(pending == 0)
+            if(pending == 0) {
                 pending += DOWN(FL);
+            }
         }
     } while(pending && ntries++ < 100);
 
@@ -338,14 +329,11 @@ H5_term_library(void)
      * down if any of the below code involves using the instrumentation code.
      */
     if(H5_MPEinit_g) {
-	int mpi_initialized;
-	int mpi_finalized;
 	int mpe_code;
+	int mpi_initialized;
 
 	MPI_Initialized(&mpi_initialized);
-	MPI_Finalized(&mpi_finalized);
-
-        if (mpi_initialized && !mpi_finalized) {
+	if(mpi_initialized) {
 	    mpe_code = MPE_Finish_log("h5log");
 	    HDassert(mpe_code >=0);
 	} /* end if */
@@ -608,27 +596,6 @@ H5_debug_mask(const char *s)
     }
 } /* end H5_debug_mask() */
 
-#ifdef H5_HAVE_PARALLEL
-
-/*-------------------------------------------------------------------------
- * Function:	H5_mpi_delete_cb
- *
- * Purpose:	Callback attribute on MPI_COMM_SELF to terminate the HDF5 
- *              library when the communicator is destroyed, i.e. on MPI_Finalize.
- *
- * Return:	MPI_SUCCESS
- *
- * Programmer:	Mohamad Chaarawi, February 2015
- *
- *-------------------------------------------------------------------------
- */
-static int H5_mpi_delete_cb(MPI_Comm H5_ATTR_UNUSED comm, int H5_ATTR_UNUSED keyval, void H5_ATTR_UNUSED *attr_val, int H5_ATTR_UNUSED *flag)
-{
-    H5_term_library();
-    return MPI_SUCCESS;
-}
-#endif /*H5_HAVE_PARALLEL*/
-
 
 /*-------------------------------------------------------------------------
  * Function:	H5get_libversion
@@ -867,110 +834,56 @@ H5close(void)
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5allocate_memory
- *
- * Purpose:	    Allocate a memory buffer with the semantics of malloc().
- *
- *              NOTE: This function is intended for use with filter
- *              plugins so that all allocation and free operations
- *              use the same memory allocator. It is not intended for
- *              use as a general memory allocator in applications.
- *
- * Parameters:
- *
- *      size:   The size of the buffer.
- *
- *      clear:  Whether or not to memset the buffer to 0.
- *
- * Return:
- *
- *      Success:    A pointer to the allocated buffer.
- *  
- *      Failure:    NULL
- *
- *-------------------------------------------------------------------------
- */
-void *
-H5allocate_memory(size_t size, hbool_t clear)
-{
-    void *ret_value = NULL;
-
-    FUNC_ENTER_API_NOINIT;
-    H5TRACE2("*x", "zb", size, clear);
-
-    if(clear)
-        ret_value = H5MM_calloc(size);
-    else
-        ret_value = H5MM_malloc(size);
-
-    FUNC_LEAVE_API(ret_value)
-
-} /* end H5allocate_memory() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5resize_memory
- *
- * Purpose:	    Resize a memory buffer with the semantics of realloc().
- *
- *              NOTE: This function is intended for use with filter
- *              plugins so that all allocation and free operations
- *              use the same memory allocator. It is not intended for
- *              use as a general memory allocator in applications.
- *
- * Parameters:
- *
- *      mem:    The buffer to be resized.
- *
- *      size:   The size of the buffer.
- *
- * Return:
- *
- *      Success:    A pointer to the resized buffer.
- *  
- *      Failure:    NULL (the input buffer will be unchanged)
- *
- *-------------------------------------------------------------------------
- */
-void *
-H5resize_memory(void *mem, size_t size)
-{
-    void *ret_value = NULL;
-
-    FUNC_ENTER_API_NOINIT;
-    H5TRACE2("*x", "*xz", mem, size);
-
-    ret_value = H5MM_realloc(mem, size);
-
-    FUNC_LEAVE_API(ret_value)
-
-} /* end H5resize_memory() */
-
-
-/*-------------------------------------------------------------------------
  * Function:	H5free_memory
  *
- * Purpose:	    Frees memory allocated by the library that it is the user's
+ * Purpose:	Frees memory allocated by the library that it is the user's
  *              responsibility to free.  Ensures that the same library
  *              that was used to allocate the memory frees it.  Passing
  *              NULL pointers is allowed.
  *
- * Return:	    SUCCEED/FAIL
+ * Return:	SUCCEED/FAIL
  *
  *-------------------------------------------------------------------------
  */
 herr_t
 H5free_memory(void *mem)
 {
-    FUNC_ENTER_API_NOINIT;
+    FUNC_ENTER_API_NOINIT
     H5TRACE1("e", "*x", mem);
 
     /* At this time, it is impossible for this to fail. */
     HDfree(mem);
 
     FUNC_LEAVE_API(SUCCEED)
-
 } /* end H5free_memory() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5checksum
+ *
+ * Purpose:	Generate a checksum for the data in Key.
+ *              If the checksum is for a contiguous buffer, pass cs as NULL.
+ *              if the checksum is for non contiguous buffer, intialize cs 
+ *              a,b,c,state to 0 and set the total_length to the size of the 
+ *              data. Then call H5checksum on every contiguous piece of the buffer
+ *              with cs as the seed value from the previous H5checksum call.
+ *
+ * Programmer:	Mohamad Chaarawi
+ *              June 2013
+ *
+ *-------------------------------------------------------------------------
+ */
+uint32_t H5checksum(const void *key, size_t length, H5_checksum_seed_t *cs) 
+{
+    uint32_t ret_value;
+
+    FUNC_ENTER_API(0)
+
+    ret_value = H5_checksum_lookup4(key, length, cs);
+
+done:
+    FUNC_LEAVE_API(ret_value)
+}   /* end H5checksum */
 
 
 #if defined(H5_HAVE_THREADSAFE) && defined(H5_BUILT_AS_DYNAMIC_LIB) \
@@ -1033,4 +946,3 @@ DllMain(_In_ HINSTANCE hinstDLL, _In_ DWORD fdwReason, _In_ LPVOID lpvReserved)
     return fOkay;
 }
 #endif /* H5_HAVE_WIN32_API && H5_BUILT_AS_DYNAMIC_LIB && H5_HAVE_WIN_THREADS && H5_HAVE_THREADSAFE*/
-

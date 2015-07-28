@@ -190,6 +190,78 @@ H5P__encode_hsize_t(const void *value, void **_pp, size_t *size)
 
 
 /*-------------------------------------------------------------------------
+ * Function:       H5P__encode_uint32_t
+ *
+ * Purpose:        Generic encoding callback routine for 'uint32_t' properties.
+ *
+ * Return:	   Success:	Non-negative
+ *		   Failure:	Negative
+ *
+ * Programmer:     Mohamad Chaarawi
+ *                 August 07, 2012
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5P__encode_uint32_t(const void *value, void **_pp, size_t *size)
+{
+    uint8_t **pp = (uint8_t **)_pp;
+
+    FUNC_ENTER_PACKAGE_NOERR
+
+    /* Sanity checks */
+    HDassert(value);
+    HDassert(size);
+
+    if(NULL != *pp) {
+        /* Encode the value */
+        UINT32ENCODE(*pp, *(const uint32_t *)value);
+    } /* end if */
+
+    /* Set size needed for encoding */
+    *size += sizeof(uint32_t);
+
+    FUNC_LEAVE_NOAPI(SUCCEED)
+} /* end H5P__encode_uint32_t() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:       H5P__encode_uint64_t
+ *
+ * Purpose:        Generic encoding callback routine for 'uint64_t' properties.
+ *
+ * Return:	   Success:	Non-negative
+ *		   Failure:	Negative
+ *
+ * Programmer:     Mohamad Chaarawi
+ *                 August 07, 2012
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5P__encode_uint64_t(const void *value, void **_pp, size_t *size)
+{
+    uint8_t **pp = (uint8_t **)_pp;
+
+    FUNC_ENTER_PACKAGE_NOERR
+
+    /* Sanity checks */
+    HDassert(value);
+    HDassert(size);
+
+    if(NULL != *pp) {
+        /* Encode the value */
+        UINT64ENCODE(*pp, *(const uint64_t *)value);
+    } /* end if */
+
+    /* Set size needed for encoding */
+    *size += sizeof(uint64_t);
+
+    FUNC_LEAVE_NOAPI(SUCCEED)
+} /* end H5P__encode_uint64_t() */
+
+
+/*-------------------------------------------------------------------------
  * Function:       H5P__encode_unsigned
  *
  * Purpose:        Generic encoding callback routine for 'unsigned' properties.
@@ -509,7 +581,7 @@ H5P__decode_size_t(const void **_pp, void *_value)
 
     /* Decode the value */
     UINT64DECODE_VAR(*pp, enc_value, enc_size);
-    H5_CHECKED_ASSIGN(*value, size_t, enc_value, uint64_t);
+    H5_ASSIGN_OVERFLOW(*value, enc_value, uint64_t, size_t);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5P__decode_size_t() */
@@ -550,10 +622,78 @@ H5P__decode_hsize_t(const void **_pp, void *_value)
 
     /* Decode the value */
     UINT64DECODE_VAR(*pp, enc_value, enc_size);
-    H5_CHECKED_ASSIGN(*value, hsize_t, enc_value, uint64_t);
+    H5_ASSIGN_OVERFLOW(*value, enc_value, uint64_t, hsize_t);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5P__decode_hsize_t() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:       H5P__decode_uint32_t
+ *
+ * Purpose:        Generic encoding callback routine for 'uint32_t' properties.
+ *
+ * Return:	   Success:	Non-negative
+ *		   Failure:	Negative
+ *
+ * Programmer:     Mohamad Chaarawi
+ *                 August 07, 2012
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5P__decode_uint32_t(const void **_pp, void *_value)
+{
+    uint32_t *value = (uint32_t *)_value; /* Property value to return */
+    const uint8_t **pp = (const uint8_t **)_pp;
+    herr_t ret_value = SUCCEED; /* Return value */
+
+    FUNC_ENTER_PACKAGE
+
+    /* Sanity checks */
+    HDassert(pp);
+    HDassert(*pp);
+    HDassert(value);
+
+    UINT32DECODE(*pp, *value)
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5P__decode_uint32_t() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:       H5P__decode_uint64_t
+ *
+ * Purpose:        Generic encoding callback routine for 'uint64_t' properties.
+ *
+ * Return:	   Success:	Non-negative
+ *		   Failure:	Negative
+ *
+ * Programmer:     Mohamad Chaarawi
+ *                 August 07, 2012
+ *
+ *-------------------------------------------------------------------------
+ */
+herr_t
+H5P__decode_uint64_t(const void **_pp, void *_value)
+{
+    uint64_t *value = (uint64_t *)_value; /* Property value to return */
+    const uint8_t **pp = (const uint8_t **)_pp;
+    herr_t ret_value = SUCCEED; /* Return value */
+
+    FUNC_ENTER_PACKAGE
+
+    /* Sanity checks */
+    HDassert(pp);
+    HDassert(*pp);
+    HDassert(value);
+
+    UINT64DECODE(*pp, *value)
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* end H5P__decode_uint64_t() */
 
 
 /*-------------------------------------------------------------------------
@@ -752,7 +892,7 @@ H5P__decode(const void *buf)
 
     /* Get the type of the property list */
     type = (H5P_plist_type_t)*p++;
-    if(type <= H5P_TYPE_USER || type > H5P_TYPE_LINK_ACCESS)
+    if(type <= H5P_TYPE_USER || type > H5P_TYPE_INDEX_XFER)
         HGOTO_ERROR(H5E_PLIST, H5E_BADRANGE, FAIL, "bad type of encoded information: %u", (unsigned)type)
 
     /* Create new property list of the specified type */

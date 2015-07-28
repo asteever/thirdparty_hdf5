@@ -102,7 +102,7 @@
  *-------------------------------------------------------------------------
  */
 herr_t
-H5T__print_stats(H5T_path_t H5_ATTR_UNUSED * path, int H5_ATTR_UNUSED * nprint/*in,out*/)
+H5T__print_stats(H5T_path_t UNUSED * path, int UNUSED * nprint/*in,out*/)
 {
 #ifdef H5T_DEBUG
     hsize_t	nbytes;
@@ -165,19 +165,14 @@ H5T_debug(const H5T_t *dt, FILE *stream)
 {
     const char	*s1 = "", *s2 = "";
     unsigned	i;
-    herr_t      ret_value = SUCCEED;       /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT
+    FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     /* Check args */
     HDassert(dt);
     HDassert(stream);
 
     switch(dt->shared->type) {
-        case H5T_NO_CLASS:
-            HGOTO_ERROR(H5E_DATATYPE, H5E_BADTYPE, FAIL, "no class");
-            break;
-
         case H5T_INTEGER:
             s1 = "int";
             break;
@@ -217,9 +212,6 @@ H5T_debug(const H5T_t *dt, FILE *stream)
                 s1 = "vlen";
             break;
 
-        case H5T_REFERENCE:
-        case H5T_ARRAY:
-        case H5T_NCLASSES:
         default:
             s1 = "";
             break;
@@ -255,10 +247,6 @@ H5T_debug(const H5T_t *dt, FILE *stream)
         uint64_t	tmp;
 
 	switch(dt->shared->u.atomic.order) {
-            case H5T_ORDER_ERROR:
-                HGOTO_ERROR(H5E_DATATYPE, H5E_BADTYPE, FAIL, "order error");
-                break;
-
             case H5T_ORDER_BE:
                 s1 = "BE";
                 break;
@@ -275,7 +263,6 @@ H5T_debug(const H5T_t *dt, FILE *stream)
                 s1 = "NONE";
                 break;
 
-            case H5T_ORDER_MIXED:
             default:
                 s1 = "order?";
                 break;
@@ -290,16 +277,8 @@ H5T_debug(const H5T_t *dt, FILE *stream)
 	    fprintf(stream, ", prec=%lu",
 		    (unsigned long) (dt->shared->u.atomic.prec));
 	switch(dt->shared->type) {
-            case H5T_NO_CLASS:
-                HGOTO_ERROR(H5E_DATATYPE, H5E_BADTYPE, FAIL, "no class");
-                break;
-
             case H5T_INTEGER:
                 switch(dt->shared->u.atomic.u.i.sign) {
-                    case H5T_SGN_ERROR:
-                        HGOTO_ERROR(H5E_DATATYPE, H5E_BADTYPE, FAIL, "sign error");
-                        break;
-
                     case H5T_SGN_NONE:
                         s1 = "unsigned";
                         break;
@@ -308,7 +287,6 @@ H5T_debug(const H5T_t *dt, FILE *stream)
                         s1 = NULL;
                         break;
 
-                    case H5T_NSGN:
                     default:
                         s1 = "sign?";
                         break;
@@ -320,10 +298,6 @@ H5T_debug(const H5T_t *dt, FILE *stream)
 
             case H5T_FLOAT:
                 switch(dt->shared->u.atomic.u.f.norm) {
-                    case H5T_NORM_ERROR:
-                        HGOTO_ERROR(H5E_DATATYPE, H5E_BADTYPE, FAIL, "norm error");
-                        break;
-
                     case H5T_NORM_IMPLIED:
                         s1 = "implied";
                         break;
@@ -361,16 +335,6 @@ H5T_debug(const H5T_t *dt, FILE *stream)
                 }
                 break;
 
-            case H5T_TIME:
-            case H5T_STRING:
-            case H5T_BITFIELD:
-            case H5T_OPAQUE:
-            case H5T_COMPOUND:
-            case H5T_REFERENCE:
-            case H5T_ENUM:
-            case H5T_VLEN:
-            case H5T_ARRAY:
-            case H5T_NCLASSES:
             default:
                 /* No additional info */
                 break;
@@ -387,10 +351,6 @@ H5T_debug(const H5T_t *dt, FILE *stream)
 	fprintf(stream, "\n");
     } else if(H5T_VLEN == dt->shared->type) {
         switch(dt->shared->u.vlen.loc) {
-            case H5T_LOC_BADLOC:
-                HGOTO_ERROR(H5E_DATATYPE, H5E_BADTYPE, FAIL, "invalid datatype location");
-                break;
-
             case H5T_LOC_MEMORY:
                 fprintf(stream, ", loc=memory");
                 break;
@@ -399,7 +359,6 @@ H5T_debug(const H5T_t *dt, FILE *stream)
                 fprintf(stream, ", loc=disk");
                 break;
 
-            case H5T_LOC_MAXLOC:
             default:
                 fprintf(stream, ", loc=UNKNOWN");
                 break;
@@ -438,7 +397,6 @@ H5T_debug(const H5T_t *dt, FILE *stream)
     }
     fprintf(stream, "}");
 
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
+    FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5T_debug() */
 

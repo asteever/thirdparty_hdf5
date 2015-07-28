@@ -23,6 +23,7 @@
 /* Major error IDs */
 hid_t H5E_FUNC_g           = FAIL;      /* Function entry/exit */
 hid_t H5E_FILE_g           = FAIL;      /* File accessibilty */
+hid_t H5E_VOL_g            = FAIL;      /* Virtual Object Layer */
 hid_t H5E_SOHM_g           = FAIL;      /* Shared Object Header Messages */
 hid_t H5E_SYM_g            = FAIL;      /* Symbol table */
 hid_t H5E_PLUGIN_g         = FAIL;      /* Plugin for dynamically loaded library */
@@ -39,6 +40,7 @@ hid_t H5E_ATTR_g           = FAIL;      /* Attribute */
 hid_t H5E_IO_g             = FAIL;      /* Low-level I/O */
 hid_t H5E_EFL_g            = FAIL;      /* External file list */
 hid_t H5E_TST_g            = FAIL;      /* Ternary Search Trees */
+hid_t H5E_QUERY_g          = FAIL;      /* Query */
 hid_t H5E_FSPACE_g         = FAIL;      /* Free Space Manager */
 hid_t H5E_DATASET_g        = FAIL;      /* Dataset */
 hid_t H5E_STORAGE_g        = FAIL;      /* Data storage */
@@ -48,6 +50,7 @@ hid_t H5E_DATATYPE_g       = FAIL;      /* Datatype */
 hid_t H5E_OHDR_g           = FAIL;      /* Object header */
 hid_t H5E_ATOM_g           = FAIL;      /* Object atom */
 hid_t H5E_NONE_MAJOR_g     = FAIL;      /* No error */
+hid_t H5E_INDEX_g          = FAIL;      /* Index */
 hid_t H5E_SLIST_g          = FAIL;      /* Skip Lists */
 hid_t H5E_ARGS_g           = FAIL;      /* Invalid arguments to routine */
 hid_t H5E_EARRAY_g         = FAIL;      /* Extensible Array */
@@ -194,6 +197,7 @@ hid_t H5E_CANTSELECT_g     = FAIL;      /* Can't select hyperslab */
 hid_t H5E_CANTNEXT_g       = FAIL;      /* Can't move to next iterator location */
 hid_t H5E_BADSELECT_g      = FAIL;      /* Invalid selection */
 hid_t H5E_CANTCOMPARE_g    = FAIL;      /* Can't compare objects */
+hid_t H5E_INCONSISTENTSTATE_g = FAIL;      /* Internal states are inconsistent */
 
 /* Argument errors */
 hid_t H5E_UNINITIALIZED_g  = FAIL;      /* Information is uinitialized */

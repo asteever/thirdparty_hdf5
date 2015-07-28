@@ -49,6 +49,7 @@ class H5_DLLCPP ArrayType : public DataType {
 	// Noop destructor
 	virtual ~ArrayType();
 
+   protected:
 	// Default constructor
 	ArrayType();
 

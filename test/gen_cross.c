@@ -175,6 +175,7 @@ create_normal_dset(hid_t fid, hid_t fsid, hid_t msid)
 
     return 0;
 
+#ifdef H5_HAVE_FILTER_SCALEOFFSET
 error:
     H5E_BEGIN_TRY {
         H5Pclose(dcpl);
@@ -182,6 +183,7 @@ error:
     } H5E_END_TRY;
 
     return -1;
+#endif /* H5_HAVE_FILTER_SCALEOFFSET */
 }
 
 
@@ -203,6 +205,7 @@ error:
 int
 create_scale_offset_dsets_float(hid_t fid, hid_t fsid, hid_t msid)
 {
+#ifdef H5_HAVE_FILTER_SCALEOFFSET
     hid_t       dataset;         /* dataset handles */
     hid_t       dcpl;
     float       data[NX][NY];          /* data to write */
@@ -264,8 +267,15 @@ create_scale_offset_dsets_float(hid_t fid, hid_t fsid, hid_t msid)
     if(H5Pclose(dcpl) < 0)
         TEST_ERROR
 
+#else /* H5_HAVE_FILTER_SCALEOFFSET */
+    const char          *not_supported= "Scaleoffset filter is not enabled. Can't create the dataset.";
+
+    puts(not_supported);
+#endif /* H5_HAVE_FILTER_SCALEOFFSET */
+
     return 0;
 
+#ifdef H5_HAVE_FILTER_SCALEOFFSET
 error:
     H5E_BEGIN_TRY {
         H5Pclose(dcpl);
@@ -273,6 +283,7 @@ error:
     } H5E_END_TRY;
 
     return -1;
+#endif /* H5_HAVE_FILTER_SCALEOFFSET */
 }
 
 
@@ -294,6 +305,7 @@ error:
 int
 create_scale_offset_dsets_double(hid_t fid, hid_t fsid, hid_t msid)
 {
+#ifdef H5_HAVE_FILTER_SCALEOFFSET
     hid_t       dataset;         /* dataset handles */
     hid_t       dcpl;
     double      data[NX][NY];          /* data to write */
@@ -355,8 +367,15 @@ create_scale_offset_dsets_double(hid_t fid, hid_t fsid, hid_t msid)
     if(H5Pclose(dcpl) < 0)
         TEST_ERROR
 
+#else /* H5_HAVE_FILTER_SCALEOFFSET */
+    const char          *not_supported= "Scaleoffset filter is not enabled. Can't create the dataset.";
+
+    puts(not_supported);
+#endif /* H5_HAVE_FILTER_SCALEOFFSET */
+
     return 0;
 
+#ifdef H5_HAVE_FILTER_SCALEOFFSET
 error:
     H5E_BEGIN_TRY {
         H5Pclose(dcpl);
@@ -364,6 +383,7 @@ error:
     } H5E_END_TRY;
 
     return -1;
+#endif /* H5_HAVE_FILTER_SCALEOFFSET */
 }
 
 
@@ -385,6 +405,7 @@ error:
 int
 create_scale_offset_dsets_char(hid_t fid, hid_t fsid, hid_t msid)
 {
+#ifdef H5_HAVE_FILTER_SCALEOFFSET
     hid_t       dataset;         /* dataset handles */
     hid_t       dcpl;
     char        data[NX][NY];          /* data to write */
@@ -454,8 +475,15 @@ create_scale_offset_dsets_char(hid_t fid, hid_t fsid, hid_t msid)
     if(H5Pclose(dcpl) < 0)
         TEST_ERROR
 
+#else /* H5_HAVE_FILTER_SCALEOFFSET */
+    const char          *not_supported= "Scaleoffset filter is not enabled. Can't create the dataset.";
+
+    puts(not_supported);
+#endif /* H5_HAVE_FILTER_SCALEOFFSET */
+
     return 0;
 
+#ifdef H5_HAVE_FILTER_SCALEOFFSET
 error:
     H5E_BEGIN_TRY {
         H5Pclose(dcpl);
@@ -463,6 +491,7 @@ error:
     } H5E_END_TRY;
 
     return -1;
+#endif /* H5_HAVE_FILTER_SCALEOFFSET */
 }
 
 
@@ -484,6 +513,7 @@ error:
 int
 create_scale_offset_dsets_short(hid_t fid, hid_t fsid, hid_t msid)
 {
+#ifdef H5_HAVE_FILTER_SCALEOFFSET
     hid_t       dataset;         /* dataset handles */
     hid_t       dcpl;
     short       data[NX][NY];          /* data to write */
@@ -553,8 +583,15 @@ create_scale_offset_dsets_short(hid_t fid, hid_t fsid, hid_t msid)
     if(H5Pclose(dcpl) < 0)
         TEST_ERROR
 
+#else /* H5_HAVE_FILTER_SCALEOFFSET */
+    const char          *not_supported= "Scaleoffset filter is not enabled. Can't create the dataset.";
+
+    puts(not_supported);
+#endif /* H5_HAVE_FILTER_SCALEOFFSET */
+
     return 0;
 
+#ifdef H5_HAVE_FILTER_SCALEOFFSET
 error:
     H5E_BEGIN_TRY {
         H5Pclose(dcpl);
@@ -562,6 +599,7 @@ error:
     } H5E_END_TRY;
 
     return -1;
+#endif /* H5_HAVE_FILTER_SCALEOFFSET */
 }
 
 
@@ -583,6 +621,7 @@ error:
 int
 create_scale_offset_dsets_int(hid_t fid, hid_t fsid, hid_t msid)
 {
+#ifdef H5_HAVE_FILTER_SCALEOFFSET
     hid_t       dataset;         /* dataset handles */
     hid_t       dcpl;
     int         data[NX][NY];          /* data to write */
@@ -652,8 +691,15 @@ create_scale_offset_dsets_int(hid_t fid, hid_t fsid, hid_t msid)
     if(H5Pclose(dcpl) < 0)
         TEST_ERROR
 
+#else /* H5_HAVE_FILTER_SCALEOFFSET */
+    const char          *not_supported= "Scaleoffset filter is not enabled. Can't create the dataset.";
+
+    puts(not_supported);
+#endif /* H5_HAVE_FILTER_SCALEOFFSET */
+
     return 0;
 
+#ifdef H5_HAVE_FILTER_SCALEOFFSET
 error:
     H5E_BEGIN_TRY {
         H5Pclose(dcpl);
@@ -661,6 +707,7 @@ error:
     } H5E_END_TRY;
 
     return -1;
+#endif /* H5_HAVE_FILTER_SCALEOFFSET */
 }
 
 
@@ -683,6 +730,7 @@ error:
 int
 create_scale_offset_dsets_long_long(hid_t fid, hid_t fsid, hid_t msid)
 {
+#ifdef H5_HAVE_FILTER_SCALEOFFSET
     hid_t       dataset;         /* dataset handles */
     hid_t       dcpl;
     long long   data[NX][NY];          /* data to write */
@@ -752,8 +800,15 @@ create_scale_offset_dsets_long_long(hid_t fid, hid_t fsid, hid_t msid)
     if(H5Pclose(dcpl) < 0)
         TEST_ERROR
 
+#else /* H5_HAVE_FILTER_SCALEOFFSET */
+    const char          *not_supported= "Scaleoffset filter is not enabled. Can't create the dataset.";
+
+    puts(not_supported);
+#endif /* H5_HAVE_FILTER_SCALEOFFSET */
+
     return 0;
 
+#ifdef H5_HAVE_FILTER_SCALEOFFSET
 error:
     H5E_BEGIN_TRY {
         H5Pclose(dcpl);
@@ -761,6 +816,7 @@ error:
     } H5E_END_TRY;
 
     return -1;
+#endif /* H5_HAVE_FILTER_SCALEOFFSET */
 }
 
 
@@ -782,6 +838,7 @@ error:
 int
 create_fletcher_dsets_float(hid_t fid, hid_t fsid, hid_t msid)
 {
+#ifdef H5_HAVE_FILTER_FLETCHER32
     hid_t       dataset;         /* dataset handles */
     hid_t       dcpl;
     float       data[NX][NY];          /* data to write */
@@ -843,8 +900,15 @@ create_fletcher_dsets_float(hid_t fid, hid_t fsid, hid_t msid)
     if(H5Pclose(dcpl) < 0)
         TEST_ERROR
 
+#else /* H5_HAVE_FILTER_FLETCHER32 */
+    const char          *not_supported= "Fletcher filter is not enabled. Can't create the dataset.";
+
+    puts(not_supported);
+#endif /* H5_HAVE_FILTER_FLETCHER32 */
+
     return 0;
 
+#ifdef H5_HAVE_FILTER_FLETCHER32
 error:
     H5E_BEGIN_TRY {
         H5Pclose(dcpl);
@@ -852,6 +916,7 @@ error:
     } H5E_END_TRY;
 
     return -1;
+#endif /* H5_HAVE_FILTER_FLETCHER32 */
 }
 
 
@@ -1066,6 +1131,7 @@ error:
 int
 create_shuffle_dsets_float(hid_t fid, hid_t fsid, hid_t msid)
 {
+#ifdef H5_HAVE_FILTER_SHUFFLE
     hid_t       dataset;         /* dataset handles */
     hid_t       dcpl;
     float       data[NX][NY];          /* data to write */
@@ -1127,8 +1193,15 @@ create_shuffle_dsets_float(hid_t fid, hid_t fsid, hid_t msid)
     if(H5Pclose(dcpl) < 0)
         TEST_ERROR
 
+#else /* H5_HAVE_FILTER_SHUFFLE */
+    const char          *not_supported= "Shuffle filter is not enabled. Can't create the dataset.";
+
+    puts(not_supported);
+#endif /* H5_HAVE_FILTER_SHUFFLE */
+
     return 0;
 
+#ifdef H5_HAVE_FILTER_SHUFFLE
 error:
     H5E_BEGIN_TRY {
         H5Pclose(dcpl);
@@ -1136,6 +1209,7 @@ error:
     } H5E_END_TRY;
 
     return -1;
+#endif /* H5_HAVE_FILTER_SHUFFLE */
 }
 
 
@@ -1157,6 +1231,7 @@ error:
 int
 create_nbit_dsets_float(hid_t fid, hid_t fsid, hid_t msid)
 {
+#ifdef H5_HAVE_FILTER_NBIT
     hid_t       dataset;         /* dataset handles */
     hid_t       datatype;
     hid_t       dcpl;
@@ -1239,8 +1314,15 @@ create_nbit_dsets_float(hid_t fid, hid_t fsid, hid_t msid)
     if(H5Pclose(dcpl) < 0)
         TEST_ERROR
 
+#else /* H5_HAVE_FILTER_NBIT */
+    const char          *not_supported= "Nbit filter is not enabled. Can't create the dataset.";
+
+    puts(not_supported);
+#endif /* H5_HAVE_FILTER_NBIT */
+
     return 0;
 
+#ifdef H5_HAVE_FILTER_NBIT
 error:
     H5E_BEGIN_TRY {
         H5Pclose(dcpl);
@@ -1248,6 +1330,7 @@ error:
     } H5E_END_TRY;
 
     return -1;
+#endif /* H5_HAVE_FILTER_NBIT */
 }
 
 
@@ -1368,4 +1451,3 @@ main (void)
 
     return 0;
 }
-

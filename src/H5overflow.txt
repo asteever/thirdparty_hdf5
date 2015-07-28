@@ -32,7 +32,6 @@
 
 unsigned, UNSIGNED;
 int, SIGNED;
-int64_t, SIGNED;
 uint8_t, UNSIGNED;
 uint16_t, UNSIGNED;
 uint32_t, UNSIGNED;

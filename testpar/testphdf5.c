@@ -307,11 +307,9 @@ int main(int argc, char **argv)
     H5Ptest_param_t io_mode_confusion_params;
     H5Ptest_param_t rr_obj_flush_confusion_params;
 
-#ifndef H5_HAVE_WIN32_API
     /* Un-buffer the stdout and stderr */
-    HDsetbuf(stderr, NULL);
-    HDsetbuf(stdout, NULL);
-#endif
+    setbuf(stderr, NULL);
+    setbuf(stdout, NULL);
 
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
@@ -370,7 +368,7 @@ int main(int argc, char **argv)
     AddTest("selnone", none_selection_chunk, NULL,
             "chunked dataset with none-selection", PARATESTFILE);
     AddTest("calloc", test_chunk_alloc, NULL,
-            "parallel extend Chunked allocation on serial file", PARATESTFILE);
+	    "parallel extend Chunked allocation on serial file", PARATESTFILE);
     AddTest("fltread", test_filter_read, NULL,
 	    "parallel read of dataset written serially with filters", PARATESTFILE);
 
@@ -378,9 +376,6 @@ int main(int argc, char **argv)
     AddTest("cmpdsetr", compress_readAll, NULL,
 	    "compressed dataset collective read", PARATESTFILE);
 #endif /* H5_HAVE_FILTER_DEFLATE */
-
-    AddTest("zerodsetr", zero_dim_dset, NULL,
-	    "zero dim dset", PARATESTFILE);
 
     ndsets_params.name = PARATESTFILE;
     ndsets_params.count = ndatasets;
@@ -530,7 +525,7 @@ int main(int argc, char **argv)
     }
 
     AddTest("denseattr", test_dense_attr, NULL,
-	    "Store Dense Attributes", PARATESTFILE);
+	    "Store Dense Attributes", NULL);
 
 
     /* Display testing information */

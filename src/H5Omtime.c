@@ -122,8 +122,8 @@ H5FL_DEFINE(time_t);
  *-------------------------------------------------------------------------
  */
 static void *
-H5O_mtime_new_decode(H5F_t H5_ATTR_UNUSED *f, hid_t H5_ATTR_UNUSED dxpl_id, H5O_t H5_ATTR_UNUSED *open_oh,
-    unsigned H5_ATTR_UNUSED mesg_flags, unsigned H5_ATTR_UNUSED *ioflags, const uint8_t *p)
+H5O_mtime_new_decode(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, H5O_t UNUSED *open_oh,
+    unsigned UNUSED mesg_flags, unsigned UNUSED *ioflags, const uint8_t *p)
 {
     time_t	*mesg;
     uint32_t    tmp_time;       /* Temporary copy of the time */
@@ -178,8 +178,8 @@ done:
  *-------------------------------------------------------------------------
  */
 static void *
-H5O_mtime_decode(H5F_t H5_ATTR_UNUSED *f, hid_t H5_ATTR_UNUSED dxpl_id, H5O_t H5_ATTR_UNUSED *open_oh,
-    unsigned H5_ATTR_UNUSED mesg_flags, unsigned H5_ATTR_UNUSED *ioflags, const uint8_t *p)
+H5O_mtime_decode(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, H5O_t UNUSED *open_oh,
+    unsigned UNUSED mesg_flags, unsigned UNUSED *ioflags, const uint8_t *p)
 {
     time_t	*mesg, the_time;
     int	i;
@@ -200,8 +200,8 @@ H5O_mtime_decode(H5F_t H5_ATTR_UNUSED *f, hid_t H5_ATTR_UNUSED dxpl_id, H5O_t H5
 
     /* decode */
     for(i = 0; i < 14; i++)
-        if(!HDisdigit(p[i]))
-            HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, NULL, "badly formatted modification time message")
+	if(!HDisdigit(p[i]))
+	    HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, NULL, "badly formatted modification time message")
 
     /*
      * Convert YYYYMMDDhhmmss UTC to a time_t.  This is a little problematic
@@ -219,14 +219,36 @@ H5O_mtime_decode(H5F_t H5_ATTR_UNUSED *f, hid_t H5_ATTR_UNUSED dxpl_id, H5O_t H5
     tm.tm_sec = (p[12]-'0')*10 + (p[13]-'0');
     tm.tm_isdst = -1; /*figure it out*/
     if((time_t)-1 == (the_time = HDmktime(&tm)))
-        HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, NULL, "badly formatted modification time message")
+	HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, NULL, "badly formatted modification time message")
 
 #if defined(H5_HAVE_TM_GMTOFF)
-    /* BSD-like systems */
+    /* FreeBSD, OSF 4.0 */
     the_time += tm.tm_gmtoff;
+#elif defined(H5_HAVE___TM_GMTOFF)
+    /* Linux libc-4 */
+    the_time += tm.__tm_gmtoff;
 #elif defined(H5_HAVE_TIMEZONE)
-    /* GNU/Linux systems */
-    the_time -= timezone - (tm.tm_isdst ? 3600 : 0);
+    /* Linux libc-5 */
+    the_time -= timezone - (tm.tm_isdst?3600:0);
+#elif defined(H5_HAVE_BSDGETTIMEOFDAY) && defined(H5_HAVE_STRUCT_TIMEZONE)
+    /* Irix5.3 */
+    {
+        struct timezone tz;
+
+        if(HDBSDgettimeofday(NULL, &tz) < 0)
+            HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, NULL, "unable to obtain local timezone information")
+        the_time -= tz.tz_minuteswest * 60 - (tm.tm_isdst ? 3600 : 0);
+    }
+#elif defined(H5_HAVE_GETTIMEOFDAY) && defined(H5_HAVE_STRUCT_TIMEZONE) && defined(H5_GETTIMEOFDAY_GIVES_TZ)
+    {
+	struct timezone tz;
+	struct timeval tv;  /* Used as a placebo; some systems don't like NULL */
+
+	if(HDgettimeofday(&tv, &tz) < 0)
+	    HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, NULL, "unable to obtain local timezone information")
+
+	the_time -= tz.tz_minuteswest * 60 - (tm.tm_isdst ? 3600 : 0);
+    }
 #else
     /*
      * The catch-all.  If we can't convert a character string universal
@@ -235,12 +257,14 @@ H5O_mtime_decode(H5F_t H5_ATTR_UNUSED *f, hid_t H5_ATTR_UNUSED dxpl_id, H5O_t H5
      * only way a user can get the modification time is from our internal
      * query routines, which can gracefully recover.
      */
+
+    /* Irix64 */
     HGOTO_ERROR(H5E_OHDR, H5E_CANTINIT, NULL, "unable to obtain local timezone information")
 #endif
 
     /* The return value */
     if(NULL == (mesg = H5FL_MALLOC(time_t)))
-        HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
+	HGOTO_ERROR(H5E_RESOURCE, H5E_NOSPACE, NULL, "memory allocation failed")
     *mesg = the_time;
 
     /* Set return value */
@@ -265,7 +289,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_mtime_new_encode(H5F_t H5_ATTR_UNUSED *f, hbool_t H5_ATTR_UNUSED disable_shared, uint8_t *p, const void *_mesg)
+H5O_mtime_new_encode(H5F_t UNUSED *f, hbool_t UNUSED disable_shared, uint8_t *p, const void *_mesg)
 {
     const time_t	*mesg = (const time_t *) _mesg;
 
@@ -307,7 +331,7 @@ H5O_mtime_new_encode(H5F_t H5_ATTR_UNUSED *f, hbool_t H5_ATTR_UNUSED disable_sha
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_mtime_encode(H5F_t H5_ATTR_UNUSED *f, hbool_t H5_ATTR_UNUSED disable_shared, uint8_t *p, const void *_mesg)
+H5O_mtime_encode(H5F_t UNUSED *f, hbool_t UNUSED disable_shared, uint8_t *p, const void *_mesg)
 {
     const time_t	*mesg = (const time_t *) _mesg;
     struct tm		*tm;
@@ -393,7 +417,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static size_t
-H5O_mtime_new_size(const H5F_t H5_ATTR_UNUSED * f, hbool_t H5_ATTR_UNUSED disable_shared, const void H5_ATTR_UNUSED * mesg)
+H5O_mtime_new_size(const H5F_t UNUSED * f, hbool_t UNUSED disable_shared, const void UNUSED * mesg)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
@@ -426,7 +450,7 @@ H5O_mtime_new_size(const H5F_t H5_ATTR_UNUSED * f, hbool_t H5_ATTR_UNUSED disabl
  *-------------------------------------------------------------------------
  */
 static size_t
-H5O_mtime_size(const H5F_t H5_ATTR_UNUSED * f, hbool_t H5_ATTR_UNUSED disable_shared, const void H5_ATTR_UNUSED * mesg)
+H5O_mtime_size(const H5F_t UNUSED * f, hbool_t UNUSED disable_shared, const void UNUSED * mesg)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
@@ -454,7 +478,7 @@ H5O_mtime_size(const H5F_t H5_ATTR_UNUSED * f, hbool_t H5_ATTR_UNUSED disable_sh
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_mtime_reset(void H5_ATTR_UNUSED *_mesg)
+H5O_mtime_reset(void UNUSED *_mesg)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
@@ -505,7 +529,7 @@ H5O_mtime_free(void *mesg)
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_mtime_debug(H5F_t H5_ATTR_UNUSED *f, hid_t H5_ATTR_UNUSED dxpl_id, const void *_mesg, FILE *stream,
+H5O_mtime_debug(H5F_t UNUSED *f, hid_t UNUSED dxpl_id, const void *_mesg, FILE *stream,
 		int indent, int fwidth)
 {
     const time_t	*mesg = (const time_t *)_mesg;

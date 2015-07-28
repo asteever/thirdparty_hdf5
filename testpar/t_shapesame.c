@@ -2237,9 +2237,8 @@ contig_hs_dr_pio_test(ShapeSameTestMethods sstest_type)
     int         express_test;
     int         local_express_test;
     int         mpi_rank = -1;
-    int         mpi_size;
     int	        test_num = 0;
-    int		edge_size;
+    int		edge_size = 10;
     int		chunk_edge_size = 0;
     int	        small_rank;
     int	        large_rank;
@@ -2259,10 +2258,7 @@ contig_hs_dr_pio_test(ShapeSameTestMethods sstest_type)
 
     HDcompile_assert(sizeof(uint32_t) == sizeof(unsigned));
 
-    MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
-
-    edge_size = (mpi_size > 6 ? mpi_size : 6);
 
     local_express_test = GetTestExpress();
 
@@ -4523,7 +4519,7 @@ ckrbrd_hs_dr_pio_test(ShapeSameTestMethods sstest_type)
     int	        mpi_size = -1;
     int         mpi_rank = -1;
     int	        test_num = 0;
-    int		edge_size;
+    int		edge_size = 10;
     int         checker_edge_size = 3;
     int		chunk_edge_size = 0;
     int	        small_rank = 3;
@@ -4544,8 +4540,6 @@ ckrbrd_hs_dr_pio_test(ShapeSameTestMethods sstest_type)
 
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
     MPI_Comm_rank(MPI_COMM_WORLD, &mpi_rank);
-
-    edge_size = (mpi_size > 6 ? mpi_size : 6);
 
     local_express_test = GetTestExpress();
 
@@ -5037,11 +5031,9 @@ int main(int argc, char **argv)
 {
     int mpi_size, mpi_rank;				/* mpi variables */
 
-#ifndef H5_HAVE_WIN32_API
     /* Un-buffer the stdout and stderr */
-    HDsetbuf(stderr, NULL);
-    HDsetbuf(stdout, NULL);
-#endif
+    setbuf(stderr, NULL);
+    setbuf(stdout, NULL);
 
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
@@ -5142,7 +5134,10 @@ int main(int argc, char **argv)
 	    printf("Shape Same tests finished with no errors\n");
 	printf("===================================\n");
     }
+    /* close HDF5 library */
+    H5close();
 
+    /* MPI_Finalize must be called AFTER H5close which may use MPI calls */
     MPI_Finalize();
 
     /* cannot just return (nerrors) because exit code is limited to 1byte */

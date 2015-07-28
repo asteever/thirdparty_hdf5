@@ -43,6 +43,9 @@
 #include "H5MMprivate.h"	/* Memory management			*/
 #include "H5Ppkg.h"		/* Property lists		  	*/
 #include "H5Tprivate.h"		/* Datatypes 				*/
+#ifdef H5_HAVE_EFF
+#include "H5VLiod.h"		/* IOD plugin    		  	*/
+#endif
 #include "H5Zpkg.h"		/* Data filters				*/
 
 
@@ -50,10 +53,34 @@
 /* Local Macros */
 /****************/
 
+#ifdef H5_HAVE_EFF
+/* hint that access to dataset will be in an append only fashion */
+#define H5D_CRT_APPEND_ONLY_SIZE	       sizeof(hbool_t)
+#define H5D_CRT_APPEND_ONLY_DEF    	       FALSE
+#define H5D_CRT_APPEND_ONLY_ENC                H5P__encode_hbool_t
+#define H5D_CRT_APPEND_ONLY_DEC                H5P__decode_hbool_t
+
+/* hints for Dataset storage layout */
+#define H5D_CRT_DIMS_ORDER_SIZE	               sizeof(uint32_t)
+#define H5D_CRT_DIMS_ORDER_DEF	               0
+#define H5D_CRT_DIMS_ORDER_ENC                 H5P__encode_unsigned
+#define H5D_CRT_DIMS_ORDER_DEC                 H5P__decode_unsigned
+
+#define H5D_CRT_STRIPE_COUNT_SIZE	       sizeof(size_t)
+#define H5D_CRT_STRIPE_COUNT_DEF	       0
+#define H5D_CRT_STRIPE_COUNT_ENC               H5P__encode_size_t
+#define H5D_CRT_STRIPE_COUNT_DEC               H5P__decode_size_t
+
+#define H5D_CRT_STRIPE_SIZE_SIZE	       sizeof(size_t)
+#define H5D_CRT_STRIPE_SIZE_DEF	               0
+#define H5D_CRT_STRIPE_SIZE_ENC                H5P__encode_size_t
+#define H5D_CRT_STRIPE_SIZE_DEC                H5P__decode_size_t
+#endif
+
 /* Define default layout information */
 #define H5D_DEF_STORAGE_COMPACT_INIT  {(hbool_t)FALSE, (size_t)0, NULL}
 #define H5D_DEF_STORAGE_CONTIG_INIT   {HADDR_UNDEF, (hsize_t)0}
-#define H5D_DEF_STORAGE_CHUNK_INIT    {H5D_CHUNK_IDX_BTREE, HADDR_UNDEF,  NULL, {{HADDR_UNDEF, NULL}}}
+#define H5D_DEF_STORAGE_CHUNK_INIT    {H5D_CHUNK_BTREE, HADDR_UNDEF,  NULL, {{HADDR_UNDEF, NULL}}}
 #define H5D_DEF_LAYOUT_CHUNK_INIT    {(unsigned)0, {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, (uint32_t)0, (hsize_t)0, {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}, {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0}}
 #ifdef H5_HAVE_C99_DESIGNATED_INITIALIZER
 #define H5D_DEF_STORAGE_COMPACT  {H5D_COMPACT, { .compact = H5D_DEF_STORAGE_COMPACT_INIT }}
@@ -144,7 +171,6 @@ static int H5P__dcrt_ext_file_list_cmp(const void *value1, const void *value2, s
 const H5P_libclass_t H5P_CLS_DCRT[1] = {{
     "dataset create",		/* Class name for debugging     */
     H5P_TYPE_DATASET_CREATE,    /* Class type                   */
-
     &H5P_CLS_OBJECT_CREATE_g,	/* Parent class                 */
     &H5P_CLS_DATASET_CREATE_g,	/* Pointer to class             */
     &H5P_CLS_DATASET_CREATE_ID_g,	/* Pointer to class ID          */
@@ -173,6 +199,12 @@ H5FL_BLK_EXTERN(type_conv);
 /***************************/
 
 /* Property value defaults */
+#ifdef H5_HAVE_EFF
+static const hbool_t H5D_def_append_only_g = H5D_CRT_APPEND_ONLY_DEF;
+static const H5FF_dset_dim_layout_t H5D_def_dims_order_g = H5D_CRT_DIMS_ORDER_DEF;
+static const size_t H5D_def_stripe_count_g = H5D_CRT_STRIPE_COUNT_DEF;
+static const size_t H5D_def_stripe_size_g = H5D_CRT_STRIPE_SIZE_DEF;
+#endif
 static const H5O_layout_t H5D_def_layout_g = H5D_CRT_LAYOUT_DEF;        /* Default storage layout */
 static const H5O_fill_t H5D_def_fill_g = H5D_CRT_FILL_VALUE_DEF;        /* Default fill value */
 static const unsigned H5D_def_alloc_time_state_g = H5D_CRT_ALLOC_TIME_STATE_DEF;  /* Default allocation time state */
@@ -206,9 +238,38 @@ static hbool_t H5P_dcrt_def_layout_init_g = FALSE;
 static herr_t
 H5P__dcrt_reg_prop(H5P_genclass_t *pclass)
 {
+    hid_t type_id = FAIL;
+    hid_t space_id = FAIL;
+    hid_t lcpl_id = H5P_LINK_CREATE_DEFAULT;
     herr_t ret_value = SUCCEED;         /* Return value */
 
     FUNC_ENTER_STATIC
+
+#ifdef H5_HAVE_EFF
+    if(H5P_register_real(pclass, H5D_CRT_APPEND_ONLY_NAME, H5D_CRT_APPEND_ONLY_SIZE, 
+                         &H5D_def_append_only_g,
+                         NULL, NULL, NULL, H5D_CRT_APPEND_ONLY_ENC, H5D_CRT_APPEND_ONLY_DEC, 
+                         NULL, NULL, NULL, NULL) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
+
+    if(H5P_register_real(pclass, H5D_CRT_DIMS_ORDER_NAME, H5D_CRT_DIMS_ORDER_SIZE, 
+                         &H5D_def_dims_order_g,
+                         NULL, NULL, NULL, H5D_CRT_DIMS_ORDER_ENC, H5D_CRT_DIMS_ORDER_DEC, 
+                         NULL, NULL, NULL, NULL) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
+
+    if(H5P_register_real(pclass, H5D_CRT_STRIPE_COUNT_NAME, H5D_CRT_STRIPE_COUNT_SIZE, 
+                         &H5D_def_stripe_count_g,
+                         NULL, NULL, NULL, H5D_CRT_STRIPE_COUNT_ENC, H5D_CRT_STRIPE_COUNT_DEC, 
+                         NULL, NULL, NULL, NULL) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
+
+    if(H5P_register_real(pclass, H5D_CRT_STRIPE_SIZE_NAME, H5D_CRT_STRIPE_SIZE_SIZE, 
+                         &H5D_def_stripe_size_g,
+                         NULL, NULL, NULL, H5D_CRT_STRIPE_SIZE_ENC, H5D_CRT_STRIPE_SIZE_DEC, 
+                         NULL, NULL, NULL, NULL) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
+#endif
 
     /* Register the storage layout property */
     if(H5P_register_real(pclass, H5D_CRT_LAYOUT_NAME, H5D_CRT_LAYOUT_SIZE, &H5D_def_layout_g, 
@@ -234,6 +295,21 @@ H5P__dcrt_reg_prop(H5P_genclass_t *pclass)
             NULL, NULL, H5D_CRT_EXT_FILE_LIST_CMP, NULL) < 0)
        HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
 
+    /* Register the type ID property*/
+    if(H5P_register_real(pclass, H5VL_DSET_TYPE_ID, sizeof(hid_t), &type_id, 
+                         NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
+
+    /* Register the space ID property */
+    if(H5P_register_real(pclass, H5VL_DSET_SPACE_ID, sizeof(hid_t), &space_id, 
+                         NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
+
+    /* Register the lcpl ID property */
+    if(H5P_register_real(pclass, H5VL_DSET_LCPL_ID, sizeof(hid_t), &lcpl_id, 
+                         NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTINSERT, FAIL, "can't insert property into class")
+
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5P__dcrt_reg_prop() */
@@ -256,7 +332,7 @@ done:
  */
 /* ARGSUSED */
 static herr_t
-H5P__dcrt_copy(hid_t dst_plist_id, hid_t src_plist_id, void H5_ATTR_UNUSED *copy_data)
+H5P__dcrt_copy(hid_t dst_plist_id, hid_t src_plist_id, void UNUSED *copy_data)
 {
     H5O_fill_t     src_fill, dst_fill;          /* Source & destination fill values */
     H5O_efl_t      src_efl, dst_efl;            /* Source & destination external file lists */
@@ -370,7 +446,7 @@ done:
  */
 /* ARGSUSED */
 static herr_t
-H5P__dcrt_close(hid_t dcpl_id, void H5_ATTR_UNUSED *close_data)
+H5P__dcrt_close(hid_t dcpl_id, void UNUSED *close_data)
 {
     H5O_fill_t      fill;               /* Fill value */
     H5O_efl_t       efl;                /* External file list */
@@ -562,7 +638,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static int
-H5P__dcrt_layout_cmp(const void *_layout1, const void *_layout2, size_t H5_ATTR_UNUSED size)
+H5P__dcrt_layout_cmp(const void *_layout1, const void *_layout2, size_t UNUSED size)
 {
     const H5O_layout_t *layout1 = (const H5O_layout_t *)_layout1,     /* Create local aliases for values */
         *layout2 = (const H5O_layout_t *)_layout2;
@@ -794,7 +870,7 @@ done:
  *-------------------------------------------------------------------------
  */
 int
-H5P_fill_value_cmp(const void *_fill1, const void *_fill2, size_t H5_ATTR_UNUSED size)
+H5P_fill_value_cmp(const void *_fill1, const void *_fill2, size_t UNUSED size)
 {
     const H5O_fill_t *fill1 = (const H5O_fill_t *)_fill1,     /* Create local aliases for values */
         *fill2 = (const H5O_fill_t *)_fill2;
@@ -1031,7 +1107,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static int
-H5P__dcrt_ext_file_list_cmp(const void *_efl1, const void *_efl2, size_t H5_ATTR_UNUSED size)
+H5P__dcrt_ext_file_list_cmp(const void *_efl1, const void *_efl2, size_t UNUSED size)
 {
     const H5O_efl_t *efl1 = (const H5O_efl_t *)_efl1,     /* Create local aliases for values */
         *efl2 = (const H5O_efl_t *)_efl2;

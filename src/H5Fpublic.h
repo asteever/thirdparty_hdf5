@@ -41,14 +41,12 @@
  * We're assuming that these constants are used rather early in the hdf5
  * session.
  *
- * Note that H5F_ACC_DEBUG is deprecated (nonfuncational) but retained as a
- * symbol for backward compatibility.
  */
 #define H5F_ACC_RDONLY	(H5CHECK 0x0000u)	/*absence of rdwr => rd-only */
 #define H5F_ACC_RDWR	(H5CHECK 0x0001u)	/*open for read and write    */
 #define H5F_ACC_TRUNC	(H5CHECK 0x0002u)	/*overwrite existing files   */
 #define H5F_ACC_EXCL	(H5CHECK 0x0004u)	/*fail if file already exists*/
-/* NOTE: 0x0008u was H5F_ACC_DEBUG, now deprecated */
+#define H5F_ACC_DEBUG	(H5CHECK 0x0008u)	/*print debug info	     */
 #define H5F_ACC_CREAT	(H5CHECK 0x0010u)	/*create non-existing files  */
 
 /* Value passed to H5Pset_elink_acc_flags to cause flags to be taken from the
@@ -177,6 +175,7 @@ extern "C" {
 
 /* Functions in H5F.c */
 H5_DLL htri_t H5Fis_hdf5(const char *filename);
+H5_DLL htri_t H5Fis_accessible(const char *container_name, hid_t fapl_id);
 H5_DLL hid_t  H5Fcreate(const char *filename, unsigned flags,
 		  	  hid_t create_plist, hid_t access_plist);
 H5_DLL hid_t  H5Fopen(const char *filename, unsigned flags,
@@ -223,7 +222,7 @@ H5_DLL herr_t H5Fget_mpi_atomicity(hid_t file_id, hbool_t *flag);
 #ifndef H5_NO_DEPRECATED_SYMBOLS
 
 /* Macros */
-#define H5F_ACC_DEBUG	(H5CHECK 0x0000u)	/*print debug info (deprecated)*/
+
 
 /* Typedefs */
 

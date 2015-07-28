@@ -13,19 +13,13 @@
  * access to either file, you may request a copy from help@hdfgroup.org.     *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/****************/
-/* Module Setup */
-/****************/
-
 #define H5F_PACKAGE		/*suppress error about including H5Fpkg	  */
 
 /* Interface initialization */
 #define H5_INTERFACE_INIT_FUNC	H5F_init_interface
 
 
-/***********/
-/* Headers */
-/***********/
+/* Packages needed by this file... */
 #include "H5private.h"		/* Generic Functions			*/
 #include "H5Aprivate.h"		/* Attributes				*/
 #include "H5ACprivate.h"        /* Metadata cache                       */
@@ -40,15 +34,8 @@
 #include "H5Pprivate.h"		/* Property lists			*/
 #include "H5SMprivate.h"	/* Shared Object Header Messages	*/
 #include "H5Tprivate.h"		/* Datatypes				*/
-
-
-/****************/
-/* Local Macros */
-/****************/
-
-/******************/
-/* Local Typedefs */
-/******************/
+#include "H5VLnative.h" 	/* Native Plugin                        */
+#include "H5VLprivate.h"	/* VOL plugins				*/
 
 /* Struct only used by functions H5F_get_objects and H5F_get_objects_cb */
 typedef struct H5F_olist_t {
@@ -66,34 +53,12 @@ typedef struct H5F_olist_t {
     size_t     max_nobjs;       /* Maximum # of IDs to put into array */
 } H5F_olist_t;
 
-
-/********************/
-/* Package Typedefs */
-/********************/
-
-
-/********************/
-/* Local Prototypes */
-/********************/
-
-static int H5F_get_objects_cb(void *obj_ptr, hid_t obj_id, void *key);
+/* private prototypes */
+static H5F_t *H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id,
+    hid_t fapl_id, H5FD_t *lf);
 static herr_t H5F_build_actual_name(const H5F_t *f, const H5P_genplist_t *fapl,
-    const char *name, char ** /*out*/ actual_name);/* Declare a free list to manage the H5F_t struct */
-
-
-/*********************/
-/* Package Variables */
-/*********************/
-
-
-/*****************************/
-/* Library Private Variables */
-/*****************************/
-
-
-/*******************/
-/* Local Variables */
-/*******************/
+    const char *name, char ** /*out*/ actual_name);
+static herr_t H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush);
 
 /* Declare a free list to manage the H5F_t struct */
 H5FL_DEFINE(H5F_t);
@@ -120,8 +85,9 @@ H5F_init_interface(void)
 {
     herr_t ret_value = SUCCEED;                 /* Return value */
 
-    FUNC_ENTER_NOAPI_NOINIT_NOERR
+    FUNC_ENTER_NOAPI_NOINIT
 
+done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5F_init_interface() */
 
@@ -230,6 +196,49 @@ done:
 
 
 /*-------------------------------------------------------------------------
+ * Function:	H5F_get_obj_count_cb
+ *
+ * Purpose: H5F_get_obj_count_cb callback function.  It calls in the
+ *          VOL and gets the object count for the file ID passed
+ *
+ * Return:	Non-negative on success; negative on failure.
+ *
+ * Programmer:  Mohamad Chaarawi
+ *              May 2012
+ *
+ *-------------------------------------------------------------------------
+ */
+int
+H5F_get_obj_count_cb(void UNUSED *obj_ptr, hid_t obj_id, void *key)
+{
+    H5F_trav_obj_cnt_t *udata = (H5F_trav_obj_cnt_t *)key;
+    ssize_t            obj_count = 0;
+    H5VL_t             *vol_plugin;
+    void               *obj;
+    int                ret_value = H5_ITER_CONT;    /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT
+
+    /* get the plugin pointer */
+    if (NULL == (vol_plugin = (H5VL_t *)H5I_get_aux(obj_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "ID does not contain VOL information")
+
+    /* get the file object */
+    if(NULL == (obj = (void *)H5I_object_verify(obj_id, H5I_FILE)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a file id")
+
+    if(H5VL_file_get(obj, vol_plugin, H5VL_FILE_GET_OBJ_COUNT, H5AC_dxpl_id, H5_EVENT_STACK_NULL, 
+                     udata->types, &obj_count) < 0)
+        HGOTO_ERROR(H5E_INTERNAL, H5E_CANTGET, H5_ITER_ERROR, "unable to get object count in file(s)")
+
+    *(udata->obj_count) += obj_count; 
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5F_get_obj_count_cb */
+
+
+/*-------------------------------------------------------------------------
  * Function:    H5F_get_obj_count
  *
  * Purpose:	Private function return the number of opened object IDs
@@ -259,6 +268,54 @@ H5F_get_obj_count(const H5F_t *f, unsigned types, hbool_t app_ref, size_t *obj_i
 done:
     FUNC_LEAVE_NOAPI(ret_value)
 } /* end H5F_get_obj_count() */
+
+
+/*-------------------------------------------------------------------------
+ * Function:	H5F_get_obj_ids_cb
+ *
+ * Purpose: H5F_get_obj_ids_cb callback function.  It calls in the
+ *          VOL and gets the object ids for the file ID passed
+ *
+ * Return:	Non-negative on success; negative on failure.
+ *
+ * Programmer:  Mohamad Chaarawi
+ *              May 2012
+ *
+ *-------------------------------------------------------------------------
+ */
+int
+H5F_get_obj_ids_cb(void UNUSED *obj_ptr, hid_t obj_id, void *key)
+{
+    H5F_trav_obj_ids_t *udata = (H5F_trav_obj_ids_t *)key;
+    H5VL_t             *vol_plugin;
+    void               *obj;
+    ssize_t            obj_count = 0;
+    int                ret_value = H5_ITER_CONT;    /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT
+
+    /* get the plugin pointer */
+    if (NULL == (vol_plugin = (H5VL_t *)H5I_get_aux(obj_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "ID does not contain VOL information")
+
+    /* get the file object */
+    if(NULL == (obj = (void *)H5I_object_verify(obj_id, H5I_FILE)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid file identifier")
+
+    if(H5VL_file_get(obj, vol_plugin, H5VL_FILE_GET_OBJ_IDS, H5AC_dxpl_id, H5_EVENT_STACK_NULL, 
+                     udata->types, udata->max_objs, udata->oid_list, &obj_count) < 0)
+        HGOTO_ERROR(H5E_INTERNAL, H5E_CANTGET, H5_ITER_ERROR, "unable to get object count in file(s)")
+
+    *(udata->obj_count) += obj_count; 
+    udata->max_objs -= obj_count;
+    udata->oid_list += obj_count;
+
+    if(udata->max_objs <= 0)
+        ret_value = H5_ITER_STOP;
+
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5F_get_obj_count_cb */
 
 
 /*-------------------------------------------------------------------------
@@ -306,7 +363,8 @@ done:
  *---------------------------------------------------------------------------
  */
 herr_t
-H5F_get_objects(const H5F_t *f, unsigned types, size_t max_nobjs, hid_t *obj_id_list, hbool_t app_ref, size_t *obj_id_count_ptr)
+H5F_get_objects(const H5F_t *f, unsigned types, size_t max_nobjs, hid_t *obj_id_list, 
+                hbool_t app_ref, size_t *obj_id_count_ptr)
 {
     size_t obj_id_count=0;      /* Number of open IDs */
     H5F_olist_t olist;          /* Structure to hold search results */
@@ -404,15 +462,15 @@ done:
  * 		object is in the file, and either count it or put its ID
  *		on the list.
  *
- * Return:      H5_ITER_STOP if the array of object IDs is filled up.
- *              H5_ITER_CONT otherwise.
+ * Return:      TRUE if the array of object IDs is filled up.
+ *              FALSE otherwise.
  *
  * Programmer:  Raymond Lu
  *              Wednesday, Dec 5, 2001
  *
  *-------------------------------------------------------------------------
  */
-static int
+int
 H5F_get_objects_cb(void *obj_ptr, hid_t obj_id, void *key)
 {
     H5F_olist_t *olist = (H5F_olist_t *)key;    /* Alias for search info */
@@ -450,11 +508,16 @@ H5F_get_objects_cb(void *obj_ptr, hid_t obj_id, void *key)
 		break;
 
 	    case H5I_DATATYPE:
-                if(H5T_is_named((H5T_t*)obj_ptr)==TRUE)
-                    oloc = H5T_oloc((H5T_t*)obj_ptr);
-                else
-                    oloc = NULL;
-		break;
+                {
+                    H5T_t *type = NULL;
+
+                    /* Get the actual datatype object that should be the vol_obj */
+                    if(NULL == (type = (H5T_t *)H5T_get_named_type((H5T_t*)obj_ptr)))
+                        oloc = NULL;
+                    else
+                        oloc = H5T_oloc(type);
+                    break;
+                }
 
 	    case H5I_UNINIT:
 	    case H5I_BADID:
@@ -462,6 +525,7 @@ H5F_get_objects_cb(void *obj_ptr, hid_t obj_id, void *key)
 	    case H5I_DATASPACE:
 	    case H5I_REFERENCE:
 	    case H5I_VFL:
+	    case H5I_VOL:
 	    case H5I_GENPROP_CLS:
 	    case H5I_GENPROP_LST:
 	    case H5I_ERROR_CLASS:
@@ -578,7 +642,7 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-H5F_t *
+static H5F_t *
 H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t *lf)
 {
     H5F_t	*f = NULL, *ret_value;
@@ -587,7 +651,7 @@ H5F_new(H5F_file_t *shared, unsigned flags, hid_t fcpl_id, hid_t fapl_id, H5FD_t
 
     if(NULL == (f = H5FL_CALLOC(H5F_t)))
 	HGOTO_ERROR(H5E_FILE, H5E_NOSPACE, NULL, "can't allocate top file structure")
-    f->file_id = -1;
+    f->id_exists = FALSE;
 
     if(shared) {
         HDassert(lf == NULL);
@@ -749,7 +813,7 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-herr_t
+static herr_t
 H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
 {
     herr_t	   ret_value = SUCCEED;         /* Return value */
@@ -802,14 +866,6 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
                         /* Push error, but keep going*/
                         HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush cache")
             } /* end if */
-
-            /* if it exists, unpin the driver information block cache entry,
-             * since we're about to destroy the cache 
-             */
-            if(f->shared->drvinfo)
-                if(H5AC_unpin_entry(f->shared->drvinfo) < 0)
-                    /* Push error, but keep going*/
-                    HDONE_ERROR(H5E_FSPACE, H5E_CANTUNPIN, FAIL, "unable to unpin drvinfo")
 
             /* Unpin the superblock, since we're about to destroy the cache */
             if(H5AC_unpin_entry(f->shared->sblock) < 0)
@@ -864,6 +920,14 @@ H5F_dest(H5F_t *f, hid_t dxpl_id, hbool_t flush)
         if(H5I_dec_ref(f->shared->fcpl_id) < 0)
             /* Push error, but keep going*/
             HDONE_ERROR(H5E_FILE, H5E_CANTDEC, FAIL, "can't close property list")
+
+        /* Only truncate the file on an orderly close, with write-access */
+        if(f->closing && (H5F_ACC_RDWR & H5F_INTENT(f))) {
+            /* Truncate the file to the current allocated size */
+            if(H5FD_truncate(f->shared->lf, dxpl_id, (unsigned)TRUE) < 0)
+                /* Push error, but keep going*/
+                HDONE_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "low level truncate failed")
+        } /* end if */
 
         /* Close the file */
         if(H5FD_close(f->shared->lf) < 0)
@@ -1066,7 +1130,7 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
      * Read or write the file superblock, depending on whether the file is
      * empty or not.
      */
-    if(0 == (MAX(H5FD_get_eof(lf, H5FD_MEM_SUPER), H5FD_get_eoa(lf, H5FD_MEM_SUPER))) && (flags & H5F_ACC_RDWR)) {
+    if(0 == H5FD_get_eof(lf) && (flags & H5F_ACC_RDWR)) {
         /*
          * We've just opened a fresh new file (or truncated one). We need
          * to create & write the superblock.
@@ -1074,7 +1138,7 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
 
         /* Initialize information about the superblock and allocate space for it */
         /* (Writes superblock extension messages, if there are any) */
-        if(H5F__super_init(file, dxpl_id) < 0)
+        if(H5F_super_init(file, dxpl_id) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, NULL, "unable to allocate file superblock")
 
         /* Create and open the root group */
@@ -1085,7 +1149,7 @@ H5F_open(const char *name, unsigned flags, hid_t fcpl_id, hid_t fapl_id,
             HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, NULL, "unable to create/open root group")
     } else if (1 == shared->nrefs) {
 	/* Read the superblock if it hasn't been read before. */
-        if(H5F__super_read(file, dxpl_id) < 0)
+        if(H5F_super_read(file, dxpl_id) < 0)
 	    HGOTO_ERROR(H5E_FILE, H5E_READERROR, NULL, "unable to read superblock")
 
 	/* Open the root group */
@@ -1182,15 +1246,6 @@ H5F_flush(H5F_t *f, hid_t dxpl_id, hbool_t closing)
         /* Push error, but keep going*/
         HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush metadata cache")
 
-    /* Truncate the file to the current allocated size */
-    if(H5FD_truncate(f->shared->lf, dxpl_id, closing) < 0)
-        HDONE_ERROR(H5E_FILE, H5E_WRITEERROR, FAIL, "low level truncate failed")
-
-    /* Flush the entire metadata cache again since the EOA could have changed in the truncate call. */
-    if(H5AC_flush(f, dxpl_id) < 0)
-        /* Push error, but keep going*/
-        HDONE_ERROR(H5E_CACHE, H5E_CANTFLUSH, FAIL, "unable to flush metadata cache")
-
     /* Set up I/O info for operation */
     fio_info.f = f;
     if(NULL == (fio_info.dxpl = (H5P_genplist_t *)H5I_object(dxpl_id)))
@@ -1239,12 +1294,11 @@ herr_t
 H5F_close(H5F_t *f)
 {
     herr_t	        ret_value = SUCCEED;    /* Return value */
-
     FUNC_ENTER_NOAPI_NOINIT
 
     /* Sanity check */
     HDassert(f);
-    HDassert(f->file_id > 0);   /* This routine should only be called when a file ID's ref count drops to zero */
+    HDassert(f->id_exists);  /* This routine should only be called when a file ID's ref count drops to zero */
 
     /* Perform checks for "semi" file close degree here, since closing the
      * file is not allowed if there are objects still open */
@@ -1265,7 +1319,7 @@ H5F_close(H5F_t *f)
     } /* end if */
 
     /* Reset the file ID for this file */
-    f->file_id = -1;
+    f->id_exists = FALSE;
 
     /* Attempt to close the file/mount hierarchy */
     if(H5F_try_close(f) < 0)
@@ -1406,10 +1460,10 @@ H5F_try_close(H5F_t *f)
     /* Check if this is a child file in a mounting hierarchy & proceed up the
      * hierarchy if so.
      */
-    if(f->parent)
+    if(f->parent) {
         if(H5F_try_close(f->parent) < 0)
             HGOTO_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "can't close parent file")
-
+    }
     /* Unmount and close each child before closing the current file. */
     if(H5F_close_mounts(f) < 0)
         HGOTO_ERROR(H5E_FILE, H5E_CANTCLOSEFILE, FAIL, "can't unmount child files")
@@ -1439,42 +1493,47 @@ done:
 
 
 /*-------------------------------------------------------------------------
- * Function:	H5F_get_id
+ * Function:	H5F_reopen
  *
- * Purpose:	Get the file ID, incrementing it, or "resurrecting" it as
- *              appropriate.
+ * Purpose:	Reopen a file.  The new file handle which is returned points
+ *		to the same file as the specified file handle.  Both handles
+ *		share caches and other information.  The only difference
+ *		between the handles is that the new handle is not mounted
+ *		anywhere and no files are mounted on it.
  *
- * Return:	Non-negative on success/Negative on failure
+ * Return:	Success:	New file ID
  *
- * Programmer:	Raymond Lu
- *		Oct 29, 2003
+ *		Failure:	FAIL
+ *
+ * Programmer:	Robb Matzke
+ *              Friday, October 16, 1998
+ *
+ * Modifications:
+ *              Quincey Koziol, May 14, 2002
+ *              Keep old file's read/write intent in reopened file.
  *
  *-------------------------------------------------------------------------
  */
-hid_t
-H5F_get_id(H5F_t *file, hbool_t app_ref)
+H5F_t *
+H5F_reopen(H5F_t *f)
 {
-    hid_t       ret_value;
+    H5F_t       *ret_value = NULL;
 
     FUNC_ENTER_NOAPI_NOINIT
 
-    HDassert(file);
+    /* Get a new "top level" file struct, sharing the same "low level" file struct */
+    /* Get a new "top level" file struct, sharing the same "low level" file struct */
+    if(NULL == (ret_value = H5F_new(f->shared, 0, H5P_FILE_CREATE_DEFAULT, 
+                                    H5P_FILE_ACCESS_DEFAULT, NULL)))
+        HGOTO_ERROR(H5E_FILE, H5E_CANTINIT, NULL, "unable to reopen file")
 
-    if(file->file_id == -1) {
-        /* Get an atom for the file */
-        if((file->file_id = H5I_register(H5I_FILE, file, app_ref)) < 0)
-	    HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to atomize file")
-    } else {
-        /* Increment reference count on atom. */
-        if(H5I_inc_ref(file->file_id, app_ref) < 0)
-            HGOTO_ERROR(H5E_ATOM, H5E_CANTSET, FAIL, "incrementing file ID failed")
-    } /* end else */
-
-    ret_value = file->file_id;
+    /* Duplicate old file's names */
+    ret_value->open_name = H5MM_xstrdup(f->open_name);
+    ret_value->actual_name = H5MM_xstrdup(f->actual_name);
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5F_get_id() */
+} /* end H5F_reopen() */
 
 
 /*-------------------------------------------------------------------------
@@ -1815,6 +1874,106 @@ H5F_addr_decode(const H5F_t *f, const uint8_t **pp/*in,out*/, haddr_t *addr_p/*o
 
 
 /*-------------------------------------------------------------------------
+ * Function:    H5F_get_file_image
+ *
+ * Purpose:     Private version of H5Fget_file_image
+ *
+ * Return:      Success:        Bytes copied / number of bytes needed.
+ *              Failure:        negative value
+ *
+ * Programmer:  John Mainzer
+ *              11/15/11
+ *
+ *-------------------------------------------------------------------------
+ */
+ssize_t
+H5F_get_file_image(H5F_t *file, void *buf_ptr, size_t buf_len)
+{
+    H5FD_t     *fd_ptr;                 /* file driver */
+    haddr_t     eoa;                    /* End of file address */
+    ssize_t     ret_value;              /* Return value */
+
+    FUNC_ENTER_NOAPI_NOINIT
+
+    /* Check args */
+    if(!file || !file->shared || !file->shared->lf)
+        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "file_id yields invalid file pointer")
+    fd_ptr = file->shared->lf;
+    if(!fd_ptr->cls)
+        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "fd_ptr yields invalid class pointer")
+
+    /* the address space used by the split and multi file drivers is not
+     * a good fit for this call.  Since the plan is to depreciate these
+     * drivers anyway, don't bother to do a "force fit".
+     *
+     * The following clause tests for the multi file driver, and fails
+     * if the supplied file has the multi file driver as its top level
+     * file driver.  However, this test will not work if there is some
+     * other file driver sitting on top of the multi file driver.
+     *
+     * I'm not sure if this is possible at present, but in all likelyhood,
+     * it will become possible in the future.  On the other hand, we may
+     * remove the split/multi file drivers before then.
+     *
+     * I am leaving this solution in for now, but we should review it,
+     * and improve the solution if necessary.
+     *
+     *                                          JRM -- 11/11/22
+     */
+    if(HDstrcmp(fd_ptr->cls->name, "multi") == 0)
+        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Not supported for multi file driver.")
+
+    /* While the family file driver is conceptually fully compatible 
+     * with the get file image operation, it sets a file driver message
+     * in the super block that prevents the image being opened with any
+     * driver other than the family file driver.  Needless to say, this
+     * rather defeats the purpose of the get file image operation.
+     *
+     * While this problem is quire solvable, the required time and 
+     * resources are lacking at present.  Hence, for now, we don't
+     * allow the get file image operation to be perfomed on files 
+     * opened with the family file driver.
+     *
+     * Observe that the following test only looks at the top level 
+     * driver, and fails if there is some other driver sitting on to
+     * of the family file driver.  
+     *
+     * I don't think this can happen at present, but that may change
+     * in the future.
+     *                                   JRM -- 12/21/11
+     */
+    if(HDstrcmp(fd_ptr->cls->name, "family") == 0)
+        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "Not supported for family file driver.")
+
+    /* Go get the actual file size */
+    if(HADDR_UNDEF == (eoa = H5FD_get_eoa(file->shared->lf, H5FD_MEM_DEFAULT)))
+        HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "unable to get file size")
+
+    /* set ret_value = to eoa -- will overwrite this if appropriate */
+    ret_value = (ssize_t)eoa;
+
+    /* test to see if a buffer was provided -- if not, we are done */
+    if(buf_ptr != NULL) {
+        size_t	space_needed;		/* size of file image */
+
+        /* Check for buffer too small */
+        if((haddr_t)buf_len < eoa)
+            HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "supplied buffer too small")
+
+        space_needed = (size_t)eoa;
+
+        /* read in the file image */
+        /* (Note compensation for base address addition in internal routine) */
+        if(H5FD_read(fd_ptr, H5AC_ind_dxpl_g, H5FD_MEM_DEFAULT, 0, space_needed, buf_ptr) < 0)
+            HGOTO_ERROR(H5E_FILE, H5E_READERROR, FAIL, "file image read request failed")
+    } /* end if */
+    
+done:
+    FUNC_LEAVE_NOAPI(ret_value)
+} /* H5F_get_file_image() */
+
+
+/*-------------------------------------------------------------------------
  * Function:    H5F_set_grp_btree_shared
  *
  * Purpose:     Set the grp_btree_shared field with a valid ref-count pointer.
@@ -1961,163 +2120,39 @@ H5F_set_store_msg_crt_idx(H5F_t *f, hbool_t flag)
 
 
 /*-------------------------------------------------------------------------
- * Function:    H5F_get_file_image
+ * Function:	H5F_get_id
  *
- * Purpose:     Private version of H5Fget_file_image
+ * Purpose:	Get the file ID, incrementing it, or "resurrecting" it as
+ *              appropriate.
  *
- * Return:      Success:        Bytes copied / number of bytes needed.
- *              Failure:        negative value
+ * Return:	Non-negative on success/Negative on failure
  *
- * Programmer:  John Mainzer
- *              11/15/11
+ * Programmer:	Raymond Lu
+ *		Oct 29, 2003
  *
  *-------------------------------------------------------------------------
  */
-ssize_t
-H5F_get_file_image(H5F_t *file, void *buf_ptr, size_t buf_len)
+hid_t
+H5F_get_id(H5F_t *file, hbool_t app_ref)
 {
-    H5FD_t     *fd_ptr;                 /* file driver */
-    haddr_t     eoa;                    /* End of file address */
-    ssize_t     ret_value;              /* Return value */
+    hid_t       ret_value;
 
     FUNC_ENTER_NOAPI_NOINIT
 
-    /* Check args */
-    if(!file || !file->shared || !file->shared->lf)
-        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "file_id yields invalid file pointer")
-    fd_ptr = file->shared->lf;
-    if(!fd_ptr->cls)
-        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "fd_ptr yields invalid class pointer")
+    HDassert(file);
 
-    /* the address space used by the split and multi file drivers is not
-     * a good fit for this call.  Since the plan is to depreciate these
-     * drivers anyway, don't bother to do a "force fit".
-     *
-     * The following clause tests for the multi file driver, and fails
-     * if the supplied file has the multi file driver as its top level
-     * file driver.  However, this test will not work if there is some
-     * other file driver sitting on top of the multi file driver.
-     *
-     * I'm not sure if this is possible at present, but in all likelyhood,
-     * it will become possible in the future.  On the other hand, we may
-     * remove the split/multi file drivers before then.
-     *
-     * I am leaving this solution in for now, but we should review it,
-     * and improve the solution if necessary.
-     *
-     *                                          JRM -- 11/11/22
-     */
-    if(HDstrcmp(fd_ptr->cls->name, "multi") == 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "Not supported for multi file driver.")
-
-    /* While the family file driver is conceptually fully compatible 
-     * with the get file image operation, it sets a file driver message
-     * in the super block that prevents the image being opened with any
-     * driver other than the family file driver.  Needless to say, this
-     * rather defeats the purpose of the get file image operation.
-     *
-     * While this problem is quire solvable, the required time and 
-     * resources are lacking at present.  Hence, for now, we don't
-     * allow the get file image operation to be perfomed on files 
-     * opened with the family file driver.
-     *
-     * Observe that the following test only looks at the top level 
-     * driver, and fails if there is some other driver sitting on to
-     * of the family file driver.  
-     *
-     * I don't think this can happen at present, but that may change
-     * in the future.
-     *                                   JRM -- 12/21/11
-     */
-    if(HDstrcmp(fd_ptr->cls->name, "family") == 0)
-        HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "Not supported for family file driver.")
-
-    /* Go get the actual file size */
-    if(HADDR_UNDEF == (eoa = H5FD_get_eoa(file->shared->lf, H5FD_MEM_DEFAULT)))
-        HGOTO_ERROR(H5E_FILE, H5E_CANTGET, FAIL, "unable to get file size")
-
-    /* set ret_value = to eoa -- will overwrite this if appropriate */
-    ret_value = (ssize_t)eoa;
-
-    /* test to see if a buffer was provided -- if not, we are done */
-    if(buf_ptr != NULL) {
-        size_t	space_needed;		/* size of file image */
-
-        /* Check for buffer too small */
-        if((haddr_t)buf_len < eoa)
-            HGOTO_ERROR(H5E_FILE, H5E_BADVALUE, FAIL, "supplied buffer too small")
-
-        space_needed = (size_t)eoa;
-
-        /* read in the file image */
-        /* (Note compensation for base address addition in internal routine) */
-        if(H5FD_read(fd_ptr, H5AC_ind_dxpl_g, H5FD_MEM_DEFAULT, 0, space_needed, buf_ptr) < 0)
-            HGOTO_ERROR(H5E_FILE, H5E_READERROR, FAIL, "file image read request failed")
-    } /* end if */
-    
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* H5F_get_file_image() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5F__set_base_addr
- *
- * Purpose:	Quick and dirty routine to set the file's 'base_addr' value
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol <koziol@hdfgroup.org>
- *		July 19, 2013
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5F__set_base_addr(const H5F_t *f, haddr_t addr)
-{
-    herr_t ret_value = SUCCEED;         /* Return value */
-
-    FUNC_ENTER_PACKAGE
-
-    HDassert(f);
-    HDassert(f->shared);
-
-    /* Dispatch to driver */
-    if(H5FD_set_base_addr(f->shared->lf, addr) < 0)
-	HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "driver set_base_addr request failed")
+    if (FAIL == (ret_value = H5I_get_id(file, H5I_FILE))) {
+        /* resurrect the ID - Register an ID with the native plugin */
+        if((ret_value = H5VL_native_register(H5I_FILE, file, app_ref)) < 0)
+            HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to register group")
+        file->id_exists = TRUE;
+    }
+    else {
+        /* Increment ref count on existing ID */
+        if(H5I_inc_ref(ret_value, app_ref) < 0)
+            HGOTO_ERROR(H5E_ATOM, H5E_CANTSET, FAIL, "incrementing file ID failed")
+    }
 
 done:
     FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5F__set_base_addr() */
-
-
-/*-------------------------------------------------------------------------
- * Function:	H5F__set_eoa
- *
- * Purpose:	Quick and dirty routine to set the file's 'eoa' value
- *
- * Return:	Non-negative on success/Negative on failure
- *
- * Programmer:	Quincey Koziol <koziol@hdfgroup.org>
- *		July 19, 2013
- *
- *-------------------------------------------------------------------------
- */
-herr_t
-H5F__set_eoa(const H5F_t *f, H5F_mem_t type, haddr_t addr)
-{
-    herr_t ret_value = SUCCEED;         /* Return value */
-
-    FUNC_ENTER_PACKAGE
-
-    HDassert(f);
-    HDassert(f->shared);
-
-    /* Dispatch to driver */
-    if(H5FD_set_eoa(f->shared->lf, type, addr) < 0)
-	HGOTO_ERROR(H5E_FILE, H5E_CANTSET, FAIL, "driver set_eoa request failed")
-
-done:
-    FUNC_LEAVE_NOAPI(ret_value)
-} /* end H5F__set_eoa() */
-
+} /* end H5F_get_id() */

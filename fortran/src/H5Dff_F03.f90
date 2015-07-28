@@ -159,9 +159,12 @@ MODULE H5D_PROVISIONAL
      INTEGER FUNCTION h5dwrite_f_c(dset_id, mem_type_id, &
           mem_space_id_default ,                         &
           file_space_id_default,                         &
-          xfer_prp_default, buf ) BIND(C, NAME='h5dwrite_f_c')
+          xfer_prp_default, buf )
        USE H5GLOBAL
-       USE, INTRINSIC :: ISO_C_BINDING, ONLY : c_ptr
+       USE, INTRINSIC :: ISO_C_BINDING
+       !DEC$IF DEFINED(HDF5F90_WINDOWS)
+       !DEC$ATTRIBUTES C,reference,decorate,alias:'H5DWRITE_F_C'::h5dwrite_f_c
+       !DEC$ENDIF
        INTEGER(HID_T), INTENT(IN) :: dset_id
        INTEGER(HID_T), INTENT(IN) :: mem_type_id
        INTEGER(HID_T) :: mem_space_id_default
@@ -178,9 +181,12 @@ MODULE H5D_PROVISIONAL
      INTEGER FUNCTION h5dread_f_c(dset_id, mem_type_id, &
           mem_space_id_default,                         &
           file_space_id_default,                        &
-          xfer_prp_default, buf) BIND(C, NAME='h5dread_f_c')
+          xfer_prp_default, buf)
        USE H5GLOBAL
-       USE, INTRINSIC :: ISO_C_BINDING, ONLY : c_ptr
+       USE, INTRINSIC :: ISO_C_BINDING
+       !DEC$IF DEFINED(HDF5F90_WINDOWS)
+       !DEC$ATTRIBUTES C,reference,decorate,alias:'H5DREAD_F_C'::h5dread_f_c
+       !DEC$ENDIF
        INTEGER(HID_T), INTENT(IN) :: dset_id
        INTEGER(HID_T), INTENT(IN) :: mem_type_id
        INTEGER(HID_T) :: mem_space_id_default
@@ -201,9 +207,12 @@ MODULE H5D_PROVISIONAL
 
   INTERFACE
      INTEGER FUNCTION h5dfill_c(f_ptr_fill_value, fill_type_id, space_id, &
-          f_ptr_buf, mem_type_id) BIND(C, NAME='h5dfill_c')
+          f_ptr_buf, mem_type_id)
        USE H5GLOBAL
-       USE, INTRINSIC :: ISO_C_BINDING, ONLY : c_ptr
+       USE, INTRINSIC :: ISO_C_BINDING
+       !DEC$IF DEFINED(HDF5F90_WINDOWS)
+       !DEC$ATTRIBUTES C,reference,decorate,alias:'H5DFILL_C'::h5dfill_c
+       !DEC$ENDIF
        TYPE(C_PTR), VALUE :: f_ptr_fill_value
        INTEGER(HID_T) :: fill_type_id ! Fill value datatype identifier
        INTEGER(HID_T), INTENT(IN) :: space_id ! Memory dataspace selection identifier
@@ -2360,7 +2369,7 @@ CONTAINS
 !
 ! Fortran2003 Interface:
   SUBROUTINE h5dvlen_reclaim_f(type_id, space_id, plist_id, buf, hdferr)
-    USE, INTRINSIC :: ISO_C_BINDING, ONLY : C_PTR
+    USE, INTRINSIC :: ISO_C_BINDING
     IMPLICIT NONE
     INTEGER(HID_T), INTENT(IN)    :: type_id
     INTEGER(HID_T), INTENT(IN)    :: space_id
@@ -2370,9 +2379,12 @@ CONTAINS
 !*****
 
     INTERFACE
-       INTEGER FUNCTION h5dvlen_reclaim_c(type_id, space_id, plist_id, buf) BIND(C, NAME='h5dvlen_reclaim_c')
+       INTEGER FUNCTION h5dvlen_reclaim_c(type_id, space_id, plist_id, buf)
          USE H5GLOBAL
-         USE, INTRINSIC :: ISO_C_BINDING, ONLY : C_PTR
+         USE, INTRINSIC :: ISO_C_BINDING
+         !DEC$IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5DVLEN_RECLAIM_C'::h5dvlen_reclaim_c
+         !DEC$ENDIF
          INTEGER(HID_T) :: type_id
          INTEGER(HID_T) :: space_id
          INTEGER(HID_T) :: plist_id

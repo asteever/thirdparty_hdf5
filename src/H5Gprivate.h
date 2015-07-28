@@ -47,14 +47,12 @@
  * The disk size for a symbol table entry...
  */
 #define H5G_SIZEOF_SCRATCH      16
-#define H5G_SIZEOF_ENTRY(sizeof_addr, sizeof_size)                            \
-   ((sizeof_size) +             /*offset of name into heap              */    \
-    (sizeof_addr) +             /*address of object header              */    \
+#define H5G_SIZEOF_ENTRY(F)                                                   \
+   (H5F_SIZEOF_SIZE(F) +        /*offset of name into heap              */    \
+    H5F_SIZEOF_ADDR(F) +        /*address of object header              */    \
     4 +                         /*entry type                            */    \
     4 +				/*reserved				*/    \
     H5G_SIZEOF_SCRATCH)         /*scratch pad space                     */
-#define H5G_SIZEOF_ENTRY_FILE(F)                                              \
-    H5G_SIZEOF_ENTRY(H5F_SIZEOF_ADDR(F), H5F_SIZEOF_SIZE(F))
 
 /* ========= Group Creation properties ============ */
 
@@ -204,6 +202,7 @@ H5_DLL herr_t H5G_get_shared_count(H5G_t *grp);
 H5_DLL herr_t H5G_mount(H5G_t *grp);
 H5_DLL hbool_t H5G_mounted(H5G_t *grp);
 H5_DLL herr_t H5G_unmount(H5G_t *grp);
+
 #ifndef H5_NO_DEPRECATED_SYMBOLS
 H5_DLL H5G_obj_t H5G_map_obj_type(H5O_type_t obj_type);
 #endif /* H5_NO_DEPRECATED_SYMBOLS */
@@ -219,10 +218,10 @@ H5_DLL char *H5G_normalize(const char *name);
 H5_DLL herr_t H5G_traverse(const H5G_loc_t *loc, const char *name,
     unsigned target, H5G_traverse_t op, void *op_data, hid_t lapl_id,
     hid_t dxpl_id);
-H5_DLL herr_t H5G_iterate(hid_t loc_id, const char *group_name,
+H5_DLL herr_t H5G_iterate(H5G_loc_t *loc, const char *group_name,
     H5_index_t idx_type, H5_iter_order_t order, hsize_t skip, hsize_t *last_lnk,
     const H5G_link_iterate_t *lnk_op, void *op_data, hid_t lapl_id, hid_t dxpl_id);
-H5_DLL herr_t H5G_visit(hid_t loc_id, const char *group_name,
+H5_DLL herr_t H5G_visit(H5G_loc_t *loc, const char *group_name,
     H5_index_t idx_type, H5_iter_order_t order, H5L_iterate_t op, void *op_data,
     hid_t lapl_id, hid_t dxpl_id);
 
@@ -279,6 +278,7 @@ H5_DLL H5RS_str_t *H5G_build_fullpath_refstr_str(H5RS_str_t *path_r, const char 
 /*
  * These functions operate on group "locations"
  */
+H5_DLL herr_t H5G_loc_real(void *obj, H5I_type_t type, H5G_loc_t *loc);
 H5_DLL herr_t H5G_loc(hid_t loc_id, H5G_loc_t *loc);
 H5_DLL herr_t H5G_loc_find(const H5G_loc_t *loc, const char *name,
     H5G_loc_t *obj_loc/*out*/, hid_t lapl_id, hid_t dxpl_id);

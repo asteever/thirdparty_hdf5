@@ -37,8 +37,8 @@
 
 #include "gif.h"
 
-int
-Gif2Mem(BYTE *MemGif, GIFTOMEM *GifMemoryStruct)
+GIFTOMEM
+Gif2Mem(BYTE *MemGif)
 {
     /*
      * The gif structure outline for passing data to memory is given in gif.h.
@@ -50,6 +50,8 @@ Gif2Mem(BYTE *MemGif, GIFTOMEM *GifMemoryStruct)
     GIFAPPLICATION    **gifApplication;    /* Application Extension structure */
     GIFCOMMENT        **gifComment;        /* Comment Extension structure     */
     GIFGRAPHICCONTROL **gifGraphicControl; /* Graphic Control Extension strct */
+
+    GIFTOMEM GifMemoryStruct;
 
     register WORD i;        /* Loop counter                                 */
     BYTE Identifier;        /* Extension block identifier holder            */
@@ -131,15 +133,15 @@ Gif2Mem(BYTE *MemGif, GIFTOMEM *GifMemoryStruct)
                 gifHead->PlainTextCount   = PlainTextCount;
 
                 /* putting stuff into the gif2mem structure */
-                GifMemoryStruct->GifHeader = gifHead;
-                GifMemoryStruct->GifImageDesc = gifImageDesc;
-                GifMemoryStruct->GifPlainTextExtension = gifPlainText;
-                GifMemoryStruct->GifApplicationExtension = gifApplication;
-                GifMemoryStruct->GifCommentExtension = gifComment;
-                GifMemoryStruct->GifGraphicControlExtension = gifGraphicControl;
+                GifMemoryStruct.GifHeader = gifHead;
+                GifMemoryStruct.GifImageDesc = gifImageDesc;
+                GifMemoryStruct.GifPlainTextExtension = gifPlainText;
+                GifMemoryStruct.GifApplicationExtension = gifApplication;
+                GifMemoryStruct.GifCommentExtension = gifComment;
+                GifMemoryStruct.GifGraphicControlExtension = gifGraphicControl;
 
                 /* return the struct */
-                return 0;
+                return GifMemoryStruct;
 
             case 0x2C:  /* Image Descriptor */
                 /*
@@ -153,7 +155,7 @@ Gif2Mem(BYTE *MemGif, GIFTOMEM *GifMemoryStruct)
 
                 if (ImageCount > ImageArray) {
                     aTemp = ImageArray;
-                    ImageArray = (BYTE)((ImageArray << 1) + 1);
+                    ImageArray = (ImageArray << 1) + 1;
                     if (!(gifImageDesc = (GIFIMAGEDESC **)realloc(gifImageDesc,
                                             sizeof(GIFIMAGEDESC *) * ImageArray))) {
                         printf("Out of memory!");
@@ -220,7 +222,7 @@ Gif2Mem(BYTE *MemGif, GIFTOMEM *GifMemoryStruct)
                         PlainTextCount++;
 
                         if (PlainTextCount > PlainTextArray)
-			  PlainTextArray = (BYTE)((PlainTextArray << 1) + 1);
+                                PlainTextArray = (PlainTextArray << 1) + 1;
 
                         if (!(gifPlainText = (GIFPLAINTEXT **)realloc(gifPlainText , sizeof(GIFPLAINTEXT *) * PlainTextArray))) {
                             printf("Out of memory!");
@@ -242,7 +244,7 @@ Gif2Mem(BYTE *MemGif, GIFTOMEM *GifMemoryStruct)
                         CommentCount++;
 
                         if (CommentCount > CommentArray)
-			  CommentArray = (BYTE)((CommentArray << 1) + 1);
+                            CommentArray = (CommentArray << 1) + 1;
 
                         if (!(gifComment = (GIFCOMMENT **)realloc(gifComment , sizeof(GIFCOMMENT *) * CommentArray))) {
                             printf("Out of memory!");
@@ -269,7 +271,7 @@ Gif2Mem(BYTE *MemGif, GIFTOMEM *GifMemoryStruct)
 
                         if (ImageCount > ImageArray) {
                             aTemp = ImageArray;
-                            ImageArray = (BYTE)((ImageArray << 1) + 1);
+                            ImageArray = (ImageArray << 1) + 1;
 
                             if (!(gifGraphicControl = (GIFGRAPHICCONTROL **)realloc(gifGraphicControl , sizeof(GIFGRAPHICCONTROL *) * ImageArray))) {
                                 printf("Out of memory!");
@@ -307,7 +309,7 @@ Gif2Mem(BYTE *MemGif, GIFTOMEM *GifMemoryStruct)
                         ApplicationCount++;
 
                         if (ApplicationCount > ApplicationArray)
-			  ApplicationArray = (BYTE)((ApplicationArray << 1) + 1);
+                            ApplicationArray = (ApplicationArray << 1) + 1;
 
                         if (!(gifApplication = (GIFAPPLICATION **)realloc(gifApplication , sizeof(GIFAPPLICATION *) * ApplicationArray))) {
                             printf("Out of memory!");

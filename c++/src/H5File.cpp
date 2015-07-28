@@ -50,7 +50,7 @@ namespace H5 {
 ///\brief	Default constructor: creates a stub H5File object.
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-H5File::H5File() : H5Location(), CommonFG(), id(H5I_INVALID_HID) {}
+H5File::H5File() : H5Location(), id(0) {}
 
 //--------------------------------------------------------------------------
 // Function:	H5File overloaded constructor
@@ -69,10 +69,9 @@ H5File::H5File() : H5Location(), CommonFG(), id(H5I_INVALID_HID) {}
 ///				       the file.
 ///		\li \c H5F_ACC_EXCL - Fail if file already exists.
 ///			\c H5F_ACC_TRUNC and \c H5F_ACC_EXCL are mutually exclusive
-///		\li \c H5F_ACC_RDONLY - Open file as read-only, if it already
-///					exists, and fail, otherwise
-///		\li \c H5F_ACC_RDWR - Open file for read/write, if it already
-///					exists, and fail, otherwise
+///		\li \c H5F_ACC_DEBUG - print debug information. This flag is
+///			used only by HDF5 library developers; it is neither
+///			tested nor supported for use in applications.
 ///\par
 ///		For info on file creation in the case of an already-open file,
 ///		please refer to the \b Special \b case section in the C layer
@@ -83,7 +82,7 @@ H5File::H5File() : H5Location(), CommonFG(), id(H5I_INVALID_HID) {}
 //		to catch then re-throw it. -BMR 2013/03/21
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-H5File::H5File( const char* name, unsigned int flags, const FileCreatPropList& create_plist, const FileAccPropList& access_plist ) : H5Location(), CommonFG(), id(H5I_INVALID_HID)
+H5File::H5File( const char* name, unsigned int flags, const FileCreatPropList& create_plist, const FileAccPropList& access_plist ) : H5Location(), id(0)
 {
     try {
 	p_get_file(name, flags, create_plist, access_plist);
@@ -108,7 +107,7 @@ H5File::H5File( const char* name, unsigned int flags, const FileCreatPropList& c
 //		to catch then re-throw it. -BMR 2013/03/21
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-H5File::H5File( const H5std_string& name, unsigned int flags, const FileCreatPropList& create_plist, const FileAccPropList& access_plist ) : H5Location(), CommonFG(), id(H5I_INVALID_HID)
+H5File::H5File( const H5std_string& name, unsigned int flags, const FileCreatPropList& create_plist, const FileAccPropList& access_plist ) : H5Location(), id(0)
 {
     try {
 	p_get_file(name.c_str(), flags, create_plist, access_plist);
@@ -122,56 +121,33 @@ H5File::H5File( const H5std_string& name, unsigned int flags, const FileCreatPro
 // This function is private and contains common code between the
 // constructors taking a string or a char*
 // Programmer	Binh-Minh Ribler - 2000
-// Modification
-//		- removed H5F_ACC_CREAT because H5Fcreate will fail with
-//		H5F_ACC_CREAT. - BMR, Sep 17, 2014
 //--------------------------------------------------------------------------
 void H5File::p_get_file(const char* name, unsigned int flags, const FileCreatPropList& create_plist, const FileAccPropList& access_plist)
 {
     // These bits only set for creation, so if any of them are set,
     // create the file.
-    if( flags & (H5F_ACC_EXCL|H5F_ACC_TRUNC))
+    if( flags & (H5F_ACC_CREAT|H5F_ACC_EXCL|H5F_ACC_TRUNC|H5F_ACC_DEBUG))
     {
-        hid_t create_plist_id = create_plist.getId();
-        hid_t access_plist_id = access_plist.getId();
-        id = H5Fcreate( name, flags, create_plist_id, access_plist_id );
-        if( id < 0 )  // throw an exception when open/create fail
-        {
-            throw FileIException("H5File constructor", "H5Fcreate failed");
-        }
+	hid_t create_plist_id = create_plist.getId();
+	hid_t access_plist_id = access_plist.getId();
+	id = H5Fcreate( name, flags, create_plist_id, access_plist_id );
+	if( id < 0 )  // throw an exception when open/create fail
+	{
+	    throw FileIException("H5File constructor", "H5Fcreate failed");
+	}
     }
     // Open the file if none of the bits above are set.
     else
     {
-        hid_t access_plist_id = access_plist.getId();
-        id = H5Fopen( name, flags, access_plist_id );
-        if( id < 0 )  // throw an exception when open/create fail
-        {
-            throw FileIException("H5File constructor", "H5Fopen failed");
-        }
+	hid_t access_plist_id = access_plist.getId();
+	id = H5Fopen( name, flags, access_plist_id );
+	if( id < 0 )  // throw an exception when open/create fail
+	{
+	    throw FileIException("H5File constructor", "H5Fopen failed");
+	}
     }
 }
-
 #endif // DOXYGEN_SHOULD_SKIP_THIS
-
-//--------------------------------------------------------------------------
-// Function:	H5File overloaded constructor
-///\brief	Creates an H5File object using an existing file id.
-///\param	existing_id - IN: Id of an existing file
-// Programmer	Binh-Minh Ribler - 2015
-// Description
-//	Mar 29, 2015
-//		Added in responding to a request from user Jason Newton.
-//		However, it is not recommended to use the private member "id"
-//		in applications.  Unlike other situations, where similar
-//		constructor is needed by the library in order to return
-//		an object, H5File doesn't need it. -BMR (HDFFV-8766 partially)
-//--------------------------------------------------------------------------
-H5File::H5File(hid_t existing_id) : H5Location(), CommonFG()
-{
-    id = existing_id;
-    incRefCount(); // increment number of references to this id
-}
 
 //--------------------------------------------------------------------------
 // Function:	H5File copy constructor
@@ -180,45 +156,50 @@ H5File::H5File(hid_t existing_id) : H5Location(), CommonFG()
 ///\param	original - IN: H5File instance to copy
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-H5File::H5File(const H5File& original) : H5Location(), CommonFG()
+H5File::H5File(const H5File& original) : H5Location(original)
 {
     id = original.getId();
     incRefCount(); // increment number of references to this id
 }
 
 //--------------------------------------------------------------------------
-// Function:	H5File::isHdf5 (static)
-///\brief	Determines whether a file in HDF5 format. (Static)
+// Function:	H5File::isAccessible
+///\brief	Determines whether a file is accessible by the fapl. (Static)
 ///\param	name - IN: Name of the file
-///\return	true if the file is in HDF5 format, and false, otherwise
+///\param	access_plist - IN: File access property list.  Default to
+///		FileCreatPropList::DEFAULT
+///\return	true if the file is accessible, and false, otherwise
 ///\exception	H5::FileIException
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-bool H5File::isHdf5(const char* name)
+bool H5File::isAccessible(const char* name, const FileAccPropList& access_plist)
 {
-   // Calls C routine H5Fis_hdf5 to determine whether the file is in
+   // Calls C routine H5Fis_accessible to determine whether the file is in
    // HDF5 format.  It returns positive value, 0, or negative value
-   htri_t ret_value = H5Fis_hdf5( name );
+   hid_t access_plist_id = access_plist.getId();
+   htri_t ret_value = H5Fis_accessible( name, access_plist_id );
    if( ret_value > 0 )
       return true;
    else if( ret_value == 0 )
       return false;
-   else // Raise exception when H5Fis_hdf5 returns a negative value
+   else // Raise exception when H5Fis_accessible returns a negative value
    {
-      throw FileIException("H5File::isHdf5", "H5Fis_hdf5 returned negative value");
+      throw FileIException("H5File::isAccessible", "H5Fis_accessible returned negative value");
    }
 }
 
 //--------------------------------------------------------------------------
-// Function:	H5File::isHdf5 (static)
+// Function:	H5File::isAccessible
 ///\brief	This is an overloaded member function, provided for convenience.
 ///		It takes an \c H5std_string for \a name. (Static)
 ///\param	name - IN: Name of the file - \c H5std_string
+///\param	access_plist - IN: File access property list.  Default to
+///		FileCreatPropList::DEFAULT
 // Programmer	Binh-Minh Ribler - 2000
 //--------------------------------------------------------------------------
-bool H5File::isHdf5(const H5std_string& name )
+bool H5File::isAccessible(const H5std_string& name, const FileAccPropList& access_plist )
 {
-   return( isHdf5( name.c_str()) );
+   return( isAccessible(name.c_str(), access_plist) );
 }
 
 //--------------------------------------------------------------------------
@@ -241,13 +222,6 @@ bool H5File::isHdf5(const H5std_string& name )
 //--------------------------------------------------------------------------
 void H5File::openFile(const char* name, unsigned int flags, const FileAccPropList& access_plist)
 {
-    try {
-        close();
-    }
-    catch (Exception close_error) {
-        throw FileIException("H5File::openFile", close_error.getDetailMsg());
-    }
-
     hid_t access_plist_id = access_plist.getId();
     id = H5Fopen (name, flags, access_plist_id);
     if (id < 0)  // throw an exception when open fails
@@ -394,6 +368,25 @@ hssize_t H5File::getFreeSpace() const
 ssize_t H5File::getObjCount(unsigned types) const
 {
    ssize_t num_objs = H5Fget_obj_count(id, types);
+   if( num_objs < 0 )
+   {
+      throw FileIException("H5File::getObjCount", "H5Fget_obj_count failed");
+   }
+   return (num_objs);
+}
+
+//--------------------------------------------------------------------------
+// Function:	H5File::getObjCount
+///\brief	This is an overloaded member function, provided for convenience.
+///		It takes no parameter and returns the object count of all
+///		object types.
+///\return	Number of opened object IDs
+///\exception	H5::FileIException
+// Programmer   Binh-Minh Ribler - May 2004
+//--------------------------------------------------------------------------
+ssize_t H5File::getObjCount() const
+{
+   ssize_t num_objs = H5Fget_obj_count(id, H5F_OBJ_ALL);
    if( num_objs < 0 )
    {
       throw FileIException("H5File::getObjCount", "H5Fget_obj_count failed");
@@ -608,7 +601,7 @@ void H5File::close()
 	    throw FileIException("H5File::close", "H5Fclose failed");
 	}
 	// reset the id
-	id = H5I_INVALID_HID;
+	id = 0;
     }
 }
 

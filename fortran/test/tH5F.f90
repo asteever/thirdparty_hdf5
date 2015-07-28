@@ -141,11 +141,13 @@ CONTAINS
           CALL h5fcreate_f(fix_filename1, H5F_ACC_TRUNC_F, file1_id, error)
                CALL check("h5fcreate_f",error,total_error)
 
+
           !
           !Create group "/G" inside file "mount1.h5".
           !
           CALL h5gcreate_f(file1_id, "/G", gid, error)
                CALL check("h5gcreate_f",error,total_error)
+
           !
           !close file and group identifiers.
           !
@@ -194,15 +196,15 @@ CONTAINS
           !
           !test whether files are in hdf5 format
           !
-          CALL h5fis_hdf5_f(fix_filename1, status, error)
-               CALL check("h5fis_hdf5_f",error,total_error)
+          CALL h5fis_accessible_f(fix_filename1, status, error)
+               CALL check("h5fis_accessible_f",error,total_error)
           IF ( .NOT. status ) THEN
               write(*,*) "File ", fix_filename1, " is not in hdf5 format"
               stop
           END IF
 
-          CALL h5fis_hdf5_f(fix_filename2, status, error)
-               CALL check("h5fis_hdf5_f",error,total_error)
+          CALL h5fis_accessible_f(fix_filename2, status, error)
+               CALL check("h5fis_accessible_f",error,total_error)
           IF ( .NOT. status ) THEN
               write(*,*) "File ", fix_filename2, " is not in hdf5 format"
               stop

@@ -28,10 +28,12 @@
 #include "H5MMprivate.h"        /* Memory management                    */
 #include "H5Opublic.h"          /* File objects                         */
 #include "H5Pprivate.h"         /* Property lists                       */
+#include "H5VLnative.h" 	/* Native Plugin                        */
+#include "H5VLprivate.h"	/* Virtual Object Layer                 */
 
-static hid_t H5L_extern_traverse(const char H5_ATTR_UNUSED *link_name, hid_t cur_group,
-    const void *udata, size_t H5_ATTR_UNUSED udata_size, hid_t lapl_id);
-static ssize_t H5L_extern_query(const char H5_ATTR_UNUSED * link_name, const void *udata,
+static hid_t H5L_extern_traverse(const char UNUSED *link_name, hid_t cur_group,
+    const void *udata, size_t UNUSED udata_size, hid_t lapl_id);
+static ssize_t H5L_extern_query(const char UNUSED * link_name, const void *udata,
     size_t udata_size, void * buf /*out*/, size_t buf_size);
 
 /* Default External Link link class */
@@ -188,8 +190,8 @@ done:
  *-------------------------------------------------------------------------
  */
 static hid_t
-H5L_extern_traverse(const char H5_ATTR_UNUSED *link_name, hid_t cur_group,
-    const void *_udata, size_t H5_ATTR_UNUSED udata_size, hid_t lapl_id)
+H5L_extern_traverse(const char UNUSED *link_name, hid_t cur_group,
+    const void *_udata, size_t UNUSED udata_size, hid_t lapl_id)
 {
     H5P_genplist_t *plist;              /* Property list pointer */
     char       *my_prefix;              /* Library's copy of the prefix */
@@ -447,6 +449,19 @@ H5L_extern_traverse(const char H5_ATTR_UNUSED *link_name, hid_t cur_group,
     if((ext_obj = H5O_open_name(&root_loc, obj_name, lapl_id, FALSE)) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_CANTOPENOBJ, FAIL, "unable to open object")
 
+    /* get the native object from the ID created by the object header and create 
+       a "VOL object" ID */
+    {
+        void  *temp_obj = NULL;
+        H5I_type_t obj_type;
+        obj_type = H5I_get_type(ext_obj);
+        if(NULL == (temp_obj = H5I_remove(ext_obj)))
+            HGOTO_ERROR(H5E_SYM, H5E_CANTOPENOBJ, FAIL, "unable to open object")
+        /* Get an atom for the datatype */
+        if((ext_obj = H5VL_native_register(obj_type, temp_obj, TRUE)) < 0)
+            HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to register datatype")
+    }
+
     /* Set return value */
     ret_value = ext_obj;
 
@@ -490,7 +505,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static ssize_t
-H5L_extern_query(const char H5_ATTR_UNUSED * link_name, const void *_udata, size_t udata_size,
+H5L_extern_query(const char UNUSED * link_name, const void *_udata, size_t udata_size,
     void *buf /*out*/, size_t buf_size)
 {
     const uint8_t *udata = (const uint8_t *)_udata;      /* Pointer to external link buffer */
@@ -546,13 +561,17 @@ herr_t
 H5Lcreate_external(const char *file_name, const char *obj_name,
     hid_t link_loc_id, const char *link_name, hid_t lcpl_id, hid_t lapl_id)
 {
-    H5G_loc_t	link_loc;               /* Group location to create link */
     char       *norm_obj_name = NULL;	/* Pointer to normalized current name */
     void       *ext_link_buf = NULL;    /* Buffer to contain external link */
     size_t      buf_size;               /* Size of buffer to hold external link */
     size_t      file_name_len;          /* Length of file name string */
     size_t      norm_obj_name_len;      /* Length of normalized object name string */
     uint8_t    *p;                      /* Pointer into external link buffer */
+    void    *obj = NULL;        /* object token of loc_id */
+    H5VL_t  *vol_plugin;        /* VOL plugin information */
+    H5VL_loc_params_t loc_params;
+    H5P_genplist_t *plist;              /* Property list pointer */
+    H5L_type_t link_type = H5L_TYPE_EXTERNAL;
     herr_t      ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_API(FAIL)
@@ -564,10 +583,12 @@ H5Lcreate_external(const char *file_name, const char *obj_name,
 	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no file name specified")
     if(!obj_name || !*obj_name)
 	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no object name specified")
-    if(H5G_loc(link_loc_id, &link_loc) < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
     if(!link_name || !*link_name)
 	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no link name specified")
+
+    /* Check the group access property list */
+    if(H5P_DEFAULT == lcpl_id)
+        lcpl_id = H5P_LINK_CREATE_DEFAULT;
 
     /* Get normalized copy of the link target */
     if(NULL == (norm_obj_name = H5G_normalize(obj_name)))
@@ -587,9 +608,34 @@ H5Lcreate_external(const char *file_name, const char *obj_name,
     p += file_name_len;
     HDstrncpy((char *)p, norm_obj_name, buf_size - (file_name_len + 1));       /* External link's object */
 
-    /* Create an external link */
-    if(H5L_create_ud(&link_loc, link_name, ext_link_buf, buf_size, H5L_TYPE_EXTERNAL, lcpl_id, lapl_id, H5AC_dxpl_id) < 0)
-        HGOTO_ERROR(H5E_LINK, H5E_CANTINIT, FAIL, "unable to create link")
+    loc_params.type = H5VL_OBJECT_BY_NAME;
+    loc_params.loc_data.loc_by_name.name = link_name;
+    loc_params.loc_data.loc_by_name.plist_id = lapl_id;
+    loc_params.obj_type = H5I_get_type(link_loc_id);
+
+    /* get the file object */
+    if(NULL == (obj = (void *)H5I_object(link_loc_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid object identifier")
+    /* get the plugin pointer */
+    if (NULL == (vol_plugin = (H5VL_t *)H5I_get_aux(link_loc_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "ID does not contain VOL information")
+
+    /* Get the plist structure */
+    if(NULL == (plist = (H5P_genplist_t *)H5I_object(lcpl_id)))
+        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
+
+    /* set creation properties */
+    if(H5P_set(plist, H5VL_LINK_TYPE, &link_type) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get property value from plist")
+    if(H5P_set(plist, H5VL_LINK_UDATA, &ext_link_buf) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get property value from plist")
+    if(H5P_set(plist, H5VL_LINK_UDATA_SIZE, &buf_size) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't get property value from plist")
+
+    /* Create the link through the VOL */
+    if((ret_value = H5VL_link_create(H5VL_LINK_CREATE_UD, obj, loc_params, vol_plugin,
+                                     lcpl_id, lapl_id, H5AC_dxpl_id, H5_EVENT_STACK_NULL)) < 0)
+	HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, FAIL, "unable to create link")
 
 done:
     H5MM_xfree(ext_link_buf);

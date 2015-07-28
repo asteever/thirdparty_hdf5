@@ -22,7 +22,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
-#include "H5private.h"
 #include "hdf5.h"
 
 static int encode_plist(hid_t plist_id, int little_endian, const char *filename_le, const char *filename_be);
@@ -63,26 +62,26 @@ main(void)
         1 /*TRUE*/,
         0 /*FALSE*/,
         ( 2 * 2048 * 1024),
-        0.3,
+        0.3f,
         (64 * 1024 * 1024),
         (4 * 1024 * 1024),
         60000,
         H5C_incr__threshold,
-        0.8,
-        3.0,
+        0.8f,
+        3.0f,
         1 /*TRUE*/,
         (8 * 1024 * 1024),
         H5C_flash_incr__add_space,
-        2.0,
-        0.25,
+        2.0f,
+        0.25f,
         H5C_decr__age_out_with_threshold,
-        0.997,
-        0.8,
+        0.997f,
+        0.8f,
         1 /*TRUE*/,
         (3 * 1024 * 1024),
         3,
         0 /*FALSE*/,
-        0.2,
+        0.2f,
         (256 * 2048),
         H5AC_METADATA_WRITE_STRATEGY__PROCESS_0_ONLY};
 
@@ -280,8 +279,8 @@ main(void)
         assert(ret > 0);
 
     /* Create FAPL for the elink FAPL */
-    if((fapl1 = H5Pcreate(H5P_FILE_ACCESS)) < 0)
-        assert(fapl1 > 0);
+    if((fapl1 = ret = H5Pcreate(ret = H5P_FILE_ACCESS)) < 0)
+        assert(ret > 0);
     if((ret = H5Pset_alignment(fapl1, 2, 1024)) < 0)
         assert(ret > 0);
 
@@ -413,24 +412,24 @@ encode_plist(hid_t plist_id, int little_endian, const char *filename_le, const c
     if((ret = H5Pencode(plist_id, NULL, &temp_size)) < 0)
         assert(ret > 0);
 
-    temp_buf = (void *)HDmalloc(temp_size);
+    temp_buf = (void *)malloc(temp_size);
     assert(temp_buf);
 
     if((ret = H5Pencode(plist_id, temp_buf, &temp_size)) < 0)
         assert(ret > 0);
 
     if(little_endian)
-        fd = HDopen(filename_le, O_RDWR | O_CREAT | O_TRUNC, 0666);
+        fd = open(filename_le, O_RDWR | O_CREAT | O_TRUNC, 0666);
     else
-        fd = HDopen(filename_be, O_RDWR | O_CREAT | O_TRUNC, 0666);
+        fd = open(filename_be, O_RDWR | O_CREAT | O_TRUNC, 0666);
     assert(fd > 0);
 
-    write_size = HDwrite(fd, temp_buf, temp_size);
+    write_size = write(fd, temp_buf, temp_size);
     assert(write_size == (ssize_t)temp_size);
 
-    HDclose(fd);
+    close(fd);
     
-    HDfree(temp_buf);
+    free(temp_buf);
 
     return 1;
 }

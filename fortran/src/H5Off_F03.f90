@@ -40,6 +40,11 @@ MODULE H5O_PROVISIONAL
 
   IMPLICIT NONE
 
+  enum, bind(c)
+     enumerator :: H5O_TYPE_UNKNOWN_F = -1
+     enumerator :: H5O_TYPE_GROUP_F, H5O_TYPE_DATASET_F, H5O_TYPE_NAMED_DATATYPE_F, H5O_TYPE_NTYPES_F
+  end enum
+
 !****t* H5T (F03)/h5o_info_t
 !
 ! Fortran2003 Derived Type:
@@ -141,10 +146,12 @@ CONTAINS
 !*****
 
     INTERFACE
-       INTEGER FUNCTION h5ovisit_c(object_id, index_type, order, op, op_data) &
-            BIND(C, NAME='h5ovisit_c')
-         USE, INTRINSIC :: ISO_C_BINDING, ONLY : c_ptr, c_funptr
+       INTEGER FUNCTION h5ovisit_c(object_id, index_type, order, op, op_data)
+         USE, INTRINSIC :: ISO_C_BINDING
          USE H5GLOBAL
+         !DEC$IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5OVISIT_C'::h5ovisit_c
+         !DEC$ENDIF
          INTEGER(HID_T), INTENT(IN) :: object_id
          INTEGER, INTENT(IN) :: index_type
          INTEGER, INTENT(IN) :: order
@@ -203,12 +210,16 @@ CONTAINS
     TYPE(C_PTR)     :: ptr
     
     INTERFACE
-       INTEGER FUNCTION h5oget_info_by_name_c(loc_id, name, namelen, lapl_id_default, object_info) &
-            BIND(C, NAME='h5oget_info_by_name_c')
-         USE, INTRINSIC :: ISO_C_BINDING, ONLY : c_char, c_ptr
+       INTEGER FUNCTION h5oget_info_by_name_c(loc_id, name, namelen, lapl_id_default, &
+           object_info)
          USE H5GLOBAL
+         USE, INTRINSIC :: ISO_C_BINDING
+         !DEC$IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5OGET_INFO_BY_NAME_C'::h5oget_info_by_name_c
+         !DEC$ENDIF
+         !DEC$ATTRIBUTES reference :: name
          INTEGER(HID_T)  , INTENT(IN)  :: loc_id
-         CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN) :: name
+         CHARACTER(LEN=*), INTENT(IN)  :: name
          INTEGER(SIZE_T) , INTENT(IN)  :: namelen
          INTEGER(HID_T)  , INTENT(IN)  :: lapl_id_default
          TYPE(C_PTR),VALUE             :: object_info
@@ -258,12 +269,15 @@ CONTAINS
     TYPE(C_PTR) :: ptr
     
     INTERFACE
-       INTEGER FUNCTION h5oget_info_c(object_id, object_info) &
-            BIND(C, NAME='h5oget_info_c')
+       INTEGER FUNCTION h5oget_info_c(object_id, object_info)
          USE H5GLOBAL
-         USE, INTRINSIC :: ISO_C_BINDING, ONLY : c_ptr
+         USE, INTRINSIC :: ISO_C_BINDING
+         !DEC$IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5OGET_INFO_C'::h5oget_info_c
+         !DEC$ENDIF
          INTEGER(HID_T), INTENT(IN)  :: object_id
          TYPE(C_PTR), VALUE          :: object_info
+
        END FUNCTION h5oget_info_c
     END INTERFACE
 
@@ -320,11 +334,15 @@ CONTAINS
     
     INTERFACE
        INTEGER FUNCTION h5oget_info_by_idx_c(loc_id, group_name, namelen, &
-            index_field, order, n, lapl_id_default, object_info) BIND(C, NAME='h5oget_info_by_idx_c')
+            index_field, order, n, lapl_id_default, object_info)
          USE H5GLOBAL
-         USE, INTRINSIC :: ISO_C_BINDING, ONLY : c_char, c_ptr, c_funptr
+         USE, INTRINSIC :: ISO_C_BINDING
+         !DEC$IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5OGET_INFO_BY_IDX_C'::h5oget_info_by_idx_c
+         !DEC$ENDIF
+         !DEC$ATTRIBUTES reference :: group_name
          INTEGER(HID_T)  , INTENT(IN)  :: loc_id
-         CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN) :: group_name
+         CHARACTER(LEN=*), INTENT(IN)  :: group_name
          INTEGER(SIZE_T) , INTENT(IN)  :: namelen
          INTEGER         , INTENT(IN)  :: index_field
          INTEGER         , INTENT(IN)  :: order
@@ -401,11 +419,15 @@ CONTAINS
 
     INTERFACE
        INTEGER FUNCTION h5ovisit_by_name_c(loc_id, object_name, namelen, index_type, order, &
-            op, op_data, lapl_id) BIND(C, NAME='h5ovisit_by_name_c')
+            op, op_data, lapl_id)
          USE, INTRINSIC :: ISO_C_BINDING
          USE H5GLOBAL
+         !DEC$IF DEFINED(HDF5F90_WINDOWS)
+         !DEC$ATTRIBUTES C,reference,decorate,alias:'H5OVISIT_BY_NAME_C'::h5ovisit_by_name_c
+         !DEC$ENDIF
+         !DEC$ATTRIBUTES reference :: object_name
          INTEGER(HID_T)  , INTENT(IN) :: loc_id
-         CHARACTER(KIND=C_CHAR), DIMENSION(*), INTENT(IN) :: object_name
+         CHARACTER(LEN=*), INTENT(IN) :: object_name
          INTEGER(SIZE_T)              :: namelen
          INTEGER         , INTENT(IN) :: index_type
          INTEGER         , INTENT(IN) :: order

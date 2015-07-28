@@ -68,6 +68,8 @@ MAJOR, H5E_PLINE, Data filters
 MAJOR, H5E_EFL, External file list
 MAJOR, H5E_REFERENCE, References
 MAJOR, H5E_VFL, Virtual File Layer
+MAJOR, H5E_VOL, Virtual Object Layer
+MAJOR, H5E_QUERY, Query
 MAJOR, H5E_TST, Ternary Search Trees
 MAJOR, H5E_RS, Reference Counted Strings
 MAJOR, H5E_ERROR, Error API
@@ -77,6 +79,7 @@ MAJOR, H5E_SOHM, Shared Object Header Messages
 MAJOR, H5E_EARRAY, Extensible Array
 MAJOR, H5E_FARRAY, Fixed Array
 MAJOR, H5E_PLUGIN, Plugin for dynamically loaded library
+MAJOR, H5E_INDEX, Index
 MAJOR, H5E_NONE_MAJOR, No error
 
 # Sections (for grouping minor errors)
@@ -217,6 +220,7 @@ MINOR, DSPACE, H5E_CANTSELECT, Can't select hyperslab
 MINOR, DSPACE, H5E_CANTNEXT, Can't move to next iterator location
 MINOR, DSPACE, H5E_BADSELECT, Invalid selection
 MINOR, DSPACE, H5E_CANTCOMPARE, Can't compare objects
+MINOR, DSPACE, H5E_INCONSISTENTSTATE, Internal states are inconsistent
 
 # Property list errors
 MINOR, PLIST, H5E_CANTGET, Can't get value

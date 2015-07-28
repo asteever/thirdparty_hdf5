@@ -117,91 +117,91 @@ print_entry_type_to_screen(int id)
     switch (id) {
     
         case 0:
-            printf("B-tree Node(0)");
+            printf("B-tree Node");
             break;
         case 1: 
-            printf("Symbol Table Node(1)");
+            printf("Symbol Table Node");
             break;
         case 2:
-            printf("Local Heap Prefix(2)");
+            printf("Local Heap Prefix");
             break;
         case 3:
-            printf("Local Heap Data Block(3)");
+            printf("Local Heap Data Block");
             break;
         case 4:
-            printf("Global Heap(4)");
+            printf("Global Heap");
             break;
         case 5:
-            printf("Object Header(5)");
+            printf("Object Header");
             break;
         case 6:
-            printf("Object Header Chunk(6)");
+            printf("Object Header Chunk");
             break;
         case 7:
-            printf("v2 B-tree Header(7)");
+            printf("v2 B-tree Header");
             break;
         case 8:
-            printf("v2 B-tree Internal Node(8)");
+            printf("v2 B-tree Internal Node");
             break;
         case 9:
-            printf("v2 B-tree Leaf Node(9)");
+            printf("v2 B-tree Leaf Node");
             break;
         case 10:
-            printf("Fractal Heap Header(10)");
+            printf("Fractal Heap Header");
             break;
         case 11:
-            printf("Fractal Heap Direct Block(11)");
+            printf("Fractal Heap Direct Block");
             break;
         case 12:
-            printf("Fractal Heap Indirect Block(12)");
+            printf("Fractal Heap Indirect Block");
             break;
         case 13:
-            printf("Free Space Header(13)");
+            printf("Free Space Header");
             break;
         case 14:
-            printf("Free Space Section(14)");
+            printf("Free Space Section");
             break;
         case 15:
-            printf("Shared Object Header Message Master Table(15)");
+            printf("Shared Object Header Message Master Table");
             break;
         case 16:
-            printf("Shared Message Index Stored As A List(16)");
+            printf("Shared Message Index Stored As A List");
             break;
         case 17:
-            printf("Extensible Array Header(17)");
+            printf("Extensible Array Header");
             break;
         case 18:
-            printf("Extensible Array Index Block(18)");
+            printf("Extensible Array Index Block");
             break;
         case 19:
-            printf("Extensible Array Super Block(19)");
+            printf("Extensible Array Super Block");
             break;
         case 20:
-            printf("Extensible Array Data Block(20)");
+            printf("Extensible Array Data Block");
             break;
         case 21:
-            printf("Extensible Array Data Block Page(21)");
+            printf("Extensible Array Data Block Page");
             break;
         case 22:
-            printf("Chunk Proxy(22)");
+            printf("Chunk Proxy");
             break;
         case 23:
-            printf("Fixed Array Header(23)");
+            printf("Fixed Array Header");
             break;
         case 24:
-            printf("Fixed Array Data Block(24)");
+            printf("Fixed Array Data Block");
             break;
         case 25:
-            printf("Fixed Array Data Block Page(25)");
+            printf("Fixed Array Data Block Page");
             break;
         case 26:
-            printf("File Superblock(26)");
+            printf("File Superblock");
             break;
         case 27:
-            printf("Test Entry(27)");
+            printf("Test Entry");
             break;
         case 28:
-            printf("Number of Types(28)");
+            printf("Number of Types");
             break;
         default:
             printf("*Unknown*");
@@ -237,7 +237,7 @@ static int print_index(hid_t fid) {
     H5C_cache_entry_t *next_entry_ptr = NULL; /* entry pointer */
 
     /* Get Internal File / Cache Pointers */
-    if ( NULL == (f = (H5F_t *)H5I_object(fid)) ) TEST_ERROR;
+    if ( NULL == (f = (H5F_t *)H5I_object_verify(fid, H5I_FILE)) ) TEST_ERROR;
     cache_ptr = f->shared->cache;
 
     /* Initial (debugging) loop */
@@ -294,7 +294,7 @@ static int verify_no_unknown_tags(hid_t fid)
     H5C_cache_entry_t *next_entry_ptr = NULL; /* entry pointer */
 
     /* Get Internal File / Cache Pointers */
-    if ( NULL == (f = (H5F_t *)H5I_object(fid)) ) TEST_ERROR;
+    if ( NULL == (f = (H5F_t *)H5I_object_verify(fid, H5I_FILE)) ) TEST_ERROR;
     cache_ptr = f->shared->cache;
 
     for (i = 0; i < H5C__HASH_TABLE_LEN; i++) {
@@ -346,7 +346,7 @@ static int mark_all_entries_investigated(hid_t fid)
     H5C_cache_entry_t *next_entry_ptr = NULL; /* entry pointer */
 
     /* Get Internal File / Cache Pointers */
-    if ( NULL == (f = (H5F_t *)H5I_object(fid)) ) TEST_ERROR;
+    if ( NULL == (f = (H5F_t *)H5I_object_verify(fid, H5I_FILE)) ) TEST_ERROR;
     cache_ptr = f->shared->cache;
 
     for (i = 0; i < H5C__HASH_TABLE_LEN; i++) {
@@ -403,7 +403,7 @@ static int verify_tag(hid_t fid, int id, haddr_t tag)
     H5C_cache_entry_t *next_entry_ptr = NULL; /* entry pointer */
 
     /* Get Internal File / Cache Pointers */
-    if ( NULL == (f = (H5F_t *)H5I_object(fid)) ) TEST_ERROR;
+    if ( NULL == (f = (H5F_t *)H5I_object_verify(fid, H5I_FILE)) ) TEST_ERROR;
     cache_ptr = f->shared->cache;
 
     for (i = 0; i < H5C__HASH_TABLE_LEN; i++) {
@@ -434,8 +434,7 @@ static int verify_tag(hid_t fid, int id, haddr_t tag)
 
     } /* for */
 
-    if (found == FALSE) 
-        TEST_ERROR;
+    if (found == FALSE) TEST_ERROR;
     
     return 0;
 
@@ -449,7 +448,7 @@ static int evict_entries(hid_t fid)
     H5F_t * f = NULL;         /* File Pointer */
 
     /* Get Internal File / Cache Pointers */
-    if ( NULL == (f = (H5F_t *)H5I_object(fid)) ) TEST_ERROR;
+    if ( NULL == (f = (H5F_t *)H5I_object_verify(fid, H5I_FILE)) ) TEST_ERROR;
 
     /* Mark all entries investigated */
     mark_all_entries_investigated(fid);
@@ -457,7 +456,7 @@ static int evict_entries(hid_t fid)
     /* Evict all we can from the cache to examine full tag creation tree */
         /* This function will likely return failure since the root group
          * is still protected. Thus, don't check its return value. */
-    H5C_flush_cache(f, H5P_DEFAULT, H5C__FLUSH_INVALIDATE_FLAG);
+    H5C_flush_cache(f, H5P_DEFAULT, H5P_DEFAULT, H5C__FLUSH_INVALIDATE_FLAG);
 
     return 0;
 
@@ -494,7 +493,7 @@ static int get_new_object_header_tag(hid_t fid, haddr_t *tag)
     int found = FALSE;                      /* If entry is found */
 
     /* Get Internal File / Cache Pointers */
-    if ( NULL == (f = (H5F_t *)H5I_object(fid)) ) TEST_ERROR;
+    if ( NULL == (f = (H5F_t *)H5I_object_verify(fid, H5I_FILE)) ) TEST_ERROR;
     cache_ptr = f->shared->cache;
 
     for (i = 0; i < H5C__HASH_TABLE_LEN; i++) {
@@ -667,7 +666,7 @@ check_file_open_tags(hid_t fcpl, int type)
     /* =================== */
     /* TEST: Open The File */
     /* =================== */
-    if ( (fid = H5Fopen(FILENAME, H5F_ACC_RDONLY, H5P_DEFAULT)) < 0 ) TEST_ERROR;
+    if ( (fid = H5Fopen(FILENAME, H5P_DEFAULT, H5P_DEFAULT)) < 0 ) TEST_ERROR;
 
     /* =================================== */
     /* Verification of Metadata Tag Values */
@@ -3846,7 +3845,7 @@ check_invalid_tag_application(void)
     if ( (fid = H5Fcreate(FILENAME, H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT)) < 0 ) TEST_ERROR;
 
     /* Get internal file pointer*/
-    if ( NULL == (f = (H5F_t *)H5I_object(fid)) ) TEST_ERROR;
+    if ( NULL == (f = (H5F_t *)H5I_object_verify(fid, H5I_FILE)) ) TEST_ERROR;
 
     /* Create dxpl */
     if ( (dxpl_id = H5Pcreate(H5P_DATASET_XFER)) < 0) TEST_ERROR;
@@ -3866,13 +3865,13 @@ check_invalid_tag_application(void)
 
     /* Call H5HL_protect to protect the local heap created above. */
     /* This should fail as no tag is set up during the protect call */
-    if (( lheap = H5HL_protect(f, H5AC_ind_dxpl_id, addr, H5AC__NO_FLAGS_SET)) != NULL ) TEST_ERROR;
+    if (( lheap = H5HL_protect(f, H5AC_ind_dxpl_id, addr, H5AC_WRITE)) != NULL ) TEST_ERROR;
 
     /* Again, set up a valid tag in the DXPL */
     if ( H5AC_tag(H5AC_ind_dxpl_id, (haddr_t)25, NULL) < 0) TEST_ERROR;
 
     /* Call H5HL_protect again to protect the local heap. This should succeed. */
-    if (( lheap = H5HL_protect(f, H5AC_ind_dxpl_id, addr, H5AC__NO_FLAGS_SET)) == NULL ) TEST_ERROR;
+    if (( lheap = H5HL_protect(f, H5AC_ind_dxpl_id, addr, H5AC_WRITE)) == NULL ) TEST_ERROR;
 
     /* Now unprotect the heap, as we're done with the test. */
     if ( H5HL_unprotect(lheap) < 0 ) TEST_ERROR;

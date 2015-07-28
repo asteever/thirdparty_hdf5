@@ -25,7 +25,23 @@ if BUILD_PARALLEL_CONDITIONAL
   EXAMPLE_PROG_PARA = ph5example
 endif
 
-INSTALL_SCRIPT_FILES = run-c-ex.sh
+if BUILD_EFF_CONDITIONAL
+  ##INCLUDES=-I$(top_srcdir)/src -I$(top_srcdir)/test
+  ##LDADD = $(LIBH5TEST) $(LIBHDF5)  $(MYAXE_LIBS) $(MYDAOS_POSIX_LIBS) $(MYPLFS_LIBS) $(MYIOD_LIBS)
+  EXAMPLE_PROG_EFF = h5ff_server \
+                h5ff_client_map h5ff_client_multiple_cont h5ff_client_obj \
+                h5ff_client_dset h5ff_client_attr h5ff_client_links h5ff_client_view \
+                h5ff_client_vl_data h5ff_python_exec h5ff_client_analysis \
+                h5ff_client_evict_deltas h5ff_client_prefetch \
+                h5ff_client_M6.2_demo h5ff_client_M7.2-pep_demo \
+                h5ff_client_timings h5ff_client_time_datasets h5ff_client_adv_analysis
+endif
+
+if BUILD_INDEXING_CONDITIONAL
+  EXAMPLE_PROG_INDEXING = h5ff_client_index
+endif
+
+INSTALL_SCRIPT_FILES = run-c-ex.sh run_ff_tests.sh
 INSTALL_TOP_SCRIPT_FILES = run-all-ex.sh
 INSTALL_TOP_FILES = README
 
@@ -33,23 +49,24 @@ INSTALL_TOP_FILES = README
 # Don't tell automake about them, because if it knew they were programs,
 # it would try to compile them instead of using the h5cc script.
 # Use the boilerplate in config/examples.am instead.
-EXAMPLE_PROG = h5_write h5_read h5_extend_write h5_chunk_read h5_compound \
-           h5_crtgrpd h5_subset h5_cmprss h5_rdwt h5_crtgrpar h5_extend \
-           h5_crtatt h5_crtgrp h5_crtdat \
-           h5_group h5_select h5_attribute h5_mount h5_reference h5_drivers \
-           h5_ref2reg h5_extlink h5_elink_unix2win h5_shared_mesg
+EXAMPLE_PROG = #h5_write h5_read h5_extend_write h5_chunk_read h5_compound \
+           #h5_crtgrpd h5_subset h5_cmprss h5_rdwt h5_crtgrpar h5_extend \
+           #h5_crtatt h5_crtgrp h5_crtdat \
+           #h5_group h5_select h5_attribute h5_mount h5_reference h5_drivers \
+           #h5_ref2reg h5_extlink h5_elink_unix2win h5_shared_mesg \
+           #h5_external_log_native_vol
 TEST_SCRIPT=testh5cc.sh 
 TEST_EXAMPLES_SCRIPT=$(INSTALL_SCRIPT_FILES)
 
 # Install files
 # List all file that should be installed in examples directory
-INSTALL_FILES = h5_write.c h5_read.c h5_extend_write.c h5_chunk_read.c   \
-          h5_crtgrpd.c h5_subset.c h5_cmprss.c h5_rdwt.c h5_crtgrpar.c \
-          h5_extend.c h5_crtatt.c h5_crtgrp.c h5_crtdat.c \
-          h5_compound.c h5_group.c h5_select.c h5_attribute.c h5_mount.c \
-          h5_reference.c h5_drivers.c h5_extlink.c h5_elink_unix2win.c   \
-          h5_ref2reg.c h5_shared_mesg.c ph5example.c
-
+INSTALL_FILES = #h5_write.c h5_read.c h5_extend_write.c h5_chunk_read.c   \
+          #h5_crtgrpd.c h5_subset.c h5_cmprss.c h5_rdwt.c h5_crtgrpar.c \
+          #h5_extend.c h5_crtatt.c h5_crtgrp.c h5_crtdat.c \
+          #h5_compound.c h5_group.c h5_select.c h5_attribute.c h5_mount.c \
+          #h5_reference.c h5_drivers.c h5_extlink.c h5_elink_unix2win.c   \
+          #h5_ref2reg.c h5_shared_mesg.c ph5example.c \
+          #h5_external_log_native_vol.c
 
 
 # How to build examples, using installed version of h5cc
@@ -60,6 +77,7 @@ else
 $(EXTRA_PROG): $(H5CC)
 	$(H5CC) $(H5CCFLAGS) $(CFLAGS) -o $@ $(srcdir)/$@.c;
 endif
+
 
 # Some examples depend on files created by other examples.
 h5_read.chkexe_: h5_write.chkexe_
@@ -117,6 +135,7 @@ h5_dtransform: $(srcdir)/h5_dtransform.c
 h5_extlink: $(srcdir)/h5_extlink.c $(EXTLINK_DIRS)
 h5_elink_unix2win: $(srcdir)/h5_elink_unix2win.c $(EXTLINK_DIRS)
 h5_shared_mesg: $(srcdir)/h5_shared_mesg.c
+h5_external_log_native_vol: $(srcdir)/h5_external_log_native_vol.c
 
 if BUILD_SHARED_SZIP_CONDITIONAL
 LD_LIBRARY_PATH=$(LL_PATH)

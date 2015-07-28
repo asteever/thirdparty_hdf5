@@ -44,12 +44,10 @@
 #include "H5Iprivate.h"		/* IDs			  		*/
 #include "H5Lprivate.h"		/* Links				*/
 #include "H5MFprivate.h"	/* File memory management		*/
-#ifdef H5O_ENABLE_BOGUS
-#include "H5MMprivate.h"	/* Memory management			*/
-#endif /* H5O_ENABLE_BOGUS */
 #include "H5Opkg.h"             /* Object headers			*/
 #include "H5SMprivate.h"        /* Shared object header messages        */
-
+#include "H5VLnative.h" 	/* Native Plugin                        */
+#include "H5VLprivate.h"	/* Virtual Object Layer                 */
 
 /****************/
 /* Local Macros */
@@ -83,9 +81,6 @@ typedef struct {
 
 static herr_t H5O_delete_oh(H5F_t *f, hid_t dxpl_id, H5O_t *oh);
 static herr_t H5O_obj_type_real(H5O_t *oh, H5O_type_t *obj_type);
-static herr_t H5O_visit(hid_t loc_id, const char *obj_name, H5_index_t idx_type,
-    H5_iter_order_t order, H5O_iterate_t op, void *op_data, hid_t lapl_id,
-    hid_t dxpl_id);
 static herr_t H5O_get_hdr_info_real(const H5O_t *oh, H5O_hdr_info_t *hdr);
 static const H5O_obj_class_t *H5O_obj_class_real(H5O_t *oh);
 
@@ -199,10 +194,10 @@ H5O_init_interface(void)
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
     /* H5O interface sanity checks */
-    HDcompile_assert(H5O_MSG_TYPES == NELMTS(H5O_msg_class_g));
-    HDcompile_assert(sizeof(H5O_fheap_id_t) == H5O_FHEAP_ID_LEN);
+    HDassert(H5O_MSG_TYPES == NELMTS(H5O_msg_class_g));
+    HDassert(sizeof(H5O_fheap_id_t) == H5O_FHEAP_ID_LEN);
 
-    HDcompile_assert(H5O_UNKNOWN_ID < H5O_MSG_TYPES);
+    HDassert(H5O_UNKNOWN_ID < H5O_MSG_TYPES);
 
     FUNC_LEAVE_NOAPI(SUCCEED)
 } /* end H5O_init_interface() */
@@ -233,21 +228,38 @@ H5O_init_interface(void)
 hid_t
 H5Oopen(hid_t loc_id, const char *name, hid_t lapl_id)
 {
-    H5G_loc_t	loc;
+    void    *obj = NULL;        /* object token of loc_id */
+    H5VL_t  *vol_plugin;        /* VOL plugin information */
+    H5I_type_t  opened_type;
+    void       *opened_obj = NULL;
+    H5VL_loc_params_t loc_params;
     hid_t       ret_value = FAIL;
 
     FUNC_ENTER_API(FAIL)
     H5TRACE3("i", "i*si", loc_id, name, lapl_id);
 
-    /* Check args */
-    if(H5G_loc(loc_id, &loc) < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
     if(!name || !*name)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no name")
 
-    /* Open the object */
-    if((ret_value = H5O_open_name(&loc, name, lapl_id, TRUE)) < 0)
-        HGOTO_ERROR(H5E_SYM, H5E_CANTOPENOBJ, FAIL, "unable to open object")
+    loc_params.type = H5VL_OBJECT_BY_NAME;
+    loc_params.loc_data.loc_by_name.name = name;
+    loc_params.loc_data.loc_by_name.plist_id = lapl_id;
+    loc_params.obj_type = H5I_get_type(loc_id);
+
+    /* get the file object */
+    if(NULL == (obj = (void *)H5I_object(loc_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid file identifier")
+    /* get the plugin pointer */
+    if (NULL == (vol_plugin = (H5VL_t *)H5I_get_aux(loc_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "ID does not contain VOL information")
+
+    /* Open the object through the VOL */
+    if(NULL == (opened_obj = H5VL_object_open(obj, loc_params, vol_plugin, &opened_type, 
+                                              H5AC_dxpl_id, H5_EVENT_STACK_NULL)))
+	HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, FAIL, "unable to open object")
+
+    if ((ret_value = H5VL_object_register(opened_obj, opened_type, vol_plugin, TRUE)) < 0)
+        HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to atomize dataset handle")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -281,19 +293,17 @@ hid_t
 H5Oopen_by_idx(hid_t loc_id, const char *group_name, H5_index_t idx_type,
     H5_iter_order_t order, hsize_t n, hid_t lapl_id)
 {
-    H5G_loc_t	loc;
-    H5G_loc_t   obj_loc;                /* Location used to open group */
-    H5G_name_t  obj_path;            	/* Opened object group hier. path */
-    H5O_loc_t   obj_oloc;            	/* Opened object object location */
-    hbool_t     loc_found = FALSE;      /* Entry at 'name' found */
+    void    *obj = NULL;        /* object token of loc_id */
+    H5VL_t  *vol_plugin;        /* VOL plugin information */
+    H5I_type_t  opened_type;
+    void       *opened_obj = NULL;
+    H5VL_loc_params_t loc_params;
     hid_t       ret_value = FAIL;
 
     FUNC_ENTER_API(FAIL)
     H5TRACE6("i", "i*sIiIohi", loc_id, group_name, idx_type, order, n, lapl_id);
 
     /* Check args */
-    if(H5G_loc(loc_id, &loc) < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
     if(!group_name || !*group_name)
 	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no name specified")
     if(idx_type <= H5_INDEX_UNKNOWN || idx_type >= H5_INDEX_N)
@@ -306,26 +316,29 @@ H5Oopen_by_idx(hid_t loc_id, const char *group_name, H5_index_t idx_type,
         if(TRUE != H5P_isa_class(lapl_id, H5P_LINK_ACCESS))
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not link access property list ID")
 
-    /* Set up opened group location to fill in */
-    obj_loc.oloc = &obj_oloc;
-    obj_loc.path = &obj_path;
-    H5G_loc_reset(&obj_loc);
+    loc_params.type = H5VL_OBJECT_BY_IDX;
+    loc_params.loc_data.loc_by_idx.name = group_name;
+    loc_params.loc_data.loc_by_idx.idx_type = idx_type;
+    loc_params.loc_data.loc_by_idx.order = order;
+    loc_params.loc_data.loc_by_idx.n = n;
+    loc_params.loc_data.loc_by_idx.plist_id = lapl_id;
+    loc_params.obj_type = H5I_get_type(loc_id);
 
-    /* Find the object's location, according to the order in the index */
-    if(H5G_loc_find_by_idx(&loc, group_name, idx_type, order, n, &obj_loc/*out*/, lapl_id, H5AC_ind_dxpl_id) < 0)
-        HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "group not found")
-    loc_found = TRUE;
+    /* get the file object */
+    if(NULL == (obj = (void *)H5I_object(loc_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid file identifier")
+    /* get the plugin pointer */
+    if (NULL == (vol_plugin = (H5VL_t *)H5I_get_aux(loc_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "ID does not contain VOL information")
 
-    /* Open the object */
-    if((ret_value = H5O_open_by_loc(&obj_loc, lapl_id, H5AC_ind_dxpl_id, TRUE)) < 0)
-        HGOTO_ERROR(H5E_SYM, H5E_CANTOPENOBJ, FAIL, "unable to open object")
+    /* Open the object through the VOL */
+    if(NULL == (opened_obj = H5VL_object_open(obj, loc_params, vol_plugin, &opened_type, H5AC_dxpl_id, H5_EVENT_STACK_NULL)))
+	HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, FAIL, "unable to open object")
+
+    if ((ret_value = H5VL_object_register(opened_obj, opened_type, vol_plugin, TRUE)) < 0)
+        HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to atomize dataset handle")
 
 done:
-    /* Release the object location if we failed after copying it */
-    if(ret_value < 0 && loc_found)
-        if(H5G_loc_free(&obj_loc) < 0)
-            HDONE_ERROR(H5E_SYM, H5E_CANTRELEASE, FAIL, "can't free location")
-
     FUNC_LEAVE_API(ret_value)
 } /* end H5Oopen_by_idx() */
 
@@ -368,36 +381,35 @@ done:
 hid_t
 H5Oopen_by_addr(hid_t loc_id, haddr_t addr)
 {
-    H5G_loc_t	loc;
-    H5G_loc_t   obj_loc;                /* Location used to open group */
-    H5G_name_t  obj_path;            	/* Opened object group hier. path */
-    H5O_loc_t   obj_oloc;            	/* Opened object object location */
-    hid_t       lapl_id = H5P_LINK_ACCESS_DEFAULT; /* lapl to use to open this object */
+    void    *obj = NULL;        /* object token of loc_id */
+    H5VL_t  *vol_plugin;        /* VOL plugin information */
+    H5I_type_t  opened_type;
+    void       *opened_obj = NULL;
+    H5VL_loc_params_t loc_params;
     hid_t       ret_value = FAIL;
 
     FUNC_ENTER_API(FAIL)
     H5TRACE2("i", "ia", loc_id, addr);
 
-    /* Check args */
-    if(H5G_loc(loc_id, &loc) < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
-    if(!H5F_addr_defined(addr))
-        HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no address supplied")
+    loc_params.type = H5VL_OBJECT_BY_ADDR;
+    loc_params.loc_data.loc_by_addr.addr = addr;
+    loc_params.obj_type = H5I_get_type(loc_id);
 
-    /* Set up opened group location to fill in */
-    obj_loc.oloc = &obj_oloc;
-    obj_loc.path = &obj_path;
-    H5G_loc_reset(&obj_loc);
-    obj_loc.oloc->addr = addr;
-    obj_loc.oloc->file = loc.oloc->file;
-    H5G_name_reset(obj_loc.path);       /* objects opened through this routine don't have a path name */
+    /* get the file object */
+    if(NULL == (obj = (void *)H5I_object(loc_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid file identifier")
+    /* get the plugin pointer */
+    if (NULL == (vol_plugin = (H5VL_t *)H5I_get_aux(loc_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "ID does not contain VOL information")
 
-    /* Open the object */
-    if((ret_value = H5O_open_by_loc(&obj_loc, lapl_id, H5AC_ind_dxpl_id, TRUE)) < 0)
-        HGOTO_ERROR(H5E_SYM, H5E_CANTOPENOBJ, FAIL, "unable to open object")
+    /* Open the object through the VOL */
+    if(NULL == (opened_obj = H5VL_object_open(obj, loc_params, vol_plugin, &opened_type, H5AC_dxpl_id, H5_EVENT_STACK_NULL)))
+	HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, FAIL, "unable to open object")
+
+    if ((ret_value = H5VL_object_register(opened_obj, opened_type, vol_plugin, TRUE)) < 0)
+        HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to atomize dataset handle")
 
 done:
-
     FUNC_LEAVE_API(ret_value)
 } /* end H5Oopen_by_addr() */
 
@@ -427,20 +439,21 @@ herr_t
 H5Olink(hid_t obj_id, hid_t new_loc_id, const char *new_name, hid_t lcpl_id,
     hid_t lapl_id)
 {
-    H5G_loc_t	new_loc;
-    H5G_loc_t	obj_loc;
-    herr_t      ret_value = SUCCEED;       /* Return value */
+    void    *obj1 = NULL;        /* object token of loc_id */
+    void    *obj2 = NULL;        /* object token of loc_id */
+    H5VL_t  *vol_plugin1 = NULL;  /* VOL plugin information */
+    H5VL_t  *vol_plugin2 = NULL;  /* VOL plugin information */
+    H5VL_loc_params_t loc_params1;
+    H5VL_loc_params_t loc_params2;
+    H5P_genplist_t *plist;      /* Property list pointer */
+    herr_t         ret_value = SUCCEED;       /* Return value */
 
     FUNC_ENTER_API(FAIL)
     H5TRACE5("e", "ii*sii", obj_id, new_loc_id, new_name, lcpl_id, lapl_id);
 
     /* Check arguments */
-    if(H5G_loc(obj_id, &obj_loc) < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
     if(new_loc_id == H5L_SAME_LOC)
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "cannot use H5L_SAME_LOC when only one location is specified")
-    if(H5G_loc(new_loc_id, &new_loc) < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
     if(!new_name || !*new_name)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no name specified")
 /* Avoid compiler warning on 32-bit machines */
@@ -451,9 +464,55 @@ H5Olink(hid_t obj_id, hid_t new_loc_id, const char *new_name, hid_t lcpl_id,
     if(lcpl_id != H5P_DEFAULT && (TRUE != H5P_isa_class(lcpl_id, H5P_LINK_CREATE)))
         HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a link creation property list")
 
-    /* Link to the object */
-    if(H5L_link(&new_loc, new_name, &obj_loc, lcpl_id, lapl_id, H5AC_dxpl_id) < 0)
-        HGOTO_ERROR(H5E_LINK, H5E_CANTINIT, FAIL, "unable to create link")
+    /* Check the group access property list */
+    if(H5P_DEFAULT == lcpl_id)
+        lcpl_id = H5P_LINK_CREATE_DEFAULT;
+
+    loc_params1.type = H5VL_OBJECT_BY_SELF;
+    loc_params1.obj_type = H5I_get_type(obj_id);
+
+    loc_params2.type = H5VL_OBJECT_BY_NAME;
+    loc_params2.obj_type = H5I_get_type(new_loc_id);
+    loc_params2.loc_data.loc_by_name.name = new_name;
+    loc_params2.loc_data.loc_by_name.plist_id = lapl_id;
+
+    if(H5L_SAME_LOC != obj_id) {
+        /* get the file object */
+        if(NULL == (obj1 = (void *)H5VL_get_object(obj_id)))
+            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid file identifier")
+        /* get the plugin pointer */
+        if (NULL == (vol_plugin1 = (H5VL_t *)H5I_get_aux(obj_id)))
+            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "ID does not contain VOL information")
+    }
+    if(H5L_SAME_LOC != new_loc_id) {
+        /* get the file object */
+        if(NULL == (obj2 = (void *)H5VL_get_object(new_loc_id)))
+            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid file identifier")
+        /* get the plugin pointer */
+        if (NULL == (vol_plugin2 = (H5VL_t *)H5I_get_aux(new_loc_id)))
+            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "ID does not contain VOL information")
+    }
+    /* Make sure that the VOL plugins are the same */
+    if(H5L_SAME_LOC != new_loc_id && H5L_SAME_LOC != obj_id) {
+        if (vol_plugin1->cls != vol_plugin2->cls)
+            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "Objects are accessed through different VOL plugins and can't be linked")
+    }
+
+    /* Get the plist structure */
+    if(NULL == (plist = (H5P_genplist_t *)H5I_object(lcpl_id)))
+        HGOTO_ERROR(H5E_ATOM, H5E_BADATOM, FAIL, "can't find object for ID")
+
+    /* set creation properties */
+    if(H5P_set(plist, H5VL_LINK_TARGET, &obj1) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't set property value for target id")
+    if(H5P_set(plist, H5VL_LINK_TARGET_LOC_PARAMS, &loc_params1) < 0)
+        HGOTO_ERROR(H5E_PLIST, H5E_CANTGET, FAIL, "can't set property value for target id")
+
+    /* Create the link through the VOL */
+    if((ret_value = H5VL_link_create(H5VL_LINK_CREATE_HARD, obj2, loc_params2, 
+                                     (vol_plugin1!=NULL ? vol_plugin1 : vol_plugin2),
+                                     lcpl_id, lapl_id, H5AC_dxpl_id, H5_EVENT_STACK_NULL)) < 0)
+	HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, FAIL, "unable to create link")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -483,17 +542,27 @@ done:
 herr_t
 H5Oincr_refcount(hid_t object_id)
 {
-    H5O_loc_t  *oloc;
+    void    *obj = NULL;        /* object token of loc_id */
+    H5VL_t  *vol_plugin;        /* VOL plugin information */
+    H5VL_loc_params_t loc_params;
     herr_t      ret_value = SUCCEED;
 
     FUNC_ENTER_API(FAIL)
     H5TRACE1("e", "i", object_id);
 
-    /* Get the object's oloc so we can adjust its link count */
-    if((oloc = H5O_get_loc(object_id)) == NULL)
-        HGOTO_ERROR(H5E_ATOM, H5E_BADVALUE, FAIL, "unable to get object location from ID")
+    loc_params.type = H5VL_OBJECT_BY_SELF;
+    loc_params.obj_type = H5I_get_type(object_id);
 
-    if(H5O_link(oloc, 1, H5AC_dxpl_id) < 0)
+    /* get the file object */
+    if(NULL == (obj = (void *)H5VL_get_object(object_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid file identifier")
+    /* get the plugin pointer */
+    if (NULL == (vol_plugin = (H5VL_t *)H5I_get_aux(object_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "ID does not contain VOL information")
+
+    /* change the ref count through the VOL */
+    if(H5VL_object_misc(obj, loc_params, vol_plugin, H5VL_OBJECT_CHANGE_REF_COUNT, 
+                        H5AC_dxpl_id, H5_EVENT_STACK_NULL, 1) < 0)
         HGOTO_ERROR(H5E_OHDR, H5E_LINKCOUNT, FAIL, "modifying object link count failed")
 
 done:
@@ -524,17 +593,26 @@ done:
 herr_t
 H5Odecr_refcount(hid_t object_id)
 {
-    H5O_loc_t  *oloc;
+    void    *obj = NULL;        /* object token of loc_id */
+    H5VL_t  *vol_plugin;        /* VOL plugin information */
+    H5VL_loc_params_t loc_params;
     herr_t      ret_value = SUCCEED;
 
     FUNC_ENTER_API(FAIL)
     H5TRACE1("e", "i", object_id);
 
-    /* Get the object's oloc so we can adjust its link count */
-    if((oloc = H5O_get_loc(object_id)) == NULL)
-        HGOTO_ERROR(H5E_ATOM, H5E_BADVALUE, FAIL, "unable to get object location from ID")
+    loc_params.type = H5VL_OBJECT_BY_SELF;
+    loc_params.obj_type = H5I_get_type(object_id);
 
-    if(H5O_link(oloc, -1, H5AC_dxpl_id) < 0)
+    /* get the file object */
+    if(NULL == (obj = (void *)H5VL_get_object(object_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid file identifier")
+    /* get the plugin pointer */
+    if (NULL == (vol_plugin = (H5VL_t *)H5I_get_aux(object_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "ID does not contain VOL information")
+
+    /* change the ref count through the VOL */
+    if(H5VL_object_misc(obj, loc_params, vol_plugin, H5VL_OBJECT_CHANGE_REF_COUNT, H5AC_dxpl_id, H5_EVENT_STACK_NULL, -1) < 0)
         HGOTO_ERROR(H5E_OHDR, H5E_LINKCOUNT, FAIL, "modifying object link count failed")
 
 done:
@@ -558,15 +636,15 @@ done:
 htri_t
 H5Oexists_by_name(hid_t loc_id, const char *name, hid_t lapl_id)
 {
-    H5G_loc_t	loc;                    /* Location info */
-    htri_t      ret_value = FAIL;       /* Return value */
+    void    *obj = NULL;        /* object token of loc_id */
+    H5VL_t  *vol_plugin;        /* VOL plugin information */
+    H5VL_loc_params_t loc_params;
+    hid_t       ret_value = FAIL;       /* Return value */
 
     FUNC_ENTER_API(FAIL)
     H5TRACE3("t", "i*si", loc_id, name, lapl_id);
 
     /* Check args */
-    if(H5G_loc(loc_id, &loc) < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
     if(!name || !*name)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no name")
     if(H5P_DEFAULT == lapl_id)
@@ -575,8 +653,20 @@ H5Oexists_by_name(hid_t loc_id, const char *name, hid_t lapl_id)
         if(TRUE != H5P_isa_class(lapl_id, H5P_LINK_ACCESS))
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not link access property list ID")
 
-    /* Check if the object exists */
-    if((ret_value = H5G_loc_exists(&loc, name, lapl_id, H5AC_ind_dxpl_id)) < 0)
+    loc_params.type = H5VL_OBJECT_BY_NAME;
+    loc_params.loc_data.loc_by_name.name = name;
+    loc_params.loc_data.loc_by_name.plist_id = lapl_id;
+    loc_params.obj_type = H5I_get_type(loc_id);
+
+    /* get the file object */
+    if(NULL == (obj = (void *)H5VL_get_object(loc_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid file identifier")
+    /* get the plugin pointer */
+    if (NULL == (vol_plugin = (H5VL_t *)H5I_get_aux(loc_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "ID does not contain VOL information")
+
+    /* change the ref count through the VOL */
+    if(H5VL_object_get(obj, loc_params, vol_plugin, H5VL_OBJECT_EXISTS, H5AC_dxpl_id, H5_EVENT_STACK_NULL, &ret_value) < 0)
         HGOTO_ERROR(H5E_OHDR, H5E_CANTGET, FAIL, "unable to determine if '%s' exists", name)
 
 done:
@@ -600,21 +690,32 @@ done:
 herr_t
 H5Oget_info(hid_t loc_id, H5O_info_t *oinfo)
 {
-    H5G_loc_t	loc;                    /* Location of group */
+    void    *obj = NULL;        /* object token of loc_id */
+    H5VL_t  *vol_plugin;        /* VOL plugin information */
+    H5VL_loc_params_t loc_params;
     herr_t      ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_API(FAIL)
     H5TRACE2("e", "i*x", loc_id, oinfo);
 
     /* Check args */
-    if(H5G_loc(loc_id, &loc) < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
     if(!oinfo)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no info struct")
 
-    /* Retrieve the object's information */
-    if(H5G_loc_info(&loc, ".", TRUE, oinfo/*out*/, H5P_LINK_ACCESS_DEFAULT, H5AC_ind_dxpl_id) < 0)
-        HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "object not found")
+    loc_params.type = H5VL_OBJECT_BY_SELF;
+    loc_params.obj_type = H5I_get_type(loc_id);
+
+    /* get the file object */
+    if(NULL == (obj = (void *)H5VL_get_object(loc_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid file identifier")
+    /* get the plugin pointer */
+    if (NULL == (vol_plugin = (H5VL_t *)H5I_get_aux(loc_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "ID does not contain VOL information")
+
+    /* Get the group info through the VOL using the location token */
+    if((ret_value = H5VL_object_get(obj, loc_params, vol_plugin, H5VL_OBJECT_GET_INFO, 
+                                    H5AC_dxpl_id, H5_EVENT_STACK_NULL, oinfo)) < 0)
+        HGOTO_ERROR(H5E_INTERNAL, H5E_CANTGET, FAIL, "unable to get group info")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -637,15 +738,15 @@ done:
 herr_t
 H5Oget_info_by_name(hid_t loc_id, const char *name, H5O_info_t *oinfo, hid_t lapl_id)
 {
-    H5G_loc_t	loc;                    /* Location of group */
+    void    *obj = NULL;        /* object token of loc_id */
+    H5VL_t  *vol_plugin;        /* VOL plugin information */
+    H5VL_loc_params_t loc_params;
     herr_t      ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_API(FAIL)
     H5TRACE4("e", "i*s*xi", loc_id, name, oinfo, lapl_id);
 
     /* Check args */
-    if(H5G_loc(loc_id, &loc) < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
     if(!name || !*name)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no name")
     if(!oinfo)
@@ -656,9 +757,23 @@ H5Oget_info_by_name(hid_t loc_id, const char *name, H5O_info_t *oinfo, hid_t lap
         if(TRUE != H5P_isa_class(lapl_id, H5P_LINK_ACCESS))
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not link access property list ID")
 
-    /* Retrieve the object's information */
-    if(H5G_loc_info(&loc, name, TRUE, oinfo/*out*/, lapl_id, H5AC_ind_dxpl_id) < 0)
-        HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "object not found")
+    loc_params.type = H5VL_OBJECT_BY_NAME;
+    loc_params.loc_data.loc_by_name.name = name;
+    loc_params.loc_data.loc_by_name.plist_id = lapl_id;
+    loc_params.obj_type = H5I_get_type(loc_id);
+
+    /* get the file object */
+    if(NULL == (obj = (void *)H5VL_get_object(loc_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid file identifier")
+
+    /* get the plugin pointer */
+    if (NULL == (vol_plugin = (H5VL_t *)H5I_get_aux(loc_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "ID does not contain VOL information")
+
+    /* Get the group info through the VOL using the location token */
+    if((ret_value = H5VL_object_get(obj, loc_params, vol_plugin, H5VL_OBJECT_GET_INFO, 
+                                    H5AC_dxpl_id, H5_EVENT_STACK_NULL, oinfo)) < 0)
+        HGOTO_ERROR(H5E_INTERNAL, H5E_CANTGET, FAIL, "unable to get group info")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -683,11 +798,9 @@ herr_t
 H5Oget_info_by_idx(hid_t loc_id, const char *group_name, H5_index_t idx_type,
     H5_iter_order_t order, hsize_t n, H5O_info_t *oinfo, hid_t lapl_id)
 {
-    H5G_loc_t	loc;                    /* Location of group */
-    H5G_loc_t   obj_loc;                /* Location used to open group */
-    H5G_name_t  obj_path;            	/* Opened object group hier. path */
-    H5O_loc_t   obj_oloc;            	/* Opened object object location */
-    hbool_t     loc_found = FALSE;      /* Entry at 'name' found */
+    void    *obj = NULL;        /* object token of loc_id */
+    H5VL_t  *vol_plugin;        /* VOL plugin information */
+    H5VL_loc_params_t loc_params;
     herr_t      ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_API(FAIL)
@@ -695,8 +808,6 @@ H5Oget_info_by_idx(hid_t loc_id, const char *group_name, H5_index_t idx_type,
              lapl_id);
 
     /* Check args */
-    if(H5G_loc(loc_id, &loc) < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
     if(!group_name || !*group_name)
 	HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no name specified")
     if(idx_type <= H5_INDEX_UNKNOWN || idx_type >= H5_INDEX_N)
@@ -711,25 +822,27 @@ H5Oget_info_by_idx(hid_t loc_id, const char *group_name, H5_index_t idx_type,
         if(TRUE != H5P_isa_class(lapl_id, H5P_LINK_ACCESS))
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not link access property list ID")
 
-    /* Set up opened group location to fill in */
-    obj_loc.oloc = &obj_oloc;
-    obj_loc.path = &obj_path;
-    H5G_loc_reset(&obj_loc);
+    loc_params.type = H5VL_OBJECT_BY_IDX;
+    loc_params.loc_data.loc_by_idx.name = group_name;
+    loc_params.loc_data.loc_by_idx.idx_type = idx_type;
+    loc_params.loc_data.loc_by_idx.order = order;
+    loc_params.loc_data.loc_by_idx.n = n;
+    loc_params.loc_data.loc_by_idx.plist_id = lapl_id;
+    loc_params.obj_type = H5I_get_type(loc_id);
 
-    /* Find the object's location, according to the order in the index */
-    if(H5G_loc_find_by_idx(&loc, group_name, idx_type, order, n, &obj_loc/*out*/, lapl_id, H5AC_ind_dxpl_id) < 0)
-        HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "group not found")
-    loc_found = TRUE;
+    /* get the file object */
+    if(NULL == (obj = (void *)H5VL_get_object(loc_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid file identifier")
+    /* get the plugin pointer */
+    if (NULL == (vol_plugin = (H5VL_t *)H5I_get_aux(loc_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "ID does not contain VOL information")
 
-    /* Retrieve the object's information */
-    if(H5O_get_info(obj_loc.oloc, H5AC_ind_dxpl_id, TRUE, oinfo) < 0)
-        HGOTO_ERROR(H5E_SYM, H5E_CANTGET, FAIL, "can't retrieve object info")
+    /* Get the group info through the VOL using the location token */
+    if((ret_value = H5VL_object_get(obj, loc_params, vol_plugin, H5VL_OBJECT_GET_INFO, 
+                                    H5AC_dxpl_id, H5_EVENT_STACK_NULL, oinfo)) < 0)
+        HGOTO_ERROR(H5E_INTERNAL, H5E_CANTGET, FAIL, "unable to get group info")
 
 done:
-    /* Release the object location */
-    if(loc_found && H5G_loc_free(&obj_loc) < 0)
-        HDONE_ERROR(H5E_SYM, H5E_CANTRELEASE, FAIL, "can't free location")
-
     FUNC_LEAVE_API(ret_value)
 } /* end H5Oget_info_by_idx() */
 
@@ -754,19 +867,27 @@ done:
 herr_t
 H5Oset_comment(hid_t obj_id, const char *comment)
 {
-    H5G_loc_t	loc;                    /* Location of group */
+    void    *obj = NULL;        /* object token of loc_id */
+    H5VL_t  *vol_plugin;        /* VOL plugin information */
+    H5VL_loc_params_t loc_params;
     herr_t      ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_API(FAIL)
     H5TRACE2("e", "i*s", obj_id, comment);
 
-    /* Check args */
-    if(H5G_loc(obj_id, &loc) < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
+    loc_params.type = H5VL_OBJECT_BY_SELF;
+    loc_params.obj_type = H5I_get_type(obj_id);
 
-    /* (Re)set the object's comment */
-    if(H5G_loc_set_comment(&loc, ".", comment, H5P_LINK_ACCESS_DEFAULT, H5AC_ind_dxpl_id) < 0)
-        HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "object not found")
+    /* get the file object */
+    if(NULL == (obj = (void *)H5VL_get_object(obj_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid file identifier")
+    /* get the plugin pointer */
+    if (NULL == (vol_plugin = (H5VL_t *)H5I_get_aux(obj_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "ID does not contain VOL information")
+
+    /* set comment on object through the VOL */
+    if(H5VL_object_misc(obj, loc_params, vol_plugin, H5VL_OBJECT_SET_COMMENT, H5AC_dxpl_id, H5_EVENT_STACK_NULL, comment) < 0)
+	HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, FAIL, "unable to set comment value")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -794,15 +915,15 @@ herr_t
 H5Oset_comment_by_name(hid_t loc_id, const char *name, const char *comment,
     hid_t lapl_id)
 {
-    H5G_loc_t	loc;                    /* Location of group */
+    void    *obj = NULL;        /* object token of loc_id */
+    H5VL_t  *vol_plugin;        /* VOL plugin information */
+    H5VL_loc_params_t loc_params;
     herr_t      ret_value = SUCCEED;    /* Return value */
 
     FUNC_ENTER_API(FAIL)
     H5TRACE4("e", "i*s*si", loc_id, name, comment, lapl_id);
 
     /* Check args */
-    if(H5G_loc(loc_id, &loc) < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
     if(!name || !*name)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no name")
     if(H5P_DEFAULT == lapl_id)
@@ -811,9 +932,21 @@ H5Oset_comment_by_name(hid_t loc_id, const char *name, const char *comment,
         if(TRUE != H5P_isa_class(lapl_id, H5P_LINK_ACCESS))
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not link access property list ID")
 
-    /* (Re)set the object's comment */
-    if(H5G_loc_set_comment(&loc, name, comment, lapl_id, H5AC_ind_dxpl_id) < 0)
-        HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "object not found")
+    loc_params.type = H5VL_OBJECT_BY_NAME;
+    loc_params.loc_data.loc_by_name.name = name;
+    loc_params.loc_data.loc_by_name.plist_id = lapl_id;
+    loc_params.obj_type = H5I_get_type(loc_id);
+
+    /* get the file object */
+    if(NULL == (obj = (void *)H5VL_get_object(loc_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid file identifier")
+    /* get the plugin pointer */
+    if (NULL == (vol_plugin = (H5VL_t *)H5I_get_aux(loc_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "ID does not contain VOL information")
+
+    /* set comment on object through the VOL */
+    if(H5VL_object_misc(obj, loc_params, vol_plugin, H5VL_OBJECT_SET_COMMENT, H5AC_dxpl_id, H5_EVENT_STACK_NULL, comment) < 0)
+	HGOTO_ERROR(H5E_SYM, H5E_CANTINIT, FAIL, "unable to set comment value")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -837,21 +970,29 @@ done:
  *-------------------------------------------------------------------------
  */
 ssize_t
-H5Oget_comment(hid_t obj_id, char *comment, size_t bufsize)
+H5Oget_comment(hid_t loc_id, char *comment, size_t bufsize)
 {
-    H5G_loc_t	loc;                    /* Location of group */
+    void    *obj = NULL;        /* object token of loc_id */
+    H5VL_t  *vol_plugin;        /* VOL plugin information */
+    H5VL_loc_params_t loc_params;
     ssize_t     ret_value;              /* Return value */
 
     FUNC_ENTER_API(FAIL)
-    H5TRACE3("Zs", "i*sz", obj_id, comment, bufsize);
+    H5TRACE3("Zs", "i*sz", loc_id, comment, bufsize);
 
-    /* Check args */
-    if(H5G_loc(obj_id, &loc) < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
+    loc_params.type = H5VL_OBJECT_BY_SELF;
+    loc_params.obj_type = H5I_get_type(loc_id);
 
-    /* Retrieve the object's comment */
-    if((ret_value = H5G_loc_get_comment(&loc, ".", comment/*out*/, bufsize, H5P_LINK_ACCESS_DEFAULT, H5AC_ind_dxpl_id)) < 0)
-        HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "object not found")
+    /* get the file object */
+    if(NULL == (obj = (void *)H5VL_get_object(loc_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid file identifier")
+    /* get the plugin pointer */
+    if (NULL == (vol_plugin = (H5VL_t *)H5I_get_aux(loc_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "ID does not contain VOL information")
+
+    if(H5VL_object_get(obj, loc_params, vol_plugin, H5VL_OBJECT_GET_COMMENT, H5AC_dxpl_id, H5_EVENT_STACK_NULL, 
+                       comment, bufsize, &ret_value) < 0)
+        HGOTO_ERROR(H5E_INTERNAL, H5E_CANTGET, FAIL, "unable to get object comment")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -878,15 +1019,15 @@ ssize_t
 H5Oget_comment_by_name(hid_t loc_id, const char *name, char *comment, size_t bufsize,
     hid_t lapl_id)
 {
-    H5G_loc_t	loc;                    /* Location of group */
+    void    *obj = NULL;        /* object token of loc_id */
+    H5VL_t  *vol_plugin;        /* VOL plugin information */
+    H5VL_loc_params_t loc_params;
     ssize_t     ret_value;              /* Return value */
 
     FUNC_ENTER_API(FAIL)
     H5TRACE5("Zs", "i*s*szi", loc_id, name, comment, bufsize, lapl_id);
 
     /* Check args */
-    if(H5G_loc(loc_id, &loc) < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
     if(!name || !*name)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no name")
     if(H5P_DEFAULT == lapl_id)
@@ -895,9 +1036,21 @@ H5Oget_comment_by_name(hid_t loc_id, const char *name, char *comment, size_t buf
         if(TRUE != H5P_isa_class(lapl_id, H5P_LINK_ACCESS))
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not link access property list ID")
 
-    /* Retrieve the object's comment */
-    if((ret_value = H5G_loc_get_comment(&loc, name, comment/*out*/, bufsize, lapl_id, H5AC_ind_dxpl_id)) < 0)
-        HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "object not found")
+    loc_params.type = H5VL_OBJECT_BY_NAME;
+    loc_params.loc_data.loc_by_name.name = name;
+    loc_params.loc_data.loc_by_name.plist_id = lapl_id;
+    loc_params.obj_type = H5I_get_type(loc_id);
+
+    /* get the file object */
+    if(NULL == (obj = (void *)H5VL_get_object(loc_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid file identifier")
+    /* get the plugin pointer */
+    if (NULL == (vol_plugin = (H5VL_t *)H5I_get_aux(loc_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "ID does not contain VOL information")
+
+    if(H5VL_object_get(obj, loc_params, vol_plugin, H5VL_OBJECT_GET_COMMENT, H5AC_dxpl_id, H5_EVENT_STACK_NULL, 
+                       comment, bufsize, &ret_value) < 0)
+        HGOTO_ERROR(H5E_INTERNAL, H5E_CANTGET, FAIL, "unable to get object info")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -940,6 +1093,9 @@ herr_t
 H5Ovisit(hid_t obj_id, H5_index_t idx_type, H5_iter_order_t order,
     H5O_iterate_t op, void *op_data)
 {
+    void    *obj = NULL;        /* object token of loc_id */
+    H5VL_t  *vol_plugin;        /* VOL plugin information */
+    H5VL_loc_params_t loc_params;
     herr_t      ret_value;              /* Return value */
 
     FUNC_ENTER_API(FAIL)
@@ -953,9 +1109,20 @@ H5Ovisit(hid_t obj_id, H5_index_t idx_type, H5_iter_order_t order,
     if(!op)
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, FAIL, "no callback operator specified")
 
-    /* Call internal object visitation routine */
-    if((ret_value = H5O_visit(obj_id, ".", idx_type, order, op, op_data, H5P_LINK_ACCESS_DEFAULT, H5AC_ind_dxpl_id)) < 0)
-	HGOTO_ERROR(H5E_SYM, H5E_BADITER, FAIL, "object visitation failed")
+    loc_params.type = H5VL_OBJECT_BY_SELF;
+    loc_params.obj_type = H5I_get_type(obj_id);
+
+    /* get the file object */
+    if(NULL == (obj = (void *)H5VL_get_object(obj_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid file identifier")
+    /* get the plugin pointer */
+    if (NULL == (vol_plugin = (H5VL_t *)H5I_get_aux(obj_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "ID does not contain VOL information")
+
+    /* iterate over the objects through the VOL */
+    if((ret_value = H5VL_object_visit(obj, loc_params, vol_plugin, idx_type, order, op, op_data, 
+                                      H5AC_dxpl_id, H5_EVENT_STACK_NULL)) < 0)
+	HGOTO_ERROR(H5E_SYM, H5E_BADITER, FAIL, "link iteration failed")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -998,6 +1165,9 @@ herr_t
 H5Ovisit_by_name(hid_t loc_id, const char *obj_name, H5_index_t idx_type,
     H5_iter_order_t order, H5O_iterate_t op, void *op_data, hid_t lapl_id)
 {
+    void    *obj = NULL;        /* object token of loc_id */
+    H5VL_t  *vol_plugin;        /* VOL plugin information */
+    H5VL_loc_params_t loc_params; 
     herr_t      ret_value;              /* Return value */
 
     FUNC_ENTER_API(FAIL)
@@ -1019,9 +1189,22 @@ H5Ovisit_by_name(hid_t loc_id, const char *obj_name, H5_index_t idx_type,
         if(TRUE != H5P_isa_class(lapl_id, H5P_LINK_ACCESS))
             HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not link access property list ID")
 
-    /* Call internal object visitation routine */
-    if((ret_value = H5O_visit(loc_id, obj_name, idx_type, order, op, op_data, lapl_id, H5AC_ind_dxpl_id)) < 0)
-	HGOTO_ERROR(H5E_SYM, H5E_BADITER, FAIL, "object visitation failed")
+    loc_params.type = H5VL_OBJECT_BY_NAME;
+    loc_params.loc_data.loc_by_name.name = obj_name;
+    loc_params.loc_data.loc_by_name.plist_id = lapl_id;
+    loc_params.obj_type = H5I_get_type(loc_id);
+
+    /* get the file object */
+    if(NULL == (obj = (void *)H5VL_get_object(loc_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "invalid file identifier")
+    /* get the plugin pointer */
+    if (NULL == (vol_plugin = (H5VL_t *)H5I_get_aux(loc_id)))
+        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "ID does not contain VOL information")
+
+    /* iterate over the objects through the VOL */
+    if((ret_value = H5VL_object_visit(obj, loc_params, vol_plugin, idx_type, order, op, 
+                                      op_data, H5AC_dxpl_id, H5_EVENT_STACK_NULL)) < 0)
+	HGOTO_ERROR(H5E_SYM, H5E_BADITER, FAIL, "link iteration failed")
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -1082,6 +1265,12 @@ H5Oclose(hid_t object_id)
             HGOTO_ERROR(H5E_ARGS, H5E_CANTRELEASE, FAIL, "not a valid file object ID (dataset, group, or datatype)")
         break;
     } /* end switch */
+
+#if 0
+    /* Close the object through the VOL */
+    if(H5VL_object_close(object_id, H5AC_dxpl_id, H5_EVENT_STACK_NULL) < 0)
+	HGOTO_ERROR(H5E_SYM, H5E_CANTRELEASE, FAIL, "unable to close object")
+#endif
 
 done:
     FUNC_LEAVE_API(ret_value)
@@ -1349,7 +1538,6 @@ H5O_open_name(H5G_loc_t *loc, const char *name, hid_t lapl_id, hbool_t app_ref)
     H5G_name_t  obj_path;            	/* Opened object group hier. path */
     H5O_loc_t   obj_oloc;            	/* Opened object object location */
     hbool_t     loc_found = FALSE;      /* Entry at 'name' found */
-    hid_t       dxpl_id = H5AC_ind_dxpl_id;  /* transfer property list used for this operation */
     hid_t       ret_value = FAIL;
 
     FUNC_ENTER_NOAPI(FAIL)
@@ -1364,12 +1552,12 @@ H5O_open_name(H5G_loc_t *loc, const char *name, hid_t lapl_id, hbool_t app_ref)
     H5G_loc_reset(&obj_loc);
 
     /* Find the object's location */
-    if(H5G_loc_find(loc, name, &obj_loc/*out*/, lapl_id, dxpl_id) < 0)
+    if(H5G_loc_find(loc, name, &obj_loc/*out*/, lapl_id, H5AC_dxpl_id) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_NOTFOUND, FAIL, "object not found")
     loc_found = TRUE;
 
     /* Open the object */
-    if((ret_value = H5O_open_by_loc(&obj_loc, lapl_id, dxpl_id, app_ref)) < 0)
+    if((ret_value = H5O_open_by_loc(&obj_loc, lapl_id, H5AC_ind_dxpl_id, app_ref)) < 0)
         HGOTO_ERROR(H5E_SYM, H5E_CANTOPENOBJ, FAIL, "unable to open object")
 
 done:
@@ -1447,7 +1635,7 @@ H5O_close(H5O_loc_t *loc)
 
 #ifdef H5O_DEBUG
     if(H5DEBUG(O)) {
-	if(H5F_FILE_ID(loc->file)< 0 && 1 == H5F_NREFS(loc->file))
+	if(H5F_FILE_ID(loc->file) && 1 == H5F_NREFS(loc->file))
 	    HDfprintf(H5DEBUG(O), "< %a auto %lu remaining\n",
 		      loc->addr,
 		      (unsigned long)H5F_NOPEN_OBJS(loc->file));
@@ -1460,10 +1648,11 @@ H5O_close(H5O_loc_t *loc)
      * If the file open object count has reached the number of open mount points
      * (each of which has a group open in the file) attempt to close the file.
      */
-    if(H5F_NOPEN_OBJS(loc->file) == H5F_NMOUNTS(loc->file))
+    if(H5F_NOPEN_OBJS(loc->file) == H5F_NMOUNTS(loc->file)) {
         /* Attempt to close down the file hierarchy */
         if(H5F_try_close(loc->file) < 0)
             HGOTO_ERROR(H5E_OHDR, H5E_CANTCLOSEFILE, FAIL, "problem attempting file close")
+    }
 
     /* Release location information */
     if(H5O_loc_free(loc) < 0)
@@ -1655,7 +1844,7 @@ done:
  *-------------------------------------------------------------------------
  */
 H5O_t *
-H5O_protect(const H5O_loc_t *loc, hid_t dxpl_id, unsigned prot_flags)
+H5O_protect(const H5O_loc_t *loc, hid_t dxpl_id, H5AC_protect_t prot)
 {
     H5O_t *oh = NULL;           /* Object header protected */
     H5O_cache_ud_t udata;       /* User data for protecting object header */
@@ -1669,16 +1858,13 @@ H5O_protect(const H5O_loc_t *loc, hid_t dxpl_id, unsigned prot_flags)
     HDassert(loc);
     HDassert(loc->file);
 
-    /* prot_flags may only contain the H5AC__READ_ONLY_FLAG */
-    HDassert((prot_flags & (unsigned)(~H5AC__READ_ONLY_FLAG)) == 0);
-
     /* Check for valid address */
     if(!H5F_addr_defined(loc->addr))
         HGOTO_ERROR(H5E_ARGS, H5E_BADVALUE, NULL, "address undefined")
 
     /* Check for write access on the file */
     file_intent = H5F_INTENT(loc->file);
-    if((0 == (prot_flags & H5AC__READ_ONLY_FLAG)) && (0 == (file_intent & H5F_ACC_RDWR)))
+    if((prot == H5AC_WRITE) && (0 == (file_intent & H5F_ACC_RDWR)))
 	HGOTO_ERROR(H5E_OHDR, H5E_BADVALUE, NULL, "no write intent on file")
 
     /* Construct the user data for protect callback */
@@ -1694,7 +1880,7 @@ H5O_protect(const H5O_loc_t *loc, hid_t dxpl_id, unsigned prot_flags)
     udata.common.addr = loc->addr;
 
     /* Lock the object header into the cache */
-    if(NULL == (oh = (H5O_t *)H5AC_protect(loc->file, dxpl_id, H5AC_OHDR, loc->addr, &udata, prot_flags)))
+    if(NULL == (oh = (H5O_t *)H5AC_protect(loc->file, dxpl_id, H5AC_OHDR, loc->addr, &udata, prot)))
 	HGOTO_ERROR(H5E_OHDR, H5E_CANTPROTECT, NULL, "unable to load object header")
 
     /* Check if there are any continuation messages to process */
@@ -1731,7 +1917,7 @@ H5O_protect(const H5O_loc_t *loc, hid_t dxpl_id, unsigned prot_flags)
             /* (which adds to the object header) */
             chk_udata.common.addr = cont_msg_info.msgs[curr_msg].addr;
             chk_udata.size = cont_msg_info.msgs[curr_msg].size;
-            if(NULL == (chk_proxy = (H5O_chunk_proxy_t *)H5AC_protect(loc->file, dxpl_id, H5AC_OHDR_CHK, cont_msg_info.msgs[curr_msg].addr, &chk_udata, prot_flags)))
+            if(NULL == (chk_proxy = (H5O_chunk_proxy_t *)H5AC_protect(loc->file, dxpl_id, H5AC_OHDR_CHK, cont_msg_info.msgs[curr_msg].addr, &chk_udata, prot)))
                 HGOTO_ERROR(H5E_OHDR, H5E_CANTPROTECT, NULL, "unable to load object header chunk")
 
             /* Sanity check */
@@ -1775,7 +1961,7 @@ H5O_protect(const H5O_loc_t *loc, hid_t dxpl_id, unsigned prot_flags)
             /* (object header will have been marked dirty during protect, if we
              *  have write access -QAK)
              */
-            if((prot_flags & H5AC__READ_ONLY_FLAG) != 0)
+            if(prot != H5AC_WRITE)
                 oh->prefix_modified = TRUE;
 #ifndef NDEBUG
             else {
@@ -1793,7 +1979,7 @@ H5O_protect(const H5O_loc_t *loc, hid_t dxpl_id, unsigned prot_flags)
         } /* end if */
 
         /* Check for any messages that were modified while being read in */
-        if(udata.common.mesgs_modified && (0 == (prot_flags & H5AC__READ_ONLY_FLAG)))
+        if(udata.common.mesgs_modified && prot != H5AC_WRITE)
             oh->mesgs_modified = TRUE;
 
         /* Reset the field that contained chunk 0's size during speculative load */
@@ -1803,7 +1989,7 @@ H5O_protect(const H5O_loc_t *loc, hid_t dxpl_id, unsigned prot_flags)
     /* Take care of loose ends for modifications made while bringing in the
      *      object header & chunks.
      */
-    if(0 == (prot_flags & H5AC__READ_ONLY_FLAG)) {
+    if(prot == H5AC_WRITE) {
         /* Check for the object header prefix being modified somehow */
         /* (usually through updating the # of object header messages) */
         if(oh->prefix_modified) {
@@ -1889,7 +2075,7 @@ H5O_pin(const H5O_loc_t *loc, hid_t dxpl_id)
     HDassert(loc);
 
     /* Get header */
-    if(NULL == (oh = H5O_protect(loc, dxpl_id, H5AC__NO_FLAGS_SET)))
+    if(NULL == (oh = H5O_protect(loc, dxpl_id, H5AC_WRITE)))
 	HGOTO_ERROR(H5E_OHDR, H5E_CANTPROTECT, NULL, "unable to protect object header")
 
     /* Increment the reference count on the object header */
@@ -2102,7 +2288,7 @@ H5O_touch(const H5O_loc_t *loc, hbool_t force, hid_t dxpl_id)
     HDassert(loc);
 
     /* Get the object header */
-    if(NULL == (oh = H5O_protect(loc, dxpl_id, H5AC__NO_FLAGS_SET)))
+    if(NULL == (oh = H5O_protect(loc, dxpl_id, H5AC_WRITE)))
 	HGOTO_ERROR(H5E_OHDR, H5E_CANTPROTECT, FAIL, "unable to load object header")
 
     /* Create/Update the modification time message */
@@ -2218,7 +2404,7 @@ H5O_delete(H5F_t *f, hid_t dxpl_id, haddr_t addr)
     loc.holding_file = FALSE;
 
     /* Get the object header information */
-    if(NULL == (oh = H5O_protect(&loc, dxpl_id, H5AC__NO_FLAGS_SET)))
+    if(NULL == (oh = H5O_protect(&loc, dxpl_id, H5AC_WRITE)))
 	HGOTO_ERROR(H5E_OHDR, H5E_CANTPROTECT, FAIL, "unable to load object header")
 
     /* Delete object */
@@ -2302,7 +2488,7 @@ H5O_obj_type(const H5O_loc_t *loc, H5O_type_t *obj_type, hid_t dxpl_id)
     FUNC_ENTER_NOAPI_TAG(dxpl_id, loc->addr, FAIL)
 
     /* Load the object header */
-    if(NULL == (oh = H5O_protect(loc, dxpl_id, H5AC__READ_ONLY_FLAG)))
+    if(NULL == (oh = H5O_protect(loc, dxpl_id, H5AC_READ)))
 	HGOTO_ERROR(H5E_OHDR, H5E_CANTPROTECT, FAIL, "unable to load object header")
 
     /* Retrieve the type of the object */
@@ -2380,7 +2566,7 @@ H5O_obj_class(const H5O_loc_t *loc, hid_t dxpl_id)
     FUNC_ENTER_NOAPI_NOINIT_TAG(dxpl_id, loc->addr, NULL)
 
     /* Load the object header */
-    if(NULL == (oh = H5O_protect(loc, dxpl_id, H5AC__READ_ONLY_FLAG)))
+    if(NULL == (oh = H5O_protect(loc, dxpl_id, H5AC_READ)))
 	HGOTO_ERROR(H5E_OHDR, H5E_CANTPROTECT, NULL, "unable to load object header")
 
     /* Test whether entry qualifies as a particular type of object */
@@ -2481,6 +2667,7 @@ H5O_get_loc(hid_t object_id)
         case H5I_ATTR:
         case H5I_REFERENCE:
         case H5I_VFL:
+        case H5I_VOL:
         case H5I_GENPROP_CLS:
         case H5I_GENPROP_LST:
         case H5I_ERROR_CLASS:
@@ -2677,7 +2864,7 @@ H5O_get_hdr_info(const H5O_loc_t *loc, hid_t dxpl_id, H5O_hdr_info_t *hdr)
     HDmemset(hdr, 0, sizeof(*hdr));
 
     /* Get the object header */
-    if(NULL == (oh = H5O_protect(loc, dxpl_id, H5AC__READ_ONLY_FLAG)))
+    if(NULL == (oh = H5O_protect(loc, dxpl_id, H5AC_READ)))
 	HGOTO_ERROR(H5E_OHDR, H5E_CANTLOAD, FAIL, "unable to load object header")
 
     /* Get the information for the object header */
@@ -2722,8 +2909,8 @@ H5O_get_hdr_info_real(const H5O_t *oh, H5O_hdr_info_t *hdr)
     hdr->version = oh->version;
 
     /* Set the number of messages & chunks */
-    H5_CHECKED_ASSIGN(hdr->nmesgs, unsigned, oh->nmesgs, size_t);
-    H5_CHECKED_ASSIGN(hdr->nchunks, unsigned, oh->nchunks, size_t);
+    H5_ASSIGN_OVERFLOW(hdr->nmesgs, oh->nmesgs, size_t, unsigned);
+    H5_ASSIGN_OVERFLOW(hdr->nchunks, oh->nchunks, size_t, unsigned);
 
     /* Set the status flags */
     hdr->flags = oh->flags;
@@ -2801,7 +2988,7 @@ H5O_get_info(const H5O_loc_t *loc, hid_t dxpl_id, hbool_t want_ih_info,
     HDassert(oinfo);
 
     /* Get the object header */
-    if(NULL == (oh = H5O_protect(loc, dxpl_id, H5AC__READ_ONLY_FLAG)))
+    if(NULL == (oh = H5O_protect(loc, dxpl_id, H5AC_READ)))
 	HGOTO_ERROR(H5E_OHDR, H5E_CANTPROTECT, FAIL, "unable to load object header")
 
     /* Reset the object info structure */
@@ -2922,7 +3109,7 @@ H5O_get_create_plist(const H5O_loc_t *loc, hid_t dxpl_id, H5P_genplist_t *oc_pli
     HDassert(oc_plist);
 
     /* Get the object header */
-    if(NULL == (oh = H5O_protect(loc, dxpl_id, H5AC__READ_ONLY_FLAG)))
+    if(NULL == (oh = H5O_protect(loc, dxpl_id, H5AC_READ)))
 	HGOTO_ERROR(H5E_OHDR, H5E_CANTPROTECT, FAIL, "unable to load object header")
 
     /* Set property values, if they were used for the object */
@@ -2977,7 +3164,7 @@ H5O_get_nlinks(const H5O_loc_t *loc, hid_t dxpl_id, hsize_t *nlinks)
     HDassert(nlinks);
 
     /* Get the object header */
-    if(NULL == (oh = H5O_protect(loc, dxpl_id, H5AC__READ_ONLY_FLAG)))
+    if(NULL == (oh = H5O_protect(loc, dxpl_id, H5AC_READ)))
 	HGOTO_ERROR(H5E_OHDR, H5E_CANTPROTECT, FAIL, "unable to load object header")
 
     /* Retrieve the # of link messages seen when the object header was loaded */
@@ -3094,7 +3281,7 @@ H5O_get_rc_and_type(const H5O_loc_t *loc, hid_t dxpl_id, unsigned *rc, H5O_type_
     HDassert(loc);
 
     /* Get the object header */
-    if(NULL == (oh = H5O_protect(loc, dxpl_id, H5AC__READ_ONLY_FLAG)))
+    if(NULL == (oh = H5O_protect(loc, dxpl_id, H5AC_READ)))
 	HGOTO_ERROR(H5E_OHDR, H5E_CANTPROTECT, FAIL, "unable to load object header")
 
     /* Set the object's reference count */
@@ -3127,7 +3314,7 @@ done:
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_free_visit_visited(void *item, void H5_ATTR_UNUSED *key, void H5_ATTR_UNUSED *operator_data/*in,out*/)
+H5O_free_visit_visited(void *item, void UNUSED *key, void UNUSED *operator_data/*in,out*/)
 {
     FUNC_ENTER_NOAPI_NOINIT_NOERR
 
@@ -3151,7 +3338,7 @@ H5O_free_visit_visited(void *item, void H5_ATTR_UNUSED *key, void H5_ATTR_UNUSED
  *-------------------------------------------------------------------------
  */
 static herr_t
-H5O_visit_cb(hid_t H5_ATTR_UNUSED group, const char *name, const H5L_info_t *linfo,
+H5O_visit_cb(hid_t UNUSED group, const char *name, const H5L_info_t *linfo,
     void *_udata)
 {
     H5O_iter_visit_ud_t *udata = (H5O_iter_visit_ud_t *)_udata;     /* User data for callback */
@@ -3261,13 +3448,12 @@ done:
  *
  *-------------------------------------------------------------------------
  */
-static herr_t
-H5O_visit(hid_t loc_id, const char *obj_name, H5_index_t idx_type,
+herr_t
+H5O_visit(H5G_loc_t *loc, const char *obj_name, H5_index_t idx_type,
     H5_iter_order_t order, H5O_iterate_t op, void *op_data, hid_t lapl_id,
     hid_t dxpl_id)
 {
     H5O_iter_visit_ud_t udata;  /* User data for callback */
-    H5G_loc_t	loc;            /* Location of reference object */
     H5G_loc_t   obj_loc;        /* Location used to open object */
     H5G_name_t  obj_path;       /* Opened object group hier. path */
     H5O_loc_t   obj_oloc;       /* Opened object object location */
@@ -3281,17 +3467,13 @@ H5O_visit(hid_t loc_id, const char *obj_name, H5_index_t idx_type,
     /* Portably initialize user data struct to zeros */
     HDmemset(&udata, 0, sizeof(udata));
 
-    /* Check args */
-    if(H5G_loc(loc_id, &loc) < 0)
-        HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
-
     /* Set up opened group location to fill in */
     obj_loc.oloc = &obj_oloc;
     obj_loc.path = &obj_path;
     H5G_loc_reset(&obj_loc);
 
     /* Find the object's location */
-    if(H5G_loc_find(&loc, obj_name, &obj_loc/*out*/, lapl_id, dxpl_id) < 0)
+    if(H5G_loc_find(loc, obj_name, &obj_loc/*out*/, lapl_id, dxpl_id) < 0)
         HGOTO_ERROR(H5E_OHDR, H5E_NOTFOUND, FAIL, "object not found")
     loc_found = TRUE;
 
@@ -3304,6 +3486,40 @@ H5O_visit(hid_t loc_id, const char *obj_name, H5_index_t idx_type,
     if((obj_id = H5O_open_by_loc(&obj_loc, lapl_id, dxpl_id, TRUE)) < 0)
         HGOTO_ERROR(H5E_OHDR, H5E_CANTOPENOBJ, FAIL, "unable to open object")
 
+    /* get the native object from the ID created by the object header and create 
+       a "VOL object" ID */
+    {
+        void  *temp_obj = NULL;
+        H5I_type_t obj_type;
+        obj_type = H5I_get_type(obj_id);
+        if(NULL == (temp_obj = H5I_remove(obj_id)))
+            HGOTO_ERROR(H5E_SYM, H5E_CANTOPENOBJ, FAIL, "unable to open object")
+        /* Get an atom for the datatype */
+        if((obj_id = H5VL_native_register(obj_type, temp_obj, TRUE)) < 0)
+            HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to register datatype")
+    }
+#if 0
+    /* if this is a named datatype, we need to create the two-fold datatype 
+       to be comaptible with the VOL */
+    if(H5I_DATATYPE == H5I_get_type(obj_id)) {
+        H5T_t *type = NULL;
+        void  *temp_obj = NULL;
+
+        if(NULL == (temp_obj = H5I_remove(obj_id)))
+            HGOTO_ERROR(H5E_SYM, H5E_CANTOPENOBJ, FAIL, "unable to open object")
+
+        /* Copy the dataset's datatype */
+        if(NULL == (type = H5T_copy((H5T_t *)temp_obj, H5T_COPY_TRANSIENT)))
+            HGOTO_ERROR(H5E_DATASET, H5E_CANTINIT, FAIL, "unable to copy datatype")
+
+        H5T_set_vol_object(type, temp_obj);
+
+        /* Get an atom for the datatype */
+        if((obj_id = H5VL_native_register(H5I_DATATYPE, type, TRUE)) < 0)
+            HGOTO_ERROR(H5E_ATOM, H5E_CANTREGISTER, FAIL, "unable to register datatype")
+    }
+#endif
+
     /* Make callback for starting object */
     if((ret_value = op(obj_id, ".", &oinfo, op_data)) < 0)
         HGOTO_ERROR(H5E_OHDR, H5E_BADITER, FAIL, "can't visit objects")
@@ -3315,6 +3531,7 @@ H5O_visit(hid_t loc_id, const char *obj_name, H5_index_t idx_type,
     /* Check for object being a group */
     if(oinfo.type == H5O_TYPE_GROUP) {
         H5G_loc_t	start_loc;          /* Location of starting group */
+        H5G_loc_t	vis_loc;            /* Location of visited group */
 
         /* Get the location of the starting group */
         if(H5G_loc(obj_id, &start_loc) < 0)
@@ -3350,8 +3567,12 @@ H5O_visit(hid_t loc_id, const char *obj_name, H5_index_t idx_type,
                 HGOTO_ERROR(H5E_OHDR, H5E_CANTINSERT, FAIL, "can't insert object node into visited list")
         } /* end if */
 
+        /* Get the location of the visited group */
+        if(H5G_loc(obj_id, &vis_loc) < 0)
+            HGOTO_ERROR(H5E_ARGS, H5E_BADTYPE, FAIL, "not a location")
         /* Call internal group visitation routine */
-        if((ret_value = H5G_visit(obj_id, ".", idx_type, order, H5O_visit_cb, &udata, lapl_id, dxpl_id)) < 0)
+        if((ret_value = H5G_visit(&vis_loc, ".", idx_type, order, H5O_visit_cb, &udata, 
+                                  lapl_id, dxpl_id)) < 0)
             HGOTO_ERROR(H5E_OHDR, H5E_BADITER, FAIL, "object visitation failed")
     } /* end if */
 
@@ -3467,7 +3688,7 @@ H5O_dec_rc_by_loc(const H5O_loc_t *loc, hid_t dxpl_id)
     HDassert(loc);
 
     /* Get header */
-    if(NULL == (oh = H5O_protect(loc, dxpl_id, H5AC__READ_ONLY_FLAG)))
+    if(NULL == (oh = H5O_protect(loc, dxpl_id, H5AC_READ)))
        HGOTO_ERROR(H5E_OHDR, H5E_CANTPROTECT, FAIL, "unable to protect object header")
 
     /* Decrement the reference count on the object header */

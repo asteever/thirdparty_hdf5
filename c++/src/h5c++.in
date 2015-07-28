@@ -333,7 +333,7 @@ if test "x$do_link" = "xyes"; then
     hpux*)                flag="-Wl,+b -Wl," ;;
     freebsd*|solaris*)    flag="-R" ;;
     rs6000*|aix*)         flag="-L" ;;
-    sgi)                  flag="-rpath " ;;
+    irix*|sgi)            flag="-rpath " ;;
     *)                    flag="" ;;
   esac
 

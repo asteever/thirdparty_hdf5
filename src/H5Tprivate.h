@@ -24,6 +24,7 @@
 
 /* Other public headers needed by this file */
 #include "H5MMpublic.h"         /* Memory management                    */
+#include "H5VLpublic.h"         /* VOL                                  */
 
 /* Private headers needed by this file */
 #include "H5private.h"		/* Generic Functions			*/
@@ -139,6 +140,9 @@ H5_DLL uint32_t H5T_hash(H5F_t * file, const H5T_t *dt);
 H5_DLL herr_t H5T_set_latest_version(H5T_t *dt);
 H5_DLL herr_t H5T_patch_file(H5T_t *dt, H5F_t *f);
 H5_DLL htri_t H5T_is_variable_str(const H5T_t *dt);
+H5_DLL void * H5T_get_named_type(const H5T_t *dt);
+H5_DLL hid_t H5VL_create_datatype(void *dt_obj, H5VL_t *vol_plugin, hbool_t app_ref);
+H5_DLL herr_t H5T_set_vol_object(H5T_t *type, void *vol_obj);
 
 /* Reference specific functions */
 H5_DLL H5R_type_t H5T_get_ref_type(const H5T_t *dt);
@@ -161,6 +165,10 @@ H5_DLL int H5T_get_offset(const H5T_t *dt);
 
 /* Fixed-point functions */
 H5_DLL H5T_sign_t H5T_get_sign(H5T_t const *dt);
+
+/* Native type function */
+H5_DLL H5T_t *H5T_get_native_type(H5T_t *dt, H5T_direction_t direction,
+        size_t *struct_align, size_t *offset, size_t *comp_size);
 
 #endif /* _H5Tprivate_H */
 

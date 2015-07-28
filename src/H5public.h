@@ -94,10 +94,10 @@ extern "C" {
 /* Version numbers */
 #define H5_VERS_MAJOR	1	/* For major interface/format changes  	     */
 #define H5_VERS_MINOR	9	/* For minor interface/format changes  	     */
-#define H5_VERS_RELEASE	227	/* For tweaks, bug-fixes, or development     */
+#define H5_VERS_RELEASE	185	/* For tweaks, bug-fixes, or development     */
 #define H5_VERS_SUBRELEASE ""	/* For pre-releases like snap0       */
 				/* Empty string for real releases.           */
-#define H5_VERS_INFO    "HDF5 library version: 1.9.227"      /* Full version string */
+#define H5_VERS_INFO    "HDF5 library version: 1.9.185"      /* Full version string */
 
 #define H5check()	H5check_version(H5_VERS_MAJOR,H5_VERS_MINOR,	      \
 				        H5_VERS_RELEASE)
@@ -113,6 +113,10 @@ extern "C" {
         ((H5_VERS_MAJOR==Maj) && (H5_VERS_MINOR<Min)) || \
         (H5_VERS_MAJOR<Maj))
 
+#ifdef H5_HAVE_EFF
+typedef uint64_t hrpl_t;
+#endif /* H5_HAVE_EFF */
+
 /*
  * Status return values.  Failed integer functions in HDF5 result almost
  * always in a negative value (unsigned failing functions sometimes return
@@ -124,7 +128,6 @@ extern "C" {
  *	    fprintf(stderr, "unable to open the requested dataset\n");
  */
 typedef int herr_t;
-
 
 /*
  * Boolean type.  Successful return values are zero (false) or positive
@@ -282,6 +285,9 @@ H5_GCC_DIAG_ON(long-long)
 #   error "nothing appropriate for uint64_t"
 #endif
 
+/* Default value for all property list classes */
+#define H5P_DEFAULT     0
+
 /* Common iteration orders */
 typedef enum {
     H5_ITER_UNKNOWN = -1,       /* Unknown order */
@@ -319,6 +325,15 @@ typedef struct H5_ih_info_t {
     hsize_t     heap_size;
 } H5_ih_info_t;
 
+/* Internal Checksum state */
+typedef struct H5_checksum_seed_t {
+    uint32_t a;
+    uint32_t b;
+    uint32_t c;
+    int32_t state;
+    size_t total_length;
+} H5_checksum_seed_t;
+
 /* Functions in H5.c */
 H5_DLL herr_t H5open(void);
 H5_DLL herr_t H5close(void);
@@ -332,8 +347,7 @@ H5_DLL herr_t H5get_libversion(unsigned *majnum, unsigned *minnum,
 H5_DLL herr_t H5check_version(unsigned majnum, unsigned minnum,
 			       unsigned relnum);
 H5_DLL herr_t H5free_memory(void *mem);
-H5_DLL void *H5allocate_memory(size_t size, hbool_t clear);
-H5_DLL void *H5resize_memory(void *mem, size_t size);
+H5_DLL uint32_t H5checksum(const void *key, size_t length, H5_checksum_seed_t *cs);
 
 #ifdef __cplusplus
 }

@@ -24,6 +24,7 @@
     
 H5E_FUNC_g=    
 H5E_FILE_g=    
+H5E_VOL_g=    
 H5E_SOHM_g=    
 H5E_SYM_g=    
 H5E_PLUGIN_g=    
@@ -40,6 +41,7 @@ H5E_ATTR_g=
 H5E_IO_g=    
 H5E_EFL_g=    
 H5E_TST_g=    
+H5E_QUERY_g=    
 H5E_FSPACE_g=    
 H5E_DATASET_g=    
 H5E_STORAGE_g=    
@@ -49,6 +51,7 @@ H5E_DATATYPE_g=
 H5E_OHDR_g=    
 H5E_ATOM_g=    
 H5E_NONE_MAJOR_g=    
+H5E_INDEX_g=    
 H5E_SLIST_g=    
 H5E_ARGS_g=    
 H5E_EARRAY_g=    
@@ -195,7 +198,8 @@ H5E_CANTCOUNT_g=
 H5E_CANTSELECT_g=    
 H5E_CANTNEXT_g=    
 H5E_BADSELECT_g=    
-H5E_CANTCOMPARE_g=
+H5E_CANTCOMPARE_g=    
+H5E_INCONSISTENTSTATE_g=
 
 /* Argument errors */    
 H5E_UNINITIALIZED_g=    

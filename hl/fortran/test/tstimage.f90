@@ -111,10 +111,12 @@ end do
 ! Initialize FORTRAN predefined datatypes.
 !
 call h5open_f(errcode)
+
 !
 ! Create a new file using default properties.
 !
 call h5fcreate_f(filename, H5F_ACC_TRUNC_F, file_id, errcode)
+
 
 !-------------------------------------------------------------------------
 ! indexed image

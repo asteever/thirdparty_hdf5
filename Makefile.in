@@ -121,8 +121,9 @@ DIST_COMMON = $(top_srcdir)/config/commence.am $(srcdir)/Makefile.in \
 	$(top_srcdir)/bin/missing
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/m4/aclocal_cxx.m4 \
-	$(top_srcdir)/m4/aclocal_fc.m4 $(top_srcdir)/configure.ac
+am__aclocal_m4_deps = $(top_srcdir)/acinclude.m4 \
+	$(top_srcdir)/m4/ax_python.m4 \
+	$(top_srcdir)/m4/ax_python_devel.m4 $(top_srcdir)/configure.ac
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
@@ -245,6 +246,7 @@ AM_FCFLAGS = @AM_FCFLAGS@ @H5_FCFLAGS@
 AM_LDFLAGS = @AM_LDFLAGS@ @H5_LDFLAGS@
 AM_MAKEFLAGS = @AM_MAKEFLAGS@
 AR = @AR@
+AS = @AS@
 AUTOCONF = @AUTOCONF@
 AUTOHEADER = @AUTOHEADER@
 AUTOMAKE = @AUTOMAKE@
@@ -276,9 +278,11 @@ DIRECT_VFD = @DIRECT_VFD@
 DLLTOOL = @DLLTOOL@
 DSYMUTIL = @DSYMUTIL@
 DUMPBIN = @DUMPBIN@
+DYNAMIC_DIRS = @DYNAMIC_DIRS@
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
 ECHO_T = @ECHO_T@
+EFF = @EFF@
 EGREP = @EGREP@
 EXEEXT = @EXEEXT@
 EXTERNAL_FILTERS = @EXTERNAL_FILTERS@
@@ -294,14 +298,17 @@ FCFLAGS_f90 = @FCFLAGS_f90@
 FCLIBS = @FCLIBS@
 FC_VERSION = @FC_VERSION@
 FGREP = @FGREP@
+FILTERS = @FILTERS@
 FSEARCH_DIRS = @FSEARCH_DIRS@
 GREP = @GREP@
 H5_CFLAGS = @H5_CFLAGS@
 H5_CPPFLAGS = @H5_CPPFLAGS@
 H5_CXXFLAGS = @H5_CXXFLAGS@
+H5_CXX_SHARED = @H5_CXX_SHARED@
 H5_FCFLAGS = @H5_FCFLAGS@
 H5_FORTRAN_SHARED = @H5_FORTRAN_SHARED@
 H5_LDFLAGS = @H5_LDFLAGS@
+H5_LONE_COLON = @H5_LONE_COLON@
 H5_VERSION = @H5_VERSION@
 HADDR_T = @HADDR_T@
 HAVE_DMALLOC = @HAVE_DMALLOC@
@@ -317,6 +324,7 @@ HL = @HL@
 HL_FOR = @HL_FOR@
 HSIZE_T = @HSIZE_T@
 HSSIZE_T = @HSSIZE_T@
+INDEXING = @INDEXING@
 INSTALL = @INSTALL@
 INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
@@ -324,6 +332,8 @@ INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 INSTRUMENT = @INSTRUMENT@
 INSTRUMENT_LIBRARY = @INSTRUMENT_LIBRARY@
+IOD_CORRUPT_TOOL = @IOD_CORRUPT_TOOL@
+LARGEFILE = @LARGEFILE@
 LD = @LD@
 LDFLAGS = @LDFLAGS@
 LIBOBJS = @LIBOBJS@
@@ -337,8 +347,20 @@ LT_STATIC_EXEC = @LT_STATIC_EXEC@
 MAINT = @MAINT@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
+MCHECKSUM_CFLAGS = @MCHECKSUM_CFLAGS@
+MCHECKSUM_LIBS = @MCHECKSUM_LIBS@
+MERCURY_CFLAGS = @MERCURY_CFLAGS@
+MERCURY_LIBS = @MERCURY_LIBS@
 MKDIR_P = @MKDIR_P@
 MPE = @MPE@
+MPI_GET_SIZE = @MPI_GET_SIZE@
+MYALACRITY_LIBS = @MYALACRITY_LIBS@
+MYAXE_LIBS = @MYAXE_LIBS@
+MYDAOS_LIBS = @MYDAOS_LIBS@
+MYFASTBIT_LIBS = @MYFASTBIT_LIBS@
+MYIODP_LIBS = @MYIODP_LIBS@
+MYIOD_LIBS = @MYIOD_LIBS@
+MYPLFS_LIBS = @MYPLFS_LIBS@
 NM = @NM@
 NMEDIT = @NMEDIT@
 OBJDUMP = @OBJDUMP@
@@ -356,6 +378,19 @@ PACKAGE_VERSION = @PACKAGE_VERSION@
 PARALLEL = @PARALLEL@
 PATH_SEPARATOR = @PATH_SEPARATOR@
 PERL = @PERL@
+PKG_CONFIG = @PKG_CONFIG@
+PKG_CONFIG_LIBDIR = @PKG_CONFIG_LIBDIR@
+PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
+PYTHON = @PYTHON@
+PYTHON_BIN = @PYTHON_BIN@
+PYTHON_CPPFLAGS = @PYTHON_CPPFLAGS@
+PYTHON_EXTRA_LDFLAGS = @PYTHON_EXTRA_LDFLAGS@
+PYTHON_EXTRA_LIBS = @PYTHON_EXTRA_LIBS@
+PYTHON_INCLUDE_DIR = @PYTHON_INCLUDE_DIR@
+PYTHON_LDFLAGS = @PYTHON_LDFLAGS@
+PYTHON_LIB = @PYTHON_LIB@
+PYTHON_SITE_PKG = @PYTHON_SITE_PKG@
+PYTHON_VERSION = @PYTHON_VERSION@
 RANLIB = @RANLIB@
 ROOT = @ROOT@
 RUNPARALLEL = @RUNPARALLEL@
@@ -364,6 +399,7 @@ R_INTEGER = @R_INTEGER@
 R_LARGE = @R_LARGE@
 SEARCH = @SEARCH@
 SED = @SED@
+SETX = @SETX@
 SET_MAKE = @SET_MAKE@
 SHELL = @SHELL@
 SIZE_T = @SIZE_T@
@@ -378,6 +414,10 @@ TR = @TR@
 TRACE_API = @TRACE_API@
 UNAME_INFO = @UNAME_INFO@
 USE_FILTER_DEFLATE = @USE_FILTER_DEFLATE@
+USE_FILTER_FLETCHER32 = @USE_FILTER_FLETCHER32@
+USE_FILTER_NBIT = @USE_FILTER_NBIT@
+USE_FILTER_SCALEOFFSET = @USE_FILTER_SCALEOFFSET@
+USE_FILTER_SHUFFLE = @USE_FILTER_SHUFFLE@
 USE_FILTER_SZIP = @USE_FILTER_SZIP@
 USINGMEMCHECKER = @USINGMEMCHECKER@
 VERSION = @VERSION@
@@ -491,10 +531,10 @@ TRACE = perl $(top_srcdir)/bin/trace
 
 # .chkexe files are used to mark tests that have run successfully.
 # .chklog files are output from those tests.
-# *.clog and *.clog2 are from the MPE option.
+# *.clog are from the MPE option.
 
 # Some files/directories generated during check that should be cleaned
-CHECK_CLEANFILES = *.chkexe *.chklog *.clog *.clog2 *-tmp
+CHECK_CLEANFILES = *.chkexe *.chklog *.clog *-tmp
 @BUILD_PARALLEL_CONDITIONAL_FALSE@TESTPARALLEL_DIR = 
 
 # Define subdirectories to build.
@@ -515,9 +555,9 @@ CHECK_CLEANFILES = *.chkexe *.chklog *.clog *.clog2 *-tmp
 @BUILD_HDF5_HL_CONDITIONAL_FALSE@HDF5_HL_DIR = 
 @BUILD_HDF5_HL_CONDITIONAL_TRUE@HDF5_HL_DIR = hl
 SUBDIRS = src test $(TESTPARALLEL_DIR) tools . $(CXX_DIR) $(FORTRAN_DIR) \
-          $(HDF5_HL_DIR)
+          $(HDF5_HL_DIR) perform
 
-DIST_SUBDIRS = src test testpar tools . c++ fortran hl examples
+DIST_SUBDIRS = src test testpar tools . c++ fortran hl perform examples
 
 # Some files generated during configure that should be cleaned
 DISTCLEANFILES = config/stamp1 config/stamp2
@@ -862,7 +902,7 @@ distcleancheck: distclean
 	       exit 1; } >&2
 check-am: all-am
 check: check-recursive
-all-am: Makefile
+all-am: Makefile all-local
 installdirs: installdirs-recursive
 installdirs-am:
 install-exec: install-exec-recursive
@@ -922,7 +962,7 @@ install-dvi: install-dvi-recursive
 
 install-dvi-am:
 
-install-exec-am:
+install-exec-am: install-exec-local
 
 install-html: install-html-recursive
 
@@ -963,11 +1003,11 @@ ps: ps-recursive
 
 ps-am:
 
-uninstall-am:
+uninstall-am: uninstall-local
 
 .MAKE: $(am__recursive_targets) install-am install-strip
 
-.PHONY: $(am__recursive_targets) CTAGS GTAGS TAGS all all-am \
+.PHONY: $(am__recursive_targets) CTAGS GTAGS TAGS all all-am all-local \
 	am--refresh check check-am clean clean-cscope clean-generic \
 	clean-libtool cscope cscopelist-am ctags ctags-am dist \
 	dist-all dist-bzip2 dist-gzip dist-lzip dist-shar dist-tarZ \
@@ -975,14 +1015,14 @@ uninstall-am:
 	distclean-libtool distclean-tags distcleancheck distdir \
 	distuninstallcheck dvi dvi-am html html-am info info-am \
 	install install-am install-data install-data-am install-dvi \
-	install-dvi-am install-exec install-exec-am install-html \
-	install-html-am install-info install-info-am install-man \
-	install-pdf install-pdf-am install-ps install-ps-am \
-	install-strip installcheck installcheck-am installcheck-local \
-	installdirs installdirs-am maintainer-clean \
+	install-dvi-am install-exec install-exec-am install-exec-local \
+	install-html install-html-am install-info install-info-am \
+	install-man install-pdf install-pdf-am install-ps \
+	install-ps-am install-strip installcheck installcheck-am \
+	installcheck-local installdirs installdirs-am maintainer-clean \
 	maintainer-clean-generic mostlyclean mostlyclean-generic \
 	mostlyclean-libtool mostlyclean-local pdf pdf-am ps ps-am tags \
-	tags-am uninstall uninstall-am
+	tags-am uninstall uninstall-am uninstall-local
 
 
 # List all build rules defined by HDF5 Makefiles as "PHONY" targets here.
@@ -1001,23 +1041,31 @@ help:
 test _test: check
 
 lib progs check-p check-s:
-	for d in $(SUBDIRS); do                                \
+	@@SETX@; for d in $(SUBDIRS); do                                \
 	  if test $$d != .; then                                        \
 	   (cd $$d && $(MAKE) $(AM_MAKEFLAGS) $@) || exit 1;            \
 	  fi;                                                           \
 	done
 
-# Make all, tests, and (un)install
+# Make all, tests, and (un)install also recurse into perform directory
+all-local:
+	@cd perform && $(MAKE) $(AM_MAKEFLAGS) all
+
 tests:
-	for d in $(SUBDIRS); do                        \
+	@@SETX@; for d in $(SUBDIRS) perform; do                        \
 	  if test $$d != .; then                                        \
 	   (cd $$d && $(MAKE) $(AM_MAKEFLAGS) $@) || exit 1;            \
 	  fi;                                                           \
-	  done
+	done
+
+install-exec-local:
+	@cd perform && $(MAKE) $(AM_MAKEFLAGS) install
+uninstall-local:
+	@cd perform && $(MAKE) $(AM_MAKEFLAGS) uninstall
 
 # Check-clean also recurses into examples directory
 check-clean:
-	for d in $(SUBDIRS) examples; do               \
+	@@SETX@; for d in $(SUBDIRS) examples perform; do               \
 	  if test $$d != .; then                                        \
 	   (cd $$d && $(MAKE) $(AM_MAKEFLAGS) $@) || exit 1;            \
 	  fi;                                                           \
@@ -1044,7 +1092,7 @@ uninstall-all:
 
 # Install examples in this directory and recursively
 install-examples uninstall-examples:
-	for d in examples $(HDF5_INTERFACES) $(HL); do               \
+	@@SETX@; for d in examples $(HDF5_INTERFACES) $(HL); do               \
 	    (cd $$d && $(MAKE) $(AM_MAKEFLAGS) $@) || exit 1;           \
 	done
 
@@ -1091,7 +1139,7 @@ trace:
 # Run tests with different Virtual File Drivers.
 # Currently, only invoke check-vfd in the test directory.
 check-vfd:
-	for d in src test; do                                 \
+	@@SETX@; for d in src test; do                                 \
 	  if test $$d != .; then                                       \
 	    (cd $$d && $(MAKE) $(AM_MAKEFLAGS) $@) || exit 1;          \
 	  fi;                                                          \
@@ -1107,7 +1155,7 @@ check-vfd:
 $(top_builddir)/config.status:
 
 # Don't include conclude.am in root Makefile; tests target needs to
-# recurse into reguar subdirs.
+# recurse into perform directory as well as reguar subdirs.
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

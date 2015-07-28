@@ -81,6 +81,7 @@ int main( void )
  hsize_t    start;                       /* Record to start reading/writing */
  hsize_t    nrecords;                    /* Number of records to read/write */
  int        compress  = 0;
+ herr_t     status;
  int        i;
  Particle  *p_data = NULL;               /* Initially no data */
  float      pressure_in [NRECORDS_ADD] = /* Define new values for the field "Pressure"  */
@@ -117,24 +118,24 @@ int main( void )
  file_id = H5Fcreate( "ex_table_04.h5", H5F_ACC_TRUNC, H5P_DEFAULT, H5P_DEFAULT );
 
  /* Make the table */
- H5TBmake_table( "Table Title",file_id,TABLE_NAME,NFIELDS,NRECORDS,
+ status=H5TBmake_table( "Table Title",file_id,TABLE_NAME,NFIELDS,NRECORDS,
                          dst_size,field_names, dst_offset, field_type,
                          chunk_size, fill_data, compress, p_data  );
 
  /* Write the pressure field starting at record 2 */
  start    = 2;
  nrecords = NRECORDS_ADD;
- H5TBwrite_fields_name( file_id, TABLE_NAME, "Pressure", start, nrecords,
+ status=H5TBwrite_fields_name( file_id, TABLE_NAME, "Pressure", start, nrecords,
    sizeof( float ), 0, field_sizes_pre, pressure_in  );
 
  /* Write the new longitude and latitude information starting at record 2 */
  start    = 2;
  nrecords = NRECORDS_ADD;
- H5TBwrite_fields_name( file_id, TABLE_NAME, "Latitude,Longitude", start, nrecords,
+ status=H5TBwrite_fields_name( file_id, TABLE_NAME, "Latitude,Longitude", start, nrecords,
    sizeof( Position ), field_offset_pos, field_sizes_pos,  position_in  );
 
  /* read the table */
- H5TBread_table( file_id, TABLE_NAME, dst_size, dst_offset, dst_sizes, dst_buf );
+ status=H5TBread_table( file_id, TABLE_NAME, dst_size, dst_offset, dst_sizes, dst_buf );
 
  /* print it by rows */
  for (i=0; i<NRECORDS; i++) {

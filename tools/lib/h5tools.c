@@ -54,6 +54,9 @@ unsigned long long packed_data_mask;  /* mask in which packed bits to display */
 
 /* module-scoped variables */
 static int  h5tools_init_g;     /* if h5tools lib has been initialized */
+#ifdef H5_HAVE_PARALLEL
+static int  h5tools_mpi_init_g; /* if MPI_Init() has been called */
+#endif /* H5_HAVE_PARALLEL */
 
 /* Names of VFDs */
 static const char *drivernames[]={
@@ -513,14 +516,11 @@ h5tools_get_fapl(hid_t fapl, const char *driver, unsigned *drivernum)
     }
 #ifdef H5_HAVE_PARALLEL
     else if(!HDstrcmp(driver, drivernames[MPIO_IDX])) {
-        int mpi_initialized, mpi_finalized;
-
         /* MPI-I/O Driver */
-        /* check if MPI is available. */
-        MPI_Initialized(&mpi_initialized);
-        MPI_Finalized(&mpi_finalized);
-
-        if(mpi_initialized && !mpi_finalized) {
+        /* check if MPI has been initialized. */
+        if(!h5tools_mpi_init_g)
+            MPI_Initialized(&h5tools_mpi_init_g);
+        if(h5tools_mpi_init_g) {
             if(H5Pset_fapl_mpio(new_fapl, MPI_COMM_WORLD, MPI_INFO_NULL) < 0)
                 goto error;
             if(drivernum)

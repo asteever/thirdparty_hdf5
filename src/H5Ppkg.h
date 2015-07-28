@@ -213,14 +213,25 @@ H5_DLL herr_t H5P__encode_hsize_t(const void *value, void **_pp, size_t *size);
 H5_DLL herr_t H5P__encode_size_t(const void *value, void **_pp, size_t *size);
 H5_DLL herr_t H5P__encode_unsigned(const void *value, void **_pp, size_t *size);
 H5_DLL herr_t H5P__encode_uint8_t(const void *value, void **_pp, size_t *size);
+H5_DLL herr_t H5P__encode_uint32_t(const void *value, void **_pp, size_t *size);
+H5_DLL herr_t H5P__encode_uint64_t(const void *value, void **_pp, size_t *size);
 H5_DLL herr_t H5P__encode_hbool_t(const void *value, void **_pp, size_t *size);
 H5_DLL herr_t H5P__encode_double(const void *value, void **_pp, size_t *size);
 H5_DLL herr_t H5P__decode_hsize_t(const void **_pp, void *value);
 H5_DLL herr_t H5P__decode_size_t(const void **_pp, void *value);
 H5_DLL herr_t H5P__decode_unsigned(const void **_pp, void *value);
 H5_DLL herr_t H5P__decode_uint8_t(const void **_pp, void *value);
+H5_DLL herr_t H5P__decode_uint64_t(const void **_pp, void *value);
+H5_DLL herr_t H5P__decode_uint32_t(const void **_pp, void *value);
 H5_DLL herr_t H5P__decode_hbool_t(const void **_pp, void *value);
 H5_DLL herr_t H5P__decode_double(const void **_pp, void *value);
+
+H5_DLL herr_t H5P_dataspace_enc(const void *value, void **_pp, size_t *size);
+H5_DLL herr_t H5P_dataspace_dec(const void **_pp, void *value);
+H5_DLL herr_t H5P_dataspace_del(hid_t prop_id, const char* name, size_t size, void* value);
+H5_DLL herr_t H5P_dataspace_copy(const char* name, size_t size, void* value);
+H5_DLL int H5P_dataspace_cmp(const void *value1, const void *value2, size_t size);
+H5_DLL herr_t H5P_dataspace_close(const char* name, size_t size, void* value);
 
 /* Private OCPL routines */
 H5_DLL herr_t H5P_get_filter(const struct H5Z_filter_info_t *filter,
